@@ -1,0 +1,30 @@
+{
+  "name": "@ar/web",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "start": "node ./dist/main.js"
+  },
+  "dependencies": {
+    "@ar/cli": "workspace:*",
+    "@ar/contracts": "workspace:*",
+    "@ar/gateway": "workspace:*",
+    "@ar/security": "workspace:*"
+  },
+  "devDependencies": {
+    "@ar/core": "workspace:*",
+    "@ar/model": "workspace:*",
+    "@ar/session": "workspace:*"
+  }
+}

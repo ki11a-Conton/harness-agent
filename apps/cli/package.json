@@ -1,0 +1,35 @@
+{
+  "name": "@ar/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "agent": "./dist/main.js"
+  },
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ar/contracts": "workspace:*",
+    "@ar/core": "workspace:*",
+    "@ar/session": "workspace:*",
+    "@ar/gateway": "workspace:*",
+    "@ar/security": "workspace:*",
+    "@ar/observability": "workspace:*",
+    "@ar/tools": "workspace:*",
+    "@ar/events": "workspace:*",
+    "@ar/model": "workspace:*",
+    "@ar/context": "workspace:*",
+    "@ar/skills": "workspace:*",
+    "@ar/evaluation": "workspace:*"
+  }
+}

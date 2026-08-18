@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "../../node_modules/.cache/tsbuildinfo/context.tsbuildinfo"
+  },
+  "include": ["src"],
+  "references": [{ "path": "../contracts" }, { "path": "../security" }]
+}

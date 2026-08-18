@@ -1,0 +1,26 @@
+{
+  "name": "@ar/core",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ar/contracts": "workspace:*",
+    "@ar/context": "workspace:*",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@ar/model": "workspace:*"
+  }
+}
