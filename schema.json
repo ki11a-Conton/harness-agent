@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mechanism Manifest",
+  "type": "object",
+  "required": [
+    "id",
+    "source_agent",
+    "source_report",
+    "category",
+    "problem",
+    "preconditions",
+    "expected_benefit",
+    "risks",
+    "implementation_scope",
+    "evaluation_cases",
+    "status"
+  ],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]+$" },
+    "source_agent": { "type": "string", "enum": ["codex", "claude-code", "hermes", "opencode", "pi"] },
+    "source_report": { "type": "string", "pattern": "^reports/[a-z-]+/.+" },
+    "category": {
+      "type": "string",
+      "enum": ["prompting", "memory", "planning", "tool_use", "learning", "scheduling", "error_recovery", "context_management", "evaluation", "other"]
+    },
+    "problem": { "type": "string" },
+    "preconditions": { "type": "string" },
+    "expected_benefit": { "type": "string" },
+    "risks": { "type": "string" },
+    "implementation_scope": { "type": "string" },
+    "evaluation_cases": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["candidate", "proposed", "evaluating", "accepted", "rejected", "shipped"]
+    }
+  }
+}

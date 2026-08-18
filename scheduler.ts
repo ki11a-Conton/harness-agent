@@ -1,0 +1,376 @@
+import type { AgentId, Session, SessionId, SessionStore } from "@ar/contracts";
+import {
+  AgentError,
+  DEFAULT_SCHEDULER_LIMITS,
+  TREE_BUDGET_HEADROOM_RATIO,
+  errorInfo,
+  type SchedulerLimits,
+  type TreeBudget,
+} from "@ar/contracts";
+
+/**
+ * P1-6 AgentExecutionScheduler — global scheduling of the whole agent tree
+ * (beyond single-batch/invocation limits).
+ *
+ * Limits (SchedulerLimits):
+ * - maxGlobalAgents: agents running anywhere at once.
+ * - maxAgentsPerRoot: agents running under one root subtree at once.
+ * - maxDepth: delegation depth ceiling for the tree (defense against
+ *   exponential fan-out; depth measured from the root session).
+ * - maxDurationMs: wall-clock budget per scheduled agent (subtree cancel).
+ *
+ * Semantics:
+ * - Requests beyond the concurrency budgets QUEUE (FIFO across all roots),
+ *   they do not auto-reject.
+ * - A queued request whose caller aborts is cancelled before it ever starts
+ *   (no session is created for it).
+ * - `cancelSubtree(rootSessionId)` aborts every queued/running agent under
+ *   that root — the cancellation tree.
+ * - Token budgets (tokens/tool-calls) belong to P1-7 hierarchical budgeting
+ *   and are intentionally NOT here; the scheduler only gates and times.
+ */
+
+export type SchedulerEntryState = "queued" | "running" | "done" | "cancelled";
+
+export interface SchedulerEntry {
+  id: number;
+  rootSessionId: SessionId;
+  parentSessionId: SessionId;
+  agentId: AgentId;
+  state: SchedulerEntryState;
+  /** When the request entered the scheduler (queueing time). */
+  enteredAt: number;
+  startedAt?: number;
+  finishedAt?: number;
+  /** Cancellation handle for this scheduling unit (wall-clock, subtree). */
+  signal: AbortSignal;
+  /** P1-7: tool-call budget pre-reserved from the root tree pool for this
+   *  agent (its allocation; the unused part returns on release). */
+  allocation?: number;
+}
+
+/** Granted scheduling slot: holds the entry until `release()` (the agent's
+ *  turn finished). Aborting `signal` means this agent must stop. */
+export interface SchedulerToken {
+  entry: SchedulerEntry;
+  signal: AbortSignal;
+  /** Release the slot; report the tool calls the agent actually executed so
+   *  the tree budget can account usage and refund unused allocation (P1-7). */
+  release: (usedToolCalls?: number) => void;
+}
+
+export interface SchedulerDeps {
+  /** Session store used to resolve the root + depth of a parent session. */
+  store: SessionStore;
+  limits?: Partial<SchedulerLimits>;
+  now?: () => number;
+}
+
+/** Per-root accounting for the P1-7 tree budget. */
+interface RootAccount {
+  budget: TreeBudget;
+  /** Tool calls actually consumed by children so far. */
+  toolUsed: number;
+  /** Tool-call allocations currently reserved (pre-deducted). */
+  toolReserved: number;
+  rootStartedAt?: number;
+}
+
+export class AgentExecutionScheduler {
+  private readonly store: SessionStore;
+  private readonly limits: SchedulerLimits;
+  private readonly now: () => number;
+
+  private readonly active = new Map<number, SchedulerEntry>();
+  private readonly queued: SchedulerEntry[] = [];
+  private readonly controllers = new Map<number, AbortController>();
+  private readonly gateResolvers = new Map<number, (token: SchedulerToken) => void>();
+  private readonly gateRejecters = new Map<number, (err: unknown) => void>();
+  private readonly rootAccounts = new Map<SessionId, RootAccount>();
+  private nextId = 0;
+
+  constructor(deps: SchedulerDeps) {
+    this.store = deps.store;
+    this.limits = { ...DEFAULT_SCHEDULER_LIMITS, ...deps.limits };
+    this.now = deps.now ?? Date.now;
+  }
+
+  /** Observe: every queued/running entry (queued first, in enqueue order). */
+  snapshot(): SchedulerEntry[] {
+    return [...this.queued, ...[...this.active.values()]];
+  }
+
+  /** P1-7: register the tree budget for a root session. Duplicate registration
+   *  is rejected — budgets are decided before any child is scheduled. */
+  setRootBudget(rootSessionId: SessionId, budget: TreeBudget): void {
+    if (this.rootAccounts.has(rootSessionId)) {
+      throw new AgentError(
+        errorInfo("INTERNAL_ERROR", `root budget already registered for session ${rootSessionId}`),
+      );
+    }
+    this.rootAccounts.set(rootSessionId, { budget, toolUsed: 0, toolReserved: 0 });
+  }
+
+  /** P1-7: how many tool-call budget is left for new children of `root` after
+   *  the root's own headroom. Useful for hosts/observability. */
+  treeBudgetRemaining(rootSessionId: SessionId): { allocated: number; remaining: number } | undefined {
+    const account = this.rootAccounts.get(rootSessionId);
+    if (account?.budget.maxToolCalls === undefined) return undefined;
+    const pool = Math.floor(account.budget.maxToolCalls * (1 - TREE_BUDGET_HEADROOM_RATIO));
+    return {
+      allocated: account.budget.maxToolCalls,
+      remaining: Math.max(0, pool - account.toolUsed - account.toolReserved),
+    };
+  }
+
+  /** Request a scheduling slot for an agent that will run under
+   *  `parentSessionId` (its subtree root is the top ancestor). Resolves with a
+   *  token once the concurrency budgets allow it; rejects when the request is
+   *  cancelled while queued (caller abort → USER_CANCELLED) or the depth
+   *  ceiling would be exceeded (RESOURCE_LIMIT — fail-closed, never starts). */
+  async acquire(
+    req: { parentSessionId: SessionId; agentId: AgentId; toolBudget?: number },
+    callerSignal: AbortSignal,
+  ): Promise<SchedulerToken> {
+    if (callerSignal.aborted) {
+      throw this.reject("cancelled before scheduling");
+    }
+    const { rootId, depth } = await this.treeOf(req.parentSessionId);
+    if (this.limits.maxDepth > 0 && depth + 1 > this.limits.maxDepth) {
+      throw new AgentError(
+        errorInfo(
+          "RESOURCE_LIMIT",
+          `max scheduler depth ${this.limits.maxDepth} reached (parent at depth ${depth})`,
+        ),
+      );
+    }
+
+    // P1-7: tree tool-call budget. A request with an allocation pre-reserves
+    // it; without one, it draws a minimal unit from the pool. Exhaustion
+    // rejects BEFORE anything starts (structured RESOURCE_LIMIT).
+    const account = this.rootAccountFor(rootId);
+    const allocation = req.toolBudget;
+    const reserve = allocation ?? 1;
+    if (account?.budget.maxToolCalls !== undefined) {
+      const pool = Math.floor(account.budget.maxToolCalls * (1 - TREE_BUDGET_HEADROOM_RATIO));
+      if (account.toolUsed + account.toolReserved + reserve > pool) {
+        throw new AgentError(
+          errorInfo(
+            "RESOURCE_LIMIT",
+            `tree tool-call budget exhausted for root ${rootId} ` +
+              `(used ${account.toolUsed} + reserved ${account.toolReserved} + need ${reserve} > pool ${pool})`,
+          ),
+        );
+      }
+      account.toolReserved += reserve;
+    }
+
+    const controller = new AbortController();
+    const entry: SchedulerEntry = {
+      id: this.nextId,
+      rootSessionId: rootId,
+      parentSessionId: req.parentSessionId,
+      agentId: req.agentId,
+      state: "queued",
+      enteredAt: this.now(),
+      signal: controller.signal,
+      // Every scheduled agent holds a tool-call allocation (explicit or the
+      // minimal 1-unit default) so release can refund what it did not spend.
+      allocation: reserve,
+    };
+    this.nextId += 1;
+
+    const gate = new Promise<SchedulerToken>((resolve, reject) => {
+      this.gateResolvers.set(entry.id, resolve);
+      this.gateRejecters.set(entry.id, reject);
+    });
+
+    const onCallerAbort = () => {
+      this.dequeue(entry);
+      this.cleanupGate(entry.id, this.reject(`cancelled before start (queued at ${entry.enteredAt})`));
+    };
+    if (callerSignal.aborted) onCallerAbort();
+    else callerSignal.addEventListener("abort", onCallerAbort, { once: true });
+
+    if (this.canStart(entry)) {
+      this.start(entry);
+    } else {
+      this.queued.push(entry);
+    }
+
+    try {
+      return await gate;
+    } finally {
+      callerSignal.removeEventListener("abort", onCallerAbort);
+    }
+  }
+
+  /** Abort every queued/running agent whose root subtree is `rootOrUnder`.
+   *  Running agents see their token signal abort (the runtime cancels);
+   *  queued agents reject with USER_CANCELLED before starting. */
+  cancelSubtree(rootOrUnder: SessionId): void {
+    for (const entry of [...this.queued, ...[...this.active.values()]]) {
+      if (entry.rootSessionId === rootOrUnder) this.cancelEntry(entry);
+    }
+    this.drain();
+  }
+
+  private canStart(entry: SchedulerEntry): boolean {
+    if (this.limits.maxGlobalAgents > 0 && this.active.size >= this.limits.maxGlobalAgents) {
+      return false;
+    }
+    if (this.limits.maxAgentsPerRoot > 0) {
+      let underRoot = 0;
+      for (const running of this.active.values()) {
+        if (running.rootSessionId === entry.rootSessionId) underRoot += 1;
+      }
+      if (underRoot >= this.limits.maxAgentsPerRoot) return false;
+    }
+    return true;
+  }
+
+  private start(entry: SchedulerEntry): void {
+    this.dequeue(entry);
+    const controller = this.controllers.get(entry.id) ?? new AbortController();
+    this.controllers.set(entry.id, controller);
+    entry.state = "running";
+    entry.startedAt = this.now();
+    entry.signal = controller.signal;
+    if (this.limits.maxDurationMs > 0) {
+      const timer = setTimeout(() => this.cancelEntry(entry), this.limits.maxDurationMs);
+      const onAbort = () => {
+        clearTimeout(timer);
+        controller.signal.removeEventListener("abort", onAbort);
+      };
+      controller.signal.addEventListener("abort", onAbort, { once: true });
+    }
+    this.startTreeClock(entry.rootSessionId);
+    this.active.set(entry.id, entry);
+    const resolve = this.gateResolvers.get(entry.id);
+    if (resolve !== undefined) {
+      this.gateResolvers.delete(entry.id);
+      this.gateRejecters.delete(entry.id);
+      resolve({
+        entry,
+        signal: controller.signal,
+        release: (usedToolCalls = 0) => this.finish(entry, usedToolCalls),
+      });
+    }
+  }
+
+  /** P1-7: the first scheduled child of a root arms the tree wall-clock
+   *  budget. Root keeps its headroom (completion/verification); the subtree
+   *  is cancelled once the children budget (total × headroom share) elapses.
+   *  The timer runs until the root budget is reached; entries cancelled by it
+   *  are released by their owners as usual. */
+  private startTreeClock(rootSessionId: SessionId): void {
+    const account = this.rootAccounts.get(rootSessionId);
+    if (account?.budget.maxDurationMs === undefined || account.rootStartedAt !== undefined) return;
+    account.rootStartedAt = this.now();
+    const allowMs = Math.round(account.budget.maxDurationMs * (1 - TREE_BUDGET_HEADROOM_RATIO));
+    if (allowMs > 0) {
+      setTimeout(() => this.cancelSubtree(rootSessionId), allowMs);
+    }
+  }
+
+  private finish(entry: SchedulerEntry, usedToolCalls: number): void {
+    this.settleTreeBudget(entry, usedToolCalls);
+    if (this.active.delete(entry.id)) {
+      entry.state = "done";
+      entry.finishedAt = this.now();
+      this.controllers.delete(entry.id);
+    }
+    this.drain();
+  }
+
+  /** P1-7: on release, refund the unused part of this entry's allocation and
+   *  account its actual tool-call usage against the root tree pool. A child
+   *  can never spend outside its allocation (pre-deducted), and unused budget
+   *  flows back to the pool. */
+  private settleTreeBudget(entry: SchedulerEntry, usedToolCalls: number): void {
+    const account = this.rootAccounts.get(entry.rootSessionId);
+    if (account === undefined) return;
+    if (entry.allocation !== undefined) {
+      account.toolReserved = Math.max(0, account.toolReserved - entry.allocation);
+    }
+    account.toolUsed += usedToolCalls;
+  }
+
+  private rootAccountFor(rootSessionId: SessionId): RootAccount | undefined {
+    return this.rootAccounts.get(rootSessionId) ?? this.accountFromDefaultBudget(rootSessionId);
+  }
+
+  /** Lazily materialize the SchedulerLimits-level default tree budget. */
+  private accountFromDefaultBudget(rootSessionId: SessionId): RootAccount | undefined {
+    const budget = this.limits.treeBudget;
+    if (budget === undefined) return undefined;
+    if (!this.rootAccounts.has(rootSessionId)) {
+      this.rootAccounts.set(rootSessionId, { budget, toolUsed: 0, toolReserved: 0 });
+    }
+    return this.rootAccounts.get(rootSessionId);
+  }
+
+  /** Abort one scheduling unit. Running → signal aborts (turn cancels);
+   *  queued → its gate rejects, so no session is ever created for it. */
+  private cancelEntry(entry: SchedulerEntry): void {
+    if (this.queued.includes(entry)) {
+      this.dequeue(entry);
+      entry.state = "cancelled";
+      this.cleanupGate(entry.id, this.reject("cancelled before start (subtree cancelled)"));
+      return;
+    }
+    if (this.active.has(entry.id)) {
+      const controller = this.controllers.get(entry.id);
+      if (controller !== undefined && !controller.signal.aborted) controller.abort();
+    }
+  }
+
+  private cleanupGate(id: number, reason: unknown): void {
+    const reject = this.gateRejecters.get(id);
+    if (reject !== undefined) {
+      this.gateRejecters.delete(id);
+      this.gateResolvers.delete(id);
+      reject(reason);
+    }
+  }
+
+  /** After a slot frees, start queued entries FIFO while any can start. A
+   *  just-started entry consumes a global slot until its own finish, so a
+   *  single front-to-back pass suffices. */
+  private drain(): void {
+    let index = 0;
+    while (index < this.queued.length) {
+      const entry = this.queued[index]!;
+      if (this.canStart(entry)) {
+        this.start(entry);
+      } else {
+        index += 1;
+      }
+    }
+  }
+
+  private dequeue(entry: SchedulerEntry): void {
+    const index = this.queued.indexOf(entry);
+    if (index >= 0) this.queued.splice(index, 1);
+  }
+
+  private reject(message: string): AgentError {
+    return new AgentError(errorInfo("USER_CANCELLED", message));
+  }
+
+  /** Walk parentId links to the root; returns the root id and the parent
+   *  session's depth (its number of ancestors). A child of `sessionId` sits
+   *  at depth+1. */
+  private async treeOf(sessionId: SessionId): Promise<{ rootId: SessionId; depth: number }> {
+    let current: Session | undefined = await this.store.getSession(sessionId);
+    let depth = 0;
+    while (current?.parentId !== undefined) {
+      current = await this.store.getSession(current.parentId);
+      depth += 1;
+    }
+    if (current === undefined) {
+      throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${sessionId}`));
+    }
+    return { rootId: current.id, depth };
+  }
+}

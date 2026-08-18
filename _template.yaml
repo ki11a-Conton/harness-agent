@@ -1,0 +1,15 @@
+# Mechanism manifest template (P2-8)
+# Copy this file, remove the _ prefix, and fill in your fields.
+id: example-mechanism
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+category: other
+problem: describe the problem being solved
+preconditions: conditions under which this mechanism applies
+expected_benefit: what improvement is expected
+risks: what could go wrong
+implementation_scope: which package(s) are affected
+evaluation_cases:
+- case one
+- case two
+status: candidate
