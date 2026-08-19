@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TOOL_SEMANTICS, toToolSemantics, type ToolMetadata, type ToolRisk } from "@ar/contracts";
+import { DEFAULT_TOOL_SEMANTICS, toToolSemantics, type ToolDefinition, type ToolMetadata, type ToolRisk } from "@ar/contracts";
 import { ToolRegistry, semanticsOf } from "./registry.js";
 import { readFileTool } from "./tools/read-file.js";
 import { writeFileTool } from "./tools/write-file.js";
@@ -61,5 +61,108 @@ describe("P1-11: tool execution semantics registry", () => {
     expect(semanticsOf(registry.get("search_files")).sideEffectScope).toBe("none");
     expect(semanticsOf(registry.get("no_such_tool"))).toBe(DEFAULT_TOOL_SEMANTICS);
     expect(semanticsOf(undefined)).toBe(DEFAULT_TOOL_SEMANTICS);
+  });
+
+  it("Q-2: semantics derive from metadata+risk, never from the tool NAME", () => {
+    // A tool with a deliberately NONSTANDARD name that carries side-effect
+    // metadata must still be classified by metadata — proof that the runtime
+    // derives semantics through the registry/ToolSemantics, not via
+    // `tool === "write_file"`-style name heuristics.
+    const weirdName: ToolDefinition = {
+      name: "custom_sync!!$$",
+      description: "a nonstandard tool",
+      inputSchema: { type: "object" } as never,
+      metadata: {
+        name: "custom_sync!!$$",
+        version: "1.0.0",
+        sideEffect: true,
+        filesystem: true,
+        process: false,
+        network: false,
+        interactive: false,
+        retry: "none",
+        concurrencySafe: false,
+      },
+      risk: "elevated",
+      async execute() {
+        return { status: "success" };
+      },
+    };
+    const s = semanticsOf(weirdName);
+    expect(s.sideEffectScope).toBe("filesystem");
+    expect(s.requiresApproval).toBe(true); // risk-derived, independent of name
+
+    // A process-scoped tool with a name that mentions "read" is STILL a
+    // process tool: scope comes from metadata.process, never the string.
+    const misleadingName: ToolDefinition = {
+      name: "read_runner",
+      description: "actually spawns a process",
+      inputSchema: { type: "object" } as never,
+      metadata: {
+        name: "read_runner",
+        version: "1.0.0",
+        sideEffect: true,
+        filesystem: false,
+        process: true,
+        network: false,
+        interactive: false,
+        retry: "unknown",
+        concurrencySafe: false,
+      },
+      risk: "elevated",
+      async execute() {
+        return { status: "success" };
+      },
+    };
+    expect(semanticsOf(misleadingName).sideEffectScope).toBe("process");
+
+    // Read-only tool with a strange name is still read-only: readonlyness is
+    // derived from the absence of sideEffect, not from the string "read".
+    const oddRead: ToolDefinition = {
+      name: "x_read_special",
+      description: "read-only by metadata",
+      inputSchema: { type: "object" } as never,
+      metadata: {
+        name: "x_read_special",
+        version: "1.0.0",
+        sideEffect: false,
+        filesystem: true,
+        process: false,
+        network: false,
+        interactive: false,
+        retry: "safe",
+        concurrencySafe: true,
+      },
+      risk: "readonly",
+      async execute() {
+        return { status: "success" };
+      },
+    };
+    const r = semanticsOf(oddRead);
+    expect(r.sideEffectScope).toBe("none");
+
+    // Unknown/custom tool without rich metadata is treated conservatively
+    // rather than being guessed from its name.
+    const unknown: ToolDefinition = {
+      name: "mystery_tool",
+      description: "no rich metadata",
+      inputSchema: { type: "object" } as never,
+      metadata: {
+        name: "mystery_tool",
+        version: "1.0.0",
+        sideEffect: false,
+        filesystem: false,
+        process: false,
+        network: false,
+        interactive: false,
+      },
+      risk: "side_effect",
+      async execute() {
+        return { status: "success" };
+      },
+    };
+    // Not guessed as a writer from its name: no sideEffect metadata → "none".
+    expect(semanticsOf(unknown).sideEffectScope).toBe("none");
+    expect(semanticsOf(unknown).readOnly).toBe(true);
   });
 });

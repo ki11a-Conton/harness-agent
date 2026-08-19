@@ -7,7 +7,7 @@ import type {
   SessionId,
   TurnId,
 } from "@ar/contracts";
-import { ERROR_CODES } from "@ar/contracts";
+import { ERROR_CODES, isCancelledErrorCode, isInternalErrorCode, toolNameOf as toolNameOfPayload } from "@ar/contracts";
 
 /** §164 failure attribution categories. */
 export type FailureRootCause =
@@ -229,8 +229,8 @@ function errorDetailOf(payload: Record<string, unknown>): FailureDetail {
  */
 function attribute(event: AgentEvent): FailureRootCause | undefined {
   const { code } = errorDetailOf(event.payload);
-  if (code === "USER_CANCELLED") return undefined;
-  if (code === "INTERNAL_ERROR") {
+  if (code !== undefined && isCancelledErrorCode(code)) return undefined;
+  if (code !== undefined && isInternalErrorCode(code)) {
     return event.type === "tool.failed" ? "tool" : "environment";
   }
   if (code !== undefined) {
@@ -251,7 +251,7 @@ function attribute(event: AgentEvent): FailureRootCause | undefined {
 }
 
 function toolNameOf(payload: Record<string, unknown>): string | undefined {
-  return stringOf(payload, ["tool", "name"]);
+  return toolNameOfPayload(payload);
 }
 
 /** Tool name for a failure: from the payload, else the correlated tool.requested. */

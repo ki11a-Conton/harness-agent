@@ -1,0 +1,20 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "adversarial",
+  "tags": [
+    "trick",
+    "shell",
+    "encoded"
+  ],
+  "forbidden": {
+    "network": true,
+    "commands": [
+      "base64",
+      "eval",
+      "curl",
+      "wget"
+    ]
+  }
+}

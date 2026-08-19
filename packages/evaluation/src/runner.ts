@@ -1,4 +1,5 @@
 import type { AgentEvent, EventStore, SessionId } from "@ar/contracts";
+import { LIMIT_TERMINATION_REASON, toolNameOf as toolNameOfPayload } from "@ar/contracts";
 import type { AgentRuntime, TurnOutcome } from "@ar/core";
 import { computeMetrics, type RunMetrics } from "@ar/observability";
 import type { EvalCase, EvalSuite } from "./eval-case.js";
@@ -252,13 +253,12 @@ export class EvalRunner {
       }
 
       // Expected termination reason (Phase 6.5): the runtime's structured
-      // reason must match. "limit:" expected values match any limit kind.
+      // reason must match. Both sides draw from the bounded P2-39
+      // TerminationReason taxonomy — exact match, no "limit:" prefix wildcard.
       if (caseDef.expectedTerminationReason !== undefined) {
         const actual = outcome?.terminationReason ?? terminationReasonOf(eventList);
         const expected = caseDef.expectedTerminationReason;
-        const matches = expected.startsWith("limit:")
-          ? actual.startsWith("limit:")
-          : actual === expected;
+        const matches = actual === expected;
         if (!matches) {
           violations.push(
             `expected terminationReason ${expected} but turn ended with ${actual === "" ? "(none)" : actual}`,
@@ -310,6 +310,9 @@ function retryTaxonomyTotal(events: AgentEvent[]): number {
   let total = events.filter((event) => event.type === "model.retry").length;
   total += events.filter((event) => event.type === "verification.failed").length;
   total += events.filter((event) => event.type === "context.compacted").length;
+  // P2-40: reconciliation + mcpReconnect are their own taxonomy kinds.
+  total += events.filter((event) => event.type === "retry.reconciliation").length;
+  total += events.filter((event) => event.type === "retry.mcpReconnect").length;
   const startedByCall = new Map<string, number>();
   for (const event of events) {
     if (event.type !== "tool.started") continue;
@@ -332,7 +335,8 @@ function terminationReasonOf(events: AgentEvent[]): string {
   const limit = [...events]
     .reverse()
     .find((event) => event.type === "run.limit_reached" && typeof event.payload.limit === "string");
-  if (limit !== undefined) return `limit:${String(limit.payload.limit)}`;
+  // P2-39: map the raw run.limit_reached identifier to the bounded taxonomy.
+  if (limit !== undefined) return LIMIT_TERMINATION_REASON[String(limit.payload.limit)] ?? "failed";
   if (events.some((event) => event.type === "verification.failed")) return "verification_failed";
   if (events.some((event) => event.type === "model.failed")) return "model_error";
   if (events.some((event) => event.type === "turn.cancelled")) return "cancelled";
@@ -353,8 +357,8 @@ function matchesExpected(actual: TurnOutcome["status"], expected: EvalCase["expe
 }
 
 function toolNameOf(event: AgentEvent): string {
-  const tool = event.payload.tool ?? event.payload.name;
-  return typeof tool === "string" ? tool : "<unknown>";
+  const tool = toolNameOfPayload(event.payload);
+  return tool ?? "<unknown>";
 }
 
 /** exec command string from a tool.requested payload ({name:"exec", args:{command}}). */

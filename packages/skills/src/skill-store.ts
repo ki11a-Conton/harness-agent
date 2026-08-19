@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { Skill, SkillId } from "@ar/contracts";
 import { AgentError, errorInfo } from "@ar/contracts";
 import { detectPromptInjection, detectSecrets } from "@ar/security";
+import { skillDenialCode, type SkillSecurityDenial } from "./skill-security.js";
 
 /** Single JSONL file holding every skill record (SKILL-EVO-001). */
 export const SKILLS_FILE_NAME = "skills.jsonl";
@@ -28,7 +29,7 @@ export interface JsonlSkillStoreOptions {
   /** Directory holding skills.jsonl; created on first write. */
   dataDir: string;
   /** Optional callback fired when a save/update is denied (injection or secret). */
-  onSecurityDenied?: (event: { detection: "injection" | "secret"; reasons: string[]; content: string; source: string }) => void;
+  onSecurityDenied?: (event: SkillSecurityDenial) => void;
 }
 
 function isNodeError(err: unknown, code: string): boolean {
@@ -62,18 +63,18 @@ export class JsonlSkillStore implements SkillStoreLike {
   }
 
   /** Issue 6/6b: check a skill's body and description for injection or secrets. */
-  private static checkUnsafe(skill: Skill): { message: string; event: { detection: "injection" | "secret"; reasons: string[]; content: string; source: string } } | null {
+  private static checkUnsafe(skill: Skill): { message: string; event: SkillSecurityDenial } | null {
     const texts = [skill.body, skill.manifest?.description].filter(
       (t): t is string => typeof t === "string" && t !== "",
     );
     for (const text of texts) {
       const injection = detectPromptInjection(text);
       if (injection.hasInjection) {
-        return { message: `injection detected (${injection.reasons.join(", ")})`, event: { detection: "injection", reasons: injection.reasons, content: text, source: "skill-store" } };
+        return { message: `injection detected (${injection.reasons.join(", ")})`, event: { detection: "injection", reasons: injection.reasons, content: text, path: skill.id, source: "skill-store" } };
       }
       const secret = detectSecrets(text);
       if (secret.hasSecret) {
-        return { message: `secret detected (${secret.secrets.join(", ")})`, event: { detection: "secret", reasons: secret.secrets, content: text, source: "skill-store" } };
+        return { message: `secret detected (${secret.secrets.join(", ")})`, event: { detection: "secret", reasons: secret.secrets, content: text, path: skill.id, source: "skill-store" } };
       }
     }
     return null;
@@ -142,7 +143,7 @@ export class JsonlSkillStore implements SkillStoreLike {
     const reason = JsonlSkillStore.checkUnsafe(skill);
     if (reason !== null) {
       this.onSecurityDenied?.(reason.event);
-      throw new AgentError(errorInfo("SECURITY_DENIED", `skill save blocked: ${reason.message}`));
+      throw new AgentError(errorInfo(skillDenialCode(reason.event.detection), `skill save blocked: ${reason.message}`));
     }
     const all = await this.readAll();
     const index = all.findIndex((s) => s.id === skill.id);
@@ -156,7 +157,7 @@ export class JsonlSkillStore implements SkillStoreLike {
     const reason = JsonlSkillStore.checkUnsafe(skill);
     if (reason !== null) {
       this.onSecurityDenied?.(reason.event);
-      throw new AgentError(errorInfo("SECURITY_DENIED", `skill update blocked: ${reason.message}`));
+      throw new AgentError(errorInfo(skillDenialCode(reason.event.detection), `skill update blocked: ${reason.message}`));
     }
     const all = await this.readAll();
     const index = all.findIndex((s) => s.id === skill.id);

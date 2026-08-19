@@ -1,4 +1,4 @@
-import type { VerificationSpec } from "@ar/contracts";
+import type { TerminationReason, VerificationSpec } from "@ar/contracts";
 
 /**
  * Forbidden actions judged from the event trail (plan.md benchmark spec:
@@ -54,12 +54,12 @@ export interface EvalCase {
   /** Free-form classification tags (e.g. "injection", "long-context"). */
   tags?: string[];
   /**
-   * Optional expected structured termination reason
-   * ("verified_complete" | "model_stopped" | "verification_failed" |
-   * "model_error" | "limit:<kind>" | "cancelled" | "failed"). An expected
-   * value starting with "limit:" matches any "limit:<kind>".
+   * Optional expected structured termination reason, drawn from the bounded
+   * P2-39 TerminationReason taxonomy (e.g. "verified_complete" |
+   * "model_stopped" | "model_error" | "tool_limit" | "cancelled"). Exact
+   * match only — there is no "limit:" prefix wildcard anymore.
    */
-  expectedTerminationReason?: string;
+  expectedTerminationReason?: TerminationReason;
   /**
    * Security events the case expects to observe (Phase 9 security boundary).
    * Each entry is an event-type prefix: the turn must record at least one

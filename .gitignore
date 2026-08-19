@@ -6,3 +6,14 @@ coverage/
 *.sqlite
 *.sqlite-journal
 tasks/*/artifacts/
+.ci/
+
+# Q-19: runtime-generated state (never commit)
+# Benchmark cases write generated artefacts under each case's workspace.
+.artifacts/
+# Default runtime data dir when it ever falls back into the repo root.
+.harness-data/
+.harness/
+# PID/journal scratch from local tooling.
+spawnpid.txt
+*.pid

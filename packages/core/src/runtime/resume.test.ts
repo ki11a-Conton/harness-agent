@@ -211,6 +211,16 @@ describe("AgentRuntime resume (P1-4)", () => {
     // The exec was never re-executed: the resumed turn ran only the text script.
     expect(result.state.commandsRun).toEqual([]);
 
+    // P2-40: the unresolved tool surfaces as a reconciliation retry-kind event.
+    const trail = await events.list(session.id);
+    const reconciliations = trail.filter((e) => e.type === "retry.reconciliation");
+    expect(reconciliations).toHaveLength(1);
+    expect(reconciliations[0]!.payload).toMatchObject({
+      toolCallId: "toolcall_ex",
+      tool: "exec",
+      sideEffect: true,
+    });
+
     const prompt = buildResumePrompt(result.state, result.committedSideEffects, result.unresolvedTools);
     expect(prompt).toContain("Unresolved tool executions");
     expect(prompt).toContain("reconcile");

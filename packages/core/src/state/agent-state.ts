@@ -1,4 +1,12 @@
 import type { AgentId, SessionId, TurnId } from "@ar/contracts";
+import {
+  STALL_WINDOW_SIZE,
+  detectStallPattern,
+  stableStringify,
+  type ProgressSignal,
+  type StallPattern,
+  type ToolCallTrace,
+} from "@ar/contracts";
 
 /**
  * Agent phase state machine per AGENT_ARCHITECTURE_PLAN §25.
@@ -18,6 +26,7 @@ export type AgentPhase =
   | "observing"
   | "compacting"
   | "recovering"
+  | "waiting_user"
   | "completed"
   | "failed"
   | "cancelled";
@@ -27,13 +36,17 @@ const TERMINAL: ReadonlySet<AgentPhase> = new Set(["completed", "failed", "cance
 /** Allowed transitions; a transition from a terminal phase is never allowed. */
 const TRANSITIONS: Readonly<Record<AgentPhase, readonly AgentPhase[]>> = {
   idle: ["thinking"],
-  thinking: ["tool_pending", "compacting", "observing", "completed", "failed", "cancelled"],
+  thinking: ["tool_pending", "compacting", "observing", "waiting_user", "completed", "failed", "cancelled"],
   tool_pending: ["waiting_permission", "executing", "observing", "cancelled"],
   waiting_permission: ["executing", "observing", "cancelled"],
   executing: ["observing", "cancelled", "failed"],
-  observing: ["thinking", "recovering", "cancelled", "failed"],
+  observing: ["thinking", "recovering", "waiting_user", "cancelled", "failed"],
   compacting: ["thinking", "failed", "cancelled"],
   recovering: ["thinking", "failed", "cancelled"],
+  // P2-43: waiting_user is a PAUSED, resumable phase — the turn asked the user
+  // for critical input. It is not a terminal: resume returns to thinking; the
+  // host/human may also cancel from here.
+  waiting_user: ["thinking", "cancelled"],
   completed: [],
   failed: [],
   cancelled: [],
@@ -50,18 +63,7 @@ export class IllegalTransitionError extends Error {
   }
 }
 
-/** Deterministic key for (name, args): stable JSON with sorted keys. */
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
-  }
-  if (typeof value === "object" && value !== null) {
-    const record = value as Record<string, unknown>;
-    const keys = Object.keys(record).sort();
-    return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(",")}}`;
-  }
-  return JSON.stringify(value);
-}
+
 
 export interface AgentStateSnapshot {
   sessionId: SessionId;
@@ -87,6 +89,10 @@ export class AgentState {
   private lastToolKey: string | undefined;
   private identicalToolStreak = 0;
   private stallRecoveriesUsed = 0;
+  /** P2-41: rolling window of recent tool executions for pattern-based stall
+   *  detection (bounded to STALL_WINDOW_SIZE). Populated by `recordToolCall`;
+   *  `recordProgress`/`clearStallWindow` reset it when a progress signal lands. */
+  private recentTraces: ToolCallTrace[] = [];
 
   constructor(
     readonly sessionId: SessionId,
@@ -192,6 +198,64 @@ export class AgentState {
   resetToolStreak(): void {
     this.identicalToolStreak = 0;
     this.lastToolKey = undefined;
+  }
+
+  /**
+   * P2-41: record one executed tool call into the rolling stall window. The
+   * result fingerprint is supplied by the runtime so an identical call with a
+   * DIFFERENT result is progress, not a stall (avoids false positives).
+   */
+  recordToolCall(trace: ToolCallTrace): void {
+    this.recentTraces.push(trace);
+    if (this.recentTraces.length > STALL_WINDOW_SIZE) {
+      this.recentTraces.shift();
+    }
+  }
+
+  /**
+   * P2-41: true when a prior trace in the window was the SAME call+args but
+   * produced a DIFFERENT result fingerprint. That means observable feedback
+   * moved (e.g. a verification now passes / returns new evidence) — concrete
+   * progress that cancels any pending stall classification.
+   */
+  priorResultChanged(trace: ToolCallTrace): boolean {
+    if (trace.resultFingerprint === undefined) return false;
+    for (const prior of this.recentTraces) {
+      if (
+        prior.name === trace.name &&
+        prior.argsKey === trace.argsKey &&
+        prior.resultFingerprint !== undefined &&
+        prior.resultFingerprint !== trace.resultFingerprint
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * P2-41: consult the pure pattern classifier over the current window. Returns
+   * null when the window is unchanged/empty or shows no stall pattern. Callers
+   * may filter by the exact pattern they care about (e.g. exclude identical_tool
+   * so the legacy identical-streak gate owns that case).
+   */
+  stallPattern(): StallPattern | null {
+    return detectStallPattern(this.recentTraces);
+  }
+
+  /**
+   * P2-41: a progress signal landed (side effect / file diff / verification
+   * improvement ...). A window with progress is never a stall — clear it so the
+   * classifier starts fresh rather than counting past progress as stagnation.
+   */
+  recordProgress(signal: ProgressSignal): void {
+    this.recentTraces = [];
+    void signal; // the signal is logged upstream; the window clearing is what matters
+  }
+
+  /** P2-41: force-clear the window (e.g. after a stall recovery). */
+  clearStallWindow(): void {
+    this.recentTraces = [];
   }
 
   snapshot(): AgentStateSnapshot {

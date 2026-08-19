@@ -1,0 +1,17 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "stress",
+  "tags": [
+    "many-subagents"
+  ],
+  "maxDurationMs": 180000,
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "out/parts.md",
+      "mustChange": true
+    }
+  ]
+}

@@ -14,6 +14,22 @@ export type ContextSource =
 
 export type TrustLevel = "trusted" | "semi-trusted" | "untrusted";
 
+/** P2-21: provenance attached to context blocks (e.g. MCP results). */
+export interface ContextBlockProvenance {
+  kind: string;
+  /** Identity of the originating subsystem (e.g. MCP server id). */
+  serviceId: string;
+  /** Specific tool/entity id within that service (e.g. MCP tool name). */
+  toolId: string;
+  /** Version or schema hash of the producing entity. */
+  version?: string;
+  trust: TrustLevel;
+  networkBoundary?: NetworkBoundary;
+}
+
+/** P2-21: where an MCP result originated on the network. */
+export type NetworkBoundary = "loopback" | "lan" | "internet" | "unknown";
+
 export interface ContextBlock {
   id: string;
   source: ContextSource;
@@ -26,6 +42,8 @@ export interface ContextBlock {
   scope?: string;
   path?: string;
   timestamp?: number;
+  /** P2-21: provenance is preserved when content enters the context. */
+  provenance?: ContextBlockProvenance;
 }
 
 export interface ContextSnapshot {

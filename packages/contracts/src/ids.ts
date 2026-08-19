@@ -20,6 +20,7 @@ export type ProcessId = Branded<"ProcessId">;
 export type TraceId = Branded<"TraceId">;
 export type PromptId = Branded<"PromptId">;
 export type ArtifactId = Branded<"ArtifactId">;
+export type AskId = Branded<"AskId">;
 
 const PREFIXES: Record<string, string> = {
   session: "session_",
@@ -38,10 +39,38 @@ const PREFIXES: Record<string, string> = {
   trace: "trace_",
   prompt: "prompt_",
   artifact: "artifact_",
+  ask: "ask_",
 };
 
+/** Production ID source: random UUID (unique, non-deterministic). */
+let idSource: () => string = randomUUID;
+
+/** Override the global ID source; pass null to restore the default randomUUID.
+ *  Q-8: tests install a deterministic generator for reproducible event/model
+ *  snapshots, then MUST restore it (the returned disposer does that). */
+export function installIdSource(source: (() => string) | null): void {
+  idSource = source ?? randomUUID;
+}
+
+/**
+ * Install a deterministic, counter-based ID source for reproducible snapshots.
+ * Returns a disposer that restores the previously active source.
+ *
+ * The counter resets on every install, so the same call sequence always yields
+ * the same IDs (fully replayable). Suffixes are globally-unique per call, so
+ * no cross-type collisions occur even though the value space is small.
+ */
+export function installDeterministicIds(): () => void {
+  const previous = idSource;
+  let counter = 0;
+  idSource = () => `d${(++counter).toString().padStart(8, "0")}`;
+  return () => {
+    idSource = previous;
+  };
+}
+
 function make<S extends string>(prefix: string): Branded<S> {
-  return `${PREFIXES[prefix] ?? `${prefix}_`}${randomUUID()}` as Branded<S>;
+  return `${PREFIXES[prefix] ?? `${prefix}_`}${idSource()}` as Branded<S>;
 }
 
 export function newSessionId(): SessionId {
@@ -91,6 +120,10 @@ export function newPromptId(): PromptId {
 }
 export function newArtifactId(): ArtifactId {
   return make("artifact");
+}
+
+export function newAskId(): AskId {
+  return make("ask");
 }
 
 export function isId(prefix: string, value: string): boolean {

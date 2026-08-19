@@ -191,6 +191,26 @@ describe("SessionReplayer (REPLAY-001)", () => {
     expect(result).toEqual({ sessionId, turns: [], events: 0, messages: [], orphans: [] });
   });
 
+  it("orders parallel turns deterministically by sequence, not wall-clock tie or list order (P2-33)", async () => {
+    // Both turns share the exact same firstEventAt (parallel completions landing
+    // in the same ms). turnB holds the lower sequence (0), turnA the higher (2).
+    const events = buildEvents([
+      { type: "turn.started", turnId: turnB, timestamp: 1000 }, // seq 0
+      { type: "turn.completed", turnId: turnB, timestamp: 1100 }, // seq 1
+      { type: "turn.started", turnId: turnA, timestamp: 1000 }, // seq 2
+      { type: "turn.completed", turnId: turnA, timestamp: 1100 }, // seq 3
+    ]);
+    // Feed turnA's events first so map-insertion order (and any engine-stable
+    // sort on equal timestamps) would yield [turnA, turnB]. The replayer must
+    // NOT depend on that: it must break the tie by earliest sequence -> [turnB, turnA].
+    const shuffled = [events[2]!, events[3]!, events[0]!, events[1]!];
+    const result = await new SessionReplayer({ events: feed(shuffled) }).replay(sessionId);
+
+    expect(result.turns.map((t) => t.turnId)).toEqual([turnB, turnA]);
+    expect(result.turns[0]!.firstEventAt).toBe(1000);
+    expect(result.turns[1]!.firstEventAt).toBe(1000);
+  });
+
   it("compare: consistent snapshot passes", async () => {
     const snapshot = {
       turns: [

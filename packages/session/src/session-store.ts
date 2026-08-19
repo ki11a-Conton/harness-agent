@@ -1,6 +1,7 @@
-import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename } from "node:fs/promises";
 import path from "node:path";
 import type { Message, Session, SessionId, SessionStore, Turn, TurnId } from "@ar/contracts";
+import { appendDurable, atomicWriteFile, backupTree } from "@ar/store-integrity";
 
 /**
  * JSONL session store (SESSION-001).
@@ -141,20 +142,20 @@ export class JSONLSessionStore implements SessionStore {
   }
 
   private async writeJsonAtomic(file: string, payload: Record<string, unknown>): Promise<void> {
-    const tmp = `${file}.tmp`;
+    // P2-35: durable atomic write (temp + fsync + rename over target) via the
+    // shared primitive. The previous tmp -> rm(target) -> rename left a window
+    // where the target was absent between rm and rename; rename-over is atomic.
     try {
-      await writeFile(tmp, JSON.stringify({ schemaVersion: SCHEMA_VERSION, ...payload }, null, 2), "utf8");
-      await rm(file, { force: true });
-      await rename(tmp, file);
+      await atomicWriteFile(file, JSON.stringify({ schemaVersion: SCHEMA_VERSION, ...payload }, null, 2));
     } catch (err) {
       throw new SessionStoreError("IO_ERROR", `write failed for ${file}: ${String(err)}`);
     }
   }
 
   private async appendJsonLine(file: string, payload: Record<string, unknown>): Promise<void> {
-    const line = JSON.stringify({ schemaVersion: SCHEMA_VERSION, ...payload });
+    // P2-35: durable append (write + fsync) so an acked message survives a crash.
     try {
-      await writeFile(file, `${line}\n`, { flag: "a", encoding: "utf8" });
+      await appendDurable(file, `${JSON.stringify({ schemaVersion: SCHEMA_VERSION, ...payload })}\n`);
     } catch (err) {
       throw new SessionStoreError("IO_ERROR", `append failed for ${file}: ${String(err)}`);
     }
@@ -370,5 +371,16 @@ export class JSONLSessionStore implements SessionStore {
       await this.moveIfExists(path.join(this.turnsDir, file), path.join(turnsDest, file));
     }
     return { archivedPath: destDir };
+  }
+
+  /**
+   * P2-35 backup: copy the whole session store (sessions/turns/messages/state
+   * and their archives) to `<dataDir>/backups/<stamp>/`, excluding temp files
+   * and the `backups` directory itself. Use it before destructive ops or as a
+   * scheduled integrity checkpoint.
+   */
+  async backup(opts: { now?: () => Date } = {}): Promise<{ path: string; files: number; bytes: number }> {
+    await this.ensureDirs();
+    return backupTree(this.dataDir, { now: opts.now });
   }
 }

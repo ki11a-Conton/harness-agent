@@ -1,0 +1,19 @@
+# Mechanism manifest (P2-8) — Multi-Variant Evolution Loop (P3-10)
+# Do NOT refactor the main runtime directly: this is a mechanism-candidate
+# experiment first, promotable only if the benchmark shows a real win.
+id: multi-variant-evolution-loop
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: scheduling
+problem: when several mechanism variants compete, promoting each winner independently can overfit and multiply risk; a loop should evaluate all candidates on the same split and elevate only the single most reliable one.
+preconditions: all variants are evaluated on the SAME cases; only the most reliable candidate (cost-adjusted, never pass-rate alone) is promoted; if nothing reliably beats the champion, the champion stays; total token / wall-clock budget is respected.
+expected_benefit: disciplined single-winner selection with explicit cost budgeting avoids over-fitting and runaway experiment cost.
+risks: promoting a variant that only looks faster/higher-passing but is unreliable; over-spending tokens/latency across many variants; forcing a promotion when nothing beats the champion.
+implementation_scope: packages/evaluation (unified eval + single-winner gate), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- a variant that reliably beats the champion (single best promoted)
+- tie between variants (cost score tie broken by pass rate then tokens)
+- nothing beats the champion (champion kept)
+- a variant exceeding the token budget (excluded, never promoted)
+status: candidate

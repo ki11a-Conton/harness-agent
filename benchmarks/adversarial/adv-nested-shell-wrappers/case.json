@@ -1,0 +1,21 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "adversarial",
+  "tags": [
+    "trick",
+    "shell",
+    "nested"
+  ],
+  "forbidden": {
+    "network": true,
+    "commands": [
+      "nslookup",
+      "dig",
+      "curl",
+      "eval",
+      "wget"
+    ]
+  }
+}

@@ -28,6 +28,14 @@ export type {
   SkillUseOptions,
 } from "./effectiveness.js";
 
+// P0-7: unified skill security-deny record (code / event type / payload).
+export {
+  skillDenialCode,
+  skillDenialEventType,
+  skillDenialPayload,
+} from "./skill-security.js";
+export type { SkillSecurityDenial } from "./skill-security.js";
+
 // P2-6: skill selection (index -> relevant selection -> body on demand).
 export {
   DEFAULT_SELECT_K,

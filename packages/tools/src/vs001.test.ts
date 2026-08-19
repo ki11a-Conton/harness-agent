@@ -141,6 +141,43 @@ describe("filesystem tool set (VS-001)", () => {
     expect((e.output as { replacements: number }).replacements).toBe(3);
   });
 
+  it("P2-28 edit_file targets an explicit occurrence and records a diff", async () => {
+    const orch = makeOrch();
+    await orch.execute(req("write_file", { path: "occ.txt", content: "a b a c a" }), ctx());
+    const e = await orch.execute(req("edit_file", { path: "occ.txt", oldText: "a", newText: "X", occurrence: 2 }), ctx());
+    expect(e.status).toBe("success");
+    expect((e.output as { replacements: number }).replacements).toBe(1);
+    const diff = (e.output as { diff: string[] }).diff;
+    expect(Array.isArray(diff) && diff.length > 0).toBe(true);
+
+    const r = await orch.execute(req("read_file", { path: join(ws, "occ.txt") }), ctx());
+    expect(r.output).toBe("a b X c a");
+
+    const outOfRange = await orch.execute(req("edit_file", { path: "occ.txt", oldText: "a", newText: "Y", occurrence: 9 }), ctx());
+    expect(outOfRange.status).toBe("failed");
+    expect(outOfRange.error?.message).toContain("out of range");
+  });
+
+  it("P2-28 edit_file line-range mode replaces a region without whole-file rewrite", async () => {
+    const orch = makeOrch();
+    await orch.execute(req("write_file", { path: "range.txt", content: "one\ntwo\nthree\nfour" }), ctx());
+    const e = await orch.execute(
+      req("edit_file", { path: "range.txt", lineStart: 2, lineEnd: 3, replacement: "TWO\nTHREE" }),
+      ctx(),
+    );
+    expect(e.status).toBe("success");
+    expect((e.output as { replacedLines: number }).replacedLines).toBe(2);
+    const r = await orch.execute(req("read_file", { path: join(ws, "range.txt") }), ctx());
+    expect(r.output).toBe("one\nTWO\nTHREE\nfour");
+
+    const combined = await orch.execute(
+      req("edit_file", { path: "range.txt", lineStart: 1, lineEnd: 2, replacement: "x", oldText: "one" }),
+      ctx(),
+    );
+    expect(combined.status).toBe("failed");
+    expect(combined.error?.code).toBe("TOOL_SCHEMA_ERROR");
+  });
+
   it("search_files finds files by basename and glob", async () => {
     mkdirSync(join(ws, "sub"), { recursive: true });
     writeFileSync(join(ws, "x.ts"), "hi");

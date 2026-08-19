@@ -1,0 +1,26 @@
+# Mechanism manifest (P2-8) — Formal Invariants (P3-17)
+# Key security properties are written as INVARIANT tests: pure, deterministic
+# predicate checks over recorded/structural facts. No effect modeling and no
+# fabrication — each check inspects a concrete snapshot and returns pass/fail.
+id: formal-invariants
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: security
+problem: critical safety properties (terminal-state discipline, capability escalation, unsafe-tool auto-retry, verification fabrication, child context isolation, holdout secrecy, memory persistence, network deny, delegation bounds, replay side-effect dedup) are asserted ad hoc rather than as a closed, gated invariant set; regressions can slip through silently.
+preconditions: invariants run over recorded/structural snapshots only (state timelines, capability claims, tool calls, verification results, memory writes, network decisions, delegation records, replay plans); nothing is modelled or predicted.
+expected_benefit: a deterministic, closed INV-001..INV-010 gate that the runtime can surface pre-release/commit; a violation is traceable to the exact record (`at`) and reason.
+risks: over-broad "holds" when a section is absent; treating an un-run check as proven. Mitigation: absent sections are conservatively treated as no-violation and clearly distinct from a real pass.
+implementation_scope: packages/evaluation (pure formal-invariants.ts + tests), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- INV-001 terminal state cannot transition (timeline)
+- INV-002 child cannot gain parent-unavailable capability (boundary-aware filesystem root)
+- INV-003 unsafe tool is never auto retried
+- INV-004 completed verification cannot be fabricated (checks + evidence)
+- INV-005 child context isolation (ungranted or parent-internal keys)
+- INV-006 benchmark holdout judge secrecy (holdout scored before activation)
+- INV-007 memory unsafe content cannot persist (incl. gate-bypass)
+- INV-008 network denied cannot execute (fail-closed)
+- INV-009 delegation bounded (depth, fan-out, capability subset)
+- INV-010 replay cannot duplicate known completed unsafe side effect
+status: candidate

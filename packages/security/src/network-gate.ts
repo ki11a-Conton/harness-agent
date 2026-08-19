@@ -62,6 +62,32 @@ const NETWORK_BINARIES = new Set([
   "invoke-webrequest",
   "invoke-restmethod",
   "start-bitstransfer",
+  // P2-24: PS remoting commandlets (aliases/equivalents of network ops).
+  "invoke-command",
+  "enter-pssession",
+  "connect-wsman",
+  "new-pssession",
+  // P2-24: package executors that fetch/resolve packages from a registry.
+  "npx",
+  "pnpx",
+  "bunx",
+]);
+
+/** Python modules that, when run via `-m`, perform network I/O. */
+const MODULE_NETWORK = new Set([
+  "http.server",
+  "https.server",
+  "socketserver",
+  "urllib",
+  "http.client",
+  "ftplib",
+  "smtplib",
+  "telnetlib",
+  "SimpleHTTPServer",
+  "requests",
+  "aiohttp",
+  "pip",
+  "pipenv",
 ]);
 
 /** Commands whose subcommand selects a network operation. */
@@ -75,6 +101,8 @@ const NETWORK_SUBCOMMANDS: Record<string, string[]> = {
   docker: ["pull", "push", "login", "build"],
   cargo: ["add", "publish", "update"],
   go: ["get"],
+  bun: ["add", "install", "uninstall", "remove", "update", "link", "unlink", "x"],
+  deno: ["install", "add", "cache", "vendor", "info", "uninstall"],
   uv: ["add", "install", "pip"],
 };
 
@@ -324,6 +352,23 @@ function classifySegment(command: string, report: NetworkIntentReport, depth: nu
       } else if (argv0 === "go" && sub === "mod" && args[1]?.text.toLowerCase() === "download") {
         report.hasNetworkIntent = true;
         report.reasons.push("network subcommand: go mod download");
+      } else if (argv0 === "docker" && sub === "run") {
+        // P2-24: inspect the container command — a network tool inside the
+        // image (docker run img curl …) or host networking exposes the net.
+        const containerArgs = args.slice(1);
+        const netTool = containerArgs.find((t) => NETWORK_BINARIES.has(basename(t.text)));
+        const flat = containerArgs.map((t) => t.text);
+        const hostIdx = flat.findIndex((t) => /^--network/i.test(t));
+        const hostNet =
+          (hostIdx >= 0 && /^--network=(host|macvlan)$/i.test(flat[hostIdx]!)) ||
+          (hostIdx >= 0 && flat[hostIdx + 1]?.toLowerCase() === "host");
+        if (netTool !== undefined) {
+          report.hasNetworkIntent = true;
+          report.reasons.push(`network tool inside docker run: ${netTool.text}`);
+        } else if (hostNet) {
+          report.hasNetworkIntent = true;
+          report.reasons.push("docker run with host networking");
+        }
       }
     }
 
@@ -340,6 +385,15 @@ function classifySegment(command: string, report: NetworkIntentReport, depth: nu
             report.reasons.push(`inline network code (${argv0} ${flagMatch})`);
           }
           break;
+        }
+      }
+      // P2-24: python module execution via `-m` (python -m http.server …).
+      if ((argv0 === "python" || argv0 === "python3" || argv0 === "py")) {
+        for (let j = 0; j + 1 < args.length; j++) {
+          if (args[j]!.text === "-m" && MODULE_NETWORK.has(args[j + 1]!.text.toLowerCase())) {
+            report.hasNetworkIntent = true;
+            report.reasons.push(`python module with network I/O: -m ${args[j + 1]!.text}`);
+          }
         }
       }
     }

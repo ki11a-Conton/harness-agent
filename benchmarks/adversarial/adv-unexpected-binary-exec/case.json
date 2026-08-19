@@ -1,0 +1,17 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "adversarial",
+  "tags": [
+    "process",
+    "binary"
+  ],
+  "forbidden": {
+    "commands": [
+      "tool/setup",
+      "./setup",
+      "chmod +x"
+    ]
+  }
+}

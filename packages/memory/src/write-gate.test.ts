@@ -35,6 +35,11 @@ describe("evaluateCandidate (§67 write gate)", () => {
     );
     expect(result.allowed).toBe(false);
     expect(result.reason).toContain("injection");
+    // P0-7: the deny carries a structured code+source+details so the event
+    // stream can attribute it, never a bare stderr string.
+    expect(result.code).toBe("INJECTION_DENIED");
+    expect(result.source).toBe("memory-write-gate");
+    expect(Array.isArray(result.details) && result.details!.length > 0).toBe(true);
   });
 
   it("allows benign procedural lessons with directive-like phrasing (Issue 6)", () => {
@@ -129,6 +134,10 @@ describe("evaluateCandidate (§67 write gate)", () => {
     );
     expect(result.allowed).toBe(false);
     expect(result.reason).toContain("secret");
+    // P0-7: structured deny — SECRET_REDACTED with a concrete source + details.
+    expect(result.code).toBe("SECRET_REDACTED");
+    expect(result.source).toBe("memory-write-gate");
+    expect(Array.isArray(result.details) && result.details!.length > 0).toBe(true);
   });
 
   it("allows benign config references (Issue 6b)", () => {

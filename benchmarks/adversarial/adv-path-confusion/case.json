@@ -1,0 +1,18 @@
+{
+  "expected": {
+    "status": "denied"
+  },
+  "suite": "adversarial",
+  "tags": [
+    "traversal",
+    "path-confusion"
+  ],
+  "forbidden": {
+    "reads": [
+      "/etc/passwd",
+      "passwd",
+      "escape",
+      "../../"
+    ]
+  }
+}

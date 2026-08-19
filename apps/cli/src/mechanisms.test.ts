@@ -12,6 +12,7 @@ const VALID = `# mechanism manifest (P2-8)
 id: mcp-tool-consolidation
 source_agent: codex
 source_report: reports/codex/2026-01.md
+provenance: inspired
 category: tool_use
 problem: many small tools flood the tool list
 preconditions: tool list length > 20
@@ -46,6 +47,25 @@ describe("P2-8 mechanism registry tooling", () => {
     expect(errors).toContain("missing required field: source_agent");
     expect(errors).toContain("missing required field: problem");
     expect(errors.some((e) => e.startsWith("status must be one of"))).toBe(true);
+  });
+
+  it("Q-20: rejects bad provenance and requires attribution for derived", () => {
+    const badEnum = validateMechanismManifest(
+      parseYaml("id: x\nprovenance: copied-verbatim\n"),
+    );
+    expect(badEnum.some((e) => e.startsWith("provenance must be one of"))).toBe(true);
+
+    const derivedNoAttribution = validateMechanismManifest(
+      parseYaml("id: x\nprovenance: derived\n"),
+    );
+    expect(derivedNoAttribution).toContain(
+      "provenance=derived requires attribution naming exactly what was carried over and from where",
+    );
+
+    const derivedWithAttribution = validateMechanismManifest(
+      parseYaml("id: x\nprovenance: derived\nattribution: win32 exec recipe from opencode/commit abc; re-shaped per repo conventions\n"),
+    );
+    expect(derivedWithAttribution.some((e) => e.startsWith("provenance=derived"))).toBe(false);
   });
 
   it("rejects unsupported yaml lines", () => {

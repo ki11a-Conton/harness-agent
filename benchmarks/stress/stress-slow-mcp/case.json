@@ -1,0 +1,17 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "stress",
+  "tags": [
+    "slow-mcp"
+  ],
+  "timeoutMs": 90000,
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "out/copied.txt",
+      "mustChange": true
+    }
+  ]
+}

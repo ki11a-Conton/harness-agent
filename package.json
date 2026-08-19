@@ -4,13 +4,17 @@
   "version": "0.1.0",
   "type": "module",
   "packageManager": "pnpm@11.21.0",
-  "scripts": {"build": "tsc -b",
+  "scripts": {
+    "build": "tsc -b",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "benchmark:smoke": "node apps/cli/dist/main.js benchmark --suite adversarial --limit 1 --allow-stub --out .ci/bench-smoke"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
+    "@vitest/coverage-v8": "^4.1.10",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }

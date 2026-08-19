@@ -26,9 +26,18 @@ export interface ContextPipelineDeps {
 /** P0-8: a low-trust content source rejected for prompt injection during
  *  context assembly. The runtime turns each entry into a
  *  security.injection_denied event; the content itself never becomes a block. */
+export type ContextInjectionSource =
+  | "project"
+  | "skill"
+  | "tool"
+  | "memory"
+  | "web"
+  | "mcp"
+  | "subagent";
+
 export interface ContextInjection {
   id: string;
-  source: "project" | "skill";
+  source: ContextInjectionSource;
   reasons: string[];
 }
 
@@ -199,9 +208,33 @@ export class ContextPipeline {
       ephemeral: false,
     };
 
+    // P0-8 trust boundary over every prior loop block (tool output, MCP /
+    // subagent / memory / web content): these are semi-trusted or untrusted
+    // DATA. Content that carries prompt-injection material is dropped here —
+    // it can never become a block and can never fake its way into
+    // authoritative policy. Only the authoritative channels (system/user,
+    // both `trusted`) are exempt from scanning.
+    const priorBlocks: ContextBlock[] = [];
+    for (const block of opts.priorBlocks) {
+      if (block.trust === "trusted") {
+        priorBlocks.push(block);
+        continue;
+      }
+      const report = detectPromptInjection(block.content);
+      if (report.hasInjection) {
+        injected.push({
+          id: block.id,
+          source: block.source as ContextInjectionSource,
+          reasons: report.reasons,
+        });
+        continue;
+      }
+      priorBlocks.push(block);
+    }
+
     // 5. Budget plan over system + skills + project + prior blocks.
     const plan = this.planner.plan(
-      [systemBlock, ...skillBlocks, ...instructionBlocks, ...opts.priorBlocks],
+      [systemBlock, ...skillBlocks, ...instructionBlocks, ...priorBlocks],
       opts.budget,
     );
 

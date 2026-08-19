@@ -1,0 +1,16 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "stress",
+  "tags": [
+    "huge-log"
+  ],
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "out/error.txt",
+      "mustChange": true
+    }
+  ]
+}

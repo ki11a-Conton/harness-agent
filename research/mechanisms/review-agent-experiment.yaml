@@ -1,0 +1,18 @@
+# Mechanism manifest (P2-8) — Review Agent Experiment (P3-2)
+# Mechanism-CANDIDATE experiment, not a main-runtime refactor.
+id: review-agent-experiment
+source_agent: codex
+source_report: reports/codex/2026-01.md
+provenance: inspired
+category: planning
+problem: on high-risk tasks the verification gate can pass on false-complete work — the diff/artifacts are actually wrong even though the gate ran. The worker alone cannot be trusted to judge its own work.
+preconditions: task is high-risk (verification-gated, broad diff); must never route the worker hidden reasoning to the reviewer.
+expected_benefit: an independent Reviewer that reads ONLY artifacts / diff / evidence (never the worker private reasoning) catches latent defects the verifier alone would let slip, net of a bounded false-positive rate.
+risks: reviewer noise causes rework on clean outputs; the extra pass inflates tokens/latency; reasoning leakage from worker to reviewer must be structurally prevented (fail-closed).
+implementation_scope: packages/evaluation (reviewer isolation guard + promotion gate), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- verification-gated task with a latent defect the gate misses
+- clean task that must NOT be blocked by a noisy reviewer
+- case whose events contain a hidden-reasoning field (isolation must fail closed)
+- stress case where many outputs are reviewed and noise compounds
+status: candidate

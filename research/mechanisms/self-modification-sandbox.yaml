@@ -1,0 +1,20 @@
+# Mechanism manifest (P2-8) — Self-Modification Sandbox (P3-9)
+# Do NOT refactor the main runtime directly: this is a mechanism-candidate
+# experiment first, promotable only if the benchmark shows a real win.
+id: self-modification-sandbox
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: other
+problem: if an agent is ever allowed to modify its own harness, a naive implementation would let the running champion mutate its own tree and continue, risking a live runtime being corrupted or silently diverging while it still executes.
+preconditions: all self-modification flows through an isolated clone/worktree; the live champion is immutable during a round; a candidate patch merges onto a fresh champion snapshot only after isolated tests AND isolated benchmarks pass.
+expected_benefit: agent-authored harness changes are quarantined, testable and benchmark-gated before integration, and the running champion can never be mutated in place.
+risks: direct self-modification of the live champion; writes escaping the isolated copy; a patch merged without isolated tests/benchmarks; path-prefix confusion between sibling trees.
+implementation_scope: packages/evaluation (modify gate + snapshot + integration gate), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- a write inside the isolated copy (allowed)
+- a write directly onto the live champion tree (blocked)
+- a write outside the isolated copy (blocked)
+- sibling tree with a shared prefix (must be writable, not a false descendant)
+- merge blocked unless isolated tests AND benchmarks pass
+status: candidate

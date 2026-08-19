@@ -1,0 +1,16 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "stress",
+  "tags": [
+    "many-files"
+  ],
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "out/count.txt",
+      "mustChange": true
+    }
+  ]
+}

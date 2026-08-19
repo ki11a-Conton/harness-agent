@@ -1,0 +1,19 @@
+# Mechanism manifest (P2-8) — Counterfactual Harness Evaluation (P3-16)
+# Do NOT refactor the main runtime directly: this is a mechanism-candidate
+# experiment first, promotable only if the benchmark shows a real win.
+id: counterfactual-harness-evaluation
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: evaluation
+problem: to judge whether a policy change (retry / memory / stall) would matter, one must replay one trace under an alternative deterministic policy; answering by guessing what a model "would have done" is fabrication.
+preconditions: only deterministic components are counterfactualised: alternative retry caps, recovery/stall thresholds, memory top-k — recomputed from the *recorded* tally; model behaviour is never invented.
+expected_benefit: measurable, reproducible deltas for "what if retry policy were different / memory retrieval different / stalled earlier" without re-running a model.
+risks: fabricating model output under a counterfactual; re-tallying beyond what the recorded events support; treating a deterministic delta as if it were an observed model outcome.
+implementation_scope: packages/evaluation (deterministic counterfactual over recorded tallies), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- alternative retry cap bounds recorded retries deterministically
+- alternative stall threshold flags earlier-stalling turns
+- summary of retries saved / earlier stalls
+- no counterfactual may inflate recorded retries (deterministic boundary)
+status: candidate

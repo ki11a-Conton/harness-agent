@@ -27,13 +27,39 @@ export const MECHANISM_CATEGORIES = [
   "error_recovery",
   "context_management",
   "evaluation",
+  "security",
   "other",
 ] as const;
+
+export const MECHANISM_CATEGORY_SET = MECHANISM_CATEGORIES as readonly string[];
+
+/**
+ * Q-20: provenance discipline. Every mechanism must declare how its code
+ * relates to a reference agent's source so we never silently copy a long code
+ * block.
+ *
+ * - `original`: no external reference; designed from first principles here.
+ * - `inspired`: concept/design informed by a reference agent's report/source,
+ *   but the implementation is original code written for this repo.
+ * - `reimplemented`: re-implements a reference feature independently (clean
+ *   room) out of the same public contract; no lines copied.
+ * - `derived`: carries over non-trivial code/structures from a reference
+ *   source — REQUIRES `attribution` naming exactly what and from where.
+ */
+export const MECHANISM_PROVENANCE = [
+  "original",
+  "inspired",
+  "reimplemented",
+  "derived",
+] as const;
+
+export const MECHANISM_PROVENANCE_SET = MECHANISM_PROVENANCE as readonly string[];
 
 export const MECHANISM_REQUIRED_FIELDS = [
   "id",
   "source_agent",
   "source_report",
+  "provenance",
   "category",
   "problem",
   "preconditions",
@@ -104,8 +130,14 @@ export function validateMechanismManifest(record: Record<string, unknown>): stri
   if (record.status !== undefined && !(MECHANISM_STATUS as readonly string[]).includes(String(record.status))) {
     errors.push(`status must be one of: ${MECHANISM_STATUS.join(", ")}`);
   }
-  if (record.category !== undefined && !(MECHANISM_CATEGORIES as readonly string[]).includes(String(record.category))) {
+  if (record.category !== undefined && !MECHANISM_CATEGORY_SET.includes(String(record.category))) {
     errors.push(`category must be one of: ${MECHANISM_CATEGORIES.join(", ")}`);
+  }
+  if (record.provenance !== undefined && !MECHANISM_PROVENANCE_SET.includes(String(record.provenance))) {
+    errors.push(`provenance must be one of: ${MECHANISM_PROVENANCE.join(", ")}`);
+  }
+  if (record.provenance === "derived" && (record.attribution === undefined || record.attribution === "")) {
+    errors.push("provenance=derived requires attribution naming exactly what was carried over and from where");
   }
   if (record.evaluation_cases !== undefined && !Array.isArray(record.evaluation_cases)) {
     errors.push("evaluation_cases must be a list");

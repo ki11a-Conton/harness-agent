@@ -1,5 +1,27 @@
 import type { AgentId, ApprovalId, SessionId, TurnId } from "./ids.js";
 
+/**
+ * P2-44 — decision scope.
+ *
+ * An approval request must state exactly what the decision binds, so a host can
+ * (a) grant a single call, (b) grant a single tool invocation pattern, or
+ * (c) expand to "everything matching for the rest of the session". Scope is a
+ * closed taxonomy; anything not listed below is a compile error.
+ */
+export type ApprovalScope = "one_call" | "one_tool" | "session";
+
+export const APPROVAL_SCOPES = [
+  "one_call",
+  "one_tool",
+  "session",
+] as const satisfies readonly ApprovalScope[];
+
+export function isApprovalScope(value: unknown): value is ApprovalScope {
+  return (
+    typeof value === "string" && (APPROVAL_SCOPES as readonly string[]).includes(value)
+  );
+}
+
 export interface ApprovalRequest {
   id: ApprovalId;
   sessionId: SessionId;
@@ -9,11 +31,21 @@ export interface ApprovalRequest {
   target: string;
   reason: string;
   policyRule?: string;
+  /**
+   * Decision scope (P2-44). Optional on the wire for backward compatibility;
+   * the resolver normalizes it to "one_call" when absent, and the resulting
+   * ApprovalDecisionRecord always carries an explicit scope.
+   */
+  scope?: ApprovalScope;
   createdAt: number;
   expiresAt: number;
 }
 
 export type ApprovalDecisionValue = "allow" | "deny" | "expired" | "cancelled";
+
+export interface ApprovalResolver {
+  resolve(request: ApprovalRequest, signal: AbortSignal): Promise<ApprovalDecision>;
+}
 
 export interface ApprovalDecision {
   id: ApprovalId;
@@ -22,6 +54,59 @@ export interface ApprovalDecision {
   decidedBy?: string;
 }
 
-export interface ApprovalResolver {
-  resolve(request: ApprovalRequest, signal: AbortSignal): Promise<ApprovalDecision>;
+/**
+ * Durable, auditable decision record (P2-44). Every resolved approval produces
+ * exactly one record capturing WHO decided, WHEN, AT what scope, and for WHICH
+ * action/target. Records are append-only: they are never deleted, so a decision
+ * can be audited long after the process that made it has gone away.
+ */
+export interface ApprovalDecisionRecord extends ApprovalDecision {
+  sessionId: SessionId;
+  turnId?: TurnId;
+  agentId: AgentId;
+  action: string;
+  target: string;
+  /** Always explicit — resolved from `request.scope ?? "one_call"`. */
+  scope: ApprovalScope;
+  /** True when the outcome is "expired" (late allow ⇒ expired). */
+  expired: boolean;
+}
+
+/**
+ * Pure projection of a settled decision into its auditable record. No storage
+ * side effects, so it is unit-testable and usable by any host/UI auditing an
+ * approval stream.
+ */
+export function approvalDecisionRecord(
+  request: ApprovalRequest,
+  decision: ApprovalDecision,
+): ApprovalDecisionRecord {
+  return {
+    id: decision.id,
+    sessionId: request.sessionId,
+    ...(request.turnId !== undefined ? { turnId: request.turnId } : {}),
+    agentId: request.agentId,
+    action: request.action,
+    target: request.target,
+    scope: isApprovalScope(request.scope) ? request.scope : "one_call",
+    value: decision.value,
+    decidedAt: decision.decidedAt,
+    ...(decision.decidedBy !== undefined ? { decidedBy: decision.decidedBy } : {}),
+    expired: decision.value === "expired",
+  };
+}
+
+/**
+ * Persistence seam for approvals (P2-44). A durable implementation keeps a
+ * pending request re-enumerable and resolvable after a process restart, and
+ * keeps the decision audit log append-only so it survives restarts unchanged.
+ *
+ * A live waiter waiting on a promise cannot be re-hydrated across a restart
+ * (that is the job of the host), but the request itself is NOT lost: the host
+ * re-surfaces it from {@link listPending} and resolves it as normal.
+ */
+export interface ApprovalStore {
+  listPending(sessionId?: SessionId): ApprovalRequest[];
+  /** Append-only audit log of every decision (never deleted). */
+  listDecisions(sessionId?: SessionId): ApprovalDecisionRecord[];
 }

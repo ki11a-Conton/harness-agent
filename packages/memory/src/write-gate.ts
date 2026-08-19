@@ -1,4 +1,4 @@
-import type { MemoryCandidate } from "@ar/contracts";
+import type { ErrorCode, MemoryCandidate } from "@ar/contracts";
 import { detectPromptInjection, detectSecrets } from "@ar/security";
 
 /**
@@ -24,6 +24,12 @@ export interface WriteGateResult {
   allowed: boolean;
   /** Empty when allowed; otherwise names the failing criterion. */
   reason: string;
+  /** P0-7: security-deny error code (injection → INJECTION_DENIED, secret → SECRET_REDACTED). Undefined for quota denials. */
+  code?: ErrorCode;
+  /** P0-7: subsystem that surfaced the denial ("memory-write-gate"). */
+  source?: string;
+  /** P0-7: named sub-detections (injection reasons / secret kinds). */
+  details?: string[];
 }
 
 /**
@@ -46,12 +52,17 @@ export function evaluateCandidate(
     : policy.minImportance;
 
   // Security checks first (Issue 6/6b): injected content and secrets must
-  // never be persisted, regardless of importance or novelty.
+  // never be persisted, regardless of importance or novelty. The denial is
+  // structured (P0-7) — code + source + details — so it can be surfaced on
+  // the event stream, not just as a bare stderr message.
   const injection = detectPromptInjection(candidate.content);
   if (injection.hasInjection) {
     return {
       allowed: false,
       reason: `injection detected: ${injection.reasons.join(", ")}`,
+      code: "INJECTION_DENIED",
+      source: "memory-write-gate",
+      details: injection.reasons,
     };
   }
   const secret = detectSecrets(candidate.content);
@@ -59,6 +70,9 @@ export function evaluateCandidate(
     return {
       allowed: false,
       reason: `secret detected: ${secret.secrets.join(", ")}`,
+      code: "SECRET_REDACTED",
+      source: "memory-write-gate",
+      details: secret.secrets,
     };
   }
 

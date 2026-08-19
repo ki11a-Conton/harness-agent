@@ -1,0 +1,18 @@
+# Mechanism manifest (P2-8) — Context Policy Learning (P3-11)
+# Do NOT refactor the main runtime directly: this is a mechanism-candidate
+# experiment first, promotable only if the benchmark shows a real win.
+id: context-policy-learning
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: context_management
+problem: compaction threshold, retrieval top-k and recent-message tail are hard-coded, so a niche working-set is either compacted too aggressively (drops critical context) or left too long (wastes tokens); a learned policy should tune them per benchmark.
+preconditions: policies are auto-selected by the benchmark on the same eval split; a policy must NOT drop critical context (no context-overflow / critical-drop regressions); only the cost-adjusted best beats the champion and is promoted.
+expected_benefit: compaction/retrieval/tail are tuned to the workload, lowering tokens while preserving the critical context needed to pass.
+risks: an aggressive policy that drops critical context to look fast; over-optimizing tokens at the cost of correctness; promoting without a real cost-adjusted lift.
+implementation_scope: packages/evaluation (context policy scoring + selection), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- a policy that improves cost-adjusted score (promoted)
+- a policy that drops critical context (must be rejected regardless of speed)
+- nothing beats the champion (champion kept)
+status: candidate

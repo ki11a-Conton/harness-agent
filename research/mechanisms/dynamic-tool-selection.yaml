@@ -1,0 +1,18 @@
+# Mechanism manifest (P2-8) — Dynamic Tool Selection experiment (P3-4)
+# Mechanism-CANDIDATE experiment, not a main-runtime refactor.
+id: dynamic-tool-selection
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: tool_use
+problem: when the tool catalog is large, every exposed tool schema eats context-token budget; exposing the full catalog wastes tokens and can crowd out useful reasoning.
+preconditions: the tool catalog is large enough that schema cost is material; a deterministic selector can infer which tools are relevant from task/fixture cues; safety-critical tools must NEVER be omitted.
+expected_benefit: exposing only a task-relevant tool subset cuts schema tokens per run, and the saved budget improves pass rate on long/context-hungry tasks, net of the cost of occasionally missing a needed tool (recovery via fallback).
+risks: the selector could omit a tool a task actually needed, causing failure/retries; subset selection must be fail-closed on any safety-critical tool; pure token savings with no quality gain must not be promoted.
+implementation_scope: packages/evaluation (tool relevance selector + safety subset invariant + promotion gate), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- large-catalog task where schema token savings relieve context pressure (should lift pass)
+- task needing an uncommon tool that a naive selector might omit (must still recover)
+- any selection that drops a safety-critical tool must be a hard invariant violation
+- stress case with many tools where subset exposes few but coverage falls
+status: candidate

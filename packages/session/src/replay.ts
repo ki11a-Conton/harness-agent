@@ -1,4 +1,5 @@
 import type { AgentEvent, EventStore, SessionId, TurnId } from "@ar/contracts";
+import { toolNameOf as toolNameOfPayload } from "@ar/contracts";
 
 export type ReplayTurnStatus = "completed" | "failed" | "cancelled" | "running" | "unknown";
 
@@ -87,6 +88,11 @@ export class SessionReplayer {
     }
 
     const turns: TurnReplay[] = [];
+    // P2-33: track the turn's earliest sequence so turn ordering is a total
+    // deterministic order even when two turns share the same wall-clock
+    // firstEventAt (parallel tool/subagent completions can land in the same ms).
+    // Replay must NOT depend on wall-clock tie-break.
+    const turnFirstSeq = new Map<TurnId, number>();
     for (const [turnId, evs] of byTurn) {
       const toolCallIds = new Set<string>();
       for (const ev of evs) {
@@ -96,6 +102,9 @@ export class SessionReplayer {
         }
       }
       const timestamps = evs.map((e) => e.timestamp);
+      // evs are pushed in `ordered` (sequence) order, so the first element is
+      // the earliest-sequence event of this turn.
+      turnFirstSeq.set(turnId, evs[0]!.sequence);
       turns.push({
         turnId,
         status: deriveTurnStatus(evs),
@@ -104,11 +113,24 @@ export class SessionReplayer {
         lastEventAt: Math.max(...timestamps),
       });
     }
-    turns.sort((a, b) => a.firstEventAt - b.firstEventAt);
+    // Deterministic total order: primary by first real timestamp, then by
+    // earliest sequence (append order), then by turnId lexically. Never falls
+    // back to map-insertion or engine-stable-sort behavior for equal timestamps.
+    turns.sort((a, b) => {
+      if (a.firstEventAt !== b.firstEventAt) {
+        return a.firstEventAt - b.firstEventAt;
+      }
+      const sa = turnFirstSeq.get(a.turnId)!;
+      const sb = turnFirstSeq.get(b.turnId)!;
+      if (sa !== sb) return sa - sb;
+      if (a.turnId < b.turnId) return -1;
+      if (a.turnId > b.turnId) return 1;
+      return 0;
+    });
 
     const messages: ReplayMessage[] = [];
     for (const ev of ordered) {
-      const toolName = typeof ev.payload.tool === "string" ? ev.payload.tool : typeof ev.payload.name === "string" ? ev.payload.name : undefined;
+      const toolName = toolNameOfPayload(ev.payload);
       if (ev.type === "tool.output") {
         messages.push({
           ...(ev.turnId !== undefined ? { turnId: ev.turnId } : {}),

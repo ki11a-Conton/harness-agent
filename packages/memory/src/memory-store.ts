@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type {
   MemoryEntry,
@@ -8,10 +8,18 @@ import type {
   MemoryType,
 } from "@ar/contracts";
 import { AgentError, errorInfo } from "@ar/contracts";
+import { atomicWriteFile, backupTree, withLock } from "@ar/store-integrity";
 import { checkUnsafeMemory, scanMemoryEntries } from "./security-gate.js";
 
 /** Single JSONL file holding every memory entry (MEMORY-001). */
 export const MEMORY_FILE_NAME = "memories.jsonl";
+
+/** Result of `backup()` for the JSONL backend. */
+export interface MemoryBackupResult {
+  path: string;
+  files: number;
+  bytes: number;
+}
 
 /** Read and parse every entry from a memories.jsonl file (used by the
  *  JSONL → SQLite migration). Missing file yields []. Corrupt lines are
@@ -90,18 +98,20 @@ export class JsonlMemoryStore implements MemoryStore {
     return parseJsonlLines(raw);
   }
 
-  /** Atomic rewrite of the whole file: temp file + rename in the same dir. */
+  /**
+   * Atomic, durable rewrite of the whole file: temp file + fsync + rename in
+   * the same dir via [[atomicWriteFile]] (P2-35). A crash never leaves a
+   * half-written line, and an acked write survives power loss.
+   */
   private async rewrite(entries: MemoryEntry[]): Promise<void> {
     await mkdir(this.dataDir, { recursive: true });
     const target = this.filePath();
-    const tmp = `${target}.tmp`;
     const body = entries
       .map((entry) => JSON.stringify(entry))
       .join("\n");
     const content = entries.length === 0 ? "" : `${body}\n`;
     try {
-      await writeFile(tmp, content, "utf8");
-      await rename(tmp, target);
+      await atomicWriteFile(target, content);
     } catch (cause) {
       throw new AgentError(
         errorInfo("INTERNAL_ERROR", `memory store write failed: ${target}`, {
@@ -109,6 +119,10 @@ export class JsonlMemoryStore implements MemoryStore {
         }),
       );
     }
+  }
+
+  private lockKey(): string {
+    return `memory:jsonl:${this.dataDir}`;
   }
 
   private static unknownMemory(id: MemoryId, op: string): AgentError {
@@ -122,18 +136,22 @@ export class JsonlMemoryStore implements MemoryStore {
     return scanMemoryEntries(await this.readAll());
   }
 
-  /** Upsert: replaces the entry with the same id, otherwise appends. */
+  /** Upsert: replaces the entry with the same id, otherwise appends.
+   *  P2-35: serialized under a per-store lock so concurrent writes cannot
+   *  lose updates on the read-modify-write cycle. */
   async write(entry: MemoryEntry): Promise<void> {
     const reason = checkUnsafeMemory(entry.content, "memory-store");
     if (reason !== null) {
       this.onSecurityDenied?.(reason.event);
       throw new AgentError(errorInfo("SECURITY_DENIED", `memory write blocked: ${reason.message}`));
     }
-    const all = await this.readAll();
-    const index = all.findIndex((e) => e.id === entry.id);
-    if (index >= 0) all[index] = entry;
-    else all.push(entry);
-    await this.rewrite(all);
+    await withLock(this.lockKey(), async () => {
+      const all = await this.readAll();
+      const index = all.findIndex((e) => e.id === entry.id);
+      if (index >= 0) all[index] = entry;
+      else all.push(entry);
+      await this.rewrite(all);
+    });
   }
 
   /** Returns the entry even when soft-deleted (reviewability, §67). */
@@ -173,28 +191,44 @@ export class JsonlMemoryStore implements MemoryStore {
     );
   }
 
-  /** Replaces an existing entry; unknown id fails explicitly. */
+  /** Replaces an existing entry; unknown id fails explicitly.
+   *  P2-35: serialized under the same per-store lock as [[write]]. */
   async update(entry: MemoryEntry): Promise<void> {
     const reason = checkUnsafeMemory(entry.content, "memory-store");
     if (reason !== null) {
       this.onSecurityDenied?.(reason.event);
       throw new AgentError(errorInfo("SECURITY_DENIED", `memory update blocked: ${reason.message}`));
     }
-    const all = await this.readAll();
-    const index = all.findIndex((e) => e.id === entry.id);
-    if (index < 0) throw JsonlMemoryStore.unknownMemory(entry.id, "update");
-    all[index] = entry;
-    await this.rewrite(all);
+    await withLock(this.lockKey(), async () => {
+      const all = await this.readAll();
+      const index = all.findIndex((e) => e.id === entry.id);
+      if (index < 0) throw JsonlMemoryStore.unknownMemory(entry.id, "update");
+      all[index] = entry;
+      await this.rewrite(all);
+    });
   }
 
-  /** Soft delete: flips deleted + bumps updatedAt, keeps the line (§67). */
+  /** Soft delete: flips deleted + bumps updatedAt, keeps the line (§67).
+   *  P2-35: serialized under the same per-store lock as [[write]]. */
   async remove(id: MemoryId): Promise<void> {
-    const all = await this.readAll();
-    const index = all.findIndex((e) => e.id === id);
-    if (index < 0) throw JsonlMemoryStore.unknownMemory(id, "remove");
-    const entry = all[index]!;
-    all[index] = { ...entry, deleted: true, updatedAt: Date.now() };
-    await this.rewrite(all);
+    await withLock(this.lockKey(), async () => {
+      const all = await this.readAll();
+      const index = all.findIndex((e) => e.id === id);
+      if (index < 0) throw JsonlMemoryStore.unknownMemory(id, "remove");
+      const entry = all[index]!;
+      all[index] = { ...entry, deleted: true, updatedAt: Date.now() };
+      await this.rewrite(all);
+    });
+  }
+
+  /**
+   * P2-35 backup: copy the whole JSONL store (plus any sibling store files) to
+   * `<dataDir>/backups/<stamp>/`. Excludes temp/scratch files and does not
+   * back up the `backups` directory itself.
+   */
+  async backup(opts: { now?: () => Date } = {}): Promise<MemoryBackupResult> {
+    const result = await backupTree(this.dataDir, { now: opts.now });
+    return { path: result.path, files: result.files, bytes: result.bytes };
   }
 }
 

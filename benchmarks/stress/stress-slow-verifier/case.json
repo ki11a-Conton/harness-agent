@@ -1,0 +1,17 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "stress",
+  "tags": [
+    "slow-verifier"
+  ],
+  "timeoutMs": 60000,
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "README.md",
+      "mustChange": true
+    }
+  ]
+}

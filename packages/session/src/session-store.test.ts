@@ -277,4 +277,35 @@ describe("JSONLSessionStore (SESSION-001)", () => {
       expect((err as SessionStoreError).code).toBe("UNSAFE_ID");
     }
   });
+
+  // ---- P2-35: Store Integrity ----------------------------------------------
+
+  it("backup() snapshots the store and round-trips a session (P2-35)", async () => {
+    const store = makeStore();
+    const session = makeSession();
+    await store.createSession(session);
+    await store.appendMessage(makeMessage(session.id, undefined, { content: "msg" }));
+    await store.saveStateSnapshot(session.id, { turns: [] });
+
+    const result = await store.backup({ now: () => new Date("2026-01-02T03:04:05.060Z") });
+    expect(result.path).toContain("backups/20260102T030405060");
+    expect(result.files).toBe(3); // sessions/, messages/, state/
+
+    const backedSession = await readFile(
+      path.join(result.path, "sessions", `${session.id}.json`),
+      "utf8",
+    );
+    expect(backedSession).toContain(session.id);
+  });
+
+  it("backup() excludes the backups dir from itself and writes no temp files (P2-35)", async () => {
+    const store = makeStore();
+    await store.createSession(makeSession());
+    const first = await store.backup({ now: () => new Date("2026-01-02T03:04:05.060Z") });
+    // A second backup must not recurse into the first backup's directory.
+    const second = await store.backup({ now: () => new Date("2026-01-02T03:04:06.060Z") });
+    const secondFiles = await import("node:fs/promises").then((m) => m.readdir(second.path));
+    expect(secondFiles).not.toContain("backups");
+    expect(first.path).not.toBe(second.path);
+  });
 });

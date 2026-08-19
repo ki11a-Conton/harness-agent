@@ -6,6 +6,7 @@
     "id",
     "source_agent",
     "source_report",
+    "provenance",
     "category",
     "problem",
     "preconditions",
@@ -19,9 +20,14 @@
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]+$" },
     "source_agent": { "type": "string", "enum": ["codex", "claude-code", "hermes", "opencode", "pi"] },
     "source_report": { "type": "string", "pattern": "^reports/[a-z-]+/.+" },
+    "provenance": {
+      "type": "string",
+      "enum": ["original", "inspired", "reimplemented", "derived"]
+    },
+    "attribution": { "type": "string" },
     "category": {
       "type": "string",
-      "enum": ["prompting", "memory", "planning", "tool_use", "learning", "scheduling", "error_recovery", "context_management", "evaluation", "other"]
+      "enum": ["prompting", "memory", "planning", "tool_use", "learning", "scheduling", "error_recovery", "context_management", "evaluation", "security", "other"]
     },
     "problem": { "type": "string" },
     "preconditions": { "type": "string" },

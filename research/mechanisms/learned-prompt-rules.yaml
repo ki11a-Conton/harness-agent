@@ -1,0 +1,21 @@
+# Mechanism manifest (P2-8) — Learned Prompt Rules experiment (P3-7)
+# Do NOT refactor the main runtime directly: this is a mechanism-candidate
+# experiment first, promotable only if the benchmark shows a real win and the
+# security scan passes.
+id: learned-prompt-rules
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: learning
+problem: an agent may re-derive the same prompting guidance on every recurring task type, or plain reflection text may be pasted straight into the system prompt, bloating it with raw transcript pieces that carry formatting noise, stale wording, or hidden injection; a learned prompt rule should be a distilled, scoped directive.
+preconditions: a prompt rule is distilled (never a verbatim reflection append), carries version / scope / evidence, passes a security scan, is promoted only by a benchmark holdout, and can be rolled back.
+expected_benefit: injecting a distilled, scoped, security-scanned directive for a matching task type lifts pass rate without pasting reflection text, while failing closed if a candidate is a verbatim reflection append, carries injection/secret/safety-strip markers, or was never benchmark-promoted.
+risks: reflection text appended verbatim to the system prompt (the invariant this experiment exists to forbid); a rule whose scope leaks outside its task type; a single reflection stamped as evidence; promoting for token/latency only without a real pass lift; a rule that strips a verification or permission barrier.
+implementation_scope: packages/evaluation (distillation + security scan + promotion gate), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- recurring task type whose reflections distill to a safe scoped directive that lifts pass on validation
+- a verbatim reflection append candidate (must fail the security scan and never promote)
+- an injected / secret-bearing / safety-strip candidate (must fail closed)
+- a single-reflection trace that must NOT become a rule (evidence too thin)
+- a non-matching scope (must be a no-op)
+status: candidate

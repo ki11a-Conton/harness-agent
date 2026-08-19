@@ -269,4 +269,48 @@ describe("JsonlMemoryStore (MEMORY-001)", () => {
     expect(results).toHaveLength(1);
     expect(results[0]!.issues.some((i) => i.detection === "secret")).toBe(true);
   });
+
+  // ---- P2-35: Store Integrity ----------------------------------------------
+
+  it("serializes concurrent writes so no update is lost (P2-35 concurrency)", async () => {
+    // Fire many upserts concurrently. Without the per-store lock the
+    // read-modify-write cycle would lose entries; with it, all survive.
+    const entries = Array.from({ length: 40 }, (_, i) =>
+      makeEntry({ content: `lesson ${i}` }),
+    );
+    await Promise.all(entries.map((e) => store.write(e)));
+
+    const listed = await store.list();
+    expect(listed).toHaveLength(40);
+    expect(new Set(entries.map((e) => e.id)).size).toBe(40);
+  });
+
+  it("serializes concurrent updates to distinct entries without loss (P2-35)", async () => {
+    const entries = Array.from({ length: 30 }, (_, i) => makeEntry({ content: `k${i}` }));
+    await Promise.all(entries.map((e) => store.write(e)));
+    // Concurrent soft-delete of every entry.
+    await Promise.all(entries.map((e) => store.remove(e.id)));
+    expect(await store.list({ deleted: true })).toHaveLength(30);
+  });
+
+  it("backup() copies the store into backups/<stamp>/ (P2-35)", async () => {
+    const a = makeEntry({ content: "backup me" });
+    await store.write(a);
+    const result = await store.backup({ now: () => new Date("2026-01-02T03:04:05.060Z") });
+    expect(result.files).toBe(1);
+    expect(result.path).toContain("backups/20260102T030405060");
+    const backed = await readFile(join(result.path, MEMORY_FILE_NAME), "utf8");
+    expect(backed).toContain("backup me");
+    // The backups dir is excluded from itself and no temp files are copied.
+    expect(await readdir(result.path)).toEqual([MEMORY_FILE_NAME]);
+  });
+
+  it("concurrent write + backup do not corrupt the store (P2-35)", async () => {
+    const entries = Array.from({ length: 20 }, (_, i) => makeEntry({ content: `x${i}` }));
+    await Promise.all([
+      store.backup(),
+      Promise.all(entries.map((e) => store.write(e))),
+    ]);
+    expect(await store.list()).toHaveLength(20);
+  });
 });

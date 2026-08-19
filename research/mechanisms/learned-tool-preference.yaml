@@ -1,0 +1,18 @@
+# Mechanism manifest (P2-8) — Learned Tool Preference experiment (P3-5)
+# Mechanism-CANDIDATE experiment, not a main-runtime refactor.
+id: learned-tool-preference
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: learning
+problem: a tool preference derived from one successful run must NOT permanently rewire global tool ordering; un-scoped or un-validated preferences can overfit one success and regress everything else.
+preconditions: a preference must be learned from enough evidence, be scoped, pass a benchmark promotion gate, and stay rollbackable; applying it must never remove a safety-critical tool or weaken a safety boundary.
+expected_benefit: prompts only the scope-matching, benchmark-promoted, non-rolled-back tool preferences from the learned table, so long-run behavior improves without a single success stamping the global config.
+risks: overfitting one success into a global preference; a scoped preference leaking outside its scope; promotion without evidence; a preference that can never be undone (permanent behavior drift).
+implementation_scope: packages/evaluation (learned tool-preference table + scoping + promotion gate + rollback), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- preference learned from a scope's successful trace that genuinely lifts that scope's pass on a validation split
+- a single-run success that must NOT become an active global preference (evidence too thin)
+- a preference whose application would drop a safety-critical tool (must be blocked)
+- a promoted preference that is later rolled back (must no longer apply anywhere)
+status: candidate

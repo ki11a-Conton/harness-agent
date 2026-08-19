@@ -1,0 +1,18 @@
+# Mechanism manifest (P2-8) — Learned Workflow experiment (P3-6)
+# Mechanism-CANDIDATE experiment, not a main-runtime refactor.
+id: learned-workflow
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: learning
+problem: an agent may re-derive the same multi-step procedure every time it sees a recurring task type, wasting tokens and risking an inconsistent order; a learned workflow can codify the proven steps.
+preconditions: a workflow must be learned from enough successful traces, expressed only as SOFT guidance per task type, scoped, benchmark-promoted, and must NEVER bypass a permission gate or the verification gate.
+expected_benefit: injecting a learned preferred-order (A→B→C) for a matching task type lowers rework and lifts pass rate, while failing closed if a candidate ever tries to skip permission/verification.
+risks: a workflow turned mandatory instead of soft guidance; a workflow that silently omits verification; overfitting one success; a scoped workflow leaking outside its task type.
+implementation_scope: packages/evaluation (workflow candidate extraction from traces + soft-guidance model + bypass guard + promotion gate), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- recurring task type whose successful trace yields a proven A→B→C that lifts pass on validation
+- a workflow candidate that would bypass the verification gate (must fail closed)
+- a single-success trace that must NOT become a workflow (evidence too thin)
+- a workflow applied to a non-matching task type must be a no-op
+status: candidate

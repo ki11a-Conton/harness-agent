@@ -1,0 +1,17 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "stress",
+  "tags": [
+    "context-limit"
+  ],
+  "contextBudgetTokens": 8000,
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "out/summary.txt",
+      "mustChange": true
+    }
+  ]
+}

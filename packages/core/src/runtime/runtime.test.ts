@@ -5,6 +5,10 @@ import { join } from "node:path";
 import type {
   AdmittedPrompt,
   AgentDefinition,
+  AskId,
+  AskUserReply,
+  AskUserRequest,
+  AskUserStore,
   InboxStore,
   ModelEvent,
   ModelProvider,
@@ -20,8 +24,9 @@ import type {
 } from "@ar/contracts";
 import { errorInfo, newAgentId, newMessageId, newToolCallId } from "@ar/contracts";
 import { DEFAULT_TOOL_SEMANTICS } from "@ar/contracts";
+import { AdaptiveRecoveryPlanner } from "@ar/contracts";
 import { EchoModelProvider, ScriptedModelProvider } from "@ar/model";
-import { AgentRuntime } from "./runtime.js";
+import { AgentRuntime, type SkillDiscovery } from "./runtime.js";
 import { InMemoryArtifactStore } from "./artifact-store.js";
 import { MemoryEventStore, MemorySessionStore } from "../test/fakes.js";
 import { FakeOrchestrator } from "../test/fake-orchestrator.js";
@@ -74,6 +79,9 @@ function makeRuntime(
     maxIterationsPerTurn?: number;
     maxRepeatedIdenticalToolCalls?: number;
     maxStallRecoveries?: number;
+    enabledStallPatterns?: readonly import("@ar/contracts").StallPattern[];
+    maxPatternStallRecoveries?: number;
+    adaptiveRecovery?: import("@ar/contracts").AdaptiveRecoveryPlanner;
     maxDurationMs?: number;
     now?: () => number;
     maxParallelToolCalls?: number;
@@ -85,8 +93,10 @@ function makeRuntime(
     injectionDetector?: (content: string) => { hasInjection: boolean; reasons: string[] };
     inbox?: import("@ar/contracts").InboxStore;
     context?: { maxTokens: number; reserved?: Partial<import("@ar/contracts").ContextBudget["reserved"]> };
-    skills?: () => Skill[] | Promise<Skill[]>;
+    skills?: () => Skill[] | SkillDiscovery | Promise<Skill[] | SkillDiscovery>;
     skillSelector?: (entries: import("@ar/contracts").SkillIndexEntry[]) => import("@ar/contracts").SkillIndexEntry[];
+    askUserStore?: import("@ar/contracts").AskUserStore;
+    askUser?: (request: import("@ar/contracts").AskUserRequest) => Promise<import("@ar/contracts").AskUserReply | undefined>;
   },
 ) {
   const store = new MemorySessionStore();
@@ -110,7 +120,12 @@ function makeRuntime(
     ...(opts?.maxRepeatedIdenticalToolCalls !== undefined
       ? { maxRepeatedIdenticalToolCalls: opts.maxRepeatedIdenticalToolCalls }
       : {}),
+    ...(opts?.adaptiveRecovery !== undefined ? { adaptiveRecovery: opts.adaptiveRecovery } : {}),
     ...(opts?.maxStallRecoveries !== undefined ? { maxStallRecoveries: opts.maxStallRecoveries } : {}),
+    ...(opts?.enabledStallPatterns !== undefined ? { enabledStallPatterns: opts.enabledStallPatterns } : {}),
+    ...(opts?.maxPatternStallRecoveries !== undefined
+      ? { maxPatternStallRecoveries: opts.maxPatternStallRecoveries }
+      : {}),
     ...(opts?.maxParallelToolCalls !== undefined ? { maxParallelToolCalls: opts.maxParallelToolCalls } : {}),
     ...(opts?.toolCapabilityOf !== undefined ? { toolCapabilityOf: opts.toolCapabilityOf } : {}),
     ...(opts?.toolOutputBudget !== undefined ? { toolOutputBudget: opts.toolOutputBudget } : {}),
@@ -139,6 +154,8 @@ function makeRuntime(
       : {}),
     ...(opts?.now !== undefined ? { now: opts.now } : {}),
     ...(opts?.skills !== undefined ? { skills: opts.skills } : {}),
+    ...(opts?.askUserStore !== undefined ? { askUserStore: opts.askUserStore } : {}),
+    ...(opts?.askUser !== undefined ? { askUser: opts.askUser } : {}),
   });
   return { store, events, runtime };
 }
@@ -440,6 +457,9 @@ describe("AgentRuntime (CORE-001)", () => {
       expect(sec?.payload.redacted).toBe(1);
       expect(sec?.payload.tool).toBe("read");
       expect(sec?.payload.toolCallId).toBeDefined();
+      // P0-7: a redaction is attributed with source/reason/code.
+      expect(sec?.payload.source).toBe("tool-output-budget");
+      expect(sec?.payload.code).toBe("SECRET_REDACTED");
       const artifact = await readdir(dir);
       expect(artifact.length).toBe(1);
       const content = await readFile(join(dir, artifact[0]!), "utf8");
@@ -548,7 +568,7 @@ describe("AgentRuntime (CORE-001)", () => {
       expect(denied?.payload).toMatchObject({
         source: "project",
         target: join(cwd, "AGENTS.md"),
-        code: "SECURITY_DENIED",
+        code: "INJECTION_DENIED",
       });
       expect(denied?.payload.reasons).toContain("dismiss-all-instructions");
     } finally {
@@ -695,6 +715,102 @@ describe("AgentRuntime (CORE-001)", () => {
     expect(outcome.toolCalls).toBe(3);
   });
 
+  it("P2-41: terminates on an alternating A->B->A->B pattern stall that the identical gate never sees", async () => {
+    // A and B differ in ARGS (so no identical streak fires) but alternate with
+    // unchanged results across the whole window -> a pure alternating_loop.
+    const a = ScriptedModelProvider.toolCall("echo", { text: "a" });
+    const b = ScriptedModelProvider.toolCall("echo", { text: "b" });
+    const provider = new ScriptedModelProvider([
+      a, b, a, b, a, b,
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "success", output: "ok" });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      enabledStallPatterns: ["alternating_loop"],
+      maxPatternStallRecoveries: 0,
+    });
+    const { outcome, storedEvents } = await runOne(runtime, store, events);
+
+    expect(outcome.status).toBe("failed");
+    expect(outcome.error?.code).toBe("RESOURCE_LIMIT");
+    const limit = storedEvents.find((e) => e.type === "run.limit_reached");
+    expect(limit?.payload).toMatchObject({ limit: "stallPattern", pattern: "alternating_loop" });
+  });
+
+  it("P2-41: uses one pattern-stall recovery (system observation) before terminating", async () => {
+    const a = ScriptedModelProvider.toolCall("echo", { text: "a" });
+    const b = ScriptedModelProvider.toolCall("echo", { text: "b" });
+    const provider = new ScriptedModelProvider([
+      a, b, a, b, a, b,
+      a, b, a, b, a, b,
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "success", output: "ok" });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      enabledStallPatterns: ["alternating_loop"],
+      maxPatternStallRecoveries: 1,
+    });
+    const { outcome, storedEvents } = await runOne(runtime, store, events);
+
+    const recoveries = storedEvents.filter((e) => e.type === "retry.stallRecovery");
+    expect(recoveries.length).toBeGreaterThanOrEqual(1);
+    expect(recoveries[0]?.payload.pattern).toBe("alternating_loop");
+    expect(outcome.status).toBe("failed");
+    expect(outcome.error?.code).toBe("RESOURCE_LIMIT");
+    const limit = storedEvents.find((e) => e.type === "run.limit_reached");
+    expect(limit?.payload.limit).toBe("stallPattern");
+  });
+
+  it("P2-42: adaptive recovery applies bounded change_strategy / delegate observations instead of only failing", async () => {
+    // The flaky tool always fails and is NOT safe-to-retry. With the adaptive
+    // planner, the runtime injects bounded self-heal observations (not a blind
+    // retry and not an immediate fail): 2 change_strategy + 1 delegate_specialist
+    // before the budget is spent, then flows the failure through.
+    const fail = () =>
+      ScriptedModelProvider.toolCall("flaky", { op: "x" });
+    const provider = new ScriptedModelProvider([
+      fail(), fail(), fail(), fail(),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "failed", error: errorInfo("INTERNAL_ERROR", "flaky failed") });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      adaptiveRecovery: new AdaptiveRecoveryPlanner(),
+      maxToolCalls: 8,
+    });
+    const { outcome } = await runOne(runtime, store, events);
+
+    // The four failing calls produce: change_strategy(2), delegate_specialist(1),
+    // then the planner has no budgeted self-heal left (fail_safe) — no more obs.
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    const strategyObs = messages.filter((m) => m.role === "system" && m.content.startsWith("[recovery:change_strategy]"));
+    const delegateObs = messages.filter((m) => m.role === "system" && m.content.startsWith("[recovery:delegate_specialist]"));
+    expect(strategyObs).toHaveLength(2);
+    expect(delegateObs).toHaveLength(1);
+
+    // The run still completes from the model's perspective (a tool failure is
+    // surfaced to the model, not turned into an immediate turn failure).
+    expect(outcome.toolCalls).toBe(4);
+  });
+
+  it("P2-42: returns fail_safe (no observation) once every budgeted self-heal action is spent", async () => {
+    const fail = () => ScriptedModelProvider.toolCall("flaky", { op: "x" });
+    const provider = new ScriptedModelProvider([
+      fail(), fail(), fail(), fail(), fail(),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "failed", error: errorInfo("INTERNAL_ERROR", "flaky failed") });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      adaptiveRecovery: new AdaptiveRecoveryPlanner(),
+      maxToolCalls: 8,
+    });
+    await runOne(runtime, store, events);
+
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    const failSafeObs = messages.filter((m) => m.role === "system" && m.content.startsWith("[recovery:fail_safe]"));
+    // fail_safe is the unlimited backstop — no observation is injected for it.
+    expect(failSafeObs).toHaveLength(0);
+  });
+
   it("fails the turn when the wall-clock budget (maxDurationMs) is exceeded", async () => {
     let clock = 0;
     const slow: AsyncIterable<ModelEvent> = (async function* () {
@@ -805,12 +921,12 @@ describe("AgentRuntime (CORE-001)", () => {
     const textOutcome = await runOne(runtime, store, events);
     expect(textOutcome.outcome.terminationReason).toBe("model_stopped");
 
-    // limit 鈫?limit:<kind>
+    // iteration limit 鈫?agent_limit
     const loopScript = ScriptedModelProvider.toolCall("loop", {});
     const loopProvider = new ScriptedModelProvider(Array.from({ length: 30 }, () => loopScript));
     const loopRt = makeRuntime(loopProvider, new FakeOrchestrator(), { maxIterationsPerTurn: 2 });
     const loopOutcome = await runOne(loopRt.runtime, loopRt.store, loopRt.events);
-    expect(loopOutcome.outcome.terminationReason).toBe("limit:maxIterationsPerTurn");
+    expect(loopOutcome.outcome.terminationReason).toBe("agent_limit");
 
     // model error 鈫?model_error
     const errProvider = new ScriptedModelProvider([
@@ -1051,6 +1167,68 @@ describe("AgentRuntime (CORE-001)", () => {
     expect(prompt.status).toBe("consumed");
   });
 
+  it("steer injection is exactly-once: an already-appended promptId message is not re-injected (P2-36)", async () => {
+    class MemInbox implements InboxStore {
+      prompts: AdmittedPrompt[] = [];
+      async admit(p: AdmittedPrompt) {
+        this.prompts.push(p);
+      }
+      async listPending(sessionId: SessionId) {
+        return this.prompts.filter((p) => p.sessionId === sessionId && p.status === "pending");
+      }
+      async listAll(sessionId: SessionId) {
+        return this.prompts.filter((p) => p.sessionId === sessionId);
+      }
+      async markPromoted(id: PromptId) {
+        const p = this.prompts.find((x) => x.id === id)!;
+        p.status = "promoted";
+      }
+      async markConsumed(id: PromptId) {
+        const p = this.prompts.find((x) => x.id === id)!;
+        p.status = "consumed";
+      }
+    }
+    const inbox = new MemInbox();
+    const provider = new ScriptedModelProvider([ScriptedModelProvider.text("done")]);
+    const { runtime, store } = makeRuntime(provider, new FakeOrchestrator({ status: "success", output: "ok" }), {
+      inbox,
+    });
+    const session = await runtime.createSession({ agent: AGENT, cwd: "C:\\work" });
+    const turn = await runtime.startTurn(session.id, "do the thing");
+    const promptId = "prompt_steer_recover" as never;
+    // Simulate the P2-36 crash window: a prior attempt appended the message but
+    // crashed before marking the prompt consumed — so the steer is still pending
+    // and the message already exists in the transcript.
+    await store.appendMessage({
+      id: newMessageId(),
+      sessionId: session.id,
+      turnId: turn.id,
+      role: "user",
+      content: "[steering] use the red theme",
+      promptId,
+      createdAt: Date.now(),
+    });
+    inbox.prompts.push({
+      id: promptId,
+      sessionId: session.id,
+      text: "use the red theme",
+      kind: "steer",
+      status: "pending",
+      admittedAt: Date.now(),
+    });
+
+    const outcome = await runtime.runTurn(session.id, turn.id, new AbortController().signal);
+
+    expect(outcome.status).toBe("completed");
+    const messages = await store.listMessages(session.id);
+    const injected = messages.filter((m) => m.content.includes("[steering] use the red theme"));
+    // The steer was NOT injected a second time.
+    expect(injected).toHaveLength(1);
+    expect(injected[0]!.promptId).toBe(promptId);
+    // The stray pending prompt was reconciled to consumed.
+    expect(inbox.prompts.find((p) => p.id === promptId)!.status).toBe("consumed");
+  });
+
   it("followup prompts are NOT injected mid-turn (outer loop owns them)", async () => {
     class MemInbox implements InboxStore {
       prompts: AdmittedPrompt[] = [];
@@ -1244,6 +1422,51 @@ describe("AgentRuntime (CORE-001)", () => {
     }
   });
 
+  it("P0-7: a SkillDiscovery with rejects surfaces security.skill_denied / security.secret_redacted on the session stream", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "rt-skilldeny-"));
+    try {
+      const provider = new ScriptedModelProvider([ScriptedModelProvider.text("done")]);
+      const { runtime, events } = makeRuntime(provider, new FakeOrchestrator(), {
+        context: { maxTokens: 50_000 },
+        skills: async () => ({
+          skills: [
+            fakeSkill("safe", "ok skill", join(cwd, "safe", "SKILL.md")),
+          ],
+          security: [
+            { detection: "injection", reasons: ["authority claim"], path: join(cwd, "evil", "SKILL.md"), source: "skill-loader" },
+            { detection: "secret", reasons: ["api key"], path: join(cwd, "leaky", "SKILL.md"), source: "skill-loader" },
+          ],
+        }),
+      });
+      const session = await runtime.createSession({ agent: AGENT, cwd });
+      const turn = await runtime.startTurn(session.id, "hello");
+      const outcome = await runtime.runTurn(session.id, turn.id, new AbortController().signal);
+      const storedEvents = await events.list(session.id);
+
+      expect(outcome.status).toBe("completed");
+      const skillDenied = storedEvents.filter((e) => e.type === "security.skill_denied");
+      const secretRedacted = storedEvents.filter((e) => e.type === "security.secret_redacted");
+      expect(skillDenied).toHaveLength(1);
+      expect(skillDenied[0]!.payload).toMatchObject({
+        code: "SKILL_DENIED",
+        source: "skill-loader",
+        target: join(cwd, "evil", "SKILL.md"),
+        details: ["authority claim"],
+      });
+      expect(skillDenied[0]!.sessionId).toBe(session.id);
+      expect(skillDenied[0]!.turnId).toBe(turn.id);
+      expect(secretRedacted).toHaveLength(1);
+      expect(secretRedacted[0]!.payload).toMatchObject({
+        code: "SECRET_REDACTED",
+        source: "skill-loader",
+        target: join(cwd, "leaky", "SKILL.md"),
+        details: ["api key"],
+      });
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
   it("without a skills provider: no skill blocks and no skill.discovered events", async () => {
     const cwd = await mkdtemp(join(tmpdir(), "rt-noskills-"));
     try {
@@ -1265,6 +1488,93 @@ describe("AgentRuntime (CORE-001)", () => {
     }
   });
 });
+
+describe("AgentRuntime (P2-43 Ask-User Gate)", () => {
+  it("parks the turn as waiting_for_user (not a tool error) when the model asks", async () => {
+    const store: MemoryAskStore = new MemoryAskStore();
+    // The model asks once, then would stop — but the gate parks on the FIRST call.
+    const provider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("ask_user", {
+        question: "which target dir?",
+        reason: "choice_required",
+        options: ["a", "b"],
+      }),
+    ]);
+    const { runtime, events } = makeRuntime(provider, new FakeOrchestrator(), {
+      askUserStore: store,
+      maxIterationsPerTurn: 1,
+    });
+    const session = await runtime.createSession({ agent: AGENT, cwd: "C:\\w" });
+    const turn = await runtime.startTurn(session.id, "do the thing");
+    const outcome = await runtime.runTurn(session.id, turn.id, new AbortController().signal);
+
+    // A formal outcome/phase — NOT a "failed" turn and NOT a simulated tool error.
+    expect(outcome.status).toBe("waiting_for_user");
+    expect(outcome.statusDetail).toBe("waiting_no_effect");
+    expect(outcome.turn.status).toBe("waiting_for_user");
+    expect(outcome.pendingAsk).toBeDefined();
+    expect(outcome.pendingAsk!.reason).toBe("choice_required");
+    expect(outcome.pendingAsk!.question).toBe("which target dir?");
+
+    // The orchestrator was never asked to run anything (gate never executes as a tool).
+    // The pending ask is durable in the store and the phase advanced to waiting_user.
+    const pending = await store.listPending(session.id);
+    expect(pending).toHaveLength(1);
+    const events_ = await events.list(session.id);
+    expect(events_.map((e) => e.type)).toContain("ask.user_asked");
+    expect(events_.map((e) => e.type)).toContain("ask.turn_waiting");
+    expect(events_.map((e) => e.type)).not.toContain("turn.failed");
+  });
+
+  it("submitUserAnswer resumes the turn with an exactly-once tagged user message", async () => {
+    const store: MemoryAskStore = new MemoryAskStore();
+    const provider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("ask_user", { question: "which input file?", reason: "missing_critical_input" }),
+    ]);
+    const { runtime, store: sessionStore } = makeRuntime(provider, new FakeOrchestrator(), {
+      askUserStore: store,
+      maxIterationsPerTurn: 1,
+    });
+    const session = await runtime.createSession({ agent: AGENT, cwd: "C:\\w" });
+    const turn = await runtime.startTurn(session.id, "task");
+    const outcome = await runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    expect(outcome.pendingAsk).toBeDefined();
+
+    const askId = outcome.pendingAsk!.id;
+    const first = await runtime.submitUserAnswer(session.id, turn.id, askId, "use b.txt");
+    expect(first.resumed).toBe(true);
+
+    const messages = await sessionStore.listMessages(session.id);
+    // The resumed reply is injected tagged with the askId.
+    expect(messages.some((m) => m.askId === askId && m.role === "user")).toBe(true);
+
+    // Exactly-once: a second submission of the same ask does NOT append again.
+    const second = await runtime.submitUserAnswer(session.id, turn.id, askId, "use b.txt");
+    expect(second.resumed).toBe(true);
+    expect(second.message).toContain("already resumed");
+    const messagesAfter = await sessionStore.listMessages(session.id);
+    expect(messagesAfter.filter((m) => m.askId === askId)).toHaveLength(1);
+  });
+});
+
+class MemoryAskStore implements AskUserStore {
+  private readonly reqs = new Map<string, AskUserRequest>();
+  async create(request: AskUserRequest) { this.reqs.set(request.id, request); }
+  async get(id: AskId) { return this.reqs.get(id); }
+  async listPending(sessionId: SessionId) {
+    return [...this.reqs.values()].filter((r) => r.sessionId === sessionId && r.status === "pending");
+  }
+  async markAnswered(id: AskId, reply: AskUserReply) {
+    const r = this.reqs.get(id);
+    if (r && r.status === "pending") {
+      this.reqs.set(id, { ...r, status: "answered", answerText: reply.text, answeredAt: reply.answeredAt });
+    }
+  }
+  async markWithdrawn(id: AskId) {
+    const r = this.reqs.get(id);
+    if (r) this.reqs.set(id, { ...r, status: "withdrawn" });
+  }
+}
 
 async function readdirRecursive(dir: string): Promise<string[]> {
   const { readdir } = await import("node:fs/promises");

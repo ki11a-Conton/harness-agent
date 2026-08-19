@@ -15,6 +15,8 @@ export const EVENT_TYPES = [
   "model.retry",
   "retry.provider",
   "retry.stallRecovery",
+  "retry.reconciliation",
+  "retry.mcpReconnect",
   "tool.requested",
   "tool.permission_requested",
   "tool.permission_resolved",
@@ -38,6 +40,9 @@ export const EVENT_TYPES = [
   "instruction.discovered",
   "approval.created",
   "approval.resolved",
+  "ask.user_asked",
+  "ask.user_replied",
+  "ask.turn_waiting",
   "human.approval",
   "human.correction",
   "human.message",
@@ -52,9 +57,27 @@ export const EVENT_TYPES = [
   "security.filesystem_denied",
   "security.process_denied",
   "security.secret_redacted",
+  "security.memory_denied",
+  "security.skill_denied",
+  "security.mcp_denied",
+  "security.approval_denied",
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
+
+/**
+ * Event ABI version (P2-34). Bumped only when the serialized shape or payload
+ * semantics of any `AgentEvent` change in a non-backward-compatible way.
+ *
+ * - The store stamps `schemaVersion: EVENT_ABI_VERSION` on every event it
+ *   persists, so each stored event is self-describing.
+ * - On read/replay, any event whose `schemaVersion` is missing or differs is
+ *   rejected loudly (fail-closed) instead of being silently misparsed —
+ *   resume/benchmark of old event logs must never guess at an incompatible format.
+ * - A future migration (v2, ...) must add an explicit migration map here
+ *   rather than loosening the read check.
+ */
+export const EVENT_ABI_VERSION = 1;
 
 export interface AgentEvent {
   id: EventId;
@@ -62,6 +85,12 @@ export interface AgentEvent {
   turnId?: TurnId;
   sequence: number;
   timestamp: number;
+  /**
+   * Event ABI version (P2-34). Optional on the producer side — the store stamps
+   * the current `EVENT_ABI_VERSION` on persist and rejects a supplied value that
+   * differs from the current version.
+   */
+  schemaVersion?: number;
   type: EventType;
   payload: Record<string, unknown>;
 }

@@ -139,3 +139,62 @@ describe("detectNetworkIntent (Phase 9 exec network gate)", () => {
     expect(r.hosts).toContain("example.com");
   });
 });
+
+describe("P2-24 network gate v2 extensions", () => {
+  it("flags package executors that resolve from a registry (npx/pnpx/bunx)", () => {
+    expect(detectNetworkIntent("npx playwright install").hasNetworkIntent).toBe(true);
+    expect(detectNetworkIntent("pnpx vitest").hasNetworkIntent).toBe(true);
+    expect(detectNetworkIntent("bunx cowsay hi").hasNetworkIntent).toBe(true);
+    // info-only flags stay allowed.
+    expect(detectNetworkIntent("npx --version").hasNetworkIntent).toBe(false);
+  });
+
+  it("flags bun and deno registry/network subcommands but not local runs", () => {
+    expect(detectNetworkIntent("bun install").hasNetworkIntent).toBe(true);
+    expect(detectNetworkIntent("bun add zod").hasNetworkIntent).toBe(true);
+    expect(detectNetworkIntent("deno install jsr:@std/http").hasNetworkIntent).toBe(true);
+    expect(detectNetworkIntent("deno cache ./deps.js").hasNetworkIntent).toBe(true);
+    expect(detectNetworkIntent("bun test").hasNetworkIntent).toBe(false);
+    expect(detectNetworkIntent("deno run app.ts").hasNetworkIntent).toBe(false);
+    // A remote module by URL is still caught.
+    expect(detectNetworkIntent("deno run https://deno.land/x/host/mod.ts").hasNetworkIntent).toBe(true);
+  });
+
+  it("flags docker run when the container command is a network tool or host-networked", () => {
+    expect(detectNetworkIntent("docker run alpine curl http://evil.example.com").hasNetworkIntent).toBe(true);
+    expect(detectNetworkIntent("docker run --rm ubuntu sh -c 'ping 8.8.8.8'").hasNetworkIntent).toBe(true);
+    expect(detectNetworkIntent("docker run --network=host app").hasNetworkIntent).toBe(true);
+    // A plain image with no network tool / host networking stays allowed.
+    expect(detectNetworkIntent("docker run nginx").hasNetworkIntent).toBe(false);
+    expect(detectNetworkIntent("docker run --network bridge app").hasNetworkIntent).toBe(false);
+  });
+
+  it("flags python module execution with network I/O (-m http.server / -m pip)", () => {
+    expect(detectNetworkIntent("python -m http.server 8000").hasNetworkIntent).toBe(true);
+    expect(detectNetworkIntent("python3 -m pip install requests").hasNetworkIntent).toBe(true);
+    expect(detectNetworkIntent("py -m socketserver").hasNetworkIntent).toBe(true);
+    // A non-network module stays allowed.
+    expect(detectNetworkIntent("python -m json.tool in.json").hasNetworkIntent).toBe(false);
+  });
+
+  it("flags PowerShell remoting commandlets added for v2", () => {
+    expect(detectNetworkIntent("invoke-command -ComputerName srv { Get-Process }").hasNetworkIntent).toBe(true);
+    expect(detectNetworkIntent("enter-pssession -ComputerName srv").hasNetworkIntent).toBe(true);
+    expect(detectNetworkIntent("connect-wsman -ComputerName srv").hasNetworkIntent).toBe(true);
+    expect(detectNetworkIntent("new-pssession -ComputerName srv").hasNetworkIntent).toBe(true);
+  });
+
+  it("flags URLs passed as node script arguments (remote script / data fetch)", () => {
+    expect(detectNetworkIntent("node https://cdn.example.com/script.js").hasNetworkIntent).toBe(true);
+    const r = detectNetworkIntent("node app.js https://api.example.com/init");
+    expect(r.hasNetworkIntent).toBe(true);
+    expect(r.hosts).toContain("api.example.com");
+  });
+
+  it("flags git scp-like remote aliases (user@host:path)", () => {
+    expect(detectNetworkIntent("git clone git@github.com:org/repo.git").hasNetworkIntent).toBe(true);
+    expect(detectNetworkIntent("git push origin main").hasNetworkIntent).toBe(true);
+    // Local git reads stay clean.
+    expect(detectNetworkIntent("git log --oneline origin/main").hasNetworkIntent).toBe(false);
+  });
+});

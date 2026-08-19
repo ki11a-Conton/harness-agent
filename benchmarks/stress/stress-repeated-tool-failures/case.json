@@ -1,0 +1,17 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "stress",
+  "tags": [
+    "retries"
+  ],
+  "maxRetries": 6,
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "out/fixed.txt",
+      "mustChange": true
+    }
+  ]
+}

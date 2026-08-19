@@ -1,0 +1,19 @@
+# Mechanism manifest (P2-8) — Model Routing Experiment (P3-14)
+# Do NOT refactor the main runtime directly: this is a mechanism-candidate
+# experiment first, promotable only if the benchmark shows a real win.
+id: model-routing-experiment
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: prompting
+problem: if routing ever grows to multiple models, it is tempting to assume "more models is better"; without evidence a routed policy can regress quality (bad cheap-model on complex work) while adding complexity for no real saving.
+preconditions: routing is decided on benchmark cost/quality; a cheap model handles only simple/read-only work, a strong model handles complex coding/review; the routed policy is promoted only when it saves tokens without regressing the complex split.
+expected_benefit: identical/in-better quality at lower cost when cheap models cover the simple split; a disciplined gate proves the saving instead of assuming it.
+risks: defaulting to "multi-model is better"; a cheap model regressing complex work; cost savings that mask a quality drop; promoting without real cost/quality proof.
+implementation_scope: packages/evaluation (task classification + routing effect model + cost/quality gate), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- routed saves tokens and holds complex quality (promoted)
+- routed regresses the complex split (rejected)
+- no meaningful token saving (rejected — champion stays)
+- classification of simple vs complex by structural cues
+status: candidate

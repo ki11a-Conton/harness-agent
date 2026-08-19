@@ -1,5 +1,5 @@
 import type { AgentId, DelegationLimits, Session, SessionId, SessionStore } from "@ar/contracts";
-import { AgentError, DEFAULT_DELEGATION_LIMITS, errorInfo } from "@ar/contracts";
+import { AgentError, DEFAULT_DELEGATION_LIMITS, errorInfo, isCancelledErrorCode } from "@ar/contracts";
 import type { AgentRuntime } from "@ar/core";
 import { Delegator, type DelegatorDeps } from "./delegator.js";
 import type { DelegationRequest, DelegationResult } from "./delegation.js";
@@ -71,7 +71,7 @@ export class ParallelDelegator {
           // P1-10: a child cancelled while queued rejects with
           // USER_CANCELLED — resolve it as a cancelled result instead of
           // taking down the whole batch (matches the already-aborted path).
-          if (err instanceof AgentError && err.info?.code === "USER_CANCELLED") {
+          if (err instanceof AgentError && isCancelledErrorCode(err.info.code)) {
             results[index] = {
               status: "cancelled",
               summary: "delegation cancelled while queued",

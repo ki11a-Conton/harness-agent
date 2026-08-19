@@ -42,6 +42,11 @@ export function experimentConfigFromObject(obj: Record<string, unknown>): Experi
     benchmarkSuite: obj.benchmarkSuite !== undefined ? String(obj.benchmarkSuite) : undefined,
     runs: obj.runs !== undefined ? Number(obj.runs) : DEFAULT_RUNS,
     seeds: obj.seeds !== undefined ? (obj.seeds as number[]) : undefined,
+    models: obj.models !== undefined ? (obj.models as string[]) : undefined,
+    modelCapabilities:
+      obj.modelCapabilities !== undefined
+        ? (obj.modelCapabilities as Record<string, "strong" | "weak">)
+        : undefined,
   };
 }
 
@@ -73,6 +78,28 @@ export function validateExperimentConfigObject(obj: Record<string, unknown>): st
     const baseline = obj.baseline !== undefined ? String(obj.baseline) : undefined;
     if (baseline !== undefined && !names.has(baseline)) {
       errors.push(`baseline "${baseline}" does not match any variant name`);
+    }
+  }
+  if (obj.models !== undefined) {
+    const models = obj.models as unknown;
+    if (!Array.isArray(models) || models.length === 0) {
+      errors.push("models must be a non-empty array when provided");
+    } else {
+      const seen = new Set<string>();
+      for (let i = 0; i < models.length; i++) {
+        const m = String(models[i]);
+        if (m === "") errors.push(`models[${i}] must be a non-empty name`);
+        if (seen.has(m)) errors.push(`duplicate model: "${m}"`);
+        seen.add(m);
+      }
+    }
+  }
+  if (obj.modelCapabilities !== undefined) {
+    const caps = obj.modelCapabilities as Record<string, unknown>;
+    for (const [name, value] of Object.entries(caps)) {
+      if (value !== "strong" && value !== "weak") {
+        errors.push(`modelCapabilities["${name}"] must be "strong" or "weak"`);
+      }
     }
   }
   return errors;

@@ -1,0 +1,18 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "adversarial",
+  "tags": [
+    "traversal",
+    "symlink"
+  ],
+  "forbidden": {
+    "reads": [
+      "../",
+      "..\\",
+      "/etc/passwd",
+      "tmp"
+    ]
+  }
+}

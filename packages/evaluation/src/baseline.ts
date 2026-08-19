@@ -1,9 +1,11 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import { join, relative, sep } from "node:path";
-import type { AgentEvent, VerificationSpec } from "@ar/contracts";
+import type { AgentEvent, TerminationReason, VerificationSpec } from "@ar/contracts";
+import { isTerminationReason, LIMIT_TERMINATION_REASON } from "@ar/contracts";
 import type { EvalCase, EvalSuite } from "./eval-case.js";
 import type { EvalOutcome, FailureCategory } from "./runner.js";
+import { scoreCost } from "./cost-model.js";
 import type { RunManifest } from "./manifest.js";
 
 /**
@@ -57,6 +59,11 @@ export interface BenchmarkCase extends EvalCase {
  *                recoveries from stall detection — the streak is reset and
  *                a system observation is injected before the turn is
  *                terminated (limit:maxRepeatedToolCalls) on a later streak.
+ * - reconciliation: `retry.reconciliation` events (P2-40): started-but-unconfirmed
+ *                tools surfaced to the model after a crash/resume. Never
+ *                auto-redone (spec maxAttempts 0).
+ * - mcpReconnect: `retry.mcpReconnect` events (P2-40): bounded MCP re-handshakes
+ *                when a call hits a disconnected client.
  */
 export interface RetryTaxonomy {
   model: number;
@@ -66,6 +73,8 @@ export interface RetryTaxonomy {
   provider: number;
   sandbox: number;
   stallRecovery: number;
+  reconciliation: number;
+  mcpReconnect: number;
 }
 
 export const EMPTY_RETRY_TAXONOMY: RetryTaxonomy = {
@@ -76,6 +85,8 @@ export const EMPTY_RETRY_TAXONOMY: RetryTaxonomy = {
   provider: 0,
   sandbox: 0,
   stallRecovery: 0,
+  reconciliation: 0,
+  mcpReconnect: 0,
 };
 
 /** Per-case recovery accounting (Phase 6.5): which failures the runtime
@@ -121,6 +132,9 @@ export interface BenchmarkCaseResult {
   false_complete: boolean;
   violations: string[];
   reason?: string;
+  /** P2-14: weighted extremely-cheap score and security gate, when the cost
+   *  model is enabled. Optional for backward compatibility with older reports. */
+  cost?: import("./cost-model.js").CostResult;
 }
 
 export interface BaselineSummary {
@@ -148,6 +162,13 @@ export interface BaselineSummary {
   total_human_interventions: number;
   /** P0-6: per-category failure counts (model/harness/judge/infrastructure). */
   failures_by_category: Record<string, number>;
+  /** P2-14: average weighted cost score; 0 when every run security-gated. */
+  avg_cost_score: number;
+  /** P2-14: average per-dimension cost sub-scores (present when ≥1 case has
+   *  a cost model; dimension always a full 0..100 scale). */
+  avg_cost_dimensions: Record<string, number>;
+  /** P2-14: number of runs that tripped the security hard gate. */
+  security_violations: number;
 }
 
 export interface BaselineMeta {
@@ -185,7 +206,7 @@ interface CaseJson {
   contextBudgetTokens?: number;
   suite?: EvalSuite;
   tags?: string[];
-  expectedTerminationReason?: string;
+  expectedTerminationReason?: TerminationReason;
   expectedSecurityEvents?: string[];
   maxRetries?: number;
   maxDurationMs?: number;
@@ -249,7 +270,7 @@ export async function loadBenchmarkCase(dir: string): Promise<BenchmarkCase> {
       ? { contextBudgetTokens: parsed.contextBudgetTokens }
       : {}),
     ...(parsed.expectedTerminationReason !== undefined
-      ? { expectedTerminationReason: parsed.expectedTerminationReason }
+      ? { expectedTerminationReason: parsed.expectedTerminationReason as TerminationReason }
       : {}),
     ...(parsed.expectedSecurityEvents !== undefined && parsed.expectedSecurityEvents.length > 0
       ? { expectedSecurityEvents: parsed.expectedSecurityEvents }
@@ -334,8 +355,11 @@ function parseCaseJson(id: string, raw: string): {
     throw new Error(`benchmark case ${id}: case.json tags must be a string array`);
   }
   const expectedTerminationReason = record.expectedTerminationReason;
-  if (expectedTerminationReason !== undefined && typeof expectedTerminationReason !== "string") {
-    throw new Error(`benchmark case ${id}: case.json expectedTerminationReason must be a string`);
+  if (expectedTerminationReason !== undefined && !isTerminationReason(expectedTerminationReason)) {
+    throw new Error(
+      `benchmark case ${id}: case.json expectedTerminationReason must be a known TerminationReason ` +
+        `(got "${String(expectedTerminationReason)}")`,
+    );
   }
   const expectedSecurityEvents = record.expectedSecurityEvents;
   if (expectedSecurityEvents !== undefined && (!Array.isArray(expectedSecurityEvents) || expectedSecurityEvents.some((e) => typeof e !== "string"))) {
@@ -378,7 +402,7 @@ function parseCaseJson(id: string, raw: string): {
     ...(contextBudgetTokens !== undefined ? { contextBudgetTokens: contextBudgetTokens as number } : {}),
     ...(suite !== undefined ? { suite: suite as EvalSuite } : {}),
     ...(tags !== undefined ? { tags: tags as string[] } : {}),
-    ...(expectedTerminationReason !== undefined ? { expectedTerminationReason: expectedTerminationReason as string } : {}),
+    ...(expectedTerminationReason !== undefined ? { expectedTerminationReason: expectedTerminationReason as TerminationReason } : {}),
     ...(expectedSecurityEvents !== undefined ? { expectedSecurityEvents: expectedSecurityEvents as string[] } : {}),
     ...(maxRetries !== undefined ? { maxRetries: maxRetries as number } : {}),
     ...(maxDurationMs !== undefined ? { maxDurationMs: maxDurationMs as number } : {}),
@@ -478,6 +502,7 @@ export function collectRunMetrics(outcome: EvalOutcome): BenchmarkCaseResult {
     // counted via verification_failures, not here.
     false_complete: !success && outcome.actualStatus === "completed",
     violations: outcome.violations,
+    cost: scoreCost(outcome),
     ...(outcome.reason !== undefined ? { reason: outcome.reason } : {}),
   };
 }
@@ -500,6 +525,8 @@ export function deriveRetryTaxonomy(events: AgentEvent[]): RetryTaxonomy {
   taxonomy.compaction = countEvents(events, "context.compacted");
   taxonomy.provider = countEvents(events, "retry.provider");
   taxonomy.stallRecovery = countEvents(events, "retry.stallRecovery");
+  taxonomy.reconciliation = countEvents(events, "retry.reconciliation");
+  taxonomy.mcpReconnect = countEvents(events, "retry.mcpReconnect");
 
   // Per-call-id trace: the failure that preceded each extra tool.started.
   const byCallId = new Map<string, AgentEvent[]>();
@@ -627,7 +654,9 @@ export function terminationReason(outcome: EvalOutcome): string {
     }
     case "failed": {
       const limit = lastLimitReached(outcome.events);
-      if (limit !== undefined) return `limit:${limit}`;
+      // P2-39: map the raw run.limit_reached identifier to the bounded
+      // TerminationReason category (no "limit:<kind>" free strings).
+      if (limit !== undefined) return LIMIT_TERMINATION_REASON[String(limit)] ?? "failed";
       if (hasEvent(outcome.events, "verification.failed")) return "verification_failed";
       if (hasEvent(outcome.events, "model.failed")) return "model_error";
       return "failed";
@@ -759,6 +788,10 @@ export function summarizeResults(results: BenchmarkCaseResult[]): BaselineSummar
   let recovered = 0;
   const terminationDistribution: Record<string, number> = {};
   const failuresByCategory: Record<string, number> = {};
+  let costScoreSum = 0;
+  let costCaseCount = 0;
+  const costDimensionSums: Record<string, number> = {};
+  let securityViolations = 0;
   for (const r of results) {
     for (const kind of Object.keys(retriesByKind) as Array<keyof RetryTaxonomy>) {
       retriesByKind[kind] += r.retry_taxonomy[kind];
@@ -769,6 +802,21 @@ export function summarizeResults(results: BenchmarkCaseResult[]): BaselineSummar
       (terminationDistribution[r.termination_reason] ?? 0) + 1;
     if (r.failure_category !== undefined) {
       failuresByCategory[r.failure_category] = (failuresByCategory[r.failure_category] ?? 0) + 1;
+    }
+    if (r.cost !== undefined) {
+      costCaseCount += 1;
+      costScoreSum += r.cost.score;
+      if (r.cost.securityViolation) securityViolations += 1;
+      for (const [dimension, value] of Object.entries(r.cost.dimensionScores)) {
+        costDimensionSums[dimension] = (costDimensionSums[dimension] ?? 0) + value;
+      }
+    }
+  }
+
+  const avgCostDimensions: Record<string, number> = {};
+  if (costCaseCount > 0) {
+    for (const [dimension, sum] of Object.entries(costDimensionSums)) {
+      avgCostDimensions[dimension] = Math.round((sum / costCaseCount) * 100) / 100;
     }
   }
 
@@ -796,6 +844,9 @@ export function summarizeResults(results: BenchmarkCaseResult[]): BaselineSummar
     total_verification_failures: results.reduce((sum, r) => sum + r.verification_failures, 0),
     total_human_interventions: results.reduce((sum, r) => sum + r.human_interventions, 0),
     failures_by_category: failuresByCategory,
+    avg_cost_score: costCaseCount === 0 ? 0 : Math.round((costScoreSum / costCaseCount) * 100) / 100,
+    avg_cost_dimensions: avgCostDimensions,
+    security_violations: securityViolations,
   };
 }
 
@@ -851,6 +902,12 @@ function renderSummaryMd(report: BaselineReport): string {
   const categories = Object.keys(s.failures_by_category);
   if (categories.length > 0) {
     lines.push(`| failures by category | ${categories.map((c) => `${c} ${s.failures_by_category[c]}`).join(", ")} |`);
+  }
+  lines.push(`| avg cost score | ${formatNum(s.avg_cost_score)} |`);
+  lines.push(`| security violations (hard gate) | ${s.security_violations} |`);
+  const costDims = Object.keys(s.avg_cost_dimensions);
+  if (costDims.length > 0) {
+    lines.push(`| avg cost dimensions | ${costDims.map((d) => `${d} ${formatNum(s.avg_cost_dimensions[d] ?? 0)}`).join(", ")} |`);
   }
   lines.push("", "## Retry taxonomy", "", "| kind | total |", "| --- | --- |");
   for (const kind of Object.keys(s.retries_by_kind) as Array<keyof RetryTaxonomy>) {

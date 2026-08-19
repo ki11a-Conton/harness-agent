@@ -1,0 +1,67 @@
+# Q-13 — CI Pipeline.
+#
+# Plan.md Q-13 requirement: at minimum `install · typecheck · test · build ·
+# benchmark smoke`. The benchmark smoke must run WITHOUT a paid model provider
+# for ordinary PR checks — it uses the CLI's `--allow-stub` stub/fake provider,
+# which records MODEL_ERROR honestly and still exercises the full harness path
+# (case loading, workspace setup, model loop, termination, report freeze).
+#
+# Optional extras (lint / coverage thresholds) can be layered on later without
+# changing this file's contract.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: install · typecheck · test · build · benchmark-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Never let an absent key silently flip a job into "no-op success".
+      OPENAI_API_KEY: ""
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit and integration tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Benchmark smoke (stub/fake provider — no paid model)
+        # One adversarial case through the real harness with the stub provider.
+        # The run itself never fails (stub MODEL_ERROR is recorded honestly);
+        # this gate fails only if the harness cannot load/run/freeze a case.
+        run: pnpm benchmark:smoke
+
+      - name: Upload benchmark smoke report
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-smoke
+          path: .ci/bench-smoke/*.md
+          if-no-files-found: error

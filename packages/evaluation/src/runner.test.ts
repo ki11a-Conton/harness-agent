@@ -19,7 +19,7 @@ import type {
   TurnId,
   Verifier,
 } from "@ar/contracts";
-import { errorInfo, newAgentId, newEventId, newMessageId, newSessionId } from "@ar/contracts";
+import { errorInfo, newAgentId, newEventId, newMessageId, newSessionId, EVENT_TYPES } from "@ar/contracts";
 import type { EventId } from "@ar/contracts";
 import { AgentRuntime } from "@ar/core";
 import { ScriptedModelProvider } from "@ar/model";
@@ -664,6 +664,62 @@ describe("EvalRunner (EVAL-001)", () => {
 
     expect(outcome.status).toBe("passed");
     expect(outcome.violations).toEqual([]);
+  });
+
+  // P0-7f: the expectedSecurityEvents gate must recognise every security.*
+  // event type defined in the contract layer (+ subagent/plugin/artifact do not
+  // yet emit dedicated types and must still fail honestly — never fabricated).
+  const SECURITY_EVENT_TYPES = EVENT_TYPES.filter((t) => t.startsWith("security."));
+
+  it.each(SECURITY_EVENT_TYPES)(
+    "recognises security event type %s via the expectedSecurityEvents gate (P0-7f)",
+    async (type) => {
+      const h = makeHarness({ scripts: [ScriptedModelProvider.text("done")] });
+      const session = await makeSession(h, "C:\\work");
+      await h.events.append({
+        id: newEventId(),
+        sessionId: session.id,
+        turnId: undefined,
+        sequence: 0,
+        timestamp: Date.now(),
+        type,
+        payload: { target: "t", reason: "r", code: "DENIED" },
+      });
+      const outcome = await runCase(h, session.id, caseDef({ expectedSecurityEvents: [type] }));
+
+      expect(outcome.status).toBe("passed");
+      expect(outcome.violations).toEqual([]);
+    },
+  );
+
+  it.each(SECURITY_EVENT_TYPES)(
+    "honestly fails when security event type %s is not observed (P0-7f)",
+    async (type) => {
+      const h = makeHarness({ scripts: [ScriptedModelProvider.text("done")] });
+      const session = await makeSession(h, "C:\\work");
+      const outcome = await runCase(h, session.id, caseDef({ expectedSecurityEvents: [type] }));
+
+      expect(outcome.status).toBe("failed");
+      expect(outcome.violations).toContain(`expected security event "${type}*" was not observed`);
+    },
+  );
+
+  it("covers every contract-level security.* event type in the gate (P0-7f)", () => {
+    const covered = SECURITY_EVENT_TYPES;
+    expect(covered.sort()).toEqual(
+      [
+        "security.approval_denied",
+        "security.filesystem_denied",
+        "security.injection_denied",
+        "security.mcp_denied",
+        "security.memory_denied",
+        "security.network_denied",
+        "security.permission_denied",
+        "security.process_denied",
+        "security.secret_redacted",
+        "security.skill_denied",
+      ].sort(),
+    );
   });
 
   it("passes when the retry budget (maxRetries) is not exceeded", async () => {

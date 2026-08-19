@@ -12,8 +12,13 @@ import type {
   ToolResult,
   ToolRisk,
 } from "@ar/contracts";
-import { errorInfo, newApprovalId } from "@ar/contracts";
-import { DeterministicPermissionEngine, defaultEffectForRisk, SandboxManager } from "@ar/security";
+import { errorInfo, isPermissionOrSandboxDenied, isTimeoutErrorCode, newApprovalId } from "@ar/contracts";
+import {
+  classifySupplyChain,
+  DeterministicPermissionEngine,
+  defaultEffectForRisk,
+  SandboxManager,
+} from "@ar/security";
 import type { ToolRegistry } from "./registry.js";
 
 export interface OrchestratorDeps {
@@ -30,6 +35,9 @@ interface SanitizedCall {
   action: "read" | "edit" | "exec";
   resource: string;
   target?: string;
+  /** P2-25: supply-chain category, when the command is dependency install /
+   *  remote code execution. Present so permission policy can distinguish it. */
+  supplyChain?: "dependency_install" | "remote_code_execution";
 }
 
 /**
@@ -91,7 +99,7 @@ export class ToolOrchestrator {
           sessionId: request.sessionId,
           ...(request.turnId !== undefined ? { turnId: request.turnId } : {}),
         },
-        this.effectivePolicy(context.permissions, tool.risk),
+        this.effectivePolicy(context.permissions, tool.risk, surface),
       );
       if (decision.effect === "deny") {
         await this.emit("tool.permission_resolved", request, context, { effect: "deny", reason: decision.reason });
@@ -155,7 +163,17 @@ export class ToolOrchestrator {
   private classify(tool: ToolDefinition, args: Record<string, unknown>): SanitizedCall {
     const m = tool.metadata;
     if (m.process) {
-      return { action: "exec", resource: "command", target: this.str(args.command ?? args.cmd) };
+      const cmd = this.str(args.command ?? args.cmd) ?? "";
+      // P2-25: surface dependency-install / remote-code-execution as their OWN
+      // permission resource, so they are NOT gated like a generic command.
+      const sc = classifySupplyChain(cmd);
+      const resource = sc === "command" ? "command" : sc;
+      return {
+        action: "exec",
+        resource,
+        target: cmd,
+        ...(sc !== "command" ? { supplyChain: sc } : {}),
+      };
     }
     if (m.network) {
       return { action: "exec", resource: "network", target: this.str(args.url) };
@@ -167,9 +185,14 @@ export class ToolOrchestrator {
     return { action: tool.risk === "readonly" ? "read" : "exec", resource: "tool" };
   }
 
-  private effectivePolicy(agentPolicy: PermissionPolicy, risk: ToolRisk): PermissionPolicy {
+  private effectivePolicy(agentPolicy: PermissionPolicy, risk: ToolRisk, surface?: SanitizedCall): PermissionPolicy {
+    // P2-25: remote code execution (curl|sh) escalates to critical → deny by
+    // default unless the operator grants the `exec:remote_code_execution`
+    // resource explicitly.
+    const effectiveRisk: ToolRisk =
+      surface?.supplyChain === "remote_code_execution" ? "critical" : risk;
     if (agentPolicy.defaultEffect === undefined) {
-      return { ...agentPolicy, defaultEffect: defaultEffectForRisk(risk) };
+      return { ...agentPolicy, defaultEffect: defaultEffectForRisk(effectiveRisk) };
     }
     return agentPolicy;
   }
@@ -369,6 +392,8 @@ export class ToolOrchestrator {
     try {
       return JSON.stringify(output).slice(0, 500);
     } catch {
+      // Best-effort: JSON.stringify throws on circular refs / BigInt; degrade
+      // to string coercion for the preview only — the real output is untouched.
       return String(output).slice(0, 500);
     }
   }
@@ -382,9 +407,9 @@ export class ToolOrchestrator {
     base?: ToolResult,
   ): ToolResult {
     let status: ToolResult["status"] = "failed";
-    if (code === "PROCESS_TIMEOUT" || base?.status === "timeout") status = "timeout";
+    if (isTimeoutErrorCode(code) || base?.status === "timeout") status = "timeout";
     else if (base?.status === "cancelled") status = "cancelled";
-    else if (code === "PERMISSION_DENIED" || code === "APPROVAL_DENIED" || code.startsWith("SANDBOX")) status = "denied";
+    else if (isPermissionOrSandboxDenied(code)) status = "denied";
     const result: ToolResult = {
       status,
       ...(base?.output !== undefined ? { output: base.output } : {}),

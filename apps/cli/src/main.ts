@@ -11,6 +11,7 @@ import type {
 } from "@ar/contracts";
 import { newAgentId, newEventId } from "@ar/contracts";
 import { AgentRuntime, defaultSandboxPolicy } from "@ar/core";
+import type { SkillDiscovery, SkillSecurityDenialRecord } from "@ar/core";
 import { FileSkillLoader } from "@ar/skills";
 import { createRuntimeRpc, InMemoryTransport } from "@ar/gateway";
 import { JSONLEventStore } from "@ar/events";
@@ -152,14 +153,22 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
   // Task 3: skill index — AR_SKILL_ROOTS is a path-delimiter-separated list of
   // skill package roots. Unset/empty env produces no roots; discover() errors
   // propagate to the caller (bubbling like instruction discovery).
-  // Task A: onSecurityDenied fires when a skill body is rejected for injection
-  // or secrets; the event is logged to stderr so the host can observe it.
+  // Task A (P0-7): a skill body rejected for injection or secrets is collected
+  // during each discovery and surfaced by the runtime as a
+  // security.skill_denied / security.secret_redacted event on the session
+  // stream (structured code+source+target) — never stderr-only. The stderr
+  // line remains a supplementary host-observability note.
+  let pendingSkillSecurity: SkillSecurityDenialRecord[] = [];
   const skillLoader = new FileSkillLoader({
     onSecurityDenied: (event) => {
-      // P0-7: structured stderr record. Startup-time rejections (no session
-      // yet) cannot become events in the trail; the host sees them here.
+      pendingSkillSecurity.push({
+        detection: event.detection,
+        reasons: event.reasons,
+        path: event.path,
+        source: event.source,
+      });
       process.stderr.write(
-        `[security] source=${event.source} detection=${event.detection} target=${event.path} reasons=${event.reasons.join(",")}\n`,
+        `[skill denied] detection=${event.detection} target=${event.path} reasons=${event.reasons.join(",")}\n`,
       );
     },
   });
@@ -167,6 +176,14 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
     .split(delimiter)
     .map((root) => root.trim())
     .filter((root) => root.length > 0);
+  // Wraps discovery so the runtime receives both the safe index and the
+  // rejections to emit on the event stream (SkillDiscovery).
+  const discoverSkills: () => Promise<SkillDiscovery> = async () => {
+    pendingSkillSecurity = [];
+    const found = await skillLoader.discover({ roots: skillRoots, maxSkills: 100 });
+    const security = pendingSkillSecurity;
+    return { skills: found, security };
+  };
   const agent: AgentDefinition = {
     id: newAgentId(),
     name: "main",
@@ -195,7 +212,7 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
     toolSemanticsOf: (name) => semanticsOf(toolRegistry.get(name)),
     // Task 3: feed the discovered skill index into the context pipeline
     // (runtime maps Skill -> {name, description} and emits skill.discovered).
-    skills: () => skillLoader.discover({ roots: skillRoots, maxSkills: 100 }),
+    skills: discoverSkills,
     // P0-8: rendered tool output is scanned for prompt injection and withheld
     // on a hit (fail-closed) before it reaches the model.
     injectionDetector: (content) => detectPromptInjection(content),

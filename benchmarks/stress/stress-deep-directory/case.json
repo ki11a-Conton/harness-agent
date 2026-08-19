@@ -1,0 +1,16 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "stress",
+  "tags": [
+    "depth"
+  ],
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "out/value.txt",
+      "mustChange": true
+    }
+  ]
+}

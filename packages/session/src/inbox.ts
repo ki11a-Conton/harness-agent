@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type {
   AdmittedPrompt,
@@ -8,6 +8,7 @@ import type {
   SessionId,
 } from "@ar/contracts";
 import { newPromptId } from "@ar/contracts";
+import { atomicWriteFile, backupTree, withLock } from "@ar/store-integrity";
 import { SessionStoreError } from "./session-store.js";
 
 /**
@@ -115,9 +116,12 @@ export class JSONLInboxStore implements InboxStore {
   }
 
   async admit(prompt: AdmittedPrompt): Promise<void> {
-    await this.load();
-    this.prompts.push(prompt);
-    await this.persist();
+    // P2-35: read-modify-persist serialized under a per-file lock.
+    return withLock(this.lockKey(), async () => {
+      await this.load();
+      this.prompts.push(prompt);
+      await this.persist();
+    });
   }
 
   async listPending(sessionId: SessionId): Promise<AdmittedPrompt[]> {
@@ -145,11 +149,18 @@ export class JSONLInboxStore implements InboxStore {
   }
 
   private async update(id: PromptId, mutate: (prompt: AdmittedPrompt) => void): Promise<void> {
-    await this.load();
-    const prompt = this.prompts.find((p) => p.id === id);
-    if (prompt === undefined) throw new SessionStoreError("UNKNOWN_PROMPT", `unknown prompt ${id}`);
-    mutate(prompt);
-    await this.persist();
+    // P2-35: serialized so concurrent promote/consume cannot lose mutations.
+    return withLock(this.lockKey(), async () => {
+      await this.load();
+      const prompt = this.prompts.find((p) => p.id === id);
+      if (prompt === undefined) throw new SessionStoreError("UNKNOWN_PROMPT", `unknown prompt ${id}`);
+      mutate(prompt);
+      await this.persist();
+    });
+  }
+
+  private lockKey(): string {
+    return `inbox:jsonl:${this.file}`;
   }
 
   private async load(): Promise<void> {
@@ -174,12 +185,17 @@ export class JSONLInboxStore implements InboxStore {
   }
 
   private async persist(): Promise<void> {
-    await mkdir(join(this.file, ".."), { recursive: true });
-    const tmp = `${this.file}.tmp`;
+    // P2-35: durable atomic write (temp + fsync + rename) via shared primitive.
     const body = this.prompts
       .map((prompt) => JSON.stringify({ schemaVersion: INBOX_SCHEMA_VERSION, prompt } satisfies PromptRecord))
       .join("\n");
-    await writeFile(tmp, `${body}\n`, "utf8");
-    await rename(tmp, this.file);
+    await atomicWriteFile(this.file, `${body}\n`);
+  }
+
+  /**
+   * P2-35 backup: copy the inbox file to `<dataDir>/backups/<stamp>/`.
+   */
+  async backup(): Promise<{ path: string; files: number; bytes: number }> {
+    return backupTree(join(this.file, ".."));
   }
 }

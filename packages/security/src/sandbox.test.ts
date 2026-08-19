@@ -1,9 +1,9 @@
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { SandboxPolicy } from "@ar/contracts";
-import { SandboxManager } from "./sandbox.js";
+import { SandboxManager, containsPath } from "./sandbox.js";
 
 let ws: string;
 let outside: string;
@@ -171,6 +171,29 @@ describe("SandboxManager process", () => {
     expect(m.checkExec("node test.js").allowed).toBe(true);
     expect(m.checkExec("curl http://x.com").allowed).toBe(false);
   });
+
+  it("P2-23: denied process surface is rejected even when allowlisted (fail-closed)", () => {
+    const m = makeManager({
+      process: { allowedCommands: ["node -e 'x'"], deniedSurfaces: ["interpreter-eval"] },
+    });
+    const d = m.checkExec("node -e 'x'");
+    expect(d.allowed).toBe(false);
+    expect(d.kind).toBe("process");
+    expect(d.reason).toContain("interpreter-eval");
+  });
+
+  it("P2-23: denied surface does not affect other surfaces", () => {
+    const m = makeManager({ process: { deniedSurfaces: ["shell-wrapper"] } });
+    expect(m.checkExec("node test.js").allowed).toBe(true);
+    expect(m.checkExec("cmd /c dir").allowed).toBe(false);
+  });
+
+  it("P2-23: surface gate runs before the command allowlist", () => {
+    const m = makeManager({
+      process: { allowedCommands: ["cd /tmp"], deniedSurfaces: ["shell-wrapper"] },
+    });
+    expect(m.checkExec("sh -c 'cd /tmp'").allowed).toBe(false);
+  });
 });
 
 describe("SandboxManager evaluate", () => {
@@ -180,5 +203,97 @@ describe("SandboxManager evaluate", () => {
     expect(m.evaluate({ target: "../outside/x", operation: "write", policy: m.policy }).allowed).toBe(false);
     expect(m.evaluate({ target: "rm -rf *", operation: "exec", policy: m.policy }).allowed).toBe(false);
     expect(m.evaluate({ target: "pnpm test", operation: "exec", policy: m.policy }).allowed).toBe(true);
+  });
+});
+
+describe("P2-22 filesystem sandbox hardening", () => {
+  it("rejects control-character and NUL-padded paths as invalid (not just outside)", () => {
+    const m = makeManager();
+    expect(m.checkRead("sub/file.txt\u0000x").allowed).toBe(false);
+    expect(m.checkRead("\nsub/file.txt").allowed).toBe(false);
+    expect(m.checkWrite("ok\u0000name.tx").allowed).toBe(false);
+  });
+
+  it("does NOT treat a path merely sharing a textual prefix as inside (ancestor collision)", () => {
+    // A "sibling" of ws that merely extends the basename (ws + "-sibling")
+    // must not be counted as inside the workspace boundary.
+    const sibling = join(dirname(ws), `${basename(ws)}-sibling`);
+    const m = makeManager();
+    expect(m.checkRead(join(sibling, "secret.txt")).allowed).toBe(false);
+    expect(m.checkWrite(join(sibling, "x.txt")).allowed).toBe(false);
+  });
+
+  it("honors allowedPaths as an extra writable/readable root (temp / artifact dir)", () => {
+    const artifact = mkdtempSync(join(tmpdir(), "ar-artifact-"));
+    try {
+      const m = new SandboxManager(ws, ws, {
+        filesystem: { mode: "workspace-write", allowedPaths: [ws, artifact] },
+        network: { mode: "deny", hosts: [] },
+        process: { timeoutMs: 1000 },
+      });
+      expect(m.checkWrite(join(artifact, "out.bin")).allowed).toBe(true);
+      expect(m.checkRead(join(artifact, "x.bin")).allowed).toBe(true);
+      // The workspace itself remains in scope.
+      expect(m.checkRead(join(ws, "sub", "file.txt")).allowed).toBe(true);
+      // Still outside every allowed root.
+      expect(m.checkWrite(join(outside, "x.txt")).allowed).toBe(false);
+    } finally {
+      rmSync(artifact, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps read vs write scopes separate (read-only still allows reads)", () => {
+    const m = makeManager({ filesystem: { mode: "read-only", allowedPaths: [ws] } });
+    expect(m.checkRead(join(ws, "sub", "file.txt")).allowed).toBe(true);
+    expect(m.checkWrite(join(ws, "x.txt")).allowed).toBe(false);
+  });
+
+  it("containsPath enforces a path boundary, not a raw string prefix", () => {
+    expect(containsPath("/tmp/ws/sub/f.txt", "/tmp/ws", false)).toBe(true);
+    expect(containsPath("/tmp/ws", "/tmp/ws", false)).toBe(true);
+    expect(containsPath("/tmp/ws2/x", "/tmp/ws", false)).toBe(false); // ancestor collision
+    expect(containsPath("/tmp/ws-2/x", "/tmp/ws", false)).toBe(false); // sibling collision
+  });
+
+  it("containsPath handles trailing-slash roots and Windows-style separators", () => {
+    expect(containsPath("/tmp/ws/a", "/tmp/ws/", false)).toBe(true);
+    expect(containsPath("C:\\ws\\a", "C:\\ws", false)).toBe(true);
+    expect(containsPath("C:\\ws2\\a", "C:\\ws", false)).toBe(false);
+  });
+
+  it("containsPath case-folds only when caseInsensitive is requested", () => {
+    // Case-sensitive default: a different-cased path is a different path.
+    expect(containsPath("/TMP/WS/x", "/tmp/ws", false)).toBe(false);
+    // Case-insensitive: the same textual path, differently cased, is inside.
+    expect(containsPath("/TMP/WS/x", "/tmp/ws", true)).toBe(true);
+    expect(containsPath("/tmp/WS/x", "/tmp/ws", true)).toBe(true);
+    // Case-insensitive must NOT erase a genuinely different sibling.
+    expect(containsPath("/tmp/ws2/x", "/tmp/ws", true)).toBe(false);
+  });
+
+  it("case-insensitive fold also rejects a truly-different sibling, not only exact root", () => {
+    const m = makeManager({ filesystem: { mode: "workspace-write", allowedPaths: [ws], caseInsensitive: true } });
+    // A different child dir under ws is still allowed in case-insensitive mode…
+    expect(m.checkWrite(join(ws, "AnyCase", "x.txt")).allowed).toBe(true);
+    // …but the outside dir remains outside even with case folded differently.
+    expect(m.checkWrite(join(outside, "SECRET.txt")).allowed).toBe(false);
+  });
+
+  it("workspace root itself is always inside (self reference)", () => {
+    const m = makeManager();
+    expect(m.checkRead(ws).allowed).toBe(true);
+    expect(m.checkWrite(join(ws, "file.txt")).allowed).toBe(true);
+  });
+
+  it("symlink via a junction pointing out of scope is denied (junction escape)", () => {
+    const junction = join(ws, "junction-out");
+    try {
+      symlinkSync(outside, junction, "junction");
+    } catch {
+      return;
+    }
+    const m = makeManager();
+    expect(m.checkRead(join(junction, "secret.txt")).allowed).toBe(false);
+    expect(m.checkWrite(join(junction, "x.txt")).allowed).toBe(false);
   });
 });

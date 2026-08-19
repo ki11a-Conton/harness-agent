@@ -43,8 +43,13 @@ export class ProcessExecutor {
     const started = Date.now();
     const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const maxOutputBytes = opts.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES;
-    const shell = opts.shell ?? (process.env.ComSpec || "cmd.exe");
-    const isCmd = opts.shell === undefined || /cmd(\.exe)?$/i.test(opts.shell);
+    // Shell default must follow the host platform, not the presence of ComSpec:
+    // on win32 the default is cmd.exe (via ComSpec / fallback); everywhere
+    // else /bin/sh. The previous logic fell back to "cmd.exe" on POSIX when
+    // ComSpec was unset, which broke exec on non-Windows hosts.
+    const shell =
+      opts.shell ?? (process.platform === "win32" ? process.env.ComSpec || "cmd.exe" : "/bin/sh");
+    const isCmd = /cmd(\.exe)?$/i.test(shell);
 
     // Empirically derived win32 recipe (executor.test.ts documents this):
     // cmd.exe /d /s /c "<command>" with windowsVerbatimArguments:true.

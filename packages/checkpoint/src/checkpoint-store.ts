@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   CHECKPOINT_SCHEMA_VERSION,
@@ -7,6 +7,7 @@ import {
   type CheckpointStore,
   type SessionId,
 } from "@ar/contracts";
+import { atomicWriteFile } from "@ar/store-integrity";
 
 /**
  * P1-3 Durable Checkpoint Store.
@@ -113,11 +114,11 @@ export class DurableCheckpointStore implements CheckpointStore {
   }
 
   private async writeAtomic(file: string, checkpoint: CheckpointData): Promise<void> {
-    const tmp = `${file}.tmp`;
+    // P2-35: durable atomic write (temp + fsync + rename over target) via the
+    // shared primitive. The previous rm(target) before rename opened a window
+    // where the target was momentarily absent; rename-over is atomic.
     try {
-      await writeFile(tmp, JSON.stringify(checkpoint, null, 2), "utf8");
-      await rm(file, { force: true });
-      await rename(tmp, file);
+      await atomicWriteFile(file, JSON.stringify(checkpoint, null, 2));
     } catch (err) {
       throw new CheckpointStoreError("IO_ERROR", `write failed for ${file}: ${String(err)}`);
     }

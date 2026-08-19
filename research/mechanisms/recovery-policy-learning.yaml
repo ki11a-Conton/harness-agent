@@ -1,0 +1,19 @@
+# Mechanism manifest (P2-8) — Recovery Policy Learning (P3-13)
+# Do NOT refactor the main runtime directly: this is a mechanism-candidate
+# experiment first, promotable only if the benchmark shows a real win.
+id: recovery-policy-learning
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: error_recovery
+problem: retry count, stall threshold and compact timing are fixed, so recovery is either too aggressive (retry everything) or too passive (give up early); a learned policy should tune them.
+preconditions: a recovery policy must NOT lift success by brute-forcing more retries; the cost gate MUST participate (promotion on cost-adjusted quality, never raw pass rate).
+expected_benefit: targeted retries / earlier stall detection / right compact timing lift recovery without inflating cost.
+risks: mass retries that fake a higher pass rate; a cost gate that is skipped; promoting a recovery that only wastes tokens/time.
+implementation_scope: packages/evaluation (recovery gate with mandatory cost model), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- a policy that gains quality per retry (cost gate passes, promoted)
+- a policy that brute-forces success with mass retries (rejected)
+- a cost gate that blocks retry-inflated candidates (rejected)
+- nothing clears the cost gate (champion kept)
+status: candidate

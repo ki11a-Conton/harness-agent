@@ -1,0 +1,20 @@
+# Mechanism manifest (P2-8) — Auto-generated Benchmark Candidates (P3-8)
+# Do NOT refactor the main runtime directly: this is a mechanism-candidate
+# experiment first, promotable only if the benchmark shows a real win.
+id: auto-generated-benchmark-candidates
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: evaluation
+problem: an agent may propose new benchmark cases directly into regression, letting it self-certify the judge and fixtures; a single unchecked proposal can silently degrade the benchmark invariant or smuggle an unsafe / judge-pinning case.
+preconditions: agent-proposed cases enter formal regression ONLY after judge freeze (must match the frozen judge, never ship their own judge), fixture sanitize (injection / secret / path-traversal / dangerous exec rejected fail-closed), and human-or-deterministic review.
+expected_benefit: auto-generated benchmark candidates expand coverage while the frozen judge and sanitized fixtures keep the regression suite trustworthy; risky or self-judged proposals are rejected or held pending, never silently admitted.
+risks: a fixture that smuggles an injection/secret/path-traversal; a candidate that pins its own judge; a self-certified candidate entering regression; circumventing the human/deterministic review gate.
+implementation_scope: packages/evaluation (candidate review pipeline), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- a clean, frozen-judge candidate that is deterministically accepted
+- an injection / secret / path-traversal / dangerous-exec fixture (must be rejected)
+- a candidate pinned to a non-frozen judge (must be rejected)
+- human-required review without approval (must be pending, never admitted)
+- unsanitized candidate with human approval (must stay rejected)
+status: candidate

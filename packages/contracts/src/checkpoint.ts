@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { stableStringify } from "./serialization.js";
 import type { AgentId, CheckpointId, SessionId, ToolCallId, TurnId } from "./ids.js";
 import type { WorkingState } from "./working-state.js";
 import type { ToolResultStatus } from "./tool.js";
@@ -98,19 +99,12 @@ export interface CheckpointData {
 /** Stable JSON serialization with sorted object keys — the checksum basis.
  *  Semantics mirror JSON.stringify so a value survives a write→parse
  *  round-trip with the same checksum: object keys holding `undefined` are
- *  omitted, array `undefined` slots become `null`. Q-5 will generalize this
- *  monolithically. */
+ *  omitted, array `undefined` slots become `null`, BigInt is rejected and
+ *  cyclic values fail explicitly. Delegates to the Q-5 canonical
+ *  `stableStringify` so args/config/checkpoint hashes all share one
+ *  implementation. */
 export function stableStringifyForChecksum(value: unknown): string {
-  if (value === undefined) return "null";
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => stableStringifyForChecksum(item)).join(",")}]`;
-  }
-  if (typeof value === "object" && value !== null) {
-    const record = value as Record<string, unknown>;
-    const keys = Object.keys(record).filter((key) => record[key] !== undefined).sort();
-    return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringifyForChecksum(record[key])}`).join(",")}}`;
-  }
-  return JSON.stringify(value);
+  return stableStringify(value);
 }
 
 /** SHA-256 checksum over the canonical payload (every field but checksum). */

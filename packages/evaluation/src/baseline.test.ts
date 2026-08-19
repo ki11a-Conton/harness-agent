@@ -171,7 +171,7 @@ describe("loadBenchmarkCases", () => {
       "hard/case.json": JSON.stringify({
         suite: "adversarial",
         tags: ["injection", "network"],
-        expectedTerminationReason: "limit:maxToolCalls",
+        expectedTerminationReason: "tool_limit",
         expectedSecurityEvents: ["security.network_denied", "security.fs_denied"],
         maxRetries: 4,
         maxDurationMs: 120000,
@@ -183,7 +183,7 @@ describe("loadBenchmarkCases", () => {
     const cases = await loadBenchmarkCases(root);
     expect(cases[0]!.suite).toBe("adversarial");
     expect(cases[0]!.tags).toEqual(["injection", "network"]);
-    expect(cases[0]!.expectedTerminationReason).toBe("limit:maxToolCalls");
+    expect(cases[0]!.expectedTerminationReason).toBe("tool_limit");
     expect(cases[0]!.expectedSecurityEvents).toEqual(["security.network_denied", "security.fs_denied"]);
     expect(cases[0]!.maxRetries).toBe(4);
     expect(cases[0]!.maxDurationMs).toBe(120000);
@@ -338,7 +338,7 @@ describe("collectRunMetrics", () => {
     ];
     const result = collectRunMetrics(outcome({ actualStatus: "failed", events }));
     expect(result.context_overflow).toBe(1);
-    expect(result.termination_reason).toBe("limit:maxIterationsPerTurn");
+    expect(result.termination_reason).toBe("agent_limit");
   });
 
   it("detects false completion: model stopped but judge says not done", () => {
@@ -433,6 +433,19 @@ describe("deriveRetryTaxonomy", () => {
     expect(taxonomy.stallRecovery).toBe(1);
   });
 
+  it("P2-40: reconciliation and mcpReconnect are counted from their events", () => {
+    const events = [
+      mk("retry.reconciliation", { tool: "exec", toolCallId: "c1" }),
+      mk("retry.reconciliation", { tool: "write_file", toolCallId: "c2" }),
+      mk("retry.mcpReconnect", { target: "git" }),
+      mk("retry.mcpReconnect", { target: "slack" }),
+      mk("retry.mcpReconnect", { target: "git" }),
+    ];
+    const taxonomy = deriveRetryTaxonomy(events);
+    expect(taxonomy.reconciliation).toBe(2);
+    expect(taxonomy.mcpReconnect).toBe(3);
+  });
+
   it("empty trail yields the empty taxonomy", () => {
     expect(deriveRetryTaxonomy([])).toEqual(EMPTY_RETRY_TAXONOMY);
   });
@@ -500,12 +513,12 @@ describe("terminationReason", () => {
     expect(terminationReason(outcome({ events: [mk("turn.completed", {})] }))).toBe("model_stopped");
   });
 
-  it("limit:<kind> when a run limit was reached", () => {
+  it("tool_limit when a run limit was reached", () => {
     const o = outcome({
       actualStatus: "failed",
       events: [mk("run.limit_reached", { limit: "maxToolCalls" }), mk("turn.failed", {})],
     });
-    expect(terminationReason(o)).toBe("limit:maxToolCalls");
+    expect(terminationReason(o)).toBe("tool_limit");
   });
 
   it("model_error when the model failed", () => {

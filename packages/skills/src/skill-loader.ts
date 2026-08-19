@@ -9,6 +9,7 @@ import type {
 } from "@ar/contracts";
 import { AgentError, errorInfo, newSkillId } from "@ar/contracts";
 import { detectPromptInjection, detectSecrets } from "@ar/security";
+import { skillDenialCode, type SkillSecurityDenial } from "./skill-security.js";
 import * as fsPromises from "node:fs/promises";
 
 const DEFAULT_MAX_METADATA_BYTES = 64 * 1024;
@@ -34,7 +35,7 @@ export interface FileSkillLoaderDeps {
   /** Injectable SkillId generator; defaults to contracts newSkillId. */
   newSkillId?: () => SkillId;
   /** Optional callback fired when a skill body is denied (injection or secret). */
-  onSecurityDenied?: (event: { detection: "injection" | "secret"; reasons: string[]; content: string; path: string; source: string }) => void;
+  onSecurityDenied?: (event: SkillSecurityDenial) => void;
 }
 
 /** Marker appended to a truncated body so callers can detect truncation. */
@@ -110,7 +111,7 @@ export class FileSkillLoader implements SkillLoader {
       this.onSecurityDenied?.({ detection: "injection", reasons: injection.reasons, content, path: skill.path, source: "skill-loader" });
       throw new AgentError(
         errorInfo(
-          "SECURITY_DENIED",
+          skillDenialCode("injection"),
           `skill load blocked: injection detected in ${skill.path} (${injection.reasons.join(", ")})`,
         ),
       );
@@ -120,7 +121,7 @@ export class FileSkillLoader implements SkillLoader {
       this.onSecurityDenied?.({ detection: "secret", reasons: secret.secrets, content, path: skill.path, source: "skill-loader" });
       throw new AgentError(
         errorInfo(
-          "SECURITY_DENIED",
+          skillDenialCode("secret"),
           `skill load blocked: secret detected in ${skill.path} (${secret.secrets.join(", ")})`,
         ),
       );

@@ -163,7 +163,7 @@ describe("HOOK-001 security: no hook can bypass security", () => {
     expect(keys).not.toContain("sandboxPolicy");
   });
 
-  it("a throwing before_tool hook propagates and stops the chain", async () => {
+  it("P2-19: a throwing before_tool hook FAILS CLOSED (denies) instead of allowing", async () => {
     const reg = new HookRegistry();
     const seen: string[] = [];
     reg.register("before_tool", () => {
@@ -174,7 +174,59 @@ describe("HOOK-001 security: no hook can bypass security", () => {
       return call;
     });
     const call = { id: newToolCallId(), name: "x", args: {} };
-    await expect(reg.beforeTool(ctx, call)).rejects.toThrow("hook boom");
+    // 禁止 hook 异常默认 allow: gate hook 抛错 → deny (null), 绝不放行.
+    expect(await reg.beforeTool(ctx, call)).toBeNull();
     expect(seen).toEqual([]);
+    // ...并且错误被可观测地记录(deny), 而非静默吞掉.
+    expect(reg.failureStats()).toMatchObject({ count: 1, denied: 1 });
+  });
+
+  it("P2-19: a timing-out before_tool hook FAILS CLOSED (denies)", async () => {
+    const reg = new HookRegistry();
+    reg.register("before_tool", () => new Promise(() => {}), { timeoutMs: 10 });
+    const call = { id: newToolCallId(), name: "x", args: {} };
+    expect(await reg.beforeTool(ctx, call)).toBeNull();
+    expect(reg.failureStats().denied).toBe(1);
+  });
+
+  it("P2-19: before_tool order, source & transformed context threading", async () => {
+    const reg = new HookRegistry();
+    const order: string[] = [];
+    reg.register("before_tool", (_c: HookContext, call: ToolCall) => {
+      order.push("a");
+      return { ...call, name: "step1" };
+    }, { source: "rule-a" });
+    reg.register("before_tool", (_c: HookContext, call: ToolCall) => {
+      order.push("b");
+      return { ...call, name: "step2" };
+    }, { source: "rule-b" });
+    const call = { id: newToolCallId(), name: "x", args: {} };
+    const out = await reg.beforeTool(ctx, call);
+    expect(order).toEqual(["a", "b"]);
+    expect(out?.name).toBe("step2");
+  });
+
+  it("P2-19: a throwing observe hook is swallowed + reported, later hooks still run", async () => {
+    const reg = new HookRegistry();
+    const seen: string[] = [];
+    reg.register("after_tool", () => { throw new Error("observer boom"); });
+    reg.register("after_tool", (_c: HookContext, call: ToolCall) => { seen.push(call.name); });
+    const call = { id: newToolCallId(), name: "x", args: {} };
+    await reg.afterTool(ctx, call, { status: "success", output: 1 });
+    expect(seen).toEqual(["x"]);
+    expect(reg.failureStats()).toMatchObject({ count: 1, denied: 0, swallowed: 1 });
+  });
+
+  it("P2-19: before_permission gate fails closed (false) on throw", async () => {
+    const reg = new HookRegistry();
+    reg.register("before_permission", () => { throw new Error("perm boom"); });
+    expect(await reg.beforePermission(ctx)).toBe(false);
+  });
+
+  it("P2-19: a sync-throwing observe hook inside dispatch does not reject", async () => {
+    const reg = new HookRegistry();
+    reg.register("session_start", () => { throw new Error("sync boom"); });
+    await expect(reg.dispatch("session_start", ctx)).resolves.toBeUndefined();
+    expect(reg.failureStats().count).toBe(1);
   });
 });

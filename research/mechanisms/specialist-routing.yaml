@@ -1,0 +1,18 @@
+# Mechanism manifest (P2-8) — Specialist Routing experiment (P3-3)
+# Mechanism-CANDIDATE experiment, not a main-runtime refactor.
+id: specialist-routing
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: planning
+problem: a single unified agent prompt handles every task the same way, so domain-specific tasks (debugging, docs, data, research) get no specialized structure and under-perform vs a specialist prompt.
+preconditions: the task type is confidently classifiable from structural cues (keywords, file paths, request text); low-confidence / mixed types must stay on the generalist.
+expected_benefit: routing a task to a specialist prompt (per-type) lifts pass rate on well-matched tasks, net of the routing-decision pass cost and of mis-routing on fuzzy tasks.
+risks: the router itself burns tokens/latency on every task; mis-classification routes a task to the wrong specialist and regresses it; marginal confidence should fall back to the generalist, never force a specialist.
+implementation_scope: packages/evaluation (task-type classifier + routing promotion gate), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- clearly-debuggable task routed to a debugging specialist (should lift pass rate)
+- generalist task with no strong type cues (must stay on generalist, not mis-route)
+- fuzzy task whose cues point at two specialists at once (low confidence → generalist)
+- stress case where many tasks are routed and routing cost compounds
+status: candidate

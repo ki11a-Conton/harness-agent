@@ -144,6 +144,8 @@ async function summarizeBody(response: Response): Promise<string> {
     const text = await response.text();
     return redactSecrets(text.replace(/\s+/g, " ").trim()).content.slice(0, BODY_SUMMARY_LIMIT);
   } catch {
+    // Best-effort: a body-summary read that races/timeouts must not fail the
+    // whole call; the real response body is not degraded by this summary.
     return "";
   }
 }

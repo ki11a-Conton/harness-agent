@@ -1,0 +1,19 @@
+# Mechanism manifest (P2-8) — Scheduler Policy Learning (P3-12)
+# Do NOT refactor the main runtime directly: this is a mechanism-candidate
+# experiment first, promotable only if the benchmark shows a real win.
+id: scheduler-policy-learning
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: scheduling
+problem: maxConcurrent, child-budget allocation and queue fairness are fixed, so a scheduler cannot adapt to stress; a learned policy should tune them but must never destabilise the stress suite.
+preconditions: a policy is promoted ONLY after the stress suite proves stable (no new security violations, no raised false-complete, bounded latency/tokens) and it lifts the stress pass rate.
+expected_benefit: throughput/allocations adapt while the adversarial/stress split stays stable.
+risks: a policy that boosts nominal pass but spikes security violations / false-completes / latency; promoting without stress-suite stability; over-allocating budget.
+implementation_scope: packages/evaluation (stress gate + scheduler selection), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- a stress-stable policy that lifts stress pass rate (promoted)
+- a policy with new security violations (rejected)
+- raised false-complete / latency / token overrun (rejected)
+- nothing stress-stable and lifting (champion kept)
+status: candidate

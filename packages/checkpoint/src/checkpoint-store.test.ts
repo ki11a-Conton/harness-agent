@@ -190,4 +190,71 @@ describe("DurableCheckpointStore (P1-3)", () => {
     expect(parsed.state.goal).toBe(data.state.goal);
     expect(parsed.childSessions).toEqual(["session_1"]);
   });
+
+  describe("Q-17 backward compatibility — checkpoint schema version", () => {
+    it("write rejects a checkpoint with an unsupported schemaVersion (fail-closed)", async () => {
+      const root = await freshRoot();
+      const store = new DurableCheckpointStore({ dataDir: root });
+      // Forge a future-version checkpoint with a self-consistent checksum so the
+      // rejection is purely due to the version gate, not the checksum gate.
+      const base = checkpoint();
+      const future = {
+        ...base,
+        schemaVersion: 999,
+      };
+      // Drop the checksum field so it can be recomputed over the forged payload;
+      // only the schema gate is meant to be exercised.
+      const { checksum: _omitted, ...payload } = future;
+      void _omitted;
+      // Cannot use buildCheckpoint (frozen version type), so checksum manually.
+      const { computeCheckpointChecksum } = await import("@ar/contracts");
+      const forged = { ...base, schemaVersion: 999, checksum: computeCheckpointChecksum(payload as never) as never };
+
+      await expect(store.save(forged as never)).rejects.toMatchObject({ code: "UNSUPPORTED_SCHEMA" });
+    });
+
+    it("read never trusts a same-version-claiming older schema without a checksum", async () => {
+      const root = await freshRoot();
+      const store = new DurableCheckpointStore({ dataDir: root });
+      const session = newSessionId();
+      const data = checkpoint({ sessionId: session });
+      await store.save(data);
+
+      // Plant a file that CLAIMS the current version but carries an illegal
+      // checksum (e.g. a v0 writer that predates checksums). It must never
+      // displace the valid checkpoint on load.
+      const dir = join(root, "checkpoints", session);
+      await writeFile(
+        join(dir, "legacy-no-checksum.json"),
+        `{"checkpointId":"legacy_old","schemaVersion":1,"sessionId":"${session}","agentId":"a","createdAt":0,"iteration":0,"checksum":"deadbeef"}`,
+        "utf8",
+      );
+
+      const loaded = await store.loadLatest(session);
+      expect(loaded?.checkpointId).toBe(data.checkpointId); // valid one still wins
+      const all = await store.list(session);
+      expect(all.map((c) => c.checkpointId)).toEqual([data.checkpointId]); // legacy excluded
+    });
+
+    it("read fail-closed on an unknown (future) schema version file", async () => {
+      const root = await freshRoot();
+      const store = new DurableCheckpointStore({ dataDir: root });
+      const session = newSessionId();
+      const data = checkpoint({ sessionId: session });
+      await store.save(data);
+
+      const dir = join(root, "checkpoints", session);
+      await writeFile(
+        join(dir, "future-v99.json"),
+        JSON.stringify({ ...data, schemaVersion: 99 }, null, 2),
+        "utf8",
+      );
+
+      const loaded = await store.loadLatest(session);
+      expect(loaded?.checkpointId).toBe(data.checkpointId); // never misread as v1
+      const all = await store.list(session);
+      expect(all).toHaveLength(1);
+      expect(all[0]!.checkpointId).toBe(data.checkpointId);
+    });
+  });
 });

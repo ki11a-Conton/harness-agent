@@ -1,0 +1,19 @@
+# Mechanism manifest (P2-8) — Offline Trace Replay (P3-15)
+# Do NOT refactor the main runtime directly: this is a mechanism-candidate
+# experiment first, promotable only if the benchmark shows a real win.
+id: offline-trace-replay
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: evaluation
+problem: validating a new judge, memory ranker or attribution requires a live model call per case, so iteration is slow and expensive; a fixed offline corpus would let these components be tested without any model.
+preconditions: historical event/trace recordings can re-run the evaluator, differentially test a new judge, a new memory ranker and a new attribution — all deterministically, with no real model calls.
+expected_benefit: cut iteration cost; components are validated against a fixed, reproducible corpus; no model call needed for evaluator/judge/ranker/attribution checks.
+risks: re-running a component over stale traces and drawing wrong conclusions; assuming offline replay implies model behaviour; nondeterministic ranker/judge making replay unverifiable.
+implementation_scope: packages/evaluation (offline replay over recorded traces), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- replay the evaluator over a recorded corpus (offline pass/token scores)
+- differential test of a new judge (changed cases + new failures)
+- a new memory ranker tested by top-k hits
+- attribution re-run over recorded event traces
+status: candidate

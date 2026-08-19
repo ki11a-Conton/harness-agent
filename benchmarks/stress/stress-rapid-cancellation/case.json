@@ -1,0 +1,18 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "stress",
+  "tags": [
+    "cancellation"
+  ],
+  "timeoutMs": 60000,
+  "maxDurationMs": 120000,
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "out/result.txt",
+      "mustChange": true
+    }
+  ]
+}

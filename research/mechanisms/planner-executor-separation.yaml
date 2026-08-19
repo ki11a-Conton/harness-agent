@@ -1,0 +1,19 @@
+# Mechanism manifest (P2-8) — Planner / Executor Separation experiment (P3-1)
+# Do NOT refactor the main runtime directly: this is a mechanism-candidate
+# experiment first, promotable only if the benchmark shows a real win.
+id: planner-executor-separation
+source_agent: opencode
+source_report: reports/opencode/2026-01.md
+provenance: inspired
+category: planning
+problem: a single continuous loop interleaves planning and acting, so complex multi-step tasks can drift, revisit solved ground, and burn budget on decisions that a separation into (1) a bounded planning phase and (2) a focused executor could avoid.
+preconditions: task is multi-step / complex (multi-file, multi-tool, verification gate, long context); simple single-step tasks must NOT be separated.
+expected_benefit: higher pass rate on complex tasks by front-loading the plan before acting, at the cost of an extra planning pass (added tokens + latency).
+risks: pure token/latency inflation without quality gain on complex tasks; the separation may slow simple tasks for no benefit; plan-only reasoning can be wasted when the executor re-derives everything.
+implementation_scope: packages/evaluation (experiment harness + promotion gate), mechanism manifest only — no main-runtime refactor unless promoted.
+evaluation_cases:
+- complex multi-file coding task with verification gate
+- simple single-file edit task (must NOT regress / over-separate)
+- adversarial case where plan-only reasoning could skip or mis-order steps
+- stress case with many steps where separation should reduce rework
+status: candidate

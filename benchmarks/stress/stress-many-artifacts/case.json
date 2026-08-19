@@ -1,0 +1,17 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "stress",
+  "tags": [
+    "many-artifacts"
+  ],
+  "allowArtifacts": true,
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "out/report.md",
+      "mustChange": true
+    }
+  ]
+}
