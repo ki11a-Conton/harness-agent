@@ -15,7 +15,7 @@
 
 | 文件 | 作用 | 当前状态 |
 |------|------|----------|
-| `plan.md` | 任务计划，按 Phase（P0/P1/P2/P3）+ Q 系列硬指标项排布，每项含 Status / Tests / Benchmark / Notes | 5328 行，**几乎全部 DONE**，仅 Q-1 仍为 IN_PROGRESS |
+| `plan.md` | 任务计划，按 Phase（P0/P1/P2/P3）+ Q 系列硬指标项排布，每项含 Status / Tests / Benchmark / Notes | 全部 Phase **DONE**（含 Q-1，2026-08-19 收尾） |
 | `mem.md` | 会话记忆：每 Phase 的关键文件、变更、踩坑（gotchas）、测试基线轨迹 | 298 行 |
 | `reflection.md` | 复盘：沉淀通用的工程原则、易错点模式、修复经验 | 78 行 |
 | `AGENTS.md` | 仓库级 Agent 约束与约定 | 接手前先读 |
@@ -44,8 +44,7 @@ P1-1 ~ P1-20 全部 **DONE**：WorkingState 统一运行状态、Context 压缩 
 P2-1 ~ P2-30 全部 **DONE**：反思 V2、记忆证据模型、有用性反馈、衰减/废弃/冲突、技能有效性、技能选择、候选沙箱、机制注册表、实验 harness、回归归因、失败案例挖掘、对抗/压力基准扩展、评估成本模型、跨模型评估、提示词/策略版本化、插件硬化、Hook 硬化、MCP 可靠性/信任、文件系统/进程沙箱、网络门 V2、供应链安全、变更事务、写入保护、文件/搜索/地图缓存等。
 
 ### Q —— 硬质量指标项
-- Q-2 ~ Q-20 全部 **DONE**（Q-3、Q-9、Q-12 等部分项在审计后回填；Q-13~Q-20 于 2026-08-19 完成）。
-- **Q-1 拆分超大 `runtime.ts`：IN_PROGRESS（进行中）—— 见第 5 节。**
+- Q-1 ~ Q-20 全部 **DONE**（Q-3、Q-9、Q-12 等部分项在审计后回填；Q-13~Q-20 于 2026-08-19 完成；Q-1 拆分超大 runtime.ts 于 2026-08-19 收尾，见第 5 节）。
 
 ## 5. Q-1 详细进度（接手点）
 
@@ -77,18 +76,30 @@ P2-1 ~ P2-30 全部 **DONE**：反思 V2、记忆证据模型、有用性反馈�
 7. **`injectSteeringPrompts` + `buildContext` 抽取（DONE）**：steer 注入 + context pipeline
    （discovery、system prompt、auto-compact、trim、overflow 检查，~183 行）。`runTurn`
    进一步缩至 **~159 行编排骨架**。
+8. **`prepareTurn` 初始化抽取（DONE）**：`runTurn` init 段抽为 `prepareTurn`，返回
+   `TurnInit`（ctx/state/turn/working/toolLedger）。
+9. **`ToolCallController` 独立模块（DONE）**：`executeToolCalls`/`runReadBatch`/
+   `executeToolCall`/`recordStallTrace` 移入 `tool-call-controller.ts`；共享符号
+   （`defaultSandboxPolicy`/`FaultPoint`/`RuntimeKilledError`/`rethrowIfKill`）下移
+   `turn-helpers.ts` 并 re-export。`runtime.ts` 现 2205 行。
+10. **`ContextController` 独立模块（DONE）**：`buildContext`/`injectSteeringPrompts`/
+    `renderToolResultForContext` 移入 `context-controller.ts`；`compactCount` 装箱为
+    `compactCounter` 与 model-call 共享。
+11. **`ModelCallController` + `VerificationController`（DONE）**：`callModelWithRetry`/
+    `handleModelCompletion` → `model-call-controller.ts`；`runVerificationGate` →
+    `verification-controller.ts`。
+12. **`RecoveryController`（DONE）**：`classifyStatusDetail`/`finishTurn`/
+    `parkForUserInput`/`checkpoint`/`reconstructResumeState` → `recovery-controller.ts`。
+    `runTurn` 收敛为约 150 行纯编排（TurnRunner），`runtime.ts` 最终 **1141 行**。
 
 > 进度细节与每一步的 Notes 已写入 `plan.md`（Q-1 段，第 4519 行起）。
 
-### 下一步（接手者从这里继续）
+### Q-1 完成结论
 
-Q-1 剩余（plan.md 中标注 **Next**）：
-- 抽取初始化逻辑 `prepareTurn`（runTurn 的 init 段）。
-- 将 `executeToolCalls` / `executeToolCall` / `runReadBatch` 移入独立模块
-  （可考虑新建 `tool-call-controller.ts`）。
-- 后续可选分解为 plan 中列举的：`ModelCallController`、`ToolCallController`、
-  `ContextController`、`VerificationController`、`RecoveryController`、`TurnRunner`。
-- **每拆一块必须跑 `pnpm typecheck` + `pnpm test`，确认 137 files / 3672 tests 全绿**。
+6 个 controller（ToolCall / Context / ModelCall / Verification / Recovery + TurnRunner
+收敛为 `runTurn` 编排）全部抽取完成。`runtime.ts` 从约 5000 行降至 **1141 行**，公共
+`@ar/core` API 与 event semantics 不变。`resumeTurn`/`submitUserAnswer`/`resolveAgent`
+因与 `runTurn` 存在双向依赖（resumeTurn → runTurn）保留在运行时骨架。
 
 `packages/core/src/runtime/` 目录现状：
 
@@ -96,6 +107,8 @@ Q-1 剩余（plan.md 中标注 **Next**）：
 runtime/  artifact-store.ts/.test.ts  checkpoint.test.ts  effective-config.test.ts
           fault-injection.ts(.test)  fault-injection-v2.test.ts  loop-integration.test.ts
           resume.test.ts  runtime.test.ts  runtime.ts  turn-helpers.ts
+          tool-call-controller.ts  context-controller.ts  model-call-controller.ts
+          verification-controller.ts  recovery-controller.ts
 ```
 
 ## 6. 常用命令
@@ -109,6 +122,16 @@ pnpm test:watch       # 增量
 pnpm test:coverage    # 覆盖率报告
 pnpm benchmark:smoke  # 对抗基准冒烟（--allow-stub）
 ```
+
+> ⚠️ **Windows 真机接手注意（2026-08-19 复核，与第 3 节 Linux 基线不同）**：
+> 1. 本机 `pnpm` 的 corepack shim 盘符错位（指向 `D:\e\node` 而非 `E:\node`），
+>    可用 `node "E:\node\node_modules\corepack\dist\pnpm.js" <cmd>` 直接调 pnpm。
+> 2. `typescript@7.0.2`（tsgo 原生）**增量构建会 panic**：每次 typecheck 前先
+>    `rm -rf node_modules/.cache/tsbuildinfo` 并删各包 `dist`，再 `tsc -b --force`。
+> 3. 全量测试在真 Windows 上约有 **23–25 个失败**（非 core 包，flaky）：backup
+>    断言 POSIX 分隔符、P0-6 fail-closed 误杀 Windows 绝对路径、fixture 度量、
+>    文件锁 EBUSY/afterAll 超时——属 Q-12 Windows path parity 未闭环的遗留，与 Q-1
+>    无关。**core 包全绿**，Q-1 验收以 core 全绿 + 非 core 失败数不增加为准。
 
 ## 7. 反馈给接手者的关键经验（来自 reflection.md / mem.md）
 

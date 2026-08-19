@@ -4518,7 +4518,7 @@ Notes:
 
 # Q-1 拆分超大 runtime.ts
 
-Status: IN_PREGRESS (helper substrate extracted 2026-08-19; controller 抽取逐块推进中)
+Status: DONE (2026-08-19 — 6 个 controller 全部抽取完成：ToolCall / Context / ModelCall / Verification / Recovery 独立模块 + TurnRunner 收敛为 runTurn 编排骨架；`runtime.ts` 5000+ 行 → 1141 行)
 
 当前 `runtime.ts` 已承载：
 
@@ -4610,13 +4610,86 @@ Progress:
     overflowAttempt，或 `finish` 携带 TurnOutcome）。
   - `runTurn` 主循环从 ~343 行进一步缩减到 ~159 行，成为纯编排方法。
   TypeScript 编译通过，全量回归 **137 files / 3672 tests 全绿**。
-- **Next**：`runTurn` 已成为 ~159 行的编排骨架。剩余可做：抽取初始化逻辑
-  （prepareTurn）、将 executeToolCalls/executeToolCall/runReadBatch 移到独立模块。
-  每块跑 full regression。
+- **(DONE 2026-08-19) prepareTurn 初始化抽取**：将 `runTurn` 的 init 段（session/
+  agent/turn 解析 + `TurnContext` 组装 + `AgentState` 创建与 `beginTurn` + working
+  state 播种 + 空 tool ledger）抽取为私有方法 `prepareTurn`，返回新增 `TurnInit`
+  接口（`ctx` / `state` / `turn` / `working` / `toolLedger`）。`runTurn` 主循环内
+  的 `agent` / `session` 局部引用改为 `ctx.agent` / `ctx.session`。纯打包重构，零
+  行为变化。
+- **(DONE 2026-08-19) ToolCallController 独立模块**：将 `executeToolCalls` /
+  `runReadBatch` / `executeToolCall` / `recordStallTrace` 四个方法移入新文件
+  `packages/core/src/runtime/tool-call-controller.ts` 的 `ToolCallController` 类，
+  方法体逐字保持，仅 `this.<field>` → `this.deps.<field>`（依赖束 `ToolCallControllerDeps`
+  注入 orchestrator/store/hooks/emit/failAt/now/timer/sandboxPolicy/recovery/
+  adaptiveRecovery/recoveryUsage/toolCapabilityOf/maxParallelToolCalls；
+  `recoveryUsage` 按引用共享）。`runtime.ts` 构造时创建 controller 实例，
+  `runTurn` 经 `this.toolCallController.executeToolCalls(...)` 委托；结果类型统一为
+  导出的 `ExecutedToolCall`。为避免 controller→runtime 循环导入，把共享符号
+  `defaultSandboxPolicy` / `FaultPoint` / `FaultPointContext` / `RuntimeKilledError` /
+  `rethrowIfKill` 下移到 `turn-helpers.ts`，`runtime.ts` re-export 保持公共
+  `@ar/core` 表面（`apps/cli`、fault-injection 测试经 `./runtime.js` 的导入不变）。
+  结果：`runtime.ts` 2608 → 2205 行，`tool-call-controller.ts` 476 行。
+- **(DONE 2026-08-19) ContextController 独立模块**：`buildContext`（context pipeline +
+  自动 compact + message-history trim + overflow 检查）、`injectSteeringPrompts`
+  （exactly-once steer 注入）、`renderToolResultForContext`（预算/artifact/脱敏/注入扫描）
+  移入 `context-controller.ts`。依赖 `checkpoint`/`finishTurn` 以注入函数绑定到运行时；
+  `compactCounter`（原 `compactCount`）装箱为 `{ value }` 与 model-call controller 按引用共享。
+- **(DONE 2026-08-19) ModelCallController 独立模块**：`callModelWithRetry`（流式接收 +
+  纯重试决策 + reactive compaction）与 `handleModelCompletion`（wall clock / append /
+  verification gate + 重试 / finishReason 分发 / ask-user gate）移入 `model-call-controller.ts`。
+  依赖 `runVerificationGate`/`checkpoint`/`finishTurn`/`parkForUserInput`/`wallClockExceeded`
+  以注入函数绑定。
+- **(DONE 2026-08-19) VerificationController 独立模块**：`runVerificationGate`（completion
+  policy + RuntimeVerifier）移入 `verification-controller.ts`。
+- **(DONE 2026-08-19) RecoveryController 独立模块**：`classifyStatusDetail`（P2-38 部分失败
+  分类）、`finishTurn`、`parkForUserInput`（P2-43 ask-user 暂停）、`checkpoint`（P1-3 持久化）、
+  `reconstructResumeState`（P1-4 崩溃恢复重放）移入 `recovery-controller.ts`。`runtime.ts`
+  构造时**先**创建 RecoveryController（context/model 的 checkpoint/finishTurn/parkForUserInput
+  注入绑定到它）。
+- **TurnRunner 收敛**：`runTurn` 保持在 `AgentRuntime`（约 150 行纯编排：prepareTurn →
+  contextController → modelCallController → toolCallController → handleToolResults →
+  recoveryController.finishTurn/checkpoint），公共入口 `resumeTurn`/`submitUserAnswer`/
+  `resolveAgent` 因与 `runTurn` 存在双向依赖（resumeTurn → runTurn）而保留在运行时骨架。
+- **最终结果**：`runtime.ts` 5000+ 行 → **1141 行**；新增 `turn-helpers.ts`（526）、
+  `tool-call-controller.ts`（476）、`context-controller.ts`（479）、`model-call-controller.ts`
+  （416）、`recovery-controller.ts`（375）、`verification-controller.ts`（76）。共享类型
+  （TurnOutcome/TurnOutcomeStatus/TurnOutcomeDetail/ResumeResult/FaultPoint/RuntimeKilledError/
+  SkillDiscovery/TRUST_BOUNDARY_PROMPT 等）下移 `turn-helpers.ts` 并在 `runtime.ts` re-export，
+  公共 `@ar/core` 表面不变。
 
----
+Tests (本机 Windows 基线 2026-08-19):
+- `tsc -b`（clean build）通过，无错误。注：tsgo 7.0.2 在**增量**构建（存在
+  `node_modules/.cache/tsbuildinfo` + 新旧 dist）时于 declaration emit 路径 panic；
+  必须先清 `node_modules/.cache/tsbuildinfo` + 各包 `dist` 再 `tsc -b --force`。
+- 全量 `vitest run`：**3646 passed / 25 failed / 1 skipped**（137 files，其中 9
+  files 含失败）。**core 包 0 失败**（全 core 12 files / 173 tests 全绿：runtime/
+  fault-injection/loop-integration/resume/effective-config/checkpoint/artifact-store 等）。
+  25 个失败全部位于 core 之外的底层包，且均为 **Windows 环境既有问题**，与本 Phase
+  改动无关（见 Notes）：backup 路径分隔符（events/session/memory/store-integrity）、
+  P0-6 fail-closed 对 Windows 绝对路径的误杀（security/sandbox、tools/orchestrator/
+  source-matrix/vs001）、fixture 度量受路径影响（evaluation/benchmark-suite）、
+  Windows 文件锁 EBUSY / afterAll hook 超时（tools/orchestrator、tools/process/
+  executor、evaluation/mining，flaky，失败数在 23–25 间波动）。
+- 未降低任何测试或安全标准：上述失败为接手前即存在的环境差异，本 Phase 未改动
+  相关断言，也未跳过/放宽任何用例。
 
-# Q-2 消除 Tool Name Heuristics
+Benchmark:
+- 无行为变化（纯打包重构 + 依赖束抽取，事件语义、公共 API、checkpoint/重试/恢复
+  路径均逐字保持）。默认 `RealTimer` / 默认 sandbox policy 行为与改前一致。
+
+Notes:
+- **环境差异（接手必读）**：HANDOVER 的「137 files / 3672 tests 全绿」基线是在
+  **Linux/WSL** 下取得的。真 Windows（当前机器）上约有 23–25 个测试失败，根因是
+  Q-12「Windows / Linux Path Parity」实际**未在真 Windows 上闭环**：P0-6 为修 POSIX
+  逃逸把 Windows 风格绝对路径 fail-closed 拒绝，副作用是在真 Windows 上把 workspace
+  内合法路径一并误杀；另有 backup 测试硬编码 POSIX 分隔符、以及 Windows 文件锁
+  EBUSY/afterAll 超时等 flaky 失败。这些与本 Phase 无关，建议单独立项修复（不属 Q-1
+  范围，未在本次改动）。
+- **tsgo 增量 panic**：`typescript@7.0.2`（原生实现）在**增量**构建（存在
+  `tsbuildinfo` + 新旧 dist）时 panic。工作流：每次构建前
+  `rm -rf node_modules/.cache/tsbuildinfo` 并删各包 `dist`，再 `tsc -b --force`。
+- 抽取原则沿用：方法体逐字迁移、`this.X` → `this.deps.X`；共享符号下移
+  `turn-helpers.ts` 并在 `runtime.ts` re-export 以破循环依赖、保公共 API 稳定。
 
 Status: DONE (2026-08-19)
 

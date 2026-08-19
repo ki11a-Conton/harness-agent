@@ -297,3 +297,47 @@
 - `RuleVersionError.code` 用字符串联合（`empty-content` 等），不是错误码数字——测试按消息文本断言更稳。
 
 ### P2-17 Policy Config Versioning (1254)
+
+---
+
+## Q-1 拆分 runtime.ts（2026-08-19 接手续做）
+
+**接手基线（Windows 真机，与 HANDOVER 的 Linux 基线不同）**：
+- `tsc -b` clean build 通过；`tsgo@7.0.2` 在**增量**构建（有 `node_modules/.cache/tsbuildinfo` + 新旧 dist）时 declaration-emit panic → 必须清 tsbuildinfo + dist 再 `--force`。
+- `vitest run`：**3646 passed / 25 failed / 1 skipped**（flaky，23–25 波动）。25 个失败全在 core 之外底层包，均为 Windows 环境既有问题：backup 断言 POSIX 分隔符、P0-6 fail-closed 误杀 Windows 绝对路径、fixture 度量受路径影响、文件锁 EBUSY / afterAll 超时。**core 包 0 失败**。
+
+**Block 1 — prepareTurn（DONE）**：
+- `runTurn` init 段 → `private async prepareTurn(sessionId, turnId, signal, opts): Promise<TurnInit>`。
+- 新增 `TurnInit` 接口（ctx/state/turn/working/toolLedger）；循环内 `agent`/`session` → `ctx.agent`/`ctx.session`。
+
+**Block 2 — ToolCallController（DONE）**：
+- 新建 `packages/core/src/runtime/tool-call-controller.ts`（476 行）：`ToolCallController` + `ToolCallControllerDeps` + `ExecutedToolCall`。
+- 移入 `executeToolCalls`/`runReadBatch`/`executeToolCall`/`recordStallTrace`，方法体逐字，`this.X`→`this.deps.X`；`recoveryUsage` 按引用共享。
+- 共享符号 `defaultSandboxPolicy`/`FaultPoint`/`FaultPointContext`/`RuntimeKilledError`/`rethrowIfKill` 下移 `turn-helpers.ts`，`runtime.ts` re-export 保持 `@ar/core` 公共表面。
+- `runtime.ts` 2608 → 2205 行。
+
+**Gotchas**：
+- controller 不 import runtime（会循环）→ 共享符号下移 turn-helpers 并 re-export。
+- `recoveryUsage` 必须传引用（同一对象属性自增），否则 adaptive recovery 预算跨调用丢失。
+- 清理了 `ToolCallRequest`/`ToolExecutionContext`/`ToolCallTrace` 三个只被已删方法使用的 type import。
+- 测试全走公共 API（无私有方法直接调用），移动 controller 不破坏任何测试。
+
+**Block 3-6 — Context/ModelCall/Verification/Recovery Controller（DONE）**：
+- 全部 6 个 controller 抽取完成，`runtime.ts` 5000+ → **1141 行**。
+- `context-controller.ts`（479）：buildContext + injectSteeringPrompts + renderToolResultForContext。
+- `model-call-controller.ts`（416）：callModelWithRetry + handleModelCompletion。
+- `verification-controller.ts`（76）：runVerificationGate。
+- `recovery-controller.ts`（375）：classifyStatusDetail + finishTurn + parkForUserInput + checkpoint + reconstructResumeState。
+- 更多共享类型下移 turn-helpers：TurnOutcome/TurnOutcomeStatus/TurnOutcomeDetail/ResumeResult/ASK_GATE_TOOL/TRUST_BOUNDARY_PROMPT/SkillDiscovery/SkillSecurityDenialRecord。
+- `compactCount` → `compactCounter = { value: 0 }`（context + model-call 按引用共享）。
+- **构造顺序关键**：recoveryController 必须最先构造（context/model 的 checkpoint/finishTurn/parkForUserInput 注入绑定到它）。
+
+**Gotchas (Block 3-6)**：
+- `SkillDiscovery`/`SkillSecurityDenialRecord`/`TRUST_BOUNDARY_PROMPT` 是 core 自有类型（非 contracts），context-controller 误从 `@ar/contracts` import 报 TS2305 → 应从 turn-helpers import。
+- 删除方法时边界判断要精确：`classifyStatusDetail` 结束行误判，多删了 `handleToolResults` doc 注释的 `/**` 开头，导致 TS 解析崩溃（连锁语法错误）。教训：删除前先读清每个方法的 `}` 结束行。
+- 抽取后清理 unused import：buildCheckpoint/newCheckpointId/newAskId/isAskReason/CheckpointData/CheckpointBudgetUsage/ToolCallId/TerminationReason/UnresolvedToolExecution/TurnOutcomeDetail/TurnOutcomeStatus 等（值/type）。
+- 孤儿 doc 注释（checkpoint/reconstructResumeState 的注释）随方法删除一并清理。
+
+**最终验收（Windows 真机）**：
+- `tsc -b`（clean build）通过。
+- 全量 vitest：3646 passed / 25 failed / 1 skipped；**core 12 files / 173 tests 全绿**，25 失败全为 Windows 环境既有问题（与拆分无关）。
