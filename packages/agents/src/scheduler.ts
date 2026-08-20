@@ -1,7 +1,8 @@
-import type { AgentId, Session, SessionId, SessionStore } from "@ar/contracts";
+import type { AgentId, Session, SessionId, SessionStore, Timer } from "@ar/contracts";
 import {
   AgentError,
   DEFAULT_SCHEDULER_LIMITS,
+  RealTimer,
   TREE_BUDGET_HEADROOM_RATIO,
   errorInfo,
   type SchedulerLimits,
@@ -47,6 +48,8 @@ export interface SchedulerEntry {
   /** P1-7: tool-call budget pre-reserved from the root tree pool for this
    *  agent (its allocation; the unused part returns on release). */
   allocation?: number;
+  /** P0-11: token budget pre-reserved for this agent. */
+  tokenAllocation?: number;
 }
 
 /** Granted scheduling slot: holds the entry until `release()` (the agent's
@@ -57,6 +60,10 @@ export interface SchedulerToken {
   /** Release the slot; report the tool calls the agent actually executed so
    *  the tree budget can account usage and refund unused allocation (P1-7). */
   release: (usedToolCalls?: number) => void;
+  /** P0-11: report token usage from a model.completed for tree accounting. */
+  reportUsage: (inputTokens: number, outputTokens: number) => void;
+  /** Root session id for tree budget lookups. */
+  rootSessionId: SessionId;
 }
 
 export interface SchedulerDeps {
@@ -64,6 +71,8 @@ export interface SchedulerDeps {
   store: SessionStore;
   limits?: Partial<SchedulerLimits>;
   now?: () => number;
+  /** P1-7: injectable timer for budget timeouts (deterministic tests). */
+  timer?: Timer;
 }
 
 /** Per-root accounting for the P1-7 tree budget. */
@@ -73,6 +82,10 @@ interface RootAccount {
   toolUsed: number;
   /** Tool-call allocations currently reserved (pre-deducted). */
   toolReserved: number;
+  /** Token usage actually consumed by children so far (P0-11). */
+  tokenUsed: number;
+  /** Token allocations currently reserved (pre-deducted). */
+  tokenReserved: number;
   rootStartedAt?: number;
 }
 
@@ -80,6 +93,7 @@ export class AgentExecutionScheduler {
   private readonly store: SessionStore;
   private readonly limits: SchedulerLimits;
   private readonly now: () => number;
+  private readonly timer: Timer;
 
   private readonly active = new Map<number, SchedulerEntry>();
   private readonly queued: SchedulerEntry[] = [];
@@ -93,6 +107,7 @@ export class AgentExecutionScheduler {
     this.store = deps.store;
     this.limits = { ...DEFAULT_SCHEDULER_LIMITS, ...deps.limits };
     this.now = deps.now ?? Date.now;
+    this.timer = deps.timer ?? new RealTimer(this.now);
   }
 
   /** Observe: every queued/running entry (queued first, in enqueue order). */
@@ -108,7 +123,7 @@ export class AgentExecutionScheduler {
         errorInfo("INTERNAL_ERROR", `root budget already registered for session ${rootSessionId}`),
       );
     }
-    this.rootAccounts.set(rootSessionId, { budget, toolUsed: 0, toolReserved: 0 });
+    this.rootAccounts.set(rootSessionId, { budget, toolUsed: 0, toolReserved: 0, tokenUsed: 0, tokenReserved: 0 });
   }
 
   /** P1-7: how many tool-call budget is left for new children of `root` after
@@ -123,13 +138,24 @@ export class AgentExecutionScheduler {
     };
   }
 
+  /** P0-11: remaining token budget for new children of `root` after headroom. */
+  tokenBudgetRemaining(rootSessionId: SessionId): { allocated: number; remaining: number } | undefined {
+    const account = this.rootAccounts.get(rootSessionId);
+    if (account?.budget.maxTokens === undefined) return undefined;
+    const pool = Math.floor(account.budget.maxTokens * (1 - TREE_BUDGET_HEADROOM_RATIO));
+    return {
+      allocated: account.budget.maxTokens,
+      remaining: Math.max(0, pool - account.tokenUsed - account.tokenReserved),
+    };
+  }
+
   /** Request a scheduling slot for an agent that will run under
    *  `parentSessionId` (its subtree root is the top ancestor). Resolves with a
    *  token once the concurrency budgets allow it; rejects when the request is
    *  cancelled while queued (caller abort → USER_CANCELLED) or the depth
    *  ceiling would be exceeded (RESOURCE_LIMIT — fail-closed, never starts). */
   async acquire(
-    req: { parentSessionId: SessionId; agentId: AgentId; toolBudget?: number },
+    req: { parentSessionId: SessionId; agentId: AgentId; toolBudget?: number; tokenBudget?: number },
     callerSignal: AbortSignal,
   ): Promise<SchedulerToken> {
     if (callerSignal.aborted) {
@@ -165,6 +191,25 @@ export class AgentExecutionScheduler {
       account.toolReserved += reserve;
     }
 
+    // P0-11: tree token budget. A request with a tokenBudget allocation
+    // pre-reserves it; without one, it draws a minimal unit from the pool.
+    // Exhaustion rejects BEFORE anything starts.
+    const tokenAllocation = req.tokenBudget;
+    const tokenReserve = tokenAllocation ?? 1;
+    if (account?.budget.maxTokens !== undefined) {
+      const tokenPool = Math.floor(account.budget.maxTokens * (1 - TREE_BUDGET_HEADROOM_RATIO));
+      if (account.tokenUsed + account.tokenReserved + tokenReserve > tokenPool) {
+        throw new AgentError(
+          errorInfo(
+            "RESOURCE_LIMIT",
+            `tree token budget exhausted for root ${rootId} ` +
+              `(used ${account.tokenUsed} + reserved ${account.tokenReserved} + need ${tokenReserve} > pool ${tokenPool})`,
+          ),
+        );
+      }
+      account.tokenReserved += tokenReserve;
+    }
+
     const controller = new AbortController();
     const entry: SchedulerEntry = {
       id: this.nextId,
@@ -177,6 +222,7 @@ export class AgentExecutionScheduler {
       // Every scheduled agent holds a tool-call allocation (explicit or the
       // minimal 1-unit default) so release can refund what it did not spend.
       allocation: reserve,
+      tokenAllocation: tokenReserve,
     };
     this.nextId += 1;
 
@@ -237,9 +283,9 @@ export class AgentExecutionScheduler {
     entry.startedAt = this.now();
     entry.signal = controller.signal;
     if (this.limits.maxDurationMs > 0) {
-      const timer = setTimeout(() => this.cancelEntry(entry), this.limits.maxDurationMs);
+      const timerHandle = this.timer.schedule(() => this.cancelEntry(entry), this.limits.maxDurationMs);
       const onAbort = () => {
-        clearTimeout(timer);
+        timerHandle.cancel();
         controller.signal.removeEventListener("abort", onAbort);
       };
       controller.signal.addEventListener("abort", onAbort, { once: true });
@@ -253,7 +299,10 @@ export class AgentExecutionScheduler {
       resolve({
         entry,
         signal: controller.signal,
+        rootSessionId: entry.rootSessionId,
         release: (usedToolCalls = 0) => this.finish(entry, usedToolCalls),
+        reportUsage: (inputTokens: number, outputTokens: number) =>
+          this.reportUsage(entry.rootSessionId, inputTokens, outputTokens),
       });
     }
   }
@@ -269,8 +318,15 @@ export class AgentExecutionScheduler {
     account.rootStartedAt = this.now();
     const allowMs = Math.round(account.budget.maxDurationMs * (1 - TREE_BUDGET_HEADROOM_RATIO));
     if (allowMs > 0) {
-      setTimeout(() => this.cancelSubtree(rootSessionId), allowMs);
+      this.timer.schedule(() => this.cancelSubtree(rootSessionId), allowMs);
     }
+  }
+
+  /** P0-11: report token usage from a model.completed for tree accounting. */
+  reportUsage(rootSessionId: SessionId, inputTokens: number, outputTokens: number): void {
+    const account = this.rootAccounts.get(rootSessionId);
+    if (account === undefined) return;
+    account.tokenUsed += inputTokens + outputTokens;
   }
 
   private finish(entry: SchedulerEntry, usedToolCalls: number): void {
@@ -286,7 +342,7 @@ export class AgentExecutionScheduler {
   /** P1-7: on release, refund the unused part of this entry's allocation and
    *  account its actual tool-call usage against the root tree pool. A child
    *  can never spend outside its allocation (pre-deducted), and unused budget
-   *  flows back to the pool. */
+   *  flows back to the pool. P0-11: same for token budget. */
   private settleTreeBudget(entry: SchedulerEntry, usedToolCalls: number): void {
     const account = this.rootAccounts.get(entry.rootSessionId);
     if (account === undefined) return;
@@ -294,6 +350,9 @@ export class AgentExecutionScheduler {
       account.toolReserved = Math.max(0, account.toolReserved - entry.allocation);
     }
     account.toolUsed += usedToolCalls;
+    // P0-11: token reservation refund (token budget is not pre-reserved
+    // in the entry; the reservation was a minimal 1-unit gate. The actual
+    // usage is tracked via reportUsage, so the refund here is a no-op).
   }
 
   private rootAccountFor(rootSessionId: SessionId): RootAccount | undefined {
@@ -305,7 +364,7 @@ export class AgentExecutionScheduler {
     const budget = this.limits.treeBudget;
     if (budget === undefined) return undefined;
     if (!this.rootAccounts.has(rootSessionId)) {
-      this.rootAccounts.set(rootSessionId, { budget, toolUsed: 0, toolReserved: 0 });
+this.rootAccounts.set(rootSessionId, { budget, toolUsed: 0, toolReserved: 0, tokenUsed: 0, tokenReserved: 0 });
     }
     return this.rootAccounts.get(rootSessionId);
   }

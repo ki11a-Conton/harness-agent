@@ -25,6 +25,8 @@ export type SessionStoreErrorCode =
   | "UNKNOWN_SESSION"
   | "UNKNOWN_TURN"
   | "UNKNOWN_PROMPT"
+  | "UNKNOWN_ASK"
+  | "ASK_NOT_PENDING"
   | "CORRUPT_RECORD"
   | "IO_ERROR"
   | "UNSUPPORTED";

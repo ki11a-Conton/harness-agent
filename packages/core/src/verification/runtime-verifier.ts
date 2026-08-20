@@ -40,6 +40,8 @@ export interface RuntimeVerifierOptions {
   maxTranscriptChars?: number;
   /** Per-message content cap in the rendered transcript. Default 1_000. */
   messageTruncate?: number;
+  /** P1-7: injected clock. Default Date.now. */
+  now?: () => number;
 }
 
 export type GateStatus = "passed" | "failed" | "blocked";
@@ -77,7 +79,8 @@ export class RuntimeVerifier {
       runStartedAt: opts.runStartedAt,
     };
 
-    const startedAt = Date.now();
+    const nowFn = opts.now ?? Date.now;
+    const startedAt = nowFn();
     let result: VerificationResult;
     let blocked: AgentErrorInfo | undefined;
 
@@ -86,7 +89,7 @@ export class RuntimeVerifier {
       // TaskVerifier fills startedAt/completedAt itself; fill defaults only
       // when the wrapped verifier omitted them (keeps VS-001 timestamps intact).
       if (!isFinite(result.startedAt)) result.startedAt = startedAt;
-      if (!isFinite(result.completedAt)) result.completedAt = Date.now();
+      if (!isFinite(result.completedAt)) result.completedAt = nowFn();
     } catch (err) {
       // Fail closed: the gate is "blocked", never a silent pass.
       const message = err instanceof AgentError ? err.info.message : err instanceof Error ? err.message : String(err);
@@ -105,7 +108,7 @@ export class RuntimeVerifier {
         ],
         evidence: [],
         startedAt,
-        completedAt: Date.now(),
+        completedAt: nowFn(),
       };
     }
 

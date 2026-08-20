@@ -271,21 +271,23 @@ describe("exportEpisode (TRACE-001, §77)", () => {
     expect(metrics.tool_call_count).toBe(3);
   });
 
-  it("sums input/output/context tokens from usage payloads", async () => {
+  it("sums input/output/context tokens from model.completed usage payloads", async () => {
     const sid = newSessionId();
     const events = new InMemoryEventStore();
     const sessions = new InMemorySessionStore();
     await sessions.createSession(makeSession(sid));
     const mk = makeEventBuilder(sid);
-    await events.append(mk("model.started", { usage: { inputTokens: 100, outputTokens: 50, contextTokens: 500 } }));
+    // P0-9: usage is reported on the terminal model.completed event ONLY
+    // (model.started/usage snapshots are folded into it by the runtime) —
+    // summing model.started too would double-count the same tokens.
     await events.append(mk("model.completed", { finishReason: "stop", usage: { inputTokens: 40, outputTokens: 10, contextTokens: 600 } }));
-    await events.append(mk("model.delta", { kind: "text", inputTokens: 7 }));
+    await events.append(mk("model.completed", { finishReason: "tool_calls", usage: { inputTokens: 100, outputTokens: 50, contextTokens: 500 } }));
 
     const output = await freshOutputDir();
     await exportEpisode({ events, sessions, outputDir: output });
 
     const metrics = (await readJson(join(output, "metrics.json"))) as RunMetrics;
-    expect(metrics.tokens_input).toBe(147);
+    expect(metrics.tokens_input).toBe(140);
     expect(metrics.tokens_output).toBe(60);
     expect(metrics.context_tokens).toBe(1100);
   });
@@ -590,7 +592,9 @@ describe("computeMetrics (TRACE-001, §78)", () => {
     const mk = makeEventBuilder(sid);
     const events = [
       mk("turn.started"),
-      mk("model.started", { usage: { inputTokens: 10, outputTokens: 5, contextTokens: 100 } }),
+      // P0-9: usage rides on model.completed (usage on model.started was the
+      // old optional reading; the runtime now folds snapshots into completed).
+      mk("model.completed", { finishReason: "stop", usage: { inputTokens: 10, outputTokens: 5, contextTokens: 100 } }),
       mk("tool.requested", { toolCallId: "toolcall_1", name: "read" }),
       mk("context.compacted", { compressed: 50 }),
       mk("verification.completed", { passed: true }),
@@ -619,6 +623,42 @@ describe("computeMetrics (TRACE-001, §78)", () => {
     ];
     const metrics = computeMetrics(events);
     expect(metrics.context_tokens).toBe(450);
+  });
+
+  it("P0-9 acceptance: exactly reports the single-call usage without double counting", () => {
+    const sid = newSessionId();
+    const mk = makeEventBuilder(sid);
+    // The runtime folds provider usage snapshots into model.completed; the
+    // terminal event alone is what metrics sums — a usage that also appeared
+    // on model.started must not be added twice.
+    const events = [
+      mk("model.started", { callId: "modelcall_1", usage: { inputTokens: 100, outputTokens: 50 } }),
+      mk("model.completed", {
+        callId: "modelcall_1",
+        finishReason: "stop",
+        usage: { inputTokens: 100, outputTokens: 50, estimatedCostUsd: 0.0012 },
+      }),
+    ];
+    const metrics = computeMetrics(events);
+    expect(metrics.tokens_input).toBe(100);
+    expect(metrics.tokens_output).toBe(50);
+    expect(metrics.estimated_cost).toBeCloseTo(0.0012, 6);
+  });
+
+  it("P0-9 acceptance: multi-call usage sums per call, never double counts", () => {
+    const sid = newSessionId();
+    const mk = makeEventBuilder(sid);
+    const events = [
+      mk("model.completed", { callId: "modelcall_1", finishReason: "stop", usage: { inputTokens: 100, outputTokens: 50, estimatedCostUsd: 0.001 } }),
+      // A duplicate/mislaid usage on a model.started must NOT add again.
+      mk("model.started", { callId: "modelcall_2", usage: { inputTokens: 200, outputTokens: 25 } }),
+      mk("model.completed", { callId: "modelcall_2", finishReason: "stop", usage: { inputTokens: 200, outputTokens: 25, estimatedCostUsd: 0.002 } }),
+    ];
+    const metrics = computeMetrics(events);
+    // 100+200 and 50+25 exactly; the model.started usage is ignored.
+    expect(metrics.tokens_input).toBe(300);
+    expect(metrics.tokens_output).toBe(75);
+    expect(metrics.estimated_cost).toBeCloseTo(0.003, 6);
   });
 
   it("requires exactly one session in the store", async () => {

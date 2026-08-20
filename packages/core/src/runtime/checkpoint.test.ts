@@ -12,6 +12,7 @@ import type {
   SessionStatus,
 } from "@ar/contracts";
 import { newAgentId } from "@ar/contracts";
+import { DEFAULT_TOOL_SEMANTICS } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
 import { AgentRuntime } from "./runtime.js";
 import { MemoryEventStore, MemorySessionStore } from "../test/fakes.js";
@@ -92,6 +93,18 @@ async function makeHarness(
     orchestrator: orch,
     agents: [AGENT],
     checkpointStore: ckpt,
+    // P0-8: unknown tools default to fail-closed. The synthetic `echo` double
+    // is read-only; declare it side-effect-free so the no-checkpoint
+    // assertion below still holds. write_file keeps its filesystem scope.
+    toolSemanticsOf: (name: string) => {
+      if (name === "write_file" || name === "edit_file") {
+        return { ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "filesystem", readOnly: false };
+      }
+      if (name === "exec") {
+        return { ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "process", readOnly: false, networkBehavior: "outbound" };
+      }
+      return { ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "none", readOnly: true };
+    },
     ...(opts.checkpointPolicy !== undefined
       ? { checkpointPolicy: opts.checkpointPolicy }
       : {}),

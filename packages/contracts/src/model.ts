@@ -44,6 +44,20 @@ export interface Usage {
   estimatedCostUsd?: number;
 }
 
+/**
+ * P0-9: a partial usage snapshot as delivered by usage events / a model's
+ * final result (fields optional — a provider may omit input or output tokens).
+ * The runtime accumulates these into the single usage record on
+ * model.completed. CONTRACT: snapshots are CUMULATIVE (later snapshots replace
+ * the fields they carry), never deltas.
+ */
+export interface UsageSnapshot {
+  inputTokens?: number;
+  outputTokens?: number;
+  contextTokens?: number;
+  estimatedCostUsd?: number;
+}
+
 export type FinishReason = "stop" | "tool_calls" | "error" | "cancelled";
 
 export interface ModelFinalResult {

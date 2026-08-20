@@ -4,8 +4,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
-import type { AgentEvent, EventStore, Message, SessionId, SessionStore } from "@ar/contracts";
-import type { InMemoryApprovalStore } from "@ar/security";
+import type { AgentEvent, ApprovalStore, EventStore, Message, SessionId, SessionStore } from "@ar/contracts";
 import type { ChannelMessage } from "@ar/gateway";
 import type { SessionBindings } from "./bindings.js";
 import type { WebChannelAdapter } from "./adapter.js";
@@ -61,7 +60,7 @@ export interface WebServerDeps {
   bindings: SessionBindings;
   events: EventStore;
   store: SessionStore;
-  approvalStore: InMemoryApprovalStore;
+  approvalStore: ApprovalStore;
   /** Defaults: 127.0.0.1:8787 — loopback only, overridable via env. */
   host?: string;
   port?: number;
@@ -85,7 +84,7 @@ export class WebServer {
   private readonly bindings: SessionBindings;
   private readonly events: EventStore;
   private readonly store: SessionStore;
-  private readonly approvalStore: InMemoryApprovalStore;
+  private readonly approvalStore: ApprovalStore;
   private readonly host: string;
   private readonly requestedPort: number;
   private readonly pollDelayMs: number;

@@ -1,5 +1,5 @@
-import type { McpToolInfo } from "@ar/contracts";
-import { AgentError, errorInfo, RETRY_KIND_SPECS } from "@ar/contracts";
+import type { McpToolInfo, Timer, TimerHandle } from "@ar/contracts";
+import { AgentError, RealTimer, errorInfo, RETRY_KIND_SPECS } from "@ar/contracts";
 
 const PROTOCOL_VERSION = "2025-03-26";
 const CLIENT_NAME = "@ar/mcp";
@@ -44,6 +44,8 @@ export interface McpClientOptions {
   connectTimeoutMs?: number;
   /** Bounds a request with no caller signal (ms). Default 30_000. */
   requestTimeoutMs?: number;
+  /** P1-7: injectable timer for request/connect timeouts (deterministic tests). */
+  timer?: Timer;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -60,12 +62,14 @@ export class McpClient {
   private nextId = 1;
   private readonly connectTimeoutMs: number;
   private readonly requestTimeoutMs: number;
+  private readonly timer: Timer;
   private hasConnected = false;
   private connected = false;
 
   constructor(opts?: McpClientOptions) {
     this.connectTimeoutMs = opts?.connectTimeoutMs ?? 10_000;
     this.requestTimeoutMs = opts?.requestTimeoutMs ?? 30_000;
+    this.timer = opts?.timer ?? new RealTimer();
   }
 
   /** True after a successful initialize and until close()/a marking failure. */
@@ -208,11 +212,11 @@ export class McpClient {
     let ownController: AbortController | undefined;
     let forwardSignal: AbortSignal | undefined = signal;
     let timedOut = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    let timerHandle: TimerHandle | undefined;
     if (signal === undefined && timeoutMs !== undefined) {
       ownController = new AbortController();
       forwardSignal = ownController.signal;
-      timer = setTimeout(() => {
+      timerHandle = this.timer.schedule(() => {
         timedOut = true;
         ownController?.abort();
       }, timeoutMs);
@@ -269,7 +273,7 @@ export class McpClient {
       );
     }
     // Request completed; disarm the timeout timer (it did not fire).
-    if (timer !== undefined) clearTimeout(timer);
+    if (timerHandle !== undefined) timerHandle.cancel();
     return body.result;
   }
 }

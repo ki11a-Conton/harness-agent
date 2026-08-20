@@ -15,7 +15,7 @@ export interface Session {
   updatedAt: number;
 }
 
-export type TurnStatus = "running" | "waiting_for_user" | "completed" | "failed" | "cancelled";
+export type TurnStatus = "running" | "waiting_for_user" | "waiting_for_approval" | "completed" | "failed" | "cancelled";
 
 export interface Turn {
   id: TurnId;

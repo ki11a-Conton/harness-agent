@@ -96,6 +96,22 @@ export function snapshotEffectiveConfig(agent: AgentDefinition): EffectiveAgentC
   };
 }
 
+/** P1-6: runtime-wide policy snapshot captured at session creation so a
+ *  resume against a differently-configured host can be detected (safe-resume
+ *  gate). Absent entries mean "not versioned by this host". */
+export interface EffectiveRuntimePolicySnapshot {
+  version: 1;
+  contextPolicyHash?: string;
+  retryPolicyHash?: string;
+  schedulerPolicyHash?: string;
+  toolSemanticsHash?: string;
+  promptVersion?: string;
+  verificationPolicyHash?: string;
+  createdAt: number;
+}
+
+export const RUNTIME_POLICY_SNAPSHOT_KEY = "runtimePolicy" as const;
+
 export interface BuiltinAgentProfile {
   readonly id: AgentId;
   readonly name: string;

@@ -214,6 +214,30 @@ function makeDeps(opts: { provider?: ModelProvider } = {}) {
     sessionService,
     approvalStore,
     runtime,
+    introspection: {
+      profile: "test",
+      registeredTools: ["read_file", "write_file", "edit_file", "search_files", "exec"],
+      stores: {
+        session: store.constructor.name,
+        events: events.constructor.name,
+        approval: approvalStore.constructor.name,
+      },
+      features: {
+        context: false,
+        verifier: false,
+        checkpoint: false,
+        artifacts: false,
+        memory: false,
+        learning: false,
+        delegation: false,
+        scheduler: false,
+        mcp: false,
+        plugins: false,
+        skills: false,
+        usageAccounting: false,
+        runBudget: false,
+      },
+    },
     doctor: {
       modelProvider: provider,
       sandboxPolicy: defaultSandboxPolicy(),
@@ -256,7 +280,7 @@ describe("agent run (plan §173 structured outcome)", () => {
     });
     const result = await runCommand(["run", "C:\\work", "write it"], deps);
     expect(result.exitCode).toBe(0);
-    expect(result.lines.join("\n")).toContain("files changed: write_file(a.txt)");
+    expect(result.lines.join("\n")).toContain("files changed: a.txt");
   });
 
   it("fails with exit code 1 when the model errors", async () => {
@@ -459,7 +483,7 @@ describe("agent doctor (plan §87)", () => {
     expect(out).toContain("[OK] workspace");
     expect(out).toContain("[OK] session store");
     expect(out).toContain("[OK] event store");
-    expect(out).toContain("doctor: 6 ok, 4 warning(s), 0 error(s)");
+    expect(out).toContain("doctor: 7 ok, 4 warning(s), 0 error(s)");
   });
 
   it("exits 1 with [ERROR] when a store is broken", async () => {
@@ -469,7 +493,7 @@ describe("agent doctor (plan §87)", () => {
     expect(result.exitCode).toBe(1);
     const out = result.lines.join("\n");
     expect(out).toContain("[ERROR] session store — disk on fire");
-    expect(out).toContain("doctor: 5 ok, 4 warning(s), 1 error(s)");
+    expect(out).toContain("doctor: 6 ok, 4 warning(s), 1 error(s)");
   });
 
   it("runChecks reports ERROR for a throwing event store", async () => {
@@ -524,7 +548,7 @@ describe("default host wiring (createDefaultDeps)", () => {
     expect(result.exitCode).toBe(0);
     const out = result.lines.join("\n");
     expect(out).toContain("status: completed");
-    expect(out).toContain("files changed: read_file(package.json)");
+    expect(out).toContain("files changed: (none)");
     const sessionId = (await deps.store.listSessions())[0]!.id;
     const events = await deps.events.list(sessionId);
     const completed = events.find((e) => e.type === "tool.completed" && e.payload.tool === "read_file");
@@ -573,7 +597,7 @@ describe("default host wiring (createDefaultDeps)", () => {
       expect(result.exitCode).toBe(0);
       const out = result.lines.join("\n");
       expect(out).toContain("[WARNING] model provider — stub provider");
-      expect(out).toContain("doctor: 6 ok, 4 warning(s), 0 error(s)");
+      expect(out).toContain("doctor: 6 ok, 5 warning(s), 0 error(s)");
     } finally {
       if (previous === undefined) delete process.env.OPENAI_API_KEY;
       else process.env.OPENAI_API_KEY = previous;
@@ -586,7 +610,7 @@ describe("default host wiring (createDefaultDeps)", () => {
     const checks = await runChecks({ toolRegistry: registry });
     const toolCheck = checks.find((c) => c.name === "tool registry");
     expect(toolCheck?.status).toBe("ERROR");
-    expect(toolCheck?.detail).toContain("1 of 5");
+    expect(toolCheck?.detail).toContain("1 of 11");
   });
 
   it("persists sessions across deps rebuilds via dataDir", async () => {

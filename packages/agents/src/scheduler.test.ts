@@ -441,6 +441,57 @@ describe("AgentExecutionScheduler tree budgeting (P1-7)", () => {
     ).rejects.toMatchObject({ info: expect.objectContaining({ code: "RESOURCE_LIMIT" }) });
   });
 
+  it("P0-11: token budget pre-reserves allocation and blocks exhaustion", async () => {
+    const store = new MemorySessionStore();
+    const [root] = await makeTree(store, 1) as unknown as [Session];
+    const scheduler = new AgentExecutionScheduler({ store });
+    scheduler.setRootBudget(root.id, { maxTokens: 1000 }); // pool 800, headroom 200
+
+    expect(scheduler.tokenBudgetRemaining(root.id)!.remaining).toBe(800);
+
+    const a = await scheduler.acquire({ parentSessionId: root.id, agentId: SUBAGENT.id, tokenBudget: 300 }, new AbortController().signal);
+    expect(scheduler.tokenBudgetRemaining(root.id)!.remaining).toBe(500);
+
+    // Token budget exhaustion rejects.
+    await expect(
+      scheduler.acquire({ parentSessionId: root.id, agentId: SUBAGENT.id, tokenBudget: 800 }, new AbortController().signal),
+    ).rejects.toMatchObject({
+      info: expect.objectContaining({ code: "RESOURCE_LIMIT", message: expect.stringContaining("tree token budget exhausted") }),
+    });
+    a.release(0);
+  });
+
+  it("P0-11: reportUsage accumulates token usage into the tree budget", async () => {
+    const store = new MemorySessionStore();
+    const [root] = await makeTree(store, 1) as unknown as [Session];
+    const scheduler = new AgentExecutionScheduler({ store });
+    scheduler.setRootBudget(root.id, { maxTokens: 1000 });
+
+    // Simulate model calls reporting token usage.
+    scheduler.reportUsage(root.id, 100, 50);
+    expect(scheduler.tokenBudgetRemaining(root.id)!.remaining).toBe(650); // 800 - 150
+
+    scheduler.reportUsage(root.id, 200, 25);
+    expect(scheduler.tokenBudgetRemaining(root.id)!.remaining).toBe(425); // 650 - 225
+
+    const a = await scheduler.acquire({ parentSessionId: root.id, agentId: SUBAGENT.id, tokenBudget: 200 }, new AbortController().signal);
+    expect(scheduler.tokenBudgetRemaining(root.id)!.remaining).toBe(225); // 425 - 200
+    a.release(0);
+  });
+
+  it("P0-11: token budget undefined allows unlimited usage", async () => {
+    const store = new MemorySessionStore();
+    const [root] = await makeTree(store, 1) as unknown as [Session];
+    const scheduler = new AgentExecutionScheduler({ store });
+    // No token budget set — all acquire/reportUsage calls succeed.
+    expect(scheduler.tokenBudgetRemaining(root.id)).toBeUndefined();
+    for (let i = 0; i < 100; i += 1) {
+      scheduler.reportUsage(root.id, 1000, 1000);
+      const a = await scheduler.acquire({ parentSessionId: root.id, agentId: SUBAGENT.id, tokenBudget: 1000 }, new AbortController().signal);
+      a.release(0);
+    }
+  });
+
   it("delegation reports real tool usage into the tree budget", async () => {
     const h = makeHarness({
       scripts: [

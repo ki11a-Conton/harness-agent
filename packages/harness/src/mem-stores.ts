@@ -11,8 +11,8 @@ import type {
 
 /**
  * In-memory SessionStore/EventStore used by one-shot hosts (CLI without a
- * dataDir, benchmark runs). Extracted from the original CLI scaffold so both
- * `main.ts` and the benchmark command share one implementation.
+ * dataDir, benchmark runs). Owned by @ar/harness so every composition-root
+ * host shares one implementation instead of hand-rolled fakes.
  */
 
 export class MemSessionStore implements SessionStore {

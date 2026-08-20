@@ -91,6 +91,11 @@ export class RecoveryController {
       const committedEffect = ledger.some((e) => e.sideEffect === true && e.status === "success");
       return committedEffect ? "waiting_with_effects" : "waiting_no_effect";
     }
+    // P1-1: waiting_for_approval is a PAUSE, same semantics as waiting_for_user.
+    if (status === "waiting_for_approval") {
+      const committedEffect = ledger.some((e) => e.sideEffect === true && e.status === "success");
+      return committedEffect ? "waiting_approval_with_effects" : "waiting_approval_no_effect";
+    }
     // A side effect is "committed" only when a side-effect-scoped tool
     // returned success (it landed in the durable ledger as applied).
     const committedEffect = ledger.some((e) => e.sideEffect === true && e.status === "success");
@@ -210,6 +215,38 @@ export class RecoveryController {
       iterations: state.getIteration(),
       state: working,
       pendingAsk: request,
+    };
+  }
+
+  /** P1-1: park the turn waiting for approval resolution. */
+  async parkForApproval(
+    ctx: TurnContext,
+    state: AgentState,
+    working: WorkingState,
+    toolCallId: string,
+    toolName: string,
+    args: Record<string, unknown>,
+    argsHash: string,
+    ledger: ToolExecutionRecord[],
+  ): Promise<TurnOutcome> {
+    const { sessionId, turnId } = ctx;
+    state.transition("waiting_approval");
+    const turn = await this.deps.store.getTurn(turnId);
+    if (turn) {
+      const updated: Turn = { ...turn, status: "waiting_for_approval" };
+      await this.deps.store.updateTurn(updated);
+    }
+    const detail: TurnOutcomeDetail = this.classifyStatusDetail("waiting_for_approval", ledger);
+    return {
+      status: "waiting_for_approval",
+      statusDetail: detail,
+      turn:
+        (await this.deps.store.getTurn(turnId)) ??
+        ({ id: turnId, sessionId, input: { sessionId, text: "" }, status: "waiting_for_approval", startedAt: this.deps.now() } as Turn),
+      toolCalls: state.getToolCallsExecuted(),
+      iterations: state.getIteration(),
+      state: working,
+      pendingApproval: { toolCallId, toolName, args, argsHash },
     };
   }
 

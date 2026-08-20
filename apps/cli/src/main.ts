@@ -1,46 +1,24 @@
 import { pathToFileURL } from "node:url";
-import { delimiter, resolve } from "node:path";
-import type {
-  AgentDefinition,
-  AgentEvent,
-  EventStore,
-  ModelProvider,
-  ModelRef,
-  PermissionPolicy,
-  SessionStore,
-} from "@ar/contracts";
-import { newAgentId, newEventId } from "@ar/contracts";
-import { AgentRuntime, defaultSandboxPolicy } from "@ar/core";
-import type { SkillDiscovery, SkillSecurityDenialRecord } from "@ar/core";
-import { FileSkillLoader } from "@ar/skills";
+import { resolve } from "node:path";
+import type { ModelProvider, ModelRef, PermissionPolicy } from "@ar/contracts";
+import { createHarness } from "@ar/harness";
+import { defaultSandboxPolicy } from "@ar/core";
 import { createRuntimeRpc, InMemoryTransport } from "@ar/gateway";
-import { JSONLEventStore } from "@ar/events";
-import { JSONLSessionStore, SessionService } from "@ar/session";
-import { InMemoryApprovalStore, StoreApprovalResolver, detectPromptInjection, redactSecrets } from "@ar/security";
 import {
-  capabilityOf,
-  semanticsOf,
-  editFileTool,
-  execTool,
-  readFileTool,
-  searchFilesTool,
-  ToolOrchestrator,
+  createProductionTools,
+  PRODUCTION_TOOL_NAMES,
   ToolRegistry,
-  writeFileTool,
 } from "@ar/tools";
 import type { CommandDeps } from "./commands.js";
 import { runCommand } from "./commands.js";
-import { MemEventStore, MemSessionStore } from "./mem-stores.js";
 import { resolveModelProvider, STUB_PROVIDER_ID } from "./provider.js";
 
-/** Builtin tool set every `createDefaultDeps` host registers (VS-001/EXEC-001). */
-export const BUILTIN_TOOLS = [
-  readFileTool,
-  writeFileTool,
-  editFileTool,
-  searchFilesTool,
-  execTool,
-] as const;
+/**
+ * Builtin tool set every `createDefaultDeps` host registers. Single source:
+ * packages/tools/src/production-tools.ts (plan.md P0-5) — the 11-tool coding
+ * profile. Kept as a names+registry helper so CLI/benchmark share one list.
+ */
+export const BUILTIN_TOOLS = PRODUCTION_TOOL_NAMES;
 
 /** §24 "build" profile: reads allowed; edits/exec/network ask for approval. */
 export const DEFAULT_PERMISSIONS: PermissionPolicy = {
@@ -69,8 +47,9 @@ export const DEFAULT_SYSTEM_PROMPT = [
 export const DEFAULT_MODEL_ID = "gpt-4o-mini";
 
 export interface DefaultDepsOptions {
-  /** Enables persistent stores (JSONLSessionStore + JSONLEventStore) under
-   *  dataDir; when absent, in-memory stores are used (doctor reports WARNING). */
+  /** Enables persistent stores (JSONL session/event, durable approval +
+   *  checkpoint) under dataDir; when absent, in-memory stores are used
+   *  (doctor reports WARNING). */
   dataDir?: string;
   /** Agent model ref; defaults to the resolved provider + DEFAULT_MODEL_ID. */
   model?: { providerId: string; modelId: string };
@@ -79,7 +58,12 @@ export interface DefaultDepsOptions {
 }
 
 export function registerBuiltinTools(registry: ToolRegistry): void {
-  for (const tool of BUILTIN_TOOLS) registry.register(tool);
+  for (const tool of createProductionTools({
+    networkMode: "deny",
+    availableTools: () => registry.names(),
+  })) {
+    registry.register(tool);
+  }
 }
 
 /** Entry point: parse `agent <command> [args]` (process.argv includes the
@@ -116,140 +100,55 @@ export function extractDataDirFlag(argv: string[]): { args: string[]; dataDir?: 
 }
 
 /**
- * Default host wiring: real tool registration (§24 build permission profile),
- * persistent stores when a dataDir is provided (JSONL), the OpenAI-compatible
- * provider when OPENAI_API_KEY is set, and the real ToolOrchestrator pipeline
- * (permission → approval → sandbox).
+ * Default host wiring via the @ar/harness production composition root
+ * (plan.md P0-3): interactive profile (read allow, edit/exec/network ask),
+ * the 11-tool production registry, ContextPipeline + budget, skills and
+ * artifact stores, persistent stores when a dataDir is provided (JSONL +
+ * durable approval/checkpoint), the OpenAI-compatible provider when
+ * OPENAI_API_KEY is set, and the real ToolOrchestrator pipeline (permission
+ * → approval → sandbox).
  */
 export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promise<CommandDeps> {
-  // Persistence: with a dataDir the host uses the real JSONL stores; without
-  // one it falls back to the in-memory fakes below (one-shot hosts don't need
-  // disk state — agent doctor reports which mode is active).
   const dataDir = options.dataDir;
-  const store: SessionStore = dataDir !== undefined ? new JSONLSessionStore({ dataDir }) : new MemSessionStore();
-  const events: EventStore = dataDir !== undefined ? new JSONLEventStore({ dataDir }) : new MemEventStore();
-  const approvalStore = new InMemoryApprovalStore();
-  const toolRegistry = new ToolRegistry();
-  registerBuiltinTools(toolRegistry);
-  const orchestrator = new ToolOrchestrator({
-    registry: toolRegistry,
-    approval: new StoreApprovalResolver(approvalStore),
-    workspaceRoot: process.cwd(),
-    events: {
-      async emit(sessionId, type, payload, turnId) {
-        await events.append({
-          id: newEventId(),
-          sessionId,
-          ...(turnId !== undefined ? { turnId } : {}),
-          sequence: 0, // both JSONL and Mem stores assign the real sequence
-          timestamp: Date.now(),
-          type,
-          payload,
-        });
-      },
-    },
-  });
   const modelProvider = options.provider ?? (await resolveModelProvider());
-  // Task 3: skill index — AR_SKILL_ROOTS is a path-delimiter-separated list of
-  // skill package roots. Unset/empty env produces no roots; discover() errors
-  // propagate to the caller (bubbling like instruction discovery).
-  // Task A (P0-7): a skill body rejected for injection or secrets is collected
-  // during each discovery and surfaced by the runtime as a
-  // security.skill_denied / security.secret_redacted event on the session
-  // stream (structured code+source+target) — never stderr-only. The stderr
-  // line remains a supplementary host-observability note.
-  let pendingSkillSecurity: SkillSecurityDenialRecord[] = [];
-  const skillLoader = new FileSkillLoader({
-    onSecurityDenied: (event) => {
-      pendingSkillSecurity.push({
-        detection: event.detection,
-        reasons: event.reasons,
-        path: event.path,
-        source: event.source,
-      });
-      process.stderr.write(
-        `[skill denied] detection=${event.detection} target=${event.path} reasons=${event.reasons.join(",")}\n`,
-      );
-    },
-  });
-  const skillRoots = (process.env.AR_SKILL_ROOTS ?? "")
-    .split(delimiter)
-    .map((root) => root.trim())
-    .filter((root) => root.length > 0);
-  // Wraps discovery so the runtime receives both the safe index and the
-  // rejections to emit on the event stream (SkillDiscovery).
-  const discoverSkills: () => Promise<SkillDiscovery> = async () => {
-    pendingSkillSecurity = [];
-    const found = await skillLoader.discover({ roots: skillRoots, maxSkills: 100 });
-    const security = pendingSkillSecurity;
-    return { skills: found, security };
-  };
-  const agent: AgentDefinition = {
-    id: newAgentId(),
-    name: "main",
-    description: "default CLI agent",
-    mode: "primary",
-    model: defaultModelRef(modelProvider, options.model),
-    systemPrompt: DEFAULT_SYSTEM_PROMPT,
-    tools: { allow: BUILTIN_TOOLS.map((t) => t.name) },
-    permissions: DEFAULT_PERMISSIONS,
-    skills: {},
-    limits: { maxToolCalls: 50 },
-  };
-  const runtime = new AgentRuntime({
-    store,
-    events,
+  const harness = await createHarness({
+    cwd: process.cwd(),
+    ...(dataDir !== undefined ? { dataDir } : {}),
+    profile: "interactive",
     modelProvider,
-    orchestrator,
-    agents: [agent],
-    sandboxPolicy: defaultSandboxPolicy(),
-    // Advertise the registered tools to the model provider.
-    toolSpecs: toolRegistry.specs(),
-    // plan.md Phase 3: retry gating + concurrency planning from tool metadata.
-    toolCapabilityOf: (name) => capabilityOf(toolRegistry.get(name)),
-    // P1-11: side-effect/checkpoint/resume decisions follow tool semantics
-    // from the registry, never tool-name hardcodes.
-    toolSemanticsOf: (name) => semanticsOf(toolRegistry.get(name)),
-    // Task 3: feed the discovered skill index into the context pipeline
-    // (runtime maps Skill -> {name, description} and emits skill.discovered).
-    skills: discoverSkills,
-    // P0-8: rendered tool output is scanned for prompt injection and withheld
-    // on a hit (fail-closed) before it reaches the model.
-    injectionDetector: (content) => detectPromptInjection(content),
-    // P1-13: tool output is redacted before it crosses any boundary (message
-    // content, artifact files) — same gate the benchmark runner uses. The
-    // redacted count also reclassifies artifacts as high-sensitivity.
-    outputRedactor: (content) => redactSecrets(content),
+    model: defaultModelRef(modelProvider, options.model),
   });
-  const sessionService = new SessionService({ store });
-  const registry = createRuntimeRpc(runtime, {
-    sessionService,
-    approvalStore,
-    events,
-    listAgents: () => [agent],
-    listTools: () => toolRegistry.specs(),
+  const registry = createRuntimeRpc(harness.runtime, {
+    sessionService: harness.sessionService,
+    approvalStore: harness.approvalStore,
+    events: harness.events,
+    listAgents: () => harness.agents,
+    listTools: () => harness.registry.specs(),
     listSkills: () => [],
   });
   const { client, server } = InMemoryTransport.pair();
   server.connect(registry);
   return {
     rpc: client,
-    store,
-    events,
-    sessionService,
-    approvalStore,
-    runtime,
+    store: harness.store,
+    events: harness.events,
+    sessionService: harness.sessionService,
+    approvalStore: harness.approvalStore,
+    runtime: harness.runtime,
+    introspection: harness.introspect(),
     doctor: {
       modelProvider,
       sandboxPolicy: defaultSandboxPolicy(),
-      permissions: agent.permissions,
+      permissions: harness.agents[0]!.permissions,
       workspaceRoot: process.cwd(),
-      toolRegistry,
+      toolRegistry: harness.registry,
       skills: undefined,
       plugins: undefined,
-      sessionStore: store,
-      eventStore: events,
+      sessionStore: harness.store,
+      eventStore: harness.events,
       dataDir,
+      contextBudgetFallback: harness.context.budgetFallback,
+      contextBudgetMaxTokens: harness.context.budget.maxTokens,
     },
   };
 }
@@ -264,10 +163,6 @@ function defaultModelRef(
     modelId: provider.id === STUB_PROVIDER_ID ? "stub-model" : DEFAULT_MODEL_ID,
   };
 }
-
-// --- in-memory fakes (CLI scaffold fallback when no dataDir is configured;
-//     shared with the benchmark command via mem-stores.ts) --------------------
-// MemSessionStore / MemEventStore live in mem-stores.ts.
 
 const isMain = process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
 if (isMain) {

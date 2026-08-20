@@ -87,14 +87,37 @@ export interface ToolPermissionResolvedPayload {
 
 /** model.completed — a model call finished. */
 export interface ModelCompletedPayload {
+  callId?: string;
   durationMs?: number;
   timeToFirstTokenMs?: number;
   finishReason?: string;
+  toolCalls?: number;
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    contextTokens?: number;
+    estimatedCostUsd?: number;
+    estimatedCost?: number;
+    cost?: number;
+  };
 }
 
 /** model.retry — a transient model failure (pre-stream or provider-level). */
 export interface ModelRetryPayload {
+  callId?: string;
   attempt: number;
+  error?: unknown;
+}
+
+/** model.started — a model call began. */
+export interface ModelStartedPayload {
+  callId?: string;
+  turnId?: string;
+}
+
+/** model.failed — a model call failed terminally. */
+export interface ModelFailedPayload {
+  callId?: string;
   error?: unknown;
 }
 
@@ -112,9 +135,40 @@ export interface VerificationFailedPayload {
   durationMs?: number;
 }
 
+/** context.built — a context assembly completed for a model call. */
+export interface ContextBuiltPayload {
+  tokens?: number;
+  used?: number;
+  budget?: number;
+  dropped?: number;
+  compacted?: boolean;
+  messagesTokens?: number;
+}
+
+/** instruction.discovered — an AGENTS.md document reached the model. */
+export interface InstructionDiscoveredPayload {
+  path?: string;
+  scope?: "root" | "nested" | "cwd";
+  sizeBytes?: number;
+  truncated?: boolean;
+}
+
+/** policy.changed_on_resume — host policy drifted since the session was
+ *  created; a safe-resume gate made it observable. */
+export interface PolicyChangedOnResumePayload {
+  contextPolicyChanged?: boolean;
+  contextPolicyHash?: string;
+  stored?: string;
+}
+
 /** context.compacted — context was summarised to reclaim budget. */
 export interface ContextCompactedPayload {
+  compressed?: number;
+  reason?: string;
+  reactive?: boolean;
   totalCount?: number;
+  /** Legacy field read by packages/evaluation attribution; kept for
+   *  backward compatibility with events that carried it. */
   overflow?: boolean;
 }
 
@@ -159,11 +213,16 @@ export interface EventPayloadMap {
   "tool.output": ToolOutputPayload;
   "tool.completed": ToolCompletedPayload;
   "tool.failed": ToolFailedPayload;
+  "model.started": ModelStartedPayload;
   "model.completed": ModelCompletedPayload;
+  "model.failed": ModelFailedPayload;
   "model.retry": ModelRetryPayload;
   "verification.completed": VerificationCompletedPayload;
   "verification.failed": VerificationFailedPayload;
+  "context.built": ContextBuiltPayload;
   "context.compacted": ContextCompactedPayload;
+  "instruction.discovered": InstructionDiscoveredPayload;
+  "policy.changed_on_resume": PolicyChangedOnResumePayload;
   "run.limit_reached": RunLimitReachedPayload;
   "turn.completed": TurnCompletedPayload;
   "approval.resolved": ApprovalResolvedPayload;

@@ -12,9 +12,11 @@ import type {
   HookContext,
   HookFn,
   HookName,
+  Timer,
   ToolCall,
   ToolResult,
 } from "@ar/contracts";
+import { RealTimer } from "@ar/contracts";
 
 /**
  * Lifecycle hook registry per AGENT_ARCHITECTURE_PLAN §51.
@@ -79,6 +81,8 @@ export interface HookOptions {
 export interface HookPolicy {
   defaultTimeoutMs?: number;
   observability?: (report: HookFailureReport) => void;
+  /** P1-7: injected clock for elapsed-time accounting. */
+  now?: () => number;
 }
 
 /** Hooks that sit on a security boundary must fail closed. */
@@ -99,11 +103,12 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 function runGuarded<T extends unknown>(
   invocation: () => T | Promise<T>,
   timeoutMs: number,
+  timer: Timer,
 ): Promise<{ ok: true; value: T } | { ok: false; kind: "throw" | "timeout"; error?: string }> {
   return new Promise<{ ok: true; value: T } | { ok: false; kind: "throw" | "timeout"; error?: string }>(
     (resolve) => {
       let settled = false;
-      const timer = setTimeout(() => {
+      const handle = timer.schedule(() => {
         if (settled) return;
         settled = true;
         resolve({ ok: false, kind: "timeout" });
@@ -115,13 +120,13 @@ function runGuarded<T extends unknown>(
         .then((value) => {
           if (settled) return;
           settled = true;
-          clearTimeout(timer);
+          handle.cancel();
           resolve({ ok: true, value });
         })
         .catch((cause) => {
           if (settled) return;
           settled = true;
-          clearTimeout(timer);
+          handle.cancel();
           resolve({ ok: false, kind: "throw", error: cause instanceof Error ? cause.message : String(cause) });
         });
     },
@@ -132,9 +137,13 @@ export class HookRegistry {
   private handlers = new Map<HookName, Stored[]>();
   private readonly policy: HookPolicy;
   private readonly failures: HookFailureReport[] = [];
+  private readonly timer: Timer;
+  private readonly nowFn: () => number;
 
   constructor(policy?: HookPolicy) {
     this.policy = { defaultTimeoutMs: DEFAULT_TIMEOUT_MS, ...policy };
+    this.nowFn = policy?.now ?? Date.now;
+    this.timer = new RealTimer(this.nowFn);
   }
 
   register(hook: HookName, fn: HookFn, opts?: HookOptions): () => void {
@@ -180,8 +189,8 @@ export class HookRegistry {
     if (!list) return;
     let index = 0;
     for (const stored of list) {
-      const startedAt = Date.now();
-      const outcome = await runGuarded(() => stored.fn(ctx), stored.timeoutMs);
+      const startedAt = this.nowFn();
+      const outcome = await runGuarded(() => stored.fn(ctx), stored.timeoutMs, this.timer);
       if (!outcome.ok) {
         this.record({
           hook,
@@ -190,7 +199,7 @@ export class HookRegistry {
           error: outcome.error,
           index,
           action: "swallow",
-          elapsedMs: Date.now() - startedAt,
+          elapsedMs: this.nowFn() - startedAt,
         });
       }
       index += 1;
@@ -206,10 +215,11 @@ export class HookRegistry {
     let current: ToolCall = call;
     let index = 0;
     for (const stored of list) {
-      const startedAt = Date.now();
+      const startedAt = this.nowFn();
       const outcome = await runGuarded(
         () => (stored.fn as BeforeToolHook)(ctx, current) as Promise<ToolCall | null>,
         stored.timeoutMs,
+        this.timer,
       );
       if (!outcome.ok) {
         // FAIL-CLOSED: 禁止 hook 异常默认 allow.
@@ -220,7 +230,7 @@ export class HookRegistry {
           error: outcome.error,
           index,
           action: "deny",
-          elapsedMs: Date.now() - startedAt,
+          elapsedMs: this.nowFn() - startedAt,
         });
         return null;
       }
@@ -238,10 +248,11 @@ export class HookRegistry {
     if (!list) return true;
     let index = 0;
     for (const stored of list) {
-      const startedAt = Date.now();
+      const startedAt = this.nowFn();
       const outcome = await runGuarded(
         () => Promise.resolve((stored.fn as (c: HookContext) => unknown)(ctx)),
         stored.timeoutMs,
+        this.timer,
       );
       if (!outcome.ok || outcome.value === false) {
         if (!outcome.ok) {
@@ -252,7 +263,7 @@ export class HookRegistry {
             error: outcome.error,
             index,
             action: "deny",
-            elapsedMs: Date.now() - startedAt,
+            elapsedMs: this.nowFn() - startedAt,
           });
         }
         return false;
@@ -272,8 +283,8 @@ export class HookRegistry {
     if (!list) return;
     let index = 0;
     for (const stored of list) {
-      const startedAt = Date.now();
-      const outcome = await runGuarded(() => invoke(stored), stored.timeoutMs);
+      const startedAt = this.nowFn();
+      const outcome = await runGuarded(() => invoke(stored), stored.timeoutMs, this.timer);
       if (!outcome.ok) {
         this.record({
           hook,
@@ -282,7 +293,7 @@ export class HookRegistry {
           error: outcome.error,
           index,
           action: "swallow",
-          elapsedMs: Date.now() - startedAt,
+          elapsedMs: this.nowFn() - startedAt,
         });
       }
       index += 1;

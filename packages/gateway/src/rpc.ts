@@ -3,6 +3,7 @@ import type {
   AgentEvent,
   AgentId,
   ApprovalId,
+  ApprovalStore,
   ErrorCode,
   EventStore,
   SessionId,
@@ -13,7 +14,6 @@ import type {
 import { AgentError, errorInfo } from "@ar/contracts";
 import type { AgentRuntime, TurnOutcome } from "@ar/core";
 import type { SessionService } from "@ar/session";
-import type { InMemoryApprovalStore } from "@ar/security";
 
 /** Caller-supplied context attached to a single invoke (transport agnostic). */
 export interface RpcContext {
@@ -99,7 +99,7 @@ export type ActiveTurnStatus = TurnOutcome["status"] | "not_running";
 export interface RuntimeRpcDeps {
   sessionService: SessionService;
   /** §161 approval binding: one-shot, session-scoped decisions. */
-  approvalStore: InMemoryApprovalStore;
+  approvalStore: ApprovalStore;
   events: EventStore;
   /** Host-wired agent listing; absent provider makes `agent.list` an error. */
   listAgents?: () => AgentDefinition[];

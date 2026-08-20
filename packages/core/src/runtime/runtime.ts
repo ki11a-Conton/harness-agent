@@ -37,6 +37,7 @@ import {
   DEFAULT_TOOL_CAPABILITY,
   DEFAULT_TOOL_SEMANTICS,
   EFFECTIVE_AGENT_SNAPSHOT_KEY,
+  RUNTIME_POLICY_SNAPSHOT_KEY,
   computeArgsHash,
   errorInfo,
   isToolAllowedByPolicy,
@@ -57,6 +58,7 @@ import type {
   CheckpointStore,
   CompactionSummary,
   EffectiveAgentConfig,
+  EffectiveRuntimePolicySnapshot,
   ToolExecutionRecord,
   WorkingState,
   ProgressSignal,
@@ -74,6 +76,7 @@ import type {
 } from "@ar/contracts";
 import type { ContextPipeline, InstructionDiscoveryOptions } from "@ar/context";
 import { estimateMessageTokens } from "@ar/context";
+import { applyWorkingStateMutation, type WorkingStateMutation } from "@ar/contracts";
 import { AgentError } from "../errors.js";
 import { AgentState } from "../state/agent-state.js";
 import { HookRegistry } from "../lifecycle/hooks.js";
@@ -100,6 +103,12 @@ import type {
   TurnOutcome,
 } from "./turn-helpers.js";
 import { ToolCallController } from "./tool-call-controller.js";
+import { RunBudgetTracker } from "./run-budget.js";
+
+/** P1-6: deterministic hash of a policy value (session fingerprinting). */
+function stableHashOf(value: unknown): string {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 16);
+}
 import type { ExecutedToolCall } from "./tool-call-controller.js";
 import { ContextController } from "./context-controller.js";
 import type { ContextUpdate } from "./context-controller.js";
@@ -281,6 +290,9 @@ export interface AgentRuntimeDeps {
   askUserStore?: AskUserStore;
   askUser?: (request: AskUserRequest) => Promise<AskUserReply | undefined>;
   askUserLifecycle?: AskUserLifecycle;
+  /** P0-11: optional callback for token usage reporting (tree / scheduler budget).
+   *  Called after model.completed with the usage from the most recent call. */
+  reportModelUsage?: (inputTokens: number, outputTokens: number) => void;
 }
 
 
@@ -324,6 +336,7 @@ export class AgentRuntime {
   private readonly outputRedactor?: AgentRuntimeDeps["outputRedactor"];
   private readonly injectionDetector?: AgentRuntimeDeps["injectionDetector"];
   private readonly inbox?: InboxStore;
+  private readonly reportModelUsage?: (inputTokens: number, outputTokens: number) => void;
   private readonly now: () => number;
   /** Q-7: injectable timer driving retry-backoff sleeps. */
   private readonly timer: Timer;
@@ -394,6 +407,7 @@ export class AgentRuntime {
     this.outputRedactor = deps.outputRedactor;
     this.injectionDetector = deps.injectionDetector;
     this.inbox = deps.inbox;
+    this.reportModelUsage = deps.reportModelUsage;
     this.now = deps.now ?? Date.now;
     this.timer = deps.timer ?? new RealTimer(this.now);
     this.sandboxPolicy = deps.sandboxPolicy;
@@ -560,6 +574,16 @@ export class AgentRuntime {
     // a session without a frozen policy must not run against the base agent).
     await this.store.saveStateSnapshot(session.id, {
       [EFFECTIVE_AGENT_SNAPSHOT_KEY]: snapshotEffectiveConfig(opts.agent),
+      // P1-6: freeze the runtime policy hashes too, so a resume can detect
+      // host-policy drift (safe-resume gate).
+      [RUNTIME_POLICY_SNAPSHOT_KEY]: {
+        version: 1,
+        contextPolicyHash: this.context !== undefined ? stableHashOf(this.context) : undefined,
+        retryPolicyHash: this.recovery !== undefined ? stableHashOf(this.recovery) : undefined,
+        schedulerPolicyHash: undefined,
+        toolSemanticsHash: this.toolSemanticsOf !== undefined ? String(this.toolSemanticsOf.length) : undefined,
+        createdAt: this.now(),
+      } satisfies EffectiveRuntimePolicySnapshot,
     });
     await this.emit(session.id, "session.created", { sessionId: session.id, agentId: session.agentId });
     await this.hooks.dispatch("session_start", {
@@ -616,6 +640,8 @@ export class AgentRuntime {
     let reactiveCompacted = false;
     let digestAppended = false;
     let lastReportTokens: number | undefined;
+    // P0-10: unified run-budget tracker (replaces scattered counters).
+    const budget = new RunBudgetTracker(ctx.agent.limits, this.now);
 
     try {
       for (let i = 0; i < this.maxIterationsPerTurn; i++) {
@@ -633,12 +659,12 @@ export class AgentRuntime {
           await this.recoveryController.checkpoint(ctx, working, state, toolLedger, "periodic:iteration", lastReportTokens !== undefined ? { maxTokens: this.context?.budget.maxTokens ?? 0, usedTokens: lastReportTokens } : undefined);
         }
 
-        const wallElapsed = this.wallClockExceeded(ctx.agent, turn);
-        if (wallElapsed !== undefined) {
-          await this.emit(sessionId, "run.limit_reached", { limit: "maxDurationMs", used: wallElapsed, allowed: ctx.agent.limits.maxDurationMs }, turnId);
+        const durationBreach = budget.onDurationCheck();
+        if (durationBreach !== undefined) {
+          await this.emit(sessionId, "run.limit_reached", { ...durationBreach }, turnId);
           return this.recoveryController.finishTurn(
             ctx, "failed", state, working,
-            errorInfo("RESOURCE_LIMIT", `maxDurationMs (${ctx.agent.limits.maxDurationMs}ms) exceeded after ${wallElapsed}ms`),
+            errorInfo("RESOURCE_LIMIT", `maxDurationMs (${durationBreach.allowed}ms) exceeded after ${durationBreach.used}ms`),
             "time_limit",
             toolLedger,
           );
@@ -647,7 +673,8 @@ export class AgentRuntime {
         await this.hooks.dispatch("before_model", {
           sessionId, turnId, agentId: ctx.session.agentId, timestamp: this.now(),
         });
-        await this.emit(sessionId, "model.started", { turnId }, turnId);
+        // P0-9: model.started is emitted by the model-call controller per
+        // attempt with a callId (usage/latency/retry attribution).
 
         const client = this.modelProvider.createClient(ctx.agent.model, {});
         let history = await this.store.listMessages(sessionId);
@@ -708,13 +735,17 @@ export class AgentRuntime {
           verificationFailures = completion.verificationFailures;
           continue;
         }
+        // P0-11: report per-call token usage to the tree budget (scheduler).
+        if (this.reportModelUsage !== undefined && modelResult.usage !== undefined) {
+          this.reportModelUsage(modelResult.usage.inputTokens ?? 0, modelResult.usage.outputTokens ?? 0);
+        }
         if (completion.action === "finish") return completion.outcome;
 
         // proceed to execute tools
         const toolCalls = completion.toolCalls;
         const executed = await this.toolCallController.executeToolCalls(ctx, state, toolCalls);
         const toolAction = await this.handleToolResults(
-          ctx, executed, working, state, toolLedger, priorBlocks, lastReportTokens,
+          ctx, executed, working, state, toolLedger, priorBlocks, lastReportTokens, budget,
         );
         if (toolAction.action === "continue_loop") continue;
         if (toolAction.action === "finish") return toolAction.outcome;
@@ -751,7 +782,7 @@ export class AgentRuntime {
     // Q-1: bundle the five read-only turn values into a single context object.
     const ctx: TurnContext = { sessionId, turnId, signal, session, agent };
 
-    const state = new AgentState(sessionId, session.agentId);
+    const state = new AgentState(sessionId, session.agentId, this.now);
     state.beginTurn(turnId);
     const turn = await this.store.getTurn(turnId);
     if (!turn) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown turn ${turnId}`));
@@ -792,9 +823,23 @@ export class AgentRuntime {
     toolLedger: ToolExecutionRecord[],
     priorBlocks: ContextBlock[],
     lastReportTokens: number | undefined,
+    budget: RunBudgetTracker,
   ): Promise<ToolResultsAction> {
     const { sessionId, turnId, signal, agent } = ctx;
         for (const { call, result, streak } of executed) {
+          // P0-12: update_plan is a runtime-internal tool that applies
+          // working state mutations directly — no external execution.
+          if (call.name === "update_plan") {
+            const mutations = call.args.mutations as WorkingStateMutation[] | undefined;
+            if (mutations !== undefined) {
+              for (const mutation of mutations) {
+                applyWorkingStateMutation(working, mutation);
+              }
+            }
+            // Skip the normal tool processing (no block, no message, no ledger).
+            state.countToolCall();
+            continue;
+          }
           const content = await this.contextController.renderToolResultForContext(ctx, call, result);
           priorBlocks.push(toContextBlock(call.id, result, content));
           await this.store.appendMessage({
@@ -914,14 +959,17 @@ export class AgentRuntime {
               toolLedger,
             ) };
           }
-          if (agent.limits.maxToolCalls !== undefined && state.getToolCallsExecuted() >= agent.limits.maxToolCalls) {
-            await this.emit(sessionId, "run.limit_reached", { limit: "maxToolCalls", used: state.getToolCallsExecuted() }, turnId);
-            return { action: "finish", outcome: await this.recoveryController.finishTurn(
-              ctx, "failed", state, working,
-              errorInfo("RESOURCE_LIMIT", `maxToolCalls (${agent.limits.maxToolCalls}) reached`),
-              "tool_limit",
-              toolLedger,
-            ) };
+          if (agent.limits.maxToolCalls !== undefined) {
+            const breach = budget.onToolCall();
+            if (breach !== undefined) {
+              await this.emit(sessionId, "run.limit_reached", { ...breach }, turnId);
+              return { action: "finish", outcome: await this.recoveryController.finishTurn(
+                ctx, "failed", state, working,
+                errorInfo("RESOURCE_LIMIT", `maxToolCalls (${agent.limits.maxToolCalls}) reached`),
+                "tool_limit",
+                toolLedger,
+              ) };
+            }
           }
         }
         // P2-37: a user interrupt arrived during the tool batch. Side effects
@@ -1114,6 +1162,20 @@ export class AgentRuntime {
       throw new AgentError(
         errorInfo("INTERNAL_ERROR", `session ${session.id} effective-agent snapshot agentId ${cfg.agentId} does not match session agentId ${session.agentId}`),
       );
+    }
+    // P1-6: safe-resume gate — detect host policy drift since the session was
+    // created. Never silently change security semantics: the change is
+    // observable on the event stream so a strict host can refuse to resume.
+    const runtimePolicy = snapshot[RUNTIME_POLICY_SNAPSHOT_KEY] as EffectiveRuntimePolicySnapshot | undefined;
+    if (runtimePolicy?.version === 1 && this.context !== undefined) {
+      const currentContextHash = stableHashOf(this.context);
+      if (runtimePolicy.contextPolicyHash !== undefined && runtimePolicy.contextPolicyHash !== currentContextHash) {
+        await this.emit(session.id, "policy.changed_on_resume", {
+          contextPolicyChanged: true,
+          contextPolicyHash: currentContextHash,
+          stored: runtimePolicy.contextPolicyHash,
+        }, undefined);
+      }
     }
     // Metadata (name/description/mode) is cosmetic and not part of the
     // security boundary; fall back to the registry when available.

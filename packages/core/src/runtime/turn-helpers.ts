@@ -16,6 +16,7 @@ import type {
   ContextBlock,
   EffectiveAgentConfig,
   Message,
+  ModelCallId,
   ModelFinalResult,
   SandboxPolicy,
   Session,
@@ -30,9 +31,12 @@ import type {
   Turn,
   TurnId,
   UnresolvedToolExecution,
+  Usage,
+  UsageSnapshot,
   WorkingState,
 } from "@ar/contracts";
 import { estimateMessageTokens } from "@ar/context";
+import { classifyCommand } from "./command-classification.js";
 
 /**
  * Q-1: immutable per-turn context. Bundles the five values resolved once at the
@@ -99,6 +103,9 @@ export const DEFAULT_RUNTIME_TOOL_SEMANTICS: Readonly<Record<string, ToolSemanti
     idempotent: false,
     retrySafety: "none",
     sideEffectScope: "filesystem",
+    networkBehavior: "none",
+    cancellable: false,
+    outputSensitivity: "high",
   },
   edit_file: {
     ...DEFAULT_TOOL_SEMANTICS,
@@ -106,6 +113,9 @@ export const DEFAULT_RUNTIME_TOOL_SEMANTICS: Readonly<Record<string, ToolSemanti
     idempotent: false,
     retrySafety: "none",
     sideEffectScope: "filesystem",
+    networkBehavior: "none",
+    cancellable: false,
+    outputSensitivity: "high",
   },
   exec: {
     ...DEFAULT_TOOL_SEMANTICS,
@@ -134,7 +144,9 @@ export function updateWorkingState(
     }
   } else if (semantics.sideEffectScope === "process" && typeof call.args.command === "string") {
     working.commandsRun.push(call.args.command);
-    if (/test/i.test(call.args.command)) working.testsRun.push(call.args.command);
+    // P0-13: use structured command classification instead of /test/i regex.
+    const classified = classifyCommand(call.args.command);
+    if (classified.kind === "test") working.testsRun.push(call.args.command);
   }
   if (result.status === "failed" || result.status === "timeout" || result.status === "denied") {
     working.failures.push(`${call.name}: ${result.error?.message ?? result.status}`);
@@ -337,11 +349,14 @@ export function decideModelRetry(
 export type ModelCallResult =
   | {
       status: "completed";
+      callId: ModelCallId;
       assistantText: string;
       calls: ToolCall[];
       final: ModelFinalResult | undefined;
       callStartedAt: number;
       timeToFirstTokenMs: number | undefined;
+      /** P0-9: partial usage snapshot for this call (may omit fields). */
+      usage: UsageSnapshot | undefined;
       reactiveCompacted: boolean;
     }
   | { status: "cancelled" }
@@ -418,7 +433,7 @@ export function rethrowIfKill(err: unknown): void {
 // consumed by the extracted controllers. Defined here so controllers never
 // import runtime.ts (cycle avoidance); runtime.ts re-exports them.
 
-export type TurnOutcomeStatus = "completed" | "failed" | "cancelled" | "waiting_for_user";
+export type TurnOutcomeStatus = "completed" | "failed" | "cancelled" | "waiting_for_user" | "waiting_for_approval";
 
 /** P2-43: the name of the ask-user GATE tool. Recognized by the runtime as a
  *  formal phase trigger — it NEVER executes as a workspace tool. Model-facing
@@ -456,7 +471,11 @@ export type TurnOutcomeDetail =
    *  cancellation. The second member notes whether side effects committed
    *  before the pause. */
   | "waiting_no_effect"
-  | "waiting_with_effects";
+  | "waiting_with_effects"
+  /** P1-1: the turn paused waiting for approval. Same semantics as
+   *  waiting_for_user — not a failure, the turn can resume. */
+  | "waiting_approval_no_effect"
+  | "waiting_approval_with_effects";
 
 export interface TurnOutcome {
   status: TurnOutcomeStatus;
@@ -481,6 +500,15 @@ export interface TurnOutcome {
    *  Present exactly in that case, so a host can render a prompt and call
    *  submitUserAnswer() to resume. Absent otherwise. */
   pendingAsk?: AskUserRequest;
+  /** P1-1: the pending approval request when `status === "waiting_for_approval"`.
+   *  Present exactly in that case, so a host can show the approval UI and
+   *  resolve it. Absent otherwise. */
+  pendingApproval?: {
+    toolCallId: string;
+    toolName: string;
+    args: Record<string, unknown>;
+    argsHash: string;
+  };
 }
 
 /** P1-4: outcome of a crash recovery. The interrupted session continues in a

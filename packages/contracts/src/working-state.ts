@@ -46,6 +46,57 @@ export interface WorkingState {
   childAgentRefs: string[];
 }
 
+/**
+ * P0-12: controlled mutation contract for the model to update its working
+ * state. The runtime rejects mutations that would overwrite protected fields
+ * (goal, filesChanged, commandsRun, testsRun, failures, toolRefs,
+ * artifactRefs, memoryRefs, childAgentRefs — these are auto-populated).
+ */
+export type WorkingStateMutation =
+  | { op: "set_constraints"; constraints: string[] }
+  | { op: "set_plan"; steps: string[] }
+  | { op: "mark_completed"; step: string }
+  | { op: "set_pending"; steps: string[] }
+  | { op: "add_decision"; decision: string }
+  | { op: "add_fact"; fact: string }
+  | { op: "add_open_question"; question: string }
+  | { op: "resolve_open_question"; question: string };
+
+/** P0-12: apply a single mutation to a WorkingState (mutates in place). */
+export function applyWorkingStateMutation(state: WorkingState, mutation: WorkingStateMutation): string {
+  switch (mutation.op) {
+    case "set_constraints":
+      state.constraints = mutation.constraints;
+      return `constraints: ${mutation.constraints.join(", ")}`;
+    case "set_plan":
+      state.plan = mutation.steps;
+      return `plan: ${mutation.steps.join(", ")}`;
+    case "mark_completed": {
+      state.completed.push(mutation.step);
+      const idx = state.pending.indexOf(mutation.step);
+      if (idx !== -1) state.pending.splice(idx, 1);
+      return `completed: ${mutation.step}`;
+    }
+    case "set_pending":
+      state.pending = mutation.steps;
+      return `pending: ${mutation.steps.join(", ")}`;
+    case "add_decision":
+      state.decisions.push(mutation.decision);
+      return `decision: ${mutation.decision}`;
+    case "add_fact":
+      state.importantFacts.push(mutation.fact);
+      return `fact: ${mutation.fact}`;
+    case "add_open_question":
+      state.openQuestions.push(mutation.question);
+      return `question: ${mutation.question}`;
+    case "resolve_open_question": {
+      const idx = state.openQuestions.indexOf(mutation.question);
+      if (idx !== -1) state.openQuestions.splice(idx, 1);
+      return `resolved: ${mutation.question}`;
+    }
+  }
+}
+
 /** Empty working state with the goal pre-filled. */
 export function newWorkingState(goal: string): WorkingState {
   return {

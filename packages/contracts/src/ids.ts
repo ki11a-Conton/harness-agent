@@ -21,6 +21,7 @@ export type TraceId = Branded<"TraceId">;
 export type PromptId = Branded<"PromptId">;
 export type ArtifactId = Branded<"ArtifactId">;
 export type AskId = Branded<"AskId">;
+export type ModelCallId = Branded<"ModelCallId">;
 
 const PREFIXES: Record<string, string> = {
   session: "session_",
@@ -40,6 +41,7 @@ const PREFIXES: Record<string, string> = {
   prompt: "prompt_",
   artifact: "artifact_",
   ask: "ask_",
+  modelcall: "modelcall_",
 };
 
 /** Production ID source: random UUID (unique, non-deterministic). */
@@ -124,6 +126,10 @@ export function newArtifactId(): ArtifactId {
 
 export function newAskId(): AskId {
   return make("ask");
+}
+
+export function newModelCallId(): ModelCallId {
+  return make("modelcall");
 }
 
 export function isId(prefix: string, value: string): boolean {

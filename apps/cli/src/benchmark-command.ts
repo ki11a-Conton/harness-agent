@@ -42,7 +42,7 @@ import {
   ToolRegistry,
   writeFileTool,
 } from "@ar/tools";
-import { MemEventStore, MemSessionStore } from "./mem-stores.js";
+import { MemEventStore, MemSessionStore } from "@ar/harness";
 import { detectPromptInjection, redactSecrets } from "@ar/security";
 import { DEFAULT_MODEL_ID, registerBuiltinTools } from "./main.js";
 import { resolveModelProvider, STUB_PROVIDER_ID } from "./provider.js";

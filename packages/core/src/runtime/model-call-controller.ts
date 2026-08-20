@@ -12,14 +12,16 @@
  * `compactCounter` is shared BY REFERENCE with the context controller.
  */
 
-import { errorInfo, newMessageId, sleep as timerSleep } from "@ar/contracts";
+import { errorInfo, newMessageId, newModelCallId, sleep as timerSleep } from "@ar/contracts";
 import type {
   AgentDefinition,
   AgentEvent,
   CheckpointBudgetUsage,
   Message,
+  ModelCallId,
   ModelClient,
   ModelFinalResult,
+  ModelRetryPayload,
   SessionId,
   SessionStore,
   TerminationReason,
@@ -29,6 +31,7 @@ import type {
   ToolSpec,
   Turn,
   TurnId,
+  Usage,
   WorkingState,
 } from "@ar/contracts";
 import { AgentError } from "../errors.js";
@@ -50,6 +53,27 @@ import type {
 } from "./turn-helpers.js";
 import type { VerificationGateResult } from "./verification-controller.js";
 
+import type {
+  UsageSnapshot,
+} from "@ar/contracts";
+
+/**
+ * P0-9: merge a usage snapshot into an accumulator. CONTRACT: `usage` events
+ * are cumulative snapshots (inputTokens = tokens this call consumed so far),
+ * never deltas — so a later snapshot REPLACES the fields it carries instead of
+ * adding. Fields absent from a snapshot keep the previous value. This feeds
+ * `model.completed.usage`, the single usage record metrics sum (no double
+ * count between model.usage and model.completed).
+ */
+export function mergeUsage(current: UsageSnapshot | undefined, snap: UsageSnapshot): UsageSnapshot {
+  const next: UsageSnapshot = { ...current };
+  if (snap.inputTokens !== undefined) next.inputTokens = snap.inputTokens;
+  if (snap.outputTokens !== undefined) next.outputTokens = snap.outputTokens;
+  if (snap.contextTokens !== undefined) next.contextTokens = snap.contextTokens;
+  if (snap.estimatedCostUsd !== undefined) next.estimatedCostUsd = snap.estimatedCostUsd;
+  return next;
+}
+
 /** Q-1: result of handleModelCompletion — tells the turn loop what to do next. */
 export type CompletionResult =
   | { action: "continue_loop"; verificationFailures: number }
@@ -60,11 +84,14 @@ export type CompletionResult =
  *  `reactiveCompacted` flag (handled by the caller). */
 export type ModelCompletionInput = {
   status: "completed";
+  callId: ModelCallId;
   assistantText: string;
   calls: ToolCall[];
   final: ModelFinalResult | undefined;
   callStartedAt: number;
   timeToFirstTokenMs: number | undefined;
+  /** P0-9: usage accumulated from usage snapshots for THIS call. */
+  usage: UsageSnapshot | undefined;
 };
 
 export interface ModelCallControllerDeps {
@@ -137,7 +164,7 @@ export class ModelCallController {
     verificationFailures: number,
   ): Promise<CompletionResult> {
     const { sessionId, turnId, signal, agent } = ctx;
-    const { assistantText, calls, final, callStartedAt, timeToFirstTokenMs } = modelResult;
+    const { assistantText, calls, final, callStartedAt, timeToFirstTokenMs, callId, usage } = modelResult;
 
     if (signal.aborted) {
       return { action: "finish", outcome: await this.deps.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger) };
@@ -170,15 +197,17 @@ export class ModelCallController {
       createdAt: this.deps.now(),
     });
     await this.deps.emit(sessionId, "model.completed", {
+      callId,
       finishReason: final.finishReason,
       toolCalls: toolCalls.length,
-      durationMs: Date.now() - callStartedAt,
+      durationMs: this.deps.now() - callStartedAt,
       ...(timeToFirstTokenMs !== undefined ? { timeToFirstTokenMs } : {}),
+      ...(usage !== undefined ? { usage } : {}),
     }, turnId);
 
     if (final.finishReason === "stop") {
       await this.deps.failAt("verification.started", { sessionId, turnId });
-      const verificationStartedAt = Date.now();
+      const verificationStartedAt = this.deps.now();
       const gate = await this.deps.runVerificationGate(ctx);
       if (gate !== undefined) {
         // P1-3: after a verification gate (passed or failed) is a
@@ -196,7 +225,7 @@ export class ModelCallController {
             // plan.md Phase 4/7: MODEL_STOPPED ≠ done. Inject a structured
             // failure observation and continue the loop; the model gets a
             // bounded number of chances to fix the reported problem.
-            await this.deps.emit(sessionId, "verification.failed", { error: gate.reason, attempt: verificationFailures, maxAttempts: this.deps.maxVerificationFailures, durationMs: Date.now() - verificationStartedAt }, turnId);
+            await this.deps.emit(sessionId, "verification.failed", { error: gate.reason, attempt: verificationFailures, maxAttempts: this.deps.maxVerificationFailures, durationMs: this.deps.now() - verificationStartedAt }, turnId);
             await this.deps.store.appendMessage({
               id: newMessageId(),
               sessionId,
@@ -210,7 +239,7 @@ export class ModelCallController {
             });
             return { action: "continue_loop", verificationFailures };
           }
-          await this.deps.emit(sessionId, "verification.failed", { error: gate.reason, attempt: verificationFailures, maxAttempts: this.deps.maxVerificationFailures, durationMs: Date.now() - verificationStartedAt }, turnId);
+          await this.deps.emit(sessionId, "verification.failed", { error: gate.reason, attempt: verificationFailures, maxAttempts: this.deps.maxVerificationFailures, durationMs: this.deps.now() - verificationStartedAt }, turnId);
           await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxVerificationFailures", used: verificationFailures, allowed: this.deps.maxVerificationFailures }, turnId);
           return { action: "finish", outcome: await this.deps.finishTurn(
             ctx, "failed", state, working,
@@ -219,7 +248,7 @@ export class ModelCallController {
             toolLedger,
           ) };
         }
-        await this.deps.emit(sessionId, "verification.completed", { passed: true, durationMs: Date.now() - verificationStartedAt }, turnId);
+        await this.deps.emit(sessionId, "verification.completed", { passed: true, durationMs: this.deps.now() - verificationStartedAt }, turnId);
         state.terminate("completed");
         return { action: "finish", outcome: await this.deps.finishTurn(ctx, "completed", state, working, undefined, "verified_complete", toolLedger) };
       }
@@ -284,14 +313,21 @@ export class ModelCallController {
     // "retry request" before surfacing failure). The RecoveryPolicy
     // bounds the attempts; each retry is observable via model.retry.
     // P1-20: per-attempt latency measurement (time to first token + total).
+    // P0-9: every attempt is a distinct model call with its own callId so
+    // usage + latency + retries attribute to the exact call that produced it.
     let callStartedAt = 0;
     let timeToFirstTokenMs: number | undefined;
     let firstTokenSeen = false;
+    let callId: ModelCallId;
+    let usage: UsageSnapshot | undefined;
     for (let attempt = 1; ; attempt += 1) {
+      callId = newModelCallId();
       let modelFailed: ReturnType<typeof errorInfo> | undefined;
-      callStartedAt = Date.now();
+      usage = undefined;
+      callStartedAt = this.deps.now();
       timeToFirstTokenMs = undefined;
       firstTokenSeen = false;
+      await this.deps.emit(sessionId, "model.started", { callId }, turnId);
       try {
         await this.deps.failAt("model.next_call", { sessionId, turnId });
         for await (const ev of client.generate({ messages: history, system, tools: this.deps.toolSpecs }, signal)) {
@@ -301,14 +337,14 @@ export class ModelCallController {
             case "text_delta":
               if (!firstTokenSeen) {
                 firstTokenSeen = true;
-                timeToFirstTokenMs = Date.now() - callStartedAt;
+                timeToFirstTokenMs = this.deps.now() - callStartedAt;
               }
               assistantText += ev.text;
               break;
             case "reasoning_delta":
               if (!firstTokenSeen) {
                 firstTokenSeen = true;
-                timeToFirstTokenMs = Date.now() - callStartedAt;
+                timeToFirstTokenMs = this.deps.now() - callStartedAt;
               }
               break;
             case "tool_call_delta":
@@ -317,11 +353,18 @@ export class ModelCallController {
               break;
             case "completed":
               final = ev.result;
+              // P0-9: a provider may only surface usage on the final result
+              // (no usage events). Fold it in with the same snapshot semantics.
+              if (final.usage !== undefined) usage = mergeUsage(usage, final.usage);
               break;
             case "error":
               throw new AgentError(ev.error);
             case "started":
+              break;
             case "usage":
+              // P0-9: cumulative snapshot contract — later snapshots replace
+              // fields; never summed inline (see mergeUsage).
+              usage = mergeUsage(usage, ev.usage);
               break;
             case "retry":
               // Provider-internal retry (retry taxonomy kind "provider",
@@ -385,7 +428,8 @@ export class ModelCallController {
       }
 
       if (retryAction.action === "retry") {
-        await this.deps.emit(sessionId, "model.retry", { attempt, error: modelFailed }, turnId);
+        const retryPayload: ModelRetryPayload = { callId, attempt, error: modelFailed };
+        await this.deps.emit(sessionId, "model.retry", { ...retryPayload }, turnId);
         if (retryAction.retryDelayMs > 0) {
           await timerSleep(this.deps.timer, retryAction.retryDelayMs);
         }
@@ -396,7 +440,7 @@ export class ModelCallController {
       }
 
       // fail
-      await this.deps.emit(sessionId, "model.failed", { error: modelFailed }, turnId);
+      await this.deps.emit(sessionId, "model.failed", { callId, error: modelFailed }, turnId);
       if (retryAction.suppressLimitEvent !== true && attempt >= retryAction.maxAttempts) {
         await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxRetries", used: attempt, allowed: retryAction.maxAttempts }, turnId);
       }
@@ -405,11 +449,13 @@ export class ModelCallController {
 
     return {
       status: "completed",
+      callId,
       assistantText,
       calls,
       final,
       callStartedAt,
       timeToFirstTokenMs,
+      usage,
       reactiveCompacted,
     };
   }

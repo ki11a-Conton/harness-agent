@@ -452,14 +452,14 @@ describe("fault injection v2: kill points + crash resume (P1-5)", () => {
     expect(storedChild!.parentId).toBe(session.id);
 
     // A fresh process resumes: the in-flight delegation surfaces as unresolved
-    // (honest ambiguity) and is never blindly re-executed. Unknown tools are
-    // not in the SIDE_EFFECT_TOOLS whitelist, but the guarantee that matters
-    // is the same: unresolved calls are presented to the model, not replayed.
+    // (honest ambiguity) and is never blindly re-executed. P0-8: unknown tools
+    // default to sideEffect=true (fail-closed — the effect may have happened),
+    // so the resolved call is presented for reconciliation, never replayed.
     const r2 = restartedRuntime({ store, events, ckpt, orch });
     const result = await r2.resumeTurn(session.id, new AbortController().signal);
     expect(result.unresolvedTools).toHaveLength(1);
     expect(result.unresolvedTools[0]!.tool).toBe("delegate");
-    expect(result.unresolvedTools[0]!.sideEffect).toBe(false);
+    expect(result.unresolvedTools[0]!.sideEffect).toBe(true);
     expect(delegateCalls).toBe(1);
     expect(result.outcome.status).toBe("completed");
   });
@@ -495,15 +495,61 @@ describe("fault injection v2: kill points + crash resume (P1-5)", () => {
 
     const r2 = restartedRuntime({ store, events, ckpt, orch });
     const result = await r2.resumeTurn(session.id, new AbortController().signal);
-    // The unknown outcome is surfaced to the model for reconciliation 鈥?the
-    // runtime never auto-retries an external call whose effect is unknown
-    // (mcp_tool_call is not in the SIDE_EFFECT_TOOLS whitelist; the runtime
-    // guarantee is that it is presented, not replayed).
+    // P0-8: the unknown outcome is surfaced as a potential side effect
+    // (fail-closed — mcp_tool_call has no declared semantics, so the runtime
+    // cannot prove no effect happened). It is presented for reconciliation,
+    // never replayed.
     expect(result.unresolvedTools).toHaveLength(1);
     expect(result.unresolvedTools[0]!.tool).toBe("mcp_tool_call");
-    expect(result.unresolvedTools[0]!.sideEffect).toBe(false);
+    expect(result.unresolvedTools[0]!.sideEffect).toBe(true);
     expect(mcpCalls).toBe(1);
     expect(result.outcome.status).toBe("completed");
+  });
+
+  it("P0-8: unknown tool killed mid-flight is reconciled fail-closed, never auto-replayed", async () => {
+    // A tool with NO registered semantics (not in the registry, not in the
+    // runtime's known map) defaults to DEFAULT_TOOL_SEMANTICS. P0-8: its
+    // sideEffectScope is "unknown" — treated as may-have-side-effect. The
+    // kill leaves the outcome ambiguous; on resume the call must surface for
+    // reconciliation, never be blindly re-run.
+    let unknownCalls = 0;
+    class UnknownOrchestrator extends WriteCountingOrchestrator {
+      override async execute(request: ToolCallRequest, context: ToolExecutionContext): Promise<ToolResult> {
+        if (request.call.name === "mystery_plugin_tool") {
+          unknownCalls += 1;
+          throw new RuntimeKilledError("tool.executing");
+        }
+        return super.execute(request, context);
+      }
+    }
+
+    const { runtime, store, events, ckpt, orch } = await makeRuntime({
+      scripts: toolScript("mystery_plugin_tool", { action: "sync" }),
+      orch: new UnknownOrchestrator(),
+      // No toolSemanticsOf: the runtime falls back to DEFAULT_TOOL_SEMANTICS.
+    });
+    const session = await runtime.createSession({ agent: AGENT, cwd });
+    const lastEventSequence = (await events.nextSequence(session.id)) - 1;
+    ckpt.seed = seededCheckpoint(session.id, { lastEventSequence });
+
+    await runUntilKilled(runtime, session, "tool.executing");
+
+    // Process died: no turn.completed, no tool result.
+    const stored = await events.list(session.id);
+    expect(stored.map((e) => e.type)).not.toContain("turn.completed");
+    expect(unknownCalls).toBe(1);
+
+    const r2 = restartedRuntime({ store, events, ckpt, orch, scripts: [] });
+    const result = await r2.resumeTurn(session.id, new AbortController().signal);
+
+    // The unknown outcome is surfaced with sideEffect=true (fail-closed) and
+    // never re-executed — the model reconciles it instead.
+    expect(result.unresolvedTools).toHaveLength(1);
+    expect(result.unresolvedTools[0]!.tool).toBe("mystery_plugin_tool");
+    expect(result.unresolvedTools[0]!.sideEffect).toBe(true);
+    expect(unknownCalls).toBe(1);
+    // No committed-side-effect claim: nothing was proven applied.
+    expect(result.committedSideEffects).toHaveLength(0);
   });
 
   it("kill while several children running: every in-flight child session survives intact, none duplicated", async () => {

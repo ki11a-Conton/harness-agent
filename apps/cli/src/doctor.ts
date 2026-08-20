@@ -23,6 +23,10 @@ export interface DoctorDeps {
   eventStore?: EventStore;
   /** Present when persistent (JSONL) stores are active. */
   dataDir?: string;
+  /** True when the model's context window was unknown and the harness used
+   *  the conservative fallback budget (plan.md P0-4: surface a warning). */
+  contextBudgetFallback?: boolean;
+  contextBudgetMaxTokens?: number;
 }
 
 export interface CheckResult {
@@ -31,8 +35,9 @@ export interface CheckResult {
   detail: string;
 }
 
-/** Number of tools a wired CLI host registers (see main.ts BUILTIN_TOOLS). */
-const EXPECTED_BUILTIN_TOOLS = 5;
+/** Number of tools a wired CLI host registers (production coding profile,
+ *  plan.md P0-5 — previously 5, now the full 11-tool production set). */
+const EXPECTED_BUILTIN_TOOLS = 11;
 
 const PROBE_SESSION = "session_doctor_probe" as SessionId;
 
@@ -49,6 +54,7 @@ export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
     await checkSessionStore(deps),
     await checkEventStore(deps),
     await checkPersistence(deps),
+    await checkContextBudget(deps),
   ];
 }
 
@@ -192,6 +198,25 @@ async function checkPersistence(deps: DoctorDeps): Promise<CheckResult> {
     };
   }
   return { name: "persistence", status: "OK", detail: `dataDir=${deps.dataDir}` };
+}
+
+async function checkContextBudget(deps: DoctorDeps): Promise<CheckResult> {
+  if (deps.contextBudgetFallback === true) {
+    return {
+      name: "context budget",
+      status: "WARNING",
+      detail:
+        `model context window unknown — conservative fallback ${deps.contextBudgetMaxTokens ?? "?"} tokens used`,
+    };
+  }
+  return {
+    name: "context budget",
+    status: "OK",
+    detail:
+      deps.contextBudgetMaxTokens === undefined
+        ? "not reported by the harness"
+        : `context window known (maxTokens=${deps.contextBudgetMaxTokens})`,
+  };
 }
 
 function typeName(value: object): string {

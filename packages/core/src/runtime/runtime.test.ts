@@ -128,9 +128,26 @@ function makeRuntime(
       : {}),
     ...(opts?.maxParallelToolCalls !== undefined ? { maxParallelToolCalls: opts.maxParallelToolCalls } : {}),
     ...(opts?.toolCapabilityOf !== undefined ? { toolCapabilityOf: opts.toolCapabilityOf } : {}),
-    ...(opts?.toolOutputBudget !== undefined ? { toolOutputBudget: opts.toolOutputBudget } : {}),
+    // P0-8: unknown tools default to fail-closed (side-effect scope "unknown").
+    // These synthetic test tools (echo/flaky/loop/...) are read-only doubles;
+    // declare them side-effect-free so the assertions on loop/stall behavior
+    // are not disturbed by the conservative default. write_file/exec fall
+    // through to the runtime's known semantics map.
+    ...(opts?.toolSemanticsOf !== undefined
+      ? { toolSemanticsOf: opts.toolSemanticsOf }
+      : {
+          toolSemanticsOf: (name: string) => {
+            if (name === "write_file" || name === "edit_file") {
+              return { ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "filesystem", readOnly: false };
+            }
+            if (name === "exec") {
+              return { ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "process", readOnly: false, networkBehavior: "outbound" };
+            }
+            return { ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "none", readOnly: true };
+          },
+        }),
     ...(opts?.artifactStore !== undefined ? { artifactStore: opts.artifactStore } : {}),
-    ...(opts?.toolSemanticsOf !== undefined ? { toolSemanticsOf: opts.toolSemanticsOf } : {}),
+    ...(opts?.toolOutputBudget !== undefined ? { toolOutputBudget: opts.toolOutputBudget } : {}),
     ...(opts?.outputRedactor !== undefined ? { outputRedactor: opts.outputRedactor } : {}),
     ...(opts?.injectionDetector !== undefined ? { injectionDetector: opts.injectionDetector } : {}),
     ...(opts?.inbox !== undefined ? { inbox: opts.inbox } : {}),
@@ -186,6 +203,46 @@ describe("AgentRuntime (CORE-001)", () => {
     expect(storedEvents.map((e) => e.type)).toContain("model.started");
     expect(storedEvents.map((e) => e.type)).toContain("model.completed");
     expect(storedEvents.map((e) => e.type)).toContain("turn.completed");
+  });
+
+  it("P0-9: model.started/completed carry a callId and completed carries the usage snapshot", async () => {
+    // A provider that emits a usage snapshot via a usage event (cumulative
+    // snapshot contract) must have it folded into model.completed, keyed by a
+    // callId that also appears on model.started/completed — the single source
+    // metrics reads, with no model.usage event in the runtime stream.
+    const provider: ModelProvider = {
+      id: "usage-probe",
+      async listModels() {
+        return [{ id: "m", name: "usage probe" }];
+      },
+      createClient() {
+        return {
+          async *generate(): AsyncGenerator<ModelEvent, void, void> {
+            yield { type: "started", timestamp: 0 };
+            yield { type: "usage", usage: { inputTokens: 100, outputTokens: 50, estimatedCostUsd: 0.0012 }, timestamp: 0 };
+            yield {
+              type: "completed",
+              result: { finishReason: "stop", text: "ok", usage: { inputTokens: 100, outputTokens: 50, estimatedCostUsd: 0.0012 } },
+              timestamp: 0,
+            };
+          },
+        };
+      },
+    };
+    const { runtime, store, events } = makeRuntime(provider, new FakeOrchestrator());
+    const { outcome, storedEvents } = await runOne(runtime, store, events);
+
+    expect(outcome.status).toBe("completed");
+    const started = storedEvents.find((e) => e.type === "model.started");
+    const completed = storedEvents.find((e) => e.type === "model.completed");
+    expect(started).toBeDefined();
+    expect(completed).toBeDefined();
+    const callId = started!.payload.callId;
+    expect(typeof callId).toBe("string");
+    expect(completed!.payload.callId).toBe(callId);
+    expect(completed!.payload.usage).toMatchObject({ inputTokens: 100, outputTokens: 50, estimatedCostUsd: 0.0012 });
+    // No model.usage event leaks into the runtime stream (runtime folded it).
+    expect(storedEvents.map((e) => e.type)).not.toContain("model.usage");
   });
 
   it("executes tool calls through the orchestrator and stores results", async () => {

@@ -44,6 +44,8 @@ export interface EnvironmentSnapshot {
   capturedAt: number;
   os: { platform: string; arch: string; release: string; type: string; logicalCpus: number };
   cwd: string;
+  workspaceRoot?: string;
+  harnessProfile?: string;
   runtimes: RuntimeVersion[];
   packageManager: PackageManagerInfo;
   git: GitState;
@@ -89,6 +91,9 @@ export interface EnvSnapshotOptions {
   networkMode?: string;
   /** Supplied by the caller (registry tool names). */
   availableTools?: string[];
+  /** Host wiring facts (P0-7): profile + workspace root, never env values. */
+  workspaceRoot?: string;
+  harnessProfile?: string;
   /** Restrict runtime probes (useful in tests / minimal environments). */
   probeLimit?: number;
 }
@@ -175,6 +180,8 @@ export async function snapshotEnvironment(opts: EnvSnapshotOptions): Promise<Env
     capturedAt: Date.now(),
     os: osInfo,
     cwd,
+    ...(opts.workspaceRoot !== undefined ? { workspaceRoot: resolve(opts.workspaceRoot) } : {}),
+    ...(opts.harnessProfile !== undefined ? { harnessProfile: opts.harnessProfile } : {}),
     runtimes,
     packageManager,
     git,

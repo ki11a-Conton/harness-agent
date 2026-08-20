@@ -1,0 +1,32 @@
+{
+  "name": "@ar/harness",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ar/agents": "workspace:*",
+    "@ar/checkpoint": "workspace:*",
+    "@ar/context": "workspace:*",
+    "@ar/contracts": "workspace:*",
+    "@ar/core": "workspace:*",
+    "@ar/events": "workspace:*",
+    "@ar/memory": "workspace:*",
+    "@ar/model": "workspace:*",
+    "@ar/security": "workspace:*",
+    "@ar/session": "workspace:*",
+    "@ar/skills": "workspace:*",
+    "@ar/tools": "workspace:*"
+  }
+}

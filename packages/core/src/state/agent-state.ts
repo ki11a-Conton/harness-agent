@@ -27,6 +27,7 @@ export type AgentPhase =
   | "compacting"
   | "recovering"
   | "waiting_user"
+  | "waiting_approval"
   | "completed"
   | "failed"
   | "cancelled";
@@ -36,8 +37,8 @@ const TERMINAL: ReadonlySet<AgentPhase> = new Set(["completed", "failed", "cance
 /** Allowed transitions; a transition from a terminal phase is never allowed. */
 const TRANSITIONS: Readonly<Record<AgentPhase, readonly AgentPhase[]>> = {
   idle: ["thinking"],
-  thinking: ["tool_pending", "compacting", "observing", "waiting_user", "completed", "failed", "cancelled"],
-  tool_pending: ["waiting_permission", "executing", "observing", "cancelled"],
+  thinking: ["tool_pending", "compacting", "observing", "waiting_user", "waiting_approval", "completed", "failed", "cancelled"],
+  tool_pending: ["waiting_permission", "executing", "observing", "waiting_approval", "cancelled"],
   waiting_permission: ["executing", "observing", "cancelled"],
   executing: ["observing", "cancelled", "failed"],
   observing: ["thinking", "recovering", "waiting_user", "cancelled", "failed"],
@@ -47,6 +48,9 @@ const TRANSITIONS: Readonly<Record<AgentPhase, readonly AgentPhase[]>> = {
   // for critical input. It is not a terminal: resume returns to thinking; the
   // host/human may also cancel from here.
   waiting_user: ["thinking", "cancelled"],
+  // P1-1: waiting_approval is a PAUSED, resumable phase — the turn is waiting
+  // for a human to approve or deny a tool call. Resume returns to thinking.
+  waiting_approval: ["thinking", "cancelled"],
   completed: [],
   failed: [],
   cancelled: [],
@@ -97,11 +101,15 @@ export class AgentState {
   constructor(
     readonly sessionId: SessionId,
     readonly agentId: AgentId,
+    now: () => number = Date.now,
   ) {
     this.phase = "idle";
-    this.startedAt = Date.now();
+    this.startedAt = now();
     this.updatedAt = this.startedAt;
+    this.nowFn = now;
   }
+
+  private readonly nowFn: () => number;
 
   getPhase(): AgentPhase {
     return this.phase;
@@ -136,9 +144,9 @@ export class AgentState {
     }
     this.phase = to;
     if (TERMINAL.has(to)) {
-      this.completedAt = Date.now();
+      this.completedAt = this.nowFn();
     }
-    this.updatedAt = Date.now();
+    this.updatedAt = this.nowFn();
   }
 
   /** Jump straight to a terminal state (used by cancel/fail from any live phase). */
@@ -147,8 +155,8 @@ export class AgentState {
       throw new IllegalTransitionError(this.phase, to);
     }
     this.phase = to;
-    this.completedAt = Date.now();
-    this.updatedAt = Date.now();
+    this.completedAt = this.nowFn();
+    this.updatedAt = this.nowFn();
   }
 
   beginTurn(turnId: TurnId): void {
@@ -159,7 +167,7 @@ export class AgentState {
     this.iteration = 0;
     this.stallRecoveriesUsed = 0;
     this.phase = "thinking";
-    this.updatedAt = Date.now();
+    this.updatedAt = this.nowFn();
   }
 
   nextIteration(): void {

@@ -65,7 +65,7 @@ function renderSummary(summary: CompactionSummary): string {
   return lines.join("\n");
 }
 
-function makeSummaryBlock(summary: CompactionSummary): ContextBlock {
+function makeSummaryBlock(summary: CompactionSummary, now: () => number): ContextBlock {
   const content = renderSummary(summary);
   return {
     id: "compaction-summary",
@@ -77,7 +77,7 @@ function makeSummaryBlock(summary: CompactionSummary): ContextBlock {
     content,
     compressible: false, // the summary itself is never re-compacted
     ephemeral: false,
-    timestamp: Date.now(),
+    timestamp: now(),
   };
 }
 
@@ -89,6 +89,12 @@ function makeSummaryBlock(summary: CompactionSummary): ContextBlock {
  * non-deterministic per spec. No I/O.
  */
 export class DefaultCompactor implements Compactor {
+  private readonly nowFn: () => number;
+
+  constructor(opts: { now?: () => number } = {}) {
+    this.nowFn = opts.now ?? Date.now;
+  }
+
   compact(blocks: ContextBlock[], summary: CompactionSummary): ContextBlock[] {
     const preserved: ContextBlock[] = [];
     let compactedCount = 0;
@@ -109,7 +115,7 @@ export class DefaultCompactor implements Compactor {
     // Ordering: preserved blocks keep their original relative order; the single
     // summary block is appended after the last preserved block so the leading
     // system/user context (e.g. goal, security policy) is never displaced.
-    preserved.push(makeSummaryBlock(summary));
+    preserved.push(makeSummaryBlock(summary, this.nowFn));
     return preserved;
   }
 }

@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import type {
   AgentId,
   ApprovalDecision,
@@ -8,15 +9,13 @@ import type {
   ApprovalRequest,
   ApprovalResolver,
   ApprovalScope,
+  ApprovalStore,
+  PendingApproval,
   SessionId,
 } from "@ar/contracts";
 import { approvalDecisionRecord, isApprovalScope, newApprovalId, RealTimer, type Timer } from "@ar/contracts";
 
-export interface PendingApproval {
-  request: ApprovalRequest;
-  /** Resolves when the store decides, the entry expires, or the signal aborts. */
-  wait(signal: AbortSignal): Promise<ApprovalDecision>;
-}
+export type { PendingApproval };
 
 interface PendingEntry {
   request: ApprovalRequest;
@@ -65,7 +64,7 @@ function createPendingEntry(request: ApprovalRequest, now: () => number, timer: 
   return { request, settle, wait };
 }
 
-export class InMemoryApprovalStore {
+export class InMemoryApprovalStore implements ApprovalStore {
   private pending = new Map<ApprovalId, PendingEntry>();
   /** Append-only decision audit log (P2-44): never deleted, survives via listDecisions. */
   private readonly decisions: ApprovalDecisionRecord[] = [];
@@ -129,13 +128,13 @@ export interface StoreApprovalResolverOptions {
   now?: () => number;
 }
 
-/** ApprovalResolver backed by an InMemoryApprovalStore. */
+/** ApprovalResolver backed by an ApprovalStore. */
 export class StoreApprovalResolver implements ApprovalResolver {
-  private readonly store: InMemoryApprovalStore;
+  private readonly store: ApprovalStore;
   private readonly expiresAfterMs: number;
   private readonly now: () => number;
 
-  constructor(store: InMemoryApprovalStore, opts: StoreApprovalResolverOptions = {}) {
+  constructor(store: ApprovalStore, opts: StoreApprovalResolverOptions = {}) {
     this.store = store;
     this.expiresAfterMs = opts.expiresAfterMs ?? 60_000;
     this.now = opts.now ?? Date.now;
@@ -193,7 +192,7 @@ interface DurableApprovalFile {
   decisions: ApprovalDecisionRecord[];
 }
 
-export class DurableApprovalStore {
+export class DurableApprovalStore implements ApprovalStore {
   private readonly inner: InMemoryApprovalStore;
   private readonly filePath: string;
   private readonly pending = new Map<ApprovalId, ApprovalRequest>();
@@ -277,7 +276,14 @@ export class DurableApprovalStore {
       pending: [...this.pending.values()],
       decisions: this.decisions,
     };
-    writeFileSync(this.filePath, JSON.stringify(data), "utf8");
+    // P1-3: atomic write — write a temp sibling then rename over the target,
+    // so a crash mid-write never leaves a truncated store. Parent dir is
+    // created first (the store owns the file path).
+    const dir = dirname(this.filePath);
+    mkdirSync(dir, { recursive: true });
+    const tmp = `${this.filePath}.tmp`;
+    writeFileSync(tmp, JSON.stringify(data), "utf8");
+    renameSync(tmp, this.filePath);
   }
 }
 

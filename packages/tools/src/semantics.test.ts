@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TOOL_SEMANTICS, toToolSemantics, type ToolDefinition, type ToolMetadata, type ToolRisk } from "@ar/contracts";
+import { DEFAULT_TOOL_SEMANTICS, mayHaveSideEffect, toToolSemantics, type ToolDefinition, type ToolMetadata, type ToolRisk } from "@ar/contracts";
 import { ToolRegistry, semanticsOf } from "./registry.js";
 import { readFileTool } from "./tools/read-file.js";
 import { writeFileTool } from "./tools/write-file.js";
@@ -164,5 +164,34 @@ describe("P1-11: tool execution semantics registry", () => {
     // Not guessed as a writer from its name: no sideEffect metadata → "none".
     expect(semanticsOf(unknown).sideEffectScope).toBe("none");
     expect(semanticsOf(unknown).readOnly).toBe(true);
+  });
+
+  it("P0-8: unknown tools fail closed via DEFAULT_TOOL_SEMANTICS", () => {
+    // The runtime resolves tools that are NOT in the registry/map to
+    // DEFAULT_TOOL_SEMANTICS. P0-8 made that default conservative:
+    // sideEffectScope "unknown" (treated as may-have-side-effect), no
+    // auto-retry, no parallel, approval required by default.
+    expect(DEFAULT_TOOL_SEMANTICS.sideEffectScope).toBe("unknown");
+    expect(DEFAULT_TOOL_SEMANTICS.retrySafety).toBe("unknown");
+    expect(DEFAULT_TOOL_SEMANTICS.concurrencySafety).toBe(false);
+    expect(DEFAULT_TOOL_SEMANTICS.requiresApproval).toBe(true);
+    expect(DEFAULT_TOOL_SEMANTICS.outputSensitivity).toBe("high");
+    expect(semanticsOf(undefined)).toBe(DEFAULT_TOOL_SEMANTICS);
+
+    // mayHaveSideEffect is the single fail-closed gate: only "none" is safe.
+    expect(mayHaveSideEffect({ ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "none" })).toBe(false);
+    expect(mayHaveSideEffect({ ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "filesystem" })).toBe(true);
+    expect(mayHaveSideEffect({ ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "process" })).toBe(true);
+    expect(mayHaveSideEffect({ ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "network" })).toBe(true);
+    expect(mayHaveSideEffect({ ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "global" })).toBe(true);
+    // "unknown" is NOT "none": the runtime cannot prove a tool is side-effect-free.
+    expect(mayHaveSideEffect(DEFAULT_TOOL_SEMANTICS)).toBe(true);
+
+    // The builtin known tools still derive their explicit scopes and are
+    // reachable through the registry (no regression to the known set).
+    const registry = new ToolRegistry();
+    registry.register(writeFileTool);
+    expect(semanticsOf(registry.get("write_file")).sideEffectScope).toBe("filesystem");
+    expect(semanticsOf(registry.get("no_such_tool")).sideEffectScope).toBe("unknown");
   });
 });

@@ -9,11 +9,13 @@ import type {
   Session,
   SessionId,
   SessionStore,
+  Timer,
   ToolPolicy,
 } from "@ar/contracts";
 import {
   AgentError,
   DEFAULT_DELEGATION_LIMITS,
+  RealTimer,
   errorInfo,
   newEventId,
   newMessageId,
@@ -51,6 +53,8 @@ export interface DelegatorDeps {
    *  concurrency/depth/wall-clock) and releases it when the child turn ends. */
   scheduler?: AgentExecutionScheduler;
   now?: () => number;
+  /** P1-7: injectable timer for delegation timeouts (deterministic tests). */
+  timer?: Timer;
 }
 
 type RaceSettle =
@@ -75,6 +79,7 @@ export class Delegator {
   private readonly events?: EventStore;
   private readonly scheduler?: AgentExecutionScheduler;
   private readonly now: () => number;
+  private readonly timer: Timer;
 
   constructor(deps: DelegatorDeps) {
     this.runtime = deps.runtime;
@@ -84,6 +89,7 @@ export class Delegator {
     this.events = deps.events;
     this.scheduler = deps.scheduler;
     this.now = deps.now ?? Date.now;
+    this.timer = deps.timer ?? new RealTimer(this.now);
   }
 
   async delegate(req: DelegationRequest, signal: AbortSignal): Promise<DelegationResult> {
@@ -170,9 +176,9 @@ export class Delegator {
       token.signal.addEventListener("abort", onTokenAbort, { once: true });
     }
     let timedOut = false;
-    const timer =
+    const timerHandle =
       limits.timeoutMs > 0
-        ? setTimeout(() => {
+        ? this.timer.schedule(() => {
             timedOut = true;
             internal.abort();
           }, limits.timeoutMs)
@@ -186,7 +192,7 @@ export class Delegator {
         run.then((outcome) => ({ kind: "outcome" as const, outcome })),
         cancelWaiter(signal).then(() => ({ kind: "cancel" as const })),
         ...(limits.timeoutMs > 0
-          ? [timeoutWaiter(limits.timeoutMs).then(() => ({ kind: "timeout" as const }))]
+          ? [timeoutWaiter(this.timer, limits.timeoutMs).then(() => ({ kind: "timeout" as const }))]
           : []),
       ]);
       result = await this.settleToResult(child.id, settled, startedAt, limits.timeoutMs, timedOut);
@@ -211,7 +217,7 @@ export class Delegator {
         verified: false,
       };
     } finally {
-      if (timer !== undefined) clearTimeout(timer);
+      if (timerHandle !== undefined) timerHandle.cancel();
       signal.removeEventListener("abort", onCallerAbort);
       if (token !== undefined && onTokenAbort !== undefined) {
         token.signal.removeEventListener("abort", onTokenAbort);
@@ -604,10 +610,9 @@ function cancelWaiter(signal: AbortSignal): Promise<"cancel"> {
   });
 }
 
-function timeoutWaiter(ms: number): Promise<"timeout"> {
+function timeoutWaiter(timer: Timer, ms: number): Promise<"timeout"> {
   return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve("timeout" as const), ms);
-    timer.unref?.();
+    timer.schedule(() => resolve("timeout" as const), ms);
   });
 }
 

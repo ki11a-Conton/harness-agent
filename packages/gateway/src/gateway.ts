@@ -1,6 +1,7 @@
 import type {
   AgentEvent,
   AgentId,
+  ApprovalStore,
   EventStore,
   Session,
   SessionId,
@@ -8,7 +9,6 @@ import type {
 } from "@ar/contracts";
 import { newEventId } from "@ar/contracts";
 import type { SessionService } from "@ar/session";
-import type { InMemoryApprovalStore } from "@ar/security";
 import type { ChannelAdapter, ChannelMessage } from "./channel.js";
 import type { RpcMethodRegistry } from "./rpc.js";
 
@@ -25,7 +25,7 @@ export interface GatewayDeps {
   /** Validates session ids handed back by `route` before reuse. */
   sessionService: SessionService;
   /** Read-only pending-request lookup so approval pushes carry full §162 fields. */
-  approvalStore: InMemoryApprovalStore;
+  approvalStore: ApprovalStore;
   /** Session events pushed back to channels; sink for §175 human.* events. */
   events: EventStore;
   /** Existing-session mapping by sender; undefined means "create a new session". */
@@ -47,7 +47,7 @@ export class Gateway {
   private readonly rpc: RpcMethodRegistry;
   private readonly channels: readonly ChannelAdapter[];
   private readonly sessionService: SessionService;
-  private readonly approvalStore: InMemoryApprovalStore;
+  private readonly approvalStore: ApprovalStore;
   private readonly events: EventStore;
   private readonly route?: (from: string) => SessionId | undefined;
   private readonly sessionDefaults?: { agentId: AgentId; cwd: string };

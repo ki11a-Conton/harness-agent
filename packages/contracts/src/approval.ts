@@ -47,6 +47,14 @@ export interface ApprovalResolver {
   resolve(request: ApprovalRequest, signal: AbortSignal): Promise<ApprovalDecision>;
 }
 
+/** A pending approval's host-visible surface: the request plus a waiter that
+ *  settles on decision/expiry/abort. */
+export interface PendingApproval {
+  request: ApprovalRequest;
+  /** Resolves when the store decides, the entry expires, or the signal aborts. */
+  wait(signal: AbortSignal): Promise<ApprovalDecision>;
+}
+
 export interface ApprovalDecision {
   id: ApprovalId;
   value: ApprovalDecisionValue;
@@ -106,6 +114,10 @@ export function approvalDecisionRecord(
  * re-surfaces it from {@link listPending} and resolves it as normal.
  */
 export interface ApprovalStore {
+  /** Registers a pending request and returns a waiter for its decision. */
+  create(request: ApprovalRequest): PendingApproval;
+  resolve(id: ApprovalId, value: ApprovalDecisionValue, decidedBy?: string): ApprovalDecision;
+  cancelAll(sessionId: SessionId): void;
   listPending(sessionId?: SessionId): ApprovalRequest[];
   /** Append-only audit log of every decision (never deleted). */
   listDecisions(sessionId?: SessionId): ApprovalDecisionRecord[];

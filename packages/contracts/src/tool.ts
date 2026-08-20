@@ -58,31 +58,44 @@ export interface ToolSemantics {
   retrySafety: ToolRetryPolicy;
   /** True when concurrent execution of this tool is safe. */
   concurrencySafety: boolean;
-  /** Where side effects land; "none" means no external side effects. */
-  sideEffectScope: "none" | "filesystem" | "process" | "network" | "global";
+  /** Where side effects land; "none" means no external side effects, "unknown"
+   *  means the tool's effect is not declared (treat as side-effecting). */
+  sideEffectScope: "none" | "filesystem" | "process" | "network" | "global" | "unknown";
   /** True when an in-flight call can be aborted cleanly. */
   cancellable: boolean;
   /** True when the tool must go through explicit human approval. */
   requiresApproval: boolean;
-  /** Network exposure of the tool. */
-  networkBehavior: "none" | "outbound";
+  /** Network exposure of the tool; "unknown" means not declared. */
+  networkBehavior: "none" | "outbound" | "unknown";
   /** Sensitivity of the tool's output for redaction/retention. */
   outputSensitivity: "low" | "medium" | "high";
 }
 
-/** Conservative semantics for unknown tools: no side effects assumed, not
- *  auto-retried, serialized. */
+/**
+ * Fail-closed semantics for unknown tools (plan.md P0-8): the runtime cannot
+ * prove a tool has no side effects, so it must assume effects — never
+ * auto-retried, never run in parallel, checkpointed as a side effect, surfaced
+ * for reconciliation on crash resume, and gated behind approval by default.
+ * Compare: DEFAULT_TOOL_CAPABILITY is the narrower retry/concurrency view;
+ * this is the full execution-semantics view.
+ */
 export const DEFAULT_TOOL_SEMANTICS: ToolSemantics = {
   readOnly: false,
   idempotent: false,
   retrySafety: "unknown",
   concurrencySafety: false,
-  sideEffectScope: "none",
-  cancellable: true,
-  requiresApproval: false,
-  networkBehavior: "none",
-  outputSensitivity: "medium",
+  sideEffectScope: "unknown",
+  cancellable: false,
+  requiresApproval: true,
+  networkBehavior: "unknown",
+  outputSensitivity: "high",
 };
+
+/** P0-8: does this tool's semantics allow treating it as side-effect-free?
+ *  "unknown" returns true (may have a side effect) — fail-closed. */
+export function mayHaveSideEffect(semantics: ToolSemantics): boolean {
+  return semantics.sideEffectScope !== "none";
+}
 
 /** Derives full semantics from the legacy metadata/risk fields, so existing
  *  ToolDefinitions migrate without changes (P1-11 step 1 — no scatter, no

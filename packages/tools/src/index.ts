@@ -16,6 +16,8 @@ export * from "./repo-map.js";
 export * from "./tools/repo-map-tool.js";
 export * from "./command-discovery.js";
 export * from "./tools/discover-commands-tool.js";
+export * from "./tools/update-plan-tool.js";
 export * from "./env-snapshot.js";
 export * from "./tools/env-snapshot-tool.js";
 export * from "./workspace.js";
+export * from "./production-tools.js";

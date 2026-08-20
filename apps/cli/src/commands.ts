@@ -2,6 +2,7 @@ import type {
   AgentEvent,
   ApprovalDecision,
   ApprovalId,
+  ApprovalStore,
   EventStore,
   Session,
   SessionId,
@@ -10,12 +11,13 @@ import type {
 import { AgentError } from "@ar/contracts";
 import type { AgentRuntime, TurnOutcome } from "@ar/core";
 import type { RpcContext, AgentSummary } from "@ar/gateway";
+import type { HarnessIntrospection } from "@ar/harness";
 import type { SessionService } from "@ar/session";
-import type { InMemoryApprovalStore } from "@ar/security";
 import type { DoctorDeps } from "./doctor.js";
 import { runChecks } from "./doctor.js";
 import { mechanismsCmd, validateMechanismManifest } from "./mechanisms.js";
 import { experimentCmd } from "./experiment-command.js";
+import { auditCmd } from "./audit.js";
 
 /** Minimal RPC client surface (InMemoryTransport matches structurally). */
 export interface RpcClient {
@@ -31,9 +33,11 @@ export interface CommandDeps {
   store: SessionStore;
   events: EventStore;
   sessionService: SessionService;
-  approvalStore: InMemoryApprovalStore;
+  approvalStore: ApprovalStore;
   runtime: AgentRuntime;
   doctor: DoctorDeps;
+  /** Host wiring facts reported by the composition root (P0-1 audit). */
+  introspection: HarnessIntrospection;
 }
 
 export interface CommandResult {
@@ -56,7 +60,8 @@ commands:
   trace <sessionId> <outputDir>     export an episode package (plan §77)
   doctor                            run environment checks (plan §87)
   mechanisms <path>                 validate mechanism manifests (P2-8)
-  experiment <config.json>          run a mechanism experiment (P2-9)`;
+  experiment <config.json>          run a mechanism experiment (P2-9)
+  audit [--json] [--out <dir>]      generate CAPABILITY_MATRIX.md/.json from real wiring evidence (P0-1)`;
 
 /** Dispatch `agent <command> [args]`. argv excludes the program and "agent". */
 export async function runCommand(argv: string[], deps: CommandDeps): Promise<CommandResult> {
@@ -88,6 +93,8 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
       return mechanismsCmd(rest);
     case "experiment":
       return experimentCmd(rest);
+    case "audit":
+      return auditCmd(rest, deps);
     default:
       return { exitCode: 1, lines: [`unknown command: ${command ?? "(none)"}`, "", USAGE] };
   }
@@ -121,7 +128,7 @@ async function runCmd(rest: string[], deps: CommandDeps): Promise<CommandResult>
     const summary = [...messages]
       .reverse()
       .find((m) => m.role === "assistant")?.content ?? "(no assistant text)";
-    const files = changedFiles(events);
+    const files = outcome.state?.filesChanged ?? [];
     const verification = verificationLine(events);
     const issues =
       outcome.status === "completed"
@@ -337,27 +344,6 @@ async function doctorCmd(deps: CommandDeps): Promise<CommandResult> {
     return { exitCode: 1, lines: [renderError("agent doctor", err)] };
   }
 }
-
-/** Files changed on a run: tools with a path/file arg, or write/edit tools. */
-function changedFiles(events: AgentEvent[]): string[] {
-  const seen = new Set<string>();
-  for (const event of events) {
-    if (event.type !== "tool.requested") continue;
-    const name = typeof event.payload.name === "string" ? event.payload.name : "";
-    const args = typeof event.payload.args === "object" && event.payload.args !== null
-      ? (event.payload.args as Record<string, unknown>)
-      : undefined;
-    const path = args === undefined ? undefined : args.path ?? args.file;
-    if (typeof path === "string") {
-      seen.add(`${name}(${path})`);
-    } else if (FILE_TOOL_RE.test(name)) {
-      seen.add(name);
-    }
-  }
-  return [...seen];
-}
-
-const FILE_TOOL_RE = /^(write|edit|append|delete|move|copy|rename)/;
 
 /** Verification status from the event trail (plan §173 "verification"). */
 function verificationLine(events: AgentEvent[]): string {

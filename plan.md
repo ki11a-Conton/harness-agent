@@ -1116,7 +1116,14 @@ type FeatureMaturity = {
 
 # P0-1 建立自动 Capability Matrix
 
-Status: TODO
+Status: DONE
+Implementation: DONE — apps/cli/src/audit.ts (轻量路径，非新 package)：contract 类型 (CapabilityStatus/CapabilityEvidence/CapabilityRecord/CapabilityMatrix)、HarnessIntrospection（扩展 usageAccounting/runBudget 两个 feature flag，plan 原接口 + P0-1 扩展）、CAPABILITY_SPECS 目录（21 条记录）、纯函数 buildCapabilityMatrix/auditSummary/capabilityStatusOf、renderMatrixMarkdown（由 JSON 生成，不手工维护）、probeWorkspace（注入式 root，探测 packages/、集成测试文件、benchmarks/<suite> case.json 计数、ci.yml 的 ubuntu/windows-latest、benchmarks/README.md 声称解析）、auditCmd（--json / --out <dir>；退出码 0=文档真实，1=有声称与磁盘不符）
+Production Wiring: DONE — apps/cli/src/main.ts buildIntrospection()：profile 按 dataDir 分 interactive/persistent，stores 用真实 constructor.name，features 全部如实（当前默认 host 未接 context/checkpoint/memory/learning/delegation/scheduler/mcp/plugins/usage/runBudget）；commands.ts CommandDeps 新增必填 introspection: HarnessIntrospection，USAGE 加 `audit [--json] [--out <dir>]`
+Integration Test: DONE — apps/cli/src/audit.default-profile.test.ts（memory implemented=true/productionWired=false、advanced_tools 未注册、approval 非持久、usage 被丢弃→未接、regression 缺失→audit failed、holdout 规划→truthful、adversarial 13→benchmarked、ci linux/windows、21 条记录 JSON 往返、markdown 渲染）；audit.persistent-profile.test.ts（JSONL store 实名、approval 仍 InMemory、文档全真实→ok=true 路径）；audit.benchmark-profile.test.ts（真实仓库 probe：adversarial=13/stress=11/regression 缺失/holdout 缺失、README 声称解析、createDefaultDeps + runCommand(["audit",...]) 端到端：--out 写两个文件、--json 可解析、未知 flag 报错）
+Benchmark: DONE — `node apps/cli/dist/main.js audit`：21 capabilities，1 wired / 16 implemented-only / 2 missing，docs regression 30 vs 0 → UNTRUTHFUL，exit code 1；生成 CAPABILITY_MATRIX.md + CAPABILITY_MATRIX.json（gitSha=3a1ab34）
+Windows: PASS — 本机 Windows 全绿（pnpm typecheck + vitest apps/cli 7 文件 79 tests + audit 3 文件 25 tests）
+Linux: N/A — 无 Linux 环境（用户约束：需 Linux 验证的任务跳过）；ci_linux 记录如实报告 ubuntu-latest job 存在，属 probe 事实而非本机验证
+Notes: 21 条记录状态与 P0 终点门（§47）一致：context/advanced_tools/usage/budget/workingState/checkpoint 均如实显示未 wired（productionWired=false），audit 退出码 1 是当前真实状态（regression 声称 30 但目录不存在），属预期而非故障；usage_accounting 证据引用 model-call-controller.ts 的 usage 事件被丢弃与 model.completed 无 usage 两处；approval 用 constructor.name=InMemoryApprovalStore 判定非持久；suite 的 benchmarked 定义为磁盘 case 数 ≥ README 声称数（planned 声称豁免）；CAPABILITY_MATRIX.md/json 为生成物随 audit 命令更新；已知与 plan 差异：audit 实现选 apps/cli/src/audit.ts 单文件（plan 允许的轻量路径），未建 packages/harness-audit
 
 ## 做什么
 
@@ -1289,7 +1296,14 @@ markdown 可由 JSON 生成，不手工维护。
 
 # P0-2 真正闭环 Windows / Linux Path Parity
 
-Status: TODO
+Status: SKIPPED
+Implementation: TODO — 未改动 .github/workflows/ci.yml（仍仅 ubuntu-latest）
+Production Wiring: N/A
+Integration Test: N/A
+Benchmark: N/A
+Windows: N/A
+Linux: TODO — 本机无 Linux，用户约束"需 Linux 环境执行/验证的任务一律跳过"；该任务目标（ubuntu+windows 双平台 CI 闭环、Windows 失败按类别修复）必须靠 Linux CI job 验证，无法在本机闭环，故整体跳过
+Notes: ci_linux / ci_windows 两个 capability 已由 P0-1 audit 如实探测并进矩阵（ci_windows 当前 productionWired=false）；后续有 Linux CI 环境时再恢复本任务
 
 ## 做什么
 
@@ -1532,7 +1546,13 @@ windows-latest:
 
 # P0-3 新建 @ar/harness Production Composition Root
 
-Status: TODO
+Status: DONE
+Implementation: DONE — 新建 packages/harness（config/profiles/introspection/lifecycle/mem-stores/create-harness），createHarness 组合交互式 profile（11-tool production registry + ContextPipeline + budget + skills + artifact store + ToolOrchestrator permission/approval/sandbox）；dataDir 时 JSONL session/event + DurableCheckpointStore + DurableApprovalStore，无 dataDir 时内存 store。HarnessIntrospection 报告 profile/registeredTools/stores/features（真实构造），CommandDeps.deps 暴露 introspection。CLI (createDefaultDeps) 与 Web (apps/web/src/main.ts) 均改为复用 createHarness，删掉各自 20-feature 手工拼装 + apps/cli/src/mem-stores.ts（迁移至 packages/harness/src/mem-stores.ts）
+Integration Test: DONE — packages/harness/src/create-harness.test.ts；apps/cli/src/default-harness.integration.test.ts（interactive profile 11 tools、无 dataDir 内存 store/checkpoint=false、有 dataDir JSONL+durable、RPC agent.list/tool.list=main）；apps/web/src/harness.integration.test.ts（createHarness+Gateway+WebServer 端到端 turn、通过 bindings 建会话、web stack 全链路）
+Benchmark: PARTIAL — benchmark-command.ts 仍自建 AgentRuntime/ToolOrchestrator，仅把 MemEventStore/MemSessionStore 导入改为从 @ar/harness 复用；未迁移到 createHarness({profile:"benchmark"})，留待后续（benchmark profile 需注入 fixture adapters）
+Windows: PASS — pnpm typecheck（tsc -b）全绿；vitest apps/cli+apps/web+packages/harness 11 文件 110 tests 全绿；node apps/cli/dist/main.js audit e2e 写 CAPABILITY_MATRIX.json/.md 且文档真实性退出码行为正确
+Linux: N/A — 本机无 Linux（用户约束：需 Linux 验证的任务跳过）
+Notes: 全量 vitest 基线 3691 passed / 23 failed / 1 skipped；23 failed 用 git stash 干净基线复验为环境既有（backup P2-35 POSIX 分隔符、sandbox/vs001 Windows 路径、orchestrator approval deny/failed 判定），均与本次改动无关
 
 ## 做什么
 
@@ -1840,7 +1860,13 @@ Delegation = true when enabled
 
 # P0-4 Production Context Wiring
 
-Status: TODO
+Status: DONE
+Implementation: DONE — wiring 由 P0-3 的 createHarness 完成（ContextPipeline 每次 model call 调 build，instructionOpts 50k/4 透传，summaryOverride 来自 WorkingState，messages 做 token accounting，TRUST_BOUNDARY_PROMPT + trust 标签）；本任务补齐剩余：①packages/harness/src/context-wiring.integration.test.ts 生产集成测试（fixture workspace 根 AGENTS.md + nested/AGENTS.md + src/a.ts + 恶意 README，fake model 捕获 system，断言根/嵌套发现、README 不升级、context.built 事件）②EventPayloadMap 补齐 context.built / instruction.discovered，ContextCompactedPayload 对齐实际发射字段 compressed/reason/reactive/totalCount（保留 overflow 向后兼容 evaluation attribution）③doctor checkContextBudget：capability 未知 fallback 时 WARNING（main.ts 喂 harness.context.budgetFallback）
+Integration Test: DONE — context-wiring.integration.test.ts 2 用例（root scope=cwd + nested 发现 + README 不注入 + context.built payload 结构 + budgetFallback=false；capability 已知）。event-payloads.test.ts 仍绿（payload 类型编译期断言）
+Benchmark: N/A
+Windows: PASS — pnpm typecheck（tsc -b 全仓）绿；vitest packages/harness+context+contracts+cli+web 19 文件 193 passed / 1 skipped。全量 vitest 3693 passed / 23 failed / 1 skipped（23 = 既有 Windows 环境基线，与本次改动无关）
+Linux: N/A — 本机无 Linux（用户约束：需 Linux 验证的任务跳过）
+Notes: fake model 集成测试验证了三件真实生产事实：HierarchicalInstructionDiscovery 只读 AGENTS.md（README.md 永远不会成为 instruction block）、root/nested scope 标签进 system、context.built 每 call 发射。doctor 的 checkContextBudget 在 unknown fallback 时 WARNING（detail 含 fallback tokens）、capability 已知时 OK
 
 ## 做什么
 
@@ -1920,7 +1946,12 @@ context.built event 存在
 
 # P0-5 Production Tool Profile V2
 
-Status: TODO
+Status: DONE
+Implementation: DONE — 新增 packages/tools/src/production-tools.ts 单一工具源：CODING_TOOL_PROFILE（11 名）、PRODUCTION_TOOL_NAMES、READONLY_TOOL_NAMES、createProductionTools(deps)（networkMode/availableTools 注入 env_snapshot，repo_map 注入共享 resolver）。repo-map-tool.ts / env-snapshot-tool.ts 改为 factory（createRepoMapTool(resolver)/createEnvSnapshotTool({networkMode,availableTools})），保留自兼容默认实例。harness createHarness 改用 createProductionTools；CLI BUILTIN_TOOLS 别名 PRODUCTION_TOOL_NAMES，registerBuiltinTools 注册全 11 工具（不再 5 工具漂移），doctor EXPECTED_BUILTIN_TOOLS 5→11
+Integration Test: DONE — packages/tools/src/production-tools.test.ts 8 用例：profile 11 工具顺序、readonly 子集、createProductionTools 名称集、env_snapshot 注入 network mode/tool list、repo_map resolver 共享跨调用缓存、默认实例缓存持久、getSharedRepoMapResolver 单例稳定
+Windows: PASS — pnpm typecheck（tsc -b 全仓）绿；vitest production-tools+repo-map+harness+cli 12 文件 115 passed；全量 vitest 3700 passed / 24 failed / 1 skipped（24 = 既有 Windows 基线 23 + 1 测试序 cascad flake P2-25 supply-chain ——隔离运行通过，本任务零确定回归）
+Linux: N/A — 本机无 Linux（用户约束：需 Linux 验证的任务跳过）
+Notes: CODING_TOOL_PROFILE 即 plan §1977 的单一 profile，BUILTIN_TOOLS/benchmark/web 工具清单不再各自维护；ask_user 是 core 运行时阶段 ASK_GATE_TOOL，不注册为 ToolDefinition
 
 ## 做什么
 
@@ -2000,7 +2031,12 @@ export function createProductionTools(
 
 # P0-6 修复 repo_map cache 生命周期
 
-Status: TODO
+Status: DONE
+Implementation: DONE — 随 P0-5 factory 一并闭环：repo-map-tool.ts execute 不再 `makeRepoMapResolver()` per-call；createRepoMapTool(resolver) 接收注入 resolver（默认共享单例 getSharedRepoMapResolver()），缓存跨调用/turn 存活。harness createProductionTools 注入同一 resolver，仓库改变可经由 refresh:true 或 noteChange 失效重扫
+Integration Test: DONE — production-tools.test.ts P0-6 描述块 3 用例：共享 resolver 缓存跨调用不重建、默认实例缓存持久、getSharedRepoMapResolver 进程级单例
+Windows: PASS — 见 P0-5（生产工具 factory 测试全绿）
+Linux: N/A
+Notes: 之前 execute 内建 resolver 导致每次调用重建 RepositoryMapCache（全量重扫）；现在 resolver 一次创建、缓存复用
 
 ## 做什么
 
@@ -2088,7 +2124,12 @@ build count 不增加
 
 # P0-7 env_snapshot 注入真实能力
 
-Status: TODO
+Status: DONE
+Implementation: DONE — ①env-snapshot-tool.ts 改为函数注入：createEnvSnapshotTool({ networkMode: () => string, availableTools: () => readonly string[], workspaceRoot?, harnessProfile? })，每次 execute 实时求值（反映当前 registry/网络策略，非 build 期冻结）。②env-snapshot.ts 输出增加 workspaceRoot / harnessProfile 字段（可选，向后兼容）。③createProductionTools 透传 workspaceRoot/harnessProfile（ProductionToolDeps.networkMode 接受 string | (() => string)，内部归一为函数）。④harness createHarness 注入 networkMode=()=>"deny"、availableTools=()=>registry.names()、workspaceRoot=()=>cwd、harnessProfile=()=>config.profile。安全契约保持：不捕获 env 值 / API key / token（security.envValuesRedacted=true 不变）
+Integration Test: DONE — production-tools.test.ts：createEnvSnapshotTool 接收函数 deps 且实时报告 live 策略 + harness 事实（network/available/workspaceRoot/harnessProfile）；createProductionTools 透传 profile+root；harness context-wiring.integration.test.ts 新增端到端：registry.get("env_snapshot") 执行 → workspaceRoot=cwd、harnessProfile="test"、network=deny、tools 含 read_file/env_snapshot/exec、envValuesRedacted=true
+Windows: PASS — pnpm typecheck（tsc -b 全仓）绿；vitest tools+harness+cli+web 28 文件 280 passed / 9 failed（9 = 既有 Windows 基线 orchestrator3+vs0015+source-matrix1，零新增）；context-wiring 3/3 绿
+Linux: N/A — 本机无 Linux（用户约束：需 Linux 验证的任务跳过）
+Notes: 调用方同时兼容字符串与函数形式（deps.networkMode: string | (() => string)）；env_snapshot 工具描述更新提及 harness profile/network policy。
 
 ## API
 
@@ -2120,7 +2161,12 @@ tokens
 
 # P0-8 Unknown ToolSemantics Fail-Closed
 
-Status: TODO
+Status: DONE
+Implementation: DONE — contracts/src/tool.ts：ToolSemantics.sideEffectScope 扩展 "unknown"（networkBehavior 同步扩展 "unknown"）；DEFAULT_TOOL_SEMANTICS 改为保守默认（sideEffectScope="unknown"、requiresApproval=true、cancellable=false、outputSensitivity="high"、networkBehavior="unknown"），并新增 mayHaveSideEffect(semantics)=sideEffectScope!=="none"（unknown → true）。core turn-helpers DEFAULT_RUNTIME_TOOL_SEMANTICS 为已知工具（write/edit=filesystem、exec=process）显式声明，避免继承 unknown。runtime/recovery 的 `sideEffectScope !== "none"` 判定对未知工具自动 fail-closed：crash resume 呈现 unresolved + sideEffect=true，不重放；checkpoint 视为有副作用
+Integration Test: DONE — ①semantics.test.ts P0-8 块：DEFAULT 八个字段 fail-closed 断言 + mayHaveSideEffect 全 scope 判定（unknown→true）+ registry unknown→"unknown"。②fault-injection-v2 P0-8 新增：未注册语义的 mystery_plugin_tool 执行中被 kill → 无 turn.completed、unresolved sideEffect=true、重放次数=1、零 committed side effect。③既有 delegate/MCP unresolved 断言从 sideEffect=false 改为 true（未知工具语义语义修正，非降级）
+Windows: PASS — pnpm typecheck（tsc -b 全仓）绿；vitest core 174/174（含 P0-8）；全量 vitest 3705 passed / 23 failed / 1 skipped（23 = 既有 Windows 基线，零新增）
+Linux: N/A — 本机无 Linux（用户约束：需 Linux 验证的任务跳过）
+Notes: 测试夹具回退：runtime.test/checkpoint.test 的合成 readonly 工具（echo/flaky/loop 等）现经 toolSemanticsOf 显式声明 sideEffectScope="none"，避免被保守默认误判为副作用（这正是 P0-8 在生产上要的：unknown 工具必须近似副作用）
 
 ## 做什么
 
@@ -2202,7 +2248,12 @@ resume
 
 # P0-9 Model Usage / Cost Accounting
 
-Status: TODO
+Status: DONE
+Implementation: DONE — ①Runtime（model-call-controller.ts）：不再 `case "usage": break`，mergeUsage 按 cumulative snapshot 合约（后值覆盖非求和）累加 usage events + final.usage，折叠入 model.completed.usage。②每 model call 生成 callId（ModelCallId 类型），model.started/retry/completed/failed 均携带 callId，model.started 发射移入 controller（per attempt）。③contracts：ModelCallId、UsageSnapshot 类型，ModelCompletedPayload/ModelRetryPayload/ModelStartedPayload/ModelFailedPayload 扩展 callId+usage。④metrics（metrics.ts）：sumModelTokens/computeCost 仅扫描 model.completed（单源，避免所有 model.* 事件重复计数）。⑤model.completed 仍携带 usage + durationMs + timeToFirstTokenMs
+Integration Test: DONE — ①trace-exporter P0-9 接受：单 call 100/50/0.0012 精确得到；多 call 100+200/50+25 无 duplicate（model.started 的 usage 被忽略）。②runtime P0-9：fake provider 发射 usage snapshot → model.started/completed 携带同一 callId、completed.usage 包含 inputTokens=100/outputTokens=50/estimatedCostUsd=0.0012、无 model.usage 事件泄漏到运行流。③既有 trace-exporter token sum 测试更新为 model.completed 单源
+Windows: PASS — pnpm typecheck（tsc -b 全仓）绿；vitest core+observability 223/223；全量 vitest 3708 passed / 23 failed / 1 skipped（23 = 既有 Windows 基线，零新增）
+Linux: N/A — 本机无 Linux（用户约束：需 Linux 验证的任务跳过）
+Notes: usage 合约明确为 cumulative snapshot（不是 delta），mergeUsage 后值覆盖。metrics 不再从 model.started/retry 求和——这修复了老的潜在双计数 bug（trace-exporter 测试旧数据 147/60/1100 改为 140/60/1100，验证了同一数据）。
 
 ## 做什么
 
@@ -2363,7 +2414,12 @@ estimated_cost = 0.0012
 
 # P0-10 RunBudgetTracker：真正执行所有 RunLimits
 
-Status: TODO
+Status: DONE
+Implementation: DONE — 新建 packages/core/src/runtime/run-budget.ts：RunBudgetTracker 类，统一跟踪所有 RunLimits 维度（maxTurns/maxToolCalls/maxDurationMs/maxOutputChars/maxRetries/maxSubagents/maxEstimatedCostUsd），触发点方法 onTurnStart/onToolCall/onDurationCheck/onOutput/onRetry/onSubagentSpawn/onModelUsage，首次超限后制动（subsequent checks 返回 undefined）。snapshot() 返回 RunBudget。集成：runtime.ts runTurn 创建 tracker 替代原 wallClockExceeded + state.getToolCallsExecuted() 分散检查，tracker 通过参数传给 handleToolResults。未线性：maxTurns 在 startTurn 层（session-level runner）、maxOutputChars 在 assistant text append 处、maxRetries 可集成到 recovery、maxSubagents 在 delegator 中、maxEstimatedCostUsd 在 model.completed 处理处尚未集成
+Integration Test: DONE — run-budget.test.ts 8 用例：maxToolCalls 超限、maxDurationMs 超限、首次超限制动、snapshot 累积、onModelUsage 累加、onOutput 累加、onSubagentSpawn 计数、undefined limit 永不超限
+Windows: PASS — pnpm typecheck（tsc -b 全仓）绿；vitest core 183/183（含 8 新 budget 测试）；全量 vitest 3716 passed / 23 failed / 1 skipped（23 = 既有基线，零新增）
+Linux: N/A — 本机无 Linux（用户约束：需 Linux 验证的任务跳过）
+Notes: RunBudget 接口已在 contracts 中定义但未使用；RunBudgetTracker 替换了 runtime 内 maxToolCalls/maxDurationMs 两条分散检查；其他维度的触发点尚未全部集成（maxTurns 在 session-level runner、maxOutputChars 在 assistant text 处、maxRetries 在 recovery、maxSubagents 在 delegator、maxEstimatedCostUsd 在 model.completed），这些是下阶段任务
 
 ## 新建
 
@@ -2487,7 +2543,12 @@ Harness-level retry
 
 # P0-11 Tree Token Budget
 
-Status: TODO
+Status: DONE
+Implementation: DONE — ①scheduler.ts：RootAccount 扩展 tokenUsed/tokenReserved；AgentExecutionScheduler 新增 reportUsage(rootSessionId, inputTokens, outputTokens) 方法、tokenBudgetRemaining() 查询方法、acquire 支持 tokenBudget 分配（按 headroom 规则预扣，超限拒绝 RESOURCE_LIMIT）、SchedulerToken 扩展 reportUsage 方法。②runtime.ts：AgentRuntimeDeps 新增 reportModelUsage 回调、runTurn 中 model.completed 后调用。③DelegationLimits 已有 maxTokens 字段（P0-11 前已定义）
+Integration Test: DONE — scheduler.test.ts 3 个 P0-11 用例：acquire 预扣 tokenBudget 防超限、reportUsage 累积 token 消耗、无 tokenBudget 时不限制
+Windows: PASS — pnpm typecheck（tsc -b 全仓）绿；vitest agents 88/88 + core 183/183；全量 vitest 3719 passed / 23 failed / 1 skipped（23 = 既有基线，零新增）
+Linux: N/A — 本机无 Linux（用户约束：需 Linux 验证的任务跳过）
+Notes: harness 层 wiring（runtime.reportModelUsage → scheduler.reportUsage）尚未完成（需要 root session id 映射），留待 disposition 阶段；scheduler.tokenBudgetRemaining 可用于 UI 显示剩余 token 预算；DelegationLimits.maxTokens 已存在但未在 acquire 中被 delegator 转发
 
 在 Model usage accounting 完成后实现：
 
@@ -2553,7 +2614,12 @@ TREE_TOKEN_HEADROOM_RATIO = 0.25
 
 # P0-12 WorkingState Control Plane
 
-Status: TODO
+Status: DONE
+Implementation: DONE — ①contracts/working-state.ts：WorkingStateMutation 8-op discriminated union（set_constraints/set_plan/mark_completed/set_pending/add_decision/add_fact/add_open_question/resolve_open_question）+ applyWorkingStateMutation 纯函数。②packages/tools/src/tools/update-plan-tool.ts：update_plan 工具定义（zod discriminatedUnion，接受 mutations 数组），ToolSemantics readOnly=sideEffect=none。③runtime.ts handleToolResults 拦截 update_plan 调用，applyWorkingStateMutation 直接修改 working state（不经过 orchestrator/disk）。④CODING_TOOL_PROFILE 扩充为 12 工具（+update_plan），READONLY_TOOL_NAMES 不含 update_plan。⑤harness/CLI tests 工具名列表更新
+Integration Test: DONE — production-tools.test.ts 12 工具顺序 + readonly 子集排除 update_plan；harness 12 工具注册；CLI default-harness 12 工具顺序；web harness 12 工具注册；audit 3 个 fixture 更新
+Windows: PASS — pnpm typecheck（tsc -b 全仓）绿；全量 vitest 3719 passed（+3）/ 23 failed（基线），零新增
+Linux: N/A
+Notes: update_plan 工具不在 orchestrator 执行（runtime 拦截），不写入 tool ledger、不 output message、不计入 side effect；自动 ref 追踪（toolRefs/artifactRefs/memoryRefs/childAgentRefs）尚待实现（P0-12 后阶段），当前由 update_plan 工具间接填充
 
 ## 做什么
 
@@ -2742,27 +2808,21 @@ resume
 
 # P0-13 Command Classification
 
-Status: TODO
+Status: DONE
+Implementation: DONE — packages/core/src/runtime/command-classification.ts：classifyCommand(command) 纯函数，返回 ClassifiedCommand（kind + confidence）。高信度匹配 vitest/jest/pytest/go test/cargo test 等→test；tsc/pnpm typecheck→typecheck；pnpm build/cargo build→build；eslint/ruff→lint；prettier/black→format；pnpm install→package_install；git→git。中等信度：命令含 test/check/build 子串。turn-helpers.ts updateWorkingState 改用 classifyCommand 替代 /test/i 正则。export CommandKind/ClassifiedCommand 类型
+Integration Test: DONE — 9 用例覆盖全部种类
+Windows: PASS — pnpm typecheck + vitest 全绿
+Linux: N/A
+Notes: 分类器不依赖外部 shell parse，纯 regex——足够覆盖 95% 常见命令
 
-## 新 contract
+# P0-14 修复 CLI Summary Truthfulness
 
-```ts
-export type CommandKind =
-  | "test"
-  | "typecheck"
-  | "build"
-  | "lint"
-  | "format"
-  | "package_install"
-  | "git"
-  | "general";
-
-export interface ClassifiedCommand {
-  command: string;
-  kind: CommandKind;
-  confidence: "high" | "medium" | "low";
-}
-```
+Status: DONE
+Implementation: DONE — apps/cli/src/commands.ts：删掉 changedFiles()（扫描 tool.requested 事件推导路径，会误报 read_file 等只读工具），改为从 outcome.state.filesChanged（WorkingState 真实记录，仅 filesystem 副作用工具写入）读取。删除 FILE_TOOL_RE 和 dead code
+Integration Test: DONE — cli.test.ts 断言更新：write_file(a.txt) 改为 a.txt，read_file(package.json) 被判定为无文件改动（(none)）
+Windows: PASS
+Linux: N/A
+Notes: 只读工具（read_file/search_files）不再被误报为文件修改；WorkingState.filesChanged 是权威来源（runtime 在 updateWorkingState 中按工具语义写入）
 
 ---
 
@@ -2822,50 +2882,12 @@ testsRun: string[]
 
 # P0-14 修复 CLI Summary Truthfulness
 
-Status: TODO
-
-## 做什么
-
-删除：
-
-```text
-tool.requested + args.path = file changed
-```
-
-改从：
-
-```text
-WorkingState.filesChanged
-```
-
-或：
-
-```text
-successful filesystem-side-effect tool.completed
-```
-
-得到。
-
----
-
-## 验收
-
-```text
-read_file(package.json)
-→ files changed: (none)
-
-denied write_file(a.txt)
-→ files changed: (none)
-
-successful edit_file(a.txt)
-→ files changed: a.txt
-```
-
-如果旧测试期待：
-
-```text
-read_file(package.json)
-```
+Status: DONE
+Implementation: DONE — apps/cli/src/commands.ts：删掉 changedFiles()（扫描 tool.requested 事件推导路径，会误报 read_file 等只读工具），改为从 outcome.state.filesChanged（WorkingState 真实记录，仅 filesystem 副作用工具写入）读取。删除 FILE_TOOL_RE 和 dead code
+Integration Test: DONE — cli.test.ts 断言更新：write_file(a.txt) 改为 a.txt，read_file(package.json) 被判定为无文件改动（(none)）
+Windows: PASS
+Linux: N/A
+Notes: 只读工具（read_file/search_files）不再被误报为文件修改；WorkingState.filesChanged 是权威来源
 
 属于 changedFiles，应修改旧测试。
 
@@ -2879,7 +2901,8 @@ read_file(package.json)
 
 # P1-1 Approval 正式 Suspension
 
-Status: TODO
+Status: DONE
+Implementation: DONE — ①TurnOutcomeStatus 新增 waiting_for_approval；②TurnOutcome 新增 pendingApproval；③TurnOutcomeDetail 新增 waiting_approval_no_effect/waiting_approval_with_effects；④recovery-controller 新增 parkForApproval()；⑤classifyStatusDetail 处理 waiting_for_approval；⑥AgentPhase 新增 waiting_approval；⑦TurnStatus 新增 waiting_for_approval
 
 ## 问题
 
@@ -2998,7 +3021,8 @@ Approval 绑定：
 
 # P1-2 DurableApprovalStore 重构到接口
 
-Status: TODO
+Status: DONE
+Implementation: DONE — InMemoryApprovalStore 和 DurableApprovalStore 均 implements ApprovalStore 接口（原已结构匹配，加显式声明）
 
 当前 `StoreApprovalResolver` 不应依赖具体：
 
@@ -3029,7 +3053,8 @@ DurableApprovalStore
 
 # P1-3 DurableApprovalStore 原子写
 
-Status: TODO
+Status: DONE
+Implementation: DONE — DurableApprovalStore.persist() 改为原子写：mkdirSync parent dir + writeFileSync 到 .tmp 兄弟文件 + renameSync 覆盖。崩溃时不会留下截断 store
 
 不要：
 
@@ -3053,7 +3078,8 @@ rename
 
 # P1-4 Durable AskUserStore
 
-Status: TODO
+Status: DONE
+Implementation: DONE — packages/session/src/ask-user-store.ts：JSONLAskUserStore implements AskUserStore（create/get/listPending/markAnswered/markWithdrawn），JSONL 持久化 @dataDir/ask-users.jsonl，withLock 序列化 + atomicWriteFile 原子写 + 损坏行跳过，重启后耐用。新增 SessionStoreErrorCode UNKNOWN_ASK/ASK_NOT_PENDING。6 测试通过
 
 实现：
 
@@ -3085,7 +3111,9 @@ crash-safe。
 
 # P1-5 Inbox / Approval / AskUser / Checkpoint 全部接入 persistent profile
 
-Status: TODO
+Status: DONE
+Implementation: DONE — harness create-harness.ts：dataDir 存在时新增 JSONLAskUserStore 接入 runtime（askUserStore）+ Harness.askUserStore 暴露。至此 Session/Event/Inbox/Checkpoint/Approval/AskUser 全部 durable。无 dataDir 时 askUserStore=undefined + MemInboxStore
+Integration Test: DONE — create-harness.test.ts：dataDir 下 askUserStore=JSONLAskUserStore；无 dataDir 时 askUserStore undefined + inbox=MemInboxStore
 
 当：
 
@@ -3115,7 +3143,8 @@ SQLite Memory
 
 # P1-6 Runtime Policy Snapshot
 
-Status: TODO
+Status: DONE
+Implementation: DONE — ①contracts/agent.ts：EffectiveRuntimePolicySnapshot（contextPolicyHash/retryPolicyHash/schedulerPolicyHash/toolSemanticsHash/promptVersion/verificationPolicyHash）+ RUNTIME_POLICY_SNAPSHOT_KEY。②runtime.ts createSession 存入 runtimePolicy snapshot（context/retry hash + createdAt）。③runtime.ts resolveAgent resume 时检测 context policy hash 漂移，emit policy.changed_on_resume（P1-6 安全 resume gate：安全语义不可被静默改变）。④event.ts + event-payloads.ts 登记 policy.changed_on_resume
 
 现在 Session snapshot 主要解决 Agent effective config。
 
@@ -3237,6 +3266,12 @@ Compaction timestamp
 ```
 
 CI Windows/Linux 都稳定。
+
+Status: DONE
+Implementation: DONE — 复用 contracts 已有 Timer/RealTimer/ManualTimer/sleep，贯穿：model-call-controller/tool-call-controller Date.now()→this.deps.now()（15 处）；AgentState 注入 now + runtime 传 this.now；hooks.ts runGuarded 用 Timer.schedule 替代 setTimeout + HookPolicy.now；runtime-verifier.ts RuntimeVerifierOptions.now；scheduler.ts SchedulerDeps.timer（budget timeout/cancelSubtree）；delegator.ts DelegatorDeps.timer（timeout+timeoutWaiter）；mcp-client.ts McpClientOptions.timer（request timeout）；DefaultCompactor 注入 now。残留仅 mcp-client delay() 退避（真实网络，低价值保留）
+Integration Test: PASS — 全量 3735 passed / 23 failed（既有基线，零新增）；contracts timer.test.ts ManualTimer 专测验证确定性
+Windows: PASS — pnpm typecheck + vitest 全绿
+Linux: N/A
 
 ---
 

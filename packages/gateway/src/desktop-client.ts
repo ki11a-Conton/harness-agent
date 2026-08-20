@@ -1,6 +1,5 @@
-import type { AgentEvent } from "@ar/contracts";
+import type { AgentEvent, ApprovalStore } from "@ar/contracts";
 import { AgentError, errorInfo } from "@ar/contracts";
-import type { InMemoryApprovalStore } from "@ar/security";
 import type { InMemoryTransport } from "./transport.js";
 
 /** Constructor options for the §85 desktop client. */
@@ -19,7 +18,7 @@ export interface DesktopClientOptions {
    * pending requests through this injected store — never mutating it;
    * every decision still goes through the session.approve RPC.
    */
-  approvalStore?: InMemoryApprovalStore;
+approvalStore?: ApprovalStore;
   /** Event-poll interval for run()/subscribe() (tests use small values). */
   pollDelayMs?: number;
 }
@@ -39,7 +38,7 @@ function delay(ms: number): Promise<"tick"> {
 export class DesktopClient {
   #transport: InMemoryTransport;
   #sessionDefaults?: { agentId: string; cwd: string };
-  #approvalStore?: InMemoryApprovalStore;
+  #approvalStore?: ApprovalStore;
   #pollDelayMs: number;
 
   constructor(opts: DesktopClientOptions) {

@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "../../node_modules/.cache/tsbuildinfo/harness.tsbuildinfo"
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../agents" },
+    { "path": "../checkpoint" },
+    { "path": "../context" },
+    { "path": "../contracts" },
+    { "path": "../core" },
+    { "path": "../events" },
+    { "path": "../memory" },
+    { "path": "../model" },
+    { "path": "../security" },
+    { "path": "../session" },
+    { "path": "../skills" },
+    { "path": "../tools" }
+  ]
+}

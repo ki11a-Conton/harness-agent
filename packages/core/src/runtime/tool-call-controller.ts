@@ -286,7 +286,7 @@ export class ToolCallController {
     const { session, turnId, signal, agent } = ctx;
     // P1-20: tool latency starts at the request (includes policy gates,
     // permission/sandbox evaluation and retries).
-    const toolStartedAt = Date.now();
+    const toolStartedAt = this.deps.now();
     await this.deps.emit(session.id, "tool.requested", { toolCallId: call.id, name: call.name, args: call.args }, turnId);
 
     // P0-1: the session's frozen tool policy is the first gate (fail-closed).
@@ -298,7 +298,7 @@ export class ToolCallController {
         `tool ${call.name} is denied by the session tool policy (allow=${JSON.stringify(agent.tools.allow ?? null)} deny=${JSON.stringify(agent.tools.deny ?? null)})`,
       );
       const result: ToolResult = { status: "denied", error };
-      await this.deps.emit(session.id, "tool.failed", { toolCallId: call.id, tool: call.name, error, durationMs: Date.now() - toolStartedAt }, turnId);
+      await this.deps.emit(session.id, "tool.failed", { toolCallId: call.id, tool: call.name, error, durationMs: this.deps.now() - toolStartedAt }, turnId);
       await this.deps.emit(session.id, "security.permission_denied", {
         toolCallId: call.id,
         tool: call.name,
@@ -315,7 +315,7 @@ export class ToolCallController {
     if (allowed === null) {
       const error = errorInfo("PERMISSION_DENIED", `tool ${call.name} blocked by hook`);
       const result: ToolResult = { status: "denied", error };
-      await this.deps.emit(session.id, "tool.failed", { toolCallId: call.id, tool: call.name, error, durationMs: Date.now() - toolStartedAt }, turnId);
+      await this.deps.emit(session.id, "tool.failed", { toolCallId: call.id, tool: call.name, error, durationMs: this.deps.now() - toolStartedAt }, turnId);
       await this.deps.emit(session.id, "security.permission_denied", {
         toolCallId: call.id,
         tool: call.name,
@@ -462,7 +462,7 @@ export class ToolCallController {
     }
     // P1-20: every executed tool closes the loop with a duration (denied
     // calls already emitted tool.failed at their gate, no double emission).
-    const durationMs = Date.now() - toolStartedAt;
+    const durationMs = this.deps.now() - toolStartedAt;
     if (result.status === "success") {
       await this.deps.emit(session.id, "tool.completed", { toolCallId: call.id, tool: call.name, durationMs }, turnId);
     } else if (result.status === "failed" || result.status === "timeout") {

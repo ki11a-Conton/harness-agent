@@ -70,11 +70,18 @@ function count(events: AgentEvent[], type: string): number {
   return events.filter((event) => event.type === type).length;
 }
 
-/** Sum a token field across model.* events (usage object first, flat fallback). */
+/**
+ * Sum a token field across model.completed events only (P0-9). Usage is the
+ * per-call cumulative snapshot carried by the terminal event; summing across
+ * model.started / model.retry / model.usage too would double-count the same
+ * tokens. A provider that emits a final usage only on model.completed is the
+ * single source of truth; anything model.usage delivered was merged into it
+ * by the runtime before completion was emitted.
+ */
 function sumModelTokens(events: AgentEvent[], keys: string[]): number {
   let total = 0;
   for (const event of events) {
-    if (!event.type.startsWith("model.")) continue;
+    if (event.type !== "model.completed") continue;
     const usage = usageOf(event.payload);
     const value =
       pickNumber(usage ?? {}, keys) ?? pickNumber(event.payload, keys);
@@ -97,7 +104,7 @@ function computeCost(events: AgentEvent[], tokensInput: number, tokensOutput: nu
   let explicit = 0;
   let hasExplicit = false;
   for (const event of events) {
-    if (!event.type.startsWith("model.")) continue;
+    if (event.type !== "model.completed") continue;
     const usage = usageOf(event.payload);
     const value =
       pickNumber(usage ?? {}, ["cost", "estimatedCostUsd", "estimatedCost"]) ??
@@ -112,6 +119,18 @@ function computeCost(events: AgentEvent[], tokensInput: number, tokensOutput: nu
     : tokensInput * DEFAULT_COST_PER_INPUT_TOKEN +
       tokensOutput * DEFAULT_COST_PER_OUTPUT_TOKEN;
   return Math.round(cost * 1e10) / 1e10;
+}
+
+/** Sum a field across model.completed usage snapshots (P0-9 de-dup). */
+function sumCompletedUsage(events: AgentEvent[], keys: string[]): number {
+  let total = 0;
+  for (const event of events) {
+    if (event.type !== "model.completed") continue;
+    const usage = usageOf(event.payload);
+    const value = pickNumber(usage ?? {}, keys);
+    if (value !== undefined) total += value;
+  }
+  return total;
 }
 
 /** Compute §78 run metrics from an event stream. */

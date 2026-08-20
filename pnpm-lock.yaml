@@ -41,6 +41,9 @@ importers:
       '@ar/gateway':
         specifier: workspace:*
         version: link:../../packages/gateway
+      '@ar/harness':
+        specifier: workspace:*
+        version: link:../../packages/harness
       '@ar/model':
         specifier: workspace:*
         version: link:../../packages/model
@@ -71,6 +74,9 @@ importers:
       '@ar/gateway':
         specifier: workspace:*
         version: link:../../packages/gateway
+      '@ar/harness':
+        specifier: workspace:*
+        version: link:../../packages/harness
       '@ar/security':
         specifier: workspace:*
         version: link:../../packages/security
@@ -190,6 +196,45 @@ importers:
       '@ar/model':
         specifier: workspace:*
         version: link:../model
+
+  packages/harness:
+    dependencies:
+      '@ar/agents':
+        specifier: workspace:*
+        version: link:../agents
+      '@ar/checkpoint':
+        specifier: workspace:*
+        version: link:../checkpoint
+      '@ar/context':
+        specifier: workspace:*
+        version: link:../context
+      '@ar/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@ar/core':
+        specifier: workspace:*
+        version: link:../core
+      '@ar/events':
+        specifier: workspace:*
+        version: link:../events
+      '@ar/memory':
+        specifier: workspace:*
+        version: link:../memory
+      '@ar/model':
+        specifier: workspace:*
+        version: link:../model
+      '@ar/security':
+        specifier: workspace:*
+        version: link:../security
+      '@ar/session':
+        specifier: workspace:*
+        version: link:../session
+      '@ar/skills':
+        specifier: workspace:*
+        version: link:../skills
+      '@ar/tools':
+        specifier: workspace:*
+        version: link:../tools
 
   packages/learning:
     dependencies:
