@@ -13,5 +13,14 @@
       "path": "out/parts.md",
       "mustChange": true
     }
-  ]
+  ],
+  "requires": [
+    "subagent",
+    "scheduler"
+  ],
+  "expectedEvents": {
+    "atLeast": {
+      "subagent.started": 10
+    }
+  }
 }

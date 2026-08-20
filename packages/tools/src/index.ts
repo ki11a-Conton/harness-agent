@@ -2,6 +2,7 @@ export * from "./registry.js";
 export * from "./orchestrator.js";
 export * from "./process/executor.js";
 export * from "./verification/task-verifier.js";
+export * from "./verification/plan-builder.js";
 export * from "./tools/read-file.js";
 export * from "./tools/write-file.js";
 export * from "./tools/edit-file.js";

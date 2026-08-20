@@ -2,6 +2,7 @@ import { existsSync, realpathSync } from "node:fs";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import type {
   AgentErrorInfo,
+  SessionId,
   TaskSpec,
   VerificationContext,
   VerificationResult,
@@ -14,6 +15,19 @@ import { ProcessExecutor } from "../process/executor.js";
 
 export interface TaskVerifierDeps {
   executor?: ProcessExecutor;
+  /** P8-2: per-step evidence callback (verification.step_started /
+   *  verification.step_completed in the runtime). Receives the stable step
+   *  ref so subagent testsRun and reports can reference it, plus the session
+   *  id so the host can attribute the event without another lookup. */
+  onStep?: (event: {
+    ref: string;
+    phase: "started" | "completed";
+    kind: string;
+    description: string;
+    passed?: boolean;
+    detail?: string;
+    sessionId?: SessionId;
+  }) => void;
 }
 
 /**
@@ -30,8 +44,11 @@ export interface TaskVerifierDeps {
 export class TaskVerifier implements Verifier {
   private readonly executor: ProcessExecutor;
 
+  private readonly onStep?: TaskVerifierDeps["onStep"];
+
   constructor(deps: TaskVerifierDeps = {}) {
     this.executor = deps.executor ?? new ProcessExecutor();
+    this.onStep = deps.onStep;
   }
 
   /** cwd-relative POSIX-style path for glob matching. */
@@ -55,16 +72,39 @@ export class TaskVerifier implements Verifier {
   }
 
   private async runCheck(spec: VerificationSpec, context: VerificationContext) {
-    switch (spec.kind) {
-      case "command":
-        return this.checkCommand(spec, context);
-      case "artifact":
-        return this.checkArtifact(spec, context);
-      case "requirement":
-        return this.checkRequirement(spec);
-      case "diff":
-        return this.checkDiff(spec, context);
-    }
+    // P8-2: every step is observable with a stable ref; started fires before
+    // the work, completed carries the outcome. Subagent testsRun references
+    // these refs.
+    const ref = `verification.step:${spec.kind}:${"command" in spec ? spec.command : "path" in spec ? spec.path : "statement" in spec ? spec.statement : "?"}`;
+    this.onStep?.({
+      ref,
+      phase: "started",
+      kind: spec.kind,
+      description: spec.description ?? spec.kind,
+      sessionId: context.sessionId,
+    });
+    const check = await (() => {
+      switch (spec.kind) {
+        case "command":
+          return this.checkCommand(spec, context);
+        case "artifact":
+          return this.checkArtifact(spec, context);
+        case "requirement":
+          return this.checkRequirement(spec);
+        case "diff":
+          return this.checkDiff(spec, context);
+      }
+    })();
+    this.onStep?.({
+      ref,
+      phase: "completed",
+      kind: spec.kind,
+      description: spec.description ?? spec.kind,
+      passed: check.passed,
+      detail: check.evidence?.description,
+      sessionId: context.sessionId,
+    });
+    return check;
   }
 
   /** P1-14: diff check — expected change set vs. unexpected destructive edits.
@@ -133,8 +173,14 @@ export class TaskVerifier implements Verifier {
   ): Promise<VerificationResult["checks"][number]> {
     const description = spec.description ?? `command: ${spec.command}`;
     try {
+      // P8-1: args are shell-quoted so planned commands with spaces/braces
+      // (e.g. `node -e "process.exit(0)"` split by the plan builder) survive
+      // the /bin/sh -c assembly. POSIX single-quote escaping; cmd.exe stays
+      // best-effort (verification commands are normally plain tool invocations).
+      const argString = (spec.args ?? []).map(shellQuote).join(" ");
+      const command = argString.length > 0 ? `${spec.command} ${argString}` : spec.command;
       const outcome = await this.executor.run({
-        command: spec.args?.length ? `${spec.command} ${spec.args.join(" ")}` : spec.command,
+        command,
         cwd: context.cwd,
         timeoutMs: 120_000,
         maxOutputBytes: 1_048_576,
@@ -226,4 +272,10 @@ function changedPathsContain(changedPaths: string[], abs: string, cwd: string): 
 
 function normalize(p: string): string {
   return p.split(sep).join("/").toLowerCase();
+}
+
+/** POSIX single-quote escaping (best-effort on cmd.exe). */
+function shellQuote(arg: string): string {
+  if (!/[\s'"\\$`(){};*?[\]<>|&!]/.test(arg)) return arg;
+  return `'${arg.replace(/'/g, `'\\''`)}'`;
 }

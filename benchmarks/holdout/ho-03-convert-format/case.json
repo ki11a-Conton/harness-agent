@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "conversion"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const r = require('./data/output.json'); if (r.length !== 3 || r[0].a !== 1 || r[1].b !== 'y') process.exit(1)"
+      ]
+    }
+  ]
+}

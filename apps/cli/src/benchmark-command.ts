@@ -1,16 +1,18 @@
-import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import type {
   AgentDefinition,
   AgentEvent,
   EventStore,
+  ModelEvent,
   ModelProvider,
   PermissionPolicy,
   SessionId,
   TurnId,
 } from "@ar/contracts";
-import { newAgentId, newEventId } from "@ar/contracts";
+import { newAgentId, newEventId, newMemoryId } from "@ar/contracts";
+import type { ContextBlock, MemoryScope } from "@ar/contracts";
 import { AgentRuntime, defaultSandboxPolicy } from "@ar/core";
 import { RecoveryPolicy } from "@ar/core";
 import { ContextPipeline } from "@ar/context";
@@ -31,6 +33,7 @@ import type {
   EvalOutcome,
   EvalSuite,
 } from "@ar/evaluation";
+import type { RunMetrics } from "@ar/observability";
 import {
   capabilityOf,
   editFileTool,
@@ -42,7 +45,21 @@ import {
   ToolRegistry,
   writeFileTool,
 } from "@ar/tools";
-import { MemEventStore, MemSessionStore } from "@ar/harness";
+import {
+  MemEventStore,
+  MemSessionStore,
+  MemoryRuntimeBridge,
+  PRODUCTION_TOOL_NAMES,
+  READONLY_TOOL_NAMES,
+  createDelegationTools,
+} from "@ar/harness";
+import {
+  AgentExecutionScheduler,
+  Delegator,
+  ParallelDelegator,
+} from "@ar/agents";
+import { createFakeMcpTool } from "./fake-mcp.js";
+import { SqliteMemoryStore } from "@ar/memory";
 import { detectPromptInjection, redactSecrets } from "@ar/security";
 import { DEFAULT_MODEL_ID, registerBuiltinTools } from "./main.js";
 import { resolveModelProvider, STUB_PROVIDER_ID } from "./provider.js";
@@ -92,12 +109,23 @@ export async function runBenchmarkCommand(
   argv: string[],
   providerOverride?: ModelProvider,
 ): Promise<{ exitCode: number; lines: string[] }> {
+  // P4-13: `agent benchmark list [--update-readme]` — suite counts always come
+  // from disk (never hand-written README claims). --update-readme rewrites the
+  // per-suite counts in benchmarks/README.md from the actual directories.
+  if (argv[0] === "list") {
+    return listBenchmarkSuites(argv.includes("--update-readme"));
+  }
+  // P4-11: `agent benchmark smoke` — run one case with a fake provider that
+  // returns DETERMINISTIC usage and FAIL when the token accounting broke
+  // (avgInputTokens must be > 0 — usage accounting is part of the harness).
+  if (argv[0] === "smoke") {
+    return runSmokeBenchmark();
+  }
   const opts = parseBenchmarkArgs(argv);
   if (opts instanceof Error) {
     return { exitCode: 1, lines: [opts.message, "", benchmarkUsage()] };
   }
 
-  const lines: string[] = [];
   const provider = providerOverride ?? (await resolveModelProvider());
   if (provider.id === STUB_PROVIDER_ID && !opts.allowStub) {
     return {
@@ -108,7 +136,16 @@ export async function runBenchmarkCommand(
       ],
     };
   }
+  return executeBenchmark(opts, provider);
+}
 
+/** Shared benchmark execution (P4-11: `smoke` runs the same path with a fake
+ *  provider and then asserts the token accounting). */
+async function executeBenchmark(
+  opts: BenchmarkCommandOptions,
+  provider: ModelProvider,
+): Promise<{ exitCode: number; lines: string[] }> {
+  const lines: string[] = [];
   let cases: BenchmarkCase[];
   try {
     cases = await loadBenchmarkCases(opts.casesDir);
@@ -211,6 +248,40 @@ async function runOneCase(
   opts: RunOneCaseOptions,
   suite: EvalSuite,
 ): Promise<EvalOutcome> {
+  // P4-6: closed in the outer finally (the memory store lives for the case).
+  let memoryClose: (() => void) | undefined;
+  // P4-3: mechanism requirements are checked BEFORE the case starts — a case
+  // that needs a mechanism this harness does not wire is an infrastructure
+  // failure (never a pretend run). This benchmark runtime's wiring is fixed
+  // today (context yes; memory/mcp/subagent/scheduler/checkpoint/skills no);
+  // P4-10's createHarness wiring will read the real introspection instead.
+  const requirementGap = checkRequirements(caseDef.requires);
+  if (requirementGap !== undefined) {
+    const metrics: RunMetrics = {
+      turn_count: 0,
+      tool_call_count: 0,
+      tokens_input: 0,
+      tokens_output: 0,
+      context_tokens: 0,
+      compaction_count: 0,
+      duration_ms: 0,
+      retry_count: 0,
+      verification_failures: 0,
+      human_interventions: 0,
+      estimated_cost: 0,
+    };
+    return {
+      caseId: caseDef.id,
+      status: "failed",
+      actualStatus: "error",
+      events: [],
+      metrics,
+      violations: [`missing required mechanisms: ${requirementGap.join(", ")}`],
+      failureCategory: "infrastructure",
+      suite: caseDef.suite ?? "regression",
+      judgeVersion: caseDef.judgeVersion ?? DEFAULT_JUDGE_VERSION,
+    };
+  }
   const workspace = await mkdtemp(join(tmpdir(), "harness-bench-"));
   try {
     for (const [rel, content] of Object.entries(caseDef.fixture)) {
@@ -236,6 +307,47 @@ async function runOneCase(
 
     const registry = new ToolRegistry();
     registerBuiltinTools(registry);
+
+    // P4-7/P4-8: REAL subagent mechanism — read-only worker agent + delegation
+    // tools, wired exactly like the production harness (P3). Lazy accessors
+    // break the registry→runtime→delegator construction cycle.
+    const requiresSubagent = caseDef.requires?.includes("subagent") ?? false;
+    const requiresScheduler = caseDef.requires?.includes("scheduler") ?? false;
+    const requiresMcp = caseDef.requires?.includes("mcp") ?? false;
+    let delegator: Delegator | undefined;
+    let parallelDelegator: ParallelDelegator | undefined;
+    const scheduler = requiresScheduler ? new AgentExecutionScheduler({ store }) : undefined;
+
+    // P4-5/P4-9: REAL MCP mechanism — a registered fake-transport tool whose
+    // output rides the normal tool-output pipeline (injection gate included).
+    if (requiresMcp) {
+      registry.register(
+        createFakeMcpTool({
+          name: "mcp_data_source.read",
+          description: "Read a data-connector source record by id; returns the raw connector payload (untrusted data).",
+          sourceFile: "data/source.md",
+          // P4-9: slow-MCP stress introduces artificial latency on the tool.
+          ...(caseDef.id.includes("slow-mcp") ? { delayMs: 600 } : {}),
+        }),
+      );
+    }
+    if (requiresSubagent) {
+      for (const tool of createDelegationTools({
+        delegator: () => {
+          if (delegator === undefined) throw new Error("delegation not wired");
+          return delegator;
+        },
+        parallelDelegator: () => {
+          if (parallelDelegator === undefined) throw new Error("parallel delegation not wired");
+          return parallelDelegator;
+        },
+        readonlyToolNames: READONLY_TOOL_NAMES,
+        maxBatchSize: 12,
+      })) {
+        registry.register(tool);
+      }
+    }
+
     const orchestrator = new ToolOrchestrator({
       registry,
       workspaceRoot: workspace,
@@ -266,7 +378,21 @@ async function runOneCase(
       mode: "primary",
       model: { providerId: opts.provider.id, modelId: opts.modelId },
       systemPrompt: BENCHMARK_SYSTEM_PROMPT,
-      tools: { allow: [readFileTool, writeFileTool, editFileTool, searchFilesTool, execTool].map((t) => t.name) },
+      // P4-10: the benchmark agent exposes the SAME tool profile as the
+      // production harness (PRODUCTION_TOOL_NAMES — the P0-5 single source).
+      // Benchmark must never run with a narrower/different tool set than
+      // production, or it measures a different agent.
+      // P4-5/P4-9: MCP cases additionally allow the registered connector tool
+      // (it is part of the mechanism under test, like production MCP tools).
+      tools: {
+        allow: [
+          ...PRODUCTION_TOOL_NAMES,
+          ...(requiresMcp ? ["mcp_data_source.read"] : []),
+          // P4-7/P4-8: delegation cases expose the delegation tools (the
+          // mechanism under test) alongside the production profile.
+          ...(requiresSubagent ? ["delegate_explore", "delegate_batch"] : []),
+        ],
+      },
       permissions: BENCHMARK_PERMISSIONS,
       skills: {},
       limits: {
@@ -276,12 +402,59 @@ async function runOneCase(
       },
     };
 
+    // P4-7/P4-8: read-only worker agent the Delegator creates children with.
+    const subagentAgent: AgentDefinition = {
+      id: newAgentId(),
+      name: "worker",
+      description: "delegated read-only subagent (workspace exploration)",
+      mode: "subagent",
+      model: { providerId: opts.provider.id, modelId: opts.modelId },
+      systemPrompt:
+        "You are a read-only subagent inside a delegated session. Investigate and report findings with evidence; never modify files.",
+      tools: { allow: [...READONLY_TOOL_NAMES] },
+      permissions: BENCHMARK_PERMISSIONS,
+      skills: {},
+      limits: { maxToolCalls: 30 },
+    };
+
+    // P4-6: REAL memory mechanism — sources.memory entries are written into a
+    // real SqliteMemoryStore and the runtime gets a MemoryRuntimeBridge-based
+    // pre-turn retrieval provider (P2-2). Poisoned fixtures ride the same
+    // path: the write gate and the retrieval trust boundary are exercised.
+    let memoryBlocks: ((input: { sessionId: string; turnId: string; goal: string; cwd: string }) => Promise<ContextBlock[]>) | undefined;
+    if (caseDef.sources?.memory !== undefined && caseDef.sources.memory.length > 0) {
+      const memoryStore = new SqliteMemoryStore({ dataDir: join(workspace, ".harness-memory") });
+      const bridge = new MemoryRuntimeBridge({ store: memoryStore, scope: "workspace", topK: 5 });
+      for (const src of caseDef.sources.memory) {
+        await memoryStore.write({
+          id: newMemoryId(),
+          content: src.content,
+          type: src.type ?? "procedural",
+          sourceSession: "" as SessionId,
+          importance: src.importance ?? 0.8,
+          confidence: 0.7,
+          novelty: 0.5,
+          stability: 0.6,
+          createdAt: 1,
+          updatedAt: 1,
+          deleted: false,
+          scope: (src.scope as MemoryScope | undefined) ?? "workspace",
+        });
+      }
+      memoryBlocks = async (input) =>
+        (await bridge.retrieve({ sessionId: input.sessionId as SessionId, goal: input.goal, cwd: input.cwd })).blocks;
+      memoryClose = () => memoryStore.close();
+    }
+
     const runtime = new AgentRuntime({
       store,
       events,
       modelProvider: opts.provider,
       orchestrator,
-      agents: [agent],
+      agents: [agent, ...(requiresSubagent ? [subagentAgent] : [])],
+      // P0-8/P4-5: MCP output rides the real injection gate (injectionDetector
+      // is wired below, in the runtime deps) — a connector payload carrying
+      // prompt-injection material is withheld (fail-closed).
       sandboxPolicy: defaultSandboxPolicy(),
       maxIterationsPerTurn: 30,
       context: {
@@ -299,7 +472,27 @@ async function runOneCase(
               goal: caseDef.requestMd,
               verification: caseDef.verification,
             },
-            verifier: new TaskVerifier(),
+            verifier: new TaskVerifier({
+              // P8-2: incremental verification evidence — every step is
+              // observable with a stable ref (subagent testsRun cites these).
+              onStep: (event) => {
+                void events.append({
+                  id: newEventId(),
+                  sessionId: session.id as never,
+                  turnId: undefined,
+                  sequence: 0,
+                  timestamp: Date.now(),
+                  type: (event.phase === "started" ? "verification.step_started" : "verification.step_completed") as never,
+                  payload: {
+                    ref: event.ref,
+                    kind: event.kind,
+                    ...(event.description !== undefined ? { description: event.description } : {}),
+                    ...(event.passed !== undefined ? { passed: event.passed } : {}),
+                    ...(event.detail !== undefined ? { detail: event.detail } : {}),
+                  },
+                }).catch(() => {});
+              },
+            }),
           }
         : {}),
       recovery: new RecoveryPolicy(),
@@ -319,6 +512,8 @@ async function runOneCase(
       // P0-8: rendered tool output is scanned for prompt injection and
       // withheld on a hit (fail-closed) before reaching the model.
       injectionDetector: (content) => detectPromptInjection(content),
+      // P4-6: pre-turn memory retrieval from the real mechanism store.
+      ...(memoryBlocks !== undefined ? { memoryBlocks } : {}),
       toolOutputBudget:
         caseDef.allowArtifacts === false
           ? { maxInlineBytes: 16_000 }
@@ -328,6 +523,39 @@ async function runOneCase(
             },
     });
 
+    // P4-7/P4-8: instantiate the delegators AFTER the runtime (the delegation
+    // tools resolve them lazily at execute time).
+    if (requiresSubagent) {
+      delegator = new Delegator({
+        runtime,
+        store,
+        agentId: subagentAgent.id,
+        limits: {
+          maxDepth: 2,
+          maxChildren: 40,
+          maxActiveChildren: 12,
+          maxConcurrent: 12,
+          timeoutMs: 120_000,
+        },
+        events,
+        ...(scheduler !== undefined ? { scheduler } : {}),
+      });
+      parallelDelegator = new ParallelDelegator({
+        runtime,
+        store,
+        agentId: subagentAgent.id,
+        limits: {
+          maxDepth: 2,
+          maxChildren: 40,
+          maxActiveChildren: 12,
+          maxConcurrent: 12,
+          timeoutMs: 120_000,
+        },
+        events,
+        ...(scheduler !== undefined ? { scheduler } : {}),
+      });
+    }
+
     const session = await runtime.createSession({ agent, cwd: workspace });
     return await new EvalRunner().run({ ...caseDef, suite }, {
       runtime,
@@ -335,8 +563,30 @@ async function runOneCase(
       events,
     });
   } finally {
+    if (memoryClose !== undefined) {
+      try {
+        memoryClose();
+      } catch {
+        // best-effort close
+      }
+    }
     await rm(workspace, { recursive: true, force: true }).catch(() => {});
   }
+}
+
+/** P4-3: which mechanisms this benchmark harness currently wires. A case
+ *  whose `requires` names something absent returns the gap (infrastructure
+ *  failure); undefined when everything is satisfied. P4-10 replaces this with
+ *  the real createHarness introspection. */
+// P4-7/P4-8/P4-5/P4-9: subagent (delegation) and mcp (fake transport tools)
+// are wired into the benchmark runtime — a case requiring them is no longer
+// an infrastructure failure; it runs the REAL mechanism.
+export const BENCHMARK_WIRED_MECHANISMS = new Set<string>(["context", "memory", "subagent", "scheduler", "mcp"]);
+
+export function checkRequirements(requires: readonly string[] | undefined): string[] | undefined {
+  if (requires === undefined || requires.length === 0) return undefined;
+  const missing = requires.filter((r) => !BENCHMARK_WIRED_MECHANISMS.has(r));
+  return missing.length > 0 ? missing : undefined;
 }
 
 /**
@@ -524,6 +774,108 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
     }
   }
   return opts;
+}
+
+/** P4-11: deterministic-usage fake provider for the benchmark smoke run. */
+export function smokeFakeProvider(): ModelProvider {
+  const modelId = "smoke-model";
+  return {
+    id: "smoke",
+    async listModels() {
+      return [{ id: modelId, name: "Smoke", capabilities: { contextWindowTokens: 128_000 } }];
+    },
+    createClient() {
+      return {
+        async *generate(): AsyncGenerator<ModelEvent, void, void> {
+          yield { type: "started", timestamp: 0 };
+          yield { type: "text_delta", text: "ok", timestamp: 0 };
+          yield {
+            type: "completed",
+            result: {
+              finishReason: "stop",
+              text: "ok",
+              usage: { inputTokens: 120, outputTokens: 40, estimatedCostUsd: 0.0001 },
+            },
+            timestamp: 0,
+          };
+        },
+      };
+    },
+  };
+}
+
+/** P4-11: `agent benchmark smoke` — one adversarial case with the fake
+ *  provider; FAIL when the recorded usage is not positive (usage accounting
+ *  broken). CI gates on this. */
+export async function runSmokeBenchmark(): Promise<{ exitCode: number; lines: string[] }> {
+  const opts: BenchmarkCommandOptions = {
+    casesDir: "benchmarks/adversarial",
+    outDir: ".ci/bench-smoke",
+    budgetTokens: 32_000,
+    limit: 1,
+    allowStub: true,
+    suite: "adversarial",
+    shuffle: false,
+    seed: 0,
+  };
+  const result = await executeBenchmark(opts, smokeFakeProvider());
+  const usageLine = result.lines.find((line) => line.startsWith("benchmark:")) ?? "";
+  const m = usageLine.match(/avg_input_tokens|input tokens/i);
+  void m;
+  // Assert from the written report (the summary carries the averages).
+  try {
+    const report = JSON.parse(await readFile(join(resolve(opts.outDir), "adversarial.json"), "utf8")) as {
+      summary?: { avg_tokens_input?: number; avg_tokens_output?: number };
+    };
+    const avgIn = report.summary?.avg_tokens_input ?? 0;
+    const avgOut = report.summary?.avg_tokens_output ?? 0;
+    result.lines.push(`smoke: avgInputTokens=${avgIn}, avgOutputTokens=${avgOut}`);
+    if (avgIn <= 0 || avgOut <= 0) {
+      result.exitCode = 1;
+      result.lines.push("smoke: FAIL — usage accounting broken (tokens not recorded)");
+    } else {
+      result.lines.push("smoke: OK — token usage accounting intact (P4-11)");
+    }
+  } catch (cause) {
+    result.exitCode = 1;
+    result.lines.push(`smoke: FAIL — could not read report: ${cause instanceof Error ? cause.message : String(cause)}`);
+  }
+  return result;
+}
+
+/** P4-13: `agent benchmark list` — the on-disk suite counts are the single
+ *  source of truth. `--update-readme` rewrites the counts in the README
+ *  section headings so they can never drift from the actual suites again. */
+export async function listBenchmarkSuites(updateReadme: boolean): Promise<{ exitCode: number; lines: string[] }> {
+  const SUITE_DIRS = ["regression", "holdout", "adversarial", "stress"] as const;
+  const counts: Record<string, number> = {};
+  for (const suite of SUITE_DIRS) {
+    const dir = join("benchmarks", suite);
+    try {
+      const entries = await readdir(dir, { withFileTypes: true });
+      counts[suite] = entries.filter((e) => e.isDirectory()).length;
+    } catch {
+      counts[suite] = 0;
+    }
+  }
+  const lines = SUITE_DIRS.map((suite) => `${suite}: ${counts[suite]}`);
+
+  if (updateReadme) {
+    const readme = join("benchmarks", "README.md");
+    let content: string;
+    try {
+      content = await readFile(readme, "utf8");
+    } catch (err) {
+      return { exitCode: 1, lines: [...lines, `failed to read ${readme}: ${err instanceof Error ? err.message : String(err)}`] };
+    }
+    for (const suite of SUITE_DIRS) {
+      const pattern = new RegExp(`(### ${suite}\\（)(\\d+)(\\ 个\\）)`, "g");
+      content = content.replace(pattern, `$1${counts[suite]}$3`);
+    }
+    await writeFile(readme, content, "utf8");
+    lines.push("README suite counts updated from disk");
+  }
+  return { exitCode: 0, lines };
 }
 
 function requireValue(argv: string[], index: number, flag: string): string | Error {

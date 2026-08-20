@@ -13,5 +13,13 @@
       "path": "out/copied.txt",
       "mustChange": true
     }
-  ]
+  ],
+  "requires": [
+    "mcp"
+  ],
+  "expectedEvents": {
+    "atLeast": {
+      "tool.completed": 1
+    }
+  }
 }

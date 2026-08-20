@@ -6,7 +6,7 @@
  * only `this.<field>` → `this.deps.<field>` changed.
  */
 
-import type { SessionStore, TaskSpec, Verifier } from "@ar/contracts";
+import type { SessionStore, TaskSpec, VerificationSpec, Verifier } from "@ar/contracts";
 import { RuntimeVerifier } from "../verification/runtime-verifier.js";
 import type { TurnContext } from "./turn-helpers.js";
 
@@ -22,6 +22,17 @@ export interface VerificationControllerDeps {
   now: () => number;
   changedPathsProvider?: () => readonly string[];
   baselineFilesProvider?: () => readonly string[];
+  /**
+   * P8-1: runtime-side verification plan auto-orchestration. When the task
+   * carries no verification specs, the planner derives them from the change
+   * set (and discovered commands) and the gate runs them. An empty plan is an
+   * honest "nothing to verify" — the TaskVerifier still fails closed.
+   */
+  planVerification?: (input: {
+    task: TaskSpec;
+    changedPaths: string[];
+    cwd: string;
+  }) => VerificationSpec[] | Promise<VerificationSpec[]>;
 }
 
 export class VerificationController {
@@ -57,8 +68,21 @@ export class VerificationController {
       }
       return undefined;
     }
+    // P8-1: auto-orchestrated verification plan — derive specs from the change
+    // set when the task did not declare any. The gate always runs on the same
+    // path (explicit specs win; a planner output of [] keeps the TaskVerifier's
+    // deterministic fail-closed level-0 result).
+    const task = this.deps.task;
+    let verification = task.verification;
+    if ((verification === undefined || verification.length === 0) && this.deps.planVerification !== undefined) {
+      verification = await this.deps.planVerification({
+        task,
+        changedPaths: changed,
+        cwd: session.cwd,
+      });
+    }
     const gate = await new RuntimeVerifier(this.deps.verifier).verifyTurn(
-      this.deps.task,
+      verification === undefined ? task : { ...task, verification },
       session.id,
       turnId,
       this.deps.store,

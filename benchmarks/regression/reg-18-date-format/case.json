@@ -1,0 +1,20 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "bugfix",
+    "javascript"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/date.js').then(m => { if (m.formatDate(new Date(2020,0,5)) !== '2020-01-05') process.exit(1) })"
+      ]
+    }
+  ]
+}

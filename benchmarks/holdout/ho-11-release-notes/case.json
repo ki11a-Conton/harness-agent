@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "documentation"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "bash",
+      "args": [
+        "-c",
+        "grep -q 'crash on empty input' out/release-notes.md && ! grep -q 'old typo' out/release-notes.md"
+      ]
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { classifyCommand } from "./command-classifier.js";
 /**
  * P2-31 Test / Build / Lint Command Discovery.
  *
@@ -50,16 +51,13 @@ const SCRIPT_KIND_ORDER: Array<[RegExp, DiscoveredKind]> = [
   [/^verify/, "verify"],
 ];
 
-/** Classify an arbitrary command string (CI / AGENTS lines) by keyword. */
+/** P8-4: classification is delegated to the SHARED classifier so discovery,
+ *  the verification plan builder and working-state classification agree on
+ *  what a command is. */
 function classify(cmd: string): { kind: DiscoveredKind; confidence: "high" | "medium" } | null {
-  const lower = cmd.toLowerCase();
-  if (lower.includes("typecheck") || lower.includes("tsc --noemit")) return { kind: "typecheck", confidence: "high" };
-  if (/lint|eslint|clippy|flake8|ruff check/.test(lower)) return { kind: "lint", confidence: "high" };
-  if (/verify/.test(lower)) return { kind: "verify", confidence: "medium" };
-  if (/\bcheck\b/.test(lower)) return { kind: "check", confidence: "medium" };
-  if (/build/.test(lower)) return { kind: "build", confidence: "high" };
-  if (/test/.test(lower)) return { kind: "test", confidence: "high" };
-  return null;
+  const result = classifyCommand(cmd);
+  if (result.category === "other") return null;
+  return { kind: result.category as DiscoveredKind, confidence: result.confidence as "high" | "medium" };
 }
 
 /** Walk a repo directory returning repo-relative file paths, skipping dep dirs. */

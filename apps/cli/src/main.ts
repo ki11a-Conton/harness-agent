@@ -55,6 +55,10 @@ export interface DefaultDepsOptions {
   model?: { providerId: string; modelId: string };
   /** Test/advanced injection: replaces env-based provider resolution. */
   provider?: ModelProvider;
+  /** P2: enable the memory + learning pipeline (pre-turn retrieval, post-turn
+   *  reflection, `agent learn` promotion). Requires a dataDir — memories are
+   *  never written into the workspace. */
+  memory?: boolean;
 }
 
 export function registerBuiltinTools(registry: ToolRegistry): void {
@@ -111,12 +115,17 @@ export function extractDataDirFlag(argv: string[]): { args: string[]; dataDir?: 
 export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promise<CommandDeps> {
   const dataDir = options.dataDir;
   const modelProvider = options.provider ?? (await resolveModelProvider());
+  const memoryEnabled = options.memory === true || process.env.HARNESS_MEMORY === "1";
+  if (memoryEnabled && dataDir === undefined) {
+    throw new Error("memory is enabled but no dataDir is configured (--data-dir or HARNESS_DATA_DIR) — refusing to write memories into the workspace");
+  }
   const harness = await createHarness({
     cwd: process.cwd(),
     ...(dataDir !== undefined ? { dataDir } : {}),
     profile: "interactive",
     modelProvider,
     model: defaultModelRef(modelProvider, options.model),
+    ...(memoryEnabled ? { featureFlags: { memory: true, learning: true } } : {}),
   });
   const registry = createRuntimeRpc(harness.runtime, {
     sessionService: harness.sessionService,
@@ -136,6 +145,10 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
     approvalStore: harness.approvalStore,
     runtime: harness.runtime,
     introspection: harness.introspect(),
+    ...(harness.candidates !== undefined ? { candidates: harness.candidates } : {}),
+    ...(harness.memory !== undefined ? { memoryStore: harness.memory.store } : {}),
+    ...(harness.askUserStore !== undefined ? { askUserStore: harness.askUserStore } : {}),
+    ...(harness.checkpointStore !== undefined ? { checkpointStore: harness.checkpointStore } : {}),
     doctor: {
       modelProvider,
       sandboxPolicy: defaultSandboxPolicy(),

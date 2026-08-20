@@ -252,3 +252,120 @@ export function compare(
   }
   return { ok: issues.length === 0, issues };
 }
+
+// ---- P9-4: offline trace replay V2 — derive metrics/judgement from the
+// event stream WITHOUT re-invoking the model. The event log is the single
+// source; every figure below is a pure fold over emitted facts. ----------
+
+export interface ReplayRunMetrics {
+  sessionId: SessionId;
+  turns: number;
+  modelCalls: number;
+  /** Sum of input+output tokens reported by model.completed usage snapshots. */
+  tokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  /** Total wall-clock across model calls (durationMs on model.completed). */
+  modelTimeMs: number;
+  toolCalls: number;
+  toolFailures: number;
+  retries: number;
+  compactions: number;
+  verificationSteps: number;
+  verificationPassed: number;
+  securityDenials: number;
+  /** False-complete grade of the LAST terminal turn (P8-3). */
+  completionGrade?: import("@ar/contracts").FalseCompleteGrade;
+}
+
+/** Fold the event stream of one session into run metrics. Pure — no model,
+ *  no store writes; safe for any historical trace. */
+export async function deriveRunMetrics(
+  events: readonly AgentEvent[],
+): Promise<ReplayRunMetrics> {
+  let turns = 0;
+  let modelCalls = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let modelTimeMs = 0;
+  let toolCalls = 0;
+  let toolFailures = 0;
+  let retries = 0;
+  let compactions = 0;
+  let verificationSteps = 0;
+  let verificationPassed = 0;
+  let securityDenials = 0;
+  let lastTerminal: { reason?: string } | undefined;
+
+  for (const event of events) {
+    switch (event.type) {
+      case "turn.started":
+        turns += 1;
+        break;
+      case "turn.completed": {
+        const reason = (event.payload as { terminationReason?: string }).terminationReason;
+        lastTerminal = { reason };
+        break;
+      }
+      case "model.started":
+        modelCalls += 1;
+        break;
+      case "model.completed": {
+        const usage = (event.payload as { usage?: { inputTokens?: number; outputTokens?: number } }).usage;
+        if (usage?.inputTokens !== undefined) inputTokens += usage.inputTokens;
+        if (usage?.outputTokens !== undefined) outputTokens += usage.outputTokens;
+        const durationMs = (event.payload as { durationMs?: number }).durationMs;
+        if (durationMs !== undefined) modelTimeMs += durationMs;
+        break;
+      }
+      case "model.retry":
+        retries += 1;
+        break;
+      case "tool.requested":
+        toolCalls += 1;
+        break;
+      case "tool.failed":
+        toolFailures += 1;
+        break;
+      case "context.compacted":
+        compactions += 1;
+        break;
+      case "verification.step_started":
+        verificationSteps += 1;
+        break;
+      case "verification.step_completed": {
+        if ((event.payload as { passed?: boolean }).passed === true) verificationPassed += 1;
+        break;
+      }
+      default:
+        if (event.type.startsWith("security.")) securityDenials += 1;
+    }
+  }
+
+  let completionGrade: import("@ar/contracts").FalseCompleteGrade | undefined;
+  if (lastTerminal?.reason !== undefined) {
+    const { gradeCompletion } = await import("@ar/contracts");
+    completionGrade = gradeCompletion(lastTerminal.reason as import("@ar/contracts").TerminationReason, {
+      passedSteps: verificationPassed,
+      totalSteps: verificationSteps,
+    });
+  }
+
+  return {
+    sessionId: events[0]?.sessionId ?? ("" as SessionId),
+    turns,
+    modelCalls,
+    tokens: inputTokens + outputTokens,
+    inputTokens,
+    outputTokens,
+    modelTimeMs,
+    toolCalls,
+    toolFailures,
+    retries,
+    compactions,
+    verificationSteps,
+    verificationPassed,
+    securityDenials,
+    ...(completionGrade !== undefined ? { completionGrade } : {}),
+  };
+}

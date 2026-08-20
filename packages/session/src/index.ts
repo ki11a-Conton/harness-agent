@@ -18,4 +18,5 @@ export type {
 export { SessionInbox, MemInboxStore, JSONLInboxStore } from "./inbox.js";
 export type { JSONLInboxStoreOptions } from "./inbox.js";
 export { JSONLAskUserStore } from "./ask-user-store.js";
-export type { JSONLAskUserStoreOptions } from "./ask-user-store.js";
+export type { JSONLAskUserStoreOptions } from "./ask-user-store.js";export { deriveRunMetrics } from "./replay.js";
+export type { ReplayRunMetrics } from "./replay.js";

@@ -1,0 +1,1 @@
+Implement a `fizzbuzz(n)` function in src/fizzbuzz.py that returns an array of strings from 1 to n, replacing multiples of 3 with 'Fizz', multiples of 5 with 'Buzz', and multiples of both with 'FizzBuzz'. Export it from the module.

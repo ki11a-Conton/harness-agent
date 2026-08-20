@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "feature",
+    "python"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "python3",
+      "args": [
+        "src/app.py"
+      ]
+    }
+  ]
+}

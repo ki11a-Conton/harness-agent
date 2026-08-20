@@ -1,5 +1,10 @@
 export { McpClient } from "./mcp-client.js";
 export type { McpClientOptions } from "./mcp-client.js";
+export { StdioMcpClient } from "./stdio-client.js";
+export type { StdioMcpClientOptions } from "./stdio-client.js";
+export { connectMcpServer } from "./mcp-transport.js";
+export type { McpServerConnection, McpTransportOptions } from "./mcp-transport.js";
+export { jsonSchemaToZod, requiredKeysOf } from "./json-schema-zod.js";
 export type {
   ToolLike,
   ToolLikeHandlerContext,

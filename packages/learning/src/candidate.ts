@@ -1,4 +1,5 @@
 import type { HarnessScoreCard } from "./scorecard.js";
+import type { MemoryCandidate, StrategyLesson } from "@ar/contracts";
 
 /**
  * §69 learning candidate types. A candidate is the unit the learning pipeline
@@ -49,6 +50,19 @@ export interface LearningCandidate {
   content: string;
   /** Reflection output that produced this candidate, when known (§69 pipeline). */
   sourceReflectionId?: string;
+  /**
+   * P2-6: structured strategy lesson when the candidate came from a
+   * procedural reflection — promotion builds a richer memory entry from it
+   * (When/Do/Avoid + evidence refs) instead of a bare content string.
+   */
+  structured?: StrategyLesson;
+  /**
+   * P2-6: the full source MemoryCandidate (content/type/sourceSession/
+   * scoring) when the candidate was produced by post-turn reflection — the
+   * promotion path rebuilds the persisted MemoryEntry from it, so scoring
+   * and provenance survive the queue.
+   */
+  sourceCandidate?: MemoryCandidate;
   /**
    * Measured benchmark score before promotion. Recorded by the promoter on a
    * successful promotion; undefined means no baseline has been established.

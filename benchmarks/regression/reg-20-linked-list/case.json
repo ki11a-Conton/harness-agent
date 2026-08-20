@@ -1,0 +1,20 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "implementation",
+    "python"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "python3",
+      "args": [
+        "-c",
+        "from src.list import LinkedList; l=LinkedList(); [l.prepend(x) for x in (3,2,1)]; assert l.to_list()==[3,2,1]"
+      ]
+    }
+  ]
+}

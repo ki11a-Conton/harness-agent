@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "analysis"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "bash",
+      "args": [
+        "-c",
+        "grep -q boom out/top-error.txt"
+      ]
+    }
+  ]
+}

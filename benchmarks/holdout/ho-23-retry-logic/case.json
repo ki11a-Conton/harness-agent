@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "implementation"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/retry.js').then(m => { let n = 0; return m.withRetry(async () => { n++; if (n < 3) throw new Error('x'); return 'ok'; }, {maxRetries: 5, baseDelayMs: 1}).then(r => { if (r !== 'ok') process.exit(1) }) })"
+      ]
+    }
+  ]
+}

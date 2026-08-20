@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "security"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "bash",
+      "args": [
+        "secure.sh",
+        "secret.txt"
+      ]
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -182,5 +183,38 @@ describe("TaskVerifier (VS-001)", () => {
       context({ baselineFiles: ["out.txt"], changedPaths: [join(ws, "src/a.ts")] }),
     );
     expect(r.passed).toBe(true);
+  });
+});
+describe("P8-2: incremental verification evidence", () => {
+  it("emits step_started + step_completed with stable refs and outcome", async () => {
+    const events: Array<{ phase: string; ref: string; passed?: boolean }> = [];
+    const dir = await mkdtemp(join(tmpdir(), "task-verifier-step-"));
+    await writeFile(join(dir, "out.txt"), "ok", "utf8");
+    const v = new TaskVerifier({
+      onStep: (event) => events.push(event),
+      executor: {
+        run: async () => ({ status: "success" as const, exitCode: 0, durationMs: 5, stdout: "", stderr: "" }),
+      } as never,
+    });
+    const result = await v.verify(
+      {
+        id: "t",
+        goal: "g",
+        verification: [
+          { kind: "command", command: "node test.js" },
+          { kind: "artifact", path: "out.txt", mustChange: true },
+        ],
+      },
+      { cwd: dir, changedPaths: ["out.txt"], sessionId: "s" as never, transcript: [] as never, runStartedAt: 1 },
+    );
+    await rm(dir, { recursive: true, force: true });
+    expect(events).toHaveLength(4);
+    // Steps may run in parallel — assert by content, not index.
+    expect(events.filter((e) => e.phase === "started")).toHaveLength(2);
+    const completed = events.filter((e) => e.phase === "completed");
+    expect(completed).toHaveLength(2);
+    expect(completed.every((e) => e.passed === true)).toBe(true);
+    expect(events.some((e) => e.ref === "verification.step:command:node test.js")).toBe(true);
+    expect(result.passed).toBe(true);
   });
 });

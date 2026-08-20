@@ -99,7 +99,7 @@ function defaultInput(overrides: Partial<AuditInput> = {}): AuditInput {
       adversarial: { exists: true, caseCount: 13 },
       stress: { exists: true, caseCount: 11 },
     },
-    ciWorkflow: { exists: true, ubuntu: true, windows: false },
+    ciWorkflow: { exists: true, ubuntu: true, windows: true },
     readmeClaims: [
       { suite: "regression", claimed: 30, planned: false },
       { suite: "holdout", claimed: 30, planned: true },
@@ -180,10 +180,10 @@ describe("audit default (interactive) profile (P0-1)", () => {
     expect(capabilityStatusOf(record)).toBe("benchmarked");
   });
 
-  it("CI: linux job wired, windows job not", () => {
+  it("CI: linux and windows jobs both wired (P10-6 promotion gate)", () => {
     const matrix = buildCapabilityMatrix(defaultInput());
     expect(capabilityStatusOf(matrix.records.find((r) => r.id === "ci_linux")!)).toBe("wired");
-    expect(capabilityStatusOf(matrix.records.find((r) => r.id === "ci_windows")!)).toBe("implemented");
+    expect(capabilityStatusOf(matrix.records.find((r) => r.id === "ci_windows")!)).toBe("wired");
   });
 
   it("summary counts the statuses across all records", () => {

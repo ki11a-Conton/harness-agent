@@ -7,6 +7,7 @@ import type {
   ToolPolicy,
   WorkingState,
 } from "@ar/contracts";
+import type { WorkspacePatch } from "./workspace-isolation.js";
 
 /** SUBAGENT-001: structured delegation request (plan §53). */
 export interface DelegationRequest {
@@ -19,6 +20,11 @@ export interface DelegationRequest {
   agentId?: AgentId;
   /** Further restriction of the child agent's tool policy. */
   toolPolicy?: ToolPolicy;
+  /** P3-4: whether the child may write to the workspace. false (default) →
+   *  the child shares the parent root read-only; true → the child runs in an
+   *  isolated copy and its changes return as a workspacePatch (P3-5). Only
+   *  meaningful when the delegator has a ChildWorkspaceManager wired. */
+  writable?: boolean;
   limits?: Partial<DelegationLimits>;
 }
 
@@ -96,4 +102,8 @@ export interface DelegationResult {
    *  (terminationReason "verified_complete"). A child that merely stopped
    *  ("model_stopped") is NOT marked verified — "I'm done" is not success. */
   verified: boolean;
+  /** P3-5: the child's workspace changes (isolated-copy mode only) as a
+   *  structured patch the parent may apply under conflict detection. Absent
+   *  for read-only children and for failed/cancelled/timeout outcomes. */
+  workspacePatch?: WorkspacePatch;
 }

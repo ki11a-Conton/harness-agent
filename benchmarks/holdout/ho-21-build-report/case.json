@@ -1,0 +1,18 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "scripting"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "bash",
+      "args": [
+        "scripts/report.sh"
+      ]
+    }
+  ]
+}

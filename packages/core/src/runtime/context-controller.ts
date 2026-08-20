@@ -76,12 +76,23 @@ export interface ContextControllerDeps {
     type: AgentEvent["type"],
     payload: Record<string, unknown>,
     turnId?: TurnId,
+    spans?: { spanId?: string; parentSpanId?: string },
   ) => Promise<AgentEvent>;
   now: () => number;
   failAt: (point: FaultPoint, ctx: FaultPointContext) => Promise<void>;
   context?: { pipeline: ContextPipeline; budget: ContextBudget; instructionOpts?: InstructionDiscoveryOptions };
   skills?: () => Skill[] | SkillDiscovery | Promise<Skill[] | SkillDiscovery>;
   skillSelector?: (entries: SkillIndexEntry[]) => SkillIndexEntry[];
+  /** P2-8: loads the body of the skills selected by `skillSelector` as
+   *  semi-trusted context blocks (progressive disclosure: index → selection
+   *  → body load → context). Receives the turn identity and selected names;
+   *  the returned blocks are admitted into the pipeline ahead of tool output.
+   *  Absent by default (index-only skills). */
+  skillBodyBlocks?: (input: {
+    sessionId: SessionId;
+    turnId: TurnId;
+    names: string[];
+  }) => Promise<ContextBlock[]>;
   recovery?: RecoveryPolicy;
   compactCounter: { value: number };
   checkpoint: (
@@ -143,32 +154,51 @@ export class ContextController {
           // provider may additionally report rejected skills.
           const disco = this.deps.skills !== undefined ? await this.deps.skills() : undefined;
           const skills = disco !== undefined && !Array.isArray(disco) ? disco.skills : disco;
+          const selectedSkills =
+            this.deps.skillSelector !== undefined && skills !== undefined
+              ? this.deps.skillSelector(
+                  skills.map((skill) => ({
+                    name: skill.manifest.name,
+                    description: skill.manifest.description ?? "",
+                  })),
+                )
+              : skills?.map((skill) => ({
+                  name: skill.manifest.name,
+                  description: skill.manifest.description ?? "",
+                })) ?? [];
+          // P2-8: progressive disclosure — load the bodies of the selected
+          // skills and admit them as semi-trusted skill data ahead of tool
+          // output. A body-load failure degrades to index-only (never breaks
+          // the turn); the index itself is unaffected.
+          let skillBodyBlocks: ContextBlock[] = [];
+          if (this.deps.skillBodyBlocks !== undefined && selectedSkills.length > 0) {
+            try {
+              skillBodyBlocks = await this.deps.skillBodyBlocks({
+                sessionId,
+                turnId,
+                names: selectedSkills.map((entry) => entry.name),
+              });
+            } catch (cause) {
+              process.stderr.write(
+                `[context] skillBodyBlocks failed: ${cause instanceof Error ? cause.message : String(cause)}\n`,
+              );
+            }
+          }
           const built = await this.deps.context.pipeline.build({
             cwd: session.cwd,
             systemPrompt: agent.systemPrompt,
-            priorBlocks,
+            priorBlocks: [...skillBodyBlocks, ...priorBlocks],
             budget: this.deps.context.budget,
             instructionOpts: this.deps.context.instructionOpts,
             messages: history,
+            // P6-3: attach the session so context.* selection telemetry events
+            // land in the right stream.
+            telemetrySessionId: session.id,
             // P1-2: what must survive compaction comes from the runtime's
             // working state (summaryOverride); the pipeline never synthesizes
             // summary content.
             summaryOverride: workingStateToCompactionSummary(working),
-            ...(skills !== undefined
-              ? {
-                  skills: (this.deps.skillSelector !== undefined
-                    ? this.deps.skillSelector(
-                        skills.map((skill) => ({
-                          name: skill.manifest.name,
-                          description: skill.manifest.description ?? "",
-                        })),
-                      )
-                    : skills.map((skill) => ({
-                        name: skill.manifest.name,
-                        description: skill.manifest.description ?? "",
-                      }))),
-                }
-              : {}),
+            ...(selectedSkills.length > 0 ? { skills: selectedSkills } : {}),
           });
           lastReportTokens = built.report.used;
           // P1-17: every discovered instruction document is observable with

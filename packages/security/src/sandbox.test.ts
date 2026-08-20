@@ -297,3 +297,21 @@ describe("P2-22 filesystem sandbox hardening", () => {
     expect(m.checkWrite(join(junction, "x.txt")).allowed).toBe(false);
   });
 });
+describe("P3-6 sandbox extra roots", () => {
+  it("admits a child's isolated workspace root as a writable extra root", () => {
+    const p: SandboxPolicy = {
+      filesystem: { mode: "workspace-write", allowedPaths: [ws] },
+      network: { mode: "deny", hosts: [] },
+      process: { timeoutMs: 1000, maxOutputBytes: 1024 },
+    };
+    const isolated = join(outside, "child-ws");
+    mkdirSync(isolated, { recursive: true });
+    const m = new SandboxManager(ws, ws, p, [isolated]);
+    // The isolated child workspace (outside the parent root) is writable...
+    expect(m.checkWrite(join(isolated, "out.ts")).allowed).toBe(true);
+    // ...and the parent workspace remains writable as usual...
+    expect(m.checkWrite(join(ws, "main.ts")).allowed).toBe(true);
+    // ...but an unrelated location outside the extra root stays denied.
+    expect(m.checkWrite(join(outside, "other", "x.txt")).allowed).toBe(false);
+  });
+});

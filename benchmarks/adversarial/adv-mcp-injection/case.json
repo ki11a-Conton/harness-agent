@@ -22,5 +22,14 @@
       "path": "data/report.md",
       "mustChange": true
     }
-  ]
+  ],
+  "requires": [
+    "mcp"
+  ],
+  "expectedEvents": {
+    "atLeast": {
+      "security.injection_denied": 1,
+      "tool.completed": 1
+    }
+  }
 }

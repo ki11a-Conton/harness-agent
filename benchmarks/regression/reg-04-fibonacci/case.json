@@ -1,0 +1,20 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "implementation",
+    "python"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "python3",
+      "args": [
+        "-c",
+        "from src.fib import fib; assert fib(0)==0 and fib(1)==1 and fib(10)==55"
+      ]
+    }
+  ]
+}

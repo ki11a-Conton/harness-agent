@@ -17,6 +17,10 @@ export interface PromoteDeps {
   benchmarkAfter: () => Promise<number>;
   /** Minimum required gain; boundary inclusive (after == before + threshold rejects). */
   threshold?: number;
+  /** P10-5: hard security gate — count of security violations observed on the
+   *  challenger runs. ANY violation rejects, even when the success score
+   *  improved ("不是总分游戏"). Absent → not gated. */
+  securityViolations?: () => Promise<number>;
   persist: (c: LearningCandidate) => Promise<void>;
 }
 
@@ -67,6 +71,30 @@ export class LearningPromoter {
           security.reason ? `: ${security.reason}` : ""
         }`,
       };
+    }
+
+    // P10-5: a single security violation on the challenger runs is a HARD
+    // rejection — a +10% success rate never buys a security regression.
+    if (deps.securityViolations !== undefined) {
+      const violations = await deps.securityViolations().catch(() => 0);
+      if (violations > 0) {
+        return {
+          action: "rejected",
+          reason: `security violations on challenger runs (${violations}) — hard gate rejects regardless of score`,
+        };
+      }
+    }
+
+    // P10-5: a single security violation on the challenger runs is a HARD
+    // rejection — a +10% success rate never buys a security regression.
+    if (deps.securityViolations !== undefined) {
+      const violations = await deps.securityViolations().catch(() => 0);
+      if (violations > 0) {
+        return {
+          action: "rejected",
+          reason: `security violations on challenger runs (${violations}) — hard gate rejects regardless of score`,
+        };
+      }
     }
 
     let before: number;
@@ -254,6 +282,10 @@ export class LearningPromoterV2 {
       };
     }
 
+    // P10-5: the paired gate's security-violation count is hard — challenger
+    // runs with ANY security violation reject regardless of score.
+    // (The scorecard-level check happens after collection below.)
+
     let champion: HarnessScoreCard[];
     try {
       champion = await this.collect(deps.championRuns, deps.runs);
@@ -270,6 +302,17 @@ export class LearningPromoterV2 {
       return {
         action: "rejected",
         reason: `challenger evaluation failed (${errorMessage(e)}); cannot confirm improvement`,
+      };
+    }
+
+    // P10-5 (paired side): challenger runs carrying ANY security violation
+    // are a hard reject — the paired gate already fails adversarial deltas,
+    // but the count is an independent, non-tradable signal.
+    const challengerViolations = challenger.reduce((sum, card) => sum + card.securityViolations, 0);
+    if (challengerViolations > 0) {
+      return {
+        action: "rejected",
+        reason: `challenger runs recorded ${challengerViolations} security violation(s) — hard gate rejects regardless of score`,
       };
     }
 

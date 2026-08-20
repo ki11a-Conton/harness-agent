@@ -1,0 +1,18 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "performance"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "bench/compare.mjs"
+      ]
+    }
+  ]
+}

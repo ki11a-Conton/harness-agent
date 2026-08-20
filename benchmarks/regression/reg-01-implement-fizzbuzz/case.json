@@ -1,0 +1,20 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "implementation",
+    "python"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "python3",
+      "args": [
+        "-c",
+        "from src.fizzbuzz import fizzbuzz; r=fizzbuzz(15); assert r[2]=='Fizz' and r[4]=='Buzz' and r[14]=='FizzBuzz' and len(r)==15"
+      ]
+    }
+  ]
+}

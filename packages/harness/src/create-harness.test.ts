@@ -102,6 +102,31 @@ describe("P0-3: createHarness production composition root", () => {
     await harness.close();
   });
 
+  it("P5-3: dataStore sqlite backs all five runtime contracts with one WAL store", async () => {
+    const dataDir = await tempDir();
+    const harness = await createHarness(baseConfig({ dataDir, dataStore: "sqlite" }));
+    try {
+      const info = harness.introspect();
+      expect(info.stores.session).toBe("SqliteRuntimeStore");
+      expect(info.stores.events).toBe("SqliteRuntimeStore");
+      // checkpoint/askUser are composition surfaces (the InboxStore.listPending
+      // and EventStore.list name collisions make single-class implementation
+      // impossible — documented in the store).
+      expect(info.stores.checkpoint).toBe("Object");
+      expect(harness.askUserStore).toBeDefined();
+      expect(harness.askUserStore!.constructor.name).toBe("Object");
+      // The sqlite-backed store persists across a reopen (one file, WAL).
+      const sessionId = (await harness.sessionService.create({ agentId: harness.agents[0]!.id, model: harness.agents[0]!.model, cwd: harness.config.cwd })).id;
+      await harness.close();
+      const reopened = await createHarness(baseConfig({ dataDir, dataStore: "sqlite" }));
+      const sessions = await reopened.store.listSessions();
+      expect(sessions.some((s) => s.id === sessionId)).toBe(true);
+      await reopened.close();
+    } finally {
+      await harness.close();
+    }
+  });
+
   it("uses no ask-user store and memory inbox without a dataDir", async () => {
     const harness = await createHarness(baseConfig());
     expect(harness.askUserStore).toBeUndefined();
@@ -118,7 +143,9 @@ describe("P0-3: createHarness production composition root", () => {
 
     expect(harness.scheduler).toBeDefined();
     expect(harness.delegator).toBeDefined();
-    expect(harness.agents.map((a) => a.name)).toEqual(["main", "worker"]);
+    // P3-6: delegation registers the read-only worker AND the write-capable
+    // worker-w agent (used by delegate_worker).
+    expect(harness.agents.map((a) => a.name)).toEqual(["main", "worker-w", "worker"]);
     const worker = harness.agents.find((a) => a.name === "worker")!;
     expect(worker.mode).toBe("subagent");
     expect(worker.tools.allow).toEqual([...READONLY_TOOL_NAMES]);

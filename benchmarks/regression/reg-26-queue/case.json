@@ -1,0 +1,20 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "implementation",
+    "python"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "python3",
+      "args": [
+        "-c",
+        "from src.queue import Queue; q=Queue(); q.enqueue(1); q.enqueue(2); assert q.dequeue()==1 and q.dequeue()==2 and q.dequeue() is None"
+      ]
+    }
+  ]
+}

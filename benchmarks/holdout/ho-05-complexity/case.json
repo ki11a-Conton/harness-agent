@@ -1,0 +1,16 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "analysis"
+  ],
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "out/complexity.md",
+      "mustChange": true
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "implementation"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/health.js').then(async m => { const r = await m.healthCheck(['https://example.com']); if (r !== 'ok') process.exit(1) })"
+      ]
+    }
+  ]
+}

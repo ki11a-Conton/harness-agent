@@ -4,8 +4,10 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   appendDurable,
+  archiveFile,
   atomicWriteFile,
   backupTree,
+  enforceArtifactRetention,
   parseJsonl,
   verifyJsonlFile,
   withLock,
@@ -138,5 +140,29 @@ describe("store-integrity (P2-35)", () => {
     // temp and pre-existing backup are not copied.
     expect(await readdir(backupRoot)).not.toContain("scratch.tmp");
     expect(await readdir(result.path)).toEqual(["sessions"]);
+  });
+});
+describe("P11-4/P11-5: retention + archive", () => {
+  it("enforceArtifactRetention deletes oldest-first until caps hold", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "retention-"));
+    const files = ["a.txt", "b.txt", "c.txt"];
+    for (const name of files) {
+      await writeFile(join(dir, name), "x".repeat(100), "utf8");
+    }
+    // Cap at 2 files → oldest (a.txt) deleted.
+    const result = await enforceArtifactRetention(dir, { maxFiles: 2 });
+    expect(result.deleted).toBe(1);
+    expect(result.remainingBytes).toBe(200);
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("archiveFile moves the source byte-for-byte into the archive", async () => {
+    const active = await mkdtemp(join(tmpdir(), "active-"));
+    const archive = join(active, "archive");
+    await writeFile(join(active, "s1.jsonl"), "line1\nline2\n", "utf8");
+    const target = await archiveFile(active, "s1.jsonl", archive);
+    expect(target).toBe(join(archive, "s1.jsonl"));
+    expect(await readFile(target!, "utf8")).toBe("line1\nline2\n");
+    await rm(active, { recursive: true, force: true });
   });
 });

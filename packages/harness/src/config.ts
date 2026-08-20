@@ -6,6 +6,10 @@ import type {
   RunLimits,
   SandboxPolicy,
   McpServerConfig,
+  SkillIndexEntry,
+  TaskSpec,
+  VerificationSpec,
+  Verifier,
 } from "@ar/contracts";
 import type { MemoryScope, MemoryType } from "@ar/contracts";
 
@@ -47,6 +51,12 @@ export interface HarnessConfig {
   cwd: string;
   dataDir?: string;
 
+  /** P5-3: runtime store backend for a persistent dataDir. `jsonl` (default)
+   *  uses the JSONL session/event/inbox/ask/checkpoint stores; `sqlite` uses
+   *  one SqliteRuntimeStore (WAL) for all five contracts. Memory keeps its
+   *  own DB either way. */
+  dataStore?: "jsonl" | "sqlite";
+
   profile: HarnessProfile;
 
   modelProvider: ModelProvider;
@@ -55,15 +65,57 @@ export interface HarnessConfig {
   featureFlags?: Partial<HarnessFeatureFlags>;
   limits?: Partial<RunLimits>;
 
+  /** Overrides the profile's default sandbox policy. Needed to admit real
+   *  network access for http MCP tools (the default sandbox denies network;
+   *  stdio MCP is local IPC and does not need this). */
+  sandboxPolicy?: SandboxPolicy;
+
   memory?: HarnessMemoryConfig;
   delegation?: HarnessDelegationConfig;
 
   /** Explicit budget wins over capability-derived budget. */
   contextBudget?: ContextBudget;
 
-  /** MCP server configs are accepted and exposed, but connecting them is
-   *  deferred (no ToolDefinition bridge exists yet — plan P0-8+). */
+  /** P2-8: skill index pruning before injection (progressive disclosure:
+   *  index → selection → body on demand). Receives the metadata rows and
+   *  returns the subset to inject. Default: identity (all skills indexed). */
+  skillSelector?: (entries: SkillIndexEntry[]) => SkillIndexEntry[];
+
+  /** P7-1/P7-2: progressive tool disclosure — a ToolSelector narrows the
+   *  tool schemas advertised to the model per goal. Default: identity (every
+   *  schema advertised, pre-P7 behavior). */
+  toolSelector?: import("@ar/core").ToolSelector;
+
+  /**
+   * MCP server configs. When present (or the mcp feature flag is on), the
+   * harness CONNECTS each server over its real transport (http → JSON-RPC
+   * over fetch, stdio → spawned child process), adapts the advertised tools
+   * into the registry and exposes them to the main agent. A server whose
+   * tool descriptions carry prompt-injection material is rejected
+   * fail-closed at registration (P0-8). Connection failures abort harness
+   * creation — a misconfigured server is never silently dropped.
+   */
   mcp?: McpServerConfig[];
+
+  /**
+   * Task whose verification specs gate completion (P8-1). When set, the
+   * harness wires a TaskVerifier AND a verification plan builder: a task with
+   * no declared specs gets an auto-orchestrated plan derived from the change
+   * set + discovered commands (buildVerificationPlan). Explicit specs win.
+   */
+  task?: TaskSpec;
+  verification?: {
+    /** Plan builder override. Default: buildVerificationPlan consuming the
+     *  P7-6 command discovery hints. */
+    planner?: (input: {
+      task: TaskSpec;
+      changedPaths: string[];
+      cwd: string;
+    }) => VerificationSpec[] | Promise<VerificationSpec[]>;
+    /** Verifier override. Default: TaskVerifier emitting
+     *  verification.step_started/step_completed events (P8-2). */
+    verifier?: Verifier;
+  };
 }
 
 export const DEFAULT_FEATURE_FLAGS: HarnessFeatureFlags = {

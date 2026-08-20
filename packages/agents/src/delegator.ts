@@ -19,6 +19,7 @@ import {
   errorInfo,
   newEventId,
   newMessageId,
+  resolveChildLimits,
 } from "@ar/contracts";
 import type { AgentRuntime, TurnOutcome } from "@ar/core";
 import { detectPromptInjection } from "@ar/security";
@@ -30,6 +31,7 @@ import type {
   TestRunRef,
 } from "./delegation.js";
 import { AgentExecutionScheduler, type SchedulerToken } from "./scheduler.js";
+import type { ChildWorkspaceHandle, ChildWorkspaceManager } from "./workspace-isolation.js";
 
 const SUMMARY_MAX_CHARS = 2000;
 const EVIDENCE_DESC_MAX_CHARS = 200;
@@ -55,6 +57,18 @@ export interface DelegatorDeps {
   now?: () => number;
   /** P1-7: injectable timer for delegation timeouts (deterministic tests). */
   timer?: Timer;
+  /** P3-4: child workspace isolation. When set, `writable:true` delegations
+   *  run the child in an isolated copy and return a workspacePatch (P3-5);
+   *  without it, writable delegations fall back to the shared parent root
+   *  (same as today — the host owns the isolation gate). */
+  workspaceManager?: ChildWorkspaceManager;
+  /** P3-6: called when a child's isolated workspace root is created, so the
+   *  host can admit that root into the child session's sandbox (the child
+   *  must be able to write its own workspace). */
+  onChildWorkspace?: (childSessionId: SessionId, root: string) => void;
+  /** P3-6: called when the child's isolated workspace is disposed, so the
+   *  host can remove the root from the sandbox allow-list. */
+  onChildWorkspaceDisposed?: (childSessionId: SessionId) => void;
 }
 
 type RaceSettle =
@@ -80,6 +94,9 @@ export class Delegator {
   private readonly scheduler?: AgentExecutionScheduler;
   private readonly now: () => number;
   private readonly timer: Timer;
+  private readonly workspaceManager?: ChildWorkspaceManager;
+  private readonly onChildWorkspace?: (childSessionId: SessionId, root: string) => void;
+  private readonly onChildWorkspaceDisposed?: (childSessionId: SessionId) => void;
 
   constructor(deps: DelegatorDeps) {
     this.runtime = deps.runtime;
@@ -90,6 +107,9 @@ export class Delegator {
     this.scheduler = deps.scheduler;
     this.now = deps.now ?? Date.now;
     this.timer = deps.timer ?? new RealTimer(this.now);
+    this.workspaceManager = deps.workspaceManager;
+    this.onChildWorkspace = deps.onChildWorkspace;
+    this.onChildWorkspaceDisposed = deps.onChildWorkspaceDisposed;
   }
 
   async delegate(req: DelegationRequest, signal: AbortSignal): Promise<DelegationResult> {
@@ -153,6 +173,34 @@ export class Delegator {
     } catch (err) {
       token?.release();
       throw new AgentError(errorInfo("INTERNAL_ERROR", `failed to create child session: ${describe(err)}`, { cause: err }));
+    }
+    // P3-10: attribute the child's per-call usage to its tree root.
+    if (this.scheduler !== undefined && token !== undefined) {
+      this.scheduler.bindSession(child.id, token.rootSessionId);
+    }
+
+    // P3-4: a write-capable child runs in an isolated workspace copy — never
+    // the parent root directly. The child session's cwd is repointed to the
+    // isolated root before any turn starts (no turn has run yet, so this is
+    // safe); its changes return as a workspacePatch (P3-5).
+    let workspace: ChildWorkspaceHandle | undefined;
+    if (req.writable === true && this.workspaceManager !== undefined) {
+      try {
+        workspace = await this.workspaceManager.create({
+          parentRoot: parent.cwd,
+          childSessionId: child.id,
+          writable: true,
+        });
+        await this.store.updateSession({ ...child, cwd: workspace.root });
+        // P3-6: admit the isolated root into the child session's sandbox so
+        // its own workspace is writable (and nothing outside it is).
+        this.onChildWorkspace?.(child.id, workspace.root);
+      } catch (err) {
+        token?.release();
+        throw new AgentError(
+          errorInfo("INTERNAL_ERROR", `failed to isolate child workspace: ${describe(err)}`, { cause: err }),
+        );
+      }
     }
 
     await this.seedContext(child.id, req.context);
@@ -219,11 +267,30 @@ export class Delegator {
     } finally {
       if (timerHandle !== undefined) timerHandle.cancel();
       signal.removeEventListener("abort", onCallerAbort);
+      // P3-10: stop attributing the child session to its root.
+      if (this.scheduler !== undefined) this.scheduler.unbindSession(child.id);
       if (token !== undefined && onTokenAbort !== undefined) {
         token.signal.removeEventListener("abort", onTokenAbort);
         // P1-7: report actual tool-call usage so the tree budget can refund
         // the unused allocation.
         token.release(result?.toolCalls ?? 0);
+      }
+      // P3-4/P3-5: a successful isolated child hands its workspace diff to
+      // the parent; the scratch copy is always disposed (also on failure).
+      if (workspace !== undefined) {
+        try {
+          if (result !== undefined && result.status === "success" && workspace.mode === "isolated-copy") {
+            result.workspacePatch = await workspace.diff();
+          }
+        } catch {
+          // patch extraction must never break the delegation result
+        }
+        try {
+          await workspace.dispose();
+        } catch {
+          // cleanup failure is non-fatal
+        }
+        this.onChildWorkspaceDisposed?.(child.id);
       }
     }
 
@@ -239,12 +306,18 @@ export class Delegator {
     return session;
   }
 
-  /** INV-009: reject before creating any child when recursion bounds are hit. */
+  /** INV-009: reject before creating any child when recursion bounds are hit.
+   *  P3-3: the historical `maxChildren` is the backward-compatible alias of
+   *  `maxChildrenTotal`; `maxActiveChildren` additionally caps concurrent
+   *  ACTIVE children (running/waiting turns) — completed children never
+   *  occupy an active slot, so a long-lived parent is never permanently
+   *  exhausted by its own history. */
   private async enforceBounds(parent: Session, limits: DelegationLimits): Promise<void> {
     if (limits.maxDepth === 0) {
       throw this.boundError("leaf agent (maxDepth=0) cannot delegate");
     }
-    if (limits.maxChildren === 0) {
+    const childCaps = resolveChildLimits(limits);
+    if (childCaps.total === 0) {
       throw this.boundError("delegation disabled (maxChildren=0)");
     }
     const depth = await this.depthOf(parent.id);
@@ -252,9 +325,38 @@ export class Delegator {
       throw this.boundError(`max delegation depth ${limits.maxDepth} reached (current depth ${depth})`);
     }
     const children = await this.store.listSessions({ parentId: parent.id });
-    if (children.length >= limits.maxChildren) {
-      throw this.boundError(`max children ${limits.maxChildren} reached (current ${children.length})`);
+    if (children.length >= childCaps.total) {
+      throw this.boundError(`max children ${childCaps.total} reached (current ${children.length})`);
     }
+    if (childCaps.active !== undefined && childCaps.active > 0) {
+      const activeChildren = await this.countActiveChildren(children);
+      if (activeChildren >= childCaps.active) {
+        throw this.boundError(
+          `max active children ${childCaps.active} reached (current ${activeChildren} running/waiting)`,
+        );
+      }
+    }
+  }
+
+  /** P3-3: a child is ACTIVE while its latest turn is still running or
+   *  waiting (for user/approval); a session with no turn yet (just created,
+   *  delegation about to start it) counts as active too. Sessions whose
+   *  latest turn reached a terminal state are done and free their slot. */
+  private async countActiveChildren(children: Session[]): Promise<number> {
+    let active = 0;
+    for (const child of children) {
+      const turns = await this.store.listTurns(child.id);
+      const latest = turns.length > 0 ? turns[turns.length - 1] : undefined;
+      if (
+        latest === undefined ||
+        latest.status === "running" ||
+        latest.status === "waiting_for_user" ||
+        latest.status === "waiting_for_approval"
+      ) {
+        active += 1;
+      }
+    }
+    return active;
   }
 
   private boundError(message: string): AgentError {

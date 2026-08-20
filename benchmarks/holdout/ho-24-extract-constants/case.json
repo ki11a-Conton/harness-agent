@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "refactor"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/prices.js').then(m => { if (Math.abs(m.total(100) - 108.25) > 0.001) process.exit(1) })"
+      ]
+    }
+  ]
+}

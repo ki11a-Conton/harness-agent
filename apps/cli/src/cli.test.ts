@@ -483,7 +483,7 @@ describe("agent doctor (plan §87)", () => {
     expect(out).toContain("[OK] workspace");
     expect(out).toContain("[OK] session store");
     expect(out).toContain("[OK] event store");
-    expect(out).toContain("doctor: 7 ok, 4 warning(s), 0 error(s)");
+    expect(out).toContain("doctor: 8 ok, 4 warning(s), 0 error(s)");
   });
 
   it("exits 1 with [ERROR] when a store is broken", async () => {
@@ -493,7 +493,7 @@ describe("agent doctor (plan §87)", () => {
     expect(result.exitCode).toBe(1);
     const out = result.lines.join("\n");
     expect(out).toContain("[ERROR] session store — disk on fire");
-    expect(out).toContain("doctor: 6 ok, 4 warning(s), 1 error(s)");
+    expect(out).toContain("doctor: 7 ok, 4 warning(s), 1 error(s)");
   });
 
   it("runChecks reports ERROR for a throwing event store", async () => {
@@ -597,7 +597,7 @@ describe("default host wiring (createDefaultDeps)", () => {
       expect(result.exitCode).toBe(0);
       const out = result.lines.join("\n");
       expect(out).toContain("[WARNING] model provider — stub provider");
-      expect(out).toContain("doctor: 6 ok, 5 warning(s), 0 error(s)");
+      expect(out).toContain("doctor: 7 ok, 5 warning(s), 0 error(s)");
     } finally {
       if (previous === undefined) delete process.env.OPENAI_API_KEY;
       else process.env.OPENAI_API_KEY = previous;

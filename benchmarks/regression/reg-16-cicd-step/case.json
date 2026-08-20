@@ -1,0 +1,17 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "config",
+    "ci"
+  ],
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": ".github/workflows/ci.yml",
+      "mustChange": true
+    }
+  ]
+}

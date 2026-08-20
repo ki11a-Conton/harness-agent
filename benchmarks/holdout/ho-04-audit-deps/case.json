@@ -1,0 +1,16 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "audit"
+  ],
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "out/audit.md",
+      "mustChange": true
+    }
+  ]
+}

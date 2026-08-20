@@ -86,3 +86,49 @@ export const LIMIT_TERMINATION_REASON: Readonly<Record<string, TerminationReason
   maxVerificationFailures: "verification_failed",
   maxRetries: "model_error",
 };
+/**
+ * P8-3 — false-complete grading. Metrics MUST distinguish these even when the
+ * termination-reason enum stays coarse:
+ *
+ *   verified_complete    — finished AND the verification gate passed fully.
+ *   verified_partial     — finished, gate ran, only some steps passed.
+ *   verification_failed  — the gate itself exhausted its retries / failed.
+ *   unverified_complete  — the model just stopped; no gate, no evidence.
+ *
+ * "I'm done" is NOT success — unverified_complete is the honest grade for a
+ * bare model_stopped with no verification evidence.
+ */
+export type FalseCompleteGrade =
+  | "unverified_complete"
+  | "verification_failed"
+  | "verified_partial"
+  | "verified_complete";
+
+export interface CompletionEvidence {
+  /** Steps that passed the verification gate. */
+  passedSteps: number;
+  /** Total steps the gate ran. */
+  totalSteps: number;
+}
+
+export function gradeCompletion(
+  reason: TerminationReason,
+  evidence?: CompletionEvidence,
+): FalseCompleteGrade {
+  switch (reason) {
+    case "verified_complete":
+      return "verified_complete";
+    case "verification_failed":
+      return "verification_failed";
+    case "model_stopped":
+      if (evidence !== undefined && evidence.totalSteps > 0) {
+        return evidence.passedSteps >= evidence.totalSteps
+          ? "verified_complete"
+          : "verified_partial";
+      }
+      return "unverified_complete";
+    default:
+      // failure/cancelled/limit reasons are not "complete" at all.
+      return "unverified_complete";
+  }
+}

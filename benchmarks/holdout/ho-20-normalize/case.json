@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "transformation"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/normalize.js').then(m => { const r = m.normalize([{a:'  Hi '},{a:'TRUE'}]); if (r[0].a !== 'hi' || r[1].a !== true) process.exit(1) })"
+      ]
+    }
+  ]
+}

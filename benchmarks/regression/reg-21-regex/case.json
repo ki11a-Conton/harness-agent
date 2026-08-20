@@ -1,0 +1,20 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "bugfix",
+    "javascript"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/email.js').then(m => { if (!m.isEmail('a@b.com') || m.isEmail('nope')) process.exit(1) })"
+      ]
+    }
+  ]
+}

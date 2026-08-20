@@ -1,0 +1,20 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "implementation",
+    "shell"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "bash",
+      "args": [
+        "scripts/check.sh",
+        "README"
+      ]
+    }
+  ]
+}

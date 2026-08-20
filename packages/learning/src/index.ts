@@ -53,4 +53,6 @@ export type {
   SandboxRunDeps,
   SandboxViolation,
   SandboxViolationKind,
-} from "./sandbox.js";
+} from "./sandbox.js";export * from "./change.js";
+export * from "./paired-evaluation.js";
+export * from "./experiments.js";

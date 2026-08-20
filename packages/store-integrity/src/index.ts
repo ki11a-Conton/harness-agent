@@ -209,3 +209,5 @@ export function assertRecordVersion(record: unknown, expected: number, label: st
     throw new Error(`${label}: unsupported schemaVersion ${String(rec.schemaVersion)}`);
   }
 }
+export { enforceArtifactRetention, archiveFile } from "./retention.js";
+export type { ArtifactRetentionOptions, ArtifactRetentionResult } from "./retention.js";

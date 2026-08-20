@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "analysis"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "bash",
+      "args": [
+        "-c",
+        "test -f out/errors.txt && test -f out/count.txt && [ $(grep -c ERROR out/errors.txt) -eq 2 ]"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "config"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "bash",
+      "args": [
+        "-c",
+        "grep -q '30 2' cron.txt && grep -q backup.sh cron.txt"
+      ]
+    }
+  ]
+}

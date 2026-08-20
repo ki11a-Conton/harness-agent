@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "bugfix"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/counter.js').then(m => { for (let i = 0; i < 1000; i++) m.increment(); if (m.value() !== 1000) process.exit(1) })"
+      ]
+    }
+  ]
+}

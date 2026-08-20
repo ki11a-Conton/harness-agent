@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "performance"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/fetch.js').then(m => m.fetchAll(['https://example.com','https://example.org']).then(r => { if (r.length !== 2) process.exit(1) }))"
+      ]
+    }
+  ]
+}

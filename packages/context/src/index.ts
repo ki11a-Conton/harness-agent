@@ -29,3 +29,5 @@ export type {
 // P2-17: versioned policy-config registry (retry/compaction/scheduler/... ) with rollback + trace.
 export { PolicyConfigRegistry, hashPolicyConfig, stableSerializeConfig, PolicyVersionError } from "./policy-versioning.js";
 export type { PolicyVersion, ProvisionPolicyConfig } from "./policy-versioning.js";
+export { HeuristicTokenEstimator, DEFAULT_TOKEN_ESTIMATOR } from "./tokenizer.js";
+export type { TokenEstimator } from "./tokenizer.js";

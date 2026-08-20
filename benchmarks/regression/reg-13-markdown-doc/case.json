@@ -1,0 +1,16 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "documentation"
+  ],
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "docs/api.md",
+      "mustChange": true
+    }
+  ]
+}

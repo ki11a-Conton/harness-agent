@@ -100,7 +100,7 @@ function persistentInput(overrides: Partial<AuditInput> = {}): AuditInput {
       adversarial: { exists: true, caseCount: 13 },
       stress: { exists: true, caseCount: 11 },
     },
-    ciWorkflow: { exists: true, ubuntu: true, windows: false },
+    ciWorkflow: { exists: true, ubuntu: true, windows: true },
     readmeClaims: [
       { suite: "adversarial", claimed: 13, planned: false },
       { suite: "stress", claimed: 11, planned: false },

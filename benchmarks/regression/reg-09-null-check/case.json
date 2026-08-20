@@ -1,0 +1,20 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "bugfix",
+    "javascript"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/util.js').then(m => { if (m.safeLen(null) !== 0 || m.safeLen('abc') !== 3) process.exit(1) })"
+      ]
+    }
+  ]
+}

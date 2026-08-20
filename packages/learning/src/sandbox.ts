@@ -56,8 +56,9 @@ export interface SandboxRunDeps<T> {
   /** The candidate to run in isolation. */
   candidate: LearningCandidate;
   /** Reads the champion's global state; the sandbox snapshots it before the
-   *  run and diffes it after. Required for the mutation check. */
-  championState: () => unknown;
+   *  run and diffes it after. Required for the mutation check. May be async —
+   *  the digest is always computed over the resolved value. */
+  championState: () => unknown | Promise<unknown>;
   /** The isolated run. */
   runner: (ctx: SandboxContext) => Promise<T>;
 }
@@ -95,7 +96,12 @@ export class CandidateSandbox {
   async run<T>(deps: SandboxRunDeps<T>): Promise<SandboxResult<T>> {
     const started = this.now();
     const scratchDir = await mkdtemp(join(this.scratchRoot, "candidate-"));
-    const before = championDigest(deps.championState());
+    // Always digest the RESOLVED value — an async championState returning a
+    // Promise must not be digested as "{}" (which would blind the mutation
+    // check). Await before digesting.
+    const digestOf = async (produce: () => unknown | Promise<unknown>): Promise<string> =>
+      championDigest(await produce());
+    const before = await digestOf(deps.championState);
     const violations: SandboxViolation[] = [];
     let result: T | undefined;
     let error: unknown;
@@ -124,7 +130,7 @@ export class CandidateSandbox {
     }
 
     try {
-      const after = championDigest(deps.championState());
+      const after = await digestOf(deps.championState);
       if (after !== before) {
         violations.push({ kind: "champion_mutation", detail: "champion state changed during the candidate run" });
       }

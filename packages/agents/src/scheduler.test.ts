@@ -514,3 +514,26 @@ describe("AgentExecutionScheduler tree budgeting (P1-7)", () => {
     expect(h.scheduler!.treeBudgetRemaining(parent.id)!.remaining).toBe(7);
   });
 });
+describe("P3-10: session-scoped usage reporting", () => {
+  it("bindSession routes runtime-side usage to the tree root", async () => {
+    const store = new MemorySessionStore();
+    const [root] = await makeTree(store, 1) as unknown as [Session];
+    const scheduler = new AgentExecutionScheduler({ store });
+    scheduler.setRootBudget(root.id, { maxTokens: 1000 });
+
+    // A child session reports usage — without a binding nothing is counted.
+    const child = { id: "child-1" as SessionId };
+    scheduler.reportUsageBySession(child.id, 100, 50);
+    expect(scheduler.tokenBudgetRemaining(root.id)!.remaining).toBe(800);
+
+    // After binding, the same usage reaches the root tree account.
+    scheduler.bindSession(child.id, root.id);
+    scheduler.reportUsageBySession(child.id, 100, 50);
+    expect(scheduler.tokenBudgetRemaining(root.id)!.remaining).toBe(650);
+
+    // Unbinding stops attribution (the child finished).
+    scheduler.unbindSession(child.id);
+    scheduler.reportUsageBySession(child.id, 100, 50);
+    expect(scheduler.tokenBudgetRemaining(root.id)!.remaining).toBe(650);
+  });
+});

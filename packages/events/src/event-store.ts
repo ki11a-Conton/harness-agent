@@ -85,9 +85,37 @@ function recordLine(event: AgentEvent): string {
 export class JSONLEventStore implements EventStore {
   private readonly dataDir: string;
   private appendChain: Promise<void> = Promise.resolve();
+  // P5-2: per-session in-memory event cache. JSONL is a single-process store
+  // (all appends are serialized through [[appendChain]]), so the cache turns
+  // each append from "read the whole file + append" (O(n) per append, O(n²)
+  // total) into "memory push + append one line" (O(1) per append). A new
+  // process / store instance starts with an empty cache and re-reads from
+  // disk on first touch — cross-process freshness is the SQLite store's job
+  // (P5-3), not this store's.
+  private readonly cache = new Map<SessionId, AgentEvent[]>();
+  /** P5-1: observable read traffic — total JSONL lines parsed. Lets the perf
+   *  test prove linear (not quadratic) append behaviour without wall-clock
+   *  thresholds. */
+  private linesReadTotal = 0;
 
   constructor(opts: { dataDir: string }) {
     this.dataDir = opts.dataDir;
+  }
+
+  /** P5-1: introspection for the performance test — how many JSONL lines were
+   *  actually read off disk since construction. */
+  debugStats(): { linesRead: number; cachedSessions: number } {
+    return { linesRead: this.linesReadTotal, cachedSessions: this.cache.size };
+  }
+
+  /** P5-5 (JSONL side): drop the in-memory cache for a session so the next
+   *  read re-syncs from disk (used by cross-instance tests). */
+  clearCache(sessionId?: SessionId): void {
+    if (sessionId === undefined) {
+      this.cache.clear();
+      return;
+    }
+    this.cache.delete(sessionId);
   }
 
   private filePath(sessionId: SessionId): string {
@@ -104,7 +132,22 @@ export class JSONLEventStore implements EventStore {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
       throw err;
     }
+    // P5-1: count the parsed lines for the linearity proof.
+    if (content.length > 0) {
+      this.linesReadTotal += content.split("\n").length;
+    }
     return parseEvents(content, path);
+  }
+
+  /** P5-2: cache-backed load — first touch reads the file once, later reads
+   *  are O(1) memory hits (single-process store; see class docs). */
+  private load(sessionId: SessionId): Promise<AgentEvent[]> {
+    const cached = this.cache.get(sessionId);
+    if (cached !== undefined) return Promise.resolve(cached);
+    return this.readEvents(sessionId).then((events) => {
+      this.cache.set(sessionId, events);
+      return events;
+    });
   }
 
   private enqueue<T>(fn: () => Promise<T>): Promise<T> {
@@ -148,7 +191,7 @@ export class JSONLEventStore implements EventStore {
       );
     }
     return this.enqueue(async () => {
-      const existing = await this.readEvents(event.sessionId);
+      const existing = await this.load(event.sessionId);
       if (existing.some((e) => e.id === event.id)) {
         throw new Error(`duplicate event id: ${event.id}`);
       }
@@ -160,6 +203,8 @@ export class JSONLEventStore implements EventStore {
       const stored: AgentEvent = { ...event, sequence, schemaVersion: EVENT_ABI_VERSION };
       await mkdir(this.dataDir, { recursive: true });
       await appendDurable(this.filePath(event.sessionId), `${recordLine(stored)}`);
+      // P5-2: keep the in-memory cache in sync so the next append/list is O(1).
+      existing.push(stored);
       return stored;
     });
   }
@@ -168,7 +213,7 @@ export class JSONLEventStore implements EventStore {
     sessionId: SessionId,
     opts: { afterSequence?: number; limit?: number } = {},
   ): Promise<AgentEvent[]> {
-    const events = await this.readEvents(sessionId);
+    const events = await this.load(sessionId);
     const afterSequence = opts.afterSequence ?? -1;
     const filtered = events.filter((e) => e.sequence > afterSequence);
     if (opts.limit === undefined) return filtered;
@@ -179,7 +224,7 @@ export class JSONLEventStore implements EventStore {
     sessionId: SessionId,
     opts: { afterSequence?: number } = {},
   ): AsyncIterable<AgentEvent> {
-    const events = await this.readEvents(sessionId);
+    const events = await this.load(sessionId);
     const afterSequence = opts.afterSequence ?? -1;
     for (const event of events) {
       if (event.sequence > afterSequence) yield event;
@@ -187,7 +232,7 @@ export class JSONLEventStore implements EventStore {
   }
 
   async nextSequence(sessionId: SessionId): Promise<number> {
-    const events = await this.readEvents(sessionId);
+    const events = await this.load(sessionId);
     if (events.length === 0) return 0;
     return events[events.length - 1]!.sequence + 1;
   }

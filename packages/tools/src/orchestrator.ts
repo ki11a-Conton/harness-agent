@@ -6,6 +6,7 @@ import type {
   PermissionEngine,
   PermissionPolicy,
   SandboxDecision,
+  SessionId,
   ToolCallRequest,
   ToolDefinition,
   ToolExecutionContext,
@@ -29,6 +30,10 @@ export interface OrchestratorDeps {
   workspaceRoot?: string;
   events?: EventSink;
   now?: () => number;
+  /** P3-6: per-session extra sandbox roots (e.g. a child's isolated
+   *  workspace). Returned roots are admitted as allowed filesystem roots for
+   *  that session's tool calls, in addition to workspaceRoot. */
+  sandboxExtraRoots?: (sessionId: SessionId) => readonly string[];
 }
 
 interface SanitizedCall {
@@ -55,6 +60,7 @@ export class ToolOrchestrator {
   private readonly workspaceRoot?: string;
   private readonly events?: EventSink;
   private readonly now: () => number;
+  private readonly sandboxExtraRoots?: (sessionId: SessionId) => readonly string[];
 
   constructor(deps: OrchestratorDeps) {
     this.registry = deps.registry;
@@ -64,6 +70,7 @@ export class ToolOrchestrator {
     this.workspaceRoot = deps.workspaceRoot;
     this.events = deps.events;
     this.now = deps.now ?? Date.now;
+    this.sandboxExtraRoots = deps.sandboxExtraRoots;
   }
 
   async execute(request: ToolCallRequest, context: ToolExecutionContext): Promise<ToolResult> {
@@ -254,7 +261,8 @@ export class ToolOrchestrator {
       return { allowed: true, reason: "no sandbox surface for generic tool" };
     }
     const root = this.workspaceRoot ?? context.cwd;
-    const manager = new SandboxManager(root, context.cwd, context.sandboxPolicy);
+    const extraRoots = this.sandboxExtraRoots?.(context.sessionId) ?? [];
+    const manager = new SandboxManager(root, context.cwd, context.sandboxPolicy, [...extraRoots]);
     switch (surface.resource) {
       case "file":
         return manager.evaluate({

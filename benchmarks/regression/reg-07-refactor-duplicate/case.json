@@ -1,0 +1,20 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "refactor",
+    "javascript"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/calc.js').then(m => { if (m.sum([1,2,3]) !== 6 || m.product([1,2,3]) !== 6) process.exit(1) })"
+      ]
+    }
+  ]
+}

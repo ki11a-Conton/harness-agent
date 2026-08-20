@@ -62,6 +62,7 @@ export interface RecoveryControllerDeps {
     type: AgentEvent["type"],
     payload: Record<string, unknown>,
     turnId?: TurnId,
+    spans?: { spanId?: string; parentSpanId?: string },
   ) => Promise<AgentEvent>;
   now: () => number;
   checkpointStore?: CheckpointStore;

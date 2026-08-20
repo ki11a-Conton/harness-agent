@@ -42,8 +42,20 @@ const EXPECTED_BUILTIN_TOOLS = 11;
 const PROBE_SESSION = "session_doctor_probe" as SessionId;
 
 /** Run every §87 check; each check reports independently, never throws. */
+/** P12-2: host environment — OS, Node, pnpm, platform parity note. Pure
+ *  runtime facts, no stores touched. */
+function checkEnvironment(): CheckResult {
+  const nodeVersion = process.versions.node;
+  const platform = process.platform;
+  const isWindows = platform === "win32";
+  const osName = isWindows ? "Windows" : platform === "darwin" ? "macOS" : platform === "linux" ? "Linux" : platform;
+  const detail = `${osName} / Node ${nodeVersion}${isWindows ? " (Windows parity: covered by dedicated CI)" : " (cross-platform CI required for path/fs/process changes)"}`;
+  return { name: "environment", status: "OK", detail };
+}
+
 export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
   return [
+    await checkEnvironment(),
     await checkModelProvider(deps),
     await checkSandbox(deps),
     await checkPermissions(deps),

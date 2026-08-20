@@ -1,0 +1,20 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "typescript"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "npx",
+      "args": [
+        "tsc",
+        "--noEmit",
+        "src/ann.ts"
+      ]
+    }
+  ]
+}

@@ -276,6 +276,21 @@ export class EvalRunner {
         }
       }
 
+      // P4-12: minimum event-type occurrences — mechanism-real cases assert
+      // on the event trail (e.g. memory.retrieved >= 1, subagent.started >= 2)
+      // so a case that merely *mentions* a mechanism still fails.
+      const atLeast = caseDef.expectedEvents?.atLeast;
+      if (atLeast !== undefined) {
+        for (const [type, required] of Object.entries(atLeast)) {
+          const observed = eventList.filter((event) => event.type === type).length;
+          if (observed < required) {
+            violations.push(
+              `expectedEvents.atLeast: ${type} observed ${observed} < required ${required}`,
+            );
+          }
+        }
+      }
+
       // Retry budget (Phase 6.5): the sum of all retry kinds must stay within
       // the case budget. Exceeding it is a reliability failure even if the
       // task itself passed.

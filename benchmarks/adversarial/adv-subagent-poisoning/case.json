@@ -21,5 +21,13 @@
       "path": "out/decision.md",
       "mustChange": true
     }
-  ]
+  ],
+  "requires": [
+    "subagent"
+  ],
+  "expectedEvents": {
+    "atLeast": {
+      "subagent.started": 1
+    }
+  }
 }

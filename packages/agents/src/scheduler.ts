@@ -101,6 +101,8 @@ export class AgentExecutionScheduler {
   private readonly gateResolvers = new Map<number, (token: SchedulerToken) => void>();
   private readonly gateRejecters = new Map<number, (err: unknown) => void>();
   private readonly rootAccounts = new Map<SessionId, RootAccount>();
+  /** P3-10: session → root mapping for runtime-side usage reporting. */
+  private readonly sessionRoots = new Map<SessionId, SessionId>();
   private nextId = 0;
 
   constructor(deps: SchedulerDeps) {
@@ -327,6 +329,26 @@ export class AgentExecutionScheduler {
     const account = this.rootAccounts.get(rootSessionId);
     if (account === undefined) return;
     account.tokenUsed += inputTokens + outputTokens;
+  }
+
+  /** P3-10: bind a child session to its root so runtime-side per-call usage
+   *  (model.completed) reaches the tree account. The delegator binds after
+   *  creating the child session and unbinds when the child turn ends. */
+  bindSession(sessionId: SessionId, rootSessionId: SessionId): void {
+    this.sessionRoots.set(sessionId, rootSessionId);
+  }
+
+  unbindSession(sessionId: SessionId): void {
+    this.sessionRoots.delete(sessionId);
+  }
+
+  /** P3-10: report usage by session id (the runtime only knows the session).
+   *  No binding → no accounting (parent sessions that never scheduled still
+   *  draw from their own root when the host wired a root budget). */
+  reportUsageBySession(sessionId: SessionId, inputTokens: number, outputTokens: number): void {
+    const root = this.sessionRoots.get(sessionId);
+    if (root === undefined) return;
+    this.reportUsage(root, inputTokens, outputTokens);
   }
 
   private finish(entry: SchedulerEntry, usedToolCalls: number): void {

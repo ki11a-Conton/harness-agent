@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "scripting"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "bash",
+      "args": [
+        "-c",
+        "test ! -f data/old.txt && test -f data/new.txt && grep -q payload data/new.txt"
+      ]
+    }
+  ]
+}

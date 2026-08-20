@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "debugging"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/flaky.js').then(m => { const r = [0,1,2,3,4].map(() => m.next()); if (r.join(',') !== '0,1,2,3,4') process.exit(1) })"
+      ]
+    }
+  ]
+}

@@ -875,3 +875,38 @@ describe("fixtures (EVAL-001)", () => {
     expect(existsSync(root)).toBe(false);
   });
 });
+
+
+
+describe("P4-12: expectedEvents.atLeast judge", () => {
+  async function runWithEvents(types: string[], atLeast: Record<string, number>) {
+    const h = makeHarness({ scripts: [ScriptedModelProvider.text("done")] });
+    const session = await makeSession(h, "C:\\work");
+    for (const type of types) {
+      await h.events.append({
+        id: newEventId(),
+        sessionId: session.id,
+        turnId: undefined,
+        sequence: 0,
+        timestamp: Date.now(),
+        type: type as never,
+        payload: {},
+      });
+    }
+    return runCase(h, session.id, caseDef({ expectedEvents: { atLeast } }));
+  }
+
+  it("passes when the required event types occur at least the required count", async () => {
+    const outcome = await runWithEvents(
+      ["subagent.started", "subagent.started", "memory.retrieved"],
+      { "subagent.started": 2, "memory.retrieved": 1 },
+    );
+    expect(outcome.status).toBe("passed");
+  });
+
+  it("fails when a required event is observed fewer times than required", async () => {
+    const outcome = await runWithEvents(["subagent.started"], { "subagent.started": 2 });
+    expect(outcome.status).toBe("failed");
+    expect(outcome.violations.some((v) => v.includes("expectedEvents.atLeast: subagent.started observed 1 < required 2"))).toBe(true);
+  });
+});

@@ -24,11 +24,19 @@ const UNC_PATH = /^[\\/]{2}/;
  * network policy and process policy. Deterministic, testable, no bypass.
  */
 export class SandboxManager {
+  /** P3-6: per-instance additional allowed roots (e.g. an isolated child
+   *  workspace). Contained like every other root — realpath-canonicalized,
+   *  never a textual prefix match. */
+  private readonly extraRoots: string[];
+
   constructor(
     readonly workspaceRoot: string,
     readonly cwd: string,
     readonly policy: SandboxPolicy,
-  ) {}
+    extraRoots: string[] = [],
+  ) {
+    this.extraRoots = extraRoots;
+  }
 
   evaluate(request: SandboxRequest): SandboxDecision {
     switch (request.operation) {
@@ -160,6 +168,9 @@ export class SandboxManager {
    */
   private allowedRoots(): string[] {
     const roots = [realWorkspaceRoot(this.workspaceRoot)];
+    for (const extra of this.extraRoots) {
+      roots.push(realWorkspaceRoot(extra));
+    }
     for (const ap of this.policy.filesystem.allowedPaths ?? []) {
       roots.push(realResolve(isAbsolute(ap) ? ap : resolve(this.cwd, ap)));
     }

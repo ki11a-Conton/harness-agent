@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
 import { errorInfo } from "@ar/contracts";
 import { grepFiles, repoTree, symbolSearch, type GrepHit, type SymbolHit, type RepoTreeEntry } from "../navigate.js";
+import { indexedSymbolSearch } from "../symbol-index.js";
 
 /**
  * P2-29 navigation tools. Read-only; policy (permission + sandbox path scoping)
@@ -124,10 +125,13 @@ export interface SymbolSearchToolInput {
   maxResults?: number;
 }
 
-export const symbolSearchTool: ToolDefinition<SymbolSearchToolInput, { fallback: true; indexer: string; hits: SymbolHit[] }> = {
+export const symbolSearchTool: ToolDefinition<
+  SymbolSearchToolInput,
+  { fallback: boolean; indexer: string; hits: SymbolHit[]; filesIndexed?: number }
+> = {
   name: "symbol_search",
   description:
-    "Find symbols (functions/classes/types/consts/imports) by name with a regex fallback. Returns fallback:true (no semantic index wired).",
+    "Find symbols (functions/classes/types/consts/imports) by name. Uses the P7-4 light TypeScript/JavaScript index when the workspace has source files (fallback:false), otherwise a grep fallback (fallback:true).",
   inputSchema: z.object({
     symbol: z.string().min(1),
     path: z.string().optional(),
@@ -145,8 +149,33 @@ export const symbolSearchTool: ToolDefinition<SymbolSearchToolInput, { fallback:
     retry: "safe",
     concurrencySafe: true,
   },
-  async execute(input: SymbolSearchToolInput, context: ToolExecutionContext): Promise<ToolResult<{ fallback: true; indexer: string; hits: SymbolHit[] }>> {
+  async execute(
+    input: SymbolSearchToolInput,
+    context: ToolExecutionContext,
+  ): Promise<ToolResult<{ fallback: boolean; indexer: string; hits: SymbolHit[]; filesIndexed?: number }>> {
     try {
+      // P7-4 (EXPERIMENT): prefer the light TS/JS index when it indexed any
+      // source file; otherwise fall back to the grep search.
+      const indexed = await indexedSymbolSearch({
+        symbol: input.symbol,
+        root: context.cwd,
+        relPath: input.path ?? ".",
+        maxHits: input.maxResults ?? 200,
+      });
+      if (indexed.filesIndexed > 0) {
+        return {
+          status: "success",
+          output: indexed,
+          evidence: [
+            {
+              type: "file",
+              description: `symbol_search: ${indexed.hits.length} symbol(s) for ${input.symbol} (${indexed.filesIndexed} files indexed)`,
+              source: input.symbol,
+              timestamp: Date.now(),
+            },
+          ],
+        };
+      }
       const res = await symbolSearch({
         symbol: input.symbol,
         root: context.cwd,

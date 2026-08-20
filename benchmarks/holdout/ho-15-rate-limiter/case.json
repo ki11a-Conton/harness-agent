@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "implementation"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/limiter.js').then(m => { const l = new m.Limiter(1, 1000); if (!l.allow()) process.exit(1); if (l.allow()) process.exit(1) })"
+      ]
+    }
+  ]
+}

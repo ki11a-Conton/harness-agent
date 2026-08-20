@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "security"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/shell.js').then(m => { const r = m.run('safe'); if (r !== 'safe') process.exit(1) })"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "refactor"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/names.js').then(m => { if (m.compute(2,3) !== 11) process.exit(1) })"
+      ]
+    }
+  ]
+}

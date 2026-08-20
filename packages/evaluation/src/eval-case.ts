@@ -66,6 +66,39 @@ export interface EvalCase {
    * event whose type starts with it (e.g. "security.network_denied").
    */
   expectedSecurityEvents?: string[];
+  /**
+   * P4-12: minimum occurrence of specific event types the case must observe —
+   * mechanism-real benchmarks assert on the EVENT TRAIL, not just the final
+   * files. Example: `{ atLeast: { "memory.retrieved": 1, "subagent.started": 2 } }`
+   * requires the turn to actually retrieve memory once and spawn two
+   * subagents. Absent → no event-count assertion.
+   */
+  expectedEvents?: { atLeast?: Record<string, number> };
+  /**
+   * P4-3: mechanisms this case requires (e.g. "memory" | "mcp" | "subagent" |
+   * "scheduler" | "checkpoint" | "skills"). The runner checks the harness
+   * introspection BEFORE starting the case; a missing mechanism is an
+   * infrastructure failure (never a pretend run). Absent → no requirement.
+   */
+  requires?: string[];
+  /**
+   * P4-4: mechanism fixture sources — the runner materializes these into REAL
+   * mechanism adapters (never fixture files pretending to be mechanism
+   * output). `sources.memory` entries are written into a real memory store;
+   * `sources.skills` become skill packages. Absent → no mechanism fixtures.
+   */
+  sources?: {
+    memory?: {
+      content: string;
+      type?: "explicit" | "episodic" | "procedural";
+      scope?: string;
+      importance?: number;
+      /** Poisoned memories are adversarial fixtures (should be dropped /
+       *  ignored by the trust boundary, never obeyed). */
+      malicious?: boolean;
+    }[];
+    skills?: { name: string; description?: string; body: string }[];
+  };
   /** Budget on total retries across all retry kinds (retry taxonomy sum). */
   maxRetries?: number;
   /**

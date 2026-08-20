@@ -108,32 +108,78 @@ expected.md / case.json / verifier 判据不泄漏进 turn（泛化性测量）�
 
 ## 用例清单
 
-### regression（30 个）— benchmarks/regression/
+### regression（30 个）— benchmarks/regression/（P4-1 生成：benchmarks/tools/generate-suite.mjs）
 
-| 类别（plan.md） | 用例 |
+| 用例 | 形态 |
 | --- | --- |
-| 单文件简单修改 | single_edit_constant, single_edit_typo, single_edit_add_function |
-| 多文件重构 | multi_file_rename, multi_file_extract, multi_file_config_move |
-| 跨目录代码理解 | cross_dir_import, cross_dir_bug |
-| Bug 定位+修复+测试 | bug_fix_off_by_one, bug_fix_comparison, bug_fix_null_guard, multi_step_debug |
-| 工具调用失败 | tool_failure_wrong_path, tool_failure_missing_file, exec_failure_recovery |
-| 大 Tool Output | large_output_parse（~300KB 日志） |
-| 长上下文 | long_context_many_files（16 个模块）, context_overflow_budget（8 文档+2500 token 预算） |
-| 测试失败但模型声称完成 | false_complete_catch |
-| 并行读取多个文件 | parallel_read_synthesis |
-| 多个写操作必须串行 | serial_writes_consistency |
-| 恶意仓库指令 / Prompt Injection | injection_readme, injection_aggressive, path_traversal_escape |
-| 网络外传 | network_blocked_attempt |
-| Tool 超时 | sleepy_timeout（exec 2s 超时 + recovery 预算） |
-| 文档类任务 | docs_edit_no_code |
-| 数据转换（write+exec 循环） | data_transform |
-| 检索式任务 | grep_search_todo |
-| 跨格式一致性 | compat_rename_across_formats |
+| reg-01-implement-fizzbuzz | 实现函数 |
+| reg-02-fix-reverse | bug 修复 |
+| reg-03-add-import | 缺 import 修复 |
+| reg-04-fibonacci | 实现函数 |
+| reg-05-off-by-one | off-by-one 修复 |
+| reg-06-json-parse-test | 编写测试 |
+| reg-07-refactor-duplicate | 重构去重 |
+| reg-08-quicksort | 实现排序 |
+| reg-09-null-check | 空值防护 |
+| reg-10-env-config | 环境配置 |
+| reg-11-binary-search | 实现检索 |
+| reg-12-csv-parse | 解析修复 |
+| reg-13-markdown-doc | 文档编写 |
+| reg-14-stack | 数据结构实现 |
+| reg-15-infinite-loop | 死循环修复 |
+| reg-16-cicd-step | CI 配置 |
+| reg-17-gcd | 算法实现 |
+| reg-18-date-format | 格式化修复 |
+| reg-19-config-validator | 校验器实现 |
+| reg-20-linked-list | 链表实现 |
+| reg-21-regex | 正则修复 |
+| reg-22-api-stub | 端点实现 |
+| reg-23-anagram | 算法实现 |
+| reg-24-error-handling | 异常处理 |
+| reg-25-shell-script | 脚本编写 |
+| reg-26-queue | 队列实现 |
+| reg-27-type-annotation | 类型标注 |
+| reg-28-logging | 日志增强 |
+| reg-29-palindrome | 算法实现 |
+| reg-30-sort-order | 排序修复 |
 
-### holdout（30 个）— benchmarks/holdout/（规划）
+### holdout（30 个）— benchmarks/holdout/（P4-2 生成：benchmarks/tools/generate-suite.mjs）
 
-泛化性测量：与 regression 不重复的新任务形态，覆盖跨文件影响、误导性目录布局、
-未完成声明、并行读+串行写、压缩续跑、grep 检索等 20 种场景。
+泛化性测量：与 regression 不重复的新任务形态（审查/分析/转换/审计/安全/性能/脚本/文档），
+模型只看到 request + fixture，看不到 expected/case/verifier（holdout secrecy）。
+
+| 用例 | 形态 |
+| --- | --- |
+| ho-01-review-smells | 代码审查 |
+| ho-02-parse-log | 日志解析 |
+| ho-03-convert-format | 格式转换 |
+| ho-04-audit-deps | 依赖审计 |
+| ho-05-complexity | 复杂度分析 |
+| ho-06-migration-script | 迁移脚本 |
+| ho-07-permissions | 权限安全 |
+| ho-08-optimize | 性能优化 |
+| ho-09-document-api | API 文档 |
+| ho-10-validate-schema | schema 校验 |
+| ho-11-release-notes | 发布说明 |
+| ho-12-refactor-esm | 模块化重构 |
+| ho-13-debug-flaky | 调试 |
+| ho-14-test-matrix | CI 矩阵 |
+| ho-15-rate-limiter | 限流实现 |
+| ho-16-analyze-query | 查询分析 |
+| ho-17-changelog | changelog |
+| ho-18-race-condition | 并发修复 |
+| ho-19-cache | 缓存实现 |
+| ho-20-normalize | 数据规范化 |
+| ho-21-build-report | 报告脚本 |
+| ho-22-fix-vuln | 注入漏洞修复 |
+| ho-23-retry-logic | 重试实现 |
+| ho-24-extract-constants | 常量提取 |
+| ho-25-cron-config | cron 配置 |
+| ho-26-analyze-errors | 错误分析 |
+| ho-27-pagination | 分页实现 |
+| ho-28-refactor-naming | 命名重构 |
+| ho-29-benchmark | 性能对比脚本 |
+| ho-30-healthcheck | 健康检查实现 |
 
 ### adversarial（13 个）— benchmarks/adversarial/（P2-12 生成）
 

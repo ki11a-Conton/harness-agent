@@ -275,6 +275,9 @@ export async function loadBenchmarkCase(dir: string): Promise<BenchmarkCase> {
     ...(parsed.expectedSecurityEvents !== undefined && parsed.expectedSecurityEvents.length > 0
       ? { expectedSecurityEvents: parsed.expectedSecurityEvents }
       : {}),
+    ...(parsed.expectedEvents !== undefined ? { expectedEvents: parsed.expectedEvents } : {}),
+    ...(parsed.requires !== undefined && parsed.requires.length > 0 ? { requires: parsed.requires } : {}),
+    ...(parsed.sources !== undefined ? { sources: parsed.sources } : {}),
     ...(parsed.maxRetries !== undefined ? { maxRetries: parsed.maxRetries } : {}),
     ...(parsed.maxDurationMs !== undefined ? { maxDurationMs: parsed.maxDurationMs } : {}),
     ...(parsed.allowArtifacts !== undefined ? { allowArtifacts: parsed.allowArtifacts } : {}),
@@ -297,6 +300,18 @@ function parseCaseJson(id: string, raw: string): {
   tags?: string[];
   expectedTerminationReason?: string;
   expectedSecurityEvents?: string[];
+  expectedEvents?: { atLeast?: Record<string, number> };
+  requires?: string[];
+  sources?: {
+    memory?: {
+      content: string;
+      type?: "explicit" | "episodic" | "procedural";
+      scope?: string;
+      importance?: number;
+      malicious?: boolean;
+    }[];
+    skills?: { name: string; description?: string; body: string }[];
+  };
   maxRetries?: number;
   maxDurationMs?: number;
   allowArtifacts?: boolean;
@@ -381,6 +396,45 @@ function parseCaseJson(id: string, raw: string): {
   if (judgeVersion !== undefined && typeof judgeVersion !== "string") {
     throw new Error(`benchmark case ${id}: case.json judgeVersion must be a string`);
   }
+  const expectedEvents = record.expectedEvents as Record<string, unknown> | undefined;
+  if (expectedEvents !== undefined) {
+    const atLeast = expectedEvents.atLeast;
+    if (atLeast === undefined) {
+      throw new Error(`benchmark case ${id}: case.json expectedEvents.atLeast is required`);
+    }
+    if (typeof atLeast !== "object" || atLeast === null || Array.isArray(atLeast)) {
+      throw new Error(`benchmark case ${id}: case.json expectedEvents.atLeast must be an object`);
+    }
+    for (const [type, count] of Object.entries(atLeast)) {
+      if (typeof count !== "number" || !Number.isInteger(count) || count < 0) {
+        throw new Error(`benchmark case ${id}: case.json expectedEvents.atLeast.${type} must be a non-negative integer`);
+      }
+    }
+  }
+  const requires = record.requires;
+  if (requires !== undefined && (!Array.isArray(requires) || requires.some((r) => typeof r !== "string"))) {
+    throw new Error(`benchmark case ${id}: case.json requires must be a string array`);
+  }
+  const sources = record.sources as Record<string, unknown> | undefined;
+  if (sources !== undefined && (typeof sources !== "object" || sources === null || Array.isArray(sources))) {
+    throw new Error(`benchmark case ${id}: case.json sources must be an object`);
+  }
+  if (sources?.memory !== undefined && !Array.isArray(sources.memory)) {
+    throw new Error(`benchmark case ${id}: case.json sources.memory must be an array`);
+  }
+  if (sources?.skills !== undefined && !Array.isArray(sources.skills)) {
+    throw new Error(`benchmark case ${id}: case.json sources.skills must be an array`);
+  }
+  for (const mem of (sources?.memory as Array<Record<string, unknown>> | undefined) ?? []) {
+    if (typeof mem.content !== "string" || mem.content === "") {
+      throw new Error(`benchmark case ${id}: case.json sources.memory[].content must be a non-empty string`);
+    }
+  }
+  for (const skill of (sources?.skills as Array<Record<string, unknown>> | undefined) ?? []) {
+    if (typeof skill.name !== "string" || typeof skill.body !== "string") {
+      throw new Error(`benchmark case ${id}: case.json sources.skills[] needs name + body strings`);
+    }
+  }
 
   return {
     ...(task !== undefined ? { task: task as string } : {}),
@@ -408,6 +462,11 @@ function parseCaseJson(id: string, raw: string): {
     ...(maxDurationMs !== undefined ? { maxDurationMs: maxDurationMs as number } : {}),
     ...(allowArtifacts !== undefined ? { allowArtifacts: allowArtifacts as boolean } : {}),
     ...(judgeVersion !== undefined ? { judgeVersion: judgeVersion as string } : {}),
+    ...(expectedEvents !== undefined
+      ? { expectedEvents: expectedEvents as { atLeast?: Record<string, number> } }
+      : {}),
+    ...(requires !== undefined ? { requires: requires as string[] } : {}),
+    ...(sources !== undefined ? { sources: sources as EvalCase["sources"] } : {}),
   };
 }
 

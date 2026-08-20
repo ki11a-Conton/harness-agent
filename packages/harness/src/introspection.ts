@@ -37,4 +37,9 @@ export interface HarnessIntrospection {
     usageAccounting?: boolean;
     runBudget?: boolean;
   };
+  /** P0-3: connected MCP transports (present only when ≥1 server connected). */
+  mcp?: {
+    servers: number;
+    tools: string[];
+  };
 }

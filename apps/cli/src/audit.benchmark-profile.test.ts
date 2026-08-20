@@ -25,33 +25,34 @@ async function tmpOut(): Promise<string> {
 }
 
 describe("audit benchmark profile — real workspace probes (P0-1)", () => {
-  it("probes the real benchmark suites: adversarial=13, stress=11, regression/holdout missing", async () => {
+  it("probes the real benchmark suites: adversarial=13, stress=11, regression=30, holdout=30 (P4-1/P4-2)", async () => {
     const probe = await probeWorkspace({ root: REPO_ROOT, gitSha: async () => undefined });
     expect(probe.benchmarkSuites.adversarial).toEqual({ exists: true, caseCount: 13 });
     expect(probe.benchmarkSuites.stress).toEqual({ exists: true, caseCount: 11 });
-    expect(probe.benchmarkSuites.regression).toEqual({ exists: false, caseCount: 0 });
-    expect(probe.benchmarkSuites.holdout).toEqual({ exists: false, caseCount: 0 });
+    expect(probe.benchmarkSuites.regression).toEqual({ exists: true, caseCount: 30 });
+    expect(probe.benchmarkSuites.holdout).toEqual({ exists: true, caseCount: 30 });
   });
 
-  it("parses the README claims: regression 30 (unplanned), holdout 30 (planned)", async () => {
+  it("parses the README claims: regression 30, holdout 30 (no longer planned)", async () => {
     const probe = await probeWorkspace({ root: REPO_ROOT, gitSha: async () => undefined });
     const regression = probe.readmeClaims.find((c) => c.suite === "regression");
     const holdout = probe.readmeClaims.find((c) => c.suite === "holdout");
     expect(regression).toEqual({ suite: "regression", claimed: 30, planned: false });
-    expect(holdout).toEqual({ suite: "holdout", claimed: 30, planned: true });
+    expect(holdout).toEqual({ suite: "holdout", claimed: 30, planned: false });
   });
 
-  it("sees the real packages and CI workflow (linux yes, windows no)", async () => {
+  it("sees the real packages and CI workflow (linux and windows both present)", async () => {
     const probe = await probeWorkspace({ root: REPO_ROOT, gitSha: async () => undefined });
     expect(probe.packages.memory).toBe(true);
     expect(probe.packages.context).toBe(true);
     expect(probe.integrationTests.suite_conformance).toBe(true);
     expect(probe.ciWorkflow.exists).toBe(true);
     expect(probe.ciWorkflow.ubuntu).toBe(true);
-    expect(probe.ciWorkflow.windows).toBe(false);
+    // P10-6: the promotion gate now runs BOTH platforms.
+    expect(probe.ciWorkflow.windows).toBe(true);
   });
 
-  it("derives the real repo state: adversarial benchmarked, regression missing, audit FAILED", async () => {
+  it("derives the real repo state: adversarial + regression + holdout all benchmarked (P4-1/P4-2)", async () => {
     const probe = await probeWorkspace({ root: REPO_ROOT, gitSha: async () => undefined });
     const input: AuditInput = {
       ...probe,
@@ -96,8 +97,9 @@ describe("audit benchmark profile — real workspace probes (P0-1)", () => {
     };
     const matrix = buildCapabilityMatrix(input);
     expect(capabilityStatusOf(matrix.records.find((r) => r.id === "adversarial_suite")!)).toBe("benchmarked");
-    expect(capabilityStatusOf(matrix.records.find((r) => r.id === "regression_suite")!)).toBe("missing");
-    expect(matrix.records.find((r) => r.id === "regression_suite")!.evidence[0]?.note).toContain("README claims 30");
+    expect(capabilityStatusOf(matrix.records.find((r) => r.id === "regression_suite")!)).toBe("benchmarked");
+    expect(capabilityStatusOf(matrix.records.find((r) => r.id === "holdout_suite")!)).toBe("benchmarked");
+    expect(matrix.records.find((r) => r.id === "regression_suite")!.evidence[0]?.note).toContain("30");
   });
 
   it("createDefaultDeps with a dataDir wires durable stores honestly (checkpoint + approval)", async () => {
@@ -112,11 +114,11 @@ describe("audit benchmark profile — real workspace probes (P0-1)", () => {
     expect(deps.introspection.features.memory).toBe(false);
   });
 
-  it("`agent audit --out` writes CAPABILITY_MATRIX.json + .md and exits 1 on untruthful docs", async () => {
+  it("`agent audit --out` writes CAPABILITY_MATRIX.json + .md and exits 0 on truthful docs (P4-1)", async () => {
     const deps = await createDefaultDeps();
     const out = await tmpOut();
     const result = await runCommand(["audit", "--out", out], deps);
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBe(0);
     const json = JSON.parse(await readFile(join(out, "CAPABILITY_MATRIX.json"), "utf8")) as {
       records: unknown[];
       gitSha?: string;
@@ -124,15 +126,14 @@ describe("audit benchmark profile — real workspace probes (P0-1)", () => {
     expect(json.records.length).toBe(21);
     const md = await readFile(join(out, "CAPABILITY_MATRIX.md"), "utf8");
     expect(md).toContain("# CAPABILITY MATRIX");
-    expect(md).toContain("| regression_suite | missing |");
-    expect(md).toContain("audit: FAILED");
-    expect(result.lines.join("\n")).toContain("docs regression: claimed 30, on disk 0 → UNTRUTHFUL");
+    expect(md).toContain("| regression_suite | benchmarked |");
+    expect(md).toContain("audit: OK");
   });
 
-  it("`agent audit --json` emits a parseable matrix and still exits 1", async () => {
+  it("`agent audit --json` emits a parseable matrix and exits 0 when truthful", async () => {
     const deps = await createDefaultDeps();
     const result = await runCommand(["audit", "--json"], deps);
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBe(0);
     const parsed = JSON.parse(result.lines.join("\n")) as { records: { id: string }[] };
     expect(parsed.records.map((r) => r.id)).toContain("regression_suite");
   });

@@ -25,16 +25,25 @@ export const EVENT_TYPES = [
   "tool.output",
   "tool.completed",
   "tool.failed",
+  "tools.selected",
+  "command.discovered",
   "context.built",
   "context.compacted",
+  "context.candidate",
+  "context.selected",
+  "context.dropped",
   "subagent.started",
   "subagent.completed",
   "subagent.failed",
   "verification.started",
+  "verification.step_started",
+  "verification.step_completed",
   "verification.completed",
   "verification.failed",
   "memory.candidate",
   "memory.persisted",
+  "memory.retrieved",
+  "reflection.completed",
   "skill.discovered",
   "skill.loaded",
   "skill.updated",
@@ -86,6 +95,11 @@ export interface AgentEvent {
   turnId?: TurnId;
   sequence: number;
   timestamp: number;
+  /** P9-2: trace span identifiers — the producing unit (model call, tool
+   *  call, verification run) and its parent. Not required for any consumer;
+   *  replay/explain use them to reconstruct the tree without OTel. */
+  spanId?: string;
+  parentSpanId?: string;
   /**
    * Event ABI version (P2-34). Optional on the producer side — the store stamps
    * the current `EVENT_ABI_VERSION` on persist and rejects a supplied value that

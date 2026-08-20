@@ -60,6 +60,24 @@ describe("P2-7 learning candidate sandbox", () => {
     ]);
   });
 
+  it("detects champion mutation with an ASYNC championState (resolves before digesting)", async () => {
+    const sandbox = new CandidateSandbox({ scratchRoot: tmpdir() });
+    const champion = { rules: ["r1"] };
+
+    const out = await sandbox.run({
+      candidate: makeCandidate(),
+      championState: async () => champion,
+      runner: async () => {
+        champion.rules.push("smuggled");
+        return "done";
+      },
+    });
+
+    expect(out.violations).toEqual([
+      { kind: "champion_mutation", detail: "champion state changed during the candidate run" },
+    ]);
+  });
+
   it("cleanup still runs when the runner throws; the error propagates", async () => {
     const sandbox = new CandidateSandbox({ scratchRoot: tmpdir() });
     let scratch = "";

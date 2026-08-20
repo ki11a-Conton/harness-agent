@@ -29,6 +29,7 @@ import type {
   Turn,
   TurnId,
   UserMessage,
+  VerificationSpec,
   Verifier,
 } from "@ar/contracts";
 import {
@@ -75,6 +76,7 @@ import type {
   Timer,
 } from "@ar/contracts";
 import type { ContextPipeline, InstructionDiscoveryOptions } from "@ar/context";
+import type { ToolSelector } from "../tools/tool-selector.js";
 import { estimateMessageTokens } from "@ar/context";
 import { applyWorkingStateMutation, type WorkingStateMutation } from "@ar/contracts";
 import { AgentError } from "../errors.js";
@@ -235,6 +237,15 @@ export interface AgentRuntimeDeps {
   /** LOOP-001 / VERIFY-001: independent verifier; gating active only when
    *  both `task` and `verifier` are set. */
   verifier?: Verifier;
+  /** P8-1: runtime-side verification plan auto-orchestration. When the task
+   *  declares no verification specs, this derives them from the change set
+   *  (buildVerificationPlan / discovered commands) and the gate runs them.
+   *  Explicit task.verification always wins. */
+  verificationPlanner?: (input: {
+    task: TaskSpec;
+    changedPaths: string[];
+    cwd: string;
+  }) => VerificationSpec[] | Promise<VerificationSpec[]>;
   /** LOOP-001 / RECOVERY-001: bounded recovery policy for tool failures. */
   recovery?: RecoveryPolicy;
   /** P2-42: adaptive recovery planner with per-action budgets. When set (and
@@ -258,6 +269,9 @@ export interface AgentRuntimeDeps {
   skillSelector?: (entries: SkillIndexEntry[]) => SkillIndexEntry[];
   /** LOOP-001: tool specs advertised to the model (default: none). */
   toolSpecs?: readonly ToolSpec[];
+  /** P7-1/P7-2: progressive tool disclosure — narrows the advertised tool
+   *  schemas per goal (deterministic champion). Absent → identity (all). */
+  toolSelector?: ToolSelector;
   /** LOOP-001: paths touched by the run, reported into verification context. */
   changedPathsProvider?: () => readonly string[];
   /** P1-16: workspace file inventory at run start, reported into verification
@@ -290,9 +304,57 @@ export interface AgentRuntimeDeps {
   askUserStore?: AskUserStore;
   askUser?: (request: AskUserRequest) => Promise<AskUserReply | undefined>;
   askUserLifecycle?: AskUserLifecycle;
-  /** P0-11: optional callback for token usage reporting (tree / scheduler budget).
-   *  Called after model.completed with the usage from the most recent call. */
-  reportModelUsage?: (inputTokens: number, outputTokens: number) => void;
+  /** P0-11/P3-10: optional callback for token usage reporting (tree /
+   *  scheduler budget). Called after model.completed with the session the
+   *  call belonged to and the usage from the most recent call — the session id
+   *  lets the host attribute usage to the right tree root (P3-10). */
+  reportModelUsage?: (sessionId: SessionId, inputTokens: number, outputTokens: number) => void;
+  /** P2-2: pre-turn memory retrieval. When set, the runtime awaits it once
+   *  per turn (after turn initialization, before the first model call) and
+   *  passes the returned blocks into the context pipeline as memory prior
+   *  blocks (source "memory", semi-trusted data). One `memory.retrieved`
+   *  event is emitted per turn and the memory ids are appended to the
+   *  working state's `memoryRefs`. Absent by default (no memory — plan.md
+   *  P2-2: user goal → scope → retrieve → topK → ContextBlock). */
+  memoryBlocks?: (input: {
+    sessionId: SessionId;
+    turnId: TurnId;
+    goal: string;
+    cwd: string;
+  }) => Promise<ContextBlock[]>;
+  /** P2-5: post-turn reflection hook. Invoked after every terminal turn
+   *  outcome (completed / failed / cancelled) with the final outcome. The
+   *  host owns the reflection pipeline (event stream read, deterministic
+   *  Reflector, candidate write gate) — core only signals completion. Errors
+   *  thrown here are swallowed: reflection must never change the turn result. */
+  onTurnComplete?: (input: {
+    sessionId: SessionId;
+    turnId: TurnId;
+    outcome: TurnOutcome;
+  }) => void | Promise<void>;
+  /** P2-8: skill body blocks for the skills selected by `skillSelector`
+   *  (progressive disclosure: index → selection → body load → context).
+   *  Receives the turn identity and the selected skill names; returns ready
+   *  context blocks that are admitted into the pipeline as semi-trusted skill
+   *  data before tool output. The session/turn let the host attribute skill
+   *  effectiveness per task (P2-9). Absent by default (index-only skills). */
+  skillBodyBlocks?: (input: {
+    sessionId: SessionId;
+    turnId: TurnId;
+    names: string[];
+  }) => Promise<ContextBlock[]>;
+  /** P3-9: host-provided specialist delegation for adaptive recovery (the
+   *  host owns the Delegator and the budget gate). When a tool keeps failing
+   *  and the adaptive planner picks delegate_specialist, the host may really
+   *  delegate to a specialist subagent and report a bounded observation. */
+  delegateSpecialist?: (input: {
+    sessionId: SessionId;
+    turnId: TurnId;
+    goal: string;
+    tool: string;
+    failure: string;
+    signal: AbortSignal;
+  }) => Promise<{ delegated: boolean; summary?: string } | undefined>;
 }
 
 
@@ -336,7 +398,7 @@ export class AgentRuntime {
   private readonly outputRedactor?: AgentRuntimeDeps["outputRedactor"];
   private readonly injectionDetector?: AgentRuntimeDeps["injectionDetector"];
   private readonly inbox?: InboxStore;
-  private readonly reportModelUsage?: (inputTokens: number, outputTokens: number) => void;
+  private readonly reportModelUsage?: (sessionId: SessionId, inputTokens: number, outputTokens: number) => void;
   private readonly now: () => number;
   /** Q-7: injectable timer driving retry-backoff sleeps. */
   private readonly timer: Timer;
@@ -344,6 +406,7 @@ export class AgentRuntime {
   private readonly context?: AgentRuntimeDeps["context"];
   private readonly task?: TaskSpec;
   private readonly verifier?: Verifier;
+  private readonly verificationPlanner?: AgentRuntimeDeps["verificationPlanner"];
   private readonly recovery?: RecoveryPolicy;
   /** P2-42: adaptive recovery planner (bounded action budgets). */
   private readonly adaptiveRecovery?: AdaptiveRecoveryPlanner;
@@ -351,7 +414,16 @@ export class AgentRuntime {
   private readonly recoveryUsage: Partial<Record<RecoveryAction, number>> = {};
   private readonly skills?: AgentRuntimeDeps["skills"];
   private readonly skillSelector?: AgentRuntimeDeps["skillSelector"];
+  /** P2-8: loads skill bodies for the selected skills (progressive disclosure). */
+  private readonly skillBodyBlocks?: AgentRuntimeDeps["skillBodyBlocks"];
+  /** P2-2: pre-turn memory retrieval (memory prior blocks + memory.retrieved). */
+  private readonly memoryBlocks?: AgentRuntimeDeps["memoryBlocks"];
+  /** P2-5: post-turn reflection hook (never alters the turn result). */
+  private readonly onTurnComplete?: AgentRuntimeDeps["onTurnComplete"];
+  /** P3-9: host-provided specialist delegation for adaptive recovery. */
+  private readonly delegateSpecialist?: AgentRuntimeDeps["delegateSpecialist"];
   private readonly toolSpecs: readonly ToolSpec[];
+  private readonly toolSelector?: ToolSelector;
   private readonly changedPathsProvider?: () => readonly string[];
   private readonly baselineFilesProvider?: () => readonly string[];
   /** P1-20: cumulative compaction count (observability metric). Q-1: boxed
@@ -414,11 +486,17 @@ export class AgentRuntime {
     this.context = deps.context;
     this.task = deps.task;
     this.verifier = deps.verifier;
+    this.verificationPlanner = deps.verificationPlanner;
     this.recovery = deps.recovery;
     this.adaptiveRecovery = deps.adaptiveRecovery;
     this.skills = deps.skills;
     this.skillSelector = deps.skillSelector;
+    this.skillBodyBlocks = deps.skillBodyBlocks;
+    this.memoryBlocks = deps.memoryBlocks;
+    this.onTurnComplete = deps.onTurnComplete;
+    this.delegateSpecialist = deps.delegateSpecialist;
     this.toolSpecs = deps.toolSpecs ?? [];
+    this.toolSelector = deps.toolSelector;
     this.changedPathsProvider = deps.changedPathsProvider;
     this.baselineFilesProvider = deps.baselineFilesProvider;
     this.checkpointStore = deps.checkpointStore;
@@ -433,7 +511,7 @@ export class AgentRuntime {
     this.recoveryController = new RecoveryController({
       store: this.store,
       events: this.events,
-      emit: (sessionId, type, payload, turnId) => this.emit(sessionId, type, payload, turnId),
+      emit: (sessionId, type, payload, turnId, spans) => this.emit(sessionId, type, payload, turnId, spans),
       now: () => this.now(),
       checkpointStore: this.checkpointStore,
       askUserStore: this.askUserStore,
@@ -447,7 +525,7 @@ export class AgentRuntime {
       orchestrator: this.orchestrator,
       store: this.store,
       hooks: this.hooks,
-      emit: (sessionId, type, payload, turnId) => this.emit(sessionId, type, payload, turnId),
+      emit: (sessionId, type, payload, turnId, spans) => this.emit(sessionId, type, payload, turnId, spans),
       failAt: (point, ctx) => this.failAt(point, ctx),
       now: () => this.now(),
       timer: this.timer,
@@ -457,18 +535,20 @@ export class AgentRuntime {
       recoveryUsage: this.recoveryUsage,
       toolCapabilityOf: (toolName) => this.toolCapabilityOf(toolName),
       maxParallelToolCalls: this.maxParallelToolCalls,
+      delegateSpecialist: this.delegateSpecialist,
     });
     // Q-1: context pipeline + steering + tool-output rendering delegated to
     // the extracted controller. `compactCounter` is shared by reference with
     // the model-call controller (reactive compaction).
     this.contextController = new ContextController({
       store: this.store,
-      emit: (sessionId, type, payload, turnId) => this.emit(sessionId, type, payload, turnId),
+      emit: (sessionId, type, payload, turnId, spans) => this.emit(sessionId, type, payload, turnId, spans),
       now: () => this.now(),
       failAt: (point, ctx) => this.failAt(point, ctx),
       context: this.context,
       skills: this.skills,
       skillSelector: this.skillSelector,
+      skillBodyBlocks: this.skillBodyBlocks,
       recovery: this.recovery,
       compactCounter: this.compactCounter,
       checkpoint: (ctx, working, state, toolLedger, reason, budgetUsage) =>
@@ -490,6 +570,9 @@ export class AgentRuntime {
       now: () => this.now(),
       changedPathsProvider: this.changedPathsProvider,
       baselineFilesProvider: this.baselineFilesProvider,
+      ...(this.verificationPlanner !== undefined
+        ? { planVerification: this.verificationPlanner }
+        : {}),
     });
     // Q-1: model-call + post-completion delegated to the extracted
     // controller. runVerificationGate is bound to the verification
@@ -498,10 +581,11 @@ export class AgentRuntime {
     // on AgentRuntime to avoid a controller ↔ runtime cycle).
     this.modelCallController = new ModelCallController({
       store: this.store,
-      emit: (sessionId, type, payload, turnId) => this.emit(sessionId, type, payload, turnId),
+      emit: (sessionId, type, payload, turnId, spans) => this.emit(sessionId, type, payload, turnId, spans),
       now: () => this.now(),
       failAt: (point, ctx) => this.failAt(point, ctx),
       toolSpecs: this.toolSpecs,
+      ...(this.toolSelector !== undefined ? { toolSelector: this.toolSelector } : {}),
       recovery: this.recovery,
       timer: this.timer,
       compactCounter: this.compactCounter,
@@ -534,12 +618,15 @@ export class AgentRuntime {
     type: AgentEvent["type"],
     payload: Record<string, unknown>,
     turnId?: TurnId,
+    spans?: { spanId?: string; parentSpanId?: string },
   ): Promise<AgentEvent> {
     const sequence = await this.events.nextSequence(sessionId);
     return this.events.append({
       id: newEventId(),
       sessionId,
       ...(turnId !== undefined ? { turnId } : {}),
+      ...(spans?.spanId !== undefined ? { spanId: spans.spanId } : {}),
+      ...(spans?.parentSpanId !== undefined ? { parentSpanId: spans.parentSpanId } : {}),
       sequence,
       timestamp: this.now(),
       type,
@@ -622,9 +709,33 @@ export class AgentRuntime {
   }
 
   /** Execute one turn: model round-trips + tool calls, bounded and cancellable.
- *  `opts.initialState` seeds the working state from a restored checkpoint
- *  (P1-4 resume) instead of the turn input text. */
+   *  `opts.initialState` seeds the working state from a restored checkpoint
+   *  (P1-4 resume) instead of the turn input text. */
   async runTurn(
+    sessionId: SessionId,
+    turnId: TurnId,
+    signal: AbortSignal,
+    opts: { initialState?: WorkingState } = {},
+  ): Promise<TurnOutcome> {
+    const outcome = await this.runTurnCore(sessionId, turnId, signal, opts);
+    // P2-5: post-turn reflection hook — fired exactly once per terminal
+    // outcome (the host owns the reflection pipeline). Errors are swallowed:
+    // reflection must never change the turn result.
+    if (this.onTurnComplete !== undefined) {
+      try {
+        await this.onTurnComplete({ sessionId, turnId, outcome });
+      } catch (cause) {
+        process.stderr.write(
+          `[runtime] onTurnComplete failed: ${cause instanceof Error ? cause.message : String(cause)}\n`,
+        );
+      }
+    }
+    return outcome;
+  }
+
+  /** P2-5: runTurn body (the wrapper fires the post-turn reflection hook).
+   *  Model round-trips + tool calls, bounded and cancellable. */
+  private async runTurnCore(
     sessionId: SessionId,
     turnId: TurnId,
     signal: AbortSignal,
@@ -635,6 +746,39 @@ export class AgentRuntime {
     const { ctx, state, turn, working, toolLedger } = await this.prepareTurn(sessionId, turnId, signal, opts);
 
     const priorBlocks: ContextBlock[] = [];
+    // P2-2: pre-turn memory retrieval — runs once per turn, before the first
+    // model call. The retrieved memory blocks join the context pipeline as
+    // semi-trusted prior data; their ids land in the working state's
+    // memoryRefs and one memory.retrieved event is emitted per turn.
+    if (this.memoryBlocks !== undefined) {
+      const memoryBlocks = await this.memoryBlocks({
+        sessionId,
+        turnId,
+        goal: working.goal,
+        cwd: ctx.session.cwd,
+      });
+      if (memoryBlocks.length > 0) {
+        priorBlocks.push(...memoryBlocks);
+        const memoryIds: string[] = [];
+        for (const block of memoryBlocks) {
+          const id = block.id.startsWith("memory:") ? block.id.slice("memory:".length) : block.id;
+          if (id.length > 0 && !memoryIds.includes(id)) memoryIds.push(id);
+        }
+        const known = new Set(working.memoryRefs);
+        for (const id of memoryIds) {
+          if (!known.has(id)) {
+            working.memoryRefs.push(id);
+            known.add(id);
+          }
+        }
+        await this.emit(sessionId, "memory.retrieved", {
+          query: working.goal,
+          count: memoryIds.length,
+          memoryIds,
+          suppressed: 0,
+        }, turnId);
+      }
+    }
     let overflowAttempt = 0;
     let verificationFailures = 0;
     let reactiveCompacted = false;
@@ -737,13 +881,13 @@ export class AgentRuntime {
         }
         // P0-11: report per-call token usage to the tree budget (scheduler).
         if (this.reportModelUsage !== undefined && modelResult.usage !== undefined) {
-          this.reportModelUsage(modelResult.usage.inputTokens ?? 0, modelResult.usage.outputTokens ?? 0);
+          this.reportModelUsage(sessionId, modelResult.usage.inputTokens ?? 0, modelResult.usage.outputTokens ?? 0);
         }
         if (completion.action === "finish") return completion.outcome;
 
         // proceed to execute tools
         const toolCalls = completion.toolCalls;
-        const executed = await this.toolCallController.executeToolCalls(ctx, state, toolCalls);
+        const executed = await this.toolCallController.executeToolCalls(ctx, state, toolCalls, modelResult.callId);
         const toolAction = await this.handleToolResults(
           ctx, executed, working, state, toolLedger, priorBlocks, lastReportTokens, budget,
         );

@@ -22,9 +22,10 @@ import type {
   ToolExecutionContext,
   ToolResult,
 } from "@ar/contracts";
-import { errorInfo, newAgentId, newMessageId, newToolCallId } from "@ar/contracts";
+import { errorInfo, newAgentId, newMessageId, newSessionId, newToolCallId, newTurnId } from "@ar/contracts";
 import { DEFAULT_TOOL_SEMANTICS } from "@ar/contracts";
 import { AdaptiveRecoveryPlanner } from "@ar/contracts";
+import { DeterministicToolSelector } from "../tools/tool-selector.js";
 import { EchoModelProvider, ScriptedModelProvider } from "@ar/model";
 import { AgentRuntime, type SkillDiscovery } from "./runtime.js";
 import { InMemoryArtifactStore } from "./artifact-store.js";
@@ -97,6 +98,16 @@ function makeRuntime(
     skillSelector?: (entries: import("@ar/contracts").SkillIndexEntry[]) => import("@ar/contracts").SkillIndexEntry[];
     askUserStore?: import("@ar/contracts").AskUserStore;
     askUser?: (request: import("@ar/contracts").AskUserRequest) => Promise<import("@ar/contracts").AskUserReply | undefined>;
+    delegateSpecialist?: (input: {
+      sessionId: import("@ar/contracts").SessionId;
+      turnId: import("@ar/contracts").TurnId;
+      goal: string;
+      tool: string;
+      failure: string;
+      signal: AbortSignal;
+    }) => Promise<{ delegated: boolean; summary?: string } | undefined>;
+    toolSelector?: import("../tools/tool-selector.js").ToolSelector;
+    toolSpecs?: readonly import("@ar/contracts").ToolSpec[];
   },
 ) {
   const store = new MemorySessionStore();
@@ -151,6 +162,9 @@ function makeRuntime(
     ...(opts?.outputRedactor !== undefined ? { outputRedactor: opts.outputRedactor } : {}),
     ...(opts?.injectionDetector !== undefined ? { injectionDetector: opts.injectionDetector } : {}),
     ...(opts?.inbox !== undefined ? { inbox: opts.inbox } : {}),
+    ...(opts?.delegateSpecialist !== undefined ? { delegateSpecialist: opts.delegateSpecialist } : {}),
+    ...(opts?.toolSelector !== undefined ? { toolSelector: opts.toolSelector } : {}),
+    ...(opts?.toolSpecs !== undefined ? { toolSpecs: opts.toolSpecs } : {}),
     ...(opts?.skillSelector !== undefined ? { skillSelector: opts.skillSelector } : {}),
     ...(opts?.context !== undefined
       ? {
@@ -847,6 +861,39 @@ describe("AgentRuntime (CORE-001)", () => {
     // The run still completes from the model's perspective (a tool failure is
     // surfaced to the model, not turned into an immediate turn failure).
     expect(outcome.toolCalls).toBe(4);
+  });
+
+  it("P3-9: delegate_specialist ACTUALLY delegates through the host callback", async () => {
+    const fail = () => ScriptedModelProvider.toolCall("flaky", { op: "x" });
+    const provider = new ScriptedModelProvider([
+      fail(), fail(), fail(), fail(),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "failed", error: errorInfo("INTERNAL_ERROR", "flaky failed") });
+    let specialistInput: unknown;
+    const delegateSpecialist = async (input: unknown) => {
+      specialistInput = input;
+      return { delegated: true, summary: "a specialist found the root cause" };
+    };
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      adaptiveRecovery: new AdaptiveRecoveryPlanner(),
+      maxToolCalls: 8,
+      delegateSpecialist,
+    });
+    await runOne(runtime, store, events);
+
+    // The host callback was really invoked with the failure context.
+    expect(specialistInput).toMatchObject({
+      tool: "flaky",
+      goal: "hello",
+    });
+    // The model sees a REAL delegation observation (not just "try different").
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    const obs = messages.find(
+      (m) => m.role === "system" && m.content.startsWith("[recovery:delegate_specialist]"),
+    );
+    expect(obs?.content).toContain("a specialist subagent is investigating");
+    expect(obs?.content).toContain("a specialist found the root cause");
   });
 
   it("P2-42: returns fail_safe (no observation) once every budgeted self-heal action is spent", async () => {
@@ -1644,3 +1691,70 @@ async function readdirRecursive(dir: string): Promise<string[]> {
   }
   return out;
 }
+describe("P7-1/P7-2/P7-3: progressive tool disclosure", () => {
+  it("advertises only the selected tool schemas and emits tools.selected", async () => {
+    const seen: string[][] = [];
+    const provider: ModelProvider = {
+      id: "capture",
+      async listModels() {
+        return [{ id: "m", name: "m", capabilities: { contextWindowTokens: 100_000 } }];
+      },
+      createClient() {
+        return {
+          async *generate(input: { tools?: readonly unknown[] }) {
+            seen.push((input.tools ?? []).map((t) => (t as { name: string }).name));
+            yield { type: "completed", result: { finishReason: "stop", text: "done" }, timestamp: 1 };
+          },
+        };
+      },
+    };
+    const orch = new FakeOrchestrator();
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      toolSelector: new DeterministicToolSelector([], new Set(["read_file", "write_file", "exec", "search_files", "update_plan"])),
+      toolSpecs: [
+        { name: "read_file", description: "read", inputSchema: { type: "object" } },
+        { name: "write_file", description: "write", inputSchema: { type: "object" } },
+        { name: "exec", description: "run", inputSchema: { type: "object" } },
+        { name: "search_files", description: "search", inputSchema: { type: "object" } },
+        { name: "update_plan", description: "plan", inputSchema: { type: "object" } },
+        { name: "weather_lookup", description: "weather", inputSchema: { type: "object" } },
+      ],
+    });
+    const session = await runtime.createSession({ agent: AGENT, cwd: "/w" });
+    const turn = await runtime.startTurn(session.id, "fix the parser");
+    const outcome = await runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    expect(outcome.status).toBe("completed");
+
+    // The advertised schemas are the core subset, not everything.
+    expect(seen.length).toBe(1);
+    const advertised = seen[0]!;
+    expect(advertised).toEqual(
+      expect.arrayContaining(["read_file", "write_file", "exec", "search_files", "update_plan"]),
+    );
+    // tools.selected telemetry was emitted.
+    const sel = await events.list(session.id);
+    expect(sel.some((e) => e.type === "tools.selected" && (e.payload as { selected?: number }).selected === advertised.length)).toBe(true);
+  });
+});
+
+describe("P9-1/P9-2: trace spans", () => {
+  it("model events carry spanId; tool events carry parentSpanId back to the model call", async () => {
+    const provider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("flaky", { op: "x" }),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "success", output: "ok" });
+    const { runtime, store, events } = makeRuntime(provider, orch);
+    const { storedEvents } = await runOne(runtime, store, events);
+
+    const modelStarted = storedEvents.find((e) => e.type === "model.started")!;
+    const modelCompleted = storedEvents.find((e) => e.type === "model.completed")!;
+    expect(modelStarted.spanId).toBeDefined();
+    expect(modelCompleted.spanId).toBe(modelStarted.spanId);
+
+    const toolCompleted = storedEvents.find((e) => e.type === "tool.completed")!;
+    expect(toolCompleted.spanId).toBeDefined();
+    // P9-1: the tool call's parent is the model call that requested it.
+    expect(toolCompleted.parentSpanId).toBe(modelStarted.spanId);
+  });
+});

@@ -1,0 +1,19 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "implementation"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/api.js').then(m => { const a = m.get('x'); const b = m.get('x'); if (a !== b || m.callCount() !== 1) process.exit(1) })"
+      ]
+    }
+  ]
+}

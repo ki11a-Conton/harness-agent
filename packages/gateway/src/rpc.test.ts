@@ -304,7 +304,7 @@ describe("createRuntimeRpc session lifecycle", () => {
     expect(outcome.toolCalls).toBe(0);
 
     const types = (await events.list(session.id)).map((e) => e.type);
-    expect(types).toEqual(["session.created", "turn.started", "model.started", "model.completed", "turn.completed"]);
+    expect(types).toEqual(["session.created", "turn.started", "model.started", "tools.selected", "model.completed", "turn.completed"]);
   });
 
   it("session.create rejects an unknown agent", async () => {

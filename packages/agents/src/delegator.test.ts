@@ -22,11 +22,13 @@ import {
   errorInfo,
   newAgentId,
   newMessageId,
+  newTurnId,
 } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
 import type { Script } from "@ar/model";
 import { AgentRuntime } from "@ar/core";
 import { Delegator, restrictToolPolicy } from "./delegator.js";
+import type { ChildWorkspaceManager } from "./workspace-isolation.js";
 
 // ---- in-memory fakes (per plan §97) ---------------------------------------
 
@@ -168,6 +170,7 @@ function makeHarness(opts?: {
   agents?: AgentDefinition[];
   now?: () => number;
   verifier?: Verifier;
+  workspaceManager?: ChildWorkspaceManager;
 }) {
   const store = new MemorySessionStore();
   const events = new MemoryEventStore();
@@ -193,6 +196,7 @@ function makeHarness(opts?: {
     agentId: SUBAGENT.id,
     limits: opts?.limits,
     now,
+    ...(opts?.workspaceManager !== undefined ? { workspaceManager: opts.workspaceManager } : {}),
   });
   return { store, events, runtime, delegator, orchestrator, provider };
 }
@@ -573,6 +577,117 @@ describe("Delegator (SUBAGENT-001)", () => {
     await expect(
       h.delegator.delegate({ parentSessionId: parent.id, goal: "second" }, new AbortController().signal),
     ).rejects.toMatchObject({ info: { code: "RESOURCE_LIMIT" } });
+  });
+
+  it("allows further delegations after a completed child under maxActiveChildren (P3-3)", async () => {
+    const h = makeHarness({
+      limits: { maxChildrenTotal: 10, maxActiveChildren: 1 },
+      scripts: [
+        ScriptedModelProvider.text("child done"),
+        ScriptedModelProvider.text("child done two"),
+      ],
+    });
+    const parent = await createParent(h);
+
+    // First child runs to a terminal state (scripted model completes) — it
+    // no longer occupies the active slot.
+    const first = await h.delegator.delegate(
+      { parentSessionId: parent.id, goal: "first" },
+      new AbortController().signal,
+    );
+    expect(first.status).toBe("success");
+
+    const second = await h.delegator.delegate(
+      { parentSessionId: parent.id, goal: "second" },
+      new AbortController().signal,
+    );
+    expect(second.status).toBe("success");
+    // Historical count is 2 now, but the active cap only counted 1 at a time.
+    expect(await h.store.listSessions({ parentId: parent.id })).toHaveLength(2);
+  });
+
+  it("rejects a delegation while an ACTIVE child turn is still running (P3-3)", async () => {
+    const h = makeHarness({ limits: { maxChildrenTotal: 10, maxActiveChildren: 1 } });
+    const parent = await createParent(h);
+
+    // Fabricate a running child session + turn directly (bypassing the
+    // runtime loop) so the active slot is occupied.
+    const child = await h.runtime.createSession({
+      agent: PARENT,
+      cwd: parent.cwd,
+      parentId: parent.id,
+    });
+    await h.store.createTurn({
+      id: newTurnId(),
+      sessionId: child.id,
+      input: { sessionId: child.id, text: "running" },
+      status: "running",
+      startedAt: 0,
+    });
+
+    await expect(
+      h.delegator.delegate({ parentSessionId: parent.id, goal: "second" }, new AbortController().signal),
+    ).rejects.toMatchObject({ info: { code: "RESOURCE_LIMIT" } });
+  });
+
+  it("runs a writable child in an isolated workspace and returns its patch (P3-4/P3-5)", async () => {
+    let createdWith: { parentRoot: string; writable: boolean } | undefined;
+    const fakeManager: ChildWorkspaceManager = {
+      async create(input) {
+        createdWith = { parentRoot: input.parentRoot, writable: input.writable };
+        return {
+          root: `${input.parentRoot}-isolated`,
+          mode: "isolated-copy" as const,
+          diff: async () => ({
+            childSessionId: input.childSessionId,
+            entries: [{ path: "x.ts", kind: "added" as const, content: "export const x = 1;\n" }],
+          }),
+          dispose: async () => {},
+        };
+      },
+      async apply() {
+        return { applied: [], conflicts: [], skipped: [] };
+      },
+    };
+    const h = makeHarness({ workspaceManager: fakeManager });
+    const parent = await createParent(h);
+
+    const result = await h.delegator.delegate(
+      { parentSessionId: parent.id, goal: "g", writable: true },
+      new AbortController().signal,
+    );
+    expect(result.status).toBe("success");
+    // The child ran in the isolated root, not the parent's working directory.
+    expect(createdWith).toMatchObject({ parentRoot: parent.cwd, writable: true });
+    const child = await h.store.getSession(result.childSessionId);
+    expect(child?.cwd).toBe(`${parent.cwd}-isolated`);
+    // The patch travels with the result for the parent to apply (P3-5).
+    expect(result.workspacePatch).toBeDefined();
+    expect(result.workspacePatch!.entries).toEqual([
+      expect.objectContaining({ path: "x.ts", kind: "added" }),
+    ]);
+  });
+
+  it("keeps a read-only child on the shared parent root (P3-4)", async () => {
+    const h = makeHarness({
+      workspaceManager: {
+        async create() {
+          throw new Error("must not be called for read-only delegations");
+        },
+        async apply() {
+          return { applied: [], conflicts: [], skipped: [] };
+        },
+      },
+    });
+    const parent = await createParent(h);
+    const result = await h.delegator.delegate(
+      { parentSessionId: parent.id, goal: "g" },
+      new AbortController().signal,
+    );
+    expect(result.status).toBe("success");
+    const child = await h.store.getSession(result.childSessionId);
+    expect(child?.cwd).toBe(parent.cwd);
+    expect(result.workspacePatch).toBeUndefined();
   });
 
   it("rejects delegation from a depth-1 child when maxDepth=1", async () => {

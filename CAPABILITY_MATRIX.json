@@ -1,6 +1,5 @@
 {
-  "generatedAt": 1787217555414,
-  "gitSha": "3a1ab34db792d57f372a496c814520379bbedd21",
+  "generatedAt": 1787237815272,
   "records": [
     {
       "id": "context_pipeline",
@@ -263,30 +262,30 @@
     {
       "id": "regression_suite",
       "description": "Regression benchmark suite present at the documented count (benchmarks/regression, README claims 30)",
-      "implemented": false,
-      "productionWired": false,
+      "implemented": true,
+      "productionWired": true,
       "integrationTested": true,
-      "benchmarkExercised": false,
+      "benchmarkExercised": true,
       "evidence": [
         {
           "kind": "benchmark_case",
           "ref": "benchmarks/regression",
-          "note": "directory missing (README claims 30)"
+          "note": "30 case(s) on disk (README claims 30)"
         }
       ]
     },
     {
       "id": "holdout_suite",
       "description": "Holdout benchmark suite present at the documented count (benchmarks/holdout, README claims 30)",
-      "implemented": false,
-      "productionWired": false,
+      "implemented": true,
+      "productionWired": true,
       "integrationTested": true,
-      "benchmarkExercised": false,
+      "benchmarkExercised": true,
       "evidence": [
         {
           "kind": "benchmark_case",
           "ref": "benchmarks/holdout",
-          "note": "directory missing (README claims 30)"
+          "note": "30 case(s) on disk (README claims 30)"
         }
       ]
     },
@@ -339,14 +338,14 @@
       "id": "ci_windows",
       "description": "Windows CI job exists (windows-latest)",
       "implemented": true,
-      "productionWired": false,
+      "productionWired": true,
       "integrationTested": false,
       "benchmarkExercised": false,
       "evidence": [
         {
           "kind": "ci_job",
           "ref": ".github/workflows/ci.yml",
-          "note": "no windows-latest job"
+          "note": "windows-latest job"
         }
       ]
     }

@@ -5,3 +5,5 @@ export * from "./runtime/runtime.js";
 export * from "./runtime/artifact-store.js";
 export * from "./verification/runtime-verifier.js";
 export * from "./recovery/recovery.js";
+export { DeterministicToolSelector, NoopToolSelector } from "./tools/tool-selector.js";
+export type { ToolSelector, ToolSelectionResult } from "./tools/tool-selector.js";

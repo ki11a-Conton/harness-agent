@@ -1,0 +1,20 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "bugfix",
+    "javascript"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/users.js').then(m => { const r = m.sortUsers([{name:'b'},{name:'a'}]); if (r[0].name !== 'a' || r[1].name !== 'b') process.exit(1) })"
+      ]
+    }
+  ]
+}

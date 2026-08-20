@@ -4,6 +4,7 @@ import type {
   ApprovalId,
   ApprovalStore,
   EventStore,
+  MemoryStore,
   Session,
   SessionId,
   SessionStore,
@@ -11,13 +12,16 @@ import type {
 import { AgentError } from "@ar/contracts";
 import type { AgentRuntime, TurnOutcome } from "@ar/core";
 import type { RpcContext, AgentSummary } from "@ar/gateway";
-import type { HarnessIntrospection } from "@ar/harness";
+import type { HarnessIntrospection, LearningCandidateStore } from "@ar/harness";
 import type { SessionService } from "@ar/session";
 import type { DoctorDeps } from "./doctor.js";
 import { runChecks } from "./doctor.js";
 import { mechanismsCmd, validateMechanismManifest } from "./mechanisms.js";
 import { experimentCmd } from "./experiment-command.js";
 import { auditCmd } from "./audit.js";
+import { learnCmd } from "./learn-command.js";
+import { explainCmd } from "./explain-command.js";
+import { recoverListCmd } from "./recover-command.js";
 
 /** Minimal RPC client surface (InMemoryTransport matches structurally). */
 export interface RpcClient {
@@ -38,6 +42,14 @@ export interface CommandDeps {
   doctor: DoctorDeps;
   /** Host wiring facts reported by the composition root (P0-1 audit). */
   introspection: HarnessIntrospection;
+  /** P2-7: learning-candidate queue (reflection output, pre-promotion). */
+  candidates?: LearningCandidateStore;
+  /** P2-7: memory store the promotion writes into. */
+  memoryStore?: MemoryStore;
+  /** P12-3: durable ask-user store (pending asks recovery scan). */
+  askUserStore?: import("@ar/contracts").AskUserStore;
+  /** P12-3: durable checkpoint store (unfinished checkpoints recovery scan). */
+  checkpointStore?: import("@ar/contracts").CheckpointStore;
 }
 
 export interface CommandResult {
@@ -61,7 +73,11 @@ commands:
   doctor                            run environment checks (plan §87)
   mechanisms <path>                 validate mechanism manifests (P2-8)
   experiment <config.json>          run a mechanism experiment (P2-9)
-  audit [--json] [--out <dir>]      generate CAPABILITY_MATRIX.md/.json from real wiring evidence (P0-1)`;
+  audit [--json] [--out <dir>]      generate CAPABILITY_MATRIX.md/.json from real wiring evidence (P0-1)
+  explain <sessionId> [--tool-call <id>]  why did the agent do this? observable evidence only (P9-3)
+  recover list                         startup recovery scan — unfinished sessions/approvals/asks/orphans (P12-3)
+  learn candidates|evaluate <id>|promote <id>|reevaluate
+                                    learning-candidate lifecycle — reflection queues, explicit promotion only (P2-7)`;
 
 /** Dispatch `agent <command> [args]`. argv excludes the program and "agent". */
 export async function runCommand(argv: string[], deps: CommandDeps): Promise<CommandResult> {
@@ -95,6 +111,38 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
       return experimentCmd(rest);
     case "audit":
       return auditCmd(rest, deps);
+    case "explain": {
+      const sessionId = rest[0] as SessionId | undefined;
+      if (sessionId === undefined) {
+        return { exitCode: 1, lines: ["usage: agent explain <sessionId> [--tool-call <id>]"] };
+      }
+      const toolIdx = rest.indexOf("--tool-call");
+      const toolCallId = toolIdx >= 0 ? rest[toolIdx + 1] : undefined;
+      return explainCmd(
+        { sessionId, ...(toolCallId !== undefined ? { toolCallId } : {}) },
+        deps.events,
+      );
+    }
+    case "recover": {
+      if (rest[0] !== "list") {
+        return { exitCode: 1, lines: ["usage: agent recover list"] };
+      }
+      const result = await recoverListCmd({
+        store: deps.store,
+        approvalStore: deps.approvalStore,
+        ...(deps.askUserStore !== undefined ? { askUserStore: deps.askUserStore } : {}),
+        ...(deps.checkpointStore !== undefined ? { checkpointStore: deps.checkpointStore } : {}),
+      });
+      return { exitCode: result.exitCode, lines: result.lines };
+    }
+    case "learn":
+      if (deps.candidates === undefined) {
+        return { exitCode: 1, lines: ["learn: no learning pipeline wired (harness learning/memory is disabled)"] };
+      }
+      return learnCmd(rest, {
+        candidates: deps.candidates,
+        ...(deps.memoryStore !== undefined ? { memoryStore: deps.memoryStore } : {}),
+      });
     default:
       return { exitCode: 1, lines: [`unknown command: ${command ?? "(none)"}`, "", USAGE] };
   }

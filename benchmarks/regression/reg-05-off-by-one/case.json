@@ -1,0 +1,17 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "bugfix",
+    "javascript"
+  ],
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "out.txt",
+      "mustChange": false
+    }
+  ]
+}

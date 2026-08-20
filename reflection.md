@@ -77,3 +77,80 @@ This is the second time `??` precedence has bitten us (previous case: `?.` vs `?
 | P2-9 | 1178 | — | experiment-config.ts, experiment-harness.ts, experiment-command.ts, experiment.ts |
 
 Total: +74 tests, 3 SQLite migrations, 10 new files, 1 new directory tree.
+## P2-1~P2-10 (Memory/Skill/Learning wiring)
+
+### What Worked
+- **core-via-callback bridging**: memoryBlocks / onTurnComplete / skillBodyBlocks as optional AgentRuntimeDeps callbacks — core stayed dependency-free, harness stayed the single composition owner. Same pattern as skillSelector (P2-6): optional dep, default absent, tests inject.
+- **Honest feedback**: `used` is only ever asserted on a succeeded terminal outcome; failed turns stay silent. Never fabricate.
+- **Deterministic everywhere**: Reflector (rules), write gate (thresholds), retrieval (substring/token match), CandidateSandbox (digests) — no LLM in any P2 path, tests are fast and stable.
+
+### What Broke & How We Fixed
+- **node:sqlite FTS5 missing on node 22/23 prebuilts** → replaced the node binary with a v24.8.0 official build (npmmirror). 59→2 failures instantly. Environment, not code.
+- **Goal/query mismatch in retrieval tests**: "fix ENOENT" vs content with "fails with ENOENT" — token match fails ("fix" ≠ "fails"). Use substring/overlapping tokens in test goals.
+- **turn.failed severity is hard-coded 0.9** (not SEVERITY[cause]) — an environment-group candidate passes the default gate. Raised the writePolicy threshold in tests to prove filtering.
+- **Branded types**: MemoryId/TurnId/EventId/SkillId bite in tests — use contracts id factories (newEventId etc.) instead of string literals.
+- **async championState blinded the sandbox mutation check** — `championDigest(asyncFn())` digests a Promise → "{}" on both sides. Fixed in CandidateSandbox.run to always `await` before digesting. **Rule: when a callback may be async, digest the resolved value, never the function's raw return.**
+
+### Unresolved / Deferred
+- Champion/Challenger benchmark scoring for promotion (P4 Mechanism-real Benchmark).
+- verificationPassed / tokenCost / latency effectiveness dimensions (need verifier + usage wiring).
+- Memory `used` granularity: currently turn-level success; model-references-memory-id detection is a future refinement.
+
+## P3-1~P3-10 (Multi-Agent / delegation)
+
+### What Worked
+- **Lazy accessor breaks the registry→runtime→delegator cycle**: register tools first (specs needed by the runtime), construct the delegator after, resolve at execute time. Clean, no circular imports.
+- **Per-session sandbox extra roots**: the only honest way to let a child write its isolated workspace without widening the parent boundary. Extra roots go through the same realpath containment as workspaceRoot.
+- **Physical + metadata merge reconciliation**: apply the patch first, then reconcile the working state against the physical result — both stay consistent, nothing silently dropped.
+- **Deprecated-but-compatible limits**: maxChildren stays as the alias; new optional caps layer on top — zero breakage in existing tests.
+
+### What Broke & How We Fixed
+- sandbox denied the isolated root → added SandboxManager extraRoots + orchestrator callback + per-session Map in the harness.
+- agents array order changed (worker-w first) → update the composition test's literal.
+- One failing call only produces change_strategy; delegate_specialist needs 4 failures (planner budget order) — script the model accordingly.
+- reportModelUsage signature change (added sessionId) is breaking — update all call sites at once.
+- Branded AgentId from a string accessor — cast at the boundary.
+
+### Unresolved / Deferred
+- End-to-end delegate_worker integration test (real worker writing into the isolated root) — components unit-tested separately.
+- Parent working-state metadata merge for delegate_worker relies on tool output + parent update_plan, not automatic.
+- P0-2 Windows path parity still open (needs Linux CI).
+
+## P4-1~P4-13 (Mechanism-real Benchmark)
+
+### What Worked
+- **Honest mechanism declarations**: cases declare `requires` + `expectedEvents.atLeast`; the runner FAILS honestly when the mechanism isn't wired — no pretend runs, no "file pretends to be MCP output".
+- **Judge on the event trail, not final files**: expectedEvents made adv-memory-poisoning actually prove memory.retrieved fired (end-to-end tested).
+- **Generator-driven suites**: 60 real cases from one deterministic script; README counts synced by `agent benchmark list --update-readme`; audit cross-checks.
+- **Tool profile parity**: benchmark agent now exposes the same PRODUCTION_TOOL_NAMES as the harness — a benchmark measuring a narrower agent isn't measuring production.
+
+### What Broke & How We Fixed
+- audit flipped FAILED→OK once regression existed — update the old "missing"/exit-1 assertions in one sweep.
+- plan.md duplicate-P4 ghost paragraphs after batch fills — delete by line range between the filled block and the next PHASE.
+- SqliteMemoryStore.close() is synchronous — don't await it; declare the closer outside the try so finally can reach it.
+- RunMetrics uses snake_case field names — check the interface, don't guess.
+
+### Unresolved / Deferred
+- P4-5/7/8/9 runtime wiring (FakeMcpServer, delegation in the benchmark harness) — cases declare requirements but the mechanisms aren't wired in runOneCase.
+- createHarness task/verifier overrides for a full P4-10 swap.
+
+## PHASE 5~13（Store V2 / Context V4 / Tool V3 / Verification V3 / Observability / Evolution / Perf / Release / Experiments）
+
+### What Worked
+- **One store, five contracts**: SqliteRuntimeStore replaced the JSONL family behind identical interfaces; the harness swap was a config flag, not a rewrite. Composition (`.askUser`/`.checkpoints`) resolved interface name collisions honestly.
+- **Deterministic perf over wall-clock**: read-traffic counters and structural integrity assertions — quadratic behavior can't hide behind a fast machine.
+- **Honest experiments**: P13 challengers ship as deterministic pure functions with explicit "not promoted" status; the promotion gate (P10-5) hard-rejects security violations before score ever matters.
+- **Observability without OTel**: spanId/parentSpanId on events reconstructs the model→tool call tree; `agent explain` and `deriveRunMetrics` read only emitted facts.
+
+### What Broke & How We Fixed
+- emit wrappers dropping the new spans arg → thread the 5th param through every controller deps type.
+- SQLite concurrent DDL locks in WAL → pre-create tables in the parent.
+- SQLite doesn't dedupe event ids → explicit json_extract lookup inside the sequence transaction.
+- DeterministicToolSelector ctor arg order (extra vs coreTools) → mis-used Set crashed with "reading 'some'".
+- artifact verification needs real files on disk → temp-dir fixtures in tests.
+- doctor test counts drift when a new check is added → update counters alongside.
+
+### Unresolved / Deferred
+- P13 challengers un-promoted (need real benchmark wiring).
+- P10-6 Windows CI, P12-5 CI upload, P8-1 runtime auto-plan wiring.
+- Repo-map manifest/dependency-edge invalidation (P7-5 note).

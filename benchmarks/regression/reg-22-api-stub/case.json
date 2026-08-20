@@ -1,0 +1,20 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "implementation",
+    "node"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const s=require('./server.js'); s.listen(0, async () => { const port = s.address().port; const r = await fetch(`http://127.0.0.1:${port}/health`); if (r.status !== 200) process.exit(1); const b = await r.json(); if (!b.ok) process.exit(1); s.close(); })"
+      ]
+    }
+  ]
+}

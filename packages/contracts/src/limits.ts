@@ -33,7 +33,17 @@ export interface ContextReport {
 
 export interface DelegationLimits {
   maxDepth: number;
+  /** @deprecated P3-3 — kept as the backward-compatible alias of
+   *  `maxChildrenTotal` (historical total children a parent may spawn).
+   *  Prefer maxChildrenTotal / maxActiveChildren. */
   maxChildren: number;
+  /** P3-3: total children a parent may ever spawn (historical count, all
+   *  completed included). Absent → falls back to the deprecated maxChildren. */
+  maxChildrenTotal?: number;
+  /** P3-3: concurrent ACTIVE children of one parent (running / waiting
+   *  turns). Completed children never occupy an active slot. Absent → no
+   *  active cap (only maxConcurrent and the scheduler gate concurrency). */
+  maxActiveChildren?: number;
   maxConcurrent: number;
   timeoutMs: number;
   /** P1-7: tool-call budget allocated to this delegation. The scheduler
@@ -50,6 +60,18 @@ export const DEFAULT_DELEGATION_LIMITS: DelegationLimits = {
   maxConcurrent: 3,
   timeoutMs: 10 * 60 * 1000,
 };
+
+/** P3-3: resolve the child-count caps from delegation limits. `total` always
+ *  has a concrete value (maxChildrenTotal, else the deprecated maxChildren
+ *  alias, else 0 = no cap); `active` is undefined when no active cap was set.
+ */
+export function resolveChildLimits(limits: Pick<DelegationLimits, "maxChildren" | "maxChildrenTotal" | "maxActiveChildren">): {
+  total: number;
+  active?: number;
+} {
+  const total = limits.maxChildrenTotal ?? limits.maxChildren;
+  return { total: total ?? 0, active: limits.maxActiveChildren };
+}
 
 /** P1-7: tree-wide budget for a root session and everything spawned under it.
  *  The scheduler accounts tool-call usage and tree wall-clock; token

@@ -35,6 +35,7 @@ import type {
   WorkingState,
 } from "@ar/contracts";
 import { AgentError } from "../errors.js";
+import type { ToolSelector } from "../tools/tool-selector.js";
 import { AgentState } from "../state/agent-state.js";
 import type { RecoveryPolicy } from "../recovery/recovery.js";
 import {
@@ -101,10 +102,14 @@ export interface ModelCallControllerDeps {
     type: AgentEvent["type"],
     payload: Record<string, unknown>,
     turnId?: TurnId,
+    spans?: { spanId?: string; parentSpanId?: string },
   ) => Promise<AgentEvent>;
   now: () => number;
   failAt: (point: FaultPoint, ctx: FaultPointContext) => Promise<void>;
   toolSpecs: readonly ToolSpec[];
+  /** P7-1/P7-2: progressive disclosure — narrows the advertised tool schemas
+   *  per goal. Absent → every spec is advertised (identity). */
+  toolSelector?: ToolSelector;
   recovery?: RecoveryPolicy;
   timer: Timer;
   compactCounter: { value: number };
@@ -203,7 +208,7 @@ export class ModelCallController {
       durationMs: this.deps.now() - callStartedAt,
       ...(timeToFirstTokenMs !== undefined ? { timeToFirstTokenMs } : {}),
       ...(usage !== undefined ? { usage } : {}),
-    }, turnId);
+    }, turnId, { spanId: callId });
 
     if (final.finishReason === "stop") {
       await this.deps.failAt("verification.started", { sessionId, turnId });
@@ -327,10 +332,29 @@ export class ModelCallController {
       callStartedAt = this.deps.now();
       timeToFirstTokenMs = undefined;
       firstTokenSeen = false;
-      await this.deps.emit(sessionId, "model.started", { callId }, turnId);
+      await this.deps.emit(sessionId, "model.started", { callId }, turnId, { spanId: callId });
       try {
         await this.deps.failAt("model.next_call", { sessionId, turnId });
-        for await (const ev of client.generate({ messages: history, system, tools: this.deps.toolSpecs }, signal)) {
+        // P7-1/P7-2: progressive tool disclosure — the model request advertises
+        // only the goal-relevant schemas (deterministic keyword champion).
+        const advertisedTools = this.deps.toolSelector?.select({
+          goal: working.goal,
+          tools: this.deps.toolSpecs,
+        });
+        const tools: readonly ToolSpec[] = advertisedTools?.selected ?? this.deps.toolSpecs;
+        // P7-3: selection is observable (availability vs admitted vs dropped).
+        await this.deps.emit(
+          sessionId,
+          "tools.selected",
+          {
+            callId,
+            available: this.deps.toolSpecs.length,
+            selected: tools.length,
+            dropped: advertisedTools?.dropped ?? [],
+          },
+          turnId,
+        );
+        for await (const ev of client.generate({ messages: history, system, tools: [...tools] }, signal)) {
           if (signal.aborted) break;
           await this.deps.failAt("model.stream", { sessionId, turnId });
           switch (ev.type) {

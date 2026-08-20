@@ -68,6 +68,7 @@ export interface ToolCallControllerDeps {
     type: AgentEvent["type"],
     payload: Record<string, unknown>,
     turnId?: TurnId,
+    spans?: { spanId?: string; parentSpanId?: string },
   ) => Promise<AgentEvent>;
   /** P1-5 fault-injection kill point (no-op when absent). */
   failAt: (point: FaultPoint, ctx: FaultPointContext) => Promise<void>;
@@ -87,6 +88,18 @@ export interface ToolCallControllerDeps {
   toolCapabilityOf: (toolName: string) => ToolCapability;
   /** Max parallel concurrency-safe calls per read batch. */
   maxParallelToolCalls: number;
+  /** P3-9: host-provided specialist delegation. When adaptive recovery picks
+   *  `delegate_specialist`, the host decides whether to actually delegate
+   *  (budget allows + task decomposable) and returns a bounded observation
+   *  for the model; absent → the legacy "try a different approach" message. */
+  delegateSpecialist?: (input: {
+    sessionId: SessionId;
+    turnId: TurnId;
+    goal: string;
+    tool: string;
+    failure: string;
+    signal: AbortSignal;
+  }) => Promise<{ delegated: boolean; summary?: string } | undefined>;
 }
 
 export class ToolCallController {
@@ -107,6 +120,8 @@ export class ToolCallController {
     ctx: TurnContext,
     state: AgentState,
     calls: ToolCall[],
+    /** P9-1: the model call that requested these tool calls (parent span). */
+    parentCallId?: string,
   ): Promise<ExecutedToolCall[]> {
     const { signal } = ctx;
     const executed: ExecutedToolCall[] = [];
@@ -132,7 +147,7 @@ export class ToolCallController {
         // so a read that has not settled at abort time is simply dropped (its
         // result is not recorded); the reads themselves observe the aborted
         // signal and terminate promptly.
-        const settled = await this.runReadBatch(ctx, batch);
+        const settled = await this.runReadBatch(ctx, batch, parentCallId);
         state.transition("observing");
         state.transition("thinking");
         for (const { call: c, result } of settled) {
@@ -146,7 +161,7 @@ export class ToolCallController {
         i = j;
       } else {
         state.transition("tool_pending");
-        const result = await this.executeToolCall(ctx, call);
+        const result = await this.executeToolCall(ctx, call, parentCallId);
         state.transition("observing");
         state.transition("thinking");
         if (signal.aborted) {
@@ -185,6 +200,7 @@ export class ToolCallController {
   async runReadBatch(
     ctx: TurnContext,
     batch: ToolCall[],
+    parentCallId?: string,
   ): Promise<Array<{ call: ToolCall; result: ToolResult }>> {
     const { signal } = ctx;
     if (signal.aborted || batch.length === 0) return [];
@@ -211,7 +227,7 @@ export class ToolCallController {
       };
       signal.addEventListener("abort", onAbort, { once: true });
       batch.forEach((c, idx) => {
-        this.executeToolCall(ctx, c)
+        this.executeToolCall(ctx, c, parentCallId)
           .then((result) => {
             results[idx] = { call: c, result };
             remaining -= 1;
@@ -282,12 +298,13 @@ export class ToolCallController {
   async executeToolCall(
     ctx: TurnContext,
     call: ToolCall,
+    parentCallId?: string,
   ): Promise<ToolResult> {
     const { session, turnId, signal, agent } = ctx;
     // P1-20: tool latency starts at the request (includes policy gates,
     // permission/sandbox evaluation and retries).
     const toolStartedAt = this.deps.now();
-    await this.deps.emit(session.id, "tool.requested", { toolCallId: call.id, name: call.name, args: call.args }, turnId);
+    await this.deps.emit(session.id, "tool.requested", { toolCallId: call.id, name: call.name, args: call.args }, turnId, { spanId: call.id, parentSpanId: parentCallId });
 
     // P0-1: the session's frozen tool policy is the first gate (fail-closed).
     // Permission/sandbox evaluation still happens downstream in the
@@ -442,15 +459,45 @@ export class ToolCallController {
         }
         // Self-heal actions: inject a bounded observation so the model changes
         // approach (vs. blindly retrying), then feed the failed result onward.
+        // P3-9: delegate_specialist ACTUALLY delegates when the host wired a
+        // specialist service (budget allows + task decomposable) instead of
+        // only printing "try a different approach".
         if (decision.action === "change_strategy" || decision.action === "delegate_specialist") {
+          let content: string;
+          if (decision.action === "delegate_specialist" && this.deps.delegateSpecialist !== undefined) {
+            let turn;
+            try {
+              turn = await this.deps.store.getTurn(turnId);
+            } catch {
+              turn = undefined;
+            }
+            try {
+              const outcome = await this.deps.delegateSpecialist({
+                sessionId: session.id,
+                turnId,
+                goal: turn?.input.text ?? "",
+                tool: call.name,
+                failure: decision.reason,
+                signal: execCtx.signal,
+              });
+              content =
+                outcome?.delegated === true
+                  ? `[recovery:delegate_specialist] a specialist subagent is investigating "${call.name}" failure in isolation. ${outcome.summary ?? "Its findings will appear when it completes."}`
+                  : `[recovery:delegate_specialist] specialist delegation unavailable (${outcome?.summary ?? "outside budget or scope"}); stop repeating "${call.name}" and try a different approach.`;
+            } catch (cause) {
+              content = `[recovery:delegate_specialist] specialist delegation failed (${cause instanceof Error ? cause.message : String(cause)}); stop repeating "${call.name}" and try a different approach.`;
+            }
+          } else {
+            content =
+              `[recovery:${decision.action}] "${call.name}" failed without a safe retry (${decision.reason}); ` +
+              "stop repeating it and try a different approach.";
+          }
           await this.deps.store.appendMessage({
             id: newMessageId(),
             sessionId: session.id,
             turnId,
             role: "system",
-            content:
-              `[recovery:${decision.action}] "${call.name}" failed without a safe retry (${decision.reason}); ` +
-              "stop repeating it and try a different approach.",
+            content,
             createdAt: this.deps.now(),
           });
           break;
@@ -464,7 +511,7 @@ export class ToolCallController {
     // calls already emitted tool.failed at their gate, no double emission).
     const durationMs = this.deps.now() - toolStartedAt;
     if (result.status === "success") {
-      await this.deps.emit(session.id, "tool.completed", { toolCallId: call.id, tool: call.name, durationMs }, turnId);
+      await this.deps.emit(session.id, "tool.completed", { toolCallId: call.id, tool: call.name, durationMs }, turnId, { spanId: call.id, parentSpanId: parentCallId });
     } else if (result.status === "failed" || result.status === "timeout") {
       // P2-37: a CANCELLED tool outcome (user interrupt during execution) is not
       // a tool failure — do not mislabel it as one. The turn's cancellation is

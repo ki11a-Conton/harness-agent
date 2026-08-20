@@ -192,6 +192,30 @@ describe("loadBenchmarkCases", () => {
     expect(cases[0]!.judgeVersion).toBe("2.0.0");
   });
 
+  it("parses P4-12/P4-3 fields (expectedEvents.atLeast + requires)", async () => {
+    const root = await makeCaseDir({
+      "m/request.md": "task",
+      "m/expected.md": "done",
+      "m/case.json": JSON.stringify({
+        expectedEvents: { atLeast: { "memory.retrieved": 1, "subagent.started": 2 } },
+        requires: ["memory", "subagent"],
+      }),
+    });
+    const cases = await loadBenchmarkCases(root);
+    expect(cases[0]!.expectedEvents).toEqual({ atLeast: { "memory.retrieved": 1, "subagent.started": 2 } });
+    expect(cases[0]!.requires).toEqual(["memory", "subagent"]);
+  });
+
+  it("rejects malformed expectedEvents / requires (P4-3/P4-12)", async () => {
+    const root = await makeCaseDir({
+      "bad1/request.md": "t", "bad1/expected.md": "d",
+      "bad1/case.json": JSON.stringify({ expectedEvents: { atLeast: { "memory.retrieved": -1 } } }),
+      "bad2/request.md": "t", "bad2/expected.md": "d",
+      "bad2/case.json": JSON.stringify({ requires: 42 }),
+    });
+    await expect(loadBenchmarkCases(root)).rejects.toThrow();
+  });
+
   it("defaults suite to regression and judgeVersion to 1.0.0", async () => {
     const root = await makeCaseDir({ "plain/request.md": "x", "plain/expected.md": "x" });
     const cases = await loadBenchmarkCases(root);
