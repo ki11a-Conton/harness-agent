@@ -224,6 +224,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   let boundDelegator: Delegator | undefined;
   let boundParallelDelegator: ParallelDelegator | undefined;
   let workerAgent: AgentDefinition | undefined;
+  const delegationToolNames: string[] = [];
   if (delegationEnabled) {
     workerAgent = workerAgentDefinition(config);
     for (const tool of createDelegationTools({
@@ -245,6 +246,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
       workerAgentId: () => workerAgent!.id,
       workspaceManager: () => new DefaultChildWorkspaceManager(),
     })) {
+      delegationToolNames.push(tool.name);
       registry.register(tool);
     }
   }
@@ -381,7 +383,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
 
   // --- agents (main; subagent added below once runtime exists) ---------------
   const agents: AgentDefinition[] = [
-    mainAgent(config, mcpToolNames),
+    mainAgent(config, mcpToolNames, delegationToolNames),
     ...(workerAgent !== undefined ? [workerAgent] : []),
   ];
   const scheduler =
@@ -787,7 +789,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   return harness;
 }
 
-function mainAgent(config: HarnessConfig, mcpToolNames: string[] = []): AgentDefinition {
+function mainAgent(config: HarnessConfig, mcpToolNames: string[] = [], delegationToolNames: string[] = []): AgentDefinition {
   return {
     id: newAgentId(),
     name: "main",
@@ -795,7 +797,7 @@ function mainAgent(config: HarnessConfig, mcpToolNames: string[] = []): AgentDef
     mode: "primary",
     model: config.model,
     systemPrompt: DEFAULT_MAIN_SYSTEM_PROMPT,
-    tools: { allow: [...PRODUCTION_TOOL_NAMES, ...mcpToolNames] },
+    tools: { allow: [...PRODUCTION_TOOL_NAMES, ...mcpToolNames, ...delegationToolNames] },
     permissions: resolveProfile(config.profile).permissions,
     skills: {},
     limits: { maxToolCalls: 50, ...config.limits },

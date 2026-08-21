@@ -143,12 +143,11 @@ export class SandboxManager {
     // behave differently across platforms; neither is a normal workspace path.
     // eslint-disable-next-line no-control-regex
     if (/[\u0000-\u001f]/.test(target)) return null;
-    // A Windows drive path (`C:\…`, `C:/…`) or UNC path (`\\server\share\…`)
-    // is absolute on Windows and must never be treated as a relative path that
-    // resolves inside a POSIX workspace. The workspace may be interactively
-    // addressed from another OS (or the model may have been handed a Windows
-    // path), so these are always outside scope — deny, fail-closed.
-    if (WINDOWS_DRIVE_PATH.test(target) || UNC_PATH.test(target)) return null;
+    // On Windows, `C:\…` is a valid absolute path. On POSIX, it's a relative
+    // path that could be used to smuggle an absolute Windows path past the
+    // sandbox. Only reject Windows drive paths when the target is NOT already
+    // absolute (i.e. when it would be treated as a relative path on this OS).
+    if (!isAbsolute(target) && (WINDOWS_DRIVE_PATH.test(target) || UNC_PATH.test(target))) return null;
     const absolute = isAbsolute(target) ? target : resolve(this.cwd, target);
     try {
       return realpathSync(absolute);

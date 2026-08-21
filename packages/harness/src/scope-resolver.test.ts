@@ -7,6 +7,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
 import { memoryScopeFor, resolveRepositoryIdentity, stableHash } from "./scope-resolver.js";
 
+function normalizePath(p: string): string {
+  return p.replace(/\\/g, "/");
+}
+
 let tempDirs: string[] = [];
 async function tempDir(): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "ar-scope-"));
@@ -31,7 +35,7 @@ describe("P2-3: repository identity", () => {
     const identity = await resolveRepositoryIdentity(dir);
     expect(identity.kind).toBe("git");
     expect(identity.id).toBe(stableHash("https://github.com/acme/repo.git"));
-    expect(identity.root).toBe(dir);
+    expect(identity.root).toBe(normalizePath(dir));
   });
 
   it("falls back to the repo root hash when there is no origin remote", async () => {
@@ -39,14 +43,14 @@ describe("P2-3: repository identity", () => {
     git(dir, ["init", "-q"]);
     const identity = await resolveRepositoryIdentity(dir);
     expect(identity.kind).toBe("git");
-    expect(identity.id).toBe(stableHash(dir));
+    expect(identity.id).toBe(stableHash(normalizePath(dir)));
   });
 
   it("degrades to a path identity for non-git directories (never throws)", async () => {
     const dir = await tempDir();
     const identity = await resolveRepositoryIdentity(dir);
     expect(identity.kind).toBe("path");
-    expect(identity.id).toBe(stableHash(dir));
+    expect(identity.id).toBe(stableHash(normalizePath(dir)));
   });
 
   it("is stable for the same path across calls", async () => {

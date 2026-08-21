@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { newSessionId } from "@ar/contracts";
 import { safeJoin } from "./workspace-manager.js";
 import { DefaultChildWorkspaceManager } from "./workspace-manager.js";
+import { resolve, sep } from "node:path";
 
 let tempDirs: string[] = [];
 async function tempDir(): Promise<string> {
@@ -145,10 +146,13 @@ describe("P3-5: diff + physical apply", () => {
 
 describe("P3-4: path safety", () => {
   it("rejects traversal and absolute paths", () => {
-    expect(safeJoin("/root", "../escape")).toBeUndefined();
-    expect(safeJoin("/root", "a/../../escape")).toBeUndefined();
-    expect(safeJoin("/root", "/absolute")).toBeUndefined();
-    expect(safeJoin("/root", "C:\\win")).toBeUndefined();
-    expect(safeJoin("/root", "sub/file.ts")).toBe("/root/sub/file.ts");
+    // Use a platform-appropriate root (resolve turns `/root` into a usable
+    // absolute path on both Windows and POSIX).
+    const root = resolve("/root");
+    expect(safeJoin(root, "../escape")).toBeUndefined();
+    expect(safeJoin(root, "a/../../escape")).toBeUndefined();
+    expect(safeJoin(root, "/absolute")).toBeUndefined();
+    expect(safeJoin(root, "C:\\win")).toBeUndefined();
+    expect(safeJoin(root, "sub/file.ts")).toBe(resolve(root, "sub/file.ts"));
   });
 });

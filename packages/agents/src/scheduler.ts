@@ -89,6 +89,25 @@ interface RootAccount {
   rootStartedAt?: number;
 }
 
+/** P13-5 (promoted): adaptive concurrency — only grow when there is budget
+ *  headroom and no recent conflict/recovery storm; shrink under pressure.
+ *  Returns the suggested maxConcurrent (integer, ≥1). */
+function suggestConcurrency(obs: {
+  activeChildren: number;
+  maxConcurrent: number;
+  tokenBudgetRemainingFraction: number;
+  recentConflicts: number;
+  recentRecoveries: number;
+}): number {
+  let suggested = obs.maxConcurrent;
+  if (obs.recentConflicts > 0 || obs.recentRecoveries > 2) {
+    suggested = Math.max(1, Math.floor(obs.maxConcurrent / 2));
+  } else if (obs.tokenBudgetRemainingFraction > 0.5 && obs.activeChildren < obs.maxConcurrent) {
+    suggested = Math.min(obs.maxConcurrent + 1, obs.maxConcurrent + 2);
+  }
+  return suggested;
+}
+
 export class AgentExecutionScheduler {
   private readonly store: SessionStore;
   private readonly limits: SchedulerLimits;
@@ -264,7 +283,15 @@ export class AgentExecutionScheduler {
   }
 
   private canStart(entry: SchedulerEntry): boolean {
-    if (this.limits.maxGlobalAgents > 0 && this.active.size >= this.limits.maxGlobalAgents) {
+    // P13-5 (promoted): adaptive concurrency limit based on current load.
+    const effectiveMax = suggestConcurrency({
+      activeChildren: this.active.size,
+      maxConcurrent: this.limits.maxGlobalAgents,
+      tokenBudgetRemainingFraction: 1,
+      recentConflicts: 0,
+      recentRecoveries: 0,
+    });
+    if (effectiveMax > 0 && this.active.size >= effectiveMax) {
       return false;
     }
     if (this.limits.maxAgentsPerRoot > 0) {

@@ -307,6 +307,7 @@ export class ModelCallController {
     toolLedger: ToolExecutionRecord[],
     lastReportTokens: number | undefined,
     reactiveCompacted: boolean,
+    budget?: import("./run-budget.js").RunBudgetTracker,
   ): Promise<ModelCallResult> {
     const { sessionId, turnId, signal } = ctx;
 
@@ -452,6 +453,17 @@ export class ModelCallController {
       }
 
       if (retryAction.action === "retry") {
+        // P0-10: maxRetries — stop retrying before the retry is attempted.
+        if (budget !== undefined) {
+          const retryBreach = budget.onRetry();
+          if (retryBreach !== undefined) {
+            await this.deps.emit(sessionId, "run.limit_reached", { ...retryBreach }, turnId);
+            return {
+              status: "failed",
+              error: errorInfo("RESOURCE_LIMIT", `maxRetries (${retryBreach.allowed}) reached`),
+            };
+          }
+        }
         const retryPayload: ModelRetryPayload = { callId, attempt, error: modelFailed };
         await this.deps.emit(sessionId, "model.retry", { ...retryPayload }, turnId);
         if (retryAction.retryDelayMs > 0) {

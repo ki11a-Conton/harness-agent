@@ -786,6 +786,17 @@ export class AgentRuntime {
     let lastReportTokens: number | undefined;
     // P0-10: unified run-budget tracker (replaces scattered counters).
     const budget = new RunBudgetTracker(ctx.agent.limits, this.now);
+    // P0-10: maxTurns — a turn-level cap, consumed at the start of each turn.
+    const turnBreach = budget.onTurnStart();
+    if (turnBreach !== undefined) {
+      await this.emit(sessionId, "run.limit_reached", { ...turnBreach, used: turnBreach.used }, turnId);
+      return this.recoveryController.finishTurn(
+        ctx, "failed", state, working,
+        errorInfo("RESOURCE_LIMIT", `maxTurns (${turnBreach.allowed}) reached`),
+        "agent_limit",
+        toolLedger,
+      );
+    }
 
     try {
       for (let i = 0; i < this.maxIterationsPerTurn; i++) {
@@ -859,7 +870,7 @@ export class AgentRuntime {
         digestAppended = ctxUpdate.digestAppended;
         overflowAttempt = ctxUpdate.overflowAttempt;
         const modelResult = await this.modelCallController.callModelWithRetry(
-          ctx, client, history, system, working, state, toolLedger, lastReportTokens, reactiveCompacted,
+          ctx, client, history, system, working, state, toolLedger, lastReportTokens, reactiveCompacted, budget,
         );
 
         if (modelResult.status === "cancelled") {
@@ -883,10 +894,59 @@ export class AgentRuntime {
         if (this.reportModelUsage !== undefined && modelResult.usage !== undefined) {
           this.reportModelUsage(sessionId, modelResult.usage.inputTokens ?? 0, modelResult.usage.outputTokens ?? 0);
         }
+        // P0-10: maxEstimatedCostUsd — check immediately after model usage so a
+        // runaway cost stops BEFORE the next model call.
+        if (modelResult.usage !== undefined) {
+          const costBreach = budget.onModelUsage(
+            modelResult.usage.inputTokens ?? 0,
+            modelResult.usage.outputTokens ?? 0,
+            modelResult.usage.estimatedCostUsd ?? 0,
+          );
+          if (costBreach !== undefined) {
+            await this.emit(sessionId, "run.limit_reached", { ...costBreach }, turnId);
+            return this.recoveryController.finishTurn(
+              ctx, "failed", state, working,
+              errorInfo("RESOURCE_LIMIT", `maxEstimatedCostUsd (${costBreach.allowed}) exceeded after ${costBreach.used}`),
+              "agent_limit",
+              toolLedger,
+            );
+          }
+        }
+        // P0-10: maxOutputChars — assistant text counts toward the output cap
+        // (tool output is metered separately by toolOutputBudget). A breach
+        // stops the turn before more tokens are generated.
+        if (modelResult.assistantText !== undefined) {
+          const outputBreach = budget.onOutput(modelResult.assistantText.length);
+          if (outputBreach !== undefined) {
+            await this.emit(sessionId, "run.limit_reached", { ...outputBreach }, turnId);
+            return this.recoveryController.finishTurn(
+              ctx, "failed", state, working,
+              errorInfo("RESOURCE_LIMIT", `maxOutputChars (${outputBreach.allowed}) exceeded after ${outputBreach.used}`),
+              "agent_limit",
+              toolLedger,
+            );
+          }
+        }
         if (completion.action === "finish") return completion.outcome;
 
         // proceed to execute tools
         const toolCalls = completion.toolCalls;
+        // P0-10: maxSubagents — consumed before any delegate tool actually
+        // spawns a child (never after the fact).
+        for (const call of toolCalls) {
+          if (call.name.startsWith("delegate")) {
+            const spawnBreach = budget.onSubagentSpawn();
+            if (spawnBreach !== undefined) {
+              await this.emit(sessionId, "run.limit_reached", { ...spawnBreach }, turnId);
+              return this.recoveryController.finishTurn(
+                ctx, "failed", state, working,
+                errorInfo("RESOURCE_LIMIT", `maxSubagents (${spawnBreach.allowed}) reached`),
+                "agent_limit",
+                toolLedger,
+              );
+            }
+          }
+        }
         const executed = await this.toolCallController.executeToolCalls(ctx, state, toolCalls, modelResult.callId);
         const toolAction = await this.handleToolResults(
           ctx, executed, working, state, toolLedger, priorBlocks, lastReportTokens, budget,

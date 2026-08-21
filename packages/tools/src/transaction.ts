@@ -262,7 +262,17 @@ export class WorkspaceChangeTransaction {
     const tmp = resolve(dir, `.ar-txn-${process.pid}-${randomBytes(6).toString("hex")}.tmp`);
     await fs.writeFile(tmp, content, this.encoding);
     try {
-      await fs.rename(tmp, p);
+      // Windows EPERM: the destination file may still be held by the
+      // filesystem (antivirus, indexing). Retry the rename with backoff.
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        try {
+          await fs.rename(tmp, p);
+          return;
+        } catch (rerr) {
+          if (attempt < 4) await new Promise((r) => setTimeout(r, 50 * (attempt + 1)));
+          else throw rerr;
+        }
+      }
     } catch (err) {
       await fs.rm(tmp, { force: true }).catch(() => undefined);
       throw err;

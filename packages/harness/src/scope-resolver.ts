@@ -12,6 +12,11 @@ import type { MemoryScope } from "@ar/contracts";
 
 const execFileAsync = promisify(execFile);
 
+/** Normalize path separators to forward slashes for stable cross-platform ids. */
+function normalizePath(p: string): string {
+  return p.replace(/\\/g, "/");
+}
+
 /** Stable repository identity (P2-3): a git repo is identified by its remote
  *  URL when available (repo root as fallback), a non-git workspace by the
  *  normalized root path hash. `id` is stable across machines for the same
@@ -33,7 +38,7 @@ export async function resolveRepositoryIdentity(cwd: string): Promise<Repository
       cwd,
       timeout: 5000,
     });
-    const root = rootOut.trim();
+    const root = normalizePath(rootOut.trim());
     if (root === "") throw new Error("empty git root");
     let remote = "";
     try {
@@ -48,7 +53,7 @@ export async function resolveRepositoryIdentity(cwd: string): Promise<Repository
     const source = remote !== "" ? remote : root;
     return { kind: "git", id: stableHash(source), root };
   } catch {
-    const root = resolve(cwd);
+    const root = normalizePath(resolve(cwd));
     return { kind: "path", id: stableHash(root), root };
   }
 }

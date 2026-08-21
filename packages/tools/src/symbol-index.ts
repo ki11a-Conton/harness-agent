@@ -1,5 +1,6 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
+import { normalizePath } from "@ar/security";
 
 /**
  * P7-4 (EXPERIMENT): lightweight TypeScript/JavaScript symbol index built on
@@ -90,7 +91,8 @@ async function buildRootIndex(root: string): Promise<RootIndex> {
   for (const file of sourceFiles) {
     try {
       const [content, st] = await Promise.all([readFile(file, "utf8"), stat(file)]);
-      files.set(relative(root, file), { relPath: relative(root, file), lines: content.split("\n"), mtimeMs: st.mtimeMs });
+      const rel = normalizePath(relative(root, file));
+    files.set(rel, { relPath: rel, lines: content.split("\n"), mtimeMs: st.mtimeMs });
     } catch {
       // unreadable file: skip
     }

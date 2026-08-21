@@ -160,7 +160,15 @@ export async function backupTree(
   await mkdir(destRoot, { recursive: true });
   await copyDir(root, destRoot);
   await syncDir(root);
-  return { path: destRoot, files: seen.length, bytes };
+  // P0-2: expose the backup location with POSIX separators — it is a
+  // record/reporting value, not a filesystem handle (Windows drive letters
+  // are preserved).
+  return { path: toPortablePath(destRoot), files: seen.length, bytes };
+}
+
+/** Normalize a reported path to `/` separators (Windows backslash → `/`). */
+function toPortablePath(p: string): string {
+  return p.replace(/\\/g, "/");
 }
 
 /**

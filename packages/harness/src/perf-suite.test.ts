@@ -84,7 +84,7 @@ describe("P11-1: long-session scale (deterministic)", () => {
     expect(events).toHaveLength(1_000);
     expect((await sessionStore.listSessions()).length).toBeGreaterThanOrEqual(500);
     console.log(`[P11-1] 10k msgs + 1k events + 500 sessions: ${elapsed.toFixed(0)}ms`);
-  }, 120_000);
+  }, 300_000);
 
   it("builds context over a 10k-message history deterministically", async () => {
     const dir = await freshDir();

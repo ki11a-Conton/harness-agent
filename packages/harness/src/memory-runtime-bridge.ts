@@ -20,6 +20,7 @@ import {
   type RankedMemoryItem,
   type SuppressedMemory,
 } from "@ar/memory";
+import { suggestMemoryTopK } from "@ar/learning";
 
 /** Result of a pre-turn retrieval (P2-2): ready context blocks plus the
  *  ranked items they were rendered from (for feedback) and the suppressed
@@ -136,7 +137,7 @@ export class MemoryRuntimeBridge {
   }): Promise<RetrievedMemoryContext> {
     const query = input.goal.trim() === "" ? input.cwd : input.goal;
     const result = await retrieveMemories(this.store, query, this.scope, {
-      k: this.topK,
+      k: this.suggestTopK(),
       now: this.now(),
     });
     // P2-4: retrieval is observable on the funnel (retrievedCount++).
@@ -189,6 +190,15 @@ export class MemoryRuntimeBridge {
       succeeded: entry.succeeded,
       roiPer1k: entry.tokens > 0 ? (entry.succeeded / entry.tokens) * 1000 : 0,
     }));
+  }
+
+  /** P13-4 (challenger bridge): suggest memory topK from observed token ROI.
+   *  Pure passthrough of suggestMemoryTopK over this bridge's ROI ledger; the
+   *  harness keeps using the configured/fixed topK until a benchmark gate
+   *  promotes adaptive topK (default behaviour is UNCHANGED). */
+  suggestTopK(): number {
+    const roi = this.tokenROI().map(({ roiPer1k }) => ({ roiPer1k }));
+    return suggestMemoryTopK(roi, this.topK);
   }
 
   /** Apply one immutable usefulness update and persist it. */

@@ -186,6 +186,13 @@ export class SqliteRuntimeStore
   close(): void {
     if (this.closed) return; // idempotent close (lifecycle + test finally)
     this.closed = true;
+    // Switch to DELETE journal mode before closing to release -shm/-wal files
+    // on Windows (otherwise EBUSY during temp directory cleanup).
+    try {
+      this.db.exec("PRAGMA journal_mode=DELETE;");
+    } catch {
+      // best-effort: may fail on a read-only or busy store
+    }
     this.db.close();
   }
 

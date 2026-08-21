@@ -25,14 +25,22 @@ import { migrateJsonlToSqlite } from "./migrate.js";
 import { SqliteRuntimeStore } from "./sqlite-runtime-store.js";
 
 const tempDirs: string[] = [];
+const stores: SqliteRuntimeStore[] = [];
 async function freshDir(): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "harness-store-"));
   tempDirs.push(dir);
   return dir;
 }
 
+function trackStore(store: SqliteRuntimeStore): SqliteRuntimeStore {
+  stores.push(store);
+  return store;
+}
+
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((d) => rm(d, { recursive: true, force: true })));
+  for (const store of stores) store.close();
+  stores.length = 0;
+  await Promise.all(tempDirs.splice(0).map((d) => rm(d, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })));
 });
 
 function session(): Session {
@@ -82,7 +90,7 @@ function event(sessionId: string, type = "turn.started"): AgentEvent {
 describe("SqliteRuntimeStore (P5-3)", () => {
   it("persists sessions/turns/messages/state snapshots and survives reopen", async () => {
     const dir = await freshDir();
-    const store = new SqliteRuntimeStore({ dataDir: dir });
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: dir }));
     const s = session();
     const t = turn(s.id);
     const m = message(s.id, t.id, "hello");
@@ -92,7 +100,7 @@ describe("SqliteRuntimeStore (P5-3)", () => {
     await store.saveStateSnapshot(s.id, { plan: ["a"] });
     store.close();
 
-    const reopened = new SqliteRuntimeStore({ dataDir: dir });
+    const reopened = trackStore(new SqliteRuntimeStore({ dataDir: dir }));
     expect(await reopened.getSession(s.id)).toEqual(s);
     expect(await reopened.getTurn(t.id)).toEqual(t);
     expect(await reopened.listMessages(s.id)).toEqual([m]);
@@ -104,7 +112,7 @@ describe("SqliteRuntimeStore (P5-3)", () => {
   });
 
   it("updates sessions/turns and filters listSessions by parent/status", async () => {
-    const store = new SqliteRuntimeStore({ dataDir: await freshDir() });
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: await freshDir() }));
     const parent = session();
     const child = { ...session(), id: newSessionId(), parentId: parent.id, status: "completed" as const };
     await store.createSession(parent);
@@ -116,7 +124,7 @@ describe("SqliteRuntimeStore (P5-3)", () => {
   });
 
   it("assigns strictly increasing per-session event sequences under interleaving", async () => {
-    const store = new SqliteRuntimeStore({ dataDir: await freshDir() });
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: await freshDir() }));
     const sid = newSessionId();
     const others = newSessionId();
     await Promise.all([
@@ -135,14 +143,14 @@ describe("SqliteRuntimeStore (P5-3)", () => {
   });
 
   it("rejects duplicate event ids", async () => {
-    const store = new SqliteRuntimeStore({ dataDir: await freshDir() });
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: await freshDir() }));
     const e = event(newSessionId());
     await store.append(e);
     await expect(store.append(e)).rejects.toThrow();
   });
 
   it("inbox: admit/list/promote/consume lifecycle", async () => {
-    const store = new SqliteRuntimeStore({ dataDir: await freshDir() });
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: await freshDir() }));
     const sid = newSessionId();
     const prompt: AdmittedPrompt = {
       id: newPromptId(),
@@ -162,7 +170,7 @@ describe("SqliteRuntimeStore (P5-3)", () => {
   });
 
   it("askUser: create/listPending/answer/withdraw via the composition surface", async () => {
-    const store = new SqliteRuntimeStore({ dataDir: await freshDir() });
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: await freshDir() }));
     const sid = newSessionId();
     const request: AskUserRequest = {
       id: newAskId(),
@@ -184,7 +192,7 @@ describe("SqliteRuntimeStore (P5-3)", () => {
   });
 
   it("checkpoints: save/loadLatest/list via the composition surface", async () => {
-    const store = new SqliteRuntimeStore({ dataDir: await freshDir() });
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: await freshDir() }));
     const sid = newSessionId();
     const cp = (id: string, at: number): CheckpointData =>
       ({
@@ -334,7 +342,7 @@ describe("P5-4: JSONL → SQLite migration", () => {
       `${JSON.stringify({ schemaVersion: 1, event: e1 })}\n${JSON.stringify({ schemaVersion: 1, event: e2 })}\n`,
     );
 
-    const target = new SqliteRuntimeStore({ dataDir: join(root, "sqlite") });
+    const target = trackStore(new SqliteRuntimeStore({ dataDir: join(root, "sqlite") }));
     try {
       // dry run: counts but writes nothing
       const dry = await migrateJsonlToSqlite({
