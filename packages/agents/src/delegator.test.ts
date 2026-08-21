@@ -27,7 +27,8 @@ import {
 import { ScriptedModelProvider } from "@ar/model";
 import type { Script } from "@ar/model";
 import { AgentRuntime } from "@ar/core";
-import { Delegator, restrictToolPolicy } from "./delegator.js";
+import { Delegator, restrictToolPolicy, writableIsolationError } from "./delegator.js";
+import { AgentExecutionScheduler } from "./scheduler.js";
 import type { ChildWorkspaceManager } from "./workspace-isolation.js";
 
 // ---- in-memory fakes (per plan §97) ---------------------------------------
@@ -171,8 +172,13 @@ function makeHarness(opts?: {
   now?: () => number;
   verifier?: Verifier;
   workspaceManager?: ChildWorkspaceManager;
+  testOnlyUnsafeSharedWorkspace?: boolean;
+  scheduler?: AgentExecutionScheduler;
+  store?: MemorySessionStore;
 }) {
-  const store = new MemorySessionStore();
+  // A caller-supplied scheduler MUST share this store (it resolves root+depth
+  // from it), so the store option lets a test build both over one instance.
+  const store = opts?.store ?? new MemorySessionStore();
   const events = new MemoryEventStore();
   const now = opts?.now ?? Date.now;
   const provider = new ScriptedModelProvider(opts?.scripts ?? [ScriptedModelProvider.text("child done")]);
@@ -197,6 +203,10 @@ function makeHarness(opts?: {
     limits: opts?.limits,
     now,
     ...(opts?.workspaceManager !== undefined ? { workspaceManager: opts.workspaceManager } : {}),
+    ...(opts?.testOnlyUnsafeSharedWorkspace !== undefined
+      ? { testOnlyUnsafeSharedWorkspace: opts.testOnlyUnsafeSharedWorkspace }
+      : {}),
+    ...(opts?.scheduler !== undefined ? { scheduler: opts.scheduler } : {}),
   });
   return { store, events, runtime, delegator, orchestrator, provider };
 }
@@ -688,6 +698,95 @@ describe("Delegator (SUBAGENT-001)", () => {
     const child = await h.store.getSession(result.childSessionId);
     expect(child?.cwd).toBe(parent.cwd);
     expect(result.workspacePatch).toBeUndefined();
+  });
+
+  // ---- P14-3: writable delegation requires workspace isolation (fail-closed)
+
+  it("P14-3: writable delegation without a workspace manager is denied before any child is created", async () => {
+    const h = makeHarness(); // no workspaceManager — the production-invalid config
+    const parent = await createParent(h);
+
+    await expect(
+      h.delegator.delegate({ parentSessionId: parent.id, goal: "g", writable: true }, new AbortController().signal),
+    ).rejects.toMatchObject({ info: { code: "SECURITY_DENIED" } });
+
+    // Denied before any child session existed and before any tool ran.
+    expect(await h.store.listSessions({ parentId: parent.id })).toEqual([]);
+    expect(h.orchestrator.calls).toEqual([]);
+    // The denial is a typed security event on the parent session.
+    const denied = h.events.events.filter(
+      (e) => e.sessionId === parent.id && e.type === "security.permission_denied",
+    );
+    expect(denied).toHaveLength(1);
+    expect(denied[0]!.payload).toMatchObject({ code: "SECURITY_DENIED" });
+  });
+
+  it("P14-3: testOnlyUnsafeSharedWorkspace opts into the shared-write fallback (test-only)", async () => {
+    const h = makeHarness({ testOnlyUnsafeSharedWorkspace: true });
+    const parent = await createParent(h);
+
+    const result = await h.delegator.delegate(
+      { parentSessionId: parent.id, goal: "g", writable: true },
+      new AbortController().signal,
+    );
+    expect(result.status).toBe("success");
+    // Explicit test-only escape hatch: child runs on the shared parent root
+    // and produces no workspace patch — never used by production wiring.
+    const child = await h.store.getSession(result.childSessionId);
+    expect(child?.cwd).toBe(parent.cwd);
+    expect(result.workspacePatch).toBeUndefined();
+    expect(h.events.events.some((e) => e.type === "security.permission_denied")).toBe(false);
+  });
+
+  it("P14-3: workspace create failure cancels the never-run child and cleans the scheduler", async () => {
+    const failingManager: ChildWorkspaceManager = {
+      async create() {
+        throw new Error("disk full");
+      },
+      async apply() {
+        return { applied: [], conflicts: [], skipped: [] };
+      },
+    };
+    const store = new MemorySessionStore();
+    const scheduler = new AgentExecutionScheduler({ store });
+    const h = makeHarness({ workspaceManager: failingManager, scheduler, store });
+    const parent = await createParent(h);
+
+    await expect(
+      h.delegator.delegate({ parentSessionId: parent.id, goal: "g", writable: true }, new AbortController().signal),
+    ).rejects.toMatchObject({ info: { code: "INTERNAL_ERROR" } });
+
+    // No child side effect: the never-run child is cancelled, ran no turn and
+    // executed no tool.
+    const children = await h.store.listSessions({ parentId: parent.id });
+    expect(children).toHaveLength(1);
+    expect(children[0]!.status).toBe("cancelled");
+    expect(await h.store.listTurns(children[0]!.id)).toEqual([]);
+    expect(h.orchestrator.calls).toEqual([]);
+    // Scheduler slot released: no queued/running entry survives the failure.
+    expect(scheduler.snapshot()).toEqual([]);
+    // The scheduler is not poisoned: a later read-only delegation still runs.
+    const after = await h.delegator.delegate(
+      { parentSessionId: parent.id, goal: "g2" },
+      new AbortController().signal,
+    );
+    expect(after.status).toBe("success");
+    expect(scheduler.snapshot()).toEqual([]);
+  });
+
+  it("P14-3: writableIsolationError is typed and the escape hatch is explicit", () => {
+    expect(writableIsolationError({ workspaceManager: undefined, testOnlyUnsafeSharedWorkspace: false })!.info.code).toBe(
+      "SECURITY_DENIED",
+    );
+    expect(
+      writableIsolationError({
+        workspaceManager: { create: async () => ({ root: "/x", mode: "isolated-copy" as const, diff: async () => ({ childSessionId: "" as SessionId, entries: [] }), dispose: async () => {} }), apply: async () => ({ applied: [], conflicts: [], skipped: [] }) },
+        testOnlyUnsafeSharedWorkspace: false,
+      }),
+    ).toBeUndefined();
+    expect(
+      writableIsolationError({ workspaceManager: undefined, testOnlyUnsafeSharedWorkspace: true }),
+    ).toBeUndefined();
   });
 
   it("rejects delegation from a depth-1 child when maxDepth=1", async () => {

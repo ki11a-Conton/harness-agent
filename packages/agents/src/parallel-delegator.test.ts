@@ -492,6 +492,25 @@ describe("ParallelDelegator (SUBAGENT-002)", () => {
     expect(await h.store.listSessions({ parentId: parent.id })).toHaveLength(0);
   });
 
+  it("P14-3: a writable request without a workspace manager rejects the whole batch before any child starts", async () => {
+    const h = makeHarness(); // no workspaceManager — the production-invalid config
+    const parent = await createParent(h);
+
+    await expect(
+      h.delegator.delegateAll(
+        [
+          { parentSessionId: parent.id, goal: "write", writable: true },
+          { parentSessionId: parent.id, goal: "read" },
+        ],
+        new AbortController().signal,
+      ),
+    ).rejects.toMatchObject({ info: { code: "SECURITY_DENIED" } });
+
+    // No child session was created for any batch member (no partial start).
+    expect(await h.store.listSessions({ parentId: parent.id })).toEqual([]);
+    expect(h.orchestrator.calls).toEqual([]);
+  });
+
   it("creates one child per request, all under the parent", async () => {
     const h = makeHarness();
     const parent = await createParent(h);

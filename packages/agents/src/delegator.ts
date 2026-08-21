@@ -59,9 +59,13 @@ export interface DelegatorDeps {
   timer?: Timer;
   /** P3-4: child workspace isolation. When set, `writable:true` delegations
    *  run the child in an isolated copy and return a workspacePatch (P3-5);
-   *  without it, writable delegations fall back to the shared parent root
-   *  (same as today — the host owns the isolation gate). */
+   *  without it, writable delegations are denied (P14-3 fail-closed). */
   workspaceManager?: ChildWorkspaceManager;
+  /** P14-3: test-only escape hatch — when true, writable delegations without
+   *  a workspaceManager fall back to the shared parent root (same as the
+   *  pre-P14-3 behavior). NEVER set in production config; only useful for
+   *  tests that do not care about workspace isolation. */
+  testOnlyUnsafeSharedWorkspace?: boolean;
   /** P3-6: called when a child's isolated workspace root is created, so the
    *  host can admit that root into the child session's sandbox (the child
    *  must be able to write its own workspace). */
@@ -95,6 +99,7 @@ export class Delegator {
   private readonly now: () => number;
   private readonly timer: Timer;
   private readonly workspaceManager?: ChildWorkspaceManager;
+  private readonly testOnlyUnsafeSharedWorkspace: boolean;
   private readonly onChildWorkspace?: (childSessionId: SessionId, root: string) => void;
   private readonly onChildWorkspaceDisposed?: (childSessionId: SessionId) => void;
 
@@ -108,6 +113,7 @@ export class Delegator {
     this.now = deps.now ?? Date.now;
     this.timer = deps.timer ?? new RealTimer(this.now);
     this.workspaceManager = deps.workspaceManager;
+    this.testOnlyUnsafeSharedWorkspace = deps.testOnlyUnsafeSharedWorkspace ?? false;
     this.onChildWorkspace = deps.onChildWorkspace;
     this.onChildWorkspaceDisposed = deps.onChildWorkspaceDisposed;
   }
@@ -116,6 +122,25 @@ export class Delegator {
     const limits: DelegationLimits = { ...this.limits, ...req.limits };
     const parent = await this.requireSession(req.parentSessionId);
     await this.enforceBounds(parent, limits);
+
+    // P14-3: a writable delegation REQUIRES workspace isolation — fail-closed.
+    // There is no implicit shared-write fallback to the parent root in
+    // production; the only escape hatch is the explicitly test-only
+    // testOnlyUnsafeSharedWorkspace flag. Denied before any child session or
+    // scheduler slot exists, so no child can execute any tool.
+    if (req.writable === true) {
+      const isolationError = writableIsolationError({
+        workspaceManager: this.workspaceManager,
+        testOnlyUnsafeSharedWorkspace: this.testOnlyUnsafeSharedWorkspace,
+      });
+      if (isolationError !== undefined) {
+        await this.emit(parent.id, "security.permission_denied", {
+          reason: isolationError.info.message,
+          code: "SECURITY_DENIED",
+        });
+        throw isolationError;
+      }
+    }
 
     // P1-6/P1-7: global scheduling before any child session exists. A request
     // that must WAIT queues (fairness); cancelling it while queued throws
@@ -196,6 +221,16 @@ export class Delegator {
         // its own workspace is writable (and nothing outside it is).
         this.onChildWorkspace?.(child.id, workspace.root);
       } catch (err) {
+        // P14-3: failed isolation must not leave a live orphan — the never-run
+        // child session is marked cancelled (best-effort; the isolation failure
+        // is the error surfaced) and the scheduler session binding is dropped
+        // before the slot releases, so no token/root accounting leaks.
+        try {
+          await this.store.updateSession({ ...child, status: "cancelled" });
+        } catch {
+          // store cleanup must not mask the isolation failure
+        }
+        this.scheduler?.unbindSession(child.id);
         token?.release();
         throw new AgentError(
           errorInfo("INTERNAL_ERROR", `failed to isolate child workspace: ${describe(err)}`, { cause: err }),
@@ -685,6 +720,25 @@ export class Delegator {
       payload,
     });
   }
+}
+
+/** P14-3: writable delegation requires a ChildWorkspaceManager — fail-closed.
+ *  No implicit shared-write fallback exists in production; the only escape
+ *  hatch is the explicitly test-only `testOnlyUnsafeSharedWorkspace` flag.
+ *  Returns the typed SECURITY_DENIED error when isolation is unavailable. */
+export function writableIsolationError(deps: {
+  workspaceManager: ChildWorkspaceManager | undefined;
+  testOnlyUnsafeSharedWorkspace: boolean;
+}): AgentError | undefined {
+  if (deps.workspaceManager === undefined && !deps.testOnlyUnsafeSharedWorkspace) {
+    return new AgentError(
+      errorInfo(
+        "SECURITY_DENIED",
+        "writable delegation requires workspace isolation: no ChildWorkspaceManager configured",
+      ),
+    );
+  }
+  return undefined;
 }
 
 /** §54: the child's effective tool policy is the agent's policy restricted by

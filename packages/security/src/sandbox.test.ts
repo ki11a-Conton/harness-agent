@@ -3,6 +3,7 @@ import { basename, dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { SandboxPolicy } from "@ar/contracts";
+import type { CommandPlatform } from "./process-gate.js";
 import { SandboxManager, containsPath } from "./sandbox.js";
 
 let ws: string;
@@ -21,14 +22,17 @@ afterAll(() => {
   rmSync(outside, { recursive: true, force: true });
 });
 
-function makeManager(policy?: Partial<SandboxPolicy>): SandboxManager {
+function makeManager(
+  policy?: Partial<SandboxPolicy>,
+  commandPlatform?: CommandPlatform,
+): SandboxManager {
   const p: SandboxPolicy = {
     filesystem: { mode: "workspace-write", allowedPaths: [ws] },
     network: { mode: "deny", hosts: [] },
     process: { timeoutMs: 1000, maxOutputBytes: 1024 },
     ...policy,
   };
-  return new SandboxManager(ws, ws, p);
+  return new SandboxManager(ws, ws, p, [], commandPlatform);
 }
 
 describe("SandboxManager filesystem", () => {
@@ -297,6 +301,180 @@ describe("P2-22 filesystem sandbox hardening", () => {
     expect(m.checkWrite(join(junction, "x.txt")).allowed).toBe(false);
   });
 });
+describe("P14-2 exec allowlist semantic matching", () => {
+  it("allows an exact allowlisted command and its argument extensions", () => {
+    const m = makeManager(
+      { process: { allowedCommands: ["pnpm test", "git diff"] } },
+      "posix",
+    );
+    expect(m.checkExec("pnpm test").allowed).toBe(true);
+    expect(m.checkExec("git diff").allowed).toBe(true);
+    // Argument extension WITHOUT composition operators is allowed.
+    expect(m.checkExec("git diff --stat").allowed).toBe(true);
+    expect(m.checkExec("pnpm test -- foo.test.ts").allowed).toBe(true);
+  });
+
+  it("rejects a sibling program even when it shares a textual prefix (git diffx)", () => {
+    const m = makeManager({ process: { allowedCommands: ["git diff"] } }, "posix");
+    expect(m.checkExec("git diffx").allowed).toBe(false);
+    expect(m.checkExec("git difftool").allowed).toBe(false);
+  });
+
+  it("rejects a command not in the allowlist", () => {
+    const m = makeManager(
+      { process: { allowedCommands: ["pnpm test", "git diff"] } },
+      "posix",
+    );
+    expect(m.checkExec("rm -rf /").allowed).toBe(false);
+    expect(m.checkExec("npm run secret").allowed).toBe(false);
+  });
+
+  it("POSIX: rejects shell composition after an allowlisted prefix (no argument-extension bypass)", () => {
+    const m = makeManager(
+      { process: { allowedCommands: ["git diff", "pnpm test"] } },
+      "posix",
+    );
+    // P14-2: these all contain POSIX shell composition operators → denied even
+    // though they TEXTUALLY start with an allowlisted command.
+    expect(m.checkExec("git diff; rm -rf /").allowed).toBe(false);
+    expect(m.checkExec("git diff && echo pwned").allowed).toBe(false);
+    expect(m.checkExec("git diff || true").allowed).toBe(false);
+    expect(m.checkExec("git diff | sh").allowed).toBe(false);
+    expect(m.checkExec("git diff $(cat /etc/passwd)").allowed).toBe(false);
+    expect(m.checkExec("git diff `whoami`").allowed).toBe(false);
+    expect(m.checkExec("git diff\nrm -rf /").allowed).toBe(false);
+  });
+
+  it("Windows cmd: `&` composition after an allowlisted prefix is rejected; `;` is inert on cmd", () => {
+    const m = makeManager(
+      { process: { allowedCommands: ["git diff"] } },
+      "windows",
+    );
+    // cmd separates commands with `&`, NOT `;`.
+    expect(m.checkExec("git diff & rm -rf /").allowed).toBe(false);
+    expect(m.checkExec("git diff && rm -rf /").allowed).toBe(false);
+    expect(m.checkExec("git diff | more").allowed).toBe(false);
+    // `;` is NOT a composition operator on cmd — so this is not an injection.
+    // It is also not a valid argv extension (`diff;` ≠ `diff`), so it stays
+    // denied fail-closed: never allowed as a bare argument extension.
+    expect(m.checkExec("git diff; rm -rf /").allowed).toBe(false);
+  });
+
+  it("rejects composed cmd.exe and PowerShell commands", () => {
+    const m = makeManager(
+      { process: { allowedCommands: ["cmd /c dir", "powershell -Command Get-ChildItem"] } },
+      "windows",
+    );
+    // cmd chained operators
+    expect(m.checkExec("cmd /c dir & del /f x").allowed).toBe(false);
+    expect(m.checkExec("cmd /c dir && del x").allowed).toBe(false);
+    // PowerShell operators
+    expect(m.checkExec("powershell -Command \"Get-ChildItem; Remove-Item x\"").allowed).toBe(false);
+    expect(m.checkExec("powershell -Command \"Get-ChildItem | Out-File x\"").allowed).toBe(false);
+    expect(m.checkExec("powershell -Command \"Get-ChildItem & Remove-Item x\"").allowed).toBe(false);
+    // Encoded command is not an extension of the plain wrapper.
+    expect(m.checkExec("powershell -EncodedCommand AAA=").allowed).toBe(false);
+  });
+
+  it("glob allowlist entries still permit everything (policy choice)", () => {
+    const m = makeManager({ process: { allowedCommands: ["**/*"] } }, "posix");
+    expect(m.checkExec("git diff").allowed).toBe(true);
+    expect(m.checkExec("git diff; rm -rf /").allowed).toBe(true); // policy says everything
+    expect(m.checkExec("rm -rf /").allowed).toBe(true);
+  });
+
+  it("surfaceDenied still runs before the allowlist (shell-wrapper rejected)", () => {
+    const m = makeManager(
+      { process: { allowedCommands: ["**/*"], deniedSurfaces: ["shell-wrapper"] } },
+      "posix",
+    );
+    // A composed command's surface is escalated to shell-wrapper → denied.
+    expect(m.checkExec("git diff; rm -rf /").allowed).toBe(false);
+    // Plain commands remain allowed.
+    expect(m.checkExec("git diff").allowed).toBe(true);
+  });
+});
+
+describe("P14-1 canonicalization regressions", () => {
+  it("an empty allowedPaths entry is ignored (never widens or crashes the check)", () => {
+    // A policy with a stray "" entry (e.g. built before a var was set) must
+    // not fail the sandbox nor open a hole: the empty string is not a path
+    // and contains nothing.
+    const m = makeManager({
+      filesystem: { mode: "workspace-write", allowedPaths: [ws, ""] },
+    });
+    expect(m.checkWrite(join(ws, "ok.txt")).allowed).toBe(true);
+    expect(m.checkWrite(join(outside, "x.txt")).allowed).toBe(false);
+    expect(m.checkRead(join(outside, "secret.txt")).allowed).toBe(false);
+  });
+
+  it("absolute traversal via .. is denied (/ws/../outside/secret.txt)", () => {
+    const m = makeManager();
+    expect(m.checkRead(join(ws, "..", basename(outside), "secret.txt")).allowed).toBe(false);
+    expect(m.checkWrite(join(ws, "..", basename(outside), "new.txt")).allowed).toBe(false);
+  });
+
+  it("multi-level absolute traversal is denied (/ws/sub/../../outside/secret.txt)", () => {
+    const m = makeManager();
+    // /ws/sub → .. → /ws → .. → tmpdir → outside/secret.txt (outside ws).
+    const target = join(ws, "sub", "..", "..", basename(outside), "secret.txt");
+    expect(m.checkRead(target).allowed).toBe(false);
+  });
+
+  it("trailing separators and duplicate separators are still inside (no false denial)", () => {
+    const m = makeManager();
+    expect(m.checkRead(`${ws}/sub/`).allowed).toBe(true);
+    expect(m.checkRead(`${ws}//sub//file.txt`).allowed).toBe(true);
+  });
+
+  it(". segments are resolved and stay inside", () => {
+    const m = makeManager();
+    expect(m.checkRead(`${ws}/./sub/./file.txt`).allowed).toBe(true);
+  });
+
+  it("traversal out via .. then into a sibling text-prefix root is denied", () => {
+    // /ws/sub → .. → /ws → .. → tmpdir → <sibling>/x.txt. The sibling shares
+    // the textual prefix `basename(ws)` but lives OUTSIDE /ws — the canonical
+    // ancestor walk must not lose the tail segments nor let the prefix fool it.
+    const sibling = join(dirname(ws), `${basename(ws)}-sibling`);
+    const m = makeManager();
+    expect(m.checkWrite(join(ws, "sub", "..", "..", basename(sibling), "x.txt")).allowed).toBe(false);
+  });
+
+  it("symlink escape with a NON-EXISTENT tail is denied on write (deepest existing ancestor is the symlink)", () => {
+    const link = join(ws, "out-link");
+    try {
+      symlinkSync(outside, link, "junction");
+    } catch {
+      return; // symlink creation unsupported on this host
+    }
+    const m = makeManager();
+    // The deepest existing ancestor of /ws/out-link/deep/new.txt is the
+    // symlink itself → realpath resolves it to /outside → containment denies.
+    expect(m.checkWrite(join(link, "deep", "new.txt")).allowed).toBe(false);
+    expect(m.checkRead(join(link, "deep", "secret.txt")).allowed).toBe(false);
+  });
+
+  it("symlink pointing INSIDE the workspace stays allowed (no false positive denial)", () => {
+    const link = join(ws, "in-link");
+    try {
+      symlinkSync(join(ws, "sub"), link, "junction");
+    } catch {
+      return;
+    }
+    const m = makeManager();
+    expect(m.checkRead(join(link, "file.txt")).allowed).toBe(true);
+  });
+
+  it("case-insensitive policy rejects a differently-cased OUTSIDE sibling", () => {
+    const m = makeManager({
+      filesystem: { mode: "workspace-write", allowedPaths: [ws], caseInsensitive: true },
+    });
+    const upperSibling = join(dirname(ws), `${basename(ws).toUpperCase()}-SIBLING`);
+    expect(m.checkRead(join(upperSibling, "x.txt")).allowed).toBe(false);
+  });
+});
+
 describe("P3-6 sandbox extra roots", () => {
   it("admits a child's isolated workspace root as a writable extra root", () => {
     const p: SandboxPolicy = {

@@ -11,6 +11,7 @@ export * from "./permission.js";
 export * from "./approval.js";
 export * from "./permission-expiry.js";
 export * from "./capability.js";
+export * from "./path-containment.js";
 export * from "./sandbox.js";
 export * from "./skill.js";
 export * from "./memory.js";

@@ -1,8 +1,9 @@
 import type { AgentId, DelegationLimits, Session, SessionId, SessionStore } from "@ar/contracts";
 import { AgentError, DEFAULT_DELEGATION_LIMITS, errorInfo, isCancelledErrorCode } from "@ar/contracts";
 import type { AgentRuntime } from "@ar/core";
-import { Delegator, type DelegatorDeps } from "./delegator.js";
+import { Delegator, writableIsolationError, type DelegatorDeps } from "./delegator.js";
 import type { DelegationRequest, DelegationResult } from "./delegation.js";
+import type { ChildWorkspaceManager } from "./workspace-isolation.js";
 
 /**
  * SUBAGENT-002: parallel delegation (§57, INV-009).
@@ -31,6 +32,12 @@ export class ParallelDelegator {
   private readonly store: SessionStore;
   private readonly agentId: AgentId;
   private readonly limits: DelegationLimits;
+  /** P14-3: isolation availability forwarded from deps for the batch
+   *  pre-flight gate (the inner Delegator enforces the same gate per child). */
+  private readonly isolation: {
+    workspaceManager: ChildWorkspaceManager | undefined;
+    testOnlyUnsafeSharedWorkspace: boolean;
+  };
 
   constructor(deps: DelegatorDeps) {
     this.delegator = new Delegator(deps);
@@ -38,6 +45,10 @@ export class ParallelDelegator {
     this.store = deps.store;
     this.agentId = deps.agentId;
     this.limits = { ...DEFAULT_DELEGATION_LIMITS, ...deps.limits };
+    this.isolation = {
+      workspaceManager: deps.workspaceManager,
+      testOnlyUnsafeSharedWorkspace: deps.testOnlyUnsafeSharedWorkspace ?? false,
+    };
   }
 
   /** Runs every request through Delegator.delegate, at most
@@ -114,6 +125,12 @@ export class ParallelDelegator {
       const limits: DelegationLimits = { ...this.limits, ...req.limits };
       const parent = await this.requireSession(req.parentSessionId);
       await this.enforceBounds(parent, limits, claims);
+      // P14-3: a writable request without workspace isolation is invalid
+      // configuration — reject the whole batch before any child session is
+      // created (no partial start, same philosophy as the other pre-flight
+      // checks). The inner Delegator enforces the same gate per child.
+      const isolationError = writableIsolationError(this.isolation);
+      if (req.writable === true && isolationError !== undefined) throw isolationError;
       const agentId = req.agentId ?? this.agentId;
       if (this.runtime.getAgent(agentId) === undefined) {
         throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown agent ${agentId}: cannot delegate`));

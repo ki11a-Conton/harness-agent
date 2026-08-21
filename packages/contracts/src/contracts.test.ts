@@ -544,6 +544,61 @@ describe("capability escalation defense (P2-45)", () => {
     expect(verdict.effective.network).toEqual(["api.example.com"]);
     expect(verdict.effective.process).toEqual(["npm test"]);
   });
+
+  it("P14-1: canonicalised traversal (/work/../etc → /etc) is NOT inside /work", () => {
+    // composeCapabilities is pure: the caller canonicalises first (realpath +
+    // lexical resolution). The canonical form of /work/../etc is /etc, which
+    // must fail closed — a textual prefix would have admitted it.
+    const verdict = composeCapabilities(
+      { tool: [], filesystem: ["/work"], network: [], process: [] },
+      { filesystem: ["/etc"] },
+    );
+    expect(verdict.allowed).toBe(false);
+    expect(verdict.violations.some((v) => v.kind === "filesystem_escalation")).toBe(true);
+    expect(verdict.effective.filesystem).toEqual([]);
+  });
+
+  it("P14-1: canonicalised multi-level traversal is NOT inside /work", () => {
+    const verdict = composeCapabilities(
+      { tool: [], filesystem: ["/work"], network: [], process: [] },
+      { filesystem: ["/etc"] }, // /work/a/../../etc canonicalises to /etc
+    );
+    expect(verdict.allowed).toBe(false);
+  });
+
+  it("P14-1: sibling roots with shared text prefix are NOT inside (no prefix illusion)", () => {
+    const verdict = composeCapabilities(
+      { tool: [], filesystem: ["/home/u/work"], network: [], process: [] },
+      { filesystem: ["/home/u/workx", "/home/u/work2"] },
+    );
+    expect(verdict.allowed).toBe(false);
+    expect(verdict.effective.filesystem).toEqual([]);
+  });
+
+  it("P14-1: Windows drive sibling is NOT inside (C:\\work2 vs C:\\work)", () => {
+    const verdict = composeCapabilities(
+      { tool: [], filesystem: ["C:/work"], network: [], process: [] },
+      { filesystem: ["C:/work2"] },
+    );
+    expect(verdict.allowed).toBe(false);
+  });
+
+  it("P14-1: case-insensitive folding narrows correctly and still rejects siblings", () => {
+    const verdict = composeCapabilities(
+      { tool: [], filesystem: ["/home/u/work"], network: [], process: [] },
+      { filesystem: ["/HOME/U/WORK/sub"] },
+      { caseInsensitive: true },
+    );
+    expect(verdict.allowed).toBe(true);
+    expect(verdict.effective.filesystem).toEqual(["/HOME/U/WORK/sub"]);
+
+    const sibling = composeCapabilities(
+      { tool: [], filesystem: ["/home/u/work"], network: [], process: [] },
+      { filesystem: ["/HOME/U/WORK-SIBLING"] },
+      { caseInsensitive: true },
+    );
+    expect(sibling.allowed).toBe(false);
+  });
 });
 
 describe("contracts purity", () => {

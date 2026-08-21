@@ -69,9 +69,12 @@ describe("Q-12 path parity — win32 vs posix containment equivalence", () => {
     expect(containsPath("C:/ws/a.txt", "C:/ws/", false)).toBe(true);
     // A child inside a trailing-slash root is contained…
     expect(containsPath("C:/ws/child/f.txt", "C:/ws/", false)).toBe(true);
-    // …but the root itself is NOT a child of its own trailing-slash form,
-    // matching the POSIX boundary semantics exactly (there is no empty segment).
-    expect(containsPath("C:/ws", "C:/ws/", false)).toBe(false);
+    // P14-1: containment is canonical — separator normalisation strips the
+    // trailing slash, so the root itself IS inside its own trailing-slash
+    // form (same directory, not an escape). Sibling collision is still
+    // rejected below; allowing the granted root itself is fail-closed safe.
+    expect(containsPath("C:/ws", "C:/ws/", false)).toBe(true);
+    expect(containsPath("C:/ws2/x", "C:/ws/", false)).toBe(false);
   });
 });
 

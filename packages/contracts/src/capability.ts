@@ -15,9 +15,19 @@
  * — so a host or security layer can apply identical logic to every trust
  * boundary (child / plugin / MCP / hook) and rely on it deterministically.
  *
+ * Filesystem semantics (P14-1): containment is decided by the shared pure
+ * primitive {@link isPathWithin} — boundary-aware and case-policy-aware — on
+ * inputs that the CALLER has already canonicalised (separator-normalised,
+ * absolute, realpath/lexically-resolved).  A textual prefix like
+ * `/work/../etc` or `C:\work\..\Windows` is NOT "inside `/work`" once
+ * canonicalised; a sibling like `/home/u/workx` is never inside `/home/u/work`.
+ * The capability guard and SandboxManager therefore share one containment
+ * semantic instead of one doing string compares and the other doing realpath.
+ *
  * Escalations are only override-able by an explicit user/host approval; nothing
  * in this module ever widens on its own.
  */
+import { isPathWithin } from "./path-containment.js";
 export type CapabilityDimension = "tool" | "filesystem" | "network" | "process";
 
 export const CAPABILITY_DIMENSIONS = [
@@ -65,6 +75,12 @@ export interface CapabilityVerdict {
   narrowed: CapabilityDimension[];
 }
 
+/** Optional compose-time policy: case-insensitive filesystem folding
+ *  (mirrors `FilesystemPolicy.caseInsensitive` for path comparisons). */
+export interface ComposeCapabilitiesOptions {
+  caseInsensitive?: boolean;
+}
+
 const VIOLATION_KIND_BY_DIMENSION: Record<CapabilityDimension, ViolationKind> = {
   tool: "tool_escalation",
   filesystem: "filesystem_escalation",
@@ -72,22 +88,34 @@ const VIOLATION_KIND_BY_DIMENSION: Record<CapabilityDimension, ViolationKind> = 
   process: "process_escalation",
 };
 
-function containsItem(dim: CapabilityDimension, bound: readonly string[], needle: string): boolean {
+function containsItem(
+  dim: CapabilityDimension,
+  bound: readonly string[],
+  needle: string,
+  caseInsensitive: boolean,
+): boolean {
   if (bound.includes("*")) return true; // upper bound is "full" for this dimension
   if (dim === "filesystem") {
-    // A declared path narrows a conferred root iff it is equal to it or lives
-    // strictly inside it (boundary-aware: `/home/u/work/docs` ⊂ `/home/u/work`,
-    // but `/home/u/workx` is NOT — a sibling with a shared prefix is out of scope).
+    // P14-1: shared pure boundary-aware containment on canonical inputs.
+    // `needle` and `root` must already be canonicalised by the caller (the
+    // capability guard resolves realpath; the pure module resolves `.`/`..`).
+    // A sibling (`/home/u/workx` vs `/home/u/work`) is never inside; a
+    // traversal (`/work/../etc` after resolution → `/etc`) is never inside.
     return bound.some((root) => {
-      if (needle === root) return true;
-      return needle.startsWith(root.endsWith("/") ? root : root + "/");
+      if (root === "*") return true;
+      return isPathWithin(needle, root, caseInsensitive);
     });
   }
   return bound.includes(needle);
 }
 
-function withinBound(dim: CapabilityDimension, bound: readonly string[], items: readonly string[]): boolean {
-  return items.every((item) => containsItem(dim, bound, item));
+function withinBound(
+  dim: CapabilityDimension,
+  bound: readonly string[],
+  items: readonly string[],
+  caseInsensitive: boolean,
+): boolean {
+  return items.every((item) => containsItem(dim, bound, item, caseInsensitive));
 }
 
 /**
@@ -102,13 +130,19 @@ function withinBound(dim: CapabilityDimension, bound: readonly string[], items: 
  *     is full); a subordinate may still narrow it but its own `*` claim is only
  *     valid if `conferred` also contains `*`.
  *
+ * P14-1: filesystem items must be canonicalised by the CALLER before being
+ * passed here (the capability guard realpath-resolves declared and conferred
+ * paths).  Containment is decided by the shared pure {@link isPathWithin}.
+ *
  * The returned `allowed` is false iff there is at least one violation; the
  * caller MUST fail closed and grant only `effective`.
  */
 export function composeCapabilities(
   conferred: CapabilitySets,
   declared: DeclaredCapability,
+  opts?: ComposeCapabilitiesOptions,
 ): CapabilityVerdict {
+  const caseInsensitive = opts?.caseInsensitive === true;
   const effective: CapabilitySets = {
     tool: [...conferred.tool],
     filesystem: [...conferred.filesystem],
@@ -122,14 +156,16 @@ export function composeCapabilities(
     const declaredItems = declared[dim];
     if (declaredItems === undefined) continue; // inherit the conferred bound unchanged
     narrowed.push(dim);
-    if (!withinBound(dim, conferred[dim], declaredItems)) {
+    if (!withinBound(dim, conferred[dim], declaredItems, caseInsensitive)) {
       violations.push({
         kind: VIOLATION_KIND_BY_DIMENSION[dim],
         declared: [...declaredItems],
         conferred: [...conferred[dim]],
       });
     }
-    effective[dim] = declaredItems.filter((item) => containsItem(dim, conferred[dim], item));
+    effective[dim] = declaredItems.filter((item) =>
+      containsItem(dim, conferred[dim], item, caseInsensitive),
+    );
   }
 
   return { allowed: violations.length === 0, effective, violations, narrowed };

@@ -25,6 +25,7 @@
  * `checkInvariants`, so the runtime can gate a release/commit on all of them
  * passing and a failure can be traced back to the exact violating record.
  */
+import { isPathWithin } from "@ar/contracts";
 
 export type InvariantId =
   | "INV-001"
@@ -142,7 +143,11 @@ function itemWithin(dimension: CapabilityDimension, bound: readonly string[] | u
   if (bound === undefined) return false; // none conferred ⇒ nothing allowed
   if (bound.includes("*")) return true;
   if (dimension === "filesystem") {
-    return bound.some((root) => needle === root || needle.startsWith(root.endsWith("/") ? root : root + "/"));
+    // P14-1: shared pure boundary-aware containment (no raw string prefix).
+    // The invariant checker operates on already-canonical inputs, exactly like
+    // composeCapabilities — a sibling root or traversal never masquerades as
+    // inside the conferred root.
+    return bound.some((root) => root === "*" || isPathWithin(needle, root, false));
   }
   return bound.includes(needle);
 }

@@ -1,0 +1,619 @@
+import { describe, expect, it } from "vitest";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { errorInfo, newAgentId, newApprovalId, newSkillId } from "@ar/contracts";
+import { AgentRuntime, defaultSandboxPolicy } from "@ar/core";
+import { ScriptedModelProvider } from "@ar/model";
+import { createRuntimeRpc, InMemoryTransport } from "@ar/gateway";
+import { JSONLEventStore } from "@ar/events";
+import { JSONLSessionStore, SessionService } from "@ar/session";
+import { InMemoryApprovalStore } from "@ar/security";
+import { readFileTool, ToolRegistry } from "@ar/tools";
+import { runChecks } from "./doctor.js";
+import { runCommand } from "./commands.js";
+import { createDefaultDeps, registerBuiltinTools } from "./main.js";
+const AGENT = {
+    id: newAgentId(),
+    name: "cli-agent",
+    description: "cli test agent",
+    mode: "primary",
+    model: { providerId: "scripted", modelId: "scripted-model" },
+    systemPrompt: "you are a cli test agent",
+    tools: {},
+    permissions: { rules: [] },
+    skills: {},
+    limits: {},
+};
+const TOOL_SPEC = {
+    name: "read_file",
+    description: "reads a file",
+    inputSchema: {},
+};
+const SKILL_SPEC = {
+    id: newSkillId(),
+    path: "skills/echo",
+    manifest: { name: "echo", description: "echo skill", version: "1.0.0" },
+    status: "discovered",
+    discoveredAt: 0,
+};
+/** In-memory SessionStore (repo convention: fakes are per-file). */
+class MemSessionStore {
+    sessions = new Map();
+    turns = new Map();
+    messages = [];
+    failList = false;
+    async createSession(session) {
+        this.sessions.set(session.id, session);
+    }
+    async getSession(id) {
+        return this.sessions.get(id);
+    }
+    async updateSession(session) {
+        this.sessions.set(session.id, session);
+    }
+    async listSessions() {
+        if (this.failList)
+            throw new Error("disk on fire");
+        return [...this.sessions.values()];
+    }
+    async createTurn(turn) {
+        this.turns.set(turn.id, turn);
+    }
+    async getTurn(id) {
+        return this.turns.get(id);
+    }
+    async updateTurn(turn) {
+        this.turns.set(turn.id, turn);
+    }
+    async listTurns(sessionId) {
+        return [...this.turns.values()].filter((t) => t.sessionId === sessionId);
+    }
+    async appendMessage(message) {
+        this.messages.push(message);
+    }
+    async listMessages(sessionId) {
+        return this.messages.filter((m) => m.sessionId === sessionId);
+    }
+    async listMessagesByTurn(sessionId, turnId) {
+        return this.messages.filter((m) => m.sessionId === sessionId && m.turnId === turnId);
+    }
+    async saveStateSnapshot(_sessionId, _snapshot) { }
+    async loadStateSnapshot() {
+        return undefined;
+    }
+}
+/** In-memory EventStore (mirrors the core test fake; not exported). */
+class MemEventStore {
+    events = [];
+    seq = 0;
+    failList = false;
+    async nextSequence(_sessionId) {
+        return this.seq + 1;
+    }
+    async append(event) {
+        const seq = ++this.seq;
+        const stored = { ...event, sequence: seq };
+        this.events.push(stored);
+        return stored;
+    }
+    async list(sessionId, opts) {
+        if (this.failList)
+            throw new Error("journal corrupted");
+        let list = this.events.filter((e) => e.sessionId === sessionId);
+        if (opts?.afterSequence !== undefined)
+            list = list.filter((e) => e.sequence > opts.afterSequence);
+        if (opts?.limit !== undefined)
+            list = list.slice(0, opts.limit);
+        return list;
+    }
+    async *stream(sessionId, opts) {
+        for (const e of this.events) {
+            if (e.sessionId !== sessionId)
+                continue;
+            if (opts?.afterSequence !== undefined && e.sequence <= opts.afterSequence)
+                continue;
+            yield e;
+        }
+    }
+}
+class FakeOrchestrator {
+    calls = [];
+    async execute(request, _context) {
+        this.calls.push(request);
+        return { status: "success", output: "ok" };
+    }
+}
+/** Model that blocks mid-turn until its AbortSignal fires, then finishes. */
+class BlockingProvider {
+    id = "blocking";
+    releaseBlocked;
+    blocked = new Promise((resolve) => {
+        this.releaseBlocked = resolve;
+    });
+    listModels() {
+        return Promise.resolve([]);
+    }
+    createClient() {
+        const self = this;
+        return {
+            async *generate(_request, signal) {
+                yield { type: "started", timestamp: 0 };
+                yield { type: "text_delta", text: "thinking", timestamp: 0 };
+                self.releaseBlocked?.();
+                await new Promise((resolve) => {
+                    if (signal.aborted)
+                        resolve();
+                    else
+                        signal.addEventListener("abort", () => resolve(), { once: true });
+                });
+                yield {
+                    type: "completed",
+                    result: { finishReason: "stop", text: "done" },
+                    timestamp: 0,
+                };
+            },
+        };
+    }
+}
+function makeDeps(opts = {}) {
+    const store = new MemSessionStore();
+    const events = new MemEventStore();
+    const approvalStore = new InMemoryApprovalStore();
+    const provider = opts.provider ?? new ScriptedModelProvider([ScriptedModelProvider.text("hello world")]);
+    const runtime = new AgentRuntime({
+        store,
+        events,
+        modelProvider: provider,
+        orchestrator: new FakeOrchestrator(),
+        agents: [AGENT],
+    });
+    const sessionService = new SessionService({ store });
+    const toolRegistry = new ToolRegistry();
+    registerBuiltinTools(toolRegistry);
+    const registry = createRuntimeRpc(runtime, {
+        sessionService,
+        approvalStore,
+        events,
+        listAgents: () => [AGENT],
+        listTools: () => [TOOL_SPEC],
+        listSkills: () => [SKILL_SPEC],
+    });
+    const { client, server } = InMemoryTransport.pair();
+    server.connect(registry);
+    const deps = {
+        rpc: client,
+        store,
+        events,
+        sessionService,
+        approvalStore,
+        runtime,
+        introspection: {
+            profile: "test",
+            registeredTools: ["read_file", "write_file", "edit_file", "search_files", "exec"],
+            stores: {
+                session: store.constructor.name,
+                events: events.constructor.name,
+                approval: approvalStore.constructor.name,
+            },
+            features: {
+                context: false,
+                verifier: false,
+                checkpoint: false,
+                artifacts: false,
+                memory: false,
+                learning: false,
+                delegation: false,
+                scheduler: false,
+                mcp: false,
+                plugins: false,
+                skills: false,
+                usageAccounting: false,
+                runBudget: false,
+            },
+        },
+        doctor: {
+            modelProvider: provider,
+            sandboxPolicy: defaultSandboxPolicy(),
+            permissions: AGENT.permissions,
+            workspaceRoot: process.cwd(),
+            toolRegistry,
+            skills: undefined,
+            plugins: undefined,
+            sessionStore: store,
+            eventStore: events,
+        },
+    };
+    return { deps, store, events, provider, approvalStore };
+}
+describe("agent run (plan §173 structured outcome)", () => {
+    it("completes a turn and prints the structured outcome", async () => {
+        const { deps, store } = makeDeps();
+        const result = await runCommand(["run", "C:\\work", "do it"], deps);
+        expect(result.exitCode).toBe(0);
+        const out = result.lines.join("\n");
+        expect(out).toContain("run: session ");
+        expect(out).toContain("status: completed");
+        expect(out).toContain("summary: hello world");
+        expect(out).toContain("files changed: (none)");
+        expect(out).toContain("tests: no verification gate configured");
+        expect(out).toContain("verification: no verification gate configured");
+        expect(out).toContain("remaining issues: (none)");
+        expect(out).toContain("tool calls: 0");
+        expect(out).toContain("iterations: 0");
+        expect((await store.listSessions()).length).toBe(1);
+    });
+    it("reports files changed from tool calls with a path", async () => {
+        const { deps } = makeDeps({
+            provider: new ScriptedModelProvider([
+                ScriptedModelProvider.toolCall("write_file", { path: "a.txt" }),
+                ScriptedModelProvider.text("done"),
+            ]),
+        });
+        const result = await runCommand(["run", "C:\\work", "write it"], deps);
+        expect(result.exitCode).toBe(0);
+        expect(result.lines.join("\n")).toContain("files changed: a.txt");
+    });
+    it("fails with exit code 1 when the model errors", async () => {
+        const { deps } = makeDeps({
+            provider: new ScriptedModelProvider([
+                [{ type: "error", error: errorInfo("MODEL_ERROR", "boom"), timestamp: 0 }],
+            ]),
+        });
+        const result = await runCommand(["run", "C:\\work", "explode"], deps);
+        expect(result.exitCode).toBe(1);
+        const out = result.lines.join("\n");
+        expect(out).toContain("status: failed");
+        expect(out).toContain("remaining issues: failed: MODEL_ERROR — boom");
+    });
+    it("rejects missing arguments with usage", async () => {
+        const { deps } = makeDeps();
+        const result = await runCommand(["run"], deps);
+        expect(result.exitCode).toBe(1);
+        expect(result.lines.join("\n")).toContain("agent run: expected <cwd> <text>");
+        expect(result.lines.join("\n")).toContain("usage: agent <command> [args]");
+    });
+});
+describe("agent resume", () => {
+    it("prints the session state", async () => {
+        const { deps } = makeDeps();
+        const session = (await deps.rpc.request("session.create", {
+            agentId: AGENT.id,
+            cwd: "C:\\work",
+        }));
+        const result = await runCommand(["resume", session.id], deps);
+        expect(result.exitCode).toBe(0);
+        const out = result.lines.join("\n");
+        expect(out).toContain(`session: ${session.id}`);
+        expect(out).toContain(`agent: ${AGENT.id}`);
+        expect(out).toContain("model: scripted/scripted-model");
+        expect(out).toContain("status: active");
+        expect(out).toContain("cwd: C:\\work");
+    });
+    it("fails with exit code 1 for an unknown session", async () => {
+        const { deps } = makeDeps();
+        const result = await runCommand(["resume", "session_nope"], deps);
+        expect(result.exitCode).toBe(1);
+        expect(result.lines.join("\n")).toContain("cannot resume unknown session session_nope");
+    });
+});
+describe("agent cancel", () => {
+    it("cancels a running turn", async () => {
+        const provider = new BlockingProvider();
+        const { deps, store } = makeDeps({ provider });
+        const runPromise = runCommand(["run", "C:\\work", "block me"], deps);
+        await provider.blocked;
+        const session = (await store.listSessions())[0];
+        const turn = (await store.listTurns(session.id))[0];
+        const cancel = await runCommand(["cancel", session.id, turn.id], deps);
+        expect(cancel.exitCode).toBe(0);
+        expect(cancel.lines.join(" ")).toContain("cancel: cancelled");
+        const outcome = await runPromise;
+        expect(outcome.exitCode).toBe(1);
+        expect(outcome.lines.join("\n")).toContain("status: cancelled");
+    });
+    it("reports not_running for an idle turn", async () => {
+        const { deps } = makeDeps();
+        const session = (await deps.rpc.request("session.create", {
+            agentId: AGENT.id,
+            cwd: "C:\\work",
+        }));
+        const { turnId } = (await deps.rpc.request("session.send", {
+            sessionId: session.id,
+            text: "hi",
+        }));
+        const result = await runCommand(["cancel", session.id, turnId], deps);
+        expect(result.exitCode).toBe(0);
+        expect(result.lines.join(" ")).toContain("cancel: not_running");
+    });
+});
+describe("agent approve", () => {
+    function pendingApproval(store) {
+        const request = {
+            id: newApprovalId(),
+            sessionId: "session_approve_cli",
+            agentId: AGENT.id,
+            action: "tool.execute",
+            target: "rm -rf /tmp/x",
+            reason: "cli approval test",
+            createdAt: 1_000,
+            expiresAt: Date.now() + 60_000,
+        };
+        store.create(request);
+        return request;
+    }
+    it("resolves allow and prints the request + decision", async () => {
+        const { deps, approvalStore } = makeDeps();
+        const request = pendingApproval(approvalStore);
+        const result = await runCommand(["approve", request.id, "allow"], deps);
+        expect(result.exitCode).toBe(0);
+        const out = result.lines.join("\n");
+        expect(out).toContain(`approval: ${request.id}`);
+        expect(out).toContain("action: tool.execute");
+        expect(out).toContain("target: rm -rf /tmp/x");
+        expect(out).toContain("decision: allow (decided by cli)");
+    });
+    it("resolves deny", async () => {
+        const { deps, approvalStore } = makeDeps();
+        const request = pendingApproval(approvalStore);
+        const result = await runCommand(["approve", request.id, "deny"], deps);
+        expect(result.exitCode).toBe(0);
+        expect(result.lines.join("\n")).toContain("decision: deny (decided by cli)");
+    });
+    it("fails with exit code 1 for an unknown approval", async () => {
+        const { deps } = makeDeps();
+        const result = await runCommand(["approve", newApprovalId(), "allow"], deps);
+        expect(result.exitCode).toBe(1);
+        expect(result.lines.join("\n")).toContain("unknown or already-resolved approval");
+    });
+    it("rejects a value that is not allow or deny", async () => {
+        const { deps, approvalStore } = makeDeps();
+        const request = pendingApproval(approvalStore);
+        const result = await runCommand(["approve", request.id, "maybe"], deps);
+        expect(result.exitCode).toBe(1);
+        expect(result.lines.join("\n")).toContain("value must be allow or deny");
+    });
+});
+describe("agent listings", () => {
+    it("lists agents, tools and skills over the RPC surface", async () => {
+        const { deps } = makeDeps();
+        const agents = await runCommand(["agents"], deps);
+        expect(agents.exitCode).toBe(0);
+        expect(agents.lines.join("\n")).toContain(`agent ${AGENT.id}: cli-agent — cli test agent [primary]`);
+        const tools = await runCommand(["tools"], deps);
+        expect(tools.exitCode).toBe(0);
+        expect(tools.lines.join("\n")).toContain("tool read_file: reads a file");
+        const skills = await runCommand(["skills"], deps);
+        expect(skills.exitCode).toBe(0);
+        expect(skills.lines.join("\n")).toContain(`skill ${SKILL_SPEC.id}: echo v1.0.0 [discovered]`);
+    });
+    it("lists sessions from the store; empty store prints (none)", async () => {
+        const { deps } = makeDeps();
+        const empty = await runCommand(["sessions"], deps);
+        expect(empty.exitCode).toBe(0);
+        expect(empty.lines).toEqual(["(none)"]);
+        const session = (await deps.rpc.request("session.create", {
+            agentId: AGENT.id,
+            cwd: "C:\\work",
+        }));
+        const listed = await runCommand(["sessions"], deps);
+        expect(listed.exitCode).toBe(0);
+        expect(listed.lines.join("\n")).toContain(`session ${session.id}: agent=${AGENT.id} status=active cwd=C:\\work`);
+    });
+});
+describe("agent trace", () => {
+    it("exports an episode package to the output directory", async () => {
+        const { deps, store } = makeDeps();
+        const outDir = await mkdtemp(join(tmpdir(), "cli-trace-"));
+        const cwd = await mkdtemp(join(tmpdir(), "cli-cwd-"));
+        try {
+            const run = await runCommand(["run", cwd, "hello"], deps);
+            expect(run.exitCode).toBe(0);
+            const sessionId = (await store.listSessions())[0].id;
+            const trace = await runCommand(["trace", sessionId, outDir], deps);
+            expect(trace.exitCode).toBe(0);
+            const out = trace.lines.join("\n");
+            expect(out).toContain("trace: exported episode to");
+            expect(out).toContain(`trace: session ${sessionId}`);
+            const files = await readdir(outDir);
+            expect(files).toEqual(expect.arrayContaining(["events.jsonl", "summary.json", "session.json", "metrics.json"]));
+            expect(files).toHaveLength(10);
+        }
+        finally {
+            await rm(outDir, { recursive: true, force: true });
+            await rm(cwd, { recursive: true, force: true });
+        }
+    });
+});
+describe("agent doctor (plan §87)", () => {
+    it("reports every check area and exits 0 when nothing is broken", async () => {
+        const { deps } = makeDeps();
+        const result = await runCommand(["doctor"], deps);
+        expect(result.exitCode).toBe(0);
+        const out = result.lines.join("\n");
+        expect(out).toContain("[OK] model provider");
+        expect(out).toContain("[OK] sandbox");
+        expect(out).toContain("[OK] workspace");
+        expect(out).toContain("[OK] session store");
+        expect(out).toContain("[OK] event store");
+        expect(out).toContain("doctor: 8 ok, 4 warning(s), 0 error(s)");
+    });
+    it("exits 1 with [ERROR] when a store is broken", async () => {
+        const { deps, store } = makeDeps();
+        store.failList = true;
+        const result = await runCommand(["doctor"], deps);
+        expect(result.exitCode).toBe(1);
+        const out = result.lines.join("\n");
+        expect(out).toContain("[ERROR] session store — disk on fire");
+        expect(out).toContain("doctor: 7 ok, 4 warning(s), 1 error(s)");
+    });
+    it("runChecks reports ERROR for a throwing event store", async () => {
+        const { deps, events } = makeDeps();
+        events.failList = true;
+        const checks = await runChecks({ ...deps.doctor, eventStore: events });
+        const eventCheck = checks.find((c) => c.name === "event store");
+        expect(eventCheck?.status).toBe("ERROR");
+        expect(eventCheck?.detail).toContain("journal corrupted");
+    });
+});
+describe("agent command dispatch", () => {
+    it("unknown commands exit 1 with usage", async () => {
+        const { deps } = makeDeps();
+        const result = await runCommand(["frobnicate"], deps);
+        expect(result.exitCode).toBe(1);
+        const out = result.lines.join("\n");
+        expect(out).toContain("unknown command: frobnicate");
+        expect(out).toContain("usage: agent <command> [args]");
+    });
+    it("cancel with missing arguments exits 1 with usage", async () => {
+        const { deps } = makeDeps();
+        const result = await runCommand(["cancel", "session_1"], deps);
+        expect(result.exitCode).toBe(1);
+        expect(result.lines.join("\n")).toContain("agent cancel: expected <sessionId> <turnId>");
+    });
+});
+describe("default host wiring (createDefaultDeps)", () => {
+    it("registers the five builtin tools on the RPC surface", async () => {
+        const deps = await createDefaultDeps({
+            provider: new ScriptedModelProvider([ScriptedModelProvider.text("hi")]),
+        });
+        const result = await runCommand(["tools"], deps);
+        expect(result.exitCode).toBe(0);
+        const out = result.lines.join("\n");
+        for (const name of ["read_file", "write_file", "edit_file", "search_files", "exec"]) {
+            expect(out).toContain(`tool ${name}:`);
+        }
+    });
+    it("runs an end-to-end read through the real orchestrator and tools", async () => {
+        const deps = await createDefaultDeps({
+            provider: new ScriptedModelProvider([
+                ScriptedModelProvider.toolCall("read_file", { path: "package.json" }),
+                ScriptedModelProvider.text("done reading"),
+            ]),
+        });
+        const result = await runCommand(["run", process.cwd(), "read package.json"], deps);
+        expect(result.exitCode).toBe(0);
+        const out = result.lines.join("\n");
+        expect(out).toContain("status: completed");
+        expect(out).toContain("files changed: (none)");
+        const sessionId = (await deps.store.listSessions())[0].id;
+        const events = await deps.events.list(sessionId);
+        const completed = events.find((e) => e.type === "tool.completed" && e.payload.tool === "read_file");
+        expect(completed?.payload.status).toBe("success");
+    });
+    it("asks for approval on write_file (edit:ask) and applies the denial", async () => {
+        const deps = await createDefaultDeps({
+            provider: new ScriptedModelProvider([
+                ScriptedModelProvider.toolCall("write_file", { path: "out.txt", content: "hi" }),
+                ScriptedModelProvider.text("done"),
+            ]),
+        });
+        const run = runCommand(["run", process.cwd(), "write it"], deps);
+        let approval;
+        for (let i = 0; i < 200 && approval === undefined; i += 1) {
+            approval = deps.approvalStore.listPending().find((a) => a.target === "out.txt");
+            if (approval === undefined)
+                await new Promise((r) => setTimeout(r, 10));
+        }
+        expect(approval).toBeDefined();
+        deps.approvalStore.resolve(approval.id, "deny", "test");
+        const result = await run;
+        expect(result.exitCode).toBe(0);
+        expect(result.lines.join("\n")).toContain("status: completed");
+        const sessionId = (await deps.store.listSessions())[0].id;
+        const events = await deps.events.list(sessionId);
+        const created = events.find((e) => e.type === "approval.created" && e.payload.target === "out.txt");
+        expect(created).toBeDefined();
+        const denied = events.find((e) => e.type === "tool.failed" &&
+            e.payload.tool === "write_file" &&
+            e.payload.error?.code === "APPROVAL_DENIED");
+        expect(denied).toBeDefined();
+    });
+    it("doctor warns (not errors) when the stub provider is active", async () => {
+        const previous = process.env.OPENAI_API_KEY;
+        delete process.env.OPENAI_API_KEY;
+        try {
+            const deps = await createDefaultDeps();
+            const result = await runCommand(["doctor"], deps);
+            expect(result.exitCode).toBe(0);
+            const out = result.lines.join("\n");
+            expect(out).toContain("[WARNING] model provider — stub provider");
+            expect(out).toContain("doctor: 7 ok, 5 warning(s), 0 error(s)");
+        }
+        finally {
+            if (previous === undefined)
+                delete process.env.OPENAI_API_KEY;
+            else
+                process.env.OPENAI_API_KEY = previous;
+        }
+    });
+    it("doctor flags an under-registered tool registry as ERROR", async () => {
+        const registry = new ToolRegistry();
+        registry.register(readFileTool);
+        const checks = await runChecks({ toolRegistry: registry });
+        const toolCheck = checks.find((c) => c.name === "tool registry");
+        expect(toolCheck?.status).toBe("ERROR");
+        expect(toolCheck?.detail).toContain("1 of 11");
+    });
+    it("persists sessions across deps rebuilds via dataDir", async () => {
+        const dataDir = await mkdtemp(join(tmpdir(), "cli-data-"));
+        try {
+            const deps1 = await createDefaultDeps({
+                dataDir,
+                provider: new ScriptedModelProvider([ScriptedModelProvider.text("first")]),
+            });
+            expect(deps1.doctor.sessionStore).toBeInstanceOf(JSONLSessionStore);
+            expect(deps1.doctor.eventStore).toBeInstanceOf(JSONLEventStore);
+            const agents = (await deps1.rpc.request("agent.list"));
+            const session = (await deps1.rpc.request("session.create", {
+                agentId: agents[0].id,
+                cwd: "C:\\work",
+            }));
+            const deps2 = await createDefaultDeps({
+                dataDir,
+                provider: new ScriptedModelProvider([ScriptedModelProvider.text("second")]),
+            });
+            const resume = await runCommand(["resume", session.id], deps2);
+            expect(resume.exitCode).toBe(0);
+            expect(resume.lines.join("\n")).toContain(`session: ${session.id}`);
+            const sessions = await runCommand(["sessions"], deps2);
+            expect(sessions.lines.join("\n")).toContain(session.id);
+        }
+        finally {
+            await rm(dataDir, { recursive: true, force: true });
+        }
+    });
+    it("doctor reports persistent stores with a dataDir", async () => {
+        const dataDir = await mkdtemp(join(tmpdir(), "cli-data-"));
+        try {
+            const deps = await createDefaultDeps({
+                dataDir,
+                provider: new ScriptedModelProvider([ScriptedModelProvider.text("hi")]),
+            });
+            const result = await runCommand(["doctor"], deps);
+            expect(result.exitCode).toBe(0);
+            const out = result.lines.join("\n");
+            expect(out).toContain(`[OK] persistence — dataDir=${dataDir}`);
+            expect(out).toContain("[OK] session store — reachable (JSONLSessionStore)");
+            expect(out).toContain("[OK] event store — reachable (JSONLEventStore)");
+        }
+        finally {
+            await rm(dataDir, { recursive: true, force: true });
+        }
+    });
+    it("uses the configured model ref", async () => {
+        const deps = await createDefaultDeps({
+            provider: new ScriptedModelProvider([ScriptedModelProvider.text("hi")]),
+            model: { providerId: "scripted", modelId: "custom-model" },
+        });
+        const agents = (await deps.rpc.request("agent.list"));
+        const session = (await deps.rpc.request("session.create", {
+            agentId: agents[0].id,
+            cwd: "C:\\work",
+        }));
+        const resume = await runCommand(["resume", session.id], deps);
+        expect(resume.exitCode).toBe(0);
+        expect(resume.lines.join("\n")).toContain("model: scripted/custom-model");
+    });
+});
+//# sourceMappingURL=cli.test.js.map

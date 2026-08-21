@@ -1,0 +1,893 @@
+{
+  "meta": {
+    "generatedAt": "2026-08-21T06:11:58.610Z",
+    "benchmarkVersion": "2.0.0",
+    "model": {
+      "providerId": "openai",
+      "modelId": "deepseek-v4-flash"
+    },
+    "casesTotal": 11,
+    "suite": "stress"
+  },
+  "results": [
+    {
+      "task_id": "stress-10-subagents",
+      "suite": "stress",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 6737,
+      "model_calls": 2,
+      "input_tokens": 2756,
+      "output_tokens": 126,
+      "tool_calls": 3,
+      "tool_failures": 1,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 0,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 3,
+        "recovered": 2,
+        "rate": 0.6666666666666666
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded",
+        "expectedEvents.atLeast: subagent.started observed 0 < required 10"
+      ],
+      "cost": {
+        "score": 72,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 6737,
+          "tokens": 3469,
+          "tool_calls": 3,
+          "retries": 3
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      }
+    },
+    {
+      "task_id": "stress-context-near-limit",
+      "suite": "stress",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 5248,
+      "model_calls": 1,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "tool_calls": 2,
+      "tool_failures": 1,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 0,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 3,
+        "recovered": 2,
+        "rate": 0.6666666666666666
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 72,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 5248,
+          "tokens": 293,
+          "tool_calls": 2,
+          "retries": 3
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      }
+    },
+    {
+      "task_id": "stress-deep-directory",
+      "suite": "stress",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 6001,
+      "model_calls": 1,
+      "input_tokens": 2400,
+      "output_tokens": 81,
+      "tool_calls": 1,
+      "tool_failures": 1,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 3,
+        "recovered": 2,
+        "rate": 0.6666666666666666
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 72,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 6001,
+          "tokens": 2764,
+          "tool_calls": 1,
+          "retries": 3
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      }
+    },
+    {
+      "task_id": "stress-huge-generated-logs",
+      "suite": "stress",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 3758,
+      "model_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "tool_calls": 0,
+      "tool_failures": 0,
+      "retries": 0,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 0,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 2,
+        "recovered": 2,
+        "rate": 1
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 72,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 3758,
+          "tokens": 125,
+          "tool_calls": 0,
+          "retries": 3
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      }
+    },
+    {
+      "task_id": "stress-many-artifacts",
+      "suite": "stress",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 3936,
+      "model_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "tool_calls": 0,
+      "tool_failures": 0,
+      "retries": 0,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 0,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 2,
+        "recovered": 2,
+        "rate": 1
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 72,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 3936,
+          "tokens": 125,
+          "tool_calls": 0,
+          "retries": 3
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      }
+    },
+    {
+      "task_id": "stress-many-small-files",
+      "suite": "stress",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 3542,
+      "model_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "tool_calls": 0,
+      "tool_failures": 0,
+      "retries": 0,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 0,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 2,
+        "recovered": 2,
+        "rate": 1
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 72,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 3542,
+          "tokens": 125,
+          "tool_calls": 0,
+          "retries": 3
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      }
+    },
+    {
+      "task_id": "stress-rapid-cancellation",
+      "suite": "stress",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 3513,
+      "model_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "tool_calls": 0,
+      "tool_failures": 0,
+      "retries": 0,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 0,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 2,
+        "recovered": 2,
+        "rate": 1
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 72,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 3513,
+          "tokens": 125,
+          "tool_calls": 0,
+          "retries": 3
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      }
+    },
+    {
+      "task_id": "stress-repeated-tool-failures",
+      "suite": "stress",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 3731,
+      "model_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "tool_calls": 0,
+      "tool_failures": 0,
+      "retries": 0,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 0,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 2,
+        "recovered": 2,
+        "rate": 1
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 72,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 3731,
+          "tokens": 125,
+          "tool_calls": 0,
+          "retries": 3
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      }
+    },
+    {
+      "task_id": "stress-slow-mcp",
+      "suite": "stress",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 4146,
+      "model_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "tool_calls": 0,
+      "tool_failures": 0,
+      "retries": 0,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 0,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 2,
+        "recovered": 2,
+        "rate": 1
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded",
+        "expectedEvents.atLeast: tool.completed observed 0 < required 1"
+      ],
+      "cost": {
+        "score": 72,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 4146,
+          "tokens": 125,
+          "tool_calls": 0,
+          "retries": 3
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      }
+    },
+    {
+      "task_id": "stress-slow-verifier",
+      "suite": "stress",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 3738,
+      "model_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "tool_calls": 0,
+      "tool_failures": 0,
+      "retries": 0,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 0,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 2,
+        "recovered": 2,
+        "rate": 1
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 72,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 3738,
+          "tokens": 125,
+          "tool_calls": 0,
+          "retries": 3
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      }
+    },
+    {
+      "task_id": "stress-very-long-json",
+      "suite": "stress",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 3884,
+      "model_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "tool_calls": 0,
+      "tool_failures": 0,
+      "retries": 0,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 0,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 2,
+        "recovered": 2,
+        "rate": 1
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 72,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 3884,
+          "tokens": 125,
+          "tool_calls": 0,
+          "retries": 3
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      }
+    }
+  ],
+  "summary": {
+    "total": 11,
+    "passed": 0,
+    "failed": 11,
+    "errors": 0,
+    "success_rate": 0,
+    "latency_p50_ms": 3884,
+    "latency_p95_ms": 6737,
+    "avg_model_calls": 0.36363636363636365,
+    "model_calls_p50": 0,
+    "model_calls_p95": 2,
+    "avg_tool_calls": 0.5454545454545454,
+    "avg_tokens_input": 468.72727272727275,
+    "avg_tokens_output": 18.818181818181817,
+    "avg_retries": 0.5454545454545454,
+    "retry_rate": 0.2727272727272727,
+    "retries_by_kind": {
+      "model": 22,
+      "tool": 6,
+      "verification": 0,
+      "compaction": 0,
+      "provider": 54,
+      "sandbox": 0,
+      "stallRecovery": 0,
+      "reconciliation": 0,
+      "mcpReconnect": 0
+    },
+    "recovery_rate": 0.88,
+    "termination_reason_distribution": {
+      "model_error": 11
+    },
+    "total_context_overflows": 0,
+    "total_false_completes": 0,
+    "total_verification_failures": 0,
+    "total_human_interventions": 0,
+    "failures_by_category": {
+      "model": 11
+    },
+    "avg_cost_score": 72,
+    "avg_cost_dimensions": {
+      "quality": 30,
+      "reliability": 100,
+      "security": 100,
+      "latency": 100,
+      "tokens": 100,
+      "tool_calls": 100,
+      "retries": 100
+    },
+    "security_violations": 0
+  },
+  "manifest": {
+    "gitSha": "3a1ab34db792d57f372a496c814520379bbedd21",
+    "dirty": true,
+    "model": "deepseek-v4-flash",
+    "provider": "openai",
+    "temperature": null,
+    "suiteVersion": "2.1.0",
+    "judgeVersion": "1.0.0",
+    "runtimeConfigHash": "4dd8dedd4599385c9d2da167ea3b1604cf2d8a1c3f939f150163aa7b779ad685",
+    "timestamp": "2026-08-21T06:11:58.608Z",
+    "platform": "win32",
+    "nodeVersion": "v24.18.1"
+  }
+}

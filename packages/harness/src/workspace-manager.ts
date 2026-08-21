@@ -10,6 +10,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/
 import { tmpdir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import type { SessionId } from "@ar/contracts";
+import { isPathCanonicallyWithin } from "@ar/security";
 import type {
   ApplyPatchOptions,
   ApplyPatchResult,
@@ -285,6 +286,10 @@ export function safeJoin(root: string, rel: string): string | undefined {
   }
   if (rel.startsWith("/") || /^[a-z]:[\\/]/i.test(rel)) return undefined;
   const target = resolve(root, rel);
-  if (!target.startsWith(resolve(root) + sep) && target !== resolve(root)) return undefined;
+  // P14-1: canonical containment (realpath of deepest existing ancestor +
+  // lexically resolved tail), NOT a textual prefix check — a symlink component
+  // inside root that points outside can never sneak past. Shares the exact
+  // semantic with SandboxManager and the capability guard.
+  if (!isPathCanonicallyWithin(target, resolve(root), process.cwd(), false)) return undefined;
   return target;
 }

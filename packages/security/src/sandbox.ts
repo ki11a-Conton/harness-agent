@@ -1,5 +1,3 @@
-import { realpathSync } from "node:fs";
-import { isAbsolute, resolve, sep } from "node:path";
 import type {
   NetworkPolicy,
   ProcessPolicy,
@@ -7,9 +5,18 @@ import type {
   SandboxPolicy,
   SandboxRequest,
 } from "@ar/contracts";
-import { matchGlob, normalizePath } from "./glob.js";
+import { isPathWithin, normaliseSeparators } from "@ar/contracts";
+import { isAbsolute } from "node:path";
+import { matchGlob } from "./glob.js";
 import { detectNetworkIntent } from "./network-gate.js";
-import { analyzeProcessCommand, surfaceDenied } from "./process-gate.js";
+import {
+  commandAllowlisted,
+  hostCommandPlatform,
+  parseCommandInvocation,
+  surfaceDenied,
+  type CommandPlatform,
+} from "./process-gate.js";
+import { canonicalizePath } from "./canonical-path.js";
 
 /** `C:\…`, `C:/…`, `d:\…` — an absolute drive path on Windows. Never a valid
  *  relative path inside a POSIX workspace. */
@@ -22,20 +29,33 @@ const UNC_PATH = /^[\\/]{2}/;
  * SandboxManager per AGENT_ARCHITECTURE_PLAN §19–§20.
  * Enforces filesystem scope (with symlink-escape detection via realpath),
  * network policy and process policy. Deterministic, testable, no bypass.
+ *
+ * P14-1: every filesystem decision shares ONE canonicalisation semantic with
+ * the capability guard — {@link canonicalizePath} (realpath of the deepest
+ * existing ancestor + lexically resolved tail) feeding the shared pure
+ * containment primitive {@link isPathWithin}.  No textual prefix matching.
+ *
+ * P14-2: exec allowlist matching is SEMANTIC (commandAllowlisted), never a
+ * raw `startsWith` — a composed command (`git diff; rm …`) is never treated
+ * as an argument extension of an allowlisted command.
  */
 export class SandboxManager {
   /** P3-6: per-instance additional allowed roots (e.g. an isolated child
-   *  workspace). Contained like every other root — realpath-canonicalized,
-   *  never a textual prefix match. */
+   *  workspace). Contained like every other root — canonicalised, never a
+   *  textual prefix match. */
   private readonly extraRoots: string[];
+  /** P14-2: command-analysis platform (cmd.exe vs POSIX shell semantics). */
+  private readonly commandPlatform: CommandPlatform;
 
   constructor(
     readonly workspaceRoot: string,
     readonly cwd: string,
     readonly policy: SandboxPolicy,
     extraRoots: string[] = [],
+    commandPlatform: CommandPlatform = hostCommandPlatform(),
   ) {
     this.extraRoots = extraRoots;
+    this.commandPlatform = commandPlatform;
   }
 
   evaluate(request: SandboxRequest): SandboxDecision {
@@ -78,16 +98,22 @@ export class SandboxManager {
 
   checkExec(target: string): SandboxDecision {
     const proc = this.policy.process;
-    // P2-23 surface gate: fail-closed, evaluated BEFORE the allowlist so an
-    // explicitly-denied launch surface (e.g. interpreter eval) never runs even
-    // if its text happens to match an allowlist glob. This is a static intent
-    // classifier, NOT an OS-level sandbox — see plan.md §P2-23 threat model.
-    const denied = surfaceDenied(analyzeProcessCommand(target), proc.deniedSurfaces);
+    // P2-23 + P14-2: surface gate evaluated BEFORE the allowlist so an
+    // explicitly-denied launch surface (interpreter eval, shell wrapper) never
+    // runs even if its text happens to match an allowlist glob, and so a
+    // COMPOSED command (`git diff; rm -rf /`) is treated as shell content,
+    // never as "allowed program + arguments". Static intent classifier, NOT an
+    // OS-level sandbox — see plan.md §P2-23 threat model.
+    const inv = parseCommandInvocation(target, this.commandPlatform);
+    const denied = surfaceDenied(
+      { surface: inv.surface, argv0: inv.program, reasons: [], involvesShell: inv.involvesShell, involvesNetwork: inv.involvesNetwork },
+      proc.deniedSurfaces,
+    );
     if (denied.denied) {
       return { allowed: false, reason: denied.reason ?? "process surface denied", kind: "process" };
     }
     if (proc.allowedCommands !== undefined && proc.allowedCommands.length > 0) {
-      const ok = proc.allowedCommands.some((cmd) => matchGlob(cmd, target) || target.startsWith(cmd));
+      const ok = commandAllowlisted(proc.allowedCommands, target, this.commandPlatform);
       if (!ok) return { allowed: false, reason: `command not in allowlist: ${target}`, kind: "process" };
     }
     // Phase 9 network gate: an exec command that carries network intent goes
@@ -137,6 +163,14 @@ export class SandboxManager {
     return { allowed: true, reason: `network allowed (${net.mode})` };
   }
 
+  /**
+   * Canonicalise a target for containment.  Returns null for inputs that can
+   * never be a valid in-workspace path (empty, control chars, or a Windows
+   * drive/UNC path smuggled as a relative path on a POSIX workspace).  All
+   * other inputs are canonicalised via {@link canonicalizePath}: realpath of
+   * the deepest existing ancestor + lexically resolved tail, so a not-yet
+   * existing write target can never escape via `..` or a symlink.
+   */
   resolvePath(target: string): string | null {
     if (typeof target !== "string" || target.length === 0) return null;
     // Reject NUL / control chars outright: they either fail the syscall or
@@ -148,36 +182,34 @@ export class SandboxManager {
     // sandbox. Only reject Windows drive paths when the target is NOT already
     // absolute (i.e. when it would be treated as a relative path on this OS).
     if (!isAbsolute(target) && (WINDOWS_DRIVE_PATH.test(target) || UNC_PATH.test(target))) return null;
-    const absolute = isAbsolute(target) ? target : resolve(this.cwd, target);
-    try {
-      return realpathSync(absolute);
-    } catch {
-      // Path may not exist yet (write). Resolve the deepest existing ancestor.
-      return resolveParent(absolute);
-    }
+    return canonicalizePath(target, { cwd: this.cwd });
   }
 
   /**
    * P2-22: containment against EVERY allowed root (not just the workspace).
    * This is not a naive `startsWith`: an ancestor path that merely shares a
    * textual prefix (e.g. `/tmp/ws-2` vs `/tmp/ws`) must not count as inside.
-   * Roots are realpath-canonicalized (so a `/tmp -> /private/tmp` symlink or
-   * junction cannot be used to dodge the boundary) and, when the filesystem
-   * is marked case-insensitive, compared case-folded.
+   * Roots are canonicalised with the SAME function as targets (P14-1) — a
+   * `/tmp -> /private/tmp` symlink or junction cannot dodge the boundary —
+   * and, when the filesystem is marked case-insensitive, compared case-folded.
    */
   private allowedRoots(): string[] {
-    const roots = [realWorkspaceRoot(this.workspaceRoot)];
+    const roots = [canonicalizePath(this.workspaceRoot, { cwd: this.cwd })];
     for (const extra of this.extraRoots) {
-      roots.push(realWorkspaceRoot(extra));
+      roots.push(canonicalizePath(extra, { cwd: this.cwd }));
     }
     for (const ap of this.policy.filesystem.allowedPaths ?? []) {
-      roots.push(realResolve(isAbsolute(ap) ? ap : resolve(this.cwd, ap)));
+      // An empty allowed-path entry is not a path and can never contain
+      // anything (it neither widens nor narrows scope). Skip it rather than
+      // failing the whole decision — fail-closed containment is unchanged.
+      if (ap === undefined || ap === "") continue;
+      roots.push(canonicalizePath(ap, { cwd: this.cwd }));
     }
     return roots;
   }
 
   private withinRoot(p: string, root: string): boolean {
-    return containsPath(p, root, this.policy.filesystem.caseInsensitive === true);
+    return isPathWithin(p, root, this.policy.filesystem.caseInsensitive === true);
   }
 
   private withinAllowedRoots(p: string): boolean {
@@ -186,51 +218,18 @@ export class SandboxManager {
 }
 
 /**
- * Pure, deterministic containment check: is `p` (realpath-resolved) inside
- * root `root`? Enforces a path-boundary (never a raw string prefix) so a
- * sibling like `/tmp/ws-2` is not counted inside `/tmp/ws`. When
+ * Pure, deterministic containment check: is `p` (canonical/realpath-resolved)
+ * inside root `root`?  Enforces a path-boundary (never a raw string prefix) so
+ * a sibling like `/tmp/ws-2` is not counted inside `/tmp/ws`.  When
  * `caseInsensitive` is true, both sides are case-folded before comparison —
  * the recommended setting for macOS/Windows file systems.
+ *
+ * This is a thin wrapper over the shared {@link isPathWithin} primitive,
+ * adding only separator normalisation (callers pass realpath-canonical paths,
+ * which may still contain backslashes on Windows).  Lexical `.`/`..`
+ * resolution is the caller's job (canonicalisation) — it cannot be done here
+ * without I/O knowledge.
  */
 export function containsPath(p: string, root: string, caseInsensitive: boolean): boolean {
-  const fold = (s: string): string => {
-    const n = normalizePath(s);
-    return caseInsensitive ? n.toLowerCase() : n;
-  };
-  const t = fold(p);
-  const r = fold(root);
-  if (t === r) return true;
-  return t.startsWith(r.endsWith("/") ? r : `${r}/`);
-}
-
-function realWorkspaceRoot(root: string): string {
-  try {
-    return realpathSync(root);
-  } catch {
-    return root;
-  }
-}
-
-/** Realpath an allowed-root entry, falling back to its deepest existing ancestor. */
-function realResolve(p: string): string {
-  try {
-    return realpathSync(p);
-  } catch {
-    return resolveParent(p);
-  }
-}
-
-/** For non-existent paths, resolve the realpath of the deepest existing ancestor. */
-function resolveParent(p: string): string {
-  let current = p;
-  for (let i = 0; i < 10; i++) {
-    try {
-      return realpathSync(current);
-    } catch {
-      const parent = current.slice(0, Math.max(0, current.lastIndexOf(sep)));
-      if (!parent || parent === current) return p;
-      current = parent;
-    }
-  }
-  return p;
+  return isPathWithin(normaliseSeparators(p), normaliseSeparators(root), caseInsensitive);
 }
