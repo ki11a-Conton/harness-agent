@@ -1,14 +1,17 @@
-import type { ToolSpec } from "@ar/contracts";
-import { estimateSpecTokens, estimateSpecsTokens } from "@ar/contracts";
+import type { ToolSpec } from "./tool.js";
+import { estimateSpecTokens, estimateSpecsTokens } from "./tool.js";
 
 /**
- * P18-2: deferred tool schemas only when needed.
+ * P18-2 / P23-3 — deferred tool schemas only when needed.
  *
  * The built-in small tool set is always advertised in full. When MCP/plugin
  * servers push the schema set past a TOKEN budget (never a hardcoded tool
  * count), the bulk goes deferred: the model sees a name+description stub and
  * fetches the full input schema on demand via `tool_lookup`. This keeps the
  * per-request advertisement cost bounded without hiding tools entirely.
+ *
+ * Lives in contracts (pure decision, no tools runtime dependency) so the step
+ * snapshot factory can freeze the advertisement at step build time.
  */
 
 /** P18-2 default inline advertisement budget (~24k schema tokens ≈ 96 KB of
@@ -27,7 +30,7 @@ export { estimateSpecTokens, estimateSpecsTokens };
 export function stubSpec(spec: ToolSpec, descriptionMax = DEFERRED_STUB_DESCRIPTION_MAX): ToolSpec {
   const description =
     spec.description.length > descriptionMax
-      ? `${spec.description.slice(0, descriptionMax)}… (full schema via tool_lookup)`
+      ? spec.description.slice(0, descriptionMax) + "… (full schema via tool_lookup)"
       : spec.description;
   return { name: spec.name, description, inputSchema: { type: "object" } };
 }

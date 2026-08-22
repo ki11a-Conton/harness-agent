@@ -1,3 +1,4 @@
+﻿import { defaultTestToolCatalog } from "../test/fakes.js";
 import { describe, expect, it } from "vitest";
 import type { AgentDefinition, SessionId } from "@ar/contracts";
 import { newAgentId } from "@ar/contracts";
@@ -34,6 +35,8 @@ function makeRuntime(store: MemorySessionStore, agents: AgentDefinition[]) {
   const events = new MemoryEventStore();
   const orchestrator = new FakeOrchestrator({ status: "success", output: "fake-ok" });
   const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
     store,
     events,
     modelProvider: new ScriptedModelProvider([ScriptedModelProvider.text("ok")]),
@@ -61,6 +64,8 @@ describe("P0-1 effective agent config snapshot", () => {
       ScriptedModelProvider.text("done"),
     ]);
     const runtime2 = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events: new MemoryEventStore(),
       modelProvider: provider,
@@ -86,6 +91,8 @@ describe("P0-1 effective agent config snapshot", () => {
       ScriptedModelProvider.text("done"),
     ]);
     const fresh = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events: new MemoryEventStore(),
       modelProvider: provider,
@@ -110,6 +117,8 @@ describe("P0-1 effective agent config snapshot", () => {
       ScriptedModelProvider.text("done"),
     ]);
     const runtime2 = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events: new MemoryEventStore(),
       modelProvider: provider,
@@ -143,6 +152,8 @@ describe("P0-1 effective agent config snapshot", () => {
       ScriptedModelProvider.text("done"),
     ]);
     const runtime2 = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events: new MemoryEventStore(),
       modelProvider: provider,

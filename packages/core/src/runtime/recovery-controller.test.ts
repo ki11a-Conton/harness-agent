@@ -9,6 +9,7 @@
 import { describe, expect, it } from "vitest";
 import type { SessionId, TurnId } from "@ar/contracts";
 import { DEFAULT_TOOL_SEMANTICS, newAgentId, newSessionId, newTurnId, errorInfo } from "@ar/contracts";
+import { classifyCrashJournalState } from "./turn-helpers.js";
 import { MemoryEventStore, MemorySessionStore } from "../test/fakes.js";
 import { AgentState } from "../state/agent-state.js";
 import { newWorkingState } from "@ar/contracts";
@@ -173,4 +174,37 @@ describe("P15-4: terminal lifecycle exactly once", () => {
     const failed = events.events.filter((e) => e.type === "turn.failed");
     expect(failed).toHaveLength(1);
   });
+describe("P26-5: crash journal state classification", () => {
+  it("Case A: no intent → not started", () => {
+    const c = classifyCrashJournalState({ hasIntent: false, hasExecutionStart: false, hasOutcome: false, hasCheckpoint: false });
+    expect(c.phase).toBe("no_intent");
+    expect(c.decision).toBe("not_started");
+  });
+
+  it("Case B: intent without execution-start → likely not started", () => {
+    const c = classifyCrashJournalState({ hasIntent: true, hasExecutionStart: false, hasOutcome: false, hasCheckpoint: false });
+    expect(c.phase).toBe("intent_no_execution");
+    expect(c.decision).toBe("likely_not_started");
+  });
+
+  it("Case C: execution started without outcome → UNKNOWN EFFECT, reconcile", () => {
+    const c = classifyCrashJournalState({ hasIntent: true, hasExecutionStart: true, hasOutcome: false, hasCheckpoint: false });
+    expect(c.phase).toBe("execution_no_outcome");
+    expect(c.decision).toBe("unknown_effect");
+    expect(c.action).toBe("reconcile");
+  });
+
+  it("Case D: outcome committed without checkpoint → do NOT re-execute, reconstruct forward", () => {
+    const c = classifyCrashJournalState({ hasIntent: true, hasExecutionStart: true, hasOutcome: true, hasCheckpoint: false });
+    expect(c.phase).toBe("outcome_no_checkpoint");
+    expect(c.decision).toBe("do_not_reexecute");
+    expect(c.action).toBe("reconstruct_forward");
+  });
+
+  it("Case E: checkpoint committed → resume from checkpoint (wins over everything)", () => {
+    const c = classifyCrashJournalState({ hasIntent: true, hasExecutionStart: true, hasOutcome: true, hasCheckpoint: true });
+    expect(c.phase).toBe("checkpoint_committed");
+    expect(c.decision).toBe("resume_from_checkpoint");
+  });
+});
 });

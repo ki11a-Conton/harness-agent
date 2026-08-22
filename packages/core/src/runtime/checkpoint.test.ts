@@ -1,3 +1,4 @@
+﻿import { defaultTestToolCatalog } from "../test/fakes.js";
 import { describe, expect, it } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -87,6 +88,8 @@ async function makeHarness(
   const cwd = opts.withContext ? await mkdtemp(join(tmpdir(), "rt-ckpt-")) : "C:\\work";
 
   const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
     store,
     events,
     modelProvider: provider,
@@ -220,6 +223,8 @@ describe("AgentRuntime checkpointing (P1-3)", () => {
       const events = new MemoryEventStore();
       const ckpt = new FakeCheckpointStore();
       const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
         store,
         events,
         modelProvider: provider,
@@ -255,6 +260,8 @@ describe("AgentRuntime checkpointing (P1-3)", () => {
     const store = new FilteringSessionStore();
     const events = new MemoryEventStore();
     const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events,
       modelProvider: provider,

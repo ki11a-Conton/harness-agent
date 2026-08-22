@@ -434,7 +434,14 @@ export type ModelCallResult =
       reactiveCompacted: boolean;
     }
   | { status: "cancelled" }
-  | { status: "failed"; error: ReturnType<typeof errorInfo> };
+  | { status: "failed"; error: ReturnType<typeof errorInfo> }
+  | {
+      /** P23-6: the model-visible world changed (reactive compaction of a
+       *  context-length error). The runtime must build a NEW step snapshot —
+       *  NEVER reuse the stale one. */
+      status: "rebuild_context";
+      kind: import("@ar/contracts").SamplingAttemptKind;
+    };
 
 // ── Q-1: shared runtime symbols (moved from runtime.ts) ────────────────
 // These are needed by both AgentRuntime and the extracted controllers
@@ -468,6 +475,15 @@ export type FaultPoint =
   | "tool.completed"
   /** A side-effect tool completed AND its checkpoint was persisted. */
   | "tool.checkpointed"
+  /** P26-8: the executor RETURNED (the side effect committed) but the
+   *  terminal outcome event has NOT been written yet — the crash window
+   *  between effect and journaled outcome. */
+  | "tool.effect_committed"
+  /** P26-8: immediately before the terminal turn record/event is written. */
+  | "turn.completing"
+  /** P26-8: the terminal turn event was written but the outcome has NOT been
+   *  returned to the caller yet (the ack window). */
+  | "turn.completed_acked"
   /** Midauth of a tool execution — outcome unknown (may or may not have
    *  happened) — the reconciliation window. */
   | "tool.executing"
@@ -642,4 +658,66 @@ export interface SkillSecurityDenialRecord {
 export interface SkillDiscovery {
   skills: Skill[];
   security: SkillSecurityDenialRecord[];
+}
+// --- P26-5: crash journal state classification ------------------------------
+// The side-effect lifecycle journal states (plan §P26-4) classify a crash:
+//   INTENT_PERSISTED → EXECUTION_STARTED → OUTCOME_COMMITTED → CHECKPOINT.
+// On resume each tool call is classified by how far it got:
+
+export type CrashPhase =
+  | "no_intent"
+  | "intent_no_execution"
+  | "execution_no_outcome"
+  | "outcome_no_checkpoint"
+  | "checkpoint_committed";
+
+export interface CrashJournalClassification {
+  phase: CrashPhase;
+  decision:
+    | "not_started"
+    | "likely_not_started"
+    | "unknown_effect"
+    | "do_not_reexecute"
+    | "resume_from_checkpoint";
+  action?: "reconcile" | "reconstruct_forward";
+}
+
+/** P26-5 — classify a crash point by journal state:
+ *  Case A  no intent                     → not started (safe to consider fresh).
+ *  Case B  intent, no execution-start    → likely not started — but the
+ *          process could have died after the ACTUAL start before recording,
+ *          so never blindly assume; the caller re-checks the boundary.
+ *  Case C  execution started, no outcome → UNKNOWN EFFECT → reconcile_unknown
+ *          (never blind-retry a non-idempotent tool).
+ *  Case D  outcome committed, no ckpt    → do NOT re-execute; reconstruct
+ *          working state from the committed outcome and checkpoint forward.
+ *  Case E  checkpoint committed          → resume from the checkpoint.
+ * Checkpoint wins (highest durability), then outcome, start, intent. */
+export function classifyCrashJournalState(input: {
+  hasIntent: boolean;
+  hasExecutionStart: boolean;
+  hasOutcome: boolean;
+  hasCheckpoint: boolean;
+}): CrashJournalClassification {
+  if (input.hasCheckpoint) {
+    return { phase: "checkpoint_committed", decision: "resume_from_checkpoint" };
+  }
+  if (input.hasOutcome) {
+    return {
+      phase: "outcome_no_checkpoint",
+      decision: "do_not_reexecute",
+      action: "reconstruct_forward",
+    };
+  }
+  if (input.hasExecutionStart) {
+    return {
+      phase: "execution_no_outcome",
+      decision: "unknown_effect",
+      action: "reconcile",
+    };
+  }
+  if (input.hasIntent) {
+    return { phase: "intent_no_execution", decision: "likely_not_started" };
+  }
+  return { phase: "no_intent", decision: "not_started" };
 }

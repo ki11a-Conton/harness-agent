@@ -85,6 +85,27 @@ describe("P0-3: createHarness production composition root", () => {
     await harness.close();
   });
 
+  it("P25-2: exposes a LoadedSessionManager that loads actors and unloads on close", async () => {
+    const harness = await createHarness(baseConfig());
+    expect(harness.sessions).toBeDefined();
+    expect(harness.sessions.listLoaded()).toEqual([]);
+
+    const agent = harness.agents[0]!;
+    const session = await harness.sessionService.create({
+      agentId: agent.id,
+      model: agent.model,
+      cwd: "/work",
+    });
+    const actor = await harness.sessions.load(session.id);
+    expect(actor.sessionId).toBe(session.id);
+    expect(harness.sessions.listLoaded()).toEqual([session.id]);
+
+    await harness.sessions.unload(session.id);
+    expect(harness.sessions.listLoaded()).toEqual([]);
+    await harness.close();
+    await harness.close(); // idempotent
+  });
+
   it("wires durable checkpoint + JSONL stores and tool output budget when dataDir is set", async () => {
     const dataDir = await tempDir();
     const harness = await createHarness(baseConfig({ dataDir }));

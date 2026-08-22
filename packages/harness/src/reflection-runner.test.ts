@@ -35,7 +35,8 @@ function eventStoreOf(events: AgentEvent[]): EventStore {
     append: async (e) => e,
     list: async () => events,
     stream: async function* () {},
-    nextSequence: async () => 0,
+    appendNew: async (e: Omit<AgentEvent, "sequence">) => ({ ...e, sequence: 0 }),
+nextSequence: async () => 0,
   };
 }
 
@@ -129,7 +130,8 @@ describe("P2-5: PostTurnReflector", () => {
         throw new Error("boom");
       },
       stream: async function* () {},
-      nextSequence: async () => 0,
+      appendNew: async (e: Omit<AgentEvent, "sequence">) => ({ ...e, sequence: 0 }),
+nextSequence: async () => 0,
     };
     const reflector = new PostTurnReflector({
       events: failingEvents,
@@ -167,7 +169,12 @@ describe("P14-5: write-gate denial observability", () => {
       },
       list: async () => events,
       stream: async function* () {},
-      nextSequence: async () => 0,
+      appendNew: async (e: Omit<AgentEvent, "sequence">) => {
+        const stored = { ...e, sequence: 0 };
+        appended.push(stored);
+        return stored;
+      },
+nextSequence: async () => 0,
     };
     const candidateStore = new JsonlCandidateStore({ dataDir });
     const reflector = new PostTurnReflector({
@@ -243,7 +250,8 @@ describe("P17-1/P17-2: candidate provenance + pollution quarantine", () => {
       append: async (e) => e,
       list: async () => events,
       stream: async function* () {},
-      nextSequence: async () => 0,
+      appendNew: async (e: Omit<AgentEvent, "sequence">) => ({ ...e, sequence: 0 }),
+nextSequence: async () => 0,
     };
     const candidateStore = new JsonlCandidateStore({ dataDir });
     const reflector = new PostTurnReflector({
@@ -288,7 +296,8 @@ describe("P17-1/P17-2: candidate provenance + pollution quarantine", () => {
       append: async (e) => e,
       list: async () => events,
       stream: async function* () {},
-      nextSequence: async () => 0,
+      appendNew: async (e: Omit<AgentEvent, "sequence">) => ({ ...e, sequence: 0 }),
+nextSequence: async () => 0,
     };
     const candidateStore = new JsonlCandidateStore({ dataDir });
     const reflector = new PostTurnReflector({

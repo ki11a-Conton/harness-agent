@@ -9,6 +9,7 @@ import type {
   ArtifactStore,
   ContextBlock,
   ContextBudget,
+  DurabilityFenceStore,
   EventStore,
   InboxStore,
   Message,
@@ -69,6 +70,7 @@ import type {
   RecoveryDecision,
   RecoveryInput,
   StepContext,
+  StepExecutionSnapshot,
   TurnExecutionState,
   AskUserRequest,
   AskUserReply,
@@ -82,7 +84,10 @@ import type { ContextPipeline, InstructionDiscoveryOptions } from "@ar/context";
 import type { ToolSelector } from "../tools/tool-selector.js";
 import { estimateMessageTokens, hashPolicyConfig } from "@ar/context";
 import { applyWorkingStateMutation, type WorkingStateMutation } from "@ar/contracts";
+import { buildStateDigest } from "./turn-helpers.js";
 import { AgentError } from "../errors.js";
+import { buildStepExecutionSnapshot } from "./step-snapshot-factory.js";
+import type { StepToolCatalog } from "./tool-catalog.js";
 import { AgentState } from "../state/agent-state.js";
 import { HookRegistry } from "../lifecycle/hooks.js";
 import { RecoveryPolicy } from "../recovery/recovery.js";
@@ -149,6 +154,12 @@ export type { FaultPoint, FaultPointContext, ReconciliationVerdict, TurnOutcome,
 export interface AgentRuntimeDeps {
   store: SessionStore;
   events: EventStore;
+  /** P26-3: optional durability fence — when wired, the runtime flushes the
+   *  event journal through the turn's last event before acking completion, so
+   *  an acked turn cannot be lost on crash. The store declares its honest
+   *  DurabilityLevel; absent fence = no flush (callers that need it must
+   *  wire a JSONL or SQLite store). */
+  durabilityFence?: DurabilityFenceStore;
   modelProvider: ModelProvider;
   orchestrator: ToolOrchestrator;
   agents: AgentDefinition[];
@@ -276,6 +287,18 @@ export interface AgentRuntimeDeps {
   skillSelector?: (entries: SkillIndexEntry[]) => SkillIndexEntry[];
   /** LOOP-001: tool specs advertised to the model (default: none). */
   toolSpecs?: readonly ToolSpec[];
+  /** P23-1: the mutable process tool catalog. READ ONCE at step snapshot
+   *  build time to freeze the step's tool world; never consulted mid-step. */
+  toolRegistry?: StepToolCatalog;
+  /** P18-2 deferred advertisement policy — applied at step freeze so the
+   *  model-visible advertised set (stubs included) is the frozen step's. */
+  schemaAdvertPolicy?: import("@ar/contracts").SchemaAdvertPolicy;
+  /** P23-4: test-only permissive tool resolution (never set by the harness). */
+  permissiveToolResolution?: boolean;
+  /** P24-5: resolve the MCP servers THIS step needs (lazy). The provider
+   *  returns an immutable McpBindingSnapshot whose tools are frozen into the
+   *  step router; a later refresh can only affect NEW steps. */
+  mcpBindingProvider?: (input: { goal: string }) => Promise<import("@ar/contracts").McpBindingSnapshot | undefined>;
   /** P7-1/P7-2: progressive tool disclosure — narrows the advertised tool
    *  schemas per goal (deterministic champion). Absent → identity (all). */
   toolSelector?: ToolSelector;
@@ -445,15 +468,26 @@ export class AgentRuntime {
   private readonly memoryBlocks?: AgentRuntimeDeps["memoryBlocks"];
   /** P2-5: post-turn reflection hook (never alters the turn result). */
   private readonly onTurnComplete?: AgentRuntimeDeps["onTurnComplete"];
+  /** P26-3: optional durability fence — flushed before turn completion ack. */
+  private readonly durabilityFence?: AgentRuntimeDeps["durabilityFence"];
   /** P3-9: host-provided specialist delegation for adaptive recovery. */
   private readonly delegateSpecialist?: AgentRuntimeDeps["delegateSpecialist"];
-  private readonly toolSpecs: readonly ToolSpec[];
+  /** P23-3: toolSpecs removed — advertisement is frozen per-step from the
+   *  catalog; AgentRuntimeDeps.toolSpecs is deprecated and ignored. */
+  private readonly toolRegistry?: StepToolCatalog;
+  private readonly schemaAdvertPolicy?: import("@ar/contracts").SchemaAdvertPolicy;
+  private readonly permissiveToolResolution?: boolean;
+  private readonly mcpBindingProvider?: (input: { goal: string }) => Promise<import("@ar/contracts").McpBindingSnapshot | undefined>;
   private readonly toolSelector?: ToolSelector;
   private readonly changedPathsProvider?: () => readonly string[];
   private readonly baselineFilesProvider?: () => readonly string[];
   /** P1-20: cumulative compaction count (observability metric). Q-1: boxed
    *  so the context + model-call controllers share it by reference. */
   private readonly compactCounter = { value: 0 };
+  /** P25-3: per-session running-turn guard — at most ONE active turn per
+   *  session, enforced at the runtime boundary (the SessionActor owns the
+   *  authority, this map defends against bypassing callers). */
+  private readonly runningTurns = new Map<SessionId, TurnId>();
   private readonly checkpointStore?: CheckpointStore;
   private readonly checkpointPolicy: CheckpointPolicy;
   /** P16-3: live per-turn budget-usage provider (set by runTurnCore so every
@@ -523,8 +557,12 @@ export class AgentRuntime {
     this.skillBodyBlocks = deps.skillBodyBlocks;
     this.memoryBlocks = deps.memoryBlocks;
     this.onTurnComplete = deps.onTurnComplete;
+    this.durabilityFence = deps.durabilityFence;
     this.delegateSpecialist = deps.delegateSpecialist;
-    this.toolSpecs = deps.toolSpecs ?? [];
+    this.toolRegistry = deps.toolRegistry;
+    this.schemaAdvertPolicy = deps.schemaAdvertPolicy;
+    this.permissiveToolResolution = deps.permissiveToolResolution;
+    this.mcpBindingProvider = deps.mcpBindingProvider;
     this.toolSelector = deps.toolSelector;
     this.changedPathsProvider = deps.changedPathsProvider;
     this.baselineFilesProvider = deps.baselineFilesProvider;
@@ -546,6 +584,8 @@ export class AgentRuntime {
       askUserStore: this.askUserStore,
       askUser: this.askUser,
       semanticsOf: (name) => this.semanticsOf(name),
+      // P26-8: crash injection for the turn-completion windows.
+      failAt: (point, ctx) => this.failAt(point, ctx),
     });
     // Q-1: tool-call execution delegated to the extracted controller. All
     // bindings are captured once (fields are readonly); per-turn mutable state
@@ -615,8 +655,6 @@ export class AgentRuntime {
       emit: (sessionId, type, payload, turnId, spans) => this.emit(sessionId, type, payload, turnId, spans),
       now: () => this.now(),
       failAt: (point, ctx) => this.failAt(point, ctx),
-      toolSpecs: this.toolSpecs,
-      ...(this.toolSelector !== undefined ? { toolSelector: this.toolSelector } : {}),
       recovery: this.recovery,
       timer: this.timer,
       compactCounter: this.compactCounter,
@@ -652,14 +690,14 @@ export class AgentRuntime {
     turnId?: TurnId,
     spans?: { spanId?: string; parentSpanId?: string },
   ): Promise<AgentEvent> {
-    const sequence = await this.events.nextSequence(sessionId);
-    return this.events.append({
+    // P26-1: sequence allocation is store-owned and atomic (appendNew) — the
+    // caller must NEVER allocate via nextSequence + append (non-atomic pair).
+    return this.events.appendNew({
       id: newEventId(),
       sessionId,
       ...(turnId !== undefined ? { turnId } : {}),
       ...(spans?.spanId !== undefined ? { spanId: spans.spanId } : {}),
       ...(spans?.parentSpanId !== undefined ? { parentSpanId: spans.parentSpanId } : {}),
-      sequence,
       timestamp: this.now(),
       type,
       payload,
@@ -742,27 +780,52 @@ export class AgentRuntime {
 
   /** Execute one turn: model round-trips + tool calls, bounded and cancellable.
    *  `opts.initialState` seeds the working state from a restored checkpoint
-   *  (P1-4 resume) instead of the turn input text. */
+   *  (P1-4 resume) instead of the turn input text.
+   *
+   *  P25-3: a session may run at most ONE turn at a time. A concurrent
+   *  runTurn for the same session (any turnId) throws SESSION_BUSY — the
+   *  SessionActor is the lifecycle authority and this guard defends the
+   *  boundary against direct callers. Different sessions run concurrently. */
   async runTurn(
     sessionId: SessionId,
     turnId: TurnId,
     signal: AbortSignal,
     opts: RunTurnOptions = {},
   ): Promise<TurnOutcome> {
-    const outcome = await this.runTurnCore(sessionId, turnId, signal, opts);
-    // P2-5: post-turn reflection hook — fired exactly once per terminal
-    // outcome (the host owns the reflection pipeline). Errors are swallowed:
-    // reflection must never change the turn result.
-    if (this.onTurnComplete !== undefined) {
-      try {
-        await this.onTurnComplete({ sessionId, turnId, outcome });
-      } catch (cause) {
-        process.stderr.write(
-          `[runtime] onTurnComplete failed: ${cause instanceof Error ? cause.message : String(cause)}\n`,
-        );
+    const existing = this.runningTurns.get(sessionId);
+    if (existing !== undefined) {
+      throw new AgentError(
+        errorInfo("SESSION_BUSY", `session ${sessionId} already has an active turn (${existing})`),
+      );
+    }
+    this.runningTurns.set(sessionId, turnId);
+    try {
+      const outcome = await this.runTurnCore(sessionId, turnId, signal, opts);
+      // P2-5: post-turn reflection hook — fired exactly once per terminal
+      // outcome (the host owns the reflection pipeline). Errors are swallowed:
+      // reflection must never change the turn result.
+      if (this.onTurnComplete !== undefined) {
+        try {
+          await this.onTurnComplete({ sessionId, turnId, outcome });
+        } catch (cause) {
+          process.stderr.write(
+            `[runtime] onTurnComplete failed: ${cause instanceof Error ? cause.message : String(cause)}\n`,
+          );
+        }
+      }
+      // P26-3: fence the journal BEFORE acking completion — an acked turn must
+      // survive a crash at the store's declared durability level. A fence
+      // failure fails the turn (fail-closed): the caller must not treat an
+      // un-flushed completion as durable.
+      if (this.durabilityFence !== undefined) {
+        await this.durabilityFence.flushThrough(sessionId, Number.MAX_SAFE_INTEGER);
+      }
+      return outcome;
+    } finally {
+      if (this.runningTurns.get(sessionId) === turnId) {
+        this.runningTurns.delete(sessionId);
       }
     }
-    return outcome;
   }
 
   /** P2-5: runTurn body (the wrapper fires the post-turn reflection hook).
@@ -919,7 +982,7 @@ export class AgentRuntime {
         // P15-2: form the immutable StepContext BEFORE the model call. Every
         // tool call this model response requests will reuse THIS step, so a
         // mid-step config/policy change cannot affect the batch.
-        const step = this.buildStepContext(ctx, stepIndex, priorBlocks, system, digestAppended || overflowAttempt > 0);
+        const step = await this.buildStepContext(ctx, stepIndex, priorBlocks, system, digestAppended || overflowAttempt > 0, history, working.goal);
         stepIndex += 1;
         const modelResult = await this.modelCallController.callModelWithRetry(
           ctx, client, history, system, working, state, toolLedger, lastReportTokens, reactiveCompacted, budget, step,
@@ -930,6 +993,32 @@ export class AgentRuntime {
         }
         if (modelResult.status === "failed") {
           return this.recoveryController.finishTurn(ctx, "failed", state, working, modelResult.error, "model_error", toolLedger);
+        }
+        if (modelResult.status === "rebuild_context") {
+          // P23-6: the model-visible world changed (reactive compaction) — the
+          // stale step snapshot can never be reused. Compaction orchestration
+          // lives HERE in the outer sampling loop: checkpoint → digest →
+          // shrink flag → continue, which builds a NEW StepExecutionSnapshot.
+          await this.recoveryController.checkpoint(
+            ctx, working, state, toolLedger, "context:reactive-compact",
+            this.activeBudgetUsage?.(),
+          );
+          reactiveCompacted = true;
+          await this.emit(sessionId, "context.compacted", {
+            compressed: 1,
+            reason: "reactive compact (context-length model error)",
+            reactive: true,
+            totalCount: ++this.compactCounter.value,
+          }, turnId);
+          await this.store.appendMessage({
+            id: newMessageId(),
+            sessionId,
+            turnId,
+            role: "system",
+            content: buildStateDigest(working, "context is full — reactive compact; continue concisely"),
+            createdAt: this.now(),
+          });
+          continue;
         }
 
         // completed
@@ -1072,41 +1161,53 @@ export class AgentRuntime {
     return { ctx, state, turn, working, toolLedger, turnState };
   }
 
-  /** P15-2: form the immutable StepContext for ONE model call. Everything the
-   *  model and its requested tool calls may observe is pinned before the call:
-   *  frozen effective agent config, cwd identity, tool-spec snapshot, policy
-   *  fingerprint, the context selection, the model ref and the step id. The
-   *  SAME object is threaded into every tool call of this model response — a
-   *  mid-step change can only affect the NEXT step. */
-  private buildStepContext(
+  /** P23-1: form the immutable StepExecutionSnapshot for ONE model call.
+   *  Everything the model and its requested tool calls may observe is pinned
+   *  BEFORE the call: frozen agent config, cwd identity, frozen tool router
+   *  (from the process catalog, policy-filtered), the permission profile, the
+   *  exact context identity and the model ref — plus durable fingerprints in
+   *  the StepRecord. The SAME snapshot is threaded into every tool call of
+   *  this model response; a mid-step catalog/policy change can only affect
+   *  the NEXT snapshot. */
+  private async buildStepContext(
     ctx: TurnContext,
     stepIndex: number,
     priorBlocks: ContextBlock[],
     system: string,
     compacted: boolean,
-  ): StepContext {
-    const effectiveAgent = snapshotEffectiveConfig(ctx.agent);
-    const policyHash = hashPolicyConfig({
-      tools: ctx.agent.tools,
-      permissions: ctx.agent.permissions,
-      sandbox: this.sandboxPolicy,
-    });
-    return {
-      stepId: `${ctx.turnId}:${stepIndex}`,
+    history: readonly import("@ar/contracts").Message[],
+    goal: string,
+  ): Promise<StepExecutionSnapshot> {
+    // P24-5: resolve the MCP world THIS step needs (lazy connect) and freeze
+    // its tools into the router — a refresh mid-run only affects NEW steps.
+    const mcpBinding = await this.mcpBindingProvider?.({ goal });
+    const mcpExtra: readonly import("@ar/contracts").FrozenToolBinding[] = (mcpBinding?.tools ?? []).map((t) => ({
+      name: t.toolName,
+      spec: { name: t.toolName, description: t.definition.description, inputSchema: { type: "object" } as never },
+      definition: t.definition,
+      semantics: { retrySafety: "unknown", concurrencySafety: true, cancellable: true, readOnly: false, idempotent: false, sideEffectScope: "unknown", networkBehavior: "outbound", outputSensitivity: "high", requiresApproval: true } as never,
+      provenance: { kind: "mcp", sourceId: t.serverId, generation: t.generation },
+    }));
+    return buildStepExecutionSnapshot({
+      ...mcpExtra.length > 0 ? { extraBindings: mcpExtra } : {},
       sessionId: ctx.sessionId,
       turnId: ctx.turnId,
-      agentId: ctx.agent.id,
-      effectiveAgent,
+      agent: ctx.agent,
       cwd: ctx.session.cwd,
-      toolSpecs: this.toolSpecs,
-      policyHash,
-      contextSelection: {
-        blocks: priorBlocks.length,
-        tokens: Math.ceil(Buffer.byteLength(system, "utf8") / 4),
-        compacted,
-      },
-      model: ctx.agent.model,
-    };
+      stepIndex,
+      priorBlocks,
+      system,
+      compacted,
+      history,
+      registry: this.toolRegistry ?? { get: () => undefined, list: () => [], specs: () => [] },
+      goal,
+      toolSelector: this.toolSelector,
+      schemaAdvertPolicy: this.schemaAdvertPolicy,
+      permissive: this.permissiveToolResolution,
+      semanticsOf: (name) => this.semanticsOf(name),
+      sandboxPolicy: this.sandboxPolicy,
+      now: this.now,
+    });
   }
 
   // Q-1: executeToolCalls / runReadBatch / recordStallTrace / executeToolCall

@@ -701,3 +701,113 @@ describe("P16-6: intentPersistedFailAt fires in the intent→execute crash windo
     expect(failAtCalls).toBe(0);
   });
 });
+describe("P23-4 executeBound (frozen binding, not the mutable registry)", () => {
+  function makeRegistryOrch(registry: ToolRegistry, opts: { events?: RecordingSink } = {}) {
+    return new ToolOrchestrator({
+      registry,
+      approval: undefined,
+      events: opts.events,
+      workspaceRoot: ws,
+    });
+  }
+
+  it("executeBound runs the FROZEN definition even after the registry swaps it", async () => {
+    const registry = new ToolRegistry();
+    const v1 = { ...readFileTool, execute: async () => ({ status: "success" as const, output: "v1-result" }) };
+    const v2 = { ...readFileTool, execute: async () => ({ status: "success" as const, output: "v2-result" }) };
+    registry.register(v1);
+    const orch = makeRegistryOrch(registry);
+    const binding = {
+      name: "read_file",
+      spec: { name: "read_file", description: "d", inputSchema: {} as never },
+      definition: v1,
+      semantics: {} as never,
+      provenance: { kind: "builtin" } as const,
+    };
+    // registry swaps to v2 AFTER the binding was frozen
+    registry.unregister("read_file");
+    registry.register(v2);
+    const result = await orch.executeBound(
+      { ...req("read_file", { path: join(ws, "hello.txt") }), binding: binding as never },
+      ctx(),
+    );
+    expect(result.status).toBe("success");
+    expect(result.output).toBe("v1-result");
+  });
+
+  it("execute (legacy) still resolves from the CURRENT registry", async () => {
+    const registry = new ToolRegistry();
+    const v1 = { ...readFileTool, execute: async () => ({ status: "success" as const, output: "v1" }) };
+    const v2 = { ...readFileTool, execute: async () => ({ status: "success" as const, output: "v2" }) };
+    registry.register(v1);
+    const orch = makeRegistryOrch(registry);
+    registry.unregister("read_file");
+    registry.register(v2);
+    const result = await orch.execute(req("read_file", { path: join(ws, "hello.txt") }), ctx());
+    expect(result.output).toBe("v2");
+  });
+  it("P26-4: the bound path carries step/router/binding identity into the intent journal", async () => {
+    const intents: import("@ar/contracts").ToolIntentPayload[] = [];
+    const registry = new ToolRegistry();
+    const writeTool: ToolDefinition = {
+      name: "write_file",
+      description: "write a file",
+      inputSchema: z.object({ path: z.string(), text: z.string() }),
+      risk: "elevated",
+      metadata: {
+        name: "write_file",
+        version: "1.0.0",
+        sideEffect: true,
+        network: false,
+        filesystem: true,
+        process: false,
+        interactive: false,
+      },
+      async execute(input) {
+        const { path, text } = input as { path: string; text: string };
+        writeFileSync(join(ws, path), text);
+        return { status: "success", output: "wrote" };
+      },
+    };
+    registry.register(writeTool);
+    const orch = new ToolOrchestrator({
+      registry,
+      persistIntent: async (intent) => {
+        intents.push(intent);
+      },
+      now: () => 1234,
+    });
+    const binding: import("@ar/contracts").FrozenToolBinding = {
+      name: "write_file",
+      spec: { name: "write_file", description: "write a file", inputSchema: {} },
+      definition: writeTool,
+      semantics: {
+        readOnly: false,
+        idempotent: false,
+        retrySafety: "none",
+        concurrencySafety: false,
+        sideEffectScope: "filesystem",
+        cancellable: true,
+        requiresApproval: false,
+        networkBehavior: "none",
+        outputSensitivity: "medium",
+      },
+      provenance: { kind: "builtin" },
+    };
+    const result = await orch.executeBound(
+      {
+        ...req("write_file", { path: "p2.txt", text: "x" }),
+        binding,
+        stepId: "step_1",
+        routerFingerprint: "r_fp",
+        toolBindingFingerprint: "b_fp",
+      },
+      ctx({ permissions: { rules: [{ action: "edit", resource: "file", pattern: "**/*", effect: "allow" }] } }),
+    );
+    expect(result.status).toBe("success");
+    expect(intents).toHaveLength(1);
+    expect(intents[0]!.stepId).toBe("step_1");
+    expect(intents[0]!.routerFingerprint).toBe("r_fp");
+    expect(intents[0]!.toolBindingFingerprint).toBe("b_fp");
+  });
+});

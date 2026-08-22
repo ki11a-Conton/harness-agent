@@ -21,6 +21,7 @@ import {
   newMessageId,
   resourceConflicts,
   sleep as timerSleep,
+  stableFingerprint,
 } from "@ar/contracts";
 import type {
   AgentEvent,
@@ -36,7 +37,7 @@ import type {
   ToolOrchestrator,
   ToolResult,
   ToolSemantics,
-  StepContext,
+  StepExecutionSnapshot,
   TurnExecutionState,
   TurnId,
 } from "@ar/contracts";
@@ -139,7 +140,7 @@ export class ToolCallController {
     /** P15-2: the immutable step this batch belongs to. The SAME object is
      *  used for every tool call of this model response — a mid-batch config/
      *  policy change cannot affect the already-started batch. */
-    step: StepContext,
+    step: StepExecutionSnapshot,
     /** P9-1: the model call that requested these tool calls (parent span). */
     parentCallId?: string,
   ): Promise<ExecutedToolCall[]> {
@@ -258,7 +259,7 @@ export class ToolCallController {
     /** P15-1: per-turn execution state threaded through to each call. */
     turnState: TurnExecutionState,
     /** P15-2: the immutable step shared by every call in this batch. */
-    step: StepContext,
+    step: StepExecutionSnapshot,
     parentCallId?: string,
   ): Promise<Array<{ call: ToolCall; result: ToolResult }>> {
     const { signal } = ctx;
@@ -405,22 +406,30 @@ export class ToolCallController {
     /** P15-1: per-turn execution state (recoveryUsage is read/written here). */
     turnState: TurnExecutionState,
     /** P15-2: the immutable step this tool call belongs to. */
-    step: StepContext,
+    step: StepExecutionSnapshot,
     parentCallId?: string,
   ): Promise<ToolResult> {
     const { session, turnId, signal, agent } = ctx;
     // P1-20: tool latency starts at the request (includes policy gates,
     // permission/sandbox evaluation and retries).
     const toolStartedAt = this.deps.now();
-    await this.deps.emit(session.id, "tool.requested", { toolCallId: call.id, name: call.name, args: call.args, stepId: step.stepId }, turnId, { spanId: call.id, parentSpanId: parentCallId });
+    await this.deps.emit(session.id, "tool.requested", { toolCallId: call.id, name: call.name, args: call.args, stepId: step.record.stepId }, turnId, { spanId: call.id, parentSpanId: parentCallId });
 
-    // P0-1: the session's frozen tool policy is the first gate (fail-closed).
+    // P23-5: the STEP's frozen permission profile is the first gate
+    // (fail-closed). A mid-run widening of the global agent config can only
+    // affect a NEW step — S1 keeps the authority it was sampled under.
     // Permission/sandbox evaluation still happens downstream in the
     // orchestrator; a policy-denied call never reaches hooks or execution.
-    if (!isToolAllowedByPolicy(agent.tools, call.name)) {
+    // P24-5: MCP tools bound into the step carry their server-level
+    // authorization (the descriptor's conferred allow-list was enforced at
+    // registration); they are gated by provenance, not the agent allow-list.
+    const stepToolPolicy = step.permissions.toolPolicy;
+    const boundTool = step.tools.resolve(call.name);
+    const isMcpBound = boundTool?.provenance.kind === "mcp";
+    if (!isMcpBound && !isToolAllowedByPolicy(stepToolPolicy, call.name)) {
       const error = errorInfo(
         "PERMISSION_DENIED",
-        `tool ${call.name} is denied by the session tool policy (allow=${JSON.stringify(agent.tools.allow ?? null)} deny=${JSON.stringify(agent.tools.deny ?? null)})`,
+        `tool ${call.name} is denied by the step tool policy (allow=${JSON.stringify(stepToolPolicy.allow ?? null)} deny=${JSON.stringify(stepToolPolicy.deny ?? null)})`,
       );
       const result: ToolResult = { status: "denied", error };
       await this.deps.emit(session.id, "tool.failed", { toolCallId: call.id, tool: call.name, error, durationMs: this.deps.now() - toolStartedAt }, turnId);
@@ -487,14 +496,26 @@ export class ToolCallController {
       agentId: session.agentId,
       call: allowed,
     };
+    // P23-4: the tool this call executes against is the FROZEN step binding —
+    // the exact definition the model saw. A tool present globally but absent
+    // from the step router fails TOOL_NOT_IN_STEP; it never falls through to
+    // the mutable global registry.
+    const frozenBinding = step.tools.resolve(call.name);
+    if (frozenBinding === undefined) {
+      const info = errorInfo("TOOL_NOT_IN_STEP", `tool "${call.name}" is not in the frozen step router`);
+      await this.deps.hooks.toolError(hookCtx, call, { status: "failed", error: info });
+      return { status: "failed", error: info };
+    }
     const execCtx: ToolExecutionContext = {
       sessionId: session.id,
       turnId,
       agentId: session.agentId,
-      cwd: session.cwd,
+      // P23-5: the orchestrator receives the STEP authority — permissions,
+      // sandbox and environment from the frozen snapshot, not live state.
+      cwd: step.environment.cwd,
       signal,
-      permissions: agent.permissions,
-      sandboxPolicy: this.deps.sandboxPolicy ?? defaultSandboxPolicy(),
+      permissions: step.permissions.permissions,
+      sandboxPolicy: step.permissions.sandboxPolicy,
     };
 
     let result: ToolResult;
@@ -505,7 +526,22 @@ export class ToolCallController {
       await this.deps.failAt("tool.intent_persisting", { sessionId: session.id, turnId, toolCallId: call.id, tool: call.name });
       // P1-5: a kill here leaves the tool outcome unknown (reconciliation).
       await this.deps.failAt("tool.executing", { sessionId: session.id, turnId, toolCallId: call.id, tool: call.name });
-      result = await this.deps.orchestrator.execute(request, execCtx);
+      result = await this.deps.orchestrator.executeBound(
+        {
+          ...request,
+          binding: frozenBinding,
+          // P26-4: frozen step-world identity for the intent journal — the
+          // crash-recovery can attribute an intent to the exact step/router.
+          stepId: step.record.stepId,
+          routerFingerprint: step.record.toolRouterFingerprint,
+          toolBindingFingerprint: stableFingerprint([
+            frozenBinding.name,
+            frozenBinding.provenance,
+            frozenBinding.semantics,
+          ]),
+        },
+        execCtx,
+      );
     } catch (err) {
       // P1-5: a simulated kill is not a tool failure to recover from.
       rethrowIfKill(err);
@@ -552,7 +588,7 @@ export class ToolCallController {
             await timerSleep(this.deps.timer, decision.retryDelayMs ?? 0);
           }
           try {
-            result = await this.deps.orchestrator.execute(request, execCtx);
+            result = await this.deps.orchestrator.executeBound({ ...request, binding: frozenBinding }, execCtx);
           } catch (err) {
             // P1-5: a simulated kill is not a tool failure to recover from.
             rethrowIfKill(err);
@@ -608,7 +644,7 @@ export class ToolCallController {
         if (decision.action === "retry_safe") {
           if (retryPolicy !== "safe") break;
           try {
-            result = await this.deps.orchestrator.execute(request, execCtx);
+            result = await this.deps.orchestrator.executeBound({ ...request, binding: frozenBinding }, execCtx);
           } catch (err) {
             rethrowIfKill(err);
             result = {
@@ -690,6 +726,10 @@ export class ToolCallController {
     // P1-20: every executed tool closes the loop with a duration (denied
     // calls already emitted tool.failed at their gate, no double emission).
     const durationMs = this.deps.now() - toolStartedAt;
+    // P26-8: crash window #4 — the executor RETURNED (a side effect may have
+    // committed) but the terminal outcome event has NOT been written yet. A
+    // crash here leaves the effect on record but un-journaled.
+    await this.deps.failAt("tool.effect_committed", { sessionId: session.id, turnId, toolCallId: call.id, tool: call.name });
     if (result.status === "success") {
       await this.deps.emit(session.id, "tool.completed", { toolCallId: call.id, tool: call.name, durationMs }, turnId, { spanId: call.id, parentSpanId: parentCallId });
     } else if (result.status === "failed" || result.status === "timeout") {

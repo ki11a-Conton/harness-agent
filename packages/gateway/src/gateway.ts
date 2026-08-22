@@ -7,7 +7,13 @@ import type {
   SessionId,
   TurnId,
 } from "@ar/contracts";
-import { newEventId } from "@ar/contracts";
+import { AgentError, newEventId } from "@ar/contracts";
+
+/** P25-3: typed busy detection — the SESSION_BUSY code means the session
+ *  actor already owns an active turn (no silent parallel run). */
+function isSessionBusy(err: unknown): boolean {
+  return err instanceof AgentError && err.info.code === "SESSION_BUSY";
+}
 import type { SessionService } from "@ar/session";
 import type { ChannelAdapter, ChannelMessage } from "./channel.js";
 import type { RpcMethodRegistry } from "./rpc.js";
@@ -121,7 +127,10 @@ export class Gateway {
     }
   }
 
-  /** User text: find-or-create the sender's session, then send+run the turn. */
+  /** User text: find-or-create the sender's session, then send+run the turn.
+   *  P25-5: while a turn is running the message is EXPLICITLY queued as a
+   *  follow-up (session.followup) — never silently injected. The protocol
+   *  operation, not the text, decides steer vs followup. */
   private async handleUserMessage(msg: ChannelMessage): Promise<void> {
     const key = this.userKey(msg);
     let sessionId = this.sessionByUser.get(key);
@@ -129,10 +138,20 @@ export class Gateway {
       sessionId = await this.bindSession(key, msg);
       if (sessionId === undefined) return;
     }
-    const { turnId } = (await this.rpc.invoke("session.send", {
-      sessionId,
-      text: msg.text,
-    })) as { turnId: TurnId };
+    let turnId: TurnId;
+    try {
+      ({ turnId } = (await this.rpc.invoke("session.send", {
+        sessionId,
+        text: msg.text,
+      })) as { turnId: TurnId });
+    } catch (err) {
+      if (isSessionBusy(err)) {
+        await this.rpc.invoke("session.followup", { sessionId, text: msg.text });
+        await this.reply(msg, "[queued] a turn is still running — message queued as a follow-up");
+        return;
+      }
+      throw err;
+    }
     this.lastTurnBySession.set(sessionId, turnId);
     // The run must not block message handling, or a cancel could never land.
     void this.runTurnAndReply(msg, sessionId, turnId);
@@ -185,7 +204,12 @@ export class Gateway {
         `[run] ${outcome.status} turn:${turnId} calls:${outcome.toolCalls ?? 0} iterations:${outcome.iterations ?? 0}`,
       );
     } catch (err) {
-      await this.reply(msg, `[run] error: ${err instanceof Error ? err.message : String(err)}`);
+      // P25-3: a concurrent turn is rejected with a typed SESSION_BUSY —
+      // report it as busy, not as a generic error.
+      const text = isSessionBusy(err)
+        ? "[run] busy: another turn is still running in this session"
+        : `[run] error: ${err instanceof Error ? err.message : String(err)}`;
+      await this.reply(msg, text);
     }
   }
 
@@ -308,12 +332,11 @@ export class Gateway {
     payload: Record<string, unknown>,
     turnId?: TurnId,
   ): Promise<void> {
-    const sequence = await this.events.nextSequence(sessionId);
-    await this.events.append({
+    // P26-1: store-owned atomic sequence allocation (appendNew).
+    await this.events.appendNew({
       id: newEventId(),
       sessionId,
       ...(turnId !== undefined ? { turnId } : {}),
-      sequence,
       timestamp: this.now(),
       type,
       payload,

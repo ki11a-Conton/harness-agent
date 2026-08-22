@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type {
   AgentEvent,
   EventStore,
@@ -85,6 +86,16 @@ export class MemoryEventStore implements EventStore {
     return stored;
   }
 
+  async appendNew(event: Omit<AgentEvent, "sequence">): Promise<AgentEvent> {
+    return this.append({ ...event, sequence: -1 });
+  }
+
+  get durabilityLevel(): "memory" {
+    return "memory";
+  }
+
+  async flushThrough(_sessionId: SessionId, _sequence: number): Promise<void> {}
+
   async list(sessionId: SessionId, opts?: { afterSequence?: number; limit?: number }): Promise<AgentEvent[]> {
     let list = this.events.filter((e) => e.sessionId === sessionId);
     if (opts?.afterSequence !== undefined) {
@@ -103,4 +114,53 @@ export class MemoryEventStore implements EventStore {
       yield e;
     }
   }
+}
+// ---------------------------------------------------------------------------
+// P23-4 — default test tool catalog. Tests that exercise control flow with a
+// FakeOrchestrator need the model's advertised tools to be RESOLVABLE in the
+// frozen step router (P23-4 TOOL_NOT_IN_STEP otherwise fires). This catalog
+// covers the conventional tool names; the definitions are inert stubs because
+// a FakeOrchestrator never executes them.
+// ---------------------------------------------------------------------------
+
+const DEFAULT_TEST_TOOL_NAMES = [
+  "read_file",
+  "write_file",
+  "edit_file",
+  "exec",
+  "search_files",
+  "grep_search",
+  "repo_tree",
+  "repo_map",
+  "update_plan",
+  "ask_user",
+  "env_snapshot",
+  "discover_commands",
+  "tool_lookup",
+] as const;
+
+/** Build an inert tool definition for a test tool name. */
+export function inertTestToolDefinition(name: string): import("@ar/contracts").ToolDefinition {
+  return {
+    name,
+    description: `test stub for ${name}`,
+    inputSchema: z.object({}),
+    risk: "readonly",
+    metadata: { name, version: "1.0.0", sideEffect: false, network: false, filesystem: false, process: false, interactive: false },
+    async execute() {
+      return { status: "success", output: "" };
+    },
+  };
+}
+
+/** A StepToolCatalog covering the conventional tool names (inert definitions).
+ *  Pass it as AgentRuntime toolRegistry in tests that drive tools through a
+ *  FakeOrchestrator, so the frozen step router can resolve those calls. */
+export function defaultTestToolCatalog(): import("../runtime/tool-catalog.js").StepToolCatalog {
+  const defs = [...DEFAULT_TEST_TOOL_NAMES].map((name: string) => inertTestToolDefinition(name));
+  return {
+    get: (name) => defs.find((d) => d.name === name),
+    list: () => defs,
+    specs: () => defs.map((d) => ({ name: d.name, description: d.description, inputSchema: {} as never })),
+  };
 }

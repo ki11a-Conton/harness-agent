@@ -1,4 +1,5 @@
-﻿import { mkdtemp, rm } from "node:fs/promises";
+﻿import { defaultTestToolCatalog } from "../test/fakes.js";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -142,6 +143,8 @@ async function makeRuntime(opts: {
   const events = new MemoryEventStore();
   const ckpt = opts.checkpoint ?? new FakeCheckpointStore();
   const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
     store,
     events,
     modelProvider: new ScriptedModelProvider(opts.scripts ?? [ScriptedModelProvider.text("done")]),
@@ -190,6 +193,8 @@ function restartedRuntime(
   opts: { store: FilteringSessionStore; events: MemoryEventStore; ckpt: FakeCheckpointStore; orch?: WriteCountingOrchestrator; scripts?: ModelEvent[][]; toolSemantics?: (name: string) => ToolSemantics },
 ): AgentRuntime {
   return new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
     store: opts.store,
     events: opts.events,
     modelProvider: new ScriptedModelProvider(opts.scripts ?? [ScriptedModelProvider.text("done")]),
@@ -701,6 +706,12 @@ describe("P16-6: crash-window fault injection matrix", () => {
         request: import("@ar/contracts").ToolCallRequest,
         _ctx: import("@ar/contracts").ToolExecutionContext,
       ): Promise<import("@ar/contracts").ToolResult> {
+        return this.executeBound ? this.executeBound({ ...request, binding: { name: request.call.name } as never } as never, _ctx) : this.execute(request, _ctx);
+      },
+      async executeBound(
+        request: import("@ar/contracts").BoundToolCallRequest,
+        _ctx: import("@ar/contracts").ToolExecutionContext,
+      ): Promise<import("@ar/contracts").ToolResult> {
         if (request.call.name === "write_file") {
           intentPersisted = true; // durable intent written (P16-1)
           // P16-6: crash AFTER the intent, BEFORE the executor.
@@ -714,6 +725,8 @@ describe("P16-6: crash-window fault injection matrix", () => {
     const events = new MemoryEventStore();
     const ckpt = new FakeCheckpointStore();
     const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events,
       modelProvider: new ScriptedModelProvider(toolScript("write_file", { path: "victim.txt", content: "x" })),
@@ -734,6 +747,8 @@ describe("P16-6: crash-window fault injection matrix", () => {
     expect(existsSync(join(cwd, "victim.txt"))).toBe(false);
 
     const r2 = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events,
       modelProvider: new ScriptedModelProvider([ScriptedModelProvider.text("done")]),

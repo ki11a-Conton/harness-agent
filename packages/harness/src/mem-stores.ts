@@ -72,6 +72,16 @@ export class MemEventStore implements EventStore {
     this.events.push(stored);
     return stored;
   }
+  /** P26-1: store-owned atomic sequence allocation (fake: serialized by
+   *  the single-threaded JS event loop, so no interleaving is possible). */
+  async appendNew(event: Omit<AgentEvent, "sequence">): Promise<AgentEvent> {
+    return this.append({ ...event, sequence: -1 });
+  }
+  /** P26-3: in-memory fake — honest level is memory. */
+  get durabilityLevel(): "memory" {
+    return "memory";
+  }
+  async flushThrough(_sessionId: string, _sequence: number): Promise<void> {}
   async list(sessionId: SessionId, opts?: { afterSequence?: number; limit?: number }): Promise<AgentEvent[]> {
     let list = this.events.filter((e) => e.sessionId === sessionId);
     if (opts?.afterSequence !== undefined) list = list.filter((e) => e.sequence > opts.afterSequence!);

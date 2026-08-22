@@ -129,6 +129,7 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
   });
   const registry = createRuntimeRpc(harness.runtime, {
     sessionService: harness.sessionService,
+    sessions: harness.sessions,
     approvalStore: harness.approvalStore,
     events: harness.events,
     listAgents: () => harness.agents,

@@ -1,3 +1,4 @@
+﻿import { defaultTestToolCatalog } from "../test/fakes.js";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -51,6 +52,8 @@ function makeRuntime(
   const store = new MemorySessionStore();
   const events = new MemoryEventStore();
   const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
     store,
     events,
     modelProvider: provider,
@@ -122,7 +125,11 @@ class GatedOrchestrator implements ToolOrchestrator {
   private waiters: Array<{ settled: boolean; resolve: (cancelled: boolean) => void }> = [];
   constructor(private readonly total: number) {}
 
-  async execute(request: ToolCallRequest, ctx: ToolExecutionContext): Promise<ToolResult> {
+    async executeBound(request: import("@ar/contracts").BoundToolCallRequest, ctx: import("@ar/contracts").ToolExecutionContext): Promise<import("@ar/contracts").ToolResult> {
+    return this.execute(request, ctx);
+  }
+
+async execute(request: ToolCallRequest, ctx: ToolExecutionContext): Promise<ToolResult> {
     const idx = this.calls.length;
     this.calls.push(request.call.name);
     if (idx >= this.total) return { status: "success", output: "ok" };
@@ -169,7 +176,11 @@ class ObliviousOrchestrator implements ToolOrchestrator {
   private waiters: Array<() => void> = [];
   constructor(private readonly total: number) {}
 
-  async execute(request: ToolCallRequest, _ctx: ToolExecutionContext): Promise<ToolResult> {
+    async executeBound(request: import("@ar/contracts").BoundToolCallRequest, ctx: import("@ar/contracts").ToolExecutionContext): Promise<import("@ar/contracts").ToolResult> {
+    return this.execute(request, ctx);
+  }
+
+async execute(request: ToolCallRequest, _ctx: ToolExecutionContext): Promise<ToolResult> {
     const idx = this.calls.length;
     this.calls.push(request.call.name);
     if (idx >= this.total) return { status: "success", output: "ok" };
@@ -197,6 +208,8 @@ function makeP37Runtime(
   const store = new MemorySessionStore();
   const events = new MemoryEventStore();
   const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
     store,
     events,
     modelProvider: provider,

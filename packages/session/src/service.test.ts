@@ -2,7 +2,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { AgentId, ModelRef, Session } from "@ar/contracts";
+import type { AgentId, Message, ModelRef, Session } from "@ar/contracts";
+import { newMessageId } from "@ar/contracts";
 import { JSONLSessionStore, SessionStoreError } from "./session-store.js";
 import { SessionService } from "./service.js";
 
@@ -116,5 +117,34 @@ describe("SessionService (lifecycle)", () => {
     expect(await store.listSessions()).toEqual([]);
     await expect(service.resume(created.id)).rejects.toMatchObject({ code: "UNKNOWN_SESSION" });
     expect(archivedPath).toContain("archive");
+  });
+  it("P25-7: spawnChild creates an EMPTY child — no copied history", async () => {
+    const service = makeService();
+    const parent = await service.create({ agentId: AGENT_ID, model: MODEL, cwd: "C:\\work" });
+    await store.appendMessage({
+      id: newMessageId(), sessionId: parent.id, role: "user", content: "hi", createdAt: 1,
+    } as Message);
+    const child = await service.spawnChild(parent.id);
+    expect(child.parentId).toBe(parent.id);
+    expect(child.id).not.toBe(parent.id);
+    expect(await store.listMessages(child.id)).toEqual([]);
+  });
+
+  it("P25-7: threadFork copies the parent's message history into the branch", async () => {
+    const service = makeService();
+    const parent = await service.create({ agentId: AGENT_ID, model: MODEL, cwd: "C:\\work" });
+    const seeded: Message[] = [
+      { id: newMessageId(), sessionId: parent.id, role: "user", content: "first", createdAt: 1 },
+      { id: newMessageId(), sessionId: parent.id, role: "assistant", content: "second", createdAt: 2 },
+    ];
+    for (const m of seeded) await store.appendMessage(m);
+
+    const branch = await service.threadFork(parent.id);
+    expect(branch.parentId).toBe(parent.id);
+    const copied = await store.listMessages(branch.id);
+    expect(copied).toHaveLength(2);
+    expect(copied.map((m) => m.content)).toEqual(["first", "second"]);
+    expect(copied.every((m) => m.sessionId === branch.id)).toBe(true);
+    expect(copied.map((m) => m.id)).not.toEqual(seeded.map((m) => m.id));
   });
 });

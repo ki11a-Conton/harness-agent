@@ -1,5 +1,5 @@
 import type { AgentId, ModelRef, Session, SessionId, SessionStore } from "@ar/contracts";
-import { newSessionId } from "@ar/contracts";
+import { newMessageId, newSessionId } from "@ar/contracts";
 import { SessionStoreError } from "./session-store.js";
 
 /** Archive support: the file-backed store moves artifacts to dataDir/archive/<id>. */
@@ -55,8 +55,11 @@ export class SessionService {
     return session;
   }
 
-  /** Fork a new active session that points at the parent (inherits agent/model/cwd). */
-  async fork(parentId: SessionId): Promise<Session> {
+  /** P25-7: spawn a CHILD session (subagent parentage). The child inherits
+   *  agent/model/cwd and points at the parent, but starts EMPTY — no copied
+   *  history. Conversational branches use threadFork; the two are never
+   *  overloaded. */
+  async spawnChild(parentId: SessionId): Promise<Session> {
     const parent = await this.resume(parentId);
     return this.create({
       agentId: parent.agentId,
@@ -64,6 +67,34 @@ export class SessionService {
       cwd: parent.cwd,
       parentId: parent.id,
     });
+  }
+
+  /** Backward-compatible alias of spawnChild (kept for existing callers). */
+  async fork(parentId: SessionId): Promise<Session> {
+    return this.spawnChild(parentId);
+  }
+
+  /** P25-7: fork a conversational BRANCH (thread.fork, Codex-like). Creates
+   *  a new active session with the parent's agent/model/cwd AND a copy of the
+   *  parent's message history (fresh message ids, branch sessionId). Turn
+   *  records are NOT copied — the branch continues with its own turns. */
+  async threadFork(parentId: SessionId): Promise<Session> {
+    const parent = await this.resume(parentId);
+    const session = await this.create({
+      agentId: parent.agentId,
+      model: parent.model,
+      cwd: parent.cwd,
+      parentId: parent.id,
+    });
+    const messages = await this.store.listMessages(parentId);
+    for (const message of messages) {
+      await this.store.appendMessage({
+        ...message,
+        id: newMessageId(),
+        sessionId: session.id,
+      });
+    }
+    return session;
   }
 
   async cancelSession(id: SessionId): Promise<Session> {

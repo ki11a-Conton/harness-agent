@@ -20,3 +20,6 @@ export {
   estimateMcpTokens,
 } from "./mcp-provenance.js";
 export type { McpProvenanceInput, ToContextBlockOptions } from "./mcp-provenance.js";
+export * from "./catalog.js";
+export * from "./connection-manager.js";
+export * from "./mcp-binding.js";

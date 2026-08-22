@@ -1,3 +1,4 @@
+﻿import { defaultTestToolCatalog } from "../test/fakes.js";
 import { describe, expect, it } from "vitest";
 import type {
   AgentDefinition,
@@ -100,6 +101,8 @@ async function makeRuntime(
   const events = new MemoryEventStore();
   const ckpt = new FakeCheckpointStore();
   const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
     store,
     events,
     modelProvider: provider,
@@ -241,6 +244,8 @@ describe("AgentRuntime resume (P1-4)", () => {
     const store = new FilteringSessionStore();
     const events = new MemoryEventStore();
     const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events,
       modelProvider: new ScriptedModelProvider([ScriptedModelProvider.text("done")]),
@@ -337,6 +342,8 @@ describe("P16-3: run/recovery budgets persist across checkpoint/resume", () => {
     const events = new MemoryEventStore();
     const ckpt = new FakeCheckpointStore();
     const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events,
       modelProvider: provider,
@@ -373,6 +380,8 @@ describe("P16-3: run/recovery budgets persist across checkpoint/resume", () => {
     const events = new MemoryEventStore();
     const ckpt = new FakeCheckpointStore();
     const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events,
       modelProvider: provider,

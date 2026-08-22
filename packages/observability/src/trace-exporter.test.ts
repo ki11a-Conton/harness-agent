@@ -36,6 +36,10 @@ import {
 class InMemoryEventStore implements EventStore {
   readonly stored: AgentEvent[] = [];
 
+  async appendNew(event: Omit<AgentEvent, "sequence">): Promise<AgentEvent> {
+    return this.append({ ...event, sequence: -1 });
+  }
+
   async append(event: AgentEvent): Promise<AgentEvent> {
     if (this.stored.some((e) => e.id === event.id)) {
       throw new Error(`duplicate event id: ${event.id}`);

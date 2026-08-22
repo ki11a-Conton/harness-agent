@@ -52,6 +52,8 @@ import { AgentError } from "../errors.js";
 import { AgentState } from "../state/agent-state.js";
 import { updateWorkingState } from "./turn-helpers.js";
 import type {
+  FaultPoint,
+  FaultPointContext,
   TurnContext,
   TurnOutcome,
   TurnOutcomeDetail,
@@ -73,6 +75,8 @@ export interface RecoveryControllerDeps {
   askUserStore?: AskUserStore;
   askUser?: (request: AskUserRequest) => Promise<AskUserReply | undefined>;
   semanticsOf: (name: string) => ToolSemantics;
+  /** P26-8: optional crash-injection hook for the turn-completion windows. */
+  failAt?: (point: FaultPoint, ctx: FaultPointContext) => Promise<void>;
 }
 
 export class RecoveryController {
@@ -166,6 +170,9 @@ export class RecoveryController {
         ...(grade !== undefined ? { grade } : {}),
       };
     }
+    // P26-8: crash window #8 — the terminal record/event has NOT been
+    // written yet; the turn is still recoverable and re-runnable.
+    await this.deps.failAt?.("turn.completing", { sessionId, turnId });
     const updated: Turn = { ...turn, status, completedAt: this.deps.now() };
     await this.deps.store.updateTurn(updated);
     // P2-38: derive the partial-failure classification from the durable tool
@@ -178,6 +185,9 @@ export class RecoveryController {
       { turnId, status, statusDetail, ...(error !== undefined ? { error } : {}), ...(terminationReason !== undefined ? { terminationReason } : {}), ...(grade !== undefined ? { grade } : {}), ...(completionEvidence !== undefined ? { completionEvidence } : {}) },
       turnId,
     );
+    // P26-8: crash window #9 — the terminal event is durable but the outcome
+    // has NOT been returned to the caller; a resume sees the terminal record.
+    await this.deps.failAt?.("turn.completed_acked", { sessionId, turnId });
     return {
       status,
       statusDetail,

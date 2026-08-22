@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import type {
   AgentDefinition,
   AgentEvent,
@@ -97,6 +97,10 @@ class MemoryEventStore implements EventStore {
     return this.seq + 1;
   }
 
+  async appendNew(event: Omit<AgentEvent, "sequence">): Promise<AgentEvent> {
+    return this.append({ ...event, sequence: -1 });
+  }
+
   async append(event: AgentEvent): Promise<AgentEvent> {
     const stored = { ...event, sequence: ++this.seq };
     this.events.push(stored);
@@ -124,7 +128,11 @@ class FakeOrchestrator implements ToolOrchestrator {
 
   constructor(private readonly result: ToolResult = { status: "success", output: "fake-ok" }) {}
 
-  async execute(request: ToolCallRequest, _context: ToolExecutionContext): Promise<ToolResult> {
+    async executeBound(request: import("@ar/contracts").BoundToolCallRequest, ctx: import("@ar/contracts").ToolExecutionContext): Promise<import("@ar/contracts").ToolResult> {
+    return this.execute(request, ctx);
+  }
+
+async execute(request: ToolCallRequest, _context: ToolExecutionContext): Promise<ToolResult> {
     this.calls.push({ request });
     return this.result;
   }
@@ -173,6 +181,8 @@ function makeHarness(opts?: {
   const provider = new ScriptedModelProvider(opts?.scripts ?? [ScriptedModelProvider.text("child done")]);
   const orchestrator = new FakeOrchestrator();
   const runtime = new AgentRuntime({
+      toolRegistry: localTestToolCatalog(),
+      permissiveToolResolution: true,
     store,
     events,
     modelProvider: provider,
@@ -439,3 +449,22 @@ describe("NestedDelegator (SUBAGENT-003)", () => {
     expect(await h.store.listSessions({ parentId: parent.id })).toHaveLength(0);
   });
 });
+
+/** P23-4 local inert catalog — agents tests drive tools through a
+ *  FakeOrchestrator; the frozen step router must resolve their names. */
+function localTestToolCatalog() {
+  const names = ["read_file", "write_file", "edit_file", "exec", "search_files", "grep_search", "repo_tree", "repo_map", "update_plan", "ask_user", "env_snapshot", "discover_commands", "tool_lookup", "run_test", "echo"];
+  const mk = (name: string) => ({
+    name,
+    description: `stub ${name}`,
+    inputSchema: ({} as never),
+    risk: "readonly" as const,
+    metadata: { name, version: "1.0.0", sideEffect: false, network: false, filesystem: false, process: false, interactive: false },
+    execute: async () => ({ status: "success" as const, output: "" }),
+  });
+  return {
+    get: (name: string) => (names.includes(name) ? mk(name) : undefined),
+    list: () => names.map(mk),
+    specs: () => names.map((name) => ({ name, description: `stub ${name}`, inputSchema: {} as never })),
+  };
+}

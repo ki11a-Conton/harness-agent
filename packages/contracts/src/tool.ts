@@ -257,6 +257,20 @@ export interface ToolDefinition<I = unknown, O = unknown> {
   execute(input: I, context: ToolExecutionContext): Promise<ToolResult<O>>;
 }
 
+/** P23-4 — a tool call whose tool binding was ALREADY resolved by the frozen
+ *  step router. The orchestrator validates/executes against the frozen
+ *  definition — never the mutable global catalog. */
+export interface BoundToolCallRequest extends ToolCallRequest {
+  readonly binding: import("./step-context.js").FrozenToolBinding;
+  /** P26-4: frozen step-world identity carried into the intent journal so a
+   *  crash-recovery can attribute an intent to the exact step + router that
+   *  produced it. Optional for legacy callers; production AgentRuntime fills
+   *  all three. */
+  readonly stepId?: string;
+  readonly routerFingerprint?: string;
+  readonly toolBindingFingerprint?: string;
+}
+
 export interface ToolCallRequest {
   id: ToolCallId;
   sessionId: SessionId;
@@ -288,6 +302,13 @@ export type ToolErrorCode = (typeof TOOL_ERROR_CODES)[number] & ErrorCode;
 export interface ToolOrchestrator {
   execute(
     request: ToolCallRequest,
+    context: ToolExecutionContext,
+  ): Promise<ToolResult<unknown>>;
+  /** P23-4: execute against a FROZEN step binding (the exact definition the
+   *  model saw), not the current global registry. Production AgentRuntime
+   *  calls this; plain execute() stays for legacy/external callers. */
+  executeBound(
+    request: BoundToolCallRequest,
     context: ToolExecutionContext,
   ): Promise<ToolResult<unknown>>;
 }

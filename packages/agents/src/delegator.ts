@@ -781,11 +781,10 @@ export class Delegator {
     payload: Record<string, unknown>,
   ): Promise<void> {
     if (this.events === undefined) return;
-    const sequence = await this.events.nextSequence(sessionId);
-    await this.events.append({
+    // P26-1: store-owned atomic sequence allocation (appendNew).
+    await this.events.appendNew({
       id: newEventId(),
       sessionId,
-      sequence,
       timestamp: this.now(),
       type,
       payload,
@@ -799,12 +798,11 @@ export class Delegator {
 function sinkOf(store: EventStore, now: () => number): EventSink {
   return {
     async emit(sessionId, type, payload, turnId) {
-      const sequence = await store.nextSequence(sessionId);
-      await store.append({
+      // P26-1: store-owned atomic sequence allocation (appendNew).
+      await store.appendNew({
         id: newEventId(),
         sessionId,
         ...(turnId !== undefined ? { turnId } : {}),
-        sequence,
         timestamp: now(),
         type,
         payload,

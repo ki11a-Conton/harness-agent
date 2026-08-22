@@ -21,7 +21,7 @@ import {
   newTraceId,
   newTurnId,
 } from "./index.js";
-import { EVENT_TYPES } from "./event.js";
+import { EVENT_TYPES, isSemanticJournalEvent } from "./event.js";
 import { RETRY_KINDS, RETRY_KIND_SPECS, isRetryKind } from "./retry.js";
 import type { ToolCallTrace } from "./stall.js";
 import { detectStallPattern } from "./stall.js";
@@ -743,5 +743,44 @@ describe("P19-5 protocol self-heal", () => {
     expect(canRepairSafely("context_overflow", { after: { compacted: true } })).toBe(true);
   });
 });
+});
+describe("P26-2: semantic journal classification", () => {
+  it("marks lifecycle / side-effect / gate events as semantic journal records", () => {
+    const semantic = [
+      "session.created", "session.resumed", "session.forked",
+      "turn.started", "turn.completed", "turn.failed", "turn.cancelled",
+      "model.started",
+      "tool.intent_persisted", "tool.permission_requested", "tool.permission_resolved",
+      "tool.started", "tool.completed", "tool.failed",
+      "checkpoint.created", "approval.created", "approval.resolved",
+      "ask.user_asked", "ask.user_replied",
+      "subagent.started", "subagent.completed", "subagent.failed",
+      "verification.started", "verification.completed", "verification.failed",
+      "context.compacted",
+    ] as const;
+    for (const t of semantic) {
+      expect(isSemanticJournalEvent(t as never), t).toBe(true);
+    }
+  });
+
+  it("keeps observability-only deltas non-semantic", () => {
+    const deltas = [
+      "model.delta", "model.failed", "model.retry", "retry.provider",
+      "tool.requested", "tool.output", "tool.progress", "tools.selected",
+      "context.built", "context.candidate", "context.selected", "context.dropped",
+      "security.injection_denied", "security.secret_redacted", "run.limit_reached",
+      "human.message", "human.cancel", "memory.retrieved", "reflection.completed",
+      "command.discovered", "runtime.degraded",
+    ] as const;
+    for (const t of deltas) {
+      expect(isSemanticJournalEvent(t as never), t).toBe(false);
+    }
+  });
+
+  it("covers every EventType exactly once (no type is ambiguous)", () => {
+    for (const t of EVENT_TYPES) {
+      expect(typeof isSemanticJournalEvent(t), t).toBe("boolean");
+    }
+  });
 });
 });

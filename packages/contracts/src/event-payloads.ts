@@ -1,4 +1,5 @@
 import type { EventType } from "./event.js";
+import type { ToolResult } from "./tool.js";
 
 /**
  * Q-4: typed payload map for key events.
@@ -58,6 +59,24 @@ export interface ToolIntentPayload {
   sessionId: string;
   turnId?: string;
   stepId?: string;
+  /** P26-4: frozen step-world identity (filled by the production
+   *  AgentRuntime path; optional for legacy callers). */
+  routerFingerprint?: string;
+  toolBindingFingerprint?: string;
+}
+
+/** P26-4: the side-effect lifecycle journal state machine —
+ *  INTENT_PERSISTED → EXECUTION_STARTED → OUTCOME_COMMITTED → CHECKPOINT
+ *  (policy). Every side-effecting tool persists enough identity to classify
+ *  a crash: intent (ToolIntentPayload), outcome (ToolOutcomeJournalPayload).
+ */
+export interface ToolOutcomeJournalPayload {
+  toolCallId: string;
+  status: ToolResult["status"];
+  /** Stable hash of the normalized result output (nil on failure/cancel). */
+  resultHash?: string;
+  /** Evidence hashes (e.g. file content hashes) when the tool reports them. */
+  evidenceHashes?: string[];
 }
 
 /** tool.output — streaming output chunks from a tool. */
@@ -141,6 +160,20 @@ export interface ModelRetryPayload {
 export interface ModelStartedPayload {
   callId?: string;
   turnId?: string;
+  /** P23-1: the step this model call belongs to. */
+  stepId?: string;
+  /** P23-1: durable snapshot fingerprints so replay/explain can correlate
+   *  one model call with the exact execution snapshot that produced it. */
+  toolRouterFingerprint?: string;
+  policyFingerprint?: string;
+  environmentFingerprint?: string;
+  contextFingerprint?: string;
+  instructionFingerprint?: string;
+  /** P23-7: the exact message/block ids visible to this model call — replay
+   *  and explain can state WHICH messages the model saw without duplicating
+   *  the transcript. */
+  contextMessageIds?: string[];
+  contextBlockIds?: string[];
 }
 
 /** model.failed — a model call failed terminally. */
@@ -308,6 +341,14 @@ export interface ApprovalResolvedPayload {
   value?: string;
 }
 
+/** mcp.connect_failed — P24-7: a NEEDED MCP server could not be connected.
+ *  The step proceeds WITHOUT it (built-in tools remain available); the event
+ *  carries the server id so the failure is observable, never silent. */
+export interface McpConnectFailedPayload {
+  serverId?: string;
+  error?: unknown;
+}
+
 /** recovery.decided — P19-3: the recovery planner chose a bounded action for
  *  a failure input. Consumers branch on the TYPED action, never on reason
  *  strings; used/remaining expose the per-turn budget position. */
@@ -407,6 +448,7 @@ export interface EventPayloadMap {
   "turn.failed": TurnTerminalPayload;
   "turn.cancelled": TurnTerminalPayload;
   "recovery.decided": RecoveryDecidedPayload;
+  "mcp.connect_failed": McpConnectFailedPayload;
   "protocol.repaired": ProtocolRepairPayload;
   "protocol.repair_failed": ProtocolRepairPayload;
   "subagent.started": SubagentPayload;
@@ -470,6 +512,7 @@ export const EVENT_PAYLOAD_TYPES = {
   "turn.failed": true,
   "turn.cancelled": true,
   "recovery.decided": true,
+  "mcp.connect_failed": true,
   "protocol.repaired": true,
   "protocol.repair_failed": true,
   "subagent.started": true,

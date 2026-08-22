@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -23,7 +24,7 @@ import type {
   TurnId,
 } from "@ar/contracts";
 import { errorInfo, newAgentId, newApprovalId, newSkillId } from "@ar/contracts";
-import { AgentRuntime, defaultSandboxPolicy } from "@ar/core";
+import { AgentRuntime, DefaultLoadedSessionManager, defaultSandboxPolicy } from "@ar/core";
 import { ScriptedModelProvider } from "@ar/model";
 import { createRuntimeRpc, InMemoryTransport } from "@ar/gateway";
 import { JSONLEventStore } from "@ar/events";
@@ -118,6 +119,10 @@ class MemEventStore implements EventStore {
   async nextSequence(_sessionId: SessionId): Promise<number> {
     return this.seq + 1;
   }
+  async appendNew(event: Omit<AgentEvent, "sequence">): Promise<AgentEvent> {
+    return this.append({ ...event, sequence: -1 });
+  }
+
   async append(event: AgentEvent): Promise<AgentEvent> {
     const seq = ++this.seq;
     const stored = { ...event, sequence: seq };
@@ -142,7 +147,11 @@ class MemEventStore implements EventStore {
 
 class FakeOrchestrator implements ToolOrchestrator {
   calls: ToolCallRequest[] = [];
-  async execute(request: ToolCallRequest, _context: ToolExecutionContext): Promise<ToolResult> {
+    async executeBound(request: import("@ar/contracts").BoundToolCallRequest, ctx: import("@ar/contracts").ToolExecutionContext): Promise<import("@ar/contracts").ToolResult> {
+    return this.execute(request, ctx);
+  }
+
+async execute(request: ToolCallRequest, _context: ToolExecutionContext): Promise<ToolResult> {
     this.calls.push(request);
     return { status: "success", output: "ok" };
   }
@@ -188,6 +197,8 @@ function makeDeps(opts: { provider?: ModelProvider } = {}) {
   const approvalStore = new InMemoryApprovalStore();
   const provider = opts.provider ?? new ScriptedModelProvider([ScriptedModelProvider.text("hello world")]);
   const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
     store,
     events,
     modelProvider: provider,
@@ -197,8 +208,10 @@ function makeDeps(opts: { provider?: ModelProvider } = {}) {
   const sessionService = new SessionService({ store });
   const toolRegistry = new ToolRegistry();
   registerBuiltinTools(toolRegistry);
+  const sessions = new DefaultLoadedSessionManager({ runtime, store });
   const registry = createRuntimeRpc(runtime, {
     sessionService,
+    sessions,
     approvalStore,
     events,
     listAgents: () => [AGENT],
@@ -680,3 +693,23 @@ describe("default host wiring (createDefaultDeps)", () => {
     expect(resume.lines.join("\n")).toContain("model: scripted/custom-model");
   });
 });
+
+/** Local copy of the core test catalog (tests must not reach into @ar/core's
+ *  test internals): inert definitions so the frozen step router can resolve
+ *  the conventional tool names under a FakeOrchestrator. */
+function defaultTestToolCatalog() {
+  const names = ["read_file", "write_file", "edit_file", "exec", "search_files", "grep_search", "repo_tree", "repo_map", "update_plan", "ask_user", "env_snapshot", "discover_commands", "tool_lookup"];
+  const mk = (name: string) => ({
+    name,
+    description: `stub ${name}`,
+    inputSchema: z.object({}),
+    risk: "readonly" as const,
+    metadata: { name, version: "1.0.0", sideEffect: false, network: false, filesystem: false, process: false, interactive: false },
+    execute: async () => ({ status: "success" as const, output: "" }),
+  });
+  return {
+    get: (name: string) => (names.includes(name) ? mk(name) : undefined),
+    list: () => names.map(mk),
+    specs: () => names.map((name) => ({ name, description: `stub ${name}`, inputSchema: {} as never })),
+  };
+}

@@ -298,4 +298,35 @@ describe("JSONLEventStore (EVENT-001)", () => {
     expect(listed.map((e) => e.id)).toEqual([a.id, b.id]);
     expect(listed.map((e) => e.sequence)).toEqual([0, 1]);
   });
+  it("P26-1: 100 concurrent appendNew calls get exactly sequences 0..99 (no dup, no gap)", async () => {
+    const store = new JSONLEventStore({ dataDir: await freshDataDir() });
+    const ev = (i: number): Omit<AgentEvent, "sequence"> => ({
+      id: newEventId(),
+      sessionId: SID,
+      timestamp: i,
+      type: "model.started",
+      payload: { i },
+    });
+    const results = await Promise.all(
+      Array.from({ length: 100 }, (_, i) => store.appendNew(ev(i))),
+    );
+    const seqs = results.map((e) => e.sequence).sort((a, b) => a - b);
+    expect(seqs).toEqual(Array.from({ length: 100 }, (_, i) => i));
+    expect(new Set(results.map((e) => e.id)).size).toBe(100);
+    const listed = await store.list(SID);
+    expect(listed).toHaveLength(100);
+    expect(listed.map((e) => e.sequence)).toEqual(Array.from({ length: 100 }, (_, i) => i));
+  });
+  it("P26-3: declares crash_safe and flushThrough fences the stream", async () => {
+    const dataDir = await freshDataDir();
+    const store = new JSONLEventStore({ dataDir });
+    expect(store.durabilityLevel).toBe("crash_safe");
+    await store.append(makeEvent({ id: newEventId() }));
+    const b = await store.appendNew({ ...makeEvent({ id: newEventId() }) });
+    await store.flushThrough(SID, b.sequence);
+    // A fenced stream is fully visible to a fresh store instance.
+    const reopened = new JSONLEventStore({ dataDir });
+    expect((await reopened.list(SID)).map((e) => e.sequence)).toEqual([0, 1]);
+  });
+
 });

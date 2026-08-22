@@ -24,7 +24,7 @@ import type {
   ModelRetryPayload,
   SessionId,
   SessionStore,
-  StepContext,
+  StepExecutionSnapshot,
   TerminationReason,
   Timer,
   ToolCall,
@@ -132,10 +132,9 @@ export interface ModelCallControllerDeps {
   ) => Promise<AgentEvent>;
   now: () => number;
   failAt: (point: FaultPoint, ctx: FaultPointContext) => Promise<void>;
-  toolSpecs: readonly ToolSpec[];
-  /** P7-1/P7-2: progressive disclosure — narrows the advertised tool schemas
-   *  per goal. Absent → every spec is advertised (identity). */
-  toolSelector?: ToolSelector;
+  /** P23-3: tool advertisement is FROZEN in the step snapshot — the model
+   *  controller never consults a live selector or the catalog here. */
+  readonly _stepFrozenAdvertisementOnly?: never;
   recovery?: RecoveryPolicy;
   timer: Timer;
   compactCounter: { value: number };
@@ -371,7 +370,7 @@ export class ModelCallController {
     budget?: import("./run-budget.js").RunBudgetTracker,
     /** P15-2: the immutable step this model call belongs to — its id rides the
      *  model.started event so the step and its tool batch are attributable. */
-    step?: StepContext,
+    step?: StepExecutionSnapshot,
   ): Promise<ModelCallResult> {
     const { sessionId, turnId, signal } = ctx;
 
@@ -397,16 +396,38 @@ export class ModelCallController {
       callStartedAt = this.deps.now();
       timeToFirstTokenMs = undefined;
       firstTokenSeen = false;
-      await this.deps.emit(sessionId, "model.started", { callId, ...(step !== undefined ? { stepId: step.stepId } : {}) }, turnId, { spanId: callId });
+      await this.deps.emit(
+        sessionId,
+        "model.started",
+        {
+          callId,
+          ...(step !== undefined
+            ? {
+                stepId: step.record.stepId,
+                // P23-1: the snapshot identity rides the event so replay /
+                // explain can correlate one model call with one execution
+                // snapshot WITHOUT trusting global state.
+                toolRouterFingerprint: step.record.toolRouterFingerprint,
+                policyFingerprint: step.record.policyFingerprint,
+                environmentFingerprint: step.record.environmentFingerprint,
+                contextFingerprint: step.record.contextFingerprint,
+                instructionFingerprint: step.record.instructionFingerprint,
+                // P23-7: exact context identity — ids/hashes only, never the
+                // transcript text itself.
+                contextMessageIds: [...step.context.messageIds],
+                contextBlockIds: [...step.context.blockIds],
+              }
+            : {}),
+        },
+        turnId,
+        { spanId: callId },
+      );
       try {
         await this.deps.failAt("model.next_call", { sessionId, turnId });
-        // P7-1/P7-2: progressive tool disclosure — the model request advertises
-        // only the goal-relevant schemas (deterministic keyword champion).
-        const advertisedTools = this.deps.toolSelector?.select({
-          goal: working.goal,
-          tools: this.deps.toolSpecs,
-        });
-        const tools: readonly ToolSpec[] = advertisedTools?.selected ?? this.deps.toolSpecs;
+        // P23-3: the model-visible tool set is the FROZEN step advertisement —
+        // formed once at snapshot build (selector + deferred applied there).
+        // The controller never re-selects and never touches the live catalog.
+        const tools: readonly ToolSpec[] = step?.tools.modelVisibleSpecs ?? [];
         // P7-3: selection is observable (availability vs admitted vs dropped).
         // P18-2: advertisedTokens prices the advertisement so full vs deferred
         // schema cost is measurable end-to-end.
@@ -415,9 +436,9 @@ export class ModelCallController {
           "tools.selected",
           {
             callId,
-            available: this.deps.toolSpecs.length,
+            available: step?.advertised?.available ?? tools.length,
             selected: tools.length,
-            dropped: advertisedTools?.dropped ?? [],
+            dropped: [...(step?.advertised?.dropped ?? [])],
             advertisedTokens: estimateSpecsTokens(tools),
           },
           turnId,
@@ -486,37 +507,12 @@ export class ModelCallController {
       if (retryAction.action === "success") break; // generate completed
 
       if (retryAction.action === "compact-and-retry") {
-        // Reactive compact (plan.md Phase 4/5 Stage 4): a context-length
-        // model error is NOT a retry — the runtime compacts once (state
-        // digest + reduced history) and tries again; a second overflow
-        // surfaces the failure without burning the retry budget.
-        reactiveCompacted = true;
-        await this.deps.emit(sessionId, "context.compacted", {
-          compressed: 1,
-          reason: "reactive compact (context-length model error)",
-          reactive: true,
-          totalCount: ++this.deps.compactCounter.value,
-        }, turnId);
-        await this.deps.store.appendMessage({
-          id: newMessageId(),
-          sessionId,
-          turnId,
-          role: "system",
-          content: buildStateDigest(working, "context is full — reactive compact; continue concisely"),
-          createdAt: this.deps.now(),
-        });
-        // P1-3: reactive compaction is a checkpoint safety boundary
-        // (the loop is about to restart against a shrunken context).
-        await this.deps.checkpoint(
-          ctx, working, state, toolLedger, "context:reactive-compact",
-          lastReportTokens !== undefined ? { maxTokens: this.deps.contextBudgetMaxTokens, usedTokens: lastReportTokens } : undefined,
-        );
-        history = await this.deps.store.listMessages(sessionId);
-        if (history.length > 12) history = history.slice(-12);
-        assistantText = "";
-        calls.length = 0;
-        final = undefined;
-        continue;
+        // P23-6: reactive compaction CHANGED the model-visible world — the
+        // stale step snapshot can never be reused. The compaction
+        // orchestration (digest + checkpoint + history shrink) moves UP to
+        // the runtime's outer sampling loop, which builds a NEW step. The
+        // controller only declares the boundary.
+        return { status: "rebuild_context", kind: "reactive_compaction" };
       }
 
       if (retryAction.action === "retry") {

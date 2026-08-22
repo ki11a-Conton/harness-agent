@@ -21,6 +21,7 @@ import {
   type Session,
   type Turn,
 } from "@ar/contracts";
+import { buildCheckpoint } from "@ar/contracts";
 import { migrateJsonlToSqlite } from "./migrate.js";
 import { SqliteRuntimeStore } from "./sqlite-runtime-store.js";
 
@@ -377,5 +378,99 @@ describe("P5-4: JSONL → SQLite migration", () => {
     } finally {
       target.close();
     }
+  });
+  it("P26-1: 100 concurrent appendNew calls get exactly sequences 0..99 (no dup, no gap)", async () => {
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: await freshDir() }));
+    const sid = newSessionId();
+    const ev = (i: number): Omit<AgentEvent, "sequence"> => ({
+      id: newEventId(),
+      sessionId: sid,
+      timestamp: i,
+      type: "model.started",
+      payload: { i },
+    });
+    const results = await Promise.all(
+      Array.from({ length: 100 }, (_, i) => store.appendNew(ev(i))),
+    );
+    const seqs = results.map((e) => e.sequence).sort((a, b) => a - b);
+    expect(seqs).toEqual(Array.from({ length: 100 }, (_, i) => i));
+    expect(new Set(results.map((e) => e.id)).size).toBe(100);
+    const listed = await store.list(sid);
+    expect(listed).toHaveLength(100);
+    expect(listed.map((e) => e.sequence)).toEqual(Array.from({ length: 100 }, (_, i) => i));
+  });
+  it("P26-3: declares process level honestly and flushThrough checkpoints the WAL", async () => {
+    const dir = await freshDir();
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: dir }));
+    expect(store.durabilityLevel).toBe("process");
+    const sid = newSessionId();
+    const a = await store.appendNew({
+      id: newEventId(), sessionId: sid, timestamp: 1, type: "model.started", payload: {},
+    });
+    await store.flushThrough(sid, a.sequence);
+    // The fence validates the sequence actually committed (fail-closed).
+    await expect(store.flushThrough(sid, 999)).rejects.toThrow("not committed");
+    store.close();
+    const reopened = trackStore(new SqliteRuntimeStore({ dataDir: dir }));
+    expect(await reopened.list(sid)).toHaveLength(1);
+  });
+  it("P26-6: commitToolOutcome commits message + event + checkpoint atomically", async () => {
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: await freshDir() }));
+    const sid = newSessionId();
+    const msg: Message = {
+      id: newMessageId(), sessionId: sid, role: "tool", content: "out",
+      toolCallId: "tc1" as never, createdAt: 1,
+    };
+    const outcomeEvent = {
+      id: newEventId(), sessionId: sid, timestamp: 1, type: "tool.completed" as const,
+      payload: { toolCallId: "tc1" },
+    };
+    const checkpoint = buildCheckpoint({
+      schemaVersion: 1 as const,
+      checkpointId: newCheckpointId(),
+      sessionId: sid,
+      agentId: newAgentId() as never,
+      createdAt: 1,
+      reason: "tool",
+      phase: "idle",
+      iteration: 1,
+      state: { goal: "g" } as never,
+      toolLedger: [],
+      childSessions: [],
+      lastEventSequence: 0,
+      effectiveAgentConfigRef: "cfg",
+      contextRefs: [],
+    });
+    const { event } = await store.commitToolOutcome({
+      toolMessage: msg,
+      outcomeEvent,
+      checkpoint,
+    });
+    expect(event.sequence).toBe(0);
+    expect(await store.listMessages(sid)).toHaveLength(1);
+    expect((await store.list(sid))[0]!.type).toBe("tool.completed");
+    expect(await store.checkpoints.loadLatest(sid)).toBeDefined();
+  });
+
+  it("P26-6: a failing commit rolls back EVERYTHING (no partial write)", async () => {
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: await freshDir() }));
+    const sid = newSessionId();
+    // Seed one event so the duplicate check has something to collide with.
+    await store.appendNew({ id: newEventId(), sessionId: sid, timestamp: 1, type: "turn.started", payload: {} });
+    const dupId = newEventId();
+    await store.appendNew({ id: dupId, sessionId: sid, timestamp: 2, type: "turn.started", payload: {} });
+    const msg: Message = {
+      id: newMessageId(), sessionId: sid, role: "tool", content: "out",
+      toolCallId: "tc1" as never, createdAt: 1,
+    };
+    // Duplicate event id → the whole commit must roll back: no message, no event.
+    await expect(
+      store.commitToolOutcome({
+        toolMessage: msg,
+        outcomeEvent: { id: dupId, sessionId: sid, timestamp: 3, type: "tool.completed", payload: {} },
+      }),
+    ).rejects.toThrow("duplicate event id");
+    expect(await store.listMessages(sid)).toHaveLength(0);
+    expect(await store.list(sid)).toHaveLength(2);
   });
 });

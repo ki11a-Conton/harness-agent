@@ -22,5 +22,6 @@ export * from "./env-snapshot.js";
 export * from "./tools/env-snapshot-tool.js";
 export * from "./workspace.js";
 export * from "./production-tools.js";
-export * from "./schema-advert.js";
+export { decideSchemaAdvert, stubSpec, DEFAULT_MAX_INLINE_SCHEMA_TOKENS, DEFERRED_STUB_DESCRIPTION_MAX, estimateSpecTokens, estimateSpecsTokens } from "@ar/contracts";
+export type { SchemaAdvertDecision, SchemaAdvertPolicy } from "@ar/contracts";
 export * from "./tool-lookup.js";

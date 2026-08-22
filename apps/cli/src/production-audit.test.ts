@@ -1,3 +1,4 @@
+﻿import { z } from "zod";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -23,6 +24,8 @@ const orchestrator = new ToolOrchestrator({
   events,
 });
 const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
   sandboxPolicy: config.sandboxPolicy ?? preset.sandbox,
 });
 const approvalStore = new DurableApprovalStore(join(dataDir, "approval-store.json"));
@@ -129,3 +132,23 @@ describe("P22-3 production audit", () => {
     expect(result.ok).toBe(false);
   });
 });
+
+/** Local copy of the core test catalog (tests must not reach into @ar/core's
+ *  test internals): inert definitions so the frozen step router can resolve
+ *  the conventional tool names under a FakeOrchestrator. */
+function defaultTestToolCatalog() {
+  const names = ["read_file", "write_file", "edit_file", "exec", "search_files", "grep_search", "repo_tree", "repo_map", "update_plan", "ask_user", "env_snapshot", "discover_commands", "tool_lookup"];
+  const mk = (name: string) => ({
+    name,
+    description: `stub ${name}`,
+    inputSchema: z.object({}),
+    risk: "readonly" as const,
+    metadata: { name, version: "1.0.0", sideEffect: false, network: false, filesystem: false, process: false, interactive: false },
+    execute: async () => ({ status: "success" as const, output: "" }),
+  });
+  return {
+    get: (name: string) => (names.includes(name) ? mk(name) : undefined),
+    list: () => names.map(mk),
+    specs: () => names.map((name) => ({ name, description: `stub ${name}`, inputSchema: {} as never })),
+  };
+}

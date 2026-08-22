@@ -1,3 +1,4 @@
+﻿import { defaultTestToolCatalog } from "../test/fakes.js";
 import { describe, expect, it } from "vitest";
 import type {
   AgentDefinition,
@@ -120,6 +121,8 @@ function makeLoop(
   );
   const provider = new ScriptedModelProvider(script);
   const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
     store,
     events,
     modelProvider: provider,
@@ -334,6 +337,8 @@ describe("LOOP-001 full agent loop (integration)", () => {
     const store = new MemorySessionStore();
     const events = new MemoryEventStore();
     const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events,
       modelProvider: new ScriptedModelProvider(script),
@@ -373,6 +378,8 @@ describe("LOOP-001 full agent loop (integration)", () => {
     const store = new MemorySessionStore();
     const events = new MemoryEventStore();
     const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events,
       modelProvider: new ScriptedModelProvider(script),
@@ -616,6 +623,8 @@ describe("LOOP-001 full agent loop (integration)", () => {
     const store = new MemorySessionStore();
     const events = new MemoryEventStore();
     const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events,
       modelProvider: new ScriptedModelProvider(script),
@@ -639,6 +648,8 @@ describe("LOOP-001 full agent loop (integration)", () => {
     const store = new MemorySessionStore();
     const events = new MemoryEventStore();
     const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events,
       modelProvider: new ScriptedModelProvider(script),
@@ -673,6 +684,8 @@ describe("LOOP-001 full agent loop (integration)", () => {
     const store = new MemorySessionStore();
     const events = new MemoryEventStore();
     const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events,
       modelProvider: new ScriptedModelProvider(script),
@@ -703,6 +716,8 @@ describe("LOOP-001 full agent loop (integration)", () => {
     const store = new MemorySessionStore();
     const events = new MemoryEventStore();
     const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events,
       modelProvider: new ScriptedModelProvider(script),
@@ -727,6 +742,8 @@ describe("LOOP-001 full agent loop (integration)", () => {
     const store = new MemorySessionStore();
     const events = new MemoryEventStore();
     const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events,
       modelProvider: new ScriptedModelProvider(script),
@@ -753,6 +770,8 @@ describe("LOOP-001 full agent loop (integration)", () => {
     const store = new MemorySessionStore();
     const events = new MemoryEventStore();
     const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
       store,
       events,
       modelProvider: new ScriptedModelProvider(script),

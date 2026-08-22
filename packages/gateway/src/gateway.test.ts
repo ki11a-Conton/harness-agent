@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+﻿import { afterEach, describe, expect, it } from "vitest";
 import type {
   AgentDefinition,
   AgentEvent,
@@ -18,7 +18,7 @@ import type {
   TurnId,
 } from "@ar/contracts";
 import { newAgentId, newApprovalId, newEventId } from "@ar/contracts";
-import { AgentRuntime } from "@ar/core";
+import { AgentRuntime, DefaultLoadedSessionManager } from "@ar/core";
 import { ScriptedModelProvider } from "@ar/model";
 import { SessionService } from "@ar/session";
 import { InMemoryApprovalStore } from "@ar/security";
@@ -93,6 +93,10 @@ class MemEventStore implements EventStore {
   async nextSequence(_sessionId: SessionId): Promise<number> {
     return this.seq + 1;
   }
+  async appendNew(event: Omit<AgentEvent, "sequence">): Promise<AgentEvent> {
+    return this.append({ ...event, sequence: -1 });
+  }
+
   async append(event: AgentEvent): Promise<AgentEvent> {
     const seq = ++this.seq;
     const stored = { ...event, sequence: seq };
@@ -123,7 +127,11 @@ class MemEventStore implements EventStore {
 
 class FakeOrchestrator implements ToolOrchestrator {
   calls: ToolCallRequest[] = [];
-  async execute(request: ToolCallRequest, _context: ToolExecutionContext): Promise<ToolResult> {
+    async executeBound(request: import("@ar/contracts").BoundToolCallRequest, ctx: import("@ar/contracts").ToolExecutionContext): Promise<import("@ar/contracts").ToolResult> {
+    return this.execute(request, ctx);
+  }
+
+async execute(request: ToolCallRequest, _context: ToolExecutionContext): Promise<ToolResult> {
     this.calls.push(request);
     return { status: "success", output: "ok" };
   }
@@ -195,6 +203,8 @@ function makeGateway(
     ScriptedModelProvider.text("ok"),
   ]);
   const runtime = new AgentRuntime({
+      toolRegistry: localTestToolCatalog(),
+      permissiveToolResolution: true,
     store,
     events,
     modelProvider: provider,
@@ -203,7 +213,8 @@ function makeGateway(
   });
   const sessionService = new SessionService({ store });
   const approvalStore = new InMemoryApprovalStore(() => clock.t);
-  const rpc = createRuntimeRpc(runtime, { sessionService, approvalStore, events });
+  const sessions = new DefaultLoadedSessionManager({ runtime, store });
+  const rpc = createRuntimeRpc(runtime, { sessionService, sessions, approvalStore, events });
   const channels = opts.channels ?? [new FakeChannel("ch-a")];
   const gateway = new Gateway({
     rpc,
@@ -248,6 +259,18 @@ async function waitForMessage(
   throw new Error(
     `timed out waiting for a channel message on ${channel.id}; queue: ${JSON.stringify(channel.sentTexts())}`,
   );
+}
+
+async function waitFor(
+  predicate: () => Promise<boolean>,
+  timeoutMs = 3_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await predicate()) return;
+    await new Promise((r) => setTimeout(r, 10));
+  }
+  throw new Error("timed out in waitFor");
 }
 
 async function appendEvent(events: MemEventStore, event: Omit<AgentEvent, "sequence">): Promise<void> {
@@ -318,6 +341,37 @@ describe("Gateway routing", () => {
     const reply = await waitForMessage(h.channels[0]!, (t) => t.startsWith("[error]"));
     expect(reply.text).toContain("no default agent");
     expect(await h.store.listSessions()).toHaveLength(0);
+  });
+
+  it("P25-3/P25-5: a message while a turn is running is queued as a follow-up, never injected", async () => {
+    const h = makeGateway({ provider: new BlockingProvider() });
+    gateways.push(h.gateway);
+    await h.gateway.start();
+
+    await h.channels[0]!.deliver("first message");
+    const sessions = await h.store.listSessions();
+    const sid = sessions[0]!.id;
+    // Wait until the first turn is actually active (actor owns the run).
+    await waitFor(async () => {
+      const st = (await h.rpc.invoke("session.status", { sessionId: sid })) as { activeTurn?: unknown };
+      return st.activeTurn !== undefined;
+    });
+
+    // Second message while the first turn runs: explicitly queued.
+    await h.channels[0]!.deliver("second message");
+    const queued = await waitForMessage(h.channels[0]!, (t) => t.startsWith("[queued]"));
+    expect(queued.text).toContain("follow-up");
+
+    // The second message is NOT injected into the running turn.
+    expect((await h.store.listMessages(sid)).some((m) => m.content === "second message")).toBe(false);
+
+    // Interrupting turn 1 drains the queued follow-up into a NEW turn.
+    await h.rpc.invoke("session.interrupt", { sessionId: sid });
+    await waitForMessage(h.channels[0]!, (t) => t.startsWith("[run]"));
+    await waitFor(async () =>
+      (await h.store.listMessages(sid)).some((m) => m.content === "second message"),
+    );
+    expect(await h.store.listTurns(sid)).toHaveLength(2);
   });
 });
 
@@ -612,3 +666,21 @@ describe("Gateway lifecycle and isolation", () => {
     expect(chB.sentTexts().filter((t) => t.startsWith("[approve]"))).toHaveLength(0);
   });
 });
+
+/** P23-4 local inert catalog for gateway/web tests (FakeOrchestrator). */
+function localTestToolCatalog() {
+  const names = ["read_file", "write_file", "edit_file", "exec", "search_files", "grep_search", "repo_tree", "repo_map", "update_plan", "ask_user", "env_snapshot", "discover_commands", "tool_lookup", "echo"];
+  const mk = (name: string) => ({
+    name,
+    description: `stub ${name}`,
+    inputSchema: ({} as never),
+    risk: "readonly" as const,
+    metadata: { name, version: "1.0.0", sideEffect: false, network: false, filesystem: false, process: false, interactive: false },
+    execute: async () => ({ status: "success" as const, output: "" }),
+  });
+  return {
+    get: (name: string) => (names.includes(name) ? mk(name) : undefined),
+    list: () => names.map(mk),
+    specs: () => names.map((name) => ({ name, description: `stub ${name}`, inputSchema: {} as never })),
+  };
+}

@@ -1,5 +1,6 @@
 import type {
   ApprovalRequest,
+  BoundToolCallRequest,
   ApprovalResolver,
   EventSink,
   NonFatalErrorSink,
@@ -73,6 +74,12 @@ interface SanitizedCall {
  *   resolve → validate → normalize → risk → permission → approval
  *   → sandbox → execute → timeout/output limits → evidence → events → normalize
  */
+/** P26-4: a tool request that arrived through the frozen step binding path
+ *  carries step-world identity for the intent journal. */
+function isBoundToolRequest(request: ToolCallRequest): request is BoundToolCallRequest {
+  return "binding" in request;
+}
+
 export class ToolOrchestrator {
   private readonly registry: ToolRegistry;
   private readonly permission: PermissionEngine;
@@ -101,14 +108,29 @@ export class ToolOrchestrator {
   }
 
   async execute(request: ToolCallRequest, context: ToolExecutionContext): Promise<ToolResult> {
-    const started = this.now();
-    try {
-      // 1. resolve tool
-      const tool = this.registry.get(request.call.name);
-      if (!tool) {
-        return this.fail(request, context, "TOOL_SCHEMA_ERROR", `unknown tool: ${request.call.name}`, started);
-      }
+    // P23-4: legacy resolution path — resolves from the mutable process
+    // registry. Production AgentRuntime calls executeBound() with the FROZEN
+    // step binding so a mid-run catalog swap can never change what executes.
+    const tool = this.registry.get(request.call.name);
+    if (!tool) {
+      return this.fail(request, context, "TOOL_SCHEMA_ERROR", `unknown tool: ${request.call.name}`, this.now());
+    }
+    return this.executeResolved(request, context, tool, this.now());
+  }
 
+  /** P23-4: execute against the FROZEN step binding — the exact definition the
+   *  model saw, even if the global catalog was later replaced or removed. */
+  async executeBound(request: BoundToolCallRequest, context: ToolExecutionContext): Promise<ToolResult> {
+    return this.executeResolved(request, context, request.binding.definition, this.now());
+  }
+
+  private async executeResolved(
+    request: ToolCallRequest,
+    context: ToolExecutionContext,
+    tool: ToolDefinition,
+    started: number,
+  ): Promise<ToolResult> {
+    try {
       // 2+3. validate & normalize arguments
       const parsed = tool.inputSchema.safeParse(request.call.args);
       if (!parsed.success) {
@@ -175,6 +197,16 @@ export class ToolOrchestrator {
             startedAt: this.now(),
             sessionId: request.sessionId,
             ...(request.turnId !== undefined ? { turnId: request.turnId } : {}),
+            // P26-4: frozen step-world identity — filled on the production
+            // BoundToolCallRequest path (stepId/routerFingerprint/
+            // toolBindingFingerprint); legacy execute() omits them.
+            ...(isBoundToolRequest(request) && request.stepId !== undefined ? { stepId: request.stepId } : {}),
+            ...(isBoundToolRequest(request) && request.routerFingerprint !== undefined
+              ? { routerFingerprint: request.routerFingerprint }
+              : {}),
+            ...(isBoundToolRequest(request) && request.toolBindingFingerprint !== undefined
+              ? { toolBindingFingerprint: request.toolBindingFingerprint }
+              : {}),
           });
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);

@@ -160,12 +160,11 @@ export class PostTurnReflector {
         : code === "INJECTION_DENIED"
           ? "security.injection_denied"
           : "security.memory_denied";
-    const sequence = await this.events.nextSequence(sessionId);
-    await this.events.append({
+    // P26-1: store-owned atomic sequence allocation (appendNew).
+    await this.events.appendNew({
       id: newEventId(),
       sessionId,
       turnId,
-      sequence,
       timestamp: this.now(),
       type,
       payload: {

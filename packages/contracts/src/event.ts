@@ -18,6 +18,7 @@ export const EVENT_TYPES = [
   "retry.stallRecovery",
   "retry.reconciliation",
   "retry.mcpReconnect",
+  "mcp.connect_failed",
   "recovery.decided",
   "protocol.repaired",
   "protocol.repair_failed",
@@ -120,6 +121,15 @@ export interface AgentEvent {
 
 export interface EventStore {
   append(event: AgentEvent): Promise<AgentEvent>;
+  /**
+   * P26-1: append WITHOUT a caller-allocated sequence. The store is the sole
+   * sequence authority: it stamps `sequence` atomically at the store boundary
+   * (serialized per session) and returns the stored event. Production writers
+   * MUST use this — never `nextSequence` + `append` (a non-atomic pair that a
+   * concurrent writer can interleave). `nextSequence` remains only for
+   * read-side/back-compat callers.
+   */
+  appendNew(event: Omit<AgentEvent, "sequence">): Promise<AgentEvent>;
   list(sessionId: SessionId, opts?: { afterSequence?: number; limit?: number }): Promise<AgentEvent[]>;
   stream(sessionId: SessionId, opts?: { afterSequence?: number }): AsyncIterable<AgentEvent>;
   nextSequence(sessionId: SessionId): Promise<number>;
@@ -133,4 +143,81 @@ export interface EventSink {
     payload: Record<string, unknown>,
     turnId?: TurnId,
   ): Promise<void>;
+}
+
+/**
+ * P26-2 — semantic durability journal events. The event trail IS the
+ * canonical semantic journal: no second competing log is created. These kinds
+ * are the semantic durability records a crash/recovery pipeline may rebuild
+ * from; everything else is an observability-only delta (streaming chunks,
+ * retries, security denials, progress, ...) and may be dropped/compacted
+ * without losing the recoverable truth.
+ *
+ * Mapping (plan §P26-2 examples → existing EventType):
+ *   turn.input_committed    → turn.started (input committed with the turn)
+ *   tool.execution_started  → tool.started
+ *   tool.outcome_committed  → tool.completed / tool.failed
+ *   checkpoint.committed    → checkpoint.created
+ */
+export const SEMANTIC_JOURNAL_EVENTS: ReadonlySet<EventType> = new Set<EventType>([
+  // session lifecycle
+  "session.created",
+  "session.resumed",
+  "session.forked",
+  // turn lifecycle (the turn's input is committed with turn.started)
+  "turn.started",
+  "turn.completed",
+  "turn.failed",
+  "turn.cancelled",
+  // model sampling start (a step's world was frozen)
+  "model.started",
+  // side-effect lifecycle (P26-4 state machine)
+  "tool.intent_persisted",
+  "tool.permission_requested",
+  "tool.permission_resolved",
+  "tool.started",
+  "tool.completed",
+  "tool.failed",
+  // checkpoint / approval / ask gates
+  "checkpoint.created",
+  "approval.created",
+  "approval.resolved",
+  "ask.user_asked",
+  "ask.user_replied",
+  // delegation + verification lifecycle
+  "subagent.started",
+  "subagent.completed",
+  "subagent.failed",
+  "verification.started",
+  "verification.completed",
+  "verification.failed",
+  // context compaction rewrites the recoverable working state
+  "context.compacted",
+]);
+
+/** P26-2 — true when `type` is a semantic journal record (durable truth),
+ *  false for observability-only deltas. */
+export function isSemanticJournalEvent(type: EventType): boolean {
+  return SEMANTIC_JOURNAL_EVENTS.has(type);
+}
+
+/**
+ * P26-3 — honest durability declaration. Never over-claimed:
+ *  "memory"     — data lost on process exit (in-memory fakes).
+ *  "process"    — survives process crashes (OS page cache survives).
+ *  "crash_safe" — survives OS crash / power loss (fsync or equivalent).
+ */
+export type DurabilityLevel = "memory" | "process" | "crash_safe";
+
+/**
+ * P26-3 — a durability fence: a point in the stream up to which the store
+ * guarantees every event is durably settled at its declared level. Used at
+ * turn/checkpoint boundaries so an acked event cannot be lost on crash.
+ */
+export interface DurabilityFenceStore {
+  readonly durabilityLevel: DurabilityLevel;
+  /** Ensure every event up to (and including) `sequence` for the session is
+   *  durably settled. Idempotent. Pass Number.MAX_SAFE_INTEGER to flush the
+   *  whole session. */
+  flushThrough(sessionId: SessionId, sequence: number): Promise<void>;
 }

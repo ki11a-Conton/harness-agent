@@ -1,9 +1,11 @@
 ﻿import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
   AdmittedPrompt,
+  DurabilityFenceStore,
   AgentDefinition,
   AskId,
   AskUserReply,
@@ -31,7 +33,7 @@ import { DeterministicToolSelector } from "../tools/tool-selector.js";
 import { EchoModelProvider, ScriptedModelProvider } from "@ar/model";
 import { AgentRuntime, type SkillDiscovery } from "./runtime.js";
 import { InMemoryArtifactStore } from "./artifact-store.js";
-import { MemoryEventStore, MemorySessionStore } from "../test/fakes.js";
+import { MemoryEventStore, MemorySessionStore, defaultTestToolCatalog } from "../test/fakes.js";
 import { FakeOrchestrator } from "../test/fake-orchestrator.js";
 import { ContextPipeline } from "@ar/context";
 
@@ -168,7 +170,20 @@ function makeRuntime(
     ...(opts?.inbox !== undefined ? { inbox: opts.inbox } : {}),
     ...(opts?.delegateSpecialist !== undefined ? { delegateSpecialist: opts.delegateSpecialist } : {}),
     ...(opts?.toolSelector !== undefined ? { toolSelector: opts.toolSelector } : {}),
-    ...(opts?.toolSpecs !== undefined ? { toolSpecs: opts.toolSpecs } : {}),
+    // P23-3/4: advertisement is frozen per-step from the CATALOG. Tests that
+    // historically passed toolSpecs get a fake catalog derived from those
+    // specs; the rest use the conventional inert catalog. Permissive
+    // resolution mirrors the legacy global-registry execute() these tests
+    // were written against (production harnesses are strict).
+    toolRegistry:
+      opts?.toolSpecs !== undefined
+        ? {
+            get: (name) => opts.toolSpecs!.find((t) => t.name === name) as never,
+            list: () => opts.toolSpecs!.map((t) => ({ name: t.name, description: t.description, inputSchema: z.object({}), risk: "readonly" as const, metadata: { name: t.name, version: "1.0.0", sideEffect: false, network: false, filesystem: false, process: false, interactive: false }, execute: async () => ({ status: "success" as const, output: "" }) })),
+            specs: () => opts.toolSpecs!,
+          }
+        : defaultTestToolCatalog(),
+    permissiveToolResolution: true,
     ...(opts?.skillSelector !== undefined ? { skillSelector: opts.skillSelector } : {}),
     ...(opts?.context !== undefined
       ? {
@@ -2148,5 +2163,33 @@ describe("P15-2: immutable StepContext per model call", () => {
     expect(requested.length).toBe(2);
     // Different model calls → different steps
     expect(requested[0]!.payload.stepId).not.toBe(requested[1]!.payload.stepId);
+  });
+  it("P26-3: the runtime flushes the durability fence before acking completion", async () => {
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const calls: Array<{ sessionId: SessionId; sequence: number }> = [];
+    const fence: DurabilityFenceStore = {
+      durabilityLevel: "crash_safe",
+      async flushThrough(sessionId, sequence) {
+        calls.push({ sessionId, sequence });
+      },
+    };
+    const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
+      store,
+      events,
+      modelProvider: new ScriptedModelProvider([ScriptedModelProvider.text("ok")]),
+      orchestrator: new FakeOrchestrator(),
+      agents: [AGENT],
+      durabilityFence: fence,
+    });
+    const session = await runtime.createSession({ agent: AGENT, cwd: "/work" });
+    const turn = await runtime.startTurn(session.id, "hello");
+    const outcome = await runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    expect(outcome.status).toBe("completed");
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.sessionId).toBe(session.id);
+    expect(calls[0]!.sequence).toBe(Number.MAX_SAFE_INTEGER);
   });
 });

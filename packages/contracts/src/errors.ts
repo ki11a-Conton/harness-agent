@@ -23,6 +23,9 @@ export const ERROR_CODES = [
   "PERSISTENCE_ERROR",
   "RESUME_FAILED",
   "USER_CANCELLED",
+  "SESSION_BUSY",
+  "TOOL_COLLISION",
+  "TOOL_NOT_IN_STEP",
   "INTERNAL_ERROR",
 ] as const;
 
@@ -67,6 +70,9 @@ export const ERROR_DEFAULT_MESSAGES: Record<ErrorCode, string> = {
   PERSISTENCE_ERROR: "Durable intent/state persistence failed",
   RESUME_FAILED: "Session resume failed",
   USER_CANCELLED: "Cancelled by user",
+  SESSION_BUSY: "Session already has an active turn",
+  TOOL_COLLISION: "Two tool sources produce the same model-visible name",
+  TOOL_NOT_IN_STEP: "Tool is not present in the step frozen tool router",
   INTERNAL_ERROR: "Internal error",
 };
 
@@ -96,6 +102,9 @@ export const ERROR_RETRY_DEFAULTS: Record<ErrorCode, { retryable: boolean; safeT
   PERSISTENCE_ERROR: { retryable: false, safeToRetry: false },
   RESUME_FAILED: { retryable: false, safeToRetry: false },
   USER_CANCELLED: { retryable: false, safeToRetry: false },
+  SESSION_BUSY: { retryable: false, safeToRetry: false },
+  TOOL_COLLISION: { retryable: false, safeToRetry: false },
+  TOOL_NOT_IN_STEP: { retryable: false, safeToRetry: false },
   INTERNAL_ERROR: { retryable: false, safeToRetry: false },
 };
 

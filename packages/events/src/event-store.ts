@@ -1,6 +1,6 @@
 import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { AgentEvent, EventStore, SessionId } from "@ar/contracts";
+import type { AgentEvent, DurabilityLevel, EventStore, SessionId } from "@ar/contracts";
 import { EVENT_ABI_VERSION } from "@ar/contracts";
 import { appendDurable, backupTree } from "@ar/store-integrity";
 
@@ -231,10 +231,27 @@ export class JSONLEventStore implements EventStore {
     }
   }
 
+  /** P26-1: store-owned atomic sequence allocation — the caller never
+   *  allocates; the placeholder sequence is overwritten by [[append]]. */
+  async appendNew(event: Omit<AgentEvent, "sequence">): Promise<AgentEvent> {
+    return this.append({ ...event, sequence: -1 });
+  }
+
   async nextSequence(sessionId: SessionId): Promise<number> {
     const events = await this.load(sessionId);
     if (events.length === 0) return 0;
     return events[events.length - 1]!.sequence + 1;
+  }
+
+  /** P26-3: appendDurable fsyncs every line — the honest level is crash_safe. */
+  get durabilityLevel(): DurabilityLevel {
+    return "crash_safe";
+  }
+
+  /** P26-3: await the FIFO append chain — every write up to `sequence` has
+   *  already been fsynced by appendDurable, so the chain drain IS the fence. */
+  async flushThrough(_sessionId: SessionId, _sequence: number): Promise<void> {
+    await this.enqueue(async () => undefined);
   }
 
   /**

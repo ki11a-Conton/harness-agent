@@ -9,6 +9,7 @@ import type {
   AskId,
   CheckpointData,
   CheckpointStore,
+  DurabilityLevel,
   EventStore,
   InboxStore,
   Message,
@@ -17,10 +18,11 @@ import type {
   Session,
   SessionId,
   SessionStore,
+  ToolOutcomeCommit,
   Turn,
   TurnId,
 } from "@ar/contracts";
-import { CHECKPOINT_SCHEMA_VERSION } from "@ar/contracts";
+import { CHECKPOINT_SCHEMA_VERSION, EVENT_ABI_VERSION } from "@ar/contracts";
 import type { AskUserStore } from "@ar/contracts";
 
 /**
@@ -340,6 +342,100 @@ export class SqliteRuntimeStore
         throw new Error(`duplicate event id/sequence for ${event.id}`);
       }
       throw cause;
+    }
+  }
+
+  /** P26-1: store-owned atomic sequence allocation — the caller never
+   *  allocates; the placeholder sequence is overwritten by the store. */
+  async appendNew(event: Omit<AgentEvent, "sequence">): Promise<AgentEvent> {
+    return this.append({ ...event, sequence: -1 });
+  }
+
+  /** P26-6: atomic semantic-boundary capability — the transcript message, the
+   *  outcome event AND the optional checkpoint commit in ONE transaction.
+   *  Stores without this capability fall back to ordered writes + fences
+   *  (P26-3); SQLite advertises it explicitly. */
+  readonly atomicCommitSupported = true as const;
+
+  async commitToolOutcome(commit: ToolOutcomeCommit): Promise<{ event: AgentEvent }> {
+    const { toolMessage, outcomeEvent, checkpoint } = commit;
+    if (!Number.isFinite(outcomeEvent.timestamp) || outcomeEvent.timestamp < 0) {
+      throw new Error(`invalid event timestamp for ${outcomeEvent.id}: ${outcomeEvent.timestamp}`);
+    }
+    const sessionId = toolMessage.sessionId;
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      // 1. transcript message
+      this.db
+        .prepare(
+          "INSERT INTO messages (id, session_id, turn_id, created_at, doc) VALUES (?, ?, ?, ?, ?)",
+        )
+        .run(
+          toolMessage.id,
+          toolMessage.sessionId,
+          toolMessage.turnId ?? null,
+          toolMessage.createdAt,
+          docOf(toolMessage),
+        );
+      // 2. outcome event with a store-owned atomic sequence
+      const dup = this.db
+        .prepare("SELECT 1 AS x FROM events WHERE session_id = ? AND json_extract(doc, '$.id') = ?")
+        .get(sessionId, outcomeEvent.id);
+      if (dup !== undefined) {
+        throw new Error(`duplicate event id: ${outcomeEvent.id}`);
+      }
+      const row = this.db
+        .prepare("SELECT MAX(sequence) AS seq FROM events WHERE session_id = ?")
+        .get(sessionId) as { seq: number | null };
+      const sequence = (row.seq ?? -1) + 1;
+      const stored: AgentEvent = {
+        ...outcomeEvent,
+        sequence,
+        schemaVersion: EVENT_ABI_VERSION,
+      };
+      this.db
+        .prepare("INSERT INTO events (session_id, sequence, doc) VALUES (?, ?, ?)")
+        .run(sessionId, sequence, docOf(stored));
+      // 3. optional checkpoint in the SAME transaction
+      if (checkpoint !== undefined) {
+        this.db
+          .prepare(
+            "INSERT INTO checkpoints (checkpoint_id, session_id, created_at, doc) VALUES (?, ?, ?, ?)",
+          )
+          .run(
+            checkpoint.checkpointId,
+            checkpoint.sessionId,
+            checkpoint.createdAt,
+            docOf(checkpoint),
+          );
+      }
+      this.db.exec("COMMIT");
+      return { event: stored };
+    } catch (cause) {
+      this.db.exec("ROLLBACK");
+      throw cause;
+    }
+  }
+
+  /** P26-3: HONEST durability declaration. WAL + synchronous=NORMAL makes
+   *  committed transactions survive a process crash (the frames live in the
+   *  WAL in the OS page cache) but NOT an OS crash/power loss (frames may
+   *  not be fsynced before checkpoint). We therefore claim "process", never
+   *  "crash_safe" — the JSONL store is the crash_safe backend. */
+  get durabilityLevel(): DurabilityLevel {
+    return "process";
+  }
+
+  /** P26-3: fold the WAL into the main db so a subsequent process (or OS
+   *  crash recovery) sees every committed event up to `sequence`. Idempotent;
+   *  PASSIVE never blocks a concurrent writer. */
+  async flushThrough(sessionId: SessionId, sequence: number): Promise<void> {
+    this.db.exec("PRAGMA wal_checkpoint(PASSIVE);");
+    const row = this.db
+      .prepare("SELECT 1 AS x FROM events WHERE session_id = ? AND sequence = ?")
+      .get(sessionId, sequence);
+    if (row === undefined && sequence !== Number.MAX_SAFE_INTEGER) {
+      throw new Error(`flushThrough: event ${sequence} for ${sessionId} is not committed`);
     }
   }
 

@@ -40,6 +40,7 @@ export async function main(): Promise<number> {
   const bindings = new SessionBindings();
   const registry = createRuntimeRpc(harness.runtime, {
     sessionService: harness.sessionService,
+    sessions: harness.sessions,
     approvalStore: harness.approvalStore,
     events: harness.events,
   });

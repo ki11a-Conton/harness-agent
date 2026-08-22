@@ -12,7 +12,7 @@ import type {
   TurnId,
 } from "@ar/contracts";
 import { AgentError, errorInfo } from "@ar/contracts";
-import type { AgentRuntime, TurnOutcome } from "@ar/core";
+import type { AgentRuntime, LoadedSessionManager, TurnOutcome } from "@ar/core";
 import type { SessionService } from "@ar/session";
 
 /** Caller-supplied context attached to a single invoke (transport agnostic). */
@@ -98,6 +98,10 @@ export type ActiveTurnStatus = TurnOutcome["status"] | "not_running";
 
 export interface RuntimeRpcDeps {
   sessionService: SessionService;
+  /** P25-2: single owner of live session state — the lifecycle
+   *  authority for active turns (replaces Map<sessionId:turnId, ActiveRun>).
+   *  session.run / cancel / steer / followup all route through it. */
+  sessions: LoadedSessionManager;
   /** §161 approval binding: one-shot, session-scoped decisions. */
   approvalStore: ApprovalStore;
   events: EventStore;
@@ -107,11 +111,6 @@ export interface RuntimeRpcDeps {
   listTools?: () => ToolSpec[];
   /** Host-wired skill listing; absent provider makes `skill.list` an error. */
   listSkills?: () => Skill[];
-}
-
-interface ActiveRun {
-  controller: AbortController;
-  promise: Promise<TurnOutcome>;
 }
 
 function requireParam(name: string, value: unknown): string {
@@ -130,11 +129,6 @@ export function createRuntimeRpc(
   runtime: AgentRuntime,
   deps: RuntimeRpcDeps,
 ): RpcMethodRegistry {
-  /** In-flight turns keyed by `${sessionId}:${turnId}` for session.cancel. */
-  const activeRuns = new Map<string, ActiveRun>();
-
-  const key = (sessionId: SessionId, turnId: TurnId) => `${sessionId}:${turnId}`;
-
   return new RpcMethodRegistry()
     .register("session.create", async (params) => {
       const { agentId, cwd } = params as { agentId: AgentId; cwd: string };
@@ -147,57 +141,68 @@ export function createRuntimeRpc(
     })
     .register("session.send", async (params) => {
       const { sessionId, text } = params as { sessionId: SessionId; text: string };
-      const turn = await runtime.startTurn(
-        requireParam("sessionId", sessionId) as SessionId,
-        requireParam("text", text),
-      );
+      const actor = await deps.sessions.load(requireParam("sessionId", sessionId) as SessionId);
+      const turn = await actor.createTurn({
+        sessionId: actor.sessionId,
+        text: requireParam("text", text),
+      });
       return { turnId: turn.id };
     })
     .register("session.run", async (params, ctx) => {
       const { sessionId, turnId } = params as { sessionId: SessionId; turnId: TurnId };
       const session = requireParam("sessionId", sessionId) as SessionId;
       const turn = requireParam("turnId", turnId) as TurnId;
-      const k = key(session, turn);
-      if (activeRuns.has(k)) {
-        throw new AgentError(errorInfo("INTERNAL_ERROR", `turn already running: ${turn}`));
-      }
-      const controller = new AbortController();
-      const callerSignal = ctx.signal;
-      if (callerSignal !== undefined) {
-        const link = () => controller.abort();
-        if (callerSignal.aborted) {
-          controller.abort();
-        } else {
-          callerSignal.addEventListener("abort", link, { once: true });
-        }
-        const promise = runtime.runTurn(session, turn, controller.signal).finally(() => {
-          activeRuns.delete(k);
-          callerSignal.removeEventListener("abort", link);
-        });
-        activeRuns.set(k, { controller, promise });
-        return promise;
-      }
-      const promise = runtime.runTurn(session, turn, controller.signal).finally(() => {
-        activeRuns.delete(k);
-      });
-      activeRuns.set(k, { controller, promise });
-      return promise;
+      // P25-3: the SessionActor owns the active run. A concurrent turn
+      // for the same session throws SESSION_BUSY (typed) — no silent
+      // parallel run. The caller signal is linked by the actor.
+      const actor = await deps.sessions.load(session);
+      return actor.runTurn(turn, ctx.signal);
     })
     .register("session.cancel", async (params) => {
       const { sessionId, turnId } = params as { sessionId: SessionId; turnId: TurnId };
       const session = requireParam("sessionId", sessionId) as SessionId;
       const turn = requireParam("turnId", turnId) as TurnId;
-      const run = activeRuns.get(key(session, turn));
-      if (run === undefined) {
-        return { sessionId: session, turnId: turn, status: "not_running" as const };
-      }
-      run.controller.abort();
-      const outcome = await run.promise;
-      return { sessionId: session, turnId: turn, status: outcome.status };
+      const actor = await deps.sessions.load(session);
+      const status = await actor.cancelTurn(turn);
+      return { sessionId: session, turnId: turn, status };
     })
     .register("session.resume", async (params) => {
       const { sessionId } = params as { sessionId: SessionId };
       return deps.sessionService.resume(requireParam("sessionId", sessionId) as SessionId);
+    })
+    .register("session.steer", async (params) => {
+      const { sessionId, text } = params as { sessionId: SessionId; text: string };
+      const session = requireParam("sessionId", sessionId) as SessionId;
+      const actor = await deps.sessions.load(session);
+      // P25-4: steer takes effect at the next sampling boundary only.
+      await actor.steer({ sessionId: session, text: requireParam("text", text) });
+      return { sessionId: session, admitted: "steer" as const };
+    })
+    .register("session.followup", async (params) => {
+      const { sessionId, text } = params as { sessionId: SessionId; text: string };
+      const session = requireParam("sessionId", sessionId) as SessionId;
+      const actor = await deps.sessions.load(session);
+      // P25-5: queued for a NEW turn after the current one settles —
+      // never injected into the running turn.
+      await actor.enqueueFollowup({ sessionId: session, text: requireParam("text", text) });
+      return { sessionId: session, admitted: "followup" as const };
+    })
+    .register("session.interrupt", async (params) => {
+      const { sessionId } = params as { sessionId: SessionId };
+      const session = requireParam("sessionId", sessionId) as SessionId;
+      const actor = await deps.sessions.load(session);
+      const outcome = await actor.interrupt();
+      return {
+        sessionId: session,
+        interrupted: outcome !== undefined,
+        status: outcome?.status ?? ("not_running" as const),
+      };
+    })
+    .register("session.status", async (params) => {
+      const { sessionId } = params as { sessionId: SessionId };
+      const session = requireParam("sessionId", sessionId) as SessionId;
+      const actor = await deps.sessions.load(session);
+      return actor.status();
     })
     .register("session.approve", async (params) => {
       const { approvalId, value, decidedBy } = params as {

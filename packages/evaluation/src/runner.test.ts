@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+﻿import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -100,6 +100,10 @@ class MemoryEventStore implements EventStore {
     return this.seq + 1;
   }
 
+  async appendNew(event: Omit<AgentEvent, "sequence">): Promise<AgentEvent> {
+    return this.append({ ...event, sequence: -1 });
+  }
+
   async append(event: AgentEvent): Promise<AgentEvent> {
     const stored = { ...event, sequence: ++this.seq };
     this.events.push(stored);
@@ -140,7 +144,11 @@ class EmittingOrchestrator implements ToolOrchestrator {
     private readonly streamOutput = false,
   ) {}
 
-  async execute(request: ToolCallRequest, _context: ToolExecutionContext): Promise<ToolResult> {
+    async executeBound(request: import("@ar/contracts").BoundToolCallRequest, ctx: import("@ar/contracts").ToolExecutionContext): Promise<import("@ar/contracts").ToolResult> {
+    return this.execute(request, ctx);
+  }
+
+async execute(request: ToolCallRequest, _context: ToolExecutionContext): Promise<ToolResult> {
     this.calls.push({ request });
     const timestamp = Date.now();
     const base = {
@@ -225,6 +233,8 @@ function makeHarness(opts: HarnessOpts = {}) {
       ? new EmittingOrchestrator(events, opts.toolResult, opts.streamOutput ?? false)
       : new EmittingOrchestrator(events, { status: "success", output: "fake-ok" });
   const runtime = new AgentRuntime({
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
     store,
     events,
     modelProvider: provider,
@@ -915,3 +925,23 @@ describe("P4-12: expectedEvents.atLeast judge", () => {
     expect(outcome.violations.some((v) => v.includes("expectedEvents.atLeast: subagent.started observed 1 < required 2"))).toBe(true);
   });
 });
+
+/** Local copy of the core test catalog (tests must not reach into @ar/core's
+ *  test internals): inert definitions so the frozen step router can resolve
+ *  the conventional tool names under a FakeOrchestrator. */
+function defaultTestToolCatalog() {
+  const names = ["read_file", "write_file", "edit_file", "exec", "search_files", "grep_search", "repo_tree", "repo_map", "update_plan", "ask_user", "env_snapshot", "discover_commands", "tool_lookup"];
+  const mk = (name: string) => ({
+    name,
+    description: `stub ${name}`,
+    inputSchema: ({} as never),
+    risk: "readonly" as const,
+    metadata: { name, version: "1.0.0", sideEffect: false, network: false, filesystem: false, process: false, interactive: false },
+    execute: async () => ({ status: "success" as const, output: "" }),
+  });
+  return {
+    get: (name: string) => (names.includes(name) ? mk(name) : undefined),
+    list: () => names.map(mk),
+    specs: () => names.map((name) => ({ name, description: `stub ${name}`, inputSchema: {} as never })),
+  };
+}

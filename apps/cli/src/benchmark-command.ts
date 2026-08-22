@@ -494,6 +494,9 @@ async function runOneCase(
       events,
       modelProvider: opts.provider,
       orchestrator,
+      // P23-1: the process catalog is read once per step to freeze the step
+      // tool world; never consulted mid-step.
+      toolRegistry: registry,
       agents: [agent, ...(requiresSubagent ? [subagentAgent] : [])],
       // P0-8/P4-5: MCP output rides the real injection gate (injectionDetector
       // is wired below, in the runtime deps) — a connector payload carrying
@@ -734,6 +737,10 @@ class TrackingEventStore implements EventStore {
 
   async *stream(sessionId: SessionId, opts?: { afterSequence?: number }): AsyncIterable<AgentEvent> {
     yield* this.inner.stream(sessionId, opts);
+  }
+
+  async appendNew(event: Omit<AgentEvent, "sequence">): Promise<AgentEvent> {
+    return this.inner.appendNew(event);
   }
 
   async nextSequence(sessionId: SessionId): Promise<number> {

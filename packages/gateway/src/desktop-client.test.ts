@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import type {
   AgentDefinition,
   AgentEvent,
@@ -18,7 +18,7 @@ import type {
   TurnId,
 } from "@ar/contracts";
 import { AgentError, newAgentId, newApprovalId } from "@ar/contracts";
-import { AgentRuntime } from "@ar/core";
+import { AgentRuntime, DefaultLoadedSessionManager } from "@ar/core";
 import { ScriptedModelProvider } from "@ar/model";
 import { SessionService } from "@ar/session";
 import { InMemoryApprovalStore } from "@ar/security";
@@ -99,6 +99,10 @@ class MemEventStore implements EventStore {
   async nextSequence(_sessionId: SessionId): Promise<number> {
     return this.seq + 1;
   }
+  async appendNew(event: Omit<AgentEvent, "sequence">): Promise<AgentEvent> {
+    return this.append({ ...event, sequence: -1 });
+  }
+
   async append(event: AgentEvent): Promise<AgentEvent> {
     const seq = ++this.seq;
     const stored = { ...event, sequence: seq };
@@ -129,7 +133,11 @@ class MemEventStore implements EventStore {
 
 class FakeOrchestrator implements ToolOrchestrator {
   calls: ToolCallRequest[] = [];
-  async execute(request: ToolCallRequest, _context: ToolExecutionContext): Promise<ToolResult> {
+    async executeBound(request: import("@ar/contracts").BoundToolCallRequest, ctx: import("@ar/contracts").ToolExecutionContext): Promise<import("@ar/contracts").ToolResult> {
+    return this.execute(request, ctx);
+  }
+
+async execute(request: ToolCallRequest, _context: ToolExecutionContext): Promise<ToolResult> {
     this.calls.push(request);
     return { status: "success", output: "ok" };
   }
@@ -202,6 +210,8 @@ function makeClient(
   const orch = new FakeOrchestrator();
   const provider = opts.provider ?? new ScriptedModelProvider([ScriptedModelProvider.text("ok")]);
   const runtime = new AgentRuntime({
+      toolRegistry: localTestToolCatalog(),
+      permissiveToolResolution: true,
     store,
     events,
     modelProvider: provider,
@@ -212,8 +222,10 @@ function makeClient(
   const approvalStore = new InMemoryApprovalStore(
     opts.clock === undefined ? undefined : () => opts.clock!.t,
   );
+  const sessions = new DefaultLoadedSessionManager({ runtime, store });
   const registry = createRuntimeRpc(runtime, {
     sessionService,
+    sessions,
     approvalStore,
     events,
     listAgents: () => [AGENT],
@@ -490,3 +502,21 @@ describe("DesktopClient boundaries", () => {
     await subscription;
   });
 });
+
+/** P23-4 local inert catalog for gateway/web tests (FakeOrchestrator). */
+function localTestToolCatalog() {
+  const names = ["read_file", "write_file", "edit_file", "exec", "search_files", "grep_search", "repo_tree", "repo_map", "update_plan", "ask_user", "env_snapshot", "discover_commands", "tool_lookup", "echo"];
+  const mk = (name: string) => ({
+    name,
+    description: `stub ${name}`,
+    inputSchema: ({} as never),
+    risk: "readonly" as const,
+    metadata: { name, version: "1.0.0", sideEffect: false, network: false, filesystem: false, process: false, interactive: false },
+    execute: async () => ({ status: "success" as const, output: "" }),
+  });
+  return {
+    get: (name: string) => (names.includes(name) ? mk(name) : undefined),
+    list: () => names.map(mk),
+    specs: () => names.map((name) => ({ name, description: `stub ${name}`, inputSchema: {} as never })),
+  };
+}

@@ -29,7 +29,14 @@ import {
   type SessionStore,
   type TurnId,
 } from "@ar/contracts";
-import { AgentRuntime, InMemoryArtifactStore, type SkillDiscovery, type SkillSecurityDenialRecord } from "@ar/core";
+import {
+  AgentRuntime,
+  DefaultLoadedSessionManager,
+  InMemoryArtifactStore,
+  type LoadedSessionManager,
+  type SkillDiscovery,
+  type SkillSecurityDenialRecord,
+} from "@ar/core";
 import { DurableCheckpointStore } from "@ar/checkpoint";
 import { ContextPipeline } from "@ar/context";
 import { JsonlMemoryStore, retrieveMemories, SqliteMemoryStore, type RetrieveResult } from "@ar/memory";
@@ -104,6 +111,11 @@ export interface Harness {
   sessionService: SessionService;
   agents: AgentDefinition[];
 
+  /** P25-2: live session actors — the SINGLE owner of active turn state. The
+   *  RPC/gateway path routes session.run/cancel/steer/followup through it
+   *  (replaces the RPC-local Map<sessionId:turnId, ActiveRun>). */
+  sessions: LoadedSessionManager;
+
   scheduler?: AgentExecutionScheduler;
   delegator?: Delegator;
   /** P2-1: full pre-turn memory bridge (retrieve → context blocks → feedback). */
@@ -118,7 +130,10 @@ export interface Harness {
   /** P2-8: skill body provider (progressive disclosure + effectiveness). */
   skillBodies?: SkillBodyBlockProvider;
   /** P0-3: real MCP transports connected at harness creation. */
-  mcp?: { servers: number; tools: string[] };
+  /** P24-1: MCP runtime V2 — `lazy: true` means NO server connects at
+   *  startup; connections happen per step via dependency resolution.
+   *  `failures` records observed mcp.connect_failed events (serverId+error). */
+  mcp?: { servers: number; tools: string[]; lazy?: boolean; failures: Array<{ serverId: string; error: unknown }> };
 
   approvalStore: ApprovalStore;
   inbox: InboxStore;
@@ -184,13 +199,16 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   // P3-1 deferred delegation binding refs (set after the runtime exists).
   const boundDelegator = composedTools.refs.delegator;
   const boundParallelDelegator = composedTools.refs.parallelDelegator;
-  // --- MCP transport wiring (P0-3; P22-1: compose/compose-mcp) --------------
-  const { mcpToolNames, mcpConnections } = await composeMcp(
-    config,
-    features,
-    registry,
-    appendHarnessEvent,
-  );
+  // --- MCP runtime V2 (P24-1/5: catalog ≠ connection ≠ binding) -------------
+  // composeMcp no longer connects anything at startup — a server connects
+  // lazily when a step's dependency resolution actually needs it. The
+  // binding provider feeds the step snapshot factory per model call.
+  const mcp = composeMcp(config, (e) => {
+    void appendHarnessEvent("", "mcp.connect_failed", { serverId: e.serverId, error: String(e.error) });
+  });
+  // P24-1: ONLY explicitly-eager servers connect at startup (opt-in).
+  await mcp.connectEager();
+  const mcpToolNames: string[] = []; // dynamic per-step (P24-5)
   // --- orchestrator (permission → approval → sandbox, plan §24) -------------
   // P3-6: per-session sandbox roots — a write-capable child's isolated
   // workspace is admitted into its own sandbox while it runs and removed on
@@ -340,12 +358,22 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   const runtime = new AgentRuntime({
     store,
     events,
+    // P26-3: the harness event store IS the durability fence — the runtime
+    // flushes the journal before acking turn completion. Honest level comes
+    // from the store (JSONL crash_safe / SQLite process / memory fake).
+    durabilityFence: events as EventStore & import("@ar/contracts").DurabilityFenceStore,
     modelProvider: config.modelProvider,
     orchestrator,
     agents,
     // P16-5: the runtime shares the harness's injected clock so event
     // timestamps are deterministic under test (never a bare Date.now()).
     ...(config.now !== undefined ? { now: config.now } : {}),
+    // P23-1: the process catalog is read ONCE per step to freeze the step's
+    // tool world; the runtime never consults it mid-step.
+    toolRegistry: registry,
+    // P24-5: per-step MCP binding — the runtime asks for the servers THIS
+    // step needs and freezes their tools into the step router.
+    mcpBindingProvider: (input) => mcp.bindingProvider(input),
     sandboxPolicy: config.sandboxPolicy ?? preset.sandbox,
     context: {
       pipeline,
@@ -482,9 +510,12 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
           },
         }
       : {}),
-    // P18-2: advertise the schema-advert decision (full by default; stubbed
-    // bulk in deferred mode) instead of the raw registry specs.
-    toolSpecs: schemaAdvert.advertised,
+    // P18-2/P23-3: the deferred-advertisement policy is frozen per STEP by
+    // the snapshot factory (tool_lookup's schema is kept full). The runtime
+    // no longer receives a pre-computed toolSpecs advertisement.
+    schemaAdvertPolicy: {
+      keepFull: (name) => builtinToolNames.has(name),
+    },
     toolSemanticsOf: (name) => semanticsOf(registry.get(name)),
     // P18-6: same-resource file mutations never run in parallel — the batch
     // planner splits calls whose conflict key (canonical path) matches.
@@ -567,15 +598,25 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   boundDelegator.value = delegator;
   boundParallelDelegator.value = parallelDelegator;
   const sessionService = new SessionService({ store });
+  // P25-2: live session actors — the single owner of active turn state. The
+  // actor enforces activeTurn ∈ {0,1} per session and routes steer/followup
+  // through the durable inbox (P25-4/P25-5).
+  const sessions = new DefaultLoadedSessionManager({
+    runtime,
+    store,
+    ...(inbox !== undefined ? { inbox } : {}),
+    ...(config.now !== undefined ? { now: config.now } : {}),
+  });
 
   const lifecycle = new Lifecycle();
   if (sqliteStore !== undefined) {
     lifecycle.add({ close: async () => sqliteStore!.close() });
   }
   if (memoryStore !== undefined) lifecycle.add(new MemoryStoreCloser(memoryStore));
-  for (const conn of mcpConnections) {
-    lifecycle.add({ close: () => conn.close() });
-  }
+  // P24-2: harness close closes every connected MCP generation (no orphans).
+  lifecycle.add({ close: () => mcp.close() });
+  // P25-6: harness close unloads every loaded session actor (idempotent).
+  lifecycle.add({ close: () => sessions.close() });
 
   const harness: Harness = {
     runtime,
@@ -583,6 +624,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     events,
     registry,
     sessionService,
+    sessions,
     agents,
       ...(memoryBridge !== undefined ? { memoryBridge } : {}),
     ...(memoryStore !== undefined ? { memoryStore } : {}),
@@ -591,7 +633,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     ...(skillBodyProvider !== undefined ? { skillBodies: skillBodyProvider } : {}),
     ...(scheduler !== undefined ? { scheduler } : {}),
     ...(delegator !== undefined ? { delegator } : {}),
-    ...(mcpConnections.length > 0 ? { mcp: { servers: mcpConnections.length, tools: mcpToolNames } } : {}),
+    ...(mcp.catalog.size > 0 ? { mcp: { servers: mcp.catalog.size, tools: mcpToolNames, lazy: true, failures: mcp.failures } } : {}),
     approvalStore,
     inbox,
     ...(askUserStore !== undefined ? { askUserStore } : {}),
@@ -615,7 +657,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
         delegator,
         scheduler,
         mcpTools: mcpToolNames,
-        mcpServers: mcpConnections.length,
+        mcpServers: mcp.catalog.size,
       }),
     close: () => lifecycle.close(),
   };

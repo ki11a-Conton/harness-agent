@@ -11,6 +11,10 @@ class FakeEventStore implements EventStore {
   private readonly events = new Map<SessionId, AgentEvent[]>();
   private readonly seq = new Map<SessionId, number>();
 
+  async appendNew(event: Omit<AgentEvent, "sequence">): Promise<AgentEvent> {
+    return this.append({ ...event, sequence: -1 });
+  }
+
   async append(event: AgentEvent): Promise<AgentEvent> {
     const list = this.events.get(event.sessionId) ?? [];
     list.push(event);

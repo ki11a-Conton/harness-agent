@@ -6,7 +6,7 @@ import {
   estimateSpecTokens,
   estimateSpecsTokens,
   stubSpec,
-} from "./schema-advert.js";
+} from "@ar/contracts";
 
 function spec(name: string, schemaBytes: number): ToolSpec {
   return {
