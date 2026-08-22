@@ -48,11 +48,16 @@ export async function resolveRepositoryIdentity(cwd: string): Promise<Repository
       });
       remote = stdout.trim();
     } catch {
-      // no origin remote → fall back to the repo root hash
+      // P14-6: no origin remote is an EXPECTED case, not an error — the empty
+      // assignment is the explicit fallback (and makes the catch non-empty).
+      remote = "";
     }
     const source = remote !== "" ? remote : root;
     return { kind: "git", id: stableHash(source), root };
-  } catch {
+  } catch (err) {
+    // P14-6: git is unavailable (no repo) — an expected fallback to path
+    // identity, not a silent error. Reported so failures stay observable.
+    process.stderr.write(`[degraded] scope-resolver.git: ${err instanceof Error ? err.message : String(err)}\n`);
     const root = normalizePath(resolve(cwd));
     return { kind: "path", id: stableHash(root), root };
   }

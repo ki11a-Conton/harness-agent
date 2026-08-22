@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { isNodeErrorCode } from "@ar/contracts";
 import { discoverCommands, summarize } from "@ar/tools";
 
 /**
@@ -52,7 +53,10 @@ export class CommandDiscoveryService {
       discoveredAt: this.now(),
     };
     this.hintsByRoot.set(cwd, hints);
-    await this.persist(hints).catch(() => {});
+    // P14-6: persistence is best-effort — a failure is reported, never silent.
+    await this.persist(hints).catch((err) =>
+      process.stderr.write(`[degraded] command-discovery.persist: ${err instanceof Error ? err.message : String(err)}\n`),
+    );
     return hints;
   }
 
@@ -89,7 +93,9 @@ export class CommandDiscoveryService {
     let content: string;
     try {
       content = await readFile(join(this.dataDir, "command-hints.jsonl"), "utf8");
-    } catch {
+    } catch (err) {
+      // P14-6: first-run ENOENT is expected — other read failures propagate.
+      if (!isNodeErrorCode(err, "ENOENT")) throw err;
       return;
     }
     for (const line of content.split("\n")) {
@@ -97,8 +103,9 @@ export class CommandDiscoveryService {
       try {
         const hints = JSON.parse(line) as CommandHints;
         this.hintsByRoot.set(hints.cwd, hints);
-      } catch {
-        // corrupt line: skip
+      } catch (err) {
+        // P14-6: corrupt line — skipped but reported, never silent.
+        process.stderr.write(`[degraded] command-discovery.corrupt-line: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
   }

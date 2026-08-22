@@ -60,8 +60,9 @@ export interface SchedulerToken {
   /** Release the slot; report the tool calls the agent actually executed so
    *  the tree budget can account usage and refund unused allocation (P1-7). */
   release: (usedToolCalls?: number) => void;
-  /** P0-11: report token usage from a model.completed for tree accounting. */
-  reportUsage: (inputTokens: number, outputTokens: number) => void;
+  /** P0-11/P20-1: report a per-call usage record (with provenance) from
+   *  model.completed for tree accounting. */
+  reportUsage: (usage: import("@ar/contracts").UsageSnapshot) => void;
   /** Root session id for tree budget lookups. */
   rootSessionId: SessionId;
 }
@@ -262,7 +263,21 @@ export class AgentExecutionScheduler {
     if (this.canStart(entry)) {
       this.start(entry);
     } else {
-      this.queued.push(entry);
+      // P15-3: bound the WAITING queue — a request that would overflow is a
+      // typed RESOURCE_LIMIT reject (never unbounded queuing, never silent).
+      if (this.limits.maxQueued > 0 && this.queued.length >= this.limits.maxQueued) {
+        this.cleanupGate(
+          entry.id,
+          new AgentError(
+            errorInfo(
+              "RESOURCE_LIMIT",
+              `scheduler queue full: ${this.queued.length} queued requests exceed maxQueued ${this.limits.maxQueued}`,
+            ),
+          ),
+        );
+      } else {
+        this.queued.push(entry);
+      }
     }
 
     try {
@@ -330,8 +345,8 @@ export class AgentExecutionScheduler {
         signal: controller.signal,
         rootSessionId: entry.rootSessionId,
         release: (usedToolCalls = 0) => this.finish(entry, usedToolCalls),
-        reportUsage: (inputTokens: number, outputTokens: number) =>
-          this.reportUsage(entry.rootSessionId, inputTokens, outputTokens),
+        reportUsage: (usage: import("@ar/contracts").UsageSnapshot) =>
+          this.reportUsage(entry.rootSessionId, usage),
       });
     }
   }
@@ -352,10 +367,15 @@ export class AgentExecutionScheduler {
   }
 
   /** P0-11: report token usage from a model.completed for tree accounting. */
-  reportUsage(rootSessionId: SessionId, inputTokens: number, outputTokens: number): void {
+  /** P20-1: report per-call usage (with provenance) for tree accounting. Only
+   *  finite numbers the provider actually returned are counted; an "unknown"
+   *  record adds NOTHING (a fabricated 0-token call would distort the tree). */
+  reportUsage(rootSessionId: SessionId, usage: import("@ar/contracts").UsageSnapshot): void {
     const account = this.rootAccounts.get(rootSessionId);
     if (account === undefined) return;
-    account.tokenUsed += inputTokens + outputTokens;
+    const input = usage.inputTokens ?? 0;
+    const output = usage.outputTokens ?? 0;
+    account.tokenUsed += input + output;
   }
 
   /** P3-10: bind a child session to its root so runtime-side per-call usage
@@ -372,10 +392,10 @@ export class AgentExecutionScheduler {
   /** P3-10: report usage by session id (the runtime only knows the session).
    *  No binding → no accounting (parent sessions that never scheduled still
    *  draw from their own root when the host wired a root budget). */
-  reportUsageBySession(sessionId: SessionId, inputTokens: number, outputTokens: number): void {
+  reportUsageBySession(sessionId: SessionId, usage: import("@ar/contracts").UsageSnapshot): void {
     const root = this.sessionRoots.get(sessionId);
     if (root === undefined) return;
-    this.reportUsage(root, inputTokens, outputTokens);
+    this.reportUsage(root, usage);
   }
 
   private finish(entry: SchedulerEntry, usedToolCalls: number): void {

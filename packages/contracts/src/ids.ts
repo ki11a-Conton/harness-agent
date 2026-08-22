@@ -22,6 +22,7 @@ export type PromptId = Branded<"PromptId">;
 export type ArtifactId = Branded<"ArtifactId">;
 export type AskId = Branded<"AskId">;
 export type ModelCallId = Branded<"ModelCallId">;
+export type RepairId = Branded<"RepairId">;
 
 const PREFIXES: Record<string, string> = {
   session: "session_",
@@ -130,6 +131,9 @@ export function newAskId(): AskId {
 
 export function newModelCallId(): ModelCallId {
   return make("modelcall");
+}
+export function newRepairId(): RepairId {
+  return make("repair");
 }
 
 export function isId(prefix: string, value: string): boolean {

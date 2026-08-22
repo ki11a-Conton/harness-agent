@@ -72,10 +72,15 @@ export function toContextBlock(
     content: opts.content,
     compressible: opts.compressible ?? true,
     ephemeral: opts.ephemeral ?? false,
+    category: "evidence",
     ...(opts.scope !== undefined ? { scope: opts.scope } : {}),
     ...(opts.path !== undefined ? { path: opts.path } : {}),
     ...(opts.timestamp !== undefined ? { timestamp: opts.timestamp } : {}),
     provenance: buildMcpProvenance(input),
+    // P14-5: MCP results are untrusted/semi-trusted DATA — never an
+    // instruction, never persistable into memory (P17-2 pollution gate).
+    instructional: false,
+    persistable: false,
   };
 }
 

@@ -12,7 +12,7 @@
  * `compactCounter` is shared BY REFERENCE with the context controller.
  */
 
-import { errorInfo, newMessageId, newModelCallId, sleep as timerSleep } from "@ar/contracts";
+import { errorInfo, estimateSpecsTokens, newMessageId, newModelCallId, newRepairId, repairDuplicateToolCallIds, repairMalformedToolCalls, sleep as timerSleep } from "@ar/contracts";
 import type {
   AgentDefinition,
   AgentEvent,
@@ -24,6 +24,7 @@ import type {
   ModelRetryPayload,
   SessionId,
   SessionStore,
+  StepContext,
   TerminationReason,
   Timer,
   ToolCall,
@@ -71,8 +72,33 @@ export function mergeUsage(current: UsageSnapshot | undefined, snap: UsageSnapsh
   if (snap.inputTokens !== undefined) next.inputTokens = snap.inputTokens;
   if (snap.outputTokens !== undefined) next.outputTokens = snap.outputTokens;
   if (snap.contextTokens !== undefined) next.contextTokens = snap.contextTokens;
+  // P20-1: cache accounting rides the same cumulative-snapshot contract.
+  if (snap.cacheReadTokens !== undefined) next.cacheReadTokens = snap.cacheReadTokens;
+  if (snap.cacheCreationTokens !== undefined) next.cacheCreationTokens = snap.cacheCreationTokens;
   if (snap.estimatedCostUsd !== undefined) next.estimatedCostUsd = snap.estimatedCostUsd;
+  // P20-1: provenance is sticky — a later snapshot may carry it explicitly;
+  // once "measured" it stays measured (real data beats an earlier guess).
+  if (snap.source !== undefined && (next.source === undefined || snap.source === "measured")) {
+    next.source = snap.source;
+  }
   return next;
+}
+
+/**
+ * P20-1: finalize a per-call usage record for `model.completed`. A provider
+ * that returned nothing yields `{ source: "unknown" }` — NEVER a bare 0-cost
+ * record (a 0 would fabricate a free call). A provider that returned numbers
+ * yields a `measured` record; `estimated` is reserved for host-side guesses.
+ */
+export function finalizeUsage(usage: UsageSnapshot | undefined): UsageSnapshot {
+  if (usage === undefined || Object.keys(usage).length === 0) {
+    return { source: "unknown" };
+  }
+  if (usage.source === undefined) {
+    // Numbers present but provenance not declared by the provider.
+    return { ...usage, source: "measured" };
+  }
+  return usage;
 }
 
 /** Q-1: result of handleModelCompletion — tells the turn loop what to do next. */
@@ -134,6 +160,7 @@ export interface ModelCallControllerDeps {
     error?: ReturnType<typeof errorInfo>,
     terminationReason?: TerminationReason,
     ledger?: ToolExecutionRecord[],
+    completionEvidence?: import("@ar/contracts").CompletionEvidence,
   ) => Promise<TurnOutcome>;
   parkForUserInput: (
     ctx: TurnContext,
@@ -191,7 +218,37 @@ export class ModelCallController {
       ) };
     }
 
-    const toolCalls = final.toolCalls ?? calls;
+    // P19-5: typed protocol self-heal BEFORE anything executes. Duplicate call
+    // ids are deduped (first wins — double execution is a double-effect risk)
+    // and malformed calls (args not a plain object) are dropped, each with
+    // repair evidence preserved via `protocol.repaired`. If the resulting set
+    // is empty on a tool_calls turn the turn FAILS SAFE via
+    // `protocol.repair_failed` — never a fabricated completion.
+    let repairedCalls = final.toolCalls ?? calls;
+    if (repairedCalls.length > 0) {
+      const dedup = repairDuplicateToolCallIds(repairedCalls, () => newRepairId());
+      repairedCalls = dedup.calls;
+      const malformed = repairMalformedToolCalls(repairedCalls, () => newRepairId());
+      repairedCalls = malformed.calls;
+      for (const repair of [...dedup.repairs, ...malformed.repairs]) {
+        await this.deps.emit(sessionId, "protocol.repaired", {
+          repairId: repair.repairId,
+          kind: repair.kind,
+          action: repair.action,
+          evidence: repair.evidence,
+        }, turnId);
+      }
+      if (repairedCalls.length === 0 && (final.toolCalls ?? calls).length > 0) {
+        await this.deps.emit(sessionId, "protocol.repair_failed", {
+          kind: "malformed_structured_output",
+          reason: "every requested tool call was unrecoverable (duplicate/malformed)",
+        }, turnId);
+        const info = errorInfo("MODEL_ERROR", "model requested tool calls but all were unrecoverable");
+        await this.deps.emit(sessionId, "model.failed", { error: info }, turnId);
+        return { action: "finish", outcome: await this.deps.finishTurn(ctx, "failed", state, working, info, "model_error", toolLedger) };
+      }
+    }
+    const toolCalls = repairedCalls;
     await this.deps.store.appendMessage({
       id: newMessageId(),
       sessionId,
@@ -207,7 +264,9 @@ export class ModelCallController {
       toolCalls: toolCalls.length,
       durationMs: this.deps.now() - callStartedAt,
       ...(timeToFirstTokenMs !== undefined ? { timeToFirstTokenMs } : {}),
-      ...(usage !== undefined ? { usage } : {}),
+      // P20-1: the single usage record for THIS call, with provenance —
+      // never a bare 0 when the provider gave nothing.
+      usage: finalizeUsage(usage),
     }, turnId, { spanId: callId });
 
     if (final.finishReason === "stop") {
@@ -255,7 +314,9 @@ export class ModelCallController {
         }
         await this.deps.emit(sessionId, "verification.completed", { passed: true, durationMs: this.deps.now() - verificationStartedAt }, turnId);
         state.terminate("completed");
-        return { action: "finish", outcome: await this.deps.finishTurn(ctx, "completed", state, working, undefined, "verified_complete", toolLedger) };
+        // P19-1: carry the gate's evidence into finishTurn so the terminal
+        // grade is verified_complete (all checks) or verified_partial (some).
+        return { action: "finish", outcome: await this.deps.finishTurn(ctx, "completed", state, working, undefined, "verified_complete", toolLedger, gate.evidence) };
       }
       state.terminate("completed");
       return { action: "finish", outcome: await this.deps.finishTurn(ctx, "completed", state, working, undefined, "model_stopped", toolLedger) };
@@ -308,6 +369,9 @@ export class ModelCallController {
     lastReportTokens: number | undefined,
     reactiveCompacted: boolean,
     budget?: import("./run-budget.js").RunBudgetTracker,
+    /** P15-2: the immutable step this model call belongs to — its id rides the
+     *  model.started event so the step and its tool batch are attributable. */
+    step?: StepContext,
   ): Promise<ModelCallResult> {
     const { sessionId, turnId, signal } = ctx;
 
@@ -333,7 +397,7 @@ export class ModelCallController {
       callStartedAt = this.deps.now();
       timeToFirstTokenMs = undefined;
       firstTokenSeen = false;
-      await this.deps.emit(sessionId, "model.started", { callId }, turnId, { spanId: callId });
+      await this.deps.emit(sessionId, "model.started", { callId, ...(step !== undefined ? { stepId: step.stepId } : {}) }, turnId, { spanId: callId });
       try {
         await this.deps.failAt("model.next_call", { sessionId, turnId });
         // P7-1/P7-2: progressive tool disclosure — the model request advertises
@@ -344,6 +408,8 @@ export class ModelCallController {
         });
         const tools: readonly ToolSpec[] = advertisedTools?.selected ?? this.deps.toolSpecs;
         // P7-3: selection is observable (availability vs admitted vs dropped).
+        // P18-2: advertisedTokens prices the advertisement so full vs deferred
+        // schema cost is measurable end-to-end.
         await this.deps.emit(
           sessionId,
           "tools.selected",
@@ -352,6 +418,7 @@ export class ModelCallController {
             available: this.deps.toolSpecs.length,
             selected: tools.length,
             dropped: advertisedTools?.dropped ?? [],
+            advertisedTokens: estimateSpecsTokens(tools),
           },
           turnId,
         );

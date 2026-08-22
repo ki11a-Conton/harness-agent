@@ -1,24 +1,46 @@
 /**
- * P2-42 — adaptive recovery. The runtime's recovery used to be a one-shot
- * "retry or ask or fail" decision (RECOVERY-001). P2-42 widens it into a
- * BOUNDED vocabulary of recovery actions, each with its own hard per-turn
- * budget, plus a pure planner that picks the best still-budgeted action for
- * the failure at hand — falling through to `fail_safe` only when nothing
- * budgeted remains eligible.
+ * P19-3 — bounded recovery taxonomy V3 (recovery of the P2-42 vocabulary).
  *
- * Design contract (mirrors P2-39/P2-40):
- *   - The action universe is a CLOSED set (`RecoveryAction`) with an exhaustive
- *     `RECOVERY_ACTIONS` list, so extending it is a deliberate, reviewed change.
+ * The runtime's recovery used to grow ad-hoc actions (compact /
+ * re_discover_tools / refresh_mcp were SELECTABLE by the planner but never
+ * actually applied by the runtime — a half-implementation). P19-3 closes that:
+ * the action universe is now EXACTLY this closed set, and every member is
+ * applied by the runtime with explicit governance:
+ *
+ *   retry_safe               re-execute ONLY provably-safe (retrySafety=safe)
+ *                            operations; never a side-effecting re-run.
+ *   change_strategy          inject a bounded "try a different approach"
+ *                            observation (mechanisms such as MCP re-handshake
+ *                            / tool rescan live HERE, not as separate actions).
+ *   reconcile_unknown_effect a started-but-unconfirmed call (timeout / unknown
+ *                            outcome) is surfaced for reconciliation — the
+ *                            runtime NEVER auto-reruns it and never pretends.
+ *   ask_user                 surface a prompt and wait for the user.
+ *   delegate_specialist      hand the subtask to a bounded specialist turn
+ *                            (only when the host wired a specialist service
+ *                            AND the per-turn budget allows).
+ *   fail_safe                closed, safe termination backstop (always eligible).
+ *
+ * Governance contract (mirrors P2-39/P2-40/P2-42):
+ *   - The action universe is a CLOSED set (`RecoveryAction`) with an
+ *     exhaustive `RECOVERY_ACTIONS` list, so extending it is a deliberate,
+ *     reviewed change.
  *   - Each action has fixed governance here: budget, the inputs it addresses,
- *     and a priority order tried within the eligible set.
+ *     whether side-effecting re-execution is allowed (ALWAYS false today —
+ *     P19-4's "never auto-retry unsafe tools" is encoded IN the spec, not an
+ *     unwritten convention), and a priority order tried within the eligible set.
  *   - The planner is PURE and DETERMINISTIC — no clocks, no I/O — so it is
  *     unit-testable and safe to run anywhere. The RUNTIME performs the action
- *     (inject a system observation, trigger compaction, re-handshake MCP, ...)
- *     and records the use against the budget; this module only decides.
+ *     (inject a system observation, reconcile, ask) and records the use
+ *     against the budget; this module only decides.
  *
  * False-positive control: an action is only eligible when its input matches
  * the observed failure/stall signal AND its budget has not been exhausted.
  * `fail_safe` is always eligible as the terminal, bounded backstop.
+ *
+ * String-message recovery is forbidden: consumers branch on the typed action
+ * (never on `reason` text), and every decision is observable via the
+ * `recovery.decided` event (P19-3).
  */
 import type { StallPattern } from "./stall.js";
 
@@ -48,35 +70,37 @@ export const RECOVERY_INPUTS = [
 ] as const satisfies readonly RecoveryInput[];
 
 /**
- * The bounded recovery-action vocabulary (P2-42). The runtime can perform one
- * of these per budgeted use instead of only "retry or fail":
+ * P19-3 — the bounded recovery-action vocabulary (V3, closed). The runtime
+ * applies EXACTLY one of these per budgeted use:
  *
- *   retry             re-execute the same operation (only when safe).
- *   change_strategy   inject a bounded "try a different approach" observation.
- *   compact           trigger a context compaction.
- *   re_discover_tools re-scan the tool registry for the platform's tools.
- *   refresh_mcp       re-handshake / reconnect an MCP client.
- *   ask_user          surface a prompt and wait for the user.
- *   delegate_specialist hand the subtask to a bounded specialist turn.
- *   fail_safe         closed, safe termination backstop (always eligible).
+ *   retry_safe             re-execute the same operation ONLY when retrySafety
+ *                          is "safe" (read-only / idempotent). Side-effecting
+ *                          or unknown tools are never auto-requeued.
+ *   change_strategy        inject a bounded "try a different approach"
+ *                          observation. Lower-level mechanisms (MCP reconnect,
+ *                          tool rescan) are implementation details of this
+ *                          action, NOT separate actions.
+ *   reconcile_unknown_effect surface a started-but-unconfirmed call for
+ *                          reconciliation: outcome unknown, side effects may
+ *                          exist; the model/user confirms, never a blind rerun.
+ *   ask_user               surface a prompt and wait for the user.
+ *   delegate_specialist    hand the subtask to a bounded specialist turn
+ *                          (feature-enabled + budget only).
+ *   fail_safe              closed, safe termination backstop (always eligible).
  */
 export type RecoveryAction =
-  | "retry"
+  | "retry_safe"
   | "change_strategy"
-  | "compact"
-  | "re_discover_tools"
-  | "refresh_mcp"
+  | "reconcile_unknown_effect"
   | "ask_user"
   | "delegate_specialist"
   | "fail_safe";
 
 /** Exhaustive list of recovery actions. */
 export const RECOVERY_ACTIONS = [
-  "retry",
+  "retry_safe",
   "change_strategy",
-  "compact",
-  "re_discover_tools",
-  "refresh_mcp",
+  "reconcile_unknown_effect",
   "ask_user",
   "delegate_specialist",
   "fail_safe",
@@ -90,61 +114,70 @@ export interface RecoveryActionSpec {
   addresses: readonly RecoveryInput[];
   /** Higher = tried first among eligible, still-budgeted actions. */
   priority: number;
+  /**
+   * P19-3: whether applying this action may re-execute an operation that has
+   * side effects. Deliberately FALSE for every member today — P19-4's "never
+   * auto-retry unsafe tools" is encoded here, so allowing a side-effecting
+   * re-run is a reviewed change to the spec table, not an unwritten decision.
+   */
+  allowsSideEffectReexecution: boolean;
 }
 
 /**
- * P2-42 — the recovery governance table. Values describe the CURRENT runtime
- * behavior; changing one is a behavior change, not just a comment.
+ * P19-3 — the recovery governance table (V3, closed). Values describe the
+ * CURRENT runtime behavior; changing one is a behavior change, not just a
+ * comment. In particular `allowsSideEffectReexecution` is false everywhere —
+ * no recovery action may auto-rerun a side-effecting call.
  */
 export const RECOVERY_ACTION_SPECS: Readonly<Record<RecoveryAction, RecoveryActionSpec>> = {
-  retry: {
-    action: "retry",
+  retry_safe: {
+    action: "retry_safe",
     budget: 3,
     addresses: ["tool_failure", "timeout", "model_error"],
     priority: 100,
+    // Only provably-safe (read-only/idempotent) calls are re-executed; a call
+    // that can produce side effects is never re-run by this action.
+    allowsSideEffectReexecution: false,
   },
   change_strategy: {
     action: "change_strategy",
     budget: 2,
-    // A stall, a failing check, or a stuck tool failure is best met by nudging
-    // the model to a different approach (a bounded prompt, not blind retry).
-    addresses: ["stall_pattern", "test_failure", "tool_failure"],
+    // A stall, a failing check, a stuck tool failure, or a platform hiccup
+    // (MCP disconnect / missing tool) is best met by nudging the model to a
+    // different approach — a bounded prompt, not blind retry. Reconnect /
+    // rescan mechanics are implementation details of this action.
+    addresses: ["stall_pattern", "test_failure", "tool_failure", "mcp_disconnected", "tool_unavailable"],
     priority: 80,
+    allowsSideEffectReexecution: false,
   },
-  compact: {
-    action: "compact",
-    budget: 2,
-    // Context overflow cannot be self-healed by retry; compaction is the fix.
-    addresses: ["context_overflow"],
+  reconcile_unknown_effect: {
+    action: "reconcile_unknown_effect",
+    budget: 1,
+    // A call that STARTED but whose outcome is unknown (timeout, ambiguous
+    // failure) may have committed side effects. The runtime surfaces it for
+    // reconciliation instead of guessing — and NEVER re-executes it.
+    addresses: ["timeout", "tool_failure"],
     priority: 70,
-  },
-  re_discover_tools: {
-    action: "re_discover_tools",
-    budget: 2,
-    addresses: ["tool_unavailable"],
-    priority: 60,
-  },
-  refresh_mcp: {
-    action: "refresh_mcp",
-    budget: 3,
-    addresses: ["mcp_disconnected", "tool_unavailable"],
-    priority: 50,
+    allowsSideEffectReexecution: false,
   },
   delegate_specialist: {
     action: "delegate_specialist",
     budget: 1,
     // A failing check or recurring tool trouble may warrant a bounded specialist
-    // attempt before giving up or asking the user.
+    // attempt before giving up or asking the user. Only applies when the host
+    // wired a specialist service (feature enabled) AND budget allows.
     addresses: ["test_failure", "tool_failure"],
     priority: 40,
+    allowsSideEffectReexecution: false,
   },
   ask_user: {
     action: "ask_user",
     budget: 1,
-    // Genuinely ambiguous cases (overflow needs a human decision on compaction,
-    // a model error that can't self-heal) escalate to the user.
+    // Genuinely ambiguous cases (overflow needs a human decision, a model error
+    // that can't self-heal, a missing tool) escalate to the user.
     addresses: ["context_overflow", "model_error", "tool_unavailable"],
     priority: 30,
+    allowsSideEffectReexecution: false,
   },
   fail_safe: {
     action: "fail_safe",
@@ -153,6 +186,7 @@ export const RECOVERY_ACTION_SPECS: Readonly<Record<RecoveryAction, RecoveryActi
     budget: Number.MAX_SAFE_INTEGER,
     addresses: (RECOVERY_INPUTS as readonly RecoveryInput[]),
     priority: 0,
+    allowsSideEffectReexecution: false,
   },
 };
 
@@ -177,11 +211,29 @@ export interface RecoveryDecision {
 export type RecoveryUsage = Partial<Record<RecoveryAction, number>>;
 
 /**
- * P2-42 — pure, deterministic recovery-action planner. Given a failure input
- * and the per-action usage ledger, it returns the highest-priority action that
- * addresses the input and still has budget remaining, else `fail_safe`. The
- * runtime applies the action and records its use; the caller's ledger is not
- * mutated here (decide pure; apply elsewhere).
+ * P15-1 — per-turn execution state. Everything here is created FRESH when a
+ * turn starts and discarded when the turn ends; nothing on this object may be
+ * shared across turns or sessions. The runtime creates one instance per
+ * `runTurn` and threads it through the controllers by value — it is never a
+ * module or runtime-instance field, so turn A's recovery/budget usage can
+ * never leak into turn B or into a concurrent session.
+ */
+export interface TurnExecutionState {
+  /** Per-turn recovery-action budget ledger (decide()/hasBudget() inputs). */
+  recoveryUsage: RecoveryUsage;
+}
+
+/** Create a fresh, empty per-turn execution state. */
+export function newTurnExecutionState(): TurnExecutionState {
+  return { recoveryUsage: {} };
+}
+
+/**
+ * P19-3 — pure, deterministic recovery-action planner (V3). Given a failure
+ * input and the per-action usage ledger, it returns the highest-priority
+ * action that addresses the input and still has budget remaining, else
+ * `fail_safe`. The runtime applies the action and records its use; the
+ * caller's ledger is not mutated here (decide pure; apply elsewhere).
  */
 export class AdaptiveRecoveryPlanner {
   private readonly specs: Readonly<Record<RecoveryAction, RecoveryActionSpec>>;

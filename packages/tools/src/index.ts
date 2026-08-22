@@ -22,3 +22,5 @@ export * from "./env-snapshot.js";
 export * from "./tools/env-snapshot-tool.js";
 export * from "./workspace.js";
 export * from "./production-tools.js";
+export * from "./schema-advert.js";
+export * from "./tool-lookup.js";

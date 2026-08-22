@@ -29,6 +29,7 @@ import { AgentRuntime, RuntimeKilledError, type FaultPoint, type FaultPointConte
 import { MemoryEventStore, MemorySessionStore } from "../test/fakes.js";
 import { FakeOrchestrator } from "../test/fake-orchestrator.js";
 import { ContextPipeline } from "@ar/context";
+import { existsSync } from "node:fs";
 
 const AGENT: AgentDefinition = {
   id: newAgentId(),
@@ -662,4 +663,94 @@ describe("fault injection v2: kill points + crash resume (P1-5)", () => {
     expect(result.state.filesChanged).toContain("src/z.ts");
     expect(orch.calls).toHaveLength(1);
   });
+});
+describe("P16-6: crash-window fault injection matrix", () => {
+  it("kill BEFORE intent persist: gates passed, nothing on record — resume re-runs the read safely", async () => {
+    const { runtime, store, events, ckpt, orch } = await makeRuntime({
+      scripts: toolScript("read_file", { path: "a.txt" }),
+      kill: new Set(["tool.intent_persisting"]),
+    });
+    const session = await runtime.createSession({ agent: AGENT, cwd });
+    const lastEventSequence = (await events.nextSequence(session.id)) - 1;
+    ckpt.seed = seededCheckpoint(session.id, { lastEventSequence });
+
+    await runUntilKilled(runtime, session, "tool.intent_persisting");
+    // the executor never ran (kill happened before the orchestrator call)
+    expect(orch.calls).toHaveLength(0);
+
+    const r2 = restartedRuntime({ store, events, ckpt, orch });
+    const result = await r2.resumeTurn(session.id, new AbortController().signal);
+    // nothing was on record → no committed side effect, no auto-replay of a
+    // side effect; the (read-only) call is surfaced for safe re-run
+    expect(result.committedSideEffects).toEqual([]);
+    expect(result.outcome.status).toBe("completed");
+  });
+
+  it("kill AFTER intent persisted, BEFORE execute: unknown-outcome reconciliation, side effect NEVER re-executed", async () => {
+    cwd = await mkdtemp(join(tmpdir(), "fi2-intent-"));
+    tempDirs.push(cwd);
+    // A ToolOrchestrator-shaped executor that mirrors the P16-1 pipeline for
+    // side-effecting tools: gates pass → persistIntent (durable intent on
+    // record) → intentPersistedFailAt (the crash window) → real executor.
+    // The P16-1 persistence contract itself is unit-tested in @ar/tools; here
+    // we prove the RUNTIME recovery semantics for this crash window.
+    let intentPersisted = false;
+    let executed = 0;
+    const intentOrch = {
+      async execute(
+        request: import("@ar/contracts").ToolCallRequest,
+        _ctx: import("@ar/contracts").ToolExecutionContext,
+      ): Promise<import("@ar/contracts").ToolResult> {
+        if (request.call.name === "write_file") {
+          intentPersisted = true; // durable intent written (P16-1)
+          // P16-6: crash AFTER the intent, BEFORE the executor.
+          throw new RuntimeKilledError("tool.intent_persisted");
+        }
+        executed += 1;
+        return { status: "success", output: "ok" };
+      },
+    };
+    const store = new FilteringSessionStore();
+    const events = new MemoryEventStore();
+    const ckpt = new FakeCheckpointStore();
+    const runtime = new AgentRuntime({
+      store,
+      events,
+      modelProvider: new ScriptedModelProvider(toolScript("write_file", { path: "victim.txt", content: "x" })),
+      orchestrator: intentOrch,
+      agents: [AGENT],
+      checkpointStore: ckpt,
+      checkpointPolicy: { afterSideEffectTools: false, afterCompaction: false, afterVerification: false, everyNIterations: 0 },
+    });
+    const session = await runtime.createSession({ agent: AGENT, cwd });
+    const lastEventSequence = (await events.nextSequence(session.id)) - 1;
+    ckpt.seed = seededCheckpoint(session.id, { lastEventSequence });
+
+    await runUntilKilled(runtime, session, "tool.intent_persisted");
+
+    // the durable intent WAS written (P16-1) but the executor NEVER ran
+    expect(intentPersisted).toBe(true);
+    expect(executed).toBe(0);
+    expect(existsSync(join(cwd, "victim.txt"))).toBe(false);
+
+    const r2 = new AgentRuntime({
+      store,
+      events,
+      modelProvider: new ScriptedModelProvider([ScriptedModelProvider.text("done")]),
+      orchestrator: intentOrch,
+      agents: [AGENT],
+      checkpointStore: ckpt,
+      checkpointPolicy: { afterSideEffectTools: false, afterCompaction: false, afterVerification: false, everyNIterations: 0 },
+    });
+    const result = await r2.resumeTurn(session.id, new AbortController().signal);
+
+    // unknown-outcome reconciliation (P16-2): surfaced, never blindly re-run
+    expect(result.unresolvedTools).toHaveLength(1);
+    expect(result.unresolvedTools[0]!.tool).toBe("write_file");
+    expect(result.unresolvedTools[0]!.sideEffect).toBe(true);
+    expect(existsSync(join(cwd, "victim.txt"))).toBe(false); // never executed
+    expect(result.outcome.status).toBe("completed");
+  });
+
+
 });

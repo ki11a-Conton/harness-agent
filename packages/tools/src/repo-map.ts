@@ -29,6 +29,7 @@
 import { promises as fs, type Dirent } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, resolve } from "node:path";
+import { isNodeErrorCode } from "@ar/contracts";
 import { matchGlobDirs, resolveWorkspace } from "./workspace.js";
 
 const SKIP_DIRS = new Set([
@@ -495,8 +496,10 @@ function parseManifest(
       collectDepNames(m.dependencies, out.prodDeps, out.workspaceDeps);
       collectDepNames(m.peerDependencies, out.prodDeps, out.workspaceDeps);
       collectDepNames(m.devDependencies, out.devDeps, out.workspaceDeps);
-    } catch {
-      // unparsable manifest → keep minimal name from dir
+    } catch (err) {
+      // P14-6: an unparsable manifest keeps the minimal name from the dir —
+      // the parse failure is reported (manifest integrity evidence).
+      process.stderr.write(`[degraded] repo-map.parse-manifest: ${err instanceof Error ? err.message : String(err)}\n`);
     }
   } else if (base === "pyproject.toml") {
     const m = /(?:^|\n)\s*name\s*=\s*["']([^"']+)["']/.exec(text);

@@ -2,6 +2,10 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  fileConflictKey,
+  storeConflictKey,
+  GLOBAL_CONFLICT_KEY,
+  resourceConflicts,
   errorInfo,
   newAgentId,
   newApprovalId,
@@ -21,7 +25,8 @@ import { EVENT_TYPES } from "./event.js";
 import { RETRY_KINDS, RETRY_KIND_SPECS, isRetryKind } from "./retry.js";
 import type { ToolCallTrace } from "./stall.js";
 import { detectStallPattern } from "./stall.js";
-import { AdaptiveRecoveryPlanner } from "./recovery.js";
+import { AdaptiveRecoveryPlanner, RECOVERY_ACTION_SPECS, RECOVERY_ACTIONS } from "./recovery.js";
+import { canRepairSafely, repairDuplicateToolCallIds, repairMalformedToolCalls } from "./repair.js";
 import {
   ASK_REASONS,
   defaultAskUserLifecycle,
@@ -236,44 +241,46 @@ describe("stall detection V2", () => {
   });
 });
 
-describe("adaptive recovery V2", () => {
-  it("picks retry first for a tool_failure while budget remains", () => {
+describe("adaptive recovery V3 (P19-3)", () => {
+  it("picks retry_safe first for a tool_failure while budget remains", () => {
     const p = new AdaptiveRecoveryPlanner();
     const d = p.decide("tool_failure");
-    expect(d.action).toBe("retry");
+    expect(d.action).toBe("retry_safe");
     expect(d.remaining).toBe(2); // 0/3 used
   });
 
-  it("falls to change_strategy once retry budget is spent", () => {
+  it("falls to change_strategy once retry_safe budget is spent", () => {
     const p = new AdaptiveRecoveryPlanner();
-    const d = p.decide("tool_failure", { retry: 3 });
-    // retry exhausted, change_strategy addresses tool_failure and still has budget.
+    const d = p.decide("tool_failure", { retry_safe: 3 });
+    // retry_safe exhausted, change_strategy addresses tool_failure and still has budget.
     expect(d.action).toBe("change_strategy");
     expect(d.used).toBe(0);
   });
 
-  it("compact is chosen for context_overflow (retry cannot self-heal it)", () => {
+  it("ask_user is chosen for context_overflow (retry cannot self-heal it)", () => {
     const p = new AdaptiveRecoveryPlanner();
     const d = p.decide("context_overflow");
-    expect(d.action).toBe("compact");
+    expect(d.action).toBe("ask_user");
   });
 
-  it("refresh_mcp is chosen for mcp_disconnected", () => {
+  it("mcp_disconnected is folded into change_strategy (mechanism, not an action)", () => {
     const p = new AdaptiveRecoveryPlanner();
     const d = p.decide("mcp_disconnected");
-    expect(d.action).toBe("refresh_mcp");
+    expect(d.action).toBe("change_strategy");
   });
 
-  it("ask_user is the best remaining action for context_overflow after compaction spent", () => {
+  it("reconcile_unknown_effect wins for timeout once retry_safe is spent", () => {
     const p = new AdaptiveRecoveryPlanner();
-    const d = p.decide("context_overflow", { compact: 2 });
-    expect(d.action).toBe("ask_user");
+    // retry_safe addresses timeout first; once its budget is gone the
+    // reconcile_unknown_effect branch handles the unknown-outcome case.
+    const d = p.decide("timeout", { retry_safe: 3 });
+    expect(d.action).toBe("reconcile_unknown_effect");
   });
 
   it("fails safe when every eligible action is spent", () => {
     const p = new AdaptiveRecoveryPlanner();
     const d = p.decide("test_failure", {
-      retry: 3,
+      retry_safe: 3,
       change_strategy: 2,
       delegate_specialist: 1,
     });
@@ -283,11 +290,27 @@ describe("adaptive recovery V2", () => {
   });
 
   it("respects a budget override that disables an action", () => {
-    const p = new AdaptiveRecoveryPlanner({ retry: { budget: 0 } });
+    const p = new AdaptiveRecoveryPlanner({ retry_safe: { budget: 0 } });
     const d = p.decide("tool_failure");
-    // retry disabled -> next in priority that addresses tool_failure.
-    expect(d.action).not.toBe("retry");
+    // retry_safe disabled -> next in priority that addresses tool_failure.
+    expect(d.action).not.toBe("retry_safe");
     expect(d.action).toBe("change_strategy");
+  });
+
+  it("P19-4 invariant: NO recovery action allows side-effecting re-execution", () => {
+    // "never auto-retry unsafe tools" is encoded in the spec table itself —
+    // a side-effecting re-run requires a reviewed spec change, not a code path.
+    for (const action of RECOVERY_ACTIONS) {
+      expect(RECOVERY_ACTION_SPECS[action].allowsSideEffectReexecution).toBe(false);
+    }
+    expect(RECOVERY_ACTIONS).toEqual([
+      "retry_safe",
+      "change_strategy",
+      "reconcile_unknown_effect",
+      "ask_user",
+      "delegate_specialist",
+      "fail_safe",
+    ]);
   });
 
   it("rejects an unknown recovery input with a TypeError", () => {
@@ -656,4 +679,69 @@ describe("contracts purity", () => {
 
     expect([...cycleNodes], "circular imports detected").toEqual([]);
   });
+
+describe("P18-6 resource conflict keys", () => {
+  it("canonical key forms are stable and never the raw args", () => {
+    expect(fileConflictKey("/w/a.txt")).toBe("file:/w/a.txt");
+    expect(fileConflictKey("/w/b.txt")).toBe("file:/w/b.txt");
+    expect(storeConflictKey("s1")).toBe("store:s1");
+    expect(GLOBAL_CONFLICT_KEY).toBe("global");
+  });
+
+  it("resourceConflicts: same key conflicts, different keys do not", () => {
+    const a = { conflictKey: fileConflictKey("/w/a.txt") };
+    const b = { conflictKey: fileConflictKey("/w/a.txt") };
+    const c = { conflictKey: fileConflictKey("/w/b.txt") };
+    expect(resourceConflicts([a], b)).toBe(true);
+    expect(resourceConflicts([a], c)).toBe(false);
+  });
+
+  it("global key conflicts with everything; undefined never conflicts", () => {
+    expect(resourceConflicts([], { conflictKey: GLOBAL_CONFLICT_KEY })).toBe(true);
+    expect(resourceConflicts([{ conflictKey: fileConflictKey("/x") }], { conflictKey: GLOBAL_CONFLICT_KEY })).toBe(true);
+    expect(resourceConflicts([{ conflictKey: GLOBAL_CONFLICT_KEY }], { conflictKey: undefined })).toBe(false);
+    expect(resourceConflicts([{ conflictKey: fileConflictKey("/x") }], { conflictKey: undefined })).toBe(false);
+  });
+describe("P19-5 protocol self-heal", () => {
+  it("duplicate tool call ids are deduped (first wins) with preserved evidence", () => {
+    const calls = [
+      { id: "tc-1" as never, name: "read_file", args: { path: "a.txt" } },
+      { id: "tc-1" as never, name: "read_file", args: { path: "a.txt" } },
+      { id: "tc-2" as never, name: "read_file", args: { path: "b.txt" } },
+    ];
+    const { calls: kept, repairs } = repairDuplicateToolCallIds(calls, () => "r1");
+    expect(kept.map((c) => c.id)).toEqual(["tc-1", "tc-2"]);
+    expect(repairs).toHaveLength(1);
+    expect(repairs[0]!.kind).toBe("duplicate_tool_call_id");
+    expect(repairs[0]!.action).toBe("recover");
+    expect(repairs[0]!.evidence.repaired).toBe(true);
+    expect(repairs[0]!.evidence.before).toBe("tc-1");
+    expect(repairs[0]!.evidence.detail).toContain("tc-1");
+  });
+
+  it("malformed structured output (non-object args) is dropped with evidence", () => {
+    const calls = [
+      { id: "tc-1" as never, name: "read_file", args: { path: "ok.txt" } },
+      { id: "tc-2" as never, name: "write_file", args: "not-an-object" } as never,
+      { id: "tc-3" as never, name: "exec", args: null } as never,
+    ];
+    const { calls: kept, repairs } = repairMalformedToolCalls(calls, () => "r2");
+    expect(kept.map((c) => c.id)).toEqual(["tc-1"]);
+    expect(repairs).toHaveLength(2);
+    expect(repairs.every((r) => r.kind === "malformed_structured_output")).toBe(true);
+    expect(repairs[0]!.evidence.before).toEqual({ id: "tc-2", name: "write_file", args: "not-an-object" });
+  });
+
+  it("canRepairSafely gates each kind honestly", () => {
+    expect(canRepairSafely("duplicate_tool_call_id")).toBe(true);
+    expect(canRepairSafely("malformed_structured_output")).toBe(true);
+    expect(canRepairSafely("missing_tool_result")).toBe(false);
+    expect(canRepairSafely("missing_tool_result", { after: { status: "failed", error: "tool unavailable" } })).toBe(true);
+    expect(canRepairSafely("orphan_tool_result")).toBe(false);
+    expect(canRepairSafely("orphan_tool_result", { after: { dropped: true } })).toBe(true);
+    expect(canRepairSafely("context_overflow")).toBe(false);
+    expect(canRepairSafely("context_overflow", { after: { compacted: true } })).toBe(true);
+  });
+});
+});
 });

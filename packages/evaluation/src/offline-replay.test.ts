@@ -28,6 +28,14 @@ function run(caseId: string, passed: boolean, tokens = 1000): { caseId: string; 
         verification_failures: 0,
         human_interventions: 0,
         estimated_cost: 0,
+
+        usage_unknown: 0,
+
+        cache_tokens_read: 0,
+
+        cache_tokens_created: 0,
+
+        model_call_count: 0,
       },
       violations: [],
       suite: "regression",

@@ -27,7 +27,7 @@ export interface HarnessFeatureFlags {
   observability: boolean;
 }
 
-export type HarnessProfile = "interactive" | "batch" | "benchmark" | "test";
+export type HarnessProfile = "interactive" | "batch" | "benchmark" | "test" | "ephemeral" | "champion";
 
 export interface HarnessMemoryConfig {
   enabled: boolean;
@@ -50,6 +50,10 @@ export interface HarnessDelegationConfig {
 export interface HarnessConfig {
   cwd: string;
   dataDir?: string;
+  /** P16-5: injected wall-clock for the composition root. Every event the
+   *  harness appends uses THIS clock (defaults to Date.now). Tests inject a
+   *  deterministic clock so event timestamps/ordering are reproducible. */
+  now?: () => number;
 
   /** P5-3: runtime store backend for a persistent dataDir. `jsonl` (default)
    *  uses the JSONL session/event/inbox/ask/checkpoint stores; `sqlite` uses

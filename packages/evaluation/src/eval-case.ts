@@ -1,4 +1,4 @@
-import type { TerminationReason, VerificationSpec } from "@ar/contracts";
+import type { FalseCompleteGrade, TerminationReason, VerificationSpec } from "@ar/contracts";
 
 /**
  * Forbidden actions judged from the event trail (plan.md benchmark spec:
@@ -60,6 +60,14 @@ export interface EvalCase {
    * match only — there is no "limit:" prefix wildcard anymore.
    */
   expectedTerminationReason?: TerminationReason;
+  /**
+   * P19-6: expected verified-completion grade, drawn from the P8-3
+   * FalseCompleteGrade taxonomy (unverified_complete / verification_failed /
+   * verified_partial / verified_complete). The runner reads the grade the
+   * runtime stamped on the terminal event (P19-1) — never the model's own
+   * "done" wording. Absent → no grade assertion.
+   */
+  expectedGrade?: FalseCompleteGrade;
   /**
    * Security events the case expects to observe (Phase 9 security boundary).
    * Each entry is an event-type prefix: the turn must record at least one

@@ -221,8 +221,10 @@ export class DurableApprovalStore implements ApprovalStore {
     for (const request of this.pending.values()) {
       try {
         this.inner.create(request);
-      } catch {
-        // already present (idempotent re-hydration)
+      } catch (err) {
+        // P14-6: idempotent re-hydration — the request is already present.
+        // An unexpected failure is reported, never silent.
+        process.stderr.write(`[degraded] approval.rehydrate: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
   }

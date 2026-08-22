@@ -148,4 +148,51 @@ describe("evaluateCandidate (§67 write gate)", () => {
     );
     expect(result.allowed).toBe(true);
   });
+
+  it("P14-5: a throwing injection scanner fails closed (write denied, never silently passed)", () => {
+    const result = evaluateCandidate(
+      candidate({ importance: 1, novelty: 1 }),
+      DEFAULT_MEMORY_WRITE_POLICY,
+      {
+        injection: () => {
+          throw new Error("scanner crashed");
+        },
+      },
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.code).toBe("SECURITY_DENIED");
+    expect(result.source).toBe("memory-write-gate");
+    expect(result.reason).toContain("scanner failed");
+    expect(result.details).toContain("scanner-failed");
+  });
+
+  it("P14-5: a throwing secret scanner fails closed too", () => {
+    const result = evaluateCandidate(
+      candidate({ importance: 1, novelty: 1 }),
+      DEFAULT_MEMORY_WRITE_POLICY,
+      {
+        injection: () => ({ hasInjection: false, reasons: [] }),
+        secrets: () => {
+          throw new Error("scanner crashed");
+        },
+      },
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.code).toBe("SECURITY_DENIED");
+    expect(result.details).toContain("scanner-failed");
+  });
+
+  it("P14-5: scanner failure denies EVEN with maximum importance/novelty (no bypass path)", () => {
+    const result = evaluateCandidate(
+      candidate({ importance: 1, novelty: 1, confidence: 1 }),
+      DEFAULT_MEMORY_WRITE_POLICY,
+      {
+        injection: () => {
+          throw new Error("boom");
+        },
+        secrets: () => ({ hasSecret: false, secrets: [] }),
+      },
+    );
+    expect(result.allowed).toBe(false);
+  });
 });

@@ -32,6 +32,16 @@ export interface RunMetrics {
   verification_failures: number;
   human_interventions: number;
   estimated_cost: number;
+  /** P20-1: how many model.completed records carry NO provider usage (source
+   *  "unknown"). A call with unknown usage must never be misread as free. */
+  usage_unknown: number;
+  /** P20-1: total prompt-cache reads across model.completed usage records. */
+  cache_tokens_read: number;
+  /** P20-1: total prompt-cache writes across model.completed usage records. */
+  cache_tokens_created: number;
+  /** P20-1: model calls with a completed usage record (per-call identity;
+   *  every record is attributable by its callId). */
+  model_call_count: number;
 }
 
 /** Default price assumption (USD per token) used only when no explicit cost is recorded. */
@@ -168,6 +178,26 @@ export function computeMetrics(events: AgentEvent[]): RunMetrics {
     HUMAN_EVENT_TYPES.has(event.type),
   ).length;
 
+  // P20-1: provenance + cache accounting from the per-call usage records.
+  let usageUnknown = 0;
+  let cacheRead = 0;
+  let cacheCreated = 0;
+  let modelCallCount = 0;
+  for (const event of events) {
+    if (event.type !== "model.completed") continue;
+    modelCallCount += 1;
+    const usage = usageOf(event.payload);
+    if (usage === undefined) {
+      usageUnknown += 1;
+      continue;
+    }
+    if (usage.source === "unknown") usageUnknown += 1;
+    const read = asNumber(usage.cacheReadTokens);
+    if (read !== undefined) cacheRead += read;
+    const created = asNumber(usage.cacheCreationTokens);
+    if (created !== undefined) cacheCreated += created;
+  }
+
   return {
     turn_count: count(events, "turn.started"),
     tool_call_count: count(events, "tool.requested"),
@@ -180,5 +210,9 @@ export function computeMetrics(events: AgentEvent[]): RunMetrics {
     verification_failures: verificationFailures,
     human_interventions: humanInterventions,
     estimated_cost: computeCost(events, tokensInput, tokensOutput),
+    usage_unknown: usageUnknown,
+    cache_tokens_read: cacheRead,
+    cache_tokens_created: cacheCreated,
+    model_call_count: modelCallCount,
   };
 }

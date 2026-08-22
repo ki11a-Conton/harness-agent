@@ -263,8 +263,10 @@ export class Gateway {
         }
       }
       this.lastSequenceBySession.set(sessionId, last);
-    } catch {
-      // A transient store error must not kill the push loop; the next tick retries.
+    } catch (err) {
+      // P14-6: a transient store error must not kill the push loop (the next
+      // tick retries) — but it is reported, never silent.
+      process.stderr.write(`[degraded] gateway.push-loop: ${err instanceof Error ? err.message : String(err)}\n`);
     }
   }
 

@@ -36,6 +36,9 @@ export interface FileSkillLoaderDeps {
   newSkillId?: () => SkillId;
   /** Optional callback fired when a skill body is denied (injection or secret). */
   onSecurityDenied?: (event: SkillSecurityDenial) => void;
+  /** P17-3: body cache capacity (default 64). Bounded — stale bodies are
+   *  evicted; mtime invalidation keeps entries fresh. */
+  maxCachedBodies?: number;
 }
 
 /** Marker appended to a truncated body so callers can detect truncation. */
@@ -55,12 +58,30 @@ export class FileSkillLoader implements SkillLoader {
   private readonly now: () => number;
   private readonly makeSkillId: () => SkillId;
   private readonly onSecurityDenied?: FileSkillLoaderDeps["onSecurityDenied"];
+  /** P17-3: body cache keyed by path — an entry is reused only when the file
+   *  mtime is unchanged; a file modification invalidates that entry on the
+   *  next load (controlled refresh, no stale instructions). Bounded: entries
+   *  are dropped when the cache exceeds MAX_CACHED_BODIES (LRU-ish: oldest
+   *  insertion evicted first). */
+  private readonly bodyCache = new Map<string, { mtimeMs: number; content: string }>();
+  private readonly maxCachedBodies: number;
 
   constructor(deps: FileSkillLoaderDeps = {}) {
     this.fs = deps.fs ?? fsPromises;
     this.now = deps.now ?? Date.now;
     this.makeSkillId = deps.newSkillId ?? newSkillId;
     this.onSecurityDenied = deps.onSecurityDenied;
+    this.maxCachedBodies = deps.maxCachedBodies ?? 64;
+  }
+
+  /** P17-3: controlled cache invalidation — drop the cached body for one
+   *  skill path, or the whole body cache when `path` is omitted. */
+  invalidateBodyCache(path?: string): void {
+    if (path === undefined) {
+      this.bodyCache.clear();
+      return;
+    }
+    this.bodyCache.delete(path);
   }
 
   async discover(opts: SkillLoaderOptions): Promise<Skill[]> {
@@ -81,7 +102,8 @@ export class FileSkillLoader implements SkillLoader {
     const skills: Skill[] = [];
     for (const skillPath of paths) {
       if (skills.length >= maxSkills) break;
-      const skill = await this.readMetadata(skillPath, maxMetadataBytes);
+      const root = dirs.get(skillPath)!;
+      const skill = await this.readMetadata(skillPath, maxMetadataBytes, root);
       if (skill !== undefined) skills.push(skill);
     }
     return skills;
@@ -94,7 +116,19 @@ export class FileSkillLoader implements SkillLoader {
     const maxBodyBytes = opts?.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
     let content: string;
     try {
-      content = await this.fs.readFile(skill.path, "utf8");
+      const st = await this.fs.stat(skill.path);
+      const cached = this.bodyCache.get(skill.path);
+      if (cached !== undefined && cached.mtimeMs === st.mtimeMs) {
+        content = cached.content; // P17-3: unchanged file → safe cache hit
+      } else {
+        content = await this.fs.readFile(skill.path, "utf8");
+        this.bodyCache.set(skill.path, { mtimeMs: st.mtimeMs, content });
+        if (this.bodyCache.size > this.maxCachedBodies) {
+          // Evict the oldest insertion (Map preserves insertion order).
+          const oldest = this.bodyCache.keys().next().value;
+          if (oldest !== undefined) this.bodyCache.delete(oldest);
+        }
+      }
     } catch (cause) {
       // A skill discovered moments ago should still exist; if it does not,
       // surface it instead of fabricating a body.
@@ -176,6 +210,7 @@ export class FileSkillLoader implements SkillLoader {
   private async readMetadata(
     skillPath: string,
     maxBytes: number,
+    root: string,
   ): Promise<Skill | undefined> {
     const prefix = await this.readPrefix(skillPath, maxBytes);
     if (prefix === undefined) return undefined;
@@ -194,6 +229,13 @@ export class FileSkillLoader implements SkillLoader {
       body: undefined,
       discoveredAt: this.now(),
       headers,
+      // P17-3: provenance/trust are part of the record — a filesystem skill
+      // is semi-trusted; remote skills (fetched packages/MCP) are untrusted.
+      provenance: {
+        source: "local-filesystem",
+        root,
+        trust: "semi-trusted",
+      },
     };
   }
 

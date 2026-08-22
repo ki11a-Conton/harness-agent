@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { AskId, AskUserReply, AskUserRequest, AskUserStore, SessionId } from "@ar/contracts";
+import { isNodeErrorCode } from "@ar/contracts";
 import { atomicWriteFile, withLock } from "@ar/store-integrity";
 import { SessionStoreError } from "./session-store.js";
 
@@ -11,6 +12,8 @@ import { SessionStoreError } from "./session-store.js";
  */
 export interface JSONLAskUserStoreOptions {
   dataDir: string;
+  /** P15-3: bound on pending asks; overflow rejects with QUEUE_FULL. */
+  maxPending?: number;
 }
 
 interface AskRecord {
@@ -22,16 +25,25 @@ const ASK_SCHEMA_VERSION = 1;
 
 export class JSONLAskUserStore implements AskUserStore {
   private readonly file: string;
+  private readonly maxPending: number;
   private loaded = false;
   private asks = new Map<AskId, AskUserRequest>();
 
   constructor(opts: JSONLAskUserStoreOptions) {
     this.file = join(opts.dataDir, "ask-users.jsonl");
+    this.maxPending = opts.maxPending ?? 1000;
   }
 
   async create(request: AskUserRequest): Promise<void> {
     return withLock(this.lockKey(), async () => {
       await this.load();
+      const pending = [...this.asks.values()].filter((a) => a.status === "pending");
+      if (pending.length >= this.maxPending) {
+        throw new SessionStoreError(
+          "QUEUE_FULL",
+          `ask-user queue full: ${pending.length} pending asks exceed maxPending ${this.maxPending}`,
+        );
+      }
       this.asks.set(request.id, request);
       await this.persist();
     });
@@ -89,8 +101,10 @@ export class JSONLAskUserStore implements AskUserStore {
     let raw: string;
     try {
       raw = await readFile(this.file, "utf8");
-    } catch {
-      return; // no file yet — empty store
+    } catch (err) {
+      // P14-6: first-run ENOENT is expected — other read failures propagate.
+      if (!isNodeErrorCode(err, "ENOENT")) throw err;
+      return;
     }
     for (const line of raw.split("\n")) {
       const trimmed = line.trim();
@@ -100,8 +114,10 @@ export class JSONLAskUserStore implements AskUserStore {
         if (record.schemaVersion === ASK_SCHEMA_VERSION && record.ask?.id !== undefined) {
           this.asks.set(record.ask.id, record.ask);
         }
-      } catch {
-        // corrupt line: skip (fail-open read, matching inbox/memory stores)
+      } catch (err) {
+        // P14-6: corrupt line — fail-open read (matching inbox/memory stores)
+        // but reported, never silent.
+        process.stderr.write(`[degraded] ask-user-store.corrupt-line: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
   }

@@ -9,6 +9,7 @@ import type {
   AskUserReply,
   AskUserRequest,
   AskUserStore,
+  HookContext,
   InboxStore,
   ModelEvent,
   ModelProvider,
@@ -18,12 +19,13 @@ import type {
   ProviderConfig,
   SessionId,
   Skill,
+  ToolCall,
   ToolCallRequest,
   ToolExecutionContext,
   ToolResult,
 } from "@ar/contracts";
 import { errorInfo, newAgentId, newMessageId, newSessionId, newToolCallId, newTurnId } from "@ar/contracts";
-import { DEFAULT_TOOL_SEMANTICS } from "@ar/contracts";
+import { DEFAULT_TOOL_SEMANTICS, fileConflictKey } from "@ar/contracts";
 import { AdaptiveRecoveryPlanner } from "@ar/contracts";
 import { DeterministicToolSelector } from "../tools/tool-selector.js";
 import { EchoModelProvider, ScriptedModelProvider } from "@ar/model";
@@ -86,10 +88,10 @@ function makeRuntime(
     maxDurationMs?: number;
     now?: () => number;
     maxParallelToolCalls?: number;
-    toolCapabilityOf?: (name: string) => { retry: "safe" | "unknown" | "none"; concurrencySafe: boolean };
     toolOutputBudget?: { maxInlineBytes: number; artifactDir?: string };
     artifactStore?: import("@ar/contracts").ArtifactStore;
     toolSemanticsOf?: (name: string) => import("@ar/contracts").ToolSemantics;
+    resourceConflictOf?: (call: import("@ar/contracts").ToolCall) => import("@ar/contracts").ResourceConflictKey | undefined;
     outputRedactor?: (content: string) => { content: string; redacted: number };
     injectionDetector?: (content: string) => { hasInjection: boolean; reasons: string[] };
     inbox?: import("@ar/contracts").InboxStore;
@@ -138,25 +140,27 @@ function makeRuntime(
       ? { maxPatternStallRecoveries: opts.maxPatternStallRecoveries }
       : {}),
     ...(opts?.maxParallelToolCalls !== undefined ? { maxParallelToolCalls: opts.maxParallelToolCalls } : {}),
-    ...(opts?.toolCapabilityOf !== undefined ? { toolCapabilityOf: opts.toolCapabilityOf } : {}),
     // P0-8: unknown tools default to fail-closed (side-effect scope "unknown").
-    // These synthetic test tools (echo/flaky/loop/...) are read-only doubles;
-    // declare them side-effect-free so the assertions on loop/stall behavior
-    // are not disturbed by the conservative default. write_file/exec fall
+    // These synthetic test tools (echo/flaky/loop/...) are side-effect-free
+    // doubles; declare them sideEffectScope "none" so the assertions on
+    // loop/stall behavior are not disturbed by the conservative default.
+    // P18-1: they are NOT "evidence reads" (P2-41 isRead) — readOnly stays
+    // false, so repeated identical calls take the legacy streak-stall path
+    // instead of the repeated_read_no_change pattern. write_file/exec fall
     // through to the runtime's known semantics map.
     ...(opts?.toolSemanticsOf !== undefined
       ? { toolSemanticsOf: opts.toolSemanticsOf }
       : {
           toolSemanticsOf: (name: string) => {
-            if (name === "write_file" || name === "edit_file") {
-              return { ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "filesystem", readOnly: false };
+            if (name === "write_file" || name === "edit_file") {              return { ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "filesystem", readOnly: false };
             }
             if (name === "exec") {
               return { ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "process", readOnly: false, networkBehavior: "outbound" };
             }
-            return { ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "none", readOnly: true };
+            return { ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "none" };
           },
         }),
+    ...(opts?.resourceConflictOf !== undefined ? { resourceConflictOf: opts.resourceConflictOf } : {}),
     ...(opts?.artifactStore !== undefined ? { artifactStore: opts.artifactStore } : {}),
     ...(opts?.toolOutputBudget !== undefined ? { toolOutputBudget: opts.toolOutputBudget } : {}),
     ...(opts?.outputRedactor !== undefined ? { outputRedactor: opts.outputRedactor } : {}),
@@ -499,6 +503,52 @@ describe("AgentRuntime (CORE-001)", () => {
     const sec = storedEvents.find((e) => e.type === "security.permission_denied");
     expect(sec?.payload.source).toBe("hook");
     expect(sec?.payload.code).toBe("PERMISSION_DENIED");
+  });
+
+  it("P14-4: a before_tool hook that swaps the tool identity is denied as a capability escalation", async () => {
+    // The frozen tool policy above evaluates the ORIGINAL call name; a hook
+    // returning a different name would route a different tool past that gate.
+    // The runtime must deny fail-closed and emit security.capability_denied.
+    const provider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("read", { path: "f" }),
+      ScriptedModelProvider.text("ok"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "success", output: "should-not-run" });
+    const { runtime, store, events } = makeRuntime(provider, orch);
+    runtime.getHooks().register("before_tool", (_ctx: HookContext, call: ToolCall) => ({
+      ...call,
+      name: "exec",
+    }));
+    const { outcome, storedEvents } = await runOne(runtime, store, events);
+
+    expect(outcome.status).toBe("completed");
+    expect(orch.calls.length).toBe(0);
+    const failed = storedEvents.find((e) => e.type === "tool.failed");
+    expect(failed?.payload.tool).toBe("read");
+    expect(JSON.stringify(failed?.payload.error)).toContain("exec");
+    const cap = storedEvents.find((e) => e.type === "security.capability_denied");
+    expect(cap?.payload.source).toBe("hook");
+    expect(cap?.payload.code).toBe("SECURITY_DENIED");
+    expect(cap?.payload.target).toBe("exec");
+    expect((cap?.payload.details as string[]).join(" ")).toContain("tool_escalation");
+  });
+
+  it("P14-4: a before_tool hook may still enrich args (bounded context) — same tool identity passes", async () => {
+    const provider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("read", { path: "f" }),
+      ScriptedModelProvider.text("ok"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "success", output: "ran" });
+    const { runtime, store, events } = makeRuntime(provider, orch);
+    runtime.getHooks().register("before_tool", (_ctx: HookContext, call: ToolCall) => ({
+      ...call,
+      args: { ...call.args, note: "enriched-by-hook" },
+    }));
+    const { outcome } = await runOne(runtime, store, events);
+
+    expect(outcome.status).toBe("completed");
+    expect(orch.calls.length).toBe(1);
+    expect(orch.calls[0]?.request.call.args).toMatchObject({ note: "enriched-by-hook" });
   });
 
   it("redacts secrets before tool output crosses into artifacts and emits security.secret_redacted", async () => {
@@ -915,6 +965,84 @@ describe("AgentRuntime (CORE-001)", () => {
     expect(failSafeObs).toHaveLength(0);
   });
 
+  it("P19-3: every recovery decision emits recovery.decided; a non-safe tool is never auto-re-executed", async () => {
+    const fail = () => ScriptedModelProvider.toolCall("flaky", { op: "x" });
+    const provider = new ScriptedModelProvider([
+      fail(),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "failed", error: errorInfo("INTERNAL_ERROR", "boom") });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      adaptiveRecovery: new AdaptiveRecoveryPlanner(),
+      maxToolCalls: 8,
+    });
+    await runOne(runtime, store, events);
+
+    // The decision is observable (P19-3: never branch on `reason` strings)…
+    const sessionId = (await store.listSessions())[0]!.id;
+    const decided = (await events.list(sessionId)).filter((e) => e.type === "recovery.decided");
+    expect(decided.length).toBeGreaterThan(0);
+    // …retry_safe is off-budget for an unknown-safety tool, so the first
+    // eligible action is change_strategy (priority 80).
+    expect(decided[0]!.payload.action).toBe("change_strategy");
+    expect(decided[0]!.payload.tool).toBe("flaky");
+    expect(decided[0]!.payload.input).toBe("tool_failure");
+    // …and the failing call was executed EXACTLY once: no side-effecting re-run.
+    expect(orch.calls).toHaveLength(1);
+  });
+
+  it("P19-3: retry_safe re-executes ONLY retrySafety=safe tools, bounded by budget", async () => {
+    const fail = () => ScriptedModelProvider.toolCall("flaky", { op: "x" });
+    const provider = new ScriptedModelProvider([
+      fail(),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "failed", error: errorInfo("INTERNAL_ERROR", "boom") });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      adaptiveRecovery: new AdaptiveRecoveryPlanner(),
+      maxToolCalls: 8,
+      // read-only / idempotent => retrySafety=safe => bounded auto-retry allowed.
+      toolSemanticsOf: () => ({ ...DEFAULT_TOOL_SEMANTICS, retrySafety: "safe", readOnly: true, idempotent: true }),
+    });
+    await runOne(runtime, store, events);
+
+    // 1 original execution + 3 bounded retry_safe re-executions = 4 total.
+    expect(orch.calls.length).toBe(4);
+    const sessionId = (await store.listSessions())[0]!.id;
+    const retries = (await events.list(sessionId)).filter(
+      (e) => e.type === "recovery.decided" && e.payload.action === "retry_safe",
+    );
+    expect(retries).toHaveLength(3);
+    expect(retries[0]!.payload.remaining).toBe(2);
+    expect(retries[2]!.payload.remaining).toBe(0);
+  });
+
+  it("P19-3: reconcile_unknown_effect surfaces a timeout without re-running or pretending", async () => {
+    const fail = () => ScriptedModelProvider.toolCall("flaky", { op: "x" });
+    const provider = new ScriptedModelProvider([
+      fail(),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "timeout", error: errorInfo("INTERNAL_ERROR", "timed out") });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      adaptiveRecovery: new AdaptiveRecoveryPlanner(),
+      maxToolCalls: 8,
+      // unknown safety: retry_safe off-budget; timeout has no change_strategy
+      // eligible, so reconcile_unknown_effect wins (priority 70).
+    });
+    await runOne(runtime, store, events);
+
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    const reconcileObs = messages.find(
+      (m) => m.role === "system" && m.content.startsWith("[recovery:reconcile_unknown_effect]"),
+    );
+    expect(reconcileObs).toBeDefined();
+    expect(reconcileObs!.content).toContain("Do NOT re-run it");
+    expect(reconcileObs!.content).toContain("reconcile");
+    // the call ran once — the reconcile path never auto-requeues.
+    expect(orch.calls).toHaveLength(1);
+  });
+
   it("fails the turn when the wall-clock budget (maxDurationMs) is exceeded", async () => {
     let clock = 0;
     const slow: AsyncIterable<ModelEvent> = (async function* () {
@@ -973,10 +1101,10 @@ describe("AgentRuntime (CORE-001)", () => {
     const provider = new ScriptedModelProvider([script, ScriptedModelProvider.text("done")]);
     const { runtime, store, events } = makeRuntime(provider, orch, {
       maxParallelToolCalls: 4,
-      toolCapabilityOf: (name) =>
+      toolSemanticsOf: (name) =>
         name === "read"
-          ? { retry: "safe", concurrencySafe: true }
-          : { retry: "unknown", concurrencySafe: false },
+          ? { ...DEFAULT_TOOL_SEMANTICS, retrySafety: "safe", concurrencySafety: true }
+          : DEFAULT_TOOL_SEMANTICS,
     });
     const { outcome } = await runOne(runtime, store, events);
 
@@ -1006,16 +1134,104 @@ describe("AgentRuntime (CORE-001)", () => {
     const orch = new FakeOrchestrator({ status: "success", output: "ok" });
     const { runtime, store, events } = makeRuntime(provider, orch, {
       maxParallelToolCalls: 4,
-      toolCapabilityOf: (name) =>
+      toolSemanticsOf: (name) =>
         name === "read"
-          ? { retry: "safe", concurrencySafe: true }
-          : { retry: "none", concurrencySafe: false },
+          ? { ...DEFAULT_TOOL_SEMANTICS, retrySafety: "safe", concurrencySafety: true }
+          : { ...DEFAULT_TOOL_SEMANTICS, retrySafety: "none" },
     });
     const { outcome } = await runOne(runtime, store, events);
 
     expect(outcome.status).toBe("completed");
     // write breaks the parallel batch: reads may batch, write must not join.
     expect(orch.calls.map((c) => c.request.call.id)).toEqual([callA.id, callB.id, callC.id]);
+  });
+
+  it("P18-6: same-resource mutations are split out of the parallel batch (stay serial)", async () => {
+    // Simulate a FUTURE concurrency-safe write tool: concurrencySafety=true,
+    // but the resource-conflict resolver pins each call to its canonical file
+    // path — two calls to the SAME path must never overlap.
+    let active = 0;
+    let maxActive = 0;
+    class Probe extends FakeOrchestrator {
+      override async execute(
+        request: ToolCallRequest,
+        context: ToolExecutionContext,
+      ): Promise<ToolResult> {
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+        await new Promise((r) => setTimeout(r, 20));
+        active -= 1;
+        return super.execute(request, context);
+      }
+    }
+    const write = (path: string) => ({ id: newToolCallId(), name: "write_file", args: { path } });
+    const writeA = write("same.txt");
+    const writeB = write("same.txt"); // same resource as writeA
+    const sameScript: ModelEvent[] = [
+      { type: "started", timestamp: 0 },
+      { type: "tool_call_delta", toolCall: writeA, timestamp: 0 },
+      { type: "tool_call_delta", toolCall: writeB, timestamp: 0 },
+      { type: "completed", result: { finishReason: "tool_calls" as const, toolCalls: [writeA, writeB] }, timestamp: 0 },
+    ];
+    const provider = new ScriptedModelProvider([sameScript, ScriptedModelProvider.text("done")]);
+    const orch = new Probe({ status: "success", output: "ok" });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      maxParallelToolCalls: 4,
+      toolSemanticsOf: () => ({
+        ...DEFAULT_TOOL_SEMANTICS,
+        concurrencySafety: true,
+        sideEffectScope: "filesystem",
+        readOnly: false,
+      }),
+      resourceConflictOf: (call) => fileConflictKey(call.args.path as string),
+    });
+    const { outcome } = await runOne(runtime, store, events);
+    expect(outcome.status).toBe("completed");
+    // Both calls ran — but never concurrently (same canonical path).
+    expect(orch.calls).toHaveLength(2);
+    expect(maxActive).toBe(1);
+    expect(orch.calls.map((c) => c.request.call.args.path)).toEqual(["same.txt", "same.txt"]);
+  });
+
+  it("P18-6: DIFFERENT resources stay parallel even with a conflict resolver", async () => {
+    const writeA = { id: newToolCallId(), name: "write_file", args: { path: "a.txt" } };
+    const writeB = { id: newToolCallId(), name: "write_file", args: { path: "b.txt" } };
+    let active = 0;
+    let maxActive = 0;
+    class Probe extends FakeOrchestrator {
+      override async execute(
+        request: ToolCallRequest,
+        context: ToolExecutionContext,
+      ): Promise<ToolResult> {
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+        await new Promise((r) => setTimeout(r, 20));
+        active -= 1;
+        return super.execute(request, context);
+      }
+    }
+    const diffScript: ModelEvent[] = [
+      { type: "started", timestamp: 0 },
+      { type: "tool_call_delta", toolCall: writeA, timestamp: 0 },
+      { type: "tool_call_delta", toolCall: writeB, timestamp: 0 },
+      { type: "completed", result: { finishReason: "tool_calls" as const, toolCalls: [writeA, writeB] }, timestamp: 0 },
+    ];
+    const provider = new ScriptedModelProvider([diffScript, ScriptedModelProvider.text("done")]);
+    const orch = new Probe({ status: "success", output: "ok" });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      maxParallelToolCalls: 4,
+      toolSemanticsOf: () => ({
+        ...DEFAULT_TOOL_SEMANTICS,
+        concurrencySafety: true,
+        sideEffectScope: "filesystem",
+        readOnly: false,
+      }),
+      resourceConflictOf: (call) => fileConflictKey(call.args.path as string),
+    });
+    const { outcome } = await runOne(runtime, store, events);
+    expect(outcome.status).toBe("completed");
+    expect(orch.calls).toHaveLength(2);
+    expect(maxActive).toBe(2); // different canonical paths → parallel
   });
 
   it("reports a structured termination reason on every outcome", async () => {
@@ -1731,9 +1947,18 @@ describe("P7-1/P7-2/P7-3: progressive tool disclosure", () => {
     expect(advertised).toEqual(
       expect.arrayContaining(["read_file", "write_file", "exec", "search_files", "update_plan"]),
     );
-    // tools.selected telemetry was emitted.
+    // tools.selected telemetry was emitted, carrying the P18-2 advertisement
+    // token cost (so full vs deferred schema modes are benchmark-observable).
     const sel = await events.list(session.id);
-    expect(sel.some((e) => e.type === "tools.selected" && (e.payload as { selected?: number }).selected === advertised.length)).toBe(true);
+    expect(
+      sel.some(
+        (e) =>
+          e.type === "tools.selected" &&
+          (e.payload as { selected?: number }).selected === advertised.length &&
+          (e.payload as { advertisedTokens?: number }).advertisedTokens !== undefined &&
+          (e.payload as { advertisedTokens: number }).advertisedTokens > 0,
+      ),
+    ).toBe(true);
   });
 });
 
@@ -1756,5 +1981,172 @@ describe("P9-1/P9-2: trace spans", () => {
     expect(toolCompleted.spanId).toBeDefined();
     // P9-1: the tool call's parent is the model call that requested it.
     expect(toolCompleted.parentSpanId).toBe(modelStarted.spanId);
+  });
+});
+
+describe("P15-1: recoveryUsage is truly per-turn (no cross-turn/session pollution)", () => {
+  /** Run one turn with the given script on an existing session. */
+  async function runScriptOn(
+    runtime: AgentRuntime,
+    store: MemorySessionStore,
+    sessionId: import("@ar/contracts").SessionId,
+    text: string,
+  ): Promise<void> {
+    const turn = await runtime.startTurn(sessionId, text);
+    await runtime.runTurn(sessionId, turn.id, new AbortController().signal);
+  }
+
+  it("turn A exhausts a budgeted recovery action — turn B starts with a full budget", async () => {
+    const fail = () => ScriptedModelProvider.toolCall("flaky", { op: "x" });
+    const provider = new ScriptedModelProvider([
+      // turn A: 4 failing calls → change_strategy(2) then delegate_specialist(1) then fail_safe
+      fail(), fail(), fail(), fail(),
+      ScriptedModelProvider.text("done-a"),
+      // turn B: 2 failing calls → change_strategy must be available AGAIN
+      fail(), fail(),
+      ScriptedModelProvider.text("done-b"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "failed", error: errorInfo("INTERNAL_ERROR", "flaky failed") });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      adaptiveRecovery: new AdaptiveRecoveryPlanner(),
+      maxToolCalls: 8,
+    });
+    const session = await runtime.createSession({ agent: AGENT, cwd: "C:\\work" });
+    await runScriptOn(runtime, store, session.id, "turn-a");
+    const turnB = await runtime.startTurn(session.id, "turn-b");
+    await runtime.runTurn(session.id, turnB.id, new AbortController().signal);
+
+    const messages = await store.listMessages(session.id);
+    const inTurnB = (m: { turnId?: string }) => m.turnId === turnB.id;
+    const bStrategy = messages.filter(
+      (m) => inTurnB(m) && m.role === "system" && m.content.startsWith("[recovery:change_strategy]"),
+    );
+    // If recoveryUsage leaked across turns, change_strategy (budget 2) would
+    // be exhausted by turn A and turn B would get fail_safe (no observation).
+    expect(bStrategy).toHaveLength(2);
+    // Total across both turns: 2 (A) + 2 (B) — never shared.
+    const allStrategy = messages.filter(
+      (m) => m.role === "system" && m.content.startsWith("[recovery:change_strategy]"),
+    );
+    expect(allStrategy).toHaveLength(4);
+  });
+
+  it("session A exhausting recovery budget does not affect session B", async () => {
+    const fail = () => ScriptedModelProvider.toolCall("flaky", { op: "x" });
+    const provider = new ScriptedModelProvider([
+      // session A: 4 failing calls → change_strategy(2) + delegate(1) + fail_safe
+      fail(), fail(), fail(), fail(), ScriptedModelProvider.text("done-a"),
+      // session B: 2 failing calls → change_strategy available (fresh per session turn)
+      fail(), fail(), ScriptedModelProvider.text("done-b"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "failed", error: errorInfo("INTERNAL_ERROR", "flaky failed") });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      adaptiveRecovery: new AdaptiveRecoveryPlanner(),
+      maxToolCalls: 8,
+    });
+    const sessionA = await runtime.createSession({ agent: AGENT, cwd: "C:\\work" });
+    const sessionB = await runtime.createSession({ agent: AGENT, cwd: "C:\\work" });
+    await runScriptOn(runtime, store, sessionA.id, "session-a");
+    const turnB = await runtime.startTurn(sessionB.id, "session-b");
+    await runtime.runTurn(sessionB.id, turnB.id, new AbortController().signal);
+
+    const messagesB = await store.listMessages(sessionB.id);
+    const bStrategy = messagesB.filter(
+      (m) => m.turnId === turnB.id && m.role === "system" && m.content.startsWith("[recovery:change_strategy]"),
+    );
+    expect(bStrategy).toHaveLength(2);
+  });
+
+  it("two sessions run concurrently without sharing recovery budget", async () => {
+    const fail = () => ScriptedModelProvider.toolCall("flaky", { op: "x" });
+    const provider = new ScriptedModelProvider([
+      fail(), fail(), ScriptedModelProvider.text("done-a"),
+      fail(), fail(), ScriptedModelProvider.text("done-b"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "failed", error: errorInfo("INTERNAL_ERROR", "flaky failed") });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      adaptiveRecovery: new AdaptiveRecoveryPlanner(),
+      maxToolCalls: 8,
+    });
+    const sessionA = await runtime.createSession({ agent: AGENT, cwd: "C:\\work" });
+    const sessionB = await runtime.createSession({ agent: AGENT, cwd: "C:\\work" });
+    const turnA = await runtime.startTurn(sessionA.id, "a");
+    const turnB = await runtime.startTurn(sessionB.id, "b");
+    const [outcomeA, outcomeB] = await Promise.all([
+      runtime.runTurn(sessionA.id, turnA.id, new AbortController().signal),
+      runtime.runTurn(sessionB.id, turnB.id, new AbortController().signal),
+    ]);
+    expect(outcomeA.status).toBe("completed");
+    expect(outcomeB.status).toBe("completed");
+    const messagesB = await store.listMessages(sessionB.id);
+    const bStrategy = messagesB.filter(
+      (m) => m.turnId === turnB.id && m.role === "system" && m.content.startsWith("[recovery:change_strategy]"),
+    );
+    // B's first failing call still gets change_strategy even though A used its
+    // own budget concurrently.
+    expect(bStrategy.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("P15-2: immutable StepContext per model call", () => {
+  it("every tool call in one model response shares the SAME stepId; the next model call gets a new one", async () => {
+    // One model RESPONSE carrying TWO tool calls (a parallel batch): two
+    // tool_call_delta events + a completed carrying both.
+    const multiTool: ModelEvent[] = [
+      { type: "started", timestamp: 0 },
+      { type: "tool_call_delta", toolCall: { id: newToolCallId(), name: "read", args: { path: "a" } }, timestamp: 0 },
+      { type: "tool_call_delta", toolCall: { id: newToolCallId(), name: "read", args: { path: "b" } }, timestamp: 0 },
+      {
+        type: "completed",
+        result: {
+          finishReason: "tool_calls",
+          toolCalls: [
+            { id: newToolCallId(), name: "read", args: { path: "a" } },
+            { id: newToolCallId(), name: "read", args: { path: "b" } },
+          ],
+        },
+        timestamp: 0,
+      },
+    ];
+    const provider = new ScriptedModelProvider([
+      multiTool,
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "success", output: "ok" });
+    const { runtime, store, events } = makeRuntime(provider, orch);
+    const session = await runtime.createSession({ agent: AGENT, cwd: "C:\\work" });
+    const turn = await runtime.startTurn(session.id, "hello");
+    await runtime.runTurn(session.id, turn.id, new AbortController().signal);
+
+    const storedEvents = await events.list(session.id);
+    const requested = storedEvents.filter((e) => e.type === "tool.requested");
+    expect(requested.length).toBe(2);
+    // P15-2: the same immutable step for the whole batch
+    expect(requested[0]!.payload.stepId).toBeDefined();
+    expect(requested[0]!.payload.stepId).toBe(requested[1]!.payload.stepId);
+
+    // A second model call (if any) would form a NEW step — here the script
+    // ends after one response, so assert the model.started carried stepId.
+    const started = storedEvents.find((e) => e.type === "model.started");
+    expect(started?.payload.stepId).toBe(requested[0]!.payload.stepId);
+  });
+
+  it("two sequential model calls form two distinct steps", async () => {
+    const provider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("read", { path: "a" }),
+      ScriptedModelProvider.toolCall("read", { path: "b" }),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "success", output: "ok" });
+    const { runtime, store, events } = makeRuntime(provider, orch, { maxIterationsPerTurn: 4 });
+    const session = await runtime.createSession({ agent: AGENT, cwd: "C:\\work" });
+    const turn = await runtime.startTurn(session.id, "hello");
+    await runtime.runTurn(session.id, turn.id, new AbortController().signal);
+
+    const storedEvents = await events.list(session.id);
+    const requested = storedEvents.filter((e) => e.type === "tool.requested");
+    expect(requested.length).toBe(2);
+    // Different model calls → different steps
+    expect(requested[0]!.payload.stepId).not.toBe(requested[1]!.payload.stepId);
   });
 });

@@ -25,7 +25,7 @@
 | 模块系统 | ESM（`"type": "module"`），路径别名 `@ar/*` |
 | 测试框架 | `vitest@4`，约定 `*.test.ts` 与源码同目录 |
 | 构建 | `tsc -b`（project references） |
-| 目录 | `packages/`（19 个包）+ `apps/`（cli / web）+ `benchmarks/`（adversarial / holdout / regression / stress）+ `tasks/`（任务规范）+ `research/` |
+| 目录 | `packages/`（21 个包）+ `apps/`（cli / web）+ `benchmarks/`（adversarial / holdout / regression / stress）+ `tasks/`（任务规范）+ `research/` |
 
 ---
 
@@ -187,3 +187,68 @@ node apps/cli/dist/main.js audit --out <dir>   # 生成 CAPABILITY_MATRIX（需�
 - **源码包**：`harness-agent.zip`（**排除依赖**：`node_modules`、`dist`、`coverage`、`.cache`、`.tsbuildinfo`；不跟随符号链接）。内含全部 `packages/**`、`apps/**`、`benchmarks/**`、`tasks/**`、`research/**` 源码与测试，以及**全部 217 个 `.md` 文档**（`plan.md`、`mem.md`、`reflection.md`、`HANDOVER.md`、`AGENTS.md`、`optimization-report.md`、`CAPABILITY_MATRIX.md` + benchmarks/tasks 内全部 markdown）。
 - **收到后恢复运行**：解压 → `pnpm install`（需 node_modules）→ `pnpm typecheck` → `pnpm test`。
 - **CAPABILITY_MATRIX**：`.md` / `.json` 已含在包内；重新生成 = `pnpm build && node apps/cli/dist/main.js audit --out <dir>`。
+
+## 11. P14~P22 最终交接（2026-08-22 复核）
+
+> 本段只写**已验证事实**（测试绿 / 命令实测 / stash 基线复现），不使用 "implemented = production ready" 措辞。
+> 完整证据链在 `plan.md` PHASE 14~22 的 Implementation / Regression Test 回填里。
+
+### 11.1 当前 Champion 开了什么
+
+默认 `champion` profile（`packages/harness/src/profiles.ts`）的 feature flags：
+
+| 能力 | 状态 | 证据 |
+| --- | --- | --- |
+| context pipeline V5 | 默认 ON | champion-profile 测试；P14~P17 集成测试 |
+| checkpoint（persistent） | 默认 ON（需 dataDir） | P16 durable 测试 |
+| artifacts / tool-output budget | 默认 ON | P1-12/13 测试 |
+| skills（发现/上下文） | 默认 ON | P2-8/P14-4 测试 |
+| observability | 默认 ON（常开） | metrics/trace 测试 |
+| verification plan（P8-1） | 默认 ON（有 task 时） | P19-1 gate 测试 |
+| run budget（P0-10） | 默认 ON | limits 测试 |
+| memory / delegation / learning | **默认 OFF（证据决定）** | champion-profile 测试；未通过 P21-4 gate |
+| mcp / plugins | **默认 OFF（config-driven）** | P18-3/P18-4 测试；用户配置才开 |
+
+### 11.2 为什么 promote（champion 决策依据）
+
+- **默认 ON 的机制**：已由 runtime 级集成测试 + mechanism-real benchmark 覆盖，且是可逆开关（feature flag）。
+- **证据决定的机制**（memory/delegation/learning/reviewer/adaptive recovery）：均为 P21-2 candidate，只有在 `agent champion eval` 的 paired 报告通过 P21-4 gate（无净退化 / verified 不降 / 成本增长有收益 / 无界 attempt 不算）后才可 promote。
+- 当前 **CHAMPION_MANIFEST.json 为空**——尚无机制走完真实模型 paired gate，这是诚实状态，不是遗漏。
+
+### 11.3 哪些能力仍是 experimental / config-driven
+
+- memory / learning / delegation / adaptive recovery / independent reviewer / adaptive context policy / adaptive scheduler：P21-2 candidate，默认 OFF，单变量开关。
+- MCP：`config.mcp` 配了服务器才连；stdio 工具声明 `process=true`（P18-4）。
+- plugin host：同进程信任风险，默认 OFF（P18-3）。
+- experimental planner/executor split：未启用。
+
+### 11.4 已知限制（已验证）
+
+- **沙箱 FTS5/sqlite**：memory 包 sqlite 测试 + benchmark P4-6 memory case 在本 Linux 沙箱失败（stash 基线可复现 58 个失败，与代码改动无关）；Windows/CI 真机需验证。
+- **coverage**：`pnpm test:coverage` 在沙箱含 memory 会红；CI 的 coverage job（P20-4）在 Ubuntu 真机跑（thresholds 为回归护栏）。
+- **小样本**：30-case 级别不宣称精确统计；P21-4 推荐重复 paired eval。
+- **Windows**：本地沙箱无法跑，由 `.github/workflows/ci.yml` 双平台矩阵把关（P10-6/P20-4）。
+
+### 11.5 如何复现实验
+
+```text
+pnpm build
+# mechanism-real（stub provider，无真实模型证据 → 只能说 mechanism-real passed）
+node apps/cli/dist/main.js benchmark --suite adversarial --limit 1 --allow-stub --out .ci/bench-smoke
+# 全量 benchmark（真实模型，需 OPENAI_API_KEY）
+node apps/cli/dist/main.js benchmark --suite regression
+# baseline vs candidate paired eval（P21-3，Truth rule 编码在 claimFor）
+node apps/cli/dist/main.js champion eval <baseline-runs.json> <candidate-runs.json> --mode real-model
+# 候选矩阵（P21-2）与晋升 gate（P21-4）
+node apps/cli/dist/main.js champion eval ...   # 配对后由 promotion-gate 判定
+# 最终 audit + release artifacts（P22-3/P22-4）
+node apps/cli/dist/main.js production-audit
+node apps/cli/dist/main.js release artifacts --out .ci/release-artifacts
+node apps/cli/dist/main.js docs:verify
+```
+
+### 11.6 如何 rollback
+
+- 每个晋升机制都有独立开关（P21-6）：`CHAMPION_MANIFEST.json` 的 `rollbackConfig` 直接取自 P21-2 candidate 的 disabled config。
+- 机械应答：`rollbackSwitchOf(manifest, feature)` → 具体 config 片段（如 memory 的 `{"features":{"memory":false}}`）。
+- 禁止"默认打开后找不到怎么关"——`assertAllPromotedFeaturesRollbackable` 保证不变量。

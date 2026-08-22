@@ -35,7 +35,9 @@ import type {
 } from "@ar/evaluation";
 import type { RunMetrics } from "@ar/observability";
 import {
-  capabilityOf,
+  createToolLookupTool,
+  decideSchemaAdvert,
+  semanticsOf,
   editFileTool,
   execTool,
   readFileTool,
@@ -172,6 +174,9 @@ async function executeBenchmark(
   // probed best-effort (null when unavailable); runtimeConfigHash covers the
   // harness wiring that applies to every case (per-case overrides from
   // case.json are recorded per-case in the results).
+  // P21-1: the manifest also pins profile / feature flags / context budget /
+  // task suite / seed — a comparison is only valid when these match (or the
+  // difference IS the candidate under test).
   const temperature = parseTemperature(process.env.OPENAI_TEMPERATURE);
   const manifest = await buildRunManifest({
     model: modelId,
@@ -180,6 +185,19 @@ async function executeBenchmark(
     suiteVersion: BENCHMARK_SUITE_VERSION,
     judgeVersion: DEFAULT_JUDGE_VERSION,
     runtimeConfigHash: computeRuntimeConfigHash(runtimeConfigForHash(opts, defaultBudgetTokens)),
+    profile: "benchmark",
+    features: {
+      context: true,
+      checkpoint: true,
+      artifacts: true,
+      verification: true,
+      observability: true,
+      memory: false,
+      delegation: false,
+    },
+    contextBudgetTokens: defaultBudgetTokens,
+    taskSuites: [opts.suite],
+    randomSeed: opts.shuffle ? opts.seed : null,
   });
 
   const report = await runBaseline(
@@ -269,6 +287,14 @@ async function runOneCase(
       verification_failures: 0,
       human_interventions: 0,
       estimated_cost: 0,
+
+      usage_unknown: 0,
+
+      cache_tokens_read: 0,
+
+      cache_tokens_created: 0,
+
+      model_call_count: 0,
     };
     return {
       caseId: caseDef.id,
@@ -307,6 +333,21 @@ async function runOneCase(
 
     const registry = new ToolRegistry();
     registerBuiltinTools(registry);
+
+    // P18-2: schema advertisement mode. "deferred" forces the deferred path —
+    // built-in tools stay inline, everything else is stubbed and fetchable via
+    // tool_lookup — so benchmarks can compare token cost / success directly.
+    // Default "full" keeps the historical all-inline behavior.
+    let toolSpecs = registry.specs();
+    let toolLookupName: string | undefined;
+    if (caseDef.schemaMode === "deferred") {
+      registry.register(createToolLookupTool(registry));
+      toolLookupName = "tool_lookup";
+      toolSpecs = decideSchemaAdvert(registry.specs(), {
+        maxInlineTokens: 1, // force deferred for the benchmark comparison
+        keepFull: (name) => (PRODUCTION_TOOL_NAMES as readonly string[]).includes(name) || name === toolLookupName,
+      }).advertised;
+    }
 
     // P4-7/P4-8: REAL subagent mechanism — read-only worker agent + delegation
     // tools, wired exactly like the production harness (P3). Lazy accessors
@@ -358,7 +399,7 @@ async function runOneCase(
             sessionId,
             ...(turnId !== undefined ? { turnId } : {}),
             sequence: 0, // the store assigns the real sequence
-            timestamp: Date.now(),
+            timestamp: now(), // P16-5: single injected clock for the CLI
             type,
             payload,
           });
@@ -391,6 +432,8 @@ async function runOneCase(
           // P4-7/P4-8: delegation cases expose the delegation tools (the
           // mechanism under test) alongside the production profile.
           ...(requiresSubagent ? ["delegate_explore", "delegate_batch"] : []),
+          // P18-2: deferred mode adds the on-demand schema lookup tool.
+          ...(toolLookupName !== undefined ? [toolLookupName] : []),
         ],
       },
       permissions: BENCHMARK_PERMISSIONS,
@@ -481,7 +524,7 @@ async function runOneCase(
                   sessionId: session.id as never,
                   turnId: undefined,
                   sequence: 0,
-                  timestamp: Date.now(),
+                  timestamp: now(), // P16-5: single injected clock for the CLI
                   type: (event.phase === "started" ? "verification.step_started" : "verification.step_completed") as never,
                   payload: {
                     ref: event.ref,
@@ -490,18 +533,19 @@ async function runOneCase(
                     ...(event.passed !== undefined ? { passed: event.passed } : {}),
                     ...(event.detail !== undefined ? { detail: event.detail } : {}),
                   },
-                }).catch(() => {});
+                }).catch((err) =>
+                  process.stderr.write(`[degraded] benchmark.verification-steps.append: ${err instanceof Error ? err.message : String(err)}\n`),
+                );
               },
             }),
           }
         : {}),
       recovery: new RecoveryPolicy(),
-      toolSpecs: registry.specs(),
+      toolSpecs,
       changedPathsProvider: () => changedPaths,
-      // plan.md Phase 3: retry gating + concurrency planning from tool metadata
-      // (read-only tools auto-retry and may run in parallel; writes/exec never
-      // blind-retry and never join a parallel batch).
-      toolCapabilityOf: (name) => capabilityOf(registry.get(name)),
+      // P18-1: ToolSemantics is the only execution-policy source — registry
+      // semantics drive retry/concurrency/checkpoint/approval decisions.
+      toolSemanticsOf: (name) => semanticsOf(registry.get(name)),
       // plan.md Phase 5 Stage 0 (Tool Output Budget): results above 16 KB go
       // to an artifact file inside the workspace; the model sees preview +
       // hash + path instead of raw megabytes on every call. Phase 6.5:
@@ -566,11 +610,14 @@ async function runOneCase(
     if (memoryClose !== undefined) {
       try {
         memoryClose();
-      } catch {
-        // best-effort close
+      } catch (err) {
+        // P14-6: best-effort close — reported, never silent.
+        process.stderr.write(`[degraded] benchmark.memoryClose: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
-    await rm(workspace, { recursive: true, force: true }).catch(() => {});
+    await rm(workspace, { recursive: true, force: true }).catch((err) =>
+      process.stderr.write(`[degraded] benchmark.workspace-cleanup: ${err instanceof Error ? err.message : String(err)}\n`),
+    );
   }
 }
 
@@ -906,3 +953,7 @@ function formatRate(value: number): string {
 }
 
 export type { BaselineReport };
+
+/** P16-5: single wall-clock for the CLI benchmark harness — every event the
+ *  benchmark appends uses this clock (deterministic under test). */
+export const now = () => Date.now();

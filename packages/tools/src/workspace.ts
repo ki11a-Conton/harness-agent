@@ -16,6 +16,7 @@
  */
 import { promises as fs } from "node:fs";
 import { join, resolve } from "node:path";
+import { isNodeErrorCode } from "@ar/contracts";
 
 const SKIP_DIRS = new Set([
   ".git",
@@ -88,8 +89,10 @@ export async function loadWorkspacePatterns(root: string): Promise<string[]> {
       const ws = parsed.workspaces;
       if (Array.isArray(ws)) patterns.push(...ws);
       else if (ws && Array.isArray(ws.packages)) patterns.push(...ws.packages);
-    } catch {
-      // unparsable root manifest → fall through
+    } catch (err) {
+      // P14-6: an unparsable root manifest falls through to the line-parser
+      // path — the failure is reported (manifest integrity evidence).
+      process.stderr.write(`[degraded] workspace.parse-root-manifest: ${err instanceof Error ? err.message : String(err)}\n`);
     }
   }
 

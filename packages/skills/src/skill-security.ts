@@ -11,7 +11,7 @@ import type { ErrorCode, EventType } from "@ar/contracts";
  * §958-978: structured reason / security event / error code / target / source.
  */
 export interface SkillSecurityDenial {
-  detection: "injection" | "secret";
+  detection: "injection" | "secret" | "required-tools";
   reasons: string[];
   content: string;
   /** Denied subject — a skill path (loader) or id (store). */
@@ -22,20 +22,25 @@ export interface SkillSecurityDenial {
 
 /** Error code for a skill security denial (§965). */
 export function skillDenialCode(detection: SkillSecurityDenial["detection"]): ErrorCode {
-  return detection === "injection" ? "SKILL_DENIED" : "SECRET_REDACTED";
+  if (detection === "injection" || detection === "required-tools") return "SKILL_DENIED";
+  return "SECRET_REDACTED";
 }
 
 /** Security event emitted for a skill denial (§964). */
 export function skillDenialEventType(detection: SkillSecurityDenial["detection"]): EventType {
-  return detection === "injection" ? "security.skill_denied" : "security.secret_redacted";
+  if (detection === "injection" || detection === "required-tools") return "security.skill_denied";
+  return "security.secret_redacted";
 }
 
 /** Normalized event payload for a skill denial (mirrors denialPayload shape). */
 export function skillDenialPayload(denial: SkillSecurityDenial): Record<string, unknown> {
   return {
-    reason: denial.detection === "injection"
-      ? `injection detected (${denial.reasons.join(", ")})`
-      : `secret detected (${denial.reasons.join(", ")})`,
+    reason:
+      denial.detection === "required-tools"
+        ? `required tools not allowed by host policy (${denial.reasons.join(", ")})`
+        : denial.detection === "injection"
+          ? `injection detected (${denial.reasons.join(", ")})`
+          : `secret detected (${denial.reasons.join(", ")})`,
     code: skillDenialCode(denial.detection),
     source: denial.source,
     target: denial.path,

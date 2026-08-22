@@ -6,6 +6,7 @@ import type {
   InstructionDiscovery,
   InstructionDiscoveryOptions,
 } from "@ar/contracts";
+import { isNodeErrorCode } from "@ar/contracts";
 
 const DEFAULT_MAX_BYTES_PER_FILE = 50_000;
 const DEFAULT_MAX_DOCUMENTS = 4;
@@ -114,8 +115,15 @@ export class HierarchicalInstructionDiscovery implements InstructionDiscovery {
       try {
         await stat(candidate);
         exists = true;
-      } catch {
-        // missing or unreadable document: stops the climb when above cwd
+      } catch (err) {
+        // P14-6: a missing document is the EXPECTED case for ancestor climb —
+        // explicitly kept as "not exists" (fail-closed: an unreadable doc is
+        // not treated as a present instruction); only non-ENOENT failures are
+        // reported.
+        exists = false;
+        if (!isNodeErrorCode(err, "ENOENT")) {
+          process.stderr.write(`[degraded] discovery.stat: ${err instanceof Error ? err.message : String(err)}\n`);
+        }
       }
       if (exists) {
         found.push(candidate);

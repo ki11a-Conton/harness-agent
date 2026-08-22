@@ -105,3 +105,31 @@ describe("canonicalizePath — traversal cannot escape", () => {
     expect(p.endsWith("/etc") || p.endsWith("etc")).toBe(true);
   });
 });
+
+describe("canonicalizePath — root-ancestor join regression (P14-1 fix)", () => {
+  // Regression: when the deepest existing ancestor of a non-existent path is
+  // the filesystem root "/", the ancestor/tail join used to produce "//tail",
+  // which lexicalNormalize preserved as a UNC marker. Every such canonical
+  // form then failed containment against its (single-slash) root and was
+  // misreported as an escalation. On case-insensitive policies the folded
+  // comparison could never match either.
+  it("never emits a double-slash prefix when the deepest existing ancestor is the root", () => {
+    const p = canonicalizePath("/Definitely/Not/Existing/sub", { cwd });
+    expect(p.startsWith("//")).toBe(false);
+    expect(p).toBe("/Definitely/Not/Existing/sub");
+  });
+
+  it("case-folded containment matches after root-ancestor canonicalization", () => {
+    const declared = canonicalizePath("/HOME/U/WORK/sub", { cwd });
+    const conferred = canonicalizePath("/home/u/work", { cwd });
+    expect(declared.startsWith("//")).toBe(false);
+    // case-insensitive fold: /home/u/work/sub is inside /home/u/work
+    expect(declared.toLowerCase().startsWith(`${conferred.toLowerCase()}/`)).toBe(true);
+  });
+
+  it("traversal below a non-existent root still resolves lexically (no // prefix)", () => {
+    const p = canonicalizePath("/work/../etc/passwd", { cwd });
+    expect(p.startsWith("//")).toBe(false);
+    expect(p).toBe("/etc/passwd");
+  });
+});

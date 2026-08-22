@@ -81,8 +81,11 @@ export class JsonlCandidateStore implements LearningCandidateStore {
     let content: string;
     try {
       content = await readFile(this.file, "utf8");
-    } catch {
-      return; // no file yet → empty queue
+    } catch (err) {
+      // P14-6: only the expected "first run / no file yet" ENOENT is silent —
+      // any other read error is a real failure and propagates.
+      if (isNodeError(err, "ENOENT")) return;
+      throw err;
     }
     for (const line of content.split("\n")) {
       const trimmed = line.trim();
@@ -91,8 +94,10 @@ export class JsonlCandidateStore implements LearningCandidateStore {
         const record = JSON.parse(trimmed) as CandidateRecord;
         if (record.schemaVersion !== CANDIDATE_SCHEMA_VERSION) continue;
         this.candidates.set(record.candidate.id, record.candidate);
-      } catch {
-        // corrupt line: skip (same policy as inbox/memory stores)
+      } catch (err) {
+        // P14-6: a corrupt line must be observable (it is data-loss evidence),
+        // then skipped so the rest of the queue still loads.
+        process.stderr.write(`[degraded] candidate-store.corrupt-line: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
   }
@@ -108,4 +113,9 @@ export class JsonlCandidateStore implements LearningCandidateStore {
   private lockKey(): string {
     return `candidate-store:${this.file}`;
   }
+}
+
+/** P14-6: typed node error-code check (ENOENT is the expected first-run path). */
+function isNodeError(err: unknown, code: string): boolean {
+  return err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === code;
 }

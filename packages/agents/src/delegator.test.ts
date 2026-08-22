@@ -27,6 +27,7 @@ import {
 import { ScriptedModelProvider } from "@ar/model";
 import type { Script } from "@ar/model";
 import { AgentRuntime } from "@ar/core";
+import type { GrantedCapability } from "@ar/security";
 import { Delegator, restrictToolPolicy, writableIsolationError } from "./delegator.js";
 import { AgentExecutionScheduler } from "./scheduler.js";
 import type { ChildWorkspaceManager } from "./workspace-isolation.js";
@@ -175,6 +176,7 @@ function makeHarness(opts?: {
   testOnlyUnsafeSharedWorkspace?: boolean;
   scheduler?: AgentExecutionScheduler;
   store?: MemorySessionStore;
+  parentCapability?: GrantedCapability;
 }) {
   // A caller-supplied scheduler MUST share this store (it resolves root+depth
   // from it), so the store option lets a test build both over one instance.
@@ -207,6 +209,7 @@ function makeHarness(opts?: {
       ? { testOnlyUnsafeSharedWorkspace: opts.testOnlyUnsafeSharedWorkspace }
       : {}),
     ...(opts?.scheduler !== undefined ? { scheduler: opts.scheduler } : {}),
+    ...(opts?.parentCapability !== undefined ? { parentCapability: opts.parentCapability } : {}),
   });
   return { store, events, runtime, delegator, orchestrator, provider };
 }
@@ -787,6 +790,88 @@ describe("Delegator (SUBAGENT-001)", () => {
     expect(
       writableIsolationError({ workspaceManager: undefined, testOnlyUnsafeSharedWorkspace: true }),
     ).toBeUndefined();
+  });
+
+  // ---- P14-4: child-agent capability monotonicity (Conferred ∩ Declared)
+
+  const PARENT_GRANT: GrantedCapability = {
+    policy: {
+      filesystem: { mode: "workspace-write", allowedPaths: ["C:\\work"] },
+      network: { mode: "allowlist", hosts: ["api.example.com"] },
+      process: { allowedCommands: ["pnpm test"] },
+    },
+    toolAllowlist: ["read", "write", "exec"],
+  };
+
+  it("P14-4: a declared capability must narrow the parent grant — widening is denied before any child exists", async () => {
+    const h = makeHarness({ parentCapability: PARENT_GRANT });
+    const parent = await createParent(h);
+
+    // network widening: the child claims a host the parent never conferred
+    await expect(
+      h.delegator.delegate(
+        { parentSessionId: parent.id, goal: "g", capability: { network: ["evil.example.com"] } },
+        new AbortController().signal,
+      ),
+    ).rejects.toMatchObject({ info: { code: "SECURITY_DENIED" } });
+
+    // Denied before any child session / tool / scheduler slot.
+    expect(await h.store.listSessions({ parentId: parent.id })).toEqual([]);
+    expect(h.orchestrator.calls).toEqual([]);
+    // The denial is observable on the parent session as security.capability_denied.
+    const cap = h.events.events.filter(
+      (e) => e.sessionId === parent.id && e.type === "security.capability_denied",
+    );
+    expect(cap).toHaveLength(1);
+    expect(cap[0]!.payload).toMatchObject({ code: "SECURITY_DENIED", source: "delegator" });
+  });
+
+  it("P14-4: a declared capability that narrows the parent grant passes", async () => {
+    const h = makeHarness({ parentCapability: PARENT_GRANT });
+    const parent = await createParent(h);
+
+    const result = await h.delegator.delegate(
+      {
+        parentSessionId: parent.id,
+        goal: "g",
+        capability: { network: [], process: ["pnpm test"] },
+      },
+      new AbortController().signal,
+    );
+    expect(result.status).toBe("success");
+    // No capability denial was emitted.
+    expect(h.events.events.some((e) => e.type === "security.capability_denied")).toBe(false);
+  });
+
+  it("P14-4: declared capability without a parent grant is denied (unknown bound cannot prove narrowing)", async () => {
+    const h = makeHarness(); // no parentCapability
+    const parent = await createParent(h);
+
+    await expect(
+      h.delegator.delegate(
+        { parentSessionId: parent.id, goal: "g", capability: { filesystem: ["C:\\work\\sub"] } },
+        new AbortController().signal,
+      ),
+    ).rejects.toMatchObject({ info: { code: "SECURITY_DENIED" } });
+    expect(await h.store.listSessions({ parentId: parent.id })).toEqual([]);
+  });
+
+  it("P14-4: capability.tool is rejected — the tool dimension has ONE surface (toolPolicy)", async () => {
+    const h = makeHarness({ parentCapability: PARENT_GRANT });
+    const parent = await createParent(h);
+
+    await expect(
+      h.delegator.delegate(
+        { parentSessionId: parent.id, goal: "g", capability: { tool: ["read"] } },
+        new AbortController().signal,
+      ),
+    ).rejects.toMatchObject({ info: { code: "SECURITY_DENIED" } });
+    // The toolPolicy surface still narrows tools as before.
+    const ok = await h.delegator.delegate(
+      { parentSessionId: parent.id, goal: "g2", toolPolicy: { allow: ["read"] } },
+      new AbortController().signal,
+    );
+    expect(ok.status).toBe("success");
   });
 
   it("rejects delegation from a depth-1 child when maxDepth=1", async () => {

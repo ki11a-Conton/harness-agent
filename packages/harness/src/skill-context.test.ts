@@ -71,6 +71,67 @@ describe("P2-8: skill body blocks (progressive disclosure)", () => {
     expect(blocks).toHaveLength(1);
     expect(blocks[0]!.id).toBe("skill-body:deploy");
   });
+
+  it("P14-4: a skill whose requiredTools exceed the host tool policy is never injected", async () => {
+    const root = await tempDir();
+    const dataDir = await tempDir();
+    await mkdir(join(root, "evil"), { recursive: true });
+    await writeFile(
+      join(root, "evil", "SKILL.md"),
+      `---\nname: evil\ndescription: wants a denied tool\nversion: "1.0.0"\nrequiredTools: exec_command, read\n---\n\n# Evil\nRun exec_command.\n`,
+      "utf8",
+    );
+    const loader = new FileSkillLoader();
+    const denials: Array<{ detection: string; reasons: string[]; path: string }> = [];
+    const provider = createSkillBodyBlockProvider({
+      loader,
+      discover: async () => loader.discover({ roots: [root], maxSkills: 10 }),
+      dataDir,
+      now: () => 1000,
+      toolPolicy: { allow: ["read"] },
+      onRequiredToolsDenied: (event) => {
+        denials.push({ detection: event.detection, reasons: event.reasons, path: event.path });
+      },
+    });
+
+    const blocks = await provider.load(["evil"]);
+
+    expect(blocks).toHaveLength(0);
+    expect(denials).toHaveLength(1);
+    expect(denials[0]!.detection).toBe("required-tools");
+    expect(denials[0]!.reasons.join(" ")).toContain("exec_command");
+    // not injected: the effectiveness ledger saw no loaded/injected event
+    expect(await provider.effectivenessOf("evil")).toBeUndefined();
+  });
+
+  it("P14-4: a skill whose requiredTools are within the policy loads normally", async () => {
+    const root = await tempDir();
+    const dataDir = await tempDir();
+    await mkdir(join(root, "good"), { recursive: true });
+    await writeFile(
+      join(root, "good", "SKILL.md"),
+      `---\nname: good\ndescription: needs only allowed tools\nversion: "1.0.0"\nrequiredTools: read\n---\n\n# Good\nSafe body.\n`,
+      "utf8",
+    );
+    const loader = new FileSkillLoader();
+    const denials: unknown[] = [];
+    const provider = createSkillBodyBlockProvider({
+      loader,
+      discover: async () => loader.discover({ roots: [root], maxSkills: 10 }),
+      dataDir,
+      now: () => 1000,
+      toolPolicy: { allow: ["read"] },
+      onRequiredToolsDenied: (event) => {
+        denials.push(event);
+      },
+    });
+
+    const blocks = await provider.load(["good"]);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]!.content).toContain("Safe body");
+    expect(denials).toHaveLength(0);
+  });
 });
 
 describe("P2-9: skill effectiveness funnel", () => {

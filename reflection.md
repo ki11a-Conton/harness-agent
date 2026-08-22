@@ -154,3 +154,11 @@ Total: +74 tests, 3 SQLite migrations, 10 new files, 1 new directory tree.
 - P13 challengers un-promoted (need real benchmark wiring).
 - P10-6 Windows CI, P12-5 CI upload, P8-1 runtime auto-plan wiring.
 - Repo-map manifest/dependency-edge invalidation (P7-5 note).
+
+## PHASE 22 复盘（2026-08-22）
+
+- **大型 refactor 的行尾纪律**：对 CRLF 仓库做机械替换必须先检测行尾并原样写回；一次 `open(p,'w')` 即可毁掉整个文件的 diff 可读性（P22-1 create-harness 重写踩中，P21-1 manifest 也踩中）。
+- **"有证据地删除" > "为删而删"**：P22-2 用 code search 证明 legacyMemoryBridge 无生产 caller 才删；observability/scheduler flags 是报告型字段（删除会破坏 capability 报告）→ 保留。删除决策的证据要写进 plan.md。
+- **审计工具先审自己**：production-audit 第一版误报自己的注释示例与拒绝式 startsWith——静态扫描必须 stripComments + 区分"授权式"与"拒绝式"用法。
+- **小样本诚实**：P21-4 用"推荐重复"代替虚假精度；P21-3 的 stub claim 机械地排除 "stronger" 措辞。Truth rule 必须是代码不是约定。
+- **compose 拆分原则**：helper 是"移动代码 + 显式依赖注入"，不是重新实现——行为验证靠全量测试（harness 110 测试拆前拆后全绿）。

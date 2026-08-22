@@ -19,6 +19,21 @@ export interface ToolSpec {
   inputSchema: JsonSchema;
 }
 
+/** P18-2: rough advertisement-token estimate for one spec (chars / 4 ≈
+ *  tokens). Prices the MODEL ADVERTISEMENT cost; monotone in schema size,
+ *  no tokenizer needed. Lives in contracts so both the tools package (schema
+ *  advert policy) and the core runtime (tools.selected telemetry) consume the
+ *  SAME estimate. */
+export function estimateSpecTokens(spec: ToolSpec): number {
+  return Math.ceil(JSON.stringify(spec.inputSchema).length / 4);
+}
+
+export function estimateSpecsTokens(specs: readonly ToolSpec[]): number {
+  let total = 0;
+  for (const spec of specs) total += estimateSpecTokens(spec);
+  return total;
+}
+
 export type ToolRisk = "readonly" | "side_effect" | "elevated" | "critical";
 
 /**
@@ -32,16 +47,27 @@ export type ToolRisk = "readonly" | "side_effect" | "elevated" | "critical";
 export type ToolRetryPolicy = "safe" | "unknown" | "none";
 
 /** Narrow capability projection the runtime consumes for retry gating and
- *  concurrency planning (plan.md Phase 3.2/3.3). */
+ *  concurrency planning (plan.md Phase 3.2/3.3).
+ *
+ *  P18-1: LEGACY ADAPTER TYPE. `ToolSemantics` is the ONLY execution-policy
+ *  source; `ToolCapability` exists solely as a derived projection for
+ *  backwards-compatible callers and must NEVER act as a second decision
+ *  source. The only way to build one is `toToolCapability()` from a
+ *  ToolSemantics — nothing may derive a ToolCapability from raw metadata. */
 export interface ToolCapability {
   retry: ToolRetryPolicy;
   concurrencySafe: boolean;
 }
 
-export const DEFAULT_TOOL_CAPABILITY: ToolCapability = {
-  retry: "unknown",
-  concurrencySafe: false,
-};
+/** P18-1: THE single projection ToolSemantics → ToolCapability. Every legacy
+ *  consumer must go through this function so the two views can never drift;
+ *  the runtime itself decides on ToolSemantics fields directly. */
+export function toToolCapability(semantics: ToolSemantics): ToolCapability {
+  return {
+    retry: semantics.retrySafety,
+    concurrencySafe: semantics.concurrencySafety,
+  };
+}
 
 /**
  * P1-11: structured tool execution semantics. One field per runtime decision
@@ -72,6 +98,47 @@ export interface ToolSemantics {
 }
 
 /**
+ * P18-6: resource conflict keys for concurrency. Two tool calls with the
+ * SAME key mutate the same resource and must never run in parallel, even if
+ * both are otherwise `concurrencySafe`. Keys are produced per CALL by
+ * `resourceConflictOf` (args-derived) — the static `ToolSemantics` cannot
+ * express an instance-specific target.
+ *
+ * Canonical key forms (stable strings, never the raw args):
+ *   - `file:<canonical-path>`   — a file mutation (canonical path)
+ *   - `store:<session-id>`      — a store/session mutation
+ *   - `global`                  — the whole-world lock (never parallel)
+ */
+export type ResourceConflictKey = string;
+
+/** P18-6: canonical conflict key for a file mutation (resolve the path to its
+ *  canonical form BEFORE calling this — the key must be a canonical path). */
+export function fileConflictKey(canonicalPath: string): ResourceConflictKey {
+  return `file:${canonicalPath}`;
+}
+
+/** P18-6: canonical conflict key for a store/session mutation. */
+export function storeConflictKey(sessionId: string): ResourceConflictKey {
+  return `store:${sessionId}`;
+}
+
+/** P18-6: the global lock — no tool holding it may run in parallel with any
+ *  other. */
+export const GLOBAL_CONFLICT_KEY: ResourceConflictKey = "global";
+
+/** P18-6: does a call already admitted to the batch conflict with a new one?
+ *  `undefined` keys never conflict (unknown target → conservative callers
+ *  keep such tools serial via concurrencySafety instead). */
+export function resourceConflicts(
+  admitted: readonly { conflictKey?: ResourceConflictKey }[],
+  candidate: { conflictKey?: ResourceConflictKey },
+): boolean {
+  if (candidate.conflictKey === undefined) return false;
+  if (candidate.conflictKey === GLOBAL_CONFLICT_KEY) return true;
+  return admitted.some((a) => a.conflictKey === candidate.conflictKey);
+}
+
+/**
  * Fail-closed semantics for unknown tools (plan.md P0-8): the runtime cannot
  * prove a tool has no side effects, so it must assume effects — never
  * auto-retried, never run in parallel, checkpointed as a side effect, surfaced
@@ -90,6 +157,11 @@ export const DEFAULT_TOOL_SEMANTICS: ToolSemantics = {
   networkBehavior: "unknown",
   outputSensitivity: "high",
 };
+
+/** Legacy default view — the projection of DEFAULT_TOOL_SEMANTICS. Defined
+ *  after the semantics constant (TDZ-safe): it is PURELY a derived view and
+ *  must never be treated as an independent configuration. */
+export const DEFAULT_TOOL_CAPABILITY: ToolCapability = toToolCapability(DEFAULT_TOOL_SEMANTICS);
 
 /** P0-8: does this tool's semantics allow treating it as side-effect-free?
  *  "unknown" returns true (may have a side effect) — fail-closed. */
@@ -149,9 +221,15 @@ export interface ToolResult<T = unknown> {
   metadata?: Record<string, unknown>;
 }
 
-/** Streaming chunk emitted by tools (e.g. process stdout/stderr) as tool.output events. */
+/**
+ * Streaming chunk emitted by tools as they run. P18-5: stdout/stderr chunks
+ * become `tool.output` events and a `progress` chunk becomes a separate
+ * `tool.progress` event — progress is NEVER a terminal result and never
+ * counts as completion in the durable ledger (only `tool.completed`/`tool.failed`
+ * settle a call).
+ */
 export interface ToolStreamEvent {
-  stream: "stdout" | "stderr";
+  stream: "stdout" | "stderr" | "progress";
   text: string;
 }
 
@@ -198,6 +276,7 @@ export const TOOL_ERROR_CODES = [
   "PROCESS_TIMEOUT",
   "NETWORK_ERROR",
   "RESOURCE_LIMIT",
+  "PERSISTENCE_ERROR",
   "USER_CANCELLED",
   "INTERNAL_ERROR",
 ] as const;

@@ -5,7 +5,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import type { PermissionPolicy, SandboxPolicy, ToolDefinition, ToolResult } from "@ar/contracts";
 import { newAgentId, newSessionId, newToolCallId, newTurnId } from "@ar/contracts";
-import { ToolRegistry, capabilityOf } from "./registry.js";
+import { ToolRegistry, capabilityOf, semanticsOf } from "./registry.js";
+import { toToolCapability } from "@ar/contracts";
 import { ToolOrchestrator } from "./orchestrator.js";
 
 // ---- P0-2: unified tool-source matrix --------------------------------------
@@ -250,6 +251,17 @@ describe("P0-2 tool source matrix", () => {
     expect(capabilityOf(undefined)).toEqual({ retry: "unknown", concurrencySafe: false });
   });
 
+  it("P18-1: capabilityOf is ALWAYS the projection of semanticsOf (single derivation chain)", () => {
+    // The legacy capability view can never drift from ToolSemantics: both the
+    // registered tool and the unknown fallback must satisfy the identity
+    // capabilityOf(x) === toToolCapability(semanticsOf(x)).
+    expect(capabilityOf(mcpTool)).toEqual(toToolCapability(semanticsOf(mcpTool)));
+    expect(capabilityOf(undefined)).toEqual(toToolCapability(semanticsOf(undefined)));
+    // And the projection maps the exact semantics fields.
+    const declared = { ...semanticsOf(mcpTool), retrySafety: "safe" as const, concurrencySafety: true };
+    expect(toToolCapability(declared)).toEqual({ retry: "safe", concurrencySafe: true });
+  });
+
   it("permission evaluation never auto-falls back to allow on failure", async () => {
     const registry = new ToolRegistry();
     registry.register(mcpTool);
@@ -262,4 +274,37 @@ describe("P0-2 tool source matrix", () => {
     expect(result.status).toBe("denied");
     expect(result.error?.code).toBe("PERMISSION_DENIED");
   });
+
+describe("P18-5 progress channel", () => {
+  it("progress chunks emit tool.progress — separate from the terminal result", async () => {
+    const streamingTool: ToolDefinition = {
+      name: "stream_progress",
+      description: "streams output and progress",
+      inputSchema: z.object({}),
+      risk: "readonly",
+      metadata: { name: "stream_progress", version: "1.0.0", sideEffect: false, network: false, filesystem: false, process: false, interactive: false },
+      async execute(_input, ctx) {
+        ctx.onOutput?.({ stream: "stdout", text: "partial line" });
+        ctx.onOutput?.({ stream: "progress", text: "50%" });
+        ctx.onOutput?.({ stream: "progress", text: "100%" });
+        return { status: "success", output: "done" };
+      },
+    };
+    const registry = new ToolRegistry();
+    registry.register(streamingTool);
+    const sink = new Sink();
+    const orchestrator = new ToolOrchestrator({ registry, events: sink, workspaceRoot: ws });
+    const result = await orchestrator.execute(req("stream_progress", {}), ctx());
+    expect(result.status).toBe("success");
+    const types = sink.events.map((e) => e.type);
+    expect(types).toContain("tool.output");
+    expect(types).toContain("tool.progress");
+    // P18-5: progress NEVER settles the call — exactly one terminal completion.
+    const completions = sink.events.filter((e) => e.type === "tool.completed");
+    expect(completions).toHaveLength(1);
+    expect(completions[0]?.payload.status).toBe("success");
+    const progressEvents = sink.events.filter((e) => e.type === "tool.progress");
+    expect(progressEvents.map((e) => e.payload.text)).toEqual(["50%", "100%"]);
+  });
+});
 });

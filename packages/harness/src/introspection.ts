@@ -42,4 +42,20 @@ export interface HarnessIntrospection {
     servers: number;
     tools: string[];
   };
+  /** P16-4: durability truth — the harness reports whether it is DURABLE or
+   *  IN-MEMORY, and when a durability-required feature (approval/ask_user/
+   *  checkpoint/long-run recovery) is enabled WITHOUT a durable store it is
+   *  marked `degraded` with the specific reasons. An audit must never claim
+   *  production-readiness for a degraded harness. */
+  persistence: {
+    mode: "durable" | "in-memory";
+    degraded: boolean;
+    reasons: string[];
+    /** Store class actually wired per durability-required feature. */
+    stores: {
+      approval: string;
+      askUser?: string;
+      checkpoint?: string;
+    };
+  };
 }

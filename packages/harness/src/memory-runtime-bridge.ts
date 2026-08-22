@@ -94,6 +94,7 @@ export function memoryToBlock(item: RankedMemoryItem): ContextBlock {
     content,
     compressible: true,
     ephemeral: false,
+    category: "knowledge",
     timestamp: item.memory.updatedAt,
     // P6-2: every memory block traces back to its entry (effectiveness /
     // ROI attribution keyed on this id).
@@ -103,6 +104,10 @@ export function memoryToBlock(item: RankedMemoryItem): ContextBlock {
       toolId: item.memory.id,
       trust: "semi-trusted",
     },
+    // P14-5: retrieved memory is knowledge (semi-trusted data), never an
+    // instruction and never re-persisted.
+    instructional: false,
+    persistable: false,
   };
 }
 
@@ -210,8 +215,10 @@ export class MemoryRuntimeBridge {
       const entry = await this.store.get(id);
       if (entry === undefined || entry.deleted) return;
       await this.store.update(recordUsefulness(entry, feedback));
-    } catch {
-      // Feedback must never break the turn (missing/race-deleted entry).
+    } catch (err) {
+      // P14-6: feedback must never break the turn (missing/race-deleted
+      // entry) — reported, never silent.
+      process.stderr.write(`[degraded] memory.usefulness.update: ${err instanceof Error ? err.message : String(err)}\n`);
     }
   }
 
@@ -244,8 +251,9 @@ export async function entriesForIds(
     try {
       const entry = await store.get(id);
       if (entry !== undefined && !entry.deleted) out.push(entry);
-    } catch {
-      // best effort
+    } catch (err) {
+      // P14-6: best effort — reported, never silent.
+      process.stderr.write(`[degraded] memory.entriesForIds.get: ${err instanceof Error ? err.message : String(err)}\n`);
     }
   }
   return out;

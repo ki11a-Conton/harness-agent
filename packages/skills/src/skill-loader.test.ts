@@ -29,6 +29,13 @@ async function writeDocs(root: string, files: Record<string, string>): Promise<v
   }
 }
 
+/** Write a SKILL.md package under <root>/<name>/. */
+async function writeSkill(root: string, name: string, description: string, body: string): Promise<void> {
+  const full = join(root, name, "SKILL.md");
+  await mkdir(dirname(full), { recursive: true });
+  await writeFile(full, `---\nname: ${name}\ndescription: ${description}\nversion: "1.0.0"\n---\n\n${body}`, "utf8");
+}
+
 describe("FileSkillLoader (SKILL-001)", () => {
   it("refuses to load a skill body carrying injection content (Issue 6)", async () => {
     const r = await freshRoot();
@@ -312,5 +319,64 @@ describe("FileSkillLoader (SKILL-001)", () => {
     expect((calls[0] as Record<string, unknown>).detection).toBe("injection");
     expect((calls[0] as Record<string, unknown>).source).toBe("skill-loader");
     expect((calls[0] as Record<string, unknown>).path).toBe(skills[0]!.path);
+  });
+});
+describe("P17-3: skill on-demand loading invariants", () => {
+  it("every discovered skill carries provenance + semi-trusted classification", async () => {
+    const root = await freshRoot();
+    await writeSkill(root, "deploy", "deployments", "# Deploy\nrun pnpm deploy\n");
+    const loader = new FileSkillLoader({ now: () => 1000 });
+    const skills = await loader.discover({ roots: [root] });
+    expect(skills).toHaveLength(1);
+    const s = skills[0]!;
+    expect(s.provenance).toEqual({
+      source: "local-filesystem",
+      root: expect.stringContaining("skills-"),
+      trust: "semi-trusted",
+    });
+  });
+
+  it("body cache: unchanged mtime → cache hit; file change → controlled refresh", async () => {
+    const root = await freshRoot();
+    await writeSkill(root, "deploy", "deployments", "# Deploy\nv1 body\n");
+    const loader = new FileSkillLoader();
+    const discovered = await loader.discover({ roots: [root] });
+    const s = discovered[0]!;
+
+    const first = await loader.load(s);
+    expect(first.body).toContain("v1 body");
+
+    // Change the file and advance mtime (mtime granularity).
+    await new Promise((r) => setTimeout(r, 10));
+    await writeFile(join(root, "deploy", "SKILL.md"), "# Deploy\nv2 body\n", "utf8");
+
+    // Same Skill record (old mtime not relevant — stat() is fresh each load).
+    const second = await loader.load(s);
+    expect(second.body).toContain("v2 body"); // NOT the stale v1
+
+    // Explicit invalidation also forces a refresh.
+    loader.invalidateBodyCache();
+    const third = await loader.load(discovered[0]!);
+    expect(third.body).toContain("v2 body");
+  });
+
+  it("overlapping roots: deterministic collision policy (first occurrence wins)", async () => {
+    const rootA = await freshRoot();
+    await writeSkill(rootA, "shared", "desc", "# Shared\nbody-a\n");
+    // rootB contains the SAME skill (via a nested copy) — must not duplicate.
+    const loader = new FileSkillLoader({ now: () => 1000 });
+    const skills = await loader.discover({ roots: [rootA, rootA] });
+    expect(skills).toHaveLength(1);
+    expect(skills[0]!.path).toContain("shared");
+  });
+
+  it("a truncated body is NEVER silent — the truncation marker is present", async () => {
+    const root = await freshRoot();
+    const longBody = "# Deploy\n" + "x".repeat(20_000) + "\nend\n";
+    await writeSkill(root, "huge", "desc", longBody);
+    const loader = new FileSkillLoader();
+    const discovered = await loader.discover({ roots: [root] });
+    const loaded = await loader.load(discovered[0]!, { maxBodyBytes: 1024 });
+    expect(loaded.body).toContain("[truncated at");
   });
 });

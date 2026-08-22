@@ -3,6 +3,7 @@ import type {
   ContextBlockProvenance,
   EventSink,
   NetworkBoundary,
+  NonFatalErrorSink,
   SessionId,
   TrustLevel,
   TurnId,
@@ -61,6 +62,9 @@ export async function createMcpToolAdapter(
     turnId?: TurnId;
     /** P2-21: local provenance context (server id + trust + boundary). */
     provenance?: McpProvenanceContext;
+    /** P14-6: typed channel for non-fatal event-write failures (the security
+     *  denial itself is still thrown fail-closed). */
+    nonFatal?: NonFatalErrorSink;
   } = {},
 ): Promise<ToolLike[]> {
   const tools = await client.listTools();
@@ -77,7 +81,9 @@ export async function createMcpToolAdapter(
               code: securityErrorCode("mcp"),
               details: report.reasons,
             }, opts.turnId)
-            .catch(() => {});
+            .catch((err) =>
+              opts.nonFatal?.report("mcp-adapter.emit:security.mcp_denied", err),
+            );
         }
         throw new AgentError(
           errorInfo(
@@ -116,7 +122,9 @@ export async function createMcpToolAdapter(
         if (reconnected && opts.events !== undefined && opts.sessionId !== undefined) {
           await opts.events
             .emit(opts.sessionId, "retry.mcpReconnect", { target: tool.name, source: "mcp-adapter" }, opts.turnId)
-            .catch(() => {});
+            .catch((err) =>
+              opts.nonFatal?.report("mcp-adapter.emit:retry.mcpReconnect", err),
+            );
         }
         return client.callTool(tool.name, ctx.args, ctx.signal);
       },

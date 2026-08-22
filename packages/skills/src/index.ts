@@ -48,6 +48,10 @@ export type {
   SkillSelection,
 } from "./selection.js";
 
+// P14-4: skill required-tools capability gate (declared ⊆ host tool policy).
+export { checkSkillRequiredTools, requiredToolsDenial } from "./skill-capability.js";
+export type { SkillRequiredToolsVerdict } from "./skill-capability.js";
+
 export type {
   Skill,
   SkillEffectiveness,

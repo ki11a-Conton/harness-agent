@@ -169,6 +169,59 @@ describe("P0-3: connectMcpServer — real http transport", () => {
   });
 });
 
+describe("P14-4: MCP capability boundary (conferred allowedTools ∩ declared tools)", () => {
+  it("an advertised tool outside the host's allowedTools is denied fail-closed", async () => {
+    const server = await startHttpMcpServer([
+      { name: "allowed.tool", description: "conferred", inputSchema: { type: "object" } },
+      { name: "smuggled.tool", description: "not conferred", inputSchema: { type: "object" } },
+    ]);
+
+    // The host conferred only ["allowed.tool"]; the server's advertised list
+    // (declared) widens it — the whole server registration fails.
+    await expect(
+      connectMcpServer({
+        id: "http-bounded",
+        kind: "http",
+        url: server.url,
+        allowedTools: ["allowed.tool"],
+      }),
+    ).rejects.toMatchObject({ info: { code: "MCP_DENIED" } });
+
+    await server.close();
+  });
+
+  it("advertised tools within the allow-list register and invoke normally", async () => {
+    const server = await startHttpMcpServer([
+      { name: "allowed.tool", description: "conferred", inputSchema: { type: "object", properties: { msg: { type: "string" } }, required: ["msg"] } },
+    ]);
+
+    const conn = await connectMcpServer({
+      id: "http-bounded",
+      kind: "http",
+      url: server.url,
+      allowedTools: ["allowed.tool", "other.allowed"],
+    });
+
+    expect(conn.tools.map((t) => t.name)).toEqual(["allowed.tool"]);
+    const result = await conn.tools[0]!.execute({ msg: "ok" }, testContext());
+    expect(result.status).toBe("success");
+    expect(result.output).toContain("ok");
+    await conn.close();
+  });
+
+  it("an empty allow-list confers nothing — any advertised tool is denied", async () => {
+    const server = await startHttpMcpServer([
+      { name: "any.tool", description: "unconferred", inputSchema: { type: "object" } },
+    ]);
+
+    await expect(
+      connectMcpServer({ id: "http-empty", kind: "http", url: server.url, allowedTools: [] }),
+    ).rejects.toMatchObject({ info: { code: "MCP_DENIED" } });
+
+    await server.close();
+  });
+});
+
 describe("P0-3: connectMcpServer — real stdio transport", () => {
   it("spawns the server, registers tools and invokes them over the child process", async () => {
     const spec = await startStdioMcpServer();
@@ -235,3 +288,42 @@ function testContext(): Parameters<import("@ar/contracts").ToolDefinition["execu
     sandboxPolicy: { network: "allow" } as never,
   };
 }
+
+describe("P18-4 MCP remains integration layer", () => {
+  it("stdio MCP tools are process capabilities with fail-closed side effects (never trusted for being local)", async () => {
+    const spec = await startStdioMcpServer();
+    const conn = await connectMcpServer({ id: "stdio-p18", kind: "stdio", command: spec.command, commandArgs: spec.args });
+    const tool = conn.tools[0]!;
+    // Default risk is fail-closed: side_effect (the host cannot prove a
+    // remote/opaque tool is read-only), retry unknown, serial.
+    expect(tool.risk).toBe("side_effect");
+    expect(tool.metadata.sideEffect).toBe(true);
+    expect(tool.metadata.retry).toBe("unknown");
+    expect(tool.metadata.concurrencySafe).toBe(false);
+    // P18-4: stdio = spawned child process = process capability.
+    expect(tool.metadata.process).toBe(true);
+    expect(tool.metadata.network).toBe(false);
+    await conn.close();
+  });
+
+  it("http MCP tools are network capabilities; only an explicit readonly risk relaxes the default", async () => {
+    const srv = await startHttpMcpServer([{ name: "s_net", description: "net tool", inputSchema: { type: "object" } }]);
+    try {
+      const conn = await connectMcpServer({ id: "http-p18", kind: "http", url: srv.url });
+      const tool = conn.tools[0]!;
+      expect(tool.metadata.network).toBe(true);
+      expect(tool.metadata.process).toBe(false);
+      expect(tool.risk).toBe("side_effect");
+      await conn.close();
+
+      // Explicit trusted-local declaration narrows the risk — the ONLY way
+      // the fail-closed default relaxes.
+      const conn2 = await connectMcpServer({ id: "http-ro", kind: "http", url: srv.url }, { risk: "readonly" });
+      expect(conn2.tools[0]!.risk).toBe("readonly");
+      expect(conn2.tools[0]!.metadata.sideEffect).toBe(false);
+      await conn2.close();
+    } finally {
+      await srv.close();
+    }
+  });
+});

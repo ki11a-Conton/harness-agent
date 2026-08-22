@@ -53,6 +53,12 @@ const DEFAULT_INTROSPECTION: HarnessIntrospection = {
     usageAccounting: false,
     runBudget: false,
   },
+  persistence: {
+    mode: "in-memory",
+    degraded: false,
+    reasons: [],
+    stores: { approval: "InMemoryApprovalStore" },
+  },
 };
 
 function defaultInput(overrides: Partial<AuditInput> = {}): AuditInput {

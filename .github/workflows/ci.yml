@@ -107,3 +107,44 @@ jobs:
           name: test-report-${{ matrix.os }}
           path: .ci/test-report.log
           if-no-files-found: error
+
+  # P20-4: coverage is a REAL CI gate. A single ubuntu job is enough (Windows
+  # need not repeat coverage). `pnpm test:coverage` fails (exit 1) when any
+  # per-package threshold in vitest.config.ts is missed — a threshold dip
+  # turns this job red; there is no separate success-only reporting step.
+  coverage:
+    name: coverage gate (ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OPENAI_API_KEY: ""
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Coverage gate (thresholds fail the job)
+        # v8 provider + json-summary reporter emit coverage/coverage-summary.json.
+        # A missed per-package threshold exits non-zero — no threshold is ever
+        # lowered silently to make this pass (see vitest.config.ts).
+        run: pnpm test:coverage
+
+      - name: Upload coverage summary (P20-4)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary
+          path: coverage/coverage-summary.json
+          if-no-files-found: error

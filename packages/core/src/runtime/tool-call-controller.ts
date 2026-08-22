@@ -19,6 +19,7 @@ import {
   errorInfo,
   isToolAllowedByPolicy,
   newMessageId,
+  resourceConflicts,
   sleep as timerSleep,
 } from "@ar/contracts";
 import type {
@@ -30,11 +31,13 @@ import type {
   Timer,
   ToolCall,
   ToolCallRequest,
-  ToolCapability,
+  ToolCallTrace,
   ToolExecutionContext,
   ToolOrchestrator,
   ToolResult,
-  ToolCallTrace,
+  ToolSemantics,
+  StepContext,
+  TurnExecutionState,
   TurnId,
 } from "@ar/contracts";
 import { AgentError } from "../errors.js";
@@ -54,7 +57,8 @@ export interface ExecutedToolCall {
 
 /** Q-1: everything ToolCallController needs from the runtime. All fields are
  *  read-only bindings captured when the runtime constructs the controller;
- *  `recoveryUsage` is the single shared mutable object. */
+ *  per-turn mutable state (P15-1 recoveryUsage) is NOT here — it is threaded
+ *  by value into executeToolCalls. */
 export interface ToolCallControllerDeps {
   /** Tool side-effect executor (permission/sandbox enforced inside). */
   orchestrator: ToolOrchestrator;
@@ -82,10 +86,14 @@ export interface ToolCallControllerDeps {
   recovery?: RecoveryPolicy;
   /** P2-42 adaptive recovery planner. */
   adaptiveRecovery?: AdaptiveRecoveryPlanner;
-  /** Shared mutable recovery-action budget counters (owned by AgentRuntime). */
-  recoveryUsage: Partial<Record<RecoveryAction, number>>;
-  /** Capability lookup for concurrency + retry gating. */
-  toolCapabilityOf: (toolName: string) => ToolCapability;
+  /** P18-1: ToolSemantics lookup for concurrency + retry gating — the only
+   *  execution-policy source. Legacy ToolCapability is never consulted here. */
+  toolSemanticsOf: (toolName: string) => ToolSemantics;
+  /** P18-6: per-call resource conflict key (args-derived, e.g. canonical file
+   *  path for write_file). Calls sharing a key are never batched in parallel.
+   *  Absent → no static conflict detection (unknown targets stay serial via
+   *  concurrencySafety). */
+  resourceConflictOf?: (call: ToolCall) => import("@ar/contracts").ResourceConflictKey | undefined;
   /** Max parallel concurrency-safe calls per read batch. */
   maxParallelToolCalls: number;
   /** P3-9: host-provided specialist delegation. When adaptive recovery picks
@@ -105,6 +113,11 @@ export interface ToolCallControllerDeps {
 export class ToolCallController {
   constructor(private readonly deps: ToolCallControllerDeps) {}
 
+  /** P18-6: per-call resource conflict key, when a resolver is wired. */
+  private conflictKeyOf(call: ToolCall): import("@ar/contracts").ResourceConflictKey | undefined {
+    return this.deps.resourceConflictOf?.(call);
+  }
+
   /**
    * Execute the iteration's tool calls. Consecutive concurrency-safe calls
    * (read-only, stateless — plan.md Phase 3.3) run in parallel up to
@@ -120,6 +133,13 @@ export class ToolCallController {
     ctx: TurnContext,
     state: AgentState,
     calls: ToolCall[],
+    /** P15-1: the per-turn execution state (recoveryUsage etc.) — threaded by
+     *  value from the runtime, created fresh per turn in prepareTurn. */
+    turnState: TurnExecutionState,
+    /** P15-2: the immutable step this batch belongs to. The SAME object is
+     *  used for every tool call of this model response — a mid-batch config/
+     *  policy change cannot affect the already-started batch. */
+    step: StepContext,
     /** P9-1: the model call that requested these tool calls (parent span). */
     parentCallId?: string,
   ): Promise<ExecutedToolCall[]> {
@@ -127,16 +147,39 @@ export class ToolCallController {
     const executed: ExecutedToolCall[] = [];
     let i = 0;
     while (i < calls.length) {
-      if (signal.aborted) break; // P2-37: stop the batch on a user interrupt.
+      if (signal.aborted) {
+        // P15-6: cancellation settlement — every not-yet-started call in this
+        // model batch still gets a synthetic cancelled settlement; a tool call
+        // must never vanish from the transcript (abort mid-batch).
+        for (; i < calls.length; i++) {
+          const pending = calls[i]!;
+          executed.push({
+            call: pending,
+            result: {
+              status: "cancelled",
+              error: errorInfo("USER_CANCELLED", "turn aborted before this tool call started"),
+            },
+            streak: state.noteToolCall(pending.name, pending.args),
+          });
+        }
+        break;
+      }
       const call = calls[i]!;
-      const safe = this.deps.toolCapabilityOf(call.name).concurrencySafe;
+      const safe = this.deps.toolSemanticsOf(call.name).concurrencySafety;
       if (safe && this.deps.maxParallelToolCalls > 1 && i + 1 < calls.length) {
         const batch: ToolCall[] = [call];
         let j = i + 1;
         while (
           j < calls.length &&
           batch.length < this.deps.maxParallelToolCalls &&
-          this.deps.toolCapabilityOf(calls[j]!.name).concurrencySafe
+          this.deps.toolSemanticsOf(calls[j]!.name).concurrencySafety &&
+          // P18-6: a candidate that CONFLICTS on a resource key with a call
+          // already admitted to the batch is NOT merged — same-resource
+          // mutations must stay serial even if both are concurrencySafe.
+          !resourceConflicts(
+            batch.map((c) => ({ conflictKey: this.conflictKeyOf(c) })),
+            { conflictKey: this.conflictKeyOf(calls[j]!) },
+          )
         ) {
           batch.push(calls[j]!);
           j += 1;
@@ -147,7 +190,7 @@ export class ToolCallController {
         // so a read that has not settled at abort time is simply dropped (its
         // result is not recorded); the reads themselves observe the aborted
         // signal and terminate promptly.
-        const settled = await this.runReadBatch(ctx, batch, parentCallId);
+        const settled = await this.runReadBatch(ctx, batch, turnState, step, parentCallId);
         state.transition("observing");
         state.transition("thinking");
         for (const { call: c, result } of settled) {
@@ -161,21 +204,33 @@ export class ToolCallController {
         i = j;
       } else {
         state.transition("tool_pending");
-        const result = await this.executeToolCall(ctx, call, parentCallId);
+        const result = await this.executeToolCall(ctx, call, turnState, step, parentCallId);
         state.transition("observing");
         state.transition("thinking");
         if (signal.aborted) {
           // P2-37: serial (write) chain — the interrupt took effect during this
           // call. It returned a CANCELLED outcome (or the call already committed
-          // and returned success). Either way stop the remaining calls: do not
-          // keep firing later writes into an aborted turn, and never pretend the
-          // committed ones rolled back.
+          // and returned success). Stop the remaining calls: do not keep firing
+          // later writes into an aborted turn, and never pretend the committed
+          // ones rolled back. P15-6: every not-yet-started call still gets a
+          // synthetic cancelled settlement (no tool call disappears).
           executed.push({
             call,
             result,
             streak: state.noteToolCall(call.name, call.args),
           });
           this.recordStallTrace(state, call, result);
+          for (let k = i + 1; k < calls.length; k++) {
+            const pending = calls[k]!;
+            executed.push({
+              call: pending,
+              result: {
+                status: "cancelled",
+                error: errorInfo("USER_CANCELLED", "turn aborted before this tool call started"),
+              },
+              streak: state.noteToolCall(pending.name, pending.args),
+            });
+          }
           break;
         }
         executed.push({
@@ -200,12 +255,19 @@ export class ToolCallController {
   async runReadBatch(
     ctx: TurnContext,
     batch: ToolCall[],
+    /** P15-1: per-turn execution state threaded through to each call. */
+    turnState: TurnExecutionState,
+    /** P15-2: the immutable step shared by every call in this batch. */
+    step: StepContext,
     parentCallId?: string,
   ): Promise<Array<{ call: ToolCall; result: ToolResult }>> {
     const { signal } = ctx;
     if (signal.aborted || batch.length === 0) return [];
     return new Promise<Array<{ call: ToolCall; result: ToolResult }>>((resolve, reject) => {
       const results: Array<{ call: ToolCall; result: ToolResult } | undefined> = new Array(batch.length);
+      // P18-5: per-call settlement promises — the abort path needs them to
+      // WAIT for non-cancellable in-flight calls instead of lying about them.
+      const settlePromises: Array<Promise<void> | undefined> = new Array(batch.length);
       let remaining = batch.length;
       let done = false;
       const finish = (arr: Array<{ call: ToolCall; result: ToolResult }>) => {
@@ -221,13 +283,55 @@ export class ToolCallController {
         reject(err);
       };
       const onAbort = () => {
-        // Read-only batch: drop reads that have not settled; return the settled
-        // subset in call order. The turn cancellation is reported by the caller.
-        finish([]);
+        // P18-5 cancellable-aware settlement. Every call in the batch must
+        // settle (P15-6 — none may vanish from the transcript/replay), but
+        // the settlement must HONOR cancellable semantics:
+        //   - already settled        → keep the real result.
+        //   - in-flight + cancellable → synthetic cancelled (the tool's own
+        //     signal fired; a cleanly aborted read has no side effect).
+        //   - in-flight + NON-cancellable → NEVER lied about as cancelled (a
+        //     non-cancellable tool may have produced side effects). We wait
+        //     for its REAL settlement and record what actually happened.
+        const immediate: Array<{ call: ToolCall; result: ToolResult }> = [];
+        const waitIdx: number[] = [];
+        for (let i = 0; i < batch.length; i++) {
+          const existing = results[i];
+          if (existing !== undefined) {
+            immediate.push(existing);
+          } else if (this.deps.toolSemanticsOf(batch[i]!.name).cancellable) {
+            immediate.push({
+              call: batch[i]!,
+              result: {
+                status: "cancelled",
+                error: errorInfo("USER_CANCELLED", "read batch aborted before the call settled (cancellable)"),
+              },
+            });
+          } else {
+            waitIdx.push(i);
+          }
+        }
+        if (waitIdx.length === 0) {
+          finish(immediate);
+          return;
+        }
+        // Wait for the non-cancellable calls to settle with their REAL result
+        // (they may ignore the abort and complete; the transcript then shows
+        // success/failure instead of a fabricated cancellation).
+        void Promise.all(waitIdx.map((i) => settlePromises[i]!)).then(() => {
+          finish([...immediate, ...waitIdx.map((i) => results[i]!)]);
+        });
       };
       signal.addEventListener("abort", onAbort, { once: true });
       batch.forEach((c, idx) => {
-        this.executeToolCall(ctx, c, parentCallId)
+        const promise = this.executeToolCall(ctx, c, turnState, step, parentCallId);
+        // P18-5: the settle signal ALWAYS resolves (the rejection is already
+        // recorded into results by the catch below — the abort wait path only
+        // needs to know WHEN settlement happened, never to see the error).
+        settlePromises[idx] = promise.then(
+          () => undefined,
+          () => undefined,
+        );
+        promise
           .then((result) => {
             results[idx] = { call: c, result };
             remaining -= 1;
@@ -263,7 +367,7 @@ export class ToolCallController {
    *  genuine stall (same call + same result) from progress (same call, NEW
    *  result). */
   private recordStallTrace(state: AgentState, call: ToolCall, result: ToolResult): void {
-    const isRead = this.deps.toolCapabilityOf(call.name).concurrencySafe;
+    const isRead = this.deps.toolSemanticsOf(call.name).readOnly;
     if (result.status === "success") {
       const trace: ToolCallTrace = {
         name: call.name,
@@ -298,13 +402,17 @@ export class ToolCallController {
   async executeToolCall(
     ctx: TurnContext,
     call: ToolCall,
+    /** P15-1: per-turn execution state (recoveryUsage is read/written here). */
+    turnState: TurnExecutionState,
+    /** P15-2: the immutable step this tool call belongs to. */
+    step: StepContext,
     parentCallId?: string,
   ): Promise<ToolResult> {
     const { session, turnId, signal, agent } = ctx;
     // P1-20: tool latency starts at the request (includes policy gates,
     // permission/sandbox evaluation and retries).
     const toolStartedAt = this.deps.now();
-    await this.deps.emit(session.id, "tool.requested", { toolCallId: call.id, name: call.name, args: call.args }, turnId, { spanId: call.id, parentSpanId: parentCallId });
+    await this.deps.emit(session.id, "tool.requested", { toolCallId: call.id, name: call.name, args: call.args, stepId: step.stepId }, turnId, { spanId: call.id, parentSpanId: parentCallId });
 
     // P0-1: the session's frozen tool policy is the first gate (fail-closed).
     // Permission/sandbox evaluation still happens downstream in the
@@ -344,6 +452,33 @@ export class ToolCallController {
       await this.deps.hooks.toolError(hookCtx, call, result);
       return result;
     }
+    // P14-4 hook boundary: a before_tool transform may enrich the call with
+    // bounded context (args), but it may NOT swap the tool identity. The
+    // frozen tool policy above was evaluated against the ORIGINAL name; a
+    // hook returning a different name would route a different tool past the
+    // policy gate (only the orchestrator's permission/sandbox — a separate
+    // rule set — would still run). Renaming the tool is therefore a tool-
+    // capability widening attempt: deny fail-closed and surface it as a
+    // capability escalation, never as a silent substitution.
+    if (allowed.name !== call.name) {
+      const error = errorInfo(
+        "SECURITY_DENIED",
+        `hook attempted to change tool identity: ${call.name} → ${allowed.name}`,
+      );
+      const result: ToolResult = { status: "denied", error };
+      await this.deps.emit(session.id, "tool.failed", { toolCallId: call.id, tool: call.name, error, durationMs: this.deps.now() - toolStartedAt }, turnId);
+      await this.deps.emit(session.id, "security.capability_denied", {
+        toolCallId: call.id,
+        tool: call.name,
+        target: allowed.name,
+        reason: error.message,
+        source: "hook",
+        code: "SECURITY_DENIED",
+        details: [`tool_escalation: ${call.name} → ${allowed.name}`],
+      }, turnId);
+      await this.deps.hooks.toolError(hookCtx, call, result);
+      return result;
+    }
 
     const request: ToolCallRequest = {
       id: call.id,
@@ -364,6 +499,10 @@ export class ToolCallController {
 
     let result: ToolResult;
     try {
+      // P16-6: kill BEFORE the durable tool intent is persisted — all gates
+      // (policy/hook/permission/approval/sandbox) passed but NOTHING is on
+      // record; the call can be retried fresh on resume.
+      await this.deps.failAt("tool.intent_persisting", { sessionId: session.id, turnId, toolCallId: call.id, tool: call.name });
       // P1-5: a kill here leaves the tool outcome unknown (reconciliation).
       await this.deps.failAt("tool.executing", { sessionId: session.id, turnId, toolCallId: call.id, tool: call.name });
       result = await this.deps.orchestrator.execute(request, execCtx);
@@ -392,10 +531,21 @@ export class ToolCallController {
       // (retry: "safe"). Tools with unknown or non-idempotent effects are
       // never blindly re-executed — the failed result flows to the model,
       // which decides. Retries are bounded by RecoveryPolicy and honor its
-      // per-kind delay.
-      const retryPolicy = this.deps.toolCapabilityOf(call.name).retry;
+      // per-kind delay. P19-3: the legacy branch emits the SAME typed
+      // `recovery.decided` event as adaptive recovery (action names mapped to
+      // the V3 taxonomy), so every recovery decision is observable uniformly.
+      const retryPolicy = this.deps.toolSemanticsOf(call.name).retrySafety;
       for (let attempt = 1; ; attempt += 1) {
         const decision = this.deps.recovery.decide(result.status === "timeout" ? "timeout" : "tool_failure", attempt);
+        await this.deps.emit(session.id, "recovery.decided", {
+          action: decision.action === "retry" ? "retry_safe" : decision.action === "ask" ? "ask_user" : "fail_safe",
+          input: result.status === "timeout" ? "timeout" : "tool_failure",
+          toolCallId: call.id,
+          tool: call.name,
+          used: attempt - 1,
+          remaining: Math.max(0, decision.maxAttempts - attempt),
+          reason: decision.reason,
+        }, turnId);
         if (decision.action === "retry") {
           if (retryPolicy !== "safe") break;
           if ((decision.retryDelayMs ?? 0) > 0) {
@@ -425,25 +575,37 @@ export class ToolCallController {
       (result.status === "failed" || result.status === "timeout") &&
       this.deps.adaptiveRecovery !== undefined
     ) {
-      // P2-42: adaptive recovery. Decide among a BOUNDED action set (retry,
-      // change_strategy, delegate_specialist, ask_user, fail_safe) using the
-      // planner's per-action budgets instead of the legacy retry/ask/fail
-      // branch. A non-idempotent tool is never re-executed, so `retry` is kept
-      // off its budget for this call; the failed result still flows to the
-      // model at the end (the turn's maxToolCalls / stall / iteration budgets
-      // bound the overall run).
-      const retryPolicy = this.deps.toolCapabilityOf(call.name).retry;
+      // P19-3: adaptive recovery over the CLOSED six-action taxonomy
+      // (retry_safe / change_strategy / reconcile_unknown_effect / ask_user /
+      // delegate_specialist / fail_safe). A non-idempotent tool is never
+      // re-executed, so `retry_safe` is kept off its budget for this call;
+      // the failed result still flows to the model at the end (the turn's
+      // maxToolCalls / stall / iteration budgets bound the overall run).
+      // Every decision is observable via `recovery.decided` — consumers never
+      // branch on `reason` string text.
+      const retryPolicy = this.deps.toolSemanticsOf(call.name).retrySafety;
       const planner =
         retryPolicy === "safe"
           ? this.deps.adaptiveRecovery
-          : new AdaptiveRecoveryPlanner({ retry: { budget: 0 } });
+          : new AdaptiveRecoveryPlanner({ retry_safe: { budget: 0 } });
       for (;;) {
         const decision = planner.decide(
           result.status === "timeout" ? "timeout" : "tool_failure",
-          this.deps.recoveryUsage,
+          turnState.recoveryUsage,
         );
-        this.deps.recoveryUsage[decision.action] = (this.deps.recoveryUsage[decision.action] ?? 0) + 1;
-        if (decision.action === "retry") {
+        turnState.recoveryUsage[decision.action] = (turnState.recoveryUsage[decision.action] ?? 0) + 1;
+        // P19-3: every recovery decision is observable — action, input, budget
+        // position, and rationale — so recovery is auditable, never implicit.
+        await this.deps.emit(session.id, "recovery.decided", {
+          action: decision.action,
+          input: decision.input,
+          toolCallId: call.id,
+          tool: call.name,
+          used: decision.used,
+          remaining: decision.remaining,
+          reason: decision.reason,
+        }, turnId);
+        if (decision.action === "retry_safe") {
           if (retryPolicy !== "safe") break;
           try {
             result = await this.deps.orchestrator.execute(request, execCtx);
@@ -498,6 +660,24 @@ export class ToolCallController {
             turnId,
             role: "system",
             content,
+            createdAt: this.deps.now(),
+          });
+          break;
+        }
+        // P19-3: reconcile_unknown_effect — the call may have STARTED and
+        // committed side effects whose outcome is unknown (timeout / ambiguous
+        // failure). The runtime never re-executes it and never pretends: it
+        // surfaces a typed reconciliation observation so the model/user
+        // confirms the actual effect state before any next step.
+        if (decision.action === "reconcile_unknown_effect") {
+          await this.deps.store.appendMessage({
+            id: newMessageId(),
+            sessionId: session.id,
+            turnId,
+            role: "system",
+            content:
+              `[recovery:reconcile_unknown_effect] "${call.name}" may have taken effect but its outcome is unknown (${decision.reason}). ` +
+              "Do NOT re-run it. Inspect the current state (files/processes/output) and reconcile what actually happened before continuing.",
             createdAt: this.deps.now(),
           });
           break;

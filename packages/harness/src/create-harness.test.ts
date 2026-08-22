@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ModelProvider, ModelRef } from "@ar/contracts";
+import { ScriptedModelProvider } from "@ar/model";
 import { createHarness } from "./create-harness.js";
 import type { HarnessConfig } from "./config.js";
 import { READONLY_TOOL_NAMES } from "./create-harness.js";
@@ -159,17 +160,16 @@ describe("P0-3: createHarness production composition root", () => {
 
   it("wires a memory bridge only when memory is enabled with a dataDir", async () => {
     const noMem = await createHarness(baseConfig());
-    expect(noMem.memory).toBeUndefined();
+    expect(noMem.memoryStore).toBeUndefined();
     expect(noMem.introspect().features.memory).toBe(false);
     await noMem.close();
 
     const dataDir = await tempDir();
     const withMem = await createHarness(baseConfig({ dataDir, memory: { enabled: true } }));
-    expect(withMem.memory).toBeDefined();
+    expect(withMem.memoryStore).toBeDefined();
+    expect(withMem.memoryBridge).toBeDefined();
     expect(withMem.introspect().features.memory).toBe(true);
     expect(withMem.introspect().stores.memory).toBeDefined();
-    const result = await withMem.memory!.retrieve("query", "global", { k: 3 });
-    expect(Array.isArray(result.items)).toBe(true);
     await withMem.close();
   });
 
@@ -217,5 +217,100 @@ describe("P0-3: createHarness production composition root", () => {
     expect(info.features.learning).toBe(false);
     expect(info.features.verifier).toBe(false);
     await harness.close();
+  });
+});
+describe("P16-4: production persistence contract", () => {
+  function config(over: Partial<HarnessConfig> = {}): HarnessConfig {
+    const { provider, model } = fakeProvider();
+    return {
+      profile: "ephemeral",
+      cwd: "/tmp",
+      modelProvider: provider,
+      model,
+      ...over,
+    } as HarnessConfig;
+  }
+
+  it("ephemeral profile without dataDir reports in-memory and is NOT falsely production-ready", async () => {
+    const harness = await createHarness(config({ profile: "ephemeral" }));
+    const info = harness.introspect();
+    expect(info.persistence.mode).toBe("in-memory");
+    // checkpoint defaults OFF for ephemeral → no durability claim, no reason
+    expect(info.persistence.degraded).toBe(false);
+    expect(info.features.checkpoint).toBe(false);
+    await harness.close();
+  });
+
+  it("interactive profile without dataDir is DEGRADED (checkpoint enabled, no durable store)", async () => {
+    const harness = await createHarness(config({ profile: "interactive" }));
+    const info = harness.introspect();
+    expect(info.persistence.mode).toBe("in-memory");
+    expect(info.persistence.degraded).toBe(true);
+    expect(info.persistence.reasons.some((r) => r.includes("checkpoint"))).toBe(true);
+    await harness.close();
+  });
+
+  it("durable run (dataDir) reports durable and not degraded", async () => {
+    const dir = await tempDir();
+    const harness = await createHarness(config({ profile: "interactive", dataDir: dir }));
+    const info = harness.introspect();
+    expect(info.persistence.mode).toBe("durable");
+    expect(info.persistence.degraded).toBe(false);
+    expect(info.persistence.stores.checkpoint).toBeDefined();
+    expect(info.persistence.stores.approval).toContain("Durable");
+    await harness.close();
+  });
+});
+
+describe("P16-5: event sequencing + injected clock", () => {
+  function scriptedConfig(over: Partial<HarnessConfig> = {}): HarnessConfig {
+    const provider = new ScriptedModelProvider([ScriptedModelProvider.text("done")]);
+    return baseConfig({
+      modelProvider: provider,
+      model: { providerId: "scripted", modelId: "scripted-model" },
+      ...over,
+    });
+  }
+
+  it("all harness-emitted events use the INJECTED clock (deterministic timestamps)", async () => {
+    let tick = 1000;
+    const harness = await createHarness(scriptedConfig({
+      now: () => tick, // fixed injected clock; never Date.now()
+    }));
+    const session = await harness.sessionService.create({
+      agentId: harness.agents[0]!.id,
+      model: harness.agents[0]!.model,
+      cwd: harness.config.cwd,
+    });
+    const turn = await harness.runtime.startTurn(session.id, "hi");
+    const outcome = await harness.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    expect(outcome.status).toBe("completed");
+    await harness.close();
+
+    const events = await harness.events.list(session.id);
+    expect(events.length).toBeGreaterThan(0);
+    // every event carries the injected timestamp — never the wall clock
+    for (const e of events) {
+      expect(e.timestamp).toBe(tick);
+    }
+    void tick;
+  });
+
+  it("same-session event sequences are strictly monotonic and replay-stable", async () => {
+    const harness = await createHarness(scriptedConfig({ now: () => 5000 }));
+    const session = await harness.sessionService.create({
+      agentId: harness.agents[0]!.id,
+      model: harness.agents[0]!.model,
+      cwd: harness.config.cwd,
+    });
+    const turn = await harness.runtime.startTurn(session.id, "hello");
+    await harness.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    await harness.close();
+
+    const events = await harness.events.list(session.id);
+    expect(events.length).toBeGreaterThan(0);
+    for (let i = 1; i < events.length; i++) {
+      expect(events[i]!.sequence).toBe(events[i - 1]!.sequence + 1);
+    }
   });
 });

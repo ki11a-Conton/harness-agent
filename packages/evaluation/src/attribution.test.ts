@@ -75,15 +75,17 @@ describe("tallyEvents (P2-10)", () => {
     expect(t.security_failures).toBe(4); // only security.* events (not approval.resolved)
   });
 
-  it("counts latency and tokens from model events", () => {
+  it("counts latency and tokens from model events (P20-1: nested usage record)", () => {
     const events = [
-      ev("model.completed", { durationMs: 500, outputTokens: 100 }),
-      ev("model.completed", { durationMs: 700, outputTokens: 150 }),
-      ev("model.delta", { outputTokens: 20 }),
+      ev("model.completed", { durationMs: 500, usage: { inputTokens: 200, outputTokens: 100, source: "measured" } }),
+      ev("model.completed", { durationMs: 700, usage: { inputTokens: 300, outputTokens: 150, source: "measured" } }),
+      ev("model.completed", { durationMs: 900, usage: { source: "unknown" } }), // provider gave nothing
     ];
     const t = tallyEvents(events);
-    expect(t.latency_ms).toBe(1200);
-    expect(t.tokens).toBe(270);
+    expect(t.latency_ms).toBe(2100);
+    // tokens come ONLY from measured usage records; the unknown record adds 0
+    // and is never misread as a free call.
+    expect(t.tokens).toBe(250);
   });
 
   it("counts context-overflow markers from run.limit_reached", () => {

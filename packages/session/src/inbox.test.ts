@@ -99,3 +99,45 @@ describe("JSONLInboxStore", () => {
     await expect(store.markConsumed("prompt_unknown" as never)).rejects.toThrow(/unknown prompt/);
   });
 });
+
+describe("P15-3: inbox queue bound", () => {
+  it("MemInboxStore rejects admission past maxPending with a typed QUEUE_FULL", async () => {
+    const inbox = new SessionInbox(new MemInboxStore({ maxPending: 2 }));
+    const sessionId = newSessionId();
+    await inbox.admit(sessionId, "one");
+    await inbox.admit(sessionId, "two");
+    await expect(inbox.admit(sessionId, "three")).rejects.toMatchObject({ code: "QUEUE_FULL" });
+  });
+
+  it("JSONLInboxStore rejects admission past maxPending (durable, no silent drop)", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "ar-inbox-bound-"));
+    try {
+      const store = new JSONLInboxStore({ dataDir: dir, maxPending: 1 });
+      const inbox = new SessionInbox(store);
+      const sessionId = newSessionId();
+      await inbox.admit(sessionId, "one");
+      await expect(inbox.admit(sessionId, "two")).rejects.toMatchObject({ code: "QUEUE_FULL" });
+      // the admitted prompt is intact on disk (durable truth, not RAM)
+      const pending = await inbox.listPending(sessionId);
+      expect(pending).toHaveLength(1);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("10k admissions do not grow memory without bound — rejects at the cap", async () => {
+    const inbox = new SessionInbox(new MemInboxStore({ maxPending: 100 }));
+    const sessionId = newSessionId();
+    let admitted = 0;
+    for (let i = 0; i < 10_000; i++) {
+      try {
+        await inbox.admit(sessionId, `input-${i}`);
+        admitted += 1;
+      } catch (err) {
+        expect((err as { code?: string }).code).toBe("QUEUE_FULL");
+        break;
+      }
+    }
+    expect(admitted).toBe(100);
+  });
+});

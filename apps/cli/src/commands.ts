@@ -19,6 +19,11 @@ import { runChecks } from "./doctor.js";
 import { mechanismsCmd, validateMechanismManifest } from "./mechanisms.js";
 import { experimentCmd } from "./experiment-command.js";
 import { auditCmd } from "./audit.js";
+import { renderDocsVerification, verifyDocs } from "./docs-verify.js";
+import type { EvalMode } from "@ar/evaluation";
+import { runChampionEval } from "./champion-eval.js";
+import { renderProductionAudit, runProductionAudit } from "./production-audit.js";
+import { collectReleaseArtifacts, renderReleaseArtifacts } from "./release-artifacts.js";
 import { learnCmd } from "./learn-command.js";
 import { explainCmd } from "./explain-command.js";
 import { recoverListCmd } from "./recover-command.js";
@@ -74,7 +79,12 @@ commands:
   mechanisms <path>                 validate mechanism manifests (P2-8)
   experiment <config.json>          run a mechanism experiment (P2-9)
   audit [--json] [--out <dir>]      generate CAPABILITY_MATRIX.md/.json from real wiring evidence (P0-1)
-  explain <sessionId> [--tool-call <id>]  why did the agent do this? observable evidence only (P9-3)
+  docs:verify                       machine-verify doc facts (benchmark counts, packages, CI gates, matrix) (P20-3)
+  explain <sessionId> [--tool-call <id>] [--tree]  why did the agent do this? observable evidence / trace tree (P9-3/P20-6)
+  champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model]
+                                    paired evaluation of baseline vs candidate over the SAME cases (P21-3)
+  production-audit                 P22-3 final production audit (silent catch / as never / path gates / retry / isolation)
+  release artifacts [--out <dir>]  P22-4 collect release artifacts (reports/coverage/CI/benchmark/paired/matrix/manifest)
   recover list                         startup recovery scan — unfinished sessions/approvals/asks/orphans (P12-3)
   learn candidates|evaluate <id>|promote <id>|reevaluate
                                     learning-candidate lifecycle — reflection queues, explicit promotion only (P2-7)`;
@@ -111,6 +121,40 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
       return experimentCmd(rest);
     case "audit":
       return auditCmd(rest, deps);
+    case "release": {
+      if (rest[0] !== "artifacts") {
+        return { exitCode: 1, lines: ["usage: agent release artifacts [--out <dir>]"] };
+      }
+      const outIdx = rest.indexOf("--out");
+      const outDir = outIdx >= 0 ? rest[outIdx + 1] ?? ".ci/release-artifacts" : ".ci/release-artifacts";
+      const result = await collectReleaseArtifacts({ root: process.cwd(), outDir });
+      return { exitCode: result.ok ? 0 : 1, lines: renderReleaseArtifacts(result) };
+    }
+    case "production-audit": {
+      const result = runProductionAudit({ root: process.cwd() });
+      return { exitCode: result.ok ? 0 : 1, lines: renderProductionAudit(result) };
+    }
+    case "champion": {
+      if (rest[0] !== "eval") {
+        return { exitCode: 1, lines: ["usage: agent champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model]"] };
+      }
+      const files = rest.slice(1).filter((a) => !a.startsWith("--"));
+      const modeIdx = rest.indexOf("--mode");
+      const mode: EvalMode = modeIdx >= 0 && rest[modeIdx + 1] === "real-model" ? "real-model" : "stub";
+      if (files.length < 2) {
+        return { exitCode: 1, lines: ["usage: agent champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model]"] };
+      }
+      try {
+        const { lines } = await runChampionEval({ baselinePath: files[0]!, candidatePath: files[1]!, mode });
+        return { exitCode: 0, lines };
+      } catch (err) {
+        return { exitCode: 1, lines: [`champion eval failed: ${err instanceof Error ? err.message : String(err)}`] };
+      }
+    }
+    case "docs:verify": {
+      const result = await verifyDocs({ root: process.cwd() });
+      return { exitCode: result.ok ? 0 : 1, lines: renderDocsVerification(result) };
+    }
     case "explain": {
       const sessionId = rest[0] as SessionId | undefined;
       if (sessionId === undefined) {
@@ -118,8 +162,10 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
       }
       const toolIdx = rest.indexOf("--tool-call");
       const toolCallId = toolIdx >= 0 ? rest[toolIdx + 1] : undefined;
+      // P20-6: `agent explain <sessionId> --tree` also renders the full trace tree.
+      const showTree = rest.includes("--tree");
       return explainCmd(
-        { sessionId, ...(toolCallId !== undefined ? { toolCallId } : {}) },
+        { sessionId, ...(toolCallId !== undefined ? { toolCallId } : {}), ...(showTree ? { tree: true } : {}) },
         deps.events,
       );
     }

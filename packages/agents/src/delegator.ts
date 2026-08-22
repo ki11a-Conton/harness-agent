@@ -3,9 +3,12 @@ import type {
   AgentEvent,
   AgentId,
   ContextBlock,
+  DeclaredCapability,
   DelegationLimits,
+  EventSink,
   EventStore,
   Evidence,
+  NonFatalErrorSink,
   Session,
   SessionId,
   SessionStore,
@@ -14,14 +17,18 @@ import type {
 } from "@ar/contracts";
 import {
   AgentError,
+  CAPABILITY_DIMENSIONS,
   DEFAULT_DELEGATION_LIMITS,
   RealTimer,
   errorInfo,
   newEventId,
   newMessageId,
   resolveChildLimits,
+  stderrErrorSink,
 } from "@ar/contracts";
 import type { AgentRuntime, TurnOutcome } from "@ar/core";
+import { composeBoundaryCapability } from "@ar/security";
+import type { GrantedCapability } from "@ar/security";
 import { detectPromptInjection } from "@ar/security";
 import type {
   ChangedArtifactRef,
@@ -73,6 +80,14 @@ export interface DelegatorDeps {
   /** P3-6: called when the child's isolated workspace is disposed, so the
    *  host can remove the root from the sandbox allow-list. */
   onChildWorkspaceDisposed?: (childSessionId: SessionId) => void;
+  /** P14-4: the parent's conferred capability (upper bound). A delegation
+   *  that declares a non-tool capability is verified against this grant —
+   *  the child may only narrow it. Absent this grant, ANY non-tool declared
+   *  capability is denied (an unknown upper bound cannot prove narrowing). */
+  parentCapability?: GrantedCapability;
+  /** P14-6: typed channel for non-fatal failures (workspace cleanup /
+   *  patch-extraction). Defaults to a stderr sink so reports stay observable. */
+  nonFatal?: NonFatalErrorSink;
 }
 
 type RaceSettle =
@@ -100,6 +115,8 @@ export class Delegator {
   private readonly timer: Timer;
   private readonly workspaceManager?: ChildWorkspaceManager;
   private readonly testOnlyUnsafeSharedWorkspace: boolean;
+  private readonly parentCapability?: GrantedCapability;
+  private readonly nonFatal: NonFatalErrorSink;
   private readonly onChildWorkspace?: (childSessionId: SessionId, root: string) => void;
   private readonly onChildWorkspaceDisposed?: (childSessionId: SessionId) => void;
 
@@ -114,6 +131,8 @@ export class Delegator {
     this.timer = deps.timer ?? new RealTimer(this.now);
     this.workspaceManager = deps.workspaceManager;
     this.testOnlyUnsafeSharedWorkspace = deps.testOnlyUnsafeSharedWorkspace ?? false;
+    this.parentCapability = deps.parentCapability;
+    this.nonFatal = deps.nonFatal ?? stderrErrorSink("delegator");
     this.onChildWorkspace = deps.onChildWorkspace;
     this.onChildWorkspaceDisposed = deps.onChildWorkspaceDisposed;
   }
@@ -139,6 +158,53 @@ export class Delegator {
           code: "SECURITY_DENIED",
         });
         throw isolationError;
+      }
+    }
+
+    // P14-4 child-agent boundary: a declared non-tool capability must NARROW
+    // the parent grant (EffectiveCapability = Conferred ∩ Declared). Without a
+    // parent grant, an unknown upper bound cannot prove narrowing — any
+    // declaration is denied fail-closed. The tool dimension stays governed by
+    // req.toolPolicy (restrictToolPolicy intersection) and is rejected here to
+    // keep ONE source of truth for the tool surface. Denied before any child
+    // session / scheduler slot exists.
+    if (req.capability !== undefined) {
+      const nonTool = Object.fromEntries(
+        CAPABILITY_DIMENSIONS.filter((dim) => dim !== "tool").map((dim) => [dim, req.capability![dim]]),
+      ) as DeclaredCapability;
+      const declaredNonTool = Object.fromEntries(
+        Object.entries(nonTool).filter(([, v]) => v !== undefined),
+      ) as DeclaredCapability;
+      if (Object.keys(declaredNonTool).length > 0) {
+        if (this.parentCapability === undefined) {
+          const error = errorInfo(
+            "SECURITY_DENIED",
+            "child-agent boundary denied: no parent capability grant configured; cannot verify declared capability is a narrowing",
+          );
+          await this.emit(parent.id, "security.capability_denied", {
+            reason: error.message,
+            source: "delegator",
+            code: "SECURITY_DENIED",
+          });
+          throw new AgentError(error);
+        }
+        await composeBoundaryCapability("child-agent", this.parentCapability, declaredNonTool, {
+          events: this.events !== undefined ? sinkOf(this.events, this.now) : undefined,
+          sessionId: parent.id,
+          source: "delegator",
+        });
+      }
+      if (req.capability.tool !== undefined) {
+        const error = errorInfo(
+          "SECURITY_DENIED",
+          "child-agent capability.tool is not a separate surface: narrow tools via toolPolicy",
+        );
+        await this.emit(parent.id, "security.capability_denied", {
+          reason: error.message,
+          source: "delegator",
+          code: "SECURITY_DENIED",
+        });
+        throw new AgentError(error);
       }
     }
 
@@ -227,8 +293,10 @@ export class Delegator {
         // before the slot releases, so no token/root accounting leaks.
         try {
           await this.store.updateSession({ ...child, status: "cancelled" });
-        } catch {
-          // store cleanup must not mask the isolation failure
+        } catch (cleanupErr) {
+          // P14-6: store cleanup must not mask the isolation failure — but it
+          // is reported on the non-fatal channel, never silent.
+          this.nonFatal.report("delegator.cleanup:mark-cancelled", cleanupErr);
         }
         this.scheduler?.unbindSession(child.id);
         token?.release();
@@ -317,13 +385,16 @@ export class Delegator {
           if (result !== undefined && result.status === "success" && workspace.mode === "isolated-copy") {
             result.workspacePatch = await workspace.diff();
           }
-        } catch {
-          // patch extraction must never break the delegation result
+        } catch (diffErr) {
+          // P14-6: patch extraction must never break the delegation result —
+          // but the failure is reported, never silent.
+          this.nonFatal.report("delegator.cleanup:workspace.diff", diffErr);
         }
         try {
           await workspace.dispose();
-        } catch {
-          // cleanup failure is non-fatal
+        } catch (disposeErr) {
+          // P14-6: cleanup failure is non-fatal — reported, never silent.
+          this.nonFatal.report("delegator.cleanup:workspace.dispose", disposeErr);
         }
         this.onChildWorkspaceDisposed?.(child.id);
       }
@@ -720,6 +791,26 @@ export class Delegator {
       payload,
     });
   }
+}
+
+/** P14-4: adapt the delegator's EventStore to the EventSink shape so the
+ *  shared boundary guard can emit security.capability_denied with the same
+ *  sequence/timestamp accounting as `Delegator.emit`. */
+function sinkOf(store: EventStore, now: () => number): EventSink {
+  return {
+    async emit(sessionId, type, payload, turnId) {
+      const sequence = await store.nextSequence(sessionId);
+      await store.append({
+        id: newEventId(),
+        sessionId,
+        ...(turnId !== undefined ? { turnId } : {}),
+        sequence,
+        timestamp: now(),
+        type,
+        payload,
+      });
+    },
+  };
 }
 
 /** P14-3: writable delegation requires a ChildWorkspaceManager — fail-closed.

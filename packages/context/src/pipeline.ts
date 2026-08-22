@@ -10,7 +10,9 @@ import type {
   InstructionDiscoveryOptions,
 } from "@ar/contracts";
 import { BudgetPlannerImpl } from "./budget.js";
-import { DefaultCompactor } from "./compaction.js";
+import { MultiStageCompactor } from "./compaction.js";
+import type { CompactionCircuitBreaker } from "./circuit-breaker.js";
+import { buildRehydrationBlocks } from "./rehydration.js";
 import { HierarchicalInstructionDiscovery } from "./discovery.js";
 import { detectPromptInjection } from "@ar/security";
 import { DEFAULT_TOKEN_ESTIMATOR, type TokenEstimator } from "./tokenizer.js";
@@ -18,6 +20,10 @@ import { DEFAULT_TOKEN_ESTIMATOR, type TokenEstimator } from "./tokenizer.js";
 export interface ContextPipelineDeps {
   /** Default: new HierarchicalInstructionDiscovery(). */
   discovery?: InstructionDiscovery;
+  /** P17-8: compaction circuit breaker. When it opens (consecutive
+   *  ineffective compactions), the pipeline stops auto-compacting and the
+   *  build reports `compactionBreakerOpen: true` instead of looping. */
+  compactionBreaker?: CompactionCircuitBreaker;
   /** Default: new BudgetPlannerImpl(). */
   planner?: BudgetPlanner;
   /** Default: new DefaultCompactor(). */
@@ -29,6 +35,9 @@ export interface ContextPipelineDeps {
   /** P6-5: token estimator; default HeuristicTokenEstimator (~4 bytes/token).
    *  Hosts with a real provider tokenizer inject it here. */
   tokenEstimator?: TokenEstimator;
+  /** P14-5: injection scanner; default detectPromptInjection. Injectable so
+   *  scanner-failure fail-closed is testable. */
+  injectionScanner?: (content: string) => { hasInjection: boolean; reasons: string[] };
 }
 
 /** P6-3: one observable selection fact per build. `reason` explains a drop
@@ -70,6 +79,9 @@ export interface ContextPipelineResult {
   report: ContextReport;
   /** Whether compaction ran in this build. */
   compacted: boolean;
+  /** P17-8: true when the compaction circuit breaker was OPEN — the build
+   *  proceeded WITHOUT compacting (no compact loop). */
+  compactionBreakerOpen?: boolean;
   /** The summary block when compacted (runtime traceability). */
   summary?: ContextBlock;
   /** Raw discovery results (debugging/recording). */
@@ -145,6 +157,10 @@ function toQuarantineEnvelope(block: ContextBlock, reasons: string[]): ContextBl
     tokens: estimateTokens(inner),
     content: inner,
     compressible: true,
+    // P14-5: the quarantine envelope is DATA ONLY by construction — never an
+    // instruction and never persistable into memory.
+    instructional: false,
+    persistable: false,
   };
 }
 
@@ -185,13 +201,40 @@ export class ContextPipeline {
   private readonly compactor: Compactor;
   private readonly onTelemetry?: (event: ContextTelemetryEvent) => void;
   private readonly tokenEstimator: TokenEstimator;
+  private readonly scanInjection: (content: string) => { hasInjection: boolean; reasons: string[] };
+
+  private readonly compactionBreaker?: CompactionCircuitBreaker;
+  private lastStageReports: import("./compaction.js").CompactionStageReport[] = [];
 
   constructor(deps: ContextPipelineDeps = {}) {
     this.discovery = deps.discovery ?? new HierarchicalInstructionDiscovery();
     this.planner = deps.planner ?? new BudgetPlannerImpl();
-    this.compactor = deps.compactor ?? new DefaultCompactor();
+    // P17-5: the ONE production compaction policy is the multi-stage state
+    // machine; a host may override, but the default never forks a parallel
+    // compactor.
+    this.lastStageReports = [];
+    this.compactor =
+      deps.compactor ??
+      new MultiStageCompactor({
+        onStage: (report) => this.lastStageReports.push(report),
+      });
+    this.compactionBreaker = deps.compactionBreaker;
     this.onTelemetry = deps.onTelemetry;
     this.tokenEstimator = deps.tokenEstimator ?? DEFAULT_TOKEN_ESTIMATOR;
+    // P14-5: the scanner is fail-closed by construction — a throwing scanner
+    // denies the source (drop + observable "scanner-failed" reason), never
+    // silently passes content that needed scanning.
+    const scanner = deps.injectionScanner ?? detectPromptInjection;
+    this.scanInjection = (content) => {
+      try {
+        return scanner(content);
+      } catch (err) {
+        return {
+          hasInjection: true,
+          reasons: [`scanner-failed: ${err instanceof Error ? err.message : String(err)}`],
+        };
+      }
+    };
   }
 
   private telemetry(event: ContextTelemetryEvent, sessionId?: string): void {
@@ -217,7 +260,7 @@ export class ContextPipeline {
     //    untrusted file must never fake its way into authoritative policy).
     const instructionBlocks: ContextBlock[] = [];
     for (const doc of discovered) {
-      const report = detectPromptInjection(doc.content);
+      const report = this.scanInjection(doc.content);
       if (report.hasInjection) {
         injected.push({ id: doc.path, source: "project", reasons: report.reasons });
         this.telemetry({ phase: "dropped", source: "project", id: doc.path, tokens: this.estimateTokens(doc.content), reason: "injection" });
@@ -234,6 +277,13 @@ export class ContextPipeline {
         ephemeral: false,
         scope: doc.scope,
         path: doc.path,
+        category: "knowledge",
+        // P14-5: repository documents are DATA ONLY — never instructional
+        // (an untrusted file must never upgrade into policy) and never
+        // persistable into memory (P17-1: derivable-from-repo facts are not
+        // long-term memory material).
+        instructional: false,
+        persistable: false,
       });
     }
 
@@ -249,7 +299,7 @@ export class ContextPipeline {
       seenSkillNames.add(skill.name);
       const line =
         skill.description !== "" ? `- ${skill.name}: ${skill.description}` : `- ${skill.name}`;
-      const report = detectPromptInjection(line);
+      const report = this.scanInjection(line);
       if (report.hasInjection) {
         injected.push({ id: `skill:${skill.name}`, source: "skill", reasons: report.reasons });
         this.telemetry({ phase: "dropped", source: "skill", id: skill.name, tokens: this.estimateTokens(line), reason: "injection" });
@@ -264,13 +314,19 @@ export class ContextPipeline {
         content: line,
         compressible: true,
         ephemeral: false,
+        category: "knowledge",
         // P6-2: every skill index block carries provenance back to its
         // manifest so selection telemetry and effectiveness can attribute it.
         provenance: { kind: "skill", serviceId: "skill-loader", toolId: skill.name, trust: "semi-trusted" },
+        // P14-5: skill index metadata is semi-trusted DATA — never an
+        // instruction, never persistable into memory.
+        instructional: false,
+        persistable: false,
       });
     }
 
-    // 4. Lead with the system prompt; never compactable, top priority.
+    // 4. Lead with the system prompt; never compactable, top priority. P14-5:
+    //    the system prompt is the one authoritative instruction block.
     const systemBlock: ContextBlock = {
       id: SYSTEM_BLOCK_ID,
       source: "system",
@@ -280,6 +336,9 @@ export class ContextPipeline {
       content: opts.systemPrompt,
       compressible: false,
       ephemeral: false,
+      category: "protected-instruction",
+      instructional: true,
+      persistable: false,
     };
 
     // P0-8 trust boundary over every prior loop block (tool output, MCP /
@@ -300,7 +359,7 @@ export class ContextPipeline {
         priorBlocks.push(block);
         continue;
       }
-      const report = detectPromptInjection(block.content);
+      const report = this.scanInjection(block.content);
       if (report.hasInjection) {
         injected.push({
           id: block.id,
@@ -402,6 +461,20 @@ export class ContextPipeline {
         blocks: plan.selected,
         report: { ...plan.report, messagesTokens },
         compacted: false,
+        compactionBreakerOpen: false,
+        discovered,
+        injected,
+      };
+    }
+    // P17-8: an OPEN breaker stops auto-compaction (no compact loop) — the
+    // build proceeds WITHOUT compacting and reports the breaker so the
+    // runtime can surface a degraded event.
+    if (this.compactionBreaker !== undefined && !this.compactionBreaker.canCompact) {
+      return {
+        blocks: plan.selected,
+        report: { ...plan.report, messagesTokens },
+        compacted: false,
+        compactionBreakerOpen: true,
         discovered,
         injected,
       };
@@ -418,7 +491,15 @@ export class ContextPipeline {
       );
     }
     const summary = opts.summaryOverride;
-    const blocks = this.compactor.compact(plan.selected, summary);
+    let blocks = await this.compactor.compact(plan.selected, summary);
+
+    // P17-7: post-compaction rehydration — only the high-value references are
+    // restored (bounded files / active plan / skills / unresolved evidence /
+    // pointers), never the full history. The rehydrated blocks keep the
+    // digest's working-set visible without re-pasting the transcript.
+    if (blocks.some((b) => b.id === "compaction-summary")) {
+      blocks = [...blocks, ...buildRehydrationBlocks(summary)];
+    }
 
     // Report after compaction: `used` is recomputed over the final blocks and
     // `compressed` is set to 1 (one compaction happened this build). The other
@@ -431,6 +512,9 @@ export class ContextPipeline {
       compressed: 1,
       messagesTokens,
     };
+    if (this.compactionBreaker !== undefined) {
+      this.compactionBreaker.record(this.lastStageReports, 0);
+    }
 
     // P6-3: compaction is an observable fact with cost (folded tokens).
     this.telemetry(

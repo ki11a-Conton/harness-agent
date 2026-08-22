@@ -107,6 +107,47 @@ const PRESETS: Record<HarnessProfile, ProfilePreset> = {
       delegation: false,
     },
   },
+  /**
+   * P21-5: CHAMPION profile v1 — the production default preset. Trusted
+   * surface defaults ON (context / checkpoint / artifacts / skills /
+   * observability); evidence-gated mechanisms default OFF until P21-4 proves
+   * them (memory / delegation / learning); trust-surface mechanisms default
+   * OFF (mcp requires user-configured servers, plugins are same-process
+   * trust risk). Permissions are batch-style: reads allowed, edits/exec ask,
+   * network denied — safer than interactive by default.
+   */
+  champion: {
+    permissions: BATCH_PERMISSIONS,
+    sandbox: defaultSandboxPolicy(),
+    defaultFeatureFlags: {
+      ...SHARED_DEFAULTS,
+      context: true,
+      checkpoint: true,
+      artifacts: true,
+      memory: false,
+      skills: true,
+      delegation: false,
+      learning: false,
+    },
+  },
+  /** P16-4: explicit EPHEMERAL profile for tests / one-shot runs. No
+   *  durability is claimed: checkpoint/artifacts default OFF, so without an
+   *  explicit dataDir the harness is honestly in-memory and never audited as
+   *  production-ready. Passing a dataDir upgrades it to a durable run — the
+   *  profile only changes the DEFAULTS, never the capability truth. */
+  ephemeral: {
+    permissions: BENCHMARK_PERMISSIONS,
+    sandbox: defaultSandboxPolicy(),
+    defaultFeatureFlags: {
+      ...SHARED_DEFAULTS,
+      context: true,
+      checkpoint: false,
+      artifacts: false,
+      memory: false,
+      skills: true,
+      delegation: false,
+    },
+  },
 };
 
 export function resolveProfile(profile: HarnessProfile): ProfilePreset {

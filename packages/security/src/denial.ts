@@ -24,7 +24,8 @@ export type SecurityDimension =
   | "memory"
   | "skill"
   | "mcp"
-  | "approval";
+  | "approval"
+  | "capability";
 
 export interface SecurityDenial {
   dimension: SecurityDimension;
@@ -64,6 +65,8 @@ export function securityEventType(dimension: SecurityDimension): EventType {
       return "security.mcp_denied";
     case "approval":
       return "security.approval_denied";
+    case "capability":
+      return "security.capability_denied";
   }
 }
 
@@ -90,6 +93,8 @@ export function securityErrorCode(dimension: SecurityDimension): ErrorCode {
       return "MCP_DENIED";
     case "approval":
       return "APPROVAL_DENIED";
+    case "capability":
+      return "SECURITY_DENIED";
   }
 }
 

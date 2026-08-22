@@ -27,6 +27,19 @@ export interface Skill {
   headers?: Record<string, string>;
   /** P2-5: cumulative effectiveness profile (discovered ≠ effective). */
   effectiveness?: SkillEffectiveness;
+  /** P17-3: skill provenance — where the skill came from and its trust
+   *  classification (local filesystem = semi-trusted; remote = untrusted).
+   *  Provenance/trust are part of the skill record so context building and
+   *  capability gating never guess them. */
+  provenance?: {
+    /** "local-filesystem" | "remote" (e.g. fetched package / MCP skill). */
+    source: "local-filesystem" | "remote";
+    /** The root the skill was discovered under. */
+    root: string;
+    /** P17-3: trust level derived from the source (local → semi-trusted,
+     *  remote → untrusted). Untrusted skills' bodies are pollution-prone. */
+    trust: "trusted" | "semi-trusted" | "untrusted";
+  };
 }
 
 /** P2-5: cumulative usage/outcome funnel. Absent until first feedback;

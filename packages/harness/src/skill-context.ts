@@ -14,8 +14,16 @@ import type {
   SkillEffectiveness,
   SkillId,
   SkillLoader,
+  ToolPolicy,
 } from "@ar/contracts";
-import { recordSkillEffectiveness, type SkillUseFeedback } from "@ar/skills";
+import { isNodeErrorCode } from "@ar/contracts";
+import {
+  checkSkillRequiredTools,
+  recordSkillEffectiveness,
+  requiredToolsDenial,
+  type SkillSecurityDenial,
+  type SkillUseFeedback,
+} from "@ar/skills";
 
 export interface SkillBodyBlockProviderDeps {
   loader: SkillLoader;
@@ -24,6 +32,13 @@ export interface SkillBodyBlockProviderDeps {
   discover: () => Promise<Skill[] | undefined>;
   dataDir: string;
   now?: () => number;
+  /** P14-4: the host agent's conferred tool policy. A skill whose declared
+   *  requiredTools are not allowed by this policy is never injected — the
+   *  skill boundary may only narrow, never widen, the host tool capability. */
+  toolPolicy?: ToolPolicy;
+  /** P14-4: fired when a selected skill is denied because its requiredTools
+   *  exceed the host tool policy (typed denial, never silent). */
+  onRequiredToolsDenied?: (event: SkillSecurityDenial) => void;
 }
 
 export interface SkillBodyBlockProvider {
@@ -74,6 +89,14 @@ export function createSkillBodyBlockProvider(deps: SkillBodyBlockProviderDeps): 
       for (const name of names) {
         const skill = byName.get(name);
         if (skill === undefined) continue;
+        // P14-4 skill boundary: a skill that declares required tools outside
+        // the host's conferred tool policy is a capability widening — deny
+        // injection (fail-closed) and surface the typed denial.
+        const required = checkSkillRequiredTools(skill, deps.toolPolicy);
+        if (!required.allowed) {
+          deps.onRequiredToolsDenied?.(requiredToolsDenial(skill, required));
+          continue;
+        }
         let body = bodyCache.get(name);
         if (body === undefined) {
           let loaded: Skill;
@@ -95,6 +118,7 @@ export function createSkillBodyBlockProvider(deps: SkillBodyBlockProviderDeps): 
           content: body,
           compressible: true,
           ephemeral: false,
+          category: "knowledge",
           path: skill.path,
           // P6-2: skill body blocks trace to the manifest name (stable across
           // discovers — FileSkillLoader ids are not) for effectiveness/ROI.
@@ -105,6 +129,11 @@ export function createSkillBodyBlockProvider(deps: SkillBodyBlockProviderDeps): 
             version: skill.manifest.version,
             trust: "semi-trusted",
           },
+          // P14-5: skill bodies are semi-trusted DATA (procedural knowledge,
+          // not policy) — never an instruction upgrade, never persistable into
+          // memory on their own.
+          instructional: false,
+          persistable: false,
         });
         // P2-9: loaded + injected are observable facts of this build.
         await ledger.apply(name, { kind: "loaded" });
@@ -174,8 +203,11 @@ export class SkillEffectivenessLedger {
     let content: string;
     try {
       content = await readFile(this.file, "utf8");
-    } catch {
-      return;
+    } catch (err) {
+      // P14-6: only the expected "no effectiveness file yet" ENOENT is silent;
+      // any other read error is a real failure and propagates.
+      if (isNodeErrorCode(err, "ENOENT")) return;
+      throw err;
     }
     for (const line of content.split("\n")) {
       const trimmed = line.trim();
@@ -183,8 +215,10 @@ export class SkillEffectivenessLedger {
       try {
         const record = JSON.parse(trimmed) as { name: string; effectiveness: SkillEffectiveness };
         this.profiles.set(record.name, record.effectiveness);
-      } catch {
-        // corrupt line: skip
+      } catch (err) {
+        // P14-6: a corrupt ledger line is data-loss evidence — reported, then
+        // skipped so the rest of the ledger still loads.
+        process.stderr.write(`[degraded] skill-ledger.corrupt-line: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
   }

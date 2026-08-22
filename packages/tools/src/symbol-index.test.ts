@@ -86,3 +86,42 @@ describe("P7-4: light TS/JS symbol index (EXPERIMENT)", () => {
     expect(second.hits).toHaveLength(first.hits.length);
   });
 });
+
+describe("P15-5: cross-repo cache isolation + freshness", () => {
+  it("two repos never share index state through the module cache", async () => {
+    const rootA = await freshRoot();
+    await mkdir(join(rootA, "src"), { recursive: true });
+    await writeFile(join(rootA, "src", "a.ts"), "export function alpha() {}\n", "utf8");
+    const rootB = await freshRoot();
+    await mkdir(join(rootB, "src"), { recursive: true });
+    await writeFile(join(rootB, "src", "b.ts"), "export function beta() {}\n", "utf8");
+
+    const a = await indexedSymbolSearch({ symbol: "alpha", root: rootA });
+    expect(a.hits.length).toBeGreaterThan(0);
+    // the same symbol in repo B must NOT resolve from A's index
+    const aInB = await indexedSymbolSearch({ symbol: "alpha", root: rootB });
+    expect(aInB.hits.length).toBe(0);
+    const bInB = await indexedSymbolSearch({ symbol: "beta", root: rootB });
+    expect(bInB.hits.length).toBeGreaterThan(0);
+  });
+
+  it("a root whose directory fingerprint changed rebuilds the index (no stale state)", async () => {
+    const root = await freshRoot();
+    await mkdir(join(root, "src"), { recursive: true });
+    await writeFile(join(root, "src", "one.ts"), "export function first() {}\n", "utf8");
+    const first = await indexedSymbolSearch({ symbol: "first", root });
+    expect(first.hits.length).toBeGreaterThan(0);
+
+    // Change the ROOT directory itself (new subdirectory) so the fingerprint
+    // (mtime/size of root) changes; the cache must rebuild, not serve stale.
+    await new Promise((r) => setTimeout(r, 5));
+    await mkdir(join(root, "newpkg"), { recursive: true });
+    await writeFile(join(root, "newpkg", "two.ts"), "export function second() {}\n", "utf8");
+
+    const second = await indexedSymbolSearch({ symbol: "second", root });
+    expect(second.hits.length).toBeGreaterThan(0);
+    // the old symbol is still found (rebuilt index covers the whole tree)
+    const firstAgain = await indexedSymbolSearch({ symbol: "first", root });
+    expect(firstAgain.hits.length).toBeGreaterThan(0);
+  });
+});

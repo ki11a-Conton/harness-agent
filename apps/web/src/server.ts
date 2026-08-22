@@ -133,8 +133,10 @@ export class WebServer {
               ok: false,
               error: err instanceof Error ? err.message : String(err),
             });
-          } catch {
-            // Response already started (e.g. SSE stream) — nothing left to do.
+          } catch (err) {
+            // P14-6: response already started (e.g. SSE stream) — nothing left
+            // to do, but the secondary failure is reported, never silent.
+            process.stderr.write(`[degraded] web.error-response: ${err instanceof Error ? err.message : String(err)}\n`);
           }
         }
       })();
@@ -304,8 +306,10 @@ export class WebServer {
         createdAt = session?.createdAt;
         const messages = await this.store.listMessages(sessionId);
         firstText = messages.find((m) => m.role === "user")?.content;
-      } catch {
-        // Stale binding (store read failure) — still list the id.
+      } catch (err) {
+        // P14-6: stale binding (store read failure) — the id is still listed,
+        // but the failure is reported, never silent.
+        process.stderr.write(`[degraded] web.session-listing: ${err instanceof Error ? err.message : String(err)}\n`);
       }
       sessions.push({ from, sessionId, ...(createdAt !== undefined ? { createdAt } : {}), ...(firstText !== undefined ? { firstText } : {}) });
     }
@@ -329,8 +333,10 @@ export class WebServer {
       }
       conn.seq = last;
       await this.pushAssistantText(conn, sessionId);
-    } catch {
-      // Transient store errors must not kill the stream; the next tick retries.
+    } catch (err) {
+      // P14-6: transient store errors must not kill the stream (the next tick
+      // retries) — but they are reported, never silent.
+      process.stderr.write(`[degraded] web.poll-store: ${err instanceof Error ? err.message : String(err)}\n`);
     } finally {
       conn.polling = false;
     }
@@ -405,8 +411,14 @@ export class WebServer {
     const run = previous === undefined ? this.deliverOne(msg) : previous.then(() => this.deliverOne(msg));
     // Keep only the tail, swallowing rejections: one failed delivery must
     // never block the next (the caller still sees the rejection via `run`).
+    // P14-6: the swallowed tail rejection is reported, never silent.
     this.pendingDeliveries.length = 0;
-    this.pendingDeliveries.push(run.catch(() => undefined));
+    this.pendingDeliveries.push(
+      run.catch((err) => {
+        process.stderr.write(`[degraded] web.deliver: ${err instanceof Error ? err.message : String(err)}\n`);
+        return undefined;
+      }),
+    );
     return run;
   }
 
@@ -439,8 +451,9 @@ export class WebServer {
     }
     try {
       conn.res.end();
-    } catch {
-      // Already closed by the client.
+    } catch (err) {
+      // P14-6: already closed by the client — reported, never silent.
+      process.stderr.write(`[degraded] web.conn-end: ${err instanceof Error ? err.message : String(err)}\n`);
     }
   }
 

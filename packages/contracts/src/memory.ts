@@ -1,4 +1,4 @@
-import type { MemoryId, SessionId } from "./ids.js";
+import type { MemoryId, SessionId, TurnId } from "./ids.js";
 
 export type MemoryType = "explicit" | "episodic" | "procedural";
 
@@ -36,14 +36,46 @@ export interface StrategyLesson {
   evidenceRefs: string[];
 }
 
+/** P17-1: derivability verdict — can this fact be re-derived from the repo /
+ *  git history / AGENTS.md / config? Facts that can be re-derived must NOT be
+ *  stored as long-term memory (they are cheap to re-obtain); memory is
+ *  reserved for user preferences, non-obvious project decisions, failure
+ *  lessons, environment characteristics and underivable constraints. */
+export interface DerivationVerdict {
+  verdict: "derivable" | "non-derivable";
+  reason: string;
+}
+
+/** P17-2: lifecycle state of a queued learning candidate. `quarantined`
+ *  marks candidates produced by a turn that used untrusted external content
+ *  (MCP/tool/remote skill/repo instruction) — they must never auto-promote
+ *  and must be reviewed. */
+export type CandidatePromotionState =
+  | "pending"
+  | "quarantined"
+  | "rejected"
+  | "promoted";
+
 export interface MemoryCandidate {
   content: string;
   type: MemoryType;
   sourceSession: SessionId;
+  /** P17-1: the turn that produced this candidate (provenance). */
+  sourceTurn?: TurnId;
   importance: number;
   confidence: number;
   novelty: number;
   stability: number;
+  /** P17-1: derivability verdict (derivable → not stored long-term). */
+  derivability?: DerivationVerdict;
+  /** P17-2: promotion lifecycle state (pending/quarantined/rejected/promoted). */
+  promotionState?: CandidatePromotionState;
+  /** P17-1/P17-2: security scan record (write-gate result). */
+  securityScan?: { checked: boolean; passed: boolean; at: number };
+  /** P17-2: provenance of untrusted content used by the producing turn
+   *  (e.g. ["mcp:server-x", "tool:read_file#untrusted-repo/AGENTS.md"]).
+   *  Present + non-empty → the candidate is quarantined, never auto-promoted. */
+  pollutionSources?: string[];
   /** P2-1: structured strategy lesson when the candidate is procedural. */
   structured?: StrategyLesson;
 }

@@ -40,7 +40,11 @@ export async function makeTempWorkspace(files: Record<string, string>): Promise<
 export async function cleanup(): Promise<void> {
   for (const path of createdPaths.splice(0)) {
     if (isUnderTmp(path)) {
-      await rm(path, { recursive: true, force: true }).catch(() => {});
+      // P14-6: fixture cleanup is best-effort — a failure is reported, never
+      // silently swallowed (test-teardown evidence).
+      await rm(path, { recursive: true, force: true }).catch((err) => {
+        process.stderr.write(`[degraded] fixture.cleanup: ${err instanceof Error ? err.message : String(err)}\n`);
+      });
     }
   }
 }

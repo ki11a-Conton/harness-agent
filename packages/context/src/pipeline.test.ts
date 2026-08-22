@@ -171,7 +171,9 @@ describe("ContextPipeline (LOOP-001)", () => {
     expect(result.compacted).toBe(true);
     const ids = result.blocks.map((b) => b.id);
     expect(ids[0]).toBe("system-prompt");
-    expect(ids[ids.length - 1]).toBe("compaction-summary");
+    // P17-7: rehydration blocks (bounded high-value refs) follow the digest —
+    // the summary itself must still be present.
+    expect(ids).toContain("compaction-summary");
     expect(sumTokens(result.blocks)).toBeLessThan(10_000);
 
     const summary = result.summary!;
@@ -545,12 +547,11 @@ describe("ContextPipeline (LOOP-001)", () => {
     // P0-8: the skill index is semi-trusted (no never-evict privilege), so it
     // is admitted by priority like any ordinary block — after the untrusted
     // project document (priority 1000), before tool blocks (priority 100).
-    expect(result.blocks.map((b) => b.id)).toEqual([
-      "system-prompt",
-      join(r, "AGENTS.md"),
-      "skill:grill-me",
-      "compaction-summary",
-    ]);
+    const compactedIds = result.blocks.map((b) => b.id);
+    expect(compactedIds[0]).toBe("system-prompt");
+    expect(compactedIds).toContain("compaction-summary");
+    // P17-7: rehydration refs follow the digest.
+    expect(compactedIds.some((id) => id.startsWith("rehydrate:"))).toBe(true);
     expect(result.blocks[2]!.content).toBe("- grill-me: interview the user");
     expect(result.blocks[2]!.compressible).toBe(true);
     expect(result.summary!.content).toContain("- step-0: ran tool output");
@@ -573,12 +574,10 @@ describe("ContextPipeline (LOOP-001)", () => {
     });
 
     expect(result.compacted).toBe(true);
-    expect(result.blocks.map((b) => b.id)).toEqual([
-      "system-prompt",
-      join(r, "AGENTS.md"),
-      "keep-me",
-      "compaction-summary",
-    ]);
+    const compactedIds = result.blocks.map((b) => b.id);
+    expect(compactedIds[0]).toBe("system-prompt");
+    expect(compactedIds).toContain("compaction-summary");
+    expect(compactedIds.some((id) => id.startsWith("rehydrate:"))).toBe(true);
     expect(result.blocks[2]!.content).toBe("PENDING: approval\nsecond line");
     expect(result.summary!.content).toContain("- transient output");
   });
@@ -950,5 +949,73 @@ describe("P6-5: tokenizer adapter", () => {
     });
     expect(result.blocks.find((b) => b.id === "system-prompt")!.tokens).toBe(7);
     expect(new HeuristicTokenEstimator().estimate("x".repeat(16))).toBe(4);
+  });
+});
+
+describe("P14-5: trust envelope on pipeline blocks", () => {
+  it("the system prompt block is the only instructional block", async () => {
+    const root = await freshRoot();
+    const result = await pipeline.build({
+      cwd: root,
+      systemPrompt: "you are a harness",
+      skills: [{ name: "deploy", description: "deployment" }],
+      priorBlocks: [toolBlock("tool:t1", 10, true, "some output")],
+      budget: makeBudget(),
+    });
+    const system = result.blocks.find((b) => b.id === "system-prompt");
+    expect(system?.instructional).toBe(true);
+    expect(system?.persistable).toBe(false);
+    // all other blocks are DATA ONLY (missing flag = data, never instruction)
+    for (const block of result.blocks) {
+      if (block.id === "system-prompt") continue;
+      expect(block.instructional ?? false).toBe(false);
+    }
+    // untrusted/semi-trusted data is never persistable (missing = not persistable)
+    for (const block of result.blocks) {
+      if (block.trust !== "trusted") expect(block.persistable ?? false).toBe(false);
+    }
+  });
+
+  it("a throwing injection scanner drops the source with an observable scanner-failed reason", async () => {
+    const root = await freshRoot();
+    const tp = new ContextPipeline({
+      injectionScanner: () => {
+        throw new Error("scanner exploded");
+      },
+    });
+    const result = await tp.build({
+      cwd: root,
+      systemPrompt: "sys",
+      priorBlocks: [toolBlock("tool:unsafe", 10, true, "unscannable content")],
+      budget: makeBudget(),
+    });
+    // the unscannable data block never becomes a block
+    expect(result.blocks.some((b) => b.id === "tool:unsafe")).toBe(false);
+    // and the denial is observable with source + id + reason
+    const denial = result.injected.find((i) => i.id === "tool:unsafe");
+    expect(denial?.source).toBe("tool");
+    expect(denial?.reasons.join(" ")).toContain("scanner-failed");
+  });
+
+  it("scanner failure on a project instruction document drops it too (never upgrades into policy)", async () => {
+    const root = await freshRoot();
+    await mkdir(join(root, "docs"), { recursive: true });
+    await writeFile(join(root, "docs", "AGENTS.md"), "unscannable repo instruction", "utf8");
+    const tp = new ContextPipeline({
+      injectionScanner: () => {
+        throw new Error("scanner exploded");
+      },
+    });
+    const result = await tp.build({
+      cwd: root,
+      systemPrompt: "sys",
+      priorBlocks: [],
+      budget: makeBudget(),
+      instructionOpts: { maxBytesPerFile: 50_000, maxDocuments: 4 },
+    });
+    expect(result.blocks.some((b) => b.source === "project")).toBe(false);
+    const denial = result.injected.find((i) => i.source === "project");
+    expect(denial).toBeDefined();
+    expect(denial!.reasons.join(" ")).toContain("scanner-failed");
   });
 });

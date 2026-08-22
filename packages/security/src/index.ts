@@ -5,6 +5,7 @@ export * from "./canonical-path.js";
 export * from "./approval.js";
 export * from "./permission-grant.js";
 export * from "./capability-guard.js";
+export * from "./boundary-guard.js";
 export * from "./network-gate.js";
 export * from "./process-gate.js";
 export * from "./supply-chain.js";

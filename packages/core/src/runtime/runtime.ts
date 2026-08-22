@@ -21,7 +21,6 @@ import type {
   SkillIndexEntry,
   TaskSpec,
   ToolCall,
-  ToolCapability,
   ToolOrchestrator,
   ToolResult,
   ToolSemantics,
@@ -35,7 +34,6 @@ import type {
 import {
   AdaptiveRecoveryPlanner,
   DEFAULT_CHECKPOINT_POLICY,
-  DEFAULT_TOOL_CAPABILITY,
   DEFAULT_TOOL_SEMANTICS,
   EFFECTIVE_AGENT_SNAPSHOT_KEY,
   RUNTIME_POLICY_SNAPSHOT_KEY,
@@ -48,18 +46,21 @@ import {
   newSessionId,
   newTurnId,
   newWorkingState,
+  newTurnExecutionState,
   snapshotEffectiveConfig,
   STALL_WINDOW_SIZE,
   defaultAskUserLifecycle,
   RealTimer,
 } from "@ar/contracts";
 import type {
+  CheckpointBudgetUsage,
   CheckpointId,
   CheckpointPolicy,
   CheckpointStore,
   CompactionSummary,
   EffectiveAgentConfig,
   EffectiveRuntimePolicySnapshot,
+  RunBudget,
   ToolExecutionRecord,
   WorkingState,
   ProgressSignal,
@@ -67,6 +68,8 @@ import type {
   RecoveryAction,
   RecoveryDecision,
   RecoveryInput,
+  StepContext,
+  TurnExecutionState,
   AskUserRequest,
   AskUserReply,
   AskUserStore,
@@ -77,7 +80,7 @@ import type {
 } from "@ar/contracts";
 import type { ContextPipeline, InstructionDiscoveryOptions } from "@ar/context";
 import type { ToolSelector } from "../tools/tool-selector.js";
-import { estimateMessageTokens } from "@ar/context";
+import { estimateMessageTokens, hashPolicyConfig } from "@ar/context";
 import { applyWorkingStateMutation, type WorkingStateMutation } from "@ar/contracts";
 import { AgentError } from "../errors.js";
 import { AgentState } from "../state/agent-state.js";
@@ -85,6 +88,7 @@ import { HookRegistry } from "../lifecycle/hooks.js";
 import { RecoveryPolicy } from "../recovery/recovery.js";
 import {
   buildResumePrompt,
+  classifyUnknownOutcome,
   DEFAULT_RUNTIME_TOOL_SEMANTICS,
   isContextOverflowError,
   isEffectiveAgentConfig,
@@ -99,6 +103,7 @@ import {
 import type {
   FaultPoint,
   FaultPointContext,
+  ReconciliationVerdict,
   ResumeResult,
   SkillDiscovery,
   TurnContext,
@@ -114,7 +119,7 @@ function stableHashOf(value: unknown): string {
 import type { ExecutedToolCall } from "./tool-call-controller.js";
 import { ContextController } from "./context-controller.js";
 import type { ContextUpdate } from "./context-controller.js";
-import { ModelCallController } from "./model-call-controller.js";
+import { ModelCallController, finalizeUsage } from "./model-call-controller.js";
 import { VerificationController } from "./verification-controller.js";
 import { RecoveryController } from "./recovery-controller.js";
 
@@ -139,7 +144,7 @@ const DEFAULT_ENABLED_STALL_PATTERNS: readonly StallPattern[] = [
 // @ar/core surface (apps/cli, fault-injection tests importing ./runtime.js)
 // is unchanged.
 export { defaultSandboxPolicy, RuntimeKilledError, ASK_GATE_TOOL, TRUST_BOUNDARY_PROMPT } from "./turn-helpers.js";
-export type { FaultPoint, FaultPointContext, TurnOutcome, TurnOutcomeStatus, TurnOutcomeDetail, ResumeResult, SkillSecurityDenialRecord, SkillDiscovery } from "./turn-helpers.js";
+export type { FaultPoint, FaultPointContext, ReconciliationVerdict, TurnOutcome, TurnOutcomeStatus, TurnOutcomeDetail, ResumeResult, SkillSecurityDenialRecord, SkillDiscovery } from "./turn-helpers.js";
 
 export interface AgentRuntimeDeps {
   store: SessionStore;
@@ -182,15 +187,17 @@ export interface AgentRuntimeDeps {
    *  Default 4; set 0/1 to force serial execution. Writes and unknown tools
    *  always run serially, and results are appended in call order. */
   maxParallelToolCalls?: number;
-  /** Capability lookup for retry gating and concurrency planning (plan.md
-   *  Phase 3.2/3.6). Defaults to conservative "unknown"/serial. */
-  toolCapabilityOf?: (toolName: string) => ToolCapability;
-  /** P1-11: full execution-semantics lookup. Replaces name-based hardcodes
-   *  (side-effect/checkpoint/resume decisions follow semantics, not tool
-   *  names). When unset, a built-in registry keeps the historical behavior
+  /** P1-11/P18-1: ToolSemantics lookup — the ONLY execution-policy source.
+   *  Retry, concurrency, checkpoint, approval, side-effect reconciliation,
+   *  network behavior, output sensitivity and cancellation all derive from
+   *  it (or its single projection); the legacy ToolCapability double-truth
+   *  is gone. When unset, a built-in registry keeps the historical behavior
    *  for write_file/edit_file/exec; unknown tools are conservatively
-   *  side-effect-free. */
+   *  side-effecting (fail-closed, never name-matched). */
   toolSemanticsOf?: (toolName: string) => ToolSemantics;
+  /** P18-6: per-call resource conflict key (args-derived) — calls sharing a
+   *  key are never batched in parallel. Absent → no static conflict split. */
+  resourceConflictOf?: (call: import("@ar/contracts").ToolCall) => import("@ar/contracts").ResourceConflictKey | undefined;
   /** Tool Output Budget (plan.md Phase 4/5 Stage 0): tool results whose
    *  rendered output exceeds `maxInlineBytes` are written to an artifact file
    *  under `artifactDir` and replaced in the message trail by a preview +
@@ -308,7 +315,10 @@ export interface AgentRuntimeDeps {
    *  scheduler budget). Called after model.completed with the session the
    *  call belonged to and the usage from the most recent call — the session id
    *  lets the host attribute usage to the right tree root (P3-10). */
-  reportModelUsage?: (sessionId: SessionId, inputTokens: number, outputTokens: number) => void;
+  /** P20-1: per-call usage record (with provenance) for tree-budget
+   *  accounting. Only the RUNTIME source feeds the scheduler — no separate
+   *  usage path may guess different numbers. */
+  reportModelUsage?: (sessionId: SessionId, usage: import("@ar/contracts").UsageSnapshot) => void;
   /** P2-2: pre-turn memory retrieval. When set, the runtime awaits it once
    *  per turn (after turn initialization, before the first model call) and
    *  passes the returned blocks into the context pipeline as memory prior
@@ -366,13 +376,30 @@ type ToolResultsAction =
 
 /** Q-1: per-turn initialization bundle produced by prepareTurn — the immutable
  *  read-only TurnContext plus the fresh mutable accumulators created at turn
- *  start (AgentState, working state, tool execution ledger). */
+ *  start (AgentState, working state, tool execution ledger, and the P15-1
+ *  per-turn execution state). */
 interface TurnInit {
   ctx: TurnContext;
   state: AgentState;
   turn: Turn;
   working: WorkingState;
   toolLedger: ToolExecutionRecord[];
+  /** P15-1: fresh per-turn execution state (recoveryUsage etc.) — created
+   *  here and threaded by value; never a runtime/controller field. */
+  turnState: TurnExecutionState;
+}
+
+/** P16-3: options for runTurn / runTurnCore / prepareTurn. `initialState`
+ *  seeds working state from a restored checkpoint (P1-4); the *Seed fields
+ *  carry the checkpoint's consumed budget counters forward so a resumed turn
+ *  never refreshes model/token/cost/tool/subagent/recovery/stall/verification
+ *  budgets (and never inherits ANOTHER turn's). */
+export interface RunTurnOptions {
+  initialState?: WorkingState;
+  budgetSeed?: RunBudget;
+  recoveryUsageSeed?: Partial<Record<RecoveryAction, number>>;
+  verificationRetriesSeed?: number;
+  stallRecoverySeed?: number;
 }
 
 export class AgentRuntime {
@@ -391,14 +418,14 @@ export class AgentRuntime {
   private readonly maxPatternStallRecoveries: number;
   private readonly maxVerificationFailures: number;
   private readonly maxParallelToolCalls: number;
-  private readonly toolCapabilityOf: (toolName: string) => ToolCapability;
   private readonly toolSemanticsOf?: (toolName: string) => ToolSemantics;
+  private readonly resourceConflictOf?: (call: import("@ar/contracts").ToolCall) => import("@ar/contracts").ResourceConflictKey | undefined;
   private readonly toolOutputBudget?: AgentRuntimeDeps["toolOutputBudget"];
   private readonly artifactStore?: ArtifactStore;
   private readonly outputRedactor?: AgentRuntimeDeps["outputRedactor"];
   private readonly injectionDetector?: AgentRuntimeDeps["injectionDetector"];
   private readonly inbox?: InboxStore;
-  private readonly reportModelUsage?: (sessionId: SessionId, inputTokens: number, outputTokens: number) => void;
+  private readonly reportModelUsage?: (sessionId: SessionId, usage: import("@ar/contracts").UsageSnapshot) => void;
   private readonly now: () => number;
   /** Q-7: injectable timer driving retry-backoff sleeps. */
   private readonly timer: Timer;
@@ -410,8 +437,6 @@ export class AgentRuntime {
   private readonly recovery?: RecoveryPolicy;
   /** P2-42: adaptive recovery planner (bounded action budgets). */
   private readonly adaptiveRecovery?: AdaptiveRecoveryPlanner;
-  /** P2-42: per-turn ledger of recovery-action uses against their budgets. */
-  private readonly recoveryUsage: Partial<Record<RecoveryAction, number>> = {};
   private readonly skills?: AgentRuntimeDeps["skills"];
   private readonly skillSelector?: AgentRuntimeDeps["skillSelector"];
   /** P2-8: loads skill bodies for the selected skills (progressive disclosure). */
@@ -431,6 +456,10 @@ export class AgentRuntime {
   private readonly compactCounter = { value: 0 };
   private readonly checkpointStore?: CheckpointStore;
   private readonly checkpointPolicy: CheckpointPolicy;
+  /** P16-3: live per-turn budget-usage provider (set by runTurnCore so every
+   *  checkpoint writer sees the CURRENT consumed counters). Undefined outside
+   *  a turn. */
+  private activeBudgetUsage: (() => CheckpointBudgetUsage | undefined) | undefined = undefined;
   private readonly failpoint?: AgentRuntimeDeps["failpoint"];
   /** P2-43: ask-user gate — durable store, handler, and pure lifecycle. */
   private readonly askUserStore?: AskUserStore;
@@ -472,8 +501,8 @@ export class AgentRuntime {
     this.maxPatternStallRecoveries = deps.maxPatternStallRecoveries ?? 1;
     this.maxVerificationFailures = deps.maxVerificationFailures ?? 3;
     this.maxParallelToolCalls = deps.maxParallelToolCalls ?? 4;
-    this.toolCapabilityOf = deps.toolCapabilityOf ?? (() => DEFAULT_TOOL_CAPABILITY);
     this.toolSemanticsOf = deps.toolSemanticsOf;
+    this.resourceConflictOf = deps.resourceConflictOf;
     this.toolOutputBudget = deps.toolOutputBudget;
     this.artifactStore = deps.artifactStore;
     this.outputRedactor = deps.outputRedactor;
@@ -518,9 +547,10 @@ export class AgentRuntime {
       askUser: this.askUser,
       semanticsOf: (name) => this.semanticsOf(name),
     });
-    // Q-1: tool-call execution delegated to the extracted controller. The
-    // bindings below are captured once (all fields above are readonly);
-    // `recoveryUsage` is passed by reference — the shared mutable budget map.
+    // Q-1: tool-call execution delegated to the extracted controller. All
+    // bindings are captured once (fields are readonly); per-turn mutable state
+    // (P15-1 recoveryUsage) is threaded by VALUE into executeToolCalls — it is
+    // never a controller field, so turns/sessions cannot pollute each other.
     this.toolCallController = new ToolCallController({
       orchestrator: this.orchestrator,
       store: this.store,
@@ -532,8 +562,8 @@ export class AgentRuntime {
       sandboxPolicy: this.sandboxPolicy,
       recovery: this.recovery,
       adaptiveRecovery: this.adaptiveRecovery,
-      recoveryUsage: this.recoveryUsage,
-      toolCapabilityOf: (toolName) => this.toolCapabilityOf(toolName),
+      toolSemanticsOf: (name) => this.semanticsOf(name),
+      resourceConflictOf: this.resourceConflictOf,
       maxParallelToolCalls: this.maxParallelToolCalls,
       delegateSpecialist: this.delegateSpecialist,
     });
@@ -552,9 +582,10 @@ export class AgentRuntime {
       recovery: this.recovery,
       compactCounter: this.compactCounter,
       checkpoint: (ctx, working, state, toolLedger, reason, budgetUsage) =>
-        this.recoveryController.checkpoint(ctx, working, state, toolLedger, reason, budgetUsage),
-      finishTurn: (ctx, status, state, working, error, terminationReason, ledger) =>
-        this.recoveryController.finishTurn(ctx, status, state, working, error, terminationReason, ledger),
+        this.recoveryController.checkpoint(ctx, working, state, toolLedger, reason,
+          budgetUsage ?? this.activeBudgetUsage?.()),
+      finishTurn: (ctx, status, state, working, error, terminationReason, ledger, completionEvidence) =>
+        this.recoveryController.finishTurn(ctx, status, state, working, error, terminationReason, ledger, completionEvidence),
       toolOutputBudget: this.toolOutputBudget,
       outputRedactor: this.outputRedactor,
       artifactStore: this.artifactStore,
@@ -593,9 +624,10 @@ export class AgentRuntime {
       afterVerificationCheckpoint: this.checkpointPolicy.afterVerification,
       contextBudgetMaxTokens: this.context?.budget.maxTokens ?? 0,
       checkpoint: (ctx, working, state, toolLedger, reason, budgetUsage) =>
-        this.recoveryController.checkpoint(ctx, working, state, toolLedger, reason, budgetUsage),
-      finishTurn: (ctx, status, state, working, error, terminationReason, ledger) =>
-        this.recoveryController.finishTurn(ctx, status, state, working, error, terminationReason, ledger),
+        this.recoveryController.checkpoint(ctx, working, state, toolLedger, reason,
+          budgetUsage ?? this.activeBudgetUsage?.()),
+      finishTurn: (ctx, status, state, working, error, terminationReason, ledger, completionEvidence) =>
+        this.recoveryController.finishTurn(ctx, status, state, working, error, terminationReason, ledger, completionEvidence),
       parkForUserInput: (ctx, state, working, call, ledger) =>
         this.recoveryController.parkForUserInput(ctx, state, working, call, ledger),
       runVerificationGate: (ctx) => this.verificationController.runVerificationGate(ctx),
@@ -715,7 +747,7 @@ export class AgentRuntime {
     sessionId: SessionId,
     turnId: TurnId,
     signal: AbortSignal,
-    opts: { initialState?: WorkingState } = {},
+    opts: RunTurnOptions = {},
   ): Promise<TurnOutcome> {
     const outcome = await this.runTurnCore(sessionId, turnId, signal, opts);
     // P2-5: post-turn reflection hook — fired exactly once per terminal
@@ -739,11 +771,11 @@ export class AgentRuntime {
     sessionId: SessionId,
     turnId: TurnId,
     signal: AbortSignal,
-    opts: { initialState?: WorkingState } = {},
+    opts: RunTurnOptions = {},
   ): Promise<TurnOutcome> {
     // Q-1: turn initialization extracted to prepareTurn (session/agent/turn
     // resolution, TurnContext, AgentState, working state, tool ledger).
-    const { ctx, state, turn, working, toolLedger } = await this.prepareTurn(sessionId, turnId, signal, opts);
+    const { ctx, state, turn, working, toolLedger, turnState } = await this.prepareTurn(sessionId, turnId, signal, opts);
 
     const priorBlocks: ContextBlock[] = [];
     // P2-2: pre-turn memory retrieval — runs once per turn, before the first
@@ -780,12 +812,24 @@ export class AgentRuntime {
       }
     }
     let overflowAttempt = 0;
-    let verificationFailures = 0;
+    let verificationFailures = opts.verificationRetriesSeed ?? 0;
     let reactiveCompacted = false;
     let digestAppended = false;
     let lastReportTokens: number | undefined;
     // P0-10: unified run-budget tracker (replaces scattered counters).
     const budget = new RunBudgetTracker(ctx.agent.limits, this.now);
+    // P16-3: a resumed turn seeds its consumed counters from the checkpoint —
+    // budget is NEVER refreshed on resume.
+    if (opts.budgetSeed !== undefined) budget.seedConsumed(opts.budgetSeed);
+    // P16-3: expose the live per-turn budget usage to checkpoint writers.
+    this.activeBudgetUsage = () => ({
+      maxTokens: this.context?.budget.maxTokens ?? 0,
+      ...(lastReportTokens !== undefined ? { usedTokens: lastReportTokens } : {}),
+      run: budget.snapshot(),
+      recoveryUsage: turnState.recoveryUsage,
+      verificationRetries: verificationFailures,
+      stallRecoveryCount: state.stallRecoveriesUsedCount,
+    });
     // P0-10: maxTurns — a turn-level cap, consumed at the start of each turn.
     const turnBreach = budget.onTurnStart();
     if (turnBreach !== undefined) {
@@ -799,6 +843,9 @@ export class AgentRuntime {
     }
 
     try {
+      // P15-2: step counter — one StepContext per model call; the batch of
+      // tool calls it requests reuses the SAME step (immutable snapshot).
+      let stepIndex = 0;
       for (let i = 0; i < this.maxIterationsPerTurn; i++) {
         if (signal.aborted) {
           return this.recoveryController.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger);
@@ -811,7 +858,7 @@ export class AgentRuntime {
           state.getIteration() > 0 &&
           state.getIteration() % this.checkpointPolicy.everyNIterations === 0
         ) {
-          await this.recoveryController.checkpoint(ctx, working, state, toolLedger, "periodic:iteration", lastReportTokens !== undefined ? { maxTokens: this.context?.budget.maxTokens ?? 0, usedTokens: lastReportTokens } : undefined);
+          await this.recoveryController.checkpoint(ctx, working, state, toolLedger, "periodic:iteration", this.activeBudgetUsage?.());
         }
 
         const durationBreach = budget.onDurationCheck();
@@ -869,8 +916,13 @@ export class AgentRuntime {
         lastReportTokens = ctxUpdate.lastReportTokens;
         digestAppended = ctxUpdate.digestAppended;
         overflowAttempt = ctxUpdate.overflowAttempt;
+        // P15-2: form the immutable StepContext BEFORE the model call. Every
+        // tool call this model response requests will reuse THIS step, so a
+        // mid-step config/policy change cannot affect the batch.
+        const step = this.buildStepContext(ctx, stepIndex, priorBlocks, system, digestAppended || overflowAttempt > 0);
+        stepIndex += 1;
         const modelResult = await this.modelCallController.callModelWithRetry(
-          ctx, client, history, system, working, state, toolLedger, lastReportTokens, reactiveCompacted, budget,
+          ctx, client, history, system, working, state, toolLedger, lastReportTokens, reactiveCompacted, budget, step,
         );
 
         if (modelResult.status === "cancelled") {
@@ -890,9 +942,11 @@ export class AgentRuntime {
           verificationFailures = completion.verificationFailures;
           continue;
         }
-        // P0-11: report per-call token usage to the tree budget (scheduler).
-        if (this.reportModelUsage !== undefined && modelResult.usage !== undefined) {
-          this.reportModelUsage(sessionId, modelResult.usage.inputTokens ?? 0, modelResult.usage.outputTokens ?? 0);
+        // P0-11/P20-1: report per-call usage (with provenance) to the tree
+        // budget (scheduler). finalizeUsage() marks a provider-less call
+        // "unknown" — NEVER a fabricated 0-token record.
+        if (this.reportModelUsage !== undefined) {
+          this.reportModelUsage(sessionId, finalizeUsage(modelResult.usage));
         }
         // P0-10: maxEstimatedCostUsd — check immediately after model usage so a
         // runaway cost stops BEFORE the next model call.
@@ -947,7 +1001,7 @@ export class AgentRuntime {
             }
           }
         }
-        const executed = await this.toolCallController.executeToolCalls(ctx, state, toolCalls, modelResult.callId);
+        const executed = await this.toolCallController.executeToolCalls(ctx, state, toolCalls, turnState, step, modelResult.callId);
         const toolAction = await this.handleToolResults(
           ctx, executed, working, state, toolLedger, priorBlocks, lastReportTokens, budget,
         );
@@ -977,7 +1031,7 @@ export class AgentRuntime {
     sessionId: SessionId,
     turnId: TurnId,
     signal: AbortSignal,
-    opts: { initialState?: WorkingState },
+    opts: RunTurnOptions = {},
   ): Promise<TurnInit> {
     const session = await this.store.getSession(sessionId);
     if (!session) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${sessionId}`));
@@ -988,6 +1042,10 @@ export class AgentRuntime {
 
     const state = new AgentState(sessionId, session.agentId, this.now);
     state.beginTurn(turnId);
+    // P16-3: a resumed turn seeds its stall-recovery consumption.
+    if (opts.stallRecoverySeed !== undefined && opts.stallRecoverySeed > 0) {
+      state.seedStallRecoveries(opts.stallRecoverySeed);
+    }
     const turn = await this.store.getTurn(turnId);
     if (!turn) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown turn ${turnId}`));
     // P1-4: a resuming turn seeds its working state from the restored
@@ -1001,7 +1059,54 @@ export class AgentRuntime {
     // execution ledger and the last observed context usage so a checkpoint
     // can carry budget usage without re-reading the transcript.
     const toolLedger: ToolExecutionRecord[] = [];
-    return { ctx, state, turn, working, toolLedger };
+    // P15-1: the per-turn execution state is created fresh HERE — a new
+    // recoveryUsage map per turn, so no turn inherits another turn's budget.
+    const turnState: TurnExecutionState = newTurnExecutionState();
+    // P16-3: a resumed turn seeds its recovery-action usage ledger.
+    if (opts.recoveryUsageSeed !== undefined) {
+      for (const key of Object.keys(opts.recoveryUsageSeed) as RecoveryAction[]) {
+        const value = opts.recoveryUsageSeed[key];
+        if (value !== undefined) turnState.recoveryUsage[key] = value;
+      }
+    }
+    return { ctx, state, turn, working, toolLedger, turnState };
+  }
+
+  /** P15-2: form the immutable StepContext for ONE model call. Everything the
+   *  model and its requested tool calls may observe is pinned before the call:
+   *  frozen effective agent config, cwd identity, tool-spec snapshot, policy
+   *  fingerprint, the context selection, the model ref and the step id. The
+   *  SAME object is threaded into every tool call of this model response — a
+   *  mid-step change can only affect the NEXT step. */
+  private buildStepContext(
+    ctx: TurnContext,
+    stepIndex: number,
+    priorBlocks: ContextBlock[],
+    system: string,
+    compacted: boolean,
+  ): StepContext {
+    const effectiveAgent = snapshotEffectiveConfig(ctx.agent);
+    const policyHash = hashPolicyConfig({
+      tools: ctx.agent.tools,
+      permissions: ctx.agent.permissions,
+      sandbox: this.sandboxPolicy,
+    });
+    return {
+      stepId: `${ctx.turnId}:${stepIndex}`,
+      sessionId: ctx.sessionId,
+      turnId: ctx.turnId,
+      agentId: ctx.agent.id,
+      effectiveAgent,
+      cwd: ctx.session.cwd,
+      toolSpecs: this.toolSpecs,
+      policyHash,
+      contextSelection: {
+        blocks: priorBlocks.length,
+        tokens: Math.ceil(Buffer.byteLength(system, "utf8") / 4),
+        compacted,
+      },
+      model: ctx.agent.model,
+    };
   }
 
   // Q-1: executeToolCalls / runReadBatch / recordStallTrace / executeToolCall
@@ -1084,7 +1189,7 @@ export class AgentRuntime {
             if (this.checkpointPolicy.afterSideEffectTools) {
               await this.recoveryController.checkpoint(
                 ctx, working, state, toolLedger, `tool:completed:${call.name}`,
-                lastReportTokens !== undefined ? { maxTokens: this.context?.budget.maxTokens ?? 0, usedTokens: lastReportTokens } : undefined,
+                this.activeBudgetUsage?.(),
               );
               // P1-5: kill AFTER the checkpoint persisted (a durable safety
               // boundary exists — resume can proceed from it).
@@ -1282,8 +1387,16 @@ export class AgentRuntime {
     // P2-40: each started-but-unconfirmed tool that must be reconciled is its
     // own reconciliation retry-kind event. Reconciliation is never auto-redone
     // (spec maxAttempts 0) — we only surface the fact so the taxonomy/report can
-    // hold the runtime to that promise.
+    // hold the runtime to that promise. P16-2: every event carries the typed
+    // reconciliation VERDICT (safe_retry / needs_verification / never_auto) +
+    // reason, so the audit trail can prove the policy was applied per scope.
+    const verdicts: ReconciliationVerdict[] = [];
     for (const unresolved of unresolvedTools) {
+      const verdict = classifyUnknownOutcome(
+        unresolved.tool,
+        this.semanticsOf(unresolved.tool),
+      );
+      verdicts.push(verdict);
       await this.emit(
         sessionId,
         "retry.reconciliation",
@@ -1291,15 +1404,26 @@ export class AgentRuntime {
           toolCallId: unresolved.toolCallId,
           tool: unresolved.tool,
           sideEffect: unresolved.sideEffect,
+          sideEffectScope: unresolved.sideEffectScope,
           started: unresolved.started,
+          decision: verdict.decision,
+          reason: verdict.reason,
+          ...("evidence" in verdict && verdict.evidence !== undefined ? { evidence: verdict.evidence } : {}),
         },
         turnId,
       );
     }
 
-    const resumePrompt = buildResumePrompt(working, committedSideEffects, unresolvedTools);
+    const resumePrompt = buildResumePrompt(working, committedSideEffects, unresolvedTools, verdicts);
     const turn = await this.startTurn(sessionId, resumePrompt);
-    const outcome = await this.runTurn(sessionId, turn.id, signal, { initialState: working });
+    const bu = checkpoint.budgetUsage;
+    const outcome = await this.runTurn(sessionId, turn.id, signal, {
+      initialState: working,
+      ...(bu?.run !== undefined ? { budgetSeed: bu.run } : {}),
+      ...(bu?.recoveryUsage !== undefined ? { recoveryUsageSeed: bu.recoveryUsage } : {}),
+      ...(bu?.verificationRetries !== undefined ? { verificationRetriesSeed: bu.verificationRetries } : {}),
+      ...(bu?.stallRecoveryCount !== undefined ? { stallRecoverySeed: bu.stallRecoveryCount } : {}),
+    });
     await this.emit(sessionId, "session.resumed", {
       checkpointId: checkpoint.checkpointId,
       previousTurnId: turnId,
@@ -1402,6 +1526,6 @@ export class AgentRuntime {
 }
 
 // Q-1: below are re-exports of pure helpers now living in ./turn-helpers.js.
-// Public API preserved: renderToolResult/buildResumePrompt are re-exported
-// so `export * from ./runtime.js` in index.ts stays stable.
-export { renderToolResult, buildResumePrompt };
+// Public API preserved: renderToolResult/buildResumePrompt/classifyUnknownOutcome
+// are re-exported so `export * from ./runtime.js` in index.ts stays stable.
+export { renderToolResult, buildResumePrompt, classifyUnknownOutcome };

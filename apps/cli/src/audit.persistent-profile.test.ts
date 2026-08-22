@@ -54,6 +54,15 @@ const PERSISTENT_INTROSPECTION: HarnessIntrospection = {
     usageAccounting: false,
     runBudget: false,
   },
+  persistence: {
+    mode: "durable",
+    degraded: false,
+    reasons: [],
+    stores: {
+      approval: "DurableApprovalStore",
+      checkpoint: "DurableCheckpointStore",
+    },
+  },
 };
 
 function persistentInput(overrides: Partial<AuditInput> = {}): AuditInput {

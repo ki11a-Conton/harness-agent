@@ -93,6 +93,12 @@ describe("audit benchmark profile — real workspace probes (P0-1)", () => {
           usageAccounting: false,
           runBudget: false,
         },
+        persistence: {
+          mode: "in-memory",
+          degraded: false,
+          reasons: [],
+          stores: { approval: "InMemoryApprovalStore" },
+        },
       },
     };
     const matrix = buildCapabilityMatrix(input);

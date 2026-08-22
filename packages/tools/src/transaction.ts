@@ -274,7 +274,10 @@ export class WorkspaceChangeTransaction {
         }
       }
     } catch (err) {
-      await fs.rm(tmp, { force: true }).catch(() => undefined);
+      // P14-6: tmp cleanup is best-effort — a failure is reported, never silent.
+      await fs.rm(tmp, { force: true }).catch((cleanupErr) =>
+        process.stderr.write(`[degraded] transaction.tmp-cleanup: ${cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)}\n`),
+      );
       throw err;
     }
   }

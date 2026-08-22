@@ -202,6 +202,17 @@ export class AgentState {
     return true;
   }
 
+  /** P16-3: stall recoveries consumed so far (checkpoint budget usage). */
+  get stallRecoveriesUsedCount(): number {
+    return this.stallRecoveriesUsed;
+  }
+
+  /** P16-3: seed stall-recovery consumption on resume (the resumed turn must
+   *  NOT refresh the recovered-from-checkpoint budget). */
+  seedStallRecoveries(used: number): void {
+    this.stallRecoveriesUsed = used;
+  }
+
   /** Reset the identical-call streak after a stall recovery. */
   resetToolStreak(): void {
     this.identicalToolStreak = 0;

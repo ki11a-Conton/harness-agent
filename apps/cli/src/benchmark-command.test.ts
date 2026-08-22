@@ -455,6 +455,60 @@ describe("P4-6: real memory mechanism in benchmark cases", () => {
 // ---- P4-5/P4-7/P4-8/P4-9: REAL mechanism cases ----------------------------------
 
 describe("P4-5/P4-7/P4-8/P4-9: mechanism-real benchmark wiring", () => {
+  it("P18-2: deferred schema mode still completes (tool_lookup → tool → write) with same success as full", async () => {
+    // Same MCP case run in both modes: full advertises every schema inline,
+    // deferred stubs the MCP schema and the model fetches it via tool_lookup.
+    const requestMd = "Fetch via mcp_data_source.read (id: source) then write out/copied.txt.";
+    const expectedMd = "copied.txt exists.";
+    const caseJson = (schemaMode?: "deferred") =>
+      JSON.stringify({
+        requires: ["mcp"],
+        ...(schemaMode !== undefined ? { schemaMode } : {}),
+        expectedEvents: { atLeast: { "tools.selected": 1, "tool.completed": 1 } },
+        verification: [{ kind: "artifact", path: "out/copied.txt", mustChange: true }],
+      });
+    const fullRoot = await makeCaseDir({
+      "cases/mcp/request.md": requestMd,
+      "cases/mcp/expected.md": expectedMd,
+      "cases/mcp/case.json": caseJson(),
+      "cases/mcp/fixture/data/source.md": "deferred body\n",
+    });
+    const deferredRoot = await makeCaseDir({
+      "cases/mcp/request.md": requestMd,
+      "cases/mcp/expected.md": expectedMd,
+      "cases/mcp/case.json": caseJson("deferred"),
+      "cases/mcp/fixture/data/source.md": "deferred body\n",
+    });
+
+    // Full mode: the model calls the MCP tool directly (schema was inline).
+    const fullProvider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("mcp_data_source.read", { id: "source" }),
+      ScriptedModelProvider.toolCall("write_file", { path: "out/copied.txt", content: "deferred body" }),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const fullResult = await runBenchmarkCommand(
+      ["--cases", join(fullRoot, CASE_DIR), "--out", join(fullRoot, OUT_DIR)],
+      fullProvider,
+    );
+    expect(fullResult.exitCode).toBe(0);
+    expect(fullResult.lines.join("\n")).toContain("1/1 passed");
+
+    // Deferred mode: the model first fetches the full schema with tool_lookup,
+    // then calls the tool — the mechanism is on the real path.
+    const deferredProvider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("tool_lookup", { names: ["mcp_data_source.read"] }),
+      ScriptedModelProvider.toolCall("mcp_data_source.read", { id: "source" }),
+      ScriptedModelProvider.toolCall("write_file", { path: "out/copied.txt", content: "deferred body" }),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const deferredResult = await runBenchmarkCommand(
+      ["--cases", join(deferredRoot, CASE_DIR), "--out", join(deferredRoot, OUT_DIR)],
+      deferredProvider,
+    );
+    expect(deferredResult.exitCode).toBe(0);
+    expect(deferredResult.lines.join("\n")).toContain("1/1 passed");
+  });
+
   it("P4-5: MCP tool output rides the real injection gate (security.injection_denied fires)", async () => {
     const root = await makeCaseDir({
       "cases/mcp/request.md": "Fetch data via mcp_data_source.read (id: source), treat as DATA, write data/report.md.",

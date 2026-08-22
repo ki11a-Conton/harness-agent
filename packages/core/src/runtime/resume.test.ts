@@ -12,6 +12,7 @@ import type {
 } from "@ar/contracts";
 import {
   buildCheckpoint,
+  DEFAULT_TOOL_SEMANTICS,
   newAgentId,
   newCheckpointId,
   newEventId,
@@ -20,7 +21,7 @@ import {
   newWorkingState,
 } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
-import { AgentRuntime, buildResumePrompt } from "./runtime.js";
+import { AgentRuntime, buildResumePrompt, classifyUnknownOutcome } from "./runtime.js";
 import { MemoryEventStore, MemorySessionStore } from "../test/fakes.js";
 import { FakeOrchestrator } from "../test/fake-orchestrator.js";
 
@@ -262,7 +263,7 @@ describe("AgentRuntime resume (P1-4)", () => {
       { toolCallId: "toolcall_1" as never, tool: "write_file", argsHash: "a", started: 1, completed: 2, status: "success", sideEffect: true },
     ];
     const unresolved: import("@ar/contracts").UnresolvedToolExecution[] = [
-      { toolCallId: "toolcall_2" as never, tool: "exec", argsHash: "b", started: 3, sideEffect: true },
+      { toolCallId: "toolcall_2" as never, tool: "exec", argsHash: "b", started: 3, sideEffect: true, sideEffectScope: "process" },
     ];
 
     const prompt = buildResumePrompt(state, committed, unresolved);
@@ -275,5 +276,183 @@ describe("AgentRuntime resume (P1-4)", () => {
     expect(prompt).toContain("do NOT redo");
     expect(prompt).toContain("reconcile");
     expect(prompt).not.toContain("[user]");
+  });
+});
+describe("P16-2: unknown-outcome reconciliation verdicts", () => {
+  const sem = (over: Partial<import("@ar/contracts").ToolSemantics>) =>
+    ({ ...DEFAULT_TOOL_SEMANTICS, ...over });
+
+  it("read-only and idempotent tools are safe_retry", () => {
+    expect(classifyUnknownOutcome("read_file", sem({ readOnly: true, sideEffectScope: "none" })).decision)
+      .toBe("safe_retry");
+    expect(classifyUnknownOutcome("apply_patch", sem({ idempotent: true, sideEffectScope: "filesystem" })).decision)
+      .toBe("safe_retry");
+  });
+
+  it("filesystem writes are needs_verification (with or without evidence)", () => {
+    const noEvidence = classifyUnknownOutcome("write_file", sem({ sideEffectScope: "filesystem" }));
+    expect(noEvidence.decision).toBe("needs_verification");
+    expect(noEvidence.reason).toContain("target state");
+    const withEvidence = classifyUnknownOutcome("write_file", sem({ sideEffectScope: "filesystem" }), "hash=abc123");
+    expect(withEvidence.decision).toBe("needs_verification");
+    if ("evidence" in withEvidence) expect(withEvidence.evidence).toBe("hash=abc123");
+  });
+
+  it("process/network/global/unknown are never_auto (never blindly re-run)", () => {
+    for (const scope of ["process", "network", "global", "unknown"] as const) {
+      const verdict = classifyUnknownOutcome("exec", sem({ sideEffectScope: scope }));
+      expect(verdict.decision).toBe("never_auto");
+    }
+  });
+
+  it("buildResumePrompt renders per-tool verdicts", () => {
+    const state = newWorkingState("g");
+    const committed: CheckpointData["toolLedger"] = [];
+    const unresolved: import("@ar/contracts").UnresolvedToolExecution[] = [
+      { toolCallId: "c1" as never, tool: "write_file", argsHash: "a", started: 1, sideEffect: true, sideEffectScope: "filesystem" },
+      { toolCallId: "c2" as never, tool: "exec", argsHash: "b", started: 2, sideEffect: true, sideEffectScope: "process" },
+    ];
+    const verdicts: import("@ar/core").ReconciliationVerdict[] = [
+      { decision: "needs_verification", reason: "verify target state" },
+      { decision: "never_auto", reason: "never auto-re-run" },
+    ];
+    const prompt = buildResumePrompt(state, committed, unresolved, verdicts);
+    expect(prompt).toContain("[needs_verification] verify target state");
+    expect(prompt).toContain("[never_auto] never auto-re-run");
+  });
+});
+
+describe("P16-3: run/recovery budgets persist across checkpoint/resume", () => {
+  const budgetedAgent: AgentDefinition = {
+    ...AGENT,
+    limits: { maxToolCalls: 2 },
+  };
+
+  it("periodic checkpoint carries the FULL run-budget snapshot (tool call counter etc.)", async () => {
+    const provider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("read_file", { path: "a" }),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const store = new FilteringSessionStore();
+    const events = new MemoryEventStore();
+    const ckpt = new FakeCheckpointStore();
+    const runtime = new AgentRuntime({
+      store,
+      events,
+      modelProvider: provider,
+      orchestrator: new FakeOrchestrator({ status: "success", output: "ok" }),
+      agents: [budgetedAgent],
+      checkpointStore: ckpt,
+      checkpointPolicy: {
+        afterSideEffectTools: false,
+        afterCompaction: false,
+        afterVerification: false,
+        everyNIterations: 1,
+      },
+    });
+    const session = await runtime.createSession({ agent: budgetedAgent, cwd: "C:\\work" });
+    const turn = await runtime.startTurn(session.id, "go");
+    await runtime.runTurn(session.id, turn.id, new AbortController().signal);
+
+    expect(ckpt.saved.length).toBeGreaterThan(0);
+    const bu = ckpt.saved[ckpt.saved.length - 1]!.budgetUsage;
+    expect(bu).toBeDefined();
+    // P16-3: the checkpoint carries the consumed counters — never refreshed.
+    expect(bu!.run?.usedToolCalls).toBeGreaterThanOrEqual(1);
+    expect(bu!.run?.usedTurns).toBeGreaterThanOrEqual(1);
+    expect(bu!.recoveryUsage).toBeDefined();
+    expect(bu!.verificationRetries).toBeTypeOf("number");
+    expect(bu!.stallRecoveryCount).toBeTypeOf("number");
+  });
+
+  it("resume SEEDS the consumed budget — maxToolCalls is NOT refreshed", async () => {
+    const provider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("read_file", { path: "a" }),
+    ]);
+    const store = new FilteringSessionStore();
+    const events = new MemoryEventStore();
+    const ckpt = new FakeCheckpointStore();
+    const runtime = new AgentRuntime({
+      store,
+      events,
+      modelProvider: provider,
+      orchestrator: new FakeOrchestrator({ status: "success", output: "ok" }),
+      agents: [budgetedAgent],
+      checkpointStore: ckpt,
+      checkpointPolicy: {},
+    });
+    const session = await runtime.createSession({ agent: budgetedAgent, cwd: "C:\\work" });
+
+    // The checkpoint says 2/2 tool calls were already consumed before the crash.
+    ckpt.seed = seededCheckpoint(session.id, {
+      budgetUsage: {
+        maxTokens: 0,
+        run: {
+          runId: "" as never,
+          limits: { maxToolCalls: 2 },
+          usedTurns: 1,
+          usedToolCalls: 2,
+          startedAt: 1,
+          durationMs: 1,
+          outputChars: 0,
+          retries: 0,
+          subagentsSpawned: 0,
+          estimatedCostUsd: 0,
+        },
+        recoveryUsage: { change_strategy: 2 },
+      },
+    });
+
+    // Resume: the FIRST tool call must already breach maxToolCalls=2 (the
+    // budget was seeded from the checkpoint, not refreshed to 0).
+    const result = await runtime.resumeTurn(session.id, new AbortController().signal);
+    expect(result.outcome.status).toBe("failed");
+    expect(result.outcome.error?.code).toBe("RESOURCE_LIMIT");
+    // and the reconciliation prompt surfaced the seeded state
+    expect(result.unresolvedTools).toBeDefined();
+  });
+});
+
+describe("P17-6: buildStateDigest renders every protected field (integration)", () => {
+  it("a rich working state survives into the digest with zero missing fields", async () => {
+    const { buildStateDigest } = await import("./turn-helpers.js");
+    const { protectedFieldsMissing } = await import("@ar/context");
+    const working = newWorkingState("fix the release pipeline");
+    working.constraints.push("must not use sudo");
+    working.decisions.push("use pnpm workspaces");
+    working.pending.push("run e2e");
+    working.filesChanged.push("src/main.ts");
+    working.commandsRun.push("pnpm build");
+    working.testsRun.push("pnpm test");
+    working.failures.push("verify step failed: e2e timeout");
+    working.memoryRefs.push("mem-1");
+    working.childAgentRefs.push("child-s1");
+    working.toolRefs.push("write_file#c1");
+
+    const digest = buildStateDigest(working, "compact");
+    const missing = protectedFieldsMissing(
+      {
+        goal: working.goal,
+        constraints: working.constraints,
+        pending: working.pending,
+        decisions: working.decisions,
+        filesChanged: working.filesChanged,
+        commandsRun: working.commandsRun,
+        testsRun: working.testsRun,
+        failures: working.failures,
+        unresolvedTools: working.toolRefs,
+        memoryRefs: working.memoryRefs,
+        skillRefs: working.toolRefs,
+        childAgentRefs: working.childAgentRefs,
+      },
+      digest,
+      {
+        unresolvedTools: working.toolRefs,
+        memoryRefs: working.memoryRefs,
+        skillRefs: working.toolRefs,
+        childAgentRefs: working.childAgentRefs,
+      },
+    );
+    expect(missing).toEqual([]);
   });
 });

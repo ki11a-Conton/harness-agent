@@ -1,14 +1,17 @@
 {
-  "generatedAt": 1787302670466,
-  "gitSha": "3a1ab34db792d57f372a496c814520379bbedd21",
+  "generatedAt": 1787374455506,
+  "gitSha": "4d5adb0718d66e700d81a724faead0fd4db1ef4e",
+  "profile": "interactive-ephemeral",
   "records": [
     {
       "id": "context_pipeline",
       "description": "ContextPipeline wired into the runtime (AGENTS.md discovery, budget, compaction)",
       "implemented": true,
       "productionWired": true,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -26,8 +29,10 @@
       "description": "Durable checkpoint store wired (crash resume)",
       "implemented": true,
       "productionWired": false,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -40,8 +45,10 @@
       "description": "Artifact registry wired (tool output offload, provenance)",
       "implemented": true,
       "productionWired": true,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -58,8 +65,10 @@
       "description": "Memory store wired (SQLite/durable memory)",
       "implemented": true,
       "productionWired": false,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -72,8 +81,10 @@
       "description": "Pre-turn memory retrieval injects context blocks",
       "implemented": true,
       "productionWired": false,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -86,8 +97,10 @@
       "description": "Learning pipeline wired (reflection → candidate, no inline promotion)",
       "implemented": true,
       "productionWired": false,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -100,8 +113,10 @@
       "description": "Subagent delegation exposed to the model as a tool",
       "implemented": true,
       "productionWired": false,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -114,8 +129,10 @@
       "description": "Agent execution scheduler wired (queue, budgets)",
       "implemented": true,
       "productionWired": false,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -128,8 +145,10 @@
       "description": "AskUser store durable across restart (waiting_for_user suspend/resume)",
       "implemented": true,
       "productionWired": false,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -142,8 +161,10 @@
       "description": "Approval store durable across restart (not InMemory)",
       "implemented": true,
       "productionWired": false,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -161,8 +182,10 @@
       "description": "MCP servers connected and tools registered",
       "implemented": true,
       "productionWired": false,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -172,11 +195,13 @@
     },
     {
       "id": "plugin_host",
-      "description": "Plugin host wired (registry, isolation, tool contributions)",
+      "description": "Plugin host implemented (in-process, no process isolation); P18-3 default Champion OFF — same-process plugins load only under explicit trusted-local config (defaultChampion + allowedSources) and project-local plugins need workspace approval; isolated/production-wired stages not built yet",
       "implemented": true,
       "productionWired": false,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -189,8 +214,10 @@
       "description": "Advanced navigation tools registered (grep_search, repo_tree, symbol_search, repo_map, discover_commands, env_snapshot)",
       "implemented": true,
       "productionWired": true,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -227,8 +254,10 @@
       "description": "Model usage reaches events/metrics (usage event → model.completed → metrics)",
       "implemented": true,
       "productionWired": false,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -246,8 +275,10 @@
       "description": "RunLimits enforced end-to-end (turns/tool calls/duration/retries/subagents/cost)",
       "implemented": true,
       "productionWired": false,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "runtime_dependency",
@@ -258,15 +289,18 @@
           "ref": "agent.limits",
           "note": "maxToolCalls/maxDurationMs enforced by the runtime; RunBudgetTracker (P0-10) tracks all limits, controls are wired for maxToolCalls/maxDurationMs"
         }
-      ]
+      ],
+      "degradedReason": "profile interactive-ephemeral requires run_budget wired but it is not"
     },
     {
       "id": "regression_suite",
       "description": "Regression benchmark suite present at the documented count (benchmarks/regression, README claims 30)",
       "implemented": true,
       "productionWired": true,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": true,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "benchmark_case",
@@ -280,8 +314,10 @@
       "description": "Holdout benchmark suite present at the documented count (benchmarks/holdout, README claims 30)",
       "implemented": true,
       "productionWired": true,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": true,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "benchmark_case",
@@ -295,8 +331,10 @@
       "description": "Adversarial benchmark suite present at the documented count (benchmarks/adversarial, README claims 13)",
       "implemented": true,
       "productionWired": true,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": true,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "benchmark_case",
@@ -310,8 +348,10 @@
       "description": "Stress benchmark suite present at the documented count (benchmarks/stress, README claims 11)",
       "implemented": true,
       "productionWired": true,
+      "durable": true,
       "integrationTested": true,
       "benchmarkExercised": true,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "benchmark_case",
@@ -325,8 +365,10 @@
       "description": "Linux CI job exists (ubuntu-latest)",
       "implemented": true,
       "productionWired": true,
+      "durable": true,
       "integrationTested": false,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "ci_job",
@@ -340,8 +382,10 @@
       "description": "Windows CI job exists (windows-latest)",
       "implemented": true,
       "productionWired": true,
+      "durable": true,
       "integrationTested": false,
       "benchmarkExercised": false,
+      "securityMode": "sandboxed",
       "evidence": [
         {
           "kind": "ci_job",
@@ -350,5 +394,1640 @@
         }
       ]
     }
-  ]
+  ],
+  "byProfile": {
+    "interactive-ephemeral": {
+      "generatedAt": 1787374455506,
+      "gitSha": "4d5adb0718d66e700d81a724faead0fd4db1ef4e",
+      "profile": "interactive-ephemeral",
+      "records": [
+        {
+          "id": "context_pipeline",
+          "description": "ContextPipeline wired into the runtime (AGENTS.md discovery, budget, compaction)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/context"
+            },
+            {
+              "kind": "runtime_dependency",
+              "ref": "AgentRuntimeDeps.context",
+              "note": "context pipeline + budget + instruction discovery passed"
+            }
+          ]
+        },
+        {
+          "id": "checkpoint_store",
+          "description": "Durable checkpoint store wired (crash resume)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/checkpoint"
+            }
+          ]
+        },
+        {
+          "id": "artifact_store",
+          "description": "Artifact registry wired (tool output offload, provenance)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/core"
+            },
+            {
+              "kind": "store",
+              "ref": "stores.artifacts=InMemoryArtifactStore"
+            }
+          ]
+        },
+        {
+          "id": "memory_store",
+          "description": "Memory store wired (SQLite/durable memory)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/memory"
+            }
+          ]
+        },
+        {
+          "id": "memory_retrieval",
+          "description": "Pre-turn memory retrieval injects context blocks",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/memory"
+            }
+          ]
+        },
+        {
+          "id": "learning",
+          "description": "Learning pipeline wired (reflection → candidate, no inline promotion)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/learning"
+            }
+          ]
+        },
+        {
+          "id": "delegation",
+          "description": "Subagent delegation exposed to the model as a tool",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/agents"
+            }
+          ]
+        },
+        {
+          "id": "scheduler",
+          "description": "Agent execution scheduler wired (queue, budgets)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/agents"
+            }
+          ]
+        },
+        {
+          "id": "ask_user_durable",
+          "description": "AskUser store durable across restart (waiting_for_user suspend/resume)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/core"
+            }
+          ]
+        },
+        {
+          "id": "approval_durable",
+          "description": "Approval store durable across restart (not InMemory)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/security"
+            },
+            {
+              "kind": "store",
+              "ref": "stores.approval=InMemoryApprovalStore",
+              "note": "not durable across restart"
+            }
+          ]
+        },
+        {
+          "id": "mcp_connected",
+          "description": "MCP servers connected and tools registered",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/mcp"
+            }
+          ]
+        },
+        {
+          "id": "plugin_host",
+          "description": "Plugin host implemented (in-process, no process isolation); P18-3 default Champion OFF — same-process plugins load only under explicit trusted-local config (defaultChampion + allowedSources) and project-local plugins need workspace approval; isolated/production-wired stages not built yet",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/plugins"
+            }
+          ]
+        },
+        {
+          "id": "advanced_tools",
+          "description": "Advanced navigation tools registered (grep_search, repo_tree, symbol_search, repo_map, discover_commands, env_snapshot)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/tools"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "grep_search"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "repo_tree"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "symbol_search"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "repo_map"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "discover_commands"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "env_snapshot"
+            }
+          ]
+        },
+        {
+          "id": "usage_accounting",
+          "description": "Model usage reaches events/metrics (usage event → model.completed → metrics)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/observability"
+            },
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/core/src/runtime/model-call-controller.ts",
+              "note": "usage event dropped (case \"usage\": break); model.completed carries no usage — metrics cannot see tokens/cost"
+            }
+          ]
+        },
+        {
+          "id": "run_budget",
+          "description": "RunLimits enforced end-to-end (turns/tool calls/duration/retries/subagents/cost)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/contracts"
+            },
+            {
+              "kind": "runtime_dependency",
+              "ref": "agent.limits",
+              "note": "maxToolCalls/maxDurationMs enforced by the runtime; RunBudgetTracker (P0-10) tracks all limits, controls are wired for maxToolCalls/maxDurationMs"
+            }
+          ],
+          "degradedReason": "profile interactive-ephemeral requires run_budget wired but it is not"
+        },
+        {
+          "id": "regression_suite",
+          "description": "Regression benchmark suite present at the documented count (benchmarks/regression, README claims 30)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/regression",
+              "note": "30 case(s) on disk (README claims 30)"
+            }
+          ]
+        },
+        {
+          "id": "holdout_suite",
+          "description": "Holdout benchmark suite present at the documented count (benchmarks/holdout, README claims 30)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/holdout",
+              "note": "30 case(s) on disk (README claims 30)"
+            }
+          ]
+        },
+        {
+          "id": "adversarial_suite",
+          "description": "Adversarial benchmark suite present at the documented count (benchmarks/adversarial, README claims 13)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/adversarial",
+              "note": "13 case(s) on disk (README claims 13)"
+            }
+          ]
+        },
+        {
+          "id": "stress_suite",
+          "description": "Stress benchmark suite present at the documented count (benchmarks/stress, README claims 11)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/stress",
+              "note": "11 case(s) on disk (README claims 11)"
+            }
+          ]
+        },
+        {
+          "id": "ci_linux",
+          "description": "Linux CI job exists (ubuntu-latest)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": false,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "ci_job",
+              "ref": ".github/workflows/ci.yml",
+              "note": "ubuntu-latest job"
+            }
+          ]
+        },
+        {
+          "id": "ci_windows",
+          "description": "Windows CI job exists (windows-latest)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": false,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "ci_job",
+              "ref": ".github/workflows/ci.yml",
+              "note": "windows-latest job"
+            }
+          ]
+        }
+      ]
+    },
+    "interactive-persistent": {
+      "generatedAt": 1787374455506,
+      "gitSha": "4d5adb0718d66e700d81a724faead0fd4db1ef4e",
+      "profile": "interactive-persistent",
+      "records": [
+        {
+          "id": "context_pipeline",
+          "description": "ContextPipeline wired into the runtime (AGENTS.md discovery, budget, compaction)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/context"
+            },
+            {
+              "kind": "runtime_dependency",
+              "ref": "AgentRuntimeDeps.context",
+              "note": "context pipeline + budget + instruction discovery passed"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "checkpoint_store",
+          "description": "Durable checkpoint store wired (crash resume)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": false,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/checkpoint"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "artifact_store",
+          "description": "Artifact registry wired (tool output offload, provenance)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/core"
+            },
+            {
+              "kind": "store",
+              "ref": "stores.artifacts=InMemoryArtifactStore"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "memory_store",
+          "description": "Memory store wired (SQLite/durable memory)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": false,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/memory"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "memory_retrieval",
+          "description": "Pre-turn memory retrieval injects context blocks",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/memory"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "learning",
+          "description": "Learning pipeline wired (reflection → candidate, no inline promotion)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/learning"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "delegation",
+          "description": "Subagent delegation exposed to the model as a tool",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/agents"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "scheduler",
+          "description": "Agent execution scheduler wired (queue, budgets)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/agents"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "ask_user_durable",
+          "description": "AskUser store durable across restart (waiting_for_user suspend/resume)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": false,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/core"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "approval_durable",
+          "description": "Approval store durable across restart (not InMemory)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": false,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/security"
+            },
+            {
+              "kind": "store",
+              "ref": "stores.approval=InMemoryApprovalStore",
+              "note": "not durable across restart"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "mcp_connected",
+          "description": "MCP servers connected and tools registered",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/mcp"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "plugin_host",
+          "description": "Plugin host implemented (in-process, no process isolation); P18-3 default Champion OFF — same-process plugins load only under explicit trusted-local config (defaultChampion + allowedSources) and project-local plugins need workspace approval; isolated/production-wired stages not built yet",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/plugins"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "advanced_tools",
+          "description": "Advanced navigation tools registered (grep_search, repo_tree, symbol_search, repo_map, discover_commands, env_snapshot)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/tools"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "grep_search"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "repo_tree"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "symbol_search"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "repo_map"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "discover_commands"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "env_snapshot"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "usage_accounting",
+          "description": "Model usage reaches events/metrics (usage event → model.completed → metrics)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/observability"
+            },
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/core/src/runtime/model-call-controller.ts",
+              "note": "usage event dropped (case \"usage\": break); model.completed carries no usage — metrics cannot see tokens/cost"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory; profile interactive-persistent requires usage_accounting wired but it is not"
+        },
+        {
+          "id": "run_budget",
+          "description": "RunLimits enforced end-to-end (turns/tool calls/duration/retries/subagents/cost)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/contracts"
+            },
+            {
+              "kind": "runtime_dependency",
+              "ref": "agent.limits",
+              "note": "maxToolCalls/maxDurationMs enforced by the runtime; RunBudgetTracker (P0-10) tracks all limits, controls are wired for maxToolCalls/maxDurationMs"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory; profile interactive-persistent requires run_budget wired but it is not"
+        },
+        {
+          "id": "regression_suite",
+          "description": "Regression benchmark suite present at the documented count (benchmarks/regression, README claims 30)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/regression",
+              "note": "30 case(s) on disk (README claims 30)"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "holdout_suite",
+          "description": "Holdout benchmark suite present at the documented count (benchmarks/holdout, README claims 30)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/holdout",
+              "note": "30 case(s) on disk (README claims 30)"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "adversarial_suite",
+          "description": "Adversarial benchmark suite present at the documented count (benchmarks/adversarial, README claims 13)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/adversarial",
+              "note": "13 case(s) on disk (README claims 13)"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "stress_suite",
+          "description": "Stress benchmark suite present at the documented count (benchmarks/stress, README claims 11)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/stress",
+              "note": "11 case(s) on disk (README claims 11)"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "ci_linux",
+          "description": "Linux CI job exists (ubuntu-latest)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": false,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "ci_job",
+              "ref": ".github/workflows/ci.yml",
+              "note": "ubuntu-latest job"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "ci_windows",
+          "description": "Windows CI job exists (windows-latest)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": false,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "ci_job",
+              "ref": ".github/workflows/ci.yml",
+              "note": "windows-latest job"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        }
+      ]
+    },
+    "benchmark": {
+      "generatedAt": 1787374455506,
+      "gitSha": "4d5adb0718d66e700d81a724faead0fd4db1ef4e",
+      "profile": "benchmark",
+      "records": [
+        {
+          "id": "context_pipeline",
+          "description": "ContextPipeline wired into the runtime (AGENTS.md discovery, budget, compaction)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/context"
+            },
+            {
+              "kind": "runtime_dependency",
+              "ref": "AgentRuntimeDeps.context",
+              "note": "context pipeline + budget + instruction discovery passed"
+            }
+          ]
+        },
+        {
+          "id": "checkpoint_store",
+          "description": "Durable checkpoint store wired (crash resume)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/checkpoint"
+            }
+          ]
+        },
+        {
+          "id": "artifact_store",
+          "description": "Artifact registry wired (tool output offload, provenance)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/core"
+            },
+            {
+              "kind": "store",
+              "ref": "stores.artifacts=InMemoryArtifactStore"
+            }
+          ]
+        },
+        {
+          "id": "memory_store",
+          "description": "Memory store wired (SQLite/durable memory)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/memory"
+            }
+          ]
+        },
+        {
+          "id": "memory_retrieval",
+          "description": "Pre-turn memory retrieval injects context blocks",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/memory"
+            }
+          ]
+        },
+        {
+          "id": "learning",
+          "description": "Learning pipeline wired (reflection → candidate, no inline promotion)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/learning"
+            }
+          ]
+        },
+        {
+          "id": "delegation",
+          "description": "Subagent delegation exposed to the model as a tool",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/agents"
+            }
+          ]
+        },
+        {
+          "id": "scheduler",
+          "description": "Agent execution scheduler wired (queue, budgets)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/agents"
+            }
+          ]
+        },
+        {
+          "id": "ask_user_durable",
+          "description": "AskUser store durable across restart (waiting_for_user suspend/resume)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/core"
+            }
+          ]
+        },
+        {
+          "id": "approval_durable",
+          "description": "Approval store durable across restart (not InMemory)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/security"
+            },
+            {
+              "kind": "store",
+              "ref": "stores.approval=InMemoryApprovalStore",
+              "note": "not durable across restart"
+            }
+          ]
+        },
+        {
+          "id": "mcp_connected",
+          "description": "MCP servers connected and tools registered",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/mcp"
+            }
+          ]
+        },
+        {
+          "id": "plugin_host",
+          "description": "Plugin host implemented (in-process, no process isolation); P18-3 default Champion OFF — same-process plugins load only under explicit trusted-local config (defaultChampion + allowedSources) and project-local plugins need workspace approval; isolated/production-wired stages not built yet",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/plugins"
+            }
+          ]
+        },
+        {
+          "id": "advanced_tools",
+          "description": "Advanced navigation tools registered (grep_search, repo_tree, symbol_search, repo_map, discover_commands, env_snapshot)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/tools"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "grep_search"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "repo_tree"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "symbol_search"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "repo_map"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "discover_commands"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "env_snapshot"
+            }
+          ]
+        },
+        {
+          "id": "usage_accounting",
+          "description": "Model usage reaches events/metrics (usage event → model.completed → metrics)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/observability"
+            },
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/core/src/runtime/model-call-controller.ts",
+              "note": "usage event dropped (case \"usage\": break); model.completed carries no usage — metrics cannot see tokens/cost"
+            }
+          ],
+          "degradedReason": "profile benchmark requires usage_accounting wired but it is not"
+        },
+        {
+          "id": "run_budget",
+          "description": "RunLimits enforced end-to-end (turns/tool calls/duration/retries/subagents/cost)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/contracts"
+            },
+            {
+              "kind": "runtime_dependency",
+              "ref": "agent.limits",
+              "note": "maxToolCalls/maxDurationMs enforced by the runtime; RunBudgetTracker (P0-10) tracks all limits, controls are wired for maxToolCalls/maxDurationMs"
+            }
+          ],
+          "degradedReason": "profile benchmark requires run_budget wired but it is not"
+        },
+        {
+          "id": "regression_suite",
+          "description": "Regression benchmark suite present at the documented count (benchmarks/regression, README claims 30)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/regression",
+              "note": "30 case(s) on disk (README claims 30)"
+            }
+          ]
+        },
+        {
+          "id": "holdout_suite",
+          "description": "Holdout benchmark suite present at the documented count (benchmarks/holdout, README claims 30)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/holdout",
+              "note": "30 case(s) on disk (README claims 30)"
+            }
+          ]
+        },
+        {
+          "id": "adversarial_suite",
+          "description": "Adversarial benchmark suite present at the documented count (benchmarks/adversarial, README claims 13)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/adversarial",
+              "note": "13 case(s) on disk (README claims 13)"
+            }
+          ]
+        },
+        {
+          "id": "stress_suite",
+          "description": "Stress benchmark suite present at the documented count (benchmarks/stress, README claims 11)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/stress",
+              "note": "11 case(s) on disk (README claims 11)"
+            }
+          ]
+        },
+        {
+          "id": "ci_linux",
+          "description": "Linux CI job exists (ubuntu-latest)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": false,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "ci_job",
+              "ref": ".github/workflows/ci.yml",
+              "note": "ubuntu-latest job"
+            }
+          ]
+        },
+        {
+          "id": "ci_windows",
+          "description": "Windows CI job exists (windows-latest)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": false,
+          "benchmarkExercised": false,
+          "securityMode": "sandboxed",
+          "evidence": [
+            {
+              "kind": "ci_job",
+              "ref": ".github/workflows/ci.yml",
+              "note": "windows-latest job"
+            }
+          ]
+        }
+      ]
+    },
+    "champion": {
+      "generatedAt": 1787374455506,
+      "gitSha": "4d5adb0718d66e700d81a724faead0fd4db1ef4e",
+      "profile": "champion",
+      "records": [
+        {
+          "id": "context_pipeline",
+          "description": "ContextPipeline wired into the runtime (AGENTS.md discovery, budget, compaction)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/context"
+            },
+            {
+              "kind": "runtime_dependency",
+              "ref": "AgentRuntimeDeps.context",
+              "note": "context pipeline + budget + instruction discovery passed"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "checkpoint_store",
+          "description": "Durable checkpoint store wired (crash resume)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": false,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/checkpoint"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "artifact_store",
+          "description": "Artifact registry wired (tool output offload, provenance)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/core"
+            },
+            {
+              "kind": "store",
+              "ref": "stores.artifacts=InMemoryArtifactStore"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "memory_store",
+          "description": "Memory store wired (SQLite/durable memory)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": false,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/memory"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "memory_retrieval",
+          "description": "Pre-turn memory retrieval injects context blocks",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/memory"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "learning",
+          "description": "Learning pipeline wired (reflection → candidate, no inline promotion)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/learning"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "delegation",
+          "description": "Subagent delegation exposed to the model as a tool",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/agents"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "scheduler",
+          "description": "Agent execution scheduler wired (queue, budgets)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/agents"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "ask_user_durable",
+          "description": "AskUser store durable across restart (waiting_for_user suspend/resume)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": false,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/core"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "approval_durable",
+          "description": "Approval store durable across restart (not InMemory)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": false,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/security"
+            },
+            {
+              "kind": "store",
+              "ref": "stores.approval=InMemoryApprovalStore",
+              "note": "not durable across restart"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "mcp_connected",
+          "description": "MCP servers connected and tools registered",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/mcp"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "plugin_host",
+          "description": "Plugin host implemented (in-process, no process isolation); P18-3 default Champion OFF — same-process plugins load only under explicit trusted-local config (defaultChampion + allowedSources) and project-local plugins need workspace approval; isolated/production-wired stages not built yet",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/plugins"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "advanced_tools",
+          "description": "Advanced navigation tools registered (grep_search, repo_tree, symbol_search, repo_map, discover_commands, env_snapshot)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/tools"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "grep_search"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "repo_tree"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "symbol_search"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "repo_map"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "discover_commands"
+            },
+            {
+              "kind": "registered_tool",
+              "ref": "env_snapshot"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "usage_accounting",
+          "description": "Model usage reaches events/metrics (usage event → model.completed → metrics)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/observability"
+            },
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/core/src/runtime/model-call-controller.ts",
+              "note": "usage event dropped (case \"usage\": break); model.completed carries no usage — metrics cannot see tokens/cost"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory; profile champion requires usage_accounting wired but it is not"
+        },
+        {
+          "id": "run_budget",
+          "description": "RunLimits enforced end-to-end (turns/tool calls/duration/retries/subagents/cost)",
+          "implemented": true,
+          "productionWired": false,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "runtime_dependency",
+              "ref": "packages/contracts"
+            },
+            {
+              "kind": "runtime_dependency",
+              "ref": "agent.limits",
+              "note": "maxToolCalls/maxDurationMs enforced by the runtime; RunBudgetTracker (P0-10) tracks all limits, controls are wired for maxToolCalls/maxDurationMs"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory; profile champion requires run_budget wired but it is not"
+        },
+        {
+          "id": "regression_suite",
+          "description": "Regression benchmark suite present at the documented count (benchmarks/regression, README claims 30)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/regression",
+              "note": "30 case(s) on disk (README claims 30)"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "holdout_suite",
+          "description": "Holdout benchmark suite present at the documented count (benchmarks/holdout, README claims 30)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/holdout",
+              "note": "30 case(s) on disk (README claims 30)"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "adversarial_suite",
+          "description": "Adversarial benchmark suite present at the documented count (benchmarks/adversarial, README claims 13)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/adversarial",
+              "note": "13 case(s) on disk (README claims 13)"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "stress_suite",
+          "description": "Stress benchmark suite present at the documented count (benchmarks/stress, README claims 11)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": true,
+          "benchmarkExercised": true,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "benchmark_case",
+              "ref": "benchmarks/stress",
+              "note": "11 case(s) on disk (README claims 11)"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "ci_linux",
+          "description": "Linux CI job exists (ubuntu-latest)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": false,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "ci_job",
+              "ref": ".github/workflows/ci.yml",
+              "note": "ubuntu-latest job"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        },
+        {
+          "id": "ci_windows",
+          "description": "Windows CI job exists (windows-latest)",
+          "implemented": true,
+          "productionWired": true,
+          "durable": true,
+          "integrationTested": false,
+          "benchmarkExercised": false,
+          "securityMode": "isolated",
+          "evidence": [
+            {
+              "kind": "ci_job",
+              "ref": ".github/workflows/ci.yml",
+              "note": "windows-latest job"
+            }
+          ],
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
+        }
+      ]
+    }
+  }
 }

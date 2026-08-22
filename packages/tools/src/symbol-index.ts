@@ -1,5 +1,6 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
+import { isNodeErrorCode } from "@ar/contracts";
 import { normalizePath } from "@ar/security";
 
 /**
@@ -63,13 +64,47 @@ interface RootIndex {
   builtAt: number;
 }
 
-const cache = new Map<string, RootIndex>();
+const cache = new Map<string, CacheEntry>();
+
+// P15-5: the module-level symbol-index cache is process-scoped (key = root
+// path), but it must never serve STALE cross-repo state and never grow
+// without bound. Freshness: the cache entry expires after CACHE_TTL_MS and
+// whenever the root directory's own mtime/size changes. Capacity: an LRU-ish
+// cap evicts the oldest entry so N repos cannot pile up unbounded memory.
+const CACHE_TTL_MS = 60_000;
+const MAX_CACHE_ENTRIES = 64;
+
+interface CacheEntry {
+  index: RootIndex;
+  rootStat: { mtimeMs: number; size: number };
+}
+
+async function rootFingerprint(root: string): Promise<{ mtimeMs: number; size: number }> {
+  try {
+    const st = await stat(root);
+    return { mtimeMs: st.mtimeMs, size: st.size };
+  } catch {
+    return { mtimeMs: 0, size: 0 };
+  }
+}
+
+function evictIfNeeded(): void {
+  if (cache.size >= MAX_CACHE_ENTRIES) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+}
 
 async function listSourceFiles(dir: string, root: string, out: string[]): Promise<void> {
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    // P14-6: an unreadable/vanish directory is skipped — reported unless it
+    // simply disappeared (ENOENT).
+    if (!isNodeErrorCode(err, "ENOENT")) {
+      process.stderr.write(`[degraded] symbol-index.listSourceFiles: ${err instanceof Error ? err.message : String(err)}\n`);
+    }
     return;
   }
   for (const entry of entries) {
@@ -93,19 +128,38 @@ async function buildRootIndex(root: string): Promise<RootIndex> {
       const [content, st] = await Promise.all([readFile(file, "utf8"), stat(file)]);
       const rel = normalizePath(relative(root, file));
     files.set(rel, { relPath: rel, lines: content.split("\n"), mtimeMs: st.mtimeMs });
-    } catch {
-      // unreadable file: skip
+    } catch (err) {
+      // P14-6: an unreadable file is skipped from the index — reported unless
+      // it vanished (ENOENT), never silent.
+      if (!isNodeErrorCode(err, "ENOENT")) {
+        process.stderr.write(`[degraded] symbol-index.read-file: ${err instanceof Error ? err.message : String(err)}\n`);
+      }
     }
   }
   return { root, files, builtAt: Date.now() };
 }
 
-/** Get (building if needed) the process-level index for a root. */
+/** Get (building if needed) the process-level index for a root. P15-5: the
+ *  cache is keyed by the root path AND validated against the root directory
+ *  fingerprint + TTL, so one repo's stale state can never leak into another
+ *  repo (or into the same repo after a change) through the shared module
+ *  cache. */
 export async function getSymbolIndex(root: string): Promise<{ filesIndexed: number } & RootIndex> {
   const existing = cache.get(root);
-  if (existing !== undefined) return { ...existing, filesIndexed: existing.files.size };
+  if (existing !== undefined) {
+    const now = Date.now();
+    const fp = await rootFingerprint(root);
+    const fingerprintFresh =
+      existing.rootStat.mtimeMs === fp.mtimeMs && existing.rootStat.size === fp.size;
+    if (fingerprintFresh && now - existing.index.builtAt < CACHE_TTL_MS) {
+      return { ...existing.index, filesIndexed: existing.index.files.size };
+    }
+    // stale (fingerprint changed or TTL expired): rebuild below
+    cache.delete(root);
+  }
   const built = await buildRootIndex(root);
-  cache.set(root, built);
+  cache.set(root, { index: built, rootStat: await rootFingerprint(root) });
+  evictIfNeeded();
   return { ...built, filesIndexed: built.files.size };
 }
 

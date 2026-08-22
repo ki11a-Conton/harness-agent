@@ -47,7 +47,7 @@ describe("P2-10: memory pre-turn retrieval through the real harness", () => {
       model: capturingProvider([]).model,
       featureFlags: { memory: true },
     });
-    const memoryStore = seedHarness.memory!.store;
+    const memoryStore = seedHarness.memoryStore!;
     await memoryStore.write({
       id: newMemoryId(),
       content: MEMORY_CONTENT,
@@ -104,7 +104,7 @@ describe("P2-10: memory pre-turn retrieval through the real harness", () => {
       expect((retrieved[0]!.payload.memoryIds as string[]).length).toBe(1);
 
       // P2-4: retrieval → injection → success feedback accumulated.
-      const seeded = await harness.memory!.store.search(MEMORY_CONTENT);
+      const seeded = await harness.memoryStore!.search(MEMORY_CONTENT);
       expect(seeded.length).toBeGreaterThan(0);
       const updated = seeded.find((m) => m.content === MEMORY_CONTENT)!;
       expect(updated.usefulness).toBeDefined();
@@ -128,7 +128,7 @@ describe("P2-10: memory pre-turn retrieval through the real harness", () => {
       model: capturingProvider([]).model,
       featureFlags: { memory: true },
     });
-    await seedHarness.memory!.store.write({
+    await seedHarness.memoryStore!.write({
       id: newMemoryId(),
       content: MEMORY_CONTENT,
       type: "procedural",

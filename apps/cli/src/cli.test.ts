@@ -237,6 +237,12 @@ function makeDeps(opts: { provider?: ModelProvider } = {}) {
         usageAccounting: false,
         runBudget: false,
       },
+      persistence: {
+        mode: "in-memory",
+        degraded: false,
+        reasons: [],
+        stores: { approval: approvalStore.constructor.name },
+      },
     },
     doctor: {
       modelProvider: provider,

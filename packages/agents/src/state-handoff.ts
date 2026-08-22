@@ -78,6 +78,11 @@ export function scopedContextFromWorkingState(
       content,
       compressible: true,
       ephemeral: false,
+      category: "working-state",
+      // P14-5: runtime-owned working state (goal/constraints/decisions) is
+      // authoritative instruction, not external data.
+      instructional: true,
+      persistable: false,
     });
     used += 1;
   };

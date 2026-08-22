@@ -190,8 +190,10 @@ export class SqliteRuntimeStore
     // on Windows (otherwise EBUSY during temp directory cleanup).
     try {
       this.db.exec("PRAGMA journal_mode=DELETE;");
-    } catch {
-      // best-effort: may fail on a read-only or busy store
+    } catch (err) {
+      // P14-6: best-effort — may fail on a read-only or busy store, but the
+      // failure is reported, never silent.
+      process.stderr.write(`[degraded] sqlite-store.close-journal-mode: ${err instanceof Error ? err.message : String(err)}\n`);
     }
     this.db.close();
   }

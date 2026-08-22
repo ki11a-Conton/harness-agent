@@ -10,6 +10,7 @@ import {
   invNetworkDeniedCannotExecute,
   invReplayNoDuplicateUnsafeSideEffect,
   invTerminalStateCannotTransition,
+  invUntrustedContextIsDataOnly,
   invUnsafeToolNeverAutoRetried,
   invVerificationCannotBeFabricated,
   violated,
@@ -311,9 +312,9 @@ describe("P3-17 INV-010 replay cannot duplicate known completed unsafe side effe
 });
 
 describe("P3-17 checkInvariants aggregator", () => {
-  it("runs all ten invariants", () => {
+  it("runs all eleven invariants", () => {
     const results = checkInvariants({});
-    expect(results).toHaveLength(10);
+    expect(results).toHaveLength(11);
     expect(allPass(results)).toBe(true);
   });
 
@@ -341,5 +342,55 @@ describe("P3-17 checkInvariants aggregator", () => {
     ]);
     expect(fabricated.ok).toBe(false);
     expect(standalone.ok).toBe(false);
+  });
+});
+describe("P14-5 INV-011 untrusted context is data only", () => {
+  it("holds when trusted blocks are instructional and untrusted blocks are data", () => {
+    const result = invUntrustedContextIsDataOnly([
+      { id: "system", trust: "trusted", instructional: true },
+      { id: "user", trust: "trusted", instructional: true, persistable: true },
+      { id: "tool:1", trust: "semi-trusted", instructional: false, persistable: false },
+      { id: "mcp:1", trust: "untrusted", instructional: false, persistable: false },
+    ]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("fails when untrusted data is marked instructional (data upgrading into instruction)", () => {
+    const result = invUntrustedContextIsDataOnly([
+      { id: "evil-repo", trust: "untrusted", instructional: true },
+    ]);
+    expect(result.ok).toBe(false);
+    expect(result.violations[0]!.at).toBe("evil-repo");
+    expect(result.violations[0]!.detail).toContain("instruction");
+  });
+
+  it("fails when semi-trusted data is marked instructional too", () => {
+    const result = invUntrustedContextIsDataOnly([
+      { id: "skill-body", trust: "semi-trusted", instructional: true },
+    ]);
+    expect(result.ok).toBe(false);
+  });
+
+  it("fails when untrusted content is marked persistable (memory-pollution gate)", () => {
+    const result = invUntrustedContextIsDataOnly([
+      { id: "mcp-result", trust: "untrusted", persistable: true },
+    ]);
+    expect(result.ok).toBe(false);
+    expect(result.violations[0]!.detail).toContain("persistable");
+  });
+
+  it("a missing flag is data by default (absent = false)", () => {
+    const result = invUntrustedContextIsDataOnly([
+      { id: "plain", trust: "untrusted" },
+    ]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("is part of the aggregated gate", () => {
+    const results = checkInvariants({
+      contextBlocks: [{ id: "x", trust: "untrusted", instructional: true }],
+    });
+    expect(violated(results).some((r) => r.invariant === "INV-011")).toBe(true);
+    expect(allPass(results)).toBe(false);
   });
 });

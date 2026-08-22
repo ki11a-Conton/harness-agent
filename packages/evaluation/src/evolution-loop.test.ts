@@ -9,8 +9,9 @@ function assessment(
   passRate: number,
   totalTokens: number,
   totalDurationMs: number,
+  verifiedCompletionRate = 1,
 ) {
-  return { id, costScore, passRate, totalTokens, totalDurationMs, securityFailures: 0 };
+  return { id, costScore, passRate, totalTokens, totalDurationMs, securityFailures: 0, verifiedCompletionRate };
 }
 
 const CHAMP = assessment("champion", 70, 0.7, 1000, 5_000);
@@ -63,5 +64,32 @@ describe("P3-10 evolution loop — single most reliable promotion", () => {
       tokenBudget: 1_000,
     });
     expect(d.keepChampion).toBe(true);
+  });
+
+  it("P19-6: a variant that wins on cost but degrades verified completion is NOT promoted", () => {
+    // "A" has a much higher cost score but its verified completion rate drops
+    // 0.5 below the champion (0.5 vs 1.0) — it wins on cost by shipping false
+    // completes, which is exactly the failure mode P19-6 blocks.
+    const d = choosePromoted(
+      assessment("champion", 70, 0.7, 1000, 5_000, 1.0),
+      [assessment("A", 95, 0.95, 1500, 6_000, 0.5)],
+      { minimumCostLift: 1, maxVerifiedCompletionDrop: 0.1 },
+    );
+    expect(d.keepChampion).toBe(true);
+    expect(d.reasons.join("\n")).toMatch(/verified completion/);
+  });
+
+  it("P19-6: verified completion quality breaks cost-score ties", () => {
+    const d = choosePromoted(
+      assessment("champion", 70, 0.7, 1000, 5_000, 0.9),
+      [
+        assessment("A", 85, 0.9, 1500, 6_000, 0.85),
+        assessment("B", 85, 0.9, 1500, 6_000, 0.99),
+      ],
+      { minimumCostLift: 1 },
+    );
+    // Both beat the champion on cost with equal cost score/pass rate/tokens —
+    // the one with higher verified completion quality wins.
+    expect(d.promotedId).toBe("B");
   });
 });

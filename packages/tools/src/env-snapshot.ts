@@ -18,6 +18,7 @@ import { platform, arch, type, release, cpus, totalmem } from "node:os";
 import { env as processEnv } from "node:process";
 import { promises as fs } from "node:fs";
 import { join, resolve } from "node:path";
+import { isNodeErrorCode } from "@ar/contracts";
 import type { WorkingState } from "@ar/contracts";
 
 export interface RuntimeVersion {
@@ -140,8 +141,12 @@ async function detectPackageManager(cwd: string, runtimes: RuntimeVersion[]): Pr
       await fs.access(join(cwd, lockfile));
       const found = runtimes.find((r) => r.name === manager);
       return { detected: manager, lockfile, version: found?.version ?? null };
-    } catch {
-      // try next
+    } catch (err) {
+      // P14-6: "try next" — a missing lockfile is the EXPECTED case (that is
+      // the probe); only non-ENOENT access failures are reported.
+      if (!isNodeErrorCode(err, "ENOENT")) {
+        process.stderr.write(`[degraded] env-snapshot.lockfile-probe: ${err instanceof Error ? err.message : String(err)}\n`);
+      }
     }
   }
   const node = runtimes.find((r) => r.name === "node");

@@ -37,6 +37,10 @@ export interface BenchmarkCase extends EvalCase {
   fixture: Record<string, string>;
   /** Per-case context budget override (tokens); undefined → harness default. */
   contextBudgetTokens?: number;
+  /** P18-2: schema advertisement mode for the case. "full" (default) advertises
+   *  every tool schema inline; "deferred" forces the deferred-schema path
+   *  (stubs + tool_lookup) so benchmarks can compare token cost / success. */
+  schemaMode?: "full" | "deferred";
 }
 
 /**

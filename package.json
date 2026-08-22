@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "benchmark:smoke": "node apps/cli/dist/main.js benchmark --suite adversarial --limit 1 --allow-stub --out .ci/bench-smoke"
+    "benchmark:smoke": "node apps/cli/dist/main.js benchmark --suite adversarial --limit 1 --allow-stub --out .ci/bench-smoke",
+    "docs:verify": "node apps/cli/dist/main.js docs:verify"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

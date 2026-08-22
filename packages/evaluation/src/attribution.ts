@@ -119,11 +119,29 @@ export function tallyEvents(events: AgentEvent[]): EventTally {
     security_failures,
     context_overflow,
     latency_ms: sumNumber(events, "model.completed", "durationMs"),
-    tokens: sumNumber(events, "model.completed", "outputTokens") +
-      sumNumber(events, "model.delta", "outputTokens"),
+    // P20-1: tokens come from the per-call usage record on model.completed
+    // (`payload.usage.outputTokens`, never a top-level field). A provider
+    // that gave no usage contributes 0 tokens AND shows up in usage_unknown —
+    // it is never misread as a zero-cost call.
+    tokens: sumModelUsageTokens(events),
     false_complete,
     subagent_failures: events.filter((e) => e.type === "subagent.failed").length,
   };
+}
+
+/** P20-1: sum output tokens from the usage record on model.completed events.
+ *  Ignores model.delta (no usage there) — the terminal record is the single
+ *  per-call source, exactly like observability/metrics.computeMetrics. */
+function sumModelUsageTokens(events: AgentEvent[]): number {
+  let total = 0;
+  for (const event of events) {
+    if (event.type !== "model.completed") continue;
+    const usage = event.payload.usage;
+    if (typeof usage !== "object" || usage === null) continue;
+    const output = (usage as Record<string, unknown>).outputTokens;
+    if (typeof output === "number" && Number.isFinite(output)) total += output;
+  }
+  return total;
 }
 
 export interface RegressionEvidence {

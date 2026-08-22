@@ -29,6 +29,7 @@ export type SessionStoreErrorCode =
   | "ASK_NOT_PENDING"
   | "CORRUPT_RECORD"
   | "IO_ERROR"
+  | "QUEUE_FULL"
   | "UNSUPPORTED";
 
 export class SessionStoreError extends Error {

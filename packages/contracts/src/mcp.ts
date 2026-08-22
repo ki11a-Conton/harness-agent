@@ -19,6 +19,12 @@ export interface McpServerConfig {
   commandArgs?: string[];
   /** http: base URL of the MCP endpoint. */
   url?: string;
+  /** P14-4: the host's conferred tool allow-list for THIS server. The
+   *  server's advertised tools are the DECLARED capability and may only
+   *  narrow this bound — a tool outside `allowedTools` is denied at
+   *  registration (fail-closed, typed denial). Absent = all advertised tools
+   *  are conferred (backward compatible). */
+  allowedTools?: string[];
 }
 
 export interface McpToolInfo {

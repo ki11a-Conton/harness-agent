@@ -5,7 +5,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { newMemoryId, newSessionId, type MemoryStore } from "@ar/contracts";
+import { newMemoryId, newSessionId, newTurnId, type MemoryStore } from "@ar/contracts";
 import { JsonlMemoryStore } from "@ar/memory";
 import type { LearningCandidate } from "@ar/learning";
 import { JsonlCandidateStore } from "@ar/harness";
@@ -161,5 +161,60 @@ describe("P2-7: learn reevaluate", () => {
     const result = await learnCmd(["reevaluate"], { candidates: store });
     expect(result.exitCode).toBe(0);
     expect(result.lines.join("\n")).toContain("1 pending candidate(s)");
+  });
+});
+
+describe("P17-1/P17-2: learn promote gates", () => {
+  function withMetadata(over: Partial<import("@ar/contracts").MemoryCandidate>): LearningCandidate {
+    const c = goodCandidate();
+    c.sourceCandidate = { ...c.sourceCandidate!, ...over };
+    return c;
+  }
+
+  it("rejects a QUARANTINED candidate (untrusted pollution) — never auto-promoted", async () => {
+    const dataDir = await tempDataDir();
+    const candidates = new JsonlCandidateStore({ dataDir });
+    await candidates.add(withMetadata({
+      promotionState: "quarantined",
+      pollutionSources: ["mcp:mcp_search"],
+    }));
+    const memory: MemoryStore = new JsonlMemoryStore({ dataDir: join(dataDir, "mem") });
+    const result = await learnCmd(["promote", "lc-test"], { candidates, memoryStore: memory, cwd: "/workspace" });
+    expect(result.exitCode).toBe(1);
+    expect(result.lines.join("\n")).toContain("quarantined");
+    expect(await candidates.get("lc-test")).toBeDefined(); // still queued
+    expect((await memory.list())).toHaveLength(0); // nothing persisted
+  });
+
+  it("rejects a DERIVABLE fact (re-obtainable from repo) — not stored long-term", async () => {
+    const dataDir = await tempDataDir();
+    const candidates = new JsonlCandidateStore({ dataDir });
+    await candidates.add(withMetadata({
+      derivability: { verdict: "derivable", reason: "re-derivable from repo/git/config" },
+    }));
+    const memory: MemoryStore = new JsonlMemoryStore({ dataDir: join(dataDir, "mem") });
+    const result = await learnCmd(["promote", "lc-test"], { candidates, memoryStore: memory, cwd: "/workspace" });
+    expect(result.exitCode).toBe(1);
+    expect(result.lines.join("\n")).toContain("derivable");
+    expect((await memory.list())).toHaveLength(0);
+  });
+
+  it("promotes a non-derivable pending candidate and preserves provenance", async () => {
+    const dataDir = await tempDataDir();
+    const candidates = new JsonlCandidateStore({ dataDir });
+    await candidates.add(withMetadata({
+      promotionState: "pending",
+      derivability: { verdict: "non-derivable", reason: "user preference" },
+      sourceTurn: newTurnId(),
+      securityScan: { checked: true, passed: true, at: 1000 },
+    }));
+    const memory: MemoryStore = new JsonlMemoryStore({ dataDir: join(dataDir, "mem") });
+    const result = await learnCmd(["promote", "lc-test"], { candidates, memoryStore: memory, cwd: "/workspace" });
+    expect(result.exitCode).toBe(0);
+    const entries = await memory.list();
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.derivability?.verdict).toBe("non-derivable");
+    expect(entries[0]!.sourceTurn).toBeDefined();
+    expect(entries[0]!.securityScan?.passed).toBe(true);
   });
 });

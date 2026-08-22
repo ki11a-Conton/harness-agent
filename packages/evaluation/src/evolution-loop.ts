@@ -36,6 +36,11 @@ export interface VariantAssessment {
   totalTokens: number;
   totalDurationMs: number;
   securityFailures: number;
+  /** P19-6: verified-completion quality — share of turns graded
+   *  verified_complete (P19-1 honest grade, never the model's own "done"
+   *  wording). A variant that wins on cost by scoring more false-completes is
+   *  NOT promotable: verified completion quality is a core promotion metric. */
+  verifiedCompletionRate: number;
 }
 
 export interface EvolutionBudgets {
@@ -43,6 +48,9 @@ export interface EvolutionBudgets {
   durationMsBudget: number;
   /** A challenger must beat the champion's cost score by at least this much. */
   minimumCostLift?: number;
+  /** P19-6: a challenger whose verified-completion rate drops more than this
+   *  below the champion's is rejected regardless of cost. Default 0.1. */
+  maxVerifiedCompletionDrop?: number;
 }
 
 export interface EvolutionDecision {
@@ -55,6 +63,12 @@ export interface EvolutionDecision {
 function aggregateAssessment(id: string, runs: EvalOutcome[], cost?: CostModelOptions): VariantAssessment {
   const passed = runs.filter((r) => r.status === "passed").length;
   const securityFailures = runs.filter((r) => (r.violations ?? []).length > 0).length;
+  // P19-6: verified-completion quality from the P19-1 grade the runtime
+  // stamped on each run — never from model wording. A run without a grade
+  // counts against the rate (not verified_complete by default).
+  const completedRuns = runs.filter((r) => r.actualStatus === "completed");
+  const verified = completedRuns.filter((r) => r.grade === "verified_complete").length;
+  const verifiedCompletionRate = completedRuns.length === 0 ? 0 : verified / completedRuns.length;
   const totalTokens = runs.reduce((s, r) => s + r.metrics.tokens_input + r.metrics.tokens_output, 0);
   const totalDurationMs = runs.reduce((s, r) => s + r.metrics.duration_ms, 0);
   const costResult: CostResult = scoreCost(
@@ -73,6 +87,14 @@ function aggregateAssessment(id: string, runs: EvalOutcome[], cost?: CostModelOp
         verification_failures: runs.reduce((s, r) => s + r.metrics.verification_failures, 0),
         human_interventions: 0,
         estimated_cost: 0,
+
+        usage_unknown: 0,
+
+        cache_tokens_read: 0,
+
+        cache_tokens_created: 0,
+
+        model_call_count: 0,
       },
       events: [],
     },
@@ -85,6 +107,7 @@ function aggregateAssessment(id: string, runs: EvalOutcome[], cost?: CostModelOp
     totalTokens,
     totalDurationMs,
     securityFailures,
+    verifiedCompletionRate,
   };
 }
 
@@ -98,6 +121,10 @@ export function choosePromoted(
   const tokenBudget = budgets?.tokenBudget ?? Infinity;
   const durationBudget = budgets?.durationMsBudget ?? Infinity;
   const minimumLift = budgets?.minimumCostLift ?? 1;
+  // P19-6: verified-completion quality is a core promotion metric. A
+  // challenger that degrades verified completion more than this below the
+  // champion is rejected regardless of cost.
+  const maxVerifiedDrop = budgets?.maxVerifiedCompletionDrop ?? 0.1;
 
   const reasons: string[] = [];
   const affordable = variants.filter(
@@ -116,13 +143,25 @@ export function choosePromoted(
   for (const v of affordable) {
     const beatsChampion = v.costScore - champion.costScore >= minimumLift;
     if (!beatsChampion) continue;
+    // P19-6: verified-quality gate — winning on cost by shipping false
+    // completes is not an improvement.
+    if (champion.verifiedCompletionRate - v.verifiedCompletionRate > maxVerifiedDrop) {
+      reasons.push(
+        `variant ${v.id} rejected: verified completion ${v.verifiedCompletionRate.toFixed(3)} ` +
+          `drops more than ${maxVerifiedDrop} below champion ${champion.verifiedCompletionRate.toFixed(3)}`,
+      );
+      continue;
+    }
     if (best === null) {
       best = v;
       continue;
     }
-    // Most reliable first (cost score); ties broken by pass rate then tokens.
+    // Most reliable first (cost score); ties broken by verified completion
+    // quality, pass rate, then tokens.
     if (v.costScore !== best.costScore) {
       if (v.costScore > best.costScore) best = v;
+    } else if (v.verifiedCompletionRate !== best.verifiedCompletionRate) {
+      if (v.verifiedCompletionRate > best.verifiedCompletionRate) best = v;
     } else if (v.passRate !== best.passRate) {
       if (v.passRate > best.passRate) best = v;
     } else if (v.totalTokens < best.totalTokens) {

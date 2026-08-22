@@ -6,13 +6,18 @@
  * only `this.<field>` → `this.deps.<field>` changed.
  */
 
-import type { SessionStore, TaskSpec, VerificationSpec, Verifier } from "@ar/contracts";
+import type { CompletionEvidence, SessionStore, TaskSpec, VerificationSpec, Verifier } from "@ar/contracts";
 import { RuntimeVerifier } from "../verification/runtime-verifier.js";
 import type { TurnContext } from "./turn-helpers.js";
 
 export interface VerificationGateResult {
   status: "passed" | "failed" | "blocked";
   reason: string;
+  /** P19-1: verification evidence (passedSteps/totalSteps from the gate's
+   *  checks). Present whenever the gate actually ran — the runtime grades the
+   *  turn from this instead of the model's word. Absent when the gate was
+   *  skipped (no task/verifier configured). */
+  evidence?: CompletionEvidence;
 }
 
 export interface VerificationControllerDeps {
@@ -95,6 +100,14 @@ export class VerificationController {
           : {}),
       },
     );
-    return { status: gate.status, reason: gate.reason };
+    // P19-1: derive the completion evidence from the gate's checks — how many
+    // steps ran and how many passed. This is what grades verified_partial vs
+    // verified_complete honestly (partial pass is NOT complete).
+    const passedSteps = gate.result.checks.filter((c) => c.passed).length;
+    const evidence: CompletionEvidence = {
+      passedSteps,
+      totalSteps: gate.result.checks.length,
+    };
+    return { status: gate.status, reason: gate.reason, evidence };
   }
 }

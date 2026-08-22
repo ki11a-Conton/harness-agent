@@ -104,6 +104,10 @@ export interface SchedulerLimits {
   /** Wall-clock budget per scheduled agent; 0 disables. When exceeded the
    *  agent is cancelled (its subtree signal aborts). */
   maxDurationMs: number;
+  /** P15-3: bound on the WAITING queue (requests that could not start yet
+   *  because the concurrency caps are full). A request that would overflow is
+   *  rejected with RESOURCE_LIMIT instead of queuing without bound. */
+  maxQueued: number;
   /** P1-7: default tree budget applied to every root. A per-root override via
    *  `AgentExecutionScheduler.setRootBudget` takes precedence. */
   treeBudget?: TreeBudget;
@@ -114,6 +118,7 @@ export const DEFAULT_SCHEDULER_LIMITS: SchedulerLimits = {
   maxAgentsPerRoot: 4,
   maxDepth: 3,
   maxDurationMs: 10 * 60 * 1000,
+  maxQueued: 1000,
 };
 
 export interface RunBudget {

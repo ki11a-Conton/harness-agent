@@ -2,6 +2,7 @@ import type {
   ApprovalRequest,
   ApprovalResolver,
   EventSink,
+  NonFatalErrorSink,
   PermissionDecision,
   PermissionEngine,
   PermissionPolicy,
@@ -10,10 +11,11 @@ import type {
   ToolCallRequest,
   ToolDefinition,
   ToolExecutionContext,
+  ToolIntentPayload,
   ToolResult,
   ToolRisk,
 } from "@ar/contracts";
-import { errorInfo, isPermissionOrSandboxDenied, isTimeoutErrorCode, newApprovalId } from "@ar/contracts";
+import { computeArgsHash, errorInfo, isPermissionOrSandboxDenied, isTimeoutErrorCode, mayHaveSideEffect, newApprovalId, toToolSemantics } from "@ar/contracts";
 import {
   classifySupplyChain,
   DeterministicPermissionEngine,
@@ -34,6 +36,25 @@ export interface OrchestratorDeps {
    *  workspace). Returned roots are admitted as allowed filesystem roots for
    *  that session's tool calls, in addition to workspaceRoot. */
   sandboxExtraRoots?: (sessionId: SessionId) => readonly string[];
+  /** P14-6: typed channel for non-fatal failures (event-emission failures,
+   *  background exec cleanup). Security denials NEVER go through this — they
+   *  stay typed, fail-closed results. */
+  nonFatal?: NonFatalErrorSink;
+  /** P16-1: durable tool-intent persistence for SIDE-EFFECTING tools. When
+   *  set, the orchestrator persists the execution intent (toolCallId, tool,
+   *  argsHash, semantics, startedAt, session/turn, sideEffect scope) AFTER
+   *  validate/permission/approval/sandbox pass and BEFORE the real executor
+   *  runs. A persistence failure FAILS CLOSED — the side effect does NOT
+   *  execute (hard rule). Absent → side-effecting tools run without a
+   *  pre-execution durable intent (the host opted out; P16-4 degraded mode
+   *  must reflect it). */
+  persistIntent?: (intent: ToolIntentPayload) => Promise<void>;
+  /** P16-6: fault-injection hook fired IMMEDIATELY AFTER a side-effect intent
+   *  was persisted and BEFORE the real executor runs (the crash window
+   *  "intent persisted / execution not started" → unknown-outcome
+   *  reconciliation on resume). Absent by default; hosts wire it to their
+   *  fault injector. */
+  intentPersistedFailAt?: () => Promise<void>;
 }
 
 interface SanitizedCall {
@@ -61,6 +82,9 @@ export class ToolOrchestrator {
   private readonly events?: EventSink;
   private readonly now: () => number;
   private readonly sandboxExtraRoots?: (sessionId: SessionId) => readonly string[];
+  private readonly nonFatal?: NonFatalErrorSink;
+  private readonly persistIntent?: (intent: ToolIntentPayload) => Promise<void>;
+  private readonly intentPersistedFailAt?: () => Promise<void>;
 
   constructor(deps: OrchestratorDeps) {
     this.registry = deps.registry;
@@ -71,6 +95,9 @@ export class ToolOrchestrator {
     this.events = deps.events;
     this.now = deps.now ?? Date.now;
     this.sandboxExtraRoots = deps.sandboxExtraRoots;
+    this.nonFatal = deps.nonFatal;
+    this.persistIntent = deps.persistIntent;
+    this.intentPersistedFailAt = deps.intentPersistedFailAt;
   }
 
   async execute(request: ToolCallRequest, context: ToolExecutionContext): Promise<ToolResult> {
@@ -129,7 +156,46 @@ export class ToolOrchestrator {
         return this.failSandbox(request, context, sandboxDecision, started);
       }
 
-      // 8. execute
+      // 8. P16-1: durable tool intent BEFORE the side effect. For tools whose
+      // sideEffectScope != "none", the execution intent is persisted AFTER
+      // validate/permission/approval/sandbox all pass and BEFORE the real
+      // executor runs. HARD RULE: an intent-persistence failure means the
+      // side effect does NOT execute (fail-closed) — the tool reports
+      // PERSISTENCE_ERROR and never reaches runBounded.
+      const semantics = toToolSemantics(tool.metadata, tool.risk);
+      if (mayHaveSideEffect(semantics) && this.persistIntent !== undefined) {
+        try {
+          await this.persistIntent({
+            toolCallId: request.call.id,
+            tool: tool.name,
+            argsHash: computeArgsHash(args),
+            sideEffectScope: semantics.sideEffectScope,
+            idempotent: semantics.idempotent,
+            readOnly: semantics.readOnly,
+            startedAt: this.now(),
+            sessionId: request.sessionId,
+            ...(request.turnId !== undefined ? { turnId: request.turnId } : {}),
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          const intentError = errorInfo(
+            "PERSISTENCE_ERROR",
+            `intent persistence failed; side effect NOT executed (${message})`,
+          );
+          void err; // handled below
+          await this.emit("tool.failed", request, context, {
+            toolCallId: request.call.id,
+            tool: tool.name,
+            error: intentError,
+            durationMs: this.now() - started,
+          });
+          return this.fail(request, context, "PERSISTENCE_ERROR",
+            `intent persistence failed; side effect NOT executed (${message})`, started);
+        }
+        // P16-6: crash window "intent persisted / executor not started".
+        await this.intentPersistedFailAt?.();
+      }
+
       await this.emit("tool.started", request, context, {});
       let result: ToolResult;
       try {
@@ -347,12 +413,21 @@ export class ToolOrchestrator {
         ...context,
         signal: ac.signal,
         onOutput: (event) => {
-          // Stream process output to the event trail as tool.output.
-          void this.emit("tool.output", request, context, { ...event }).catch(() => {});
+          // P18-5: stdout/stderr go to the event trail as tool.output; a
+          // "progress" chunk becomes tool.progress — a progress signal is
+          // NEVER a terminal result and never settles the call. A failed
+          // event write is non-fatal for execution but MUST stay observable
+          // (P14-6) — never a bare `.catch(() => {})`.
+          const type = event.stream === "progress" ? "tool.progress" : "tool.output";
+          void this.emit(type, request, context, { ...event }).catch((err) =>
+            this.nonFatal?.report(`orchestrator.emit:${type}`, err),
+          );
         },
       });
-      // Prevent unhandled rejections when timeout/cancel wins the race.
-      exec.catch(() => {});
+      // Prevent unhandled rejections when timeout/cancel wins the race. The
+      // race itself settles the outcome; a late rejection is the loser's
+      // signal — reported (P14-6), never silently swallowed.
+      exec.catch((err) => this.nonFatal?.report("orchestrator.execute:late", err));
       return await Promise.race([exec, timeout]);
     } finally {
       if (timer !== undefined) clearTimeout(timer);
@@ -409,7 +484,7 @@ export class ToolOrchestrator {
   private fail(
     request: ToolCallRequest,
     context: ToolExecutionContext,
-    code: "TOOL_SCHEMA_ERROR" | "PROCESS_TIMEOUT" | "APPROVAL_DENIED" | "INTERNAL_ERROR" | "PERMISSION_DENIED" | "SANDBOX_DENIED" | "SANDBOX_FILESYSTEM_DENIED" | "SANDBOX_PROCESS_DENIED" | "SANDBOX_NETWORK_DENIED",
+    code: "TOOL_SCHEMA_ERROR" | "PROCESS_TIMEOUT" | "APPROVAL_DENIED" | "INTERNAL_ERROR" | "PERMISSION_DENIED" | "SANDBOX_DENIED" | "SANDBOX_FILESYSTEM_DENIED" | "SANDBOX_PROCESS_DENIED" | "SANDBOX_NETWORK_DENIED" | "PERSISTENCE_ERROR",
     message: string,
     started: number,
     base?: ToolResult,
@@ -423,7 +498,9 @@ export class ToolOrchestrator {
       ...(base?.output !== undefined ? { output: base.output } : {}),
       error: errorInfo(code, message, { evidence: base?.error?.evidence }),
     };
-    void this.emit("tool.failed", request, context, { error: result.error, durationMs: this.now() - started }).catch(() => {});
+    void this.emit("tool.failed", request, context, { error: result.error, durationMs: this.now() - started }).catch((err) =>
+      this.nonFatal?.report("orchestrator.emit:tool.failed", err),
+    );
     return result;
   }
 
@@ -434,7 +511,9 @@ export class ToolOrchestrator {
       source: "permission-engine",
       code: "PERMISSION_DENIED",
       ...(decision.rule?.id !== undefined ? { ruleId: decision.rule.id } : {}),
-    }).catch(() => {});
+    }).catch((err) =>
+      this.nonFatal?.report("orchestrator.emit:security.permission_denied", err),
+    );
     return this.fail(request, context, "PERMISSION_DENIED", `permission denied: ${decision.reason}`, started);
   }
 
@@ -448,7 +527,7 @@ export class ToolOrchestrator {
   }
 
   private async emit(
-    type: "tool.permission_requested" | "tool.permission_resolved" | "tool.started" | "tool.output" | "tool.completed" | "tool.failed" | "approval.created" | "approval.resolved" | "security.network_denied" | "security.filesystem_denied" | "security.process_denied" | "security.permission_denied",
+    type: "tool.permission_requested" | "tool.permission_resolved" | "tool.started" | "tool.output" | "tool.progress" | "tool.completed" | "tool.failed" | "approval.created" | "approval.resolved" | "security.network_denied" | "security.filesystem_denied" | "security.process_denied" | "security.permission_denied",
     request: ToolCallRequest,
     context: ToolExecutionContext,
     payload: Record<string, unknown>,
@@ -461,8 +540,10 @@ export class ToolOrchestrator {
     };
     try {
       await this.events.emit(request.sessionId, type, full, request.turnId);
-    } catch {
-      // Event emission must never break execution.
+    } catch (err) {
+      // P14-6: event emission must never break execution — but the failure
+      // is reported (typed channel), never silently swallowed.
+      this.nonFatal?.report(`orchestrator.emit:${type}`, err);
     }
   }
 

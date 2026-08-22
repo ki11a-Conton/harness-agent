@@ -16,7 +16,7 @@ import type {
   TurnId,
   Verifier,
 } from "@ar/contracts";
-import { newAgentId } from "@ar/contracts";
+import { newAgentId, newSessionId } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
 import type { Script } from "@ar/model";
 import { AgentRuntime } from "@ar/core";
@@ -468,10 +468,10 @@ describe("AgentExecutionScheduler tree budgeting (P1-7)", () => {
     scheduler.setRootBudget(root.id, { maxTokens: 1000 });
 
     // Simulate model calls reporting token usage.
-    scheduler.reportUsage(root.id, 100, 50);
+    scheduler.reportUsage(root.id, { inputTokens: 100, outputTokens: 50, source: "measured" });
     expect(scheduler.tokenBudgetRemaining(root.id)!.remaining).toBe(650); // 800 - 150
 
-    scheduler.reportUsage(root.id, 200, 25);
+    scheduler.reportUsage(root.id, { inputTokens: 200, outputTokens: 25, source: "measured" });
     expect(scheduler.tokenBudgetRemaining(root.id)!.remaining).toBe(425); // 650 - 225
 
     const a = await scheduler.acquire({ parentSessionId: root.id, agentId: SUBAGENT.id, tokenBudget: 200 }, new AbortController().signal);
@@ -486,7 +486,7 @@ describe("AgentExecutionScheduler tree budgeting (P1-7)", () => {
     // No token budget set — all acquire/reportUsage calls succeed.
     expect(scheduler.tokenBudgetRemaining(root.id)).toBeUndefined();
     for (let i = 0; i < 100; i += 1) {
-      scheduler.reportUsage(root.id, 1000, 1000);
+      scheduler.reportUsage(root.id, { inputTokens: 1000, outputTokens: 1000, source: "measured" });
       const a = await scheduler.acquire({ parentSessionId: root.id, agentId: SUBAGENT.id, tokenBudget: 1000 }, new AbortController().signal);
       a.release(0);
     }
@@ -523,17 +523,59 @@ describe("P3-10: session-scoped usage reporting", () => {
 
     // A child session reports usage — without a binding nothing is counted.
     const child = { id: "child-1" as SessionId };
-    scheduler.reportUsageBySession(child.id, 100, 50);
+    scheduler.reportUsageBySession(child.id, { inputTokens: 100, outputTokens: 50, source: "measured" });
     expect(scheduler.tokenBudgetRemaining(root.id)!.remaining).toBe(800);
 
     // After binding, the same usage reaches the root tree account.
     scheduler.bindSession(child.id, root.id);
-    scheduler.reportUsageBySession(child.id, 100, 50);
+    scheduler.reportUsageBySession(child.id, { inputTokens: 100, outputTokens: 50, source: "measured" });
     expect(scheduler.tokenBudgetRemaining(root.id)!.remaining).toBe(650);
 
     // Unbinding stops attribution (the child finished).
     scheduler.unbindSession(child.id);
-    scheduler.reportUsageBySession(child.id, 100, 50);
+    scheduler.reportUsageBySession(child.id, { inputTokens: 100, outputTokens: 50, source: "measured" });
     expect(scheduler.tokenBudgetRemaining(root.id)!.remaining).toBe(650);
+  });
+});
+
+describe("P15-3: scheduler queue bound", () => {
+  it("rejects a request past maxQueued with RESOURCE_LIMIT instead of unbounded queueing", async () => {
+    const store = new MemorySessionStore();
+    const scheduler = new AgentExecutionScheduler({ store, limits: { maxGlobalAgents: 1, maxQueued: 2 } });
+    const parentId = newSessionId();
+    await store.createSession({
+      id: parentId,
+      agentId: newAgentId(),
+      model: { providerId: "p", modelId: "m" },
+      cwd: "/w",
+      status: "active",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const parent = (await store.getSession(parentId))!;
+
+    // First acquire starts (uses the single global slot).
+    const ac1 = new AbortController();
+    const p1 = scheduler.acquire({ parentSessionId: parent.id, agentId: parent.agentId }, ac1.signal);
+    // Wait for it to start (queued → active).
+    await new Promise((r) => setTimeout(r, 20));
+
+    // Two more queue up (maxQueued 2).
+    const ac2 = new AbortController();
+    const p2 = scheduler.acquire({ parentSessionId: parent.id, agentId: parent.agentId }, ac2.signal);
+    const ac3 = new AbortController();
+    const p3 = scheduler.acquire({ parentSessionId: parent.id, agentId: parent.agentId }, ac3.signal);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(scheduler.snapshot().filter((e) => e.state === "queued")).toHaveLength(2);
+
+    // The 4th request must REJECT (queue full), not queue without bound.
+    const ac4 = new AbortController();
+    await expect(
+      scheduler.acquire({ parentSessionId: parent.id, agentId: parent.agentId }, ac4.signal),
+    ).rejects.toMatchObject({ info: { code: "RESOURCE_LIMIT" } });
+
+    // cleanup: cancel all pending
+    ac1.abort(); ac2.abort(); ac3.abort();
+    await Promise.allSettled([p1, p2, p3]);
   });
 });

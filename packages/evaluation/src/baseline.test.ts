@@ -60,6 +60,14 @@ function outcome(overrides: Partial<EvalOutcome> = {}): EvalOutcome {
       verification_failures: 0,
       human_interventions: 0,
       estimated_cost: 0,
+
+      usage_unknown: 0,
+
+      cache_tokens_read: 0,
+
+      cache_tokens_created: 0,
+
+      model_call_count: 0,
     },
     violations: [],
     suite: "regression",
@@ -317,6 +325,14 @@ describe("collectRunMetrics", () => {
         verification_failures: 0,
         human_interventions: 0,
         estimated_cost: 0.01,
+
+        usage_unknown: 0,
+
+        cache_tokens_read: 0,
+
+        cache_tokens_created: 0,
+
+        model_call_count: 0,
       },
     });
 
@@ -802,7 +818,7 @@ describe("runBaseline P0-6 options", () => {
       [caseDef({ id: "a" })],
       async (c) => outcome({ caseId: c.id }),
       { generatedAt: "now", benchmarkVersion: "1.0.0", model: { providerId: "p", modelId: "m" }, casesTotal: 1, suite: "regression" },
-      { manifest: { gitSha: "abc", dirty: false, model: "m", provider: "p", temperature: null, suiteVersion: "2.1.0", judgeVersion: "1.0.0", runtimeConfigHash: "hash", timestamp: "t", platform: process.platform, nodeVersion: process.version } },
+      { manifest: { gitSha: "abc", dirty: false, model: "m", provider: "p", temperature: null, suiteVersion: "2.1.0", judgeVersion: "1.0.0", runtimeConfigHash: "hash", timestamp: "t", platform: process.platform, nodeVersion: process.version, profile: "benchmark", features: { context: true }, contextBudgetTokens: 32000, taskSuites: ["regression"], randomSeed: 42 } },
     );
     expect(report.manifest).toMatchObject({ gitSha: "abc", runtimeConfigHash: "hash" });
   });

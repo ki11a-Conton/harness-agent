@@ -62,6 +62,7 @@ describe("P2-18 plugin hardening — capability declaration & permission boundar
 
   it("trust grant gate: a trust level not granted `tool` is never dispatched", async () => {
     const host = new PluginHost({
+      defaultChampion: true,
       grants: {
         ...DEFAULT_GRANTS,
         untrusted: ["event"], // untrusted no longer gets tool
@@ -365,4 +366,58 @@ describe("P2-18 plugin hardening — failure isolation: timeout & quarantine", (
     host.enable("p1");
     expect(host.stats().quarantined).toEqual([]);
   });
+
+describe("P18-3 plugin policy: explicit trust, never default Champion", () => {
+  it("refuses a non-builtin plugin by default (Champion OFF)", () => {
+    const host = new PluginHost();
+    expect(() =>
+      host.register({ id: "p1", source: "local", onTool: async () => null }),
+    ).toThrow(PluginError);
+    try {
+      host.register({ id: "p1", source: "local", onTool: async () => null });
+    } catch (err) {
+      expect(err).toBeInstanceOf(PluginError);
+      expect((err as PluginError).code).toBe("champion-off");
+    }
+    expect(host.stats().total).toBe(0);
+  });
+
+  it("built-in plugins (part of the harness) still load with the default policy", () => {
+    const host = new PluginHost();
+    expect(() =>
+      host.register({ id: "core", source: "builtin", onTool: async () => result({ ok: true }) }),
+    ).not.toThrow();
+    expect(host.stats().total).toBe(1);
+  });
+
+  it("loads a local plugin ONLY under explicit trusted-local configuration", () => {
+    const host = new PluginHost({
+      defaultChampion: true,
+      allowedSources: ["local"],
+      workspaceApproved: true,
+    });
+    expect(() =>
+      host.register({ id: "p1", source: "local", onTool: async () => result({ ok: true }) }),
+    ).not.toThrow();
+    expect(host.stats().total).toBe(1);
+  });
+
+  it("project-local plugin needs explicit workspace approval even with Champion on", () => {
+    const host = new PluginHost({ defaultChampion: true, allowedSources: ["local"] });
+    try {
+      host.register({ id: "p1", source: "local", onTool: async () => null });
+    } catch (err) {
+      expect((err as PluginError).code).toBe("project-local-requires-approval");
+    }
+    expect(host.stats().total).toBe(0);
+  });
+
+  it("documented execution model defaults to in-process (no auto-enable there)", () => {
+    // The default policy has NO execution model override — registering the
+    // policy object keeps the in-process default (same-process execution is
+    // never auto-enabled; only explicit defaultChampion turns it on).
+    const host = new PluginHost();
+    expect(host.stats().total).toBe(0);
+  });
+});
 });

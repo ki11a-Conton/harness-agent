@@ -15,7 +15,8 @@ function result(content: unknown): ToolResult {
 }
 
 function plugin(id: string, onTool?: Plugin["onTool"]): Plugin {
-  return { id, onTool };
+  // P18-3: test doubles are built-in plugins (exempt from Champion-off).
+  return { id, source: "builtin", onTool };
 }
 
 describe("PluginHost", () => {
@@ -192,5 +193,90 @@ describe("PluginHost", () => {
       call: { name: "write", args: { text: "hi" } },
       sessionId: "s9",
     });
+  });
+});
+
+describe("PluginHost — P14-4 capability monotonicity", () => {
+  const GRANT: {
+    policy: {
+      filesystem: { mode: "workspace-write"; allowedPaths: string[] };
+      network: { mode: "allowlist"; hosts: string[] };
+      process: { allowedCommands: string[] };
+    };
+    toolAllowlist: string[];
+  } = {
+    policy: {
+      filesystem: { mode: "workspace-write", allowedPaths: ["C:\\work"] },
+      network: { mode: "allowlist", hosts: ["api.example.com"] },
+      process: { allowedCommands: ["pnpm test"] },
+    },
+    toolAllowlist: ["read", "write", "exec"],
+  };
+
+  it("a sandbox declaration that widens the host grant is a typed denial at registration", () => {
+    const host = new PluginHost({ capability: GRANT, defaultChampion: true });
+    expect(() =>
+      host.register({
+        id: "evil",
+        onTool: async () => result({}),
+        sandbox: { filesystem: ["C:\\work", "C:\\Windows"] },
+      }),
+    ).toThrow(/plugin boundary denied/);
+    // the plugin is not registered
+    expect(host.stats().total).toBe(0);
+  });
+
+  it("a sandbox declaration that narrows the host grant registers fine", () => {
+    const host = new PluginHost({ capability: GRANT, defaultChampion: true });
+    expect(() =>
+      host.register({
+        id: "good",
+        onTool: async () => result({}),
+        sandbox: { filesystem: ["C:\\work\\sub"], network: [] },
+      }),
+    ).not.toThrow();
+    expect(host.stats().total).toBe(1);
+  });
+
+  it("a sandbox declaration with NO host grant is denied (unknown bound cannot prove narrowing)", () => {
+    const host = new PluginHost({ defaultChampion: true }); // no capability grant
+    expect(() =>
+      host.register({
+        id: "declares",
+        onTool: async () => result({}),
+        sandbox: { filesystem: ["C:\\work\\sub"] },
+      }),
+    ).toThrow(/plugin boundary denied/);
+  });
+
+  it("sandbox.tool is rejected — the tool surface stays with capabilities (one source of truth)", () => {
+    const host = new PluginHost({ capability: GRANT, defaultChampion: true });
+    expect(() =>
+      host.register({
+        id: "toolclaim",
+        onTool: async () => result({}),
+        sandbox: { tool: ["read"] },
+      }),
+    ).toThrow(/sandbox.tool is not a plugin surface/);
+  });
+
+  it("the denial is observable through the policy callback (typed SecurityDenial)", () => {
+    const denials: Array<{ dimension: string; code: string; target?: string }> = [];
+    const host = new PluginHost({
+      capability: GRANT,
+      defaultChampion: true,
+      onCapabilityDenied: (denial) => {
+        denials.push({ dimension: denial.dimension, code: denial.code, target: denial.target });
+      },
+    });
+    expect(() =>
+      host.register({
+        id: "evil",
+        onTool: async () => result({}),
+        sandbox: { network: ["evil.example.com"] },
+      }),
+    ).toThrow();
+    expect(denials).toHaveLength(1);
+    expect(denials[0]).toMatchObject({ dimension: "capability", code: "SECURITY_DENIED", target: "evil" });
   });
 });

@@ -146,7 +146,7 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
     runtime: harness.runtime,
     introspection: harness.introspect(),
     ...(harness.candidates !== undefined ? { candidates: harness.candidates } : {}),
-    ...(harness.memory !== undefined ? { memoryStore: harness.memory.store } : {}),
+    ...(harness.memoryStore !== undefined ? { memoryStore: harness.memoryStore } : {}),
     ...(harness.askUserStore !== undefined ? { askUserStore: harness.askUserStore } : {}),
     ...(harness.checkpointStore !== undefined ? { checkpointStore: harness.checkpointStore } : {}),
     doctor: {

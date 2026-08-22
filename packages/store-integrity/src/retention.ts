@@ -24,6 +24,11 @@ export interface ArtifactRetentionResult {
   remainingBytes: number;
 }
 
+/** P14-6: typed node error-code check (ENOENT = expected missing file/dir). */
+function isNodeErrorCode(err: unknown, code: string): boolean {
+  return err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === code;
+}
+
 /** Delete oldest-first until every cap holds. Files are treated as artifacts:
  *  any file under `dir` counts. Best-effort per file — one failure never
  *  aborts the sweep. */
@@ -34,7 +39,11 @@ export async function enforceArtifactRetention(
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    // P14-6: a missing dir is expected — other failures are reported.
+    if (!isNodeErrorCode(err, "ENOENT")) {
+      process.stderr.write(`[degraded] retention.readdir: ${err instanceof Error ? err.message : String(err)}\n`);
+    }
     return { scanned: 0, deleted: 0, bytesDeleted: 0, remainingBytes: 0 };
   }
   const files: Array<{ path: string; size: number; mtimeMs: number }> = [];
@@ -43,8 +52,12 @@ export async function enforceArtifactRetention(
     try {
       const st = await stat(join(dir, entry.name));
       files.push({ path: join(dir, entry.name), size: st.size, mtimeMs: st.mtimeMs });
-    } catch {
-      // vanished between readdir and stat: skip
+    } catch (err) {
+      // P14-6: a vanished file is expected (readdir/stat race) — reported if
+      // not ENOENT.
+      if (!isNodeErrorCode(err, "ENOENT")) {
+        process.stderr.write(`[degraded] retention.stat: ${err instanceof Error ? err.message : String(err)}\n`);
+      }
     }
   }
   files.sort((a, b) => a.mtimeMs - b.mtimeMs); // oldest first
@@ -65,8 +78,10 @@ export async function enforceArtifactRetention(
       deleted += 1;
       bytesDeleted += file.size;
       total -= file.size;
-    } catch {
-      // best effort — one failure never aborts the sweep
+    } catch (err) {
+      // P14-6: best effort — one failure never aborts the sweep, but it is
+      // reported, never silent.
+      process.stderr.write(`[degraded] retention.rm: ${err instanceof Error ? err.message : String(err)}\n`);
     }
   }
 
@@ -87,15 +102,21 @@ export async function archiveFile(
   const source = join(activeDir, fileName);
   try {
     await stat(source);
-  } catch {
-    return undefined; // nothing to archive
+  } catch (err) {
+    // P14-6: nothing to archive is expected — reported if not ENOENT.
+    if (!isNodeErrorCode(err, "ENOENT")) {
+      process.stderr.write(`[degraded] retention.archive-stat: ${err instanceof Error ? err.message : String(err)}\n`);
+    }
+    return undefined;
   }
   await mkdir(archiveDir, { recursive: true });
   const target = join(archiveDir, fileName);
   try {
     await rename(source, target);
-  } catch {
-    // cross-device rename: copy fallback not implemented — keep source intact
+  } catch (err) {
+    // cross-device rename: copy fallback not implemented — keep source intact.
+    // P14-6: the skip is reported, never silent.
+    process.stderr.write(`[degraded] retention.archive-rename: ${err instanceof Error ? err.message : String(err)}\n`);
     return undefined;
   }
   return target;

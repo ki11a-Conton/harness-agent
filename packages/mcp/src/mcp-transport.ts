@@ -38,9 +38,11 @@ export interface McpTransportOptions {
   networkBoundary?: NetworkBoundary;
   /**
    * Tool risk for the adapted tools. MCP tools are remote/opaque; the host
-   * declares the risk from its knowledge of the server. Default "readonly" —
-   * an operator connecting a mutating server MUST raise this (elevated /
-   * critical), otherwise the orchestrator's permission model under-classifies.
+   * declares the risk from its knowledge of the server. P18-4 default
+   * "side_effect" — FAIL-CLOSED: the host cannot prove a remote tool is
+   * read-only, so it is treated as side-effecting until the operator
+   * explicitly declares "readonly" (trusted-local). The orchestrator's
+   * permission/sandbox/reconciliation pipeline under-classifies otherwise.
    */
   risk?: "readonly" | "side_effect" | "elevated" | "critical";
 }
@@ -57,17 +59,38 @@ export async function connectMcpServer(
   config: McpServerConfig,
   opts: McpTransportOptions = {},
 ): Promise<McpServerConnection> {
-  const risk = opts.risk ?? "readonly";
+  const risk = opts.risk ?? "side_effect";
   const networkBoundary = opts.networkBoundary ?? (config.kind === "stdio" ? "loopback" : "internet");
   const provenance = { serverId: config.id, trust: opts.trust ?? "untrusted", networkBoundary };
   const events = opts.events;
 
   const adapt = async (source: McpToolSource) => {
     const toolLikes = await createMcpToolAdapter(source, { events, provenance });
+    // P14-4 MCP boundary: the server's advertised tools are the DECLARED
+    // capability; the host's config.allowedTools is the CONFERED bound.
+    // EffectiveCapability = Conferred ∩ Declared — a tool the host did not
+    // confer is a widening and is denied fail-closed (the registration of the
+    // whole server fails; no tool outside the bound is ever registered).
+    if (config.allowedTools !== undefined) {
+      const declared = toolLikes.map((t) => t.name);
+      const missing = declared.filter((name) => !config.allowedTools!.includes(name));
+      if (missing.length > 0) {
+        throw new AgentError(
+          errorInfo(
+            "MCP_DENIED",
+            `mcp server "${config.id}" denied: advertised tools outside the host's conferred allow-list (${missing.join(", ")})`,
+            { evidence: JSON.stringify({ serverId: config.id, declared, conferred: config.allowedTools }) },
+          ),
+        );
+      }
+    }
     // stdio is a local child-process IPC channel — no network boundary is
     // crossed; http crosses the real network (and the sandbox must admit it).
+    // P18-4: a stdio MCP server is a SPAWNED PROCESS — that is a process
+    // capability, never implicitly trusted just because it is "local".
     const network = config.kind === "http";
-    return toolLikes.map((tool) => toToolDefinition(tool, config.id, risk, network));
+    const processCapability = config.kind === "stdio";
+    return toolLikes.map((tool) => toToolDefinition(tool, config.id, risk, network, processCapability));
   };
 
   if (config.kind === "http") {
@@ -112,6 +135,7 @@ function toToolDefinition(
   serverId: string,
   risk: NonNullable<McpTransportOptions["risk"]>,
   network: boolean,
+  processCapability: boolean,
 ): ToolDefinition {
   const schema = (tool.schema ?? {}) as Record<string, unknown> | undefined;
   return {
@@ -122,13 +146,15 @@ function toToolDefinition(
     metadata: {
       name: tool.name,
       version: "1.0.0",
-      // MCP calls cross a process boundary (stdio) or the network (http);
-      // side effects are unknown from the host side, so retry is never safe
-      // and concurrency is serial.
+      // P18-4: MCP calls cross a process boundary (stdio spawn) or the network
+      // (http); side effects are UNKNOWN from the host side, so the adapted
+      // tool is side-effecting by default (risk "side_effect"), never
+      // auto-retried and serial. stdio is a process capability — being local
+      // does not make it trusted.
       sideEffect: risk !== "readonly",
       network,
       filesystem: false,
-      process: false,
+      process: processCapability,
       interactive: false,
       retry: "unknown",
       concurrencySafe: false,

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
-import { errorInfo } from "@ar/contracts";
+import { errorInfo, isNodeErrorCode } from "@ar/contracts";
 import { assessWriteSafety } from "../write-safety.js";
 
 export interface WriteFileInput {
@@ -58,8 +58,12 @@ export const writeFileTool: ToolDefinition<WriteFileInput, WriteFileOutput> = {
         const st = await stat(target);
         exists = st.isFile();
         originalBytes = st.size;
-      } catch {
-        // ENOENT → brand-new file; guard will rate it safe (create).
+      } catch (err) {
+        // P14-6: ENOENT → brand-new file (the guard rates it "create");
+        // any other stat failure is reported, never silent.
+        if (!isNodeErrorCode(err, "ENOENT")) {
+          process.stderr.write(`[degraded] write-file.stat: ${err instanceof Error ? err.message : String(err)}\n`);
+        }
       }
       const safety = assessWriteSafety({
         exists,

@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { stableStringify } from "./serialization.js";
 import type { AgentId, CheckpointId, SessionId, ToolCallId, TurnId } from "./ids.js";
+import type { RunBudget } from "./limits.js";
+import type { RecoveryAction } from "./recovery.js";
 import type { WorkingState } from "./working-state.js";
 import type { ToolResultStatus } from "./tool.js";
 
@@ -25,6 +27,16 @@ export interface CheckpointBudgetUsage {
   maxTokens: number;
   /** Last observed context usage in tokens, when known. */
   usedTokens?: number;
+  /** P16-3: full run-budget snapshot (model/token/cost/tool/subagent/
+   *  retry/duration counters) so a resumed turn does NOT refresh budget. */
+  run?: RunBudget;
+  /** P16-3: per-turn recovery-action usage (change_strategy/delegate/ask/
+   *  fail_safe counters) consumed before the checkpoint. */
+  recoveryUsage?: Partial<Record<RecoveryAction, number>>;
+  /** P16-3: verification retries consumed before the checkpoint. */
+  verificationRetries?: number;
+  /** P16-3: stall-recovery invocations consumed before the checkpoint. */
+  stallRecoveryCount?: number;
 }
 
 /** P1-4 tool execution ledger record (plan §1277): the durable, replayable
@@ -61,6 +73,11 @@ export interface UnresolvedToolExecution {
   argsHash: string;
   started: number;
   sideEffect: boolean;
+  /** P16-2: declared side-effect scope of the tool at call time — the
+   *  reconciliation policy keys on it (read-only/idempotent → safe re-run;
+   *  filesystem → verify target state; process/network/global/unknown →
+   *  never auto-re-run). */
+  sideEffectScope: "none" | "filesystem" | "process" | "network" | "global" | "unknown";
 }
 
 export interface CheckpointData {

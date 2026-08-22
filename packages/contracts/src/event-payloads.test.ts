@@ -95,4 +95,47 @@ describe("Q-4 typed event payloads", () => {
       void p;
     }
   });
+
+  it("P20-5: terminal turn events carry the P19-1 grade + termination reason shape", () => {
+    const completed: EventPayloadOf<"turn.completed"> = {
+      status: "completed",
+      statusDetail: "completed",
+      terminationReason: "verified_complete",
+      grade: "verified_complete",
+      completionEvidence: { passedSteps: 2, totalSteps: 2 },
+    };
+    expect(completed.grade).toBe("verified_complete");
+    expect(completed.completionEvidence).toEqual({ passedSteps: 2, totalSteps: 2 });
+    const failed: EventPayloadOf<"turn.failed"> = { status: "failed", terminationReason: "verification_failed", grade: "verification_failed" };
+    expect(failed.grade).toBe("verification_failed");
+  });
+
+  it("P20-5: recovery.decided and protocol repair events are typed, not ad-hoc", () => {
+    const recovery: EventPayloadOf<"recovery.decided"> = {
+      action: "retry_safe",
+      input: "tool_failure",
+      tool: "read_file",
+      toolCallId: "tc-1",
+      used: 0,
+      remaining: 2,
+    };
+    expect(recovery.action).toBe("retry_safe");
+    const repaired: EventPayloadOf<"protocol.repaired"> = {
+      kind: "duplicate_tool_call_id",
+      action: "recover",
+      evidence: { kind: "duplicate_tool_call_id", repaired: true, before: "tc-1" },
+    };
+    expect(repaired.action).toBe("recover");
+    expect(repaired.evidence?.before).toBe("tc-1");
+  });
+
+  it("P20-5: subagent lifecycle events are typed and linked to the parent call", () => {
+    const started: EventPayloadOf<"subagent.started"> = {
+      subagentId: "sa-1",
+      parentCallId: "toolcall-delegate-1",
+      delegatedBy: "delegate_worker",
+      goal: "fix the flaky test",
+    };
+    expect(started.parentCallId).toBe("toolcall-delegate-1");
+  });
 });

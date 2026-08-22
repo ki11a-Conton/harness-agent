@@ -41,12 +41,40 @@ export interface ToolStartedPayload {
   name?: string;
 }
 
+/** P16-1: durable execution intent for a side-effecting tool call — the
+ *  record persisted BEFORE the real executor runs (intent persistence
+ *  failure → the side effect does NOT execute, fail-closed). */
+export interface ToolIntentPayload {
+  toolCallId: string;
+  tool: string;
+  /** Stable structural hash of the call args. */
+  argsHash: string;
+  /** sideEffectScope at the time of the call ("filesystem"/"process"/...). */
+  sideEffectScope: string;
+  /** Idempotent/readOnly semantics snapshot (reconciliation decisions). */
+  idempotent: boolean;
+  readOnly: boolean;
+  startedAt: number;
+  sessionId: string;
+  turnId?: string;
+  stepId?: string;
+}
+
 /** tool.output — streaming output chunks from a tool. */
 export interface ToolOutputPayload {
   toolCallId: string;
   tool?: string;
   name?: string;
   stream?: "stdout" | "stderr";
+  text?: string;
+}
+
+/** tool.progress — P18-5 progress channel: an in-flight progress signal,
+ *  separate from the terminal result. It NEVER settles the call and never
+ *  enters the durable ledger as completion. */
+export interface ToolProgressPayload {
+  toolCallId: string;
+  tool?: string;
   text?: string;
 }
 
@@ -172,6 +200,15 @@ export interface ContextCompactedPayload {
   overflow?: boolean;
 }
 
+/** P17-6: a compaction digest FAILED to preserve one or more protected
+ *  fields (goal/constraints/decisions/pending/files/commands/tests/failures/
+ *  memory-skill-child refs). Surfaced as a violation, never silent. */
+export interface ContextProtectedFactsViolationPayload {
+  turnId?: string;
+  missing: Array<{ field: string; item: string }>;
+  digestLength: number;
+}
+
 /** command.discovered — P7-6 lazy command discovery found the workspace's
  *  test/typecheck/build commands after a code-changing turn. */
 export interface CommandDiscoveredPayload {
@@ -191,12 +228,15 @@ export interface VerificationStepPayload {
 }
 
 /** tools.selected — P7-3 tool disclosure telemetry: how many schemas were
- *  available, how many were advertised to the model, and which were dropped. */
+ *  available, how many were advertised to the model, and which were dropped.
+ *  P18-2: advertisedTokens prices the advertisement (estimateSpecsTokens) so
+ *  benchmarks can compare full vs deferred schema cost directly. */
 export interface ToolsSelectedPayload {
   callId?: string;
   available?: number;
   selected?: number;
   dropped?: string[];
+  advertisedTokens?: number;
 }
 
 /** context.candidate/selected/dropped — P6-3 selection telemetry. One event
@@ -218,12 +258,26 @@ export interface RunLimitReachedPayload {
   pattern?: string;
 }
 
-/** turn.completed — a turn finished with a terminal state. */
-export interface TurnCompletedPayload {
+/** turn.completed / turn.failed / turn.cancelled — a turn reached a terminal
+ *  state. P19-1: the runtime stamps the verified-completion `grade` and the
+ *  bounded `terminationReason` ONCE here; consumers read them from this event
+ *  (or the outcome) — never from model wording. */
+export interface TurnTerminalPayload {
   status?: string;
+  /** P2-38: partial-failure classification (failed_with_effects / blocked /
+   *  cancelled_no_effect / waiting_*). */
+  statusDetail?: string;
   falseComplete?: boolean;
   spurious?: boolean;
   endReason?: string;
+  /** P2-39: bounded TerminationReason. */
+  terminationReason?: string;
+  /** P19-1: verified-completion grade (unverified_complete / verification_
+   *  failed / verified_partial / verified_complete). */
+  grade?: string;
+  /** P19-1: gate evidence (passedSteps/totalSteps) that produced the grade. */
+  completionEvidence?: { passedSteps: number; totalSteps: number };
+  error?: unknown;
 }
 
 /** memory.retrieved — pre-turn memory retrieval (plan.md P2-2). The runtime
@@ -254,10 +308,64 @@ export interface ApprovalResolvedPayload {
   value?: string;
 }
 
+/** recovery.decided — P19-3: the recovery planner chose a bounded action for
+ *  a failure input. Consumers branch on the TYPED action, never on reason
+ *  strings; used/remaining expose the per-turn budget position. */
+export interface RecoveryDecidedPayload {
+  action: string;
+  input: string;
+  toolCallId?: string;
+  tool?: string;
+  used?: number;
+  remaining?: number;
+  reason?: string;
+}
+
+/** protocol.repaired / protocol.repair_failed — P19-5: typed protocol
+ *  self-heal. `evidence` preserves what was observed before/after the repair —
+ *  a dropped call id never silently vanishes. */
+export interface ProtocolRepairPayload {
+  repairId?: string;
+  kind: string;
+  action: "recover" | "fail_safe";
+  evidence?: {
+    kind?: string;
+    repaired?: boolean;
+    action?: string;
+    before?: unknown;
+    after?: unknown;
+    detail?: string;
+  };
+  reason?: string;
+}
+
+/** subagent.started / subagent.completed / subagent.failed — a delegated
+ *  subagent's lifecycle. P20-6 trace tree: parentSpanId carries the spawning
+ *  call so the tree rebuilds from the event stream. */
+export interface SubagentPayload {
+  subagentId?: string;
+  parentCallId?: string;
+  delegatedBy?: string;
+  goal?: string;
+  durationMs?: number;
+  error?: unknown;
+}
+
 /** security.*_denied — a security boundary rejected an action. */
 export interface SecurityDeniedPayload {
   reason?: string;
   error?: unknown;
+}
+
+/** runtime.degraded — a best-effort subsystem failed non-fatally. The event
+ *  exists so P14-6 "no silent catches" stays true: a background/cleanup/
+ *  telemetry failure that must not break the run is still observable, with
+ *  the failing context and reason. */
+export interface RuntimeDegradedPayload {
+  /** Subsystem that degraded (e.g. "orchestrator.emit", "skill-loader.load"). */
+  context: string;
+  /** Human-readable failure reason. */
+  reason: string;
 }
 
 /**
@@ -268,8 +376,10 @@ export interface EventPayloadMap {
   "tool.requested": ToolRequestedPayload;
   "tool.permission_requested": ToolPermissionRequestedPayload;
   "tool.permission_resolved": ToolPermissionResolvedPayload;
+  "tool.intent_persisted": ToolIntentPayload;
   "tool.started": ToolStartedPayload;
   "tool.output": ToolOutputPayload;
+  "tool.progress": ToolProgressPayload;
   "tool.completed": ToolCompletedPayload;
   "tool.failed": ToolFailedPayload;
   "tools.selected": ToolsSelectedPayload;
@@ -284,6 +394,7 @@ export interface EventPayloadMap {
   "command.discovered": CommandDiscoveredPayload;
   "context.built": ContextBuiltPayload;
   "context.compacted": ContextCompactedPayload;
+  "context.protected_facts_violation": ContextProtectedFactsViolationPayload;
   "context.candidate": ContextSelectionPayload;
   "context.selected": ContextSelectionPayload;
   "context.dropped": ContextSelectionPayload;
@@ -292,8 +403,17 @@ export interface EventPayloadMap {
   "memory.retrieved": MemoryRetrievedPayload;
   "reflection.completed": ReflectionCompletedPayload;
   "run.limit_reached": RunLimitReachedPayload;
-  "turn.completed": TurnCompletedPayload;
+  "turn.completed": TurnTerminalPayload;
+  "turn.failed": TurnTerminalPayload;
+  "turn.cancelled": TurnTerminalPayload;
+  "recovery.decided": RecoveryDecidedPayload;
+  "protocol.repaired": ProtocolRepairPayload;
+  "protocol.repair_failed": ProtocolRepairPayload;
+  "subagent.started": SubagentPayload;
+  "subagent.completed": SubagentPayload;
+  "subagent.failed": SubagentPayload;
   "approval.resolved": ApprovalResolvedPayload;
+  "runtime.degraded": RuntimeDegradedPayload;
   "security.network_denied": SecurityDeniedPayload;
   "security.injection_denied": SecurityDeniedPayload;
   "security.permission_denied": SecurityDeniedPayload;
@@ -304,6 +424,7 @@ export interface EventPayloadMap {
   "security.skill_denied": SecurityDeniedPayload;
   "security.mcp_denied": SecurityDeniedPayload;
   "security.approval_denied": SecurityDeniedPayload;
+  "security.capability_denied": SecurityDeniedPayload;
 }
 
 /** Payload type for a given event type (falls back to a generic record). */
@@ -332,8 +453,10 @@ export const EVENT_PAYLOAD_TYPES = {
   "tool.requested": true,
   "tool.permission_requested": true,
   "tool.permission_resolved": true,
+  "tool.intent_persisted": true,
   "tool.started": true,
   "tool.output": true,
+  "tool.progress": true,
   "tool.completed": true,
   "tool.failed": true,
   "model.completed": true,
@@ -341,8 +464,17 @@ export const EVENT_PAYLOAD_TYPES = {
   "verification.completed": true,
   "verification.failed": true,
   "context.compacted": true,
+  "context.protected_facts_violation": true,
   "run.limit_reached": true,
   "turn.completed": true,
+  "turn.failed": true,
+  "turn.cancelled": true,
+  "recovery.decided": true,
+  "protocol.repaired": true,
+  "protocol.repair_failed": true,
+  "subagent.started": true,
+  "subagent.completed": true,
+  "subagent.failed": true,
   "approval.resolved": true,
   "security.network_denied": true,
   "security.injection_denied": true,
@@ -354,4 +486,6 @@ export const EVENT_PAYLOAD_TYPES = {
   "security.skill_denied": true,
   "security.mcp_denied": true,
   "security.approval_denied": true,
+  "security.capability_denied": true,
+  "runtime.degraded": true,
 } as const satisfies Record<string, true>;

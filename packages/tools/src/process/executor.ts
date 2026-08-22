@@ -106,8 +106,9 @@ export class ProcessExecutor {
       else stderrBytes += byteLen;
       try {
         opts.onOutput?.({ stream, text });
-      } catch {
-        // Streaming observers must never break execution.
+      } catch (err) {
+        // P14-6: streaming observers must never break execution — reported.
+        process.stderr.write(`[degraded] executor.onOutput: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     };
 

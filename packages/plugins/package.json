@@ -14,5 +14,9 @@
   "scripts": {
     "typecheck": "tsc -b",
     "test": "vitest run"
+  },
+  "dependencies": {
+    "@ar/contracts": "workspace:*",
+    "@ar/security": "workspace:*"
   }
 }

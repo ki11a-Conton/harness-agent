@@ -10,6 +10,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/
 import { tmpdir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import type { SessionId } from "@ar/contracts";
+import { isNodeErrorCode } from "@ar/contracts";
 import { isPathCanonicallyWithin } from "@ar/security";
 import type {
   ApplyPatchOptions,
@@ -99,8 +100,14 @@ export class DefaultChildWorkspaceManager implements ChildWorkspaceManager {
         let currentHash: string | undefined;
         try {
           currentHash = hashOf(await readFile(target));
-        } catch {
-          currentHash = undefined; // file gone
+        } catch (err) {
+          // P14-6: a vanished file is an EXPECTED conflict outcome (parent or
+          // child deleted it) — an explicit sentinel; other read failures are
+          // reported, never silent.
+          currentHash = undefined;
+          if (!isNodeErrorCode(err, "ENOENT")) {
+            process.stderr.write(`[degraded] workspace-manager.baseline-read: ${err instanceof Error ? err.message : String(err)}\n`);
+          }
         }
         if (currentHash !== entry.parentBaselineHash) {
           conflicts.push({
@@ -147,8 +154,11 @@ export class DefaultChildWorkspaceManager implements ChildWorkspaceManager {
     let entries;
     try {
       entries = await readdir(from, { withFileTypes: true });
-    } catch {
-      return; // unreadable subtree: skip
+    } catch (err) {
+      // P14-6: an unreadable subtree is skipped — reported so the isolation
+      // copy gap is observable, never silent.
+      process.stderr.write(`[degraded] workspace-manager.copy-readdir: ${err instanceof Error ? err.message : String(err)}\n`);
+      return;
     }
     for (const entry of entries) {
       if (entry.isSymbolicLink()) continue; // never copy symlinks (escape)
@@ -167,8 +177,10 @@ export class DefaultChildWorkspaceManager implements ChildWorkspaceManager {
         const content = await readFile(fromFile);
         baseline.set(relPath, hashOf(content));
         await writeFile(join(to, entry.name), content);
-      } catch {
-        // unreadable file: skip silently (best effort copy)
+      } catch (err) {
+        // P14-6: an unreadable/copy-failed file is skipped (best effort copy)
+        // but reported — the isolation copy gap must be observable.
+        process.stderr.write(`[degraded] workspace-manager.copy-file: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
   }
@@ -239,7 +251,12 @@ async function collectHashes(
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    // P14-6: a vanished/unreadable source dir during disposal is expected
+    // (workspace already cleaned up) — reported if not ENOENT, never silent.
+    if (!isNodeErrorCode(err, "ENOENT")) {
+      process.stderr.write(`[degraded] workspace-manager.dispose-readdir: ${err instanceof Error ? err.message : String(err)}\n`);
+    }
     return;
   }
   for (const entry of entries) {
@@ -251,8 +268,12 @@ async function collectHashes(
     } else if (entry.isFile()) {
       try {
         out.set(rel, hashOf(await readFile(abs)));
-      } catch {
-        // unreadable: omit
+      } catch (err) {
+        // P14-6: an unreadable file is omitted from the hash tree — reported
+        // unless it simply vanished (ENOENT), never silent.
+        if (!isNodeErrorCode(err, "ENOENT")) {
+          process.stderr.write(`[degraded] workspace-manager.hash-read: ${err instanceof Error ? err.message : String(err)}\n`);
+        }
       }
     }
   }

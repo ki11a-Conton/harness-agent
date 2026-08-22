@@ -8,7 +8,12 @@ export type { InstructionDiscoveryOptions, DiscoveredInstruction } from "@ar/con
 export { BudgetPlannerImpl } from "./budget.js";
 
 // CTX-003: context compaction.
-export { DefaultCompactor, isCompactable } from "./compaction.js";
+export { DefaultCompactor, isCompactable, MultiStageCompactor, previewMarker, protectedFieldsMissing } from "./compaction.js";
+export type { CompactionStageReport, MultiStageCompactorOptions, ProtectedFacts } from "./compaction.js";
+export { buildRehydrationBlocks } from "./rehydration.js";
+export { CompactionCircuitBreaker } from "./circuit-breaker.js";
+export type { BreakerState, CompactionCircuitBreakerOptions, CompactionMetrics } from "./circuit-breaker.js";
+export type { RehydrationOptions } from "./rehydration.js";
 
 // LOOP-001: full-agent-loop context pipeline (discovery + budget + compaction).
 export { ContextPipeline, estimateMessageTokens } from "./pipeline.js";

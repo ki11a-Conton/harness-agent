@@ -249,8 +249,10 @@ function parseJsonlLines(raw: string): MemoryEntry[] {
         ...(entry as MemoryEntry),
         scope: entry.scope ?? "session",
       });
-    } catch {
-      // corrupt line: skip, keep reading the rest (best-effort recovery)
+    } catch (err) {
+      // P14-6: corrupt line — skipped so the rest still loads, but reported
+      // (it is data-loss evidence), never silent.
+      process.stderr.write(`[degraded] memory-store.corrupt-line: ${err instanceof Error ? err.message : String(err)}\n`);
     }
   }
   return entries;

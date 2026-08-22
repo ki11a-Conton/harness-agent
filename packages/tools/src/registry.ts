@@ -1,15 +1,13 @@
 import type { ToolCapability, ToolDefinition, ToolSemantics, ToolSpec } from "@ar/contracts";
-import { DEFAULT_TOOL_CAPABILITY, DEFAULT_TOOL_SEMANTICS, AgentError, errorInfo, toToolSemantics } from "@ar/contracts";
+import { DEFAULT_TOOL_SEMANTICS, AgentError, errorInfo, toToolCapability, toToolSemantics } from "@ar/contracts";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
-/** Capability projection of a tool for the runtime's retry gating and
- *  concurrency planning; unknown tools are conservatively "unknown"/serial. */
+/** Capability projection of a tool for LEGACY retry/concurrency callers.
+ *  P18-1: derived through the single semantics chain (metadata → semantics →
+ *  capability), so the two views can never drift and metadata is never a
+ *  second decision source. Unknown tools are conservatively "unknown"/serial. */
 export function capabilityOf(tool: ToolDefinition | undefined): ToolCapability {
-  if (tool === undefined) return DEFAULT_TOOL_CAPABILITY;
-  return {
-    retry: tool.metadata.retry ?? DEFAULT_TOOL_CAPABILITY.retry,
-    concurrencySafe: tool.metadata.concurrencySafe ?? DEFAULT_TOOL_CAPABILITY.concurrencySafe,
-  };
+  return toToolCapability(semanticsOf(tool));
 }
 
 /** P1-11: full execution semantics of a tool; unknown tools get the

@@ -50,12 +50,25 @@ export interface Usage {
  * The runtime accumulates these into the single usage record on
  * model.completed. CONTRACT: snapshots are CUMULATIVE (later snapshots replace
  * the fields they carry), never deltas.
+ *
+ * P20-1: a provider that returns NO usage at all must never be recorded as a
+ * bare 0 (that would fabricate a "free" call). Consumers must carry the
+ * provenance in `source`:
+ *   - "measured"  — numbers came from the provider.
+ *   - "estimated" — the runtime/host estimated them (e.g. default-rate cost).
+ *   - "unknown"   — the provider gave nothing; any number on the record is
+ *                   absent, and consumers must NOT treat the call as 0-cost.
  */
 export interface UsageSnapshot {
   inputTokens?: number;
   outputTokens?: number;
   contextTokens?: number;
+  /** P20-1: prompt-cache reads (tokens served from cache). */
+  cacheReadTokens?: number;
+  /** P20-1: prompt-cache writes (tokens stored into cache). */
+  cacheCreationTokens?: number;
   estimatedCostUsd?: number;
+  source?: "measured" | "estimated" | "unknown";
 }
 
 export type FinishReason = "stop" | "tool_calls" | "error" | "cancelled";

@@ -7,7 +7,7 @@ import type {
   PromptKind,
   SessionId,
 } from "@ar/contracts";
-import { newPromptId } from "@ar/contracts";
+import { newPromptId, isNodeErrorCode } from "@ar/contracts";
 import { atomicWriteFile, backupTree, withLock } from "@ar/store-integrity";
 import { SessionStoreError } from "./session-store.js";
 
@@ -62,11 +62,24 @@ export class SessionInbox {
   }
 }
 
-/** In-memory inbox (tests, one-shot hosts). */
 export class MemInboxStore implements InboxStore {
   prompts: AdmittedPrompt[] = [];
+  private readonly maxPending: number;
+
+  /** P15-3: bound the pending queue — overflow is a typed QUEUE_FULL reject,
+   *  never an unbounded RAM growth nor a silent drop. */
+  constructor(opts: { maxPending?: number } = {}) {
+    this.maxPending = opts.maxPending ?? 1000;
+  }
 
   async admit(prompt: AdmittedPrompt): Promise<void> {
+    const pending = this.prompts.filter((p) => p.status === "pending");
+    if (pending.length >= this.maxPending) {
+      throw new SessionStoreError(
+        "QUEUE_FULL",
+        `inbox full: ${pending.length} pending prompts exceed maxPending ${this.maxPending}`,
+      );
+    }
     this.prompts.push(prompt);
   }
 
@@ -95,6 +108,8 @@ export class MemInboxStore implements InboxStore {
 
 export interface JSONLInboxStoreOptions {
   dataDir: string;
+  /** P15-3: bound on pending prompts; overflow rejects with QUEUE_FULL. */
+  maxPending?: number;
 }
 
 interface PromptRecord {
@@ -108,17 +123,26 @@ const INBOX_SCHEMA_VERSION = 1;
  *  Corrupt lines are skipped (same policy as the memory store). */
 export class JSONLInboxStore implements InboxStore {
   private readonly file: string;
+  private readonly maxPending: number;
   private loaded = false;
   private prompts: AdmittedPrompt[] = [];
 
   constructor(opts: JSONLInboxStoreOptions) {
     this.file = join(opts.dataDir, "inbox.jsonl");
+    this.maxPending = opts.maxPending ?? 1000;
   }
 
   async admit(prompt: AdmittedPrompt): Promise<void> {
     // P2-35: read-modify-persist serialized under a per-file lock.
     return withLock(this.lockKey(), async () => {
       await this.load();
+      const pending = this.prompts.filter((p) => p.status === "pending");
+      if (pending.length >= this.maxPending) {
+        throw new SessionStoreError(
+          "QUEUE_FULL",
+          `inbox full: ${pending.length} pending prompts exceed maxPending ${this.maxPending}`,
+        );
+      }
       this.prompts.push(prompt);
       await this.persist();
     });
@@ -170,16 +194,20 @@ export class JSONLInboxStore implements InboxStore {
     let raw: string;
     try {
       raw = await readFile(this.file, "utf8");
-    } catch {
-      return; // first run: no file yet
+    } catch (err) {
+      // P14-6: first-run ENOENT is expected — other read failures propagate.
+      if (!isNodeErrorCode(err, "ENOENT")) throw err;
+      return;
     }
     for (const line of raw.split("\n")) {
       if (line.trim() === "") continue;
       try {
         const record = JSON.parse(line) as PromptRecord;
         if (record.schemaVersion === INBOX_SCHEMA_VERSION) this.prompts.push(record.prompt);
-      } catch {
-        // corrupt line: skip (documented policy)
+      } catch (err) {
+        // P14-6: corrupt line — skipped (documented policy) but reported, never
+        // silent.
+        process.stderr.write(`[degraded] inbox.corrupt-line: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
   }

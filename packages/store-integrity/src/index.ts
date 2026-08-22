@@ -22,6 +22,7 @@ async function syncDir(dirPath: string): Promise<void> {
   // Directory fsync makes a rename/persist durable across power loss. It is
   // best-effort: some filesystems reject it (EINVAL/EPERM), and skipping it
   // only risks losing the rename itself, never corrupting file contents.
+  // P14-6: still reported on the degraded channel, never silent.
   try {
     const handle = await open(dirPath, "r");
     try {
@@ -29,8 +30,8 @@ async function syncDir(dirPath: string): Promise<void> {
     } finally {
       await handle.close();
     }
-  } catch {
-    /* best-effort */
+  } catch (err) {
+    process.stderr.write(`[degraded] store-integrity.syncDir: ${err instanceof Error ? err.message : String(err)}\n`);
   }
 }
 
@@ -137,8 +138,13 @@ export async function backupTree(
     try {
       const listing = await readdir(from, { withFileTypes: true });
       entries = listing.map((e) => ({ name: e.name, isDirectory: e.isDirectory() }));
-    } catch {
-      return; // missing dir is fine
+    } catch (err) {
+      // P14-6: a missing source dir is expected — other readdir failures are
+      // reported so the backup gap is observable, never silent.
+      if (!isNodeErrorCode(err, "ENOENT")) {
+        process.stderr.write(`[degraded] store-integrity.backup-readdir: ${err instanceof Error ? err.message : String(err)}\n`);
+      }
+      return;
     }
     for (const entry of entries) {
       if (entry.name === "backups") continue;
@@ -219,3 +225,9 @@ export function assertRecordVersion(record: unknown, expected: number, label: st
 }
 export { enforceArtifactRetention, archiveFile } from "./retention.js";
 export type { ArtifactRetentionOptions, ArtifactRetentionResult } from "./retention.js";
+
+/** P14-6: typed node error-code check (ENOENT = expected missing file/dir).
+ *  Kept local — this package is a zero-dependency base. */
+export function isNodeErrorCode(err: unknown, code: string): boolean {
+  return err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === code;
+}

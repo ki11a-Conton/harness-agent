@@ -31,6 +31,21 @@ export interface RunManifest {
   timestamp: string;
   platform: string;
   nodeVersion: string;
+  /** P21-1: harness profile the run executed under (interactive / batch /
+   *  benchmark / champion …) — two runs under DIFFERENT profiles are never
+   *  compared as if the harness were the same. */
+  profile: string;
+  /** P21-1: effective feature-flag snapshot (context/memory/delegation/…).
+   *  A baseline vs candidate comparison is only valid when features differ
+   *  BY DESIGN (the candidate under test), never by accident. */
+  features: Record<string, boolean>;
+  /** P21-1: context budget (tokens) the run used; null = not pinned. */
+  contextBudgetTokens: number | null;
+  /** P21-1: the task suites this run executed (regression/holdout/…). */
+  taskSuites: string[];
+  /** P21-1: PRNG seed when the run fixed one (provider/order reproducible);
+   *  null = not seeded. */
+  randomSeed: number | null;
 }
 
 /** Suite definition version. P0-6 adds the integrity layer (manifest, failure
@@ -52,6 +67,16 @@ export interface BuildRunManifestOptions {
   /** Injectable git info for deterministic tests; when absent, probed via git. */
   gitInfo?: { sha: string | null; dirty: boolean | null };
   now?: () => number;
+  /** P21-1: harness profile label. */
+  profile?: string;
+  /** P21-1: effective feature-flag snapshot. */
+  features?: Record<string, boolean>;
+  /** P21-1: context budget (tokens); null = not pinned. */
+  contextBudgetTokens?: number | null;
+  /** P21-1: task suites executed. */
+  taskSuites?: string[];
+  /** P21-1: PRNG seed when fixed; null = not seeded. */
+  randomSeed?: number | null;
 }
 
 /** Best-effort git identity probe. Any failure (no git, not a repo, timeout)
@@ -70,6 +95,13 @@ export async function buildRunManifest(opts: BuildRunManifestOptions): Promise<R
     timestamp: opts.timestamp ?? new Date(opts.now?.() ?? Date.now()).toISOString(),
     platform: process.platform,
     nodeVersion: process.version,
+    // P21-1: reproducibility identity — absent values are honest nulls/[],
+    // never guessed.
+    profile: opts.profile ?? "benchmark",
+    features: opts.features ?? {},
+    contextBudgetTokens: opts.contextBudgetTokens ?? null,
+    taskSuites: opts.taskSuites ?? [],
+    randomSeed: opts.randomSeed ?? null,
   };
 }
 

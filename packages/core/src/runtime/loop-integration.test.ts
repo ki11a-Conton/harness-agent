@@ -8,11 +8,12 @@ import type {
   ToolCallRequest,
   ToolExecutionContext,
   ToolResult,
+  ToolSemantics,
   Verifier,
   VerificationContext,
   VerificationResult,
 } from "@ar/contracts";
-import { errorInfo, newAgentId } from "@ar/contracts";
+import { DEFAULT_TOOL_SEMANTICS, errorInfo, newAgentId } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
 import { ContextPipeline } from "@ar/context";
 import { AgentRuntime } from "./runtime.js";
@@ -107,7 +108,7 @@ function makeLoop(
     maxToolCalls?: number;
     maxIterationsPerTurn?: number;
     maxVerificationFailures?: number;
-    toolCapabilityOf?: (name: string) => { retry: "safe" | "unknown" | "none"; concurrencySafe: boolean };
+    toolSemanticsOf?: (name: string) => ToolSemantics;
     orchResult?: { status: "success" | "failed"; output?: string; error?: ReturnType<typeof errorInfo> };
     changedPaths?: () => readonly string[];
   } = {},
@@ -131,7 +132,7 @@ function makeLoop(
     recovery: overrides.recovery,
     task: overrides.task,
     verifier: overrides.verifier,
-    toolCapabilityOf: overrides.toolCapabilityOf,
+    toolSemanticsOf: overrides.toolSemanticsOf,
     ...(overrides.changedPaths !== undefined ? { changedPathsProvider: overrides.changedPaths } : {}),
     ...(overrides.pipeline !== undefined
       ? { context: { pipeline: overrides.pipeline, budget: overrides.budget ?? BIG_BUDGET } }
@@ -340,7 +341,7 @@ describe("LOOP-001 full agent loop (integration)", () => {
       agents: [{ ...AGENT, limits: {} }],
       recovery: new RecoveryPolicy({ maxAttempts: 3, retryDelayMs: 0 }),
       // read-only idempotent tools are auto-retried (plan.md Phase 3.6)
-      toolCapabilityOf: () => ({ retry: "safe", concurrencySafe: false }),
+      toolSemanticsOf: () => ({ ...DEFAULT_TOOL_SEMANTICS, retrySafety: "safe" }),
     });
 
     const { outcome } = await runLoop(runtime, store);
@@ -555,5 +556,216 @@ describe("LOOP-001 full agent loop (integration)", () => {
     expect(outcome.status).toBe("failed");
     expect(outcome.error?.message).toContain("requires no side effects");
     expect(orch.calls.map((c) => c.request.call.name)).toEqual(["write_file"]);
+  });
+
+  it("P19-1: gate pass grades verified_complete with evidence on outcome AND event", async () => {
+    const { runtime, store, events } = makeLoop([ScriptedModelProvider.text("done: task finished")], {
+      task: FAKE_TASK,
+      verifier: listVerifier("passed"),
+    });
+    const { outcome } = await runLoop(runtime, store);
+    expect(outcome.status).toBe("completed");
+    expect(outcome.terminationReason).toBe("verified_complete");
+    expect(outcome.grade).toBe("verified_complete");
+    const terminal = (await events.list((await store.listSessions())[0]!.id)).find((e) => e.type === "turn.completed");
+    expect(terminal?.payload.grade).toBe("verified_complete");
+    expect(terminal?.payload.completionEvidence).toEqual({ passedSteps: 1, totalSteps: 1 });
+  });
+
+  it("P19-1: bare model stop (no gate) is unverified_complete — 'done' is NOT success", async () => {
+    const { runtime, store, events } = makeLoop([ScriptedModelProvider.text("done: task finished")], {});
+    const { outcome } = await runLoop(runtime, store);
+    expect(outcome.status).toBe("completed");
+    expect(outcome.terminationReason).toBe("model_stopped");
+    expect(outcome.grade).toBe("unverified_complete");
+    const terminal = (await events.list((await store.listSessions())[0]!.id)).find((e) => e.type === "turn.completed");
+    expect(terminal?.payload.grade).toBe("unverified_complete");
+    expect(terminal?.payload.completionEvidence).toBeUndefined();
+  });
+
+  it("P19-1: code-changing turn that never ran a gate cannot be verified_complete", async () => {
+    const { runtime, store } = makeLoop([ScriptedModelProvider.text("done")], {
+      changedPaths: () => ["src/app.ts"],
+    });
+    const { outcome } = await runLoop(runtime, store);
+    expect(outcome.grade).toBe("unverified_complete");
+    expect(outcome.grade).not.toBe("verified_complete");
+  });
+
+  it("P19-1: verification_failed grades honestly when the gate exhausts its retries", async () => {
+    const { runtime, store } = makeLoop([ScriptedModelProvider.text("done")], {
+      task: FAKE_TASK,
+      verifier: listVerifier("failed"),
+      maxVerificationFailures: 1,
+    });
+    const { outcome } = await runLoop(runtime, store);
+    expect(outcome.status).toBe("failed");
+    expect(outcome.terminationReason).toBe("verification_failed");
+    expect(outcome.grade).toBe("verification_failed");
+  });
+
+  it("P19-4: a TIMEOUT on a non-idempotent write is never blindly retried", async () => {
+    const script: ModelEvent[][] = [
+      ScriptedModelProvider.toolCall("write_file", { path: "x.txt" }),
+      ScriptedModelProvider.text("done"),
+    ];
+    const orch = new FakeOrchestrator({
+      status: "timeout",
+      error: errorInfo("INTERNAL_ERROR", "hung write"),
+    });
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const runtime = new AgentRuntime({
+      store,
+      events,
+      modelProvider: new ScriptedModelProvider(script),
+      orchestrator: orch,
+      agents: [{ ...AGENT, limits: {} }],
+      recovery: new RecoveryPolicy({ maxAttempts: 3, retryDelayMs: 0 }),
+      // write_file is NOT retrySafety=safe (unknown effects) — a timeout must
+      // not trigger a blind re-run of a possibly-committed write.
+    });
+    const { outcome } = await runLoop(runtime, store);
+    expect(outcome.status).toBe("completed");
+    // exactly ONE execution: the write was never re-run after the timeout.
+    expect(orch.calls.length).toBe(1);
+  });
+
+  it("P19-4: tool-level retry and model/provider-level retry stay in separate observable layers", async () => {
+    // Tool retry (retry_safe) emits recovery.decided — never model.retry.
+    const fail = () => ScriptedModelProvider.toolCall("read_file", { path: "a.txt" });
+    const script: ModelEvent[][] = [fail(), ScriptedModelProvider.text("done")];
+    const orch = new FakeOrchestrator({ status: "failed", error: errorInfo("INTERNAL_ERROR", "read failed") });
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const runtime = new AgentRuntime({
+      store,
+      events,
+      modelProvider: new ScriptedModelProvider(script),
+      orchestrator: orch,
+      agents: [{ ...AGENT, limits: {} }],
+      recovery: new RecoveryPolicy({ maxAttempts: 2, retryDelayMs: 0 }),
+      toolSemanticsOf: () => ({ ...DEFAULT_TOOL_SEMANTICS, retrySafety: "safe", readOnly: true, idempotent: true }),
+    });
+    const { outcome } = await runLoop(runtime, store);
+    expect(outcome.status).toBe("completed");
+    expect(orch.calls.length).toBe(2); // bounded tool retry happened
+    const all = await events.list((await store.listSessions())[0]!.id);
+    // Tool layer speaks recovery/tool events…
+    expect(all.some((e) => e.type === "recovery.decided")).toBe(true);
+    // …and NEVER fabricates model/provider retry events for a tool failure.
+    expect(all.some((e) => e.type === "model.retry")).toBe(false);
+    expect(all.some((e) => e.type === "retry.provider")).toBe(false);
+  });
+
+  it("P19-5: duplicate tool call ids in one model turn are deduped (first wins) with protocol.repaired evidence", async () => {
+    const read = { id: "dup-1" as never, name: "read_file", args: { path: "a.txt" } };
+    const script: ModelEvent[][] = [
+      [
+        { type: "started", timestamp: 0 },
+        { type: "tool_call_delta", toolCall: read, timestamp: 0 },
+        { type: "tool_call_delta", toolCall: { ...read }, timestamp: 0 }, // same id again
+        { type: "completed", result: { finishReason: "tool_calls" as const, toolCalls: [read, { ...read }] }, timestamp: 0 },
+      ],
+      ScriptedModelProvider.text("done"),
+    ];
+    const orch = new FakeOrchestrator({ status: "success", output: "ok" });
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const runtime = new AgentRuntime({
+      store,
+      events,
+      modelProvider: new ScriptedModelProvider(script),
+      orchestrator: orch,
+      agents: [{ ...AGENT, limits: {} }],
+    });
+    const { outcome } = await runLoop(runtime, store);
+    expect(outcome.status).toBe("completed");
+    // the duplicate never executes — double effect avoided.
+    expect(orch.calls).toHaveLength(1);
+    const all = await events.list((await store.listSessions())[0]!.id);
+    const repaired = all.filter((e) => e.type === "protocol.repaired");
+    expect(repaired).toHaveLength(1);
+    expect(repaired[0]!.payload.kind).toBe("duplicate_tool_call_id");
+    expect(repaired[0]!.payload.evidence as { before: unknown }).toMatchObject({ before: "dup-1" });
+  });
+
+  it("P19-5: an all-malformed tool_calls turn FAILS SAFE (protocol.repair_failed), never faked as done", async () => {
+    const bad = { id: "bad-1" as never, name: "write_file", args: "nope" } as never;
+    const script: ModelEvent[][] = [
+      [
+        { type: "started", timestamp: 0 },
+        { type: "tool_call_delta", toolCall: bad, timestamp: 0 },
+        { type: "completed", result: { finishReason: "tool_calls" as const, toolCalls: [bad] }, timestamp: 0 },
+      ],
+      ScriptedModelProvider.text("done"),
+    ];
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const runtime = new AgentRuntime({
+      store,
+      events,
+      modelProvider: new ScriptedModelProvider(script),
+      orchestrator: new FakeOrchestrator({ status: "success", output: "never" }),
+      agents: [{ ...AGENT, limits: {} }],
+    });
+    const { outcome } = await runLoop(runtime, store);
+    expect(outcome.status).toBe("failed");
+    expect(outcome.terminationReason).toBe("model_error");
+    const all = await events.list((await store.listSessions())[0]!.id);
+    expect(all.some((e) => e.type === "protocol.repaired")).toBe(true);
+    expect(all.some((e) => e.type === "protocol.repair_failed")).toBe(true);
+  });
+
+  it("P20-1: model.completed carries the measured usage record (never a bare 0)", async () => {
+    const script: ModelEvent[][] = [
+      [
+        { type: "started", timestamp: 0 },
+        { type: "completed", result: { finishReason: "stop" as const, text: "done", usage: { inputTokens: 120, outputTokens: 30 } }, timestamp: 0 },
+      ],
+    ];
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const runtime = new AgentRuntime({
+      store,
+      events,
+      modelProvider: new ScriptedModelProvider(script),
+      orchestrator: new FakeOrchestrator(),
+      agents: [{ ...AGENT, limits: {} }],
+    });
+    await runLoop(runtime, store);
+    const all = await events.list((await store.listSessions())[0]!.id);
+    const completed = all.find((e) => e.type === "model.completed")!;
+    const usage = completed.payload.usage as { inputTokens?: number; outputTokens?: number; source?: string };
+    expect(usage.inputTokens).toBe(120);
+    expect(usage.outputTokens).toBe(30);
+    // provenance: numbers present -> measured, never "unknown" or a bare 0.
+    expect(usage.source).toBe("measured");
+  });
+
+  it("P20-1: a provider that returns NO usage is marked unknown, never written as 0", async () => {
+    const script: ModelEvent[][] = [
+      [
+        { type: "started", timestamp: 0 },
+        { type: "completed", result: { finishReason: "stop" as const, text: "done" }, timestamp: 0 },
+      ],
+    ];
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const runtime = new AgentRuntime({
+      store,
+      events,
+      modelProvider: new ScriptedModelProvider(script),
+      orchestrator: new FakeOrchestrator(),
+      agents: [{ ...AGENT, limits: {} }],
+    });
+    await runLoop(runtime, store);
+    const all = await events.list((await store.listSessions())[0]!.id);
+    const completed = all.find((e) => e.type === "model.completed")!;
+    const usage = completed.payload.usage as { inputTokens?: number; outputTokens?: number; source?: string };
+    expect(usage.source).toBe("unknown");
+    // No fabricated 0-token "free" record.
+    expect(usage.inputTokens).toBeUndefined();
+    expect(usage.outputTokens).toBeUndefined();
   });
 });

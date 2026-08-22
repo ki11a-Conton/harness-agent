@@ -107,6 +107,31 @@ async function promoteCmd(args: string[], deps: LearnDeps): Promise<CommandResul
     return { exitCode: 1, lines: [`learn promote: unknown candidate ${id}`] };
   }
 
+  // Gate 0a (P17-2): a QUARANTINED candidate (produced by a turn that used
+  // untrusted external content) can never be auto-promoted — it must be
+  // reviewed first. Malicious-repo-一句话 → 永久记忆 is structurally blocked.
+  const meta = candidateToMemoryCandidate(candidate);
+  if (meta.promotionState === "quarantined" || (meta.pollutionSources?.length ?? 0) > 0) {
+    return {
+      exitCode: 1,
+      lines: [
+        `learn promote ${id}: REJECTED — candidate is quarantined (pollution sources: ${(meta.pollutionSources ?? []).join(", ") || "unknown"})`,
+        `  A turn using untrusted external content produced this candidate; it must be reviewed, never auto-promoted.`,
+      ],
+    };
+  }
+  // Gate 0b (P17-1): a DERIVABLE fact (re-obtainable from repo/git/AGENTS.md/
+  // config) is not stored as long-term memory — re-derivation never goes stale.
+  if (meta.derivability?.verdict === "derivable") {
+    return {
+      exitCode: 1,
+      lines: [
+        `learn promote ${id}: REJECTED — derivable fact (${meta.derivability.reason})`,
+        `  Long-term memory is reserved for preferences / decisions / lessons / environment quirks / underivable constraints.`,
+      ],
+    };
+  }
+
   // Gate 1: fresh write-gate re-check (security + importance/novelty).
   const gate = evaluateCandidate(candidateToMemoryCandidate(candidate), DEFAULT_MEMORY_WRITE_POLICY);
   if (!gate.allowed) {
@@ -202,6 +227,13 @@ function memoryEntryFromCandidate(
     novelty: source?.novelty ?? 0.5,
     stability: source?.stability ?? 0.5,
     ...(source?.structured !== undefined ? { structured: source.structured } : {}),
+    // P17-1: provenance survives promotion (sourceTurn/derivability/scan/
+    // pollution state are part of the durable memory record).
+    ...(source?.sourceTurn !== undefined ? { sourceTurn: source.sourceTurn } : {}),
+    ...(source?.derivability !== undefined ? { derivability: source.derivability } : {}),
+    ...(source?.promotionState !== undefined ? { promotionState: source.promotionState } : {}),
+    ...(source?.securityScan !== undefined ? { securityScan: source.securityScan } : {}),
+    ...(source?.pollutionSources !== undefined ? { pollutionSources: source.pollutionSources } : {}),
     createdAt: now,
     updatedAt: now,
     deleted: false,

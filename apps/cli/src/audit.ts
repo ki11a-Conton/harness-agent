@@ -31,6 +31,99 @@ export type CapabilityStatus =
   | "missing"
   | "unknown";
 
+/**
+ * P20-2 — capability composition profiles. The matrix reports per profile,
+ * NOT "source exists => production". A memory capability is genuinely
+ * production in the interactive-persistent profile only when the store is
+ * durable; the benchmark profile demands benchmark harness wiring; the
+ * champion profile demands the strongest posture (durable + isolated).
+ */
+export type CapabilityProfile =
+  | "interactive-ephemeral"
+  | "interactive-persistent"
+  | "benchmark"
+  | "champion";
+
+export const CAPABILITY_PROFILES = [
+  "interactive-ephemeral",
+  "interactive-persistent",
+  "benchmark",
+  "champion",
+] as const satisfies readonly CapabilityProfile[];
+
+export type SecurityMode = "sandboxed" | "isolated" | "approved" | "unrestricted";
+
+export interface ProfileExpectations {
+  /** Capability ids that MUST be durable in this profile. */
+  mustBeDurable: readonly string[];
+  /** Capability ids that MUST be wired (productionWired) in this profile. */
+  mustBeWired: readonly string[];
+  /** Security posture this profile promises. */
+  securityMode: SecurityMode;
+  /** When the profile demands durability, an in-memory harness is degraded. */
+  requiresDurableHarness: boolean;
+}
+
+/** P20-2 — per-profile expectations. Values are a reviewed configuration,
+ *  not a comment: changing a profile's posture is a behavior change. */
+export const PROFILE_EXPECTATIONS: Readonly<Record<CapabilityProfile, ProfileExpectations>> = {
+  "interactive-ephemeral": {
+    mustBeDurable: [],
+    mustBeWired: ["context_pipeline", "advanced_tools", "run_budget"],
+    securityMode: "sandboxed",
+    requiresDurableHarness: false,
+  },
+  "interactive-persistent": {
+    mustBeDurable: ["checkpoint_store", "memory_store", "ask_user_durable", "approval_durable"],
+    mustBeWired: ["context_pipeline", "advanced_tools", "usage_accounting", "run_budget"],
+    securityMode: "sandboxed",
+    requiresDurableHarness: true,
+  },
+  benchmark: {
+    mustBeDurable: [],
+    mustBeWired: [
+      "context_pipeline",
+      "advanced_tools",
+      "usage_accounting",
+      "run_budget",
+      "regression_suite",
+      "holdout_suite",
+    ],
+    securityMode: "sandboxed",
+    requiresDurableHarness: false,
+  },
+  champion: {
+    mustBeDurable: ["checkpoint_store", "memory_store", "ask_user_durable", "approval_durable"],
+    mustBeWired: [
+      "context_pipeline",
+      "advanced_tools",
+      "usage_accounting",
+      "run_budget",
+      "regression_suite",
+      "holdout_suite",
+      "adversarial_suite",
+      "stress_suite",
+    ],
+    securityMode: "isolated",
+    requiresDurableHarness: true,
+  },
+};
+
+export function isCapabilityProfile(value: unknown): value is CapabilityProfile {
+  return typeof value === "string" && (CAPABILITY_PROFILES as readonly string[]).includes(value);
+}
+
+/** P20-2 — map the harness's own introspection.profile label to a capability
+ *  profile. "interactive" + in-memory => ephemeral; "interactive" + durable
+ *  harness => persistent; anything else maps to benchmark (the default audit
+ *  posture). */
+export function profileOf(input: AuditInput): CapabilityProfile {
+  const label = input.introspection?.profile ?? "";
+  const durable = input.introspection?.persistence?.mode === "durable";
+  if (label.startsWith("interactive")) return durable ? "interactive-persistent" : "interactive-ephemeral";
+  return "benchmark";
+}
+
 export interface CapabilityEvidence {
   kind:
     | "runtime_dependency"
@@ -49,14 +142,29 @@ export interface CapabilityRecord {
   description: string;
   implemented: boolean;
   productionWired: boolean;
+  /** P20-2: true when the capability is backed by a durable store (or needs
+   *  no persistence at all) in the CURRENT profile. A durable-required
+   *  capability on an in-memory harness is false with a degradedReason. */
+  durable: boolean;
   integrationTested: boolean;
   benchmarkExercised: boolean;
+  /** P20-2: the security posture the current profile promises (sandboxed /
+   *  isolated / approved / unrestricted). */
+  securityMode: SecurityMode;
+  /** P20-2: why this record is degraded for the current profile — present
+   *  exactly when a profile expectation (durable harness / wired / isolated)
+   *  is NOT met. Absent = no degradation. */
+  degradedReason?: string;
   evidence: CapabilityEvidence[];
 }
 
 export interface CapabilityMatrix {
   generatedAt: number;
   gitSha?: string;
+  /** P20-2: the capability profile this matrix was built for (see
+   *  CAPABILITY_PROFILES). The SAME wiring yields different production
+   *  claims per profile — never read a bare matrix as profile-less. */
+  profile?: CapabilityProfile;
   records: CapabilityRecord[];
 }
 
@@ -319,7 +427,7 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
   },
   {
     id: "plugin_host",
-    description: "Plugin host wired (registry, isolation, tool contributions)",
+    description: "Plugin host implemented (in-process, no process isolation); P18-3 default Champion OFF — same-process plugins load only under explicit trusted-local config (defaultChampion + allowedSources) and project-local plugins need workspace approval; isolated/production-wired stages not built yet",
     usesIntrospection: true,
     implemented: (i) => i.packages["plugins"] === true,
     wired: (i) => intro(i)?.features.plugins === true,
@@ -481,16 +589,45 @@ function ev(kind: CapabilityEvidence["kind"], ref: string, note?: string): Capab
   return note === undefined ? { kind, ref } : { kind, ref, note };
 }
 
-function toRecord(spec: CapabilitySpec, input: AuditInput): CapabilityRecord {
-  return {
+function toRecord(spec: CapabilitySpec, input: AuditInput, profile: CapabilityProfile): CapabilityRecord {
+  const expectations = PROFILE_EXPECTATIONS[profile];
+  const implemented = spec.implemented(input);
+  const wired = spec.wired(input);
+  // P20-2: durability — a durable-required capability is durable only when
+  // the harness persistence mode is "durable" (and the harness itself is not
+  // degraded); capabilities with no persistence need are trivially durable.
+  const requiresDurability = expectations.mustBeDurable.includes(spec.id);
+  const durable = requiresDurability
+    ? input.introspection?.persistence?.mode === "durable" &&
+      input.introspection?.persistence?.degraded !== true
+    : true;
+  // P20-2: degradation — a profile expectation that the wiring does not meet.
+  const reasons: string[] = [];
+  if (expectations.requiresDurableHarness && input.introspection?.persistence?.mode !== "durable") {
+    reasons.push("profile requires a durable harness but persistence is in-memory");
+  } else if (
+    expectations.requiresDurableHarness &&
+    input.introspection?.persistence?.degraded === true &&
+    (input.introspection?.persistence?.reasons ?? []).length > 0
+  ) {
+    reasons.push(`harness degraded: ${input.introspection!.persistence!.reasons.join("; ")}`);
+  }
+  if (expectations.mustBeWired.includes(spec.id) && !wired) {
+    reasons.push(`profile ${profile} requires ${spec.id} wired but it is not`);
+  }
+  const record: CapabilityRecord = {
     id: spec.id,
     description: spec.description,
-    implemented: spec.implemented(input),
-    productionWired: spec.wired(input),
+    implemented,
+    productionWired: wired,
+    durable,
     integrationTested: spec.integrationTested(input),
     benchmarkExercised: spec.benchmarkExercised(input),
+    securityMode: expectations.securityMode,
     evidence: spec.evidence(input),
   };
+  if (reasons.length > 0) record.degradedReason = reasons.join("; ");
+  return record;
 }
 
 /** P0-1: a capability is as mature as its weakest proven link. */
@@ -502,12 +639,28 @@ export function capabilityStatusOf(record: CapabilityRecord): CapabilityStatus {
   return "benchmarked";
 }
 
-export function buildCapabilityMatrix(input: AuditInput): CapabilityMatrix {
+export function buildCapabilityMatrix(
+  input: AuditInput,
+  profile: CapabilityProfile = profileOf(input),
+): CapabilityMatrix {
   return {
     generatedAt: input.generatedAt,
     ...(input.gitSha !== undefined ? { gitSha: input.gitSha } : {}),
-    records: CAPABILITY_SPECS.map((spec) => toRecord(spec, input)),
+    ...(profile !== undefined ? { profile } : {}),
+    records: CAPABILITY_SPECS.map((spec) => toRecord(spec, input, profile)),
   };
+}
+
+/** P20-2 — the composition-aware view: one matrix PER profile, so a reader
+ *  never mistakes "source exists" for "production in my configuration". */
+export function buildCapabilityMatrixForProfiles(
+  input: AuditInput,
+): Record<CapabilityProfile, CapabilityMatrix> {
+  const out = {} as Record<CapabilityProfile, CapabilityMatrix>;
+  for (const profile of CAPABILITY_PROFILES) {
+    out[profile] = buildCapabilityMatrix(input, profile);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -593,13 +746,17 @@ export function renderMatrixMarkdown(matrix: CapabilityMatrix, summary: AuditSum
     "",
     "## Records",
     "",
-    "| id | status | implemented | productionWired | integrationTested | benchmarkExercised | evidence |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
+    ...(matrix.profile !== undefined ? [`- profile: ${matrix.profile}`] : []),
+    "",
+    "## Records",
+    "",
+    "| id | status | implemented | productionWired | durable | securityMode | integrationTested | benchmarkExercised | degraded | evidence |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...matrix.records.map((record) => {
       const status = capabilityStatusOf(record);
       const evidence = record.evidence.map((e) => (e.note === undefined ? `${e.kind}:${e.ref}` : `${e.kind}:${e.ref} (${e.note})`)).join("; ");
       return [
-        `| ${record.id} | ${status} | ${record.implemented} | ${record.productionWired} | ${record.integrationTested} | ${record.benchmarkExercised} | ${evidence} |`,
+        `| ${record.id} | ${status} | ${record.implemented} | ${record.productionWired} | ${record.durable} | ${record.securityMode} | ${record.integrationTested} | ${record.benchmarkExercised} | ${record.degradedReason ?? "-"} | ${evidence} |`,
       ].join("");
     }),
     "",
@@ -793,17 +950,21 @@ export async function auditCmd(rest: string[], deps: CommandDeps): Promise<Comma
   }
 
   const probe = await probeWorkspace({ root: process.cwd() });
+  // P20-2: the audit reports per PROFILE — the JSON carries the full
+  // composition-aware view plus the profile the host actually runs.
   const matrix = buildCapabilityMatrix({ ...probe, introspection: deps.introspection });
+  const byProfile = buildCapabilityMatrixForProfiles({ ...probe, introspection: deps.introspection });
   const summary = auditSummary(matrix, probe);
 
   await mkdir(outDir, { recursive: true });
   const jsonPath = join(outDir, "CAPABILITY_MATRIX.json");
   const mdPath = join(outDir, "CAPABILITY_MATRIX.md");
-  await writeFile(jsonPath, `${JSON.stringify(matrix, null, 2)}\n`, "utf8");
+  const jsonOut = { ...matrix, byProfile };
+  await writeFile(jsonPath, `${JSON.stringify(jsonOut, null, 2)}\n`, "utf8");
   await writeFile(mdPath, renderMatrixMarkdown(matrix, summary), "utf8");
 
   if (json) {
-    return { exitCode: summary.ok ? 0 : 1, lines: [JSON.stringify(matrix, null, 2)] };
+    return { exitCode: summary.ok ? 0 : 1, lines: [JSON.stringify(jsonOut, null, 2)] };
   }
   const lines: string[] = [
     `audit: ${summary.ok ? "OK" : "FAILED"} — ${summary.total} capabilities, ${summary.wired} wired, ${summary.implemented} implemented-only, ${summary.missing} missing`,

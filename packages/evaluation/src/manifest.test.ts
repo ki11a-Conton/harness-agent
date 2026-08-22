@@ -32,6 +32,12 @@ describe("buildRunManifest (P0-6)", () => {
       timestamp: "2026-01-01T00:00:00.000Z",
       platform: process.platform,
       nodeVersion: process.version,
+      // P21-1: reproducibility identity (defaults are honest).
+      profile: "benchmark",
+      features: {},
+      contextBudgetTokens: null,
+      taskSuites: [],
+      randomSeed: null,
     });
   });
 
@@ -126,5 +132,48 @@ describe("stableStringify (Q-5)", () => {
 
   it("serializes arrays and nested structures recursively", () => {
     expect(stableStringify([[1, 2], { a: [3] }])).toBe('[[1,2],{"a":[3]}]');
+  });
+
+  it("P21-1: records profile / features / budget / suites / seed for reproducibility", async () => {
+    const manifest = await buildRunManifest({
+      model: "m",
+      provider: "p",
+      runtimeConfigHash: "hash",
+      gitInfo: { sha: "abc", dirty: false },
+      timestamp: "t",
+      profile: "benchmark",
+      features: { context: true, memory: false },
+      contextBudgetTokens: 32000,
+      taskSuites: ["regression", "holdout"],
+      randomSeed: 42,
+    });
+    expect(manifest.profile).toBe("benchmark");
+    expect(manifest.features).toEqual({ context: true, memory: false });
+    expect(manifest.contextBudgetTokens).toBe(32000);
+    expect(manifest.taskSuites).toEqual(["regression", "holdout"]);
+    expect(manifest.randomSeed).toBe(42);
+  });
+
+  it("P21-1: absent identity fields are honest nulls/[], never guessed", async () => {
+    const manifest = await buildRunManifest({
+      model: "m",
+      provider: "p",
+      runtimeConfigHash: "hash",
+      gitInfo: { sha: "abc", dirty: false },
+      timestamp: "t",
+    });
+    expect(manifest.contextBudgetTokens).toBeNull();
+    expect(manifest.taskSuites).toEqual([]);
+    expect(manifest.randomSeed).toBeNull();
+    // two runs with different budgets can NEVER claim identical identity.
+    const other = await buildRunManifest({
+      model: "m",
+      provider: "p",
+      runtimeConfigHash: "hash",
+      gitInfo: { sha: "abc", dirty: false },
+      timestamp: "t",
+      contextBudgetTokens: 64000,
+    });
+    expect(other.contextBudgetTokens).not.toBe(manifest.contextBudgetTokens);
   });
 });

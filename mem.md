@@ -769,3 +769,23 @@
 
 - P10-6/P12-5 需 GitHub runner 真机执行（workflow 已配置并本地验证语法/产物）。
 - benchmark-command 仍自建 runtime（未迁 createHarness({profile:"benchmark"})，P4-10）；fake MCP transport 是 benchmark 的轻量替代（生产路径已真实）。
+
+## PHASE 18~22 会话记忆（2026-08-22）
+
+### 关键变更
+- **P18-6 资源冲突键**：batch 规划按 conflictKey 拆批（file:<canonical>），并发写语义为未来铺路。
+- **P19-1 grade 进 production**：`finishTurn` 唯一计算 FalseCompleteGrade；turn 事件带 grade + completionEvidence。
+- **P19-3 recovery 收口 6 动作**：移除半实现 compact/re_discover/refresh_mcp；`recovery.decided` 事件由 legacy 与 adaptive 两分支统一发射。
+- **P20-1 usage 接线**：finalizeUsage 杜绝裸 0；attribution tokens 原来读顶层 outputTokens 恒 0（嵌套 usage bug）。
+- **P20-3 docs:verify 实测抓偏差**：HANDOVER 包数 19→21、矩阵重新生成、CI 补 coverage。
+- **P21-6 rollbackConfig 派生自 candidate disabled**：feature 与关闭开关一对一。
+- **P22-1 createHarness 拆 7 个 compose helper**（1122→682 行）；tool-names.ts 打破 create-harness↔worker-agent 循环 import。
+- **P22-2 删 legacyMemoryBridge**（无 production caller 证据）→ harness.memoryStore。
+
+### 踩坑（gotchas）
+- **CRLF 陷阱**：python 文本写入把 CRLF 文件改 LF → git 显示全文件变化。必须 `open(p,'rb')` 读 + 判断 `\r\n` + 写回原行尾。
+- **contracts.test.ts 的 rfind('});')** 可能匹配字符串字面量里的 `});` → 用行级锚点插入。
+- **no-silent-catch 扫描全仓**：新代码空 catch 会让既有测试红（docs-verify 曾中招，需 stderr 可观察）。
+- **ScriptedModelProvider 双层数组**：脚本数组套帧数组，单层会 failed_no_effect。
+- **run-budget 曾用 `"" as never` 伪 runId**（P20-5 修）→ 真实 newRunId()。
+- **production-audit 自误报**：文档注释里的 `as never` 示例被扫描到 → stripComments。

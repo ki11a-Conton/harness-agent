@@ -1,6 +1,7 @@
 import type {
   AgentId,
   ContextBlock,
+  DeclaredCapability,
   DelegationLimits,
   Evidence,
   SessionId,
@@ -20,6 +21,12 @@ export interface DelegationRequest {
   agentId?: AgentId;
   /** Further restriction of the child agent's tool policy. */
   toolPolicy?: ToolPolicy;
+  /** P14-4: the child's declared capability beyond the tool dimension
+   *  (filesystem / network / process). The child may only NARROW the parent
+   *  grant (EffectiveCapability = Conferred ∩ Declared); any widening is a
+   *  typed denial before any child resource exists. The tool dimension is NOT
+   *  part of this surface — it stays governed by `toolPolicy`. */
+  capability?: DeclaredCapability;
   /** P3-4: whether the child may write to the workspace. false (default) →
    *  the child shares the parent root read-only; true → the child runs in an
    *  isolated copy and its changes return as a workspacePatch (P3-5). Only

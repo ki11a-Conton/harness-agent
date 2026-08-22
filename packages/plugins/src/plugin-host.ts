@@ -17,6 +17,14 @@
  *                               policy; a trust level outside the grant is
  *                               blocked even if declared — plugins can never
  *                               reach beyond their granted surface.
+ *   - P14-4 capability monotonicity: a plugin may additionally declare a
+ *                               `sandbox` capability (filesystem/network/
+ *                               process). It must NARROW the host's conferred
+ *                               `policy.capability` grant
+ *                               (EffectiveCapability = Conferred ∩ Declared).
+ *                               Without a grant, ANY sandbox declaration is
+ *                               rejected (an unknown upper bound cannot prove
+ *                               narrowing) — fail-closed.
  *   - failure isolation        ：sync AND async throws are caught; a call is
  *                               bounded by a per-plugin timeout; an error
  *                               budget quarantine disables a plugin after N
@@ -30,6 +38,12 @@
  *                               and per-plugin failure counts (no silent
  *                               swallow).
  */
+
+import type { DeclaredCapability } from "@ar/contracts";
+import { AgentError, errorInfo } from "@ar/contracts";
+import type { GrantedCapability } from "@ar/security";
+import { BoundaryCapabilityError, composeBoundaryCapabilitySync } from "@ar/security";
+import type { SecurityDenial } from "@ar/security";
 
 export interface ToolResult {
   content: unknown;
@@ -60,6 +74,10 @@ export interface Plugin {
   trust?: PluginTrust;
   /** Declared capabilities; if absent, legacy permissive (trust-grant only). */
   capabilities?: PluginCapability[];
+  /** P14-4: declared sandbox capability (filesystem / network / process).
+   *  Must NARROW the host's `policy.capability` grant; widening or declaring
+   *  with no grant is a typed denial at registration (fail-closed). */
+  sandbox?: DeclaredCapability;
   onTool?: (ctx: PluginToolContext) => Promise<ToolResult | null>;
   /** Per-call timeout in ms; falls back to policy.defaultTimeoutMs. */
   timeoutMs?: number;
@@ -81,8 +99,28 @@ export interface PluginPolicy {
   requireDeclaration?: boolean;
   /** Allowlist of accepted sources; empty/unset = accept any declared source. */
   allowedSources?: PluginSource[];
+  /** P14-4: the host's conferred sandbox capability upper bound. A plugin's
+   *  `sandbox` declaration must narrow it. Absent a grant, ANY sandbox
+   *  declaration is rejected (fail-closed: cannot prove narrowing). */
+  capability?: GrantedCapability;
+  /** P14-4: fired when a plugin's sandbox declaration is a widening attempt
+   *  (typed denial record; the registration also throws). */
+  onCapabilityDenied?: (denial: SecurityDenial) => void;
   /** Global kill switch for the whole host. Default true. */
   enabled?: boolean;
+  /** P18-3: same-process plugins are an arbitrary-code-execution surface.
+   *  Default Champion is OFF — a non-builtin plugin NEVER loads without
+   *  explicit configuration. Only an explicit `defaultChampion: true` +
+   *  `allowedSources` allowlist (trusted-local) turns loading on. */
+  defaultChampion?: boolean;
+  /** P18-3: documented execution model of the plugin host. "in-process"
+   *  (default) has NO process isolation — plugins must never auto-enable
+   *  here; "isolated" / "production-wired" are future stages that require a
+   *  real sandbox boundary before auto-enabling. */
+  executionModel?: "in-process" | "isolated" | "production-wired";
+  /** P18-3: project-local plugins (source "local") additionally require
+   *  explicit workspace trust/approval before they load. */
+  workspaceApproved?: boolean;
   defaultTimeoutMs?: number;
   /** Consecutive failures before a plugin is auto-quarantined. Default 0 (disabled). */
   maxConsecutiveFailures?: number;
@@ -96,7 +134,9 @@ export class PluginError extends Error {
       | "unknown-trust"
       | "undeclared-capability"
       | "invalid-manifest"
-      | "not-found",
+      | "not-found"
+      | "champion-off"
+      | "project-local-requires-approval",
     message: string,
   ) {
     super(message);
@@ -187,6 +227,22 @@ export class PluginHost {
       throw new PluginError("invalid-version", `${name}: invalid plugin version "${version}"`);
     }
     const source = plugin.source ?? "unsigned";
+    // P18-3: default Champion is OFF. A same-process plugin is arbitrary code
+    // execution; only an EXPLICIT trusted-local configuration may load one.
+    // Builtin plugins are part of the harness and exempt (like built-in tools).
+    if (source !== "builtin" && (this.policy.defaultChampion ?? false) !== true) {
+      throw new PluginError(
+        "champion-off",
+        `${name}: plugin loading is disabled by default (Champion OFF). Enable explicitly via { defaultChampion: true, allowedSources: [...] } (trusted-local) — same-process plugins are an arbitrary-code-execution surface.`,
+      );
+    }
+    // P18-3: project-local plugins additionally need workspace trust/approval.
+    if (source === "local" && this.policy.workspaceApproved !== true) {
+      throw new PluginError(
+        "project-local-requires-approval",
+        `${name}: project-local plugin requires explicit workspace trust/approval (workspaceApproved: true) before loading.`,
+      );
+    }
     if (this.policy.allowedSources !== undefined && this.policy.allowedSources.length > 0) {
       if (!this.policy.allowedSources.includes(source)) {
         throw new PluginError(
@@ -214,6 +270,70 @@ export class PluginHost {
         "undeclared-capability",
         `${name}: registers a tool handler but "tool" is not in declared capabilities`,
       );
+    }
+    // P14-4 plugin boundary: a `sandbox` declaration must NARROW the host's
+    // conferred capability. Without a grant, an unknown upper bound cannot
+    // prove narrowing — any declaration is denied fail-closed. Registration
+    // is synchronous, so the denial is surfaced through the policy callback
+    // (typed SecurityDenial) AND a typed BoundaryCapabilityError.
+    if (plugin.sandbox !== undefined) {
+      // The tool dimension is governed by `capabilities` + the onTool surface
+      // (declared ∩ trust-grant), never by a sandbox declaration — reject it
+      // so the tool surface keeps ONE source of truth.
+      if (plugin.sandbox.tool !== undefined) {
+        const denial: SecurityDenial = {
+          dimension: "capability",
+          reason: `${name}: sandbox.tool is not a plugin surface — declare the tool capability via capabilities`,
+          source: "plugin-host",
+          code: "SECURITY_DENIED",
+          target: name,
+        };
+        this.policy.onCapabilityDenied?.(denial);
+        throw new AgentError(
+          errorInfo(
+            "SECURITY_DENIED",
+            `${name}: sandbox.tool is not a plugin surface — declare the tool capability via capabilities`,
+          ),
+        );
+      }
+      const grant = this.policy.capability;
+      if (grant === undefined) {
+        const denial: SecurityDenial = {
+          dimension: "capability",
+          reason: `${name}: declares a sandbox capability but the host conferred no capability grant — cannot prove narrowing`,
+          source: "plugin-host",
+          code: "SECURITY_DENIED",
+          target: name,
+        };
+        this.policy.onCapabilityDenied?.(denial);
+        throw new BoundaryCapabilityError("plugin", [
+          {
+            kind: "tool_escalation",
+            declared: Object.keys(plugin.sandbox).map((d) => `${d}:*`),
+            conferred: [],
+          },
+        ]);
+      }
+      const declaredSandbox: DeclaredCapability = {};
+      for (const dim of ["filesystem", "network", "process"] as const) {
+        const items = plugin.sandbox[dim];
+        if (items !== undefined) declaredSandbox[dim] = items;
+      }
+      try {
+        composeBoundaryCapabilitySync("plugin", grant, declaredSandbox, {});
+      } catch (err) {
+        if (err instanceof BoundaryCapabilityError) {
+          this.policy.onCapabilityDenied?.({
+            dimension: "capability",
+            reason: `${name}: sandbox capability widening denied (${err.violations.map((v) => v.kind).join(", ")})`,
+            source: "plugin-host",
+            code: "SECURITY_DENIED",
+            target: name,
+            details: err.violations.flatMap((v) => v.declared.map((item) => `${v.kind}: ${item}`)),
+          });
+        }
+        throw err;
+      }
     }
 
     this.plugins.push({

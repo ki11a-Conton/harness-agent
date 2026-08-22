@@ -75,10 +75,18 @@ function canonicalAncestorAndTail(p: string): string {
       // non-existing tail.
       const tail = walked.reverse().join("/");
       if (!tail) return ancestor;
+      // P14-1 regression fix: the POSIX root ancestor is "/" — a naive
+      // `${ancestor}/${tail}` join produces "//tail", which lexicalNormalize
+      // classifies as a UNC marker (leading "//") and preserves as a double
+      // slash. The canonical form then never matches containment roots, so
+      // every non-existent path whose deepest existing ancestor is the
+      // filesystem root was misreported as an escalation on POSIX. Join with
+      // an empty base for the root instead.
+      const base = ancestor === "/" ? "" : ancestor;
       // Resolve the tail lexically against the canonical ancestor so that any
       // `..` in the not-yet-existing portion can never climb past the
       // canonical ancestor (which may itself be a symlink-resolved path).
-      return lexicalNormalize(`${ancestor}/${tail}`);
+      return lexicalNormalize(`${base}/${tail}`);
     } catch {
       const parent = dirname(current);
       if (parent === current) {

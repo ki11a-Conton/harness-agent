@@ -19,7 +19,9 @@
  *   INV-007 memory unsafe content cannot persist
  *   INV-008 network denied cannot execute
  *   INV-009 delegation bounded
+ *   INV-009 delegation bounded
  *   INV-010 replay cannot duplicate known completed unsafe side effect
+ *   INV-011 untrusted context never becomes instruction or memory
  *
  * Every invariant is exposed as both a standalone predicate and part of
  * `checkInvariants`, so the runtime can gate a release/commit on all of them
@@ -37,7 +39,8 @@ export type InvariantId =
   | "INV-007"
   | "INV-008"
   | "INV-009"
-  | "INV-010";
+  | "INV-010"
+  | "INV-011";
 
 export const ALL_INVARIANTS: readonly InvariantId[] = [
   "INV-001",
@@ -50,6 +53,7 @@ export const ALL_INVARIANTS: readonly InvariantId[] = [
   "INV-008",
   "INV-009",
   "INV-010",
+  "INV-011",
 ];
 
 export interface Violation {
@@ -465,6 +469,49 @@ export function invReplayNoDuplicateUnsafeSideEffect(
 }
 
 // ---------------------------------------------------------------------------
+// INV-011 — untrusted context never becomes instruction or memory
+// ---------------------------------------------------------------------------
+
+export interface ContextBlockTrustRecord {
+  /** Block identity for the violation pointer. */
+  id: string;
+  /** Trust level of the block ("trusted" | "semi-trusted" | "untrusted"). */
+  trust: string;
+  /** Whether the block is marked as authoritative instruction (P14-5). */
+  instructional?: boolean;
+  /** Whether the block is marked persistable into memory (P14-5). */
+  persistable?: boolean;
+}
+
+/**
+ * P14-5 trust envelope: only `trusted` blocks may be instructional, and
+ * untrusted blocks must never be persistable into memory. A block without the
+ * flags is data by default (absent = false). Violations:
+ *   - untrusted/semi-trusted marked instructional → would upgrade data to
+ *     policy (forbidden);
+ *   - untrusted marked persistable → would let untrusted content into memory
+ *     (P17-2 pollution gate, forbidden).
+ */
+export function invUntrustedContextIsDataOnly(blocks: ContextBlockTrustRecord[]): InvariantResult {
+  const violations: Violation[] = [];
+  for (const block of blocks) {
+    if (block.trust !== "trusted" && block.instructional === true) {
+      violations.push({
+        at: block.id,
+        detail: `trust=${block.trust} block marked instructional (data must never upgrade into instruction)`,
+      });
+    }
+    if (block.trust === "untrusted" && block.persistable === true) {
+      violations.push({
+        at: block.id,
+        detail: "untrusted block marked persistable (untrusted content must never enter memory)",
+      });
+    }
+  }
+  return bad("INV-011", "untrusted context is data only (never instruction or memory)", violations);
+}
+
+// ---------------------------------------------------------------------------
 // Aggregator
 // ---------------------------------------------------------------------------
 
@@ -479,6 +526,7 @@ export interface InvariantRun {
   networkDecisions?: NetworkDecision[];
   delegations?: DelegationRecord[];
   sideEffects?: { known: SideEffectRecord[]; replay: ReplayExecution[] };
+  contextBlocks?: ContextBlockTrustRecord[];
 }
 
 /**
@@ -503,6 +551,7 @@ export function checkInvariants(run: InvariantRun): InvariantResult[] {
     run.sideEffects?.known ?? [],
     run.sideEffects?.replay ?? [],
   ));
+  results.push(invUntrustedContextIsDataOnly(run.contextBlocks ?? []));
   return results;
 }
 

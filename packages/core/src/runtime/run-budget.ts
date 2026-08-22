@@ -1,3 +1,4 @@
+import { newRunId } from "@ar/contracts";
 import type { LimitBreach, RunBudget, RunLimits } from "@ar/contracts";
 
 /**
@@ -8,6 +9,9 @@ import type { LimitBreach, RunBudget, RunLimits } from "@ar/contracts";
  * is never masked by a second check.
  */
 export class RunBudgetTracker {
+  /** P20-5: a REAL run id generated once per tracker — the snapshot never
+   *  carries a fabricated placeholder again. */
+  private readonly runId = newRunId();
   private readonly startedAt: number;
   private readonly limits: RunLimits;
   private readonly now: () => number;
@@ -78,7 +82,7 @@ export class RunBudgetTracker {
 
   snapshot(): RunBudget {
     return {
-      runId: "" as never,
+      runId: this.runId,
       limits: { ...this.limits },
       usedTurns: this.usedTurns,
       usedToolCalls: this.usedToolCalls,
@@ -89,6 +93,29 @@ export class RunBudgetTracker {
       subagentsSpawned: this.subagentsSpawned,
       estimatedCostUsd: this.estimatedCostUsd,
     };
+  }
+
+  // ── P16-3: resume seeding ───────────────────────────────────────────────
+
+  /** P16-3: seed already-consumed counters from a restored checkpoint so a
+   *  resumed turn NEVER refreshes budget (model/token/cost/tool/subagent/
+   *  retry counters all carry forward). Only counters present in `used` are
+   *  overwritten. Wall-clock `durationMs` deliberately restarts at resume
+   *  (the new run is a fresh process) — only consumption COUNTERS carry. */
+  seedConsumed(
+    used: Partial<
+      Pick<
+        RunBudget,
+        "usedTurns" | "usedToolCalls" | "outputChars" | "retries" | "subagentsSpawned" | "estimatedCostUsd"
+      >
+    >,
+  ): void {
+    if (used.usedTurns !== undefined) this.usedTurns = used.usedTurns;
+    if (used.usedToolCalls !== undefined) this.usedToolCalls = used.usedToolCalls;
+    if (used.outputChars !== undefined) this.outputChars = used.outputChars;
+    if (used.retries !== undefined) this.retries = used.retries;
+    if (used.subagentsSpawned !== undefined) this.subagentsSpawned = used.subagentsSpawned;
+    if (used.estimatedCostUsd !== undefined) this.estimatedCostUsd = used.estimatedCostUsd;
   }
 
   // ── private ─────────────────────────────────────────────────────────────

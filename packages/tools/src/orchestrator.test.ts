@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -423,5 +423,281 @@ describe("ToolOrchestrator pipeline (TOOL-002)", () => {
     expect(result.error?.code).toBe("PROCESS_ERROR");
     const completed = sink.events.find((e) => e.type === "tool.completed");
     expect(completed?.payload.status).toBe("failed");
+  });
+});
+
+describe("P14-7: approval cache same-text/different-environment (adversarial)", () => {
+  function makeOrch(opts: {
+    approval?: ApprovalResolver;
+    events?: RecordingSink;
+  } = {}) {
+    const registry = new ToolRegistry();
+    registry.register(readFileTool);
+    return new ToolOrchestrator({
+      registry,
+      workspaceRoot: ws,
+      approval: opts.approval,
+      events: opts.events,
+    });
+  }
+
+  /** Request bound to an explicit environment (session/turn/agent) — the
+   *  environment identity rides on the request, mirroring production. */
+  function reqIn(
+    sessionId: import("@ar/contracts").SessionId,
+    turnId: import("@ar/contracts").TurnId,
+    agentId: import("@ar/contracts").AgentId,
+    name: string,
+    args: Record<string, unknown>,
+  ) {
+    return {
+      id: newToolCallId(),
+      sessionId,
+      turnId,
+      agentId,
+      call: { id: newToolCallId(), name, args },
+    };
+  }
+
+  it("identical target text NEVER reuses another session's approval — a fresh request is created per environment", async () => {
+    const store = new InMemoryApprovalStore();
+    const approval = new StoreApprovalResolver(store);
+    const orch = makeOrch({ approval });
+    const ask = policy([{ action: "read", resource: "file", pattern: "**/*", effect: "ask" }]);
+    const target = join(ws, "hello.txt");
+
+    // Environment A: session/turn A, target text = target
+    const sessionA = newSessionId();
+    const turnA = newTurnId();
+    const aWait = orch.execute(
+      reqIn(sessionA, turnA, AID, "read_file", { path: target }),
+      ctx({ sessionId: sessionA, turnId: turnA, permissions: ask }),
+    );
+    await new Promise((r) => setTimeout(r, 10));
+    const aPending = store.listPending(sessionA);
+    expect(aPending).toHaveLength(1);
+    store.resolve(aPending[0]!.id, "allow");
+    expect((await aWait).status).toBe("success");
+
+    // Environment B: DIFFERENT session/turn, SAME target text. The approval
+    // from A must NOT be reused — the runtime must ask again (a malicious
+    // agent must not smuggle "already approved" through text equality).
+    const sessionB = newSessionId();
+    const turnB = newTurnId();
+    const bWait = orch.execute(
+      reqIn(sessionB, turnB, AID, "read_file", { path: target }),
+      ctx({ sessionId: sessionB, turnId: turnB, permissions: ask }),
+    );
+    await new Promise((r) => setTimeout(r, 10));
+    // A brand-new pending request exists for B (no text-based cache hit).
+    const bPending = store.listPending(sessionB);
+    expect(bPending).toHaveLength(1);
+    expect(bPending[0]!.id).not.toBe(aPending[0]!.id);
+    store.resolve(bPending[0]!.id, "deny");
+    const bResult = await bWait;
+    expect(bResult.status).toBe("denied");
+    expect(bResult.error?.code).toBe("APPROVAL_DENIED");
+  });
+
+  it("approval requests carry the exact environment identity (session/turn/agent)", async () => {
+    const store = new InMemoryApprovalStore();
+    const approval = new StoreApprovalResolver(store);
+    const sink = new RecordingSink();
+    const orch = makeOrch({ approval, events: sink });
+    const sessionId = newSessionId();
+    const turnId = newTurnId();
+    const agentId = newAgentId();
+    const ask = policy([{ action: "read", resource: "file", pattern: "**/*", effect: "ask" }]);
+
+    const waitP = orch.execute(
+      reqIn(sessionId, turnId, agentId, "read_file", { path: join(ws, "hello.txt") }),
+      ctx({ sessionId, turnId, agentId, permissions: ask }),
+    );
+    await new Promise((r) => setTimeout(r, 10));
+    const created = sink.events.find((e) => e.type === "approval.created");
+    expect(created).toBeDefined();
+    // The approval target is the resolved environment action, not a cache key.
+    const pending = store.listPending(sessionId);
+    expect(pending).toHaveLength(1);
+    expect(pending[0]!.sessionId).toBe(sessionId);
+    expect(pending[0]!.turnId).toBe(turnId);
+    expect(pending[0]!.agentId).toBe(agentId);
+    store.resolve(pending[0]!.id, "allow");
+    await waitP;
+  });
+});
+describe("P16-1: durable tool intent before side effect", () => {
+  function makeWriteOrch(opts: {
+    persistIntent?: (intent: import("@ar/contracts").ToolIntentPayload) => Promise<void>;
+    events?: RecordingSink;
+  } = {}) {
+    const registry = new ToolRegistry();
+    // A minimal SIDE-EFFECTING tool (filesystem write semantics).
+    const writeTool: ToolDefinition = {
+      name: "write_file",
+      description: "write a file",
+      inputSchema: z.object({ path: z.string(), text: z.string() }),
+      risk: "elevated",
+      metadata: {
+        name: "write_file",
+        version: "1.0.0",
+        sideEffect: true,
+        network: false,
+        filesystem: true,
+        process: false,
+        interactive: false,
+      },
+      async execute(input) {
+        const { path, text } = input as { path: string; text: string };
+        const p = join(ws, path);
+        writeFileSync(p, text);
+        return { status: "success", output: "wrote" };
+      },
+    };
+    registry.register(writeTool);
+    return new ToolOrchestrator({
+      registry,
+      events: opts.events,
+      persistIntent: opts.persistIntent,
+      now: () => 1234,
+    });
+  }
+
+  const writePolicy: PermissionPolicy = {
+    rules: [{ action: "edit", resource: "file", pattern: "**/*", effect: "allow" }],
+  };
+
+  it("persists intent BEFORE executing a side-effecting tool (record carries argsHash + semantics)", async () => {
+    const sink = new RecordingSink();
+    const order: string[] = [];
+    const intents: import("@ar/contracts").ToolIntentPayload[] = [];
+    const orch = makeWriteOrch({
+      events: sink,
+      persistIntent: async (intent) => {
+        order.push("persist");
+        intents.push(intent);
+      },
+    });
+    const result = await orch.execute(
+      req("write_file", { path: "p1.txt", text: "x" }),
+      ctx({ permissions: writePolicy }),
+    );
+    expect(result.status).toBe("success");
+    expect(intents).toHaveLength(1);
+    expect(intents[0]!.tool).toBe("write_file");
+    expect(intents[0]!.argsHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(intents[0]!.sideEffectScope).toBe("filesystem");
+    expect(intents[0]!.idempotent).toBe(false);
+    expect(intents[0]!.startedAt).toBe(1234);
+    // tool.started fired (execution began AFTER persistence succeeded)
+    expect(sink.events.some((e) => e.type === "tool.started")).toBe(true);
+    expect(order).toEqual(["persist"]); // persisted before any execution
+  });
+
+  it("intent persistence FAILURE → the side effect does NOT execute (fail-closed)", async () => {
+    const sink = new RecordingSink();
+    const orch = makeWriteOrch({
+      events: sink,
+      persistIntent: async () => {
+        throw new Error("disk full");
+      },
+    });
+    const result = await orch.execute(
+      req("write_file", { path: "never.txt", text: "must-not-exist" }),
+      ctx({ permissions: writePolicy }),
+    );
+    expect(result.status).toBe("failed");
+    expect(result.error?.code).toBe("PERSISTENCE_ERROR");
+    // the executor never ran → the file was never created
+    expect(existsSync(join(ws, "never.txt"))).toBe(false);
+    // and no tool.started (execution never began)
+    expect(sink.events.some((e) => e.type === "tool.started")).toBe(false);
+  });
+
+  it("read-only tools are NOT gated by intent persistence", async () => {
+    const sink = new RecordingSink();
+    let persistCalls = 0;
+    const registry = new ToolRegistry();
+    registry.register(readFileTool);
+    const orch = new ToolOrchestrator({
+      registry,
+      events: sink,
+      persistIntent: async () => {
+        persistCalls += 1;
+      },
+      now: () => 1234,
+    });
+    const result = await orch.execute(
+      req("read_file", { path: join(ws, "hello.txt") }),
+      ctx(),
+    );
+    expect(result.status).toBe("success");
+    expect(persistCalls).toBe(0); // sideEffectScope "none" → no intent gate
+  });
+});
+
+describe("P16-6: intentPersistedFailAt fires in the intent→execute crash window", () => {
+  it("is invoked exactly once AFTER persistIntent succeeds and BEFORE the executor runs", async () => {
+    const registry = new ToolRegistry();
+    const writeTool: ToolDefinition = {
+      name: "write_file",
+      description: "write a file",
+      inputSchema: z.object({ path: z.string(), text: z.string() }),
+      risk: "elevated",
+      metadata: {
+        name: "write_file", version: "1.0.0", sideEffect: true,
+        network: false, filesystem: true, process: false, interactive: false,
+      },
+      async execute() {
+        executed += 1;
+        return { status: "success", output: "wrote" };
+      },
+    };
+    registry.register(writeTool);
+    let executed = 0;
+    let persistCalls = 0;
+    let failAtCalls = 0;
+    const order: string[] = [];
+    const orch = new ToolOrchestrator({
+      registry,
+      persistIntent: async () => {
+        persistCalls += 1;
+        order.push("persist");
+      },
+      intentPersistedFailAt: async () => {
+        failAtCalls += 1;
+        order.push("failat");
+      },
+    });
+    const policy: PermissionPolicy = {
+      rules: [{ action: "edit", resource: "file", pattern: "**/*", effect: "allow" }],
+    };
+    const result = await orch.execute(
+      req("write_file", { path: "p.txt", text: "x" }),
+      ctx({ permissions: policy }),
+    );
+    expect(result.status).toBe("success");
+    expect(persistCalls).toBe(1);
+    expect(failAtCalls).toBe(1);
+    expect(order).toEqual(["persist", "failat"]);
+    expect(executed).toBe(1);
+  });
+
+  it("read-only tools never fire the intent window", async () => {
+    const registry = new ToolRegistry();
+    registry.register(readFileTool);
+    let failAtCalls = 0;
+    const orch = new ToolOrchestrator({
+      registry,
+      intentPersistedFailAt: async () => {
+        failAtCalls += 1;
+      },
+    });
+    const result = await orch.execute(
+      req("read_file", { path: join(ws, "hello.txt") }),
+      ctx(),
+    );
+    expect(result.status).toBe("success");
+    expect(failAtCalls).toBe(0);
   });
 });

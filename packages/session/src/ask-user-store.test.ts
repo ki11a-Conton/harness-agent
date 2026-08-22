@@ -108,3 +108,24 @@ describe("P1-4 JSONLAskUserStore", () => {
     expect(await store2.get(ask.id)).toEqual(ask);
   });
 });
+describe("P15-3: ask-user pending queue bound", () => {
+  it("rejects creating a pending ask past maxPending with QUEUE_FULL", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "ar-ask-bound-"));
+    try {
+      const store = new JSONLAskUserStore({ dataDir: dir, maxPending: 1 });
+      const sessionId = newSessionId();
+      const mk = (i: number): AskUserRequest => ({
+        id: newAskId(),
+        sessionId,
+        reason: "missing_critical_input",
+        question: `q${i}`,
+        status: "pending",
+        createdAt: i,
+      });
+      await store.create(mk(1));
+      await expect(store.create(mk(2))).rejects.toMatchObject({ code: "QUEUE_FULL" });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});

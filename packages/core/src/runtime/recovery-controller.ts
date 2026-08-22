@@ -19,6 +19,7 @@ import {
   computeArgsHash,
   EFFECTIVE_AGENT_SNAPSHOT_KEY,
   errorInfo,
+  gradeCompletion,
   isAskReason,
   newAskId,
   newCheckpointId,
@@ -31,7 +32,9 @@ import type {
   CheckpointBudgetUsage,
   CheckpointData,
   CheckpointStore,
+  CompletionEvidence,
   EventStore,
+  FalseCompleteGrade,
   SessionId,
   SessionStore,
   TerminationReason,
@@ -41,6 +44,7 @@ import type {
   ToolSemantics,
   Turn,
   TurnId,
+  TurnStatus,
   UnresolvedToolExecution,
   WorkingState,
 } from "@ar/contracts";
@@ -73,6 +77,16 @@ export interface RecoveryControllerDeps {
 
 export class RecoveryController {
   constructor(private readonly deps: RecoveryControllerDeps) {}
+
+  /**
+   * P15-4: exactly-once terminal transitions. A turn whose stored status is
+   * already terminal has already emitted its terminal record+event — repeated
+   * finishTurn calls (duplicate cancel, duplicate approval reply, retry after
+   * a crash that resumed a completed turn) must not re-emit.
+   */
+  private static isTerminal(status: TurnStatus): boolean {
+    return status === "completed" || status === "failed" || status === "cancelled";
+  }
 
   /**
    * P2-38 — partial-failure classification. The coarse public `status` stays
@@ -118,10 +132,40 @@ export class RecoveryController {
     error?: ReturnType<typeof errorInfo>,
     terminationReason?: TerminationReason,
     ledger?: ToolExecutionRecord[],
+    /** P19-1: verification evidence (gate checks passed/total). When present,
+     *  the terminal grade is derived from it — `verified_complete` only when
+     *  every check passed, `verified_partial` when some did, and the honest
+     *  `unverified_complete` for a bare model stop with no gate run. */
+    completionEvidence?: CompletionEvidence,
   ): Promise<TurnOutcome> {
     const { sessionId, turnId } = ctx;
     const turn = await this.deps.store.getTurn(turnId);
     if (!turn) throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown turn ${turnId}`));
+    // P19-1: grade the completion ONCE here, from the bounded reason + the
+    // gate's evidence. Every terminal event/outcome below carries the same
+    // grade — no consumer recomputes or guesses it.
+    const grade: FalseCompleteGrade | undefined =
+      terminationReason !== undefined ? gradeCompletion(terminationReason, completionEvidence) : undefined;
+    // P15-4: terminal lifecycle EXACTLY ONCE. A turn whose status is already
+    // terminal (finished earlier in this process, or restored from a crashed
+    // run via checkpoint/resume) must NOT produce a second terminal record or
+    // a second terminal event. Repeated cancel, repeated approval reply, or a
+    // retry-after-crash all converge here — the first terminal transition wins
+    // and every later call returns the same outcome without re-emission.
+    if (RecoveryController.isTerminal(turn.status)) {
+      const statusDetail = this.classifyStatusDetail(turn.status as TurnOutcomeStatus, ledger ?? []);
+      return {
+        status: turn.status as TurnOutcomeStatus,
+        statusDetail,
+        turn,
+        toolCalls: state.getToolCallsExecuted(),
+        iterations: state.getIteration(),
+        state: working,
+        ...(error !== undefined ? { error } : {}),
+        ...(terminationReason !== undefined ? { terminationReason } : {}),
+        ...(grade !== undefined ? { grade } : {}),
+      };
+    }
     const updated: Turn = { ...turn, status, completedAt: this.deps.now() };
     await this.deps.store.updateTurn(updated);
     // P2-38: derive the partial-failure classification from the durable tool
@@ -131,7 +175,7 @@ export class RecoveryController {
     await this.deps.emit(
       sessionId,
       status === "completed" ? "turn.completed" : status === "cancelled" ? "turn.cancelled" : "turn.failed",
-      { turnId, status, statusDetail, ...(error !== undefined ? { error } : {}), ...(terminationReason !== undefined ? { terminationReason } : {}) },
+      { turnId, status, statusDetail, ...(error !== undefined ? { error } : {}), ...(terminationReason !== undefined ? { terminationReason } : {}), ...(grade !== undefined ? { grade } : {}), ...(completionEvidence !== undefined ? { completionEvidence } : {}) },
       turnId,
     );
     return {
@@ -143,6 +187,7 @@ export class RecoveryController {
       state: working,
       ...(error !== undefined ? { error } : {}),
       ...(terminationReason !== undefined ? { terminationReason } : {}),
+      ...(grade !== undefined ? { grade } : {}),
     };
   }
 
@@ -194,8 +239,10 @@ export class RecoveryController {
     if (this.deps.askUser !== undefined) {
       try {
         void this.deps.askUser({ ...request });
-      } catch {
-        // handler errors are observable but never fail the turn
+      } catch (err) {
+        // P14-6: handler errors must never fail the turn — but they are
+        // reported (the user may never have seen the question), never silent.
+        process.stderr.write(`[degraded] recovery-controller.askUser: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
     state.transition("waiting_user");
@@ -372,7 +419,8 @@ export class RecoveryController {
     const committedSideEffects: ToolExecutionRecord[] = [];
     const unresolvedTools: UnresolvedToolExecution[] = [];
     for (const info of requested.values()) {
-      const sideEffect = this.deps.semanticsOf(info.name).sideEffectScope !== "none";
+      const semantics = this.deps.semanticsOf(info.name);
+      const sideEffect = semantics.sideEffectScope !== "none";
       const done = completedIds.has(info.id) || terminalIds.has(info.id);
       if (!done) {
         unresolvedTools.push({
@@ -381,6 +429,9 @@ export class RecoveryController {
           argsHash: computeArgsHash(info.args),
           started: info.started,
           sideEffect,
+          // P16-2: carry the declared scope so the reconciliation policy can
+          // classify safe-retry vs needs-verification vs never-auto.
+          sideEffectScope: semantics.sideEffectScope,
         });
         continue;
       }

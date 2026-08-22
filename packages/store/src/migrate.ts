@@ -187,8 +187,10 @@ export async function migrateJsonlToSqlite(input: {
       if (!dryRun) {
         try {
           await target.append({ ...event, sessionId: sessionId as never });
-        } catch {
-          // duplicate id — already migrated, keep counting (idempotent)
+        } catch (err) {
+          // P14-6: a duplicate id (already migrated, idempotent) is expected —
+          // any other append failure is reported, never silent.
+          process.stderr.write(`[degraded] migrate.append: ${err instanceof Error ? err.message : String(err)}\n`);
         }
       }
     }

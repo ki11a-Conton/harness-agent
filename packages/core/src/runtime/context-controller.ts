@@ -41,6 +41,7 @@ import type {
   WorkingState,
 } from "@ar/contracts";
 import type { ContextPipeline, InstructionDiscoveryOptions } from "@ar/context";
+import { protectedFieldsMissing } from "@ar/context";
 import { AgentState } from "../state/agent-state.js";
 import type { RecoveryPolicy } from "../recovery/recovery.js";
 import {
@@ -111,6 +112,7 @@ export interface ContextControllerDeps {
     error?: ReturnType<typeof errorInfo>,
     terminationReason?: TerminationReason,
     ledger?: ToolExecutionRecord[],
+    completionEvidence?: import("@ar/contracts").CompletionEvidence,
   ) => Promise<TurnOutcome>;
   toolOutputBudget?: { maxInlineBytes: number; artifactDir?: string };
   outputRedactor?: (content: string) => { content: string; redacted: number };
@@ -286,12 +288,34 @@ export class ContextController {
               // keeps goal/completed-work/commands/errors after compaction;
               // full history stays in the store (transcript fallback).
               digestAppended = true;
+              const digestText = buildStateDigest(working, "context compacted — older tool outputs were folded into this summary");
+              // P17-6: programmatic preservation check — a non-empty digest
+              // is NOT success; every protected field must be present (or
+              // carried by the durable working state). A violation is
+              // surfaced on the event stream, never silent.
+              const missing = protectedFieldsMissing(
+                protectedFactsFrom(working),
+                digestText,
+                {
+                  unresolvedTools: working.toolRefs,
+                  memoryRefs: working.memoryRefs,
+                  skillRefs: working.toolRefs,
+                  childAgentRefs: working.childAgentRefs,
+                },
+              );
+              if (missing.length > 0) {
+                await this.deps.emit(sessionId, "context.protected_facts_violation", {
+                  turnId,
+                  missing,
+                  digestLength: digestText.length,
+                }, turnId);
+              }
               await this.deps.store.appendMessage({
                 id: newMessageId(),
                 sessionId,
                 turnId,
                 role: "system",
-                content: buildStateDigest(working, "context compacted — older tool outputs were folded into this summary"),
+                content: digestText,
                 createdAt: this.deps.now(),
               });
             }
@@ -466,9 +490,11 @@ export class ContextController {
             try {
               await this.deps.artifactStore.register(artifact);
               ref = `${path}#artifact:${artifact.id}`;
-            } catch {
-              // Registry failure must not break the turn; the file itself is
-              // already on disk and the hash is in the message trail.
+            } catch (err) {
+              // P14-6: registry failure must not break the turn (the file is
+              // already on disk and the hash is in the message trail) — but it
+              // is reported, never silent.
+              process.stderr.write(`[degraded] context-controller.artifact-register: ${err instanceof Error ? err.message : String(err)}\n`);
             }
           }
         } catch {
@@ -506,4 +532,23 @@ export class ContextController {
     }
     return renderText;
   }
+}
+
+/** P17-6: project the durable working state into the protected-facts shape
+ *  the preservation checker verifies against. */
+function protectedFactsFrom(working: import("@ar/contracts").WorkingState): import("@ar/context").ProtectedFacts {
+  return {
+    goal: working.goal,
+    constraints: working.constraints,
+    pending: working.pending,
+    decisions: working.decisions,
+    filesChanged: working.filesChanged,
+    commandsRun: working.commandsRun,
+    testsRun: working.testsRun,
+    failures: working.failures,
+    unresolvedTools: working.toolRefs,
+    memoryRefs: working.memoryRefs,
+    skillRefs: working.toolRefs,
+    childAgentRefs: working.childAgentRefs,
+  };
 }

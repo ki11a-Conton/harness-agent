@@ -129,4 +129,36 @@ describe("P9-4: offline trace replay metrics", () => {
     ]);
     expect(metrics.completionGrade).toBe("unverified_complete");
   });
+
+  it("P20-6: --tree renders the full trace tree and answers why-not-complete", async () => {
+    const { store, sessionId } = await freshEventStore();
+    const turnId = newTurnId();
+    await store.append(ev(sessionId, "turn.started", { goal: "fix parser" }, { turnId }));
+    await store.append(ev(sessionId, "model.started", { callId: "call1" }, { turnId, spanId: "call1" }));
+    await store.append(
+      ev(sessionId, "model.completed", { callId: "call1", finishReason: "tool_calls", usage: { inputTokens: 5, outputTokens: 3 } }, { turnId, spanId: "call1" }),
+    );
+    await store.append(
+      ev(sessionId, "tool.started", { toolCallId: "tc-1", tool: "exec" }, { turnId, spanId: "tc-1", parentSpanId: "call1" }),
+    );
+    await store.append(
+      ev(sessionId, "tool.failed", { toolCallId: "tc-1", tool: "exec", error: { message: "boom" } }, { turnId, spanId: "tc-1", parentSpanId: "call1" }),
+    );
+    await store.append(ev(sessionId, "recovery.decided", { action: "change_strategy", input: "tool_failure", tool: "exec" }, { turnId }));
+    await store.append(
+      ev(sessionId, "turn.failed", { status: "failed", terminationReason: "tool_limit", grade: "unverified_complete", error: { message: "maxToolCalls reached" } }, { turnId }),
+    );
+
+    const result = await explainCmd({ sessionId: sessionId as never, tree: true }, store);
+    expect(result.exitCode).toBe(0);
+    const text = result.lines.join("\n");
+    expect(text).toContain("--- trace tree ---");
+    // hierarchy: model → tool → recovery
+    expect(text).toContain("model completed (tool_calls)");
+    expect(text).toContain("tool failed: exec");
+    expect(text).toContain("recovery: change_strategy (tool_failure)");
+    // why-not-complete answer from the terminal event
+    expect(text).toContain("why not complete: tool_limit (grade unverified_complete)");
+    expect(text).toContain("maxToolCalls reached");
+  });
 });

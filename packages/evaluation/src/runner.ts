@@ -33,6 +33,9 @@ export interface EvalOutcome {
   /** Structured termination reason from the runtime (plan.md Phase 2); see
    *  baseline.ts terminationReason() for the event-derived fallback. */
   terminationReason?: string;
+  /** P19-1/P19-6: verified-completion grade the runtime stamped on the
+   *  terminal event (FalseCompleteGrade), or the event-derived fallback. */
+  grade?: string;
   /** P0-6: failure classification (model | harness | judge | infrastructure).
    *  Absent for clean agent-side outcomes that simply failed the task. */
   failureCategory?: FailureCategory;
@@ -266,6 +269,19 @@ export class EvalRunner {
         }
       }
 
+      // P19-6: expected verified-completion grade. The runtime stamped the
+      // grade on the terminal event (P19-1); the fallback derives it from the
+      // event trail. A case whose model merely SAID "done" must not pass a
+      // verified-complete assertion, and a code-changing turn that never ran
+      // verification must not be graded verified_complete.
+      if (caseDef.expectedGrade !== undefined) {
+        const actual = outcome?.grade ?? gradeOf(eventList);
+        const expected = caseDef.expectedGrade;
+        if (actual !== expected) {
+          violations.push(`expected grade ${expected} but turn graded ${actual === "" ? "(none)" : actual}`);
+        }
+      }
+
       // Expected security events (Phase 6.5 / Phase 9): each entry is an
       // event-type prefix that must be observed at least once. Security
       // events are emitted by the runtime security boundary; until Phase 9
@@ -316,6 +332,7 @@ export class EvalRunner {
       ...(failureCategory !== undefined ? { failureCategory } : {}),
       ...(reason !== undefined ? { reason } : {}),
       ...(outcome?.terminationReason !== undefined ? { terminationReason: outcome.terminationReason } : {}),
+      ...(outcome?.grade !== undefined ? { grade: outcome.grade } : {}),
     };
   }
 }
@@ -342,8 +359,7 @@ function retryTaxonomyTotal(events: AgentEvent[]): number {
 }
 
 /** Event-derived termination reason fallback (mirrors baseline.ts). */
-function terminationReasonOf(events: AgentEvent[]): string {
-  const verified = events.some(
+function terminationReasonOf(events: AgentEvent[]): string {  const verified = events.some(
     (event) => event.type === "verification.completed" && event.payload.passed === true,
   );
   if (verified) return "verified_complete";
@@ -357,6 +373,33 @@ function terminationReasonOf(events: AgentEvent[]): string {
   if (events.some((event) => event.type === "turn.cancelled")) return "cancelled";
   if (events.some((event) => event.type === "turn.completed")) return "model_stopped";
   return "failed";
+}
+
+/**
+ * P19-6 — event-derived verified-completion grade fallback. The runtime
+ * stamps the grade on the terminal event (turn.completed/turn.failed); this
+ * derives it from the event trail when the outcome does not carry it, so the
+ * benchmark never trusts the model's "done" wording.
+ */
+export function gradeOf(events: AgentEvent[]): string {
+  for (const event of events) {
+    if (
+      (event.type === "turn.completed" ||
+        event.type === "turn.failed" ||
+        event.type === "turn.cancelled") &&
+      typeof event.payload.grade === "string"
+    ) {
+      return event.payload.grade;
+    }
+  }
+  // Fallback: reconstruct from termination-reason signals.
+  const verified = events.some(
+    (event) => event.type === "verification.completed" && event.payload.passed === true,
+  );
+  if (verified) return "verified_complete";
+  if (events.some((event) => event.type === "verification.failed")) return "verification_failed";
+  if (events.some((event) => event.type === "turn.completed")) return "unverified_complete";
+  return "unverified_complete";
 }
 
 /** expected.status "denied" maps to a completed turn: the denial lives in the tool trail. */

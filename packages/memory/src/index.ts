@@ -53,6 +53,10 @@ export {
 } from "./write-gate.js";
 export type { MemoryWritePolicy, WriteGateResult } from "./write-gate.js";
 
+// P17-1: derivability rule — re-derivable facts are NOT stored long-term.
+export { assessDerivability, isMemoryWorthy } from "./derivability.js";
+export type { DerivationVerdict } from "@ar/contracts";
+
 // REFLECTION-001: deterministic rule-based reflection over the event stream (§68).
 export { FAILURE_EVENT_TYPES, Reflector } from "./reflection.js";
 export type { FailureRootCause, ReflectDeps } from "./reflection.js";

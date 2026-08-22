@@ -112,8 +112,10 @@ export class JsonlSkillStore implements SkillStoreLike {
           continue;
         }
         skills.push(skill as Skill);
-      } catch {
-        // corrupt line: skip, keep reading the rest (best-effort recovery)
+      } catch (err) {
+        // P14-6: corrupt line — skipped (best-effort recovery) but reported,
+        // never silent.
+        process.stderr.write(`[degraded] skill-store.corrupt-line: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
     return skills;

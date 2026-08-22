@@ -2,8 +2,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { ModelEvent, ToolCallRequest, ToolCapability, ToolExecutionContext, ToolOrchestrator, ToolResult } from "@ar/contracts";
-import { errorInfo, newToolCallId } from "@ar/contracts";
+import type { ModelEvent, ToolCallRequest, ToolExecutionContext, ToolOrchestrator, ToolResult, ToolSemantics } from "@ar/contracts";
+import { DEFAULT_TOOL_SEMANTICS, errorInfo, newToolCallId } from "@ar/contracts";
 import { ManualTimer, type Timer } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
 import { RecoveryPolicy } from "../recovery/recovery.js";
@@ -37,7 +37,7 @@ afterEach(async () => {
 
 function makeRuntime(
   provider: ScriptedModelProvider,
-  orchestrator: FakeOrchestrator,
+  orchestrator: FakeOrchestrator | ToolOrchestrator,
   opts?: {
     maxDurationMs?: number;
     context?: { maxTokens: number };
@@ -157,11 +157,41 @@ class GatedOrchestrator implements ToolOrchestrator {
   }
 }
 
+/**
+ * P18-5: an orchestrator whose in-flight calls IGNORE the abort signal —
+ * they only settle when explicitly released. Distinguishes synthetic
+ * cancellation (cancellable semantics → the controller does not wait) from
+ * honest settlement (non-cancellable semantics → the controller waits for the
+ * real result instead of fabricating a cancellation).
+ */
+class ObliviousOrchestrator implements ToolOrchestrator {
+  calls: string[] = [];
+  private waiters: Array<() => void> = [];
+  constructor(private readonly total: number) {}
+
+  async execute(request: ToolCallRequest, _ctx: ToolExecutionContext): Promise<ToolResult> {
+    const idx = this.calls.length;
+    this.calls.push(request.call.name);
+    if (idx >= this.total) return { status: "success", output: "ok" };
+    return new Promise<ToolResult>((resolve) => {
+      this.waiters[idx] = () => resolve({ status: "success", output: "ok" });
+    });
+  }
+
+  release(idx: number): void {
+    this.waiters[idx]?.();
+  }
+
+  async awaitCall(n: number): Promise<void> {
+    while (this.calls.length < n + 1) await new Promise((r) => setTimeout(r, 1));
+  }
+}
+
 function makeP37Runtime(
   provider: ScriptedModelProvider,
-  orchestrator: GatedOrchestrator,
+  orchestrator: GatedOrchestrator | ToolOrchestrator,
   opts?: {
-    toolCapabilityOf?: (name: string) => ToolCapability | undefined;
+    toolSemanticsOf?: (name: string) => ToolSemantics | undefined;
   },
 ) {
   const store = new MemorySessionStore();
@@ -172,10 +202,9 @@ function makeP37Runtime(
     modelProvider: provider,
     orchestrator,
     agents: [{ ...AGENT, limits: {} }],
-    ...(opts?.toolCapabilityOf !== undefined
+    ...(opts?.toolSemanticsOf !== undefined
       ? {
-          toolCapabilityOf: (name: string) =>
-            opts.toolCapabilityOf!(name) ?? { retry: "unknown" as const, concurrencySafe: false },
+          toolSemanticsOf: (name: string) => opts.toolSemanticsOf!(name) ?? DEFAULT_TOOL_SEMANTICS,
         }
       : {}),
   });
@@ -356,7 +385,10 @@ describe("runtime fault injection (CORE-FAULT-001)", () => {
     ]);
     const orch = new GatedOrchestrator(3);
     const { runtime, store, events } = makeP37Runtime(provider, orch, {
-      toolCapabilityOf: (name) => (name === "read_file" ? { retry: "safe", concurrencySafe: true } : undefined),
+      toolSemanticsOf: (name) =>
+        name === "read_file"
+          ? { ...DEFAULT_TOOL_SEMANTICS, retrySafety: "safe", concurrencySafety: true }
+          : undefined,
     });
     const ac = new AbortController();
     const done = runOne(runtime, store, events, ac.signal);
@@ -473,5 +505,192 @@ describe("runtime partial failure semantics (P2-38)", () => {
     expect(outcome.status).toBe("failed");
     expect(outcome.statusDetail).toBe("blocked");
     expect(outcome.error?.code).toBe("RESOURCE_LIMIT");
+  });
+});
+describe("P15-6: cancellation settlement invariant", () => {
+  function multiReadScript(count: number): ModelEvent[] {
+    const deltas: ModelEvent[] = [];
+    const calls: Array<{ id: string; name: string; args: Record<string, unknown> }> = [];
+    for (let i = 0; i < count; i++) {
+      deltas.push({ type: "tool_call_delta", toolCall: { id: `tc-${i}` as never, name: "read_file", args: { path: `f${i}` } }, timestamp: 0 } as never);
+      calls.push({ id: `tc-${i}` as never, name: "read_file", args: { path: `f${i}` } });
+    }
+    deltas.push({ type: "completed", result: { finishReason: "tool_calls", toolCalls: calls }, timestamp: 0 } as never);
+    return deltas;
+  }
+
+  /** Every model-emitted tool call must settle in the message trail (the
+   *  transcript/replay truth): one tool message per call id, never zero. */
+  function settleCount(store: MemorySessionStore, sessionId: string): number {
+    return store.messages.filter((m) => m.role === "tool" && m.sessionId === sessionId).length;
+  }
+
+  it("abort mid parallel reads: every in-flight read settles (none disappear from the trail)", async () => {
+    const gate = new GatedOrchestrator(3);
+    const provider = new ScriptedModelProvider([multiReadScript(3), ScriptedModelProvider.text("done")]);
+    const { store, events, runtime } = makeRuntime(provider, gate);
+    const session = await runtime.createSession({ agent: AGENT, cwd });
+    const turn = await runtime.startTurn(session.id, "go");
+    const ac = new AbortController();
+    const runP = runtime.runTurn(session.id, turn.id, ac.signal);
+
+    await new Promise((r) => setTimeout(r, 30));
+    ac.abort();
+    const outcome = await runP;
+    expect(outcome.status).toBe("cancelled");
+
+    // All 3 model-emitted calls settled in the message trail (committed ones
+    // as their real result, in-flight/queued ones as synthetic cancelled).
+    const settled = settleCount(store, session.id);
+    expect(settled).toBe(3);
+    const cancelledMsgs = store.messages.filter(
+      (m) => m.role === "tool" && m.sessionId === session.id && String(m.content).includes("cancelled"),
+    );
+    expect(cancelledMsgs.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("abort while a serial write executes: the write and the remaining calls all settle", async () => {
+    // ONE model response carrying two write calls — the batch runs serially
+    // (writes are not concurrency-safe), so abort lands mid-chain.
+    const gate = new GatedOrchestrator(2);
+    const provider = new ScriptedModelProvider([
+      multiReadScript(2), // reuse: two calls, gated
+      ScriptedModelProvider.text("done"),
+    ]);
+    const { store, events, runtime } = makeRuntime(provider, gate);
+    const session = await runtime.createSession({ agent: AGENT, cwd });
+    const turn = await runtime.startTurn(session.id, "go");
+    const ac = new AbortController();
+    const runP = runtime.runTurn(session.id, turn.id, ac.signal);
+
+    await new Promise((r) => setTimeout(r, 30));
+    ac.abort();
+    const outcome = await runP;
+    expect(outcome.status).toBe("cancelled");
+
+    expect(settleCount(store, session.id)).toBe(2); // write a + write b both settle
+  });
+
+  it("abort after a side effect committed: committed stays success, later calls settle as cancelled", async () => {
+    const gate = new GatedOrchestrator(2); // both writes gated
+    const provider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("write_file", { path: "a" }),
+      ScriptedModelProvider.toolCall("write_file", { path: "b" }),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const { store, events, runtime } = makeRuntime(provider, gate);
+    const session = await runtime.createSession({ agent: AGENT, cwd });
+    const turn = await runtime.startTurn(session.id, "go");
+    const ac = new AbortController();
+    const runP = runtime.runTurn(session.id, turn.id, ac.signal);
+
+    await new Promise((r) => setTimeout(r, 30));
+    gate.release(0); // write a COMMITS
+    await new Promise((r) => setTimeout(r, 20));
+    ac.abort(); // before write b starts
+    const outcome = await runP;
+    expect(outcome.status).toBe("cancelled");
+
+    const committed = store.messages.filter(
+      (m) => m.role === "tool" && m.sessionId === session.id && !String(m.content).includes("cancelled"),
+    );
+    expect(committed.length).toBe(1); // the committed write a
+    expect(settleCount(store, session.id)).toBe(2); // a + synthetic-cancelled b
+  });
+
+  it("repeated abort settles exactly once (no duplicate settlement)", async () => {
+    const gate = new GatedOrchestrator(1);
+    const provider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("read_file", { path: "a" }),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const { store, events, runtime } = makeRuntime(provider, gate);
+    const session = await runtime.createSession({ agent: AGENT, cwd });
+    const turn = await runtime.startTurn(session.id, "go");
+    const ac = new AbortController();
+    const runP = runtime.runTurn(session.id, turn.id, ac.signal);
+
+    await new Promise((r) => setTimeout(r, 30));
+    ac.abort();
+    ac.abort(); // repeated abort must not double-settle
+    await runP;
+
+    expect(settleCount(store, session.id)).toBe(1); // exactly one settlement per call
+  });
+});
+
+describe("P18-5: tool cancellation settlement is cancellable-aware", () => {
+  function twoReadsScript(readA: import("@ar/contracts").ToolCall, readB: import("@ar/contracts").ToolCall): ModelEvent[] {
+    return [
+      { type: "started", timestamp: 0 },
+      { type: "tool_call_delta", toolCall: readA, timestamp: 0 },
+      { type: "tool_call_delta", toolCall: readB, timestamp: 0 },
+      { type: "completed", result: { finishReason: "tool_calls", toolCalls: [readA, readB] }, timestamp: 0 },
+    ];
+  }
+
+  it("cancellable in-flight calls settle as cancelled WITHOUT waiting for an abort-oblivious tool", async () => {
+    const readA = { id: newToolCallId(), name: "read_file", args: { path: "a.txt" } };
+    const readB = { id: newToolCallId(), name: "read_file", args: { path: "b.txt" } };
+    const provider = new ScriptedModelProvider([
+      twoReadsScript(readA, readB),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new ObliviousOrchestrator(2);
+    const { runtime, store, events } = makeP37Runtime(provider, orch, {
+      toolSemanticsOf: (name) =>
+        name === "read_file"
+          ? { ...DEFAULT_TOOL_SEMANTICS, retrySafety: "safe", concurrencySafety: true, cancellable: true }
+          : undefined,
+    });
+    const ac = new AbortController();
+    const done = runOne(runtime, store, events, ac.signal);
+    await orch.awaitCall(1); // both reads in flight, tool IGNORES abort
+    ac.abort();
+    // cancellable → synthetic cancelled immediately; the turn must NOT hang
+    // waiting for the oblivious tool (2s guard).
+    const { outcome, storedEvents } = await Promise.race([done, hang(2000)]);
+    expect(outcome.status).toBe("cancelled");
+    // Both calls settled in the transcript — nothing vanished.
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    expect(messages.filter((m) => m.role === "tool")).toHaveLength(2);
+    // No orchestrator-level completion fired (the tool never really finished).
+    expect(storedEvents.some((e) => e.type === "tool.completed" && e.payload.status === "success")).toBe(false);
+  });
+
+  it("NON-cancellable in-flight calls are NOT lied about: the controller waits for the real result", async () => {
+    const readA = { id: newToolCallId(), name: "read_file", args: { path: "a.txt" } };
+    const readB = { id: newToolCallId(), name: "read_file", args: { path: "b.txt" } };
+    const provider = new ScriptedModelProvider([
+      twoReadsScript(readA, readB),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new ObliviousOrchestrator(2);
+    const { runtime, store, events } = makeP37Runtime(provider, orch, {
+      toolSemanticsOf: (name) =>
+        name === "read_file"
+          ? { ...DEFAULT_TOOL_SEMANTICS, retrySafety: "safe", concurrencySafety: true, cancellable: false }
+          : undefined,
+    });
+    const ac = new AbortController();
+    const done = runOne(runtime, store, events, ac.signal);
+    await orch.awaitCall(1);
+    ac.abort();
+    // Give the controller a moment — it MUST still be waiting (not resolved).
+    await new Promise((r) => setTimeout(r, 30));
+    expect(orch.calls).toHaveLength(2);
+    // Release the real results; the transcript records SUCCESS (what actually
+    // happened), never a fabricated cancellation.
+    orch.release(0);
+    orch.release(1);
+    const { outcome } = await Promise.race([done, hang(2000)]);
+    expect(outcome.status).toBe("cancelled"); // the TURN aborted…
+    // …but the CALLS settled with their REAL result: the transcript shows the
+    // success output ("ok"), never a fabricated cancellation.
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    const toolMsgs = messages.filter((m) => m.role === "tool");
+    expect(toolMsgs).toHaveLength(2);
+    expect(toolMsgs.every((m) => String(m.content).includes("ok"))).toBe(true);
+    expect(toolMsgs.some((m) => String(m.content).includes("cancelled"))).toBe(false);
   });
 });

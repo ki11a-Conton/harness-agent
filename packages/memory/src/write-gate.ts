@@ -32,6 +32,13 @@ export interface WriteGateResult {
   details?: string[];
 }
 
+/** P14-5: injectable scanners so scanner-failure fail-closed is testable;
+ *  production callers omit this and get the real detectors. */
+export interface WriteGateScanners {
+  injection?: (content: string) => { hasInjection: boolean; reasons: string[] };
+  secrets?: (content: string) => { hasSecret: boolean; secrets: string[] };
+}
+
 /**
  * §67 write gate: candidate -> importance -> novelty -> policy -> persist.
  *
@@ -45,6 +52,7 @@ export interface WriteGateResult {
 export function evaluateCandidate(
   candidate: MemoryCandidate,
   policy: MemoryWritePolicy = DEFAULT_MEMORY_WRITE_POLICY,
+  scanners?: WriteGateScanners,
 ): WriteGateResult {
   const isEpisodic = candidate.type === "episodic";
   const importanceThreshold = isEpisodic
@@ -54,8 +62,22 @@ export function evaluateCandidate(
   // Security checks first (Issue 6/6b): injected content and secrets must
   // never be persisted, regardless of importance or novelty. The denial is
   // structured (P0-7) — code + source + details — so it can be surfaced on
-  // the event stream, not just as a bare stderr message.
-  const injection = detectPromptInjection(candidate.content);
+  // the event stream, not just as a bare stderr message. P14-5: a scanner
+  // exception must never silently pass content that needs scanning — it is
+  // a fail-closed denial ("scanner-failed"), observable and never persisted.
+  const injectionScanner = scanners?.injection ?? detectPromptInjection;
+  let injection: { hasInjection: boolean; reasons: string[] };
+  try {
+    injection = injectionScanner(candidate.content);
+  } catch (err) {
+    return {
+      allowed: false,
+      reason: `security scanner failed; write denied (${err instanceof Error ? err.message : String(err)})`,
+      code: "SECURITY_DENIED",
+      source: "memory-write-gate",
+      details: ["scanner-failed"],
+    };
+  }
   if (injection.hasInjection) {
     return {
       allowed: false,
@@ -65,7 +87,19 @@ export function evaluateCandidate(
       details: injection.reasons,
     };
   }
-  const secret = detectSecrets(candidate.content);
+  const secretScanner = scanners?.secrets ?? detectSecrets;
+  let secret: { hasSecret: boolean; secrets: string[] };
+  try {
+    secret = secretScanner(candidate.content);
+  } catch (err) {
+    return {
+      allowed: false,
+      reason: `security scanner failed; write denied (${err instanceof Error ? err.message : String(err)})`,
+      code: "SECURITY_DENIED",
+      source: "memory-write-gate",
+      details: ["scanner-failed"],
+    };
+  }
   if (secret.hasSecret) {
     return {
       allowed: false,

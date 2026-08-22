@@ -1,4 +1,5 @@
 import type { EventStore, SessionId } from "@ar/contracts";
+import { buildTraceTree, renderTraceTree } from "@ar/observability";
 
 /**
  * P9-3: `agent explain <sessionId> [--tool-call <id>]` — why did the agent do
@@ -10,6 +11,9 @@ import type { EventStore, SessionId } from "@ar/contracts";
 export interface ExplainOptions {
   sessionId: SessionId;
   toolCallId?: string;
+  /** P20-6: also render the full trace tree (turn → model → tools →
+   *  recovery/compaction/verification/subagent). */
+  tree?: boolean;
 }
 
 export async function explainCmd(
@@ -87,6 +91,22 @@ export async function explainCmd(
   for (const step of steps) {
     const payload = step.payload as { ref?: string; passed?: boolean; detail?: string };
     lines.push(`verification: ${String(payload.passed === true ? "PASS" : "FAIL")} ${String(payload.ref ?? "?")}${payload.detail !== undefined ? ` — ${payload.detail}` : ""}`);
+  }
+
+  // P20-6: trace tree — the whole turn rebuilt from events with parent/span
+  // identity, so "why did this tool run / why retried / why not complete" is
+  // answerable from structure, not wording.
+  if (opts.tree === true) {
+    const tree = buildTraceTree(all);
+    lines.push("--- trace tree ---");
+    lines.push(...renderTraceTree(tree));
+    const terminal = all.filter((e) => e.type === "turn.failed").at(-1);
+    if (terminal !== undefined) {
+      const payload = terminal.payload as { grade?: string; terminationReason?: string; error?: { message?: string } };
+      lines.push(
+        `why not complete: ${String(payload.terminationReason ?? "?")} (grade ${String(payload.grade ?? "?")})${payload.error?.message !== undefined ? ` — ${payload.error.message}` : ""}`,
+      );
+    }
   }
 
   return { exitCode: 0, lines };
