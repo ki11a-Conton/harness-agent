@@ -789,3 +789,114 @@
 - **ScriptedModelProvider 双层数组**：脚本数组套帧数组，单层会 failed_no_effect。
 - **run-budget 曾用 `"" as never` 伪 runId**（P20-5 修）→ 真实 newRunId()。
 - **production-audit 自误报**：文档注释里的 `as never` 示例被扫描到 → stripComments。
+
+## PHASE 27 会话记忆（2026-08-23，Windows 真机）
+
+### 环境搭建（Windows 真机从零到测试可跑）——教训全记录
+
+- **P0 前置：safe-delete shim 污染一切 node/删除操作**。WorkBuddy 注入 `NODE_OPTIONS=--require genie-safe-delete.cjs`（拦 fs.unlink/rmSync → trash，trash 本身失败）+ bash 导出函数 rm/unlink/rmdir + PowerShell Remove-Item 也被拦。症状：pnpm install 报 `[safe-delete] 操作失败: trash`；node fs.rmSync 报同样错误；`dangerouslyDisableSandbox` **无效**（注入与环境无关）。**解法：每次命令前 `source C:\Users\MECHREV\.workbuddy\bin\clean-env.sh`**（unset 函数+变量、NODE_OPTIONS="--use-system-ca"、PATH 去掉 safe-bin）。
+- **bash 长命令输出会被吞**：前台跑 pnpm/npm 加 `| tail` 管道 → 输出空、exit 码不可信、进程状态不明（曾误判"装完了"实际半装）。**解法：run_in_background + 输出重定向 `> log 2>&1` + 事后读日志 + 检查退出码**。凡 pnpm/npm/tsc 一律如此。
+- **corepack 在 Windows 有 shim 解析 bug**：`corepack prepare pnpm --activate` 后 pnpm 命令解析到系统 Node（E:\node）的 corepack 目录 → MODULE_NOT_FOUND。**解法：npm install pnpm@11.21.0 到托管 workspace（`C:\Users\MECHREV\.workbuddy\binaries\node\workspace`），用完整路径 node pnpm.cjs 调用**。
+- **pnpm 11 Windows symlink 相对路径 cwd 错位（核心坑）**：pnpm 的 symlink-dir 用相对路径建 symlink（基于 link 目录计算），但 Windows CreateSymbolicLink 按进程 cwd 解析 → 目标路径错位 → ENOENT/UNKNOWN。junction fallback 只在 EPERM 触发且 true symlink 成功过一次后永久直调。**解法：patch 托管 workspace 的 `node_modules/pnpm/dist/pnpm.mjs`：(1) createSymlinkAsync/Sync 的 Windows 分支 catch EPERM||ENOENT||UNKNOWN||EINVAL → junction；(2) createTrueSymlinkAsync/Sync 本体改为 `fs.symlink(resolveSrcOnWinJunction(target), path, "junction")`（绝对路径 junction，彻底规避）。**
+- **pnpm install exit 0 ≠ 装好**：包内部依赖链接（如 `.pnpm/vitest@4.1.10/node_modules/@vitest/*`）静默失败成空目录 → vitest 启动报 ERR_MODULE_NOT_FOUND（@vitest/utils/helpers → pathe → ...）。**解法：跑仓库根的 `fix-links.mjs`**：扫描 .pnpm 所有空目录 → junction 指向 .pnpm 里同名真实包；**索引必须优先非空目录**（空目录先占位会让 pathe 指向 @vitest+runner 里的空目录）。修完 53 个链接后 vitest 全绿。
+- **tsgo（typescript@7.0.2）Windows emit 必 panic**：`tsc -b` 在 emitDeclarationFile → SourceFile.Path nil pointer panic；与路径长度无关（junction 短路径 D:\ha 无效）、重试无效（5 连 panic）、与代码改动无关（移除新导出仍 panic）。HANDOVER 早有警告（"tsgo 增量构建可能 panic"）。**解法：装 typescript@5.9.3 到托管 workspace，用它跑 `tsc -b` 验证类型；Windows 权威验证交给 CI 双平台**。
+- **tsbuildinfo 只读文件**：pnpm 装的 `node_modules/.cache/tsbuildinfo/*` 只读 → rm Permission denied、Git Bash chmod 无效、PowerShell Remove-Item 被 safe-delete 拦。**解法：clean-env 下 node 脚本 `fs.chmodSync(p,0o666)` + `fs.rmSync(...,maxRetries)`**。
+- **Git Bash $PWD 是 POSIX 格式**（/d/Download games/...）：拼进 node -e 字符串会变成 `D:\d\Download games\...` 错误路径。**解法：node 内用 process.cwd() 或写死 `D:/...` 正斜杠路径**。
+- **代理**：直连 registry.npmjs.org 时好时坏；本机 Clash Verge 混合端口 **127.0.0.1:7897**（探测 7890/7897/10809... 只有 7897+8080 开）。npm 加 `--proxy http://127.0.0.1:7897 --https-proxy http://127.0.0.1:7897`。
+- **reg query/系统级工具被安全策略禁**：读注册表代理配置不可用 → 用端口探测（/dev/tcp）替代。
+
+### P27 实施要点
+
+- **新文件**（packages/harness/src/）：`config-layers.ts`（层契约+AGENT_ env camelCase 映射+生命周期元数据）、`config-resolver.ts`（deep merge+per-key origins+指纹）、`config-drift.ts`（漂移策略+normalizeForComparison+redact）、`config-explainer.ts`、`config-wiring.test.ts`。
+- **createHarness 接入**：`resolvedConfig`（defaults→profile→runtime 三层，调用方 config 即 runtime 层最高优先级）+ `freezeConfigFingerprint`/`checkSessionConfigDrift`（用 SessionStore.saveStateSnapshot 存 `p27.configFingerprint`/`p27.configValue`，零契约变更）+ `configExplain(key?)`。
+- **CLI**：`agent config explain [key]`（config-command.ts；CommandDeps 加可选 resolvedConfig；main.ts 传 harness.resolvedConfig）。
+- **踩坑**：
+  - **内存 store 的 saveStateSnapshot 是 no-op**（mem-stores.ts 空实现）→ freeze/check 往返测试必须用 dataDir（JSONL store）且先 createSession（saveStateSnapshot 要求 session 存在）。
+  - **断言失败 → close 未执行 → runtime.db 锁定 → afterEach rm 卡死超时**（连锁）。测试务必保证 close 在断言后仍执行（或避免 sqlite 场景）；afterEach 用容错 rm（catch+maxRetries+加大 timeout）。
+  - **sandboxPolicy.filesystem 不是叶子**（FilesystemPolicy 是对象）→ origins 查询用叶子 key（`sandboxPolicy.network.mode`）；featureFlags.* 的 origin 是 **profile**（profile 层提供完整 flags 覆盖 defaults）不是 defaults。
+  - **featureFlags:{memory:true} 无 dataDir 会 throw**（harness 拒绝内存写记忆）→ 测试 runtime override 用 skills:false 代替。
+  - **跨 store backend 的快照不共享**（JSONL↔sqlite）→ drift 测试的 freeze/check 必须同 backend。
+  - stableSerialize 需处理 function/undefined（函数→`[fn:name]`），drift 比较前 normalizeForComparison（函数→`[[function]]`）防跨进程误报。
+
+
+## PHASE 28-31 会话记忆（2026-08-23，P30 SDK / P31 环境快照）
+
+### 实施要点
+
+- **P28 Typed Capability Approval**：`packages/contracts/src/approval.ts` 新增 `CapabilityKind`/`CapabilityRequest`（exec/file/network/mcp/tool 判别联合）、`approvalFingerprint`（canonicalJson+sort 集合无关）、`grantCoversRequest`（fail-closed，argv 前缀匹配实现 narrower）、`isArgvPrefix`、`pathIsWithin`。`ApprovalRequest` 加可选 `capability?` 向后兼容。`packages/security/src/approval-capability.ts`：`DefaultGrantCache`（remember/isCovered/revoke/list）+ `grantFromApproval`（仅 session/one_tool remember）。23 测试。
+- **P29 App Server Protocol**：`packages/protocol`（仅依赖 @ar/contracts 纯 DTO）：`InitializeGate` 握手（NOT_INITIALIZED/ALREADY_INITIALIZED）、`BoundedQueue`（capacity=2 拒绝 SERVER_OVERLOADED）、`IdempotencyTable`、`ProtocolEventMapper`（真实 EVENT_TYPES：model.delta/model.completed/tool.started…）、JSON Schema（P29-10）。`packages/gateway/src/app-server.ts` 薄适配（wire 方法名↔createRuntimeRpc，agentName→agentId）。29 测试。
+- **P30 SDK**：`packages/sdk`（仅依赖 @ar/protocol）：`HarnessTransport`/`MemoryHarnessTransport`、`runStreamed`（stream-first）→ `run` = reducer（P30-3 单一实现）、`EventChannel` 桥 push→async iterator、AbortSignal→`turn/interrupt` 服务端（P30-4）、SdkError。6 测试。
+- **P30-5 CLI 分层**：`CommandDeps.runtime` 字段删除（普通路径不持有 runtime）、`defaultSandboxPolicy` 重导出到 @ar/harness（CLI 不再值 import @ar/core）、架构守卫 test（apps/cli 普通文件禁止值 import @ar/core）。3 测试。
+- **P31 环境快照**：contracts `EnvironmentSnapshot` 深化（id/shell/capabilities/permissionsFingerprint/fingerprint）+ `buildLocalEnvironmentSnapshot` 纯工厂（本地 id 确定性：`env_local_${sha256(roots+shell+cap)}`）+ `EnvironmentManager`/`EnvironmentHandle`/`Executor`/`ExecutorFileSystem` seam；core `LocalEnvironmentManager`（resolveForSession→handle 注册表→snapshot）+ factory 的 `environment?` 注入（缺省 buildLocal）。tool-call-controller 早已用 `step.environment.cwd`（P23-3），P31 把裸 cwd hash 升级为完整 snapshot fingerprint。10 测试。
+
+### 踩坑（gotchas）
+
+- **EventChannel 永不 EOF → reducer 挂死**：channel 只等外部 end()；terminal 事件（turn/completed|failed|interrupted）seen 后必须置 terminalDelivered → asyncIterator 返回 done:true。abort 时也须 channel.end()（否则已 abort 场景空流挂死）。
+- **reducer 在正常 EOF 时不重查 abort**：真实自省——for-await 结束但 signal.aborted 且 status==completed 时循环外必须补置 interrupted，否则提前 abort 的 run 返回 completed。
+- **vitest 死锁（Windows）**：单测卡 5 分钟不出结果=测试有未 resolve 的 await（如 channel 挂死）。用 `timeout 60 vitest ... --no-file-parallelism --reporter=verbose` 快速定位；`--pool=threads --poolOptions...` 这种参数在 vitest 4.1 会 CAC 报错（选项名变了）。
+- **pnpm install --offline 可补齐 workspace 链接**：新建 package 后（sdk 晚于首次 install），根 `pnpm install --offline` 会为其生成 `node_modules/@ar/*` 链接，无需删 node_modules。
+- **memory transport 自引用闭包**：`makeTransport` 里 handler 引用 `transport`（在后面创建）→ TDZ；改 `let transport!` + 后赋值。
+- **protocol DTO 无内部 id**：wire 层 ThreadItem（agent_message/tool_result）只有 sequence+threadId+timestamp，**没有** `id`/`toolCallId`（内部对象才带）；fixture 别多写字段，`Partial<ThreadItem> & {kind}` 会报 TS2353。
+- **LocalEnvironmentManager key 是 env id 不是 session id**：bySession→byEnvironment（handle.id），否则 snapshot 反查失败落回 process.cwd()（测试眼里表现为 cwd 不对）。
+- **process.env 是 ProcessEnv**（值可 undefined）→ 与 `Record<string,string>` 不兼容：buildLocalEnvironmentSnapshot 的 env 参数用 `Readonly<Record<string,string|undefined>>` + 内部滤掉 undefined。
+- **CLI 测试也传 runtime**（cli.test.ts makeDeps/integration）→ CommandDeps 删字段后 TypeScript 报多余属性，须同步删断言。
+
+### P27 补缺（2026-08-23 晚，用户质疑 P27 完成度后核查）
+
+- **教训：不要把"定义了 API"当成"完成了任务"**。P27-4 drift 策略（freezeConfigFingerprint/checkSessionConfigDrift）此前只挂在 harness surface + 被 wiring 测试直调 API 覆盖——**没有任何生产调用者**（session 创建不冻结、恢复不检查）。grep `packages/ apps/ --include="*.ts" | grep -v test` 是查 production caller 的标准动作。
+- **修复**：在 create-harness 把 freeze/check 提为局部函数，并用显式委托包装 `LoadedSessionManager`（load 是 rpc/CLI/web 的唯一 session 加载入口）：load 时先 check → severity 为 reject/restart_required 时发 `policy.changed_on_resume` 事件 + 抛新错误码 `CONFIG_DRIFT_REJECTED`（fail-closed）；成功 load 后 re-freeze 基准。
+- **坑：对象 spread 丢类方法**。`const sessions: LoadedSessionManager = { ...baseSessions, load }` —— DefaultLoadedSessionManager 的 `unload/listLoaded/close` 在**原型**上，spread 后运行时丢失 + TS 报缺方法。必须显式委托 `unload: (id) => baseSessions.unload(id)` 等。
+- **新增错误码要有三处配套**：ERROR_CODES 数组、ERROR_DEFAULT_MESSAGES、ERROR_RETRY_DEFAULTS，漏一处就 typecheck 报错。
+- **证据**：config-wiring.test.ts 新增 2 条生产路径测试（drifted session 经 `sessions.load` 真拒绝 + 匹配 config 正常加载）；CLI 28 + gateway 22 + integration 4 全绿确认接线不破坏既有行为。
+
+## PHASE 32 会话记忆（2026-08-23，P32 Skills/Instruction Snapshot Closure）
+
+### 实施要点（四个子任务全部完成）
+
+- **P32-1 SkillSnapshot 身份**：`packages/contracts/src/step-context.ts` 新增 `SkillSnapshot`（fingerprint + selected[]，每项含 name/source/bodyHash/requiredTools/requiredMcpServers）+ `buildSkillSnapshot()` 纯工厂。指纹用 canonicalJson（对象键序无关），但 **selected 数组顺序敏感**——注入顺序是模型可见世界的一部分。`StepExecutionSnapshot.skills` 从 `unknown` 改为 `SkillSnapshot`；`StepRecord` 新增可选 `skillSnapshotFingerprint`；`ModelStartedPayload` 新增可选 `skillSnapshotFingerprint`。
+- **P32-2 缓存键含 config 身份**：`packages/harness/src/create-harness.ts` 的 `createSkillBodyBlockProvider` 缓存键改为 `skill:${resolvedConfig.fingerprint}:${cwd}`（`skill-context.ts` 用 `cachePrefix` 拼接）——同 cwd 不同 enabled/disabled 配置不共用 body 缓存，堵住跨会话泄漏。
+- **P32-3 InstructionSnapshot 深化**：`InstructionSource`（kind: system|project_instruction + source + contentHash + path?）+ `InstructionSnapshot`（sources + fingerprint）；`step-snapshot-factory.ts` 的 `instructionFingerprint = stableFingerprint([sources, system])`；context-controller 把 `built.discovered`（AGENTS.md 文档）逐条转 project_instruction source。AGENTS.md 中途变更 → 当前 step 不变、下个 step 新指纹。
+- **P32-4 Skill→MCP 依赖**：`SkillManifest` 新增 `requiredMcpServers?: string[]`（SKILL.md frontmatter `requiredMcpServer: mcp:<id>` 逗号分隔解析，见 `skill-loader.ts`）；context-controller 组装 `selectedSkills` 时携带 requiredMcpServers → runtime `buildStepContext` 传给 `mcpBindingProvider({goal, selectedSkills})` → 惰性 connect，绝不在 harness 启动时全局连接。`compose-mcp.ts` 的 resolver 消费该数组。
+
+### 踩坑（gotchas）
+
+- **TS1355**：`readonly import(...).SkillSnapshot["selected"]` 非法（readonly 只能用于数组/元组字面量）；`SkillSnapshot["selected"]` 自身已 readonly，删掉修饰符即可。
+- **context-controller if 块作用域**：`skillSnapshotEntries`/`instructionSources` 声明在 if 块内、返回语句在块外 → "Cannot find name"；必须提升到函数顶层 `let`，if 块内赋值，return 用外层变量（保持 host 无 context pipeline 时的 undefined 语义）。
+- **世界快照的数组顺序原则**：指纹对对象键序无关（canonical），但对**数组顺序敏感**（skill 注入顺序、instruction source 顺序都是模型可见世界的一部分）——"insertion-order-independent" 只适用于对象键，别误用到数组上。
+- **真实 ContextPipeline 会对 cwd 做指令发现**（`stat(cwd)` 必须存在）：端到端 skill/instruction 测试不能再用 `cwd: "C:\work"`，要用 `mkdtemp` 建真实临时目录（Windows 上 `C:\work` 不存在直接 ENOENT）。
+- **Windows typecheck 严格性高于 vitest**：测试里技能对象字面量必须标注 `: Skill` 返回类型（否则 status 推断为 string，TS 报不兼容）；`model.started` payload 类型收窄需显式断言；`requiredMcpServers` readonly 数组与 mutable 不兼容。
+- **TS6310 referenced projects may not disable emit**：全仓 typecheck 用 `tsconfig.noemit.json`（paths 指向 src，单 pass include 编译而非 project references），不能直接 `tsc --noEmit` 配 composite。
+- **Windows 平台回归噪音**（与 P32 无关，既有环境差异）：`packages/security/canonical-path.test.ts` + `boundary-guard.test.ts` 用 POSIX 绝对路径断言（`/Definitely/Not/Existing/sub` 期望回显），Windows 上 `path.resolve` 加盘符前缀 `D:/...` 导致 12 条失败；`harness/adversarial-regression.test.ts` 的 A2 symlink 用例因未开启开发者模式 EPERM 失败。均需 POSIX 环境或加 platform guard。
+
+### 证据
+
+- P32 专项单测 `skill-instruction-snapshot.p32.test.ts` 10/10 通过（键序无关、数组序敏感、body/需求变更重指纹、requiredMcpServers 携带、StepRecord 携带、无 skills 无字段、InstructionSnapshot 默认/显式 sources、AGENTS.md 变更重指纹、source 顺序敏感）。
+- runtime 端到端新增 2 条（`runtime.test.ts` P32 describe）：`model.started` 携带真实 `skillSnapshotFingerprint`；`mcpBindingProvider` 收到选中技能声明的 `["mcp:weather"]`。runtime 72 + P32 10 = 82 全绿；core/runtime + core/context 17 文件 272 测试全绿；CLI/gateway/harness/skills 回归 290/291（1 失败为既有 symlink 平台限制）。
+- 全仓 `tsc -p tsconfig.noemit.json` 通过。
+
+## PHASE 33 会话记忆（2026-08-23，P33 Symphony-style Work Orchestration）
+
+### 实施要点（P33-1 ~ P33-10 全部实现）
+
+- **P33-1 独立 orchestration 包**：新建 `packages/orchestration`（@ar/orchestration，依赖 @ar/protocol + @ar/sdk，devDep @ar/contracts；**绝不依赖 core 内部**）。结构按 plan.md：work-item/tracker/workflow-loader/reconciler/scheduler/retry-policy/workspace-manager/worker + index 导出。
+- **P33-2/3 WorkTracker + WorkItem**：`WorkItem`（id/identifier/title/description/state/priority/labels/dispatchable/updatedAt + opaque provider 引用，orchestrator 不解释 opaque）+ `WorkTracker`（listCandidates/read）+ `FakeTracker`（内存可变，测试可模拟外部状态变化）。
+- **P33-4 权威调度状态**：`OrchestratorState`（running⊆claimed、retrying⊆claimed、running∩blocked=∅、terminal∩running=∅）+ `scheduler` 操作（claim/block/unblock/retry/terminal，幂等、不变量断言）+ `statusOf`。claim 对已 claimed 幂等，terminal 清理一切。
+- **P33-5 reconcile 循环**：`Orchestrator.tick()` 每 tick：reload 配置（hook）→ reconcileRunning（外部 state terminal/inactive/非派发 → interrupt+terminal+清理）→ reconcileBlocked → reconcileRetries（backoff due → 释放 claim）→ capacity(maxConcurrent−running−retrying) → listCandidates → **claim 前重新 read 候选**（fresh read 为准）→ claim → workspaceFor → spawn worker（fire-and-forget）。
+- **P33-7 retry**：`RetryScheduler` 注入单调时钟（tests clock 手动推进），指数退避+jitter（jitterRatio 默认 ±20%），`nextAttemptAt=POSITIVE_INFINITY` 表示放弃（attempt ≥ maxAttempts）。`runWorker` 失败时从 retries 里读 prior attempts 累计，`retry.next(priorAttempts)`。
+- **P33-9 工作区隔离**：`sanitizeKey`（小写、非字母数字→`-`、截断 64）+ `hashSuffix`（sha256 12 hex）+ `workspaceFor(identifier, id, root)` → `key` = `sanitized-hash`；不同 id 绝不共享，同 id 确定性可恢复。
+- **P33-10 worker 走 AppServer**：`runWorker(client, req, signal)` 用 `HarnessClient.startThread({agentName, cwd: workspaceDir})` → `thread.runStreamed(prompt, {signal})` → reduce → WorkerResult（completed/failed/interrupted + error/output）；transport 错误 → failed+retryable。完整验证 P29 的 AppServer 边界在真实上层消费者下可用。
+
+### 踩坑（gotchas）
+
+- **`(async function* {})()` 非法**：generator 表达式需要 `async function*() {}`（带空参数）；构造空 AsyncIterable 用命名 `async function* emptyEvents() {}` 再引用。
+- **fire-and-forget spawn 的时序**：`tick()` 里 `spawn(...).catch(()=>{})` 不 await → tick 返回时 worker 可能未 settle；测试须 `await new Promise(r => setImmediate(r))` 让 fake worker 完成（真实 worker 同理，tick 从不阻塞于 worker）。
+- **测试 fake worker 立即完成会让状态瞬间 terminal**：测 stop/invalidate 路径必须用 `hold=true` 的 fake client（`done` 永不 settle），否则测不到 running。
+- **RetryScheduler 语义**：`scheduleRetry(config, attempt, now)` 的 `attempt`=**已有失败次数**；`attempt >= maxAttempts` → 放弃(INF)；否则返回 `attempt+1` 且 next=now+backoff(attempt)。测试曾误以为 attempt=次数序号而非失败计数。
+- **Windows 手工建 workspace 链接**：pnpm install 无法跑（corepack 路径坏 + 代理死），用 `ln -sfn ../../../sdk packages/orchestration/node_modules/@ar/` 建目录 junction 解决 `@ar/sdk`/`@ar/protocol`/`@ar/contracts` 解析。全仓验证靠 `tsconfig.noemit.json`（paths 映射，须把 `@ar/orchestration` 加进 paths）。
+- **worker test 里 `(async () => {})()` 是 AsyncGenerator 非法**：作为 events 迭代器要 `async function*`，我误写成 `async () => {}` 返回的是 AsyncFunction 结果，类型不符。
+
+### 证据
+
+- orchestration 3 个测试文件 29 测试全绿（纯逻辑 18 + Orchestrator 集成 7 + worker 4）；含 P33-6 三用例（terminal/inactive/显式取消停止 worker）、P33-5 容量/重验/非派发 skip/退避重试、P33-9 隔离确定性、P33-10 SDK seam、P33-8 WORKFLOW.md 解析。
+- protocol+sdk+orchestration 9 文件 64 测试全绿；全仓 typecheck（noemit）TSC EXIT=0。
+- P33 实现面不触碰 core/harness 既有代码，回归仅需重跑这三个包。

@@ -232,6 +232,110 @@ function makeGateway(
   return { store, events, approvalStore, runtime, rpc, gateway, channels, provider, clock };
 }
 
+// ---------------------------------------------------------------------------
+// P29 — App Server protocol adapter tests (thin wire layer over the same
+// runtime deps as the Gateway).
+// ---------------------------------------------------------------------------
+import { AppServer } from "./app-server.js";
+
+describe("P29 AppServer (wire adapter)", () => {
+  function makeAppServer() {
+    const h = makeGateway();
+    const sessionService = new SessionService({ store: h.store });
+    const server = new AppServer({
+      runtime: h.runtime,
+      sessions: new DefaultLoadedSessionManager({ runtime: h.runtime, store: h.store }),
+      sessionService,
+      approvalStore: h.approvalStore,
+      events: h.events,
+      listAgents: () => [AGENT],
+      ingressCapacity: 2,
+    });
+    return { server, store: h.store };
+  }
+
+  it("requires initialize before mutating methods", async () => {
+    const { server } = makeAppServer();
+    const res = await server.invoke("thread/start", { agentName: "x", cwd: "/tmp" });
+    expect(res.error?.code).toBe("NOT_INITIALIZED");
+    expect(res.error?.retryable).toBe(false);
+  });
+
+  it("initialize returns protocol version + server info + capabilities", async () => {
+    const { server } = makeAppServer();
+    const res = await server.invoke("initialize", {
+      clientInfo: { name: "cli", version: "1.0.0" },
+      capabilities: { streamingItems: true },
+    });
+    expect(res.result).toMatchObject({
+      protocolVersion: "1",
+      serverInfo: { name: "harness-app-server" },
+      capabilities: { streamingItems: true, approvalForms: false },
+    });
+  });
+
+  it("rejects repeated initialize with ALREADY_INITIALIZED", async () => {
+    const { server } = makeAppServer();
+    await server.invoke("initialize", { clientInfo: { name: "cli", version: "1" } });
+    const res = await server.invoke("initialize", { clientInfo: { name: "cli", version: "1" } });
+    expect(res.error?.code).toBe("ALREADY_INITIALIZED");
+  });
+
+  it("thread/start creates a session via the runtime", async () => {
+    const { server, store } = makeAppServer();
+    await server.invoke("initialize", { clientInfo: { name: "cli", version: "1" } });
+    const res = await server.invoke("thread/start", { agentName: AGENT.name, cwd: "C:\\work" });
+    expect(res.error).toBeUndefined();
+    const sessions = await store.listSessions();
+    expect(sessions.length).toBe(1);
+    expect(sessions[0]?.agentId).toBe(AGENT.id);
+  });
+
+  it("bounded ingress capacity=2: third concurrent call rejects fast with SERVER_OVERLOADED", async () => {
+    const { server } = makeAppServer();
+    await server.invoke("initialize", { clientInfo: { name: "cli", version: "1" } });
+    const q = (
+      server as unknown as {
+        ingress: { submit: (w: () => Promise<unknown>) => Promise<unknown>; pendingCount: number };
+      }
+    ).ingress;
+    let release1!: () => void;
+    const g1 = new Promise<void>((r) => {
+      release1 = r;
+    });
+    const slow1 = q.submit(async () => {
+      await g1;
+      return "slow1";
+    });
+    const slow2 = q.submit(async () => "slow2");
+    const rejected = q.submit(async () => "slow3").catch((e) => e as Error);
+    expect(((await rejected) as Error).message).toContain("saturated");
+    release1();
+    expect(await slow1).toBe("slow1");
+    expect(await slow2).toBe("slow2");
+    expect(q.pendingCount).toBe(0);
+  });
+
+  it("idempotency key replays the result instead of re-running", async () => {
+    const { server, store } = makeAppServer();
+    await server.invoke("initialize", { clientInfo: { name: "cli", version: "1" } });
+    const params = { agentName: AGENT.name, cwd: "C:\\work", idempotencyKey: "k-thread-1" };
+    const first = await server.invoke("thread/start", params);
+    const before = (await store.listSessions()).length;
+    const second = await server.invoke("thread/start", params);
+    expect(second.result).toEqual(first.result);
+    expect((await store.listSessions()).length).toBe(before);
+  });
+
+  it("unknown method fails closed", async () => {
+    const { server } = makeAppServer();
+    await server.invoke("initialize", { clientInfo: { name: "cli", version: "1" } });
+    const res = await server.invoke("nope/nowhere", {});
+    expect(res.error?.code).toBe("INTERNAL_ERROR");
+    expect(res.error?.retryable).toBe(false);
+  });
+});
+
 const gateways: Gateway[] = [];
 
 afterEach(async () => {

@@ -1,8 +1,7 @@
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import type { ModelProvider, ModelRef, PermissionPolicy } from "@ar/contracts";
-import { createHarness } from "@ar/harness";
-import { defaultSandboxPolicy } from "@ar/core";
+import { createHarness, defaultSandboxPolicy } from "@ar/harness";
 import { createRuntimeRpc, InMemoryTransport } from "@ar/gateway";
 import {
   createProductionTools,
@@ -144,8 +143,8 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
     events: harness.events,
     sessionService: harness.sessionService,
     approvalStore: harness.approvalStore,
-    runtime: harness.runtime,
     introspection: harness.introspect(),
+    resolvedConfig: harness.resolvedConfig,
     ...(harness.candidates !== undefined ? { candidates: harness.candidates } : {}),
     ...(harness.memoryStore !== undefined ? { memoryStore: harness.memoryStore } : {}),
     ...(harness.askUserStore !== undefined ? { askUserStore: harness.askUserStore } : {}),

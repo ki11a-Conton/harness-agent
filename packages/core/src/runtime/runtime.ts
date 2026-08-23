@@ -25,7 +25,6 @@ import type {
   ToolOrchestrator,
   ToolResult,
   ToolSemantics,
-  ToolSpec,
   Turn,
   TurnId,
   UserMessage,
@@ -38,6 +37,7 @@ import {
   DEFAULT_TOOL_SEMANTICS,
   EFFECTIVE_AGENT_SNAPSHOT_KEY,
   RUNTIME_POLICY_SNAPSHOT_KEY,
+  buildSkillSnapshot,
   computeArgsHash,
   errorInfo,
   isToolAllowedByPolicy,
@@ -69,7 +69,6 @@ import type {
   RecoveryAction,
   RecoveryDecision,
   RecoveryInput,
-  StepContext,
   StepExecutionSnapshot,
   TurnExecutionState,
   AskUserRequest,
@@ -285,10 +284,11 @@ export interface AgentRuntimeDeps {
    *  → body on demand). Receives the metadata rows; returns the subset to
    *  inject. Discovery events still cover every skill. Default: identity. */
   skillSelector?: (entries: SkillIndexEntry[]) => SkillIndexEntry[];
-  /** LOOP-001: tool specs advertised to the model (default: none). */
-  toolSpecs?: readonly ToolSpec[];
   /** P23-1: the mutable process tool catalog. READ ONCE at step snapshot
-   *  build time to freeze the step's tool world; never consulted mid-step. */
+   *  build time to freeze the step's tool world; never consulted mid-step.
+   *  (P35-1: the pre-P23 `toolSpecs` advertisement dep is GONE — the only
+   *  tool-world input left is this catalog, so there is exactly ONE decision
+   *  source for the frozen step router.) */
   toolRegistry?: StepToolCatalog;
   /** P18-2 deferred advertisement policy — applied at step freeze so the
    *  model-visible advertised set (stubs included) is the frozen step's. */
@@ -297,8 +297,13 @@ export interface AgentRuntimeDeps {
   permissiveToolResolution?: boolean;
   /** P24-5: resolve the MCP servers THIS step needs (lazy). The provider
    *  returns an immutable McpBindingSnapshot whose tools are frozen into the
-   *  step router; a later refresh can only affect NEW steps. */
-  mcpBindingProvider?: (input: { goal: string }) => Promise<import("@ar/contracts").McpBindingSnapshot | undefined>;
+   *  step router; a later refresh can only affect NEW steps. P32-4: selected
+   *  skills may declare `mcpServers` — the provider forwards them to the
+   *  dependency resolver so the step's MCP world includes skill requirements. */
+  mcpBindingProvider?: (input: {
+    goal: string;
+    selectedSkills?: readonly { name: string; requiredMcpServers?: readonly string[] }[];
+  }) => Promise<import("@ar/contracts").McpBindingSnapshot | undefined>;
   /** P7-1/P7-2: progressive tool disclosure — narrows the advertised tool
    *  schemas per goal (deterministic champion). Absent → identity (all). */
   toolSelector?: ToolSelector;
@@ -472,12 +477,13 @@ export class AgentRuntime {
   private readonly durabilityFence?: AgentRuntimeDeps["durabilityFence"];
   /** P3-9: host-provided specialist delegation for adaptive recovery. */
   private readonly delegateSpecialist?: AgentRuntimeDeps["delegateSpecialist"];
-  /** P23-3: toolSpecs removed — advertisement is frozen per-step from the
-   *  catalog; AgentRuntimeDeps.toolSpecs is deprecated and ignored. */
+  /** P23-3/P35-1: the frozen step router is the ONLY tool-world authority —
+   *  advertisement and execution both consume the step snapshot; the catalog
+   *  is read once at snapshot build time and never consulted mid-step. */
   private readonly toolRegistry?: StepToolCatalog;
   private readonly schemaAdvertPolicy?: import("@ar/contracts").SchemaAdvertPolicy;
   private readonly permissiveToolResolution?: boolean;
-  private readonly mcpBindingProvider?: (input: { goal: string }) => Promise<import("@ar/contracts").McpBindingSnapshot | undefined>;
+  private readonly mcpBindingProvider?: (input: { goal: string; selectedSkills?: readonly { name: string; requiredMcpServers?: readonly string[] }[] }) => Promise<import("@ar/contracts").McpBindingSnapshot | undefined>;
   private readonly toolSelector?: ToolSelector;
   private readonly changedPathsProvider?: () => readonly string[];
   private readonly baselineFilesProvider?: () => readonly string[];
@@ -982,7 +988,16 @@ export class AgentRuntime {
         // P15-2: form the immutable StepContext BEFORE the model call. Every
         // tool call this model response requests will reuse THIS step, so a
         // mid-step config/policy change cannot affect the batch.
-        const step = await this.buildStepContext(ctx, stepIndex, priorBlocks, system, digestAppended || overflowAttempt > 0, history, working.goal);
+        // P32-1/P32-3: the selected skill world + instruction sources of THIS
+        // context build are pinned into the step (skills snapshot + sources
+        // fingerprint); skill-declared MCP servers feed the step's MCP world.
+        const step = await this.buildStepContext(
+          ctx, stepIndex, priorBlocks, system, digestAppended || overflowAttempt > 0, history, working.goal,
+          {
+            selectedSkills: ctxUpdate.selectedSkills,
+            instructionSources: ctxUpdate.instructionSources,
+          },
+        );
         stepIndex += 1;
         const modelResult = await this.modelCallController.callModelWithRetry(
           ctx, client, history, system, working, state, toolLedger, lastReportTokens, reactiveCompacted, budget, step,
@@ -1177,10 +1192,24 @@ export class AgentRuntime {
     compacted: boolean,
     history: readonly import("@ar/contracts").Message[],
     goal: string,
+    opts: {
+      /** P32-1/P32-4: skills selected for THIS step (from the context build).
+       *  Their identities + MCP requirements are frozen into the step. */
+      selectedSkills?: import("@ar/contracts").SkillSnapshot["selected"];
+      /** P32-3: exact instruction sources (system + AGENTS.md docs). */
+      instructionSources?: readonly import("@ar/contracts").InstructionSource[];
+    } = {},
   ): Promise<StepExecutionSnapshot> {
-    // P24-5: resolve the MCP world THIS step needs (lazy connect) and freeze
-    // its tools into the router — a refresh mid-run only affects NEW steps.
-    const mcpBinding = await this.mcpBindingProvider?.({ goal });
+    // P24-5/P32-4: resolve the MCP world THIS step needs — goal mentions PLUS
+    // declared requirements of the selected skills (lazy connect). A refresh
+    // mid-run only affects NEW steps.
+    const mcpBinding = await this.mcpBindingProvider?.({
+      goal,
+      selectedSkills: opts.selectedSkills?.map((s) => ({
+        name: s.name,
+        requiredMcpServers: s.requiredMcpServers ?? [],
+      })),
+    });
     const mcpExtra: readonly import("@ar/contracts").FrozenToolBinding[] = (mcpBinding?.tools ?? []).map((t) => ({
       name: t.toolName,
       spec: { name: t.toolName, description: t.definition.description, inputSchema: { type: "object" } as never },
@@ -1188,8 +1217,16 @@ export class AgentRuntime {
       semantics: { retrySafety: "unknown", concurrencySafety: true, cancellable: true, readOnly: false, idempotent: false, sideEffectScope: "unknown", networkBehavior: "outbound", outputSensitivity: "high", requiresApproval: true } as never,
       provenance: { kind: "mcp", sourceId: t.serverId, generation: t.generation },
     }));
+    // P32-1: the selected skill world is frozen into the step — a body edit /
+    // selection change mid-run can only affect the NEXT step.
+    const skillsSnapshot =
+      opts.selectedSkills !== undefined && opts.selectedSkills.length > 0
+        ? buildSkillSnapshot(opts.selectedSkills)
+        : undefined;
     return buildStepExecutionSnapshot({
       ...mcpExtra.length > 0 ? { extraBindings: mcpExtra } : {},
+      ...(skillsSnapshot !== undefined ? { skills: skillsSnapshot } : {}),
+      ...(opts.instructionSources !== undefined ? { instructionSources: opts.instructionSources } : {}),
       sessionId: ctx.sessionId,
       turnId: ctx.turnId,
       agent: ctx.agent,

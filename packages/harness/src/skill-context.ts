@@ -39,6 +39,12 @@ export interface SkillBodyBlockProviderDeps {
   /** P14-4: fired when a selected skill is denied because its requiredTools
    *  exceed the host tool policy (typed denial, never silent). */
   onRequiredToolsDenied?: (event: SkillSecurityDenial) => void;
+  /** P32-2: cache identity — the skill discovery/body caches are keyed by
+   *  this string so a same-cwd host with DIFFERENT enabled/disabled skill
+   *  config (or plugin/config fingerprint) never leaks selections across
+   *  harnesses. Absent → caches are keyed by skill name only (legacy single-
+   *  harness behavior). */
+  cacheKey?: string;
 }
 
 export interface SkillBodyBlockProvider {
@@ -74,6 +80,12 @@ export function createSkillBodyBlockProvider(deps: SkillBodyBlockProviderDeps): 
   // Process-level caches: discovery is a disk scan and bodies are large — a
   // long turn builds context many times, so re-scan/re-read per build would
   // be wasteful. Bodies are stable per process (skills are files).
+  //
+  // P32-2: cache key = `${cacheKey}:${name}` — a same-cwd harness with a
+  // different enabled/disabled skill config MUST NOT reuse another harness's
+  // body cache (cross-session leakage). When cacheKey is absent (legacy),
+  // keys stay name-only.
+  const cachePrefix = deps.cacheKey !== undefined ? `${deps.cacheKey}:` : "";
   let discoveredSkills: Skill[] | undefined;
   const bodyCache = new Map<string, string>();
   const ensureSkills = async (): Promise<Skill[] | undefined> => {
@@ -97,7 +109,8 @@ export function createSkillBodyBlockProvider(deps: SkillBodyBlockProviderDeps): 
           deps.onRequiredToolsDenied?.(requiredToolsDenial(skill, required));
           continue;
         }
-        let body = bodyCache.get(name);
+        const cacheName = `${cachePrefix}${name}`;
+        let body = bodyCache.get(cacheName);
         if (body === undefined) {
           let loaded: Skill;
           try {
@@ -107,7 +120,7 @@ export function createSkillBodyBlockProvider(deps: SkillBodyBlockProviderDeps): 
           }
           body = loaded.body ?? "";
           if (body === "") continue;
-          bodyCache.set(name, body);
+          bodyCache.set(cacheName, body);
         }
         blocks.push({
           id: `${SKILL_BODY_PREFIX}${name}`,

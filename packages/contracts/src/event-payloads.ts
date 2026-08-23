@@ -174,6 +174,8 @@ export interface ModelStartedPayload {
    *  the transcript. */
   contextMessageIds?: string[];
   contextBlockIds?: string[];
+  /** P32-1: the skill world identity when skills were pinned to this step. */
+  skillSnapshotFingerprint?: string;
 }
 
 /** model.failed — a model call failed terminally. */

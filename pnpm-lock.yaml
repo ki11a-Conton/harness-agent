@@ -198,6 +198,9 @@ importers:
       '@ar/core':
         specifier: workspace:*
         version: link:../core
+      '@ar/protocol':
+        specifier: workspace:*
+        version: link:../protocol
       '@ar/security':
         specifier: workspace:*
         version: link:../security
@@ -323,6 +326,22 @@ importers:
       '@ar/security':
         specifier: workspace:*
         version: link:../security
+
+  packages/protocol:
+    dependencies:
+      '@ar/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+
+  packages/sdk:
+    dependencies:
+      '@ar/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@ar/contracts':
+        specifier: workspace:*
+        version: link:../contracts
 
   packages/security:
     dependencies:
@@ -781,6 +800,7 @@ packages:
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   lightningcss-linux-arm64-musl@1.33.0:
     resolution: {integrity: sha512-yiO5ROMuYQgXbC60yjZU5CYSFZGKXL0HFATXt9mHJn1+zW55oCtMI9NfcVhYLMFDL7gV7oBPon/EmMMGg2OvtQ==}

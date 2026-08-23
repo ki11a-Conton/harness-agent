@@ -3,6 +3,7 @@ export * from "./permission.js";
 export * from "./sandbox.js";
 export * from "./canonical-path.js";
 export * from "./approval.js";
+export * from "./approval-capability.js";
 export * from "./permission-grant.js";
 export * from "./capability-guard.js";
 export * from "./boundary-guard.js";

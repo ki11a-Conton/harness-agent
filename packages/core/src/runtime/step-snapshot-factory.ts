@@ -3,13 +3,17 @@ import {
   isToolAllowedByPolicy,
   snapshotEffectiveConfig,
   stableFingerprint,
+  buildLocalEnvironmentSnapshot,
   type AgentDefinition,
   type ContextBlock,
+  type EnvironmentSnapshot,
   type FrozenToolBinding,
+  type InstructionSource,
   type Message,
   type PermissionProfileSnapshot,
   type SandboxPolicy,
   type SessionId,
+  type SkillSnapshot,
   type StepExecutionSnapshot,
   type StepRecord,
   type ToolSemantics,
@@ -59,6 +63,17 @@ export interface StepSnapshotBuildInput {
    *  inert bindings. Production never sets this (strict TOOL_NOT_IN_STEP). */
   permissive?: boolean;
   sandboxPolicy?: SandboxPolicy;
+  /** P31-3 — pre-built environment snapshot (id + cwd + roots + shell). When
+   *  omitted, a deterministic LOCAL snapshot is built from `cwd`. Tool
+   *  execution and fingerprinting use this snapshot, never live state. */
+  environment?: EnvironmentSnapshot;
+  /** P32-1 — the skills selected for this step (identity + body hash +
+   *  required tools / MCP servers). Fingerprinted into StepRecord. */
+  skills?: SkillSnapshot;
+  /** P32-3 — explicit instruction sources (system prompt + AGENTS.md docs +
+   *  skill bodies) assembled by the caller. When omitted (legacy callers),
+   *  the sources default to a single `system` source over `system`. */
+  instructionSources?: readonly InstructionSource[];
   now: () => number;
 }
 
@@ -140,8 +155,33 @@ export function buildStepExecutionSnapshot(input: StepSnapshotBuildInput): StepE
     permissions: agent.permissions,
     sandbox: sandboxPolicy,
   });
-  const environmentFingerprint = stableFingerprint([cwd]);
-  const instructionFingerprint = stableFingerprint([system]);
+  // P31-3: environment identity is the full snapshot fingerprint (id+shell+
+  // roots+capabilities), not a naked cwd hash. A changed shell / workspace set
+  // / capability set now correctly re-fingerprints the step.
+  const environment: EnvironmentSnapshot =
+    input.environment ??
+    buildLocalEnvironmentSnapshot({
+      cwd,
+      shell: "local-default",
+      env: undefined,
+      permissionsFingerprint: policyFingerprint,
+    });
+  const environmentFingerprint = environment.fingerprint;
+
+  // P32-3 — instruction world identity: explicit sources (system + AGENTS.md
+  // + skill bodies). A changed document mid-run re-fingerprints the NEXT
+  // step; the current step's instructionFingerprint is immutable.
+  const sources: readonly InstructionSource[] =
+    input.instructionSources ??
+    [{ kind: "system", source: "system", contentHash: stableFingerprint([system]) }];
+  const instructionFingerprint = stableFingerprint([
+    sources.map((s) => ({ kind: s.kind, source: s.source, contentHash: s.contentHash, ...(s.path !== undefined ? { path: s.path } : {}) })),
+    system,
+  ]);
+
+  // P32-1 — skill identity rides the durable record when skills are pinned.
+  const skillSnapshotFingerprint = input.skills?.fingerprint;
+
   const contextFingerprint = stableFingerprint([
     history.map((m) => m.id),
     priorBlocks.map((b) => b.id),
@@ -159,6 +199,7 @@ export function buildStepExecutionSnapshot(input: StepSnapshotBuildInput): StepE
     environmentFingerprint,
     contextFingerprint,
     instructionFingerprint,
+    ...(skillSnapshotFingerprint !== undefined ? { skillSnapshotFingerprint } : {}),
     createdAt: now(),
   };
 
@@ -174,10 +215,7 @@ export function buildStepExecutionSnapshot(input: StepSnapshotBuildInput): StepE
   return {
     record,
     agent: effectiveAgent,
-    environment: {
-      cwd,
-      workspaceRoots: [cwd],
-    },
+    environment,
     permissions,
     tools: router,
     model: agent.model,
@@ -189,7 +227,13 @@ export function buildStepExecutionSnapshot(input: StepSnapshotBuildInput): StepE
       estimatedTokens: Math.ceil(Buffer.byteLength(system, "utf8") / 4),
       compacted,
     },
-    instructions: { system, systemHash },
+    instructions: {
+      system,
+      systemHash,
+      sources,
+      fingerprint: instructionFingerprint,
+    },
+    ...(skillSnapshotFingerprint !== undefined ? { skills: input.skills } : {}),
     advertised: {
       available,
       dropped,

@@ -10,9 +10,9 @@ import type {
   SessionStore,
 } from "@ar/contracts";
 import { AgentError } from "@ar/contracts";
-import type { AgentRuntime, TurnOutcome } from "@ar/core";
+import type { TurnOutcome } from "@ar/core";
 import type { RpcContext, AgentSummary } from "@ar/gateway";
-import type { HarnessIntrospection, LearningCandidateStore } from "@ar/harness";
+import type { HarnessConfig, HarnessIntrospection, LearningCandidateStore, ResolvedConfig } from "@ar/harness";
 import type { SessionService } from "@ar/session";
 import type { DoctorDeps } from "./doctor.js";
 import { runChecks } from "./doctor.js";
@@ -27,6 +27,7 @@ import { collectReleaseArtifacts, renderReleaseArtifacts } from "./release-artif
 import { learnCmd } from "./learn-command.js";
 import { explainCmd } from "./explain-command.js";
 import { recoverListCmd } from "./recover-command.js";
+import { configExplainCmd } from "./config-command.js";
 
 /** Minimal RPC client surface (InMemoryTransport matches structurally). */
 export interface RpcClient {
@@ -43,7 +44,6 @@ export interface CommandDeps {
   events: EventStore;
   sessionService: SessionService;
   approvalStore: ApprovalStore;
-  runtime: AgentRuntime;
   doctor: DoctorDeps;
   /** Host wiring facts reported by the composition root (P0-1 audit). */
   introspection: HarnessIntrospection;
@@ -55,6 +55,9 @@ export interface CommandDeps {
   askUserStore?: import("@ar/contracts").AskUserStore;
   /** P12-3: durable checkpoint store (unfinished checkpoints recovery scan). */
   checkpointStore?: import("@ar/contracts").CheckpointStore;
+  /** P27-2/5: the resolved config stack (layers + per-key origins +
+   *  fingerprint) for `agent config explain`. */
+  resolvedConfig?: ResolvedConfig<HarnessConfig>;
 }
 
 export interface CommandResult {
@@ -86,6 +89,7 @@ commands:
   production-audit                 P22-3 final production audit (silent catch / as never / path gates / retry / isolation)
   release artifacts [--out <dir>]  P22-4 collect release artifacts (reports/coverage/CI/benchmark/paired/matrix/manifest)
   recover list                         startup recovery scan — unfinished sessions/approvals/asks/orphans (P12-3)
+  config explain [key]                explain effective config: per-key origin + lifecycle, no secrets (P27-5)
   learn candidates|evaluate <id>|promote <id>|reevaluate
                                     learning-candidate lifecycle — reflection queues, explicit promotion only (P2-7)`;
 
@@ -189,6 +193,15 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
         candidates: deps.candidates,
         ...(deps.memoryStore !== undefined ? { memoryStore: deps.memoryStore } : {}),
       });
+    case "config": {
+      if (rest[0] !== "explain") {
+        return { exitCode: 1, lines: ["usage: agent config explain [key]", "", USAGE] };
+      }
+      if (deps.resolvedConfig === undefined) {
+        return { exitCode: 1, lines: ["config explain: no resolved config wired (host did not expose it)"] };
+      }
+      return configExplainCmd(rest[1], { resolvedConfig: deps.resolvedConfig });
+    }
     default:
       return { exitCode: 1, lines: [`unknown command: ${command ?? "(none)"}`, "", USAGE] };
   }

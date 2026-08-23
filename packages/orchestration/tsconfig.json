@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "../../node_modules/.cache/tsbuildinfo/orchestration.tsbuildinfo"
+  },
+  "include": ["src"],
+  "references": [{ "path": "../protocol" }, { "path": "../contracts" }, { "path": "../sdk" }]
+}

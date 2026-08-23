@@ -94,7 +94,6 @@ describe("P0-3: createDefaultDeps via the @ar/harness composition root", () => {
 
   it("exposes the harness runtime surface: agents and tools over the RPC", async () => {
     const deps = await createDefaultDeps({ provider: fakeProvider() });
-    expect(deps.runtime).toBeDefined();
     expect(deps.sessionService).toBeDefined();
     expect(deps.store).toBeDefined();
     expect(deps.events).toBeDefined();

@@ -26,6 +26,7 @@ export const ERROR_CODES = [
   "SESSION_BUSY",
   "TOOL_COLLISION",
   "TOOL_NOT_IN_STEP",
+  "CONFIG_DRIFT_REJECTED",
   "INTERNAL_ERROR",
 ] as const;
 
@@ -73,6 +74,7 @@ export const ERROR_DEFAULT_MESSAGES: Record<ErrorCode, string> = {
   SESSION_BUSY: "Session already has an active turn",
   TOOL_COLLISION: "Two tool sources produce the same model-visible name",
   TOOL_NOT_IN_STEP: "Tool is not present in the step frozen tool router",
+  CONFIG_DRIFT_REJECTED: "Session config drift rejected (restart required or frozen key changed)",
   INTERNAL_ERROR: "Internal error",
 };
 
@@ -105,6 +107,7 @@ export const ERROR_RETRY_DEFAULTS: Record<ErrorCode, { retryable: boolean; safeT
   SESSION_BUSY: { retryable: false, safeToRetry: false },
   TOOL_COLLISION: { retryable: false, safeToRetry: false },
   TOOL_NOT_IN_STEP: { retryable: false, safeToRetry: false },
+  CONFIG_DRIFT_REJECTED: { retryable: false, safeToRetry: false },
   INTERNAL_ERROR: { retryable: false, safeToRetry: false },
 };
 

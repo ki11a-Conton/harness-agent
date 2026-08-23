@@ -4,6 +4,7 @@ export * from "./lifecycle/hooks.js";
 export * from "./runtime/runtime.js";
 export * from "./runtime/session-actor.js";
 export * from "./runtime/artifact-store.js";
+export * from "./runtime/local-environment-manager.js";
 export * from "./verification/runtime-verifier.js";
 export * from "./recovery/recovery.js";
 export { DeterministicToolSelector, NoopToolSelector } from "./tools/tool-selector.js";

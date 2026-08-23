@@ -226,7 +226,6 @@ function makeDeps(opts: { provider?: ModelProvider } = {}) {
     events,
     sessionService,
     approvalStore,
-    runtime,
     introspection: {
       profile: "test",
       registeredTools: ["read_file", "write_file", "edit_file", "search_files", "exec"],

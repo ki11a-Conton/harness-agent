@@ -19,8 +19,14 @@ export interface ComposedMcp {
   resolver: McpDependencyResolver;
   /** Observed connection failures (serverId + error) for observability. */
   readonly failures: Array<{ serverId: string; error: unknown }>;
-  /** Lazy binding provider consumed by the runtime at step build. */
-  bindingProvider(input: { goal: string }): Promise<McpBindingSnapshot | undefined>;
+  /** Lazy binding provider consumed by the runtime at step build. P32-4: the
+   *  selected skills' declared MCP requirements are forwarded to the resolver,
+   *  so a step that selects a skill connecting `mcp:foo` also binds foo —
+   *  still lazily, never at process startup. */
+  bindingProvider(input: {
+    goal: string;
+    selectedSkills?: readonly { name: string; requiredMcpServers?: readonly string[] }[];
+  }): Promise<McpBindingSnapshot | undefined>;
   /** Close every connected generation (no orphan stdio children). */
   close(): Promise<void>;
   /** serverId → known tool names from currently ready generations. */
@@ -70,12 +76,16 @@ export function composeMcp(
       return out;
     },
     async bindingProvider(input) {
-      // resolve which servers THIS step needs (mentions + requiredByDefault;
-      // explicit tool-name matching uses the current known tools)
+      // resolve which servers THIS step needs (mentions + requiredByDefault
+      // + selected skill/plugin declared requirements; explicit tool-name
+      // matching uses the current known tools)
       const needed = resolver.resolve({
         goal: input.goal,
         explicitToolNames: undefined,
-        selectedSkills: [],
+        selectedSkills: (input.selectedSkills ?? []).map((s) => ({
+          id: s.name,
+          mcpServers: s.requiredMcpServers ?? [],
+        })),
         selectedPlugins: [],
       });
       const neededServers = [...needed];

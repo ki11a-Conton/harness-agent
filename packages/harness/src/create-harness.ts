@@ -9,6 +9,8 @@ import { composeScheduler, composeDelegators } from "./compose/compose-delegatio
 import { introspectHarness, type IntrospectionInput } from "./compose/compose-observability.js";
 import { PRODUCTION_TOOL_NAMES } from "./tool-names.js";
 import {
+  AgentError,
+  errorInfo,
   fileConflictKey,
   newAgentId,
   newEventId,
@@ -98,6 +100,13 @@ import { createDelegationTools } from "./delegation-tools.js";
 import type { LearningCandidate } from "@ar/learning";
 import { DefaultChildWorkspaceManager } from "./workspace-manager.js";
 import { createVerificationPlanner } from "./verification-planner.js";
+import { resolveHarnessConfig, type ResolvedConfig } from "./config-resolver.js";
+import {
+  evaluateConfigDrift,
+  normalizeForComparison,
+  type DriftDecision,
+} from "./config-drift.js";
+import { explainConfig, type ConfigExplainResult } from "./config-explainer.js";
 
 /** Tool profile shared by every production harness — defined in tool-names.ts
  *  (P22-1). Re-exported for backward compatibility. */
@@ -152,9 +161,34 @@ export interface Harness {
   profile: HarnessProfile;
   config: HarnessConfig;
 
+  /**
+   * P27-2/4: the resolved config stack (layers + per-key origins +
+   * fingerprint) the harness was created with. Drift detection (P27-4)
+   * freezes the fingerprint per session and compares it on resume — the step
+   * snapshot is never silently mutated.
+   */
+  resolvedConfig: import("./config-resolver.js").ResolvedConfig<HarnessConfig>;
+
+  /** P27-4: freeze the current effective config fingerprint for a session
+   *  (stored via the existing durable state snapshot). */
+  freezeConfigFingerprint(sessionId: SessionId): Promise<void>;
+
+  /** P27-4: compare a session's frozen config against the current effective
+   *  config; returns a lifecycle-aware drift decision (fail-closed: a changed
+   *  session_frozen key with unknown direction → reject). */
+  checkSessionConfigDrift(sessionId: SessionId): Promise<import("./config-drift.js").DriftDecision>;
+
+  /** P27-2/5: explain config origins (redacted, no secrets). `key` = dotted
+   *  path (e.g. "sandboxPolicy.network"); omitted → whole config. */
+  configExplain(key?: string): import("./config-explainer.js").ConfigExplainResult;
+
   introspect(): HarnessIntrospection;
   close(): Promise<void>;
 }
+
+// P27-4: durable session snapshot keys for the frozen config fingerprint.
+const CONFIG_FP_KEY = "p27.configFingerprint";
+const CONFIG_VALUE_KEY = "p27.configValue";
 
 export const DEFAULT_MAIN_SYSTEM_PROMPT = [
   "You are the harness agent running inside a workspace.",
@@ -172,6 +206,13 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   const cwd = config.cwd;
   const dataDir = config.dataDir;
   if (dataDir !== undefined) await mkdir(dataDir, { recursive: true });
+
+  // P27-2: resolve the effective config stack (defaults → profile →
+  // runtime overrides) with per-key origins + fingerprint. The caller's
+  // `config` is the highest-precedence runtime layer — the resolved value
+  // is exactly what this harness uses (drift detection freezes it per
+  // session, P27-4).
+  const resolvedConfig = resolveHarnessConfig({ profile: config.profile, overrides: config });
 
   const preset = resolveProfile(config.profile);
   const features: HarnessFeatureFlags = resolveFeatureFlags(config.profile, config.featureFlags);
@@ -333,6 +374,11 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
       discover: async () => (await discoverSkills()).skills,
       dataDir,
       toolPolicy: skillToolPolicy,
+      // P32-2: cache identity includes the resolved config fingerprint + cwd
+      // so a same-cwd harness with different enabled/disabled skill config
+      // never reuses another harness's discovery/body cache (no cross-session
+      // skill leakage). Two harnesses with identical config share the cache.
+      cacheKey: `skill:${resolvedConfig.fingerprint}:${cwd}`,
       onRequiredToolsDenied: (event) => {
         pendingSkillSecurity.value.push({
           detection: event.detection,
@@ -601,12 +647,96 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   // P25-2: live session actors — the single owner of active turn state. The
   // actor enforces activeTurn ∈ {0,1} per session and routes steer/followup
   // through the durable inbox (P25-4/P25-5).
-  const sessions = new DefaultLoadedSessionManager({
+  const baseSessions = new DefaultLoadedSessionManager({
     runtime,
     store,
     ...(inbox !== undefined ? { inbox } : {}),
     ...(config.now !== undefined ? { now: config.now } : {}),
   });
+
+  // P27-4: freeze the CURRENT effective-config fingerprint for a session
+  // (stored via the existing durable state snapshot).
+  const freezeConfigFingerprint = async (sessionId: SessionId): Promise<void> => {
+    const prev = await store.loadStateSnapshot(sessionId);
+    await store.saveStateSnapshot(sessionId, {
+      ...(prev ?? {}),
+      [CONFIG_FP_KEY]: resolvedConfig.fingerprint,
+      [CONFIG_VALUE_KEY]: JSON.stringify(normalizeForComparison(resolvedConfig.value)),
+    });
+  };
+
+  // P27-4: compare a session's frozen config against the current effective
+  // config; returns a lifecycle-aware drift decision (fail-closed: a changed
+  // session_frozen key with unknown direction → reject).
+  const checkSessionConfigDrift = async (sessionId: SessionId): Promise<DriftDecision> => {
+    const snap = await store.loadStateSnapshot(sessionId);
+    const fp = snap?.[CONFIG_FP_KEY];
+    const valueJson = snap?.[CONFIG_VALUE_KEY];
+    if (typeof fp !== "string") {
+      // No frozen snapshot → nothing to compare (fresh session / legacy).
+      return {
+        severity: "none" as const,
+        changed: [],
+        frozenChanged: false,
+        fingerprint: { prev: "", next: resolvedConfig.fingerprint },
+      };
+    }
+    let prevValue: unknown;
+    try {
+      prevValue = valueJson !== undefined ? JSON.parse(valueJson as string) : undefined;
+    } catch {
+      prevValue = undefined;
+    }
+    const prevResolved: ResolvedConfig<HarnessConfig> = {
+      value: prevValue as HarnessConfig,
+      layers: [],
+      origins: new Map(),
+      fingerprint: fp,
+    };
+    return evaluateConfigDrift(prevResolved, resolvedConfig);
+  };
+
+  // P27-4: wire the config-drift gate into the ONE production session-load
+  // path (rpc/CLI/web all go through LoadedSessionManager.load). fail-closed:
+  // a drifted frozen key rejects the load; otherwise every successful load
+  // re-freezes the baseline for the next resume.
+  // NOTE: explicit delegation (not spread) — class methods live on the
+  // prototype and would be lost by object spread.
+  const sessions: LoadedSessionManager = {
+    load: async (id: SessionId) => {
+      const decision = await checkSessionConfigDrift(id);
+      if (decision.severity === "reject" || decision.severity === "restart_required") {
+        const names = decision.changed
+          .filter((c) => c.lifecycle === "process_static" || c.lifecycle === "session_frozen")
+          .map((c) => c.key);
+        await appendHarnessEvent(
+          id,
+          "policy.changed_on_resume",
+          {
+            contextPolicyChanged: true,
+            driftKeys: names,
+            severity: decision.severity,
+          },
+          {},
+        );
+        throw new AgentError(
+          errorInfo(
+            "CONFIG_DRIFT_REJECTED",
+            `session ${id} config drifted: ${names.join(", ")} (${decision.severity}); restart or new session required`,
+          ),
+        );
+      }
+      const actor = await baseSessions.load(id);
+      // Re-freeze after every successful load: the next resume compares
+      // against this load's effective config. (A fresh session has no frozen
+      // snapshot → the check above returns "none" and this becomes its baseline.)
+      await freezeConfigFingerprint(id);
+      return actor;
+    },
+    unload: (id: SessionId) => baseSessions.unload(id),
+    listLoaded: () => baseSessions.listLoaded(),
+    close: () => baseSessions.close(),
+  };
 
   const lifecycle = new Lifecycle();
   if (sqliteStore !== undefined) {
@@ -642,6 +772,11 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     context: { pipeline, budget, budgetFallback },
     profile: config.profile,
     config,
+    // P27-2/4/5: resolved config stack + per-session drift freeze/check.
+    resolvedConfig,
+    freezeConfigFingerprint,
+    checkSessionConfigDrift,
+    configExplain: (key?: string): ConfigExplainResult => explainConfig(resolvedConfig, key),
     introspect: () =>
       introspectHarness({
         profile: config.profile,

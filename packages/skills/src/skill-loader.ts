@@ -224,6 +224,10 @@ export class FileSkillLoader implements SkillLoader {
         description: headers.description ?? "",
         version: headers.version ?? "0.0.0",
         requiredTools: splitList(headers.requiredTools),
+        // P32-4: SKILL.md may declare required MCP servers (comma-separated
+        // `mcp:<serverId>` ids; both singular and plural spellings accepted).
+        requiredMcpServers:
+          splitList(headers.requiredMcpServer) ?? splitList(headers.requiredMcpServers) ?? undefined,
       },
       status: "discovered",
       body: undefined,

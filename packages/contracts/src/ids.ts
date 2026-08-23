@@ -23,6 +23,9 @@ export type ArtifactId = Branded<"ArtifactId">;
 export type AskId = Branded<"AskId">;
 export type ModelCallId = Branded<"ModelCallId">;
 export type RepairId = Branded<"RepairId">;
+/** P31-1 — identity of an execution environment (local: deterministic per
+ *  cwd+workspace set; remote: provider-assigned). */
+export type EnvironmentId = Branded<"EnvironmentId">;
 
 const PREFIXES: Record<string, string> = {
   session: "session_",

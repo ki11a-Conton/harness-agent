@@ -17,8 +17,12 @@ export type {
   RpcResponseMessage,
   RpcServer,
 } from "./transport.js";
+export { StdioTransport } from "./stdio-transport.js";
+export type { StdioRole, StdioTransportOptions } from "./stdio-transport.js";
 export { Gateway } from "./gateway.js";
 export type { GatewayDeps } from "./gateway.js";
+export { AppServer } from "./app-server.js";
+export type { AppServerOptions, AppServerInvokeResult } from "./app-server.js";
 export { DesktopClient } from "./desktop-client.js";
 export type { DesktopClientOptions } from "./desktop-client.js";
 export type { ChannelAdapter, ChannelMessage } from "./channel.js";

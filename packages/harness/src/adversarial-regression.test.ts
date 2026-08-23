@@ -88,8 +88,12 @@ describe("P14-7: adversarial regression pack", () => {
       mkdirSync(join(base, "ws"));
       mkdirSync(join(base, "outside"));
       writeFileSync(join(base, "outside", "secret.txt"), "x");
-      // ws/link -> outside: a target inside ws that escapes via symlink
-      symlinkSync(join(base, "outside"), join(base, "ws", "link"));
+      try {
+        // ws/link -> outside: a target inside ws that escapes via symlink
+        symlinkSync(join(base, "outside"), join(base, "ws", "link"));
+      } catch {
+        return; // symlink unsupported on this platform (e.g. EPERM in CI)
+      }
       const root = canonicalizePath(join(base, "ws"), { cwd: base });
       const target = canonicalizePath(join(base, "ws", "link", "secret.txt"), { cwd: base });
       // canonical form resolves to the REAL target outside the conferred root

@@ -1,0 +1,38 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "incremental": false,
+    "noEmit": true,
+    "tsBuildInfoFile": null,
+    "paths": {
+      "@ar/agents": ["./packages/agents/src/index.ts"],
+      "@ar/checkpoint": ["./packages/checkpoint/src/index.ts"],
+      "@ar/context": ["./packages/context/src/index.ts"],
+      "@ar/contracts": ["./packages/contracts/src/index.ts"],
+      "@ar/core": ["./packages/core/src/index.ts"],
+      "@ar/events": ["./packages/events/src/index.ts"],
+      "@ar/evaluation": ["./packages/evaluation/src/index.ts"],
+      "@ar/gateway": ["./packages/gateway/src/index.ts"],
+      "@ar/harness": ["./packages/harness/src/index.ts"],
+      "@ar/learning": ["./packages/learning/src/index.ts"],
+      "@ar/mcp": ["./packages/mcp/src/index.ts"],
+      "@ar/memory": ["./packages/memory/src/index.ts"],
+      "@ar/orchestration": ["./packages/orchestration/src/index.ts"],
+      "@ar/model": ["./packages/model/src/index.ts"],
+      "@ar/observability": ["./packages/observability/src/index.ts"],
+      "@ar/plugins": ["./packages/plugins/src/index.ts"],
+      "@ar/protocol": ["./packages/protocol/src/index.ts"],
+      "@ar/sdk": ["./packages/sdk/src/index.ts"],
+      "@ar/security": ["./packages/security/src/index.ts"],
+      "@ar/session": ["./packages/session/src/index.ts"],
+      "@ar/skills": ["./packages/skills/src/index.ts"],
+      "@ar/store": ["./packages/store/src/index.ts"],
+      "@ar/store-integrity": ["./packages/store-integrity/src/index.ts"],
+      "@ar/tools": ["./packages/tools/src/index.ts"]
+    }
+  },
+  "include": ["packages/*/src/**/*.ts", "apps/*/src/**/*.ts"]
+}

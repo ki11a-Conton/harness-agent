@@ -416,6 +416,10 @@ export class ModelCallController {
                 // transcript text itself.
                 contextMessageIds: [...step.context.messageIds],
                 contextBlockIds: [...step.context.blockIds],
+                // P32-1: the skill world identity when skills are pinned.
+                ...(step.record.skillSnapshotFingerprint !== undefined
+                  ? { skillSnapshotFingerprint: step.record.skillSnapshotFingerprint }
+                  : {}),
               }
             : {}),
         },

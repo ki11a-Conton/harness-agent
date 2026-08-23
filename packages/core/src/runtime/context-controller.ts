@@ -16,7 +16,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { errorInfo, newArtifactId, newMessageId } from "@ar/contracts";
+import { errorInfo, newArtifactId, newMessageId, stableFingerprint } from "@ar/contracts";
 import type {
   AgentDefinition,
   AgentEvent,
@@ -63,7 +63,7 @@ import type {
 /** Q-1: result of buildContext — either proceed with updated context state
  *  or finish the turn on overflow. */
 export type ContextUpdate =
-  | { action: "proceed"; history: Message[]; system: string; lastReportTokens: number | undefined; digestAppended: boolean; overflowAttempt: number }
+  | { action: "proceed"; history: Message[]; system: string; lastReportTokens: number | undefined; digestAppended: boolean; overflowAttempt: number; selectedSkills?: import("@ar/contracts").SkillSnapshot["selected"]; instructionSources?: readonly import("@ar/contracts").InstructionSource[] }
   | { action: "finish"; outcome: TurnOutcome };
 
 /** Q-1: everything ContextController needs from the runtime. All fields are
@@ -149,6 +149,12 @@ export class ContextController {
   ): Promise<ContextUpdate> {
     const { sessionId, turnId, session } = ctx;
     let system = agent.systemPrompt;
+    // P32-1/P32-3: step-witness values — the selected skill manifest-of
+    // record and the instruction sources (system + AGENTS.md) assembled from
+    // this build. Populated inside the context branch; undefined when the
+    // host runs without a context pipeline.
+    let skillSnapshotEntries: import("@ar/contracts").SkillSnapshot["selected"] | undefined;
+    let instructionSources: readonly import("@ar/contracts").InstructionSource[] | undefined;
 
         if (this.deps.context !== undefined) {
           // Task 3: skill index — awaited once per build; provider errors
@@ -156,6 +162,12 @@ export class ContextController {
           // provider may additionally report rejected skills.
           const disco = this.deps.skills !== undefined ? await this.deps.skills() : undefined;
           const skills = disco !== undefined && !Array.isArray(disco) ? disco.skills : disco;
+          // P32-1/P32-4: keep a manifest-of record for the STEP snapshot —
+          // which skills were selected, their body hash (mtime-free identity),
+          // required tools and required MCP servers. The runtime freezes this
+          // into StepExecutionSnapshot.skills; MCP requirements feed the
+          // step's dependency resolver (never global startup).
+          const skillsById = new Map(skills?.map((skill) => [skill.manifest.name, skill]) ?? []);
           const selectedSkills =
             this.deps.skillSelector !== undefined && skills !== undefined
               ? this.deps.skillSelector(
@@ -168,6 +180,21 @@ export class ContextController {
                   name: skill.manifest.name,
                   description: skill.manifest.description ?? "",
                 })) ?? [];
+          const entries: import("@ar/contracts").SkillSnapshot["selected"] = selectedSkills.map(
+            (entry) => {
+              const skill = skillsById.get(entry.name);
+              return {
+                name: entry.name,
+                source: skill?.provenance?.source ?? "unknown",
+                ...(skill?.body !== undefined && skill.body !== ""
+                  ? { bodyHash: stableFingerprint([skill.body]) }
+                  : {}),
+                requiredTools: [...(skill?.manifest.requiredTools ?? [])],
+                requiredMcpServers: [...(skill?.manifest.requiredMcpServers ?? [])],
+              };
+            },
+          );
+          if (entries.length > 0) skillSnapshotEntries = entries;
           // P2-8: progressive disclosure — load the bodies of the selected
           // skills and admit them as semi-trusted skill data ahead of tool
           // output. A body-load failure degrades to index-only (never breaks
@@ -203,6 +230,19 @@ export class ContextController {
             ...(selectedSkills.length > 0 ? { skills: selectedSkills } : {}),
           });
           lastReportTokens = built.report.used;
+          // P32-3: the exact instruction world THIS step was built from —
+          // system prompt hash + every project instruction document that
+          // reached the model. The runtime pins these into the snapshot so a
+          // mid-step AGENTS.md change can only affect the NEXT step.
+          instructionSources = [
+            { kind: "system", source: "system", contentHash: stableFingerprint([system]) },
+            ...built.discovered.map((doc) => ({
+              kind: "project_instruction" as const,
+              source: doc.path,
+              contentHash: stableFingerprint([doc.content]),
+              path: doc.path,
+            })),
+          ];
           // P1-17: every discovered instruction document is observable with
           // its scope, so operators can audit which AGENTS.md files reached
           // the model (and whether a document was truncated).
@@ -382,6 +422,9 @@ export class ContextController {
       lastReportTokens,
       digestAppended,
       overflowAttempt,
+      selectedSkills: skillSnapshotEntries,
+      // P32-3: system + project instruction sources of THIS context build.
+      instructionSources,
     };
   }
 

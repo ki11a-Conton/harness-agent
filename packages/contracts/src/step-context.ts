@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { AgentId } from "./ids.js";
+import type { EnvironmentId } from "./ids.js";
 import type { ModelRef } from "./model.js";
 import type { EffectiveAgentConfig, ToolPolicy } from "./agent.js";
 import type { PermissionPolicy } from "./permission.js";
@@ -104,9 +105,92 @@ export interface StepToolRouter {
 }
 
 /** P23-1 — exact execution environment identity (P31 deepens this). */
+export interface EnvironmentCapabilities {
+  /** Read-only host capability set. Absent flavors are not supported. */
+  readonly filesystem: readonly ("local" | "workspace-only" | "remote")[];
+  readonly exec: readonly ("local" | "remote")[];
+  readonly network: readonly ("denied" | "allowlist" | "full")[];
+  readonly sandbox: readonly ("none" | "local-process" | "container")[];
+}
+
+/** P31-1 — frozen shell configuration a tool may observe/use. */
+export interface ShellSnapshot {
+  /** Executable path of the shell binary (e.g. "/bin/bash"). */
+  readonly shell: string;
+  /** Immutable-enough env for this step; changes re-derive fingerprints. */
+  readonly envVars?: Record<string, string>;
+  /** Hash of env vars present in the snapshot (stable across key order). */
+  readonly envVarsFingerprint?: string;
+}
+
+/** P31-1 — snapshot of a single executable environment. Local environments get
+ *  a DETERMINISTIC id derived from the cwd+workspace root set (same dir →
+ *  same environment), so step records correlate across restarts and replays
+ *  without holding host details. */
 export interface EnvironmentSnapshot {
+  /** P31-1 — identity of this environment (local: deterministic). */
+  readonly id: EnvironmentId;
   readonly cwd: string;
-  readonly workspaceRoots?: readonly string[];
+  readonly workspaceRoots: readonly string[];
+  readonly shell: ShellSnapshot;
+  /** Hash of the permission/sandbox policy inputs for this step. */
+  readonly permissionsFingerprint: string;
+  readonly capabilities: EnvironmentCapabilities;
+  /** Full environment identity: id + shell + workspaceRoots + capabilities. */
+  readonly fingerprint: string;
+}
+
+/**
+ * P31-1 — build a deterministic local environment snapshot. Pure: no IO, the
+ * caller gathers workspace roots and shell facts. The id is stable across
+ * process runs: same cwd+roots+shell → same id.
+ */
+export function buildLocalEnvironmentSnapshot(input: {
+  cwd: string;
+  workspaceRoots?: readonly string[];
+  shell: string;
+  env?: Readonly<Record<string, string | undefined>>;
+  capabilities?: EnvironmentCapabilities;
+  permissionsFingerprint: string;
+}): EnvironmentSnapshot {
+  const workspaceRoots = input.workspaceRoots ?? [input.cwd];
+  const guard: Record<string, string> = {};
+  for (const key of Object.keys(input.env ?? {})) {
+    const value = input.env![key];
+    if (value !== undefined) guard[key] = value;
+  }
+  const envKeys = Object.keys(guard).sort();
+  const envVarsFingerprint =
+    input.env !== undefined
+      ? stableFingerprint([envKeys, envKeys.map((k) => guard[k])])
+      : undefined;
+  const shell: ShellSnapshot = {
+    shell: input.shell,
+    ...(input.env !== undefined ? { envVars: guard } : {}),
+    ...(envVarsFingerprint !== undefined ? { envVarsFingerprint } : {}),
+  };
+  const capabilities = input.capabilities ?? localCapabilities();
+  const id = `env_local_${stableFingerprint([workspaceRoots, shell.shell, capabilities])}` as EnvironmentId;
+  const fingerprint = stableFingerprint([id, shell, capabilities]);
+  return {
+    id,
+    cwd: input.cwd,
+    workspaceRoots,
+    shell,
+    permissionsFingerprint: input.permissionsFingerprint,
+    capabilities,
+    fingerprint,
+  };
+}
+
+/** Local-process host capability set (P31-4 — the only shipped executor). */
+export function localCapabilities(): EnvironmentCapabilities {
+  return {
+    filesystem: ["local"],
+    exec: ["local"],
+    network: ["full"],
+    sandbox: ["local-process"],
+  };
 }
 
 /** P23-1 — the exact permission world a step executes under. P23-5 makes this
@@ -129,10 +213,66 @@ export interface ModelContextSnapshot {
   readonly compacted: boolean;
 }
 
-/** P23-1 — pinned system/instruction surface (P32 deepens with skills). */
+/** P23-1 — pinned system/instruction surface. P32 deepens: the instruction /
+ *  skill world is captured as EXPLICIT SOURCES (system prompt, project
+ *  instruction documents, skill bodies) with a deterministic fingerprint, so
+ *  a mid-step AGENTS.md or skill-body change can only affect the NEXT step. */
+export interface InstructionSource {
+  /** Kind of instruction source. */
+  readonly kind: "system" | "project_instruction" | "skill_body";
+  /** Where the content came from (AGENTS.md path, skill name, "system"). */
+  readonly source: string;
+  /** Hash of the rendered content this source contributed. */
+  readonly contentHash: string;
+  /** Canonical path for document sources (AGENTS.md) — absent for system. */
+  readonly path?: string;
+}
+
 export interface InstructionSnapshot {
   readonly system: string;
   readonly systemHash: string;
+  /** P32-3 — ordered instruction sources that produced this system surface. */
+  readonly sources: readonly InstructionSource[];
+  /** P32-3 — deterministic fingerprint over sources + system hash. A changed
+   *  AGENTS.md / skill body / system prompt re-fingerprints the step. */
+  readonly fingerprint: string;
+}
+
+/** P32-1 — immutable snapshot of the skills selected for this step. Identical
+ *  selection with different object insertion order hashes identically; a
+ *  body hash / required-tools / MCP-requirement change produces a NEW
+ *  fingerprint. Never holds live process state — only identity + provenance. */
+export interface SkillSnapshot {
+  readonly fingerprint: string;
+  readonly selected: readonly {
+    name: string;
+    source: string;
+    bodyHash?: string;
+    requiredTools: readonly string[];
+    requiredMcpServers: readonly string[];
+  }[];
+}
+
+export function buildSkillSnapshot(
+  selected: readonly {
+    name: string;
+    source?: string;
+    bodyHash?: string;
+    requiredTools?: readonly string[];
+    requiredMcpServers?: readonly string[];
+  }[],
+): SkillSnapshot {
+  const normalized = selected.map((s) => ({
+    name: s.name,
+    source: s.source ?? "unknown",
+    ...(s.bodyHash !== undefined ? { bodyHash: s.bodyHash } : {}),
+    requiredTools: [...(s.requiredTools ?? [])],
+    requiredMcpServers: [...(s.requiredMcpServers ?? [])],
+  }));
+  return {
+    fingerprint: stableFingerprint(normalized),
+    selected: normalized,
+  };
 }
 
 /** P23-1 — the frozen execution world for ONE model call. May hold runtime
@@ -150,8 +290,8 @@ export interface StepExecutionSnapshot {
   readonly instructions: InstructionSnapshot;
   /** P24: McpBindingSnapshot when an MCP binding is pinned. */
   readonly mcp?: unknown;
-  /** P32: SkillSnapshot when skills are pinned. */
-  readonly skills?: unknown;
+  /** P32-1: SkillSnapshot when skills are pinned. */
+  readonly skills?: SkillSnapshot;
   /** P23-3: advertisement telemetry frozen with the step — the catalog size
    *  BEFORE selection/deferral and everything dropped from advertisement. */
   readonly advertised?: {

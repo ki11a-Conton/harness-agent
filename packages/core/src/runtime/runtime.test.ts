@@ -1,5 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
-import { z } from "zod";
+﻿import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -33,7 +32,7 @@ import { DeterministicToolSelector } from "../tools/tool-selector.js";
 import { EchoModelProvider, ScriptedModelProvider } from "@ar/model";
 import { AgentRuntime, type SkillDiscovery } from "./runtime.js";
 import { InMemoryArtifactStore } from "./artifact-store.js";
-import { MemoryEventStore, MemorySessionStore, defaultTestToolCatalog } from "../test/fakes.js";
+import { MemoryEventStore, MemorySessionStore, defaultTestToolCatalog, inertTestToolDefinition } from "../test/fakes.js";
 import { FakeOrchestrator } from "../test/fake-orchestrator.js";
 import { ContextPipeline } from "@ar/context";
 
@@ -111,7 +110,11 @@ function makeRuntime(
       signal: AbortSignal;
     }) => Promise<{ delegated: boolean; summary?: string } | undefined>;
     toolSelector?: import("../tools/tool-selector.js").ToolSelector;
-    toolSpecs?: readonly import("@ar/contracts").ToolSpec[];
+    toolRegistry?: import("./tool-catalog.js").StepToolCatalog;
+    mcpBindingProvider?: (input: {
+      goal: string;
+      selectedSkills?: readonly { name: string; requiredMcpServers?: readonly string[] }[];
+    }) => Promise<import("@ar/contracts").McpBindingSnapshot | undefined>;
   },
 ) {
   const store = new MemorySessionStore();
@@ -170,21 +173,15 @@ function makeRuntime(
     ...(opts?.inbox !== undefined ? { inbox: opts.inbox } : {}),
     ...(opts?.delegateSpecialist !== undefined ? { delegateSpecialist: opts.delegateSpecialist } : {}),
     ...(opts?.toolSelector !== undefined ? { toolSelector: opts.toolSelector } : {}),
-    // P23-3/4: advertisement is frozen per-step from the CATALOG. Tests that
-    // historically passed toolSpecs get a fake catalog derived from those
-    // specs; the rest use the conventional inert catalog. Permissive
-    // resolution mirrors the legacy global-registry execute() these tests
-    // were written against (production harnesses are strict).
-    toolRegistry:
-      opts?.toolSpecs !== undefined
-        ? {
-            get: (name) => opts.toolSpecs!.find((t) => t.name === name) as never,
-            list: () => opts.toolSpecs!.map((t) => ({ name: t.name, description: t.description, inputSchema: z.object({}), risk: "readonly" as const, metadata: { name: t.name, version: "1.0.0", sideEffect: false, network: false, filesystem: false, process: false, interactive: false }, execute: async () => ({ status: "success" as const, output: "" }) })),
-            specs: () => opts.toolSpecs!,
-          }
-        : defaultTestToolCatalog(),
+    // P23-3/4 + P35-1: advertisement is frozen per-step from the CATALOG —
+    // the `toolSpecs` advertisement dep is gone; callers pass a catalog
+    // (or rely on the conventional inert catalog). Permissive resolution
+    // mirrors the legacy global-registry execute() these tests were written
+    // against (production harnesses are strict).
+    toolRegistry: opts?.toolRegistry ?? defaultTestToolCatalog(),
     permissiveToolResolution: true,
     ...(opts?.skillSelector !== undefined ? { skillSelector: opts.skillSelector } : {}),
+    ...(opts?.mcpBindingProvider !== undefined ? { mcpBindingProvider: opts.mcpBindingProvider } : {}),
     ...(opts?.context !== undefined
       ? {
           context: {
@@ -1940,16 +1937,17 @@ describe("P7-1/P7-2/P7-3: progressive tool disclosure", () => {
       },
     };
     const orch = new FakeOrchestrator();
+    // P35-1: the frozen step world comes from the catalog — the test names
+    // every schema the advertised set may include, exactly as the model sees
+    // them after the goal-based selector narrows advertisement.
+    const names = ["read_file", "write_file", "exec", "search_files", "update_plan", "weather_lookup"];
     const { runtime, store, events } = makeRuntime(provider, orch, {
       toolSelector: new DeterministicToolSelector([], new Set(["read_file", "write_file", "exec", "search_files", "update_plan"])),
-      toolSpecs: [
-        { name: "read_file", description: "read", inputSchema: { type: "object" } },
-        { name: "write_file", description: "write", inputSchema: { type: "object" } },
-        { name: "exec", description: "run", inputSchema: { type: "object" } },
-        { name: "search_files", description: "search", inputSchema: { type: "object" } },
-        { name: "update_plan", description: "plan", inputSchema: { type: "object" } },
-        { name: "weather_lookup", description: "weather", inputSchema: { type: "object" } },
-      ],
+      toolRegistry: {
+        get: (name: string) => inertTestToolDefinition(name),
+        list: () => names.map((n) => inertTestToolDefinition(n)),
+        specs: () => names.map((n) => ({ name: n, description: `test stub for ${n}`, inputSchema: {} as never })),
+      },
     });
     const session = await runtime.createSession({ agent: AGENT, cwd: "/w" });
     const turn = await runtime.startTurn(session.id, "fix the parser");
@@ -2191,5 +2189,98 @@ describe("P15-2: immutable StepContext per model call", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]!.sessionId).toBe(session.id);
     expect(calls[0]!.sequence).toBe(Number.MAX_SAFE_INTEGER);
+  });
+});
+
+describe("P32: end-to-end skill / instruction snapshot closure through the runtime loop", () => {
+  // The real context pipeline performs instruction discovery against the
+  // session cwd (AGENTS.md walking), so the cwd must exist on disk.
+  let cwd: string;
+
+  beforeAll(async () => {
+    cwd = await mkdtemp(join(tmpdir(), "p32-runtime-"));
+  });
+
+  afterAll(async () => {
+    await rm(cwd, { recursive: true, force: true });
+  });
+
+  function grillSkill(): Skill {
+    return {
+      id: "grill-me" as never,
+      path: "/skills/grill-me",
+      manifest: { name: "grill-me", description: "grill things", version: "1.0.0" },
+      status: "discovered",
+      discoveredAt: 0,
+      body: "# grill-me\n\nTurn the grill on.\n",
+      provenance: { source: "local-filesystem", root: "/skills", trust: "semi-trusted" },
+    };
+  }
+
+  function mcpSkill(): Skill {
+    return {
+      id: "assistant-me" as never,
+      path: "/skills/assistant-me",
+      manifest: {
+        name: "assistant-me",
+        description: "assists",
+        version: "1.0.0",
+        requiredMcpServers: ["mcp:weather"],
+      },
+      status: "discovered",
+      discoveredAt: 0,
+      body: "assistant body",
+      provenance: { source: "local-filesystem", root: "/skills", trust: "semi-trusted" },
+    };
+  }
+
+  it("model.started carries skillSnapshotFingerprint when skills are pinned into the step", async () => {
+    const provider = new ScriptedModelProvider([ScriptedModelProvider.text("done")]);
+    const orch = new FakeOrchestrator({ status: "success", output: "ok" });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      context: { maxTokens: 50_000 },
+      skills: async () => [grillSkill()],
+      skillSelector: (entries) => entries.filter((e) => e.name === "grill-me"),
+    });
+    const session = await runtime.createSession({ agent: AGENT, cwd });
+    const turn = await runtime.startTurn(session.id, "please grill");
+    const outcome = await runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    expect(outcome.status).toBe("completed");
+
+    const storedEvents = await events.list(session.id);
+    const started = storedEvents.find((e) => e.type === "model.started");
+    expect(started).toBeDefined();
+    const fingerprint = (started!.payload as { skillSnapshotFingerprint?: string }).skillSnapshotFingerprint;
+    // The skill world identity rides the model.started event (P32-1) — replay
+    // and explain can correlate the call to the selected skill world without
+    // re-running selection. Presence and non-emptiness are the invariant.
+    expect(fingerprint).toBeDefined();
+    expect(typeof fingerprint).toBe("string");
+    expect(fingerprint!.length).toBeGreaterThan(0);
+  });
+
+  it("mcpBindingProvider receives requiredMcpServers declared by selected skills", async () => {
+    const observed: Array<{ name: string; requiredMcpServers?: readonly string[] }> = [];
+    const provider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("read", { path: "a.txt" }),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "success", output: "ok" });
+    const { runtime, store } = makeRuntime(provider, orch, {
+      context: { maxTokens: 50_000 },
+      skills: async () => [mcpSkill()],
+      skillSelector: (entries) => entries.filter((e) => e.name === "assistant-me"),
+      mcpBindingProvider: async ({ selectedSkills }) => {
+        observed.push(...(selectedSkills ?? []).map((s) => ({ name: s.name, requiredMcpServers: s.requiredMcpServers })));
+        return undefined;
+      },
+    });
+    const session = await runtime.createSession({ agent: AGENT, cwd });
+    const turn = await runtime.startTurn(session.id, "may I have some help");
+    await runtime.runTurn(session.id, turn.id, new AbortController().signal);
+
+    // P32-4: the resolver saw the skill's declared MCP requirement — lazily,
+    // scoped to the step, without any global startup connect.
+    expect(observed).toContainEqual({ name: "assistant-me", requiredMcpServers: ["mcp:weather"] });
   });
 });

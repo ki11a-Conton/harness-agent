@@ -14,6 +14,10 @@ export interface SkillManifest {
   description: string;
   version: string;
   requiredTools?: string[];
+  /** P32-4: MCP servers this skill requires (declared in SKILL.md headers,
+   *  e.g. `requiredMcpServer: mcp:foo`). The dependency resolver connects
+   *  them lazily when this skill is selected — never at process startup. */
+  requiredMcpServers?: string[];
 }
 
 export interface Skill {

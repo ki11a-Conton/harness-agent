@@ -33,6 +33,7 @@ export * from "./retry.js";
 export * from "./stall.js";
 export * from "./recovery.js";
 export * from "./step-context.js";
+export * from "./environment-manager.js";
 export * from "./schema-advert.js";
 export * from "./ask-user.js";
 export * from "./taxonomy.js";
