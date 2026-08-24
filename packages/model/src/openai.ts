@@ -60,6 +60,9 @@ interface ChatChunk {
   choices?: Array<{
     delta?: {
       content?: string;
+      /** deepseek-style thinking-mode field; must be passed back to the API
+       *  on the next assistant message of the conversation. */
+      reasoning_content?: string;
       tool_calls?: Array<{
         index?: number;
         id?: string;
@@ -76,6 +79,9 @@ type OpenAiMessage = {
   role: string;
   content: string | null;
   tool_call_id?: string;
+  /** deepseek thinking-mode: the reasoning content must be echoed back on the
+   *  next assistant message; omit when absent (plain providers reject it). */
+  reasoning_content?: string;
   tool_calls?: Array<{
     id: string;
     type: "function";
@@ -91,6 +97,7 @@ function toOpenAiMessage(message: Message): OpenAiMessage {
     return {
       role: "assistant",
       content: message.content,
+      ...(message.reasoningContent !== undefined ? { reasoning_content: message.reasoningContent } : {}),
       tool_calls: message.toolCalls.map((call) => ({
         id: call.id,
         type: "function",
@@ -98,7 +105,13 @@ function toOpenAiMessage(message: Message): OpenAiMessage {
       })),
     };
   }
-  return { role: message.role, content: message.content };
+  return {
+    role: message.role,
+    content: message.content,
+    ...(message.role === "assistant" && message.reasoningContent !== undefined
+      ? { reasoning_content: message.reasoningContent }
+      : {}),
+  };
 }
 
 function toOpenAiTool(tool: ToolSpec): Record<string, unknown> {
@@ -325,6 +338,8 @@ async function* streamChatCompletion(
   let buffer = "";
   let streamEnded = false;
   let text = "";
+  /** Accumulated thinking-mode reasoning content (deepseek reasoning_content). */
+  let reasoning = "";
   const toolCalls = new Map<number, { id: string; name: string; args: string }>();
   let usage: Usage | undefined;
   let aborted = false;
@@ -354,6 +369,7 @@ async function* streamChatCompletion(
         finishReason: reason ?? (calls.length ? "tool_calls" : "stop"),
         text,
         ...(calls.length ? { toolCalls: calls } : {}),
+        ...(reasoning.length > 0 ? { reasoningContent: reasoning } : {}),
         ...(usage ? { usage } : {}),
       },
       timestamp: Date.now(),
@@ -385,6 +401,10 @@ async function* streamChatCompletion(
     if (delta?.content) {
       text += delta.content;
       events.push({ type: "text_delta", text: delta.content, timestamp: Date.now() });
+    }
+    if (delta?.reasoning_content) {
+      reasoning += delta.reasoning_content;
+      events.push({ type: "reasoning_delta", text: delta.reasoning_content, timestamp: Date.now() });
     }
     if (delta?.tool_calls) {
       for (const call of delta.tool_calls) {

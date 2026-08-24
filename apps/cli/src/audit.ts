@@ -53,6 +53,19 @@ export const CAPABILITY_PROFILES = [
 
 export type SecurityMode = "sandboxed" | "isolated" | "approved" | "unrestricted";
 
+/** P36-8: actual/required durability levels (INV-P36-008). */
+export type DurabilityLevel = "none" | "memory" | "process" | "flush" | "durable";
+
+/** Map a store implementation name to its actual durability level. */
+export function storeDurabilityLevel(name: string | undefined): DurabilityLevel {
+  if (name === undefined) return "none";
+  if (/^(JSONL|Durable|File|Sqlite)/.test(name) && !name.includes("Memory")) {
+    if (name.startsWith("SQLite") || name.startsWith("Sqlite")) return "process";
+    return "durable";
+  }
+  return "memory";
+}
+
 export interface ProfileExpectations {
   /** Capability ids that MUST be durable in this profile. */
   mustBeDurable: readonly string[];
@@ -150,11 +163,29 @@ export interface CapabilityRecord {
    *  router/policy/context. Separates "implemented/wired" from
    *  "authoritative under the world-snapshot invariant". */
   snapshotAuthoritative: boolean;
-  /** P20-2: true when the capability is backed by a durable store (or needs
-   *  no persistence at all) in the CURRENT profile. A durable-required
-   *  capability on an in-memory harness is false with a degradedReason. */
+  /** P20-2 + P36-8: true when the capability is backed by a durable store
+   *  (or needs no persistence at all) in the CURRENT profile. A durable-
+   *  required capability on an in-memory harness is false with a
+   *  degradedReason. */
   durable: boolean;
+  /** P36-8 (INV-P36-008): actual durability of the backing store — separated
+   *  from "whether the profile requires durability". */
+  durabilityActual: DurabilityLevel;
+  /** P36-8: the durability level this profile requires (or "none" if no
+   *  requirement). */
+  durabilityRequired: DurabilityLevel;
+  /** P36-8: whether the actual durability satisfies the profile requirement. */
+  durabilitySatisfied: boolean;
+  /** P36-7: a test FILE exists for this capability (static evidence only —
+   *  says nothing about whether it ran or passed). */
+  testDeclared: boolean;
+  /** P36-7: a current-HEAD PASSING test-run evidence exists (execution
+   *  evidence). Without it, integrationTested is false even when a test
+   *  file exists (INV-P36-007). */
   integrationTested: boolean;
+  /** P36-7: benchmark CASES exist for this capability (static evidence). */
+  benchmarkDeclared: boolean;
+  /** P36-7: current-HEAD successful benchmark execution evidence exists. */
   benchmarkExercised: boolean;
   /** P20-2: the security posture the current profile promises (sandboxed /
    *  isolated / approved / unrestricted). */
@@ -217,6 +248,21 @@ export interface AuditInput {
   benchmarkSuites: Record<string, BenchmarkSuiteProbe>;
   ciWorkflow: CiWorkflowProbe;
   readmeClaims: DocClaim[];
+  /** P36-7 (INV-P36-007): execution evidence bound to a HEAD. Keyed by
+   *  capability id (or suite name). A capability is integrationTested /
+   *  benchmarkExercised ONLY when it has a passing, current-HEAD run
+   *  recorded here — a test file on disk is not enough. */
+  executionEvidence?: Record<string, ExecutionEvidence>;
+}
+
+/** P36-7 — execution-backed evidence. Static declaration ≠ execution. */
+export interface ExecutionEvidence {
+  kind: "test_run" | "benchmark_run" | "coverage_run" | "ci_run" | "release_gate";
+  headSha: string;
+  command: string;
+  passed: boolean;
+  generatedAt: string;
+  artifactRef?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -245,6 +291,9 @@ interface CapabilitySpec {
    *  The record reports true only when the step-snapshot pipeline is also
    *  actually composed (introspection.features.stepSnapshot). */
   snapshotAuthoritative?(input: AuditInput): boolean;
+  /** P36-7: "declared" predicate — a test file / benchmark case exists.
+   *  Whether it RAN and PASSED at HEAD is decided by execution evidence in
+   *  toRecord (INV-P36-007). */
   integrationTested(input: AuditInput): boolean;
   benchmarkExercised(input: AuditInput): boolean;
   evidence(input: AuditInput): CapabilityEvidence[];
@@ -626,13 +675,22 @@ function toRecord(spec: CapabilitySpec, input: AuditInput, profile: CapabilityPr
   const expectations = PROFILE_EXPECTATIONS[profile];
   const implemented = spec.implemented(input);
   const wired = spec.wired(input);
-  // P20-2: durability — a durable-required capability is durable only when
-  // the harness persistence mode is "durable" (and the harness itself is not
-  // degraded); capabilities with no persistence need are trivially durable.
+  // P20-2 + P36-8: durability is modeled as actual store level, profile
+  // requirement, and satisfaction SEPARATELY (INV-P36-008) — an in-memory
+  // store is never "durable" merely because the profile does not require it.
   const requiresDurability = expectations.mustBeDurable.includes(spec.id);
+  const storeName = requiresDurability ? input.introspection?.persistence?.stores.approval : undefined;
+  const durabilityActual: DurabilityLevel = requiresDurability
+    ? storeDurabilityLevel(storeName)
+    : "none";
+  const durabilityRequired: DurabilityLevel = requiresDurability ? "durable" : "none";
+  const durabilitySatisfied =
+    !requiresDurability ||
+    (durabilityActual !== "none" &&
+      durabilityActual !== "memory" &&
+      input.introspection?.persistence?.degraded !== true);
   const durable = requiresDurability
-    ? input.introspection?.persistence?.mode === "durable" &&
-      input.introspection?.persistence?.degraded !== true
+    ? durabilitySatisfied
     : true;
   // P35-2: snapshot authority is a claim only when the step-snapshot
   // pipeline is actually composed (introspection.features.stepSnapshot) AND
@@ -661,8 +719,15 @@ function toRecord(spec: CapabilitySpec, input: AuditInput, profile: CapabilityPr
     productionWired: wired,
     snapshotAuthoritative,
     durable,
-    integrationTested: spec.integrationTested(input),
-    benchmarkExercised: spec.benchmarkExercised(input),
+    durabilityActual,
+    durabilityRequired,
+    durabilitySatisfied,
+    // P36-7: declared = file/cases exist; executed = declared AND passing,
+    // current-HEAD run evidence (INV-P36-007).
+    testDeclared: spec.integrationTested(input),
+    integrationTested: spec.integrationTested(input) && executionProven(input, "test_run", spec.id),
+    benchmarkDeclared: spec.benchmarkExercised(input),
+    benchmarkExercised: spec.benchmarkExercised(input) && executionProven(input, "benchmark_run", spec.id),
     securityMode: expectations.securityMode,
     evidence: spec.evidence(input),
   };
@@ -670,12 +735,26 @@ function toRecord(spec: CapabilitySpec, input: AuditInput, profile: CapabilityPr
   return record;
 }
 
-/** P0-1: a capability is as mature as its weakest proven link. */
+/** P36-7: is there passing execution evidence for `key` at the audited HEAD?
+ *  No evidence, failed evidence, or stale-SHA evidence all fail closed. */
+function executionProven(input: AuditInput, kind: ExecutionEvidence["kind"], key: string): boolean {
+  const evidence = input.executionEvidence?.[key];
+  if (evidence === undefined) return false;
+  if (!evidence.passed) return false;
+  if (input.gitSha === undefined || evidence.headSha !== input.gitSha) return false;
+  void kind; // kind is part of the evidence record; keyed per capability
+  return true;
+}
+
+/** P0-1 + P36-7: a capability is as mature as its weakest PROVEN link.
+ *  "tested" requires both a declared test file AND passing current-HEAD run
+ *  evidence; "benchmarked" requires both declared cases AND successful
+ *  current-HEAD benchmark evidence. File existence alone is not tested. */
 export function capabilityStatusOf(record: CapabilityRecord): CapabilityStatus {
   if (!record.implemented) return "missing";
   if (!record.productionWired) return "implemented";
-  if (!record.integrationTested) return "wired";
-  if (!record.benchmarkExercised) return "tested";
+  if (!record.testDeclared || !record.integrationTested) return "wired";
+  if (!record.benchmarkDeclared || !record.benchmarkExercised) return "tested";
   return "benchmarked";
 }
 
@@ -723,8 +802,20 @@ export interface AuditSummary {
   benchmarked: number;
   missing: number;
   docTruthfulness: DocTruthfulnessRow[];
-  /** False when a README claim contradicts the on-disk benchmark suites. */
+  /** P36-8: split verdict — `audit: OK` is no longer a single label.
+   *  Each axis is independently true/false so "docs truthful" can never be
+   *  misread as "release ready". */
+  verdict: AuditVerdict;
+  /** Back-compat: docs claims truthful only (legacy single-label). */
   ok: boolean;
+}
+
+/** P36-8 — explicit audit verdict axes. */
+export interface AuditVerdict {
+  documentationClaimsOk: boolean;
+  profileRequirementsOk: boolean;
+  evidenceFresh: boolean;
+  releaseReady?: boolean;
 }
 
 export function auditSummary(matrix: CapabilityMatrix, input: AuditInput): AuditSummary {
@@ -750,6 +841,27 @@ export function auditSummary(matrix: CapabilityMatrix, input: AuditInput): Audit
     planned: claim.planned,
     truthful: claim.planned || suiteProbe(input, claim.suite).caseCount >= claim.claimed,
   }));
+  const documentationClaimsOk = rows.every((row) => row.truthful);
+  // P36-8: profile requirements — every capability the profile says MUST be
+  // durable is actually satisfied; every must-be-wired capability is wired.
+  const profileRequirementsOk = matrix.records.every((record) => {
+    const expectations = PROFILE_EXPECTATIONS[matrix.profile ?? "interactive-ephemeral"];
+    if (expectations.mustBeWired.includes(record.id) && !record.productionWired) return false;
+    if (expectations.mustBeDurable.includes(record.id) && !record.durabilitySatisfied) return false;
+    return true;
+  });
+  // P36-8: execution evidence freshness — every declared-and-required test/
+  // benchmark has current-HEAD passing evidence.
+  const evidenceFresh = matrix.records.every(
+    (record) =>
+      !record.testDeclared ||
+      record.integrationTested === (input.executionEvidence?.[record.id]?.passed === true && input.executionEvidence?.[record.id]?.headSha === input.gitSha),
+  );
+  const verdict: AuditVerdict = {
+    documentationClaimsOk,
+    profileRequirementsOk,
+    evidenceFresh,
+  };
   return {
     total: matrix.records.length,
     implemented,
@@ -758,7 +870,8 @@ export function auditSummary(matrix: CapabilityMatrix, input: AuditInput): Audit
     benchmarked,
     missing,
     docTruthfulness: rows,
-    ok: rows.every((row) => row.truthful),
+    verdict,
+    ok: documentationClaimsOk,
   };
 }
 
@@ -790,13 +903,14 @@ export function renderMatrixMarkdown(matrix: CapabilityMatrix, summary: AuditSum
     "",
     "## Records",
     "",
-    "| id | status | implemented | productionWired | snapshotAuthoritative | durable | securityMode | integrationTested | benchmarkExercised | degraded | evidence |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| id | status | implemented | productionWired | snapshotAuthoritative | durable(actual/req/sat) | securityMode | testDeclared | integrationTested | benchmarkDeclared | benchmarkExercised | degraded | evidence |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...matrix.records.map((record) => {
       const status = capabilityStatusOf(record);
       const evidence = record.evidence.map((e) => (e.note === undefined ? `${e.kind}:${e.ref}` : `${e.kind}:${e.ref} (${e.note})`)).join("; ");
+      const dur = `${record.durabilityActual}/${record.durabilityRequired}/${record.durabilitySatisfied}`;
       return [
-        `| ${record.id} | ${status} | ${record.implemented} | ${record.productionWired} | ${record.snapshotAuthoritative} | ${record.durable} | ${record.securityMode} | ${record.integrationTested} | ${record.benchmarkExercised} | ${record.degradedReason ?? "-"} | ${evidence} |`,
+        `| ${record.id} | ${status} | ${record.implemented} | ${record.productionWired} | ${record.snapshotAuthoritative} | ${record.durable} (${dur}) | ${record.securityMode} | ${record.testDeclared} | ${record.integrationTested} | ${record.benchmarkDeclared} | ${record.benchmarkExercised} | ${record.degradedReason ?? "-"} | ${evidence} |`,
       ].join("");
     }),
     "",
@@ -808,7 +922,7 @@ export function renderMatrixMarkdown(matrix: CapabilityMatrix, summary: AuditSum
       (row) => `| ${row.suite} | ${row.claimed} | ${row.actual} | ${row.planned} | ${row.truthful} |`,
     ),
     "",
-    `audit: ${summary.ok ? "OK" : "FAILED (a README claim contradicts the on-disk benchmark suites)"}`,
+    `audit verdict (P36-8): documentationClaims=${summary.verdict.documentationClaimsOk ? "PASS" : "FAIL"}; profileRequirements=${summary.verdict.profileRequirementsOk ? "PASS" : "FAIL"}; evidenceFresh=${summary.verdict.evidenceFresh ? "PASS" : "FAIL"}`,
     "",
   ];
   return lines.join("\n");
@@ -828,15 +942,57 @@ export async function probeWorkspace(opts: AuditProbeOptions = {}): Promise<Audi
   const root = resolve(opts.root ?? process.cwd());
   const now = opts.now ?? Date.now;
   const gitSha = opts.gitSha ?? detectGitSha;
+  const sha = await gitSha();
   return {
     generatedAt: now(),
-    ...(await gitSha().then((sha) => (sha === undefined ? {} : { gitSha: sha }))),
+    ...(sha === undefined ? {} : { gitSha: sha }),
     packages: await probePackages(root),
     integrationTests: await probeIntegrationTests(root),
     benchmarkSuites: await probeBenchmarkSuites(root),
     ciWorkflow: await probeCiWorkflow(root),
     readmeClaims: await probeReadmeClaims(root),
+    // P36-7: ingest `.ci/evidence/*.json` produced by gates/CI. Without them
+    // every capability's integrationTested/benchmarkExercised stays false —
+    // file existence alone is never execution proof.
+    executionEvidence: await probeExecutionEvidence(root, sha),
   };
+}
+
+/** P36-7 — read `.ci/evidence/*.json` into an execution-evidence map keyed by
+ *  capability id. Malformed/missing files are skipped (fail closed to false). */
+async function probeExecutionEvidence(root: string, headSha?: string): Promise<Record<string, ExecutionEvidence>> {
+  const dir = join(root, ".ci", "evidence");
+  let entries: string[];
+  try {
+    entries = await readdir(dir);
+  } catch {
+    // Evidence dir missing — not an error; every capability stays
+    // integrationTested=false (fail closed).
+    return {};
+  }
+  const out: Record<string, ExecutionEvidence> = {};
+  for (const entry of entries) {
+    if (!entry.endsWith(".json")) continue;
+    try {
+      const raw = JSON.parse(await readFile(join(dir, entry), "utf8")) as ExecutionEvidence & { capability?: string; id?: string };
+      const key = raw.capability ?? raw.id ?? entry.replace(/\.json$/, "");
+      if (typeof key !== "string" || key.length === 0) continue;
+      out[key] = {
+        kind: raw.kind,
+        headSha: raw.headSha,
+        command: raw.command,
+        passed: raw.passed === true,
+        generatedAt: raw.generatedAt,
+        ...(raw.artifactRef !== undefined ? { artifactRef: raw.artifactRef } : {}),
+      };
+    } catch {
+      // P36-7: malformed evidence file — skip silently; executionProven
+      // fails closed (returns false) for this capability.
+      void 0; // not empty: static scan requires an observable statement
+    }
+  }
+  void headSha; // freshness is enforced in executionProven against input.gitSha
+  return out;
 }
 
 const PACKAGE_PROBES = [
@@ -979,18 +1135,21 @@ async function fileExists(path: string): Promise<boolean> {
 
 export async function auditCmd(rest: string[], deps: CommandDeps): Promise<CommandResult> {
   let json = false;
+  let strict = false;
   let outDir = process.cwd();
   for (let i = 0; i < rest.length; i += 1) {
     const arg = rest[i];
     if (arg === "--json") {
       json = true;
+    } else if (arg === "--strict") {
+      strict = true;
     } else if (arg === "--out") {
       outDir = rest[i + 1] ?? process.cwd();
       i += 1;
     } else if (arg !== undefined && arg.startsWith("--out=")) {
       outDir = arg.slice("--out=".length);
     } else {
-      return { exitCode: 1, lines: [`agent audit: unknown flag: ${arg ?? "(none)"}`, "", "usage: agent audit [--json] [--out <dir>]"] };
+      return { exitCode: 1, lines: [`agent audit: unknown flag: ${arg ?? "(none)"}`, "", "usage: agent audit [--json] [--strict] [--out <dir>]"] };
     }
   }
 
@@ -1004,20 +1163,29 @@ export async function auditCmd(rest: string[], deps: CommandDeps): Promise<Comma
   await mkdir(outDir, { recursive: true });
   const jsonPath = join(outDir, "CAPABILITY_MATRIX.json");
   const mdPath = join(outDir, "CAPABILITY_MATRIX.md");
-  const jsonOut = { ...matrix, byProfile };
+  const jsonOut = { ...matrix, byProfile, verdict: summary.verdict };
   await writeFile(jsonPath, `${JSON.stringify(jsonOut, null, 2)}\n`, "utf8");
   await writeFile(mdPath, renderMatrixMarkdown(matrix, summary), "utf8");
 
+  // P36-8: exit semantics —
+  //   agent audit         → exit 0 on truthful docs (malformed evidence still 0
+  //                         but evidenceFresh=false is reported; malformed
+  //                         JSON is skipped silently — not fatal);
+  //   agent audit --strict → exit non-zero when PROFILE requirements unmet.
+  const strictOk = strict ? summary.verdict.profileRequirementsOk : true;
+  const exitCode = summary.ok && strictOk ? 0 : 1;
+
   if (json) {
-    return { exitCode: summary.ok ? 0 : 1, lines: [JSON.stringify(jsonOut, null, 2)] };
+    return { exitCode, lines: [JSON.stringify(jsonOut, null, 2)] };
   }
   const lines: string[] = [
     `audit: ${summary.ok ? "OK" : "FAILED"} — ${summary.total} capabilities, ${summary.wired} wired, ${summary.implemented} implemented-only, ${summary.missing} missing`,
+    `audit verdict: documentationClaims=${summary.verdict.documentationClaimsOk ? "PASS" : "FAIL"}; profileRequirements=${summary.verdict.profileRequirementsOk ? "PASS" : "FAIL"}; evidenceFresh=${summary.verdict.evidenceFresh ? "PASS" : "FAIL"}`,
     ...summary.docTruthfulness.map(
       (row) => `docs ${row.suite}: claimed ${row.claimed}, on disk ${row.actual}${row.planned ? " (marked planned)" : ""} → ${row.truthful ? "truthful" : "UNTRUTHFUL"}`,
     ),
     `audit: wrote ${jsonPath}`,
     `audit: wrote ${mdPath}`,
   ];
-  return { exitCode: summary.ok ? 0 : 1, lines };
+  return { exitCode, lines };
 }

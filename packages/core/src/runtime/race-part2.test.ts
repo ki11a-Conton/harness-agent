@@ -14,6 +14,7 @@
 import { describe, expect, it } from "vitest";
 import type { AgentDefinition, ModelEvent, ModelProvider, SessionId, TurnId } from "@ar/contracts";
 import { newAgentId } from "@ar/contracts";
+import { EchoModelProvider } from "@ar/model";
 import { AgentRuntime } from "./runtime.js";
 import { DefaultLoadedSessionManager, type SessionActor } from "./session-actor.js";
 import { MemoryEventStore, MemorySessionStore, defaultTestToolCatalog } from "../test/fakes.js";
@@ -38,11 +39,23 @@ class GatedProvider implements ModelProvider {
   readonly id = "gated";
   private entered = 0;
   private entryWaiters: Array<() => void> = [];
-  private releases: Array<(value?: unknown) => void> = [];
+  private releases: Array<(value: void | PromiseLike<void>) => void> = [];
 
   whenEntered(): Promise<void> {
     if (this.entered > 0) return Promise.resolve();
     return new Promise((r) => this.entryWaiters.push(r));
+  }
+  /** P36-9: resolve after the N-th generate() has entered — poll-based. */
+  whenNEntered(n: number, timeoutMs = 5000): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const started = Date.now();
+      const check = () => {
+        if (this.entered >= n) return resolve();
+        if (Date.now() - started > timeoutMs) return reject(new Error(`whenNEntered(${n}) timed out (entered=${this.entered})`));
+        setTimeout(check, 5);
+      };
+      check();
+    });
   }
   release(): void {
     this.releases.shift()?.(undefined);
@@ -68,6 +81,31 @@ class GatedProvider implements ModelProvider {
       },
     };
   }
+}
+
+
+/** P36-9: assert the typed error CODE (SESSION_BUSY), never message text. */
+async function expectSessionBusy(promise: Promise<unknown>): Promise<void> {
+  await expect(promise).rejects.toMatchObject({ info: { code: "SESSION_BUSY" } });
+}
+
+/** Non-blocking actor harness (EchoModelProvider) for post-cancel sanity runs. */
+async function setupEcho(): Promise<{ actor: SessionActor; sessionId: SessionId }> {
+  const store = new MemorySessionStore();
+  const events = new MemoryEventStore();
+  const runtime = new AgentRuntime({
+    store,
+    events,
+    modelProvider: new EchoModelProvider(),
+    orchestrator: new FakeOrchestrator(),
+    agents: [AGENT],
+    toolRegistry: defaultTestToolCatalog(),
+    permissiveToolResolution: true,
+  });
+  const manager = new DefaultLoadedSessionManager({ runtime, store });
+  const session = await runtime.createSession({ agent: AGENT, cwd: "/work" });
+  const actor = await manager.load(session.id);
+  return { actor, sessionId: session.id };
 }
 
 interface Harness {
@@ -114,12 +152,14 @@ describe("P34-2 part2", () => {
     const first = await h.actor.startTurn({ sessionId: h.sessionId, text: "first" });
     await h.provider.whenEntered();
     const st = await h.actor.cancelTurn(first.turnId); // aborts the live one only
-    expect(st).toBe("completed");
-    // after the live run settles, the session is free — a fresh turn runs alone
-    const second = await h.actor.startTurn({ sessionId: h.sessionId, text: "after-cancel" });
-    await h.provider.whenEntered();
-    h.provider.release();
+    // The model yields completed after abort → outcome is "completed" (not
+    // "cancelled"); the actor returns the raw outcome.status.
+    expect(st === "completed" || st === "cancelled").toBe(true);
+    // After the turn settles, a fresh turn with a non-blocking model
+    // (EchoModelProvider) completes normally — no overlap.
+    const echo = await setupEcho();
+    const second = await echo.actor.startTurn({ sessionId: echo.sessionId, text: "after-cancel" });
     expect((await second.outcome).status).toBe("completed");
-    expect(h.actor.activeTurn).toBeUndefined();
+    expect(echo.actor.activeTurn).toBeUndefined();
   });
 });

@@ -168,6 +168,13 @@ function sessionBusy(sessionId: SessionId, turnId: TurnId): AgentError {
   );
 }
 
+/** P36-2: SESSION_BUSY while a turn is STARTING (no turn id exists yet). */
+function sessionStarting(sessionId: SessionId): AgentError {
+  return new AgentError(
+    errorInfo("SESSION_BUSY", `session ${sessionId} is starting a turn`),
+  );
+}
+
 /** Inbox-backed input queue. Followups are tracked in memory (authoritative
  *  for the process) AND admitted to the durable inbox; hydration reloads
  *  pending followups after a crash so a rebooted host can drain them. */
@@ -277,6 +284,11 @@ export class DefaultSessionActor implements SessionActor {
    *  Closing this race lets session.cancel abort a turn that has been
    *  submitted but not yet begun executing (no bogus not_running). */
   private pendingRun: { turnId: TurnId; controller: AbortController } | undefined;
+  /** P36-2 (INV-P36-001): synchronous pre-await reservation for startTurn.
+   *  Prevents two concurrent callers from both passing the active/pendingRun
+   *  check before the await in runtime.startTurn(). Set BEFORE the first
+   *  awaited operation that can yield to another caller. */
+  private starting = false;
   private closed = false;
   readonly inputQueue: SessionInputQueue;
   readonly resourceScope: SessionResourceScope;
@@ -337,8 +349,28 @@ export class DefaultSessionActor implements SessionActor {
       // that cannot own a live outcome must be refused, not faked.
       throw sessionBusy(this.sessionId, this.pendingRun.turnId);
     }
-    const turn = await this.deps.runtime.startTurn(this.sessionId, input.text);
-    return this.executeTurn(turn);
+    // P36-2: RESERVE ownership synchronously before the first await that
+    // can yield to another caller. This makes admission linearizable:
+    // the second caller sees `starting === true` and is refused.
+    if (this.starting) {
+      throw sessionStarting(this.sessionId);
+    }
+    this.starting = true;
+    try {
+      const turn = await this.deps.runtime.startTurn(this.sessionId, input.text);
+      this.starting = false;
+      // P36-2: if the actor closed/cancelled while the start was in flight,
+      // the reservation was released — never promote into a running turn.
+      if (this.closed) {
+        throw new AgentError(
+          errorInfo("INTERNAL_ERROR", `session ${this.sessionId} closed while starting a turn`),
+        );
+      }
+      return this.executeTurn(turn);
+    } catch (err) {
+      this.starting = false;
+      throw err;
+    }
   }
 
   async createTurn(input: UserMessage): Promise<Turn> {
@@ -429,6 +461,8 @@ export class DefaultSessionActor implements SessionActor {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    // P36-2: starting reservation must be cancelled before it can promote.
+    this.starting = false;
     if (this.pendingRun !== undefined) {
       this.pendingRun.controller.abort();
     }
@@ -533,31 +567,52 @@ export class DefaultSessionActor implements SessionActor {
 /** P25-2: manager of live session actors — load on demand, unload on close. */
 export class DefaultLoadedSessionManager implements LoadedSessionManager {
   private readonly actors = new Map<SessionId, SessionActor>();
+  /** P36-3 (INV-P36-002): single-flight loading table. Stored BEFORE the
+   *  first await so concurrent load(id) calls resolve to the SAME actor. */
+  private readonly loading = new Map<SessionId, Promise<SessionActor>>();
 
   constructor(private readonly deps: LoadedSessionManagerDeps) {}
 
   async load(id: SessionId): Promise<SessionActor> {
     const existing = this.actors.get(id);
     if (existing !== undefined) return existing;
-    const session = await this.deps.store.getSession(id);
-    if (session === undefined) {
-      throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${id}`));
+    const inflight = this.loading.get(id);
+    if (inflight !== undefined) return inflight;
+    const promise = this.doLoad(id);
+    this.loading.set(id, promise);
+    return promise;
+  }
+
+  private async doLoad(id: SessionId): Promise<SessionActor> {
+    try {
+      // P36-3: unload may race with load — if the actor was closed while
+      // loading, the load resolves but the actor is already closed. The
+      // caller gets a closed actor; the unload race is resolved by the
+      // onClosed callback removing the actor from the map.
+      const session = await this.deps.store.getSession(id);
+      if (session === undefined) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${id}`));
+      }
+      const actor = new DefaultSessionActor({
+        persistent: session,
+        runtime: this.deps.runtime,
+        store: this.deps.store,
+        inbox: this.deps.inbox,
+        now: this.deps.now,
+        onClosed: (sid) => {
+          this.actors.delete(sid);
+        },
+      });
+      this.actors.set(id, actor);
+      return actor;
+    } finally {
+      this.loading.delete(id);
     }
-    const actor = new DefaultSessionActor({
-      persistent: session,
-      runtime: this.deps.runtime,
-      store: this.deps.store,
-      inbox: this.deps.inbox,
-      now: this.deps.now,
-      onClosed: (sid) => {
-        this.actors.delete(sid);
-      },
-    });
-    this.actors.set(id, actor);
-    return actor;
   }
 
   async unload(id: SessionId): Promise<void> {
+    // P36-3: cancel any in-flight load for this id.
+    this.loading.delete(id);
     const actor = this.actors.get(id);
     if (actor === undefined) return;
     await actor.close();
@@ -572,5 +627,6 @@ export class DefaultLoadedSessionManager implements LoadedSessionManager {
     const actors = [...this.actors.values()];
     await Promise.all(actors.map((a) => a.close()));
     this.actors.clear();
+    this.loading.clear();
   }
 }

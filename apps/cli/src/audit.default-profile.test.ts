@@ -102,6 +102,17 @@ function defaultInput(overrides: Partial<AuditInput> = {}): AuditInput {
       config_drift_matrix: true,
       security_regression_matrix: true,
     },
+    // P36-7: fixtures declare tests present AND passing at the fixture HEAD.
+    executionEvidence: {
+      context_pipeline: { kind: "test_run", headSha: "git-abc", command: "vitest", passed: true, generatedAt: "t" },
+      advanced_tools: { kind: "test_run", headSha: "git-abc", command: "vitest", passed: true, generatedAt: "t" },
+      artifact_store: { kind: "test_run", headSha: "git-abc", command: "vitest", passed: true, generatedAt: "t" },
+      regression_suite: { kind: "benchmark_run", headSha: "git-abc", command: "bench", passed: true, generatedAt: "t" },
+      holdout_suite: { kind: "benchmark_run", headSha: "git-abc", command: "bench", passed: true, generatedAt: "t" },
+      adversarial_suite: { kind: "benchmark_run", headSha: "git-abc", command: "bench", passed: true, generatedAt: "t" },
+      stress_suite: { kind: "benchmark_run", headSha: "git-abc", command: "bench", passed: true, generatedAt: "t" },
+    },
+    gitSha: "git-abc",
     benchmarkSuites: {
       regression: { exists: false, caseCount: 0 },
       holdout: { exists: false, caseCount: 0 },
@@ -219,7 +230,7 @@ describe("audit default (interactive) profile (P0-1)", () => {
     expect(md).toContain("| regression_suite | missing |");
     expect(md).toContain("| adversarial_suite | benchmarked |");
     expect(md).toContain("| regression | 30 | 0 | false | false |");
-    expect(md).toContain("audit: FAILED");
+    expect(md).toContain("audit verdict (P36-8): documentationClaims=FAIL");
   });
 
   it("P35-2: snapshot-bound capabilities are authoritative; plain ones are not", () => {
@@ -259,5 +270,60 @@ describe("audit default (interactive) profile (P0-1)", () => {
     const md = renderMatrixMarkdown(matrix, auditSummary(matrix, input));
     expect(md).toContain("| id | status | implemented | productionWired | snapshotAuthoritative |");
     expect(md).toContain("| context_pipeline | tested | true | true | true |");
+  });
+
+  // ---------------------------------------------------------------------------
+  // P36-7 — execution-backed evidence (INV-P36-007)
+  // ---------------------------------------------------------------------------
+
+  it("P36-7: test file exists but no run evidence → NOT integrationTested", () => {
+    const input = defaultInput({ executionEvidence: {} });
+    const record = buildCapabilityMatrix(input).records.find((r) => r.id === "context_pipeline")!;
+    expect(record.testDeclared).toBe(true);
+    expect(record.integrationTested).toBe(false);
+    expect(capabilityStatusOf(record)).toBe("wired");
+  });
+
+  it("P36-7: failed test run → NOT integrationTested", () => {
+    const input = defaultInput({
+      executionEvidence: {
+        context_pipeline: { kind: "test_run", headSha: "git-abc", command: "vitest", passed: false, generatedAt: "t" },
+      },
+    });
+    const record = buildCapabilityMatrix(input).records.find((r) => r.id === "context_pipeline")!;
+    expect(record.testDeclared).toBe(true);
+    expect(record.integrationTested).toBe(false);
+  });
+
+  it("P36-7: passing evidence at STALE SHA → NOT integrationTested", () => {
+    const input = defaultInput({
+      executionEvidence: {
+        context_pipeline: { kind: "test_run", headSha: "old-sha", command: "vitest", passed: true, generatedAt: "t" },
+      },
+    });
+    const record = buildCapabilityMatrix(input).records.find((r) => r.id === "context_pipeline")!;
+    expect(record.integrationTested).toBe(false);
+  });
+
+  it("P36-7: passing evidence at current SHA → integrationTested", () => {
+    const input = defaultInput();
+    const record = buildCapabilityMatrix(input).records.find((r) => r.id === "context_pipeline")!;
+    expect(record.integrationTested).toBe(true);
+    expect(capabilityStatusOf(record)).toBe("tested");
+  });
+
+  it("P36-7: benchmark cases exist without run → NOT benchmarkExercised", () => {
+    const input = defaultInput({ executionEvidence: {} });
+    const record = buildCapabilityMatrix(input).records.find((r) => r.id === "adversarial_suite")!;
+    expect(record.benchmarkDeclared).toBe(true);
+    expect(record.benchmarkExercised).toBe(false);
+  });
+
+  it("P36-7: markdown matrix renders testDeclared vs integrationTested separately", () => {
+    const input = defaultInput({ executionEvidence: {} });
+    const matrix = buildCapabilityMatrix(input);
+    const md = renderMatrixMarkdown(matrix, auditSummary(matrix, input));
+    expect(md).toContain("| testDeclared | integrationTested | benchmarkDeclared | benchmarkExercised |");
+    expect(md).toContain("| context_pipeline | wired | true | true | true | true (none/none/true) | sandboxed | true | false | false | false |");
   });
 });

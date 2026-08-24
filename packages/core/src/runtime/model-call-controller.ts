@@ -113,6 +113,8 @@ export type ModelCompletionInput = {
   status: "completed";
   callId: ModelCallId;
   assistantText: string;
+  /** Thinking-mode reasoning accumulated from reasoning_delta events. */
+  reasoningText: string;
   calls: ToolCall[];
   final: ModelFinalResult | undefined;
   callStartedAt: number;
@@ -195,7 +197,7 @@ export class ModelCallController {
     verificationFailures: number,
   ): Promise<CompletionResult> {
     const { sessionId, turnId, signal, agent } = ctx;
-    const { assistantText, calls, final, callStartedAt, timeToFirstTokenMs, callId, usage } = modelResult;
+    const { assistantText, reasoningText, calls, final, callStartedAt, timeToFirstTokenMs, callId, usage } = modelResult;
 
     if (signal.aborted) {
       return { action: "finish", outcome: await this.deps.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger) };
@@ -255,6 +257,7 @@ export class ModelCallController {
       role: "assistant",
       content: final.text ?? assistantText,
       ...(toolCalls.length > 0 ? { toolCalls } : {}),
+      ...(reasoningText.length > 0 ? { reasoningContent: reasoningText } : {}),
       createdAt: this.deps.now(),
     });
     await this.deps.emit(sessionId, "model.completed", {
@@ -375,6 +378,7 @@ export class ModelCallController {
     const { sessionId, turnId, signal } = ctx;
 
     let assistantText = "";
+    let reasoningText = "";
     const calls: ToolCall[] = [];
     let final: ModelFinalResult | undefined;
 
@@ -463,6 +467,10 @@ export class ModelCallController {
                 firstTokenSeen = true;
                 timeToFirstTokenMs = this.deps.now() - callStartedAt;
               }
+              // Thinking-mode reasoning (deepseek reasoning_content). Persisted
+              // on the assistant message so it can be passed back to providers
+              // that require it; never surfaced as user-facing final output.
+              reasoningText += ev.text;
               break;
             case "tool_call_delta":
               calls.push(ev.toolCall);
@@ -537,6 +545,7 @@ export class ModelCallController {
           await timerSleep(this.deps.timer, retryAction.retryDelayMs);
         }
         assistantText = "";
+        reasoningText = "";
         calls.length = 0;
         final = undefined;
         continue;
@@ -554,6 +563,7 @@ export class ModelCallController {
       status: "completed",
       callId,
       assistantText,
+      reasoningText,
       calls,
       final,
       callStartedAt,

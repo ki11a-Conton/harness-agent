@@ -1,20 +1,18 @@
-# Harness Agent v5 — Codex-Grade Runtime Semantics & Service Boundary Plan
+# Harness Agent v5 — P36 Release Integrity & Linearizability Closure Plan
 
-> Repository: `ki11a-Conton/harness-agent`  
-> Target branch assumption: current `main` as reviewed on 2026-08-22  
-> Previous plan: P14–P22 are treated as completed unless source-level verification below explicitly identifies a semantic gap.  
-> This plan starts at **P23** and MUST NOT re-implement completed work under a new name.
+> Repository: `ki11a-Conton/harness-agent`
 >
-> Primary reference:
+> Reviewed baseline: current `main` around commit `b413f4f80833b642878816d8f3a06a353d8e069b`
 >
-> - current `harness-agent` source
-> - the 2026-08-21 Codex/Symphony harness source analysis
-> - OpenAI Codex architecture patterns: Session → TurnContext → StepContext, frozen tool router, thread lifecycle, App Server, ThreadStore/config/MCP patterns
-> - OpenAI Symphony reconciliation model
+> This plan starts at **PHASE 36**.
+>
+> P23–P35 are treated as implemented foundations, but **their status is NOT trusted blindly**.
+> If source-level verification discovers that an invariant is not actually satisfied,
+> P36 MUST fix the production path and update the historical status truthfully.
 >
 > Mission:
 >
-> **Move `harness-agent` from a feature-rich, strongly tested Agent Runtime to a semantically closed, service-grade Agent Harness where every model action is bound to the exact world snapshot that produced it, every session has a single authoritative execution owner, every side effect has a durable causal record, and every UI/SDK client uses one stable protocol boundary.**
+> **Turn Harness v5 from “feature-complete with documented known noise” into a release-integrity-closed runtime where session ownership is linearizable, SDK streaming semantics are truthful, process policy cannot be bypassed by shell composition, capability evidence is execution-backed, and a release task cannot be marked DONE unless every required gate is actually green.**
 
 ---
 
@@ -22,3468 +20,1721 @@
 
 You are the coding agent implementing this plan.
 
-Do **not** begin by adding files.
+Do **not** begin by adding abstractions.
 
-First inspect the current repository and verify every assumption in this plan against the current branch.
+Do **not** begin by creating `V2`, `V3`, `Fixed`, `New`, `Safe`, or duplicate implementations.
 
-The source code is authoritative.
+First inspect the current repository and verify every assumption against source.
 
-A task is not DONE because:
+The source code and executable evidence are authoritative.
 
-- an interface exists;
-- a unit test directly constructs a helper;
-- an event contains a field;
-- a feature exists behind an unused adapter;
-- a method is exported;
+A task is **NOT DONE** because:
+
+- a previous `plan.md` says DONE;
+- `HANDOFF.md` says the failure is “known noise”;
+- a test file exists;
+- a benchmark case exists;
+- an implementation is present but not production-wired;
+- a failure predates the current patch;
+- a code path has a comment claiming an invariant;
 - a capability matrix says `implemented`;
-- a previous plan says `DONE`;
-- a fake test demonstrates the idea.
+- a local workaround makes `tsc` emit;
+- a test passes only when run in isolation;
+- the change did not introduce the failing test;
+- an assertion is weakened until green;
+- a race failure is non-deterministic.
 
-A task is DONE only when its required **production path** is wired, its semantic invariant is tested, and the full relevant test suite passes.
+A task is DONE only when:
+
+1. the production path satisfies the invariant;
+2. the invariant is directly tested;
+3. relevant package tests pass;
+4. full typecheck passes;
+5. full test suite passes;
+6. full build passes;
+7. required coverage passes;
+8. required race/chaos/security suites pass;
+9. benchmark smoke passes;
+10. capability/release evidence references the current HEAD;
+11. no required gate is skipped, ignored, or renamed to “noise”.
 
 ---
 
 # 1. NON-NEGOTIABLE EXECUTION RULES
 
-## Rule 1 — Preserve the capabilities that are already stronger than a basic Codex clone
+## Rule 1 — Red means red
 
-Do NOT remove or weaken the existing:
+If a required release command exits non-zero:
 
-- side-effect intent persistence;
-- checkpointing;
-- tool execution ledger;
-- crash reconciliation;
-- fault injection;
-- verification gates;
-- false-complete grading;
-- adaptive/bounded recovery;
-- unsafe-tool no-retry invariant;
-- ask-user durable suspension;
-- run/tree budgets;
-- resource conflict semantics;
-- output/artifact budgets;
-- memory/learning pipeline;
-- independent reviewer isolation;
-- delegation/workspace isolation;
-- usage accounting;
-- trace tree;
-- champion promotion gates.
+```text
+releaseReady = false
+```
 
-Codex is a reference for architectural boundaries, **not a request to replace working reliability mechanisms**.
+There is no exception for:
+
+```text
+pre-existing failure
+known noise
+platform noise
+race noise
+test harness issue
+only test code type error
+not caused by this phase
+```
+
+Those descriptions may be useful for triage.
+
+They may **not** convert a failed gate into PASS.
 
 ---
 
-## Rule 2 — No parallel implementation
+## Rule 2 — Do not weaken standards to make P36 pass
 
-If an existing primitive can be evolved, evolve it.
+Forbidden:
+
+- lowering coverage thresholds;
+- deleting failing tests without proving they are invalid;
+- adding broad `.skip`, `.only`, `test.todo`, platform-wide skip;
+- excluding race tests from `tsconfig`;
+- changing CI to ignore command exit codes;
+- converting a required test into documentation;
+- replacing real benchmark execution with file existence;
+- replacing integration tests with helper-only unit tests;
+- catching an error and returning success;
+- changing release status semantics from “PASS” to “best effort”;
+- marking a phase DONE with unresolved required gates.
+
+If a test is genuinely invalid, repair the test so it tests the intended invariant.
+
+---
+
+## Rule 3 — Fix the invariant, not the symptom
+
+Examples:
 
 Bad:
 
 ```text
-ToolRegistry
-ToolRegistryV2
-CodexToolRegistry
-FrozenRegistry
+SESSION_BUSY test expects the wrong message
+→ update regex only
 ```
 
 Good:
 
 ```text
-ToolRegistry = mutable catalog
-StepToolRouter = immutable execution snapshot built from the catalog
+determine whether two same-session starts can race
+→ fix actor admission linearizability
+→ test typed error code
+→ keep message non-authoritative
 ```
 
 Bad:
 
 ```text
-EventStore
-JournalStore
-SemanticEventStore
-RuntimeJournalStore
+SDK stream hangs
+→ add timeout
 ```
 
-if all four become competing sources of truth.
+Good:
 
-Prefer one canonical durable trail with explicit projections/fences.
-
----
-
-## Rule 3 — Production wiring before status updates
-
-For every task:
-
-1. add/modify contracts;
-2. wire production composition root;
-3. wire runtime call path;
-4. add unit tests;
-5. add integration/invariant tests;
-6. run package-local tests;
-7. run full typecheck;
-8. run full tests;
-9. run build;
-10. only then mark the task DONE.
+```text
+separate public event consumption from internal result reduction
+→ prove both can consume the same run concurrently
+```
 
 ---
 
-## Rule 4 — Fail closed on authority ambiguity
+## Rule 4 — No hidden asynchronous ownership gaps
+
+Any invariant of the form:
+
+```text
+exactly one owner
+at most one active turn
+one load per session
+one durable commit
+one terminal settlement
+```
+
+must remain true across every `await`.
+
+If ownership is checked before an `await`, ownership must be reserved before that `await`.
+
+---
+
+## Rule 5 — Security decisions fail closed on ambiguity
 
 If the runtime cannot prove:
 
-- which tool definition the model saw;
-- which MCP generation a call belongs to;
-- which permission profile applies;
-- whether a non-idempotent side effect committed;
-- whether an approval applies to this exact capability;
-- whether a thread already has an active turn;
+- a filesystem path’s canonical identity;
+- a command is a single permitted invocation;
+- a shell-composed command is explicitly authorized;
+- a cached approval covers equal-or-narrower authority;
+- an MCP generation matches the originating step;
+- an unsafe side effect definitely did not commit;
 
-then do not guess.
+then deny / reconcile / require explicit approval.
 
-Return a typed failure, reconciliation state, overload/busy state, or require explicit operator input.
+Never guess.
 
 ---
 
-## Rule 5 — No hidden global mutable world during a step
+## Rule 6 — Tests must exercise production paths
 
-Once a sampling request begins, the runtime must not consult a newly mutated global registry/config/MCP view to interpret model-originated calls from that sampling request.
+A P36 invariant test should normally flow through the real public or production composition path.
 
-The core invariant of this plan is:
+Preferred:
 
 ```text
-MODEL_VISIBLE_WORLD(step N)
-          ==
-TOOL_EXECUTION_WORLD(step N)
+Harness/AppServer/SessionActor/SandboxManager/Audit CLI
 ```
 
-for all model-originated actions.
+Avoid proving a production invariant only by directly invoking a pure helper.
+
+Helpers still need unit tests, but production-path tests are mandatory.
 
 ---
 
-## Rule 6 — No same-session concurrent turns
+## Rule 7 — Evidence must distinguish existence from execution
 
-A logical session/thread may have **at most one active executing turn**.
+These are different facts:
 
-A second user input while a turn is active must become one of:
+```text
+test file exists
+test was executed
+test passed at HEAD
 
-- steer input;
-- queued follow-up input;
-- explicit rejection/busy response;
+benchmark case exists
+benchmark suite was executed
+benchmark suite passed at HEAD
+```
 
-according to API semantics.
-
-It must never silently become a second concurrent `runTurn()` against the same session.
-
----
-
-## Rule 7 — Model retry taxonomy must preserve snapshot semantics
-
-Differentiate:
-
-1. **transport/provider retry**  
-   same semantic request, same prompt/tool snapshot;
-2. **model request retry**  
-   same semantic request, same StepExecutionSnapshot;
-3. **reactive compaction / context rebuild / tool catalog change / model switch**  
-   **new sampling snapshot required**.
-
-Do not reuse a stale StepContext after the actual model-visible prompt/tool universe changes.
+Never collapse them.
 
 ---
 
-## Rule 8 — Do not over-copy Codex
+## Rule 8 — Keep P36 narrow
 
-Do NOT implement unless this plan explicitly asks for it:
+P36 is a closure phase.
 
-- OpenAI enterprise auth;
-- ChatGPT workspace policy;
-- marketplace;
-- Guardian-specific infrastructure;
-- full remote executor;
-- full PathUri conversion;
-- macOS Seatbelt;
-- Linux Landlock/seccomp clone;
-- Windows restricted-token clone;
-- every Codex App Server endpoint;
-- project/thread-section UI features.
+Do not add:
 
-We want the architectural invariants, not product-specific bulk.
+- new memory architecture;
+- new subagent roles;
+- new planner types;
+- new plugin systems;
+- new MCP transports;
+- new UI features;
+- new benchmark categories unless required to prove a P36 bug;
+- new “smart” heuristics unrelated to release integrity.
+
+If a new feature idea appears, record it under `Deferred after P36`.
 
 ---
 
-# 2. CURRENT SOURCE AUDIT — WHAT IS ALREADY GOOD
+# 2. CURRENT SOURCE AUDIT — ISSUES P36 MUST CLOSE
 
-The following current mechanisms should be preserved and used as building blocks.
+This section is a starting hypothesis. Re-verify before editing.
 
-## 2.1 Existing StepContext
+---
 
-Current contract roughly captures:
+## 2.1 Release status truthfulness gap
+
+Current P35 release reporting marks completion even though the documented run included:
+
+- failing tests;
+- blocked typecheck/build;
+- coverage not run;
+- benchmark smoke not run;
+- chaos/race not fully green.
+
+This violates the plan’s own completion rule.
+
+P36 must make this mechanically impossible.
+
+---
+
+## 2.2 SessionActor admission race
+
+Current `DefaultSessionActor.startTurn()` conceptually performs:
 
 ```ts
-interface StepContext {
-  stepId: string;
-  sessionId: SessionId;
-  turnId: TurnId;
-  agentId: AgentId;
-  effectiveAgent: EffectiveAgentConfig;
-  cwd: string;
-  toolSpecs: readonly ToolSpec[];
-  policyHash: string;
-  contextSelection: {
-    blocks: number;
-    tokens: number;
-    compacted: boolean;
-  };
-  model: ModelRef;
+if (active === undefined && pendingRun === undefined) {
+  const turn = await runtime.startTurn(...);
+  return executeTurn(turn);
 }
 ```
 
-The runtime creates one before a model call and threads it into the tool batch.
+The actor does not necessarily reserve ownership before the awaited `runtime.startTurn()`.
 
-This is a good start.
+Two simultaneous callers can pass the admission check before either becomes active.
 
-**Do not delete it.**
-
-But it is not yet authoritative enough; P23 closes the semantic gap.
+P36 must make same-session turn admission linearizable.
 
 ---
 
-## 2.2 Existing ToolCallController
+## 2.3 LoadedSessionManager load race
 
-Keep:
-
-- bounded concurrency;
-- deterministic call-order result observation;
-- `ToolSemantics`;
-- resource conflict keys;
-- cancellable-aware settlement;
-- adaptive recovery;
-- typed recovery taxonomy;
-- stall traces;
-- no unsafe automatic retry;
-- abort settlement.
-
-P23 changes how the controller resolves a tool, not the useful behaviors around execution.
-
----
-
-## 2.3 Existing ToolOrchestrator
-
-Keep the existing pipeline:
-
-```text
-resolve
-validate
-normalize
-risk
-permission
-approval
-sandbox
-persist side-effect intent
-execute
-timeout/output limits
-evidence
-events
-normalize
-```
-
-The important change is that `resolve` must become capable of resolving against a **frozen step binding**, not only the mutable process-wide registry.
-
----
-
-## 2.4 Existing MCP Tool View
-
-The current `McpToolView` already provides useful concepts:
-
-- schema hashing;
-- refresh diff;
-- staged refresh;
-- snapshot isolation;
-- structural mismatch failure.
-
-Reuse the schema/diff logic.
-
-Do not build an unrelated second schema-hash mechanism.
-
-P24 evolves this from a turn-level helper into a production Step binding system.
-
----
-
-## 2.5 Existing Gateway/RPC
-
-The current gateway already has an important clean boundary:
-
-```text
-Gateway
-  ↓
-RpcMethodRegistry
-  ↓
-AgentRuntime
-```
-
-Keep that principle.
-
-P28 turns it into a proper App Server protocol instead of deleting it.
-
----
-
-# 3. CURRENT SOURCE AUDIT — VERIFIED GAPS TO FIX
-
-These gaps are the reason this plan exists.
-
----
-
-## GAP-01 — StepContext is passed around but is not the authoritative tool world
-
-Current model-call code still selects tools from controller-level:
+Current manager pattern conceptually performs:
 
 ```ts
-this.deps.toolSpecs
-this.deps.toolSelector
+const existing = actors.get(id);
+if (existing) return existing;
+
+const session = await store.getSession(id);
+const actor = new DefaultSessionActor(...);
+actors.set(id, actor);
+return actor;
 ```
 
-instead of using an already-frozen exact `step.toolRouter.modelVisibleSpecs`.
+Two concurrent loads may both miss the map before the store read resolves.
 
-Therefore:
-
-```text
-StepContext.toolSpecs
-```
-
-is not guaranteed to equal:
-
-```text
-the exact schemas passed to model.generate()
-```
-
-This violates the core snapshot invariant.
+P36 must single-flight or serialize creation so one logical session has exactly one live actor in a manager.
 
 ---
 
-## GAP-02 — Reactive compaction can reuse a stale step identity
+## 2.4 SDK `runStreamed()` double-consumer semantic gap
 
-The current model retry path can:
-
-1. start with a StepContext;
-2. hit context-length failure;
-3. append a digest;
-4. shrink/rebuild history;
-5. retry inside `callModelWithRetry`.
-
-The model-visible context changed.
-
-That must be treated as a **new sampling snapshot**, not merely another attempt inside the old snapshot.
-
----
-
-## GAP-03 — Tool execution still resolves from the global mutable registry
-
-`ToolOrchestrator.execute()` currently does:
+The public API exposes:
 
 ```ts
-const tool = this.registry.get(request.call.name);
+{
+  events: AsyncIterable<TurnEvent>;
+  done: Promise<RunResult>;
+}
 ```
 
-The tool definition used at execution time is therefore process-global.
+but `done` is currently derived by consuming the same single-consumer event channel.
 
-A true step snapshot requires:
+A user consuming `events` and awaiting `done` can race with the internal reducer.
 
-```text
-model advertised binding X
-→ call resolves binding X
-```
-
-even if global catalog X is later replaced/removed.
+P36 must make both surfaces independently correct over the same run.
 
 ---
 
-## GAP-04 — Tool policy execution reads Turn/global state rather than frozen step authority
+## 2.5 Process allowlist glob / shell composition gap
 
-The ToolCallController still gates with current turn agent policy and controller/global sandbox/semantics dependencies.
+The semantic process gate correctly parses shell operators for normal command matching.
 
-A `stepId` in the event is useful observability, but it is not authority.
+However, broad glob matching is evaluated in a way that can authorize a shell-composed command before composition semantics are rejected.
 
-The Step execution world must contain the exact policy/permission/environment/router binding used for that call.
-
----
-
-## GAP-05 — MCP is eager at Harness startup
-
-Current production composition:
+Example threat:
 
 ```text
-for each configured MCP server:
-    connect
-    discover tools
-    register all tools
+allowedCommands = ["git *"]
+target = "git status; echo pwned"
 ```
 
-A single misconfigured unused server can abort Harness creation.
+The target is a composed shell command and must not be admitted by a normal argv/glob rule.
 
-This must evolve to:
+P36 must separate:
 
 ```text
-catalog
-→ resolve need
-→ lazy connection
-→ immutable binding
+plain invocation policy
+vs
+explicit shell composition policy
 ```
 
 ---
 
-## GAP-06 — McpToolView is turn-scoped and not the production tool execution authority
+## 2.6 Canonical path ambiguity gap
 
-Current `McpToolView` is useful but does not close:
+The canonicalizer currently falls back after broad `realpath` failures.
 
-```text
-MCP snapshot
-→ StepToolRouter
-→ actual invocation binding
-```
+Only path-not-found style errors should enter “deepest existing ancestor + tail” fallback.
 
-It must be integrated into the production world snapshot.
+Permission, loop, I/O, and unknown canonicalization failures must fail closed.
+
+Depth-limit exhaustion must fail closed.
 
 ---
 
-## GAP-07 — Same session can run multiple different turns concurrently
+## 2.7 Capability audit evidence gap
 
-The current RPC in-flight map is keyed by:
-
-```text
-${sessionId}:${turnId}
-```
-
-It rejects running the exact same turn twice, but does not reject:
+Current audit can infer:
 
 ```text
-session S / turn A
-session S / turn B
+integrationTested = test file exists
+benchmarkExercised = benchmark directory/case count exists
 ```
 
-running simultaneously.
+This proves repository content, not execution.
 
-That is unsafe for a conversation/session state machine.
+P36 must introduce execution-backed evidence.
 
 ---
 
-## GAP-08 — There is no LoadedSession / SessionActor owner
+## 2.8 Durability semantics gap
 
-The current `SessionService` is mostly durable CRUD/lifecycle.
+Current matrix can report `durable=true` merely because the current profile does not require durability.
 
-Runtime handles such as:
-
-- active turn;
-- cancellation;
-- input queue;
-- active MCP references;
-- turn lock;
-- pending steer input;
-
-do not have one authoritative session-owned lifecycle object.
-
----
-
-## GAP-09 — Persistence is strong but lacks a formal durability-boundary contract
-
-The project already has:
-
-- ordered events;
-- SQLite WAL;
-- JSONL stores;
-- side-effect intent persistence;
-- checkpoints;
-- state snapshots.
-
-But there is not yet one explicit abstraction answering:
+That mixes:
 
 ```text
-"everything through semantic boundary N is durable"
+actual capability durability
+profile durability requirement
+profile requirement satisfaction
 ```
 
-for:
-
-- turn start;
-- side-effect intent;
-- side-effect outcome;
-- checkpoint;
-- turn completion.
+P36 must model these separately.
 
 ---
 
-## GAP-10 — App protocol is still internal RPC, not a versioned Thread/Turn/Item contract
+## 2.9 Audit OK semantics gap
 
-Current RPC is useful but still:
+Current `audit: OK` can mean only that README benchmark counts match on-disk counts.
+
+This label is too broad.
+
+P36 must distinguish at least:
 
 ```text
-session.create
-session.send
-session.run
+documentationClaims
+capabilityProfileSatisfaction
+releaseGate
+```
+
+---
+
+# 3. P36 DELIVERY MAP
+
+| Task | Priority | Theme |
+| --- | --- | --- |
+| P36-0 | P0 | Baseline truth capture |
+| P36-1 | P0 | Release gate truthfulness |
+| P36-2 | P0 | SessionActor linearizability |
+| P36-3 | P0 | LoadedSessionManager single-flight |
+| P36-4 | P0 | SDK stream/result semantic closure |
+| P36-5 | P0 | Process policy shell-composition closure |
+| P36-6 | P1 | Filesystem canonicalization fail-closed |
+| P36-7 | P1 | Execution-backed capability evidence |
+| P36-8 | P1 | Durability / audit semantic model |
+| P36-9 | P1 | Race + chaos suite stabilization |
+| P36-10 | P1 | Cross-platform invariant matrix |
+| P36-11 | P1 | Champion/release evidence binding |
+| P36-12 | P0 | Zero-red release candidate gate |
+| P36-13 | P2 | Documentation / migration / handoff truth |
+
+Do not reorder P36-12 before P36-1..11 are complete.
+
+---
+
+# PHASE 36-0 — Baseline Truth Capture
+
+> Priority: P0
+>
+> Goal: establish the exact current failure set before changing source.
+
+## Why
+
+P36 must distinguish:
+
+```text
+existing red baseline
+new regressions
+fixed failures
+remaining failures
+```
+
+without using the existing baseline as an excuse to pass release.
+
+## Implementation
+
+Before edits, run and persist raw outputs for:
+
+```bash
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm test:coverage
+pnpm docs:verify
+pnpm benchmark:smoke
+```
+
+Also identify the exact available commands for:
+
+```text
+race suite
+chaos suite
+security suite
+protocol conformance
+production audit
+champion evaluation smoke
+```
+
+If a command is not exposed in `package.json`, locate the real test paths and record them.
+
+Create a machine-readable baseline artifact, for example:
+
+```text
+.ci/p36-baseline.json
+```
+
+Suggested schema:
+
+```ts
+interface GateRunEvidence {
+  gate: string;
+  command: string;
+  headSha: string;
+  startedAt: string;
+  finishedAt: string;
+  exitCode: number;
+  passed: boolean;
+  summary?: {
+    testFilesPassed?: number;
+    testFilesFailed?: number;
+    testsPassed?: number;
+    testsFailed?: number;
+  };
+  logPath: string;
+}
+
+interface P36Baseline {
+  headSha: string;
+  dirty: boolean;
+  gates: GateRunEvidence[];
+}
+```
+
+Do not commit massive logs unless repository conventions already commit CI logs.
+
+The JSON summary may be committed if appropriate.
+
+## Required tests
+
+Unit-test parser/serializer if introducing reusable gate-evidence code.
+
+## Acceptance criteria
+
+- exact baseline HEAD recorded;
+- every required gate attempted;
+- exit code captured exactly;
+- failed gates remain `passed=false`;
+- “not run” is represented explicitly, never as PASS.
+
+## Forbidden shortcuts
+
+- do not omit slow gates;
+- do not change commands before capturing baseline;
+- do not classify a failure as “noise” inside the pass/fail field.
+
+## Status block
+
+```text
+Status:
+Baseline HEAD:
+Implementation:
+Commands run:
+Failures observed:
+Evidence:
+Windows:
+Linux:
+Notes:
+```
+
+---
+
+# PHASE 36-1 — Release Gate Truthfulness
+
+> Priority: P0
+>
+> Goal: make it impossible for a release task to report PASS while required gates are red or not run.
+
+## Design
+
+Introduce a typed release gate model.
+
+Example:
+
+```ts
+type GateState =
+  | "passed"
+  | "failed"
+  | "not_run"
+  | "blocked";
+
+interface ReleaseGateResult {
+  id:
+    | "typecheck"
+    | "test"
+    | "build"
+    | "coverage"
+    | "docs"
+    | "benchmark_smoke"
+    | "protocol"
+    | "security"
+    | "race"
+    | "chaos"
+    | "capability_audit";
+  state: GateState;
+  headSha: string;
+  command: string;
+  evidenceRef?: string;
+  reason?: string;
+}
+
+interface ReleaseVerdict {
+  headSha: string;
+  ready: boolean;
+  gates: ReleaseGateResult[];
+}
+```
+
+Rule:
+
+```text
+ready = true
+IFF
+every required gate.state == "passed"
+AND
+every gate.headSha == release HEAD
+```
+
+No baseline exception.
+
+## Implementation
+
+Add a release verification command or evolve an existing one.
+
+Suggested CLI:
+
+```text
+agent release verify
+agent release verify --json
+```
+
+It must:
+
+1. resolve current HEAD;
+2. run or ingest authoritative gate evidence;
+3. reject stale evidence from another SHA;
+4. reject dirty-tree evidence unless explicitly using a dirty-tree development mode;
+5. report each gate separately;
+6. exit non-zero when any required gate is failed/not_run/blocked.
+
+The human-readable output should say:
+
+```text
+Release verdict: FAILED
+
+typecheck        FAILED
+test             FAILED
+build            BLOCKED
+coverage         NOT_RUN
+benchmark_smoke  NOT_RUN
 ...
 ```
-
-with no:
-
-- initialize handshake;
-- protocol version;
-- client capabilities;
-- Thread/Turn/Item DTO layer;
-- bounded ingress/outbound backpressure;
-- schema generation/golden fixtures.
-
----
-
-## GAP-11 — No public SDK layer
-
-There is no standalone SDK package with:
-
-```text
-HarnessClient
-Thread
-runStreamed()
-run()
-```
-
-The CLI still has access to runtime/store internals.
-
----
-
-## GAP-12 — Config is a direct `HarnessConfig`, not a layered explainable config
-
-Current configuration cannot generally answer:
-
-```text
-which layer supplied this key?
-what fingerprint did this session freeze?
-which keys changed?
-is the change allowed to affect current step/turn/session?
-```
-
----
-
-## GAP-13 — Approval records are durable, but authority identity is still stringly typed
-
-Current request has:
-
-```ts
-action: string;
-target: string;
-scope: "one_call" | "one_tool" | "session";
-```
-
-The scope is excellent audit metadata, but the runtime still needs a canonical semantic capability identity such as:
-
-```text
-exec(command, cwd, environment, permission delta)
-file_write(canonical path)
-network(origin)
-mcp(server generation, tool)
-```
-
-for safe approval reuse.
-
----
-
-## GAP-14 — No Symphony-style external-work reconciliation layer
-
-The existing scheduler/delegator solves **intra-task** agent execution.
-
-It is not the same as:
-
-```text
-external work item A
-external work item B
-external work item C
-```
-
-with polling, claims, state reconciliation, retries, and workspace lifecycle.
-
-A separate orchestration layer is still absent.
-
----
-
-# 4. TARGET ARCHITECTURE AFTER P23–P33
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│                         Clients                              │
-│ CLI │ Web │ Desktop │ IDE │ TypeScript SDK │ Chat Gateway   │
-└──────────────────────────────┬───────────────────────────────┘
-                               │
-                               ▼
-┌──────────────────────────────────────────────────────────────┐
-│                     App Server v1                            │
-│ initialize / capabilities                                    │
-│ thread/* │ turn/* │ item events │ approval/* │ ask/*        │
-│ bounded queues │ replay │ backpressure                       │
-└──────────────────────────────┬───────────────────────────────┘
-                               │
-                               ▼
-┌──────────────────────────────────────────────────────────────┐
-│                    LoadedSessionManager                      │
-│ PersistentSession                                            │
-│      ↕                                                       │
-│ LoadedSession / SessionActor                                 │
-│ single active turn │ steer queue │ cancellation │ resources  │
-└──────────────────────────────┬───────────────────────────────┘
-                               │
-                               ▼
-┌──────────────────────────────────────────────────────────────┐
-│                         Runtime                              │
-│ TurnContext                                                  │
-│      │                                                       │
-│      ▼                                                       │
-│ SamplingSnapshot / StepExecutionSnapshot                     │
-│ ├─ exact prompt/context identity                             │
-│ ├─ exact model                                              │
-│ ├─ exact environment                                         │
-│ ├─ exact permission profile                                  │
-│ ├─ exact skill/instruction snapshot                          │
-│ ├─ exact MCP binding generation                              │
-│ └─ Frozen StepToolRouter                                     │
-│          │                                                   │
-│          ├─ modelVisibleSpecs()                              │
-│          └─ resolve(call) → FrozenToolBinding                │
-└──────────────────────────────┬───────────────────────────────┘
-                               │
-                               ▼
-┌──────────────────────────────────────────────────────────────┐
-│                 Tool Execution Pipeline                      │
-│ frozen binding                                               │
-│ → validation                                                 │
-│ → capability request                                         │
-│ → permission / approval                                      │
-│ → sandbox                                                    │
-│ → intent durability fence                                    │
-│ → execute                                                    │
-│ → outcome durability fence                                   │
-│ → checkpoint                                                 │
-└──────────────────────────────┬───────────────────────────────┘
-                               │
-                               ▼
-┌──────────────────────────────────────────────────────────────┐
-│                Canonical Durable Trail                       │
-│ semantic journal/events                                      │
-│ projections │ checkpoints │ transcript │ trace               │
-│ flush-through fences                                         │
-└──────────────────────────────────────────────────────────────┘
-
-ABOVE SINGLE-THREAD HARNESS:
-
-┌──────────────────────────────────────────────────────────────┐
-│               Symphony-style Orchestrator                    │
-│ WorkTracker → Reconcile → Claim → Workspace → AppServer      │
-│ Retry / Stop / Release / Observe                             │
-└──────────────────────────────────────────────────────────────┘
-```
-
----
-
-# PHASE 23 — Step World Snapshot V2: Make the Snapshot Authoritative
-
-> Priority: CRITICAL  
-> Do this before lazy MCP/App Server.  
-> This phase closes the most important semantic gap found in the current code.
-
----
-
-## P23-1 Split serializable step record from runtime execution snapshot
-
-### Problem
-
-The current `StepContext` mixes audit fields with values that are intended to represent runtime authority, but the actual controllers still use global dependencies.
-
-We need two explicit concepts:
-
-```text
-StepRecord
-```
-
-for durable/observable identity, and:
-
-```text
-StepExecutionSnapshot
-```
-
-for actual immutable runtime bindings.
-
-### Do
-
-Introduce:
-
-```ts
-export interface StepRecord {
-  readonly stepId: StepId;
-  readonly sessionId: SessionId;
-  readonly turnId: TurnId;
-  readonly agentId: AgentId;
-
-  readonly model: ModelRef;
-
-  readonly toolRouterFingerprint: string;
-  readonly policyFingerprint: string;
-  readonly environmentFingerprint: string;
-  readonly contextFingerprint: string;
-  readonly instructionFingerprint: string;
-  readonly mcpBindingFingerprint?: string;
-  readonly skillSnapshotFingerprint?: string;
-
-  readonly createdAt: number;
-}
-```
-
-Then runtime-only:
-
-```ts
-export interface StepExecutionSnapshot {
-  readonly record: StepRecord;
-
-  readonly agent: EffectiveAgentConfig;
-  readonly environment: EnvironmentSnapshot;
-  readonly permissions: PermissionProfileSnapshot;
-  readonly tools: StepToolRouter;
-
-  readonly model: ModelSnapshot;
-  readonly context: ModelContextSnapshot;
-  readonly instructions: InstructionSnapshot;
-
-  readonly mcp?: McpBindingSnapshot;
-  readonly skills?: SkillSnapshot;
-}
-```
-
-### Important
-
-Do not persist function closures/executors inside `StepRecord`.
-
-`StepExecutionSnapshot` may hold runtime object references.
-
-The durable record stores fingerprints/provenance only.
-
-### Files
-
-Candidate locations:
-
-```text
-packages/contracts/src/step-context.ts
-packages/core/src/runtime/step-execution-snapshot.ts
-packages/core/src/runtime/step-snapshot-factory.ts
-```
-
-If naming can be improved, do so consistently.
-
-### How
-
-1. Keep compatibility export for current `StepContext` temporarily if public API uses it.
-2. Make runtime use `StepExecutionSnapshot`.
-3. Add deterministic fingerprint helpers.
-4. Fingerprints must canonicalize object key order.
-5. No fingerprint may depend on:
-   - function `.toString()`;
-   - object identity;
-   - random iteration order;
-   - memory address;
-   - `Date.now()` except explicit createdAt outside the hash.
-
-### Acceptance
-
-Unit:
-
-- equivalent snapshots with different object insertion order → same fingerprint;
-- changed tool schema → different tool router fingerprint;
-- changed permission → different policy fingerprint;
-- changed cwd/workspace roots → environment fingerprint changes.
-
-Integration:
-
-- `model.started` event contains `stepId` and snapshot fingerprints;
-- `tool.requested` from that model call contains the same `stepId`;
-- trace explain can correlate one model call with one execution snapshot.
-
-### DONE definition
-
-Do not mark DONE if only new interfaces exist.
-
-The main runtime loop must create a `StepExecutionSnapshot`.
-
----
-
-## P23-2 Introduce Frozen `StepToolRouter`
-
-### Goal
-
-Make this true:
-
-```text
-tools advertised to model
-       ==
-bindings available to calls produced by that model request
-```
-
-### Do
-
-Create an immutable router.
-
-Suggested shape:
-
-```ts
-export interface ToolProvenance {
-  readonly kind: "builtin" | "mcp" | "plugin" | "dynamic";
-  readonly sourceId?: string;
-  readonly generation?: string;
-}
-
-export interface FrozenToolBinding {
-  readonly name: string;
-  readonly spec: ToolSpec;
-  readonly definition: ToolDefinition;
-  readonly semantics: ToolSemantics;
-  readonly provenance: ToolProvenance;
-}
-
-export interface StepToolRouter {
-  readonly id: string;
-  readonly fingerprint: string;
-  readonly modelVisibleSpecs: readonly ToolSpec[];
-
-  has(name: string): boolean;
-  resolve(name: string): FrozenToolBinding | undefined;
-}
-```
-
-Use a concrete class whose internal map is private and never mutated after construction.
-
-### Build path
-
-```text
-mutable ToolRegistry
-       ↓
-candidate bindings
-       ↓
-policy filter
-       ↓
-deferred exposure / selector
-       ↓
-collision check
-       ↓
-freeze
-       ↓
-StepToolRouter
-```
-
-### Critical distinction
-
-`ToolRegistry` remains the process catalog.
-
-`StepToolRouter` is a per-sampling execution snapshot.
-
-Do not replace one with the other.
-
-### How
-
-1. Add a router factory.
-2. Convert registry definitions into `FrozenToolBinding`.
-3. Apply tool policy.
-4. Apply deferred schema logic.
-5. Apply goal-based tool selector.
-6. Include selected MCP/plugin bindings.
-7. Freeze the exact set.
-8. Compute router fingerprint.
-9. Put router into `StepExecutionSnapshot`.
-
-### Collision rule
-
-If two sources produce the same model-visible name:
-
-```text
-builtin:read_file
-mcp-X:read_file
-```
-
-do not silently last-write-wins.
-
-Fail with typed `TOOL_COLLISION`.
-
-If aliases/namespaces are desired, resolve before freeze.
-
-### Acceptance
-
-Invariant test:
-
-```text
-registry has A
-build StepRouter S1
-registry unregisters A
-S1.resolve(A) still resolves the original frozen binding
-new StepRouter S2 does not contain A
-```
-
-Another:
-
-```text
-registry A v1
-S1 built
-registry replaces A with v2
-call from S1 executes v1
-call from S2 executes v2
-```
-
-This test is mandatory.
-
----
-
-## P23-3 ModelCallController must consume `step.tools.modelVisibleSpecs` directly
-
-### Current failure mode
-
-The controller currently recomputes:
-
-```ts
-toolSelector.select({
-  goal: working.goal,
-  tools: this.deps.toolSpecs,
-});
-```
-
-inside `callModelWithRetry()`.
-
-That means StepContext is not authoritative.
-
-### Do
-
-Move **all tool selection before model call** into Step snapshot creation.
-
-Then model controller must receive:
-
-```ts
-step: StepExecutionSnapshot
-```
-
-and call:
-
-```ts
-client.generate({
-  messages: step.context.messages,
-  system: step.instructions.system,
-  tools: [...step.tools.modelVisibleSpecs],
-});
-```
-
-or equivalent.
-
-### Forbidden after this task
-
-Inside `ModelCallController.callModelWithRetry()` there must be no production lookup of:
-
-```ts
-this.deps.toolSpecs
-this.deps.toolSelector
-registry.specs()
-mcp.tools
-```
-
-for that already-created request.
-
-### Migration
-
-Controller deps should shrink.
-
-Remove `toolSpecs` / `toolSelector` when no longer required.
-
-Do not leave stale constructor dependencies “for later”.
-
-### Acceptance
-
-Test using selector with changing external state:
-
-```text
-selector first call -> [A]
-selector second call -> [B]
-```
-
-For one Step snapshot:
-
-- selector invoked once before model request;
-- model receives A;
-- retry of same semantic request receives A;
-- tool execution accepts only A.
-
-No second selector invocation in the model controller.
-
----
-
-## P23-4 Tool execution must resolve the frozen binding, not global registry
-
-### Current failure mode
-
-`ToolOrchestrator.execute()` resolves:
-
-```ts
-this.registry.get(request.call.name)
-```
-
-at execution time.
-
-### Do
-
-Change the execution seam so the already-resolved binding is passed in.
-
-Option A, recommended:
-
-```ts
-interface BoundToolCallRequest extends ToolCallRequest {
-  readonly binding: FrozenToolBinding;
-}
-```
-
-Then:
-
-```ts
-orchestrator.executeBound(request, context)
-```
-
-and the orchestrator validates against:
-
-```ts
-request.binding.definition
-```
-
-not the global registry.
-
-Keep a compatibility `execute()` only if external callers require it; production AgentRuntime must use `executeBound`.
-
-### Alternative
-
-Allow orchestrator deps to receive a `ToolResolver` argument per call:
-
-```ts
-execute(request, context, resolver)
-```
-
-but make sure the resolver is the frozen Step router.
-
-### Do not
-
-Do not copy orchestration logic into StepToolRouter.
-
-Router resolves.
-
-Orchestrator enforces.
-
-### Acceptance
-
-Mandatory drift test:
-
-1. router S1 contains write tool executor that records `"v1"`;
-2. model produces call;
-3. global registry swaps executor to `"v2"`;
-4. execute call from S1;
-5. output must be `"v1"`.
-
-A tool produced by S1 that is absent from S1 but present globally must fail:
-
-```text
-TOOL_NOT_IN_STEP
-```
-
-not execute globally.
-
----
-
-## P23-5 Step policy must become execution authority
-
-### Do
-
-Capture exact step authority:
-
-```ts
-interface PermissionProfileSnapshot {
-  readonly toolPolicy: ToolPolicy;
-  readonly permissions: PermissionPolicy;
-  readonly sandboxPolicy: SandboxPolicy;
-  readonly fingerprint: string;
-}
-```
-
-ToolCallController must gate against:
-
-```ts
-step.permissions.toolPolicy
-```
-
-not mutable `ctx.agent.tools`.
-
-ToolOrchestrator context must receive:
-
-```ts
-permissions: step.permissions.permissions
-sandboxPolicy: step.permissions.sandboxPolicy
-cwd/environment from step.environment
-```
-
-### Acceptance
-
-Test:
-
-1. Step S1 created with write denied.
-2. global agent config becomes write allowed.
-3. S1 call remains denied.
-4. S2 sees allowed.
-
-Inverse test too:
-
-1. S1 allowed.
-2. global config narrows.
-3. Define explicit policy:
-   - either grandfather already-issued S1 call;
-   - or force invalidation before execution.
-
-Recommended for authority consistency:
-
-**S1 keeps captured authority unless a host-level emergency revocation epoch changed.**
-
-Add optional revocation epoch for emergency narrowing if needed.
-
-Do not silently mix policies.
-
----
-
-## P23-6 Define retry vs re-snapshot boundary
-
-### Goal
-
-Fix stale StepContext during reactive compaction.
-
-### Define
-
-```ts
-type SamplingAttemptKind =
-  | "transport_retry"
-  | "model_retry"
-  | "reactive_compaction"
-  | "context_rebuild"
-  | "tool_world_changed"
-  | "model_switch";
-```
-
-Rules:
-
-### Reuse same StepExecutionSnapshot
-
-Allowed only if all model-visible inputs are semantically identical:
-
-- same messages/context;
-- same system/instructions;
-- same tool specs;
-- same model;
-- same policy;
-- same environment.
-
-Examples:
-
-```text
-HTTP 502 transport retry
-provider internal retry
-```
-
-### Build new StepExecutionSnapshot
-
-Required when:
-
-```text
-context compaction changed messages
-system prompt changed
-tool set changed
-MCP binding changed
-model changed
-environment changed
-permission world changed
-```
-
-### Suggested runtime refactor
-
-Move reactive-compaction retry orchestration one level upward.
-
-Instead of hiding context rebuild entirely inside `ModelCallController`, return:
-
-```ts
-type ModelCallAction =
-  | { kind: "completed"; ... }
-  | { kind: "retry_same_snapshot"; ... }
-  | { kind: "rebuild_context"; reason: "context_overflow" }
-  | { kind: "failed"; ... };
-```
-
-Runtime:
-
-```ts
-if (action.kind === "rebuild_context") {
-  await checkpoint(...);
-  rebuild context;
-  continue outer sampling loop; // creates NEW step
-}
-```
-
-### Acceptance
-
-Test:
-
-- first step ID S1 hits context overflow;
-- compaction occurs;
-- next model request has S2;
-- S1.contextFingerprint != S2.contextFingerprint;
-- no tool call from S2 is attributed to S1.
-
----
-
-## P23-7 Snapshot exact context, not an approximation
-
-### Current state
-
-Current context snapshot tracks coarse:
-
-```text
-block count
-estimated system tokens
-compacted flag
-```
-
-Useful telemetry, insufficient semantic identity.
-
-### Do
-
-Create:
-
-```ts
-interface ModelContextSnapshot {
-  readonly messageIds: readonly MessageId[];
-  readonly blockIds: readonly string[];
-  readonly systemHash: string;
-  readonly contextHash: string;
-  readonly estimatedTokens: number;
-  readonly compacted: boolean;
-}
-```
-
-Do not duplicate entire transcript in events.
-
-Store IDs/hashes.
-
-### Acceptance
-
-- changing one included message changes contextHash;
-- changing excluded old history does not change current contextHash;
-- compaction creates a new contextHash;
-- replay/explain can state which message IDs were visible to a model call.
-
----
-
-## P23-8 Add Step snapshot invariant suite
-
-Create a dedicated suite, e.g.:
-
-```text
-packages/core/src/runtime/step-snapshot.invariant.test.ts
-```
-
-Mandatory cases:
-
-1. tool removed after sampling → old call still resolves old binding;
-2. tool added after sampling → old step cannot call it;
-3. schema changed after sampling → old schema validates against old binding;
-4. policy widened after sampling → old step not widened;
-5. policy narrowed after sampling → behavior matches documented revocation rule;
-6. selector state changes after sampling → old advertised set unchanged;
-7. MCP refresh after sampling → old binding generation unchanged;
-8. reactive compaction → new step;
-9. provider retry with identical request → same step;
-10. event chain model/tool uses same stepId.
-
-### Phase gate
-
-P23 cannot be DONE until all 10 pass through real Runtime integration, not only direct helper construction.
-
----
-
----
-
-## PHASE 23 — COMPLETED (Step World Snapshot V2)
-
-Implementation record (production-wired, invariant-tested):
-
-| Sub-task | Evidence                                                                                                                                                                                                            |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P23-1    | `StepRecord` + `StepExecutionSnapshot` + deterministic fingerprint helpers; runtime builds a real snapshot before EVERY model call; `model.started` carries stepId + 5 fingerprints; `tool.requested` shares stepId |
-| P23-2    | `FrozenStepToolRouter` (immutable); factory freeze pipeline (policy filter → collision `TOOL_COLLISION` → selector once → deferred advert); S1 survives registry removal/swap                                       |
-| P23-3    | `ModelCallController` consumes `step.tools.modelVisibleSpecs`; controller no longer touches toolSpecs/toolSelector/registry; schema-advert moved to contracts                                                       |
-| P23-4    | `ToolOrchestrator.executeBound` executes `request.binding.definition`; controller resolves `step.tools.resolve` and fails `TOOL_NOT_IN_STEP`; permissive mode is test-only                                          |
-| P23-5    | policy gate + orchestrator context use `step.permissions` (toolPolicy/permissions/sandboxPolicy) and `step.environment.cwd`                                                                                         |
-| P23-6    | `SamplingAttemptKind`; controller returns `rebuild_context`; compaction orchestration moved to the runtime outer loop → NEW step                                                                                    |
-| P23-7    | `model.started` carries exact `contextMessageIds`/`contextBlockIds`; contextHash == record fingerprint                                                                                                              |
-| P23-8    | 10-invariant suite through the real Runtime loop (step-snapshot.invariant.test.ts)                                                                                                                                  |
-
-Commits: P23-1..P23-8 (8 commits). Core runtime suite: 223 tests green; step-snapshot + invariant suites: 38 tests.
-
-# PHASE 24 — MCP Runtime V2: Catalog ≠ Connection ≠ Binding
-
-> Priority: CRITICAL/HIGH  
-> Depends on P23 StepToolRouter.
-
----
-
-## P24-1 Replace eager MCP composition with `McpServerCatalog`
-
-### Current problem
-
-Harness creation connects all configured servers.
-
-### Do
-
-Define catalog descriptors without connecting:
-
-```ts
-export interface McpServerDescriptor {
-  readonly id: string;
-  readonly config: McpServerConfig;
-  readonly trust: "trusted" | "untrusted";
-  readonly networkBoundary: "loopback" | "internet";
-  readonly enabled: boolean;
-  readonly requiredByDefault?: boolean;
-}
-```
-
-`composeMcp()` should become mostly catalog composition.
-
-Do not spawn stdio children or HTTP initialize every server at startup.
-
-### Acceptance
-
-Configure 10 fake MCP servers.
-
-Create Harness.
-
-Assert:
-
-```text
-connect count == 0
-```
-
-unless explicitly configured as eager/required.
-
----
-
-## P24-2 Add `McpConnectionManager`
-
-### Responsibilities
-
-```text
-getOrConnect(serverId)
-reuse
-health state
-connection generation
-refresh
-idle close
-close all
-```
-
-Suggested state:
-
-```ts
-type McpConnectionState =
-  | { kind: "disconnected" }
-  | { kind: "connecting"; promise: Promise<McpConnectionGeneration> }
-  | { kind: "ready"; generation: McpConnectionGeneration }
-  | { kind: "failed"; error: ErrorInfo; retryAfter?: number };
-```
-
-### Concurrency
-
-Two simultaneous steps requiring the same disconnected server must share one connect promise.
-
-Test:
-
-```text
-100 concurrent getOrConnect(A)
-→ exactly one transport connect
-```
-
-### Lifecycle
-
-Harness `close()` closes every connected generation.
-
-No orphan stdio processes.
-
----
-
-## P24-3 Add need-driven dependency resolver
-
-### Inputs
-
-Resolver may consider:
-
-- explicit MCP server/tool mention;
-- selected skill required MCP dependencies;
-- selected plugin dependencies;
-- tool lookup request;
-- explicit host-required servers;
-- workflow configuration.
-
-### Do not
-
-Do not connect servers purely because their config exists.
-
-### Suggested interface
-
-```ts
-interface McpDependencyResolver {
-  resolve(input: {
-    goal: string;
-    explicitToolNames?: readonly string[];
-    selectedSkills: readonly SkillSelection[];
-    selectedPlugins: readonly PluginSelection[];
-  }): ReadonlySet<McpServerId>;
-}
-```
-
-### Phase-1 pragmatic policy
-
-If automatic semantic server inference is uncertain:
-
-- allow explicit server tags / declared dependencies;
-- keep an optional `requiredByDefault`;
-- do not invent fragile LLM-based MCP discovery inside the runtime.
-
----
-
-## P24-4 Build immutable `McpBindingSnapshot`
-
-### Definition
-
-```ts
-interface McpBindingSnapshot {
-  readonly id: string;
-  readonly fingerprint: string;
-  readonly generations: ReadonlyMap<McpServerId, string>;
-  readonly tools: readonly McpFrozenToolBinding[];
-  readonly createdAt: number;
-}
-```
-
-Each MCP tool binding must hold:
-
-- server ID;
-- connection generation;
-- tool name;
-- schema hash;
-- exact adapter/executor reference;
-- trust/provenance.
-
-### Important
-
-A call generated against generation G1 must not silently execute against G2.
-
----
-
-## P24-5 Integrate MCP bindings into StepToolRouter
-
-Build order:
-
-```text
-base tool catalog
-+
-MCP binding tools
-+
-plugin/dynamic tools
-↓
-exposure/selection
-↓
-Frozen StepToolRouter
-```
-
-The main Agent allow list should no longer be permanently constructed from every MCP tool at Harness startup.
-
-Policy should reason over tool provenance/names dynamically.
-
-### Acceptance
-
-- server A needed, server B not needed;
-- only A connects;
-- router contains A tools;
-- B failure irrelevant;
-- next step needs B → B connection attempted then.
-
----
-
-## P24-6 Refresh by generation, never mutate active binding
-
-Reuse current `McpToolView` schema diff ideas.
-
-### Rule
-
-Refresh:
-
-```text
-G1 active
-tools/list changes
-→ construct G2
-→ future Step snapshots may bind G2
-→ already-created Steps retain G1
-```
-
-Never mutate `G1.tools` in place.
-
-### Acceptance
-
-1. G1 schema = `{x:string}`;
-2. Step S1 uses G1;
-3. refresh produces G2 schema `{x:number}`;
-4. S1 generated `{x:"a"}`;
-5. S1 still validates/executes using G1;
-6. S2 advertises G2.
-
----
-
-## P24-7 Unused broken server must not kill startup
-
-### Acceptance
-
-Config:
-
-```text
-A = valid but not needed
-B = invalid executable path but not needed
-```
-
-Harness creation succeeds.
-
-A simple task that uses no MCP succeeds.
-
-When a step actually requires B:
-
-- produce typed `MCP_CONNECT_FAILED`;
-- event includes server ID;
-- unrelated built-in tools remain available;
-- no process-wide crash.
-
----
-
-## P24-8 MCP cache/idle policy
-
-Add configurable:
-
-```ts
-interface McpRuntimePolicy {
-  idleTtlMs?: number;
-  maxConnectedServers?: number;
-  connectTimeoutMs?: number;
-}
-```
-
-Do not overengineer LRU if there are only a few servers, but make lifecycle bounded.
-
-Tests use injected timer.
-
----
-
----
-
-## PHASE 24 — COMPLETED (MCP Runtime V2: Catalog ≠ Connection ≠ Binding)
-
-Implementation record:
-
-| Sub-task | Evidence                                                                                                                                                                                                  |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P24-1    | `McpServerCatalog` — declaration only, never connects; descriptors carry trust/networkBoundary/enabled/eager/requiredByDefault; `composeMcp` is lazy; eager servers connect only on opt-in `connectEager` |
-| P24-2    | `McpConnectionManager` — shared connect promise (100 concurrent → 1 connect), generation lifecycle, idle close, closeAll (no orphan stdio), connect timeout                                               |
-| P24-3    | `McpDependencyResolver` — mcp:<id> mentions, known-tool matching, skill/plugin declared deps, requiredByDefault; config existence is never a reason to connect                                            |
-| P24-4    | `McpBindingSnapshot` — immutable (id/fingerprint/generations/tools/createdAt); each tool carries serverId+generation+schemaHash+definition ref+trust; G1 never executes G2                                |
-| P24-5    | runtime `mcpBindingProvider` freezes per-step MCP world into StepToolRouter (`extraBindings`, provenance kind=mcp); no global registration / no allow-list baking; controller gates by provenance         |
-| P24-6    | refresh → new generation; bound snapshot fingerprint changes; step S1 retains G1 while S2 advertises G2                                                                                                   |
-| P24-7    | unreachable non-needed server never aborts startup; a step that needs it gets typed `mcp.connect_failed` (recorded + emitted with serverId); built-ins stay available; no crash                           |
-| P24-8    | `McpRuntimePolicy` (idleTtlMs/maxConnectedServers/connectTimeoutMs) via descriptor.policy; injected-timer tests                                                                                           |
-
-Commits: P24-1..P24-8 (3 commits). mcp-runtime-v2 13 + mcp-wiring 6 + core/harness/cli 774 green (P4-6 sandbox memory excluded).
-
-# PHASE 25 — SessionActor: Single Owner of Live Session State
-
-> Priority: CRITICAL  
-> This closes a real concurrency hole in the current RPC/Gateway path.
-
----
-
-## P25-1 Separate durable `PersistentSession` from live `LoadedSession`
-
-### Persistent
-
-Contains semantic durable state:
-
-```ts
-interface PersistentSession {
-  id: SessionId;
-  parentId?: SessionId;
-  agentId: AgentId;
-  model: ModelRef;
-  cwd: string;
-  status: SessionStatus;
-  createdAt: number;
-  updatedAt: number;
-}
-```
-
-Existing Session can remain the durable shape.
-
-### Loaded
-
-Runtime only:
-
-```ts
-interface LoadedSession {
-  readonly persistent: PersistentSession;
-
-  activeTurn?: ActiveTurnHandle;
-  readonly inputQueue: SessionInputQueue;
-  readonly resourceScope: SessionResourceScope;
-  readonly cancellation: AbortController;
-}
-```
-
-Do not serialize:
-
-- AbortController;
-- promises;
-- MCP sockets;
-- locks;
-- timers.
-
----
-
-## P25-2 Add `SessionActor` / `LoadedSessionManager`
-
-Suggested API:
-
-```ts
-interface LoadedSessionManager {
-  load(id: SessionId): Promise<SessionActor>;
-  unload(id: SessionId): Promise<void>;
-  listLoaded(): SessionId[];
-}
-
-interface SessionActor {
-  startTurn(input: UserInput): Promise<TurnHandle>;
-  steer(input: UserInput): Promise<void>;
-  enqueueFollowup(input: UserInput): Promise<void>;
-  interrupt(): Promise<TurnOutcome | undefined>;
-  status(): SessionRuntimeStatus;
-}
-```
-
-### Hard invariant
-
-Inside one actor:
-
-```text
-activeTurn ∈ {0,1}
-```
-
----
-
-## P25-3 Fix RPC same-session concurrency
-
-Replace:
-
-```text
-Map<sessionId:turnId, ActiveRun>
-```
-
-as the primary lifecycle authority.
-
-The SessionActor owns active run.
-
-### Required behavior
-
-If `turn/start` is called while one is active:
-
-API must explicitly choose one:
-
-```text
-BUSY
-STEER
-QUEUE
-```
-
-No silent parallel run.
-
-For compatibility `session.run`, return typed:
-
-```text
-SESSION_BUSY
-```
-
-if another turn is active.
-
-### Tests
-
-Start A.
-
-Before A settles, start B.
-
-Assert:
-
-```text
-runtime.runTurn max concurrent for same session == 1
-```
-
-Across different sessions:
-
-```text
-S1 turn A
-S2 turn B
-```
-
-may execute concurrently.
-
----
-
-## P25-4 Define steer semantics
-
-A steer is input intended to influence the currently active turn.
-
-Suggested:
-
-```ts
-interface SteerInput {
-  id: PromptId;
-  text: string;
-  admittedAt: number;
-}
-```
-
-Use existing Inbox where possible.
-
-### Runtime safe boundary
-
-Steering input is injected:
-
-- before next model sampling;
-- never halfway through interpreting an existing tool call;
-- never by mutating an already-built Step snapshot.
-
-Therefore:
-
-```text
-steer arrives during Step S1
-→ S1 tool batch completes/cancels according to policy
-→ next sampling snapshot S2 includes steer
-```
-
----
-
-## P25-5 Follow-up queue
-
-A normal user message while a turn runs can be queued as a future turn.
-
-Explicitly distinguish it from steer.
-
-Do not infer based on text.
-
-Protocol should say which operation is used.
-
----
-
-## P25-6 Session shutdown
-
-`unload` / Harness close must:
-
-1. interrupt active turn;
-2. settle non-cancellable in-flight tools correctly;
-3. flush journal/fences;
-4. close session-bound resources;
-5. release MCP references;
-6. remove actor from manager.
-
-Idempotent.
-
----
-
-## P25-7 Fork semantics
-
-Current durable `SessionService.fork()` creates a child relation but does not necessarily provide Codex-like copied semantic history.
-
-Define two distinct operations if needed:
-
-```text
-session.spawnChild
-```
-
-for subagent parentage, and:
-
-```text
-thread.fork
-```
-
-for conversational branch.
-
-Do not overload them.
-
-`thread.fork` must specify boundary:
-
-```text
-through turn X
-before turn X
-latest completed
-```
-
-If implementing only latest-completed in v1, document it.
-
----
-
-## PHASE 25 — COMPLETED (SessionActor: Single Owner of Live Session State)
-
-Implementation record (GAP-07/GAP-08 closed — the RPC/gateway concurrency hole):
-
-| Sub-task | Evidence                                                                                                                                                                                                                                                                                                                   |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P25-1    | `PersistentSession` = the contracts `Session` (durable); `LoadedSession` is runtime-only (activeTurn + inputQueue + resourceScope + cancellation) — AbortController/promises/queues/sockets are NEVER serialized                                                                                                           |
-| P25-2    | `DefaultSessionActor` + `DefaultLoadedSessionManager` in core (`session-actor.ts`); load idempotent, unload/listLoaded/close; hard invariant `activeTurn ∈ {0,1}`; harness exposes `harness.sessions`; create-harness test proves load→unload→close                                                                        |
-| P25-3    | RPC `Map<sessionId:turnId, ActiveRun>` deleted — `session.send/run/cancel` route through the actor; typed `SESSION_BUSY` error code added to contracts; `AgentRuntime.runTurn` per-session guard (max concurrent == 1, bypass-proof); `pendingRun` closes the submit→cancel race; cross-session concurrency proven (S1∥S2) |
-| P25-4    | steer admitted through the existing inbox (`kind=steer`); runtime drains at the next sampling boundary only — never mid-tool, never mutating a frozen step snapshot; `startTurn(onConflict:"steer")` returns the running turn's handle                                                                                     |
-| P25-5    | followup admitted as `kind=followup` (never text-inferred); actor drains the queue into a NEW turn after the current one settles; gateway converts SESSION_BUSY into `session.followup` + `[queued]` reply                                                                                                                 |
-| P25-6    | `unload`/close idempotent: interrupt active turn → settle in-flight tools → release resource scope → remove actor; harness close drains every loaded actor                                                                                                                                                                 |
-| P25-7    | `SessionService.spawnChild` (EMPTY child — subagent parentage) vs `threadFork` (copies parent message history, Codex-like branch) — never overloaded; `fork` retained as a spawnChild alias                                                                                                                                |
-
-# PHASE 26 — Durability V2: Canonical Journal & Fences
-
-> Priority: HIGH  
-> Preserve current stores; do not rewrite everything into event sourcing at once.
-
----
-
-## P26-1 Make event sequence allocation atomic at the store boundary
-
-### Problem class
-
-Callers currently often do:
-
-```ts
-sequence = await events.nextSequence(sessionId);
-events.append({...sequence});
-```
-
-Sequence allocation must be store-owned and atomic.
-
-### Do
-
-Add:
-
-```ts
-interface EventStore {
-  appendNew(
-    event: Omit<AgentEvent, "sequence">
-  ): Promise<AgentEvent>;
-}
-```
-
-or change `append` semantics so caller never allocates sequence.
-
-Keep `nextSequence` only for backward compatibility if needed; production writers must stop using it.
-
-### Acceptance
-
-100 concurrent event appends in same session:
-
-- exactly sequences 0..99;
-- no duplicate;
-- no gap caused by race;
-- deterministic ordering is the store commit order.
-
-Test JSONL and SQLite.
-
----
-
-## P26-2 Promote the event trail into the canonical semantic journal
-
-Do **not** create a second competing log.
-
-Define which event kinds are semantic durability records.
-
-Examples:
-
-```text
-turn.input_committed
-turn.started
-model.started
-tool.intent_persisted
-tool.execution_started
-tool.outcome_committed
-checkpoint.committed
-approval.created
-approval.resolved
-turn.completed
-turn.failed
-turn.cancelled
-```
-
-Observability-only deltas may remain non-semantic.
-
-Add helper:
-
-```ts
-isSemanticJournalEvent(type): boolean
-```
-
----
-
-## P26-3 Add `DurabilityFence`
-
-Suggested:
-
-```ts
-interface DurabilityFenceStore {
-  flushThrough(
-    sessionId: SessionId,
-    sequence: number,
-  ): Promise<void>;
-}
-```
-
-For SQLite:
-
-- transaction commit provides the fence;
-- WAL/synchronous policy must be documented honestly.
-
-For JSONL:
-
-- flush file handle;
-- use fsync for hard boundary if durability mode promises it.
-
-### Durability profiles
-
-Consider:
-
-```ts
-type DurabilityLevel =
-  | "memory"
-  | "process"
-  | "crash_safe";
-```
-
-Do not claim crash-safe for a backend that does not fsync.
-
----
-
-## P26-4 Formalize side-effect lifecycle journal states
-
-For every side-effect tool:
-
-```text
-INTENT_PERSISTED
-      ↓
-EXECUTION_STARTED
-      ↓
-OUTCOME_COMMITTED
-      ↓
-CHECKPOINT_COMMITTED (policy)
-```
-
-Persist enough identity:
-
-```ts
-interface ToolIntentJournalPayload {
-  toolCallId: string;
-  stepId: string;
-  routerFingerprint: string;
-  toolBindingFingerprint: string;
-  argsHash: string;
-  sideEffectScope: string;
-  idempotent: boolean;
-}
-```
-
-Outcome:
-
-```ts
-interface ToolOutcomeJournalPayload {
-  toolCallId: string;
-  status: ToolResult["status"];
-  resultHash?: string;
-  evidenceHashes?: string[];
-}
-```
-
----
-
-## P26-5 Resume reconciliation must classify by journal state
-
-On crash:
-
-### Case A
-
-No intent:
-
-```text
-safe to consider not started
-```
-
-### Case B
-
-Intent persisted, no execution-start record:
-
-Depending on failpoint and backend certainty:
-
-```text
-likely not started
-```
-
-but do not assume if process could die after actual start before recording.
-
-Design execution-start ordering carefully.
-
-### Case C
-
-Execution started, no outcome:
-
-```text
-UNKNOWN EFFECT
-→ reconcile_unknown_effect
-```
-
-Never blind retry unsafe tool.
-
-### Case D
-
-Outcome committed, checkpoint missing:
-
-```text
-do not re-execute
-→ reconstruct working state from committed outcome
-→ checkpoint forward
-```
-
-### Case E
-
-Checkpoint committed:
-
-resume from checkpoint.
-
----
-
-## P26-6 SQLite atomic semantic boundary adapter
-
-For SQLite backend, add transaction helpers so logically coupled writes can commit atomically when feasible.
-
-Candidate operation:
-
-```ts
-commitToolOutcome({
-  toolMessage,
-  outcomeEvent,
-  checkpoint?,
-})
-```
-
-Do not expose SQL to core.
-
-Use an optional store capability interface.
-
-Fallback stores use ordered writes + fences and advertise weaker atomicity.
-
----
-
-## P26-7 Add projections, but keep one truth source
-
-Useful projections:
-
-```text
-SessionProjection
-TurnProjection
-TranscriptProjection
-ToolLedgerProjection
-TraceProjection
-```
-
-A projection may be rebuilt from journal + durable documents.
-
-Do not make a projection independently authoritative.
-
-Add rebuild tests:
-
-```text
-delete projection
-rebuild
-same visible state
-```
-
----
-
-## P26-8 Crash matrix
-
-Use existing fault injection.
-
-At minimum inject kill at:
-
-1. before intent;
-2. after intent;
-3. after execution start;
-4. after effect committed in executor but before outcome write;
-5. after outcome write;
-6. before checkpoint;
-7. after checkpoint;
-8. before turn completion;
-9. after turn completion event before response to client.
-
-For a non-idempotent fake write tool, verify no crash path performs an automatic duplicate side effect.
-
----
-## PHASE 26 — COMPLETED (Durability V2: Canonical Journal & Fences)
-
-Implementation record (the event trail IS the canonical journal — no second log):
-
-| Sub-task | Evidence |
-| --- | --- |
-| P26-1 | `EventStore.appendNew` — store-owned atomic sequence allocation; ALL production writers migrated off `nextSequence+append` (runtime emit, gateway, delegator×2, reflection-runner); 100-concurrent append test on JSONL AND SQLite → exactly 0..99, no dup, no gap |
-| P26-2 | `isSemanticJournalEvent` + `SEMANTIC_JOURNAL_EVENTS` (contracts): lifecycle/side-effect/gate events are durable records; observability deltas (model.delta/tool.output/retry/security) are not; classification tests cover every EventType |
-| P26-3 | `DurabilityLevel` (memory/process/crash_safe) + `DurabilityFenceStore.flushThrough`; JSONL=crash_safe (appendDurable fsyncs), SQLite=process (WAL+NORMAL — HONEST, never over-claimed), mem=memory; runtime flushes the fence BEFORE acking completion (fail-closed) |
-| P26-4 | `ToolIntentJournalPayload` extended with stepId/routerFingerprint/toolBindingFingerprint; `BoundToolCallRequest` now carries the frozen step-world identity (filled by tool-call-controller); orchestrator persists it into the intent journal; `ToolOutcomeJournalPayload` typed |
-| P26-5 | `classifyCrashJournalState` (Case A not_started / B likely_not_started / C unknown_effect→reconcile / D do_not_reexecute→reconstruct_forward / E resume_from_checkpoint) + unit tests |
-| P26-6 | `AtomicToolOutcomeCommitStore` optional capability — SqliteRuntimeStore.commitToolOutcome commits message + outcome event + checkpoint in ONE transaction (rollback on failure); SQL never exposed to core; fallback stores use ordered writes + fences (P26-3) |
-| P26-7 | projections module (Session/Turn/Transcript/ToolLedger/Trace) rebuilt from journal + durable docs — never an independent authority; rebuild idempotence tests (rebuild twice → identical visible state) |
-| P26-8 | 3 new FaultPoints wired (tool.effect_committed / turn.completing / turn.completed_acked); crash-matrix suite kills at all 9 plan points with a NON-IDEMPOTENT write tool and proves no crash path auto-duplicates the side effect |
-
-
-# PHASE 27 — Config Layer Stack & Lifecycle-Aware Drift
-
-> Priority: HIGH/MEDIUM
-
----
-
-## P27-1 Introduce config layers
-
-Do not require TOML unless desired.
-
-The important concept is layering/origin, not file syntax.
-
-Suggested precedence low → high:
-
-```text
-defaults
-profile
-system
-user
-project
-environment
-session overrides
-explicit runtime overrides
-```
-
-Candidate structure:
-
-```ts
-interface ConfigLayer {
-  readonly id: string;
-  readonly source: ConfigLayerSource;
-  readonly values: DeepPartial<HarnessConfig>;
-  readonly fingerprint: string;
-}
-```
-
----
-
-## P27-2 Produce effective config + per-key origins
-
-```ts
-interface ResolvedConfig<T> {
-  readonly value: T;
-  readonly layers: readonly ConfigLayer[];
-  readonly origins: ReadonlyMap<string, ConfigOrigin>;
-  readonly fingerprint: string;
-}
-```
-
-Example explain:
-
-```text
-sandboxPolicy.network = deny
-  from profile:champion
-
-contextBudget.maxTokens = 64000
-  from project:.harness/config.json
-
-mcp.github.enabled = true
-  from session override
-```
-
----
-
-## P27-3 Classify config keys by lifecycle
-
-Create explicit metadata:
-
-```ts
-type ConfigLifecycle =
-  | "process_static"
-  | "session_frozen"
-  | "turn_dynamic"
-  | "step_dynamic";
-```
-
-Examples:
-
-### process_static
-
-- data store backend;
-- data directory.
-
-### session_frozen
-
-- base agent identity;
-- default authority ceiling.
-
-### turn dynamic
-
-- task-specific verification plan inputs.
-
-### step dynamic
-
-- model selection if intentionally switchable;
-- MCP binding selection;
-- tool exposure.
-
-Document every config field.
-
----
-
-## P27-4 Drift policy
-
-At runtime, when resolved config fingerprint changes:
-
-- process-static → restart required;
-- session-frozen widening → reject or require new session;
-- session-frozen narrowing → emergency revocation policy;
-- step-dynamic → next step only.
-
-Never silently mutate current Step snapshot.
-
----
-
-## P27-5 Config explain CLI
-
-Add:
-
-```text
-agent config explain
-agent config explain <key>
-```
-
-Output origins/fingerprint, no secrets.
-
-Redact:
-
-- API keys;
-- auth headers;
-- tokens.
-
----
-
-# PHASE 28 — Typed Capability Approval V3
-
-> Priority: HIGH for security semantics.
-
----
-
-## P28-1 Keep durable approval store, replace string identity with typed capability
-
-Current durable store is good.
-
-Evolve request:
-
-```ts
-type CapabilityRequest =
-  | ExecCapability
-  | FileCapability
-  | NetworkCapability
-  | McpCapability
-  | PermissionEscalationCapability;
-```
-
-Suggested:
-
-```ts
-interface ExecCapability {
-  kind: "exec";
-  environmentId: string;
-  cwd: string;
-  argv: readonly string[];
-  tty: boolean;
-  permissionDelta?: PermissionDelta;
-}
-
-interface FileCapability {
-  kind: "file";
-  operation: "write" | "delete" | "move";
-  canonicalPaths: readonly string[];
-}
-
-interface NetworkCapability {
-  kind: "network";
-  protocol: "http" | "https" | "tcp";
-  origin: string;
-}
-
-interface McpCapability {
-  kind: "mcp";
-  serverId: string;
-  generation: string;
-  tool: string;
-  argsHash: string;
-}
-```
-
-Keep legacy `action/target` as display projection during migration.
-
----
-
-## P28-2 Semantic approval fingerprint
-
-Create canonical:
-
-```ts
-approvalFingerprint(capability): string
-```
-
-Never include raw secret values.
-
-For exec, identity includes:
-
-- environment;
-- cwd;
-- argv canonical representation;
-- permission delta;
-- tty if authority differs.
-
-For MCP:
-
-- server;
-- generation or compatibility identity;
-- tool;
-- requested authority.
-
----
-
-## P28-3 Make approval scope executable, not audit-only
-
-Current scopes:
-
-```text
-one_call
-one_tool
-session
-```
-
-must have defined reuse semantics.
-
-Suggested:
-
-### one_call
-
-Matches only exact request/call.
-
-### one_tool
-
-Matches same semantic tool/capability pattern under equal-or-narrower authority.
-
-### session
-
-May reuse only within same session and exact approved capability scope.
 
 Never:
 
 ```text
-approve "exec npm test"
-→ approve all exec
+Release verdict: complete with known noise
 ```
 
----
+## Plan/Handoff status rules
 
-## P28-4 Grant cache must support authority subset checks
+Update coding-agent instructions:
 
-Implement:
-
-```ts
-isCoveredByGrant(request, grant): boolean
-```
-
-Fail closed on unknown.
-
-Tests:
-
-- same command/cwd → match;
-- same command different cwd → no match;
-- less privilege → may match;
-- more privilege → no match;
-- same MCP tool different server → no;
-- same server different generation with changed schema/authority → no.
-
----
-
-## P28-5 Emergency revocation
-
-Session-level remembered grant can be revoked.
-
-Revocation applies before new execution.
-
-Already-running non-cancellable operation follows documented semantics; do not pretend rollback occurred.
-
----
-
-# PHASE 29 — App Server Protocol v1
-
-> Priority: HIGH  
-> Build on Gateway; do not replace the Runtime.
-
----
-
-## P29-1 Create protocol package/boundary
-
-Recommended:
+A phase may use:
 
 ```text
-packages/protocol/
+DONE
+BLOCKED
+IN_PROGRESS
+NOT_STARTED
+```
+
+A required gate failure implies:
+
+```text
+P36-12 = BLOCKED
+```
+
+not DONE.
+
+## Required tests
+
+1. all gates pass → exit 0;
+2. one failed → exit non-zero;
+3. one not_run → exit non-zero;
+4. one blocked → exit non-zero;
+5. stale SHA evidence → exit non-zero;
+6. missing evidence → exit non-zero;
+7. “pre-existing” reason with failed state → still exit non-zero;
+8. current-head all green → ready true.
+
+## Acceptance criteria
+
+- release success cannot be produced from red evidence;
+- status cannot silently downgrade failed to passed;
+- current HEAD binding is enforced;
+- CLI exit code matches verdict.
+
+## Forbidden shortcuts
+
+- do not interpret `reason` text;
+- do not special-case “known noise”;
+- do not mark blocked commands as passed.
+
+---
+
+# PHASE 36-2 — SessionActor Linearizability
+
+> Priority: P0
+>
+> Invariant:
+>
+> ```text
+> INV-P36-001
+> For one session actor, at most one turn admission may own execution at any instant,
+> including the interval before runtime.startTurn() resolves.
+> ```
+
+## Why
+
+An actor that checks ownership before an `await` but reserves ownership after it has a race window.
+
+## Required architecture
+
+Use one explicit actor lifecycle state.
+
+Suggested:
+
+```ts
+type ActorRunState =
+  | { kind: "idle" }
+  | {
+      kind: "starting";
+      requestId: string;
+      controller: AbortController;
+    }
+  | {
+      kind: "running";
+      turn: Turn;
+      controller: AbortController;
+      outcome: Promise<TurnOutcome>;
+    }
+  | {
+      kind: "closing";
+    };
+```
+
+Alternative implementations are allowed if they prove the same linearizability.
+
+Do not keep multiple weak booleans/maps that can contradict each other.
+
+## Admission rule
+
+Ownership reservation must happen synchronously before the first awaited operation that can yield to another caller.
+
+Pseudo:
+
+```ts
+if (state.kind !== "idle") {
+  resolve conflict explicitly;
+}
+
+const reservation = reserveStarting();
+
+try {
+  const turn = await runtime.startTurn(...);
+  promoteStartingToRunning(reservation, turn);
+} catch (err) {
+  releaseReservation(reservation);
+  throw err;
+}
+```
+
+## Conflict semantics
+
+While `starting`:
+
+- `busy` → typed `SESSION_BUSY`;
+- `steer` → only allowed if semantics can target a valid running/sampling turn; otherwise typed refusal;
+- `queue` → may durably enqueue future input;
+- do not invent a fake current turn id.
+
+Document exact behavior.
+
+## Cancellation
+
+A cancel/close arriving during `starting` must cancel the reserved start and must not later promote into a running turn.
+
+Required invariant:
+
+```text
+close/cancel wins before promotion
+=> no late turn starts after actor closed
+```
+
+## Required tests
+
+### Test A — simultaneous admission
+
+Use a runtime fake whose `startTurn()` blocks before returning.
+
+```ts
+const a = actor.startTurn(A);
+await fake.waitUntilStartTurnEntered();
+
+const b = actor.startTurn(B);
+
+expect b => SESSION_BUSY
+
+release A
+```
+
+### Test B — true Promise.all race
+
+```ts
+const [a, b] = await Promise.allSettled([
+  actor.startTurn(A),
+  actor.startTurn(B),
+]);
+```
+
+Repeat enough times under deterministic gates.
+
+Expected:
+
+```text
+fulfilled admissions = 1
+SESSION_BUSY = 1
+```
+
+### Test C — starting + close
+
+- reserve start;
+- call close;
+- release runtime start;
+- assert no running turn survives;
+- no resource leak.
+
+### Test D — starting + cancel
+
+Same as close but targeted cancellation.
+
+### Test E — queued followup
+
+Must not execute until current turn reaches terminal settlement.
+
+### Test F — actor active identity
+
+No later handle may overwrite a still-owning handle.
+
+## Acceptance criteria
+
+- no same-actor double admission;
+- no late promotion after close;
+- all conflicts typed;
+- existing steer/followup semantics preserved;
+- race test stable in repeated runs.
+
+## Forbidden shortcuts
+
+- do not rely only on `AgentRuntime.runTurn()` to reject the second call;
+- SessionActor itself must be authoritative;
+- do not “fix” by adding arbitrary sleeps.
+
+---
+
+# PHASE 36-3 — LoadedSessionManager Single-Flight Ownership
+
+> Priority: P0
+>
+> Invariant:
+>
+> ```text
+> INV-P36-002
+> Within one LoadedSessionManager, concurrent load(sessionId) calls resolve to the exact same actor instance.
+> ```
+
+## Implementation
+
+Use a single-flight table.
+
+Example:
+
+```ts
+private actors = new Map<SessionId, SessionActor>();
+private loading = new Map<SessionId, Promise<SessionActor>>();
+```
+
+Algorithm:
+
+```text
+if actors has id:
+  return actor
+
+if loading has id:
+  return same promise
+
+create load promise
+store it before await
+on success:
+  install actor exactly once
+finally:
+  clear loading entry
+```
+
+## Unload interaction
+
+Define behavior when `unload(id)` races with `load(id)`.
+
+Choose and document one policy, e.g.:
+
+```text
+unload waits for in-flight load, then closes actor
 ```
 
 or:
 
 ```text
-packages/gateway/src/protocol/
+unload marks cancellation and load resolves as closed
 ```
 
-If this protocol is intended for SDK/other processes, prefer independent package.
+Do not leave ambiguous.
 
-It must NOT import `AgentRuntime`.
+## Failure interaction
 
-Define DTOs only.
+If `store.getSession()` fails:
+
+- all concurrent load callers see the same failure;
+- loading slot clears;
+- a later retry may try again.
+
+## Required tests
+
+1. 100 concurrent `load(id)` → same object identity;
+2. store read counter == 1 for a single-flight burst;
+3. load failure fan-out → all fail, retry later succeeds;
+4. load + unload race leaves no loaded actor;
+5. close manager during load leaves no live actor;
+6. two different session ids may load concurrently.
+
+## Acceptance criteria
+
+- one live actor per session id per manager;
+- no duplicate actor construction under concurrent load;
+- no leaked loading promises.
 
 ---
 
-## P29-2 Initialize handshake
+# PHASE 36-4 — SDK Event Stream / Done Semantic Closure
 
-First request:
+> Priority: P0
+>
+> Invariants:
+>
+> ```text
+> INV-P36-003
+> Public `events` consumption must not steal data from `done`.
+>
+> INV-P36-004
+> `done` must represent the reduction of the same ordered event sequence exposed to the caller.
+> ```
 
-```json
-{
-  "method": "initialize",
-  "id": 1,
-  "params": {
-    "clientInfo": {
-      "name": "harness_cli",
-      "version": "..."
-    },
-    "capabilities": {
-      "streamingItems": true,
-      "approvalForms": true
-    }
+## Required public behavior
+
+This must work:
+
+```ts
+const run = await thread.runStreamed("task");
+
+const observed: TurnEvent[] = [];
+
+const consume = (async () => {
+  for await (const event of run.events) {
+    observed.push(event);
   }
-}
+})();
+
+const [result] = await Promise.all([
+  run.done,
+  consume,
+]);
 ```
 
-Server returns:
+Expected:
 
-```json
-{
-  "protocolVersion": "1",
-  "serverInfo": {...},
-  "capabilities": {...}
-}
-```
+- `observed` contains every event exactly once;
+- `done` settles;
+- `done` reflects the same terminal event/items/usage;
+- no deadlock;
+- no event stealing.
 
-Before initialize:
+## Implementation options
+
+### Preferred — broadcast + internal reducer
+
+Transport event arrives once:
 
 ```text
-other mutating requests → NOT_INITIALIZED
-```
-
-Repeated initialize:
-
-```text
-ALREADY_INITIALIZED
-```
-
----
-
-## P29-3 External primitive names: Thread → Turn → Item
-
-Internally Session can remain.
-
-Protocol maps:
-
-```text
-Thread ↔ Session
-Turn ↔ Turn
-Item ↔ user/model/tool/approval/verification visible item
-```
-
-Do not rename all internal packages just to match wire names.
-
----
-
-## P29-4 Minimum v1 methods
-
-### Thread
-
-```text
-thread/start
-thread/read
-thread/resume
-thread/fork
-thread/list
-thread/loaded/list
-```
-
-### Turn
-
-```text
-turn/start
-turn/interrupt
-turn/steer
-```
-
-### Approval
-
-```text
-approval/respond
-```
-
-### Ask user
-
-```text
-ask/respond
-```
-
-### Introspection
-
-```text
-agent/list
-tool/list
-skill/list
-trace/read
-```
-
----
-
-## P29-5 Item model
-
-Create a wire union:
-
-```ts
-type ThreadItem =
-  | UserMessageItem
-  | AgentMessageItem
-  | ToolCallItem
-  | ToolResultItem
-  | FileChangeItem
-  | ApprovalItem
-  | AskUserItem
-  | VerificationItem
-  | RuntimeWarningItem;
-```
-
-Do not expose chain-of-thought.
-
-Reasoning metadata can be:
-
-- status;
-- summary if intentionally generated;
-- token usage;
-
-not hidden private reasoning.
-
----
-
-## P29-6 Protocol Event Mapper
-
-Core events remain core events.
-
-Add:
-
-```text
-AgentEvent
+transport
    ↓
-ProtocolEventMapper
-   ↓
-item/started
-item/delta
-item/completed
+RunEventHub
+   ├─→ public event queue
+   └─→ internal reducer state
+```
+
+The internal reducer should update incrementally on `push`, not by iterating the public queue.
+
+### Acceptable — tee with two independent bounded consumers
+
+Only if backpressure and cleanup are correct.
+
+## Requirements
+
+- bounded buffering;
+- deterministic event order;
+- terminal event delivered once;
+- unsubscribe exactly once;
+- abort interrupts server;
+- local iterator return does not cancel `done` unless API explicitly documents that behavior;
+- `done` does not require user to consume `events`;
+- user consumption does not require awaiting `done`.
+
+## Terminal semantics
+
+Explicitly define:
+
+```text
 turn/completed
-...
+turn/failed
+turn/interrupted
+transport EOF before terminal
+abort before server terminal
 ```
 
-Keep mapping deterministic.
-
-Golden tests.
-
----
-
-## P29-7 Bounded queues and backpressure
-
-Add bounded:
-
-```text
-transport ingress queue
-request processing queue
-outbound notification queue
-```
-
-When saturated:
-
-return retryable typed error:
-
-```text
-SERVER_OVERLOADED
-```
-
-Do not grow arrays forever.
-
-### Acceptance
-
-capacity=2 test:
-
-- hold two requests;
-- third is rejected quickly;
-- process memory does not accumulate unbounded work;
-- client can retry.
-
----
-
-## P29-8 Replay/resume subscription
-
-Client may subscribe from:
-
-```text
-afterSequence
-```
-
-The event sequence is authoritative.
-
-Reconnect:
-
-```text
-last seen = 42
-→ request afterSequence=42
-→ get >42 only
-```
-
-No duplicates after reducer dedupe.
-
----
-
-## P29-9 Request idempotency for mutating API
-
-Especially:
-
-- thread/start;
-- turn/start;
-- approval/respond;
-- ask/respond.
-
-Support optional idempotency key.
-
-Retried transport request must not start duplicate turn.
-
----
-
-## P29-10 Schema generation / fixtures
-
-Generate or maintain JSON Schema.
-
-CI:
-
-- current types → schema;
-- compare committed golden;
-- protocol-breaking change requires explicit version/migration update.
-
----
-
-# PHASE 30 — TypeScript SDK & Client-Only UI Path
-
-> Priority: MEDIUM/HIGH after App Server.
-
----
-
-## P30-1 Create `packages/sdk`
-
-Exports:
-
-```ts
-HarnessClient
-Thread
-ThreadEvent
-ThreadItem
-RunResult
-```
-
-No dependency on `@ar/core`.
-
-Only:
-
-```text
-@ar/protocol
-transport client
-```
-
----
-
-## P30-2 Stream-first API
-
-Primary:
-
-```ts
-const thread = await client.startThread(...);
-
-const { events } = await thread.runStreamed("fix bug");
-
-for await (const event of events) {
-  ...
-}
-```
-
-Convenience:
-
-```ts
-const result = await thread.run("fix bug");
-```
-
-`run()` is a reducer over `runStreamed()`.
-
-No parallel independent implementation.
-
----
-
-## P30-3 Reducer truth test
-
-Given exact event fixture:
-
-```text
-manual stream reducer
-SDK run()
-```
-
-must produce identical:
-
-- items;
-- finalResponse;
-- usage;
-- status.
-
----
-
-## P30-4 Abort
-
-SDK `AbortSignal` maps to `turn/interrupt`.
-
-Do not merely cancel local HTTP reading while server keeps running unknowingly.
-
----
-
-## P30-5 Migrate CLI toward AppServerClient
-
-Current CLI already uses an in-memory RPC transport but still returns direct runtime/store handles in deps.
-
-Move interactive run/control paths to protocol client.
-
-Admin/doctor may receive explicit admin/introspection services, but ordinary user interactions should not call `AgentRuntime` directly.
-
-Target dependency:
-
-```text
-CLI
- ↓
-SDK/AppServerClient
- ↓
-App Server
- ↓
-LoadedSessionManager
- ↓
-Runtime
-```
-
-Add architecture test preventing:
-
-```text
-apps/cli
-```
-
-from importing `@ar/core` for ordinary execution after migration.
-
----
-
-# PHASE 31 — Environment Snapshot & Execution Host Seam
-
-> Priority: MEDIUM  
-> Build local-first. Do not implement remote executor yet.
-
----
-
-## P31-1 Replace naked cwd identity inside Step with EnvironmentSnapshot
-
-Define:
-
-```ts
-interface EnvironmentSnapshot {
-  readonly id: EnvironmentId;
-  readonly cwd: string;
-  readonly workspaceRoots: readonly string[];
-  readonly shell: ShellSnapshot;
-  readonly permissionsFingerprint: string;
-  readonly capabilities: EnvironmentCapabilities;
-  readonly fingerprint: string;
-}
-```
-
-Local environment ID can be deterministic for session/workspace.
-
----
-
-## P31-2 EnvironmentManager
-
-```ts
-interface EnvironmentManager {
-  resolveForSession(session: PersistentSession): Promise<EnvironmentHandle>;
-  snapshot(handle: EnvironmentHandle): Promise<EnvironmentSnapshot>;
-}
-```
-
-Initial implementation:
-
-```text
-LocalEnvironmentManager
-```
-
-only.
-
----
-
-## P31-3 Tool execution reads Step environment
-
-File/shell/sandbox must use:
-
-```text
-step.environment
-```
-
-not `process.cwd()` or mutable global cwd.
-
-Keep child isolated workspace support, but represent it as an environment/workspace root instead of an out-of-band map when practical.
-
----
-
-## P31-4 Prepare executor seam without fake remote support
-
-Define capability interface if useful:
-
-```ts
-interface Executor {
-  filesystem: ExecutorFileSystem;
-  exec(...): Promise<...>;
-}
-```
-
-but only ship local executor.
-
-Do not claim remote support.
-
----
-
-# PHASE 32 — Skills & Instruction Snapshot Closure
-
-> Priority: MEDIUM  
-> Same world-snapshot principle as MCP/tools.
-
----
-
-## P32-1 Skill snapshot identity
-
-Current skill progressive disclosure is useful.
-
-Add immutable selected snapshot:
-
-```ts
-interface SkillSnapshot {
-  readonly fingerprint: string;
-  readonly selected: readonly {
-    name: string;
-    source: string;
-    bodyHash?: string;
-    requiredTools: readonly string[];
-    requiredMcpServers: readonly string[];
-  }[];
-}
-```
-
----
-
-## P32-2 Cache key must include config identity
-
-Do not cache solely by cwd.
-
-Key should include:
-
-```text
-cwd
-skill roots
-config fingerprint
-plugin snapshot fingerprint
-```
-
-Prevent cross-session leakage when same cwd has different enabled/disabled skill config.
-
----
-
-## P32-3 InstructionSnapshot
-
-Capture:
-
-```ts
-interface InstructionSnapshot {
-  readonly sources: readonly InstructionSource[];
-  readonly systemHash: string;
-  readonly fingerprint: string;
-}
-```
-
-If AGENTS.md/project instruction changes mid-step:
-
-- current step unchanged;
-- next step may see new snapshot.
-
----
-
-## P32-4 Skill → MCP dependency integration
-
-If selected skill requires MCP server:
-
-```text
-skill selection
-→ McpDependencyResolver
-→ McpBindingSnapshot
-→ StepToolRouter
-```
-
-Do not start all skill dependencies globally at process startup.
-
----
-
-# PHASE 33 — Symphony-Style External Work Orchestration
-
-> Priority: MEDIUM/LATER  
-> This is above the Harness, not inside AgentRuntime.
-
----
-
-## P33-1 Create independent orchestration package
+Unexpected EOF must not silently become completed.
 
 Suggested:
 
 ```text
-packages/orchestration/
-├── work-item.ts
-├── tracker.ts
-├── workflow-loader.ts
-├── reconciler.ts
-├── scheduler.ts
-├── retry-policy.ts
-├── workspace-manager.ts
-└── worker.ts
+terminal event absent + transport closes
+=> failed / protocol error
 ```
 
-No dependency from core → orchestration.
+unless local abort semantics intentionally classify interrupted.
 
-Dependency:
+## Required tests
 
-```text
-orchestration → SDK/AppServer client
-```
+1. consume events + await done concurrently;
+2. await done without consuming events;
+3. consume events without awaiting done;
+4. slow public consumer;
+5. terminal failure;
+6. interrupt;
+7. immediate abort;
+8. iterator early return;
+9. transport closes before terminal;
+10. duplicate terminal event is rejected/ignored deterministically;
+11. event order identical raw client vs SDK;
+12. large event burst stays within configured buffer policy.
 
-not:
+## Acceptance criteria
 
-```text
-orchestration → AgentRuntime internals
-```
+- no single-consumer caveat remains in public API docs;
+- conformance test no longer needs to avoid awaiting `done`;
+- same stream truth is mechanically proven.
+
+## Forbidden shortcuts
+
+- do not solve with timeout;
+- do not copy all events unbounded forever;
+- do not document “events and done must not be used together”.
 
 ---
 
-## P33-2 Generic WorkTracker
+# PHASE 36-5 — Process Policy Shell-Composition Closure
+
+> Priority: P0
+>
+> Invariant:
+>
+> ```text
+> INV-P36-005
+> A plain-command allowlist rule cannot authorize shell composition.
+> ```
+
+## Threat model
+
+A rule such as:
+
+```text
+git *
+pnpm test*
+node *
+```
+
+must not authorize:
+
+```text
+git status; echo pwned
+git status && whoami
+git status || curl ...
+pnpm test | sh
+node app.js > secret.txt
+```
+
+unless an explicit policy independently authorizes shell composition.
+
+## Required decision order
+
+Change policy flow to:
+
+```text
+1. parse target invocation
+2. detect shell composition
+3. classify launch surface
+4. apply denied surface policy
+5. if composed:
+     require explicit shell-composition authorization
+     DO NOT apply ordinary argv/glob extension rules
+6. if plain:
+     evaluate program/argv allowlist
+7. apply network intent policy
+```
+
+## Policy model
+
+Preferred:
 
 ```ts
-interface WorkTracker {
-  listCandidates(): Promise<WorkItem[]>;
-  read(ids: readonly WorkId[]): Promise<WorkItem[]>;
+interface ProcessPolicy {
+  allowedCommands?: string[];
+  allowedShellCommands?: string[]; // explicit high-risk exact rules
 }
 ```
 
-Do not start with GitHub/Linear-specific core logic.
+or a typed rule:
 
-Use fake tracker first.
+```ts
+type CommandRule =
+  | { kind: "argv"; program: string; argvPrefix?: string[] }
+  | { kind: "exact_shell"; command: string };
+```
+
+Do not overload a broad glob to mean both.
+
+## Compatibility
+
+If preserving legacy string rules:
+
+- legacy glob rules apply only to non-composed invocations;
+- composed commands require exact explicit shell rule;
+- document the migration.
+
+## Required tests
+
+### POSIX
+
+```text
+allow ["git *"]
+
+git status                       ALLOW
+git status --short               ALLOW
+git status; echo pwned           DENY
+git status && whoami             DENY
+git status || true               DENY
+git status | cat                 DENY
+git status $(whoami)             DENY
+git status `whoami`              DENY
+git status
+whoami                          DENY
+git status > out                 DENY
+```
+
+### Windows CMD
+
+```text
+dir & whoami                     DENY
+dir && whoami                    DENY
+dir | findstr x                  DENY
+```
+
+### PowerShell
+
+```text
+Get-ChildItem; whoami            DENY
+Get-ChildItem | Out-File x       DENY
+$(whoami)                        DENY
+```
+
+### Explicit shell policy
+
+If introduced:
+
+- exact authorized composed command may pass;
+- extension of it may not pass;
+- different cwd/environment/authority must not reuse approval if approval is involved.
+
+## Acceptance criteria
+
+- broad plain globs cannot admit composition;
+- normal argv extension still works;
+- network gate still applies.
 
 ---
 
-## P33-3 Normalized WorkItem
+# PHASE 36-6 — Filesystem Canonicalization Fail-Closed
+
+> Priority: P1
+>
+> Invariant:
+>
+> ```text
+> INV-P36-006
+> Path containment decisions are allowed only when canonical identity is proven.
+> ```
+
+## Error taxonomy
+
+Do not catch every `realpath` failure as “path missing”.
+
+Differentiate at least:
+
+### Fallback-eligible
+
+```text
+ENOENT
+ENOTDIR
+```
+
+These may use deepest-existing-ancestor fallback.
+
+### Fail-closed
+
+```text
+EACCES
+EPERM
+ELOOP
+EIO
+UNKNOWN
+depth limit exceeded
+invalid device/path semantics
+```
+
+Return typed canonicalization failure.
+
+## Contract
+
+Prefer:
 
 ```ts
-interface WorkItem {
-  id: string;
-  identifier: string;
-  title: string;
-  description?: string;
-  state: string;
-  priority?: number;
-  labels: string[];
-  dispatchable: boolean;
-  updatedAt?: number;
+type CanonicalPathResult =
+  | { ok: true; path: string }
+  | {
+      ok: false;
+      code: "permission" | "symlink_loop" | "io" | "depth" | "invalid" | "unknown";
+      message: string;
+    };
+```
+
+or throw a typed security error.
+
+Do not silently return a partially canonical path.
+
+## Required tests
+
+1. missing leaf → canonical ancestor fallback works;
+2. missing nested tail with `..` cannot escape;
+3. permission denied → deny;
+4. symlink loop → deny;
+5. depth exhaustion → deny;
+6. symlink escape → deny;
+7. Windows junction/case behavior where available;
+8. POSIX root case;
+9. control chars → deny;
+10. relative path resolve against cwd.
+
+Where real OS setup is difficult, inject the filesystem resolver primitive for deterministic error taxonomy tests, plus at least one real-filesystem integration test.
+
+## Acceptance criteria
+
+- only explicit missing-path errors fallback;
+- every ambiguous canonicalization failure denies;
+- capability guard and sandbox share the same canonicalization semantics.
+
+---
+
+# PHASE 36-7 — Execution-Backed Capability Evidence
+
+> Priority: P1
+>
+> Goal: stop claiming a capability is tested merely because a test file exists.
+
+## New evidence model
+
+Separate static and execution evidence.
+
+Example:
+
+```ts
+interface StaticEvidence {
+  kind: "source" | "test_file" | "benchmark_case" | "ci_config";
+  ref: string;
+}
+
+interface ExecutionEvidence {
+  kind:
+    | "test_run"
+    | "benchmark_run"
+    | "coverage_run"
+    | "ci_run"
+    | "release_gate";
+  headSha: string;
+  command: string;
+  passed: boolean;
+  generatedAt: string;
+  artifactRef?: string;
 }
 ```
 
-Provider-native opaque reference may be preserved without core interpretation.
+Capability fields should become conceptually:
+
+```text
+implemented       <- source/static evidence
+productionWired   <- runtime introspection
+testDeclared      <- test file exists
+integrationTested <- current-HEAD passing execution evidence
+benchmarkDeclared <- cases exist
+benchmarkExercised<- current-HEAD successful benchmark evidence
+```
+
+## Evidence freshness
+
+Execution evidence is valid only if:
+
+```text
+evidence.headSha == audited HEAD
+```
+
+Optionally allow ancestor evidence only for unchanged files if you implement a precise dependency proof.
+
+Do not implement that optimization in P36 unless necessary.
+
+Simplest safe rule: exact HEAD.
+
+## Evidence source
+
+Preferred:
+
+```text
+.ci/evidence/*.json
+```
+
+generated by commands/CI.
+
+Examples:
+
+```text
+.ci/evidence/tests.json
+.ci/evidence/coverage.json
+.ci/evidence/benchmark-smoke.json
+.ci/evidence/security.json
+.ci/evidence/race.json
+```
+
+## CI integration
+
+Each CI gate should emit machine-readable evidence.
+
+The audit command may consume local evidence or CI-produced artifacts.
+
+If evidence missing:
+
+```text
+integrationTested = false
+benchmarkExercised = false
+```
+
+## Required tests
+
+1. test file exists, no run evidence → not tested;
+2. failed test run → not tested;
+3. passing evidence stale SHA → not tested;
+4. passing evidence current SHA → tested;
+5. benchmark cases exist, no run → not exercised;
+6. benchmark current-HEAD pass → exercised;
+7. malformed evidence → fail closed;
+8. evidence path missing → fail closed.
+
+## Acceptance criteria
+
+- file existence no longer equals execution success;
+- matrix tells static declaration vs executed proof apart.
 
 ---
 
-## P33-4 Authoritative scheduler state
+# PHASE 36-8 — Durability & Audit Semantic Model
+
+> Priority: P1
+
+## Problem
+
+Current-style:
+
+```text
+durable=true
+```
+
+can mean:
+
+```text
+profile did not require durability
+```
+
+instead of:
+
+```text
+actual backing store is durable across restart
+```
+
+This is semantically misleading.
+
+## New model
+
+Suggested:
 
 ```ts
-interface OrchestratorState {
-  running: Map<WorkId, RunningEntry>;
-  claimed: Set<WorkId>;
-  blocked: Map<WorkId, BlockedEntry>;
-  retries: Map<WorkId, RetryEntry>;
+type DurabilityLevel =
+  | "none"
+  | "memory"
+  | "process"
+  | "flush"
+  | "durable";
+
+interface CapabilityDurability {
+  actual: DurabilityLevel;
+  required: DurabilityLevel;
+  satisfied: boolean;
 }
 ```
 
-Invariants:
+For example:
 
 ```text
-running ⊆ claimed
-retrying ⊆ claimed
-running ∩ blocked = ∅
-terminal eventually ∩ running = ∅
+approval store = InMemoryApprovalStore
+actual = memory
+
+interactive-ephemeral
+required = none
+satisfied = true
+
+champion
+required = durable
+satisfied = false
 ```
 
----
-
-## P33-5 Reconcile before dispatch
-
-Each tick:
+The matrix must never render:
 
 ```text
-reload dynamic workflow config
-reconcile running
-reconcile blocked
-reconcile retry eligibility
-compute capacity
-list candidates
-revalidate candidate immediately before claim
-claim
-prepare workspace
-start Harness thread through App Server
-schedule next tick
+durable=true
 ```
 
-Never only consume a queue and hope state remains valid.
+for an in-memory store merely because current profile does not require durability.
 
----
+## Security posture
 
-## P33-6 Stop workers when external state invalidates them
-
-Cases:
-
-- item becomes terminal;
-- item becomes inactive;
-- item no longer assigned/routed;
-- required label removed;
-- explicit cancellation.
-
-Worker gets `turn/interrupt`.
-
-Workspace cleanup policy runs afterward.
-
----
-
-## P33-7 Retry policy
-
-Transient failures:
+Similarly distinguish:
 
 ```text
-exponential backoff + jitter
+actualSecurityMode
+requiredSecurityMode
+securitySatisfied
 ```
 
-State change may cancel pending retry.
+if current matrix uses one field for the promised profile mode.
 
-Use injected monotonic timer in tests.
+## Audit summary split
 
-No retry storm after restart.
-
----
-
-## P33-8 Repository-owned WORKFLOW.md
-
-Implement a minimal contract inspired by Symphony:
-
-```md
----
-tracker:
-  kind: fake
-polling:
-  interval_ms: 30000
-agent:
-  max_concurrent: 4
-workspace:
-  root: .workspaces
----
-
-Work on the assigned item.
-
-Before handoff:
-- inspect the repository
-- implement the requested change
-- run verification
-- summarize evidence
-```
-
-Parser:
-
-- optional YAML front matter;
-- body = prompt template;
-- unknown keys ignored for forward compatibility;
-- invalid known fields fail with typed errors.
-
-If adding a YAML dependency is undesirable, choose a documented alternative, but do not silently implement an incompatible pseudo-YAML parser.
-
----
-
-## P33-9 Per-work-item workspace isolation
-
-Reuse existing child workspace ideas.
-
-Each item gets deterministic sanitized key + collision-resistant hash suffix.
-
-No two distinct identifiers may accidentally share workspace.
-
----
-
-## P33-10 Worker uses App Server, not Core
-
-Worker:
+Replace ambiguous `audit: OK` with explicit summaries:
 
 ```text
-workspace
-→ appServer thread/start
-→ turn/start
-→ consume events
-→ react to tracker reconcile interruption
+Documentation claims: PASS
+Profile capability requirements: FAIL
+Execution evidence freshness: FAIL
+Release gate: FAIL
 ```
 
-This validates the App Server boundary under a real higher-level consumer.
+Possible JSON:
 
----
+```ts
+interface AuditVerdict {
+  documentationClaimsOk: boolean;
+  profileRequirementsOk: boolean;
+  evidenceFresh: boolean;
+  releaseReady?: boolean;
+}
+```
 
-# PHASE 34 — Conformance, Chaos & Race Test Matrix
+## CLI exit semantics
 
-> Priority: REQUIRED before declaring v5 complete.
-
----
-
-## P34-1 World-snapshot conformance suite
-
-Create a top-level invariant suite with:
-
-- tool catalog drift;
-- MCP drift;
-- policy drift;
-- instruction drift;
-- skill drift;
-- model switch;
-- context compaction;
-- environment drift.
-
-Every test asserts old Step immutable / new Step updated.
-
----
-
-## P34-2 Same-session race suite
-
-Randomize:
+Define separate commands/options:
 
 ```text
-turn start
-steer
-follow-up
-cancel
-approval response
-ask response
-MCP refresh
+agent audit
+agent audit --strict
+agent release verify
 ```
 
-Assert no two `runTurn()` instances for same session overlap.
+Recommended:
 
-Use a concurrency probe, not sleeps-only assertions.
+- `agent audit` reports facts and exits non-zero on malformed/contradictory evidence;
+- `agent audit --strict` exits non-zero when profile requirements are unmet;
+- `agent release verify` enforces all release gates.
+
+## Required tests
+
+1. in-memory approval + ephemeral profile → actual memory, satisfied yes;
+2. in-memory approval + champion → satisfied no;
+3. durable approval + champion → satisfied yes;
+4. docs true but profile degraded → documentation PASS, profile FAIL;
+5. profile pass but release gate missing → release FAIL;
+6. markdown labels unambiguous.
+
+## Acceptance criteria
+
+- actual capability properties are never inferred from “not required”;
+- `OK` cannot be misread as release readiness.
 
 ---
 
-## P34-3 Tool side-effect crash suite
+# PHASE 36-9 — Race & Chaos Suite Stabilization
 
-Use non-idempotent counter/file-append tool.
+> Priority: P1
+>
+> Goal: remove the category “known race noise” from release gating.
 
-Inject crash across P26 boundaries.
+## Rule
 
-Assert:
+A race test is either:
 
 ```text
-automatic duplicate side effect count = 0
+valid and passing
 ```
 
-for every unsafe path.
-
----
-
-## P34-4 MCP chaos
-
-Cases:
-
-- connect hangs;
-- initialize timeout;
-- server dies mid-call;
-- tools/list schema changes;
-- duplicate tool names;
-- malformed schema;
-- unused server unavailable;
-- reconnect generation changes.
-
-Old Step never silently binds new generation.
-
----
-
-## P34-5 App Server protocol conformance
-
-Test both:
+or:
 
 ```text
-InMemoryTransport
-StdioTransport
+invalid and repaired/replaced
 ```
 
-same contract fixtures.
+It is never “expected red”.
 
-Cases:
+## Procedure for each current failing race test
 
-- request before initialize;
-- duplicate initialize;
-- unknown method;
-- malformed params;
-- overload;
-- reconnect replay;
-- duplicate idempotency key;
-- interrupt active turn;
-- steer active turn;
-- concurrent turn rejection.
+For every failing race file:
 
----
+1. write the invariant it intends to prove;
+2. determine whether failure is:
+   - product bug;
+   - test harness race;
+   - incorrect assertion;
+   - nondeterministic timer dependency;
+   - leaked resource;
+   - global shared state;
+3. repair production or test accordingly;
+4. replace wall-clock sleeps with deterministic gates where possible;
+5. run repeatedly.
 
-## P34-6 SDK conformance
+## Deterministic synchronization
 
-Same protocol fixture:
-
-- raw client;
-- SDK runStreamed;
-- SDK run.
-
-Equivalent final state.
-
----
-
-## P34-7 Config drift matrix
-
-For each lifecycle class:
+Prefer:
 
 ```text
-process_static
-session_frozen
-turn_dynamic
-step_dynamic
+Deferred/Barrier/Latch
+fake model provider gates
+fake store gates
+fake orchestrator gates
+injected clock/timer
 ```
 
-change config while active and verify documented behavior.
+Avoid:
 
----
+```ts
+await sleep(10)
+```
 
-## P34-8 Security regression matrix
+for correctness assertions.
 
-Must remain green:
+## Required stress loop
 
-- path traversal;
-- symlink escapes;
-- command injection;
-- prompt injection;
-- MCP tool-description injection;
-- permission widening;
-- approval over-reuse;
-- unsafe retry;
-- writable child workspace escape;
-- secret leakage in protocol/config explain.
-
----
-
-# PHASE 35 — Final Architecture Consolidation & Release Gate
-
----
-
-## P35-1 Remove stale global dependencies after Step snapshot closure
-
-After P23, search for production runtime reads of:
+Expose a command such as:
 
 ```text
-global toolSpecs
-global toolSelector
-global registry resolve for model-originated calls
-global MCP tool list
-ctx.agent.tools for already-snapshotted step authority
+pnpm test:race
 ```
 
-Delete or narrow obsolete dependencies.
+and make it run key concurrency tests multiple times or through a deterministic race matrix.
 
-Do not keep two decision sources.
+Examples:
 
-### P35-1 COMPLETED — Remove stale global dependencies after Step snapshot closure
+- simultaneous `SessionActor.startTurn`;
+- manager concurrent load;
+- cancel during starting;
+- close during tool execution;
+- SDK abort during streaming;
+- durability crash windows;
+- MCP single-flight generation;
+- event sequence allocation.
 
-Implementation record (audit + changes + verification, current `main`):
+## Chaos suite
 
-**审计结论（全部确认干净）**:
-- ✅ 全局 `toolSelector`：仅 `buildStepExecutionSnapshot`（`packages/core/src/runtime/step-snapshot-factory.ts:84`）内调用一次；`model-call-controller.ts:137` 有 `_stepFrozenAdvertisementOnly?: never` 哨兵字段防回归；
-- ✅ 全局 registry resolve：`tool-call-controller.ts:427/503` 一律 `step.tools.resolve()`（冻结绑定），无全局回退；
-- ✅ 全局 MCP tool list：仅 `mcpBindingProvider` 在 snapshot build 时调用（`runtime.ts:1206`）；
-- ✅ `ctx.agent.tools` / `session.agent.tools`：零残留；
-- ❌ 唯一残留死字段 `AgentRuntimeDeps.toolSpecs`（`packages/core/src/runtime/runtime.ts`）——已删除。
-
-**改动文件清单**:
-1. `packages/core/src/runtime/runtime.ts`：删除 `AgentRuntimeDeps.toolSpecs?: readonly ToolSpec[]` 死字段（原 LOOP-001 注释：deprecated and ignored）；删除 `ToolSpec`、`StepContext` 两个死 import；私有字段注释更新为「toolSpecs removed，advertisement 由 catalog 冻结」。
-2. `packages/core/src/runtime/runtime.test.ts`：`makeRuntime` opts 类型删除 `toolSpecs?`，新增 `toolRegistry?`；registry 构造改为 `opts?.toolRegistry ?? defaultTestToolCatalog()`；P7 用例改显式 `toolRegistry`（含 `weather_lookup` 的 6 工具 catalog）并补显式类型；删除不再使用的 `z` import，导入 `inertTestToolDefinition`。
-3. **保留不动**：`contracts/step-context.ts:37` 的 `StepContext.toolSpecs`——P31-1「compatible legacy surface」+ P23-1 intentional surface，勿删。
-
-**验证结果（当前 `main` 实跑）**:
-- `node_modules/.bin/vitest run packages/core/src` → **369 tests：352 passed / 17 failed**；失败全部为 race 系列（`race-part0-4` / `race-bisect3,5` / `race-split` / `session-race2`），即 §3.1 / HANDOFF 已知噪音（`toThrow(/SESSION_BUSY/)` 消息断言不匹配 + gated 流程 300s 超时）；
-- P35-1 相关文件全绿：`runtime.test.ts` **72/72**；
-- 其余非 race 文件全绿：`step-snapshot.invariant` 10/10、`world-snapshot.conformance` 8/8、`session-actor` 13/13、`crash-matrix` 8/8、`crash-sideeffect` 5/5；
-- 全仓 `tsc -b`：P35-1 改动文件（runtime.ts / runtime.test.ts）零类型错误；冷启 `noEmitOnError` 因 race 测试错误未 emit → 下游 `TS6305` 级联属已知 build 噪音，非 P35-1 回归；
-- harness 包 `create-harness`（toolSelector 传递链）不受影响。
-
----
-
-## P35-2 Update capability matrix truthfully
-
-Add distinctions:
+Expose:
 
 ```text
-implemented
-productionWired
-snapshotAuthoritative
-durable
-tested
+pnpm test:chaos
 ```
 
-Critical capabilities should not merely be “implemented”.
+if not already available.
 
-### P35-2 COMPLETED — Update capability matrix truthfully
+Chaos must be deterministic enough for CI.
 
-Implementation record (audit + changes + verification, current `main`):
+## Acceptance criteria
 
-**新增区分维度 `snapshotAuthoritative`（P23 世界快照权威性）**:
-- `HarnessIntrospection.features.stepSnapshot`（`packages/harness/src/introspection.ts`）——生产组合根（`compose-observability.ts`）恒为 `true`（runtime 每次模型调用前都构建 `StepExecutionSnapshot`，属接线事实而非开关）；
-- `apps/cli/src/audit.ts`：`CapabilityRecord.snapshotAuthoritative` + `CapabilitySpec.snapshotAuthoritative?()` 谓词 + `toRecord` 计算 + markdown 列；
-- **交叉验证（machine-checkable）**：`snapshotAuthorityProven(input)` 要求三条件同时成立——
-  1. `introspection.features.stepSnapshot === true`（快照管线已接线）；
-  2. P34-7 配置漂移矩阵覆盖（`integrationTests.config_drift_matrix`）；
-  3. P34-8 安全回归矩阵覆盖（`integrationTests.security_regression_matrix`）。
-  缺任一 → 该项能力不得声称 snapshot-authoritative（fail-closed）。
+- zero known-red race tests;
+- zero flaky retries in CI;
+- race and chaos are real release gates.
 
-**标记为 snapshot-authoritative 的能力**（其模型可见执行面流经冻结 StepToolRouter/上下文，且已接线）:
-- ✅ `context_pipeline`（上下文按步冻结，P23-7）、`advanced_tools`（工具冻结进 StepToolRouter，P23-2 / INV-V5-001/002）；
-- ⏳ 本 profile 未接线（`features.* = false`）→ 诚实为 `false`：`mcp_connected`、`delegation`、`plugin_host`；
-- ❌ 非快照绑定（持久化/可观测/生命周期/CI）：`checkpoint_store`、`artifact_store`、`memory_*`、`learning`、`scheduler`、`ask_user_durable`、`approval_durable`、`usage_accounting`、`run_budget`、benchmark suites、`ci_*`。
+## Forbidden shortcuts
 
-**验证结果**:
-- `CAPABILITY_MATRIX.md`（`agent audit` 重生成，gitSha `7a10e83`）：`context_pipeline | tested | true | true | true | ...`、`advanced_tools | tested | true | true | true | ...`、`mcp_connected | implemented | true | false | false | ...`（诚实，未接线）；
-- vitest：`apps/cli/src/audit*` 4 文件 38 测试全绿（新增 P35-2 断言：权威性判定、无 stepSnapshot 不声称、markdown 列渲染）；
-- `docs-verify`（7）、`production-audit`（5）、`cli.test`（28）、`release-artifacts`（3）、`create-harness`（17）全绿；
-- `CAPABILITY_MATRIX.md/.json` 已重生成并包含新列（`docs:verify`/`production-audit` 表头子串检查保持通过）。
+- no retrying the full test command until green;
+- no `--retry` used to hide flakes;
+- no platform skip unless invariant is truly platform-inapplicable and there is an equivalent platform-specific test.
 
 ---
 
-## P35-3 Architecture docs
+# PHASE 36-10 — Cross-Platform Invariant Matrix
 
-Create/update:
+> Priority: P1
+
+## Scope
+
+At minimum verify both Linux and Windows for:
 
 ```text
-docs/architecture/runtime-scopes.md
-docs/architecture/tool-snapshot.md
-docs/architecture/session-actor.md
-docs/architecture/durability.md
-docs/architecture/app-server.md
-docs/architecture/mcp-runtime.md
-docs/architecture/orchestration.md
+path canonicalization
+process command parsing
+shell operator detection
+session actor concurrency
+SQLite/JSONL durability
+App Server transport
+SDK conformance
+capability audit
+release verify
 ```
 
-Each doc must state invariants, not only class diagrams.
+## CI
 
-### P35-3 COMPLETED — Architecture docs
+Keep Linux + Windows.
 
-All seven docs created under `docs/architecture/`, each stating invariants
-(not only class diagrams):
+Add explicit named jobs if necessary:
 
-| doc | core invariants stated |
-| --- | --- |
-| `runtime-scopes.md` | INV-CFG-001..004 — config lifecycle 4 classes (process_static / session_frozen / turn_dynamic / step_dynamic) × change directions; no silent step-snapshot mutation; fail-closed on ambiguity; origin traceability; frozen fingerprint |
-| `tool-snapshot.md` | INV-V5-001/002 (+INV-SNAP-001..003) — advertised==executed router fingerprint; step binding identity; MCP generation identity; policy non-widening; collision fail-closed; deterministic fingerprints; retry taxonomy |
-| `session-actor.md` | INV-V5-005 (+INV-SES-001..005) — single active turn; durable/live separation; steer at sampling boundary; explicit follow-up; orderly shutdown; fork semantics |
-| `durability.md` | INV-V5-009/007 (+INV-DUR-001..004) — monotonic atomic journal sequence; fence before ack; no blind retry of unsafe effects; resume classification; projection rebuild; atomic commit where feasible; crash matrix |
-| `app-server.md` | INV-PROT-001..007 + INV-V5-010 — initialize gate; closed item model; deterministic mapping; bounded queues/backpressure; replay from sequence; idempotent mutating calls; error code passthrough; protocol isolation |
-| `mcp-runtime.md` | INV-V5-003 (+INV-MCP-001..005) — generation identity; lazy composition; single-flight connect; unused-broken-server tolerance; lifecycle closure; bounded idle |
-| `orchestration.md` | INV-V5-012 + INV-ORCH-001..005 — authoritative state consistency; reconcile-before-dispatch; convergence; boundary isolation; workspace isolation; bounded retry |
+```text
+verify-linux
+verify-windows
+coverage-linux
+security-matrix
+release-evidence
+```
 
-Verification: docs render as valid markdown; P35-3 is documentation-only and
-does not change production wiring (no test impact).
+Do not rely on a comment saying both platforms are covered.
 
----
+## Platform-specific semantics
 
-## P35-4 Migration notes
+Tests must explicitly account for:
 
-Public changes:
+```text
+POSIX shell
+cmd.exe
+PowerShell
+drive letters
+UNC
+case-insensitive path option
+separator normalization
+```
 
-- StepContext compatibility;
-- RPC → App Server;
-- SDK package;
-- approval typed capability;
-- config layers;
-- MCP lazy semantics.
+## Acceptance criteria
 
-Document how old callers migrate.
-
-### P35-4 COMPLETED — Migration notes
-
-`docs/migration.md` created, covering all six public changes:
-
-1. **StepContext compatibility** — legacy surface retained; new authority
-   (`StepExecutionSnapshot` / `StepRecord`) documented; `toolSpecs`/`toolSelector` dep removal.
-2. **RPC → App Server** — `session.*` → `thread/*`, `turn/*`; initialize gate;
-   `SESSION_BUSY`; replay from sequence; error code passthrough.
-3. **SDK package** — `@ar/sdk` standalone; `HarnessClient.startThread` →
-   `runStreamed()` / `run()`; `AbortSignal` → server-side interrupt;
-   single-consumer channel warning.
-4. **Approval typed capability** — `CapabilityRequest` union; `approvalFingerprint`;
-   semantic scope reuse (`INV-V5-008`).
-5. **Config layers** — layering/origin traceability; `config explain <key>` CLI;
-   drift rules per lifecycle class.
-6. **MCP lazy semantics** — catalog → need-driven connect; generation-pinned
-   bindings; unused-broken-server tolerance.
-
-Verification: doc renders as valid markdown; P35-4 is documentation-only and
-does not change production wiring.
+- release candidate requires both verify platforms green;
+- platform-specific failures cannot be reclassified as noise.
 
 ---
 
-## P35-5 Final commands
+# PHASE 36-11 — Champion & Release Evidence Binding
+
+> Priority: P1
+>
+> Goal: ensure Champion claims use real current-HEAD benchmark data.
+
+## Champion promotion record
+
+Create or evolve:
+
+```ts
+interface ChampionPromotionEvidence {
+  candidateId: string;
+  baselineId: string;
+  headSha: string;
+  modelIdentity: string;
+  benchmarkSuites: string[];
+  runIds: string[];
+  metrics: {
+    passedDelta: number;
+    verifiedCompletionDelta: number;
+    tokensDelta: number;
+    costDelta: number;
+    toolCallsDelta: number;
+    recoveryDelta: number;
+  };
+  securityGatePassed: boolean;
+  raceGatePassed: boolean;
+  crossPlatformPassed: boolean;
+  promoted: boolean;
+}
+```
+
+## Promotion rule
+
+Promotion may not occur if:
+
+```text
+releaseReady == false
+```
+
+or:
+
+```text
+security/race/cross-platform gates red
+```
+
+Even if benchmark quality improved.
+
+## Required tests
+
+1. better benchmark + red security → no promotion;
+2. better benchmark + stale SHA → no promotion;
+3. better benchmark + green release → promotable;
+4. missing paired cases → hard fail;
+5. stub-mode result cannot be labeled real-model superiority.
+
+## Acceptance criteria
+
+- Champion remains evidence-gated;
+- current HEAD identity is included.
+
+---
+
+# PHASE 36-12 — Zero-Red Release Candidate Gate
+
+> Priority: P0
+>
+> This phase may not be marked DONE until every required gate is green.
+
+## Required commands
 
 At minimum:
 
@@ -3493,297 +1744,433 @@ pnpm test
 pnpm build
 pnpm test:coverage
 pnpm docs:verify
+pnpm benchmark:smoke
 ```
 
-Plus project-specific:
+Plus real project commands for:
 
 ```text
-production-audit
-benchmark smoke
+production audit
 protocol conformance
+security regression
+race suite
 chaos suite
+cross-platform CI
 ```
 
-Use exact CLI command available after implementation.
+If a named script does not exist, create a stable package script for it.
 
-### P35-5 COMPLETED — Final release gate verification
+Recommended final scripts:
 
-Verification results (current `main`, Windows x64, node v24.18.1, pnpm v11.21.0):
+```json
+{
+  "test:security": "...",
+  "test:race": "...",
+  "test:chaos": "...",
+  "test:protocol": "...",
+  "release:verify": "..."
+}
+```
 
-| gate | result | notes |
-| --- | --- | --- |
-| `pnpm test` (vitest run) | **231/245 files, 4707/4742 tests passed** | 14 failed files — 9 race‑series (known §3.1 noise, 17 tests), 2 Windows POSIX path (platform limit, 7 tests), 1 benchmark‑command MCP stub (2 tests, pre‑existing), 1 benchmark‑suite stress fixture (2 tests, pre‑existing), 1 no‑silent‑catch static scan (1 test, pre‑existing). **Zero failures are P35 regressions.** |
-| `pnpm typecheck` / `pnpm build` (tsc -b) | ❌ blocked by known race‑noise | `tsconfig.base.json` has `noEmitOnError: true`; committed race‑test TS2345 errors (known §3.1) block core's emit → downstream `TS6305` cascade. Non‑race errors = 0. Workaround: `noEmitOnError: false` → all production packages build cleanly (only race‑test TS2345 reported). |
-| `pnpm test:coverage` | ⏳ not run | Requires `tsc -b` (blocked by race noise) or vitest config workaround. |
-| `pnpm docs:verify` | ✅ equivalent passed | `docs-verify.test.ts` (7 tests) passes; `production-audit.test.ts` (5 tests) passes. CLI binary requires dist build. |
-| production‑audit | ✅ equivalent passed | `agent audit` via vitest path (createDefaultDeps + runCommand) writes CAPABILITY_MATRIX.md/.json; verified by `audit.benchmark-profile.test.ts` (8 tests) and regeneration test. |
-| benchmark smoke | ⏳ not run | Requires dist build + benchmark runner. |
-| protocol conformance | ✅ equivalent passed | `transport-conformance.test.ts` (P34-5) and `sdk/conformance.test.ts` (P34-6) exercised by core repo's test suite. |
-| chaos suite | ⏳ not run | Race/chaos suites are the known gate‑blocking noise (P34-2/P34-4). |
-
-**P35 release conclusion**: The Harness v5 semantic invariants (P23 world snapshot, P25 session actor, P26 durability fences, P29 protocol, P35-1/2) are production‑wired and tested. The remaining build‑gate and test failures are all pre‑existing noise (race timing, Windows platform, stress fixtures, MCP stub benchmark) — **none are P35 regressions**. The project is at the final release gate with the known noise documented.
-
----
-
----
-
-# 5. MANDATORY CODE-LEVEL INVARIANTS
-
-These should be represented in tests, preferably with names containing the invariant identifier.
-
----
-
-## INV-V5-001 — Model/Tool Router Identity
-
-For every model-originated tool call:
+## Required final state
 
 ```text
-executedRouterFingerprint
+typecheck               PASS
+full tests              PASS
+build                    PASS
+coverage                 PASS
+docs verify              PASS
+benchmark smoke          PASS
+production audit         PASS
+protocol conformance     PASS
+security                 PASS
+race                     PASS
+chaos                    PASS
+linux CI                 PASS
+windows CI               PASS
+capability evidence SHA  == HEAD
+release evidence SHA     == HEAD
+```
+
+And:
+
+```text
+failed required gates    0
+blocked required gates   0
+not-run required gates   0
+known-noise exemptions   0
+ignored failures         0
+```
+
+## Release verdict
+
+Only then:
+
+```text
+Harness v5 release candidate: READY
+```
+
+Anything else:
+
+```text
+BLOCKED
+```
+
+## Required artifact
+
+Generate:
+
+```text
+RELEASE_EVIDENCE.json
+RELEASE_EVIDENCE.md
+```
+
+Suggested fields:
+
+```ts
+{
+  headSha,
+  generatedAt,
+  dirty,
+  platformEvidence,
+  gates,
+  capabilityAuditRef,
+  championEvidenceRef?,
+  releaseReady
+}
+```
+
+## Acceptance criteria
+
+- current HEAD has a complete machine-readable proof bundle;
+- release verification is reproducible;
+- P36-12 status is derived from gate evidence, not handwritten.
+
+---
+
+# PHASE 36-13 — Documentation / Handoff Truth Closure
+
+> Priority: P2
+
+## Update
+
+At minimum:
+
+```text
+HANDOFF.md
+plan.md
+docs/architecture/session-actor.md
+docs/architecture/app-server.md
+docs/architecture/durability.md
+docs/architecture/tool-snapshot.md
+docs/migration.md
+CAPABILITY_MATRIX.md
+```
+
+Add:
+
+```text
+docs/architecture/release-integrity.md
+```
+
+## release-integrity.md must explain
+
+- release gate state model;
+- why “pre-existing failure” is still release red;
+- execution-backed evidence;
+- SHA freshness;
+- SessionActor linearizability;
+- SDK stream truth;
+- security shell-composition policy;
+- capability durability semantics.
+
+## Handoff rules
+
+HANDOFF must contain:
+
+```text
+Current HEAD
+Dirty tree?
+Exact gate commands
+Exact gate results
+Known limitations
+Deferred work
+```
+
+If release not green, first line must say:
+
+```text
+Release status: BLOCKED
+```
+
+Do not bury it under prose.
+
+## Acceptance criteria
+
+- docs agree with executable evidence;
+- no “DONE” section contradicts red gate output.
+
+---
+
+# 4. MANDATORY CODE-LEVEL INVARIANTS
+
+These invariant IDs should appear in tests.
+
+---
+
+## INV-P36-001 — Session Turn Admission Linearizability
+
+```text
+per SessionActor:
+successful concurrent execution ownership <= 1
+```
+
+including the `runtime.startTurn()` await window.
+
+---
+
+## INV-P36-002 — Single Actor Per Loaded Manager Session
+
+```text
+concurrent load(id) calls
+→ same SessionActor identity
+```
+
+---
+
+## INV-P36-003 — SDK Public Stream Independence
+
+```text
+consume(events) concurrently with await done
+→ no event loss, no deadlock
+```
+
+---
+
+## INV-P36-004 — SDK Reducer Truth
+
+```text
+done result
 ==
-advertisedRouterFingerprint
+reduction of the exact event sequence exposed for that run
 ```
 
 ---
 
-## INV-V5-002 — Tool Binding Identity
-
-A call from Step S must resolve the tool binding captured by S, never a later global catalog binding.
-
----
-
-## INV-V5-003 — MCP Generation Identity
-
-A model call advertised using MCP generation G must execute using G or fail explicitly.
-
-Never silently upgrade to G+1.
-
----
-
-## INV-V5-004 — Policy Non-Widening
-
-Global config changes after Step creation must not silently widen that Step's authority.
-
----
-
-## INV-V5-005 — Single Active Turn
-
-For a session:
+## INV-P36-005 — Plain Allowlist Cannot Authorize Shell Composition
 
 ```text
-count(active executing turns) <= 1
+argv/glob allow rule
+!=
+shell composition authority
 ```
-
-always.
 
 ---
 
-## INV-V5-006 — No Vanishing Model Tool Call
-
-Every model-produced tool call must end in one observable settlement:
+## INV-P36-006 — Canonicalization Ambiguity Fails Closed
 
 ```text
-success
-failed
-denied
-timeout
-cancelled
-unknown_effect
+cannot prove canonical path
+→ deny
 ```
 
-No disappearance on abort.
+---
+
+## INV-P36-007 — Execution Evidence Is HEAD-Bound
+
+```text
+tested/benchmarked claim
+requires passing execution evidence for current HEAD
+```
 
 ---
 
-## INV-V5-007 — Unsafe Side Effect Never Blind-Retried
+## INV-P36-008 — Actual Durability Is Not Profile Requirement
 
-Crash/timeout/unknown outcome of non-safe tool never triggers automatic re-execution.
-
----
-
-## INV-V5-008 — Approval Cannot Broaden Authority
-
-A cached approval matches only equal-or-narrower semantic capability.
+```text
+actualDurability
+independent from
+requiredDurability
+```
 
 ---
 
-## INV-V5-009 — Semantic Journal Sequence
+## INV-P36-009 — Release Success Is Conjunctive
 
-Per session, committed journal sequence is unique and monotonic.
-
----
-
-## INV-V5-010 — Protocol Isolation
-
-Client/SDK packages do not import AgentRuntime internals.
+```text
+releaseReady
+==
+ALL(required gates == passed)
+```
 
 ---
 
-## INV-V5-011 — Event Stream Is SDK Truth
+## INV-P36-010 — No Known-Noise Release Exception
 
-`run()` result is derived from the same stream observable to `runStreamed()`.
+```text
+failed gate + reason "known noise"
+still means
+releaseReady == false
+```
 
 ---
 
-## INV-V5-012 — Reconciliation Convergence
+# 5. REQUIRED ADVERSARIAL TEST MATRIX
 
-A work item that becomes ineligible eventually has no active worker.
+## Concurrency
+
+```text
+100 simultaneous actor.startTurn
+100 simultaneous manager.load
+start + close
+start + cancel
+run + steer
+run + queue
+queue + close
+two sessions concurrent
+```
+
+## SDK
+
+```text
+events + done together
+slow events consumer
+done only
+events only
+abort before first event
+abort mid-stream
+server failure
+server EOF without terminal
+duplicate terminal
+large event burst
+```
+
+## Process security
+
+```text
+git status; echo pwned
+git status && whoami
+git status || true
+git status | sh
+git status $(whoami)
+git status `whoami`
+git status\nwhoami
+git status > out
+cmd /c dir & whoami
+powershell -Command "Get-ChildItem; whoami"
+```
+
+## Filesystem security
+
+```text
+../ escape
+non-existent tail + ..
+symlink escape
+junction escape where applicable
+EACCES
+EPERM
+ELOOP
+deep path limit
+UNC
+drive-letter path
+case-folded collision
+```
+
+## Evidence
+
+```text
+test file exists but no execution
+stale SHA
+failed run
+malformed JSON
+missing evidence
+benchmark cases exist but never executed
+```
 
 ---
 
 # 6. EXACT IMPLEMENTATION ORDER
 
-Do not parallelize phases that depend on unfinished semantics.
-
-Recommended order:
+Use this order:
 
 ```text
-P23 Step snapshot closure
+P36-0 baseline truth
   ↓
-P24 MCP Runtime V2
+P36-1 release truth model
   ↓
-P25 SessionActor
+P36-2 SessionActor linearizability
   ↓
-P26 Durability fences
+P36-3 manager single-flight
   ↓
-P27 Config layers
+P36-4 SDK stream closure
   ↓
-P28 Typed approval capability
+P36-5 process security
   ↓
-P29 App Server
+P36-6 path fail-closed
   ↓
-P30 SDK / CLI migration
+P36-7 execution evidence
   ↓
-P31 Environment snapshot
+P36-8 audit/durability semantics
   ↓
-P32 Skills/instruction snapshot closure
+P36-9 race/chaos stabilization
   ↓
-P33 Symphony orchestration
+P36-10 cross-platform matrix
   ↓
-P34 conformance/chaos
+P36-11 champion evidence binding
   ↓
-P35 consolidation/release
+P36-12 zero-red release gate
+  ↓
+P36-13 docs/handoff
 ```
 
-Allowed parallel work:
-
-- P27 config utility implementation can start after P23 contracts stabilize;
-- protocol DTO design can begin while P26 is underway;
-- documentation can be updated continuously.
-
-Do not implement P30 SDK before P29 protocol semantics stabilize.
-
-Do not implement P33 worker by reaching directly into Runtime just because App Server is unfinished.
+Do not mark P36-12 DONE before P36-9 and P36-10 are green.
 
 ---
 
 # 7. CODING AGENT TASK PROCEDURE
 
-For **each subtask**, execute this exact procedure.
-
----
+For every subtask:
 
 ## Step A — Source audit
 
 Before editing:
 
-1. identify all production callers;
-2. identify all tests;
-3. identify public exports;
-4. identify compatibility constraints;
-5. write a short implementation note in the task section.
+1. identify production callers;
+2. identify public exports;
+3. identify tests;
+4. identify current failure;
+5. identify architecture constraints;
+6. identify platform differences;
+7. write a short task implementation note.
 
-Search for:
+## Step B — Add failing regression test first where practical
 
-```text
-imports
-constructor deps
-factory wiring
-composition root
-test fakes
-CLI/web consumers
-```
+The test should reproduce the bug before the production fix.
 
----
+For race bugs, use deterministic gates.
 
-## Step B — State the invariant
+## Step C — Minimal production fix
 
-Write one sentence:
+Do not refactor unrelated modules.
 
-```text
-After this change, X must always be true.
-```
+## Step D — Focused verification
 
-If you cannot state it, you do not understand the task yet.
-
----
-
-## Step C — Implement minimum coherent change
-
-Avoid placeholder classes.
-
-A new abstraction must have a production caller in the same subtask unless the plan explicitly marks it as preparatory.
-
----
-
-## Step D — Add negative tests first
-
-Examples:
-
-- stale global tool must NOT execute;
-- second turn must NOT run concurrently;
-- unused broken MCP must NOT kill startup;
-- broader approval must NOT reuse narrow grant.
-
-Positive tests are not enough.
-
----
-
-## Step E — Add integration test
-
-At least one test must pass through the real composition path relevant to the task.
-
-Examples:
+Run:
 
 ```text
-createHarness
-→ runtime
-→ fake model
-→ tool call
+target unit tests
+target integration tests
+target security/race tests
+typecheck for affected packages
 ```
 
-not only:
+## Step E — Cross-module verification
 
-```text
-new StepToolRouter(...)
-```
+Run all directly affected packages.
 
----
+## Step F — Full verification
 
-## Step F — Run focused tests
-
-Example:
-
-```bash
-pnpm vitest run packages/core/src/runtime/step-snapshot.invariant.test.ts
-```
-
-Use actual repo command syntax.
-
----
-
-## Step G — Run dependent packages
-
-If modifying contracts:
-
-```text
-contracts + core + tools + harness + gateway + CLI
-```
-
-as applicable.
-
----
-
-## Step H — Full validation
+Run:
 
 ```bash
 pnpm typecheck
@@ -3791,572 +2178,257 @@ pnpm test
 pnpm build
 ```
 
-Run coverage at phase gates.
+For security/release tasks also run:
 
----
+```bash
+pnpm test:coverage
+pnpm docs:verify
+pnpm benchmark:smoke
+```
 
-## Step I — Update plan status with evidence
+and P36 dedicated suites.
 
-Use:
+## Step G — Only then update status
 
-```md
-Status: DONE
+Each task update must include:
 
+```text
+Status:
 Implementation:
-- ...
-
-Regression Tests:
-- ...
-
-Production wiring:
-- ...
-
-Commands:
-- `pnpm ...` → PASS
+Files changed:
+Regression test:
+Integration test:
+Security impact:
+Concurrency impact:
+Windows:
+Linux:
+Full typecheck:
+Full tests:
+Build:
+Coverage:
+Notes:
 ```
 
-Do not write only:
+Do not write `DONE` while required fields are red.
+
+---
+
+# 8. STATUS DEFINITIONS
+
+## DONE
+
+All task acceptance criteria pass.
+
+## BLOCKED
+
+A required dependency or gate is red.
+
+Must include exact blocker.
+
+## IN_PROGRESS
+
+Implementation underway.
+
+## NOT_STARTED
+
+No production work started.
+
+Forbidden status labels:
 
 ```text
-Status: DONE
+DONE_WITH_NOISE
+MOSTLY_DONE
+FUNCTIONALLY_DONE
+PASS_EXCEPT
+GREEN_ENOUGH
 ```
 
 ---
 
-# 8. RECOMMENDED CODE SKETCH — STEP TOOL ROUTER
+# 9. RELEASE EVIDENCE FORMAT
 
-This is illustrative; adapt naming to repository conventions.
+Recommended:
 
-```ts
-export interface FrozenToolBinding {
-  readonly name: string;
-  readonly spec: ToolSpec;
-  readonly definition: ToolDefinition;
-  readonly semantics: ToolSemantics;
-  readonly provenance: ToolProvenance;
-  readonly fingerprint: string;
-}
-
-export class FrozenStepToolRouter implements StepToolRouter {
-  readonly id: string;
-  readonly fingerprint: string;
-  readonly modelVisibleSpecs: readonly ToolSpec[];
-
-  private readonly byName: ReadonlyMap<string, FrozenToolBinding>;
-
-  constructor(bindings: readonly FrozenToolBinding[]) {
-    const map = new Map<string, FrozenToolBinding>();
-
-    for (const binding of bindings) {
-      if (map.has(binding.name)) {
-        throw new AgentError(
-          errorInfo("TOOL_COLLISION", `duplicate step tool: ${binding.name}`),
-        );
-      }
-      map.set(binding.name, binding);
+```json
+{
+  "schemaVersion": 1,
+  "headSha": "...",
+  "dirty": false,
+  "generatedAt": "...",
+  "gates": [
+    {
+      "id": "typecheck",
+      "command": "pnpm typecheck",
+      "state": "passed",
+      "exitCode": 0,
+      "headSha": "...",
+      "artifactRef": ".ci/release/typecheck.log"
     }
-
-    this.byName = map;
-    this.modelVisibleSpecs = Object.freeze(
-      bindings.map((b) => deepFreezeSpec(b.spec)),
-    );
-
-    this.fingerprint = fingerprintToolBindings(bindings);
-    this.id = `router:${this.fingerprint.slice(0, 16)}`;
-  }
-
-  has(name: string): boolean {
-    return this.byName.has(name);
-  }
-
-  resolve(name: string): FrozenToolBinding | undefined {
-    return this.byName.get(name);
-  }
+  ],
+  "releaseReady": true
 }
 ```
 
-Do not rely on `Object.freeze` alone for security.
-
-The important authority is that there is no mutation API and execution holds the binding reference.
-
----
-
-# 9. RECOMMENDED CODE SKETCH — STEP SNAPSHOT FACTORY
-
-```ts
-export interface StepSnapshotFactoryDeps {
-  toolRouterFactory: StepToolRouterFactory;
-  environmentManager: EnvironmentManager;
-  instructionProvider: InstructionSnapshotProvider;
-  skillSnapshotProvider?: SkillSnapshotProvider;
-  mcpBindingFactory?: McpBindingFactory;
-  now?: () => number;
-}
-
-export class StepSnapshotFactory {
-  constructor(private readonly deps: StepSnapshotFactoryDeps) {}
-
-  async capture(input: {
-    turn: TurnContext;
-    working: WorkingState;
-    modelContext: PreparedModelContext;
-  }): Promise<StepExecutionSnapshot> {
-    const environment = await this.deps.environmentManager.snapshotForTurn(input.turn);
-
-    const skills = await this.deps.skillSnapshotProvider?.capture({
-      turn: input.turn,
-      goal: input.working.goal,
-    });
-
-    const mcp = await this.deps.mcpBindingFactory?.capture({
-      goal: input.working.goal,
-      skills,
-      environment,
-    });
-
-    const tools = await this.deps.toolRouterFactory.capture({
-      turn: input.turn,
-      goal: input.working.goal,
-      mcp,
-      skills,
-    });
-
-    const instructions = await this.deps.instructionProvider.capture({
-      turn: input.turn,
-      environment,
-    });
-
-    const context = freezePreparedContext(input.modelContext);
-
-    const record: StepRecord = {
-      stepId: newStepId(),
-      sessionId: input.turn.sessionId,
-      turnId: input.turn.turnId,
-      agentId: input.turn.agent.id,
-      model: input.turn.agent.model,
-      toolRouterFingerprint: tools.fingerprint,
-      policyFingerprint: environment.permissionsFingerprint,
-      environmentFingerprint: environment.fingerprint,
-      contextFingerprint: context.fingerprint,
-      instructionFingerprint: instructions.fingerprint,
-      ...(mcp !== undefined ? { mcpBindingFingerprint: mcp.fingerprint } : {}),
-      ...(skills !== undefined ? { skillSnapshotFingerprint: skills.fingerprint } : {}),
-      createdAt: this.deps.now?.() ?? Date.now(),
-    };
-
-    return {
-      record,
-      agent: snapshotEffectiveConfig(input.turn.agent),
-      environment,
-      permissions: capturePermissionProfile(input.turn, environment),
-      tools,
-      model: captureModelSnapshot(input.turn.agent.model),
-      context,
-      instructions,
-      ...(mcp !== undefined ? { mcp } : {}),
-      ...(skills !== undefined ? { skills } : {}),
-    };
-  }
-}
-```
-
----
-
-# 10. RECOMMENDED CODE SKETCH — SESSION ACTOR
-
-```ts
-export class SessionActor {
-  private active: ActiveTurnHandle | undefined;
-  private readonly followups: UserInput[] = [];
-
-  constructor(
-    readonly session: PersistentSession,
-    private readonly runtime: AgentRuntime,
-  ) {}
-
-  async start(input: UserInput): Promise<TurnHandle> {
-    if (this.active !== undefined) {
-      throw new AgentError(
-        errorInfo("SESSION_BUSY", `session ${this.session.id} already has an active turn`),
-      );
-    }
-
-    const turn = await this.runtime.startTurn(this.session.id, input.text);
-    const controller = new AbortController();
-
-    const promise = this.runtime
-      .runTurn(this.session.id, turn.id, controller.signal)
-      .finally(() => {
-        if (this.active?.turnId === turn.id) {
-          this.active = undefined;
-        }
-      });
-
-    this.active = {
-      turnId: turn.id,
-      controller,
-      promise,
-    };
-
-    return {
-      turnId: turn.id,
-      outcome: promise,
-    };
-  }
-
-  async steer(input: UserInput): Promise<void> {
-    if (this.active === undefined) {
-      throw new AgentError(errorInfo("NO_ACTIVE_TURN", "nothing to steer"));
-    }
-
-    await this.runtime.admitSteerInput({
-      sessionId: this.session.id,
-      turnId: this.active.turnId,
-      input,
-    });
-  }
-
-  async interrupt(): Promise<TurnOutcome | undefined> {
-    const active = this.active;
-    if (active === undefined) return undefined;
-
-    active.controller.abort();
-    return active.promise;
-  }
-}
-```
-
-Production implementation may need queue/drain locks; this sketch only shows the ownership rule.
-
----
-
-# 11. RECOMMENDED CODE SKETCH — LAZY MCP
-
-```ts
-export class McpConnectionManager {
-  private readonly states = new Map<McpServerId, ConnectionState>();
-
-  constructor(
-    private readonly catalog: McpServerCatalog,
-    private readonly connector: McpConnector,
-  ) {}
-
-  async getOrConnect(
-    id: McpServerId,
-    signal: AbortSignal,
-  ): Promise<McpConnectionGeneration> {
-    const current = this.states.get(id);
-
-    if (current?.kind === "ready") return current.generation;
-    if (current?.kind === "connecting") return current.promise;
-
-    const descriptor = this.catalog.get(id);
-    if (descriptor === undefined || !descriptor.enabled) {
-      throw new AgentError(errorInfo("MCP_NOT_CONFIGURED", `unknown MCP server ${id}`));
-    }
-
-    const promise = this.connector
-      .connect(descriptor, signal)
-      .then((connection) => {
-        const generation = freezeMcpGeneration(connection);
-        this.states.set(id, { kind: "ready", generation });
-        return generation;
-      })
-      .catch((cause) => {
-        this.states.set(id, {
-          kind: "failed",
-          error: normalizeMcpError(cause),
-        });
-        throw cause;
-      });
-
-    this.states.set(id, { kind: "connecting", promise });
-    return promise;
-  }
-}
-```
-
----
-
-# 12. RECOMMENDED TEST PATTERN — TOOL WORLD DRIFT
-
-```ts
-it("executes the exact tool binding advertised by the originating step", async () => {
-  const seen: string[] = [];
-
-  registry.register(tool("write_x", async () => {
-    seen.push("v1");
-    return success("v1");
-  }));
-
-  const step = await factory.capture(...);
-
-  // Simulate catalog refresh after the model request was formed.
-  registry.unregister("write_x");
-  registry.register(tool("write_x", async () => {
-    seen.push("v2");
-    return success("v2");
-  }));
-
-  const result = await executeModelCallFromStep(step, {
-    name: "write_x",
-    args: {},
-  });
-
-  expect(result.output).toBe("v1");
-  expect(seen).toEqual(["v1"]);
-});
-```
-
-The real test should flow through `AgentRuntime`, not just call router directly.
-
----
-
-# 13. RECOMMENDED TEST PATTERN — SAME-SESSION TURN RACE
-
-```ts
-it("never executes two turns concurrently inside one session", async () => {
-  let active = 0;
-  let maxActive = 0;
-
-  modelProvider.blockGenerate(async () => {
-    active += 1;
-    maxActive = Math.max(maxActive, active);
-    await gate.wait();
-    active -= 1;
-    return completed();
-  });
-
-  const thread = await app.threadStart(...);
-
-  const a = app.turnStart(thread.id, "A");
-  await modelProvider.waitUntilEntered();
-
-  const b = app.turnStart(thread.id, "B");
-
-  await expect(b).rejects.toMatchObject({
-    code: "SESSION_BUSY",
-  });
-
-  gate.release();
-  await a;
-
-  expect(maxActive).toBe(1);
-});
-```
-
-Also test different sessions reach maxActive=2.
-
----
-
-# 14. WHAT NOT TO CLAIM AFTER THIS PLAN
-
-Even if P23–P35 pass, do not claim:
-
-- “identical to Codex”;
-- “Codex-compatible protocol” unless intentionally tested against Codex;
-- “remote execution” if only local environment seam exists;
-- “exactly-once side effects” for arbitrary external systems.
-
-Correct claim:
+Rule:
 
 ```text
-The Harness binds model actions to immutable execution snapshots,
-serializes live turns per session, uses lazy generation-pinned MCP bindings,
-records explicit durability boundaries, and exposes a versioned App Server
-protocol with a stream-first SDK.
+releaseReady=true
+requires
+every required gate state=passed
 ```
-
-For side effects, prefer:
-
-```text
-at-most-once automatic retry for unsafe actions + unknown-effect reconciliation
-```
-
-rather than mathematically false “exactly once”.
 
 ---
 
-# 15. FINAL ACCEPTANCE CHECKLIST
+# 10. DEFINITION OF P36 COMPLETE
 
-Do not mark Harness v5 complete unless every checkbox can be proven.
+P36 is complete only if all are true:
 
-## Step/world
+## Runtime ownership
 
-- [ ] exact advertised tool set frozen before sampling
-- [ ] execution resolves same frozen binding
-- [ ] policy authority frozen
-- [ ] context identity frozen
-- [ ] reactive compaction creates new sampling snapshot
-- [ ] MCP generation frozen per step
-- [ ] instruction/skill snapshot identity available
-
-## Session
-
-- [ ] one active turn per session
-- [ ] steer is explicit
-- [ ] follow-up queue explicit
-- [ ] cancel settles tool calls correctly
-- [ ] loaded runtime state separated from durable session
-
-## Durability
-
-- [ ] event sequence allocation atomic
-- [ ] semantic journal events identified
-- [ ] side-effect intent durable
-- [ ] side-effect outcome durable
-- [ ] checkpoint boundary durable
-- [ ] resume classifies unknown effects
-- [ ] crash matrix has zero automatic duplicate unsafe effects
-
-## MCP
-
-- [ ] startup does not connect every server
-- [ ] unused broken server does not kill Harness
-- [ ] same server concurrent need single-flights connect
-- [ ] refresh creates new generation
-- [ ] old Step keeps old generation
-- [ ] lifecycle closes all connected servers
-
-## Approval
-
-- [ ] typed capability identity
-- [ ] canonical fingerprint
-- [ ] scope actually controls reuse
-- [ ] broader request cannot reuse narrower grant
-- [ ] audit log preserved
-
-## Protocol
-
-- [ ] initialize required
-- [ ] Thread/Turn/Item DTOs independent from Core
-- [ ] bounded queues/backpressure
-- [ ] interrupt
-- [ ] steer
-- [ ] replay from sequence
-- [ ] idempotent mutating requests
-- [ ] schema/golden tests
+- [ ] simultaneous actor start is linearizable
+- [ ] manager load is single-flight
+- [ ] close/cancel cannot leave late-started turn
+- [ ] same session max active execution is 1
+- [ ] different sessions can execute concurrently
 
 ## SDK
 
-- [ ] no Core dependency
-- [ ] runStreamed primary
-- [ ] run is reducer
-- [ ] AbortSignal reaches server interrupt
-- [ ] CLI ordinary execution uses client boundary
+- [ ] `events` + `done` usable together
+- [ ] no single-consumer caveat
+- [ ] no deadlock
+- [ ] same ordered event truth
+- [ ] abort reaches server
+- [ ] unexpected EOF not silently completed
 
-## Orchestration
+## Security
 
-- [ ] generic WorkTracker
-- [ ] reconciliation before dispatch
-- [ ] state invalidation stops worker
-- [ ] bounded concurrency
-- [ ] retry backoff
-- [ ] isolated workspaces
-- [ ] worker drives Harness through App Server
+- [ ] glob cannot authorize shell composition
+- [ ] argv extension still works
+- [ ] POSIX operators tested
+- [ ] CMD operators tested
+- [ ] PowerShell operators tested
+- [ ] ambiguous path canonicalization denies
+- [ ] symlink/junction escape tested
+
+## Audit
+
+- [ ] static existence separated from executed proof
+- [ ] execution evidence bound to HEAD
+- [ ] actual durability modeled separately
+- [ ] profile requirement satisfaction explicit
+- [ ] docs claim status separate from release status
+- [ ] stale evidence rejected
 
 ## Release
 
-- [ ] `pnpm typecheck`
-- [ ] `pnpm test`
-- [ ] `pnpm build`
-- [ ] `pnpm test:coverage`
-- [ ] `pnpm docs:verify`
-- [ ] production audit
-- [ ] benchmark smoke
-- [ ] protocol conformance
-- [ ] chaos/race suite
-- [ ] capability matrix updated
-- [ ] migration notes updated
+- [ ] typecheck PASS
+- [ ] full tests PASS
+- [ ] build PASS
+- [ ] coverage PASS
+- [ ] docs PASS
+- [ ] benchmark smoke PASS
+- [ ] security PASS
+- [ ] protocol PASS
+- [ ] race PASS
+- [ ] chaos PASS
+- [ ] Linux CI PASS
+- [ ] Windows CI PASS
+- [ ] current HEAD evidence complete
+- [ ] no known-noise exemptions
+- [ ] releaseReady true
 
 ---
 
-# 16. PRIORITY IF TIME IS LIMITED
+# 11. WHAT NOT TO DO AFTER P36
 
-If implementation resources become constrained, **do not start more surface area**.
+Do not immediately add more mechanisms.
 
-Ship in this order:
-
-## Tier 0 — must do
+After P36, the preferred development mode is:
 
 ```text
-P23 Step snapshot closure
-P25 SessionActor
+baseline
+→ challenger
+→ paired benchmark
+→ security/race/release gates
+→ promotion or rejection
 ```
 
-These fix correctness.
+New capability work should require a measurable hypothesis.
 
-## Tier 1 — next
+Example:
 
 ```text
-P24 MCP Runtime V2
-P26 Durability fences
-P28 typed approval identity
+Hypothesis:
+memory retrieval improves verified completion on long-context tasks
+without increasing false-complete rate > X
+and token cost > Y
 ```
 
-These fix dynamic authority and reliability.
+Then evaluate.
 
-## Tier 2 — service boundary
-
-```text
-P29 App Server
-P30 SDK
-```
-
-These make the Harness consumable as a platform.
-
-## Tier 3 — extensibility
-
-```text
-P27 Config layers
-P31 Environment seam
-P32 skill/instruction snapshot
-```
-
-## Tier 4 — long-running automation
-
-```text
-P33 Symphony orchestration
-```
-
-Do not sacrifice Tier 0 correctness to finish Tier 4 features.
+Do not enable a mechanism merely because it exists.
 
 ---
 
-# 17. FINAL INSTRUCTION TO THE CODING AGENT
+# 12. DEFERRED AFTER P36
 
-Your objective is **not** to make the repository contain more classes.
+Record but do not implement during P36 unless required for correctness:
 
-Your objective is to make the following statements mechanically true and testable:
+- OS-level process sandbox;
+- remote executor;
+- plugin process isolation;
+- distributed SessionActor ownership;
+- multi-process lease/fencing;
+- advanced benchmark statistics;
+- model-provider redundancy;
+- remote release evidence attestation.
+
+---
+
+# 13. FINAL INSTRUCTION TO THE CODING AGENT
+
+The objective of P36 is not to add more architecture.
+
+The objective is to make the following statements **mechanically true**:
 
 ```text
-1. I can prove which exact world snapshot produced every model-originated action.
+1. A session has one live execution owner, including across await boundaries.
 
-2. I can prove the model-advertised tool schema and the executed tool binding
-   came from the same frozen router.
+2. Loading the same session concurrently cannot create two actors.
 
-3. I can change global MCP/config/tool state without retroactively changing an
-   already-issued model action.
+3. SDK users may consume events and await done at the same time without stealing events.
 
-4. I can never accidentally run two turns concurrently against one session.
+4. A normal command allowlist cannot authorize shell composition.
 
-5. I can point to a durable semantic boundary before and after a side effect.
+5. A filesystem decision is denied when canonical identity cannot be proven.
 
-6. I can crash in any tested side-effect window without blindly duplicating an
-   unsafe action.
+6. The capability matrix can distinguish source existence from executed proof.
 
-7. A client can drive the complete Agent lifecycle without importing Core.
+7. In-memory durability is never labeled durable merely because a profile does not require durability.
 
-8. A higher-level reconciler can schedule many independent work items using
-   only the public App Server/SDK boundary.
+8. “audit OK” cannot be confused with “release ready”.
+
+9. A failed or not-run required gate can never produce releaseReady=true.
+
+10. Harness v5 is only called a release candidate when the entire required gate set is green on the current HEAD.
 ```
 
-When these are true, the project has moved beyond “feature-rich agent runtime”.
+Do the work in order.
 
-It has become a coherent **Agent Harness runtime platform**.
+Add a failing regression test before the fix where practical.
 
-Do each phase carefully.
+Do not suppress failures.
 
-Do not mark tasks DONE based on declarations.
+Do not downgrade standards.
 
-Prove the invariant through the production path.
+Do not call red gates noise.
+
+Do not mark DONE early.
+
+When P36-12 finally says:
+
+```text
+Release verdict: READY
+```
+
+that statement must be backed by current-HEAD executable evidence, not confidence, comments, or prior status text.

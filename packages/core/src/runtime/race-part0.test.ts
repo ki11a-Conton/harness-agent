@@ -38,7 +38,7 @@ class GatedProvider implements ModelProvider {
   readonly id = "gated";
   private entered = 0;
   private entryWaiters: Array<() => void> = [];
-  private releases: Array<(value?: unknown) => void> = [];
+  private releases: Array<(value: void | PromiseLike<void>) => void> = [];
 
   whenEntered(): Promise<void> {
     if (this.entered > 0) return Promise.resolve();
@@ -68,6 +68,12 @@ class GatedProvider implements ModelProvider {
       },
     };
   }
+}
+
+
+/** P36-9: assert the typed error CODE (SESSION_BUSY), never message text. */
+async function expectSessionBusy(promise: Promise<unknown>): Promise<void> {
+  await expect(promise).rejects.toMatchObject({ info: { code: "SESSION_BUSY" } });
 }
 
 interface Harness {
@@ -114,7 +120,7 @@ describe("P34-2 part0", () => {
     const first = await h.actor.startTurn({ sessionId: h.sessionId, text: "first" });
     await h.provider.whenEntered(); // first turn is mid-flight
     const secondId = await createStandaloneTurn(h, "second");
-    await expect(h.actor.runTurn(secondId)).rejects.toThrow(/SESSION_BUSY/);
+    await expectSessionBusy(h.actor.runTurn(secondId));
     assertOneLiveRun(h.actor, first.turnId);
     h.provider.release();
     const outcome = await first.outcome;

@@ -53,7 +53,9 @@ function stripComments(src: string): string {
   return src
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .split("\n")
-    .map((line) => line.replace(/\/\/.*$/, ""))
+    // P36-12: use [^\r\n]* (not .*$) — on CRLF files .*$ fails to match
+    // because \r blocks the $ anchor, leaving // comments in the scan.
+    .map((line) => line.replace(/\/\/[^\r\n]*/, ""))
     .join("\n");
 }
 
@@ -116,8 +118,12 @@ export function runProductionAudit(deps: { root: string }): ProductionAuditResul
     // Comments are stripped so doc examples never trip the scan; a REAL
     // literal cast in shipped code is flagged.
     const src = stripComments(readFileSync(file, "utf8"));
-    // Fabricated literal cast: `"" as never`, `0 as never`, `null as never`.
-    const re = /(\"\"|''|0|\bnull)\s*as\s*never/g;
+    // Fabricated literal casts are detected here (double-quote empty string,
+    // single-quote empty string, digit zero, or null immediately before a
+    // never-cast). The regex is built by concatenation below so this file's
+    // own pattern text never contains the forbidden literal.
+    const quote = '"' + '"';
+    const re = new RegExp(`(${quote}|''|0|\\bnull)\\s*as\\s*never`, "g");
     for (const m of src.matchAll(re)) {
       const index = m.index ?? 0;
       const line = src.slice(0, index).split("\n").length;

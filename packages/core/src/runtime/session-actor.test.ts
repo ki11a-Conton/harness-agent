@@ -19,7 +19,7 @@ import type {
 import { newAgentId } from "@ar/contracts";
 import { EchoModelProvider, ScriptedModelProvider } from "@ar/model";
 import { AgentRuntime } from "./runtime.js";
-import { DefaultLoadedSessionManager, type SessionActor } from "./session-actor.js";
+import { DefaultLoadedSessionManager, DefaultSessionActor, type SessionActor } from "./session-actor.js";
 import { MemoryEventStore, MemorySessionStore, defaultTestToolCatalog } from "../test/fakes.js";
 import { FakeOrchestrator } from "../test/fake-orchestrator.js";
 
@@ -366,5 +366,186 @@ describe("SessionActor (PHASE 25)", () => {
     expect(manager.listLoaded()).toEqual([]);
     const outcome = await handle.outcome;
     expect(outcome.status).toBe("cancelled");
+  });
+
+  // ---------------------------------------------------------------------------
+  // P36-2 — SessionActor linearizability (INV-P36-001)
+  // ---------------------------------------------------------------------------
+
+  /** A runtime stub whose startTurn blocks until the gate opens, then
+   *  delegates to a real runtime. This makes the actor sit in the
+   *  `await runtime.startTurn()` window deterministically. */
+  function gatedRuntime(
+    real: AgentRuntime,
+    sessionId: SessionId,
+  ): { runtime: Pick<AgentRuntime, "startTurn" | "runTurn">; open: () => void } {
+    let open!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    return {
+      runtime: {
+        startTurn: async (sid: SessionId, text: string) => {
+          await gate;
+          return real.startTurn(sid, text);
+        },
+        runTurn: (sid: SessionId, turnId: unknown, signal?: AbortSignal) =>
+          real.runTurn(sid, turnId as never, signal as AbortSignal),
+      },
+      open,
+    };
+  }
+
+  it("P36-2 Test A — simultaneous admission: second caller gets SESSION_BUSY while first is in startTurn await", async () => {
+    const { runtime, store, events, orchestrator, inbox, sessionId } = await setupActor();
+    const session = (await store.getSession(sessionId))!;
+    const { runtime: gated, open } = gatedRuntime(runtime, sessionId);
+    const actor = new DefaultSessionActor({
+      persistent: session,
+      runtime: gated,
+      store,
+      inbox,
+    });
+    const a = actor.startTurn({ sessionId, text: "A" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 10)); // first is inside startTurn await
+    const b = actor.startTurn({ sessionId, text: "B" });
+    const err = await b.then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    expect((err as { info?: { code: string } })?.info?.code).toBe("SESSION_BUSY");
+    open();
+    const handle = await a;
+    await actor.interrupt();
+    await handle.outcome;
+    expect(events).toBeDefined();
+    expect(orchestrator).toBeDefined();
+  });
+
+  it("P36-2 Test B — Promise.all race: exactly one admission succeeds", async () => {
+    const { actor, sessionId } = await setupActor({ provider: new EchoModelProvider() });
+    const results = await Promise.allSettled([
+      actor.startTurn({ sessionId, text: "race1" }),
+      actor.startTurn({ sessionId, text: "race2" }),
+    ]);
+    const fulfilled = results.filter((r) => r.status === "fulfilled");
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    const reason = (rejected[0]! as PromiseRejectedResult).reason;
+    expect((reason as { info?: { code: string } })?.info?.code).toBe("SESSION_BUSY");
+    // Clean up
+    const handle = (fulfilled[0]! as PromiseFulfilledResult<Awaited<ReturnType<SessionActor["startTurn"]>>>).value;
+    await actor.interrupt();
+    await handle.outcome;
+  });
+
+  it("P36-2 Test C — starting + close: no running turn survives after close", async () => {
+    const { runtime, store, sessionId } = await setupActor();
+    const session = (await store.getSession(sessionId))!;
+    const { runtime: gated, open } = gatedRuntime(runtime, sessionId);
+    const actor = new DefaultSessionActor({
+      persistent: session,
+      runtime: gated,
+      store,
+    });
+    const startPromise = actor.startTurn({ sessionId, text: "start-me" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 10)); // inside startTurn await
+    await actor.close();
+    open();
+    const err = await startPromise.then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    // The start must NOT promote into a running turn after close.
+    expect(err).toBeDefined();
+    expect(actor.activeTurn).toBeUndefined();
+    expect(actor.status().loaded).toBe(false);
+  });
+
+  it("P36-2 Test D — starting + cancel: targeted cancellation aborts the reserved start", async () => {
+    const { runtime, store, sessionId } = await setupActor();
+    const session = (await store.getSession(sessionId))!;
+    const { runtime: gated, open } = gatedRuntime(runtime, sessionId);
+    const actor = new DefaultSessionActor({
+      persistent: session,
+      runtime: gated,
+      store,
+    });
+    const startPromise = actor.startTurn({ sessionId, text: "start-me" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 10)); // inside startTurn await
+    // No turn id exists yet while starting; close (which covers cancel) wins.
+    await actor.close();
+    open();
+    const err = await startPromise.then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    expect(err).toBeDefined();
+    expect(actor.activeTurn).toBeUndefined();
+  });
+
+  // ---------------------------------------------------------------------------
+  // P36-3 — LoadedSessionManager single-flight (INV-P36-002)
+  // ---------------------------------------------------------------------------
+
+  it("P36-3: 100 concurrent load(id) → same object identity", async () => {
+    const { manager, sessionId } = await setupActor();
+    const results = await Promise.all(Array.from({ length: 100 }, () => manager.load(sessionId)));
+    const first = results[0]!;
+    for (const actor of results) {
+      expect(actor).toBe(first);
+    }
+  });
+
+  it("P36-3: store read count == 1 for a single-flight burst", async () => {
+    const { manager, runtime, store } = await setupActor();
+    // A NEW session id that has NOT been loaded yet → the burst exercises the
+    // single-flight path (the setupActor session was already loaded).
+    const fresh = await runtime.createSession({ agent: AGENT, cwd: "/work-burst" });
+    const original = store.getSession.bind(store);
+    let count = 0;
+    store.getSession = async (id) => { count += 1; return original(id); };
+    const results = await Promise.all(Array.from({ length: 50 }, () => manager.load(fresh.id)));
+    const first = results[0]!;
+    for (const actor of results) {
+      expect(actor).toBe(first);
+    }
+    expect(count).toBe(1);
+  });
+
+  it("P36-3: load failure fan-out → all fail, retry later succeeds", async () => {
+    const { manager, runtime, store } = await setupActor();
+    const fresh = await runtime.createSession({ agent: AGENT, cwd: "/work-fail" });
+    const original = store.getSession.bind(store);
+    let fail = true;
+    store.getSession = async (id) => {
+      if (fail) throw new Error("store failure");
+      return original(id);
+    };
+    const results = await Promise.allSettled(Array.from({ length: 10 }, () => manager.load(fresh.id)));
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(rejected).toHaveLength(10);
+    fail = false;
+    const actor = await manager.load(fresh.id);
+    expect(actor).toBeDefined();
+  });
+
+  it("P36-3: load + unload race leaves no loaded actor", async () => {
+    const { manager, sessionId } = await setupActor();
+    const actor = await manager.load(sessionId);
+    expect(manager.listLoaded()).toContain(sessionId);
+    await manager.unload(sessionId);
+    expect(manager.listLoaded()).not.toContain(sessionId);
+  });
+
+  it("P36-3: two different session ids may load concurrently", async () => {
+    const { manager, runtime } = await setupActor();
+    const s1 = await runtime.createSession({ agent: AGENT, cwd: "/work" });
+    const s2 = await runtime.createSession({ agent: AGENT, cwd: "/work2" });
+    const [a1, a2] = await Promise.all([manager.load(s1.id), manager.load(s2.id)]);
+    expect(a1.sessionId).toBe(s1.id);
+    expect(a2.sessionId).toBe(s2.id);
+    expect(a1).not.toBe(a2);
   });
 });

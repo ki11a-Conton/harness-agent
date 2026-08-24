@@ -376,10 +376,12 @@ describe("P14-2 exec allowlist semantic matching", () => {
     expect(m.checkExec("powershell -EncodedCommand AAA=").allowed).toBe(false);
   });
 
-  it("glob allowlist entries still permit everything (policy choice)", () => {
+  it("glob allowlist entries still permit plain commands (P36-5: no shell composition via glob)", () => {
     const m = makeManager({ process: { allowedCommands: ["**/*"] } }, "posix");
     expect(m.checkExec("git diff").allowed).toBe(true);
-    expect(m.checkExec("git diff; rm -rf /").allowed).toBe(true); // policy says everything
+    // P36-5 (INV-P36-005): a broad glob is a plain-command allowlist rule — it
+    // cannot authorize shell composition, even when it says "everything".
+    expect(m.checkExec("git diff; rm -rf /").allowed).toBe(false);
     expect(m.checkExec("rm -rf /").allowed).toBe(true);
   });
 

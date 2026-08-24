@@ -83,10 +83,11 @@ describe("composeBoundaryCapability — P14-4 boundary × dimension matrix", () 
           if (dimension === "tool") {
             expect(effective).toEqual(["read"]);
           } else if (dimension === "filesystem") {
-            expect(effective).toMatchObject({
-              mode: "workspace-write",
-              allowedPaths: ["/home/u/work/sub"],
-            });
+            expect(effective).toMatchObject({ mode: "workspace-write" });
+            // P36-10: on Windows, POSIX-style paths gain a drive letter prefix
+            const paths = (effective as { allowedPaths: string[] }).allowedPaths;
+            expect(paths.length).toBe(1);
+            expect(paths[0]!.replace(/^[A-Za-z]:/, "")).toBe("/home/u/work/sub");
           } else if (dimension === "network") {
             expect(effective).toMatchObject({ mode: "allowlist", hosts: [] });
           } else {
@@ -101,9 +102,9 @@ describe("composeBoundaryCapability — P14-4 boundary × dimension matrix", () 
         });
         expect(narrowed.toolAllowlist).toEqual(["read"]);
         // filesystem/network/process inherited from the grant, un-widened
-        expect(narrowed.policy.filesystem).toMatchObject({
-          allowedPaths: ["/home/u/work"],
-        });
+        const fs = narrowed.policy.filesystem as { allowedPaths: string[] };
+        expect(fs.allowedPaths.length).toBe(1);
+        expect(fs.allowedPaths[0]!.replace(/^[A-Za-z]:/, "")).toBe("/home/u/work");
         expect(narrowed.policy.network).toMatchObject({
           hosts: ["api.example.com"],
         });

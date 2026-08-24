@@ -6,6 +6,11 @@
  * convenience `run()` is a REDUCER over that stream (P30-3 — the same single
  * implementation, no parallel code path).
  *
+ * P36-4 (INV-P36-003/004): `RunEventHub` replaces the single-consumer
+ * EventChannel with a broadcast hub that feeds an internal reducer AND a
+ * public event queue independently. This means `events` and `done` can be
+ * consumed concurrently without deadlock or event stealing.
+ *
  * The SDK depends ONLY on `@ar/protocol` (DTOs) and a transport client
  * (P30-1). It never imports `@ar/core` or the runtime.
  */
@@ -107,44 +112,19 @@ export async function reduceTurnEvents(
 }
 
 // ---------------------------------------------------------------------------
-// EventChannel: bridge transport push events → async iterator
+// PushChannel: a simple push-based AsyncIterable (single consumer).
+// Used as the PUBLIC event queue in RunEventHub.
 // ---------------------------------------------------------------------------
 
-class EventChannel implements AsyncIterable<TurnEvent> {
+class PushChannel implements AsyncIterable<TurnEvent> {
   private readonly queue: TurnEvent[] = [];
   private readonly waiters: ((e: TurnEvent | undefined) => void)[] = [];
   private ended = false;
-  /** A terminal event (turn/completed|failed|interrupted) has been seen. */
-  private terminalSeen = false;
-  /** The terminal event itself has been delivered to a consumer. */
-  private terminalDelivered = false;
-  private readonly unsubscribe: () => void;
 
-  constructor(
-    transport: HarnessTransport,
-    threadId: string,
-    turnId: string,
-  ) {
-    this.unsubscribe = transport.subscribe("turn", (event) => {
-      if (event.threadId !== threadId || event.turnId !== turnId) return;
-      this.push(event);
-    });
-  }
-
-  private static isTerminal(event: TurnEvent): boolean {
-    return (
-      event.type === "turn/completed" ||
-      event.type === "turn/failed" ||
-      event.type === "turn/interrupted"
-    );
-  }
-
-  private push(event: TurnEvent): void {
+  push(event: TurnEvent): void {
     if (this.ended) return;
-    if (EventChannel.isTerminal(event)) this.terminalSeen = true;
     const waiter = this.waiters.shift();
     if (waiter !== undefined) {
-      if (EventChannel.isTerminal(event)) this.terminalDelivered = true;
       waiter(event);
       return;
     }
@@ -154,7 +134,6 @@ class EventChannel implements AsyncIterable<TurnEvent> {
   end(): void {
     if (this.ended) return;
     this.ended = true;
-    this.unsubscribe();
     for (const w of this.waiters.splice(0)) w(undefined);
   }
 
@@ -162,13 +141,9 @@ class EventChannel implements AsyncIterable<TurnEvent> {
     return {
       next: (): Promise<IteratorResult<TurnEvent>> => {
         if (this.queue.length > 0) {
-          const event = this.queue.shift()!;
-          if (EventChannel.isTerminal(event)) this.terminalDelivered = true;
-          return Promise.resolve({ value: event, done: false });
+          return Promise.resolve({ value: this.queue.shift()!, done: false });
         }
-        // EOF: either the run settled (terminal delivered) or the channel was
-        // externally closed (abort/return).
-        if (this.ended || this.terminalDelivered) {
+        if (this.ended) {
           return Promise.resolve({ value: undefined, done: true });
         }
         return new Promise<IteratorResult<TurnEvent>>((resolve) => {
@@ -176,7 +151,6 @@ class EventChannel implements AsyncIterable<TurnEvent> {
             if (event === undefined) {
               resolve({ value: undefined, done: true });
             } else {
-              if (EventChannel.isTerminal(event)) this.terminalDelivered = true;
               resolve({ value: event, done: false });
             }
           });
@@ -187,6 +161,130 @@ class EventChannel implements AsyncIterable<TurnEvent> {
         return Promise.resolve({ value: undefined, done: true });
       },
     };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RunEventHub (P36-4): broadcast hub that feeds a public event queue AND an
+// internal incremental reducer independently.  `done` never consumes the
+// public queue — it uses the internal reducer state.
+// ---------------------------------------------------------------------------
+
+/** Incremental reducer used by RunEventHub. */
+function accumulateEvent(state: RunResult, event: TurnEvent): void {
+  if (event.type === "turn/failed") {
+    state.status = "failed";
+    state.error = event.error;
+  } else if (event.type === "turn/interrupted" && state.status !== "failed") {
+    state.status = "interrupted";
+  }
+  if (event.type === "item/completed" && event.item !== undefined) {
+    state.items.push(event.item);
+    if (event.item.kind === "agent_message" && event.item.final === true) {
+      state.finalResponse = event.item.text;
+      state.usage = event.item.usage;
+    }
+  }
+}
+
+function isTerminal(event: TurnEvent): boolean {
+  return (
+    event.type === "turn/completed" ||
+    event.type === "turn/failed" ||
+    event.type === "turn/interrupted"
+  );
+}
+
+class RunEventHub {
+  readonly events: PushChannel;
+  private readonly state: RunResult = { items: [], status: "completed" };
+  private readonly _done: Promise<RunResult>;
+  private resolveDone!: (r: RunResult) => void;
+  private readonly unsubscribe: () => void;
+  private terminated = false;
+
+  constructor(
+    transport: HarnessTransport,
+    threadId: string,
+    turnId: string,
+    turnRunPromise: Promise<void>,
+    signal?: AbortSignal,
+  ) {
+    this.events = new PushChannel();
+
+    this._done = new Promise<RunResult>((resolve) => {
+      this.resolveDone = resolve;
+    });
+
+    this.unsubscribe = transport.subscribe("turn", (event) => {
+      if (event.threadId !== threadId || event.turnId !== turnId) return;
+      // 1. Push to the public event queue (independent consumer).
+      this.events.push(event);
+      // 2. Incrementally update the internal reducer state.
+      accumulateEvent(this.state, event);
+      // 3. On terminal event, resolve done.
+      if (isTerminal(event)) {
+        this.terminated = true;
+        this.events.end();
+        this.resolveDone({ ...this.state });
+      }
+    });
+
+    // P36-4: run/start invocation — the transport sends events; the hub
+    // collects them. The turnRunPromise resolves when the server starts
+    // streaming. If the transport closes before a terminal event, the hub
+    // must NOT silently complete — it's a protocol error.
+    void turnRunPromise.then(
+      () => {
+        // turn/run completed; the terminal event should have been received
+        // via the subscription. If not, the hub is still waiting.
+      },
+      (err) => {
+        // turn/run failed (e.g. transport error). Terminal the hub if not
+        // already terminated.
+        if (!this.terminated) {
+          this.terminated = true;
+          this.state.status = "failed";
+          this.state.error = { code: "protocol_error", message: String(err), retryable: false };
+          this.events.end();
+          this.resolveDone({ ...this.state });
+        }
+      },
+    );
+
+    // P36-4: abort support — maps to server interrupt and closes the hub.
+    if (signal !== undefined) {
+      if (signal.aborted) {
+        this.abort(transport, threadId, turnId);
+      } else {
+        signal.addEventListener("abort", () => this.abort(transport, threadId, turnId), { once: true });
+      }
+    }
+  }
+
+  private abort(transport: HarnessTransport, threadId: string, turnId: string): void {
+    if (!this.terminated) {
+      this.terminated = true;
+      if (this.state.status !== "failed") {
+        this.state.status = "interrupted";
+      }
+      this.events.end();
+      this.resolveDone({ ...this.state });
+    }
+    void transport.invoke("turn/interrupt", { threadId, turnId, reason: "aborted" });
+  }
+
+  get done(): Promise<RunResult> {
+    return this._done;
+  }
+
+  close(): void {
+    this.unsubscribe();
+    this.events.end();
+    if (!this.terminated) {
+      this.terminated = true;
+      this.resolveDone({ ...this.state });
+    }
   }
 }
 
@@ -206,6 +304,9 @@ export class Thread {
   /**
    * P30-2 — run a turn, STREAM-first. Returns an async iterable of wire
    * TurnEvents plus a `done` promise with the reduced RunResult.
+   *
+   * P36-4: `events` and `done` are now independent (RunEventHub broadcast).
+   * They may be consumed concurrently without deadlock or event stealing.
    */
   async runStreamed(
     prompt: string,
@@ -225,35 +326,17 @@ export class Thread {
     }
     const { turnId } = started.result as { turnId: string };
 
-    const channel = new EventChannel(this.transport, this.threadId, turnId);
+    // P36-4: invoke turn/run concurrently — the hub subscribes to events
+    // before the run starts, so no event is missed.
+    const turnRunPromise = this.transport.invoke("turn/run", {
+      threadId: this.threadId,
+      turnId,
+    }).then(() => {});
 
-    // P30-4 — abort maps to turn/interrupt on the SERVER, not just stopping
-    // local reads. We also end the local channel so the reducer unblocks even
-    // if the server never emits a terminal event (already-aborted case).
-    const abort = opts.signal;
-    const interrupt = () => {
-      void this.transport.invoke("turn/interrupt", {
-        threadId: this.threadId,
-        turnId,
-        reason: "aborted",
-      });
-      channel.end();
-    };
-    if (abort !== undefined) {
-      if (abort.aborted) interrupt();
-      else abort.addEventListener("abort", interrupt, { once: true });
-    }
-    const all = async (): Promise<RunResult> => {
-      try {
-        await this.transport.invoke("turn/run", { threadId: this.threadId, turnId });
-        const result = await reduceTurnEvents(channel, abort);
-        return { ...result, turnId };
-      } finally {
-        channel.end();
-      }
-    };
-    const done = all();
-    return { events: channel, done };
+    const hub = new RunEventHub(this.transport, this.threadId, turnId, turnRunPromise, opts.signal);
+    const done = hub.done.then((r) => ({ ...r, turnId }));
+
+    return { events: hub.events, done };
   }
 
   /**

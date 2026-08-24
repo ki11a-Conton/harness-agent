@@ -38,11 +38,23 @@ class GatedProvider implements ModelProvider {
   readonly id = "gated";
   private entered = 0;
   private entryWaiters: Array<() => void> = [];
-  private releases: Array<(value?: unknown) => void> = [];
+  private releases: Array<(value: void | PromiseLike<void>) => void> = [];
 
   whenEntered(): Promise<void> {
     if (this.entered > 0) return Promise.resolve();
     return new Promise((r) => this.entryWaiters.push(r));
+  }
+  /** P36-9: resolve after the N-th generate() has entered — poll-based. */
+  whenNEntered(n: number, timeoutMs = 5000): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const started = Date.now();
+      const check = () => {
+        if (this.entered >= n) return resolve();
+        if (Date.now() - started > timeoutMs) return reject(new Error(`whenNEntered(${n}) timed out (entered=${this.entered})`));
+        setTimeout(check, 5);
+      };
+      check();
+    });
   }
   release(): void {
     this.releases.shift()?.(undefined);
@@ -68,6 +80,12 @@ class GatedProvider implements ModelProvider {
       },
     };
   }
+}
+
+
+/** P36-9: assert the typed error CODE (SESSION_BUSY), never message text. */
+async function expectSessionBusy(promise: Promise<unknown>): Promise<void> {
+  await expect(promise).rejects.toMatchObject({ info: { code: "SESSION_BUSY" } });
 }
 
 interface Harness {
@@ -119,17 +137,19 @@ describe("P34-2 part4", () => {
       h.actor.enqueueFollowup({ sessionId: h.sessionId, text: "D" }), // queued
     ]);
     assertOneLiveRun(h.actor, live.turnId);
-    expect(settled[0]!.status).not.toBe("fulfilled"); // B refused
+    expect(settled[0]!.status).toBe("rejected");
+    expect((settled[0]! as PromiseRejectedResult).reason?.info?.code).toBe("SESSION_BUSY");
     expect(settled[1]!.status).toBe("fulfilled"); // C steered
     expect(settled[2]!.status).toBe("fulfilled"); // D queued
     expect(h.actor.inputQueue.pendingCount).toBe(1);
     h.provider.release();
     await live.outcome;
-    // the queued follow-up is drained only after the live run settles
-    const drained = await h.actor.startTurn({ sessionId: h.sessionId, text: "D" });
-    await h.provider.whenEntered();
+    // the queued follow-up is drained automatically into a NEW turn after
+    // the live run settles (never concurrently). Wait for the drain turn
+    // to enter generate(), then release it.
+    await h.provider.whenNEntered(2);
     h.provider.release();
-    await drained.outcome;
+    await new Promise<void>((resolve) => setTimeout(resolve, 20)); // drain settles
     expect(h.actor.activeTurn).toBeUndefined();
   });
 });

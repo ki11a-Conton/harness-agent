@@ -327,6 +327,14 @@ function tokensEqual(a: readonly string[], b: readonly string[]): boolean {
  * P14-2 — semantic allowlist matching.  Replaces the old
  * `matchGlob(cmd, target) || target.startsWith(cmd)` prefix check.
  *
+ * P36-5 (INV-P36-005): A plain-command allowlist rule (`git *`) can NOT
+ * authorize shell composition (`git status; echo pwned`).  Decision order:
+ *
+ *   1. Parse target — detect shell composition.
+ *   2. If composed → only exact program+argv shell rules match (no glob, no
+ *      argv extension).  The policy must explicitly write the composed command.
+ *   3. If plain → apply glob rules + argv extension (existing semantics).
+ *
  * Rules:
  *  - A glob entry that matches the whole target always allows (explicit
  *    policy text, e.g. an all-commands glob or `git *`).
@@ -344,24 +352,27 @@ export function commandAllowlisted(
   target: string,
   platform: CommandPlatform = hostCommandPlatform(),
 ): boolean {
-  // Explicit glob match first (policy text that intentionally allows a shape).
-  for (const cmd of allowedCommands) {
-    if (matchGlob(cmd, target)) return true;
-  }
+  // 1. Parse target first — detect shell composition (P36-5).
   const inv = parseCommandInvocation(target, platform);
   if (inv.program === null) return false;
+
+  // 2. Composed target: only exact program+argv matches (no glob, no argv ext).
+  if (inv.hasShellOperators) {
+    for (const cmd of allowedCommands) {
+      const rule = parseCommandInvocation(cmd, platform);
+      if (rule.program !== null && rule.program === inv.program && tokensEqual(rule.argv, inv.argv)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // 3. Plain target: apply glob + argv extension rules.
   for (const cmd of allowedCommands) {
-    // Skip glob entries — already handled above.
+    if (matchGlob(cmd, target)) return true;
     if (cmd.includes("*") || cmd.includes("?")) continue;
     const rule = parseCommandInvocation(cmd, platform);
     if (rule.program === null || rule.program !== inv.program) continue;
-    if (rule.hasShellOperators) {
-      // Policy explicitly wrote a composed command: only token-identical
-      // targets match; no extension of a composed allowlist entry.
-      if (tokensEqual(rule.argv, inv.argv)) return true;
-      continue;
-    }
-    if (inv.hasShellOperators) continue; // composed target ≠ plain-entry extension
     if (isTokenPrefix(rule.argv, inv.argv)) return true;
   }
   return false;

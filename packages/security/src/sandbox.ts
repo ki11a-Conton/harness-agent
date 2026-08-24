@@ -182,7 +182,14 @@ export class SandboxManager {
     // sandbox. Only reject Windows drive paths when the target is NOT already
     // absolute (i.e. when it would be treated as a relative path on this OS).
     if (!isAbsolute(target) && (WINDOWS_DRIVE_PATH.test(target) || UNC_PATH.test(target))) return null;
-    return canonicalizePath(target, { cwd: this.cwd });
+    try {
+      return canonicalizePath(target, { cwd: this.cwd });
+    } catch {
+      // P36-6 (INV-P36-006): an ambiguous canonicalization (permission,
+      // symlink loop, I/O, depth, unknown, UNC on a non-UNC host) FAILS
+      // CLOSED — the decision is denied (null), never silently bypassed.
+      return null;
+    }
   }
 
   /**

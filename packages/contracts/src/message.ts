@@ -13,6 +13,11 @@ export interface Message {
   toolCallId?: ToolCallId;
   /** Set when role === "assistant": tool calls requested by the model. */
   toolCalls?: ToolCall[];
+  /** Set when role === "assistant": reasoning/thinking content produced by a
+   *  thinking-mode model (e.g. deepseek reasoning_content). Some providers
+   *  REQUIRE this to be passed back on the next assistant message of the
+   *  conversation; it is never shown to the user as final output. */
+  reasoningContent?: string;
   /** P2-36: when this message was produced by injecting an inbox prompt (steer /
    *  followup), records the source prompt id. Used as the exactly-once key so a
    *  crash between "message appended" and "prompt consumed" cannot double-inject

@@ -106,6 +106,11 @@ function persistentInput(overrides: Partial<AuditInput> = {}): AuditInput {
       config_drift_matrix: true,
       security_regression_matrix: true,
     },
+    executionEvidence: {
+      context_pipeline: { kind: "test_run", headSha: "git-abc", command: "vitest", passed: true, generatedAt: "t" },
+      approval_durable: { kind: "test_run", headSha: "git-abc", command: "vitest", passed: true, generatedAt: "t" },
+    },
+    gitSha: "git-abc",
     benchmarkSuites: {
       regression: { exists: false, caseCount: 0 },
       holdout: { exists: false, caseCount: 0 },
