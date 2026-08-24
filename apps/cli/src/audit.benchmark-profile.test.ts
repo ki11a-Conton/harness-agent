@@ -92,6 +92,7 @@ describe("audit benchmark profile — real workspace probes (P0-1)", () => {
           skills: true,
           usageAccounting: false,
           runBudget: false,
+          stepSnapshot: true,
         },
         persistence: {
           mode: "in-memory",

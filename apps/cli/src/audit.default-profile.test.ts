@@ -52,6 +52,7 @@ const DEFAULT_INTROSPECTION: HarnessIntrospection = {
     skills: true,
     usageAccounting: false,
     runBudget: false,
+    stepSnapshot: true,
   },
   persistence: {
     mode: "in-memory",
@@ -98,6 +99,8 @@ function defaultInput(overrides: Partial<AuditInput> = {}): AuditInput {
       observability_trace: true,
       core_runtime: true,
       suite_conformance: true,
+      config_drift_matrix: true,
+      security_regression_matrix: true,
     },
     benchmarkSuites: {
       regression: { exists: false, caseCount: 0 },
@@ -217,5 +220,44 @@ describe("audit default (interactive) profile (P0-1)", () => {
     expect(md).toContain("| adversarial_suite | benchmarked |");
     expect(md).toContain("| regression | 30 | 0 | false | false |");
     expect(md).toContain("audit: FAILED");
+  });
+
+  it("P35-2: snapshot-bound capabilities are authoritative; plain ones are not", () => {
+    const matrix = buildCapabilityMatrix(defaultInput());
+    const byId = new Map(matrix.records.map((r) => [r.id, r]));
+    // context + tool surface flow through the frozen StepToolRouter (P23)
+    expect(byId.get("context_pipeline")!.snapshotAuthoritative).toBe(true);
+    expect(byId.get("advanced_tools")!.snapshotAuthoritative).toBe(true);
+    // not wired in this profile → not authoritative
+    expect(byId.get("mcp_connected")!.snapshotAuthoritative).toBe(false);
+    expect(byId.get("delegation")!.snapshotAuthoritative).toBe(false);
+    expect(byId.get("plugin_host")!.snapshotAuthoritative).toBe(false);
+    // durability/observability/lifecycle capabilities are not snapshot-bound
+    expect(byId.get("checkpoint_store")!.snapshotAuthoritative).toBe(false);
+    expect(byId.get("usage_accounting")!.snapshotAuthoritative).toBe(false);
+    expect(byId.get("ci_linux")!.snapshotAuthoritative).toBe(false);
+  });
+
+  it("P35-2: never claims snapshot authority without the composed step pipeline", () => {
+    const input = defaultInput();
+    const noStep = {
+      ...input,
+      introspection: {
+        ...DEFAULT_INTROSPECTION,
+        features: { ...DEFAULT_INTROSPECTION.features, stepSnapshot: false },
+      },
+    };
+    const matrix = buildCapabilityMatrix(noStep);
+    const context = matrix.records.find((r) => r.id === "context_pipeline")!;
+    expect(context.productionWired).toBe(true);
+    expect(context.snapshotAuthoritative).toBe(false);
+  });
+
+  it("P35-2: markdown matrix renders the snapshotAuthoritative column", () => {
+    const input = defaultInput();
+    const matrix = buildCapabilityMatrix(input);
+    const md = renderMatrixMarkdown(matrix, auditSummary(matrix, input));
+    expect(md).toContain("| id | status | implemented | productionWired | snapshotAuthoritative |");
+    expect(md).toContain("| context_pipeline | tested | true | true | true |");
   });
 });

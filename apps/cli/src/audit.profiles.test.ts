@@ -35,6 +35,7 @@ const EPHEMERAL_INTROSPECTION: HarnessIntrospection = {
     mcp: false,
     plugins: false,
     skills: false,
+    stepSnapshot: true,
   },
   persistence: {
     mode: "in-memory",

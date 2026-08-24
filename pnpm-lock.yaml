@@ -318,6 +318,19 @@ importers:
         specifier: workspace:*
         version: link:../evaluation
 
+  packages/orchestration:
+    dependencies:
+      '@ar/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@ar/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@ar/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+
   packages/plugins:
     dependencies:
       '@ar/contracts':

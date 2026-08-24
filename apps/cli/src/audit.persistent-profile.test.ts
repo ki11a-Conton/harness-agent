@@ -53,6 +53,7 @@ const PERSISTENT_INTROSPECTION: HarnessIntrospection = {
     skills: true,
     usageAccounting: false,
     runBudget: false,
+    stepSnapshot: true,
   },
   persistence: {
     mode: "durable",
@@ -102,6 +103,8 @@ function persistentInput(overrides: Partial<AuditInput> = {}): AuditInput {
       observability_trace: true,
       core_runtime: true,
       suite_conformance: true,
+      config_drift_matrix: true,
+      security_regression_matrix: true,
     },
     benchmarkSuites: {
       regression: { exists: false, caseCount: 0 },

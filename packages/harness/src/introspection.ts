@@ -36,6 +36,12 @@ export interface HarnessIntrospection {
     skills: boolean;
     usageAccounting?: boolean;
     runBudget?: boolean;
+    /** P35-2: the StepExecutionSnapshot pipeline (P23) is composed — every
+     *  model call binds to a frozen world snapshot (tools/MCP/policy/context).
+     *  True for the production composition root (the runtime always builds a
+     *  snapshot before sampling). Optional so audit test fixtures that omit
+     *  it are treated as "not proven" rather than falsely authoritative. */
+    stepSnapshot?: boolean;
   };
   /** P0-3: connected MCP transports (present only when ≥1 server connected). */
   mcp?: {

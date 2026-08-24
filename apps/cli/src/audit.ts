@@ -142,6 +142,14 @@ export interface CapabilityRecord {
   description: string;
   implemented: boolean;
   productionWired: boolean;
+  /** P35-2: the capability's model-visible execution path is bound to the
+   *  frozen StepExecutionSnapshot (P23) — model-advertised tool world ==
+   *  executed tool world (INV-V5-001/002/003). True only when the step
+   *  snapshot pipeline is composed (introspection.features.stepSnapshot)
+   *  AND this capability's surface actually flows through the frozen
+   *  router/policy/context. Separates "implemented/wired" from
+   *  "authoritative under the world-snapshot invariant". */
+  snapshotAuthoritative: boolean;
   /** P20-2: true when the capability is backed by a durable store (or needs
    *  no persistence at all) in the CURRENT profile. A durable-required
    *  capability on an in-memory harness is false with a degradedReason. */
@@ -232,6 +240,11 @@ interface CapabilitySpec {
   usesIntrospection: boolean;
   implemented(input: AuditInput): boolean;
   wired(input: AuditInput): boolean;
+  /** P35-2: declares this capability's surface as snapshot-bound (P23) —
+   *  tools/MCP bindings frozen into StepToolRouter, context frozen per step.
+   *  The record reports true only when the step-snapshot pipeline is also
+   *  actually composed (introspection.features.stepSnapshot). */
+  snapshotAuthoritative?(input: AuditInput): boolean;
   integrationTested(input: AuditInput): boolean;
   benchmarkExercised(input: AuditInput): boolean;
   evidence(input: AuditInput): CapabilityEvidence[];
@@ -251,6 +264,19 @@ function hasTool(input: AuditInput, name: string): boolean {
 
 function allTools(input: AuditInput, names: readonly string[]): boolean {
   return names.every((name) => hasTool(input, name));
+}
+
+/** P35-2 — cross-verification of the world-snapshot invariant (plan.md
+ *  P35-2): a capability may claim `snapshotAuthoritative` only when the step
+ *  snapshot pipeline is composed (introspection fact) AND the invariant is
+ *  actually tested by the P34-7 config-drift matrix and the P34-8 security
+ *  regression matrix. No claim without both wiring AND coverage. */
+function snapshotAuthorityProven(input: AuditInput): boolean {
+  return (
+    intro(input)?.features.stepSnapshot === true &&
+    input.integrationTests["config_drift_matrix"] === true &&
+    input.integrationTests["security_regression_matrix"] === true
+  );
 }
 
 function suiteProbe(input: AuditInput, suite: string): BenchmarkSuiteProbe {
@@ -280,6 +306,7 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     usesIntrospection: true,
     implemented: (i) => i.packages["context"] === true,
     wired: (i) => intro(i)?.features.context === true,
+    snapshotAuthoritative: (i) => intro(i)?.features.context === true,
     integrationTested: (i) => i.integrationTests["core_loop_integration"] === true,
     benchmarkExercised: () => false,
     evidence: (i) => [
@@ -362,6 +389,9 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     wired: (i) =>
       intro(i)?.features.delegation === true &&
       (hasTool(i, "delegate") || hasTool(i, "delegate_explore") || hasTool(i, "delegate_worker")),
+    snapshotAuthoritative: (i) =>
+      intro(i)?.features.delegation === true &&
+      (hasTool(i, "delegate") || hasTool(i, "delegate_explore") || hasTool(i, "delegate_worker")),
     integrationTested: (i) => i.integrationTests["agents_delegator"] === true,
     benchmarkExercised: () => false,
     evidence: (i) => [
@@ -421,6 +451,7 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     usesIntrospection: true,
     implemented: (i) => i.packages["mcp"] === true,
     wired: (i) => intro(i)?.features.mcp === true,
+    snapshotAuthoritative: (i) => intro(i)?.features.mcp === true,
     integrationTested: (i) => i.integrationTests["mcp_adapter"] === true,
     benchmarkExercised: () => false,
     evidence: (i) => [dep("mcp_connected")],
@@ -431,6 +462,7 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     usesIntrospection: true,
     implemented: (i) => i.packages["plugins"] === true,
     wired: (i) => intro(i)?.features.plugins === true,
+    snapshotAuthoritative: (i) => intro(i)?.features.plugins === true,
     integrationTested: (i) => i.integrationTests["plugins_host"] === true,
     benchmarkExercised: () => false,
     evidence: (i) => [dep("plugin_host")],
@@ -441,6 +473,7 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     usesIntrospection: true,
     implemented: (i) => i.packages["tools"] === true,
     wired: (i) => allTools(i, ADVANCED_TOOL_NAMES),
+    snapshotAuthoritative: (i) => allTools(i, ADVANCED_TOOL_NAMES),
     integrationTested: (i) => i.integrationTests["tools_navigation"] === true,
     benchmarkExercised: () => false,
     evidence: (i) => [
@@ -601,6 +634,12 @@ function toRecord(spec: CapabilitySpec, input: AuditInput, profile: CapabilityPr
     ? input.introspection?.persistence?.mode === "durable" &&
       input.introspection?.persistence?.degraded !== true
     : true;
+  // P35-2: snapshot authority is a claim only when the step-snapshot
+  // pipeline is actually composed (introspection.features.stepSnapshot) AND
+  // the spec declares its surface as snapshot-bound (P23) AND the invariant
+  // is cross-verified by the P34-7/P34-8 matrix coverage.
+  const snapshotAuthoritative =
+    spec.snapshotAuthoritative?.(input) === true && snapshotAuthorityProven(input);
   // P20-2: degradation — a profile expectation that the wiring does not meet.
   const reasons: string[] = [];
   if (expectations.requiresDurableHarness && input.introspection?.persistence?.mode !== "durable") {
@@ -620,6 +659,7 @@ function toRecord(spec: CapabilitySpec, input: AuditInput, profile: CapabilityPr
     description: spec.description,
     implemented,
     productionWired: wired,
+    snapshotAuthoritative,
     durable,
     integrationTested: spec.integrationTested(input),
     benchmarkExercised: spec.benchmarkExercised(input),
@@ -750,13 +790,13 @@ export function renderMatrixMarkdown(matrix: CapabilityMatrix, summary: AuditSum
     "",
     "## Records",
     "",
-    "| id | status | implemented | productionWired | durable | securityMode | integrationTested | benchmarkExercised | degraded | evidence |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| id | status | implemented | productionWired | snapshotAuthoritative | durable | securityMode | integrationTested | benchmarkExercised | degraded | evidence |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...matrix.records.map((record) => {
       const status = capabilityStatusOf(record);
       const evidence = record.evidence.map((e) => (e.note === undefined ? `${e.kind}:${e.ref}` : `${e.kind}:${e.ref} (${e.note})`)).join("; ");
       return [
-        `| ${record.id} | ${status} | ${record.implemented} | ${record.productionWired} | ${record.durable} | ${record.securityMode} | ${record.integrationTested} | ${record.benchmarkExercised} | ${record.degradedReason ?? "-"} | ${evidence} |`,
+        `| ${record.id} | ${status} | ${record.implemented} | ${record.productionWired} | ${record.snapshotAuthoritative} | ${record.durable} | ${record.securityMode} | ${record.integrationTested} | ${record.benchmarkExercised} | ${record.degradedReason ?? "-"} | ${evidence} |`,
       ].join("");
     }),
     "",
@@ -833,6 +873,11 @@ const INTEGRATION_TEST_PROBES: Record<string, string[]> = {
   observability_trace: ["packages/observability/src/trace-exporter.test.ts"],
   core_runtime: ["packages/core/src/runtime/runtime.test.ts"],
   suite_conformance: ["packages/evaluation/src/benchmark-suite.test.ts"],
+  // P35-2: invariant coverage required to claim snapshotAuthoritative —
+  // P34-7 config-drift matrix (step immutability across config lifecycle)
+  // and P34-8 security regression matrix (security invariants stay green).
+  config_drift_matrix: ["packages/harness/src/config-drift-matrix.test.ts"],
+  security_regression_matrix: ["packages/harness/src/security-regression-matrix.test.ts"],
 };
 
 async function probePackages(root: string): Promise<Record<string, boolean>> {
