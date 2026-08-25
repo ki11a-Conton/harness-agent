@@ -86,15 +86,41 @@ class BlockingProvider implements ModelProvider {
 /** Orchestrator that blocks tool execution until explicitly released. */
 class BlockingOrchestrator extends FakeOrchestrator {
   pending: Array<() => void> = [];
+  private enteredCount = 0;
+  private pendingWaiters: Array<{ target: number; resolve: () => void }> = [];
 
   override async execute(
     _request: ToolCallRequest,
     _context: ToolExecutionContext,
   ): Promise<ToolResult> {
+    this.enteredCount += 1;
+    const target = this.enteredCount;
+    for (const w of this.pendingWaiters) {
+      if (w.target <= target) w.resolve();
+    }
+    this.pendingWaiters = this.pendingWaiters.filter((w) => w.target > target);
     await new Promise<void>((resolve) => {
       this.pending.push(resolve);
     });
     return { status: "success", output: "blocked-tool-ok" };
+  }
+
+  /** Deterministic barrier: resolves once the n-th execute() has been entered.
+   *  P38.1-10: replaces the old `setTimeout(10)` "wait for in-flight tool"
+   *  sleeps. The timer is only a watchdog — it FAILS the test instead of
+   *  blindly assuming an event already happened. */
+  whenEntered(n: number, timeoutMs = 3000): Promise<void> {
+    if (this.enteredCount >= n) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`whenEntered(${n}) timed out (entered=${this.enteredCount})`)), timeoutMs);
+      this.pendingWaiters.push({
+        target: n,
+        resolve: () => {
+          clearTimeout(timer);
+          resolve();
+        },
+      });
+    });
   }
 
   releaseNext(): void {
@@ -159,6 +185,24 @@ async function setupActor(
   const session = await runtime.createSession({ agent: AGENT, cwd: "/work" });
   const actor = await manager.load(session.id);
   return { runtime, manager, store, events, orchestrator, inbox, sessionId: session.id, actor };
+}
+
+/**
+ * P38.1-10: watchdog-style wait. Polls the predicate until it holds or the
+ * watchdog fires. NEVER used to *assume* an ordering that a sleep would imply
+ * — it FAILS the test when the expected state does not arrive, which is the
+ * only acceptable use of a timer (per plan.md INV-P38.1-013).
+ */
+async function waitFor(
+  predicate: () => boolean | Promise<boolean>,
+  timeoutMs = 3000,
+): Promise<void> {
+  const start = Date.now();
+  for (;;) {
+    if (await predicate()) return;
+    if (Date.now() - start > timeoutMs) throw new Error("waitFor timed out");
+    await new Promise((r) => setTimeout(r, 1));
+  }
 }
 
 describe("SessionActor (PHASE 25)", () => {
@@ -242,8 +286,7 @@ describe("SessionActor (PHASE 25)", () => {
     ]);
     const { actor, sessionId } = await setupActor({ provider, orchestrator: orch });
     const firstHandle = await actor.startTurn({ sessionId, text: "first" });
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
-    expect(orch.pending.length).toBe(1);
+    await orch.whenEntered(1); // deterministic: tool call is in flight
     const queued = await actor.startTurn(
       { sessionId, text: "later" },
       { onConflict: "queue" },
@@ -298,8 +341,7 @@ describe("SessionActor (PHASE 25)", () => {
     const handle = await actor.startTurn({ sessionId, text: "start" });
 
     // Wait until the tool call is in flight (blocked).
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
-    expect(orch.pending.length).toBe(1);
+    await orch.whenEntered(1);
 
     // Steer arrives DURING the tool execution.
     await actor.steer({ sessionId, text: "change course" });
@@ -324,8 +366,7 @@ describe("SessionActor (PHASE 25)", () => {
     const { actor, sessionId, store } = await setupActor({ provider, orchestrator: orch });
     const handle = await actor.startTurn({ sessionId, text: "first" });
 
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
-    expect(orch.pending.length).toBe(1);
+    await orch.whenEntered(1); // deterministic: tool call is in flight
 
     // Follow-up admitted while the first turn is running.
     await actor.enqueueFollowup({ sessionId, text: "follow-up message" });
@@ -340,15 +381,16 @@ describe("SessionActor (PHASE 25)", () => {
     expect(firstTurnMsgs.some((m) => m.content === "follow-up message")).toBe(false);
 
     // After the turn settles, the actor drains the queue into a NEW turn.
-    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+    await waitFor(async () => (await store.listMessages(sessionId)).some((m) => m.content === "follow-up message"));
     const historyAfter = await store.listMessages(sessionId);
     expect(historyAfter.some((m) => m.content === "follow-up message")).toBe(true);
   });
 
   it("P25-6: close interrupts the active turn and is idempotent", async () => {
-    const { actor, manager, sessionId } = await setupActor({ provider: new BlockingProvider() });
+    const provider = new BlockingProvider();
+    const { actor, manager, sessionId } = await setupActor({ provider });
     const handle = await actor.startTurn({ sessionId, text: "blocked" });
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await provider.blocked;
 
     await actor.close();
     await actor.close(); // idempotent
@@ -358,18 +400,20 @@ describe("SessionActor (PHASE 25)", () => {
   });
 
   it("P25-6: interrupt aborts the active turn and returns its outcome", async () => {
-    const { actor, sessionId } = await setupActor({ provider: new BlockingProvider() });
+    const provider = new BlockingProvider();
+    const { actor, sessionId } = await setupActor({ provider });
     const handle = await actor.startTurn({ sessionId, text: "blocked" });
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await provider.blocked;
     const outcome = await actor.interrupt();
     expect(outcome?.status).toBe("cancelled");
     expect(handle.outcome).toBeDefined();
   });
 
   it("P25-6: unload removes the actor from the manager after settling the turn", async () => {
-    const { actor, manager, sessionId } = await setupActor({ provider: new BlockingProvider() });
+    const provider = new BlockingProvider();
+    const { actor, manager, sessionId } = await setupActor({ provider });
     const handle = await actor.startTurn({ sessionId, text: "blocked" });
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await provider.blocked;
     await manager.unload(sessionId);
     expect(manager.listLoaded()).toEqual([]);
     const outcome = await handle.outcome;
@@ -386,14 +430,21 @@ describe("SessionActor (PHASE 25)", () => {
   function gatedRuntime(
     real: AgentRuntime,
     sessionId: SessionId,
-  ): { runtime: Pick<AgentRuntime, "startTurn" | "runTurn">; open: () => void } {
+  ): { runtime: Pick<AgentRuntime, "startTurn" | "runTurn">; open: () => void; entered: Promise<void> } {
     let open!: () => void;
+    let enteredResolve!: () => void;
+    // P38.1-10: `entered` is a deterministic barrier (no sleep) — resolves as
+    // soon as the actor is inside the `await runtime.startTurn()` window.
+    const entered = new Promise<void>((resolve) => {
+      enteredResolve = resolve;
+    });
     const gate = new Promise<void>((resolve) => {
       open = resolve;
     });
     return {
       runtime: {
         startTurn: async (sid: SessionId, text: string) => {
+          enteredResolve();
           await gate;
           return real.startTurn(sid, text);
         },
@@ -401,13 +452,14 @@ describe("SessionActor (PHASE 25)", () => {
           real.runTurn(sid, turnId as never, signal as AbortSignal),
       },
       open,
+      entered,
     };
   }
 
   it("P36-2 Test A — simultaneous admission: second caller gets SESSION_BUSY while first is in startTurn await", async () => {
     const { runtime, store, events, orchestrator, inbox, sessionId } = await setupActor();
     const session = (await store.getSession(sessionId))!;
-    const { runtime: gated, open } = gatedRuntime(runtime, sessionId);
+    const { runtime: gated, open, entered } = gatedRuntime(runtime, sessionId);
     const actor = new DefaultSessionActor({
       persistent: session,
       runtime: gated,
@@ -415,7 +467,7 @@ describe("SessionActor (PHASE 25)", () => {
       inbox,
     });
     const a = actor.startTurn({ sessionId, text: "A" });
-    await new Promise<void>((resolve) => setTimeout(resolve, 10)); // first is inside startTurn await
+    await entered; // deterministic: first is inside startTurn await
     const b = actor.startTurn({ sessionId, text: "B" });
     const err = await b.then(
       () => undefined,
@@ -451,14 +503,14 @@ describe("SessionActor (PHASE 25)", () => {
   it("P36-2 Test C — starting + close: no running turn survives after close", async () => {
     const { runtime, store, sessionId } = await setupActor();
     const session = (await store.getSession(sessionId))!;
-    const { runtime: gated, open } = gatedRuntime(runtime, sessionId);
+    const { runtime: gated, open, entered } = gatedRuntime(runtime, sessionId);
     const actor = new DefaultSessionActor({
       persistent: session,
       runtime: gated,
       store,
     });
     const startPromise = actor.startTurn({ sessionId, text: "start-me" });
-    await new Promise<void>((resolve) => setTimeout(resolve, 10)); // inside startTurn await
+    await entered; // deterministic: inside startTurn await
     await actor.close();
     open();
     const err = await startPromise.then(
@@ -474,14 +526,14 @@ describe("SessionActor (PHASE 25)", () => {
   it("P36-2 Test D — starting + cancel: targeted cancellation aborts the reserved start", async () => {
     const { runtime, store, sessionId } = await setupActor();
     const session = (await store.getSession(sessionId))!;
-    const { runtime: gated, open } = gatedRuntime(runtime, sessionId);
+    const { runtime: gated, open, entered } = gatedRuntime(runtime, sessionId);
     const actor = new DefaultSessionActor({
       persistent: session,
       runtime: gated,
       store,
     });
     const startPromise = actor.startTurn({ sessionId, text: "start-me" });
-    await new Promise<void>((resolve) => setTimeout(resolve, 10)); // inside startTurn await
+    await entered; // deterministic: inside startTurn await
     // No turn id exists yet while starting; close (which covers cancel) wins.
     await actor.close();
     open();
@@ -649,8 +701,9 @@ describe("SessionActor (PHASE 25)", () => {
     // At most one outcome ever succeeded — the rest were SESSION_BUSY.
     // Clean up any active turn.
     await actor.interrupt();
-    // Wait for the outcome to settle.
-    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    // Wait (deterministically) for the aborted turn to settle and release
+    // ownership.
+    await waitFor(() => actor.activeTurn === undefined);
     expect(actor.activeTurn).toBeUndefined();
   });
 
@@ -696,14 +749,17 @@ describe("SessionActor (PHASE 25)", () => {
     const { manager, runtime, store, sessionId } = await setupActor();
     const fresh = await runtime.createSession({ agent: AGENT, cwd: "/work2" });
     let storeRelease!: () => void;
+    let storeEnteredResolve!: () => void;
+    const storeEntered = new Promise<void>((resolve) => { storeEnteredResolve = resolve; });
     const gate = new Promise<void>((resolve) => { storeRelease = resolve; });
     const originalGet = store.getSession.bind(store);
     store.getSession = async (id: SessionId) => {
+      storeEnteredResolve();
       await gate;
       return originalGet(id);
     };
     const loadPromise = manager.load(fresh.id);
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await storeEntered; // deterministic: load is blocked inside getSession
     await manager.unload(fresh.id); // bumps generation
     storeRelease();
     const err = await loadPromise.then(() => undefined, (e: unknown) => e);
@@ -716,14 +772,17 @@ describe("SessionActor (PHASE 25)", () => {
     const { manager, runtime, store } = await setupActor();
     const fresh = await runtime.createSession({ agent: AGENT, cwd: "/work3" });
     let storeRelease!: () => void;
+    let storeEnteredResolve!: () => void;
+    const storeEntered = new Promise<void>((resolve) => { storeEnteredResolve = resolve; });
     const gate = new Promise<void>((resolve) => { storeRelease = resolve; });
     const originalGet = store.getSession.bind(store);
     store.getSession = async (id: SessionId) => {
+      storeEnteredResolve();
       await gate;
       return originalGet(id);
     };
     const loadPromise = manager.load(fresh.id);
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await storeEntered; // deterministic: load is blocked inside getSession
     await manager.close();
     storeRelease();
     const err = await loadPromise.then(() => undefined, (e: unknown) => e);
@@ -736,16 +795,19 @@ describe("SessionActor (PHASE 25)", () => {
     const { manager, runtime, store } = await setupActor();
     const fresh = await runtime.createSession({ agent: AGENT, cwd: "/work4" });
     let storeRelease!: () => void;
+    let storeEnteredResolve!: () => void;
+    const storeEntered = new Promise<void>((resolve) => { storeEnteredResolve = resolve; });
     const gate = new Promise<void>((resolve) => { storeRelease = resolve; });
     const originalGet = store.getSession.bind(store);
     let callCount = 0;
     store.getSession = async (id: SessionId) => {
       callCount += 1;
+      storeEnteredResolve();
       await gate;
       return originalGet(id);
     };
     const load1 = manager.load(fresh.id);
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await storeEntered; // deterministic: gen1 load is blocked inside getSession
     await manager.unload(fresh.id); // bumps generation → gen1 should not install
     storeRelease();
     const err1 = await load1.then(() => undefined, (e: unknown) => e);
@@ -842,7 +904,17 @@ describe("SessionActor (PHASE 25)", () => {
   it("P38-1: drain owns the slot before the awaited dequeue — no reservation overwrite", async () => {
     const { runtime, store, sessionId } = await setupActor();
     const session = (await store.getSession(sessionId))!;
-    const actor = new DefaultSessionActor({ persistent: session, runtime, store });
+    // Instrument startTurn so we can assert the promotion fired EXACTLY once
+    // (no duplicate promotion while drain owns the reservation).
+    let startCalls = 0;
+    const proxiedRuntime = {
+      startTurn: (sid: SessionId, text: string) => {
+        startCalls += 1;
+        return runtime.startTurn(sid, text);
+      },
+      runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => runtime.runTurn(sid, turnId, signal),
+    } as Pick<AgentRuntime, "startTurn" | "runTurn">;
+    const actor = new DefaultSessionActor({ persistent: session, runtime: proxiedRuntime, store });
     await actor.enqueueFollowup({ sessionId, text: "queued" });
     const gated = gatedFollowupQueue(actor.inputQueue);
     const drainPromise = actor.drainFollowupsForTest(gated.queue);
@@ -855,9 +927,9 @@ describe("SessionActor (PHASE 25)", () => {
     expect((err as { info?: { code: string } })?.info?.code).toBe("SESSION_BUSY");
     gated.open();
     await drainPromise;
-    // The followup was promoted — exactly one owner. If the echo model
-    // completes instantly the turn settles; otherwise it is running.
-    expect(actor.activeTurn === undefined || actor.activeTurn !== undefined).toBe(true);
+    // The queued followup was promoted via runtime.startTurn exactly once —
+    // the direct "sneak" was refused, so only the drain's promotion counts.
+    expect(startCalls).toBe(1);
   });
 
   it("P38-2: promotion failure keeps the durable input and releases the reservation", async () => {

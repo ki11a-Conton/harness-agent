@@ -167,7 +167,7 @@ describe("P34-2 same-session race suite", () => {
     const outcome = await first.outcome;
     expect(outcome.status).toBe("completed");
     // P37-1: the queued follow-up is drained automatically by the actor.
-    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    await waitUntilIdle(h.actor);
     expect(h.actor.activeTurn).toBeUndefined();
   });
 
@@ -217,7 +217,7 @@ describe("P34-2 same-session race suite", () => {
     h.provider.release();
     await live.outcome;
     // P37-1: queued follow-up drains automatically after the live run settles.
-    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    await waitUntilIdle(h.actor);
     expect(h.actor.activeTurn).toBeUndefined();
   });
 });

@@ -147,6 +147,21 @@ async function createStandaloneTurn(h: Harness, text: string): Promise<TurnId> {
   return turn.id;
 }
 
+/** P38.1-10: watchdog-style wait — polls until the predicate holds or fails the
+ *  test on timeout. Replaces the old `setTimeout(20)` "drain settles" sleeps,
+ *  which only assumed an ordering instead of proving it. */
+async function waitFor(
+  predicate: () => boolean | Promise<boolean>,
+  timeoutMs = 3000,
+): Promise<void> {
+  const start = Date.now();
+  for (;;) {
+    if (await predicate()) return;
+    if (Date.now() - start > timeoutMs) throw new Error("waitFor timed out");
+    await new Promise((r) => setTimeout(r, 1));
+  }
+}
+
 describe("P34-2x", () => {
 it("2.1 racing a second runTurn at a live turn — refused (SESSION_BUSY), never two live runs", async () => {
     const h = await setup();
@@ -180,7 +195,7 @@ it("2.2 turn start / steer / follow-up racing a live turn — no parallel run", 
     // generate(), then release it.
     await h.provider.whenNEntered(2);
     h.provider.release();
-    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    await waitFor(() => h.actor.activeTurn === undefined);
     expect(h.actor.activeTurn).toBeUndefined();
   });
 
@@ -238,7 +253,7 @@ it("2.5 adversarial interleave — non-conflicting ops land around ONE live run,
     // generate() (enteredCount >= 2), then release it.
     await h.provider.whenNEntered(2);
     h.provider.release();
-    await new Promise<void>((resolve) => setTimeout(resolve, 20)); // drain settles
+    await waitFor(() => h.actor.activeTurn === undefined);
     expect(h.actor.activeTurn).toBeUndefined();
     expect(h.actor.inputQueue.pendingCount).toBe(0);
   });

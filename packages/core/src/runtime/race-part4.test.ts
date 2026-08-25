@@ -126,6 +126,20 @@ async function createStandaloneTurn(h: Harness, text: string): Promise<TurnId> {
   return turn.id;
 }
 
+/** P38.1-10: watchdog-style wait — polls until the predicate holds or fails the
+ *  test on timeout. Replaces the old `setTimeout(20)` "drain settles" sleeps. */
+async function waitFor(
+  predicate: () => boolean | Promise<boolean>,
+  timeoutMs = 3000,
+): Promise<void> {
+  const start = Date.now();
+  for (;;) {
+    if (await predicate()) return;
+    if (Date.now() - start > timeoutMs) throw new Error("waitFor timed out");
+    await new Promise((r) => setTimeout(r, 1));
+  }
+}
+
 describe("P34-2 part4", () => {
   it("2.5 adversarial interleave — non-conflicting ops land around ONE live run, follow-up drains serially", async () => {
     const h = await setup();
@@ -149,7 +163,7 @@ describe("P34-2 part4", () => {
     // to enter generate(), then release it.
     await h.provider.whenNEntered(2);
     h.provider.release();
-    await new Promise<void>((resolve) => setTimeout(resolve, 20)); // drain settles
+    await waitFor(() => h.actor.activeTurn === undefined);
     expect(h.actor.activeTurn).toBeUndefined();
   });
 });
