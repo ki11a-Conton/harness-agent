@@ -19,7 +19,7 @@ import type {
   ThreadItem,
   TurnEvent,
 } from "@ar/protocol";
-import type { HarnessTransport } from "./transport.js";
+import type { HarnessTransport, TransportInvoke } from "./transport.js";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -116,12 +116,17 @@ export async function reduceTurnEvents(
 // Used as the PUBLIC event queue in RunEventHub.
 // ---------------------------------------------------------------------------
 
+/** P38-8 (INV-P38-010): channel lifecycle — a stream failure after iterator
+ *  creation is observable as an error, never as clean EOF. */
+type ChannelState =
+  | { kind: "open" }
+  | { kind: "ended" }
+  | { kind: "failed"; error: Error };
+
 export class PushChannel implements AsyncIterable<TurnEvent> {
   private readonly queue: TurnEvent[] = [];
   private readonly waiters: ((e: TurnEvent | undefined) => void)[] = [];
-  private ended = false;
-  /** P37-5 (INV-P37-006): bounded buffer — absent consumer cannot grow unbounded. */
-  private overflow = false;
+  private state: ChannelState = { kind: "open" };
 
   constructor(
     private readonly maxEvents = 4096,
@@ -130,11 +135,11 @@ export class PushChannel implements AsyncIterable<TurnEvent> {
   ) {}
 
   push(event: TurnEvent): void {
-    if (this.ended) return;
+    if (this.state.kind !== "open") return;
     if (this.queue.length >= this.maxEvents) {
-      this.overflow = true;
+      // P38-8: overflow is a FAILURE — channel.fail + hub settles failed.
+      this.fail(new OverflowError("event stream buffer overflow"));
       this.onOverflow?.();
-      this.end();
       return;
     }
     const waiter = this.waiters.shift();
@@ -146,27 +151,45 @@ export class PushChannel implements AsyncIterable<TurnEvent> {
   }
 
   end(): void {
-    if (this.ended) return;
-    this.ended = true;
-    for (const w of this.waiters.splice(0)) w(undefined);
+    if (this.state.kind === "open") {
+      this.state = { kind: "ended" };
+      for (const w of this.waiters.splice(0)) w(undefined);
+    }
+  }
+
+  /** P38-8: fail the stream with an error. Already-delivered queued events
+   *  are still delivered; the NEXT iteration rejects with the stored error. */
+  fail(error: Error): void {
+    if (this.state.kind === "open") {
+      this.state = { kind: "failed", error };
+      for (const w of this.waiters.splice(0)) w(undefined);
+    }
   }
 
   [Symbol.asyncIterator](): AsyncIterator<TurnEvent> {
-    if (this.overflow) {
-      throw new OverflowError("event stream buffer overflow");
-    }
     return {
       next: (): Promise<IteratorResult<TurnEvent>> => {
+        // Deliver already accepted queued events first (documented policy).
         if (this.queue.length > 0) {
           return Promise.resolve({ value: this.queue.shift()!, done: false });
         }
-        if (this.ended) {
+        const s = this.state;
+        if (s.kind === "failed") {
+          return Promise.reject(s.error);
+        }
+        if (s.kind === "ended") {
           return Promise.resolve({ value: undefined, done: true });
         }
-        return new Promise<IteratorResult<TurnEvent>>((resolve) => {
+        return new Promise<IteratorResult<TurnEvent>>((resolve, reject) => {
           this.waiters.push((event) => {
             if (event === undefined) {
-              resolve({ value: undefined, done: true });
+              // Re-check state: an event of undefined means end/fail arrived.
+              const st = this.state;
+              if (st.kind === "failed") {
+                reject(st.error);
+              } else {
+                resolve({ value: undefined, done: true });
+              }
             } else {
               resolve({ value: event, done: false });
             }
@@ -225,8 +248,12 @@ class RunEventHub {
   private readonly state: RunResult = { items: [], status: "completed" };
   private readonly _done: Promise<RunResult>;
   private resolveDone!: (r: RunResult) => void;
-  private readonly unsubscribe: () => void;
-  private terminated = false;
+  private settled = false;
+  // P38-7: run-scoped cleanup handles.
+  private readonly unsubscribeTurn: () => void;
+  private readonly unsubscribeClose: () => void;
+  private readonly abortSignal?: AbortSignal;
+  private readonly abortListener?: () => void;
 
   constructor(
     transport: HarnessTransport,
@@ -234,85 +261,136 @@ class RunEventHub {
     turnId: string,
     signal?: AbortSignal,
   ) {
-    // P37-5: bounded buffer — overflow causes a terminal failure.
+    // P38-8: bounded buffer — overflow is a channel FAILURE + failed done.
     this.events = new PushChannel(4096, () => {
-      if (!this.terminated) {
-        this.terminated = true;
-        this.state.status = "failed";
-        this.state.error = {
-          code: "STREAM_BUFFER_OVERFLOW",
-          retryable: true,
-          message: "event stream buffer overflow (max 4096 events)",
-        };
-        this.resolveDone({ ...this.state });
-      }
+      this.settleOnce(
+        {
+          status: "failed",
+          items: [...this.state.items],
+          error: {
+            code: "STREAM_BUFFER_OVERFLOW",
+            retryable: true,
+            message: "event stream buffer overflow (max 4096 events)",
+          },
+        },
+        new OverflowError("event stream buffer overflow"),
+      );
     });
 
     this._done = new Promise<RunResult>((resolve) => {
       this.resolveDone = resolve;
     });
 
-    // P37-3: subscribe BEFORE the first operation that can emit a run event.
-    this.unsubscribe = transport.subscribe("turn", (event) => {
+    // P38-6 (INV-P38-008): subscribe BEFORE the first operation that can
+    // emit a run event.
+    this.unsubscribeTurn = transport.subscribe("turn", (event) => {
       if (event.threadId !== threadId || event.turnId !== turnId) return;
       this.events.push(event);
       accumulateEvent(this.state, event);
       if (isTerminal(event)) {
-        this.terminated = true;
-        this.events.end();
-        this.resolveDone({ ...this.state });
+        this.settleOnce({ ...this.state });
       }
     });
 
-    // P37-4 (Bug B): expose transport close lifecycle — if the transport
+    // P38-4/P38-7 (Bug B): transport close lifecycle — if the transport
     // closes before a terminal turn event, the run terminally FAILS.
     const onClose = () => {
-      if (!this.terminated) {
-        this.terminated = true;
-        this.state.status = "failed";
-        this.state.error = {
-          code: "STREAM_TERMINATED_BEFORE_TURN_END",
-          retryable: true,
-          message: "transport closed before terminal turn event",
-        };
-        this.events.end();
-        this.resolveDone({ ...this.state });
-      }
+      this.settleOnce(
+        {
+          status: "failed",
+          items: [...this.state.items],
+          error: {
+            code: "STREAM_TERMINATED_BEFORE_TURN_END",
+            retryable: true,
+            message: "transport closed before terminal turn event",
+          },
+        },
+        new SdkError("transport closed before terminal turn event", { code: "STREAM_TERMINATED_BEFORE_TURN_END", retryable: true }),
+      );
     };
-    const unsubClose = transport.onClose?.(onClose) ?? (() => {});
+    this.unsubscribeClose = transport.onClose?.(onClose) ?? (() => {});
 
-    // P37-4: abort support — maps to server interrupt.
+    // P38-7: abort support — maps to server interrupt, but the abort listener
+    // is tracked for cleanup in settleOnce.
     if (signal !== undefined) {
+      this.abortSignal = signal;
+      const onAbort = () => {
+        // Always notify the server (even if the event stream already
+        // terminated) — the local abort is authoritative.
+        void transport.invoke("turn/interrupt", { threadId, turnId, reason: "aborted" });
+        this.settleOnce({
+          status: "interrupted",
+          items: [...this.state.items],
+        });
+      };
+      this.abortListener = onAbort;
       if (signal.aborted) {
-        this.abort(transport, threadId, turnId);
+        onAbort();
       } else {
-        signal.addEventListener("abort", () => this.abort(transport, threadId, turnId), { once: true });
+        signal.addEventListener("abort", onAbort, { once: true });
       }
     }
   }
 
-  /** P37-4 (INV-P37-005): a resolved `{ error }` from turn/run is a terminal
-   *  failure. Call this when the invoke response carries an error. */
-  fail(error: { code: string; message: string; retryable: boolean }): void {
-    if (!this.terminated) {
-      this.terminated = true;
-      this.state.status = "failed";
-      this.state.error = { code: error.code, message: error.message, retryable: error.retryable };
-      this.events.end();
-      this.resolveDone({ ...this.state });
-    }
+  /** P38-6 (INV-P38-007): attach the turn/run invocation WITHOUT blocking
+   *  runStreamed() from returning. Handles resolved { error }, rejection, and
+   *  success-after-terminal without double-settling. */
+  attachRunInvocation(invocation: Promise<TransportInvoke<unknown>>): void {
+    void invocation.then(
+      (response) => {
+        if (response.error !== undefined) {
+          // P38-4 (INV-P37-005): a resolved { error } from turn/run is a
+          // terminal failure, not a "not yet started" signal.
+          this.settleOnce(
+            {
+              status: "failed",
+              items: [...this.state.items],
+              error: { code: response.error.code, message: response.error.message, retryable: response.error.retryable },
+            },
+            new SdkError(response.error.message, response.error),
+          );
+        }
+        // Success after terminal: settleOnce is a no-op (already settled).
+      },
+      (err) => {
+        // Rejected invoke Promise → terminal failure.
+        this.settleOnce(
+          {
+            status: "failed",
+            items: [...this.state.items],
+            error: { code: "protocol_error", message: String(err), retryable: false },
+          },
+          err instanceof Error ? err : new SdkError(String(err), { code: "protocol_error", retryable: false }),
+        );
+      },
+    );
   }
 
-  private abort(transport: HarnessTransport, threadId: string, turnId: string): void {
-    if (!this.terminated) {
-      this.terminated = true;
-      if (this.state.status !== "failed") {
-        this.state.status = "interrupted";
-      }
-      this.events.end();
-      this.resolveDone({ ...this.state });
+  /**
+   * P38-7 (INV-P38-009): THE single terminal path. Every terminal signal goes
+   * through here — turn terminal event, local abort, transport close, buffer
+   * overflow, invoke error/rejection, explicit close. Settles done exactly
+   * once and releases all run-scoped listeners exactly once.
+   *
+   * `channelError` distinguishes TRANSPORT failures (overflow, transport
+   * close, invoke rejection — the stream was abnormally cut) from protocol
+   * terminals (turn/completed|failed|interrupted — the stream ended normally
+   * per protocol). Only transport failures fail the public event channel.
+   */
+  private settleOnce(result: RunResult, channelError?: Error): void {
+    if (this.settled) return;
+    this.settled = true;
+    this.unsubscribeTurn();
+    this.unsubscribeClose();
+    if (this.abortSignal !== undefined && this.abortListener !== undefined) {
+      this.abortSignal.removeEventListener("abort", this.abortListener);
     }
-    void transport.invoke("turn/interrupt", { threadId, turnId, reason: "aborted" });
+    if (channelError !== undefined) {
+      this.events.fail(channelError);
+    } else {
+      this.events.end();
+    }
+    this.resolveDone(result);
   }
 
   get done(): Promise<RunResult> {
@@ -320,12 +398,7 @@ class RunEventHub {
   }
 
   close(): void {
-    this.unsubscribe();
-    this.events.end();
-    if (!this.terminated) {
-      this.terminated = true;
-      this.resolveDone({ ...this.state });
-    }
+    this.settleOnce({ status: "completed", items: [...this.state.items] });
   }
 }
 
@@ -367,22 +440,16 @@ export class Thread {
     }
     const { turnId } = started.result as { turnId: string };
 
-    // P37-3: subscribe BEFORE invoking turn/run — a synchronous transport
-    // can emit events before the invoke returns.
+    // P38-6 (INV-P38-007/008): subscribe FIRST (hub constructor), then start
+    // turn/run, attach it to the hub, and RETURN immediately — the stream is
+    // live while turn/run is still pending.
     const hub = new RunEventHub(this.transport, this.threadId, turnId, opts.signal);
-    const runResponse = await this.transport.invoke("turn/run", {
-      threadId: this.threadId,
-      turnId,
-    });
-    // P37-4 (INV-P37-005): a resolved `{ error }` from turn/run is a
-    // terminal failure, not a "not yet started" signal.
-    if (runResponse.error !== undefined) {
-      hub.fail({
-        code: runResponse.error.code,
-        message: runResponse.error.message,
-        retryable: runResponse.error.retryable,
-      });
-    }
+    hub.attachRunInvocation(
+      this.transport.invoke("turn/run", {
+        threadId: this.threadId,
+        turnId,
+      }),
+    );
 
     const done = hub.done.then((r) => ({ ...r, turnId }));
     return { events: hub.events, done };

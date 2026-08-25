@@ -689,15 +689,12 @@ function toRecord(spec: CapabilitySpec, input: AuditInput, profile: CapabilityPr
   const expectations = PROFILE_EXPECTATIONS[profile];
   const implemented = spec.implemented(input);
   const wired = spec.wired(input);
-  // P20-2 + P36-8 + P37-9: durability is modeled as actual store level,
-  // profile requirement, and satisfaction SEPARATELY (INV-P36-008/010).
-  // Bug A: each capability has its OWN backing store — not all use approval.
-  // Bug B: satisfaction uses explicit durability ordering, not hardcoded bools.
+  // P20-2 + P36-8 + P37-9 + P38-11 (INV-P38-013): durabilityActual describes
+  // the ACTUAL backing store regardless of profile requirements. Changing the
+  // profile never rewrites actual store durability.
+  const storeName = backingStoreName(spec.id, input.introspection);
+  const durabilityActual: DurabilityLevel = storeDurabilityLevel(storeName);
   const requiresDurability = expectations.mustBeDurable.includes(spec.id);
-  const storeName = requiresDurability ? backingStoreName(spec.id, input.introspection) : undefined;
-  const durabilityActual: DurabilityLevel = requiresDurability
-    ? storeDurabilityLevel(storeName)
-    : "none";
   const durabilityRequired: DurabilityLevel = requiresDurability ? "durable" : "none";
   const DURABILITY_RANK: Record<DurabilityLevel, number> = { none: 0, memory: 1, process: 2, flush: 3, durable: 4 };
   const durabilitySatisfied =
@@ -880,14 +877,21 @@ export function auditSummary(matrix: CapabilityMatrix, input: AuditInput): Audit
     if (expectations.mustBeDurable.includes(record.id) && !record.durabilitySatisfied) return false;
     return true;
   });
-  // P36-8 + P37-7: evidence freshness — every declared test/benchmark has
-  // current-HEAD passing evidence of the correct kind.  The old code compared
-  // `false === false` which made stale/missing evidence look fresh.
-  const evidenceFresh = matrix.records.every(
+  // P36-8 + P37-7 + P38-10 (INV-P38-012): evidence freshness — every declared
+  // test AND benchmark has current-HEAD passing evidence of the correct kind.
+  // The old code compared `false === false` which made stale/missing evidence
+  // look fresh; it also ignored benchmark evidence entirely.
+  const testFresh = matrix.records.every(
     (record) =>
       !record.testDeclared ||
       evidenceIsFresh(input.executionEvidence?.[`capability:${record.id}`], "test_run", input.gitSha),
   );
+  const benchmarkFresh = matrix.records.every(
+    (record) =>
+      !record.benchmarkDeclared ||
+      evidenceIsFresh(input.executionEvidence?.[`benchmark:${record.id}`], "benchmark_run", input.gitSha),
+  );
+  const evidenceFresh = testFresh && benchmarkFresh;
   const verdict: AuditVerdict = {
     documentationClaimsOk,
     profileRequirementsOk,

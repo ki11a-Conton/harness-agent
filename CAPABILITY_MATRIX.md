@@ -1,7 +1,7 @@
 # CAPABILITY MATRIX
 
-- generatedAt: 2026-08-24T12:27:10.256Z
-- gitSha: 7a10e83821f48c54a52e8b390ddb8e822fafc89a
+- generatedAt: 2026-08-25T02:35:18.761Z
+- gitSha: a1cfa9e410e8f348c6052f32c509b2c27c10902f
 
 ## Summary
 
@@ -31,7 +31,7 @@
 | delegation | implemented | true | false | false | none/none/true | sandboxed | true | false | false | false | - | runtime_dependency:packages/agents |
 | scheduler | implemented | true | false | false | none/none/true | sandboxed | true | false | false | false | - | runtime_dependency:packages/agents |
 | ask_user_durable | implemented | true | false | false | none/none/true | sandboxed | true | false | false | false | - | runtime_dependency:packages/core |
-| approval_durable | implemented | true | false | false | none/none/true | sandboxed | true | false | false | false | - | runtime_dependency:packages/security; store:stores.approval=InMemoryApprovalStore (not durable across restart) |
+| approval_durable | implemented | true | false | false | memory/none/true | sandboxed | true | false | false | false | - | runtime_dependency:packages/security; store:stores.approval=InMemoryApprovalStore (not durable across restart) |
 | mcp_connected | implemented | true | false | false | none/none/true | sandboxed | true | false | false | false | - | runtime_dependency:packages/mcp |
 | plugin_host | implemented | true | false | false | none/none/true | sandboxed | true | false | false | false | - | runtime_dependency:packages/plugins |
 | advanced_tools | wired | true | true | true | none/none/true | sandboxed | true | false | false | false | - | runtime_dependency:packages/tools; registered_tool:grep_search; registered_tool:repo_tree; registered_tool:symbol_search; registered_tool:repo_map; registered_tool:discover_commands; registered_tool:env_snapshot |

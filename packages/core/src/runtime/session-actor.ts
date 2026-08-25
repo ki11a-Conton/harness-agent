@@ -78,8 +78,15 @@ export interface SessionInputQueue {
   /** P37-1: returns a stable followup id so the actor can pair the drain
    *  outcome with the caller's resolver. */
   enqueueFollowup(input: UserMessage): Promise<string>;
-  /** P37-1: returns a followup entry with the stable id. */
-  nextPendingFollowup(): Promise<{ id: string; input: UserMessage } | undefined>;
+  /**
+   * P38-1/P38-2 (INV-P38-001/002): two-phase promotion API. reserve takes the
+   * next followup WITHOUT consuming the durable record; completePromotion acks
+   * it only after a real turn was created; releasePromotion requeues it when
+   * promotion failed so the input is never lost.
+   */
+  reservePendingFollowup(): Promise<{ id: string; input: UserMessage } | undefined>;
+  completePromotion(id: string): Promise<void>;
+  releasePromotion(id: string): Promise<void>;
 }
 
 /** P25-1: session-bound resource registry (sandbox roots, MCP refs, ...).
@@ -115,6 +122,8 @@ export interface SessionActor {
   readonly resourceScope: SessionResourceScope;
   readonly cancellation: AbortController;
   readonly activeTurn?: ActiveTurnHandle;
+  /** P38-14: diagnostic — the current unified actor state kind. */
+  readonly executionState: ActorExecutionState["kind"];
 
   /** Start a NEW turn. When a turn is already active the caller MUST choose
    *  the conflict policy explicitly: "busy" (default) throws SESSION_BUSY,
@@ -184,6 +193,8 @@ export class InboxSessionInputQueue implements SessionInputQueue {
   private readonly followups: Array<{ id: string; input: UserMessage; promptId?: PromptId }> = [];
   private hydrated = false;
   private followupIdCounter = 0;
+  /** P38-2: the followup reserved for promotion but NOT yet consumed. */
+  private reserved: { id: string; input: UserMessage; promptId?: PromptId } | undefined;
 
   constructor(private readonly deps: { sessionId: SessionId; inbox?: InboxStore; now?: () => number }) {}
 
@@ -214,18 +225,36 @@ export class InboxSessionInputQueue implements SessionInputQueue {
     return id;
   }
 
-  async nextPendingFollowup(): Promise<{ id: string; input: UserMessage } | undefined> {
+  /** P38-1/P38-2: take the next followup WITHOUT consuming the durable
+   *  record. Only one reservation at a time (single-flight drain). */
+  async reservePendingFollowup(): Promise<{ id: string; input: UserMessage } | undefined> {
+    if (this.reserved !== undefined) return undefined;
     if (!this.hydrated) {
       this.hydrated = true;
       await this.hydrate();
     }
     const next = this.followups.shift();
     if (next === undefined) return undefined;
-    if (next.promptId !== undefined && this.deps.inbox !== undefined) {
-      // Durable record: the followup was promoted into a real turn.
-      await this.deps.inbox.markConsumed(next.promptId);
-    }
+    this.reserved = next;
     return { id: next.id, input: next.input };
+  }
+
+  /** P38-2 (INV-P38-002): mark the durable prompt consumed ONLY after a real
+   *  turn was created (promotion succeeded). */
+  async completePromotion(id: string): Promise<void> {
+    if (this.reserved === undefined || this.reserved.id !== id) return;
+    if (this.reserved.promptId !== undefined && this.deps.inbox !== undefined) {
+      await this.deps.inbox.markConsumed(this.reserved.promptId);
+    }
+    this.reserved = undefined;
+  }
+
+  /** P38-2 (INV-P38-003): promotion failed — requeue the reserved input at
+   *  the head so it is recoverable (never lost, never double-consumed). */
+  async releasePromotion(id: string): Promise<void> {
+    if (this.reserved === undefined || this.reserved.id !== id) return;
+    this.followups.unshift(this.reserved);
+    this.reserved = undefined;
   }
 
   private async admit(text: string, kind: "steer" | "followup"): Promise<PromptId> {
@@ -345,6 +374,10 @@ export class DefaultSessionActor implements SessionActor {
     return s.kind === "running" ? { turn: s.turn, controller: s.controller, outcome: s.outcome } : undefined;
   }
 
+  get executionState(): ActorExecutionState["kind"] {
+    return this.state.kind;
+  }
+
   async startTurn(
     input: UserMessage,
     opts: { onConflict?: SessionBusyDecision } = {},
@@ -441,7 +474,11 @@ export class DefaultSessionActor implements SessionActor {
       return s.outcome;
     }
     if (s.kind === "starting") {
+      // P38-4 (INV-P38-005): interrupt REVOKES the reservation — abort the
+      // controller AND return the state to idle so a late runtime.startTurn
+      // can never promote (requestId revalidation also fails).
       s.controller.abort();
+      this.state = { kind: "idle" };
     }
     return undefined;
   }
@@ -545,32 +582,72 @@ export class DefaultSessionActor implements SessionActor {
     void this.drainFollowups();
   }
 
-  private async drainFollowups(): Promise<void> {
+  private async drainFollowups(queue: SessionInputQueue = this.inputQueue): Promise<void> {
     if (this.closed) return;
     if (this.state.kind !== "idle") return;
-    const entry = await this.inputQueue.nextPendingFollowup();
-    if (entry === undefined) return;
-    // P37-1: reserve BEFORE await that can yield
+    // P38-1 (INV-P38-001): RESERVE the actor slot BEFORE the awaited dequeue.
+    // A concurrent startTurn will see "starting" and be refused — no
+    // reservation overwrite.
     const controller = new AbortController();
     const requestId = nextRequestId();
     this.state = { kind: "starting", source: "followup", controller, requestId };
+    let reservedId: string | undefined;
     try {
-      const turn = await this.deps.runtime.startTurn(this.sessionId, entry.input.text);
-      if (this.state.kind !== "starting" || this.state.requestId !== requestId) {
-        // cancelled/closed during drain — no promotion
+      // P38-2 (INV-P38-002): reserve the followup entry WITHOUT consuming the
+      // durable inbox record. The inbox is marked consumed only after a real
+      // turn is created (completePromotion).
+      const entry = await queue.reservePendingFollowup();
+      if (entry === undefined) {
+        // No pending followup — release the reservation.
+        if (this.state.kind === "starting" && this.state.requestId === requestId) {
+          this.state = { kind: "idle" };
+        }
         return;
       }
+      reservedId = entry.id;
+      const turn = await this.deps.runtime.startTurn(this.sessionId, entry.input.text);
+      // P38-4: cancelled/aborted reservation cannot promote.
+      if (this.state.kind !== "starting" || this.state.requestId !== requestId || controller.signal.aborted) {
+        // Release the reserved followup back to the queue head so it can
+        // be retried on a later drain.
+        await queue.releasePromotion(entry.id);
+        reservedId = undefined;
+        return;
+      }
+      // Promotion succeeded — mark the durable prompt consumed.
+      await queue.completePromotion(entry.id);
+      reservedId = undefined;
       const handle = this.promoteToRunning(turn, controller);
       const resolver = this.followupResolvers.get(entry.id);
       if (resolver !== undefined) {
         this.followupResolvers.delete(entry.id);
         void handle.outcome.then(resolver);
       }
-    } catch {
+    } catch (err) {
+      // P38-2 (INV-P38-003): promotion failure — release the reservation and
+      // requeue the reserved input (never consumed, never lost).
       if (this.state.kind === "starting" && this.state.requestId === requestId) {
         this.state = { kind: "idle" };
       }
+      if (reservedId !== undefined) {
+        try {
+          await queue.releasePromotion(reservedId);
+        } catch (releaseErr) {
+          // The queue is best-effort here; the durable inbox record is still
+          // pending so hydration on restart recovers it. Surface the loss so
+          // it is never silent (P14-6).
+          process.stderr.write(
+            `[degraded] session ${this.sessionId} failed to release reserved followup ${reservedId}: ${releaseErr instanceof Error ? releaseErr.message : String(releaseErr)}\n`,
+          );
+        }
+      }
     }
+  }
+
+  /** @internal P38 test seam: run the followup drain against a (possibly
+   *  gated) queue override. */
+  drainFollowupsForTest(queue?: SessionInputQueue): Promise<void> {
+    return this.drainFollowups(queue);
   }
 
   private async requireTurn(turnId: TurnId): Promise<Turn> {
@@ -591,11 +668,19 @@ export class DefaultSessionActor implements SessionActor {
 }
 
 /** P25-2: manager of live session actors — load on demand, unload on close. */
+/** P38-5 (INV-P38-006): identity-bearing loading entry — an older load
+ *  generation can never delete/replace the entry owned by a newer one. */
+interface LoadingEntry {
+  generation: number;
+  controller: AbortController;
+  promise: Promise<SessionActor>;
+}
+
 export class DefaultLoadedSessionManager implements LoadedSessionManager {
   private readonly actors = new Map<SessionId, SessionActor>();
   /** P36-3 (INV-P36-002): single-flight loading table. Stored BEFORE the
    *  first await so concurrent load(id) calls resolve to the SAME actor. */
-  private readonly loading = new Map<SessionId, Promise<SessionActor>>();
+  private readonly loading = new Map<SessionId, LoadingEntry>();
   /** P37-2 (INV-P37-002): generation fencing — unload/close bumps the
    *  generation so an older in-flight load cannot install an actor after
    *  unload/close has won. */
@@ -608,20 +693,21 @@ export class DefaultLoadedSessionManager implements LoadedSessionManager {
     const existing = this.actors.get(id);
     if (existing !== undefined) return existing;
     const inflight = this.loading.get(id);
-    if (inflight !== undefined) return inflight;
+    if (inflight !== undefined) return inflight.promise;
     // P37-2: capture the generation BEFORE the first await.
     const generation = this.generations.get(id) ?? 0;
     const controller = new AbortController();
-    const promise = this.doLoad(id, generation, controller);
-    this.loading.set(id, promise);
-    return promise;
+    const entry: LoadingEntry = { generation, controller, promise: undefined! };
+    entry.promise = this.doLoad(id, entry);
+    this.loading.set(id, entry);
+    return entry.promise;
   }
 
-  private async doLoad(id: SessionId, generation: number, controller: AbortController): Promise<SessionActor> {
+  private async doLoad(id: SessionId, entry: LoadingEntry): Promise<SessionActor> {
     try {
       const session = await this.deps.store.getSession(id);
-      // P37-2: unload/close may have won while getSession() was in flight.
-      if (this.closed || (this.generations.get(id) ?? 0) !== generation || controller.signal.aborted) {
+      // P37-2/P38-5: unload/close may have won while getSession() was in flight.
+      if (this.closed || (this.generations.get(id) ?? 0) !== entry.generation || entry.controller.signal.aborted) {
         throw new AgentError(errorInfo("LOAD_CANCELLED", `session load ${id} was cancelled`));
       }
       if (session === undefined) {
@@ -638,21 +724,30 @@ export class DefaultLoadedSessionManager implements LoadedSessionManager {
         },
       });
       // Re-check under the same fence: nothing may install after unload/close.
-      if (this.closed || (this.generations.get(id) ?? 0) !== generation || controller.signal.aborted) {
+      if (this.closed || (this.generations.get(id) ?? 0) !== entry.generation || entry.controller.signal.aborted) {
         await actor.close();
         throw new AgentError(errorInfo("LOAD_CANCELLED", `session load ${id} was cancelled`));
       }
       this.actors.set(id, actor);
       return actor;
     } finally {
-      this.loading.delete(id);
+      // P38-5 (INV-P38-006): never delete an entry we do not own. A stale
+      // finally from an older generation must not remove a newer entry.
+      if (this.loading.get(id) === entry) {
+        this.loading.delete(id);
+      }
     }
   }
 
   async unload(id: SessionId): Promise<void> {
-    // P37-2: fence out any in-flight load for this id.
+    // P38-5: fence out any in-flight load AND abort its controller (delete is
+    // not cancellation — the in-flight getSession must be aborted too).
     this.generations.set(id, (this.generations.get(id) ?? 0) + 1);
-    this.loading.delete(id);
+    const entry = this.loading.get(id);
+    if (entry !== undefined) {
+      entry.controller.abort();
+      this.loading.delete(id);
+    }
     const actor = this.actors.get(id);
     if (actor === undefined) return;
     await actor.close();
@@ -668,6 +763,10 @@ export class DefaultLoadedSessionManager implements LoadedSessionManager {
     // P37-2: invalidate every generation so no in-flight load can install.
     for (const id of this.generations.keys()) {
       this.generations.set(id, (this.generations.get(id) ?? 0) + 1);
+    }
+    // P38-5: abort in-flight load controllers too (delete is not cancellation).
+    for (const entry of this.loading.values()) {
+      entry.controller.abort();
     }
     const actors = [...this.actors.values()];
     await Promise.all(actors.map((a) => a.close()));

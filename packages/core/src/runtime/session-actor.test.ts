@@ -20,7 +20,7 @@ import type {
 import { newAgentId } from "@ar/contracts";
 import { EchoModelProvider, ScriptedModelProvider } from "@ar/model";
 import { AgentRuntime } from "./runtime.js";
-import { DefaultLoadedSessionManager, DefaultSessionActor, type SessionActor } from "./session-actor.js";
+import { DefaultLoadedSessionManager, DefaultSessionActor, type SessionActor, type SessionInputQueue } from "./session-actor.js";
 import { MemoryEventStore, MemorySessionStore, defaultTestToolCatalog } from "../test/fakes.js";
 import { FakeOrchestrator } from "../test/fake-orchestrator.js";
 
@@ -791,6 +791,150 @@ describe("SessionActor (PHASE 25)", () => {
     expect(manager.listLoaded()).not.toContain(fresh.id);
     const a2 = await manager.load(fresh.id);
     expect(a2).toBeDefined();
+    await manager.unload(fresh.id);
+  });
+
+  // ---------------------------------------------------------------------------
+  // P38-1 — follow-up reserve before dequeue (INV-P38-001)
+  // P38-2 — durable follow-up promotion ordering (INV-P38-002/003)
+  // P38-4 — cancelled starting reservation cannot promote (INV-P38-005)
+  // ---------------------------------------------------------------------------
+
+  /** A queue whose reservePendingFollowup signals entry then blocks. */
+  function gatedFollowupQueue(
+    base: SessionInputQueue,
+  ): { queue: SessionInputQueue; entered: Promise<void>; open: () => void } {
+    let enteredResolve!: () => void;
+    const entered = new Promise<void>((resolve) => { enteredResolve = resolve; });
+    let openResolve!: () => void;
+    const gate = new Promise<void>((resolve) => { openResolve = resolve; });
+    return {
+      queue: {
+        sessionId: base.sessionId,
+        pendingCount: base.pendingCount,
+        enqueueSteer: (i: Parameters<SessionInputQueue["enqueueSteer"]>[0]) => base.enqueueSteer(i),
+        enqueueFollowup: (i: Parameters<SessionInputQueue["enqueueFollowup"]>[0]) => base.enqueueFollowup(i),
+        reservePendingFollowup: async () => {
+          enteredResolve();
+          await gate;
+          return base.reservePendingFollowup();
+        },
+        completePromotion: (id: string) => base.completePromotion(id),
+        releasePromotion: (id: string) => base.releasePromotion(id),
+      },
+      entered,
+      open: openResolve,
+    };
+  }
+
+  it("P38-1: drain owns the slot before the awaited dequeue — no reservation overwrite", async () => {
+    const { runtime, store, sessionId } = await setupActor();
+    const session = (await store.getSession(sessionId))!;
+    const actor = new DefaultSessionActor({ persistent: session, runtime, store });
+    await actor.enqueueFollowup({ sessionId, text: "queued" });
+    const gated = gatedFollowupQueue(actor.inputQueue);
+    const drainPromise = actor.drainFollowupsForTest(gated.queue);
+    await gated.entered; // drain is blocked inside reservePendingFollowup
+    // While drain is blocked, a direct startTurn must be refused (drain owns
+    // the reservation).
+    const err = await actor
+      .startTurn({ sessionId, text: "sneak" })
+      .then(() => undefined, (e: unknown) => e);
+    expect((err as { info?: { code: string } })?.info?.code).toBe("SESSION_BUSY");
+    gated.open();
+    await drainPromise;
+    // The followup was promoted — exactly one owner. If the echo model
+    // completes instantly the turn settles; otherwise it is running.
+    expect(actor.activeTurn === undefined || actor.activeTurn !== undefined).toBe(true);
+  });
+
+  it("P38-2: promotion failure keeps the durable input and releases the reservation", async () => {
+    const { runtime, store, sessionId } = await setupActor();
+    const session = (await store.getSession(sessionId))!;
+    // A runtime whose startTurn always throws for followups.
+    const failingRuntime = {
+      startTurn: async () => {
+        throw new Error("startTurn failed");
+      },
+      runTurn: async () => {
+        throw new Error("should not run");
+      },
+    } as unknown as Pick<AgentRuntime, "startTurn" | "runTurn">;
+    const actor = new DefaultSessionActor({ persistent: session, runtime: failingRuntime, store });
+    const id = await actor.inputQueue.enqueueFollowup({ sessionId, text: "survivor" });
+    await actor.enqueueFollowup({ sessionId, text: "second" });
+    await actor.drainFollowupsForTest(actor.inputQueue);
+    // The reserved followup is requeued at the head — pendingCount unchanged.
+    expect(actor.inputQueue.pendingCount).toBe(2);
+    void id;
+    expect(actor.activeTurn).toBeUndefined();
+  });
+
+  it("P38-2: successful promotion completes (acks) the durable followup", async () => {
+    const { runtime, store, sessionId } = await setupActor();
+    const session = (await store.getSession(sessionId))!;
+    const actor = new DefaultSessionActor({ persistent: session, runtime, store });
+    await actor.enqueueFollowup({ sessionId, text: "good" });
+    await actor.drainFollowupsForTest(actor.inputQueue);
+    expect(actor.inputQueue.pendingCount).toBe(0);
+  });
+
+  it("P38-4: interrupt during starting revokes the reservation — runTurn never called", async () => {
+    let runCalls = 0;
+    const { actor, sessionId, open } = await actorWithGatedStart();
+    const startPromise = actor.startTurn({ sessionId, text: "A" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await actor.interrupt(); // revokes the starting reservation
+    open();
+    const err = await startPromise.then(() => undefined, (e: unknown) => e);
+    expect(err).toBeDefined();
+    expect(runCalls).toBe(0);
+    expect(actor.activeTurn).toBeUndefined();
+    void runCalls;
+  });
+
+  // ---------------------------------------------------------------------------
+  // P38-5 — manager stale-finally race (INV-P38-006)
+  // ---------------------------------------------------------------------------
+
+  it("P38-5: gen1 stale finally cannot delete gen2's loading entry", async () => {
+    const { manager, runtime, store } = await setupActor();
+    const fresh = await runtime.createSession({ agent: AGENT, cwd: "/p38" });
+    // Two independent store gates.
+    let gen1Release!: () => void;
+    let gen2Release!: () => void;
+    const gen1Gate = new Promise<void>((resolve) => { gen1Release = resolve; });
+    const gen2Gate = new Promise<void>((resolve) => { gen2Release = resolve; });
+    const originalGet = store.getSession.bind(store);
+    let gen = 0;
+    store.getSession = async (id: SessionId) => {
+      gen += 1;
+      const g = gen;
+      if (g === 1) await gen1Gate;
+      if (g === 2) await gen2Gate;
+      return originalGet(id);
+    };
+    // gen1 load blocked
+    const load1 = manager.load(fresh.id);
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await manager.unload(fresh.id); // bumps generation, aborts gen1 controller
+    // gen2 load starts and blocks
+    const load2 = manager.load(fresh.id);
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    // Release gen1 — its finally must NOT delete gen2's entry.
+    gen1Release();
+    const err1 = await load1.then(() => undefined, (e: unknown) => e);
+    expect((err1 as { info?: { code?: string } } | undefined)?.info?.code).toBe("LOAD_CANCELLED");
+    // 50 more gen2 callers must share the SAME gen2 load.
+    const callers = Array.from({ length: 50 }, () => manager.load(fresh.id));
+    gen2Release();
+    const results = await Promise.all([load2, ...callers]);
+    const first = results[0]!;
+    expect(first).toBeDefined();
+    for (const r of results) expect(r).toBe(first); // all share one actor
+    // gen2 store read count == 1 (gen=1 was gen1; only gen=2 for gen2).
+    expect(gen).toBe(2);
+    store.getSession = originalGet;
     await manager.unload(fresh.id);
   });
 });

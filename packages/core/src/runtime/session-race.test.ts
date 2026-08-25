@@ -126,6 +126,18 @@ async function catchCode(p: Promise<unknown>): Promise<string | undefined> {
   }
 }
 
+/** P38-14: wait until the actor reaches idle (no running turn, no drain
+ *  reservation). Polls the diagnostic executionState — no arbitrary sleeps. */
+async function waitUntilIdle(actor: SessionActor, timeoutMs = 2000): Promise<void> {
+  const started = Date.now();
+  while (actor.executionState !== "idle") {
+    if (Date.now() - started > timeoutMs) {
+      throw new Error(`actor did not reach idle (state=${actor.executionState})`);
+    }
+    await new Promise<void>((resolve) => setTimeout(resolve, 2));
+  }
+}
+
 describe("P34-2 same-session race suite", () => {
   it("2.1 racing a second runTurn at a live turn — refused (SESSION_BUSY), never two live runs", async () => {
     const h = await setup();
@@ -165,7 +177,9 @@ describe("P34-2 same-session race suite", () => {
     await h.provider.whenEntered();
     const status = await h.actor.cancelTurn(first.turnId); // aborts the live one
     expect(status).toBe("cancelled");
-    // after the live run settles the session is free — a fresh turn runs alone
+    // P38-1: after cancellation the drain (if any) releases the reservation —
+    // wait for the actor to be genuinely idle before starting a fresh turn.
+    await waitUntilIdle(h.actor);
     const second = await h.actor.startTurn({ sessionId: h.sessionId, text: "after-cancel" });
     await h.provider.whenEntered();
     h.provider.release();

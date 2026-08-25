@@ -16,7 +16,7 @@
     "test:security": "vitest run packages/security packages/harness/src/security-regression-matrix.test.ts",
     "test:race": "vitest run packages/core/src/runtime/race-split.test.ts packages/core/src/runtime/race-part0.test.ts packages/core/src/runtime/race-part1.test.ts packages/core/src/runtime/race-part2.test.ts packages/core/src/runtime/race-part3.test.ts packages/core/src/runtime/race-part4.test.ts packages/core/src/runtime/race-bisect.test.ts packages/core/src/runtime/race-bisect3.test.ts packages/core/src/runtime/race-bisect5.test.ts packages/core/src/runtime/session-race.test.ts packages/core/src/runtime/session-race2.test.ts",
     "test:chaos": "vitest run packages/mcp/src/mcp-chaos.test.ts",
-    "capability:audit": "node apps/cli/dist/main.js audit",
+    "capability:audit": "node apps/cli/dist/main.js audit --strict",
     "release:verify": "node apps/cli/dist/main.js release verify",
     "deps:audit": "pnpm audit"
   },

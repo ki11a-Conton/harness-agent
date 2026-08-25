@@ -185,7 +185,9 @@ describe("P30-4 abort → turn/interrupt", () => {
   it("aborting mid-run invokes turn/interrupt with the right turnId", async () => {
     seq = 0;
     const called: Record<string, unknown>[] = [];
-    const transport = makeTransport([delta("start"), turnInterrupted()], {
+    // P38-7: abort happens MID-RUN — no terminal event in the fixture, so the
+    // abort listener is still armed when the signal fires.
+    const transport = makeTransport([delta("start")], {
       onInvoke: (m, p) => {
         if (m === "turn/interrupt") called.push(p);
       },
