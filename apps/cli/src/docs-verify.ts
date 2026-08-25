@@ -52,14 +52,6 @@ function claimedSuiteCount(readme: string, suite: string): number | undefined {
   return Number(match[1]);
 }
 
-async function dirEntryCount(dir: string): Promise<number> {
-  try {
-    return (await readdir(dir, { withFileTypes: true })).filter((e) => e.isDirectory()).length;
-  } catch {
-    return 0;
-  }
-}
-
 async function fileContains(file: string, needles: string[]): Promise<{ exists: boolean; found: boolean[] }> {
   let content = "";
   let exists = true;
@@ -108,36 +100,44 @@ export async function verifyDocs(deps: { root: string }): Promise<DocVerificatio
     });
   }
 
-  // ---- package count integrity (packages/ inventory validity) ----
-  // The handoff docs (HANDOFF/HANDOVER) are gone; the check now validates the
-  // workspace structure directly: every packages/<name> directory must carry
-  // its own package.json (a well-formed pnpm workspace member).
-  const actualPackages = await dirEntryCount(packagesRoot);
-  const packageJsonDirs = await (async () => {
-    try {
-      const entries = await readdir(packagesRoot, { withFileTypes: true });
-      let count = 0;
-      for (const e of entries) {
-        if (!e.isDirectory()) continue;
-        try {
-          await readFile(join(packagesRoot, e.name, "package.json"), "utf8");
-          count += 1;
-        } catch {
-          // directory without package.json — not a workspace member
-        }
-      }
-      return count;
-    } catch {
-      return 0;
+  // ---- package count integrity (packages/ inventory vs HANDOVER claim) ----
+  // P20-3: the HANDOVER doc carries a claimed package count (`packages/（N 个包）`).
+  // Machine truth = the claim must equal the number of packages/ members that
+  // carry their own package.json. An absent claim or an unreadable HANDOVER.md
+  // fails closed (never silently skipped).
+  let handover = "";
+  try {
+    handover = await readFile(join(root, "HANDOVER.md"), "utf8");
+  } catch (err) {
+    process.stderr.write(`[docs:verify] HANDOVER.md unreadable: ${err instanceof Error ? err.message : String(err)}
+`);
+  }
+  const handoverClaim = handover.match(/packages\/\s*（?(\d+)\s*个包/);
+  const claimedPackages = handoverClaim === null ? undefined : Number(handoverClaim[1]);
+
+  let actualPackages = 0;
+  try {
+    const entries = await readdir(packagesRoot, { withFileTypes: true });
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      const hasPackageJson = await readFile(join(packagesRoot, e.name, "package.json"), "utf8")
+        .then(() => true)
+        .catch(() => false);
+      if (hasPackageJson) actualPackages += 1;
     }
-  })();
-  const packageCountTruthful = packageJsonDirs === actualPackages;
+  } catch {
+    actualPackages = 0;
+  }
+
+  const packageCountTruthful = claimedPackages !== undefined && claimedPackages === actualPackages;
   checks.push({
     name: "package count",
     truthful: packageCountTruthful,
     reason: packageCountTruthful
-      ? `${actualPackages} packages/ members each carry package.json`
-      : `${actualPackages} packages/ directories but only ${packageJsonDirs} carry package.json`,
+      ? `${actualPackages} packages/ on disk matches the HANDOVER claim ${claimedPackages}`
+      : claimedPackages === undefined
+        ? `HANDOVER.md does not claim a package count (packages/ on disk: ${actualPackages})`
+        : `HANDOVER claims ${claimedPackages} packages but ${actualPackages} are on disk`,
   });
 
   // ---- CI gates: a workflow exists AND runs test + coverage ----

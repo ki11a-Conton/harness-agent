@@ -121,7 +121,7 @@ describe("P2-7: learn promote", () => {
     const result = await learnCmd(["promote", "lc-test"], {
       candidates,
       memoryStore: memory,
-      cwd: "/workspace",
+      cwd: dataDir, // a non-git temp dir → path identity → scope "workspace"
     });
 
     expect(result.exitCode).toBe(0);
