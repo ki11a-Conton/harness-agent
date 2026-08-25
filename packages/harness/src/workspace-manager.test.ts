@@ -146,9 +146,11 @@ describe("P3-5: diff + physical apply", () => {
 
 describe("P3-4: path safety", () => {
   it("rejects traversal and absolute paths", () => {
-    // Use a platform-appropriate root (resolve turns `/root` into a usable
-    // absolute path on both Windows and POSIX).
-    const root = resolve("/root");
+    // Use a real, accessible absolute root (tmpdir). `/root` on Linux CI is
+    // a real directory the runner cannot read (EACCES) — canonicalization
+    // fails closed with CanonicalizationFailed, which breaks the positive
+    // assertion below. tmpdir is readable on every platform.
+    const root = join(tmpdir(), `ws-root-${process.pid}`);
     expect(safeJoin(root, "../escape")).toBeUndefined();
     expect(safeJoin(root, "a/../../escape")).toBeUndefined();
     expect(safeJoin(root, "/absolute")).toBeUndefined();

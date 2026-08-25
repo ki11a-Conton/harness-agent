@@ -66,10 +66,12 @@ jobs:
       - name: Unit and integration tests
         # bash on both runners (Git Bash ships with windows-latest); the single
         # command propagates its exit code while the log is kept for P12-5.
+        # P37-13: tee to console so GitHub job logs show failure details even
+        # when the redirection to file hides them from the Actions UI.
         shell: bash
         run: |
           mkdir -p .ci
-          pnpm test > .ci/test-report.log 2>&1
+          pnpm test 2>&1 | tee .ci/test-report.log
 
       - name: Build
         run: pnpm build
@@ -102,6 +104,8 @@ jobs:
           if-no-files-found: error
 
       - name: Upload test report (P12-5)
+        # P37-13: upload even on failure so CI failures are debuggable.
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-report-${{ matrix.os }}
