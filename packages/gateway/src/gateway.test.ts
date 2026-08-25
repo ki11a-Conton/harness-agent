@@ -17,7 +17,7 @@ import type {
   Turn,
   TurnId,
 } from "@ar/contracts";
-import { newAgentId, newApprovalId, newEventId } from "@ar/contracts";
+import { eventSinkFromStore, newAgentId, newApprovalId, newEventId } from "@ar/contracts";
 import { AgentRuntime, DefaultLoadedSessionManager } from "@ar/core";
 import { ScriptedModelProvider } from "@ar/model";
 import { SessionService } from "@ar/session";
@@ -213,7 +213,7 @@ function makeGateway(
   });
   const sessionService = new SessionService({ store });
   const approvalStore = new InMemoryApprovalStore(() => clock.t);
-  const sessions = new DefaultLoadedSessionManager({ runtime, store });
+  const sessions = new DefaultLoadedSessionManager({ runtime, store, emit: eventSinkFromStore(events) });
   const rpc = createRuntimeRpc(runtime, { sessionService, sessions, approvalStore, events });
   const channels = opts.channels ?? [new FakeChannel("ch-a")];
   const gateway = new Gateway({

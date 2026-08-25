@@ -18,7 +18,7 @@ import type {
   Turn,
   TurnId,
 } from "@ar/contracts";
-import { newAgentId, newSkillId } from "@ar/contracts";
+import { eventSinkFromStore, newAgentId, newSkillId } from "@ar/contracts";
 import { AgentRuntime, DefaultLoadedSessionManager } from "@ar/core";
 import { ScriptedModelProvider } from "@ar/model";
 import { SessionService } from "@ar/session";
@@ -170,7 +170,7 @@ function makeHarness(opts: { blocking?: boolean; ingressCapacity?: number } = {}
   });
   const sessionService = new SessionService({ store });
   const approvalStore = new InMemoryApprovalStore();
-  const sessions = new DefaultLoadedSessionManager({ runtime, store });
+  const sessions = new DefaultLoadedSessionManager({ runtime, store, emit: eventSinkFromStore(events) });
   const registry = createRuntimeRpc(runtime, {
     sessionService,
     sessions,

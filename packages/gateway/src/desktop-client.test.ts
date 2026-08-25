@@ -17,7 +17,7 @@ import type {
   Turn,
   TurnId,
 } from "@ar/contracts";
-import { AgentError, newAgentId, newApprovalId } from "@ar/contracts";
+import { AgentError, eventSinkFromStore, newAgentId, newApprovalId } from "@ar/contracts";
 import { AgentRuntime, DefaultLoadedSessionManager } from "@ar/core";
 import { ScriptedModelProvider } from "@ar/model";
 import { SessionService } from "@ar/session";
@@ -222,7 +222,7 @@ function makeClient(
   const approvalStore = new InMemoryApprovalStore(
     opts.clock === undefined ? undefined : () => opts.clock!.t,
   );
-  const sessions = new DefaultLoadedSessionManager({ runtime, store });
+  const sessions = new DefaultLoadedSessionManager({ runtime, store, emit: eventSinkFromStore(events) });
   const registry = createRuntimeRpc(runtime, {
     sessionService,
     sessions,

@@ -80,6 +80,7 @@ import {
   type HarnessProfile,
 } from "./config.js";
 import type { AgentEvent } from "@ar/contracts";
+import { eventSinkFromStore } from "@ar/contracts";
 import type { HarnessIntrospection } from "./introspection.js";
 import { Lifecycle, MemoryStoreCloser } from "./lifecycle.js";
 import { CommandDiscoveryService } from "./command-discovery-service.js";
@@ -652,6 +653,9 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     store,
     ...(inbox !== undefined ? { inbox } : {}),
     ...(config.now !== undefined ? { now: config.now } : {}),
+    // P38.1-12/13: keep the durable event stream complete when a starting turn
+    // is revoked before promotion (the runtime is uninvolved → actor seam).
+    emit: eventSinkFromStore(events, config.now),
   });
 
   // P27-4: freeze the CURRENT effective-config fingerprint for a session

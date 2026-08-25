@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { releaseVerifyCmd, resolveReleaseVerdict } from "./release-command.js";
+import { GATE_COMMANDS } from "./release-verify.js";
 
 const HEAD = "0123456789abcdef";
 const REQUIRED_IDS = ["typecheck","test","build","coverage","docs","benchmark_smoke","protocol","security","race","chaos","capability_audit"];
@@ -22,8 +23,13 @@ async function tmpEvidenceDir(): Promise<string> {
 }
 
 function evidenceFile(id: string, exitCode: number | null): string {
-  return JSON.stringify({ gate: id, headSha: HEAD, command: `cmd ${id}`, exitCode });
+  return JSON.stringify({ gate: id, headSha: HEAD, command: GATE_COMMANDS[requiredGateIndex(id)], exitCode });
 }
+
+/** Resolve the canonical gate command for a gate id (provenance is checked by
+ *  the verifier — the fixture must record the exact canonical command). */
+const requiredGateIndex = (id: string): keyof typeof GATE_COMMANDS =>
+  id as keyof typeof GATE_COMMANDS;
 
 describe("P36-1 release verify CLI", () => {
   it("all gates green at HEAD → exit 0, READY", async () => {
@@ -57,7 +63,7 @@ describe("P36-1 release verify CLI", () => {
   it("stale SHA evidence → blocked, exit non-zero", async () => {
     const dir = await tmpEvidenceDir();
     for (const id of REQUIRED_IDS) {
-      await writeFile(join(dir, `${id}.json`), JSON.stringify({ gate: id, headSha: id === "test" ? "deadbeef" : HEAD, command: `cmd ${id}`, exitCode: 0 }));
+      await writeFile(join(dir, `${id}.json`), JSON.stringify({ gate: id, headSha: id === "test" ? "deadbeef" : HEAD, command: GATE_COMMANDS[requiredGateIndex(id)], exitCode: 0 }));
     }
     const result = await releaseVerifyCmd([], { root: process.cwd(), evidenceDir: dir, headSha: HEAD });
     expect(result.exitCode).toBe(1);
