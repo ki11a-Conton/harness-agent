@@ -554,35 +554,40 @@ describe("SessionActor (PHASE 25)", () => {
   // P37-1 — unified actor admission state machine (INV-P37-001)
   // ---------------------------------------------------------------------------
 
-  /** A runtime stub whose startTurn blocks until the gate opens. */
-  function gatedStartRuntime(real: AgentRuntime): { runtime: Pick<AgentRuntime, "startTurn" | "runTurn">; open: () => void } {
+  /** A runtime stub whose startTurn signals entered then blocks until the
+   *  gate opens. P38-14: no setTimeout resolves for 'entered' guarantee. */
+  function gatedStartRuntime(real: AgentRuntime): { runtime: Pick<AgentRuntime, "startTurn" | "runTurn">; entered: Promise<void>; open: () => void } {
+    let enteredResolve!: () => void;
+    const entered = new Promise<void>((resolve) => { enteredResolve = resolve; });
     let open!: () => void;
     const gate = new Promise<void>((resolve) => { open = resolve; });
     return {
       runtime: {
         startTurn: async (sid: SessionId, text: string) => {
+          enteredResolve();
           await gate;
           return real.startTurn(sid, text);
         },
         runTurn: (sid: SessionId, turnId: unknown, signal?: AbortSignal) =>
           real.runTurn(sid, turnId as never, signal as AbortSignal),
       },
+      entered,
       open,
     };
   }
 
-  async function actorWithGatedStart(): Promise<{ actor: SessionActor; sessionId: SessionId; open: () => void }> {
+  async function actorWithGatedStart(): Promise<{ actor: SessionActor; sessionId: SessionId; entered: Promise<void>; open: () => void }> {
     const { runtime, store, sessionId } = await setupActor();
     const session = (await store.getSession(sessionId))!;
-    const { runtime: gated, open } = gatedStartRuntime(runtime);
+    const { runtime: gated, entered, open } = gatedStartRuntime(runtime);
     const actor = new DefaultSessionActor({ persistent: session, runtime: gated, store });
-    return { actor, sessionId, open };
+    return { actor, sessionId, entered, open };
   }
 
   it("P37-1 A — startTurn vs runTurn: runTurn while starting → SESSION_BUSY", async () => {
-    const { actor, sessionId, open } = await actorWithGatedStart();
+    const { actor, sessionId, entered, open } = await actorWithGatedStart();
     const startPromise = actor.startTurn({ sessionId, text: "A" });
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await entered;
     // The actor is "starting" — runTurn must be refused, not cross the boundary.
     const err = await actor
       .runTurn("turn_nonexistent" as TurnId)
@@ -595,7 +600,7 @@ describe("SessionActor (PHASE 25)", () => {
   });
 
   it("P37-1 B — startTurn vs createTurn: createTurn while starting → SESSION_BUSY", async () => {
-    const { actor, sessionId, open } = await actorWithGatedStart();
+    const { actor, sessionId, entered, open } = await actorWithGatedStart();
     const startPromise = actor.startTurn({ sessionId, text: "A" });
     await new Promise<void>((resolve) => setTimeout(resolve, 10));
     const err = await actor
@@ -609,11 +614,11 @@ describe("SessionActor (PHASE 25)", () => {
   });
 
   it("P37-1 C — direct start vs followup drain: max live owner = 1", async () => {
-    const { actor, sessionId, open } = await actorWithGatedStart();
+    const { actor, sessionId, entered, open } = await actorWithGatedStart();
     // Queue a followup while the actor is idle (before any turn).
     await actor.enqueueFollowup({ sessionId, text: "queued" });
     const first = actor.startTurn({ sessionId, text: "A" });
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await entered;
     // While "starting" for A, a direct start must be refused (owner = 1).
     const err = await actor
       .startTurn({ sessionId, text: "sneak" })
@@ -643,9 +648,9 @@ describe("SessionActor (PHASE 25)", () => {
   });
 
   it("P37-1 E — close during starting: no late promotion", async () => {
-    const { actor, sessionId, open } = await actorWithGatedStart();
+    const { actor, sessionId, entered, open } = await actorWithGatedStart();
     const startPromise = actor.startTurn({ sessionId, text: "A" });
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await entered;
     await actor.close();
     open();
     const err = await startPromise.then(() => undefined, (e: unknown) => e);
@@ -654,9 +659,9 @@ describe("SessionActor (PHASE 25)", () => {
   });
 
   it("P37-1 F — interrupt during starting: no late running turn", async () => {
-    const { actor, sessionId, open } = await actorWithGatedStart();
+    const { actor, sessionId, entered, open } = await actorWithGatedStart();
     const startPromise = actor.startTurn({ sessionId, text: "A" });
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await entered;
     await actor.interrupt(); // aborts the starting reservation
     open();
     // The start may resolve (controller aborted → cancelled) but must never
@@ -881,9 +886,9 @@ describe("SessionActor (PHASE 25)", () => {
 
   it("P38-4: interrupt during starting revokes the reservation — runTurn never called", async () => {
     let runCalls = 0;
-    const { actor, sessionId, open } = await actorWithGatedStart();
+    const { actor, sessionId, entered, open } = await actorWithGatedStart();
     const startPromise = actor.startTurn({ sessionId, text: "A" });
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await entered;
     await actor.interrupt(); // revokes the starting reservation
     open();
     const err = await startPromise.then(() => undefined, (e: unknown) => e);

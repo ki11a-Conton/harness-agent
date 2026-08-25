@@ -174,4 +174,54 @@ describe("P36-6 — canonicalization error taxonomy (INV-P36-006)", () => {
     }
     // No path triggered a permission error — skip (platform limitation).
   });
+
+  // ---------------------------------------------------------------------------
+  // P38-13 — deterministic canonical error taxonomy (INV-P38-016)
+  // ---------------------------------------------------------------------------
+
+  /** Fake realpath that throws a specific error code. */
+  function fakeRealpath(code: string): (p: string) => string {
+    return (p: string) => {
+      const err = new Error(`fake ${code}`) as NodeJS.ErrnoException;
+      err.code = code;
+      throw err;
+    };
+  }
+
+  it.each([
+    ["EACCES", "permission"],
+    ["EPERM", "permission"],
+    ["ELOOP", "symlink_loop"],
+    ["EIO", "io"],
+    ["UNKNOWN_CODE", "unknown"],
+  ] as const)("P38-13: %s → CanonicalizationFailed(code=%s)", (errCode, expectedCode) => {
+    try {
+      canonicalizePath("/some/path", { cwd }, { realpath: fakeRealpath(errCode) });
+      throw new Error("expected canonicalizePath to throw");
+    } catch (err) {
+      if (err instanceof CanonicalizationFailed) {
+        expect(err.code).toBe(expectedCode);
+        expect(err.path).toBe("/some/path");
+      } else {
+        throw err;
+      }
+    }
+  });
+
+  it("P38-13: depth exhaustion throws CanonicalizationFailed(code=depth)", () => {
+    // A path deeper than the 64-ancestor cap, with a fake realpath that
+    // always throws ENOENT (each ancestor walk tries another level without
+    // reaching the root before the cap).
+    const deep = `/${Array.from({ length: 80 }, (_, i) => `d${i}`).join("/")}`;
+    try {
+      canonicalizePath(deep, { cwd }, { realpath: fakeRealpath("ENOENT") });
+      throw new Error("expected canonicalizePath to throw");
+    } catch (err) {
+      if (err instanceof CanonicalizationFailed) {
+        expect(err.code).toBe("depth");
+      } else {
+        throw err;
+      }
+    }
+  });
 });

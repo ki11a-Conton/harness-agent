@@ -1,9 +1,19 @@
-# 交接文档（HANDOFF）
+# Harness Agent Handoff
 
-- **生成时间**：2026-08-23 22:35（GMT+8）
-- **仓库**：`D:\Download games\harness agent\harness-agent-src\harness-agent`（多包 TypeScript，pnpm workspace）
+## Current release status
+
+- Current HEAD: `8f27ad0` (P38 work in progress, working tree has uncommitted changes)
+- Release target SHA: to be set after P38-16 final gates
+- Branch/tag: `main`
+- Working tree: dirty (P38-13/14/15 in flight)
+- Current closure phase: P38 (Streaming & Evidence Truth Closure)
+- Release verdict: pending P38-16 final gates
+- Official CI attestation: last green run was `a1cfa9e` (all 4 jobs PASS)
+
+- **生成时间**：2026-08-25 10:50（GMT+8）
+- **仓库**：`ki11a-Conton/harness-agent`（多包 TypeScript，pnpm workspace）
 - **包数量**：24 packages 在 `packages/` 下
-- **当前阶段**：P37（最终收尾），P37-0~P37-10 已完成
+- **当前阶段**：P38（流式与证据真值收尾），P38-0~P38-14 已完成
 
 ---
 

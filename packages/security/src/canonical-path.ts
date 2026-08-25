@@ -61,8 +61,16 @@ export interface CanonicalizeOptions {
  * heuristic.  EACCES, EPERM, ELOOP, EIO, and other errors throw a typed
  * CanonicalizationFailed — path containment decisions are denied, never
  * silently bypassed.
+ *
+ * P38-13 (INV-P38-016): the optional `fs` parameter allows injecting a fake
+ * realpath for deterministic taxonomy tests. When omitted, `realpathSync`
+ * from node:fs is used.
  */
-export function canonicalizePath(target: string, opts: CanonicalizeOptions): string {
+export function canonicalizePath(
+  target: string,
+  opts: CanonicalizeOptions,
+  fs?: { realpath: (p: string) => string },
+): string {
   if (typeof target !== "string" || target.length === 0) {
     throw new Error(`cannot canonicalize empty path`);
   }
@@ -74,15 +82,16 @@ export function canonicalizePath(target: string, opts: CanonicalizeOptions): str
   const absolute = isAbsolute(target) ? target : resolve(opts.cwd, target);
   const normalized = normaliseSeparators(absolute);
 
+  const rp = fs?.realpath ?? realpathSync;
   try {
     // Full realpath: existing path (also resolves symlinks and lets the OS
     // resolve `.`/`..` against real directory inodes).
-    return normaliseSeparators(realpathSync(normalized));
+    return normaliseSeparators(rp(normalized));
   } catch (err) {
     const nodeErr = err as NodeJS.ErrnoException;
     // P36-6: only ENOENT/ENOTDIR are eligible for the ancestor fallback.
     if (nodeErr.code === "ENOENT" || nodeErr.code === "ENOTDIR") {
-      return canonicalAncestorAndTail(normalized);
+      return canonicalAncestorAndTail(normalized, rp);
     }
     // All other errors fail closed.
     throw classifyCanonicalError(nodeErr, normalized);
@@ -107,7 +116,7 @@ function classifyCanonicalError(err: NodeJS.ErrnoException, path: string): Canon
 /** Realpath the deepest existing ancestor of `p` (which is absolute and
  *  separator-normalised), then append the remaining non-existing segments and
  *  lexically resolve any `.`/`..` in them against the canonical ancestor. */
-function canonicalAncestorAndTail(p: string): string {
+function canonicalAncestorAndTail(p: string, rp: (p: string) => string = realpathSync): string {
   // Walk up: find the deepest ancestor that exists on disk.
   let current = p;
   const walked: string[] = [];
