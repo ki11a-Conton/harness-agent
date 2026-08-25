@@ -62,9 +62,15 @@ export async function resolveRepositoryIdentity(cwd: string): Promise<Repository
     // P14-6: git is unavailable (no repo) — an expected fallback to path
     // identity, not a silent error. Reported so failures stay observable.
     process.stderr.write(`[degraded] scope-resolver.git: ${err instanceof Error ? err.message : String(err)}\n`);
-    // Resolve 8.3 short names to the long form for consistency with the git
-    // branch (the id must be stable across machines/checkouts).
-    const root = normalizePath(realpathSync(resolve(cwd)));
+    // Resolve 8.3 short names when possible, but never throw for a non-
+    // existent cwd (e.g. /workspace in CI) — realpathSync requires the path.
+    const resolved = resolve(cwd);
+    let root: string;
+    try {
+      root = normalizePath(realpathSync(resolved));
+    } catch {
+      root = normalizePath(resolved);
+    }
     return { kind: "path", id: stableHash(root), root };
   }
 }
