@@ -17,7 +17,7 @@ import type {
   ToolResult,
   TurnId,
 } from "@ar/contracts";
-import { newAgentId } from "@ar/contracts";
+import { newAgentId, newPromptId } from "@ar/contracts";
 import { EchoModelProvider, ScriptedModelProvider } from "@ar/model";
 import { AgentRuntime } from "./runtime.js";
 import {
@@ -1013,7 +1013,7 @@ describe("SessionActor (PHASE 25)", () => {
           return runtime.startTurn(sid, text);
         },
         runTurn: (sid: SessionId, turnId: TurnId, signal?: AbortSignal) =>
-          runtime.runTurn(sid, turnId, signal),
+          runtime.runTurn(sid, turnId, signal ?? new AbortController().signal),
       } as unknown as Pick<AgentRuntime, "startTurn" | "runTurn">;
       const actor = new DefaultSessionActor({ persistent: session, runtime: countingRuntime, store, inbox });
       // enqueueFollowup admits A durably AND pushes A locally; the first
@@ -1049,7 +1049,7 @@ describe("SessionActor (PHASE 25)", () => {
       const { sessionId } = await setupActor();
       const inbox = new MemInboxStore();
       await inbox.admit({
-        id: "durable-survivor",
+        id: newPromptId(),
         sessionId,
         text: "survivor",
         kind: "followup",

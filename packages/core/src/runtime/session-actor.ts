@@ -578,8 +578,59 @@ export class DefaultSessionActor implements SessionActor {
       this.state = { kind: "closing" };
     }
     this.cancellation.abort();
+    // P38.1-2 (INV-P38.1-002): terminally settle any queued followup callers
+    // still waiting for promotion — they must never hang forever on close.
+    for (const id of [...this.followupDeferred.keys()]) {
+      this.settleFollowup(id, {
+        kind: "err",
+        err: new AgentError(
+          errorInfo("ACTOR_CLOSED", `session ${this.sessionId} closed before followup promotion`),
+        ),
+      });
+    }
     this.resourceScope.release();
     this.deps.onClosed?.(this.sessionId);
+  }
+
+  /** P38.1-2 (INV-P38.1-002): a queue-mode startTurn caller's promise, tracked
+   *  by stable followup id so the drain loop can resolve/reject it. The wrapped
+   *  resolve/reject settle exactly once — the `settled` flag guards races
+   *  between promotion success, promotion failure and actor close. */
+  private createFollowupOutcome(followupId: string): Promise<TurnOutcome> {
+    const deferred: FollowupDeferred = { settled: false, resolve: undefined!, reject: undefined! };
+    const outcome = new Promise<TurnOutcome>((resolve, reject) => {
+      deferred.resolve = (value) => {
+        if (deferred.settled) return;
+        deferred.settled = true;
+        resolve(value);
+      };
+      deferred.reject = (reason) => {
+        if (deferred.settled) return;
+        deferred.settled = true;
+        reject(reason);
+      };
+    });
+    this.followupDeferred.set(followupId, deferred);
+    return outcome;
+  }
+
+  /** P38.1-2 (INV-P38.1-002): terminally settle a queued followup caller once.
+   *  Deletes from the map on first settle so a later duplicate (e.g. actor
+   *  close racing promotion) is a no-op. */
+  private settleFollowup(
+    id: string,
+    result: { kind: "ok"; outcome: TurnOutcome } | { kind: "err"; err: unknown },
+  ): void {
+    const deferred = this.followupDeferred.get(id);
+    if (deferred === undefined) return;
+    this.followupDeferred.delete(id);
+    if (deferred.settled) return;
+    deferred.settled = true;
+    if (result.kind === "ok") {
+      deferred.resolve(result.outcome);
+    } else {
+      deferred.reject(result.err);
+    }
   }
 
   /** P37-1: reserve → promote to running. */
@@ -657,8 +708,16 @@ export class DefaultSessionActor implements SessionActor {
       // P38-4: cancelled/aborted reservation cannot promote.
       if (this.state.kind !== "starting" || this.state.requestId !== requestId || controller.signal.aborted) {
         // Release the reserved followup back to the queue head so it can
-        // be retried on a later drain.
+        // be retried on a later drain. P38.1-2: the current caller must still
+        // settle terminally — the durable input is recoverable but this
+        // promotion attempt is definitively over.
         await queue.releasePromotion(entry.id);
+        this.settleFollowup(entry.id, {
+          kind: "err",
+          err: new AgentError(
+            errorInfo("FOLLOWUP_PROMOTION_FAILED", `session ${this.sessionId} followup promotion cancelled before running`),
+          ),
+        });
         reservedId = undefined;
         return;
       }
@@ -666,11 +725,12 @@ export class DefaultSessionActor implements SessionActor {
       await queue.completePromotion(entry.id);
       reservedId = undefined;
       const handle = this.promoteToRunning(turn, controller);
-      const resolver = this.followupResolvers.get(entry.id);
-      if (resolver !== undefined) {
-        this.followupResolvers.delete(entry.id);
-        void handle.outcome.then(resolver);
-      }
+      // P38.1-2 (INV-P38.1-002): resolve the queued caller with the drained
+      // turn's outcome exactly once.
+      void handle.outcome.then(
+        (outcome) => this.settleFollowup(entry.id, { kind: "ok", outcome }),
+        (err) => this.settleFollowup(entry.id, { kind: "err", err }),
+      );
     } catch (err) {
       // P38-2 (INV-P38-003): promotion failure — release the reservation and
       // requeue the reserved input (never consumed, never lost).
@@ -688,6 +748,14 @@ export class DefaultSessionActor implements SessionActor {
             `[degraded] session ${this.sessionId} failed to release reserved followup ${reservedId}: ${releaseErr instanceof Error ? releaseErr.message : String(releaseErr)}\n`,
           );
         }
+        // P38.1-2 (INV-P38.1-002): terminally settle the current caller even
+        // though the durable input is requeued / retryable — no forever-pending.
+        this.settleFollowup(reservedId, {
+          kind: "err",
+          err: new AgentError(
+            errorInfo("FOLLOWUP_PROMOTION_FAILED", `session ${this.sessionId} followup promotion failed: ${err instanceof Error ? err.message : String(err)}`),
+          ),
+        });
       }
     }
   }

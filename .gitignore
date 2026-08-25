@@ -17,3 +17,5 @@ tasks/*/artifacts/
 # PID/journal scratch from local tooling.
 spawnpid.txt
 *.pid
+# pnpm store cache (local package manager cache — never commit).
+.pnpm-store/
