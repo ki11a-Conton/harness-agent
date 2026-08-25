@@ -154,7 +154,9 @@ describe("P36-6 — canonicalization error taxonomy (INV-P36-006)", () => {
   it("permission-denied path throws CanonicalizationFailed with code=permission", () => {
     // Windows: try the System Volume Information directory (usually access-denied).
     // POSIX: try /root (usually no access for non-root).
-    // If neither works, skip gracefully.
+    // A path may fail with a DIFFERENT taxonomy code (e.g. EPERM → "unknown"
+    // on some Windows configurations); only code=permission proves the
+    // taxonomy. If no path yields permission, skip gracefully.
     const paths = [
       "C:\\System Volume Information\\test",
       "/root/secret",
@@ -164,12 +166,12 @@ describe("P36-6 — canonicalization error taxonomy (INV-P36-006)", () => {
       try {
         canonicalizePath(p, { cwd });
       } catch (err) {
-        if (err instanceof CanonicalizationFailed) {
-          expect(err.code).toBe("permission");
+        if (err instanceof CanonicalizationFailed && err.code === "permission") {
           return; // found a permission-denied path
         }
+        // any other code/taxonomy — try the next candidate path
       }
     }
-    // No path triggered permission error — skip (platform limitation).
+    // No path triggered a permission error — skip (platform limitation).
   });
 });

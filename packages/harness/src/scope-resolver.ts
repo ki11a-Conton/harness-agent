@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { resolve } from "node:path";
+import { realpathSync } from "node:fs";
 import type { MemoryScope } from "@ar/contracts";
 
 const execFileAsync = promisify(execFile);
@@ -38,7 +39,10 @@ export async function resolveRepositoryIdentity(cwd: string): Promise<Repository
       cwd,
       timeout: 5000,
     });
-    const root = normalizePath(rootOut.trim());
+    // Windows git may return 8.3 short paths (e.g. C:/Users/RUNNER~1/...).
+    // Resolve to the long form so the id is stable across machines/checkouts
+    // (P2-3 "stable across machines" contract) and matches the caller's dir.
+    const root = normalizePath(realpathSync(rootOut.trim()));
     if (root === "") throw new Error("empty git root");
     let remote = "";
     try {
