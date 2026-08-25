@@ -1,7 +1,6 @@
 // P2-3: memory scope resolver — repository identity + scope derivation.
 
 import { mkdtemp, rm } from "node:fs/promises";
-import { realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -12,10 +11,9 @@ function normalizePath(p: string): string {
   return p.replace(/\\/g, "/");
 }
 
-/** Like normalizePath, but also resolves 8.3 short names to the long form
- *  so the path matches what resolveRepositoryIdentity returns (realpathSync). */
-function resolvedPath(p: string): string {
-  return normalizePath(realpathSync(p));
+/** Run git rev-parse and return the actual git root, normalized. */
+function gitRoot(dir: string): string {
+  return normalizePath(execFileSync("git", ["-C", dir, "rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim());
 }
 
 let tempDirs: string[] = [];
@@ -42,7 +40,10 @@ describe("P2-3: repository identity", () => {
     const identity = await resolveRepositoryIdentity(dir);
     expect(identity.kind).toBe("git");
     expect(identity.id).toBe(stableHash("https://github.com/acme/repo.git"));
-    expect(identity.root).toBe(resolvedPath(dir));
+    // Compare against git's OWN rev-parse output — git may report 8.3 short
+    // paths (Windows) or long paths; only git's view of the root is
+    // authoritative for identity.root.
+    expect(identity.root).toBe(gitRoot(dir));
   });
 
   it("falls back to the repo root hash when there is no origin remote", async () => {
@@ -50,14 +51,14 @@ describe("P2-3: repository identity", () => {
     git(dir, ["init", "-q"]);
     const identity = await resolveRepositoryIdentity(dir);
     expect(identity.kind).toBe("git");
-    expect(identity.id).toBe(stableHash(resolvedPath(dir)));
+    expect(identity.id).toBe(stableHash(gitRoot(dir)));
   });
 
   it("degrades to a path identity for non-git directories (never throws)", async () => {
     const dir = await tempDir();
     const identity = await resolveRepositoryIdentity(dir);
     expect(identity.kind).toBe("path");
-    expect(identity.id).toBe(stableHash(resolvedPath(dir)));
+    expect(identity.id).toBe(stableHash(normalizePath(dir)));
   });
 
   it("is stable for the same path across calls", async () => {

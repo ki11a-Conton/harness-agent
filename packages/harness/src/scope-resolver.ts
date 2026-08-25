@@ -8,7 +8,6 @@ import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { resolve } from "node:path";
-import { realpathSync } from "node:fs";
 import type { MemoryScope } from "@ar/contracts";
 
 const execFileAsync = promisify(execFile);
@@ -39,10 +38,7 @@ export async function resolveRepositoryIdentity(cwd: string): Promise<Repository
       cwd,
       timeout: 5000,
     });
-    // Windows git may return 8.3 short paths (e.g. C:/Users/RUNNER~1/...).
-    // Resolve to the long form so the id is stable across machines/checkouts
-    // (P2-3 "stable across machines" contract) and matches the caller's dir.
-    const root = normalizePath(realpathSync(rootOut.trim()));
+    const root = normalizePath(rootOut.trim());
     if (root === "") throw new Error("empty git root");
     let remote = "";
     try {
@@ -62,15 +58,7 @@ export async function resolveRepositoryIdentity(cwd: string): Promise<Repository
     // P14-6: git is unavailable (no repo) — an expected fallback to path
     // identity, not a silent error. Reported so failures stay observable.
     process.stderr.write(`[degraded] scope-resolver.git: ${err instanceof Error ? err.message : String(err)}\n`);
-    // Resolve 8.3 short names when possible, but never throw for a non-
-    // existent cwd (e.g. /workspace in CI) — realpathSync requires the path.
-    const resolved = resolve(cwd);
-    let root: string;
-    try {
-      root = normalizePath(realpathSync(resolved));
-    } catch {
-      root = normalizePath(resolved);
-    }
+    const root = normalizePath(resolve(cwd));
     return { kind: "path", id: stableHash(root), root };
   }
 }
