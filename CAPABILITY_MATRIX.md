@@ -1,7 +1,7 @@
 # CAPABILITY MATRIX
 
-- generatedAt: 2026-08-25T02:52:27.103Z
-- gitSha: 8f27ad0c07ef14833f7185ccab4afbadebc3a63d
+- generatedAt: 2026-08-25T03:06:13.744Z
+- gitSha: e7c468e7b03082209b5041d8ba3eb0e7812f46ad
 
 ## Summary
 

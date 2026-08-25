@@ -899,6 +899,45 @@ describe("SessionActor (PHASE 25)", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // P38-3 — explicit createTurn ownership contract (INV-P38-004, Contract A)
+  // ---------------------------------------------------------------------------
+
+  it("P38-3: create vs create — second createTurn while first is creating → SESSION_BUSY", async () => {
+    const { runtime, store, sessionId } = await setupActor();
+    const session = (await store.getSession(sessionId))!;
+    const { runtime: gated, entered, open } = gatedStartRuntime(runtime);
+    const actor = new DefaultSessionActor({ persistent: session, runtime: gated, store });
+    const create1 = actor.createTurn({ sessionId, text: "c1" });
+    await entered;
+    const err = await actor.createTurn({ sessionId, text: "c2" }).then(() => undefined, (e: unknown) => e);
+    expect((err as { info?: { code: string } })?.info?.code).toBe("SESSION_BUSY");
+    open();
+    await create1;
+  });
+
+  it("P38-3: create vs start — startTurn while creating → SESSION_BUSY", async () => {
+    const { runtime, store, sessionId } = await setupActor();
+    const session = (await store.getSession(sessionId))!;
+    const { runtime: gated, entered, open } = gatedStartRuntime(runtime);
+    const actor = new DefaultSessionActor({ persistent: session, runtime: gated, store });
+    const create1 = actor.createTurn({ sessionId, text: "c1" });
+    await entered;
+    const err = await actor.startTurn({ sessionId, text: "s1" }).then(() => undefined, (e: unknown) => e);
+    expect((err as { info?: { code: string } })?.info?.code).toBe("SESSION_BUSY");
+    open();
+    await create1;
+  });
+
+  it("P38-3: createTurn does NOT execute the turn — returns a durable record only", async () => {
+    const { actor, sessionId } = await setupActor();
+    const turn = await actor.createTurn({ sessionId, text: "no-run" });
+    expect(turn).toBeDefined();
+    expect(turn.sessionId).toBe(sessionId);
+    expect(actor.executionState).toBe("idle");
+    expect(actor.activeTurn).toBeUndefined();
+  });
+
+  // ---------------------------------------------------------------------------
   // P38-5 — manager stale-finally race (INV-P38-006)
   // ---------------------------------------------------------------------------
 

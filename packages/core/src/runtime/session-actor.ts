@@ -322,7 +322,7 @@ export type ActorExecutionState =
   | { kind: "idle" }
   | {
       kind: "starting";
-      source: "new_turn" | "existing_turn" | "followup";
+      source: "new_turn" | "existing_turn" | "followup" | "create_only";
       controller: AbortController;
       requestId: string;
       turnId?: TurnId;
@@ -425,7 +425,26 @@ export class DefaultSessionActor implements SessionActor {
     if (s.kind === "running") throw sessionBusy(this.sessionId, s.turn.id);
     if (s.kind === "starting") throw sessionStarting(this.sessionId);
     if (s.kind === "closing") throw new AgentError(errorInfo("INTERNAL_ERROR", `session ${this.sessionId} is closing`));
-    return this.deps.runtime.startTurn(this.sessionId, input.text);
+    // P38-3 (INV-P38-004, Contract A): turn CREATION is session-exclusive.
+    // Reserve the actor slot before the await so a concurrent createTurn or
+    // startTurn cannot cross the boundary; release after the durable turn
+    // record exists (creation never executes the turn).
+    const controller = new AbortController();
+    const requestId = nextRequestId();
+    this.state = { kind: "starting", source: "create_only", controller, requestId };
+    try {
+      const turn = await this.deps.runtime.startTurn(this.sessionId, input.text);
+      if (this.state.kind !== "starting" || this.state.requestId !== requestId || controller.signal.aborted) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", `createTurn ${this.sessionId} cancelled`));
+      }
+      this.state = { kind: "idle" };
+      return turn;
+    } catch (err) {
+      if (this.state.kind === "starting" && this.state.requestId === requestId) {
+        this.state = { kind: "idle" };
+      }
+      throw err;
+    }
   }
 
   async runTurn(turnId: TurnId, signal?: AbortSignal): Promise<TurnOutcome> {
