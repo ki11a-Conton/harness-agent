@@ -444,12 +444,17 @@ export class Thread {
     // turn/run, attach it to the hub, and RETURN immediately — the stream is
     // live while turn/run is still pending.
     const hub = new RunEventHub(this.transport, this.threadId, turnId, opts.signal);
-    hub.attachRunInvocation(
-      this.transport.invoke("turn/run", {
-        threadId: this.threadId,
-        turnId,
-      }),
-    );
+    // P38.1-5 (INV-P38.1-006): a signal aborted BEFORE runStreamed must not
+    // invoke turn/run at all. The hub constructor already handles pre-abort
+    // (it fires the abort path → turn/interrupt + done=interrupted).
+    if (opts.signal?.aborted !== true) {
+      hub.attachRunInvocation(
+        this.transport.invoke("turn/run", {
+          threadId: this.threadId,
+          turnId,
+        }),
+      );
+    }
 
     const done = hub.done.then((r) => ({ ...r, turnId }));
     return { events: hub.events, done };

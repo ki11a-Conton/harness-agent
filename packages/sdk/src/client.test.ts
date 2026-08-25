@@ -263,3 +263,67 @@ describe("SDK error plumbing", () => {
     expect(result.error?.retryable).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// P38.1-5 — SDK pre-abort must NOT invoke turn/run (INV-P38.1-006)
+// ---------------------------------------------------------------------------
+
+describe("P38.1-5 SDK pre-abort no-run closure", () => {
+  it("already-aborted signal: turn/run calls == 0, done.status == interrupted", async () => {
+    seq = 0;
+    let turnRunCalls = 0;
+    let interruptCalls = 0;
+    const transport = makeTransport([], {
+      onInvoke: (m) => {
+        if (m === "turn/run") turnRunCalls += 1;
+        if (m === "turn/interrupt") interruptCalls += 1;
+      },
+    });
+    const client = await HarnessClient.connect(transport);
+    const thread = await client.startThread({ agentName: "a", cwd: "/tmp" });
+    const ac = new AbortController();
+    ac.abort(); // pre-abort BEFORE runStreamed
+    const { done } = await thread.runStreamed("hi", { signal: ac.signal });
+    const result = await done;
+    expect(turnRunCalls).toBe(0); // INV-P38.1-006: no server turn/run
+    expect(interruptCalls).toBeGreaterThanOrEqual(1);
+    expect(result.status).toBe("interrupted");
+  });
+
+  it("mid-run abort: turn/run called exactly once (+ interrupt), done == interrupted", async () => {
+    seq = 0;
+    let turnRunCalls = 0;
+    let interruptCalls = 0;
+    const transport = makeTransport([delta("start")], {
+      onInvoke: (m) => {
+        if (m === "turn/run") turnRunCalls += 1;
+        if (m === "turn/interrupt") interruptCalls += 1;
+      },
+    });
+    const client = await HarnessClient.connect(transport);
+    const thread = await client.startThread({ agentName: "a", cwd: "/tmp" });
+    const ac = new AbortController();
+    const { done } = await thread.runStreamed("hello", { signal: ac.signal });
+    await Promise.resolve();
+    ac.abort();
+    const result = await done;
+    expect(turnRunCalls).toBe(1); // mid-run is a real run
+    expect(interruptCalls).toBeGreaterThanOrEqual(1);
+    expect(result.status).toBe("interrupted");
+  });
+
+  it("normal streaming: turn/run called once, all items delivered", async () => {
+    seq = 0;
+    let turnRunCalls = 0;
+    const transport = makeTransport(cleanFixture(), {
+      onInvoke: (m) => {
+        if (m === "turn/run") turnRunCalls += 1;
+      },
+    });
+    const client = await HarnessClient.connect(transport);
+    const thread = await client.startThread({ agentName: "a", cwd: "/tmp" });
+    const result = await thread.run("do it");
+    expect(turnRunCalls).toBe(1);
+    expect(result.status).toBe("completed");
+  });
+});

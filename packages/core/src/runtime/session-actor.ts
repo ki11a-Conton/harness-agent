@@ -488,7 +488,7 @@ export class DefaultSessionActor implements SessionActor {
     this.state = { kind: "starting", source: "existing_turn", controller, requestId, turnId };
     try {
       const turn = await this.requireTurn(turnId);
-      if (this.state.kind !== "starting" || this.state.requestId !== requestId) {
+      if (this.state.kind !== "starting" || this.state.requestId !== requestId || controller.signal.aborted) {
         throw new AgentError(errorInfo("INTERNAL_ERROR", `runTurn ${turnId} cancelled during load`));
       }
       return this.promoteToRunning(turn, controller, signal).outcome;
@@ -540,7 +540,11 @@ export class DefaultSessionActor implements SessionActor {
       return outcome.status;
     }
     if (s.kind === "starting" && s.turnId === turnId) {
+      // P38.1-4 (INV-P38.1-004/005): cancel of a starting existing-turn is
+      // abort + reservation REVOCATION. Returning while the actor stays in
+      // "starting" would let a late requireTurn promote to running.
       s.controller.abort();
+      this.state = this.closed ? { kind: "closing" } : { kind: "idle" };
       return "cancelled";
     }
     return "not_running";
@@ -616,7 +620,9 @@ export class DefaultSessionActor implements SessionActor {
 
   /** P38.1-2 (INV-P38.1-002): terminally settle a queued followup caller once.
    *  Deletes from the map on first settle so a later duplicate (e.g. actor
-   *  close racing promotion) is a no-op. */
+   *  close racing promotion) is a no-op. The exactly-once guard is the map
+   *  delete (synchronous) plus the settled flag honored by the createOnce
+   *  resolve/reject wrappers in createFollowupOutcome. */
   private settleFollowup(
     id: string,
     result: { kind: "ok"; outcome: TurnOutcome } | { kind: "err"; err: unknown },
@@ -625,7 +631,10 @@ export class DefaultSessionActor implements SessionActor {
     if (deferred === undefined) return;
     this.followupDeferred.delete(id);
     if (deferred.settled) return;
-    deferred.settled = true;
+    // NOTE: do NOT set deferred.settled=true here — the createFollowupOutcome
+    // resolve/reject wrapper does so AND performs the actual resolve/reject.
+    // Pre-setting it would make the wrapper's `if (deferred.settled) return`
+    // swallow the settlement and permanently hang the caller.
     if (result.kind === "ok") {
       deferred.resolve(result.outcome);
     } else {
@@ -691,6 +700,31 @@ export class DefaultSessionActor implements SessionActor {
     const requestId = nextRequestId();
     this.state = { kind: "starting", source: "followup", controller, requestId };
     let reservedId: string | undefined;
+
+    /** P38.1-3: a promotion that cannot produce a running owner. Reset the
+     *  starting slot, requeue the durable prompt (it was never consumed), and
+     *  terminally settle the waiting caller exactly once. */
+    const failPromotion = async (entryId: string, reason: string): Promise<void> => {
+      if (this.state.kind === "starting" && this.state.requestId === requestId) {
+        this.state = { kind: "idle" };
+      }
+      if (reservedId === entryId) reservedId = undefined;
+      try {
+        await queue.releasePromotion(entryId);
+      } catch (releaseErr) {
+        // Best-effort requeue; the durable inbox record is still pending so
+        // hydration on restart recovers it. Surface the loss (P14-6) — never
+        // silent.
+        process.stderr.write(
+          `[degraded] session ${this.sessionId} failed to release reserved followup ${entryId}: ${releaseErr instanceof Error ? releaseErr.message : String(releaseErr)}\n`,
+        );
+      }
+      this.settleFollowup(entryId, {
+        kind: "err",
+        err: new AgentError(errorInfo("FOLLOWUP_PROMOTION_FAILED", `session ${this.sessionId} ${reason}`)),
+      });
+    };
+
     try {
       // P38-2 (INV-P38-002): reserve the followup entry WITHOUT consuming the
       // durable inbox record. The inbox is marked consumed only after a real
@@ -704,58 +738,65 @@ export class DefaultSessionActor implements SessionActor {
         return;
       }
       reservedId = entry.id;
-      const turn = await this.deps.runtime.startTurn(this.sessionId, entry.input.text);
-      // P38-4: cancelled/aborted reservation cannot promote.
-      if (this.state.kind !== "starting" || this.state.requestId !== requestId || controller.signal.aborted) {
-        // Release the reserved followup back to the queue head so it can
-        // be retried on a later drain. P38.1-2: the current caller must still
-        // settle terminally — the durable input is recoverable but this
-        // promotion attempt is definitively over.
-        await queue.releasePromotion(entry.id);
-        this.settleFollowup(entry.id, {
-          kind: "err",
-          err: new AgentError(
-            errorInfo("FOLLOWUP_PROMOTION_FAILED", `session ${this.sessionId} followup promotion cancelled before running`),
-          ),
-        });
-        reservedId = undefined;
+
+      let turn: Turn;
+      try {
+        turn = await this.deps.runtime.startTurn(this.sessionId, entry.input.text);
+      } catch (err) {
+        // startTurn threw before any durable mutation: the prompt is still
+        // pending (recoverable), the caller is settled terminally.
+        await failPromotion(entry.id, `followup promotion failed: ${err instanceof Error ? err.message : String(err)}`);
         return;
       }
-      // Promotion succeeded — mark the durable prompt consumed.
-      await queue.completePromotion(entry.id);
+
+      // P38-4 (INV-P38-005): cancelled/aborted reservation cannot promote.
+      if (this.state.kind !== "starting" || this.state.requestId !== requestId || controller.signal.aborted) {
+        await failPromotion(entry.id, "followup promotion cancelled before running");
+        return;
+      }
+
+      // P38.1-3 (INV-P38.1-003): establish the running OWNER synchronously
+      // BEFORE the durable ack. If the actor is interrupted/cancelled/closed
+      // while the ack is in flight, the consumed prompt is still bound to a
+      // recoverable turn — there is no consumed-without-owner window.
+      let handle: TurnHandle;
+      try {
+        handle = this.promoteToRunning(turn, controller);
+      } catch (promoteErr) {
+        // The reservation was invalidated at the final instant — the prompt
+        // was never consumed, so requeue it (recoverable) and settle.
+        await failPromotion(entry.id, `followup promotion to running failed: ${promoteErr instanceof Error ? promoteErr.message : String(promoteErr)}`);
+        return;
+      }
+
+      // Owner (running turn) is established. Mark the durable prompt consumed.
+      // A durable-ack failure here must NOT requeue (the running turn owns the
+      // prompt — requeuing would double-execute it): surface the loss so the
+      // reconciliation path is on record, and let the caller settle via the
+      // running turn's own outcome.
+      try {
+        await queue.completePromotion(entry.id);
+      } catch (ackErr) {
+        process.stderr.write(
+          `[degraded] session ${this.sessionId} durable followup ack failed for ${entry.id} (running turn remains the owner): ${ackErr instanceof Error ? ackErr.message : String(ackErr)}\n`,
+        );
+      }
       reservedId = undefined;
-      const handle = this.promoteToRunning(turn, controller);
+
       // P38.1-2 (INV-P38.1-002): resolve the queued caller with the drained
-      // turn's outcome exactly once.
+      // turn's outcome exactly once — success or terminal failure.
       void handle.outcome.then(
         (outcome) => this.settleFollowup(entry.id, { kind: "ok", outcome }),
         (err) => this.settleFollowup(entry.id, { kind: "err", err }),
       );
     } catch (err) {
-      // P38-2 (INV-P38-003): promotion failure — release the reservation and
-      // requeue the reserved input (never consumed, never lost).
+      // reservePendingFollowup (or the ack guard) threw — defensive. Release
+      // the reservation if we still hold it (never consumed, never lost).
       if (this.state.kind === "starting" && this.state.requestId === requestId) {
         this.state = { kind: "idle" };
       }
       if (reservedId !== undefined) {
-        try {
-          await queue.releasePromotion(reservedId);
-        } catch (releaseErr) {
-          // The queue is best-effort here; the durable inbox record is still
-          // pending so hydration on restart recovers it. Surface the loss so
-          // it is never silent (P14-6).
-          process.stderr.write(
-            `[degraded] session ${this.sessionId} failed to release reserved followup ${reservedId}: ${releaseErr instanceof Error ? releaseErr.message : String(releaseErr)}\n`,
-          );
-        }
-        // P38.1-2 (INV-P38.1-002): terminally settle the current caller even
-        // though the durable input is requeued / retryable — no forever-pending.
-        this.settleFollowup(reservedId, {
-          kind: "err",
-          err: new AgentError(
-            errorInfo("FOLLOWUP_PROMOTION_FAILED", `session ${this.sessionId} followup promotion failed: ${err instanceof Error ? err.message : String(err)}`),
-          ),
-        });
+        await failPromotion(reservedId, `followup promotion failed: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
   }
@@ -764,6 +805,13 @@ export class DefaultSessionActor implements SessionActor {
    *  gated) queue override. */
   drainFollowupsForTest(queue?: SessionInputQueue): Promise<void> {
     return this.drainFollowups(queue);
+  }
+
+  /** @internal P38.1-3 test seam: register a queue-mode caller's deferred for
+   *  `followupId` (as startTurn's queue path would) so a test can assert the
+   *  caller terminally settles across an interrupted durable ack. */
+  registerFollowupCallerForTest(followupId: string): Promise<TurnOutcome> {
+    return this.createFollowupOutcome(followupId);
   }
 
   private async requireTurn(turnId: TurnId): Promise<Turn> {

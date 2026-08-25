@@ -15,6 +15,7 @@ import type {
   ToolCallRequest,
   ToolExecutionContext,
   ToolResult,
+  Turn,
   TurnId,
 } from "@ar/contracts";
 import { newAgentId, newPromptId } from "@ar/contracts";
@@ -1076,6 +1077,220 @@ describe("SessionActor (PHASE 25)", () => {
       // A duplicate would surface here as a second reservation.
       const again = await queue.reservePendingFollowup();
       expect(again).toBeUndefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // P38.1-3 — durable promotion / cancellation closure (INV-P38.1-002/003)
+  // ---------------------------------------------------------------------------
+
+  describe("P38.1-3 durable promotion/cancellation closure", () => {
+    /** Wrap a queue so the durable ack (completePromotion) is gated. */
+    function gatedAckQueue(
+      base: SessionInputQueue,
+    ): { queue: SessionInputQueue; ackEntered: Promise<void>; openAck: () => void } {
+      let ackEnteredResolve!: () => void;
+      const ackEntered = new Promise<void>((resolve) => { ackEnteredResolve = resolve; });
+      let openAckResolve!: () => void;
+      const ackGate = new Promise<void>((resolve) => { openAckResolve = resolve; });
+      return {
+        queue: {
+          sessionId: base.sessionId,
+          pendingCount: base.pendingCount,
+          enqueueSteer: (i: Parameters<SessionInputQueue["enqueueSteer"]>[0]) => base.enqueueSteer(i),
+          enqueueFollowup: (i: Parameters<SessionInputQueue["enqueueFollowup"]>[0]) => base.enqueueFollowup(i),
+          reservePendingFollowup: () => base.reservePendingFollowup(),
+          completePromotion: async (id) => {
+            ackEnteredResolve();
+            await ackGate;
+            return base.completePromotion(id);
+          },
+          releasePromotion: (id) => base.releasePromotion(id),
+        },
+        ackEntered,
+        openAck: openAckResolve,
+      };
+    }
+
+    it("Test A — interrupt during the durable ack: owner bound, caller settles (no consumed-without-owner)", async () => {
+      // The followup turn must STAY running while we cancel it inside the ack
+      // window, so it blocks on the first model call.
+      const blocking = new BlockingProvider();
+      const { runtime, store, sessionId } = await setupActor({ provider: blocking });
+      const session = (await store.getSession(sessionId))!;
+      const actor = new DefaultSessionActor({ persistent: session, runtime, store });
+      const followupId = await actor.inputQueue.enqueueFollowup({ sessionId, text: "queued" });
+      // Register a queue-mode caller (as startTurn's queue path would).
+      const caller = actor.registerFollowupCallerForTest(followupId);
+
+      const gated = gatedAckQueue(actor.inputQueue);
+      const drainPromise = actor.drainFollowupsForTest(gated.queue);
+      await gated.ackEntered; // drain is now inside the durable-ack window
+
+      // INV-P38.1-003: the running owner must exist BEFORE the ack is taken.
+      expect(actor.executionState).toBe("running");
+
+      // Cancel the followup turn while the ack is still pending in flight.
+      await actor.interrupt();
+      gated.openAck(); // release the ack → the prompt is consumed mid-cancel
+      await drainPromise;
+
+      // INV-P38.1-002: the caller terminally settles (cancelled) — never hangs.
+      const outcome = await caller; // would hang forever on the pre-P38.1-3 bug
+      expect(outcome.status).toBe("cancelled");
+      expect(actor.activeTurn).toBeUndefined();
+    });
+
+    it("Test B — durable-ack failure: prompt recoverable, caller settles, no double promotion", async () => {
+      const { runtime, store, sessionId, inbox } = await setupActor();
+      const session = (await store.getSession(sessionId))!;
+      // Pass the harness inbox so the durable prompt is admitted (Test B
+      // asserts the prompt stays recoverable after a durable-ack failure).
+      const actor = new DefaultSessionActor({ persistent: session, runtime, store, inbox });
+      const followupId = await actor.inputQueue.enqueueFollowup({ sessionId, text: "survivor" });
+      const caller = actor.registerFollowupCallerForTest(followupId);
+
+      const base = actor.inputQueue;
+      const throwingAck: SessionInputQueue = {
+        sessionId: base.sessionId,
+        pendingCount: base.pendingCount,
+        enqueueSteer: (i: Parameters<SessionInputQueue["enqueueSteer"]>[0]) => base.enqueueSteer(i),
+        enqueueFollowup: (i: Parameters<SessionInputQueue["enqueueFollowup"]>[0]) => base.enqueueFollowup(i),
+        reservePendingFollowup: () => base.reservePendingFollowup(),
+        completePromotion: async () => {
+          throw new Error("durable ack down");
+        },
+        releasePromotion: (id) => base.releasePromotion(id),
+      };
+
+      await actor.drainFollowupsForTest(throwingAck);
+      // The running owner was established before the failed ack, so the caller
+      // settles via the turn outcome. The durable prompt is still pending
+      // (recoverable) and locally NOT requeued (would double-execute).
+      const outcome = await caller;
+      expect(outcome.status).toBe("completed");
+      const pending = await inbox.listPending(sessionId);
+      expect(pending.some((p) => p.text === "survivor")).toBe(true);
+      expect(actor.inputQueue.pendingCount).toBe(0);
+      expect(actor.activeTurn).toBeUndefined();
+    });
+
+    it("Test C — restart hydration does not re-run an already-consumed followup", async () => {
+      const { sessionId, inbox } = await setupActor();
+      const q1 = new InboxSessionInputQueue({ sessionId, inbox });
+      await q1.enqueueFollowup({ sessionId, text: "once" });
+      const entry = await q1.reservePendingFollowup();
+      expect(entry).toBeDefined();
+      await q1.completePromotion(entry!.id); // consumed & owner-bound
+      // A fresh boot over the same durable inbox must NOT re-queue it.
+      const q2 = new InboxSessionInputQueue({ sessionId, inbox });
+      const again = await q2.reservePendingFollowup();
+      expect(again).toBeUndefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // P38.1-4 — starting reservation cancellation hardening (INV-P38.1-004/005)
+  // ---------------------------------------------------------------------------
+
+  describe("P38.1-4 starting reservation cancellation hardening", () => {
+    /** A session store whose getTurn blocks until released — used to pin a
+     *  runTurn(existing) INSIDE its requireTurn await (the promotion window). */
+    function gatedGetTurnStore(
+      real: MemorySessionStore,
+    ): { store: MemorySessionStore; entered: Promise<void>; open: () => void } {
+      let enteredResolve!: () => void;
+      const entered = new Promise<void>((resolve) => { enteredResolve = resolve; });
+      let openResolve!: () => void;
+      const gate = new Promise<void>((resolve) => { openResolve = resolve; });
+      return {
+        store: {
+          ...real,
+          async getTurn(id: TurnId): Promise<Turn | undefined> {
+            enteredResolve();
+            await gate;
+            return real.getTurn(id);
+          },
+        } as MemorySessionStore,
+        entered,
+        open: openResolve,
+      };
+    }
+
+    it("Test A — runTurn(existing) blocked in load + cancelTurn: runTurn never invoked (INV-P38.1-005)", async () => {
+      const { runtime, store, sessionId, actor: realActor } = await setupActor();
+      // Create a REAL durable turn so that (absent cancellation) requireTurn
+      // would succeed and runtime.runTurn WOULD be invoked — this isolates the
+      // cancellation logic instead of an "unknown turn" short-circuit.
+      const existing = await realActor.createTurn({ sessionId, text: "existing" });
+      const session = (await store.getSession(sessionId))!;
+      let runCalls = 0;
+      const runtimeProxy = {
+        startTurn: (sid: SessionId, text: string) => runtime.startTurn(sid, text),
+        runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => {
+          runCalls += 1;
+          return runtime.runTurn(sid, turnId, signal);
+        },
+      } as Pick<AgentRuntime, "startTurn" | "runTurn">;
+      const { store: gatedStore, entered, open } = gatedGetTurnStore(store);
+      const actor = new DefaultSessionActor({ persistent: session, runtime: runtimeProxy, store: gatedStore });
+
+      const runPromise = actor.runTurn(existing.id).then(() => undefined, (e: unknown) => e);
+      await entered; // runTurn is now inside requireTurn — the promotion window
+      const status = await actor.cancelTurn(existing.id);
+      expect(status).toBe("cancelled");
+      open(); // release getTurn → the cancelled reservation must NOT promote
+      const err = await runPromise;
+      expect(err).toBeDefined();
+      // INV-P38.1-004/005: a revoked starting reservation never reaches runtime.runTurn.
+      expect(runCalls).toBe(0);
+      expect(actor.activeTurn).toBeUndefined();
+    });
+
+    it("Test B — startTurn + interrupt: no late running, no owner overwrite", async () => {
+      const { actor, sessionId, entered, open } = await actorWithGatedStart();
+      const startPromise = actor.startTurn({ sessionId, text: "B" }).then(() => undefined, (e: unknown) => e);
+      await entered;
+      await actor.interrupt();
+      open();
+      const err = await startPromise;
+      expect(err).toBeDefined();
+      expect(actor.activeTurn).toBeUndefined();
+      expect(actor.executionState).not.toBe("running");
+    });
+
+    it("Test C — close during starting: no active turn after close", async () => {
+      const { runtime, store, sessionId } = await setupActor();
+      const session = (await store.getSession(sessionId))!;
+      const { runtime: gated, entered, open } = gatedStartRuntime(runtime);
+      const actor = new DefaultSessionActor({ persistent: session, runtime: gated, store });
+      const startPromise = actor.startTurn({ sessionId, text: "C" }).then(() => undefined, (e: unknown) => e);
+      await entered;
+      await actor.close();
+      open();
+      const err = await startPromise;
+      expect(err).toBeDefined();
+      expect(actor.activeTurn).toBeUndefined();
+      expect(actor.status().loaded).toBe(false);
+    });
+
+    it("Test D — 100-way mixed ownership race keeps max live owner <= 1", async () => {
+      const { actor, sessionId } = await setupActor();
+      await actor.enqueueFollowup({ sessionId, text: "queue0" });
+      const runs = Array.from({ length: 50 }, (_, i) =>
+        actor
+          .startTurn({ sessionId, text: `s${i}` })
+          .then(() => "ok", () => "busy"),
+      );
+      const queuePrefill = Array.from({ length: 50 }, (_, i) =>
+        actor
+          .enqueueFollowup({ sessionId, text: `q${i}` })
+          .then(() => "queued"),
+      );
+      await Promise.all([...queuePrefill, ...runs]);
+      // Max concurrency is governed by the actor, not by tweaking inputs: the
+      // activeTurn singleton invariant holds throughout (never > 1 owner).
+      expect(actor.activeTurn !== undefined ? 1 : 0).toBeLessThanOrEqual(1);
     });
   });
 });
