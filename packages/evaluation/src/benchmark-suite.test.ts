@@ -96,7 +96,7 @@ describe("benchmark suite conformance (P2-12 / P2-13)", () => {
     }
   });
 
-  it("stress cases express their stress via a budget or a heavy fixture", async () => {
+  it("stress cases express their stress via a budget or a heavy fixture or a generated-load tag", async () => {
     const stress = await loadSuite("stress");
     for (const c of stress) {
       const hasBudget =
@@ -117,7 +117,10 @@ describe("benchmark suite conformance (P2-12 / P2-13)", () => {
       // Huge fixtures (huge log / long JSON / many files / deep dir) count.
       const heavy =
         fixtureBytes > 64 * 1024 || Object.keys(c.fixture).length > 100 || maxDepth > 5;
-      expect(hasBudget || heavy, `${c.id} expresses no stress dimension`).toBe(true);
+      // P36-9: some stress cases (e.g. stress-huge-generated-logs) express
+      // their stress via a case tag and runtime generation, not static fixture.
+      const generatedLoad = c.tags?.includes("huge-log") ?? false;
+      expect(hasBudget || heavy || generatedLoad, `${c.id} expresses no stress dimension`).toBe(true);
     }
   });
 
@@ -127,7 +130,14 @@ describe("benchmark suite conformance (P2-12 / P2-13)", () => {
     const huge = stress.find((c) => c.id === "stress-huge-generated-logs");
     const longJson = stress.find((c) => c.id === "stress-very-long-json");
     const many = stress.find((c) => c.id === "stress-many-small-files");
-    expect(huge?.fixture["logs/app.log"]!.length).toBeGreaterThan(100_000);
+    // P36-9: stress-huge-generated-logs generates its log at runtime (tag
+    // "huge-log"), so it has no static fixture on disk — only assert the
+    // static fixtures that exist.
+    if (huge?.fixture["logs/app.log"] !== undefined) {
+      expect(huge.fixture["logs/app.log"]!.length).toBeGreaterThan(100_000);
+    } else {
+      expect(huge?.tags).toContain("huge-log");
+    }
     expect(longJson?.fixture["data/big.json"]!.length).toBeGreaterThan(100_000);
     expect(Object.keys(many?.fixture ?? {})).toHaveLength(1_000);
   });

@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import type {
   AgentDefinition,
   AgentEvent,
@@ -362,13 +362,20 @@ describe("createRuntimeRpc session lifecycle", () => {
   });
 
   it("session.steer admits a steering prompt without touching the transcript", async () => {
-    const { registry } = makeRpc();
+    const { registry } = makeRpc({ provider: new BlockingProvider() });
     const session = await createSession(registry);
+    // P37-1: steer requires a currently running turn.
+    const { turnId } = await sendTurn(registry, session.id);
+    const runPromise = registry.invoke("session.run", { sessionId: session.id, turnId });
+    // Yield to let runTurn progress from "starting" to "running".
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
     const res = (await registry.invoke("session.steer", {
       sessionId: session.id,
       text: "redirect me",
     })) as { admitted: string };
     expect(res.admitted).toBe("steer");
+    await registry.invoke("session.cancel", { sessionId: session.id, turnId });
+    await runPromise.catch(() => undefined);
   });
 
   it("session.followup queues a follow-up turn and surfaces it in session.status", async () => {
@@ -419,7 +426,9 @@ describe("createRuntimeRpc session lifecycle", () => {
       registry.invoke("session.run", { sessionId: session.id, turnId }),
     );
     expect(err.info.code).toBe("SESSION_BUSY");
-    expect(err.info.message).toContain("already has an active turn");
+    // P37-1: the message may say "already has an active turn" or "is starting
+    // a turn" depending on timing; the code is authoritative.
+    expect(["already has an active turn", "is starting a turn"].some((s) => err.info.message.includes(s))).toBe(true);
     const cancel = (await registry.invoke("session.cancel", {
       sessionId: session.id,
       turnId,

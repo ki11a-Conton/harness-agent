@@ -154,11 +154,9 @@ describe("P34-2 same-session race suite", () => {
     h.provider.release();
     const outcome = await first.outcome;
     expect(outcome.status).toBe("completed");
-    // the queued follow-up drains AFTER the first settles — sequential
-    const drained = await h.actor.startTurn({ sessionId: h.sessionId, text: "follow-up" });
-    await h.provider.whenEntered();
-    h.provider.release();
-    expect((await drained.outcome).status).toBe("completed");
+    // P37-1: the queued follow-up is drained automatically by the actor.
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    expect(h.actor.activeTurn).toBeUndefined();
   });
 
   it("2.3 cancel / interrupt racing a live run — aborts the SAME live turn, session stays single-owner", async () => {
@@ -204,11 +202,8 @@ describe("P34-2 same-session race suite", () => {
     expect(h.actor.inputQueue.pendingCount).toBe(1);
     h.provider.release();
     await live.outcome;
-    // queued follow-up drains only after the live run settles
-    const drained = await h.actor.startTurn({ sessionId: h.sessionId, text: "D" });
-    await h.provider.whenEntered();
-    h.provider.release();
-    await drained.outcome;
+    // P37-1: queued follow-up drains automatically after the live run settles.
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
     expect(h.actor.activeTurn).toBeUndefined();
   });
 });

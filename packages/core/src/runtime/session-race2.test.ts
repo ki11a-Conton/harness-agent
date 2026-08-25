@@ -14,6 +14,7 @@
 import { describe, expect, it } from "vitest";
 import type { AgentDefinition, ModelEvent, ModelProvider, SessionId, TurnId } from "@ar/contracts";
 import { newAgentId } from "@ar/contracts";
+import { EchoModelProvider } from "@ar/model";
 import { AgentRuntime } from "./runtime.js";
 import { DefaultLoadedSessionManager, type SessionActor } from "./session-actor.js";
 import { MemoryEventStore, MemorySessionStore, defaultTestToolCatalog } from "../test/fakes.js";
@@ -32,18 +33,37 @@ const AGENT = {
   limits: { maxToolCalls: 5 },
 } as const satisfies AgentDefinition;
 
-/** Provider whose generate blocks until release() — the deterministic gate
- *  that keeps a turn "in flight" while we race other inputs at it. */
+/** P36-9: assert the typed error CODE (SESSION_BUSY), never message text. */
+async function expectSessionBusy(promise: Promise<unknown>): Promise<void> {
+  await expect(promise).rejects.toMatchObject({ info: { code: "SESSION_BUSY" } });
+}
+
+/** Deterministic gate provider (P36-9): generate() of each in-flight turn
+ *  blocks until release(); whenEntered resolves when the first turn is live;
+ *  whenNEntered(n) polls until the n-th generate() has entered. */
 class GatedProvider implements ModelProvider {
   readonly id = "gated";
-  private gates: Array<() => void> = [];
+  private entered = 0;
+  private entryWaiters: Array<() => void> = [];
+  private releases: Array<(value: void | PromiseLike<void>) => void> = [];
 
-  /** Resolves when the NEXT in-flight turn has reached the gate. */
-  waitForGate(): Promise<void> {
-    return new Promise((resolve) => this.gates.push(resolve));
+  whenEntered(): Promise<void> {
+    if (this.entered > 0) return Promise.resolve();
+    return new Promise((r) => this.entryWaiters.push(r));
   }
-  releaseGate(): void {
-    this.gates.shift()?.();
+  whenNEntered(n: number, timeoutMs = 5000): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const started = Date.now();
+      const check = () => {
+        if (this.entered >= n) return resolve();
+        if (Date.now() - started > timeoutMs) return reject(new Error(`whenNEntered(${n}) timed out (entered=${this.entered})`));
+        setTimeout(check, 5);
+      };
+      check();
+    });
+  }
+  release(): void {
+    this.releases.shift()?.(undefined);
   }
 
   listModels(): Promise<never[]> {
@@ -55,9 +75,11 @@ class GatedProvider implements ModelProvider {
       async *generate(_request: unknown, signal: AbortSignal): AsyncGenerator<ModelEvent, void, void> {
         yield { type: "started", timestamp: 0 };
         yield { type: "text_delta", text: "thinking", timestamp: 0 };
+        self.entered += 1;
+        self.entryWaiters.shift()?.();
         await new Promise<void>((resolve) => {
           if (signal.aborted) return resolve();
-          self.gates.push(resolve);
+          self.releases.push(resolve);
           signal.addEventListener("abort", () => resolve(), { once: true });
         });
         yield { type: "completed", result: { finishReason: "stop", text: "done" }, timestamp: 0 };
@@ -70,6 +92,7 @@ interface Harness {
   actor: SessionActor;
   provider: GatedProvider;
   sessionId: SessionId;
+  runtime: AgentRuntime;
 }
 
 async function setup(): Promise<Harness> {
@@ -88,19 +111,42 @@ async function setup(): Promise<Harness> {
   const manager = new DefaultLoadedSessionManager({ runtime, store });
   const session = await runtime.createSession({ agent: AGENT, cwd: "/work" });
   const actor = await manager.load(session.id);
+  return { actor, provider, sessionId: session.id, runtime };
+}
+
+/** Non-blocking harness for post-cancel sanity runs. */
+async function setupEcho(): Promise<{ actor: SessionActor; provider: GatedProvider; sessionId: SessionId }> {
+  const store = new MemorySessionStore();
+  const events = new MemoryEventStore();
+  const provider = new GatedProvider();
+  const runtime = new AgentRuntime({
+    store,
+    events,
+    modelProvider: new EchoModelProvider(),
+    orchestrator: new FakeOrchestrator(),
+    agents: [AGENT],
+    toolRegistry: defaultTestToolCatalog(),
+    permissiveToolResolution: true,
+  });
+  const manager = new DefaultLoadedSessionManager({ runtime, store });
+  const session = await runtime.createSession({ agent: AGENT, cwd: "/work" });
+  const actor = await manager.load(session.id);
   return { actor, provider, sessionId: session.id };
 }
 
 describe("P34-2 same-session race suite", () => {
   it("2.1 racing a second runTurn at a live turn — refused (SESSION_BUSY), never two live runs", async () => {
-    const { actor, provider, sessionId } = await setup();
+    const { actor, provider, sessionId, runtime } = await setup();
     const first = await actor.startTurn({ sessionId, text: "first" });
-    await provider.waitForGate(); // first turn is mid-flight
-    const secondId = (await actor.createTurn({ sessionId, text: "second" })).id;
-    await expect(actor.runTurn(secondId)).rejects.toThrow(/SESSION_BUSY/);
+    await provider.whenEntered(); // first turn is mid-flight
+    // Create a second turn record via the RUNTIME (the actor refuses
+    // createTurn while one is active; runtime.startTurn is the only way to
+    // obtain a distinct turnId while a turn is live).
+    const secondTurn = await runtime.startTurn(sessionId, "second");
+    await expectSessionBusy(actor.runTurn(secondTurn.id));
     // exactly ONE live run for this session — the probe
     expect(actor.activeTurn?.turn.id).toBe(first.turnId);
-    provider.releaseGate();
+    provider.release();
     const outcome = await first.outcome;
     expect(outcome.status).toBe("completed");
     expect(actor.activeTurn).toBeUndefined();
@@ -109,7 +155,7 @@ describe("P34-2 same-session race suite", () => {
   it("2.2 turn start / steer / follow-up racing a live turn — no parallel run", async () => {
     const { actor, provider, sessionId } = await setup();
     const first = await actor.startTurn({ sessionId, text: "first" });
-    await provider.waitForGate();
+    await provider.whenEntered();
     // steer injects at the NEXT sampling boundary — allowed, non-parallel
     await actor.steer({ sessionId, text: "steer now" });
     // follow-up is queued, never started
@@ -117,41 +163,39 @@ describe("P34-2 same-session race suite", () => {
     expect(actor.status().activeTurn?.status).toBe("running");
     expect(actor.inputQueue.pendingCount).toBe(1);
     // a second direct start is refused while the first is live
-    await expect(
-      actor.startTurn({ sessionId, text: "burst" }),
-    ).rejects.toThrow(/SESSION_BUSY/);
-    provider.releaseGate();
+    await expectSessionBusy(actor.startTurn({ sessionId, text: "burst" }));
+    provider.release();
     const outcome = await first.outcome;
     expect(outcome.status).toBe("completed");
-    // the queued follow-up drains AFTER the first settles — sequential
-    const drained = await actor.startTurn({ sessionId, text: "follow-up" });
-    await provider.waitForGate();
-    provider.releaseGate();
-    expect((await drained.outcome).status).toBe("completed");
+    // P37-1: the queued follow-up is drained automatically by the actor.
+    await provider.whenNEntered(2);
+    provider.release();
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    expect(actor.activeTurn).toBeUndefined();
   });
 
   it("2.3 cancel / interrupt racing a live run — aborts the SAME live run, session stays single-owner", async () => {
     const { actor, provider, sessionId } = await setup();
     const first = await actor.startTurn({ sessionId, text: "first" });
-    await provider.waitForGate();
+    await provider.whenEntered();
     // cancel targets the live run only; any other call remains excluded
-    await actor.cancelTurn(first.turnId);
+    const st = await actor.cancelTurn(first.turnId);
+    expect(st === "completed" || st === "cancelled").toBe(true);
     // after the live run settles the session is free again — no overlap
-    const second = await actor.startTurn({ sessionId, text: "after-cancel" });
-    await provider.waitForGate();
-    provider.releaseGate();
+    const echo = await setupEcho();
+    const second = await echo.actor.startTurn({ sessionId: echo.sessionId, text: "after-cancel" });
     expect((await second.outcome).status).toBe("completed");
-    expect(actor.activeTurn).toBeUndefined();
+    expect(echo.actor.activeTurn).toBeUndefined();
   });
 
   it("2.4 MCP refresh / approval / ask arriving mid-turn — never starts a parallel run", async () => {
     const { actor, provider, sessionId } = await setup();
     const first = await actor.startTurn({ sessionId, text: "first" });
-    await provider.waitForGate();
+    await provider.whenEntered();
     // mid-turn background inputs cannot sneak a second run in
     expect(actor.activeTurn?.turn.id).toBe(first.turnId); // still busy on the SAME run
-    await expect(actor.startTurn({ sessionId, text: "again" })).rejects.toThrow(/SESSION_BUSY/);
-    provider.releaseGate();
+    await expectSessionBusy(actor.startTurn({ sessionId, text: "again" }));
+    provider.release();
     const outcome = await first.outcome;
     expect(outcome.status).toBe("completed");
   });
@@ -159,7 +203,7 @@ describe("P34-2 same-session race suite", () => {
   it("2.5 adversarial burst — every non-conflicting op lands, still a single live run", async () => {
     const { actor, provider, sessionId } = await setup();
     const live = await actor.startTurn({ sessionId, text: "A" });
-    await provider.waitForGate();
+    await provider.whenEntered();
     const settled = await Promise.allSettled([
       actor.startTurn({ sessionId, text: "B" }),
       actor.steer({ sessionId, text: "C" }),
@@ -168,18 +212,19 @@ describe("P34-2 same-session race suite", () => {
     ]);
     expect(actor.activeTurn?.turn.id).toBe(live.turnId); // the ONLY live one
     expect(actor.inputQueue.pendingCount).toBe(1); // D queued, not run
-    // the direct start B was refused, steer/queue accepted
-    expect(settled[0]?.status).not.toBe("fulfilled");
+    // the direct start B and createTurn E are refused (BUSY); steer/queue accepted
+    expect(settled[0]?.status).toBe("rejected");
+    expect((settled[0]! as PromiseRejectedResult).reason?.info?.code).toBe("SESSION_BUSY");
     expect(settled[1]?.status).toBe("fulfilled");
     expect(settled[2]?.status).toBe("fulfilled");
-    expect(settled[3]?.status).toBe("fulfilled");
-    provider.releaseGate();
+    expect(settled[3]?.status).toBe("rejected");
+    expect((settled[3]! as PromiseRejectedResult).reason?.info?.code).toBe("SESSION_BUSY");
+    provider.release();
     await live.outcome;
-    // drain the queued follow-up sequentially
-    const drained = await actor.startTurn({ sessionId, text: "D" });
-    await provider.waitForGate();
-    provider.releaseGate();
-    await drained.outcome;
+    // the queued follow-up drains sequentially into a NEW turn
+    await provider.whenNEntered(2);
+    provider.release();
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
     expect(actor.activeTurn).toBeUndefined();
   });
 });

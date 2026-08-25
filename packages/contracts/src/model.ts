@@ -79,6 +79,11 @@ export interface ModelFinalResult {
   toolCalls?: ToolCall[];
   usage?: Usage;
   error?: AgentErrorInfo;
+  /** Reasoning/thinking content emitted by a thinking-mode provider. Carried
+   *  so the caller can persist it on the assistant message and, for providers
+   *  that require it (deepseek reasoning_content), pass it back on the next
+   *  request. Never surfaced as final user-facing output. */
+  reasoningContent?: string;
 }
 
 export type ModelEvent =

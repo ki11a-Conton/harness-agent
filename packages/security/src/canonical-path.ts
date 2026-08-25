@@ -22,6 +22,26 @@ import { realpathSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { isPathWithin, lexicalNormalize, normaliseSeparators } from "@ar/contracts";
 
+/** P36-6 (INV-P36-006): typed canonicalization failure. */
+export interface CanonicalizationError {
+  ok: false;
+  code: "permission" | "symlink_loop" | "io" | "depth" | "invalid" | "unknown";
+  path: string;
+  message: string;
+}
+
+export class CanonicalizationFailed extends Error {
+  readonly ok = false as const;
+  readonly code: CanonicalizationError["code"];
+  readonly path: string;
+  constructor(code: CanonicalizationError["code"], path: string, detail: string) {
+    super(`canonicalization failed: ${code} for ${path}: ${detail}`);
+    this.name = "CanonicalizationFailed";
+    this.code = code;
+    this.path = path;
+  }
+}
+
 export interface CanonicalizeOptions {
   /** Working directory used to resolve relative paths. */
   cwd: string;
@@ -36,6 +56,11 @@ export interface CanonicalizeOptions {
  *   - non-existent path    → realpath(deepest existing ancestor) + tail,
  *                            with `.`/`..` in the tail lexically resolved
  *                            against the canonical ancestor
+ *
+ * P36-6 (INV-P36-006): only ENOENT/ENOTDIR fall back to the ancestor
+ * heuristic.  EACCES, EPERM, ELOOP, EIO, and other errors throw a typed
+ * CanonicalizationFailed — path containment decisions are denied, never
+ * silently bypassed.
  */
 export function canonicalizePath(target: string, opts: CanonicalizeOptions): string {
   if (typeof target !== "string" || target.length === 0) {
@@ -53,10 +78,29 @@ export function canonicalizePath(target: string, opts: CanonicalizeOptions): str
     // Full realpath: existing path (also resolves symlinks and lets the OS
     // resolve `.`/`..` against real directory inodes).
     return normaliseSeparators(realpathSync(normalized));
-  } catch {
-    // Non-existent (at least not fully): canonical ancestor + lexically
-    // resolved tail.
-    return canonicalAncestorAndTail(normalized);
+  } catch (err) {
+    const nodeErr = err as NodeJS.ErrnoException;
+    // P36-6: only ENOENT/ENOTDIR are eligible for the ancestor fallback.
+    if (nodeErr.code === "ENOENT" || nodeErr.code === "ENOTDIR") {
+      return canonicalAncestorAndTail(normalized);
+    }
+    // All other errors fail closed.
+    throw classifyCanonicalError(nodeErr, normalized);
+  }
+}
+
+/** P36-6: classify a non-ENOENT realpath error into a typed failure. */
+function classifyCanonicalError(err: NodeJS.ErrnoException, path: string): CanonicalizationFailed {
+  switch (err.code) {
+    case "EACCES":
+    case "EPERM":
+      return new CanonicalizationFailed("permission", path, err.message);
+    case "ELOOP":
+      return new CanonicalizationFailed("symlink_loop", path, err.message);
+    case "EIO":
+      return new CanonicalizationFailed("io", path, err.message);
+    default:
+      return new CanonicalizationFailed("unknown", path, err.message);
   }
 }
 
@@ -87,7 +131,14 @@ function canonicalAncestorAndTail(p: string): string {
       // `..` in the not-yet-existing portion can never climb past the
       // canonical ancestor (which may itself be a symlink-resolved path).
       return lexicalNormalize(`${base}/${tail}`);
-    } catch {
+    } catch (err) {
+      const nodeErr = err as NodeJS.ErrnoException;
+      // P36-6: only missing-path errors let us keep walking up.  Any other
+      // error (EACCES/EPERM/ELOOP/EIO/…) is an ambiguous canonicalization and
+      // must fail closed.
+      if (nodeErr.code !== "ENOENT" && nodeErr.code !== "ENOTDIR") {
+        throw classifyCanonicalError(nodeErr, p);
+      }
       const parent = dirname(current);
       if (parent === current) {
         // At the filesystem root and nothing exists — return the root.
@@ -99,8 +150,13 @@ function canonicalAncestorAndTail(p: string): string {
       current = parent;
     }
   }
-  // Safety net — walk above the cap: return the (possibly non-canonical) path.
-  return current;
+  // P37-10 (INV-P37-011): ancestor depth exhaustion FAILS CLOSED — never
+  // return a potentially non-canonical path (a containment bypass risk).
+  throw new CanonicalizationFailed(
+    "depth",
+    p,
+    "ancestor resolution exceeded maximum depth",
+  );
 }
 
 /**

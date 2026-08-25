@@ -158,14 +158,16 @@ async function sdkStreamed(events: TurnEvent[]): Promise<{ result: RunResult; co
   const { transport } = transportFor(events);
   const client = await HarnessClient.connect(transport);
   const thread = await client.startThread({ agentName: "a", cwd: "/tmp" });
-  const { events: stream } = await thread.runStreamed("do it");
-  // EventChannel is SINGLE-consumer: `done` shares the same channel as the
-  // stream, so a test must consume exactly one of them. We consume the raw
-  // stream (the streaming-first surface) and reduce it by hand — the `done`
-  // promise is left to settle on its own (empty reduce, harmless).
+  const { events: stream, done } = await thread.runStreamed("do it");
+  // P36-4 (INV-P36-003): `events` and `done` are INDEPENDENT (RunEventHub
+  // broadcast). Consuming the stream and awaiting done CONCURRENTLY must not
+  // deadlock or steal events.
   const consumed: TurnEvent[] = [];
-  for await (const e of stream) consumed.push(e);
-  return { result: await reduceTurnEvents(consumed), consumed };
+  const consume = (async () => {
+    for await (const e of stream) consumed.push(e);
+  })();
+  const [result] = await Promise.all([done, consume]);
+  return { result, consumed };
 }
 
 async function sdkRun(events: TurnEvent[]): Promise<RunResult> {

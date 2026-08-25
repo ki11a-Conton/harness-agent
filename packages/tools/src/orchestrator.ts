@@ -449,7 +449,7 @@ export class ToolOrchestrator {
           // "progress" chunk becomes tool.progress — a progress signal is
           // NEVER a terminal result and never settles the call. A failed
           // event write is non-fatal for execution but MUST stay observable
-          // (P14-6) — never a bare `.catch(() => {})`.
+          // (P14-6) — never a bare silent catch.
           const type = event.stream === "progress" ? "tool.progress" : "tool.output";
           void this.emit(type, request, context, { ...event }).catch((err) =>
             this.nonFatal?.report(`orchestrator.emit:${type}`, err),

@@ -33,6 +33,8 @@ export interface ProtocolTransport {
 export interface HarnessTransport extends ProtocolTransport {
   /** The initialize result (protocol version + capabilities). */
   initializeResult(): Promise<InitializeServer>;
+  /** P37-4: register a close handler. Returns an unsubscribe function. */
+  onClose?(handler: () => void): () => void;
 }
 
 /**
@@ -42,6 +44,7 @@ export interface HarnessTransport extends ProtocolTransport {
 export class MemoryHarnessTransport implements HarnessTransport {
   private readonly handler: (method: string, params: Record<string, unknown>) => Promise<TransportInvoke<unknown>>;
   private readonly subscribers = new Set<(e: TurnEvent) => void>();
+  private readonly closeHandlers = new Set<() => void>();
   private init?: InitializeServer;
 
   constructor(
@@ -74,7 +77,14 @@ export class MemoryHarnessTransport implements HarnessTransport {
     return this.init;
   }
 
+  /** P37-4: register a close handler. */
+  onClose(handler: () => void): () => void {
+    this.closeHandlers.add(handler);
+    return () => this.closeHandlers.delete(handler);
+  }
+
   async close(): Promise<void> {
+    for (const h of this.closeHandlers) h();
     this.subscribers.clear();
   }
 }

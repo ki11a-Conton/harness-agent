@@ -225,8 +225,9 @@ describe("P14-2 commandAllowlisted (semantic allowlist matching)", () => {
     expect(commandAllowlisted(["powershell -Command x"], "powershell -EncodedCommand AAA=", "windows")).toBe(false);
   });
 
-  it("glob entries still allow explicit shapes", () => {
-    expect(commandAllowlisted(["**/*"], "git diff; rm -rf /", "posix")).toBe(true); // policy says everything
+  it("glob entries still allow explicit shapes (P36-5: broad globs cannot admit composition)", () => {
+    expect(commandAllowlisted(["**/*"], "git status", "posix")).toBe(true); // plain command → glob matches
+    expect(commandAllowlisted(["**/*"], "git diff; rm -rf /", "posix")).toBe(false); // P36-5: composed → no glob match
     expect(commandAllowlisted(["git *"], "git status", "posix")).toBe(true);
     expect(commandAllowlisted(["git *"], "git diff; rm -rf /", "posix")).toBe(false);
   });

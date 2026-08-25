@@ -36,7 +36,6 @@ import type {
 import type { RunMetrics } from "@ar/observability";
 import {
   createToolLookupTool,
-  decideSchemaAdvert,
   semanticsOf,
   editFileTool,
   execTool,
@@ -334,19 +333,15 @@ async function runOneCase(
     const registry = new ToolRegistry();
     registerBuiltinTools(registry);
 
-    // P18-2: schema advertisement mode. "deferred" forces the deferred path —
-    // built-in tools stay inline, everything else is stubbed and fetchable via
-    // tool_lookup — so benchmarks can compare token cost / success directly.
-    // Default "full" keeps the historical all-inline behavior.
-    let toolSpecs = registry.specs();
+    // P18-2: schema advertisement mode. "deferred" registers tool_lookup so
+    // benchmarks can fetch full schemas on demand. P23-3 made the frozen
+    // StepToolRouter the single source of the model-visible tool set, so the
+    // legacy `toolSpecs` deps param is gone — tool_lookup is what makes the
+    // deferred path observable end-to-end.
     let toolLookupName: string | undefined;
     if (caseDef.schemaMode === "deferred") {
       registry.register(createToolLookupTool(registry));
       toolLookupName = "tool_lookup";
-      toolSpecs = decideSchemaAdvert(registry.specs(), {
-        maxInlineTokens: 1, // force deferred for the benchmark comparison
-        keepFull: (name) => (PRODUCTION_TOOL_NAMES as readonly string[]).includes(name) || name === toolLookupName,
-      }).advertised;
     }
 
     // P4-7/P4-8: REAL subagent mechanism — read-only worker agent + delegation
@@ -544,7 +539,6 @@ async function runOneCase(
           }
         : {}),
       recovery: new RecoveryPolicy(),
-      toolSpecs,
       changedPathsProvider: () => changedPaths,
       // P18-1: ToolSemantics is the only execution-policy source — registry
       // semantics drive retry/concurrency/checkpoint/approval decisions.
@@ -740,6 +734,16 @@ class TrackingEventStore implements EventStore {
   }
 
   async appendNew(event: Omit<AgentEvent, "sequence">): Promise<AgentEvent> {
+    // P36-12: P26-1 moved all production writers to appendNew, but the
+    // onRequested hook was only in append() — tool.requested events were
+    // silently missed, so changedPaths stayed empty.
+    if (event.type === "tool.requested") {
+      const name = event.payload.name;
+      const args = event.payload.args;
+      if (typeof name === "string" && typeof args === "object" && args !== null) {
+        this.onRequested(name, args as Record<string, unknown>);
+      }
+    }
     return this.inner.appendNew(event);
   }
 

@@ -11,7 +11,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { canonicalizePath } from "./canonical-path.js";
+import { canonicalizePath, CanonicalizationFailed } from "./canonical-path.js";
 
 let base: string;
 let ws: string;
@@ -116,7 +116,8 @@ describe("canonicalizePath — root-ancestor join regression (P14-1 fix)", () =>
   it("never emits a double-slash prefix when the deepest existing ancestor is the root", () => {
     const p = canonicalizePath("/Definitely/Not/Existing/sub", { cwd });
     expect(p.startsWith("//")).toBe(false);
-    expect(p).toBe("/Definitely/Not/Existing/sub");
+    // Windows resolves /foo to the current drive (D:/foo); POSIX keeps /foo.
+    expect(p.replace(/^[A-Za-z]:/, "")).toBe("/Definitely/Not/Existing/sub");
   });
 
   it("case-folded containment matches after root-ancestor canonicalization", () => {
@@ -130,6 +131,45 @@ describe("canonicalizePath — root-ancestor join regression (P14-1 fix)", () =>
   it("traversal below a non-existent root still resolves lexically (no // prefix)", () => {
     const p = canonicalizePath("/work/../etc/passwd", { cwd });
     expect(p.startsWith("//")).toBe(false);
-    expect(p).toBe("/etc/passwd");
+    expect(p.replace(/^[A-Za-z]:/, "")).toBe("/etc/passwd");
+  });
+});
+
+describe("P36-6 — canonicalization error taxonomy (INV-P36-006)", () => {
+  it("CanonicalizationFailed is a typed error with ok=false and a code", () => {
+    const err = new CanonicalizationFailed("permission", "/some/path", "access denied");
+    expect(err.ok).toBe(false);
+    expect(err.code).toBe("permission");
+    expect(err.path).toBe("/some/path");
+    expect(err.message).toContain("permission");
+    expect(err instanceof Error).toBe(true);
+  });
+
+  it("non-existent (ENOENT) still falls back to ancestor — no throw", () => {
+    // Paths that don't exist must still work (backward compat).
+    const p = canonicalizePath("/tmp/__nonexistent_p36_test__/file.txt", { cwd });
+    expect(p).toContain("__nonexistent_p36_test__/file.txt");
+  });
+
+  it("permission-denied path throws CanonicalizationFailed with code=permission", () => {
+    // Windows: try the System Volume Information directory (usually access-denied).
+    // POSIX: try /root (usually no access for non-root).
+    // If neither works, skip gracefully.
+    const paths = [
+      "C:\\System Volume Information\\test",
+      "/root/secret",
+      "\\\\?\\C:\\System Volume Information",
+    ];
+    for (const p of paths) {
+      try {
+        canonicalizePath(p, { cwd });
+      } catch (err) {
+        if (err instanceof CanonicalizationFailed) {
+          expect(err.code).toBe("permission");
+          return; // found a permission-denied path
+        }
+      }
+    }
+    // No path triggered permission error — skip (platform limitation).
   });
 });

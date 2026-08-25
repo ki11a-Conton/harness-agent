@@ -16,7 +16,7 @@ class GatedProvider implements ModelProvider {
   readonly id = "gated";
   private entered = 0;
   private entryWaiters: Array<() => void> = [];
-  private releases: Array<(value?: unknown) => void> = [];
+  private releases: Array<(value: void | PromiseLike<void>) => void> = [];
 
   // resolves when the NEXT in-flight turn has reached the gate
   whenEntered(): Promise<void> {
@@ -46,6 +46,11 @@ class GatedProvider implements ModelProvider {
   }
 }
 
+/** P36-9: assert the typed error CODE (SESSION_BUSY), never message text. */
+async function expectSessionBusy(promise: Promise<unknown>): Promise<void> {
+  await expect(promise).rejects.toMatchObject({ info: { code: "SESSION_BUSY" } });
+}
+
 describe("bisect5", () => {
   it("gated flow", async () => {
     const store = new MemorySessionStore();
@@ -60,8 +65,10 @@ describe("bisect5", () => {
     const actor = await manager.load(session.id);
     const first = await actor.startTurn({ sessionId: session.id, text: "first" });
     await provider.whenEntered();
-    const secondId = (await actor.createTurn({ sessionId: session.id, text: "second" })).id;
-    await expect(actor.runTurn(secondId)).rejects.toThrow(/SESSION_BUSY/);
+    // Create a second turn via the RUNTIME (actor.createTurn refuses while
+    // one is active); runTurn on it is refused with SESSION_BUSY.
+    const secondTurn = await runtime.startTurn(session.id, "second");
+    await expectSessionBusy(actor.runTurn(secondTurn.id));
     expect(actor.activeTurn?.turn.id).toBe(first.turnId);
     provider.release();
     const outcome = await first.outcome;

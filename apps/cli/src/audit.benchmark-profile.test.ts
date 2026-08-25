@@ -52,7 +52,7 @@ describe("audit benchmark profile — real workspace probes (P0-1)", () => {
     expect(probe.ciWorkflow.windows).toBe(true);
   });
 
-  it("derives the real repo state: adversarial + regression + holdout all benchmarked (P4-1/P4-2)", async () => {
+  it("derives the real repo state: cases declared but NOT executed without evidence (P36-7)", async () => {
     const probe = await probeWorkspace({ root: REPO_ROOT, gitSha: async () => undefined });
     const input: AuditInput = {
       ...probe,
@@ -92,6 +92,7 @@ describe("audit benchmark profile — real workspace probes (P0-1)", () => {
           skills: true,
           usageAccounting: false,
           runBudget: false,
+          stepSnapshot: true,
         },
         persistence: {
           mode: "in-memory",
@@ -102,10 +103,31 @@ describe("audit benchmark profile — real workspace probes (P0-1)", () => {
       },
     };
     const matrix = buildCapabilityMatrix(input);
-    expect(capabilityStatusOf(matrix.records.find((r) => r.id === "adversarial_suite")!)).toBe("benchmarked");
-    expect(capabilityStatusOf(matrix.records.find((r) => r.id === "regression_suite")!)).toBe("benchmarked");
-    expect(capabilityStatusOf(matrix.records.find((r) => r.id === "holdout_suite")!)).toBe("benchmarked");
-    expect(matrix.records.find((r) => r.id === "regression_suite")!.evidence[0]?.note).toContain("30");
+    // P36-7: benchmark cases EXIST (benchmarkDeclared) but no passing current-
+    // HEAD run evidence → benchmarkExercised=false, status cannot be
+    // "benchmarked".
+    const adv = matrix.records.find((r) => r.id === "adversarial_suite")!;
+    expect(adv.benchmarkDeclared).toBe(true);
+    expect(adv.benchmarkExercised).toBe(false);
+    expect(capabilityStatusOf(adv)).toBe("wired");
+    // With current-HEAD passing benchmark evidence the same probe reaches
+    // benchmarked (INV-P36-007 satisfied).
+    const proven = buildCapabilityMatrix({
+      ...input,
+      gitSha: "git-abc",
+      executionEvidence: {
+        "capability:adversarial_suite": { kind: "test_run", headSha: "git-abc", command: "vitest", passed: true, generatedAt: "t" },
+        "capability:regression_suite": { kind: "test_run", headSha: "git-abc", command: "vitest", passed: true, generatedAt: "t" },
+        "capability:holdout_suite": { kind: "test_run", headSha: "git-abc", command: "vitest", passed: true, generatedAt: "t" },
+        "benchmark:adversarial_suite": { kind: "benchmark_run", headSha: "git-abc", command: "bench", passed: true, generatedAt: "t" },
+        "benchmark:regression_suite": { kind: "benchmark_run", headSha: "git-abc", command: "bench", passed: true, generatedAt: "t" },
+        "benchmark:holdout_suite": { kind: "benchmark_run", headSha: "git-abc", command: "bench", passed: true, generatedAt: "t" },
+      },
+    });
+    expect(capabilityStatusOf(proven.records.find((r) => r.id === "adversarial_suite")!)).toBe("benchmarked");
+    expect(capabilityStatusOf(proven.records.find((r) => r.id === "regression_suite")!)).toBe("benchmarked");
+    expect(capabilityStatusOf(proven.records.find((r) => r.id === "holdout_suite")!)).toBe("benchmarked");
+    expect(proven.records.find((r) => r.id === "regression_suite")!.evidence[0]?.note).toContain("30");
   });
 
   it("createDefaultDeps with a dataDir wires durable stores honestly (checkpoint + approval)", async () => {
@@ -132,8 +154,11 @@ describe("audit benchmark profile — real workspace probes (P0-1)", () => {
     expect(json.records.length).toBe(21);
     const md = await readFile(join(out, "CAPABILITY_MATRIX.md"), "utf8");
     expect(md).toContain("# CAPABILITY MATRIX");
-    expect(md).toContain("| regression_suite | benchmarked |");
-    expect(md).toContain("audit: OK");
+    // P36-7: cases exist (benchmarkDeclared=true) but no executing evidence →
+    // status is "wired", not "benchmarked".
+    expect(md).toContain("| regression_suite | wired |");
+    expect(md).toContain("| regression_suite | wired | true | true | false | none/none/true | sandboxed | true | false | true | false");
+    expect(md).toContain("audit verdict (P36-8): documentationClaims=PASS");
   });
 
   it("`agent audit --json` emits a parseable matrix and exits 0 when truthful", async () => {

@@ -28,6 +28,14 @@ export const ERROR_CODES = [
   "TOOL_NOT_IN_STEP",
   "CONFIG_DRIFT_REJECTED",
   "INTERNAL_ERROR",
+  // P37-1: an operation that requires a live turn (e.g. steer) has none.
+  "NO_ACTIVE_TURN",
+  // P37-2: a load was cancelled by unload/close while in flight.
+  "LOAD_CANCELLED",
+  // P37-4: the transport closed before the terminal turn event arrived.
+  "STREAM_TERMINATED_BEFORE_TURN_END",
+  // P37-5: the SDK event buffer exceeded its configured bound.
+  "STREAM_BUFFER_OVERFLOW",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -76,6 +84,10 @@ export const ERROR_DEFAULT_MESSAGES: Record<ErrorCode, string> = {
   TOOL_NOT_IN_STEP: "Tool is not present in the step frozen tool router",
   CONFIG_DRIFT_REJECTED: "Session config drift rejected (restart required or frozen key changed)",
   INTERNAL_ERROR: "Internal error",
+  NO_ACTIVE_TURN: "No active turn for this operation",
+  LOAD_CANCELLED: "Session load was cancelled",
+  STREAM_TERMINATED_BEFORE_TURN_END: "Stream ended before the turn did",
+  STREAM_BUFFER_OVERFLOW: "Event stream buffer overflow",
 };
 
 /** Default retry policy for each failure class. Auto-retry is unsafe by default. */
@@ -109,6 +121,10 @@ export const ERROR_RETRY_DEFAULTS: Record<ErrorCode, { retryable: boolean; safeT
   TOOL_NOT_IN_STEP: { retryable: false, safeToRetry: false },
   CONFIG_DRIFT_REJECTED: { retryable: false, safeToRetry: false },
   INTERNAL_ERROR: { retryable: false, safeToRetry: false },
+  NO_ACTIVE_TURN: { retryable: false, safeToRetry: false },
+  LOAD_CANCELLED: { retryable: false, safeToRetry: false },
+  STREAM_TERMINATED_BEFORE_TURN_END: { retryable: true, safeToRetry: false },
+  STREAM_BUFFER_OVERFLOW: { retryable: true, safeToRetry: false },
 };
 
 export function errorInfo(

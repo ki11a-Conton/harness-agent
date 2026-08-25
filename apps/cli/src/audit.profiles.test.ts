@@ -6,6 +6,8 @@ import {
   CAPABILITY_PROFILES,
   profileOf,
   type AuditInput,
+  backingStoreName,
+  storeDurabilityLevel,
 } from "./audit.js";
 
 /**
@@ -35,6 +37,7 @@ const EPHEMERAL_INTROSPECTION: HarnessIntrospection = {
     mcp: false,
     plugins: false,
     skills: false,
+    stepSnapshot: true,
   },
   persistence: {
     mode: "in-memory",
@@ -147,10 +150,11 @@ describe("P20-2 per-profile durability", () => {
   it("ephemeral profile does NOT demand durability — no degraded reason", () => {
     const matrix = buildCapabilityMatrix(input(EPHEMERAL_INTROSPECTION), "interactive-ephemeral");
     // checkpoint_store is wired (feature on) but the harness is in-memory;
-    // ephemeral does not require durability, so it is trivially durable and
-    // NOT degraded — durability is simply not a promise of this profile.
+    // ephemeral does not require durability, so durabilitySatisfied is
+    // trivially satisfied and NOT degraded — durability is simply not a
+    // promise of this profile.
     const checkpoint = record(matrix, "checkpoint_store");
-    expect(checkpoint.durable).toBe(true);
+    expect(checkpoint.durabilitySatisfied).toBe(true);
     expect(checkpoint.degradedReason).toBeUndefined();
     expect(matrix.profile).toBe("interactive-ephemeral");
   });
@@ -158,7 +162,7 @@ describe("P20-2 per-profile durability", () => {
   it("persistent profile on an IN-MEMORY harness degrades durable-required capabilities", () => {
     const matrix = buildCapabilityMatrix(input(EPHEMERAL_INTROSPECTION), "interactive-persistent");
     const checkpoint = record(matrix, "checkpoint_store");
-    expect(checkpoint.durable).toBe(false);
+    expect(checkpoint.durabilitySatisfied).toBe(false);
     expect(checkpoint.degradedReason).toMatch(/requires a durable harness/);
     // usage_accounting is required-wired in persistent but the harness did
     // not wire it.
@@ -169,7 +173,7 @@ describe("P20-2 per-profile durability", () => {
   it("persistent profile on a DURABLE harness reports durable capabilities", () => {
     const matrix = buildCapabilityMatrix(input(DURABLE_INTROSPECTION), "interactive-persistent");
     const checkpoint = record(matrix, "checkpoint_store");
-    expect(checkpoint.durable).toBe(true);
+    expect(checkpoint.durabilitySatisfied).toBe(true);
     expect(checkpoint.degradedReason).toBeUndefined();
   });
 });
@@ -188,5 +192,32 @@ describe("P20-2 per-profile security mode", () => {
     for (const profile of CAPABILITY_PROFILES) {
       expect(views[profile].profile).toBe(profile);
     }
+  });
+
+  it("P37-9: backingStoreName maps each capability to its own store", () => {
+    const intro = {
+      ...DURABLE_INTROSPECTION,
+      stores: {
+        session: "JSONLSessionStore",
+        events: "JSONLEventStore",
+        checkpoint: "DurableCheckpointStore",
+        memory: "DurableMemoryStore",
+        askUser: "JSONLAskUserStore",
+        approval: "DurableApprovalStore",
+      },
+    } as HarnessIntrospection;
+    expect(backingStoreName("checkpoint_store", intro)).toBe("DurableCheckpointStore");
+    expect(backingStoreName("memory_store", intro)).toBe("DurableMemoryStore");
+    expect(backingStoreName("ask_user_durable", intro)).toBe("JSONLAskUserStore");
+    expect(backingStoreName("approval_durable", intro)).toBe("DurableApprovalStore");
+    expect(backingStoreName("context_pipeline", intro)).toBeUndefined();
+  });
+
+  it("P37-9: durability ordering — process < durable, flush < durable", () => {
+    expect(storeDurabilityLevel("SQLiteStore")).toBe("process");
+    expect(storeDurabilityLevel("JSONLStore")).toBe("durable");
+    expect(storeDurabilityLevel("DurableApprovalStore")).toBe("durable");
+    expect(storeDurabilityLevel("InMemoryApprovalStore")).toBe("memory");
+    expect(storeDurabilityLevel(undefined)).toBe("none");
   });
 });

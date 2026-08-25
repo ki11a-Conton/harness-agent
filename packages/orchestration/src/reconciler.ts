@@ -41,6 +41,8 @@ export interface OrchestratorOptions {
   readonly maxConcurrent?: number;
   /** Called after each tick; allows tests to observe reconcile decisions. */
   readonly onTick?: (info: { tick: number; dispatched: WorkId[]; stopped: WorkId[] }) => void;
+  /** P36-9: spawn/worker failures are surfaced here — never silent. */
+  readonly onError?: (info: { itemId: WorkId; phase: string; error: string }) => void;
 }
 
 export class Orchestrator {
@@ -98,7 +100,15 @@ export class Orchestrator {
         continue; // raced with reconcile; skip this candidate.
       }
       const ws = workspaceFor(freshItem.identifier, freshItem.id, this.opts.workspaceRoot);
-      this.spawn(freshItem, ws.dir).catch(() => {});
+      this.spawn(freshItem, ws.dir).catch((cause) => {
+        // P14-6 / P36-9: never a silent catch — surface spawn failures on the
+        // error channel so a worker that dies at launch is observable.
+        this.opts.onError?.({
+          itemId: id,
+          phase: "spawn",
+          error: cause instanceof Error ? cause.message : String(cause),
+        });
+      });
       dispatched.push(id);
       slots -= 1;
     }

@@ -15,11 +15,12 @@ import type {
   ToolCallRequest,
   ToolExecutionContext,
   ToolResult,
+  TurnId,
 } from "@ar/contracts";
 import { newAgentId } from "@ar/contracts";
 import { EchoModelProvider, ScriptedModelProvider } from "@ar/model";
 import { AgentRuntime } from "./runtime.js";
-import { DefaultLoadedSessionManager, type SessionActor } from "./session-actor.js";
+import { DefaultLoadedSessionManager, DefaultSessionActor, type SessionActor } from "./session-actor.js";
 import { MemoryEventStore, MemorySessionStore, defaultTestToolCatalog } from "../test/fakes.js";
 import { FakeOrchestrator } from "../test/fake-orchestrator.js";
 
@@ -366,5 +367,430 @@ describe("SessionActor (PHASE 25)", () => {
     expect(manager.listLoaded()).toEqual([]);
     const outcome = await handle.outcome;
     expect(outcome.status).toBe("cancelled");
+  });
+
+  // ---------------------------------------------------------------------------
+  // P36-2 — SessionActor linearizability (INV-P36-001)
+  // ---------------------------------------------------------------------------
+
+  /** A runtime stub whose startTurn blocks until the gate opens, then
+   *  delegates to a real runtime. This makes the actor sit in the
+   *  `await runtime.startTurn()` window deterministically. */
+  function gatedRuntime(
+    real: AgentRuntime,
+    sessionId: SessionId,
+  ): { runtime: Pick<AgentRuntime, "startTurn" | "runTurn">; open: () => void } {
+    let open!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    return {
+      runtime: {
+        startTurn: async (sid: SessionId, text: string) => {
+          await gate;
+          return real.startTurn(sid, text);
+        },
+        runTurn: (sid: SessionId, turnId: unknown, signal?: AbortSignal) =>
+          real.runTurn(sid, turnId as never, signal as AbortSignal),
+      },
+      open,
+    };
+  }
+
+  it("P36-2 Test A — simultaneous admission: second caller gets SESSION_BUSY while first is in startTurn await", async () => {
+    const { runtime, store, events, orchestrator, inbox, sessionId } = await setupActor();
+    const session = (await store.getSession(sessionId))!;
+    const { runtime: gated, open } = gatedRuntime(runtime, sessionId);
+    const actor = new DefaultSessionActor({
+      persistent: session,
+      runtime: gated,
+      store,
+      inbox,
+    });
+    const a = actor.startTurn({ sessionId, text: "A" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 10)); // first is inside startTurn await
+    const b = actor.startTurn({ sessionId, text: "B" });
+    const err = await b.then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    expect((err as { info?: { code: string } })?.info?.code).toBe("SESSION_BUSY");
+    open();
+    const handle = await a;
+    await actor.interrupt();
+    await handle.outcome;
+    expect(events).toBeDefined();
+    expect(orchestrator).toBeDefined();
+  });
+
+  it("P36-2 Test B — Promise.all race: exactly one admission succeeds", async () => {
+    const { actor, sessionId } = await setupActor({ provider: new EchoModelProvider() });
+    const results = await Promise.allSettled([
+      actor.startTurn({ sessionId, text: "race1" }),
+      actor.startTurn({ sessionId, text: "race2" }),
+    ]);
+    const fulfilled = results.filter((r) => r.status === "fulfilled");
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    const reason = (rejected[0]! as PromiseRejectedResult).reason;
+    expect((reason as { info?: { code: string } })?.info?.code).toBe("SESSION_BUSY");
+    // Clean up
+    const handle = (fulfilled[0]! as PromiseFulfilledResult<Awaited<ReturnType<SessionActor["startTurn"]>>>).value;
+    await actor.interrupt();
+    await handle.outcome;
+  });
+
+  it("P36-2 Test C — starting + close: no running turn survives after close", async () => {
+    const { runtime, store, sessionId } = await setupActor();
+    const session = (await store.getSession(sessionId))!;
+    const { runtime: gated, open } = gatedRuntime(runtime, sessionId);
+    const actor = new DefaultSessionActor({
+      persistent: session,
+      runtime: gated,
+      store,
+    });
+    const startPromise = actor.startTurn({ sessionId, text: "start-me" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 10)); // inside startTurn await
+    await actor.close();
+    open();
+    const err = await startPromise.then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    // The start must NOT promote into a running turn after close.
+    expect(err).toBeDefined();
+    expect(actor.activeTurn).toBeUndefined();
+    expect(actor.status().loaded).toBe(false);
+  });
+
+  it("P36-2 Test D — starting + cancel: targeted cancellation aborts the reserved start", async () => {
+    const { runtime, store, sessionId } = await setupActor();
+    const session = (await store.getSession(sessionId))!;
+    const { runtime: gated, open } = gatedRuntime(runtime, sessionId);
+    const actor = new DefaultSessionActor({
+      persistent: session,
+      runtime: gated,
+      store,
+    });
+    const startPromise = actor.startTurn({ sessionId, text: "start-me" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 10)); // inside startTurn await
+    // No turn id exists yet while starting; close (which covers cancel) wins.
+    await actor.close();
+    open();
+    const err = await startPromise.then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    expect(err).toBeDefined();
+    expect(actor.activeTurn).toBeUndefined();
+  });
+
+  // ---------------------------------------------------------------------------
+  // P36-3 — LoadedSessionManager single-flight (INV-P36-002)
+  // ---------------------------------------------------------------------------
+
+  it("P36-3: 100 concurrent load(id) → same object identity", async () => {
+    const { manager, sessionId } = await setupActor();
+    const results = await Promise.all(Array.from({ length: 100 }, () => manager.load(sessionId)));
+    const first = results[0]!;
+    for (const actor of results) {
+      expect(actor).toBe(first);
+    }
+  });
+
+  it("P36-3: store read count == 1 for a single-flight burst", async () => {
+    const { manager, runtime, store } = await setupActor();
+    // A NEW session id that has NOT been loaded yet → the burst exercises the
+    // single-flight path (the setupActor session was already loaded).
+    const fresh = await runtime.createSession({ agent: AGENT, cwd: "/work-burst" });
+    const original = store.getSession.bind(store);
+    let count = 0;
+    store.getSession = async (id) => { count += 1; return original(id); };
+    const results = await Promise.all(Array.from({ length: 50 }, () => manager.load(fresh.id)));
+    const first = results[0]!;
+    for (const actor of results) {
+      expect(actor).toBe(first);
+    }
+    expect(count).toBe(1);
+  });
+
+  it("P36-3: load failure fan-out → all fail, retry later succeeds", async () => {
+    const { manager, runtime, store } = await setupActor();
+    const fresh = await runtime.createSession({ agent: AGENT, cwd: "/work-fail" });
+    const original = store.getSession.bind(store);
+    let fail = true;
+    store.getSession = async (id) => {
+      if (fail) throw new Error("store failure");
+      return original(id);
+    };
+    const results = await Promise.allSettled(Array.from({ length: 10 }, () => manager.load(fresh.id)));
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(rejected).toHaveLength(10);
+    fail = false;
+    const actor = await manager.load(fresh.id);
+    expect(actor).toBeDefined();
+  });
+
+  it("P36-3: load + unload race leaves no loaded actor", async () => {
+    const { manager, sessionId } = await setupActor();
+    const actor = await manager.load(sessionId);
+    expect(manager.listLoaded()).toContain(sessionId);
+    await manager.unload(sessionId);
+    expect(manager.listLoaded()).not.toContain(sessionId);
+  });
+
+  it("P36-3: two different session ids may load concurrently", async () => {
+    const { manager, runtime } = await setupActor();
+    const s1 = await runtime.createSession({ agent: AGENT, cwd: "/work" });
+    const s2 = await runtime.createSession({ agent: AGENT, cwd: "/work2" });
+    const [a1, a2] = await Promise.all([manager.load(s1.id), manager.load(s2.id)]);
+    expect(a1.sessionId).toBe(s1.id);
+    expect(a2.sessionId).toBe(s2.id);
+    expect(a1).not.toBe(a2);
+  });
+
+  // ---------------------------------------------------------------------------
+  // P37-1 — unified actor admission state machine (INV-P37-001)
+  // ---------------------------------------------------------------------------
+
+  /** A runtime stub whose startTurn blocks until the gate opens. */
+  function gatedStartRuntime(real: AgentRuntime): { runtime: Pick<AgentRuntime, "startTurn" | "runTurn">; open: () => void } {
+    let open!: () => void;
+    const gate = new Promise<void>((resolve) => { open = resolve; });
+    return {
+      runtime: {
+        startTurn: async (sid: SessionId, text: string) => {
+          await gate;
+          return real.startTurn(sid, text);
+        },
+        runTurn: (sid: SessionId, turnId: unknown, signal?: AbortSignal) =>
+          real.runTurn(sid, turnId as never, signal as AbortSignal),
+      },
+      open,
+    };
+  }
+
+  async function actorWithGatedStart(): Promise<{ actor: SessionActor; sessionId: SessionId; open: () => void }> {
+    const { runtime, store, sessionId } = await setupActor();
+    const session = (await store.getSession(sessionId))!;
+    const { runtime: gated, open } = gatedStartRuntime(runtime);
+    const actor = new DefaultSessionActor({ persistent: session, runtime: gated, store });
+    return { actor, sessionId, open };
+  }
+
+  it("P37-1 A — startTurn vs runTurn: runTurn while starting → SESSION_BUSY", async () => {
+    const { actor, sessionId, open } = await actorWithGatedStart();
+    const startPromise = actor.startTurn({ sessionId, text: "A" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    // The actor is "starting" — runTurn must be refused, not cross the boundary.
+    const err = await actor
+      .runTurn("turn_nonexistent" as TurnId)
+      .then(() => undefined, (e: unknown) => e);
+    expect((err as { info?: { code: string } })?.info?.code).toBe("SESSION_BUSY");
+    open();
+    const handle = await startPromise;
+    await actor.interrupt();
+    await handle.outcome;
+  });
+
+  it("P37-1 B — startTurn vs createTurn: createTurn while starting → SESSION_BUSY", async () => {
+    const { actor, sessionId, open } = await actorWithGatedStart();
+    const startPromise = actor.startTurn({ sessionId, text: "A" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    const err = await actor
+      .createTurn({ sessionId, text: "B" })
+      .then(() => undefined, (e: unknown) => e);
+    expect((err as { info?: { code: string } })?.info?.code).toBe("SESSION_BUSY");
+    open();
+    const handle = await startPromise;
+    await actor.interrupt();
+    await handle.outcome;
+  });
+
+  it("P37-1 C — direct start vs followup drain: max live owner = 1", async () => {
+    const { actor, sessionId, open } = await actorWithGatedStart();
+    // Queue a followup while the actor is idle (before any turn).
+    await actor.enqueueFollowup({ sessionId, text: "queued" });
+    const first = actor.startTurn({ sessionId, text: "A" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    // While "starting" for A, a direct start must be refused (owner = 1).
+    const err = await actor
+      .startTurn({ sessionId, text: "sneak" })
+      .then(() => undefined, (e: unknown) => e);
+    expect((err as { info?: { code: string } })?.info?.code).toBe("SESSION_BUSY");
+    open();
+    const handle = await first;
+    await actor.interrupt();
+    await handle.outcome;
+  });
+
+  it("P37-1 D — 100-way mixed race: successful execution ownership <= 1", async () => {
+    const { actor, sessionId } = await setupActor({ provider: new EchoModelProvider() });
+    const ops: Promise<unknown>[] = [];
+    for (let i = 0; i < 50; i += 1) {
+      ops.push(actor.startTurn({ sessionId, text: `s${i}` }).then(() => undefined, () => undefined));
+      ops.push(actor.runTurn("turn_x" as TurnId).then(() => undefined, () => undefined));
+      ops.push(actor.createTurn({ sessionId, text: `c${i}` }).then(() => undefined, () => undefined));
+    }
+    await Promise.all(ops);
+    // At most one outcome ever succeeded — the rest were SESSION_BUSY.
+    // Clean up any active turn.
+    await actor.interrupt();
+    // Wait for the outcome to settle.
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    expect(actor.activeTurn).toBeUndefined();
+  });
+
+  it("P37-1 E — close during starting: no late promotion", async () => {
+    const { actor, sessionId, open } = await actorWithGatedStart();
+    const startPromise = actor.startTurn({ sessionId, text: "A" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await actor.close();
+    open();
+    const err = await startPromise.then(() => undefined, (e: unknown) => e);
+    expect(err).toBeDefined();
+    expect(actor.activeTurn).toBeUndefined();
+  });
+
+  it("P37-1 F — interrupt during starting: no late running turn", async () => {
+    const { actor, sessionId, open } = await actorWithGatedStart();
+    const startPromise = actor.startTurn({ sessionId, text: "A" });
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await actor.interrupt(); // aborts the starting reservation
+    open();
+    // The start may resolve (controller aborted → cancelled) but must never
+    // leave a running turn behind.
+    const handle = await startPromise.catch(() => undefined);
+    if (handle !== undefined) {
+      await (handle as { outcome: Promise<unknown> }).outcome.catch(() => undefined);
+    }
+    expect(actor.activeTurn).toBeUndefined();
+  });
+
+  it("P37-1 H — steer while idle: NO_ACTIVE_TURN", async () => {
+    const { actor, sessionId } = await setupActor();
+    const err = await actor
+      .steer({ sessionId, text: "steer now" })
+      .then(() => undefined, (e: unknown) => e);
+    expect((err as { info?: { code: string } })?.info?.code).toBe("NO_ACTIVE_TURN");
+  });
+
+  // ---------------------------------------------------------------------------
+  // P37-2 — LoadedSessionManager late-resurrection closure (INV-P37-002)
+  // ---------------------------------------------------------------------------
+
+  it("P37-2: true load+unload race — block getSession, unload, then release store", async () => {
+    const { manager, runtime, store, sessionId } = await setupActor();
+    const fresh = await runtime.createSession({ agent: AGENT, cwd: "/work2" });
+    let storeRelease!: () => void;
+    const gate = new Promise<void>((resolve) => { storeRelease = resolve; });
+    const originalGet = store.getSession.bind(store);
+    store.getSession = async (id: SessionId) => {
+      await gate;
+      return originalGet(id);
+    };
+    const loadPromise = manager.load(fresh.id);
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await manager.unload(fresh.id); // bumps generation
+    storeRelease();
+    const err = await loadPromise.then(() => undefined, (e: unknown) => e);
+    expect((err as { info?: { code: string } })?.info?.code).toBe("LOAD_CANCELLED");
+    expect(manager.listLoaded()).not.toContain(fresh.id);
+    store.getSession = originalGet;
+  });
+
+  it("P37-2: manager close during load cannot be followed by actor install", async () => {
+    const { manager, runtime, store } = await setupActor();
+    const fresh = await runtime.createSession({ agent: AGENT, cwd: "/work3" });
+    let storeRelease!: () => void;
+    const gate = new Promise<void>((resolve) => { storeRelease = resolve; });
+    const originalGet = store.getSession.bind(store);
+    store.getSession = async (id: SessionId) => {
+      await gate;
+      return originalGet(id);
+    };
+    const loadPromise = manager.load(fresh.id);
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await manager.close();
+    storeRelease();
+    const err = await loadPromise.then(() => undefined, (e: unknown) => e);
+    const code = (err as { info?: { code?: string } } | undefined)?.info?.code;
+    expect(code).toBe("LOAD_CANCELLED");
+    store.getSession = originalGet;
+  });
+
+  it("P37-2: generation 1 blocked → unload → generation 2 loads → gen1 cannot overwrite gen2", async () => {
+    const { manager, runtime, store } = await setupActor();
+    const fresh = await runtime.createSession({ agent: AGENT, cwd: "/work4" });
+    let storeRelease!: () => void;
+    const gate = new Promise<void>((resolve) => { storeRelease = resolve; });
+    const originalGet = store.getSession.bind(store);
+    let callCount = 0;
+    store.getSession = async (id: SessionId) => {
+      callCount += 1;
+      await gate;
+      return originalGet(id);
+    };
+    const load1 = manager.load(fresh.id);
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await manager.unload(fresh.id); // bumps generation → gen1 should not install
+    storeRelease();
+    const err1 = await load1.then(() => undefined, (e: unknown) => e);
+    const code = (err1 as { info?: { code?: string } } | undefined)?.info?.code;
+    expect(code).toBe("LOAD_CANCELLED");
+    // reload after unload works with new generation
+    store.getSession = originalGet;
+    const actor = await manager.load(fresh.id);
+    expect(actor).toBeDefined();
+    expect(manager.listLoaded()).toContain(fresh.id);
+    await manager.unload(fresh.id);
+  });
+
+  it("P37-2: reload after unload works with new generation", async () => {
+    const { manager, runtime } = await setupActor();
+    const fresh = await runtime.createSession({ agent: AGENT, cwd: "/work5" });
+    const a1 = await manager.load(fresh.id);
+    expect(manager.listLoaded()).toContain(fresh.id);
+    await manager.unload(fresh.id);
+    expect(manager.listLoaded()).not.toContain(fresh.id);
+    const a2 = await manager.load(fresh.id);
+    expect(a2).toBeDefined();
+    expect(a2.sessionId).toBe(fresh.id);
+    expect(a2).not.toBe(a1); // new actor after unload+reload
+    await manager.unload(fresh.id);
+  });
+
+  it("P37-2: failure fan-out remains single-flight", async () => {
+    const { manager, runtime, store } = await setupActor();
+    const fresh = await runtime.createSession({ agent: AGENT, cwd: "/work6" });
+    const originalGet = store.getSession.bind(store);
+    let fail = true;
+    store.getSession = async (id: SessionId) => {
+      if (fail) throw new Error("store failure");
+      return originalGet(id);
+    };
+    const results = await Promise.allSettled(Array.from({ length: 10 }, () => manager.load(fresh.id)));
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(rejected).toHaveLength(10);
+    fail = false;
+    const actor = await manager.load(fresh.id);
+    expect(actor).toBeDefined();
+    store.getSession = originalGet;
+  });
+
+  it("P37-2: no leaked loading entries/controllers after unload", async () => {
+    const { manager, runtime, store, sessionId } = await setupActor();
+    const fresh = await runtime.createSession({ agent: AGENT, cwd: "/work7" });
+    const a1 = await manager.load(fresh.id);
+    expect(manager.listLoaded()).toContain(fresh.id);
+    await manager.unload(fresh.id);
+    // The loading map should be clean after the load completes/unload clears it.
+    // We can't directly inspect the private loading map, but the observable
+    // behavior should be correct.
+    expect(manager.listLoaded()).not.toContain(fresh.id);
+    const a2 = await manager.load(fresh.id);
+    expect(a2).toBeDefined();
+    await manager.unload(fresh.id);
   });
 });

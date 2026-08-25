@@ -115,9 +115,11 @@ export async function verifyDocs(deps: { root: string }): Promise<DocVerificatio
     });
   }
 
-  // ---- package counts (HANDOVER / docs claims vs packages/ inventory) ----
+  // ---- package counts (HANDOFF / docs claims vs packages/ inventory) ----
   const actualPackages = await dirEntryCount(packagesRoot);
-  const docs = ["HANDOVER.md"];
+  // P37-11: HANDOFF.md is the canonical handoff source; HANDOVER.md is
+  // deprecated. Try HANDOFF.md first, then HANDOVER.md for backward compat.
+  const docs = ["HANDOFF.md", "HANDOVER.md"];
   let anyDoc = "";
   for (const name of docs) {
     try {

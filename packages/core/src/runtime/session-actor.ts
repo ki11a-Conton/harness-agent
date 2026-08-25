@@ -75,9 +75,11 @@ export interface SessionInputQueue {
   readonly sessionId: SessionId;
   readonly pendingCount: number;
   enqueueSteer(input: UserMessage): Promise<void>;
-  enqueueFollowup(input: UserMessage): Promise<void>;
-  /** Next queued followup, or undefined when empty. */
-  nextPendingFollowup(): Promise<UserMessage | undefined>;
+  /** P37-1: returns a stable followup id so the actor can pair the drain
+   *  outcome with the caller's resolver. */
+  enqueueFollowup(input: UserMessage): Promise<string>;
+  /** P37-1: returns a followup entry with the stable id. */
+  nextPendingFollowup(): Promise<{ id: string; input: UserMessage } | undefined>;
 }
 
 /** P25-1: session-bound resource registry (sandbox roots, MCP refs, ...).
@@ -168,12 +170,20 @@ function sessionBusy(sessionId: SessionId, turnId: TurnId): AgentError {
   );
 }
 
+/** P36-2: SESSION_BUSY while a turn is STARTING (no turn id exists yet). */
+function sessionStarting(sessionId: SessionId): AgentError {
+  return new AgentError(
+    errorInfo("SESSION_BUSY", `session ${sessionId} is starting a turn`),
+  );
+}
+
 /** Inbox-backed input queue. Followups are tracked in memory (authoritative
  *  for the process) AND admitted to the durable inbox; hydration reloads
  *  pending followups after a crash so a rebooted host can drain them. */
 export class InboxSessionInputQueue implements SessionInputQueue {
-  private readonly followups: Array<{ input: UserMessage; promptId?: PromptId }> = [];
+  private readonly followups: Array<{ id: string; input: UserMessage; promptId?: PromptId }> = [];
   private hydrated = false;
+  private followupIdCounter = 0;
 
   constructor(private readonly deps: { sessionId: SessionId; inbox?: InboxStore; now?: () => number }) {}
 
@@ -193,15 +203,18 @@ export class InboxSessionInputQueue implements SessionInputQueue {
     // next safe sampling boundary via injectSteeringPrompts.
   }
 
-  async enqueueFollowup(input: UserMessage): Promise<void> {
+  async enqueueFollowup(input: UserMessage): Promise<string> {
+    this.followupIdCounter += 1;
+    const id = `fup-${this.followupIdCounter}`;
     let promptId: PromptId | undefined;
     if (this.deps.inbox !== undefined) {
       promptId = await this.admit(input.text, "followup");
     }
-    this.followups.push({ input, promptId });
+    this.followups.push({ id, input, promptId });
+    return id;
   }
 
-  async nextPendingFollowup(): Promise<UserMessage | undefined> {
+  async nextPendingFollowup(): Promise<{ id: string; input: UserMessage } | undefined> {
     if (!this.hydrated) {
       this.hydrated = true;
       await this.hydrate();
@@ -212,7 +225,7 @@ export class InboxSessionInputQueue implements SessionInputQueue {
       // Durable record: the followup was promoted into a real turn.
       await this.deps.inbox.markConsumed(next.promptId);
     }
-    return next.input;
+    return { id: next.id, input: next.input };
   }
 
   private async admit(text: string, kind: "steer" | "followup"): Promise<PromptId> {
@@ -237,7 +250,12 @@ export class InboxSessionInputQueue implements SessionInputQueue {
       // Only status "pending": a promoted followup already started a turn
       // (crash recovery) and must not be re-queued.
       if (p.kind === "followup" && p.status === "pending") {
-        this.followups.push({ input: { sessionId: this.sessionId, text: p.text }, promptId: p.id });
+        this.followupIdCounter += 1;
+        this.followups.push({
+          id: `fup-${this.followupIdCounter}`,
+          input: { sessionId: this.sessionId, text: p.text },
+          promptId: p.id,
+        });
       }
     }
   }
@@ -270,20 +288,39 @@ export class DefaultSessionResourceScope implements SessionResourceScope {
   }
 }
 
-/** P25-2/3: the single owner of one live session — activeTurn ∈ {0,1}. */
+/** P37-1: single authoritative actor execution state. */
+export type ActorExecutionState =
+  | { kind: "idle" }
+  | {
+      kind: "starting";
+      source: "new_turn" | "existing_turn" | "followup";
+      controller: AbortController;
+      requestId: string;
+      turnId?: TurnId;
+    }
+  | {
+      kind: "running";
+      turn: Turn;
+      controller: AbortController;
+      outcome: Promise<TurnOutcome>;
+    }
+  | { kind: "closing" };
+
+let requestIdCounter = 0;
+function nextRequestId(): string {
+  requestIdCounter += 1;
+  return `req-${requestIdCounter}`;
+}
+
+/** P25-2/3 + P37-1: the single owner of one live session — unified state. */
 export class DefaultSessionActor implements SessionActor {
-  private active: ActiveTurnHandle | undefined;
-  /** P25-3: a run registered synchronously while its store read is in flight.
-   *  Closing this race lets session.cancel abort a turn that has been
-   *  submitted but not yet begun executing (no bogus not_running). */
-  private pendingRun: { turnId: TurnId; controller: AbortController } | undefined;
+  private state: ActorExecutionState = { kind: "idle" };
   private closed = false;
   readonly inputQueue: SessionInputQueue;
   readonly resourceScope: SessionResourceScope;
   readonly cancellation: AbortController;
-  /** Resolvers for `queue` startTurn handles — resolved when the drained
-   *  follow-up turn settles. */
-  private readonly followupResolvers: Array<(outcome: TurnOutcome) => void> = [];
+  /** P37-1: followup resolvers keyed by stable followup id. */
+  private readonly followupResolvers = new Map<string, (outcome: TurnOutcome) => void>();
 
   constructor(private readonly deps: SessionActorDeps) {
     this.inputQueue = new InboxSessionInputQueue({
@@ -304,7 +341,8 @@ export class DefaultSessionActor implements SessionActor {
   }
 
   get activeTurn(): ActiveTurnHandle | undefined {
-    return this.active;
+    const s = this.state;
+    return s.kind === "running" ? { turn: s.turn, controller: s.controller, outcome: s.outcome } : undefined;
   }
 
   async startTurn(
@@ -312,70 +350,82 @@ export class DefaultSessionActor implements SessionActor {
     opts: { onConflict?: SessionBusyDecision } = {},
   ): Promise<TurnHandle> {
     this.assertOpen();
-    const existing = this.active;
-    if (existing !== undefined) {
-      // P25-3: explicit conflict decision — no silent parallel run.
+    const s = this.state;
+    if (s.kind === "running") {
       const decision = opts.onConflict ?? "busy";
-      if (decision === "busy") {
-        throw sessionBusy(this.sessionId, existing.turn.id);
-      }
+      if (decision === "busy") throw sessionBusy(this.sessionId, s.turn.id);
       if (decision === "steer") {
         await this.steer(input);
-        return { turnId: existing.turn.id, outcome: existing.outcome };
+        return { turnId: s.turn.id, outcome: s.outcome };
       }
-      // "queue": the outcome belongs to the future drained turn.
+      // queue: outcome belongs to the future drained followup
+      const followupId = await this.inputQueue.enqueueFollowup(input);
       const outcome = new Promise<TurnOutcome>((resolve) => {
-        this.followupResolvers.push(resolve);
+        this.followupResolvers.set(followupId, resolve);
       });
-      await this.enqueueFollowup(input);
-      return { turnId: existing.turn.id, outcome };
+      return { turnId: s.turn.id, outcome };
     }
-    if (this.pendingRun !== undefined) {
-      // A turn is being submitted right now (its store read is in flight).
-      // This is a sub-millisecond window: steer/followup callers should use
-      // the dedicated actor.steer / actor.enqueueFollowup methods — a start
-      // that cannot own a live outcome must be refused, not faked.
-      throw sessionBusy(this.sessionId, this.pendingRun.turnId);
+    if (s.kind === "starting") throw sessionStarting(this.sessionId);
+    if (s.kind === "closing") throw new AgentError(errorInfo("INTERNAL_ERROR", `session ${this.sessionId} is closing`));
+    // idle → reserve starting
+    const controller = new AbortController();
+    const requestId = nextRequestId();
+    this.state = { kind: "starting", source: "new_turn", controller, requestId };
+    try {
+      const turn = await this.deps.runtime.startTurn(this.sessionId, input.text);
+      // P37-1: revalidate — if closed/cancelled during await, never promote
+      if (this.state.kind !== "starting" || this.state.requestId !== requestId) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", `session ${this.sessionId} closed while starting a turn`));
+      }
+      return this.promoteToRunning(turn, controller);
+    } catch (err) {
+      if (this.state.kind === "starting" && this.state.requestId === requestId) {
+        this.state = { kind: "idle" };
+      }
+      throw err;
     }
-    const turn = await this.deps.runtime.startTurn(this.sessionId, input.text);
-    return this.executeTurn(turn);
   }
 
   async createTurn(input: UserMessage): Promise<Turn> {
     this.assertOpen();
-    if (this.active !== undefined) {
-      throw sessionBusy(this.sessionId, this.active.turn.id);
-    }
-    if (this.pendingRun !== undefined) {
-      throw sessionBusy(this.sessionId, this.pendingRun.turnId);
-    }
+    const s = this.state;
+    if (s.kind === "running") throw sessionBusy(this.sessionId, s.turn.id);
+    if (s.kind === "starting") throw sessionStarting(this.sessionId);
+    if (s.kind === "closing") throw new AgentError(errorInfo("INTERNAL_ERROR", `session ${this.sessionId} is closing`));
     return this.deps.runtime.startTurn(this.sessionId, input.text);
   }
 
   async runTurn(turnId: TurnId, signal?: AbortSignal): Promise<TurnOutcome> {
     this.assertOpen();
-    if (this.active !== undefined) {
-      throw sessionBusy(this.sessionId, this.active.turn.id);
-    }
-    if (this.pendingRun !== undefined) {
-      throw sessionBusy(this.sessionId, this.pendingRun.turnId);
-    }
-    // P25-3: register the run SYNCHRONOUSLY so a cancel arriving before the
-    // store read completes can still abort it (never a silent not_running).
+    const s = this.state;
+    if (s.kind === "running") throw sessionBusy(this.sessionId, s.turn.id);
+    if (s.kind === "starting") throw sessionStarting(this.sessionId);
+    if (s.kind === "closing") throw new AgentError(errorInfo("INTERNAL_ERROR", `session ${this.sessionId} is closing`));
+    // P37-1: reserve SYNCHRONOUSLY before the first await
     const controller = new AbortController();
-    this.pendingRun = { turnId, controller };
+    const requestId = nextRequestId();
+    this.state = { kind: "starting", source: "existing_turn", controller, requestId, turnId };
     try {
       const turn = await this.requireTurn(turnId);
-      this.pendingRun = undefined;
-      return this.executeTurn(turn, signal, controller).outcome;
+      if (this.state.kind !== "starting" || this.state.requestId !== requestId) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", `runTurn ${turnId} cancelled during load`));
+      }
+      return this.promoteToRunning(turn, controller, signal).outcome;
     } catch (err) {
-      this.pendingRun = undefined;
+      if (this.state.kind === "starting" && this.state.requestId === requestId) {
+        this.state = { kind: "idle" };
+      }
       throw err;
     }
   }
 
   async steer(input: UserMessage): Promise<void> {
     this.assertOpen();
+    const s = this.state;
+    if (s.kind !== "running") {
+      // P37-1: steer requires an active running turn
+      throw new AgentError(errorInfo("NO_ACTIVE_TURN", "steer requires a currently running turn"));
+    }
     await this.inputQueue.enqueueSteer(input);
   }
 
@@ -385,80 +435,77 @@ export class DefaultSessionActor implements SessionActor {
   }
 
   async interrupt(): Promise<TurnOutcome | undefined> {
-    const active = this.active;
-    if (active !== undefined) {
-      active.controller.abort();
-      return active.outcome;
+    const s = this.state;
+    if (s.kind === "running") {
+      s.controller.abort();
+      return s.outcome;
     }
-    if (this.pendingRun !== undefined) {
-      this.pendingRun.controller.abort();
+    if (s.kind === "starting") {
+      s.controller.abort();
     }
     return undefined;
   }
 
   async cancelTurn(turnId: TurnId): Promise<SessionTurnStatus> {
-    const active = this.active;
-    if (active !== undefined) {
-      if (active.turn.id !== turnId) return "not_running";
-      active.controller.abort();
-      const outcome = await active.outcome;
+    const s = this.state;
+    if (s.kind === "running") {
+      if (s.turn.id !== turnId) return "not_running";
+      s.controller.abort();
+      const outcome = await s.outcome;
       return outcome.status;
     }
-    const pending = this.pendingRun;
-    if (pending !== undefined && pending.turnId === turnId) {
-      // Cancelled before the store read finished: abort now; the runtime sees
-      // the aborted signal when the turn executes and settles as cancelled.
-      pending.controller.abort();
+    if (s.kind === "starting" && s.turnId === turnId) {
+      s.controller.abort();
       return "cancelled";
     }
     return "not_running";
   }
 
   status(): SessionRuntimeStatus {
+    const s = this.state;
     return {
       sessionId: this.sessionId,
-      ...(this.active !== undefined
-        ? { activeTurn: { turnId: this.active.turn.id, status: "running" as const } }
-        : {}),
+      ...(s.kind === "running" ? { activeTurn: { turnId: s.turn.id, status: "running" as const } } : {}),
       queuedFollowups: this.inputQueue.pendingCount,
       loaded: !this.closed,
     };
   }
 
-  /** P25-6: idempotent shutdown — interrupt, settle, release, remove. */
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
-    if (this.pendingRun !== undefined) {
-      this.pendingRun.controller.abort();
-    }
-    const active = this.active;
-    if (active !== undefined) {
-      active.controller.abort();
+    const s = this.state;
+    if (s.kind === "starting") {
+      s.controller.abort();
+      // P37-1: prevent late promotion
+      this.state = { kind: "closing" };
+    } else if (s.kind === "running") {
+      s.controller.abort();
       try {
-        await active.outcome;
+        await s.outcome;
       } catch (cause) {
-        // P14-6: never silent — a rejected turn outcome during shutdown is
-        // surfaced on the degraded channel (the original caller already saw
-        // the rejection; this is the observable audit trail).
         process.stderr.write(
           `[degraded] session ${this.sessionId} turn outcome rejected during close: ${cause instanceof Error ? cause.message : String(cause)}\n`,
         );
       }
+      this.state = { kind: "closing" };
+    } else {
+      this.state = { kind: "closing" };
     }
-    // The actor-level cancellation aborts any linked turn controller and is a
-    // no-op for already-settled turns.
     this.cancellation.abort();
     this.resourceScope.release();
     this.deps.onClosed?.(this.sessionId);
   }
 
-  private executeTurn(
+  /** P37-1: reserve → promote to running. */
+  private promoteToRunning(
     turn: Turn,
+    controller: AbortController,
     externalSignal?: AbortSignal,
-    prebuilt?: AbortController,
   ): TurnHandle {
-    const controller = prebuilt ?? new AbortController();
+    if (this.state.kind !== "starting" || this.state.controller !== controller) {
+      throw new AgentError(errorInfo("INTERNAL_ERROR", "stale reservation: cannot promote to running"));
+    }
     const onExternalAbort = () => controller.abort();
     const onCloseAbort = () => controller.abort();
     if (externalSignal !== undefined) {
@@ -472,15 +519,11 @@ export class DefaultSessionActor implements SessionActor {
 
     const outcomePromise = this.deps.runtime.runTurn(this.sessionId, turn.id, controller.signal);
     const handle: ActiveTurnHandle = { turn, controller, outcome: outcomePromise };
-    this.active = handle;
+    this.state = { kind: "running", turn, controller, outcome: outcomePromise };
 
     void outcomePromise.then(
-      () => {
-        this.settle(handle, externalSignal, onExternalAbort, onCloseAbort);
-      },
-      () => {
-        this.settle(handle, externalSignal, onExternalAbort, onCloseAbort);
-      },
+      () => this.settle(handle, externalSignal, onExternalAbort, onCloseAbort),
+      () => this.settle(handle, externalSignal, onExternalAbort, onCloseAbort),
     );
     return { turnId: turn.id, outcome: outcomePromise };
   }
@@ -495,21 +538,38 @@ export class DefaultSessionActor implements SessionActor {
       externalSignal.removeEventListener("abort", onExternalAbort);
     }
     this.cancellation.signal.removeEventListener("abort", onCloseAbort);
-    if (this.active === handle) this.active = undefined;
-    // P25-5: after the turn settles, drain one queued follow-up (if any) into
-    // a fresh turn. The loop stops when the queue empties or a turn is active.
+    if (this.state.kind === "running" && (this.state as { outcome: Promise<unknown> }).outcome === handle.outcome) {
+      this.state = { kind: "idle" };
+    }
+    // P37-1: drain followups with proper reservation (no bypass)
     void this.drainFollowups();
   }
 
   private async drainFollowups(): Promise<void> {
-    if (this.closed || this.active !== undefined || this.pendingRun !== undefined) return;
-    const followup = await this.inputQueue.nextPendingFollowup();
-    if (followup === undefined) return;
-    const turn = await this.deps.runtime.startTurn(this.sessionId, followup.text);
-    const handle = this.executeTurn(turn);
-    const resolver = this.followupResolvers.shift();
-    if (resolver !== undefined) {
-      void handle.outcome.then(resolver);
+    if (this.closed) return;
+    if (this.state.kind !== "idle") return;
+    const entry = await this.inputQueue.nextPendingFollowup();
+    if (entry === undefined) return;
+    // P37-1: reserve BEFORE await that can yield
+    const controller = new AbortController();
+    const requestId = nextRequestId();
+    this.state = { kind: "starting", source: "followup", controller, requestId };
+    try {
+      const turn = await this.deps.runtime.startTurn(this.sessionId, entry.input.text);
+      if (this.state.kind !== "starting" || this.state.requestId !== requestId) {
+        // cancelled/closed during drain — no promotion
+        return;
+      }
+      const handle = this.promoteToRunning(turn, controller);
+      const resolver = this.followupResolvers.get(entry.id);
+      if (resolver !== undefined) {
+        this.followupResolvers.delete(entry.id);
+        void handle.outcome.then(resolver);
+      }
+    } catch {
+      if (this.state.kind === "starting" && this.state.requestId === requestId) {
+        this.state = { kind: "idle" };
+      }
     }
   }
 
@@ -533,31 +593,66 @@ export class DefaultSessionActor implements SessionActor {
 /** P25-2: manager of live session actors — load on demand, unload on close. */
 export class DefaultLoadedSessionManager implements LoadedSessionManager {
   private readonly actors = new Map<SessionId, SessionActor>();
+  /** P36-3 (INV-P36-002): single-flight loading table. Stored BEFORE the
+   *  first await so concurrent load(id) calls resolve to the SAME actor. */
+  private readonly loading = new Map<SessionId, Promise<SessionActor>>();
+  /** P37-2 (INV-P37-002): generation fencing — unload/close bumps the
+   *  generation so an older in-flight load cannot install an actor after
+   *  unload/close has won. */
+  private readonly generations = new Map<SessionId, number>();
+  private closed = false;
 
   constructor(private readonly deps: LoadedSessionManagerDeps) {}
 
   async load(id: SessionId): Promise<SessionActor> {
     const existing = this.actors.get(id);
     if (existing !== undefined) return existing;
-    const session = await this.deps.store.getSession(id);
-    if (session === undefined) {
-      throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${id}`));
+    const inflight = this.loading.get(id);
+    if (inflight !== undefined) return inflight;
+    // P37-2: capture the generation BEFORE the first await.
+    const generation = this.generations.get(id) ?? 0;
+    const controller = new AbortController();
+    const promise = this.doLoad(id, generation, controller);
+    this.loading.set(id, promise);
+    return promise;
+  }
+
+  private async doLoad(id: SessionId, generation: number, controller: AbortController): Promise<SessionActor> {
+    try {
+      const session = await this.deps.store.getSession(id);
+      // P37-2: unload/close may have won while getSession() was in flight.
+      if (this.closed || (this.generations.get(id) ?? 0) !== generation || controller.signal.aborted) {
+        throw new AgentError(errorInfo("LOAD_CANCELLED", `session load ${id} was cancelled`));
+      }
+      if (session === undefined) {
+        throw new AgentError(errorInfo("INTERNAL_ERROR", `unknown session ${id}`));
+      }
+      const actor = new DefaultSessionActor({
+        persistent: session,
+        runtime: this.deps.runtime,
+        store: this.deps.store,
+        inbox: this.deps.inbox,
+        now: this.deps.now,
+        onClosed: (sid) => {
+          this.actors.delete(sid);
+        },
+      });
+      // Re-check under the same fence: nothing may install after unload/close.
+      if (this.closed || (this.generations.get(id) ?? 0) !== generation || controller.signal.aborted) {
+        await actor.close();
+        throw new AgentError(errorInfo("LOAD_CANCELLED", `session load ${id} was cancelled`));
+      }
+      this.actors.set(id, actor);
+      return actor;
+    } finally {
+      this.loading.delete(id);
     }
-    const actor = new DefaultSessionActor({
-      persistent: session,
-      runtime: this.deps.runtime,
-      store: this.deps.store,
-      inbox: this.deps.inbox,
-      now: this.deps.now,
-      onClosed: (sid) => {
-        this.actors.delete(sid);
-      },
-    });
-    this.actors.set(id, actor);
-    return actor;
   }
 
   async unload(id: SessionId): Promise<void> {
+    // P37-2: fence out any in-flight load for this id.
+    this.generations.set(id, (this.generations.get(id) ?? 0) + 1);
+    this.loading.delete(id);
     const actor = this.actors.get(id);
     if (actor === undefined) return;
     await actor.close();
@@ -569,8 +664,14 @@ export class DefaultLoadedSessionManager implements LoadedSessionManager {
   }
 
   async close(): Promise<void> {
+    this.closed = true;
+    // P37-2: invalidate every generation so no in-flight load can install.
+    for (const id of this.generations.keys()) {
+      this.generations.set(id, (this.generations.get(id) ?? 0) + 1);
+    }
     const actors = [...this.actors.values()];
     await Promise.all(actors.map((a) => a.close()));
     this.actors.clear();
+    this.loading.clear();
   }
 }

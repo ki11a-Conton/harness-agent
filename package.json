@@ -11,7 +11,14 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "benchmark:smoke": "node apps/cli/dist/main.js benchmark --suite adversarial --limit 1 --allow-stub --out .ci/bench-smoke",
-    "docs:verify": "node apps/cli/dist/main.js docs:verify"
+    "docs:verify": "node apps/cli/dist/main.js docs:verify",
+    "test:protocol": "vitest run packages/gateway/src/transport-conformance.test.ts packages/sdk/src/conformance.test.ts packages/protocol",
+    "test:security": "vitest run packages/security packages/harness/src/security-regression-matrix.test.ts",
+    "test:race": "vitest run packages/core/src/runtime/race-split.test.ts packages/core/src/runtime/race-part0.test.ts packages/core/src/runtime/race-part1.test.ts packages/core/src/runtime/race-part2.test.ts packages/core/src/runtime/race-part3.test.ts packages/core/src/runtime/race-part4.test.ts packages/core/src/runtime/race-bisect.test.ts packages/core/src/runtime/race-bisect3.test.ts packages/core/src/runtime/race-bisect5.test.ts packages/core/src/runtime/session-race.test.ts packages/core/src/runtime/session-race2.test.ts",
+    "test:chaos": "vitest run packages/mcp/src/mcp-chaos.test.ts",
+    "capability:audit": "node apps/cli/dist/main.js audit",
+    "release:verify": "node apps/cli/dist/main.js release verify",
+    "deps:audit": "pnpm audit"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

@@ -117,6 +117,10 @@ export function introspectHarness(input: IntrospectionInput): HarnessIntrospecti
       skills: input.features.skills,
       usageAccounting: false,
       runBudget: false,
+      // P35-2: the production composition root always composes the
+      // StepExecutionSnapshot pipeline (step-snapshot-factory) before every
+      // model call — this is a wiring fact, not a toggle.
+      stepSnapshot: true,
     },
     ...(input.mcpServers !== undefined && (input.mcpServers ?? 0) > 0
       ? { mcp: { servers: input.mcpServers, tools: input.mcpTools ?? [] } }

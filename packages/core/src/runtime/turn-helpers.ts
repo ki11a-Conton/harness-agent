@@ -425,6 +425,8 @@ export type ModelCallResult =
       status: "completed";
       callId: ModelCallId;
       assistantText: string;
+      /** Thinking-mode reasoning accumulated from reasoning_delta events. */
+      reasoningText: string;
       calls: ToolCall[];
       final: ModelFinalResult | undefined;
       callStartedAt: number;
