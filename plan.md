@@ -1,908 +1,1106 @@
-# Harness Agent v5 — P38 Streaming & Evidence Truth Closure Plan
+# Harness Agent v5 — P38.1 Release Integrity & Followup Hotfix Closure Plan
 
-> Repository: `ki11a-Conton/harness-agent`
->
-> Reviewed baseline HEAD: `aafb50b8af7b6429a0ec1f6317dcbb35bed688b9`
->
-> Scope: **final narrow closure after P35–P37**.
->
-> P38 is NOT a feature phase. Do not add new memory/planner/delegation/MCP/plugin
-> mechanisms or unrelated architecture.
->
-> P38 closes only the remaining defects found in the post-P37 review:
->
-> - follow-up drain still checks idle → awaits dequeue → reserves;
-> - durable follow-up may be consumed before turn creation succeeds;
-> - queued caller outcome can remain unresolved after promotion failure;
-> - `createTurn()` still bypasses explicit Actor reservation;
-> - interrupting a `starting` reservation does not revoke promotion;
-> - stale manager load `finally` can delete a newer generation's loading entry;
-> - `runStreamed()` subscribes first but waits for the whole `turn/run` call before returning;
-> - SDK terminal paths do not centrally clean subscriptions/listeners;
-> - PushChannel overflow can look like clean EOF to an already-created iterator;
-> - release attestation hard-codes PASS instead of reducing real gate evidence;
-> - `capability:audit` is not truly strict;
-> - benchmark evidence is not included in freshness;
-> - `durabilityActual` still depends on profile requirements;
-> - canonical error tests are not deterministic;
-> - race tests still use sleeps and weak end-state assertions;
-> - HANDOFF current-state truth is stale.
->
-> **After P38 genuinely passes, architecture-closure work stops.**
->
-> Next loop must be:
->
-> ```text
-> baseline
-> → challenger
-> → real-model paired benchmark
-> → security/race/cost gates
-> → promote or reject
-> ```
+> 目标：**不要开始 P39，不要新增大机制，不要继续堆抽象层。**  
+> 本阶段只修复 P38 验收中暴露出来的真实 correctness / liveness / release-integrity 缺口，直到 exact HEAD 在 Linux、Windows、Coverage、Release Attestation 上同时成立，并且不存在“测试假绿 / evidence 假绿 / followup 重复执行 / SDK 已取消仍启动”等语义漏洞。
 
 ---
 
-# 0. MANDATORY AGENT RULES
+## 0. 阶段定位
 
-## Rule 0.1 — Inspect current HEAD before editing
+P38.1 不是新功能阶段，而是 **P38 Release Candidate Hotfix / Closure**。
 
-The SHA above is only the reviewed baseline. If HEAD advanced, re-read the current
-production path and preserve already-correct fixes.
+如果 P38 的目标是“关闭 architecture closure 阶段”，那么 P38.1 的唯一职责就是：
 
-## Rule 0.2 — Production truth beats comments and test names
+1. 把 P38 中已经发现、但尚未被真正证明关闭的缺陷全部修完；
+2. 让 release evidence 本身具备可信度；
+3. exact HEAD 的 Linux / Windows / Coverage / Release Attestation 同时全绿；
+4. 完成后**停止 architecture hotfix loop**，正式进入 benchmark-driven challenger 阶段。
 
-A comment saying `reserve BEFORE await` is not evidence if code awaits first.
+### 允许做的事
 
-A test named `max owner <= 1` is not evidence unless the test measures max ownership.
+- 修 correctness / liveness / durability / evidence / CI bug；
+- 补 deterministic regression；
+- 修 release verifier；
+- 修 evidence schema / semantics；
+- 重分类 perf / soak test；
+- 补最小必要文档与 release truth contract。
 
-A CI job named `release attestation` is not evidence unless it derives status from
-executed gate results.
+### 禁止做的事
 
-## Rule 0.3 — Regression first
+- 新增 agent 大机制；
+- 新增 planner / reasoner / memory 大架构；
+- 重写整个 runtime；
+- 新增与本阶段无关的 benchmark 机制；
+- 为了“看起来更强”同时修改多个行为变量；
+- 把失败标记为 known noise 后继续宣布 READY。
 
-For every defect:
+### 成功标准
 
-```text
-reproduce
-→ confirm failing invariant
-→ production fix
-→ focused test
-→ package test
-→ full release gates
-```
-
-## Rule 0.4 — No sleeps for race correctness
-
-Do not use `setTimeout(...10)` to hope another async path has started.
-
-Use:
+只有满足以下条件才能写 `READY`：
 
 ```text
-Deferred
-Barrier
-Latch
-gated fake runtime
-gated store
-gated queue
+exact HEAD
+  + Linux PASS
+  + Windows PASS
+  + Coverage PASS
+  + Required Gates PASS
+  + Evidence consistency PASS
+  + Command provenance PASS
+  + Release Attestation READY
+  + failed = 0
+  + blocked = 0
+  + not_run = 0
+  + stale = 0
 ```
-
-## Rule 0.5 — Measure concurrency directly
-
-Instrument fake runtime:
-
-```ts
-currentActive += 1;
-maxActive = Math.max(maxActive, currentActive);
-...
-currentActive -= 1;
-```
-
-Assert:
-
-```ts
-expect(maxActive).toBe(1);
-```
-
-Do not infer max concurrency from `activeTurn === undefined` at the end.
-
-## Rule 0.6 — Every waiting caller has an explicit failure fate
-
-Forbidden:
-
-```ts
-catch {
-  state = idle;
-}
-```
-
-when a durable input or resolver is waiting.
-
-Failure must:
-
-```text
-retry
-requeue
-reject caller
-persist failure
-or return typed terminal result
-```
-
-## Rule 0.7 — Streaming must return before terminal completion
-
-Required:
-
-```text
-subscribe
-→ start turn/run Promise
-→ attach Promise to hub
-→ RETURN {events, done}
-→ events arrive live
-→ done settles later
-```
-
-## Rule 0.8 — Release evidence is collected, never invented
-
-Official release attestation must reduce machine evidence generated by actual gate
-commands at the exact release SHA.
-
-## Rule 0.9 — Strict means all required audit truth axes
-
-Release strict audit must require:
-
-```text
-documentationClaimsOk
-AND profileRequirementsOk
-AND evidenceFresh
-```
-
-## Rule 0.10 — Actual durability is reality, not policy
-
-Example:
-
-```text
-actual=memory
-required=none
-satisfied=true
-```
-
-is correct for an in-memory store in a profile that does not require durability.
-
-## Rule 0.11 — One canonical handoff
-
-`HANDOFF.md` is authoritative. `HANDOVER.md` may only redirect.
 
 ---
 
-# 1. DELIVERY MAP
+# 1. Baseline Truth Capture — 执行前必须重新采样
 
-| Task | Priority | Theme |
-| --- | --- | --- |
-| P38-0 | P0 | Capture current truth baseline |
-| P38-1 | P0 | Follow-up reserve-before-dequeue |
-| P38-2 | P0 | Durable follow-up promotion ordering |
-| P38-3 | P1 | Explicit `createTurn()` ownership contract |
-| P38-4 | P1 | Revoke cancelled starting reservations |
-| P38-5 | P0 | Manager stale-finally race |
-| P38-6 | P0 | Restore true live `runStreamed()` |
-| P38-7 | P0 | Exactly-once SDK settlement + cleanup |
-| P38-8 | P1 | Error-aware bounded PushChannel |
-| P38-9 | P0 | Make capability audit truly strict |
-| P38-10 | P0 | Include benchmark freshness |
-| P38-11 | P1 | Make actual durability profile-independent |
-| P38-12 | P0 | Evidence-derived CI release attestation |
-| P38-13 | P1 | Deterministic canonical taxonomy tests |
-| P38-14 | P1 | Remove race sleeps / weak assertions |
-| P38-15 | P1 | Repair HANDOFF truth |
-| P38-16 | P0 | Final zero-red release + closure exit |
+本计划写作时审查基线为：
 
----
+```text
+728f23a451754c9ad03346be89490bf7f9cb70ce
+```
 
-# P38-0 — CURRENT TRUTH BASELINE
+但 Agent 开始执行本计划时，**必须重新读取 exact HEAD**。
+不要把这个 SHA 当成执行时真相。
 
-Run:
+## 做什么
+
+- 记录 exact HEAD；
+- 记录 working tree；
+- 记录 Node / pnpm；
+- 记录 Linux / Windows / Coverage / Release Attestation 当前状态；
+- 记录本地 required gates 当前真实结果；
+- 写入 `.ci/p38-1-baseline.json`。
+
+## 怎么做
 
 ```bash
 git rev-parse HEAD
 git status --short
+git log -1 --oneline
+node --version
+pnpm --version
+```
 
+执行 baseline gates：
+
+```bash
 pnpm typecheck
 pnpm test
 pnpm build
 pnpm test:coverage
 pnpm docs:verify
-pnpm benchmark:smoke
+```
+
+如果已经存在以下 scripts，也一并执行：
+
+```bash
 pnpm test:protocol
 pnpm test:security
 pnpm test:race
 pnpm test:chaos
+pnpm benchmark:smoke
 pnpm capability:audit
 pnpm release:verify
 ```
 
-Record each as:
+## 怎么验收
 
-```text
-PASS
-FAIL
-MISSING
-NOT_RUN
-```
-
-Do not inherit previous HANDOFF verdicts.
-
-Acceptance:
-
-```text
-exact HEAD known
-dirty state known
-every required gate has explicit current result
-```
+- [ ] `.ci/p38-1-baseline.json` 记录 exact HEAD；
+- [ ] 记录 working tree 是否 clean；
+- [ ] 每个 baseline gate 有真实 command；
+- [ ] 每个 baseline gate 有真实 exitCode；
+- [ ] 不存在“命令失败但 artifact 写 exitCode=0”；
+- [ ] 不把任何红项写成 known noise。
 
 ---
 
-# P38-1 — FOLLOW-UP RESERVE BEFORE DEQUEUE
+# 2. 当前 Blocking Findings
 
-> `INV-P38-001`:
->
-> A follow-up drain owns the Actor admission slot before any awaited dequeue that
-> could allow another caller to acquire ownership.
+## P0-1 — Followup hydration duplication
 
-## Current defect
+路径：
 
-Reviewed shape:
+```text
+enqueueFollowup(A)
+  ↓
+local queue += A
+  +
+durable inbox += A
+
+第一次 reservePendingFollowup()
+  ↓
+hydrate()
+  ↓
+又从 durable inbox 读到 A
+  ↓
+local queue += A
+```
+
+结果：同一 prompt 可能 promotion 两次。
+
+## P0-2 — Followup resolver liveness
+
+promotion 失败时 durable input 会 release/requeue，但 caller `handle.outcome` 可能永久 pending。
+
+## P0-3 — Followup durable ack / cancellation ordering
+
+存在：
+
+```text
+turn created
+  ↓
+markConsumed(prompt) await
+  ↓
+cancel/interrupt
+  ↓
+reservation invalid
+```
+
+的灰区，可能出现 consumed prompt 没有真正 running owner。
+
+## P0-4 — starting existing-turn cancellation late promotion
+
+`cancelTurn(turnId)` 如果只 abort controller、不 revoke reservation，后续仍可能 late promote。
+
+## P0-5 — SDK pre-abort still invokes turn/run
+
+pre-aborted signal 已让 Hub settle interrupted，但 `runStreamed()` 仍可能无条件 invoke `turn/run`。
+
+## P0-6 — CI evidence false-green
+
+失败分支存在写出：
+
+```json
+{"passed": false, "exitCode": 0}
+```
+
+的可能，而 release verifier 若主要按 exitCode 解释，会错误 PASS。
+
+## P0-7 — capability_audit provenance 不真实
+
+`capability_audit` 必须来自真实：
+
+```bash
+pnpm capability:audit
+```
+
+不能由其它 audit command + 人工 PASS artifact 代替。
+
+## P0-8 — strict audit 没有硬绑定 evidenceFresh
+
+`audit --strict` 必须在 required execution evidence stale / missing 时退出 1。
+
+## P1-1 — canonical realpath injection seam 只接通一半
+
+ancestor walker 必须使用 injected `rp(current)`，不能偷偷回到 `realpathSync(current)`。
+
+## P1-2 — regression 假绿
+
+存在 tautology / disconnected counter，例如：
 
 ```ts
-if (this.state.kind !== "idle") return;
-
-const entry =
-  await this.inputQueue.nextPendingFollowup();
-
-const controller = new AbortController();
-this.state = {
-  kind: "starting",
-  source: "followup",
-  ...
-};
+expect(x === undefined || x !== undefined).toBe(true);
 ```
 
-Race:
+这种测试不能证明 invariant。
+
+## P1-3 — race tests 仍有 wall-clock ordering sleep
+
+Actor / Manager correctness test 应使用 barrier / deferred，不应依赖 10ms / 20ms。
+
+## P1-4 — heavy perf/soak 塞进普通 pnpm test
+
+Windows 上 20k/50k append/fsync 型测试会拖垮 correctness CI。
+
+---
+
+# 3. Mandatory Invariants
+
+- **INV-P38.1-001** — 一个 durable followup prompt 在一次 actor lifecycle 中最多被 promotion 一次；hydrate 不得制造 duplicate local entry。
+- **INV-P38.1-002** — Followup promotion 失败时：durable input 可恢复，调用者 Promise 必须 terminal settle。
+- **INV-P38.1-003** — 任何被 markConsumed 的 followup 必须绑定到一个可恢复的 promoted turn。
+- **INV-P38.1-004** — starting reservation 一旦被 interrupt/cancel/close revoke，永远不能再次 promoteToRunning。
+- **INV-P38.1-005** — cancelTurn(turnId) 对 starting existing-turn 必须等价于 abort + reservation invalidation。
+- **INV-P38.1-006** — SDK 收到 pre-aborted AbortSignal 时 `turn/run` 调用次数必须为 0。
+- **INV-P38.1-007** — SDK 本地 terminal 状态不得和 server-side lifecycle 矛盾。
+- **INV-P38.1-008** — gate evidence 的 `passed` 和 `exitCode` 必须一致；矛盾 evidence 必须 INVALID/BLOCKED。
+- **INV-P38.1-009** — 每个 required gate evidence 必须证明执行了它声明的 canonical command。
+- **INV-P38.1-010** — capability_audit 只能由 `pnpm capability:audit` 证明。
+- **INV-P38.1-011** — `audit --strict` 必须失败于 stale / missing required execution evidence。
+- **INV-P38.1-012** — injected realpath adapter 必须贯穿 full path + ancestor walk。
+- **INV-P38.1-013** — P38/P38.1 concurrency regressions 不允许靠 wall-clock sleep 证明 ordering。
+- **INV-P38.1-014** — regression 必须能在对应旧错误实现上失败。
+- **INV-P38.1-015** — `pnpm test` 是 correctness gate，不应被大型 soak workload 主导。
+- **INV-P38.1-016** — official release attestation 必须绑定 exact HEAD。
+- **INV-P38.1-017** — failed=0、blocked=0、not_run=0、inconsistent=0、stale=0、command_mismatch=0。
+- **INV-P38.1-018** — P38.1 完成后停止 architecture closure loop，进入 benchmark-driven challenger。
+
+---
+
+# 4. Delivery Map
+
+严格按顺序执行：
 
 ```text
-drain sees idle
-→ await queue
-
-direct startTurn reserves starting
-
-queue resolves
-→ drain overwrites state with its own starting reservation
-```
-
-## Required fix
-
-Preferred:
-
-```text
-idle
-→ reserve followup starting
-→ await queue
-→ no item: release same reservation
-→ item: use same reservation to create/promote turn
-```
-
-No code may:
-
-```text
-observe idle
-await
-then unconditionally claim ownership
-```
-
-## Required deterministic test
-
-Use a queue whose `nextPendingFollowup()`:
-
-```text
-signals entered
-blocks on barrier
-```
-
-While blocked, call direct `startTurn()`.
-
-There must be one documented winner and no reservation overwrite.
-
-Directly measure runtime ownership.
-
-Acceptance:
-
-```text
-max execution owner = 1
-reservation overwrite = impossible
-no setTimeout synchronization
+P38.1-0   Baseline truth capture
+P38.1-1   Followup hydration deduplication
+P38.1-2   Followup resolver terminal semantics
+P38.1-3   Followup durable promotion / cancellation closure
+P38.1-4   Starting reservation cancellation hardening
+P38.1-5   SDK pre-abort no-run closure
+P38.1-6   Gate evidence schema + parser truthfulness
+P38.1-7   Canonical gate command provenance
+P38.1-8   Strict capability audit freshness closure
+P38.1-9   Canonical path deterministic seam closure
+P38.1-10  Regression quality / race determinism cleanup
+P38.1-11  Perf / soak gate reclassification
+P38.1-12  Exact-HEAD CI attestation / zero-red RC gate
+P38.1-13  Final comprehensive audit + release truth
 ```
 
 ---
 
-# P38-2 — DURABLE FOLLOW-UP PROMOTION ORDERING
+# P38.1-0 — Baseline Truth Capture
 
-> `INV-P38-002`:
->
-> A durable pending follow-up is not marked consumed until promotion into a
-> concrete turn has succeeded.
->
-> `INV-P38-003`:
->
-> Promotion failure cannot lose the input or leave the waiting caller unresolved.
+## 做什么
 
-## Current defect
+- [ ] 冻结 exact HEAD；
+- [ ] 收集当前 CI 状态；
+- [ ] 收集本地 gate 状态；
+- [ ] 保存 baseline evidence；
+- [ ] 对当前红项分类，但不得 exempt。
 
-Current logical order:
+## 怎么做
 
-```text
-shift local followup
-→ mark durable inbox consumed
-→ runtime.startTurn()
+建议 evidence 结构：
+
+```ts
+interface BaselineGateResult {
+  command: string;
+  exitCode: number | null;
+  startedAt: string;
+  finishedAt: string;
+}
+
+interface P381Baseline {
+  headSha: string;
+  workingTreeClean: boolean;
+  nodeVersion: string;
+  pnpmVersion: string;
+  gates: Record<string, BaselineGateResult>;
+}
 ```
 
-If `runtime.startTurn()` fails:
+## 怎么验收
+
+- [ ] exact HEAD 写入 baseline；
+- [ ] 所有命令真实执行；
+- [ ] 不伪造 PASS；
+- [ ] 后续每个 phase 都以此 baseline 做 attribution。
+
+---
+
+# P38.1-1 — Followup Hydration Deduplication
+
+## 目标
+
+关闭：
 
 ```text
-local entry gone
-durable prompt consumed
-no turn created
+enqueue durable + local
+  ↓
+first hydrate
+  ↓
+durable same prompt loaded again
 ```
 
-A resolver may also remain pending forever because drain catch swallows failure.
+导致 duplicate promotion 的 P0 correctness bug。
 
-## Required lifecycle
+## 重点文件
 
-Preferred:
+```text
+packages/core/src/runtime/session-actor.ts
+packages/core/src/runtime/session-actor.test.ts
+```
+
+必要时涉及 InboxStore 测试 fixture。
+
+## 做什么
+
+- [ ] local followup 保留 durable identity `promptId`；
+- [ ] hydrate 时跳过 local queue 已存在的 promptId；
+- [ ] hydrate 时跳过 reserved slot 已存在的 promptId；
+- [ ] dedup 只能按 prompt identity，不得按 text；
+- [ ] restart 后仍能加载真正未出现过的 durable pending prompt。
+
+## 怎么做
+
+推荐：
+
+```ts
+type LocalFollowup = {
+  id: string;
+  input: UserMessage;
+  promptId?: PromptId;
+};
+
+private collectKnownPromptIds(): Set<PromptId> {
+  const ids = new Set<PromptId>();
+
+  for (const f of this.followups) {
+    if (f.promptId !== undefined) {
+      ids.add(f.promptId);
+    }
+  }
+
+  if (this.reserved?.promptId !== undefined) {
+    ids.add(this.reserved.promptId);
+  }
+
+  return ids;
+}
+```
+
+hydrate：
+
+```ts
+private async hydrate(): Promise<void> {
+  const inbox = this.deps.inbox;
+  if (inbox === undefined) return;
+
+  const pending = await inbox.listPending(this.sessionId);
+  const known = this.collectKnownPromptIds();
+
+  for (const p of pending) {
+    if (p.kind !== "followup") continue;
+    if (known.has(p.id)) continue;
+
+    this.followups.push({
+      id: `durable-${p.id}`,
+      input: {
+        sessionId: this.sessionId,
+        text: p.text,
+      },
+      promptId: p.id,
+    });
+
+    known.add(p.id);
+  }
+}
+```
+
+## 必须先写的 regression
+
+### Test A — enqueue before first hydration
+
+```text
+hydrated=false
+enqueueFollowup(A)
+reservePendingFollowup()
+```
+
+验收：
+
+```text
+A only once
+runtime.startTurn count == 1
+```
+
+### Test B — same text, different promptId
+
+两条内容完全相同：
+
+```text
+A1: text="retry"
+A2: text="retry"
+```
+
+但 promptId 不同。
+
+验收：两条都保留。
+
+### Test C — restart hydration
+
+```text
+local empty
+inbox pending A
+```
+
+hydrate 后 A 正常进入 local queue。
+
+### Test D — reserved + hydrate
+
+reserved prompt 不得重复回 followups。
+
+## 怎么验收
+
+```bash
+pnpm vitest packages/core/src/runtime/session-actor.test.ts
+pnpm typecheck
+```
+
+- [ ] regression 在旧实现上可失败；
+- [ ] 新实现 PASS；
+- [ ] 同 prompt 最多 promotion 一次。
+
+---
+
+# P38.1-2 — Followup Resolver Terminal Semantics
+
+## 目标
+
+关闭：
+
+```text
+promotion failure
+  ↓
+durable requeue
+  ↓
+caller outcome forever pending
+```
+
+## 做什么
+
+- [ ] `Map<followupId, resolve>` 改为完整 Deferred；
+- [ ] 每个 deferred 必须 exactly-once settle；
+- [ ] promotion failure 要 terminal settle 当前 caller；
+- [ ] actor close/unload 要 settle 未完成 followup caller；
+- [ ] resolver map terminal 后必须清理。
+
+## 推荐实现
+
+```ts
+interface FollowupDeferred {
+  settled: boolean;
+  resolve: (value: TurnOutcome) => void;
+  reject: (reason: unknown) => void;
+}
+
+private readonly followupDeferred =
+  new Map<string, FollowupDeferred>();
+```
+
+helper：
+
+```ts
+private rejectFollowup(
+  id: string,
+  err: unknown,
+): void {
+  const deferred = this.followupDeferred.get(id);
+  if (deferred === undefined || deferred.settled) return;
+
+  deferred.settled = true;
+  deferred.reject(err);
+  this.followupDeferred.delete(id);
+}
+```
+
+建议错误码：
+
+```text
+FOLLOWUP_PROMOTION_FAILED
+```
+
+## promotion failure 语义
+
+```text
+reserve followup
+  ↓
+runtime.startTurn throws
+  ↓
+releasePromotion(id)
+  ↓
+reject caller outcome
+  ↓
+clear resolver
+```
+
+durable input 可以保留等待未来 retry，但**本次调用者不能永远挂住**。
+
+## 必须先写的 regression
+
+- [ ] runtime.startTurn throws → durable pending/requeued；
+- [ ] 同一路径 `handle.outcome` 必须 reject；
+- [ ] test 使用明确 watchdog 证明不是永久 pending；
+- [ ] actor close 时 queued followup outcome settle；
+- [ ] exactly-once：同一个 deferred 不能 resolve 后又 reject。
+
+## 验收
+
+```bash
+pnpm vitest packages/core/src/runtime/session-actor.test.ts
+pnpm typecheck
+```
+
+---
+
+# P38.1-3 — Followup Durable Promotion / Cancellation Closure
+
+## 目标
+
+不允许出现：
+
+```text
+prompt.status = consumed
+BUT
+no recoverable promoted turn owner
+```
+
+## 原因
+
+当前危险窗口：
+
+```text
+runtime.startTurn()
+  ↓
+turn record created
+  ↓
+await completePromotion()
+  ↓
+markConsumed()
+
+         interrupt/cancel
+         ↓
+         revoke reservation
+
+markConsumed completes
+  ↓
+promoteToRunning rejected
+```
+
+## 做什么
+
+需要明确一种 durable promotion contract。
+
+### 推荐方案 A
+
+如果 schema 易扩：
 
 ```text
 pending
-→ reserved/promoting
-→ runtime.startTurn success
-→ durable turn identity established
-→ markConsumed / ack
+  ↓
+promoting(turnId)
+  ↓
+running/committed
+  ↓
+consumed
 ```
 
-Failure:
-
-```text
-keep/requeue durable pending input
-AND settle/reject caller resolver
-AND observable typed error
-```
-
-## Queue API
-
-If needed, replace destructive dequeue with two-phase API:
+Inbox record 加：
 
 ```ts
-reservePendingFollowup()
-completePromotion(id, turnId)
-releasePromotion(id)
+status: "pending" | "promoting" | "consumed";
+promotedTurnId?: TurnId;
 ```
 
-or equivalent.
+### 最小方案 B
 
-Do not redesign the whole persistence layer.
+如果不扩 schema：
 
-## Required tests
+- turn durable record 建立后；
+- 必须确认 current reservation 仍 valid；
+- durable consumed ack 后如果发生 crash/cancel，recovery 必须能根据 prompt ↔ turn 关系恢复；
+- 不允许 consumed record 完全失去 owner identity。
 
-1. queued followup + `runtime.startTurn` throws:
-   - prompt not silently consumed;
-   - caller outcome settles;
-2. successful promotion:
-   - start success occurs before markConsumed;
-3. restart/hydration after failed promotion:
-   - same input is recoverable;
-4. resolver-less followup followed by resolver followup:
-   - no resolver mismatch;
-5. close during promotion:
-   - no lost prompt.
-
-Acceptance:
+## 核心状态机
 
 ```text
-lost followups = 0
-permanently pending queued outcomes = 0
+pending
+  └─ reserve
+      ↓
+promoting(promptId, turnId, requestId)
+      ├─ request still valid
+      │      ↓
+      │   running
+      │      ↓
+      │   consumed
+      │
+      └─ cancellation / failure
+             ↓
+           pending
+```
+
+## 必须写的 deterministic regression
+
+### Test A — cancel between create and durable ack
+
+人为 gate：
+
+```text
+startTurn created
+completePromotion blocked
+interrupt
+release ack gate
+```
+
+验收：
+
+- [ ] 不出现 consumed-without-owner；
+- [ ] caller terminal settle；
+- [ ] durable prompt 可恢复。
+
+### Test B — completePromotion throws
+
+验收：
+
+- [ ] prompt 没丢；
+- [ ] active owner 没伪造；
+- [ ] resolver settle；
+- [ ] no double promotion。
+
+### Test C — crash/reload
+
+如果 prompt 已进入 promoting / consumed：
+
+- [ ] 能证明对应 turnId；
+- [ ] 不会把它当全新 followup 再执行第二次。
+
+## 验收
+
+```bash
+pnpm vitest packages/core/src/runtime/session-actor.test.ts
+pnpm test:race
+pnpm typecheck
 ```
 
 ---
 
-# P38-3 — EXPLICIT `createTurn()` OWNERSHIP CONTRACT
+# P38.1-4 — Starting Reservation Cancellation Hardening
 
-> `INV-P38-004`:
->
-> `createTurn()` has a documented concurrency contract and cannot accidentally
-> bypass session turn-creation authority.
+## 目标
 
-## Current defect
+所有：
 
-Current behavior checks idle but does not reserve before:
+```text
+interrupt
+cancelTurn
+close
+```
+
+都必须真正 revoke `starting` ownership。
+
+## 做什么
+
+- [ ] cancelTurn(starting existing turn) = abort + revoke；
+- [ ] interrupt(starting) = abort + revoke；
+- [ ] close(starting) = abort + revoke；
+- [ ] promotion 前再次检查 requestId；
+- [ ] promotion 前再次检查 `controller.signal.aborted`。
+
+## 推荐 helper
 
 ```ts
-await runtime.startTurn(...)
-```
+private revokeStarting(
+  expectedRequestId?: number,
+): void {
+  if (this.state.kind !== "starting") return;
 
-Thus:
+  if (
+    expectedRequestId !== undefined &&
+    this.state.requestId !== expectedRequestId
+  ) {
+    return;
+  }
 
-```text
-createTurn A sees idle
-→ await
+  this.state.controller.abort();
 
-startTurn B sees idle
-→ reserve
-```
-
-## Required decision
-
-Inspect `AgentRuntime.startTurn()` and choose one contract.
-
-### Contract A — creation is session-exclusive
-
-Use Actor reservation:
-
-```text
-idle
-→ starting(source=create_only)
-→ runtime.startTurn
-→ return durable Turn
-→ idle
-```
-
-### Contract B — multiple pending created turns are intentionally safe
-
-Then prove:
-
-```text
-multiple createTurn operations
-+
-concurrent execution
-```
-
-cannot violate session/runtime invariants.
-
-Document why `createTurn` is not execution ownership.
-
-Do not keep half-serialization.
-
-## Tests
-
-If A:
-
-```text
-create vs create
-create vs start
-create vs followup
-```
-
-If B:
-
-```text
-two creates + one run
-store/session invariants remain correct
-```
-
-Acceptance:
-
-```text
-createTurn concurrency semantics = explicit + tested
-```
-
----
-
-# P38-4 — CANCELLED STARTING RESERVATION CANNOT PROMOTE
-
-> `INV-P38-005`:
->
-> Once a starting reservation is interrupted/cancelled/closed, it can never
-> promote into `running`.
-
-## Current defect
-
-Current starting interrupt aborts controller but leaves state `starting`.
-
-Later `runtime.startTurn()` may return, requestId still matches, then Actor promotes
-and calls `runtime.runTurn()` with an already-aborted signal.
-
-## Required fix
-
-Promotion must require:
-
-```ts
-state.kind === "starting"
-&& state.requestId === requestId
-&& controller.signal.aborted === false
-```
-
-Better: interrupt/close explicitly revoke reservation state/token.
-
-If a durable Turn record was already created before cancellation was observed,
-give it a defined status/cleanup. Do not orphan it silently.
-
-## Required tests
-
-1. blocked start → interrupt → release:
-   - `runtime.runTurn` call count = 0;
-2. close while starting:
-   - no promotion;
-3. abort existing-turn load before `requireTurn` resolves:
-   - no promotion;
-4. typed cancellation outcome/error.
-
-Acceptance:
-
-```text
-late promotion after cancellation = 0
-```
-
----
-
-# P38-5 — MANAGER STALE-`finally` RACE
-
-> `INV-P38-006`:
->
-> An older load generation cannot delete or replace the loading entry owned by a
-> newer generation.
-
-## Current defect
-
-Generation fencing exists, but old `doLoad()` still executes:
-
-```ts
-finally {
-  this.loading.delete(id);
+  if (this.closed) {
+    this.state = { kind: "closing" };
+  } else {
+    this.state = { kind: "idle" };
+  }
 }
 ```
 
-Race:
+实际 state name 按现有类型适配，不要为抄这个 helper 破坏现有 state machine。
 
-```text
-gen1 blocked
-→ unload increments generation and deletes loading
-→ gen2 starts, loading[id]=gen2
-
-gen1 resumes
-→ finally delete(id)
-→ gen2 loading entry disappears
-
-gen2-B caller arrives
-→ starts duplicate gen2 load
-```
-
-## Required design
-
-Use identity-bearing entry:
+## Promotion guard
 
 ```ts
-interface LoadingEntry {
-  generation: number;
-  controller: AbortController;
-  promise: Promise<SessionActor>;
+if (
+  this.state.kind !== "starting" ||
+  this.state.requestId !== requestId ||
+  controller.signal.aborted
+) {
+  throw new AgentError(
+    errorInfo(
+      "TURN_START_CANCELLED",
+      "starting reservation was revoked before promotion",
+    ),
+  );
 }
 ```
 
-Store entry object.
+## 必须写的 race tests
 
-Finally:
-
-```ts
-if (this.loading.get(id) === myEntry) {
-  this.loading.delete(id);
-}
-```
-
-Never delete an entry you do not own.
-
-Unload should invalidate/abort current entry; `delete` is not cancellation.
-
-## Required true overlap test
-
-Use separate gates:
+### Test A — runTurn(existing) + cancelTurn
 
 ```text
-gen1 getSession blocked
-unload
-gen2 getSession starts and blocks
-release gen1
-50 more load(id) calls
+runTurn(existing)
+  ↓
+blocked before runtime.runTurn
+
+cancelTurn(turnId)
+  ↓
+release gate
 ```
 
-Expected:
+验收：
 
 ```text
-all 50 share gen2
-gen2 store read count = 1
-no gen2-B duplicate
+runtime.runTurn call count == 0
+activeTurn == undefined
 ```
 
-Do NOT release gen1 and await its rejection before starting gen2; that does not
-test the race.
+### Test B — startTurn + interrupt
 
-Acceptance:
+- [ ] no late running；
+- [ ] no owner overwrite。
 
-```text
-stale finally deleting new entry = impossible
-same-generation duplicate load = 0
+### Test C — close during starting
+
+- [ ] no late publication；
+- [ ] no active turn after close。
+
+### Test D — 100-way mixed ownership
+
+使用 barrier，不使用 sleep。
+
+## 验收
+
+```bash
+pnpm vitest packages/core/src/runtime/session-actor.test.ts
+pnpm test:race
+pnpm typecheck
 ```
 
 ---
 
-# P38-6 — RESTORE TRUE LIVE `runStreamed()`
+# P38.1-5 — SDK Pre-Abort No-Run Closure
 
-> `INV-P38-007`:
->
-> `runStreamed()` returns before `turn/run` terminal completion.
->
-> `INV-P38-008`:
->
-> Subscription is installed before first possible event.
+## 目标
 
-## Current defect
-
-P37 fixed:
+当 signal 在进入 `runStreamed()` 前已经 aborted：
 
 ```text
-subscribe before invoke
+turn/run calls == 0
 ```
 
-but current method then:
+## 重点文件
 
-```ts
-const runResponse =
-  await transport.invoke("turn/run", ...);
-
-return { events, done };
+```text
+packages/sdk/src/client.ts
+packages/sdk/src/client.test.ts
+packages/sdk/src/event-stream.test.ts
 ```
 
-Because AppServer `turn/run → session.run → actor.runTurn` waits for TurnOutcome,
-the stream is returned only after the run finishes.
+## 做什么
 
-That is buffered replay, not live streaming.
+- [ ] Hub 创建后检查 pre-abort；
+- [ ] pre-aborted 不再 invoke `turn/run`；
+- [ ] mid-run abort 语义保持不变；
+- [ ] subscribe-before-run invariant 保持。
 
-## Required structure
+## 推荐实现
 
 ```ts
-const hub = new RunEventHub(...); // subscribes now
+const hub = new RunEventHub(
+  this.transport,
+  this.id,
+  turnId,
+  opts.signal,
+);
 
-const invocation =
-  this.transport.invoke("turn/run", {
-    threadId: this.threadId,
+if (opts.signal?.aborted === true) {
+  return {
+    events: hub.events,
+    done: hub.done,
+  };
+}
+
+const runPromise = this.transport.invoke(
+  "turn/run",
+  {
+    threadId: this.id,
     turnId,
-  });
+  },
+);
 
-hub.attachRunInvocation(invocation);
+hub.attachRunPromise(runPromise);
 
 return {
   events: hub.events,
-  done: hub.done.then((r) => ({ ...r, turnId })),
+  done: hub.done,
 };
 ```
 
-`attachRunInvocation()` handles:
+## 必须补 regression
 
-```text
-resolved { error }
-rejected Promise
-resolved success after terminal
+### already-aborted
+
+记录：
+
+```ts
+let turnRunCalls = 0;
+let interruptCalls = 0;
 ```
 
-without blocking `runStreamed()`.
-
-## Required return-before-terminal regression
-
-Fake `turn/run`:
+验收：
 
 ```text
-emit first delta
-block invocation Promise
+turnRunCalls == 0
+done.status == interrupted
 ```
 
-Test:
+### mid-run abort
+
+验收：
 
 ```text
-await runStreamed() returns while invoke still blocked
-consume first delta
-verify run Promise still pending
-release gate
-observe terminal + done
+turnRunCalls == 1
+interruptCalls >= 1
+done.status == interrupted
 ```
 
-No microtask trick that avoids proving this.
+### normal streaming
 
-## Synchronous first event test
+- [ ] synchronous emission 无丢事件；
+- [ ] subscribe-before-invoke 仍成立；
+- [ ] listener cleanup 仍为 0 growth。
 
-Emit an event synchronously inside `invoke("turn/run")`.
+## 验收
 
-It must be observed because Hub subscribed before invoke.
-
-Acceptance:
-
-```text
-stream returned before terminal = YES
-first-event loss = 0
+```bash
+pnpm vitest packages/sdk/src/client.test.ts
+pnpm vitest packages/sdk/src/event-stream.test.ts
+pnpm vitest packages/sdk/src/conformance.test.ts
+pnpm typecheck
 ```
 
 ---
 
-# P38-7 — SDK EXACTLY-ONCE TERMINAL SETTLEMENT + CLEANUP
+# P38.1-6 — Gate Evidence Schema + Parser Truthfulness
 
-> `INV-P38-009`:
->
-> Every SDK run settles exactly once and releases all run-scoped listeners exactly once.
+## 目标
 
-## Required architecture
-
-Centralize:
-
-```ts
-private settleOnce(result: RunResult): void
-```
-
-It must:
-
-```text
-guard terminated
-set terminated
-unsubscribe turn listener
-unsubscribe transport close listener
-remove abort listener
-finish/fail public event channel
-resolve done
-```
-
-Store cleanup handles:
-
-```ts
-private unsubscribeTurn: () => void;
-private unsubscribeClose: () => void;
-private abortSignal?: AbortSignal;
-private abortListener?: () => void;
-```
-
-Every terminal path goes through `settleOnce`:
-
-```text
-turn/completed
-turn/failed
-turn/interrupted
-local abort
-turn/run {error}
-turn/run Promise rejection
-transport close/EOF
-buffer overflow
-explicit close
-```
-
-## Race semantics
-
-Terminal event may arrive before invoke resolves.
-
-Later invoke success/error may not double-settle.
-
-Transport close after terminal may not replace completed result.
-
-## Tests
-
-Instrument fake transport subscriber counts.
-
-Assert:
-
-```text
-during active run: listener count expected
-after terminal: listener count back to baseline
-```
-
-Run 1,000 short runs and assert no listener growth.
-
-Acceptance:
-
-```text
-double settle = 0
-listener leak = 0
-```
-
----
-
-# P38-8 — ERROR-AWARE BOUNDED `PushChannel`
-
-> `INV-P38-010`:
->
-> Stream failure after iterator creation is observable as an error, not clean EOF.
-
-## Current defect
-
-Overflow sets an overflow flag and `end()`.
-
-But an iterator created before overflow can later receive:
-
-```text
-done=true
-```
-
-instead of `OverflowError`.
-
-An events-only consumer can interpret overflow as successful stream end.
-
-## Required channel state
-
-Use:
-
-```ts
-type ChannelState =
-  | { kind: "open" }
-  | { kind: "ended" }
-  | { kind: "failed"; error: Error };
-```
-
-API:
-
-```ts
-push(event)
-end()
-fail(error)
-```
-
-`next()` must reject when failed according to documented buffering policy.
-
-Recommended:
-
-```text
-deliver already accepted queued events
-then next() rejects stored error
-```
-
-Overflow:
-
-```text
-channel.fail(new OverflowError(...))
-AND hub settleOnce(failed RunResult)
-```
-
-## Tests
-
-1. create iterator first;
-2. consume one event;
-3. pause consumer;
-4. push over capacity;
-5. next iteration rejects OverflowError.
-
-Also:
-
-```text
-events-only consumer sees error
-done-only consumer sees failed RunResult
-later terminal event does not double-settle
-```
-
-Acceptance:
-
-```text
-overflow represented as clean EOF = impossible
-```
-
----
-
-# P38-9 — CAPABILITY AUDIT MUST BE TRULY STRICT
-
-> `INV-P38-011`:
->
-> Release capability audit exits zero only when all release-relevant audit truth
-> axes pass.
-
-## Root script
-
-Change release gate to:
+彻底消灭：
 
 ```json
-"capability:audit":
-  "node apps/cli/dist/main.js audit --strict"
+{"passed": false, "exitCode": 0}
 ```
 
-## Strict semantics
+被解释成 PASS。
 
-Required:
+## Evidence schema
+
+建议：
+
+```ts
+interface GateExecutionEvidence {
+  schemaVersion: 2;
+  gate: GateId;
+  command: string;
+  headSha: string;
+
+  startedAt: string;
+  finishedAt: string;
+
+  exitCode: number | null;
+  passed: boolean;
+
+  runner?: {
+    os?: string;
+    arch?: string;
+    node?: string;
+    pnpm?: string;
+  };
+
+  artifactDigest?: string;
+}
+```
+
+## 做什么
+
+### 单一 truth
+
+`passed` 必须派生自 exitCode：
+
+```ts
+function createGateEvidence(
+  exitCode: number | null,
+  input: Omit<GateExecutionEvidence, "passed" | "exitCode">,
+): GateExecutionEvidence {
+  return {
+    ...input,
+    exitCode,
+    passed: exitCode === 0,
+  };
+}
+```
+
+### Parser consistency
+
+```ts
+if (record.exitCode === null) {
+  return blocked("gate was not executed");
+}
+
+if (record.passed !== (record.exitCode === 0)) {
+  return blocked(
+    "inconsistent gate evidence: passed does not match exitCode",
+  );
+}
+```
+
+## 禁止的 CI 写法
+
+```bash
+cmd && echo '{"exitCode":0,"passed":true}' \
+    || echo '{"exitCode":0,"passed":false}'
+```
+
+## 推荐 CI 写法
+
+```bash
+set +e
+pnpm test:security
+code=$?
+set -e
+
+node scripts/write-gate-evidence.mjs \
+  --gate security \
+  --command "pnpm test:security" \
+  --exit-code "$code"
+
+exit "$code"
+```
+
+## 必须补 verifier tests
+
+- [ ] `passed=false, exitCode=0` → INVALID/BLOCKED；
+- [ ] `passed=true, exitCode=1` → INVALID/BLOCKED；
+- [ ] `exitCode=null` → NOT_RUN/BLOCKED；
+- [ ] `passed=true, exitCode=0` + exact SHA + command match → PASS；
+- [ ] malformed schema → BLOCKED，不 silent fallback。
+
+## 验收
+
+```bash
+pnpm vitest apps/cli/src/release-verify.test.ts
+pnpm typecheck
+```
+
+---
+
+# P38.1-7 — Canonical Gate Command Provenance
+
+## 目标
+
+Release verifier 不仅验证：
+
+```text
+有 evidence artifact
+```
+
+还必须验证：
+
+```text
+artifact 确实来自 canonical command
+```
+
+## Canonical commands
+
+推荐集中定义：
+
+```ts
+type GateId =
+  | "typecheck"
+  | "test"
+  | "build"
+  | "coverage"
+  | "docs"
+  | "benchmark_smoke"
+  | "protocol"
+  | "security"
+  | "race"
+  | "chaos"
+  | "capability_audit";
+
+const GATE_COMMANDS: Record<GateId, string> = {
+  typecheck: "pnpm typecheck",
+  test: "pnpm test",
+  build: "pnpm build",
+  coverage: "pnpm test:coverage",
+  docs: "pnpm docs:verify",
+  benchmark_smoke: "pnpm benchmark:smoke",
+  protocol: "pnpm test:protocol",
+  security: "pnpm test:security",
+  race: "pnpm test:race",
+  chaos: "pnpm test:chaos",
+  capability_audit: "pnpm capability:audit",
+};
+```
+
+## 做什么
+
+- [ ] release verifier 校验 `record.command === GATE_COMMANDS[id]`；
+- [ ] CI 真正运行 `pnpm capability:audit`；
+- [ ] 不允许 `agent audit --out` 冒充 capability_audit；
+- [ ] 每个 required gate 独立 artifact。
+
+## 必须补测试
+
+### Wrong command
+
+```text
+gate=security
+command=pnpm test:race
+```
+
+验收：BLOCKED。
+
+### capability audit impersonation
+
+```text
+gate=capability_audit
+command=node apps/cli/dist/main.js audit --out report.json
+```
+
+验收：BLOCKED。
+
+### exact canonical command
+
+```text
+gate=capability_audit
+command=pnpm capability:audit
+exitCode=0
+headSha=current
+```
+
+验收：PASS。
+
+## 验收
+
+```bash
+pnpm vitest apps/cli/src/release-verify.test.ts
+pnpm capability:audit
+pnpm typecheck
+```
+
+---
+
+# P38.1-8 — Strict Capability Audit Freshness Closure
+
+## 目标
+
+`audit --strict` 必须对 evidence freshness 负责。
+
+## 正确 strict truth
 
 ```ts
 const strictOk =
@@ -911,867 +1109,940 @@ const strictOk =
   summary.verdict.evidenceFresh;
 ```
 
-Ordinary `agent audit` may remain informational if backward compatibility requires.
-
-But `pnpm capability:audit` is a release gate.
-
-## Tests
-
-```text
-docs PASS / profile FAIL / evidence PASS → exit 1
-docs PASS / profile PASS / evidence FAIL → exit 1
-docs FAIL → exit 1
-all PASS → exit 0
-```
-
-Acceptance:
-
-```text
-matrix profileRequirements=FAIL + capability:audit PASS = impossible
-matrix evidenceFresh=FAIL + capability:audit PASS = impossible
-```
-
----
-
-# P38-10 — BENCHMARK FRESHNESS
-
-> `INV-P38-012`:
->
-> Benchmark evidence that release maturity depends on must be current-HEAD,
-> passing, and correct-kind.
-
-## Current defect
-
-Current freshness checks test evidence but not benchmark evidence.
-
-## Required semantics
-
-At minimum:
+不要：
 
 ```ts
-const testFresh = matrix.records.every(
-  r =>
-    !r.testDeclared ||
-    evidenceIsFresh(
-      input.executionEvidence?.[`capability:${r.id}`],
-      "test_run",
-      input.gitSha,
-    ),
-);
-
-const benchmarkFresh = matrix.records.every(
-  r =>
-    !r.benchmarkDeclared ||
-    evidenceIsFresh(
-      input.executionEvidence?.[`benchmark:${r.id}`],
-      "benchmark_run",
-      input.gitSha,
-    ),
-);
-
-const evidenceFresh =
-  testFresh && benchmarkFresh;
+strictOk = profileRequirementsOk;
 ```
 
-If profile-specific, expose honest names such as:
+## 做什么
 
-```text
-declaredEvidenceFresh
-requiredEvidenceFresh
-```
+- [ ] strict 模式加入 evidenceFresh；
+- [ ] stale test evidence → exit 1；
+- [ ] stale benchmark evidence → exit 1；
+- [ ] missing required evidence → exit 1；
+- [ ] 非 strict 兼容行为可保留，但 release 一律 strict。
 
-Do not call something `evidenceFresh` if a required evidence family is ignored.
+## 必须补测试
 
-## Tests
+- [ ] docs PASS + profile PASS + stale test evidence → exit 1；
+- [ ] docs PASS + profile PASS + missing benchmark evidence → exit 1；
+- [ ] docs PASS + profile FAIL + evidence fresh → exit 1；
+- [ ] 全部 PASS → exit 0。
 
-```text
-tests fresh + benchmark stale → FAIL
-tests fresh + benchmark missing → FAIL
-benchmark wrong kind → FAIL
-all fresh → PASS
-```
-
-Acceptance:
-
-```text
-stale benchmark + release-grade freshness PASS = impossible
-```
-
----
-
-# P38-11 — PROFILE-INDEPENDENT `durabilityActual`
-
-> `INV-P38-013`:
->
-> Actual durability describes the actual backing store regardless of profile requirements.
-
-## Current defect
-
-Current code only calculates store durability when profile requires durability.
-
-Thus:
-
-```text
-InMemoryApprovalStore
-required=none
-```
-
-can render:
-
-```text
-actual=none
-```
-
-## Required fix
-
-Always calculate actual:
-
-```ts
-const storeName =
-  backingStoreName(spec.id, input.introspection);
-
-const durabilityActual =
-  storeDurabilityLevel(storeName);
-
-const durabilityRequired =
-  requiresDurability
-    ? "durable"
-    : "none";
-
-const durabilitySatisfied =
-  rank[durabilityActual] >=
-  rank[durabilityRequired];
-```
-
-## Tests
-
-Ephemeral:
-
-```text
-actual=memory
-required=none
-satisfied=true
-```
-
-Persistent:
-
-```text
-actual=memory
-required=durable
-satisfied=false
-```
-
-Do not redesign store introspection in P38 unless necessary. Class-name-based durability
-inference may remain as future cleanup.
-
-Acceptance:
-
-```text
-changing profile does not rewrite actual store durability
-```
-
----
-
-# P38-12 — CI ATTESTATION MUST REDUCE REAL GATE EVIDENCE
-
-> `INV-P38-014`:
->
-> Every official release gate is backed by execution of the exact gate command for
-> the exact release SHA.
->
-> `INV-P38-015`:
->
-> Attestation cannot synthesize PASS with hard-coded gate states.
-
-## Current defect
-
-Current CI executes a subset of gates, then attestation writes PASS entries for gates
-such as:
-
-```text
-docs
-protocol
-security
-race
-chaos
-capability_audit
-```
-
-without independently deriving those PASS values from their named commands.
-
-## Required pipeline
-
-Every `REQUIRED_GATE` must have an evidence producer.
-
-Possible layout:
-
-```text
-verify-linux
-verify-windows
-coverage
-docs
-protocol
-security
-race
-chaos
-benchmark-smoke
-capability-audit
-        ↓
-release-attestation
-```
-
-Jobs may be combined for efficiency, but each gate needs its own evidence file.
-
-## Gate evidence schema
-
-```json
-{
-  "schemaVersion": 1,
-  "gate": "security",
-  "headSha": "<github.sha>",
-  "command": "pnpm test:security",
-  "exitCode": 0,
-  "passed": true,
-  "generatedAt": "..."
-}
-```
-
-PASS derives from exit code, not hard-coded attestation text.
-
-## Attestation reducer
-
-Attestation job:
-
-```text
-download/collect evidence
-→ verify exact SHA
-→ verify command matches GATE_COMMANDS
-→ run same release verdict logic
-→ READY only if verdict.ready
-```
-
-Preferred to reuse:
+## 验收
 
 ```bash
-pnpm release:verify
-```
-
-against collected CI evidence.
-
-## Capability-audit ordering
-
-Avoid circular dependency.
-
-Suggested:
-
-```text
-non-capability gates generate execution evidence
-→ capability audit consumes required evidence
-→ capability audit emits own gate evidence
-→ release verify consumes all gates
-```
-
-## Required CI verifier
-
-Add static/unit check if practical:
-
-```text
-every REQUIRED_GATE has producer
-GATE_COMMANDS map to real scripts
-attestation generator has no hard-coded PASS map
-```
-
-Acceptance:
-
-```text
-official PASS not backed by gate evidence = 0
+pnpm vitest apps/cli/src/audit*.test.ts
+pnpm capability:audit
+pnpm typecheck
 ```
 
 ---
 
-# P38-13 — DETERMINISTIC CANONICAL ERROR TAXONOMY TESTS
+# P38.1-9 — Canonical Path Deterministic Seam Closure
 
-> `INV-P38-016`:
->
-> Every canonicalization fail-closed class is deterministically tested.
+## 目标
 
-## Current state
+`canonicalizePath(..., {realpath: fake})` 必须控制：
 
-Production depth behavior is already fail-closed. Preserve it.
+```text
+full-path realpath
++
+ancestor-walk realpath
+```
 
-Remaining problem: permission/taxonomy tests depend on platform-specific paths and may
-finish without any assertion.
+全部调用。
 
-## Required test seam
+## 生产修复
 
-Small injectable realpath abstraction:
+找到：
 
 ```ts
-interface CanonicalFs {
-  realpath(path: string): string;
-}
+function canonicalAncestorAndTail(
+  p: string,
+  rp: (p: string) => string = realpathSync,
+): string {
 ```
 
-Production public API keeps using Node `realpathSync`.
+循环中必须使用：
 
-Tests inject errors.
-
-## Required deterministic branches
-
-```text
-ENOENT
-ENOTDIR
-EACCES
-EPERM
-ELOOP
-EIO
-unknown
-depth exhaustion
+```ts
+const ancestor = normaliseSeparators(
+  rp(current),
+);
 ```
 
-Expected mapping:
+不能继续：
 
-```text
-ENOENT/ENOTDIR → ancestor fallback
-EACCES/EPERM  → permission
-ELOOP         → symlink_loop
-EIO           → io
-unknown       → unknown
-depth         → depth
+```ts
+realpathSync(current)
 ```
 
-Keep a few real filesystem integration tests separately.
+## 必须补 taxonomy regression
 
-Acceptance:
+- [ ] full path EACCES → permission；
+- [ ] full path EPERM → permission；
+- [ ] full path ELOOP → symlink_loop；
+- [ ] full path EIO → io；
+- [ ] full path ENOENT → ancestor EACCES → permission；
+- [ ] full path ENOENT → ancestor ELOOP → symlink_loop；
+- [ ] full path ENOENT → ancestor EIO → io；
+- [ ] 64+ 层 ENOENT → depth；
+- [ ] fake adapter 调用次数可断言，证明 ancestor 没偷偷走真实 FS。
 
-```text
-taxonomy branch with zero deterministic assertion = 0
+## 验收
+
+```bash
+pnpm vitest packages/security/src/canonical-path.test.ts
+pnpm test:security
+pnpm typecheck
 ```
 
 ---
 
-# P38-14 — REMOVE RACE SLEEPS / WEAK ASSERTIONS
+# P38.1-10 — Regression Quality / Race Determinism Cleanup
 
-> `INV-P38-017`:
->
-> P38 concurrency tests prove scheduling and max concurrency directly.
+## 目标
 
-## Scope
+删除所有“名字像 regression，但不能证明 invariant”的假绿测试。
 
-Prioritize P37-added Actor/Manager tests.
+## 必须全局审查
 
-Replace:
-
-```ts
-await setTimeout(...)
+```bash
+rg "P38-|P38\.1-" packages apps
+rg "setTimeout\(" packages/core/src/runtime
 ```
 
-with explicit gate entry signals.
-
-## Required helper
-
-Create shared test helper such as:
+## 禁止模式 A — tautology
 
 ```ts
-function deferred<T>() {
-  let resolve!: (value: T) => void;
+expect(
+  actor.activeTurn === undefined ||
+  actor.activeTurn !== undefined
+).toBe(true);
+```
+
+必须重写成具体 invariant，例如：
+
+```ts
+expect(maxOwners).toBeLessThanOrEqual(1);
+expect(runtimeStartCalls).toBe(1);
+```
+
+## 禁止模式 B — disconnected counter
+
+错误：
+
+```ts
+let runCalls = 0;
+expect(runCalls).toBe(0);
+```
+
+但 fake runtime 从未 `runCalls += 1`。
+
+正确：
+
+```ts
+const runtime = {
+  runTurn: async (...) => {
+    runCalls += 1;
+    ...
+  },
+};
+```
+
+## 禁止模式 C — sleep 作为 ordering primitive
+
+错误：
+
+```ts
+await new Promise(r => setTimeout(r, 10));
+```
+
+然后假设“另一个 async 已进入某状态”。
+
+正确：
+
+```ts
+const entered = deferred<void>();
+const release = deferred<void>();
+```
+
+被测函数显式：
+
+```ts
+entered.resolve();
+await release.promise;
+```
+
+## 允许 timeout 的唯一用途
+
+只允许 test-level watchdog：
+
+```text
+如果 2 秒仍未 settle，则测试失败
+```
+
+不能拿它证明执行顺序。
+
+## 推荐 helper
+
+```ts
+function deferred<T = void>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
   let reject!: (reason?: unknown) => void;
+
   const promise = new Promise<T>((res, rej) => {
     resolve = res;
     reject = rej;
   });
+
   return { promise, resolve, reject };
 }
 ```
 
-## Fix mixed race test
+## Meta review rule
 
-Do not swallow every result and only inspect final actor state.
-
-Instrument fake runtime:
+对每条 P38 / P38.1 regression 都问：
 
 ```text
-currentActive
-maxActive
-startCalls
-runCalls
+如果把 production code 恢复成旧 bug，
+这条测试会明确失败吗？
 ```
 
-Assert:
+如果答案不是明确“会”，测试必须重写。
 
-```text
-maxActive === 1
-```
+## 验收
 
-and expected admission/busy counts.
+- [ ] 0 tautological assertion；
+- [ ] 0 disconnected counter；
+- [ ] Actor/Manager ownership tests 0 sleep-ordering；
+- [ ] focused race tests 连续执行多次稳定。
 
-## Manager gen overlap
-
-Use independent barriers for gen1 and gen2 and assert actual overlap.
-
-Acceptance:
-
-```text
-P38 race correctness sleeps = 0
-weak end-state-only max concurrency proof = 0
-```
-
----
-
-# P38-15 — REPAIR `HANDOFF.md`
-
-> `INV-P38-018`:
->
-> The canonical handoff describes the current release target and current gate truth.
-
-## Required top section
-
-```markdown
-# Harness Agent Handoff
-
-## Current release status
-
-- Current HEAD:
-- Release target SHA:
-- Branch/tag:
-- Working tree:
-- Current closure phase:
-- Release verdict:
-- Official CI attestation:
-```
-
-Then exact gate table:
-
-```text
-gate
-command
-result
-SHA
-evidence/artifact
-```
-
-## Historical notes
-
-Old P35 data such as:
-
-```text
-4707/4742
-known noise
-typecheck blocked
-```
-
-may remain only under:
-
-```text
-Historical / superseded
-```
-
-and clearly marked non-current.
-
-## HANDOVER
-
-Redirect only.
-
-Acceptance:
-
-```text
-first ~100 lines of HANDOFF are sufficient to determine current truth
-```
-
----
-
-# P38-16 — FINAL ZERO-RED RELEASE + EXIT
-
-P38 cannot be marked complete before:
+推荐：
 
 ```bash
+for i in 1 2 3 4 5; do
+  pnpm test:race || exit 1
+done
+```
+
+Windows 用 PowerShell 等价循环。
+
+---
+
+# P38.1-11 — Perf / Soak Gate Reclassification
+
+## 目标
+
+让：
+
+```text
+pnpm test
+```
+
+重新成为稳定的 correctness gate。
+
+不要简单：
+
+```text
+240s → 600s
+```
+
+## 分类原则
+
+### correctness
+
+默认进：
+
+```bash
+pnpm test
+```
+
+特点：
+
+- 功能/不变量；
+- 稳定；
+- 快；
+- 跨平台。
+
+### perf regression
+
+进：
+
+```bash
+pnpm test:perf
+```
+
+特点：
+
+- 检测 O(n²) / pathological growth；
+- 使用较小 deterministic workload；
+- 不需要 50k 真 fsync 才能证明复杂度。
+
+### soak / scale
+
+进：
+
+```bash
+pnpm test:soak
+```
+
+特点：
+
+- 20k/50k/100k；
+- 大量磁盘 I/O；
+- long-session；
+- nightly / scheduled / dedicated runner。
+
+## 推荐 root scripts
+
+根据当前 Vitest 版本调整实际 glob：
+
+```json
+{
+  "scripts": {
+    "test": "vitest run --exclude '**/*.perf.test.ts' --exclude '**/*.soak.test.ts'",
+    "test:perf": "vitest run '**/*.perf.test.ts'",
+    "test:soak": "vitest run '**/*.soak.test.ts'"
+  }
+}
+```
+
+如果当前 Vitest CLI 不接受上述形式，按实际版本支持语法实现，不要照抄后不验证。
+
+## event-store perf 建议
+
+普通 correctness/perf gate 保留：
+
+```text
+1k 或 5k append
+linesRead ~ O(1)
+window growth factor bounded
+```
+
+重型：
+
+```text
+20k Windows
+50k Linux
+```
+
+移动到 soak/scale。
+
+## Windows 验收
+
+- [ ] `pnpm test` 不再因 20k/50k fsync timeout；
+- [ ] Windows 仍运行所有 runtime/security/path/store/sdk correctness tests；
+- [ ] perf gate 若 required，不使用不合理统一 wall-clock hard threshold；
+- [ ] soak 是否 required 在 CI policy 中明确写出。
+
+---
+
+# P38.1-12 — Exact-HEAD CI Attestation / Zero-Red RC Gate
+
+## 目标
+
+这是最终发布门。
+
+只有 exact HEAD 的 required jobs 全 PASS，attestation 才能 READY。
+
+## Required gates
+
+```text
+typecheck          PASS
+test               PASS
+build              PASS
+coverage           PASS
+docs               PASS
+benchmark_smoke    PASS
+protocol           PASS
+security           PASS
+race               PASS
+chaos               PASS
+capability_audit   PASS
+linux_ci            PASS
+windows_ci          PASS
+```
+
+最终：
+
+```text
+failed              0
+blocked             0
+not_run             0
+inconsistent        0
+stale_sha           0
+command_mismatch    0
+```
+
+## Attestation 必须包含
+
+- [ ] exact headSha；
+- [ ] workflow run id；
+- [ ] 每个 required gate id；
+- [ ] 每个 gate canonical command；
+- [ ] 每个 gate exitCode；
+- [ ] passed；
+- [ ] runner OS；
+- [ ] artifact digest（可行时）；
+- [ ] overall verdict。
+
+## READY truth
+
+```ts
+const ready =
+  everyRequiredGatePassed &&
+  everyEvidenceHeadShaMatches &&
+  everyEvidenceCommandMatches &&
+  noInconsistentEvidence &&
+  linuxPassed &&
+  windowsPassed &&
+  coveragePassed;
+```
+
+## Release attestation job
+
+可以使用：
+
+```yaml
+if: always()
+```
+
+来生成 BLOCKED report。
+
+但绝不能因为 job 自己成功执行就写 READY。
+
+READY 必须来自上述 conjunctive truth。
+
+## Self-reference 规则
+
+不要：
+
+```text
+generate evidence at commit A
+commit evidence
+HEAD becomes B
+evidence still says A
+```
+
+正确：
+
+```text
+commit B
+  ↓
+CI checkout B
+  ↓
+run gates
+  ↓
+generate attestation(headSha=B)
+  ↓
+upload artifact / check / release asset
+```
+
+Attestation 是对 commit 的外部证明，不应该依赖一个提交里“自称自己就是最终 SHA”的 tracked file。
+
+## 验收
+
+- [ ] Linux job PASS；
+- [ ] Windows job PASS；
+- [ ] Coverage PASS；
+- [ ] release attestation 未 skipped；
+- [ ] exact HEAD 一致；
+- [ ] final verdict READY。
+
+---
+
+# P38.1-13 — Final Comprehensive Audit + Release Truth
+
+## 目标
+
+全部代码修好后，再做一次全仓库大审查。
+
+不能只看：
+
+```text
+pnpm test green
+```
+
+还要看测试本身是否真的证明了对应语义。
+
+## 最终大审查清单
+
+### Runtime / Followup
+
+- [ ] 同一个 durable prompt 是否可能重复 promotion？
+- [ ] hydration 是否按 prompt identity dedup？
+- [ ] 相同 text 不同 promptId 是否被错误去重？
+- [ ] promotion failure caller 是否 terminal settle？
+- [ ] durable requeue 是否仍可恢复？
+- [ ] consumed prompt 是否一定存在 recoverable owner？
+- [ ] cancel/interrupt/close 后是否有 late promotion？
+
+### SDK
+
+- [ ] pre-aborted turn/run calls == 0？
+- [ ] mid-run abort interrupt 正常？
+- [ ] sync emission 无 event loss？
+- [ ] done exactly once？
+- [ ] listeners 最终 0 growth？
+
+### Evidence
+
+- [ ] passed 和 exitCode 一致？
+- [ ] malformed evidence fail closed？
+- [ ] stale SHA fail closed？
+- [ ] command mismatch fail closed？
+- [ ] capability_audit 来自真实 canonical command？
+
+### Audit
+
+- [ ] strict 对 docs claims？
+- [ ] strict 对 profile requirements？
+- [ ] strict 对 evidenceFresh？
+- [ ] benchmark evidence freshness 也参与？
+
+### Canonical path
+
+- [ ] full-path realpath 使用 injected adapter？
+- [ ] ancestor walker 也使用 injected adapter？
+- [ ] depth cap fail closed？
+- [ ] error taxonomy deterministic？
+
+### Tests
+
+- [ ] 0 tautology；
+- [ ] 0 disconnected counter；
+- [ ] concurrency tests 0 ordering sleep；
+- [ ] regression 在旧错误实现上可失败。
+
+### CI
+
+- [ ] Linux PASS；
+- [ ] Windows PASS；
+- [ ] Coverage PASS；
+- [ ] Required gates PASS；
+- [ ] Attestation READY；
+- [ ] exact HEAD match。
+
+---
+
+# 5. Detailed Regression Matrix
+
+| Area | Scenario | Required Result |
+|---|---|---|
+| Followup | enqueue before first hydration | 同一 prompt 只出现一次 |
+| Followup | same text, different promptIds | 两条都保留 |
+| Followup | promotion startTurn throws | durable requeue + caller settle |
+| Followup | completePromotion throws | input 不丢、caller settle |
+| Followup | interrupt during ack window | 无 consumed-without-owner |
+| Followup | restart hydration | pending prompt 恢复一次 |
+| Actor | runTurn blocked + cancelTurn | runtime.runTurn calls == 0 |
+| Actor | startTurn blocked + interrupt | no late running |
+| Actor | startTurn blocked + close | no late owner |
+| Actor | mixed ownership race | max live owner <= 1 |
+| SDK | pre-aborted signal | turn/run calls == 0 |
+| SDK | abort mid-run | interrupt invoked |
+| SDK | sync transport emission | no event loss |
+| SDK | 1000 short runs | listener growth == 0 |
+| Evidence | passed=false + exitCode=0 | INVALID/BLOCKED |
+| Evidence | passed=true + exitCode=1 | INVALID/BLOCKED |
+| Evidence | wrong command | BLOCKED |
+| Evidence | stale SHA | BLOCKED |
+| Audit | fresh=false under strict | exit 1 |
+| Path | ENOENT then ancestor EACCES | permission |
+| Path | ENOENT then ancestor ELOOP | symlink_loop |
+| Path | 64+ missing ancestors | depth |
+| CI | Linux exact HEAD | PASS |
+| CI | Windows exact HEAD | PASS |
+| CI | Coverage | PASS |
+| Release | all required exact-head gates | READY only if all PASS |
+
+---
+
+# 6. Required Package Scripts
+
+执行完成后 root `package.json` 至少需要清晰可重复的命令面。
+
+如果已有等价命令，保留已有命名即可；关键是 CI 和 verifier 使用同一 canonical 定义。
+
+```json
+{
+  "scripts": {
+    "typecheck": "...",
+    "test": "...",
+    "build": "...",
+    "test:coverage": "...",
+    "docs:verify": "...",
+    "benchmark:smoke": "...",
+
+    "test:protocol": "...",
+    "test:security": "...",
+    "test:race": "...",
+    "test:chaos": "...",
+
+    "capability:audit": "node apps/cli/dist/main.js audit --strict",
+    "release:verify": "node apps/cli/dist/main.js release verify",
+
+    "test:perf": "...",
+    "test:soak": "..."
+  }
+}
+```
+
+---
+
+# 7. Per-Phase Execution Discipline
+
+每个 phase 强制：
+
+```text
+1. 写 regression
+2. 证明 regression 对旧 bug 会失败
+3. 修改 production code
+4. focused test
+5. cross-package regression
+6. pnpm typecheck
+7. checkpoint / commit
+8. 再进入下一 phase
+```
+
+禁止：
+
+```text
+一次性改 20 个文件
+  ↓
+最后才 pnpm test
+  ↓
+红了不知道是谁引入
+```
+
+---
+
+# 8. Commit / Checkpoint 建议
+
+建议保持小 commit，便于回归定位：
+
+```text
+fix(p38.1-1): dedupe hydrated durable followups by prompt identity
+fix(p38.1-2): terminally settle failed followup promotions
+fix(p38.1-3): close durable promotion cancellation window
+fix(p38.1-4): revoke starting reservations on cancel
+fix(p38.1-5): do not invoke turn/run for pre-aborted sdk runs
+fix(p38.1-6): reject inconsistent gate evidence
+fix(p38.1-7): bind evidence to canonical gate commands
+fix(p38.1-8): make strict audit fail on stale evidence
+fix(p38.1-9): use injected realpath throughout ancestor walk
+test(p38.1-10): replace tautological and timing-based race tests
+ci(p38.1-11): split correctness perf and soak gates
+ci(p38.1-12): generate exact-head release attestation
+```
+
+---
+
+# 9. Final Zero-Red Gate
+
+从 clean checkout / clean tree 开始执行：
+
+```bash
+pnpm install --frozen-lockfile
+
 pnpm typecheck
 pnpm test
 pnpm build
 pnpm test:coverage
 pnpm docs:verify
-pnpm benchmark:smoke
+
 pnpm test:protocol
 pnpm test:security
 pnpm test:race
 pnpm test:chaos
+
+pnpm benchmark:smoke
 pnpm capability:audit
+
+# 如果定义为 required：
+pnpm test:perf
+
 pnpm release:verify
 ```
 
-All PASS for the release target.
+`pnpm test:soak` 是否每次 release required，由 CI policy 决定。
 
-Required CI:
+如果不是 required，必须明确：
 
 ```text
-Linux required gates        PASS
-Windows required gates      PASS
-coverage                    PASS
-docs                        PASS
-protocol                    PASS
-security                    PASS
-race                        PASS
-chaos                       PASS
-benchmark smoke             PASS
-capability audit            PASS
-release attestation         READY
+nightly / scheduled scale gate
 ```
 
-Required semantic state:
+不能一边在 plan 里说 required，一边 CI 永远不跑。
+
+---
+
+# 10. Final DONE Conditions
+
+- [ ] P38.1-0 baseline truth capture 完成；
+- [ ] P38.1-1 hydration duplication regression PASS；
+- [ ] P38.1-2 resolver liveness regression PASS；
+- [ ] P38.1-3 durable promotion/cancellation regression PASS；
+- [ ] P38.1-4 starting cancellation regression PASS；
+- [ ] P38.1-5 SDK pre-abort no-run PASS；
+- [ ] P38.1-6 evidence consistency PASS；
+- [ ] P38.1-7 command provenance PASS；
+- [ ] P38.1-8 strict evidenceFresh PASS；
+- [ ] P38.1-9 canonical injected-rp PASS；
+- [ ] P38.1-10 0 tautology；
+- [ ] P38.1-10 0 disconnected counter；
+- [ ] P38.1-10 actor/manager ownership tests 0 ordering sleep；
+- [ ] P38.1-11 correctness/perf/soak 分类完成；
+- [ ] `pnpm typecheck` PASS；
+- [ ] `pnpm test` PASS；
+- [ ] `pnpm build` PASS；
+- [ ] `pnpm test:coverage` PASS；
+- [ ] `pnpm docs:verify` PASS；
+- [ ] `pnpm test:protocol` PASS；
+- [ ] `pnpm test:security` PASS；
+- [ ] `pnpm test:race` PASS；
+- [ ] `pnpm test:chaos` PASS；
+- [ ] `pnpm benchmark:smoke` PASS；
+- [ ] `pnpm capability:audit` PASS；
+- [ ] Linux exact HEAD CI PASS；
+- [ ] Windows exact HEAD CI PASS；
+- [ ] Coverage exact HEAD PASS；
+- [ ] Release Attestation exact HEAD READY；
+- [ ] failed required gates = 0；
+- [ ] blocked required gates = 0；
+- [ ] not-run required gates = 0；
+- [ ] inconsistent evidence = 0；
+- [ ] stale SHA evidence = 0；
+- [ ] command mismatch evidence = 0。
+
+---
+
+# 11. Hard NO-DONE Rules
+
+下面任意一条成立，P38.1 必须保持 `BLOCKED`：
+
+- Windows 红、Linux 绿；
+- Linux 红、Windows 绿；
+- Coverage 红；
+- Coverage 没跑；
+- release attestation skipped；
+- attestation 来自旧 SHA；
+- evidence command 与 canonical command 不匹配；
+- `passed` 和 `exitCode` 不一致；
+- `audit --strict` 在 stale evidence 下仍 exit 0；
+- followup caller 存在 forever-pending；
+- 同一个 durable prompt 可能 duplicate promotion；
+- pre-aborted SDK 仍调用 `turn/run`；
+- regression 是 tautology；
+- regression counter 没接 production path；
+- 用 sleep 证明 Actor/Manager ordering；
+- 把红项标成 known noise 后继续 READY。
+
+---
+
+# 12. Final Audit 输出格式
+
+Agent 做完后，最终输出必须按如下格式：
 
 ```text
-followup reservation overwrite       0
-lost durable followup                0
-unsettled queued outcome             0
-late cancelled promotion             0
-max runtime owner                    1
+# P38.1 Final Audit
 
-old manager generation deletes new   0
-duplicate same-generation loads      0
-late actor resurrection              0
+HEAD:
+<sha>
 
-runStreamed returns before terminal  YES
-lost synchronous first event         0
-SDK terminal hangs                   0
-double settlement                    0
-listener leaks                       0
-overflow as clean EOF                0
+Working tree:
+clean / dirty
 
-non-strict audit as release gate     NO
-profile FAIL but audit PASS          impossible
-evidenceFresh FAIL but audit PASS    impossible
-stale benchmark accepted             0
-profile-dependent durabilityActual   NO
+## Runtime invariants
+INV-P38.1-001 PASS
+INV-P38.1-002 PASS
+...
+INV-P38.1-018 PASS
 
-hard-coded attestation PASS          0
-missing gate accepted                0
-stale SHA gate accepted              0
+## Gate results
+typecheck          PASS
+test               PASS
+build              PASS
+coverage           PASS
+docs               PASS
+protocol           PASS
+security           PASS
+race               PASS
+chaos              PASS
+benchmark_smoke    PASS
+capability_audit   PASS
+linux              PASS
+windows            PASS
+release_attestation READY
 
-P38 race sleeps                      0
-untested canonical taxonomy branch   0
+## Evidence integrity
+headSha match               PASS
+command provenance          PASS
+passed/exitCode consistency PASS
+stale evidence              0
+blocked evidence            0
+not-run evidence            0
+
+## Regression summary
+<逐条列 P38.1 regression + PASS>
+
+## Remaining risks
+NONE
+或明确列出阻塞项。
+
+## Final verdict
+READY / BLOCKED
+```
+
+如果还有阻塞项，不允许写：
+
+```text
+DONE with known noise
 ```
 
 ---
 
-# 2. REQUIRED ADVERSARIAL TEST MATRIX
+# 13. P38.1 完成后的路线
 
-## Actor / Followup
+如果 exact HEAD 真正 READY：
+
+**停止 P39 大架构升级。**
+
+后续进入：
 
 ```text
-drain blocked in dequeue + direct start
-drain blocked + createTurn
-followup start creation throws
-followup success before markConsumed
-resolver-less followup + resolver followup
-queued promotion failure settles caller
-interrupt while starting
-close while starting
-100-way mixed admission with maxActive instrumentation
+Champion baseline
+  ↓
+Failure clustering
+  ↓
+提出一个 condition-specific challenger
+  ↓
+paired A/B benchmark
+  ↓
+quality gate
+  ↓
+security/race/cost gate
+  ↓
+PROMOTE 或 REJECT
 ```
 
-## Manager
+## Benchmark 演化规则
+
+- 一次 challenger 只改变一个主要变量；
+- 先解决 champion 真实 failure cluster；
+- 不做“全局开启一个机制看看会不会变强”；
+- quality 是 hard gate；
+- token/tool/latency 是 tie-breaker；
+- 成本下降但质量下降 → REJECT；
+- 建议每 case 至少 3-run paired repetition；
+- 稳定后升级到 5-run；
+- 推荐 A/B/A/B 交错，减少 provider backend drift。
+
+---
+
+# 14. 可直接给 Codex / Agent 的执行提示
 
 ```text
-gen1 blocked
-unload
-gen2 starts and blocks
-gen1 releases
-50 concurrent gen2 callers
-one gen2 store read
-one gen2 actor
-close during load
-reload after unload
-```
+你现在负责执行 P38.1。
 
-## SDK
+必须严格遵守：
 
-```text
-runStreamed returns while turn/run pending
-synchronous first event
-resolved protocol error
-rejected invoke Promise
-EOF before first event
-EOF after delta
-terminal then EOF
-abort before terminal
-terminal vs abort race
-overflow after iterator creation
-events-only overflow consumer
-done-only overflow consumer
-1,000 runs without listener growth
-```
-
-## Audit
-
-```text
-strict docs fail
-strict profile fail
-strict evidence fail
-strict all pass
-tests fresh + benchmark stale
-benchmark missing
-benchmark wrong kind
-actual memory / required none
-actual memory / required durable
-```
-
-## Canonical
-
-```text
-ENOENT
-ENOTDIR
-EACCES
-EPERM
-ELOOP
-EIO
-unknown
-depth
-real symlink containment
-```
-
-## CI
-
-```text
-every REQUIRED_GATE has producer
-every producer uses expected command
-evidence SHA exact match
-attestation generated from evidence
-no hard-coded passed table
+1. 严格按 plan.md 顺序执行，不要跳 phase。
+2. 每个 phase 先写能失败的 regression，再修 production code。
+3. 每完成一个 phase，立即运行 focused tests + cross-package tests + typecheck。
+4. 不要新增与 P38.1 无关的大功能。
+5. 不要开始 P39。
+6. 不要把红项写成 known noise。
+7. 不要用 sleep 证明并发 ordering；使用 barrier / deferred。
+8. 不要写 tautological tests。
+9. 不要写 disconnected counters。
+10. Evidence 必须来自真实 command execution。
+11. Release verifier 必须检查 exact HEAD。
+12. Release verifier 必须检查 command provenance。
+13. Release verifier 必须检查 passed/exitCode consistency。
+14. audit --strict 必须检查 evidenceFresh。
+15. Followup durable prompt 必须 exactly-once promotion。
+16. Followup promotion failure caller 必须 terminal settle。
+17. pre-aborted SDK 不得 invoke turn/run。
+18. 最终只有 Linux + Windows + Coverage + Required Gates + Attestation 全绿才允许 READY。
+19. 如果任何 required gate 红/blocked/not-run，最终 verdict 必须 BLOCKED。
+20. 全部完成后，按 plan.md 的 Final Audit 模板做一次全仓库大审查。
 ```
 
 ---
 
-# 3. EXACT IMPLEMENTATION ORDER
+# 15. 一页版 Acceptance Checklist
 
-```text
-P38-0 baseline
-  ↓
-P38-1 followup reservation
-  ↓
-P38-2 durable followup ordering
-  ↓
-P38-3 createTurn contract
-  ↓
-P38-4 cancellation reservation
-  ↓
-P38-5 manager stale-finally
-  ↓
-P38-6 live streaming
-  ↓
-P38-7 settleOnce cleanup
-  ↓
-P38-8 error-aware channel
-  ↓
-P38-9 strict audit
-  ↓
-P38-10 benchmark freshness
-  ↓
-P38-11 durability actual
-  ↓
-P38-12 CI evidence reducer
-  ↓
-P38-13 canonical deterministic tests
-  ↓
-P38-14 concurrency test cleanup
-  ↓
-P38-15 HANDOFF truth
-  ↓
-P38-16 final release
-```
-
-Do not hand-edit evidence to make the last gate pass.
+- [ ] P38.1-0 Baseline truth capture
+- [ ] P38.1-1 Followup hydration dedupe
+- [ ] P38.1-2 Followup resolver terminal semantics
+- [ ] P38.1-3 Durable promotion/cancellation closure
+- [ ] P38.1-4 Starting reservation cancel closure
+- [ ] P38.1-5 SDK pre-abort no-run
+- [ ] P38.1-6 Evidence consistency
+- [ ] P38.1-7 Canonical command provenance
+- [ ] P38.1-8 Strict evidenceFresh
+- [ ] P38.1-9 Canonical injected realpath seam
+- [ ] P38.1-10 Regression quality + deterministic race tests
+- [ ] P38.1-11 Correctness / perf / soak split
+- [ ] P38.1-12 Exact-head CI attestation
+- [ ] P38.1-13 Final comprehensive audit
+- [ ] Final: Linux PASS
+- [ ] Final: Windows PASS
+- [ ] Final: Coverage PASS
+- [ ] Final: Required gates PASS
+- [ ] Final: Attestation READY
+- [ ] Final: zero-red
 
 ---
 
-# 4. PER-TASK STATUS TEMPLATE
+# 16. 最终阶段定义
 
-Every task must end with:
-
-```text
-Status:
-Invariant:
-Root cause:
-Regression reproduced:
-Production fix:
-Files changed:
-Focused tests:
-Adversarial/race tests:
-Failure-path tests:
-Linux:
-Windows:
-Typecheck:
-Full tests:
-Build:
-Coverage:
-Docs:
-Release impact:
-Evidence:
-Remaining blockers:
-```
-
-Allowed:
+只有在下面全部成立时，才允许正式宣布：
 
 ```text
-DONE
-BLOCKED
-IN_PROGRESS
-NOT_STARTED
+Harness v5 Architecture Closure = COMPLETE
 ```
 
-Forbidden:
+必须是：
 
 ```text
-DONE_WITH_NOISE
-MOSTLY_DONE
-FUNCTIONALLY_DONE
-PASS_EXCEPT
-GREEN_ENOUGH
-KNOWN_NOISE_ACCEPTED
+Runtime correctness          CLOSED
+Followup exactly-once        CLOSED
+Cancellation late-promotion  CLOSED
+SDK streaming lifecycle      CLOSED
+Evidence truthfulness        CLOSED
+Command provenance           CLOSED
+Strict freshness             CLOSED
+Canonical path seam          CLOSED
+Regression quality           CLOSED
+Linux CI                     GREEN
+Windows CI                   GREEN
+Coverage                     GREEN
+Release Attestation          READY
 ```
 
----
-
-# 5. HARD FINAL CHECKLIST
-
-## Actor / Manager
-
-- [ ] drain owns reservation before awaited dequeue.
-- [ ] durable followup consumption occurs after successful promotion.
-- [ ] promotion failure settles/retries deterministically.
-- [ ] createTurn contract explicit and tested.
-- [ ] cancelled starting reservation cannot run.
-- [ ] stale manager finally cannot delete new loading entry.
-- [ ] true gen1/gen2 overlap regression exists.
-- [ ] max runtime concurrency measured directly.
-
-## SDK
-
-- [ ] runStreamed returns before terminal completion.
-- [ ] subscription installed before first possible event.
-- [ ] invoke Promise attached without blocking return.
-- [ ] all terminal paths use one settleOnce.
-- [ ] all run-scoped listeners cleaned.
-- [ ] iterator created before overflow receives error.
-- [ ] no unbounded queue.
-- [ ] 1,000-run leak regression passes.
-
-## Audit / Release
-
-- [ ] capability:audit uses strict.
-- [ ] strict requires docs truth.
-- [ ] strict requires profile requirements.
-- [ ] strict requires evidence freshness.
-- [ ] benchmark evidence participates in required freshness.
-- [ ] wrong-kind benchmark evidence fails.
-- [ ] durabilityActual profile-independent.
-- [ ] every REQUIRED_GATE has execution evidence.
-- [ ] official attestation reduces evidence.
-- [ ] no hard-coded PASS map.
-- [ ] exact release SHA required.
-
-## Verification
-
-- [ ] deterministic canonical taxonomy tests.
-- [ ] no arbitrary sleeps in P38 race tests.
-- [ ] HANDOFF current truth updated.
-- [ ] HANDOVER redirect only.
-
-## Release gates
-
-- [ ] `pnpm typecheck`
-- [ ] `pnpm test`
-- [ ] `pnpm build`
-- [ ] `pnpm test:coverage`
-- [ ] `pnpm docs:verify`
-- [ ] `pnpm benchmark:smoke`
-- [ ] `pnpm test:protocol`
-- [ ] `pnpm test:security`
-- [ ] `pnpm test:race`
-- [ ] `pnpm test:chaos`
-- [ ] `pnpm capability:audit`
-- [ ] `pnpm release:verify`
-- [ ] Linux CI
-- [ ] Windows CI
-- [ ] official attestation READY
-
----
-
-# 6. FINAL VERDICT FORMAT
-
-If all are green:
+否则：
 
 ```text
-Harness v5 architecture closure: COMPLETE
-Release target: <SHA>
-Official release attestation: READY
-Known release-gate noise: 0
-Required not-run gates: 0
-Required stale evidence: 0
+Harness v5 Architecture Closure = BLOCKED
 ```
 
-If not:
+不要再出现“基本完成”“known noise 不影响”“本地全绿所以算完成”这种中间态替代硬验收。
+
+P38.1 真正完成后，项目的主线应从：
 
 ```text
-Harness v5 architecture closure: BLOCKED
-Release target: <SHA>
-Blocking gates:
-- ...
+继续找架构漏洞
 ```
 
-No softer wording.
-
----
-
-# 7. AFTER P38 — STOP ARCHITECTURE CLOSURE
-
-Once P38 is genuinely green, DO NOT automatically create P39/P40 architecture plans.
-
-Freeze the architecture and measure it.
-
-Next loop:
+正式切换为：
 
 ```text
-1. Freeze baseline.
-2. Run real-model benchmark suites.
-3. Record:
-   - verified completion rate
-   - tool calls
-   - tokens
-   - latency
-   - retries/recovery
-   - compaction
-   - policy denials
-   - cost
-4. Introduce exactly one challenger mechanism.
-5. Run paired benchmark.
-6. Promote only if quality/safety/cost evidence supports it.
-7. Reject otherwise.
+用真实 benchmark 提升 champion 的任务成功率
 ```
 
-Future architecture changes require benchmark or production evidence.
-
----
-
-# 8. FINAL INSTRUCTION TO THE CODING AGENT
-
-Make these statements literally true:
-
-```text
-SessionActor has one owner.
-Followups are never lost.
-Cancellation cannot promote.
-Old session loads cannot destroy new single-flight ownership.
-runStreamed really streams.
-Every SDK terminal path settles and cleans up.
-A stream failure is never clean EOF.
-Strict audit is actually strict.
-Release freshness includes required benchmark evidence.
-Actual durability describes reality.
-CI attestation reports executed gates, not declared gates.
-Race tests prove races without sleeping.
-HANDOFF tells the current truth.
-```
-
-When all are mechanically proven at the exact release SHA:
-
-**stop closure work and return to benchmark-driven evolution.**
+这才是后续阶段的主战场。
