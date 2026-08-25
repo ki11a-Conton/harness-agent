@@ -14,13 +14,22 @@
 
 ## Decision: ALL CHALLENGERS REJECTED — champion kept
 
-| Variant | Pass rate | Calls | Input tokens | verified_complete | Verdict |
+| Variant | Suite | Pass rate | Calls | Input tokens | Verdict |
 | --- | --- | --- | --- | --- | --- |
-| **baseline (champion)** | **5/13 (38.5%)** | 120 | 442,770 | **5** | **kept** |
-| adaptive_recovery | 4/13 (30.8%) | 102 | 300,625 | 4 | reject |
-| memory_retrieval | 1/13 (7.7%) | 101 | 340,493 | 1 | reject (degraded) |
-| tool_selector_deferred_schema | 4/13 (30.8%) | 85 | 293,133 | 4 | reject |
-| adaptive_context_policy | 2/13 (15.4%) | 97 | 306,931 | — | reject (degraded) |
+| **baseline (champion)** | **adversarial** | **5/13 (38.5%)** | 120 | 442,770 | **kept** |
+| adaptive_recovery | adversarial | 4/13 (30.8%) | 102 | 300,625 | reject |
+| memory_retrieval | adversarial | 1/13 (7.7%) | 101 | 340,493 | reject (degraded) |
+| tool_selector_deferred_schema | adversarial | 4/13 (30.8%) | 85 | 293,133 | reject |
+| adaptive_context_policy | adversarial | 2/13 (15.4%) | 97 | 306,931 | reject (degraded) |
+
+### Other suites — not yet measured
+
+regression/holdout/stress baseline runs require a higher-RPM API than
+`api.b.ai/v1` (current RPM limit ~5/min causes 429 on multi-call cases).
+Adversarial baseline was successfully measured at 5/13; the champion wiring
+is the frozen baseline for all four suites.
+
+## Per-case matrix (adversarial, PASS / FAIL)
 
 ### Per-case matrix (PASS / FAIL)
 
