@@ -66,12 +66,18 @@ describe("P5-1/P5-2: JSONL event store scaling", () => {
     try {
       const store = new JSONLEventStore({ dataDir });
       const sid = newSessionId();
+      // Windows fsync is an order of magnitude slower than Linux and shared
+      // runners can be slow (AV scan); keep the quadratic-detection signal
+      // (linesRead) while fitting the platform's real disk cost — same
+      // pattern as the 50k test below.
+      const n = process.platform === "win32" ? 5_000 : 10_000;
+      const windowSize = 500;
       const windows: number[] = [];
       const started = performance.now();
       let windowStart = started;
-      for (let i = 0; i < 10_000; i++) {
+      for (let i = 0; i < n; i++) {
         await store.append({ ...makeEvent(), sessionId: sid });
-        if ((i + 1) % 500 === 0) {
+        if ((i + 1) % windowSize === 0) {
           windows.push(performance.now() - windowStart);
           windowStart = performance.now();
         }
@@ -85,14 +91,14 @@ describe("P5-1/P5-2: JSONL event store scaling", () => {
       const max = Math.max(...windows);
       expect(max).toBeLessThan(p50 * 12 + 2_000);
       expect(store.debugStats().linesRead).toBeLessThan(100);
-      expect(await store.list(sid)).toHaveLength(10_000);
+      expect(await store.list(sid)).toHaveLength(n);
       console.log(
-        `[P5-1] 10k appends: ${elapsed.toFixed(1)}ms total, window p50=${p50.toFixed(1)}ms p95=${p95.toFixed(1)}ms`,
+        `[P5-1] ${n} appends: ${elapsed.toFixed(1)}ms total, window p50=${p50.toFixed(1)}ms p95=${p95.toFixed(1)}ms`,
       );
     } finally {
       await rm(dataDir, { recursive: true, force: true });
     }
-  }, 180_000);
+  }, 240_000);
 
   it("50k appends complete without pathological blow-up (recorded for plan.md)", async () => {
     const dataDir = await freshDataDir();
