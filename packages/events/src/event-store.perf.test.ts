@@ -1,4 +1,3 @@
-import { statSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,17 +6,12 @@ import { newEventId, newSessionId, type AgentEvent } from "@ar/contracts";
 import { JSONLEventStore } from "./event-store.js";
 
 /**
- * P5-1: JSONL store performance characteristics (1k / 10k / 50k scale).
+ * P5-1/P38.1-11: JSONL store performance gate (`pnpm test:perf`).
  *
- * The assertions are DETERMINISTIC (read-traffic counters), not wall-clock:
- * - Before P5-2 the store re-read the whole JSONL file on every append —
- *   2_000 appends to one session parsed ~2M lines (O(n²)).
- * - After P5-2 the cache keeps appends O(1); the same run parses 0 lines
- *   after the first touch. The test fails loudly if quadratic behaviour ever
- *   returns, without depending on machine speed.
- *
- * Wall-clock figures are printed (p50/p95 window approximations) for the
- * plan.md record and for a human running `vitest run --reporter=verbose`.
+ * This is the small, deterministic workload that guards against quadratic
+ * read-traffic (linesRead counter), re-admitted as the PERF gate after the
+ * 50k/20k fsync soak moved to `event-store.soak.test.ts` (`pnpm test:soak`).
+ * `pnpm test` (correctness) excludes both gates.
  */
 
 function makeEvent(): AgentEvent {
@@ -95,32 +89,6 @@ describe("P5-1/P5-2: JSONL event store scaling", () => {
       console.log(
         `[P5-1] ${n} appends: ${elapsed.toFixed(1)}ms total, window p50=${p50.toFixed(1)}ms p95=${p95.toFixed(1)}ms`,
       );
-    } finally {
-      await rm(dataDir, { recursive: true, force: true });
-    }
-  }, 240_000);
-
-  it("50k appends complete without pathological blow-up (recorded for plan.md)", async () => {
-    const dataDir = await freshDataDir();
-    try {
-      const store = new JSONLEventStore({ dataDir });
-      const sid = newSessionId();
-      const started = performance.now();
-      // Windows fsync is an order of magnitude slower than Linux; keep the
-      // quadratic-detection signal (linesRead stays ~0) while fitting the
-      // platform's real disk cost. The linearity assertion below is platform-
-      // agnostic — 50k is Linux CI's record scale, Windows runs 20k.
-      const n = process.platform === "win32" ? 20_000 : 50_000;
-      for (let i = 0; i < n; i++) {
-        await store.append({ ...makeEvent(), sessionId: sid });
-      }
-      const elapsed = performance.now() - started;
-      const diskBytes = statSync(join(dataDir, `${sid}.jsonl`)).size;
-      console.log(
-        `[P5-1] 50k appends: ${elapsed.toFixed(1)}ms, linesRead=${store.debugStats().linesRead}, ` +
-          `diskBytes=${diskBytes}`,
-      );
-      expect(await store.list(sid)).toHaveLength(n);
     } finally {
       await rm(dataDir, { recursive: true, force: true });
     }

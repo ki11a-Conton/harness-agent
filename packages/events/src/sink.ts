@@ -1,0 +1,1 @@
+export { eventSinkFromStore } from "@ar/contracts";

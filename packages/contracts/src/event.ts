@@ -1,4 +1,5 @@
 import type { EventId, SessionId, TurnId } from "./ids.js";
+import { newEventId } from "./ids.js";
 
 export const EVENT_TYPES = [
   "session.created",
@@ -143,6 +144,35 @@ export interface EventSink {
     payload: Record<string, unknown>,
     turnId?: TurnId,
   ): Promise<void>;
+}
+
+/**
+ * Adapt an {@link EventStore} to the {@link EventSink} shape so a runtime seam
+ * (e.g. the session actor's optional `emit`) can write terminal events through
+ * the same durable store the runtime uses.
+ *
+ * P38.1-12/13: when a starting turn reservation is revoked before promotion the
+ * runtime is uninvolved, so its normal terminal event is never produced. Hosts
+ * wire this adapter (backed by their EventStore) into the actor seam to keep
+ * the event stream complete.
+ */
+export function eventSinkFromStore(
+  store: EventStore,
+  now: () => number = () => Date.now(),
+): EventSink {
+  return {
+    async emit(sessionId, type, payload, turnId) {
+      // P26-1: store-owned atomic sequence allocation (appendNew).
+      await store.appendNew({
+        id: newEventId(),
+        sessionId,
+        ...(turnId !== undefined ? { turnId } : {}),
+        timestamp: now(),
+        type,
+        payload,
+      });
+    },
+  };
 }
 
 /**

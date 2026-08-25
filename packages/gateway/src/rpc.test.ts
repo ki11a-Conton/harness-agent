@@ -20,7 +20,7 @@ import type {
   Turn,
   TurnId,
 } from "@ar/contracts";
-import { AgentError, newAgentId, newApprovalId, newSkillId } from "@ar/contracts";
+import { AgentError, eventSinkFromStore, newAgentId, newApprovalId, newSkillId } from "@ar/contracts";
 import type { TurnOutcome } from "@ar/core";
 import { AgentRuntime, DefaultLoadedSessionManager } from "@ar/core";
 import { ScriptedModelProvider } from "@ar/model";
@@ -219,7 +219,13 @@ function makeRpc(opts: { provider?: ModelProvider; clock?: { t: number } } = {})
   const approvalStore = new InMemoryApprovalStore(
     opts.clock === undefined ? undefined : () => opts.clock!.t,
   );
-  const sessions = new DefaultLoadedSessionManager({ runtime, store });
+  const sessions = new DefaultLoadedSessionManager({
+    runtime,
+    store,
+    // P38.1-12/13: keep the event stream complete when a starting turn is
+    // revoked before promotion (the runtime is uninvolved → actor seam).
+    emit: eventSinkFromStore(events),
+  });
   const registry = createRuntimeRpc(runtime, {
     sessionService,
     sessions,

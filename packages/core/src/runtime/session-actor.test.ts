@@ -1307,13 +1307,15 @@ describe("SessionActor (PHASE 25)", () => {
       const { store: gatedStore, entered, open } = gatedGetTurnStore(store);
       const actor = new DefaultSessionActor({ persistent: session, runtime: runtimeProxy, store: gatedStore });
 
-      const runPromise = actor.runTurn(existing.id).then(() => undefined, (e: unknown) => e);
+      const runPromise = actor.runTurn(existing.id);
       await entered; // runTurn is now inside requireTurn — the promotion window
       const status = await actor.cancelTurn(existing.id);
       expect(status).toBe("cancelled");
       open(); // release getTurn → the cancelled reservation must NOT promote
-      const err = await runPromise;
-      expect(err).toBeDefined();
+      const outcome = await runPromise;
+      // INV-P38.1-004/005: a revoked starting reservation resolves as cancelled
+      // (runtime.runTurn is uninvolved) — NOT a silent success.
+      expect(outcome.status).toBe("cancelled");
       // INV-P38.1-004/005: a revoked starting reservation never reaches runtime.runTurn.
       expect(runCalls).toBe(0);
       expect(actor.activeTurn).toBeUndefined();

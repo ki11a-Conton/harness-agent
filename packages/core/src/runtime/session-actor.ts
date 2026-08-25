@@ -25,6 +25,7 @@
 // (runtime finishTurn), release the resource scope, and remove the actor.
 
 import type {
+  EventSink,
   InboxStore,
   PromptId,
   Session,
@@ -164,6 +165,11 @@ export interface SessionActorDeps {
   inbox?: InboxStore;
   now?: () => number;
   onClosed?: (sessionId: SessionId) => void;
+  /** P38.1-12/13 (INV-P38.1-004/005): when a starting existing-turn's
+   *  reservation is revoked by cancel before promotion, the actor terminalizes
+   *  the loaded turn itself (cancelled) WITHOUT invoking runtime.runTurn. It
+   *  emits the terminal event through this seam so the stream stay complete. */
+  emit?: EventSink;
 }
 
 /** P38.1-2 (INV-P38.1-002): a queue-mode followup caller's deferred. Must
@@ -180,6 +186,9 @@ export interface LoadedSessionManagerDeps {
   store: SessionStore;
   inbox?: InboxStore;
   now?: () => number;
+  /** P38.1-12/13: forwarded to each loaded actor so a pre-promotion cancel can
+   *  emit turn.cancelled while keeping runtime.runTurn uninvolved. */
+  emit?: EventSink;
 }
 
 function sessionBusy(sessionId: SessionId, turnId: TurnId): AgentError {
@@ -489,7 +498,17 @@ export class DefaultSessionActor implements SessionActor {
     try {
       const turn = await this.requireTurn(turnId);
       if (this.state.kind !== "starting" || this.state.requestId !== requestId || controller.signal.aborted) {
-        throw new AgentError(errorInfo("INTERNAL_ERROR", `runTurn ${turnId} cancelled during load`));
+        // INV-P38.1-004/005: the starting reservation was revoked (cancel /
+        // interrupt / close) before promotion. It must NEVER reach
+        // runtime.runTurn; instead the actor terminalizes the loaded turn
+        // itself — persist cancelled, emit the terminal event through the
+        // emit seam (the runtime is uninvolved), and resolve the caller with a
+        // cancelled outcome so no side (caller / store / event stream) hangs.
+        const outcome = await this.terminalizeRevokedTurn(turn);
+        if (this.state.kind === "starting" && this.state.requestId === requestId) {
+          this.state = { kind: "idle" };
+        }
+        return outcome;
       }
       return this.promoteToRunning(turn, controller, signal).outcome;
     } catch (err) {
@@ -640,6 +659,47 @@ export class DefaultSessionActor implements SessionActor {
     } else {
       deferred.reject(result.err);
     }
+  }
+
+  /** INV-P38.1-004/005: a starting reservation revoked before promotion (cancel
+   *  / interrupt / close) must never reach runtime.runTurn. Because the runtime
+   *  is uninvolved, the actor itself makes the terminalization complete:
+   *   • persist the durable turn as `cancelled` (the store is the source the
+   *     caller / observers read),
+   *   • emit `turn.cancelled` through the optional emit seam so the event
+   *     stream stays complete (P38.1-12/13),
+   *   • return a cancelled TurnOutcome so the caller never hangs.
+   *  Side-effect writes are best-effort and degraded loudly — never silent. */
+  private async terminalizeRevokedTurn(turn: Turn): Promise<TurnOutcome> {
+    const cancelledTurn: Turn = { ...turn, status: "cancelled" };
+    try {
+      await this.deps.store.updateTurn(cancelledTurn);
+    } catch (persistErr) {
+      process.stderr.write(
+        `[degraded] session ${this.sessionId} failed to persist turn ${turn.id} as cancelled: ${persistErr instanceof Error ? persistErr.message : String(persistErr)}\n`,
+      );
+    }
+    if (this.deps.emit !== undefined) {
+      try {
+        await this.deps.emit.emit(
+          this.sessionId,
+          "turn.cancelled",
+          { status: "cancelled", statusDetail: "cancelled_no_effect" },
+          turn.id,
+        );
+      } catch (emitErr) {
+        process.stderr.write(
+          `[degraded] session ${this.sessionId} failed to emit turn.cancelled for ${turn.id}: ${emitErr instanceof Error ? emitErr.message : String(emitErr)}\n`,
+        );
+      }
+    }
+    return {
+      status: "cancelled",
+      statusDetail: "cancelled_no_effect",
+      turn: cancelledTurn,
+      toolCalls: 0,
+      iterations: 0,
+    };
   }
 
   /** P37-1: reserve → promote to running. */
@@ -883,6 +943,7 @@ export class DefaultLoadedSessionManager implements LoadedSessionManager {
         store: this.deps.store,
         inbox: this.deps.inbox,
         now: this.deps.now,
+        emit: this.deps.emit,
         onClosed: (sid) => {
           this.actors.delete(sid);
         },
