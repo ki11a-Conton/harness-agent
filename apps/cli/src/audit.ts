@@ -845,6 +845,28 @@ export interface AuditVerdict {
   releaseReady?: boolean;
 }
 
+/**
+ * P38.1-8 (INV-P38.1-011) — the strict audit exit decision.
+ *
+ * Under `--strict` the audit exits non-zero unless EVERY axis is green:
+ * documentation claims, profile requirements, AND required-execution-evidence
+ * freshness. The old code only looked at `profileRequirementsOk`, so stale /
+ * missing evidence could slip through a strict gate. `summaryOk` is the
+ * docs-only shorthand (documentationClaimsOk) used by the non-strict path.
+ */
+export function strictAuditExitCode(input: {
+  strict: boolean;
+  summaryOk: boolean;
+  verdict: AuditVerdict;
+}): number {
+  const strictOk = input.strict
+    ? input.verdict.documentationClaimsOk &&
+      input.verdict.profileRequirementsOk &&
+      input.verdict.evidenceFresh
+    : true;
+  return input.summaryOk && strictOk ? 0 : 1;
+}
+
 export function auditSummary(matrix: CapabilityMatrix, input: AuditInput): AuditSummary {
   let implemented = 0;
   let wired = 0;
@@ -1202,13 +1224,13 @@ export async function auditCmd(rest: string[], deps: CommandDeps): Promise<Comma
   await writeFile(jsonPath, `${JSON.stringify(jsonOut, null, 2)}\n`, "utf8");
   await writeFile(mdPath, renderMatrixMarkdown(matrix, summary), "utf8");
 
-  // P36-8: exit semantics —
+  // P36-8 + P38.1-8 (INV-P38.1-011): exit semantics —
   //   agent audit         → exit 0 on truthful docs (malformed evidence still 0
   //                         but evidenceFresh=false is reported; malformed
   //                         JSON is skipped silently — not fatal);
-  //   agent audit --strict → exit non-zero when PROFILE requirements unmet.
-  const strictOk = strict ? summary.verdict.profileRequirementsOk : true;
-  const exitCode = summary.ok && strictOk ? 0 : 1;
+  //   agent audit --strict → exit non-zero when documentation claims, PROFILE
+  //                          requirements, OR evidence freshness is unmet.
+  const exitCode = strictAuditExitCode({ strict, summaryOk: summary.ok, verdict: summary.verdict });
 
   if (json) {
     return { exitCode, lines: [JSON.stringify(jsonOut, null, 2)] };

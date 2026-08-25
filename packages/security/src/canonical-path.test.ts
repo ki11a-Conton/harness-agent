@@ -224,4 +224,82 @@ describe("P36-6 — canonicalization error taxonomy (INV-P36-006)", () => {
       }
     }
   });
+
+  // ---------------------------------------------------------------------------
+  // P38.1-9 — canonical path deterministic seam (INV-P38.1-012)
+  // ---------------------------------------------------------------------------
+  // The ancestor walker MUST honour the injected `realpath` adapter used for
+  // the full path. If it silently falls back to the real `realpathSync`, a
+  // fake adapter can't witness the ancestor calls and real-FS ENOENT/EACCES
+  // bypasses the taxonomy. Each regression below is deterministic: it must
+  // FAIL on the old (realpathSync-driven) walker and PASS now.
+
+  /** Fake realpath that records every call, throwing per-path rules. */
+  function tracingRealpath(rules: Map<string, string>): {
+    adapter: (p: string) => string;
+    calls: string[];
+  } {
+    const calls: string[] = [];
+    return {
+      calls,
+      adapter: (p: string) => {
+        calls.push(p);
+        const code = rules.get(p) ?? "ENOENT";
+        const err = new Error(`fake ${code}`) as NodeJS.ErrnoException;
+        err.code = code;
+        throw err;
+      },
+    };
+  }
+
+  it.each([
+    ["EACCES", "permission"],
+    ["ELOOP", "symlink_loop"],
+    ["EIO", "io"],
+  ] as const)(
+    "P38.1-9: full-path ENOENT then ancestor %s → CanonicalizationFailed(code=%s)",
+    (ancestorCode, expectedCode) => {
+      // Full path is missing (ENOENT); the ancestor walker then probes
+      // dirname(current) each level. Make one ancestor probe throw.
+      const target = "/p38a/no/such/deep/path";
+      const rules = new Map<string, string>([["/p38a/no/such", ancestorCode]]);
+      const { adapter } = tracingRealpath(rules);
+      try {
+        canonicalizePath(target, { cwd }, { realpath: adapter });
+        throw new Error("expected canonicalizePath to throw");
+      } catch (err) {
+        if (err instanceof CanonicalizationFailed) {
+          expect(err.code).toBe(expectedCode);
+        } else {
+          throw err;
+        }
+      }
+    },
+  );
+
+  it("P38.1-9: ancestor walk is fully driven by the injected adapter (exact call trace)", () => {
+    // Prove the ancestor walker calls the INJECTED adapter at every level —
+    // if it silently used realpathSync, the fake would only see the single
+    // full-path call and the real FS would terminate the walk early.
+    const target = "/s0/s1/s2/s3/s4/s5/s6/s7";
+    const { adapter, calls } = tracingRealpath(new Map());
+    // Always-ENOENT → the walk climbs to root and falls back there. The seam
+    // proof is the exact call trace: the ancestor walk MUST drive the injected
+    // adapter (never realpathSync).
+    canonicalizePath(target, { cwd }, { realpath: adapter });
+    // 1 full-path pre-check + 1 initial walker probe (same path) + then one
+    // probe per ancestor level, each dropping a trailing segment down to root.
+    expect(calls).toEqual([
+      "/s0/s1/s2/s3/s4/s5/s6/s7",
+      "/s0/s1/s2/s3/s4/s5/s6/s7",
+      "/s0/s1/s2/s3/s4/s5/s6",
+      "/s0/s1/s2/s3/s4/s5",
+      "/s0/s1/s2/s3/s4",
+      "/s0/s1/s2/s3",
+      "/s0/s1/s2",
+      "/s0/s1",
+      "/s0",
+      "/",
+    ]);
+  });
 });

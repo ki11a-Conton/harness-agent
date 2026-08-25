@@ -122,7 +122,11 @@ function canonicalAncestorAndTail(p: string, rp: (p: string) => string = realpat
   const walked: string[] = [];
   for (let i = 0; i < 64; i++) {
     try {
-      const ancestor = normaliseSeparators(realpathSync(current));
+      // P38.1-9 (INV-P38.1-012): the ancestor walk MUST use the injected
+      // `rp` adapter, never silently fall back to `realpathSync`. Otherwise a
+      // fake adapter can't witness the ancestor realpath calls and fake adapter
+      // errors are bypassed by real filesystem I/O.
+      const ancestor = normaliseSeparators(rp(current));
       // `current` is the canonicalised deepest existing ancestor; the segments
       // between it and the original path (reversed order in `walked`) are the
       // non-existing tail.

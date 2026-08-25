@@ -102,6 +102,19 @@ export function computeReleaseVerdict(opts: ReleaseVerifyOptions): ReleaseVerdic
     if (gate === undefined) {
       return { id, state: "not_run", headSha, command: GATE_COMMANDS[id], reason: "no evidence provided" };
     }
+    // INV-P38.1-009: evidence must prove it actually ran the canonical command.
+    // A substituted/imitation command (e.g. `agent audit --out` standing in for
+    // `pnpm capability:audit`) is BLOCKED — INV-P38.1-010.
+    if (gate.command !== GATE_COMMANDS[id]) {
+      return {
+        id,
+        state: "blocked",
+        headSha,
+        command: gate.command,
+        evidenceRef: gate.evidenceRef,
+        reason: `command mismatch: expected ${GATE_COMMANDS[id]}, got ${gate.command}`,
+      };
+    }
     // INV-P36-007: stale evidence (different SHA) is never admissible.
     if (gate.headSha !== headSha) {
       return {
@@ -158,7 +171,19 @@ export function parseGateEvidence(json: string, sourcePath: string): ReleaseGate
     throw new Error(`malformed gate evidence at ${sourcePath}: unknown gate id ${id}`);
   }
   const exitCode = record.exitCode;
-  const state: GateState =
-    exitCode === 0 ? "passed" : exitCode === null ? "not_run" : "failed";
-  return { id, state, headSha, command, evidenceRef: sourcePath };
+  // INV-P38.1-008: `passed` is derived from exitCode — a declared `passed` that
+  // contradicts exitCode is BLOCKED, never silently treated as green.
+  const declaredPassed = record.passed;
+  let state: GateState;
+  let reason: string | undefined;
+  if (exitCode === null) {
+    state = "not_run";
+    reason = "gate was not executed";
+  } else if (declaredPassed !== undefined && declaredPassed !== (exitCode === 0)) {
+    state = "blocked";
+    reason = "inconsistent gate evidence: passed does not match exitCode";
+  } else {
+    state = exitCode === 0 ? "passed" : "failed";
+  }
+  return { id, state, headSha, command, evidenceRef: sourcePath, reason };
 }
