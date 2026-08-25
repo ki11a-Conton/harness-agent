@@ -67,6 +67,16 @@ export class MemoryHarnessTransport implements HarnessTransport {
     for (const s of this.subscribers) s(event);
   }
 
+  /** P38-7: test helper — current subscriber count (listener-leak probe). */
+  subscriberCount(): number {
+    return this.subscribers.size;
+  }
+
+  /** P38-7: test helper — current close-handler count. */
+  closeHandlerCount(): number {
+    return this.closeHandlers.size;
+  }
+
   async initializeResult(): Promise<InitializeServer> {
     if (this.init !== undefined) return this.init;
     const res = await this.invoke("initialize", {

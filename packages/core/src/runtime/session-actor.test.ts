@@ -602,7 +602,7 @@ describe("SessionActor (PHASE 25)", () => {
   it("P37-1 B — startTurn vs createTurn: createTurn while starting → SESSION_BUSY", async () => {
     const { actor, sessionId, entered, open } = await actorWithGatedStart();
     const startPromise = actor.startTurn({ sessionId, text: "A" });
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await entered;
     const err = await actor
       .createTurn({ sessionId, text: "B" })
       .then(() => undefined, (e: unknown) => e);
@@ -944,27 +944,37 @@ describe("SessionActor (PHASE 25)", () => {
   it("P38-5: gen1 stale finally cannot delete gen2's loading entry", async () => {
     const { manager, runtime, store } = await setupActor();
     const fresh = await runtime.createSession({ agent: AGENT, cwd: "/p38" });
-    // Two independent store gates.
+    // Two independent store gates, each signalling when a load enters.
     let gen1Release!: () => void;
     let gen2Release!: () => void;
     const gen1Gate = new Promise<void>((resolve) => { gen1Release = resolve; });
     const gen2Gate = new Promise<void>((resolve) => { gen2Release = resolve; });
+    let gen1EnteredResolve!: () => void;
+    const gen1Entered = new Promise<void>((resolve) => { gen1EnteredResolve = resolve; });
+    let gen2EnteredResolve!: () => void;
+    const gen2Entered = new Promise<void>((resolve) => { gen2EnteredResolve = resolve; });
     const originalGet = store.getSession.bind(store);
     let gen = 0;
     store.getSession = async (id: SessionId) => {
       gen += 1;
       const g = gen;
-      if (g === 1) await gen1Gate;
-      if (g === 2) await gen2Gate;
+      if (g === 1) {
+        gen1EnteredResolve();
+        await gen1Gate;
+      }
+      if (g === 2) {
+        gen2EnteredResolve();
+        await gen2Gate;
+      }
       return originalGet(id);
     };
     // gen1 load blocked
     const load1 = manager.load(fresh.id);
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await gen1Entered; // gen1 is blocked inside getSession
     await manager.unload(fresh.id); // bumps generation, aborts gen1 controller
     // gen2 load starts and blocks
     const load2 = manager.load(fresh.id);
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await gen2Entered; // gen2 is blocked inside getSession
     // Release gen1 — its finally must NOT delete gen2's entry.
     gen1Release();
     const err1 = await load1.then(() => undefined, (e: unknown) => e);

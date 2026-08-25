@@ -207,4 +207,26 @@ describe("P36-4 event stream / done semantic closure", () => {
     }
     expect(threw).toBe(true);
   });
+
+  // ---------------------------------------------------------------------------
+  // P38-7 — exactly-once settlement + listener cleanup (INV-P38-009)
+  // ---------------------------------------------------------------------------
+
+  it("P38-7: 1,000 short runs — no listener growth", async () => {
+    const fixture = [ev("item/delta", { delta: { text: "x" } }), ev("turn/completed", {})];
+    const { transport } = makeTransport(fixture);
+    const client = await HarnessClient.connect(transport);
+    const thread = await client.startThread({ agentName: "a", cwd: "/tmp" });
+    // baseline: 0 listeners before any run
+    expect(transport.subscriberCount()).toBe(0);
+    expect(transport.closeHandlerCount()).toBe(0);
+    for (let i = 0; i < 1_000; i++) {
+      const { done } = await thread.runStreamed(`run-${i}`);
+      const result = await done;
+      expect(result.status).toBe("completed");
+    }
+    // After 1,000 terminal runs, every run-scoped listener is released.
+    expect(transport.subscriberCount()).toBe(0);
+    expect(transport.closeHandlerCount()).toBe(0);
+  });
 });
