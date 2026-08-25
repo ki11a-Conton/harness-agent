@@ -525,7 +525,9 @@ async function runOneCase(
         budget: {
           maxTokens: caseDef.contextBudgetTokens ?? opts.budgetTokens,
           reserved: { system: 256, task: 128, output: 256 },
-          dynamic: 0,
+          // P38-EVOLUTION: the adaptive_context_policy challenger grants the
+          // context pipeline dynamic headroom (P3-11); baseline keeps it 0.
+          dynamic: opts.candidate === "adaptive_context_policy" ? 4096 : 0,
         },
       },
       ...(caseDef.verification !== undefined && caseDef.verification.length > 0
@@ -841,7 +843,7 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
       case "--candidate": {
         const value = requireValue(argv, ++i, "--candidate");
         if (value instanceof Error) return value;
-        const valid = ["adaptive_recovery", "context_pipeline_v5", "tool_selector_deferred_schema", "memory_retrieval", "memory_write_learning", "independent_reviewer"];
+        const valid = ["adaptive_recovery", "context_pipeline_v5", "tool_selector_deferred_schema", "memory_retrieval", "memory_write_learning", "independent_reviewer", "adaptive_context_policy", "adaptive_scheduler", "delegation"];
         if (!valid.includes(value)) return new Error(`agent benchmark: unknown candidate "${value}" (valid: ${valid.join(", ")})`);
         opts.candidate = value;
         break;

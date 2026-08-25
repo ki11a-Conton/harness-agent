@@ -20,6 +20,7 @@
 | adaptive_recovery | 4/13 (30.8%) | 102 | 300,625 | 4 | reject |
 | memory_retrieval | 1/13 (7.7%) | 101 | 340,493 | 1 | reject (degraded) |
 | tool_selector_deferred_schema | 4/13 (30.8%) | 85 | 293,133 | 4 | reject |
+| adaptive_context_policy | 2/13 (15.4%) | 97 | 306,931 | — | reject (degraded) |
 
 ### Per-case matrix (PASS / FAIL)
 
@@ -51,6 +52,9 @@
 4. **adaptive_recovery / deferred_schema** saved tokens (~32%) but shipped
    lower verified completion — cost savings do not compensate quality loss
    (P3-10 rule 1).
+5. **adaptive_context_policy** (dynamic context headroom, P3-11) also degraded
+   the suite (2/13) — extra dynamic budget did not help adversarial
+   completion and added context drift.
 
 ## Champion wiring (unchanged)
 
@@ -68,5 +72,7 @@
 - `memory_retrieval` — wires pre-turn memory retrieval for every case
 - `tool_selector_deferred_schema` — registers `tool_lookup` (deferred schema)
   for every case
+- `adaptive_context_policy` — grants the context pipeline dynamic headroom
+  (P3-11)
 
 Future challengers reuse the same paired-eval loop mechanically.
