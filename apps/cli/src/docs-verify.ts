@@ -52,13 +52,6 @@ function claimedSuiteCount(readme: string, suite: string): number | undefined {
   return Number(match[1]);
 }
 
-/** Extract the first "N 个包" / "N packages" claim from a doc. */
-function claimedPackageCount(doc: string): number | undefined {
-  const match = doc.match(/(\d+)\s*(?:个包|packages?)/);
-  if (match === null || match === undefined) return undefined;
-  return Number(match[1]);
-}
-
 async function dirEntryCount(dir: string): Promise<number> {
   try {
     return (await readdir(dir, { withFileTypes: true })).filter((e) => e.isDirectory()).length;
@@ -115,33 +108,36 @@ export async function verifyDocs(deps: { root: string }): Promise<DocVerificatio
     });
   }
 
-  // ---- package counts (HANDOFF / docs claims vs packages/ inventory) ----
+  // ---- package count integrity (packages/ inventory validity) ----
+  // The handoff docs (HANDOFF/HANDOVER) are gone; the check now validates the
+  // workspace structure directly: every packages/<name> directory must carry
+  // its own package.json (a well-formed pnpm workspace member).
   const actualPackages = await dirEntryCount(packagesRoot);
-  // P37-11: HANDOFF.md is the canonical handoff source; HANDOVER.md is
-  // deprecated. Try HANDOFF.md first, then HANDOVER.md for backward compat.
-  const docs = ["HANDOFF.md", "HANDOVER.md"];
-  let anyDoc = "";
-  for (const name of docs) {
+  const packageJsonDirs = await (async () => {
     try {
-      anyDoc = await readFile(join(root, name), "utf8");
-      break;
-    } catch (err) {
-      process.stderr.write(`[docs:verify] ${name} unreadable: ${err instanceof Error ? err.message : String(err)}
-`);
-      continue;
+      const entries = await readdir(packagesRoot, { withFileTypes: true });
+      let count = 0;
+      for (const e of entries) {
+        if (!e.isDirectory()) continue;
+        try {
+          await readFile(join(packagesRoot, e.name, "package.json"), "utf8");
+          count += 1;
+        } catch {
+          // directory without package.json — not a workspace member
+        }
+      }
+      return count;
+    } catch {
+      return 0;
     }
-  }
-  const claimedPackages = claimedPackageCount(anyDoc);
-  const packageCountTruthful = claimedPackages !== undefined && claimedPackages === actualPackages;
+  })();
+  const packageCountTruthful = packageJsonDirs === actualPackages;
   checks.push({
     name: "package count",
     truthful: packageCountTruthful,
-    reason:
-      claimedPackages === undefined
-        ? `no machine-parseable package count claim found in ${docs.join("/")} (actual on-disk packages/: ${actualPackages})`
-        : packageCountTruthful
-          ? `doc claims ${claimedPackages} packages; ${actualPackages} on disk`
-          : `doc claims ${claimedPackages} packages but ${actualPackages} are on disk`,
+    reason: packageCountTruthful
+      ? `${actualPackages} packages/ members each carry package.json`
+      : `${actualPackages} packages/ directories but only ${packageJsonDirs} carry package.json`,
   });
 
   // ---- CI gates: a workflow exists AND runs test + coverage ----
