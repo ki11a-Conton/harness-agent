@@ -11,7 +11,7 @@ import type {
   SessionId,
   TurnId,
 } from "@ar/contracts";
-import { newAgentId, newEventId, newMemoryId } from "@ar/contracts";
+import { newAgentId, newEventId, newMemoryId, AdaptiveRecoveryPlanner } from "@ar/contracts";
 import type { ContextBlock, MemoryScope } from "@ar/contracts";
 import { AgentRuntime, defaultSandboxPolicy } from "@ar/core";
 import { RecoveryPolicy } from "@ar/core";
@@ -80,6 +80,9 @@ export interface BenchmarkCommandOptions {
   shuffle: boolean;
   /** P0-6: PRNG seed for the shuffle (0 = default); same seed → same order. */
   seed: number;
+  /** P38-EVOLUTION: challenger candidate id (from CANDIDATE_FEATURES) to
+   *  enable for this run; undefined = champion baseline. */
+  candidate?: string;
 }
 
 const SUITES: EvalSuite[] = ["regression", "holdout", "adversarial", "stress"];
@@ -201,7 +204,12 @@ async function executeBenchmark(
 
   const report = await runBaseline(
     selected,
-    (caseDef) => runOneCase(caseDef, { provider, modelId, budgetTokens: defaultBudgetTokens }, opts.suite),
+    (caseDef) =>
+      runOneCase(
+        caseDef,
+        { provider, modelId, budgetTokens: defaultBudgetTokens, candidate: opts.candidate },
+        opts.suite,
+      ),
     {
       generatedAt: new Date().toISOString(),
       benchmarkVersion: "2.0.0",
@@ -235,6 +243,8 @@ interface RunOneCaseOptions {
   provider: ModelProvider;
   modelId: string;
   budgetTokens: number;
+  /** P38-EVOLUTION: challenger candidate id, undefined = champion baseline. */
+  candidate?: string;
 }
 
 /** Benchmark permission profile: work inside the workspace is allowed without
@@ -338,8 +348,10 @@ async function runOneCase(
     // StepToolRouter the single source of the model-visible tool set, so the
     // legacy `toolSpecs` deps param is gone — tool_lookup is what makes the
     // deferred path observable end-to-end.
+    // P38-EVOLUTION: the tool_selector_deferred_schema challenger enables the
+    // deferred mode for every case.
     let toolLookupName: string | undefined;
-    if (caseDef.schemaMode === "deferred") {
+    if (caseDef.schemaMode === "deferred" || opts.candidate === "tool_selector_deferred_schema") {
       registry.register(createToolLookupTool(registry));
       toolLookupName = "tool_lookup";
     }
@@ -459,11 +471,16 @@ async function runOneCase(
     // real SqliteMemoryStore and the runtime gets a MemoryRuntimeBridge-based
     // pre-turn retrieval provider (P2-2). Poisoned fixtures ride the same
     // path: the write gate and the retrieval trust boundary are exercised.
+    // P38-EVOLUTION: the memory_retrieval challenger wires the retrieval
+    // provider for EVERY case (empty store when the case has no seed memory).
     let memoryBlocks: ((input: { sessionId: string; turnId: string; goal: string; cwd: string }) => Promise<ContextBlock[]>) | undefined;
-    if (caseDef.sources?.memory !== undefined && caseDef.sources.memory.length > 0) {
+    if (
+      (caseDef.sources?.memory !== undefined && caseDef.sources.memory.length > 0) ||
+      opts.candidate === "memory_retrieval"
+    ) {
       const memoryStore = new SqliteMemoryStore({ dataDir: join(workspace, ".harness-memory") });
       const bridge = new MemoryRuntimeBridge({ store: memoryStore, scope: "workspace", topK: 5 });
-      for (const src of caseDef.sources.memory) {
+      for (const src of caseDef.sources?.memory ?? []) {
         await memoryStore.write({
           id: newMemoryId(),
           content: src.content,
@@ -493,6 +510,11 @@ async function runOneCase(
       // tool world; never consulted mid-step.
       toolRegistry: registry,
       agents: [agent, ...(requiresSubagent ? [subagentAgent] : [])],
+      // P38-EVOLUTION: challenger mechanism — adaptive recovery planner when
+      // the candidate is enabled; champion baseline leaves it undefined.
+      ...(opts.candidate === "adaptive_recovery"
+        ? { adaptiveRecovery: new AdaptiveRecoveryPlanner() }
+        : {}),
       // P0-8/P4-5: MCP output rides the real injection gate (injectionDetector
       // is wired below, in the runtime deps) — a connector payload carrying
       // prompt-injection material is withheld (fail-closed).
@@ -816,6 +838,14 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
         opts.seed = n;
         break;
       }
+      case "--candidate": {
+        const value = requireValue(argv, ++i, "--candidate");
+        if (value instanceof Error) return value;
+        const valid = ["adaptive_recovery", "context_pipeline_v5", "tool_selector_deferred_schema", "memory_retrieval", "memory_write_learning", "independent_reviewer"];
+        if (!valid.includes(value)) return new Error(`agent benchmark: unknown candidate "${value}" (valid: ${valid.join(", ")})`);
+        opts.candidate = value;
+        break;
+      }
       case "--suite": {
         const value = requireValue(argv, ++i, "--suite");
         if (value instanceof Error) return value;
@@ -955,6 +985,7 @@ function benchmarkUsage(): string {
     "  --limit <n>      run at most the first n cases (default: all)",
     "  --shuffle        randomize case EXECUTION order (report stays in fixed case order)",
     "  --seed <n>       PRNG seed for --shuffle (default 0; same seed reproduces the same order)",
+    "  --candidate <id>  challenger candidate (adaptive_recovery, memory_retrieval, ...)",
     "  --allow-stub     run even without a model provider (records MODEL_ERROR honestly)",
   ].join("\n");
 }
