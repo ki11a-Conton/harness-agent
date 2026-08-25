@@ -1,6 +1,6 @@
 {
-  "generatedAt": 1787661049844,
-  "gitSha": "7f0d203f9383454aae99b035e04d7fc28240dcfe",
+  "generatedAt": 1787663528633,
+  "gitSha": "073a18d6adf86b49b471c8d2a155004496be7ac8",
   "profile": "interactive-ephemeral",
   "records": [
     {
@@ -344,7 +344,7 @@
       "id": "run_budget",
       "description": "RunLimits enforced end-to-end (turns/tool calls/duration/retries/subagents/cost)",
       "implemented": true,
-      "productionWired": false,
+      "productionWired": true,
       "snapshotAuthoritative": false,
       "durabilityActual": "none",
       "durabilityRequired": "none",
@@ -358,14 +358,8 @@
         {
           "kind": "runtime_dependency",
           "ref": "packages/contracts"
-        },
-        {
-          "kind": "runtime_dependency",
-          "ref": "agent.limits",
-          "note": "maxToolCalls/maxDurationMs enforced by the runtime; RunBudgetTracker (P0-10) tracks all limits, controls are wired for maxToolCalls/maxDurationMs"
         }
-      ],
-      "degradedReason": "profile interactive-ephemeral requires run_budget wired but it is not"
+      ]
     },
     {
       "id": "regression_suite",
@@ -502,8 +496,8 @@
   ],
   "byProfile": {
     "interactive-ephemeral": {
-      "generatedAt": 1787661049844,
-      "gitSha": "7f0d203f9383454aae99b035e04d7fc28240dcfe",
+      "generatedAt": 1787663528633,
+      "gitSha": "073a18d6adf86b49b471c8d2a155004496be7ac8",
       "profile": "interactive-ephemeral",
       "records": [
         {
@@ -847,7 +841,7 @@
           "id": "run_budget",
           "description": "RunLimits enforced end-to-end (turns/tool calls/duration/retries/subagents/cost)",
           "implemented": true,
-          "productionWired": false,
+          "productionWired": true,
           "snapshotAuthoritative": false,
           "durabilityActual": "none",
           "durabilityRequired": "none",
@@ -861,14 +855,8 @@
             {
               "kind": "runtime_dependency",
               "ref": "packages/contracts"
-            },
-            {
-              "kind": "runtime_dependency",
-              "ref": "agent.limits",
-              "note": "maxToolCalls/maxDurationMs enforced by the runtime; RunBudgetTracker (P0-10) tracks all limits, controls are wired for maxToolCalls/maxDurationMs"
             }
-          ],
-          "degradedReason": "profile interactive-ephemeral requires run_budget wired but it is not"
+          ]
         },
         {
           "id": "regression_suite",
@@ -1005,8 +993,8 @@
       ]
     },
     "interactive-persistent": {
-      "generatedAt": 1787661049844,
-      "gitSha": "7f0d203f9383454aae99b035e04d7fc28240dcfe",
+      "generatedAt": 1787663528633,
+      "gitSha": "073a18d6adf86b49b471c8d2a155004496be7ac8",
       "profile": "interactive-persistent",
       "records": [
         {
@@ -1364,7 +1352,7 @@
           "id": "run_budget",
           "description": "RunLimits enforced end-to-end (turns/tool calls/duration/retries/subagents/cost)",
           "implemented": true,
-          "productionWired": false,
+          "productionWired": true,
           "snapshotAuthoritative": false,
           "durabilityActual": "none",
           "durabilityRequired": "none",
@@ -1378,14 +1366,9 @@
             {
               "kind": "runtime_dependency",
               "ref": "packages/contracts"
-            },
-            {
-              "kind": "runtime_dependency",
-              "ref": "agent.limits",
-              "note": "maxToolCalls/maxDurationMs enforced by the runtime; RunBudgetTracker (P0-10) tracks all limits, controls are wired for maxToolCalls/maxDurationMs"
             }
           ],
-          "degradedReason": "profile requires a durable harness but persistence is in-memory; profile interactive-persistent requires run_budget wired but it is not"
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
         },
         {
           "id": "regression_suite",
@@ -1528,8 +1511,8 @@
       ]
     },
     "benchmark": {
-      "generatedAt": 1787661049844,
-      "gitSha": "7f0d203f9383454aae99b035e04d7fc28240dcfe",
+      "generatedAt": 1787663528633,
+      "gitSha": "073a18d6adf86b49b471c8d2a155004496be7ac8",
       "profile": "benchmark",
       "records": [
         {
@@ -1874,7 +1857,7 @@
           "id": "run_budget",
           "description": "RunLimits enforced end-to-end (turns/tool calls/duration/retries/subagents/cost)",
           "implemented": true,
-          "productionWired": false,
+          "productionWired": true,
           "snapshotAuthoritative": false,
           "durabilityActual": "none",
           "durabilityRequired": "none",
@@ -1888,14 +1871,8 @@
             {
               "kind": "runtime_dependency",
               "ref": "packages/contracts"
-            },
-            {
-              "kind": "runtime_dependency",
-              "ref": "agent.limits",
-              "note": "maxToolCalls/maxDurationMs enforced by the runtime; RunBudgetTracker (P0-10) tracks all limits, controls are wired for maxToolCalls/maxDurationMs"
             }
-          ],
-          "degradedReason": "profile benchmark requires run_budget wired but it is not"
+          ]
         },
         {
           "id": "regression_suite",
@@ -2032,8 +2009,8 @@
       ]
     },
     "champion": {
-      "generatedAt": 1787661049844,
-      "gitSha": "7f0d203f9383454aae99b035e04d7fc28240dcfe",
+      "generatedAt": 1787663528633,
+      "gitSha": "073a18d6adf86b49b471c8d2a155004496be7ac8",
       "profile": "champion",
       "records": [
         {
@@ -2391,7 +2368,7 @@
           "id": "run_budget",
           "description": "RunLimits enforced end-to-end (turns/tool calls/duration/retries/subagents/cost)",
           "implemented": true,
-          "productionWired": false,
+          "productionWired": true,
           "snapshotAuthoritative": false,
           "durabilityActual": "none",
           "durabilityRequired": "none",
@@ -2405,14 +2382,9 @@
             {
               "kind": "runtime_dependency",
               "ref": "packages/contracts"
-            },
-            {
-              "kind": "runtime_dependency",
-              "ref": "agent.limits",
-              "note": "maxToolCalls/maxDurationMs enforced by the runtime; RunBudgetTracker (P0-10) tracks all limits, controls are wired for maxToolCalls/maxDurationMs"
             }
           ],
-          "degradedReason": "profile requires a durable harness but persistence is in-memory; profile champion requires run_budget wired but it is not"
+          "degradedReason": "profile requires a durable harness but persistence is in-memory"
         },
         {
           "id": "regression_suite",
@@ -2557,7 +2529,7 @@
   },
   "verdict": {
     "documentationClaimsOk": true,
-    "profileRequirementsOk": false,
+    "profileRequirementsOk": true,
     "evidenceFresh": false
   }
 }

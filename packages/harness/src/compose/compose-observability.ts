@@ -116,7 +116,13 @@ export function introspectHarness(input: IntrospectionInput): HarnessIntrospecti
       plugins: input.features.plugins,
       skills: input.features.skills,
       usageAccounting: false,
-      runBudget: false,
+      // P38.1-12: RunLimits ARE enforced by the runtime — every turn creates a
+      // RunBudgetTracker (packages/core/src/runtime/runtime.ts) that enforces
+      // maxTurns / maxToolCalls / maxDurationMs and beyond. Reporting `false`
+      // was honest under-reporting that wrongly failed the profile mustBeWired
+      // check for run_budget on every profile. Usage accounting stays false
+      // because the usage event chain is genuinely not wired.
+      runBudget: true,
       // P35-2: the production composition root always composes the
       // StepExecutionSnapshot pipeline (step-snapshot-factory) before every
       // model call — this is a wiring fact, not a toggle.

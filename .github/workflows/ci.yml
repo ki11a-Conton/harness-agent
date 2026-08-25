@@ -125,14 +125,27 @@ jobs:
           echo "{\"schemaVersion\":1,\"gate\":\"test\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test\",\"exitCode\":0,\"passed\":true,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/test.json
           echo "{\"schemaVersion\":1,\"gate\":\"build\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm build\",\"exitCode\":0,\"passed\":true,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/build.json
           echo "{\"schemaVersion\":1,\"gate\":\"benchmark_smoke\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm benchmark:smoke\",\"exitCode\":0,\"passed\":true,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/benchmark_smoke.json
-          echo "{\"schemaVersion\":1,\"gate\":\"capability_audit\",\"headSha\":\"${{ github.sha }}\",\"command\":\"node apps/cli/dist/main.js audit --strict\",\"exitCode\":0,\"passed\":true,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/capability_audit.json
+          # INV-P38.1: capability_audit evidence must (a) come from the real
+          # canonical command `pnpm capability:audit` (command-provenance check)
+          # and (b) record the ACTUAL gate exit code — a hard-coded 0 while the
+          # gate is red is exactly the fake-green this plan forbids.
+          pnpm capability:audit; rc_capability=$?
+          echo "{\"schemaVersion\":1,\"gate\":\"capability_audit\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm capability:audit\",\"exitCode\":$rc_capability,\"passed\":$([ $rc_capability -eq 0 ] && echo true || echo false),\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/capability_audit.json
           # Run the remaining gate commands that are NOT already covered by
-          # earlier steps, so their exit codes are also recorded honestly.
-          pnpm docs:verify && echo "{\"schemaVersion\":1,\"gate\":\"docs\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm docs:verify\",\"exitCode\":0,\"passed\":true,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/docs.json || echo "{\"schemaVersion\":1,\"gate\":\"docs\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm docs:verify\",\"exitCode\":0,\"passed\":false,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/docs.json
-          pnpm test:protocol && echo "{\"schemaVersion\":1,\"gate\":\"protocol\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:protocol\",\"exitCode\":0,\"passed\":true,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/protocol.json || echo "{\"schemaVersion\":1,\"gate\":\"protocol\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:protocol\",\"exitCode\":0,\"passed\":false,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/protocol.json
-          pnpm test:security && echo "{\"schemaVersion\":1,\"gate\":\"security\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:security\",\"exitCode\":0,\"passed\":true,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/security.json || echo "{\"schemaVersion\":1,\"gate\":\"security\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:security\",\"exitCode\":0,\"passed\":false,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/security.json
-          pnpm test:race && echo "{\"schemaVersion\":1,\"gate\":\"race\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:race\",\"exitCode\":0,\"passed\":true,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/race.json || echo "{\"schemaVersion\":1,\"gate\":\"race\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:race\",\"exitCode\":0,\"passed\":false,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/race.json
-          pnpm test:chaos && echo "{\"schemaVersion\":1,\"gate\":\"chaos\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:chaos\",\"exitCode\":0,\"passed\":true,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/chaos.json || echo "{\"schemaVersion\":1,\"gate\":\"chaos\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:chaos\",\"exitCode\":0,\"passed\":false,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/chaos.json
+          # earlier steps. INV-P38.1-008: `passed` MUST derive from the real
+          # exit code, never a hard-coded value — any `{passed:false, exitCode:0}`
+          # is the exact inconsistency the release verifier rejects. We capture
+          # the actual `$?` so evidence is honest on both success and failure.
+          pnpm docs:verify; rc_docs=$?
+          echo "{\"schemaVersion\":1,\"gate\":\"docs\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm docs:verify\",\"exitCode\":$rc_docs,\"passed\":$([ $rc_docs -eq 0 ] && echo true || echo false),\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/docs.json
+          pnpm test:protocol; rc_protocol=$?
+          echo "{\"schemaVersion\":1,\"gate\":\"protocol\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:protocol\",\"exitCode\":$rc_protocol,\"passed\":$([ $rc_protocol -eq 0 ] && echo true || echo false),\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/protocol.json
+          pnpm test:security; rc_security=$?
+          echo "{\"schemaVersion\":1,\"gate\":\"security\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:security\",\"exitCode\":$rc_security,\"passed\":$([ $rc_security -eq 0 ] && echo true || echo false),\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/security.json
+          pnpm test:race; rc_race=$?
+          echo "{\"schemaVersion\":1,\"gate\":\"race\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:race\",\"exitCode\":$rc_race,\"passed\":$([ $rc_race -eq 0 ] && echo true || echo false),\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/race.json
+          pnpm test:chaos; rc_chaos=$?
+          echo "{\"schemaVersion\":1,\"gate\":\"chaos\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:chaos\",\"exitCode\":$rc_chaos,\"passed\":$([ $rc_chaos -eq 0 ] && echo true || echo false),\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/chaos.json
           # Verify all gate evidence files exist and are non-empty.
           for f in .ci/evidence/*.json; do [ -s "$f" ] || { echo "ERROR: empty evidence $f"; exit 1; }; done
 

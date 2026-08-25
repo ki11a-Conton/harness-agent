@@ -1,15 +1,15 @@
 # CAPABILITY MATRIX
 
-- generatedAt: 2026-08-25T12:30:49.844Z
-- gitSha: 7f0d203f9383454aae99b035e04d7fc28240dcfe
+- generatedAt: 2026-08-25T13:12:08.633Z
+- gitSha: 073a18d6adf86b49b471c8d2a155004496be7ac8
 
 ## Summary
 
 | status | count |
 | --- | --- |
 | total | 21 |
-| implemented | 12 |
-| wired | 9 |
+| implemented | 11 |
+| wired | 10 |
 | tested | 0 |
 | benchmarked | 0 |
 | missing | 0 |
@@ -36,7 +36,7 @@
 | plugin_host | implemented | true | false | false | none/none/true | sandboxed | true | false | false | false | - | runtime_dependency:packages/plugins |
 | advanced_tools | wired | true | true | true | none/none/true | sandboxed | true | false | false | false | - | runtime_dependency:packages/tools; registered_tool:grep_search; registered_tool:repo_tree; registered_tool:symbol_search; registered_tool:repo_map; registered_tool:discover_commands; registered_tool:env_snapshot |
 | usage_accounting | implemented | true | false | false | none/none/true | sandboxed | true | false | false | false | - | runtime_dependency:packages/observability; runtime_dependency:packages/core/src/runtime/model-call-controller.ts (usage event dropped (case "usage": break); model.completed carries no usage — metrics cannot see tokens/cost) |
-| run_budget | implemented | true | false | false | none/none/true | sandboxed | true | false | false | false | profile interactive-ephemeral requires run_budget wired but it is not | runtime_dependency:packages/contracts; runtime_dependency:agent.limits (maxToolCalls/maxDurationMs enforced by the runtime; RunBudgetTracker (P0-10) tracks all limits, controls are wired for maxToolCalls/maxDurationMs) |
+| run_budget | wired | true | true | false | none/none/true | sandboxed | true | false | false | false | - | runtime_dependency:packages/contracts |
 | regression_suite | wired | true | true | false | none/none/true | sandboxed | true | false | true | false | - | benchmark_case:benchmarks/regression (30 case(s) on disk (README claims 30)) |
 | holdout_suite | wired | true | true | false | none/none/true | sandboxed | true | false | true | false | - | benchmark_case:benchmarks/holdout (30 case(s) on disk (README claims 30)) |
 | adversarial_suite | wired | true | true | false | none/none/true | sandboxed | true | false | true | false | - | benchmark_case:benchmarks/adversarial (13 case(s) on disk (README claims 13)) |
@@ -53,4 +53,4 @@
 | adversarial | 13 | 13 | false | true |
 | stress | 11 | 11 | false | true |
 
-audit verdict (P36-8): documentationClaims=PASS; profileRequirements=FAIL; evidenceFresh=FAIL
+audit verdict (P36-8): documentationClaims=PASS; profileRequirements=PASS; evidenceFresh=FAIL
