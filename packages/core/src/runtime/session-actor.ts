@@ -166,6 +166,15 @@ export interface SessionActorDeps {
   onClosed?: (sessionId: SessionId) => void;
 }
 
+/** P38.1-2 (INV-P38.1-002): a queue-mode followup caller's deferred. Must
+ *  settle exactly once — the `settled` flag guards resolve/reject races
+ *  between promotion success, promotion failure and actor close. */
+export interface FollowupDeferred {
+  settled: boolean;
+  resolve: (value: TurnOutcome) => void;
+  reject: (reason: unknown) => void;
+}
+
 export interface LoadedSessionManagerDeps {
   runtime: Pick<AgentRuntime, "startTurn" | "runTurn">;
   store: SessionStore;
@@ -271,21 +280,41 @@ export class InboxSessionInputQueue implements SessionInputQueue {
     return id;
   }
 
+  /** P38.1-1 (INV-P38.1-001): all durable prompt identities the queue already
+   *  knows about — local followups plus the single in-flight reservation.
+   *  Hydration skips these so `enqueue before first hydrate` can never create
+   *  a duplicate local entry for the same durable prompt. */
+  private collectKnownPromptIds(): Set<PromptId> {
+    const ids = new Set<PromptId>();
+    for (const f of this.followups) {
+      if (f.promptId !== undefined) ids.add(f.promptId);
+    }
+    if (this.reserved?.promptId !== undefined) {
+      ids.add(this.reserved.promptId);
+    }
+    return ids;
+  }
+
   private async hydrate(): Promise<void> {
     const inbox = this.deps.inbox;
     if (inbox === undefined) return;
     const pending = await inbox.listPending(this.sessionId);
+    const known = this.collectKnownPromptIds();
     for (const p of pending) {
       // Only status "pending": a promoted followup already started a turn
       // (crash recovery) and must not be re-queued.
-      if (p.kind === "followup" && p.status === "pending") {
-        this.followupIdCounter += 1;
-        this.followups.push({
-          id: `fup-${this.followupIdCounter}`,
-          input: { sessionId: this.sessionId, text: p.text },
-          promptId: p.id,
-        });
-      }
+      if (p.kind !== "followup" || p.status !== "pending") continue;
+      // P38.1-1: dedup by prompt identity — the same durable prompt may exist
+      // in the inbox AND the local queue (enqueued before first hydration).
+      // Skip it here; identical TEXT with a different promptId is kept.
+      if (known.has(p.id)) continue;
+      this.followupIdCounter += 1;
+      this.followups.push({
+        id: `fup-${this.followupIdCounter}`,
+        input: { sessionId: this.sessionId, text: p.text },
+        promptId: p.id,
+      });
+      known.add(p.id);
     }
   }
 }
@@ -348,8 +377,10 @@ export class DefaultSessionActor implements SessionActor {
   readonly inputQueue: SessionInputQueue;
   readonly resourceScope: SessionResourceScope;
   readonly cancellation: AbortController;
-  /** P37-1: followup resolvers keyed by stable followup id. */
-  private readonly followupResolvers = new Map<string, (outcome: TurnOutcome) => void>();
+  /** P37-1: followup resolvers keyed by stable followup id. P38.1-2: upgraded
+   *  to full deferreds (resolve + reject) so a caller can NEVER hang forever —
+   *  promotion failure / cancellation / actor close all settle terminally. */
+  private readonly followupDeferred = new Map<string, FollowupDeferred>();
 
   constructor(private readonly deps: SessionActorDeps) {
     this.inputQueue = new InboxSessionInputQueue({
@@ -393,9 +424,7 @@ export class DefaultSessionActor implements SessionActor {
       }
       // queue: outcome belongs to the future drained followup
       const followupId = await this.inputQueue.enqueueFollowup(input);
-      const outcome = new Promise<TurnOutcome>((resolve) => {
-        this.followupResolvers.set(followupId, resolve);
-      });
+      const outcome = this.createFollowupOutcome(followupId);
       return { turnId: s.turn.id, outcome };
     }
     if (s.kind === "starting") throw sessionStarting(this.sessionId);

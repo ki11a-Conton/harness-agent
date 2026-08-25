@@ -20,7 +20,13 @@ import type {
 import { newAgentId } from "@ar/contracts";
 import { EchoModelProvider, ScriptedModelProvider } from "@ar/model";
 import { AgentRuntime } from "./runtime.js";
-import { DefaultLoadedSessionManager, DefaultSessionActor, type SessionActor, type SessionInputQueue } from "./session-actor.js";
+import {
+  DefaultLoadedSessionManager,
+  DefaultSessionActor,
+  InboxSessionInputQueue,
+  type SessionActor,
+  type SessionInputQueue,
+} from "./session-actor.js";
 import { MemoryEventStore, MemorySessionStore, defaultTestToolCatalog } from "../test/fakes.js";
 import { FakeOrchestrator } from "../test/fake-orchestrator.js";
 
@@ -990,5 +996,86 @@ describe("SessionActor (PHASE 25)", () => {
     expect(gen).toBe(2);
     store.getSession = originalGet;
     await manager.unload(fresh.id);
+  });
+
+  // ---------------------------------------------------------------------------
+  // P38.1-1 — followup hydration deduplication (INV-P38.1-001)
+  // ---------------------------------------------------------------------------
+
+  describe("P38.1-1 followup hydration dedup", () => {
+    it("Test A — enqueue before first hydration promotes the durable prompt exactly once", async () => {
+      const { runtime, store, inbox, sessionId } = await setupActor();
+      const session = (await store.getSession(sessionId))!;
+      let startTurnCalls = 0;
+      const countingRuntime = {
+        startTurn: async (sid: SessionId, text: string) => {
+          startTurnCalls += 1;
+          return runtime.startTurn(sid, text);
+        },
+        runTurn: (sid: SessionId, turnId: TurnId, signal?: AbortSignal) =>
+          runtime.runTurn(sid, turnId, signal),
+      } as unknown as Pick<AgentRuntime, "startTurn" | "runTurn">;
+      const actor = new DefaultSessionActor({ persistent: session, runtime: countingRuntime, store, inbox });
+      // enqueueFollowup admits A durably AND pushes A locally; the first
+      // reservePendingFollowup hydrates and must NOT load the same prompt twice.
+      await actor.enqueueFollowup({ sessionId, text: "A" });
+      await actor.drainFollowupsForTest(actor.inputQueue);
+      expect(startTurnCalls).toBe(1);
+      // No duplicate may remain in the local queue for a late second promotion.
+      expect(actor.inputQueue.pendingCount).toBe(0);
+      const again = await actor.inputQueue.reservePendingFollowup();
+      expect(again).toBeUndefined();
+    });
+
+    it("Test B — same text, different promptIds are both retained", async () => {
+      const { sessionId } = await setupActor();
+      const queue = new InboxSessionInputQueue({ sessionId, inbox: new MemInboxStore() });
+      await queue.enqueueFollowup({ sessionId, text: "retry" });
+      await queue.enqueueFollowup({ sessionId, text: "retry" });
+      expect(queue.pendingCount).toBe(2);
+      // first reserve triggers hydration — dedup is by prompt identity, NOT text
+      const first = await queue.reservePendingFollowup();
+      expect(first?.input.text).toBe("retry");
+      expect(queue.pendingCount).toBe(1);
+      // complete the in-flight reservation (single-flight) then prove the
+      // second identical-text prompt (different promptId) is still retained.
+      await queue.completePromotion(first!.id);
+      const second = await queue.reservePendingFollowup();
+      expect(second?.input.text).toBe("retry");
+      expect(queue.pendingCount).toBe(0);
+    });
+
+    it("Test C — restart hydration loads a true durable pending prompt once", async () => {
+      const { sessionId } = await setupActor();
+      const inbox = new MemInboxStore();
+      await inbox.admit({
+        id: "durable-survivor",
+        sessionId,
+        text: "survivor",
+        kind: "followup",
+        status: "pending",
+        admittedAt: 0,
+      });
+      const queue = new InboxSessionInputQueue({ sessionId, inbox });
+      // Local queue empty before hydration (fresh boot).
+      expect(queue.pendingCount).toBe(0);
+      const entry = await queue.reservePendingFollowup();
+      expect(entry?.input.text).toBe("survivor");
+      expect(queue.pendingCount).toBe(0);
+    });
+
+    it("Test D — a reserved prompt is never re-added to the queue", async () => {
+      const { sessionId } = await setupActor();
+      const inbox = new MemInboxStore();
+      const queue = new InboxSessionInputQueue({ sessionId, inbox });
+      await queue.enqueueFollowup({ sessionId, text: "A" });
+      const first = await queue.reservePendingFollowup();
+      expect(first).toBeDefined();
+      await queue.completePromotion(first!.id);
+      expect(queue.pendingCount).toBe(0);
+      // A duplicate would surface here as a second reservation.
+      const again = await queue.reservePendingFollowup();
+      expect(again).toBeUndefined();
+    });
   });
 });

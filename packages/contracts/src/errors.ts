@@ -36,6 +36,12 @@ export const ERROR_CODES = [
   "STREAM_TERMINATED_BEFORE_TURN_END",
   // P37-5: the SDK event buffer exceeded its configured bound.
   "STREAM_BUFFER_OVERFLOW",
+  // P38.1-2: a followup could not be promoted to a running turn; the durable
+  // input remains recoverable but the current caller must settle terminally.
+  "FOLLOWUP_PROMOTION_FAILED",
+  // P38.1-2: the session actor was closed while a queued followup caller was
+  // still waiting for promotion.
+  "ACTOR_CLOSED",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -88,6 +94,8 @@ export const ERROR_DEFAULT_MESSAGES: Record<ErrorCode, string> = {
   LOAD_CANCELLED: "Session load was cancelled",
   STREAM_TERMINATED_BEFORE_TURN_END: "Stream ended before the turn did",
   STREAM_BUFFER_OVERFLOW: "Event stream buffer overflow",
+  FOLLOWUP_PROMOTION_FAILED: "Followup could not be promoted to a running turn",
+  ACTOR_CLOSED: "Session actor closed before followup promotion",
 };
 
 /** Default retry policy for each failure class. Auto-retry is unsafe by default. */
@@ -125,6 +133,8 @@ export const ERROR_RETRY_DEFAULTS: Record<ErrorCode, { retryable: boolean; safeT
   LOAD_CANCELLED: { retryable: false, safeToRetry: false },
   STREAM_TERMINATED_BEFORE_TURN_END: { retryable: true, safeToRetry: false },
   STREAM_BUFFER_OVERFLOW: { retryable: true, safeToRetry: false },
+  FOLLOWUP_PROMOTION_FAILED: { retryable: true, safeToRetry: true },
+  ACTOR_CLOSED: { retryable: false, safeToRetry: false },
 };
 
 export function errorInfo(
