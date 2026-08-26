@@ -115,13 +115,17 @@ export function introspectHarness(input: IntrospectionInput): HarnessIntrospecti
       mcp: input.features.mcp || (input.mcpServers ?? 0) > 0,
       plugins: input.features.plugins,
       skills: input.features.skills,
-      usageAccounting: false,
+      // P38.2-11: usage accounting IS wired — the runtime folds provider
+      // `usage` events into `model.completed.usage` (P0-9, proven by
+      // packages/core/src/runtime/runtime.test.ts) and the observability
+      // metrics pipeline reads that snapshot (packages/observability/metrics.ts).
+      // Reporting `false` was stale under-reporting; the chain is real.
+      usageAccounting: true,
       // P38.1-12: RunLimits ARE enforced by the runtime — every turn creates a
       // RunBudgetTracker (packages/core/src/runtime/runtime.ts) that enforces
       // maxTurns / maxToolCalls / maxDurationMs and beyond. Reporting `false`
       // was honest under-reporting that wrongly failed the profile mustBeWired
-      // check for run_budget on every profile. Usage accounting stays false
-      // because the usage event chain is genuinely not wired.
+      // check for run_budget on every profile.
       runBudget: true,
       // P35-2: the production composition root always composes the
       // StepExecutionSnapshot pipeline (step-snapshot-factory) before every

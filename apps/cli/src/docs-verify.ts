@@ -168,6 +168,20 @@ export async function verifyDocs(deps: { root: string }): Promise<DocVerificatio
         : "CAPABILITY_MATRIX.md exists but is not the machine-generated audit output",
   });
 
+  // ---- P38.2-11 (INV-P38.2-011): a TRACKED matrix is informational only.
+  // The Acceptable option keeps it in the repo but it MUST carry the
+  // NOT RELEASE EVIDENCE marker — an unmarked tracked snapshot could be
+  // mistaken for release attestation. Fail closed when the marker is absent.
+  const matrixBanner = await fileContains(join(root, "CAPABILITY_MATRIX.md"), ["NOT RELEASE EVIDENCE"]);
+  const matrixJsonMarker = await fileContains(join(root, "CAPABILITY_MATRIX.json"), ["\"releaseEvidence\": false"]);
+  checks.push({
+    name: "CAPABILITY_MATRIX marked informational (P38.2-11)",
+    truthful: (matrixBanner.found[0] ?? false) && (matrixJsonMarker.found[0] ?? false),
+    reason: matrixBanner.found[0] && matrixJsonMarker.found[0]
+      ? "tracked matrix is explicitly NOT RELEASE EVIDENCE (informational snapshot)"
+      : "tracked matrix lacks the NOT RELEASE EVIDENCE marker — regenerate with `agent audit` (P38.2-11)",
+  });
+
   // ---- profile defaults (P20-2): matrix carries the profile view ----
   const matrixJson = await fileContains(join(root, "CAPABILITY_MATRIX.json"), ["byProfile"]);
   const matrixMdProfile = await fileContains(join(root, "CAPABILITY_MATRIX.md"), ["- profile:"]);

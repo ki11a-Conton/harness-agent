@@ -166,12 +166,36 @@ describe("audit default (interactive) profile (P0-1)", () => {
     expect(record.evidence.some((e) => e.kind === "store" && e.note === "not durable across restart")).toBe(true);
   });
 
-  it("usage accounting: runtime drops the usage event, so NOT wired", () => {
+  it("usage accounting: NOT wired when the composition reports usageAccounting=false", () => {
     const record = buildCapabilityMatrix(defaultInput()).records.find((r) => r.id === "usage_accounting")!;
     expect(record.implemented).toBe(true);
     expect(record.productionWired).toBe(false);
     expect(capabilityStatusOf(record)).toBe("implemented");
-    expect(record.evidence.some((e) => e.ref === "packages/core/src/runtime/model-call-controller.ts")).toBe(true);
+    // P38.2-11: the diagnostic must reflect CURRENT production wiring — the
+    // runtime folds `usage` events into `model.completed.usage` (P0-9,
+    // runtime.test.ts), so the note must NOT claim the event is dropped or
+    // that model.completed carries no usage.
+    const note = record.evidence.find((e) => e.ref === "packages/core/src/runtime/model-call-controller.ts");
+    expect(note).toBeDefined();
+    expect(note!.note).toContain("folds usage events into model.completed (P0-9)");
+    expect(note!.note).not.toContain("dropped");
+    expect(note!.note).not.toContain("carries no usage");
+    expect(note!.note).not.toContain("not wired");
+  });
+
+  it("P38.2-11: usage accounting IS wired when introspection reports usageAccounting=true", () => {
+    const input = defaultInput({
+      introspection: {
+        ...DEFAULT_INTROSPECTION,
+        features: { ...DEFAULT_INTROSPECTION.features, usageAccounting: true },
+      },
+    });
+    const record = buildCapabilityMatrix(input).records.find((r) => r.id === "usage_accounting")!;
+    expect(record.productionWired).toBe(true);
+    expect(record.degradedReason).toBeUndefined();
+    // The stale "not wired" diagnostic must not be emitted when the
+    // introspection fact says the chain IS wired.
+    expect(record.evidence.some((e) => e.ref === "packages/core/src/runtime/model-call-controller.ts")).toBe(false);
   });
 
   it("regression suite: README claims 30 but no directory on disk → missing, audit FAILED", () => {
@@ -331,5 +355,13 @@ describe("audit default (interactive) profile (P0-1)", () => {
     const md = renderMatrixMarkdown(matrix, auditSummary(matrix, input));
     expect(md).toContain("| durability(actual/req/sat) |");
     expect(md).toContain("| context_pipeline | wired | true | true | true | none/none/true | sandboxed | true | false | false | false |");
+  });
+
+  it("P38.2-11 (INV-P38.2-011): markdown marks the snapshot as NOT RELEASE EVIDENCE", () => {
+    const input = defaultInput();
+    const matrix = buildCapabilityMatrix(input);
+    const md = renderMatrixMarkdown(matrix, auditSummary(matrix, input));
+    expect(md).toContain("NOT RELEASE EVIDENCE");
+    expect(md).toContain("immutable `github.sha`");
   });
 });

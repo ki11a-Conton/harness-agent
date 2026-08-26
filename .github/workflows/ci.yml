@@ -82,25 +82,11 @@ jobs:
         # this gate fails only if the harness cannot load/run/freeze a case.
         run: pnpm benchmark:smoke
 
-      - name: Generate capability matrix (P12-5, real wiring evidence)
-        # `agent audit` derives capability status from the live harness
-        # introspection (stores/tools/features), never from documentation.
-        run: node apps/cli/dist/main.js audit --out .ci/capability
-
       - name: Upload benchmark smoke report (P12-5)
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-smoke-${{ matrix.os }}
           path: .ci/bench-smoke/*.md
-          if-no-files-found: error
-
-      - name: Upload capability matrix (P12-5)
-        uses: actions/upload-artifact@v4
-        with:
-          name: capability-matrix-${{ matrix.os }}
-          path: |
-            .ci/capability/CAPABILITY_MATRIX.md
-            .ci/capability/CAPABILITY_MATRIX.json
           if-no-files-found: error
 
       - name: Upload test report (P12-5)
@@ -151,6 +137,27 @@ jobs:
             r=$(node -e "const j=require('$EVID/$gate.json'); process.exit(j.passed?0:1)") && continue || { echo "GATE FAILED: $gate"; rc=1; }
           done
           exit $rc
+
+      # P38.2-11: the AUTHORITATIVE capability matrix is generated AFTER the
+      # gate evidence exists — `audit` synthesizes capability test_run evidence
+      # from the passing `test` gate + the reviewed manifest (P38.2-5/11), so
+      # the artifact carries real integrationTested status at the immutable
+      # github.sha, not an evidence-less snapshot.
+      - name: Generate capability matrix (P12-5, P38.2-11 real wiring evidence)
+        run: node apps/cli/dist/main.js audit --out .ci/capability
+
+      - name: Upload capability matrix (P12-5, P38.2-11)
+        uses: actions/upload-artifact@v4
+        with:
+          # P38.2-11 (INV-P38.2-011): the CI artifact is the AUTHORITATIVE
+          # capability record, bound to the immutable github.sha. The tracked
+          # repository snapshot is informational only (marked NOT RELEASE
+          # EVIDENCE) and must never be treated as release attestation.
+          name: capability-matrix-${{ github.sha }}-${{ matrix.os }}
+          path: |
+            .ci/capability/CAPABILITY_MATRIX.md
+            .ci/capability/CAPABILITY_MATRIX.json
+          if-no-files-found: error
 
       - name: Upload gate evidence (P38.2-10)
         uses: actions/upload-artifact@v4
@@ -264,14 +271,20 @@ jobs:
 
       - name: Verify evidence SHA and derive release verdict (P38.2-13)
         # INV-P38.2-015: the attestation REDUCES the downloaded evidence files;
-        # there is no hard-coded PASS table here.
+        # there is no hard-coded PASS table here. runtimeReleaseReady is derived
+        # from the actual `release verify` exit code, never hard-coded.
         run: |
           echo "Release SHA: ${{ github.sha }}"
           ls -laR .ci/evidence/gates/
-          node apps/cli/dist/main.js release verify
+          if node apps/cli/dist/main.js release verify; then
+            READY="true"
+          else
+            READY="false"
+          fi
           cat > release-attestation.json <<EOF
-          {"schemaVersion":2,"headSha":"${{ github.sha }}","generatedAt":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","runtimeReleaseReady":true,"championPromotion":{"status":"NOT_RUN","reason":"paid real-model benchmark is optional and was not requested for runtime RC"}}
+          {"schemaVersion":2,"headSha":"${{ github.sha }}","generatedAt":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","runtimeReleaseReady":${READY},"championPromotion":{"status":"NOT_RUN","reason":"paid real-model benchmark is optional and was not requested for runtime RC"}}
           EOF
+          echo "runtimeReleaseReady: ${READY}"
 
       - name: Upload release attestation (P38.2-13)
         uses: actions/upload-artifact@v4

@@ -1,19 +1,22 @@
 /**
- * P36-1 — `agent release verify` CLI command.
+ * P36-1 — `agent release verify` / `agent release gate` CLI commands.
  *
- * Resolves the current HEAD, ingests authoritative per-gate evidence from
- * `.ci/evidence/*.json` (or an explicit dir), and computes the release
- * verdict. A verdict is READY only when EVERY required gate is passed at the
- * exact release HEAD. Any failed / not_run / blocked / stale gate → non-zero.
+ * P38.2-4/13: `release gate` is a repo-owned gate runner that executes the
+ * canonical command from GATE_COMMANDS (single source of truth), captures the
+ * real exit code (INV-P38.2-004), and writes evidence JSON to the P38.2-10
+ * namespaced layout. `release verify` reads the same evidence layout.
  */
-import { execFile } from "node:child_process";
-import { readFile, readdir } from "node:fs/promises";
+import { execFile, execFileSync } from "node:child_process";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { CommandResult } from "./commands.js";
 import {
+  GATE_COMMANDS,
+  REQUIRED_GATES,
   computeReleaseVerdict,
   parseGateEvidence,
   renderReleaseVerdict,
+  type RequiredGateId,
   type ReleaseGateResult,
   type ReleaseVerdict,
 } from "./release-verify.js";
@@ -25,20 +28,6 @@ export interface ReleaseVerifyOptions {
   /** Override HEAD resolution (tests). */
   headSha?: string;
 }
-
-const EVIDENCE_FILES = [
-  "typecheck.json",
-  "test.json",
-  "build.json",
-  "coverage.json",
-  "docs.json",
-  "benchmark-smoke.json",
-  "protocol.json",
-  "security.json",
-  "race.json",
-  "chaos.json",
-  "capability-audit.json",
-];
 
 async function detectHead(root: string): Promise<string> {
   return new Promise((resolveSha, reject) => {
@@ -141,4 +130,104 @@ export async function releaseVerifyCmd(rest: string[], cliOpts: ReleaseVerifyOpt
   } catch (err) {
     return { exitCode: 1, lines: [`agent release verify failed: ${err instanceof Error ? err.message : String(err)}`] };
   }
+}
+
+/** P38.2-13 — execute the canonical gate command and write its evidence. */
+export interface GateRunResult {
+  gate: RequiredGateId;
+  command: string;
+  exitCode: number;
+  evidencePath: string;
+}
+
+/** Detect the OS namespace used by the P38.2-10 evidence layout. */
+export function gatePlatform(): "linux" | "windows" | "darwin" {
+  switch (process.platform) {
+    case "win32":
+      return "windows";
+    case "darwin":
+      return "darwin";
+    default:
+      return "linux";
+  }
+}
+
+/** Run one required gate, capture the REAL exit code, and write evidence.
+ *  INV-P38.2-004: the evidence is durable before the command returns; a red
+ *  gate returns its own exit code (evidence already written, never skipped). */
+export async function runGate(
+  gate: RequiredGateId,
+  opts: { root?: string; headSha?: string; evidenceDir?: string } = {},
+): Promise<GateRunResult> {
+  const root = resolve(opts.root ?? process.cwd());
+  const headSha = opts.headSha ?? (await detectHead(root));
+  const command = GATE_COMMANDS[gate];
+  // P38.2-10: evidence is namespaced per platform under gates/<os>/.
+  const evidenceDir = resolve(opts.evidenceDir ?? join(root, ".ci", "evidence", "gates", gatePlatform()));
+  const evidencePath = join(evidenceDir, `${gate}.json`);
+  await mkdir(evidenceDir, { recursive: true });
+
+  // Real exit code capture — execFileSync never exits the process early, so a
+  // red gate is ALWAYS captured and evidence is written before we return.
+  let exitCode = 0;
+  try {
+    execFileSync(command, {
+      cwd: root,
+      shell: true,
+      stdio: "inherit",
+      env: { ...process.env, OPENAI_API_KEY: "" }, // gates must run without a paid key
+      windowsHide: true,
+    });
+  } catch (err) {
+    exitCode = typeof err === "object" && err !== null && "status" in err ? ((err as { status?: number }).status ?? 1) : 1;
+  }
+
+  const evidence = {
+    schemaVersion: 1,
+    kind: "gate",
+    gate,
+    headSha,
+    command,
+    exitCode,
+    passed: exitCode === 0,
+    platform: gatePlatform(),
+    generatedAt: new Date().toISOString(),
+  };
+  await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
+  return { gate, command, exitCode, evidencePath };
+}
+
+/** `agent release gate [--all | <gate>...] [--evidence-dir <dir>]` */
+export async function releaseGateCmd(rest: string[], cliOpts: ReleaseVerifyOptions = {}): Promise<CommandResult> {
+  const explicitEvidenceDir = (() => {
+    const idx = rest.indexOf("--evidence-dir");
+    return idx >= 0 ? rest[idx + 1] : undefined;
+  })();
+  // Strip --evidence-dir and its value so they never count as gate ids.
+  const args = rest.filter((a) => a !== "--all" && a !== "--evidence-dir" && a !== explicitEvidenceDir);
+  if (args.some((a) => a.startsWith("--"))) {
+    return { exitCode: 1, lines: ["agent release gate: unknown flag", "", "usage: agent release gate [--all | <gate>...] [--evidence-dir <dir>]"] };
+  }
+  let gates: RequiredGateId[];
+  if (rest.includes("--all")) {
+    gates = [...REQUIRED_GATES];
+  } else if (args.length === 0) {
+    return { exitCode: 1, lines: ["agent release gate: specify a gate id or --all", "", "usage: agent release gate [--all | <gate>...] [--evidence-dir <dir>]"] };
+  } else {
+    const unknown = args.filter((a) => !(REQUIRED_GATES as readonly string[]).includes(a));
+    if (unknown.length > 0) {
+      return { exitCode: 1, lines: [`agent release gate: unknown gate id(s): ${unknown.join(", ")}`, "", `known gates: ${REQUIRED_GATES.join(", ")}`] };
+    }
+    gates = args as RequiredGateId[];
+  }
+
+  const lines: string[] = [];
+  let worstExit = 0;
+  for (const gate of gates) {
+    const result = await runGate(gate, { root: cliOpts.root ?? process.cwd(), headSha: cliOpts.headSha, evidenceDir: explicitEvidenceDir });
+    lines.push(`gate ${gate}: exitCode=${result.exitCode} ${result.exitCode === 0 ? "PASS" : "FAIL"} → ${result.evidencePath}`);
+    if (result.exitCode !== 0) worstExit = 1;
+  }
+  lines.push("", "All attempted gates produced durable evidence (INV-P38.2-004).");
+  return { exitCode: worstExit, lines };
 }

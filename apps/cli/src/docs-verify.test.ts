@@ -44,6 +44,9 @@ jobs:
 `;
 
 const MATRIX_MD = `# CAPABILITY MATRIX
+
+> NOT RELEASE EVIDENCE — informational repository snapshot. Official release verification uses CI-generated artifacts at immutable \`github.sha\`.
+
 - generatedAt: 2026-08-21T00:00:00.000Z
 - gitSha: abc
 
@@ -51,7 +54,7 @@ const MATRIX_MD = `# CAPABILITY MATRIX
 | id | status | implemented | productionWired | durable | securityMode |
 `;
 
-const MATRIX_JSON = `{"generatedAt":0,"byProfile":{"benchmark":{"records":[]}}}`;
+const MATRIX_JSON = `{"generatedAt":0,"releaseEvidence": false,"byProfile":{"benchmark":{"records":[]}}}`;
 
 const HANDOVER = `## 状态速览
 packages/（4 个包）已完成；
@@ -163,6 +166,23 @@ describe("P20-3 docs:verify — machine truth verification", () => {
     expect(result.ok).toBe(false);
     const profiles = result.checks.find((c) => c.name === "capability profiles present")!;
     expect(profiles.truthful).toBe(false);
+  });
+
+  it("P38.2-11: fails closed when the tracked matrix lacks the NOT RELEASE EVIDENCE marker", async () => {
+    await makeRoot({
+      ...suiteCaseFiles(3),
+      "benchmarks/README.md": README_CLAIMS,
+      "packages/a/package.json": "{}",
+      "HANDOVER.md": HANDOVER,
+      ".github/workflows/ci.yml": CI_WITH_GATES,
+      // Tracked matrix WITHOUT the informational marker + releaseEvidence:false.
+      "CAPABILITY_MATRIX.md": "# CAPABILITY MATRIX\n- generatedAt: 2026-08-21T00:00:00.000Z\n| id | status | implemented | productionWired |",
+      "CAPABILITY_MATRIX.json": `{"generatedAt":0,"byProfile":{"benchmark":{"records":[]}}}`,
+    });
+    const result = await verifyDocs({ root });
+    expect(result.ok).toBe(false);
+    const marker = result.checks.find((c) => c.name === "CAPABILITY_MATRIX marked informational (P38.2-11)")!;
+    expect(marker.truthful).toBe(false);
   });
 
   it("fails closed when the doc package count contradicts packages/ on disk", async () => {

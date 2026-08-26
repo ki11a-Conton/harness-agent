@@ -148,16 +148,22 @@ describe("audit benchmark profile — real workspace probes (P0-1)", () => {
     const result = await runCommand(["audit", "--out", out], deps);
     expect(result.exitCode).toBe(0);
     const json = JSON.parse(await readFile(join(out, "CAPABILITY_MATRIX.json"), "utf8")) as {
-      records: unknown[];
+      records: { id: string; benchmarkDeclared?: boolean; benchmarkExercised?: boolean }[];
       gitSha?: string;
     };
     expect(json.records.length).toBe(21);
     const md = await readFile(join(out, "CAPABILITY_MATRIX.md"), "utf8");
     expect(md).toContain("# CAPABILITY MATRIX");
-    // P36-7: cases exist (benchmarkDeclared=true) but no executing evidence →
-    // status is "wired", not "benchmarked".
-    expect(md).toContain("| regression_suite | wired |");
-    expect(md).toContain("| regression_suite | wired | true | true | false | none/none/true | sandboxed | true | false | true | false");
+    // P36-7: cases exist (benchmarkDeclared=true) but a benchmark suite is never
+    // "benchmarked" without a passing benchmark_run evidence — the exercised
+    // column stays false regardless of ambient gate evidence. (A passing `test`
+    // gate truthfully flips integrationTested → status may be "wired" or
+    // "tested", but never "benchmarked".)
+    const regression = json.records.find((r) => r.id === "regression_suite");
+    expect(regression?.benchmarkDeclared).toBe(true);
+    expect(regression?.benchmarkExercised).toBe(false);
+    expect(md).toMatch(/\| regression_suite \| (wired|tested) \|/);
+    expect(md).not.toMatch(/\| regression_suite \| benchmarked \|/);
     expect(md).toContain("audit verdict (P36-8): documentationClaims=PASS");
   });
 

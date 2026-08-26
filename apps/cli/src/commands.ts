@@ -28,7 +28,7 @@ import { learnCmd } from "./learn-command.js";
 import { explainCmd } from "./explain-command.js";
 import { recoverListCmd } from "./recover-command.js";
 import { configExplainCmd } from "./config-command.js";
-import { releaseVerifyCmd } from "./release-command.js";
+import { releaseGateCmd, releaseVerifyCmd } from "./release-command.js";
 
 /** Minimal RPC client surface (InMemoryTransport matches structurally). */
 export interface RpcClient {
@@ -131,8 +131,14 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
         const result = await releaseVerifyCmd(rest.slice(1), { root: process.cwd() });
         return { exitCode: result.exitCode, lines: result.lines };
       }
+      if (rest[0] === "gate") {
+        // P38.2-4/13: repo-owned gate runner — canonical command from
+        // GATE_COMMANDS, real exit code captured, evidence namespaced per OS.
+        const result = await releaseGateCmd(rest.slice(1), { root: process.cwd() });
+        return { exitCode: result.exitCode, lines: result.lines };
+      }
       if (rest[0] !== "artifacts") {
-        return { exitCode: 1, lines: ["usage: agent release verify [--json] | agent release artifacts [--out <dir>]"] };
+        return { exitCode: 1, lines: ["usage: agent release verify [--json] | agent release gate [--all | <gate>...] | agent release artifacts [--out <dir>]"] };
       }
       const outIdx = rest.indexOf("--out");
       const outDir = outIdx >= 0 ? rest[outIdx + 1] ?? ".ci/release-artifacts" : ".ci/release-artifacts";

@@ -1,6 +1,7 @@
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { join, resolve } from "node:path";
+import type { Dirent } from "node:fs";
 import type { HarnessIntrospection } from "@ar/harness";
 import type { CommandDeps, CommandResult } from "./commands.js";
 
@@ -557,7 +558,11 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     evidence: (i) => [
       dep("usage_accounting"),
       ...(intro(i)?.features.usageAccounting !== true
-        ? [ev("runtime_dependency", "packages/core/src/runtime/model-call-controller.ts", "usage event dropped (case \"usage\": break); model.completed carries no usage — metrics cannot see tokens/cost")]
+        ? // P38.2-11: the diagnostic must reflect CURRENT production wiring. The
+          // runtime folds `usage` events into `model.completed.usage` (P0-9,
+          // runtime.test.ts) and metrics read that snapshot — it no longer
+          // drops the event or strips usage from model.completed.
+          [ev("runtime_dependency", "packages/core/src/runtime/model-call-controller.ts", "usageAccounting not reported wired by this composition; note: the runtime folds usage events into model.completed (P0-9) so tokens/cost ARE observable from the event stream")]
         : []),
     ],
   },
@@ -968,6 +973,11 @@ export function renderMatrixMarkdown(matrix: CapabilityMatrix, summary: AuditSum
   const lines: string[] = [
     "# CAPABILITY MATRIX",
     "",
+    // P38.2-11 (INV-P38.2-011): a repository snapshot is INFORMATIONAL, never
+    // release evidence. Official release verification must use freshly
+    // generated CI artifacts at the immutable github.sha.
+    "> NOT RELEASE EVIDENCE — informational repository snapshot. Official release verification uses CI-generated artifacts at immutable `github.sha`.",
+    "",
     `- generatedAt: ${new Date(matrix.generatedAt).toISOString()}`,
     ...(matrix.gitSha !== undefined ? [`- gitSha: ${matrix.gitSha}`] : []),
     "",
@@ -1028,55 +1038,136 @@ export async function probeWorkspace(opts: AuditProbeOptions = {}): Promise<Audi
   const now = opts.now ?? Date.now;
   const gitSha = opts.gitSha ?? detectGitSha;
   const sha = await gitSha();
+  const integrationTests = await probeIntegrationTests(root);
   return {
     generatedAt: now(),
     ...(sha === undefined ? {} : { gitSha: sha }),
     packages: await probePackages(root),
-    integrationTests: await probeIntegrationTests(root),
+    integrationTests,
     benchmarkSuites: await probeBenchmarkSuites(root),
     ciWorkflow: await probeCiWorkflow(root),
     readmeClaims: await probeReadmeClaims(root),
-    // P36-7: ingest `.ci/evidence/*.json` produced by gates/CI. Without them
+    // P36-7: ingest `.ci/evidence/**` produced by gates/CI. Without them
     // every capability's integrationTested/benchmarkExercised stays false —
-    // file existence alone is never execution proof.
-    executionEvidence: await probeExecutionEvidence(root, sha),
+    // file existence alone is never execution proof. P38.2-5/11: the probe
+    // walks namespaced subdirectories and synthesizes capability test_run
+    // evidence from a passing `test` gate + the reviewed manifest.
+    executionEvidence: await probeExecutionEvidence(root, sha, integrationTests),
   };
 }
 
-/** P36-7 — read `.ci/evidence/*.json` into an execution-evidence map keyed by
- *  capability id. Malformed/missing files are skipped (fail closed to false). */
-async function probeExecutionEvidence(root: string, headSha?: string): Promise<Record<string, ExecutionEvidence>> {
+/** P36-7 — read every `.ci/evidence` JSON file (recursively) into an
+ *  execution-evidence map keyed by namespaced id (`gate:...`, `capability:...`,
+ *  `benchmark:...`). Walks subdirectories (P38.2-5/10: evidence lives under
+ *  gates/<os>/, capabilities/, benchmarks/). Malformed/missing files are
+ *  skipped (fail closed to false).
+ *
+ *  P38.2-5/11 (INV-P38.2-005): capability evidence is NEVER inferred from a
+ *  test filename. After reading all files, if a `test` GATE passed at the exact
+ *  audited HEAD, the reviewed CAPABILITY_TEST_MANIFEST maps capabilities to
+ *  probe files that were part of that lane — each mapped capability whose probe
+ *  files exist on disk gets synthesized `capability:<id>` test_run evidence.
+ *  A failed/missing test gate synthesizes nothing (fail closed). */
+async function probeExecutionEvidence(
+  root: string,
+  headSha: string | undefined,
+  integrationTests: Record<string, boolean>,
+): Promise<Record<string, ExecutionEvidence>> {
   const dir = join(root, ".ci", "evidence");
-  let entries: string[];
-  try {
-    entries = await readdir(dir);
-  } catch {
-    // Evidence dir missing — not an error; every capability stays
-    // integrationTested=false (fail closed).
-    return {};
-  }
   const out: Record<string, ExecutionEvidence> = {};
-  for (const entry of entries) {
-    if (!entry.endsWith(".json")) continue;
+
+  const collect = async (d: string): Promise<void> => {
+    let entries: Dirent[];
     try {
-      const raw = JSON.parse(await readFile(join(dir, entry), "utf8")) as ExecutionEvidence & { capability?: string; id?: string };
-      const key = raw.capability ?? raw.id ?? entry.replace(/\.json$/, "");
-      if (typeof key !== "string" || key.length === 0) continue;
-      out[key] = {
-        kind: raw.kind,
-        headSha: raw.headSha,
-        command: raw.command,
-        passed: raw.passed === true,
-        generatedAt: raw.generatedAt,
-        ...(raw.artifactRef !== undefined ? { artifactRef: raw.artifactRef } : {}),
-      };
+      entries = await readdir(d, { withFileTypes: true });
     } catch {
-      // P36-7: malformed evidence file — skip silently; executionProven
-      // fails closed (returns false) for this capability.
-      void 0; // not empty: static scan requires an observable statement
+      return; // missing dir — every capability stays fail-closed false
+    }
+    for (const entry of entries) {
+      const path = join(d, entry.name);
+      if (entry.isDirectory()) {
+        await collect(path);
+        continue;
+      }
+      if (!entry.name.endsWith(".json")) continue;
+      try {
+        const raw = JSON.parse(await readFile(path, "utf8")) as ExecutionEvidence & {
+          capability?: string;
+          id?: string;
+          gate?: string;
+          suite?: string;
+          kind?: string;
+        };
+        // P38.2-5: key by the EXPLICIT field, never the file name — a gate file
+        // can never collide with a capability key and vice versa.
+        const key =
+          raw.capability !== undefined
+            ? `capability:${raw.capability}`
+            : raw.suite !== undefined
+              ? `benchmark:${raw.suite}`
+              : raw.id !== undefined
+                ? raw.id
+                : raw.gate !== undefined
+                  ? `gate:${raw.gate}`
+                  : undefined;
+        if (key === undefined) continue;
+        if (raw.capability !== undefined && raw.kind === "benchmark_run") {
+          // benchmark evidence carried under a capability field — namespace by
+          // benchmark to keep test/benchmark claims disjoint (INV-P38.2-005).
+          out[`benchmark:${raw.capability}`] = {
+            kind: "benchmark_run",
+            headSha: raw.headSha,
+            command: raw.command,
+            passed: raw.passed === true,
+            generatedAt: raw.generatedAt,
+            ...(raw.artifactRef !== undefined ? { artifactRef: raw.artifactRef } : {}),
+          };
+          continue;
+        }
+        out[key] = {
+          kind: raw.kind,
+          headSha: raw.headSha,
+          command: raw.command,
+          passed: raw.passed === true,
+          generatedAt: raw.generatedAt,
+          ...(raw.artifactRef !== undefined ? { artifactRef: raw.artifactRef } : {}),
+        };
+      } catch {
+        // P36-7: malformed evidence file — skip silently; executionProven
+        // fails closed (returns false) for this capability.
+        void 0; // P14-6: observable statement — comments alone are not observability
+      }
+    }
+  };
+  await collect(dir);
+
+  // P38.2-5/11: synthesize capability test_run evidence from a PASSING test
+  // gate at the exact audited HEAD + the reviewed manifest. A general `pnpm
+  // test` result may prove many capability test files ran, but the mapping is
+  // the reviewed CAPABILITY_TEST_MANIFEST — never a filename guess.
+  const testGate = out["gate:test"];
+  const testLanePassed =
+    testGate !== undefined &&
+    testGate.passed === true &&
+    headSha !== undefined &&
+    testGate.headSha === headSha;
+  if (testLanePassed) {
+    for (const [capabilityId, probeIds] of Object.entries(CAPABILITY_TEST_MANIFEST)) {
+      const key = `capability:${capabilityId}`;
+      if (out[key] !== undefined) continue; // explicit evidence wins
+      const probesPresent = probeIds.every((probeId) => integrationTests[probeId] === true);
+      if (!probesPresent) continue; // file missing → not part of the lane
+      out[key] = {
+        kind: "test_run",
+        headSha,
+        command: "pnpm test",
+        passed: true,
+        generatedAt: testGate.generatedAt,
+        artifactRef: "gate:test",
+      };
     }
   }
-  void headSha; // freshness is enforced in executionProven against input.gitSha
+
   return out;
 }
 
@@ -1096,6 +1187,37 @@ const PACKAGE_PROBES = [
   "session",
   "evaluation",
 ] as const;
+
+/**
+ * P38.2-5/11: reviewed manifest mapping capability → integration-test
+ * probe id(s). Evidence generation uses this to derive test_run evidence
+ * from a successful `pnpm test` gate (INV-P38.2-005/013). Each capability
+ * listed here whose probe files exist on disk AND whose `test` gate passed
+ * at the exact HEAD SHA receives synthesized `capability:<id>` test_run
+ * evidence. This is the ONLY path that may turn a passed test lane into
+ * capability evidence — never guessed by filename.
+ */
+const CAPABILITY_TEST_MANIFEST: Record<string, readonly string[]> = {
+  context_pipeline: ["core_loop_integration"],
+  checkpoint_store: ["core_checkpoint"],
+  artifact_store: ["core_artifact"],
+  memory_store: ["memory_store"],
+  memory_retrieval: ["memory_retrieval"],
+  learning: ["learning_sandbox"],
+  delegation: ["agents_delegator"],
+  scheduler: ["agents_scheduler"],
+  ask_user_durable: ["core_resume"],
+  approval_durable: ["security_approval"],
+  mcp_connected: ["mcp_adapter"],
+  plugin_host: ["plugins_host"],
+  advanced_tools: ["tools_navigation"],
+  usage_accounting: ["observability_trace"],
+  run_budget: ["core_runtime"],
+  regression_suite: ["suite_conformance"],
+  holdout_suite: ["suite_conformance"],
+  adversarial_suite: ["suite_conformance"],
+  stress_suite: ["suite_conformance"],
+};
 
 const INTEGRATION_TEST_PROBES: Record<string, string[]> = {
   core_loop_integration: ["packages/core/src/runtime/loop-integration.test.ts", "packages/context/src/pipeline.test.ts"],
@@ -1248,7 +1370,16 @@ export async function auditCmd(rest: string[], deps: CommandDeps): Promise<Comma
   await mkdir(outDir, { recursive: true });
   const jsonPath = join(outDir, "CAPABILITY_MATRIX.json");
   const mdPath = join(outDir, "CAPABILITY_MATRIX.md");
-  const jsonOut = { ...matrix, byProfile, verdict: summary.verdict };
+  const jsonOut = {
+    ...matrix,
+    byProfile,
+    verdict: summary.verdict,
+    // P38.2-11 (INV-P38.2-011): the generated snapshot is informational only —
+    // never release evidence. The CI artifact generated at the immutable
+    // github.sha is the authoritative capability record.
+    releaseEvidence: false,
+    notice: "NOT RELEASE EVIDENCE — informational repository snapshot. Official release verification uses CI-generated artifacts at immutable github.sha.",
+  };
   await writeFile(jsonPath, `${JSON.stringify(jsonOut, null, 2)}\n`, "utf8");
   await writeFile(mdPath, renderMatrixMarkdown(matrix, summary), "utf8");
 
