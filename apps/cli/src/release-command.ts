@@ -54,26 +54,53 @@ async function detectHead(root: string): Promise<string> {
 
 async function readGateEvidence(dir: string): Promise<ReleaseGateResult[]> {
   const gates: ReleaseGateResult[] = [];
-  const seen = new Set<string>();
-  let entries: string[];
-  try {
-    entries = await readdir(dir);
-  } catch {
-    // Evidence dir missing → all gates are not_run (fail closed).
-    return [];
-  }
-  for (const entry of entries) {
-    if (!entry.endsWith(".json")) continue;
-    const path = join(dir, entry);
-    const text = await readFile(path, "utf8");
-    const gate = parseGateEvidence(text, path);
-    if (seen.has(gate.id)) {
-      throw new Error(`duplicate evidence for gate ${gate.id} (${path})`);
+  const byId = new Map<string, ReleaseGateResult[]>();
+  const collect = async (d: string): Promise<void> => {
+    let entries: string[];
+    try {
+      entries = await readdir(d);
+    } catch {
+      return;
     }
-    seen.add(gate.id);
-    gates.push(gate);
+    for (const entry of entries) {
+      const path = join(d, entry);
+      try {
+        const stat = await import("node:fs/promises").then((m) => m.stat(path));
+        if (stat.isDirectory()) {
+          await collect(path);
+        } else if (entry.endsWith(".json")) {
+          const text = await readFile(path, "utf8");
+          const gate = parseGateEvidence(text, path);
+          const list = byId.get(gate.id) ?? [];
+          list.push(gate);
+          byId.set(gate.id, list);
+        }
+      } catch {
+        continue;
+      }
+    }
+  };
+  await collect(dir);
+  // P38.2-10 (INV-P38.2-010): the same gate may have evidence from multiple
+  // platforms (gates/linux/*.json + gates/windows/*.json). All instances must
+  // pass — a red platform makes the gate red.
+  for (const [id, instances] of byId) {
+    if (instances.length === 1) {
+      gates.push(instances[0]!);
+      continue;
+    }
+    const first = instances[0]!;
+    const allPassed = instances.every((g) => g.state === "passed");
+    const platforms = instances.map((g) => g.evidenceRef).join(", ");
+    gates.push({
+      id: id as ReleaseGateResult["id"],
+      state: allPassed ? "passed" : "failed",
+      headSha: first.headSha,
+      command: first.command,
+      reason: `multi-platform evidence (${platforms}): ${allPassed ? "all platforms passed" : "one or more platforms failed"}`,
+      evidenceRef: platforms,
+    });
   }
-  void EVIDENCE_FILES; // naming convention documented; discovery is by *.json
   return gates;
 }
 

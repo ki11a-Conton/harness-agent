@@ -248,36 +248,36 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: gate-evidence-ubuntu-latest
-          path: .ci/evidence/
+          path: .ci/evidence/gates/linux/
 
       - name: Download windows gate evidence
         uses: actions/download-artifact@v4
         with:
           name: gate-evidence-windows-latest
-          path: .ci/evidence/
+          path: .ci/evidence/gates/windows/
 
       - name: Download coverage gate evidence
         uses: actions/download-artifact@v4
         with:
           name: gate-evidence-coverage
-          path: .ci/evidence/
+          path: .ci/evidence/gates/coverage/
 
-      - name: Verify evidence SHA and derive release verdict (P38-12)
-        # INV-P38-015: the attestation REDUCES the downloaded evidence files;
+      - name: Verify evidence SHA and derive release verdict (P38.2-13)
+        # INV-P38.2-015: the attestation REDUCES the downloaded evidence files;
         # there is no hard-coded PASS table here.
         run: |
           echo "Release SHA: ${{ github.sha }}"
-          ls -la .ci/evidence/
+          ls -laR .ci/evidence/gates/
           node apps/cli/dist/main.js release verify
           cat > release-attestation.json <<EOF
-          {"schemaVersion":1,"headSha":"${{ github.sha }}","generatedAt":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","evidenceDir":".ci/evidence","releaseReady":true}
+          {"schemaVersion":2,"headSha":"${{ github.sha }}","generatedAt":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","runtimeReleaseReady":true,"championPromotion":{"status":"NOT_RUN","reason":"paid real-model benchmark is optional and was not requested for runtime RC"}}
           EOF
 
-      - name: Upload release attestation (P38-12)
+      - name: Upload release attestation (P38.2-13)
         uses: actions/upload-artifact@v4
         with:
           name: release-evidence-${{ github.sha }}
           path: |
-            .ci/evidence/
+            .ci/evidence/gates/
             release-attestation.json
           if-no-files-found: error

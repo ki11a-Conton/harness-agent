@@ -1,7 +1,7 @@
 # CAPABILITY MATRIX
 
-- generatedAt: 2026-08-26T00:56:15.597Z
-- gitSha: b138eae4bf408154ef62a2ee40f204b8b016c1e5
+- generatedAt: 2026-08-26T01:44:37.026Z
+- gitSha: 47cb9e9a55f2f3f5bc6e51d3ce5fcac3db924b8e
 
 ## Summary
 
@@ -53,4 +53,4 @@
 | adversarial | 13 | 13 | false | true |
 | stress | 11 | 11 | false | true |
 
-audit verdict (P36-8): documentationClaims=PASS; profileRequirements=PASS; evidenceFresh=FAIL
+audit verdict (P36-8): documentationClaims=PASS; profileRequirements=PASS; evidenceFresh=FAIL; requiredEvidenceFresh=FAIL

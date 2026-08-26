@@ -86,8 +86,10 @@ function freshInput(overrides: Partial<AuditInput> = {}): AuditInput {
       core_loop_integration: true,
     },
     // context_pipeline is test-declared; regression_suite is benchmark-declared.
+    // P38.2-6: required (mustBeWired) capabilities also need fresh test evidence.
     executionEvidence: {
       "capability:context_pipeline": { kind: "test_run", headSha: "git-abc", command: "vitest", passed: true, generatedAt: "t" },
+      "capability:advanced_tools": { kind: "test_run", headSha: "git-abc", command: "vitest", passed: true, generatedAt: "t" },
       "benchmark:regression_suite": { kind: "benchmark_run", headSha: "git-abc", command: "bench", passed: true, generatedAt: "t" },
     },
     gitSha: "git-abc",
@@ -134,11 +136,14 @@ describe("P38.1-8 strict audit exit decision (INV-P38.1-011)", () => {
     expect(strictAuditExitCode({ strict: true, summaryOk: summary.ok, verdict: summary.verdict })).toBe(1);
   });
 
-  it("missing benchmark evidence → exit 1 under strict", () => {
-    // docs PASS + profile PASS, but benchmark evidence for regression_suite is absent.
+  it("missing benchmark evidence → exit 0 under interactive strict (P38.2-6)", () => {
+    // docs PASS + profile PASS + required test evidence fresh; benchmark
+    // evidence is NOT required for the interactive runtime profile — strict
+    // runtime release passes without paid benchmark evidence.
     const input = freshInput({
       executionEvidence: {
         "capability:context_pipeline": { kind: "test_run", headSha: "git-abc", command: "vitest", passed: true, generatedAt: "t" },
+        "capability:advanced_tools": { kind: "test_run", headSha: "git-abc", command: "vitest", passed: true, generatedAt: "t" },
       },
       gitSha: "git-abc",
     });
@@ -146,15 +151,18 @@ describe("P38.1-8 strict audit exit decision (INV-P38.1-011)", () => {
     const summary = auditSummary(matrix, input);
     expect(summary.verdict.documentationClaimsOk).toBe(true);
     expect(summary.verdict.profileRequirementsOk).toBe(true);
-    expect(summary.verdict.evidenceFresh).toBe(false);
-    expect(strictAuditExitCode({ strict: true, summaryOk: summary.ok, verdict: summary.verdict })).toBe(1);
+    expect(summary.verdict.requiredEvidenceFresh).toBe(true);
+    expect(strictAuditExitCode({ strict: true, summaryOk: summary.ok, verdict: summary.verdict })).toBe(0);
   });
 
-  it("pure decision is a strict conjunction over all three axes", () => {
-    const base: AuditVerdict = { documentationClaimsOk: true, profileRequirementsOk: true, evidenceFresh: true };
+  it("pure decision is a strict conjunction over required axes (P38.2-6)", () => {
+    const base: AuditVerdict = { documentationClaimsOk: true, profileRequirementsOk: true, evidenceFresh: true, requiredEvidenceFresh: true };
     expect(strictAuditExitCode({ strict: true, summaryOk: true, verdict: base })).toBe(0);
     expect(strictAuditExitCode({ strict: true, summaryOk: true, verdict: { ...base, documentationClaimsOk: false } })).toBe(1);
     expect(strictAuditExitCode({ strict: true, summaryOk: true, verdict: { ...base, profileRequirementsOk: false } })).toBe(1);
-    expect(strictAuditExitCode({ strict: true, summaryOk: true, verdict: { ...base, evidenceFresh: false } })).toBe(1);
+    // declared-only freshness drop does NOT block strict runtime release.
+    expect(strictAuditExitCode({ strict: true, summaryOk: true, verdict: { ...base, evidenceFresh: false } })).toBe(0);
+    // required freshness drop DOES block strict release.
+    expect(strictAuditExitCode({ strict: true, summaryOk: true, verdict: { ...base, requiredEvidenceFresh: false } })).toBe(1);
   });
 });

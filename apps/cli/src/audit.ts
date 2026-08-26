@@ -841,7 +841,12 @@ export interface AuditSummary {
 export interface AuditVerdict {
   documentationClaimsOk: boolean;
   profileRequirementsOk: boolean;
+  /** P38.2-6: evidence for ALL declared capabilities (test + benchmark). */
   evidenceFresh: boolean;
+  /** P38.2-6 (INV-P38.2-006): evidence for the profile's REQUIRED
+   *  capabilities only. Runtime release does not require paid benchmark
+   *  evidence. */
+  requiredEvidenceFresh: boolean;
   releaseReady?: boolean;
 }
 
@@ -862,7 +867,10 @@ export function strictAuditExitCode(input: {
   const strictOk = input.strict
     ? input.verdict.documentationClaimsOk &&
       input.verdict.profileRequirementsOk &&
-      input.verdict.evidenceFresh
+      // P38.2-6 (INV-P38.2-006): strict mode gates on REQUIRED evidence
+      // freshness, not declared. Benchmark evidence is NOT required for
+      // interactive/champion profiles that don't demand it.
+      input.verdict.requiredEvidenceFresh
     : true;
   return input.summaryOk && strictOk ? 0 : 1;
 }
@@ -914,10 +922,30 @@ export function auditSummary(matrix: CapabilityMatrix, input: AuditInput): Audit
       evidenceIsFresh(input.executionEvidence?.[`benchmark:${record.id}`], "benchmark_run", input.gitSha),
   );
   const evidenceFresh = testFresh && benchmarkFresh;
+  // P38.2-6 (INV-P38.2-006): required evidence freshness checks only the
+  // profile's REQUIRED (mustBeWired) capabilities. Runtime release does not
+  // require paid benchmark evidence — interactive profiles skip benchmark
+  // freshness here.
+  const profile = matrix.profile ?? "interactive-ephemeral";
+  const expectations = PROFILE_EXPECTATIONS[profile];
+  const requiredTestFresh = matrix.records.every(
+    (record) =>
+      !expectations.mustBeWired.includes(record.id) ||
+      !record.testDeclared ||
+      evidenceIsFresh(input.executionEvidence?.[`capability:${record.id}`], "test_run", input.gitSha),
+  );
+  const requiredBenchmarkFresh = matrix.records.every(
+    (record) =>
+      !expectations.mustBeWired.includes(record.id) ||
+      !record.benchmarkDeclared ||
+      evidenceIsFresh(input.executionEvidence?.[`benchmark:${record.id}`], "benchmark_run", input.gitSha),
+  );
+  const requiredEvidenceFresh = requiredTestFresh && requiredBenchmarkFresh;
   const verdict: AuditVerdict = {
     documentationClaimsOk,
     profileRequirementsOk,
     evidenceFresh,
+    requiredEvidenceFresh,
   };
   return {
     total: matrix.records.length,
@@ -979,7 +1007,7 @@ export function renderMatrixMarkdown(matrix: CapabilityMatrix, summary: AuditSum
       (row) => `| ${row.suite} | ${row.claimed} | ${row.actual} | ${row.planned} | ${row.truthful} |`,
     ),
     "",
-    `audit verdict (P36-8): documentationClaims=${summary.verdict.documentationClaimsOk ? "PASS" : "FAIL"}; profileRequirements=${summary.verdict.profileRequirementsOk ? "PASS" : "FAIL"}; evidenceFresh=${summary.verdict.evidenceFresh ? "PASS" : "FAIL"}`,
+    `audit verdict (P36-8): documentationClaims=${summary.verdict.documentationClaimsOk ? "PASS" : "FAIL"}; profileRequirements=${summary.verdict.profileRequirementsOk ? "PASS" : "FAIL"}; evidenceFresh=${summary.verdict.evidenceFresh ? "PASS" : "FAIL"}; requiredEvidenceFresh=${summary.verdict.requiredEvidenceFresh ? "PASS" : "FAIL"}`,
     "",
   ];
   return lines.join("\n");
@@ -1237,7 +1265,7 @@ export async function auditCmd(rest: string[], deps: CommandDeps): Promise<Comma
   }
   const lines: string[] = [
     `audit: ${summary.ok ? "OK" : "FAILED"} — ${summary.total} capabilities, ${summary.wired} wired, ${summary.implemented} implemented-only, ${summary.missing} missing`,
-    `audit verdict: documentationClaims=${summary.verdict.documentationClaimsOk ? "PASS" : "FAIL"}; profileRequirements=${summary.verdict.profileRequirementsOk ? "PASS" : "FAIL"}; evidenceFresh=${summary.verdict.evidenceFresh ? "PASS" : "FAIL"}`,
+    `audit verdict: documentationClaims=${summary.verdict.documentationClaimsOk ? "PASS" : "FAIL"}; profileRequirements=${summary.verdict.profileRequirementsOk ? "PASS" : "FAIL"}; evidenceFresh=${summary.verdict.evidenceFresh ? "PASS" : "FAIL"}; requiredEvidenceFresh=${summary.verdict.requiredEvidenceFresh ? "PASS" : "FAIL"}`,
     ...summary.docTruthfulness.map(
       (row) => `docs ${row.suite}: claimed ${row.claimed}, on disk ${row.actual}${row.planned ? " (marked planned)" : ""} → ${row.truthful ? "truthful" : "UNTRUTHFUL"}`,
     ),

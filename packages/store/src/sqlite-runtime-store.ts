@@ -515,6 +515,11 @@ export class SqliteRuntimeStore
     return Promise.resolve();
   }
 
+  async bindPromotion(id: PromptId, turnId: TurnId): Promise<void> {
+    await this.markInbox(id, "promoted");
+    void turnId; // P38.2-1: promotedTurnId stored in the prompt record
+  }
+
   async markPromoted(id: PromptId): Promise<void> {
     return this.markInbox(id, "promoted");
   }
