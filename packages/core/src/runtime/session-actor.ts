@@ -212,6 +212,7 @@ function sessionStarting(sessionId: SessionId): AgentError {
 export class InboxSessionInputQueue implements SessionInputQueue {
   private readonly followups: Array<{ id: string; input: UserMessage; promptId?: PromptId }> = [];
   private hydrated = false;
+  private hydration: Promise<void> | undefined;
   private followupIdCounter = 0;
   /** P38-2: the followup reserved for promotion but NOT yet consumed. */
   private reserved: { id: string; input: UserMessage; promptId?: PromptId } | undefined;
@@ -249,10 +250,7 @@ export class InboxSessionInputQueue implements SessionInputQueue {
    *  record. Only one reservation at a time (single-flight drain). */
   async reservePendingFollowup(): Promise<{ id: string; input: UserMessage } | undefined> {
     if (this.reserved !== undefined) return undefined;
-    if (!this.hydrated) {
-      this.hydrated = true;
-      await this.hydrate();
-    }
+    await this.ensureHydrated();
     const next = this.followups.shift();
     if (next === undefined) return undefined;
     this.reserved = next;
@@ -307,6 +305,26 @@ export class InboxSessionInputQueue implements SessionInputQueue {
       ids.add(this.reserved.promptId);
     }
     return ids;
+  }
+
+  /** P38.2-3 (INV-P38.2-003): single-flight hydration — failed hydration is
+   *  retryable (never permanently latched). */
+  private async ensureHydrated(): Promise<void> {
+    if (this.hydrated) return;
+    if (this.hydration !== undefined) {
+      await this.hydration;
+      return;
+    }
+    const p = this.hydrate();
+    this.hydration = p;
+    try {
+      await p;
+      this.hydrated = true;
+    } finally {
+      if (this.hydration === p) {
+        this.hydration = undefined;
+      }
+    }
   }
 
   private async hydrate(): Promise<void> {
