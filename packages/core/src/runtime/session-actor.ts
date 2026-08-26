@@ -86,7 +86,9 @@ export interface SessionInputQueue {
    * promotion failed so the input is never lost.
    */
   reservePendingFollowup(): Promise<{ id: string; input: UserMessage } | undefined>;
-  completePromotion(id: string): Promise<void>;
+  /** P38.2-1 (INV-P38.2-001): bind the durable prompt to the created turn,
+   *  then mark it consumed. `turnId` is the durable Turn created from it. */
+  completePromotion(id: string, turnId: TurnId): Promise<void>;
   releasePromotion(id: string): Promise<void>;
 }
 
@@ -257,11 +259,14 @@ export class InboxSessionInputQueue implements SessionInputQueue {
     return { id: next.id, input: next.input };
   }
 
-  /** P38-2 (INV-P38-002): mark the durable prompt consumed ONLY after a real
-   *  turn was created (promotion succeeded). */
-  async completePromotion(id: string): Promise<void> {
+  /** P38-2 (INV-P38-002) + P38.2-1 (INV-P38.2-001): bind the durable prompt
+   *  to the created turn identity, then mark it consumed. The bind happens
+   *  BEFORE markConsumed so even if the ack fails, the prompt is never
+   *  re-promoted to a second turn after restart. */
+  async completePromotion(id: string, turnId: TurnId): Promise<void> {
     if (this.reserved === undefined || this.reserved.id !== id) return;
     if (this.reserved.promptId !== undefined && this.deps.inbox !== undefined) {
+      await this.deps.inbox.bindPromotion(this.reserved.promptId, turnId);
       await this.deps.inbox.markConsumed(this.reserved.promptId);
     }
     this.reserved = undefined;
@@ -835,7 +840,7 @@ export class DefaultSessionActor implements SessionActor {
       // reconciliation path is on record, and let the caller settle via the
       // running turn's own outcome.
       try {
-        await queue.completePromotion(entry.id);
+        await queue.completePromotion(entry.id, turn.id);
       } catch (ackErr) {
         process.stderr.write(
           `[degraded] session ${this.sessionId} durable followup ack failed for ${entry.id} (running turn remains the owner): ${ackErr instanceof Error ? ackErr.message : String(ackErr)}\n`,

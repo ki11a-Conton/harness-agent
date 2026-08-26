@@ -144,6 +144,13 @@ class MemInboxStore implements InboxStore {
     const p = this.prompts.find((x) => x.id === id);
     if (p !== undefined && p.status === "pending") p.status = "promoted";
   }
+  async bindPromotion(id: PromptId, turnId: TurnId): Promise<void> {
+    const p = this.prompts.find((x) => x.id === id);
+    if (p !== undefined && p.status === "pending") {
+      p.status = "promoted";
+      p.promotedTurnId = turnId;
+    }
+  }
   async markConsumed(id: PromptId): Promise<void> {
     const p = this.prompts.find((x) => x.id === id);
     if (p !== undefined) p.status = "consumed";
@@ -893,7 +900,7 @@ describe("SessionActor (PHASE 25)", () => {
           await gate;
           return base.reservePendingFollowup();
         },
-        completePromotion: (id: string) => base.completePromotion(id),
+        completePromotion: (id: string, turnId: TurnId) => base.completePromotion(id, turnId),
         releasePromotion: (id: string) => base.releasePromotion(id),
       },
       entered,
@@ -1112,7 +1119,7 @@ describe("SessionActor (PHASE 25)", () => {
       expect(queue.pendingCount).toBe(1);
       // complete the in-flight reservation (single-flight) then prove the
       // second identical-text prompt (different promptId) is still retained.
-      await queue.completePromotion(first!.id);
+      await queue.completePromotion(first!.id, "turn_x" as TurnId);
       const second = await queue.reservePendingFollowup();
       expect(second?.input.text).toBe("retry");
       expect(queue.pendingCount).toBe(0);
@@ -1144,7 +1151,7 @@ describe("SessionActor (PHASE 25)", () => {
       await queue.enqueueFollowup({ sessionId, text: "A" });
       const first = await queue.reservePendingFollowup();
       expect(first).toBeDefined();
-      await queue.completePromotion(first!.id);
+      await queue.completePromotion(first!.id, "turn_x" as TurnId);
       expect(queue.pendingCount).toBe(0);
       // A duplicate would surface here as a second reservation.
       const again = await queue.reservePendingFollowup();
@@ -1172,10 +1179,10 @@ describe("SessionActor (PHASE 25)", () => {
           enqueueSteer: (i: Parameters<SessionInputQueue["enqueueSteer"]>[0]) => base.enqueueSteer(i),
           enqueueFollowup: (i: Parameters<SessionInputQueue["enqueueFollowup"]>[0]) => base.enqueueFollowup(i),
           reservePendingFollowup: () => base.reservePendingFollowup(),
-          completePromotion: async (id) => {
+          completePromotion: async (id, turnId) => {
             ackEnteredResolve();
             await ackGate;
-            return base.completePromotion(id);
+            return base.completePromotion(id, turnId);
           },
           releasePromotion: (id) => base.releasePromotion(id),
         },
@@ -1253,7 +1260,7 @@ describe("SessionActor (PHASE 25)", () => {
       await q1.enqueueFollowup({ sessionId, text: "once" });
       const entry = await q1.reservePendingFollowup();
       expect(entry).toBeDefined();
-      await q1.completePromotion(entry!.id); // consumed & owner-bound
+      await q1.completePromotion(entry!.id, "turn_x" as TurnId); // consumed & owner-bound
       // A fresh boot over the same durable inbox must NOT re-queue it.
       const q2 = new InboxSessionInputQueue({ sessionId, inbox });
       const again = await q2.reservePendingFollowup();

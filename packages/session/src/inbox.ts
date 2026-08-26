@@ -6,6 +6,7 @@ import type {
   PromptId,
   PromptKind,
   SessionId,
+  TurnId,
 } from "@ar/contracts";
 import { newPromptId, isNodeErrorCode } from "@ar/contracts";
 import { atomicWriteFile, backupTree, withLock } from "@ar/store-integrity";
@@ -98,6 +99,15 @@ export class MemInboxStore implements InboxStore {
     prompt.promotedAt = Date.now();
   }
 
+  /** P38.2-1 (INV-P38.2-001): bind the prompt to the durable turn identity. */
+  async bindPromotion(id: PromptId, turnId: TurnId): Promise<void> {
+    const prompt = this.prompts.find((p) => p.id === id);
+    if (prompt === undefined) throw new SessionStoreError("UNKNOWN_PROMPT", `unknown prompt ${id}`);
+    prompt.status = "promoted";
+    prompt.promotedAt = Date.now();
+    prompt.promotedTurnId = turnId;
+  }
+
   async markConsumed(id: PromptId): Promise<void> {
     const prompt = this.prompts.find((p) => p.id === id);
     if (prompt === undefined) throw new SessionStoreError("UNKNOWN_PROMPT", `unknown prompt ${id}`);
@@ -162,6 +172,17 @@ export class JSONLInboxStore implements InboxStore {
     await this.update(id, (prompt) => {
       prompt.status = "promoted";
       prompt.promotedAt = Date.now();
+    });
+  }
+
+  /** P38.2-1 (INV-P38.2-001): bind the prompt to the durable turn identity
+   *  created from it. Once set, a restart must never create another turn for
+   *  this prompt. */
+  async bindPromotion(id: PromptId, turnId: TurnId): Promise<void> {
+    await this.update(id, (prompt) => {
+      prompt.status = "promoted";
+      prompt.promotedAt = Date.now();
+      prompt.promotedTurnId = turnId;
     });
   }
 

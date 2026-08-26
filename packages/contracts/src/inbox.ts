@@ -1,4 +1,4 @@
-import type { PromptId, SessionId } from "./ids.js";
+import type { PromptId, SessionId, TurnId } from "./ids.js";
 
 /**
  * Session inbox (plan.md Phase 1 Issue 3 / Phase 5.3, P2-36): user input
@@ -39,6 +39,11 @@ export interface AdmittedPrompt {
   admittedAt: number;
   promotedAt?: number;
   consumedAt?: number;
+  /** P38.2-1 (INV-P38.2-001): durable turn identity bound to this prompt.
+   *  Set when a durable Turn is successfully created from this followup,
+   *  before markConsumed. A restart must never create another turn for the
+   *  same prompt if promotedTurnId already exists. */
+  promotedTurnId?: TurnId;
   /** Auto-upgrade path (JSONL/durable stores: on boot any line written by a
    *  pre-P2-36 caller is simply metadata-less; consumers do not require it). */
 }
@@ -48,6 +53,7 @@ export interface InboxStore {
   listPending(sessionId: SessionId): Promise<AdmittedPrompt[]>;
   listAll(sessionId: SessionId): Promise<AdmittedPrompt[]>;
   markPromoted(id: PromptId): Promise<void>;
+  bindPromotion(id: PromptId, turnId: TurnId): Promise<void>;
   markConsumed(id: PromptId): Promise<void>;
 }
 

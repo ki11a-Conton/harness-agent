@@ -1,4 +1,4 @@
-﻿import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -17,6 +17,7 @@ import type {
   ModelRef,
   ModelRequest,
   PromptId,
+  TurnId,
   ProviderConfig,
   SessionId,
   Skill,
@@ -1464,6 +1465,11 @@ describe("AgentRuntime (CORE-001)", () => {
         const p = this.prompts.find((x) => x.id === id)!;
         p.status = "promoted";
       }
+      async bindPromotion(id: PromptId, turnId: TurnId) {
+        const p = this.prompts.find((x) => x.id === id)!;
+        p.status = "promoted";
+        p.promotedTurnId = turnId;
+      }
       async markConsumed(id: PromptId) {
         const p = this.prompts.find((x) => x.id === id)!;
         p.status = "consumed";
@@ -1515,6 +1521,11 @@ describe("AgentRuntime (CORE-001)", () => {
         const p = this.prompts.find((x) => x.id === id)!;
         p.status = "promoted";
       }
+      async bindPromotion(id: PromptId, turnId: TurnId) {
+        const p = this.prompts.find((x) => x.id === id)!;
+        p.status = "promoted";
+        p.promotedTurnId = turnId;
+      }
       async markConsumed(id: PromptId) {
         const p = this.prompts.find((x) => x.id === id)!;
         p.status = "consumed";
@@ -1537,7 +1548,7 @@ describe("AgentRuntime (CORE-001)", () => {
       turnId: turn.id,
       role: "user",
       content: "[steering] use the red theme",
-      promptId,
+      promptId: promptId,
       createdAt: Date.now(),
     });
     inbox.prompts.push({
@@ -1576,6 +1587,11 @@ describe("AgentRuntime (CORE-001)", () => {
       async markPromoted(id: PromptId) {
         const p = this.prompts.find((x) => x.id === id)!;
         p.status = "promoted";
+      }
+      async bindPromotion(id: PromptId, turnId: TurnId) {
+        const p = this.prompts.find((x) => x.id === id)!;
+        p.status = "promoted";
+        p.promotedTurnId = turnId;
       }
       async markConsumed(id: PromptId) {
         const p = this.prompts.find((x) => x.id === id)!;
