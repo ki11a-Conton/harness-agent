@@ -40,6 +40,16 @@ class GatedProvider implements ModelProvider {
   private entered = 0;
   private entryWaiters: Array<() => void> = [];
   private releases: Array<(value: void | PromiseLike<void>) => void> = [];
+  /** P38.2-8 (INV-P38.2-008): execution-overlap counters wired to the runtime
+   *  seam. Each generate() that is mid-flight counts as one live run; a test
+   *  asserts maxActiveRuns === 1 to prove runs never overlapped. */
+  private activeRuns = 0;
+  private maxActiveRuns = 0;
+
+  /** P38.2-8: the observed maximum number of concurrently live executions. */
+  get observedMaxActiveRuns(): number {
+    return this.maxActiveRuns;
+  }
 
   whenEntered(): Promise<void> {
     if (this.entered > 0) return Promise.resolve();
@@ -72,12 +82,19 @@ class GatedProvider implements ModelProvider {
         yield { type: "text_delta", text: "thinking", timestamp: 0 };
         self.entered += 1;
         self.entryWaiters.shift()?.();
-        await new Promise<void>((resolve) => {
-          if (signal.aborted) return resolve();
-          self.releases.push(resolve);
-          signal.addEventListener("abort", () => resolve(), { once: true });
-        });
-        yield { type: "completed", result: { finishReason: "stop", text: "done" }, timestamp: 0 };
+        // P38.2-8: this generate() is now a live runtime execution.
+        self.activeRuns += 1;
+        self.maxActiveRuns = Math.max(self.maxActiveRuns, self.activeRuns);
+        try {
+          await new Promise<void>((resolve) => {
+            if (signal.aborted) return resolve();
+            self.releases.push(resolve);
+            signal.addEventListener("abort", () => resolve(), { once: true });
+          });
+          yield { type: "completed", result: { finishReason: "stop", text: "done" }, timestamp: 0 };
+        } finally {
+          self.activeRuns -= 1;
+        }
       },
     };
   }
@@ -161,5 +178,9 @@ describe("P34-2 part2", () => {
     const second = await echo.actor.startTurn({ sessionId: echo.sessionId, text: "after-cancel" });
     expect((await second.outcome).status).toBe("completed");
     expect(echo.actor.activeTurn).toBeUndefined();
+    // P38.2-8: the cancelled live run and the fresh run never overlapped at
+    // the seam (the fresh run used the non-blocking provider, so it is not
+    // counted here — the gated provider observed only the one live run).
+    expect(h.provider.observedMaxActiveRuns).toBe(1);
   });
 });

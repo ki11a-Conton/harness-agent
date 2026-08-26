@@ -65,6 +65,17 @@ class GatedProvider implements ModelProvider {
   private entered = 0;
   private entryWaiters: Array<() => void> = [];
   private releases: Array<(value: void | PromiseLike<void>) => void> = [];
+  /** P38.2-8 (INV-P38.2-008): execution-overlap counters wired to the runtime
+   *  seam. Each generate() that is mid-flight counts as one live run; a test
+   *  asserts maxActiveRuns === 1 to prove runs never overlapped, instead of
+   *  only checking the current API shape (activeTurn). */
+  private activeRuns = 0;
+  private maxActiveRuns = 0;
+
+  /** P38.2-8: the observed maximum number of concurrently live executions. */
+  get observedMaxActiveRuns(): number {
+    return this.maxActiveRuns;
+  }
 
   whenEntered(): Promise<void> {
     if (this.entered > 0) return Promise.resolve();
@@ -98,12 +109,19 @@ class GatedProvider implements ModelProvider {
         yield { type: "text_delta", text: "thinking", timestamp: 0 };
         self.entered += 1;
         self.entryWaiters.shift()?.();
-        await new Promise<void>((resolve) => {
-          if (signal.aborted) return resolve();
-          self.releases.push(resolve);
-          signal.addEventListener("abort", () => resolve(), { once: true });
-        });
-        yield { type: "completed", result: { finishReason: "stop", text: "done" }, timestamp: 0 };
+        // P38.2-8: this generate() is now a live runtime execution.
+        self.activeRuns += 1;
+        self.maxActiveRuns = Math.max(self.maxActiveRuns, self.activeRuns);
+        try {
+          await new Promise<void>((resolve) => {
+            if (signal.aborted) return resolve();
+            self.releases.push(resolve);
+            signal.addEventListener("abort", () => resolve(), { once: true });
+          });
+          yield { type: "completed", result: { finishReason: "stop", text: "done" }, timestamp: 0 };
+        } finally {
+          self.activeRuns -= 1;
+        }
       },
     };
   }
@@ -174,6 +192,8 @@ it("2.1 racing a second runTurn at a live turn — refused (SESSION_BUSY), never
     const outcome = await first.outcome;
     expect(outcome.status).toBe("completed");
     expect(h.actor.activeTurn).toBeUndefined();
+    // P38.2-8: only ever ONE concurrent runtime execution at the seam.
+    expect(h.provider.observedMaxActiveRuns).toBe(1);
   });
 
 it("2.2 turn start / steer / follow-up racing a live turn — no parallel run", async () => {
@@ -197,6 +217,8 @@ it("2.2 turn start / steer / follow-up racing a live turn — no parallel run", 
     h.provider.release();
     await waitFor(() => h.actor.activeTurn === undefined);
     expect(h.actor.activeTurn).toBeUndefined();
+    // P38.2-8: turns always drain serially, never overlapping.
+    expect(h.provider.observedMaxActiveRuns).toBe(1);
   });
 
 it("2.3 cancel / interrupt racing a live run — aborts the SAME live turn, session stays single-owner", async () => {
@@ -214,6 +236,10 @@ it("2.3 cancel / interrupt racing a live run — aborts the SAME live turn, sess
     const second = await a2.startTurn({ sessionId: s2, text: "after-cancel" });
     expect((await second.outcome).status).toBe("completed");
     expect(a2.activeTurn).toBeUndefined();
+    // P38.2-8: the cancelled live run + the fresh run never overlapped at the
+    // seam (the fresh run used the non-blocking provider, so it is not counted
+    // here — the gated provider observed only the one live run).
+    expect(h.provider.observedMaxActiveRuns).toBe(1);
   });
 
 it("2.4 approval / ask / MCP refresh arriving mid-turn — never starts a parallel run", async () => {
@@ -229,6 +255,8 @@ it("2.4 approval / ask / MCP refresh arriving mid-turn — never starts a parall
     h.provider.release();
     const outcome = await first.outcome;
     expect(outcome.status).toBe("completed");
+    // P38.2-8: refusal paths never opened a second concurrent execution.
+    expect(h.provider.observedMaxActiveRuns).toBe(1);
   });
 
 it("2.5 adversarial interleave — non-conflicting ops land around ONE live run, follow-up drains serially", async () => {
@@ -256,5 +284,8 @@ it("2.5 adversarial interleave — non-conflicting ops land around ONE live run,
     await waitFor(() => h.actor.activeTurn === undefined);
     expect(h.actor.activeTurn).toBeUndefined();
     expect(h.actor.inputQueue.pendingCount).toBe(0);
+    // P38.2-8: the live turn + the drained follow-up ran serially, never
+    // overlapping at the runtime seam.
+    expect(h.provider.observedMaxActiveRuns).toBe(1);
   });
 });

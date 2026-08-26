@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import type {
   AdmittedPrompt,
   AgentDefinition,
+  EventType,
   InboxStore,
   ModelEvent,
   ModelProvider,
@@ -192,6 +193,36 @@ async function setupActor(
   const session = await runtime.createSession({ agent: AGENT, cwd: "/work" });
   const actor = await manager.load(session.id);
   return { runtime, manager, store, events, orchestrator, inbox, sessionId: session.id, actor };
+}
+
+/** A session store whose getTurn blocks until released — used to pin a
+ *  runTurn(existing) INSIDE its requireTurn await (the promotion window).
+ *  Spread copies only own enumerable fields, so prototype methods (getTurn /
+ *  updateTurn / …) must be re-bound to the underlying real store explicitly —
+ *  otherwise terminalizeRevokedTurn's updateTurn() would hit a missing method
+ *  (that was exactly the P38.1-004 pre-change silent-degradation trap). */
+function gatedGetTurnStore(
+  real: MemorySessionStore,
+): { store: MemorySessionStore; entered: Promise<void>; open: () => void } {
+  let enteredResolve!: () => void;
+  const entered = new Promise<void>((resolve) => { enteredResolve = resolve; });
+  let openResolve!: () => void;
+  const gate = new Promise<void>((resolve) => { openResolve = resolve; });
+  return {
+    store: {
+      ...real,
+      getTurn: async (id: TurnId): Promise<Turn | undefined> => {
+        enteredResolve();
+        await gate;
+        return real.getTurn(id);
+      },
+      updateTurn: (turn: Turn) => real.updateTurn(turn),
+      createTurn: (turn: Turn) => real.createTurn(turn),
+      listTurns: (sessionId: SessionId) => real.listTurns(sessionId),
+    } as MemorySessionStore,
+    entered,
+    open: openResolve,
+  };
 }
 
 /**
@@ -1273,29 +1304,6 @@ describe("SessionActor (PHASE 25)", () => {
   // ---------------------------------------------------------------------------
 
   describe("P38.1-4 starting reservation cancellation hardening", () => {
-    /** A session store whose getTurn blocks until released — used to pin a
-     *  runTurn(existing) INSIDE its requireTurn await (the promotion window). */
-    function gatedGetTurnStore(
-      real: MemorySessionStore,
-    ): { store: MemorySessionStore; entered: Promise<void>; open: () => void } {
-      let enteredResolve!: () => void;
-      const entered = new Promise<void>((resolve) => { enteredResolve = resolve; });
-      let openResolve!: () => void;
-      const gate = new Promise<void>((resolve) => { openResolve = resolve; });
-      return {
-        store: {
-          ...real,
-          async getTurn(id: TurnId): Promise<Turn | undefined> {
-            enteredResolve();
-            await gate;
-            return real.getTurn(id);
-          },
-        } as MemorySessionStore,
-        entered,
-        open: openResolve,
-      };
-    }
-
     it("Test A — runTurn(existing) blocked in load + cancelTurn: runTurn never invoked (INV-P38.1-005)", async () => {
       const { runtime, store, sessionId, actor: realActor } = await setupActor();
       // Create a REAL durable turn so that (absent cancellation) requireTurn
@@ -1356,7 +1364,27 @@ describe("SessionActor (PHASE 25)", () => {
     });
 
     it("Test D — 100-way mixed ownership race keeps max live owner <= 1", async () => {
-      const { actor, sessionId } = await setupActor();
+      const { runtime, store, sessionId } = await setupActor();
+      const session = (await store.getSession(sessionId))!;
+      // P38.2-8 (INV-P38.2-008): measure REAL execution overlap at the runtime
+      // seam — wrap runtime.runTurn with activeRuns/maxActiveRuns counters.
+      // A shape-only `activeTurn ? 1 : 0` check proves only the current API
+      // surface, not whether two executions overlapped earlier in the race.
+      let activeRuns = 0;
+      let maxActiveRuns = 0;
+      const countingRuntime = {
+        startTurn: (sid: SessionId, text: string) => runtime.startTurn(sid, text),
+        runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => {
+          activeRuns += 1;
+          maxActiveRuns = Math.max(maxActiveRuns, activeRuns);
+          return runtime
+            .runTurn(sid, turnId, signal)
+            .finally(() => {
+              activeRuns -= 1;
+            });
+        },
+      } as unknown as Pick<AgentRuntime, "startTurn" | "runTurn">;
+      const actor = new DefaultSessionActor({ persistent: session, runtime: countingRuntime, store });
       await actor.enqueueFollowup({ sessionId, text: "queue0" });
       const runs = Array.from({ length: 50 }, (_, i) =>
         actor
@@ -1369,9 +1397,172 @@ describe("SessionActor (PHASE 25)", () => {
           .then(() => "queued"),
       );
       await Promise.all([...queuePrefill, ...runs]);
-      // Max concurrency is governed by the actor, not by tweaking inputs: the
-      // activeTurn singleton invariant holds throughout (never > 1 owner).
+      // P38.2-8: no two runtime.runTurn executions EVER overlapped — the
+      // observed max concurrency at the seam is exactly 1.
+      expect(maxActiveRuns).toBe(1);
+      // The activeTurn singleton invariant holds throughout (never > 1 owner).
       expect(actor.activeTurn !== undefined ? 1 : 0).toBeLessThanOrEqual(1);
     });
+  });
+});
+
+describe("P38.2-9 — terminal cancellation persistence truth (INV-P38.2-009)", () => {
+  /** A MemorySessionStore whose updateTurn rejects once. After the failure it
+   *  delegates to the real store so subsequent calls work normally. Spread
+   *  copies only own props, so prototype methods are re-bound explicitly. */
+  function onceFailingStore(real: MemorySessionStore): { store: MemorySessionStore; fail: () => void } {
+    let shouldFail = false;
+    return {
+      store: {
+        ...real,
+        updateTurn: async (turn: Turn): Promise<void> => {
+          if (shouldFail) {
+            shouldFail = false; // one-shot
+            throw new Error("P38.2-9 simulated updateTurn failure");
+          }
+          return real.updateTurn(turn);
+        },
+        getTurn: (id: TurnId) => real.getTurn(id),
+        createTurn: (turn: Turn) => real.createTurn(turn),
+        listTurns: (sessionId: SessionId) => real.listTurns(sessionId),
+      } as MemorySessionStore,
+      fail: () => { shouldFail = true; },
+    };
+  }
+
+  it("updateTurn success → cancelled (statusDetail cancelled_no_effect, P38.2-9)", async () => {
+    const { runtime, store, sessionId, actor: realActor } = await setupActor();
+    const existing = await realActor.createTurn({ sessionId, text: "existing" });
+    const session = (await store.getSession(sessionId))!;
+    let runCalls = 0;
+    const runtimeProxy = {
+      startTurn: (sid: SessionId, text: string) => runtime.startTurn(sid, text),
+      runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => {
+        runCalls += 1;
+        return runtime.runTurn(sid, turnId, signal);
+      },
+    } as Pick<AgentRuntime, "startTurn" | "runTurn">;
+    const gated = gatedGetTurnStore(store);
+    const actor = new DefaultSessionActor({ persistent: session, runtime: runtimeProxy, store: gated.store });
+    const runPromise = actor.runTurn(existing.id);
+    await gated.entered; // inside requireTurn — promotion window
+    const status = await actor.cancelTurn(existing.id);
+    expect(status).toBe("cancelled");
+    gated.open();
+    const outcome = await runPromise;
+    // INV-P38.2-009: success path → clean cancelled
+    expect(outcome.status).toBe("cancelled");
+    expect(outcome.statusDetail).toBe("cancelled_no_effect");
+    expect(runCalls).toBe(0);
+  });
+
+  it("updateTurn failure → failed + cancellation_persistence_uncertain (P38.2-9)", async () => {
+    const { runtime, store, sessionId, actor: realActor } = await setupActor();
+    const existing = await realActor.createTurn({ sessionId, text: "existing" });
+    const session = (await store.getSession(sessionId))!;
+    let runCalls = 0;
+    const runtimeProxy = {
+      startTurn: (sid: SessionId, text: string) => runtime.startTurn(sid, text),
+      runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => {
+        runCalls += 1;
+        return runtime.runTurn(sid, turnId, signal);
+      },
+    } as Pick<AgentRuntime, "startTurn" | "runTurn">;
+    // Wrap store so updateTurn fails.
+    const fstore = onceFailingStore(store);
+    const gated = gatedGetTurnStore(fstore.store);
+    const actor = new DefaultSessionActor({ persistent: session, runtime: runtimeProxy, store: gated.store });
+    fstore.fail(); // next updateTurn will throw
+    const runPromise = actor.runTurn(existing.id);
+    await gated.entered; // inside requireTurn — promotion window
+    const status = await actor.cancelTurn(existing.id);
+    expect(status).toBe("cancelled");
+    gated.open();
+    const outcome = await runPromise;
+    // INV-P38.2-009: persist failure → typed uncertainty, NOT a clean cancelled
+    expect(outcome.status).toBe("failed");
+    expect(outcome.statusDetail).toBe("cancellation_persistence_uncertain");
+    expect(outcome.error?.code).toBe("INTERNAL_ERROR");
+    // runtime.runTurn was never called (the turn was cancelled before promotion)
+    expect(runCalls).toBe(0);
+  });
+
+  it("event emit failure separately surfaced (P38.2-9)", async () => {
+    // The emit call is inside a separate try-catch in terminalizeRevokedTurn —
+    // an emit failure must not hide the persist result. We verify the success-
+    // persist path first, then the failure-persist path.
+    const { runtime, store, sessionId, actor: realActor } = await setupActor();
+    const session = (await store.getSession(sessionId))!;
+    let runCalls = 0;
+    const runtimeProxy = {
+      startTurn: (sid: SessionId, text: string) => runtime.startTurn(sid, text),
+      runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => {
+        runCalls += 1;
+        return runtime.runTurn(sid, turnId, signal);
+      },
+    } as Pick<AgentRuntime, "startTurn" | "runTurn">;
+
+    // A session with a failing emit.
+    const existing = await realActor.createTurn({ sessionId, text: "existing" });
+    const fstore = onceFailingStore(store);
+    fstore.fail(); // next updateTurn fails
+    const gated = gatedGetTurnStore(fstore.store);
+    const actor = new DefaultSessionActor({
+      persistent: session,
+      runtime: runtimeProxy,
+      store: gated.store,
+      emit: {
+        async emit(_sid: SessionId, _type: EventType, _payload: Record<string, unknown>, _turnId?: TurnId): Promise<void> {
+          throw new Error("P38.2-9 simulated emit failure");
+        },
+      },
+    });
+
+    const runPromise = actor.runTurn(existing.id);
+    await gated.entered;
+    await actor.cancelTurn(existing.id);
+    gated.open();
+    const outcome = await runPromise;
+    // The failed emit does NOT change the uncertainty status — both failures
+    // are independently surfaced via degraded logs; the outcome reflects the
+    // persist truth (P38.2-9: caller must not see a clean cancelled).
+    expect(outcome.status).toBe("failed");
+    expect(outcome.statusDetail).toBe("cancellation_persistence_uncertain");
+    expect(runCalls).toBe(0);
+  });
+
+  it("no runtime.runTurn execution after pre-promotion cancellation with failing persist (P38.2-9)", async () => {
+    const { runtime, store, sessionId, actor: realActor } = await setupActor();
+    const session = (await store.getSession(sessionId))!;
+    let runCalls = 0;
+    const runtimeProxy = {
+      startTurn: (sid: SessionId, text: string) => runtime.startTurn(sid, text),
+      runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => {
+        runCalls += 1;
+        return runtime.runTurn(sid, turnId, signal);
+      },
+    } as Pick<AgentRuntime, "startTurn" | "runTurn">;
+
+    // Create two turns: one to cancel, one to test that a second run after
+    // cancelled-uncertain does NOT sneak into runtime.runTurn.
+    const existing = await realActor.createTurn({ sessionId, text: "existing" });
+    const fstore = onceFailingStore(store);
+    fstore.fail();
+    const gated = gatedGetTurnStore(fstore.store);
+    const actor = new DefaultSessionActor({ persistent: session, runtime: runtimeProxy, store: gated.store });
+    const runPromise = actor.runTurn(existing.id);
+    await gated.entered;
+    await actor.cancelTurn(existing.id);
+    gated.open();
+    const outcome = await runPromise;
+    expect(outcome.status).toBe("failed");
+    expect(outcome.statusDetail).toBe("cancellation_persistence_uncertain");
+    expect(runCalls).toBe(0);
+
+    // A new startTurn must still work — the actor must be idle.
+    const freshHandle = await actor.startTurn({ sessionId, text: "fresh" });
+    const fresh = await freshHandle.outcome;
+    expect(fresh.status).toBe("completed");
+    expect(runCalls).toBe(1);
   });
 });

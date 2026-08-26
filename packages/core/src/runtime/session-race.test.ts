@@ -41,6 +41,17 @@ class GatedProvider implements ModelProvider {
   private firstArmed = true; // first generate() of a turn parks on the gate
   private entryWaiters: Array<() => void> = [];
   private releaseGate?: () => void = undefined;
+  /** P38.2-8 (INV-P38.2-008): execution-overlap counters wired to the runtime
+   *  seam. Each generate() that is mid-flight (parked on the gate) counts as
+   *  one live run; a test asserts maxActiveRuns === 1 to prove runs never
+   *  overlapped. */
+  private activeRuns = 0;
+  private maxActiveRuns = 0;
+
+  /** P38.2-8: the observed maximum number of concurrently live executions. */
+  get observedMaxActiveRuns(): number {
+    return this.maxActiveRuns;
+  }
 
   whenEntered(): Promise<void> {
     if (!this.firstArmed) return Promise.resolve();
@@ -67,13 +78,25 @@ class GatedProvider implements ModelProvider {
           // FIRST round of a turn: park here until release()
           self.firstArmed = false;
           self.entryWaiters.shift()?.();
-          await new Promise<void>((resolve) => {
-            if (signal.aborted) return resolve();
-            self.releaseGate = resolve;
-            signal.addEventListener("abort", () => resolve(), { once: true });
-          });
+          // P38.2-8: this generate() is now a live runtime execution — parked
+          // on the gate until release()/abort, then emitting the completed
+          // yield. Later rounds (firstArmed already false) stream instantly
+          // and never count as a live run.
+          self.activeRuns += 1;
+          self.maxActiveRuns = Math.max(self.maxActiveRuns, self.activeRuns);
+          try {
+            await new Promise<void>((resolve) => {
+              if (signal.aborted) return resolve();
+              self.releaseGate = resolve;
+              signal.addEventListener("abort", () => resolve(), { once: true });
+            });
+            yield { type: "completed", result: { finishReason: "stop", text: "done" }, timestamp: 0 };
+          } finally {
+            self.activeRuns -= 1;
+          }
+        } else {
+          yield { type: "completed", result: { finishReason: "stop", text: "done" }, timestamp: 0 };
         }
-        yield { type: "completed", result: { finishReason: "stop", text: "done" }, timestamp: 0 };
       },
     };
   }
@@ -150,6 +173,8 @@ describe("P34-2 same-session race suite", () => {
     const outcome = await first.outcome;
     expect(outcome.status).toBe("completed");
     expect(h.actor.activeTurn).toBeUndefined();
+    // P38.2-8: the refused runTurn never opened a parallel execution.
+    expect(h.provider.observedMaxActiveRuns).toBe(1);
   });
 
   it("2.2 turn start / steer / follow-up racing a live turn — no parallel run", async () => {
@@ -169,6 +194,8 @@ describe("P34-2 same-session race suite", () => {
     // P37-1: the queued follow-up is drained automatically by the actor.
     await waitUntilIdle(h.actor);
     expect(h.actor.activeTurn).toBeUndefined();
+    // P38.2-8: the live turn and the drained follow-up ran serially.
+    expect(h.provider.observedMaxActiveRuns).toBe(1);
   });
 
   it("2.3 cancel / interrupt racing a live run — aborts the SAME live turn, session stays single-owner", async () => {
@@ -185,6 +212,8 @@ describe("P34-2 same-session race suite", () => {
     h.provider.release();
     expect((await second.outcome).status).toBe("completed");
     expect(h.actor.activeTurn).toBeUndefined();
+    // P38.2-8: the cancelled live run and the fresh run never overlapped.
+    expect(h.provider.observedMaxActiveRuns).toBe(1);
   });
 
   it("2.4 approval / ask / MCP refresh mid-turn — never starts a parallel run", async () => {
@@ -198,6 +227,8 @@ describe("P34-2 same-session race suite", () => {
     h.provider.release();
     const outcome = await first.outcome;
     expect(outcome.status).toBe("completed");
+    // P38.2-8: refusal paths never opened a second concurrent execution.
+    expect(h.provider.observedMaxActiveRuns).toBe(1);
   });
 
   it("2.5 adversarial interleave — non-conflicting ops land around ONE live run; follow-up drains serially", async () => {
@@ -219,5 +250,8 @@ describe("P34-2 same-session race suite", () => {
     // P37-1: queued follow-up drains automatically after the live run settles.
     await waitUntilIdle(h.actor);
     expect(h.actor.activeTurn).toBeUndefined();
+    // P38.2-8: the live turn + the drained follow-up ran serially, never
+    // overlapping at the runtime seam.
+    expect(h.provider.observedMaxActiveRuns).toBe(1);
   });
 });

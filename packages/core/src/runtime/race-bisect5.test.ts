@@ -17,6 +17,16 @@ class GatedProvider implements ModelProvider {
   private entered = 0;
   private entryWaiters: Array<() => void> = [];
   private releases: Array<(value: void | PromiseLike<void>) => void> = [];
+  /** P38.2-8 (INV-P38.2-008): execution-overlap counters wired to the runtime
+   *  seam. Each generate() that is mid-flight counts as one live run; a test
+   *  asserts maxActiveRuns === 1 to prove runs never overlapped. */
+  private activeRuns = 0;
+  private maxActiveRuns = 0;
+
+  /** P38.2-8: the observed maximum number of concurrently live executions. */
+  get observedMaxActiveRuns(): number {
+    return this.maxActiveRuns;
+  }
 
   // resolves when the NEXT in-flight turn has reached the gate
   whenEntered(): Promise<void> {
@@ -35,12 +45,19 @@ class GatedProvider implements ModelProvider {
         yield { type: "text_delta", text: "thinking", timestamp: 0 };
         self.entered += 1;
         self.entryWaiters.shift()?.();
-        await new Promise<void>((resolve) => {
-          if (signal.aborted) return resolve();
-          self.releases.push(resolve);
-          signal.addEventListener("abort", () => resolve(), { once: true });
-        });
-        yield { type: "completed", result: { finishReason: "stop", text: "done" }, timestamp: 0 };
+        // P38.2-8: this generate() is now a live runtime execution.
+        self.activeRuns += 1;
+        self.maxActiveRuns = Math.max(self.maxActiveRuns, self.activeRuns);
+        try {
+          await new Promise<void>((resolve) => {
+            if (signal.aborted) return resolve();
+            self.releases.push(resolve);
+            signal.addEventListener("abort", () => resolve(), { once: true });
+          });
+          yield { type: "completed", result: { finishReason: "stop", text: "done" }, timestamp: 0 };
+        } finally {
+          self.activeRuns -= 1;
+        }
       },
     };
   }
@@ -74,5 +91,7 @@ describe("bisect5", () => {
     const outcome = await first.outcome;
     expect(outcome.status).toBe("completed");
     expect(actor.activeTurn).toBeUndefined();
+    // P38.2-8: the refused second runTurn never opened a parallel execution.
+    expect(provider.observedMaxActiveRuns).toBe(1);
   });
 });

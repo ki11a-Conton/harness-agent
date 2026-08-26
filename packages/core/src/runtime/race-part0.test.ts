@@ -39,6 +39,14 @@ class GatedProvider implements ModelProvider {
   private entered = 0;
   private entryWaiters: Array<() => void> = [];
   private releases: Array<(value: void | PromiseLike<void>) => void> = [];
+  /** P38.2-8 (INV-P38.2-008): execution-overlap counters at the runtime seam. */
+  private activeRuns = 0;
+  private maxActiveRuns = 0;
+
+  /** P38.2-8: observed max concurrently live executions. */
+  get observedMaxActiveRuns(): number {
+    return this.maxActiveRuns;
+  }
 
   whenEntered(): Promise<void> {
     if (this.entered > 0) return Promise.resolve();
@@ -59,12 +67,18 @@ class GatedProvider implements ModelProvider {
         yield { type: "text_delta", text: "thinking", timestamp: 0 };
         self.entered += 1;
         self.entryWaiters.shift()?.();
-        await new Promise<void>((resolve) => {
-          if (signal.aborted) return resolve();
-          self.releases.push(resolve);
-          signal.addEventListener("abort", () => resolve(), { once: true });
-        });
-        yield { type: "completed", result: { finishReason: "stop", text: "done" }, timestamp: 0 };
+        self.activeRuns += 1;
+        self.maxActiveRuns = Math.max(self.maxActiveRuns, self.activeRuns);
+        try {
+          await new Promise<void>((resolve) => {
+            if (signal.aborted) return resolve();
+            self.releases.push(resolve);
+            signal.addEventListener("abort", () => resolve(), { once: true });
+          });
+          yield { type: "completed", result: { finishReason: "stop", text: "done" }, timestamp: 0 };
+        } finally {
+          self.activeRuns -= 1;
+        }
       },
     };
   }
@@ -126,5 +140,7 @@ describe("P34-2 part0", () => {
     const outcome = await first.outcome;
     expect(outcome.status).toBe("completed");
     expect(h.actor.activeTurn).toBeUndefined();
+    // P38.2-8: only one concurrent runtime execution at the seam.
+    expect(h.provider.observedMaxActiveRuns).toBe(1);
   });
 });

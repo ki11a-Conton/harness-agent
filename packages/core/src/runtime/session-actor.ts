@@ -37,7 +37,7 @@ import type {
   UserMessage,
 } from "@ar/contracts";
 import { errorInfo, newPromptId } from "@ar/contracts";
-import type { AgentRuntime, TurnOutcome } from "./runtime.js";
+import type { AgentRuntime, TurnOutcome, TurnOutcomeDetail } from "./runtime.js";
 import { AgentError } from "../errors.js";
 
 /** P25-1: durable session shape — the contracts `Session` IS the persistent
@@ -707,22 +707,32 @@ export class DefaultSessionActor implements SessionActor {
    *   • emit `turn.cancelled` through the optional emit seam so the event
    *     stream stays complete (P38.1-12/13),
    *   • return a cancelled TurnOutcome so the caller never hangs.
-   *  Side-effect writes are best-effort and degraded loudly — never silent. */
+   *
+   *  INV-P38.2-009: if the durable updateTurn(cancelled) FAILS, the caller must
+   *  not receive a clean `cancelled` outcome — the store may still hold old
+   *  nonterminal state. We return a typed `failed` outcome whose statusDetail is
+   *  `cancellation_persistence_uncertain`, and the emit payload carries the
+   *  same uncertainty so no observer claims a clean cancellation. */
   private async terminalizeRevokedTurn(turn: Turn): Promise<TurnOutcome> {
     const cancelledTurn: Turn = { ...turn, status: "cancelled" };
+    let persistFailed = false;
     try {
       await this.deps.store.updateTurn(cancelledTurn);
     } catch (persistErr) {
+      persistFailed = true;
       process.stderr.write(
         `[degraded] session ${this.sessionId} failed to persist turn ${turn.id} as cancelled: ${persistErr instanceof Error ? persistErr.message : String(persistErr)}\n`,
       );
     }
+    const statusDetail: TurnOutcomeDetail = persistFailed
+      ? "cancellation_persistence_uncertain"
+      : "cancelled_no_effect";
     if (this.deps.emit !== undefined) {
       try {
         await this.deps.emit.emit(
           this.sessionId,
           "turn.cancelled",
-          { status: "cancelled", statusDetail: "cancelled_no_effect" },
+          { status: persistFailed ? "failed" : "cancelled", statusDetail },
           turn.id,
         );
       } catch (emitErr) {
@@ -732,11 +742,19 @@ export class DefaultSessionActor implements SessionActor {
       }
     }
     return {
-      status: "cancelled",
-      statusDetail: "cancelled_no_effect",
+      status: persistFailed ? "failed" : "cancelled",
+      statusDetail,
       turn: cancelledTurn,
       toolCalls: 0,
       iterations: 0,
+      ...(persistFailed
+        ? {
+            error: errorInfo(
+              "INTERNAL_ERROR",
+              `failed to persist cancelled turn ${turn.id} — durable status is uncertain`,
+            ),
+          }
+        : {}),
     };
   }
 

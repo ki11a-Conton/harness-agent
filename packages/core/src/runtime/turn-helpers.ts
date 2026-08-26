@@ -574,7 +574,11 @@ export type TurnOutcomeDetail =
   /** P1-1: the turn paused waiting for approval. Same semantics as
    *  waiting_for_user — not a failure, the turn can resume. */
   | "waiting_approval_no_effect"
-  | "waiting_approval_with_effects";
+  | "waiting_approval_with_effects"
+  /** P38.2-9: a starting turn was cancelled before promotion, but the durable
+   *  updateTurn(cancelled) call failed — the caller must NOT treat this as a
+   *  clean cancellation. The store may still hold old nonterminal state. */
+  | "cancellation_persistence_uncertain";
 
 export interface TurnOutcome {
   status: TurnOutcomeStatus;
