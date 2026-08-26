@@ -216,7 +216,7 @@ export class InboxSessionInputQueue implements SessionInputQueue {
   /** P38-2: the followup reserved for promotion but NOT yet consumed. */
   private reserved: { id: string; input: UserMessage; promptId?: PromptId } | undefined;
 
-  constructor(private readonly deps: { sessionId: SessionId; inbox?: InboxStore; now?: () => number }) {}
+  constructor(private readonly deps: { sessionId: SessionId; inbox?: InboxStore; store?: SessionStore; now?: () => number }) {}
 
   get sessionId(): SessionId {
     return this.deps.sessionId;
@@ -311,13 +311,27 @@ export class InboxSessionInputQueue implements SessionInputQueue {
 
   private async hydrate(): Promise<void> {
     const inbox = this.deps.inbox;
+    const store = this.deps.store;
     if (inbox === undefined) return;
     const pending = await inbox.listPending(this.sessionId);
     const known = this.collectKnownPromptIds();
     for (const p of pending) {
       // Only status "pending": a promoted followup already started a turn
       // (crash recovery) and must not be re-queued.
-      if (p.kind !== "followup" || p.status !== "pending") continue;
+      if (p.kind !== "followup") continue;
+      // P38.2-2 (INV-P38.2-002): promoted prompts are reconciled against
+      // their bound turn — never replayed.
+      if (p.status === "promoted") {
+        if (p.promotedTurnId !== undefined && store !== undefined) {
+          const turn = await store.getTurn(p.promotedTurnId);
+          if (turn !== undefined && (turn.status === "completed" || turn.status === "failed" || turn.status === "cancelled")) {
+            // Turn is terminal — mark the prompt consumed.
+            await inbox.markConsumed(p.id);
+          }
+        }
+        continue;
+      }
+      if (p.status !== "pending") continue;
       // P38.1-1: dedup by prompt identity — the same durable prompt may exist
       // in the inbox AND the local queue (enqueued before first hydration).
       // Skip it here; identical TEXT with a different promptId is kept.
@@ -400,6 +414,7 @@ export class DefaultSessionActor implements SessionActor {
     this.inputQueue = new InboxSessionInputQueue({
       sessionId: deps.persistent.id,
       inbox: deps.inbox,
+      store: deps.store,
       now: deps.now,
     });
     this.resourceScope = new DefaultSessionResourceScope(deps.persistent.id);
