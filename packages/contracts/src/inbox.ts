@@ -51,6 +51,18 @@ export interface AdmittedPrompt {
 export interface InboxStore {
   admit(prompt: AdmittedPrompt): Promise<void>;
   listPending(sessionId: SessionId): Promise<AdmittedPrompt[]>;
+  /**
+   * P38.3-3 (INV-P38.3-003): recovery query — followup prompts that are
+   * eligible for reconciliation after a restart:
+   *
+   *   - pending                       (never promoted → may be queued fresh)
+   *   - promoted (+/- promotedTurnId) (bound to a turn → reconcile lineage)
+   *
+   * consumed prompts are excluded (their message already appended / turn done).
+   * Hydration MUST use this API — `listPending` only returns "pending", which
+   * would make the promoted-recovery branch structurally unreachable.
+   */
+  listRecoverable(sessionId: SessionId): Promise<AdmittedPrompt[]>;
   listAll(sessionId: SessionId): Promise<AdmittedPrompt[]>;
   markPromoted(id: PromptId): Promise<void>;
   bindPromotion(id: PromptId, turnId: TurnId): Promise<void>;

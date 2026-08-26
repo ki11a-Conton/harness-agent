@@ -169,9 +169,12 @@ describe("P34-2 part2", () => {
     const first = await h.actor.startTurn({ sessionId: h.sessionId, text: "first" });
     await h.provider.whenEntered();
     const st = await h.actor.cancelTurn(first.turnId); // aborts the live one only
+    // P38.3-8: the request is accepted; terminal truth comes from the outcome.
+    expect(st.disposition).toBe("cancel_requested");
     // The model yields completed after abort → outcome is "completed" (not
-    // "cancelled"); the actor returns the raw outcome.status.
-    expect(st === "completed" || st === "cancelled").toBe(true);
+    // "cancelled"); the outcome carries the terminal status.
+    const terminal = await first.outcome;
+    expect(terminal.status === "completed" || terminal.status === "cancelled").toBe(true);
     // After the turn settles, a fresh turn with a non-blocking model
     // (EchoModelProvider) completes normally — no overlap.
     const echo = await setupEcho();

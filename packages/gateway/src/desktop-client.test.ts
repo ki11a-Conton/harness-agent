@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import type {
   AgentDefinition,
   AgentEvent,
@@ -358,7 +358,8 @@ describe("DesktopClient session lifecycle (§85)", () => {
     await provider.blocked;
 
     const cancel = await client.cancel(sessionId, turnId);
-    expect(cancel.status).toBe("cancelled");
+    // P38.3-8: request accepted; terminal truth from the outcome.
+    expect(cancel.disposition).toBe("cancel_requested");
 
     const outcome = await runPromise;
     expect(outcome.status).toBe("cancelled");

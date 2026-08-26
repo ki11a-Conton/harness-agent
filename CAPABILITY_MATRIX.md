@@ -2,8 +2,8 @@
 
 > NOT RELEASE EVIDENCE — informational repository snapshot. Official release verification uses CI-generated artifacts at immutable `github.sha`.
 
-- generatedAt: 2026-08-26T04:54:58.628Z
-- gitSha: 302a7223921618e6a6004b4fe6a89abda7753a34
+- generatedAt: 2026-08-26T09:55:36.734Z
+- gitSha: 27f7045edc6e87de1f6ce81a70ceab64a5d4560b
 
 ## Summary
 

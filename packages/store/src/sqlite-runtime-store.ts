@@ -26,6 +26,19 @@ import { CHECKPOINT_SCHEMA_VERSION, EVENT_ABI_VERSION } from "@ar/contracts";
 import type { AskUserStore } from "@ar/contracts";
 
 /**
+ * P38.3-1: inbox lineage errors raised by this store. The `@ar/store` package
+ * deliberately does NOT depend on `@ar/session` (where SessionStoreError
+ * lives), so inbox invariant violations surface as plain Error objects carrying
+ * the same stable `code` ("PROMOTION_CONFLICT" / "CONSUME_NOT_PROMOTED") that
+ * the session inbox stores use — fail-closed, typed enough to assert on.
+ */
+function inboxLineageError(code: "PROMOTION_CONFLICT" | "CONSUME_NOT_PROMOTED", message: string): Error {
+  const err = new Error(message);
+  (err as { code?: string }).code = code;
+  return err;
+}
+
+/**
  * P5-3: SQLiteRuntimeStore — one SQLite file (WAL) backing the five runtime
  * persistence contracts: SessionStore, EventStore, InboxStore, AskUserStore,
  * CheckpointStore. Approval mutable API / Artifact metadata stay on their own
@@ -494,6 +507,17 @@ export class SqliteRuntimeStore
     return rows.map((row) => parseDoc<AdmittedPrompt>(row.doc, "inbox prompt"));
   }
 
+  /** P38.3-3 (INV-P38.3-003): recovery query — pending + promoted followups.
+   *  Consumed prompts are excluded. */
+  async listRecoverable(sessionId: SessionId): Promise<AdmittedPrompt[]> {
+    const rows = this.db
+      .prepare(
+        "SELECT doc FROM inbox WHERE session_id = ? AND status IN ('pending', 'promoted') ORDER BY admitted_at",
+      )
+      .all(sessionId);
+    return rows.map((row) => parseDoc<AdmittedPrompt>(row.doc, "inbox prompt"));
+  }
+
   async listAll(sessionId: SessionId): Promise<AdmittedPrompt[]> {
     const rows = this.db
       .prepare("SELECT doc FROM inbox WHERE session_id = ? ORDER BY admitted_at")
@@ -516,8 +540,23 @@ export class SqliteRuntimeStore
   }
 
   async bindPromotion(id: PromptId, turnId: TurnId): Promise<void> {
-    await this.markInbox(id, "promoted");
-    void turnId; // P38.2-1: promotedTurnId stored in the prompt record
+    const row = this.db.prepare("SELECT doc FROM inbox WHERE id = ?").get(id);
+    if (row === undefined) return Promise.resolve();
+    const prompt = parseDoc<AdmittedPrompt>(row.doc, "inbox prompt");
+    if (prompt.promotedTurnId !== undefined && prompt.promotedTurnId !== turnId) {
+      throw inboxLineageError(
+        "PROMOTION_CONFLICT",
+        `prompt ${id} already bound to turn ${prompt.promotedTurnId}; refusing lineage rewrite to ${turnId}`,
+      );
+    }
+    const updated: AdmittedPrompt = {
+      ...prompt,
+      status: "promoted",
+      promotedAt: Date.now(),
+      promotedTurnId: turnId,
+    };
+    this.db.prepare("UPDATE inbox SET status = 'promoted', doc = ? WHERE id = ?").run(docOf(updated), id);
+    return Promise.resolve();
   }
 
   async markPromoted(id: PromptId): Promise<void> {
@@ -525,7 +564,22 @@ export class SqliteRuntimeStore
   }
 
   async markConsumed(id: PromptId): Promise<void> {
-    return this.markInbox(id, "consumed");
+    const row = this.db.prepare("SELECT doc FROM inbox WHERE id = ?").get(id);
+    if (row === undefined) return Promise.resolve();
+    const prompt = parseDoc<AdmittedPrompt>(row.doc, "inbox prompt");
+    if (prompt.status === "pending") {
+      throw inboxLineageError(
+        "CONSUME_NOT_PROMOTED",
+        `prompt ${id} is pending and unbound; cannot consume before promotion`,
+      );
+    }
+    const updated: AdmittedPrompt = {
+      ...prompt,
+      status: "consumed",
+      consumedAt: Date.now(),
+    };
+    this.db.prepare("UPDATE inbox SET status = 'consumed', doc = ? WHERE id = ?").run(docOf(updated), id);
+    return Promise.resolve();
   }
 
   // --- AskUserStore --------------------------------------------------------

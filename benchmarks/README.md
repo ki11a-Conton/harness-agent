@@ -35,6 +35,17 @@ node apps/cli/dist/main.js benchmark --shuffle --seed 42           # 乱序执�
   `failures_by_category`。
 - `--shuffle` 只随机化**执行**顺序（mulberry32 + Fisher-Yates，seed 默认 0）；
   报告顺序恒等于用例输入顺序，跨运行对比不受影响。
+- `--candidate <id>` （P38.3-10）：运行 challenger 候选，而非 champion baseline。
+  候选 id 会改变 runtime wiring（adaptive_recovery → recovery.adaptive = true、
+  memory_retrieval → mechanisms.memory = true、tool_selector_deferred_schema →
+  mechanisms.deferredSchema = true、adaptive_context_policy → context.dynamic = 4096），
+  并反映在 `runtimeConfigHash` 与 `effectiveConfig` 中。
+- **测量 ≠ 质量**（P38.3-12）：benchmark 命令仅报告**测量**结果（报告已写入、
+  X/Y 用例通过判定）。它**不是**质量裁决。质量评估由独立命令
+  `agent champion eval <baseline-runs.json> <candidate-runs.json>` 完成。
+- 每次运行附 **run manifest**（P0-6 / P38.3-10）：gitSha / dirty / model / provider /
+  temperature / suiteVersion / judgeVersion / runtimeConfigHash / timestamp /
+  platform / nodeVersion / candidate / effectiveConfig（含工具集哈希与机制接线）。
 
 无 `OPENAI_API_KEY` 时命令拒绝运行；`--allow-stub` 会诚实记录 stub 的 MODEL_ERROR
 （每个用例失败），仅用于冒烟验证管线。

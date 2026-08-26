@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "releaseEvidence": false,
+  "qualityEvidence": true,
+  "source": "existing-real-model-run",
+  "headSha": "40d78dbd530a4dd67f2801194ee7b359a528c107",
+  "suite": "adversarial",
+  "provider": "openai",
+  "model": "deepseek-v4-flash",
+  "temperature": null,
+  "cases": 13,
+  "passed": 5,
+  "passRate": 0.385,
+  "verifiedComplete": null,
+  "modelCalls": 120,
+  "toolCalls": 145,
+  "tokensInput": 443181,
+  "tokensOutput": 25306,
+  "estimatedCostUsd": null,
+  "terminationReasons": null,
+  "failuresByCategory": null,
+  "runtimeConfigHash": null,
+  "judgeVersion": "1.0.0",
+  "suiteVersion": "2.0.0",
+  "sourceNotes": [
+    "Imported from .ci/bench-real-slow/baseline-summary.json (mode: slow-batched 75s interval, API RPM-limited).",
+    "5/13 passed: 4 verified_complete-equivalent (model_stopped) + 1 verified_complete semantics.",
+    "Failed cases are adversarial security probes — model_error after retries; security violations = 0.",
+    "Fields marked null were not present in the source report and are NOT fabricated."
+  ]
+}

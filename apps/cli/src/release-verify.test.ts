@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   GATE_COMMANDS,
+  REQUIRED_GATE_PLATFORMS,
+  aggregateGateInstances,
   computeReleaseVerdict,
   parseGateEvidence,
+  parseRawEvidence,
   renderReleaseVerdict,
+  validateGateEvidenceInstance,
+  type RawGateEvidence,
   type ReleaseGateResult,
   type RequiredGateId,
 } from "./release-verify.js";
@@ -39,6 +44,14 @@ describe("P36-1 release gate truthfulness", () => {
     const verdict = computeReleaseVerdict({ headSha: HEAD, gates: allPassed() });
     expect(verdict.ready).toBe(true);
     expect(verdict.gates.every((g) => g.state === "passed")).toBe(true);
+  });
+
+  it("P38.3-12: attestation separates runtimeReleaseReady from championPromotion", () => {
+    const verdict = computeReleaseVerdict({ headSha: HEAD, gates: allPassed() });
+    // runtime readiness tracks the free deterministic gates exactly...
+    expect(verdict.runtimeReleaseReady).toBe(verdict.ready);
+    // ...but champion quality is a SEPARATE concern never evaluated here.
+    expect(verdict.championPromotion).toEqual({ status: "not_evaluated" });
   });
 
   it("one gate failed → ready false, gate stays failed", () => {
@@ -180,5 +193,242 @@ describe("P38.1-7 canonical gate command provenance", () => {
     const verdict = computeReleaseVerdict({ headSha: HEAD, gates });
     expect(verdict.ready).toBe(true);
     expect(verdict.gates.find((g) => g.id === "capability_audit")!.state).toBe("passed");
+  });
+});
+
+describe("P38.3-5 validateGateEvidenceInstance", () => {
+  const VALID_EVIDENCE: RawGateEvidence = {
+    schemaVersion: 1,
+    kind: "gate",
+    gate: "test",
+    headSha: HEAD,
+    command: GATE_COMMANDS.test,
+    exitCode: 0,
+    passed: true,
+    platform: "linux",
+  };
+
+  it("valid evidence → passed", () => {
+    const result = validateGateEvidenceInstance({
+      evidence: VALID_EVIDENCE,
+      expectedHead: HEAD,
+      expectedCommand: GATE_COMMANDS.test,
+      expectedGate: "test",
+      expectedPlatform: "linux",
+      sourcePath: "test.json",
+    });
+    expect(result.state).toBe("passed");
+    expect(result.id).toBe("test");
+    expect(result.platform).toBe("linux");
+  });
+
+  it("unsupported schemaVersion → throws", () => {
+    expect(() => validateGateEvidenceInstance({
+      evidence: { ...VALID_EVIDENCE, schemaVersion: 0 },
+      expectedHead: HEAD,
+      expectedCommand: GATE_COMMANDS.test,
+      expectedGate: "test",
+      expectedPlatform: "linux",
+      sourcePath: "test.json",
+    })).toThrow(/unsupported schemaVersion/);
+  });
+
+  it("wrong kind → throws", () => {
+    expect(() => validateGateEvidenceInstance({
+      evidence: { ...VALID_EVIDENCE, kind: "benchmark_run" },
+      expectedHead: HEAD,
+      expectedCommand: GATE_COMMANDS.test,
+      expectedGate: "test",
+      expectedPlatform: "linux",
+      sourcePath: "test.json",
+    })).toThrow(/kind.*benchmark_run.*not.*gate/);
+  });
+
+  it("wrong gate id → throws", () => {
+    expect(() => validateGateEvidenceInstance({
+      evidence: { ...VALID_EVIDENCE, gate: "chaos" },
+      expectedHead: HEAD,
+      expectedCommand: GATE_COMMANDS.test,
+      expectedGate: "test",
+      expectedPlatform: "linux",
+      sourcePath: "test.json",
+    })).toThrow(/does not match expected/);
+  });
+
+  it("stale headSha → throws", () => {
+    expect(() => validateGateEvidenceInstance({
+      evidence: { ...VALID_EVIDENCE, headSha: "deadbeef" },
+      expectedHead: HEAD,
+      expectedCommand: GATE_COMMANDS.test,
+      expectedGate: "test",
+      expectedPlatform: "linux",
+      sourcePath: "test.json",
+    })).toThrow(/stale evidence/);
+  });
+
+  it("wrong command → throws", () => {
+    expect(() => validateGateEvidenceInstance({
+      evidence: { ...VALID_EVIDENCE, command: "echo success" },
+      expectedHead: HEAD,
+      expectedCommand: GATE_COMMANDS.test,
+      expectedGate: "test",
+      expectedPlatform: "linux",
+      sourcePath: "test.json",
+    })).toThrow(/command mismatch/);
+  });
+
+  it("wrong platform → throws", () => {
+    expect(() => validateGateEvidenceInstance({
+      evidence: { ...VALID_EVIDENCE, platform: "windows" },
+      expectedHead: HEAD,
+      expectedCommand: GATE_COMMANDS.test,
+      expectedGate: "test",
+      expectedPlatform: "linux",
+      sourcePath: "test.json",
+    })).toThrow(/does not match expected/);
+  });
+
+  it("exitCode null → not_run", () => {
+    const result = validateGateEvidenceInstance({
+      evidence: { ...VALID_EVIDENCE, exitCode: null, passed: false },
+      expectedHead: HEAD,
+      expectedCommand: GATE_COMMANDS.test,
+      expectedGate: "test",
+      expectedPlatform: "linux",
+      sourcePath: "test.json",
+    });
+    expect(result.state).toBe("not_run");
+  });
+
+  it("exitCode 1 + passed true → blocked (inconsistent)", () => {
+    const result = validateGateEvidenceInstance({
+      evidence: { ...VALID_EVIDENCE, exitCode: 1, passed: true },
+      expectedHead: HEAD,
+      expectedCommand: GATE_COMMANDS.test,
+      expectedGate: "test",
+      expectedPlatform: "linux",
+      sourcePath: "test.json",
+    });
+    expect(result.state).toBe("blocked");
+    expect(result.reason).toContain("inconsistent");
+  });
+
+  it("exitCode 1 → failed", () => {
+    const result = validateGateEvidenceInstance({
+      evidence: { ...VALID_EVIDENCE, exitCode: 1, passed: false },
+      expectedHead: HEAD,
+      expectedCommand: GATE_COMMANDS.test,
+      expectedGate: "test",
+      expectedPlatform: "linux",
+      sourcePath: "test.json",
+    });
+    expect(result.state).toBe("failed");
+  });
+});
+
+describe("P38.3-6 aggregateGateInstances", () => {
+  it("all required platforms passed → passed", () => {
+    const result = aggregateGateInstances({
+      id: "test",
+      instances: [
+        { id: "test", platform: "linux", state: "passed", headSha: HEAD, command: GATE_COMMANDS.test, evidenceRef: "a.json" },
+        { id: "test", platform: "windows", state: "passed", headSha: HEAD, command: GATE_COMMANDS.test, evidenceRef: "b.json" },
+      ],
+      expectedHead: HEAD,
+    });
+    expect(result.state).toBe("passed");
+    expect(result.id).toBe("test");
+  });
+
+  it("missing required platform → failed", () => {
+    const result = aggregateGateInstances({
+      id: "test",
+      instances: [
+        { id: "test", platform: "linux", state: "passed", headSha: HEAD, command: GATE_COMMANDS.test, evidenceRef: "a.json" },
+      ],
+      expectedHead: HEAD,
+    });
+    expect(result.state).toBe("failed");
+    expect(result.reason).toContain("missing required platform windows");
+  });
+
+  it("red required platform → failed", () => {
+    const result = aggregateGateInstances({
+      id: "test",
+      instances: [
+        { id: "test", platform: "linux", state: "passed", headSha: HEAD, command: GATE_COMMANDS.test, evidenceRef: "a.json" },
+        { id: "test", platform: "windows", state: "failed", headSha: HEAD, command: GATE_COMMANDS.test, evidenceRef: "b.json" },
+      ],
+      expectedHead: HEAD,
+    });
+    expect(result.state).toBe("failed");
+    expect(result.reason).toContain("windows failed");
+  });
+
+  it("coverage has single platform only", () => {
+    const result = aggregateGateInstances({
+      id: "coverage",
+      instances: [
+        { id: "coverage", platform: "coverage", state: "passed", headSha: HEAD, command: GATE_COMMANDS.coverage, evidenceRef: "cov.json" },
+      ],
+      expectedHead: HEAD,
+    });
+    expect(result.state).toBe("passed");
+  });
+
+  it("duplicate linux cannot substitute for missing windows", () => {
+    const result = aggregateGateInstances({
+      id: "test",
+      instances: [
+        { id: "test", platform: "linux", state: "passed", headSha: HEAD, command: GATE_COMMANDS.test, evidenceRef: "a.json" },
+        { id: "test", platform: "linux", state: "passed", headSha: HEAD, command: GATE_COMMANDS.test, evidenceRef: "c.json" },
+      ],
+      expectedHead: HEAD,
+    });
+    expect(result.state).toBe("failed");
+    expect(result.reason).toContain("missing required platform windows");
+  });
+});
+
+describe("REQUIRED_GATE_PLATFORMS shape", () => {
+  it("every REQUIRED_GATE has a platform entry", () => {
+    for (const gate of ["typecheck", "test", "build", "coverage", "docs", "benchmark_smoke", "protocol", "security", "race", "chaos", "capability_audit"] as RequiredGateId[]) {
+      expect(REQUIRED_GATE_PLATFORMS[gate]).toBeDefined();
+      expect(REQUIRED_GATE_PLATFORMS[gate].length).toBeGreaterThan(0);
+    }
+  });
+
+  it("coverage is single-platform", () => {
+    expect(REQUIRED_GATE_PLATFORMS.coverage).toEqual(["coverage"]);
+  });
+
+  it("non-coverage gates require linux+windows", () => {
+    for (const gate of ["typecheck", "test", "build", "docs", "benchmark_smoke", "protocol", "security", "race", "chaos", "capability_audit"] as RequiredGateId[]) {
+      expect(REQUIRED_GATE_PLATFORMS[gate]).toEqual(["linux", "windows"]);
+    }
+  });
+});
+
+describe("parseRawEvidence", () => {
+  it("full valid evidence → RawGateEvidence", () => {
+    const raw = parseRawEvidence(
+      JSON.stringify({ schemaVersion: 1, kind: "gate", gate: "test", headSha: HEAD, command: GATE_COMMANDS.test, exitCode: 0, passed: true, platform: "linux" }),
+      "e.json",
+    );
+    expect(raw.gate).toBe("test");
+    expect(raw.schemaVersion).toBe(1);
+    expect(raw.kind).toBe("gate");
+  });
+
+  it("missing gate id → throws", () => {
+    expect(() => parseRawEvidence(JSON.stringify({ headSha: HEAD }), "e.json")).toThrow(/missing gate/);
+  });
+
+  it("unknown gate id → throws", () => {
+    expect(() => parseRawEvidence(JSON.stringify({ gate: "bogus", headSha: HEAD, command: "x", exitCode: 0 }), "e.json")).toThrow(/unknown gate/);
+  });
+
+  it("non-JSON → throws", () => {
+    expect(() => parseRawEvidence("{nope", "e.json")).toThrow(/malformed/);
   });
 });

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "releaseEvidence": false,
+  "qualityEvidence": true,
+  "source": "existing-real-model-run",
+  "generatedAt": "2026-08-26T00:00:00.000Z",
+  "model": {
+    "provider": "openai",
+    "modelId": "deepseek-v4-flash"
+  },
+  "perSuiteShaTruth": {
+    "adversarial": {
+      "headSha": "40d78dbd530a4dd67f2801194ee7b359a528c107",
+      "source": ".ci/bench-real-slow/baseline-summary.json",
+      "cases": 13,
+      "imported": true
+    },
+    "regression": {
+      "headSha": "e824c3ed9f9ccca1d69b426d4eacbdfab134d800",
+      "source": ".ci/bench-suite/regression/reg-01-implement-fizzbuzz/baseline.json, .ci/bench-suite/regression/reg-02-fix-reverse/baseline.json",
+      "cases": 2,
+      "imported": true,
+      "note": "Only 2 per-case runs exist locally (both model_error). No full 30-case regression aggregate exists on disk."
+    },
+    "holdout": {
+      "headSha": null,
+      "source": null,
+      "imported": false
+    },
+    "stress": {
+      "headSha": null,
+      "source": null,
+      "imported": false
+    }
+  },
+  "notes": [
+    "Full benchmark was reported as completed by the operator, but no local report artifact was available to import in this checkout. No paid rerun was performed by P38.3.",
+    "The only real-model report artifact present in this checkout is the adversarial suite (13 cases, 5 passed) from .ci/bench-real-slow at SHA 40d78dbd.",
+    "All other suites are recorded as NOT AVAILABLE — no fabricated zeros or invented pass rates.",
+    "Missing fields are null, never fabricated."
+  ]
+}

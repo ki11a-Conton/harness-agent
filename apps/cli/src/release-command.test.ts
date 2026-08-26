@@ -1,9 +1,10 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { gatePlatform, releaseGateCmd, releaseVerifyCmd, resolveReleaseVerdict, runGate } from "./release-command.js";
-import { GATE_COMMANDS } from "./release-verify.js";
+import { GATE_COMMANDS, REQUIRED_GATE_PLATFORMS } from "./release-verify.js";
+import type { ReleasePlatform } from "./release-verify.js";
 
 const HEAD = "0123456789abcdef";
 const REQUIRED_IDS = ["typecheck","test","build","coverage","docs","benchmark_smoke","protocol","security","race","chaos","capability_audit"];
@@ -22,8 +23,38 @@ async function tmpEvidenceDir(): Promise<string> {
   return dir;
 }
 
-function evidenceFile(id: string, exitCode: number | null): string {
-  return JSON.stringify({ gate: id, headSha: HEAD, command: GATE_COMMANDS[requiredGateIndex(id)], exitCode });
+/** Write ONE evidence instance under gates/<platform>/<id>.json with the full
+ *  P38.3-5 schema (schemaVersion/kind/platform/passed). */
+async function writeInstance(
+  dir: string,
+  id: string,
+  platform: ReleasePlatform,
+  opts: { exitCode?: number | null; headSha?: string; command?: string; kind?: string; passed?: boolean } = {},
+): Promise<string> {
+  const path = join(dir, "gates", platform, `${id}.json`);
+  await mkdir(join(dir, "gates", platform), { recursive: true });
+  const evidence = {
+    schemaVersion: 1,
+    kind: opts.kind ?? "gate",
+    gate: id,
+    headSha: opts.headSha ?? HEAD,
+    command: opts.command ?? GATE_COMMANDS[requiredGateIndex(id)],
+    exitCode: opts.exitCode ?? 0,
+    passed: opts.passed ?? ((opts.exitCode ?? 0) === 0),
+    platform,
+    generatedAt: new Date().toISOString(),
+  };
+  await writeFile(path, JSON.stringify(evidence));
+  return path;
+}
+
+/** Write every required platform instance for every required gate, all green. */
+async function writeAllGreen(dir: string): Promise<void> {
+  for (const id of REQUIRED_IDS) {
+    for (const platform of REQUIRED_GATE_PLATFORMS[requiredGateIndex(id)]) {
+      await writeInstance(dir, id, platform);
+    }
+  }
 }
 
 /** Resolve the canonical gate command for a gate id (provenance is checked by
@@ -32,11 +63,9 @@ const requiredGateIndex = (id: string): keyof typeof GATE_COMMANDS =>
   id as keyof typeof GATE_COMMANDS;
 
 describe("P36-1 release verify CLI", () => {
-  it("all gates green at HEAD → exit 0, READY", async () => {
+  it("all gates green at HEAD across required platforms → exit 0, READY", async () => {
     const dir = await tmpEvidenceDir();
-    for (const id of REQUIRED_IDS) {
-      await writeFile(join(dir, `${id}.json`), evidenceFile(id, 0));
-    }
+    await writeAllGreen(dir);
     const result = await releaseVerifyCmd([], { root: process.cwd(), evidenceDir: dir, headSha: HEAD });
     expect(result.exitCode).toBe(0);
     expect(result.lines.join("\n")).toContain("Release verdict: READY");
@@ -44,9 +73,8 @@ describe("P36-1 release verify CLI", () => {
 
   it("one failed gate → exit non-zero, FAILED", async () => {
     const dir = await tmpEvidenceDir();
-    for (const id of REQUIRED_IDS) {
-      await writeFile(join(dir, `${id}.json`), evidenceFile(id, id === "test" ? 1 : 0));
-    }
+    await writeAllGreen(dir);
+    await writeInstance(dir, "test", "linux", { exitCode: 1 });
     const result = await releaseVerifyCmd([], { root: process.cwd(), evidenceDir: dir, headSha: HEAD });
     expect(result.exitCode).toBe(1);
     expect(result.lines.join("\n")).toContain("test             FAILED");
@@ -60,21 +88,34 @@ describe("P36-1 release verify CLI", () => {
     expect(result.lines.join("\n")).toContain("typecheck        NOT_RUN");
   });
 
-  it("stale SHA evidence → blocked, exit non-zero", async () => {
+  it("P38.3-7: one required gate entirely missing → ready=false / exit 1", async () => {
     const dir = await tmpEvidenceDir();
     for (const id of REQUIRED_IDS) {
-      await writeFile(join(dir, `${id}.json`), JSON.stringify({ gate: id, headSha: id === "test" ? "deadbeef" : HEAD, command: GATE_COMMANDS[requiredGateIndex(id)], exitCode: 0 }));
+      if (id === "chaos") continue; // chaos has NO evidence at all
+      for (const platform of REQUIRED_GATE_PLATFORMS[requiredGateIndex(id)]) {
+        await writeInstance(dir, id, platform);
+      }
     }
+    const { verdict } = await resolveReleaseVerdict({ root: process.cwd(), evidenceDir: dir, headSha: HEAD });
+    expect(verdict.ready).toBe(false);
+    const chaos = verdict.gates.find((g) => g.id === "chaos")!;
+    expect(chaos.state).toBe("not_run");
     const result = await releaseVerifyCmd([], { root: process.cwd(), evidenceDir: dir, headSha: HEAD });
     expect(result.exitCode).toBe(1);
-    expect(result.lines.join("\n")).toContain("stale evidence");
+  });
+
+  it("stale SHA evidence → blocked, exit non-zero", async () => {
+    const dir = await tmpEvidenceDir();
+    await writeAllGreen(dir);
+    await writeInstance(dir, "test", "linux", { headSha: "deadbeef" });
+    const result = await releaseVerifyCmd([], { root: process.cwd(), evidenceDir: dir, headSha: HEAD });
+    expect(result.exitCode).toBe(1);
+    expect(result.lines.join("\n")).toContain("stale");
   });
 
   it("--json emits machine-readable verdict", async () => {
     const dir = await tmpEvidenceDir();
-    for (const id of REQUIRED_IDS) {
-      await writeFile(join(dir, `${id}.json`), evidenceFile(id, 0));
-    }
+    await writeAllGreen(dir);
     const result = await releaseVerifyCmd(["--json"], { root: process.cwd(), evidenceDir: dir, headSha: HEAD });
     expect(result.exitCode).toBe(0);
     const parsed = JSON.parse(result.lines[0]!) as { ready: boolean; gates: { id: string; state: string }[] };
@@ -82,26 +123,117 @@ describe("P36-1 release verify CLI", () => {
     expect(parsed.gates).toHaveLength(REQUIRED_IDS.length);
   });
 
-  it("P38.2-10: multiple instances of the same gate (platforms) merge — all must pass", async () => {
+  it("P38.2-10/P38.3-5: multiple instances of the same gate (platforms) merge — all must pass", async () => {
     // Two evidence files for the same gate (gates/linux + gates/windows layout).
     // INV-P38.2-010: the merged gate is green only when EVERY platform passed;
     // a red platform makes the gate red. No throw — merging is the designed
     // behavior for namespaced multi-platform evidence.
     const dir = await tmpEvidenceDir();
-    await writeFile(join(dir, "a.json"), evidenceFile("test", 0));
-    await writeFile(join(dir, "b.json"), evidenceFile("test", 1));
+    await writeAllGreen(dir);
+    await writeInstance(dir, "test", "linux", { exitCode: 1 }); // red linux, green windows
     const { verdict } = await resolveReleaseVerdict({ root: process.cwd(), evidenceDir: dir, headSha: HEAD });
     const testGate = verdict.gates.find((g) => g.id === "test")!;
     expect(testGate.state).toBe("failed");
-    expect(testGate.reason).toContain("multi-platform evidence");
     expect(verdict.ready).toBe(false);
 
     // All platforms green → merged gate passes.
     const dir2 = await tmpEvidenceDir();
-    await writeFile(join(dir2, "linux.json"), evidenceFile("test", 0));
-    await writeFile(join(dir2, "windows.json"), evidenceFile("test", 0));
+    await writeAllGreen(dir2);
     const verdict2 = await resolveReleaseVerdict({ root: process.cwd(), evidenceDir: dir2, headSha: HEAD });
     expect(verdict2.verdict.gates.find((g) => g.id === "test")!.state).toBe("passed");
+  });
+
+  it("P38.3-5: stale Windows hidden by valid Linux → release NOT READY", async () => {
+    const dir = await tmpEvidenceDir();
+    await writeAllGreen(dir);
+    // Windows evidence at a STALE sha — Linux is valid at HEAD. The stale
+    // secondary platform must NOT be hidden by the valid Linux instance.
+    await writeInstance(dir, "test", "windows", { headSha: "stale-windows-sha" });
+    const { verdict } = await resolveReleaseVerdict({ root: process.cwd(), evidenceDir: dir, headSha: HEAD });
+    expect(verdict.ready).toBe(false);
+    expect(verdict.gates.find((g) => g.id === "test")!.state).toBe("failed");
+  });
+
+  it("P38.3-5: wrong Windows command → gate blocked/failed, NOT READY", async () => {
+    const dir = await tmpEvidenceDir();
+    await writeAllGreen(dir);
+    // Windows ran `echo success` instead of the canonical `pnpm test`.
+    await writeInstance(dir, "test", "windows", { command: "echo success" });
+    const { verdict } = await resolveReleaseVerdict({ root: process.cwd(), evidenceDir: dir, headSha: HEAD });
+    expect(verdict.ready).toBe(false);
+    expect(verdict.gates.find((g) => g.id === "test")!.state).toBe("failed");
+  });
+
+  it("P38.3-5: wrong evidence kind → blocked, NOT READY", async () => {
+    const dir = await tmpEvidenceDir();
+    await writeAllGreen(dir);
+    await writeInstance(dir, "test", "linux", { kind: "benchmark_run" });
+    const { verdict } = await resolveReleaseVerdict({ root: process.cwd(), evidenceDir: dir, headSha: HEAD });
+    expect(verdict.ready).toBe(false);
+    expect(verdict.gates.find((g) => g.id === "test")!.state).toBe("failed");
+  });
+
+  it("P38.3-5: inconsistent exit code (1 + passed true) → blocked, NOT READY", async () => {
+    const dir = await tmpEvidenceDir();
+    await writeAllGreen(dir);
+    await writeInstance(dir, "test", "linux", { exitCode: 1, passed: true });
+    const { verdict } = await resolveReleaseVerdict({ root: process.cwd(), evidenceDir: dir, headSha: HEAD });
+    expect(verdict.ready).toBe(false);
+    expect(verdict.gates.find((g) => g.id === "test")!.state).toBe("failed");
+  });
+
+  it("P38.3-5/6: ordering independence — verdict identical with reversed traversal", async () => {
+    const dirA = await tmpEvidenceDir();
+    await writeAllGreen(dirA);
+    // dirB writes the same evidence in the REVERSE per-gate/platform order —
+    // the reader must be order-independent (readdir order never matters).
+    const dirB = await tmpEvidenceDir();
+    for (const id of [...REQUIRED_IDS].reverse()) {
+      const platforms = [...REQUIRED_GATE_PLATFORMS[requiredGateIndex(id)]].reverse();
+      for (const platform of platforms) {
+        await writeInstance(dirB, id, platform);
+      }
+    }
+    const verdictA = await resolveReleaseVerdict({ root: process.cwd(), evidenceDir: dirA, headSha: HEAD });
+    const verdictB = await resolveReleaseVerdict({ root: process.cwd(), evidenceDir: dirB, headSha: HEAD });
+    expect(verdictB.verdict.ready).toBe(verdictA.verdict.ready);
+    expect(verdictB.verdict.gates.map((g) => g.state)).toEqual(verdictA.verdict.gates.map((g) => g.state));
+    expect(verdictB.verdict.ready).toBe(true);
+  });
+
+  it("P38.3-6: missing Windows → gate NOT passed even with valid Linux", async () => {
+    const dir = await tmpEvidenceDir();
+    await writeAllGreen(dir);
+    // Delete all windows evidence for the test gate.
+    await rm(join(dir, "gates", "windows", "test.json"));
+    const { verdict } = await resolveReleaseVerdict({ root: process.cwd(), evidenceDir: dir, headSha: HEAD });
+    expect(verdict.ready).toBe(false);
+    const testGate = verdict.gates.find((g) => g.id === "test")!;
+    expect(testGate.state).toBe("failed");
+    expect(testGate.reason).toContain("missing required platform windows");
+  });
+
+  it("P38.3-6: duplicate Linux cannot substitute for missing Windows", async () => {
+    const dir = await tmpEvidenceDir();
+    await writeAllGreen(dir);
+    // Two Linux instances, zero Windows — still NOT passed.
+    await writeInstance(dir, "test", "linux", { exitCode: 0 });
+    await rm(join(dir, "gates", "windows", "test.json"));
+    const { verdict } = await resolveReleaseVerdict({ root: process.cwd(), evidenceDir: dir, headSha: HEAD });
+    expect(verdict.ready).toBe(false);
+    expect(verdict.gates.find((g) => g.id === "test")!.reason).toContain("missing required platform windows");
+  });
+
+  it("P38.3-6: unknown platform cannot satisfy a required platform", async () => {
+    const dir = await tmpEvidenceDir();
+    await writeAllGreen(dir);
+    // Add an unknown-platform instance for test; delete windows. The unknown
+    // platform must NOT satisfy the windows requirement.
+    await writeInstance(dir, "test", "darwin", { exitCode: 0 });
+    await rm(join(dir, "gates", "windows", "test.json"));
+    const { verdict } = await resolveReleaseVerdict({ root: process.cwd(), evidenceDir: dir, headSha: HEAD });
+    expect(verdict.ready).toBe(false);
+    expect(verdict.gates.find((g) => g.id === "test")!.reason).toContain("missing required platform windows");
   });
 });
 

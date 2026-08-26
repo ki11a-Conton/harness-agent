@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   BENCHMARK_SUITE_VERSION,
+  buildEffectiveConfig,
   buildRunManifest,
   computeRuntimeConfigHash,
+  computeToolSetHash,
+  normalizeToolSet,
   stableStringify,
 } from "./manifest.js";
 import { DEFAULT_JUDGE_VERSION } from "./baseline.js";
@@ -38,6 +41,8 @@ describe("buildRunManifest (P0-6)", () => {
       contextBudgetTokens: null,
       taskSuites: [],
       randomSeed: null,
+      // P38.3-10: absent candidate is an honest champion baseline.
+      candidate: null,
     });
   });
 
@@ -175,5 +180,88 @@ describe("stableStringify (Q-5)", () => {
       contextBudgetTokens: 64000,
     });
     expect(other.contextBudgetTokens).not.toBe(manifest.contextBudgetTokens);
+  });
+});
+
+describe("buildEffectiveConfig (P38.3-10)", () => {
+  const BASE = {
+    candidate: null,
+    provider: "openai",
+    model: "gpt-4o-mini",
+    temperature: 0.3,
+    context: { maxTokens: 32000, dynamic: 0 },
+    recovery: { adaptive: false },
+    mechanisms: {
+      memory: false,
+      subagent: false,
+      scheduler: false,
+      mcp: false,
+      deferredSchema: false,
+    },
+    tools: ["read_file", "write_file", "exec"],
+  };
+
+  it("baseline hash != adaptive_recovery hash", () => {
+    const baseline = buildEffectiveConfig(BASE);
+    const adaptive = buildEffectiveConfig({
+      ...BASE,
+      candidate: "adaptive_recovery",
+      recovery: { adaptive: true },
+    });
+    expect(baseline.runtimeConfigHash).not.toBe(adaptive.runtimeConfigHash);
+  });
+
+  it("baseline hash != memory_retrieval hash", () => {
+    const baseline = buildEffectiveConfig(BASE);
+    const memory = buildEffectiveConfig({
+      ...BASE,
+      candidate: "memory_retrieval",
+      mechanisms: { ...BASE.mechanisms, memory: true },
+    });
+    expect(baseline.runtimeConfigHash).not.toBe(memory.runtimeConfigHash);
+  });
+
+  it("baseline hash != deferred schema hash", () => {
+    const baseline = buildEffectiveConfig(BASE);
+    const deferred = buildEffectiveConfig({
+      ...BASE,
+      candidate: "tool_selector_deferred_schema",
+      mechanisms: { ...BASE.mechanisms, deferredSchema: true },
+    });
+    expect(baseline.runtimeConfigHash).not.toBe(deferred.runtimeConfigHash);
+  });
+
+  it("baseline hash != adaptive context hash", () => {
+    const baseline = buildEffectiveConfig(BASE);
+    const context = buildEffectiveConfig({
+      ...BASE,
+      candidate: "adaptive_context_policy",
+      context: { maxTokens: 32000, dynamic: 4096 },
+    });
+    expect(baseline.runtimeConfigHash).not.toBe(context.runtimeConfigHash);
+  });
+
+  it("deterministic repeat: same config → same hashes", () => {
+    const a = buildEffectiveConfig(BASE);
+    const b = buildEffectiveConfig({ ...BASE });
+    expect(a.runtimeConfigHash).toBe(b.runtimeConfigHash);
+    expect(a.toolSetHash).toBe(b.toolSetHash);
+  });
+
+  it("tool set hash is order-independent (normalized)", () => {
+    const unordered = ["exec", "read_file", "write_file"];
+    const normal = ["read_file", "write_file", "exec"];
+    expect(computeToolSetHash(unordered)).toBe(computeToolSetHash(normal));
+    expect(computeToolSetHash(unordered)).toBe(
+      computeRuntimeConfigHash(["exec", "read_file", "write_file"]),
+    );
+  });
+
+  it("model/provider change changes hash/provenance", () => {
+    const base = buildEffectiveConfig(BASE);
+    const diffModel = buildEffectiveConfig({ ...BASE, model: "gpt-4o" });
+    const diffProvider = buildEffectiveConfig({ ...BASE, provider: "azure" });
+    expect(base.runtimeConfigHash).not.toBe(diffModel.runtimeConfigHash);
+    expect(base.runtimeConfigHash).not.toBe(diffProvider.runtimeConfigHash);
   });
 });

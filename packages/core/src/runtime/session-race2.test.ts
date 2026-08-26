@@ -215,7 +215,10 @@ describe("P34-2 same-session race suite", () => {
     await provider.whenEntered();
     // cancel targets the live run only; any other call remains excluded
     const st = await actor.cancelTurn(first.turnId);
-    expect(st === "completed" || st === "cancelled").toBe(true);
+    // P38.3-8: the request is accepted; terminal truth comes from the outcome.
+    expect(st.disposition).toBe("cancel_requested");
+    const terminal = await first.outcome;
+    expect(terminal.status === "completed" || terminal.status === "cancelled").toBe(true);
     // after the live run settles the session is free again — no overlap
     const echo = await setupEcho();
     const second = await echo.actor.startTurn({ sessionId: echo.sessionId, text: "after-cancel" });

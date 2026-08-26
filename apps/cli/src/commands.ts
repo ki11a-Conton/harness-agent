@@ -307,8 +307,8 @@ async function cancelCmd(rest: string[], deps: CommandDeps): Promise<CommandResu
     const result = (await deps.rpc.request("session.cancel", {
       sessionId,
       turnId,
-    })) as { status: string };
-    return { exitCode: 0, lines: [`cancel: ${result.status}`] };
+    })) as { disposition: string };
+    return { exitCode: 0, lines: [`cancel: ${result.disposition}`] };
   } catch (err) {
     return { exitCode: 1, lines: [renderError("agent cancel", err)] };
   }

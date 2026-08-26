@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "releaseEvidence": false,
+  "qualityEvidence": true,
+  "source": "existing-real-model-run",
+  "headSha": "e824c3ed9f9ccca1d69b426d4eacbdfab134d800",
+  "suite": "regression",
+  "provider": "openai",
+  "model": "deepseek-v4-flash",
+  "temperature": null,
+  "cases": 2,
+  "passed": 0,
+  "passRate": 0.0,
+  "verifiedComplete": 0,
+  "modelCalls": 17,
+  "toolCalls": 18,
+  "tokensInput": 47218,
+  "tokensOutput": 1826,
+  "estimatedCostUsd": null,
+  "terminationReasons": { "model_error": 2 },
+  "failuresByCategory": { "model": 2 },
+  "runtimeConfigHash": null,
+  "judgeVersion": "1.0.0",
+  "suiteVersion": "2.1.0",
+  "sourceNotes": [
+    "Only 2 of 30 regression cases have per-case report artifacts locally (.ci/bench-suite/regression/reg-01-implement-fizzbuzz, reg-02-fix-reverse), both at SHA e824c3ed.",
+    "Both imported cases failed with model_error (0/2 passed). This is a PARTIAL sample, NOT a full 30-case regression result.",
+    "No full 30-case regression aggregate exists on disk; the 2.1.0 suiteVersion above is from the single-case reports' manifests.",
+    "Aggregate token/call counts are the exact sum across the two imported per-case reports (reg-01: 31325/1232 in/out, 10 model calls, 10 tool calls; reg-02: 15893/594 in/out, 7 model calls, 8 tool calls).",
+    "runtimeConfigHash left null because the two per-case manifests disagree on what a suite-level hash would mean; the per-case hash (a6ab8daf...) is available in the source report.",
+    "No paid rerun was performed by P38.3. Missing fields are null, never fabricated."
+  ]
+}

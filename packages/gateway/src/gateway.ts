@@ -253,9 +253,9 @@ export class Gateway {
     const result = (await this.rpc.invoke("session.cancel", {
       sessionId,
       turnId,
-    })) as { status: string };
+    })) as { disposition: string };
     await this.emitHuman(sessionId, "human.cancel", { text: msg.text, turnId }, turnId);
-    await this.reply(msg, `[cancel] ${result.status}`);
+    await this.reply(msg, `[cancel] ${result.disposition}`);
   }
 
   // --- event push ----------------------------------------------------------

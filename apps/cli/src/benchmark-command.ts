@@ -19,6 +19,7 @@ import { ContextPipeline } from "@ar/context";
 import { resolveCapabilities, budgetForCapabilities } from "@ar/model";
 import {
   BENCHMARK_SUITE_VERSION,
+  buildEffectiveConfig,
   buildRunManifest,
   computeRuntimeConfigHash,
   DEFAULT_JUDGE_VERSION,
@@ -29,6 +30,7 @@ import {
 } from "@ar/evaluation";
 import type {
   BenchmarkCase,
+  BenchmarkEffectiveConfig,
   BaselineReport,
   EvalOutcome,
   EvalSuite,
@@ -180,6 +182,28 @@ async function executeBenchmark(
   // task suite / seed — a comparison is only valid when these match (or the
   // difference IS the candidate under test).
   const temperature = parseTemperature(process.env.OPENAI_TEMPERATURE);
+  // P38.3-10: effective wiring manifest — the ACTUAL runtime configuration for
+  // this run (candidate + mechanisms + tool set + hashes). Recorded in the
+  // run manifest so a reviewer can reproduce or reject a comparison.
+  const effectiveConfig = buildEffectiveConfig({
+    candidate: opts.candidate ?? null,
+    provider: provider.id,
+    model: modelId,
+    temperature,
+    context: {
+      maxTokens: defaultBudgetTokens,
+      dynamic: opts.candidate === "adaptive_context_policy" ? 4096 : 0,
+    },
+    recovery: { adaptive: opts.candidate === "adaptive_recovery" },
+    mechanisms: {
+      memory: opts.candidate === "memory_retrieval",
+      subagent: false,
+      scheduler: false,
+      mcp: false,
+      deferredSchema: opts.candidate === "tool_selector_deferred_schema",
+    },
+    tools: [readFileTool.name, writeFileTool.name, editFileTool.name, searchFilesTool.name, execTool.name],
+  });
   const manifest = await buildRunManifest({
     model: modelId,
     provider: provider.id,
@@ -200,6 +224,9 @@ async function executeBenchmark(
     contextBudgetTokens: defaultBudgetTokens,
     taskSuites: [opts.suite],
     randomSeed: opts.shuffle ? opts.seed : null,
+    // P38.3-10: provenance — which candidate ran and with what wiring.
+    candidate: opts.candidate ?? null,
+    effectiveConfig,
   });
 
   const report = await runBaseline(
@@ -222,10 +249,16 @@ async function executeBenchmark(
 
   await writeBaselineFiles(report, opts.outDir);
   const outBase = opts.suite === "regression" ? "baseline" : opts.suite;
+  // P38.3-12: the benchmark is a MEASUREMENT — "ran and produced a valid
+  // report". It is NOT a quality verdict. The label below is deliberate: a
+  // reader must never mistake "cases passed in this run" for "the agent is
+  // good enough to promote".
   lines.push(`benchmark: ${report.summary.passed}/${report.summary.total} passed (${formatRate(report.summary.success_rate)})`);
   lines.push(`benchmark: p50 ${report.summary.latency_p50_ms}ms / p95 ${report.summary.latency_p95_ms}ms`);
   lines.push(`benchmark: recovery rate ${formatRate(report.summary.recovery_rate)}`);
   lines.push(`benchmark: report written to ${join(resolve(opts.outDir), `${outBase}.json`)} and ${outBase}-summary.md`);
+  lines.push("benchmark: NOTE — this is a measurement result, NOT a quality verdict.");
+  lines.push('benchmark: quality assessment happens separately: agent champion eval <baseline-runs.json> <candidate-runs.json>');
   for (const result of report.results) {
     lines.push(
       `  ${result.success ? "PASS" : "FAIL"} ${result.task_id} (${result.termination_reason}, ${result.duration_ms}ms, ` +
@@ -315,6 +348,10 @@ async function runOneCase(
       failureCategory: "infrastructure",
       suite: caseDef.suite ?? "regression",
       judgeVersion: caseDef.judgeVersion ?? DEFAULT_JUDGE_VERSION,
+      // P38.3-10: the effective feature truth is still recorded even for a
+      // requirement-gap failure — the reviewer sees which mechanisms were
+      // wired (or not).
+      effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
     };
   }
   const workspace = await mkdtemp(join(tmpdir(), "harness-bench-"));
@@ -622,11 +659,15 @@ async function runOneCase(
     }
 
     const session = await runtime.createSession({ agent, cwd: workspace });
-    return await new EvalRunner().run({ ...caseDef, suite }, {
+    const outcome = await new EvalRunner().run({ ...caseDef, suite }, {
       runtime,
       sessionId: session.id,
       events,
     });
+    // P38.3-10: record the EFFECTIVE per-case mechanism wiring — some suites
+    // turn mechanisms on only when the case requires them, so a run-level
+    // manifest default would lie about this case.
+    return { ...outcome, effectiveFeatures: effectiveFeaturesFor(caseDef, opts) };
   } finally {
     if (memoryClose !== undefined) {
       try {
@@ -655,6 +696,29 @@ export function checkRequirements(requires: readonly string[] | undefined): stri
   if (requires === undefined || requires.length === 0) return undefined;
   const missing = requires.filter((r) => !BENCHMARK_WIRED_MECHANISMS.has(r));
   return missing.length > 0 ? missing : undefined;
+}
+
+/**
+ * P38.3-10 — the EFFECTIVE mechanism wiring for one case. Mechanisms are
+ * turned on when the case requires them OR the candidate forces them for
+ * every case. This is the per-case truth the report exposes, never a
+ * run-level default that would hide per-case deviations.
+ */
+export function effectiveFeaturesFor(
+  caseDef: BenchmarkCase,
+  opts: Pick<RunOneCaseOptions, "candidate">,
+): Record<string, boolean> {
+  const requires = caseDef.requires ?? [];
+  const candidate = opts.candidate ?? null;
+  return {
+    memory:
+      candidate === "memory_retrieval" ||
+      (caseDef.sources?.memory !== undefined && caseDef.sources.memory.length > 0),
+    subagent: requires.includes("subagent"),
+    scheduler: requires.includes("scheduler"),
+    mcp: requires.includes("mcp"),
+    deferredSchema: caseDef.schemaMode === "deferred" || candidate === "tool_selector_deferred_schema",
+  };
 }
 
 /**
@@ -702,8 +766,12 @@ async function listWorkspaceFiles(root: string): Promise<string[]> {
   return out;
 }
 
-/** P0-6 manifest: the runtime wiring shared by every case in this run. */
+/** P0-6 manifest: the runtime wiring shared by every case in this run.
+ *  P38.3-10: the config MUST include the candidate and its mechanism effects
+ *  (adaptive recovery, memory retrieval, deferred schema, adaptive context
+ *  policy) — two behaviorally different runs must never share a hash. */
 function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudgetTokens: number): Record<string, unknown> {
+  const candidate = opts.candidate ?? null;
   return {
     benchmarkVersion: "2.0.0",
     suite: opts.suite,
@@ -713,14 +781,29 @@ function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudgetTokens
     sandbox: defaultSandboxPolicy(),
     tools: [readFileTool.name, writeFileTool.name, editFileTool.name, searchFilesTool.name, execTool.name],
     agentLimits: { maxToolCalls: 100, maxDurationMs: 600_000 },
-    recovery: "default",
+    recovery: {
+      // P38-EVOLUTION: the adaptive_recovery candidate wires the planner.
+      adaptive: candidate === "adaptive_recovery",
+    },
     context: {
       maxTokens: defaultBudgetTokens,
       reserved: { system: 256, task: 128, output: 256 },
+      // P38-EVOLUTION: adaptive_context_policy grants dynamic headroom.
+      dynamic: candidate === "adaptive_context_policy" ? 4096 : 0,
     },
     maxIterationsPerTurn: 30,
     toolOutputBudget: { maxInlineBytes: 16_000 },
     judgeVersion: DEFAULT_JUDGE_VERSION,
+    // P38.3-10: candidate + its mechanism wiring are part of the hash — a
+    // baseline run and a candidate run are NEVER the same configuration.
+    candidate,
+    mechanisms: {
+      memory: candidate === "memory_retrieval",
+      subagent: false,
+      scheduler: false,
+      mcp: false,
+      deferredSchema: candidate === "tool_selector_deferred_schema",
+    },
   };
 }
 

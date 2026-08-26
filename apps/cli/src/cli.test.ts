@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -358,7 +358,7 @@ describe("agent cancel", () => {
     const turn = (await store.listTurns(session.id))[0]!;
     const cancel = await runCommand(["cancel", session.id, turn.id], deps);
     expect(cancel.exitCode).toBe(0);
-    expect(cancel.lines.join(" ")).toContain("cancel: cancelled");
+    expect(cancel.lines.join(" ")).toContain("cancel: cancel_requested");
     const outcome = await runPromise;
     expect(outcome.exitCode).toBe(1);
     expect(outcome.lines.join("\n")).toContain("status: cancelled");

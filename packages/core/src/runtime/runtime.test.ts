@@ -1163,16 +1163,30 @@ describe("AgentRuntime (CORE-001)", () => {
     // Simulate a FUTURE concurrency-safe write tool: concurrencySafety=true,
     // but the resource-conflict resolver pins each call to its canonical file
     // path — two calls to the SAME path must never overlap.
+    // P38.3-9: deterministic barrier instead of a setTimeout window — while the
+    // first call is held in flight, a correct serializer must NOT have
+    // dispatched the second call yet (dispatched stays 1, maxActive stays 1).
     let active = 0;
     let maxActive = 0;
+    let dispatched = 0;
+    let isFirst = true;
+    let markFirstEntered!: () => void;
+    const firstEntered = new Promise<void>((r) => { markFirstEntered = r; });
+    let releaseFirst!: () => void;
     class Probe extends FakeOrchestrator {
       override async execute(
         request: ToolCallRequest,
         context: ToolExecutionContext,
       ): Promise<ToolResult> {
+        dispatched += 1;
         active += 1;
         maxActive = Math.max(maxActive, active);
-        await new Promise((r) => setTimeout(r, 20));
+        if (isFirst) {
+          isFirst = false;
+          markFirstEntered();
+          // Hold the first call in flight until the test releases it.
+          await new Promise<void>((r) => { releaseFirst = r; });
+        }
         active -= 1;
         return super.execute(request, context);
       }
@@ -1198,10 +1212,17 @@ describe("AgentRuntime (CORE-001)", () => {
       }),
       resourceConflictOf: (call) => fileConflictKey(call.args.path as string),
     });
-    const { outcome } = await runOne(runtime, store, events);
+    const runP = runOne(runtime, store, events);
+    await firstEntered; // first write is now in flight, held by the barrier
+    // Deterministic serialization proof: while the first call is held, the
+    // second call has NOT been dispatched — there is no overlap window at all.
+    expect(dispatched).toBe(1);
+    expect(maxActive).toBe(1);
+    releaseFirst(); // first completes; the second then runs serially
+    const { outcome } = await runP;
     expect(outcome.status).toBe("completed");
     // Both calls ran — but never concurrently (same canonical path).
-    expect(orch.calls).toHaveLength(2);
+    expect(dispatched).toBe(2);
     expect(maxActive).toBe(1);
     expect(orch.calls.map((c) => c.request.call.args.path)).toEqual(["same.txt", "same.txt"]);
   });
@@ -1209,16 +1230,28 @@ describe("AgentRuntime (CORE-001)", () => {
   it("P18-6: DIFFERENT resources stay parallel even with a conflict resolver", async () => {
     const writeA = { id: newToolCallId(), name: "write_file", args: { path: "a.txt" } };
     const writeB = { id: newToolCallId(), name: "write_file", args: { path: "b.txt" } };
+    // P38.3-9: deterministic two-party barrier — each call awaits a shared
+    // gate until BOTH have been dispatched. If the runtime wrongly serialized
+    // them, the second would never be dispatched while the first is held and
+    // the run would hang (bounded by the 2s guard below). Parallel dispatch ⇒
+    // both in flight.
     let active = 0;
     let maxActive = 0;
+    let dispatched = 0;
+    let bothEntered!: () => void;
+    const bothEnteredP = new Promise<void>((r) => { bothEntered = r; });
+    let gateResolve!: () => void;
+    const gate = new Promise<void>((r) => { gateResolve = r; });
     class Probe extends FakeOrchestrator {
       override async execute(
         request: ToolCallRequest,
         context: ToolExecutionContext,
       ): Promise<ToolResult> {
+        dispatched += 1;
         active += 1;
         maxActive = Math.max(maxActive, active);
-        await new Promise((r) => setTimeout(r, 20));
+        if (dispatched >= 2) bothEntered();
+        await gate; // shared gate — all calls wait on the SAME promise
         active -= 1;
         return super.execute(request, context);
       }
@@ -1241,9 +1274,20 @@ describe("AgentRuntime (CORE-001)", () => {
       }),
       resourceConflictOf: (call) => fileConflictKey(call.args.path as string),
     });
-    const { outcome } = await runOne(runtime, store, events);
+    const runP = runOne(runtime, store, events);
+    // Wait for BOTH calls to be dispatched in flight (2s guard against a hang
+    // if the runtime ever regressed to serial dispatch).
+    await Promise.race([
+      bothEnteredP,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("P18-6: different-resource calls were serialized — no parallel overlap")), 2000),
+      ),
+    ]);
+    expect(maxActive).toBe(2); // both in flight at once → real parallel execution
+    gateResolve(); // release both calls through the shared gate
+    const { outcome } = await runP;
     expect(outcome.status).toBe("completed");
-    expect(orch.calls).toHaveLength(2);
+    expect(dispatched).toBe(2);
     expect(maxActive).toBe(2); // different canonical paths → parallel
   });
 
@@ -1458,6 +1502,11 @@ describe("AgentRuntime (CORE-001)", () => {
       async listPending(sessionId: SessionId) {
         return this.prompts.filter((p) => p.sessionId === sessionId && p.status === "pending");
       }
+      async listRecoverable(sessionId: SessionId) {
+        return this.prompts.filter(
+          (p) => p.sessionId === sessionId && (p.status === "pending" || p.status === "promoted"),
+        );
+      }
       async listAll(sessionId: SessionId) {
         return this.prompts.filter((p) => p.sessionId === sessionId);
       }
@@ -1513,6 +1562,11 @@ describe("AgentRuntime (CORE-001)", () => {
       }
       async listPending(sessionId: SessionId) {
         return this.prompts.filter((p) => p.sessionId === sessionId && p.status === "pending");
+      }
+      async listRecoverable(sessionId: SessionId) {
+        return this.prompts.filter(
+          (p) => p.sessionId === sessionId && (p.status === "pending" || p.status === "promoted"),
+        );
       }
       async listAll(sessionId: SessionId) {
         return this.prompts.filter((p) => p.sessionId === sessionId);
@@ -1580,6 +1634,11 @@ describe("AgentRuntime (CORE-001)", () => {
       }
       async listPending(sessionId: SessionId) {
         return this.prompts.filter((p) => p.sessionId === sessionId && p.status === "pending");
+      }
+      async listRecoverable(sessionId: SessionId) {
+        return this.prompts.filter(
+          (p) => p.sessionId === sessionId && (p.status === "pending" || p.status === "promoted"),
+        );
       }
       async listAll(sessionId: SessionId) {
         return this.prompts.filter((p) => p.sessionId === sessionId);

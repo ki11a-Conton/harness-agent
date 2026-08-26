@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { ScriptedModelProvider } from "@ar/model";
-import { assertWorkspaceIsolated, runBenchmarkCommand } from "./benchmark-command.js";
+import { assertWorkspaceIsolated, effectiveFeaturesFor, runBenchmarkCommand } from "./benchmark-command.js";
 
 let tempDirs: string[] = [];
 
@@ -141,6 +141,14 @@ describe("agent benchmark (benchmark-command.ts)", () => {
     expect(report.manifest!.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(report.manifest!.platform).toBe(process.platform);
     expect(report.manifest!.nodeVersion).toBe(process.version);
+    // P38.3-10: provenance — champion baseline runs record candidate null and
+    // the effective wiring manifest.
+    expect(report.manifest!.candidate).toBeNull();
+    expect(report.manifest!.effectiveConfig).toBeDefined();
+    expect(report.manifest!.effectiveConfig!.candidate).toBeNull();
+    expect(report.manifest!.effectiveConfig!.tools).toContain("read_file");
+    expect(report.manifest!.effectiveConfig!.toolSetHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(report.manifest!.effectiveConfig!.runtimeConfigHash).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("supports --shuffle/--seed: randomized execution, fixed report order", async () => {
@@ -613,5 +621,46 @@ describe("P4-5/P4-7/P4-8/P4-9: mechanism-real benchmark wiring", () => {
     );
     expect(result.exitCode).toBe(0);
     expect(result.lines.join("\n")).toContain("1/1 passed");
+  });
+
+  it("P38.3-10: per-case effective features reflect case requires + candidate", () => {
+    // MCP-only case, champion baseline → only mcp wired.
+    const mcp = effectiveFeaturesFor(
+      { id: "adv-mcp", requires: ["mcp"] } as never,
+      { candidate: undefined },
+    );
+    expect(mcp).toEqual({
+      memory: false,
+      subagent: false,
+      scheduler: false,
+      mcp: true,
+      deferredSchema: false,
+    });
+
+    // No requires, but the memory_retrieval candidate forces memory on.
+    const memoryCandidate = effectiveFeaturesFor(
+      { id: "plain", requires: undefined } as never,
+      { candidate: "memory_retrieval" },
+    );
+    expect(memoryCandidate.memory).toBe(true);
+
+    // Deferred schema either from case.json or from the candidate.
+    const caseDeferred = effectiveFeaturesFor(
+      { id: "adv-deferred", schemaMode: "deferred" } as never,
+      { candidate: undefined },
+    );
+    const candDeferred = effectiveFeaturesFor(
+      { id: "plain", requires: undefined } as never,
+      { candidate: "tool_selector_deferred_schema" },
+    );
+    expect(caseDeferred.deferredSchema).toBe(true);
+    expect(candDeferred.deferredSchema).toBe(true);
+
+    // Memory seeds from sources.memory also turn the mechanism on.
+    const seeded = effectiveFeaturesFor(
+      { id: "mem", sources: { memory: [{ content: "x" }] } } as never,
+      { candidate: undefined },
+    );
+    expect(seeded.memory).toBe(true);
   });
 });

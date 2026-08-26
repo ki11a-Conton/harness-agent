@@ -46,12 +46,90 @@ export interface RunManifest {
   /** P21-1: PRNG seed when the run fixed one (provider/order reproducible);
    *  null = not seeded. */
   randomSeed: number | null;
+  /** P38.3-10: challenger candidate id (undefined/null = champion baseline).
+   *  Recorded in provenance so a baseline vs candidate comparison can never
+   *  be mistaken for two identical runs. */
+  candidate: string | null;
+  /** P38.3-10: effective wiring manifest — the ACTUAL runtime configuration
+   *  this run executed (candidate, mechanisms, tool set, hashes). Optional
+   *  for backward compatibility with older reports. */
+  effectiveConfig?: BenchmarkEffectiveConfig;
 }
 
 /** Suite definition version. P0-6 adds the integrity layer (manifest, failure
  *  classification, ordered execution) on top of the Phase 6.5 four-suite split;
  *  bump when the suite definitions or their judging semantics change. */
 export const BENCHMARK_SUITE_VERSION = "2.1.0";
+
+/**
+ * P38.3-10 — effective wiring manifest. The benchmark runner dynamically
+ * changes runtime wiring per case (mechanisms turned on only when a case
+ * requires them) and per candidate (challenger features). This object records
+ * the ACTUAL configuration a run executed, so a reviewer can reproduce or
+ * reject a comparison from the manifest alone.
+ */
+export interface BenchmarkEffectiveConfig {
+  /** Challenger candidate id; null = champion baseline. */
+  candidate: string | null;
+  provider: string;
+  model: string;
+  temperature: number | null;
+  context: {
+    maxTokens: number;
+    /** P38-EVOLUTION: dynamic headroom granted by adaptive_context_policy. */
+    dynamic: number;
+  };
+  recovery: {
+    /** P38-EVOLUTION: adaptive recovery planner wired (adaptive_recovery). */
+    adaptive: boolean;
+  };
+  /** Mechanisms actually wired for this run/case. */
+  mechanisms: {
+    memory: boolean;
+    subagent: boolean;
+    scheduler: boolean;
+    mcp: boolean;
+    deferredSchema: boolean;
+  };
+  /** Effective model-visible tool set (normalized, sorted). */
+  tools: string[];
+  /** sha256 over the stable-serialized normalized tool set. */
+  toolSetHash: string;
+  /** sha256 over the stable-serialized full effective config (without the
+   *  hash fields themselves — see buildEffectiveConfig). */
+  runtimeConfigHash: string;
+}
+
+/** The effective config as serialized for hashing: runtimeConfigHash and
+ *  toolSetHash are computed FROM this projection, never included in it. */
+export type EffectiveConfigHashInput = Omit<
+  BenchmarkEffectiveConfig,
+  "toolSetHash" | "runtimeConfigHash"
+>;
+
+/**
+ * Build the full effective config for one run/case. Normalizes the tool set
+ * (sort + dedupe — order is semantically irrelevant), computes toolSetHash,
+ * then runtimeConfigHash over the stable-serialized config (WITHOUT the hash
+ * fields, so the hash is a pure function of the wiring).
+ */
+export function buildEffectiveConfig(input: EffectiveConfigHashInput): BenchmarkEffectiveConfig {
+  const tools = normalizeToolSet(input.tools);
+  const toolSetHash = computeRuntimeConfigHash(tools);
+  const runtimeConfigHash = computeRuntimeConfigHash({ ...input, tools });
+  return { ...input, tools, toolSetHash, runtimeConfigHash };
+}
+
+/** Sort + dedupe a tool-name array so semantically identical sets hash the
+ *  same regardless of insertion order. */
+export function normalizeToolSet(tools: readonly string[]): string[] {
+  return [...new Set(tools)].sort();
+}
+
+/** Convenience hash over just a tool set (stable, order-independent). */
+export function computeToolSetHash(tools: readonly string[]): string {
+  return computeRuntimeConfigHash(normalizeToolSet(tools));
+}
 
 export interface BuildRunManifestOptions {
   model: string;
@@ -77,6 +155,11 @@ export interface BuildRunManifestOptions {
   taskSuites?: string[];
   /** P21-1: PRNG seed when fixed; null = not seeded. */
   randomSeed?: number | null;
+  /** P38.3-10: challenger candidate id (undefined/null = champion baseline). */
+  candidate?: string | null;
+  /** P38.3-10: effective wiring manifest for this run (built by
+   *  buildEffectiveConfig); recorded in provenance. */
+  effectiveConfig?: BenchmarkEffectiveConfig;
 }
 
 /** Best-effort git identity probe. Any failure (no git, not a repo, timeout)
@@ -102,6 +185,9 @@ export async function buildRunManifest(opts: BuildRunManifestOptions): Promise<R
     contextBudgetTokens: opts.contextBudgetTokens ?? null,
     taskSuites: opts.taskSuites ?? [],
     randomSeed: opts.randomSeed ?? null,
+    // P38.3-10: provenance — missing candidate means champion baseline.
+    candidate: opts.candidate ?? null,
+    ...(opts.effectiveConfig !== undefined ? { effectiveConfig: opts.effectiveConfig } : {}),
   };
 }
 

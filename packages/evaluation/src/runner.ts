@@ -42,6 +42,11 @@ export interface EvalOutcome {
   /** Suite + judge version for regression reporting (Phase 6.5). */
   suite: EvalSuite;
   judgeVersion: string;
+  /** P38.3-10: effective per-case mechanism wiring (which mechanisms were
+   *  actually turned on for THIS case — mcp/memory/subagent/scheduler/
+   *  deferredSchema). Optional; recorded by harnesses that wire mechanisms
+   *  per case. */
+  effectiveFeatures?: Record<string, boolean>;
 }
 
 /** Tool events that count as side effects on the environment (§73 forbidden.side_effects). */

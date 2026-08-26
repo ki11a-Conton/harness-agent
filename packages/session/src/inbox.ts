@@ -88,6 +88,14 @@ export class MemInboxStore implements InboxStore {
     return this.prompts.filter((p) => p.sessionId === sessionId && p.status === "pending");
   }
 
+  /** P38.3-3 (INV-P38.3-003): recovery query — pending + promoted followups.
+   *  Consumed prompts are excluded. */
+  async listRecoverable(sessionId: SessionId): Promise<AdmittedPrompt[]> {
+    return this.prompts.filter(
+      (p) => p.sessionId === sessionId && (p.status === "pending" || p.status === "promoted"),
+    );
+  }
+
   async listAll(sessionId: SessionId): Promise<AdmittedPrompt[]> {
     return this.prompts.filter((p) => p.sessionId === sessionId);
   }
@@ -99,18 +107,34 @@ export class MemInboxStore implements InboxStore {
     prompt.promotedAt = Date.now();
   }
 
-  /** P38.2-1 (INV-P38.2-001): bind the prompt to the durable turn identity. */
+  /** P38.3-1 (INV-P38.3-001/002): durably bind the prompt to the turn created
+   *  from it. Idempotent for the SAME TurnId; a DIFFERENT TurnId is a lineage
+   *  rewrite and MUST fail closed with PROMOTION_CONFLICT. */
   async bindPromotion(id: PromptId, turnId: TurnId): Promise<void> {
     const prompt = this.prompts.find((p) => p.id === id);
     if (prompt === undefined) throw new SessionStoreError("UNKNOWN_PROMPT", `unknown prompt ${id}`);
+    if (prompt.promotedTurnId !== undefined && prompt.promotedTurnId !== turnId) {
+      throw new SessionStoreError(
+        "PROMOTION_CONFLICT",
+        `prompt ${id} already bound to turn ${prompt.promotedTurnId}; refusing lineage rewrite to ${turnId}`,
+      );
+    }
     prompt.status = "promoted";
     prompt.promotedAt = Date.now();
     prompt.promotedTurnId = turnId;
   }
 
+  /** P38.3-1: consume only transitions an already-promoted prompt (promoted →
+   *  consumed). Consuming a pending unbound prompt fails closed. */
   async markConsumed(id: PromptId): Promise<void> {
     const prompt = this.prompts.find((p) => p.id === id);
     if (prompt === undefined) throw new SessionStoreError("UNKNOWN_PROMPT", `unknown prompt ${id}`);
+    if (prompt.status === "pending") {
+      throw new SessionStoreError(
+        "CONSUME_NOT_PROMOTED",
+        `prompt ${id} is pending and unbound; cannot consume before promotion`,
+      );
+    }
     prompt.status = "consumed";
     prompt.consumedAt = Date.now();
   }
@@ -163,6 +187,15 @@ export class JSONLInboxStore implements InboxStore {
     return this.prompts.filter((p) => p.sessionId === sessionId && p.status === "pending");
   }
 
+  /** P38.3-3 (INV-P38.3-003): recovery query — pending + promoted followups.
+   *  Consumed prompts are excluded. */
+  async listRecoverable(sessionId: SessionId): Promise<AdmittedPrompt[]> {
+    await this.load();
+    return this.prompts.filter(
+      (p) => p.sessionId === sessionId && (p.status === "pending" || p.status === "promoted"),
+    );
+  }
+
   async listAll(sessionId: SessionId): Promise<AdmittedPrompt[]> {
     await this.load();
     return this.prompts.filter((p) => p.sessionId === sessionId);
@@ -175,19 +208,33 @@ export class JSONLInboxStore implements InboxStore {
     });
   }
 
-  /** P38.2-1 (INV-P38.2-001): bind the prompt to the durable turn identity
-   *  created from it. Once set, a restart must never create another turn for
-   *  this prompt. */
+  /** P38.3-1 (INV-P38.3-001/002): durably bind the prompt to the turn created
+   *  from it. Idempotent for the SAME TurnId; a DIFFERENT TurnId is a lineage
+   *  rewrite and MUST fail closed with PROMOTION_CONFLICT. */
   async bindPromotion(id: PromptId, turnId: TurnId): Promise<void> {
     await this.update(id, (prompt) => {
+      if (prompt.promotedTurnId !== undefined && prompt.promotedTurnId !== turnId) {
+        throw new SessionStoreError(
+          "PROMOTION_CONFLICT",
+          `prompt ${id} already bound to turn ${prompt.promotedTurnId}; refusing lineage rewrite to ${turnId}`,
+        );
+      }
       prompt.status = "promoted";
       prompt.promotedAt = Date.now();
       prompt.promotedTurnId = turnId;
     });
   }
 
+  /** P38.3-1: consume only transitions an already-promoted prompt (promoted →
+   *  consumed). Consuming a pending unbound prompt fails closed. */
   async markConsumed(id: PromptId): Promise<void> {
     await this.update(id, (prompt) => {
+      if (prompt.status === "pending") {
+        throw new SessionStoreError(
+          "CONSUME_NOT_PROMOTED",
+          `prompt ${id} is pending and unbound; cannot consume before promotion`,
+        );
+      }
       prompt.status = "consumed";
       prompt.consumedAt = Date.now();
     });

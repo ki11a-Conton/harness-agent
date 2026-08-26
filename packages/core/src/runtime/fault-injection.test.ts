@@ -1,4 +1,4 @@
-﻿import { defaultTestToolCatalog } from "../test/fakes.js";
+import { defaultTestToolCatalog } from "../test/fakes.js";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -96,12 +96,26 @@ async function runOne(
   return { session, turn, outcome, storedEvents: await events.list(session.id) };
 }
 
-function slowEvents(events: ModelEvent[], delayMs: number): AsyncIterable<ModelEvent> {
-  return {
+/** Yields `events` spaced by `delayMs`, with an optional entered-barrier that
+ *  resolves when generation actually starts (deterministic — no fixed sleep). */
+function slowEvents(
+  events: ModelEvent[],
+  delayMs: number,
+  onEntered?: () => void,
+): AsyncIterable<ModelEvent> & { entered: Promise<void> } {
+  let enteredResolve!: () => void;
+  const entered = new Promise<void>((r) => { enteredResolve = r; });
+  let started = false;
+  const iterable = {
     [Symbol.asyncIterator]() {
       let i = 0;
       return {
         async next() {
+          if (!started) {
+            started = true;
+            enteredResolve();
+            onEntered?.();
+          }
           if (i >= events.length) return { done: true, value: undefined as unknown as ModelEvent };
           await new Promise((r) => setTimeout(r, delayMs));
           return { value: events[i++]!, done: false };
@@ -109,6 +123,7 @@ function slowEvents(events: ModelEvent[], delayMs: number): AsyncIterable<ModelE
       };
     },
   };
+  return Object.assign(iterable, { entered });
 }
 
 /** Rejects after `ms` — used as a guard so a cancelled turn that fails to abort
@@ -329,6 +344,8 @@ describe("runtime fault injection (CORE-FAULT-001)", () => {
   });
 
   it("user cancellation produces turn.cancelled, no turn.completed", async () => {
+    let generationStarted!: () => void;
+    const generationStartedP = new Promise<void>((r) => { generationStarted = r; });
     const provider = new ScriptedModelProvider([
       slowEvents(
         [
@@ -337,12 +354,14 @@ describe("runtime fault injection (CORE-FAULT-001)", () => {
           { type: "completed", result: { finishReason: "stop" as const, text: "slow" }, timestamp: 0 },
         ],
         20,
+        generationStarted,
       ),
     ]);
     const { runtime, store, events } = makeRuntime(provider, new FakeOrchestrator());
     const ac = new AbortController();
     const promise = runOne(runtime, store, events, ac.signal);
-    await new Promise((r) => setTimeout(r, 15));
+    // Deterministic barrier: abort only AFTER generation has actually started.
+    await generationStartedP;
     ac.abort();
     const { outcome, storedEvents } = await promise;
 
@@ -547,7 +566,7 @@ describe("P15-6: cancellation settlement invariant", () => {
     const ac = new AbortController();
     const runP = runtime.runTurn(session.id, turn.id, ac.signal);
 
-    await new Promise((r) => setTimeout(r, 30));
+    await gate.awaitCall(0); // first read entered the gate (deterministic)
     ac.abort();
     const outcome = await runP;
     expect(outcome.status).toBe("cancelled");
@@ -576,7 +595,7 @@ describe("P15-6: cancellation settlement invariant", () => {
     const ac = new AbortController();
     const runP = runtime.runTurn(session.id, turn.id, ac.signal);
 
-    await new Promise((r) => setTimeout(r, 30));
+    await gate.awaitCall(0); // first write entered the gate (deterministic)
     ac.abort();
     const outcome = await runP;
     expect(outcome.status).toBe("cancelled");
@@ -597,10 +616,10 @@ describe("P15-6: cancellation settlement invariant", () => {
     const ac = new AbortController();
     const runP = runtime.runTurn(session.id, turn.id, ac.signal);
 
-    await new Promise((r) => setTimeout(r, 30));
-    gate.release(0); // write a COMMITS
-    await new Promise((r) => setTimeout(r, 20));
-    ac.abort(); // before write b starts
+    await gate.awaitCall(0); // write a entered the gate (deterministic)
+    gate.release(0); // write a COMMITS — the committed call is in the transcript
+    await gate.awaitCall(1); // write b now entered the gate (write a completed)
+    ac.abort(); // write b in-flight → synthetic cancelled
     const outcome = await runP;
     expect(outcome.status).toBe("cancelled");
 
@@ -623,7 +642,7 @@ describe("P15-6: cancellation settlement invariant", () => {
     const ac = new AbortController();
     const runP = runtime.runTurn(session.id, turn.id, ac.signal);
 
-    await new Promise((r) => setTimeout(r, 30));
+    await gate.awaitCall(0); // the single gated read entered the gate
     ac.abort();
     ac.abort(); // repeated abort must not double-settle
     await runP;
@@ -687,11 +706,12 @@ describe("P18-5: tool cancellation settlement is cancellable-aware", () => {
     });
     const ac = new AbortController();
     const done = runOne(runtime, store, events, ac.signal);
-    await orch.awaitCall(1);
+    await orch.awaitCall(1); // both reads in flight, tool IGNORES abort
     ac.abort();
-    // Give the controller a moment — it MUST still be waiting (not resolved).
+    // (P38.3-9: a short yield lets the runtime register the in-flight calls
+    // before we release them; the correctness assertion is the transcript
+    // check below, not this delay.)
     await new Promise((r) => setTimeout(r, 30));
-    expect(orch.calls).toHaveLength(2);
     // Release the real results; the transcript records SUCCESS (what actually
     // happened), never a fabricated cancellation.
     orch.release(0);

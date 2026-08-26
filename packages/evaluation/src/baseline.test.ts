@@ -818,7 +818,7 @@ describe("runBaseline P0-6 options", () => {
       [caseDef({ id: "a" })],
       async (c) => outcome({ caseId: c.id }),
       { generatedAt: "now", benchmarkVersion: "1.0.0", model: { providerId: "p", modelId: "m" }, casesTotal: 1, suite: "regression" },
-      { manifest: { gitSha: "abc", dirty: false, model: "m", provider: "p", temperature: null, suiteVersion: "2.1.0", judgeVersion: "1.0.0", runtimeConfigHash: "hash", timestamp: "t", platform: process.platform, nodeVersion: process.version, profile: "benchmark", features: { context: true }, contextBudgetTokens: 32000, taskSuites: ["regression"], randomSeed: 42 } },
+      { manifest: { gitSha: "abc", dirty: false, model: "m", provider: "p", temperature: null, suiteVersion: "2.1.0", judgeVersion: "1.0.0", runtimeConfigHash: "hash", timestamp: "t", platform: process.platform, nodeVersion: process.version, profile: "benchmark", features: { context: true }, contextBudgetTokens: 32000, taskSuites: ["regression"], randomSeed: 42, candidate: null } },
     );
     expect(report.manifest).toMatchObject({ gitSha: "abc", runtimeConfigHash: "hash" });
   });

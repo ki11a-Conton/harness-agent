@@ -13,12 +13,17 @@ import type { CommandResult } from "./commands.js";
 import {
   GATE_COMMANDS,
   REQUIRED_GATES,
+  aggregateGateInstances,
   computeReleaseVerdict,
-  parseGateEvidence,
+  parseRawEvidence,
   renderReleaseVerdict,
-  type RequiredGateId,
+  validateGateEvidenceInstance,
+  type RawGateEvidence,
   type ReleaseGateResult,
+  type ReleasePlatform,
   type ReleaseVerdict,
+  type RequiredGateId,
+  type ValidatedGateEvidence,
 } from "./release-verify.js";
 
 export interface ReleaseVerifyOptions {
@@ -41,9 +46,19 @@ async function detectHead(root: string): Promise<string> {
   });
 }
 
-async function readGateEvidence(dir: string): Promise<ReleaseGateResult[]> {
-  const gates: ReleaseGateResult[] = [];
-  const byId = new Map<string, ReleaseGateResult[]>();
+/**
+ * P38.3-5/6 — read raw evidence, validate EVERY instance against the exact
+ * HEAD/command/gate/platform BEFORE aggregating, index by gate+platform, check
+ * the required platform set, then aggregate per-gate verdicts.
+ *
+ * Forbidden flow: aggregate first → validate only the representative/first
+ * evidence. A stale or malformed secondary platform must NOT be hidden by a
+ * valid first instance — any invalid instance is recorded as blocked, never
+ * silently dropped.
+ */
+async function readGateEvidence(dir: string, expectedHead: string): Promise<ReleaseGateResult[]> {
+  const byId = new Map<RequiredGateId, ValidatedGateEvidence[]>();
+  const structuralFailures: string[] = [];
   const collect = async (d: string): Promise<void> => {
     let entries: string[];
     try {
@@ -53,44 +68,102 @@ async function readGateEvidence(dir: string): Promise<ReleaseGateResult[]> {
     }
     for (const entry of entries) {
       const path = join(d, entry);
+      let stat;
       try {
-        const stat = await import("node:fs/promises").then((m) => m.stat(path));
-        if (stat.isDirectory()) {
-          await collect(path);
-        } else if (entry.endsWith(".json")) {
-          const text = await readFile(path, "utf8");
-          const gate = parseGateEvidence(text, path);
-          const list = byId.get(gate.id) ?? [];
-          list.push(gate);
-          byId.set(gate.id, list);
-        }
+        stat = await import("node:fs/promises").then((m) => m.stat(path));
       } catch {
         continue;
+      }
+      if (stat.isDirectory()) {
+        await collect(path);
+        continue;
+      }
+      if (!entry.endsWith(".json")) continue;
+
+      // Level 1 — read + parse the raw record. A structural failure (non-JSON,
+      // missing fields, unknown gate) cannot be attributed to a gate.
+      let raw: RawGateEvidence;
+      try {
+        const text = await readFile(path, "utf8");
+        raw = parseRawEvidence(text, path);
+      } catch (err) {
+        structuralFailures.push(err instanceof Error ? err.message : String(err));
+        continue;
+      }
+
+      // Level 2 — validate the instance against the exact expected HEAD,
+      // canonical command, gate, and platform. A semantic failure is attributed
+      // to the gate it claims.
+      try {
+        const impliedPlatform = inferPlatformFromPath(d);
+        if (raw.platform && impliedPlatform && raw.platform !== impliedPlatform) {
+          throw new Error(
+            `malformed gate evidence at ${path}: platform "${raw.platform}" contradicts directory "${impliedPlatform}"`,
+          );
+        }
+        const platform = (raw.platform ?? impliedPlatform) as ReleasePlatform | undefined;
+        if (platform === undefined) {
+          throw new Error(`malformed gate evidence at ${path}: missing platform`);
+        }
+        const validated = validateGateEvidenceInstance({
+          evidence: raw,
+          expectedHead,
+          expectedCommand: GATE_COMMANDS[raw.gate as RequiredGateId],
+          expectedGate: raw.gate as RequiredGateId,
+          expectedPlatform: platform,
+          sourcePath: path,
+        });
+        const list = byId.get(validated.id) ?? [];
+        list.push(validated);
+        byId.set(validated.id, list);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const gateId = raw.gate as RequiredGateId;
+        const impliedPlatform = inferPlatformFromPath(d);
+        const blockedPlatform = (raw.platform || impliedPlatform || "linux") as ReleasePlatform;
+        const list = byId.get(gateId) ?? [];
+        list.push({
+          id: gateId,
+          platform: blockedPlatform,
+          state: "blocked",
+          headSha: expectedHead,
+          command: GATE_COMMANDS[gateId],
+          evidenceRef: path,
+          reason: message,
+        });
+        byId.set(gateId, list);
       }
     }
   };
   await collect(dir);
-  // P38.2-10 (INV-P38.2-010): the same gate may have evidence from multiple
-  // platforms (gates/linux/*.json + gates/windows/*.json). All instances must
-  // pass — a red platform makes the gate red.
+
+  // Aggregate per-gate instances with platform-aware checks. Gates with only
+  // blocked instances produce a blocked aggregated gate.
+  const results: ReleaseGateResult[] = [];
   for (const [id, instances] of byId) {
-    if (instances.length === 1) {
-      gates.push(instances[0]!);
-      continue;
-    }
-    const first = instances[0]!;
-    const allPassed = instances.every((g) => g.state === "passed");
-    const platforms = instances.map((g) => g.evidenceRef).join(", ");
-    gates.push({
-      id: id as ReleaseGateResult["id"],
-      state: allPassed ? "passed" : "failed",
-      headSha: first.headSha,
-      command: first.command,
-      reason: `multi-platform evidence (${platforms}): ${allPassed ? "all platforms passed" : "one or more platforms failed"}`,
-      evidenceRef: platforms,
+    results.push(aggregateGateInstances({ id, instances, expectedHead }));
+  }
+  // Structural failures (unreadable files, unknown gate, non-JSON) are surfaced
+  // as a blocked pseudo-gate so they never disappear silently.
+  if (structuralFailures.length > 0) {
+    results.push({
+      id: "typecheck",
+      state: "blocked",
+      headSha: expectedHead,
+      command: GATE_COMMANDS.typecheck,
+      reason: `invalid evidence file(s): ${structuralFailures.join("; ")}`,
     });
   }
-  return gates;
+  return results;
+}
+
+const PLATFORM_DIR_NAMES: readonly string[] = ["linux", "windows", "darwin", "coverage"];
+
+function inferPlatformFromPath(dir: string): ReleasePlatform | undefined {
+  const base = dir.split(/[\\/]/).pop() ?? "";
+  return (PLATFORM_DIR_NAMES as readonly string[]).includes(base)
+    ? (base as ReleasePlatform)
+    : undefined;
 }
 
 /** Resolve a verdict from evidence on disk (used by the CLI and tests). */
@@ -101,7 +174,7 @@ export async function resolveReleaseVerdict(opts: ReleaseVerifyOptions): Promise
   const root = resolve(opts.root ?? process.cwd());
   const headSha = opts.headSha ?? (await detectHead(root));
   const evidenceDir = resolve(opts.evidenceDir ?? join(root, ".ci", "evidence"));
-  const gates = await readGateEvidence(evidenceDir);
+  const gates = await readGateEvidence(evidenceDir, headSha);
   const verdict = computeReleaseVerdict({ headSha, gates });
   return { verdict, headSha };
 }

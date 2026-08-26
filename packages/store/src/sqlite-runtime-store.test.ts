@@ -20,6 +20,7 @@ import {
   type Message,
   type Session,
   type Turn,
+  type TurnId,
 } from "@ar/contracts";
 import { buildCheckpoint } from "@ar/contracts";
 import { migrateJsonlToSqlite } from "./migrate.js";
@@ -168,6 +169,36 @@ describe("SqliteRuntimeStore (P5-3)", () => {
     await store.markConsumed(prompt.id);
     const all = await store.listAll(sid);
     expect(all[0]!.status).toBe("consumed");
+  });
+
+  it("P38.3-3 — listRecoverable observes promoted prompts (INV-P38.3-003)", async () => {
+    const store = trackStore(new SqliteRuntimeStore({ dataDir: await freshDir() }));
+    try {
+      const sid = newSessionId();
+      const prompt: AdmittedPrompt = {
+        id: newPromptId(),
+        sessionId: sid,
+        text: "recoverable-promoted",
+        kind: "followup",
+        status: "pending",
+        admittedAt: 1,
+      };
+      await store.admit(prompt);
+      await store.bindPromotion(prompt.id, "turn_recover" as TurnId);
+      // listPending (pending only) must NOT see the promoted prompt — this is
+      // why hydration MUST use listRecoverable.
+      expect((await store.listPending(sid)).find((p) => p.id === prompt.id)).toBeUndefined();
+      // listRecoverable (pending + promoted) MUST observe it.
+      const recoverable = await store.listRecoverable(sid);
+      const observed = recoverable.find((p) => p.id === prompt.id)!;
+      expect(observed.status).toBe("promoted");
+      expect(observed.promotedTurnId).toBe("turn_recover" as TurnId);
+      // consumed prompts are excluded from recovery.
+      await store.markConsumed(prompt.id);
+      expect((await store.listRecoverable(sid)).find((p) => p.id === prompt.id)).toBeUndefined();
+    } finally {
+      store.close();
+    }
   });
 
   it("askUser: create/listPending/answer/withdraw via the composition surface", async () => {

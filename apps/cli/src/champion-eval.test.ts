@@ -95,4 +95,61 @@ describe("P21-3 champion eval CLI", () => {
     // tokens delta is 0 here (same run metrics) — claim must be neutral, not overstated
     expect(report.claim).toContain("real-model paired eval");
   });
+
+  it("P38.3-12: quality policy PASSes for a clean same-case comparison", async () => {
+    const baselinePath = await writeRuns("baseline5.json", [
+      run("a", true, "verified_complete"),
+      run("b", true, "verified_complete"),
+    ]);
+    const candidatePath = await writeRuns("candidate5.json", [
+      run("a", true, "verified_complete"),
+      run("b", true, "verified_complete"),
+    ]);
+    const { lines } = await runChampionEval({ baselinePath, candidatePath, mode: "real-model" });
+    const out = lines.join("\n");
+    expect(out).toContain("quality policy (P38.3-12):");
+    expect(out).toContain("PASS  same case set");
+    expect(out).toContain("PASS  compatible judge version");
+    expect(out).toContain("PASS  security non-regression");
+    expect(out).toContain("QUALITY VERDICT: PASS");
+  });
+
+  it("P38.3-12: quality policy FAILs on a judge-version mismatch", async () => {
+    const baselinePath = await writeRuns("baseline6.json", [
+      { ...run("a", true, "verified_complete"), judgeVersion: "1.0.0" },
+    ]);
+    const candidatePath = await writeRuns("candidate6.json", [
+      { ...run("a", true, "verified_complete"), judgeVersion: "1.1.0" },
+    ]);
+    const { lines } = await runChampionEval({ baselinePath, candidatePath, mode: "real-model" });
+    const out = lines.join("\n");
+    expect(out).toContain("FAIL  compatible judge version");
+    expect(out).toContain("judge version mismatch");
+    expect(out).toContain("QUALITY VERDICT: FAIL");
+  });
+
+  it("P38.3-12: security regression fails the policy (never acceptable)", async () => {
+    const baseline = run("a", true, "verified_complete");
+    const insecure = run("a", false, "verification_failed");
+    insecure.violations = ["security.injection_denied fired: payload"];
+    const baselinePath = await writeRuns("baseline7.json", [baseline]);
+    const candidatePath = await writeRuns("candidate7.json", [insecure]);
+    const { lines } = await runChampionEval({ baselinePath, candidatePath, mode: "real-model" });
+    const out = lines.join("\n");
+    expect(out).toContain("FAIL  security non-regression");
+    expect(out).toContain("security violations increased");
+    expect(out).toContain("QUALITY VERDICT: FAIL");
+  });
+
+  it("P38.3-12: new infrastructure failures fail the policy", async () => {
+    const baseline = run("a", true, "verified_complete");
+    const infraFail = run("a", false, "verification_failed");
+    infraFail.failureCategory = "infrastructure";
+    const baselinePath = await writeRuns("baseline8.json", [baseline]);
+    const candidatePath = await writeRuns("candidate8.json", [infraFail]);
+    const { lines } = await runChampionEval({ baselinePath, candidatePath, mode: "real-model" });
+    const out = lines.join("\n");
+    expect(out).toContain("FAIL  no new harness/judge/infra failures");
+    expect(out).toContain("QUALITY VERDICT: FAIL");
+  });
 });

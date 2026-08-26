@@ -203,7 +203,8 @@ describe("P34-2 same-session race suite", () => {
     const first = await h.actor.startTurn({ sessionId: h.sessionId, text: "first" });
     await h.provider.whenEntered();
     const status = await h.actor.cancelTurn(first.turnId); // aborts the live one
-    expect(status).toBe("cancelled");
+    // P38.3-8: request accepted; terminal truth observed from the outcome.
+    expect(status.disposition).toBe("cancel_requested");
     // P38-1: after cancellation the drain (if any) releases the reservation —
     // wait for the actor to be genuinely idle before starting a fresh turn.
     await waitUntilIdle(h.actor);

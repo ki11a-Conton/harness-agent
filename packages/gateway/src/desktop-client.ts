@@ -124,12 +124,12 @@ export class DesktopClient {
     return { status: o.status, toolCalls: o.toolCalls, iterations: o.iterations };
   }
 
-  async cancel(sessionId: string, turnId: string): Promise<{ status: string }> {
+  async cancel(sessionId: string, turnId: string): Promise<{ disposition: string }> {
     const result = (await this.#transport.request("session.cancel", {
       sessionId,
       turnId,
-    })) as { status: string };
-    return { status: result.status };
+    })) as { disposition: string };
+    return { disposition: result.disposition };
   }
 
   async resume(sessionId: string): Promise<{ session: unknown }> {

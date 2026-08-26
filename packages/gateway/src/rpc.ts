@@ -163,8 +163,11 @@ export function createRuntimeRpc(
       const session = requireParam("sessionId", sessionId) as SessionId;
       const turn = requireParam("turnId", turnId) as TurnId;
       const actor = await deps.sessions.load(session);
-      const status = await actor.cancelTurn(turn);
-      return { sessionId: session, turnId: turn, status };
+      const result = await actor.cancelTurn(turn);
+      // P38.3-8: disposition signals request acceptance only; terminal truth
+      // (cancelled vs failed/cancellation_persistence_uncertain) is observed
+      // through the TurnOutcome / persisted Turn.
+      return { sessionId: session, turnId: turn, disposition: result.disposition };
     })
     .register("session.resume", async (params) => {
       const { sessionId } = params as { sessionId: SessionId };

@@ -30,7 +30,13 @@ export type SessionStoreErrorCode =
   | "CORRUPT_RECORD"
   | "IO_ERROR"
   | "QUEUE_FULL"
-  | "UNSUPPORTED";
+  | "UNSUPPORTED"
+  /** P38.3-1 (INV-P38.3-002): a prompt is already bound to a different TurnId.
+   *  Lineage must never be rewritten. */
+  | "PROMOTION_CONFLICT"
+  /** P38.3-1: consume was attempted on a prompt that was never promoted
+   *  (no durable promoted state / no bound turn). Fail closed. */
+  | "CONSUME_NOT_PROMOTED";
 
 export class SessionStoreError extends Error {
   readonly code: SessionStoreErrorCode;

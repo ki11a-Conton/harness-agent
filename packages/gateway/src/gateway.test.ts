@@ -1,4 +1,4 @@
-﻿import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type {
   AgentDefinition,
   AgentEvent,
@@ -687,10 +687,13 @@ describe("Gateway cancellation", () => {
     await provider.blocked;
 
     await h.channels[0]!.deliver("cancel");
-    // The cancel settles both the abort reply and the original run reply.
-    const texts = h.channels[0]!.sentTexts();
-    expect(texts).toContain("[cancel] cancelled");
-    expect(texts.some((t) => t.startsWith("[run] cancelled"))).toBe(true);
+    // The cancel request reply settles synchronously; the original run reply
+    // arrives once the aborted turn settles (P38.3-8: request acceptance vs
+    // terminal outcome are distinct).
+    const cancelReply = await waitForMessage(h.channels[0]!, (t) => t.startsWith("[cancel]"));
+    expect(cancelReply.text).toBe("[cancel] cancel_requested");
+    const runReply = await waitForMessage(h.channels[0]!, (t) => t.startsWith("[run]"));
+    expect(runReply.text.startsWith("[run] cancelled")).toBe(true);
 
     const session = (await h.store.listSessions())[0]!;
     const turn = (await h.store.listTurns(session.id))[0]!;

@@ -81,15 +81,27 @@ export interface SessionInputQueue {
   enqueueFollowup(input: UserMessage): Promise<string>;
   /**
    * P38-1/P38-2 (INV-P38-001/002): two-phase promotion API. reserve takes the
-   * next followup WITHOUT consuming the durable record; completePromotion acks
-   * it only after a real turn was created; releasePromotion requeues it when
-   * promotion failed so the input is never lost.
+   * next followup WITHOUT consuming the durable record; bindReservedFollowup
+   * durably establishes P→T; completeReservedFollowup acks only at terminal;
+   * releaseReservedFollowup requeues it when promotion failed so the input is
+   * never lost.
+   *
+   * P38.3-1 (INV-P38.3-001/002): split the durable bind from final consume.
+   * bindReservedFollowup durably establishes P→T (promoted, promotedTurnId).
+   * completeReservedFollowup transitions the already-bound prompt to consumed.
+   * releaseReservedFollowup requeues a reservation that was never bound.
+   * BIND != CONSUME — the two durable steps MUST remain separate.
    */
   reservePendingFollowup(): Promise<{ id: string; input: UserMessage } | undefined>;
-  /** P38.2-1 (INV-P38.2-001): bind the durable prompt to the created turn,
-   *  then mark it consumed. `turnId` is the durable Turn created from it. */
-  completePromotion(id: string, turnId: TurnId): Promise<void>;
-  releasePromotion(id: string): Promise<void>;
+  /** P38.3-1: durably bind the reserved prompt to the created turn identity.
+   *  Called BEFORE promoteToRunning / runtime.runTurn. */
+  bindReservedFollowup(reservationId: string, turnId: TurnId): Promise<void>;
+  /** P38.3-1: mark the (already bound) prompt consumed. Only after the turn
+   *  is terminal. The reserved slot is released after this call. */
+  completeReservedFollowup(reservationId: string): Promise<void>;
+  /** P38.3-1: requeue a reservation that was never bound/consumed. The prompt
+   *  remains pending in the durable inbox and is recoverable. */
+  releaseReservedFollowup(reservationId: string): Promise<void>;
 }
 
 /** P25-1: session-bound resource registry (sandbox roots, MCP refs, ...).
@@ -115,7 +127,15 @@ export interface SessionRuntimeStatus {
   loaded: boolean;
 }
 
-export type SessionTurnStatus = TurnStatus | "not_running";
+/** P38.3-8: result of a cancelTurn request. The disposition signals whether
+ *  the request was accepted; terminal cancellation truth is always observed
+ *  through TurnOutcome / persisted Turn / terminal events — never through the
+ *  request-level response alone.
+ *  Documented: cancel request accepted != durable terminal cancellation confirmed. */
+export interface CancelTurnResult {
+  disposition: "cancel_requested" | "not_running";
+  turnId: TurnId;
+}
 
 /** P25-2: the single owner of one live session's state. */
 export interface SessionActor {
@@ -145,8 +165,14 @@ export interface SessionActor {
   enqueueFollowup(input: UserMessage): Promise<void>;
   /** Hard-abort the active turn (if any) and await its outcome. */
   interrupt(): Promise<TurnOutcome | undefined>;
-  /** Abort the active turn only when it matches `turnId`; returns its status. */
-  cancelTurn(turnId: TurnId): Promise<SessionTurnStatus>;
+  /** Abort the active turn only when it matches `turnId`.
+   *
+   *  P38.3-8 semantic: this is a REQUEST acceptance API. The returned
+   *  disposition says the request was accepted (or not applicable) — it does
+   *  NOT claim durable terminal cancellation. Terminal truth (cancelled vs
+   *  failed/cancellation_persistence_uncertain) is observed through the
+   *  TurnOutcome / persisted Turn / terminal events. */
+  cancelTurn(turnId: TurnId): Promise<CancelTurnResult>;
   status(): SessionRuntimeStatus;
   /** Idempotent P25-6 shutdown. */
   close(): Promise<void>;
@@ -257,22 +283,30 @@ export class InboxSessionInputQueue implements SessionInputQueue {
     return { id: next.id, input: next.input };
   }
 
-  /** P38-2 (INV-P38-002) + P38.2-1 (INV-P38.2-001): bind the durable prompt
-   *  to the created turn identity, then mark it consumed. The bind happens
-   *  BEFORE markConsumed so even if the ack fails, the prompt is never
-   *  re-promoted to a second turn after restart. */
-  async completePromotion(id: string, turnId: TurnId): Promise<void> {
+  /** P38.3-1 (INV-P38.3-001/002): durably bind the reserved prompt to the
+   *  created turn identity. This MUST happen before the turn starts executing
+   *  (P38.3-2). It does NOT consume the prompt. */
+  async bindReservedFollowup(id: string, turnId: TurnId): Promise<void> {
     if (this.reserved === undefined || this.reserved.id !== id) return;
     if (this.reserved.promptId !== undefined && this.deps.inbox !== undefined) {
       await this.deps.inbox.bindPromotion(this.reserved.promptId, turnId);
+    }
+  }
+
+  /** P38.3-1: mark the (already bound) reserved prompt consumed. Only called
+   *  once the turn is terminal — the prompt's promotedTurnId is retained. The
+   *  reservation slot is cleared after the durable consume succeeds. */
+  async completeReservedFollowup(id: string): Promise<void> {
+    if (this.reserved === undefined || this.reserved.id !== id) return;
+    if (this.reserved.promptId !== undefined && this.deps.inbox !== undefined) {
       await this.deps.inbox.markConsumed(this.reserved.promptId);
     }
     this.reserved = undefined;
   }
 
-  /** P38-2 (INV-P38-003): promotion failed — requeue the reserved input at
-   *  the head so it is recoverable (never lost, never double-consumed). */
-  async releasePromotion(id: string): Promise<void> {
+  /** P38.3-1: promotion could not bind — requeue the reserved input at the
+   *  head so it is recoverable (never lost, never double-consumed). */
+  async releaseReservedFollowup(id: string): Promise<void> {
     if (this.reserved === undefined || this.reserved.id !== id) return;
     this.followups.unshift(this.reserved);
     this.reserved = undefined;
@@ -331,21 +365,45 @@ export class InboxSessionInputQueue implements SessionInputQueue {
     const inbox = this.deps.inbox;
     const store = this.deps.store;
     if (inbox === undefined) return;
-    const pending = await inbox.listPending(this.sessionId);
+    // P38.3-3 (INV-P38.3-003): use the RECOVERY query (pending + promoted),
+    // NOT listPending (pending only) — otherwise the promoted-reconciliation
+    // branch below would be structurally unreachable in production.
+    const recoverable = await inbox.listRecoverable(this.sessionId);
     const known = this.collectKnownPromptIds();
-    for (const p of pending) {
-      // Only status "pending": a promoted followup already started a turn
-      // (crash recovery) and must not be re-queued.
+    for (const p of recoverable) {
       if (p.kind !== "followup") continue;
-      // P38.2-2 (INV-P38.2-002): promoted prompts are reconciled against
-      // their bound turn — never replayed.
+      // P38.2-2 (INV-P38.2-002) + P38.3-3 (INV-P38.3-002): promoted prompts are
+      // reconciled against their bound turn — never replayed, never T2.
       if (p.status === "promoted") {
-        if (p.promotedTurnId !== undefined && store !== undefined) {
+        if (p.promotedTurnId === undefined) {
+          // P38.3-3: malformed durable state — promoted without turn identity.
+          // Fail closed: do NOT requeue as a fresh prompt (that would risk T2).
+          // Surface the diagnostic so recovery is on record.
+          process.stderr.write(
+            `[degraded] inbox.promotion-identity-missing: session ${this.sessionId} prompt ${p.id} is promoted but has no promotedTurnId — recovery-required, not replayed\n`,
+          );
+          continue;
+        }
+        if (store !== undefined) {
           const turn = await store.getTurn(p.promotedTurnId);
-          if (turn !== undefined && (turn.status === "completed" || turn.status === "failed" || turn.status === "cancelled")) {
-            // Turn is terminal — mark the prompt consumed.
-            await inbox.markConsumed(p.id);
+          if (turn === undefined) {
+            process.stderr.write(
+              `[degraded] inbox.bound-turn-missing: session ${this.sessionId} prompt ${p.id} bound to unknown turn ${p.promotedTurnId} — recovery-required, not replayed\n`,
+            );
+            continue;
           }
+          if (turn.status === "completed" || turn.status === "failed" || turn.status === "cancelled") {
+            // Turn is terminal — mark the prompt consumed.
+            try {
+              await inbox.markConsumed(p.id);
+            } catch (consumeErr) {
+              process.stderr.write(
+                `[degraded] session ${this.sessionId} failed to consume promoted prompt ${p.id} after terminal bound turn: ${consumeErr instanceof Error ? consumeErr.message : String(consumeErr)}\n`,
+              );
+            }
+          }
+          // Nonterminal bound turn: recovery owns lineage T. Never enqueue P as
+          // a fresh followup (INV-P38.3-002) — no T2.
         }
         continue;
       }
@@ -588,13 +646,17 @@ export class DefaultSessionActor implements SessionActor {
     return undefined;
   }
 
-  async cancelTurn(turnId: TurnId): Promise<SessionTurnStatus> {
+  async cancelTurn(turnId: TurnId): Promise<CancelTurnResult> {
     const s = this.state;
     if (s.kind === "running") {
-      if (s.turn.id !== turnId) return "not_running";
+      if (s.turn.id !== turnId) {
+        return { disposition: "not_running", turnId };
+      }
+      // P38.3-8: abort is requested; the terminal outcome (cancelled vs
+      // failed/cancellation_persistence_uncertain) is observed through the
+      // run outcome / persisted turn — never claimed by this return value.
       s.controller.abort();
-      const outcome = await s.outcome;
-      return outcome.status;
+      return { disposition: "cancel_requested", turnId };
     }
     if (s.kind === "starting" && s.turnId === turnId) {
       // P38.1-4 (INV-P38.1-004/005): cancel of a starting existing-turn is
@@ -602,9 +664,12 @@ export class DefaultSessionActor implements SessionActor {
       // "starting" would let a late requireTurn promote to running.
       s.controller.abort();
       this.state = this.closed ? { kind: "closing" } : { kind: "idle" };
-      return "cancelled";
+      // P38.3-8: the durable persistence of the cancellation is NOT yet known
+      // (updateTurn may fail → failed/cancellation_persistence_uncertain), so
+      // the request result never claims "cancelled" as durable truth.
+      return { disposition: "cancel_requested", turnId };
     }
-    return "not_running";
+    return { disposition: "not_running", turnId };
   }
 
   status(): SessionRuntimeStatus {
@@ -816,6 +881,7 @@ export class DefaultSessionActor implements SessionActor {
     const requestId = nextRequestId();
     this.state = { kind: "starting", source: "followup", controller, requestId };
     let reservedId: string | undefined;
+    let boundTurnId: TurnId | undefined;
 
     /** P38.1-3: a promotion that cannot produce a running owner. Reset the
      *  starting slot, requeue the durable prompt (it was never consumed), and
@@ -825,15 +891,20 @@ export class DefaultSessionActor implements SessionActor {
         this.state = { kind: "idle" };
       }
       if (reservedId === entryId) reservedId = undefined;
-      try {
-        await queue.releasePromotion(entryId);
-      } catch (releaseErr) {
-        // Best-effort requeue; the durable inbox record is still pending so
-        // hydration on restart recovers it. Surface the loss (P14-6) — never
-        // silent.
-        process.stderr.write(
-          `[degraded] session ${this.sessionId} failed to release reserved followup ${entryId}: ${releaseErr instanceof Error ? releaseErr.message : String(releaseErr)}\n`,
-        );
+      // P38.3-2: only requeue when the prompt was NEVER bound. Once P→T is
+      // durable, requeueing would double-execute — the reconcile path handles
+      // the bound lineage instead.
+      if (boundTurnId === undefined) {
+        try {
+          await queue.releaseReservedFollowup(entryId);
+        } catch (releaseErr) {
+          // Best-effort requeue; the durable inbox record is still pending so
+          // hydration on restart recovers it. Surface the loss (P14-6) — never
+          // silent.
+          process.stderr.write(
+            `[degraded] session ${this.sessionId} failed to release reserved followup ${entryId}: ${releaseErr instanceof Error ? releaseErr.message : String(releaseErr)}\n`,
+          );
+        }
       }
       this.settleFollowup(entryId, {
         kind: "err",
@@ -844,7 +915,7 @@ export class DefaultSessionActor implements SessionActor {
     try {
       // P38-2 (INV-P38-002): reserve the followup entry WITHOUT consuming the
       // durable inbox record. The inbox is marked consumed only after a real
-      // turn is created (completePromotion).
+      // turn is created and completes (completeReservedFollowup).
       const entry = await queue.reservePendingFollowup();
       if (entry === undefined) {
         // No pending followup — release the reservation.
@@ -865,53 +936,119 @@ export class DefaultSessionActor implements SessionActor {
         return;
       }
 
-      // P38-4 (INV-P38-005): cancelled/aborted reservation cannot promote.
+      // P38.3-2 step 4: revalidate the actor reservation before the durable
+      // bind. If the reservation was revoked, the prompt is still unbound and
+      // recoverable.
       if (this.state.kind !== "starting" || this.state.requestId !== requestId || controller.signal.aborted) {
-        await failPromotion(entry.id, "followup promotion cancelled before running");
+        await failPromotion(entry.id, "followup promotion cancelled before bind");
         return;
       }
 
-      // P38.1-3 (INV-P38.1-003): establish the running OWNER synchronously
-      // BEFORE the durable ack. If the actor is interrupted/cancelled/closed
-      // while the ack is in flight, the consumed prompt is still bound to a
-      // recoverable turn — there is no consumed-without-owner window.
+      // P38.3-2 step 5 (INV-P38.3-001): durably bind P → T BEFORE any
+      // execution begins. If the bind fails, T exists but MUST NOT execute.
+      try {
+        await queue.bindReservedFollowup(entry.id, turn.id);
+        boundTurnId = turn.id;
+      } catch (bindErr) {
+        // Bind failed — T exists but must not run. The prompt remains pending
+        // or uncertain per the store result. Never silently create another
+        // turn in the same attempt; the created-but-unbound turn is an orphan
+        // surfaced via diagnostics. No runtime.runTurn(T).
+        process.stderr.write(
+          `[degraded] session ${this.sessionId} durable followup bind failed for ${entry.id} (created turn ${turn.id} will not execute): ${bindErr instanceof Error ? bindErr.message : String(bindErr)}\n`,
+        );
+        await failPromotion(entry.id, `followup durable bind failed: ${bindErr instanceof Error ? bindErr.message : String(bindErr)}`);
+        return;
+      }
+
+      // P38.3-2 step 6: revalidate the actor reservation AFTER the bind. If it
+      // was revoked between bind and promotion, P is durably promoted → T; we
+      // must NOT requeue (no T2) and must NOT execute T — terminalize it
+      // consistently so the lineage stays one-to-one.
+      if (this.state.kind !== "starting" || this.state.requestId !== requestId || controller.signal.aborted) {
+        try {
+          await this.terminalizeRevokedTurn(turn);
+        } catch (terminalizeErr) {
+          process.stderr.write(
+            `[degraded] session ${this.sessionId} failed to terminalize revoked bound turn ${turn.id}: ${terminalizeErr instanceof Error ? terminalizeErr.message : String(terminalizeErr)}\n`,
+          );
+        }
+        if (this.state.kind === "starting" && this.state.requestId === requestId) {
+          this.state = { kind: "idle" };
+        }
+        this.settleFollowup(entry.id, {
+          kind: "err",
+          err: new AgentError(errorInfo("FOLLOWUP_PROMOTION_FAILED", `session ${this.sessionId} followup cancelled after bind (turn ${turn.id} terminalized)`)),
+        });
+        return;
+      }
+
+      // P38.3-2 step 7: establish the running OWNER synchronously BEFORE the
+      // durable ack. The prompt is already durably bound to T — the running
+      // turn is the single owner of that lineage.
       let handle: TurnHandle;
       try {
         handle = this.promoteToRunning(turn, controller);
       } catch (promoteErr) {
-        // The reservation was invalidated at the final instant — the prompt
-        // was never consumed, so requeue it (recoverable) and settle.
-        await failPromotion(entry.id, `followup promotion to running failed: ${promoteErr instanceof Error ? promoteErr.message : String(promoteErr)}`);
-        return;
-      }
-
-      // Owner (running turn) is established. Mark the durable prompt consumed.
-      // A durable-ack failure here must NOT requeue (the running turn owns the
-      // prompt — requeuing would double-execute it): surface the loss so the
-      // reconciliation path is on record, and let the caller settle via the
-      // running turn's own outcome.
-      try {
-        await queue.completePromotion(entry.id, turn.id);
-      } catch (ackErr) {
+        // promoteToRunning failed at the final instant. The prompt is ALREADY
+        // durably bound to T (P38.3-2). Do NOT requeue (no T2). Terminalize T
+        // consistently so recovery follows the bound lineage.
         process.stderr.write(
-          `[degraded] session ${this.sessionId} durable followup ack failed for ${entry.id} (running turn remains the owner): ${ackErr instanceof Error ? ackErr.message : String(ackErr)}\n`,
+          `[degraded] session ${this.sessionId} promote-to-running failed after bind for turn ${turn.id}: ${promoteErr instanceof Error ? promoteErr.message : String(promoteErr)}\n`,
         );
+        try {
+          await this.terminalizeRevokedTurn(turn);
+        } catch (terminalizeErr) {
+          process.stderr.write(
+            `[degraded] session ${this.sessionId} failed to terminalize bound turn ${turn.id} after promote failure: ${terminalizeErr instanceof Error ? terminalizeErr.message : String(terminalizeErr)}\n`,
+          );
+        }
+        if (this.state.kind === "starting" && this.state.requestId === requestId) {
+          this.state = { kind: "idle" };
+        }
+        this.settleFollowup(entry.id, {
+          kind: "err",
+          err: new AgentError(errorInfo("FOLLOWUP_PROMOTION_FAILED", `session ${this.sessionId} followup promotion to running failed (turn ${turn.id} terminalized)`)),
+        });
+        return;
       }
       reservedId = undefined;
 
-      // P38.1-2 (INV-P38.1-002): resolve the queued caller with the drained
-      // turn's outcome exactly once — success or terminal failure.
+      // P38.3-2 step 8-9: when the turn is TERMINAL, mark P consumed (P is
+      // already durably bound, so the consume only flips promoted → consumed)
+      // and settle the waiting caller exactly once. A consume failure here must
+      // NOT requeue — the bound lineage owns the prompt (INV-P38.3-004):
+      // surface the loss so reconciliation is on record.
       void handle.outcome.then(
-        (outcome) => this.settleFollowup(entry.id, { kind: "ok", outcome }),
-        (err) => this.settleFollowup(entry.id, { kind: "err", err }),
+        (outcome) => {
+          void queue
+            .completeReservedFollowup(entry.id)
+            .catch((ackErr) => {
+              process.stderr.write(
+                `[degraded] session ${this.sessionId} durable followup consume failed for ${entry.id} (prompt remains bound to turn ${turn.id}): ${ackErr instanceof Error ? ackErr.message : String(ackErr)}\n`,
+              );
+            })
+            .then(() => this.settleFollowup(entry.id, { kind: "ok", outcome }));
+        },
+        (err) => {
+          void queue
+            .completeReservedFollowup(entry.id)
+            .catch((ackErr) => {
+              process.stderr.write(
+                `[degraded] session ${this.sessionId} durable followup consume failed for ${entry.id} after terminal error (prompt remains bound to turn ${turn.id}): ${ackErr instanceof Error ? ackErr.message : String(ackErr)}\n`,
+              );
+            })
+            .then(() => this.settleFollowup(entry.id, { kind: "err", err }));
+        },
       );
     } catch (err) {
-      // reservePendingFollowup (or the ack guard) threw — defensive. Release
-      // the reservation if we still hold it (never consumed, never lost).
+      // reservePendingFollowup (or an unexpected throw) — defensive. Release
+      // the reservation if we still hold it and it was never bound (never
+      // consumed, never lost).
       if (this.state.kind === "starting" && this.state.requestId === requestId) {
         this.state = { kind: "idle" };
       }
-      if (reservedId !== undefined) {
+      if (reservedId !== undefined && boundTurnId === undefined) {
         await failPromotion(reservedId, `followup promotion failed: ${err instanceof Error ? err.message : String(err)}`);
       }
     }

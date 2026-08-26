@@ -347,8 +347,8 @@ describe("createRuntimeRpc session lifecycle", () => {
     const cancel = (await registry.invoke("session.cancel", {
       sessionId: session.id,
       turnId,
-    })) as { status: string };
-    expect(cancel.status).toBe("cancelled");
+    })) as { disposition: string };
+    expect(cancel.disposition).toBe("cancel_requested");
 
     const outcome = (await runPromise) as TurnOutcome;
     expect(outcome.status).toBe("cancelled");
@@ -363,8 +363,8 @@ describe("createRuntimeRpc session lifecycle", () => {
     const result = (await registry.invoke("session.cancel", {
       sessionId: session.id,
       turnId,
-    })) as { status: string };
-    expect(result.status).toBe("not_running");
+    })) as { disposition: string };
+    expect(result.disposition).toBe("not_running");
   });
 
   it("session.steer admits a steering prompt without touching the transcript", async () => {
@@ -438,8 +438,9 @@ describe("createRuntimeRpc session lifecycle", () => {
     const cancel = (await registry.invoke("session.cancel", {
       sessionId: session.id,
       turnId,
-    })) as { status: string };
-    expect(cancel.status).toBe("cancelled");
+    })) as { disposition: string };
+    // P38.3-8: request accepted; terminal truth observed from the outcome.
+    expect(cancel.disposition).toBe("cancel_requested");
     const outcome = (await first) as TurnOutcome;
     expect(outcome.status).toBe("cancelled");
   });
@@ -599,8 +600,9 @@ describe("concurrency and transport", () => {
     const cancelA = (await registry.invoke("session.cancel", {
       sessionId: sessionA.id,
       turnId: turnA.turnId,
-    })) as { status: string };
-    expect(cancelA.status).toBe("cancelled");
+    })) as { disposition: string };
+    // P38.3-8: request accepted; terminal truth from the outcome.
+    expect(cancelA.disposition).toBe("cancel_requested");
 
     const [outcomeA, outcomeB] = (await Promise.all([runA, runB])) as [TurnOutcome, TurnOutcome];
     expect(outcomeA.status).toBe("cancelled");

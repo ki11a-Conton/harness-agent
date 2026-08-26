@@ -215,7 +215,7 @@ jobs:
       - name: Generate coverage gate evidence (P38-12)
         run: |
           mkdir -p .ci/evidence
-          echo "{\"schemaVersion\":1,\"gate\":\"coverage\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:coverage\",\"exitCode\":0,\"passed\":true,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/coverage.json
+          echo "{\"schemaVersion\":1,\"kind\":\"gate\",\"gate\":\"coverage\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:coverage\",\"exitCode\":0,\"passed\":true,\"platform\":\"coverage\",\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/coverage.json
 
       - name: Upload coverage gate evidence (P38-12)
         uses: actions/upload-artifact@v4
@@ -272,14 +272,21 @@ jobs:
           name: gate-evidence-coverage
           path: .ci/evidence/gates/coverage/
 
-      - name: Verify evidence SHA and derive release verdict (P38.2-13)
+      - name: Verify evidence SHA and derive release verdict (P38.2-13 / P38.3-7)
+        id: release-verify
         # INV-P38.2-015: the attestation REDUCES the downloaded evidence files;
         # there is no hard-coded PASS table here. runtimeReleaseReady is derived
         # from the actual `release verify` exit code, never hard-coded.
+        #
+        # P38.3-7: the attestation artifact is ALWAYS written (including on a
+        # negative verdict) and the job is failed by a dedicated assert step —
+        # a red verdict can never render the job green.
         run: |
-          echo "Release SHA: ${{ github.sha }}"
-          ls -laR .ci/evidence/gates/
-          if node apps/cli/dist/main.js release verify; then
+          set +e
+          node apps/cli/dist/main.js release verify
+          VERIFY_RC=$?
+          set -e
+          if [ "$VERIFY_RC" -eq 0 ]; then
             READY="true"
           else
             READY="false"
@@ -288,8 +295,13 @@ jobs:
           {"schemaVersion":2,"headSha":"${{ github.sha }}","generatedAt":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","runtimeReleaseReady":${READY},"championPromotion":{"status":"NOT_RUN","reason":"paid real-model benchmark is optional and was not requested for runtime RC"}}
           EOF
           echo "runtimeReleaseReady: ${READY}"
+          echo "verify_rc=${VERIFY_RC}" >> "$GITHUB_OUTPUT"
 
       - name: Upload release attestation (P38.2-13)
+        # P38.3-7: `if: always()` — a red verdict still leaves debuggable
+        # attestation evidence; the upload must never be skipped by an earlier
+        # failing step.
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: release-evidence-${{ github.sha }}
@@ -297,3 +309,12 @@ jobs:
             .ci/evidence/gates/
             release-attestation.json
           if-no-files-found: error
+
+      - name: Fail job when release not ready (P38.3-7)
+        # P38.3-7 invariant: job green ⇔ runtimeReleaseReady == true. The job
+        # is only green when the attestation recorded READY=true (verify_rc 0).
+        if: always() && steps.release-verify.outputs.verify_rc != '0'
+        run: |
+          echo "release attestation: NOT READY"
+          echo "runtimeReleaseReady=false was recorded; failing the job per INV-P38.3-007."
+          exit 1

@@ -139,6 +139,9 @@ export interface BenchmarkCaseResult {
   /** P2-14: weighted extremely-cheap score and security gate, when the cost
    *  model is enabled. Optional for backward compatibility with older reports. */
   cost?: import("./cost-model.js").CostResult;
+  /** P38.3-10: effective per-case mechanism wiring. Optional for backward
+   *  compatibility with older reports. */
+  effective_features?: Record<string, boolean>;
 }
 
 export interface BaselineSummary {
@@ -567,6 +570,9 @@ export function collectRunMetrics(outcome: EvalOutcome): BenchmarkCaseResult {
     violations: outcome.violations,
     cost: scoreCost(outcome),
     ...(outcome.reason !== undefined ? { reason: outcome.reason } : {}),
+    ...(outcome.effectiveFeatures !== undefined
+      ? { effective_features: outcome.effectiveFeatures }
+      : {}),
   };
 }
 
@@ -939,6 +945,7 @@ function renderSummaryMd(report: BaselineReport): string {
   if (report.manifest !== undefined) {
     lines.push("## Run manifest", "");
     lines.push(`- git: ${report.manifest.gitSha === null ? "not available" : `${report.manifest.gitSha}${report.manifest.dirty ? " (dirty)" : ""}`}`);
+    lines.push(`- candidate: ${report.manifest.candidate ?? "champion baseline"}`);
     lines.push(`- runtime config hash: ${report.manifest.runtimeConfigHash}`);
     lines.push(`- suite version: ${report.manifest.suiteVersion}`);
     lines.push(`- judge version: ${report.manifest.judgeVersion}`);
@@ -968,6 +975,13 @@ function renderSummaryMd(report: BaselineReport): string {
   }
   lines.push(`| avg cost score | ${formatNum(s.avg_cost_score)} |`);
   lines.push(`| security violations (hard gate) | ${s.security_violations} |`);
+  // P38.3-12: measurement vs quality must be impossible to confuse. The
+  // summary is a MEASUREMENT of this run — it never claims agent quality.
+  lines.push("", "> This report is a **measurement** (the benchmark ran and produced a valid",
+    "> report). It is NOT a quality verdict. Quality assessment happens separately",
+    "> against a frozen champion (`agent champion eval baseline-runs.json",
+    "> candidate-runs.json`). A low pass rate here means this run's measurement",
+    "> failed its cases — it does not by itself promote or demote the agent.");
   const costDims = Object.keys(s.avg_cost_dimensions);
   if (costDims.length > 0) {
     lines.push(`| avg cost dimensions | ${costDims.map((d) => `${d} ${formatNum(s.avg_cost_dimensions[d] ?? 0)}`).join(", ")} |`);

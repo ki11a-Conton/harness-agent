@@ -138,6 +138,11 @@ class MemInboxStore implements InboxStore {
   async listPending(sessionId: SessionId): Promise<AdmittedPrompt[]> {
     return this.prompts.filter((p) => p.sessionId === sessionId && p.status === "pending");
   }
+  async listRecoverable(sessionId: SessionId): Promise<AdmittedPrompt[]> {
+    return this.prompts.filter(
+      (p) => p.sessionId === sessionId && (p.status === "pending" || p.status === "promoted"),
+    );
+  }
   async listAll(sessionId: SessionId): Promise<AdmittedPrompt[]> {
     return this.prompts.filter((p) => p.sessionId === sessionId);
   }
@@ -710,13 +715,16 @@ describe("SessionActor (PHASE 25)", () => {
     await handle.outcome;
   });
 
-  it("P37-1 C — direct start vs followup drain: max live owner = 1", async () => {
+  it("P37-1 C — direct start vs followup drain: admission refuses concurrent start (not execution overlap)", async () => {
     const { actor, sessionId, entered, open } = await actorWithGatedStart();
     // Queue a followup while the actor is idle (before any turn).
     await actor.enqueueFollowup({ sessionId, text: "queued" });
     const first = actor.startTurn({ sessionId, text: "A" });
     await entered;
-    // While "starting" for A, a direct start must be refused (owner = 1).
+    // While "starting" for A, a direct start must be refused (SESSION_BUSY).
+    // This proves admission-level exclusion, not runtime execution overlap.
+    // P38.2-8 tests (with activeRuns counters at the seam) prove execution
+    // concurrency; this test only proves the admission gate works.
     const err = await actor
       .startTurn({ sessionId, text: "sneak" })
       .then(() => undefined, (e: unknown) => e);
@@ -727,16 +735,44 @@ describe("SessionActor (PHASE 25)", () => {
     await handle.outcome;
   });
 
-  it("P37-1 D — 100-way mixed race: successful execution ownership <= 1", async () => {
+  it("P37-1 D — 100-way mixed race: at most one admission succeeds; final state idle", async () => {
     const { actor, sessionId } = await setupActor({ provider: new EchoModelProvider() });
+    let startSuccess = 0;
+    let startBusy = 0;
+    let runSuccess = 0;
+    let runBusy = 0;
+    let createSuccess = 0;
+    let createBusy = 0;
     const ops: Promise<unknown>[] = [];
     for (let i = 0; i < 50; i += 1) {
-      ops.push(actor.startTurn({ sessionId, text: `s${i}` }).then(() => undefined, () => undefined));
-      ops.push(actor.runTurn("turn_x" as TurnId).then(() => undefined, () => undefined));
-      ops.push(actor.createTurn({ sessionId, text: `c${i}` }).then(() => undefined, () => undefined));
+      ops.push(
+        actor
+          .startTurn({ sessionId, text: `s${i}` })
+          .then(() => { startSuccess += 1; })
+          .catch(() => { startBusy += 1; }),
+      );
+      ops.push(
+        actor
+          .runTurn("turn_x" as TurnId)
+          .then(() => { runSuccess += 1; })
+          .catch(() => { runBusy += 1; }),
+      );
+      ops.push(
+        actor
+          .createTurn({ sessionId, text: `c${i}` })
+          .then(() => { createSuccess += 1; })
+          .catch(() => { createBusy += 1; }),
+      );
     }
     await Promise.all(ops);
-    // At most one outcome ever succeeded — the rest were SESSION_BUSY.
+    // At most one admission ever succeeded — the rest were SESSION_BUSY.
+    // NOTE (P38.3-9): this asserts final-state admission, NOT execution
+    // concurrency. Actual execution overlap is measured in the P38.2-8 tests
+    // via activeRuns/maxActiveRuns counters at the runtime seam.
+    const totalSuccess = startSuccess + runSuccess + createSuccess;
+    const totalBusy = startBusy + runBusy + createBusy;
+    expect(totalSuccess).toBe(1); // at most one turn ever starts
+    expect(totalBusy).toBe(149); // the rest are refused
     // Clean up any active turn.
     await actor.interrupt();
     // Wait (deterministically) for the aborted turn to settle and release
@@ -931,8 +967,9 @@ describe("SessionActor (PHASE 25)", () => {
           await gate;
           return base.reservePendingFollowup();
         },
-        completePromotion: (id: string, turnId: TurnId) => base.completePromotion(id, turnId),
-        releasePromotion: (id: string) => base.releasePromotion(id),
+        bindReservedFollowup: (id: string, turnId: TurnId) => base.bindReservedFollowup(id, turnId),
+        completeReservedFollowup: (id: string) => base.completeReservedFollowup(id),
+        releaseReservedFollowup: (id: string) => base.releaseReservedFollowup(id),
       },
       entered,
       open: openResolve,
@@ -1150,7 +1187,9 @@ describe("SessionActor (PHASE 25)", () => {
       expect(queue.pendingCount).toBe(1);
       // complete the in-flight reservation (single-flight) then prove the
       // second identical-text prompt (different promptId) is still retained.
-      await queue.completePromotion(first!.id, "turn_x" as TurnId);
+      // P38.3-1: bind (durable P→T) then consume (terminal) are separate steps.
+      await queue.bindReservedFollowup(first!.id, "turn_x" as TurnId);
+      await queue.completeReservedFollowup(first!.id);
       const second = await queue.reservePendingFollowup();
       expect(second?.input.text).toBe("retry");
       expect(queue.pendingCount).toBe(0);
@@ -1182,7 +1221,8 @@ describe("SessionActor (PHASE 25)", () => {
       await queue.enqueueFollowup({ sessionId, text: "A" });
       const first = await queue.reservePendingFollowup();
       expect(first).toBeDefined();
-      await queue.completePromotion(first!.id, "turn_x" as TurnId);
+      await queue.bindReservedFollowup(first!.id, "turn_x" as TurnId);
+      await queue.completeReservedFollowup(first!.id);
       expect(queue.pendingCount).toBe(0);
       // A duplicate would surface here as a second reservation.
       const again = await queue.reservePendingFollowup();
@@ -1195,7 +1235,9 @@ describe("SessionActor (PHASE 25)", () => {
   // ---------------------------------------------------------------------------
 
   describe("P38.1-3 durable promotion/cancellation closure", () => {
-    /** Wrap a queue so the durable ack (completePromotion) is gated. */
+    /** Wrap a queue so the durable BIND (bindReservedFollowup) is gated.
+     *  P38.3-2: bind happens BEFORE promoteToRunning — gating it proves the
+     *  turn does not execute until the prompt is durably bound. */
     function gatedAckQueue(
       base: SessionInputQueue,
     ): { queue: SessionInputQueue; ackEntered: Promise<void>; openAck: () => void } {
@@ -1210,45 +1252,58 @@ describe("SessionActor (PHASE 25)", () => {
           enqueueSteer: (i: Parameters<SessionInputQueue["enqueueSteer"]>[0]) => base.enqueueSteer(i),
           enqueueFollowup: (i: Parameters<SessionInputQueue["enqueueFollowup"]>[0]) => base.enqueueFollowup(i),
           reservePendingFollowup: () => base.reservePendingFollowup(),
-          completePromotion: async (id, turnId) => {
+          bindReservedFollowup: async (id, turnId) => {
             ackEnteredResolve();
             await ackGate;
-            return base.completePromotion(id, turnId);
+            return base.bindReservedFollowup(id, turnId);
           },
-          releasePromotion: (id) => base.releasePromotion(id),
+          completeReservedFollowup: (id) => base.completeReservedFollowup(id),
+          releaseReservedFollowup: (id) => base.releaseReservedFollowup(id),
         },
         ackEntered,
         openAck: openAckResolve,
       };
     }
 
-    it("Test A — interrupt during the durable ack: owner bound, caller settles (no consumed-without-owner)", async () => {
-      // The followup turn must STAY running while we cancel it inside the ack
-      // window, so it blocks on the first model call.
-      const blocking = new BlockingProvider();
-      const { runtime, store, sessionId } = await setupActor({ provider: blocking });
+    it("Test A — interrupt during the durable bind: prompt bound, turn never runs, caller settles", async () => {
+      const { runtime, store, sessionId } = await setupActor();
       const session = (await store.getSession(sessionId))!;
-      const actor = new DefaultSessionActor({ persistent: session, runtime, store });
+      let runCalls = 0;
+      const countingRuntime = {
+        startTurn: (sid: SessionId, text: string) => runtime.startTurn(sid, text),
+        runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => {
+          runCalls += 1;
+          return runtime.runTurn(sid, turnId, signal);
+        },
+      } as Pick<AgentRuntime, "startTurn" | "runTurn">;
+      const actor = new DefaultSessionActor({ persistent: session, runtime: countingRuntime, store });
       const followupId = await actor.inputQueue.enqueueFollowup({ sessionId, text: "queued" });
       // Register a queue-mode caller (as startTurn's queue path would).
       const caller = actor.registerFollowupCallerForTest(followupId);
 
       const gated = gatedAckQueue(actor.inputQueue);
       const drainPromise = actor.drainFollowupsForTest(gated.queue);
-      await gated.ackEntered; // drain is now inside the durable-ack window
+      await gated.ackEntered; // drain is inside the durable-bind window
 
-      // INV-P38.1-003: the running owner must exist BEFORE the ack is taken.
-      expect(actor.executionState).toBe("running");
+      // INV-P38.3-001: while the bind is in flight, the turn is NOT running.
+      expect(actor.executionState).toBe("starting");
 
-      // Cancel the followup turn while the ack is still pending in flight.
+      // Interrupt during the bind window — the reservation is revoked.
       await actor.interrupt();
-      gated.openAck(); // release the ack → the prompt is consumed mid-cancel
+      gated.openAck(); // release the bind → the prompt becomes durably bound
       await drainPromise;
 
-      // INV-P38.1-002: the caller terminally settles (cancelled) — never hangs.
-      const outcome = await caller; // would hang forever on the pre-P38.1-3 bug
-      expect(outcome.status).toBe("cancelled");
+      // P38.3-2: the bound turn must NEVER execute (no runtime.runTurn).
+      expect(runCalls).toBe(0);
+      // The prompt is durably bound (promoted → T) even though T never ran —
+      // recovery follows T's lineage, never creates T2 (INV-P38.3-002).
       expect(actor.activeTurn).toBeUndefined();
+      // INV-P38.1-002: the caller terminally settles — never hangs.
+      const err = await caller.then(
+        () => undefined,
+        (e: unknown) => e,
+      );
+      expect(err).toBeDefined();
     });
 
     it("Test B — durable-ack failure: prompt recoverable, caller settles, no double promotion", async () => {
@@ -1267,20 +1322,26 @@ describe("SessionActor (PHASE 25)", () => {
         enqueueSteer: (i: Parameters<SessionInputQueue["enqueueSteer"]>[0]) => base.enqueueSteer(i),
         enqueueFollowup: (i: Parameters<SessionInputQueue["enqueueFollowup"]>[0]) => base.enqueueFollowup(i),
         reservePendingFollowup: () => base.reservePendingFollowup(),
-        completePromotion: async () => {
+        bindReservedFollowup: (id, turnId) => base.bindReservedFollowup(id, turnId),
+        completeReservedFollowup: async () => {
           throw new Error("durable ack down");
         },
-        releasePromotion: (id) => base.releasePromotion(id),
+        releaseReservedFollowup: (id) => base.releaseReservedFollowup(id),
       };
 
       await actor.drainFollowupsForTest(throwingAck);
-      // The running owner was established before the failed ack, so the caller
-      // settles via the turn outcome. The durable prompt is still pending
-      // (recoverable) and locally NOT requeued (would double-execute).
+      // P38.3-2: the durable BIND happened BEFORE execution, so the prompt is
+      // already promoted→T when the later consume fails. The caller settles
+      // via the turn outcome; the durable prompt stays BOUND (promoted, not
+      // consumed, not pending) — recovery reconciles against T
+      // (INV-P38.3-004), never requeues a new turn.
       const outcome = await caller;
       expect(outcome.status).toBe("completed");
-      const pending = await inbox.listPending(sessionId);
-      expect(pending.some((p) => p.text === "survivor")).toBe(true);
+      const all = await inbox.listAll(sessionId);
+      const survivor = all.find((p) => p.text === "survivor");
+      expect(survivor).toBeDefined();
+      expect(survivor!.status).toBe("promoted");
+      expect(survivor!.promotedTurnId).toBeDefined();
       expect(actor.inputQueue.pendingCount).toBe(0);
       expect(actor.activeTurn).toBeUndefined();
     });
@@ -1291,11 +1352,333 @@ describe("SessionActor (PHASE 25)", () => {
       await q1.enqueueFollowup({ sessionId, text: "once" });
       const entry = await q1.reservePendingFollowup();
       expect(entry).toBeDefined();
-      await q1.completePromotion(entry!.id, "turn_x" as TurnId); // consumed & owner-bound
+      await q1.bindReservedFollowup(entry!.id, "turn_x" as TurnId);
+      await q1.completeReservedFollowup(entry!.id); // consumed & owner-bound
       // A fresh boot over the same durable inbox must NOT re-queue it.
       const q2 = new InboxSessionInputQueue({ sessionId, inbox });
       const again = await q2.reservePendingFollowup();
       expect(again).toBeUndefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // P38.3-2 — bind durable followup identity before execution starts
+  // (INV-P38.3-001/002). Crash windows A/B/C + bind-failure — deterministic,
+  // no sleep-based proof.
+  // ---------------------------------------------------------------------------
+
+  describe("P38.3-2 followup bind-before-execute ordering", () => {
+    /** Wrap a queue so bindReservedFollowup PAUSES AFTER the durable bind
+     *  lands (base.bindReservedFollowup returns) but BEFORE the drain resumes
+     *  to promoteToRunning — the exact Crash Window B seam. */
+    function gatedBindQueue(
+      base: SessionInputQueue,
+    ): { queue: SessionInputQueue; bindEntered: Promise<void>; openBind: () => void } {
+      let bindEnteredResolve!: () => void;
+      const bindEntered = new Promise<void>((resolve) => { bindEnteredResolve = resolve; });
+      let openBindResolve!: () => void;
+      const bindGate = new Promise<void>((resolve) => { openBindResolve = resolve; });
+      return {
+        queue: {
+          sessionId: base.sessionId,
+          pendingCount: base.pendingCount,
+          enqueueSteer: (i: Parameters<SessionInputQueue["enqueueSteer"]>[0]) => base.enqueueSteer(i),
+          enqueueFollowup: (i: Parameters<SessionInputQueue["enqueueFollowup"]>[0]) => base.enqueueFollowup(i),
+          reservePendingFollowup: () => base.reservePendingFollowup(),
+          bindReservedFollowup: async (id, turnId) => {
+            await base.bindReservedFollowup(id, turnId); // durable bind lands
+            bindEnteredResolve(); // signal the crash point (after bind)
+            await bindGate; // pause here: bind durable, execution not started
+          },
+          completeReservedFollowup: (id) => base.completeReservedFollowup(id),
+          releaseReservedFollowup: (id) => base.releaseReservedFollowup(id),
+        },
+        bindEntered,
+        openBind: openBindResolve,
+      };
+    }
+
+    /** Wrap a queue so bindReservedFollowup PAUSES BEFORE the durable bind
+     *  (after startTurn created T, before P→T is durable) — the exact Crash
+     *  Window A seam. */
+    function gatedPreBindQueue(
+      base: SessionInputQueue,
+    ): { queue: SessionInputQueue; preBindEntered: Promise<void>; openPreBind: () => void } {
+      let preBindEnteredResolve!: () => void;
+      const preBindEntered = new Promise<void>((resolve) => { preBindEnteredResolve = resolve; });
+      let openPreBindResolve!: () => void;
+      const preBindGate = new Promise<void>((resolve) => { openPreBindResolve = resolve; });
+      return {
+        queue: {
+          sessionId: base.sessionId,
+          pendingCount: base.pendingCount,
+          enqueueSteer: (i: Parameters<SessionInputQueue["enqueueSteer"]>[0]) => base.enqueueSteer(i),
+          enqueueFollowup: (i: Parameters<SessionInputQueue["enqueueFollowup"]>[0]) => base.enqueueFollowup(i),
+          reservePendingFollowup: () => base.reservePendingFollowup(),
+          bindReservedFollowup: async (id, turnId) => {
+            preBindEnteredResolve(); // crash point: T created, bind not yet durable
+            await preBindGate;
+            return base.bindReservedFollowup(id, turnId);
+          },
+          completeReservedFollowup: (id) => base.completeReservedFollowup(id),
+          releaseReservedFollowup: (id) => base.releaseReservedFollowup(id),
+        },
+        preBindEntered,
+        openPreBind: openPreBindResolve,
+      };
+    }
+
+    it("Crash Window A — barrier after startTurn, before bind: P pending, T created, zero side effects", async () => {
+      const { runtime, store, inbox, sessionId } = await setupActor();
+      const session = (await store.getSession(sessionId))!;
+      let runCalls = 0;
+      const countingRuntime = {
+        startTurn: (sid: SessionId, text: string) => runtime.startTurn(sid, text),
+        runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => {
+          runCalls += 1;
+          return runtime.runTurn(sid, turnId, signal);
+        },
+      } as Pick<AgentRuntime, "startTurn" | "runTurn">;
+      const actor = new DefaultSessionActor({ persistent: session, runtime: countingRuntime, store, inbox });
+      await actor.enqueueFollowup({ sessionId, text: "crash-A" });
+
+      const gated = gatedPreBindQueue(actor.inputQueue);
+      const drainPromise = actor.drainFollowupsForTest(gated.queue);
+      // Crash point: bindReservedFollowup reached means startTurn already
+      // created the durable turn, and the bind has NOT landed yet.
+      await gated.preBindEntered;
+      const pending = await inbox.listPending(sessionId);
+      expect(pending.some((p) => p.text === "crash-A")).toBe(true);
+      const turns = await store.listTurns(sessionId);
+      expect(turns.length).toBe(1); // T created
+      expect(runCalls).toBe(0); // no execution ever started
+
+      // Simulate restart: a fresh queue over the same durable inbox may retry
+      // P (it was never bound → genuinely pending), and the orphan T must not
+      // have executed.
+      const q2 = new InboxSessionInputQueue({ sessionId, inbox });
+      const retried = await q2.reservePendingFollowup();
+      expect(retried?.input.text).toBe("crash-A");
+      expect(runCalls).toBe(0);
+      // Release the abandoned drain (the original process is gone; unwinding
+      // the gate keeps the harness deterministic).
+      gated.openPreBind();
+      await drainPromise.catch(() => {});
+    });
+
+    it("Crash Window B — barrier after bind, before promoteToRunning: P promoted→T, no T2 on recovery", async () => {
+      const { runtime, store, inbox, sessionId } = await setupActor();
+      const session = (await store.getSession(sessionId))!;
+      let runCalls = 0;
+      const countingRuntime = {
+        startTurn: (sid: SessionId, text: string) => runtime.startTurn(sid, text),
+        runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => {
+          runCalls += 1;
+          return runtime.runTurn(sid, turnId, signal);
+        },
+      } as Pick<AgentRuntime, "startTurn" | "runTurn">;
+      const actor = new DefaultSessionActor({ persistent: session, runtime: countingRuntime, store, inbox });
+      await actor.enqueueFollowup({ sessionId, text: "crash-B" });
+
+      const gated = gatedBindQueue(actor.inputQueue);
+      const drainPromise = actor.drainFollowupsForTest(gated.queue);
+      // Crash point: bind has LANDED durably (P promoted→T), execution has
+      // NOT started.
+      await gated.bindEntered;
+      const all = await inbox.listAll(sessionId);
+      const bound = all.find((p) => p.text === "crash-B")!;
+      expect(bound.status).toBe("promoted");
+      expect(bound.promotedTurnId).toBeDefined();
+      expect(runCalls).toBe(0); // bind durable, turn NOT executed yet
+
+      // On restart the prompt is promoted→T and MUST NOT be re-queued as a
+      // fresh followup (no T2) — INV-P38.3-002.
+      const q2 = new InboxSessionInputQueue({ sessionId, inbox });
+      const retried = await q2.reservePendingFollowup();
+      expect(retried).toBeUndefined();
+
+      // The abandoned original process revokes the reservation (crash/abort):
+      // the bound turn is terminalized consistently, never executed, never
+      // given a T2.
+      await actor.interrupt();
+      gated.openBind();
+      await drainPromise.catch(() => {});
+      expect(runCalls).toBe(0);
+      // The bound turn is now terminal (cancelled) — recovery follows T's
+      // lineage, not a fresh prompt.
+      const turns = await store.listTurns(sessionId);
+      expect(turns.length).toBe(1);
+      expect(["cancelled", "failed"].includes(turns[0]!.status)).toBe(true);
+    });
+
+    it("Crash Window C — after run starts, prompt is already durably bound (P.promotedTurnId === T.id)", async () => {
+      const { runtime, store, inbox, sessionId } = await setupActor();
+      const session = (await store.getSession(sessionId))!;
+      let observedTurnId: TurnId | undefined;
+      let runCalls = 0;
+      const countingRuntime = {
+        startTurn: (sid: SessionId, text: string) => runtime.startTurn(sid, text),
+        runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => {
+          runCalls += 1;
+          observedTurnId = turnId;
+          return runtime.runTurn(sid, turnId, signal);
+        },
+      } as Pick<AgentRuntime, "startTurn" | "runTurn">;
+      const actor = new DefaultSessionActor({ persistent: session, runtime: countingRuntime, store, inbox });
+      await actor.enqueueFollowup({ sessionId, text: "crash-C" });
+      await actor.drainFollowupsForTest(actor.inputQueue);
+
+      // The turn ran — assert the durable prompt was bound to that exact turn
+      // BEFORE execution (INV-P38.3-001): the bind is durable by the time the
+      // run began.
+      expect(runCalls).toBe(1);
+      expect(observedTurnId).toBeDefined();
+      await waitFor(async () => {
+        const all = await inbox.listAll(sessionId);
+        const p = all.find((x) => x.text === "crash-C");
+        return p !== undefined && p.promotedTurnId === observedTurnId;
+      });
+      const all = await inbox.listAll(sessionId);
+      const bound = all.find((p) => p.text === "crash-C")!;
+      expect(bound.promotedTurnId).toBe(observedTurnId); // lineage = the run's turn
+      // Terminal reconciliation eventually consumes the bound prompt.
+      await waitFor(async () => {
+        const all2 = await inbox.listAll(sessionId);
+        return all2.find((p) => p.text === "crash-C")?.status === "consumed";
+      });
+    });
+
+    it("bind failure — T exists but must NOT execute; caller terminally rejects", async () => {
+      const { runtime, store, inbox, sessionId } = await setupActor();
+      const session = (await store.getSession(sessionId))!;
+      let runCalls = 0;
+      const countingRuntime = {
+        startTurn: (sid: SessionId, text: string) => runtime.startTurn(sid, text),
+        runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => {
+          runCalls += 1;
+          return runtime.runTurn(sid, turnId, signal);
+        },
+      } as Pick<AgentRuntime, "startTurn" | "runTurn">;
+      const actor = new DefaultSessionActor({ persistent: session, runtime: countingRuntime, store, inbox });
+      const followupId = await actor.inputQueue.enqueueFollowup({ sessionId, text: "bind-fail" });
+      const caller = actor.registerFollowupCallerForTest(followupId);
+
+      const base = actor.inputQueue;
+      const failingBind: SessionInputQueue = {
+        sessionId: base.sessionId,
+        pendingCount: base.pendingCount,
+        enqueueSteer: (i: Parameters<SessionInputQueue["enqueueSteer"]>[0]) => base.enqueueSteer(i),
+        enqueueFollowup: (i: Parameters<SessionInputQueue["enqueueFollowup"]>[0]) => base.enqueueFollowup(i),
+        reservePendingFollowup: () => base.reservePendingFollowup(),
+        bindReservedFollowup: async () => {
+          throw new Error("bind down");
+        },
+        completeReservedFollowup: (id) => base.completeReservedFollowup(id),
+        releaseReservedFollowup: (id) => base.releaseReservedFollowup(id),
+      };
+
+      await actor.drainFollowupsForTest(failingBind);
+      // P38.3-2: a failed bind means runtime.runTurn was NEVER reached.
+      expect(runCalls).toBe(0);
+      // The prompt was never bound → still pending → the reservation was
+      // requeued and is recoverable (never lost).
+      const pending = await inbox.listPending(sessionId);
+      expect(pending.some((p) => p.text === "bind-fail")).toBe(true);
+      expect(actor.inputQueue.pendingCount).toBe(1);
+      // The waiting caller terminally rejects (never hangs).
+      const err = await caller.then(
+        () => undefined,
+        (e: unknown) => e,
+      );
+      expect(err).toBeDefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // P38.3-3 — promoted reconciliation reachable in production
+  // (INV-P38.3-003): hydration MUST observe promoted prompts (listRecoverable)
+  // and reconcile them against their bound turn — never T2, never a fresh P.
+  // ---------------------------------------------------------------------------
+
+  describe("P38.3-3 promoted reconciliation reachable", () => {
+    it("terminal bound turn → prompt consumed on restart (completed)", async () => {
+      const { runtime, store, inbox, sessionId } = await setupActor();
+      // Manually build the durable crash state: P promoted → T (completed).
+      const p: AdmittedPrompt = {
+        id: newPromptId(),
+        sessionId,
+        text: "terminal-reconcile",
+        kind: "followup",
+        status: "pending",
+        admittedAt: 0,
+      };
+      await inbox.admit(p);
+      // Create a real durable turn and mark it completed directly.
+      const turn = await runtime.startTurn(sessionId, "terminal-reconcile");
+      const durable = (await store.getTurn(turn.id))!;
+      await store.updateTurn({ ...durable, status: "completed" });
+      await inbox.bindPromotion(p.id, turn.id);
+
+      // A fresh actor/queue over the same durable state: hydration reconciles.
+      const session = (await store.getSession(sessionId))!;
+      const actor = new DefaultSessionActor({ persistent: session, runtime, store, inbox });
+      const reserved = await actor.inputQueue.reservePendingFollowup();
+      // The promoted prompt was NOT re-queued (no T2 / no fresh P).
+      expect(reserved).toBeUndefined();
+      // The terminal bound turn reconciled the prompt to consumed.
+      const all = await inbox.listAll(sessionId);
+      expect(all.find((x) => x.id === p.id)!.status).toBe("consumed");
+    });
+
+    it("nonterminal bound turn → no requeue, no T2, lineage retained", async () => {
+      const { runtime, store, inbox, sessionId } = await setupActor();
+      const p: AdmittedPrompt = {
+        id: newPromptId(),
+        sessionId,
+        text: "nonterminal-reconcile",
+        kind: "followup",
+        status: "pending",
+        admittedAt: 0,
+      };
+      await inbox.admit(p);
+      const turn = await runtime.startTurn(sessionId, "nonterminal-reconcile");
+      // Turn stays nonterminal (created/running) — not terminalized.
+      await inbox.bindPromotion(p.id, turn.id);
+
+      const session = (await store.getSession(sessionId))!;
+      const actor = new DefaultSessionActor({ persistent: session, runtime, store, inbox });
+      const reserved = await actor.inputQueue.reservePendingFollowup();
+      expect(reserved).toBeUndefined(); // never a fresh prompt
+      // The prompt is still promoted→T (lineage retained, not consumed, not
+      // pending).
+      const all = await inbox.listAll(sessionId);
+      const record = all.find((x) => x.id === p.id)!;
+      expect(record.status).toBe("promoted");
+      expect(record.promotedTurnId).toBe(turn.id);
+      // No second turn was created for this prompt.
+      const turns = await store.listTurns(sessionId);
+      expect(turns.length).toBe(1);
+    });
+
+    it("malformed promoted record (promoted + missing promotedTurnId) fails closed — no duplicate promotion", async () => {
+      const { runtime, store, inbox, sessionId } = await setupActor();
+      const p: AdmittedPrompt = {
+        id: newPromptId(),
+        sessionId,
+        text: "malformed-promoted",
+        kind: "followup",
+        status: "promoted", // promoted but promotedTurnId missing → invalid durable state
+        admittedAt: 0,
+      };
+      await inbox.admit(p);
+
+      const session = (await store.getSession(sessionId))!;
+      const actor = new DefaultSessionActor({ persistent: session, runtime, store, inbox });
+      const reserved = await actor.inputQueue.reservePendingFollowup();
+      // Fail closed: NOT requeued as a fresh pending prompt (would risk T2).
+      expect(reserved).toBeUndefined();
+      const all = await inbox.listAll(sessionId);
+      expect(all.find((x) => x.id === p.id)!.status).toBe("promoted"); // unchanged
     });
   });
 
@@ -1325,7 +1708,8 @@ describe("SessionActor (PHASE 25)", () => {
       const runPromise = actor.runTurn(existing.id);
       await entered; // runTurn is now inside requireTurn — the promotion window
       const status = await actor.cancelTurn(existing.id);
-      expect(status).toBe("cancelled");
+      // P38.3-8: the request is accepted; terminal truth comes from the outcome.
+      expect(status.disposition).toBe("cancel_requested");
       open(); // release getTurn → the cancelled reservation must NOT promote
       const outcome = await runPromise;
       // INV-P38.1-004/005: a revoked starting reservation resolves as cancelled
@@ -1447,7 +1831,8 @@ describe("P38.2-9 — terminal cancellation persistence truth (INV-P38.2-009)", 
     const runPromise = actor.runTurn(existing.id);
     await gated.entered; // inside requireTurn — promotion window
     const status = await actor.cancelTurn(existing.id);
-    expect(status).toBe("cancelled");
+    // P38.3-8: request accepted; terminal truth (cancelled) from the outcome.
+    expect(status.disposition).toBe("cancel_requested");
     gated.open();
     const outcome = await runPromise;
     // INV-P38.2-009: success path → clean cancelled
@@ -1476,7 +1861,8 @@ describe("P38.2-9 — terminal cancellation persistence truth (INV-P38.2-009)", 
     const runPromise = actor.runTurn(existing.id);
     await gated.entered; // inside requireTurn — promotion window
     const status = await actor.cancelTurn(existing.id);
-    expect(status).toBe("cancelled");
+    // P38.3-8: request accepted; terminal truth (failed) from the outcome.
+    expect(status.disposition).toBe("cancel_requested");
     gated.open();
     const outcome = await runPromise;
     // INV-P38.2-009: persist failure → typed uncertainty, NOT a clean cancelled
@@ -1564,5 +1950,120 @@ describe("P38.2-9 — terminal cancellation persistence truth (INV-P38.2-009)", 
     const fresh = await freshHandle.outcome;
     expect(fresh.status).toBe("completed");
     expect(runCalls).toBe(1);
+  });
+});
+
+describe("P38.3-8 — cancel request acceptance vs durable terminal truth", () => {
+  /** Gate store helper shared with P38.2-9 tests (defined in that block's
+   *  scope; re-declared here for clarity). */
+  function gatedGetTurn(real: MemorySessionStore): { store: MemorySessionStore; entered: Promise<void>; open: () => void } {
+    let open!: () => void;
+    const gate = new Promise<void>((r) => { open = r; });
+    let enteredResolve!: () => void;
+    const entered = new Promise<void>((r) => { enteredResolve = r; });
+    return {
+      store: {
+        ...real,
+        getTurn: async (id: TurnId) => {
+          enteredResolve();
+          await gate;
+          return real.getTurn(id);
+        },
+        createTurn: (t: Turn) => real.createTurn(t),
+        updateTurn: (t: Turn) => real.updateTurn(t),
+        listTurns: (sid: SessionId) => real.listTurns(sid),
+      } as MemorySessionStore,
+      entered,
+      open: () => open(),
+    };
+  }
+
+  function onceFailingStore(real: MemorySessionStore): { store: MemorySessionStore; fail: () => void } {
+    let shouldFail = false;
+    return {
+      store: {
+        ...real,
+        updateTurn: async (turn: Turn): Promise<void> => {
+          if (shouldFail) {
+            shouldFail = false;
+            throw new Error("P38.3-8 simulated updateTurn failure");
+          }
+          return real.updateTurn(turn);
+        },
+        getTurn: (id: TurnId) => real.getTurn(id),
+        createTurn: (turn: Turn) => real.createTurn(turn),
+        listTurns: (sessionId: SessionId) => real.listTurns(sessionId),
+      } as MemorySessionStore,
+      fail: () => { shouldFail = true; },
+    };
+  }
+
+  it("starting cancellation + persistence succeeds → cancel_requested then cancelled", async () => {
+    const { runtime, store, sessionId, actor: realActor } = await setupActor();
+    const existing = await realActor.createTurn({ sessionId, text: "existing" });
+    const session = (await store.getSession(sessionId))!;
+    let runCalls = 0;
+    const runtimeProxy = {
+      startTurn: (sid: SessionId, text: string) => runtime.startTurn(sid, text),
+      runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => {
+        runCalls += 1;
+        return runtime.runTurn(sid, turnId, signal);
+      },
+    } as Pick<AgentRuntime, "startTurn" | "runTurn">;
+    const gated = gatedGetTurn(store);
+    const actor = new DefaultSessionActor({ persistent: session, runtime: runtimeProxy, store: gated.store });
+    const runPromise = actor.runTurn(existing.id);
+    await gated.entered;
+    const request = await actor.cancelTurn(existing.id);
+    // P38.3-8: the request-level result is acceptance, NEVER a durable claim.
+    expect(request.disposition).toBe("cancel_requested");
+    expect(request.turnId).toBe(existing.id);
+    gated.open();
+    const outcome = await runPromise;
+    // Terminal truth arrives only via the outcome.
+    expect(outcome.status).toBe("cancelled");
+    expect(runCalls).toBe(0);
+  });
+
+  it("starting cancellation + persistence fails → cancel_requested then failed/cancellation_persistence_uncertain", async () => {
+    const { runtime, store, sessionId, actor: realActor } = await setupActor();
+    const existing = await realActor.createTurn({ sessionId, text: "existing" });
+    const session = (await store.getSession(sessionId))!;
+    let runCalls = 0;
+    const runtimeProxy = {
+      startTurn: (sid: SessionId, text: string) => runtime.startTurn(sid, text),
+      runTurn: (sid: SessionId, turnId: TurnId, signal: AbortSignal) => {
+        runCalls += 1;
+        return runtime.runTurn(sid, turnId, signal);
+      },
+    } as Pick<AgentRuntime, "startTurn" | "runTurn">;
+    const fstore = onceFailingStore(store);
+    const gated = gatedGetTurn(fstore.store);
+    const actor = new DefaultSessionActor({ persistent: session, runtime: runtimeProxy, store: gated.store });
+    fstore.fail();
+    const runPromise = actor.runTurn(existing.id);
+    await gated.entered;
+    const request = await actor.cancelTurn(existing.id);
+    // P38.3-8: the request-level result is STILL acceptance-only. No caller
+    // receives an early value claiming durable terminal cancellation.
+    expect(request.disposition).toBe("cancel_requested");
+    gated.open();
+    const outcome = await runPromise;
+    // The durable truth differs — and it arrives via the outcome.
+    expect(outcome.status).toBe("failed");
+    expect(outcome.statusDetail).toBe("cancellation_persistence_uncertain");
+    expect(runCalls).toBe(0);
+  });
+
+  it("cancel request response is never a terminal status string", async () => {
+    const { runtime, store, sessionId, actor: realActor } = await setupActor();
+    const existing = await realActor.createTurn({ sessionId, text: "existing" });
+    const session = (await store.getSession(sessionId))!;
+    const actor = new DefaultSessionActor({ persistent: session, runtime, store });
+    // Not running — still returns the structured result, not a status string.
+    const request = await actor.cancelTurn(existing.id);
+    expect(request.disposition).toBe("not_running");
+    expect(typeof request.disposition).toBe("string");
+    expect(request.disposition).not.toBe("cancelled");
   });
 });

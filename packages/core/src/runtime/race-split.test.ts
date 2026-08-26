@@ -226,10 +226,13 @@ it("2.3 cancel / interrupt racing a live run — aborts the SAME live turn, sess
     const first = await h.actor.startTurn({ sessionId: h.sessionId, text: "first" });
     await h.provider.whenEntered();
     const st = await h.actor.cancelTurn(first.turnId); // aborts the live one only
+    // P38.3-8: the request is accepted; terminal truth comes from the outcome.
     // The model yields completed after abort → turn outcome is "completed"
     // (not "cancelled") — "cancelled" would require the runtime to transform
-    // the terminal event; the actor's cancelTurn returns the raw outcome.status.
-    expect(st === "completed" || st === "cancelled").toBe(true);
+    // the terminal event.
+    expect(st.disposition).toBe("cancel_requested");
+    const terminal = await first.outcome;
+    expect(terminal.status === "completed" || terminal.status === "cancelled").toBe(true);
     // After the turn settles, the actor is free — a fresh turn using a
     // non-blocking model (EchoModelProvider) should complete normally.
     const { actor: a2, sessionId: s2 } = await setupActor();

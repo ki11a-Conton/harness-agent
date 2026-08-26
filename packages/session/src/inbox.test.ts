@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { newSessionId } from "@ar/contracts";
+import { newSessionId, type TurnId } from "@ar/contracts";
 import { JSONLInboxStore, MemInboxStore, SessionInbox } from "./inbox.js";
 
 const SESSION = newSessionId();
@@ -97,6 +97,104 @@ describe("JSONLInboxStore", () => {
 
     const store = new JSONLInboxStore({ dataDir: dir });
     await expect(store.markConsumed("prompt_unknown" as never)).rejects.toThrow(/unknown prompt/);
+  });
+});
+
+describe("P38.3-3 — promoted reconciliation reachable (listRecoverable)", () => {
+  afterEach(async () => {
+    for (const dir of tempDirs.splice(0)) {
+      await rm(dir, { recursive: true, force: true }).catch(() => {});
+    }
+  });
+
+  it("Reachability — listRecoverable observes promoted prompts in every production store (fails with listPending)", async () => {
+    const stores: Array<{ label: string; store: MemInboxStore | JSONLInboxStore }> = [
+      { label: "MemInboxStore", store: new MemInboxStore() },
+      { label: "JSONLInboxStore", store: new JSONLInboxStore({ dataDir: await makeDataDir() }) },
+    ];
+    for (const { label, store } of stores) {
+      const inbox = new SessionInbox(store);
+      const p = await inbox.admit(SESSION, "recoverable-promoted", "followup");
+      await store.bindPromotion(p.id, "turn_recover" as TurnId);
+
+      // listPending (pending only) must NOT see the promoted prompt — this is
+      // exactly why hydration MUST use listRecoverable.
+      const pending = await store.listPending(SESSION);
+      expect(pending.find((x) => x.id === p.id)).toBeUndefined();
+
+      // listRecoverable (pending + promoted) MUST observe it.
+      const recoverable = await store.listRecoverable(SESSION);
+      const observed = recoverable.find((x) => x.id === p.id)!;
+      expect(observed.status).toBe("promoted");
+      expect(observed.promotedTurnId).toBe("turn_recover" as TurnId);
+
+      // consumed prompts are excluded from recovery.
+      await store.markConsumed(p.id);
+      const after = await store.listRecoverable(SESSION);
+      expect(after.find((x) => x.id === p.id)).toBeUndefined();
+    }
+  });
+});
+
+describe("P38.3-1 — split followup durable bind from final consume", () => {
+  afterEach(async () => {
+    for (const dir of tempDirs.splice(0)) {
+      await rm(dir, { recursive: true, force: true }).catch(() => {});
+    }
+  });
+
+  it("Test 1 — same identity binding is idempotent (bind P→T1 twice → still T1)", async () => {
+    for (const store of [new MemInboxStore(), new JSONLInboxStore({ dataDir: await makeDataDir() })]) {
+      const inbox = new SessionInbox(store);
+      const p = await inbox.admit(SESSION, "lineage", "followup");
+      await store.bindPromotion(p.id, "turn_T1" as TurnId);
+      await store.bindPromotion(p.id, "turn_T1" as TurnId); // idempotent
+      const all = await store.listAll(SESSION);
+      const record = all.find((x) => x.id === p.id)!;
+      expect(record.status).toBe("promoted");
+      expect(record.promotedTurnId).toBe("turn_T1" as TurnId);
+      expect(record.promotedAt).toBeDefined();
+    }
+  });
+
+  it("Test 2 — conflicting identity is rejected (bind P→T1 then P→T2 → PROMOTION_CONFLICT, still T1)", async () => {
+    for (const store of [new MemInboxStore(), new JSONLInboxStore({ dataDir: await makeDataDir() })]) {
+      const inbox = new SessionInbox(store);
+      const p = await inbox.admit(SESSION, "lineage", "followup");
+      await store.bindPromotion(p.id, "turn_T1" as TurnId);
+      await expect(store.bindPromotion(p.id, "turn_T2" as TurnId)).rejects.toMatchObject({
+        code: "PROMOTION_CONFLICT",
+      });
+      const all = await store.listAll(SESSION);
+      const record = all.find((x) => x.id === p.id)!;
+      expect(record.promotedTurnId).toBe("turn_T1" as TurnId);
+    }
+  });
+
+  it("Test 3 — consume requires a promoted lineage (pending unbound consume fails closed)", async () => {
+    for (const store of [new MemInboxStore(), new JSONLInboxStore({ dataDir: await makeDataDir() })]) {
+      const inbox = new SessionInbox(store);
+      const p = await inbox.admit(SESSION, "unbound", "followup");
+      await expect(store.markConsumed(p.id)).rejects.toMatchObject({
+        code: "CONSUME_NOT_PROMOTED",
+      });
+      const all = await store.listAll(SESSION);
+      expect(all.find((x) => x.id === p.id)!.status).toBe("pending");
+    }
+  });
+
+  it("Test 4 — consumed record retains promotedTurnId lineage", async () => {
+    for (const store of [new MemInboxStore(), new JSONLInboxStore({ dataDir: await makeDataDir() })]) {
+      const inbox = new SessionInbox(store);
+      const p = await inbox.admit(SESSION, "bound-then-consumed", "followup");
+      await store.bindPromotion(p.id, "turn_T1" as TurnId);
+      await store.markConsumed(p.id);
+      const all = await store.listAll(SESSION);
+      const record = all.find((x) => x.id === p.id)!;
+      expect(record.status).toBe("consumed");
+      expect(record.promotedTurnId).toBe("turn_T1" as TurnId); // lineage retained
+      expect(record.consumedAt).toBeDefined();
+    }
   });
 });
 
