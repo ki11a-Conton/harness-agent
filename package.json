@@ -12,7 +12,7 @@
     "test:perf": "vitest run '**/*.perf.test.ts'",
     "test:soak": "vitest run '**/*.soak.test.ts'",
     "test:coverage": "vitest run --coverage --exclude '**/*.perf.test.ts' --exclude '**/*.soak.test.ts'",
-    "benchmark:smoke": "node apps/cli/dist/main.js benchmark --suite adversarial --limit 1 --allow-stub --out .ci/bench-smoke",
+    "benchmark:smoke": "node apps/cli/dist/main.js benchmark smoke",
     "docs:verify": "node apps/cli/dist/main.js docs:verify",
     "test:protocol": "vitest run packages/gateway/src/transport-conformance.test.ts packages/sdk/src/conformance.test.ts packages/protocol",
     "test:security": "vitest run packages/security packages/harness/src/security-regression-matrix.test.ts",

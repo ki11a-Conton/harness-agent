@@ -112,48 +112,51 @@ jobs:
           path: .ci/test-report.log
           if-no-files-found: error
 
-      # P38-12 (INV-P38-014/015): every required gate produces an execution
-      # evidence file. This step runs AFTER all gates — if any gate failed, the
-      # job has already terminated (set -e default), so only successful gates
-      # reach here. The attestation job will download these files and re-run
-      # `pnpm release:verify` to derive the release verdict.
-      - name: Generate gate execution evidence (P38-12)
+      # P38.2-4 (INV-P38.2-004): every attempted gate emits truthful evidence
+      # from its REAL exit code. Under `bash -e` a failing command exits before
+      # `$?` is captured, so each gate runs inside `set +e` and the evidence is
+      # written before the step can fail. P38.2-10: evidence is namespaced per
+      # OS (linux/ windows) so platforms never overwrite each other.
+      - name: Generate gate execution evidence (P38.2-4/10)
         shell: bash
         run: |
-          mkdir -p .ci/evidence
-          echo "{\"schemaVersion\":1,\"gate\":\"typecheck\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm typecheck\",\"exitCode\":0,\"passed\":true,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/typecheck.json
-          echo "{\"schemaVersion\":1,\"gate\":\"test\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test\",\"exitCode\":0,\"passed\":true,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/test.json
-          echo "{\"schemaVersion\":1,\"gate\":\"build\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm build\",\"exitCode\":0,\"passed\":true,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/build.json
-          echo "{\"schemaVersion\":1,\"gate\":\"benchmark_smoke\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm benchmark:smoke\",\"exitCode\":0,\"passed\":true,\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/benchmark_smoke.json
-          # INV-P38.1: capability_audit evidence must (a) come from the real
-          # canonical command `pnpm capability:audit` (command-provenance check)
-          # and (b) record the ACTUAL gate exit code — a hard-coded 0 while the
-          # gate is red is exactly the fake-green this plan forbids.
-          pnpm capability:audit; rc_capability=$?
-          echo "{\"schemaVersion\":1,\"gate\":\"capability_audit\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm capability:audit\",\"exitCode\":$rc_capability,\"passed\":$([ $rc_capability -eq 0 ] && echo true || echo false),\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/capability_audit.json
-          # Run the remaining gate commands that are NOT already covered by
-          # earlier steps. INV-P38.1-008: `passed` MUST derive from the real
-          # exit code, never a hard-coded value — any `{passed:false, exitCode:0}`
-          # is the exact inconsistency the release verifier rejects. We capture
-          # the actual `$?` so evidence is honest on both success and failure.
-          pnpm docs:verify; rc_docs=$?
-          echo "{\"schemaVersion\":1,\"gate\":\"docs\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm docs:verify\",\"exitCode\":$rc_docs,\"passed\":$([ $rc_docs -eq 0 ] && echo true || echo false),\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/docs.json
-          pnpm test:protocol; rc_protocol=$?
-          echo "{\"schemaVersion\":1,\"gate\":\"protocol\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:protocol\",\"exitCode\":$rc_protocol,\"passed\":$([ $rc_protocol -eq 0 ] && echo true || echo false),\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/protocol.json
-          pnpm test:security; rc_security=$?
-          echo "{\"schemaVersion\":1,\"gate\":\"security\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:security\",\"exitCode\":$rc_security,\"passed\":$([ $rc_security -eq 0 ] && echo true || echo false),\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/security.json
-          pnpm test:race; rc_race=$?
-          echo "{\"schemaVersion\":1,\"gate\":\"race\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:race\",\"exitCode\":$rc_race,\"passed\":$([ $rc_race -eq 0 ] && echo true || echo false),\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/race.json
-          pnpm test:chaos; rc_chaos=$?
-          echo "{\"schemaVersion\":1,\"gate\":\"chaos\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:chaos\",\"exitCode\":$rc_chaos,\"passed\":$([ $rc_chaos -eq 0 ] && echo true || echo false),\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/chaos.json
-          # Verify all gate evidence files exist and are non-empty.
-          for f in .ci/evidence/*.json; do [ -s "$f" ] || { echo "ERROR: empty evidence $f"; exit 1; }; done
+          OS=$(case "${{ matrix.os }}" in *windows*) echo windows;; *) echo linux;; esac)
+          EVID=".ci/evidence/gates/$OS"
+          mkdir -p "$EVID"
+          run_gate() {
+            local gate="$1"; local cmd="$2"
+            set +e
+            eval "$cmd" >/dev/null 2>&1
+            local rc=$?
+            set -e
+            echo "{\"schemaVersion\":1,\"kind\":\"gate\",\"gate\":\"$gate\",\"headSha\":\"${{ github.sha }}\",\"command\":\"$cmd\",\"exitCode\":$rc,\"passed\":$([ $rc -eq 0 ] && echo true || echo false),\"platform\":\"$OS\",\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > "$EVID/$gate.json"
+          }
+          run_gate typecheck "pnpm typecheck"
+          run_gate test "pnpm test"
+          run_gate build "pnpm build"
+          run_gate benchmark_smoke "pnpm benchmark:smoke"
+          run_gate capability_audit "pnpm capability:audit"
+          run_gate docs "pnpm docs:verify"
+          run_gate protocol "pnpm test:protocol"
+          run_gate security "pnpm test:security"
+          run_gate race "pnpm test:race"
+          run_gate chaos "pnpm test:chaos"
+          # The step fails with the FIRST red gate's real exit code — evidence
+          # for every attempted gate is already durable.
+          for f in "$EVID"/*.json; do
+            [ -s "$f" ] || { echo "ERROR: empty evidence $f"; exit 1; }
+          done
+          rc=0
+          for gate in typecheck test build benchmark_smoke capability_audit docs protocol security race chaos; do
+            r=$(node -e "const j=require('$EVID/$gate.json'); process.exit(j.passed?0:1)") && continue || { echo "GATE FAILED: $gate"; rc=1; }
+          done
+          exit $rc
 
-      - name: Upload gate evidence (P38-12)
+      - name: Upload gate evidence (P38.2-10)
         uses: actions/upload-artifact@v4
         with:
           name: gate-evidence-${{ matrix.os }}
-          path: .ci/evidence/
+          path: .ci/evidence/gates/
           if-no-files-found: error
 
   # P20-4: coverage is a REAL CI gate. A single ubuntu job is enough (Windows
