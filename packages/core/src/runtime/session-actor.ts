@@ -361,6 +361,36 @@ export class InboxSessionInputQueue implements SessionInputQueue {
     }
   }
 
+  /**
+   * P38.4-1 (INV-P38.4-001/003/004) — same-T recovery contract.
+   *
+   * For every durable followup prompt P observed by listRecoverable:
+   *
+   * | Prompt state | Bound turn | Required action |
+   * |---|---|---|
+   * | pending | none | enqueue for normal followup reservation |
+   * | promoted | missing TurnId | fail closed (PROMOTION_IDENTITY_MISSING), no T2 |
+   * | promoted | turn not found | fail closed (BOUND_TURN_MISSING), no T2 |
+   * | promoted | T completed   | consume P |
+   * | promoted | T failed      | consume P |
+   * | promoted | T cancelled   | consume P |
+   * | promoted | T pending/created | recover SAME T under existing runtime |
+   * | promoted | T running (no live owner) | recover SAME T under restart semantics |
+   * | consumed | any | never replay |
+   *
+   * "Recover SAME T" means: use the existing durable Turn identity T.
+   * NEVER call startTurn() — that creates a new identity and violates
+   * INV-P38.4-001 (one prompt, one turn lineage).
+   *
+   * Preferred recovery mechanism: call runtime.runTurn(T, ...) against the
+   * already-created durable Turn, which is restart-safe for a nonterminal
+   * Turn. This produces a TurnHandle whose outcome drives terminal
+   * reconciliation (P38.4-2).
+   *
+   * If recovery execution is cancelled/closed before terminal, do NOT create
+   * T2 — either terminalize T or leave it durably recoverable for the next
+   * runtime owner.
+   */
   private async hydrate(): Promise<void> {
     const inbox = this.deps.inbox;
     const store = this.deps.store;
@@ -403,7 +433,10 @@ export class InboxSessionInputQueue implements SessionInputQueue {
             }
           }
           // Nonterminal bound turn: recovery owns lineage T. Never enqueue P as
-          // a fresh followup (INV-P38.3-002) — no T2.
+          // a fresh followup (INV-P38.3-002) — no T2. The actual same-T resume
+          // is performed by DefaultSessionActor.discoverRecoverableTurns +
+          // drainFollowups (P38.4-2/3), which record T and run it under the
+          // SAME Turn identity on this process's next idle slot.
         }
         continue;
       }
@@ -485,6 +518,16 @@ export class DefaultSessionActor implements SessionActor {
    *  to full deferreds (resolve + reject) so a caller can NEVER hang forever —
    *  promotion failure / cancellation / actor close all settle terminally. */
   private readonly followupDeferred = new Map<string, FollowupDeferred>();
+  /** P38.4-2 (INV-P38.4-003/004): recoverable nonterminal bound turns discovered
+   *  during hydration. Each entry is a durable Turn that was promoted to a
+   *  prompt P but never reached terminal state before the previous process died.
+   *  drainFollowups recovers them by calling `runTurn(t.id)` — same T, no T2,
+   *  no startTurn. The promptId is tracked so that after recovery the prompt
+   *  can be durably consumed (INV-P38.4-004: recovery must converge the
+   *  lineage, not leave dangling promoted records). */
+  private readonly _recoverableTurns: Array<{ turn: Turn; promptId: PromptId }> = [];
+  /** Guard: recoverable turns are queried at most once per actor lifetime. */
+  private _recoverableChecked = false;
 
   constructor(private readonly deps: SessionActorDeps) {
     this.inputQueue = new InboxSessionInputQueue({
@@ -874,6 +917,40 @@ export class DefaultSessionActor implements SessionActor {
   private async drainFollowups(queue: SessionInputQueue = this.inputQueue): Promise<void> {
     if (this.closed) return;
     if (this.state.kind !== "idle") return;
+    // P38.4-2/3 (INV-P38.4-003/004): recover same-T for bound nonterminal
+    // turns BEFORE draining new followups. These are durable Turns that were
+    // promoted to a prompt but never reached terminal state before the previous
+    // process died. Recovery reuses the existing durable Turn identity (same T)
+    // via `runTurn(t.id)` — NEVER startTurn (that would create T2 and violate
+    // INV-P38.4-001). Recovery is single-flight: one recoverable turn at a time,
+    // and each run settles via promoteToRunning → settle → drainFollowups, so
+    // the actor re-enters this method after every terminal outcome.
+    if (!this._recoverableChecked) {
+      this._recoverableChecked = true;
+      await this.discoverRecoverableTurns();
+    }
+    const recoverable = this._recoverableTurns.shift();
+    if (recoverable !== undefined) {
+      // Same-T recovery. `runTurn` reserves the starting slot, loads the
+      // existing durable Turn via requireTurn, and promotes it to running —
+      // reusing the runtime runTurn path that guards single-turn-per-session.
+      const { turn, promptId } = recoverable;
+      void this.runTurn(turn.id).then(
+        (outcome) => {
+          // INV-P38.4-004: recovery converged — the turn is terminal. Durable
+          // consume the bound prompt so the promoted lineage is closed (no
+          // dangling promoted record, no T2). Nonterminal outcomes are not
+          // possible here (runTurn always settles terminal).
+          void this.consumeRecoveredPrompt(turn.id, promptId, outcome);
+        },
+        (err) => {
+          process.stderr.write(
+            `[degraded] session ${this.sessionId} failed to recover bound turn ${turn.id}: ${err instanceof Error ? err.message : String(err)}\n`,
+          );
+        },
+      );
+      return;
+    }
     // P38-1 (INV-P38-001): RESERVE the actor slot BEFORE the awaited dequeue.
     // A concurrent startTurn will see "starting" and be refused — no
     // reservation overwrite.
@@ -1058,6 +1135,77 @@ export class DefaultSessionActor implements SessionActor {
    *  gated) queue override. */
   drainFollowupsForTest(queue?: SessionInputQueue): Promise<void> {
     return this.drainFollowups(queue);
+  }
+
+  /**
+   * P38.4-2 (INV-P38.4-003/004) — discover bound nonterminal turns that need
+   * same-T recovery after a process restart.
+   *
+   * For every durable followup prompt P observed by listRecoverable with
+   * status "promoted" and a bound nonterminal turn T, record T as recoverable.
+   * Terminal bound turns are reconciled to consumed during hydrate; nonterminal
+   * bound turns must be RESUME-able under the SAME Turn identity.
+   *
+   * Recovery semantics decision (P38.4-1 §20.3):
+   * - stored `running` has no live in-memory owner after restart → recoverable
+   * - stored `pending/created` (durably created, never executed) → recoverable
+   * - stored `completed/failed/cancelled` → NOT recoverable (terminal, consumed
+   *   by hydrate)
+   *
+   * This query is intentionally idempotent and side-effect free: it only
+   * populates `_recoverableTurns`. Execution happens in drainFollowups, which
+   * runs exactly one turn at a time through the actor's normal reservation
+   * path (single-flight, single live turn per session).
+   */
+  private async discoverRecoverableTurns(): Promise<void> {
+    const inbox = this.deps.inbox;
+    const store = this.deps.store;
+    if (inbox === undefined || store === undefined) return;
+    const recoverable = await inbox.listRecoverable(this.sessionId);
+    const seen = new Set<TurnId>();
+    for (const p of recoverable) {
+      if (p.kind !== "followup" || p.status !== "promoted") continue;
+      if (p.promotedTurnId === undefined) continue; // fail-closed in hydrate
+      if (seen.has(p.promotedTurnId)) continue;
+      const turn = await store.getTurn(p.promotedTurnId);
+      if (turn === undefined) continue; // fail-closed in hydrate
+      if (turn.status === "completed" || turn.status === "failed" || turn.status === "cancelled") {
+        continue; // terminal — consumed by hydrate
+      }
+      seen.add(p.promotedTurnId);
+      this._recoverableTurns.push({ turn, promptId: p.id });
+    }
+  }
+
+  /**
+   * P38.4-2 (INV-P38.4-004) — durable consume of a prompt whose bound turn has
+   * been recovered to a terminal state. This closes the promoted lineage after
+   * same-T recovery so the inbox record never dangles. Idempotent: a prompt
+   * already consumed (or already pending) is left untouched by the store.
+   * Failure is surfaced, never silently swallowed — the durable record is the
+   * source of truth and remains recoverable for the next runtime owner.
+   */
+  private async consumeRecoveredPrompt(
+    turnId: TurnId,
+    promptId: PromptId,
+    _outcome: TurnOutcome,
+  ): Promise<void> {
+    const inbox = this.deps.inbox;
+    if (inbox === undefined) return;
+    try {
+      // Guard: only consume if the recovered turn really is terminal in the
+      // store (runTurn may have been cancelled before terminal persistence).
+      const turn = await this.deps.store.getTurn(turnId);
+      if (turn === undefined) return; // never consume for an unknown turn
+      if (turn.status !== "completed" && turn.status !== "failed" && turn.status !== "cancelled") {
+        return; // not terminal — do not consume (still recoverable)
+      }
+      await inbox.markConsumed(promptId);
+    } catch (consumeErr) {
+      process.stderr.write(
+        `[degraded] session ${this.sessionId} failed to consume recovered prompt ${promptId} after turn ${turnId}: ${consumeErr instanceof Error ? consumeErr.message : String(consumeErr)}\n`,
+      );
+    }
   }
 
   /** @internal P38.1-3 test seam: register a queue-mode caller's deferred for
