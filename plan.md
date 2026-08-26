@@ -81,8 +81,8 @@ P38.2 must close these issues and then STOP architecture work.
 | P38.2-5 | P0 | Separate gate / capability / benchmark evidence namespaces |
 | P38.2-6 | P0 | Profile-scoped strict audit evidence requirements |
 | P38.2-7 | P0 | Correct deterministic free benchmark smoke |
-| P38.2-8 | P1 | Strengthen real concurrency tests |
-| P38.2-9 | P1 | Terminal cancellation persistence truth |
+| P38.2-8 | P1 | Strengthen real concurrency tests | DONE |
+| P38.2-9 | P1 | Terminal cancellation persistence truth | DONE |
 | P38.2-10 | P1 | OS-specific release evidence |
 | P38.2-11 | P1 | Tracked capability matrix truthfulness |
 | P38.2-12 | P2 | Move heavyweight perf out of default test lane |
@@ -1339,8 +1339,8 @@ gate evidence lost under bash -e           0
 wrong-kind capability evidence accepted    0
 paid benchmark required for runtime RC      0
 false-success benchmark smoke              0
-fake max-concurrency tests                  0
-clean-cancel on failed persistence         0
+fake max-concurrency tests                  0   ✓ P38.2-8
+clean-cancel on failed persistence         0   ✓ P38.2-9
 Linux/Windows evidence overwrite           0
 tracked matrix treated as attestation      0
 ```
