@@ -70,5 +70,33 @@ difference declared), P21-4 quality gates, security non-regression, no new
 infrastructure failures. Promotion only if the quality verdict passes AND the
 provenance checks hold; otherwise reject with the evidence recorded.
 
+### Result (2026-08-27, real model, holdout 30 cases)
+
+**adaptive_recovery challenger REJECTED** — QUALITY VERDICT: FAIL.
+
+- paired: 1W / 2L / 7T / 20 both-failed; net passed delta **-1** (9/30 → 8/30)
+- verified completion: 0.300 → 0.267 (Δ -0.033)
+- token cost Δ **+2,034,326** with no net success gain (P21-4 Q3: cost growth
+  without benefit)
+- recovery Δ **-6** — the bounded recovery planner did NOT lift recovery;
+  it consumed more iterations/tokens and degraded verified completion
+- provenance: all P38.4-8 checks PASS (compatible evaluation context,
+  candidate actually differs, controlled difference declared) — the rejection
+  is attributable: evaluationContextHash identical across sides, so the delta
+  is genuinely due to the candidate wiring, not noise.
+- The hypothesis (bounded recovery lifts verification_failed + model_error
+  clusters) is NOT supported by evidence. Do not promote; do not retry this
+  candidate without a different mechanism.
+
+### Remaining hypothesis direction
+
+- agent_limit (46%) remains the dominant cluster. It is a step-budget property
+  of the benchmark harness (30 iterations), not an agent-strategy defect —
+  raising maxIterations would change the measurement, not test a strategy.
+  No candidate mechanism in CANDIDATE_FEATURES addresses step budget.
+- Next candidates worth a single-variable test on holdout (in priority order):
+  tool_selector_deferred_schema (cuts per-iteration schema tokens → more work
+  per step), adaptive_context_policy (dynamic context headroom), memory_retrieval.
+
 Runtime architecture is FROZEN (P38.4-11): this loop only evaluates Agent
 strategy-layer challengers. No Runtime code changes are planned.

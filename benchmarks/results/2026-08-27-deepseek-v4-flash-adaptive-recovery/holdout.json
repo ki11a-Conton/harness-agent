@@ -1,0 +1,2697 @@
+{
+  "meta": {
+    "generatedAt": "2026-08-27T07:29:53.905Z",
+    "benchmarkVersion": "2.0.0",
+    "model": {
+      "providerId": "openai",
+      "modelId": "deepseek-v4-flash"
+    },
+    "casesTotal": 30,
+    "suite": "holdout"
+  },
+  "results": [
+    {
+      "task_id": "ho-01-review-smells",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 19260,
+      "model_calls": 5,
+      "input_tokens": 8100,
+      "output_tokens": 493,
+      "tool_calls": 10,
+      "tool_failures": 7,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 6,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 0,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 9,
+        "recovered": 2,
+        "rate": 0.2222222222222222
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 0,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 1,
+          "latency": 19260,
+          "tokens": 9885,
+          "tool_calls": 10,
+          "retries": 3
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "a44683e137481b3631433b86d6915a15d5713b2236caf652c76fbd53166e13d5",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-02-parse-log",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 328377,
+      "model_calls": 24,
+      "input_tokens": 910799,
+      "output_tokens": 8994,
+      "tool_calls": 38,
+      "tool_failures": 9,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 2,
+        "verification": 1,
+        "compaction": 42,
+        "provider": 2,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 12,
+        "recovered": 2,
+        "rate": 0.16666666666666666
+      },
+      "compactions": 42,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 0,
+          "security": 0,
+          "latency": 9.1,
+          "tokens": 5,
+          "tool_calls": 52.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 230,
+          "security": 2,
+          "latency": 328377,
+          "tokens": 923844,
+          "tool_calls": 38,
+          "retries": 3
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=repo_tree)",
+          "security.filesystem_denied (tool=grep_search)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "2612ba3a1522e1f8989988a9e56c426374cd1ace97b377acb5c61ae9bc443f0a",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-03-convert-format",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 269930,
+      "model_calls": 30,
+      "input_tokens": 123872,
+      "output_tokens": 7049,
+      "tool_calls": 32,
+      "tool_failures": 9,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 6,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 11,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 12,
+        "recovered": 2,
+        "rate": 0.16666666666666666
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 54.91,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 100,
+          "latency": 11.1,
+          "tokens": 21.5,
+          "tool_calls": 62.5,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 0,
+          "latency": 269930,
+          "tokens": 149050,
+          "tool_calls": 32,
+          "retries": 2
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "efffca6acb484cecc5e345adc1a36fb0986d355aca0d565eaad8ca6ff4d5a128",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-04-audit-deps",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 123547,
+      "model_calls": 19,
+      "input_tokens": 66618,
+      "output_tokens": 5608,
+      "tool_calls": 21,
+      "tool_failures": 4,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 3,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 5,
+        "recovered": 1,
+        "rate": 0.2
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 86.3,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 75,
+          "security": 100,
+          "latency": 24.3,
+          "tokens": 32.7,
+          "tool_calls": 95.2,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 25,
+          "security": 0,
+          "latency": 123547,
+          "tokens": 97771,
+          "tool_calls": 21,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "1f1e779abe6162dcd70f90970dcd92ddf619f83218f5e0f4727102e747f9b7e9",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-05-complexity",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 220997,
+      "model_calls": 20,
+      "input_tokens": 159574,
+      "output_tokens": 8775,
+      "tool_calls": 24,
+      "tool_failures": 9,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 4,
+        "tool": 6,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 4,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 14,
+        "recovered": 5,
+        "rate": 0.35714285714285715
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 75,
+          "security": 0,
+          "latency": 13.6,
+          "tokens": 17.2,
+          "tool_calls": 83.3,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 25,
+          "security": 1,
+          "latency": 220997,
+          "tokens": 186202,
+          "tool_calls": 24,
+          "retries": 4
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "404fc659ff957381ccf15b14d147eefc36230a6e0505614b67a6e0fa3ede646c",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-06-migration-script",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 429817,
+      "model_calls": 30,
+      "input_tokens": 253896,
+      "output_tokens": 21293,
+      "tool_calls": 29,
+      "tool_failures": 3,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 2,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 3,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 7,
+        "recovered": 3,
+        "rate": 0.42857142857142855
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1"
+      ],
+      "cost": {
+        "score": 49.24,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 7,
+          "tokens": 10.2,
+          "tool_calls": 69,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 429817,
+          "tokens": 314654,
+          "tool_calls": 29,
+          "retries": 2
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "96bcd464960bbe8f7a8d0cd230f90ac8218884f322bc58a9cb10adbcdc742134",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-07-permissions",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 267301,
+      "model_calls": 30,
+      "input_tokens": 189043,
+      "output_tokens": 8771,
+      "tool_calls": 34,
+      "tool_failures": 9,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 1,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 9,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 59.08,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 11.2,
+          "tokens": 13.8,
+          "tool_calls": 58.8,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 267301,
+          "tokens": 232318,
+          "tool_calls": 34,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "aaac660a7a7ab8dd97dfd43ac9c99f6530ca195e76ed7371bea43b1cb3819297",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-08-optimize",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 185242,
+      "model_calls": 27,
+      "input_tokens": 120204,
+      "output_tokens": 4515,
+      "tool_calls": 30,
+      "tool_failures": 3,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 2,
+        "verification": 3,
+        "compaction": 5,
+        "provider": 7,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 7,
+        "recovered": 3,
+        "rate": 0.42857142857142855
+      },
+      "compactions": 5,
+      "verification_passed": false,
+      "verification_failures": 3,
+      "human_interventions": 0,
+      "termination_reason": "verification_failed",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 40.64,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 5,
+          "security": 100,
+          "latency": 16.2,
+          "tokens": 12.4,
+          "tool_calls": 66.7,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 95,
+          "security": 0,
+          "latency": 185242,
+          "tokens": 258905,
+          "tool_calls": 30,
+          "retries": 1
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "36ceab808cc91133c123779f4e43bc2f68c74a1acf23fcf32e1d5206ed21d834",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-09-document-api",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 38913,
+      "model_calls": 7,
+      "input_tokens": 12152,
+      "output_tokens": 372,
+      "tool_calls": 7,
+      "tool_failures": 1,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 0,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 1,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 99.08,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 77.1,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 38913,
+          "tokens": 15324,
+          "tool_calls": 7,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "f283596ef330624d9d6dfc130ffca54f02dd01091764d2ace8395f690465456b",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-10-validate-schema",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 955778,
+      "model_calls": 15,
+      "input_tokens": 37458,
+      "output_tokens": 1427,
+      "tool_calls": 15,
+      "tool_failures": 6,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 3,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 10,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 10,
+        "recovered": 3,
+        "rate": 0.3
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "time_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 5,
+          "tokens": 69.9,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 1,
+          "latency": 955778,
+          "tokens": 45811,
+          "tool_calls": 15,
+          "retries": 3
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "2014e6ae6137b5e865bd3b6726b1404d4cec06b0ef96abf0f5ea27036e0b03cd",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-11-release-notes",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 371619,
+      "model_calls": 30,
+      "input_tokens": 231522,
+      "output_tokens": 20185,
+      "tool_calls": 42,
+      "tool_failures": 10,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 3,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 3,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 14,
+        "recovered": 3,
+        "rate": 0.21428571428571427
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 8.1,
+          "tokens": 11.3,
+          "tool_calls": 47.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 2,
+          "latency": 371619,
+          "tokens": 284347,
+          "tool_calls": 42,
+          "retries": 3
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=write_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "804563fd40968a28a8566e5d1f38097f7d37520f1c57e2db69cdf80084243fd6",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-12-refactor-esm",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 69938,
+      "model_calls": 10,
+      "input_tokens": 29048,
+      "output_tokens": 2292,
+      "tool_calls": 18,
+      "tool_failures": 8,
+      "retries": 8,
+      "retry_taxonomy": {
+        "model": 3,
+        "tool": 8,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 4,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 11,
+        "recovered": 3,
+        "rate": 0.2727272727272727
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 0,
+          "latency": 42.9,
+          "tokens": 79.3,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 2,
+          "latency": 69938,
+          "tokens": 40333,
+          "tool_calls": 18,
+          "retries": 4
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "c2984cf6e3149b8a1a769836399827d300ad0c6305c1014bf10ab12fa187f704",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-13-debug-flaky",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 463903,
+      "model_calls": 30,
+      "input_tokens": 301628,
+      "output_tokens": 23730,
+      "tool_calls": 37,
+      "tool_failures": 9,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 5,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 7,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 15,
+        "recovered": 5,
+        "rate": 0.3333333333333333
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 6.5,
+          "tokens": 9.2,
+          "tool_calls": 54.1,
+          "retries": 80
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 1,
+          "latency": 463903,
+          "tokens": 348428,
+          "tool_calls": 37,
+          "retries": 5
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=grep_search)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "34be4164998ebb77544d6b277875d092a87189ae162248aaa1841c3c3f1e4129",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-14-test-matrix",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 96305,
+      "model_calls": 14,
+      "input_tokens": 18933,
+      "output_tokens": 509,
+      "tool_calls": 13,
+      "tool_failures": 5,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 5,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 5,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 0,
+          "latency": 31.2,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 1,
+          "latency": 96305,
+          "tokens": 26812,
+          "tool_calls": 13,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "2e76996f67b68e99b25b4cabb9fcb546eb6cab3115e32cf15753bee78949c9d6",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-15-rate-limiter",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 469214,
+      "model_calls": 30,
+      "input_tokens": 298398,
+      "output_tokens": 21628,
+      "tool_calls": 44,
+      "tool_failures": 10,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 6,
+        "tool": 4,
+        "verification": 2,
+        "compaction": 8,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 18,
+        "recovered": 7,
+        "rate": 0.3888888888888889
+      },
+      "compactions": 8,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 15,
+          "security": 0,
+          "latency": 6.4,
+          "tokens": 8.1,
+          "tool_calls": 45.5,
+          "retries": 66.7
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 85,
+          "security": 1,
+          "latency": 469214,
+          "tokens": 392733,
+          "tool_calls": 44,
+          "retries": 6
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=grep_search)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "0b5467a5b8268d751a84491e135f6b25cd36e6704a27e6354ed136f6bf0816bb",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-16-analyze-query",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 28787,
+      "model_calls": 7,
+      "input_tokens": 13806,
+      "output_tokens": 422,
+      "tool_calls": 8,
+      "tool_failures": 2,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 0,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 2,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 100,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 28787,
+          "tokens": 17734,
+          "tool_calls": 8,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "4d887efb1c5cce1e8d9a967a84d6cfcec1063274b910e5fe60dce8836d2967e2",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-17-changelog",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 25964,
+      "model_calls": 8,
+      "input_tokens": 9976,
+      "output_tokens": 282,
+      "tool_calls": 8,
+      "tool_failures": 3,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 2,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 3,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 100,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 25964,
+          "tokens": 12155,
+          "tool_calls": 8,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "b64e8c7e55a820d7910cc2c6996bb672faa14586a61bb493bd984991a5322b13",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-18-race-condition",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 308987,
+      "model_calls": 30,
+      "input_tokens": 76035,
+      "output_tokens": 4668,
+      "tool_calls": 29,
+      "tool_failures": 7,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 6,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 10,
+        "recovered": 2,
+        "rate": 0.2
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 56.18,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 100,
+          "latency": 9.7,
+          "tokens": 33.1,
+          "tool_calls": 69,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 0,
+          "latency": 308987,
+          "tokens": 96806,
+          "tool_calls": 29,
+          "retries": 2
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "f37ca73365a7cbc90f26c15244291aca2627ae0158a2a04a1c6a19021a64f381",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-19-cache",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 348141,
+      "model_calls": 30,
+      "input_tokens": 367945,
+      "output_tokens": 12114,
+      "tool_calls": 43,
+      "tool_failures": 8,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 3,
+        "tool": 4,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 2,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 13,
+        "recovered": 4,
+        "rate": 0.3076923076923077
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 47.64,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 8.6,
+          "tokens": 6.3,
+          "tool_calls": 46.5,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 348141,
+          "tokens": 509946,
+          "tool_calls": 43,
+          "retries": 3
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "622f474c03147e69d211876873f4112b8de27fa22fd29d1e1aada3bf5ef1162c",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-20-normalize",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 206557,
+      "model_calls": 28,
+      "input_tokens": 102978,
+      "output_tokens": 5494,
+      "tool_calls": 28,
+      "tool_failures": 4,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 3,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 7,
+        "recovered": 2,
+        "rate": 0.2857142857142857
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 3,
+      "human_interventions": 0,
+      "termination_reason": "verification_failed",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 25,
+          "security": 0,
+          "latency": 14.5,
+          "tokens": 23.7,
+          "tool_calls": 71.4,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 75,
+          "security": 1,
+          "latency": 206557,
+          "tokens": 135173,
+          "tool_calls": 28,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.network_denied (tool=exec)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "5353162ab0f9fad3b2c3a11197a1a5427f8a8d7b2d354e0daebb24a7a4d77b7c",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-21-build-report",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 178060,
+      "model_calls": 19,
+      "input_tokens": 124038,
+      "output_tokens": 10862,
+      "tool_calls": 27,
+      "tool_failures": 12,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 4,
+        "tool": 2,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 1,
+        "sandbox": 0,
+        "stallRecovery": 2,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 17,
+        "recovered": 5,
+        "rate": 0.29411764705882354
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 75,
+          "security": 0,
+          "latency": 16.8,
+          "tokens": 20.8,
+          "tool_calls": 74.1,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 25,
+          "security": 1,
+          "latency": 178060,
+          "tokens": 154123,
+          "tool_calls": 27,
+          "retries": 4
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=write_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "ef55e876f94d49900a2ecce3397c9a2f574e5276f9dc316d518c4d27f0922401",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-22-fix-vuln",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 259166,
+      "model_calls": 30,
+      "input_tokens": 136585,
+      "output_tokens": 7717,
+      "tool_calls": 28,
+      "tool_failures": 6,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 8,
+        "tool": 2,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 16,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 16,
+        "recovered": 9,
+        "rate": 0.5625
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 49.24,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 11.6,
+          "tokens": 18.7,
+          "tool_calls": 71.4,
+          "retries": 50
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 259166,
+          "tokens": 170735,
+          "tool_calls": 28,
+          "retries": 8
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "1b2df68da3b0e34c6ff58a33b295a29fe0c03bbf31640ba67fe8fa6a1298e2e9",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-23-retry-logic",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 316335,
+      "model_calls": 30,
+      "input_tokens": 215078,
+      "output_tokens": 11811,
+      "tool_calls": 39,
+      "tool_failures": 7,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 8,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 9.5,
+          "tokens": 11,
+          "tool_calls": 51.3,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 4,
+          "latency": 316335,
+          "tokens": 290164,
+          "tool_calls": 39,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=grep_search)",
+          "forbidden network attempt: \"nc \" in \"python -c \"\ncontent = '''export async function withRetry(fn, options = {}) {\n  const { maxRetries = 3, baseDelayMs = 100 } = options;\n  let last;\n  for (let attempt = 0; attempt < maxRetries; attempt++) {\n    try {\n      return await fn();\n    } catch (e) {\n      last = e;\n    }\n    if (attempt < maxRetries - 1) {\n      await new Promise((resolve) => setTimeout(resolve, baseDelayMs * 2 ** attempt));\n    }\n  }\n  throw last;\n}\n'''\nwith open('src/retry.js', 'w', newline='\\r\\n') as f:\n    f.write(content)\nprint('Done')\n\"\"",
+          "forbidden network attempt: \"nc \" in \"python -X utf8 -c \"\ncontent = '''export async function withRetry(fn, options = {}) {\n  const { maxRetries = 3, baseDelayMs = 100 } = options;\n  let last;\n  for (let attempt = 0; attempt < maxRetries; attempt++) {\n    try {\n      return await fn();\n    } catch (e) {\n      last = e;\n    }\n    if (attempt < maxRetries - 1) {\n      await new Promise((resolve) => setTimeout(resolve, baseDelayMs * 2 ** attempt));\n    }\n  }\n  throw last;\n}\n'''\npath = 'src/retry.js'\nwith open(path, 'w', newline='\\r\\n') as f:\n    f.write(content)\nwith open(path, 'r') as f:\n    print('READBACK:', repr(f.read()))\n\"\"",
+          "forbidden network attempt: \"nc \" in \"node --input-type=module -e \"\nimport { withRetry } from './src/retry.js';\nimport { performance } from 'node:perf_hooks';\n\n// Test 1: succeeds on 1st try, no options\nlet n1 = 0;\nconst r1 = await withRetry(async () => { n1++; return 'ok'; });\nconsole.log('T1 success:', r1, 'calls:', n1);\n\n// Test 2: defaults -> 3 attempts total, 2 delays (100, 200)\nlet n2 = 0;\nconst t2 = performance.now();\ntry { await withRetry(async () => { n2++; throw new Error('x'); }); }\ncatch (e) { console.log('T2 threw:', e.message, 'calls:', n2, 'elapsedMs:', Math.round(performance.now() - t2)); }\n\n// Test 3: custom options -> succeeds on 3rd attempt (2 failures -> delays baseDelayMs, 2*baseDelayMs)\nlet n3 = 0;\nconst t3 = performance.now();\nconst r3 = await withRetry(async () => { n3++; if (n3 < 3) throw new Error('fail'); return 'done'; }, { maxRetries: 3, baseDelayMs: 50 });\nconsole.log('T3 success:', r3, 'calls:', n3, 'elapsedMs:', Math.round(performance.now() - t3));\n\n// Test 4: custom maxRetries=1 -> only 1 attempt, no delay\nlet n4 = 0;\ntry { await withRetry(async () => { n4++; throw new Error('y'); }, { maxRetries: 1, baseDelayMs: 1000 }); }\ncatch (e) { console.log('T4 threw:', e.message, 'calls:', n4); }\n\"\""
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "d52b49d0d8e3e65f76a3d666d315c1a4d37c2fb8bb1820bce05abbe2b204bfe9",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-24-extract-constants",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 220580,
+      "model_calls": 30,
+      "input_tokens": 77706,
+      "output_tokens": 2942,
+      "tool_calls": 34,
+      "tool_failures": 6,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 11,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 9,
+        "recovered": 2,
+        "rate": 0.2222222222222222
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 55.48,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 100,
+          "latency": 13.6,
+          "tokens": 30.1,
+          "tool_calls": 58.8,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 0,
+          "latency": 220580,
+          "tokens": 106285,
+          "tool_calls": 34,
+          "retries": 2
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "b4e3d6249937487a76d4ac1c954f0ca8568c11c5668269644c3b6a3269de7434",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-25-cron-config",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 195251,
+      "model_calls": 30,
+      "input_tokens": 115759,
+      "output_tokens": 5030,
+      "tool_calls": 35,
+      "tool_failures": 8,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 4,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 9,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 11,
+        "recovered": 2,
+        "rate": 0.18181818181818182
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 0,
+          "latency": 15.4,
+          "tokens": 21.6,
+          "tool_calls": 57.1,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 2,
+          "latency": 195251,
+          "tokens": 147862,
+          "tool_calls": 35,
+          "retries": 1
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=grep_search)",
+          "security.filesystem_denied (tool=grep_search)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "a5debf8e54fc1e8b31d3f2bef391ca2b8a0560e97212bcca4507a3483c94d16e",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-26-analyze-errors",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 394015,
+      "model_calls": 30,
+      "input_tokens": 669103,
+      "output_tokens": 6980,
+      "tool_calls": 46,
+      "tool_failures": 14,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 33,
+        "provider": 4,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 16,
+        "recovered": 1,
+        "rate": 0.0625
+      },
+      "compactions": 33,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 0,
+          "security": 0,
+          "latency": 7.6,
+          "tokens": 5,
+          "tool_calls": 43.5,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 185,
+          "security": 3,
+          "latency": 394015,
+          "tokens": 916514,
+          "tool_calls": 46,
+          "retries": 1
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=repo_tree)",
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=repo_tree)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "c2a6bed3668a4fac8fa47d59ad166dd2d83a0f9a1f417ae261b1a52a9785da49",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-27-pagination",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 186348,
+      "model_calls": 30,
+      "input_tokens": 117357,
+      "output_tokens": 6278,
+      "tool_calls": 38,
+      "tool_failures": 9,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 6,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 7,
+        "sandbox": 0,
+        "stallRecovery": 2,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 10,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 16.1,
+          "tokens": 21.4,
+          "tool_calls": 52.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 2,
+          "latency": 186348,
+          "tokens": 149567,
+          "tool_calls": 38,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.permission_denied (tool=repository_tree)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "b538d7f79adc1f2d49bb400ba53fbb254073fe67718fe34789bef422ff33f626",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-28-refactor-naming",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 206223,
+      "model_calls": 30,
+      "input_tokens": 103627,
+      "output_tokens": 6573,
+      "tool_calls": 39,
+      "tool_failures": 9,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 6,
+        "verification": 1,
+        "compaction": 5,
+        "provider": 8,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 11,
+        "recovered": 1,
+        "rate": 0.09090909090909091
+      },
+      "compactions": 5,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 55,
+          "security": 0,
+          "latency": 14.5,
+          "tokens": 11.4,
+          "tool_calls": 51.3,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 45,
+          "security": 1,
+          "latency": 206223,
+          "tokens": 280211,
+          "tool_calls": 39,
+          "retries": 1
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "9ed0c0e65c46f08abf7de8d00a7890d2aa7641ecc314fc40cae6c47150d79f1d",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-29-benchmark",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 30173,
+      "model_calls": 7,
+      "input_tokens": 15780,
+      "output_tokens": 247,
+      "tool_calls": 8,
+      "tool_failures": 1,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 0,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 1,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 99.98,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 99.4,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 30173,
+          "tokens": 19998,
+          "tool_calls": 8,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "0029850e838321308ecdaa246e79dc8f83f6f858702c82d0e861311b9c0f2e6b",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    },
+    {
+      "task_id": "ho-30-healthcheck",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 239158,
+      "model_calls": 22,
+      "input_tokens": 64868,
+      "output_tokens": 4084,
+      "tool_calls": 21,
+      "tool_failures": 8,
+      "retries": 10,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 10,
+        "verification": 3,
+        "compaction": 0,
+        "provider": 4,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 12,
+        "recovered": 3,
+        "rate": 0.25
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 3,
+      "human_interventions": 0,
+      "termination_reason": "verification_failed",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 48.4,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 25,
+          "security": 100,
+          "latency": 12.5,
+          "tokens": 39.9,
+          "tool_calls": 95.2,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 75,
+          "security": 0,
+          "latency": 239158,
+          "tokens": 80256,
+          "tool_calls": 21,
+          "retries": 1
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "6251d90b323b0ef5717ce4733a1933afdb8a490f54e1f65e7ce7921e09404efc",
+      "candidateConfigHash": "0c6b2b1ad264b2d8440251523cdab91a347e3ad9018a9b9b5380d56040c6b6bf",
+      "controlledDifference": [
+        "candidate:adaptive_recovery"
+      ]
+    }
+  ],
+  "summary": {
+    "total": 30,
+    "passed": 8,
+    "failed": 22,
+    "errors": 0,
+    "success_rate": 0.26666666666666666,
+    "latency_p50_ms": 220580,
+    "latency_p95_ms": 469214,
+    "avg_model_calls": 22.733333333333334,
+    "model_calls_p50": 28,
+    "model_calls_p95": 30,
+    "avg_tool_calls": 27.5,
+    "avg_tokens_input": 165729.53333333333,
+    "avg_tokens_output": 7371.5,
+    "avg_retries": 4.2,
+    "retry_rate": 1,
+    "retries_by_kind": {
+      "model": 56,
+      "tool": 126,
+      "verification": 33,
+      "compaction": 93,
+      "provider": 148,
+      "sandbox": 0,
+      "stallRecovery": 10,
+      "reconciliation": 0,
+      "mcpReconnect": 0
+    },
+    "recovery_rate": 0.23728813559322035,
+    "termination_reason_distribution": {
+      "model_error": 3,
+      "agent_limit": 15,
+      "verified_complete": 8,
+      "verification_failed": 3,
+      "time_limit": 1
+    },
+    "total_context_overflows": 0,
+    "total_false_completes": 0,
+    "total_verification_failures": 33,
+    "total_human_interventions": 0,
+    "failures_by_category": {
+      "model": 3
+    },
+    "avg_cost_score": 31.54,
+    "avg_cost_dimensions": {
+      "quality": 48.67,
+      "reliability": 65,
+      "security": 46.67,
+      "latency": 27.32,
+      "tokens": 37.79,
+      "tool_calls": 72.58,
+      "retries": 96.56
+    },
+    "security_violations": 16
+  },
+  "manifest": {
+    "gitSha": "07aeb65efcbf4b282f1d7a724c5d5d6650b37567",
+    "dirty": false,
+    "model": "deepseek-v4-flash",
+    "provider": "openai",
+    "temperature": null,
+    "suiteVersion": "2.1.0",
+    "judgeVersion": "1.0.0",
+    "runtimeConfigHash": "2e0e9b288c0ec0808e8293727d201acb12739710fc49c5537015637ad3f9db7e",
+    "timestamp": "2026-08-27T07:29:53.903Z",
+    "platform": "win32",
+    "nodeVersion": "v24.18.1",
+    "profile": "benchmark",
+    "features": {
+      "context": true,
+      "checkpoint": true,
+      "artifacts": true,
+      "verification": true,
+      "observability": true,
+      "memory": false,
+      "delegation": false
+    },
+    "contextBudgetTokens": 32000,
+    "taskSuites": [
+      "holdout"
+    ],
+    "randomSeed": null,
+    "candidate": "adaptive_recovery",
+    "effectiveConfig": {
+      "candidate": "adaptive_recovery",
+      "provider": "openai",
+      "model": "deepseek-v4-flash",
+      "temperature": null,
+      "context": {
+        "maxTokens": 32000,
+        "dynamic": 0
+      },
+      "recovery": {
+        "adaptive": true
+      },
+      "mechanisms": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "tools": [
+        "edit_file",
+        "exec",
+        "read_file",
+        "search_files",
+        "write_file"
+      ],
+      "toolSetHash": "9c614bc8119187d80132343fa0b0a57975a01c3bf18a7d91724cd46e2eca760e",
+      "runtimeConfigHash": "3ad02fbd858c413c4eded8005b4144028523740768c6b7c1f3dc70d19c542655"
+    }
+  }
+}
