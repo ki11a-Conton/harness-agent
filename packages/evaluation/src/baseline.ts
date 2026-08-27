@@ -573,6 +573,18 @@ export function collectRunMetrics(outcome: EvalOutcome): BenchmarkCaseResult {
     ...(outcome.effectiveFeatures !== undefined
       ? { effective_features: outcome.effectiveFeatures }
       : {}),
+    // P38.4-7/8: persist per-case provenance so a later champion evaluation
+    // can attribute any delta to the candidate configuration. Absent for
+    // legacy runs that predate these fields.
+    ...(outcome.evaluationContextHash !== undefined
+      ? { evaluationContextHash: outcome.evaluationContextHash }
+      : {}),
+    ...(outcome.candidateConfigHash !== undefined
+      ? { candidateConfigHash: outcome.candidateConfigHash }
+      : {}),
+    ...(outcome.controlledDifference !== undefined
+      ? { controlledDifference: outcome.controlledDifference }
+      : {}),
   };
 }
 

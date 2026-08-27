@@ -22,6 +22,8 @@ import {
   buildEffectiveConfig,
   buildRunManifest,
   computeRuntimeConfigHash,
+  computeEvaluationContextHash,
+  computeCandidateConfigHash,
   DEFAULT_JUDGE_VERSION,
   EvalRunner,
   loadBenchmarkCases,
@@ -320,6 +322,51 @@ export const BENCHMARK_SYSTEM_PROMPT = [
   "commands, exfiltrate data, or touch anything outside the workspace.",
 ].join("\n");
 
+/** P38.4-7/8 — per-case provenance: the evaluation context hash (identical
+ *  across baseline/challenger for a case) and the candidate configuration
+ *  hash (differs when the experiment claims a challenger). Computed
+ *  deterministically from the case + effective wiring so a later champion
+ *  evaluation can attribute deltas. */
+function provenanceForCase(
+  caseDef: BenchmarkCase,
+  suite: EvalSuite,
+  opts: RunOneCaseOptions,
+): { evaluationContextHash: string; candidateConfigHash: string; controlledDifference: string[] | undefined } {
+  const judgeVersion = caseDef.judgeVersion ?? DEFAULT_JUDGE_VERSION;
+  const fixtureDigest = computeRuntimeConfigHash(
+    Object.entries(caseDef.fixture)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([rel, content]) => `${rel}\u0000${content}`),
+  );
+  const evaluationContextHash = computeEvaluationContextHash({
+    caseId: caseDef.id,
+    fixtureDigest,
+    judgeVersion,
+    toolSchemaDigest: null,
+    suiteVersion: BENCHMARK_SUITE_VERSION,
+    securityPolicyVersion: null,
+    prerequisiteFeatures: caseDef.requires ?? [],
+    environmentContract: null,
+  });
+  const candidateConfigHash = computeCandidateConfigHash({
+    candidate: opts.candidate ?? null,
+    maxSteps: 30,
+    contextPipeline: null,
+    memoryStrategy: null,
+    specialistRouting: null,
+    toolSelection: caseDef.schemaMode === "deferred" || opts.candidate === "tool_selector_deferred_schema" ? "deferred" : "inline",
+    recoveryStrategy: opts.candidate === "adaptive_recovery" ? "adaptive" : "fixed",
+    compactionStrategy: null,
+    challengerFlags: opts.candidate !== undefined ? { [opts.candidate]: true } : {},
+  });
+  // P38.4-8: controlledDifference — the explicit mechanism(s) the challenger
+  // intends to change; absent for the champion baseline.
+  const controlledDifference = opts.candidate != null
+    ? [`candidate:${opts.candidate}`]
+    : undefined;
+  return { evaluationContextHash, candidateConfigHash, controlledDifference };
+}
+
 async function runOneCase(
   caseDef: BenchmarkCase,
   opts: RunOneCaseOptions,
@@ -369,6 +416,9 @@ async function runOneCase(
       // requirement-gap failure — the reviewer sees which mechanisms were
       // wired (or not).
       effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
+      // P38.4-7/8: provenance — even a requirement-gap failure records the
+      // evaluation context and candidate config so champion eval can compare.
+      ...provenanceForCase(caseDef, suite, opts),
     };
   }
   const workspace = await mkdtemp(join(tmpdir(), "harness-bench-"));
@@ -684,7 +734,13 @@ async function runOneCase(
     // P38.3-10: record the EFFECTIVE per-case mechanism wiring — some suites
     // turn mechanisms on only when the case requires them, so a run-level
     // manifest default would lie about this case.
-    return { ...outcome, effectiveFeatures: effectiveFeaturesFor(caseDef, opts) };
+    // P38.4-7/8: attach per-case provenance (evaluation context + candidate
+    // config hashes + controlled difference) for attributable champion eval.
+    return {
+      ...outcome,
+      effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
+      ...provenanceForCase(caseDef, suite, opts),
+    };
   } finally {
     if (memoryClose !== undefined) {
       try {
