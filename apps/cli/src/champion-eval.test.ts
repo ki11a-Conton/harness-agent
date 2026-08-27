@@ -3,7 +3,8 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { EvalOutcome } from "@ar/evaluation";
-import { runChampionEval } from "./champion-eval.js";
+import { buildPairedReport } from "@ar/evaluation";
+import { runChampionEval, evaluateChampionQuality } from "./champion-eval.js";
 
 let dir = "";
 afterEach(async () => {
@@ -107,7 +108,7 @@ describe("P21-3 champion eval CLI", () => {
     ]);
     const { lines } = await runChampionEval({ baselinePath, candidatePath, mode: "real-model" });
     const out = lines.join("\n");
-    expect(out).toContain("quality policy (P38.3-12):");
+    expect(out).toContain("quality policy (P38.3-12 + P38.4-8):");
     expect(out).toContain("PASS  same case set");
     expect(out).toContain("PASS  compatible judge version");
     expect(out).toContain("PASS  security non-regression");
@@ -151,5 +152,120 @@ describe("P21-3 champion eval CLI", () => {
     const out = lines.join("\n");
     expect(out).toContain("FAIL  no new harness/judge/infra failures");
     expect(out).toContain("QUALITY VERDICT: FAIL");
+  });
+
+  describe("P38.4-8 provenance comparability", () => {
+    // Runs carrying full P38.4-7 provenance.
+    function provRun(
+      caseId: string,
+      passed: boolean,
+      evalCtx: string,
+      candCfg: string,
+      controlled?: string[],
+    ): EvalOutcome {
+      return {
+        ...run(caseId, passed, passed ? "verified_complete" : "verification_failed"),
+        evaluationContextHash: evalCtx,
+        candidateConfigHash: candCfg,
+        ...(controlled !== undefined ? { controlledDifference: controlled } : {}),
+      };
+    }
+
+    function verdict(
+      baselineRuns: EvalOutcome[],
+      candidateRuns: EvalOutcome[],
+      opts?: { strictPromotion?: boolean },
+    ) {
+      const report = buildPairedReport(baselineRuns, candidateRuns, "stub");
+      return evaluateChampionQuality(baselineRuns, candidateRuns, report, opts);
+    }
+
+    it("1. same context + candidate differs → comparable (PASS)", () => {
+      const v = verdict(
+        [provRun("a", true, "ctx-1", "base-cfg")],
+        [provRun("a", true, "ctx-1", "cand-cfg", ["recovery.strategy"])],
+      );
+      expect(v.checks.compatibleEvaluationContext).toBe(true);
+      expect(v.checks.candidateActuallyDiffers).toBe(true);
+      expect(v.checks.controlledDifferenceDeclared).toBe(true);
+      expect(v.passed).toBe(true);
+    });
+
+    it("2. judge same but fixture hash differs → FAIL (context mismatch)", () => {
+      const v = verdict(
+        [provRun("a", true, "ctx-1", "base-cfg")],
+        [provRun("a", true, "ctx-2", "cand-cfg", ["recovery.strategy"])],
+      );
+      expect(v.checks.compatibleEvaluationContext).toBe(false);
+      expect(v.passed).toBe(false);
+      expect(v.failures.join("\n")).toContain("evaluation context mismatch");
+    });
+
+    it("3. tool policy differs unexpectedly → FAIL via context hash", () => {
+      // Same judge, same case, but the evaluation context (which includes the
+      // tool schema digest) differs — not attributable.
+      const v = verdict(
+        [provRun("a", true, "ctx-toolA", "base-cfg")],
+        [provRun("a", true, "ctx-toolB", "cand-cfg", ["recovery.strategy"])],
+      );
+      expect(v.checks.compatibleEvaluationContext).toBe(false);
+      expect(v.passed).toBe(false);
+    });
+
+    it("4. candidate config identical while challenger claim made → FAIL", () => {
+      const v = verdict(
+        [provRun("a", true, "ctx-1", "same-cfg")],
+        [provRun("a", true, "ctx-1", "same-cfg", ["recovery.strategy"])],
+      );
+      expect(v.checks.candidateActuallyDiffers).toBe(false);
+      expect(v.passed).toBe(false);
+      expect(v.failures.join("\n")).toContain("identical to baseline");
+    });
+
+    it("5. controlledDifference missing in strict promotion mode → FAIL", () => {
+      const v = verdict(
+        [provRun("a", true, "ctx-1", "base-cfg")],
+        [provRun("a", true, "ctx-1", "cand-cfg")], // no controlledDifference
+        { strictPromotion: true },
+      );
+      expect(v.checks.controlledDifferenceDeclared).toBe(false);
+      expect(v.passed).toBe(false);
+    });
+
+    it("6. legacy run behavior is explicit and truthful (informational, non-strict passes)", () => {
+      // Legacy runs have no provenance fields. Non-strict: informational only,
+      // verdict still PASSes for a clean comparison.
+      const v = verdict([run("a", true, "verified_complete")], [run("a", true, "verified_complete")]);
+      expect(v.checks.compatibleEvaluationContext).toBe(true);
+      expect(v.passed).toBe(true);
+      // But the informational warning is present so reviewers know.
+      expect(v.warnings.join("\n")).toContain("legacy provenance");
+    });
+
+    it("7. security regression still fails even when provenance passes", () => {
+      const insecure = provRun("a", false, "ctx-1", "cand-cfg", ["recovery.strategy"]);
+      insecure.violations = ["security.injection_denied fired: payload"];
+      const v = verdict(
+        [provRun("a", true, "ctx-1", "base-cfg")],
+        [insecure],
+      );
+      expect(v.checks.compatibleEvaluationContext).toBe(true);
+      expect(v.checks.candidateActuallyDiffers).toBe(true);
+      expect(v.checks.securityNonRegression).toBe(false);
+      expect(v.passed).toBe(false);
+    });
+
+    it("8. extra candidate case still fails (sameCaseSet)", () => {
+      const v = verdict(
+        [provRun("a", true, "ctx-1", "base-cfg")],
+        [
+          provRun("a", true, "ctx-1", "cand-cfg", ["recovery.strategy"]),
+          provRun("b", true, "ctx-1", "cand-cfg", ["recovery.strategy"]),
+        ],
+      );
+      expect(v.checks.sameCaseSet).toBe(false);
+      expect(v.passed).toBe(false);
+      expect(v.failures.join("\n")).toContain("not in the baseline");
+    });
   });
 });

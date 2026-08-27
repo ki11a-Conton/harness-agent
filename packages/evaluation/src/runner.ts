@@ -47,6 +47,18 @@ export interface EvalOutcome {
    *  deferredSchema). Optional; recorded by harnesses that wire mechanisms
    *  per case. */
   effectiveFeatures?: Record<string, boolean>;
+  /** P38.4-7/8: per-case evaluation context hash — must be identical across
+   *  baseline/challenger for a comparison to be attributable. Optional for
+   *  legacy runs that predate this field. */
+  evaluationContextHash?: string;
+  /** P38.4-7/8: per-case candidate configuration hash — must differ when the
+   *  experiment claims a challenger (at least one case). Optional for legacy
+   *  runs. */
+  candidateConfigHash?: string;
+  /** P38.4-8: explicitly declared controlled difference (the mechanism(s) the
+   *  challenger intends to change), recorded at run creation. Optional for
+   *  legacy runs; required for strict promotion-quality comparisons. */
+  controlledDifference?: string[];
 }
 
 /** Tool events that count as side effects on the environment (§73 forbidden.side_effects). */
