@@ -85,6 +85,9 @@ export interface BenchmarkCommandOptions {
   /** P38-EVOLUTION: challenger candidate id (from CANDIDATE_FEATURES) to
    *  enable for this run; undefined = champion baseline. */
   candidate?: string;
+  /** P38.4-real: fixed delay in ms between case executions (TPM/rate-limit
+   *  friendly slow mode; 0 = no delay). */
+  caseDelayMs: number;
 }
 
 const SUITES: EvalSuite[] = ["regression", "holdout", "adversarial", "stress"];
@@ -250,7 +253,15 @@ async function executeBenchmark(
       casesTotal: selected.length,
       suite: opts.suite,
     },
-    { shuffle: opts.shuffle, seed: opts.seed, manifest },
+    {
+      shuffle: opts.shuffle,
+      seed: opts.seed,
+      manifest,
+      // P38.4-real: TPM/rate-limit friendly slow mode — fixed delay between
+      // cases so a long batch never trips the provider's per-minute limits.
+      // Execution pacing only; does NOT change runtime wiring or results.
+      caseDelayMs: opts.caseDelayMs,
+    },
   );
 
   await writeBaselineFiles(report, opts.outDir);
@@ -879,6 +890,7 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
     suite: "regression",
     shuffle: false,
     seed: 0,
+    caseDelayMs: 0,
   };
   // Resolved after parsing: default cases dir is benchmarks/<suite>.
   opts.casesDir = join("benchmarks", opts.suite);
@@ -935,6 +947,14 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
         const valid = ["adaptive_recovery", "context_pipeline_v5", "tool_selector_deferred_schema", "memory_retrieval", "memory_write_learning", "independent_reviewer", "adaptive_context_policy", "adaptive_scheduler", "delegation"];
         if (!valid.includes(value)) return new Error(`agent benchmark: unknown candidate "${value}" (valid: ${valid.join(", ")})`);
         opts.candidate = value;
+        break;
+      }
+      case "--delay": {
+        const value = requireValue(argv, ++i, "--delay");
+        if (value instanceof Error) return value;
+        const n = Number(value);
+        if (!Number.isInteger(n) || n < 0) return new Error("agent benchmark: --delay must be a non-negative integer (ms)");
+        opts.caseDelayMs = n;
         break;
       }
       case "--suite": {
@@ -995,6 +1015,7 @@ export async function runSmokeBenchmark(): Promise<{ exitCode: number; lines: st
     allowStub: true,
     suite: "adversarial",
     shuffle: false,
+    caseDelayMs: 0,
     seed: 0,
   };
   const result = await executeBenchmark(opts, smokeFakeProvider());
@@ -1077,6 +1098,7 @@ function benchmarkUsage(): string {
     "  --shuffle        randomize case EXECUTION order (report stays in fixed case order)",
     "  --seed <n>       PRNG seed for --shuffle (default 0; same seed reproduces the same order)",
     "  --candidate <id>  challenger candidate (adaptive_recovery, memory_retrieval, ...)",
+    "  --delay <ms>     fixed delay between cases (TPM/rate-limit friendly slow mode; 0 = no delay)",
     "  --allow-stub     run even without a model provider (records MODEL_ERROR honestly)",
   ].join("\n");
 }

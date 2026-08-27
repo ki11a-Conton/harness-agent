@@ -772,7 +772,8 @@ export async function runBaseline(
 ): Promise<BaselineReport> {
   const order = opts.shuffle === true ? shuffledOrder(cases.length, opts.seed ?? 0) : cases.map((_, i) => i);
   const results: BenchmarkCaseResult[] = new Array(cases.length);
-  for (const index of order) {
+  for (let k = 0; k < order.length; k++) {
+    const index = order[k]!;
     const caseDef = cases[index]!;
     try {
       const outcome = await runCase(caseDef);
@@ -805,6 +806,12 @@ export async function runBaseline(
         reason: err instanceof Error ? err.message : String(err),
       };
     }
+    // P38.4-real: TPM/rate-limit friendly slow mode — fixed delay between
+    // cases (execution pacing, not a correctness primitive; skipped after the
+    // last case and when delay is 0).
+    if (opts.caseDelayMs !== undefined && opts.caseDelayMs > 0 && k < order.length - 1) {
+      await new Promise((r) => setTimeout(r, opts.caseDelayMs));
+    }
   }
   return {
     meta: { ...meta, casesTotal: cases.length },
@@ -821,6 +828,9 @@ export interface RunBaselineOptions {
   seed?: number;
   /** P0-6 run manifest recorded into the report. */
   manifest?: RunManifest;
+  /** P38.4-real: fixed delay in ms between cases (TPM/rate-limit friendly
+   *  slow mode; 0/undefined = no delay). Execution pacing only. */
+  caseDelayMs?: number;
 }
 
 /** Deterministic Fisher-Yates using a seeded mulberry32 PRNG. */

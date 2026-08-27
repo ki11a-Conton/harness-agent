@@ -515,6 +515,24 @@ export class OpenAICompatibleProvider implements ModelProvider {
         }),
       );
     }
+    // P38.4-real: allow the provider retry budget to be tuned via environment
+    // variables (same OPENAI_* convention as apiKey/baseUrl/modelId). TPM-limited
+    // servers need more retries and a longer backoff than the defaults; runtime
+    // calls createClient(model, {}) so env vars are the only injection point
+    // that does not touch the runtime architecture. Explicit config values win
+    // over env vars (tests and callers that pass config keep their behavior).
+    const num = (value: unknown, env: string | undefined, fallback: number): number => {
+      const fromValue = typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+      if (fromValue !== undefined) return fromValue;
+      if (env !== undefined) {
+        const n = Number(env);
+        if (Number.isFinite(n) && n >= 0) return n;
+      }
+      return fallback;
+    };
+    const maxProviderRetries = num(config.maxProviderRetries, process.env.OPENAI_MAX_RETRIES, DEFAULT_MAX_PROVIDER_RETRIES);
+    const retryDelayMs = num(config.retryDelayMs, process.env.OPENAI_RETRY_DELAY_MS, DEFAULT_RETRY_DELAY_MS);
+    const requestTimeoutMs = num(config.requestTimeoutMs, process.env.OPENAI_REQUEST_TIMEOUT_MS, DEFAULT_REQUEST_TIMEOUT_MS);
     return {
       generate: (request, signal) =>
         streamChatCompletion(
@@ -522,15 +540,9 @@ export class OpenAICompatibleProvider implements ModelProvider {
             baseUrl,
             apiKey,
             modelId,
-            maxProviderRetries: Number(config.maxProviderRetries) >= 0
-              ? Number(config.maxProviderRetries)
-              : DEFAULT_MAX_PROVIDER_RETRIES,
-            retryDelayMs: Number(config.retryDelayMs) >= 0
-              ? Number(config.retryDelayMs)
-              : DEFAULT_RETRY_DELAY_MS,
-            requestTimeoutMs: Number(config.requestTimeoutMs) >= 0
-              ? Number(config.requestTimeoutMs)
-              : DEFAULT_REQUEST_TIMEOUT_MS,
+            maxProviderRetries,
+            retryDelayMs,
+            requestTimeoutMs,
           },
           request,
           signal,
