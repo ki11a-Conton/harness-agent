@@ -216,6 +216,55 @@ export function stableStringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
+/**
+ * P38.4-7 — per-case evaluation context hash.
+ *
+ * Attributes that SHOULD remain identical across a baseline/challenger paired
+ * evaluation: the case identity, the case fixture/version digest, the judge
+ * version, the tool schema/policy digest, the suite version, the security
+ * policy version, case prerequisite features, and the environment contract.
+ *
+ * Candidate-only knobs (recovery strategy, compaction strategy, context
+ * pipeline, …) must NOT be part of this hash — a changed candidate must leave
+ * `evaluationContextHash` unchanged (INV-P38.4-007 comparability).
+ */
+export function computeEvaluationContextHash(input: {
+  caseId: string;
+  fixtureDigest: string | null;
+  judgeVersion: string;
+  toolSchemaDigest: string | null;
+  suiteVersion: string;
+  securityPolicyVersion: string | null;
+  prerequisiteFeatures: readonly string[];
+  environmentContract: string | null;
+}): string {
+  return computeRuntimeConfigHash(input);
+}
+
+/**
+ * P38.4-7 — per-case candidate configuration hash.
+ *
+ * The ACTUAL agent/challenger configuration under test: maxSteps, context
+ * pipeline strategy, memory strategy, specialist routing, tool selection
+ * strategy, recovery strategy, compaction strategy, and candidate/challenger
+ * flags. Two runs with the same candidateConfigHash executed the same agent
+ * wiring for the case; any change to a candidate-only knob changes this hash
+ * (and only this hash).
+ */
+export function computeCandidateConfigHash(input: {
+  candidate: string | null;
+  maxSteps: number | null;
+  contextPipeline: string | null;
+  memoryStrategy: string | null;
+  specialistRouting: string | null;
+  toolSelection: string | null;
+  recoveryStrategy: string | null;
+  compactionStrategy: string | null;
+  challengerFlags: Record<string, boolean>;
+}): string {
+  return computeRuntimeConfigHash(input);
+}
+
 async function detectGitInfo(): Promise<{ sha: string | null; dirty: boolean | null }> {
   let sha = "";
   let status = "";

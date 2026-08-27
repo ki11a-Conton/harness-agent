@@ -3,6 +3,8 @@ import {
   BENCHMARK_SUITE_VERSION,
   buildEffectiveConfig,
   buildRunManifest,
+  computeCandidateConfigHash,
+  computeEvaluationContextHash,
   computeRuntimeConfigHash,
   computeToolSetHash,
   normalizeToolSet,
@@ -157,6 +159,80 @@ describe("stableStringify (Q-5)", () => {
     expect(manifest.contextBudgetTokens).toBe(32000);
     expect(manifest.taskSuites).toEqual(["regression", "holdout"]);
     expect(manifest.randomSeed).toBe(42);
+  });
+
+  describe("P38.4-7 per-case provenance hashes", () => {
+    const baseEval = {
+      caseId: "reg-01",
+      fixtureDigest: "abc123",
+      judgeVersion: "1.0.0",
+      toolSchemaDigest: "def456",
+      suiteVersion: "2.1.0",
+      securityPolicyVersion: "1.0.0",
+      prerequisiteFeatures: ["memory"] as readonly string[],
+      environmentContract: "linux-sandbox",
+    };
+    const baseCandidate = {
+      candidate: "adaptive-recovery-5",
+      maxSteps: 50,
+      contextPipeline: "default",
+      memoryStrategy: "semantic",
+      specialistRouting: null,
+      toolSelection: "default",
+      recoveryStrategy: "adaptive",
+      compactionStrategy: "aggressive",
+      challengerFlags: { adaptiveRetry: true },
+    };
+
+    it("same effective context → same evaluationContextHash", () => {
+      const h1 = computeEvaluationContextHash(baseEval);
+      const h2 = computeEvaluationContextHash({ ...baseEval });
+      expect(h1).toBe(h2);
+    });
+
+    it("changed case fixture → different evaluationContextHash", () => {
+      const h1 = computeEvaluationContextHash(baseEval);
+      const h2 = computeEvaluationContextHash({ ...baseEval, fixtureDigest: "xyz999" });
+      expect(h1).not.toBe(h2);
+    });
+
+    it("changed judge version → different evaluationContextHash", () => {
+      const h1 = computeEvaluationContextHash(baseEval);
+      const h2 = computeEvaluationContextHash({ ...baseEval, judgeVersion: "2.0.0" });
+      expect(h1).not.toBe(h2);
+    });
+
+    it("changed candidate-only knob → evaluationContextHash unchanged", () => {
+      const h1 = computeEvaluationContextHash(baseEval);
+      const h2 = computeEvaluationContextHash({ ...baseEval });
+      // recovery strategy is NOT in evaluation context
+      expect(h1).toBe(h2);
+    });
+
+    it("changed candidate-only knob → candidateConfigHash changed", () => {
+      const h1 = computeCandidateConfigHash(baseCandidate);
+      const h2 = computeCandidateConfigHash({ ...baseCandidate, recoveryStrategy: "fixed" });
+      expect(h1).not.toBe(h2);
+    });
+
+    it("object key insertion order does not change hash", () => {
+      const a = { z: 1, a: 2 };
+      const b = { a: 2, z: 1 };
+      const h1 = computeRuntimeConfigHash(a);
+      const h2 = computeRuntimeConfigHash(b);
+      expect(h1).toBe(h2);
+    });
+
+    it("candidateConfigHash is deterministic", () => {
+      const h1 = computeCandidateConfigHash(baseCandidate);
+      const h2 = computeCandidateConfigHash(baseCandidate);
+      expect(h1).toBe(h2);
+    });
+
+    it("evaluationContextHash output is 64-char hex", () => {
+      const h = computeEvaluationContextHash(baseEval);
+      expect(h).toMatch(/^[0-9a-f]{64}$/);
+    });
   });
 
   it("P21-1: absent identity fields are honest nulls/[], never guessed", async () => {
