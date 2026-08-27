@@ -127,6 +127,12 @@ export async function runBenchmarkCommand(
   if (argv[0] === "smoke") {
     return runSmokeBenchmark();
   }
+  // P38.4-6: `agent benchmark validate <result-dir>` — free deterministic
+  // validation of committed benchmark artifacts (completeness, count
+  // consistency, duplicates, suite mismatch, secret scan). Never runs a model.
+  if (argv[0] === "validate") {
+    return runValidateBenchmarkArtifacts(argv.slice(1));
+  }
   const opts = parseBenchmarkArgs(argv);
   if (opts instanceof Error) {
     return { exitCode: 1, lines: [opts.message, "", benchmarkUsage()] };
@@ -1084,3 +1090,56 @@ export type { BaselineReport };
 /** P16-5: single wall-clock for the CLI benchmark harness — every event the
  *  benchmark appends uses this clock (deterministic under test). */
 export const now = () => Date.now();
+
+/**
+ * P38.4-6: `agent benchmark validate <result-dir>` — free deterministic
+ * validation of committed benchmark artifacts. Reads the artifact directory,
+ * checks manifest completeness, count consistency, suite match, duplicate case
+ * IDs, and secret scan. Never runs a model. Returns exit code 0 on success,
+ * 1 on any validation error or warning.
+ */
+export async function runValidateBenchmarkArtifacts(
+  argv: string[],
+): Promise<{ exitCode: number; lines: string[] }> {
+  const resultDir = argv[0];
+  if (resultDir === undefined || resultDir === "--help" || resultDir === "-h") {
+    return {
+      exitCode: 1,
+      lines: [
+        "Usage: agent benchmark validate <result-dir>",
+        "",
+        "Validate committed benchmark artifacts for completeness, consistency,",
+        "duplicate/missing cases, suite name mismatch, and secret leakage.",
+        "Never runs a model — free deterministic check.",
+      ],
+    };
+  }
+  try {
+    const { validateBenchmarkArtifacts } = await import("@ar/evaluation");
+    const result = await validateBenchmarkArtifacts(resultDir);
+    const lines: string[] = [];
+    if (result.ok) {
+      lines.push(`Benchmark artifacts in ${resultDir}: VALID`);
+      lines.push(`  Suites: ${result.summary.suites}`);
+      lines.push(`  Cases:  ${result.summary.cases}`);
+      lines.push(`  Passed: ${result.summary.passed}`);
+      lines.push(`  Failed: ${result.summary.failed}`);
+    } else {
+      lines.push(`Benchmark artifacts in ${resultDir}: INVALID`);
+      for (const err of result.errors) {
+        lines.push(`  ERROR: ${err}`);
+      }
+    }
+    for (const warn of result.warnings) {
+      lines.push(`  WARN:  ${warn}`);
+    }
+    return { exitCode: result.ok ? 0 : 1, lines };
+  } catch (err) {
+    return {
+      exitCode: 1,
+      lines: [
+        `agent benchmark validate: ${err instanceof Error ? err.message : String(err)}`,
+      ],
+    };
+  }
+}

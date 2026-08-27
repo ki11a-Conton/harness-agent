@@ -32,3 +32,4 @@ export * from "./candidate-matrix.js";
 export * from "./paired-eval.js";
 export * from "./promotion-gate.js";
 export * from "./champion-manifest.js";
+export * from "./artifact-validate.js";

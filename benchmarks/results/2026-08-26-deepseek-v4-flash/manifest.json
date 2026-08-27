@@ -34,7 +34,8 @@
     }
   },
   "notes": [
-    "Full benchmark was reported as completed by the operator, but no local report artifact was available to import in this checkout. No paid rerun was performed by P38.3.",
+    "P38.4-5 (2026-08-26): a fresh search for the operator's completed 84-case run was performed across the repo, .dsh, .ci, Downloads/Desktop/Documents, and D:\\ top-level dirs. Only the P38.3-imported partial artifacts were found (adversarial 13 + regression 2). No complete 84-case source artifact is available in any searchable location.",
+    "P38.4-5 import status: BLOCKED — source artifacts unavailable. Per plan §10: do not fabricate, do not rerun paid suites, do not silently mark complete.",
     "The only real-model report artifact present in this checkout is the adversarial suite (13 cases, 5 passed) from .ci/bench-real-slow at SHA 40d78dbd.",
     "All other suites are recorded as NOT AVAILABLE — no fabricated zeros or invented pass rates.",
     "Missing fields are null, never fabricated."
