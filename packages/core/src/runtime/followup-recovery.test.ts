@@ -276,10 +276,9 @@ describe("P38.4-2/3 followup same-T recovery (nonterminal bound turns)", () => {
       freshRuntime(store, new MemoryEventStore(), inbox),
     );
     const actor2 = await loadActor(rt2, store, inbox, sessionId);
-    void actor2.drainFollowupsForTest();
-    // No recoverable turns → no runTurn for the terminal turn. (A generous
-    // settle window proves absence, not just timing.)
-    await new Promise((r) => setTimeout(r, 100));
+    // Await drain completion: discoverRecoverableTurns runs, finds no
+    // nonterminal, exits without any runTurn call for the terminal turn.
+    await actor2.drainFollowupsForTest();
     expect(runCalls2.get(boundTurnId!)).toBeUndefined(); // NOT recovered
     expect(totalRuns(runCalls2)).toBe(0);
     // Prompt remains consumed.
@@ -358,9 +357,8 @@ describe("P38.4-2/3 followup same-T recovery (nonterminal bound turns)", () => {
       runTurn: () => { throw new Error("simulated runTurn crash"); },
     };
     const actorBroken = await loadActor(brokenRt, store, inbox, sessionId);
-    void actorBroken.drainFollowupsForTest();
-    // Allow recovery attempt to settle (it fails synchronously, P not consumed).
-    await new Promise((r) => setTimeout(r, 50));
+    // Await drain: recovery attempt fails synchronously (throw), P not consumed.
+    await actorBroken.drainFollowupsForTest();
     const pAfter = inbox.prompts.find((x) => x.id === p1)!;
     expect(pAfter.status).toBe("promoted"); // NOT consumed
     expect(pAfter.promotedTurnId).toBe(t1.id);
