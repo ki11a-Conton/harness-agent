@@ -376,3 +376,185 @@ export function deriveBenchmarkSummary(
     falseCompletes,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Overall summary generation
+// ---------------------------------------------------------------------------
+
+export interface OverallSummaryConfig {
+  /** Result directory name (e.g. "2026-08-26-deepseek-v4-flash"). */
+  resultDirName: string;
+  /** Per-suite summary files keyed by suite name. */
+  suites: Array<{
+    name: string;
+    cases: number | null;
+    passed: number | null;
+    failed: number | null;
+    passRate: number | null;
+    tokensInput: number | null;
+    tokensOutput: number | null;
+    costUsd: number | null;
+    /** True when this suite has complete data (not partial). */
+    complete: boolean;
+    notes?: string;
+  }>;
+  /** 84-case completeness: true only when ALL four suites have full data. */
+  overallComplete: boolean;
+  /** Provenance info. */
+  provenance: {
+    provider: string | null;
+    model: string | null;
+    judgeVersion: string | null;
+    suiteManifestDigest: string | null;
+    sanitizedDir: string;
+  };
+  /** Failure clustering across all suites. */
+  failureClusters: Record<string, { count: number; caseIds: string[]; suites: string[] }>;
+  /** Security stats. */
+  security: {
+    securityCasePassRate: number | null;
+    securityViolationCount: number;
+  };
+  /** Infrastructure quality. */
+  infrastructure: {
+    harnessFailures: number;
+    judgeFailures: number;
+    infrastructureFailures: number;
+  };
+  /** Efficiency where available. */
+  efficiency: {
+    totalToolCalls: number | null;
+    medianToolCalls: number | null;
+    tokensInput: number | null;
+    tokensOutput: number | null;
+    totalTokens: number | null;
+    costUsd: number | null;
+    durationMs: number | null;
+  };
+}
+
+/** Generate a machine-readable overall-summary.json from suite-level data. */
+export function buildOverallSummary(config: OverallSummaryConfig): Record<string, unknown> {
+  const totalCases = config.suites.reduce((s, su) => s + (su.cases ?? 0), 0);
+  const totalPassed = config.suites.reduce((s, su) => s + (su.passed ?? 0), 0);
+
+  return {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    complete: config.overallComplete,
+    suites: config.suites.map((s) => ({
+      suite: s.name,
+      cases: s.cases,
+      passed: s.passed,
+      passRate: s.passRate,
+      tokensInput: s.tokensInput,
+      tokensOutput: s.tokensOutput,
+      costUsd: s.costUsd,
+      complete: s.complete,
+      notes: s.notes ?? null,
+    })),
+    totalCases: config.overallComplete ? totalCases : null,
+    totalPassed: config.overallComplete ? totalPassed : null,
+    provenance: config.provenance,
+    failureClusters: config.failureClusters,
+    security: config.security,
+    infrastructure: config.infrastructure,
+    efficiency: config.efficiency,
+  };
+}
+
+/** Generate overall-summary.md from machine-readable data. Pure, deterministic
+ *  (except generatedAt which is a new timestamp). */
+export function renderOverallSummaryMarkdown(config: OverallSummaryConfig): string {
+  const lines: string[] = [];
+  const model = config.provenance.model ?? "?";
+  const dir = config.provenance.sanitizedDir;
+
+  lines.push(`# Benchmark Quality Evidence — ${model} (generated from ${dir})`);
+  lines.push("");
+
+  // Suites table
+  lines.push("## Suites");
+  lines.push("");
+  lines.push("| suite | passed/cases | pass rate | tokens (in/out) | cost | notes |");
+  lines.push("|-------|-------------|-----------|-----------------|------|-------|");
+  for (const s of config.suites) {
+    const passStr = s.passed !== null && s.cases !== null ? `${s.passed}/${s.cases}` : "—";
+    const rateStr = s.passRate !== null ? `${(s.passRate * 100).toFixed(1)}%` : "—";
+    const tokStr = s.tokensInput !== null && s.tokensOutput !== null
+      ? `${s.tokensInput.toLocaleString()} / ${s.tokensOutput.toLocaleString()}`
+      : "—";
+    const costStr = s.costUsd !== null ? `$${s.costUsd.toFixed(4)}` : "—";
+    const noteStr = s.complete ? "" : s.notes ?? "*partial*";
+    lines.push(`| ${s.name} | ${passStr} | ${rateStr} | ${tokStr} | ${costStr} | ${noteStr} |`);
+  }
+
+  // Total
+  if (config.overallComplete) {
+    const totalCases = config.suites.reduce((s, su) => s + (su.cases ?? 0), 0);
+    const totalPassed = config.suites.reduce((s, su) => s + (su.passed ?? 0), 0);
+    const totalRate = totalCases > 0 ? (totalPassed / totalCases * 100).toFixed(1) : "—";
+    lines.push(`| **TOTAL** | **${totalPassed}/${totalCases}** | **${totalRate}%** |  |  | |`);
+  } else {
+    lines.push("| **TOTAL** | **INCOMPLETE** |  |  |  | Not all suites have complete data |");
+  }
+  lines.push("");
+
+  // Failure clustering
+  lines.push("## Failure Clustering");
+  lines.push("");
+  if (Object.keys(config.failureClusters).length === 0) {
+    lines.push("No failures to cluster.");
+  } else {
+    for (const [category, data] of Object.entries(config.failureClusters)) {
+      lines.push(`**${category}**: ${data.count}`);
+      lines.push(`  - suites: ${data.suites.join(", ")}`);
+      if (data.caseIds.length > 0 && data.caseIds.length <= 30) {
+        lines.push(`  - cases: ${data.caseIds.join(", ")}`);
+      } else if (data.caseIds.length > 30) {
+        lines.push(`  - cases: ${data.caseIds.length} total (list truncated)`);
+      }
+    }
+  }
+  lines.push("");
+
+  // Security
+  lines.push("## Security");
+  lines.push("");
+  lines.push(`- security-case pass rate: ${config.security.securityCasePassRate !== null ? `${(config.security.securityCasePassRate * 100).toFixed(1)}%` : "N/A"}`);
+  lines.push(`- security violations: ${config.security.securityViolationCount}`);
+  lines.push("");
+
+  // Infrastructure
+  lines.push("## Infrastructure Quality");
+  lines.push("");
+  lines.push(`- harness failures: ${config.infrastructure.harnessFailures}`);
+  lines.push(`- judge failures: ${config.infrastructure.judgeFailures}`);
+  lines.push(`- infrastructure failures: ${config.infrastructure.infrastructureFailures}`);
+  lines.push("");
+
+  // Efficiency
+  lines.push("## Efficiency");
+  lines.push("");
+  const na = (v: unknown): string => v !== null && v !== undefined ? String(v) : "N/A";
+  lines.push(`- total tool calls: ${na(config.efficiency.totalToolCalls)}`);
+  lines.push(`- median tool calls/case: ${na(config.efficiency.medianToolCalls)}`);
+  lines.push(`- input tokens: ${na(config.efficiency.tokensInput)}`);
+  lines.push(`- output tokens: ${na(config.efficiency.tokensOutput)}`);
+  lines.push(`- total tokens: ${na(config.efficiency.totalTokens)}`);
+  lines.push(`- cost: ${na(config.efficiency.costUsd !== null ? `$${config.efficiency.costUsd.toFixed(4)}` : null)}`);
+  lines.push(`- duration: ${na(config.efficiency.durationMs !== null ? `${config.efficiency.durationMs}ms` : null)}`);
+  lines.push("");
+
+  // Provenance
+  lines.push("## Provenance");
+  lines.push("");
+  lines.push(`- provider/model: ${config.provenance.provider ?? "N/A"}/${config.provenance.model ?? "N/A"}`);
+  lines.push(`- judge version: ${config.provenance.judgeVersion ?? "N/A"}`);
+  lines.push(`- suite manifest digest: ${config.provenance.suiteManifestDigest ?? "N/A"}`);
+  lines.push(`- sanitized artifact directory: ${dir}`);
+  lines.push(`- complete: ${config.overallComplete ? "yes" : "no — incomplete"}`);
+  lines.push(`- generatedAt: ${new Date().toISOString()}`);
+
+  return lines.join("\n");
+}

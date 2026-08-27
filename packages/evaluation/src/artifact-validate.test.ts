@@ -12,8 +12,10 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  buildOverallSummary,
   checkSecrets,
   deriveBenchmarkSummary,
+  renderOverallSummaryMarkdown,
   scanForSecrets,
   validateBenchmarkArtifacts,
 } from "./artifact-validate.js";
@@ -250,5 +252,86 @@ describe("P38.4-6 artifact validation", () => {
     expect(s1.tokensInput).toBe(300);
     expect(s1.tokensOutput).toBe(150);
     expect(s1.toolCalls).toBe(3);
+  });
+
+  describe("P38.4-9 overall summary generation", () => {
+    const fullConfig = {
+      resultDirName: "2026-08-26-deepseek-v4-flash",
+      suites: [
+        { name: "regression", cases: 30, passed: 20, failed: 10, passRate: 0.667, tokensInput: 1000, tokensOutput: 500, costUsd: 0.5, complete: true },
+        { name: "holdout", cases: 30, passed: 15, failed: 15, passRate: 0.5, tokensInput: 1000, tokensOutput: 500, costUsd: 0.5, complete: true },
+        { name: "adversarial", cases: 13, passed: 5, failed: 8, passRate: 0.385, tokensInput: 443181, tokensOutput: 25306, costUsd: null, complete: true },
+        { name: "stress", cases: 11, passed: 9, failed: 2, passRate: 0.818, tokensInput: 500, tokensOutput: 250, costUsd: null, complete: true },
+      ],
+      overallComplete: true,
+      provenance: {
+        provider: "openai",
+        model: "deepseek-v4-flash",
+        judgeVersion: "1.0.0",
+        suiteManifestDigest: "abc",
+        sanitizedDir: "benchmarks/results/2026-08-26-deepseek-v4-flash",
+      },
+      failureClusters: { model_error: { count: 8, caseIds: ["adv-01"], suites: ["adversarial"] } },
+      security: { securityCasePassRate: 0.385, securityViolationCount: 0 },
+      infrastructure: { harnessFailures: 0, judgeFailures: 0, infrastructureFailures: 0 },
+      efficiency: { totalToolCalls: 145, medianToolCalls: 11, tokensInput: 500, tokensOutput: 250, totalTokens: 750, costUsd: null, durationMs: 3600000 },
+    };
+
+    it("complete config → TOTAL row shows X/84", () => {
+      const md = renderOverallSummaryMarkdown(fullConfig);
+      expect(md).toContain("**49/84**");
+      expect(md).not.toContain("INCOMPLETE");
+    });
+
+    it("incomplete config → TOTAL row shows INCOMPLETE, never X/84", () => {
+      const incomplete = {
+        ...fullConfig,
+        overallComplete: false,
+        suites: fullConfig.suites.map((s, i) => (i === 0 ? { ...s, complete: false, cases: 2, passed: 0, passRate: 0 } : s)),
+      };
+      const md = renderOverallSummaryMarkdown(incomplete);
+      expect(md).toContain("INCOMPLETE");
+      expect(md).not.toContain("/84");
+    });
+
+    it("buildOverallSummary records complete=false and null totals when incomplete", () => {
+      const incomplete = { ...fullConfig, overallComplete: false };
+      const summary = buildOverallSummary(incomplete);
+      expect(summary.complete).toBe(false);
+      expect(summary.totalCases).toBeNull();
+      expect(summary.totalPassed).toBeNull();
+    });
+
+    it("deterministic: two renders with same inputs produce same content", () => {
+      const a = renderOverallSummaryMarkdown(fullConfig);
+      const b = renderOverallSummaryMarkdown(fullConfig);
+      // Only generatedAt differs; strip the timestamp line.
+      const strip = (s: string) => s.replace(/generatedAt: .*/, "");
+      expect(strip(a)).toBe(strip(b));
+    });
+
+    it("N/A shown for unavailable efficiency metrics, never zero", () => {
+      const sparse = {
+        ...fullConfig,
+        efficiency: { totalToolCalls: null, medianToolCalls: null, tokensInput: null, tokensOutput: null, totalTokens: null, costUsd: null, durationMs: null },
+      };
+      const md = renderOverallSummaryMarkdown(sparse);
+      expect(md).toContain("total tool calls: N/A");
+      expect(md).toContain("cost: N/A");
+      expect(md).not.toContain("total tool calls: 0");
+    });
+
+    it("failure clustering sections include count, suites, and case IDs", () => {
+      const md = renderOverallSummaryMarkdown(fullConfig);
+      expect(md).toContain("**model_error**: 8");
+      expect(md).toContain("suites: adversarial");
+      expect(md).toContain("cases: adv-01");
+    });
+
+    it("security section separates pass rate from violation count", () => {
+      const md = renderOverallSummaryMarkdown(fullConfig);
+      expect(md).toContain("security-case pass rate: 38.5%");
+      expect(md).toContain("security violations: 0");
+    });
   });
 });
