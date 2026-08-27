@@ -202,4 +202,70 @@ describe("P20-3 docs:verify — machine truth verification", () => {
     expect(packages.truthful).toBe(false);
     expect(packages.reason).toContain("77");
   });
+
+  it("P38.4-10: passes when HANDOVER canonical section has no volatile SHA/run-id", async () => {
+    const staticHandover = `## 状态速览
+packages/（4 个包）已完成；
+测试基线 3919 passed / 0 failed。
+## Runtime release truth
+The canonical release truth is the exact-SHA GitHub Actions artifact.
+Do not treat this file as a substitute for exact-SHA CI evidence.
+`;
+    await makeRoot({
+      ...suiteCaseFiles(3),
+      "benchmarks/README.md": README_CLAIMS,
+      "packages/a/package.json": "{}",
+      "HANDOVER.md": staticHandover,
+      ".github/workflows/ci.yml": CI_WITH_GATES,
+      "CAPABILITY_MATRIX.md": MATRIX_MD,
+      "CAPABILITY_MATRIX.json": MATRIX_JSON,
+    });
+    const result = await verifyDocs({ root });
+    const handover = result.checks.find((c) => c.name === "HANDOVER static truth (P38.4-10)")!;
+    expect(handover.truthful).toBe(true);
+  });
+
+  it("P38.4-10: fails closed when HANDOVER canonical section embeds a volatile Release SHA", async () => {
+    const volatileHandover = `## 状态速览
+packages/（4 个包）已完成；
+测试基线 3919 passed / 0 failed。
+Release SHA: 33de85f9a1b2c3d4e5f60718293a4b5c6d7e8f901
+latest run: 32964584028
+`;
+    await makeRoot({
+      ...suiteCaseFiles(3),
+      "benchmarks/README.md": README_CLAIMS,
+      "packages/a/package.json": "{}",
+      "HANDOVER.md": volatileHandover,
+      ".github/workflows/ci.yml": CI_WITH_GATES,
+      "CAPABILITY_MATRIX.md": MATRIX_MD,
+      "CAPABILITY_MATRIX.json": MATRIX_JSON,
+    });
+    const result = await verifyDocs({ root });
+    const handover = result.checks.find((c) => c.name === "HANDOVER static truth (P38.4-10)")!;
+    expect(handover.truthful).toBe(false);
+    expect(handover.reason).toMatch(/Release SHA|latest run/);
+  });
+
+  it("P38.4-10: historical section may keep SHA facts without failing the static rule", async () => {
+    // SHA/run-id facts AFTER "## Historical / superseded" are allowed.
+    const historicalHandover = `## 状态速览
+packages/（4 个包）已完成；
+测试基线 3919 passed / 0 failed。
+## Historical / superseded
+Release SHA: 33de85f9a1b2c3d4e5f60718293a4b5c6d7e8f901 (historical example, not current truth)
+`;
+    await makeRoot({
+      ...suiteCaseFiles(3),
+      "benchmarks/README.md": README_CLAIMS,
+      "packages/a/package.json": "{}",
+      "HANDOVER.md": historicalHandover,
+      ".github/workflows/ci.yml": CI_WITH_GATES,
+      "CAPABILITY_MATRIX.md": MATRIX_MD,
+      "CAPABILITY_MATRIX.json": MATRIX_JSON,
+    });
+    const result = await verifyDocs({ root });
+    const handover = result.checks.find((c) => c.name === "HANDOVER static truth (P38.4-10)")!;
+    expect(handover.truthful).toBe(true);
+  });
 });

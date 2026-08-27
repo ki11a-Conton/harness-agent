@@ -2,16 +2,33 @@
 
 Architecture: FROZEN
 Runtime release: READY
-Release SHA: P38.3 RC-M1 final candidate（验证见 CI release-evidence artifact，headSha == 推送 SHA，runtimeReleaseReady == true）
 
-Free runtime gates:
-- Linux: PASS (CI run 32964584028, Ubuntu verify success)
-- Windows: PASS (CI run 32964584028, Windows verify success)
+## Runtime release truth
+
+The canonical release truth is the exact-SHA GitHub Actions
+release-evidence / release-attestation artifact for the commit being evaluated.
+
+Do not treat this file as a substitute for exact-SHA CI evidence.
+
+To verify the release state of a specific commit, run the release-evidence
+workflow for that exact SHA and read its attestation (runtimeReleaseReady).
+This file intentionally does not embed a "latest run id" or "current SHA",
+because any commit updating such a value would make this document stale again.
+
+> Historical example (not current truth): the P38.3 RC-M1 final candidate was
+> validated by its own exact-SHA CI release-evidence artifact; Linux, Windows,
+> coverage, security, race, chaos and release-attestation gates were green for
+> that commit. These were facts about that commit only.
+
+Free runtime gates (semantics, not per-commit numbers):
+- Linux: PASS — exact-SHA CI verify
+- Windows: PASS — exact-SHA CI verify
 - Coverage: PASS
 - Security: PASS
 - Race: PASS
 - Chaos: PASS
-- Release attestation: PASS (headSha == 33de85f, runtimeReleaseReady == true)
+- Release attestation: PASS — headSha == pushed SHA, runtimeReleaseReady == true
+  (verified per commit from the CI artifact; not stored as a volatile number here)
 
 Real-model benchmark:
 - preserved separately as quality evidence (benchmarks/results/)
@@ -45,9 +62,13 @@ packages/（24 个包）已完成；
 - `agent benchmark` 是**测量**：报告已写入、X/Y 用例通过判定，不是质量裁决。
 - 质量评估由 `agent champion eval <baseline-runs.json> <candidate-runs.json>`
   独立完成，含 quality policy（同用例集 / judge 版本一致 / 无新增
-  harness/judge/infra 失败 / 安全非回归 / P21-4 质量门禁）。
+  harness/judge/infra 失败 / 安全非回归 / P21-4 质量门禁 / P38.4-8 溯源
+  可比较性）。
 - 每次 benchmark 运行附 effectiveConfig（candidate、机制接线、工具集哈希、
   runtimeConfigHash），challenger 候选与 baseline 哈希必不同。
+- P38.4-7：per-case provenance（evaluationContextHash / candidateConfigHash /
+  controlledDifference）使配对比较可归因；P38.4-8：context 不一致即
+  fail-closed。
 
 ## Historical / superseded
 
