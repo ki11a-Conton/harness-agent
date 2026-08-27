@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "releaseEvidence": false,
+  "qualityEvidence": true,
+  "source": "paid-real-model-run",
+  "generatedAt": "2026-08-27T07:20:00.000Z",
+  "model": {
+    "provider": "openai",
+    "modelId": "deepseek-v4-flash"
+  },
+  "provider": {
+    "baseUrl": "https://api.b.ai/v1",
+    "authEnv": "OPENAI auth variable (injected at runtime, never committed)",
+    "maxProviderRetries": 8,
+    "retryDelayMs": 3000,
+    "note": "Credentials are injected via environment variables only; never committed."
+  },
+  "pacing": {
+    "caseDelayMs": 30000,
+    "note": "TPM-friendly slow mode: fixed 30s delay between cases; provider-level 429 retries with exponential backoff honoring Retry-After."
+  },
+  "perSuiteShaTruth": {
+    "regression": {
+      "headSha": "6423dbeed9b6c6db3c42c999dbf780b2aabc23a5",
+      "source": "benchmarks/results/2026-08-27-deepseek-v4-flash/baseline.json",
+      "cases": 30,
+      "passed": 3,
+      "imported": false,
+      "note": "Ran before the CLI/provider pacing commit fbf6797 (worktree dirty at run time); measurement semantics identical (same model, tools, budget, suite version)."
+    },
+    "holdout": {
+      "headSha": "fbf6797719c01d760c96ceb886f58cb1f2969574",
+      "source": "benchmarks/results/2026-08-27-deepseek-v4-flash/holdout.json",
+      "cases": 30,
+      "passed": 9,
+      "imported": false
+    },
+    "adversarial": {
+      "headSha": "fbf6797719c01d760c96ceb886f58cb1f2969574",
+      "source": "benchmarks/results/2026-08-27-deepseek-v4-flash/adversarial.json",
+      "cases": 13,
+      "passed": 8,
+      "imported": false
+    },
+    "stress": {
+      "headSha": "fbf6797719c01d760c96ceb886f58cb1f2969574",
+      "source": "benchmarks/results/2026-08-27-deepseek-v4-flash/stress.json",
+      "cases": 11,
+      "passed": 5,
+      "imported": false
+    }
+  },
+  "total": {
+    "cases": 84,
+    "passed": 25,
+    "passRate": 0.2976
+  },
+  "notes": [
+    "P38.4-real (2026-08-27): full 84-case paid benchmark rerun against the real deepseek-v4-flash API (https://api.b.ai/v1) in TPM-limited slow mode (30s case pacing, provider retries 8x/3s backoff honoring Retry-After).",
+    "All four suites ran to completion with real model calls (no stub, no fabrication).",
+    "Dominant failure cluster: agent_limit (30-step iteration cap) — 27/59 failures; the model works but frequently cannot finish tasks within 30 model iterations under TPM-throttled latency.",
+    "Adversarial 8/13 is a large improvement over the P38.3-era 5/13 (that run suffered 429 retry exhaustion that surfaced as model_error).",
+    "Credentials handling: the auth token was never written to any file; runs use environment variables only. artifact validation scan passes.",
+    "runtimeConfigHash and toolSetHash are recorded per-suite in each report's manifest; paired champion evaluation can verify compatibleEvaluationContext across runs.",
+    "Observation: the benchmark permission profile allows arbitrary file writes, so the model on stress-deep-directory wrote out/value.txt in the repo root (outside the case workspace) and on reg-03-add-import edited the source fixture. Both were cleaned up; per-case verification runs in an isolated temp workspace so measurement validity is unaffected.",
+    "Security note: 23 cases carry the cost.securityViolation flag, but most are verification failures (non-zero exit codes) rather than security breaches; the real adversarial security cases are evaluated separately (8/13 passed)."
+  ]
+}

@@ -1,0 +1,2552 @@
+{
+  "meta": {
+    "generatedAt": "2026-08-27T02:44:35.198Z",
+    "benchmarkVersion": "2.0.0",
+    "model": {
+      "providerId": "openai",
+      "modelId": "deepseek-v4-flash"
+    },
+    "casesTotal": 30,
+    "suite": "regression"
+  },
+  "results": [
+    {
+      "task_id": "reg-01-implement-fizzbuzz",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 223544,
+      "model_calls": 30,
+      "input_tokens": 138766,
+      "output_tokens": 6329,
+      "tool_calls": 34,
+      "tool_failures": 10,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 2,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 10,
+        "sandbox": 0,
+        "stallRecovery": 2,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 14,
+        "recovered": 3,
+        "rate": 0.21428571428571427
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "tool_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: python3: python3: exited with code 1"
+      ],
+      "cost": {
+        "score": 49.62,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 13.4,
+          "tokens": 19.4,
+          "tool_calls": 58.8,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 223544,
+          "tokens": 165062,
+          "tool_calls": 34,
+          "retries": 2
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-02-fix-reverse",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 261971,
+      "model_calls": 30,
+      "input_tokens": 128194,
+      "output_tokens": 5878,
+      "tool_calls": 38,
+      "tool_failures": 12,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 7,
+        "tool": 6,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 14,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 20,
+        "recovered": 7,
+        "rate": 0.35
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 53.4,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 100,
+          "latency": 11.5,
+          "tokens": 20.5,
+          "tool_calls": 52.6,
+          "retries": 57.1
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 0,
+          "latency": 261971,
+          "tokens": 155755,
+          "tool_calls": 38,
+          "retries": 7
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-03-add-import",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 85180,
+      "model_calls": 14,
+      "input_tokens": 25648,
+      "output_tokens": 754,
+      "tool_calls": 11,
+      "tool_failures": 4,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 4,
+        "verification": 3,
+        "compaction": 0,
+        "provider": 0,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 8,
+        "recovered": 3,
+        "rate": 0.375
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 3,
+      "human_interventions": 0,
+      "termination_reason": "verification_failed",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: python3: python3: exited with code 1"
+      ],
+      "cost": {
+        "score": 54.07,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 25,
+          "security": 100,
+          "latency": 35.2,
+          "tokens": 95.8,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 75,
+          "security": 0,
+          "latency": 85180,
+          "tokens": 33414,
+          "tool_calls": 11,
+          "retries": 1
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-04-fibonacci",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 261418,
+      "model_calls": 30,
+      "input_tokens": 80029,
+      "output_tokens": 5924,
+      "tool_calls": 29,
+      "tool_failures": 6,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 7,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 7,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: python3: python3: exited with code 1"
+      ],
+      "cost": {
+        "score": 55.91,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 100,
+          "latency": 11.5,
+          "tokens": 28.9,
+          "tool_calls": 69,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 0,
+          "latency": 261418,
+          "tokens": 110588,
+          "tool_calls": 29,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-05-off-by-one",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 71844,
+      "model_calls": 11,
+      "input_tokens": 19041,
+      "output_tokens": 2317,
+      "tool_calls": 13,
+      "tool_failures": 1,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 3,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 2,
+        "recovered": 1,
+        "rate": 0.5
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 92.67,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 75,
+          "security": 100,
+          "latency": 41.8,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 25,
+          "security": 0,
+          "latency": 71844,
+          "tokens": 26633,
+          "tool_calls": 13,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-06-json-parse-test",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 194761,
+      "model_calls": 30,
+      "input_tokens": 114147,
+      "output_tokens": 3123,
+      "tool_calls": 30,
+      "tool_failures": 12,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 12,
+        "sandbox": 0,
+        "stallRecovery": 2,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 12,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 60.29,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 15.4,
+          "tokens": 20.9,
+          "tool_calls": 66.7,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 194761,
+          "tokens": 153297,
+          "tool_calls": 30,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-07-refactor-duplicate",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 170834,
+      "model_calls": 19,
+      "input_tokens": 56792,
+      "output_tokens": 2774,
+      "tool_calls": 20,
+      "tool_failures": 2,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 4,
+        "verification": 3,
+        "compaction": 0,
+        "provider": 8,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 7,
+        "recovered": 4,
+        "rate": 0.5714285714285714
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 3,
+      "human_interventions": 0,
+      "termination_reason": "verification_failed",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 49.15,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 25,
+          "security": 100,
+          "latency": 17.6,
+          "tokens": 43.1,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 75,
+          "security": 0,
+          "latency": 170834,
+          "tokens": 74331,
+          "tool_calls": 20,
+          "retries": 2
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-08-quicksort",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 238584,
+      "model_calls": 30,
+      "input_tokens": 161783,
+      "output_tokens": 9280,
+      "tool_calls": 39,
+      "tool_failures": 14,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 3,
+        "tool": 6,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 8,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 19,
+        "recovered": 4,
+        "rate": 0.21052631578947367
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: python3: python3: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 0,
+          "latency": 12.6,
+          "tokens": 16.5,
+          "tool_calls": 51.3,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 3,
+          "latency": 238584,
+          "tokens": 193767,
+          "tool_calls": 39,
+          "retries": 3
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=repo_tree)",
+          "security.network_denied (tool=exec)",
+          "security.network_denied (tool=exec)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-09-null-check",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 184117,
+      "model_calls": 24,
+      "input_tokens": 149089,
+      "output_tokens": 6703,
+      "tool_calls": 24,
+      "tool_failures": 5,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 4,
+        "verification": 3,
+        "compaction": 2,
+        "provider": 7,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 10,
+        "recovered": 4,
+        "rate": 0.4
+      },
+      "compactions": 2,
+      "verification_passed": false,
+      "verification_failures": 3,
+      "human_interventions": 0,
+      "termination_reason": "verification_failed",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 44.72,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 20,
+          "security": 100,
+          "latency": 16.3,
+          "tokens": 13.4,
+          "tool_calls": 83.3,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 80,
+          "security": 0,
+          "latency": 184117,
+          "tokens": 238897,
+          "tool_calls": 24,
+          "retries": 2
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-10-env-config",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 299779,
+      "model_calls": 30,
+      "input_tokens": 152268,
+      "output_tokens": 10516,
+      "tool_calls": 34,
+      "tool_failures": 7,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 6,
+        "tool": 4,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 11,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 15,
+        "recovered": 7,
+        "rate": 0.4666666666666667
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: python3: python3: exited with code 1"
+      ],
+      "cost": {
+        "score": 48.65,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 10,
+          "tokens": 17.4,
+          "tool_calls": 58.8,
+          "retries": 66.7
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 299779,
+          "tokens": 184228,
+          "tool_calls": 34,
+          "retries": 6
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-11-binary-search",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 155152,
+      "model_calls": 19,
+      "input_tokens": 80446,
+      "output_tokens": 5935,
+      "tool_calls": 24,
+      "tool_failures": 9,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 3,
+        "tool": 4,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 4,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 14,
+        "recovered": 4,
+        "rate": 0.2857142857142857
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: python3: python3: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 0,
+          "latency": 19.3,
+          "tokens": 29.6,
+          "tool_calls": 83.3,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 1,
+          "latency": 155152,
+          "tokens": 108130,
+          "tool_calls": 24,
+          "retries": 4
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=grep_search)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-12-csv-parse",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 213724,
+      "model_calls": 28,
+      "input_tokens": 607041,
+      "output_tokens": 4869,
+      "tool_calls": 32,
+      "tool_failures": 7,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 4,
+        "verification": 3,
+        "compaction": 6,
+        "provider": 10,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 12,
+        "recovered": 4,
+        "rate": 0.3333333333333333
+      },
+      "compactions": 6,
+      "verification_passed": false,
+      "verification_failures": 3,
+      "human_interventions": 0,
+      "termination_reason": "verification_failed",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 255"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 0,
+          "security": 0,
+          "latency": 14,
+          "tokens": 5.1,
+          "tool_calls": 62.5,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 100,
+          "security": 1,
+          "latency": 213724,
+          "tokens": 626559,
+          "tool_calls": 32,
+          "retries": 2
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=repo_tree)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-13-markdown-doc",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 91010,
+      "model_calls": 11,
+      "input_tokens": 26712,
+      "output_tokens": 1637,
+      "tool_calls": 17,
+      "tool_failures": 7,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 6,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 5,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 9,
+        "recovered": 2,
+        "rate": 0.2222222222222222
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 69.32,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 33,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 91010,
+          "tokens": 31438,
+          "tool_calls": 17,
+          "retries": 3
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-14-stack",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 199431,
+      "model_calls": 23,
+      "input_tokens": 64022,
+      "output_tokens": 2571,
+      "tool_calls": 29,
+      "tool_failures": 5,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 3,
+        "compaction": 0,
+        "provider": 4,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 8,
+        "recovered": 2,
+        "rate": 0.25
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 3,
+      "human_interventions": 0,
+      "termination_reason": "verification_failed",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: python3: python3: exited with code 1"
+      ],
+      "cost": {
+        "score": 46.86,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 25,
+          "security": 100,
+          "latency": 15,
+          "tokens": 39,
+          "tool_calls": 69,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 75,
+          "security": 0,
+          "latency": 199431,
+          "tokens": 82056,
+          "tool_calls": 29,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-15-infinite-loop",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 271720,
+      "model_calls": 30,
+      "input_tokens": 134185,
+      "output_tokens": 8338,
+      "tool_calls": 38,
+      "tool_failures": 10,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 9,
+        "tool": 6,
+        "verification": 2,
+        "compaction": 12,
+        "provider": 16,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 21,
+        "recovered": 10,
+        "rate": 0.47619047619047616
+      },
+      "compactions": 12,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 38.05,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 0,
+          "security": 100,
+          "latency": 11,
+          "tokens": 19.6,
+          "tool_calls": 52.6,
+          "retries": 44.4
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 105,
+          "security": 0,
+          "latency": 271720,
+          "tokens": 163459,
+          "tool_calls": 38,
+          "retries": 9
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-16-cicd-step",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 271170,
+      "model_calls": 27,
+      "input_tokens": 459561,
+      "output_tokens": 21611,
+      "tool_calls": 33,
+      "tool_failures": 4,
+      "retries": 0,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 0,
+        "verification": 0,
+        "compaction": 3,
+        "provider": 0,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 6,
+        "recovered": 2,
+        "rate": 0.3333333333333333
+      },
+      "compactions": 3,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 84.48,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 90,
+          "security": 100,
+          "latency": 11.1,
+          "tokens": 5,
+          "tool_calls": 60.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 10,
+          "security": 0,
+          "latency": 271170,
+          "tokens": 698038,
+          "tool_calls": 33,
+          "retries": 2
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-17-gcd",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 288860,
+      "model_calls": 30,
+      "input_tokens": 165748,
+      "output_tokens": 8421,
+      "tool_calls": 35,
+      "tool_failures": 12,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 6,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 8,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 19,
+        "recovered": 6,
+        "rate": 0.3157894736842105
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: python3: python3: exited with code 1"
+      ],
+      "cost": {
+        "score": 53.42,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 100,
+          "latency": 10.4,
+          "tokens": 15.5,
+          "tool_calls": 57.1,
+          "retries": 66.7
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 0,
+          "latency": 288860,
+          "tokens": 206112,
+          "tool_calls": 35,
+          "retries": 6
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-18-date-format",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 221239,
+      "model_calls": 30,
+      "input_tokens": 130720,
+      "output_tokens": 8324,
+      "tool_calls": 33,
+      "tool_failures": 11,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 4,
+        "tool": 2,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 9,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 16,
+        "recovered": 4,
+        "rate": 0.25
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 13.6,
+          "tokens": 19.8,
+          "tool_calls": 60.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 3,
+          "latency": 221239,
+          "tokens": 161261,
+          "tool_calls": 33,
+          "retries": 4
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.network_denied (tool=exec)",
+          "security.network_denied (tool=exec)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-19-config-validator",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 276688,
+      "model_calls": 30,
+      "input_tokens": 390690,
+      "output_tokens": 12144,
+      "tool_calls": 31,
+      "tool_failures": 3,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 7,
+        "tool": 2,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 11,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 11,
+        "recovered": 7,
+        "rate": 0.6363636363636364
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 52.9,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 100,
+          "latency": 10.8,
+          "tokens": 5.7,
+          "tool_calls": 64.5,
+          "retries": 57.1
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 0,
+          "latency": 276688,
+          "tokens": 558016,
+          "tool_calls": 31,
+          "retries": 7
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-20-linked-list",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 220892,
+      "model_calls": 30,
+      "input_tokens": 135870,
+      "output_tokens": 6464,
+      "tool_calls": 36,
+      "tool_failures": 9,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 2,
+        "verification": 2,
+        "compaction": 1,
+        "provider": 8,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 13,
+        "recovered": 3,
+        "rate": 0.23076923076923078
+      },
+      "compactions": 1,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: python3: python3: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 0,
+          "latency": 13.6,
+          "tokens": 16.4,
+          "tool_calls": 55.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 1,
+          "latency": 220892,
+          "tokens": 195711,
+          "tool_calls": 36,
+          "retries": 2
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-21-regex",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 228220,
+      "model_calls": 30,
+      "input_tokens": 162010,
+      "output_tokens": 7706,
+      "tool_calls": 29,
+      "tool_failures": 5,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 2,
+        "verification": 2,
+        "compaction": 13,
+        "provider": 9,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 9,
+        "recovered": 3,
+        "rate": 0.3333333333333333
+      },
+      "compactions": 13,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 0,
+          "security": 0,
+          "latency": 13.1,
+          "tokens": 6.6,
+          "tool_calls": 69,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 110,
+          "security": 1,
+          "latency": 228220,
+          "tokens": 482771,
+          "tool_calls": 29,
+          "retries": 2
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-22-api-stub",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 215965,
+      "model_calls": 30,
+      "input_tokens": 113217,
+      "output_tokens": 5813,
+      "tool_calls": 32,
+      "tool_failures": 11,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 6,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 10,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 14,
+        "recovered": 2,
+        "rate": 0.14285714285714285
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 13.9,
+          "tokens": 22,
+          "tool_calls": 62.5,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 5,
+          "latency": 215965,
+          "tokens": 145305,
+          "tool_calls": 32,
+          "retries": 2
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.network_denied (tool=exec)",
+          "security.network_denied (tool=exec)",
+          "security.network_denied (tool=exec)",
+          "security.network_denied (tool=exec)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-23-anagram",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 275117,
+      "model_calls": 30,
+      "input_tokens": 124193,
+      "output_tokens": 8607,
+      "tool_calls": 35,
+      "tool_failures": 9,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 5,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 10,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: python3: python3: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 10.9,
+          "tokens": 18.9,
+          "tool_calls": 57.1,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 1,
+          "latency": 275117,
+          "tokens": 169327,
+          "tool_calls": 35,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=grep_search)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-24-error-handling",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 96594,
+      "model_calls": 14,
+      "input_tokens": 15539,
+      "output_tokens": 689,
+      "tool_calls": 16,
+      "tool_failures": 7,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 10,
+        "recovered": 2,
+        "rate": 0.2
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 64.24,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 100,
+          "latency": 31.1,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 0,
+          "latency": 96594,
+          "tokens": 21215,
+          "tool_calls": 16,
+          "retries": 3
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-25-shell-script",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 106667,
+      "model_calls": 13,
+      "input_tokens": 40985,
+      "output_tokens": 3609,
+      "tool_calls": 13,
+      "tool_failures": 3,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 3,
+        "tool": 4,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 5,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 8,
+        "recovered": 4,
+        "rate": 0.5
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1"
+      ],
+      "cost": {
+        "score": 55.82,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 28.1,
+          "tokens": 58.7,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 106667,
+          "tokens": 54470,
+          "tool_calls": 13,
+          "retries": 4
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-26-queue",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 177334,
+      "model_calls": 30,
+      "input_tokens": 80992,
+      "output_tokens": 4835,
+      "tool_calls": 31,
+      "tool_failures": 9,
+      "retries": 8,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 8,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 11,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 10,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: python3: python3: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 16.9,
+          "tokens": 29,
+          "tool_calls": 64.5,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 2,
+          "latency": 177334,
+          "tokens": 110311,
+          "tool_calls": 31,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-27-type-annotation",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 262573,
+      "model_calls": 30,
+      "input_tokens": 166708,
+      "output_tokens": 6496,
+      "tool_calls": 32,
+      "tool_failures": 7,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 6,
+        "tool": 2,
+        "verification": 1,
+        "compaction": 2,
+        "provider": 15,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 14,
+        "recovered": 6,
+        "rate": 0.42857142857142855
+      },
+      "compactions": 2,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: npx: npx: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 70,
+          "security": 0,
+          "latency": 11.4,
+          "tokens": 11.7,
+          "tool_calls": 62.5,
+          "retries": 66.7
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 30,
+          "security": 2,
+          "latency": 262573,
+          "tokens": 273329,
+          "tool_calls": 32,
+          "retries": 6
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.network_denied (tool=exec)",
+          "security.filesystem_denied (tool=repo_tree)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-28-logging",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 28952,
+      "model_calls": 9,
+      "input_tokens": 24688,
+      "output_tokens": 775,
+      "tool_calls": 11,
+      "tool_failures": 4,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 0,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 4,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 100,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 28952,
+          "tokens": 29623,
+          "tool_calls": 11,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-29-palindrome",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 279460,
+      "model_calls": 30,
+      "input_tokens": 134358,
+      "output_tokens": 8463,
+      "tool_calls": 42,
+      "tool_failures": 9,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 2,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 4,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 12,
+        "recovered": 2,
+        "rate": 0.16666666666666666
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: python3: python3: exited with code 1"
+      ],
+      "cost": {
+        "score": 48.68,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 10.7,
+          "tokens": 17.4,
+          "tool_calls": 47.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 279460,
+          "tokens": 184404,
+          "tool_calls": 42,
+          "retries": 1
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    },
+    {
+      "task_id": "reg-30-sort-order",
+      "suite": "regression",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 298698,
+      "model_calls": 26,
+      "input_tokens": 101260,
+      "output_tokens": 7418,
+      "tool_calls": 28,
+      "tool_failures": 7,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 6,
+        "tool": 2,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 9,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 15,
+        "recovered": 7,
+        "rate": 0.4666666666666667
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 49.85,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 10,
+          "tokens": 25.3,
+          "tool_calls": 71.4,
+          "retries": 57.1
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 298698,
+          "tokens": 126497,
+          "tool_calls": 28,
+          "retries": 7
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      }
+    }
+  ],
+  "summary": {
+    "total": 30,
+    "passed": 3,
+    "failed": 27,
+    "errors": 0,
+    "success_rate": 0.1,
+    "latency_p50_ms": 220892,
+    "latency_p95_ms": 298698,
+    "avg_model_calls": 24.933333333333334,
+    "model_calls_p50": 30,
+    "model_calls_p95": 30,
+    "avg_tool_calls": 28.3,
+    "avg_tokens_input": 139490.06666666668,
+    "avg_tokens_output": 6277.433333333333,
+    "avg_retries": 3.533333333333333,
+    "retry_rate": 0.9666666666666667,
+    "retries_by_kind": {
+      "model": 82,
+      "tool": 106,
+      "verification": 46,
+      "compaction": 39,
+      "provider": 229,
+      "sandbox": 0,
+      "stallRecovery": 17,
+      "reconciliation": 0,
+      "mcpReconnect": 0
+    },
+    "recovery_rate": 0.29512893982808025,
+    "termination_reason_distribution": {
+      "tool_limit": 1,
+      "agent_limit": 16,
+      "verification_failed": 5,
+      "verified_complete": 3,
+      "model_error": 5
+    },
+    "total_context_overflows": 0,
+    "total_false_completes": 0,
+    "total_verification_failures": 46,
+    "total_human_interventions": 0,
+    "failures_by_category": {
+      "model": 5
+    },
+    "avg_cost_score": 39.07,
+    "avg_cost_dimensions": {
+      "quality": 37,
+      "reliability": 56.83,
+      "security": 66.67,
+      "latency": 19.44,
+      "tokens": 34.04,
+      "tool_calls": 71.36,
+      "retries": 90.53
+    },
+    "security_violations": 10
+  },
+  "manifest": {
+    "gitSha": "6423dbeed9b6c6db3c42c999dbf780b2aabc23a5",
+    "dirty": true,
+    "model": "deepseek-v4-flash",
+    "provider": "openai",
+    "temperature": null,
+    "suiteVersion": "2.1.0",
+    "judgeVersion": "1.0.0",
+    "runtimeConfigHash": "77339e0683ed5416ca69a4a89583afa8a4789ad12995be42647af91c51184413",
+    "timestamp": "2026-08-27T02:44:35.197Z",
+    "platform": "win32",
+    "nodeVersion": "v24.18.1",
+    "profile": "benchmark",
+    "features": {
+      "context": true,
+      "checkpoint": true,
+      "artifacts": true,
+      "verification": true,
+      "observability": true,
+      "memory": false,
+      "delegation": false
+    },
+    "contextBudgetTokens": 32000,
+    "taskSuites": [
+      "regression"
+    ],
+    "randomSeed": null,
+    "candidate": null,
+    "effectiveConfig": {
+      "candidate": null,
+      "provider": "openai",
+      "model": "deepseek-v4-flash",
+      "temperature": null,
+      "context": {
+        "maxTokens": 32000,
+        "dynamic": 0
+      },
+      "recovery": {
+        "adaptive": false
+      },
+      "mechanisms": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "tools": [
+        "edit_file",
+        "exec",
+        "read_file",
+        "search_files",
+        "write_file"
+      ],
+      "toolSetHash": "9c614bc8119187d80132343fa0b0a57975a01c3bf18a7d91724cd46e2eca760e",
+      "runtimeConfigHash": "c6229d5621b063533810b75ac9f67d8eb02f9cc0279e3b273a453aba09e72c9c"
+    }
+  }
+}
