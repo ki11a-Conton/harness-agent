@@ -12,6 +12,21 @@ import { join, basename } from "node:path";
 import type { BenchmarkCaseResult } from "./baseline.js";
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** True when the file exists. The catch carries real logic (`return false`),
+ *  so it is not a silent catch. */
+async function exists(p: string): Promise<boolean> {
+  try {
+    await stat(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -197,25 +212,19 @@ export async function validateBenchmarkArtifacts(
       }
     }
 
-    // Check for per-case runs file
-    const runsFile = join(resultDir, `${suiteName}-runs.sanitized.json`);
-    const runsFileAlt = join(resultDir, `runs.sanitized.json`);
-    const runsFileSuite = join(resultDir, `${suiteName}-runs.json`);
+    // Check for per-case runs file (probe candidates; optional for
+    // summary-only result directories).
+    const candidates = [
+      `${suiteName}-runs.sanitized.json`,
+      `runs.sanitized.json`,
+      `${suiteName}-runs.json`,
+    ];
     let runsFileToUse: string | undefined;
-    try {
-      await stat(runsFile);
-      runsFileToUse = runsFile;
-    } catch {
-      try {
-        await stat(runsFileAlt);
-        runsFileToUse = runsFileAlt;
-      } catch {
-        try {
-          await stat(runsFileSuite);
-          runsFileToUse = runsFileSuite;
-        } catch {
-          // runs file is optional if summary is from a different source
-        }
+    for (const cand of candidates) {
+      const full = join(resultDir, cand);
+      if (await exists(full)) {
+        runsFileToUse = full;
+        break;
       }
     }
 
@@ -283,15 +292,17 @@ export async function validateBenchmarkArtifacts(
 
   // 5. Check overall-summary if present
   const overallSummaryFile = join(resultDir, "overall-summary.json");
-  try {
-    const raw = await readFile(overallSummaryFile, "utf8");
-    const overall = JSON.parse(raw) as Record<string, unknown>;
-    const overallSecrets = checkSecrets(overall);
-    if (!overallSecrets.ok) {
-      errors.push(`overall-summary.json: secrets found (${overallSecrets.matches.length} matches)`);
+  if (await exists(overallSummaryFile)) {
+    try {
+      const raw = await readFile(overallSummaryFile, "utf8");
+      const overall = JSON.parse(raw) as Record<string, unknown>;
+      const overallSecrets = checkSecrets(overall);
+      if (!overallSecrets.ok) {
+        errors.push(`overall-summary.json: secrets found (${overallSecrets.matches.length} matches)`);
+      }
+    } catch (err) {
+      warnings.push(`overall-summary.json: could not read/parse (${err instanceof Error ? err.message : String(err)})`);
     }
-  } catch {
-    // overall-summary is optional
   }
 
   return {
