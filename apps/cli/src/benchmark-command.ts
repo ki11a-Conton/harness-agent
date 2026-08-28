@@ -23,7 +23,6 @@ import {
   buildRunManifest,
   computeRuntimeConfigHash,
   computeEvaluationContextHash,
-  computeCandidateConfigHash,
   DEFAULT_JUDGE_VERSION,
   EvalRunner,
   loadBenchmarkCases,
@@ -68,6 +67,7 @@ import { SqliteMemoryStore } from "@ar/memory";
 import { detectPromptInjection, redactSecrets } from "@ar/security";
 import { DEFAULT_MODEL_ID, registerBuiltinTools } from "./main.js";
 import { resolveModelProvider, STUB_PROVIDER_ID } from "./provider.js";
+import { getCandidateRegistry } from "@ar/evaluation";
 
 export interface BenchmarkCommandOptions {
   casesDir: string;
@@ -141,6 +141,23 @@ export async function runBenchmarkCommand(
   const opts = parseBenchmarkArgs(argv);
   if (opts instanceof Error) {
     return { exitCode: 1, lines: [opts.message, "", benchmarkUsage()] };
+  }
+
+  // E1-03: candidate validation BEFORE any provider call. Unknown,
+  // unsupported (declared-but-unwired) and no-op candidates fail closed with
+  // a stable reason code — never silently run as baseline.
+  if (opts.candidate !== undefined) {
+    const registry = getCandidateRegistry();
+    try {
+      registry.validateActive(opts.candidate);
+    } catch (err) {
+      return {
+        exitCode: 1,
+        lines: [
+          `agent benchmark: candidate rejected before provider call: ${err instanceof Error ? err.message : String(err)}`,
+        ],
+      };
+    }
   }
 
   const provider = providerOverride ?? (await resolveModelProvider());
@@ -348,19 +365,13 @@ function provenanceForCase(
     prerequisiteFeatures: caseDef.requires ?? [],
     environmentContract: null,
   });
-  const candidateConfigHash = computeCandidateConfigHash({
-    candidate: opts.candidate ?? null,
-    maxSteps: 30,
-    contextPipeline: null,
-    memoryStrategy: null,
-    specialistRouting: null,
-    toolSelection: caseDef.schemaMode === "deferred" || opts.candidate === "tool_selector_deferred_schema" ? "deferred" : "inline",
-    recoveryStrategy: opts.candidate === "adaptive_recovery" ? "adaptive" : "fixed",
-    compactionStrategy: null,
-    challengerFlags: opts.candidate !== undefined ? { [opts.candidate]: true } : {},
-  });
-  // P38.4-8: controlledDifference — the explicit mechanism(s) the challenger
-  // intends to change; absent for the champion baseline.
+  // E1-03: candidate config hash from the registry's resolved semantic digest
+  // (not from self-reported challengerFlags). An unwired or no-op candidate
+  // produces the same digest as the baseline; the CLI rejects it before any
+  // provider call, but the hash itself is honest either way.
+  const registry = getCandidateRegistry();
+  const resolved = registry.resolve(opts.candidate ?? null);
+  const candidateConfigHash = resolved.semanticDigest;
   const controlledDifference = opts.candidate != null
     ? [`candidate:${opts.candidate}`]
     : undefined;
@@ -1023,8 +1034,12 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
       case "--candidate": {
         const value = requireValue(argv, ++i, "--candidate");
         if (value instanceof Error) return value;
-        const valid = ["adaptive_recovery", "context_pipeline_v5", "tool_selector_deferred_schema", "memory_retrieval", "memory_write_learning", "independent_reviewer", "adaptive_context_policy", "adaptive_scheduler", "delegation"];
-        if (!valid.includes(value)) return new Error(`agent benchmark: unknown candidate "${value}" (valid: ${valid.join(", ")})`);
+        const registry = getCandidateRegistry();
+        const candidate = registry.find(value);
+        if (candidate === undefined) {
+          const all = registry.all().map((c) => c.id).join(", ");
+          return new Error(`agent benchmark: unknown candidate "${value}" (valid: ${all})`);
+        }
         opts.candidate = value;
         break;
       }

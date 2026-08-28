@@ -29,6 +29,7 @@ export * from "./offline-replay.js";
 export * from "./counterfactual.js";
 export * from "./formal-invariants.js";
 export * from "./candidate-matrix.js";
+export * from "./candidate-registry.js";
 export * from "./paired-eval.js";
 export * from "./promotion-gate.js";
 export * from "./champion-manifest.js";
