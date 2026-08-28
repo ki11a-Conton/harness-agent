@@ -593,7 +593,7 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
   },
   {
     id: "holdout_suite",
-    description: "Holdout benchmark suite present at the documented count (benchmarks/holdout, README claims 30)",
+    description: "Holdout benchmark suite present at the documented count (benchmarks/holdout, README claims 32)",
     usesIntrospection: false,
     implemented: (i) => suiteProbe(i, "holdout").exists,
     wired: (i) => suiteProbe(i, "holdout").exists,

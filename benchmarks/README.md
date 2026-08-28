@@ -10,7 +10,7 @@ Phase 6.5（2026-08-14）起分为四套 suite：`regression`（防回归）、`
 # 需要真实模型（OPENAI_API_KEY；可选 OPENAI_BASE_URL / OPENAI_MODEL）
 pnpm build
 node apps/cli/dist/main.js benchmark --suite regression            # 全部 30 个回归用例
-node apps/cli/dist/main.js benchmark --suite holdout               # holdout 30 个
+node apps/cli/dist/main.js benchmark --suite holdout               # holdout 32 个
 node apps/cli/dist/main.js benchmark --suite adversarial           # adversarial 13 个
 node apps/cli/dist/main.js benchmark --suite stress                # stress 11 个
 node apps/cli/dist/main.js benchmark --limit 3                     # 只跑前 3 个（冒烟）
@@ -154,7 +154,7 @@ expected.md / case.json / verifier 判据不泄漏进 turn（泛化性测量）�
 | reg-29-palindrome | 算法实现 |
 | reg-30-sort-order | 排序修复 |
 
-### holdout（30 个）— benchmarks/holdout/（P4-2 生成：benchmarks/tools/generate-suite.mjs）
+### holdout（32 个）— benchmarks/holdout/（P4-2 生成：benchmarks/tools/generate-suite.mjs）
 
 泛化性测量：与 regression 不重复的新任务形态（审查/分析/转换/审计/安全/性能/脚本/文档），
 模型只看到 request + fixture，看不到 expected/case/verifier（holdout secrecy）。
@@ -191,6 +191,8 @@ expected.md / case.json / verifier 判据不泄漏进 turn（泛化性测量）�
 | ho-28-refactor-naming | 命名重构 |
 | ho-29-benchmark | 性能对比脚本 |
 | ho-30-healthcheck | 健康检查实现 |
+| ho-31-memory-guard-null | 空值守卫（记忆检索） |
+| ho-32-memory-build-tip | 构建提示（记忆检索） |
 
 ### adversarial（13 个）— benchmarks/adversarial/（P2-12 生成）
 

@@ -25,20 +25,21 @@ async function tmpOut(): Promise<string> {
 }
 
 describe("audit benchmark profile — real workspace probes (P0-1)", () => {
-  it("probes the real benchmark suites: adversarial=13, stress=11, regression=30, holdout=30 (P4-1/P4-2)", async () => {
+  it("probes the real benchmark suites: adversarial=13, stress=11, regression=30, holdout=32 (P4-1/P4-2)", async () => {
     const probe = await probeWorkspace({ root: REPO_ROOT, gitSha: async () => undefined });
     expect(probe.benchmarkSuites.adversarial).toEqual({ exists: true, caseCount: 13 });
     expect(probe.benchmarkSuites.stress).toEqual({ exists: true, caseCount: 11 });
     expect(probe.benchmarkSuites.regression).toEqual({ exists: true, caseCount: 30 });
-    expect(probe.benchmarkSuites.holdout).toEqual({ exists: true, caseCount: 30 });
+    // E1-05 added two seeded-memory holdout cases (ho-31/ho-32), 30 -> 32.
+    expect(probe.benchmarkSuites.holdout).toEqual({ exists: true, caseCount: 32 });
   });
 
-  it("parses the README claims: regression 30, holdout 30 (no longer planned)", async () => {
+  it("parses the README claims: regression 30, holdout 32 (no longer planned)", async () => {
     const probe = await probeWorkspace({ root: REPO_ROOT, gitSha: async () => undefined });
     const regression = probe.readmeClaims.find((c) => c.suite === "regression");
     const holdout = probe.readmeClaims.find((c) => c.suite === "holdout");
     expect(regression).toEqual({ suite: "regression", claimed: 30, planned: false });
-    expect(holdout).toEqual({ suite: "holdout", claimed: 30, planned: false });
+    expect(holdout).toEqual({ suite: "holdout", claimed: 32, planned: false });
   });
 
   it("sees the real packages and CI workflow (linux and windows both present)", async () => {

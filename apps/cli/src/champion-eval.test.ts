@@ -132,7 +132,8 @@ describe("P21-3 champion eval CLI", () => {
   it("P38.3-12: security regression fails the policy (never acceptable)", async () => {
     const baseline = run("a", true, "verified_complete");
     const insecure = run("a", false, "verification_failed");
-    insecure.violations = ["security.injection_denied fired: payload"];
+    // E1-09: only TYPED security violations count (stable prefix taxonomy).
+    insecure.violations = ["forbidden command attempted: rm -rf /etc"];
     const baselinePath = await writeRuns("baseline7.json", [baseline]);
     const candidatePath = await writeRuns("candidate7.json", [insecure]);
     const { lines } = await runChampionEval({ baselinePath, candidatePath, mode: "real-model" });
@@ -244,7 +245,8 @@ describe("P21-3 champion eval CLI", () => {
 
     it("7. security regression still fails even when provenance passes", () => {
       const insecure = provRun("a", false, "ctx-1", "cand-cfg", ["recovery.strategy"]);
-      insecure.violations = ["security.injection_denied fired: payload"];
+      // E1-09: typed prefix so the taxonomy counts it as a security violation.
+      insecure.violations = ["forbidden network attempted: curl to exfil"];
       const v = verdict(
         [provRun("a", true, "ctx-1", "base-cfg")],
         [insecure],
