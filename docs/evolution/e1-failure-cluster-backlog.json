@@ -1,0 +1,297 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-08-28T11:05:50.844Z",
+  "source": "historical 2026-08-27 holdout (30 cases per arm, real-model deepseek-v4-flash)",
+  "evidenceRule": "derived from on-disk artifacts; paid reruns blocked without RUN_PAID_BENCHMARKS=1",
+  "baseline": {
+    "total": 30,
+    "passed": 9,
+    "termination": {
+      "agent_limit": 9,
+      "verification_failed": 7,
+      "model_error": 5
+    }
+  },
+  "arms": {
+    "baseline": {
+      "passed": 9,
+      "total": 30,
+      "termination": {
+        "agent_limit": 9,
+        "verification_failed": 7,
+        "model_error": 5
+      },
+      "tokensInputK": 2970
+    },
+    "adaptive_recovery": {
+      "passed": 8,
+      "total": 30,
+      "termination": {
+        "model_error": 3,
+        "agent_limit": 15,
+        "verification_failed": 3,
+        "time_limit": 1
+      },
+      "tokensInputK": 4971
+    },
+    "deferred_schema": {
+      "passed": 10,
+      "total": 30,
+      "termination": {
+        "agent_limit": 15,
+        "verification_failed": 3,
+        "model_error": 2
+      },
+      "tokensInputK": 3807
+    },
+    "memory_retrieval": {
+      "passed": 9,
+      "total": 30,
+      "termination": {
+        "verification_failed": 5,
+        "agent_limit": 8,
+        "model_error": 5,
+        "tool_limit": 1,
+        "time_limit": 2
+      },
+      "tokensInputK": 2482
+    },
+    "adaptive_context": {
+      "passed": 9,
+      "total": 30,
+      "termination": {
+        "verification_failed": 2,
+        "agent_limit": 13,
+        "model_error": 4,
+        "time_limit": 2
+      },
+      "tokensInputK": 4447
+    }
+  },
+  "clusters": {
+    "agent_limit": {
+      "count": 9,
+      "share": "9/30",
+      "hypothesis": "model keeps iterating past the point where verification would pass; spends the step budget on speculative work",
+      "touchedBy": [
+        "budget_aware_completion_v1 (E1-13, strategy layer — not yet benchmarked)"
+      ],
+      "evidence": {
+        "baseline": {
+          "passed": 9,
+          "total": 30,
+          "termination": {
+            "agent_limit": 9,
+            "verification_failed": 7,
+            "model_error": 5
+          },
+          "tokensInputK": 2970
+        },
+        "adaptive_recovery": {
+          "passed": 8,
+          "total": 30,
+          "termination": {
+            "model_error": 3,
+            "agent_limit": 15,
+            "verification_failed": 3,
+            "time_limit": 1
+          },
+          "tokensInputK": 4971
+        },
+        "deferred_schema": {
+          "passed": 10,
+          "total": 30,
+          "termination": {
+            "agent_limit": 15,
+            "verification_failed": 3,
+            "model_error": 2
+          },
+          "tokensInputK": 3807
+        },
+        "memory_retrieval": {
+          "passed": 9,
+          "total": 30,
+          "termination": {
+            "verification_failed": 5,
+            "agent_limit": 8,
+            "model_error": 5,
+            "tool_limit": 1,
+            "time_limit": 2
+          },
+          "tokensInputK": 2482
+        },
+        "adaptive_context": {
+          "passed": 9,
+          "total": 30,
+          "termination": {
+            "verification_failed": 2,
+            "agent_limit": 13,
+            "model_error": 4,
+            "time_limit": 2
+          },
+          "tokensInputK": 4447
+        }
+      }
+    },
+    "verification_failed": {
+      "count": 7,
+      "share": "7/30",
+      "hypothesis": "verification runs but fails repeatedly; model converges on a wrong shape and retries the same approach",
+      "touchedBy": [
+        "adaptive_recovery (REJECTED on holdout)",
+        "memory_retrieval (no delta)"
+      ],
+      "evidence": {
+        "baseline": {
+          "passed": 9,
+          "total": 30,
+          "termination": {
+            "agent_limit": 9,
+            "verification_failed": 7,
+            "model_error": 5
+          },
+          "tokensInputK": 2970
+        },
+        "adaptive_recovery": {
+          "passed": 8,
+          "total": 30,
+          "termination": {
+            "model_error": 3,
+            "agent_limit": 15,
+            "verification_failed": 3,
+            "time_limit": 1
+          },
+          "tokensInputK": 4971
+        },
+        "deferred_schema": {
+          "passed": 10,
+          "total": 30,
+          "termination": {
+            "agent_limit": 15,
+            "verification_failed": 3,
+            "model_error": 2
+          },
+          "tokensInputK": 3807
+        },
+        "memory_retrieval": {
+          "passed": 9,
+          "total": 30,
+          "termination": {
+            "verification_failed": 5,
+            "agent_limit": 8,
+            "model_error": 5,
+            "tool_limit": 1,
+            "time_limit": 2
+          },
+          "tokensInputK": 2482
+        },
+        "adaptive_context": {
+          "passed": 9,
+          "total": 30,
+          "termination": {
+            "verification_failed": 2,
+            "agent_limit": 13,
+            "model_error": 4,
+            "time_limit": 2
+          },
+          "tokensInputK": 4447
+        }
+      }
+    },
+    "model_error": {
+      "count": 5,
+      "share": "5/30",
+      "hypothesis": "provider/model errors interrupt turns; recovery retries help only partially",
+      "touchedBy": [
+        "adaptive_recovery (REJECTED)",
+        "memory_retrieval (no delta)"
+      ],
+      "evidence": {
+        "baseline": {
+          "passed": 9,
+          "total": 30,
+          "termination": {
+            "agent_limit": 9,
+            "verification_failed": 7,
+            "model_error": 5
+          },
+          "tokensInputK": 2970
+        },
+        "adaptive_recovery": {
+          "passed": 8,
+          "total": 30,
+          "termination": {
+            "model_error": 3,
+            "agent_limit": 15,
+            "verification_failed": 3,
+            "time_limit": 1
+          },
+          "tokensInputK": 4971
+        },
+        "deferred_schema": {
+          "passed": 10,
+          "total": 30,
+          "termination": {
+            "agent_limit": 15,
+            "verification_failed": 3,
+            "model_error": 2
+          },
+          "tokensInputK": 3807
+        },
+        "memory_retrieval": {
+          "passed": 9,
+          "total": 30,
+          "termination": {
+            "verification_failed": 5,
+            "agent_limit": 8,
+            "model_error": 5,
+            "tool_limit": 1,
+            "time_limit": 2
+          },
+          "tokensInputK": 2482
+        },
+        "adaptive_context": {
+          "passed": 9,
+          "total": 30,
+          "termination": {
+            "verification_failed": 2,
+            "agent_limit": 13,
+            "model_error": 4,
+            "time_limit": 2
+          },
+          "tokensInputK": 4447
+        }
+      }
+    }
+  },
+  "nextRound": [
+    {
+      "rank": 1,
+      "candidate": "budget_aware_completion_v1",
+      "cluster": "agent_limit",
+      "rationale": "agent_limit is the largest cluster (9/30) and is an agent-strategy problem — exactly what E1-13 wires (converge+verify before budget exhaustion). Requires real-model paired benchmark with repeat protocol.",
+      "blockedBy": "RUN_PAID_BENCHMARKS=1"
+    },
+    {
+      "rank": 2,
+      "candidate": "memory_retrieval",
+      "cluster": "token efficiency",
+      "rationale": "accepted earlier for token savings (-529K tokens on 84-case benchmark); re-audit already INCOMPARABLE under strict E1-07 (legacy_no_activation_evidence) — a fresh run with E1-04 evidence is required.",
+      "blockedBy": "RUN_PAID_BENCHMARKS=1"
+    },
+    {
+      "rank": 3,
+      "candidate": "adaptive_recovery",
+      "cluster": "model_error/verification_failed",
+      "rationale": "REJECTED (-1 pass on holdout); backlog candidate for a reworked planner hypothesis — do not rerun as-is.",
+      "blockedBy": "needs new hypothesis, then RUN_PAID_BENCHMARKS=1"
+    },
+    {
+      "rank": 4,
+      "candidate": "delegation",
+      "cluster": "(not yet benchmarked)",
+      "rationale": "registry candidate with real wiring path; no historical evidence.",
+      "blockedBy": "RUN_PAID_BENCHMARKS=1"
+    }
+  ]
+}
