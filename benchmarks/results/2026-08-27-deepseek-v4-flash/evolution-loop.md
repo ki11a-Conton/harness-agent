@@ -98,5 +98,29 @@ provenance checks hold; otherwise reject with the evidence recorded.
   tool_selector_deferred_schema (cuts per-iteration schema tokens → more work
   per step), adaptive_context_policy (dynamic context headroom), memory_retrieval.
 
+## 6. Second challenger: tool_selector_deferred_schema (PASS)
+
+Hypothesis: deferred schema advertisement (fetch full tool schemas on demand
+via tool_lookup instead of inlining every schema each iteration) cuts per-step
+token overhead, leaving more effective work per 30-step budget. Directly
+targets the agent_limit cluster.
+
+Result (2026-08-27, real model, holdout 30 cases):
+**tool_selector_deferred_schema ACCEPTED** — QUALITY VERDICT: PASS.
+
+- paired: 1W / 0L / 9T / 20 both-failed; net passed delta **+1** (9/30 → 10/30)
+- verified completion: 0.300 → 0.333 (Δ +0.033)
+- token cost Δ +828,688 WITH a net success gain — P21-4 Q3 satisfied
+  (cost growth accompanied by success, unlike adaptive_recovery which had
+  cost growth with a regression)
+- all P38.4-8 provenance checks PASS (attributable)
+- conversion note: 1 verification_failed baseline case (ho-21-build-report)
+  converted to candidate pass; 9 passes held; 0 regressions.
+
+Evidence supports champion inclusion of the deferred-schema tool-selection
+strategy. Next: evaluate the champion preset (defaultOn=yes candidates +
+evidence-approved ones) as a combined run, and/or test the next candidate
+(adaptive_context_policy / memory_retrieval) in isolation.
+
 Runtime architecture is FROZEN (P38.4-11): this loop only evaluates Agent
 strategy-layer challengers. No Runtime code changes are planned.
