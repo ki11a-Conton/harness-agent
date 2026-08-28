@@ -145,6 +145,13 @@ export interface BenchmarkCaseResult {
   /** E1-04: per-case mechanism activation evidence (from the run path).
    *  Optional for legacy runs; required for strict promotion comparisons. */
   activation_evidence?: import("./activation-evidence.js").CandidateActivationEvidence;
+  /** P38.4-7/8: per-case evaluation context hash — persisted so a later
+   *  champion evaluation can attribute any delta to the candidate config. */
+  evaluationContextHash?: string;
+  /** P38.4-7/8: per-case candidate configuration hash. */
+  candidateConfigHash?: string;
+  /** P38.4-8: explicitly declared controlled difference. */
+  controlledDifference?: string[];
 }
 
 export interface BaselineSummary {

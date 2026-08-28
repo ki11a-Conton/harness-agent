@@ -113,25 +113,30 @@ export async function validateBenchmarkArtifacts(
   let totalFailed = 0;
   let suiteCount = 0;
 
-  // 1. manifest.json must exist and be valid JSON
-  let manifest: Record<string, unknown>;
+  // 1. manifest.json — REQUIRED for a full multi-suite results directory, but
+  //    OPTIONAL for a single-suite challenger directory (E1-06, Repro 5).
+  //    When absent we degrade: validate the per-suite summaries + runs that
+  //    ARE present and record a warning instead of failing the whole dir.
+  let manifest: Record<string, unknown> | undefined;
   try {
     const raw = await readFile(join(resultDir, "manifest.json"), "utf8");
     manifest = JSON.parse(raw) as Record<string, unknown>;
-  } catch (err) {
-    errors.push(`manifest.json: ${err instanceof Error ? err.message : String(err)}`);
-    return { ok: false, errors, warnings, summary: { suites: 0, cases: 0, passed: 0, failed: 0 } };
+  } catch {
+    manifest = undefined;
+    warnings.push("manifest.json: missing or unreadable — validating per-suite artifacts only (E1-06 single-suite dir)");
   }
 
-  // 2. Check manifest schema version
-  if (typeof manifest.schemaVersion !== "number") {
+  // 2. Check manifest schema version (only when present)
+  if (manifest !== undefined && typeof manifest.schemaVersion !== "number") {
     errors.push("manifest.json: missing or non-numeric schemaVersion");
   }
 
-  // 3. Secret scan on manifest
-  const manifestSecrets = checkSecrets(manifest);
-  if (!manifestSecrets.ok) {
-    errors.push(`manifest.json: secrets found (${manifestSecrets.matches.length} matches)`);
+  // 3. Secret scan on manifest (only when present)
+  if (manifest !== undefined) {
+    const manifestSecrets = checkSecrets(manifest);
+    if (!manifestSecrets.ok) {
+      errors.push(`manifest.json: secrets found (${manifestSecrets.matches.length} matches)`);
+    }
   }
 
   // 4. Discover per-suite summary files
@@ -255,7 +260,7 @@ export async function validateBenchmarkArtifacts(
           }
 
           // Check for missing case IDs (if expected manifest is available)
-          const expectedManifest = manifest.perSuiteCaseIds as Record<string, string[]> | undefined;
+          const expectedManifest = manifest?.["perSuiteCaseIds"] as Record<string, string[]> | undefined;
           if (expectedManifest?.[suiteName]) {
             const expectedIds = new Set(expectedManifest[suiteName]);
             for (const id of expectedIds) {

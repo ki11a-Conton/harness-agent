@@ -1,6 +1,5 @@
-import { readFile } from "node:fs/promises";
 import type { EvalOutcome } from "@ar/evaluation";
-import { buildPairedReport, evaluateQualityGates, type EvalMode, type PairedEvalReport } from "@ar/evaluation";
+import { loadRunsFromArtifact, buildPairedReport, evaluateQualityGates, type EvalMode, type PairedEvalReport } from "@ar/evaluation";
 
 /**
  * P21-3 — `agent champion eval <baseline-runs.json> <candidate-runs.json>
@@ -248,10 +247,10 @@ export function renderChampionQuality(verdict: ChampionQualityVerdict): string[]
 export async function runChampionEval(
   opts: ChampionEvalOptions,
 ): Promise<{ report: PairedEvalReport; lines: string[] }> {
-  const baselineRaw = await readFile(opts.baselinePath, "utf8");
-  const candidateRaw = await readFile(opts.candidatePath, "utf8");
-  const baselineRuns = JSON.parse(baselineRaw) as EvalOutcome[];
-  const candidateRuns = JSON.parse(candidateRaw) as EvalOutcome[];
+  const baseline = await loadRunsFromArtifact(opts.baselinePath);
+  const candidate = await loadRunsFromArtifact(opts.candidatePath);
+  const baselineRuns = baseline.runs;
+  const candidateRuns = candidate.runs;
   const report = buildPairedReport(baselineRuns, candidateRuns, opts.mode);
   const quality = evaluateChampionQuality(baselineRuns, candidateRuns, report);
 
