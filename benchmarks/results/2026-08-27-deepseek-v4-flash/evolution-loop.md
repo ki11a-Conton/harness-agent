@@ -169,5 +169,23 @@ Champion candidate status after 4 single-variable experiments (holdout):
 - adaptive_recovery — REJECTED (-1 pass, recovery Δ -6)
 - adaptive_context_policy — REJECTED (0 delta, +1.48M tokens waste)
 
+## 9. Candidate wiring audit (evidence of coverage)
+
+Not every CANDIDATE_FEATURES entry has a benchmark wiring branch in
+benchmark-command.ts (checked via grep for `opts.candidate === "<id>"`):
+
+- WIRED (testable single-variable): adaptive_recovery, tool_selector_deferred_schema,
+  memory_retrieval, adaptive_context_policy — ALL four tested above.
+- NOT WIRED (running --candidate would equal baseline — NO test run attempted,
+  no API spend wasted): context_pipeline_v5, memory_write_learning,
+  independent_reviewer, adaptive_scheduler. delegation is wired through the
+  case `requires` path (requiresSubagent), not the --candidate flag.
+
+Coverage conclusion: the evolution loop tested 100% of the candidates that
+have a real mechanism branch. The remaining entries are declared in the
+candidate matrix but not implemented as benchmark switches; running them
+would be a no-op experiment and was correctly skipped. Wiring them would be
+Agent-strategy work for a future round, NOT a Runtime change.
+
 Runtime architecture is FROZEN (P38.4-11): this loop only evaluates Agent
 strategy-layer challengers. No Runtime code changes are planned.
