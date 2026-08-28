@@ -23,6 +23,10 @@ export interface ChampionEvalOptions {
   baselinePath: string;
   candidatePath: string;
   mode: EvalMode;
+  /** E1-08: strict provenance + activation gate (default true). */
+  strict?: boolean;
+  /** E1-08: candidate id for the activation contract (default null). */
+  candidateId?: string | null;
 }
 
 export interface ChampionQualityVerdict {
@@ -246,13 +250,24 @@ export function renderChampionQuality(verdict: ChampionQualityVerdict): string[]
 
 export async function runChampionEval(
   opts: ChampionEvalOptions,
-): Promise<{ report: PairedEvalReport; lines: string[] }> {
+): Promise<{ report: PairedEvalReport; lines: string[]; decision?: import("./promotion-decision.js").ChampionEvalDecision }> {
   const baseline = await loadRunsFromArtifact(opts.baselinePath);
   const candidate = await loadRunsFromArtifact(opts.candidatePath);
   const baselineRuns = baseline.runs;
   const candidateRuns = candidate.runs;
   const report = buildPairedReport(baselineRuns, candidateRuns, opts.mode);
-  const quality = evaluateChampionQuality(baselineRuns, candidateRuns, report);
+  // Quality policy verdict keeps its legacy default (informational for legacy
+  // runs); the E1-08 DECISION layer below is where strict fail-closed applies.
+  const quality = evaluateChampionQuality(baselineRuns, candidateRuns, report, {
+    strictPromotion: opts.strict ?? false,
+  });
+
+  // E1-08: single decision (state machine) on top of the quality policy.
+  const { evaluateChampionDecision } = await import("./promotion-decision.js");
+  const decision = evaluateChampionDecision(baselineRuns, candidateRuns, report, {
+    strict: opts.strict ?? true,
+    candidateId: opts.candidateId ?? null,
+  });
 
   const lines = [
     `mode: ${report.mode}`,
@@ -274,6 +289,13 @@ export async function runChampionEval(
     "claim:",
     `  ${report.claim}`,
     ...renderChampionQuality(quality),
+    "",
+    "decision (E1-08):",
+    `  ${decision.decision}  [${decision.reasonCode}]`,
+    `  ${decision.explanation}`,
+    ...(decision.comparability !== null && !decision.comparability.comparable
+      ? [`  incomparable reasons: ${decision.comparability.reasons.join(", ")}`]
+      : []),
   ];
-  return { report, lines };
+  return { report, lines, decision };
 }

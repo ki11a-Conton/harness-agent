@@ -85,8 +85,8 @@ commands:
   audit [--json] [--strict] [--out <dir>]  generate CAPABILITY_MATRIX.md/.json from real wiring evidence; --json is stdout-only unless --out is given (E1-01) (P0-1)
   docs:verify                       machine-verify doc facts (benchmark counts, packages, CI gates, matrix) (P20-3)
   explain <sessionId> [--tool-call <id>] [--tree]  why did the agent do this? observable evidence / trace tree (P9-3/P20-6)
-  champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model]
-                                    paired evaluation of baseline vs candidate over the SAME cases (P21-3)
+  champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--candidate <id>]
+                                    paired evaluation of baseline vs candidate over the SAME cases (P21-3; E1-08 decisions: ACCEPT/REJECT/INCONCLUSIVE/INVALID)
   production-audit                 P22-3 final production audit (silent catch / as never / path gates / retry / isolation)
   release artifacts [--out <dir>]  P22-4 collect release artifacts (reports/coverage/CI/benchmark/paired/matrix/manifest)
   recover list                         startup recovery scan — unfinished sessions/approvals/asks/orphans (P12-3)
@@ -151,17 +151,30 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
     }
     case "champion": {
       if (rest[0] !== "eval") {
-        return { exitCode: 1, lines: ["usage: agent champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model]"] };
+        return { exitCode: 1, lines: ["usage: agent champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--candidate <id>]"] };
       }
       const files = rest.slice(1).filter((a) => !a.startsWith("--"));
       const modeIdx = rest.indexOf("--mode");
       const mode: EvalMode = modeIdx >= 0 && rest[modeIdx + 1] === "real-model" ? "real-model" : "stub";
+      const strict = rest.includes("--strict");
+      const candIdx = rest.indexOf("--candidate");
+      const candidateId = candIdx >= 0 ? rest[candIdx + 1] : undefined;
       if (files.length < 2) {
-        return { exitCode: 1, lines: ["usage: agent champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model]"] };
+        return { exitCode: 1, lines: ["usage: agent champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--candidate <id>]"] };
       }
       try {
-        const { lines } = await runChampionEval({ baselinePath: files[0]!, candidatePath: files[1]!, mode });
-        return { exitCode: 0, lines };
+        const { lines, decision } = await runChampionEval({ baselinePath: files[0]!, candidatePath: files[1]!, mode, strict, candidateId });
+        // E1-08: exit code reflects the decision:
+        //   0 = ACCEPT (promotable)
+        //   1 = INCONCLUSIVE (insufficient evidence)
+        //   2 = REJECT (comparison valid but quality gates failed)
+        //   3 = INVALID (not comparable — provenance/activation failure)
+        const exitCode = decision?.decision === "ACCEPT" ? 0
+          : decision?.decision === "INCONCLUSIVE" ? 1
+          : decision?.decision === "REJECT" ? 2
+          : decision?.decision === "INVALID" ? 3
+          : 1;
+        return { exitCode, lines };
       } catch (err) {
         return { exitCode: 1, lines: [`champion eval failed: ${err instanceof Error ? err.message : String(err)}`] };
       }
