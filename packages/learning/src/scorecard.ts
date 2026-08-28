@@ -1,4 +1,5 @@
 import type { EvalOutcome, EvalSuite } from "@ar/evaluation";
+import { countSecurityViolations } from "@ar/evaluation";
 
 /**
  * P0-5 HarnessScoreCard: the unit of a repeated-run benchmark evaluation.
@@ -96,8 +97,7 @@ export function computeScoreCard(outcomes: EvalOutcome[]): HarnessScoreCard {
     avgOutputTokens: total === 0 ? 0 : mean(outcomes.map((o) => o.metrics.tokens_output)),
     avgToolCalls: total === 0 ? 0 : mean(outcomes.map((o) => o.metrics.tool_call_count)),
     contextOverflows: outcomes.reduce((sum, o) => sum + o.metrics.compaction_count, 0),
-    securityViolations: outcomes.filter(
-      (o) => o.suite === "adversarial" && o.status === "failed",
-    ).length,
+    // E1-09: typed security taxonomy from real violations, not suite+status.
+    securityViolations: outcomes.reduce((sum, o) => sum + countSecurityViolations(o.violations ?? []), 0),
   };
 }

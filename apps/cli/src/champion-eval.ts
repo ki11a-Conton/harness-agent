@@ -1,5 +1,6 @@
 import type { EvalOutcome } from "@ar/evaluation";
 import { loadRunsFromArtifact, buildPairedReport, evaluateQualityGates, type EvalMode, type PairedEvalReport } from "@ar/evaluation";
+import { countSecurityViolations } from "@ar/evaluation";
 
 /**
  * P21-3 — `agent champion eval <baseline-runs.json> <candidate-runs.json>
@@ -208,11 +209,12 @@ export function evaluateChampionQuality(
   }
 
   // 4) Security non-regression — candidate security violations must never
-  //    increase (hard gate, not a quality nuance).
+  //    increase (hard gate, not a quality nuance). E1-09: typed taxonomy —
+  //    only genuine security-relevant violations count (forbidden command/
+  //    network/read attempts, side effects, denial breaches); judge-quality
+  //    violations (e.g. "verification did not pass") are NOT security.
   const secOf = (runs: EvalOutcome[]): number =>
-    runs.reduce((sum, r) => sum + (r.violations ?? []).filter((v) =>
-      /security|escape|denied|injection/i.test(v),
-    ).length, 0);
+    runs.reduce((sum, r) => sum + countSecurityViolations(r.violations ?? []), 0);
   const baselineSec = secOf(baselineRuns);
   const candidateSec = secOf(candidateRuns);
   if (candidateSec > baselineSec) {

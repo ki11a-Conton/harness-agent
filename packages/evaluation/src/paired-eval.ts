@@ -90,14 +90,14 @@ export function classifyPaired(
   return "candidate_only_passed";
 }
 
+import { countSecurityViolations } from "./security-taxonomy.js";
+
 function runOf(outcome: EvalOutcome): CaseRun {
   const metrics = outcome.metrics;
   return {
     passed: outcome.status === "passed",
     grade: outcome.grade ?? "?",
-    securityViolations: (outcome.violations ?? []).filter((v) =>
-      /security|escape|denied|injection/i.test(v),
-    ).length,
+    securityViolations: countSecurityViolations(outcome.violations ?? []),
     toolCalls: metrics.tool_call_count,
     tokens: metrics.tokens_input + metrics.tokens_output,
     estimatedCostUsd: metrics.estimated_cost,

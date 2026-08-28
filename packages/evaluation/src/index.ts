@@ -33,6 +33,7 @@ export * from "./candidate-registry.js";
 export * from "./activation-evidence.js";
 export * from "./load-runs.js";
 export * from "./provenance-v2.js";
+export * from "./security-taxonomy.js";
 export * from "./paired-eval.js";
 export * from "./promotion-gate.js";
 export * from "./champion-manifest.js";

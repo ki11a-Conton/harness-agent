@@ -10,6 +10,7 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join, basename } from "node:path";
 import type { BenchmarkCaseResult } from "./baseline.js";
+import { countSecurityViolations } from "./security-taxonomy.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -369,7 +370,9 @@ export function deriveBenchmarkSummary(
     tokensInput += r.input_tokens ?? 0;
     tokensOutput += r.output_tokens ?? 0;
     toolCalls += r.tool_calls ?? 0;
-    securityViolations += r.violations?.length ?? 0;
+    // E1-09: typed security taxonomy — only genuine security-relevant
+    // violations count, never every judge violation.
+    securityViolations += countSecurityViolations(r.violations ?? []);
     verificationFailures += r.verification_failures ?? 0;
     if (r.false_complete) falseCompletes += 1;
   }
