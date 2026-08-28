@@ -82,7 +82,7 @@ commands:
   doctor                            run environment checks (plan §87)
   mechanisms <path>                 validate mechanism manifests (P2-8)
   experiment <config.json>          run a mechanism experiment (P2-9)
-  audit [--json] [--out <dir>]      generate CAPABILITY_MATRIX.md/.json from real wiring evidence (P0-1)
+  audit [--json] [--strict] [--out <dir>]  generate CAPABILITY_MATRIX.md/.json from real wiring evidence; --json is stdout-only unless --out is given (E1-01) (P0-1)
   docs:verify                       machine-verify doc facts (benchmark counts, packages, CI gates, matrix) (P20-3)
   explain <sessionId> [--tool-call <id>] [--tree]  why did the agent do this? observable evidence / trace tree (P9-3/P20-6)
   champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model]

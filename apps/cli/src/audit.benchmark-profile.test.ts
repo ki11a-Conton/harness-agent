@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -173,6 +173,43 @@ describe("audit benchmark profile — real workspace probes (P0-1)", () => {
     expect(result.exitCode).toBe(0);
     const parsed = JSON.parse(result.lines.join("\n")) as { records: { id: string }[] };
     expect(parsed.records.map((r) => r.id)).toContain("regression_suite");
+  });
+
+  it("E1-01: `agent audit --json` in an empty temp dir writes NO files (stdout-only contract)", async () => {
+    const dir = await tmpOut();
+    const deps = await createDefaultDeps();
+    const result = await auditCmd(["--json"], deps, { root: dir });
+    expect(result.exitCode).toBe(0);
+    expect(() => JSON.parse(result.lines.join("\n"))).not.toThrow();
+    const entries = await readdir(dir);
+    expect(entries).toEqual([]);
+  });
+
+  it("E1-01: `agent audit --json --out <dir>` writes both artifacts to that dir", async () => {
+    const out = await tmpOut();
+    const deps = await createDefaultDeps();
+    const result = await auditCmd(["--json", "--out", out], deps, { root: out });
+    expect(result.exitCode).toBe(0);
+    expect(() => JSON.parse(result.lines.join("\n"))).not.toThrow();
+    const json = JSON.parse(await readFile(join(out, "CAPABILITY_MATRIX.json"), "utf8")) as { records: { id: string }[] };
+    expect(json.records.length).toBeGreaterThan(0);
+    const md = await readFile(join(out, "CAPABILITY_MATRIX.md"), "utf8");
+    expect(md).toContain("# CAPABILITY MATRIX");
+  });
+
+  it("E1-01: `agent audit --json` leaves tracked CAPABILITY_MATRIX files untouched (hermeticity)", async () => {
+    // The repo's committed matrix files must not be modified by a plain
+    // `--json` run against the real tree (regression for the pnpm test
+    // pollution observed in E1-00 repro 6).
+    const deps = await createDefaultDeps();
+    const beforeJson = await readFile(join(REPO_ROOT, "CAPABILITY_MATRIX.json"), "utf8").catch(() => null);
+    const beforeMd = await readFile(join(REPO_ROOT, "CAPABILITY_MATRIX.md"), "utf8").catch(() => null);
+    const result = await runCommand(["audit", "--json"], deps);
+    expect(result.exitCode).toBe(0);
+    const afterJson = await readFile(join(REPO_ROOT, "CAPABILITY_MATRIX.json"), "utf8").catch(() => null);
+    const afterMd = await readFile(join(REPO_ROOT, "CAPABILITY_MATRIX.md"), "utf8").catch(() => null);
+    expect(afterJson).toBe(beforeJson);
+    expect(afterMd).toBe(beforeMd);
   });
 
   it("unknown audit flags are rejected with usage", async () => {

@@ -1340,10 +1340,11 @@ async function fileExists(path: string): Promise<boolean> {
 // CLI command (`agent audit` / `agent audit --json`)
 // ---------------------------------------------------------------------------
 
-export async function auditCmd(rest: string[], deps: CommandDeps): Promise<CommandResult> {
+export async function auditCmd(rest: string[], deps: CommandDeps, options: { root?: string } = {}): Promise<CommandResult> {
   let json = false;
   let strict = false;
-  let outDir = process.cwd();
+  let outDir: string | undefined = undefined;
+  const root = options.root ?? process.cwd();
   for (let i = 0; i < rest.length; i += 1) {
     const arg = rest[i];
     if (arg === "--json") {
@@ -1360,16 +1361,13 @@ export async function auditCmd(rest: string[], deps: CommandDeps): Promise<Comma
     }
   }
 
-  const probe = await probeWorkspace({ root: process.cwd() });
   // P20-2: the audit reports per PROFILE — the JSON carries the full
   // composition-aware view plus the profile the host actually runs.
+  const probe = await probeWorkspace({ root });
   const matrix = buildCapabilityMatrix({ ...probe, introspection: deps.introspection });
   const byProfile = buildCapabilityMatrixForProfiles({ ...probe, introspection: deps.introspection });
   const summary = auditSummary(matrix, probe);
 
-  await mkdir(outDir, { recursive: true });
-  const jsonPath = join(outDir, "CAPABILITY_MATRIX.json");
-  const mdPath = join(outDir, "CAPABILITY_MATRIX.md");
   const jsonOut = {
     ...matrix,
     byProfile,
@@ -1380,8 +1378,23 @@ export async function auditCmd(rest: string[], deps: CommandDeps): Promise<Comma
     releaseEvidence: false,
     notice: "NOT RELEASE EVIDENCE — informational repository snapshot. Official release verification uses CI-generated artifacts at immutable github.sha.",
   };
-  await writeFile(jsonPath, `${JSON.stringify(jsonOut, null, 2)}\n`, "utf8");
-  await writeFile(mdPath, renderMatrixMarkdown(matrix, summary), "utf8");
+
+  // E1-01: stdout-only contract. `--json` writes NO files unless an explicit
+  // `--out <dir>` is given; this keeps `agent audit --json` side-effect free
+  // so full test runs / CI never modify tracked CAPABILITY_MATRIX.* files.
+  // The non-JSON default (no `--json`, no `--out`) keeps its legacy behavior:
+  // it writes CAPABILITY_MATRIX.json + .md into the workspace root, which is
+  // what `pnpm capability:audit` (`audit --strict`) and docs:verify rely on.
+  let wroteArtifacts = false;
+  if (outDir !== undefined || !json) {
+    const targetDir = outDir ?? root;
+    await mkdir(targetDir, { recursive: true });
+    const jsonPath = join(targetDir, "CAPABILITY_MATRIX.json");
+    const mdPath = join(targetDir, "CAPABILITY_MATRIX.md");
+    await writeFile(jsonPath, `${JSON.stringify(jsonOut, null, 2)}\n`, "utf8");
+    await writeFile(mdPath, renderMatrixMarkdown(matrix, summary), "utf8");
+    wroteArtifacts = true;
+  }
 
   // P36-8 + P38.1-8 (INV-P38.1-011): exit semantics —
   //   agent audit         → exit 0 on truthful docs (malformed evidence still 0
@@ -1400,8 +1413,9 @@ export async function auditCmd(rest: string[], deps: CommandDeps): Promise<Comma
     ...summary.docTruthfulness.map(
       (row) => `docs ${row.suite}: claimed ${row.claimed}, on disk ${row.actual}${row.planned ? " (marked planned)" : ""} → ${row.truthful ? "truthful" : "UNTRUTHFUL"}`,
     ),
-    `audit: wrote ${jsonPath}`,
-    `audit: wrote ${mdPath}`,
+    ...(wroteArtifacts
+      ? [`audit: wrote ${join(outDir ?? root, "CAPABILITY_MATRIX.json")}`, `audit: wrote ${join(outDir ?? root, "CAPABILITY_MATRIX.md")}`]
+      : []),
   ];
   return { exitCode, lines };
 }
