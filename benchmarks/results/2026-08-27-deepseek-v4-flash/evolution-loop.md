@@ -142,5 +142,32 @@ Conclusion: dynamic context headroom does not help on this suite; do not
 promote. Champion inclusion stays with deferred-schema (accepted) pending
 further single-variable evidence.
 
+## 8. Fourth challenger: memory_retrieval (ACCEPTED — efficiency, no success delta)
+
+Hypothesis: pre-turn memory retrieval (P2-2) gives the model relevant prior
+context that reduces redundant re-discovery work (fewer tool calls, fewer
+tokens) without hurting success.
+
+Result (2026-08-27, real model, holdout 30 cases):
+**memory_retrieval ACCEPTED** — QUALITY VERDICT: PASS.
+
+- paired: 2W / 2L / 7T / 19 both-failed; net passed delta **0** (9/30 → 9/30)
+- verified completion: 0.300 → 0.300 (no change)
+- tool calls Δ **-57** (fewer tool calls — less redundant discovery)
+- tokens Δ **-529,504** (fewer tokens — efficiency gain at equal quality)
+- P21-4 gates PASS (cost NOT increased; it decreased)
+- provenance all PASS (attributable)
+
+Interpretation: memory_retrieval is an EFFICIENCY win (equal success at lower
+token/tool cost), not a success-rate win. Champion inclusion is justified on
+cost grounds; a combined champion preset run should verify it composes with
+deferred-schema without regression.
+
+Champion candidate status after 4 single-variable experiments (holdout):
+- tool_selector_deferred_schema — ACCEPTED (+1 pass, +0.033 verified)
+- memory_retrieval — ACCEPTED (0 delta, -529K tokens efficiency)
+- adaptive_recovery — REJECTED (-1 pass, recovery Δ -6)
+- adaptive_context_policy — REJECTED (0 delta, +1.48M tokens waste)
+
 Runtime architecture is FROZEN (P38.4-11): this loop only evaluates Agent
 strategy-layer challengers. No Runtime code changes are planned.

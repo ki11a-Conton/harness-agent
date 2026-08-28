@@ -1,0 +1,26 @@
+{
+  "suite": "holdout",
+  "cases": 30,
+  "passed": 9,
+  "failed": 21,
+  "errors": 0,
+  "passRate": 0.3,
+  "failureCategories": {
+    "model": 5
+  },
+  "terminationReasons": {
+    "verified_complete": 9,
+    "verification_failed": 5,
+    "agent_limit": 8,
+    "model_error": 5,
+    "tool_limit": 1,
+    "time_limit": 2
+  },
+  "tokensInput": 2482528,
+  "tokensOutput": 146673,
+  "toolCalls": 677,
+  "securityViolations": 42,
+  "verificationFailures": 29,
+  "falseCompletes": 0,
+  "generatedAt": "2026-08-28T06:26:25.466Z"
+}
