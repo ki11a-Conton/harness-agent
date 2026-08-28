@@ -19,6 +19,7 @@ describe("CandidateRegistry (E1-03)", () => {
       "delegation",
       "adaptive_context_policy",
       "adaptive_scheduler",
+      "budget_aware_completion_v1",
     ]);
   });
 
@@ -58,7 +59,7 @@ describe("CandidateRegistry (E1-03)", () => {
     const registry = createCandidateRegistry();
     const baseline = registry.resolveBaseline();
     // Every experimental candidate must produce a real semantic delta.
-    for (const id of ["adaptive_recovery", "tool_selector_deferred_schema", "memory_retrieval", "adaptive_context_policy", "delegation"]) {
+    for (const id of ["adaptive_recovery", "tool_selector_deferred_schema", "memory_retrieval", "adaptive_context_policy", "delegation", "budget_aware_completion_v1"]) {
       const resolved = registry.resolve(id);
       expect(resolved.hasSemanticDelta).toBe(true);
       expect(resolved.semanticDigest).not.toBe(baseline.semanticDigest);

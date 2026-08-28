@@ -90,6 +90,8 @@ export interface BenchmarkEffectiveConfig {
     scheduler: boolean;
     mcp: boolean;
     deferredSchema: boolean;
+    /** E1-13: step-budget completion guidance injected into the system prompt. */
+    stepBudgetCompletion: boolean;
   };
   /** Effective model-visible tool set (normalized, sorted). */
   tools: string[];

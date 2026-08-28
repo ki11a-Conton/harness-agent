@@ -273,6 +273,7 @@ describe("buildEffectiveConfig (P38.3-10)", () => {
       scheduler: false,
       mcp: false,
       deferredSchema: false,
+      stepBudgetCompletion: false,
     },
     tools: ["read_file", "write_file", "exec"],
   };

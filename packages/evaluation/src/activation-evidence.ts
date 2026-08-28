@@ -26,6 +26,7 @@ export type ActivationReasonCode =
   | "recovery_decision"
   | "context_dynamic_allocated"
   | "context_dynamic_used"
+  | "budget_guidance_injected"
   | "eligible_case"
   | "not_eligible_no_seed"
   | "not_eligible_no_mechanism"
@@ -160,6 +161,12 @@ export const DEFAULT_ACTIVATION_CONTRACTS: ActivationContract[] = [
     minActivatedCoverage: 0.5,
     minEligibleCases: 3,
   },
+  {
+    candidateId: "budget_aware_completion_v1",
+    schemaVersion: ACTIVATION_EVIDENCE_SCHEMA_VERSION,
+    minActivatedCoverage: 0.5,
+    minEligibleCases: 3,
+  },
 ];
 
 /** Find the activation contract for a candidate (undefined = no contract). */
@@ -272,6 +279,26 @@ export function activationEvidenceFor(
         baselineMechanismDigest: "fixed-budget",
         candidateMechanismDigest: "dynamic-budget-4096",
         summary: { observable: false },
+      };
+    }
+    case "budget_aware_completion_v1": {
+      // E1-13: activation is observed when the step-budget completion guidance
+      // was actually injected into the agent's system prompt (a real wiring
+      // decision made by the benchmark runner for this candidate). The
+      // baseline digest is the standard benchmark prompt; the candidate digest
+      // reflects the budget-aware completion guidance block.
+      const injections = activationEvents.filter((e) => e.type === "budget_guidance_injected");
+      return {
+        schemaVersion: ACTIVATION_EVIDENCE_SCHEMA_VERSION,
+        candidateId,
+        caseId: caseDef.id,
+        eligible: true,
+        activated: injections.length > 0,
+        activationCount: injections.length,
+        reasonCodes: injections.length > 0 ? ["budget_guidance_injected"] : ["activation_zero"],
+        baselineMechanismDigest: "benchmark-standard-prompt",
+        candidateMechanismDigest: "benchmark-prompt+step-budget-guidance",
+        summary: { injectionCount: injections.length },
       };
     }
     default:

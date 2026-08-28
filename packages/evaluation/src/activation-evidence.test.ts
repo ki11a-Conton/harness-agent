@@ -129,4 +129,39 @@ describe("activation evidence (E1-04)", () => {
     expect(e.activationCount).toBe(2);
     expect(e.reasonCodes).toContain("tool_lookup_called");
   });
+
+  it("budget_aware_completion_v1 activates when the guidance is injected (E1-13)", () => {
+    const e = activationEvidenceFor("budget_aware_completion_v1", { id: "c1" } as never, [
+      { type: "budget_guidance_injected", payload: { guidance: "step-budget-completion-v1" } },
+    ]);
+    expect(e.eligible).toBe(true);
+    expect(e.activated).toBe(true);
+    expect(e.activationCount).toBe(1);
+    expect(e.reasonCodes).toContain("budget_guidance_injected");
+    expect(e.baselineMechanismDigest).not.toBe(e.candidateMechanismDigest);
+  });
+
+  it("budget_aware_completion_v1 without injection stays activation_zero", () => {
+    const e = activationEvidenceFor("budget_aware_completion_v1", { id: "c1" } as never, []);
+    expect(e.eligible).toBe(true);
+    expect(e.activated).toBe(false);
+    expect(e.reasonCodes).toContain("activation_zero");
+  });
+
+  it("budget_aware_completion_v1 has a satisfied activation contract (E1-13)", () => {
+    const contract = activationContractFor("budget_aware_completion_v1");
+    expect(contract).toBeDefined();
+    const s = aggregateActivation([
+      activationEvidenceFor("budget_aware_completion_v1", { id: "c1" } as never, [
+        { type: "budget_guidance_injected" },
+      ]),
+      activationEvidenceFor("budget_aware_completion_v1", { id: "c2" } as never, [
+        { type: "budget_guidance_injected" },
+      ]),
+      activationEvidenceFor("budget_aware_completion_v1", { id: "c3" } as never, [
+        { type: "budget_guidance_injected" },
+      ]),
+    ]);
+    expect(activationSatisfied(contract, s)).toBe(true);
+  });
 });

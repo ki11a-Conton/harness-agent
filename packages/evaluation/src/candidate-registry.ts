@@ -149,6 +149,18 @@ const CANDIDATES: CandidateRegistration[] = [
     enabledPatch: { scheduler: true },
     disabledPatch: { scheduler: undefined },
   },
+  {
+    id: "budget_aware_completion_v1",
+    description: "step-budget aware completion strategy — system prompt instructs the agent to converge and verify before exhausting its iteration budget (E1-13)",
+    status: "experimental",
+    layer: "agent-strategy",
+    // Agent-strategy layer: the real effect is a systemPrompt injection in the
+    // benchmark runner (budget-aware completion guidance). The config field
+    // marks the semantic switch; the digest changes so a baseline run and a
+    // candidate run are never the same configuration.
+    enabledPatch: { completionPolicy: "budget_aware" },
+    disabledPatch: { completionPolicy: undefined },
+  },
 ];
 
 // ---------------------------------------------------------------------------
