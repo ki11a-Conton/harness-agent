@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "Evolution E1 decision ledger — evidence state for historical challenger verdicts. Historical 84-case measurements are preserved; historical ACCEPTED verdicts for tool_selector_deferred_schema and memory_retrieval are NOT treated as promoted/active Champion pending mechanism-activation and strict-provenance review (E1-03..E1-07).",
+  "baseline": {
+    "reviewSha": "84c7163eb68493c6bc4aa59cb78a83d3af7faa03",
+    "createdAt": "2026-08-28",
+    "sourceArtifacts": [
+      "benchmarks/results/2026-08-27-deepseek-v4-flash/**",
+      "benchmarks/results/2026-08-27-deepseek-v4-flash-adaptive-recovery/**",
+      "benchmarks/results/2026-08-27-deepseek-v4-flash-deferred-schema/**",
+      "benchmarks/results/2026-08-27-deepseek-v4-flash-adaptive-context/**",
+      "benchmarks/results/2026-08-27-deepseek-v4-flash-memory-retrieval/**"
+    ]
+  },
+  "decisions": [
+    {
+      "decisionId": "E1-DEC-001",
+      "candidateId": "tool_selector_deferred_schema",
+      "historicalVerdict": "ACCEPTED",
+      "currentEvidenceState": "HISTORICAL_ONLY",
+      "reasonCodes": ["MECHANISM_NOT_ACTIVATED", "ADVERT_MODE_STILL_FULL", "V1_PROVENANCE_NOT_STRICT"],
+      "sourceArtifacts": ["benchmarks/results/2026-08-27-deepseek-v4-flash-deferred-schema/holdout.json"],
+      "createdAt": "2026-08-28",
+      "supersededBy": null,
+      "notes": "Historical holdout showed +1 pass (9/30 -> 10/30) but schema advert stayed mode=full with deferred=[]; the +1 cannot be attributed to deferred schema advertisement. Not promoted."
+    },
+    {
+      "decisionId": "E1-DEC-002",
+      "candidateId": "memory_retrieval",
+      "historicalVerdict": "ACCEPTED",
+      "currentEvidenceState": "HISTORICAL_ONLY",
+      "reasonCodes": ["MECHANISM_NOT_ACTIVATED", "EMPTY_MEMORY_STORE", "V1_PROVENANCE_NOT_STRICT"],
+      "sourceArtifacts": ["benchmarks/results/2026-08-27-deepseek-v4-flash-memory-retrieval/holdout.json"],
+      "createdAt": "2026-08-28",
+      "supersededBy": null,
+      "notes": "Historical holdout showed -529K tokens efficiency at equal success, but 30/30 holdout cases have empty sources.memory so retrieval ran against an empty store; token delta cannot be attributed to memory retrieval. Not promoted."
+    },
+    {
+      "decisionId": "E1-DEC-003",
+      "candidateId": "adaptive_recovery",
+      "historicalVerdict": "REJECTED",
+      "currentEvidenceState": "HISTORICAL_ONLY",
+      "reasonCodes": ["V1_PROVENANCE_NOT_STRICT"],
+      "sourceArtifacts": ["benchmarks/results/2026-08-27-deepseek-v4-flash-adaptive-recovery/holdout.json"],
+      "createdAt": "2026-08-28",
+      "supersededBy": null,
+      "notes": "Historical rejection (-1 pass, recovery delta -6) preserved for display; v1 provenance insufficient as a permanent mechanism conclusion."
+    },
+    {
+      "decisionId": "E1-DEC-004",
+      "candidateId": "adaptive_context_policy",
+      "historicalVerdict": "REJECTED",
+      "currentEvidenceState": "HISTORICAL_ONLY",
+      "reasonCodes": ["V1_PROVENANCE_NOT_STRICT"],
+      "sourceArtifacts": ["benchmarks/results/2026-08-27-deepseek-v4-flash-adaptive-context/holdout.json"],
+      "createdAt": "2026-08-28",
+      "supersededBy": null,
+      "notes": "Historical rejection (0 delta, +1.48M tokens waste) preserved for display; v1 provenance insufficient as a permanent mechanism conclusion."
+    }
+  ]
+}
