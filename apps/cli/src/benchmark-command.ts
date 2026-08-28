@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type {
   AgentDefinition,
   AgentEvent,
@@ -731,13 +731,36 @@ async function runOneCase(
       sessionId: session.id,
       events,
     });
+    // E1-02: post-case workspace sentinel — a case that wrote OUTSIDE its own
+    // temp workspace (tracked via write_file/edit_file targets) is an
+    // infrastructure/policy failure, never an agent-quality result. The exec
+    // cwd containment (resolveExecCwd) prevents shell escapes; this catches
+    // file-write escapes for defense in depth.
+        const workspaceAbs = resolve(workspace);
+    // A changed path is a workspace escape when it is not the workspace root
+    // and not a descendant of it (relative() gives ".."-prefixed or absolute
+    // results for anything outside).
+    const escaped = changedPaths.filter((p) => {
+      const rel = relative(workspaceAbs, p);
+      if (rel === "") return false;
+      return rel.startsWith(`..${sep}`) || rel === ".." || isAbsolute(rel);
+    });
+    const workspaceEscapedOutcome: EvalOutcome | undefined = escaped.length > 0
+      ? {
+          ...outcome,
+          status: "error",
+          actualStatus: "error",
+          failureCategory: "infrastructure",
+          reason: `case wrote outside its workspace (E1-02 sentinel): ${escaped.join(", ")}`,
+        }
+      : undefined;
     // P38.3-10: record the EFFECTIVE per-case mechanism wiring — some suites
     // turn mechanisms on only when the case requires them, so a run-level
     // manifest default would lie about this case.
     // P38.4-7/8: attach per-case provenance (evaluation context + candidate
     // config hashes + controlled difference) for attributable champion eval.
     return {
-      ...outcome,
+      ...(workspaceEscapedOutcome ?? outcome),
       effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
       ...provenanceForCase(caseDef, suite, opts),
     };

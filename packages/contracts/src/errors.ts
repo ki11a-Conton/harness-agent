@@ -42,6 +42,9 @@ export const ERROR_CODES = [
   // P38.1-2: the session actor was closed while a queued followup caller was
   // still waiting for promotion.
   "ACTOR_CLOSED",
+  // E1-02: an exec/tool cwd (or path) resolves outside the session workspace —
+  // workspace containment violation with a stable, auditable reason code.
+  "WORKSPACE_POLICY",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -96,6 +99,7 @@ export const ERROR_DEFAULT_MESSAGES: Record<ErrorCode, string> = {
   STREAM_BUFFER_OVERFLOW: "Event stream buffer overflow",
   FOLLOWUP_PROMOTION_FAILED: "Followup could not be promoted to a running turn",
   ACTOR_CLOSED: "Session actor closed before followup promotion",
+  WORKSPACE_POLICY: "Path resolves outside the session workspace",
 };
 
 /** Default retry policy for each failure class. Auto-retry is unsafe by default. */
@@ -135,6 +139,7 @@ export const ERROR_RETRY_DEFAULTS: Record<ErrorCode, { retryable: boolean; safeT
   STREAM_BUFFER_OVERFLOW: { retryable: true, safeToRetry: false },
   FOLLOWUP_PROMOTION_FAILED: { retryable: true, safeToRetry: true },
   ACTOR_CLOSED: { retryable: false, safeToRetry: false },
+  WORKSPACE_POLICY: { retryable: false, safeToRetry: false },
 };
 
 export function errorInfo(

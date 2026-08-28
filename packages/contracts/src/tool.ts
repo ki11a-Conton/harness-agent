@@ -293,6 +293,7 @@ export const TOOL_ERROR_CODES = [
   "PERSISTENCE_ERROR",
   "USER_CANCELLED",
   "INTERNAL_ERROR",
+  "WORKSPACE_POLICY",
 ] as const;
 
 export type ToolErrorCode = (typeof TOOL_ERROR_CODES)[number] & ErrorCode;
