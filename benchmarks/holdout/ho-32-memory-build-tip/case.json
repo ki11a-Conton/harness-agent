@@ -1,0 +1,36 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "memory",
+    "build"
+  ],
+  "requires": ["memory"],
+  "sources": {
+    "memory": [
+      {
+        "content": "the canonical build command for this workspace is `node scripts/build.js` — run it from the workspace root and it writes dist/bundle.txt; never use npm",
+        "type": "procedural",
+        "scope": "workspace",
+        "importance": 0.95
+      }
+    ]
+  },
+  "verification": [
+    {
+      "kind": "command",
+      "command": "bash",
+      "args": [
+        "-c",
+        "test -f dist/bundle.txt && grep -q 'BUILD OK' dist/bundle.txt"
+      ]
+    },
+    {
+      "kind": "artifact",
+      "path": "dist/bundle.txt",
+      "mustChange": true
+    }
+  ]
+}

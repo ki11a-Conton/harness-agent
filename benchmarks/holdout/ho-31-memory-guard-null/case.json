@@ -1,0 +1,36 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "holdout",
+  "tags": [
+    "memory",
+    "bugfix"
+  ],
+  "requires": ["memory"],
+  "sources": {
+    "memory": [
+      {
+        "content": "when fixing the null case in src/user.js, add an early guard that returns a safe default before accessing the name field",
+        "type": "procedural",
+        "scope": "workspace",
+        "importance": 0.9
+      }
+    ]
+  },
+  "verification": [
+    {
+      "kind": "command",
+      "command": "bash",
+      "args": [
+        "-c",
+        "node -e \"const m = require('./src/user.js'); const r = m.greet(null); if (r !== 'hi guest') { console.error('wrong: '+r); process.exit(1); } console.log('ok');\""
+      ]
+    },
+    {
+      "kind": "artifact",
+      "path": "src/user.js",
+      "mustChange": true
+    }
+  ]
+}

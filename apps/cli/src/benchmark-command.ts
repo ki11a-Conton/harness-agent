@@ -656,6 +656,15 @@ async function runOneCase(
       ...(opts.candidate === "adaptive_recovery"
         ? { adaptiveRecovery: new AdaptiveRecoveryPlanner() }
         : {}),
+      // E1-05: the tool_selector_deferred_schema candidate must ACTUALLY
+      // defer schemas, not just register tool_lookup. A real schemaAdvertPolicy
+      // forces the non-core tools into stub advertisement (fetchable via
+      // tool_lookup); baseline keeps the default full advertisement. The core
+      // filesystem/exec/verification tools stay full so the model never loses
+      // the tools a coding task needs.
+      ...(schemaAdvertPolicyFor(opts.candidate) !== undefined
+        ? { schemaAdvertPolicy: schemaAdvertPolicyFor(opts.candidate) }
+        : {}),
       // P0-8/P4-5: MCP output rides the real injection gate (injectionDetector
       // is wired below, in the runtime deps) — a connector payload carrying
       // prompt-injection material is withheld (fail-closed).
@@ -859,6 +868,26 @@ export function effectiveFeaturesFor(
     scheduler: requires.includes("scheduler"),
     mcp: requires.includes("mcp"),
     deferredSchema: caseDef.schemaMode === "deferred" || candidate === "tool_selector_deferred_schema",
+  };
+}
+
+/**
+ * E1-05 — the tool_selector_deferred_schema candidate's REAL schema advert
+ * policy. Baseline returns undefined (default full advertisement). The
+ * candidate forces maxInlineTokens=1 so EVERY tool exceeds the inline budget;
+ * keepFull preserves the core filesystem/exec/search/verification tools (and
+ * tool_lookup itself) in full, deferring the peripheral bulk to on-demand
+ * stubs. This is what makes deferred schema actually observable in a run —
+ * not just registering tool_lookup.
+ */
+export function schemaAdvertPolicyFor(candidate: string | undefined): { maxInlineTokens: number; keepFull: (name: string) => boolean } | undefined {
+  if (candidate !== "tool_selector_deferred_schema") return undefined;
+  return {
+    maxInlineTokens: 1,
+    keepFull: (name: string) =>
+      name === "read_file" || name === "write_file" || name === "edit_file" ||
+      name === "exec" || name === "search_files" || name === "tool_lookup" ||
+      name.startsWith("verify") || name === "command_discovery",
   };
 }
 
