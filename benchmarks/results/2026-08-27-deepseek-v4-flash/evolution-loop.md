@@ -122,5 +122,25 @@ strategy. Next: evaluate the champion preset (defaultOn=yes candidates +
 evidence-approved ones) as a combined run, and/or test the next candidate
 (adaptive_context_policy / memory_retrieval) in isolation.
 
+## 7. Third challenger: adaptive_context_policy (REJECTED)
+
+Hypothesis: dynamic context headroom (P3-11) lets the pipeline use more of the
+budget when a task is dense, reducing premature truncation/compaction.
+
+Result (2026-08-27, real model, holdout 30 cases):
+**adaptive_context_policy REJECTED** — QUALITY VERDICT: FAIL.
+
+- paired: 1W / 1L / 8T / 20 both-failed; net passed delta **0** (9/30 → 9/30)
+- verified completion: 0.300 → 0.300 (no change)
+- token cost Δ **+1,479,498** with no net success gain (P21-4 Q3: cost growth
+  without benefit)
+- compaction Δ +83 — MORE compactions, not fewer (dynamic headroom did not
+  prevent truncation; it increased token spend)
+- provenance all PASS (attributable rejection)
+
+Conclusion: dynamic context headroom does not help on this suite; do not
+promote. Champion inclusion stays with deferred-schema (accepted) pending
+further single-variable evidence.
+
 Runtime architecture is FROZEN (P38.4-11): this loop only evaluates Agent
 strategy-layer challengers. No Runtime code changes are planned.
