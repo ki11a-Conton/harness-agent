@@ -91,6 +91,12 @@ export interface BenchmarkCommandOptions {
   /** P38.4-real: fixed delay in ms between case executions (TPM/rate-limit
    *  friendly slow mode; 0 = no delay). */
   caseDelayMs: number;
+  /** E1-11: repeat the suite N times (1 = single measurement). Each repeat
+   *  produces its own report; aggregate stats are printed. */
+  repeat: number;
+  /** E1-11: give each repeat a distinct PRNG seed so execution order differs
+   *  (order effects cannot align across repeats). Requires --shuffle. */
+  interleave: boolean;
 }
 
 const SUITES: EvalSuite[] = ["regression", "holdout", "adversarial", "stress"];
@@ -283,6 +289,62 @@ async function executeBenchmark(
       caseDelayMs: opts.caseDelayMs,
     },
   );
+
+  // E1-11: repeat protocol — a single run is a measurement, not a statistical
+  // baseline. When --repeat > 1, run the suite N times (interleaved seeds when
+  // requested) and report per-repeat pass-rate spread.
+  if (opts.repeat > 1 && opts.interleave && !opts.shuffle) {
+    return { exitCode: 1, lines: ["agent benchmark: --interleave requires --shuffle (distinct seeds per repeat)"] };
+  }
+  if (opts.repeat > 1) {
+    const { runRepeatedBaseline } = await import("@ar/evaluation");
+    const repeated = await runRepeatedBaseline(
+      selected,
+      (caseDef) =>
+        runOneCase(
+          caseDef,
+          { provider, modelId, budgetTokens: defaultBudgetTokens, candidate: opts.candidate },
+          opts.suite,
+        ),
+      {
+        generatedAt: new Date().toISOString(),
+        benchmarkVersion: "2.0.0",
+        model: { providerId: provider.id, modelId },
+        casesTotal: selected.length,
+        suite: opts.suite,
+      },
+      {
+        repeat: opts.repeat,
+        interleave: opts.interleave,
+        shuffle: opts.shuffle,
+        seed: opts.seed,
+        manifest,
+        caseDelayMs: opts.caseDelayMs,
+      },
+    );
+    await writeBaselineFiles(report, opts.outDir);
+    const outBase = opts.suite === "regression" ? "baseline" : opts.suite;
+    for (let r = 0; r < repeated.repeats.length; r++) {
+      const rep = repeated.repeats[r]!;
+      if (r === 0) {
+        // First repeat keeps the canonical names (compatible with prior
+        // artifacts and `champion eval` / `benchmark validate`).
+        await writeBaselineFiles(rep, opts.outDir);
+        continue;
+      }
+      // Later repeats get per-repeat names so no artifact is overwritten.
+      const dir = resolve(opts.outDir);
+      const { writeFile } = await import("node:fs/promises");
+      await writeFile(join(dir, `${outBase}-r${r + 1}.json`), `${JSON.stringify(rep, null, 2)}\n`, "utf8");
+      const { renderSummaryMd } = await import("@ar/evaluation");
+      await writeFile(join(dir, `${outBase}-r${r + 1}-summary.md`), renderSummaryMd(rep), "utf8");
+    }
+    const agg = repeated.aggregate;
+    lines.push(`benchmark: ${agg.repeats} repeats — pass rate mean ${formatRate(agg.passRateMean)} min ${formatRate(agg.passRateMin)} max ${formatRate(agg.passRateMax)} std ${agg.passRateStd.toFixed(4)}`);
+    lines.push(`benchmark: per-repeat pass rates: ${agg.perRepeatPassRates.map((r) => formatRate(r)).join(", ")}`);
+    lines.push("benchmark: NOTE — repeat spread is a measurement; significance is judged by champion eval / promotion (E1-08/E1-14).");
+    return { exitCode: 0, lines };
+  }
 
   await writeBaselineFiles(report, opts.outDir);
   const outBase = opts.suite === "regression" ? "baseline" : opts.suite;
@@ -1048,6 +1110,8 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
     shuffle: false,
     seed: 0,
     caseDelayMs: 0,
+    repeat: 1,
+    interleave: false,
   };
   // Resolved after parsing: default cases dir is benchmarks/<suite>.
   opts.casesDir = join("benchmarks", opts.suite);
@@ -1118,6 +1182,17 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
         opts.caseDelayMs = n;
         break;
       }
+      case "--repeat": {
+        const value = requireValue(argv, ++i, "--repeat");
+        if (value instanceof Error) return value;
+        const n = Number(value);
+        if (!Number.isInteger(n) || n < 1) return new Error("agent benchmark: --repeat must be a positive integer (number of runs)");
+        opts.repeat = n;
+        break;
+      }
+      case "--interleave":
+        opts.interleave = true;
+        break;
       case "--suite": {
         const value = requireValue(argv, ++i, "--suite");
         if (value instanceof Error) return value;
@@ -1178,6 +1253,8 @@ export async function runSmokeBenchmark(): Promise<{ exitCode: number; lines: st
     shuffle: false,
     caseDelayMs: 0,
     seed: 0,
+    repeat: 1,
+    interleave: false,
   };
   const result = await executeBenchmark(opts, smokeFakeProvider());
   const usageLine = result.lines.find((line) => line.startsWith("benchmark:")) ?? "";
@@ -1260,6 +1337,9 @@ function benchmarkUsage(): string {
     "  --seed <n>       PRNG seed for --shuffle (default 0; same seed reproduces the same order)",
     "  --candidate <id>  challenger candidate (adaptive_recovery, memory_retrieval, ...)",
     "  --delay <ms>     fixed delay between cases (TPM/rate-limit friendly slow mode; 0 = no delay)",
+    "  --repeat <n>     run the suite n times (E1-11; 1 = single measurement). Writes per-repeat reports",
+    "                   <suite>-r<n>.json + prints aggregate pass-rate stats (mean/min/max/std)",
+    "  --interleave     give each repeat a distinct PRNG seed (requires --shuffle; order differs per repeat)",
     "  --allow-stub     run even without a model provider (records MODEL_ERROR honestly)",
   ].join("\n");
 }

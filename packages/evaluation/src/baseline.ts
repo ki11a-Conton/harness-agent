@@ -969,7 +969,7 @@ export async function writeBaselineFiles(report: BaselineReport, outDir: string)
   await writeFile(join(outDir, `${base}-summary.md`), renderSummaryMd(report), "utf8");
 }
 
-function renderSummaryMd(report: BaselineReport): string {
+export function renderSummaryMd(report: BaselineReport): string {
   const s = report.summary;
   const lines: string[] = [];
   lines.push(`# Benchmark ${report.meta.suite}`, "");
