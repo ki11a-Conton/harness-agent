@@ -691,6 +691,33 @@ describe("default host wiring (createDefaultDeps)", () => {
     expect(resume.exitCode).toBe(0);
     expect(resume.lines.join("\n")).toContain("model: scripted/custom-model");
   });
+
+  it("champion state reports the frozen C0 baseline (E1-14)", async () => {
+    const deps = await createDefaultDeps();
+    const result = await runCommand(["champion", "state", "--json"], deps);
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.lines.join("\n")) as { level: string; applied: boolean };
+    expect(parsed.level).toBe("C0");
+    expect(parsed.applied).toBe(true);
+  });
+
+  it("champion promote fails closed without an explicit ACCEPT decision (E1-14)", async () => {
+    const deps = await createDefaultDeps();
+    // Missing --decision ACCEPT is fail-closed (usage error, never promotes).
+    const result = await runCommand(["champion", "promote", "memory_retrieval", "--evidence", "some-file.json"], deps);
+    expect(result.exitCode).toBe(1);
+    expect(result.lines.join("\n")).toContain("usage: agent champion promote");
+  });
+
+  it("champion promote fails closed when the evidence file does not exist (E1-14)", async () => {
+    const deps = await createDefaultDeps();
+    const result = await runCommand(
+      ["champion", "promote", "memory_retrieval", "--evidence", "nope.json", "--decision", "ACCEPT"],
+      deps,
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.lines.join("\n")).toContain("does not exist");
+  });
 });
 
 /** Local copy of the core test catalog (tests must not reach into @ar/core's

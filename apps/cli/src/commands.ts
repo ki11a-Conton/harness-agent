@@ -150,8 +150,81 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
       return { exitCode: result.ok ? 0 : 1, lines: renderProductionAudit(result) };
     }
     case "champion": {
+      // E1-14: `agent champion state [--json]` — read the current champion
+      // level (C0/C1/C2) + promotion history from docs/evolution/champion-state.json.
+      if (rest[0] === "promote") {
+        // E1-14: `agent champion promote <candidate-id> --evidence <evidence-file> --decision ACCEPT`
+        // The EXPLICIT apply step — champion eval never writes the active
+        // Champion; only this command does, and only with an explicit strict
+        // ACCEPT decision + a concrete evidence artifact that exists on disk.
+        const { stat } = await import("node:fs/promises");
+        const { evaluateChampionPromotion } = await import("@ar/evaluation");
+        const { readChampionStateFile, writeChampionStateFile } = await import("./champion-state-file.js");
+        const candidateId = rest[1];
+        const evIdx = rest.indexOf("--evidence");
+        const evidenceRef = evIdx >= 0 ? rest[evIdx + 1] : undefined;
+        const decIdx = rest.indexOf("--decision");
+        const decision = decIdx >= 0 ? rest[decIdx + 1] : undefined;
+        if (candidateId === undefined || evidenceRef === undefined || decision === undefined) {
+          return { exitCode: 1, lines: ["usage: agent champion promote <candidate-id> --evidence <evidence-file> --decision ACCEPT"] };
+        }
+        // Fail-closed: the evidence must be a real file (the promoting report).
+        try {
+          const s = await stat(evidenceRef);
+          if (!s.isFile()) {
+            return { exitCode: 1, lines: [`champion promote: evidence ${evidenceRef} is not a file`] };
+          }
+        } catch {
+          return { exitCode: 1, lines: [`champion promote: evidence ${evidenceRef} does not exist — no concrete evidence, no promotion`] };
+        }
+        if (decision !== "ACCEPT") {
+          return { exitCode: 1, lines: [`champion promote: only an explicit --decision ACCEPT promotes (got ${decision})`] };
+        }
+        const current = await readChampionStateFile();
+        if (current instanceof Error) {
+          return { exitCode: 1, lines: [`champion promote: ${current.message}`] };
+        }
+        const verdict = evaluateChampionPromotion(current, candidateId, decision, evidenceRef);
+        if (!verdict.ok) {
+          return { exitCode: 1, lines: [`champion promote: ${verdict.reason}`] };
+        }
+        // Explicit apply: persist the promoted state as the active Champion.
+        const applied = { ...verdict.next, applied: true };
+        await writeChampionStateFile(applied);
+        return {
+          exitCode: 0,
+          lines: [
+            `champion promote: ${current.level} -> ${applied.level} (${candidateId})`,
+            `  evidence: ${evidenceRef}`,
+            `  history: ${applied.history.length} promotion(s)`,
+            "  WARNING: promotion is evidence-based; re-run champion eval with",
+            "  --strict --candidate <id> before trusting this level in production.",
+          ],
+        };
+      }
+      if (rest[0] === "state") {
+        const { readChampionStateFile } = await import("./champion-state-file.js");
+        const json = rest.includes("--json");
+        const result = await readChampionStateFile();
+        if (result instanceof Error) {
+          return { exitCode: 1, lines: [`champion state: ${result.message}`] };
+        }
+        if (json) {
+          return { exitCode: 0, lines: [JSON.stringify(result, null, 2)] };
+        }
+        const lines = [
+          "champion state (E1-14):",
+          `  level: ${result.level}`,
+          `  candidate: ${result.candidateId ?? "(frozen production baseline)"}`,
+          `  evidence: ${result.evidenceRef ?? "(none — not promoted)"}`,
+          `  applied: ${result.applied}`,
+          `  history: ${result.history.length} promotion(s)`,
+          ...result.history.map((h) => `    - ${h.promotedAt} ${h.candidateId} -> ${h.evidenceRef}`),
+        ];
+        return { exitCode: 0, lines };
+      }
       if (rest[0] !== "eval") {
-        return { exitCode: 1, lines: ["usage: agent champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--candidate <id>]"] };
+        return { exitCode: 1, lines: ["usage: agent champion (eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--candidate <id>]) | (state [--json]) | (promote <candidate-id> --evidence <evidence-ref>)"] };
       }
       const files = rest.slice(1).filter((a) => !a.startsWith("--"));
       const modeIdx = rest.indexOf("--mode");

@@ -35,6 +35,7 @@ export * from "./load-runs.js";
 export * from "./provenance-v2.js";
 export * from "./security-taxonomy.js";
 export * from "./repeated-run.js";
+export * from "./champion-state.js";
 export * from "./paired-eval.js";
 export * from "./promotion-gate.js";
 export * from "./champion-manifest.js";
