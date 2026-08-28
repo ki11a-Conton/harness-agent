@@ -19,12 +19,14 @@ import { ContextPipeline } from "@ar/context";
 import { resolveCapabilities, budgetForCapabilities } from "@ar/model";
 import {
   BENCHMARK_SUITE_VERSION,
+  activationEvidenceFor,
   buildEffectiveConfig,
   buildRunManifest,
   computeRuntimeConfigHash,
   computeEvaluationContextHash,
   DEFAULT_JUDGE_VERSION,
   EvalRunner,
+  getCandidateRegistry,
   loadBenchmarkCases,
   runBaseline,
   writeBaselineFiles,
@@ -67,7 +69,6 @@ import { SqliteMemoryStore } from "@ar/memory";
 import { detectPromptInjection, redactSecrets } from "@ar/security";
 import { DEFAULT_MODEL_ID, registerBuiltinTools } from "./main.js";
 import { resolveModelProvider, STUB_PROVIDER_ID } from "./provider.js";
-import { getCandidateRegistry } from "@ar/evaluation";
 
 export interface BenchmarkCommandOptions {
   casesDir: string;
@@ -455,6 +456,31 @@ async function runOneCase(
       }
     };
 
+    // E1-04: activation evidence observer — gathers real execution-path signals
+    // for the candidate mechanism. Only fires when a candidate is active.
+    let activationEvents: { type: string; payload?: Record<string, unknown> }[] = [];
+    const candidateId = opts.candidate;
+    if (candidateId !== undefined) {
+      events.onAppended = (event: AgentEvent) => {
+        const payload = event.payload;
+        // Track tool_lookup calls for deferred schema activation.
+        if (candidateId === "tool_selector_deferred_schema" && event.type === "tool.requested" && payload.name === "tool_lookup") {
+          activationEvents.push({ type: "tool_lookup_called", payload });
+        }
+        // Track recovery decisions for adaptive_recovery activation.
+        if (candidateId === "adaptive_recovery" && event.type === "recovery.decided") {
+          activationEvents.push({ type: "recovery_decision", payload });
+        }
+        // Track memory retrieval for memory_retrieval activation.
+        if (candidateId === "memory_retrieval" && event.type === "memory.retrieved") {
+          activationEvents.push({ type: "memory_retrieved", payload });
+        }
+        // adaptive_context_policy has NO runtime event (dynamic budget is
+        // config-level) — activationEvidenceFor honestly reports it as
+        // not_observable, so no observer branch is possible here.
+      };
+    }
+
     const registry = new ToolRegistry();
     registerBuiltinTools(registry);
 
@@ -770,10 +796,18 @@ async function runOneCase(
     // manifest default would lie about this case.
     // P38.4-7/8: attach per-case provenance (evaluation context + candidate
     // config hashes + controlled difference) for attributable champion eval.
+    const base = workspaceEscapedOutcome ?? outcome;
     return {
-      ...(workspaceEscapedOutcome ?? outcome),
+      ...base,
       effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
       ...provenanceForCase(caseDef, suite, opts),
+      // E1-04: activation evidence from the real run path. Eligibility and
+      // activation are derived from observed events + wiring, never from the
+      // candidate name alone. A candidate that activated zero times stays
+      // activated:false — the promotion gate fails closed on it.
+      ...(candidateId !== undefined
+        ? { activationEvidence: activationEvidenceFor(candidateId, caseDef, activationEvents) }
+        : {}),
     };
   } finally {
     if (memoryClose !== undefined) {
@@ -925,6 +959,8 @@ function parseTemperature(raw: string | undefined): number | null {
 /** EventStore wrapper that observes tool.requested events (for changedPaths). */
 class TrackingEventStore implements EventStore {
   onRequested: (name: string, args: Record<string, unknown>) => void = () => {};
+  /** E1-04: hook for all appended events (activation evidence observer). */
+  onAppended: (event: AgentEvent) => void = () => {};
 
   constructor(private readonly inner: EventStore) {}
 
@@ -936,6 +972,7 @@ class TrackingEventStore implements EventStore {
         this.onRequested(name, args as Record<string, unknown>);
       }
     }
+    this.onAppended(event);
     return this.inner.append(event);
   }
 
@@ -958,6 +995,7 @@ class TrackingEventStore implements EventStore {
         this.onRequested(name, args as Record<string, unknown>);
       }
     }
+    this.onAppended(event as AgentEvent);
     return this.inner.appendNew(event);
   }
 

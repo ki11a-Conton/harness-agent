@@ -142,6 +142,9 @@ export interface BenchmarkCaseResult {
   /** P38.3-10: effective per-case mechanism wiring. Optional for backward
    *  compatibility with older reports. */
   effective_features?: Record<string, boolean>;
+  /** E1-04: per-case mechanism activation evidence (from the run path).
+   *  Optional for legacy runs; required for strict promotion comparisons. */
+  activation_evidence?: import("./activation-evidence.js").CandidateActivationEvidence;
 }
 
 export interface BaselineSummary {
@@ -584,6 +587,9 @@ export function collectRunMetrics(outcome: EvalOutcome): BenchmarkCaseResult {
       : {}),
     ...(outcome.controlledDifference !== undefined
       ? { controlledDifference: outcome.controlledDifference }
+      : {}),
+    ...(outcome.activationEvidence !== undefined
+      ? { activation_evidence: outcome.activationEvidence }
       : {}),
   };
 }

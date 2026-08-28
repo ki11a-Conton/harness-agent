@@ -59,6 +59,10 @@ export interface EvalOutcome {
    *  challenger intends to change), recorded at run creation. Optional for
    *  legacy runs; required for strict promotion-quality comparisons. */
   controlledDifference?: string[];
+  /** E1-04: per-case mechanism activation evidence (from the run path, not
+   *  from the candidate name). Optional for legacy runs; required for strict
+   *  promotion comparisons. */
+  activationEvidence?: import("./activation-evidence.js").CandidateActivationEvidence;
 }
 
 /** Tool events that count as side effects on the environment (§73 forbidden.side_effects). */
