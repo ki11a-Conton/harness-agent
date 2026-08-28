@@ -947,6 +947,11 @@ export class DefaultSessionActor implements SessionActor {
           process.stderr.write(
             `[degraded] session ${this.sessionId} failed to recover bound turn ${turn.id}: ${err instanceof Error ? err.message : String(err)}\n`,
           );
+          // E1-10: liveness — recovery failure must not strand the actor.
+          // After a failed recovery the actor is idle (runTurn's catch block
+          // resets state). Continue draining so remaining recoverable turns
+          // and pending followups can still make progress.
+          void this.drainFollowups();
         },
       );
       return;

@@ -382,4 +382,52 @@ describe("P38.4-2/3 followup same-T recovery (nonterminal bound turns)", () => {
       return p?.status === "consumed";
     });
   });
+
+  it("G. E1-10 liveness: recovery failures must not strand the actor — remaining turns and followups still progress", async () => {
+    const { runtime, store, inbox, sessionId } = await setup();
+
+    // 1) Build TWO bound-nonterminal lineages (P1→T1, P2→T2).
+    const p1: PromptId = "prompt-live-1" as PromptId;
+    const p2: PromptId = "prompt-live-2" as PromptId;
+    await inbox.admit({ id: p1, sessionId, text: "live-one", kind: "followup", status: "pending", admittedAt: Date.now() });
+    await inbox.admit({ id: p2, sessionId, text: "live-two", kind: "followup", status: "pending", admittedAt: Date.now() });
+    const t1 = await runtime.startTurn(sessionId, "live-one");
+    const t2 = await runtime.startTurn(sessionId, "live-two");
+    await inbox.bindPromotion(p1, t1.id);
+    await inbox.bindPromotion(p2, t2.id);
+
+    // 2) "Restart" with a runtime that throws SYNCHRONOUSLY for T1 (like the
+    //    broken runTurn in F — no settled outcomePromise, no settle) but
+    //    succeeds for T2. This is the worst case for liveness: recovery of T1
+    //    fails hard and nothing else would re-enter drainFollowups.
+    const healthyRt = freshRuntime(store, new MemoryEventStore(), inbox);
+    let runT1Count = 0;
+    const selectiveRt: Pick<AgentRuntime, "startTurn" | "runTurn"> = {
+      startTurn: (sid, text) => runtime.startTurn(sid, text),
+      runTurn: (sid, turnId, signal) => {
+        if (turnId === t1.id) {
+          runT1Count++;
+          throw new Error("simulated T1 recovery crash"); // synchronous throw
+        }
+        return healthyRt.runTurn(sid, turnId, signal);
+      },
+    };
+    const actor = await loadActor(selectiveRt, store, inbox, sessionId);
+    // Await the full drain: T1 recovery fails, then T2 recovery should succeed.
+    await actor.drainFollowupsForTest();
+
+    // T2 must have been recovered (runTurn called for T2).
+    // T1 prompt stays promoted (fail-closed for the failed turn).
+    const p1After = inbox.prompts.find((x) => x.id === p1)!;
+    expect(p1After.status).toBe("promoted");
+    // T2 must be recovered and consumed even though T1's recovery failed first.
+    await waitFor(async () => {
+      const p = inbox.prompts.find((x) => x.id === p2);
+      return p?.status === "consumed";
+    });
+    const p2After = inbox.prompts.find((x) => x.id === p2)!;
+    expect(p2After.status).toBe("consumed");
+    // T1 recovery was attempted once (not silently dropped).
+    expect(runT1Count).toBe(1);
+  });
 });
