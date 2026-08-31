@@ -270,7 +270,13 @@
       "candidate": "budget_aware_completion_v1",
       "cluster": "agent_limit",
       "rationale": "agent_limit is the largest cluster (9/30) and is an agent-strategy problem — exactly what E1-13 wires (converge+verify before budget exhaustion). Requires real-model paired benchmark with repeat protocol.",
-      "blockedBy": "RUN_PAID_BENCHMARKS=1"
+      "blockedBy": "RUN_PAID_BENCHMARKS=1",
+      "outcome": {
+        "testedAt": "2026-08-31",
+        "result": "REJECT (E1-08 exit 2) — 10/32 vs 10/32 netDelta 0, +968K tokens, +2 infra failures (not agent-attributable)",
+        "evidenceRef": "docs/evolution/e1-next-evidence.json",
+        "nextStep": "rework step-budget hypothesis (reduce cost, avoid infra regressions) or deprioritize"
+      }
     },
     {
       "rank": 2,

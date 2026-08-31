@@ -1,0 +1,65 @@
+[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000
+mode: real-model
+paired cases: 32
+wins/losses/ties: 0W / 0L / 10T / 22 both-failed
+net passed delta: 0
+verified completion: 0.000 → 0.000
+tool calls Δ: -4
+tokens Δ: +968453
+cost Δ: $+0.0000
+recovery Δ: +20
+compaction Δ: +45
+
+per-case:
+  ho-01-review-smells: tie (b:pass ? / c:pass ?)
+  ho-02-parse-log: both_failed (b:fail ? / c:fail ?)
+  ho-03-convert-format: both_failed (b:fail ? / c:fail ?)
+  ho-04-audit-deps: tie (b:pass ? / c:pass ?)
+  ho-05-complexity: tie (b:pass ? / c:pass ?)
+  ho-06-migration-script: both_failed (b:fail ? / c:fail ?)
+  ho-07-permissions: both_failed (b:fail ? / c:fail ?)
+  ho-08-optimize: both_failed (b:fail ? / c:fail ?)
+  ho-09-document-api: tie (b:pass ? / c:pass ?)
+  ho-10-validate-schema: both_failed (b:fail ? / c:fail ?)
+  ho-11-release-notes: both_failed (b:fail ? / c:fail ?)
+  ho-12-refactor-esm: tie (b:pass ? / c:pass ?)
+  ho-13-debug-flaky: both_failed (b:fail ? / c:fail ?)
+  ho-14-test-matrix: tie (b:pass ? / c:pass ?)
+  ho-15-rate-limiter: both_failed (b:fail ? / c:fail ?)
+  ho-16-analyze-query: tie (b:pass ? / c:pass ?)
+  ho-17-changelog: tie (b:pass ? / c:pass ?)
+  ho-18-race-condition: both_failed (b:fail ? / c:fail ?)
+  ho-19-cache: both_failed (b:fail ? / c:fail ?)
+  ho-20-normalize: both_failed (b:fail ? / c:fail ?)
+  ho-21-build-report: tie (b:pass ? / c:pass ?)
+  ho-22-fix-vuln: both_failed (b:fail ? / c:fail ?)
+  ho-23-retry-logic: both_failed (b:fail ? / c:fail ?)
+  ho-24-extract-constants: both_failed (b:fail ? / c:fail ?)
+  ho-25-cron-config: both_failed (b:fail ? / c:fail ?)
+  ho-26-analyze-errors: both_failed (b:fail ? / c:fail ?)
+  ho-27-pagination: both_failed (b:fail ? / c:fail ?)
+  ho-28-refactor-naming: both_failed (b:fail ? / c:fail ?)
+  ho-29-benchmark: tie (b:pass ? / c:pass ?)
+  ho-30-healthcheck: both_failed (b:fail ? / c:fail ?)
+  ho-31-memory-guard-null: both_failed (b:fail ? / c:fail ?)
+  ho-32-memory-build-tip: both_failed (b:fail ? / c:fail ?)
+
+claim:
+  real-model paired eval over 32 same cases: no net pass-rate change (10 ties); verified completion 0.000 → 0.000 (Δ +0.000); cost +968453 tokens — needs success-rate justification (P21-4).
+
+quality policy (P38.3-12 + P38.4-8):
+  PASS  same case set
+  PASS  compatible judge version
+  PASS  compatible evaluation context (attributable)
+  PASS  candidate actually differs
+  PASS  controlled difference declared
+  FAIL  no new harness/judge/infra failures
+  PASS  security non-regression
+  FAIL  P21-4 quality gates (regression/verified/cost)
+    - candidate has more harness/judge/infrastructure failures (2 vs baseline 0) — delta is not agent-attributable
+    - token cost +968453 with no net success gain — cost growth without benefit (P21-4 Q3)
+  QUALITY VERDICT: FAIL (see above — do not promote on this evidence)
+
+decision (E1-08):
+  REJECT  [QUALITY_GATES_FAILED]
+  Candidate is comparable but fails 2 quality check(s): candidate has more harness/judge/infrastructure failures (2 vs baseline 0) — delta is not agent-attributable; token cost +968453 with no net success gain — cost growth without benefit (P21-4 Q3)

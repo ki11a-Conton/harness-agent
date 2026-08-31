@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "1.0.0",
+  "evalId": "E1-NEXT-001",
+  "candidateId": "budget_aware_completion_v1",
+  "generatedAt": "2026-08-31T09:40:16.586Z",
+  "mode": "real-model",
+  "model": "deepseek-v4-flash",
+  "suite": "holdout",
+  "cases": 32,
+  "decision": "REJECT",
+  "exitCode": 2,
+  "decisionReason": [
+    "quality gates failed",
+    "+968453 tokens with no net success gain",
+    "candidate has more infrastructure failures (2 vs 0)"
+  ],
+  "comparability": {
+    "sameCaseSet": true,
+    "evaluationContextMatch": true,
+    "candidateConfigDiffers": true,
+    "strict": true
+  },
+  "results": {
+    "baselinePass": 10,
+    "candidatePass": 10,
+    "netDelta": 0,
+    "wins": 0,
+    "losses": 0,
+    "ties": 10,
+    "bothFail": 22
+  },
+  "tokens": {
+    "baselineInputK": 4272,
+    "candidateInputK": 5215,
+    "deltaK": 943
+  },
+  "durationMs": {
+    "baseline": 6216861,
+    "candidate": 6592073
+  },
+  "infrastructureFailures": {
+    "baseline": 0,
+    "candidate": 0
+  },
+  "termination": {
+    "baseline": {
+      "agent_limit": 14,
+      "model_error": 4,
+      "tool_limit": 1,
+      "verification_failed": 3
+    },
+    "candidate": {
+      "verification_failed": 1,
+      "agent_limit": 18,
+      "model_error": 3
+    }
+  },
+  "activationEvidence": {
+    "eligibleCases": 32,
+    "activatedCases": 32
+  },
+  "artifacts": {
+    "baseline": "benchmarks/results/2026-08-31-e1-next-baseline-holdout.json",
+    "candidate": ".ci/e1-next/candidate-holdout/holdout.json",
+    "report": ".ci/e1-next/paired-report.json"
+  },
+  "championAfter": "C0 (no promotion — REJECT)"
+}

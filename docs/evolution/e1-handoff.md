@@ -57,19 +57,19 @@
 | memory_retrieval | ACCEPTED | -529K tokens | INCOMPARABLE (legacy) | has contract | Accepted for token efficiency, needs fresh run |
 | adaptive_recovery | REJECTED | -1 pass | INCOMPARABLE (legacy) | has contract | Rework hypothesis needed |
 | adaptive_context_policy | REJECTED | 0 delta +1.48M tokens | INCOMPARABLE (legacy) | not_observable | Config-level, never proven |
-| budget_aware_completion_v1 | (not benchmarked) | — | — | has contract | E1-13, agent-strategy, next round priority #1 |
+| budget_aware_completion_v1 | **REJECTED** | 10/32 vs 10/32 (32-case arm) | **COMPARABLE** ✅ | activated 32/32 | Real-model 2026-08-31: netDelta 0, +968K tokens, 2 infra failures → E1-08 REJECT (exit 2) |
 | delegation | (not benchmarked) | — | — | no contract | Experimental, wired but unevaluated |
 
 ## 4. Failure Clusters (baseline 30-case holdout)
 
 | Cluster | Count | Targeted by |
 |---------|-------|-------------|
-| `agent_limit` | 9/30 | `budget_aware_completion_v1` (not yet benchmarked) |
+| `agent_limit` | 9/30 | `budget_aware_completion_v1` — **TESTED 2026-08-31: REJECT** (10/32 vs 10/32, netDelta 0, +968K tokens) |
 | `verification_failed` | 7/30 | No winning challenger yet |
 | `model_error` | 5/30 | adaptive_recovery (REJECTED) |
 
 Next round priorities (all BLOCKED on `RUN_PAID_BENCHMARKS=1`):
-1. `budget_aware_completion_v1` → agent_limit
+1. ~~`budget_aware_completion_v1` → agent_limit~~ **TESTED 2026-08-31: REJECT** (see §3) — rework step-budget hypothesis or deprioritize
 2. `memory_retrieval` → fresh run with E1-04 evidence
 3. `adaptive_recovery` → reworked hypothesis
 4. `delegation` → first benchmark
@@ -82,6 +82,8 @@ Next round priorities (all BLOCKED on `RUN_PAID_BENCHMARKS=1`):
 | Decision ledger | `docs/evolution/e1-decision-ledger.json` | 4 entries with E1-12 audit block |
 | Baseline facts | `docs/evolution/e1-baseline.md` | 152 lines, 6 repros, known risks |
 | Failure cluster backlog | `docs/evolution/e1-failure-cluster-backlog.json` | Derived from on-disk artifacts |
+| **E1-next eval evidence** | `docs/evolution/e1-next-evidence.json` | budget_aware_completion_v1 real-model, 2026-08-31 |
+| **E1-next run artifacts** | `benchmarks/results/2026-08-31-deepseek-v4-flash-budget-aware/` | baseline + candidate holdout + paired report (untouched 84-case preserved) |
 | Historical results | `benchmarks/results/2026-08-27-*` | Untouched, owned by commit 84c7163 |
 | Historical results | `benchmarks/results/2026-08-26-*` | Pre-existing, also untouched |
 
