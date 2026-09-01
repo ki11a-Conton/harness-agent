@@ -31,6 +31,7 @@ export * from "./formal-invariants.js";
 export * from "./candidate-matrix.js";
 export * from "./candidate-registry.js";
 export * from "./activation-evidence.js";
+export * from "./activation-evidence-v2.js";
 export * from "./load-runs.js";
 export * from "./provenance-v2.js";
 export * from "./provenance-v3.js";
