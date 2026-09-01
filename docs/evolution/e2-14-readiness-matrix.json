@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-01T12:29:59.673Z",
+  "note": "offline causal readiness matrix — NO provider calls, NO API key needed (E2-14)",
+  "rows": [
+    {
+      "candidateId": "adaptive_recovery_v2",
+      "baseline实际状态": "机制关闭",
+      "candidate实际状态": "真实机制开启",
+      "eligible fixture": "6 eligible case(s) (min 5)",
+      "activation证明": "required events present",
+      "readiness": "READY"
+    },
+    {
+      "candidateId": "memory_retrieval",
+      "baseline实际状态": "机制关闭",
+      "candidate实际状态": "真实机制开启",
+      "eligible fixture": "3 eligible case(s) (min 3)",
+      "activation证明": "required events present",
+      "readiness": "READY"
+    },
+    {
+      "candidateId": "delegation",
+      "baseline实际状态": "机制关闭",
+      "candidate实际状态": "机制关闭",
+      "eligible fixture": "3 eligible case(s) (min 3)",
+      "activation证明": "activation events MISSING",
+      "readiness": "UNSUPPORTED"
+    },
+    {
+      "candidateId": "budget_aware_completion_v1",
+      "baseline实际状态": "机制关闭",
+      "candidate实际状态": "真实机制开启",
+      "eligible fixture": "5 eligible case(s) (min 5)",
+      "activation证明": "required events present",
+      "readiness": "READY"
+    },
+    {
+      "candidateId": "tool_selector_deferred_schema",
+      "baseline实际状态": "机制关闭",
+      "candidate实际状态": "真实机制开启",
+      "eligible fixture": "3 eligible case(s) (min 3)",
+      "activation证明": "required events present",
+      "readiness": "READY"
+    }
+  ]
+}
