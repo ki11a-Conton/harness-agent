@@ -48,3 +48,4 @@ export * from "./arm-factory.js";
 export * from "./paired-plan.js";
 export * from "./champion-decision-v3.js";
 export * from "./promotion-envelope.js";
+export * from "./champion-profile.js";

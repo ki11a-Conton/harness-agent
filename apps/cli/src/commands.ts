@@ -355,8 +355,13 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
         ...(deps.memoryStore !== undefined ? { memoryStore: deps.memoryStore } : {}),
       });
     case "config": {
+      if (rest[0] === "effective") {
+        // E2-08: read-only runtime profile identity diagnostic (no provider).
+        const { configEffectiveCmd } = await import("./config-command.js");
+        return configEffectiveCmd(rest.slice(1));
+      }
       if (rest[0] !== "explain") {
-        return { exitCode: 1, lines: ["usage: agent config explain [key]", "", USAGE] };
+        return { exitCode: 1, lines: ["usage: agent config explain [key] | effective <candidate|baseline> [--json]", "", USAGE] };
       }
       if (deps.resolvedConfig === undefined) {
         return { exitCode: 1, lines: ["config explain: no resolved config wired (host did not expose it)"] };

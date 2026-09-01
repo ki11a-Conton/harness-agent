@@ -39,3 +39,55 @@ export async function configExplainCmd(
   }
   return { exitCode: 0, lines };
 }
+
+/**
+ * E2-08 — `agent config effective <candidate>|baseline [--json]`.
+ *
+ * Read-only diagnostic: resolves the requested arm through the ArmFactory and
+ * prints the ACTUAL runtime profile identity (champion level, candidate,
+ * resolved config digest, strategy ids, features) — computed from the
+ * constructed config, never from a docs file. No provider calls. --json emits
+ * one parseable JSON document on stdout.
+ */
+export async function configEffectiveCmd(argv: string[]): Promise<CommandResult> {
+  const wantJson = argv.includes("--json");
+  const target = argv.find((a) => !a.startsWith("--")) ?? "baseline";
+  const { getArmFactory, runtimeIdentityOf } = await import("@ar/evaluation");
+  const factory = getArmFactory();
+  let arm;
+  try {
+    arm = target === "baseline"
+      ? factory.resolveBaseline()
+      : factory.resolveCandidate(target);
+  } catch (err) {
+    const detail = `config effective: cannot resolve "${target}": ${err instanceof Error ? err.message : String(err)}`;
+    return { exitCode: 1, lines: wantJson ? [JSON.stringify({ ok: false, detail })] : [detail] };
+  }
+  const identity = runtimeIdentityOf(arm);
+  const payload = {
+    schemaVersion: identity.schemaVersion,
+    ok: true,
+    target,
+    championLevel: identity.championLevel,
+    candidateId: identity.candidateId,
+    resolvedConfigDigest: identity.resolvedConfigDigest,
+    strategyIds: identity.strategyIds,
+    featuresEnabled: identity.featuresEnabled,
+    note: "identity computed from the ACTUAL resolved arm config (E2-08) — never from docs state; no provider calls",
+  };
+  if (wantJson) {
+    return { exitCode: 0, lines: [JSON.stringify(payload, null, 2)] };
+  }
+  return {
+    exitCode: 0,
+    lines: [
+      `config effective (E2-08):`,
+      `  target: ${target}`,
+      `  championLevel: ${identity.championLevel}`,
+      `  candidateId: ${identity.candidateId ?? "(none — baseline)"}`,
+      `  resolvedConfigDigest: ${identity.resolvedConfigDigest}`,
+      `  strategyIds: ${identity.strategyIds.join(", ") || "(none)"}`,
+      `  featuresEnabled: ${identity.featuresEnabled.join(", ") || "(none)"}`,
+    ],
+  };
+}

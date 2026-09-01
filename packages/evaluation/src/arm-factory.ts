@@ -20,6 +20,7 @@
  * registration id + the digest of the actual constructed config.
  */
 
+import { createHash } from "node:crypto";
 import { getCandidateRegistry, type CandidateRegistration } from "./candidate-registry.js";
 import { stableStringify } from "./manifest.js";
 
@@ -269,7 +270,15 @@ function buildSnapshot(input: {
     perCaseEligibility: input.caseEligibilities,
     declaredDeltaPaths: input.declaredDeltaPaths,
   };
-  return { ...snapshotBase, digest: stableStringify(snapshotBase) };
+  // Compact content-addressed digest (sha256 over the canonical snapshot),
+  // NOT the raw stable string — consumers get a short, comparable token.
+  const digest = computeSnapshotDigest(snapshotBase);
+  return { ...snapshotBase, digest };
+}
+
+/** sha256 (hex) over the canonical snapshot (stable key order). */
+export function computeSnapshotDigest(snapshot: Omit<ResolvedArmSnapshot, "digest">): string {
+  return createHash("sha256").update(stableStringify(snapshot), "utf8").digest("hex");
 }
 
 export function createArmFactory(): ArmFactory {
