@@ -1,0 +1,152 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "BLOCKED_AWAITING_OPERATOR_AUTHORIZATION",
+  "generatedAt": "2026-09-01T12:31:08.419Z",
+  "note": "E2-15 dry-run/preflight ONLY — no provider request executed (no operator authorization). Provider call count = 0.",
+  "preconditions": {
+    "worktreeClean": false,
+    "e2FreeGatesPassed": true,
+    "sandboxBackend": "win32-none (strong isolation unavailable — promotion benchmark REFUSED on Windows per E2-09)",
+    "armFactoryDiffValid": true,
+    "artifactSchemaV3": true,
+    "paidAuthorization": false,
+    "runPaidBenchmarks": false
+  },
+  "dryRun": {
+    "model": "deepseek-v4-flash",
+    "endpointIdentity": "digest(https://api.b.ai/v1)",
+    "candidateId": "adaptive_recovery_v2",
+    "readiness": "READY (E2-14)",
+    "cases": [
+      "ho-01",
+      "ho-02",
+      "ho-03",
+      "ho-04",
+      "ho-05",
+      "ho-06"
+    ],
+    "eligibleCases": 6,
+    "repetitions": 3,
+    "abPlan": [
+      {
+        "pairId": "602f97752bf5067f4ac3b3de",
+        "caseId": "ho-01",
+        "repetition": 0,
+        "order": "AB"
+      },
+      {
+        "pairId": "5d932102bd5979517d2efae7",
+        "caseId": "ho-02",
+        "repetition": 0,
+        "order": "BA"
+      },
+      {
+        "pairId": "f1d7b7a103424a4dfca9e70e",
+        "caseId": "ho-03",
+        "repetition": 0,
+        "order": "AB"
+      },
+      {
+        "pairId": "003d64864b376afd01a4bb74",
+        "caseId": "ho-04",
+        "repetition": 0,
+        "order": "BA"
+      },
+      {
+        "pairId": "98fecbf9bce756a08fce2369",
+        "caseId": "ho-05",
+        "repetition": 0,
+        "order": "AB"
+      },
+      {
+        "pairId": "f2fbf4b044f58aba07f6c165",
+        "caseId": "ho-06",
+        "repetition": 0,
+        "order": "BA"
+      },
+      {
+        "pairId": "9205fe3b47f7785a858a17a2",
+        "caseId": "ho-01",
+        "repetition": 1,
+        "order": "AB"
+      },
+      {
+        "pairId": "536324d9bb09ebff1781a6ff",
+        "caseId": "ho-02",
+        "repetition": 1,
+        "order": "BA"
+      },
+      {
+        "pairId": "d5e39d86c49e9718b00796c8",
+        "caseId": "ho-03",
+        "repetition": 1,
+        "order": "AB"
+      },
+      {
+        "pairId": "e6db373c4af517dc2259333f",
+        "caseId": "ho-04",
+        "repetition": 1,
+        "order": "BA"
+      },
+      {
+        "pairId": "abff54647dc7b74c38e1a2c4",
+        "caseId": "ho-05",
+        "repetition": 1,
+        "order": "AB"
+      },
+      {
+        "pairId": "6af839c1e34c2e9c3f97b13d",
+        "caseId": "ho-06",
+        "repetition": 1,
+        "order": "BA"
+      },
+      {
+        "pairId": "a94a4f647171a3ff2a07a369",
+        "caseId": "ho-01",
+        "repetition": 2,
+        "order": "AB"
+      },
+      {
+        "pairId": "a113afa1c07e2c2e45fe1906",
+        "caseId": "ho-02",
+        "repetition": 2,
+        "order": "BA"
+      },
+      {
+        "pairId": "e415a008d9362cd48e0d4ace",
+        "caseId": "ho-03",
+        "repetition": 2,
+        "order": "AB"
+      },
+      {
+        "pairId": "30fe9733dcb4cb706cff4056",
+        "caseId": "ho-04",
+        "repetition": 2,
+        "order": "BA"
+      },
+      {
+        "pairId": "afda4f235e9646b9cfef374a",
+        "caseId": "ho-05",
+        "repetition": 2,
+        "order": "AB"
+      },
+      {
+        "pairId": "c9ff60a0373eabdbeadf7b19",
+        "caseId": "ho-06",
+        "repetition": 2,
+        "order": "BA"
+      }
+    ],
+    "orderSeed": 11,
+    "modelSeed": null,
+    "callsPerArm": 1,
+    "totalEstimatedCalls": 36,
+    "estimatedCostUsd": 0.07200000000000001
+  },
+  "executionRequirements": [
+    "operator confirms cost (RUN_PAID_BENCHMARKS=1)",
+    "same clean commit/build for BOTH arms",
+    "E2-01..E2-14 satisfied",
+    "E2-09 strong isolation backend required for promotion-grade run"
+  ]
+}
