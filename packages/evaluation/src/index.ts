@@ -45,3 +45,4 @@ export * from "./artifact-validate.js";
 export * from "./e2-baseline-audit.js";
 export * from "./artifact-v3/index.js";
 export * from "./arm-factory.js";
+export * from "./paired-plan.js";
