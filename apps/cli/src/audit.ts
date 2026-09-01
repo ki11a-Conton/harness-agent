@@ -1344,6 +1344,7 @@ export async function auditCmd(rest: string[], deps: CommandDeps, options: { roo
   let json = false;
   let strict = false;
   let outDir: string | undefined = undefined;
+  let writeFlag = false;
   const root = options.root ?? process.cwd();
   for (let i = 0; i < rest.length; i += 1) {
     const arg = rest[i];
@@ -1351,13 +1352,17 @@ export async function auditCmd(rest: string[], deps: CommandDeps, options: { roo
       json = true;
     } else if (arg === "--strict") {
       strict = true;
+    } else if (arg === "--write") {
+      // E2-13: explicit write mode — update the tracked CAPABILITY_MATRIX
+      // artifacts ONLY when the caller asks; never as a default side effect.
+      writeFlag = true;
     } else if (arg === "--out") {
       outDir = rest[i + 1] ?? process.cwd();
       i += 1;
     } else if (arg !== undefined && arg.startsWith("--out=")) {
       outDir = arg.slice("--out=".length);
     } else {
-      return { exitCode: 1, lines: [`agent audit: unknown flag: ${arg ?? "(none)"}`, "", "usage: agent audit [--json] [--strict] [--out <dir>]"] };
+      return { exitCode: 1, lines: [`agent audit: unknown flag: ${arg ?? "(none)"}`, "", "usage: agent audit [--json] [--strict] [--write] [--out <dir>]"] };
     }
   }
 
@@ -1379,14 +1384,15 @@ export async function auditCmd(rest: string[], deps: CommandDeps, options: { roo
     notice: "NOT RELEASE EVIDENCE — informational repository snapshot. Official release verification uses CI-generated artifacts at immutable github.sha.",
   };
 
-  // E1-01: stdout-only contract. `--json` writes NO files unless an explicit
-  // `--out <dir>` is given; this keeps `agent audit --json` side-effect free
-  // so full test runs / CI never modify tracked CAPABILITY_MATRIX.* files.
-  // The non-JSON default (no `--json`, no `--out`) keeps its legacy behavior:
-  // it writes CAPABILITY_MATRIX.json + .md into the workspace root, which is
-  // what `pnpm capability:audit` (`audit --strict`) and docs:verify rely on.
+  // E1-01 + E2-13: stdout-only contract. `--json` writes NO files unless an
+  // explicit `--out <dir>` is given. E2-13: the NON-JSON default is ALSO
+  // side-effect free — it prints the matrix to stdout and only writes the
+  // tracked CAPABILITY_MATRIX.* artifacts when the caller passes an explicit
+  // `--write`. `pnpm capability:audit` (audit --strict) therefore does NOT
+  // modify the worktree; updating tracked matrix artifacts is an explicit,
+  // auditable action.
   let wroteArtifacts = false;
-  if (outDir !== undefined || !json) {
+  if (writeFlag || outDir !== undefined) {
     const targetDir = outDir ?? root;
     await mkdir(targetDir, { recursive: true });
     const jsonPath = join(targetDir, "CAPABILITY_MATRIX.json");

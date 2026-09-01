@@ -52,3 +52,4 @@ export * from "./champion-profile.js";
 export * from "./benchmark-isolation.js";
 export * from "./security-outcome-v2.js";
 export * from "./evolution-ledger.js";
+export * from "./gate-evidence-v2.js";
