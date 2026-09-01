@@ -150,13 +150,23 @@ export async function runBenchmarkCommand(
     return { exitCode: 1, lines: [opts.message, "", benchmarkUsage()] };
   }
 
-  // E1-03: candidate validation BEFORE any provider call. Unknown,
-  // unsupported (declared-but-unwired) and no-op candidates fail closed with
-  // a stable reason code — never silently run as baseline.
+  // E1-03 / E2-03: candidate preflight BEFORE any provider call. The arm
+  // factory resolves the REAL harness config; unknown, unsupported (declared-
+  // but-unwired, e.g. delegation without real subagent wiring), no-op and
+  // undeclared-delta candidates fail closed with a stable reason code — never
+  // silently run as baseline, never consume provider calls.
   if (opts.candidate !== undefined) {
-    const registry = getCandidateRegistry();
+    const { getArmFactory } = await import("@ar/evaluation");
     try {
-      registry.validateActive(opts.candidate);
+      const preflight = getArmFactory().preflight(opts.candidate);
+      if (!preflight.ok) {
+        return {
+          exitCode: 1,
+          lines: [
+            `agent benchmark: candidate rejected before provider call: [${preflight.reasonCode}] ${preflight.detail}`,
+          ],
+        };
+      }
     } catch (err) {
       return {
         exitCode: 1,
