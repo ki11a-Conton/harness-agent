@@ -707,22 +707,30 @@ describe("default host wiring (createDefaultDeps)", () => {
     }
   });
 
-  it("champion promote fails closed without an explicit ACCEPT decision (E1-14)", async () => {
+  it("champion promote fails closed without an envelope (E1-14)", async () => {
     const deps = await createDefaultDeps();
-    // Missing --decision ACCEPT is fail-closed (usage error, never promotes).
+    // No --envelope is a usage error (never promotes).
     const result = await runCommand(["champion", "promote", "memory_retrieval", "--evidence", "some-file.json"], deps);
     expect(result.exitCode).toBe(1);
     expect(result.lines.join("\n")).toContain("usage: agent champion promote");
   });
 
-  it("champion promote fails closed when the evidence file does not exist (E1-14)", async () => {
+  it("champion promote rejects --decision ACCEPT as an authority (E2-07)", async () => {
     const deps = await createDefaultDeps();
+    // E2-07: --decision is NO LONGER an authority; the CLI refuses it.
     const result = await runCommand(
-      ["champion", "promote", "memory_retrieval", "--evidence", "nope.json", "--decision", "ACCEPT"],
+      ["champion", "promote", "--envelope", "nope.json", "--decision", "ACCEPT"],
       deps,
     );
     expect(result.exitCode).toBe(1);
-    expect(result.lines.join("\n")).toContain("does not exist");
+    expect(result.lines.join("\n")).toContain("--decision is no longer an authority");
+  });
+
+  it("champion promote rejects an envelope that does not exist (E2-07)", async () => {
+    const deps = await createDefaultDeps();
+    const result = await runCommand(["champion", "promote", "--envelope", "nope.json"], deps);
+    expect(result.exitCode).toBe(1);
+    expect(result.lines.join("\n")).toContain("envelope rejected");
   });
 
   it("champion audit runs read-only and evaluates the real AR2 evidence as invalid (E2-00)", async () => {

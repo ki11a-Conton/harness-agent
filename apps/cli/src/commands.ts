@@ -150,57 +150,111 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
       return { exitCode: result.ok ? 0 : 1, lines: renderProductionAudit(result) };
     }
     case "champion": {
-      // E1-14: `agent champion state [--json]` — read the current champion
-      // level (C0/C1/C2) + promotion history from docs/evolution/champion-state.json.
+      // E1-14/E2-07: `agent champion promote --envelope <path>` — the ONLY
+      // promotion authority is a machine-verifiable PromotionEnvelope produced
+      // by the decision layer (E2-06). The CLI can no longer declare
+      // `--decision ACCEPT`; a hand-written `{"decision":"ACCEPT"}` is
+      // rejected because the envelope's content digest and artifact refs
+      // cannot be verified.
       if (rest[0] === "promote") {
-        // E1-14: `agent champion promote <candidate-id> --evidence <evidence-file> --decision ACCEPT`
-        // The EXPLICIT apply step — champion eval never writes the active
-        // Champion; only this command does, and only with an explicit strict
-        // ACCEPT decision + a concrete evidence artifact that exists on disk.
-        const { stat } = await import("node:fs/promises");
-        const { evaluateChampionPromotion } = await import("@ar/evaluation");
-        const { readChampionStateFile, writeChampionStateFile } = await import("./champion-state-file.js");
-        const candidateId = rest[1];
-        const evIdx = rest.indexOf("--evidence");
-        const evidenceRef = evIdx >= 0 ? rest[evIdx + 1] : undefined;
+        const { readChampionStateFile, writeChampionStateFileCas, championStateDigest } = await import("./champion-state-file.js");
+        const { loadPromotionEnvelope, PROMOTION_ENVELOPE_SCHEMA_VERSION, PROMOTION_ENVELOPE_POLICY_VERSION } = await import("@ar/evaluation");
+        const envIdx = rest.indexOf("--envelope");
+        const envelopePath = envIdx >= 0 ? rest[envIdx + 1] : undefined;
+        // `--decision ACCEPT` is REJECTED — it is no longer an authority.
         const decIdx = rest.indexOf("--decision");
-        const decision = decIdx >= 0 ? rest[decIdx + 1] : undefined;
-        if (candidateId === undefined || evidenceRef === undefined || decision === undefined) {
-          return { exitCode: 1, lines: ["usage: agent champion promote <candidate-id> --evidence <evidence-file> --decision ACCEPT"] };
+        if (decIdx >= 0) {
+          return { exitCode: 1, lines: ["champion promote: --decision is no longer an authority (E2-07). Promote only via --envelope <path> of a machine-generated PromotionEnvelope."] };
         }
-        // Fail-closed: the evidence must be a real file (the promoting report).
-        try {
-          const s = await stat(evidenceRef);
-          if (!s.isFile()) {
-            return { exitCode: 1, lines: [`champion promote: evidence ${evidenceRef} is not a file`] };
-          }
-        } catch {
-          return { exitCode: 1, lines: [`champion promote: evidence ${evidenceRef} does not exist — no concrete evidence, no promotion`] };
+        if (envelopePath === undefined) {
+          return { exitCode: 1, lines: ["usage: agent champion promote --envelope <promotion-envelope.json> [--candidate <id>]"] };
         }
-        if (decision !== "ACCEPT") {
-          return { exitCode: 1, lines: [`champion promote: only an explicit --decision ACCEPT promotes (got ${decision})`] };
-        }
+        // Read current champion state; its digest is the CAS expected value.
         const current = await readChampionStateFile();
         if (current instanceof Error) {
           return { exitCode: 1, lines: [`champion promote: ${current.message}`] };
         }
-        const verdict = evaluateChampionPromotion(current, candidateId, decision, evidenceRef);
-        if (!verdict.ok) {
-          return { exitCode: 1, lines: [`champion promote: ${verdict.reason}`] };
+        const candidateIdArg = rest.indexOf("--candidate");
+        const candidateId = candidateIdArg >= 0 ? rest[candidateIdArg + 1] : undefined;
+
+        const verify = await loadPromotionEnvelope(envelopePath, {
+          parentStateDigest: championStateDigest(current),
+          candidateId,
+          expectedPolicyVersion: PROMOTION_ENVELOPE_POLICY_VERSION,
+          verifyArtifactRefs: true,
+        });
+        if (!verify.ok || verify.envelope === null) {
+          const issues = verify.issues.map((i) => `  [${i.code}] ${i.detail}`).join("\n");
+          return {
+            exitCode: 1,
+            lines: [
+              `champion promote: envelope rejected (${issues.split("\n").length} issue(s)):`,
+              issues,
+            ],
+          };
         }
-        // Explicit apply: persist the promoted state as the active Champion.
-        const applied = { ...verdict.next, applied: true };
-        await writeChampionStateFile(applied);
+        const envelope = verify.envelope;
+
+        // Envelope declares ACCEPT + passed every verification. Apply the
+        // promotion as the next unbounded level, recording envelope digests.
+        const { applyPromotion } = await import("@ar/evaluation");
+        const next = applyPromotion(
+          current,
+          envelope.candidateId,
+          {},
+          envelope.artifactRefs.find((r) => r.role === "candidate")?.path ?? envelopePath,
+          { envelopeDigest: envelope.contentDigest, decisionEnvelopeDigest: envelope.decisionEnvelopeDigest },
+        );
+        const applied = { ...next, applied: true };
+        const cas = await writeChampionStateFileCas(applied, championStateDigest(current));
+        if (!cas.ok) {
+          return {
+            exitCode: 1,
+            lines: ["champion promote: STALE_CHAMPION_STATE — the champion state changed since this envelope was read; refusing to overwrite (concurrent promote?). Re-run with a fresh envelope."],
+          };
+        }
         return {
           exitCode: 0,
           lines: [
-            `champion promote: ${current.level} -> ${applied.level} (${candidateId})`,
-            `  evidence: ${evidenceRef}`,
+            `champion promote: ${current.level} -> ${applied.level} (${envelope.candidateId})`,
+            `  envelope: ${envelopePath} (digest ${envelope.contentDigest.slice(0, 12)}…)`,
+            `  policy: ${envelope.policyVersion}`,
             `  history: ${applied.history.length} promotion(s)`,
-            "  WARNING: promotion is evidence-based; re-run champion eval with",
-            "  --strict --candidate <id> before trusting this level in production.",
+            "  NOTE: applied is a document state; runtime application is proven by E2-08.",
           ],
         };
+      }
+      if (rest[0] === "rollback") {
+        // E2-07: explicit rollback transition — never deletes history.
+        const { readChampionStateFile, writeChampionStateFileCas, championStateDigest } = await import("./champion-state-file.js");
+        const { rollbackChampionState } = await import("@ar/evaluation");
+        const targetIdx = rest.indexOf("--to");
+        const target = targetIdx >= 0 ? rest[targetIdx + 1] : undefined;
+        const reasonIdx = rest.indexOf("--reason");
+        const reason = reasonIdx >= 0 ? rest[reasonIdx + 1] : undefined;
+        if (target === undefined || reason === undefined) {
+          return { exitCode: 1, lines: ["usage: agent champion rollback --to <C0|C1|...> --reason <text>"] };
+        }
+        const current = await readChampionStateFile();
+        if (current instanceof Error) {
+          return { exitCode: 1, lines: [`champion rollback: ${current.message}`] };
+        }
+        try {
+          const rolled = rollbackChampionState(current, { targetLevel: target as never, reason });
+          const cas = await writeChampionStateFileCas(rolled, championStateDigest(current));
+          if (!cas.ok) {
+            return { exitCode: 1, lines: ["champion rollback: STALE_CHAMPION_STATE — state changed concurrently; retry."] };
+          }
+          return {
+            exitCode: 0,
+            lines: [
+              `champion rollback: ${current.level} -> ${target} (${reason})`,
+              `  history preserved: ${rolled.history.length} record(s) (rollback is an explicit transition, never a delete)`,
+            ],
+          };
+        } catch (err) {
+          return { exitCode: 1, lines: [`champion rollback: ${err instanceof Error ? err.message : String(err)}`] };
+        }
       }
       if (rest[0] === "state") {
         const { readChampionStateFile } = await import("./champion-state-file.js");
@@ -234,7 +288,7 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
         return e2QuarantineCmd(rest.slice(1));
       }
       if (rest[0] !== "eval") {
-        return { exitCode: 1, lines: ["usage: agent champion (eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--candidate <id>]) | (state [--json]) | (promote <candidate-id> --evidence <evidence-ref> --decision ACCEPT) | (audit [--baseline <p>] [--candidate <p>] [--review-sha <sha>]) | (quarantine [--reason-codes a,b,c] [--note <text>])"] };
+        return { exitCode: 1, lines: ["usage: agent champion (eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--candidate <id>]) | (state [--json]) | (promote --envelope <promotion-envelope.json> [--candidate <id>]) | (rollback --to <C0|C1|...> --reason <text>) | (audit [--baseline <p>] [--candidate <p>] [--review-sha <sha>]) | (quarantine [--reason-codes a,b,c] [--note <text>])"] };
       }
       const files = rest.slice(1).filter((a) => !a.startsWith("--"));
       const modeIdx = rest.indexOf("--mode");

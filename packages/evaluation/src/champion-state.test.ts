@@ -3,6 +3,8 @@ import {
   createInitialChampionState,
   evaluateChampionPromotion,
   applyPromotion,
+  rollbackChampionState,
+  nextChampionLevel,
 } from "./champion-state.js";
 
 describe("champion state machine (E1-14)", () => {
@@ -69,13 +71,60 @@ describe("champion state machine (E1-14)", () => {
     }
   });
 
-  it("C2 is the max level — no further promotion", () => {
+  it("E2-07: the chain is unbounded — C2 can promote to C3 (no max)", () => {
     const c0 = createInitialChampionState();
     const c1 = applyPromotion(c0, "memory_retrieval", { features: { memory: true } }, "r1.json");
     const c2 = applyPromotion(c1, "budget_aware_completion_v1", { completionPolicy: "budget_aware" }, "r2.json");
-    const v = evaluateChampionPromotion(c2, "delegation", "ACCEPT", "r3.json");
-    expect(v.ok).toBe(false);
-    if (!v.ok) expect(v.decision).toBe("ALREADY_MAX");
+    expect(c2.level).toBe("C2");
+    const v = evaluateChampionPromotion(c2, "adaptive_recovery_v2", "ACCEPT", "r3.json");
+    expect(v.ok).toBe(true);
+    if (v.ok) {
+      expect(v.next.level).toBe("C3");
+      expect(v.next.history).toHaveLength(3);
+    }
+    // And further: C3 -> C4.
+    if (v.ok) {
+      const v4 = evaluateChampionPromotion(v.next, "delegation", "ACCEPT", "r4.json");
+      expect(v4.ok).toBe(true);
+      if (v4.ok) expect(v4.next.level).toBe("C4");
+    }
+  });
+
+  it("E2-07: applyPromotion records envelope + decision digests when provided", () => {
+    const c0 = createInitialChampionState();
+    const c1 = applyPromotion(c0, "adaptive_recovery_v2", { adaptiveRecovery: "conservative-v1" }, "r1.json", {
+      envelopeDigest: "env-digest-abc",
+      decisionEnvelopeDigest: "dec-digest-xyz",
+    });
+    expect(c1.level).toBe("C1");
+    expect(c1.history[0]!.envelopeDigest).toBe("env-digest-abc");
+    expect(c1.history[0]!.decisionEnvelopeDigest).toBe("dec-digest-xyz");
+  });
+
+  it("E2-07: rollback is an explicit transition that preserves full history", () => {
+    const c0 = createInitialChampionState();
+    const c1 = applyPromotion(c0, "adaptive_recovery_v2", { adaptiveRecovery: "conservative-v1" }, "r1.json", {
+      envelopeDigest: "env1",
+    });
+    const c2 = applyPromotion(c1, "budget_aware_completion_v1", { completionPolicy: "budget_aware" }, "r2.json", {
+      envelopeDigest: "env2",
+    });
+    const rolled = rollbackChampionState(c2, { targetLevel: "C0", reason: "E2-07 test rollback" });
+    expect(rolled.level).toBe("C0");
+    expect(rolled.candidateId).toBeNull();
+    expect(rolled.rollback).toBeDefined();
+    expect(rolled.rollback!.fromLevel).toBe("C2");
+    expect(rolled.history.length).toBeGreaterThanOrEqual(3); // 2 promotions + rollback record
+    // History still contains the C1/C2 promotions.
+    expect(rolled.history.some((h) => h.candidateId === "adaptive_recovery_v2")).toBe(true);
+    expect(rolled.history.some((h) => h.candidateId === "budget_aware_completion_v1")).toBe(true);
+  });
+
+  it("E2-07: rollback to a non-lower target is rejected", () => {
+    const c0 = createInitialChampionState();
+    const c1 = applyPromotion(c0, "adaptive_recovery_v2", { adaptiveRecovery: "conservative-v1" }, "r1.json");
+    expect(() => rollbackChampionState(c1, { targetLevel: "C1", reason: "same level" })).toThrow(/not lower/);
+    expect(() => rollbackChampionState(c1, { targetLevel: "C2", reason: "upgrade" })).toThrow(/not lower/);
   });
 
   it("applyPromotion is pure — does not mutate the input state", () => {
