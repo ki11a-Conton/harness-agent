@@ -1,0 +1,181 @@
+{
+  "schemaVersion": "2.0.0",
+  "generatedAtIso": "2026-09-01T11:58:39.277Z",
+  "reviewBaselineSha": "5a6f90c4767413ae1c89dca7a451a13ab5dd6cf0",
+  "activeChampion": {
+    "level": "C0",
+    "candidateId": null,
+    "validity": "PROVEN"
+  },
+  "experiments": [
+    {
+      "experimentId": "E1-NEXT-001",
+      "candidateId": "budget_aware_completion_v1",
+      "parentCandidateId": null,
+      "artifacts": [
+        {
+          "path": "benchmarks/results/2026-08-31-deepseek-v4-flash-budget-aware/baseline-holdout.json",
+          "digest": "0b647f1b9c78dc7a98bb0d2f02be6d12a79fc7d2ca30397c6c26ef70dc647f43",
+          "role": "baseline"
+        },
+        {
+          "path": "benchmarks/results/2026-08-31-deepseek-v4-flash-budget-aware/candidate-holdout.json",
+          "digest": "26e8bc773a4b204a464333254c5de9fb193beeb99b7fce18a184eae63b556e8b",
+          "role": "candidate"
+        },
+        {
+          "path": "docs/evolution/e1-next-evidence.json",
+          "digest": "29bb3d863036cde2bf23eff3eb8229bb3fcf770e933e4a6f675dbf7ccc920eeb",
+          "role": "evidence"
+        }
+      ],
+      "derived": {
+        "caseCount": 32,
+        "passedCount": 10,
+        "totalDurationMs": 6592073,
+        "securityBreaches": null
+      },
+      "rawDecision": "REJECT",
+      "currentValidity": "INVALID_PROVENANCE",
+      "reasonCodes": [
+        "SOURCE_DIRTY",
+        "SOURCE_SHA_MISMATCH",
+        "SINGLE_RUN_INSUFFICIENT",
+        "COST_CEILING_EXCEEDED"
+      ],
+      "qualitySummary": "net 10/32 vs 10/32, +968K tokens, 2 infra failures",
+      "securitySummary": null,
+      "activationSummary": null,
+      "paidAuthorization": {
+        "authorized": true
+      },
+      "championTransitionRefs": [],
+      "humanNotes": "Historical paid run; E2 re-check marks provenance invalid."
+    },
+    {
+      "experimentId": "E1-NEXT-002",
+      "candidateId": "memory_retrieval",
+      "parentCandidateId": null,
+      "artifacts": [
+        {
+          "path": "benchmarks/results/2026-09-01-deepseek-v4-flash-memory-retrieval/candidate-holdout.json",
+          "digest": "ab726680bf7c593e1a9b33bab3323701d74ae59f8be63e0ff001b0f5ec8d8ca3",
+          "role": "candidate"
+        },
+        {
+          "path": "docs/evolution/e1-next-evidence-memory.json",
+          "digest": "5d6a2ad023032fb6de7f6054515bceaf4662fb4a1ce1b3d1727ddd0b5242627a",
+          "role": "evidence"
+        }
+      ],
+      "derived": {
+        "caseCount": 32,
+        "passedCount": 12,
+        "totalDurationMs": 5871025,
+        "securityBreaches": null
+      },
+      "rawDecision": "INVALID",
+      "currentValidity": "INVALID_PROVENANCE",
+      "reasonCodes": [
+        "CANDIDATE_NOT_ACTIVATED",
+        "MIN_ELIGIBLE_CASES_NOT_MET"
+      ],
+      "qualitySummary": "12/32 (+2 wins, -169K tokens) but eligible=2 < minEligibleCases=3",
+      "securitySummary": null,
+      "activationSummary": "eligible 2/2 activated, coverage 1.0 but sample too small",
+      "paidAuthorization": {
+        "authorized": true
+      },
+      "championTransitionRefs": [],
+      "humanNotes": "Activation contract failed closed (E1-04)."
+    },
+    {
+      "experimentId": "E1-NEXT-003",
+      "candidateId": "delegation",
+      "parentCandidateId": null,
+      "artifacts": [
+        {
+          "path": "benchmarks/results/2026-09-01-deepseek-v4-flash-delegation/candidate-holdout.json",
+          "digest": "ae908a2711708e9a4dcc234a68874422cb89a4e6ca11986933de87dd9a4cd4c9",
+          "role": "candidate"
+        },
+        {
+          "path": "docs/evolution/e1-next-evidence-delegation.json",
+          "digest": "3a54545dd46cec1f0775440c12683409dea3060f4535d39e4ef9e731ff39b728",
+          "role": "evidence"
+        }
+      ],
+      "derived": {
+        "caseCount": 32,
+        "passedCount": 9,
+        "totalDurationMs": 6536682,
+        "securityBreaches": null
+      },
+      "rawDecision": "INVALID",
+      "currentValidity": "INVALID_PROVENANCE",
+      "reasonCodes": [
+        "CANDIDATE_NOT_ACTIVATED",
+        "NET_REGRESSION"
+      ],
+      "qualitySummary": "9/32 (-1), +686K tokens, no activation contract",
+      "securitySummary": null,
+      "activationSummary": "no activation contract wired",
+      "paidAuthorization": {
+        "authorized": true
+      },
+      "championTransitionRefs": [],
+      "humanNotes": "First delegation benchmark; no contract, fail-closed INVALID."
+    },
+    {
+      "experimentId": "E1-NEXT-004",
+      "candidateId": "adaptive_recovery_v2",
+      "parentCandidateId": null,
+      "artifacts": [
+        {
+          "path": "benchmarks/results/2026-08-31-deepseek-v4-flash-budget-aware/baseline-holdout.json",
+          "digest": "0b647f1b9c78dc7a98bb0d2f02be6d12a79fc7d2ca30397c6c26ef70dc647f43",
+          "role": "baseline"
+        },
+        {
+          "path": "benchmarks/results/2026-09-01-deepseek-v4-flash-ar2/candidate-holdout.json",
+          "digest": "98569c98e5d87fef42c1f3bc626d00b357eb788370b7a7b8e5d890777545c70a",
+          "role": "candidate"
+        },
+        {
+          "path": "docs/evolution/e1-next-evidence-ar2.json",
+          "digest": "725dd59cd54270d941e2f1d4b546579224289ff69661b33c9cc1e8e1ac59fe53",
+          "role": "evidence"
+        },
+        {
+          "path": "docs/evolution/e2-02-ar2-provenance-rejection.json",
+          "digest": "f407abf969a62a0e22ea422bf12abc7cf17431970b710c4ade7c3dd75637650a",
+          "role": "audit"
+        }
+      ],
+      "derived": {
+        "caseCount": 32,
+        "passedCount": 11,
+        "totalDurationMs": 6530343,
+        "securityBreaches": null
+      },
+      "rawDecision": "ACCEPT",
+      "currentValidity": "INVALID_PROVENANCE",
+      "reasonCodes": [
+        "SOURCE_DIRTY",
+        "SOURCE_SHA_MISMATCH",
+        "SINGLE_RUN_INSUFFICIENT",
+        "PRODUCTION_APPLICATION_UNPROVEN"
+      ],
+      "qualitySummary": "11/32 (+1, +44K tokens) single run — PROMISING_BUT_INCONCLUSIVE",
+      "securitySummary": null,
+      "activationSummary": "32/32 recovery_decision, coverage 1.0",
+      "paidAuthorization": {
+        "authorized": true
+      },
+      "championTransitionRefs": [
+        "C0->C1 (2026-09-01) then quarantined back to C0 (E2-00)"
+      ],
+      "humanNotes": "RAW decision was ACCEPT at the time; E2 audit re-classifies as INVALID_PROVENANCE (dirty cross-SHA single run). Active production remains C0."
+    }
+  ]
+}

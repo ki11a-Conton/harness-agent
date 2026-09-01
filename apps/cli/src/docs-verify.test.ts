@@ -13,6 +13,17 @@ async function makeRoot(files: Record<string, string>) {
     await mkdir(join(abs, ".."), { recursive: true });
     await writeFile(abs, content, "utf8");
   }
+  // E2-12: every fixture root gets a minimal valid evolution ledger so the
+  // evolution-consistency check passes unless a test tampers with it.
+  const ledger = {
+    schemaVersion: "2.0.0",
+    generatedAtIso: "2026-09-01T00:00:00.000Z",
+    reviewBaselineSha: "abc",
+    activeChampion: { level: "C0", candidateId: null, validity: "PROVEN" },
+    experiments: [],
+  };
+  await mkdir(join(root, "docs", "evolution"), { recursive: true });
+  await writeFile(join(root, "docs", "evolution", "evolution-ledger.json"), JSON.stringify(ledger, null, 2), "utf8");
 }
 
 function suiteCaseFiles(count: number): Record<string, string> {

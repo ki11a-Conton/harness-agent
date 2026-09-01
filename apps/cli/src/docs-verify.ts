@@ -225,6 +225,26 @@ export async function verifyDocs(deps: { root: string }): Promise<DocVerificatio
           : "no per-profile capability view found (regenerate with `agent audit` after P20-2)",
   });
 
+  // ---- E2-12: evolution ledger is the single machine-truth source ----
+  const { verifyEvolutionLedger } = await import("@ar/evaluation");
+  let ledgerIssues: string[] = [];
+  let ledgerKnown = false;
+  try {
+    const ledgerRaw = JSON.parse(await readFile(join(root, "docs", "evolution", "evolution-ledger.json"), "utf8"));
+    const ledgerResult = await verifyEvolutionLedger(ledgerRaw, root);
+    ledgerKnown = true;
+    ledgerIssues = ledgerResult.issues.map((i) => `[${i.code}] ${i.detail}`);
+  } catch (err) {
+    ledgerIssues.push(`[MISSING_REFERENCE] evolution-ledger.json unreadable: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  checks.push({
+    name: "evolution ledger consistent (E2-12)",
+    truthful: ledgerKnown && ledgerIssues.length === 0,
+    reason: ledgerIssues.length === 0
+      ? "evolution-ledger.json verifies: refs exist, digests match, summaries recompute, one active champion"
+      : ledgerIssues.join("; "),
+  });
+
   return {
     checks,
     ok: checks.every((c) => c.truthful),

@@ -56,7 +56,7 @@
 | tool_selector_deferred_schema | ACCEPTED | +1 pass (9→10/30) | INCOMPARABLE (legacy) | has contract | Accepted pre-E1, re-audit finds incomparable |
 | memory_retrieval | **INVALID** (fail-closed) | 10/32 → 12/32 (+2) | **INCOMPARABLE (not_activated)** | activated 2/2 eligible | Real-model 2026-09-01: +2 wins, -169K tokens, but eligible=2 < minEligibleCases=3 → E1-08 INVALID (exit 3), Champion stays C0 |
 | adaptive_recovery | REJECTED | -1 pass | INCOMPARABLE (legacy) | has contract | Rework hypothesis needed |
-| **adaptive_recovery_v2** | **ACCEPTED → CHAMPION C1** | 10/32 → 11/32 (+1) | **COMPARABLE** ✅ | activated 32/32 | Real-model 2026-09-01: conservative planner (retry_safe/change_strategy budget 1), +44K tokens, E1-08 ACCEPT (exit 0) → promoted C0→C1 |
+| **adaptive_recovery_v2** | historical ACCEPT, **E2: INVALID_PROVENANCE** | 10/32 → 11/32 (+1) | **COMPARABLE** ✅ | activated 32/32 | Real-model 2026-09-01 single run: conservative planner, +44K tokens, raw E1-08 ACCEPT (exit 0); **E2-00 audit quarantined it** (dirty cross-SHA single run) → active Champion stays **C0**; signal at most PROMISING_BUT_INCONCLUSIVE |
 | adaptive_context_policy | REJECTED | 0 delta +1.48M tokens | INCOMPARABLE (legacy) | not_observable | Config-level, never proven |
 | budget_aware_completion_v1 | **REJECTED** | 10/32 vs 10/32 (32-case arm) | **COMPARABLE** ✅ | activated 32/32 | Real-model 2026-08-31: netDelta 0, +968K tokens, 2 infra failures → E1-08 REJECT (exit 2) |
 | delegation | **INVALID** (fail-closed) | 10/32 → 9/32 (-1) | **INCOMPARABLE (not_activated)** | no contract | Real-model 2026-09-01: net -1, +686K tokens, no activation contract wired → E1-08 INVALID (exit 3) |
@@ -79,7 +79,8 @@ Next round priorities (all BLOCKED on `RUN_PAID_BENCHMARKS=1`):
 
 | Artifact | Path | Status |
 |----------|------|--------|
-| Champion state | `docs/evolution/champion-state.json` | **C1 — adaptive_recovery_v2 (promoted 2026-09-01)** |
+| Champion state | `docs/evolution/champion-state.json` | **C0 active — adaptive_recovery_v2 history QUARANTINED (E2-00)**; raw C1 promotion recorded in history with original evidence path |
+| Evolution ledger | `docs/evolution/evolution-ledger.json` | **E2-12 single machine-truth source** — refs/digests/summaries verified by `docs:verify` |
 | Decision ledger | `docs/evolution/e1-decision-ledger.json` | 4 entries with E1-12 audit block |
 | Baseline facts | `docs/evolution/e1-baseline.md` | 152 lines, 6 repros, known risks |
 | Failure cluster backlog | `docs/evolution/e1-failure-cluster-backlog.json` | Derived from on-disk artifacts |
@@ -89,7 +90,7 @@ Next round priorities (all BLOCKED on `RUN_PAID_BENCHMARKS=1`):
 | **E1-next memory artifacts** | `benchmarks/results/2026-09-01-deepseek-v4-flash-memory-retrieval/` | candidate holdout + paired report (baseline reused from 08-31) |
 | **E1-next delegation evidence** | `docs/evolution/e1-next-evidence-delegation.json` | delegation real-model, 2026-09-01, INVALID (no contract) |
 | **E1-next delegation artifacts** | `benchmarks/results/2026-09-01-deepseek-v4-flash-delegation/` | candidate holdout + paired report |
-| **E1-next ar2 evidence** | `docs/evolution/e1-next-evidence-ar2.json` | adaptive_recovery_v2 real-model, 2026-09-01, ACCEPT → C1 |
+| **E1-next ar2 evidence** | `docs/evolution/e1-next-evidence-ar2.json` | adaptive_recovery_v2 real-model, 2026-09-01 — raw ACCEPT history; **E2 validity INVALID_PROVENANCE** (see e2-02 rejection) |
 | **E1-next ar2 artifacts** | `benchmarks/results/2026-09-01-deepseek-v4-flash-ar2/` | candidate holdout + paired report (promotion evidence) |
 | Historical results | `benchmarks/results/2026-08-27-*` | Untouched, owned by commit 84c7163 |
 | Historical results | `benchmarks/results/2026-08-26-*` | Pre-existing, also untouched |
