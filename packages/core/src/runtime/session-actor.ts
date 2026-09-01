@@ -39,6 +39,13 @@ import type {
 import { errorInfo, newPromptId } from "@ar/contracts";
 import type { AgentRuntime, TurnOutcome, TurnOutcomeDetail } from "./runtime.js";
 import { AgentError } from "../errors.js";
+// E2-10: same-T bounded recovery state machine (typed ordering/budget/backoff).
+import {
+  createRecoveryTask,
+  recoveryPolicy,
+  transitionRecoveryTask,
+  type RecoveryTaskRecord,
+} from "./recovery-state-machine.js";
 
 /** P25-1: durable session shape — the contracts `Session` IS the persistent
  *  shape. Keep the alias so callers never confuse it with LoadedSession. */
@@ -544,6 +551,11 @@ export class DefaultSessionActor implements SessionActor {
     return this.deps.persistent.id;
   }
 
+  /** E2-10: injectable recovery clock (deps.now or Date.now). */
+  private recoveryClock(): { now: () => number } {
+    return this.deps.now !== undefined ? { now: this.deps.now } : { now: Date.now };
+  }
+
   get persistent(): PersistentSession {
     return this.deps.persistent;
   }
@@ -935,22 +947,64 @@ export class DefaultSessionActor implements SessionActor {
       // existing durable Turn via requireTurn, and promotes it to running —
       // reusing the runtime runTurn path that guards single-turn-per-session.
       const { turn, promptId } = recoverable;
+      // E2-10: typed same-T recovery state. A failed recovery handler (runtime
+      // crash / infrastructure failure surfaced as runTurn rejection) is
+      // recorded as TERMINAL_FAILED on the SAME T — never silently dropped,
+      // never looped. The bounded-retry / backoff / exhausted semantics live in
+      // the state machine (recovery-state-machine.ts): the actor keeps the
+      // E1-10 liveness contract (T1 stays promoted, T2 may progress) while the
+      // failure is durably typed instead of a fire-and-forget log line.
+      const policy = recoveryPolicy();
+      let record: RecoveryTaskRecord = createRecoveryTask(turn.id, promptId, policy, this.recoveryClock());
+      try {
+        record = transitionRecoveryTask(record, { type: "begin" }, policy, this.recoveryClock());
+      } catch (beginErr) {
+        // begin only fails if the record is already terminal (should not
+        // happen on a fresh task) — fail-closed, surface it, keep liveness.
+        process.stderr.write(
+          `[degraded] session ${this.sessionId} recovery begin failed for ${turn.id}: ${beginErr instanceof Error ? beginErr.message : String(beginErr)}\n`,
+        );
+        void this.drainFollowups();
+        return;
+      }
+      // runTurn is async: a synchronous throw inside becomes a rejection, so
+      // we handle ALL failures in the rejection handler below (single path).
       void this.runTurn(turn.id).then(
         (outcome) => {
           // INV-P38.4-004: recovery converged — the turn is terminal. Durable
           // consume the bound prompt so the promoted lineage is closed (no
           // dangling promoted record, no T2). Nonterminal outcomes are not
           // possible here (runTurn always settles terminal).
+          try {
+            record = transitionRecoveryTask(record, { type: "handler_succeeded" }, policy, this.recoveryClock());
+          } catch (okErr) {
+            process.stderr.write(
+              `[degraded] session ${this.sessionId} recovery success transition failed for ${turn.id}: ${okErr instanceof Error ? okErr.message : String(okErr)}\n`,
+            );
+          }
           void this.consumeRecoveredPrompt(turn.id, promptId, outcome);
+          void this.drainFollowups();
         },
         (err) => {
-          process.stderr.write(
-            `[degraded] session ${this.sessionId} failed to recover bound turn ${turn.id}: ${err instanceof Error ? err.message : String(err)}\n`,
-          );
-          // E1-10: liveness — recovery failure must not strand the actor.
-          // After a failed recovery the actor is idle (runTurn's catch block
-          // resets state). Continue draining so remaining recoverable turns
-          // and pending followups can still make progress.
+          // E2-10: record the failure on the SAME T as TERMINAL_FAILED (typed,
+          // non-silent). T1 stays promoted in the inbox (fail-closed) and the
+          // queue may proceed to T2 — liveness preserved, failure surfaced.
+          const message = err instanceof Error ? err.message : String(err);
+          try {
+            record = transitionRecoveryTask(
+              record,
+              { type: "handler_failed", error: message, retryable: false },
+              policy,
+              this.recoveryClock(),
+            );
+            process.stderr.write(
+              `[degraded] session ${this.sessionId} recovery TERMINAL_FAILED for ${turn.id}: ${message} (attempt ${record.attempt}/${record.maxRecoveryAttempts}, state ${record.state})\n`,
+            );
+          } catch (transitionErr) {
+            process.stderr.write(
+              `[degraded] session ${this.sessionId} recovery failure transition error for ${turn.id}: ${transitionErr instanceof Error ? transitionErr.message : String(transitionErr)}\n`,
+            );
+          }
           void this.drainFollowups();
         },
       );
