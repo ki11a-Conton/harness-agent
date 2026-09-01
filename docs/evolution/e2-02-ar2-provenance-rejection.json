@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-01T09:45:39.057Z",
+  "baseline": {
+    "path": "benchmarks/results/2026-08-31-deepseek-v4-flash-budget-aware/baseline-holdout.json",
+    "gitSha": "c8fd5f87d7d410b88c8e025b53b5e5d24b4789ed",
+    "dirty": true
+  },
+  "candidate": {
+    "path": "benchmarks/results/2026-09-01-deepseek-v4-flash-ar2/candidate-holdout.json",
+    "gitSha": "3cf62ab8a8e6108349dbc9724785aef9ec023901",
+    "dirty": true
+  },
+  "verdict": {
+    "schemaVersion": "3.0.0",
+    "comparable": false,
+    "promotionEligible": false,
+    "reasonCodes": [
+      "BUILD_DIRTY",
+      "BUILD_SHA_MISMATCH",
+      "MODEL_SEED_UNSUPPORTED",
+      "SOURCE_BECAME_DIRTY"
+    ],
+    "mismatches": [
+      {
+        "field": "build.gitSha",
+        "baseline": "c8fd5f87d7d410b88c8e025b53b5e5d24b4789ed",
+        "candidate": "3cf62ab8a8e6108349dbc9724785aef9ec023901"
+      },
+      {
+        "field": "build.clean",
+        "baseline": "false",
+        "candidate": "false"
+      },
+      {
+        "field": "build.clean",
+        "baseline": "false",
+        "candidate": "false"
+      },
+      {
+        "field": "provider.modelSeedSupport",
+        "baseline": "unknown",
+        "candidate": "unknown"
+      },
+      {
+        "field": "finalSourceClean",
+        "baseline": "false",
+        "candidate": "false"
+      }
+    ],
+    "armDelta": {
+      "declared": [
+        "candidateConfig"
+      ],
+      "observed": []
+    }
+  }
+}
