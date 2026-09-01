@@ -46,3 +46,4 @@ export * from "./e2-baseline-audit.js";
 export * from "./artifact-v3/index.js";
 export * from "./arm-factory.js";
 export * from "./paired-plan.js";
+export * from "./champion-decision-v3.js";

@@ -13,7 +13,7 @@
  */
 
 import type { EvalOutcome } from "@ar/evaluation";
-import { judgePairComparability, type PairComparabilityVerdict } from "@ar/evaluation";
+import { judgePairComparability, evaluateQualityGates, type PairComparabilityVerdict } from "@ar/evaluation";
 import type { PairedEvalReport } from "@ar/evaluation";
 import { evaluateChampionQuality, type ChampionQualityVerdict } from "./champion-eval.js";
 
@@ -72,6 +72,20 @@ export function evaluateChampionDecision(
       decision: "INCONCLUSIVE",
       reasonCode: "SMALL_SAMPLE",
       explanation: `Only ${baselineRuns.length} paired cases — insufficient for a statistically significant promotion verdict.`,
+      comparability,
+      quality,
+    };
+  }
+
+  // E2-06: `recommendsRepetition` is now a BINDING gate, not a report-only
+  // warning. A single independent run (even at ~30 cases) with a small delta
+  // must be INCONCLUSIVE — a one-off 10→11 is never ACCEPT (F-02).
+  const gates = evaluateQualityGates(report);
+  if (gates.recommendsRepetition) {
+    return {
+      decision: "INCONCLUSIVE",
+      reasonCode: "REPETITION_REQUIRED",
+      explanation: `Net passed delta (${report.aggregated.netPassedDelta}) is below the conclusive threshold for a single run — the quality gate recommends repetition and the verdict is INCONCLUSIVE, never ACCEPT.`,
       comparability,
       quality,
     };

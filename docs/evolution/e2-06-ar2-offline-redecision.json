@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-01T10:15:35.058Z",
+  "title": "E2-06 offline re-decision of the historical AR2 evidence",
+  "baseline": {
+    "path": "benchmarks/results/2026-08-31-deepseek-v4-flash-budget-aware/baseline-holdout.json",
+    "gitSha": "c8fd5f87d7d410b88c8e025b53b5e5d24b4789ed",
+    "dirty": true
+  },
+  "candidate": {
+    "path": "benchmarks/results/2026-09-01-deepseek-v4-flash-ar2/candidate-holdout.json",
+    "gitSha": "3cf62ab8a8e6108349dbc9724785aef9ec023901",
+    "dirty": true
+  },
+  "measured": {
+    "netPassedDelta": 1,
+    "cases": 32,
+    "wins": 1,
+    "losses": 0,
+    "ties": 10,
+    "bothFailed": 21
+  },
+  "fullGateDecision": {
+    "schemaVersion": "3.0.0",
+    "policyVersion": "e2-06-policy-v1",
+    "generatedAtIso": "2026-09-01T10:15:35.057Z",
+    "decision": "INVALID",
+    "reasonCodes": [
+      "ARTIFACT_DIGEST_MISMATCH",
+      "EFFECT_BELOW_THRESHOLD",
+      "INCOMPARABLE",
+      "SINGLE_RUN_REQUIRES_REPETITION"
+    ],
+    "gates": {
+      "artifactIntegrity": false,
+      "provenanceComparable": false,
+      "pairComplete": true,
+      "activationSatisfied": true,
+      "securityClear": true,
+      "verifiedNonRegression": true,
+      "runtimeErrorSymmetry": true,
+      "repetitionSufficient": false,
+      "effectSufficient": false,
+      "directionStable": true,
+      "costBounded": true
+    },
+    "statistics": {
+      "cases": 32,
+      "netPassedDelta": 1,
+      "repetitions": 1,
+      "perRepetitionDeltas": [
+        1
+      ],
+      "activationCoverage": 1,
+      "securityBreaches": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "verifiedRates": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "tokensDelta": 44375
+    },
+    "explanation": "Inputs are not comparable: artifact digest mismatch, provenance differences, or incomplete pairs — evidence cannot be used for promotion.",
+    "nextStep": "Fix provenance/artifact integrity (E2-01/E2-02) and re-run the paired eval with the V3 protocol."
+  },
+  "qualification": {
+    "provenanceIsolatedSignal": "PROMISING_BUT_INCONCLUSIVE",
+    "note": "after quarantining provenance (E2-00), the single-run +1 signal remains INCONCLUSIVE — never ACCEPT, per E2-06 policy"
+  }
+}
