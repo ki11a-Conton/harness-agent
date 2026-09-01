@@ -41,3 +41,4 @@ export * from "./promotion-gate.js";
 export * from "./champion-manifest.js";
 export * from "./artifact-validate.js";
 export * from "./e2-baseline-audit.js";
+export * from "./artifact-v3/index.js";

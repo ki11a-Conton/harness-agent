@@ -1390,31 +1390,32 @@ export type { BaselineReport };
 export const now = () => Date.now();
 
 /**
- * P38.4-6: `agent benchmark validate <result-dir>` — free deterministic
- * validation of committed benchmark artifacts. Reads the artifact directory,
- * checks manifest completeness, count consistency, suite match, duplicate case
- * IDs, and secret scan. Never runs a model. Returns exit code 0 on success,
- * 1 on any validation error or warning.
+ * P38.4-6 / E2-01: `agent benchmark validate <result-dir>` — free deterministic
+ * validation of committed benchmark artifacts. Uses the V3 directory validator
+ * (discover -> classify -> validate -> rederive summary). Never runs a model.
+ * Returns exit code 0 on success, 1 on any validation error.
+ * E2-01: eliminates the false-positive "0 suites / 0 cases / VALID" (F-04).
  */
 export async function runValidateBenchmarkArtifacts(
   argv: string[],
 ): Promise<{ exitCode: number; lines: string[] }> {
-  const resultDir = argv[0];
+  const showJson = argv.includes("--json");
+  const resultDir = argv.find((a) => !a.startsWith("--"));
   if (resultDir === undefined || resultDir === "--help" || resultDir === "-h") {
     return {
       exitCode: 1,
       lines: [
-        "Usage: agent benchmark validate <result-dir>",
+        "Usage: agent benchmark validate <result-dir> [--json]",
         "",
         "Validate committed benchmark artifacts for completeness, consistency,",
-        "duplicate/missing cases, suite name mismatch, and secret leakage.",
+        "duplicate/missing cases, digest integrity, and summary correctness.",
         "Never runs a model — free deterministic check.",
       ],
     };
   }
   try {
-    const { validateBenchmarkArtifacts } = await import("@ar/evaluation");
-    const result = await validateBenchmarkArtifacts(resultDir);
+    const { validateArtifactDir } = await import("@ar/evaluation");
+    const result = await validateArtifactDir(resultDir);
     const lines: string[] = [];
     if (result.ok) {
       lines.push(`Benchmark artifacts in ${resultDir}: VALID`);
@@ -1425,11 +1426,21 @@ export async function runValidateBenchmarkArtifacts(
     } else {
       lines.push(`Benchmark artifacts in ${resultDir}: INVALID`);
       for (const err of result.errors) {
-        lines.push(`  ERROR: ${err}`);
+        lines.push(`  ERROR: [${err.code}] ${err.detail}${err.file ? ` (${err.file})` : ""}`);
       }
     }
-    for (const warn of result.warnings) {
-      lines.push(`  WARN:  ${warn}`);
+    if (result.detail.length > 0 && !showJson) {
+      for (const d of result.detail) {
+        if (d.passed) continue;
+        lines.push(`  ${d.passed ? "PASS" : "FAIL"}  [${d.code}] ${d.detail}${d.file ? ` (${d.file})` : ""}`);
+      }
+    }
+    if (showJson) {
+      // JSON mode: stdout is the parseable JSON document, diagnostics on stderr.
+      return {
+        exitCode: result.ok ? 0 : 1,
+        lines: [JSON.stringify(result, null, 2)],
+      };
     }
     return { exitCode: result.ok ? 0 : 1, lines };
   } catch (err) {

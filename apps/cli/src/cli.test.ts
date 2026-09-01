@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
@@ -757,6 +757,46 @@ describe("default host wiring (createDefaultDeps)", () => {
     ], deps);
     expect(result.exitCode).toBe(1);
     expect(result.lines.join("\n")).toContain("validForPromotion: false");
+  });
+
+  it("benchmark validate --json emits a single parseable JSON doc with reason codes (E2-01)", async () => {
+    const deps = await createDefaultDeps();
+    const result = await runCommand([
+      "benchmark", "validate", "--json",
+      "benchmarks/results/2026-09-01-deepseek-v4-flash-ar2",
+    ], deps);
+    // Legacy artifact dir: non-zero exit + LEGACY_NOT_PROMOTION_ELIGIBLE.
+    expect(result.exitCode).toBe(1);
+    // JSON mode: the entire stdout is ONE parseable JSON document.
+    const joined = result.lines.join("\n").trim();
+    const parsed = JSON.parse(joined) as {
+      ok: boolean;
+      errors: Array<{ code: string }>;
+      summary: { cases: number };
+    };
+    expect(parsed.ok).toBe(false);
+    expect(parsed.summary.cases).toBeGreaterThan(0);
+    expect(parsed.errors.some((e) => e.code === "LEGACY_NOT_PROMOTION_ELIGIBLE")).toBe(true);
+    // No false "0 suites / 0 cases / VALID" — cases must be discovered.
+    expect(parsed.summary.cases).not.toBe(0);
+  });
+
+  it("benchmark validate on an empty dir exits NON-zero with NO_EXPERIMENT_ARTIFACTS (E2-01)", async () => {
+    const deps = await createDefaultDeps();
+    const emptyDir = join(tmpdir(), "e2-empty-validate-" + Math.random().toString(36).slice(2));
+    await mkdir(emptyDir, { recursive: true });
+    try {
+      const result = await runCommand(["benchmark", "validate", "--json", emptyDir], deps);
+      expect(result.exitCode).toBe(1);
+      const parsed = JSON.parse(result.lines.join("\n").trim()) as {
+        ok: boolean;
+        errors: Array<{ code: string }>;
+      };
+      expect(parsed.ok).toBe(false);
+      expect(parsed.errors.some((e) => e.code === "NO_EXPERIMENT_ARTIFACTS")).toBe(true);
+    } finally {
+      await rm(emptyDir, { recursive: true, force: true });
+    }
   });
 });
 
