@@ -521,6 +521,23 @@ async function runOneCase(
       ...provenanceForCase(caseDef, suite, opts),
     };
   }
+  // E2-09: host mutation sentinel — capture the host repo state BEFORE the
+  // case runs so post-case detection can catch real child-process writes
+  // outside the case workspace (absolute paths/redirection/interpreters that
+  // the tool-argument sentinel cannot see). git status porcelain is the
+  // lightweight primary signal (reflects tracked + untracked writes); the
+  // full-tree digest scan is skipped in the per-case fast path.
+  let hostStateBefore: import("@ar/evaluation").HostState | undefined;
+  let hostMutationPossible = true;
+  try {
+    const { captureHostState } = await import("@ar/evaluation");
+    hostStateBefore = await captureHostState(process.cwd(), { include: [], excludePrefixes: [] });
+  } catch {
+    // Sentinel unavailable (no git?) — fail open for local dev but keep the
+    // E1-02 tool-argument sentinel active. Promotion benchmarks enforce the
+    // isolation backend at preflight (E2-09) and never rely on this alone.
+    hostMutationPossible = false;
+  }
   const workspace = await mkdtemp(join(tmpdir(), "harness-bench-"));
   try {
     for (const [rel, content] of Object.entries(caseDef.fixture)) {
@@ -910,6 +927,30 @@ async function runOneCase(
     // P38.4-7/8: attach per-case provenance (evaluation context + candidate
     // config hashes + controlled difference) for attributable champion eval.
     const base = workspaceEscapedOutcome ?? outcome;
+
+    // E2-09: host mutation sentinel — if the host repo state changed since
+    // case start (child-process writes outside the workspace), the case is an
+    // infrastructure/policy failure. `hostStateBefore` was captured before
+    // execution below.
+    if (hostStateBefore !== undefined && hostMutationPossible) {
+      const { captureHostState, hostMutated } = await import("@ar/evaluation");
+      const hostAfter = await captureHostState(process.cwd(), { include: [], excludePrefixes: [] });
+      if (hostMutated(hostStateBefore, hostAfter)) {
+        return {
+          ...base,
+          status: "error",
+          actualStatus: "error",
+          failureCategory: "infrastructure",
+          reason: "host repo mutated during case (E2-09 sentinel): child processes wrote outside the case workspace",
+          effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
+          ...provenanceForCase(caseDef, suite, opts),
+          ...(candidateId !== undefined
+            ? { activationEvidence: activationEvidenceFor(candidateId, caseDef, activationEvents) }
+            : {}),
+        };
+      }
+    }
+
     return {
       ...base,
       effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
