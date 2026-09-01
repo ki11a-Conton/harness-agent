@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0.0",
+  "evalId": "E1-NEXT-003",
+  "candidateId": "delegation",
+  "generatedAt": "2026-09-01T05:05:38.155Z",
+  "mode": "real-model",
+  "model": "deepseek-v4-flash",
+  "baseUrl": "https://api.b.ai/v1",
+  "suite": "holdout",
+  "cases": 32,
+  "decision": "INVALID",
+  "exitCode": 3,
+  "decisionReason": [
+    "candidate_not_activated (no activation contract wired for delegation)",
+    "net regression -1, +685934 tokens"
+  ],
+  "comparability": {
+    "sameCaseSet": true,
+    "evaluationContextMatch": true,
+    "candidateConfigDiffers": true,
+    "activationContractSatisfied": false,
+    "strict": true
+  },
+  "qualityGates": {
+    "passed": false,
+    "details": "net regression -1; token cost +685934; 1 infra failure vs baseline 0"
+  },
+  "results": {
+    "baselinePass": 10,
+    "candidatePass": 9,
+    "netDelta": -1,
+    "wins": 0,
+    "losses": 1,
+    "ties": 9,
+    "bothFail": 22
+  },
+  "tokens": {
+    "baselineInputK": 4272,
+    "candidateInputK": 4958,
+    "deltaK": 686
+  },
+  "activationEvidence": {
+    "contractWired": false,
+    "note": "delegation has no activation contract in DEFAULT_ACTIVATION_CONTRACTS; strict eval fails closed as candidate_not_activated"
+  },
+  "artifacts": {
+    "baseline": "benchmarks/results/2026-08-31-deepseek-v4-flash-budget-aware/baseline-holdout.json",
+    "candidate": "benchmarks/results/2026-09-01-deepseek-v4-flash-delegation/candidate-holdout.json",
+    "report": "benchmarks/results/2026-09-01-deepseek-v4-flash-delegation/paired-report.txt"
+  },
+  "championAfter": "C0 (no promotion — INVALID)"
+}

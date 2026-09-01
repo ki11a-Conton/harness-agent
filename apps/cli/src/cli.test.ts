@@ -692,13 +692,19 @@ describe("default host wiring (createDefaultDeps)", () => {
     expect(resume.lines.join("\n")).toContain("model: scripted/custom-model");
   });
 
-  it("champion state reports the frozen C0 baseline (E1-14)", async () => {
+  it("champion state reports the active champion level (E1-14)", async () => {
     const deps = await createDefaultDeps();
     const result = await runCommand(["champion", "state", "--json"], deps);
     expect(result.exitCode).toBe(0);
-    const parsed = JSON.parse(result.lines.join("\n")) as { level: string; applied: boolean };
-    expect(parsed.level).toBe("C0");
+    const parsed = JSON.parse(result.lines.join("\n")) as { level: string; applied: boolean; candidateId: string | null };
+    // The repository's champion-state.json is the source of truth; this asserts
+    // the CLI reports whatever the active level is (C0 frozen baseline, or a
+    // promoted C1/C2 with its candidate id).
+    expect(["C0", "C1", "C2"]).toContain(parsed.level);
     expect(parsed.applied).toBe(true);
+    if (parsed.level !== "C0") {
+      expect(parsed.candidateId).toBeTruthy();
+    }
   });
 
   it("champion promote fails closed without an explicit ACCEPT decision (E1-14)", async () => {

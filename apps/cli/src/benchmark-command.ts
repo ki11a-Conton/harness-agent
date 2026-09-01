@@ -229,7 +229,7 @@ async function executeBenchmark(
       maxTokens: defaultBudgetTokens,
       dynamic: opts.candidate === "adaptive_context_policy" ? 4096 : 0,
     },
-    recovery: { adaptive: opts.candidate === "adaptive_recovery" },
+    recovery: { adaptive: opts.candidate === "adaptive_recovery" || opts.candidate === "adaptive_recovery_v2" },
     mechanisms: {
       memory: opts.candidate === "memory_retrieval",
       subagent: false,
@@ -546,7 +546,7 @@ async function runOneCase(
           activationEvents.push({ type: "tool_lookup_called", payload });
         }
         // Track recovery decisions for adaptive_recovery activation.
-        if (candidateId === "adaptive_recovery" && event.type === "recovery.decided") {
+        if ((candidateId === "adaptive_recovery" || candidateId === "adaptive_recovery_v2") && event.type === "recovery.decided") {
           activationEvents.push({ type: "recovery_decision", payload });
         }
         // Track memory retrieval for memory_retrieval activation.
@@ -741,8 +741,14 @@ async function runOneCase(
       agents: [agent, ...(requiresSubagent ? [subagentAgent] : [])],
       // P38-EVOLUTION: challenger mechanism — adaptive recovery planner when
       // the candidate is enabled; champion baseline leaves it undefined.
+      // E1-next: adaptive_recovery_v2 wires the SAME P19-3 planner but with
+      // tighter per-turn budgets (retry_safe/change_strategy → 1) so recovery
+      // converges to fail_safe faster, avoiding v1's agent_limit regression.
       ...(opts.candidate === "adaptive_recovery"
         ? { adaptiveRecovery: new AdaptiveRecoveryPlanner() }
+        : {}),
+      ...(opts.candidate === "adaptive_recovery_v2"
+        ? { adaptiveRecovery: new AdaptiveRecoveryPlanner({ retry_safe: { budget: 1 }, change_strategy: { budget: 1 } }) }
         : {}),
       // E1-05: the tool_selector_deferred_schema candidate must ACTUALLY
       // defer schemas, not just register tool_lookup. A real schemaAdvertPolicy
@@ -1043,7 +1049,7 @@ function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudgetTokens
     agentLimits: { maxToolCalls: 100, maxDurationMs: 600_000 },
     recovery: {
       // P38-EVOLUTION: the adaptive_recovery candidate wires the planner.
-      adaptive: candidate === "adaptive_recovery",
+      adaptive: candidate === "adaptive_recovery" || candidate === "adaptive_recovery_v2",
     },
     context: {
       maxTokens: defaultBudgetTokens,

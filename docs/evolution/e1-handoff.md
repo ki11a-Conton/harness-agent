@@ -56,29 +56,30 @@
 | tool_selector_deferred_schema | ACCEPTED | +1 pass (9→10/30) | INCOMPARABLE (legacy) | has contract | Accepted pre-E1, re-audit finds incomparable |
 | memory_retrieval | **INVALID** (fail-closed) | 10/32 → 12/32 (+2) | **INCOMPARABLE (not_activated)** | activated 2/2 eligible | Real-model 2026-09-01: +2 wins, -169K tokens, but eligible=2 < minEligibleCases=3 → E1-08 INVALID (exit 3), Champion stays C0 |
 | adaptive_recovery | REJECTED | -1 pass | INCOMPARABLE (legacy) | has contract | Rework hypothesis needed |
+| **adaptive_recovery_v2** | **ACCEPTED → CHAMPION C1** | 10/32 → 11/32 (+1) | **COMPARABLE** ✅ | activated 32/32 | Real-model 2026-09-01: conservative planner (retry_safe/change_strategy budget 1), +44K tokens, E1-08 ACCEPT (exit 0) → promoted C0→C1 |
 | adaptive_context_policy | REJECTED | 0 delta +1.48M tokens | INCOMPARABLE (legacy) | not_observable | Config-level, never proven |
 | budget_aware_completion_v1 | **REJECTED** | 10/32 vs 10/32 (32-case arm) | **COMPARABLE** ✅ | activated 32/32 | Real-model 2026-08-31: netDelta 0, +968K tokens, 2 infra failures → E1-08 REJECT (exit 2) |
-| delegation | (not benchmarked) | — | — | no contract | Experimental, wired but unevaluated |
+| delegation | **INVALID** (fail-closed) | 10/32 → 9/32 (-1) | **INCOMPARABLE (not_activated)** | no contract | Real-model 2026-09-01: net -1, +686K tokens, no activation contract wired → E1-08 INVALID (exit 3) |
 
 ## 4. Failure Clusters (baseline 30-case holdout)
 
 | Cluster | Count | Targeted by |
 |---------|-------|-------------|
-| `agent_limit` | 9/30 | `budget_aware_completion_v1` — **TESTED 2026-08-31: REJECT** (10/32 vs 10/32, netDelta 0, +968K tokens) |
+| `agent_limit` | 9/30 | `budget_aware_completion_v1` — **TESTED 2026-08-31: REJECT** (10/32 vs 10/32, netDelta 0, +968K tokens); `adaptive_recovery_v2` — **ACCEPTED 2026-09-01: CHAMPION C1** (11/32 vs 10/32, netDelta +1, +44K tokens) |
 | `verification_failed` | 7/30 | No winning challenger yet |
 | `model_error` | 5/30 | adaptive_recovery (REJECTED) |
 
 Next round priorities (all BLOCKED on `RUN_PAID_BENCHMARKS=1`):
 1. ~~`budget_aware_completion_v1` → agent_limit~~ **TESTED 2026-08-31: REJECT** (see §3) — rework step-budget hypothesis or deprioritize
 2. ~~`memory_retrieval` → fresh run with E1-04 evidence~~ **TESTED 2026-09-01: INVALID** (eligible=2 < 3, not_activated) — add more seeded-memory cases or deprioritize
-3. `adaptive_recovery` → reworked hypothesis
-4. `delegation` → first benchmark
+3. ~~`adaptive_recovery` → reworked hypothesis~~ **TESTED 2026-09-01: adaptive_recovery_v2 ACCEPT → CHAMPION C1** — conservative planner promoted
+4. ~~`delegation` → first benchmark~~ **TESTED 2026-09-01: INVALID** (no activation contract, net -1) — wire a contract or deprioritize
 
 ## 5. Evidence Migration
 
 | Artifact | Path | Status |
 |----------|------|--------|
-| Champion state | `docs/evolution/champion-state.json` | C0, frozen baseline |
+| Champion state | `docs/evolution/champion-state.json` | **C1 — adaptive_recovery_v2 (promoted 2026-09-01)** |
 | Decision ledger | `docs/evolution/e1-decision-ledger.json` | 4 entries with E1-12 audit block |
 | Baseline facts | `docs/evolution/e1-baseline.md` | 152 lines, 6 repros, known risks |
 | Failure cluster backlog | `docs/evolution/e1-failure-cluster-backlog.json` | Derived from on-disk artifacts |
@@ -86,6 +87,10 @@ Next round priorities (all BLOCKED on `RUN_PAID_BENCHMARKS=1`):
 | **E1-next run artifacts** | `benchmarks/results/2026-08-31-deepseek-v4-flash-budget-aware/` | baseline + candidate holdout + paired report (untouched 84-case preserved) |
 | **E1-next memory evidence** | `docs/evolution/e1-next-evidence-memory.json` | memory_retrieval real-model, 2026-09-01, INVALID (not_activated) |
 | **E1-next memory artifacts** | `benchmarks/results/2026-09-01-deepseek-v4-flash-memory-retrieval/` | candidate holdout + paired report (baseline reused from 08-31) |
+| **E1-next delegation evidence** | `docs/evolution/e1-next-evidence-delegation.json` | delegation real-model, 2026-09-01, INVALID (no contract) |
+| **E1-next delegation artifacts** | `benchmarks/results/2026-09-01-deepseek-v4-flash-delegation/` | candidate holdout + paired report |
+| **E1-next ar2 evidence** | `docs/evolution/e1-next-evidence-ar2.json` | adaptive_recovery_v2 real-model, 2026-09-01, ACCEPT → C1 |
+| **E1-next ar2 artifacts** | `benchmarks/results/2026-09-01-deepseek-v4-flash-ar2/` | candidate holdout + paired report (promotion evidence) |
 | Historical results | `benchmarks/results/2026-08-27-*` | Untouched, owned by commit 84c7163 |
 | Historical results | `benchmarks/results/2026-08-26-*` | Pre-existing, also untouched |
 

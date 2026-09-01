@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "1.0.0",
+  "evalId": "E1-NEXT-004",
+  "candidateId": "adaptive_recovery_v2",
+  "generatedAt": "2026-09-01T06:58:38.894Z",
+  "mode": "real-model",
+  "model": "deepseek-v4-flash",
+  "baseUrl": "https://api.b.ai/v1",
+  "suite": "holdout",
+  "cases": 32,
+  "decision": "ACCEPT",
+  "exitCode": 0,
+  "decisionReason": [
+    "all quality gates pass",
+    "activation contract satisfied",
+    "netDelta +1 with only +44K tokens"
+  ],
+  "comparability": {
+    "sameCaseSet": true,
+    "evaluationContextMatch": true,
+    "candidateConfigDiffers": true,
+    "activationContractSatisfied": true,
+    "strict": true
+  },
+  "qualityGates": {
+    "passed": true,
+    "details": "+1 win / 0 loss / 10 ties; tokens +44K; no new infra failures; security non-regression"
+  },
+  "results": {
+    "baselinePass": 10,
+    "candidatePass": 11,
+    "netDelta": 1,
+    "wins": 1,
+    "losses": 0,
+    "ties": 10,
+    "bothFail": 21
+  },
+  "tokens": {
+    "baselineInputK": 4272,
+    "candidateInputK": 4306,
+    "deltaK": 34
+  },
+  "durationMs": {
+    "baseline": 6216861,
+    "candidate": 6530343
+  },
+  "activationEvidence": {
+    "eligibleCases": 32,
+    "activatedCases": 32,
+    "coverage": 1.0,
+    "contractMinEligibleCases": 3,
+    "contractMet": true
+  },
+  "termination": {
+    "baseline": {
+      "agent_limit": 14,
+      "model_error": 4,
+      "tool_limit": 1,
+      "verification_failed": 3
+    },
+    "candidate": {
+      "agent_limit": 19,
+      "verification_failed": 1,
+      "model_error": 1
+    }
+  },
+  "artifacts": {
+    "baseline": "benchmarks/results/2026-08-31-deepseek-v4-flash-budget-aware/baseline-holdout.json",
+    "candidate": "benchmarks/results/2026-09-01-deepseek-v4-flash-ar2/candidate-holdout.json",
+    "report": "benchmarks/results/2026-09-01-deepseek-v4-flash-ar2/paired-report.txt"
+  },
+  "championAfter": "C1 (promoted — adaptive_recovery_v2)"
+}

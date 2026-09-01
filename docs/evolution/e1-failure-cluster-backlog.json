@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1.0.0",
   "generatedAt": "2026-08-28T11:05:50.844Z",
-  "source": "historical 2026-08-27 holdout (30 cases per arm, real-model deepseek-v4-flash)",
-  "evidenceRule": "derived from on-disk artifacts; paid reruns blocked without RUN_PAID_BENCHMARKS=1",
+  "source": "historical 2026-08-27 holdout (30 cases per arm, real-model deepseek-v4-flash); E1-next runs (2026-08-31/2026-09-01) used 32-case holdout (ho-31/ho-32 added by E1-05)",
+  "evidenceRule": "derived from on-disk artifacts; paid reruns blocked without RUN_PAID_BENCHMARKS=1. E1-next runs completed (2026-08-31/2026-09-01): budget_aware_completion_v1 REJECTED, memory_retrieval INVALID, delegation INVALID, adaptive_recovery_v2 ACCEPTED and promoted to C1.",
   "baseline": {
     "total": 30,
     "passed": 9,
@@ -296,14 +296,26 @@
       "candidate": "adaptive_recovery",
       "cluster": "model_error/verification_failed",
       "rationale": "REJECTED (-1 pass on holdout); backlog candidate for a reworked planner hypothesis — do not rerun as-is.",
-      "blockedBy": "needs new hypothesis, then RUN_PAID_BENCHMARKS=1"
+      "blockedBy": "needs new hypothesis, then RUN_PAID_BENCHMARKS=1",
+      "outcome": {
+        "testedAt": "2026-09-01",
+        "result": "REWORKED as adaptive_recovery_v2 (conservative planner, retry_safe/change_strategy budget 1) — ACCEPT (E1-08 exit 0), promoted C0→C1",
+        "evidenceRef": "docs/evolution/e1-next-evidence-ar2.json",
+        "nextStep": "adaptive_recovery_v2 is now Champion C1"
+      }
     },
     {
       "rank": 4,
       "candidate": "delegation",
-      "cluster": "(not yet benchmarked)",
+      "cluster": "(first benchmark)",
       "rationale": "registry candidate with real wiring path; no historical evidence.",
-      "blockedBy": "RUN_PAID_BENCHMARKS=1"
+      "blockedBy": "RUN_PAID_BENCHMARKS=1",
+      "outcome": {
+        "testedAt": "2026-09-01",
+        "result": "INVALID (E1-08 exit 3) — 10/32 baseline → 9/32 candidate (net -1, +686K tokens); no activation contract wired → candidate_not_activated fail-closed",
+        "evidenceRef": "docs/evolution/e1-next-evidence-delegation.json",
+        "nextStep": "wire an activation contract for delegation (eligible + observable events) or deprioritize"
+      }
     }
   ]
 }

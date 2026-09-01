@@ -161,6 +161,18 @@ const CANDIDATES: CandidateRegistration[] = [
     enabledPatch: { completionPolicy: "budget_aware" },
     disabledPatch: { completionPolicy: undefined },
   },
+  {
+    id: "adaptive_recovery_v2",
+    description: "conservative recovery planner — tighter retry budgets so recovery converges to fail_safe faster, avoiding the agent_limit regression of adaptive_recovery v1 (E1-next)",
+    status: "experimental",
+    layer: "agent-strategy",
+    // Same mechanism as adaptive_recovery (P19-3 planner) but with tighter
+    // per-turn budgets: the benchmark runner wires the planner with
+    // retry_safe/change_strategy budget=1 (v1 used 3/2). The config field
+    // marks the semantic switch; the digest differs from both baseline and v1.
+    enabledPatch: { adaptiveRecovery: "conservative-v1" },
+    disabledPatch: { adaptiveRecovery: undefined },
+  },
 ];
 
 // ---------------------------------------------------------------------------

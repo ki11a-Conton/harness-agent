@@ -156,6 +156,12 @@ export const DEFAULT_ACTIVATION_CONTRACTS: ActivationContract[] = [
     minEligibleCases: 3,
   },
   {
+    candidateId: "adaptive_recovery_v2",
+    schemaVersion: ACTIVATION_EVIDENCE_SCHEMA_VERSION,
+    minActivatedCoverage: 0.5,
+    minEligibleCases: 3,
+  },
+  {
     candidateId: "adaptive_context_policy",
     schemaVersion: ACTIVATION_EVIDENCE_SCHEMA_VERSION,
     minActivatedCoverage: 0.5,
@@ -263,6 +269,21 @@ export function activationEvidenceFor(
         reasonCodes: decisions.length > 0 ? ["recovery_decision"] : ["activation_zero"],
         baselineMechanismDigest: "fixed-recovery",
         candidateMechanismDigest: "adaptive-recovery-planner",
+        summary: { recoveryDecisions: decisions.length },
+      };
+    }
+    case "adaptive_recovery_v2": {
+      const decisions = activationEvents.filter((e) => e.type === "recovery_decision");
+      return {
+        schemaVersion: ACTIVATION_EVIDENCE_SCHEMA_VERSION,
+        candidateId,
+        caseId: caseDef.id,
+        eligible: true,
+        activated: decisions.length > 0,
+        activationCount: decisions.length,
+        reasonCodes: decisions.length > 0 ? ["recovery_decision"] : ["activation_zero"],
+        baselineMechanismDigest: "fixed-recovery",
+        candidateMechanismDigest: "adaptive-recovery-planner-v2-conservative",
         summary: { recoveryDecisions: decisions.length },
       };
     }

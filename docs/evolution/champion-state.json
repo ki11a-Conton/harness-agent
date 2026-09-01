@@ -1,10 +1,37 @@
 {
   "schemaVersion": "1.0.0",
-  "level": "C0",
-  "candidateId": null,
-  "configPatch": {},
-  "evidenceRef": null,
-  "history": [],
-  "applied": true,
-  "description": "Frozen production baseline — no candidate has passed strict E1-14 promotion gate. Only strict ACCEPT from champion eval (E1-08) can promote to C1."
+  "level": "C1",
+  "candidateId": "adaptive_recovery_v2",
+  "configPatch": {
+    "features": {
+      "context": false,
+      "memory": false,
+      "learning": false,
+      "delegation": false,
+      "mcp": false,
+      "plugins": false
+    },
+    "adaptiveRecovery": "conservative-v1"
+  },
+  "evidenceRef": "benchmarks/results/2026-09-01-deepseek-v4-flash-ar2/paired-report.txt",
+  "history": [
+    {
+      "promotedAt": "2026-09-01T06:59:37.534Z",
+      "candidateId": "adaptive_recovery_v2",
+      "evidenceRef": "benchmarks/results/2026-09-01-deepseek-v4-flash-ar2/paired-report.txt",
+      "semanticDigest": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "configPatch": {
+        "features": {
+          "context": false,
+          "memory": false,
+          "learning": false,
+          "delegation": false,
+          "mcp": false,
+          "plugins": false
+        },
+        "adaptiveRecovery": "conservative-v1"
+      }
+    }
+  ],
+  "applied": true
 }

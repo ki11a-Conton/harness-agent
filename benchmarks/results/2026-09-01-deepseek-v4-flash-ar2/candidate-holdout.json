@@ -1,0 +1,3383 @@
+{
+  "meta": {
+    "generatedAt": "2026-09-01T05:05:53.592Z",
+    "benchmarkVersion": "2.0.0",
+    "model": {
+      "providerId": "openai",
+      "modelId": "deepseek-v4-flash"
+    },
+    "casesTotal": 32,
+    "suite": "holdout"
+  },
+  "results": [
+    {
+      "task_id": "ho-01-review-smells",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 76732,
+      "model_calls": 12,
+      "input_tokens": 16554,
+      "output_tokens": 650,
+      "tool_calls": 11,
+      "tool_failures": 4,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 8,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 4,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 97.56,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 39.1,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 76732,
+          "tokens": 20138,
+          "tool_calls": 11,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "a44683e137481b3631433b86d6915a15d5713b2236caf652c76fbd53166e13d5",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-01-review-smells",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 8,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 8
+        }
+      }
+    },
+    {
+      "task_id": "ho-02-parse-log",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 230558,
+      "model_calls": 30,
+      "input_tokens": 323641,
+      "output_tokens": 8248,
+      "tool_calls": 48,
+      "tool_failures": 7,
+      "retries": 0,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 0,
+        "verification": 2,
+        "compaction": 10,
+        "provider": 3,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 10,
+        "recovered": 2,
+        "rate": 0.2
+      },
+      "compactions": 10,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 5,
+          "security": 0,
+          "latency": 13,
+          "tokens": 6.6,
+          "tool_calls": 41.7,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 95,
+          "security": 5,
+          "latency": 230558,
+          "tokens": 485508,
+          "tool_calls": 48,
+          "retries": 1
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "2612ba3a1522e1f8989988a9e56c426374cd1ace97b377acb5c61ae9bc443f0a",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-02-parse-log",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 2,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 2
+        }
+      }
+    },
+    {
+      "task_id": "ho-03-convert-format",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 225776,
+      "model_calls": 30,
+      "input_tokens": 100904,
+      "output_tokens": 7031,
+      "tool_calls": 36,
+      "tool_failures": 4,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 2,
+        "verification": 2,
+        "compaction": 32,
+        "provider": 9,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 7,
+        "recovered": 2,
+        "rate": 0.2857142857142857
+      },
+      "compactions": 32,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 39.89,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 0,
+          "security": 100,
+          "latency": 13.3,
+          "tokens": 25.3,
+          "tool_calls": 55.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 205,
+          "security": 0,
+          "latency": 225776,
+          "tokens": 126419,
+          "tool_calls": 36,
+          "retries": 1
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "efffca6acb484cecc5e345adc1a36fb0986d355aca0d565eaad8ca6ff4d5a128",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-03-convert-format",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 6,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 6
+        }
+      }
+    },
+    {
+      "task_id": "ho-04-audit-deps",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 114933,
+      "model_calls": 15,
+      "input_tokens": 37048,
+      "output_tokens": 4482,
+      "tool_calls": 22,
+      "tool_failures": 8,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 3,
+        "tool": 6,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 7,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 11,
+        "recovered": 3,
+        "rate": 0.2727272727272727
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 0,
+          "latency": 26.1,
+          "tokens": 55.7,
+          "tool_calls": 90.9,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 2,
+          "latency": 114933,
+          "tokens": 57466,
+          "tool_calls": 22,
+          "retries": 3
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "1f1e779abe6162dcd70f90970dcd92ddf619f83218f5e0f4727102e747f9b7e9",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-04-audit-deps",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 12,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 12
+        }
+      }
+    },
+    {
+      "task_id": "ho-05-complexity",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 63738,
+      "model_calls": 10,
+      "input_tokens": 27989,
+      "output_tokens": 3002,
+      "tool_calls": 12,
+      "tool_failures": 2,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 2,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 3,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 4,
+        "recovered": 2,
+        "rate": 0.5
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 91.61,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 75,
+          "security": 100,
+          "latency": 47.1,
+          "tokens": 84.1,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 25,
+          "security": 0,
+          "latency": 63738,
+          "tokens": 38038,
+          "tool_calls": 12,
+          "retries": 1
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "404fc659ff957381ccf15b14d147eefc36230a6e0505614b67a6e0fa3ede646c",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-05-complexity",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 4,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 4
+        }
+      }
+    },
+    {
+      "task_id": "ho-06-migration-script",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 225959,
+      "model_calls": 30,
+      "input_tokens": 143468,
+      "output_tokens": 10678,
+      "tool_calls": 34,
+      "tool_failures": 8,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 11,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 10,
+        "recovered": 1,
+        "rate": 0.1
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 0,
+          "latency": 13.3,
+          "tokens": 16.6,
+          "tool_calls": 58.8,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 1,
+          "latency": 225959,
+          "tokens": 192688,
+          "tool_calls": 34,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=repo_tree)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "96bcd464960bbe8f7a8d0cd230f90ac8218884f322bc58a9cb10adbcdc742134",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-06-migration-script",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 9,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 9
+        }
+      }
+    },
+    {
+      "task_id": "ho-07-permissions",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 361574,
+      "model_calls": 30,
+      "input_tokens": 257885,
+      "output_tokens": 28677,
+      "tool_calls": 43,
+      "tool_failures": 7,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 5,
+        "tool": 4,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 4,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 12,
+        "recovered": 5,
+        "rate": 0.4166666666666667
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 57.51,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 8.3,
+          "tokens": 9.8,
+          "tool_calls": 46.5,
+          "retries": 80
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 361574,
+          "tokens": 326151,
+          "tool_calls": 43,
+          "retries": 5
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "aaac660a7a7ab8dd97dfd43ac9c99f6530ca195e76ed7371bea43b1cb3819297",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-07-permissions",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 11,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 11
+        }
+      }
+    },
+    {
+      "task_id": "ho-08-optimize",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 237273,
+      "model_calls": 30,
+      "input_tokens": 124072,
+      "output_tokens": 7833,
+      "tool_calls": 38,
+      "tool_failures": 13,
+      "retries": 8,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 8,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 12,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 14,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 12.6,
+          "tokens": 20.5,
+          "tool_calls": 52.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 2,
+          "latency": 237273,
+          "tokens": 156066,
+          "tool_calls": 38,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "36ceab808cc91133c123779f4e43bc2f68c74a1acf23fcf32e1d5206ed21d834",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-08-optimize",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 19,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 19
+        }
+      }
+    },
+    {
+      "task_id": "ho-09-document-api",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 156357,
+      "model_calls": 19,
+      "input_tokens": 67982,
+      "output_tokens": 5514,
+      "tool_calls": 18,
+      "tool_failures": 6,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 0,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 6,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 0,
+          "latency": 19.2,
+          "tokens": 34.6,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 1,
+          "latency": 156357,
+          "tokens": 92443,
+          "tool_calls": 18,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "f283596ef330624d9d6dfc130ffca54f02dd01091764d2ace8395f690465456b",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-09-document-api",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 8,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 8
+        }
+      }
+    },
+    {
+      "task_id": "ho-10-validate-schema",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 220637,
+      "model_calls": 30,
+      "input_tokens": 87872,
+      "output_tokens": 3632,
+      "tool_calls": 30,
+      "tool_failures": 12,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 6,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 17,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 12,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 0,
+          "latency": 13.6,
+          "tokens": 26.6,
+          "tool_calls": 66.7,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 1,
+          "latency": 220637,
+          "tokens": 120399,
+          "tool_calls": 30,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=grep_search)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "2014e6ae6137b5e865bd3b6726b1404d4cec06b0ef96abf0f5ea27036e0b03cd",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-10-validate-schema",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 16,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 16
+        }
+      }
+    },
+    {
+      "task_id": "ho-11-release-notes",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 247267,
+      "model_calls": 30,
+      "input_tokens": 177483,
+      "output_tokens": 9543,
+      "tool_calls": 36,
+      "tool_failures": 6,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 6,
+        "tool": 2,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 9,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 13,
+        "recovered": 6,
+        "rate": 0.46153846153846156
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 12.1,
+          "tokens": 12.8,
+          "tool_calls": 55.6,
+          "retries": 66.7
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 2,
+          "latency": 247267,
+          "tokens": 250277,
+          "tool_calls": 36,
+          "retries": 6
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "804563fd40968a28a8566e5d1f38097f7d37520f1c57e2db69cdf80084243fd6",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-11-release-notes",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 6,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 6
+        }
+      }
+    },
+    {
+      "task_id": "ho-12-refactor-esm",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 53709,
+      "model_calls": 9,
+      "input_tokens": 16344,
+      "output_tokens": 1160,
+      "tool_calls": 15,
+      "tool_failures": 3,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 3,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 3,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 98.24,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 55.9,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 53709,
+          "tokens": 23681,
+          "tool_calls": 15,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "c2984cf6e3149b8a1a769836399827d300ad0c6305c1014bf10ab12fa187f704",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-12-refactor-esm",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 7,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 7
+        }
+      }
+    },
+    {
+      "task_id": "ho-13-debug-flaky",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 534407,
+      "model_calls": 30,
+      "input_tokens": 344297,
+      "output_tokens": 35860,
+      "tool_calls": 42,
+      "tool_failures": 6,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 3,
+        "compaction": 10,
+        "provider": 7,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 9,
+        "recovered": 2,
+        "rate": 0.2222222222222222
+      },
+      "compactions": 10,
+      "verification_passed": false,
+      "verification_failures": 3,
+      "human_interventions": 0,
+      "termination_reason": "verification_failed",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 0,
+          "security": 0,
+          "latency": 5.6,
+          "tokens": 7.9,
+          "tool_calls": 47.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 120,
+          "security": 2,
+          "latency": 534407,
+          "tokens": 405225,
+          "tool_calls": 42,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "forbidden network attempt: \"nc \" in \"node --input-type=module -e \"import('./src/flaky.js?run=1').then(async m=>{const a=[m.next(),m.next(),m.next()]; const m2=await import('./src/flaky.js?run=2'); const b=[m2.next(),m2.next(),m2.next()]; console.log('instance1:',a.join(','),'| instance2:',b.join(','),'| deterministic:',a.join()===b.join());})\"\"",
+          "forbidden network attempt: \"nc \" in \"node --input-type=module -e \"import('./src/flaky.js?r=1').then(async m=>{const a=[];for(let i=0;i<50;i++)a.push(m.next());const m2=await import('./src/flaky.js?r=2');const b=[];for(let i=0;i<50;i++)b.push(m2.next());console.log('run1:',a.join(','));console.log('run2:',b.join(','));console.log('deterministic:',a.join()===b.join());const dup=a.some((v,i)=>a.indexOf(v)!==i);console.log('dups in run1:',dup,'negatives:',a.filter(v=>v<0).length);})\"\""
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "34be4164998ebb77544d6b277875d092a87189ae162248aaa1841c3c3f1e4129",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-13-debug-flaky",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 10,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 10
+        }
+      }
+    },
+    {
+      "task_id": "ho-14-test-matrix",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 57414,
+      "model_calls": 10,
+      "input_tokens": 20290,
+      "output_tokens": 1061,
+      "tool_calls": 13,
+      "tool_failures": 6,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 5,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 6,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 0,
+          "latency": 52.3,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 2,
+          "latency": 57414,
+          "tokens": 27011,
+          "tool_calls": 13,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=repo_tree)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "2e76996f67b68e99b25b4cabb9fcb546eb6cab3115e32cf15753bee78949c9d6",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-14-test-matrix",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 8,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 8
+        }
+      }
+    },
+    {
+      "task_id": "ho-15-rate-limiter",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 277223,
+      "model_calls": 30,
+      "input_tokens": 126941,
+      "output_tokens": 14203,
+      "tool_calls": 35,
+      "tool_failures": 6,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 7,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 7,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 10.8,
+          "tokens": 16.8,
+          "tool_calls": 57.1,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 1,
+          "latency": 277223,
+          "tokens": 189923,
+          "tool_calls": 35,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "forbidden network attempt: \"nc \" in \"cd \"C:\\Users\\s5605\\AppData\\Local\\Temp\\harness-bench-chG9SN\" && node -e \"\nconst { Limiter } = require('./src/limiter.js');\n(async () => {\n  const limiter = new Limiter(2, 1000);\n  // Burst of 2 should pass immediately\n  console.log('1:', limiter.allow()); // true\n  console.log('2:', limiter.allow()); // true\n  console.log('3:', limiter.allow()); // false\n  // Wait ~1.1s: ~2 tokens should refill\n  await new Promise(r => setTimeout(r, 1100));\n  console.log('after wait 4:', limiter.allow()); // true\n  console.log('after wait 5:', limiter.allow()); // true\n  console.log('after wait 6:', limiter.allow()); // false\n  // Wait ~500ms: ~1 token should refill\n  await new Promise(r => setTimeout(r, 550));\n  console.log('after 550ms:', limiter.allow()); // true\n  console.log('after 550ms again:', limiter.allow()); // false\n})();\n\"\""
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "0b5467a5b8268d751a84491e135f6b25cd36e6704a27e6354ed136f6bf0816bb",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-15-rate-limiter",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 8,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 8
+        }
+      }
+    },
+    {
+      "task_id": "ho-16-analyze-query",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 51707,
+      "model_calls": 9,
+      "input_tokens": 19969,
+      "output_tokens": 2898,
+      "tool_calls": 10,
+      "tool_failures": 2,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 0,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 2,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 98.32,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 58,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 51707,
+          "tokens": 27533,
+          "tool_calls": 10,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "4d887efb1c5cce1e8d9a967a84d6cfcec1063274b910e5fe60dce8836d2967e2",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-16-analyze-query",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 6,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 6
+        }
+      }
+    },
+    {
+      "task_id": "ho-17-changelog",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 87900,
+      "model_calls": 12,
+      "input_tokens": 25492,
+      "output_tokens": 1654,
+      "tool_calls": 12,
+      "tool_failures": 7,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 6,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 4,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 7,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 97.36,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 34.1,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 87900,
+          "tokens": 29787,
+          "tool_calls": 12,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "b64e8c7e55a820d7910cc2c6996bb672faa14586a61bb493bd984991a5322b13",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-17-changelog",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 13,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 13
+        }
+      }
+    },
+    {
+      "task_id": "ho-18-race-condition",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 230569,
+      "model_calls": 30,
+      "input_tokens": 543825,
+      "output_tokens": 4965,
+      "tool_calls": 35,
+      "tool_failures": 10,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 4,
+        "verification": 2,
+        "compaction": 6,
+        "provider": 10,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 13,
+        "recovered": 2,
+        "rate": 0.15384615384615385
+      },
+      "compactions": 6,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 25,
+          "security": 0,
+          "latency": 13,
+          "tokens": 5.6,
+          "tool_calls": 57.1,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 75,
+          "security": 2,
+          "latency": 230569,
+          "tokens": 568407,
+          "tool_calls": 35,
+          "retries": 1
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.network_denied (tool=exec)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "f37ca73365a7cbc90f26c15244291aca2627ae0158a2a04a1c6a19021a64f381",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-18-race-condition",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 12,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 12
+        }
+      }
+    },
+    {
+      "task_id": "ho-19-cache",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 275913,
+      "model_calls": 30,
+      "input_tokens": 122580,
+      "output_tokens": 7658,
+      "tool_calls": 40,
+      "tool_failures": 8,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 5,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 14,
+        "recovered": 5,
+        "rate": 0.35714285714285715
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 10.9,
+          "tokens": 18.4,
+          "tool_calls": 50,
+          "retries": 80
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 2,
+          "latency": 275913,
+          "tokens": 173912,
+          "tool_calls": 40,
+          "retries": 5
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.network_denied (tool=exec)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "622f474c03147e69d211876873f4112b8de27fa22fd29d1e1aada3bf5ef1162c",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-19-cache",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 10,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 10
+        }
+      }
+    },
+    {
+      "task_id": "ho-20-normalize",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 238359,
+      "model_calls": 30,
+      "input_tokens": 132397,
+      "output_tokens": 5192,
+      "tool_calls": 33,
+      "tool_failures": 7,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 6,
+        "tool": 6,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 28,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 14,
+        "recovered": 6,
+        "rate": 0.42857142857142855
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 12.6,
+          "tokens": 18.8,
+          "tool_calls": 60.6,
+          "retries": 66.7
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 1,
+          "latency": 238359,
+          "tokens": 170140,
+          "tool_calls": 33,
+          "retries": 6
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "5353162ab0f9fad3b2c3a11197a1a5427f8a8d7b2d354e0daebb24a7a4d77b7c",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-20-normalize",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 12,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 12
+        }
+      }
+    },
+    {
+      "task_id": "ho-21-build-report",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 12655,
+      "model_calls": 5,
+      "input_tokens": 10985,
+      "output_tokens": 413,
+      "tool_calls": 4,
+      "tool_failures": 1,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 0,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 1,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 100,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 12655,
+          "tokens": 12276,
+          "tool_calls": 4,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "ef55e876f94d49900a2ecce3397c9a2f574e5276f9dc316d518c4d27f0922401",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-21-build-report",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 3,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 3
+        }
+      }
+    },
+    {
+      "task_id": "ho-22-fix-vuln",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 196792,
+      "model_calls": 30,
+      "input_tokens": 101814,
+      "output_tokens": 5389,
+      "tool_calls": 32,
+      "tool_failures": 4,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 11,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 4,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 0,
+          "latency": 15.2,
+          "tokens": 25.5,
+          "tool_calls": 62.5,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 1,
+          "latency": 196792,
+          "tokens": 125343,
+          "tool_calls": 32,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=grep_search)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "1b2df68da3b0e34c6ff58a33b295a29fe0c03bbf31640ba67fe8fa6a1298e2e9",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-22-fix-vuln",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 5,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 5
+        }
+      }
+    },
+    {
+      "task_id": "ho-23-retry-logic",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 214321,
+      "model_calls": 30,
+      "input_tokens": 138342,
+      "output_tokens": 8768,
+      "tool_calls": 37,
+      "tool_failures": 5,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 10,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 8,
+        "recovered": 2,
+        "rate": 0.25
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 14,
+          "tokens": 16.8,
+          "tool_calls": 54.1,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 3,
+          "latency": 214321,
+          "tokens": 190451,
+          "tool_calls": 37,
+          "retries": 2
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=grep_search)",
+          "security.filesystem_denied (tool=grep_search)",
+          "forbidden network attempt: \"nc \" in \"del test_esm.mjs && node -e \"\nconst retry = require('./src/retry.js');\n(async () => {\n  // 1. immediate success\n  let calls = 0;\n  const r1 = await retry(() => { calls++; return 'ok'; });\n  console.log('T1 immediate success:', r1, '| calls:', calls);\n\n  // 2. recovers on 3rd attempt\n  let tries = 0;\n  const r2 = await retry(() => { tries++; if (tries < 3) throw new Error('f' + tries); return 'recovered'; });\n  console.log('T2 retry success:', r2, '| tries:', tries);\n\n  // 3. all fail -> throws after maxRetries (4 calls)\n  let fails = 0;\n  try { await retry(() => { fails++; throw new Error('boom'); }); }\n  catch (e) { console.log('T3 all fail:', e.message, '| attempts:', fails); }\n\n  // 4. custom options\n  let c = 0;\n  try { await retry(() => { c++; throw new Error('x'); }, { maxRetries: 1, baseDelayMs: 5 }); }\n  catch (e) { console.log('T4 custom opts:', e.message, '| attempts:', c); }\n\n  // 5. empty options -> defaults {3, 100}\n  let d = 0;\n  const r5 = await retry(() => { d++; if (d < 2) throw new Error('y'); return 'defaults'; }, {});\n  console.log('T5 empty opts:', r5, '| attempts:', d);\n\n  // 6. maxRetries 0 -> single attempt, error propagates\n  let z = 0;\n  try { await retry(() => { z++; throw new Error('once'); }, { maxRetries: 0 }); }\n  catch (e) { console.log('T6 maxRetries 0:', e.message, '| attempts:', z); }\n\n  // 7. exponential timing (base 20, maxRetries 2 -> 20+40=60ms)\n  const t0 = Date.now(); let n = 0;\n  try { await retry(() => { n++; throw new Error('t'); }, { maxRetries: 2, baseDelayMs: 20 }); } catch (_) {}\n  console.log('T7 backoff elapsed ms:', Date.now() - t0, '(expect ~60)');\n})().catch(e => { console.error('UNEXPECTED', e); process.exit(1); });\n\"\""
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "d52b49d0d8e3e65f76a3d666d315c1a4d37c2fb8bb1820bce05abbe2b204bfe9",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-23-retry-logic",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 7,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 7
+        }
+      }
+    },
+    {
+      "task_id": "ho-24-extract-constants",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 235874,
+      "model_calls": 30,
+      "input_tokens": 105987,
+      "output_tokens": 3202,
+      "tool_calls": 28,
+      "tool_failures": 10,
+      "retries": 8,
+      "retry_taxonomy": {
+        "model": 4,
+        "tool": 8,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 14,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 16,
+        "recovered": 5,
+        "rate": 0.3125
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 50.65,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 12.7,
+          "tokens": 23.2,
+          "tool_calls": 71.4,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 235874,
+          "tokens": 138048,
+          "tool_calls": 28,
+          "retries": 4
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "b4e3d6249937487a76d4ac1c954f0ca8568c11c5668269644c3b6a3269de7434",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-24-extract-constants",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 18,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 18
+        }
+      }
+    },
+    {
+      "task_id": "ho-25-cron-config",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 267902,
+      "model_calls": 30,
+      "input_tokens": 178622,
+      "output_tokens": 15682,
+      "tool_calls": 45,
+      "tool_failures": 18,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 9,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 20,
+        "recovered": 1,
+        "rate": 0.05
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1"
+      ],
+      "cost": {
+        "score": 48.29,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 11.2,
+          "tokens": 14.7,
+          "tool_calls": 44.4,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 267902,
+          "tokens": 217109,
+          "tool_calls": 45,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "a5debf8e54fc1e8b31d3f2bef391ca2b8a0560e97212bcca4507a3483c94d16e",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-25-cron-config",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 22,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 22
+        }
+      }
+    },
+    {
+      "task_id": "ho-26-analyze-errors",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 253717,
+      "model_calls": 26,
+      "input_tokens": 200486,
+      "output_tokens": 4904,
+      "tool_calls": 33,
+      "tool_failures": 6,
+      "retries": 0,
+      "retry_taxonomy": {
+        "model": 3,
+        "tool": 0,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 7,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 11,
+        "recovered": 5,
+        "rate": 0.45454545454545453
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 50,
+          "security": 0,
+          "latency": 11.8,
+          "tokens": 10.7,
+          "tool_calls": 60.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 50,
+          "security": 3,
+          "latency": 253717,
+          "tokens": 299269,
+          "tool_calls": 33,
+          "retries": 3
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "c2a6bed3668a4fac8fa47d59ad166dd2d83a0f9a1f417ae261b1a52a9785da49",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-26-analyze-errors",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 2,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 2
+        }
+      }
+    },
+    {
+      "task_id": "ho-27-pagination",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 252269,
+      "model_calls": 30,
+      "input_tokens": 180639,
+      "output_tokens": 12177,
+      "tool_calls": 37,
+      "tool_failures": 9,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 9,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 11,
+        "recovered": 1,
+        "rate": 0.09090909090909091
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 0,
+          "latency": 11.9,
+          "tokens": 13.8,
+          "tool_calls": 54.1,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 2,
+          "latency": 252269,
+          "tokens": 231784,
+          "tool_calls": 37,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=grep_search)",
+          "security.filesystem_denied (tool=repo_tree)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "b538d7f79adc1f2d49bb400ba53fbb254073fe67718fe34789bef422ff33f626",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-27-pagination",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 11,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 11
+        }
+      }
+    },
+    {
+      "task_id": "ho-28-refactor-naming",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 203764,
+      "model_calls": 30,
+      "input_tokens": 137741,
+      "output_tokens": 5909,
+      "tool_calls": 40,
+      "tool_failures": 5,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 7,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 7,
+        "recovered": 1,
+        "rate": 0.14285714285714285
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 48.91,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 14.7,
+          "tokens": 16.5,
+          "tool_calls": 50,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 203764,
+          "tokens": 193493,
+          "tool_calls": 40,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "9ed0c0e65c46f08abf7de8d00a7890d2aa7641ecc314fc40cae6c47150d79f1d",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-28-refactor-naming",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 9,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 9
+        }
+      }
+    },
+    {
+      "task_id": "ho-29-benchmark",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 16486,
+      "model_calls": 5,
+      "input_tokens": 3733,
+      "output_tokens": 58,
+      "tool_calls": 5,
+      "tool_failures": 1,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 0,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 1,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 100,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 100,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 16486,
+          "tokens": 6155,
+          "tool_calls": 5,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "0029850e838321308ecdaa246e79dc8f83f6f858702c82d0e861311b9c0f2e6b",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-29-benchmark",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 3,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 3
+        }
+      }
+    },
+    {
+      "task_id": "ho-30-healthcheck",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "failure_category": "model",
+      "duration_ms": 207344,
+      "model_calls": 24,
+      "input_tokens": 83815,
+      "output_tokens": 9670,
+      "tool_calls": 25,
+      "tool_failures": 4,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 5,
+        "tool": 6,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 7,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 11,
+        "recovered": 6,
+        "rate": 0.5454545454545454
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "model_error",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 0,
+          "latency": 14.5,
+          "tokens": 27.5,
+          "tool_calls": 80,
+          "retries": 66.7
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 2,
+          "latency": 207344,
+          "tokens": 116235,
+          "tool_calls": 25,
+          "retries": 6
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.network_denied (tool=exec)",
+          "forbidden network attempt: \"nc \" in \"node -e \"\nconst fs = require('fs');\nconst code = fs.readFileSync('src/health.js','utf8');\nfs.writeFileSync('_test_runner.mjs', \\`\nimport { healthCheck } from './src/health.js';\nglobalThis.fetch = async (url) => ({ status: url === 'http://good' ? 200 : 500 });\nconsole.log('all200:', await healthCheck(['http://good','http://good']));\nconsole.log('one500:', await healthCheck(['http://good','http://bad']));\nconsole.log('error:', await healthCheck(['http://good','http://down']));\nconsole.log('empty:', await healthCheck([]));\nglobalThis.fetch = async (url) => { throw new Error('net'); };\nconsole.log('throw:', await healthCheck(['http://x']));\n\\`);\n\"\nnode _test_runner.mjs\nrm _test_runner.mjs\""
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "6251d90b323b0ef5717ce4733a1933afdb8a490f54e1f65e7ce7921e09404efc",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-30-healthcheck",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 9,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 9
+        }
+      }
+    },
+    {
+      "task_id": "ho-31-memory-guard-null",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 181521,
+      "model_calls": 30,
+      "input_tokens": 80834,
+      "output_tokens": 2530,
+      "tool_calls": 35,
+      "tool_failures": 10,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 6,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 18,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 11,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 2"
+      ],
+      "cost": {
+        "score": 55.19,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 100,
+          "latency": 16.5,
+          "tokens": 26.3,
+          "tool_calls": 57.1,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 0,
+          "latency": 181521,
+          "tokens": 121779,
+          "tool_calls": 35,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": true,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "16491e9e337cdbbc463107e3d71e1eed3ea13a8699d6c561da2719ac13f2e2eb",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-31-memory-guard-null",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 16,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 16
+        }
+      }
+    },
+    {
+      "task_id": "ho-32-memory-build-tip",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 519693,
+      "model_calls": 30,
+      "input_tokens": 366124,
+      "output_tokens": 19840,
+      "tool_calls": 49,
+      "tool_failures": 10,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 2,
+        "verification": 2,
+        "compaction": 42,
+        "provider": 2,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 14,
+        "recovered": 3,
+        "rate": 0.21428571428571427
+      },
+      "compactions": 42,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1; artifact: dist/bundle.txt: artifact dist/bundle.txt was not changed"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 0,
+          "security": 0,
+          "latency": 5.8,
+          "tokens": 5,
+          "tool_calls": 40.8,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 255,
+          "security": 3,
+          "latency": 519693,
+          "tokens": 670370,
+          "tool_calls": 49,
+          "retries": 2
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=grep_search)",
+          "security.filesystem_denied (tool=grep_search)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": true,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "dee1142f10a42b097e93962ca07b9ecf4a1ce2a8ce16dd8d550c6249c5118193",
+      "candidateConfigHash": "{\"adaptiveRecovery\":\"conservative-v1\",\"features\":{\"context\":false,\"delegation\":false,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:adaptive_recovery_v2"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "adaptive_recovery_v2",
+        "caseId": "ho-32-memory-build-tip",
+        "eligible": true,
+        "activated": true,
+        "activationCount": 7,
+        "reasonCodes": [
+          "recovery_decision"
+        ],
+        "baselineMechanismDigest": "fixed-recovery",
+        "candidateMechanismDigest": "adaptive-recovery-planner-v2-conservative",
+        "summary": {
+          "recoveryDecisions": 7
+        }
+      }
+    }
+  ],
+  "summary": {
+    "total": 32,
+    "passed": 11,
+    "failed": 21,
+    "errors": 0,
+    "success_rate": 0.34375,
+    "latency_p50_ms": 220637,
+    "latency_p95_ms": 519693,
+    "avg_model_calls": 23.625,
+    "model_calls_p50": 30,
+    "model_calls_p95": 30,
+    "avg_tool_calls": 29.15625,
+    "avg_tokens_input": 134567.34375,
+    "avg_tokens_output": 7890.09375,
+    "avg_retries": 3.8125,
+    "retry_rate": 0.9375,
+    "retries_by_kind": {
+      "model": 45,
+      "tool": 122,
+      "verification": 33,
+      "compaction": 100,
+      "provider": 247,
+      "sandbox": 0,
+      "stallRecovery": 10,
+      "reconciliation": 0,
+      "mcpReconnect": 0
+    },
+    "recovery_rate": 0.20477815699658702,
+    "termination_reason_distribution": {
+      "verified_complete": 11,
+      "agent_limit": 19,
+      "verification_failed": 1,
+      "model_error": 1
+    },
+    "total_context_overflows": 0,
+    "total_false_completes": 0,
+    "total_verification_failures": 33,
+    "total_human_interventions": 0,
+    "failures_by_category": {
+      "model": 1
+    },
+    "avg_cost_score": 30.74,
+    "avg_cost_dimensions": {
+      "quality": 54.06,
+      "reliability": 68.13,
+      "security": 40.63,
+      "latency": 24.98,
+      "tokens": 38.75,
+      "tool_calls": 69.24,
+      "retries": 95.63
+    },
+    "security_violations": 19
+  },
+  "manifest": {
+    "gitSha": "3cf62ab8a8e6108349dbc9724785aef9ec023901",
+    "dirty": true,
+    "model": "deepseek-v4-flash",
+    "provider": "openai",
+    "temperature": null,
+    "suiteVersion": "2.1.0",
+    "judgeVersion": "1.0.0",
+    "runtimeConfigHash": "6f573411910ae5c73722ee964ee8f16b55c966dca062d1a783d2d22af3d27545",
+    "timestamp": "2026-09-01T05:05:53.591Z",
+    "platform": "win32",
+    "nodeVersion": "v24.18.1",
+    "profile": "benchmark",
+    "features": {
+      "context": true,
+      "checkpoint": true,
+      "artifacts": true,
+      "verification": true,
+      "observability": true,
+      "memory": false,
+      "delegation": false
+    },
+    "contextBudgetTokens": 32000,
+    "taskSuites": [
+      "holdout"
+    ],
+    "randomSeed": 11,
+    "candidate": "adaptive_recovery_v2",
+    "effectiveConfig": {
+      "candidate": "adaptive_recovery_v2",
+      "provider": "openai",
+      "model": "deepseek-v4-flash",
+      "temperature": null,
+      "context": {
+        "maxTokens": 32000,
+        "dynamic": 0
+      },
+      "recovery": {
+        "adaptive": true
+      },
+      "mechanisms": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false,
+        "stepBudgetCompletion": false
+      },
+      "tools": [
+        "edit_file",
+        "exec",
+        "read_file",
+        "search_files",
+        "write_file"
+      ],
+      "toolSetHash": "9c614bc8119187d80132343fa0b0a57975a01c3bf18a7d91724cd46e2eca760e",
+      "runtimeConfigHash": "47f10bae0cef68e1182a6e03168a2ea9774e7b3e41ee987a33c91e29685ef0cb"
+    }
+  }
+}

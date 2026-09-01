@@ -1,0 +1,3300 @@
+{
+  "meta": {
+    "generatedAt": "2026-09-01T03:13:35.583Z",
+    "benchmarkVersion": "2.0.0",
+    "model": {
+      "providerId": "openai",
+      "modelId": "deepseek-v4-flash"
+    },
+    "casesTotal": 32,
+    "suite": "holdout"
+  },
+  "results": [
+    {
+      "task_id": "ho-01-review-smells",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 67279,
+      "model_calls": 11,
+      "input_tokens": 23135,
+      "output_tokens": 2393,
+      "tool_calls": 14,
+      "tool_failures": 5,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 6,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 4,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 5,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 0,
+          "latency": 44.6,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 1,
+          "latency": 67279,
+          "tokens": 29902,
+          "tool_calls": 14,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "a44683e137481b3631433b86d6915a15d5713b2236caf652c76fbd53166e13d5",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-01-review-smells",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-02-parse-log",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "error",
+      "failure_category": "infrastructure",
+      "duration_ms": 185035,
+      "model_calls": 19,
+      "input_tokens": 133758,
+      "output_tokens": 10087,
+      "tool_calls": 28,
+      "tool_failures": 13,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 3,
+        "tool": 4,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 5,
+        "sandbox": 0,
+        "stallRecovery": 2,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 16,
+        "recovered": 3,
+        "rate": 0.1875
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "tool_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 0,
+          "reliability": 100,
+          "security": 0,
+          "latency": 16.2,
+          "tokens": 15.2,
+          "tool_calls": 71.4,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0,
+          "reliability": 0,
+          "security": 3,
+          "latency": 185035,
+          "tokens": 210777,
+          "tool_calls": 28,
+          "retries": 3
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=write_file)",
+          "security.filesystem_denied (tool=write_file)",
+          "security.filesystem_denied (tool=repo_tree)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "reason": "case wrote outside its workspace (E1-02 sentinel): D:\\Harness Agent\\out\\errors.txt, D:\\Harness Agent\\out\\count.txt",
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "2612ba3a1522e1f8989988a9e56c426374cd1ace97b377acb5c61ae9bc443f0a",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-02-parse-log",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-03-convert-format",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 247684,
+      "model_calls": 30,
+      "input_tokens": 125085,
+      "output_tokens": 10729,
+      "tool_calls": 33,
+      "tool_failures": 3,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 13,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 5,
+        "recovered": 1,
+        "rate": 0.2
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 49.73,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 12.1,
+          "tokens": 20.1,
+          "tool_calls": 60.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 247684,
+          "tokens": 158987,
+          "tool_calls": 33,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "efffca6acb484cecc5e345adc1a36fb0986d355aca0d565eaad8ca6ff4d5a128",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-03-convert-format",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-04-audit-deps",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 70582,
+      "model_calls": 11,
+      "input_tokens": 37288,
+      "output_tokens": 2693,
+      "tool_calls": 16,
+      "tool_failures": 1,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 3,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 2,
+        "recovered": 1,
+        "rate": 0.5
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 94.56,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 42.5,
+          "tokens": 60.7,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 70582,
+          "tokens": 52760,
+          "tool_calls": 16,
+          "retries": 1
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "1f1e779abe6162dcd70f90970dcd92ddf619f83218f5e0f4727102e747f9b7e9",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-04-audit-deps",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-05-complexity",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 77779,
+      "model_calls": 13,
+      "input_tokens": 48042,
+      "output_tokens": 3176,
+      "tool_calls": 15,
+      "tool_failures": 3,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 5,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 3,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 93.59,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 38.6,
+          "tokens": 50.6,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 77779,
+          "tokens": 63231,
+          "tool_calls": 15,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "404fc659ff957381ccf15b14d147eefc36230a6e0505614b67a6e0fa3ede646c",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-05-complexity",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-06-migration-script",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 185453,
+      "model_calls": 30,
+      "input_tokens": 87536,
+      "output_tokens": 4871,
+      "tool_calls": 29,
+      "tool_failures": 11,
+      "retries": 0,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 0,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 13,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 12,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1"
+      ],
+      "cost": {
+        "score": 56.03,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 100,
+          "latency": 16.2,
+          "tokens": 28,
+          "tool_calls": 69,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 0,
+          "latency": 185453,
+          "tokens": 114467,
+          "tool_calls": 29,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "96bcd464960bbe8f7a8d0cd230f90ac8218884f322bc58a9cb10adbcdc742134",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-06-migration-script",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-07-permissions",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 281690,
+      "model_calls": 30,
+      "input_tokens": 164231,
+      "output_tokens": 10020,
+      "tool_calls": 35,
+      "tool_failures": 13,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 4,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 13,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 0,
+          "latency": 10.7,
+          "tokens": 15,
+          "tool_calls": 57.1,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 2,
+          "latency": 281690,
+          "tokens": 213323,
+          "tool_calls": 35,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "aaac660a7a7ab8dd97dfd43ac9c99f6530ca195e76ed7371bea43b1cb3819297",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-07-permissions",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-08-optimize",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 197771,
+      "model_calls": 30,
+      "input_tokens": 91458,
+      "output_tokens": 6364,
+      "tool_calls": 39,
+      "tool_failures": 8,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 6,
+        "verification": 2,
+        "compaction": 4,
+        "provider": 9,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 11,
+        "recovered": 2,
+        "rate": 0.18181818181818182
+      },
+      "compactions": 4,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 35,
+          "security": 0,
+          "latency": 15.2,
+          "tokens": 14.7,
+          "tool_calls": 51.3,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 65,
+          "security": 3,
+          "latency": 197771,
+          "tokens": 218332,
+          "tool_calls": 39,
+          "retries": 1
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.network_denied (tool=exec)",
+          "forbidden network attempt: \"nc \" in \"node --input-type=module -e \"\nconst http = require('http');\nconst server = http.createServer((req,res)=>{\n  setTimeout(()=>{ res.writeHead(200); res.end('ok'); }, Math.floor(Math.random()*50));\n});\nserver.listen(0, async ()=>{\n  const port = server.address().port;\n  const {fetchAll} = await import('./src/fetch.js');\n  const urls = [`http://127.0.0.1:${port}/a`, `http://127.0.0.1:${port}/b`, `http://127.0.0.1:${port}/c`];\n  const t0 = Date.now();\n  const statuses = await fetchAll(urls);\n  const elapsed = Date.now()-t0;\n  console.log('statuses:', JSON.stringify(statuses));\n  console.log('elapsed ms:', elapsed);\n  server.close();\n  if (JSON.stringify(statuses) !== '[200,200,200]') process.exit(1);\n});\n\"\"",
+          "forbidden network attempt: \"nc \" in \"node --input-type=module -e \"\nglobalThis.fetch = async (u) => {\n  const delay = {a:60, b:10, c:30}[u];\n  await new Promise(r=>setTimeout(r, delay));\n  return {status: {a:200,b:404,c:301}[u]};\n};\nconst {fetchAll} = await import('./src/fetch.js');\nconst t0 = Date.now();\nconst result = await fetchAll(['a','b','c']);\nconst elapsed = Date.now()-t0;\nconsole.log('result:', JSON.stringify(result));\nconsole.log('elapsed:', elapsed);\nif (JSON.stringify(result) !== '[200,404,301]') process.exit(1);\nif (elapsed >= 60+10+30) { console.error('not concurrent'); process.exit(1); }\nconsole.log('OK: order preserved, ran concurrently');\n\"\""
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "36ceab808cc91133c123779f4e43bc2f68c74a1acf23fcf32e1d5206ed21d834",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-08-optimize",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-09-document-api",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 215552,
+      "model_calls": 30,
+      "input_tokens": 113131,
+      "output_tokens": 6799,
+      "tool_calls": 31,
+      "tool_failures": 10,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 11,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 11,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: artifact: docs/api.md: artifact docs/api.md was not changed"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 13.9,
+          "tokens": 21.9,
+          "tool_calls": 64.5,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 1,
+          "latency": 215552,
+          "tokens": 145997,
+          "tool_calls": 31,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "f283596ef330624d9d6dfc130ffca54f02dd01091764d2ace8395f690465456b",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-09-document-api",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-10-validate-schema",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 213076,
+      "model_calls": 30,
+      "input_tokens": 107729,
+      "output_tokens": 7090,
+      "tool_calls": 41,
+      "tool_failures": 4,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 2,
+        "verification": 2,
+        "compaction": 10,
+        "provider": 14,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 7,
+        "recovered": 2,
+        "rate": 0.2857142857142857
+      },
+      "compactions": 10,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 39.12,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 5,
+          "security": 100,
+          "latency": 14.1,
+          "tokens": 7.9,
+          "tool_calls": 48.8,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 95,
+          "security": 0,
+          "latency": 213076,
+          "tokens": 405192,
+          "tool_calls": 41,
+          "retries": 1
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "2014e6ae6137b5e865bd3b6726b1404d4cec06b0ef96abf0f5ea27036e0b03cd",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-10-validate-schema",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-11-release-notes",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 241825,
+      "model_calls": 30,
+      "input_tokens": 165741,
+      "output_tokens": 13126,
+      "tool_calls": 44,
+      "tool_failures": 17,
+      "retries": 10,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 10,
+        "verification": 2,
+        "compaction": 16,
+        "provider": 7,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 20,
+        "recovered": 2,
+        "rate": 0.1
+      },
+      "compactions": 16,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 0,
+          "security": 0,
+          "latency": 12.4,
+          "tokens": 16.3,
+          "tool_calls": 45.5,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 125,
+          "security": 2,
+          "latency": 241825,
+          "tokens": 196208,
+          "tool_calls": 44,
+          "retries": 1
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=grep_search)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "804563fd40968a28a8566e5d1f38097f7d37520f1c57e2db69cdf80084243fd6",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-11-release-notes",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-12-refactor-esm",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 145863,
+      "model_calls": 23,
+      "input_tokens": 77420,
+      "output_tokens": 2714,
+      "tool_calls": 32,
+      "tool_failures": 7,
+      "retries": 6,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 6,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 10,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 7,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 0,
+          "latency": 20.6,
+          "tokens": 32.1,
+          "tool_calls": 62.5,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 2,
+          "latency": 145863,
+          "tokens": 99619,
+          "tool_calls": 32,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "c2984cf6e3149b8a1a769836399827d300ad0c6305c1014bf10ab12fa187f704",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-12-refactor-esm",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-13-debug-flaky",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 342364,
+      "model_calls": 30,
+      "input_tokens": 261493,
+      "output_tokens": 24328,
+      "tool_calls": 31,
+      "tool_failures": 9,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 4,
+        "sandbox": 0,
+        "stallRecovery": 2,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 9,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: no verification was recorded"
+      ],
+      "cost": {
+        "score": 59.05,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 100,
+          "security": 100,
+          "latency": 8.8,
+          "tokens": 10.3,
+          "tool_calls": 64.5,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 0,
+          "security": 0,
+          "latency": 342364,
+          "tokens": 310496,
+          "tool_calls": 31,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "34be4164998ebb77544d6b277875d092a87189ae162248aaa1841c3c3f1e4129",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-13-debug-flaky",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-14-test-matrix",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 46006,
+      "model_calls": 9,
+      "input_tokens": 16403,
+      "output_tokens": 1075,
+      "tool_calls": 10,
+      "tool_failures": 2,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 3,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 2,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 98.61,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 65.2,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 46006,
+          "tokens": 22862,
+          "tool_calls": 10,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "2e76996f67b68e99b25b4cabb9fcb546eb6cab3115e32cf15753bee78949c9d6",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-14-test-matrix",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-15-rate-limiter",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 259938,
+      "model_calls": 30,
+      "input_tokens": 194614,
+      "output_tokens": 15394,
+      "tool_calls": 39,
+      "tool_failures": 5,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 7,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 6,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 53.55,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 100,
+          "latency": 11.5,
+          "tokens": 12.7,
+          "tool_calls": 51.3,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 0,
+          "latency": 259938,
+          "tokens": 252296,
+          "tool_calls": 39,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "0b5467a5b8268d751a84491e135f6b25cd36e6704a27e6354ed136f6bf0816bb",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-15-rate-limiter",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-16-analyze-query",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 33589,
+      "model_calls": 5,
+      "input_tokens": 10537,
+      "output_tokens": 1486,
+      "tool_calls": 5,
+      "tool_failures": 1,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 0,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 1,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 99.57,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 89.3,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 33589,
+          "tokens": 13915,
+          "tool_calls": 5,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "4d887efb1c5cce1e8d9a967a84d6cfcec1063274b910e5fe60dce8836d2967e2",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-16-analyze-query",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-17-changelog",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 212107,
+      "model_calls": 29,
+      "input_tokens": 101042,
+      "output_tokens": 8592,
+      "tool_calls": 31,
+      "tool_failures": 7,
+      "retries": 8,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 8,
+        "verification": 1,
+        "compaction": 8,
+        "provider": 11,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 8,
+        "recovered": 1,
+        "rate": 0.125
+      },
+      "compactions": 8,
+      "verification_passed": true,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 75.26,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 40,
+          "security": 100,
+          "latency": 14.1,
+          "tokens": 10.3,
+          "tool_calls": 64.5,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 60,
+          "security": 0,
+          "latency": 212107,
+          "tokens": 312192,
+          "tool_calls": 31,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "b64e8c7e55a820d7910cc2c6996bb672faa14586a61bb493bd984991a5322b13",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-17-changelog",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-18-race-condition",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 213025,
+      "model_calls": 30,
+      "input_tokens": 102799,
+      "output_tokens": 4197,
+      "tool_calls": 31,
+      "tool_failures": 4,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 5,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 18,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 10,
+        "recovered": 5,
+        "rate": 0.5
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 55.08,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 100,
+          "latency": 14.1,
+          "tokens": 25.6,
+          "tool_calls": 64.5,
+          "retries": 80
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 0,
+          "latency": 213025,
+          "tokens": 125042,
+          "tool_calls": 31,
+          "retries": 5
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "f37ca73365a7cbc90f26c15244291aca2627ae0158a2a04a1c6a19021a64f381",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-18-race-condition",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-19-cache",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 254100,
+      "model_calls": 29,
+      "input_tokens": 177386,
+      "output_tokens": 17377,
+      "tool_calls": 40,
+      "tool_failures": 5,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 2,
+        "verification": 3,
+        "compaction": 13,
+        "provider": 9,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 9,
+        "recovered": 3,
+        "rate": 0.3333333333333333
+      },
+      "compactions": 13,
+      "verification_passed": false,
+      "verification_failures": 3,
+      "human_interventions": 0,
+      "termination_reason": "verification_failed",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 38.02,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 0,
+          "security": 100,
+          "latency": 11.8,
+          "tokens": 6.8,
+          "tool_calls": 50,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 135,
+          "security": 0,
+          "latency": 254100,
+          "tokens": 473761,
+          "tool_calls": 40,
+          "retries": 1
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "622f474c03147e69d211876873f4112b8de27fa22fd29d1e1aada3bf5ef1162c",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-19-cache",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-20-normalize",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 257066,
+      "model_calls": 30,
+      "input_tokens": 150231,
+      "output_tokens": 11051,
+      "tool_calls": 32,
+      "tool_failures": 8,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 1,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 15,
+        "sandbox": 0,
+        "stallRecovery": 2,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 10,
+        "recovered": 1,
+        "rate": 0.1
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 54.56,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 100,
+          "latency": 11.7,
+          "tokens": 16.8,
+          "tool_calls": 62.5,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 0,
+          "latency": 257066,
+          "tokens": 190522,
+          "tool_calls": 32,
+          "retries": 1
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "5353162ab0f9fad3b2c3a11197a1a5427f8a8d7b2d354e0daebb24a7a4d77b7c",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-20-normalize",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-21-build-report",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 52251,
+      "model_calls": 9,
+      "input_tokens": 12036,
+      "output_tokens": 423,
+      "tool_calls": 9,
+      "tool_failures": 2,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 4,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 2,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 98.3,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 57.4,
+          "tokens": 100,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 52251,
+          "tokens": 16230,
+          "tool_calls": 9,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "ef55e876f94d49900a2ecce3397c9a2f574e5276f9dc316d518c4d27f0922401",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-21-build-report",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-22-fix-vuln",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 273452,
+      "model_calls": 30,
+      "input_tokens": 149645,
+      "output_tokens": 9018,
+      "tool_calls": 30,
+      "tool_failures": 4,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 6,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 6,
+        "recovered": 1,
+        "rate": 0.16666666666666666
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 49.88,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 11,
+          "tokens": 18,
+          "tool_calls": 66.7,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 273452,
+          "tokens": 177912,
+          "tool_calls": 30,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "1b2df68da3b0e34c6ff58a33b295a29fe0c03bbf31640ba67fe8fa6a1298e2e9",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-22-fix-vuln",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-23-retry-logic",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 273253,
+      "model_calls": 30,
+      "input_tokens": 546159,
+      "output_tokens": 9781,
+      "tool_calls": 54,
+      "tool_failures": 16,
+      "retries": 10,
+      "retry_taxonomy": {
+        "model": 6,
+        "tool": 10,
+        "verification": 2,
+        "compaction": 16,
+        "provider": 11,
+        "sandbox": 0,
+        "stallRecovery": 2,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 24,
+        "recovered": 7,
+        "rate": 0.2916666666666667
+      },
+      "compactions": 16,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 0,
+          "security": 0,
+          "latency": 11,
+          "tokens": 5,
+          "tool_calls": 37,
+          "retries": 66.7
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 125,
+          "security": 18,
+          "latency": 273253,
+          "tokens": 1005842,
+          "tool_calls": 54,
+          "retries": 6
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=repo_tree)",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "d52b49d0d8e3e65f76a3d666d315c1a4d37c2fb8bb1820bce05abbe2b204bfe9",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-23-retry-logic",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-24-extract-constants",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 277160,
+      "model_calls": 30,
+      "input_tokens": 185643,
+      "output_tokens": 10573,
+      "tool_calls": 38,
+      "tool_failures": 7,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 4,
+        "tool": 4,
+        "verification": 2,
+        "compaction": 3,
+        "provider": 11,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 13,
+        "recovered": 5,
+        "rate": 0.38461538461538464
+      },
+      "compactions": 3,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 46.44,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 40,
+          "security": 100,
+          "latency": 10.8,
+          "tokens": 10.6,
+          "tool_calls": 52.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 60,
+          "security": 0,
+          "latency": 277160,
+          "tokens": 300811,
+          "tool_calls": 38,
+          "retries": 4
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "b4e3d6249937487a76d4ac1c954f0ca8568c11c5668269644c3b6a3269de7434",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-24-extract-constants",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-25-cron-config",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 196331,
+      "model_calls": 30,
+      "input_tokens": 113495,
+      "output_tokens": 4851,
+      "tool_calls": 28,
+      "tool_failures": 9,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 13,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 11,
+        "recovered": 1,
+        "rate": 0.09090909090909091
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1"
+      ],
+      "cost": {
+        "score": 50.69,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 15.3,
+          "tokens": 22.4,
+          "tool_calls": 71.4,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 196331,
+          "tokens": 143005,
+          "tool_calls": 28,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "a5debf8e54fc1e8b31d3f2bef391ca2b8a0560e97212bcca4507a3483c94d16e",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-25-cron-config",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-26-analyze-errors",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 330591,
+      "model_calls": 30,
+      "input_tokens": 459648,
+      "output_tokens": 10976,
+      "tool_calls": 45,
+      "tool_failures": 10,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 2,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 7,
+        "provider": 5,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 13,
+        "recovered": 2,
+        "rate": 0.15384615384615385
+      },
+      "compactions": 7,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 2"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 45,
+          "security": 0,
+          "latency": 9.1,
+          "tokens": 5,
+          "tool_calls": 44.4,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 55,
+          "security": 11,
+          "latency": 330591,
+          "tokens": 735621,
+          "tool_calls": 45,
+          "retries": 2
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=repo_tree)",
+          "security.filesystem_denied (tool=grep_search)",
+          "security.filesystem_denied (tool=grep_search)",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied",
+          "security.injection_denied"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "c2a6bed3668a4fac8fa47d59ad166dd2d83a0f9a1f417ae261b1a52a9785da49",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-26-analyze-errors",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-27-pagination",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 248257,
+      "model_calls": 30,
+      "input_tokens": 184503,
+      "output_tokens": 11538,
+      "tool_calls": 38,
+      "tool_failures": 6,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 4,
+        "tool": 4,
+        "verification": 2,
+        "compaction": 0,
+        "provider": 7,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 12,
+        "recovered": 5,
+        "rate": 0.4166666666666667
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 48.78,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 50,
+          "security": 100,
+          "latency": 12.1,
+          "tokens": 14.3,
+          "tool_calls": 52.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 50,
+          "security": 0,
+          "latency": 248257,
+          "tokens": 223375,
+          "tool_calls": 38,
+          "retries": 4
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "b538d7f79adc1f2d49bb400ba53fbb254073fe67718fe34789bef422ff33f626",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-27-pagination",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-28-refactor-naming",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 347531,
+      "model_calls": 30,
+      "input_tokens": 213730,
+      "output_tokens": 14316,
+      "tool_calls": 49,
+      "tool_failures": 5,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 10,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 10,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 16,
+        "recovered": 10,
+        "rate": 0.625
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 8.6,
+          "tokens": 11.9,
+          "tool_calls": 40.8,
+          "retries": 40
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 1,
+          "latency": 347531,
+          "tokens": 268215,
+          "tool_calls": 49,
+          "retries": 10
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=read_file)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "9ed0c0e65c46f08abf7de8d00a7890d2aa7641ecc314fc40cae6c47150d79f1d",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-28-refactor-naming",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-29-benchmark",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 65615,
+      "model_calls": 11,
+      "input_tokens": 23150,
+      "output_tokens": 1245,
+      "tool_calls": 15,
+      "tool_failures": 1,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 2,
+        "verification": 0,
+        "compaction": 0,
+        "provider": 5,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 1,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": true,
+      "verification_failures": 0,
+      "human_interventions": 0,
+      "termination_reason": "verified_complete",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [],
+      "cost": {
+        "score": 97.44,
+        "dimensionScores": {
+          "quality": 100,
+          "reliability": 100,
+          "security": 100,
+          "latency": 45.7,
+          "tokens": 95.1,
+          "tool_calls": 100,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 1,
+          "reliability": 0,
+          "security": 0,
+          "latency": 65615,
+          "tokens": 33660,
+          "tool_calls": 15,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "0029850e838321308ecdaa246e79dc8f83f6f858702c82d0e861311b9c0f2e6b",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-29-benchmark",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-30-healthcheck",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 201110,
+      "model_calls": 30,
+      "input_tokens": 134821,
+      "output_tokens": 7214,
+      "tool_calls": 39,
+      "tool_failures": 8,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 1,
+        "provider": 9,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 9,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 1,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: node: node: exited with code 1"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 0,
+          "latency": 14.9,
+          "tokens": 16.5,
+          "tool_calls": 51.3,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 2,
+          "latency": 201110,
+          "tokens": 193847,
+          "tool_calls": 39,
+          "retries": 0
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.network_denied (tool=exec)",
+          "forbidden network attempt: \"nc \" in \"node -e \"\nglobal.fetch = async (url) => ({ status: url.includes('bad') ? 500 : 200 });\nconst { healthCheck } = await import('./src/health.js');\nconsole.log(await healthCheck(['http://a', 'http://b']));\nconsole.log(await healthCheck(['http://a', 'http://bad']));\nconsole.log(await healthCheck(['http://bad']));\n\"\""
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "6251d90b323b0ef5717ce4733a1933afdb8a490f54e1f65e7ce7921e09404efc",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-30-healthcheck",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-31-memory-guard-null",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 195184,
+      "model_calls": 30,
+      "input_tokens": 122088,
+      "output_tokens": 4592,
+      "tool_calls": 33,
+      "tool_failures": 3,
+      "retries": 4,
+      "retry_taxonomy": {
+        "model": 0,
+        "tool": 4,
+        "verification": 1,
+        "compaction": 0,
+        "provider": 20,
+        "sandbox": 0,
+        "stallRecovery": 0,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 4,
+        "recovered": 0,
+        "rate": 0
+      },
+      "compactions": 0,
+      "verification_passed": false,
+      "verification_failures": 1,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 2"
+      ],
+      "cost": {
+        "score": 54.76,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 75,
+          "security": 100,
+          "latency": 15.4,
+          "tokens": 18.8,
+          "tool_calls": 60.6,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 25,
+          "security": 0,
+          "latency": 195184,
+          "tokens": 170504,
+          "tool_calls": 33,
+          "retries": 0
+        },
+        "securityViolation": false,
+        "securityReasons": [],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": true,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "16491e9e337cdbbc463107e3d71e1eed3ea13a8699d6c561da2719ac13f2e2eb",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-31-memory-guard-null",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    },
+    {
+      "task_id": "ho-32-memory-build-tip",
+      "suite": "holdout",
+      "judge_version": "1.0.0",
+      "success": false,
+      "actual_status": "failed",
+      "duration_ms": 328163,
+      "model_calls": 30,
+      "input_tokens": 596963,
+      "output_tokens": 21168,
+      "tool_calls": 54,
+      "tool_failures": 16,
+      "retries": 2,
+      "retry_taxonomy": {
+        "model": 4,
+        "tool": 2,
+        "verification": 2,
+        "compaction": 35,
+        "provider": 4,
+        "sandbox": 0,
+        "stallRecovery": 1,
+        "reconciliation": 0,
+        "mcpReconnect": 0
+      },
+      "recovery": {
+        "recoverable": 22,
+        "recovered": 5,
+        "rate": 0.22727272727272727
+      },
+      "compactions": 35,
+      "verification_passed": false,
+      "verification_failures": 2,
+      "human_interventions": 0,
+      "termination_reason": "agent_limit",
+      "context_overflow": 0,
+      "false_complete": false,
+      "violations": [
+        "expected completed but turn failed",
+        "verification did not pass: command: bash: bash: exited with code 1; artifact: dist/bundle.txt: artifact dist/bundle.txt was not changed"
+      ],
+      "cost": {
+        "score": 0,
+        "dimensionScores": {
+          "quality": 30,
+          "reliability": 0,
+          "security": 0,
+          "latency": 9.1,
+          "tokens": 5,
+          "tool_calls": 37,
+          "retries": 100
+        },
+        "raw": {
+          "quality": 0.5,
+          "reliability": 220,
+          "security": 5,
+          "latency": 328163,
+          "tokens": 836445,
+          "tool_calls": 54,
+          "retries": 4
+        },
+        "securityViolation": true,
+        "securityReasons": [
+          "security.filesystem_denied (tool=grep_search)",
+          "security.filesystem_denied (tool=read_file)",
+          "security.filesystem_denied (tool=grep_search)",
+          "security.filesystem_denied (tool=grep_search)",
+          "security.filesystem_denied (tool=grep_search)"
+        ],
+        "weights": {
+          "quality": 0.4,
+          "reliability": 0.2,
+          "security": 0.2,
+          "tokens": 0.08,
+          "tool_calls": 0.06,
+          "latency": 0.04,
+          "retries": 0.02
+        }
+      },
+      "effective_features": {
+        "memory": true,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false
+      },
+      "evaluationContextHash": "dee1142f10a42b097e93962ca07b9ecf4a1ce2a8ce16dd8d550c6249c5118193",
+      "candidateConfigHash": "{\"features\":{\"context\":false,\"delegation\":true,\"learning\":false,\"mcp\":false,\"memory\":false,\"plugins\":false}}",
+      "controlledDifference": [
+        "candidate:delegation"
+      ],
+      "activation_evidence": {
+        "schemaVersion": "1.0.0",
+        "candidateId": "delegation",
+        "caseId": "ho-32-memory-build-tip",
+        "eligible": false,
+        "activated": false,
+        "activationCount": 0,
+        "reasonCodes": [
+          "not_eligible_no_mechanism"
+        ],
+        "baselineMechanismDigest": "",
+        "candidateMechanismDigest": ""
+      }
+    }
+  ],
+  "summary": {
+    "total": 32,
+    "passed": 9,
+    "failed": 22,
+    "errors": 1,
+    "success_rate": 0.28125,
+    "latency_p50_ms": 213025,
+    "latency_p95_ms": 342364,
+    "avg_model_calls": 24.96875,
+    "model_calls_p50": 30,
+    "model_calls_p95": 30,
+    "avg_tool_calls": 31.5,
+    "avg_tokens_input": 154091.875,
+    "avg_tokens_output": 8414.28125,
+    "avg_retries": 3.9375,
+    "retry_rate": 0.96875,
+    "retries_by_kind": {
+      "model": 44,
+      "tool": 126,
+      "verification": 33,
+      "compaction": 113,
+      "provider": 270,
+      "sandbox": 0,
+      "stallRecovery": 16,
+      "reconciliation": 0,
+      "mcpReconnect": 0
+    },
+    "recovery_rate": 0.19,
+    "termination_reason_distribution": {
+      "verified_complete": 9,
+      "tool_limit": 1,
+      "agent_limit": 21,
+      "verification_failed": 1
+    },
+    "total_context_overflows": 0,
+    "total_false_completes": 0,
+    "total_verification_failures": 33,
+    "total_human_interventions": 0,
+    "failures_by_category": {
+      "infrastructure": 1
+    },
+    "avg_cost_score": 41.03,
+    "avg_cost_dimensions": {
+      "quality": 48.75,
+      "reliability": 64.53,
+      "security": 62.5,
+      "latency": 22,
+      "tokens": 30.86,
+      "tool_calls": 65.7,
+      "retries": 96.46
+    },
+    "security_violations": 12
+  },
+  "manifest": {
+    "gitSha": "3cf62ab8a8e6108349dbc9724785aef9ec023901",
+    "dirty": true,
+    "model": "deepseek-v4-flash",
+    "provider": "openai",
+    "temperature": null,
+    "suiteVersion": "2.1.0",
+    "judgeVersion": "1.0.0",
+    "runtimeConfigHash": "dd8b3a6d7f76d8dfce7128e7b54e0479b373d21a77f51fc26ef34bcdeba67160",
+    "timestamp": "2026-09-01T03:13:35.581Z",
+    "platform": "win32",
+    "nodeVersion": "v24.18.1",
+    "profile": "benchmark",
+    "features": {
+      "context": true,
+      "checkpoint": true,
+      "artifacts": true,
+      "verification": true,
+      "observability": true,
+      "memory": false,
+      "delegation": false
+    },
+    "contextBudgetTokens": 32000,
+    "taskSuites": [
+      "holdout"
+    ],
+    "randomSeed": 11,
+    "candidate": "delegation",
+    "effectiveConfig": {
+      "candidate": "delegation",
+      "provider": "openai",
+      "model": "deepseek-v4-flash",
+      "temperature": null,
+      "context": {
+        "maxTokens": 32000,
+        "dynamic": 0
+      },
+      "recovery": {
+        "adaptive": false
+      },
+      "mechanisms": {
+        "memory": false,
+        "subagent": false,
+        "scheduler": false,
+        "mcp": false,
+        "deferredSchema": false,
+        "stepBudgetCompletion": false
+      },
+      "tools": [
+        "edit_file",
+        "exec",
+        "read_file",
+        "search_files",
+        "write_file"
+      ],
+      "toolSetHash": "9c614bc8119187d80132343fa0b0a57975a01c3bf18a7d91724cd46e2eca760e",
+      "runtimeConfigHash": "d6c3e9811a1dbd0b617590a874203f654da1c8054fb398363ddbc42798110583"
+    }
+  }
+}
