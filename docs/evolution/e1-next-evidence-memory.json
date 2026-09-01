@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "1.0.0",
+  "evalId": "E1-NEXT-002",
+  "candidateId": "memory_retrieval",
+  "generatedAt": "2026-09-01T02:20:14.247Z",
+  "mode": "real-model",
+  "model": "deepseek-v4-flash",
+  "baseUrl": "https://api.b.ai/v1",
+  "suite": "holdout",
+  "cases": 32,
+  "decision": "INVALID",
+  "exitCode": 3,
+  "decisionReason": [
+    "candidate_not_activated",
+    "activation contract not satisfied: eligible=2 < minEligibleCases=3"
+  ],
+  "comparability": {
+    "sameCaseSet": true,
+    "evaluationContextMatch": true,
+    "candidateConfigDiffers": true,
+    "activationContractSatisfied": false,
+    "strict": true
+  },
+  "qualityGates": {
+    "passed": true,
+    "details": "+2 wins / 0 losses / 10 ties; tokens -169301; no new infra failures; security non-regression"
+  },
+  "results": {
+    "baselinePass": 10,
+    "candidatePass": 12,
+    "netDelta": 2,
+    "wins": 2,
+    "losses": 0,
+    "ties": 10,
+    "bothFail": 20
+  },
+  "tokens": {
+    "baselineInputK": 4272,
+    "candidateInputK": 4103,
+    "deltaK": -169
+  },
+  "durationMs": {
+    "baseline": 6216861,
+    "candidate": 0
+  },
+  "activationEvidence": {
+    "eligibleCases": 2,
+    "activatedCases": 2,
+    "coverage": 1,
+    "contractMinEligibleCases": 3,
+    "contractMet": false
+  },
+  "termination": {
+    "baseline": {
+      "agent_limit": 14,
+      "model_error": 4,
+      "tool_limit": 1,
+      "verification_failed": 3
+    },
+    "candidate": {
+      "agent_limit": 18,
+      "tool_limit": 1,
+      "verification_failed": 1
+    }
+  },
+  "artifacts": {
+    "baseline": "benchmarks/results/2026-08-31-deepseek-v4-flash-budget-aware/baseline-holdout.json",
+    "candidate": "benchmarks/results/2026-09-01-deepseek-v4-flash-memory-retrieval/candidate-holdout.json",
+    "report": ".ci/e1-next/paired-memory-report.txt"
+  },
+  "championAfter": "C0 (no promotion — INVALID)"
+}

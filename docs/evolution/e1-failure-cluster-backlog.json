@@ -283,7 +283,13 @@
       "candidate": "memory_retrieval",
       "cluster": "token efficiency",
       "rationale": "accepted earlier for token savings (-529K tokens on 84-case benchmark); re-audit already INCOMPARABLE under strict E1-07 (legacy_no_activation_evidence) — a fresh run with E1-04 evidence is required.",
-      "blockedBy": "RUN_PAID_BENCHMARKS=1"
+      "blockedBy": "RUN_PAID_BENCHMARKS=1",
+      "outcome": {
+        "testedAt": "2026-09-01",
+        "result": "INVALID (E1-08 exit 3) — 10/32 baseline → 12/32 candidate (+2 wins, -169K tokens), but eligible=2 < minEligibleCases=3 → candidate_not_activated → fail-closed",
+        "evidenceRef": "docs/evolution/e1-next-evidence-memory.json",
+        "nextStep": "add more seeded-memory cases to holdout suite (≥3 with seed memory) or deprioritize"
+      }
     },
     {
       "rank": 3,
