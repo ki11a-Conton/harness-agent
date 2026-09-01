@@ -11,12 +11,14 @@
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
-import { createInitialChampionState, type ChampionState } from "@ar/evaluation";
+import { createInitialChampionState, migrateChampionValidity, type ChampionState } from "@ar/evaluation";
 
 export const CHAMPION_STATE_PATH = join("docs", "evolution", "champion-state.json");
 
 /** Read the current champion state. Returns an Error on missing/invalid file
- *  (fail-closed — a missing state is never silently treated as promoted). */
+ *  (fail-closed — a missing state is never silently treated as promoted).
+ *  E2-00: legacy records without `validity` are migrated on read — a C1/C2
+ *  never auto-trusts as production-valid. */
 export async function readChampionStateFile(pathOverride?: string): Promise<ChampionState | Error> {
   const path = pathOverride ?? CHAMPION_STATE_PATH;
   try {
@@ -25,7 +27,7 @@ export async function readChampionStateFile(pathOverride?: string): Promise<Cham
     if (parsed.schemaVersion !== "1.0.0" || parsed.level === undefined) {
       return new Error(`invalid champion-state.json (schemaVersion=${parsed.schemaVersion}, level=${parsed.level})`);
     }
-    return parsed;
+    return migrateChampionValidity(parsed);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       // No file yet → the initial frozen baseline. Honest default: never

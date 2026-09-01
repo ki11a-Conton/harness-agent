@@ -724,6 +724,40 @@ describe("default host wiring (createDefaultDeps)", () => {
     expect(result.exitCode).toBe(1);
     expect(result.lines.join("\n")).toContain("does not exist");
   });
+
+  it("champion audit runs read-only and evaluates the real AR2 evidence as invalid (E2-00)", async () => {
+    const deps = await createDefaultDeps();
+    const result = await runCommand(["champion", "audit"], deps);
+    // The audit is always read-only; exit 1 means the evidence is invalid
+    // (which is the expected outcome for the historical AR2 pair).
+    expect(result.exitCode).toBe(1);
+    const output = result.lines.join("\n");
+    expect(output).toContain("validForPromotion: false");
+    expect(output).toContain("SOURCE_DIRTY");
+    expect(output).toContain("SOURCE_SHA_MISMATCH");
+    expect(output).toContain("SINGLE_RUN_INSUFFICIENT");
+    expect(output).toContain("PRODUCTION_APPLICATION_UNPROVEN");
+  });
+
+  it("champion quarantine is listed in the champion usage (E2-00)", async () => {
+    const deps = await createDefaultDeps();
+    // A bogus subcommand returns the usage line which documents audit/quarantine.
+    const result = await runCommand(["champion", "bogus"], deps);
+    expect(result.exitCode).toBe(1);
+    expect(result.lines.join("\n")).toContain("audit");
+    expect(result.lines.join("\n")).toContain("quarantine");
+  });
+
+  it("champion audit with explicit paths still returns invalid (E2-00)", async () => {
+    const deps = await createDefaultDeps();
+    const result = await runCommand([
+      "champion", "audit",
+      "--baseline", "benchmarks/results/2026-08-31-deepseek-v4-flash-budget-aware/baseline-holdout.json",
+      "--candidate", "benchmarks/results/2026-09-01-deepseek-v4-flash-ar2/candidate-holdout.json",
+    ], deps);
+    expect(result.exitCode).toBe(1);
+    expect(result.lines.join("\n")).toContain("validForPromotion: false");
+  });
 });
 
 /** Local copy of the core test catalog (tests must not reach into @ar/core's

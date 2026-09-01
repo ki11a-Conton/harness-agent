@@ -223,8 +223,18 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
         ];
         return { exitCode: 0, lines };
       }
+      if (rest[0] === "audit") {
+        // E2-00: read-only baseline audit (never calls a provider).
+        const { e2AuditCmd } = await import("./e2-command.js");
+        return e2AuditCmd(rest.slice(1));
+      }
+      if (rest[0] === "quarantine") {
+        // E2-00: explicit quarantine — demote active champion to C0, preserve history.
+        const { e2QuarantineCmd } = await import("./e2-command.js");
+        return e2QuarantineCmd(rest.slice(1));
+      }
       if (rest[0] !== "eval") {
-        return { exitCode: 1, lines: ["usage: agent champion (eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--candidate <id>]) | (state [--json]) | (promote <candidate-id> --evidence <evidence-ref>)"] };
+        return { exitCode: 1, lines: ["usage: agent champion (eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--candidate <id>]) | (state [--json]) | (promote <candidate-id> --evidence <evidence-ref> --decision ACCEPT) | (audit [--baseline <p>] [--candidate <p>] [--review-sha <sha>]) | (quarantine [--reason-codes a,b,c] [--note <text>])"] };
       }
       const files = rest.slice(1).filter((a) => !a.startsWith("--"));
       const modeIdx = rest.indexOf("--mode");

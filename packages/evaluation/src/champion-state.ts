@@ -14,6 +14,19 @@
  *   promotes to C1; only strict evidence on top of C1 promotes to C2.
  * - Every promotion records evidenceRef + the candidate config patch so the
  *   chain is auditable and reversible (the previous level is retained).
+ *
+ * E2-00 — provenance-aware validity:
+ * - A promotion record is a CLAIM, not a proof. `validity` records whether the
+ *   promotion is currently trustworthy for production semantics:
+ *     * `PROVEN`                          — supported by reproducible evidence
+ *       (only C0 is PROVEN by construction today);
+ *     * `QUARANTINED_PENDING_REEVALUATION` — promoted historically, but not
+ *       re-verified under the E2 protocol (default for any legacy C1/C2);
+ *     * `INVALID_PROVENANCE`               — the E2 baseline audit found
+ *       concrete provenance failures.
+ * - `quarantineChampionState` demotes the ACTIVE level back to C0 while
+ *   PRESERVING the full promotion history and artifact references (fail-closed:
+ *   never auto-trust a promotion that lacks machine-verifiable provenance).
  */
 
 import { getCandidateRegistry } from "./candidate-registry.js";
@@ -21,6 +34,12 @@ import { getCandidateRegistry } from "./candidate-registry.js";
 export const CHAMPION_STATE_SCHEMA_VERSION = "1.0.0";
 
 export type ChampionLevel = "C0" | "C1" | "C2";
+
+/** E2-00: provenance-aware validity of a champion level/promotion. */
+export type ChampionValidity =
+  | "PROVEN"
+  | "QUARANTINED_PENDING_REEVALUATION"
+  | "INVALID_PROVENANCE";
 
 export interface ChampionPromotionRecord {
   promotedAt: string;
@@ -31,6 +50,20 @@ export interface ChampionPromotionRecord {
   semanticDigest: string;
   /** The config patch applied to reach this champion level. */
   configPatch: Record<string, unknown>;
+}
+
+/** E2-00: record of a quarantine action (state demotion to C0). */
+export interface ChampionQuarantineRecord {
+  schemaVersion: string;
+  quarantinedAtIso: string;
+  /** The level that was active before quarantine. */
+  priorLevel: ChampionLevel;
+  /** The candidate that was active before quarantine. */
+  priorCandidateId: string | null;
+  /** Stable E2 reason codes behind the quarantine. */
+  reasonCodes: string[];
+  /** Human-readable note explaining why the promotion was quarantined. */
+  note: string;
 }
 
 export interface ChampionState {
@@ -46,9 +79,13 @@ export interface ChampionState {
   history: ChampionPromotionRecord[];
   /** Whether this state is currently applied as the active Champion profile. */
   applied: boolean;
+  /** E2-00: provenance validity of the CURRENT level. */
+  validity: ChampionValidity;
+  /** E2-00: quarantine record when the active level was demoted to C0. */
+  quarantine?: ChampionQuarantineRecord;
 }
 
-/** The initial frozen production baseline. */
+/** The initial frozen production baseline (PROVEN by construction). */
 export function createInitialChampionState(opts: { applied?: boolean } = {}): ChampionState {
   return {
     schemaVersion: CHAMPION_STATE_SCHEMA_VERSION,
@@ -58,6 +95,21 @@ export function createInitialChampionState(opts: { applied?: boolean } = {}): Ch
     evidenceRef: null,
     history: [],
     applied: opts.applied ?? true,
+    validity: "PROVEN",
+  };
+}
+
+/**
+ * E2-00 backward-compatible migration: an old record (schema 1.0.0 without
+ * `validity`) must NEVER auto-trust a legacy C1/C2. Missing `validity` on a
+ * C0 baseline is PROVEN; on any C1/C2 it defaults to QUARANTINED — the audit
+ * (or a future E2-07 envelope) is what upgrades it to PROVEN.
+ */
+export function migrateChampionValidity(state: ChampionState): ChampionState {
+  if (state.validity !== undefined) return state;
+  return {
+    ...state,
+    validity: state.level === "C0" ? "PROVEN" : "QUARANTINED_PENDING_REEVALUATION",
   };
 }
 
@@ -128,6 +180,8 @@ export function evaluateChampionPromotion(
 /**
  * Compute the next champion state for an accepted candidate. Pure: returns a
  * new state, retains the previous level in history, never mutates the input.
+ * E2-00: the new level's validity is QUARANTINED_PENDING_REEVALUATION — a
+ * promotion is a claim; the E2 audit/envelope is what later proves it.
  */
 export function applyPromotion(
   current: ChampionState,
@@ -153,5 +207,52 @@ export function applyPromotion(
     evidenceRef,
     history: [...current.history, record],
     applied: false, // applying the active profile is a separate step
+    validity: "QUARANTINED_PENDING_REEVALUATION",
+  };
+}
+
+/**
+ * E2-00: quarantine the active promotion back to C0 while preserving the
+ * complete history (including the demoted candidate's evidence reference).
+ * Fail-closed: production parsing may only trust C0 until re-verified.
+ * Pure — returns a new state; persistence is the caller's choice.
+ */
+export function quarantineChampionState(
+  current: ChampionState,
+  opts: { reasonCodes: string[]; note: string },
+): ChampionState {
+  if (current.level === "C0") {
+    // Nothing to quarantine; keep the state but record the action for audit.
+    return {
+      ...current,
+      quarantine: {
+        schemaVersion: CHAMPION_STATE_SCHEMA_VERSION,
+        quarantinedAtIso: new Date().toISOString(),
+        priorLevel: "C0",
+        priorCandidateId: current.candidateId,
+        reasonCodes: opts.reasonCodes,
+        note: opts.note,
+      },
+    };
+  }
+  return {
+    schemaVersion: CHAMPION_STATE_SCHEMA_VERSION,
+    level: "C0",
+    candidateId: null,
+    configPatch: {},
+    evidenceRef: null,
+    // History is preserved verbatim — the C1 record and its evidence path
+    // remain queryable (never rewritten or deleted).
+    history: [...current.history],
+    applied: true,
+    validity: "QUARANTINED_PENDING_REEVALUATION",
+    quarantine: {
+      schemaVersion: CHAMPION_STATE_SCHEMA_VERSION,
+      quarantinedAtIso: new Date().toISOString(),
+      priorLevel: current.level,
+      priorCandidateId: current.candidateId,
+      reasonCodes: opts.reasonCodes,
+      note: opts.note,
+    },
   };
 }

@@ -1,19 +1,9 @@
 {
   "schemaVersion": "1.0.0",
-  "level": "C1",
-  "candidateId": "adaptive_recovery_v2",
-  "configPatch": {
-    "features": {
-      "context": false,
-      "memory": false,
-      "learning": false,
-      "delegation": false,
-      "mcp": false,
-      "plugins": false
-    },
-    "adaptiveRecovery": "conservative-v1"
-  },
-  "evidenceRef": "benchmarks/results/2026-09-01-deepseek-v4-flash-ar2/paired-report.txt",
+  "level": "C0",
+  "candidateId": null,
+  "configPatch": {},
+  "evidenceRef": null,
   "history": [
     {
       "promotedAt": "2026-09-01T06:59:37.534Z",
@@ -33,5 +23,19 @@
       }
     }
   ],
-  "applied": true
+  "applied": true,
+  "validity": "QUARANTINED_PENDING_REEVALUATION",
+  "quarantine": {
+    "schemaVersion": "1.0.0",
+    "quarantinedAtIso": "2026-09-01T08:59:06.323Z",
+    "priorLevel": "C1",
+    "priorCandidateId": "adaptive_recovery_v2",
+    "reasonCodes": [
+      "SOURCE_DIRTY",
+      "SOURCE_SHA_MISMATCH",
+      "SINGLE_RUN_INSUFFICIENT",
+      "PRODUCTION_APPLICATION_UNPROVEN"
+    ],
+    "note": "single dirty run cannot be production-valid under E2 (E2-00)"
+  }
 }

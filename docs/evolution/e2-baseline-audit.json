@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "1.0.0",
+  "validForPromotion": false,
+  "activeForProduction": "C0",
+  "historicalDecision": "ACCEPT",
+  "validity": "INVALID_PROVENANCE",
+  "recommendedNextAction": "do not treat the recorded C1 as production-valid; quarantine to C0 and re-run under the E2 protocol (E2-01…E2-05, then E2-15 paid repeat only with explicit authorization)",
+  "reasonCodes": [
+    "SOURCE_DIRTY",
+    "SOURCE_DIRTY",
+    "SOURCE_SHA_MISMATCH",
+    "IMPLEMENTATION_NOT_IN_RECORDED_SOURCE",
+    "SINGLE_RUN_INSUFFICIENT",
+    "REPETITION_RECOMMENDED_BUT_ACCEPTED",
+    "PRODUCTION_APPLICATION_UNPROVEN"
+  ],
+  "checks": [
+    {
+      "code": "ARTIFACT_MISSING_OR_CORRUPT",
+      "passed": true,
+      "detail": "baseline artifact present (sha256 0b647f1b9c78…)"
+    },
+    {
+      "code": "ARTIFACT_MISSING_OR_CORRUPT",
+      "passed": true,
+      "detail": "candidate artifact present (sha256 98569c98e5d8…)"
+    },
+    {
+      "code": "SOURCE_DIRTY",
+      "passed": false,
+      "detail": "baseline recorded dirty=true at c8fd5f87d7d410b88c8e025b53b5e5d24b4789ed — executed source not reconstructable"
+    },
+    {
+      "code": "SOURCE_DIRTY",
+      "passed": false,
+      "detail": "candidate recorded dirty=true at 3cf62ab8a8e6108349dbc9724785aef9ec023901 — executed source not reconstructable"
+    },
+    {
+      "code": "SOURCE_SHA_MISMATCH",
+      "passed": false,
+      "detail": "baseline gitSha c8fd5f87d7d410b88c8e025b53b5e5d24b4789ed != candidate gitSha 3cf62ab8a8e6108349dbc9724785aef9ec023901 — different source, not attributable"
+    },
+    {
+      "code": "IMPLEMENTATION_NOT_IN_RECORDED_SOURCE",
+      "passed": false,
+      "detail": "candidate ran at 3cf62ab8a8e6108349dbc9724785aef9ec023901, not review baseline 5a6f90c4767413ae1c89dca7a451a13ab5dd6cf0 — implementation may not exist in the recorded source"
+    },
+    {
+      "code": "SINGLE_RUN_INSUFFICIENT",
+      "passed": false,
+      "detail": "single independent run per arm, no repetition/interleave metadata (E2-05 required)"
+    },
+    {
+      "code": "REPETITION_RECOMMENDED_BUT_ACCEPTED",
+      "passed": false,
+      "detail": "champion records ACCEPT on a single-run pair — repetition was recommended but the decision did not require it"
+    },
+    {
+      "code": "PRODUCTION_APPLICATION_UNPROVEN",
+      "passed": false,
+      "detail": "champion-state.json marks applied=true but no runtime config digest / harness consumption is recorded — production application unproven"
+    }
+  ],
+  "baseline": {
+    "path": "benchmarks/results/2026-08-31-deepseek-v4-flash-budget-aware/baseline-holdout.json",
+    "exists": true,
+    "sha256": "0b647f1b9c78dc7a98bb0d2f02be6d12a79fc7d2ca30397c6c26ef70dc647f43",
+    "gitSha": "c8fd5f87d7d410b88c8e025b53b5e5d24b4789ed",
+    "dirty": true,
+    "caseCount": 32,
+    "repetition": {
+      "repeat": null,
+      "interleaved": false
+    }
+  },
+  "candidate": {
+    "path": "benchmarks/results/2026-09-01-deepseek-v4-flash-ar2/candidate-holdout.json",
+    "exists": true,
+    "sha256": "98569c98e5d87fef42c1f3bc626d00b357eb788370b7a7b8e5d890777545c70a",
+    "gitSha": "3cf62ab8a8e6108349dbc9724785aef9ec023901",
+    "dirty": true,
+    "caseCount": 32,
+    "repetition": {
+      "repeat": null,
+      "interleaved": false
+    }
+  }
+}
