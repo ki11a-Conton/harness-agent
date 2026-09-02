@@ -166,13 +166,14 @@ describe("R-03: BA orderIndex wrong [FIXED]", () => {
 });
 
 // ---------------------------------------------------------------------------
-// R-04: ArmFactory compare accepts undeclared delta.
-//   Adding `undeclaredSecurityBypass=true` to candidate config still returns
-//   comparable=true, providerCallsAllowed=true.  The bug is
-//   `allowed.has(candidate.candidateId)` always true because declaredDeltaPaths
-//   = [candidate.id].  REPRODUCED.
+// R-04: ArmFactory compare accepted undeclared delta.
+//   Adding `undeclaredSecurityBypass=true` to candidate config previously
+//   returned comparable=true, providerCallsAllowed=true because
+//   declaredDeltaPaths defaulted to [candidate.id].  FIXED in E3-03: compare
+//   now diff-snaps the ACTUAL harnessConfig and rejects any undeclared field
+//   as UNDECLARED_ARM_DELTA (comparable=false, providerCallsAllowed=false).
 // ---------------------------------------------------------------------------
-describe("R-04: Arm undeclared delta bypass [REPRODUCED]", () => {
+describe("R-04: Arm undeclared delta bypass [FIXED in E3-03]", () => {
   it("candidate with undeclaredSecurityBypass=true still comparable", async () => {
     const { getArmFactory } = await import("@ar/evaluation");
     const factory = getArmFactory();
