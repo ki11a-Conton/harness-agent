@@ -1,5 +1,5 @@
 /**
- * E2-03 — typed ArmFactory: the single source of truth for constructing
+ * E2-03 / E3-03 — typed ArmFactory: the single source of truth for constructing
  * REAL baseline/candidate experiment arms.
  *
  * The E1 candidate-registry was a "descriptive JSON patch list" — the real
@@ -7,6 +7,14 @@
  * "adaptive_recovery"`, etc.). E2-03 replaces that split with a typed arm
  * factory whose resolved snapshot IS what the benchmark runner, manifest,
  * activation capture and champion application all consume.
+ *
+ * E3-03 closes the remaining gap: the snapshot's `harnessConfig` was a
+ * `Record<string, unknown>` that a runner still had to interpret through
+ * hard-coded candidate-id branches. The factory now exposes a typed
+ * `ResolvedExperimentArm` whose `runtimeMechanisms` describes each REAL
+ * runtime injection point (recovery planner, memory retrieval, deferred
+ * schema, adaptive context budget, budget-aware completion guidance) in a way
+ * a runner consumes directly — no `opts.candidate === "…"` branches.
  *
  * Key concepts (E2-03 #2):
  *   - CaseEligibility  — whether a case is SUITED to test a mechanism
@@ -25,6 +33,7 @@ import { getCandidateRegistry, type CandidateRegistration } from "./candidate-re
 import { stableStringify } from "./manifest.js";
 
 export const ARM_FACTORY_SCHEMA_VERSION = "1.0.0";
+export const ARM_FACTORY_POLICY_VERSION = "e3-03-arm-v1";
 
 export type PreflightReasonCode =
   | "CANDIDATE_UNSUPPORTED"
@@ -85,13 +94,50 @@ export interface ArmComparison {
   hasCausalDelta: boolean;
   undeclaredDeltas: string[];
   declaredDeltas: string[];
+  /** Declared paths that did NOT actually change (declared-but-absent). */
+  missingDeclaredDeltas: string[];
   reasonCode: PreflightReasonCode | null;
   providerCallsAllowed: boolean;
+}
+
+/**
+ * E3-03 — typed runtime mechanism injection points a real runner consumes
+ * directly (NO `opts.candidate === "…"` branches). Each field maps to a REAL
+ * runtime/runtime-dep wiring decision, and `digest` covers all of them so any
+ * change to a mechanism changes the arm digest.
+ */
+export interface RuntimeMechanisms {
+  /** Recovery planner to wire into the runtime (null = champion default). */
+  recoveryPlanner: "adaptive-v1" | "adaptive-v2-conservative" | null;
+  /** Pre-turn memory retrieval provider wired (candidate memory on). */
+  memoryRetrieval: boolean;
+  /** Deferred schema advertisement policy active (tool_lookup + stub bulk). */
+  deferredSchema: boolean;
+  /** Adaptive context budget dynamic headroom in tokens (0 = baseline). */
+  adaptiveContextDynamic: number;
+  /** Budget-aware completion guidance injected into the system prompt. */
+  budgetAwareCompletion: boolean;
+  /** Digest of prompt/system additions (null = none). */
+  promptAdditionsDigest: string | null;
+  /** Policy version that produced these mechanisms. */
+  policyVersion: string;
+}
+
+/** E3-03 — the typed resolved arm a runner consumes end-to-end. */
+export interface ResolvedExperimentArm extends ResolvedArmSnapshot {
+  /** Real runtime injection points (the source the runner reads). */
+  runtimeMechanisms: RuntimeMechanisms;
+  /** Policy version (distinct from schema version). */
+  policyVersion: string;
 }
 
 export interface ArmFactory {
   resolveBaseline(caseEligibilities?: CaseEligibility[]): ResolvedArmSnapshot;
   resolveCandidate(id: string, caseEligibilities?: CaseEligibility[]): ResolvedArmSnapshot;
+  /** E3-03: resolve the typed arm (runtime mechanisms + snapshot). */
+  resolveArm(id: string | null, caseEligibilities?: CaseEligibility[]): ResolvedExperimentArm;
+  /** E3-03: resolve ONLY the typed runtime mechanism injection points. */
+  resolveRuntimeMechanisms(id: string | null): RuntimeMechanisms;
   /** Structured diff of baseline vs candidate. */
   compare(
     baseline: ResolvedArmSnapshot,
@@ -118,9 +164,29 @@ export interface MechanismWiring {
   apply(config: Record<string, unknown>): Record<string, unknown>;
   /** Callback to check whether the mechanism is actually active. */
   isActive(config: Record<string, unknown>): boolean;
+  /** E3-03: apply the candidate's effect to the typed RuntimeMechanisms. */
+  applyRuntime(base: RuntimeMechanisms): RuntimeMechanisms;
+  /** E3-03: exact JSON-pointer paths (harnessConfig.*) this candidate may
+   *  change. ANY change outside these paths is an UNDECLARED_ARM_DELTA; a
+   *  declared path that does NOT actually change is a missing causal delta. */
+  declaredPaths: string[];
 }
 
 const NOOP = (c: Record<string, unknown>): Record<string, unknown> => ({ ...c });
+
+const BASELINE_RUNTIME_MECHANISMS: RuntimeMechanisms = {
+  recoveryPlanner: null,
+  memoryRetrieval: false,
+  deferredSchema: false,
+  adaptiveContextDynamic: 0,
+  budgetAwareCompletion: false,
+  promptAdditionsDigest: null,
+  policyVersion: ARM_FACTORY_POLICY_VERSION,
+};
+
+function sha256Hex(input: string): string {
+  return createHash("sha256").update(input, "utf8").digest("hex");
+}
 
 /** Hard rule: a candidate declared UNSUPPORTED in the registry is never
  *  constructable — preflight rejects it with CANDIDATE_UNSUPPORTED. */
@@ -129,6 +195,8 @@ function unsupportedWiring(id: string): MechanismWiring {
     constructorId: `unsupported:${id}`,
     apply: NOOP,
     isActive: () => false,
+    applyRuntime: (base) => base,
+    declaredPaths: [],
   };
 }
 
@@ -143,37 +211,56 @@ export function wireCandidateMechanism(reg: CandidateRegistration): MechanismWir
         constructorId: "memory:sqlite-retrieval-v1",
         apply: (config) => ({ ...config, features: { ...featuresOf(config), memory: true } }),
         isActive: (config) => featuresOf(config)?.memory === true,
+        applyRuntime: (base) => ({ ...base, memoryRetrieval: true }),
+        declaredPaths: ["harnessConfig.features.memory"],
       };
-    case "adaptive_recovery":
     case "adaptive_recovery":
       return {
         constructorId: "recovery:adaptive-planner-v1",
         apply: (config) => ({ ...config, adaptiveRecovery: config.adaptiveRecovery ?? "adaptive-v1" }),
         isActive: (config) => config.adaptiveRecovery !== undefined && config.adaptiveRecovery !== null,
+        applyRuntime: (base) => ({ ...base, recoveryPlanner: "adaptive-v1" }),
+        declaredPaths: ["harnessConfig.adaptiveRecovery"],
       };
     case "adaptive_recovery_v2":
       return {
         constructorId: "recovery:adaptive-planner-v2-conservative",
         apply: (config) => ({ ...config, adaptiveRecovery: "conservative-v1" }),
         isActive: (config) => config.adaptiveRecovery === "conservative-v1",
+        applyRuntime: (base) => ({ ...base, recoveryPlanner: "adaptive-v2-conservative" }),
+        declaredPaths: ["harnessConfig.adaptiveRecovery"],
       };
     case "tool_selector_deferred_schema":
       return {
         constructorId: "tools:deferred-schema-advert-v1",
         apply: (config) => ({ ...config, toolSelector: { strategy: "deferred-schema" } }),
         isActive: (config) => (config.toolSelector as Record<string, unknown> | undefined)?.strategy === "deferred-schema",
+        applyRuntime: (base) => ({
+          ...base,
+          deferredSchema: true,
+          promptAdditionsDigest: sha256Hex("tool-selector-deferred-schema:v1"),
+        }),
+        declaredPaths: ["harnessConfig.toolSelector"],
       };
     case "adaptive_context_policy":
       return {
         constructorId: "context:adaptive-policy-v1",
         apply: (config) => ({ ...config, contextPolicy: { strategy: "adaptive-budget" } }),
         isActive: (config) => (config.contextPolicy as Record<string, unknown> | undefined)?.strategy === "adaptive-budget",
+        applyRuntime: (base) => ({ ...base, adaptiveContextDynamic: 4096 }),
+        declaredPaths: ["harnessConfig.contextPolicy"],
       };
     case "budget_aware_completion_v1":
       return {
         constructorId: "completion:budget-aware-guide-v1",
         apply: (config) => ({ ...config, completionPolicy: "budget_aware" }),
         isActive: (config) => config.completionPolicy === "budget_aware",
+        applyRuntime: (base) => ({
+          ...base,
+          budgetAwareCompletion: true,
+          promptAdditionsDigest: sha256Hex("budget-aware-completion:v1"),
+        }),
+        declaredPaths: ["harnessConfig.completionPolicy"],
       };
     default:
       // Unsupported or not-yet-wired candidates fail closed.
@@ -229,7 +316,7 @@ function buildSnapshot(input: {
   baselineConfig: Record<string, unknown>;
   caseEligibilities: CaseEligibility[];
   declaredDeltaPaths: string[];
-}): ResolvedArmSnapshot {
+}): ResolvedExperimentArm {
   const registry = getCandidateRegistry();
   const baseline = canonicalizeConfig(input.baselineConfig);
   let config = { ...baseline };
@@ -258,22 +345,34 @@ function buildSnapshot(input: {
     }
   }
 
+  // E3-03: compute typed runtime mechanisms from the candidate wiring.
+  let runtimeMechanisms: RuntimeMechanisms = { ...BASELINE_RUNTIME_MECHANISMS };
+  if (candidate !== null) {
+    runtimeMechanisms = wireCandidateMechanism(candidate).applyRuntime(runtimeMechanisms);
+  }
+  const promptFromRuntime = runtimeMechanisms.promptAdditionsDigest;
+
   const armId = candidate === null ? "baseline" : `candidate:${candidate.id}`;
-  const snapshotBase: Omit<ResolvedArmSnapshot, "digest"> = {
+  const experimentBase: Omit<ResolvedExperimentArm, "digest"> = {
     schemaVersion: ARM_FACTORY_SCHEMA_VERSION,
+    policyVersion: ARM_FACTORY_POLICY_VERSION,
     armId,
     candidateId: candidate?.id ?? null,
     harnessConfig: config,
     toolSchemas: [], // filled by the harness wiring step (real tool register)
-    promptAdditionsDigest: null,
+    promptAdditionsDigest: promptFromRuntime,
     mechanisms: { armId, candidateId: candidate?.id ?? null, activations: mechanisms },
     perCaseEligibility: input.caseEligibilities,
     declaredDeltaPaths: input.declaredDeltaPaths,
+    runtimeMechanisms: {
+      ...runtimeMechanisms,
+      promptAdditionsDigest: promptFromRuntime,
+    },
   };
   // Compact content-addressed digest (sha256 over the canonical snapshot),
   // NOT the raw stable string — consumers get a short, comparable token.
-  const digest = computeSnapshotDigest(snapshotBase);
-  return { ...snapshotBase, digest };
+  const digest = computeSnapshotDigest(experimentBase);
+  return { ...experimentBase, digest };
 }
 
 /** sha256 (hex) over the canonical snapshot (stable key order). */
@@ -284,7 +383,7 @@ export function computeSnapshotDigest(snapshot: Omit<ResolvedArmSnapshot, "diges
 export function createArmFactory(): ArmFactory {
   const registry = getCandidateRegistry();
 
-  const resolveBaseline = (caseEligibilities: CaseEligibility[] = []): ResolvedArmSnapshot =>
+  const resolveBaseline = (caseEligibilities: CaseEligibility[] = []): ResolvedExperimentArm =>
     buildSnapshot({
       candidate: null,
       baselineConfig: defaultBenchmarkHarnessConfig(),
@@ -292,48 +391,60 @@ export function createArmFactory(): ArmFactory {
       declaredDeltaPaths: [],
     });
 
-  const resolveCandidate = (id: string, caseEligibilities: CaseEligibility[] = []): ResolvedArmSnapshot => {
+  const resolveCandidate = (id: string, caseEligibilities: CaseEligibility[] = []): ResolvedExperimentArm => {
     const candidate = registry.find(id);
     if (candidate === undefined) {
       throw new Error(`UNKNOWN_CANDIDATE: no such candidate "${id}"`);
     }
-    // E2-03 #1/#2: the candidate arm's BASE config must equal the PRODUCTION
-    // default baseline (context stays ON). It must NEVER inherit other
-    // candidates' disabled patches (e.g. context_pipeline_v5's
-    // `context:false`) — that fabricated a false arm delta (F-07).
     const baselineConfig = defaultBenchmarkHarnessConfig();
     return buildSnapshot({
       candidate,
       baselineConfig,
       caseEligibilities,
-      declaredDeltaPaths: [candidate.id],
+      declaredDeltaPaths: wireCandidateMechanism(candidate).declaredPaths,
     });
   };
+
+  /**
+   * E3-03 — recursive path diff. Returns every changed JSON-pointer path
+   * between two canonicalized configs (harnessConfig.*). A path whose value is
+   * identical (deep) is not reported. Used by compare() so the declared-path
+   * allowlist is precise — no `key === "features"` wildcard, no candidate-id
+   * shortcut.
+   */
+  function configPathDiff(a: Record<string, unknown>, b: Record<string, unknown>, prefix = "harnessConfig"): string[] {
+    const out: string[] = [];
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    for (const key of keys) {
+      const path = `${prefix}.${key}`;
+      const av = a[key];
+      const bv = b[key];
+      const bothObjects = typeof av === "object" && av !== null && !Array.isArray(av)
+        && typeof bv === "object" && bv !== null && !Array.isArray(bv);
+      if (bothObjects) {
+        out.push(...configPathDiff(av as Record<string, unknown>, bv as Record<string, unknown>, path));
+        continue;
+      }
+      if (stableStringify(av) === stableStringify(bv)) continue;
+      out.push(path);
+    }
+    return out;
+  }
 
   const compare = (baseline: ResolvedArmSnapshot, candidate: ResolvedArmSnapshot): ArmComparison => {
     const baselineNorm = canonicalizeConfig(baseline.harnessConfig);
     const candidateNorm = canonicalizeConfig(candidate.harnessConfig);
     const allowed = new Set(candidate.declaredDeltaPaths);
 
-    const undeclared: string[] = [];
-    const declared: string[] = [];
-    for (const key of new Set([...Object.keys(baselineNorm), ...Object.keys(candidateNorm)])) {
-      const b = stableStringify(baselineNorm[key]);
-      const c = stableStringify(candidateNorm[key]);
-      if (b === c) continue;
-      const path = `harnessConfig.${key}`;
-      if (allowed.has(key) || allowed.has(candidate.candidateId ?? "") || key === "features") {
-        // features is a declared candidate switch; candidate id matches.
-        declared.push(path);
-      } else {
-        undeclared.push(path);
-      }
-    }
+    const changed = configPathDiff(baselineNorm, candidateNorm);
+    const undeclared = changed.filter((p) => !allowed.has(p));
+    const declared = changed.filter((p) => allowed.has(p));
+    const missingDeclared = [...allowed].filter((p) => !changed.includes(p));
 
     const hasCausalDelta = declared.length > 0;
-    const comparable = hasCausalDelta && undeclared.length === 0;
+    const comparable = hasCausalDelta && undeclared.length === 0 && missingDeclared.length === 0;
     let reasonCode: PreflightReasonCode | null = null;
-    if (!hasCausalDelta) reasonCode = "NO_CAUSAL_DELTA";
+    if (!hasCausalDelta || missingDeclared.length > 0) reasonCode = "NO_CAUSAL_DELTA";
     else if (undeclared.length > 0) reasonCode = "UNDECLARED_ARM_DELTA";
 
     return {
@@ -341,10 +452,17 @@ export function createArmFactory(): ArmFactory {
       hasCausalDelta,
       undeclaredDeltas: undeclared,
       declaredDeltas: declared,
+      missingDeclaredDeltas: missingDeclared,
       reasonCode,
       providerCallsAllowed: comparable,
     };
   };
+
+  const resolveArm = (id: string | null, caseEligibilities: CaseEligibility[] = []): ResolvedExperimentArm =>
+    id === null ? resolveBaseline(caseEligibilities) : resolveCandidate(id, caseEligibilities);
+
+  const resolveRuntimeMechanisms = (id: string | null): RuntimeMechanisms =>
+    resolveArm(id).runtimeMechanisms;
 
   const preflight = (id: string, caseEligibilities: CaseEligibility[] = []) => {
     const candidate = registry.find(id);
@@ -354,10 +472,6 @@ export function createArmFactory(): ArmFactory {
     if (candidate.status === "unsupported") {
       return { ok: false, reasonCode: "CANDIDATE_UNSUPPORTED" as const, detail: `candidate "${id}" is declared UNSUPPORTED — no real wiring branch`, providerCallsAllowed: false };
     }
-    // A candidate whose mechanism wiring fell back to the unsupported stub
-    // (e.g. delegation has no REAL subagent wiring yet) must be rejected
-    // before any provider call — never allowed to run while the manifest
-    // records subagent=false (E2-03 #6).
     const wiring = wireCandidateMechanism(candidate);
     if (wiring.constructorId.startsWith("unsupported:")) {
       return { ok: false, reasonCode: "CANDIDATE_UNSUPPORTED" as const, detail: `candidate "${id}" has no real wiring branch (${wiring.constructorId}) — preflight rejects it`, providerCallsAllowed: false };
@@ -365,8 +479,11 @@ export function createArmFactory(): ArmFactory {
     const baseline = resolveBaseline(caseEligibilities);
     const candidateArm = resolveCandidate(id, caseEligibilities);
     const cmp = compare(baseline, candidateArm);
-    if (!cmp.hasCausalDelta) {
-      return { ok: false, reasonCode: "NO_CAUSAL_DELTA" as const, detail: `candidate "${id}" produces no causal delta vs baseline`, providerCallsAllowed: false };
+    if (!cmp.hasCausalDelta || cmp.missingDeclaredDeltas.length > 0) {
+      const detail = cmp.missingDeclaredDeltas.length > 0
+        ? `candidate "${id}" declares delta paths that did NOT change: ${cmp.missingDeclaredDeltas.join(", ")}`
+        : `candidate "${id}" produces no causal delta vs baseline`;
+      return { ok: false, reasonCode: "NO_CAUSAL_DELTA" as const, detail, providerCallsAllowed: false };
     }
     if (cmp.undeclaredDeltas.length > 0) {
       return {
@@ -379,7 +496,7 @@ export function createArmFactory(): ArmFactory {
     return { ok: true, reasonCode: null, detail: `candidate "${id}" has a causal delta within declared paths`, providerCallsAllowed: true };
   };
 
-  return { resolveBaseline, resolveCandidate, compare, preflight };
+  return { resolveBaseline, resolveCandidate, resolveArm, resolveRuntimeMechanisms, compare, preflight };
 }
 
 let _armFactory: ArmFactory | undefined;

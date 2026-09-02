@@ -30,10 +30,12 @@ import {
   DEFAULT_JUDGE_VERSION,
   EvalRunner,
   getCandidateRegistry,
+  getArmFactory,
   loadBenchmarkCases,
   runBaseline,
   runPairedExperiment,
   writeBaselineFiles,
+  type RuntimeMechanisms,
 } from "@ar/evaluation";
 import type {
   BenchmarkCase,
@@ -268,6 +270,8 @@ async function executeBenchmark(
   // P38.3-10: effective wiring manifest — the ACTUAL runtime configuration for
   // this run (candidate + mechanisms + tool set + hashes). Recorded in the
   // run manifest so a reviewer can reproduce or reject a comparison.
+  // E3-03: mechanism wiring derived from the resolved arm.
+  const armMechanisms = getArmFactory().resolveRuntimeMechanisms(opts.candidate ?? null);
   const effectiveConfig = buildEffectiveConfig({
     candidate: opts.candidate ?? null,
     provider: provider.id,
@@ -275,16 +279,16 @@ async function executeBenchmark(
     temperature,
     context: {
       maxTokens: defaultBudgetTokens,
-      dynamic: opts.candidate === "adaptive_context_policy" ? 4096 : 0,
+      dynamic: armMechanisms.adaptiveContextDynamic,
     },
-    recovery: { adaptive: opts.candidate === "adaptive_recovery" || opts.candidate === "adaptive_recovery_v2" },
+    recovery: { adaptive: armMechanisms.recoveryPlanner !== null },
     mechanisms: {
-      memory: opts.candidate === "memory_retrieval",
+      memory: armMechanisms.memoryRetrieval,
       subagent: false,
       scheduler: false,
       mcp: false,
-      deferredSchema: opts.candidate === "tool_selector_deferred_schema",
-      stepBudgetCompletion: opts.candidate === "budget_aware_completion_v1",
+      deferredSchema: armMechanisms.deferredSchema,
+      stepBudgetCompletion: armMechanisms.budgetAwareCompletion,
     },
     tools: [readFileTool.name, writeFileTool.name, editFileTool.name, searchFilesTool.name, execTool.name],
   });
@@ -952,21 +956,25 @@ async function runOneCase(
 
     // E1-04: activation evidence observer — gathers real execution-path signals
     // for the candidate mechanism. Only fires when a candidate is active.
+    // E3-03: observer branches are driven by the RESOLVED arm's typed runtime
+    // mechanisms (getArmFactory().resolveRuntimeMechanisms), never by
+    // candidate-id comparison branches.
     let activationEvents: { type: string; payload?: Record<string, unknown> }[] = [];
     const candidateId = opts.candidate;
+    const armMechanisms: RuntimeMechanisms = getArmFactory().resolveRuntimeMechanisms(candidateId ?? null);
     if (candidateId !== undefined) {
       events.onAppended = (event: AgentEvent) => {
         const payload = event.payload;
         // Track tool_lookup calls for deferred schema activation.
-        if (candidateId === "tool_selector_deferred_schema" && event.type === "tool.requested" && payload.name === "tool_lookup") {
+        if (armMechanisms.deferredSchema && event.type === "tool.requested" && payload.name === "tool_lookup") {
           activationEvents.push({ type: "tool_lookup_called", payload });
         }
-        // Track recovery decisions for adaptive_recovery activation.
-        if ((candidateId === "adaptive_recovery" || candidateId === "adaptive_recovery_v2") && event.type === "recovery.decided") {
+        // Track recovery decisions for adaptive recovery activation.
+        if (armMechanisms.recoveryPlanner !== null && event.type === "recovery.decided") {
           activationEvents.push({ type: "recovery_decision", payload });
         }
         // Track memory retrieval for memory_retrieval activation.
-        if (candidateId === "memory_retrieval" && event.type === "memory.retrieved") {
+        if (armMechanisms.memoryRetrieval && event.type === "memory.retrieved") {
           activationEvents.push({ type: "memory_retrieved", payload });
         }
         // adaptive_context_policy has NO runtime event (dynamic budget is
@@ -984,9 +992,9 @@ async function runOneCase(
     // legacy `toolSpecs` deps param is gone — tool_lookup is what makes the
     // deferred path observable end-to-end.
     // P38-EVOLUTION: the tool_selector_deferred_schema challenger enables the
-    // deferred mode for every case.
+    // deferred mode for every case. E3-03: driven by the resolved arm.
     let toolLookupName: string | undefined;
-    if (caseDef.schemaMode === "deferred" || opts.candidate === "tool_selector_deferred_schema") {
+    if (caseDef.schemaMode === "deferred" || armMechanisms.deferredSchema) {
       registry.register(createToolLookupTool(registry));
       toolLookupName = "tool_lookup";
     }
@@ -1057,7 +1065,8 @@ async function runOneCase(
     // E1-13: budget_aware_completion_v1 — inject the step-budget completion
     // guidance into the agent's system prompt and record the deterministic
     // activation observation (a real wiring decision, not a name/flag claim).
-    const budgetAwareActive = opts.candidate === "budget_aware_completion_v1";
+    // E3-03: driven by the resolved arm.
+    const budgetAwareActive = armMechanisms.budgetAwareCompletion;
     if (budgetAwareActive && candidateId !== undefined) {
       activationEvents.push({ type: "budget_guidance_injected", payload: { guidance: "step-budget-completion-v1" } });
     }
@@ -1118,10 +1127,11 @@ async function runOneCase(
     // path: the write gate and the retrieval trust boundary are exercised.
     // P38-EVOLUTION: the memory_retrieval challenger wires the retrieval
     // provider for EVERY case (empty store when the case has no seed memory).
+    // E3-03: candidate activation driven by the resolved arm.
     let memoryBlocks: ((input: { sessionId: string; turnId: string; goal: string; cwd: string }) => Promise<ContextBlock[]>) | undefined;
     if (
       (caseDef.sources?.memory !== undefined && caseDef.sources.memory.length > 0) ||
-      opts.candidate === "memory_retrieval"
+      armMechanisms.memoryRetrieval
     ) {
       const memoryStore = new SqliteMemoryStore({ dataDir: join(workspace, ".harness-memory") });
       const bridge = new MemoryRuntimeBridge({ store: memoryStore, scope: "workspace", topK: 5 });
@@ -1160,10 +1170,11 @@ async function runOneCase(
       // E1-next: adaptive_recovery_v2 wires the SAME P19-3 planner but with
       // tighter per-turn budgets (retry_safe/change_strategy → 1) so recovery
       // converges to fail_safe faster, avoiding v1's agent_limit regression.
-      ...(opts.candidate === "adaptive_recovery"
+      // E3-03: planner wiring driven by the resolved arm's recoveryPlanner.
+      ...(armMechanisms.recoveryPlanner === "adaptive-v1"
         ? { adaptiveRecovery: new AdaptiveRecoveryPlanner() }
         : {}),
-      ...(opts.candidate === "adaptive_recovery_v2"
+      ...(armMechanisms.recoveryPlanner === "adaptive-v2-conservative"
         ? { adaptiveRecovery: new AdaptiveRecoveryPlanner({ retry_safe: { budget: 1 }, change_strategy: { budget: 1 } }) }
         : {}),
       // E1-05: the tool_selector_deferred_schema candidate must ACTUALLY
@@ -1172,8 +1183,9 @@ async function runOneCase(
       // tool_lookup); baseline keeps the default full advertisement. The core
       // filesystem/exec/verification tools stay full so the model never loses
       // the tools a coding task needs.
-      ...(schemaAdvertPolicyFor(opts.candidate) !== undefined
-        ? { schemaAdvertPolicy: schemaAdvertPolicyFor(opts.candidate) }
+      // E3-03: schema advert policy derived from the resolved arm.
+      ...(schemaAdvertPolicyForMechanisms(armMechanisms) !== undefined
+        ? { schemaAdvertPolicy: schemaAdvertPolicyForMechanisms(armMechanisms) }
         : {}),
       // P0-8/P4-5: MCP output rides the real injection gate (injectionDetector
       // is wired below, in the runtime deps) — a connector payload carrying
@@ -1187,7 +1199,8 @@ async function runOneCase(
           reserved: { system: 256, task: 128, output: 256 },
           // P38-EVOLUTION: the adaptive_context_policy challenger grants the
           // context pipeline dynamic headroom (P3-11); baseline keeps it 0.
-          dynamic: opts.candidate === "adaptive_context_policy" ? 4096 : 0,
+          // E3-03: driven by the resolved arm.
+          dynamic: armMechanisms.adaptiveContextDynamic,
         },
       },
       ...(caseDef.verification !== undefined && caseDef.verification.length > 0
@@ -1393,15 +1406,17 @@ export function effectiveFeaturesFor(
   opts: Pick<RunOneCaseOptions, "candidate">,
 ): Record<string, boolean> {
   const requires = caseDef.requires ?? [];
-  const candidate = opts.candidate ?? null;
+  // E3-03: candidate-driven mechanism wiring comes from the RESOLVED arm's
+  // typed runtime mechanisms, never from candidate-id branches.
+  const mech = getArmFactory().resolveRuntimeMechanisms(opts.candidate ?? null);
   return {
     memory:
-      candidate === "memory_retrieval" ||
+      mech.memoryRetrieval ||
       (caseDef.sources?.memory !== undefined && caseDef.sources.memory.length > 0),
     subagent: requires.includes("subagent"),
     scheduler: requires.includes("scheduler"),
     mcp: requires.includes("mcp"),
-    deferredSchema: caseDef.schemaMode === "deferred" || candidate === "tool_selector_deferred_schema",
+    deferredSchema: caseDef.schemaMode === "deferred" || mech.deferredSchema,
   };
 }
 
@@ -1415,7 +1430,20 @@ export function effectiveFeaturesFor(
  * not just registering tool_lookup.
  */
 export function schemaAdvertPolicyFor(candidate: string | undefined): { maxInlineTokens: number; keepFull: (name: string) => boolean } | undefined {
-  if (candidate !== "tool_selector_deferred_schema") return undefined;
+  return schemaAdvertPolicyForMechanisms(
+    getArmFactory().resolveRuntimeMechanisms(candidate ?? null),
+  );
+}
+
+/**
+ * E3-03 — schema advert policy derived from the RESOLVED arm's typed runtime
+ * mechanisms, never from a candidate-id string. The deferred-schema policy
+ * forces maxInlineTokens=1 so EVERY tool exceeds the inline budget; keepFull
+ * preserves the core filesystem/exec/search/verification tools (and tool_lookup
+ * itself) in full, deferring the peripheral bulk to on-demand stubs.
+ */
+export function schemaAdvertPolicyForMechanisms(mech: RuntimeMechanisms): { maxInlineTokens: number; keepFull: (name: string) => boolean } | undefined {
+  if (!mech.deferredSchema) return undefined;
   return {
     maxInlineTokens: 1,
     keepFull: (name: string) =>
@@ -1476,11 +1504,13 @@ async function listWorkspaceFiles(root: string): Promise<string[]> {
  *  policy) — two behaviorally different runs must never share a hash. */
 function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudgetTokens: number): Record<string, unknown> {
   const candidate = opts.candidate ?? null;
+  // E3-03: candidate-driven mechanism wiring from the resolved arm.
+  const mech = getArmFactory().resolveRuntimeMechanisms(candidate);
   return {
     benchmarkVersion: "2.0.0",
     suite: opts.suite,
     defaultBudgetTokens,
-    systemPrompt: opts.candidate === "budget_aware_completion_v1"
+    systemPrompt: mech.budgetAwareCompletion
       ? BENCHMARK_SYSTEM_PROMPT + BUDGET_AWARE_COMPLETION_GUIDANCE
       : BENCHMARK_SYSTEM_PROMPT,
     permissions: BENCHMARK_PERMISSIONS,
@@ -1488,28 +1518,24 @@ function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudgetTokens
     tools: [readFileTool.name, writeFileTool.name, editFileTool.name, searchFilesTool.name, execTool.name],
     agentLimits: { maxToolCalls: 100, maxDurationMs: 600_000 },
     recovery: {
-      // P38-EVOLUTION: the adaptive_recovery candidate wires the planner.
-      adaptive: candidate === "adaptive_recovery" || candidate === "adaptive_recovery_v2",
+      adaptive: mech.recoveryPlanner !== null,
     },
     context: {
       maxTokens: defaultBudgetTokens,
       reserved: { system: 256, task: 128, output: 256 },
-      // P38-EVOLUTION: adaptive_context_policy grants dynamic headroom.
-      dynamic: candidate === "adaptive_context_policy" ? 4096 : 0,
+      dynamic: mech.adaptiveContextDynamic,
     },
     maxIterationsPerTurn: 30,
     toolOutputBudget: { maxInlineBytes: 16_000 },
     judgeVersion: DEFAULT_JUDGE_VERSION,
-    // P38.3-10: candidate + its mechanism wiring are part of the hash — a
-    // baseline run and a candidate run are NEVER the same configuration.
     candidate,
     mechanisms: {
-      memory: candidate === "memory_retrieval",
+      memory: mech.memoryRetrieval,
       subagent: false,
       scheduler: false,
       mcp: false,
-      deferredSchema: candidate === "tool_selector_deferred_schema",
-      stepBudgetCompletion: candidate === "budget_aware_completion_v1",
+      deferredSchema: mech.deferredSchema,
+      stepBudgetCompletion: mech.budgetAwareCompletion,
     },
   };
 }
