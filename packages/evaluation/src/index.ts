@@ -56,3 +56,4 @@ export * from "./gate-evidence-v2.js";
 export * from "./mechanism-contract.js";
 export * from "./paired-executor.js";
 export * from "./champion-eval-v3.js";
+export * from "./champion-harness-config.js";
