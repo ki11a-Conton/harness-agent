@@ -180,6 +180,8 @@ describe("E2-16 §5 final architecture invariants", () => {
         candidateId: "adaptive_recovery_v2",
         parentLevel: "C0",
         parentStateDigest: "y",
+        decisionArtifactPath: "no-such-file.json",
+        decisionArtifactDigest: "forged",
         artifactRefs: [],
       });
       const forgedPath = join(dir, "forged.json");

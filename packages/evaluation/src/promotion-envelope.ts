@@ -48,6 +48,11 @@ export interface PromotionEnvelope {
   parentStateDigest: string;
   /** E2-06 decision envelope digest (content-addressed). */
   decisionEnvelopeDigest: string;
+  /** E3-07: path + digest of the REAL DecisionArtifactV3 that authorized this
+   *  promotion. A bare digest string is NOT authority — the artifact must
+   *  exist and its content digest must match. */
+  decisionArtifactPath: string;
+  decisionArtifactDigest: string;
   artifactRefs: AxisArtifactRef[];
   /** Source/build sha the artifacts were produced under (E2-02). */
   sourceSha: string | null;
@@ -63,6 +68,9 @@ export type EnvelopeValidationCode =
   | "DIGEST_MISMATCH"
   | "ARTIFACT_MISSING"
   | "ARTIFACT_DIGEST_CHANGED"
+  | "DECISION_ARTIFACT_MISSING"
+  | "DECISION_ARTIFACT_DIGEST_CHANGED"
+  | "DECISION_ARTIFACT_INVALID"
   | "CANDIDATE_MISMATCH"
   | "PARENT_STATE_MISMATCH"
   | "POLICY_VERSION_MISMATCH"
@@ -80,6 +88,9 @@ export interface BuildPromotionEnvelopeInput {
   candidateId: string;
   parentLevel: string;
   parentStateDigest: string;
+  /** E3-07: real DecisionArtifactV3 path + content digest (REQUIRED). */
+  decisionArtifactPath: string;
+  decisionArtifactDigest: string;
   artifactRefs: AxisArtifactRef[];
   sourceSha?: string | null;
   generatedAtIso?: string;
@@ -106,6 +117,8 @@ export function buildPromotionEnvelope(input: BuildPromotionEnvelopeInput): Prom
     parentLevel: input.parentLevel,
     parentStateDigest: input.parentStateDigest,
     decisionEnvelopeDigest: input.decisionEnvelopeDigest,
+    decisionArtifactPath: input.decisionArtifactPath,
+    decisionArtifactDigest: input.decisionArtifactDigest,
     artifactRefs: [...input.artifactRefs],
     sourceSha: input.sourceSha ?? null,
   };
@@ -134,6 +147,8 @@ export async function loadPromotionEnvelope(
     candidateId?: string;
     expectedPolicyVersion?: string;
     verifyArtifactRefs?: boolean;
+    /** E3-07: re-read + re-digest the DecisionArtifactV3 (default true). */
+    verifyDecisionArtifact?: boolean;
   } = {},
 ): Promise<EnvelopeValidationResult> {
   const issues: Array<{ code: EnvelopeValidationCode; detail: string }> = [];
@@ -170,6 +185,12 @@ export async function loadPromotionEnvelope(
   if (!Array.isArray(e.artifactRefs) || e.artifactRefs.length === 0) {
     issues.push({ code: "MISSING_REQUIRED_FIELD", detail: "artifactRefs missing or empty" });
   }
+  if (typeof e.decisionArtifactPath !== "string" || e.decisionArtifactPath === "") {
+    issues.push({ code: "MISSING_REQUIRED_FIELD", detail: "decisionArtifactPath missing" });
+  }
+  if (typeof e.decisionArtifactDigest !== "string" || e.decisionArtifactDigest === "") {
+    issues.push({ code: "MISSING_REQUIRED_FIELD", detail: "decisionArtifactDigest missing" });
+  }
 
   // Recompute the envelope's own digest (self-excluding).
   if (typeof e.contentDigest === "string") {
@@ -183,6 +204,8 @@ export async function loadPromotionEnvelope(
       parentLevel: e.parentLevel,
       parentStateDigest: e.parentStateDigest,
       decisionEnvelopeDigest: e.decisionEnvelopeDigest,
+      decisionArtifactPath: e.decisionArtifactPath,
+      decisionArtifactDigest: e.decisionArtifactDigest,
       artifactRefs: e.artifactRefs,
       sourceSha: e.sourceSha ?? null,
     };
@@ -207,6 +230,43 @@ export async function loadPromotionEnvelope(
         }
       }),
     );
+  }
+
+  // E3-07: verify the REAL DecisionArtifact that authorized this promotion.
+  // A bare `decisionEnvelopeDigest` string is NOT authority — the decision
+  // artifact must exist, its content digest must match, and it must be a
+  // valid DecisionArtifactV3 with schema + policy + contentDigest + ACCEPT
+  // decision (acceptance #1/#2).
+  if (verify.verifyDecisionArtifact !== false && typeof e.decisionArtifactPath === "string") {
+    try {
+      const buf = await readFile(e.decisionArtifactPath);
+      const actual = sha256OfFileBytes(buf);
+      if (actual !== e.decisionArtifactDigest) {
+        issues.push({ code: "DECISION_ARTIFACT_DIGEST_CHANGED", detail: `decision artifact ${e.decisionArtifactPath} digest changed: recorded ${e.decisionArtifactDigest}, actual ${actual}` });
+      } else {
+        // Digest matches — confirm the artifact is a valid DecisionArtifactV3:
+        // schemaVersion, policyVersion, contentDigest and ACCEPT decision.
+        try {
+          const parsed = JSON.parse(buf.toString("utf8")) as Record<string, unknown>;
+          if (typeof parsed.schemaVersion !== "string" || parsed.schemaVersion === "") {
+            issues.push({ code: "DECISION_ARTIFACT_INVALID", detail: "decision artifact missing schemaVersion" });
+          }
+          if (typeof parsed.policyVersion !== "string" || parsed.policyVersion === "") {
+            issues.push({ code: "DECISION_ARTIFACT_INVALID", detail: "decision artifact missing policyVersion" });
+          }
+          if (parsed.decision !== "ACCEPT") {
+            issues.push({ code: "DECISION_ARTIFACT_INVALID", detail: `decision artifact decision="${String(parsed.decision)}" is not ACCEPT` });
+          }
+          if (typeof parsed.contentDigest !== "string" || parsed.contentDigest === "") {
+            issues.push({ code: "DECISION_ARTIFACT_INVALID", detail: "decision artifact missing contentDigest" });
+          }
+        } catch {
+          issues.push({ code: "DECISION_ARTIFACT_INVALID", detail: "decision artifact is not valid JSON" });
+        }
+      }
+    } catch {
+      issues.push({ code: "DECISION_ARTIFACT_MISSING", detail: `decision artifact ${e.decisionArtifactPath} missing/unreadable` });
+    }
   }
 
   // Parent state compare (when provided).

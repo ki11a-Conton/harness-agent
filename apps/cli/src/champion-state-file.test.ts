@@ -46,7 +46,9 @@ describe("champion-state-file (E1-14)", () => {
       expect(loaded.candidateId).toBe("memory_retrieval");
       expect(loaded.evidenceRef).toBe("runs/holdout.json");
       expect(loaded.history).toHaveLength(1);
-      expect(loaded.applied).toBe(true); // writeChampionStateFile always marks applied=true
+      // E3-07: the writer preserves `applied` EXACTLY as given. applyPromotion
+      // creates applicationPending (applied=false); promote never forces true.
+      expect(loaded.applied).toBe(false);
     }
   });
 

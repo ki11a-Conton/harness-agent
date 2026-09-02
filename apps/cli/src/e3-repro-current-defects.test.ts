@@ -290,10 +290,12 @@ describe("R-06: empty perRepetitionDeltas with repetitions=2 gives INVALID [FIXE
 
 // ---------------------------------------------------------------------------
 // R-07: self-constructed PromotionEnvelope with arbitrary decision digest
-//   and source SHA → strict loader accepts.  REPRODUCED.
+//   and source SHA → strict loader accepts.  FIXED in E3-07: the envelope
+//   must reference a REAL DecisionArtifactV3 (path + digest); a bare digest
+//   string or forged artifact is rejected.
 // ---------------------------------------------------------------------------
-describe("R-07: forged envelope accepted [REPRODUCED]", () => {
-  it("envelope with arbitrary decisionEnvelopeDigest/sourceSha loads as accepted", async () => {
+describe("R-07: forged envelope rejected [FIXED in E3-07]", () => {
+  it("envelope with arbitrary decisionEnvelopeDigest/sourceSha and NO real decision artifact is rejected", async () => {
     const dir = await makeTemp();
     const artifactPath = join(dir, "artifact.json");
 
@@ -307,6 +309,9 @@ describe("R-07: forged envelope accepted [REPRODUCED]", () => {
       candidateId: "adaptive_recovery_v2",
       parentLevel: "C0",
       parentStateDigest: sha("C0"),
+      // E3-07: references a decision artifact that does NOT exist.
+      decisionArtifactPath: join(dir, "no-decision-artifact.json"),
+      decisionArtifactDigest: "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
       artifactRefs: [
         { role: "candidate", path: artifactPath, digest: artifactDigest },
       ],
@@ -322,22 +327,19 @@ describe("R-07: forged envelope accepted [REPRODUCED]", () => {
       candidateId: "adaptive_recovery_v2",
     });
 
-    // REPRODUCED: forged envelope is accepted
-    expect(result.ok).toBe(true);
-    expect(result.envelope).not.toBeNull();
-    expect(result.envelope!.decision).toBe("ACCEPT");
+    // FIXED (E3-07): forged envelope rejected — missing decision artifact.
+    expect(result.ok).toBe(false);
+    expect(result.issues.some((i) => i.code === "DECISION_ARTIFACT_MISSING")).toBe(true);
   });
 });
 
 // ---------------------------------------------------------------------------
-// R-08: two concurrent CAS writes based on same parent → both return ok=true
-//   on POSIX (no write-lock, last-writer-wins). On Windows the second rename
-//   throws EPERM — the CAS is still not atomic-locked.  REPRODUCED: the CAS
-//   does not prevent concurrent writes (no advisory lock / retry). At least
-//   one write succeeds unconditionally, and on POSIX both succeed.
+// R-08: two concurrent CAS writes based on same parent → exactly one wins.
+//   FIXED in E3-07: compare + write happens INSIDE a cross-process lock, so
+//   the second writer re-reads the advanced state and rejects with stale.
 // ---------------------------------------------------------------------------
-describe("R-08: concurrent CAS double success [REPRODUCED]", () => {
-  it("two concurrent writeChampionStateFileCas both ok on same parent", async () => {
+describe("R-08: concurrent CAS exactly one winner [FIXED in E3-07]", () => {
+  it("two concurrent writeChampionStateFileCas on same parent -> exactly one ok", async () => {
     const dir = await makeTemp();
     const statePath = join(dir, "champion-state.json");
 
@@ -359,14 +361,16 @@ describe("R-08: concurrent CAS double success [REPRODUCED]", () => {
       ),
     ]);
 
-    // REPRODUCED: at least one write succeeds (the CAS does not prevent
-    // concurrent writes — no advisory lock / retry). On POSIX both succeed
-    // (last-writer-wins). On Windows the second rename may fail with EPERM
-    // because rename to an existing file is not allowed.
+    // FIXED (E3-07): the cross-process lock + in-lock re-read means exactly
+    // one writer succeeds; the other sees the advanced state and returns stale.
     const okCount = results.filter(
       (r) => r.status === "fulfilled" && r.value.ok === true,
     ).length;
-    expect(okCount).toBeGreaterThanOrEqual(1);
+    const staleCount = results.filter(
+      (r) => r.status === "fulfilled" && r.value.ok === false && r.value.stale === true,
+    ).length;
+    expect(okCount).toBe(1);
+    expect(okCount + staleCount).toBe(2);
   });
 });
 

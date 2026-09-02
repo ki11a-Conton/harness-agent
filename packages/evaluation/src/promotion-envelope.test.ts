@@ -44,8 +44,11 @@ function mkEnvelope(overrides: Record<string, unknown> = {}) {
     candidateId: "adaptive_recovery_v2",
     parentLevel: "C0",
     parentStateDigest: sha("parent-state"),
+    decisionArtifactPath: "decision-artifact.json",
+    decisionArtifactDigest: sha("e2-06-decision-artifact"),
     artifactRefs: artifactRefs(),
     sourceSha: "abc123",
+    ...overrides,
   });
 }
 
@@ -113,6 +116,7 @@ describe("E2-07 promotion envelope (unforgeable authority)", () => {
         candidateId: "adaptive_recovery_v2",
         expectedPolicyVersion: PROMOTION_ENVELOPE_POLICY_VERSION,
         verifyArtifactRefs: false, // no real artifact files in this unit test
+        verifyDecisionArtifact: false,
       });
       expect(result.ok).toBe(true);
       expect(result.envelope!.candidateId).toBe("adaptive_recovery_v2");
@@ -137,6 +141,8 @@ describe("E2-07 promotion envelope (unforgeable authority)", () => {
       parentLevel: env.parentLevel,
       parentStateDigest: env.parentStateDigest,
       decisionEnvelopeDigest: env.decisionEnvelopeDigest,
+      decisionArtifactPath: env.decisionArtifactPath,
+      decisionArtifactDigest: env.decisionArtifactDigest,
       artifactRefs: env.artifactRefs,
       sourceSha: env.sourceSha,
     };
@@ -159,13 +165,15 @@ describe("E2-07 promotion envelope (unforgeable authority)", () => {
         candidateId: "x",
         parentLevel: "C0",
         parentStateDigest: sha("p"),
+        decisionArtifactPath: join(dir, "decision.json"),
+        decisionArtifactDigest: sha("decision-accept"),
         artifactRefs: refs,
       });
       const envPath = join(dir, "env.json");
       await writeFile(envPath, JSON.stringify(env), "utf8");
       // Tamper the artifact after the envelope was minted.
       await writeFile(base, "tampered content", "utf8");
-      const result = await loadPromotionEnvelope(envPath, { parentStateDigest: sha("p") });
+      const result = await loadPromotionEnvelope(envPath, { parentStateDigest: sha("p"), verifyDecisionArtifact: false });
       expect(result.ok).toBe(false);
       expect(result.issues.some((i) => i.code === "ARTIFACT_DIGEST_CHANGED")).toBe(true);
     } finally {
@@ -184,6 +192,7 @@ describe("E2-07 promotion envelope (unforgeable authority)", () => {
         parentStateDigest: sha("parent-state"),
         candidateId: "WRONG",
         verifyArtifactRefs: false,
+        verifyDecisionArtifact: false,
       });
       expect(wrongCandidate.ok).toBe(false);
       expect(wrongCandidate.issues.some((i) => i.code === "CANDIDATE_MISMATCH")).toBe(true);
@@ -191,6 +200,7 @@ describe("E2-07 promotion envelope (unforgeable authority)", () => {
       const wrongParent = await loadPromotionEnvelope(path, {
         parentStateDigest: sha("different-parent"),
         verifyArtifactRefs: false,
+        verifyDecisionArtifact: false,
       });
       expect(wrongParent.ok).toBe(false);
       expect(wrongParent.issues.some((i) => i.code === "PARENT_STATE_MISMATCH")).toBe(true);
@@ -199,6 +209,7 @@ describe("E2-07 promotion envelope (unforgeable authority)", () => {
         parentStateDigest: sha("parent-state"),
         expectedPolicyVersion: "old-policy",
         verifyArtifactRefs: false,
+        verifyDecisionArtifact: false,
       });
       expect(wrongPolicy.ok).toBe(false);
       expect(wrongPolicy.issues.some((i) => i.code === "POLICY_VERSION_MISMATCH")).toBe(true);
@@ -266,6 +277,8 @@ describe("E2-07 promotion envelope (unforgeable authority)", () => {
       candidateId: "adaptive_recovery_v2",
       parentLevel: "C1", // tries to claim parent C1
       parentStateDigest: sha("quarantined-c1-imagined"),
+      decisionArtifactPath: "decision.json",
+      decisionArtifactDigest: sha("decision-accept"),
       artifactRefs: artifactRefs(),
     });
     // The real state digest is C0's — the imagined C1 parent never matches.
@@ -274,7 +287,7 @@ describe("E2-07 promotion envelope (unforgeable authority)", () => {
     try {
       const path = join(dir, "evil.json");
       await writeFile(path, JSON.stringify(fakeParentEnv), "utf8");
-      const result = await loadPromotionEnvelope(path, { parentStateDigest: realDigest, verifyArtifactRefs: false });
+      const result = await loadPromotionEnvelope(path, { parentStateDigest: realDigest, verifyArtifactRefs: false, verifyDecisionArtifact: false });
       expect(result.ok).toBe(false);
       expect(result.issues.some((i) => i.code === "PARENT_STATE_MISMATCH")).toBe(true);
     } finally {

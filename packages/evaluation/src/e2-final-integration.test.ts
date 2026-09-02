@@ -219,8 +219,22 @@ describe("E2-16 final integration acceptance", () => {
       // 4. Promotion transaction via envelope authority. The artifact digest is
       // computed from the ACTUAL file on disk (writeExperimentArtifactV3 adds
       // the canonical contentDigest), matching loadPromotionEnvelope's
-      // re-verification.
+      // re-verification. E3-07: the envelope must reference a REAL
+      // DecisionArtifactV3 file (path + digest) that says ACCEPT.
       const { readFile } = await import("node:fs/promises");
+      const { buildDecisionArtifactV3 } = await import("./champion-eval-v3.js");
+      const decisionArtifact = buildDecisionArtifactV3(
+        decision,
+        "baseline-digest",
+        "candidate-digest",
+        "adaptive_recovery_v2",
+        "plan-1",
+        [1, 1, 1],
+      );
+      const decisionArtifactPath = join(dir, "decision-artifact.json");
+      await writeFile(decisionArtifactPath, JSON.stringify(decisionArtifact), "utf8");
+      const decisionArtifactOnDisk = await readFile(decisionArtifactPath, "utf8");
+
       const onDisk = await readFile(artifactPath, "utf8");
       const envelope = buildPromotionEnvelope({
         generatedBy: "e2-16",
@@ -228,6 +242,8 @@ describe("E2-16 final integration acceptance", () => {
         candidateId: "adaptive_recovery_v2",
         parentLevel: "C0",
         parentStateDigest: sha("c0-state"),
+        decisionArtifactPath,
+        decisionArtifactDigest: sha(decisionArtifactOnDisk),
         artifactRefs: [{ role: "candidate", path: artifactPath, digest: sha(onDisk) }],
         sourceSha: "clean-head",
       });
