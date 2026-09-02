@@ -807,7 +807,7 @@ describe("E3-02: paired promotion path (real PairedExperimentExecutor)", () => {
     const root = await makePairCases();
     const provider = new ScriptedModelProvider(Array.from({ length: 16 }, () => ScriptedModelProvider.text("done")));
     const result = await runBenchmarkCommand(
-      ["--cases", join(root, "cases"), "--candidate", "memory_retrieval", "--out", join(root, "out")],
+      ["--cases", join(root, "cases"), "--candidate", "memory_retrieval", "--allow-insecure-local-benchmark", "--out", join(root, "out")],
       provider,
     );
     expect(result.exitCode).toBe(0);
@@ -836,7 +836,7 @@ describe("E3-02: paired promotion path (real PairedExperimentExecutor)", () => {
     const root = await makePairCases();
     const provider = new ScriptedModelProvider(Array.from({ length: 16 }, () => ScriptedModelProvider.text("done")));
     const result = await runBenchmarkCommand(
-      ["--cases", join(root, "cases"), "--candidate", "memory_retrieval", "--out", join(root, "out")],
+      ["--cases", join(root, "cases"), "--candidate", "memory_retrieval", "--allow-insecure-local-benchmark", "--out", join(root, "out")],
       provider,
     );
     expect(result.exitCode).toBe(0);
@@ -861,7 +861,7 @@ describe("E3-02: paired promotion path (real PairedExperimentExecutor)", () => {
     const root = await makePairCases();
     const provider = new ScriptedModelProvider(Array.from({ length: 32 }, () => ScriptedModelProvider.text("done")));
     const result = await runBenchmarkCommand(
-      ["--cases", join(root, "cases"), "--candidate", "memory_retrieval", "--repeat", "2", "--out", join(root, "out")],
+      ["--cases", join(root, "cases"), "--candidate", "memory_retrieval", "--repeat", "2", "--allow-insecure-local-benchmark", "--out", join(root, "out")],
       provider,
     );
     expect(result.exitCode).toBe(0);
@@ -928,6 +928,7 @@ describe("E3-02: paired promotion path (real PairedExperimentExecutor)", () => {
       maxEstimatedCostUsd: 0,
       paidAuthorized: true,
       planDigest: undefined,
+      allowInsecureLocalBenchmark: false,
     };
     const res = await preflightBenchmark(opts, dupCases as unknown as Parameters<typeof preflightBenchmark>[1], "offline-test");
     expect(res.ok).toBe(false);

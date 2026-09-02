@@ -62,6 +62,7 @@ import {
   ToolOrchestrator,
   ToolRegistry,
   writeFileTool,
+  ALLOW_INSECURE_LOCAL_BENCHMARK_FLAG,
 } from "@ar/tools";
 import {
   MemEventStore,
@@ -125,6 +126,9 @@ export interface BenchmarkCommandOptions {
   maxEstimatedCostUsd: number;
   /** E3-01: set by RUN_PAID_BENCHMARKS=1 env var. */
   paidAuthorized: boolean;
+  /** E3-09: allow promotion-grade benchmark on a platform without a strong
+   *  isolation backend (never promotion-eligible). */
+  allowInsecureLocalBenchmark: boolean;
   /** E3-01: --plan-digest — expected plan digest for confirmation. */
   planDigest: string | undefined;
 }
@@ -324,7 +328,11 @@ async function executeBenchmark(
   // runRepeatedBaseline() path below remains the single-arm (no candidate)
   // MEASUREMENT path — a historical measurement, never a promotion verdict.
   if (opts.candidate !== undefined) {
-    return runPairedPromotion(opts, provider, selected, modelId, defaultBudgetTokens, manifest, effectiveConfig);
+    // E3-09: determine exec confinement for this promotion run. The preflight
+    // already refused if no strong backend (unless --allow-insecure-local was
+    // passed). Here we resolve the exact mode to pass to each case.
+    const confinement = await decideBenchmarkConfinement(opts);
+    return runPairedPromotion(opts, provider, selected, modelId, defaultBudgetTokens, manifest, effectiveConfig, confinement);
   }
 
   // E1-11: repeat protocol — a single run is a measurement, not a statistical
@@ -455,6 +463,42 @@ export interface PairedExperimentArtifact {
 }
 
 /**
+ * E3-09 — resolve the exec confinement mode for a promotion benchmark.
+ *
+ * The preflight already REFUSED a promotion run on a platform with no strong
+ * backend (unless --allow-insecure-local-benchmark was passed). Here we turn
+ * that decision into the exact confinement mode:
+ *
+ *   - strong backend available  → "strong" (exec routes through the verified
+ *     OS-level sandbox backend; a model command cannot bypass the wrapper)
+ *   - --allow-insecure-local-benchmark → "insecure-local" (explicitly allowed
+ *     local development; NEVER promotion-eligible — the paired experiment may
+ *     run for measurement but cannot yield a promotion verdict)
+ *   - otherwise → undefined (the promotion path should not reach here; the
+ *     preflight refusal already guarded it, but stay defensive).
+ */
+async function decideBenchmarkConfinement(
+  opts: BenchmarkCommandOptions,
+): Promise<"strong" | "insecure-local" | undefined> {
+  if (opts.allowInsecureLocalBenchmark) {
+    return "insecure-local";
+  }
+  try {
+    const { probeIsolationBackend } = await import("@ar/evaluation");
+    const backend = await probeIsolationBackend();
+    if (backend.strongIsolation) {
+      return "strong";
+    }
+  } catch (err) {
+    process.stderr.write(`[degraded] benchmark.confinement-resolve: ${err instanceof Error ? err.message : String(err)}\n`);
+  }
+  // No strong backend and no explicit insecure flag — preflight should have
+  // refused this run; stay defensive (undefined → no confinement, never
+  // claims safety it does not have).
+  return undefined;
+}
+
+/**
  * E3-02 — run a real promotion experiment: baseline + candidate arms of every
  * pair scheduled by the PairedExperimentPlan, executed through runOneCase in
  * plan order, journaled per arm, resumed from the journal, and finalized only
@@ -469,6 +513,7 @@ async function runPairedPromotion(
   defaultBudgetTokens: number,
   manifest: RunManifest,
   _effectiveConfig: unknown,
+  processConfinement?: "strong" | "insecure-local",
 ): Promise<{ exitCode: number; lines: string[] }> {
   const lines: string[] = [];
   const plan = buildPairedPlan({
@@ -501,6 +546,10 @@ async function runPairedPromotion(
           modelId,
           budgetTokens: defaultBudgetTokens,
           candidate: arm.armId === "candidate" ? opts.candidate : undefined,
+          // E3-09: the promotion run's exec confinement (strong when a real
+          // backend exists, insecure-local when explicitly allowed, undefined
+          // → default policy without confinement).
+          processConfinement,
         },
         opts.suite,
       ),
@@ -632,7 +681,30 @@ export async function preflightBenchmark(
     return { ok: false, reason: "--repeat must be a positive integer (number of runs)" };
   }
 
-  // 4. Probe isolation availability (best-effort; the per-case sentinel runs
+  // 4. E3-09: confinement preflight for promotion-grade benchmarks. When
+  //    `--candidate` is set (promotion intent), the exec tool MUST be
+  //    confined by an OS-level sandbox backend. On platforms without a
+  //    strong backend (Windows, macOS without container tooling), the
+  //    promotion benchmark is REFUSED before any provider call unless the
+  //    user explicitly opts into insecure local mode.
+  if (opts.candidate !== undefined) {
+    try {
+      const { probeIsolationBackend } = await import("@ar/evaluation");
+      const backend = await probeIsolationBackend();
+      if (!backend.strongIsolation && !opts.allowInsecureLocalBenchmark) {
+        return {
+          ok: false,
+          reason: `promotion benchmark requires a strong isolation backend (${backend.id} on ${backend.platform}: ${backend.note}) — pass ${ALLOW_INSECURE_LOCAL_BENCHMARK_FLAG} to allow insecure local execution (never promotion-eligible)`,
+        };
+      }
+    } catch (err) {
+      // Probe failure is a degraded observation, not a hard fail — the
+      // per-case exec sandbox still runs (fail-closed when no backend).
+      process.stderr.write(`[degraded] benchmark.confinement-probe: ${err instanceof Error ? err.message : String(err)}\n`);
+    }
+  }
+
+  // 5. Probe isolation availability (best-effort; the per-case sentinel runs
   //    regardless and fails a mutated host as infrastructure failure).
   try {
     const { captureHostState } = await import("@ar/evaluation");
@@ -781,6 +853,10 @@ interface RunOneCaseOptions {
   budgetTokens: number;
   /** P38-EVOLUTION: challenger candidate id, undefined = champion baseline. */
   candidate?: string;
+  /** E3-09: exec confinement mode for this case. When set, the sandbox
+   *  policy includes process.confinement so the exec tool routes through
+   *  prepareSandboxedExec (OS-level sandbox or fail-closed denial). */
+  processConfinement?: "strong" | "insecure-local";
 }
 
 /** Benchmark permission profile: work inside the workspace is allowed without
@@ -1190,7 +1266,13 @@ async function runOneCase(
       // P0-8/P4-5: MCP output rides the real injection gate (injectionDetector
       // is wired below, in the runtime deps) — a connector payload carrying
       // prompt-injection material is withheld (fail-closed).
-      sandboxPolicy: defaultSandboxPolicy(),
+      // E3-09: when exec confinement is active, the sandbox policy carries
+      // process.confinement so the exec tool routes the spawn through the
+      // verified OS-level sandbox backend (strong) or the explicit insecure
+      // local wrapper (never promotion-eligible).
+      sandboxPolicy: opts.processConfinement !== undefined
+        ? { ...defaultSandboxPolicy(), process: { ...defaultSandboxPolicy().process, confinement: opts.processConfinement } }
+        : defaultSandboxPolicy(),
       maxIterationsPerTurn: 30,
       context: {
         pipeline: new ContextPipeline(),
@@ -1621,6 +1703,7 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
     maxEstimatedCostUsd: 0,
     paidAuthorized: process.env.RUN_PAID_BENCHMARKS === "1",
     planDigest: undefined,
+    allowInsecureLocalBenchmark: false,
   };
   // Resolved after parsing: default cases dir is benchmarks/<suite>.
   opts.casesDir = join("benchmarks", opts.suite);
@@ -1659,6 +1742,9 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
       }
       case "--allow-stub":
         opts.allowStub = true;
+        break;
+      case "--allow-insecure-local-benchmark":
+        opts.allowInsecureLocalBenchmark = true;
         break;
       case "--shuffle":
         opts.shuffle = true;
@@ -1818,6 +1904,7 @@ export async function runSmokeBenchmark(): Promise<{ exitCode: number; lines: st
     maxEstimatedCostUsd: 0,
     paidAuthorized: false,
     planDigest: undefined,
+    allowInsecureLocalBenchmark: false,
   };
   let cases: BenchmarkCase[];
   try {
@@ -1919,6 +2006,7 @@ function benchmarkUsage(): string {
     "  --max-estimated-tokens <n>   hard cap on estimated tokens (0 = unlimited, E3-01)",
     "  --max-estimated-cost-usd <n> hard cap on estimated cost in USD (0 = unlimited, E3-01)",
     "  --plan-digest <hex>  expected plan digest (sha256 hex); run only if plan matches (E3-01)",
+    "  --allow-insecure-local-benchmark  allow promotion benchmark without a strong OS sandbox (never promotion-eligible, E3-09)",
     "  env: RUN_PAID_BENCHMARKS=1   authorize an external billed provider (E3-01)",
   ].join("\n");
 }
