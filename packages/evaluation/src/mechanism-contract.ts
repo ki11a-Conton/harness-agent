@@ -145,6 +145,12 @@ export interface EligibilityInput {
   eligible: Map<string, boolean>;
 }
 
+/** E3-05: count only entries where eligible === true (Map.size counts ALL
+ *  entries, including false — plan bug: "eligible 数量错误地使用 Map.size"). */
+function countEligible(eligible: Map<string, boolean>): number {
+  return [...eligible.values()].filter(Boolean).length;
+}
+
 export interface ActivationWiringInput {
   /** candidateId -> whether the E2-04 V2 recorder/observer is wired for the
    *  candidate's real activation events. */
@@ -192,7 +198,7 @@ export function evaluateMechanismContract(
       candidateId,
       baselineState: { mechanismOn: false, surfaceDigest: null, summary: "registry: unsupported" },
       candidateState: { mechanismOn: false, surfaceDigest: null, summary: "registry: unsupported" },
-      eligibleCases: eligibility.eligible.size,
+      eligibleCases: countEligible(eligibility.eligible),
       minEligibleCases: contract.minEligibleCases,
       hasRealDelta: false,
       activationWired: false,
@@ -215,7 +221,7 @@ export function evaluateMechanismContract(
       candidateId,
       baselineState: { mechanismOn: false, surfaceDigest: null, summary: "arm resolution failed" },
       candidateState: { mechanismOn: false, surfaceDigest: null, summary: "arm resolution failed" },
-      eligibleCases: eligibility.eligible.size,
+      eligibleCases: countEligible(eligibility.eligible),
       minEligibleCases: contract.minEligibleCases,
       hasRealDelta: false,
       activationWired: false,
@@ -241,7 +247,7 @@ export function evaluateMechanismContract(
       candidateId,
       baselineState: { mechanismOn: baseAct?.on === true, surfaceDigest: baseline.digest, summary: baseline.armId },
       candidateState: { mechanismOn: false, surfaceDigest: candidate.digest, summary: candidate.armId },
-      eligibleCases: eligibility.eligible.size,
+      eligibleCases: countEligible(eligibility.eligible),
       minEligibleCases: contract.minEligibleCases,
       hasRealDelta: false,
       activationWired: activation.wired[candidateId] === true,
@@ -256,7 +262,9 @@ export function evaluateMechanismContract(
   const candidateMechanismOn = candAct?.on === true;
   const hasRealDelta = baseline.digest !== candidate.digest && candidateMechanismOn;
   const baselineContamination = baselineMechanismOn; // baseline must NOT have the mechanism
-  const eligibleCases = eligibility.eligible.size;
+  // E3-05: count only entries where eligible === true (Map.size counts ALL
+  // entries, including false — plan bug: "eligible 数量错误地使用 Map.size").
+  const eligibleCases = countEligible(eligibility.eligible);
   const minEligible = opts.minEligibleOverride ?? contract.minEligibleCases;
   const activationWired = activation.wired[candidateId] === true;
   const eventsForCandidate = activation.requiredEvents?.[candidateId];

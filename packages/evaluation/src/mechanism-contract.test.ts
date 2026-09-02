@@ -127,4 +127,27 @@ describe("E2-14 mechanism contract readiness", () => {
     // provider-zero proof: no helper here ever calls a provider.
     expect(mechanismContractFor("adaptive_recovery_v2")!.requiredActivationEvents).toContain("recovery.decided");
   });
+
+  it("E3-05: eligible count excludes false entries (Map.size bug fix)", () => {
+    // 5 map entries, only 2 are true → eligibleCases must be 2, not 5.
+    const mixed = new Map<string, boolean>([
+      ["ho-01", true],
+      ["ho-02", false],
+      ["ho-03", true],
+      ["ho-04", false],
+      ["ho-05", false],
+    ]);
+    const evalResult = evaluateMechanismContract(
+      "adaptive_recovery_v2",
+      { eligible: mixed },
+      ev(
+        { adaptive_recovery_v2: true },
+        { adaptive_recovery_v2: { "recovery.decided": true } },
+      ),
+    );
+    expect(evalResult.eligibleCases).toBe(2);
+    // Should be NOT_READY because minEligibleCases is 5.
+    expect(evalResult.readiness).toBe("NOT_READY");
+    expect(evalResult.reasons.some((r) => r.includes("eligible cases 2 < minimum 5"))).toBe(true);
+  });
 });
