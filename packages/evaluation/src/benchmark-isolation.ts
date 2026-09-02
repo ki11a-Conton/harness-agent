@@ -29,7 +29,7 @@
 import { createHash } from "node:crypto";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { execFile } from "node:child_process";
-import { join, relative, sep, isAbsolute, resolve } from "node:path";
+import { join, win32, posix } from "node:path";
 import { stableStringify } from "./manifest.js";
 
 export const BENCHMARK_ISOLATION_SCHEMA_VERSION = "1.0.0";
@@ -225,11 +225,19 @@ export function hostMutated(before: HostState, after: HostState): boolean {
   return false;
 }
 
-/** Classify a changed path against the case workspace (escape check). */
-export function isPathOutsideWorkspace(path: string, workspaceAbs: string): boolean {
-  const rel = relative(resolve(workspaceAbs), resolve(path));
+/** Target path platform flavor. The host OS must NOT be used to interpret
+ *  another platform's path syntax — that is how Windows escape cases broke
+ *  on POSIX hosts (and vice versa). */
+export type PathFlavor = "win32" | "posix";
+
+export function isPathOutsideWorkspace(path: string, workspaceAbs: string, flavor: PathFlavor = process.platform === "win32" ? "win32" : "posix"): boolean {
+  const p = flavor === "win32" ? win32 : posix;
+  const ws = p.resolve(workspaceAbs);
+  const target = p.resolve(path);
+  const rel = p.relative(ws, target);
+  const sep = flavor === "win32" ? "\\" : "/";
   if (rel === "") return false;
-  return rel.startsWith(`..${sep}`) || rel === ".." || isAbsolute(rel);
+  return rel.startsWith(`..${sep}`) || rel === ".." || p.isAbsolute(rel);
 }
 
 export interface SentinelReport {

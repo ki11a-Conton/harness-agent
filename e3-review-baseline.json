@@ -1,0 +1,181 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "e3-review-baseline",
+  "subjectSha": "f73a337d71027afd48a8ac5ac0de1a7f4ae8497c",
+  "subjectShortSha": "f73a337d7102",
+  "subjectTreeDigest": "c9aa8448909f587243cc24dfaea8df3d45868395",
+  "generatedAtIso": "2026-09-02T02:04:57.309Z",
+  "generatedBy": "scripts/e3/generate-review-baseline.mjs (offline, no API key)",
+  "note": "Baseline for the E3 evolution. subjectSha is the git commit this baseline describes. A later documentation commit that adds this file is NOT part of the tested code tree.",
+  "worktree": {
+    "before": {
+      "gitAvailable": true,
+      "treeDigest": "c9aa8448909f587243cc24dfaea8df3d45868395",
+      "porcelainLines": 9,
+      "porcelainHead": [
+        "ackage.json",
+        "packages/evaluation/src/benchmark-isolation.test.ts",
+        "packages/evaluation/src/benchmark-isolation.ts",
+        "plan-P38.3-RC-M1-final-hardening.md",
+        "plan-P38.4-post-freeze-recovery-benchmark-evidence.md",
+        "plan.md",
+        "apps/cli/src/e3-repro-current-defects.test.ts",
+        "e3-review-baseline.json",
+        "scripts/"
+      ],
+      "clean": false
+    },
+    "after": {
+      "gitAvailable": true,
+      "treeDigest": "c9aa8448909f587243cc24dfaea8df3d45868395",
+      "porcelainLines": 9,
+      "porcelainHead": [
+        "ackage.json",
+        "packages/evaluation/src/benchmark-isolation.test.ts",
+        "packages/evaluation/src/benchmark-isolation.ts",
+        "plan-P38.3-RC-M1-final-hardening.md",
+        "plan-P38.4-post-freeze-recovery-benchmark-evidence.md",
+        "plan.md",
+        "apps/cli/src/e3-repro-current-defects.test.ts",
+        "e3-review-baseline.json",
+        "scripts/"
+      ],
+      "clean": false
+    },
+    "cleanBeforeAndAfter": false
+  },
+  "gates": [
+    {
+      "label": "typecheck (tsc -b)",
+      "command": "pnpm typecheck",
+      "exitCode": 0,
+      "durationMs": 2379,
+      "stdoutTail": "$ tsc -b",
+      "passed": true
+    },
+    {
+      "label": "cross-platform path unit tests (benchmark-isolation)",
+      "command": "pnpm vitest run packages/evaluation/src/benchmark-isolation.test.ts",
+      "exitCode": 0,
+      "durationMs": 6476,
+      "stdoutTail": "✓ packages/evaluation/src/benchmark-isolation.test.ts (12 tests) 2605ms\n     ✓ 2. node -e writing an absolute path OUTSIDE the workspace mutates the host tree -> detected  453ms\n     ✓ 2b. node -e writing INSIDE the workspace does not mutate the host tree  458ms\n     ✓ 3. modifying a host tracked file is detected via git status / tree digest  377ms\n     ✓ 3b. host unchanged (same content) is NOT mutated  491ms\n     ✓ 4. withHostMutationSentinel reports host mutations around a case run  409ms\n     ✓ 6. normal in-workspace work still passes through the sentinel untouched  393ms\n\n Test Files  1 passed (1)\n      Tests  12 passed (12)\n   Start at  10:02:40\n   Duration  3.69s (transform 518ms, setup 0ms, import 648ms, tests 2.61s, environment 0ms)",
+      "passed": true
+    },
+    {
+      "label": "default full test suite",
+      "command": "pnpm test",
+      "exitCode": 0,
+      "durationMs": 119490,
+      "stdoutTail": "✓ packages/security/src/denial.test.ts (4 tests) 10ms\n ✓ packages/evaluation/src/scheduler-policy.test.ts (4 tests) 6ms\n ✓ packages/core/src/runtime/race-bisect.test.ts (1 test) 5ms\n ✓ packages/harness/src/champion-profile.test.ts (5 tests) 5ms\n ✓ apps/cli/src/schema-advert-policy.test.ts (3 tests) 6ms\n ✓ packages/evaluation/src/recovery-policy.test.ts (5 tests) 9ms\n ✓ packages/evaluation/src/context-policy.test.ts (3 tests) 6ms\n\n Test Files  281 passed (281)\n      Tests  5250 passed | 1 skipped (5251)\n   Start at  10:02:47\n   Duration  116.48s (transform 13.37s, setup 0ms, import 59.03s, tests 129.44s, environment 54ms)",
+      "passed": true
+    }
+  ],
+  "defectRepro": {
+    "exitCode": 0,
+    "passed": true,
+    "expectedReproducedCount": 11,
+    "expectedFixedCount": 1,
+    "reproduced": [
+      "R-01: invalid interleave calls provider before error",
+      "R-02: repeat N+1",
+      "R-03: BA orderIndex wrong",
+      "R-04: Arm undeclared delta bypass",
+      "R-05: all-unknown provenance accepted",
+      "R-06: empty perRepetitionDeltas with repetitions=2 gives ACCEPT",
+      "R-07: forged envelope accepted",
+      "R-08: concurrent CAS double success",
+      "R-09: summary tamper accepted",
+      "R-10: benchmark exec writes outside workspace",
+      "R-11: AR2 champion eval --strict INCONCLUSIVE not INVALID"
+    ],
+    "fixed": [
+      "R-12: benchmark validate on historical AR2 finds 32 cases"
+    ],
+    "stdoutTail": "✓ one case --repeat 2: provider called 3 times (initial + N repeats)  2421ms\n     ✓ exec writes to absolute path outside case workspace, benchmark reports PASS  1295ms\n\n Test Files  1 passed (1)\n      Tests  12 passed (12)\n   Start at  10:04:46\n   Duration  9.84s (transform 3.68s, setup 0ms, import 4.38s, tests 4.96s, environment 0ms)\n$ vitest run apps/cli/src/e3-repro-current-defects.test.ts"
+  },
+  "providerCalls": {
+    "realProviderCalls": 0,
+    "fakeProviderUsed": true,
+    "note": "All gates are offline; the defect repro uses ScriptedModelProvider (id=scripted). No real model endpoint was contacted."
+  },
+  "activeChampion": "C0",
+  "activeChampionRecordedFrom": "docs/evolution/champion-state.json",
+  "capabilityStatus": {
+    "buildOutputPresent": {
+      "appsCliDist": true,
+      "note": "built dist presence is NOT a green capability gate; actual capability audit requires `pnpm capability:audit` with a provider."
+    }
+  },
+  "releaseStatus": {
+    "releaseVerifyNotRun": true,
+    "note": "release:verify was NOT run in this offline baseline (it needs a provider/network). Recorded as not-run, not as pass."
+  },
+  "coverageStatus": {
+    "coverageNotMeasured": true,
+    "note": "coverage was not measured in this offline baseline; `pnpm test:coverage` was not run here."
+  },
+  "regressions": {
+    "list": [
+      {
+        "id": "R-01",
+        "status": "REPRODUCED",
+        "summary": "invalid --repeat 2 --interleave without --shuffle errors, but provider already called 1 time before the error"
+      },
+      {
+        "id": "R-02",
+        "status": "REPRODUCED",
+        "summary": "one case + --repeat 2 = 3 provider calls (initial + N repeats)"
+      },
+      {
+        "id": "R-03",
+        "status": "REPRODUCED",
+        "summary": "BA pair still has baseline.orderIndex=0 / candidate=1"
+      },
+      {
+        "id": "R-04",
+        "status": "REPRODUCED",
+        "summary": "undeclaredSecurityBypass=true in candidate config still comparable + providerCallsAllowed"
+      },
+      {
+        "id": "R-05",
+        "status": "REPRODUCED",
+        "summary": "all-unknown provenance accepted as comparable + promotionEligible"
+      },
+      {
+        "id": "R-06",
+        "status": "REPRODUCED",
+        "summary": "repetitions=2 + perRepetitionDeltas=[] → decideChampionV3 ACCEPT"
+      },
+      {
+        "id": "R-07",
+        "status": "REPRODUCED",
+        "summary": "forged PromotionEnvelope with arbitrary decision digest/source SHA accepted by strict loader"
+      },
+      {
+        "id": "R-08",
+        "status": "REPRODUCED",
+        "summary": "concurrent CAS on same parent: no advisory lock — at least one (POSIX: both) succeed"
+      },
+      {
+        "id": "R-09",
+        "status": "REPRODUCED",
+        "summary": "summary tamper (passRate/tokens/recoveryRate, keep caseCount/passed) accepted by strict loader"
+      },
+      {
+        "id": "R-10",
+        "status": "REPRODUCED",
+        "summary": "benchmark real exec writes absolute path outside case workspace; file created + 1/1 PASS"
+      },
+      {
+        "id": "R-11",
+        "status": "REPRODUCED",
+        "summary": "AR2 champion eval --strict → verified 0→0, provenance compatible, INCONCLUSIVE not V3 INVALID"
+      },
+      {
+        "id": "R-12",
+        "status": "FIXED",
+        "summary": "historical AR2 benchmark validate finds 32 cases, marks legacy/not-promotion-eligible (improvement already works)"
+      }
+    ]
+  }
+}

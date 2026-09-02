@@ -1,12 +1,17 @@
 {
   "schemaVersion": "2.0.0",
+  "documentKind": "historical-snapshot",
+  "subjectSha": "d7ead299f3092336c7e243934befb3a27e0bb5de",
+  "subjectTreeDigest": "19920f8c5373857d83d107bf4308f3c69b87faa7",
+  "documentationCommitNotInTestedTree": true,
+  "note": "HISTORICAL SNAPSHOT of the E2 evolution at subjectSha. The documentation commit that carries this file is NOT part of the tested code tree. Superseded by the E3 baseline (e3-review-baseline.json at f73a337d71027afd48a8ac5ac0de1a7f4ae8497c).",
   "generatedAt": "2026-09-01T20:43:04.1552049+08:00",
   "headSha": "d7ead299f3092336c7e243934befb3a27e0bb5de",
   "worktreeCleanDuringGates": false,
   "e2FreeGates": {
     "typecheck": "PASS",
     "build": "PASS",
-    "test": "PASS (5236 passed, 1 skipped, 280 files)",
+    "test": "PASS (5236 passed, 1 skipped, 280 files — stale for current HEAD)",
     "protocol": "PASS",
     "security": "PASS",
     "race": "PASS",
@@ -42,5 +47,5 @@
     "release:verify has no gate evidence for the current HEAD — CI on a clean checkout must run each gate and commit evidence before release",
     "coverage gate needs a longer window/batch script to complete"
   ],
-  "conclusion": "Promotion NOT currently allowed. Active production Champion is C0. E2-15 was NOT executed (no operator authorization). The full E2 free implementation chain (artifacts/provenance/pairing/decision/promotion/profile/security/recovery) is implemented, tested and committed."
+  "conclusion": "Promotion NOT currently allowed. Active production Champion is C0. E2-15 was NOT executed (no operator authorization). The full E2 free implementation chain (artifacts/provenance/pairing/decision/promotion/profile/security/recovery) is implemented, tested and committed. THIS IS A HISTORICAL SNAPSHOT — do not treat as current status; see e3-review-baseline.json."
 }

@@ -2,7 +2,7 @@ import { describe, expect, it, afterEach } from "vitest";
 import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import {
   probeIsolationBackend,
   promotionEligible,
@@ -159,12 +159,40 @@ describe("E2-09 host mutation sentinel (real child-process escapes)", () => {
     }
   });
 
-  it("8. isPathOutsideWorkspace classifies escape vs containment (incl. relative ..)", () => {
-    const ws = resolve("C:\\ws\\case-1");
-    expect(isPathOutsideWorkspace("C:\\ws\\case-1\\file.txt", ws)).toBe(false);
-    expect(isPathOutsideWorkspace("C:\\ws\\other\\file.txt", ws)).toBe(true);
-    expect(isPathOutsideWorkspace("C:\\ws\\case-1\\..\\..\\etc\\passwd", ws)).toBe(true);
-    expect(isPathOutsideWorkspace("D:\\elsewhere\\x", ws)).toBe(true);
+  it("8. isPathOutsideWorkspace classifies escape vs containment with explicit flavor", () => {
+    // Windows workspace, interpreted with win32 semantics regardless of host OS.
+    const ws = "C:\\ws\\case-1";
+    expect(isPathOutsideWorkspace("C:\\ws\\case-1\\file.txt", ws, "win32")).toBe(false);
+    expect(isPathOutsideWorkspace("C:\\ws\\other\\file.txt", ws, "win32")).toBe(true);
+    expect(isPathOutsideWorkspace("C:\\ws\\case-1\\..\\..\\etc\\passwd", ws, "win32")).toBe(true);
+    expect(isPathOutsideWorkspace("D:\\elsewhere\\x", ws, "win32")).toBe(true);
+
+    // POSIX workspace, interpreted with posix semantics.
+    const pws = "/ws/case-1";
+    expect(isPathOutsideWorkspace("/ws/case-1/file.txt", pws, "posix")).toBe(false);
+    expect(isPathOutsideWorkspace("/ws/other/file.txt", pws, "posix")).toBe(true);
+    expect(isPathOutsideWorkspace("/ws/case-1/../../etc/passwd", pws, "posix")).toBe(true);
+    expect(isPathOutsideWorkspace("/etc/passwd", pws, "posix")).toBe(true);
+  });
+
+  it("8b. path flavor covers Windows drive, UNC and POSIX root semantics", () => {
+    // Drive letter must be resolved with win32 (host-independent).
+    expect(isPathOutsideWorkspace("c:\\ws\\case-1\\a.txt", "C:\\ws\\case-1", "win32")).toBe(false);
+    // UNC workspace (\\server\share\case) with UNC child path.
+    const uncWs = "\\\\server\\share\\case-1";
+    expect(isPathOutsideWorkspace("\\\\server\\share\\case-1\\file.txt", uncWs, "win32")).toBe(false);
+    expect(isPathOutsideWorkspace("\\\\server\\share\\other\\file.txt", uncWs, "win32")).toBe(true);
+    // POSIX root: a bare absolute path outside the workspace is outside.
+    expect(isPathOutsideWorkspace("/tmp/x", "/ws/case-1", "posix")).toBe(true);
+    expect(isPathOutsideWorkspace("/ws/case-1", "/ws/case-1", "posix")).toBe(false);
+  });
+
+  it("8c. default flavor follows host platform (consistent containment on host paths)", () => {
+    // On the host platform the default flavor must never mis-classify a path
+    // that lives inside the workspace.
+    const hostWs = join(process.cwd(), "case-1");
+    expect(isPathOutsideWorkspace(join(hostWs, "file.txt"), hostWs)).toBe(false);
+    expect(isPathOutsideWorkspace(join(hostWs, "..", "other", "x.txt"), hostWs)).toBe(true);
   });
 
   it("treeDigestOf is deterministic and sensitive to content", async () => {
