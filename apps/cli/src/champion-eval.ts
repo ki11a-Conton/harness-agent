@@ -28,6 +28,9 @@ export interface ChampionEvalOptions {
   strict?: boolean;
   /** E1-08: candidate id for the activation contract (default null). */
   candidateId?: string | null;
+  /** E3-06: legacy descriptive-only mode (--historical). No promotion
+   *  authority is produced; legacy AR2 artifacts are never strict-eligible. */
+  historical?: boolean;
 }
 
 export interface ChampionQualityVerdict {
@@ -253,6 +256,80 @@ export function renderChampionQuality(verdict: ChampionQualityVerdict): string[]
 export async function runChampionEval(
   opts: ChampionEvalOptions,
 ): Promise<{ report: PairedEvalReport; lines: string[]; decision?: import("./promotion-decision.js").ChampionEvalDecision }> {
+  const strict = opts.strict ?? false;
+  const historical = opts.historical ?? false;
+
+  // E3-06: strict (non-historical) eval MUST route through the V3 bridge. If
+  // the artifacts are V3 we derive every gate from the artifact and emit a
+  // DecisionArtifactV3; if they are legacy AR2 the strict path fails closed
+  // with LEGACY_NOT_PROMOTION_ELIGIBLE (INVALID) — legacy evidence can never
+  // be promoted.
+  if (strict && !historical) {
+    try {
+      const { runV3ChampionEval } = await import("@ar/evaluation");
+      const res = await runV3ChampionEval({
+        baselinePath: opts.baselinePath,
+        candidatePath: opts.candidatePath,
+        candidateId: opts.candidateId ?? null,
+      });
+      const lines = renderV3ChampionEval(res);
+      return {
+        report: buildPairedReport([], [], opts.mode), // V3 path owns reporting
+        lines,
+        decision: {
+          decision: res.envelope.decision,
+          reasonCode: res.envelope.reasonCodes[0] ?? "NO_GATE_FAILURE",
+          explanation: res.envelope.explanation,
+          comparability: null,
+          quality: null,
+        },
+      };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("LEGACY_NOT_PROMOTION_ELIGIBLE")) {
+        // Fail closed: legacy artifacts are never promotion-eligible under
+        // strict eval (E3-06 acceptance #1).
+        const lines = [
+          `mode: ${opts.mode} (strict V3)`,
+          "decision (E3-06):",
+          "  INVALID  [LEGACY_NOT_PROMOTION_ELIGIBLE]",
+          `  ${msg}`,
+          "  Legacy AR2 artifacts cannot be promoted. Re-run the paired protocol with the V3 artifact writer.",
+        ];
+        return {
+          report: buildPairedReport([], [], opts.mode),
+          lines,
+          decision: {
+            decision: "INVALID",
+            reasonCode: "LEGACY_NOT_PROMOTION_ELIGIBLE",
+            explanation: msg,
+            comparability: null,
+            quality: null,
+          },
+        };
+      }
+      // Non-legacy error (e.g. malformed artifact) — still fail closed as INVALID.
+      const lines = [
+        `mode: ${opts.mode} (strict V3)`,
+        "decision (E3-06):",
+        "  INVALID  [ARTIFACT_DIGEST_MISMATCH]",
+        `  ${msg}`,
+      ];
+      return {
+        report: buildPairedReport([], [], opts.mode),
+        lines,
+        decision: {
+          decision: "INVALID",
+          reasonCode: "ARTIFACT_DIGEST_MISMATCH",
+          explanation: msg,
+          comparability: null,
+          quality: null,
+        },
+      };
+    }
+  }
+
+  // Legacy descriptive path (--historical, or non-strict).
   const baseline = await loadRunsFromArtifact(opts.baselinePath);
   const candidate = await loadRunsFromArtifact(opts.candidatePath);
   const baselineRuns = baseline.runs;
@@ -300,4 +377,49 @@ export async function runChampionEval(
       : []),
   ];
   return { report, lines, decision };
+}
+
+/** Render the V3 champion eval result as human-readable lines (E3-06). */
+export function renderV3ChampionEval(
+  res: import("@ar/evaluation").V3ChampionEvalResult,
+): string[] {
+  const e = res.envelope;
+  const da = res.decisionArtifact;
+  const lines = [
+    "mode: real-model (strict V3)",
+    `paired cases: ${e.statistics.cases}`,
+    `net passed delta: ${e.statistics.netPassedDelta > 0 ? "+" : ""}${e.statistics.netPassedDelta}`,
+    `verified completion: ${e.statistics.verifiedRates.baseline.toFixed(3)} → ${e.statistics.verifiedRates.candidate.toFixed(3)}`,
+    `repetitions: ${e.statistics.repetitions}`,
+    `per-repetition deltas: [${e.statistics.perRepetitionDeltas.join(", ")}]`,
+    `activation coverage: ${e.statistics.activationCoverage === null ? "n/a" : e.statistics.activationCoverage.toFixed(3)}`,
+    `tokens Δ: ${e.statistics.tokensDelta > 0 ? "+" : ""}${e.statistics.tokensDelta}`,
+    "",
+    "gates (E3-06):",
+    `  artifactIntegrity: ${e.gates.artifactIntegrity}`,
+    `  provenanceComparable: ${e.gates.provenanceComparable}`,
+    `  pairComplete: ${e.gates.pairComplete}`,
+    `  perRepetitionComplete: ${e.gates.perRepetitionComplete}`,
+    `  activationSatisfied: ${e.gates.activationSatisfied}`,
+    `  securityClear: ${e.gates.securityClear}`,
+    `  verifiedNonRegression: ${e.gates.verifiedNonRegression}`,
+    `  runtimeErrorSymmetry: ${e.gates.runtimeErrorSymmetry}`,
+    `  repetitionSufficient: ${e.gates.repetitionSufficient}`,
+    `  effectSufficient: ${e.gates.effectSufficient}`,
+    `  directionStable: ${e.gates.directionStable}`,
+    `  costBounded: ${e.gates.costBounded}`,
+    "",
+    "decision (E3-06):",
+    `  ${e.decision}  [${e.reasonCodes.join(", ")}]`,
+    `  ${e.explanation}`,
+    "",
+    "decision artifact (content-addressed):",
+    `  schemaVersion: ${da.schemaVersion}`,
+    `  policyVersion: ${da.policyVersion}`,
+    `  candidateId: ${da.candidateId ?? "null"}`,
+    `  baselineArtifactDigest: ${da.baselineArtifactDigest.slice(0, 16)}…`,
+    `  candidateArtifactDigest: ${da.candidateArtifactDigest.slice(0, 16)}…`,
+    `  contentDigest: ${da.contentDigest}`,
+  ];
+  return lines;
 }

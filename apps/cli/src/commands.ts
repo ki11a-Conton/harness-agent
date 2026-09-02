@@ -85,7 +85,7 @@ commands:
   audit [--json] [--strict] [--out <dir>]  generate CAPABILITY_MATRIX.md/.json from real wiring evidence; --json is stdout-only unless --out is given (E1-01) (P0-1)
   docs:verify                       machine-verify doc facts (benchmark counts, packages, CI gates, matrix) (P20-3)
   explain <sessionId> [--tool-call <id>] [--tree]  why did the agent do this? observable evidence / trace tree (P9-3/P20-6)
-  champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--candidate <id>]
+  champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--historical] [--candidate <id>]
                                     paired evaluation of baseline vs candidate over the SAME cases (P21-3; E1-08 decisions: ACCEPT/REJECT/INCONCLUSIVE/INVALID)
   production-audit                 P22-3 final production audit (silent catch / as never / path gates / retry / isolation)
   release artifacts [--out <dir>]  P22-4 collect release artifacts (reports/coverage/CI/benchmark/paired/matrix/manifest)
@@ -288,19 +288,20 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
         return e2QuarantineCmd(rest.slice(1));
       }
       if (rest[0] !== "eval") {
-        return { exitCode: 1, lines: ["usage: agent champion (eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--candidate <id>]) | (state [--json]) | (promote --envelope <promotion-envelope.json> [--candidate <id>]) | (rollback --to <C0|C1|...> --reason <text>) | (audit [--baseline <p>] [--candidate <p>] [--review-sha <sha>]) | (quarantine [--reason-codes a,b,c] [--note <text>])"] };
+        return { exitCode: 1, lines: ["usage: agent champion (eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--historical] [--candidate <id>]) | (state [--json]) | (promote --envelope <promotion-envelope.json> [--candidate <id>]) | (rollback --to <C0|C1|...> --reason <text>) | (audit [--baseline <p>] [--candidate <p>] [--review-sha <sha>]) | (quarantine [--reason-codes a,b,c] [--note <text>])"] };
       }
       const files = rest.slice(1).filter((a) => !a.startsWith("--"));
       const modeIdx = rest.indexOf("--mode");
       const mode: EvalMode = modeIdx >= 0 && rest[modeIdx + 1] === "real-model" ? "real-model" : "stub";
       const strict = rest.includes("--strict");
+      const historical = rest.includes("--historical");
       const candIdx = rest.indexOf("--candidate");
       const candidateId = candIdx >= 0 ? rest[candIdx + 1] : undefined;
       if (files.length < 2) {
-        return { exitCode: 1, lines: ["usage: agent champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--candidate <id>]"] };
+        return { exitCode: 1, lines: ["usage: agent champion eval <baseline-runs.json> <candidate-runs.json> [--mode stub|real-model] [--strict] [--historical] [--candidate <id>]"] };
       }
       try {
-        const { lines, decision } = await runChampionEval({ baselinePath: files[0]!, candidatePath: files[1]!, mode, strict, candidateId });
+        const { lines, decision } = await runChampionEval({ baselinePath: files[0]!, candidatePath: files[1]!, mode, strict, historical, candidateId });
         // E1-08: exit code reflects the decision:
         //   0 = ACCEPT (promotable)
         //   1 = INCONCLUSIVE (insufficient evidence)

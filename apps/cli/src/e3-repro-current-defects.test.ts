@@ -188,10 +188,11 @@ describe("R-04: Arm undeclared delta bypass [REPRODUCED]", () => {
       },
     };
     const cmp = factory.compare(baseline, tampered);
-    // REPRODUCED: compare says comparable/providerCallsAllowed despite
-    // undeclared field.
-    expect(cmp.comparable).toBe(true);
-    expect(cmp.providerCallsAllowed).toBe(true);
+    // FIXED (E3-03): undeclared config delta is UNDECLARED_ARM_DELTA —
+    // comparable=false, providerCallsAllowed=false.
+    expect(cmp.comparable).toBe(false);
+    expect(cmp.providerCallsAllowed).toBe(false);
+    expect(cmp.reasonCode).toBe("UNDECLARED_ARM_DELTA");
   });
 });
 
@@ -237,24 +238,25 @@ function nullProvenance(armId: string): ExperimentProvenanceV3 {
   };
 }
 
-describe("R-05: all-unknown provenance accepted [REPRODUCED]", () => {
-  it("provenance with all null/unknown fields returns comparable=true", () => {
+describe("R-05: all-unknown provenance rejected [FIXED in E3-04]", () => {
+  it("provenance with all null/unknown fields is NOT comparable / not promotion-eligible", () => {
     const b = nullProvenance("baseline");
     const c = nullProvenance("candidate");
     const cmp = compareProvenanceV3(b, c, { strict: true });
-    // REPRODUCED: all-null should be promotion-ineligible but isn't
-    expect(cmp.comparable).toBe(true);
-    expect(cmp.promotionEligible).toBe(true);
+    // FIXED (E3-04): hasUnknownIdentity() is now called inside
+    // compareProvenanceV3 — all-null identity is never promotion-eligible.
+    expect(cmp.comparable).toBe(false);
+    expect(cmp.promotionEligible).toBe(false);
+    expect(cmp.reasonCodes).toContain("UNKNOWN_IDENTITY");
   });
 });
 
 // ---------------------------------------------------------------------------
 // R-06: repetitions=2, perRepetitionDeltas=[] → decideChampionV3 returns
-//   ACCEPT.  directionStable = true when perRepetitionDeltas is empty
-//   (empty array → true).  REPRODUCED.
+//   INVALID (E3-06: perRepetitionComplete gate).  FIXED.
 // ---------------------------------------------------------------------------
-describe("R-06: empty perRepetitionDeltas with repetitions=2 gives ACCEPT [REPRODUCED]", () => {
-  it("decideChampionV3 ACCEPTs with repetitions=2 and empty perRepetitionDeltas", () => {
+describe("R-06: empty perRepetitionDeltas with repetitions=2 gives INVALID [FIXED in E3-06]", () => {
+  it("decideChampionV3 rejects repetitions=2 and empty perRepetitionDeltas as INVALID", () => {
     const d = decideChampionV3({
       digestValid: true,
       pairComplete: true,
@@ -280,8 +282,9 @@ describe("R-06: empty perRepetitionDeltas with repetitions=2 gives ACCEPT [REPRO
       maxTokensDelta: 100000,
       recommendsRepetition: false,
     });
-    // REPRODUCED: empty perRepetitionDeltas should be INVALID but is ACCEPT
-    expect(d.decision).toBe("ACCEPT");
+    // FIXED (E3-06): perRepetitionComplete gate catches empty deltas.
+    expect(d.decision).toBe("INVALID");
+    expect(d.reasonCodes).toContain("PER_REPETITION_INCOMPLETE");
   });
 });
 
@@ -371,8 +374,8 @@ describe("R-08: concurrent CAS double success [REPRODUCED]", () => {
 // R-09: summary tamper accepted — change passRate/tokens/recoveryRate but
 //   keep caseCount/passed → strict loader accepts.  REPRODUCED.
 // ---------------------------------------------------------------------------
-describe("R-09: summary tamper accepted [REPRODUCED]", () => {
-  it("tampered summary passRate/tokens/recoveryRate accepted by loader", async () => {
+describe("R-09: summary tamper rejected [FIXED in E3-04]", () => {
+  it("tampered summary passRate/tokens/recoveryRate rejected by strict loader", async () => {
     const dir = await makeTemp();
 
     const outcome = (caseId: string, passed: boolean): CaseOutcomeV3 => ({
@@ -438,14 +441,9 @@ describe("R-09: summary tamper accepted [REPRODUCED]", () => {
     await writeFile(artifactPath, JSON.stringify(raw, null, 2), "utf8");
 
     // Load with strict loader.
-    const loaded = await loadExperimentArtifactV3(artifactPath);
-
-    // REPRODUCED: tampered summary (passRate/tokens/recoveryRate) accepted.
-    // The recomputed summary has the ORIGINAL values (derived from outcomes).
-    expect(loaded.recomputedSummary.passRate).toBe(1); // 2/2 = 1
-    expect(loaded.recomputedSummary.totalTokensInput).toBe(200); // 100+100
-    expect(loaded.recomputedSummary.caseCount).toBe(2);
-    expect(loaded.recomputedSummary.passed).toBe(2);
+    // FIXED (E3-04): the strict loader now validates ALL summary fields and
+    // throws SUMMARY_MISMATCH on the tampered values.
+    await expect(loadExperimentArtifactV3(artifactPath)).rejects.toThrow(/SUMMARY_MISMATCH/);
   });
 });
 
@@ -500,17 +498,19 @@ describe("R-10: benchmark exec writes outside workspace [REPRODUCED]", () => {
 
 // ---------------------------------------------------------------------------
 // R-11: AR2 real champion eval --strict → verified 0→0, grade ?, provenance
-//   compatible, final INCONCLUSIVE not V3 INVALID.  REPRODUCED.
+//   compatible, final INCONCLUSIVE not V3 INVALID.  FIXED in E3-06: strict
+//   eval routes through the V3 bridge and legacy AR2 artifacts now fail
+//   closed as INVALID / LEGACY_NOT_PROMOTION_ELIGIBLE.
 // ---------------------------------------------------------------------------
-describe("R-11: AR2 champion eval --strict INCONCLUSIVE not INVALID [REPRODUCED]", () => {
-  it("historical AR2 champion eval --strict outputs INCONCLUSIVE", async () => {
+describe("R-11: AR2 champion eval --strict now INVALID (E3-06 fix) [FIXED]", () => {
+  it("historical AR2 champion eval --strict fails closed as INVALID / LEGACY_NOT_PROMOTION_ELIGIBLE", async () => {
     const baselinePath = "benchmarks/results/2026-08-31-deepseek-v4-flash-budget-aware/baseline-holdout.json";
     const candidatePath = "benchmarks/results/2026-09-01-deepseek-v4-flash-ar2/candidate-holdout.json";
 
     await expect(stat(baselinePath)).resolves.toBeDefined();
     await expect(stat(candidatePath)).resolves.toBeDefined();
 
-    const { report, lines, decision } = await runChampionEval({
+    const { lines, decision } = await runChampionEval({
       baselinePath,
       candidatePath,
       mode: "real-model",
@@ -518,19 +518,33 @@ describe("R-11: AR2 champion eval --strict INCONCLUSIVE not INVALID [REPRODUCED]
       candidateId: "adaptive_recovery_v2",
     });
 
-    // REPRODUCED: decision is INCONCLUSIVE (should be INVALID in V3)
+    // FIXED (E3-06): strict eval of legacy AR2 artifacts is INVALID —
+    // legacy evidence can never be promoted.
     expect(decision).toBeDefined();
-    expect(decision!.decision).toBe("INCONCLUSIVE");
+    expect(decision!.decision).toBe("INVALID");
+    expect(decision!.reasonCode).toBe("LEGACY_NOT_PROMOTION_ELIGIBLE");
 
-    // REPRODUCED: lines mention "verified" (0→0 for verified completion)
+    // The output clearly states legacy artifacts cannot be promoted.
     const output = lines.join("\n");
-    expect(output).toContain("verified");
+    expect(output).toContain("LEGACY_NOT_PROMOTION_ELIGIBLE");
+  });
 
-    // REPRODUCED: comparability = true (should be false under V3 strict
-    // all-unknown provenance)
-    if (decision!.comparability !== null) {
-      expect(decision!.comparability.comparable).toBe(true);
-    }
+  it("historical AR2 champion eval --historical stays descriptive-only (no promotion authority)", async () => {
+    const baselinePath = "benchmarks/results/2026-08-31-deepseek-v4-flash-budget-aware/baseline-holdout.json";
+    const candidatePath = "benchmarks/results/2026-09-01-deepseek-v4-flash-ar2/candidate-holdout.json";
+
+    const { report, decision } = await runChampionEval({
+      baselinePath,
+      candidatePath,
+      mode: "real-model",
+      strict: false,
+      historical: true,
+      candidateId: "adaptive_recovery_v2",
+    });
+
+    // Historical path keeps the legacy paired report (descriptive only).
+    expect(report.aggregated.cases).toBeGreaterThan(0);
+    expect(decision).toBeDefined();
   });
 });
 

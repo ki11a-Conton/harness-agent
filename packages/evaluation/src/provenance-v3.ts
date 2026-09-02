@@ -378,6 +378,18 @@ export function compareProvenanceV3(
   const mismatches: ProvenanceMismatchV3[] = [];
   const observed: string[] = [];
 
+  // E3-04: unknown identity (all-null key fields) is never comparable.
+  const baseUnknown = hasUnknownIdentity(baseline);
+  const candUnknown = hasUnknownIdentity(candidate);
+  if (baseUnknown) {
+    reasonCodes.push("UNKNOWN_IDENTITY");
+    mismatches.push({ field: "build.identity", baseline: "UNKNOWN", candidate: "UNKNOWN" });
+  }
+  if (candUnknown) {
+    reasonCodes.push("UNKNOWN_IDENTITY");
+    mismatches.push({ field: "build.identity", baseline: "UNKNOWN", candidate: "UNKNOWN" });
+  }
+
   const fail = (code: ProvenanceV3ReasonCode, field: string, b: unknown, c: unknown): void => {
     reasonCodes.push(code);
     mismatches.push(mismatch(field, b, c, code));
