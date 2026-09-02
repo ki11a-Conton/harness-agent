@@ -10,6 +10,7 @@ import {
   loadLegacyArtifact,
   discoverArtifactFiles,
   validateArtifactDir,
+  validateArtifactV3,
   classifyArtifact,
   parseExperimentArtifactV3,
   ArtifactSchemaError,
@@ -393,6 +394,103 @@ describe("E2-01 field preservation table (deliverable)", () => {
       expect(loaded.artifact.arm).toEqual(artifact.arm);
       // Full canonical equality.
       expect(loaded.artifact).toEqual(artifact);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("E3-04 artifact-v3 — summary/provenance/manifest validation", () => {
+  it("1. tamper ANY summary field fails strict loader (acceptance #1)", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "e3-04-"));
+    try {
+      const artifact = buildExperimentArtifactV3(makeInput());
+      // Tamper passRate, tokens, latency, recoveryRate — each is a reject.
+      const tamperedSets: Array<[string, unknown]> = [
+        ["passRate", 0.0],
+        ["totalTokensInput", 0],
+        ["medianLatencyMs", 0],
+        ["recoveryRate", 1.0],
+        ["totalCostUsd", null],
+        ["totalToolCalls", 999],
+      ];
+      for (const [field, val] of tamperedSets) {
+        const tampered = JSON.parse(JSON.stringify(artifact)) as Record<string, unknown>;
+        tampered.summary = { ...artifact.summary, [field]: val };
+        const path = join(dir, `baseline-holdout.json`);
+        await writeFile(path, JSON.stringify(tampered), "utf8");
+        await expect(loadExperimentArtifactV3(path)).rejects.toThrow(ArtifactSchemaError);
+        await expect(loadExperimentArtifactV3(path)).rejects.toThrow(/SUMMARY_MISMATCH/);
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("2. empty manifest → strict loader rejects (acceptance #2)", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "e3-04-"));
+    try {
+      const input = makeInput({ manifest: {} });
+      const artifact = buildExperimentArtifactV3(input);
+      const path = join(dir, "baseline-holdout.json");
+      await writeExperimentArtifactV3(artifact, path);
+      await expect(loadExperimentArtifactV3(path)).rejects.toThrow(ArtifactSchemaError);
+      await expect(loadExperimentArtifactV3(path)).rejects.toThrow(/MISSING_REQUIRED_FIELD/);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("3. provenance all-null → strict loader rejects with UNKNOWN_IDENTITY (acceptance #3)", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "e3-04-"));
+    try {
+      const input = makeInput({
+        provenance: { sourceManifestPath: null, gitSha: null, dirty: null, model: null, provider: null, runtimeConfigHash: null },
+      });
+      const artifact = buildExperimentArtifactV3(input);
+      const path = join(dir, "baseline-holdout.json");
+      await writeExperimentArtifactV3(artifact, path);
+      await expect(loadExperimentArtifactV3(path)).rejects.toThrow(ArtifactSchemaError);
+      await expect(loadExperimentArtifactV3(path)).rejects.toThrow(/UNKNOWN_IDENTITY/);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("4. validateArtifactV3 field-level summary check (acceptance #1 validate path)", async () => {
+    const artifact = buildExperimentArtifactV3(makeInput());
+    // Tamper passRate in the summary.
+    const tampered = { ...artifact, summary: { ...artifact.summary, passRate: 0.0 } };
+    const checks = validateArtifactV3(tampered);
+    const summaryCheck = checks.find((c) => c.code === "SUMMARY_MISMATCH");
+    expect(summaryCheck).toBeDefined();
+    expect(summaryCheck!.passed).toBe(false);
+  });
+
+  it("5. discoverArtifactFiles finds all suite canonical names (acceptance #9)", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "e3-04-"));
+    try {
+      // Write canonical artifacts for multiple suites.
+      for (const name of ["baseline-holdout.json", "candidate-holdout.json", "holdout.json",
+        "baseline-regression.json", "regression.json",
+        "adversarial.json", "baseline-adversarial.json",
+        "stress.json", "candidate-smoke.json"]) {
+        await writeFile(join(dir, name), "{}", "utf8");
+      }
+      // Write non-canonical files that must be excluded.
+      for (const bad of ["baseline-holdout-summary.json", "holdout-runs.json",
+        "baseline-holdout-r2.json", "random.json", "readme.md"]) {
+        await writeFile(join(dir, bad), "{}", "utf8");
+      }
+      const found = await discoverArtifactFiles(dir);
+      expect(found).toHaveLength(9);
+      // Every canonical name must be found.
+      for (const expected of ["baseline-holdout.json", "candidate-holdout.json", "holdout.json",
+        "baseline-regression.json", "regression.json",
+        "adversarial.json", "baseline-adversarial.json",
+        "stress.json", "candidate-smoke.json"]) {
+        expect(found.map((f) => f.replace(/\\/g, "/").split("/").pop())).toContain(expected);
+      }
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

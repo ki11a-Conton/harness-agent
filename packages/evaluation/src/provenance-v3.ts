@@ -31,6 +31,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { ARTIFACT_V3_SCHEMA_VERSION } from "./artifact-v3/types.js";
 import { computeRuntimeConfigHash, stableStringify } from "./manifest.js";
 
 export const PROVENANCE_V3_SCHEMA_VERSION = "3.0.0";
@@ -234,7 +235,9 @@ export function captureBuildIdentityV3(input: {
     pnpmVersion: input.pnpmVersion ?? null,
     os: input.os ?? null,
     arch: input.arch ?? null,
-    artifactSchemaVersion: PROVENANCE_V3_SCHEMA_VERSION,
+    // E3-04: the build identity records the ARTIFACT schema version that
+    // produced it — never the provenance schema version (they can diverge).
+    artifactSchemaVersion: ARTIFACT_V3_SCHEMA_VERSION,
     runnerVersion: input.runnerVersion ?? null,
   };
 }

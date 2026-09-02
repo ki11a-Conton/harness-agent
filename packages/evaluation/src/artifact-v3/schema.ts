@@ -152,6 +152,11 @@ export function parseExperimentArtifactV3(value: unknown): ExperimentArtifactV3 
   };
 
   const manifest = expectObject(record.manifest, "manifest");
+  // E3-04: an empty manifest object is never valid — the manifest must carry
+  // source/build/provider/protocol/arm/runtime identities.
+  if (Object.keys(manifest).length === 0) {
+    throw new ArtifactSchemaError("MISSING_REQUIRED_FIELD", "manifest", "manifest is an empty object — required identities missing");
+  }
 
   const outcomesRaw = expectArray(record.outcomes, "outcomes");
   const outcomes = outcomesRaw.map((o, i) => parseCaseOutcomeV3(o, i));

@@ -74,15 +74,42 @@ export async function loadExperimentArtifactV3(path: string): Promise<LoadedArti
   // Re-derived summary must equal the persisted summary; tampering the
   // persisted summary alone surfaces as SUMMARY_MISMATCH (distinct from
   // CONTENT_DIGEST_MISMATCH, which covers the outcomes payload).
+  // E3-04: validate EVERY summary field, not just caseCount/passed.
   const persisted = artifact.summary;
   if (persisted === undefined || typeof persisted !== "object" || persisted === null) {
     throw new ArtifactSchemaError("SUMMARY_MISMATCH", "summary", "persisted summary missing or not an object");
   }
-  if (recomputedSummary.caseCount !== persisted.caseCount || recomputedSummary.passed !== persisted.passed) {
+  const summaryFields: (keyof typeof recomputedSummary)[] = [
+    "suiteCount", "caseCount", "passed", "failed", "passRate",
+    "terminationReasons", "failureCategories",
+    "totalTokensInput", "totalTokensOutput", "totalCostUsd",
+    "medianLatencyMs", "totalToolCalls", "recoveryCount", "recoveryRate",
+  ];
+  for (const field of summaryFields) {
+    const pv = (persisted as unknown as Record<string, unknown>)[field];
+    const rv = recomputedSummary[field];
+    // Deep-equality check using JSON.stringify for nested objects.
+    const pStr = JSON.stringify(pv);
+    const rStr = JSON.stringify(rv);
+    if (pStr !== rStr) {
+      throw new ArtifactSchemaError(
+        "SUMMARY_MISMATCH",
+        `summary.${field}`,
+        `persisted ${pStr}, recomputed ${rStr}`,
+      );
+    }
+  }
+
+  // E3-04: provenance unknown-identity check — when all required provenance
+  // fields are null, the artifact is not promotion-eligible.
+  const prov = artifact.provenance;
+  const allUnknown = prov.gitSha === null && prov.model === null && prov.provider === null
+    && prov.sourceManifestPath === null && prov.runtimeConfigHash === null;
+  if (allUnknown) {
     throw new ArtifactSchemaError(
-      "SUMMARY_MISMATCH",
-      "summary",
-      `persisted caseCount=${persisted.caseCount} passed=${persisted.passed}; recomputed caseCount=${recomputedSummary.caseCount} passed=${recomputedSummary.passed}`,
+      "MISSING_REQUIRED_FIELD",
+      "provenance",
+      "all required provenance fields are null — UNKNOWN_IDENTITY; promotion not eligible",
     );
   }
 
@@ -119,18 +146,28 @@ export async function loadLegacyArtifact(path: string): Promise<LegacyLoadedArti
 
 /**
  * Discover experiment artifact files in a directory. The E2-01 validator must
- * find the ACTUAL holdout artifacts (baseline-holdout.json /
- * candidate-holdout.json / holdout.json), never report "0 suites / 0 cases"
- * on a real result dir.
+ * find the ACTUAL artifacts for EVERY suite (holdout, regression, adversarial,
+ * stress, smoke), never report "0 suites / 0 cases" on a real result dir.
+ *
+ * E3-04: canonical naming is `<arm>-<suite>.json` (e.g.
+ * baseline-holdout.json / candidate-regression.json) or `<suite>.json`
+ * (e.g. holdout.json); `-summary.json` / `-runs.json` / `-r<N>.json`
+ * repeat/summary files are excluded so they never double-count an outcome.
  */
 export async function discoverArtifactFiles(dir: string): Promise<string[]> {
   const entries = await readdir(dir).catch(() => [] as string[]);
+  // The suite names the benchmark runner emits as canonical artifacts.
+  const KNOWN_SUITES = ["holdout", "regression", "adversarial", "stress", "smoke"];
   const candidates: string[] = [];
   for (const entry of entries) {
     const lower = entry.toLowerCase();
-    // Canonical names the benchmark runner writes.
-    const isHoldoutJson = lower.endsWith("-holdout.json") || lower === "holdout.json";
-    if (isHoldoutJson && !lower.endsWith("-summary.json") && !lower.endsWith("-runs.json")) {
+    // Never a summary/repeat/run-list artifact.
+    if (lower.endsWith("-summary.json") || lower.endsWith("-runs.json")) continue;
+    if (/-r\d+\.json$/.test(lower)) continue;
+    // Canonical arm-suite name (baseline-holdout.json, candidate-regression.json)
+    // or bare suite name (holdout.json, regression.json).
+    const isSuiteJson = KNOWN_SUITES.some((s) => lower === `${s}.json` || lower.endsWith(`-${s}.json`));
+    if (isSuiteJson) {
       candidates.push(join(dir, entry));
     }
   }

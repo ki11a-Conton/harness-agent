@@ -73,22 +73,30 @@ export function validateArtifactV3(artifact: ExperimentArtifactV3): ArtifactVali
     checks.push({ code: "EMPTY_ARTIFACT", passed: true, detail: `${artifact.outcomes.length} cases` });
   }
 
-  // 2. Re-derive summary and compare.
+  // 2. Re-derive summary and compare EVERY field (E3-04: not just
+  //    caseCount/passed — a tampered passRate/tokens/cost/latency/recoveryRate
+  //    must be rejected).
   const derived = deriveSummaryV3(artifact.outcomes);
-  if (derived.caseCount !== artifact.summary.caseCount) {
+  const summaryFields: (keyof typeof derived)[] = [
+    "suiteCount", "caseCount", "passed", "failed", "passRate",
+    "terminationReasons", "failureCategories",
+    "totalTokensInput", "totalTokensOutput", "totalCostUsd",
+    "medianLatencyMs", "totalToolCalls", "recoveryCount", "recoveryRate",
+  ];
+  const summaryMismatches: string[] = [];
+  for (const field of summaryFields) {
+    const pStr = JSON.stringify((artifact.summary as unknown as Record<string, unknown>)[field]);
+    const rStr = JSON.stringify(derived[field]);
+    if (pStr !== rStr) summaryMismatches.push(`${field}: persisted ${pStr} != derived ${rStr}`);
+  }
+  if (summaryMismatches.length > 0) {
     checks.push({
       code: "SUMMARY_MISMATCH",
       passed: false,
-      detail: `persisted caseCount=${artifact.summary.caseCount} != derived ${derived.caseCount}`,
-    });
-  } else if (derived.passed !== artifact.summary.passed) {
-    checks.push({
-      code: "SUMMARY_MISMATCH",
-      passed: false,
-      detail: `persisted passed=${artifact.summary.passed} != derived ${derived.passed}`,
+      detail: summaryMismatches.join("; "),
     });
   } else {
-    checks.push({ code: "SUMMARY_MISMATCH", passed: true, detail: "summary matches derived" });
+    checks.push({ code: "SUMMARY_MISMATCH", passed: true, detail: "all summary fields match derived" });
   }
 
   // 3. Content digest re-verification.
@@ -129,6 +137,21 @@ export function validateArtifactV3(artifact: ExperimentArtifactV3): ArtifactVali
     checks.push({ code: "MISSING_REQUIRED_FIELD", passed: false, detail: "all outcomes missing terminationReason" });
   } else {
     checks.push({ code: "MISSING_REQUIRED_FIELD", passed: true, detail: "terminationReason present" });
+  }
+
+  // 6. Provenance unknown identity (E3-04): all required provenance fields
+  //    null => never promotion-eligible.
+  const prov = artifact.provenance;
+  const allUnknown = prov.gitSha === null && prov.model === null && prov.provider === null
+    && prov.sourceManifestPath === null && prov.runtimeConfigHash === null;
+  if (allUnknown) {
+    checks.push({
+      code: "MISSING_REQUIRED_FIELD",
+      passed: false,
+      detail: "all required provenance fields are null — UNKNOWN_IDENTITY; promotion not eligible",
+    });
+  } else {
+    checks.push({ code: "MISSING_REQUIRED_FIELD", passed: true, detail: "provenance identity present" });
   }
 
   return checks;
