@@ -6,8 +6,9 @@
  * the FIXED behavior. This suite is run separately from the default
  * `pnpm test` via `pnpm e3:repro-current-defects`.
  *
- * All repros are offline (fake/scripted provider, temp dirs, historical
- * artifacts). Real provider calls = 0.
+ * E3-01: R-01 fixed — interleave without shuffle now fails in preflight
+ * (0 provider calls, error before any provider resolution).
+ * All other repros unchanged.
  */
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -69,11 +70,10 @@ const sha = (s: string): string =>
 
 // ---------------------------------------------------------------------------
 // R-01: invalid --repeat 2 --interleave without --shuffle
-//   CLI errors at the end, but provider already called 1 time before the
-//   error.  REPRODUCED: calls === 1 before the interleave error.
+//   E3-01 FIXED: CLI errors in preflight, 0 provider calls before the error.
 // ---------------------------------------------------------------------------
-describe("R-01: invalid interleave calls provider before error [REPRODUCED]", () => {
-  it("--repeat 2 --interleave without --shuffle: provider called before error", async () => {
+describe("R-01: invalid interleave fails before provider call [FIXED]", () => {
+  it("--repeat 2 --interleave without --shuffle: 0 provider calls before error", async () => {
     const root = await makeCaseDir({
       "cases/t1/request.md": "write a test file",
       "cases/t1/expected.md": "file written",
@@ -96,12 +96,11 @@ describe("R-01: invalid interleave calls provider before error [REPRODUCED]", ()
       provider,
     );
 
-    // REPRODUCED: error does mention interleave
+    // FIXED: error mentions interleave
     expect(res.exitCode).toBe(1);
     expect(res.lines.join("\n")).toContain("interleave");
-    // REPRODUCED: provider was called before the error
-    expect(provider.calls.length).toBeGreaterThanOrEqual(1);
-    expect(provider.calls.length).toBe(1);
+    // FIXED: provider was NEVER called (preflight rejects before resolution)
+    expect(provider.calls.length).toBe(0);
   });
 });
 

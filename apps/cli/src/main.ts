@@ -113,7 +113,7 @@ export function extractDataDirFlag(argv: string[]): { args: string[]; dataDir?: 
  */
 export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promise<CommandDeps> {
   const dataDir = options.dataDir;
-  const modelProvider = options.provider ?? (await resolveModelProvider());
+  const modelProvider = options.provider ?? (await resolveModelProvider()).provider;
   const memoryEnabled = options.memory === true || process.env.HARNESS_MEMORY === "1";
   if (memoryEnabled && dataDir === undefined) {
     throw new Error("memory is enabled but no dataDir is configured (--data-dir or HARNESS_DATA_DIR) — refusing to write memories into the workspace");

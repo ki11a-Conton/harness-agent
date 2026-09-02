@@ -664,3 +664,129 @@ describe("P4-5/P4-7/P4-8/P4-9: mechanism-real benchmark wiring", () => {
     expect(seeded.memory).toBe(true);
   });
 });
+
+// ---- E3-01: preflight (0 provider calls before all checks) ---------------
+
+describe("E3-01: preflight — 0 provider calls before checks", () => {
+  it("invalid interleave fails before any provider call", async () => {
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "test",
+      "cases/t1/expected.md": "done",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const provider = new ScriptedModelProvider([]);
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--repeat", "2", "--interleave", "--out", join(root, "out")],
+      provider,
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.lines.join("\n")).toContain("interleave");
+    // Provider never called (preflight rejects before resolution)
+    expect(provider.calls.length).toBe(0);
+  });
+
+  it("empty cases dir fails before any provider call", async () => {
+    const empty = await makeCaseDir({ "cases/.keep": "" });
+    const provider = new ScriptedModelProvider([]);
+    const result = await runBenchmarkCommand(
+      ["--cases", join(empty, "cases"), "--out", join(empty, "out")],
+      provider,
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.lines[0]).toContain("no cases found");
+    expect(provider.calls.length).toBe(0);
+  });
+
+  it("unknown candidate fails before any provider call", async () => {
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "test",
+      "cases/t1/expected.md": "done",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const provider = new ScriptedModelProvider([]);
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--candidate", "no-such-candidate", "--out", join(root, "out")],
+      provider,
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.lines[0]).toContain("unknown candidate");
+    expect(provider.calls.length).toBe(0);
+  });
+
+  it("--dry-run outputs JSON plan and exits 0 with 0 provider calls", async () => {
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "test",
+      "cases/t1/expected.md": "done",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const provider = new ScriptedModelProvider([]);
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--dry-run", "--out", join(root, "out")],
+      provider,
+    );
+    expect(result.exitCode).toBe(0);
+    expect(result.lines.length).toBe(1);
+    const plan = JSON.parse(result.lines[0]!);
+    expect(plan.mode).toBe("dry-run");
+    expect(plan.planDigest).toMatch(/^[0-9a-f]{64}$/);
+    expect(plan.casesTotal).toBe(1);
+    expect(plan.providerCalls).toBe(0);
+    expect(provider.calls.length).toBe(0);
+  });
+
+  it("--max-logical-runs exceeded fails before any provider call", async () => {
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "test",
+      "cases/t1/expected.md": "done",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+      "cases/t2/request.md": "test",
+      "cases/t2/expected.md": "done",
+      "cases/t2/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const provider = new ScriptedModelProvider([]);
+    // 2 cases × --repeat 2 = 4 logical runs, exceeds --max-logical-runs 3
+    const result = await runBenchmarkCommand(
+      [
+        "--cases", join(root, "cases"),
+        "--repeat", "2",
+        "--max-logical-runs", "3",
+        "--out", join(root, "out"),
+      ],
+      provider,
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.lines[0]).toContain("max-logical-runs");
+    expect(provider.calls.length).toBe(0);
+  });
+});
+
+describe("E3-01: paid guard — external billed provider requires RUN_PAID_BENCHMARKS=1", () => {
+  it("OPENAI_API_KEY set without RUN_PAID_BENCHMARKS=1 rejects before provider call", async () => {
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "test",
+      "cases/t1/expected.md": "done",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    // Save and override env vars — no provider override so billing class is
+    // derived from the environment.
+    const prevKey = process.env.OPENAI_API_KEY;
+    const prevPaid = process.env.RUN_PAID_BENCHMARKS;
+    process.env.OPENAI_API_KEY = "sk-test-probe";
+    delete process.env.RUN_PAID_BENCHMARKS;
+    try {
+      // No provider override — the preflight sees "external-billed" from the
+      // API key and rejects without RUN_PAID_BENCHMARKS.
+      const result = await runBenchmarkCommand([
+        "--cases", join(root, "cases"),
+        "--out", join(root, "out"),
+      ]);
+      expect(result.exitCode).toBe(1);
+      expect(result.lines[0]).toContain("RUN_PAID_BENCHMARKS");
+    } finally {
+      if (prevKey !== undefined) process.env.OPENAI_API_KEY = prevKey;
+      else delete process.env.OPENAI_API_KEY;
+      if (prevPaid !== undefined) process.env.RUN_PAID_BENCHMARKS = prevPaid;
+      else delete process.env.RUN_PAID_BENCHMARKS;
+    }
+  });
+});

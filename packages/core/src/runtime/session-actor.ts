@@ -40,16 +40,111 @@ import { errorInfo, newPromptId } from "@ar/contracts";
 import type { AgentRuntime, TurnOutcome, TurnOutcomeDetail } from "./runtime.js";
 import { AgentError } from "../errors.js";
 // E2-10: same-T bounded recovery state machine (typed ordering/budget/backoff).
+// E3-10: the actor now persists the recovery record to a durable store and
+// re-drives the SAME-T bounded retry from it (peek/leased head, retryable
+// classification, injected scheduler / manual clock).
 import {
   createRecoveryTask,
   recoveryPolicy,
+  retryDue,
+  taskTerminal,
   transitionRecoveryTask,
+  type RecoveryClock,
   type RecoveryTaskRecord,
 } from "./recovery-state-machine.js";
 
 /** P25-1: durable session shape — the contracts `Session` IS the persistent
  *  shape. Keep the alias so callers never confuse it with LoadedSession. */
 export type PersistentSession = Session;
+
+/**
+ * E3-10 — durable same-T recovery record.
+ *
+ * Extends the pure `RecoveryTaskRecord` (recovery-state-machine.ts) with the
+ * durable-store fields the actor needs to recover the SAME turn across process
+ * restarts WITHOUT resetting the retry budget:
+ *
+ *   taskId         — the durable Turn identity being recovered (same T, no T2)
+ *   lineageId      — the prompt lineage this recovery belongs to
+ *   promptId       — the durable prompt bound to the turn (for terminal consume)
+ *   state          — RecoveryTaskState: PENDING (initial) / RECOVERY_IN_PROGRESS
+ *                    (retrying) / RETRY_SCHEDULED / RECOVERED / EXHAUSTED /
+ *                    TERMINAL_FAILED.  The plan's "INITIAL | RETRYING" shorthand
+ *                    maps to PENDING and RECOVERY_IN_PROGRESS/RETRY_SCHEDULED.
+ *   attempt        — recovery-handler attempt counter (bounded by maxRecoveryAttempts)
+ *   maxRecoveryAttempts — hard retry budget (never reset on restart)
+ *   nextAttemptAt  — scheduler epoch for the next retry (exponential backoff)
+ *   lastError      — last typed handler error
+ *   policyVersion  — which policy produced the current record
+ *   lease          — single-flight owner + expiry: only one live owner may
+ *                    actively recover this T at a time (two actors / duplicate
+ *                    completion never double-execute).
+ */
+export interface RecoveryRecord extends RecoveryTaskRecord {
+  /** The durable prompt whose promoted lineage this recovery owns. */
+  promptId: PromptId;
+  /** Single-flight lease. `undefined` = free. A lease whose expiry has passed
+   *  is stale and may be re-acquired. */
+  lease?: { owner: string; expiresAt: number };
+}
+
+/**
+ * E3-10 — durable recovery-record store. Persisting the record (rather than
+ * recreating it per drain) is what keeps attempt/nextAttemptAt/policyVersion
+ * across process restarts, so a crash never resets the retry budget.
+ */
+export interface RecoveryStore {
+  getRecord(taskId: TurnId): Promise<RecoveryRecord | undefined>;
+  putRecord(record: RecoveryRecord): Promise<void>;
+  deleteRecord(taskId: TurnId): Promise<void>;
+}
+
+/** E3-10 — injectable scheduler used to fire the next same-T retry after the
+ *  backoff window. Injected scheduler/manual clock replaces the old
+ *  `void this.drainFollowups()` recursive hot loops: the actor never re-drains
+ *  from inside a failure handler. */
+export interface RecoveryScheduler {
+  schedule(delayMs: number, cb: () => void): { cancel(): void };
+}
+
+/** E3-10 — retryable classification result. */
+export type RecoveryErrorClass = "retryable" | "terminal";
+
+/**
+ * E3-10 — classify a recovery-handler failure:
+ *  - infrastructure / transport / process-crash / timeout  → retryable (backoff)
+ *  - business / durable-state terminal failures            → terminal (fail closed)
+ *
+ * The authoritative typed signal is the contracts `AgentErrorInfo.retryable`
+ * (ERROR_RETRY_DEFAULTS: NETWORK_ERROR / PROCESS_TIMEOUT / MODEL_ERROR are
+ * retryable; PERMISSION_DENIED / TOOL_SCHEMA_ERROR / VERIFICATION_FAILED are
+ * terminal). Plain untyped errors default to retryable, because the bounded
+ * maxRecoveryAttempts budget (never reset on restart) caps total attempts — a
+ * wrong guess can never spin forever.
+ */
+export function classifyRecoveryError(err: unknown): RecoveryErrorClass {
+  if (err instanceof AgentError) {
+    // Contracts carry the typed retryability — never guess from message text.
+    return err.info.retryable ? "retryable" : "terminal";
+  }
+  return "retryable";
+}
+
+/** E3-10 — in-memory RecoveryStore fallback. Used when the actor is not wired
+ *  to a durable recovery store (single-process single-flight still holds;
+ *  cross-restart budget continuity requires a real durable store). */
+export class MemoryRecoveryStore implements RecoveryStore {
+  private readonly records = new Map<string, RecoveryRecord>();
+  async getRecord(taskId: TurnId): Promise<RecoveryRecord | undefined> {
+    return this.records.get(taskId);
+  }
+  async putRecord(record: RecoveryRecord): Promise<void> {
+    this.records.set(record.taskId, { ...record, lease: record.lease ? { ...record.lease } : undefined });
+  }
+  async deleteRecord(taskId: TurnId): Promise<void> {
+    this.records.delete(taskId);
+  }
+}
 
 /** P25-1: live session state. Runtime only — none of these fields are
  *  serialized (AbortController, promises, queues, scopes are all ephemeral). */
@@ -205,6 +300,34 @@ export interface SessionActorDeps {
    *  the loaded turn itself (cancelled) WITHOUT invoking runtime.runTurn. It
    *  emits the terminal event through this seam so the stream stay complete. */
   emit?: EventSink;
+  /**
+   * E3-10 — durable recovery-record store. When omitted, the actor uses an
+   * in-memory fallback: single-process single-flight still holds, but a
+   * process restart cannot continue the retry budget from attempt/nextAttemptAt.
+   * Production wiring should provide a durable store so a crash never resets
+   * the budget (plan E3-10 item 5).
+   */
+  recoveryStore?: RecoveryStore;
+  /**
+   * E3-10 — injectable scheduler for the next same-T retry after backoff.
+   * When omitted AND `now` is not provided (real clock), the actor schedules
+   * the retry with setTimeout; when `now` is provided (manual clock / tests),
+   * retries are driven by the caller (advance the clock + re-drain). The old
+   * `void this.drainFollowups()` recursive hot loop is forbidden — this
+   * scheduler is the ONLY re-entry path for a retryable failure.
+   */
+  scheduler?: RecoveryScheduler;
+  /**
+   * E3-10 — recovery policy overrides (maxRecoveryAttempts / backoffBaseMs /
+   * exhaustedPolicy). Defaults to the state machine's defaults (3 / 1000 /
+   * block-queue). Injected so tests can drive a short backoff and both
+   * exhaustion policies deterministically.
+   */
+  recoveryPolicy?: {
+    maxRecoveryAttempts?: number;
+    backoffBaseMs?: number;
+    exhaustedPolicy?: "block-queue" | "proceed-queue";
+  };
 }
 
 /** P38.1-2 (INV-P38.1-002): a queue-mode followup caller's deferred. Must
@@ -224,6 +347,12 @@ export interface LoadedSessionManagerDeps {
   /** P38.1-12/13: forwarded to each loaded actor so a pre-promotion cancel can
    *  emit turn.cancelled while keeping runtime.runTurn uninvolved. */
   emit?: EventSink;
+  /** E3-10 — forwarded to each loaded actor (see SessionActorDeps). */
+  recoveryStore?: RecoveryStore;
+  /** E3-10 — forwarded to each loaded actor (see SessionActorDeps). */
+  scheduler?: RecoveryScheduler;
+  /** E3-10 — forwarded to each loaded actor (see SessionActorDeps). */
+  recoveryPolicy?: SessionActorDeps["recoveryPolicy"];
 }
 
 function sessionBusy(sessionId: SessionId, turnId: TurnId): AgentError {
@@ -514,6 +643,11 @@ function nextRequestId(): string {
   return `req-${requestIdCounter}`;
 }
 
+/** E3-10 — lease TTL for single-flight recovery (60 seconds). If the
+ *  recovering process crashes, another owner may acquire the lease after
+ *  this duration. */
+const RECOVERY_LEASE_TTL_MS = 60_000;
+
 /** P25-2/3 + P37-1: the single owner of one live session — unified state. */
 export class DefaultSessionActor implements SessionActor {
   private state: ActorExecutionState = { kind: "idle" };
@@ -531,10 +665,35 @@ export class DefaultSessionActor implements SessionActor {
    *  drainFollowups recovers them by calling `runTurn(t.id)` — same T, no T2,
    *  no startTurn. The promptId is tracked so that after recovery the prompt
    *  can be durably consumed (INV-P38.4-004: recovery must converge the
-   *  lineage, not leave dangling promoted records). */
+   *  lineage, not leave dangling promoted records).
+   *
+   *  E3-10: this array uses a peek/leased-head pattern. The head is NEVER
+   *  shift()ed before the recovery record's terminal transition is durable.
+   *  Only RECOVERED (happy-path) and EXHAUSTED/proceed-queue (policy) remove
+   *  the head; EXHAUSTED/block-queue and TERMINAL_FAILED freeze the queue at
+   *  the dead-lettered head. */
   private readonly _recoverableTurns: Array<{ turn: Turn; promptId: PromptId }> = [];
   /** Guard: recoverable turns are queried at most once per actor lifetime. */
   private _recoverableChecked = false;
+
+  /** E3-10 — single-flight guard: while a drain pass is in progress, re-entrant
+   *  calls (from settle, which fires when the runtime turn completes) return
+   *  immediately. This prevents the outer recovery loop from racing with the
+   *  settle-triggered drain when `await this.runTurn(...)` is in a `while`
+   *  loop inside the same drain. */
+  private _draining = false;
+
+  /** E3-10 — the recovery record store. Defaults to an in-memory fallback when
+   *  `deps.recoveryStore` is not provided. */
+  private readonly _recoveryStore: RecoveryStore;
+
+  /** E3-10 — per-instance owner identity for lease acquisition. Stable across
+   *  the actor lifetime; used for single-flight so two live actors cannot
+   *  concurrently recover the same T. */
+  private readonly _ownerId: string;
+
+  /** E3-10 — pending retry timer handle. Cancelled on close. */
+  private _retryTimer: { cancel(): void } | undefined;
 
   constructor(private readonly deps: SessionActorDeps) {
     this.inputQueue = new InboxSessionInputQueue({
@@ -545,6 +704,8 @@ export class DefaultSessionActor implements SessionActor {
     });
     this.resourceScope = new DefaultSessionResourceScope(deps.persistent.id);
     this.cancellation = new AbortController();
+    this._recoveryStore = deps.recoveryStore ?? new MemoryRecoveryStore();
+    this._ownerId = `recovery-owner-${deps.persistent.id}-${nextRequestId()}`;
   }
 
   get sessionId(): SessionId {
@@ -554,6 +715,245 @@ export class DefaultSessionActor implements SessionActor {
   /** E2-10: injectable recovery clock (deps.now or Date.now). */
   private recoveryClock(): { now: () => number } {
     return this.deps.now !== undefined ? { now: this.deps.now } : { now: Date.now };
+  }
+
+  /** E3-10: effective recovery policy (deps overrides or state-machine defaults). */
+  private recoveryPolicy(): ReturnType<typeof recoveryPolicy> {
+    return recoveryPolicy(this.deps.recoveryPolicy);
+  }
+
+  /** E3-10: load the durable recovery record for `taskId`, or create + persist
+   *  a fresh PENDING record (attempt 0, nextAttemptAt = now) on first sight.
+   *  A restart never re-creates from scratch if the record already exists —
+   *  the attempt/nextAttemptAt budget survives the process. */
+  private async loadOrCreateRecoveryRecord(taskId: TurnId, promptId: PromptId): Promise<RecoveryRecord> {
+    const existing = await this._recoveryStore.getRecord(taskId);
+    if (existing !== undefined) return existing;
+    const base = createRecoveryTask(taskId, promptId, this.recoveryPolicy(), this.recoveryClock());
+    const fresh: RecoveryRecord = { ...base, promptId };
+    return this.persistRecoveryRecord(fresh);
+  }
+
+  /** E3-10: persist a recovery record; a durable-write failure is surfaced as a
+   *  degraded diagnostic (never silent) and the record is returned unchanged so
+   *  the in-memory flow can still proceed fail-safe. */
+  private async persistRecoveryRecord(record: RecoveryRecord): Promise<RecoveryRecord> {
+    try {
+      await this._recoveryStore.putRecord(record);
+    } catch (persistErr) {
+      process.stderr.write(
+        `[degraded] session ${this.sessionId} failed to persist recovery record for ${record.taskId}: ${persistErr instanceof Error ? persistErr.message : String(persistErr)}\n`,
+      );
+    }
+    return record;
+  }
+
+  /** E3-10: is this record leased to a DIFFERENT live owner? Stale leases
+   *  (expired) are free. */
+  private leaseHeldByOther(record: RecoveryRecord): boolean {
+    if (record.lease === undefined) return false;
+    if (record.lease.expiresAt <= this.recoveryClock().now()) return false;
+    return record.lease.owner !== this._ownerId;
+  }
+
+  /** E3-10: acquire the single-flight lease (owner + expiry) and persist it. */
+  private async acquireLease(record: RecoveryRecord): Promise<RecoveryRecord> {
+    const leased: RecoveryRecord = {
+      ...record,
+      lease: { owner: this._ownerId, expiresAt: this.recoveryClock().now() + RECOVERY_LEASE_TTL_MS },
+    };
+    return this.persistRecoveryRecord(leased);
+  }
+
+  /** E3-10: release OUR lease (never another owner's). */
+  private async releaseLease(taskId: TurnId): Promise<void> {
+    const record = await this._recoveryStore.getRecord(taskId);
+    if (record === undefined || record.lease === undefined) return;
+    if (record.lease.owner !== this._ownerId) return;
+    await this.persistRecoveryRecord({ ...record, lease: undefined });
+  }
+
+  /** E3-10: default retry scheduler. With a manual clock (`deps.now` injected,
+   *  tests) retries are caller-driven — no real timers — so tests advance the
+   *  clock and re-drain deterministically. With the real clock, a setTimeout
+   *  fires the next drain after `nextAttemptAt` (exponential backoff). */
+  private defaultRecoveryScheduler(): RecoveryScheduler {
+    if (this.deps.now !== undefined) {
+      return { schedule: () => ({ cancel: () => {} }) };
+    }
+    return {
+      schedule: (delayMs, cb) => {
+        const t = setTimeout(cb, Math.max(0, delayMs));
+        return { cancel: () => clearTimeout(t) };
+      },
+    };
+  }
+
+  /** E3-10: schedule the next same-T retry after the backoff window. The ONLY
+   *  re-entry path for a retryable failure — never `void this.drainFollowups()`
+   *  from inside a failure handler (no recursive hot loops). */
+  private scheduleRecoveryRetry(record: RecoveryRecord): void {
+    const delay = record.nextAttemptAt - this.recoveryClock().now();
+    if (delay <= 0) return; // already due — next drain picks it up
+    this._retryTimer?.cancel();
+    const scheduler = this.deps.scheduler ?? this.defaultRecoveryScheduler();
+    this._retryTimer = scheduler.schedule(delay, () => {
+      this._retryTimer = undefined;
+      void this.drainFollowups();
+    });
+  }
+
+  /**
+   * E3-10 — recover ONE head turn under the same-T bounded retry state
+   * machine. Returns the signal for the drain loop:
+   *   "shifted"      — head reached a durable terminal transition and was
+   *                    dequeued (RECOVERED, or EXHAUSTED + proceed-queue).
+   *   "wait-backoff" — RETRY_SCHEDULED and backoff not elapsed (or a
+   *                    retryable failure just scheduled the retry); T2 stays
+   *                    blocked, no hot loop.
+   *   "wait-lease"   — another live owner holds the single-flight lease.
+   *   "block"        — EXHAUSTED (block-queue) or TERMINAL_FAILED: dead-letter;
+   *                    the queue freezes at the head (T2 never overtakes).
+   *
+   * The head is NEVER removed from `_recoverableTurns` before a terminal
+   * transition is persisted (plan E3-10 item 2).
+   */
+  private async recoverHead(): Promise<"shifted" | "wait-backoff" | "wait-lease" | "block"> {
+    const head = this._recoverableTurns[0]!;
+    const policy = this.recoveryPolicy();
+    const clock = this.recoveryClock();
+    let record = await this.loadOrCreateRecoveryRecord(head.turn.id, head.promptId);
+
+    // A prior attempt crashed mid-flight: the durable record is stuck in
+    // RECOVERY_IN_PROGRESS with a stale/absent lease. Record the interruption
+    // as a RETRYABLE failure at the CURRENT attempt (begin already counted it —
+    // no extra increment), then fall through to the normal budget/backoff
+    // logic. This is what lets a restarted actor continue from attempt/
+    // nextAttemptAt instead of resetting the budget (plan E3-10 item 5).
+    if (record.state === "RECOVERY_IN_PROGRESS") {
+      if (this.leaseHeldByOther(record)) {
+        return "wait-lease";
+      }
+      try {
+        record = { ...transitionRecoveryTask(
+          record,
+          {
+            type: "handler_failed",
+            error: "recovery interrupted: process restart / lease expired while recovery in progress",
+            retryable: true,
+          },
+          policy,
+          clock,
+        ), promptId: record.promptId, lease: undefined };
+        record = await this.persistRecoveryRecord(record);
+      } catch (interruptedErr) {
+        process.stderr.write(
+          `[degraded] session ${this.sessionId} recovery interrupted-transition error for ${head.turn.id}: ${interruptedErr instanceof Error ? interruptedErr.message : String(interruptedErr)}\n`,
+        );
+        return "wait-lease";
+      }
+    }
+
+    // Durable terminal states.
+    if (record.state === "RECOVERED") {
+      this._recoverableTurns.shift();
+      return "shifted";
+    }
+    if (record.state === "EXHAUSTED" || record.state === "TERMINAL_FAILED") {
+      if (record.state === "EXHAUSTED" && policy.exhaustedPolicy === "proceed-queue") {
+        this._recoverableTurns.shift(); // dead-letter, T2 may proceed
+        return "shifted";
+      }
+      // EXHAUSTED (block-queue) or TERMINAL_FAILED → freeze the queue.
+      return "block";
+    }
+
+    // Backoff not yet elapsed → wait. T2 does NOT run, and nothing re-drains
+    // until the injected scheduler / caller re-enters (no hot loop).
+    if (record.state === "RETRY_SCHEDULED" && !retryDue(record, clock)) {
+      this.scheduleRecoveryRetry(record);
+      return "wait-backoff";
+    }
+
+    // Single-flight: a different live owner is actively recovering this T.
+    if (this.leaseHeldByOther(record)) {
+      return "wait-lease";
+    }
+
+    // Acquire the lease and begin the attempt.
+    record = await this.acquireLease(record);
+    let attempt: RecoveryRecord;
+    try {
+      const attemptBase = transitionRecoveryTask(record, { type: "begin" }, policy, clock);
+      attempt = { ...attemptBase, promptId: record.promptId };
+    } catch (beginErr) {
+      process.stderr.write(
+        `[degraded] session ${this.sessionId} recovery begin failed for ${head.turn.id}: ${beginErr instanceof Error ? beginErr.message : String(beginErr)}\n`,
+      );
+      await this.releaseLease(head.turn.id);
+      return "wait-lease";
+    }
+    await this.persistRecoveryRecord(attempt);
+
+    // Same-T recovery: `runTurn` reserves the starting slot, loads the existing
+    // durable Turn and promotes it — the runtime's single-turn-per-session
+    // guard applies. A rejection is a recovery-handler failure and is
+    // classified retryable-vs-terminal before being recorded.
+    try {
+      const outcome = await this.runTurn(head.turn.id);
+      const successBase = transitionRecoveryTask(attempt, { type: "handler_succeeded" }, policy, clock);
+      const success: RecoveryRecord = { ...successBase, promptId: attempt.promptId };
+      await this.persistRecoveryRecord(success);
+      await this.releaseLease(head.turn.id);
+      // INV-P38.4-004: converged — durably consume the bound prompt
+      // (best-effort; consumeRecoveredPrompt re-checks the store).
+      void this.consumeRecoveredPrompt(head.turn.id, head.promptId, outcome);
+      this._recoverableTurns.shift(); // RECOVERED transition is durable
+      return "shifted";
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const retryable = classifyRecoveryError(err) === "retryable";
+      let failed: RecoveryTaskRecord;
+      try {
+        failed = transitionRecoveryTask(
+          attempt,
+          { type: "handler_failed", error: message, retryable },
+          policy,
+          clock,
+        );
+      } catch (transitionErr) {
+        process.stderr.write(
+          `[degraded] session ${this.sessionId} recovery failure transition error for ${head.turn.id}: ${transitionErr instanceof Error ? transitionErr.message : String(transitionErr)}\n`,
+        );
+        await this.releaseLease(head.turn.id);
+        return "wait-backoff";
+      }
+      const failedRecord: RecoveryRecord = { ...failed, promptId: attempt.promptId };
+      await this.persistRecoveryRecord(failedRecord);
+      await this.releaseLease(head.turn.id);
+      if (failed.state === "RETRY_SCHEDULED") {
+        // Retryable failure — same T is retried after exponential backoff.
+        this.scheduleRecoveryRetry(failedRecord);
+        return "wait-backoff";
+      }
+      if (failed.state === "EXHAUSTED" && policy.exhaustedPolicy === "proceed-queue") {
+        this._recoverableTurns.shift();
+        return "shifted";
+      }
+      // EXHAUSTED (block-queue) or TERMINAL_FAILED → dead-letter + freeze.
+      return "block";
+    }
+  }
+
+  /** E3-10: drain the recoverable head queue. Stops on the first wait/block
+   *  signal — the followup drain must not proceed while T1 is unresolved or
+   *  the queue is frozen at a dead-lettered head. */
+  private async drainRecoverable(): Promise<void> {
+    while (this._recoverableTurns.length > 0) {
+      const result = await this.recoverHead();
+      if (result === "shifted") continue;
+      return; // wait-backoff / wait-lease / block
+    }
   }
 
   get persistent(): PersistentSession {
@@ -740,6 +1140,9 @@ export class DefaultSessionActor implements SessionActor {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    // E3-10: cancel any pending retry timer so a closed actor never re-drains.
+    this._retryTimer?.cancel();
+    this._retryTimer = undefined;
     const s = this.state;
     if (s.kind === "starting") {
       s.controller.abort();
@@ -926,89 +1329,39 @@ export class DefaultSessionActor implements SessionActor {
     void this.drainFollowups();
   }
 
+  /** E3-10: single-flight drain. Any re-entrant call (from `settle` when a
+   *  runtime turn completes) returns immediately while a drain pass is in
+   *  flight, so the recovery loop can `await` each runTurn without racing a
+   *  settle-triggered re-drain. */
   private async drainFollowups(queue: SessionInputQueue = this.inputQueue): Promise<void> {
     if (this.closed) return;
     if (this.state.kind !== "idle") return;
-    // P38.4-2/3 (INV-P38.4-003/004): recover same-T for bound nonterminal
-    // turns BEFORE draining new followups. These are durable Turns that were
-    // promoted to a prompt but never reached terminal state before the previous
-    // process died. Recovery reuses the existing durable Turn identity (same T)
-    // via `runTurn(t.id)` — NEVER startTurn (that would create T2 and violate
-    // INV-P38.4-001). Recovery is single-flight: one recoverable turn at a time,
-    // and each run settles via promoteToRunning → settle → drainFollowups, so
-    // the actor re-enters this method after every terminal outcome.
+    if (this._draining) return;
+    this._draining = true;
+    try {
+      await this.drainFollowupsInner(queue);
+    } finally {
+      this._draining = false;
+    }
+  }
+
+  private async drainFollowupsInner(queue: SessionInputQueue): Promise<void> {
+    // P38.4-2/3 (INV-P38.4-003/004): discover same-T recoverable bound
+    // nonterminal turns once per lifetime (never startTurn, no T2).
     if (!this._recoverableChecked) {
       this._recoverableChecked = true;
       await this.discoverRecoverableTurns();
     }
-    const recoverable = this._recoverableTurns.shift();
-    if (recoverable !== undefined) {
-      // Same-T recovery. `runTurn` reserves the starting slot, loads the
-      // existing durable Turn via requireTurn, and promotes it to running —
-      // reusing the runtime runTurn path that guards single-turn-per-session.
-      const { turn, promptId } = recoverable;
-      // E2-10: typed same-T recovery state. A failed recovery handler (runtime
-      // crash / infrastructure failure surfaced as runTurn rejection) is
-      // recorded as TERMINAL_FAILED on the SAME T — never silently dropped,
-      // never looped. The bounded-retry / backoff / exhausted semantics live in
-      // the state machine (recovery-state-machine.ts): the actor keeps the
-      // E1-10 liveness contract (T1 stays promoted, T2 may progress) while the
-      // failure is durably typed instead of a fire-and-forget log line.
-      const policy = recoveryPolicy();
-      let record: RecoveryTaskRecord = createRecoveryTask(turn.id, promptId, policy, this.recoveryClock());
-      try {
-        record = transitionRecoveryTask(record, { type: "begin" }, policy, this.recoveryClock());
-      } catch (beginErr) {
-        // begin only fails if the record is already terminal (should not
-        // happen on a fresh task) — fail-closed, surface it, keep liveness.
-        process.stderr.write(
-          `[degraded] session ${this.sessionId} recovery begin failed for ${turn.id}: ${beginErr instanceof Error ? beginErr.message : String(beginErr)}\n`,
-        );
-        void this.drainFollowups();
-        return;
+    // E3-10: recover same-T BEFORE draining new followups. The head is a
+    // PEEK — it is never shift()ed before its recovery record reaches a
+    // durable terminal transition (plan E3-10 item 2). If the head is
+    // unresolved (backoff pending / lease held / dead-lettered block), the
+    // followup drain does NOT proceed — T2 never overtakes T1.
+    if (this._recoverableTurns.length > 0) {
+      await this.drainRecoverable();
+      if (this._recoverableTurns.length > 0) {
+        return; // head unresolved or the queue is frozen at a dead-letter
       }
-      // runTurn is async: a synchronous throw inside becomes a rejection, so
-      // we handle ALL failures in the rejection handler below (single path).
-      void this.runTurn(turn.id).then(
-        (outcome) => {
-          // INV-P38.4-004: recovery converged — the turn is terminal. Durable
-          // consume the bound prompt so the promoted lineage is closed (no
-          // dangling promoted record, no T2). Nonterminal outcomes are not
-          // possible here (runTurn always settles terminal).
-          try {
-            record = transitionRecoveryTask(record, { type: "handler_succeeded" }, policy, this.recoveryClock());
-          } catch (okErr) {
-            process.stderr.write(
-              `[degraded] session ${this.sessionId} recovery success transition failed for ${turn.id}: ${okErr instanceof Error ? okErr.message : String(okErr)}\n`,
-            );
-          }
-          void this.consumeRecoveredPrompt(turn.id, promptId, outcome);
-          void this.drainFollowups();
-        },
-        (err) => {
-          // E2-10: record the failure on the SAME T as TERMINAL_FAILED (typed,
-          // non-silent). T1 stays promoted in the inbox (fail-closed) and the
-          // queue may proceed to T2 — liveness preserved, failure surfaced.
-          const message = err instanceof Error ? err.message : String(err);
-          try {
-            record = transitionRecoveryTask(
-              record,
-              { type: "handler_failed", error: message, retryable: false },
-              policy,
-              this.recoveryClock(),
-            );
-            process.stderr.write(
-              `[degraded] session ${this.sessionId} recovery TERMINAL_FAILED for ${turn.id}: ${message} (attempt ${record.attempt}/${record.maxRecoveryAttempts}, state ${record.state})\n`,
-            );
-          } catch (transitionErr) {
-            process.stderr.write(
-              `[degraded] session ${this.sessionId} recovery failure transition error for ${turn.id}: ${transitionErr instanceof Error ? transitionErr.message : String(transitionErr)}\n`,
-            );
-          }
-          void this.drainFollowups();
-        },
-      );
-      return;
     }
     // P38-1 (INV-P38-001): RESERVE the actor slot BEFORE the awaited dequeue.
     // A concurrent startTurn will see "starting" and be refused — no
@@ -1344,6 +1697,9 @@ export class DefaultLoadedSessionManager implements LoadedSessionManager {
         inbox: this.deps.inbox,
         now: this.deps.now,
         emit: this.deps.emit,
+        recoveryStore: this.deps.recoveryStore,
+        scheduler: this.deps.scheduler,
+        recoveryPolicy: this.deps.recoveryPolicy,
         onClosed: (sid) => {
           this.actors.delete(sid);
         },

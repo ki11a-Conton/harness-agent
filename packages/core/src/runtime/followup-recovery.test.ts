@@ -17,6 +17,10 @@
 //   - any call to startTurn creates a new identity (must NOT be used for recovery)
 //   - recoverable turns are discovered at most once per actor lifetime
 //   - pending/created turns are recovered; terminal turns are NOT recovered
+//
+// E3-10: same-T bounded retry replaces the old "liveness" assertion. T1 must
+// reach RECOVERED / EXHAUSTED / TERMINAL_FAILED before T2 may proceed. A
+// retryable handler failure triggers backoff on the SAME T; T2 stays blocked.
 
 import { describe, expect, it } from "vitest";
 import type {
@@ -30,7 +34,7 @@ import type {
 import { newAgentId } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
 import { AgentRuntime, type TurnOutcome } from "./runtime.js";
-import { DefaultSessionActor, type SessionInputQueue } from "./session-actor.js";
+import { DefaultSessionActor, type RecoveryScheduler, type SessionInputQueue } from "./session-actor.js";
 import { MemoryEventStore, MemorySessionStore, defaultTestToolCatalog } from "../test/fakes.js";
 import { FakeOrchestrator } from "../test/fake-orchestrator.js";
 import type { InboxStore } from "@ar/contracts";
@@ -135,9 +139,22 @@ async function loadActor(
   store: MemorySessionStore,
   inbox: MemInboxStore,
   sessionId: SessionId,
+  deps?: {
+    now?: () => number;
+    scheduler?: RecoveryScheduler;
+    recoveryPolicy?: { maxRecoveryAttempts?: number; backoffBaseMs?: number; exhaustedPolicy?: "block-queue" | "proceed-queue" };
+  },
 ): Promise<DefaultSessionActor> {
   const session = (await store.getSession(sessionId))!;
-  return new DefaultSessionActor({ persistent: session, runtime, store, inbox });
+  return new DefaultSessionActor({
+    persistent: session,
+    runtime,
+    store,
+    inbox,
+    ...(deps?.now !== undefined ? { now: deps.now } : {}),
+    ...(deps?.scheduler !== undefined ? { scheduler: deps.scheduler } : {}),
+    ...(deps?.recoveryPolicy !== undefined ? { recoveryPolicy: deps.recoveryPolicy } : {}),
+  });
 }
 
 async function waitFor(predicate: () => Promise<boolean> | boolean, timeoutMs = 3000): Promise<void> {
@@ -383,7 +400,7 @@ describe("P38.4-2/3 followup same-T recovery (nonterminal bound turns)", () => {
     });
   });
 
-  it("G. E1-10 liveness: recovery failures must not strand the actor — remaining turns and followups still progress", async () => {
+  it("G. E3-10 same-T bounded retry: T1 attempt1 crash → backoff → T2 blocked → attempt2 success → T1 consumed, then T2", async () => {
     const { runtime, store, inbox, sessionId } = await setup();
 
     // 1) Build TWO bound-nonterminal lineages (P1→T1, P2→T2).
@@ -396,10 +413,10 @@ describe("P38.4-2/3 followup same-T recovery (nonterminal bound turns)", () => {
     await inbox.bindPromotion(p1, t1.id);
     await inbox.bindPromotion(p2, t2.id);
 
-    // 2) "Restart" with a runtime that throws SYNCHRONOUSLY for T1 (like the
-    //    broken runTurn in F — no settled outcomePromise, no settle) but
-    //    succeeds for T2. This is the worst case for liveness: recovery of T1
-    //    fails hard and nothing else would re-enter drainFollowups.
+    // 2) A runtime that throws SYNCHRONOUSLY for T1 on the FIRST attempt (a
+    //    plain Error → classified RETRYABLE by E3-10 classifyRecoveryError),
+    //    then succeeds for T1 on later attempts; succeeds for T2 always.
+    //    Injected manual clock + scheduler drive the backoff deterministically.
     const healthyRt = freshRuntime(store, new MemoryEventStore(), inbox);
     let runT1Count = 0;
     const selectiveRt: Pick<AgentRuntime, "startTurn" | "runTurn"> = {
@@ -407,27 +424,54 @@ describe("P38.4-2/3 followup same-T recovery (nonterminal bound turns)", () => {
       runTurn: (sid, turnId, signal) => {
         if (turnId === t1.id) {
           runT1Count++;
-          throw new Error("simulated T1 recovery crash"); // synchronous throw
+          if (runT1Count === 1) {
+            throw new Error("simulated T1 recovery crash"); // synchronous throw
+          }
         }
         return healthyRt.runTurn(sid, turnId, signal);
       },
     };
-    const actor = await loadActor(selectiveRt, store, inbox, sessionId);
-    // Await the full drain: T1 recovery fails, then T2 recovery should succeed.
-    await actor.drainFollowupsForTest();
 
-    // T2 must have been recovered (runTurn called for T2).
-    // T1 prompt stays promoted (fail-closed for the failed turn).
+    let clock = 1_000_000;
+    const fired: Array<() => void> = [];
+    const scheduler: RecoveryScheduler = {
+      schedule(_delayMs: number, cb: () => void) {
+        fired.push(cb);
+        return { cancel() { /* manual — no-op */ } };
+      },
+    };
+    const actor = await loadActor(selectiveRt, store, inbox, sessionId, {
+      now: () => clock,
+      scheduler,
+      recoveryPolicy: { maxRecoveryAttempts: 3, backoffBaseMs: 100 },
+    });
+
+    // 3) First drain: T1 attempt1 crashes (retryable) → RETRY_SCHEDULED with
+    //    backoff → T2 MUST stay blocked (never overtakes T1). No hot loop.
+    await actor.drainFollowupsForTest();
+    expect(runT1Count).toBe(1);
+    const p2Blocked = inbox.prompts.find((x) => x.id === p2)!;
+    expect(p2Blocked.status).toBe("promoted"); // T2 NOT consumed
+    // A single retry was scheduled (backoff not elapsed yet).
+    expect(fired.length).toBe(1);
+
+    // 4) Advance the clock past the backoff, then re-drain. T1 attempt2
+    //    succeeds → T1 prompt consumed → the queue advances to T2.
+    clock += 200;
+    await actor.drainFollowupsForTest();
+    expect(runT1Count).toBe(2);
+    await waitFor(async () => {
+      const p = inbox.prompts.find((x) => x.id === p1);
+      return p?.status === "consumed";
+    });
     const p1After = inbox.prompts.find((x) => x.id === p1)!;
-    expect(p1After.status).toBe("promoted");
-    // T2 must be recovered and consumed even though T1's recovery failed first.
+    expect(p1After.status).toBe("consumed");
+    // T2 then proceeds (drain reaches it after T1 is durable-RECOVERED).
     await waitFor(async () => {
       const p = inbox.prompts.find((x) => x.id === p2);
       return p?.status === "consumed";
     });
     const p2After = inbox.prompts.find((x) => x.id === p2)!;
     expect(p2After.status).toBe("consumed");
-    // T1 recovery was attempted once (not silently dropped).
-    expect(runT1Count).toBe(1);
   });
 });

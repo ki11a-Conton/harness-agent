@@ -16,5 +16,10 @@ export {
 } from "./main.js";
 export type { DefaultDepsOptions } from "./main.js";
 
-export { resolveModelProvider, STUB_PROVIDER_ID, stubProvider } from "./provider.js";
-export type { ResolveModelProviderOptions } from "./provider.js";
+export {
+  billingClassForProvider,
+  resolveModelProvider,
+  STUB_PROVIDER_ID,
+  stubProvider,
+} from "./provider.js";
+export type { BillingClass, BillingProvider, ResolveModelProviderOptions } from "./provider.js";

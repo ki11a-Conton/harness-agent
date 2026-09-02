@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -68,7 +69,8 @@ import { createFakeMcpTool } from "./fake-mcp.js";
 import { SqliteMemoryStore } from "@ar/memory";
 import { detectPromptInjection, redactSecrets } from "@ar/security";
 import { DEFAULT_MODEL_ID, registerBuiltinTools } from "./main.js";
-import { resolveModelProvider, STUB_PROVIDER_ID } from "./provider.js";
+import { billingClassForProvider, resolveModelProvider, STUB_PROVIDER_ID } from "./provider.js";
+import type { BillingClass } from "./provider.js";
 
 export interface BenchmarkCommandOptions {
   casesDir: string;
@@ -97,6 +99,23 @@ export interface BenchmarkCommandOptions {
   /** E1-11: give each repeat a distinct PRNG seed so execution order differs
    *  (order effects cannot align across repeats). Requires --shuffle. */
   interleave: boolean;
+
+  // ---- E3-01: preflight / hard limits / dry-run ----
+
+  /** E3-01: --dry-run — output canonical plan + plan digest, 0 provider calls. */
+  dryRun: boolean;
+  /** E3-01: --max-logical-runs — hard cap on total logical runs (0 = no limit). */
+  maxLogicalRuns: number;
+  /** E3-01: --max-model-calls — hard cap on estimated model calls (0 = no limit). */
+  maxModelCalls: number;
+  /** E3-01: --max-estimated-tokens — hard cap on estimated tokens (0 = no limit). */
+  maxEstimatedTokens: number;
+  /** E3-01: --max-estimated-cost-usd — hard cap on estimated cost in USD (0 = no limit). */
+  maxEstimatedCostUsd: number;
+  /** E3-01: set by RUN_PAID_BENCHMARKS=1 env var. */
+  paidAuthorized: boolean;
+  /** E3-01: --plan-digest — expected plan digest for confirmation. */
+  planDigest: string | undefined;
 }
 
 const SUITES: EvalSuite[] = ["regression", "holdout", "adversarial", "stress"];
@@ -150,34 +169,50 @@ export async function runBenchmarkCommand(
     return { exitCode: 1, lines: [opts.message, "", benchmarkUsage()] };
   }
 
-  // E1-03 / E2-03: candidate preflight BEFORE any provider call. The arm
-  // factory resolves the REAL harness config; unknown, unsupported (declared-
-  // but-unwired, e.g. delegation without real subagent wiring), no-op and
-  // undeclared-delta candidates fail closed with a stable reason code — never
-  // silently run as baseline, never consume provider calls.
-  if (opts.candidate !== undefined) {
-    const { getArmFactory } = await import("@ar/evaluation");
-    try {
-      const preflight = getArmFactory().preflight(opts.candidate);
-      if (!preflight.ok) {
-        return {
-          exitCode: 1,
-          lines: [
-            `agent benchmark: candidate rejected before provider call: [${preflight.reasonCode}] ${preflight.detail}`,
-          ],
-        };
-      }
-    } catch (err) {
-      return {
-        exitCode: 1,
-        lines: [
-          `agent benchmark: candidate rejected before provider call: ${err instanceof Error ? err.message : String(err)}`,
-        ],
-      };
-    }
+  // E3-01: load cases BEFORE any provider call (preflight needs them).
+  let cases: BenchmarkCase[];
+  try {
+    cases = await loadBenchmarkCases(opts.casesDir);
+  } catch (err) {
+    return { exitCode: 1, lines: [`agent benchmark: failed to load cases: ${err instanceof Error ? err.message : String(err)}`] };
   }
 
-  const provider = providerOverride ?? (await resolveModelProvider());
+  // E3-01: determine billing class for preflight (before provider resolution).
+  // When a provider override is passed (tests), billing is always offline-test.
+  const billingClass: BillingClass = providerOverride !== undefined
+    ? "offline-test"
+    : billingClassForProvider(
+        process.env.OPENAI_API_KEY ? "openai" : STUB_PROVIDER_ID,
+        !!process.env.OPENAI_API_KEY,
+      );
+
+  // E3-01: preflight — ALL checks before ANY provider call.
+  const preflight = await preflightBenchmark(opts, cases, billingClass);
+  if (!preflight.ok) {
+    return { exitCode: 1, lines: [`agent benchmark: ${preflight.reason}`] };
+  }
+
+  // E3-01: dry-run — output canonical JSON plan + exit 0, 0 provider calls.
+  if (opts.dryRun) {
+    return { exitCode: 0, lines: [JSON.stringify(buildDryRunPlan(opts, cases, billingClass, preflight), null, 2)] };
+  }
+
+  // E3-01: resolve provider AFTER preflight + dry-run check.
+  const provider = providerOverride ?? (await resolveModelProvider()).provider;
+
+  // E3-01: billing authorization (after resolution, confirm).
+  if (billingClass === "external-billed" && !opts.paidAuthorized) {
+    return { exitCode: 1, lines: ["agent benchmark: RUN_PAID_BENCHMARKS=1 is required for an external billed provider."] };
+  }
+
+  // E3-01: plan-digest confirmation.
+  if (opts.planDigest !== undefined && preflight.planDigest !== opts.planDigest) {
+    return {
+      exitCode: 1,
+      lines: [`agent benchmark: plan digest mismatch — expected ${opts.planDigest}, computed ${preflight.planDigest}`],
+    };
+  }
+
   if (provider.id === STUB_PROVIDER_ID && !opts.allowStub) {
     return {
       exitCode: 1,
@@ -187,25 +222,19 @@ export async function runBenchmarkCommand(
       ],
     };
   }
-  return executeBenchmark(opts, provider);
+  return executeBenchmark(opts, provider, cases);
 }
 
 /** Shared benchmark execution (P4-11: `smoke` runs the same path with a fake
- *  provider and then asserts the token accounting). */
+ *  provider and then asserts the token accounting).
+ *  E3-01: cases arrive pre-loaded by runBenchmarkCommand (preflight already
+ *  validated them); `smoke` loads its own. */
 async function executeBenchmark(
   opts: BenchmarkCommandOptions,
   provider: ModelProvider,
+  cases: BenchmarkCase[],
 ): Promise<{ exitCode: number; lines: string[] }> {
   const lines: string[] = [];
-  let cases: BenchmarkCase[];
-  try {
-    cases = await loadBenchmarkCases(opts.casesDir);
-  } catch (err) {
-    return { exitCode: 1, lines: [`agent benchmark: failed to load cases: ${err instanceof Error ? err.message : String(err)}`] };
-  }
-  if (cases.length === 0) {
-    return { exitCode: 1, lines: [`agent benchmark: no cases found in ${opts.casesDir}`] };
-  }
   const selected = opts.limit > 0 ? cases.slice(0, opts.limit) : cases;
   const modelId =
     provider.id === STUB_PROVIDER_ID
@@ -376,6 +405,222 @@ async function executeBenchmark(
     );
   }
   return { exitCode: 0, lines };
+}
+
+// ---------------------------------------------------------------------------
+// E3-01: preflight + dry-run (all checks BEFORE any provider call)
+// ---------------------------------------------------------------------------
+
+/** E3-01: preflight estimation constants (conservative planning defaults used
+ *  only for hard-limit checks and the dry-run plan). The real run's actuals
+ *  are recorded in the report; these are planning estimates, never claims. */
+export const PREFLIGHT_ESTIMATE = {
+  /** Estimated model calls per case run (preflight planning only). */
+  callsPerCaseRun: 10,
+  /** Estimated tokens per model call (preflight planning only). */
+  tokensPerCall: 4_000,
+  /** Estimated cost per model call in USD (preflight planning only). */
+  costPerCallUsd: 0.0005,
+} as const;
+
+export interface PreflightResult {
+  ok: boolean;
+  reason?: string;
+  /** sha256 over stable-stringified plan inputs (E3-01). */
+  planDigest?: string;
+  totalLogicalRuns?: number;
+  estimatedModelCalls?: number;
+  estimatedTokens?: number;
+  estimatedCostUsd?: number;
+}
+
+/**
+ * E3-01: ALL preflight checks — cases, candidate, protocol, isolation,
+ * billing, limits — happen here BEFORE any provider resolution/call.
+ * Returns the plan digest for --plan-digest confirmation and --dry-run.
+ */
+export async function preflightBenchmark(
+  opts: BenchmarkCommandOptions,
+  cases: BenchmarkCase[],
+  billingClass: BillingClass,
+): Promise<PreflightResult> {
+  // 1. Cases non-empty + no duplicates (by caseId).
+  if (cases.length === 0) {
+    return { ok: false, reason: `no cases found in ${opts.casesDir}` };
+  }
+  const seen = new Set<string>();
+  const duplicates = cases.filter((c) => {
+    if (seen.has(c.id)) return true;
+    seen.add(c.id);
+    return false;
+  });
+  if (duplicates.length > 0) {
+    return { ok: false, reason: `duplicate case ids in ${opts.casesDir}: ${duplicates.map((c) => c.id).join(", ")}` };
+  }
+
+  // 2. Candidate preflight — must be READY (causal delta within declared
+  //    paths), not unsupported / unknown / no-op.
+  if (opts.candidate !== undefined) {
+    const { getArmFactory } = await import("@ar/evaluation");
+    try {
+      const armPreflight = getArmFactory().preflight(opts.candidate);
+      if (!armPreflight.ok) {
+        return {
+          ok: false,
+          reason: `candidate rejected before provider call: [${armPreflight.reasonCode}] ${armPreflight.detail}`,
+        };
+      }
+    } catch (err) {
+      return {
+        ok: false,
+        reason: `candidate rejected before provider call: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+  }
+
+  // 3. Protocol validation.
+  if (opts.interleave && !opts.shuffle) {
+    return { ok: false, reason: "--interleave requires --shuffle (distinct seeds per repeat)" };
+  }
+  if (opts.repeat < 1) {
+    return { ok: false, reason: "--repeat must be a positive integer (number of runs)" };
+  }
+
+  // 4. Probe isolation availability (best-effort; the per-case sentinel runs
+  //    regardless and fails a mutated host as infrastructure failure).
+  try {
+    const { captureHostState } = await import("@ar/evaluation");
+    await captureHostState(process.cwd(), { include: [], excludePrefixes: [] });
+  } catch (err) {
+    // Isolation probe unavailable — preflight does NOT hard-fail (local dev
+    // without git still runs); the per-case sentinel reports honestly. The
+    // failure is observed through the degraded channel (P14-6: comments alone
+    // are not observability).
+    process.stderr.write(`[degraded] benchmark.isolation-probe: ${err instanceof Error ? err.message : String(err)}\n`);
+  }
+
+  // 5. Cost/call estimate. This CLI runs single-arm benchmarks, so total
+  //    logical runs = cases × repeat (a paired experiment would be × 2).
+  const selected = opts.limit > 0 ? cases.slice(0, opts.limit) : cases;
+  const totalLogicalRuns = selected.length * opts.repeat;
+  const estimatedModelCalls = totalLogicalRuns * PREFLIGHT_ESTIMATE.callsPerCaseRun;
+  const estimatedTokens = estimatedModelCalls * PREFLIGHT_ESTIMATE.tokensPerCall;
+  const estimatedCostUsd = estimatedModelCalls * PREFLIGHT_ESTIMATE.costPerCallUsd;
+
+  // 6. Billing: an external-billed provider requires RUN_PAID_BENCHMARKS=1
+  //    (an API key alone is NOT authorization).
+  if (billingClass === "external-billed" && !opts.paidAuthorized) {
+    return {
+      ok: false,
+      reason: "RUN_PAID_BENCHMARKS=1 is required for an external billed provider — an API key alone is not authorization",
+    };
+  }
+
+  // 7. Hard limits.
+  if (opts.maxLogicalRuns > 0 && totalLogicalRuns > opts.maxLogicalRuns) {
+    return { ok: false, reason: `plan requires ${totalLogicalRuns} logical runs — exceeds --max-logical-runs (${opts.maxLogicalRuns})` };
+  }
+  if (opts.maxModelCalls > 0 && estimatedModelCalls > opts.maxModelCalls) {
+    return { ok: false, reason: `plan estimates ${estimatedModelCalls} model calls — exceeds --max-model-calls (${opts.maxModelCalls})` };
+  }
+  if (opts.maxEstimatedTokens > 0 && estimatedTokens > opts.maxEstimatedTokens) {
+    return { ok: false, reason: `plan estimates ${estimatedTokens} tokens — exceeds --max-estimated-tokens (${opts.maxEstimatedTokens})` };
+  }
+  if (opts.maxEstimatedCostUsd > 0 && estimatedCostUsd > opts.maxEstimatedCostUsd) {
+    return {
+      ok: false,
+      reason: `plan estimates $${estimatedCostUsd.toFixed(4)} — exceeds --max-estimated-cost-usd ($${opts.maxEstimatedCostUsd.toFixed(4)})`,
+    };
+  }
+
+  // 8. Plan digest: sha256 over stable-stringified plan inputs.
+  const planDigest = computeRuntimeConfigHash({
+    benchmarkVersion: "2.0.0",
+    suite: opts.suite,
+    caseIds: selected.map((c) => c.id),
+    limit: opts.limit,
+    repeat: opts.repeat,
+    interleave: opts.interleave,
+    shuffle: opts.shuffle,
+    seed: opts.seed,
+    candidate: opts.candidate ?? null,
+    billingClass,
+    maxLogicalRuns: opts.maxLogicalRuns,
+    maxModelCalls: opts.maxModelCalls,
+    maxEstimatedTokens: opts.maxEstimatedTokens,
+    maxEstimatedCostUsd: opts.maxEstimatedCostUsd,
+  });
+
+  return { ok: true, planDigest, totalLogicalRuns, estimatedModelCalls, estimatedTokens, estimatedCostUsd };
+}
+
+/** E3-01: canonical dry-run JSON plan (0 provider calls). */
+export interface DryRunPlan {
+  schemaVersion: string;
+  mode: "dry-run";
+  planDigest: string;
+  casesDir: string;
+  suite: string;
+  casesTotal: number;
+  caseIds: string[];
+  limit: number;
+  repeat: number;
+  interleave: boolean;
+  shuffle: boolean;
+  seed: number;
+  candidate: string | null;
+  billingClass: BillingClass;
+  paidAuthorizationRequired: boolean;
+  paidAuthorized: boolean;
+  totalLogicalRuns: number;
+  estimatedModelCalls: number;
+  estimatedTokens: number;
+  estimatedCostUsd: number;
+  limits: {
+    maxLogicalRuns: number;
+    maxModelCalls: number;
+    maxEstimatedTokens: number;
+    maxEstimatedCostUsd: number;
+  };
+  providerCalls: 0;
+}
+
+export function buildDryRunPlan(
+  opts: BenchmarkCommandOptions,
+  cases: BenchmarkCase[],
+  billingClass: BillingClass,
+  preflight: PreflightResult,
+): DryRunPlan {
+  const selected = opts.limit > 0 ? cases.slice(0, opts.limit) : cases;
+  return {
+    schemaVersion: "e3-01",
+    mode: "dry-run",
+    planDigest: preflight.planDigest ?? "",
+    casesDir: opts.casesDir,
+    suite: opts.suite,
+    casesTotal: selected.length,
+    caseIds: selected.map((c) => c.id),
+    limit: opts.limit,
+    repeat: opts.repeat,
+    interleave: opts.interleave,
+    shuffle: opts.shuffle,
+    seed: opts.seed,
+    candidate: opts.candidate ?? null,
+    billingClass,
+    paidAuthorizationRequired: billingClass === "external-billed",
+    paidAuthorized: opts.paidAuthorized,
+    totalLogicalRuns: preflight.totalLogicalRuns ?? 0,
+    estimatedModelCalls: preflight.estimatedModelCalls ?? 0,
+    estimatedTokens: preflight.estimatedTokens ?? 0,
+    estimatedCostUsd: preflight.estimatedCostUsd ?? 0,
+    limits: {
+      maxLogicalRuns: opts.maxLogicalRuns,
+      maxModelCalls: opts.maxModelCalls,
+      maxEstimatedTokens: opts.maxEstimatedTokens,
+      maxEstimatedCostUsd: opts.maxEstimatedCostUsd,
+    },
+    providerCalls: 0,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1198,6 +1443,14 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
     caseDelayMs: 0,
     repeat: 1,
     interleave: false,
+    // E3-01: new flags + env-derived paid authorization.
+    dryRun: false,
+    maxLogicalRuns: 0,
+    maxModelCalls: 0,
+    maxEstimatedTokens: 0,
+    maxEstimatedCostUsd: 0,
+    paidAuthorized: process.env.RUN_PAID_BENCHMARKS === "1",
+    planDigest: undefined,
   };
   // Resolved after parsing: default cases dir is benchmarks/<suite>.
   opts.casesDir = join("benchmarks", opts.suite);
@@ -1289,6 +1542,51 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
         if (!explicitCases) opts.casesDir = join("benchmarks", opts.suite);
         break;
       }
+      // ---- E3-01: new flags ----
+      case "--dry-run":
+        opts.dryRun = true;
+        break;
+      case "--max-logical-runs": {
+        const value = requireValue(argv, ++i, "--max-logical-runs");
+        if (value instanceof Error) return value;
+        const n = Number(value);
+        if (!Number.isInteger(n) || n < 0) return new Error("agent benchmark: --max-logical-runs must be a non-negative integer (0 = unlimited)");
+        opts.maxLogicalRuns = n;
+        break;
+      }
+      case "--max-model-calls": {
+        const value = requireValue(argv, ++i, "--max-model-calls");
+        if (value instanceof Error) return value;
+        const n = Number(value);
+        if (!Number.isInteger(n) || n < 0) return new Error("agent benchmark: --max-model-calls must be a non-negative integer (0 = unlimited)");
+        opts.maxModelCalls = n;
+        break;
+      }
+      case "--max-estimated-tokens": {
+        const value = requireValue(argv, ++i, "--max-estimated-tokens");
+        if (value instanceof Error) return value;
+        const n = Number(value);
+        if (!Number.isInteger(n) || n < 0) return new Error("agent benchmark: --max-estimated-tokens must be a non-negative integer (0 = unlimited)");
+        opts.maxEstimatedTokens = n;
+        break;
+      }
+      case "--max-estimated-cost-usd": {
+        const value = requireValue(argv, ++i, "--max-estimated-cost-usd");
+        if (value instanceof Error) return value;
+        const n = Number(value);
+        if (!Number.isFinite(n) || n < 0) return new Error("agent benchmark: --max-estimated-cost-usd must be a non-negative number (0 = unlimited)");
+        opts.maxEstimatedCostUsd = n;
+        break;
+      }
+      case "--plan-digest": {
+        const value = requireValue(argv, ++i, "--plan-digest");
+        if (value instanceof Error) return value;
+        if (!/^[0-9a-f]{64}$/.test(value)) {
+          return new Error("agent benchmark: --plan-digest must be a 64-char hex sha256 digest");
+        }
+        opts.planDigest = value;
+        break;
+      }
       default:
         if (arg?.startsWith("--")) return new Error(`agent benchmark: unknown flag: ${arg}`);
         return new Error(`agent benchmark: unexpected argument: ${arg}`);
@@ -1327,7 +1625,8 @@ export function smokeFakeProvider(): ModelProvider {
 
 /** P4-11: `agent benchmark smoke` — one adversarial case with the fake
  *  provider; FAIL when the recorded usage is not positive (usage accounting
- *  broken). CI gates on this. */
+ *  broken). CI gates on this.
+ *  E3-01: loads cases locally for the updated executeBenchmark signature. */
 export async function runSmokeBenchmark(): Promise<{ exitCode: number; lines: string[] }> {
   const opts: BenchmarkCommandOptions = {
     casesDir: "benchmarks/adversarial",
@@ -1341,8 +1640,25 @@ export async function runSmokeBenchmark(): Promise<{ exitCode: number; lines: st
     seed: 0,
     repeat: 1,
     interleave: false,
+    // E3-01: new fields
+    dryRun: false,
+    maxLogicalRuns: 0,
+    maxModelCalls: 0,
+    maxEstimatedTokens: 0,
+    maxEstimatedCostUsd: 0,
+    paidAuthorized: false,
+    planDigest: undefined,
   };
-  const result = await executeBenchmark(opts, smokeFakeProvider());
+  let cases: BenchmarkCase[];
+  try {
+    cases = await loadBenchmarkCases(opts.casesDir);
+  } catch (err) {
+    return { exitCode: 1, lines: [`agent benchmark smoke: failed to load cases: ${err instanceof Error ? err.message : String(err)}`] };
+  }
+  if (cases.length === 0) {
+    return { exitCode: 1, lines: [`agent benchmark smoke: no cases found in ${opts.casesDir}`] };
+  }
+  const result = await executeBenchmark(opts, smokeFakeProvider(), cases);
   const usageLine = result.lines.find((line) => line.startsWith("benchmark:")) ?? "";
   const m = usageLine.match(/avg_input_tokens|input tokens/i);
   void m;
@@ -1427,6 +1743,13 @@ function benchmarkUsage(): string {
     "                   <suite>-r<n>.json + prints aggregate pass-rate stats (mean/min/max/std)",
     "  --interleave     give each repeat a distinct PRNG seed (requires --shuffle; order differs per repeat)",
     "  --allow-stub     run even without a model provider (records MODEL_ERROR honestly)",
+    "  --dry-run        output canonical JSON plan + plan digest; 0 provider calls (E3-01)",
+    "  --max-logical-runs <n>   hard cap on total logical runs (0 = unlimited, E3-01)",
+    "  --max-model-calls <n>    hard cap on estimated model calls (0 = unlimited, E3-01)",
+    "  --max-estimated-tokens <n>   hard cap on estimated tokens (0 = unlimited, E3-01)",
+    "  --max-estimated-cost-usd <n> hard cap on estimated cost in USD (0 = unlimited, E3-01)",
+    "  --plan-digest <hex>  expected plan digest (sha256 hex); run only if plan matches (E3-01)",
+    "  env: RUN_PAID_BENCHMARKS=1   authorize an external billed provider (E3-01)",
   ].join("\n");
 }
 

@@ -20,7 +20,9 @@ import { WebServer } from "./server.js";
  */
 export async function main(): Promise<number> {
   const dir = process.env.HARNESS_DATA_DIR;
-  const provider = await resolveModelProvider();
+  // E3-01: resolveModelProvider now returns a BillingProvider — unwrap the
+  // provider for harness wiring.
+  const provider = (await resolveModelProvider()).provider;
   const harness: Harness = await createHarness({
     cwd: process.cwd(),
     ...(dir !== undefined && dir.length > 0 ? { dataDir: dir } : {}),
