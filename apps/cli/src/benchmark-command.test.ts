@@ -790,3 +790,147 @@ describe("E3-01: paid guard — external billed provider requires RUN_PAID_BENCH
     }
   });
 });
+
+describe("E3-02: paired promotion path (real PairedExperimentExecutor)", () => {
+  function makePairCases(): Promise<string> {
+    return makeCaseDir({
+      "cases/a/request.md": "just finish",
+      "cases/a/expected.md": "done",
+      "cases/a/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+      "cases/b/request.md": "just finish",
+      "cases/b/expected.md": "done",
+      "cases/b/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+  }
+
+  it("1. 2 cases × 1 rep × 2 arms = exactly 4 logical arm runs, artifact finalized", async () => {
+    const root = await makePairCases();
+    const provider = new ScriptedModelProvider(Array.from({ length: 16 }, () => ScriptedModelProvider.text("done")));
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--candidate", "memory_retrieval", "--out", join(root, "out")],
+      provider,
+    );
+    expect(result.exitCode).toBe(0);
+    const output = result.lines.join("\n");
+    expect(output).toContain("PAIRED experiment");
+    expect(output).toContain("2/2 pairs finalized");
+
+    const { readFile } = await import("node:fs/promises");
+    const artifact = JSON.parse(await readFile(join(root, "out", "paired-experiment.json"), "utf8"));
+    expect(artifact.kind).toBe("paired-experiment");
+    expect(artifact.planDigest).toMatch(/^[0-9a-f]{64}$/);
+    expect(artifact.counters.logicalRuns).toBe(4); // 2 cases × 2 arms — never 5+
+    expect(artifact.finalizedPairs.length).toBe(2);
+    expect(artifact.partialPairs.length).toBe(0);
+    expect(artifact.complete).toBe(true);
+    // Every finalized pair has exactly one baseline and one candidate outcome.
+    for (const pair of artifact.finalizedPairs) {
+      expect(pair.baseline.arm.armId).toBe("baseline");
+      expect(pair.candidate.arm.armId).toBe("candidate");
+      expect(pair.baseline.valid).toBe(true);
+      expect(pair.candidate.valid).toBe(true);
+    }
+  });
+
+  it("2. BA pairs execute the candidate before the baseline (real order in artifact)", async () => {
+    const root = await makePairCases();
+    const provider = new ScriptedModelProvider(Array.from({ length: 16 }, () => ScriptedModelProvider.text("done")));
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--candidate", "memory_retrieval", "--out", join(root, "out")],
+      provider,
+    );
+    expect(result.exitCode).toBe(0);
+    const { readFile } = await import("node:fs/promises");
+    const artifact = JSON.parse(await readFile(join(root, "out", "paired-experiment.json"), "utf8"));
+    // The artifact records the execution sequence: for each pair, the arm with
+    // the lower orderIndex ran first — AB → baseline, BA → candidate.
+    for (const pair of artifact.plan.pairs) {
+      const runs = artifact.orderedRuns.filter((r: { pairId: string }) => r.pairId === pair.pairId);
+      expect(runs).toHaveLength(2);
+      const first = runs[0]!.armId;
+      if (pair.order === "BA") {
+        expect(first).toBe("candidate");
+      } else {
+        expect(first).toBe("baseline");
+      }
+    }
+    expect(artifact.plan.pairs.some((p: { order: string }) => p.order === "BA")).toBe(true);
+  });
+
+  it("3. --repeat 2 on 2 cases → exactly 8 logical arm runs (2×2×2)", async () => {
+    const root = await makePairCases();
+    const provider = new ScriptedModelProvider(Array.from({ length: 32 }, () => ScriptedModelProvider.text("done")));
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--candidate", "memory_retrieval", "--repeat", "2", "--out", join(root, "out")],
+      provider,
+    );
+    expect(result.exitCode).toBe(0);
+    const { readFile } = await import("node:fs/promises");
+    const artifact = JSON.parse(await readFile(join(root, "out", "paired-experiment.json"), "utf8"));
+    expect(artifact.counters.logicalRuns).toBe(8);
+    expect(artifact.finalizedPairs.length).toBe(4);
+    expect(artifact.complete).toBe(true);
+  });
+
+  it("4. --repeat 0 / negative / non-integer are REJECTED before any provider call", async () => {
+    const root = await makePairCases();
+    for (const bad of ["0", "-1", "1.5"]) {
+      const provider = new ScriptedModelProvider([]);
+      const result = await runBenchmarkCommand(
+        ["--cases", join(root, "cases"), "--repeat", bad, "--out", join(root, "out")],
+        provider,
+      );
+      expect(result.exitCode).toBe(1);
+      expect(provider.calls.length).toBe(0);
+    }
+  });
+
+  it("5. duplicate case ids are REJECTED before any provider call", async () => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const dupCases = [
+      {
+        id: "t1",
+        task: "x",
+        requestMd: "x",
+        expectedMd: "x",
+        fixture: {},
+        expected: { status: "completed" },
+        suite: "regression",
+        judgeVersion: "1.0.0",
+      },
+      {
+        id: "t1", // duplicate id
+        task: "x",
+        requestMd: "x",
+        expectedMd: "x",
+        fixture: {},
+        expected: { status: "completed" },
+        suite: "regression",
+        judgeVersion: "1.0.0",
+      },
+    ];
+    const opts = {
+      casesDir: "cases",
+      outDir: "out",
+      budgetTokens: 32000,
+      limit: 0,
+      allowStub: true,
+      suite: "regression" as const,
+      shuffle: false,
+      seed: 0,
+      caseDelayMs: 0,
+      repeat: 1,
+      interleave: false,
+      dryRun: false,
+      maxLogicalRuns: 0,
+      maxModelCalls: 0,
+      maxEstimatedTokens: 0,
+      maxEstimatedCostUsd: 0,
+      paidAuthorized: true,
+      planDigest: undefined,
+    };
+    const res = await preflightBenchmark(opts, dupCases as unknown as Parameters<typeof preflightBenchmark>[1], "offline-test");
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.reason).toContain("duplicate case ids");
+  });
+});

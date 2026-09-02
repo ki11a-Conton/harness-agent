@@ -56,6 +56,8 @@ export interface PairedExperimentPlan {
   cases: string[];
   repetitions: number;
   orderSeed: number | null;
+  /** E3-02: stable identity digest over suite/cases/repetitions/orderSeed. */
+  planDigest: string;
   pairs: PairedPair[];
   /** Total logical arm runs (must be 2 × repetitions × cases). */
   totalLogicalRuns: number;
@@ -80,6 +82,28 @@ export function derivePairId(opts: { suite: string; caseId: string; repetition: 
     .slice(0, 24);
 }
 
+/**
+ * E3-02 — plan digest: sha256 over the plan's IDENTITY fields (schemaVersion,
+ * suite, cases, repetitions, orderSeed). Resume verifies this digest so a
+ * journal from a DIFFERENT plan is rejected. It deliberately excludes runtime
+ * fields (counters, pairs' per-run state) — the schedule identity is what
+ * makes a resume valid.
+ */
+export function computePairedPlanDigest(plan: Pick<PairedExperimentPlan, "schemaVersion" | "suite" | "cases" | "repetitions" | "orderSeed">): string {
+  return createHash("sha256")
+    .update(
+      stableStringify({
+        schemaVersion: plan.schemaVersion,
+        suite: plan.suite,
+        cases: plan.cases,
+        repetitions: plan.repetitions,
+        orderSeed: plan.orderSeed,
+      }),
+      "utf8",
+    )
+    .digest("hex");
+}
+
 /** Simple deterministic PRNG (mulberry32) — drives only ORDER decisions. */
 export function pairedSeededRandom(seed: number): () => number {
   let a = seed >>> 0;
@@ -92,9 +116,20 @@ export function pairedSeededRandom(seed: number): () => number {
   };
 }
 
-/** Build the deterministic paired plan. Pure — same inputs, same plan. */
+/** Validate repetitions — must be a positive integer. */
+function validateRepetitions(repetitions: number): number {
+  if (!Number.isInteger(repetitions) || repetitions < 1 || !Number.isFinite(repetitions)) {
+    throw new Error(`PairedExperimentPlan: repetitions must be a positive integer, got ${repetitions}`);
+  }
+  return repetitions;
+}
+
+/** Build the deterministic paired plan. Pure — same inputs, same plan.
+ *
+ * E3-02: orderIndex reflects the TRUE pair order, not a fixed arm label
+ * sequence. AB → baseline first (lower index), BA → candidate first. */
 export function buildPairedPlan(opts: PairPlanOptions): PairedExperimentPlan {
-  const repetitions = Math.max(1, Math.floor(opts.repetitions));
+  const repetitions = validateRepetitions(opts.repetitions);
   const orderSeed = opts.orderSeed ?? 0;
   const rng = pairedSeededRandom(orderSeed);
   // ONE seed-derived global flip (0/1), computed once: different seeds flip
@@ -108,8 +143,20 @@ export function buildPairedPlan(opts: PairPlanOptions): PairedExperimentPlan {
     for (const caseId of opts.cases) {
       const order: ArmOrder = (orderIndex / 2 + globalFlip) % 2 === 0 ? "AB" : "BA";
       const pairId = derivePairId({ suite: opts.suite, caseId, repetition: rep, orderSeed });
-      const baseline: ArmRunRef = { armId: "baseline", caseId, repetition: rep, orderIndex };
-      const candidate: ArmRunRef = { armId: "candidate", caseId, repetition: rep, orderIndex: orderIndex + 1 };
+      // E3-02: orderIndex reflects the actual execution order for the pair.
+      // AB: baseline first (lower index); BA: candidate first (lower index).
+      const baseline: ArmRunRef = {
+        armId: "baseline",
+        caseId,
+        repetition: rep,
+        orderIndex: order === "AB" ? orderIndex : orderIndex + 1,
+      };
+      const candidate: ArmRunRef = {
+        armId: "candidate",
+        caseId,
+        repetition: rep,
+        orderIndex: order === "AB" ? orderIndex + 1 : orderIndex,
+      };
       pairs.push({
         pairId,
         caseId,
@@ -123,16 +170,22 @@ export function buildPairedPlan(opts: PairPlanOptions): PairedExperimentPlan {
     }
   }
 
-  return {
+  return finalizePlan({
     schemaVersion: PAIRED_PLAN_SCHEMA_VERSION,
     suite: opts.suite,
     cases: [...opts.cases],
     repetitions,
     orderSeed,
     pairs,
+    planDigest: "",
     totalLogicalRuns: repetitions * opts.cases.length * 2,
     maxProviderCalls: repetitions * opts.cases.length * 2,
-  };
+  });
+}
+
+// Compute planDigest after the plan is assembled (all identity fields set).
+function finalizePlan(plan: PairedExperimentPlan): PairedExperimentPlan {
+  return { ...plan, planDigest: computePairedPlanDigest(plan) };
 }
 
 // ---------------------------------------------------------------------------

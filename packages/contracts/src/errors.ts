@@ -45,6 +45,10 @@ export const ERROR_CODES = [
   // E1-02: an exec/tool cwd (or path) resolves outside the session workspace —
   // workspace containment violation with a stable, auditable reason code.
   "WORKSPACE_POLICY",
+  // E3-09: benchmark exec requires OS-level sandbox confinement (bwrap) but no
+  // strong backend is available or its capability self-test failed — the exec
+  // is refused before any process runs (fail-closed).
+  "SANDBOX_BACKEND_DENIED",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -100,6 +104,7 @@ export const ERROR_DEFAULT_MESSAGES: Record<ErrorCode, string> = {
   FOLLOWUP_PROMOTION_FAILED: "Followup could not be promoted to a running turn",
   ACTOR_CLOSED: "Session actor closed before followup promotion",
   WORKSPACE_POLICY: "Path resolves outside the session workspace",
+  SANDBOX_BACKEND_DENIED: "Benchmark exec refused — no strong OS-level sandbox backend available",
 };
 
 /** Default retry policy for each failure class. Auto-retry is unsafe by default. */
@@ -140,6 +145,7 @@ export const ERROR_RETRY_DEFAULTS: Record<ErrorCode, { retryable: boolean; safeT
   FOLLOWUP_PROMOTION_FAILED: { retryable: true, safeToRetry: true },
   ACTOR_CLOSED: { retryable: false, safeToRetry: false },
   WORKSPACE_POLICY: { retryable: false, safeToRetry: false },
+  SANDBOX_BACKEND_DENIED: { retryable: false, safeToRetry: false },
 };
 
 export function errorInfo(

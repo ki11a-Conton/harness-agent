@@ -5,6 +5,7 @@ import {
   dryRunPairedPlan,
   finalizePairState,
   derivePairId,
+  computePairedPlanDigest,
   type PairedExperimentPlan,
   type FinalizedPairRecord,
 } from "./paired-plan.js";
@@ -150,5 +151,50 @@ describe("E2-05 paired experiment plan", () => {
     expect(report.abBalance.ab + report.abBalance.ba).toBe(plan.pairs.length);
     // No provider calls, no artifact written.
     expect(provider.calls).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// E3-02: real execution order — orderIndex must reflect the PAIR order
+// ---------------------------------------------------------------------------
+
+describe("E3-02: plan execution order (orderIndex matches pair order)", () => {
+  it("9. AB pairs have baseline.orderIndex < candidate.orderIndex; BA pairs candidate first", () => {
+    for (const orderSeed of [0, 1, 7, 11]) {
+      const plan = buildPairedPlan({ suite: SUITE, cases: CASES, repetitions: 3, orderSeed });
+      for (const p of plan.pairs) {
+        if (p.order === "AB") {
+          expect(p.baseline.orderIndex, `AB ${p.pairId}`).toBeLessThan(p.candidate.orderIndex);
+        } else {
+          expect(p.candidate.orderIndex, `BA ${p.pairId}`).toBeLessThan(p.baseline.orderIndex);
+        }
+      }
+    }
+  });
+
+  it("10. every arm has a unique orderIndex and together they cover 0..total-1 exactly once", () => {
+    for (const orderSeed of [0, 1, 7, 11]) {
+      const plan = buildPairedPlan({ suite: SUITE, cases: CASES, repetitions: 3, orderSeed });
+      const indexes = plan.pairs.flatMap((p) => [p.baseline.orderIndex, p.candidate.orderIndex]);
+      expect(indexes.length).toBe(plan.totalLogicalRuns);
+      expect(new Set(indexes).size).toBe(indexes.length);
+      indexes.sort((a, b) => a - b);
+      expect(indexes).toEqual(Array.from({ length: plan.totalLogicalRuns }, (_, i) => i));
+    }
+  });
+
+  it("11. plan digest: stable per plan; differs when order seed / cases / repetitions change", () => {
+    const a = buildPairedPlan({ suite: SUITE, cases: CASES, repetitions: 2, orderSeed: 7 });
+    const b = buildPairedPlan({ suite: SUITE, cases: CASES, repetitions: 2, orderSeed: 7 });
+    expect(computePairedPlanDigest(a)).toBe(computePairedPlanDigest(b));
+    expect(computePairedPlanDigest(a)).toMatch(/^[0-9a-f]{64}$/);
+    const c = buildPairedPlan({ suite: SUITE, cases: CASES, repetitions: 2, orderSeed: 99 });
+    expect(computePairedPlanDigest(a)).not.toBe(computePairedPlanDigest(c));
+  });
+
+  it("12. repetitions 0 / negative / non-integer are REJECTED, never auto-corrected to 1", () => {
+    for (const bad of [0, -1, 1.5, Number.NaN]) {
+      expect(() => buildPairedPlan({ suite: SUITE, cases: CASES, repetitions: bad, orderSeed: 1 })).toThrow();
+    }
   });
 });

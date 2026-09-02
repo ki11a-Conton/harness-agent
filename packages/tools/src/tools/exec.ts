@@ -1,7 +1,9 @@
 import { z } from "zod";
-import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
+import type { ErrorCode, ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
 import { errorInfo } from "@ar/contracts";
 import { ProcessExecutor } from "../process/executor.js";
+import { prepareSandboxedExec } from "../process/sandbox-executor.js";
+import type { SandboxExecutionProvenance } from "../process/sandbox-executor.js";
 import { isAbsolute, resolve, relative, sep } from "node:path";
 import { realpath, stat } from "node:fs/promises";
 
@@ -18,6 +20,9 @@ export interface ExecOutput {
   stderr: string;
   truncated: boolean;
   durationMs: number;
+  /** E3-09: sandbox backend identity, policy and self-test digest when the
+   *  exec ran under a confinement policy (benchmark mode). */
+  provenance?: SandboxExecutionProvenance;
 }
 
 /**
@@ -120,6 +125,34 @@ export const execTool: ToolDefinition<ExecInput, ExecOutput> = {
         error: errorInfo("WORKSPACE_POLICY", `exec cwd is outside the session workspace (${code})`),
       };
     }
+
+    // ---- E3-09: OS-level execution confinement (benchmark mode) ----
+    // The confinement decision lives on the sandbox policy; the CLI benchmark
+    // wiring sets process.confinement = "strong" (or "insecure-local" with the
+    // explicit flag). When set, the spawn MUST go through the verified
+    // sandbox execution spec — a model command cannot bypass the wrapper. If
+    // no strong backend is available (or its self-test fails), exec is DENIED
+    // before any process runs (fail-closed).
+    const confinement = proc.confinement;
+    let sandboxPrepared: Awaited<ReturnType<typeof prepareSandboxedExec>> | undefined;
+    if (confinement !== undefined) {
+      sandboxPrepared = await prepareSandboxedExec({
+        confinement,
+        workspaceRoot: context.cwd,
+        command: input.command,
+        cwd,
+        env: input.env,
+        timeoutMs: input.timeoutMs ?? proc.timeoutMs ?? 60_000,
+        maxOutputBytes: proc.maxOutputBytes ?? 1_048_576,
+      });
+      if (!sandboxPrepared.ok) {
+        return {
+          status: "failed",
+          error: errorInfo(sandboxPrepared.denial.code as ErrorCode, sandboxPrepared.denial.reason),
+        };
+      }
+    }
+
     const outcome = await new ProcessExecutor().run({
       command: input.command,
       cwd,
@@ -128,6 +161,9 @@ export const execTool: ToolDefinition<ExecInput, ExecOutput> = {
       maxOutputBytes: proc.maxOutputBytes,
       signal: context.signal,
       onOutput: context.onOutput,
+      ...(sandboxPrepared?.ok === true
+        ? { sandboxExecution: sandboxPrepared.sandboxExecution }
+        : {}),
     });
 
     const base = {
@@ -136,6 +172,7 @@ export const execTool: ToolDefinition<ExecInput, ExecOutput> = {
       stderr: outcome.stderr,
       truncated: outcome.truncated,
       durationMs: outcome.durationMs,
+      ...(outcome.provenance !== undefined ? { provenance: outcome.provenance } : {}),
     };
 
     switch (outcome.status) {
@@ -145,12 +182,21 @@ export const execTool: ToolDefinition<ExecInput, ExecOutput> = {
           output: base,
           evidence: [
             { type: "command", description: `exec exited 0 (${outcome.durationMs}ms)`, source: input.command, timestamp: Date.now() },
+            ...(outcome.provenance !== undefined
+              ? [{ type: "command" as const, description: `execution sandbox: ${outcome.provenance.backendId} strong=${outcome.provenance.strongIsolation} selfTest=${outcome.provenance.selfTestDigest?.slice(0, 12) ?? "none"}`, source: "sandbox-executor", timestamp: Date.now() }]
+              : []),
           ],
         };
       case "timeout":
         return { status: "timeout", output: base, error: errorInfo("PROCESS_TIMEOUT", outcome.error) };
       case "cancelled":
         return { status: "cancelled", error: errorInfo("USER_CANCELLED", outcome.error) };
+      case "denied":
+        return {
+          status: "failed",
+          output: base,
+          error: errorInfo((outcome.denial?.code ?? "SANDBOX_BACKEND_DENIED") as ErrorCode, outcome.denial?.reason ?? outcome.error ?? "execution denied by sandbox backend"),
+        };
       default:
         return { status: "failed", output: base, error: errorInfo("PROCESS_ERROR", outcome.error) };
     }

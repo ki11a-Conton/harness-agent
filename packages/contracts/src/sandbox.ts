@@ -42,6 +42,13 @@ export interface ProcessPolicy {
   /** P2-23: process surfaces to deny outright (fail-closed), independent of
    *  command allowlist. E.g. preventing eval-style interpreter invocation. */
   deniedSurfaces?: ProcessSurface[];
+  /** E3-09: required OS-level execution confinement for benchmark exec. When
+   *  set to "strong", the exec tool spawns through the sandbox backend (bwrap)
+   *  and fails closed if the backend cannot provide strong isolation. When set
+   *  to "insecure-local", the backend runs without OS confinement and the
+   *  outcome is flagged as never promotion-eligible. Undefined = current
+   *  behavior (no OS-level wrapper). */
+  confinement?: "strong" | "insecure-local";
 }
 
 export interface SandboxPolicy {

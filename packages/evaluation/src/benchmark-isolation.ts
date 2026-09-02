@@ -53,6 +53,10 @@ export interface IsolationBackend {
   platform: NodeJS.Platform;
   /** OS-level write confinement available. */
   strongIsolation: boolean;
+  /** E3-09: when true, this is the explicit insecure-local mode — no OS-level
+   *  confinement. Such a backend is NEVER promotion-eligible, no matter what
+   *  id/strongIsolation it reports. */
+  insecureLocal?: boolean;
   /** Human explanation for the support matrix. */
   note: string;
 }
@@ -88,10 +92,29 @@ export async function probeIsolationBackend(platform: NodeJS.Platform = process.
   }
 }
 
-/** Promotion-grade benchmarks REQUIRE a strong isolation backend. Fail-closed. */
+/** Promotion-grade benchmarks REQUIRE a strong isolation backend. Fail-closed.
+ *  An insecure-local backend is NEVER promotion-eligible (E3-09). */
 export function promotionEligible(backend: IsolationBackend): boolean {
-  return backend.strongIsolation;
+  return backend.strongIsolation && backend.insecureLocal !== true;
 }
+
+/** E3-09: wrap any backend into the explicit insecure-local mode. The
+ *  resulting backend is never promotion-eligible and its note carries the
+ *  prominent warning. Use only for local development behind the explicit
+ *  --allow-insecure-local-benchmark flag. */
+export function asInsecureLocalBackend(backend: IsolationBackend): IsolationBackend {
+  return {
+    schemaVersion: backend.schemaVersion,
+    id: backend.id,
+    platform: backend.platform,
+    strongIsolation: false,
+    insecureLocal: true,
+    note: `${backend.note} | INSECURE LOCAL MODE — no OS-level confinement; artifacts are NEVER promotion-eligible`,
+  };
+}
+
+/** E3-09: the explicit flag that opts into insecure local mode. */
+export const ALLOW_INSECURE_LOCAL_BENCHMARK_FLAG = "--allow-insecure-local-benchmark";
 
 function runQuiet(args: string[]): Promise<void> {
   return new Promise((resolvePromise, reject) => {

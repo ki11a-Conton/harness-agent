@@ -17,8 +17,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
@@ -32,7 +31,7 @@ import {
 } from "./champion-state.js";
 import { resolveChampionProfile, runtimeIdentityOf, proveApplication } from "./champion-profile.js";
 import { getArmFactory } from "./arm-factory.js";
-import { hostMutated, captureHostState } from "./benchmark-isolation.js";
+import { prepareSandboxedExec, ProcessExecutor } from "@ar/tools";
 import { stableStringify } from "./manifest.js";
 
 const sha = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
@@ -91,21 +90,52 @@ describe("E2-16 final integration acceptance", () => {
     }
   });
 
-  it("C. child process cannot write outside the workspace (host sentinel detects)", async () => {
+  it("C. EFFECT PREVENTION: a child process write outside the workspace is DENIED (or blocked); the external file does NOT exist (E3-09)", async () => {
     const ws = await mkdtemp(join(tmpdir(), "e2-16-c-ws-"));
     const host = await mkdtemp(join(tmpdir(), "e2-16-c-host-"));
+    const escaped = join(host, "src", "escaped.txt");
     try {
       await writeFile(join(host, "tracked.txt"), "original", "utf8");
       await mkdir(join(host, "src"), { recursive: true });
-      const before = await captureHostState(host, { include: ["tracked.txt", "src"], excludePrefixes: [] });
-      const escaped = join(host, "src", "escaped.txt");
-      await new Promise<void>((res, rej) => {
-        execFile(process.execPath, ["-e", `require('fs').writeFileSync(${JSON.stringify(escaped)}, 'pwned')`], { cwd: ws }, (err) => (err ? rej(err) : res()));
+
+      // Scripted exec attempt: write a file outside the case workspace.
+      const nodeCmd = `${JSON.stringify(process.execPath)} -e ${JSON.stringify(`require('fs').writeFileSync(${JSON.stringify(escaped)}, 'pwned')`)}`;
+
+      // Use the REAL platform backend probe (win32 → unavailable → denied).
+      const prep = await prepareSandboxedExec({
+        confinement: "strong",
+        workspaceRoot: ws,
+        command: nodeCmd,
+        cwd: ws,
+        timeoutMs: 10000,
+        maxOutputBytes: 10000,
       });
-      const after = await captureHostState(host, { include: ["tracked.txt", "src"], excludePrefixes: [] });
-      expect(hostMutated(before, after)).toBe(true);
-      const { stat } = await import("node:fs/promises");
-      await expect(stat(escaped)).resolves.toBeDefined();
+
+      if (!prep.ok) {
+        // Fail-closed: denied before any process. The effect never happened.
+        expect(prep.denial.code).toBeTruthy();
+        expect(prep.denial.code).toContain("SANDBOX_BACKEND");
+      } else {
+        // Strong backend available (Linux CI with bwrap): the process runs
+        // inside the sandbox and the write to the read-only host root is
+        // blocked. exitCode MUST be non-zero (write failed).
+        const outcome = await new ProcessExecutor().run({
+          command: nodeCmd,
+          cwd: ws,
+          timeoutMs: 10000,
+          maxOutputBytes: 10000,
+          sandboxExecution: prep.sandboxExecution,
+        });
+        if (outcome.status === "denied") {
+          expect(outcome.denial?.code).toBeTruthy();
+        } else {
+          expect(outcome.exitCode).not.toBe(0);
+        }
+      }
+
+      // THE CORE ASSERTION: the external file does NOT exist (the effect
+      // never happened). This is the E3-09 strengthening.
+      await expect(access(escaped)).rejects.toThrow();
     } finally {
       await rm(ws, { recursive: true, force: true });
       await rm(host, { recursive: true, force: true });

@@ -1,17 +1,20 @@
 import { describe, expect, it, afterEach } from "vitest";
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   probeIsolationBackend,
   promotionEligible,
+  asInsecureLocalBackend,
   treeDigestOf,
   captureHostState,
   hostMutated,
   isPathOutsideWorkspace,
   withHostMutationSentinel,
+  type IsolationBackend,
 } from "./benchmark-isolation.js";
+import { prepareSandboxedExec, ProcessExecutor, ALLOW_INSECURE_LOCAL_BENCHMARK_FLAG } from "@ar/tools";
 
 async function makeTemp(): Promise<string> {
   return mkdtemp(join(tmpdir(), "e2-09-"));
@@ -38,34 +41,82 @@ describe("E2-09 benchmark isolation backend matrix", () => {
     expect(promotionEligible({ schemaVersion: "1.0.0", id: "linux-bwrap", platform: "linux", strongIsolation: true, note: "x" })).toBe(true);
     expect(promotionEligible({ schemaVersion: "1.0.0", id: "unknown", platform: "linux", strongIsolation: false, note: "x" })).toBe(false);
   });
+
+  it("1c. an insecure-local backend is NEVER promotion-eligible, even with a strong id", () => {
+    const strong: IsolationBackend = { schemaVersion: "1.0.0", id: "linux-bwrap", platform: "linux", strongIsolation: true, note: "x" };
+    const insecure = asInsecureLocalBackend(strong);
+    expect(insecure.strongIsolation).toBe(false);
+    expect(insecure.insecureLocal).toBe(true);
+    expect(promotionEligible(insecure)).toBe(false);
+    expect(insecure.note).toContain("INSECURE LOCAL MODE");
+  });
 });
 
 describe("E2-09 host mutation sentinel (real child-process escapes)", () => {
-  it("2. node -e writing an absolute path OUTSIDE the workspace mutates the host tree -> detected", async () => {
+  it("2. EFFECT PREVENTION: a scripted exec write outside the workspace is DENIED (or blocked); the external file does NOT exist (E3-09)", async () => {
     const ws = await makeTemp();
-    const host = await makeTemp(); // pretend host repo sandbox
+    const host = await makeTemp();
+    const escaped = join(host, "src", "escaped.txt");
     try {
       await writeFile(join(host, "tracked.txt"), "original", "utf8");
       await mkdir(join(host, "src"), { recursive: true });
-      const before = await captureHostState(host, { include: ["tracked.txt", "src"], excludePrefixes: [] });
 
-      // Child process writes OUTSIDE ws into the host tree via absolute path.
-      const escaped = join(host, "src", "escaped.txt");
-      await new Promise<void>((res, rej) => {
-        execFile(process.execPath, ["-e", `require('fs').writeFileSync(${JSON.stringify(escaped)}, 'pwned')`], { cwd: ws }, (err) => (err ? rej(err) : res()));
+      // Scripted exec attempt: write a file outside the case workspace.
+      const nodeCmd = `${JSON.stringify(process.execPath)} -e ${JSON.stringify(`require('fs').writeFileSync(${JSON.stringify(escaped)}, 'pwned')`)}`;
+
+      // Use the REAL platform backend probe (win32 → unavailable → denied).
+      const prep = await prepareSandboxedExec({
+        confinement: "strong",
+        workspaceRoot: ws,
+        command: nodeCmd,
+        cwd: ws,
+        timeoutMs: 10000,
+        maxOutputBytes: 10000,
       });
 
-      const after = await captureHostState(host, { include: ["tracked.txt", "src"], excludePrefixes: [] });
-      expect(hostMutated(before, after)).toBe(true);
+      if (!prep.ok) {
+        // Fail-closed: denied before any process. The effect never happened.
+        expect(prep.denial.code).toBeTruthy();
+        expect(prep.denial.code).toContain("SANDBOX_BACKEND");
+      } else {
+        // Strong backend available (Linux CI with bwrap): the process runs
+        // inside the sandbox and the write to the read-only host root is
+        // blocked. exitCode MUST be non-zero (write failed).
+        const outcome = await new ProcessExecutor().run({
+          command: nodeCmd,
+          cwd: ws,
+          timeoutMs: 10000,
+          maxOutputBytes: 10000,
+          sandboxExecution: prep.sandboxExecution,
+        });
+        // The sandbox blocked the write → the process exited with an error.
+        // (A "denied" status also means blocked; "failed" with exitCode != 0
+        // means the write was attempted but EROFS prevented it.)
+        if (outcome.status === "denied") {
+          expect(outcome.denial?.code).toBeTruthy();
+        } else {
+          expect(outcome.exitCode).not.toBe(0);
+        }
+      }
 
-      // And the external file actually exists (proving the escape happened and
-      // the sentinel caught it).
-      const { stat } = await import("node:fs/promises");
-      await expect(stat(escaped)).resolves.toBeDefined();
+      // THE CORE ASSERTION: the external file does NOT exist (the effect
+      // never happened). This is the E3-09 strengthening over the old
+      // sentinel-only assertion.
+      await expect(access(escaped)).rejects.toThrow();
     } finally {
       await rm(ws, { recursive: true, force: true });
       await rm(host, { recursive: true, force: true });
     }
+  });
+
+  it("2b. insecure local mode is explicit, warned, and NEVER promotion-eligible", async () => {
+    const winBackend = await probeIsolationBackend("win32");
+    const insecure = asInsecureLocalBackend(winBackend);
+    expect(insecure.strongIsolation).toBe(false);
+    expect(insecure.insecureLocal).toBe(true);
+    expect(promotionEligible(insecure)).toBe(false);
+    expect(insecure.note).toContain("INSECURE LOCAL MODE");
+    expect(ALLOW_INSECURE_LOCAL_BENCHMARK_FLAG).toBe("--allow-insecure-local-benchmark");
   });
 
   it("2b. node -e writing INSIDE the workspace does not mutate the host tree", async () => {

@@ -13,7 +13,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -24,11 +24,11 @@ import { classifySecurityOutcomeV2, policyDeniedFact, attackAttemptedFact } from
 import { decideChampionV3, type DecisionGateInputV3 } from "./champion-decision-v3.js";
 import { buildPromotionEnvelope, loadPromotionEnvelope } from "./promotion-envelope.js";
 import { resolveChampionProfile, runtimeIdentityOf, proveApplication } from "./champion-profile.js";
-import { captureHostState, hostMutated } from "./benchmark-isolation.js";
 import { verifyEvolutionLedger, type EvolutionLedger } from "./evolution-ledger.js";
 import { preflightPairedPlan, buildPairedPlan } from "./paired-plan.js";
 import { activationSatisfied, activationContractFor, type ActivationCoverageSummary } from "./activation-evidence.js";
 import { evaluateMechanismContract } from "./mechanism-contract.js";
+import { prepareSandboxedExec, ProcessExecutor } from "@ar/tools";
 
 const sha = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
 
@@ -230,20 +230,52 @@ describe("E2-16 §5 final architecture invariants", () => {
     expect(escape.hardBreach).toBe(true);
   });
 
-  it("9. exec 有真实边界 — child process cannot write outside the workspace (host sentinel)", async () => {
+  it("9. EFFECT PREVENTION: exec has a REAL boundary — a write outside the workspace is denied; the external file does NOT exist (E3-09)", async () => {
     const ws = await mkdtemp(join(tmpdir(), "inv9-ws-"));
     const host = await mkdtemp(join(tmpdir(), "inv9-host-"));
+    const escaped = join(host, "src", "escaped.txt");
     try {
       await writeFile(join(host, "tracked.txt"), "original", "utf8");
       await mkdir(join(host, "src"), { recursive: true });
-      const before = await captureHostState(host, { include: ["tracked.txt", "src"], excludePrefixes: [] });
-      const escaped = join(host, "src", "escaped.txt");
-      const { execFile } = await import("node:child_process");
-      await new Promise<void>((res, rej) => {
-        execFile(process.execPath, ["-e", `require('fs').writeFileSync(${JSON.stringify(escaped)}, 'pwned')`], { cwd: ws }, (err) => (err ? rej(err) : res()));
+
+      // Scripted exec attempt: write a file outside the case workspace.
+      const nodeCmd = `${JSON.stringify(process.execPath)} -e ${JSON.stringify(`require('fs').writeFileSync(${JSON.stringify(escaped)}, 'pwned')`)}`;
+
+      // Use the REAL platform backend probe (win32 → unavailable → denied).
+      const prep = await prepareSandboxedExec({
+        confinement: "strong",
+        workspaceRoot: ws,
+        command: nodeCmd,
+        cwd: ws,
+        timeoutMs: 10000,
+        maxOutputBytes: 10000,
       });
-      const after = await captureHostState(host, { include: ["tracked.txt", "src"], excludePrefixes: [] });
-      expect(hostMutated(before, after)).toBe(true);
+
+      if (!prep.ok) {
+        // Fail-closed: denied before any process. The effect never happened.
+        expect(prep.denial.code).toBeTruthy();
+        expect(prep.denial.code).toContain("SANDBOX_BACKEND");
+      } else {
+        // Strong backend available (Linux CI with bwrap): the process runs
+        // inside the sandbox and the write to the read-only host root is
+        // blocked. exitCode MUST be non-zero (write failed).
+        const outcome = await new ProcessExecutor().run({
+          command: nodeCmd,
+          cwd: ws,
+          timeoutMs: 10000,
+          maxOutputBytes: 10000,
+          sandboxExecution: prep.sandboxExecution,
+        });
+        if (outcome.status === "denied") {
+          expect(outcome.denial?.code).toBeTruthy();
+        } else {
+          expect(outcome.exitCode).not.toBe(0);
+        }
+      }
+
+      // THE CORE ASSERTION: the external file does NOT exist (the effect
+      // never happened). This is the E3-09 strengthening.
+      await expect(access(escaped)).rejects.toThrow();
     } finally {
       await rm(ws, { recursive: true, force: true });
       await rm(host, { recursive: true, force: true });

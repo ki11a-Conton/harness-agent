@@ -105,11 +105,12 @@ describe("R-01: invalid interleave fails before provider call [FIXED]", () => {
 });
 
 // ---------------------------------------------------------------------------
-// R-02: one case, one arm, --repeat 2 → provider called 3 times (initial + N
-//   repeats).  REPRODUCED: calls === 3 (should be 2).
+// R-02: one case, one arm, --repeat 2 → the historical bug ran 1 initial +
+//   N repeats = 3 provider calls.  E3-02 FIXED: repeat=N means EXACTLY N
+//   repetitions per case per arm → provider called exactly 2 times.
 // ---------------------------------------------------------------------------
-describe("R-02: repeat N+1 [REPRODUCED]", () => {
-  it("one case --repeat 2: provider called 3 times (initial + N repeats)", async () => {
+describe("R-02: repeat N+1 [FIXED]", () => {
+  it("one case --repeat 2: provider called exactly 2 times (N repeats, no initial + N)", async () => {
     const root = await makeCaseDir({
       "cases/t1/request.md": "write a test file",
       "cases/t1/expected.md": "file written",
@@ -119,7 +120,6 @@ describe("R-02: repeat N+1 [REPRODUCED]", () => {
     });
 
     const provider = new ScriptedModelProvider([
-      ScriptedModelProvider.text("done"),
       ScriptedModelProvider.text("done"),
       ScriptedModelProvider.text("done"),
     ]);
@@ -133,19 +133,19 @@ describe("R-02: repeat N+1 [REPRODUCED]", () => {
       provider,
     );
 
-    // REPRODUCED: exit 0 with 3 provider calls (initial 1 + N=2 repeats)
+    // FIXED: exit 0 with exactly 2 provider calls (N=2 — no initial run + N).
     expect(res.exitCode).toBe(0);
-    expect(provider.calls.length).toBe(3);
+    expect(provider.calls.length).toBe(2);
   });
 });
 
 // ---------------------------------------------------------------------------
 // R-03: paired plan BA pair → baseline.orderIndex=0, candidate.orderIndex=1
-//   regardless of AB/BA order.  REPRODUCED: baseline always has the lower
-//   orderIndex even for BA pairs.
+//   regardless of AB/BA order.  E3-02 FIXED: the orderIndex reflects the TRUE
+//   pair order — BA pairs put the CANDIDATE first (lower orderIndex).
 // ---------------------------------------------------------------------------
-describe("R-03: BA orderIndex wrong [REPRODUCED]", () => {
-  it("BA pair has baseline.orderIndex < candidate.orderIndex (should be candidate first)", () => {
+describe("R-03: BA orderIndex wrong [FIXED]", () => {
+  it("BA pair has candidate.orderIndex < baseline.orderIndex (candidate executes first)", () => {
     const plan = buildPairedPlan({
       suite: "holdout",
       cases: ["c1", "c2"],
@@ -154,8 +154,12 @@ describe("R-03: BA orderIndex wrong [REPRODUCED]", () => {
     const baPairs = plan.pairs.filter((p) => p.order === "BA");
     expect(baPairs.length).toBeGreaterThan(0);
     for (const p of baPairs) {
-      // REPRODUCED: baseline gets lower orderIndex even for BA (should be
-      // candidate first in BA).
+      // FIXED: in a BA pair the candidate executes before the baseline, so
+      // the candidate carries the lower orderIndex.
+      expect(p.candidate.orderIndex).toBeLessThan(p.baseline.orderIndex);
+    }
+    // AB pairs keep the baseline first.
+    for (const p of plan.pairs.filter((p) => p.order === "AB")) {
       expect(p.baseline.orderIndex).toBeLessThan(p.candidate.orderIndex);
     }
   });

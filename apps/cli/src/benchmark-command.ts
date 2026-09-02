@@ -22,14 +22,17 @@ import {
   BENCHMARK_SUITE_VERSION,
   activationEvidenceFor,
   buildEffectiveConfig,
+  buildPairedPlan,
   buildRunManifest,
   computeRuntimeConfigHash,
   computeEvaluationContextHash,
+  computePairedPlanDigest,
   DEFAULT_JUDGE_VERSION,
   EvalRunner,
   getCandidateRegistry,
   loadBenchmarkCases,
   runBaseline,
+  runPairedExperiment,
   writeBaselineFiles,
 } from "@ar/evaluation";
 import type {
@@ -38,6 +41,12 @@ import type {
   BaselineReport,
   EvalOutcome,
   EvalSuite,
+  OrderedArmRun,
+  PairedCounters,
+  PairedExperimentPlan,
+  PairedFinalizedPair,
+  PairedPartialPair,
+  RunManifest,
 } from "@ar/evaluation";
 import type { RunMetrics } from "@ar/observability";
 import {
@@ -304,12 +313,78 @@ async function executeBenchmark(
     effectiveConfig,
   });
 
+  // E3-02: promotion path — a candidate runs a REAL paired experiment
+  // (baseline + candidate arms in ONE plan). The PairedExperimentExecutor
+  // schedules every arm in plan order, journals per arm, and finalizes only
+  // pairs where BOTH arms are strict-valid. The legacy runBaseline() +
+  // runRepeatedBaseline() path below remains the single-arm (no candidate)
+  // MEASUREMENT path — a historical measurement, never a promotion verdict.
+  if (opts.candidate !== undefined) {
+    return runPairedPromotion(opts, provider, selected, modelId, defaultBudgetTokens, manifest, effectiveConfig);
+  }
+
+  // E1-11: repeat protocol — a single run is a measurement, not a statistical
+  // baseline. When --repeat > 1, run the suite EXACTLY N times (E3-02: no
+  // "initial run + N repeats" — N means N) and report per-repeat pass-rate
+  // spread.
+  if (opts.repeat > 1 && opts.interleave && !opts.shuffle) {
+    return { exitCode: 1, lines: ["agent benchmark: --interleave requires --shuffle (distinct seeds per repeat)"] };
+  }
+  if (opts.repeat > 1) {
+    const { runRepeatedBaseline } = await import("@ar/evaluation");
+    const repeated = await runRepeatedBaseline(
+      selected,
+      (caseDef) =>
+        runOneCase(
+          caseDef,
+          { provider, modelId, budgetTokens: defaultBudgetTokens, candidate: undefined },
+          opts.suite,
+        ),
+      {
+        generatedAt: new Date().toISOString(),
+        benchmarkVersion: "2.0.0",
+        model: { providerId: provider.id, modelId },
+        casesTotal: selected.length,
+        suite: opts.suite,
+      },
+      {
+        repeat: opts.repeat,
+        interleave: opts.interleave,
+        shuffle: opts.shuffle,
+        seed: opts.seed,
+        manifest,
+        caseDelayMs: opts.caseDelayMs,
+      },
+    );
+    // E3-02: exactly N repeats — no extra initial report. The first repeat
+    // keeps the canonical filenames; later repeats get per-repeat names so no
+    // artifact is overwritten.
+    const outBase = opts.suite === "regression" ? "baseline" : opts.suite;
+    const dir = resolve(opts.outDir);
+    for (let r = 0; r < repeated.repeats.length; r++) {
+      const rep = repeated.repeats[r]!;
+      if (r === 0) {
+        await writeBaselineFiles(rep, opts.outDir);
+        continue;
+      }
+      await writeFile(join(dir, `${outBase}-r${r + 1}.json`), `${JSON.stringify(rep, null, 2)}\n`, "utf8");
+      const { renderSummaryMd } = await import("@ar/evaluation");
+      await writeFile(join(dir, `${outBase}-r${r + 1}-summary.md`), renderSummaryMd(rep), "utf8");
+    }
+    const agg = repeated.aggregate;
+    lines.push(`benchmark: ${agg.repeats} repeats — pass rate mean ${formatRate(agg.passRateMean)} min ${formatRate(agg.passRateMin)} max ${formatRate(agg.passRateMax)} std ${agg.passRateStd.toFixed(4)}`);
+    lines.push(`benchmark: per-repeat pass rates: ${agg.perRepeatPassRates.map((r) => formatRate(r)).join(", ")}`);
+    lines.push("benchmark: NOTE — repeat spread is a measurement; significance is judged by champion eval / promotion (E1-08/E1-14).");
+    return { exitCode: 0, lines };
+  }
+
+  // Single measurement (--repeat 1): the historical runBaseline path.
   const report = await runBaseline(
     selected,
     (caseDef) =>
       runOneCase(
         caseDef,
-        { provider, modelId, budgetTokens: defaultBudgetTokens, candidate: opts.candidate },
+        { provider, modelId, budgetTokens: defaultBudgetTokens, candidate: undefined },
         opts.suite,
       ),
     {
@@ -330,62 +405,6 @@ async function executeBenchmark(
     },
   );
 
-  // E1-11: repeat protocol — a single run is a measurement, not a statistical
-  // baseline. When --repeat > 1, run the suite N times (interleaved seeds when
-  // requested) and report per-repeat pass-rate spread.
-  if (opts.repeat > 1 && opts.interleave && !opts.shuffle) {
-    return { exitCode: 1, lines: ["agent benchmark: --interleave requires --shuffle (distinct seeds per repeat)"] };
-  }
-  if (opts.repeat > 1) {
-    const { runRepeatedBaseline } = await import("@ar/evaluation");
-    const repeated = await runRepeatedBaseline(
-      selected,
-      (caseDef) =>
-        runOneCase(
-          caseDef,
-          { provider, modelId, budgetTokens: defaultBudgetTokens, candidate: opts.candidate },
-          opts.suite,
-        ),
-      {
-        generatedAt: new Date().toISOString(),
-        benchmarkVersion: "2.0.0",
-        model: { providerId: provider.id, modelId },
-        casesTotal: selected.length,
-        suite: opts.suite,
-      },
-      {
-        repeat: opts.repeat,
-        interleave: opts.interleave,
-        shuffle: opts.shuffle,
-        seed: opts.seed,
-        manifest,
-        caseDelayMs: opts.caseDelayMs,
-      },
-    );
-    await writeBaselineFiles(report, opts.outDir);
-    const outBase = opts.suite === "regression" ? "baseline" : opts.suite;
-    for (let r = 0; r < repeated.repeats.length; r++) {
-      const rep = repeated.repeats[r]!;
-      if (r === 0) {
-        // First repeat keeps the canonical names (compatible with prior
-        // artifacts and `champion eval` / `benchmark validate`).
-        await writeBaselineFiles(rep, opts.outDir);
-        continue;
-      }
-      // Later repeats get per-repeat names so no artifact is overwritten.
-      const dir = resolve(opts.outDir);
-      const { writeFile } = await import("node:fs/promises");
-      await writeFile(join(dir, `${outBase}-r${r + 1}.json`), `${JSON.stringify(rep, null, 2)}\n`, "utf8");
-      const { renderSummaryMd } = await import("@ar/evaluation");
-      await writeFile(join(dir, `${outBase}-r${r + 1}-summary.md`), renderSummaryMd(rep), "utf8");
-    }
-    const agg = repeated.aggregate;
-    lines.push(`benchmark: ${agg.repeats} repeats — pass rate mean ${formatRate(agg.passRateMean)} min ${formatRate(agg.passRateMin)} max ${formatRate(agg.passRateMax)} std ${agg.passRateStd.toFixed(4)}`);
-    lines.push(`benchmark: per-repeat pass rates: ${agg.perRepeatPassRates.map((r) => formatRate(r)).join(", ")}`);
-    lines.push("benchmark: NOTE — repeat spread is a measurement; significance is judged by champion eval / promotion (E1-08/E1-14).");
-    return { exitCode: 0, lines };
-  }
-
   await writeBaselineFiles(report, opts.outDir);
   const outBase = opts.suite === "regression" ? "baseline" : opts.suite;
   // P38.3-12: the benchmark is a MEASUREMENT — "ran and produced a valid
@@ -402,6 +421,129 @@ async function executeBenchmark(
     lines.push(
       `  ${result.success ? "PASS" : "FAIL"} ${result.task_id} (${result.termination_reason}, ${result.duration_ms}ms, ` +
         `${result.model_calls} calls, ${result.tool_calls} tools${result.retries > 0 ? `, ${result.retries} retries` : ""})`,
+    );
+  }
+  return { exitCode: 0, lines };
+}
+
+// ---------------------------------------------------------------------------
+// E3-02: paired promotion path
+// ---------------------------------------------------------------------------
+
+/** The on-disk paired experiment artifact. `finalizedPairs` are the ONLY
+ *  promotion-eligible outcomes; `partialPairs` are never scored. */
+export interface PairedExperimentArtifact {
+  schemaVersion: string;
+  kind: "paired-experiment";
+  planDigest: string;
+  plan: PairedExperimentPlan;
+  counters: PairedCounters;
+  orderedRuns: OrderedArmRun[];
+  finalizedPairs: PairedFinalizedPair[];
+  partialPairs: PairedPartialPair[];
+  haltedByBudget: boolean;
+  interrupted: boolean;
+  resumed: boolean;
+  complete: boolean;
+  modelSeed: number | null;
+  generatedAt: string;
+  candidate: string | null;
+}
+
+/**
+ * E3-02 — run a real promotion experiment: baseline + candidate arms of every
+ * pair scheduled by the PairedExperimentPlan, executed through runOneCase in
+ * plan order, journaled per arm, resumed from the journal, and finalized only
+ * when both arms are strict-valid. `--repeat N` means exactly N independent
+ * repetitions per case per arm (total logical runs = 2 × N × cases).
+ */
+async function runPairedPromotion(
+  opts: BenchmarkCommandOptions,
+  provider: ModelProvider,
+  selected: BenchmarkCase[],
+  modelId: string,
+  defaultBudgetTokens: number,
+  manifest: RunManifest,
+  _effectiveConfig: unknown,
+): Promise<{ exitCode: number; lines: string[] }> {
+  const lines: string[] = [];
+  const plan = buildPairedPlan({
+    suite: opts.suite,
+    cases: selected.map((c) => c.id),
+    repetitions: opts.repeat,
+    // E3-02: randomized order is controlled ONLY by orderSeed (--seed). A
+    // model seed is stored separately (modelSeed below) and never reorders.
+    orderSeed: opts.seed,
+  });
+  const planDigest = computePairedPlanDigest(plan);
+  const outDir = resolve(opts.outDir);
+  // Per-plan journal directory: resume only works for the SAME plan digest.
+  const journalDir = join(outDir, ".paired-journal", planDigest);
+
+  const result = await runPairedExperiment({
+    plan,
+    cases: selected,
+    provider,
+    maxModelCalls: opts.maxModelCalls,
+    journalDir,
+    modelSeed: null,
+    runArm: (arm, caseDef, ctx) =>
+      runOneCase(
+        caseDef,
+        {
+          // The budgeted/counting provider — every generate() consumes the
+          // model-call budget; reaching max-model-calls stops immediately.
+          provider: ctx.provider,
+          modelId,
+          budgetTokens: defaultBudgetTokens,
+          candidate: arm.armId === "candidate" ? opts.candidate : undefined,
+        },
+        opts.suite,
+      ),
+  });
+
+  if (result.status === "resume-rejected") {
+    return { exitCode: 1, lines: [`agent benchmark: paired resume rejected — ${result.reason}`] };
+  }
+
+  await mkdir(outDir, { recursive: true });
+  const artifact: PairedExperimentArtifact = {
+    schemaVersion: "e3-02",
+    kind: "paired-experiment",
+    planDigest,
+    plan,
+    counters: result.counters,
+    orderedRuns: result.orderedRuns,
+    finalizedPairs: result.finalizedPairs,
+    partialPairs: result.partialPairs,
+    haltedByBudget: result.haltedByBudget,
+    interrupted: result.interrupted,
+    resumed: result.resumed,
+    complete: result.complete,
+    modelSeed: result.modelSeed,
+    generatedAt: new Date().toISOString(),
+    candidate: opts.candidate ?? null,
+  };
+  const artifactPath = join(outDir, "paired-experiment.json");
+  await writeFile(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
+
+  lines.push(`benchmark: PAIRED experiment (${opts.candidate}) — ${result.finalizedPairs.length}/${plan.pairs.length} pairs finalized`);
+  lines.push(
+    `benchmark: counters — ${result.counters.logicalRuns} logical runs, ${result.counters.modelCallAttempts} model calls, ${result.counters.transportRetries} transport retries`,
+  );
+  if (result.haltedByBudget) {
+    lines.push("benchmark: STOPPED EARLY — model-call budget exhausted; partial invalid artifact written (no silent continuation)");
+  }
+  if (result.partialPairs.length > 0) {
+    lines.push(`benchmark: ${result.partialPairs.length} partial pair(s) NOT scored — promotion consumes only finalized pairs`);
+  }
+  if (!result.complete) {
+    lines.push("benchmark: experiment incomplete — re-run with the same plan to resume from the journal");
+  }
+  lines.push(`benchmark: paired experiment artifact written to ${artifactPath}`);
+  for (const pair of result.finalizedPairs) {
+    lines.push(
+      `  PAIR ${pair.pairId.slice(0, 8)} ${pair.order} ${pair.caseId} rep${pair.repetition} — baseline ${pair.baseline.outcome.status} / candidate ${pair.candidate.outcome.status}`,
     );
   }
   return { exitCode: 0, lines };
@@ -499,10 +641,12 @@ export async function preflightBenchmark(
     process.stderr.write(`[degraded] benchmark.isolation-probe: ${err instanceof Error ? err.message : String(err)}\n`);
   }
 
-  // 5. Cost/call estimate. This CLI runs single-arm benchmarks, so total
-  //    logical runs = cases × repeat (a paired experiment would be × 2).
+  // 5. Cost/call estimate. A single-arm benchmark is cases × repeat; a
+  //    candidate run is a PAIRED experiment (E3-02) — baseline AND candidate
+  //    arms in one plan, so total logical runs = 2 × cases × repeat.
   const selected = opts.limit > 0 ? cases.slice(0, opts.limit) : cases;
-  const totalLogicalRuns = selected.length * opts.repeat;
+  const armFactor = opts.candidate !== undefined ? 2 : 1;
+  const totalLogicalRuns = selected.length * opts.repeat * armFactor;
   const estimatedModelCalls = totalLogicalRuns * PREFLIGHT_ESTIMATE.callsPerCaseRun;
   const estimatedTokens = estimatedModelCalls * PREFLIGHT_ESTIMATE.tokensPerCall;
   const estimatedCostUsd = estimatedModelCalls * PREFLIGHT_ESTIMATE.costPerCallUsd;
