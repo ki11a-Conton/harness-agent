@@ -89,6 +89,7 @@ describe("E2-06 champion decision V3 golden cases", () => {
     expect(env.gates.repetitionSufficient).toBe(true);
     expect(env.gates.effectSufficient).toBe(true);
     expect(env.gates.directionStable).toBe(true);
+    expect(env.gates.perRepetitionComplete).toBe(true);
     expect(env.reasonCodes).toEqual([]);
   });
 

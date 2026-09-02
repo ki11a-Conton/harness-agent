@@ -37,6 +37,7 @@ export type ChampionDecisionReasonCodeV3 =
   | "ARTIFACT_DIGEST_MISMATCH"
   | "INCOMPARABLE"
   | "PAIR_INCOMPLETE"
+  | "PER_REPETITION_INCOMPLETE"
   | "ACTIVATION_UNSATISFIED"
   | "SECURITY_BREACH"
   | "VERIFIED_REGRESSION"
@@ -99,6 +100,7 @@ export interface ChampionDecisionEnvelopeV3 {
     artifactIntegrity: boolean;
     provenanceComparable: boolean;
     pairComplete: boolean;
+    perRepetitionComplete: boolean;
     activationSatisfied: boolean;
     securityClear: boolean;
     verifiedNonRegression: boolean;
@@ -150,9 +152,15 @@ export function decideChampionV3(input: DecisionGateInputV3): ChampionDecisionEn
     runtimeErrorSymmetry: input.infraFailuresCandidate <= input.infraFailuresBaseline,
     repetitionSufficient: input.repetitions >= 2 && !input.recommendsRepetition,
     effectSufficient: input.netPassedDelta >= input.minConclusiveNetDelta,
-    directionStable: input.perRepetitionDeltas.length === 0
+    // E3-06 acceptance #3: per-repetition deltas MUST cover every repetition
+    // (length === repetitions). Missing/duplicate repetition data is INVALID,
+    // never direction-stable.
+    perRepetitionComplete: input.perRepetitionDeltas.length === input.repetitions,
+    directionStable: input.repetitions === 0
       ? true
-      : input.perRepetitionDeltas.every((d) => d >= 0),
+      : input.perRepetitionDeltas.length === input.repetitions
+        ? input.perRepetitionDeltas.every((d) => d >= 0)
+        : false,
     costBounded: input.tokensDelta <= input.maxTokensDelta,
   };
 
@@ -161,6 +169,7 @@ export function decideChampionV3(input: DecisionGateInputV3): ChampionDecisionEn
   if (!gates.artifactIntegrity) hardFail("ARTIFACT_DIGEST_MISMATCH");
   if (!gates.provenanceComparable) hardFail("INCOMPARABLE");
   if (!gates.pairComplete) hardFail("PAIR_INCOMPLETE");
+  if (!gates.perRepetitionComplete) hardFail("PER_REPETITION_INCOMPLETE");
   if (!gates.activationSatisfied) hardFail("ACTIVATION_UNSATISFIED");
   if (!gates.securityClear) hardFail("SECURITY_BREACH");
   if (!gates.verifiedNonRegression) hardFail("VERIFIED_REGRESSION");
@@ -171,9 +180,9 @@ export function decideChampionV3(input: DecisionGateInputV3): ChampionDecisionEn
   if (!gates.costBounded) hardFail("COST_CEILING_EXCEEDED");
 
   // INVALID: the inputs/protocol cannot support inference at all.
-  if (!gates.artifactIntegrity || !gates.provenanceComparable || !gates.pairComplete) {
+  if (!gates.artifactIntegrity || !gates.provenanceComparable || !gates.pairComplete || !gates.perRepetitionComplete) {
     return envelope(input, "INVALID", reasons, gates,
-      "Inputs are not comparable: artifact digest mismatch, provenance differences, or incomplete pairs — evidence cannot be used for promotion.",
+      "Inputs are not comparable: artifact digest mismatch, provenance differences, incomplete pairs, or missing per-repetition data — evidence cannot be used for promotion.",
       "Fix provenance/artifact integrity (E2-01/E2-02) and re-run the paired eval with the V3 protocol.",
     );
   }
