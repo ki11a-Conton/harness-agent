@@ -285,6 +285,15 @@ export function parseExperimentArtifactV3(value: unknown): ExperimentArtifactV3 
     candidateId: expectString(armRaw.candidateId, "arm.candidateId", true),
     candidateConfigHash: expectHexDigest(armRaw.candidateConfigHash, "arm.candidateConfigHash", 64, true),
   };
+  // E4-03 #1: a candidate arm must carry its config hash (baseline may be null).
+  // A candidate whose config hash is missing cannot be reproduced or compared.
+  if (arm.candidateId !== null && arm.candidateConfigHash === null) {
+    throw new ArtifactSchemaError(
+      "MISSING_REQUIRED_FIELD",
+      "arm.candidateConfigHash",
+      `candidate arm "${arm.candidateId}" has no candidateConfigHash`,
+    );
+  }
 
   const manifest = expectObject(record.manifest, "manifest");
   // E3-04: an empty manifest object is never valid — the manifest must carry

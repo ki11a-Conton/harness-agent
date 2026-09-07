@@ -232,6 +232,14 @@ describe("E4-03: field-level strict validation — numeric bounds + shape-only c
     m.caseCount = 2;
     expect(() => parseExperimentArtifactV3(good)).not.toThrow();
   });
+
+  it("E4-03 #1: rejects a candidate arm with a missing candidateConfigHash", () => {
+    const art = structuredClone(buildExperimentArtifactV3(makeInput())) as unknown as Record<string, unknown>;
+    const arm = art.arm as Record<string, unknown>;
+    arm.candidateId = "some_candidate";
+    arm.candidateConfigHash = null;
+    expect(() => parseExperimentArtifactV3(art)).toThrow(/MISSING_REQUIRED_FIELD/);
+  });
 });
 
 describe("E2-01 writer -> strict loader round-trip", () => {
