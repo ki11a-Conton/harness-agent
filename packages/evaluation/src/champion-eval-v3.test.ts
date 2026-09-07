@@ -19,6 +19,10 @@ import {
 import type { ChampionDecisionEnvelopeV3 } from "./champion-decision-v3.js";
 import { decideChampionV3 } from "./champion-decision-v3.js";
 
+// E4-03: valid-format manifest digest fixtures.
+const GIT40 = "c".repeat(40);
+const HEX64 = "a".repeat(64);
+
 function makeOutcome(overrides: Partial<CaseOutcomeV3> = {}): CaseOutcomeV3 {
   return {
     caseId: "ho-01",
@@ -93,13 +97,13 @@ function makePair(
 
   const baseline = buildExperimentArtifactV3({
     arm: { armId: "baseline", candidateId: null, candidateConfigHash: null },
-    manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "abc123", dirty: false },
+    manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT40, dirty: false },
     outcomes: baselineOutcomes,
     provenance: baseProvenance,
   });
   const candidate = buildExperimentArtifactV3({
     arm: { armId: "candidate", candidateId: "memory_retrieval", candidateConfigHash: "b".repeat(64) },
-    manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "abc123", dirty: false, planDigest: "plan-1" },
+    manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT40, dirty: false, planDigest: HEX64 },
     outcomes: candidateOutcomes,
     provenance: candProvenance,
     securityOutcomes: candidateSecurityEscaped
@@ -130,14 +134,14 @@ describe("E3-06 V3 champion eval bridge", () => {
 
   it("2. V3 pair with grades/verification -> decision statistics carry real values (no ?/0→0)", () => {
     const pair = makePair();
-    const { decisionArtifact, envelope } = deriveV3Decision(pair, "memory_retrieval", "plan-1");
+    const { decisionArtifact, envelope } = deriveV3Decision(pair, "memory_retrieval", HEX64);
     // statistics carry real grade counts; decision is ACCEPT (3 reps, +3 delta, activated)
     expect(envelope.decision).toBe("ACCEPT");
     expect(decisionArtifact.decision).toBe("ACCEPT");
     expect(decisionArtifact.schemaVersion).toBe(DECISION_ARTIFACT_V3_SCHEMA_VERSION);
     expect(decisionArtifact.policyVersion).toBe(CHAMPION_EVAL_V3_POLICY_VERSION);
     expect(decisionArtifact.candidateId).toBe("memory_retrieval");
-    expect(decisionArtifact.planDigest).toBe("plan-1");
+    expect(decisionArtifact.planDigest).toBe(HEX64);
     expect(decisionArtifact.repetitions).toBe(3);
     expect(decisionArtifact.perRepetitionDeltas).toEqual([1, 1, 1]);
     expect(decisionArtifact.contentDigest.length).toBe(24);
@@ -146,7 +150,7 @@ describe("E3-06 V3 champion eval bridge", () => {
   it("3. repetitions=2 with per-repetition deltas empty -> never ACCEPT (defense)", () => {
     // Derivation always produces matching deltas, but force the defensive check.
     const pair = makePair({ candidateRepetition: [1, 2, 3], candidatePassed: [true, true, true] });
-    const { derivedInputs, envelope } = deriveV3Decision(pair, "memory_retrieval", "plan-1");
+    const { derivedInputs, envelope } = deriveV3Decision(pair, "memory_retrieval", HEX64);
     // Simulate a tampered input where per-rep length != repetitions.
     const tampered = { ...derivedInputs, perRepetitionDeltas: [] };
     const env = decideChampionV3(tampered);
@@ -179,13 +183,13 @@ describe("E3-06 V3 champion eval bridge", () => {
 
   it("5. tampered input artifact changes the decision artifact digest (revalidation fails)", () => {
     const pair = makePair();
-    const a1 = deriveV3Decision(pair, "memory_retrieval", "plan-1").decisionArtifact;
+    const a1 = deriveV3Decision(pair, "memory_retrieval", HEX64).decisionArtifact;
     // Tamper: candidate outcome passes flip.
     const tamperedPair: V3ArtifactPair = {
       ...pair,
       candidate: buildExperimentArtifactV3({
         arm: { armId: "candidate", candidateId: "memory_retrieval", candidateConfigHash: "b".repeat(64) },
-        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "abc123", dirty: false, planDigest: "plan-1" },
+        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT40, dirty: false, planDigest: HEX64 },
         outcomes: [1, 2, 3].map((rep) => makeOutcome({
           caseId: `ho-0${rep}`, armId: "candidate", repetition: rep, passed: false, grade: "poor",
           verificationPassed: false, activationRef: "ae-1",
@@ -194,7 +198,7 @@ describe("E3-06 V3 champion eval bridge", () => {
       }),
       candidateDigest: "tampered-digest",
     };
-    const a2 = deriveV3Decision(tamperedPair, "memory_retrieval", "plan-1").decisionArtifact;
+    const a2 = deriveV3Decision(tamperedPair, "memory_retrieval", HEX64).decisionArtifact;
     expect(a2.decision).not.toBe("ACCEPT"); // INCONCLUSIVE — net effect 0 < threshold
     // digest binds both artifact digests
     expect(a1.candidateArtifactDigest).not.toBe(a2.candidateArtifactDigest);
@@ -223,18 +227,18 @@ describe("E3-06 V3 champion eval bridge", () => {
 
   it("8. decision artifact binds plan digest + is content-addressed", () => {
     const pair = makePair();
-    const res = deriveV3Decision(pair, "memory_retrieval", "plan-1");
+    const res = deriveV3Decision(pair, "memory_retrieval", HEX64);
     const da = res.decisionArtifact;
-    expect(da.planDigest).toBe("plan-1");
+    expect(da.planDigest).toBe(HEX64);
     expect(da.gates).toHaveProperty("artifactIntegrity");
     // recompute: same envelope + digests -> same artifact (stable)
-    const res2 = deriveV3Decision(pair, "memory_retrieval", "plan-1");
+    const res2 = deriveV3Decision(pair, "memory_retrieval", HEX64);
     expect(res2.decisionArtifact.contentDigest).toBe(da.contentDigest);
   });
 
   it("9. security breach in candidate -> REJECT via derived gate", () => {
     const pair = makePair({ candidateSecurityEscaped: true });
-    const { envelope } = deriveV3Decision(pair, "memory_retrieval", "plan-1");
+    const { envelope } = deriveV3Decision(pair, "memory_retrieval", HEX64);
     expect(envelope.decision).toBe("REJECT");
     expect(envelope.reasonCodes).toContain("SECURITY_BREACH");
   });

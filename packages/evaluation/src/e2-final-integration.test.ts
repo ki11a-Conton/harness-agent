@@ -149,7 +149,7 @@ describe("E2-16 final integration acceptance", () => {
       const arm = getArmFactory().resolveCandidate("adaptive_recovery_v2");
       const artifact = buildExperimentArtifactV3({
         arm: { armId: "candidate", candidateId: "adaptive_recovery_v2", candidateConfigHash: arm.digest },
-        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "clean-head", dirty: false },
+        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false },
         outcomes: Array.from({ length: 6 }, (_, i) => ({
           caseId: `ho-0${i + 1}`,
           suite: "holdout",

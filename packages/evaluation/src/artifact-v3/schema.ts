@@ -238,6 +238,34 @@ export function parseCaseOutcomeV3(raw: unknown, index: number): CaseOutcomeV3 {
   return outcome;
 }
 
+/**
+ * E4-03 #1: validate the manifest's identity fields by format, but only for
+ * keys that are actually present (conditional). This tightens malformed values
+ * (a non-hex gitSha, a bogus isolationStrength, a negative repeat) without
+ * requiring fields that later tasks wire in (decisionPolicyVersion /
+ * thresholdDigest arrive with E4-05).
+ */
+function validateManifestFields(manifest: Record<string, unknown>): void {
+  if ("gitSha" in manifest) expectGitSha(manifest.gitSha, "manifest.gitSha", true);
+  if ("sourceSha" in manifest) expectGitSha(manifest.sourceSha, "manifest.sourceSha", true);
+  if ("planDigest" in manifest) expectHexDigest(manifest.planDigest, "manifest.planDigest", 64, true);
+  if ("runtimeConfigHash" in manifest) expectHexDigest(manifest.runtimeConfigHash, "manifest.runtimeConfigHash", 64, true);
+  if ("thresholdDigest" in manifest) expectHexDigest(manifest.thresholdDigest, "manifest.thresholdDigest", 64, true);
+  if ("model" in manifest) expectNonEmptyString(manifest.model, "manifest.model", true);
+  if ("provider" in manifest) expectNonEmptyString(manifest.provider, "manifest.provider", true);
+  if ("decisionPolicyVersion" in manifest) expectNonEmptyString(manifest.decisionPolicyVersion, "manifest.decisionPolicyVersion");
+  if ("isolationStrength" in manifest) {
+    const v = manifest.isolationStrength;
+    if (v !== "strong" && v !== "insecure-local" && v !== "none") {
+      throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", "manifest.isolationStrength", `expected strong|insecure-local|none, got ${JSON.stringify(v)}`);
+    }
+  }
+  if ("promotionEligible" in manifest) expectBoolean(manifest.promotionEligible, "manifest.promotionEligible");
+  if ("repeat" in manifest) expectPositiveInteger(manifest.repeat, "manifest.repeat");
+  if ("caseCount" in manifest) expectNonNegativeInteger(manifest.caseCount, "manifest.caseCount");
+  if ("outcomeCount" in manifest) expectNonNegativeInteger(manifest.outcomeCount, "manifest.outcomeCount");
+}
+
 /** Strict-parse the ENTIRE V3 artifact. Throws ArtifactSchemaError on any
  *  missing/mistyped field; validates digests + summary + duplicates. */
 export function parseExperimentArtifactV3(value: unknown): ExperimentArtifactV3 {
@@ -264,6 +292,10 @@ export function parseExperimentArtifactV3(value: unknown): ExperimentArtifactV3 
   if (Object.keys(manifest).length === 0) {
     throw new ArtifactSchemaError("MISSING_REQUIRED_FIELD", "manifest", "manifest is an empty object — required identities missing");
   }
+  // E4-03 #1: field-level manifest validation. Conditional on presence so it is
+  // forward-compatible with fields wired by later tasks (E4-04 activation,
+  // E4-05 decision policy), but any PRESENT identity is format-checked.
+  validateManifestFields(manifest);
 
   const outcomesRaw = expectArray(record.outcomes, "outcomes");
   const outcomes = outcomesRaw.map((o, i) => parseCaseOutcomeV3(o, i));

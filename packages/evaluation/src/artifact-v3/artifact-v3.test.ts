@@ -58,7 +58,7 @@ function makeOutcome(overrides: Partial<CaseOutcomeV3> = {}): CaseOutcomeV3 {
 function makeInput(overrides: Partial<ExperimentArtifactV3Input> = {}): ExperimentArtifactV3Input {
   return {
     arm: { armId: "baseline", candidateId: null, candidateConfigHash: null },
-    manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "abc123", dirty: false },
+    manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT40, dirty: false },
     outcomes: [
       makeOutcome({ caseId: "ho-01", order: 1 }),
       makeOutcome({ caseId: "ho-02", order: 2, passed: false, terminationReason: "agent_limit", failureCategory: "model", grade: null, verificationPassed: false }),
@@ -206,6 +206,31 @@ describe("E4-03: field-level strict validation — numeric bounds + shape-only c
       art.outcomes[0]![field] = value;
       expect(() => parseExperimentArtifactV3(art)).toThrow(ArtifactSchemaError);
     }
+  });
+
+  it("E4-03 #1: rejects malformed manifest identity fields (conditional format checks)", () => {
+    const mutations: Array<(m: Record<string, unknown>) => void> = [
+      (m) => { m.gitSha = "not-a-sha"; },
+      (m) => { m.planDigest = "nope"; },
+      (m) => { m.runtimeConfigHash = "nope"; },
+      (m) => { m.isolationStrength = "bogus"; },
+      (m) => { m.promotionEligible = "yes"; },
+      (m) => { m.repeat = 0; },
+      (m) => { m.caseCount = -1; },
+    ];
+    for (const mutate of mutations) {
+      const art = structuredClone(buildExperimentArtifactV3(makeInput())) as unknown as Record<string, unknown>;
+      mutate(art.manifest as Record<string, unknown>);
+      expect(() => parseExperimentArtifactV3(art)).toThrow(ArtifactSchemaError);
+    }
+    // A well-formed manifest carrying the forward-looking identity fields parses.
+    const good = structuredClone(buildExperimentArtifactV3(makeInput())) as unknown as Record<string, unknown>;
+    const m = good.manifest as Record<string, unknown>;
+    m.isolationStrength = "insecure-local";
+    m.promotionEligible = false;
+    m.repeat = 3;
+    m.caseCount = 2;
+    expect(() => parseExperimentArtifactV3(good)).not.toThrow();
   });
 });
 
@@ -373,7 +398,7 @@ describe("E2-01 directory validator (F-04: no more '0 suites / 0 cases / VALID')
     try {
       // Write a legacy report-object shape (like the real AR2 candidate-holdout.json).
       const legacy = {
-        manifest: { gitSha: "3cf62ab", dirty: true, model: "deepseek-v4-flash" },
+        manifest: { gitSha: GIT40, dirty: true, model: "deepseek-v4-flash" },
         results: [
           { task_id: "ho-01", suite: "holdout", success: true, termination_reason: "verified_complete", verified: true },
           { task_id: "ho-02", suite: "holdout", success: false, termination_reason: "agent_limit", verified: false },
@@ -485,7 +510,7 @@ describe("E2-01 field preservation table (deliverable)", () => {
       });
       const artifact = buildExperimentArtifactV3({
         arm: { armId: "candidate", candidateId: "adaptive_recovery_v2", candidateConfigHash: HEX64B },
-        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "deadbeef", dirty: true, model: "deepseek-v4-flash", provider: "openai", runtimeConfigHash: "rt-hash" },
+        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT40, dirty: true, model: "deepseek-v4-flash", provider: "openai", runtimeConfigHash: HEX64B },
         outcomes: [outcome],
         activationEvidence: [{ id: "ae-1", reasonCodes: ["recovery_decision"], note: "recovery fired" }],
         securityOutcomes: [{ caseId: "ho-42", kind: "blocked", detail: "sandbox blocked write" }],
