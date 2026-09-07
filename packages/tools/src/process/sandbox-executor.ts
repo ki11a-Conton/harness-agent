@@ -12,6 +12,8 @@
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { stableStringify } from "@ar/contracts";
 
@@ -597,6 +599,38 @@ export function unavailableBackend(platform: NodeJS.Platform): SandboxExecutionB
 
 const selfTestCache = new Map<string, { digest: string; ok: boolean }>();
 
+/**
+ * E4-00 — run a backend's capability self-test inside a unique OS temp dir so
+ * probe fixtures and any leaked writes NEVER touch the repository working tree.
+ *
+ * The self-test's effect paths are built under the probe base, and the probe
+ * policy makes that base writable (mirroring the historical
+ * `writableDirs: [process.cwd()]` with the base under cwd). Relocating BOTH the
+ * base and the writable dir to the same temp path preserves the exact probe
+ * semantics (effect paths sit under the writable base) while keeping the run
+ * side-effect-free and reproducible — a hard requirement of the E4 offline
+ * gates (every task must end with `git status --short` empty). Cleaned up in a
+ * finally so a throwing self-test still leaves no residue.
+ */
+async function selfTestInTempDir(
+  backend: SandboxExecutionBackend,
+  policy: SandboxPolicySpec,
+): Promise<CapabilitySelfTestResult> {
+  const base = await mkdtemp(join(tmpdir(), "e3-09-selftest-"));
+  try {
+    const relocated: SandboxPolicySpec = {
+      ...policy,
+      writableDirs: policy.writableDirs.map((d) => (d === process.cwd() ? base : d)),
+    };
+    if (!relocated.writableDirs.includes(base)) {
+      relocated.writableDirs = [base, ...relocated.writableDirs];
+    }
+    return await backend.selfTest(buildProbePaths(base), relocated);
+  } finally {
+    await rm(base, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 export async function selfTestForBackend(backend: SandboxExecutionBackend, policy: SandboxPolicySpec, paths?: ProbePaths): Promise<CapabilitySelfTestResult> {
   const key = `${backend.id}@${SANDBOX_EXECUTOR_SCHEMA_VERSION}`;
   const cached = selfTestCache.get(key);
@@ -611,8 +645,9 @@ export async function selfTestForBackend(backend: SandboxExecutionBackend, polic
       probes: [],
     };
   }
-  const p = paths ?? buildProbePaths(join(process.cwd(), ".e3-09-self-test"));
-  const result = await backend.selfTest(p, policy);
+  const result = paths !== undefined
+    ? await backend.selfTest(paths, policy)
+    : await selfTestInTempDir(backend, policy);
   selfTestCache.set(key, { digest: result.digest, ok: result.ok });
   return result;
 }
@@ -648,7 +683,7 @@ export async function capabilityProbe(opts?: {
   const platform = opts?.platform ?? process.platform;
   const backend = opts?.backend ?? (await probeSandboxBackend(platform));
   if (!backend.strongIsolation) {
-    const self = await backend.selfTest(buildProbePaths(join(process.cwd(), ".e3-09-probe")), buildSandboxPolicySpec({
+    const self = await selfTestInTempDir(backend, buildSandboxPolicySpec({
       writableDirs: [process.cwd()],
       readonlyDirs: [],
       envAllowlist: ["PATH", "HOME"],

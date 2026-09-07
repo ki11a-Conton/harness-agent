@@ -7,9 +7,9 @@
  * backend code is exercised by CI). Every test is offline and deterministic.
  */
 import { describe, expect, it } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { ProcessExecutor } from "./executor.js";
 import {
   ALLOW_INSECURE_LOCAL_BENCHMARK_FLAG,
@@ -26,6 +26,7 @@ import {
   probeDigestOf,
   probeSandboxBackend,
   runCapabilityProbes,
+  selfTestForBackend,
   unavailableBackend,
   type SandboxExecutionBackend,
   type SandboxPolicySpec,
@@ -256,6 +257,106 @@ function leakingBackend(): SandboxExecutionBackend {
     },
   };
 }
+
+describe("E4-00: capability self-test leaves no residue in the repo working tree", () => {
+  const probePolicy = (): SandboxPolicySpec =>
+    buildSandboxPolicySpec({
+      writableDirs: [process.cwd()],
+      readonlyDirs: [],
+      envAllowlist: ["PATH", "HOME"],
+      maxOutputBytes: 1000,
+      timeoutMs: 5000,
+    });
+  const isUnderTmp = (p: string): boolean => {
+    const rel = relative(resolve(tmpdir()), resolve(p));
+    return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
+  };
+
+  it("runs the probe in a temp dir (never under cwd) and removes it on success", async () => {
+    let capturedBase = "";
+    const backend: SandboxExecutionBackend = {
+      id: `e400-capture-${process.hrtime.bigint()}`,
+      platform: "linux",
+      strongIsolation: true,
+      schemaVersion: "1.0.0",
+      wrapperArgv: () => [],
+      async selfTest(paths) {
+        capturedBase = paths.outsideDir;
+        // Simulate the historical pollution: a real backend writes fixtures/leaks
+        // under the probe base (bwrap does mkdirSync + writeFileSync here).
+        writeFileSync(join(capturedBase, "e3-09-leaked.txt"), "pwned");
+        return {
+          ok: true,
+          backendId: backend.id,
+          schemaVersion: "1.0.0",
+          digest: "d-e400",
+          attempted: [],
+          failures: [],
+          probes: [],
+        };
+      },
+    };
+    await selfTestForBackend(backend, probePolicy());
+    // The base was relocated to the OS temp dir, NOT the repo working tree.
+    expect(capturedBase).not.toBe("");
+    expect(capturedBase.startsWith(process.cwd())).toBe(false);
+    expect(isUnderTmp(capturedBase)).toBe(true);
+    // The temp base (and the simulated leak inside it) is gone after the call.
+    expect(existsSync(capturedBase)).toBe(false);
+    // And the historical repo-root pollution path is never created.
+    expect(existsSync(join(process.cwd(), ".e3-09-self-test"))).toBe(false);
+  });
+
+  it("removes the temp dir even when the self-test throws", async () => {
+    let capturedBase = "";
+    const backend: SandboxExecutionBackend = {
+      id: `e400-throw-${process.hrtime.bigint()}`,
+      platform: "linux",
+      strongIsolation: true,
+      schemaVersion: "1.0.0",
+      wrapperArgv: () => [],
+      async selfTest(paths) {
+        capturedBase = paths.outsideDir;
+        writeFileSync(join(capturedBase, "e3-09-partial.txt"), "x");
+        throw new Error("boom-e400");
+      },
+    };
+    await expect(selfTestForBackend(backend, probePolicy())).rejects.toThrow("boom-e400");
+    expect(capturedBase.startsWith(process.cwd())).toBe(false);
+    // finally-cleanup ran despite the throw.
+    expect(existsSync(capturedBase)).toBe(false);
+    expect(existsSync(join(process.cwd(), ".e3-09-self-test"))).toBe(false);
+  });
+
+  it("capabilityProbe on a non-strong backend also leaves no repo residue", async () => {
+    let capturedBase = "";
+    const backend: SandboxExecutionBackend = {
+      id: `e400-nonstrong-${process.hrtime.bigint()}`,
+      platform: "win32",
+      strongIsolation: false,
+      schemaVersion: "1.0.0",
+      wrapperArgv: () => [],
+      async selfTest(paths) {
+        capturedBase = paths.outsideDir;
+        writeFileSync(join(capturedBase, "e3-09-leaked.txt"), "x");
+        return {
+          ok: false,
+          backendId: backend.id,
+          schemaVersion: "1.0.0",
+          digest: "d-nonstrong",
+          attempted: [],
+          failures: [],
+          probes: [],
+        };
+      },
+    };
+    await capabilityProbe({ backend });
+    expect(capturedBase.startsWith(process.cwd())).toBe(false);
+    expect(isUnderTmp(capturedBase)).toBe(true);
+    expect(existsSync(capturedBase)).toBe(false);
+    expect(existsSync(join(process.cwd(), ".e3-09-probe"))).toBe(false);
+  });
+});
 
 describe("E3-09 capability self-test plumbing", () => {
   it("a strong backend whose self-test passes -> capabilityProbe ok, strongIsolation true", async () => {
