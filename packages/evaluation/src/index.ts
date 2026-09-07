@@ -51,6 +51,7 @@ export * from "./promotion-envelope.js";
 export * from "./champion-profile.js";
 export * from "./benchmark-isolation.js";
 export * from "./security-outcome-v2.js";
+export * from "./security-evidence-execution.js";
 export * from "./evolution-ledger.js";
 export * from "./gate-evidence-v2.js";
 export * from "./mechanism-contract.js";
