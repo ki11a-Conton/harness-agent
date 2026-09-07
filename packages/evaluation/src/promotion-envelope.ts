@@ -168,8 +168,11 @@ async function pathGuardViolations(bundleRoot: string, p: string, role: string):
     if (realRel === "" || realRel.startsWith("..") || isAbsolute(realRel)) {
       out.push(`${role}: path "${p}" escapes the bundle root via symlink`);
     }
-  } catch {
-    // target missing/unresolvable — the strict load reports it as ARTIFACT_NOT_V3
+  } catch (pathErr) {
+    // Best-effort realpath check; when the target does not exist or cannot be
+    // resolved the strict artifact load reports it as ARTIFACT_NOT_V3 below.
+    // Still reported so a flaky filesystem is never invisible.
+    process.stderr.write(`[degraded] promotion-envelope realpath check skipped: ${pathErr instanceof Error ? pathErr.message : String(pathErr)}\n`);
   }
   return out;
 }
@@ -397,8 +400,11 @@ export async function loadPromotionEnvelope(
             issues.push({ code: "DECISION_REPLAY_MISMATCH", detail: v });
           }
         }
-      } catch {
-        // presence/JSON already reported by the block above
+      } catch (replayErr) {
+        // The decision artifact was already reported missing/invalid by the
+        // presence block above; this second read failing is surfaced on the
+        // degraded channel rather than swallowed.
+        process.stderr.write(`[degraded] promotion-envelope decision replay skipped: ${replayErr instanceof Error ? replayErr.message : String(replayErr)}\n`);
       }
     }
   }
