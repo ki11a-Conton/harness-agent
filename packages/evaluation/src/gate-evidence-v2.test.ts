@@ -7,6 +7,9 @@ import {
   verifyGateEvidenceV2,
   captureGitState,
   digestOf,
+  runGateV2,
+  writeGateEvidenceV2,
+  loadGateEvidenceV2,
   GATE_EVIDENCE_V2_SCHEMA_VERSION,
   type GateEvidenceV2,
 } from "./gate-evidence-v2.js";
@@ -125,5 +128,106 @@ describe("E2-13 gate evidence V2", () => {
     const parsed = JSON.parse(JSON.stringify(e)) as GateEvidenceV2;
     expect(parsed.gitSha).toBe(HEAD);
     expect(parsed.command).toEqual(CMD);
+  });
+});
+
+describe("E4-10 gate evidence generator + loader", () => {
+  it("runGateV2 captures the REAL exit code and passes only on exit 0", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "e4-10-gate-"));
+    try {
+      const artifact = join(dir, "out.json");
+      await writeFile(artifact, "{}", "utf8");
+      const ev = await runGateV2({
+        gate: "capability_audit",
+        command: ["pnpm", "capability:audit"],
+        cwd: dir,
+        toolVersion: "test",
+        artifactPaths: [artifact],
+        environmentClass: "offline",
+        run: async () => ({ exitCode: 0, stdout: "ok", stderr: "" }),
+      });
+      expect(ev.passed).toBe(true);
+      expect(ev.state).toBe("passed");
+      expect(ev.exitCode).toBe(0);
+      expect(ev.providerCalls).toBe(0);
+      expect(ev.artifactRefs?.[0]?.digest).toMatch(/^[0-9a-f]{64}$/);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("a nonzero exit is recorded as failed, never passed", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "e4-10-gate-"));
+    try {
+      const ev = await runGateV2({
+        gate: "g", command: ["x"], cwd: dir, toolVersion: "t",
+        run: async () => ({ exitCode: 3, stdout: "", stderr: "boom" }),
+      });
+      expect(ev.passed).toBe(false);
+      expect(ev.exitCode).toBe(3);
+      expect(ev.state).toBe("failed");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("a missing declared artifact cannot be PASS", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "e4-10-gate-"));
+    try {
+      const ev = await runGateV2({
+        gate: "g", command: ["x"], cwd: dir, toolVersion: "t",
+        artifactPaths: [join(dir, "does-not-exist.json")],
+        run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+      });
+      expect(ev.passed).toBe(false);
+      expect(ev.artifactRefs?.[0]?.digest).toBeNull();
+      // And the verifier rejects a hand-forged PASS over a missing artifact.
+      const forged = { ...ev, passed: true, state: "passed" as const };
+      const v = verify(forged);
+      expect(v.ok).toBe(false);
+      expect(v.issues.map((i) => i.code)).toContain("MISSING_ARTIFACT_REF");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("an offline gate reporting provider calls is rejected", () => {
+    const v = verify(mkEvidence({ environmentClass: "offline", providerCalls: 5 }));
+    expect(v.ok).toBe(false);
+    expect(v.issues.map((i) => i.code)).toContain("PROVIDER_CALLS_ON_OFFLINE");
+  });
+
+  it("a hand-written PASS with a nonzero exit code is rejected", () => {
+    const v = verify(mkEvidence({ passed: true, exitCode: 1, state: "passed" }));
+    expect(v.ok).toBe(false);
+    expect(v.issues.map((i) => i.code)).toContain("EXIT_CODE_TAMPERED");
+  });
+
+  it("stale sourceSha (evidence from an older HEAD) is rejected", () => {
+    const v = verify(mkEvidence({ gitSha: "oldsha" }), { expectedHead: "newhead" });
+    expect(v.ok).toBe(false);
+    expect(v.issues.map((i) => i.code)).toContain("STALE_HEAD");
+  });
+
+  it("write then load round-trips; a missing file loads as NOT_RUN (never PASS)", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "e4-10-gate-"));
+    try {
+      const path = join(dir, "evidence.json");
+      await writeGateEvidenceV2(mkEvidence(), path);
+      const loaded = await loadGateEvidenceV2(path);
+      expect(loaded.passed).toBe(true);
+      const missing = await loadGateEvidenceV2(join(dir, "nope.json"));
+      expect(missing.state).toBe("not_run");
+      expect(missing.passed).toBe(false);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("gate output content changed but the recorded digest not updated is rejected", () => {
+    const e = mkEvidence({ outputDigest: digestOf({ stdout: "original" }) });
+    const v = verify(e, { expectedOutputDigest: digestOf({ stdout: "tampered" }) });
+    expect(v.ok).toBe(false);
+    expect(v.issues.map((i) => i.code)).toContain("DIGEST_MISMATCH");
   });
 });
