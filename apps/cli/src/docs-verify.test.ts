@@ -92,6 +92,14 @@ describe("P20-3 docs:verify — machine truth verification", () => {
     await makeRoot({
       ...suiteCaseFiles(3),
       "benchmarks/README.md": README_CLAIMS,
+      "package.json": JSON.stringify({
+        scripts: {
+          typecheck: "tsc -b", test: "vitest run", build: "tsc -b", "test:coverage": "vitest run --coverage",
+          "docs:verify": "node apps/cli/dist/main.js docs:verify", "benchmark:smoke": "node apps/cli/dist/main.js benchmark smoke",
+          "test:protocol": "vitest run x", "test:security": "vitest run x", "test:race": "vitest run x", "test:chaos": "vitest run x",
+          "capability:audit": "node apps/cli/dist/main.js audit --strict",
+        },
+      }),
       "packages/a/package.json": "{}",
       "packages/b/package.json": "{}",
       "packages/c/package.json": "{}",
@@ -104,6 +112,28 @@ describe("P20-3 docs:verify — machine truth verification", () => {
     const result = await verifyDocs({ root });
     expect(result.ok).toBe(true);
     for (const check of result.checks) expect(check.truthful, check.name).toBe(true);
+  });
+
+  it("fails closed when a release-gate command references a missing script (E4-10)", async () => {
+    await makeRoot({
+      ...suiteCaseFiles(3),
+      "benchmarks/README.md": README_CLAIMS,
+      // package.json omits `capability:audit` — a gate command with no script.
+      "package.json": JSON.stringify({ scripts: { typecheck: "tsc -b", test: "vitest run" } }),
+      "packages/a/package.json": "{}",
+      "packages/b/package.json": "{}",
+      "packages/c/package.json": "{}",
+      "packages/d/package.json": "{}",
+      "HANDOVER.md": HANDOVER,
+      ".github/workflows/ci.yml": CI_WITH_GATES,
+      "CAPABILITY_MATRIX.md": MATRIX_MD,
+      "CAPABILITY_MATRIX.json": MATRIX_JSON,
+    });
+    const result = await verifyDocs({ root });
+    expect(result.ok).toBe(false);
+    const gate = result.checks.find((c) => c.name === "release gate commands exist in package.json (E4-10)")!;
+    expect(gate.truthful).toBe(false);
+    expect(gate.reason).toContain("capability:audit");
   });
 
   it("fails closed when a README benchmark count contradicts the disk", async () => {

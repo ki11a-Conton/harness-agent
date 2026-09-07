@@ -282,6 +282,38 @@ export async function verifyDocs(deps: { root: string }): Promise<DocVerificatio
     });
   }
 
+  // ---- E4-10 #5: every release-gate command exists as a real package.json
+  // script. A gate that references a non-existent script can never run, so its
+  // evidence would be fabricated or NOT_RUN — fail closed on a dangling command.
+  {
+    const { GATE_COMMANDS } = await import("./release-verify.js");
+    let pkgScripts: Record<string, string> = {};
+    let pkgOk = true;
+    try {
+      const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as { scripts?: Record<string, string> };
+      pkgScripts = pkg.scripts ?? {};
+    } catch (err) {
+      pkgOk = false;
+      process.stderr.write(`[docs:verify] package.json unreadable: ${err instanceof Error ? err.message : String(err)}\n`);
+    }
+    const missing: string[] = [];
+    for (const cmd of Object.values(GATE_COMMANDS)) {
+      const m = cmd.match(/^pnpm\s+([A-Za-z0-9:_-]+)/);
+      const scriptName = m?.[1];
+      if (scriptName !== undefined && pkgScripts[scriptName] === undefined) missing.push(`${scriptName} (for "${cmd}")`);
+    }
+    const truthful = pkgOk && missing.length === 0;
+    checks.push({
+      name: "release gate commands exist in package.json (E4-10)",
+      truthful,
+      reason: !pkgOk
+        ? "package.json unreadable — gate commands cannot be verified"
+        : missing.length === 0
+          ? "every release-gate command maps to a real package.json script"
+          : `gate command(s) reference missing scripts: ${missing.join(", ")}`,
+    });
+  }
+
   return {
     checks,
     ok: checks.every((c) => c.truthful),
