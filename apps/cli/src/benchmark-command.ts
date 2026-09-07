@@ -25,6 +25,9 @@ import {
   securityExpectationFromCase,
   buildActivationEvidenceFromSignalsV2,
   type ObservedActivationSignal,
+  buildV3ArtifactsFromPaired,
+  writeExperimentArtifactV3,
+  loadExperimentArtifactV3,
   buildEffectiveConfig,
   buildPairedPlan,
   buildRunManifest,
@@ -621,6 +624,36 @@ async function runPairedPromotion(
   const artifactPath = join(outDir, "paired-experiment.json");
   await writeFile(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
 
+  // E4-02: canonical IN-PROCESS V3 production. The paired executor's real
+  // outcomes feed the single V3 writer directly — `paired-to-v3.mjs` is no
+  // longer a required production step, and no field is guessed at conversion.
+  if (result.finalizedPairs.length > 0) {
+    const candidateConfigHash = result.finalizedPairs[0]?.candidate.outcome.candidateConfigHash ?? null;
+    const v3 = buildV3ArtifactsFromPaired(result.finalizedPairs, {
+      planDigest,
+      gitSha: manifest.gitSha,
+      dirty: manifest.dirty,
+      model: modelId,
+      provider: provider.id,
+      runtimeConfigHash: manifest.runtimeConfigHash,
+      suiteVersion: manifest.suiteVersion,
+      judgeVersion: manifest.judgeVersion,
+      candidateId: opts.candidate ?? null,
+      candidateConfigHash,
+      isolationStrength: processConfinement ?? "none",
+      promotionEligible: processConfinement === "strong",
+    });
+    const v3BaselinePath = join(outDir, "v3-baseline.json");
+    const v3CandidatePath = join(outDir, "v3-candidate.json");
+    await writeExperimentArtifactV3(v3.baseline, v3BaselinePath);
+    await writeExperimentArtifactV3(v3.candidate, v3CandidatePath);
+    // Strict reload proves the artifact is promotion-loadable end-to-end
+    // (schema + refs + digest + summary). A failure here is a real defect.
+    await loadExperimentArtifactV3(v3BaselinePath);
+    await loadExperimentArtifactV3(v3CandidatePath);
+    lines.push("benchmark: canonical V3 artifacts written + strict-reloaded (v3-baseline.json, v3-candidate.json) — paired-to-v3.mjs not required");
+  }
+
   lines.push(`benchmark: PAIRED experiment (${opts.candidate}) — ${result.finalizedPairs.length}/${plan.pairs.length} pairs finalized`);
   lines.push(
     `benchmark: counters — ${result.counters.logicalRuns} logical runs, ${result.counters.modelCallAttempts} model calls, ${result.counters.transportRetries} transport retries`,
@@ -1116,7 +1149,10 @@ function provenanceForCase(
   // provider call, but the hash itself is honest either way.
   const registry = getCandidateRegistry();
   const resolved = registry.resolve(opts.candidate ?? null);
-  const candidateConfigHash = resolved.semanticDigest;
+  // E4-02: candidateConfigHash must be a real 64-hex digest, not the canonical
+  // config STRING. `semanticDigest` is a stable serialization used for equality
+  // comparison; hashing it yields the promotion-grade config digest.
+  const candidateConfigHash = computeRuntimeConfigHash(resolved.semanticDigest);
   const controlledDifference = opts.candidate != null
     ? [`candidate:${opts.candidate}`]
     : undefined;

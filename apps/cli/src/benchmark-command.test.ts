@@ -955,6 +955,62 @@ describe("E3-02: paired promotion path (real PairedExperimentExecutor)", () => {
     expect(cand.activationEvidenceV2.aggregation.activated).toBeGreaterThanOrEqual(1);
   });
 
+  it("E4-02: paired run emits canonical V3 in-process (no paired-to-v3.mjs), facts from execution", async () => {
+    const root = await makePairCases();
+    const provider = new ScriptedModelProvider(Array.from({ length: 16 }, () => ScriptedModelProvider.text("done")));
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--candidate", "budget_aware_completion_v1", "--allow-insecure-local-benchmark", "--out", join(root, "out")],
+      provider,
+    );
+    expect(result.exitCode).toBe(0);
+    // The canonical sink ran in-process (no manual conversion step).
+    expect(result.lines.join("\n")).toContain("canonical V3 artifacts written + strict-reloaded");
+
+    const { readFile } = await import("node:fs/promises");
+    const base = JSON.parse(await readFile(join(root, "out", "v3-baseline.json"), "utf8"));
+    const cand = JSON.parse(await readFile(join(root, "out", "v3-candidate.json"), "utf8"));
+
+    // schemaVersion + digest present (strict reload already proved validity).
+    expect(base.schemaVersion).toBe("3.0.0");
+    expect(cand.schemaVersion).toBe("3.0.0");
+    expect(cand.contentDigest).toMatch(/^[0-9a-f]{64}$/);
+
+    // Every case present in both arms.
+    expect(base.outcomes.map((o: { caseId: string }) => o.caseId).sort()).toEqual(["a", "b"]);
+    expect(cand.outcomes.map((o: { caseId: string }) => o.caseId).sort()).toEqual(["a", "b"]);
+
+    // provider/model/config hashes come from the execution plan (real, not guessed).
+    expect(cand.provenance.provider).toBe("scripted");
+    expect(cand.provenance.runtimeConfigHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(cand.arm.candidateId).toBe("budget_aware_completion_v1");
+    expect(cand.arm.candidateConfigHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(base.arm.candidateConfigHash).toBeNull();
+    // candidate config hash differs from the runtime config hash (real delta).
+    expect(cand.arm.candidateConfigHash).not.toBe(cand.provenance.runtimeConfigHash);
+
+    // security evidence from the real classifier (per-case, refs resolve).
+    expect(cand.securityOutcomes.length).toBeGreaterThanOrEqual(1);
+    expect(cand.securityOutcomes.every((s: { kind: string }) => typeof s.kind === "string")).toBe(true);
+    for (const o of cand.outcomes) {
+      if (o.securityOutcomeRef !== null) {
+        expect(cand.securityOutcomes.some((s: { caseId: string }) => s.caseId === o.securityOutcomeRef)).toBe(true);
+      }
+    }
+
+    // activation evidence from the real recorder (candidate arm activated).
+    expect(cand.activationEvidence.length).toBeGreaterThanOrEqual(1);
+    expect(cand.outcomes.some((o: { activationRef: string | null }) => o.activationRef !== null)).toBe(true);
+
+    // promotionEligible matches the isolation posture (insecure → false).
+    expect(cand.manifest.promotionEligible).toBe(false);
+    expect(cand.manifest.isolationStrength).toBe("insecure-local");
+
+    // verificationPassed derived from real verifier events, not status.
+    for (const o of cand.outcomes) {
+      expect(o.verificationPassed === null || typeof o.verificationPassed === "boolean").toBe(true);
+    }
+  });
+
   it("2. BA pairs execute the candidate before the baseline (real order in artifact)", async () => {
     const root = await makePairCases();
     const provider = new ScriptedModelProvider(Array.from({ length: 16 }, () => ScriptedModelProvider.text("done")));

@@ -1,4 +1,17 @@
 /**
+ * ⚠️  NON-PRODUCTION MIGRATION TOOL (E4-02) ⚠️
+ *
+ * As of E4-02 the REAL paired benchmark writes canonical V3 artifacts
+ * IN-PROCESS (`buildV3ArtifactsFromPaired` in @ar/evaluation, called by
+ * `runPairedPromotion`). This script is retained ONLY to back-convert
+ * pre-E4-02 `paired-experiment.json` files that predate the in-process sink.
+ *
+ * It MUST NOT be invoked by any release/promotion flow. Its output is always
+ * `promotionEligible: false` (a post-hoc conversion cannot re-establish the
+ * isolation posture or the execution-time facts the in-process sink records),
+ * and it FAILS on missing fields rather than guessing provider/model/hashes.
+ *
+ * ---------------------------------------------------------------------------
  * E3-14 post-benchmark: convert paired-experiment.json finalizedPairs
  * into V3 baseline + candidate artifacts using the PRODUCTION writer.
  *
@@ -36,6 +49,16 @@ async function main() {
 
   if (!finalizedPairs || finalizedPairs.length === 0) {
     console.error("No finalizedPairs found in", pairedPath);
+    process.exit(1);
+  }
+
+  // E4-02 #7: a migration tool must NOT guess required fields — fail on missing.
+  if (!planDigest) {
+    console.error("paired-experiment.json is missing planDigest — refusing to guess (E4-02 #7)");
+    process.exit(1);
+  }
+  if (!candidate) {
+    console.error("paired-experiment.json is missing candidate — refusing to guess (E4-02 #7)");
     process.exit(1);
   }
 
@@ -145,11 +168,17 @@ async function main() {
   }
 
   // 4. Build manifest and provenance
+  // E4-02 #7: a post-hoc conversion can NEVER re-establish the execution-time
+  // isolation posture, so its output is permanently ineligible for promotion.
+  // The `runtimeConfigHash` placeholder below is therefore inert (never
+  // promoted); the in-process sink records the real hash instead.
   const manifest = {
     suiteVersion: "2.1.0",
     judgeVersion: "2.1.0",
     gitSha,
     dirty,
+    promotionEligible: false,
+    isolationStrength: "migration-tool",
   };
   const provenance = {
     sourceManifestPath: null,
