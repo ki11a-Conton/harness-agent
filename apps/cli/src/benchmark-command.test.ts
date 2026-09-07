@@ -994,9 +994,29 @@ describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 pr
   const baseOpts = () => ({
     casesDir: "cases", outDir: "out", budgetTokens: 32000, limit: 0, allowStub: true,
     suite: "regression" as const, shuffle: false, seed: 0, caseDelayMs: 0, repeat: 1,
-    interleave: false, dryRun: false, maxLogicalRuns: 0, maxModelCalls: 0,
-    maxEstimatedTokens: 0, maxEstimatedCostUsd: 0, paidAuthorized: true,
+    interleave: false, dryRun: false, maxLogicalRuns: null as number | null,
+    // A positive cap so paid runs clear the "explicit positive cap" check and
+    // reach the plan-digest gate; the 0=forbid behavior is tested separately.
+    maxModelCalls: 1000 as number | null,
+    maxEstimatedTokens: null as number | null, maxEstimatedCostUsd: null as number | null,
+    paidAuthorized: true,
     planDigest: undefined as string | undefined, allowInsecureLocalBenchmark: false,
+  });
+
+  it("maxModelCalls=0 (FORBID) is rejected before any provider call", async () => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
+    const res = await preflightBenchmark({ ...baseOpts(), maxModelCalls: 0 }, cases, "offline-test");
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.reason).toContain("--max-model-calls (0 = forbid)");
+  });
+
+  it("paid run with an omitted (unlimited) model-call cap is rejected", async () => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
+    const res = await preflightBenchmark({ ...baseOpts(), maxModelCalls: null }, cases, "external-billed");
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.reason).toContain("explicit positive --max-model-calls");
   });
 
   it("external-billed run WITHOUT --plan-digest is rejected before any provider call", async () => {

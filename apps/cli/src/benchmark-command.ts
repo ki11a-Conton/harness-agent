@@ -117,14 +117,19 @@ export interface BenchmarkCommandOptions {
 
   /** E3-01: --dry-run — output canonical plan + plan digest, 0 provider calls. */
   dryRun: boolean;
-  /** E3-01: --max-logical-runs — hard cap on total logical runs (0 = no limit). */
-  maxLogicalRuns: number;
-  /** E3-01: --max-model-calls — hard cap on estimated model calls (0 = no limit). */
-  maxModelCalls: number;
-  /** E3-01: --max-estimated-tokens — hard cap on estimated tokens (0 = no limit). */
-  maxEstimatedTokens: number;
-  /** E3-01: --max-estimated-cost-usd — hard cap on estimated cost in USD (0 = no limit). */
-  maxEstimatedCostUsd: number;
+  /** E3-01/E4-01: --max-logical-runs — hard cap on total logical runs.
+   *  E4-01: `null` (flag omitted) = unlimited; `0` = FORBID (preflight rejects
+   *  any plan that needs >0 runs, before a provider call); positive = the cap. */
+  maxLogicalRuns: number | null;
+  /** E3-01/E4-01: --max-model-calls — hard cap on estimated model calls.
+   *  `null` = unlimited, `0` = FORBID, positive = the cap. */
+  maxModelCalls: number | null;
+  /** E3-01/E4-01: --max-estimated-tokens — hard cap on estimated tokens.
+   *  `null` = unlimited, `0` = FORBID, positive = the cap. */
+  maxEstimatedTokens: number | null;
+  /** E3-01/E4-01: --max-estimated-cost-usd — hard cap on estimated cost in USD.
+   *  `null` = unlimited, `0` = FORBID, positive = the cap. */
+  maxEstimatedCostUsd: number | null;
   /** E3-01: set by RUN_PAID_BENCHMARKS=1 env var. */
   paidAuthorized: boolean;
   /** E3-09: allow promotion-grade benchmark on a platform without a strong
@@ -534,7 +539,10 @@ async function runPairedPromotion(
     plan,
     cases: selected,
     provider,
-    maxModelCalls: opts.maxModelCalls,
+    // E4-01: the executor keeps its internal `0 = unlimited` sentinel; the CLI
+    // maps `null` (unlimited) → 0. A user `0` (forbid) never reaches here —
+    // preflight already rejected it before any provider call.
+    maxModelCalls: opts.maxModelCalls ?? 0,
     journalDir,
     modelSeed: null,
     runArm: (arm, caseDef, ctx) =>
@@ -758,17 +766,19 @@ export async function preflightBenchmark(
     };
   }
 
-  // 7. Hard limits.
-  if (opts.maxLogicalRuns > 0 && totalLogicalRuns > opts.maxLogicalRuns) {
+  // 7. Hard limits. E4-01: `null` (flag omitted) = unlimited; `0` = FORBID, so
+  // any plan that needs >0 of the resource is rejected here — BEFORE any
+  // provider call. Positive = the cap.
+  if (opts.maxLogicalRuns !== null && totalLogicalRuns > opts.maxLogicalRuns) {
     return { ok: false, reason: `plan requires ${totalLogicalRuns} logical runs — exceeds --max-logical-runs (${opts.maxLogicalRuns})` };
   }
-  if (opts.maxModelCalls > 0 && estimatedModelCalls > opts.maxModelCalls) {
-    return { ok: false, reason: `plan estimates ${estimatedModelCalls} model calls — exceeds --max-model-calls (${opts.maxModelCalls})` };
+  if (opts.maxModelCalls !== null && estimatedModelCalls > opts.maxModelCalls) {
+    return { ok: false, reason: `plan estimates ${estimatedModelCalls} model calls — exceeds --max-model-calls (${opts.maxModelCalls}${opts.maxModelCalls === 0 ? " = forbid" : ""})` };
   }
-  if (opts.maxEstimatedTokens > 0 && estimatedTokens > opts.maxEstimatedTokens) {
+  if (opts.maxEstimatedTokens !== null && estimatedTokens > opts.maxEstimatedTokens) {
     return { ok: false, reason: `plan estimates ${estimatedTokens} tokens — exceeds --max-estimated-tokens (${opts.maxEstimatedTokens})` };
   }
-  if (opts.maxEstimatedCostUsd > 0 && estimatedCostUsd > opts.maxEstimatedCostUsd) {
+  if (opts.maxEstimatedCostUsd !== null && estimatedCostUsd > opts.maxEstimatedCostUsd) {
     return {
       ok: false,
       reason: `plan estimates $${estimatedCostUsd.toFixed(4)} — exceeds --max-estimated-cost-usd ($${opts.maxEstimatedCostUsd.toFixed(4)})`,
@@ -800,6 +810,15 @@ export async function preflightBenchmark(
   // one that actually runs. Dry-run is exempt (it makes 0 calls and PRODUCES
   // the digest the user then confirms).
   if (!opts.dryRun && billingClass === "external-billed") {
+    // E4-01: a paid run must set an EXPLICIT positive model-call cap. `null`
+    // (flag omitted = unlimited) risks unbounded spend; `0` (forbid) is already
+    // rejected by the hard-limit check above. Require a real positive cap.
+    if (opts.maxModelCalls === null) {
+      return {
+        ok: false,
+        reason: "a paid (external-billed) run must set an explicit positive --max-model-calls cap (omitted = unlimited is not allowed for billed execution)",
+      };
+    }
     if (opts.planDigest === undefined) {
       return {
         ok: false,
@@ -840,10 +859,10 @@ export interface DryRunPlan {
   estimatedTokens: number;
   estimatedCostUsd: number;
   limits: {
-    maxLogicalRuns: number;
-    maxModelCalls: number;
-    maxEstimatedTokens: number;
-    maxEstimatedCostUsd: number;
+    maxLogicalRuns: number | null;
+    maxModelCalls: number | null;
+    maxEstimatedTokens: number | null;
+    maxEstimatedCostUsd: number | null;
   };
   providerCalls: 0;
 }
@@ -1775,11 +1794,13 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
     repeat: 1,
     interleave: false,
     // E3-01: new flags + env-derived paid authorization.
+    // E4-01: limits default to `null` = unlimited (flag omitted). Passing the
+    // flag with 0 means FORBID; a positive value is the cap.
     dryRun: false,
-    maxLogicalRuns: 0,
-    maxModelCalls: 0,
-    maxEstimatedTokens: 0,
-    maxEstimatedCostUsd: 0,
+    maxLogicalRuns: null,
+    maxModelCalls: null,
+    maxEstimatedTokens: null,
+    maxEstimatedCostUsd: null,
     paidAuthorized: process.env.RUN_PAID_BENCHMARKS === "1",
     planDigest: undefined,
     allowInsecureLocalBenchmark: false,
@@ -1885,7 +1906,7 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
         const value = requireValue(argv, ++i, "--max-logical-runs");
         if (value instanceof Error) return value;
         const n = Number(value);
-        if (!Number.isInteger(n) || n < 0) return new Error("agent benchmark: --max-logical-runs must be a non-negative integer (0 = unlimited)");
+        if (!Number.isInteger(n) || n < 0) return new Error("agent benchmark: --max-logical-runs must be a non-negative integer (0 = forbid; omit the flag for unlimited)");
         opts.maxLogicalRuns = n;
         break;
       }
@@ -1893,7 +1914,7 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
         const value = requireValue(argv, ++i, "--max-model-calls");
         if (value instanceof Error) return value;
         const n = Number(value);
-        if (!Number.isInteger(n) || n < 0) return new Error("agent benchmark: --max-model-calls must be a non-negative integer (0 = unlimited)");
+        if (!Number.isInteger(n) || n < 0) return new Error("agent benchmark: --max-model-calls must be a non-negative integer (0 = forbid; omit the flag for unlimited)");
         opts.maxModelCalls = n;
         break;
       }
@@ -1901,7 +1922,7 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
         const value = requireValue(argv, ++i, "--max-estimated-tokens");
         if (value instanceof Error) return value;
         const n = Number(value);
-        if (!Number.isInteger(n) || n < 0) return new Error("agent benchmark: --max-estimated-tokens must be a non-negative integer (0 = unlimited)");
+        if (!Number.isInteger(n) || n < 0) return new Error("agent benchmark: --max-estimated-tokens must be a non-negative integer (0 = forbid; omit the flag for unlimited)");
         opts.maxEstimatedTokens = n;
         break;
       }
@@ -1909,7 +1930,7 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
         const value = requireValue(argv, ++i, "--max-estimated-cost-usd");
         if (value instanceof Error) return value;
         const n = Number(value);
-        if (!Number.isFinite(n) || n < 0) return new Error("agent benchmark: --max-estimated-cost-usd must be a non-negative number (0 = unlimited)");
+        if (!Number.isFinite(n) || n < 0) return new Error("agent benchmark: --max-estimated-cost-usd must be a non-negative number (0 = forbid; omit the flag for unlimited)");
         opts.maxEstimatedCostUsd = n;
         break;
       }
@@ -1977,10 +1998,10 @@ export async function runSmokeBenchmark(): Promise<{ exitCode: number; lines: st
     interleave: false,
     // E3-01: new fields
     dryRun: false,
-    maxLogicalRuns: 0,
-    maxModelCalls: 0,
-    maxEstimatedTokens: 0,
-    maxEstimatedCostUsd: 0,
+    maxLogicalRuns: null,
+    maxModelCalls: null,
+    maxEstimatedTokens: null,
+    maxEstimatedCostUsd: null,
     paidAuthorized: false,
     planDigest: undefined,
     allowInsecureLocalBenchmark: false,
@@ -1993,6 +2014,15 @@ export async function runSmokeBenchmark(): Promise<{ exitCode: number; lines: st
   }
   if (cases.length === 0) {
     return { exitCode: 1, lines: [`agent benchmark smoke: no cases found in ${opts.casesDir}`] };
+  }
+  // E4-01 #6: smoke is a programmatic benchmark entry too — run the SAME shared
+  // preflight gate (cases, protocol, hard limits) before executing, so no entry
+  // point can reach executeBenchmark without passing the same validation the CLI
+  // path enforces. Smoke is offline (fake provider, no candidate), so the paid /
+  // plan-digest / isolation gates are inert here but the check is uniform.
+  const smokePreflight = await preflightBenchmark(opts, cases, "offline-test");
+  if (!smokePreflight.ok) {
+    return { exitCode: 1, lines: [`agent benchmark smoke: preflight rejected — ${smokePreflight.reason}`] };
   }
   const result = await executeBenchmark(opts, smokeFakeProvider(), cases);
   const usageLine = result.lines.find((line) => line.startsWith("benchmark:")) ?? "";
@@ -2080,10 +2110,10 @@ function benchmarkUsage(): string {
     "  --interleave     give each repeat a distinct PRNG seed (requires --shuffle; order differs per repeat)",
     "  --allow-stub     run even without a model provider (records MODEL_ERROR honestly)",
     "  --dry-run        output canonical JSON plan + plan digest; 0 provider calls (E3-01)",
-    "  --max-logical-runs <n>   hard cap on total logical runs (0 = unlimited, E3-01)",
-    "  --max-model-calls <n>    hard cap on estimated model calls (0 = unlimited, E3-01)",
-    "  --max-estimated-tokens <n>   hard cap on estimated tokens (0 = unlimited, E3-01)",
-    "  --max-estimated-cost-usd <n> hard cap on estimated cost in USD (0 = unlimited, E3-01)",
+    "  --max-logical-runs <n>   hard cap on total logical runs (0 = forbid; omit = unlimited, E4-01)",
+    "  --max-model-calls <n>    hard cap on estimated model calls (0 = forbid; omit = unlimited, E4-01)",
+    "  --max-estimated-tokens <n>   hard cap on estimated tokens (0 = forbid; omit = unlimited, E4-01)",
+    "  --max-estimated-cost-usd <n> hard cap on estimated cost in USD (0 = forbid; omit = unlimited, E4-01)",
     "  --plan-digest <hex>  expected plan digest (sha256 hex); run only if plan matches (E3-01)",
     "  --allow-insecure-local-benchmark  allow promotion benchmark without a strong OS sandbox (never promotion-eligible, E3-09)",
     "  env: RUN_PAID_BENCHMARKS=1   authorize an external billed provider (E3-01)",
