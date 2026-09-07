@@ -21,6 +21,7 @@ import { execFile } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { runGateV2, writeGateEvidenceV2, type GateEvidenceV2 } from "@ar/evaluation";
 
 const execFileAsync = promisify(execFile);
 
@@ -63,10 +64,13 @@ export async function collectReleaseArtifacts(deps: {
   fast?: boolean;
   /** Injectable exec for tests (defaults to the real child_process). */
   execFn?: (cmd: string, args: string[], opts: { cwd: string; timeoutMs: number }) => Promise<string>;
+  /** Injectable gate runner for tests (defaults to the real runGateV2). */
+  gateFn?: typeof runGateV2;
 }): Promise<ReleaseArtifactResult> {
   const outDir = deps.outDir;
   await mkdir(outDir, { recursive: true });
   const execFn = deps.execFn ?? ((cmd, args, opts) => run(cmd, args, opts));
+  const gateFn = deps.gateFn ?? runGateV2;
   const artifacts: ReleaseArtifact[] = [];
 
   const put = (id: string, produced: boolean, note: string, file: string) => {
@@ -165,6 +169,23 @@ export async function collectReleaseArtifacts(deps: {
   };
   await writeFile(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   put("champion-manifest", true, "CHAMPION_MANIFEST.json (empty until a promotion is evidenced)", manifestFile);
+
+  // 9) E4-10 — HEAD-bound gate evidence produced by RUNNING a command (never
+  // hand-written). runGateV2 captures the real exit code, binds HEAD +
+  // cleanness, and digests the gate's artifacts; a nonzero exit or a missing
+  // artifact records state=failed, never a fabricated PASS.
+  const gateEvidencePath = join(outDir, "gate-evidence-capability-audit.json");
+  const gateEvidence: GateEvidenceV2 = await gateFn({
+    gate: "capability_audit",
+    command: ["pnpm", "capability:audit"],
+    cwd: deps.root,
+    toolVersion: "e4-10",
+    environmentClass: "offline",
+    providerCalls: 0,
+    artifactPaths: [join(outDir, "capability", "CAPABILITY_MATRIX.md")],
+  });
+  await writeGateEvidenceV2(gateEvidence, gateEvidencePath);
+  put("gate-evidence", gateEvidence.passed, `GateEvidenceV2 (state=${gateEvidence.state}, exit=${String(gateEvidence.exitCode)}) from a real command run`, gateEvidencePath);
 
   return {
     artifacts,

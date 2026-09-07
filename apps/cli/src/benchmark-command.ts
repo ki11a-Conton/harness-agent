@@ -2243,16 +2243,33 @@ export async function runSmokeBenchmark(): Promise<{ exitCode: number; lines: st
   // Assert from the written report (the summary carries the averages).
   try {
     const report = JSON.parse(await readFile(join(resolve(opts.outDir), "adversarial.json"), "utf8")) as {
-      summary?: { avg_tokens_input?: number; avg_tokens_output?: number };
+      summary?: { avg_tokens_input?: number; avg_tokens_output?: number; passed?: number; total?: number };
+      runs?: Array<{ actual_status?: string }>;
     };
     const avgIn = report.summary?.avg_tokens_input ?? 0;
     const avgOut = report.summary?.avg_tokens_output ?? 0;
     result.lines.push(`smoke: avgInputTokens=${avgIn}, avgOutputTokens=${avgOut}`);
+    // E4-10 #4: the smoke is a BOOT/health gate — it must fail when a case
+    // ERRORED (infrastructure failure) or usage accounting is broken, and when
+    // no case ran at all. An adversarial case that correctly RESISTS (does not
+    // "complete" the poisoned task) is NOT a smoke failure — that is its purpose.
+    const total = report.summary?.total ?? 0;
+    const errored = (report.runs ?? []).filter((r) => r.actual_status === "error");
+    if (total === 0) {
+      result.exitCode = 1;
+      result.lines.push("smoke: FAIL — no cases executed");
+      return result;
+    }
+    if (errored.length > 0) {
+      result.exitCode = 1;
+      result.lines.push(`smoke: FAIL — ${errored.length} run(s) errored (infrastructure)`);
+      return result;
+    }
     if (avgIn <= 0 || avgOut <= 0) {
       result.exitCode = 1;
       result.lines.push("smoke: FAIL — usage accounting broken (tokens not recorded)");
     } else {
-      result.lines.push("smoke: OK — token usage accounting intact (P4-11)");
+      result.lines.push("smoke: OK — cases executed without infrastructure error and token usage accounting intact (P4-11 / E4-10 boot-smoke semantics)");
     }
   } catch (cause) {
     result.exitCode = 1;

@@ -110,10 +110,14 @@ export function runUsageAudit(deps: { root: string; capabilities?: ReadonlyArray
   const caps = deps.capabilities ?? KEY_CAPABILITIES;
   const capabilities: CapabilityUsage[] = [];
   for (const { capability, symbol } of caps) {
-    const exported = files.some((f) => f.isIndex && !f.isAuditor && new RegExp(`\\b${symbol}\\b`).test(f.src));
-    const tested = files.some((f) => f.isTest && !f.isE2E && !f.isAuditor && new RegExp(`\\b${symbol}\\b`).test(f.src));
-    const wiredFiles = files.filter((f) => !f.isTest && !f.isIndex && !f.isAuditor && new RegExp(`\\b${symbol}\\b`).test(f.src));
-    const observedFiles = files.filter((f) => f.isE2E && !f.isAuditor && new RegExp(`\\b${symbol}\\b`).test(f.src));
+    const re = new RegExp(`\\b${symbol}\\b`);
+    // A file that DEFINES the symbol is not a consumer of it.
+    const defRe = new RegExp(`export\\s+(?:async\\s+)?(?:function|class|const|let)\\s+${symbol}\\b|export\\s*\\{[^}]*\\b${symbol}\\b`);
+    const isDefinition = (f: ScannedFile): boolean => defRe.test(f.src);
+    const exported = files.some((f) => f.isIndex && !f.isAuditor && re.test(f.src));
+    const tested = files.some((f) => f.isTest && !f.isE2E && !f.isAuditor && re.test(f.src));
+    const wiredFiles = files.filter((f) => !f.isTest && !f.isIndex && !f.isAuditor && !isDefinition(f) && re.test(f.src));
+    const observedFiles = files.filter((f) => f.isE2E && !f.isAuditor && re.test(f.src));
     const wired = wiredFiles.length > 0;
     const observed = observedFiles.length > 0;
     capabilities.push({

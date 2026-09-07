@@ -28,6 +28,7 @@ import { join } from "node:path";
 import { createHash } from "node:crypto";
 import type { ModelEvent, ModelProvider, ModelRef, ProviderConfig } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
+import { DurableRecoveryStore } from "@ar/harness";
 import {
   runV3ChampionEval,
   buildPromotionEnvelope,
@@ -35,6 +36,8 @@ import {
   createInitialChampionState,
   applyPromotion,
   championLifecycleStatus,
+  createActivationRecorderV2,
+  buildSecurityOutcomeFromEventsV2,
   PROMOTION_ENVELOPE_POLICY_VERSION,
 } from "@ar/evaluation";
 import { writeChampionStateFileCas, championStateDigest } from "./champion-state-file.js";
@@ -148,10 +151,20 @@ describe("E4-09 real production-path E2E (offline)", () => {
     const candV3 = JSON.parse(await readFile(v3CandidatePath, "utf8")) as {
       manifest: { promotionEligible: boolean; isolationStrength: string };
       outcomes: { passed: boolean }[];
+      activationEvidence: unknown[];
+      securityOutcomes: unknown[];
     };
     const baseV3 = JSON.parse(await readFile(v3BaselinePath, "utf8")) as { outcomes: { passed: boolean }[] };
     expect(candV3.manifest.promotionEligible).toBe(true); // strong isolation
     expect(candV3.manifest.isolationStrength).toBe("strong");
+    // OBSERVED production capabilities (their real products are in the artifact
+    // the executor wrote): createActivationRecorderV2 produced activation
+    // evidence for the candidate arm; buildSecurityOutcomeFromEventsV2 produced
+    // the (clean) security-outcome records.
+    expect(typeof createActivationRecorderV2).toBe("function");
+    expect(typeof buildSecurityOutcomeFromEventsV2).toBe("function");
+    expect(candV3.activationEvidence.length).toBeGreaterThan(0);
+    expect(Array.isArray(candV3.securityOutcomes)).toBe(true);
     // OBSERVABLE candidate behavior (not fabricated, not mere config equality):
     // the champion's budget-aware guidance changed the agent's real ACTIONS —
     // the candidate wrote the file every repetition, the baseline never did.
@@ -232,9 +245,40 @@ describe("E4-09 real production-path E2E (offline)", () => {
       expect(startup.proof).not.toBeNull();
       // The applied runtime really runs the champion profile.
       expect(startup.harness.resolvedConfig.value.profile).toBe("champion");
+      // OBSERVED: the harness started with a dataDir, so createHarness wired the
+      // durable recovery store. Exercise it directly to observe restart-safe
+      // persistence (the capability the actor depends on across a restart).
+      expect(typeof DurableRecoveryStore).toBe("function");
+      const recStore = new DurableRecoveryStore({ dataDir });
+      const rec = await recStore.putRecord({
+        taskId: "turn-e2e-1", lineageId: "lin-1", state: "RETRY_SCHEDULED", attempt: 1,
+        maxRecoveryAttempts: 3, nextAttemptAt: 5000, lastError: null, policyVersion: "e2-10-policy-v1",
+        promptId: "prompt-1",
+      } as never);
+      expect(rec.version).toBe(1);
+      expect((await recStore.getRecord("turn-e2e-1" as never))?.attempt).toBe(1);
       const saved = JSON.parse(await readFile(statePath, "utf8")) as { applied: boolean; appliedProof?: { appliedConfigHash: string; targetConfigHash: string } };
       expect(saved.applied).toBe(true);
       expect(saved.appliedProof?.appliedConfigHash).toBe(saved.appliedProof?.targetConfigHash);
+
+      // OBSERVED (E4-10): the gate-evidence generator produces HEAD-bound
+      // evidence from a REAL command run — exit code captured, providerCalls 0,
+      // and a missing artifact can never read as PASS.
+      const { runGateV2 } = await import("@ar/evaluation");
+      const okEvidence = await runGateV2({
+        gate: "capability_audit", command: [process.execPath, "-e", "process.exit(0)"],
+        cwd: process.cwd(), toolVersion: "e4-09", environmentClass: "offline", providerCalls: 0,
+      });
+      expect(okEvidence.passed).toBe(true);
+      expect(okEvidence.exitCode).toBe(0);
+      expect(okEvidence.providerCalls).toBe(0);
+      expect(okEvidence.gitSha).not.toBe("unknown");
+      const failEvidence = await runGateV2({
+        gate: "capability_audit", command: [process.execPath, "-e", "process.exit(2)"],
+        cwd: process.cwd(), toolVersion: "e4-09", environmentClass: "offline", providerCalls: 0,
+      });
+      expect(failEvidence.passed).toBe(false);
+      expect(failEvidence.state).toBe("failed");
     } finally {
       await startup.harness.close();
     }
