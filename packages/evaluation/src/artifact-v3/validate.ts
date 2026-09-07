@@ -24,7 +24,7 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { ArtifactSchemaError, classifyArtifact, parseExperimentArtifactV3 } from "./schema.js";
+import { ArtifactSchemaError, classifyArtifact, findRefAndEventViolations, parseExperimentArtifactV3 } from "./schema.js";
 import type { ExperimentArtifactV3 } from "./types.js";
 import { discoverArtifactFiles } from "./loader.js";
 import { computeContentDigestV3, deriveSummaryV3 } from "./writer.js";
@@ -39,7 +39,9 @@ export type ValidationReasonCode =
   | "DUPLICATE_OUTCOME"
   | "MISSING_REQUIRED_FIELD"
   | "LEGACY_NOT_PROMOTION_ELIGIBLE"
-  | "EMPTY_ARTIFACT";
+  | "EMPTY_ARTIFACT"
+  | "DANGLING_REF"
+  | "DUPLICATE_EVENT";
 
 export interface ArtifactValidationCheck {
   code: ValidationReasonCode;
@@ -152,6 +154,19 @@ export function validateArtifactV3(artifact: ExperimentArtifactV3): ArtifactVali
     });
   } else {
     checks.push({ code: "MISSING_REQUIRED_FIELD", passed: true, detail: "provenance identity present" });
+  }
+
+  // 7. E4-03 #2: outcome refs resolve to real events; activation ids unique.
+  const { dangling, duplicateEvents } = findRefAndEventViolations(artifact);
+  if (duplicateEvents.length > 0) {
+    checks.push({ code: "DUPLICATE_EVENT", passed: false, detail: `duplicate activationEvidence ids: ${duplicateEvents.join(", ")}` });
+  } else {
+    checks.push({ code: "DUPLICATE_EVENT", passed: true, detail: "activation event ids unique" });
+  }
+  if (dangling.length > 0) {
+    checks.push({ code: "DANGLING_REF", passed: false, detail: dangling.join("; ") });
+  } else {
+    checks.push({ code: "DANGLING_REF", passed: true, detail: "all outcome refs resolve to real events" });
   }
 
   return checks;

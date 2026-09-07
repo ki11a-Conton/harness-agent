@@ -20,7 +20,9 @@ export type SchemaErrorReason =
   | "DUPLICATE_OUTCOME"
   | "MISSING_REQUIRED_FIELD"
   | "CONTENT_DIGEST_MISMATCH"
-  | "SUMMARY_MISMATCH";
+  | "SUMMARY_MISMATCH"
+  | "DANGLING_REF"
+  | "DUPLICATE_EVENT";
 
 export class ArtifactSchemaError extends Error {
   readonly reason: SchemaErrorReason;
@@ -271,4 +273,35 @@ export function parseExperimentArtifactV3(value: unknown): ExperimentArtifactV3 
     provenance,
     contentDigest,
   };
+}
+
+/**
+ * E4-03 #2: cross-field integrity — every outcome ref must resolve to a real
+ * event carried in the SAME artifact, and activation-evidence event ids must be
+ * unique. Returns violation descriptions (empty = clean). Used by both the
+ * strict loader (throws) and the directory validator (records checks).
+ *   - activationRef        → an activationEvidence[].id
+ *   - securityOutcomeRef   → a securityOutcomes[].caseId
+ */
+export function findRefAndEventViolations(artifact: ExperimentArtifactV3): {
+  dangling: string[];
+  duplicateEvents: string[];
+} {
+  const activationIds = new Set<string>();
+  const duplicateEvents: string[] = [];
+  for (const ae of artifact.activationEvidence) {
+    if (activationIds.has(ae.id)) duplicateEvents.push(ae.id);
+    activationIds.add(ae.id);
+  }
+  const securityCaseIds = new Set(artifact.securityOutcomes.map((s) => s.caseId));
+  const dangling: string[] = [];
+  for (const o of artifact.outcomes) {
+    if (o.activationRef !== null && !activationIds.has(o.activationRef)) {
+      dangling.push(`outcomes[${o.caseId}].activationRef "${o.activationRef}" has no matching activationEvidence id`);
+    }
+    if (o.securityOutcomeRef !== null && !securityCaseIds.has(o.securityOutcomeRef)) {
+      dangling.push(`outcomes[${o.caseId}].securityOutcomeRef "${o.securityOutcomeRef}" has no matching securityOutcome caseId`);
+    }
+  }
+  return { dangling, duplicateEvents };
 }

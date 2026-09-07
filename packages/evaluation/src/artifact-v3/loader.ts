@@ -9,7 +9,7 @@
 
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { ArtifactSchemaError, classifyArtifact, parseExperimentArtifactV3 } from "./schema.js";
+import { ArtifactSchemaError, classifyArtifact, findRefAndEventViolations, parseExperimentArtifactV3 } from "./schema.js";
 import type { ArtifactClassification, ExperimentArtifactV3 } from "./types.js";
 import { canonicalDigestInput, deriveSummaryV3 } from "./writer.js";
 
@@ -54,6 +54,17 @@ export async function loadExperimentArtifactV3(path: string): Promise<LoadedArti
     );
   }
   const artifact = parseExperimentArtifactV3(parsed);
+
+  // E4-03 #2: outcome refs must resolve to real events in this artifact, and
+  // activation-evidence ids must be unique — enforced on the strict-load path.
+  const { dangling, duplicateEvents } = findRefAndEventViolations(artifact);
+  if (duplicateEvents.length > 0) {
+    throw new ArtifactSchemaError("DUPLICATE_EVENT", "activationEvidence", `duplicate event ids: ${duplicateEvents.join(", ")}`);
+  }
+  if (dangling.length > 0) {
+    throw new ArtifactSchemaError("DANGLING_REF", "outcomes", dangling.join("; "));
+  }
+
   const recomputedSummary = deriveSummaryV3(artifact.outcomes);
 
   // Re-verify content digest (CONTENT_DIGEST_MISMATCH on tampering). The

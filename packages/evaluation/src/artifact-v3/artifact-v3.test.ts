@@ -138,6 +138,43 @@ describe("E4-03: field-level strict validation — numeric bounds + shape-only c
       expect(() => parseExperimentArtifactV3(art)).toThrow(ArtifactSchemaError);
     }
   });
+
+  it("E4-03 #2: strict load rejects dangling outcome refs and duplicate activation event ids", async () => {
+    const dir = await makeTempDir();
+    try {
+      const path = join(dir, "baseline-holdout.json");
+
+      // activationRef points at no activationEvidence entry.
+      const dangling = buildExperimentArtifactV3(makeInput({
+        outcomes: [makeOutcome({ activationRef: "ghost", securityOutcomeRef: null })],
+        activationEvidence: [],
+        securityOutcomes: [],
+      }));
+      await writeExperimentArtifactV3(dangling, path);
+      await expect(loadExperimentArtifactV3(path)).rejects.toThrow(/DANGLING_REF/);
+
+      // securityOutcomeRef points at no securityOutcomes caseId.
+      const danglingSec = buildExperimentArtifactV3(makeInput({
+        outcomes: [makeOutcome({ activationRef: null, securityOutcomeRef: "no-such-case" })],
+        securityOutcomes: [],
+      }));
+      await writeExperimentArtifactV3(danglingSec, path);
+      await expect(loadExperimentArtifactV3(path)).rejects.toThrow(/DANGLING_REF/);
+
+      // duplicate activationEvidence event ids.
+      const dupEvents = buildExperimentArtifactV3(makeInput({
+        outcomes: [makeOutcome({ activationRef: "ae-1", securityOutcomeRef: null })],
+        activationEvidence: [
+          { id: "ae-1", reasonCodes: ["r"], note: "a" },
+          { id: "ae-1", reasonCodes: ["r"], note: "b" },
+        ],
+      }));
+      await writeExperimentArtifactV3(dupEvents, path);
+      await expect(loadExperimentArtifactV3(path)).rejects.toThrow(/DUPLICATE_EVENT/);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("E2-01 writer -> strict loader round-trip", () => {
@@ -407,7 +444,7 @@ describe("E2-01 field preservation table (deliverable)", () => {
           { id: "recovery.decided", action: "change_strategy", budgetExhausted: true },
         ],
         activationRef: "ae-1",
-        securityOutcomeRef: "sec-1",
+        securityOutcomeRef: "ho-42",
         outputDigest: "out-digest-1",
         workspaceDigest: "ws-digest-1",
         judgeVersion: "9.9.9",
@@ -438,7 +475,7 @@ describe("E2-01 field preservation table (deliverable)", () => {
       expect(o.recoveryDecisions[1]!.action).toBe("change_strategy");
       expect(o.recoveryDecisions[1]!.budgetExhausted).toBe(true);
       expect(o.activationRef).toBe("ae-1");
-      expect(o.securityOutcomeRef).toBe("sec-1");
+      expect(o.securityOutcomeRef).toBe("ho-42");
       expect(o.outputDigest).toBe("out-digest-1");
       expect(o.workspaceDigest).toBe("ws-digest-1");
       expect(o.judgeVersion).toBe("9.9.9");
