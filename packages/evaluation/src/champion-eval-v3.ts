@@ -41,6 +41,9 @@ export interface DecisionArtifactV3 {
   policyVersion: string;
   /** E4-05 #5: sha256 over the applied DecisionPolicyV3 (thresholds). */
   thresholdDigest: string;
+  /** E4-06 #4: the FULL applied policy, embedded so the promotion loader can
+   *  replay the evaluator deterministically and verify thresholdDigest. */
+  policy: DecisionPolicyV3;
   candidateId: string | null;
   /** Plan digest from the candidate artifact manifest (nullable). */
   planDigest: string | null;
@@ -89,6 +92,7 @@ export function buildDecisionArtifactV3(
     schemaVersion: DECISION_ARTIFACT_V3_SCHEMA_VERSION,
     policyVersion: policy.version,
     thresholdDigest: computeThresholdDigestV3(policy),
+    policy,
     candidateId,
     planDigest,
     baselineArtifactDigest: baselineDigest,
@@ -307,6 +311,55 @@ export function deriveV3Decision(
   );
 
   return { envelope, derivedInputs: inputs, decisionArtifact };
+}
+
+/**
+ * E4-06 #4/#5 — replay the pure evaluator on the strict-loaded V3 pair and
+ * compare the FULL decision payload to the stored DecisionArtifact. A hand-
+ * forged `{"decision":"ACCEPT"}` over a pair that actually fails a hard gate
+ * (security breach, incomparability, incomplete pairing) is caught here, as is
+ * a tampered thresholdDigest (must equal the digest of the embedded policy).
+ * Returns violation strings (empty when the replay reproduces the stored
+ * decision exactly).
+ */
+export function verifyDecisionArtifactReplayV3(
+  baseline: ExperimentArtifactV3,
+  candidate: ExperimentArtifactV3,
+  stored: Record<string, unknown>,
+): string[] {
+  const violations: string[] = [];
+  let policy: DecisionPolicyV3;
+  try {
+    policy = validateDecisionPolicyV3(stored["policy"]);
+  } catch (err) {
+    violations.push(`stored decision policy invalid: ${err instanceof Error ? err.message : String(err)}`);
+    return violations;
+  }
+  if (stored["thresholdDigest"] !== computeThresholdDigestV3(policy)) {
+    violations.push(`stored thresholdDigest ${String(stored["thresholdDigest"])} != digest(embedded policy) (thresholds tampered)`);
+  }
+  const candidateId = typeof stored["candidateId"] === "string" ? (stored["candidateId"] as string) : null;
+  const planDigest = typeof stored["planDigest"] === "string" ? (stored["planDigest"] as string) : null;
+  const pair: V3ArtifactPair = {
+    baseline,
+    candidate,
+    baselineDigest: String(stored["baselineArtifactDigest"] ?? ""),
+    candidateDigest: String(stored["candidateArtifactDigest"] ?? ""),
+  };
+  const replay = deriveV3Decision(pair, candidateId, planDigest, policy);
+  const da = replay.decisionArtifact;
+  const eq = (a: unknown, b: unknown): boolean => stableStringify(a) === stableStringify(b);
+  if (da.decision !== stored["decision"]) {
+    violations.push(`replayed decision ${da.decision} != stored ${String(stored["decision"])}`);
+  }
+  if (!eq(da.reasonCodes, stored["reasonCodes"])) violations.push("replayed reasonCodes != stored");
+  if (!eq(da.gates, stored["gates"])) violations.push("replayed gates != stored");
+  if (!eq(da.statistics, stored["statistics"])) violations.push("replayed statistics != stored");
+  if (!eq(da.perRepetitionDeltas, stored["perRepetitionDeltas"])) violations.push("replayed perRepetitionDeltas != stored");
+  if (da.repetitions !== stored["repetitions"]) {
+    violations.push(`replayed repetitions ${da.repetitions} != stored ${String(stored["repetitions"])}`);
+  }
+  return violations;
 }
 
 /** Full public entry: accepts artifact PATHS only and returns the decision

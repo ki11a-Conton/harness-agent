@@ -24,8 +24,9 @@
 
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { stableStringify } from "./manifest.js";
-import { classifyArtifact, parseExperimentArtifactV3 } from "./artifact-v3/schema.js";
+import { loadExperimentArtifactV3 } from "./artifact-v3/loader.js";
 
 export const PROMOTION_ENVELOPE_SCHEMA_VERSION = "3.0.0";
 export const PROMOTION_ENVELOPE_POLICY_VERSION = "e2-07-policy-v1";
@@ -76,6 +77,7 @@ export type EnvelopeValidationCode =
   | "DECISION_ARTIFACT_DIGEST_CHANGED"
   | "DECISION_ARTIFACT_INVALID"
   | "DECISION_ARTIFACT_DIGEST_INVALID"
+  | "DECISION_REPLAY_MISMATCH"
   | "CANDIDATE_MISMATCH"
   | "PARENT_STATE_MISMATCH"
   | "POLICY_VERSION_MISMATCH"
@@ -294,36 +296,27 @@ export async function loadPromotionEnvelope(
     const candRef = refByRole.get("candidate");
     if (!baseRef) issues.push({ code: "MISSING_REQUIRED_FIELD", detail: "artifactRefs missing a baseline role" });
     if (!candRef) issues.push({ code: "MISSING_REQUIRED_FIELD", detail: "artifactRefs missing a candidate role" });
+    // One file may not impersonate two roles (e.g. baseline ref pointed at the
+    // candidate artifact).
+    if (baseRef && candRef && resolve(baseRef.path) === resolve(candRef.path)) {
+      issues.push({ code: "CROSS_BINDING_MISMATCH", detail: "baseline and candidate artifactRefs resolve to the same file (one file per role)" });
+    }
 
     const strictLoadV3 = async (ref: AxisArtifactRef | undefined, role: string) => {
       if (!ref) return null;
-      let buf: Buffer;
+      // Full strict load: schema + refs + content digest + summary + eventRecords.
+      // A plain text file, a non-V3 shape, or a V3 whose internal contentDigest
+      // no longer matches its (tampered) outcomes all throw here.
       try {
-        buf = await readFile(ref.path);
-      } catch {
-        issues.push({ code: "ARTIFACT_MISSING", detail: `${role} artifact ${ref.path} unreadable` });
-        return null;
-      }
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(buf.toString("utf8"));
-      } catch {
-        issues.push({ code: "ARTIFACT_NOT_V3", detail: `${role} artifact ${ref.path} is not valid JSON (a plain text file with a matching SHA is not a V3 artifact)` });
-        return null;
-      }
-      if (classifyArtifact(parsed).kind !== "v3") {
-        issues.push({ code: "ARTIFACT_NOT_V3", detail: `${role} artifact ${ref.path} is not a V3 experiment artifact (shape ${classifyArtifact(parsed).kind})` });
-        return null;
-      }
-      try {
-        return parseExperimentArtifactV3(parsed);
+        const { artifact } = await loadExperimentArtifactV3(ref.path);
+        return artifact;
       } catch (err) {
-        issues.push({ code: "ARTIFACT_NOT_V3", detail: `${role} artifact ${ref.path} fails strict V3 parse: ${err instanceof Error ? err.message : String(err)}` });
+        issues.push({ code: "ARTIFACT_NOT_V3", detail: `${role} artifact ${ref.path} fails strict V3 load: ${err instanceof Error ? err.message : String(err)}` });
         return null;
       }
     };
     const candV3 = await strictLoadV3(candRef, "candidate");
-    await strictLoadV3(baseRef, "baseline");
+    const baseV3 = await strictLoadV3(baseRef, "baseline");
 
     // candidate must be promotion-eligible (strong isolation recorded at run time).
     if (candV3 && candV3.manifest["promotionEligible"] !== true) {
@@ -348,6 +341,16 @@ export async function loadPromotionEnvelope(
         }
         if (candV3 && e.sourceSha != null && e.sourceSha !== candV3.provenance.gitSha) {
           issues.push({ code: "CROSS_BINDING_MISMATCH", detail: `envelope.sourceSha ${String(e.sourceSha)} != candidate provenance.gitSha ${String(candV3.provenance.gitSha)}` });
+        }
+        // E4-06 #4/#5: replay the pure evaluator on the strict-loaded pair and
+        // require the FULL decision payload to match the stored artifact. A file
+        // that says ACCEPT over a pair that actually fails is caught here.
+        if (baseV3 && candV3) {
+          const { verifyDecisionArtifactReplayV3 } = await import("./champion-eval-v3.js");
+          const replayViolations = verifyDecisionArtifactReplayV3(baseV3, candV3, parsed);
+          for (const v of replayViolations) {
+            issues.push({ code: "DECISION_REPLAY_MISMATCH", detail: v });
+          }
         }
       } catch {
         // presence/JSON already reported by the block above

@@ -150,12 +150,12 @@ describe("E2-16 final integration acceptance", () => {
       const artifact = buildExperimentArtifactV3({
         arm: { armId: "candidate", candidateId: "adaptive_recovery_v2", candidateConfigHash: arm.digest },
         manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: "d".repeat(64), promotionEligible: true, isolationStrength: "strong" },
-        outcomes: Array.from({ length: 6 }, (_, i) => ({
-          caseId: `ho-0${i + 1}`,
+        outcomes: Array.from({ length: 12 }, (_, i) => ({
+          caseId: `ho-0${(i % 6) + 1}`,
           suite: "holdout",
           armId: "candidate",
           attempt: 1,
-          repetition: 1,
+          repetition: Math.floor(i / 6) + 1,
           order: i + 1,
           passed: true,
           grade: "good",
@@ -168,7 +168,7 @@ describe("E2-16 final integration acceptance", () => {
           latencyMs: 100,
           toolCalls: 3,
           recoveryDecisions: [{ id: "recovery.decided", action: "retry_safe", budgetExhausted: false }],
-          activationRef: null,
+          activationRef: `act-${i + 1}`,
           securityOutcomeRef: null,
           outputDigest: null,
           workspaceDigest: null,
@@ -176,7 +176,7 @@ describe("E2-16 final integration acceptance", () => {
           evaluationContextHash: "a".repeat(64),
           candidateConfigHash: arm.digest,
         })),
-        activationEvidence: [],
+        activationEvidence: Array.from({ length: 12 }, (_, i) => ({ id: `act-${i + 1}`, reasonCodes: ["memory.retrieved"], note: "activation observed" })),
         securityOutcomes: [],
         provenance: { sourceManifestPath: null, gitSha: "c".repeat(40), dirty: false, model: "deepseek-v4-flash", provider: "fake", runtimeConfigHash: arm.digest },
       });
@@ -188,8 +188,8 @@ describe("E2-16 final integration acceptance", () => {
       const baselineArtifact = buildExperimentArtifactV3({
         arm: { armId: "baseline", candidateId: null, candidateConfigHash: null },
         manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: "d".repeat(64), promotionEligible: true, isolationStrength: "strong" },
-        outcomes: Array.from({ length: 6 }, (_, i) => ({
-          caseId: `ho-0${i + 1}`, suite: "holdout", armId: "baseline", attempt: 1, repetition: 1, order: i + 1,
+        outcomes: Array.from({ length: 12 }, (_, i) => ({
+          caseId: `ho-0${(i % 6) + 1}`, suite: "holdout", armId: "baseline", attempt: 1, repetition: Math.floor(i / 6) + 1, order: i + 1,
           passed: false, grade: "poor", verificationPassed: false, terminationReason: "verified_complete",
           failureCategory: null, inputTokens: 900, outputTokens: 400, costUsd: 0.01, latencyMs: 100,
           toolCalls: 3, recoveryDecisions: [], activationRef: null, securityOutcomeRef: null,
@@ -207,49 +207,20 @@ describe("E2-16 final integration acceptance", () => {
       const validated = await validateArtifactDir(dir);
       expect(validated.ok).toBe(true);
 
-      // 3. Decision ACCEPT fixture (sufficient reps, no regression).
-      const decision = decideChampionV3({
-        digestValid: true,
-        pairComplete: true,
-        comparable: true,
-        incomparabilityReasons: [],
-        activationCoverage: 1,
-        activationEligibleCases: 6,
-        minActivationEligibleCases: 3,
-        minActivationCoverage: 0.5,
-        securityBreachesCandidate: 0,
-        securityBreachesBaseline: 0,
-        baselineVerifiedRate: 0.8,
-        candidateVerifiedRate: 0.9,
-        maxVerifiedDrop: 0.05,
-        infraFailuresBaseline: 0,
-        infraFailuresCandidate: 0,
-        cases: 6,
-        netPassedDelta: 3,
-        repetitions: 3,
-        perRepetitionDeltas: [1, 1, 1],
-        minConclusiveNetDelta: 2,
-        tokensDelta: 10000,
-        maxTokensDelta: 100000,
-        recommendsRepetition: false,
+      // 3. Decision DERIVED from the real V3 pair (E4-06: no hand-filled gates —
+      //    the promotion loader replays the evaluator and must reproduce this).
+      const { runV3ChampionEval } = await import("./champion-eval-v3.js");
+      const evalResult = await runV3ChampionEval({
+        baselinePath,
+        candidatePath: artifactPath,
+        candidateId: "adaptive_recovery_v2",
       });
-      expect(decision.decision).toBe("ACCEPT");
+      const decisionArtifact = evalResult.decisionArtifact;
+      expect(decisionArtifact.decision).toBe("ACCEPT");
 
-      // 4. Promotion transaction via envelope authority. The artifact digest is
-      // computed from the ACTUAL file on disk (writeExperimentArtifactV3 adds
-      // the canonical contentDigest), matching loadPromotionEnvelope's
-      // re-verification. E3-07: the envelope must reference a REAL
-      // DecisionArtifactV3 file (path + digest) that says ACCEPT.
+      // 4. Promotion transaction via envelope authority over the REAL decision
+      //    artifact file (path + digest).
       const { readFile } = await import("node:fs/promises");
-      const { buildDecisionArtifactV3 } = await import("./champion-eval-v3.js");
-      const decisionArtifact = buildDecisionArtifactV3(
-        decision,
-        "baseline-digest",
-        "candidate-digest",
-        "adaptive_recovery_v2",
-        "d".repeat(64),
-        [1, 1, 1],
-      );
       const decisionArtifactPath = join(dir, "decision-artifact.json");
       await writeFile(decisionArtifactPath, JSON.stringify(decisionArtifact), "utf8");
       const decisionArtifactOnDisk = await readFile(decisionArtifactPath, "utf8");
@@ -258,7 +229,7 @@ describe("E2-16 final integration acceptance", () => {
       const onDiskBase = await readFile(baselinePath, "utf8");
       const envelope = buildPromotionEnvelope({
         generatedBy: "e2-16",
-        decisionEnvelopeDigest: sha(JSON.stringify(decision.statistics)),
+        decisionEnvelopeDigest: sha(JSON.stringify(decisionArtifact.statistics)),
         candidateId: "adaptive_recovery_v2",
         parentLevel: "C0",
         parentStateDigest: sha("c0-state"),
