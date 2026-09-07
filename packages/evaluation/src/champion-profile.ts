@@ -128,6 +128,31 @@ export function runtimeIdentityDigest(identity: RuntimeProfileIdentity): string 
 export interface ChampionProfileLoaderOptions {
   /** Fallback harness config defaults to fill non-candidate fields. */
   baseHarnessConfig?: Record<string, unknown>;
+  /**
+   * E4-07: allow the profile to be resolved for a champion that is PROMOTED BUT
+   * NOT YET APPLIED (validity QUARANTINED_PENDING_REEVALUATION, applied=false,
+   * level != C0). This is used ONLY by the runtime application path, which must
+   * resolve the candidate's config in order to PROVE it can be applied; a
+   * successful application flips validity to PROVEN. Production profile loading
+   * without this option stays fail-closed: a quarantined champion never enters
+   * production. INVALID_PROVENANCE is never accepted under any option.
+   */
+  allowPendingApplication?: boolean;
+}
+
+/**
+ * E4-07: is this state a promotion claim awaiting runtime application? True
+ * for a non-C0 champion level that is unapplied and pending re-evaluation, and
+ * never for an invalid-provenance state.
+ */
+export function championAwaitingApplication(state: ChampionProfileStateSource | null): boolean {
+  if (state === null) return false;
+  return (
+    state.level !== null &&
+    state.level !== "C0" &&
+    state.applied === false &&
+    state.validity === "QUARANTINED_PENDING_REEVALUATION"
+  );
 }
 
 /**
@@ -165,12 +190,16 @@ export function resolveChampionProfile(
     return { ok: false, profile: null, reasonCode: "PROFILE_NOT_FOUND", reason: "unsupported selection" };
   }
   if (state.validity !== "PROVEN") {
-    return {
-      ok: false,
-      profile: null,
-      reasonCode: "CHAMPION_QUARANTINED_OR_INVALID",
-      reason: `champion ${state.level} (${state.candidateId}) is ${state.validity} — quarantined/invalid champions never enter production`,
-    };
+    // E4-07: the runtime application path may resolve a promotion claim that is
+    // still awaiting its proof. Everything else stays fail-closed.
+    if (!(opts.allowPendingApplication === true && championAwaitingApplication(state))) {
+      return {
+        ok: false,
+        profile: null,
+        reasonCode: "CHAMPION_QUARANTINED_OR_INVALID",
+        reason: `champion ${state.level} (${state.candidateId}) is ${state.validity} — quarantined/invalid champions never enter production`,
+      };
+    }
   }
   if (selection.candidateId !== state.candidateId || selection.level !== state.level) {
     return {

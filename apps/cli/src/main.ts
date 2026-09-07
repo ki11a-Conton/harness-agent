@@ -1,7 +1,8 @@
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import type { ModelProvider, ModelRef, PermissionPolicy } from "@ar/contracts";
-import { createHarness, defaultSandboxPolicy } from "@ar/harness";
+import { defaultSandboxPolicy } from "@ar/harness";
+import { createHarnessWithChampion } from "./champion-application.js";
 import { createRuntimeRpc, InMemoryTransport } from "@ar/gateway";
 import {
   createProductionTools,
@@ -118,14 +119,23 @@ export async function createDefaultDeps(options: DefaultDepsOptions = {}): Promi
   if (memoryEnabled && dataDir === undefined) {
     throw new Error("memory is enabled but no dataDir is configured (--data-dir or HARNESS_DATA_DIR) — refusing to write memories into the workspace");
   }
-  const harness = await createHarness({
-    cwd: process.cwd(),
-    ...(dataDir !== undefined ? { dataDir } : {}),
-    profile: "interactive",
-    modelProvider,
-    model: defaultModelRef(modelProvider, options.model),
-    ...(memoryEnabled ? { featureFlags: { memory: true, learning: true } } : {}),
+  // E4-07: the CLI production composition root uses the shared champion
+  // application path. It reads the champion state, applies the resolved profile
+  // through the real createHarness, verifies the final normalized config, and
+  // writes an AppliedProof by CAS only after the configuration matches.
+  const championStartup = await createHarnessWithChampion({
+    runtimeEntrypoint: "cli",
+    baseConfig: {
+      cwd: process.cwd(),
+      ...(dataDir !== undefined ? { dataDir } : {}),
+      profile: "interactive",
+      modelProvider,
+      model: defaultModelRef(modelProvider, options.model),
+      ...(memoryEnabled ? { featureFlags: { memory: true, learning: true } } : {}),
+    },
+    sourceSha: process.env.GIT_SHA ?? null,
   });
+  const harness = championStartup.harness;
   const registry = createRuntimeRpc(harness.runtime, {
     sessionService: harness.sessionService,
     sessions: harness.sessions,

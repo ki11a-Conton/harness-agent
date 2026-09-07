@@ -127,7 +127,7 @@ export function resolveChampionHarness(
     applied: boolean;
   } | null,
   selection: { level: string; candidateId: string },
-  opts?: { dataDir?: string },
+  opts?: { dataDir?: string; allowPendingApplication?: boolean },
 ): {
   ok: boolean;
   harnessConfig?: ChampionHarnessConfig;
@@ -139,7 +139,7 @@ export function resolveChampionHarness(
     kind: "explicit-champion",
     level: selection.level,
     candidateId: selection.candidateId,
-  });
+  }, { allowPendingApplication: opts?.allowPendingApplication === true });
   if (!profileResult.ok || profileResult.profile === null) {
     return { ok: false, reason: profileResult.reason };
   }

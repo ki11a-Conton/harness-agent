@@ -1,7 +1,12 @@
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
-import { createHarness, type Harness } from "@ar/harness";
-import { DEFAULT_MODEL_ID, resolveModelProvider, STUB_PROVIDER_ID } from "@ar/cli";
+import type { Harness } from "@ar/harness";
+import {
+  createHarnessWithChampion,
+  DEFAULT_MODEL_ID,
+  resolveModelProvider,
+  STUB_PROVIDER_ID,
+} from "@ar/cli";
 import { createRuntimeRpc, Gateway } from "@ar/gateway";
 import type { AgentSummary } from "@ar/gateway";
 import { WebChannelAdapter } from "./adapter.js";
@@ -23,16 +28,25 @@ export async function main(): Promise<number> {
   // E3-01: resolveModelProvider now returns a BillingProvider — unwrap the
   // provider for harness wiring.
   const provider = (await resolveModelProvider()).provider;
-  const harness: Harness = await createHarness({
-    cwd: process.cwd(),
-    ...(dir !== undefined && dir.length > 0 ? { dataDir: dir } : {}),
-    profile: "interactive",
-    modelProvider: provider,
-    model: {
-      providerId: provider.id,
-      modelId: provider.id === STUB_PROVIDER_ID ? "stub-model" : DEFAULT_MODEL_ID,
+  // E4-07: Web uses the same production champion application path as CLI.
+  // The shared path resolves the pending champion profile, passes it through
+  // the real createHarness, verifies the final normalized configuration, and
+  // writes an AppliedProof by CAS only after the target configuration matches.
+  const championStartup = await createHarnessWithChampion({
+    runtimeEntrypoint: "web",
+    baseConfig: {
+      cwd: process.cwd(),
+      ...(dir !== undefined && dir.length > 0 ? { dataDir: dir } : {}),
+      profile: "interactive",
+      modelProvider: provider,
+      model: {
+        providerId: provider.id,
+        modelId: provider.id === STUB_PROVIDER_ID ? "stub-model" : DEFAULT_MODEL_ID,
+      },
     },
+    sourceSha: process.env.GIT_SHA ?? null,
   });
+  const harness: Harness = championStartup.harness;
   const agentId = harness.agents[0]?.id;
   if (agentId === undefined) {
     await harness.close();

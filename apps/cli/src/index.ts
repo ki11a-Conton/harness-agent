@@ -17,6 +17,15 @@ export {
 export type { DefaultDepsOptions } from "./main.js";
 
 export {
+  createHarnessWithChampion,
+  projectChampionFieldChecks,
+} from "./champion-application.js";
+export type {
+  ChampionStartupOutcome,
+  CreateHarnessWithChampionOptions,
+} from "./champion-application.js";
+
+export {
   billingClassForProvider,
   resolveModelProvider,
   STUB_PROVIDER_ID,
