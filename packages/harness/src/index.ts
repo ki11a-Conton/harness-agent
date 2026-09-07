@@ -3,6 +3,7 @@ export * from "./profiles.js";
 export * from "./introspection.js";
 export * from "./lifecycle.js";
 export * from "./mem-stores.js";
+export * from "./durable-recovery-store.js";
 export * from "./create-harness.js";
 export * from "./memory-runtime-bridge.js";
 export * from "./scope-resolver.js";

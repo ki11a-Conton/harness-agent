@@ -73,6 +73,7 @@ import { AgentExecutionScheduler, Delegator, ParallelDelegator } from "@ar/agent
 import { connectMcpServer, type McpServerConnection } from "@ar/mcp";
 import { TaskVerifier } from "@ar/tools";
 import { MemEventStore, MemSessionStore } from "./mem-stores.js";
+import { DurableRecoveryStore } from "./durable-recovery-store.js";
 import {
   DEFAULT_CONTEXT_BUDGET,
   type HarnessConfig,
@@ -645,6 +646,12 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   boundDelegator.value = delegator;
   boundParallelDelegator.value = parallelDelegator;
   const sessionService = new SessionService({ store });
+  // E4-08: production recovery persistence. When a dataDir is configured the
+  // actor's recovery record (attempt / nextAttemptAt / lease / terminal state)
+  // survives a real process restart via an atomic, CAS-guarded durable store.
+  // Without a dataDir (ephemeral / in-memory mode) the actor keeps its
+  // in-memory fallback — never the production path.
+  const recoveryStore = dataDir !== undefined ? new DurableRecoveryStore({ dataDir, ...(config.now !== undefined ? { now: config.now } : {}) }) : undefined;
   // P25-2: live session actors — the single owner of active turn state. The
   // actor enforces activeTurn ∈ {0,1} per session and routes steer/followup
   // through the durable inbox (P25-4/P25-5).
@@ -653,6 +660,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     store,
     ...(inbox !== undefined ? { inbox } : {}),
     ...(config.now !== undefined ? { now: config.now } : {}),
+    ...(recoveryStore !== undefined ? { recoveryStore } : {}),
     // P38.1-12/13: keep the durable event stream complete when a starting turn
     // is revoked before promotion (the runtime is uninvolved → actor seam).
     emit: eventSinkFromStore(events, config.now),

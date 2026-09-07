@@ -86,16 +86,26 @@ export interface RecoveryRecord extends RecoveryTaskRecord {
   /** Single-flight lease. `undefined` = free. A lease whose expiry has passed
    *  is stale and may be re-acquired. */
   lease?: { owner: string; expiresAt: number };
+  /** E4-08 — optimistic-concurrency version. The durable store assigns + bumps
+   *  it on every accepted write; a write whose version does not match the
+   *  on-disk record is rejected (lost-update / double-lease prevention across
+   *  processes and workers). Absent only on a not-yet-persisted fresh record. */
+  version?: number;
 }
 
 /**
  * E3-10 — durable recovery-record store. Persisting the record (rather than
  * recreating it per drain) is what keeps attempt/nextAttemptAt/policyVersion
  * across process restarts, so a crash never resets the retry budget.
+ *
+ * E4-08 — `putRecord` is a compare-and-set: it returns the stored record with
+ * its new `version`, and MUST throw when the incoming record's `version` does
+ * not match the currently stored one (a concurrent owner won). Callers that
+ * acquire a lease or begin an attempt MUST treat a throw as "do not proceed".
  */
 export interface RecoveryStore {
   getRecord(taskId: TurnId): Promise<RecoveryRecord | undefined>;
-  putRecord(record: RecoveryRecord): Promise<void>;
+  putRecord(record: RecoveryRecord): Promise<RecoveryRecord>;
   deleteRecord(taskId: TurnId): Promise<void>;
 }
 
@@ -130,16 +140,25 @@ export function classifyRecoveryError(err: unknown): RecoveryErrorClass {
   return "retryable";
 }
 
-/** E3-10 — in-memory RecoveryStore fallback. Used when the actor is not wired
- *  to a durable recovery store (single-process single-flight still holds;
- *  cross-restart budget continuity requires a real durable store). */
+/** E3-10 — in-memory RecoveryStore fallback. Used ONLY for tests or an explicit
+ *  ephemeral mode; production wiring must use a durable store so a restart
+ *  continues the retry budget. E4-08: it still enforces the same compare-and-set
+ *  contract (a stale-version write throws) so single-process contention is
+ *  exercised identically. */
 export class MemoryRecoveryStore implements RecoveryStore {
   private readonly records = new Map<string, RecoveryRecord>();
   async getRecord(taskId: TurnId): Promise<RecoveryRecord | undefined> {
-    return this.records.get(taskId);
+    const found = this.records.get(taskId);
+    return found === undefined ? undefined : { ...found, lease: found.lease ? { ...found.lease } : undefined };
   }
-  async putRecord(record: RecoveryRecord): Promise<void> {
-    this.records.set(record.taskId, { ...record, lease: record.lease ? { ...record.lease } : undefined });
+  async putRecord(record: RecoveryRecord): Promise<RecoveryRecord> {
+    const current = this.records.get(record.taskId);
+    if (record.version !== undefined && (current?.version ?? 0) !== record.version) {
+      throw new Error(`recovery CAS conflict for ${record.taskId}: expected version ${record.version}, stored ${String(current?.version)}`);
+    }
+    const next: RecoveryRecord = { ...record, version: (current?.version ?? 0) + 1, lease: record.lease ? { ...record.lease } : undefined };
+    this.records.set(record.taskId, next);
+    return { ...next, lease: next.lease ? { ...next.lease } : undefined };
   }
   async deleteRecord(taskId: TurnId): Promise<void> {
     this.records.delete(taskId);
@@ -734,18 +753,27 @@ export class DefaultSessionActor implements SessionActor {
     return this.persistRecoveryRecord(fresh);
   }
 
-  /** E3-10: persist a recovery record; a durable-write failure is surfaced as a
-   *  degraded diagnostic (never silent) and the record is returned unchanged so
-   *  the in-memory flow can still proceed fail-safe. */
+  /** E3-10: persist a recovery record, returning the STORED record (with the
+   *  version the durable layer assigned). A write failure is surfaced on the
+   *  degraded channel (never silent) and the input record is returned so a
+   *  best-effort terminal write cannot undo an action that already happened. */
   private async persistRecoveryRecord(record: RecoveryRecord): Promise<RecoveryRecord> {
     try {
-      await this._recoveryStore.putRecord(record);
+      return await this._recoveryStore.putRecord(record);
     } catch (persistErr) {
       process.stderr.write(
         `[degraded] session ${this.sessionId} failed to persist recovery record for ${record.taskId}: ${persistErr instanceof Error ? persistErr.message : String(persistErr)}\n`,
       );
     }
     return record;
+  }
+
+  /** E4-08 #3/#4: a STRICT persist used for the intent/lease writes that MUST
+   *  be durable BEFORE any recoverable external action runs. A store failure or
+   *  a CAS conflict THROWS so the caller aborts the attempt instead of running
+   *  an action it cannot account for (no unrecoverable external side effect). */
+  private async persistRecoveryIntent(record: RecoveryRecord): Promise<RecoveryRecord> {
+    return this._recoveryStore.putRecord(record);
   }
 
   /** E3-10: is this record leased to a DIFFERENT live owner? Stale leases
@@ -756,13 +784,15 @@ export class DefaultSessionActor implements SessionActor {
     return record.lease.owner !== this._ownerId;
   }
 
-  /** E3-10: acquire the single-flight lease (owner + expiry) and persist it. */
+  /** E3-10: acquire the single-flight lease (owner + expiry) and persist it.
+   *  E4-08: the write is STRICT — a concurrent owner that won the CAS makes this
+   *  throw, so exactly one actor proceeds to run the recovery action. */
   private async acquireLease(record: RecoveryRecord): Promise<RecoveryRecord> {
     const leased: RecoveryRecord = {
       ...record,
       lease: { owner: this._ownerId, expiresAt: this.recoveryClock().now() + RECOVERY_LEASE_TTL_MS },
     };
-    return this.persistRecoveryRecord(leased);
+    return this.persistRecoveryIntent(leased);
   }
 
   /** E3-10: release OUR lease (never another owner's). */
@@ -880,8 +910,19 @@ export class DefaultSessionActor implements SessionActor {
       return "wait-lease";
     }
 
-    // Acquire the lease and begin the attempt.
-    record = await this.acquireLease(record);
+    // Acquire the lease and begin the attempt. E4-08 #3/#4: BOTH the lease
+    // acquisition and the attempt-intent write are durable BEFORE runTurn. If
+    // either throws (a concurrent owner won the CAS, or the store is down) we
+    // MUST NOT run the recovery action — otherwise an external side effect could
+    // happen with no durable record of who owns it. Fail closed to wait-lease.
+    try {
+      record = await this.acquireLease(record);
+    } catch (leaseErr) {
+      process.stderr.write(
+        `[degraded] session ${this.sessionId} recovery lease failed for ${head.turn.id}: ${leaseErr instanceof Error ? leaseErr.message : String(leaseErr)}\n`,
+      );
+      return "wait-lease";
+    }
     let attempt: RecoveryRecord;
     try {
       const attemptBase = transitionRecoveryTask(record, { type: "begin" }, policy, clock);
@@ -893,7 +934,15 @@ export class DefaultSessionActor implements SessionActor {
       await this.releaseLease(head.turn.id);
       return "wait-lease";
     }
-    await this.persistRecoveryRecord(attempt);
+    try {
+      attempt = await this.persistRecoveryIntent(attempt);
+    } catch (persistErr) {
+      process.stderr.write(
+        `[degraded] session ${this.sessionId} recovery attempt-intent persist failed for ${head.turn.id} — NOT running the action: ${persistErr instanceof Error ? persistErr.message : String(persistErr)}\n`,
+      );
+      await this.releaseLease(head.turn.id);
+      return "wait-lease";
+    }
 
     // Same-T recovery: `runTurn` reserves the starting slot, loads the existing
     // durable Turn and promotes it — the runtime's single-turn-per-session
