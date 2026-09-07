@@ -217,6 +217,16 @@ export interface ActivationCaseSource {
  * - adaptive_context_policy: activation is NOT observable via events (the
  *   dynamic budget is config-level) → reported not_observable, so the
  *   promotion gate treats it as unproven.
+ *
+ * LEGACY (E4-04 #6): this V1 helper returns hard-coded mechanism "digests"
+ * (e.g. "no-memory") that prove nothing about what the model saw. The
+ * promotion-grade path is `createActivationRecorderV2` /
+ * `buildActivationEvidenceFromSignalsV2` (activation-evidence-v2.ts,
+ * activation-evidence-execution.ts), which records recomputable payload
+ * digests + case/arm/attempt/repetition lineage AT the fact site and validates
+ * them. `runOneCase` now produces BOTH: V1 for the interim artifact shape and
+ * V2 for promotion. Once E4-02 builds V3 in-process from the V2 evidence, this
+ * helper has no production consumers and can be retired to V1 readers/tests.
  */
 export function activationEvidenceFor(
   candidateId: string,

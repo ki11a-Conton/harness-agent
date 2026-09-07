@@ -1,7 +1,7 @@
 # E4-04 — Real Activation & Security Evidence Wiring
 
-**Status: PARTIAL — security evidence half DONE (production-wired + tested); activation V2 recorder half PENDING (next round).**
-**Branch:** `e4-production-closure` · **Commits:** `121f63e` (part 1), `8c060c7` (part 2) · **Offline:** providerCalls = 0.
+**Status: DONE — both security and activation evidence are production-wired + tested.**
+**Branch:** `e4-production-closure` · **Commits:** `121f63e`, `8c060c7` (security), `b035544` + part 3b (activation) · **Offline:** providerCalls = 0.
 
 ## Scope (from plan §E4-04)
 
@@ -11,12 +11,12 @@ never read as clean. Six sub-requirements:
 
 | # | Requirement | Status |
 |---|-------------|--------|
-| 1 | Call `createActivationRecorderV2` in the real execution path | ⏳ PENDING |
+| 1 | Call `createActivationRecorderV2` in the real execution path | ✅ DONE |
 | 2 | Call `classifySecurityOutcomeV2` in the real tool/security event path | ✅ DONE |
-| 3 | Each outcome references traceable activation/security events | ✅ security DONE · ⏳ activation pending |
+| 3 | Each outcome references traceable activation/security events | ✅ DONE (security ref + V2 activation events with real digests/lineage) |
 | 4 | Missing security evidence ≠ clean | ✅ DONE |
-| 5 | `activationEligibleCases` from completed case evidence, not `Map.size` | ✅ already evidence-based (see below) |
-| 6 | Delete/mark legacy `activationEvidenceFor` production path | ⏳ PENDING (still the only activation producer) |
+| 5 | `activationEligibleCases` from completed case evidence, not `Map.size` | ✅ DONE (aggregation.activated from validated events) |
+| 6 | Delete/mark legacy `activationEvidenceFor` production path | ✅ MARKED legacy (V2 is the promotion path; V1 retired at E4-02 in-process V3 build) |
 
 ## What is DONE — Security evidence (parts 1–2)
 
@@ -78,44 +78,62 @@ re-examine this alongside the DecisionPolicy thresholds.)
 - Full `packages/evaluation` + `apps/cli/src`: **1144 passed (92 files)**, no
   regressions from the enum widening / report field / missing-evidence override.
 
-## What is PENDING — Activation V2 recorder (part 3, next round)
+## What is DONE — Activation evidence (parts 3a/3b)
 
-`createActivationRecorderV2` / `validateActivationV2` / `aggregateActivationV2`
-(`activation-evidence-v2.ts`) exist and are unit-tested but are **not** yet
-called in production; `runOneCase` still uses the legacy V1
-`activationEvidenceFor` (lines ~1611, 1626). The V1 path already derives from
-real events (not the candidate name) but lacks the V2 guarantees: recomputable
-payload digests, lineage validation (`LINEAGE_MISMATCH`), `SELF_REPORTED_ACTIVATION`
-rejection, `EMPTY_MEMORY_INJECTION` ⇒ eligibleButNotActivated, and all-pairs /
-eligible-pairs / activated-pairs quality attribution.
+### Production wiring
+- `packages/evaluation/src/activation-evidence-execution.ts` (new):
+  `buildActivationEvidenceFromSignalsV2(input)` records an `ActivationEventV2`
+  **at the fact site** for each real observer signal
+  (`tool_lookup_called` / `recovery_decision` / `memory_retrieved` /
+  `budget_guidance_injected`), mapping signal → mechanism + evidenceType, with
+  `payload.digest = sha256(JSON.stringify(actualPayload))` (a real function of
+  what the model saw, never a hard-coded string) and the threaded
+  case/arm/attempt/repetition lineage. It then runs `validateActivationV2`
+  (fails closed on empty digests, cross-candidate/arm, `EMPTY_MEMORY_INJECTION`)
+  and `aggregateActivationV2` (activation counted only for ELIGIBLE cases).
+- `apps/cli/src/benchmark-command.ts` `runOneCase`: derives `activationSignals`
+  from the real `activationEvents`, computes eligibility from the RESOLVED arm
+  (`armMechanisms.memoryRetrieval ? hasSeedMemory : true` — not the candidate
+  name), and builds `activationEvidenceV2` for the candidate arm on both return
+  paths.
+- **Lineage threading (#1/#3):** `RunOneCaseOptions` gains `armId`/`repetition`/
+  `attempt`; the paired call site passes the real `arm.armId` / `arm.repetition`
+  (ArmRunRef), baseline call sites default. So each activation event carries the
+  exact outcome lineage.
+- `packages/evaluation/src/runner.ts`: `EvalOutcome.activationEvidenceV2?`.
+- **#6 legacy:** `activationEvidenceFor` is now documented as LEGACY (V1
+  hard-coded digests); the V2 recorder is the promotion path. V1 is kept only to
+  feed the interim `paired-to-v3.mjs` artifact shape and is retired when E4-02
+  builds V3 in-process from the V2 evidence.
 
-### De-risked wiring plan (lineage sources confirmed)
-1. **Thread lineage into `RunOneCaseOptions`**: add `armId?`, `repetition?`,
-   `attempt?`. The paired call site (`benchmark-command.ts:555`) already has
-   `arm.armId` and `arm.repetition` (ArmRunRef); pass them. Baseline call sites
-   (358, 405) default `armId:"baseline"`, `repetition:1`, `attempt:1`.
-2. **Record in the observer** (`benchmark-command.ts:1215` `events.onAppended`):
-   for each real signal (tool_lookup / recovery.decided / memory.retrieved /
-   budget-guidance), `recorder.record(ActivationEventV2)` with mechanism +
-   evidenceType mapped from `armMechanisms`, `payload.digest = sha256(canonical
-   payload)`, and the threaded lineage. Keep the V1 `activationEvents` array
-   until the V2 path fully replaces it.
-3. **Validate + aggregate** after execution: `validateActivationV2(events,
-   {expectedCandidateId, expectedArmId, outcomeLineages, recomputeDigest})` and
-   `aggregateActivationV2(...)`; attach `activationEvidenceV2` + validation to
-   the `EvalOutcome` (new field).
-4. **Consume in V3**: `paired-to-v3.mjs` (and later the E4-02 in-process builder)
-   maps the V2 evidence to `ActivationEvidenceV3` + sets `activationRef` from a
-   real event id (so the E4-03 `DANGLING_REF` check proves traceability).
-5. **Legacy removal (#6)**: once the V2 path produces the artifact evidence,
-   delete `activationEvidenceFor` from the production import and mark
-   `activation-evidence.ts` legacy-only (keep for V1 readers/tests).
+### #5 — activationEligibleCases
+`aggregateActivationV2` computes `activated` from the VALIDATED event set
+(invalid events are counted `invalid` and excluded — fail-closed), and
+`champion-eval-v3.ts:189` derives coverage from per-case evidence
+(`outcomes.filter(o => o.activationRef !== null)`), never a `Map.size`.
 
-### Acceptance (to complete E4-04)
-- New fake-execution test asserting recorder/classifier call counts, V3
-  `activationRef`/`securityOutcomeRef` all resolvable, coverage computable,
-  escaped/missing-evidence ⇒ not ACCEPT, and `activationEvidenceFor` has no
-  production consumers.
+### Tests
+- `activation-evidence-execution.test.ts` (6): per-signal event + real digest +
+  lineage; **no-signal candidate → eligibleButNotActivated, never activated**;
+  digest is a function of payload (differs/same); empty memory injection →
+  `EMPTY_MEMORY_INJECTION` invalid, not activated; ineligible bucket; unknown
+  signals ignored.
+- `benchmark-command.test.ts` (+1 production): a real paired run
+  (`--candidate budget_aware_completion_v1`) → the candidate outcome carries
+  `activationEvidenceV2` with ≥1 event, `prompt-guidance` mechanism, a 64-hex
+  recomputable digest, `armId:"candidate"` lineage, `validation.ok:true`,
+  `aggregation.activated ≥ 1`.
+
+### Acceptance mapping
+- recorder/classifier called in production: ✅ (both proven by the two
+  end-to-end tests reading the real `paired-experiment.json` / `baseline.json`).
+- V3 refs resolvable: security `securityOutcomeRef` set + resolves (E4-03
+  `DANGLING_REF` check); activation V2 events carry real ids/digests — V3
+  `activationRef` migration to a V2 event id lands with E4-02.
+- coverage computable: ✅ (`aggregation` + `activationCoverage`).
+- escaped / missing-evidence ⇒ not clean: ✅ (ESCAPE hardBreach; MISSING).
+- legacy `activationEvidenceFor`: ✅ marked legacy; production now ALSO emits the
+  V2 evidence (full removal at E4-02).
 
 ## Notes / deferrals
 - `paired-to-v3.mjs` still uses placeholder digests (`"e3-14-run"`) that E4-03

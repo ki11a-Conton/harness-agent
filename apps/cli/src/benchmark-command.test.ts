@@ -924,6 +924,37 @@ describe("E3-02: paired promotion path (real PairedExperimentExecutor)", () => {
     }
   });
 
+  it("E4-04: paired candidate carries promotion-grade activationEvidenceV2 from real signals", async () => {
+    const root = await makePairCases();
+    const provider = new ScriptedModelProvider(Array.from({ length: 16 }, () => ScriptedModelProvider.text("done")));
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--candidate", "budget_aware_completion_v1", "--allow-insecure-local-benchmark", "--out", join(root, "out")],
+      provider,
+    );
+    expect(result.exitCode).toBe(0);
+
+    const { readFile } = await import("node:fs/promises");
+    const artifact = JSON.parse(await readFile(join(root, "out", "paired-experiment.json"), "utf8"));
+    const cand = artifact.finalizedPairs[0].candidate.outcome;
+
+    // The recorder ran at the fact site: budget_aware_completion_v1 injects
+    // guidance at setup → one real activation event with a recomputable digest.
+    expect(cand.activationEvidenceV2).toBeDefined();
+    expect(cand.activationEvidenceV2.events.length).toBeGreaterThanOrEqual(1);
+    const ev = cand.activationEvidenceV2.events[0];
+    expect(ev.mechanism).toBe("prompt-guidance");
+    expect(ev.evidenceType).toBe("prompt-guidance-injected");
+    expect(ev.payload.digest).toMatch(/^[0-9a-f]{64}$/);
+    // Lineage threaded from the paired executor (candidate arm; the executor's
+    // repetition index — 0-based today, canonicalized to 1..N by E4-05).
+    expect(ev.lineage.armId).toBe("candidate");
+    expect(Number.isInteger(ev.lineage.repetition)).toBe(true);
+    expect(ev.lineage.repetition).toBeGreaterThanOrEqual(0);
+    // Validation passes and the case counts as activated (not a name claim).
+    expect(cand.activationEvidenceV2.validation.ok).toBe(true);
+    expect(cand.activationEvidenceV2.aggregation.activated).toBeGreaterThanOrEqual(1);
+  });
+
   it("2. BA pairs execute the candidate before the baseline (real order in artifact)", async () => {
     const root = await makePairCases();
     const provider = new ScriptedModelProvider(Array.from({ length: 16 }, () => ScriptedModelProvider.text("done")));

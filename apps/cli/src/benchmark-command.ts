@@ -23,6 +23,8 @@ import {
   activationEvidenceFor,
   buildSecurityOutcomeFromEventsV2,
   securityExpectationFromCase,
+  buildActivationEvidenceFromSignalsV2,
+  type ObservedActivationSignal,
   buildEffectiveConfig,
   buildPairedPlan,
   buildRunManifest,
@@ -566,6 +568,10 @@ async function runPairedPromotion(
           // backend exists, insecure-local when explicitly allowed, undefined
           // → default policy without confinement).
           processConfinement,
+          // E4-04: real lineage for promotion-grade activation evidence.
+          armId: arm.armId,
+          repetition: arm.repetition,
+          attempt: 1,
         },
         opts.suite,
       ),
@@ -1032,6 +1038,12 @@ interface RunOneCaseOptions {
    *  policy includes process.confinement so the exec tool routes through
    *  prepareSandboxedExec (OS-level sandbox or fail-closed denial). */
   processConfinement?: "strong" | "insecure-local";
+  /** E4-04: lineage for promotion-grade activation evidence. The paired
+   *  executor passes the real arm/repetition; single-run callers default to
+   *  baseline/1/1. */
+  armId?: string;
+  repetition?: number;
+  attempt?: number;
 }
 
 /** Benchmark permission profile: work inside the workspace is allowed without
@@ -1597,6 +1609,32 @@ async function runOneCase(
     const secArmId = candidateId !== undefined ? "candidate" : "baseline";
     const secExpectation = securityExpectationFromCase(caseDef);
 
+    // E4-04 #1/#3: promotion-grade activation evidence recorded AT the fact
+    // site from the real observer signals (never from the candidate name). The
+    // legacy V1 `activationEvidenceFor` is kept alongside until the V2 path
+    // fully replaces it in the artifact (E4-02 in-process builder).
+    const activationSignals = activationEvents.filter(
+      (e): e is ObservedActivationSignal =>
+        e.type === "tool_lookup_called" ||
+        e.type === "recovery_decision" ||
+        e.type === "memory_retrieved" ||
+        e.type === "budget_guidance_injected",
+    );
+    const hasSeedMemory = ((caseDef as { sources?: { memory?: unknown[] } }).sources?.memory?.length ?? 0) > 0;
+    const activationEligible = armMechanisms.memoryRetrieval ? hasSeedMemory : true;
+    const activationEvidenceV2 =
+      candidateId !== undefined
+        ? buildActivationEvidenceFromSignalsV2({
+            candidateId,
+            caseId: caseDef.id,
+            armId: opts.armId ?? secArmId,
+            attempt: opts.attempt ?? 1,
+            repetition: opts.repetition ?? 1,
+            signals: activationSignals,
+            eligible: activationEligible,
+          })
+        : undefined;
+
     // E2-09: host mutation sentinel — if the host repo state changed since
     // case start (child-process writes outside the workspace), the case is an
     // infrastructure/policy failure. `hostStateBefore` was captured before
@@ -1624,6 +1662,7 @@ async function runOneCase(
           ...(candidateId !== undefined
             ? { activationEvidence: activationEvidenceFor(candidateId, caseDef, activationEvents) }
             : {}),
+          ...(activationEvidenceV2 !== undefined ? { activationEvidenceV2 } : {}),
         };
       }
     }
@@ -1648,6 +1687,7 @@ async function runOneCase(
       ...(candidateId !== undefined
         ? { activationEvidence: activationEvidenceFor(candidateId, caseDef, activationEvents) }
         : {}),
+      ...(activationEvidenceV2 !== undefined ? { activationEvidenceV2 } : {}),
     };
   } finally {
     if (memoryClose !== undefined) {

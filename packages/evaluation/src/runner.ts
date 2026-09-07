@@ -67,6 +67,10 @@ export interface EvalOutcome {
    *  (never defaulted to clean when the observer produced no evidence).
    *  Optional for legacy runs; required for strict promotion comparisons. */
   securityOutcome?: import("./security-outcome-v2.js").SecurityOutcomeV2;
+  /** E4-04: promotion-grade activation evidence recorded AT the fact site with
+   *  recomputable payload digests + case/arm/attempt/repetition lineage, then
+   *  validated + aggregated. Replaces the legacy name-based digest claim. */
+  activationEvidenceV2?: import("./activation-evidence-execution.js").ActivationEvidenceExecutionResult;
 }
 
 /** Tool events that count as side effects on the environment (§73 forbidden.side_effects). */
