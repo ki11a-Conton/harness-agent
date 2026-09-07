@@ -81,11 +81,11 @@ describe("E2-16 §5 final architecture invariants", () => {
           passed: true, grade: "good", verificationPassed: true, terminationReason: "verified_complete",
           failureCategory: null, inputTokens: 100, outputTokens: 50, costUsd: 0, latencyMs: 10, toolCalls: 1,
           recoveryDecisions: [], activationRef: null, securityOutcomeRef: null, outputDigest: null,
-          workspaceDigest: null, judgeVersion: "1.0.0", evaluationContextHash: "ctx", candidateConfigHash: null,
+          workspaceDigest: null, judgeVersion: "1.0.0", evaluationContextHash: "a".repeat(64), candidateConfigHash: null,
         }],
         activationEvidence: [],
         securityOutcomes: [],
-        provenance: { sourceManifestPath: null, gitSha: "x", dirty: false, model: "m", provider: "p", runtimeConfigHash: "r" },
+        provenance: { sourceManifestPath: null, gitSha: "c".repeat(40), dirty: false, model: "m", provider: "p", runtimeConfigHash: "a".repeat(64) },
       });
       const path = join(dir, "baseline-holdout.json");
       const { writeExperimentArtifactV3 } = await import("./artifact-v3/index.js");
@@ -310,7 +310,7 @@ describe("E2-16 §5 final architecture invariants", () => {
         arm: { armId: "baseline", candidateId: null, candidateConfigHash: null },
         manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0" },
         outcomes: [], activationEvidence: [], securityOutcomes: [],
-        provenance: { sourceManifestPath: null, gitSha: "x", dirty: false, model: "m", provider: "p", runtimeConfigHash: "r" },
+        provenance: { sourceManifestPath: null, gitSha: "c".repeat(40), dirty: false, model: "m", provider: "p", runtimeConfigHash: "a".repeat(64) },
       });
       const json = JSON.stringify(artifact);
       await writeFile(join(dir, "runs", "b.json"), json, "utf8");

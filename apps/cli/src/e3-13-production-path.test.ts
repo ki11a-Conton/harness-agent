@@ -84,11 +84,11 @@ async function buildV3ArtifactPair(
     inputTokens: 1000, outputTokens: 500, costUsd: 0.01, latencyMs: 100,
     toolCalls: 3, recoveryDecisions: [], activationRef, securityOutcomeRef: null,
     outputDigest: null, workspaceDigest: null, judgeVersion: "1.0.0",
-    evaluationContextHash: "ctx", candidateConfigHash: configHash,
+    evaluationContextHash: sha("ctx"), candidateConfigHash: configHash,
   });
 
   const gitSha = "a".repeat(40);
-  const baseConfigHash = "base-hash";
+  const baseConfigHash = sha("base");
   const runtimeConfigHash = baseConfigHash; // both arms share the same runtime config
 
   // Baseline: ho-01 fails in both reps; ho-02/03 pass in both reps.

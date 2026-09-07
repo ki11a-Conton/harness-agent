@@ -19,6 +19,12 @@ import {
   type ExperimentArtifactV3Input,
 } from "./index.js";
 
+// E4-03: valid-format digest fixtures (the writer recomputes contentDigest over
+// the payload, so round-trips stay consistent with these values).
+const HEX64 = "a".repeat(64);
+const HEX64B = "b".repeat(64);
+const GIT40 = "c".repeat(40);
+
 function makeOutcome(overrides: Partial<CaseOutcomeV3> = {}): CaseOutcomeV3 {
   return {
     caseId: "ho-01",
@@ -43,7 +49,7 @@ function makeOutcome(overrides: Partial<CaseOutcomeV3> = {}): CaseOutcomeV3 {
     outputDigest: "abc",
     workspaceDigest: "def",
     judgeVersion: "1.0.0",
-    evaluationContextHash: "ctx1",
+    evaluationContextHash: HEX64,
     candidateConfigHash: null,
     ...overrides,
   };
@@ -57,7 +63,7 @@ function makeInput(overrides: Partial<ExperimentArtifactV3Input> = {}): Experime
       makeOutcome({ caseId: "ho-01", order: 1 }),
       makeOutcome({ caseId: "ho-02", order: 2, passed: false, terminationReason: "agent_limit", failureCategory: "model", grade: null, verificationPassed: false }),
     ],
-    provenance: { sourceManifestPath: null, gitSha: "abc123", dirty: false, model: "deepseek-v4-flash", provider: "openai", runtimeConfigHash: "cfg" },
+    provenance: { sourceManifestPath: null, gitSha: GIT40, dirty: false, model: "deepseek-v4-flash", provider: "openai", runtimeConfigHash: HEX64B },
     ...overrides,
   };
 }
@@ -116,6 +122,21 @@ describe("E4-03: field-level strict validation — numeric bounds + shape-only c
     expect(cls.kind).toBe("v3");
     expect(cls.promotionEligible).toBe(false); // shape ≠ eligibility
     expect(() => parseExperimentArtifactV3(garbage)).toThrow(ArtifactSchemaError);
+  });
+
+  it("E4-03 #1: rejects illegal git SHA / digest formats", () => {
+    const mutations: Array<(a: Record<string, unknown>) => void> = [
+      (a) => { (a.provenance as Record<string, unknown>).gitSha = "not-a-sha"; },
+      (a) => { (a.provenance as Record<string, unknown>).runtimeConfigHash = "zzz"; },
+      (a) => { a.contentDigest = "xyz"; },
+      (a) => { (a.outcomes as Record<string, unknown>[])[0]!.evaluationContextHash = "nope"; },
+      (a) => { (a.outcomes as Record<string, unknown>[])[0]!.candidateConfigHash = "nope"; },
+    ];
+    for (const mutate of mutations) {
+      const art = structuredClone(buildExperimentArtifactV3(makeInput())) as unknown as Record<string, unknown>;
+      mutate(art);
+      expect(() => parseExperimentArtifactV3(art)).toThrow(ArtifactSchemaError);
+    }
   });
 });
 
@@ -225,7 +246,7 @@ describe("E2-01 strict loader fail-closed scenarios", () => {
         makeOutcome({ caseId: "ho-01", armId: "candidate", attempt: 1, repetition: 1, order: 1 }),
         makeOutcome({ caseId: "ho-01", armId: "candidate", attempt: 1, repetition: 1, order: 2 }),
       ];
-      const artifact = buildExperimentArtifactV3({ ...input, outcomes, arm: { armId: "candidate", candidateId: "x", candidateConfigHash: "c" } });
+      const artifact = buildExperimentArtifactV3({ ...input, outcomes, arm: { armId: "candidate", candidateId: "x", candidateConfigHash: HEX64 } });
       const path = join(dir, "candidate-holdout.json");
       await writeExperimentArtifactV3(artifact, path);
       // buildExperimentArtifactV3 does not dedupe; the schema parser rejects.
@@ -390,16 +411,16 @@ describe("E2-01 field preservation table (deliverable)", () => {
         outputDigest: "out-digest-1",
         workspaceDigest: "ws-digest-1",
         judgeVersion: "9.9.9",
-        evaluationContextHash: "eval-ctx-hash",
-        candidateConfigHash: "cand-cfg-hash",
+        evaluationContextHash: HEX64,
+        candidateConfigHash: HEX64B,
       });
       const artifact = buildExperimentArtifactV3({
-        arm: { armId: "candidate", candidateId: "adaptive_recovery_v2", candidateConfigHash: "cand-cfg-hash" },
+        arm: { armId: "candidate", candidateId: "adaptive_recovery_v2", candidateConfigHash: HEX64B },
         manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "deadbeef", dirty: true, model: "deepseek-v4-flash", provider: "openai", runtimeConfigHash: "rt-hash" },
         outcomes: [outcome],
         activationEvidence: [{ id: "ae-1", reasonCodes: ["recovery_decision"], note: "recovery fired" }],
         securityOutcomes: [{ caseId: "ho-42", kind: "blocked", detail: "sandbox blocked write" }],
-        provenance: { sourceManifestPath: "manifest.json", gitSha: "deadbeef", dirty: true, model: "deepseek-v4-flash", provider: "openai", runtimeConfigHash: "rt-hash" },
+        provenance: { sourceManifestPath: "manifest.json", gitSha: GIT40, dirty: true, model: "deepseek-v4-flash", provider: "openai", runtimeConfigHash: HEX64B },
       });
       await writeExperimentArtifactV3(artifact, path);
 
@@ -421,8 +442,8 @@ describe("E2-01 field preservation table (deliverable)", () => {
       expect(o.outputDigest).toBe("out-digest-1");
       expect(o.workspaceDigest).toBe("ws-digest-1");
       expect(o.judgeVersion).toBe("9.9.9");
-      expect(o.evaluationContextHash).toBe("eval-ctx-hash");
-      expect(o.candidateConfigHash).toBe("cand-cfg-hash");
+      expect(o.evaluationContextHash).toBe(HEX64);
+      expect(o.candidateConfigHash).toBe(HEX64B);
       // Activation + security payloads round-trip.
       expect(loaded.artifact.activationEvidence[0]).toEqual(artifact.activationEvidence[0]);
       expect(loaded.artifact.securityOutcomes[0]).toEqual(artifact.securityOutcomes[0]);

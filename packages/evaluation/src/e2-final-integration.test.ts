@@ -173,12 +173,12 @@ describe("E2-16 final integration acceptance", () => {
           outputDigest: null,
           workspaceDigest: null,
           judgeVersion: "1.0.0",
-          evaluationContextHash: "ctx",
+          evaluationContextHash: "a".repeat(64),
           candidateConfigHash: arm.digest,
         })),
         activationEvidence: [],
         securityOutcomes: [],
-        provenance: { sourceManifestPath: null, gitSha: "clean-head", dirty: false, model: "deepseek-v4-flash", provider: "fake", runtimeConfigHash: arm.digest },
+        provenance: { sourceManifestPath: null, gitSha: "c".repeat(40), dirty: false, model: "deepseek-v4-flash", provider: "fake", runtimeConfigHash: arm.digest },
       });
       const artifactPath = join(dir, "candidate-holdout.json");
       const { writeExperimentArtifactV3 } = await import("./artifact-v3/index.js");

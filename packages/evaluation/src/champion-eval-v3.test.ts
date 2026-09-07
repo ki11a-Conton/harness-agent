@@ -43,8 +43,8 @@ function makeOutcome(overrides: Partial<CaseOutcomeV3> = {}): CaseOutcomeV3 {
     outputDigest: "out-1",
     workspaceDigest: "ws-1",
     judgeVersion: "1.0.0",
-    evaluationContextHash: "ctx-1",
-    candidateConfigHash: "cfg-1",
+    evaluationContextHash: "a".repeat(64),
+    candidateConfigHash: "b".repeat(64),
     ...overrides,
   };
 }
@@ -68,10 +68,10 @@ function makePair(
   const candidateSecurityEscaped = opts.candidateSecurityEscaped ?? false;
 
   const baseProvenance = opts.baselineProvenance ?? {
-    sourceManifestPath: "manifest.json", gitSha: "abc123", dirty: false, model: "deepseek-v4-flash", provider: "openai", runtimeConfigHash: "cfg-1",
+    sourceManifestPath: "manifest.json", gitSha: "c".repeat(40), dirty: false, model: "deepseek-v4-flash", provider: "openai", runtimeConfigHash: "a".repeat(64),
   };
   const candProvenance = opts.candidateProvenance ?? {
-    sourceManifestPath: "manifest.json", gitSha: "abc123", dirty: false, model: "deepseek-v4-flash", provider: "openai", runtimeConfigHash: "cfg-1",
+    sourceManifestPath: "manifest.json", gitSha: "c".repeat(40), dirty: false, model: "deepseek-v4-flash", provider: "openai", runtimeConfigHash: "a".repeat(64),
   };
 
   const baselineOutcomes = [1, 2, 3].map((rep) => makeOutcome({
@@ -98,7 +98,7 @@ function makePair(
     provenance: baseProvenance,
   });
   const candidate = buildExperimentArtifactV3({
-    arm: { armId: "candidate", candidateId: "memory_retrieval", candidateConfigHash: "cfg-1" },
+    arm: { armId: "candidate", candidateId: "memory_retrieval", candidateConfigHash: "b".repeat(64) },
     manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "abc123", dirty: false, planDigest: "plan-1" },
     outcomes: candidateOutcomes,
     provenance: candProvenance,
@@ -184,7 +184,7 @@ describe("E3-06 V3 champion eval bridge", () => {
     const tamperedPair: V3ArtifactPair = {
       ...pair,
       candidate: buildExperimentArtifactV3({
-        arm: { armId: "candidate", candidateId: "memory_retrieval", candidateConfigHash: "cfg-1" },
+        arm: { armId: "candidate", candidateId: "memory_retrieval", candidateConfigHash: "b".repeat(64) },
         manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "abc123", dirty: false, planDigest: "plan-1" },
         outcomes: [1, 2, 3].map((rep) => makeOutcome({
           caseId: `ho-0${rep}`, armId: "candidate", repetition: rep, passed: false, grade: "poor",

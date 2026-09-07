@@ -422,7 +422,7 @@ describe("R-09: summary tamper rejected [FIXED in E3-04]", () => {
       securityOutcomes: [],
       provenance: {
         sourceManifestPath: null,
-        gitSha: "abc",
+        gitSha: "c".repeat(40),
         dirty: false,
         model: "scripted",
         provider: "scripted",

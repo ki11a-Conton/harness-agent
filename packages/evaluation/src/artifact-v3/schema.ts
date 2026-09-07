@@ -126,6 +126,24 @@ function expectNonNegativeNumber(v: unknown, field: string, allowNull = false): 
   return n;
 }
 
+/** E4-03 #1: a digest field must be an exact-length lowercase hex string. */
+function expectHexDigest(v: unknown, field: string, length: number, allowNull = false): string | null {
+  if (v === null && allowNull) return null;
+  if (typeof v !== "string" || !new RegExp(`^[0-9a-f]{${length}}$`).test(v)) {
+    throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", field, `expected ${length}-char lowercase hex digest, got ${JSON.stringify(v)}`);
+  }
+  return v;
+}
+
+/** E4-03 #1: a Git SHA is 40 (sha-1) or 64 (sha-256) lowercase hex. */
+function expectGitSha(v: unknown, field: string, allowNull = false): string | null {
+  if (v === null && allowNull) return null;
+  if (typeof v !== "string" || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(v)) {
+    throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", field, `expected a 40- or 64-char hex git SHA, got ${JSON.stringify(v)}`);
+  }
+  return v;
+}
+
 /** Parse one case outcome with full field validation. */
 export function parseCaseOutcomeV3(raw: unknown, index: number): CaseOutcomeV3 {
   const o = expectObject(raw, `outcomes[${index}]`);
@@ -159,8 +177,8 @@ export function parseCaseOutcomeV3(raw: unknown, index: number): CaseOutcomeV3 {
     outputDigest: expectString(o.outputDigest, `outcomes[${index}].outputDigest`, true),
     workspaceDigest: expectString(o.workspaceDigest, `outcomes[${index}].workspaceDigest`, true),
     judgeVersion: expectString(o.judgeVersion, `outcomes[${index}].judgeVersion`)!,
-    evaluationContextHash: expectString(o.evaluationContextHash, `outcomes[${index}].evaluationContextHash`, true),
-    candidateConfigHash: expectString(o.candidateConfigHash, `outcomes[${index}].candidateConfigHash`, true),
+    evaluationContextHash: expectHexDigest(o.evaluationContextHash, `outcomes[${index}].evaluationContextHash`, 64, true),
+    candidateConfigHash: expectHexDigest(o.candidateConfigHash, `outcomes[${index}].candidateConfigHash`, 64, true),
   };
   return outcome;
 }
@@ -182,7 +200,7 @@ export function parseExperimentArtifactV3(value: unknown): ExperimentArtifactV3 
   const arm = {
     armId: expectString(armRaw.armId, "arm.armId")!,
     candidateId: expectString(armRaw.candidateId, "arm.candidateId", true),
-    candidateConfigHash: expectString(armRaw.candidateConfigHash, "arm.candidateConfigHash", true),
+    candidateConfigHash: expectHexDigest(armRaw.candidateConfigHash, "arm.candidateConfigHash", 64, true),
   };
 
   const manifest = expectObject(record.manifest, "manifest");
@@ -231,14 +249,14 @@ export function parseExperimentArtifactV3(value: unknown): ExperimentArtifactV3 
   const provRaw = expectObject(record.provenance, "provenance");
   const provenance = {
     sourceManifestPath: expectString(provRaw.sourceManifestPath, "provenance.sourceManifestPath", true),
-    gitSha: expectString(provRaw.gitSha, "provenance.gitSha", true),
+    gitSha: expectGitSha(provRaw.gitSha, "provenance.gitSha", true),
     dirty: expectBoolean(provRaw.dirty, "provenance.dirty", true),
     model: expectString(provRaw.model, "provenance.model", true),
     provider: expectString(provRaw.provider, "provenance.provider", true),
-    runtimeConfigHash: expectString(provRaw.runtimeConfigHash, "provenance.runtimeConfigHash", true),
+    runtimeConfigHash: expectHexDigest(provRaw.runtimeConfigHash, "provenance.runtimeConfigHash", 64, true),
   };
 
-  const contentDigest = expectString(record.contentDigest, "contentDigest")!;
+  const contentDigest = expectHexDigest(record.contentDigest, "contentDigest", 64)!;
 
   return {
     schemaVersion,
