@@ -1139,4 +1139,27 @@ describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 pr
     // under strong isolation cannot be run insecure without a digest mismatch.
     expect(strongDigest).not.toBe(insecureDigest);
   });
+
+  it("E4-01: buildBenchmarkExecutionPlan + digest are deterministic and isolation-bound", async () => {
+    const { buildBenchmarkExecutionPlan, computeBenchmarkPlanDigest } = await import("./benchmark-command.js");
+    const base = {
+      opts: { ...baseOpts(), candidate: "adaptive_recovery_v2" },
+      caseIds: ["t1"],
+      billingClass: "offline-test" as const,
+      isolationBackendId: "bwrap",
+      isolationStrength: "strong" as const,
+      promotionEligible: true,
+    };
+    const p1 = buildBenchmarkExecutionPlan(base);
+    const p2 = buildBenchmarkExecutionPlan(base);
+    expect(p1.estimateStatus).toBe("bounded");
+    expect(computeBenchmarkPlanDigest(p1)).toBe(computeBenchmarkPlanDigest(p2));
+    const insecure = buildBenchmarkExecutionPlan({
+      ...base,
+      isolationBackendId: "none",
+      isolationStrength: "insecure-local",
+      promotionEligible: false,
+    });
+    expect(computeBenchmarkPlanDigest(insecure)).not.toBe(computeBenchmarkPlanDigest(p1));
+  });
 });

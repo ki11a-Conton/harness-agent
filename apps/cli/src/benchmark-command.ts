@@ -651,6 +651,77 @@ export const PREFLIGHT_ESTIMATE = {
   costPerCallUsd: 0.0005,
 } as const;
 
+/**
+ * E4-01 — the SINGLE canonical benchmark execution plan. Every field that can
+ * change what a run actually does (case set, limits, billing, isolation
+ * posture, promotion eligibility) lives here and feeds the plan digest, so a
+ * `--plan-digest` confirmation binds the exact plan that will execute. Volatile
+ * provenance (sourceSha, createdAt) is deliberately EXCLUDED — it belongs in
+ * the artifact metadata, not the reproducible digest (same logical plan across
+ * runs must yield the same digest).
+ */
+export interface BenchmarkExecutionPlan {
+  schemaVersion: string;
+  suite: string;
+  caseIds: string[];
+  limit: number;
+  repeat: number;
+  interleave: boolean;
+  shuffle: boolean;
+  seed: number;
+  candidate: string | null;
+  billingClass: BillingClass;
+  /** E4-01 #2: `null` = unlimited, `0` = forbid, positive = the cap. */
+  maxLogicalRuns: number | null;
+  maxModelCalls: number | null;
+  maxEstimatedTokens: number | null;
+  maxEstimatedCostUsd: number | null;
+  /** E4-01 #4: the estimator is deterministic, so this is always "bounded"
+   *  today; a paid run with "unknown" would be refused unless overridden. */
+  estimateStatus: "bounded" | "unknown";
+  isolationBackendId: string;
+  isolationStrength: "strong" | "insecure-local" | "none";
+  promotionEligible: boolean;
+}
+
+/** E4-01: build the canonical plan from resolved preflight inputs. */
+export function buildBenchmarkExecutionPlan(input: {
+  opts: BenchmarkCommandOptions;
+  caseIds: string[];
+  billingClass: BillingClass;
+  isolationBackendId: string;
+  isolationStrength: BenchmarkExecutionPlan["isolationStrength"];
+  promotionEligible: boolean;
+}): BenchmarkExecutionPlan {
+  const { opts, caseIds, billingClass, isolationBackendId, isolationStrength, promotionEligible } = input;
+  return {
+    schemaVersion: "e4-01",
+    suite: opts.suite,
+    caseIds,
+    limit: opts.limit,
+    repeat: opts.repeat,
+    interleave: opts.interleave,
+    shuffle: opts.shuffle,
+    seed: opts.seed,
+    candidate: opts.candidate ?? null,
+    billingClass,
+    maxLogicalRuns: opts.maxLogicalRuns,
+    maxModelCalls: opts.maxModelCalls,
+    maxEstimatedTokens: opts.maxEstimatedTokens,
+    maxEstimatedCostUsd: opts.maxEstimatedCostUsd,
+    estimateStatus: "bounded",
+    isolationBackendId,
+    isolationStrength,
+    promotionEligible,
+  };
+}
+
+/** E4-01: sha256 over the canonical plan's stable JSON. Same logical plan →
+ *  same digest across runs (volatile fields are not part of the plan). */
+export function computeBenchmarkPlanDigest(plan: BenchmarkExecutionPlan): string {
+  return computeRuntimeConfigHash(plan);
+}
+
 export interface PreflightResult {
   ok: boolean;
   reason?: string;
@@ -811,31 +882,20 @@ export async function preflightBenchmark(
     };
   }
 
-  // 8. Plan digest: sha256 over stable-stringified plan inputs.
-  const planDigest = computeRuntimeConfigHash({
-    benchmarkVersion: "2.1.0",
-    suite: opts.suite,
+  // 8. Plan digest: sha256 over the canonical BenchmarkExecutionPlan (E4-01).
+  // The plan binds the case set, limits, billing, isolation posture and
+  // promotion eligibility, so a --plan-digest confirmation authorizes the exact
+  // plan that will run; confirming under one isolation strength and running
+  // under another yields a digest mismatch (E4-01 #3/#5).
+  const executionPlan = buildBenchmarkExecutionPlan({
+    opts,
     caseIds: selected.map((c) => c.id),
-    limit: opts.limit,
-    repeat: opts.repeat,
-    interleave: opts.interleave,
-    shuffle: opts.shuffle,
-    seed: opts.seed,
-    candidate: opts.candidate ?? null,
     billingClass,
-    maxLogicalRuns: opts.maxLogicalRuns,
-    maxModelCalls: opts.maxModelCalls,
-    maxEstimatedTokens: opts.maxEstimatedTokens,
-    maxEstimatedCostUsd: opts.maxEstimatedCostUsd,
-    // E4-01 #3: fold the isolation posture + promotion eligibility into the
-    // canonical digest. Confirming a plan under one isolation strength and
-    // running it under another changes the digest → rejected. An insecure-local
-    // run carries promotionEligible=false INTO the digest, so no downstream
-    // converter can silently re-qualify it (E4-01 #5).
     isolationBackendId,
     isolationStrength,
     promotionEligible,
   });
+  const planDigest = computeBenchmarkPlanDigest(executionPlan);
 
   // E4-01: a paid (external-billed) run must confirm the EXACT plan via
   // --plan-digest from a prior --dry-run. An API key + RUN_PAID_BENCHMARKS=1
@@ -907,6 +967,11 @@ export interface DryRunPlan {
     maxEstimatedTokens: number | null;
     maxEstimatedCostUsd: number | null;
   };
+  // E4-01: the folded plan posture, surfaced so the printed plan matches the
+  // digest exactly.
+  estimateStatus: "bounded" | "unknown";
+  isolationStrength: "strong" | "insecure-local" | "none";
+  promotionEligible: boolean;
   providerCalls: 0;
 }
 
@@ -918,7 +983,7 @@ export function buildDryRunPlan(
 ): DryRunPlan {
   const selected = opts.limit > 0 ? cases.slice(0, opts.limit) : cases;
   return {
-    schemaVersion: "e3-01",
+    schemaVersion: "e4-01",
     mode: "dry-run",
     planDigest: preflight.planDigest ?? "",
     casesDir: opts.casesDir,
@@ -944,6 +1009,9 @@ export function buildDryRunPlan(
       maxEstimatedTokens: opts.maxEstimatedTokens,
       maxEstimatedCostUsd: opts.maxEstimatedCostUsd,
     },
+    estimateStatus: "bounded",
+    isolationStrength: preflight.isolationStrength ?? "none",
+    promotionEligible: preflight.promotionEligible ?? false,
     providerCalls: 0,
   };
 }
