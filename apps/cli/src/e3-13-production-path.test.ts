@@ -66,9 +66,16 @@ async function makeCaseDir(files: Record<string, string>): Promise<string> {
 const sha = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
 
 /**
- * Build a V3 baseline + candidate artifact pair with 3 cases × 2 repetitions
- * per arm. Candidate wins on net delta in both reps (ACCEPT threshold).
- * Uses the PRODUCTION writer (buildExperimentArtifactV3 + writeExperimentArtifactV3).
+ * SYNTHETIC TEST FIXTURE — NOT production-chain evidence (downgraded by E4-09).
+ *
+ * This builds a V3 baseline + candidate artifact pair with hand-authored
+ * outcome rows (3 cases × 2 reps, candidate wins on net delta). It uses the
+ * production WRITER, but the OUTCOMES are fabricated, so it can only exercise
+ * the downstream mechanics (evaluator → envelope → CAS → resolveChampionHarness)
+ * on a known-good shape. It must NEVER be cited as proof that the real
+ * benchmark → V3 → evaluator → promotion → application chain works — that is
+ * proven end-to-end, with every artifact produced by the previous real stage,
+ * in e4-09-production-e2e.test.ts.
  */
 async function buildV3ArtifactPair(
   dir: string,
