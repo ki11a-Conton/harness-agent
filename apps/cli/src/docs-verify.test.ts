@@ -24,6 +24,14 @@ async function makeRoot(files: Record<string, string>) {
   };
   await mkdir(join(root, "docs", "evolution"), { recursive: true });
   await writeFile(join(root, "docs", "evolution", "evolution-ledger.json"), JSON.stringify(ledger, null, 2), "utf8");
+  // E4-00: every fixture root gets a valid current-plan entry + its detailed
+  // spec, so the plan-entry check passes unless a test tampers with it.
+  await writeFile(
+    join(root, "plan.md"),
+    "# Harness Agent — 当前执行计划入口（E4）\n\n详细任务规格：`plan(20260907-004430).md`\n",
+    "utf8",
+  );
+  await writeFile(join(root, "plan(20260907-004430).md"), "# E4 detailed spec\n", "utf8");
 }
 
 function suiteCaseFiles(count: number): Record<string, string> {
@@ -278,5 +286,59 @@ Release SHA: 33de85f9a1b2c3d4e5f60718293a4b5c6d7e8f901 (historical example, not 
     const result = await verifyDocs({ root });
     const handover = result.checks.find((c) => c.name === "HANDOVER static truth (P38.4-10)")!;
     expect(handover.truthful).toBe(true);
+  });
+
+  it("E4-00: fails closed when plan.md does not declare itself the current entry", async () => {
+    await makeRoot({
+      ...suiteCaseFiles(3),
+      "benchmarks/README.md": README_CLAIMS,
+      "packages/a/package.json": "{}",
+      "HANDOVER.md": HANDOVER,
+      ".github/workflows/ci.yml": CI_WITH_GATES,
+      "CAPABILITY_MATRIX.md": MATRIX_MD,
+      "CAPABILITY_MATRIX.json": MATRIX_JSON,
+    });
+    // Overwrite the seeded entry with an unmarked (stale) plan.
+    await writeFile(join(root, "plan.md"), "# Some old notes\nnothing marks this as current\n", "utf8");
+    const result = await verifyDocs({ root });
+    const plan = result.checks.find((c) => c.name === "current plan entry (E4-00)")!;
+    expect(plan.truthful).toBe(false);
+    expect(plan.reason).toMatch(/does not declare itself the current plan entry/);
+  });
+
+  it("E4-00: fails closed when the entry references a spec file that is missing", async () => {
+    await makeRoot({
+      ...suiteCaseFiles(3),
+      "benchmarks/README.md": README_CLAIMS,
+      "packages/a/package.json": "{}",
+      "HANDOVER.md": HANDOVER,
+      ".github/workflows/ci.yml": CI_WITH_GATES,
+      "CAPABILITY_MATRIX.md": MATRIX_MD,
+      "CAPABILITY_MATRIX.json": MATRIX_JSON,
+    });
+    await writeFile(
+      join(root, "plan.md"),
+      "# Harness Agent — 当前执行计划入口（E4）\n详细规格：`plan(20990101-000000).md`\n",
+      "utf8",
+    );
+    const result = await verifyDocs({ root });
+    const plan = result.checks.find((c) => c.name === "current plan entry (E4-00)")!;
+    expect(plan.truthful).toBe(false);
+    expect(plan.reason).toMatch(/spec file is missing/);
+  });
+
+  it("E4-00: passes when the entry is marked current and its spec exists", async () => {
+    await makeRoot({
+      ...suiteCaseFiles(3),
+      "benchmarks/README.md": README_CLAIMS,
+      "packages/a/package.json": "{}",
+      "HANDOVER.md": HANDOVER,
+      ".github/workflows/ci.yml": CI_WITH_GATES,
+      "CAPABILITY_MATRIX.md": MATRIX_MD,
+      "CAPABILITY_MATRIX.json": MATRIX_JSON,
+    });
+    const result = await verifyDocs({ root });
+    const plan = result.checks.find((c) => c.name === "current plan entry (E4-00)")!;
+    expect(plan.truthful).toBe(true);
   });
 });

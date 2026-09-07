@@ -7,6 +7,7 @@
  * backend code is exercised by CI). Every test is offline and deterministic.
  */
 import { describe, expect, it } from "vitest";
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve } from "node:path";
@@ -354,6 +355,26 @@ describe("E4-00: capability self-test leaves no residue in the repo working tree
     expect(capturedBase.startsWith(process.cwd())).toBe(false);
     expect(isUnderTmp(capturedBase)).toBe(true);
     expect(existsSync(capturedBase)).toBe(false);
+    expect(existsSync(join(process.cwd(), ".e3-09-probe"))).toBe(false);
+  });
+
+  it("E4-00 no-dirty-worktree: the real-platform gate adds no untracked files to the repo", async () => {
+    const porcelain = (): string => {
+      try {
+        return execFileSync("git", ["status", "--porcelain"], { cwd: process.cwd(), encoding: "utf8" });
+      } catch {
+        return "";
+      }
+    };
+    const untracked = (): Set<string> =>
+      new Set(porcelain().split("\n").filter((l) => l.startsWith("??")).map((l) => l.slice(3).trim()));
+    const before = untracked();
+    // Exercise the platform-derived gate paths that historically polluted cwd.
+    await capabilityProbe();
+    await decideBenchmarkConfinement({ allowInsecureLocal: true });
+    const added = [...untracked()].filter((p) => !before.has(p));
+    expect(added, `gate left untracked files: ${added.join(", ")}`).toEqual([]);
+    expect(existsSync(join(process.cwd(), ".e3-09-self-test"))).toBe(false);
     expect(existsSync(join(process.cwd(), ".e3-09-probe"))).toBe(false);
   });
 });

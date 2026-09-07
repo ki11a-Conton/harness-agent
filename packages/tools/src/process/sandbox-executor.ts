@@ -627,7 +627,13 @@ async function selfTestInTempDir(
     }
     return await backend.selfTest(buildProbePaths(base), relocated);
   } finally {
-    await rm(base, { recursive: true, force: true }).catch(() => {});
+    // Best-effort cleanup must be OBSERVABLE (P14-6): a leftover temp dir is
+    // reported on the degraded channel, never silently swallowed.
+    try {
+      await rm(base, { recursive: true, force: true });
+    } catch (err) {
+      process.stderr.write(`[degraded] sandbox.self-test.tempdir-cleanup: ${err instanceof Error ? err.message : String(err)}\n`);
+    }
   }
 }
 

@@ -245,6 +245,43 @@ export async function verifyDocs(deps: { root: string }): Promise<DocVerificatio
       : ledgerIssues.join("; "),
   });
 
+  // ---- E4-00: the current plan entry exists, declares itself current, and
+  // points to a real detailed spec. Fail closed when the entry is missing,
+  // unmarked, or references a spec that does not exist — a later agent must be
+  // able to find THE current plan, not a stale or ambiguous one.
+  {
+    let planEntry = "";
+    let planExists = true;
+    try {
+      planEntry = await readFile(join(root, "plan.md"), "utf8");
+    } catch {
+      planExists = false;
+    }
+    const CURRENT_MARKER = "当前执行计划入口";
+    const markedCurrent = planExists && planEntry.includes(CURRENT_MARKER);
+    const specRef = planEntry.match(/plan\((\d{8}-\d{6})\)\.md/);
+    let specExists = false;
+    if (specRef !== null && specRef !== undefined) {
+      specExists = await readFile(join(root, `plan(${specRef[1]}).md`), "utf8")
+        .then(() => true)
+        .catch(() => false);
+    }
+    const truthful = markedCurrent && specExists;
+    checks.push({
+      name: "current plan entry (E4-00)",
+      truthful,
+      reason: !planExists
+        ? "plan.md is missing — there is no current-plan entry"
+        : !markedCurrent
+          ? "plan.md does not declare itself the current plan entry (missing marker 当前执行计划入口)"
+          : specRef === null || specRef === undefined
+            ? "plan.md does not reference a detailed plan spec (plan(<YYYYMMDD-HHMMSS>).md)"
+            : specExists
+              ? `plan.md is the current entry and references an existing spec plan(${specRef[1]}).md`
+              : `plan.md references plan(${specRef[1]}).md but that spec file is missing`,
+    });
+  }
+
   return {
     checks,
     ok: checks.every((c) => c.truthful),
