@@ -15,6 +15,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { stableStringify } from "./manifest.js";
 import { classifyArtifact, parseExperimentArtifactV3 } from "./artifact-v3/schema.js";
+import { evaluatePairing } from "./paired-key.js";
 import type { ExperimentArtifactV3 } from "./artifact-v3/types.js";
 import {
   decideChampionV3,
@@ -177,12 +178,12 @@ export function deriveV3Decision(
   const prov = provenanceRefsComparableV3(baseline, candidate);
   const incomparabilityReasons = prov.comparable ? [] : prov.reasons;
 
-  // 3. Pair completeness: every baseline case has a candidate twin (no extra).
-  const baselineIds = new Set(baseline.outcomes.map((o) => o.caseId));
-  const candidateIds = new Set(candidate.outcomes.map((o) => o.caseId));
-  const missing = [...baselineIds].filter((id) => !candidateIds.has(id));
-  const extra = [...candidateIds].filter((id) => !baselineIds.has(id));
-  const pairComplete = missing.length === 0 && extra.length === 0;
+  // 3. E4-05: EXACT pairing on canonical (suite, caseId, repetition) keys.
+  //    Duplicate / missing / extra PairKeys and out-of-range repetitions are
+  //    violations (never a silent Map<caseId> overwrite). All deltas below are
+  //    computed over PAIRED keys only — a missing twin is never 0-filled.
+  const pairing = evaluatePairing(baseline.outcomes, candidate.outcomes);
+  const pairComplete = pairing.pairComplete;
 
   // 4. Activation coverage: fraction of candidate cases carrying an
   //    activationRef (real activation evidence payload).
@@ -205,37 +206,12 @@ export function deriveV3Decision(
   const infraFailuresBaseline = baseline.outcomes.filter((o) => o.failureCategory === "infrastructure").length;
   const infraFailuresCandidate = candidate.outcomes.filter((o) => o.failureCategory === "infrastructure").length;
 
-  // 8. Paired net-passed delta.
-  const baselineByCase = new Map(baseline.outcomes.map((o) => [o.caseId, o.passed]));
-  let netPassedDelta = 0;
-  for (const cand of candidate.outcomes) {
-    const basePassed = baselineByCase.get(cand.caseId);
-    if (basePassed !== undefined) {
-      if (cand.passed && !basePassed) netPassedDelta += 1;
-      else if (!cand.passed && basePassed) netPassedDelta -= 1;
-    }
-  }
-
-  // 9. Repetitions from the candidate's repetition values.
-  const repetitions = new Set(candidate.outcomes.map((o) => o.repetition)).size;
-
-  // 10. Per-repetition deltas (length must === repetitions; caller cannot
-  //     fake — derived from artifact outcomes grouped by repetition).
-  const repValues = [...new Set(candidate.outcomes.map((o) => o.repetition))].sort((a, b) => a - b);
-  const perRepetitionDeltas: number[] = repValues.map((rep) => {
-    const baseByCase = new Map(
-      baseline.outcomes.filter((o) => o.repetition === rep).map((o) => [o.caseId, o.passed]),
-    );
-    let repDelta = 0;
-    for (const c of candidate.outcomes.filter((o) => o.repetition === rep)) {
-      const bPassed = baseByCase.get(c.caseId);
-      if (bPassed !== undefined) {
-        if (c.passed && !bPassed) repDelta += 1;
-        else if (!c.passed && bPassed) repDelta -= 1;
-      }
-    }
-    return repDelta;
-  });
+  // 8-10. E4-05: paired net-passed delta, repetitions, and per-repetition
+  //       deltas all come from the exact pairing (paired keys only, no 0-fill;
+  //       per-repetition computed over the same case set at each rep).
+  const netPassedDelta = pairing.netPassedDelta;
+  const repetitions = pairing.repetitions;
+  const perRepetitionDeltas = pairing.perRepetitionDeltas;
 
   // 11. Token delta.
   const sumTokens = (os: { inputTokens: number; outputTokens: number }[]) =>
@@ -258,10 +234,11 @@ export function deriveV3Decision(
     maxVerifiedDrop: 0.05,
     infraFailuresBaseline,
     infraFailuresCandidate,
-    cases: baseline.outcomes.length,
+    cases: pairing.cases,
     netPassedDelta,
     repetitions,
     perRepetitionDeltas,
+    pairingViolations: pairing.violations,
     minConclusiveNetDelta: 1,
     tokensDelta,
     maxTokensDelta: 50000,

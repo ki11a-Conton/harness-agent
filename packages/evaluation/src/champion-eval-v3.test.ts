@@ -242,4 +242,45 @@ describe("E3-06 V3 champion eval bridge", () => {
     expect(envelope.decision).toBe("REJECT");
     expect(envelope.reasonCodes).toContain("SECURITY_BREACH");
   });
+
+  // E4-05: the high-risk mispairing the old caseId-only Map silently accepted.
+  it("10. E4-05: candidate has an extra repetition -> INVALID (PAIR_INCOMPLETE)", () => {
+    const prov = { sourceManifestPath: "m.json", gitSha: GIT40, dirty: false, model: "m", provider: "p", runtimeConfigHash: HEX64 };
+    const baseline = buildExperimentArtifactV3({
+      arm: { armId: "baseline", candidateId: null, candidateConfigHash: null },
+      manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT40, dirty: false },
+      outcomes: [makeOutcome({ caseId: "ho-01", armId: "baseline", repetition: 1, passed: false, activationRef: null })],
+      provenance: prov,
+    });
+    const candidate = buildExperimentArtifactV3({
+      arm: { armId: "candidate", candidateId: "memory_retrieval", candidateConfigHash: "b".repeat(64) },
+      manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT40, dirty: false, planDigest: HEX64 },
+      outcomes: [
+        makeOutcome({ caseId: "ho-01", armId: "candidate", repetition: 1, passed: true }),
+        makeOutcome({ caseId: "ho-01", armId: "candidate", repetition: 2, passed: true }),
+      ],
+      provenance: prov,
+    });
+    const { envelope } = deriveV3Decision({ baseline, candidate, baselineDigest: "x", candidateDigest: "y" }, "memory_retrieval", HEX64);
+    expect(envelope.decision).toBe("INVALID");
+    expect(envelope.reasonCodes).toContain("PAIR_INCOMPLETE");
+  });
+
+  it("11. E4-05: repetition 0 -> INVALID (out of range)", () => {
+    const prov = { sourceManifestPath: "m.json", gitSha: GIT40, dirty: false, model: "m", provider: "p", runtimeConfigHash: HEX64 };
+    const baseline = buildExperimentArtifactV3({
+      arm: { armId: "baseline", candidateId: null, candidateConfigHash: null },
+      manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT40, dirty: false },
+      outcomes: [makeOutcome({ caseId: "ho-01", armId: "baseline", repetition: 0, passed: false, activationRef: null })],
+      provenance: prov,
+    });
+    const candidate = buildExperimentArtifactV3({
+      arm: { armId: "candidate", candidateId: "memory_retrieval", candidateConfigHash: "b".repeat(64) },
+      manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT40, dirty: false, planDigest: HEX64 },
+      outcomes: [makeOutcome({ caseId: "ho-01", armId: "candidate", repetition: 0, passed: true })],
+      provenance: prov,
+    });
+    const { envelope } = deriveV3Decision({ baseline, candidate, baselineDigest: "x", candidateDigest: "y" }, "memory_retrieval", HEX64);
+    expect(envelope.decision).toBe("INVALID");
+  });
 });

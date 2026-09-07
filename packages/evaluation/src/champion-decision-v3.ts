@@ -81,6 +81,10 @@ export interface DecisionGateInputV3 {
   repetitions: number;
   /** Per-repetition net-passed deltas (for direction stability). */
   perRepetitionDeltas: number[];
+  /** E4-05: exact-pairing violations (duplicate/missing/extra/out-of-range
+   *  PairKeys). Non-empty forces pairComplete=false → INVALID; carried for
+   *  audit. Does not itself change the gate logic. */
+  pairingViolations?: string[];
   /** Pre-registered effect threshold (ACCEPT requires >= this). */
   minConclusiveNetDelta: number;
   /** Token/cost growth (ACCEPT requires bounded). */
