@@ -178,7 +178,7 @@ async function main() {
     gitSha,
     dirty,
     promotionEligible: false,
-    isolationStrength: "migration-tool",
+    isolationStrength: "none",
   };
   const provenance = {
     sourceManifestPath: null,
