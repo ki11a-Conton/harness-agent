@@ -44,6 +44,7 @@ import type {
   EvalOutcome,
   EvalSuite,
   OrderedArmRun,
+  PairedArmRecord,
   PairedCounters,
   PairedExperimentPlan,
   PairedFinalizedPair,
@@ -560,6 +561,13 @@ async function runPairedPromotion(
   }
 
   await mkdir(outDir, { recursive: true });
+  // E3-14: bound the event trail of EVERY arm outcome in the artifact — resume
+  // loads pre-existing journal entries that may carry an unbounded trail (e.g.
+  // a case at its duration/tool limits emitting >60k events). Without this the
+  // final JSON.stringify(artifact) throws "Invalid string length" and the whole
+  // paid run is lost. Metrics/violations are untouched; only debug trail drops.
+  const boundRecord = (rec: PairedArmRecord): PairedArmRecord =>
+    rec === null ? rec : { ...rec, outcome: boundOutcomeEvents(rec.outcome) };
   const artifact: PairedExperimentArtifact = {
     schemaVersion: "e3-02",
     kind: "paired-experiment",
@@ -567,8 +575,16 @@ async function runPairedPromotion(
     plan,
     counters: result.counters,
     orderedRuns: result.orderedRuns,
-    finalizedPairs: result.finalizedPairs,
-    partialPairs: result.partialPairs,
+    finalizedPairs: result.finalizedPairs.map((p) => ({
+      ...p,
+      baseline: boundRecord(p.baseline),
+      candidate: boundRecord(p.candidate),
+    })),
+    partialPairs: result.partialPairs.map((p) => ({
+      ...p,
+      baseline: p.baseline === null ? null : boundRecord(p.baseline),
+      candidate: p.candidate === null ? null : boundRecord(p.candidate),
+    })),
     haltedByBudget: result.haltedByBudget,
     interrupted: result.interrupted,
     resumed: result.resumed,
@@ -728,8 +744,9 @@ export async function preflightBenchmark(
   const estimatedCostUsd = estimatedModelCalls * PREFLIGHT_ESTIMATE.costPerCallUsd;
 
   // 6. Billing: an external-billed provider requires RUN_PAID_BENCHMARKS=1
-  //    (an API key alone is NOT authorization).
-  if (billingClass === "external-billed" && !opts.paidAuthorized) {
+  //    (an API key alone is NOT authorization). Dry-run is exempt — it makes
+  //    0 provider calls and the user needs the plan digest to authorize.
+  if (!opts.dryRun && billingClass === "external-billed" && !opts.paidAuthorized) {
     return {
       ok: false,
       reason: "RUN_PAID_BENCHMARKS=1 is required for an external billed provider — an API key alone is not authorization",
@@ -1410,7 +1427,11 @@ async function runOneCase(
     // manifest default would lie about this case.
     // P38.4-7/8: attach per-case provenance (evaluation context + candidate
     // config hashes + controlled difference) for attributable champion eval.
-    const base = workspaceEscapedOutcome ?? outcome;
+    // E3-14: bound the event trail BEFORE it reaches journal/artifact
+    // serialization — a case at its duration/tool limits can emit >60k events
+    // (~463MB JSON) which exceeds V8's string cap and crashes the run with
+    // "Invalid string length". Metrics/violations are already computed.
+    const base = boundOutcomeEvents(workspaceEscapedOutcome ?? outcome);
 
     // E2-09: host mutation sentinel — if the host repo state changed since
     // case start (child-process writes outside the workspace), the case is an
@@ -1470,6 +1491,38 @@ async function runOneCase(
 // are wired into the benchmark runtime — a case requiring them is no longer
 // an infrastructure failure; it runs the REAL mechanism.
 export const BENCHMARK_WIRED_MECHANISMS = new Set<string>(["context", "memory", "subagent", "scheduler", "mcp"]);
+
+/**
+ * E3-14 — bound the per-outcome event trail stored in journals/artifacts.
+ *
+ * A case can legitimately run to its duration/tool limits and emit tens of
+ * thousands of events (observed: 61,959 events → ~463MB JSON for one arm).
+ * V8 caps a single string at ~2^29-1 chars, so serializing such an outcome
+ * (journal entry or paired-experiment.json) throws "Invalid string length"
+ * and crashes the whole paid benchmark run. This is a benchmark-infrastructure
+ * defect: the measurement is complete, but the event trail makes the artifact
+ * unserializable.
+ *
+ * Metrics/violations/grade/terminationReason are ALL derived from the full
+ * event stream BEFORE this bound is applied, so truncation only drops debug
+ * trail — never measurement. The journal keeps the bounded trail; the full
+ * trail exists in the case session store during the run.
+ */
+export const OUTCOME_EVENTS_HEAD = 200;
+export const OUTCOME_EVENTS_TAIL = 100;
+
+export function boundOutcomeEvents(outcome: EvalOutcome): EvalOutcome {
+  const { events } = outcome;
+  if (events.length <= OUTCOME_EVENTS_HEAD + OUTCOME_EVENTS_TAIL) return outcome;
+  const head = events.slice(0, OUTCOME_EVENTS_HEAD);
+  const tail = events.slice(events.length - OUTCOME_EVENTS_TAIL);
+  const note = `event trail bounded for serialization: ${events.length} → ${head.length + tail.length} (head ${head.length} + tail ${tail.length})`;
+  return {
+    ...outcome,
+    events: [...head, ...tail],
+    reason: outcome.reason === undefined ? note : `${outcome.reason} | ${note}`,
+  };
+}
 
 export function checkRequirements(requires: readonly string[] | undefined): string[] | undefined {
   if (requires === undefined || requires.length === 0) return undefined;

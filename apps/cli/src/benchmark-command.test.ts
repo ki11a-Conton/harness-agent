@@ -3,6 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { ScriptedModelProvider } from "@ar/model";
+import { makeEventId, makeSessionId } from "@ar/contracts";
+import type { EvalOutcome } from "@ar/evaluation";
 import { assertWorkspaceIsolated, effectiveFeaturesFor, runBenchmarkCommand } from "./benchmark-command.js";
 
 let tempDirs: string[] = [];
@@ -388,6 +390,55 @@ describe("checkRequirements (P4-3)", () => {
     expect(checkRequirements(["mcp"])).toBeUndefined();
     expect(checkRequirements(["subagent", "context"])).toBeUndefined();
     expect(checkRequirements(["plugins"])).toEqual(["plugins"]);
+  });
+});
+
+describe("boundOutcomeEvents (E3-14: bounded event trail so journals/artifacts stay serializable)", () => {
+  const mkEvent = (i: number) => ({
+    id: makeEventId(i),
+    sessionId: makeSessionId(0),
+    sequence: i,
+    timestamp: i,
+    type: "model.started" as const,
+    payload: {},
+  });
+
+  const mkOutcome = (n: number): EvalOutcome => ({
+    caseId: "ho-01",
+    status: "failed" as const,
+    actualStatus: "failed",
+    events: Array.from({ length: n }, (_, i) => mkEvent(i)),
+    metrics: { tool_call_count: n, turn_count: 1, tokens_input: 1, tokens_output: 1 },
+    violations: ["expected completed but turn failed"],
+    suite: "holdout" as const,
+    judgeVersion: "1.0.0",
+  } as unknown as EvalOutcome);
+
+  it("leaves a small trail untouched", async () => {
+    const { boundOutcomeEvents } = await import("./benchmark-command.js");
+    const outcome = mkOutcome(50);
+    const bound = boundOutcomeEvents(outcome);
+    expect(bound.events.length).toBe(50);
+    expect(bound.violations).toEqual(["expected completed but turn failed"]);
+    expect(bound.metrics.tool_call_count).toBe(50);
+  });
+
+  it("bounds a huge trail to head + tail, preserving metrics/violations", async () => {
+    const { boundOutcomeEvents, OUTCOME_EVENTS_HEAD, OUTCOME_EVENTS_TAIL } = await import("./benchmark-command.js");
+    const outcome = mkOutcome(61_959); // observed pathological size for one arm
+    const bound = boundOutcomeEvents(outcome);
+    expect(bound.events.length).toBe(OUTCOME_EVENTS_HEAD + OUTCOME_EVENTS_TAIL);
+    // Head preserved: first events unchanged.
+    expect(bound.events[0]).toEqual(mkEvent(0));
+    expect(bound.events[OUTCOME_EVENTS_HEAD - 1]).toEqual(mkEvent(OUTCOME_EVENTS_HEAD - 1));
+    // Tail preserved: last events unchanged.
+    expect(bound.events[bound.events.length - 1]).toEqual(mkEvent(61_958));
+    // Decision-relevant fields survive the bound untouched.
+    expect(bound.violations).toEqual(["expected completed but turn failed"]);
+    expect(bound.metrics.tool_call_count).toBe(61_959);
+    expect(bound.status).toBe("failed");
+    expect(bound.reason).toContain("event trail bounded for serialization");
+    expect(bound.reason).toContain("61959");
   });
 });
 
