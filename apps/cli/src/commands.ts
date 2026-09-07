@@ -149,6 +149,15 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
       const result = runProductionAudit({ root: process.cwd() });
       return { exitCode: result.ok ? 0 : 1, lines: renderProductionAudit(result) };
     }
+    case "usage-audit": {
+      // E4-10: classify each key capability as exported/tested/wired/observed
+      // from on-disk evidence. --strict fails (non-zero) unless every key
+      // capability is observed in a production-path e2e.
+      const { runUsageAudit, renderUsageAudit } = await import("./usage-audit.js");
+      const result = runUsageAudit({ root: process.cwd() });
+      const strict = rest.includes("--strict");
+      return { exitCode: strict && !result.ok ? 1 : 0, lines: renderUsageAudit(result) };
+    }
     case "champion": {
       // E1-14/E2-07: `agent champion promote --envelope <path>` — the ONLY
       // promotion authority is a machine-verifiable PromotionEnvelope produced

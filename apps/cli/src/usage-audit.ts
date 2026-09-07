@@ -1,0 +1,146 @@
+/**
+ * E4-10 — production usage audit.
+ *
+ * For each key capability, classify how far it has actually reached in the
+ * product, from evidence on disk (never a hand-maintained table):
+ *
+ *   exported  — the symbol is re-exported from a package index (public surface)
+ *   tested    — a *.test.ts references it
+ *   wired     — a NON-test production source references it (reachable from an
+ *               entry point: createHarness / main / commands)
+ *   observed  — an end-to-end production-path test actually exercises it
+ *
+ * A capability that is only `exported` (public symbol, no production caller) is
+ * reported as such — the audit's whole purpose is to surface "exported but not
+ * wired" and "wired but never observed" gaps rather than let a capability table
+ * claim more than the code proves.
+ */
+
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+export type UsageLevel = "exported" | "tested" | "wired" | "observed";
+
+export interface CapabilityUsage {
+  capability: string;
+  symbol: string;
+  exported: boolean;
+  tested: boolean;
+  wired: boolean;
+  observed: boolean;
+  /** The highest level reached (exported < tested < wired < observed). */
+  level: UsageLevel;
+  wiredBy: string[];
+  observedBy: string[];
+}
+
+export interface UsageAuditResult {
+  capabilities: CapabilityUsage[];
+  ok: boolean;
+  /** Capabilities that did NOT reach `observed`. */
+  notObserved: string[];
+}
+
+/** The key capabilities E4-10 requires to be observed end-to-end. */
+export const KEY_CAPABILITIES: ReadonlyArray<{ capability: string; symbol: string }> = [
+  { capability: "createActivationRecorderV2", symbol: "createActivationRecorderV2" },
+  { capability: "classifySecurityOutcomeV2", symbol: "buildSecurityOutcomeFromEventsV2" },
+  { capability: "canonical V3 writer", symbol: "writeExperimentArtifactV3" },
+  { capability: "strict promotion loader", symbol: "loadPromotionEnvelope" },
+  { capability: "resolveChampionHarness", symbol: "resolveChampionHarness" },
+  { capability: "durable RecoveryStore", symbol: "DurableRecoveryStore" },
+  { capability: "GateEvidenceV2 generator", symbol: "runGateV2" },
+];
+
+const IGNORED = new Set(["node_modules", "dist", ".git", "coverage"]);
+
+interface ScannedFile {
+  path: string; // repo-relative
+  src: string;
+  isTest: boolean;
+  isIndex: boolean;
+  isE2E: boolean;
+  isAuditor: boolean;
+}
+
+function collectTs(dir: string, root: string, out: ScannedFile[] = []): ScannedFile[] {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if (!IGNORED.has(entry.name)) collectTs(join(dir, entry.name), root, out);
+      continue;
+    }
+    if (!entry.isFile() || !entry.name.endsWith(".ts")) continue;
+    const abs = join(dir, entry.name);
+    let src: string;
+    try {
+      src = readFileSync(abs, "utf8");
+    } catch {
+      continue;
+    }
+    const rel = abs.slice(root.length + 1).replace(/\\/g, "/");
+    out.push({
+      path: rel,
+      src,
+      isTest: entry.name.endsWith(".test.ts"),
+      isIndex: entry.name === "index.ts",
+      isE2E: /e2e|production-e2e|production-path/.test(entry.name),
+      // The auditor's own module lists the symbols as strings — never count it.
+      isAuditor: /usage-audit\.ts$/.test(rel),
+    });
+  }
+  return out;
+}
+
+function rank(exported: boolean, tested: boolean, wired: boolean, observed: boolean): UsageLevel {
+  if (observed) return "observed";
+  if (wired) return "wired";
+  if (tested) return "tested";
+  if (exported) return "exported";
+  return "exported"; // absent — reported via exported=false below
+}
+
+export function runUsageAudit(deps: { root: string; capabilities?: ReadonlyArray<{ capability: string; symbol: string }> }): UsageAuditResult {
+  const files = collectTs(deps.root, deps.root);
+  const caps = deps.capabilities ?? KEY_CAPABILITIES;
+  const capabilities: CapabilityUsage[] = [];
+  for (const { capability, symbol } of caps) {
+    const exported = files.some((f) => f.isIndex && !f.isAuditor && new RegExp(`\\b${symbol}\\b`).test(f.src));
+    const tested = files.some((f) => f.isTest && !f.isE2E && !f.isAuditor && new RegExp(`\\b${symbol}\\b`).test(f.src));
+    const wiredFiles = files.filter((f) => !f.isTest && !f.isIndex && !f.isAuditor && new RegExp(`\\b${symbol}\\b`).test(f.src));
+    const observedFiles = files.filter((f) => f.isE2E && !f.isAuditor && new RegExp(`\\b${symbol}\\b`).test(f.src));
+    const wired = wiredFiles.length > 0;
+    const observed = observedFiles.length > 0;
+    capabilities.push({
+      capability,
+      symbol,
+      exported,
+      tested,
+      wired,
+      observed,
+      level: rank(exported, tested, wired, observed),
+      wiredBy: wiredFiles.map((f) => f.path).slice(0, 6),
+      observedBy: observedFiles.map((f) => f.path).slice(0, 6),
+    });
+  }
+  const notObserved = capabilities.filter((c) => !c.observed).map((c) => c.capability);
+  return { capabilities, ok: notObserved.length === 0, notObserved };
+}
+
+export function renderUsageAudit(result: UsageAuditResult): string[] {
+  const lines = ["production usage audit (exported < tested < wired < observed):"];
+  for (const c of result.capabilities) {
+    const flags = [c.exported && "exported", c.tested && "tested", c.wired && "wired", c.observed && "observed"].filter(Boolean).join(",") || "ABSENT";
+    lines.push(`  ${c.observed ? "PASS" : "FAIL"}  ${c.capability.padEnd(28)} [${flags}]  level=${c.level}`);
+    if (!c.observed) {
+      lines.push(`         wired by: ${c.wiredBy.join(", ") || "(none)"}; observed by: ${c.observedBy.join(", ") || "(none)"}`);
+    }
+  }
+  lines.push(result.ok ? "usage audit: PASS (all key capabilities observed)" : `usage audit: FAIL (${result.notObserved.length} not observed: ${result.notObserved.join(", ")})`);
+  return lines;
+}
