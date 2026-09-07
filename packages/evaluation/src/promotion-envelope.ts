@@ -23,8 +23,8 @@
  */
 
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readFile, realpath } from "node:fs/promises";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { stableStringify } from "./manifest.js";
 import { loadExperimentArtifactV3 } from "./artifact-v3/loader.js";
 
@@ -71,6 +71,7 @@ export type EnvelopeValidationCode =
   | "ARTIFACT_MISSING"
   | "ARTIFACT_DIGEST_CHANGED"
   | "ARTIFACT_NOT_V3"
+  | "PATH_OUTSIDE_BUNDLE"
   | "CANDIDATE_NOT_ELIGIBLE"
   | "CROSS_BINDING_MISMATCH"
   | "DECISION_ARTIFACT_MISSING"
@@ -147,6 +148,32 @@ function sha256OfFileBytes(buf: Buffer): string {
  * @param verify.verifyArtifactRefs whether to re-read + re-digest the artifact
  *                                 files (default true)
  */
+/**
+ * E4-06 #3 — a bundle ref must resolve inside the trusted bundle root, both
+ * lexically (no `..` traversal, no absolute path to elsewhere) and after
+ * symlink resolution. Returns violation strings (empty when safe).
+ */
+async function pathGuardViolations(bundleRoot: string, p: string, role: string): Promise<string[]> {
+  const out: string[] = [];
+  const abs = resolve(bundleRoot, p);
+  const rel = relative(bundleRoot, abs);
+  if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) {
+    out.push(`${role}: path "${p}" resolves outside the trusted bundle root`);
+    return out; // refuse to read anything outside the root
+  }
+  try {
+    const realRoot = await realpath(bundleRoot);
+    const realTarget = await realpath(abs);
+    const realRel = relative(realRoot, realTarget);
+    if (realRel === "" || realRel.startsWith("..") || isAbsolute(realRel)) {
+      out.push(`${role}: path "${p}" escapes the bundle root via symlink`);
+    }
+  } catch {
+    // target missing/unresolvable — the strict load reports it as ARTIFACT_NOT_V3
+  }
+  return out;
+}
+
 export async function loadPromotionEnvelope(
   path: string,
   verify: {
@@ -156,6 +183,10 @@ export async function loadPromotionEnvelope(
     verifyArtifactRefs?: boolean;
     /** E3-07: re-read + re-digest the DecisionArtifactV3 (default true). */
     verifyDecisionArtifact?: boolean;
+    /** E4-06 #3: trusted bundle root. Every artifact ref and the decision
+     *  artifact must resolve INSIDE this directory (no traversal / symlink
+     *  escape). Defaults to the envelope's own directory. */
+    bundleRoot?: string;
   } = {},
 ): Promise<EnvelopeValidationResult> {
   const issues: Array<{ code: EnvelopeValidationCode; detail: string }> = [];
@@ -300,6 +331,20 @@ export async function loadPromotionEnvelope(
     // candidate artifact).
     if (baseRef && candRef && resolve(baseRef.path) === resolve(candRef.path)) {
       issues.push({ code: "CROSS_BINDING_MISMATCH", detail: "baseline and candidate artifactRefs resolve to the same file (one file per role)" });
+    }
+
+    // E4-06 #3: every ref must stay inside the trusted bundle root.
+    const bundleRoot = verify.bundleRoot ?? dirname(resolve(path));
+    for (const [role, ref] of [["baseline", baseRef], ["candidate", candRef]] as const) {
+      if (!ref) continue;
+      for (const v of await pathGuardViolations(bundleRoot, ref.path, `${role} artifactRef`)) {
+        issues.push({ code: "PATH_OUTSIDE_BUNDLE", detail: v });
+      }
+    }
+    if (typeof e.decisionArtifactPath === "string") {
+      for (const v of await pathGuardViolations(bundleRoot, e.decisionArtifactPath, "decisionArtifact")) {
+        issues.push({ code: "PATH_OUTSIDE_BUNDLE", detail: v });
+      }
     }
 
     const strictLoadV3 = async (ref: AxisArtifactRef | undefined, role: string) => {

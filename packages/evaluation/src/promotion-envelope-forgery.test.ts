@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile, readFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
@@ -167,6 +167,19 @@ describe("E4-06 forged promotion regression", () => {
     expect(await codes(envPath)).toContain("DECISION_REPLAY_MISMATCH");
   });
 
+  it("evaluatorVersion randomized (digest recomputed) -> DECISION_REPLAY_MISMATCH", async () => {
+    const { envPath, decisionArtifactPath } = await buildValidBundle(dir);
+    const da = JSON.parse(await readFile(decisionArtifactPath, "utf8")) as Record<string, unknown>;
+    da.evaluatorVersion = "some-other-evaluator-v9";
+    const { computeDecisionArtifactContentDigestV3 } = await import("./champion-eval-v3.js");
+    da.contentDigest = computeDecisionArtifactContentDigestV3(da);
+    await writeFile(decisionArtifactPath, JSON.stringify(da), "utf8");
+    const env = JSON.parse(await readFile(envPath, "utf8")) as PromotionEnvelope;
+    env.decisionArtifactDigest = sha(await readFile(decisionArtifactPath, "utf8"));
+    await rewriteEnvelope(envPath, env);
+    expect(await codes(envPath)).toContain("DECISION_REPLAY_MISMATCH");
+  });
+
   it("decision flipped to ACCEPT over a failing pair (digest recomputed) -> DECISION_REPLAY_MISMATCH", async () => {
     // Build a pair where the candidate does NOT beat baseline (net delta 0,
     // single rep) so the real evaluator says INCONCLUSIVE; forge ACCEPT.
@@ -269,6 +282,38 @@ describe("E4-06 forged promotion regression", () => {
     const envPath = join(dir, "envelope.json");
     await writeFile(envPath, JSON.stringify(env), "utf8");
     expect(await codes(envPath)).toContain("CANDIDATE_NOT_ELIGIBLE");
+  });
+
+  it("path traversal: candidate ref escapes the bundle root -> PATH_OUTSIDE_BUNDLE", async () => {
+    const { envPath } = await buildValidBundle(dir);
+    const env = JSON.parse(await readFile(envPath, "utf8")) as PromotionEnvelope;
+    env.artifactRefs.find((r) => r.role === "candidate")!.path = join(dir, "..", "outside", "candidate.json");
+    await rewriteEnvelope(envPath, env);
+    expect(await codes(envPath)).toContain("PATH_OUTSIDE_BUNDLE");
+  });
+
+  it("symlink escape: candidate ref is a link out of the bundle -> PATH_OUTSIDE_BUNDLE", async () => {
+    const { symlink, lstat } = await import("node:fs/promises");
+    const { envPath, candidatePath } = await buildValidBundle(dir);
+    // Put the real candidate OUTSIDE the bundle and link to it from inside.
+    const outside = join(dir, "..", "e4-06-outside");
+    await mkdir(outside, { recursive: true });
+    const realPath = join(outside, "candidate.json");
+    await writeFile(realPath, await readFile(candidatePath), "utf8");
+    const linkPath = join(dir, "candidate-link.json");
+    try {
+      await symlink(realPath, linkPath);
+    } catch {
+      // symlink creation needs privileges on some platforms; skip rather than fail
+      return;
+    }
+    const env = JSON.parse(await readFile(envPath, "utf8")) as PromotionEnvelope;
+    const ref = env.artifactRefs.find((r) => r.role === "candidate")!;
+    ref.path = linkPath;
+    ref.digest = sha(await readFile(realPath, "utf8"));
+    await rewriteEnvelope(envPath, env);
+    expect(await codes(envPath)).toContain("PATH_OUTSIDE_BUNDLE");
+    await lstat(linkPath); // sanity: the link exists
   });
 
   it("a rejected load leaves every bundle file byte-identical (loader is read-only)", async () => {

@@ -238,6 +238,7 @@ describe("E3-13 production-path offline integration", () => {
     const verified = await loadPromotionEnvelope(envPath, {
       parentStateDigest: sha("c0-state"),
       candidateId: "adaptive_recovery_v2",
+      bundleRoot: root,
     });
     expect(verified.ok).toBe(true);
 

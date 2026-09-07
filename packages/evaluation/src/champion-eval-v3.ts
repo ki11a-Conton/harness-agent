@@ -31,6 +31,11 @@ import {
 
 export const CHAMPION_EVAL_V3_POLICY_VERSION = "e3-06-policy-v1";
 export const DECISION_ARTIFACT_V3_SCHEMA_VERSION = "3.0.0";
+/** E4-06 #4: identity of the pure evaluator that produced a DecisionArtifactV3.
+ *  The promotion loader replays with THIS evaluator and rejects artifacts from
+ *  a different one, so a decision cannot be laundered across an incompatible
+ *  evaluator change. */
+export const DECISION_EVALUATOR_VERSION = "e4-06-evaluator-v1";
 
 // ---------------------------------------------------------------------------
 // DecisionArtifactV3
@@ -44,6 +49,8 @@ export interface DecisionArtifactV3 {
   /** E4-06 #4: the FULL applied policy, embedded so the promotion loader can
    *  replay the evaluator deterministically and verify thresholdDigest. */
   policy: DecisionPolicyV3;
+  /** E4-06 #4: which pure evaluator produced this artifact. */
+  evaluatorVersion: string;
   candidateId: string | null;
   /** Plan digest from the candidate artifact manifest (nullable). */
   planDigest: string | null;
@@ -93,6 +100,7 @@ export function buildDecisionArtifactV3(
     policyVersion: policy.version,
     thresholdDigest: computeThresholdDigestV3(policy),
     policy,
+    evaluatorVersion: DECISION_EVALUATOR_VERSION,
     candidateId,
     planDigest,
     baselineArtifactDigest: baselineDigest,
@@ -328,6 +336,9 @@ export function verifyDecisionArtifactReplayV3(
   stored: Record<string, unknown>,
 ): string[] {
   const violations: string[] = [];
+  if (stored["evaluatorVersion"] !== DECISION_EVALUATOR_VERSION) {
+    violations.push(`stored evaluatorVersion ${String(stored["evaluatorVersion"])} != current ${DECISION_EVALUATOR_VERSION} (decision not reproducible by this evaluator)`);
+  }
   let policy: DecisionPolicyV3;
   try {
     policy = validateDecisionPolicyV3(stored["policy"]);
