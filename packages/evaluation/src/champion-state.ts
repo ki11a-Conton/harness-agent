@@ -24,6 +24,11 @@
  */
 
 import { getCandidateRegistry } from "./candidate-registry.js";
+import {
+  championApplicationTargetDigestV1,
+  type AppliedProofV1,
+  type ChampionApplicationFailureV1,
+} from "./champion-application.js";
 
 export const CHAMPION_STATE_SCHEMA_VERSION = "1.0.0";
 
@@ -96,6 +101,13 @@ export interface ChampionState {
   quarantine?: ChampionQuarantineRecord;
   /** E2-07: rollback audit record when this state is a rollback target. */
   rollback?: ChampionRollbackRecord;
+  /** E4-07: proof that a REAL process startup ran createHarness and verified
+   *  the resulting config. Present only when `applied === true` for a
+   *  non-baseline level; `applied` without a valid proof is a semantic error. */
+  appliedProof?: AppliedProofV1;
+  /** E4-07: why the last real application attempt failed. The promotion claim
+   *  is kept; the state is never silently reported as applied. */
+  applicationFailure?: ChampionApplicationFailureV1;
 }
 
 /** The initial frozen production baseline (PROVEN by construction). */
@@ -282,7 +294,8 @@ export function rollbackChampionState(
       semanticDigest: "",
       configPatch: {},
     }],
-    applied: true,
+    applied: to === 0, // E4-07: C0 is the default baseline (trivially applied); a
+    // rolled-back champion level must be re-applied by a real startup + re-proven.
     validity: to === 0 ? "PROVEN" : "QUARANTINED_PENDING_REEVALUATION",
     rollback: rollbackRecord,
   };
@@ -332,4 +345,69 @@ export function quarantineChampionState(
       note: opts.note,
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// E4-07 — application lifecycle transitions
+//
+//   PROVEN (C0 baseline / a proven level)
+//     -> new promotion -> APPLICATION_PENDING   (applyPromotion: applied=false)
+//       -> real startup runs createHarness
+//         -> config matches target  -> APPLIED            (applied=true + proof)
+//         -> config drift / failure -> APPLICATION_FAILED (claim kept, reason set)
+//       -> a new promotion from either state -> APPLICATION_PENDING again
+//
+// APPLYING is the transient inside a single startup; it is not persisted as a
+// terminal state, so a crash mid-application leaves APPLICATION_PENDING (which
+// the next startup retries) rather than a stuck APPLYING.
+// ---------------------------------------------------------------------------
+
+/** The persisted E4-07 lifecycle status derived from a state's fields. */
+export type ChampionLifecycleStatus =
+  | "PROVEN"
+  | "APPLICATION_PENDING"
+  | "APPLIED"
+  | "APPLICATION_FAILED";
+
+export function championLifecycleStatus(state: ChampionState): ChampionLifecycleStatus {
+  if (state.applicationFailure !== undefined) return "APPLICATION_FAILED";
+  // C0 is the frozen production baseline: there is no champion profile to
+  // apply, so it is PROVEN by construction regardless of the `applied` flag.
+  if (state.level === "C0") return "PROVEN";
+  if (state.applied) return "APPLIED";
+  return "APPLICATION_PENDING";
+}
+
+/**
+ * Record that a real process startup applied this champion: `applied=true`,
+ * the level becomes PROVEN, and the proof is attached. Fails closed when the
+ * proof does not describe THIS promotion (generation mismatch) or names a
+ * different candidate — a stale proof can never mark a newer claim applied.
+ */
+export function markChampionApplied(current: ChampionState, proof: AppliedProofV1): ChampionState {
+  const generation = championApplicationTargetDigestV1(current);
+  if (proof.stateDigest !== generation) {
+    throw new Error(`markChampionApplied: proof stateDigest ${proof.stateDigest.slice(0, 12)}… != current promotion ${generation.slice(0, 12)}… (stale proof)`);
+  }
+  if (current.candidateId === null || proof.candidateId !== current.candidateId) {
+    throw new Error(`markChampionApplied: proof candidate "${proof.candidateId}" != state candidate "${String(current.candidateId)}"`);
+  }
+  if (proof.level !== current.level) {
+    throw new Error(`markChampionApplied: proof level ${proof.level} != state level ${current.level}`);
+  }
+  const { applicationFailure: _f, ...rest } = current;
+  return { ...rest, applied: true, validity: "PROVEN", appliedProof: proof };
+}
+
+/**
+ * Record that a real application attempt failed. The promotion claim and its
+ * history are preserved; `applied` stays false so no consumer can mistake the
+ * state for an applied champion.
+ */
+export function markChampionApplicationFailed(
+  current: ChampionState,
+  failure: ChampionApplicationFailureV1,
+): ChampionState {
+  const { appliedProof: _p, ...rest } = current;
+  return { ...rest, applied: false, applicationFailure: failure };
 }
