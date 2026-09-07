@@ -205,8 +205,12 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
           envelope.artifactRefs.find((r) => r.role === "candidate")?.path ?? envelopePath,
           { envelopeDigest: envelope.contentDigest, decisionEnvelopeDigest: envelope.decisionEnvelopeDigest },
         );
-        const applied = { ...next, applied: true };
-        const cas = await writeChampionStateFileCas(applied, championStateDigest(current));
+        // E4-07: promote records the transition as applicationPending
+        // (applied=false). The applied proof is written ONLY by a real process
+        // startup that runs createHarness and verifies the resulting config
+        // matches the target — never by the promote command itself. Forcing
+        // applied:true here was the semantic bug this task removes.
+        const cas = await writeChampionStateFileCas(next, championStateDigest(current));
         if (!cas.ok) {
           return {
             exitCode: 1,
@@ -216,11 +220,13 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
         return {
           exitCode: 0,
           lines: [
-            `champion promote: ${current.level} -> ${applied.level} (${envelope.candidateId})`,
+            `champion promote: ${current.level} -> ${next.level} (${envelope.candidateId})`,
             `  envelope: ${envelopePath} (digest ${envelope.contentDigest.slice(0, 12)}…)`,
             `  policy: ${envelope.policyVersion}`,
-            `  history: ${applied.history.length} promotion(s)`,
-            "  NOTE: applied is a document state; runtime application is proven by E2-08.",
+            `  history: ${next.history.length} promotion(s)`,
+            "  state: applicationPending (applied=false) — the next real CLI/Web startup",
+            "         runs createHarness and writes the applied proof only if the",
+            "         resulting config matches the champion target.",
           ],
         };
       }
