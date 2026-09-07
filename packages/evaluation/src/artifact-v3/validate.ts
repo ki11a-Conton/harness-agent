@@ -24,7 +24,7 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { ArtifactSchemaError, classifyArtifact, findRefAndEventViolations, parseExperimentArtifactV3 } from "./schema.js";
+import { ArtifactSchemaError, classifyArtifact, findEventRecordViolations, findRefAndEventViolations, parseExperimentArtifactV3 } from "./schema.js";
 import type { ExperimentArtifactV3 } from "./types.js";
 import { discoverArtifactFiles } from "./loader.js";
 import { computeContentDigestV3, deriveSummaryV3 } from "./writer.js";
@@ -41,7 +41,8 @@ export type ValidationReasonCode =
   | "LEGACY_NOT_PROMOTION_ELIGIBLE"
   | "EMPTY_ARTIFACT"
   | "DANGLING_REF"
-  | "DUPLICATE_EVENT";
+  | "DUPLICATE_EVENT"
+  | "EVENT_RECORDS_INVALID";
 
 export interface ArtifactValidationCheck {
   code: ValidationReasonCode;
@@ -167,6 +168,14 @@ export function validateArtifactV3(artifact: ExperimentArtifactV3): ArtifactVali
     checks.push({ code: "DANGLING_REF", passed: false, detail: dangling.join("; ") });
   } else {
     checks.push({ code: "DANGLING_REF", passed: true, detail: "all outcome refs resolve to real events" });
+  }
+
+  // 8. E4-02 #6: embedded event trails are intact + tamper-evident.
+  const erViolations = findEventRecordViolations(artifact);
+  if (erViolations.length > 0) {
+    checks.push({ code: "EVENT_RECORDS_INVALID", passed: false, detail: erViolations.join("; ") });
+  } else {
+    checks.push({ code: "EVENT_RECORDS_INVALID", passed: true, detail: "event records intact (or absent)" });
   }
 
   return checks;

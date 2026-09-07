@@ -10,8 +10,11 @@ import {
   ARTIFACT_V3_SCHEMA_VERSION,
   type ArtifactClassification,
   type CaseOutcomeV3,
+  type EventChunkV3,
+  type EventRecordsV3,
   type ExperimentArtifactV3,
 } from "./types.js";
+import { computeEventChunkDigestV3 } from "./writer.js";
 
 /** Stable schema-error reasons (also used as validator reason codes). */
 export type SchemaErrorReason =
@@ -235,7 +238,81 @@ export function parseCaseOutcomeV3(raw: unknown, index: number): CaseOutcomeV3 {
     evaluationContextHash: expectHexDigest(o.evaluationContextHash, `outcomes[${index}].evaluationContextHash`, 64, true),
     candidateConfigHash: expectHexDigest(o.candidateConfigHash, `outcomes[${index}].candidateConfigHash`, 64, true),
   };
+  // E4-02 #5/#6: eventRecords is optional (pre-E4-02 artifacts omit it); when
+  // present its STRUCTURE is validated here and its INTEGRITY (seq contiguity,
+  // digests) is checked by validateEventRecordsIntegrity on the strict path.
+  if (o.eventRecords !== undefined) {
+    outcome.eventRecords = parseEventRecords(o.eventRecords, `outcomes[${index}].eventRecords`);
+  }
   return outcome;
+}
+
+/** Parse one outcome's embedded event records (structure only). */
+function parseEventRecords(raw: unknown, field: string): EventRecordsV3 {
+  const r = expectObject(raw, field);
+  if (r.mode !== "embedded") {
+    throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", `${field}.mode`, `expected "embedded", got ${JSON.stringify(r.mode)}`);
+  }
+  const totalEvents = expectNonNegativeInteger(r.totalEvents, `${field}.totalEvents`);
+  const chunks: EventChunkV3[] = expectArray(r.chunks, `${field}.chunks`).map((c, i) => {
+    const ch = expectObject(c, `${field}.chunks[${i}]`);
+    return {
+      chunkIndex: expectNonNegativeInteger(ch.chunkIndex, `${field}.chunks[${i}].chunkIndex`),
+      firstSeq: expectNonNegativeInteger(ch.firstSeq, `${field}.chunks[${i}].firstSeq`),
+      lastSeq: expectNonNegativeInteger(ch.lastSeq, `${field}.chunks[${i}].lastSeq`),
+      count: expectNonNegativeInteger(ch.count, `${field}.chunks[${i}].count`),
+      digest: expectHexDigest(ch.digest, `${field}.chunks[${i}].digest`, 64)!,
+      events: expectArray(ch.events, `${field}.chunks[${i}].events`).map(
+        (e, j) => expectObject(e, `${field}.chunks[${i}].events[${j}]`),
+      ),
+    };
+  });
+  return { mode: "embedded", totalEvents, chunks };
+}
+
+/**
+ * E4-02 #6 — verify each outcome's embedded event trail is internally
+ * consistent and tamper-evident. Returns human-readable violations (empty when
+ * every outcome's eventRecords is intact or absent). Rejects: lost chunk (a gap
+ * in the contiguous seq range), duplicated seq (an overlap), out-of-order
+ * (chunkIndex not in position), digest mismatch (tampered/reordered events), and
+ * count/totalEvents inconsistency. Lives here (not validate.ts) so the strict
+ * loader can call it without a loader↔validate cycle.
+ */
+export function findEventRecordViolations(artifact: ExperimentArtifactV3): string[] {
+  const violations: string[] = [];
+  for (const o of artifact.outcomes) {
+    const er = o.eventRecords;
+    if (er === undefined) continue;
+    const f = `outcomes[${o.caseId}:${o.armId}].eventRecords`;
+    const sumCounts = er.chunks.reduce((s, c) => s + c.count, 0);
+    if (sumCounts !== er.totalEvents) {
+      violations.push(`${f}: totalEvents ${er.totalEvents} != sum of chunk counts ${sumCounts}`);
+    }
+    let expectedSeq = 0;
+    er.chunks.forEach((c, i) => {
+      if (c.chunkIndex !== i) {
+        violations.push(`${f}.chunks[${i}]: chunkIndex ${c.chunkIndex} != position ${i} (out-of-order)`);
+      }
+      if (c.count !== c.events.length) {
+        violations.push(`${f}.chunks[${c.chunkIndex}]: count ${c.count} != events.length ${c.events.length}`);
+      }
+      if (c.lastSeq - c.firstSeq + 1 !== c.count) {
+        violations.push(`${f}.chunks[${c.chunkIndex}]: seq range ${c.firstSeq}..${c.lastSeq} inconsistent with count ${c.count}`);
+      }
+      if (c.firstSeq !== expectedSeq) {
+        violations.push(`${f}.chunks[${c.chunkIndex}]: firstSeq ${c.firstSeq} != expected ${expectedSeq} (lost chunk / duplicate seq / gap)`);
+      }
+      if (computeEventChunkDigestV3(c.events) !== c.digest) {
+        violations.push(`${f}.chunks[${c.chunkIndex}]: digest mismatch (events tampered or reordered)`);
+      }
+      expectedSeq = c.lastSeq + 1;
+    });
+    if (er.totalEvents > 0 && expectedSeq !== er.totalEvents) {
+      violations.push(`${f}: chunks end at seq ${expectedSeq - 1}, expected ${er.totalEvents - 1}`);
+    }
+  }
+  return violations;
 }
 
 /**

@@ -67,6 +67,35 @@ export interface SecurityOutcomeV3 {
   detail: string;
 }
 
+/**
+ * E4-02 #5/#6 — one embedded chunk of a case's typed event trail. Each chunk
+ * carries its own recomputable digest + count + seq range so a lost chunk, a
+ * duplicated seq, an out-of-order event, or a tampered payload is strictly
+ * rejected on load. Small runs use one chunk; large runs split into several.
+ */
+export interface EventChunkV3 {
+  /** 0-based chunk ordinal (must be contiguous 0..chunks.length-1). */
+  chunkIndex: number;
+  /** Inclusive first event sequence number in this chunk. */
+  firstSeq: number;
+  /** Inclusive last event sequence number in this chunk. */
+  lastSeq: number;
+  /** Number of events in this chunk (must equal events.length). */
+  count: number;
+  /** sha256 (hex) over the canonical serialization of `events`. */
+  digest: string;
+  /** The typed events themselves (each carries a `type`). */
+  events: Record<string, unknown>[];
+}
+
+/** The full event trail for one outcome, chunked + digest-anchored. */
+export interface EventRecordsV3 {
+  mode: "embedded";
+  /** Total events across all chunks (must equal sum of chunk counts). */
+  totalEvents: number;
+  chunks: EventChunkV3[];
+}
+
 /** Canonical per-case outcome. Every decision-relevant field is preserved. */
 export interface CaseOutcomeV3 {
   caseId: string;
@@ -105,6 +134,12 @@ export interface CaseOutcomeV3 {
   evaluationContextHash: string | null;
   /** Per-case candidate configuration hash (P38.4-7). */
   candidateConfigHash: string | null;
+  /**
+   * E4-02 #5/#6: the case's typed event trail, chunked + digest-anchored so
+   * the artifact is self-contained (the summary is recomputable from these
+   * events and any tampering is rejected). Optional for pre-E4-02 artifacts.
+   */
+  eventRecords?: EventRecordsV3;
 }
 
 /** Activation evidence payload (subset kept from E1-04). */

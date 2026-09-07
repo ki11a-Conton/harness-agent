@@ -27,7 +27,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { buildExperimentArtifactV3 } from "./artifact-v3/writer.js";
+import { buildExperimentArtifactV3, buildEventRecordsV3 } from "./artifact-v3/writer.js";
 import { stableStringify } from "./manifest.js";
 import type { ExperimentArtifactV3, CaseOutcomeV3, ActivationEvidenceV3, SecurityOutcomeV3 } from "./artifact-v3/types.js";
 import type { EvalOutcome } from "./runner.js";
@@ -132,6 +132,12 @@ function toCaseOutcome(
     judgeVersion: outcome.judgeVersion,
     evaluationContextHash: outcome.evaluationContextHash ?? null,
     candidateConfigHash: armId === "candidate" ? (outcome.candidateConfigHash ?? null) : null,
+    // E4-02 #5: carry the case's typed event trail (chunked + digest-anchored)
+    // so the artifact is self-contained. Omitted when there are no events.
+    eventRecords:
+      outcome.events.length > 0
+        ? buildEventRecordsV3(outcome.events as unknown as Record<string, unknown>[])
+        : undefined,
   };
 }
 

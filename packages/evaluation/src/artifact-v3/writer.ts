@@ -19,12 +19,47 @@ import {
   type ActivationEvidenceV3,
   type ArmIdentityV3,
   type CaseOutcomeV3,
+  type EventChunkV3,
+  type EventRecordsV3,
   type ExperimentArtifactV3,
   type ProvenanceRefsV3,
   type SecurityOutcomeV3,
   type SummaryV3,
 } from "./types.js";
 import { stableStringify } from "../manifest.js";
+
+/**
+ * E4-02 #5/#6 — canonical event-trail chunking. The digest is sha256 over the
+ * stable serialization of the chunk's events, so it is recomputable from the
+ * embedded events alone (writer AND validator use this exact function).
+ */
+export function computeEventChunkDigestV3(events: Record<string, unknown>[]): string {
+  return createHash("sha256").update(stableStringify(events), "utf8").digest("hex");
+}
+
+/** Split a case's typed events into digest-anchored embedded chunks. */
+export function buildEventRecordsV3(
+  events: Record<string, unknown>[],
+  chunkSize = 256,
+): EventRecordsV3 {
+  const chunks: EventChunkV3[] = [];
+  for (let i = 0; i < events.length; i += chunkSize) {
+    // Normalize through JSON so the stored events are byte-identical to what a
+    // reader gets after the artifact is serialized + re-parsed (in-memory
+    // AgentEvents may carry `undefined` fields that JSON.stringify drops). The
+    // digest is computed over this SAME normalized form the loader will see.
+    const slice = JSON.parse(JSON.stringify(events.slice(i, i + chunkSize))) as Record<string, unknown>[];
+    chunks.push({
+      chunkIndex: chunks.length,
+      firstSeq: i,
+      lastSeq: i + slice.length - 1,
+      count: slice.length,
+      digest: computeEventChunkDigestV3(slice),
+      events: slice,
+    });
+  }
+  return { mode: "embedded", totalEvents: events.length, chunks };
+}
 
 /** Inputs the writer needs — everything except summary/digest (derived). */
 export interface ExperimentArtifactV3Input {

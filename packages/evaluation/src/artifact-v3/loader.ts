@@ -9,7 +9,7 @@
 
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { ArtifactSchemaError, classifyArtifact, findRefAndEventViolations, parseExperimentArtifactV3 } from "./schema.js";
+import { ArtifactSchemaError, classifyArtifact, findEventRecordViolations, findRefAndEventViolations, parseExperimentArtifactV3 } from "./schema.js";
 import type { ArtifactClassification, ExperimentArtifactV3 } from "./types.js";
 import { canonicalDigestInput, deriveSummaryV3 } from "./writer.js";
 
@@ -63,6 +63,12 @@ export async function loadExperimentArtifactV3(path: string): Promise<LoadedArti
   }
   if (dangling.length > 0) {
     throw new ArtifactSchemaError("DANGLING_REF", "outcomes", dangling.join("; "));
+  }
+
+  // E4-02 #6: embedded event trails must be intact + tamper-evident.
+  const erViolations = findEventRecordViolations(artifact);
+  if (erViolations.length > 0) {
+    throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", "eventRecords", erViolations.join("; "));
   }
 
   const recomputedSummary = deriveSummaryV3(artifact.outcomes);
