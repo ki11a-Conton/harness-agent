@@ -146,6 +146,50 @@ function expectGitSha(v: unknown, field: string, allowNull = false): string | nu
   return v;
 }
 
+/** E4-03 #3/#4: a rate field is a finite number in [0, 1]. */
+function expectRate(v: unknown, field: string): number {
+  const n = expectNumber(v, field);
+  if (n === null || n < 0 || n > 1) {
+    throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", field, `expected a rate in [0,1], got ${JSON.stringify(v)}`);
+  }
+  return n;
+}
+
+/** E4-03 #4: a category→count map with non-negative integer values. */
+function expectCountMap(v: unknown, field: string): Record<string, number> {
+  const o = expectObject(v, field);
+  const out: Record<string, number> = {};
+  for (const [k, val] of Object.entries(o)) {
+    out[k] = expectNonNegativeInteger(val, `${field}.${k}`);
+  }
+  return out;
+}
+
+/**
+ * E4-03 #4: the persisted summary is validated FIELD BY FIELD (no raw cast).
+ * Value correctness against the outcomes is still re-derived by the loader /
+ * validator (SUMMARY_MISMATCH); this closes the type/range hole.
+ */
+function parseSummaryV3(v: unknown): ExperimentArtifactV3["summary"] {
+  const s = expectObject(v, "summary");
+  return {
+    suiteCount: expectNonNegativeInteger(s.suiteCount, "summary.suiteCount"),
+    caseCount: expectNonNegativeInteger(s.caseCount, "summary.caseCount"),
+    passed: expectNonNegativeInteger(s.passed, "summary.passed"),
+    failed: expectNonNegativeInteger(s.failed, "summary.failed"),
+    passRate: expectRate(s.passRate, "summary.passRate"),
+    terminationReasons: expectCountMap(s.terminationReasons, "summary.terminationReasons"),
+    failureCategories: expectCountMap(s.failureCategories, "summary.failureCategories"),
+    totalTokensInput: expectNonNegativeInteger(s.totalTokensInput, "summary.totalTokensInput"),
+    totalTokensOutput: expectNonNegativeInteger(s.totalTokensOutput, "summary.totalTokensOutput"),
+    totalCostUsd: expectNonNegativeNumber(s.totalCostUsd, "summary.totalCostUsd", true),
+    medianLatencyMs: expectNonNegativeNumber(s.medianLatencyMs, "summary.medianLatencyMs")!,
+    totalToolCalls: expectNonNegativeInteger(s.totalToolCalls, "summary.totalToolCalls"),
+    recoveryCount: expectNonNegativeInteger(s.recoveryCount, "summary.recoveryCount"),
+    recoveryRate: expectRate(s.recoveryRate, "summary.recoveryRate"),
+  };
+}
+
 /** Parse one case outcome with full field validation. */
 export function parseCaseOutcomeV3(raw: unknown, index: number): CaseOutcomeV3 {
   const o = expectObject(raw, `outcomes[${index}]`);
@@ -265,9 +309,9 @@ export function parseExperimentArtifactV3(value: unknown): ExperimentArtifactV3 
     arm,
     manifest,
     outcomes,
-    // summary + contentDigest are re-derived by the validator; the persisted
-    // summary is parsed separately for cross-checking (SUMMARY_MISMATCH).
-    summary: record.summary as ExperimentArtifactV3["summary"],
+    // summary is validated field-by-field here (E4-03 #4, no raw cast) and
+    // re-derived + compared by the loader/validator (SUMMARY_MISMATCH).
+    summary: parseSummaryV3(record.summary),
     activationEvidence,
     securityOutcomes,
     provenance,

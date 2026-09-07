@@ -175,6 +175,24 @@ describe("E4-03: field-level strict validation — numeric bounds + shape-only c
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  it("E4-03 #4: rejects a malformed summary (out-of-range rate, negative/fractional count, non-object)", () => {
+    const mutations: Array<(s: Record<string, unknown>) => void> = [
+      (s) => { s.passRate = 1.5; },
+      (s) => { s.recoveryRate = -0.1; },
+      (s) => { s.passed = -3; },
+      (s) => { s.totalTokensInput = 1.5; },
+      (s) => { s.terminationReasons = { verified_complete: -1 }; },
+    ];
+    for (const mutate of mutations) {
+      const art = structuredClone(buildExperimentArtifactV3(makeInput())) as unknown as Record<string, unknown>;
+      mutate(art.summary as Record<string, unknown>);
+      expect(() => parseExperimentArtifactV3(art)).toThrow(ArtifactSchemaError);
+    }
+    const nonObj = structuredClone(buildExperimentArtifactV3(makeInput())) as unknown as Record<string, unknown>;
+    nonObj.summary = "nope";
+    expect(() => parseExperimentArtifactV3(nonObj)).toThrow(ArtifactSchemaError);
+  });
 });
 
 describe("E2-01 writer -> strict loader round-trip", () => {
