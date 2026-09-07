@@ -193,6 +193,20 @@ describe("E4-03: field-level strict validation — numeric bounds + shape-only c
     nonObj.summary = "nope";
     expect(() => parseExperimentArtifactV3(nonObj)).toThrow(ArtifactSchemaError);
   });
+
+  it("E4-03 #2: rejects empty caseId / suite / armId and blank grade", () => {
+    const cases: Array<[string, unknown]> = [
+      ["caseId", ""],
+      ["suite", "   "],
+      ["armId", ""],
+      ["grade", "  "],
+    ];
+    for (const [field, value] of cases) {
+      const art = structuredClone(buildExperimentArtifactV3(makeInput())) as unknown as { outcomes: Record<string, unknown>[] };
+      art.outcomes[0]![field] = value;
+      expect(() => parseExperimentArtifactV3(art)).toThrow(ArtifactSchemaError);
+    }
+  });
 });
 
 describe("E2-01 writer -> strict loader round-trip", () => {

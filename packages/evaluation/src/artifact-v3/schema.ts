@@ -77,6 +77,15 @@ function expectString(v: unknown, field: string, allowNull = false): string | nu
   return v;
 }
 
+/** E4-03 #2: identity / grade strings must be non-empty when present. */
+function expectNonEmptyString(v: unknown, field: string, allowNull = false): string | null {
+  const s = expectString(v, field, allowNull);
+  if (s !== null && s.trim() === "") {
+    throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", field, "expected a non-empty string");
+  }
+  return s;
+}
+
 function expectNumber(v: unknown, field: string, allowNull = false): number | null {
   if (v === null && allowNull) return null;
   if (typeof v !== "number" || !Number.isFinite(v)) {
@@ -194,14 +203,14 @@ function parseSummaryV3(v: unknown): ExperimentArtifactV3["summary"] {
 export function parseCaseOutcomeV3(raw: unknown, index: number): CaseOutcomeV3 {
   const o = expectObject(raw, `outcomes[${index}]`);
   const outcome: CaseOutcomeV3 = {
-    caseId: expectString(o.caseId, `outcomes[${index}].caseId`)!,
-    suite: expectString(o.suite, `outcomes[${index}].suite`)!,
-    armId: expectString(o.armId, `outcomes[${index}].armId`)!,
+    caseId: expectNonEmptyString(o.caseId, `outcomes[${index}].caseId`)!,
+    suite: expectNonEmptyString(o.suite, `outcomes[${index}].suite`)!,
+    armId: expectNonEmptyString(o.armId, `outcomes[${index}].armId`)!,
     attempt: expectNonNegativeInteger(o.attempt, `outcomes[${index}].attempt`),
     repetition: expectPositiveInteger(o.repetition, `outcomes[${index}].repetition`),
     order: expectNonNegativeInteger(o.order, `outcomes[${index}].order`),
     passed: expectBoolean(o.passed, `outcomes[${index}].passed`)!,
-    grade: expectString(o.grade, `outcomes[${index}].grade`, true),
+    grade: expectNonEmptyString(o.grade, `outcomes[${index}].grade`, true),
     verificationPassed: expectBoolean(o.verificationPassed, `outcomes[${index}].verificationPassed`, true),
     terminationReason: expectString(o.terminationReason, `outcomes[${index}].terminationReason`, true),
     failureCategory: expectString(o.failureCategory, `outcomes[${index}].failureCategory`, true),
