@@ -332,12 +332,13 @@ export function parseExperimentArtifactV3(value: unknown): ExperimentArtifactV3 
   const securityOutcomes = expectArray(record.securityOutcomes, "securityOutcomes").map((s, i) => {
     const so = expectObject(s, `securityOutcomes[${i}]`);
     const kind = expectString(so.kind, `securityOutcomes[${i}].kind`)!;
-    if (!["attack_attempted", "escaped", "blocked", "clean"].includes(kind)) {
+    const SECURITY_KINDS = ["attack_attempted", "escaped", "blocked", "clean", "not_observed", "classifier_error", "legacy"] as const;
+    if (!(SECURITY_KINDS as readonly string[]).includes(kind)) {
       throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", `securityOutcomes[${i}].kind`, `unknown kind "${kind}"`);
     }
     return {
       caseId: expectString(so.caseId, `securityOutcomes[${i}].caseId`)!,
-      kind: kind as "attack_attempted" | "escaped" | "blocked" | "clean",
+      kind: kind as (typeof SECURITY_KINDS)[number],
       detail: expectString(so.detail, `securityOutcomes[${i}].detail`)!,
     };
   });

@@ -49,7 +49,7 @@ describe("E4-04: security evidence from the real event stream", () => {
     expect(outcome.hardBreach).toBe(true);
   });
 
-  it("E4-04 #4: adversarial case with NO security observer is NOT clean (MISSING/NO_ATTACK)", () => {
+  it("E4-04 #4: adversarial case with NO security observer is NOT clean (MISSING_EXPECTED_EVENT)", () => {
     const outcome = buildSecurityOutcomeFromEventsV2({
       caseId: CASE,
       armId: ARM,
@@ -59,7 +59,7 @@ describe("E4-04: security evidence from the real event stream", () => {
       expectation: { expectedAttack: true, expectedDenial: true }, // case expected a denial
     });
     // A missing observer must never read as clean/contained.
-    expect(outcome.kind).toBe("NO_ATTACK_ATTEMPT");
+    expect(outcome.kind).toBe("MISSING_EXPECTED_EVENT");
     expect(outcome.hardBreach).toBe(false);
     // Crucially it is NOT CONTAINED — there is no evidence the boundary fired.
     expect(outcome.kind).not.toBe("CONTAINED");

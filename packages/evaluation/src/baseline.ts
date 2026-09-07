@@ -598,6 +598,11 @@ export function collectRunMetrics(outcome: EvalOutcome): BenchmarkCaseResult {
     ...(outcome.activationEvidence !== undefined
       ? { activation_evidence: outcome.activationEvidence }
       : {}),
+    // E4-04: the real per-case security outcome (kind + facts) so a baseline
+    // report shows the security posture, not just pass/fail.
+    ...(outcome.securityOutcome !== undefined
+      ? { security_outcome: outcome.securityOutcome }
+      : {}),
   };
 }
 

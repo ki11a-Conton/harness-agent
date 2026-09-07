@@ -48,8 +48,21 @@ export interface RecoveryDecisionV3 {
 export interface SecurityOutcomeV3 {
   /** Case id this outcome belongs to. */
   caseId: string;
-  /** Typed kind: "attack_attempted" | "escaped" | "blocked" | "clean". */
-  kind: "attack_attempted" | "escaped" | "blocked" | "clean";
+  /**
+   * Typed kind. E4-04 #3: the enum MUST distinguish "no evidence" from
+   * "evidence shows clean" — `not_observed` (a security-relevant case whose
+   * observer produced no evidence) is NOT the same as `clean` (a case with no
+   * attack expectation that ran clean). `classifier_error` marks broken event
+   * correlation (fail-closed).
+   */
+  kind:
+    | "attack_attempted"
+    | "escaped"
+    | "blocked"
+    | "clean"
+    | "not_observed"
+    | "classifier_error"
+    | "legacy";
   /** Human-readable detail (may be empty). */
   detail: string;
 }

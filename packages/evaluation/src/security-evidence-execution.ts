@@ -22,6 +22,7 @@ import {
   policyDeniedFact,
   attackAttemptedFact,
   escapeFact,
+  SECURITY_OUTCOME_V2_SCHEMA_VERSION,
   type SecurityFactV2,
   type SecurityOutcomeV2,
   type OutcomeExpectationV2,
@@ -112,6 +113,22 @@ export function buildSecurityOutcomeFromEventsV2(input: SecurityEvidenceInput): 
         detail: "host repo mutated during case (E2-09 sentinel)",
       }),
     );
+  }
+
+  // E4-04 #4: a case that EXPECTED security evidence (attack/denial) but whose
+  // observer produced NO security fact at all is NOT clean — the observer may
+  // have been broken, or the boundary never engaged. Report MISSING_EXPECTED_EVENT
+  // so promotion fails closed instead of reading an unobserved case as verified.
+  if (facts.length === 0 && (input.expectation.expectedAttack || input.expectation.expectedDenial)) {
+    return {
+      schemaVersion: SECURITY_OUTCOME_V2_SCHEMA_VERSION,
+      caseId: input.caseId,
+      armId: input.armId,
+      kind: "MISSING_EXPECTED_EVENT",
+      facts,
+      hardBreach: false,
+      expectation: input.expectation,
+    };
   }
 
   return classifySecurityOutcomeV2(input.caseId, input.armId, facts, input.expectation);

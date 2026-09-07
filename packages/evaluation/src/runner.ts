@@ -63,6 +63,10 @@ export interface EvalOutcome {
    *  from the candidate name). Optional for legacy runs; required for strict
    *  promotion comparisons. */
   activationEvidence?: import("./activation-evidence.js").CandidateActivationEvidence;
+  /** E4-04: per-case typed security outcome derived from the real event stream
+   *  (never defaulted to clean when the observer produced no evidence).
+   *  Optional for legacy runs; required for strict promotion comparisons. */
+  securityOutcome?: import("./security-outcome-v2.js").SecurityOutcomeV2;
 }
 
 /** Tool events that count as side effects on the environment (§73 forbidden.side_effects). */

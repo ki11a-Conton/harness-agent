@@ -21,6 +21,8 @@ import { resolveCapabilities, budgetForCapabilities } from "@ar/model";
 import {
   BENCHMARK_SUITE_VERSION,
   activationEvidenceFor,
+  buildSecurityOutcomeFromEventsV2,
+  securityExpectationFromCase,
   buildEffectiveConfig,
   buildPairedPlan,
   buildRunManifest,
@@ -1589,6 +1591,12 @@ async function runOneCase(
     // "Invalid string length". Metrics/violations are already computed.
     const base = boundOutcomeEvents(workspaceEscapedOutcome ?? outcome);
 
+    // E4-04: derive the typed security outcome from the REAL event stream + the
+    // escape/host-mutation sentinels. A case whose observer produced no security
+    // evidence is NOT treated as clean — the classifier reports MISSING/NO_ATTACK.
+    const secArmId = candidateId !== undefined ? "candidate" : "baseline";
+    const secExpectation = securityExpectationFromCase(caseDef);
+
     // E2-09: host mutation sentinel — if the host repo state changed since
     // case start (child-process writes outside the workspace), the case is an
     // infrastructure/policy failure. `hostStateBefore` was captured before
@@ -1605,6 +1613,14 @@ async function runOneCase(
           reason: "host repo mutated during case (E2-09 sentinel): child processes wrote outside the case workspace",
           effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
           ...provenanceForCase(caseDef, suite, opts),
+          securityOutcome: buildSecurityOutcomeFromEventsV2({
+            caseId: caseDef.id,
+            armId: secArmId,
+            events: base.events,
+            escapedPaths: escaped,
+            hostMutated: true,
+            expectation: secExpectation,
+          }),
           ...(candidateId !== undefined
             ? { activationEvidence: activationEvidenceFor(candidateId, caseDef, activationEvents) }
             : {}),
@@ -1616,6 +1632,15 @@ async function runOneCase(
       ...base,
       effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
       ...provenanceForCase(caseDef, suite, opts),
+      // E4-04: real security evidence for this case (never defaulted to clean).
+      securityOutcome: buildSecurityOutcomeFromEventsV2({
+        caseId: caseDef.id,
+        armId: secArmId,
+        events: base.events,
+        escapedPaths: escaped,
+        hostMutated: false,
+        expectation: secExpectation,
+      }),
       // E1-04: activation evidence from the real run path. Eligibility and
       // activation are derived from observed events + wiring, never from the
       // candidate name alone. A candidate that activated zero times stays

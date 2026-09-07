@@ -56,6 +56,28 @@ async function main() {
   const activationEvidence = [];
   const baselineOutcomes = [];
   const candidateOutcomes = [];
+  // E4-04: real security evidence per arm (was hardcoded []).
+  const baselineSecurity = [];
+  const candidateSecurity = [];
+
+  // Map the V2 SecurityOutcomeV2 kind to the V3 artifact kind, preserving the
+  // E4-04 #3 distinction between "no evidence" (not_observed) and "clean".
+  const v2KindToV3 = (kind) => ({
+    CONTAINED: "blocked",
+    ESCAPE: "escaped",
+    INVALID: "classifier_error",
+    MISSING_EXPECTED_EVENT: "not_observed",
+    NO_ATTACK_ATTEMPT: "clean",
+    UNKNOWN_LEGACY: "legacy",
+  }[kind] ?? "not_observed");
+
+  const securityEntry = (sec, caseId) => ({
+    caseId,
+    kind: v2KindToV3(sec.kind),
+    detail: sec.facts && sec.facts.length > 0
+      ? `${sec.kind}: ${sec.facts.map((f) => f.type).join(",")}`
+      : sec.kind,
+  });
 
   let pairIndex = 0;
   for (const pair of finalizedPairs) {
@@ -78,8 +100,20 @@ async function main() {
       activationRef = aeId;
     }
 
+    // E4-04: collect the real per-arm security outcome and reference it.
+    let baseSecRef = null;
+    let candSecRef = null;
+    if (baseOutcome.securityOutcome) {
+      baselineSecurity.push(securityEntry(baseOutcome.securityOutcome, pair.caseId));
+      baseSecRef = pair.caseId;
+    }
+    if (candOutcome.securityOutcome) {
+      candidateSecurity.push(securityEntry(candOutcome.securityOutcome, pair.caseId));
+      candSecRef = pair.caseId;
+    }
+
     const metrics = (o) => o.metrics ?? {};
-    const toV3 = (outcome, armId, ref) => ({
+    const toV3 = (outcome, armId, ref, secRef) => ({
       caseId: outcome.caseId,
       suite: outcome.suite ?? "holdout",
       armId,
@@ -98,7 +132,7 @@ async function main() {
       toolCalls: metrics(outcome).tool_call_count ?? 0,
       recoveryDecisions: [],
       activationRef: ref,
-      securityOutcomeRef: null,
+      securityOutcomeRef: secRef,
       outputDigest: null,
       workspaceDigest: null,
       judgeVersion: outcome.judgeVersion ?? "2.1.0",
@@ -106,8 +140,8 @@ async function main() {
       candidateConfigHash: armId === "candidate" ? (outcome.candidateConfigHash ?? null) : null,
     });
 
-    baselineOutcomes.push(toV3(baseOutcome, "baseline", null));
-    candidateOutcomes.push(toV3(candOutcome, "candidate", activationRef));
+    baselineOutcomes.push(toV3(baseOutcome, "baseline", null, baseSecRef));
+    candidateOutcomes.push(toV3(candOutcome, "candidate", activationRef, candSecRef));
   }
 
   // 4. Build manifest and provenance
@@ -132,7 +166,7 @@ async function main() {
     manifest,
     outcomes: baselineOutcomes,
     activationEvidence: activationEvidence.length > 0 ? activationEvidence : undefined,
-    securityOutcomes: [],
+    securityOutcomes: baselineSecurity,
     provenance,
   });
 
@@ -142,7 +176,7 @@ async function main() {
     manifest: { ...manifest, planDigest: planDigest ?? null },
     outcomes: candidateOutcomes,
     activationEvidence: activationEvidence.length > 0 ? activationEvidence : undefined,
-    securityOutcomes: [],
+    securityOutcomes: candidateSecurity,
     provenance,
   });
 
