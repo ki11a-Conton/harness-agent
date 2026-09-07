@@ -704,19 +704,24 @@ export async function preflightBenchmark(
   //    promotion benchmark is REFUSED before any provider call unless the
   //    user explicitly opts into insecure local mode.
   if (opts.candidate !== undefined) {
+    let backend: Awaited<ReturnType<typeof import("@ar/evaluation").probeIsolationBackend>>;
     try {
       const { probeIsolationBackend } = await import("@ar/evaluation");
-      const backend = await probeIsolationBackend();
-      if (!backend.strongIsolation && !opts.allowInsecureLocalBenchmark) {
-        return {
-          ok: false,
-          reason: `promotion benchmark requires a strong isolation backend (${backend.id} on ${backend.platform}: ${backend.note}) — pass ${ALLOW_INSECURE_LOCAL_BENCHMARK_FLAG} to allow insecure local execution (never promotion-eligible)`,
-        };
-      }
+      backend = await probeIsolationBackend();
     } catch (err) {
-      // Probe failure is a degraded observation, not a hard fail — the
-      // per-case exec sandbox still runs (fail-closed when no backend).
-      process.stderr.write(`[degraded] benchmark.confinement-probe: ${err instanceof Error ? err.message : String(err)}\n`);
+      // E4-01: a promotion-intent run must NOT proceed on an UNKNOWN isolation
+      // posture. A probe failure is fail-closed (refuse the promotion run), not
+      // a degraded warning that lets an unverified run continue.
+      return {
+        ok: false,
+        reason: `promotion benchmark isolation probe failed (fail-closed): ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+    if (!backend.strongIsolation && !opts.allowInsecureLocalBenchmark) {
+      return {
+        ok: false,
+        reason: `promotion benchmark requires a strong isolation backend (${backend.id} on ${backend.platform}: ${backend.note}) — pass ${ALLOW_INSECURE_LOCAL_BENCHMARK_FLAG} to allow insecure local execution (never promotion-eligible)`,
+      };
     }
   }
 
@@ -787,6 +792,27 @@ export async function preflightBenchmark(
     maxEstimatedTokens: opts.maxEstimatedTokens,
     maxEstimatedCostUsd: opts.maxEstimatedCostUsd,
   });
+
+  // E4-01: a paid (external-billed) run must confirm the EXACT plan via
+  // --plan-digest from a prior --dry-run. An API key + RUN_PAID_BENCHMARKS=1
+  // alone is not authorization for an unconfirmed plan; the digest binds the
+  // case set, limits and (below) policy/isolation so the confirmed plan is the
+  // one that actually runs. Dry-run is exempt (it makes 0 calls and PRODUCES
+  // the digest the user then confirms).
+  if (!opts.dryRun && billingClass === "external-billed") {
+    if (opts.planDigest === undefined) {
+      return {
+        ok: false,
+        reason: "a paid (external-billed) run must pass --plan-digest <digest> from a prior --dry-run to authorize the exact plan",
+      };
+    }
+    if (opts.planDigest !== planDigest) {
+      return {
+        ok: false,
+        reason: `plan digest mismatch — expected ${opts.planDigest}, computed ${planDigest}`,
+      };
+    }
+  }
 
   return { ok: true, planDigest, totalLogicalRuns, estimatedModelCalls, estimatedTokens, estimatedCostUsd };
 }

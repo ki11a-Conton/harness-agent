@@ -1,7 +1,7 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ScriptedModelProvider } from "@ar/model";
 import { makeEventId, makeSessionId } from "@ar/contracts";
 import type { EvalOutcome } from "@ar/evaluation";
@@ -984,5 +984,75 @@ describe("E3-02: paired promotion path (real PairedExperimentExecutor)", () => {
     const res = await preflightBenchmark(opts, dupCases as unknown as Parameters<typeof preflightBenchmark>[1], "offline-test");
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.reason).toContain("duplicate case ids");
+  });
+});
+
+describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 provider calls)", () => {
+  const oneCase = [
+    { id: "t1", task: "x", requestMd: "x", expectedMd: "x", fixture: {}, expected: { status: "completed" }, suite: "regression", judgeVersion: "1.0.0" },
+  ];
+  const baseOpts = () => ({
+    casesDir: "cases", outDir: "out", budgetTokens: 32000, limit: 0, allowStub: true,
+    suite: "regression" as const, shuffle: false, seed: 0, caseDelayMs: 0, repeat: 1,
+    interleave: false, dryRun: false, maxLogicalRuns: 0, maxModelCalls: 0,
+    maxEstimatedTokens: 0, maxEstimatedCostUsd: 0, paidAuthorized: true,
+    planDigest: undefined as string | undefined, allowInsecureLocalBenchmark: false,
+  });
+
+  it("external-billed run WITHOUT --plan-digest is rejected before any provider call", async () => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
+    const res = await preflightBenchmark(baseOpts(), cases, "external-billed");
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.reason).toContain("--plan-digest");
+  });
+
+  it("external-billed run with a MISMATCHED digest is rejected", async () => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
+    const res = await preflightBenchmark({ ...baseOpts(), planDigest: "deadbeef" }, cases, "external-billed");
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.reason).toContain("mismatch");
+  });
+
+  it("external-billed run carrying the EXACT dry-run digest proceeds", async () => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
+    const dry = await preflightBenchmark({ ...baseOpts(), dryRun: true }, cases, "external-billed");
+    expect(dry.ok).toBe(true);
+    expect(typeof dry.planDigest).toBe("string");
+    const res = await preflightBenchmark({ ...baseOpts(), planDigest: dry.planDigest }, cases, "external-billed");
+    expect(res.ok).toBe(true);
+  });
+
+  it("offline-test run does NOT require a plan digest (behavior unchanged)", async () => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
+    const res = await preflightBenchmark(baseOpts(), cases, "offline-test");
+    expect(res.ok).toBe(true);
+  });
+
+  it("promotion run whose isolation probe THROWS is refused fail-closed (not degraded)", async () => {
+    vi.resetModules();
+    vi.doMock("@ar/evaluation", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("@ar/evaluation")>();
+      return {
+        ...actual,
+        probeIsolationBackend: async () => {
+          throw new Error("probe exploded");
+        },
+      };
+    });
+    try {
+      const { preflightBenchmark } = await import("./benchmark-command.js");
+      const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
+      const opts = { ...baseOpts(), candidate: "adaptive_recovery_v2" };
+      const res = await preflightBenchmark(opts, cases, "offline-test");
+      expect(res.ok).toBe(false);
+      if (!res.ok) expect(res.reason).toContain("fail-closed");
+    } finally {
+      vi.doUnmock("@ar/evaluation");
+      vi.resetModules();
+    }
   });
 });
