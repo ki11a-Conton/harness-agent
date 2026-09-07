@@ -65,3 +65,26 @@
 - ✅ 阻断项 #10（部分）：根 `plan.md` 改为当前 E4 唯一入口，旧 E3 计划标记 HISTORICAL。
 - ⏳ 待办：no-dirty-worktree 检查脚本/测试；docs:verify 增加“当前 plan 入口唯一且可发现”检查；
   e3-review-baseline.json 历史说明强化；E4-00-report.md。
+
+## 5. E4 收口状态（E4-01 … E4-10，全部离线，providerCalls=0）
+
+> 本节记录 §3 十二项阻断的收口，不改动 §1–§3 对评审基线 ad37841 的历史判定。
+> 每项均有对应提交与报告（docs/E4-0N-report.md）。
+
+| # | 阻断项 | 收口 | 任务 |
+|---|---|---|---|
+| 1 | 伪造 ACCEPT + 任意文本 candidate 可过 loader | strict-load 真实 V3 + evaluator 重放 + 交叉绑定 + 路径守卫；15 例伪造矩阵 | E4-06 |
+| 2 | evaluator 只比 caseId 不比 (caseId, repetition) | canonical PairKey + 精确多重集合配对 | E4-05 |
+| 3 | promote 直接写 applied=true | promote 只写 applicationPending（applied=false） | E4-07 |
+| 4 | champion profile 未接真实 createHarness | CLI/Web 共用 createHarnessWithChampion，校验真实解析配置 + AppliedProof | E4-07 |
+| 5 | 生产路径测试手工造通过结果 | 真实端到端链（每产物来自上一生产阶段）+ 对抗 E2E | E4-09 |
+| 6 | paired benchmark 靠脚本手工转 V3 | 执行器进程内直产 canonical V3 + strict reload | E4-02 |
+| 7 | Activation/SecurityEvidenceV2 未进真实链 | 接入真实事件采集（fact-site） | E4-04 |
+| 8 | recovery 默认内存 store，重启不保留 | DurableRecoveryStore（原子文件 + CAS + 跨进程锁 + 隔离损坏）注入 createHarness | E4-08 |
+| 9 | planDigest 可省略 / 隔离降级 / 不安全结果无标记 | preflight 强制 planDigest + fail-closed 隔离 + promotionEligible=false | E4-01 |
+| 10 | 根 plan/handoff/audit/release 描述旧基线或 NOT_RUN | HEAD 绑定 gate evidence 生成器 + usage audit（7/7 observed）+ docs gate-command 检查 | E4-10 |
+| 11 | benchmark:smoke 退出 0 但 case FAIL | 诚实 boot-smoke 语义：无 case/ERRORED/用量断裂即非 0 | E4-10 |
+| 12 | 测试遗留 .e3-09-self-test 污染 | E4-00 已修（selfTestInTempDir） | E4-00 |
+
+- 状态：E4-00 … E4-10 全部完成；E4-11（付费复跑）未授权，保持 NOT AUTHORIZED。
+- 验证：`tsc -b` 全绿；全量测试套件通过；`usage-audit` 7/7 observed；`docs:verify` 退出 0；`benchmark:smoke` 退出 0。
