@@ -67,6 +67,8 @@ export interface DecisionGateInputV3 {
   /** Typed security breaches (candidate). */
   securityBreachesCandidate: number;
   securityBreachesBaseline: number;
+  /** E4-05 #5: allowed candidate breaches from the policy (default 0 = forbid any). */
+  securityBreachesAllowed?: number;
   /** Verified-completion rates (candidate must not regress). */
   baselineVerifiedRate: number;
   candidateVerifiedRate: number;
@@ -151,7 +153,7 @@ export function decideChampionV3(input: DecisionGateInputV3): ChampionDecisionEn
       input.activationCoverage !== null
       && input.activationEligibleCases >= input.minActivationEligibleCases
       && input.activationCoverage >= input.minActivationCoverage,
-    securityClear: input.securityBreachesCandidate === 0,
+    securityClear: input.securityBreachesCandidate <= (input.securityBreachesAllowed ?? 0),
     verifiedNonRegression: input.candidateVerifiedRate >= input.baselineVerifiedRate - input.maxVerifiedDrop,
     runtimeErrorSymmetry: input.infraFailuresCandidate <= input.infraFailuresBaseline,
     repetitionSufficient: input.repetitions >= 2 && !input.recommendsRepetition,

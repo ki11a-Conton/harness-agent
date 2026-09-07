@@ -18,6 +18,12 @@ import {
 } from "./champion-eval-v3.js";
 import type { ChampionDecisionEnvelopeV3 } from "./champion-decision-v3.js";
 import { decideChampionV3 } from "./champion-decision-v3.js";
+import {
+  DECISION_POLICY_V3_VERSION,
+  DEFAULT_DECISION_POLICY_V3,
+  computeThresholdDigestV3,
+  validateDecisionPolicyV3,
+} from "./decision-policy-v3.js";
 
 // E4-03: valid-format manifest digest fixtures.
 const GIT40 = "c".repeat(40);
@@ -63,6 +69,7 @@ function makePair(
     candidateVerified?: boolean[];
     baselineProvenance?: ExperimentArtifactV3Input["provenance"];
     candidateProvenance?: ExperimentArtifactV3Input["provenance"];
+    candidateManifestExtra?: Record<string, unknown>;
   } = {},
 ): V3ArtifactPair {
   const candidatePassed = opts.candidatePassed ?? [true, true, true];
@@ -103,7 +110,7 @@ function makePair(
   });
   const candidate = buildExperimentArtifactV3({
     arm: { armId: "candidate", candidateId: "memory_retrieval", candidateConfigHash: "b".repeat(64) },
-    manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT40, dirty: false, planDigest: HEX64 },
+    manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT40, dirty: false, planDigest: HEX64, ...(opts.candidateManifestExtra ?? {}) },
     outcomes: candidateOutcomes,
     provenance: candProvenance,
     securityOutcomes: candidateSecurityEscaped
@@ -139,7 +146,9 @@ describe("E3-06 V3 champion eval bridge", () => {
     expect(envelope.decision).toBe("ACCEPT");
     expect(decisionArtifact.decision).toBe("ACCEPT");
     expect(decisionArtifact.schemaVersion).toBe(DECISION_ARTIFACT_V3_SCHEMA_VERSION);
-    expect(decisionArtifact.policyVersion).toBe(CHAMPION_EVAL_V3_POLICY_VERSION);
+    // E4-05: the decision is bound to the versioned policy + its threshold digest.
+    expect(decisionArtifact.policyVersion).toBe(DECISION_POLICY_V3_VERSION);
+    expect(decisionArtifact.thresholdDigest).toBe(computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3));
     expect(decisionArtifact.candidateId).toBe("memory_retrieval");
     expect(decisionArtifact.planDigest).toBe(HEX64);
     expect(decisionArtifact.repetitions).toBe(3);
@@ -282,5 +291,43 @@ describe("E3-06 V3 champion eval bridge", () => {
     });
     const { envelope } = deriveV3Decision({ baseline, candidate, baselineDigest: "x", candidateDigest: "y" }, "memory_retrieval", HEX64);
     expect(envelope.decision).toBe("INVALID");
+  });
+
+  // E4-05 part 2: thresholds come from a verified, versioned policy.
+  it("12. E4-05: manifest.thresholdDigest != applied policy -> INVALID (tamper)", () => {
+    const pair = makePair({ candidateManifestExtra: { thresholdDigest: "f".repeat(64) } });
+    const { envelope } = deriveV3Decision(pair, "memory_retrieval", HEX64); // default policy digest != "f"*64
+    expect(envelope.decision).toBe("INVALID");
+    expect(envelope.reasonCodes).toContain("PAIR_INCOMPLETE");
+  });
+
+  it("13. E4-05: manifest.repeat != observed repetitions -> INVALID", () => {
+    const pair = makePair({ candidateManifestExtra: { repeat: 5 } }); // actual is 3
+    const { envelope } = deriveV3Decision(pair, "memory_retrieval", HEX64);
+    expect(envelope.decision).toBe("INVALID");
+  });
+
+  it("14. E4-05: a stricter policy threshold flips ACCEPT -> INCONCLUSIVE", () => {
+    const strictPolicy = { ...DEFAULT_DECISION_POLICY_V3, minConclusiveNetDelta: 10 };
+    // default policy, no recorded thresholdDigest → ACCEPT (delta 3 >= 1)
+    const plainPair = makePair();
+    expect(deriveV3Decision(plainPair, "memory_retrieval", HEX64).envelope.decision).toBe("ACCEPT");
+    // strict policy applied, manifest records its digest → not INVALID, but the
+    // delta (3) is below the stricter threshold (10) → INCONCLUSIVE
+    const strictPair = makePair({
+      candidateManifestExtra: { thresholdDigest: computeThresholdDigestV3(strictPolicy) },
+    });
+    const res = deriveV3Decision(strictPair, "memory_retrieval", HEX64, strictPolicy);
+    expect(res.envelope.decision).toBe("INCONCLUSIVE");
+    expect(res.decisionArtifact.thresholdDigest).toBe(computeThresholdDigestV3(strictPolicy));
+    expect(res.decisionArtifact.policyVersion).toBe(strictPolicy.version);
+  });
+
+  it("15. E4-05: validateDecisionPolicyV3 rejects malformed thresholds", () => {
+    expect(() => validateDecisionPolicyV3({ ...DEFAULT_DECISION_POLICY_V3, minActivationCoverage: 2 })).toThrow();
+    expect(() => validateDecisionPolicyV3({ ...DEFAULT_DECISION_POLICY_V3, maxVerifiedDrop: -1 })).toThrow();
+    expect(() => validateDecisionPolicyV3({ version: "" })).toThrow();
+    // round-trips a valid policy
+    expect(validateDecisionPolicyV3(DEFAULT_DECISION_POLICY_V3)).toEqual(DEFAULT_DECISION_POLICY_V3);
   });
 });

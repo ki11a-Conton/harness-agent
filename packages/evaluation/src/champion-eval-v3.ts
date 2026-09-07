@@ -16,6 +16,12 @@ import { readFile } from "node:fs/promises";
 import { stableStringify } from "./manifest.js";
 import { classifyArtifact, parseExperimentArtifactV3 } from "./artifact-v3/schema.js";
 import { evaluatePairing } from "./paired-key.js";
+import {
+  DEFAULT_DECISION_POLICY_V3,
+  computeThresholdDigestV3,
+  validateDecisionPolicyV3,
+  type DecisionPolicyV3,
+} from "./decision-policy-v3.js";
 import type { ExperimentArtifactV3 } from "./artifact-v3/types.js";
 import {
   decideChampionV3,
@@ -33,6 +39,8 @@ export const DECISION_ARTIFACT_V3_SCHEMA_VERSION = "3.0.0";
 export interface DecisionArtifactV3 {
   schemaVersion: string;
   policyVersion: string;
+  /** E4-05 #5: sha256 over the applied DecisionPolicyV3 (thresholds). */
+  thresholdDigest: string;
   candidateId: string | null;
   /** Plan digest from the candidate artifact manifest (nullable). */
   planDigest: string | null;
@@ -64,10 +72,12 @@ export function buildDecisionArtifactV3(
   candidateId: string | null,
   planDigest: string | null,
   perRepetitionDeltas: number[],
+  policy: DecisionPolicyV3 = DEFAULT_DECISION_POLICY_V3,
 ): DecisionArtifactV3 {
   const base: Omit<DecisionArtifactV3, "contentDigest" | "generatedAtIso"> = {
     schemaVersion: DECISION_ARTIFACT_V3_SCHEMA_VERSION,
-    policyVersion: CHAMPION_EVAL_V3_POLICY_VERSION,
+    policyVersion: policy.version,
+    thresholdDigest: computeThresholdDigestV3(policy),
     candidateId,
     planDigest,
     baselineArtifactDigest: baselineDigest,
@@ -167,6 +177,7 @@ export function deriveV3Decision(
   pair: V3ArtifactPair,
   candidateId: string | null,
   planDigest: string | null,
+  policy: DecisionPolicyV3 = DEFAULT_DECISION_POLICY_V3,
 ): V3ChampionEvalResult {
   const { baseline, candidate } = pair;
 
@@ -183,7 +194,27 @@ export function deriveV3Decision(
   //    violations (never a silent Map<caseId> overwrite). All deltas below are
   //    computed over PAIRED keys only — a missing twin is never 0-filled.
   const pairing = evaluatePairing(baseline.outcomes, candidate.outcomes);
-  const pairComplete = pairing.pairComplete;
+
+  // 3b. E4-05 #4/#5: thresholds come from the pre-registered policy. The
+  //     manifest's recorded thresholdDigest must match the policy actually
+  //     applied (tamper detection), and manifest.repeat must match the observed
+  //     repetitions (three-way plan / manifest / outcome consistency). Any
+  //     mismatch is a protocol violation → not pair-complete → INVALID.
+  const thresholdDigest = computeThresholdDigestV3(policy);
+  const policyViolations: string[] = [];
+  const manifestThresholdDigest = candidate.manifest["thresholdDigest"];
+  if (typeof manifestThresholdDigest === "string" && manifestThresholdDigest !== thresholdDigest) {
+    policyViolations.push(
+      `manifest.thresholdDigest ${manifestThresholdDigest} != applied policy digest ${thresholdDigest} (thresholds tampered or policy not from the plan)`,
+    );
+  }
+  const manifestRepeat = candidate.manifest["repeat"];
+  if (typeof manifestRepeat === "number" && manifestRepeat !== pairing.repetitions) {
+    policyViolations.push(
+      `manifest.repeat ${manifestRepeat} != observed repetitions ${pairing.repetitions} (plan/manifest/outcome disagree)`,
+    );
+  }
+  const pairComplete = pairing.pairComplete && policyViolations.length === 0;
 
   // 4. Activation coverage: fraction of candidate cases carrying an
   //    activationRef (real activation evidence payload).
@@ -225,23 +256,24 @@ export function deriveV3Decision(
     incomparabilityReasons,
     activationCoverage,
     activationEligibleCases: activated,
-    minActivationEligibleCases: 3,
-    minActivationCoverage: 0.5,
+    minActivationEligibleCases: policy.minActivationEligibleCases,
+    minActivationCoverage: policy.minActivationCoverage,
     securityBreachesCandidate,
     securityBreachesBaseline,
+    securityBreachesAllowed: policy.securityBreachesAllowed,
     baselineVerifiedRate,
     candidateVerifiedRate,
-    maxVerifiedDrop: 0.05,
+    maxVerifiedDrop: policy.maxVerifiedDrop,
     infraFailuresBaseline,
     infraFailuresCandidate,
     cases: pairing.cases,
     netPassedDelta,
     repetitions,
     perRepetitionDeltas,
-    pairingViolations: pairing.violations,
-    minConclusiveNetDelta: 1,
+    pairingViolations: [...pairing.violations, ...policyViolations],
+    minConclusiveNetDelta: policy.minConclusiveNetDelta,
     tokensDelta,
-    maxTokensDelta: 50000,
+    maxTokensDelta: policy.maxTokensDelta,
     recommendsRepetition: repetitions < 2,
   };
 
@@ -260,6 +292,7 @@ export function deriveV3Decision(
     candidateId,
     planDigest,
     perRepetitionDeltas,
+    policy,
   );
 
   return { envelope, derivedInputs: inputs, decisionArtifact };
@@ -274,5 +307,10 @@ export async function runV3ChampionEval(opts: {
 }): Promise<V3ChampionEvalResult> {
   const pair = await loadV3ArtifactPair(opts.baselinePath, opts.candidatePath);
   const planDigest = (pair.candidate.manifest["planDigest"] as string | undefined) ?? null;
-  return deriveV3Decision(pair, opts.candidateId ?? pair.candidate.arm.candidateId ?? null, planDigest);
+  // E4-05 #6: the evaluator receives the FULL validated policy object from the
+  // plan (manifest.decisionPolicy), not just a planDigest string. Absent → the
+  // versioned default (byte-identical to the pre-E4-05 thresholds).
+  const rawPolicy = pair.candidate.manifest["decisionPolicy"];
+  const policy = rawPolicy !== undefined ? validateDecisionPolicyV3(rawPolicy) : DEFAULT_DECISION_POLICY_V3;
+  return deriveV3Decision(pair, opts.candidateId ?? pair.candidate.arm.candidateId ?? null, planDigest, policy);
 }
