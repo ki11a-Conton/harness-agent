@@ -71,13 +71,51 @@ describe("E2-01 artifact-v3 schema", () => {
     const v3 = buildExperimentArtifactV3(makeInput());
     const raw = JSON.parse(JSON.stringify(v3)) as unknown;
     expect(classifyArtifact(raw).kind).toBe("v3");
-    expect(classifyArtifact(raw).promotionEligible).toBe(true);
+    // E4-03 #2: classification detects SHAPE only — it never confers promotion
+    // eligibility. Eligibility requires a successful strict load.
+    expect(classifyArtifact(raw).promotionEligible).toBe(false);
 
     expect(classifyArtifact({ results: [] }).kind).toBe("legacy-report-object");
     expect(classifyArtifact({ results: [] }).promotionEligible).toBe(false);
     expect(classifyArtifact([]).kind).toBe("unknown");
     expect(classifyArtifact({ schemaVersion: "2.0.0", results: [] }).kind).toBe("unknown");
     expect(classifyArtifact(null).kind).toBe("unknown");
+  });
+});
+
+describe("E4-03: field-level strict validation — numeric bounds + shape-only classification", () => {
+  // structuredClone (not JSON) so NaN / Infinity survive into the validator.
+  function corruptOutcome(field: keyof CaseOutcomeV3, value: unknown): unknown {
+    const art = structuredClone(buildExperimentArtifactV3(makeInput()));
+    (art.outcomes[0] as unknown as Record<string, unknown>)[field] = value;
+    return art;
+  }
+
+  it.each([
+    ["inputTokens", Number.NaN],
+    ["inputTokens", Number.POSITIVE_INFINITY],
+    ["inputTokens", -5],
+    ["outputTokens", -1],
+    ["latencyMs", -100],
+    ["toolCalls", -3],
+    ["repetition", 0],
+    ["repetition", 1.5],
+    ["attempt", 2.5],
+    ["order", -1],
+  ] as const)("rejects invalid %s = %p", (field, value) => {
+    expect(() => parseExperimentArtifactV3(corruptOutcome(field, value))).toThrow(ArtifactSchemaError);
+  });
+
+  it("rejects a negative costUsd", () => {
+    expect(() => parseExperimentArtifactV3(corruptOutcome("costUsd", -0.01))).toThrow(ArtifactSchemaError);
+  });
+
+  it("E4-03 #2: a schemaVersion=3.0.0 document with invalid content is v3-shaped but NOT eligible and fails strict parse", () => {
+    const garbage = { schemaVersion: "3.0.0", outcomes: "not-an-array" };
+    const cls = classifyArtifact(garbage);
+    expect(cls.kind).toBe("v3");
+    expect(cls.promotionEligible).toBe(false); // shape ≠ eligibility
+    expect(() => parseExperimentArtifactV3(garbage)).toThrow(ArtifactSchemaError);
   });
 });
 

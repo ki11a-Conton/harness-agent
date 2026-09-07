@@ -161,10 +161,11 @@ export interface ExperimentArtifactV3 {
   contentDigest: string;
 }
 
-/** Loader classification of a discovered artifact. */
+/** Loader classification of a discovered artifact (SHAPE only). */
 export interface ArtifactClassification {
   schemaVersion: string | null;
   kind: "v3" | "legacy-report-object" | "legacy-flat-outcomes" | "unknown";
-  /** True only for a strict V3 artifact (promotion-eligible path). */
+  /** E4-03 #2: ALWAYS false from classification. Shape detection does not
+   *  confer eligibility; only a successful strict load does. */
   promotionEligible: boolean;
 }

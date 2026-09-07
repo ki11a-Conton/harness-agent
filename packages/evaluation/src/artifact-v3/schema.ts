@@ -33,7 +33,15 @@ export class ArtifactSchemaError extends Error {
   }
 }
 
-/** Classify an arbitrary parsed JSON document (no throw — fail-closed read). */
+/**
+ * Classify an arbitrary parsed JSON document by SHAPE (no throw — fail-closed
+ * read). E4-03 #2: classification NEVER asserts promotion eligibility. A
+ * document merely carrying schemaVersion "3.0.0" is classified as the "v3"
+ * SHAPE, but `promotionEligible` is always false here — eligibility is granted
+ * only by a SUCCESSFUL strict load (`loadExperimentArtifactV3`), which runs the
+ * full field-level + cross-field + digest/summary validation. This closes the
+ * "schemaVersion looks right ⇒ eligible" hole.
+ */
 export function classifyArtifact(value: unknown): ArtifactClassification {
   if (typeof value !== "object" || value === null) {
     return { schemaVersion: null, kind: "unknown", promotionEligible: false };
@@ -41,7 +49,8 @@ export function classifyArtifact(value: unknown): ArtifactClassification {
   const record = value as Record<string, unknown>;
   const schemaVersion = typeof record.schemaVersion === "string" ? record.schemaVersion : null;
   if (schemaVersion === ARTIFACT_V3_SCHEMA_VERSION) {
-    return { schemaVersion, kind: "v3", promotionEligible: true };
+    // Shape is V3, but eligibility requires a successful strict load (E4-03 #2).
+    return { schemaVersion, kind: "v3", promotionEligible: false };
   }
   if (schemaVersion !== null) {
     return { schemaVersion, kind: "unknown", promotionEligible: false };
@@ -92,6 +101,31 @@ function expectArray(v: unknown, field: string): unknown[] {
   return v;
 }
 
+/** E4-03 #3: numeric fields carry range / integrality / finiteness bounds. */
+function expectNonNegativeInteger(v: unknown, field: string): number {
+  const n = expectNumber(v, field); // rejects NaN / Infinity / non-number
+  if (n === null || !Number.isInteger(n) || n < 0) {
+    throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", field, `expected non-negative integer, got ${JSON.stringify(v)}`);
+  }
+  return n;
+}
+
+function expectPositiveInteger(v: unknown, field: string): number {
+  const n = expectNumber(v, field);
+  if (n === null || !Number.isInteger(n) || n < 1) {
+    throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", field, `expected positive integer (>=1), got ${JSON.stringify(v)}`);
+  }
+  return n;
+}
+
+function expectNonNegativeNumber(v: unknown, field: string, allowNull = false): number | null {
+  const n = expectNumber(v, field, allowNull);
+  if (n !== null && n < 0) {
+    throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", field, `expected non-negative number, got ${JSON.stringify(v)}`);
+  }
+  return n;
+}
+
 /** Parse one case outcome with full field validation. */
 export function parseCaseOutcomeV3(raw: unknown, index: number): CaseOutcomeV3 {
   const o = expectObject(raw, `outcomes[${index}]`);
@@ -99,19 +133,19 @@ export function parseCaseOutcomeV3(raw: unknown, index: number): CaseOutcomeV3 {
     caseId: expectString(o.caseId, `outcomes[${index}].caseId`)!,
     suite: expectString(o.suite, `outcomes[${index}].suite`)!,
     armId: expectString(o.armId, `outcomes[${index}].armId`)!,
-    attempt: expectNumber(o.attempt, `outcomes[${index}].attempt`)!,
-    repetition: expectNumber(o.repetition, `outcomes[${index}].repetition`)!,
-    order: expectNumber(o.order, `outcomes[${index}].order`)!,
+    attempt: expectNonNegativeInteger(o.attempt, `outcomes[${index}].attempt`),
+    repetition: expectPositiveInteger(o.repetition, `outcomes[${index}].repetition`),
+    order: expectNonNegativeInteger(o.order, `outcomes[${index}].order`),
     passed: expectBoolean(o.passed, `outcomes[${index}].passed`)!,
     grade: expectString(o.grade, `outcomes[${index}].grade`, true),
     verificationPassed: expectBoolean(o.verificationPassed, `outcomes[${index}].verificationPassed`, true),
     terminationReason: expectString(o.terminationReason, `outcomes[${index}].terminationReason`, true),
     failureCategory: expectString(o.failureCategory, `outcomes[${index}].failureCategory`, true),
-    inputTokens: expectNumber(o.inputTokens, `outcomes[${index}].inputTokens`)!,
-    outputTokens: expectNumber(o.outputTokens, `outcomes[${index}].outputTokens`)!,
-    costUsd: expectNumber(o.costUsd, `outcomes[${index}].costUsd`, true),
-    latencyMs: expectNumber(o.latencyMs, `outcomes[${index}].latencyMs`)!,
-    toolCalls: expectNumber(o.toolCalls, `outcomes[${index}].toolCalls`)!,
+    inputTokens: expectNonNegativeInteger(o.inputTokens, `outcomes[${index}].inputTokens`),
+    outputTokens: expectNonNegativeInteger(o.outputTokens, `outcomes[${index}].outputTokens`),
+    costUsd: expectNonNegativeNumber(o.costUsd, `outcomes[${index}].costUsd`, true),
+    latencyMs: expectNonNegativeInteger(o.latencyMs, `outcomes[${index}].latencyMs`),
+    toolCalls: expectNonNegativeInteger(o.toolCalls, `outcomes[${index}].toolCalls`),
     recoveryDecisions: expectArray(o.recoveryDecisions, `outcomes[${index}].recoveryDecisions`).map((d, i) => {
       const r = expectObject(d, `outcomes[${index}].recoveryDecisions[${i}]`);
       return {
