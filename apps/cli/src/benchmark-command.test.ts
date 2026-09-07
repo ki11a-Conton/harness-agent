@@ -874,6 +874,10 @@ describe("E3-02: paired promotion path (real PairedExperimentExecutor)", () => {
     expect(artifact.finalizedPairs.length).toBe(2);
     expect(artifact.partialPairs.length).toBe(0);
     expect(artifact.complete).toBe(true);
+    // E4-01 #5: an --allow-insecure run is PERMANENTLY promotion-ineligible,
+    // recorded in the artifact so no downstream converter can re-qualify it.
+    expect(artifact.promotionEligible).toBe(false);
+    expect(artifact.isolationStrength).toBe("insecure-local");
     // Every finalized pair has exactly one baseline and one candidate outcome.
     for (const pair of artifact.finalizedPairs) {
       expect(pair.baseline.arm.armId).toBe("baseline");
@@ -1074,5 +1078,65 @@ describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 pr
       vi.doUnmock("@ar/evaluation");
       vi.resetModules();
     }
+  });
+
+  it("E4-01 #3: the same logical plan yields the same digest across runs", async () => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
+    const a = await preflightBenchmark({ ...baseOpts(), dryRun: true }, cases, "offline-test");
+    const b = await preflightBenchmark({ ...baseOpts(), dryRun: true }, cases, "offline-test");
+    expect(a.ok).toBe(true);
+    expect(a.planDigest).toBe(b.planDigest);
+  });
+
+  it("E4-01 #3/#5: isolation strength is folded into the digest; insecure is permanently ineligible", async () => {
+    const cases = oneCase as unknown as Parameters<typeof import("./benchmark-command.js").preflightBenchmark>[1];
+    const mockProbe = (strong: boolean) => {
+      vi.resetModules();
+      vi.doMock("@ar/evaluation", async (importOriginal) => {
+        const actual = await importOriginal<typeof import("@ar/evaluation")>();
+        return {
+          ...actual,
+          probeIsolationBackend: (async () => ({
+            id: strong ? "bwrap" : "none",
+            platform: "test",
+            strongIsolation: strong,
+            note: strong ? "verified" : "no backend",
+          })) as unknown as typeof actual.probeIsolationBackend,
+        };
+      });
+    };
+    let strongDigest = "";
+    let insecureDigest = "";
+    try {
+      // Phase 1: strong backend + candidate → promotion-eligible.
+      mockProbe(true);
+      let mod = await import("./benchmark-command.js");
+      const strong = await mod.preflightBenchmark({ ...baseOpts(), candidate: "adaptive_recovery_v2" }, cases, "offline-test");
+      expect(strong.ok).toBe(true);
+      expect(strong.promotionEligible).toBe(true);
+      expect(strong.isolationStrength).toBe("strong");
+      strongDigest = strong.planDigest ?? "";
+
+      // Phase 2: no strong backend + --allow-insecure → permanently ineligible.
+      vi.doUnmock("@ar/evaluation");
+      mockProbe(false);
+      mod = await import("./benchmark-command.js");
+      const insecure = await mod.preflightBenchmark(
+        { ...baseOpts(), candidate: "adaptive_recovery_v2", allowInsecureLocalBenchmark: true },
+        cases,
+        "offline-test",
+      );
+      expect(insecure.ok).toBe(true);
+      expect(insecure.promotionEligible).toBe(false);
+      expect(insecure.isolationStrength).toBe("insecure-local");
+      insecureDigest = insecure.planDigest ?? "";
+    } finally {
+      vi.doUnmock("@ar/evaluation");
+      vi.resetModules();
+    }
+    // The two isolation postures produce DIFFERENT digests — a plan confirmed
+    // under strong isolation cannot be run insecure without a digest mismatch.
+    expect(strongDigest).not.toBe(insecureDigest);
   });
 });

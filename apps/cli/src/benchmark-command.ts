@@ -466,6 +466,11 @@ export interface PairedExperimentArtifact {
   modelSeed: number | null;
   generatedAt: string;
   candidate: string | null;
+  // E4-01 #5: promotion eligibility + isolation posture, bound to the plan
+  // digest. An insecure-local run carries promotionEligible=false PERMANENTLY;
+  // no downstream converter (V3 writer, promotion loader) may flip it to true.
+  promotionEligible: boolean;
+  isolationStrength: "strong" | "insecure-local" | "none";
 }
 
 /**
@@ -600,6 +605,10 @@ async function runPairedPromotion(
     modelSeed: result.modelSeed,
     generatedAt: new Date().toISOString(),
     candidate: opts.candidate ?? null,
+    // E4-01 #5: only a strong-isolation promotion run is eligible; an
+    // insecure-local run is permanently ineligible (recorded in the artifact).
+    promotionEligible: processConfinement === "strong",
+    isolationStrength: processConfinement ?? "none",
   };
   const artifactPath = join(outDir, "paired-experiment.json");
   await writeFile(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
@@ -651,6 +660,10 @@ export interface PreflightResult {
   estimatedModelCalls?: number;
   estimatedTokens?: number;
   estimatedCostUsd?: number;
+  /** E4-01 #3/#5: isolation posture + promotion eligibility folded into the
+   *  digest. An insecure-local run carries promotionEligible=false. */
+  isolationStrength?: "strong" | "insecure-local" | "none";
+  promotionEligible?: boolean;
 }
 
 /**
@@ -705,12 +718,18 @@ export async function preflightBenchmark(
     return { ok: false, reason: "--repeat must be a positive integer (number of runs)" };
   }
 
-  // 4. E3-09: confinement preflight for promotion-grade benchmarks. When
-  //    `--candidate` is set (promotion intent), the exec tool MUST be
-  //    confined by an OS-level sandbox backend. On platforms without a
-  //    strong backend (Windows, macOS without container tooling), the
-  //    promotion benchmark is REFUSED before any provider call unless the
+  // 4. E3-09/E4-01: confinement preflight for promotion-grade benchmarks. When
+  //    `--candidate` is set (promotion intent), the exec tool MUST be confined
+  //    by an OS-level sandbox backend. On platforms without a strong backend
+  //    the promotion benchmark is REFUSED before any provider call unless the
   //    user explicitly opts into insecure local mode.
+  //    E4-01 #3/#5: capture the isolation posture + promotion eligibility so
+  //    they fold into the canonical plan digest. A confirmed plan binds the
+  //    isolation strength it was authorized under; an insecure-local run is
+  //    PERMANENTLY promotionEligible=false (no downstream converter may flip it).
+  let isolationBackendId = "not-probed";
+  let isolationStrength: "strong" | "insecure-local" | "none" = "none";
+  let promotionEligible = false;
   if (opts.candidate !== undefined) {
     let backend: Awaited<ReturnType<typeof import("@ar/evaluation").probeIsolationBackend>>;
     try {
@@ -725,7 +744,14 @@ export async function preflightBenchmark(
         reason: `promotion benchmark isolation probe failed (fail-closed): ${err instanceof Error ? err.message : String(err)}`,
       };
     }
-    if (!backend.strongIsolation && !opts.allowInsecureLocalBenchmark) {
+    isolationBackendId = backend.id;
+    if (backend.strongIsolation) {
+      isolationStrength = "strong";
+      promotionEligible = true;
+    } else if (opts.allowInsecureLocalBenchmark) {
+      isolationStrength = "insecure-local";
+      promotionEligible = false; // E4-01 #5: insecure is NEVER promotion-eligible
+    } else {
       return {
         ok: false,
         reason: `promotion benchmark requires a strong isolation backend (${backend.id} on ${backend.platform}: ${backend.note}) — pass ${ALLOW_INSECURE_LOCAL_BENCHMARK_FLAG} to allow insecure local execution (never promotion-eligible)`,
@@ -787,7 +813,7 @@ export async function preflightBenchmark(
 
   // 8. Plan digest: sha256 over stable-stringified plan inputs.
   const planDigest = computeRuntimeConfigHash({
-    benchmarkVersion: "2.0.0",
+    benchmarkVersion: "2.1.0",
     suite: opts.suite,
     caseIds: selected.map((c) => c.id),
     limit: opts.limit,
@@ -801,6 +827,14 @@ export async function preflightBenchmark(
     maxModelCalls: opts.maxModelCalls,
     maxEstimatedTokens: opts.maxEstimatedTokens,
     maxEstimatedCostUsd: opts.maxEstimatedCostUsd,
+    // E4-01 #3: fold the isolation posture + promotion eligibility into the
+    // canonical digest. Confirming a plan under one isolation strength and
+    // running it under another changes the digest → rejected. An insecure-local
+    // run carries promotionEligible=false INTO the digest, so no downstream
+    // converter can silently re-qualify it (E4-01 #5).
+    isolationBackendId,
+    isolationStrength,
+    promotionEligible,
   });
 
   // E4-01: a paid (external-billed) run must confirm the EXACT plan via
@@ -833,7 +867,16 @@ export async function preflightBenchmark(
     }
   }
 
-  return { ok: true, planDigest, totalLogicalRuns, estimatedModelCalls, estimatedTokens, estimatedCostUsd };
+  return {
+    ok: true,
+    planDigest,
+    totalLogicalRuns,
+    estimatedModelCalls,
+    estimatedTokens,
+    estimatedCostUsd,
+    isolationStrength,
+    promotionEligible,
+  };
 }
 
 /** E3-01: canonical dry-run JSON plan (0 provider calls). */
