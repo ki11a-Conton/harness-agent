@@ -25,6 +25,7 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { stableStringify } from "./manifest.js";
+import { classifyArtifact, parseExperimentArtifactV3 } from "./artifact-v3/schema.js";
 
 export const PROMOTION_ENVELOPE_SCHEMA_VERSION = "3.0.0";
 export const PROMOTION_ENVELOPE_POLICY_VERSION = "e2-07-policy-v1";
@@ -68,9 +69,13 @@ export type EnvelopeValidationCode =
   | "DIGEST_MISMATCH"
   | "ARTIFACT_MISSING"
   | "ARTIFACT_DIGEST_CHANGED"
+  | "ARTIFACT_NOT_V3"
+  | "CANDIDATE_NOT_ELIGIBLE"
+  | "CROSS_BINDING_MISMATCH"
   | "DECISION_ARTIFACT_MISSING"
   | "DECISION_ARTIFACT_DIGEST_CHANGED"
   | "DECISION_ARTIFACT_INVALID"
+  | "DECISION_ARTIFACT_DIGEST_INVALID"
   | "CANDIDATE_MISMATCH"
   | "PARENT_STATE_MISMATCH"
   | "POLICY_VERSION_MISMATCH"
@@ -266,6 +271,87 @@ export async function loadPromotionEnvelope(
       }
     } catch {
       issues.push({ code: "DECISION_ARTIFACT_MISSING", detail: `decision artifact ${e.decisionArtifactPath} missing/unreadable` });
+    }
+  }
+
+  // E4-06 — the envelope is authority ONLY if the referenced artifacts are REAL
+  // V3 experiment artifacts + a REAL DecisionArtifact, cross-bound to each
+  // other, and the candidate is promotion-eligible. A JSON that merely says
+  // ACCEPT with correct file SHAs is NOT enough: the files must strict-load as
+  // V3, the DecisionArtifact's own content digest must recompute, and its
+  // planDigest / candidateId / sourceSha must agree with the artifacts.
+  if (verify.verifyArtifactRefs !== false) {
+    const refByRole = new Map<string, AxisArtifactRef>();
+    for (const ref of e.artifactRefs ?? []) {
+      if (ref && typeof ref.role === "string") {
+        if (refByRole.has(ref.role)) {
+          issues.push({ code: "CROSS_BINDING_MISMATCH", detail: `duplicate artifactRef role "${ref.role}" (one file per role)` });
+        }
+        refByRole.set(ref.role, ref);
+      }
+    }
+    const baseRef = refByRole.get("baseline");
+    const candRef = refByRole.get("candidate");
+    if (!baseRef) issues.push({ code: "MISSING_REQUIRED_FIELD", detail: "artifactRefs missing a baseline role" });
+    if (!candRef) issues.push({ code: "MISSING_REQUIRED_FIELD", detail: "artifactRefs missing a candidate role" });
+
+    const strictLoadV3 = async (ref: AxisArtifactRef | undefined, role: string) => {
+      if (!ref) return null;
+      let buf: Buffer;
+      try {
+        buf = await readFile(ref.path);
+      } catch {
+        issues.push({ code: "ARTIFACT_MISSING", detail: `${role} artifact ${ref.path} unreadable` });
+        return null;
+      }
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(buf.toString("utf8"));
+      } catch {
+        issues.push({ code: "ARTIFACT_NOT_V3", detail: `${role} artifact ${ref.path} is not valid JSON (a plain text file with a matching SHA is not a V3 artifact)` });
+        return null;
+      }
+      if (classifyArtifact(parsed).kind !== "v3") {
+        issues.push({ code: "ARTIFACT_NOT_V3", detail: `${role} artifact ${ref.path} is not a V3 experiment artifact (shape ${classifyArtifact(parsed).kind})` });
+        return null;
+      }
+      try {
+        return parseExperimentArtifactV3(parsed);
+      } catch (err) {
+        issues.push({ code: "ARTIFACT_NOT_V3", detail: `${role} artifact ${ref.path} fails strict V3 parse: ${err instanceof Error ? err.message : String(err)}` });
+        return null;
+      }
+    };
+    const candV3 = await strictLoadV3(candRef, "candidate");
+    await strictLoadV3(baseRef, "baseline");
+
+    // candidate must be promotion-eligible (strong isolation recorded at run time).
+    if (candV3 && candV3.manifest["promotionEligible"] !== true) {
+      issues.push({ code: "CANDIDATE_NOT_ELIGIBLE", detail: `candidate promotionEligible=${String(candV3.manifest["promotionEligible"])} — insecure/none isolation cannot promote` });
+    }
+
+    // DecisionArtifact: recompute its content digest + cross-bind to the plan.
+    if (typeof e.decisionArtifactPath === "string") {
+      try {
+        const buf = await readFile(e.decisionArtifactPath);
+        const parsed = JSON.parse(buf.toString("utf8")) as Record<string, unknown>;
+        const { computeDecisionArtifactContentDigestV3 } = await import("./champion-eval-v3.js");
+        const recomputed = computeDecisionArtifactContentDigestV3(parsed);
+        if (typeof parsed.contentDigest !== "string" || recomputed !== parsed.contentDigest) {
+          issues.push({ code: "DECISION_ARTIFACT_DIGEST_INVALID", detail: `decision artifact contentDigest recomputes to ${recomputed}, recorded ${String(parsed.contentDigest)}` });
+        }
+        if (typeof parsed.candidateId === "string" && parsed.candidateId !== e.candidateId) {
+          issues.push({ code: "CROSS_BINDING_MISMATCH", detail: `decision.candidateId "${String(parsed.candidateId)}" != envelope.candidateId "${e.candidateId}"` });
+        }
+        if (candV3 && parsed.planDigest !== (candV3.manifest["planDigest"] ?? null)) {
+          issues.push({ code: "CROSS_BINDING_MISMATCH", detail: `decision.planDigest ${String(parsed.planDigest)} != candidate manifest.planDigest ${String(candV3.manifest["planDigest"])}` });
+        }
+        if (candV3 && e.sourceSha != null && e.sourceSha !== candV3.provenance.gitSha) {
+          issues.push({ code: "CROSS_BINDING_MISMATCH", detail: `envelope.sourceSha ${String(e.sourceSha)} != candidate provenance.gitSha ${String(candV3.provenance.gitSha)}` });
+        }
+      } catch {
+        // presence/JSON already reported by the block above
+      }
     }
   }
 

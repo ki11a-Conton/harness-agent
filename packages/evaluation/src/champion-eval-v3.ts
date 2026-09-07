@@ -65,6 +65,17 @@ function computeDecisionDigest(base: Record<string, unknown>): string {
   return createHash("sha256").update(stableStringify(base), "utf8").digest("hex").slice(0, 24);
 }
 
+/**
+ * E4-06 #1 — recompute a stored DecisionArtifactV3's content digest from its
+ * own fields (self-excluding contentDigest + generatedAtIso), so a loader can
+ * prove the artifact was not hand-edited. A present-but-wrong digest (the
+ * pre-E4-06 loader only checked presence) is caught here.
+ */
+export function computeDecisionArtifactContentDigestV3(artifact: Record<string, unknown>): string {
+  const { contentDigest: _c, generatedAtIso: _g, ...base } = artifact;
+  return computeDecisionDigest(base as Record<string, unknown>);
+}
+
 export function buildDecisionArtifactV3(
   envelope: ChampionDecisionEnvelopeV3,
   baselineDigest: string,

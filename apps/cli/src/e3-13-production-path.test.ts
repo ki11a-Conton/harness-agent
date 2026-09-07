@@ -114,7 +114,7 @@ async function buildV3ArtifactPair(
   const candidateConfigHash = arm.digest;
   const candidateArtifact = buildExperimentArtifactV3({
     arm: { armId: "candidate", candidateId: "adaptive_recovery_v2", candidateConfigHash },
-    manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha, dirty: false, planDigest: sha("plan-v1") },
+    manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha, dirty: false, planDigest: sha("plan-v1"), promotionEligible: true, isolationStrength: "strong" },
     outcomes: [
       // Rep 1: candidate passes all 3 (activation on all three, coverage 3/6
       // overall ≥ 0.5 with ≥3 eligible cases).
@@ -216,6 +216,7 @@ describe("E3-13 production-path offline integration", () => {
     await writeFile(decisionArtifactPath, decisionArtifactStr, "utf8");
 
     const onDiskCand = await readFile(candidateV3Path, "utf8");
+    const onDiskBase = await readFile(baselineV3Path, "utf8");
     const envelope = buildPromotionEnvelope({
       generatedBy: "e3-13",
       candidateId: "adaptive_recovery_v2",
@@ -224,7 +225,10 @@ describe("E3-13 production-path offline integration", () => {
       decisionArtifactPath,
       decisionArtifactDigest: sha(decisionArtifactStr),
       decisionEnvelopeDigest: sha(JSON.stringify(evalResult.envelope.statistics)),
-      artifactRefs: [{ role: "candidate", path: candidateV3Path, digest: sha(onDiskCand) }],
+      artifactRefs: [
+        { role: "baseline", path: baselineV3Path, digest: sha(onDiskBase) },
+        { role: "candidate", path: candidateV3Path, digest: sha(onDiskCand) },
+      ],
       sourceSha: "a".repeat(40),
     });
     const envPath = join(envelopeDir, "envelope.json");

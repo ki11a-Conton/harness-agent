@@ -149,7 +149,7 @@ describe("E2-16 final integration acceptance", () => {
       const arm = getArmFactory().resolveCandidate("adaptive_recovery_v2");
       const artifact = buildExperimentArtifactV3({
         arm: { armId: "candidate", candidateId: "adaptive_recovery_v2", candidateConfigHash: arm.digest },
-        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false },
+        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: "d".repeat(64), promotionEligible: true, isolationStrength: "strong" },
         outcomes: Array.from({ length: 6 }, (_, i) => ({
           caseId: `ho-0${i + 1}`,
           suite: "holdout",
@@ -183,6 +183,25 @@ describe("E2-16 final integration acceptance", () => {
       const artifactPath = join(dir, "candidate-holdout.json");
       const { writeExperimentArtifactV3 } = await import("./artifact-v3/index.js");
       await writeExperimentArtifactV3(artifact, artifactPath);
+
+      // E4-06: a complete promotion bundle also carries the BASELINE artifact.
+      const baselineArtifact = buildExperimentArtifactV3({
+        arm: { armId: "baseline", candidateId: null, candidateConfigHash: null },
+        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: "d".repeat(64), promotionEligible: true, isolationStrength: "strong" },
+        outcomes: Array.from({ length: 6 }, (_, i) => ({
+          caseId: `ho-0${i + 1}`, suite: "holdout", armId: "baseline", attempt: 1, repetition: 1, order: i + 1,
+          passed: false, grade: "poor", verificationPassed: false, terminationReason: "verified_complete",
+          failureCategory: null, inputTokens: 900, outputTokens: 400, costUsd: 0.01, latencyMs: 100,
+          toolCalls: 3, recoveryDecisions: [], activationRef: null, securityOutcomeRef: null,
+          outputDigest: null, workspaceDigest: null, judgeVersion: "1.0.0",
+          evaluationContextHash: "a".repeat(64), candidateConfigHash: null,
+        })),
+        activationEvidence: [],
+        securityOutcomes: [],
+        provenance: { sourceManifestPath: null, gitSha: "c".repeat(40), dirty: false, model: "deepseek-v4-flash", provider: "fake", runtimeConfigHash: arm.digest },
+      });
+      const baselinePath = join(dir, "baseline-holdout.json");
+      await writeExperimentArtifactV3(baselineArtifact, baselinePath);
 
       // 2. Strict validator accepts the writer-generated dir.
       const validated = await validateArtifactDir(dir);
@@ -228,7 +247,7 @@ describe("E2-16 final integration acceptance", () => {
         "baseline-digest",
         "candidate-digest",
         "adaptive_recovery_v2",
-        "plan-1",
+        "d".repeat(64),
         [1, 1, 1],
       );
       const decisionArtifactPath = join(dir, "decision-artifact.json");
@@ -236,6 +255,7 @@ describe("E2-16 final integration acceptance", () => {
       const decisionArtifactOnDisk = await readFile(decisionArtifactPath, "utf8");
 
       const onDisk = await readFile(artifactPath, "utf8");
+      const onDiskBase = await readFile(baselinePath, "utf8");
       const envelope = buildPromotionEnvelope({
         generatedBy: "e2-16",
         decisionEnvelopeDigest: sha(JSON.stringify(decision.statistics)),
@@ -244,8 +264,11 @@ describe("E2-16 final integration acceptance", () => {
         parentStateDigest: sha("c0-state"),
         decisionArtifactPath,
         decisionArtifactDigest: sha(decisionArtifactOnDisk),
-        artifactRefs: [{ role: "candidate", path: artifactPath, digest: sha(onDisk) }],
-        sourceSha: "clean-head",
+        artifactRefs: [
+          { role: "baseline", path: baselinePath, digest: sha(onDiskBase) },
+          { role: "candidate", path: artifactPath, digest: sha(onDisk) },
+        ],
+        sourceSha: "c".repeat(40),
       });
       const envPath = join(dir, "envelope.json");
       await writeFile(envPath, JSON.stringify(envelope), "utf8");
