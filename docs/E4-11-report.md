@@ -1,86 +1,98 @@
 # E4-11 Report: Exploratory Paid Reevaluation (insecure-local, NOT promotion-grade)
 
+## Summary
+
+Two exploratory paid attempts against user-provided endpoints. The second (a
+local proxy) **finalized a pair and drove the entire chain end-to-end with a real
+model**: paired executor → canonical V3 (written + strict-reloaded in-process) →
+real evaluator → DecisionArtifact. It is **exploratory only** — on Windows there
+is no strong isolation, so `promotionEligible=false` and no promotion is possible
+or performed.
+
 ## Authorization
 
 User authorized a paid run this round with:
-- provider/model: `qwen3.8-flash` via base URL `https://api.b.ai/v1` (OpenAI-compatible);
-- max USD budget: user stated `99999999`;
+- provider/model: first `qwen3.8-flash` via `https://api.b.ai/v1`; then a local
+  proxy `http://127.0.0.1:8787/v1` with a proxy-managed key sentinel and model
+  `auto`;
+- max USD budget: user stated `99999999` (treated as an outer bound only — see
+  hard caps below);
 - explicit acceptance of an **insecure-local, non-promotion-grade, exploratory**
   run (no OS isolation).
 
 Because this host is Windows (`win32`), `probeIsolationBackend().strongIsolation`
-is `false`, so a promotion-eligible run is impossible here. The run was therefore
-executed with `--allow-insecure-local-benchmark`, which the E4-01 gate marks
-**permanently `promotionEligible=false`**. `RUN_PAID_BENCHMARKS=1` was set only
-in the run process; the API key was passed only via environment and is **not**
-present in any tracked file, log, or artifact.
+is `false`, so a promotion-eligible run is impossible here. Both runs used
+`--allow-insecure-local-benchmark`, which the E4-01 gate marks **permanently
+`promotionEligible=false`**. `RUN_PAID_BENCHMARKS=1` was set only in the run
+process; keys were passed only via environment and are **not** present in any
+tracked file, log, or artifact.
 
 ## Scope and hard caps (my own, far below the user's stated budget)
 
 Minimal interpretable set: 1 case × 1 repetition × 2 arms = 2 logical runs.
-Hard limits enforced by the executor: `--max-model-calls 20`,
-`--max-estimated-tokens 200000`, `--max-estimated-cost-usd 2`, `--seed 1`,
-exact case list, wall-clock via per-case timeout. The user's `99999999` was
-treated only as an outer bound; the operative caps were the small ones above.
+Hard limits: `--max-model-calls 20`, `--max-estimated-tokens 200000`,
+`--max-estimated-cost-usd 2`, `--seed 1`, exact case list, wall-clock per case.
 
-## Dry-run (0 provider calls) — plan + digest
+## Attempt 1 — api.b.ai (`qwen3.8-flash`)
 
-`--dry-run` produced the canonical plan and `planDigest`
-`5ce8f5d65040f961f96fba7729e2e6599728757461d313121e58ce46cd0b013f`
-(estimated cost $0.01, `insecure-local`, `promotionEligible=false`). The real run
-was bound to that exact digest via `--plan-digest`, so preflight verified the
-executed plan matched the confirmed one.
+Bound to dry-run `planDigest`
+`5ce8f5d65040f961f96fba7729e2e6599728757461d313121e58ce46cd0b013f`.
+The baseline arm completed + `verified_complete` (the real model works), but the
+candidate arm hit **HTTP 429 rate_limit** repeatedly → the pair did not finalize
+→ no canonical V3. Reported usage was 0 (the endpoint returned no usage
+accounting).
 
-## Real run — outcome
+## Attempt 2 — local proxy (`127.0.0.1:8787`, model `auto`) — SUCCEEDED
 
-Two invocations (initial + one journal resume), same plan/digest:
+Same minimal plan, fresh out dir, bound to the identical `--plan-digest`.
+`/v1/models` health check returned `auto`. Result:
 
 | metric | value |
 |---|---|
+| pairs finalized | 1/1 |
 | logical runs | 2 |
-| model-call attempts | 13 per invocation (≈26 total across both) |
-| transport retries | 6 per invocation |
-| baseline arm | **valid, passed, `verified_complete`** — the real model completed the task through the real paired executor |
-| candidate arm | **failed — `model_error`: HTTP 429 rate_limit** from the endpoint (after retries) |
-| pairs finalized | 0 |
-| canonical V3 written | none (V3 is emitted only when a pair finalizes) |
-| `promotionEligible` | false (insecure-local) |
-| reported usage / cost | 0 tokens / $0 (the endpoint returned no usage accounting; even at typical small-model rates this is pennies) |
+| model-call attempts | 6 |
+| transport retries | 0 |
+| baseline arm | passed |
+| candidate arm | passed |
+| canonical V3 | `v3-baseline.json` + `v3-candidate.json` written + strict-reloaded in-process |
+| V3 `schemaVersion` | 3.0.0; `promotionEligible=false`; `isolationStrength=insecure-local` |
+| evaluator decision | **INCONCLUSIVE** |
+| `pairComplete` | true |
+| `netPassedDelta` | 0 (both arms passed the single trivial case) |
+| `activationCoverage` | 1 |
+| reason codes | `ACTIVATION_UNSATISFIED`, `EFFECT_BELOW_THRESHOLD`, `SINGLE_RUN_REQUIRES_REPETITION` |
+| `evaluatorVersion` | `e4-06-evaluator-v1`; `thresholdDigest` present |
 | champion state | untouched — no auto-promotion |
 
-## What this proves and what it does not
+## What this proves
 
-**Proves:** the full paid pipeline is real and works end-to-end — a genuine
-external model (`qwen3.8-flash`) drove the real paired executor and the baseline
-arm completed + verified a task, with the plan bound to a confirmed digest and
-hard caps enforced.
+The full E3/E4 production pipeline runs end-to-end with a **real, non-scripted
+model**: `benchmark` entry → real paired executor → **canonical V3** (no manual
+`paired-to-v3.mjs`) → strict reload → real evaluator → `DecisionArtifact`, with
+the plan bound to a user-confirmed digest and hard caps enforced. The E4-05
+policy digest and E4-06 evaluator-version binding are live on real data.
 
-**Does not achieve:** a complete, promotion-eligible paired artifact. The
-candidate arm was blocked by the endpoint's HTTP 429 rate limiting (an external
-constraint, not a code defect), so no pair finalized, no canonical V3 was
-produced, and no promotion bundle draft exists.
+## What it correctly does NOT conclude
 
-## Honest verdict
+The decision is **INCONCLUSIVE, not ACCEPT** — exactly right for a single trivial
+case where both arms pass (`netPassedDelta = 0`, one repetition). Combined with
+`promotionEligible=false` (insecure-local) and the unmet `release:verify`
+precondition, E4-11's **promotion-grade** acceptance
+(`promotionEligible=true`, a conclusive ACCEPT, strict V3 as a promotion bundle)
+is **not** met and cannot be met on this host.
 
-E4-11's promotion-grade acceptance (`promotionEligible=true`, `pairComplete=true`,
-strict V3 load) is **NOT met** and cannot be met on this host:
-- Windows has no strong isolation backend → runs are permanently ineligible;
-- the third-party endpoint rate-limited the candidate arm → no complete pair.
+## To run E4-11 promotion-grade (future)
 
-This run is recorded as **exploratory only**. No promotion was performed and none
-should be inferred from it.
+1. Linux + `bwrap`/landlock (strong isolation → `promotionEligible=true`);
+2. `release:verify` passing at the target HEAD;
+3. a case set where the candidate can plausibly beat baseline, with ≥2
+   repetitions so `repetitionSufficient` can hold;
+4. dry-run → confirm exact `planDigest` → a concrete max-USD cap → run;
+   strict-load the V3; verify `pairComplete`; still do not auto-promote.
 
-## To run E4-11 properly (promotion-grade)
+## Artifacts and hygiene
 
-1. A Linux host with `bwrap`/landlock (strong isolation) so `promotionEligible=true`;
-2. `release:verify` passing at the target HEAD (fresh HEAD-bound gate evidence);
-3. an endpoint that is not rate-limiting (or a retry/backoff that clears it);
-4. dry-run → confirm the exact `planDigest` → a concrete max-USD cap → run with
-   hard limits; strict-load the resulting V3; verify `pairComplete`; still do not
-   auto-promote.
-
-## Artifacts
-
-- Run artifacts live in a temp dir (not the repo): `paired-experiment.json` +
-  the `.paired-journal/<pairedPlanDigest>/` arm records. The repo working tree is
-  clean; no key is present in any tracked file.
+Run artifacts are in a temp dir (not the repo): `paired-experiment.json`,
+`v3-baseline.json`, `v3-candidate.json`, and the `.paired-journal/` arm records.
+The repo working tree is clean; no API key is present in any tracked file.
