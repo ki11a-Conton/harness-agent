@@ -134,7 +134,12 @@ function toCaseOutcome(
     toolCalls: m.tool_call_count,
     recoveryDecisions: recoveryDecisionsFromOutcome(outcome),
     activationRef: activationEventId,
-    securityOutcomeRef: outcome.securityOutcome ? outcome.caseId : null,
+    // E4-R02 #5: the security ref is the PER-SAMPLE record id, so c1 rep1 and
+    // c1 rep2 reference DIFFERENT records, and a baseline outcome can never
+    // borrow a candidate's record.
+    securityOutcomeRef: outcome.securityOutcome
+      ? `${outcome.suite}\u0000${outcome.caseId}\u0000${repetition}\u0000${armId}`
+      : null,
     outputDigest: outputDigestFromEvents(outcome),
     workspaceDigest: null, // workspace torn down pre-build; recorded with eventRecords, never faked
     judgeVersion: outcome.judgeVersion,
@@ -159,7 +164,7 @@ function activationEvidenceFrom(outcome: EvalOutcome): ActivationEvidenceV3[] {
   }));
 }
 
-function securityOutcomeFrom(outcome: EvalOutcome): SecurityOutcomeV3 | null {
+function securityOutcomeFrom(outcome: EvalOutcome, armId: "baseline" | "candidate", repetition: number): SecurityOutcomeV3 | null {
   const sec = outcome.securityOutcome;
   if (!sec) return null;
   const kindMap: Record<string, SecurityOutcomeV3["kind"]> = {
@@ -170,10 +175,15 @@ function securityOutcomeFrom(outcome: EvalOutcome): SecurityOutcomeV3 | null {
     NO_ATTACK_ATTEMPT: "clean",
     UNKNOWN_LEGACY: "legacy",
   };
+  // E4-R02 #4/#5 (F04): the outcome id is PER-SAMPLE — executionIdentityDigest
+  // is not known here, so it is bound by (suite, caseId, repetition, arm),
+  // which the evaluator can re-verify against the outcome that references it.
+  // Two repetitions of the same case keep BOTH records: no Map<caseId>
+  // overwrite, and no cross-arm borrow.
   return {
-    caseId: outcome.caseId,
+    caseId: `${outcome.suite}\u0000${outcome.caseId}\u0000${repetition}\u0000${armId}`,
     kind: kindMap[sec.kind] ?? "not_observed",
-    detail: sec.facts.length > 0 ? `${sec.kind}: ${sec.facts.map((f) => f.type).join(",")}` : sec.kind,
+    detail: `${sec.kind} rep=${repetition} arm=${armId}${sec.facts.length > 0 ? `: ${sec.facts.map((f) => f.type).join(",")}` : ""}`,
   };
 }
 
@@ -207,8 +217,11 @@ export function buildV3ArtifactsFromPaired(
     candidateOutcomes.push(toCaseOutcome(c, "candidate", v3Repetition, order));
     baselineActivation.push(...activationEvidenceFrom(b));
     candidateActivation.push(...activationEvidenceFrom(c));
-    const bs = securityOutcomeFrom(b);
-    const cs = securityOutcomeFrom(c);
+    // E4-R02 #5: security outcomes are PER-SAMPLE — one record per repetition,
+    // not a Map<caseId> overwrite. The outcome references its own record via
+    // the per-sample id.
+    const bs = securityOutcomeFrom(b, "baseline", v3Repetition);
+    const cs = securityOutcomeFrom(c, "candidate", v3Repetition);
     if (bs) baselineSecurity.set(bs.caseId, bs);
     if (cs) candidateSecurity.set(cs.caseId, cs);
   }
