@@ -13,6 +13,7 @@
 
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { validateExperimentArtifactV3FromBytes } from "./artifact-v3/loader.js";
 import { stableStringify } from "./manifest.js";
 import { classifyArtifact, parseExperimentArtifactV3 } from "./artifact-v3/schema.js";
 import { evaluatePairing } from "./paired-key.js";
@@ -131,25 +132,32 @@ export interface V3ArtifactPair {
   candidateDigest: string;
 }
 
-/** Load two artifacts as a V3 pair. If either is not V3, throws
- *  LEGACY_NOT_PROMOTION_ELIGIBLE. */
+/** Load two artifacts as a V3 pair through the SAME strict validation the
+ *  file loader uses (E4-R02 #2/#3): bytes → parse → schema → contentDigest →
+ *  refs → eventRecords → summary → provenance. A NON-V3 artifact (e.g. a legacy
+ *  `{results: []}` report) is refused with LEGACY_NOT_PROMOTION_ELIGIBLE, and
+ *  any tampered V3 is refused with the same SCHEMA error the loader gives —
+ *  a promotion decision is never computed from bytes the loader would reject. */
 export async function loadV3ArtifactPair(
   baselinePath: string,
   candidatePath: string,
 ): Promise<V3ArtifactPair> {
   const rawBase = await readFile(baselinePath, "utf8");
   const rawCand = await readFile(candidatePath, "utf8");
-  const baseParsed = JSON.parse(rawBase) as unknown;
-  const candParsed = JSON.parse(rawCand) as unknown;
-  const baseClass = classifyArtifact(baseParsed);
-  const candClass = classifyArtifact(candParsed);
+  const baseClass = classifyArtifact(JSON.parse(rawBase) as unknown);
+  const candClass = classifyArtifact(JSON.parse(rawCand) as unknown);
   if (baseClass.kind !== "v3" || candClass.kind !== "v3") {
     throw new Error(
       `LEGACY_NOT_PROMOTION_ELIGIBLE: baseline=${baseClass.kind} candidate=${candClass.kind} — V3 artifacts required for strict promotion`,
     );
   }
-  const baseline = parseExperimentArtifactV3(baseParsed);
-  const candidate = parseExperimentArtifactV3(candParsed);
+  // Both are V3 now — run the FULL strict read (digest, refs, eventRecords,
+  // summary, provenance). A tampered V3 is rejected here exactly as the file
+  // loader rejects it.
+  const strictBase = validateExperimentArtifactV3FromBytes(rawBase, baselinePath);
+  const strictCand = validateExperimentArtifactV3FromBytes(rawCand, candidatePath);
+  const baseline = strictBase.artifact;
+  const candidate = strictCand.artifact;
   const baselineDigest = createHash("sha256").update(rawBase.trim(), "utf8").digest("hex");
   const candidateDigest = createHash("sha256").update(rawCand.trim(), "utf8").digest("hex");
   return { baseline, candidate, baselineDigest, candidateDigest };

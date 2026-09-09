@@ -113,6 +113,11 @@ function makePair(
     manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT40, dirty: false, planDigest: HEX64, ...(opts.candidateManifestExtra ?? {}) },
     outcomes: candidateOutcomes,
     provenance: candProvenance,
+    // E4-R02: every activationRef must resolve. Provide the matching evidence
+    // when any outcome references "ae-1", so the strict reader accepts the pair.
+    activationEvidence: candidateOutcomes.some((o) => o.activationRef === "ae-1")
+      ? [{ id: "ae-1", reasonCodes: ["memory.retrieved"], note: "activated" }]
+      : undefined,
     securityOutcomes: candidateSecurityEscaped
       ? [{ caseId: "ho-01", kind: "escaped", detail: "escaped sandbox" }]
       : undefined,

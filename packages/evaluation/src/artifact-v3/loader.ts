@@ -11,7 +11,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { ArtifactSchemaError, classifyArtifact, findEventRecordViolations, findRefAndEventViolations, parseExperimentArtifactV3 } from "./schema.js";
 import type { ArtifactClassification, ExperimentArtifactV3 } from "./types.js";
-import { canonicalDigestInput, deriveSummaryV3 } from "./writer.js";
+import { canonicalDigestInput, computeContentDigestV3, deriveSummaryV3 } from "./writer.js";
 
 export interface LoadedArtifact {
   artifact: ExperimentArtifactV3;
@@ -38,18 +38,27 @@ export interface LegacyLoadedArtifact {
 /** Strict-load a V3 artifact. Re-verifies digest + summary. Throws
  *  ArtifactSchemaError on any provenance/digest/summary violation. */
 export async function loadExperimentArtifactV3(path: string): Promise<LoadedArtifact> {
-  const raw = await readFile(path, "utf8");
+  return validateExperimentArtifactV3FromBytes(await readFile(path, "utf8"), path);
+}
+
+/**
+ * E4-R02 #2: the ONE strict read path — bytes → parse → schema → contentDigest →
+ * refs → eventRecords → summary → provenance. Both the file loader above and the
+ * champion evaluator call this, so a decision can never be computed from bytes
+ * the loader would have rejected. `source` is used only in error messages.
+ */
+export function validateExperimentArtifactV3FromBytes(raw: string, source: string): LoadedArtifact {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", path, "not valid JSON");
+    throw new ArtifactSchemaError("SCHEMA_VALIDATION_FAILED", source, "not valid JSON");
   }
   const classification = classifyArtifact(parsed);
   if (classification.kind !== "v3") {
     throw new ArtifactSchemaError(
       "UNSUPPORTED_SCHEMA_VERSION",
-      path,
+      source,
       `expected schemaVersion "3.0.0", got ${classification.schemaVersion ?? "no schemaVersion"} (kind ${classification.kind})`,
     );
   }
@@ -77,9 +86,7 @@ export async function loadExperimentArtifactV3(path: string): Promise<LoadedArti
   // canonical digest excludes the contentDigest field itself AND the summary
   // (writer's NON_DIGEST_KEYS), so passing the full artifact minus the digest
   // field is correct.
-  const { computeContentDigestV3 } = await import("./writer.js");
-  const { contentDigest: recordedDigest, ...digestSource } = artifact;
-  const recomputedDigest = computeContentDigestV3(digestSource);
+  const { contentDigest: recordedDigest, ...digestSource } = artifact;  const recomputedDigest = computeContentDigestV3(digestSource);
   if (recomputedDigest !== recordedDigest) {
     throw new ArtifactSchemaError(
       "CONTENT_DIGEST_MISMATCH",
@@ -130,7 +137,7 @@ export async function loadExperimentArtifactV3(path: string): Promise<LoadedArti
     );
   }
 
-  return { artifact, path, recomputedSummary };
+  return { artifact, path: source, recomputedSummary };
 }
 
 /** Legacy-load any non-V3 artifact for HISTORICAL display only. Never throws
