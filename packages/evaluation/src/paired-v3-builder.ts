@@ -48,6 +48,14 @@ export interface PairedV3Facts {
   candidateConfigHash: string | null;
   isolationStrength: string;
   promotionEligible: boolean;
+  /** E4-R01: identity/completeness metadata preserved in the V3 manifest so a
+   *  reader can verify WHICH confirmed experiment produced this artifact and
+   *  whether it was complete. Optional for backward compatibility. */
+  executionIdentityDigest?: string;
+  scheduleDigest?: string;
+  expectedSampleKeys?: readonly string[];
+  runComplete?: boolean;
+  incompleteReason?: string | null;
 }
 
 export interface PairedV3Artifacts {
@@ -216,6 +224,12 @@ export function buildV3ArtifactsFromPaired(
     runtimeConfigHash: facts.runtimeConfigHash,
     isolationStrength: facts.isolationStrength,
     promotionEligible: facts.promotionEligible,
+    // E4-R01: bind the artifact to the confirmed experiment + its completeness.
+    ...(facts.executionIdentityDigest !== undefined ? { executionIdentityDigest: facts.executionIdentityDigest } : {}),
+    ...(facts.scheduleDigest !== undefined ? { scheduleDigest: facts.scheduleDigest } : {}),
+    ...(facts.expectedSampleKeys !== undefined ? { expectedSampleKeys: [...facts.expectedSampleKeys] } : {}),
+    ...(facts.runComplete !== undefined ? { runComplete: facts.runComplete } : {}),
+    ...(facts.incompleteReason !== undefined && facts.incompleteReason !== null ? { incompleteReason: facts.incompleteReason } : {}),
   };
   const provenance = {
     sourceManifestPath: null,

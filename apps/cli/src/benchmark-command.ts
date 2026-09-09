@@ -34,6 +34,11 @@ import {
   computeRuntimeConfigHash,
   computeEvaluationContextHash,
   computePairedPlanDigest,
+  buildExecutionIdentityV1,
+  computeExecutionIdentityDigestV1,
+  caseInputFingerprintV1,
+  DEFAULT_DECISION_POLICY_V3,
+  computeThresholdDigestV3,
   DEFAULT_JUDGE_VERSION,
   EvalRunner,
   getCandidateRegistry,
@@ -250,7 +255,7 @@ export async function runBenchmarkCommand(
       ],
     };
   }
-  return executeBenchmark(opts, provider, cases);
+  return executeBenchmark(opts, provider, cases, preflight);
 }
 
 /** Shared benchmark execution (P4-11: `smoke` runs the same path with a fake
@@ -261,6 +266,9 @@ async function executeBenchmark(
   opts: BenchmarkCommandOptions,
   provider: ModelProvider,
   cases: BenchmarkCase[],
+  /** E4-R01: the CONFIRMED preflight plan. The executor consumes this same
+   *  identity instead of re-deriving a different "planDigest". */
+  preflight: PreflightResult,
 ): Promise<{ exitCode: number; lines: string[] }> {
   const lines: string[] = [];
   const selected = opts.limit > 0 ? cases.slice(0, opts.limit) : cases;
@@ -345,7 +353,7 @@ async function executeBenchmark(
     // already refused if no strong backend (unless --allow-insecure-local was
     // passed). Here we resolve the exact mode to pass to each case.
     const confinement = await decideBenchmarkConfinement(opts);
-    return runPairedPromotion(opts, provider, selected, modelId, defaultBudgetTokens, manifest, effectiveConfig, confinement);
+    return runPairedPromotion(opts, provider, selected, modelId, defaultBudgetTokens, manifest, effectiveConfig, confinement, preflight);
   }
 
   // E1-11: repeat protocol — a single run is a measurement, not a statistical
@@ -478,6 +486,14 @@ export interface PairedExperimentArtifact {
   // no downstream converter (V3 writer, promotion loader) may flip it to true.
   promotionEligible: boolean;
   isolationStrength: "strong" | "insecure-local" | "none";
+  /** E4-R01: the two identities, kept distinct. planDigest above carries the
+   *  CONFIRMED execution plan; these record the schedule grid and the full
+   *  execution identity the journal is keyed by. */
+  scheduleDigest: string;
+  executionIdentityDigest: string;
+  executionPlanDigest: string;
+  /** E4-R01: why a run is not promotable when it is incomplete. */
+  incompleteReason?: "budget-halted" | "partial-pairs" | "interrupted" | null;
 }
 
 /**
@@ -532,6 +548,7 @@ async function runPairedPromotion(
   manifest: RunManifest,
   _effectiveConfig: unknown,
   processConfinement?: "strong" | "insecure-local",
+  preflight?: PreflightResult,
 ): Promise<{ exitCode: number; lines: string[] }> {
   const lines: string[] = [];
   const plan = buildPairedPlan({
@@ -542,10 +559,61 @@ async function runPairedPromotion(
     // model seed is stored separately (modelSeed below) and never reorders.
     orderSeed: opts.seed,
   });
-  const planDigest = computePairedPlanDigest(plan);
+  // E4-R01: two distinct identities, never conflated.
+  //   scheduleDigest      — the AB/BA grid only (what order arms run in).
+  //   executionIdentity   — THE experiment the user confirmed: candidate, arms'
+  //     config, provider/model, case INPUT content, source snapshot, limits,
+  //     billing, isolation posture and the pre-registered decision policy.
+  // The journal and the promotion evidence bind to the execution identity, so a
+  // journal from any other experiment is refused rather than silently reused.
+  const scheduleDigest = computePairedPlanDigest(plan);
+  const executionPlanDigest = preflight?.planDigest ?? scheduleDigest;
+  const promotionEligibleRun = preflight?.promotionEligible === true && processConfinement === "strong";
+  const identity = buildExecutionIdentityV1({
+    scheduleDigest,
+    suite: opts.suite,
+    judgeVersion: manifest.judgeVersion,
+    repetitions: opts.repeat,
+    orderSeed: opts.seed,
+    modelSeed: null,
+    caseIds: selected.map((c) => c.id),
+    caseFingerprints: Object.fromEntries(
+      selected.map((c) => [c.id, caseInputFingerprintV1({
+        requestMd: c.requestMd,
+        expectedMd: c.expectedMd,
+        fixture: c.fixture,
+        verification: c.verification ?? null,
+        requires: c.requires ?? null,
+        schemaMode: c.schemaMode ?? null,
+      })]),
+    ),
+    baselineConfigHash: "baseline",
+    candidate: opts.candidate ?? null,
+    candidateConfigHash: manifest.runtimeConfigHash,
+    providerId: provider.id,
+    modelId,
+    effectiveModelParams: { budgetTokens: defaultBudgetTokens },
+    sourceSha: manifest.gitSha,
+    treeFingerprint: manifest.dirty ? "dirty" : null,
+    limits: {
+      maxLogicalRuns: opts.maxLogicalRuns,
+      maxModelCalls: opts.maxModelCalls,
+      maxEstimatedTokens: opts.maxEstimatedTokens,
+      maxEstimatedCostUsd: opts.maxEstimatedCostUsd,
+    },
+    billingClass: preflight?.billingClass ?? "offline-test",
+    isolationBackendId: preflight?.isolationBackendId ?? "not-probed",
+    isolationStrength: processConfinement ?? "none",
+    promotionEligible: promotionEligibleRun,
+    decisionPolicy: { ...DEFAULT_DECISION_POLICY_V3 },
+    thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
+  });
+  const executionIdentityDigest = computeExecutionIdentityDigestV1(identity);
   const outDir = resolve(opts.outDir);
-  // Per-plan journal directory: resume only works for the SAME plan digest.
-  const journalDir = join(outDir, ".paired-journal", planDigest);
+  // E4-R01: the journal directory is named by the EXECUTION identity, so a
+  // changed candidate / model / case content / source / policy / budget cannot
+  // land in an earlier experiment's journal at all.
+  const journalDir = join(outDir, ".paired-journal", executionIdentityDigest);
 
   const result = await runPairedExperiment({
     plan,
@@ -556,6 +624,7 @@ async function runPairedPromotion(
     // preflight already rejected it before any provider call.
     maxModelCalls: opts.maxModelCalls ?? 0,
     journalDir,
+    identity,
     modelSeed: null,
     runArm: (arm, caseDef, ctx) =>
       runOneCase(
@@ -592,10 +661,18 @@ async function runPairedPromotion(
   // paid run is lost. Metrics/violations are untouched; only debug trail drops.
   const boundRecord = (rec: PairedArmRecord): PairedArmRecord =>
     rec === null ? rec : { ...rec, outcome: boundOutcomeEvents(rec.outcome) };
+  // E4-R01 / F02: eligibility requires BOTH a strong isolation posture AND a
+  // COMPLETE run. A halted/interrupted run may keep diagnostic artifacts, but a
+  // completed subset of pairs can never be promoted from it.
+  const runComplete = result.complete && result.partialPairs.length === 0;
+  const promotionEligibleResult = promotionEligibleRun && runComplete;
   const artifact: PairedExperimentArtifact = {
     schemaVersion: "e3-02",
     kind: "paired-experiment",
-    planDigest,
+    planDigest: executionPlanDigest,
+    scheduleDigest,
+    executionIdentityDigest,
+    executionPlanDigest,
     plan,
     counters: result.counters,
     orderedRuns: result.orderedRuns,
@@ -616,10 +693,17 @@ async function runPairedPromotion(
     modelSeed: result.modelSeed,
     generatedAt: new Date().toISOString(),
     candidate: opts.candidate ?? null,
-    // E4-01 #5: only a strong-isolation promotion run is eligible; an
-    // insecure-local run is permanently ineligible (recorded in the artifact).
-    promotionEligible: processConfinement === "strong",
+    // E4-01 #5 + E4-R01: strong isolation AND a complete run, recorded so no
+    // downstream converter can re-qualify an insecure or partial experiment.
+    promotionEligible: promotionEligibleResult,
     isolationStrength: processConfinement ?? "none",
+    incompleteReason: runComplete
+      ? null
+      : result.haltedByBudget
+        ? "budget-halted"
+        : result.partialPairs.length > 0
+          ? "partial-pairs"
+          : "interrupted",
   };
   const artifactPath = join(outDir, "paired-experiment.json");
   await writeFile(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
@@ -630,7 +714,14 @@ async function runPairedPromotion(
   if (result.finalizedPairs.length > 0) {
     const candidateConfigHash = result.finalizedPairs[0]?.candidate.outcome.candidateConfigHash ?? null;
     const v3 = buildV3ArtifactsFromPaired(result.finalizedPairs, {
-      planDigest,
+      planDigest: executionPlanDigest,
+      executionIdentityDigest,
+      scheduleDigest,
+      expectedSampleKeys: plan.pairs.flatMap((p) =>
+        Array.from({ length: plan.repetitions }, (_, rep) => `${opts.suite}\u0000${p.caseId}\u0000${rep}`),
+      ),
+      runComplete,
+      incompleteReason: artifact.incompleteReason ?? null,
       gitSha: manifest.gitSha,
       dirty: manifest.dirty,
       model: modelId,
@@ -641,7 +732,7 @@ async function runPairedPromotion(
       candidateId: opts.candidate ?? null,
       candidateConfigHash,
       isolationStrength: processConfinement ?? "none",
-      promotionEligible: processConfinement === "strong",
+      promotionEligible: promotionEligibleResult,
     });
     const v3BaselinePath = join(outDir, "v3-baseline.json");
     const v3CandidatePath = join(outDir, "v3-candidate.json");
@@ -776,6 +867,10 @@ export interface PreflightResult {
    *  digest. An insecure-local run carries promotionEligible=false. */
   isolationStrength?: "strong" | "insecure-local" | "none";
   promotionEligible?: boolean;
+  /** E4-R01: the isolation BACKEND identity + billing class, so the execution
+   *  identity the executor binds is the same one that was confirmed. */
+  isolationBackendId?: string;
+  billingClass?: BillingClass;
 }
 
 /**
@@ -977,6 +1072,9 @@ export async function preflightBenchmark(
     estimatedCostUsd,
     isolationStrength,
     promotionEligible,
+    // E4-R01: carry the confirmed backend identity + billing class forward.
+    isolationBackendId,
+    billingClass,
   };
 }
 
@@ -2236,7 +2334,7 @@ export async function runSmokeBenchmark(): Promise<{ exitCode: number; lines: st
   if (!smokePreflight.ok) {
     return { exitCode: 1, lines: [`agent benchmark smoke: preflight rejected — ${smokePreflight.reason}`] };
   }
-  const result = await executeBenchmark(opts, smokeFakeProvider(), cases);
+  const result = await executeBenchmark(opts, smokeFakeProvider(), cases, smokePreflight);
   const usageLine = result.lines.find((line) => line.startsWith("benchmark:")) ?? "";
   const m = usageLine.match(/avg_input_tokens|input tokens/i);
   void m;

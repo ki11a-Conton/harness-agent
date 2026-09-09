@@ -23,7 +23,8 @@ import { join } from "node:path";
 import type { ModelProvider, ModelRef, ProviderConfig, ModelRequest, ModelEvent } from "@ar/contracts";
 import type { EvalOutcome } from "./runner.js";
 import type { BenchmarkCase } from "./baseline.js";
-import { buildPairedPlan, type PairedExperimentPlan } from "./paired-plan.js";
+import { buildPairedPlan, computePairedPlanDigest, type PairedExperimentPlan } from "./paired-plan.js";
+import { buildExecutionIdentityV1, type PairedExecutionIdentityV1 } from "./paired-execution-identity.js";
 import {
   runPairedExperiment,
   armRunIdOf,
@@ -293,6 +294,7 @@ describe("E3-02 PairedExperimentExecutor", () => {
         cases: plan2cases(plan),
         provider: provider1,
         journalDir,
+        identity: identFor(plan),
         runArm: async (arm, _caseDef, _ctx) => {
           armCount += 1;
           return makeOutcome(arm.caseId, true);
@@ -309,7 +311,7 @@ describe("E3-02 PairedExperimentExecutor", () => {
 
     // Verify journal has 5 entries.
     const journalFiles = await readdir(journalDir).catch(() => []);
-    const armJournalFiles = journalFiles.filter((f) => f.endsWith(".json") && !f.startsWith(".tmp-"));
+    const armJournalFiles = journalFiles.filter((f) => f.endsWith(".json") && !f.startsWith(".tmp-") && f !== "identity.json");
     expect(armJournalFiles.length).toBe(5);
 
     // Resume: should complete the remaining 7 arms.
@@ -319,6 +321,7 @@ describe("E3-02 PairedExperimentExecutor", () => {
       cases: plan2cases(plan),
       provider: provider2,
       journalDir,
+      identity: identFor(plan),
       runArm: async (arm, _caseDef, _ctx) => {
         return makeOutcome(arm.caseId, true);
       },
@@ -370,6 +373,7 @@ describe("E3-02 PairedExperimentExecutor", () => {
       cases: plan2cases(planA),
       provider: providerA,
       journalDir,
+      identity: identFor(planA),
       runArm: async (arm, _caseDef, _ctx) => makeOutcome(arm.caseId, true),
     });
     assertOk(resultA);
@@ -383,12 +387,16 @@ describe("E3-02 PairedExperimentExecutor", () => {
       cases: plan2cases(planB),
       provider: providerB,
       journalDir,
+      identity: identFor(planB),
       runArm: async (arm, _caseDef, _ctx) => makeOutcome(arm.caseId, true),
     });
     expect(resultB.status).toBe("resume-rejected");
     if (resultB.status === "resume-rejected") {
-      expect(resultB.reason).toContain("plan digest");
+      // E4-R01: the identity gate names the differing field, and the rejected
+      // run must not have touched the provider at all.
+      expect((resultB.violations ?? []).some((v) => v.includes("scheduleDigest"))).toBe(true);
     }
+    expect(providerB.callCount).toBe(0);
 
     await rm(journalDir, { recursive: true, force: true }).catch(() => {});
   });
@@ -476,3 +484,35 @@ describe("E3-02 PairedExperimentExecutor", () => {
     expect(result.counters.modelCallAttempts).toBe(4);
   });
 });
+// ---------------------------------------------------------------------------
+// E4-R01 — execution identity fixture. Hoisted so the resume tests above can
+// use it. Override one field to prove that any security-relevant change to the
+// experiment blocks a resume instead of silently reusing the old journal.
+// ---------------------------------------------------------------------------
+export function identFor(
+  plan: PairedExperimentPlan,
+  over: Partial<PairedExecutionIdentityV1> = {},
+): PairedExecutionIdentityV1 {
+  return buildExecutionIdentityV1({
+    scheduleDigest: computePairedPlanDigest(plan),
+    suite: plan.suite,
+    judgeVersion: "1.0.0",
+    repetitions: plan.repetitions,
+    orderSeed: plan.orderSeed ?? 0,
+    modelSeed: null,
+    caseIds: plan.cases,
+    caseFingerprints: Object.fromEntries(plan.cases.map((c) => [c, "fixture-" + c])),
+    candidate: "cand-x",
+    providerId: "fake",
+    modelId: "fake-model",
+    sourceSha: "a".repeat(40),
+    limits: { maxLogicalRuns: null, maxModelCalls: null, maxEstimatedTokens: null, maxEstimatedCostUsd: null },
+    billingClass: "offline-test",
+    isolationBackendId: "none",
+    isolationStrength: "none",
+    promotionEligible: false,
+    decisionPolicy: { version: "test-policy-v1" },
+    thresholdDigest: "b".repeat(64),
+    ...over,
+  });
+}

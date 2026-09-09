@@ -25,6 +25,12 @@ import { join } from "node:path";
 import type { ModelProvider, ModelRequest, ProviderConfig, ModelRef } from "@ar/contracts";
 import type { RunMetrics } from "@ar/observability";
 import { computePairedPlanDigest, type ArmName, type ArmOrder, type ArmRunRef, type PairedExperimentPlan, type PairedPair } from "./paired-plan.js";
+import {
+  computeExecutionIdentityDigestV1,
+  executionIdentityViolationsV1,
+  PAIRED_EXECUTION_IDENTITY_SCHEMA_VERSION,
+  type PairedExecutionIdentityV1,
+} from "./paired-execution-identity.js";
 import type { EvalOutcome } from "./runner.js";
 import type { BenchmarkCase } from "./baseline.js";
 
@@ -270,6 +276,57 @@ async function loadJournal(dir: string): Promise<{
   return { planDigest, entries };
 }
 
+// ---------------------------------------------------------------------------
+// E4-R01 — journal identity header
+//
+// A journal directory is only valid for the exact experiment that wrote it. The
+// header records that experiment's full execution identity; a resume verifies it
+// BEFORE any provider is created or called. A journal with no header (written
+// before this fix, or partially written) is refused and left on disk for
+// diagnosis rather than trusted.
+// ---------------------------------------------------------------------------
+
+const IDENTITY_HEADER_FILE = "identity.json";
+
+interface JournalIdentityHeaderV1 {
+  schemaVersion: typeof PAIRED_EXECUTION_IDENTITY_SCHEMA_VERSION;
+  identity: PairedExecutionIdentityV1;
+  identityDigest: string;
+  writtenAt: number;
+}
+
+async function readJournalIdentityHeader(dir: string): Promise<JournalIdentityHeaderV1 | null> {
+  let raw: string;
+  try {
+    raw = await readFile(join(dir, IDENTITY_HEADER_FILE), "utf8");
+  } catch (err) {
+    const code = err instanceof Error ? (err as NodeJS.ErrnoException).code : undefined;
+    if (code === "ENOENT") return null;
+    process.stderr.write(
+      `[degraded] paired-executor.journal.identity-unreadable: ${err instanceof Error ? err.message : String(err)}\n`,
+    );
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as JournalIdentityHeaderV1;
+  } catch (err) {
+    process.stderr.write(
+      `[degraded] paired-executor.journal.identity-malformed: ${err instanceof Error ? err.message : String(err)}\n`,
+    );
+    return null;
+  }
+}
+
+async function writeJournalIdentityHeader(dir: string, header: JournalIdentityHeaderV1): Promise<void> {
+  const target = join(dir, IDENTITY_HEADER_FILE);
+  const tmp = join(dir, `.tmp-identity-${process.pid}-${Math.random().toString(36).slice(2, 8)}`);
+  await writeFile(tmp, JSON.stringify(header, null, 2) + "\n", "utf8");
+  await rm(target, { force: true }).catch((err: unknown) => {
+    process.stderr.write(`[degraded] paired-executor.journal.identity-cleanup: ${String(err)}\n`);
+  });
+  await rename(tmp, target);
+}
+
 async function writeJournalEntry(dir: string, entry: PairedJournalEntry): Promise<void> {
   const target = join(dir, `${entry.armRunId}.json`);
   // Atomic write: write to temp then rename. On Windows, rename over existing
@@ -335,6 +392,8 @@ export type PairedExperimentRunResult =
       status: "resume-rejected";
       reason: string;
       planDigest: string;
+      /** E4-R01: which identity fields differed (never secret material). */
+      violations?: string[];
     };
 
 // ---------------------------------------------------------------------------
@@ -409,39 +468,89 @@ export interface PairedExecutorOptions {
   /** Observability hook fired after each arm completes. Throw from this hook
    *  to simulate a crash (journal entries persist, executor stops). */
   onArmCompleted?: (info: { armRunId: string; arm: ArmRunRef; pairId: string; logicalRuns: number }) => void | Promise<void>;
+  /**
+   * E4-R01: the full execution identity of THIS experiment. When a journalDir is
+   * used, it is recorded in the journal header and verified field-by-field
+   * before any provider is created or called, so a journal from a different
+   * candidate / model / case content / source / policy / isolation posture can
+   * never be resumed into this experiment.
+   */
+  identity?: PairedExecutionIdentityV1;
 }
 
 export async function runPairedExperiment(opts: PairedExecutorOptions): Promise<PairedExperimentRunResult> {
-  const { plan, cases, runArm, provider, maxModelCalls = 0, journalDir, modelSeed = null, onArmCompleted } = opts;
+  const { plan, cases, runArm, provider, maxModelCalls = 0, journalDir, modelSeed = null, onArmCompleted, identity } = opts;
   const planDigest = computePairedPlanDigest(plan);
   const caseById = new Map(cases.map((c) => [c.id, c]));
   const budget = createBudget(maxModelCalls);
-  const budgetedProvider = createBudgetedProvider(provider, budget);
 
-  // ---- Load journal if resuming ----
+  // ---- E4-R01: verify the journal's execution identity BEFORE any provider ----
+  // The provider must not be created (let alone called) for an experiment whose
+  // journal turns out to belong to a different run.
   let journal = new Map<string, PairedJournalEntry>();
   let resumed = false;
+  const identityDigest = identity !== undefined ? computeExecutionIdentityDigestV1(identity) : null;
   if (journalDir !== undefined) {
     await mkdir(journalDir, { recursive: true });
+    const header = await readJournalIdentityHeader(journalDir);
     const loaded = await loadJournal(journalDir);
-    if (loaded.entries.size > 0) {
-      if (loaded.planDigest !== planDigest) {
+    if (loaded.entries.size > 0 || header !== null) {
+      if (identity === undefined || identityDigest === null) {
+        return {
+          status: "resume-rejected",
+          reason: "journal exists but this run supplied no execution identity — refusing to resume without identity verification",
+          planDigest,
+          violations: ["identity not supplied"],
+        };
+      }
+      const violations = executionIdentityViolationsV1(header?.identity, identity);
+      if (violations.length > 0) {
+        return {
+          status: "resume-rejected",
+          reason: `journal execution identity does not match this experiment (${String(violations.length)} field(s)) — refusing to mix journals; the existing journal is left untouched for diagnosis`,
+          planDigest,
+          violations,
+        };
+      }
+      // Belt and braces: the schedule digest is one identity component, so a
+      // header match implies it, but keep the cheap independent check.
+      if (loaded.planDigest !== null && loaded.planDigest !== planDigest) {
         return {
           status: "resume-rejected",
           reason: `journal plan digest (${loaded.planDigest}) does not match current plan digest (${planDigest}) — refusing to resume a different experiment`,
           planDigest,
+          violations: ["scheduleDigest"],
+        };
+      }
+      if (header !== null && identityDigest !== null && header.identityDigest !== identityDigest) {
+        return {
+          status: "resume-rejected",
+          reason: "journal identity digest does not match this experiment's computed identity digest",
+          planDigest,
+          violations: ["identityDigest mismatch"],
         };
       }
       journal = loaded.entries;
-      resumed = true;
-      // Seed the budget from the journal (counters are cumulative).
+      resumed = journal.size > 0;
+      // Budget is CUMULATIVE across resumes: previously consumed calls are
+      // re-counted here so a new process cannot re-spend an already-granted
+      // allowance. Extra budget requires a deliberately new authorized plan.
       for (const e of journal.values()) {
         budget.logicalRuns += 1;
         budget.modelCallAttempts += e.modelCallAttempts;
         budget.transportRetries += e.transportRetries;
       }
+    } else if (identity !== undefined && identityDigest !== null) {
+      await writeJournalIdentityHeader(journalDir, {
+        schemaVersion: PAIRED_EXECUTION_IDENTITY_SCHEMA_VERSION,
+        identity,
+        identityDigest,
+        writtenAt: Date.now(),
+      });
     }
   }
+
+  const budgetedProvider = createBudgetedProvider(provider, budget);
 
   // ---- Ordered execution ----
   const ordered = orderedArmRuns(plan);
