@@ -48,18 +48,41 @@ export async function resolveExecCwd(
       ? resolve(requested)
       : resolve(root, requested);
 
-  const within = (abs: string): boolean => {
-    if (abs === root) return true;
-    const rel = relative(root, abs);
+  const inside = (base: string, abs: string): boolean => {
+    if (abs === base) return true;
+    const rel = relative(base, abs);
     return rel !== "" && !rel.startsWith(".." + sep) && rel !== ".." && !isAbsolute(rel);
   };
 
-  if (!within(candidate)) {
+  // E4-R07: the containment basis must be consistent. `workspaceRoot` may itself
+  // be an ALIAS of the real directory (POSIX symlink; Windows junction, 8.3
+  // short name, case-folded volume root — what the Windows CI runner hits).
+  // realpath-ing the candidate and comparing it to the UN-canonical root made
+  // every legitimate alias read as a symlink escape, so the root is canonicalized
+  // too and the post-realpath check compares canonical against canonical.
+  let canonicalRoot = root;
+  try {
+    canonicalRoot = await realpath(root);
+  } catch (rootErr) {
+    // An unusable root keeps the LEXICAL basis (so the checks below still run
+    // and stay fail-closed), but that is never silent: an alias we cannot
+    // resolve is exactly the condition worth surfacing.
+    process.stderr.write(
+      `[degraded] exec-workspace: cannot canonicalize workspace root, using lexical path (${rootErr instanceof Error ? rootErr.message : String(rootErr)})\n`,
+    );
+  }
+
+  // Lexical pre-check rejects the obvious escapes without touching the fs. A
+  // candidate written in the ROOT'S canonical form is legitimate too, so either
+  // basis is accepted here; containment is enforced canonically below.
+  const lexicallyInside = inside(root, candidate) || inside(canonicalRoot, candidate);
+  if (!lexicallyInside) {
     throw new Error("WORKSPACE_POLICY:cwd-outside");
   }
 
   // Symlink escape: realpath the target; if it no longer sits inside the
-  // workspace (after resolving any links), reject.
+  // CANONICAL workspace root (after resolving any links), reject. A link inside
+  // the workspace that points out still fails here.
   let canonical: string;
   try {
     canonical = await realpath(candidate);
@@ -68,7 +91,7 @@ export async function resolveExecCwd(
     // never silently fallen back to the workspace root.
     throw new Error("WORKSPACE_POLICY:cwd-unresolvable");
   }
-  if (!within(canonical)) {
+  if (!inside(canonicalRoot, canonical)) {
     throw new Error("WORKSPACE_POLICY:symlink-escape");
   }
   // realpath resolves file paths too; the cwd must be a directory.
