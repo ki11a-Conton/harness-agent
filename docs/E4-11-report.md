@@ -90,6 +90,34 @@ effect to accept. Producing a genuine ACCEPT would require a case where the
 budget-aware candidate really beats baseline; that outcome is model-dependent and
 was **not** fabricated here.
 
+## Attempt 3 — distinguishing case (blocked by the proxy model's tool-call defect)
+
+To try to produce a real (not fabricated) ACCEPT, a case was designed that gives
+the budget-aware guidance a genuine causal role: fix a buggy `calc.py` whose only
+verification is running `python calc_test.py` — the candidate arm is explicitly
+told to prioritize running the verification command, the baseline is not.
+
+Result: the run did **not** complete. The proxy model emitted **malformed `exec`
+tool calls** (`{"arguments":{"command":"ls"}}` — a nested `arguments` object that
+fails schema validation: `command: Required`). The harness handled this correctly
+and fail-closed: `TOOL_SCHEMA_ERROR`, `recovery.decided: retry_safe`, then
+`run.limit_reached: stallPattern repeated_error` → clean `tool_limit`
+termination with `unverified_complete`. The baseline arm consumed 17 model calls
+and failed; the run was stopped before the candidate arm to avoid spending
+against a model that cannot use the exec tool.
+
+**Finding:** the local proxy's `auto` model is not capable of well-formed exec
+tool calls, so any exec-requiring case cannot complete through it. This is a
+model/tool-interop limitation of the chosen endpoint, not a pipeline or
+case-design defect — the harness's schema validation + stall detection worked
+exactly as designed (a positive fail-closed demonstration).
+
+**Consequence for ACCEPT:** a genuine real-model ACCEPT is not achievable with
+this proxy model on tool-driven cases. The evaluator's ACCEPT path through the
+real chain is already demonstrated by the automated `e4-09` production-path E2E
+(real stages, provider keyed on the candidate arm's real guidance marker →
+ACCEPT). No fabrication was attempted.
+
 ## What this proves
 
 The full E3/E4 production pipeline runs end-to-end with a **real, non-scripted
