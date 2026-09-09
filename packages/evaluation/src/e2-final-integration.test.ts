@@ -72,6 +72,9 @@ describe("E2-16 final integration acceptance", () => {
       tokensDelta: 44000,
       maxTokensDelta: 100000,
       recommendsRepetition: true,
+      recoveryCount: 0,
+      recoveredCount: 0,
+      minRecoveryRate: null,
     });
     expect(env.decision).toBe("INVALID");
     expect(env.gates.provenanceComparable).toBe(false);

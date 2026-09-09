@@ -32,6 +32,9 @@ function acceptBase(overrides: Partial<DecisionGateInputV3> = {}): DecisionGateI
     tokensDelta: 40000,
     maxTokensDelta: 100000,
     recommendsRepetition: false,
+    recoveryCount: 3,
+    recoveredCount: 3,
+    minRecoveryRate: null,
     ...overrides,
   };
 }

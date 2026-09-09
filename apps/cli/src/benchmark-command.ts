@@ -718,7 +718,9 @@ async function runPairedPromotion(
       executionIdentityDigest,
       scheduleDigest,
       expectedSampleKeys: plan.pairs.flatMap((p) =>
-        Array.from({ length: plan.repetitions }, (_, rep) => `${opts.suite}\u0000${p.caseId}\u0000${rep}`),
+        // V3 repetitions are 1-based (E4-03 positive integer, E4-05 canonical
+        // 1..repeat); the paired plan is 0-based. Convert here, once.
+        Array.from({ length: plan.repetitions }, (_, rep) => `${opts.suite}\u0000${p.caseId}\u0000${rep + 1}`),
       ),
       runComplete,
       incompleteReason: artifact.incompleteReason ?? null,

@@ -45,7 +45,9 @@ export type ChampionDecisionReasonCodeV3 =
   | "SINGLE_RUN_REQUIRES_REPETITION"
   | "EFFECT_BELOW_THRESHOLD"
   | "DIRECTION_UNSTABLE"
-  | "COST_CEILING_EXCEEDED";
+  | "COST_CEILING_EXCEEDED"
+  | "RECOVERY_RATE_BELOW_THRESHOLD"
+  | "RECOVERY_UNMEASURED";
 
 // ---------------------------------------------------------------------------
 // Input contract
@@ -94,6 +96,17 @@ export interface DecisionGateInputV3 {
   maxTokensDelta: number;
   /** Whether the quality gate recommends repetition (BINDING). */
   recommendsRepetition: boolean;
+  /**
+   * E4-R03 (F07): recovery capability gate. `recoveryCount` = recovery-eligible
+   * samples (outcomes carrying >= 1 recoveryDecision); `recoveredCount` = those
+   * whose recovery converged (verified pass AND no budget-exhausted decision).
+   * `minRecoveryRate` comes from the CONFIRMED policy; a null value means the
+   * plan does not require recovery. When it is non-null and `recoveryCount` is
+   * 0, the plan demanded measurable recovery that never happened → NOT PASS.
+   */
+  recoveryCount: number;
+  recoveredCount: number;
+  minRecoveryRate: number | null;
 }
 
 export interface ChampionDecisionEnvelopeV3 {
@@ -115,6 +128,7 @@ export interface ChampionDecisionEnvelopeV3 {
     effectSufficient: boolean;
     directionStable: boolean;
     costBounded: boolean;
+    recoverySufficient: boolean;
   };
   statistics: {
     cases: number;
@@ -125,6 +139,7 @@ export interface ChampionDecisionEnvelopeV3 {
     securityBreaches: { baseline: number; candidate: number };
     verifiedRates: { baseline: number; candidate: number };
     tokensDelta: number;
+    recovery: { recoveryCount: number; recoveredCount: number; minRecoveryRate: number | null };
   };
   explanation: string;
   nextStep: string;
@@ -168,6 +183,15 @@ export function decideChampionV3(input: DecisionGateInputV3): ChampionDecisionEn
         ? input.perRepetitionDeltas.every((d) => d >= 0)
         : false,
     costBounded: input.tokensDelta <= input.maxTokensDelta,
+    // E4-R03 (F07): a null minRecoveryRate means the plan does not gate on
+    // recovery. When it IS set, every recovery-eligible sample must be present
+    // and its converged ratio must reach the threshold; a plan that required
+    // recovery but produced zero measurable samples can NEVER PASS.
+    recoverySufficient: input.minRecoveryRate === null
+      ? true
+      : input.recoveryCount === 0
+        ? false
+        : input.recoveredCount / input.recoveryCount >= input.minRecoveryRate,
   };
 
   const reasons: ChampionDecisionReasonCodeV3[] = [];
@@ -184,6 +208,10 @@ export function decideChampionV3(input: DecisionGateInputV3): ChampionDecisionEn
   if (!gates.repetitionSufficient) hardFail("SINGLE_RUN_REQUIRES_REPETITION");
   if (!gates.directionStable) hardFail("DIRECTION_UNSTABLE");
   if (!gates.costBounded) hardFail("COST_CEILING_EXCEEDED");
+  if (!gates.recoverySufficient) {
+    if (input.minRecoveryRate !== null && input.recoveryCount === 0) hardFail("RECOVERY_UNMEASURED");
+    else hardFail("RECOVERY_RATE_BELOW_THRESHOLD");
+  }
 
   // INVALID: the inputs/protocol cannot support inference at all.
   if (!gates.artifactIntegrity || !gates.provenanceComparable || !gates.pairComplete || !gates.perRepetitionComplete) {
@@ -194,10 +222,10 @@ export function decideChampionV3(input: DecisionGateInputV3): ChampionDecisionEn
   }
 
   // REJECT: experiment valid but a quality/security/cost gate fails.
-  if (!gates.securityClear || !gates.verifiedNonRegression || !gates.runtimeErrorSymmetry || !gates.costBounded) {
+  if (!gates.securityClear || !gates.verifiedNonRegression || !gates.runtimeErrorSymmetry || !gates.costBounded || !gates.recoverySufficient) {
     return envelope(input, "REJECT", reasons, gates,
-      "Experiment is comparable but a hard quality/security/cost gate failed — the candidate must not be promoted.",
-      "Address the failing gate (security breach, verified-completion regression, runtime-error asymmetry, or cost ceiling) before re-evaluating.",
+      "Experiment is comparable but a hard quality/security/cost/recovery gate failed — the candidate must not be promoted.",
+      "Address the failing gate (security breach, verified-completion regression, runtime-error asymmetry, cost ceiling, or recovery rate) before re-evaluating.",
     );
   }
 
@@ -240,6 +268,11 @@ function envelope(
       securityBreaches: { baseline: input.securityBreachesBaseline, candidate: input.securityBreachesCandidate },
       verifiedRates: { baseline: input.baselineVerifiedRate, candidate: input.candidateVerifiedRate },
       tokensDelta: input.tokensDelta,
+      recovery: {
+        recoveryCount: input.recoveryCount,
+        recoveredCount: input.recoveredCount,
+        minRecoveryRate: input.minRecoveryRate,
+      },
     },
     explanation,
     nextStep,

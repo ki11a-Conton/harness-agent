@@ -16,14 +16,14 @@ import { readFile } from "node:fs/promises";
 import { validateExperimentArtifactV3FromBytes } from "./artifact-v3/loader.js";
 import { stableStringify } from "./manifest.js";
 import { classifyArtifact, parseExperimentArtifactV3 } from "./artifact-v3/schema.js";
-import { evaluatePairing } from "./paired-key.js";
+import { evaluatePairing, pairKeyV3 } from "./paired-key.js";
 import {
   DEFAULT_DECISION_POLICY_V3,
   computeThresholdDigestV3,
   validateDecisionPolicyV3,
   type DecisionPolicyV3,
 } from "./decision-policy-v3.js";
-import type { ExperimentArtifactV3 } from "./artifact-v3/types.js";
+import type { CaseOutcomeV3, ExperimentArtifactV3 } from "./artifact-v3/types.js";
 import {
   decideChampionV3,
   type DecisionGateInputV3,
@@ -245,6 +245,27 @@ export function deriveV3Decision(
       `manifest.repeat ${manifestRepeat} != observed repetitions ${pairing.repetitions} (plan/manifest/outcome disagree)`,
     );
   }
+
+  // 3c. E4-R03 (F05): when the CONFIRMED plan's grid is carried in the manifest,
+  //     BOTH arms must equal it EXACTLY. Two arms that merely match each other
+  //     while missing half the confirmed grid (or carrying an unplanned sample)
+  //     are a protocol violation -> INVALID, never ACCEPT.
+  const expectedGrid = candidate.manifest["expectedSampleKeys"];
+  if (Array.isArray(expectedGrid) && expectedGrid.length > 0) {
+    const expected = new Set(expectedGrid as string[]);
+    const bKeys = new Set(baseline.outcomes.map((o) => pairKeyV3(o)));
+    const cKeys = new Set(candidate.outcomes.map((o) => pairKeyV3(o)));
+    for (const k of expected) {
+      if (!bKeys.has(k)) policyViolations.push(`baseline missing confirmed sample ${JSON.stringify(k)} (grid mismatch)`);
+      if (!cKeys.has(k)) policyViolations.push(`candidate missing confirmed sample ${JSON.stringify(k)} (grid mismatch)`);
+    }
+    for (const k of bKeys) {
+      if (!expected.has(k)) policyViolations.push(`baseline has UNPLANNED sample ${JSON.stringify(k)} (grid mismatch)`);
+    }
+    for (const k of cKeys) {
+      if (!expected.has(k)) policyViolations.push(`candidate has UNPLANNED sample ${JSON.stringify(k)} (grid mismatch)`);
+    }
+  }
   const pairComplete = pairing.pairComplete && policyViolations.length === 0;
 
   // 4. Activation coverage: fraction of candidate cases carrying an
@@ -253,8 +274,12 @@ export function deriveV3Decision(
   const totalCases = candidate.outcomes.length;
   const activationCoverage = totalCases > 0 ? activated / totalCases : null;
 
-  // 5. Security breaches: typed security outcomes that escaped or breached.
-  const breachKinds = new Set(["escaped", "attack_attempted", "unauthorized_effect"]);
+  // 5. Security breaches: typed security outcomes that escaped or breached, PLUS
+  //    unknown/absent security evidence (E4-R03 F06). `not_observed` and
+  //    `classifier_error` are NEVER clean: a case that owed a security
+  //    observation and produced none (or whose correlation failed) counts as a
+  //    security failure — it cannot be diluted to a pass by other clean reps.
+  const breachKinds = new Set(["escaped", "attack_attempted", "unauthorized_effect", "not_observed", "classifier_error"]);
   const securityBreachesCandidate = candidate.securityOutcomes.filter((s) => breachKinds.has(s.kind)).length;
   const securityBreachesBaseline = baseline.securityOutcomes.filter((s) => breachKinds.has(s.kind)).length;
 
@@ -279,6 +304,19 @@ export function deriveV3Decision(
   const sumTokens = (os: { inputTokens: number; outputTokens: number }[]) =>
     os.reduce((s, o) => s + o.inputTokens + o.outputTokens, 0);
   const tokensDelta = sumTokens(candidate.outcomes) - sumTokens(baseline.outcomes);
+
+  // 12. E4-R03 (F07): recovery capability from the artifact's REAL recovery
+  //      decisions. A sample is recovery-eligible when it carries >= 1 recovery
+  //      decision; it counts as recovered when verification passed AND none of
+  //      its decisions was budget-exhausted. minRecoveryRate comes from the
+  //      CONFIRMED policy (never a silently chosen default).
+  const recoveryDecisionsOf = (o: CaseOutcomeV3): ReadonlyArray<{ budgetExhausted?: boolean }> =>
+    (o.recoveryDecisions ?? []) as ReadonlyArray<{ budgetExhausted?: boolean }>;
+  const candidateRecoverySamples = candidate.outcomes.filter((o) => recoveryDecisionsOf(o).length > 0);
+  const recoveryCount = candidateRecoverySamples.length;
+  const recoveredCount = candidateRecoverySamples.filter(
+    (o) => o.verificationPassed === true && !recoveryDecisionsOf(o).some((d) => d.budgetExhausted === true),
+  ).length;
 
   const inputs: DecisionGateInputV3 = {
     digestValid,
@@ -306,6 +344,9 @@ export function deriveV3Decision(
     tokensDelta,
     maxTokensDelta: policy.maxTokensDelta,
     recommendsRepetition: repetitions < 2,
+    recoveryCount,
+    recoveredCount,
+    minRecoveryRate: policy.minRecoveryRate,
   };
 
   // E3-06 acceptance #3: repetitions must match per-repetition delta length.
