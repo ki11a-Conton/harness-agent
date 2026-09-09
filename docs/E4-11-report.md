@@ -65,6 +65,31 @@ Same minimal plan, fresh out dir, bound to the identical `--plan-digest`.
 | `evaluatorVersion` | `e4-06-evaluator-v1`; `thresholdDigest` present |
 | champion state | untouched — no auto-promotion |
 
+## Attempt 2b — local proxy, `--repeat 2` (stronger multi-repetition run)
+
+Bound to its own dry-run digest `fd00459c…`, fresh out dir, hard caps
+(`--max-model-calls 60`, `--max-estimated-cost-usd 5`):
+
+| metric | value |
+|---|---|
+| pairs finalized | 2/2 |
+| logical runs | 4 (2 reps × 2 arms) |
+| model-call attempts | 21 |
+| transport retries | 0 |
+| per-rep result | baseline passed / candidate passed (both reps) |
+| canonical V3 | written + strict-reloaded in-process |
+| evaluator decision | **INCONCLUSIVE** |
+| `pairComplete` | true |
+| `netPassedDelta` | 0 |
+| reason codes | `ACTIVATION_UNSATISFIED`, `EFFECT_BELOW_THRESHOLD` |
+
+Note: with 2 repetitions the `SINGLE_RUN_REQUIRES_REPETITION` gate is now
+satisfied; the remaining `EFFECT_BELOW_THRESHOLD` is honest — the real model
+completes this trivial task on **both** arms, so there is no causal candidate
+effect to accept. Producing a genuine ACCEPT would require a case where the
+budget-aware candidate really beats baseline; that outcome is model-dependent and
+was **not** fabricated here.
+
 ## What this proves
 
 The full E3/E4 production pipeline runs end-to-end with a **real, non-scripted
