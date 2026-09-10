@@ -104,19 +104,24 @@ and fail-closed: `TOOL_SCHEMA_ERROR`, `recovery.decided: retry_safe`, then
 `run.limit_reached: stallPattern repeated_error` → clean `tool_limit`
 termination with `unverified_complete`. The baseline arm consumed 17 model calls
 and failed; the run was stopped before the candidate arm to avoid spending
-against a model that cannot use the exec tool.
+against a model that, in THIS run, could not produce a well-formed exec call.
 
-**Finding:** the local proxy's `auto` model is not capable of well-formed exec
-tool calls, so any exec-requiring case cannot complete through it. This is a
-model/tool-interop limitation of the chosen endpoint, not a pipeline or
-case-design defect — the harness's schema validation + stall detection worked
-exactly as designed (a positive fail-closed demonstration).
+**Observation (calibrated, not over-claimed):** the local proxy's `auto` model
+emitted a **malformed `exec` tool call once** in this run (nested `arguments`
+object → `TOOL_SCHEMA_ERROR` → stall → fail-closed). This proves the harness
+rejected the malformed call and stopped the stall — a positive fail-closed
+demonstration. It does **NOT** prove the endpoint "can never produce a
+well-formed exec call": that would require more samples/other models, and the
+malformation may be model- or load-specific. The correct statement is: **no
+real-model ACCEPT was achieved with this provider/model on this case; the
+exec-dependent attempt did not complete.**
 
-**Consequence for ACCEPT:** a genuine real-model ACCEPT is not achievable with
-this proxy model on tool-driven cases. The evaluator's ACCEPT path through the
-real chain is already demonstrated by the automated `e4-09` production-path E2E
-(real stages, provider keyed on the candidate arm's real guidance marker →
-ACCEPT). No fabrication was attempted.
+**Consequence for ACCEPT (honest bounds):** a genuine real-model ACCEPT was not
+produced here, and an exec-requiring case did not complete with this endpoint's
+`auto` model in this run. The evaluator's ACCEPT path through the real chain is
+demonstrated by the automated `e4-09` production-path E2E (real stages, provider
+keyed on the candidate arm's real guidance marker → ACCEPT). No fabrication was
+attempted; `promotionEligible=false` (insecure-local) throughout.
 
 ## What this proves
 
@@ -149,3 +154,37 @@ is **not** met and cannot be met on this host.
 Run artifacts are in a temp dir (not the repo): `paired-experiment.json`,
 `v3-baseline.json`, `v3-candidate.json`, and the `.paired-journal/` arm records.
 The repo working tree is clean; no API key is present in any tracked file.
+## E4-R11 calibration + movable evidence index
+
+**Usage semantics:** the proxy endpoint returned usage-less responses for the
+calls that did complete. Those runs are therefore marked budget usage
+unknown/missing, NOT tokens=0 / cost=0: with no per-call usage the CLI's
+max-estimated-cost-usd did not observe billable usage, and the honest summary
+is "usage not reported by endpoint; cost not provable as 0". Budget-execution
+semantics in this exploratory run are accordingly bounded, not claimed exact.
+
+**Digest binding (R01 context):** Attempts 1-2 reused one --plan-digest across
+different provider/model values. Under R01's execution-identity contract that
+digest did NOT bind provider/model, so those runs must not be read as proof that
+the "confirmed full execution plan" was verified - the plan identity became
+provider/model-bound only with R01+ (executionIdentityDigest).
+
+**Surviving original artifacts (movable evidence index, %TEMP%\e411-c17d0c9a):**
+the files below are the ORIGINAL run outputs (not rebuilt from the report).
+Relative to the run root - role | sha256:
+
+- out3\v3-candidate.json  EF44258BF627820A9AD3EB48027AA826BA13FEA71BA6497CCD6E863FF6B268F8
+- out3\v3-baseline.json   23B751CAE98CDE4CDB12BFBB86A4787C647A856D71F7294298F442C7EA6FC7EA
+- out3\paired-experiment.json  BDD1B4F1D657A1E81FA76BE9537BBE4A7E7C76786FBB58849221428973703751
+- out3\.paired-journal\9d973a9c6739d242375175e5247bf3ebc4875513031b86dc097b887f510f869c\ (4 arm files: 1AA34578.. / AF8DBED6.. / 75113F95.. / E0BCB124..)
+- out2\paired-experiment.json  EB3B420FD565491132F9F60996E8B22A42F369B25677C5A0D163B279E1210D7E
+- out2\v3-baseline.json   5B7162DA7FBAC8FA7F57E4F519EDE5EC712F946C6E38F57B21145025373B105F
+- out2\v3-candidate.json  D0F806DA4E00D793BF389D7CCBF9F605794A431C8DA76A29B5A1A8D377A7C7F2
+- out4\.paired-journal\9d973a9c6739d242375175e5247bf3ebc4875513031b86dc097b887f510f869c\952c8ab5da2b8a64a94aa682-baseline.json  9783AAB6714785CAFB7FE4948BCE3D80F5B54A7561145CE90EFF631B5C451CED  (crux-case malformed-exec stall)
+- cases\c1\{calc.py,calc_test.py,case.json,request.md,expected.md}
+- eval.mjs  ED64FD8A220D713323AE4D5A6FABF09BB997F57DDA9DC55FE032028B672C993E
+
+These are the ORIGINAL bytes (the temp dir has not been rewritten; full sha256
+for every surviving file was captured during this round). If the temp dir is
+later deleted, the report remains but the run becomes "original evidence
+unverifiable" - no fake original is rebuilt from the report.
