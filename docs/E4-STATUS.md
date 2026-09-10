@@ -88,3 +88,12 @@
 
 - 状态：E4-00 … E4-10 全部完成；E4-11（付费复跑）未授权，保持 NOT AUTHORIZED。
 - 验证：`tsc -b` 全绿；全量测试套件通过；`usage-audit` 7/7 observed；`docs:verify` 退出 0；`benchmark:smoke` 退出 0。
+
+## 修订计划执行状态（2026-09-09 计划）
+
+- R01-R09 + R11 已完成；本状态页新段记录修订计划的真实收口。
+- testedSourceSha（本轮离线验证依据）：`1347f8d`（R11 收口；各 R commit 见 docs/E4-R10-report.md）。
+- 修订计划评审基线（reviewedSourceSha）：`016473870c15f123edbbd6c624550b09ee69fe75`；旧 ad37841 段保持 HISTORICAL。
+- 未完成（不勾选）：Windows CI 需推送后在最终提交复跑；release attestation 未产生；
+  CI workflow 侧 V2 发证待接入；真实模型 champion 质量 INCONCLUSIVE（无伪造 ACCEPT）。
+- runtimeReleaseReady 为离线工程门禁；championPromotion 质量结论单列，未宣称已证实。
