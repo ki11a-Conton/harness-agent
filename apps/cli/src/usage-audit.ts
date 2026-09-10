@@ -18,7 +18,7 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { gitHeadShaAt, loadObservationEvidence, type ObservationEvidence } from "./observation-evidence.js";
+import { gitHeadShaAt, loadAllObservationEvidence, loadObservationEvidence, type ObservationEvidence } from "./observation-evidence.js";
 
 export type UsageLevel = "exported" | "tested" | "wired" | "observed";
 
@@ -109,28 +109,40 @@ function rank(exported: boolean, tested: boolean, wired: boolean, observed: bool
 export function runUsageAudit(deps: {
   root: string;
   capabilities?: ReadonlyArray<{ capability: string; symbol: string }>;
-  /** E4-R08: runtime-evidence file to decide `observed` (defaults to the shared
-   *  observation evidence path; tests inject a temp file). */
-  evidencePath?: string;
+  /** E4-R18 (N16): the SPECIFIC test-run whose committed evidence decides
+   *  `observed`. Release-grade auditing passes a runId so an old successful run
+   *  can never mask a current failure. When absent, every committed run file is
+   *  scanned (diagnostic mode). */
+  runId?: string;
   /** Audited HEAD for sha matching (defaults to git rev-parse of `root`). */
   headSha?: string | null;
 }): UsageAuditResult {
   const files = collectTs(deps.root, deps.root);
   const caps = deps.capabilities ?? KEY_CAPABILITIES;
   // E4-R08 (F17): `observed` is decided ONLY from runtime ObservationEvidence —
-  // never from a file name, a comment, a string, an import or `typeof`. Only
-  // passed rows whose testedSourceSha matches the audited HEAD (when both are
-  // known) count; a mismatch is a hard reject, and unknown HEAD makes a row
-  // acceptable only when the row itself is unsure (or unverifiable offline).
+  // never from a file name, a comment, a string, an import or `typeof`.
+  // E4-R18 (N15): strict observed requires BOTH the audited HEAD and the row's
+  // testedSourceSha to be KNOWN and EXACTLY equal (an unknown SHA is diagnostic
+  // only), the row's symbol to match the registered capability symbol, and the
+  // row's testFile to exist under the audited root. The evidence itself was
+  // strict-parsed (digest recomputed, runId isolated, committed after the test
+  // passed).
   const headSha = deps.headSha !== undefined ? deps.headSha : gitHeadShaAt(deps.root);
-  const evidence = loadObservationEvidence(deps.evidencePath);
-  const evidenceFor = (capability: string): ObservationEvidence[] =>
-    evidence.filter(
-      (e) =>
-        e.capabilityId === capability &&
-        e.runStatus === "passed" &&
-        (headSha === null || e.testedSourceSha === null || e.testedSourceSha === headSha),
-    );
+  const evidence = deps.runId !== undefined ? loadObservationEvidence(deps.runId) : loadAllObservationEvidence();
+  const evidenceFor = (capability: string, symbol: string): ObservationEvidence[] =>
+    evidence.filter((e) => {
+      if (e.capabilityId !== capability) return false;
+      // E4-R18: a row naming a different symbol is not evidence for this
+      // capability (a wrong-symbol row can never satisfy a registration).
+      if (e.symbol !== symbol) return false;
+      // E4-R18: exact SHA match — an unknown SHA on either side is NOT strict
+      // observed (diagnostic only).
+      if (headSha === null || e.testedSourceSha !== headSha) return false;
+      // E4-R18: the row's testFile must be a real file under the audited root —
+      // a fictional/absent test file proves nothing.
+      if (!files.some((f) => f.path === e.testFile)) return false;
+      return true;
+    });
   const capabilities: CapabilityUsage[] = [];
   for (const { capability, symbol } of caps) {
     const re = new RegExp(`\\b${symbol}\\b`);
@@ -143,7 +155,7 @@ export function runUsageAudit(deps: {
     const wired = wiredFiles.length > 0;
     // E4-R08: OBSERVED requires a passed, sha-matched runtime evidence row; the
     // old E2E-filename/text scan is gone (a comment would have counted).
-    const observedRows = evidenceFor(capability);
+    const observedRows = evidenceFor(capability, symbol);
     const observed = observedRows.length > 0;
     capabilities.push({
       capability,

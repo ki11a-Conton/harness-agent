@@ -42,7 +42,7 @@ import {
 } from "@ar/evaluation";
 import { writeChampionStateFileCas, championStateDigest } from "./champion-state-file.js";
 import { createHarnessWithChampion } from "./champion-application.js";
-import { observeCapability, gitHeadShaAt } from "./observation-evidence.js";
+import { createObservationRun, gitHeadShaAt } from "./observation-evidence.js";
 
 const sha = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
 /** E4-R08: HEAD at run time — the observations below bind to this snapshot. */
@@ -139,6 +139,18 @@ describe("E4-09 real production-path E2E (offline)", () => {
     });
     const outDir = join(root, "out");
 
+    // E4-R18 (N16): observations are COLLECTED during the test and COMMITTED
+    // only after every assertion below passes (test-end hook). A failure at any
+    // point leaves no passed proof behind.
+    expect(TESTED_SHA).not.toBeNull(); // a git checkout is required for strict evidence
+    const observationRun = createObservationRun({
+      runId: `e4-09-${process.pid}-${Date.now()}`,
+      testFile: TEST_FILE,
+      testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
+      testedSourceSha: TESTED_SHA as string,
+      entrypoint: "cli",
+    });
+
     // STAGE 1: real CLI benchmark, real paired executor, strong isolation.
     const bench = await importBenchmarkWithStrongIsolation();
     const provider = new ArmAwareProvider();
@@ -169,22 +181,18 @@ describe("E4-09 real production-path E2E (offline)", () => {
     expect(typeof buildSecurityOutcomeFromEventsV2).toBe("function");
     expect(candV3.activationEvidence.length).toBeGreaterThan(0);
     expect(Array.isArray(candV3.securityOutcomes)).toBe(true);
-    // E4-R08: record PASSED runtime observations (the real products exist in the
-    // artifacts the executor wrote; the audit consumes these rows, not text).
-    observeCapability({
+    // E4-R08/R18: COLLECT candidate observations (committed only at test end).
+    observationRun.observe({
       capabilityId: "createActivationRecorderV2", symbol: "createActivationRecorderV2",
-      entrypoint: "benchmark", testFile: TEST_FILE, testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
-      testedSourceSha: TESTED_SHA, invocation: "real paired benchmark produced candidate activationEvidence rows",
+      entrypoint: "benchmark", invocation: "real paired benchmark produced candidate activationEvidence rows",
     });
-    observeCapability({
+    observationRun.observe({
       capabilityId: "classifySecurityOutcomeV2", symbol: "buildSecurityOutcomeFromEventsV2",
-      entrypoint: "benchmark", testFile: TEST_FILE, testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
-      testedSourceSha: TESTED_SHA, invocation: "real paired benchmark produced securityOutcome records",
+      entrypoint: "benchmark", invocation: "real paired benchmark produced securityOutcome records",
     });
-    observeCapability({
+    observationRun.observe({
       capabilityId: "canonical V3 writer", symbol: "writeExperimentArtifactV3",
-      entrypoint: "benchmark", testFile: TEST_FILE, testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
-      testedSourceSha: TESTED_SHA, invocation: "executor's in-process canonical V3 strict-reloaded from disk",
+      entrypoint: "benchmark", invocation: "executor's in-process canonical V3 strict-reloaded from disk",
     });
     // OBSERVABLE candidate behavior (not fabricated, not mere config equality):
     // the champion's budget-aware guidance changed the agent's real ACTIONS —
@@ -239,10 +247,9 @@ describe("E4-09 real production-path E2E (offline)", () => {
       bundleRoot: root,
     });
     expect(verified.ok).toBe(true);
-    observeCapability({
+    observationRun.observe({
       capabilityId: "strict promotion loader", symbol: "loadPromotionEnvelope",
-      entrypoint: "cli", testFile: TEST_FILE, testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
-      testedSourceSha: TESTED_SHA, invocation: "real envelope bundle verified (artifacts + decision replay) against the real chain",
+      entrypoint: "cli", invocation: "real envelope bundle verified (artifacts + decision replay) against the real chain",
     });
     expect(verified.ok).toBe(true);
     const pending = applyPromotion(c0, CANDIDATE, {}, decisionArtifactPath, {
@@ -286,15 +293,13 @@ describe("E4-09 real production-path E2E (offline)", () => {
       } as never);
       expect(rec.version).toBe(1);
       expect((await injectedStore!.getRecord("turn-e2e-1" as never))?.attempt).toBe(1);
-      observeCapability({
+      observationRun.observe({
         capabilityId: "durable RecoveryStore", symbol: "DurableRecoveryStore",
-        entrypoint: "cli", testFile: TEST_FILE, testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
-        testedSourceSha: TESTED_SHA, invocation: "createHarness(dataDir) injected DurableRecoveryStore into the actor; put/get round-trip on THAT instance",
+        entrypoint: "cli", invocation: "createHarness(dataDir) injected DurableRecoveryStore into the actor; put/get round-trip on THAT instance",
       });
-      observeCapability({
+      observationRun.observe({
         capabilityId: "resolveChampionHarness", symbol: "resolveChampionHarness",
-        entrypoint: "cli", testFile: TEST_FILE, testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
-        testedSourceSha: TESTED_SHA, invocation: "createHarnessWithChampion resolved the champion config and applied it (status applied)",
+        entrypoint: "cli", invocation: "createHarnessWithChampion resolved the champion config and applied it (status applied)",
       });
       const saved = JSON.parse(await readFile(statePath, "utf8")) as { applied: boolean; appliedProof?: { appliedConfigHash: string; targetConfigHash: string } };
       expect(saved.applied).toBe(true);
@@ -318,11 +323,20 @@ describe("E4-09 real production-path E2E (offline)", () => {
       });
       expect(failEvidence.passed).toBe(false);
       expect(failEvidence.state).toBe("failed");
-      observeCapability({
+      observationRun.observe({
         capabilityId: "GateEvidenceV2 generator", symbol: "runGateV2",
-        entrypoint: "release", testFile: TEST_FILE, testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
-        testedSourceSha: TESTED_SHA, invocation: "runGateV2 executed real commands (exit 0 / exit 2), captured real exit codes + gitSha + providerCalls=0",
+        entrypoint: "release", invocation: "runGateV2 executed real commands (exit 0 / exit 2), captured real exit codes + gitSha + providerCalls=0",
       });
+
+      // E4-R18 (N16): every assertion has PASSED — commit the observations now
+      // (the test-end hook) and prove the STRICT audit consumes THIS run.
+      observationRun.commit();
+      const { runUsageAudit } = await import("./usage-audit.js");
+      const audit = runUsageAudit({ root: process.cwd(), runId: observationRun.runId, headSha: TESTED_SHA });
+      expect(audit.ok).toBe(true);
+      for (const c of audit.capabilities) {
+        expect(c.observed).toBe(true);
+      }
     } finally {
       await startup.harness.close();
     }

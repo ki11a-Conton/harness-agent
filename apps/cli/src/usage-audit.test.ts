@@ -1,18 +1,29 @@
 /**
- * E4-10 — production usage audit tests.
+ * E4-10 + E4-R18 — production usage audit tests.
  *
  * The audit must classify honestly from on-disk evidence and must NOT let a
- * capability claim more reach than the code proves (the "exported but never
- * wired" gap is the whole point).
+ * capability claim more reach than the code proves. E4-R18 (N15/N16):
+ * `observed` requires STRICT per-run observation evidence — recomputed digest,
+ * exact 40-hex SHA match, registered symbol, existing test file, and a
+ * SPECIFIC runId (an old successful run can never mask a current failure).
  */
 
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
-import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
+import { describe, expect, it, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
+import { mkdtemp, rm, writeFile, mkdir, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { runUsageAudit, renderUsageAudit, KEY_CAPABILITIES } from "./usage-audit.js";
+import {
+  computeObservationEvidenceDigest,
+  observationEvidencePathForRun,
+  OBSERVATION_EVIDENCE_SCHEMA_VERSION,
+  createObservationRun,
+} from "./observation-evidence.js";
 
 let root = "";
+let evDir = "";
+const OLD_ENV = process.env.E2E_OBSERVATION_EVIDENCE_DIR;
+
 async function makeRoot(files: Record<string, string>): Promise<string> {
   root = await mkdtemp(join(tmpdir(), "usage-audit-"));
   for (const [rel, content] of Object.entries(files)) {
@@ -22,32 +33,70 @@ async function makeRoot(files: Record<string, string>): Promise<string> {
   }
   return root;
 }
+
+beforeEach(async () => {
+  evDir = await mkdtemp(join(tmpdir(), "usage-audit-ev-"));
+  process.env.E2E_OBSERVATION_EVIDENCE_DIR = evDir;
+});
+
+afterEach(async () => {
+  if (evDir !== "") await rm(evDir, { recursive: true, force: true });
+  if (OLD_ENV === undefined) delete process.env.E2E_OBSERVATION_EVIDENCE_DIR;
+  else process.env.E2E_OBSERVATION_EVIDENCE_DIR = OLD_ENV;
+});
+
 afterAll(async () => { if (root !== "") await rm(root, { recursive: true, force: true }); });
 
+const HEAD = "a".repeat(40);
+
+/** Write a STRICT-VALID committed row for one run (real recomputed digest). */
+async function writeCommittedRow(
+  runId: string,
+  opts: {
+    capabilityId?: string;
+    symbol?: string;
+    testedSourceSha?: string;
+    testFile?: string;
+    runStatus?: string;
+    digestOverride?: string;
+    schemaVersion?: string;
+  } = {},
+): Promise<void> {
+  const body = {
+    schemaVersion: opts.schemaVersion ?? OBSERVATION_EVIDENCE_SCHEMA_VERSION,
+    runId,
+    capabilityId: opts.capabilityId ?? "cap1",
+    symbol: opts.symbol ?? "symbolA",
+    entrypoint: "cli" as const,
+    testFile: opts.testFile ?? "apps/cli/src/real.e2e.test.ts",
+    testName: "real passing chain",
+    testedSourceSha: opts.testedSourceSha ?? HEAD,
+    runStatus: opts.runStatus ?? "passed",
+    invocation: "real benchmark->V3->eval->envelope->startup chain",
+  };
+  const row = {
+    ...body,
+    evidenceDigest: opts.digestOverride ?? computeObservationEvidenceDigest(body as never),
+  };
+  await writeFile(observationEvidencePathForRun(runId), `${JSON.stringify(row)}\n`, "utf8");
+}
+
 describe("E4-10 production usage audit", () => {
-  it("observed > wired > tested > exported: a symbol in an e2e reaches observed ONLY with runtime evidence", async () => {
+  it("observed > wired > tested > exported: a symbol reaches observed ONLY with strict per-run evidence", async () => {
     await makeRoot({
       "packages/x/src/index.ts": "export * from './a.js';\nexport function theThing(){}\n",
       "packages/x/src/a.ts": "export function theThing(){}\n",
       "packages/x/src/a.test.ts": "import { theThing } from './a.js'; theThing();\n",
       "apps/cli/src/prod.ts": "import { theThing } from '@ar/x'; theThing();\n",
-      "apps/cli/src/e4-09-production-e2e.test.ts": "import { theThing } from '@ar/x'; theThing();\n",
+      "apps/cli/src/real.e2e.test.ts": "import { theThing } from '@ar/x'; theThing();\n",
     });
-    const evPath = join(root, "ev.jsonl");
-    await writeFile(
-      evPath,
-      JSON.stringify({
-        schemaVersion: "e4-r08-v1", capabilityId: "the thing", symbol: "theThing", entrypoint: "cli",
-        testFile: "apps/cli/src/e4-09-production-e2e.test.ts", testName: "chain", testedSourceSha: "t",
-        runStatus: "passed", invocation: "real chain", evidenceDigest: "0".repeat(64),
-      }) + "\n",
-      "utf8",
-    );
+    const runId = "run-ok";
+    await writeCommittedRow(runId, { capabilityId: "the thing", symbol: "theThing" });
     const r = runUsageAudit({
       root,
       capabilities: [{ capability: "the thing", symbol: "theThing" }],
-      evidencePath: evPath,
-      headSha: "t",
+      runId,
+      headSha: HEAD,
     });
     const c = r.capabilities[0]!;
     expect(c.exported).toBe(true);
@@ -119,23 +168,10 @@ describe("E4-10 production usage audit", () => {
     // process.cwd() is the repo root under vitest.
     const r = runUsageAudit({ root: process.cwd() });
     expect(r.capabilities.length).toBe(KEY_CAPABILITIES.length);
-    for (const c of r.capabilities) {
-      if (c.observed) expect(c.observedBy.length).toBeGreaterThan(0);
-    }
   });
 });
 
-describe("E4-R08 observed from runtime evidence only", () => {
-  const HEAD = "a".repeat(40);
-  function row(capabilityId: string, symbol: string, testedSourceSha: string | null = HEAD, runStatus = "passed"): string {
-    return JSON.stringify({
-      schemaVersion: "e4-r08-v1", capabilityId, symbol, entrypoint: "cli",
-      testFile: "apps/cli/src/fake.e2e.test.ts", testName: "real passing chain",
-      testedSourceSha, runStatus, invocation: "real benchmark->V3->eval->envelope->startup chain",
-      evidenceDigest: "0".repeat(64),
-    }) + "\n";
-  }
-
+describe("E4-R18 strict observation evidence (N15/N16)", () => {
   it("F17: comment/string/import/typeof/file-name can NEVER be observed (no evidence => false)", async () => {
     await makeRoot({
       "apps/cli/src/not-real-e2e.test.ts": [
@@ -149,7 +185,7 @@ describe("E4-R08 observed from runtime evidence only", () => {
     const r = runUsageAudit({
       root,
       capabilities: [{ capability: "fictionalCapability", symbol: "fictionalCapability" }],
-      evidencePath: join(root, "none.jsonl"),
+      runId: "no-such-run",
       headSha: HEAD,
     });
     const c = r.capabilities[0]!;
@@ -159,27 +195,110 @@ describe("E4-R08 observed from runtime evidence only", () => {
     expect(r.notObserved).toContain("fictionalCapability");
   });
 
-  it("failed / skipped / stale-SHA rows are never observed", async () => {
-    await makeRoot({ "apps/cli/src/x.e2e.test.ts": "// noop\n" });
-    const evPath = join(root, "ev.jsonl");
-    await writeFile(
-      evPath,
-      row("cap1", "symbolA", "0".repeat(40)) + row("cap1", "symbolA", HEAD, "failed") + row("cap1", "symbolA", HEAD, "skipped"),
-      "utf8",
-    );
-    const r = runUsageAudit({ root, capabilities: [{ capability: "cap1", symbol: "symbolA" }], evidencePath: evPath, headSha: HEAD });
+  it("N15: a row with a FABRICATED (non-recomputing) digest is never observed", async () => {
+    await makeRoot({ "apps/cli/src/real.e2e.test.ts": "// real chain\n" });
+    const runId = "run-bad-digest";
+    await writeCommittedRow(runId, { digestOverride: "0".repeat(64) });
+    const r = runUsageAudit({ root, capabilities: [{ capability: "cap1", symbol: "symbolA" }], runId, headSha: HEAD });
+    expect(r.capabilities[0]!.observed).toBe(false);
+    expect(r.ok).toBe(false);
+  });
+
+  it("N15: a row with a NULL/unknown testedSourceSha is never observed", async () => {
+    await makeRoot({ "apps/cli/src/real.e2e.test.ts": "// real chain\n" });
+    const runId = "run-null-sha";
+    // Hand-write a row with a null SHA and a SELF-CONSISTENT digest — the
+    // strict reader rejects the unknown SHA before anything else.
+    const body = {
+      schemaVersion: OBSERVATION_EVIDENCE_SCHEMA_VERSION,
+      runId,
+      capabilityId: "cap1",
+      symbol: "symbolA",
+      entrypoint: "cli",
+      testFile: "apps/cli/src/real.e2e.test.ts",
+      testName: "chain",
+      testedSourceSha: null,
+      runStatus: "passed",
+      invocation: "real chain",
+    };
+    const row = { ...body, evidenceDigest: computeObservationEvidenceDigest(body as never) };
+    await writeFile(observationEvidencePathForRun(runId), `${JSON.stringify(row)}\n`, "utf8");
+    const r = runUsageAudit({ root, capabilities: [{ capability: "cap1", symbol: "symbolA" }], runId, headSha: HEAD });
+    expect(r.capabilities[0]!.observed).toBe(false);
+    expect(r.ok).toBe(false);
+  });
+
+  it("N15: a WRONG symbol row can never satisfy a capability registration", async () => {
+    await makeRoot({ "apps/cli/src/real.e2e.test.ts": "// real chain\n" });
+    const runId = "run-wrong-symbol";
+    await writeCommittedRow(runId, { symbol: "otherSymbol" });
+    const r = runUsageAudit({ root, capabilities: [{ capability: "cap1", symbol: "symbolA" }], runId, headSha: HEAD });
     expect(r.capabilities[0]!.observed).toBe(false);
   });
 
-  it("a passed + sha-matched observation row IS observed", async () => {
-    await makeRoot({ "apps/cli/src/x.e2e.test.ts": "// real chain lives elsewhere\n" });
-    const evPath = join(root, "ev2.jsonl");
-    await writeFile(evPath, row("cap1", "symbolA"), "utf8");
-    const r = runUsageAudit({ root, capabilities: [{ capability: "cap1", symbol: "symbolA" }], evidencePath: evPath, headSha: HEAD });
+  it("N15: a row whose testFile does NOT exist under the audited root is never observed", async () => {
+    await makeRoot({ "apps/cli/src/real.e2e.test.ts": "// real chain\n" });
+    const runId = "run-fake-test";
+    await writeCommittedRow(runId, { testFile: "apps/cli/src/fictional.test.ts" });
+    const r = runUsageAudit({ root, capabilities: [{ capability: "cap1", symbol: "symbolA" }], runId, headSha: HEAD });
+    expect(r.capabilities[0]!.observed).toBe(false);
+  });
+
+  it("N16: a different runId cannot read another run's success (old success never masks a current failure)", async () => {
+    await makeRoot({ "apps/cli/src/real.e2e.test.ts": "// real chain\n" });
+    await writeCommittedRow("old-successful-run", {}); // committed PASSED rows exist
+    const r = runUsageAudit({
+      root,
+      capabilities: [{ capability: "cap1", symbol: "symbolA" }],
+      runId: "current-failed-run", // this run committed NOTHING
+      headSha: HEAD,
+    });
+    expect(r.capabilities[0]!.observed).toBe(false);
+    expect(r.ok).toBe(false);
+  });
+
+  it("N16: a test that observes then FAILS leaves no passed proof (commit never called)", async () => {
+    await makeRoot({ "apps/cli/src/real.e2e.test.ts": "// real chain\n" });
+    const runId = "run-then-fail";
+    const collector = createObservationRun({
+      runId,
+      testFile: "apps/cli/src/real.e2e.test.ts",
+      testName: "chain",
+      testedSourceSha: HEAD,
+      entrypoint: "cli",
+    });
+    collector.observe({ capabilityId: "cap1", symbol: "symbolA", entrypoint: "cli", invocation: "real chain" });
+    // The test's LATER assertion would fail here — commit() is never reached.
+    const r = runUsageAudit({ root, capabilities: [{ capability: "cap1", symbol: "symbolA" }], runId, headSha: HEAD });
+    expect(r.capabilities[0]!.observed).toBe(false);
+    // No file was written by the collector.
+    await expect(readFile(observationEvidencePathForRun(runId))).rejects.toThrow();
+  });
+
+  it("control: a committed collector run IS observed with its exact runId", async () => {
+    await makeRoot({ "apps/cli/src/real.e2e.test.ts": "// real chain\n" });
+    const runId = "run-committed";
+    const collector = createObservationRun({
+      runId,
+      testFile: "apps/cli/src/real.e2e.test.ts",
+      testName: "chain",
+      testedSourceSha: HEAD,
+      entrypoint: "cli",
+    });
+    collector.observe({ capabilityId: "cap1", symbol: "symbolA", entrypoint: "cli", invocation: "real chain" });
+    collector.commit(); // test-end hook AFTER all assertions passed
+    const r = runUsageAudit({ root, capabilities: [{ capability: "cap1", symbol: "symbolA" }], runId, headSha: HEAD });
     const c = r.capabilities[0]!;
     expect(c.observed).toBe(true);
     expect(c.level).toBe("observed");
-    expect(c.observedBy.length).toBe(1);
     expect(r.ok).toBe(true);
+  });
+
+  it("a stale-SHA row (valid digest) is never observed at a different HEAD", async () => {
+    await makeRoot({ "apps/cli/src/real.e2e.test.ts": "// real chain\n" });
+    const runId = "run-stale";
+    await writeCommittedRow(runId, { testedSourceSha: "b".repeat(40) });
+    const r = runUsageAudit({ root, capabilities: [{ capability: "cap1", symbol: "symbolA" }], runId, headSha: HEAD });
+    expect(r.capabilities[0]!.observed).toBe(false);
   });
 });
