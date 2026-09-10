@@ -114,7 +114,15 @@ jobs:
           mkdir -p "$EVID"
           rc=0
           for gate in typecheck test build benchmark_smoke capability_audit docs protocol security race chaos; do
-            node apps/cli/dist/main.js release gate "$gate" --evidence-dir "$EVID" || rc=1
+            ERR="$EVID/$gate.stderr"
+            # E4-R09: duplicate the gate output into a file; every red gate also
+            # emits a ::error:: workflow annotation naming the gate + its last
+            # output lines, so CI annotations name the failing gate without
+            # needing full log access.
+            if ! node apps/cli/dist/main.js release gate "$gate" --evidence-dir "$EVID" >"$ERR" 2>&1; then
+              rc=1
+              tail -n 4 "$ERR" | while IFS= read -r l; do echo "::error file=${GITHUB_WORKFLOW:-ci.yml},title=release gate $gate failed::$l"; done
+            fi
           done
           # Every attempted gate's evidence is durable (the generator wrote it
           # before returning); fail with the first red gate's rc semantics.
