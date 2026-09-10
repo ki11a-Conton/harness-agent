@@ -65,6 +65,12 @@ export interface RecoveryTaskRecord {
   /** Last typed error from the handler. */
   lastError: string | null;
   policyVersion: string;
+  /** E4-R17 (N13): the recovery ACTION completed but the durable TERMINAL
+   *  transition (RECOVERED) could not be persisted. The task is in
+   *  pending-commit: the queue must NOT advance, the prompt must NOT be
+   *  consumed, and the action must NEVER be re-run — a restart re-attempts
+   *  only the terminal write (reconcile), never the handler. */
+  needsReconcile?: boolean;
 }
 
 export interface RecoveryClock {
@@ -190,6 +196,12 @@ export function retryDue(task: RecoveryTaskRecord, clock: RecoveryClock): boolea
 /** Query: is this task terminal (recovered/exhausted/terminal-failed)? */
 export function taskTerminal(task: RecoveryTaskRecord): boolean {
   return task.state === "RECOVERED" || task.state === "EXHAUSTED" || task.state === "TERMINAL_FAILED";
+}
+
+/** E4-R17 (N13): is this task in pending-commit (action done, terminal ACK
+ *  unpersisted)? Such a task must never be re-run and never advance the queue. */
+export function recoveryNeedsReconcile(task: RecoveryTaskRecord): boolean {
+  return task.needsReconcile === true;
 }
 
 /**

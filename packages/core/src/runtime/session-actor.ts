@@ -45,6 +45,7 @@ import { AgentError } from "../errors.js";
 // classification, injected scheduler / manual clock).
 import {
   createRecoveryTask,
+  recoveryNeedsReconcile,
   recoveryPolicy,
   retryDue,
   taskTerminal,
@@ -666,6 +667,8 @@ function nextRequestId(): string {
  *  recovering process crashes, another owner may acquire the lease after
  *  this duration. */
 const RECOVERY_LEASE_TTL_MS = 60_000;
+/** E4-R17 (N13): bounded re-check window for a pending-commit (reconcile) task. */
+const RECOVERY_RECONCILE_RETRY_MS = 5_000;
 
 /** P25-2/3 + P37-1: the single owner of one live session — unified state. */
 export class DefaultSessionActor implements SessionActor {
@@ -833,6 +836,35 @@ export class DefaultSessionActor implements SessionActor {
     });
   }
 
+  /** E4-R17 (N13): schedule a BOUNDED re-check of a pending-commit task — the
+   *  terminal write is re-attempted (never the action) so a transient store
+   *  failure self-heals without user input. */
+  private scheduleReconcileRetry(record: RecoveryRecord): void {
+    const delay = Math.max(RECOVERY_RECONCILE_RETRY_MS, 1);
+    this._retryTimer?.cancel();
+    const scheduler = this.deps.scheduler ?? this.defaultRecoveryScheduler();
+    this._retryTimer = scheduler.schedule(delay, () => {
+      this._retryTimer = undefined;
+      void this.drainFollowups();
+    });
+  }
+
+  /** E4-R17 (N14): when the head is leased to another LIVE owner, arrange a
+   *  finite wake at the lease's expiry so this actor re-checks WITHOUT user
+   *  input (never waits forever). */
+  private scheduleLeaseWake(record: RecoveryRecord): void {
+    const lease = record.lease;
+    if (lease === undefined) return;
+    const delay = lease.expiresAt - this.recoveryClock().now();
+    if (delay <= 0) return; // already expired — next drain picks it up
+    this._retryTimer?.cancel();
+    const scheduler = this.deps.scheduler ?? this.defaultRecoveryScheduler();
+    this._retryTimer = scheduler.schedule(delay, () => {
+      this._retryTimer = undefined;
+      void this.drainFollowups();
+    });
+  }
+
   /**
    * E3-10 — recover ONE head turn under the same-T bounded retry state
    * machine. Returns the signal for the drain loop:
@@ -861,7 +893,32 @@ export class DefaultSessionActor implements SessionActor {
     // logic. This is what lets a restarted actor continue from attempt/
     // nextAttemptAt instead of resetting the budget (plan E3-10 item 5).
     if (record.state === "RECOVERY_IN_PROGRESS") {
+      // E4-R17 (N13): pending-commit — the recovery ACTION completed once but
+      // its durable TERMINAL transition could not be persisted. NEVER re-run
+      // the action; only re-attempt the terminal write (reconcile). On success
+      // the prompt is consumed and the queue advances; on failure the queue
+      // stays frozen at the head (T2 never overtakes an uncommitted T1).
+      if (recoveryNeedsReconcile(record)) {
+        try {
+          await this._recoveryStore.putRecord({
+            ...record,
+            state: "RECOVERED",
+            needsReconcile: undefined,
+            lease: undefined,
+            lastError: null,
+          });
+          void this.consumeRecoveredPrompt(head.turn.id, head.promptId, {} as TurnOutcome);
+          this._recoverableTurns.shift();
+          return "shifted";
+        } catch (reconcileErr) {
+          // Terminal write still failing — stay frozen, re-check after a bounded
+          // window (the action is NOT re-run).
+          this.scheduleReconcileRetry(record);
+          return "wait-backoff";
+        }
+      }
       if (this.leaseHeldByOther(record)) {
+        this.scheduleLeaseWake(record);
         return "wait-lease";
       }
       try {
@@ -907,6 +964,8 @@ export class DefaultSessionActor implements SessionActor {
 
     // Single-flight: a different live owner is actively recovering this T.
     if (this.leaseHeldByOther(record)) {
+      // E4-R17 (N14): finite wake at lease expiry — never wait forever.
+      this.scheduleLeaseWake(record);
       return "wait-lease";
     }
 
@@ -952,7 +1011,27 @@ export class DefaultSessionActor implements SessionActor {
       const outcome = await this.runTurn(head.turn.id);
       const successBase = transitionRecoveryTask(attempt, { type: "handler_succeeded" }, policy, clock);
       const success: RecoveryRecord = { ...successBase, promptId: attempt.promptId };
-      await this.persistRecoveryRecord(success);
+      // E4-R17 (N13): the TERMINAL write is STRICT — a failure must NOT be
+      // swallowed into a fake ACK. If the RECOVERED transition cannot be
+      // persisted, the task enters pending-commit (needsReconcile): the queue
+      // does NOT advance, the prompt is NOT consumed, and the action is never
+      // re-run (only the terminal write is re-attempted later).
+      try {
+        await this._recoveryStore.putRecord(success);
+      } catch (ackErr) {
+        const message = ackErr instanceof Error ? ackErr.message : String(ackErr);
+        process.stderr.write(
+          `[degraded] session ${this.sessionId} terminal recovery ACK failed for ${head.turn.id}: ${message} — entering pending-commit (reconcile), queue frozen\n`,
+        );
+        await this.persistRecoveryRecord({
+          ...attempt,
+          needsReconcile: true,
+          lease: undefined,
+          lastError: `terminal ACK failed: ${message}`,
+        });
+        this.scheduleReconcileRetry(attempt);
+        return "wait-backoff";
+      }
       await this.releaseLease(head.turn.id);
       // INV-P38.4-004: converged — durably consume the bound prompt
       // (best-effort; consumeRecoveredPrompt re-checks the store).
@@ -978,7 +1057,20 @@ export class DefaultSessionActor implements SessionActor {
         return "wait-backoff";
       }
       const failedRecord: RecoveryRecord = { ...failed, promptId: attempt.promptId };
-      await this.persistRecoveryRecord(failedRecord);
+      // E4-R17 (N13): the failure-state write is STRICT before any queue
+      // advancement — a swallowed write must not let the queue proceed over an
+      // unpersisted terminal state.
+      try {
+        await this._recoveryStore.putRecord(failedRecord);
+      } catch (failPersistErr) {
+        const message = failPersistErr instanceof Error ? failPersistErr.message : String(failPersistErr);
+        process.stderr.write(
+          `[degraded] session ${this.sessionId} recovery failure-state persist failed for ${head.turn.id}: ${message} — queue stays frozen\n`,
+        );
+        await this.releaseLease(head.turn.id);
+        this.scheduleReconcileRetry(attempt);
+        return "wait-backoff";
+      }
       await this.releaseLease(head.turn.id);
       if (failed.state === "RETRY_SCHEDULED") {
         // Retryable failure — same T is retried after exponential backoff.
@@ -986,7 +1078,7 @@ export class DefaultSessionActor implements SessionActor {
         return "wait-backoff";
       }
       if (failed.state === "EXHAUSTED" && policy.exhaustedPolicy === "proceed-queue") {
-        this._recoverableTurns.shift();
+        this._recoverableTurns.shift(); // durable EXHAUSTED write succeeded above
         return "shifted";
       }
       // EXHAUSTED (block-queue) or TERMINAL_FAILED → dead-letter + freeze.
@@ -1631,7 +1723,17 @@ export class DefaultSessionActor implements SessionActor {
       const turn = await store.getTurn(p.promotedTurnId);
       if (turn === undefined) continue; // fail-closed in hydrate
       if (turn.status === "completed" || turn.status === "failed" || turn.status === "cancelled") {
-        continue; // terminal — consumed by hydrate
+        // E4-R17 (N13): a terminal turn is normally consumed by hydrate — but a
+        // PENDING-COMMIT recovery record (action done, terminal ACK unpersisted)
+        // must still be visible to a restarted actor so it can COMMIT the
+        // terminal and consume the prompt without re-running the action. A
+        // crash after the action but before the ACK is otherwise unrecoverable.
+        const rec = await this._recoveryStore.getRecord(p.promotedTurnId);
+        if (rec !== undefined && recoveryNeedsReconcile(rec)) {
+          seen.add(p.promotedTurnId);
+          this._recoverableTurns.push({ turn, promptId: p.id });
+        }
+        continue;
       }
       seen.add(p.promotedTurnId);
       this._recoverableTurns.push({ turn, promptId: p.id });
