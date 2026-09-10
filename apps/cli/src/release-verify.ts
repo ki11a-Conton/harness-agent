@@ -13,6 +13,8 @@
  * ready == false.
  */
 
+import { gateEvidenceV2Issues } from "@ar/evaluation";
+
 export type GateState = "passed" | "failed" | "not_run" | "blocked";
 
 export type ReleasePlatform = "linux" | "windows" | "darwin" | "coverage";
@@ -105,7 +107,8 @@ export const REQUIRED_GATE_PLATFORMS: Readonly<Record<RequiredGateId, readonly R
   capability_audit: ["linux", "windows"],
 };
 
-/** Schema of a raw evidence file written by a gate run. */
+/** Schema of a raw evidence file written by a gate run. V1 is historical;
+ *  V2 (GATE_EVIDENCE_V2_SCHEMA_VERSION) is the current production protocol. */
 export interface RawGateEvidence {
   schemaVersion: number;
   kind: string;
@@ -116,6 +119,9 @@ export interface RawGateEvidence {
   passed: boolean;
   platform: string;
   generatedAt?: string;
+  /** E4-R09 (F19): V2-only — source cleanness before/after the run. */
+  cleanBefore?: boolean;
+  cleanAfter?: boolean;
 }
 
 /** P38.3-5: a validated evidence instance — every field is verified against
@@ -228,7 +234,20 @@ export function validateGateEvidenceInstance(opts: {
   const { evidence, expectedHead, expectedCommand, expectedGate, expectedPlatform, sourcePath } = opts;
 
   // Structural violations (fail closed — never normalized to PASS).
-  if (evidence.schemaVersion !== 1) {
+  if (evidence.schemaVersion === 1) {
+    // E4-R09 (F19): V1 evidence is HISTORICAL — it cannot certify the current
+    // release. Demoted to blocked, never passed.
+    return {
+      id: expectedGate,
+      platform: expectedPlatform,
+      state: "blocked",
+      headSha: expectedHead,
+      command: expectedCommand,
+      evidenceRef: sourcePath,
+      reason: "legacy V1 gate evidence is historical/unsupported for the current release (migrate to V2)",
+    };
+  }
+  if (evidence.schemaVersion !== 2) {
     throw new Error(
       `malformed gate evidence at ${sourcePath}: unsupported schemaVersion ${evidence.schemaVersion}`,
     );
@@ -280,6 +299,18 @@ export function validateGateEvidenceInstance(opts: {
       command: expectedCommand,
       evidenceRef: sourcePath,
       reason: `inconsistent gate evidence: passed=${evidence.passed} does not match exitCode=${evidence.exitCode}`,
+    };
+  }
+  // E4-R09 (F19): a V2 PASS also requires a CLEAN source tree before AND after.
+  if (evidence.passed && (evidence.cleanBefore !== true || evidence.cleanAfter !== true)) {
+    return {
+      id: expectedGate,
+      platform: expectedPlatform,
+      state: "blocked",
+      headSha: expectedHead,
+      command: expectedCommand,
+      evidenceRef: sourcePath,
+      reason: `dirty-tree V2 evidence: cleanBefore=${String(evidence.cleanBefore)} cleanAfter=${String(evidence.cleanAfter)} — cannot certify a release`,
     };
   }
   return {
@@ -387,8 +418,11 @@ export function parseGateEvidence(json: string, sourcePath: string): ReleaseGate
 }
 
 /** P38.3-5: parse a raw evidence file into a typed RawGateEvidence, rejecting
- *  structurally invalid JSON. The per-instance semantic validation happens in
- *  validateGateEvidenceInstance. */
+ *  structurally invalid JSON. E4-R09 (F19): V2 evidence (the current release
+ *  protocol, %s) is STRICTLY validated and mapped (gitSha→headSha,
+ *  command argv→string, platform from the file path); V1 evidence is parsed
+ *  structurally for display but is demoted by validateGateEvidenceInstance
+ *  (historical/unsupported for the current release). */
 export function parseRawEvidence(json: string, sourcePath: string): RawGateEvidence {
   let raw: unknown;
   try {
@@ -396,10 +430,47 @@ export function parseRawEvidence(json: string, sourcePath: string): RawGateEvide
   } catch {
     throw new Error(`malformed gate evidence at ${sourcePath}: not valid JSON`);
   }
-  const record = raw as Partial<RawGateEvidence> & {
+  const record = raw as Partial<Omit<RawGateEvidence, "schemaVersion">> & {
+    schemaVersion?: number | string;
     gate?: string;
     id?: string;
+    gitSha?: string;
+    command?: string | string[];
+    cleanBefore?: boolean;
+    cleanAfter?: boolean;
+    inputDigest?: string;
+    outputDigest?: string;
   };
+  // E4-R09 (F18/F19): a V2 evidence object must pass the SAME strict validation
+  // as every other V2 consumer — never `JSON.parse as`.
+  if (record.schemaVersion === "2.0.0" || (typeof record.schemaVersion === "string" && (record.schemaVersion as string).startsWith("2."))) {
+    const issues = gateEvidenceV2Issues(raw);
+    if (issues.length > 0) {
+      throw new Error(`malformed gate evidence at ${sourcePath}: invalid GateEvidenceV2: ${issues.slice(0, 3).join("; ")}`);
+    }
+    const v2 = raw as {
+      gate: string; gitSha: string; command: string[]; cleanBefore: boolean; cleanAfter: boolean;
+      exitCode: number | null; passed: boolean; finishedAtIso: string; inputDigest: string; outputDigest: string;
+    };
+    const gate = v2.gate;
+    if (!(REQUIRED_GATES as readonly string[]).includes(gate)) {
+      throw new Error(`malformed gate evidence at ${sourcePath}: unknown gate id ${gate}`);
+    }
+    const platform = platformFromEvidencePath(sourcePath);
+    return {
+      schemaVersion: 2,
+      kind: "gate",
+      gate,
+      headSha: v2.gitSha,
+      command: v2.command.join(" "),
+      exitCode: v2.exitCode,
+      passed: v2.passed,
+      platform,
+      generatedAt: v2.finishedAtIso,
+      cleanBefore: v2.cleanBefore,
+      cleanAfter: v2.cleanAfter,
+    };
+  }
   const gate = (record.gate ?? record.id) as string | undefined;
   if (gate === undefined) {
     throw new Error(`malformed gate evidence at ${sourcePath}: missing gate id`);
@@ -408,13 +479,19 @@ export function parseRawEvidence(json: string, sourcePath: string): RawGateEvide
     throw new Error(`malformed gate evidence at ${sourcePath}: unknown gate id ${gate}`);
   }
   return {
-    schemaVersion: record.schemaVersion ?? 0,
+    schemaVersion: typeof record.schemaVersion === "number" ? record.schemaVersion : 0,
     kind: record.kind ?? "",
     gate,
     headSha: record.headSha ?? "",
-    command: record.command ?? "",
+    command: typeof record.command === "string" ? record.command : (record.command ?? []).join(" "),
     exitCode: record.exitCode === undefined ? null : record.exitCode,
     passed: record.passed ?? false,
     platform: record.platform ?? "",
   };
+}
+
+function platformFromEvidencePath(p: string): string {
+  const m = /gates[/\\]([a-z0-9_-]+)[/\\]/.exec(p);
+  const platform = m?.[1] ?? "";
+  return KNOWN_PLATFORMS.includes(platform) ? platform : "";
 }

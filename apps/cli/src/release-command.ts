@@ -211,6 +211,8 @@ export interface GateRunResult {
   command: string;
   exitCode: number;
   evidencePath: string;
+  /** E4-R09: HEAD the evidence bound to (from the V2 generator's own capture). */
+  gitSha?: string;
 }
 
 /** Detect the OS namespace used by the P38.2-10 evidence layout. */
@@ -225,49 +227,59 @@ export function gatePlatform(): "linux" | "windows" | "darwin" {
   }
 }
 
-/** Run one required gate, capture the REAL exit code, and write evidence.
- *  INV-P38.2-004: the evidence is durable before the command returns; a red
- *  gate returns its own exit code (evidence already written, never skipped). */
+/** Run one required gate, capture the REAL exit code, and write V2 evidence.
+ *  E4-R09 (F19): the production release CLI uses the SAME V2 generator as every
+ *  other V2 consumer (runGateV2), which binds git state before/after + derives
+ *  `passed` from the real exit code and declared artifacts. The runner keeps
+ *  the V1 invariants: evidence is durable before the command returns; a red
+ *  gate returns its own exit code; the paid key is stripped. */
 export async function runGate(
   gate: RequiredGateId,
   opts: { root?: string; headSha?: string; evidenceDir?: string } = {},
 ): Promise<GateRunResult> {
   const root = resolve(opts.root ?? process.cwd());
   const headSha = opts.headSha ?? (await detectHead(root));
-  const command = GATE_COMMANDS[gate];
+  const commandStr = GATE_COMMANDS[gate];
   // P38.2-10: evidence is namespaced per platform under gates/<os>/.
   const evidenceDir = resolve(opts.evidenceDir ?? join(root, ".ci", "evidence", "gates", gatePlatform()));
   const evidencePath = join(evidenceDir, `${gate}.json`);
   await mkdir(evidenceDir, { recursive: true });
 
-  // Real exit code capture — execFileSync never exits the process early, so a
-  // red gate is ALWAYS captured and evidence is written before we return.
-  let exitCode = 0;
-  try {
-    execFileSync(command, {
-      cwd: root,
-      shell: true,
-      stdio: "inherit",
-      env: { ...process.env, OPENAI_API_KEY: "" }, // gates must run without a paid key
-      windowsHide: true,
-    });
-  } catch (err) {
-    exitCode = typeof err === "object" && err !== null && "status" in err ? ((err as { status?: number }).status ?? 1) : 1;
-  }
-
-  const evidence = {
-    schemaVersion: 1,
-    kind: "gate",
+  const { runGateV2, writeGateEvidenceV2 } = await import("@ar/evaluation");
+  const evidence = await runGateV2({
     gate,
-    headSha,
-    command,
-    exitCode,
-    passed: exitCode === 0,
-    platform: gatePlatform(),
-    generatedAt: new Date().toISOString(),
-  };
-  await writeFile(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
-  return { gate, command, exitCode, evidencePath };
+    command: commandStr.split(/\s+/).filter(Boolean),
+    cwd: root,
+    toolVersion: "release-command-v2",
+    environmentClass: "offline",
+    providerCalls: 0,
+    // Preserve the V1 runner contract: shell execution, paid key stripped,
+    // real exit code captured (a red gate never exits the process early).
+    run: async (cmd, cwd) => {
+      let exitCode = 0;
+      let stderr = "";
+      let stdout = "";
+      try {
+        const out = execFileSync(cmd.join(" "), {
+          cwd,
+          shell: true,
+          stdio: "pipe",
+          encoding: "utf8",
+          env: { ...process.env, OPENAI_API_KEY: "" },
+          windowsHide: true,
+        });
+        stdout = String(out ?? "");
+      } catch (err) {
+        const e = err as { status?: number; stderr?: unknown; stdout?: unknown; message?: string };
+        exitCode = typeof e.status === "number" ? e.status : 1;
+        stdout = String(e.stdout ?? "");
+        stderr = String(e.stderr ?? (e.message ?? ""));
+      }
+      return { exitCode, stdout, stderr };
+    },
+  });
+  await writeGateEvidenceV2(evidence, evidencePath);
+  return { gate, command: commandStr, exitCode: evidence.exitCode ?? 0, evidencePath, gitSha: evidence.gitSha };
 }
 
 /** `agent release gate [--all | <gate>...] [--evidence-dir <dir>]` */

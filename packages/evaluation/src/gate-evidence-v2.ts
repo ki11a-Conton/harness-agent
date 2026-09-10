@@ -312,7 +312,11 @@ export async function runGateV2(opts: RunGateV2Options): Promise<GateEvidenceV2>
     (opts.artifactPaths ?? []).map(async (p) => ({ path: p, digest: await digestFile(p) })),
   );
   const missingArtifact = artifactRefs.some((a) => a.digest === null);
-  const passed = exitCode === 0 && !missingArtifact;
+  // E4-R09 (F19): a PASS requires a CLEAN source tree before AND after — a
+  // gate run that dirties the tree (or ran on a dirty one) can only record
+  // state=failed/invalid, never certify a release.
+  const sourceClean = (before?.clean ?? false) && (after?.clean ?? false);
+  const passed = exitCode === 0 && !missingArtifact && sourceClean;
   const gitSha = before?.sha ?? after?.sha ?? "unknown";
   const evidence = buildGateEvidenceV2({
     gate: opts.gate,
@@ -328,7 +332,9 @@ export async function runGateV2(opts: RunGateV2Options): Promise<GateEvidenceV2>
     exitCode,
     passed,
     state: passed ? "passed" : "failed",
-    summary: passed ? `${opts.gate}: PASS (exit 0)` : `${opts.gate}: FAIL (exit ${exitCode}${missingArtifact ? ", missing artifact" : ""})`,
+    summary: passed
+      ? `${opts.gate}: PASS (exit 0)`
+      : `${opts.gate}: FAIL (exit ${exitCode}${missingArtifact ? ", missing artifact" : ""}${!sourceClean ? ", dirty source tree" : ""})`,
     providerCalls: opts.providerCalls ?? 0,
     ...(opts.environmentClass !== undefined ? { environmentClass: opts.environmentClass } : {}),
     artifactRefs,

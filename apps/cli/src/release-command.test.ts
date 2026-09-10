@@ -24,25 +24,35 @@ async function tmpEvidenceDir(): Promise<string> {
 }
 
 /** Write ONE evidence instance under gates/<platform>/<id>.json with the full
- *  P38.3-5 schema (schemaVersion/kind/platform/passed). */
+ *  V2 protocol (E4-R09: V1 fixtures are historical and blocked by the verifier). */
 async function writeInstance(
   dir: string,
   id: string,
   platform: ReleasePlatform,
-  opts: { exitCode?: number | null; headSha?: string; command?: string; kind?: string; passed?: boolean } = {},
+  opts: { exitCode?: number | null; headSha?: string; command?: string; kind?: string; passed?: boolean; clean?: boolean } = {},
 ): Promise<string> {
   const path = join(dir, "gates", platform, `${id}.json`);
   await mkdir(join(dir, "gates", platform), { recursive: true });
+  const passed = opts.passed ?? ((opts.exitCode ?? 0) === 0);
   const evidence = {
-    schemaVersion: 1,
-    kind: opts.kind ?? "gate",
+    schemaVersion: "2.0.0",
     gate: id,
-    headSha: opts.headSha ?? HEAD,
-    command: opts.command ?? GATE_COMMANDS[requiredGateIndex(id)],
+    command: (opts.command ?? GATE_COMMANDS[requiredGateIndex(id)]).split(/\s+/).filter(Boolean),
+    toolVersion: "release-command-v2",
+    gitSha: opts.headSha ?? HEAD,
+    cleanBefore: opts.clean ?? true,
+    cleanAfter: opts.clean ?? true,
+    inputDigest: "0".repeat(64),
+    outputDigest: "1".repeat(64),
+    startedAtIso: new Date(Date.now() - 1000).toISOString(),
+    finishedAtIso: new Date().toISOString(),
     exitCode: opts.exitCode ?? 0,
-    passed: opts.passed ?? ((opts.exitCode ?? 0) === 0),
-    platform,
-    generatedAt: new Date().toISOString(),
+    passed,
+    state: opts.exitCode === null ? "not_run" : passed ? "passed" : "failed",
+    summary: "fixture",
+    providerCalls: 0,
+    environmentClass: "offline",
+    kind: opts.kind ?? "gate",
   };
   await writeFile(path, JSON.stringify(evidence));
   return path;
@@ -164,13 +174,16 @@ describe("P36-1 release verify CLI", () => {
     expect(verdict.gates.find((g) => g.id === "test")!.state).toBe("failed");
   });
 
-  it("P38.3-5: wrong evidence kind → blocked, NOT READY", async () => {
+  it("P38.3-5: legacy V1 evidence → blocked, NOT READY (historical/unsupported)", async () => {
     const dir = await tmpEvidenceDir();
     await writeAllGreen(dir);
-    await writeInstance(dir, "test", "linux", { kind: "benchmark_run" });
+    // Overwrite test/linux with a hand-written V1 evidence (the pre-V2 shape).
+    const v1 = { schemaVersion: 1, kind: "gate", gate: "test", headSha: HEAD, command: GATE_COMMANDS[requiredGateIndex("test")], exitCode: 0, passed: true, platform: "linux" };
+    await writeFile(join(dir, "gates", "linux", "test.json"), JSON.stringify(v1));
     const { verdict } = await resolveReleaseVerdict({ root: process.cwd(), evidenceDir: dir, headSha: HEAD });
     expect(verdict.ready).toBe(false);
-    expect(verdict.gates.find((g) => g.id === "test")!.state).toBe("failed");
+    // The V1 file cannot certify the current release (historical/unsupported).
+    expect(verdict.gates.find((g) => g.id === "test")!.state).not.toBe("passed");
   });
 
   it("P38.3-5: inconsistent exit code (1 + passed true) → blocked, NOT READY", async () => {
@@ -238,29 +251,40 @@ describe("P36-1 release verify CLI", () => {
 });
 
 describe("P38.2-4/13 repo-owned gate runner (INV-P38.2-004)", () => {
-  it("runGate executes the canonical command and writes durable evidence with the REAL exit code", async () => {
+  it("runGate executes the canonical command and writes durable V2 evidence with the REAL exit code", async () => {
     const dir = await tmpEvidenceDir();
     const result = await runGate("typecheck", { root: process.cwd(), headSha: HEAD, evidenceDir: dir });
     expect(result.gate).toBe("typecheck");
     expect(result.command).toBe(GATE_COMMANDS.typecheck);
-    // Evidence is written even when the gate is red — INV-P38.2-004.
+    // Evidence is written even when the gate is red — INV-P38.2-004. The
+    // protocol is V2 (E4-R09): schemaVersion "2.0.0", command argv, gitSha.
     const written = JSON.parse(await readFile(result.evidencePath, "utf8")) as {
       gate: string;
-      headSha: string;
-      command: string;
+      gitSha: string;
+      headSha?: string;
+      command: string[];
       exitCode: number;
       passed: boolean;
-      kind: string;
-      schemaVersion: number;
+      schemaVersion: string;
+      cleanBefore: boolean;
+      cleanAfter: boolean;
     };
     expect(written.gate).toBe("typecheck");
-    expect(written.headSha).toBe(HEAD);
-    expect(written.command).toBe(GATE_COMMANDS.typecheck);
-    expect(written.kind).toBe("gate");
-    expect(written.schemaVersion).toBe(1);
+    // runGateV2 captures the REAL repo HEAD (the headSha option is not used to
+    // stamp evidence) — 40-hex on this checkout.
+    expect(written.gitSha).toMatch(/^[0-9a-f]{40}$/);
+    expect(written.command.join(" ")).toBe(GATE_COMMANDS.typecheck);
+    expect(written.schemaVersion).toBe("2.0.0");
+    // cleanBefore/cleanAfter are recorded truthfully (the dev checkout here is
+    // typically dirty, so they are booleans decided by the real git state);
+    // the dirty-tree PASS-invalidation is covered by dedicated blocked tests.
+    expect(typeof written.cleanBefore).toBe("boolean");
+    expect(typeof written.cleanAfter).toBe("boolean");
     expect(written.exitCode).toBe(result.exitCode);
-    expect(written.passed).toBe(written.exitCode === 0);
-    // A real green gate run (pnpm typecheck on this repo) records exitCode 0.
+    // E4-R09: a PASS additionally requires a CLEAN tree (before AND after) —
+    // this dev checkout may be dirty, so passed must equal the cleanness, not
+    // exitCode alone. A real green gate run still records exitCode 0.
+    expect(written.passed).toBe(written.cleanBefore === true && written.cleanAfter === true);
     expect(written.exitCode).toBe(0);
   });
 
@@ -273,8 +297,10 @@ describe("P38.2-4/13 repo-owned gate runner (INV-P38.2-004)", () => {
     // `pnpm test:chaos` may legitimately pass on this repo; what matters is the
     // evidence file records the ACTUAL exit code (passed === exitCode === 0).
     expect(result.exitCode).toBe(0);
-    const written = JSON.parse(await readFile(result.evidencePath, "utf8")) as { exitCode: number; passed: boolean };
-    expect(written.passed).toBe(written.exitCode === 0);
+    const written = JSON.parse(await readFile(result.evidencePath, "utf8")) as { exitCode: number; passed: boolean; cleanBefore?: boolean; cleanAfter?: boolean };
+    // E4-R09: passed requires exit 0 AND a clean source tree (the dev checkout
+    // here may be dirty), so derive passed from the recorded cleanness.
+    expect(written.passed).toBe(written.exitCode === 0 && written.cleanBefore === true && written.cleanAfter === true);
   });
 
   it("releaseGateCmd rejects unknown gate ids", async () => {

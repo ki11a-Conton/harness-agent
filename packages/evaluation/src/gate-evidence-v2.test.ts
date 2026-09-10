@@ -134,14 +134,26 @@ describe("E2-13 gate evidence V2", () => {
 });
 
 describe("E4-10 gate evidence generator + loader", () => {
-  it("runGateV2 captures the REAL exit code and passes only on exit 0", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "e4-10-gate-"));
+  async function tempGitRepo(): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), "e4-r09-repo-"));
+    const { execFileSync } = await import("node:child_process");
+    execFileSync("git", ["init", "-q"], { cwd: dir });
+    await writeFile(join(dir, "f.txt"), "x", "utf8");
+    execFileSync("git", ["add", "."], { cwd: dir });
+    execFileSync("git", ["-c", "user.email=a@b.c", "-c", "user.name=t", "commit", "-qm", "init"], { cwd: dir });
+    return dir;
+  }
+
+  it("runGateV2 captures the REAL exit code and passes only on exit 0 (on a CLEAN source tree)", async () => {
+    const dir = await tempGitRepo();
+    const artifactDir = await mkdtemp(join(tmpdir(), "e4-r09-art-"));
     try {
-      const artifact = join(dir, "out.json");
+      // The artifact lives OUTSIDE the git repo so the tree stays clean.
+      const artifact = join(artifactDir, "out.json");
       await writeFile(artifact, "{}", "utf8");
       const ev = await runGateV2({
         gate: "capability_audit",
-        command: ["pnpm", "capability:audit"],
+        command: ["node", "-e", "0"],
         cwd: dir,
         toolVersion: "test",
         artifactPaths: [artifact],
@@ -151,10 +163,13 @@ describe("E4-10 gate evidence generator + loader", () => {
       expect(ev.passed).toBe(true);
       expect(ev.state).toBe("passed");
       expect(ev.exitCode).toBe(0);
+      expect(ev.cleanBefore).toBe(true);
+      expect(ev.cleanAfter).toBe(true);
       expect(ev.providerCalls).toBe(0);
       expect(ev.artifactRefs?.[0]?.digest).toMatch(/^[0-9a-f]{64}$/);
     } finally {
       await rm(dir, { recursive: true, force: true });
+      await rm(artifactDir, { recursive: true, force: true });
     }
   });
 

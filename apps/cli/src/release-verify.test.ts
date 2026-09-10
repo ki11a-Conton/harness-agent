@@ -197,8 +197,9 @@ describe("P38.1-7 canonical gate command provenance", () => {
 });
 
 describe("P38.3-5 validateGateEvidenceInstance", () => {
+  // E4-R09: the current protocol is V2; V1 is historical and blocked.
   const VALID_EVIDENCE: RawGateEvidence = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     kind: "gate",
     gate: "test",
     headSha: HEAD,
@@ -206,6 +207,8 @@ describe("P38.3-5 validateGateEvidenceInstance", () => {
     exitCode: 0,
     passed: true,
     platform: "linux",
+    cleanBefore: true,
+    cleanAfter: true,
   };
 
   it("valid evidence → passed", () => {
@@ -231,6 +234,32 @@ describe("P38.3-5 validateGateEvidenceInstance", () => {
       expectedPlatform: "linux",
       sourcePath: "test.json",
     })).toThrow(/unsupported schemaVersion/);
+  });
+
+  it("legacy V1 evidence is BLOCKED (historical, unsupported for current release)", () => {
+    const result = validateGateEvidenceInstance({
+      evidence: { ...VALID_EVIDENCE, schemaVersion: 1 },
+      expectedHead: HEAD,
+      expectedCommand: GATE_COMMANDS.test,
+      expectedGate: "test",
+      expectedPlatform: "linux",
+      sourcePath: "test.json",
+    });
+    expect(result.state).toBe("blocked");
+    expect(result.reason).toMatch(/historical|unsupported/);
+  });
+
+  it("a V2 PASS on a DIRTY tree is BLOCKED", () => {
+    const result = validateGateEvidenceInstance({
+      evidence: { ...VALID_EVIDENCE, cleanBefore: false },
+      expectedHead: HEAD,
+      expectedCommand: GATE_COMMANDS.test,
+      expectedGate: "test",
+      expectedPlatform: "linux",
+      sourcePath: "test.json",
+    });
+    expect(result.state).toBe("blocked");
+    expect(result.reason).toMatch(/dirty-tree/);
   });
 
   it("wrong kind → throws", () => {
