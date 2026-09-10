@@ -134,6 +134,11 @@ export interface Harness {
   /** P22-2: the real memory store (replaces the removed P0-3 harness.memory
    *  legacy bridge). Exposed so hosts/tests can seed and inspect memories. */
   memoryStore?: MemoryStore;
+  /** E4-R08: the DurableRecoveryStore this harness INJECTED into its session
+   *  actors (present when a dataDir is configured). Exposed so an observation
+   *  test can exercise the ACTUAL injected instance — never a newly constructed
+   *  one — proving the production wiring, not a look-alike. */
+  recoveryStore?: import("./durable-recovery-store.js").DurableRecoveryStore;
   /** P2-6: durable learning-candidate queue (reflection output, pre-promotion). */
   candidates?: LearningCandidateStore;
   /** P2-5: post-turn reflection runner (journal + candidate queue). */
@@ -770,6 +775,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     agents,
       ...(memoryBridge !== undefined ? { memoryBridge } : {}),
     ...(memoryStore !== undefined ? { memoryStore } : {}),
+    ...(recoveryStore !== undefined ? { recoveryStore } : {}),
     ...(candidateStore !== undefined ? { candidates: candidateStore } : {}),
     ...(reflector !== undefined ? { reflector } : {}),
     ...(skillBodyProvider !== undefined ? { skillBodies: skillBodyProvider } : {}),

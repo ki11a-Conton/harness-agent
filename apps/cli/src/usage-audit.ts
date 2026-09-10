@@ -17,7 +17,8 @@
  */
 
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { gitHeadShaAt, loadObservationEvidence, type ObservationEvidence } from "./observation-evidence.js";
 
 export type UsageLevel = "exported" | "tested" | "wired" | "observed";
 
@@ -105,9 +106,31 @@ function rank(exported: boolean, tested: boolean, wired: boolean, observed: bool
   return "exported"; // absent — reported via exported=false below
 }
 
-export function runUsageAudit(deps: { root: string; capabilities?: ReadonlyArray<{ capability: string; symbol: string }> }): UsageAuditResult {
+export function runUsageAudit(deps: {
+  root: string;
+  capabilities?: ReadonlyArray<{ capability: string; symbol: string }>;
+  /** E4-R08: runtime-evidence file to decide `observed` (defaults to the shared
+   *  observation evidence path; tests inject a temp file). */
+  evidencePath?: string;
+  /** Audited HEAD for sha matching (defaults to git rev-parse of `root`). */
+  headSha?: string | null;
+}): UsageAuditResult {
   const files = collectTs(deps.root, deps.root);
   const caps = deps.capabilities ?? KEY_CAPABILITIES;
+  // E4-R08 (F17): `observed` is decided ONLY from runtime ObservationEvidence —
+  // never from a file name, a comment, a string, an import or `typeof`. Only
+  // passed rows whose testedSourceSha matches the audited HEAD (when both are
+  // known) count; a mismatch is a hard reject, and unknown HEAD makes a row
+  // acceptable only when the row itself is unsure (or unverifiable offline).
+  const headSha = deps.headSha !== undefined ? deps.headSha : gitHeadShaAt(deps.root);
+  const evidence = loadObservationEvidence(deps.evidencePath);
+  const evidenceFor = (capability: string): ObservationEvidence[] =>
+    evidence.filter(
+      (e) =>
+        e.capabilityId === capability &&
+        e.runStatus === "passed" &&
+        (headSha === null || e.testedSourceSha === null || e.testedSourceSha === headSha),
+    );
   const capabilities: CapabilityUsage[] = [];
   for (const { capability, symbol } of caps) {
     const re = new RegExp(`\\b${symbol}\\b`);
@@ -117,9 +140,11 @@ export function runUsageAudit(deps: { root: string; capabilities?: ReadonlyArray
     const exported = files.some((f) => f.isIndex && !f.isAuditor && re.test(f.src));
     const tested = files.some((f) => f.isTest && !f.isE2E && !f.isAuditor && re.test(f.src));
     const wiredFiles = files.filter((f) => !f.isTest && !f.isIndex && !f.isAuditor && !isDefinition(f) && re.test(f.src));
-    const observedFiles = files.filter((f) => f.isE2E && !f.isAuditor && re.test(f.src));
     const wired = wiredFiles.length > 0;
-    const observed = observedFiles.length > 0;
+    // E4-R08: OBSERVED requires a passed, sha-matched runtime evidence row; the
+    // old E2E-filename/text scan is gone (a comment would have counted).
+    const observedRows = evidenceFor(capability);
+    const observed = observedRows.length > 0;
     capabilities.push({
       capability,
       symbol,
@@ -129,7 +154,7 @@ export function runUsageAudit(deps: { root: string; capabilities?: ReadonlyArray
       observed,
       level: rank(exported, tested, wired, observed),
       wiredBy: wiredFiles.map((f) => f.path).slice(0, 6),
-      observedBy: observedFiles.map((f) => f.path).slice(0, 6),
+      observedBy: observedRows.map((e) => `${e.testFile}:${e.testName} (${e.invocation})`).slice(0, 6),
     });
   }
   const notObserved = capabilities.filter((c) => !c.observed).map((c) => c.capability);

@@ -25,7 +25,7 @@ async function makeRoot(files: Record<string, string>): Promise<string> {
 afterAll(async () => { if (root !== "") await rm(root, { recursive: true, force: true }); });
 
 describe("E4-10 production usage audit", () => {
-  it("observed > wired > tested > exported: a symbol in an e2e reaches observed", async () => {
+  it("observed > wired > tested > exported: a symbol in an e2e reaches observed ONLY with runtime evidence", async () => {
     await makeRoot({
       "packages/x/src/index.ts": "export * from './a.js';\nexport function theThing(){}\n",
       "packages/x/src/a.ts": "export function theThing(){}\n",
@@ -33,7 +33,22 @@ describe("E4-10 production usage audit", () => {
       "apps/cli/src/prod.ts": "import { theThing } from '@ar/x'; theThing();\n",
       "apps/cli/src/e4-09-production-e2e.test.ts": "import { theThing } from '@ar/x'; theThing();\n",
     });
-    const r = runUsageAudit({ root, capabilities: [{ capability: "the thing", symbol: "theThing" }] });
+    const evPath = join(root, "ev.jsonl");
+    await writeFile(
+      evPath,
+      JSON.stringify({
+        schemaVersion: "e4-r08-v1", capabilityId: "the thing", symbol: "theThing", entrypoint: "cli",
+        testFile: "apps/cli/src/e4-09-production-e2e.test.ts", testName: "chain", testedSourceSha: "t",
+        runStatus: "passed", invocation: "real chain", evidenceDigest: "0".repeat(64),
+      }) + "\n",
+      "utf8",
+    );
+    const r = runUsageAudit({
+      root,
+      capabilities: [{ capability: "the thing", symbol: "theThing" }],
+      evidencePath: evPath,
+      headSha: "t",
+    });
     const c = r.capabilities[0]!;
     expect(c.exported).toBe(true);
     expect(c.tested).toBe(true);
@@ -107,5 +122,64 @@ describe("E4-10 production usage audit", () => {
     for (const c of r.capabilities) {
       if (c.observed) expect(c.observedBy.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("E4-R08 observed from runtime evidence only", () => {
+  const HEAD = "a".repeat(40);
+  function row(capabilityId: string, symbol: string, testedSourceSha: string | null = HEAD, runStatus = "passed"): string {
+    return JSON.stringify({
+      schemaVersion: "e4-r08-v1", capabilityId, symbol, entrypoint: "cli",
+      testFile: "apps/cli/src/fake.e2e.test.ts", testName: "real passing chain",
+      testedSourceSha, runStatus, invocation: "real benchmark->V3->eval->envelope->startup chain",
+      evidenceDigest: "0".repeat(64),
+    }) + "\n";
+  }
+
+  it("F17: comment/string/import/typeof/file-name can NEVER be observed (no evidence => false)", async () => {
+    await makeRoot({
+      "apps/cli/src/not-real-e2e.test.ts": [
+        "// fictionalCapability is tested here",
+        'const s = "fictionalCapability";',
+        "import { fictionalCapability } from '@ar/x';",
+        "expect(typeof fictionalCapability).toBe('function');",
+        "void fictionalCapability;",
+      ].join("\n"),
+    });
+    const r = runUsageAudit({
+      root,
+      capabilities: [{ capability: "fictionalCapability", symbol: "fictionalCapability" }],
+      evidencePath: join(root, "none.jsonl"),
+      headSha: HEAD,
+    });
+    const c = r.capabilities[0]!;
+    expect(c.observed).toBe(false);
+    expect(c.level).not.toBe("observed");
+    expect(r.ok).toBe(false);
+    expect(r.notObserved).toContain("fictionalCapability");
+  });
+
+  it("failed / skipped / stale-SHA rows are never observed", async () => {
+    await makeRoot({ "apps/cli/src/x.e2e.test.ts": "// noop\n" });
+    const evPath = join(root, "ev.jsonl");
+    await writeFile(
+      evPath,
+      row("cap1", "symbolA", "0".repeat(40)) + row("cap1", "symbolA", HEAD, "failed") + row("cap1", "symbolA", HEAD, "skipped"),
+      "utf8",
+    );
+    const r = runUsageAudit({ root, capabilities: [{ capability: "cap1", symbol: "symbolA" }], evidencePath: evPath, headSha: HEAD });
+    expect(r.capabilities[0]!.observed).toBe(false);
+  });
+
+  it("a passed + sha-matched observation row IS observed", async () => {
+    await makeRoot({ "apps/cli/src/x.e2e.test.ts": "// real chain lives elsewhere\n" });
+    const evPath = join(root, "ev2.jsonl");
+    await writeFile(evPath, row("cap1", "symbolA"), "utf8");
+    const r = runUsageAudit({ root, capabilities: [{ capability: "cap1", symbol: "symbolA" }], evidencePath: evPath, headSha: HEAD });
+    const c = r.capabilities[0]!;
+    expect(c.observed).toBe(true);
+    expect(c.level).toBe("observed");
+    expect(c.observedBy.length).toBe(1);
+    expect(r.ok).toBe(true);
   });
 });

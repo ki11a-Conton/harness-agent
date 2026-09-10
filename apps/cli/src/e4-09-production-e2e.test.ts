@@ -42,8 +42,12 @@ import {
 } from "@ar/evaluation";
 import { writeChampionStateFileCas, championStateDigest } from "./champion-state-file.js";
 import { createHarnessWithChampion } from "./champion-application.js";
+import { observeCapability, gitHeadShaAt } from "./observation-evidence.js";
 
 const sha = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
+/** E4-R08: HEAD at run time — the observations below bind to this snapshot. */
+const TESTED_SHA = gitHeadShaAt(process.cwd());
+const TEST_FILE = "apps/cli/src/e4-09-production-e2e.test.ts";
 
 const GUIDANCE_MARKER = "Budget-aware completion guidance:";
 const CANDIDATE = "budget_aware_completion_v1";
@@ -165,6 +169,23 @@ describe("E4-09 real production-path E2E (offline)", () => {
     expect(typeof buildSecurityOutcomeFromEventsV2).toBe("function");
     expect(candV3.activationEvidence.length).toBeGreaterThan(0);
     expect(Array.isArray(candV3.securityOutcomes)).toBe(true);
+    // E4-R08: record PASSED runtime observations (the real products exist in the
+    // artifacts the executor wrote; the audit consumes these rows, not text).
+    observeCapability({
+      capabilityId: "createActivationRecorderV2", symbol: "createActivationRecorderV2",
+      entrypoint: "benchmark", testFile: TEST_FILE, testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
+      testedSourceSha: TESTED_SHA, invocation: "real paired benchmark produced candidate activationEvidence rows",
+    });
+    observeCapability({
+      capabilityId: "classifySecurityOutcomeV2", symbol: "buildSecurityOutcomeFromEventsV2",
+      entrypoint: "benchmark", testFile: TEST_FILE, testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
+      testedSourceSha: TESTED_SHA, invocation: "real paired benchmark produced securityOutcome records",
+    });
+    observeCapability({
+      capabilityId: "canonical V3 writer", symbol: "writeExperimentArtifactV3",
+      entrypoint: "benchmark", testFile: TEST_FILE, testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
+      testedSourceSha: TESTED_SHA, invocation: "executor's in-process canonical V3 strict-reloaded from disk",
+    });
     // OBSERVABLE candidate behavior (not fabricated, not mere config equality):
     // the champion's budget-aware guidance changed the agent's real ACTIONS —
     // the candidate wrote the file every repetition, the baseline never did.
@@ -218,6 +239,12 @@ describe("E4-09 real production-path E2E (offline)", () => {
       bundleRoot: root,
     });
     expect(verified.ok).toBe(true);
+    observeCapability({
+      capabilityId: "strict promotion loader", symbol: "loadPromotionEnvelope",
+      entrypoint: "cli", testFile: TEST_FILE, testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
+      testedSourceSha: TESTED_SHA, invocation: "real envelope bundle verified (artifacts + decision replay) against the real chain",
+    });
+    expect(verified.ok).toBe(true);
     const pending = applyPromotion(c0, CANDIDATE, {}, decisionArtifactPath, {
       envelopeDigest: envelope.contentDigest,
       decisionEnvelopeDigest: envelope.decisionEnvelopeDigest,
@@ -246,17 +273,29 @@ describe("E4-09 real production-path E2E (offline)", () => {
       // The applied runtime really runs the champion profile.
       expect(startup.harness.resolvedConfig.value.profile).toBe("champion");
       // OBSERVED: the harness started with a dataDir, so createHarness wired the
-      // durable recovery store. Exercise it directly to observe restart-safe
-      // persistence (the capability the actor depends on across a restart).
-      expect(typeof DurableRecoveryStore).toBe("function");
-      const recStore = new DurableRecoveryStore({ dataDir });
-      const rec = await recStore.putRecord({
+      // durable recovery store. Exercise the ACTUAL injected instance (the one
+      // the actor's session manager was given) — never a newly constructed
+      // look-alike (E4-R08 #9) — to observe restart-safe persistence.
+      const injectedStore = startup.harness.recoveryStore;
+      expect(injectedStore).toBeDefined();
+      expect(injectedStore).toBeInstanceOf(DurableRecoveryStore);
+      const rec = await injectedStore!.putRecord({
         taskId: "turn-e2e-1", lineageId: "lin-1", state: "RETRY_SCHEDULED", attempt: 1,
         maxRecoveryAttempts: 3, nextAttemptAt: 5000, lastError: null, policyVersion: "e2-10-policy-v1",
         promptId: "prompt-1",
       } as never);
       expect(rec.version).toBe(1);
-      expect((await recStore.getRecord("turn-e2e-1" as never))?.attempt).toBe(1);
+      expect((await injectedStore!.getRecord("turn-e2e-1" as never))?.attempt).toBe(1);
+      observeCapability({
+        capabilityId: "durable RecoveryStore", symbol: "DurableRecoveryStore",
+        entrypoint: "cli", testFile: TEST_FILE, testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
+        testedSourceSha: TESTED_SHA, invocation: "createHarness(dataDir) injected DurableRecoveryStore into the actor; put/get round-trip on THAT instance",
+      });
+      observeCapability({
+        capabilityId: "resolveChampionHarness", symbol: "resolveChampionHarness",
+        entrypoint: "cli", testFile: TEST_FILE, testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
+        testedSourceSha: TESTED_SHA, invocation: "createHarnessWithChampion resolved the champion config and applied it (status applied)",
+      });
       const saved = JSON.parse(await readFile(statePath, "utf8")) as { applied: boolean; appliedProof?: { appliedConfigHash: string; targetConfigHash: string } };
       expect(saved.applied).toBe(true);
       expect(saved.appliedProof?.appliedConfigHash).toBe(saved.appliedProof?.targetConfigHash);
@@ -279,6 +318,11 @@ describe("E4-09 real production-path E2E (offline)", () => {
       });
       expect(failEvidence.passed).toBe(false);
       expect(failEvidence.state).toBe("failed");
+      observeCapability({
+        capabilityId: "GateEvidenceV2 generator", symbol: "runGateV2",
+        entrypoint: "release", testFile: TEST_FILE, testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
+        testedSourceSha: TESTED_SHA, invocation: "runGateV2 executed real commands (exit 0 / exit 2), captured real exit codes + gitSha + providerCalls=0",
+      });
     } finally {
       await startup.harness.close();
     }

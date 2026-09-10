@@ -124,6 +124,43 @@ describe("E4-07 real champion application integration suite", () => {
     }
   });
 
+  it("E4-R08: Web startup ALSO installs the champion mechanism (main agent prompt carries the guidance)", async () => {
+    await writePendingState("budget_aware_completion_v1", {});
+    const outcome = await createHarnessWithChampion({
+      runtimeEntrypoint: "web",
+      baseConfig: baseConfig(join(dir, "web-data2")),
+      stateFilePath: statePath,
+      sourceSha: "c".repeat(40),
+    });
+    try {
+      expect(outcome.status).toBe("applied");
+      const main = outcome.harness.agents.find((a) => a.name === "main");
+      expect(main!.systemPrompt).toContain("prioritize running the verification command");
+    } finally {
+      await outcome.harness.close();
+    }
+  });
+
+  it("E4-R08: if the mechanism install is REMOVED, application FAILS (never applied on flags alone)", async () => {
+    await writePendingState("budget_aware_completion_v1", {});
+    const outcome = await createHarnessWithChampion({
+      runtimeEntrypoint: "cli",
+      baseConfig: baseConfig(join(dir, "no-mech-data")),
+      stateFilePath: statePath,
+      sourceSha: "d".repeat(40),
+      // Simulate the install being absent: the harness is built WITHOUT the
+      // completionGuidance the champion requires (a regression of the F12 fix).
+      createHarnessFn: async (config) => {
+        const { createHarness } = await import("@ar/harness");
+        return createHarness({ ...config, completionGuidance: undefined });
+      },
+    });
+    expect(outcome.status).toBe("applicationFailed");
+    expect(outcome.proof).toBeNull();
+    expect(outcome.reason).toMatch(/drift|completionGuidance/i);
+    await outcome.harness.close();
+  });
+
   it("4. proof config hashes derive from createHarness final config (acceptance #4)", async () => {
     await writePendingState();
     const outcome = await createHarnessWithChampion({
