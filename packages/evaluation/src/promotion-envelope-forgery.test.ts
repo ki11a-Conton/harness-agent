@@ -19,10 +19,11 @@ import { join } from "node:path";
 import { createHash } from "node:crypto";
 
 import { buildExperimentArtifactV3, writeExperimentArtifactV3 } from "./artifact-v3/index.js";
-import { runV3ChampionEval } from "./champion-eval-v3.js";
+import { runV3ChampionEval, computeDecisionArtifactContentDigestV3 } from "./champion-eval-v3.js";
 import {
   buildPromotionEnvelope,
   loadPromotionEnvelope,
+  computeEnvelopeContentDigest,
   PROMOTION_ENVELOPE_POLICY_VERSION,
   type PromotionEnvelope,
 } from "./promotion-envelope.js";
@@ -50,7 +51,10 @@ function outcome(caseId: string, armId: string, rep: number, order: number, pass
 async function buildValidBundle(dir: string) {
   const mk = (armId: string, extra: Record<string, unknown>) => ({
     suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT_SHA, dirty: false,
-    planDigest: PLAN_DIGEST, promotionEligible: true, isolationStrength: "strong", ...extra,
+    planDigest: PLAN_DIGEST, promotionEligible: true, isolationStrength: "strong",
+    // E4-R04 #5: the production builder always records the runtime config
+    // identity; a genuine bundle must carry it too.
+    runtimeConfigHash: CAND_CONFIG, ...extra,
   });
   const baseline = buildExperimentArtifactV3({
     arm: { armId: "baseline", candidateId: null, candidateConfigHash: null },
@@ -336,5 +340,100 @@ describe("E4-06 forged promotion regression", () => {
     // changed by the ATTACKER before the load, not by the loader.
     expect((await readFile(baselinePath)).equals(before.base)).toBe(true);
     expect((await readFile(decisionArtifactPath)).equals(before.da)).toBe(true);
+  });
+});
+
+describe("E4-R04 identity binding + bundle read semantics (F08-F11)", () => {
+  it("F08: rewriting decision baseline/candidateArtifactDigest and recomputing the outer digests is still rejected", async () => {
+    const { envPath, baselinePath, candidatePath } = await buildValidBundle(dir);
+    // Read the decision artifact, rewrite BOTH artifact digest fields, recompute
+    // its contentDigest AND the envelope digest (a perfect outer recompute), then
+    // reload: the replay must detect the mismatch against the ACTUAL bytes read.
+    const env = JSON.parse(await readFile(envPath, "utf8")) as PromotionEnvelope;
+    const daPath = env.decisionArtifactPath; // already absolute in this bundle
+    const da = JSON.parse(await readFile(daPath, "utf8")) as Record<string, unknown>;
+    da.baselineArtifactDigest = "f".repeat(64);
+    da.candidateArtifactDigest = "f".repeat(64);
+    da.contentDigest = computeDecisionArtifactContentDigestV3(da);
+    await writeFile(daPath, JSON.stringify(da), "utf8");
+    env.decisionArtifactDigest = sha(await readFile(daPath, "utf8"));
+    env.contentDigest = computeEnvelopeContentDigest({
+      schemaVersion: env.schemaVersion, policyVersion: env.policyVersion, generatedBy: env.generatedBy,
+      generatedAtIso: env.generatedAtIso, decision: env.decision, candidateId: env.candidateId,
+      parentLevel: env.parentLevel, parentStateDigest: env.parentStateDigest,
+      decisionEnvelopeDigest: env.decisionEnvelopeDigest ?? null, decisionArtifactPath: env.decisionArtifactPath,
+      decisionArtifactDigest: env.decisionArtifactDigest, artifactRefs: env.artifactRefs, sourceSha: env.sourceSha ?? null,
+    });
+    await rewriteEnvelope(envPath, env);
+    const r = await loadPromotionEnvelope(envPath, {
+      parentStateDigest: sha("c0-state"), candidateId: "cand-x",
+      expectedPolicyVersion: PROMOTION_ENVELOPE_POLICY_VERSION, verifyArtifactRefs: true,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.issues.some((i) => i.code === "DECISION_REPLAY_MISMATCH" && i.detail.includes("ACTUAL bytes"))).toBe(true);
+    void baselinePath; void candidatePath; void daPath;
+  });
+
+  it("F10: envelope/decision candidateId changed to another-candidate under a recomputed envelope digest -> rejected", async () => {
+    const { envPath } = await buildValidBundle(dir);
+    const env = JSON.parse(await readFile(envPath, "utf8")) as PromotionEnvelope;
+    env.candidateId = "another-candidate";
+    env.contentDigest = computeEnvelopeContentDigest({
+      schemaVersion: env.schemaVersion, policyVersion: env.policyVersion, generatedBy: env.generatedBy,
+      generatedAtIso: env.generatedAtIso, decision: env.decision, candidateId: env.candidateId,
+      parentLevel: env.parentLevel, parentStateDigest: env.parentStateDigest,
+      decisionEnvelopeDigest: env.decisionEnvelopeDigest ?? null, decisionArtifactPath: env.decisionArtifactPath,
+      decisionArtifactDigest: env.decisionArtifactDigest, artifactRefs: env.artifactRefs, sourceSha: env.sourceSha ?? null,
+    });
+    await rewriteEnvelope(envPath, env);
+    const r = await loadPromotionEnvelope(envPath, {
+      parentStateDigest: sha("c0-state"), candidateId: "cand-x",
+      expectedPolicyVersion: PROMOTION_ENVELOPE_POLICY_VERSION, verifyArtifactRefs: true,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.issues.some((i) => i.code === "CANDIDATE_MISMATCH")).toBe(true);
+  });
+
+  it("F10: the candidate artifact's OWN arm claims a different candidateId -> replay refuses", async () => {
+    const { envPath, candidatePath } = await buildValidBundle(dir);
+    const art = JSON.parse(await readFile(candidatePath, "utf8")) as {
+      arm: { armId: string; candidateId: string; candidateConfigHash: string | null };
+      manifest: Record<string, unknown>;
+      outcomes: unknown[];
+      activationEvidence: unknown[];
+      securityOutcomes: unknown[];
+      provenance: unknown;
+    };
+    // A REAL identity forgery: the attacker rebuilds the artifact so its content
+    // digest is valid again — the ONLY change is the arm's candidateId. The
+    // strict loader accepts it, so the REPLAY cross-binding must be what refuses.
+    const rebuilt = buildExperimentArtifactV3({
+      arm: { ...art.arm, candidateId: "impostor" },
+      manifest: art.manifest,
+      outcomes: art.outcomes as never,
+      activationEvidence: art.activationEvidence as never,
+      securityOutcomes: art.securityOutcomes as never,
+      provenance: art.provenance as never,
+    });
+    await writeExperimentArtifactV3(rebuilt, candidatePath);
+    // Re-point the envelope digest to the new bytes so ONLY the identity change
+    // is in play (it must still be caught by the replay cross-binding).
+    const env = JSON.parse(await readFile(envPath, "utf8")) as PromotionEnvelope;
+    const candRef = env.artifactRefs.find((r: { role: string }) => r.role === "candidate")!;
+    candRef.digest = sha(await readFile(candidatePath, "utf8"));
+    env.contentDigest = computeEnvelopeContentDigest({
+      schemaVersion: env.schemaVersion, policyVersion: env.policyVersion, generatedBy: env.generatedBy,
+      generatedAtIso: env.generatedAtIso, decision: env.decision, candidateId: env.candidateId,
+      parentLevel: env.parentLevel, parentStateDigest: env.parentStateDigest,
+      decisionEnvelopeDigest: env.decisionEnvelopeDigest ?? null, decisionArtifactPath: env.decisionArtifactPath,
+      decisionArtifactDigest: env.decisionArtifactDigest, artifactRefs: env.artifactRefs, sourceSha: env.sourceSha ?? null,
+    });
+    await rewriteEnvelope(envPath, env);
+    const r = await loadPromotionEnvelope(envPath, {
+      parentStateDigest: sha("c0-state"), candidateId: "cand-x",
+      expectedPolicyVersion: PROMOTION_ENVELOPE_POLICY_VERSION, verifyArtifactRefs: true,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.issues.some((i) => i.code === "DECISION_REPLAY_MISMATCH")).toBe(true);
   });
 });

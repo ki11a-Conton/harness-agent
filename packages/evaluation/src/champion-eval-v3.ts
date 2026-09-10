@@ -21,6 +21,7 @@ import {
   DEFAULT_DECISION_POLICY_V3,
   computeThresholdDigestV3,
   validateDecisionPolicyV3,
+  DECISION_POLICY_V3_VERSION,
   type DecisionPolicyV3,
 } from "./decision-policy-v3.js";
 import type { CaseOutcomeV3, ExperimentArtifactV3 } from "./artifact-v3/types.js";
@@ -383,11 +384,43 @@ export function verifyDecisionArtifactReplayV3(
   baseline: ExperimentArtifactV3,
   candidate: ExperimentArtifactV3,
   stored: Record<string, unknown>,
+  /** E4-R04 (F09): digests of the ACTUAL BYTES that were read, not the stored
+   *  strings. When provided, the replay's pair carries these, and the stored
+   *  digests must equal them. When omitted (legacy callers), the replay pair
+   *  carries the stored strings and a mismatch is not asserted here. */
+  actualBaselineDigest?: string,
+  actualCandidateDigest?: string,
 ): string[] {
   const violations: string[] = [];
+
+  // E4-R04 #4: strict version support — unknown values are UNSUPPORTED, a
+  // non-empty string is never enough.
+  if (stored["schemaVersion"] !== DECISION_ARTIFACT_V3_SCHEMA_VERSION) {
+    violations.push(
+      `stored schemaVersion ${JSON.stringify(stored["schemaVersion"])} != supported ${DECISION_ARTIFACT_V3_SCHEMA_VERSION} (unknown decisions are never trusted)`,
+    );
+  }
   if (stored["evaluatorVersion"] !== DECISION_EVALUATOR_VERSION) {
     violations.push(`stored evaluatorVersion ${String(stored["evaluatorVersion"])} != current ${DECISION_EVALUATOR_VERSION} (decision not reproducible by this evaluator)`);
   }
+
+  // E4-R04 (F09): the digests the replay pair uses MUST come from the actual
+  // bytes read off disk. If the caller supplied them, the stored DecisionArtifact
+  // must agree; a forger who rewrites the stored digest fields and recomputes the
+  // outer digest is caught by the mismatch against the real bytes.
+  const baselineDigest = actualBaselineDigest ?? String(stored["baselineArtifactDigest"] ?? "");
+  const candidateDigest = actualCandidateDigest ?? String(stored["candidateArtifactDigest"] ?? "");
+  if (actualBaselineDigest !== undefined && stored["baselineArtifactDigest"] !== baselineDigest) {
+    violations.push(
+      `stored baselineArtifactDigest ${JSON.stringify(stored["baselineArtifactDigest"])} != digest of the ACTUAL bytes read (${baselineDigest})`,
+    );
+  }
+  if (actualCandidateDigest !== undefined && stored["candidateArtifactDigest"] !== candidateDigest) {
+    violations.push(
+      `stored candidateArtifactDigest ${JSON.stringify(stored["candidateArtifactDigest"])} != digest of the ACTUAL bytes read (${candidateDigest})`,
+    );
+  }
+
   let policy: DecisionPolicyV3;
   try {
     policy = validateDecisionPolicyV3(stored["policy"]);
@@ -395,16 +428,54 @@ export function verifyDecisionArtifactReplayV3(
     violations.push(`stored decision policy invalid: ${err instanceof Error ? err.message : String(err)}`);
     return violations;
   }
+  // E4-R04 #4: strict version support — a non-empty string is never enough.
+  // `policyVersion` on the DecisionArtifact is `policy.version`; it must be a
+  // KNOWN supported policy version and internally consistent.
+  if (policy.version !== DECISION_POLICY_V3_VERSION) {
+    violations.push(
+      `policy.version ${JSON.stringify(policy.version)} != supported ${DECISION_POLICY_V3_VERSION} (unknown policy version is never trusted)`,
+    );
+  }
+  if (typeof stored["policyVersion"] === "string" && stored["policyVersion"] !== policy.version) {
+    violations.push(
+      `stored policyVersion ${JSON.stringify(stored["policyVersion"])} != embedded policy.version ${JSON.stringify(policy.version)}`,
+    );
+  }
   if (stored["thresholdDigest"] !== computeThresholdDigestV3(policy)) {
     violations.push(`stored thresholdDigest ${String(stored["thresholdDigest"])} != digest(embedded policy) (thresholds tampered)`);
   }
   const candidateId = typeof stored["candidateId"] === "string" ? (stored["candidateId"] as string) : null;
   const planDigest = typeof stored["planDigest"] === "string" ? (stored["planDigest"] as string) : null;
+
+  // E4-R04 (F10): role/identity cross-binding — the candidate role in the
+  // artifact must be the SAME candidate the DecisionArtifact names, and the
+  // config hash must line up. Baseline role likewise: arms must not be swapped.
+  if (candidate.arm.armId !== "candidate") {
+    violations.push(`candidate artifact armId=${JSON.stringify(candidate.arm.armId)} is not "candidate" (roles swapped?)`);
+  }
+  if (baseline.arm.armId !== "baseline") {
+    violations.push(`baseline artifact armId=${JSON.stringify(baseline.arm.armId)} is not "baseline" (roles swapped?)`);
+  }
+  if (candidateId !== null && candidate.arm.candidateId !== candidateId) {
+    violations.push(`stored candidateId ${JSON.stringify(candidateId)} != candidate.arm.candidateId ${JSON.stringify(candidate.arm.candidateId)}`);
+  }
+  // E4-R04 #5: the candidate's CONFIG identity must be present — a run without a
+  // config identity cannot be promoted (missing promotion-required info is
+  // rejected, never skipped). arm.candidateConfigHash and
+  // manifest.runtimeConfigHash are DIFFERENT facts (candidate config vs runtime
+  // config); each must exist, but they are not cross-required to be equal.
+  if (candidate.arm.candidateConfigHash === null || candidate.arm.candidateConfigHash === "") {
+    violations.push("candidate arm lacks candidateConfigHash (candidate config identity unknown)");
+  }
+  if (typeof candidate.manifest["runtimeConfigHash"] !== "string" || candidate.manifest["runtimeConfigHash"] === "") {
+    violations.push("candidate manifest lacks runtimeConfigHash (runtime config identity unknown)");
+  }
+
   const pair: V3ArtifactPair = {
     baseline,
     candidate,
-    baselineDigest: String(stored["baselineArtifactDigest"] ?? ""),
-    candidateDigest: String(stored["candidateArtifactDigest"] ?? ""),
+    baselineDigest,
+    candidateDigest,
   };
   const replay = deriveV3Decision(pair, candidateId, planDigest, policy);
   const da = replay.decisionArtifact;

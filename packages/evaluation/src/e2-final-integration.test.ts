@@ -152,7 +152,7 @@ describe("E2-16 final integration acceptance", () => {
       const arm = getArmFactory().resolveCandidate("adaptive_recovery_v2");
       const artifact = buildExperimentArtifactV3({
         arm: { armId: "candidate", candidateId: "adaptive_recovery_v2", candidateConfigHash: arm.digest },
-        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: "d".repeat(64), promotionEligible: true, isolationStrength: "strong" },
+        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: "d".repeat(64), promotionEligible: true, isolationStrength: "strong", runtimeConfigHash: arm.digest },
         outcomes: Array.from({ length: 12 }, (_, i) => ({
           caseId: `ho-0${(i % 6) + 1}`,
           suite: "holdout",
@@ -190,7 +190,7 @@ describe("E2-16 final integration acceptance", () => {
       // E4-06: a complete promotion bundle also carries the BASELINE artifact.
       const baselineArtifact = buildExperimentArtifactV3({
         arm: { armId: "baseline", candidateId: null, candidateConfigHash: null },
-        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: "d".repeat(64), promotionEligible: true, isolationStrength: "strong" },
+        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: "d".repeat(64), promotionEligible: true, isolationStrength: "strong", runtimeConfigHash: arm.digest },
         outcomes: Array.from({ length: 12 }, (_, i) => ({
           caseId: `ho-0${(i % 6) + 1}`, suite: "holdout", armId: "baseline", attempt: 1, repetition: Math.floor(i / 6) + 1, order: i + 1,
           passed: false, grade: "poor", verificationPassed: false, terminationReason: "verified_complete",

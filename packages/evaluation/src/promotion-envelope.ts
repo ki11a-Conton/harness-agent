@@ -26,7 +26,7 @@ import { createHash } from "node:crypto";
 import { readFile, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { stableStringify } from "./manifest.js";
-import { loadExperimentArtifactV3 } from "./artifact-v3/loader.js";
+import { loadExperimentArtifactV3, validateExperimentArtifactV3FromBytes } from "./artifact-v3/loader.js";
 
 export const PROMOTION_ENVELOPE_SCHEMA_VERSION = "3.0.0";
 export const PROMOTION_ENVELOPE_POLICY_VERSION = "e2-07-policy-v1";
@@ -135,6 +135,13 @@ export function buildPromotionEnvelope(input: BuildPromotionEnvelopeInput): Prom
 
 function sha256OfFileBytes(buf: Buffer): string {
   return createHash("sha256").update(buf).digest("hex");
+}
+
+/** Digest the writer/E2-06 layer uses for artifact digests: sha256 over the
+ *  TRIMMED UTF-8 text (loadV3ArtifactPair's convention). The replay must
+ *  recompute it EXACTLY like the writer, or a genuine bundle would mismatch. */
+function sha256OfTrimmedText(buf: Buffer): string {
+  return createHash("sha256").update(buf.toString("utf8").trim(), "utf8").digest("hex");
 }
 
 /**
@@ -256,18 +263,47 @@ export async function loadPromotionEnvelope(
     }
   }
 
-  // Verify artifact refs: file must exist and digest must be unchanged.
+  // E4-R04 (F11): every path/read in this loader resolves against the trusted
+  // BUNDLE ROOT — never process.cwd() — and each file is read ONCE, so the
+  // bytes used for digest verification, strict parse and evaluator replay are
+  // the same bytes (a file swapped between check and consume cannot smuggle
+  // different content through).
+  const bundleRoot = verify.bundleRoot ?? dirname(resolve(path));
+  const readOnce = new Map<string, Buffer>();
+  const readBytes = async (absPath: string): Promise<Buffer | null> => {
+    if (readOnce.has(absPath)) return readOnce.get(absPath)!;
+    try {
+      const b = await readFile(absPath);
+      readOnce.set(absPath, b);
+      return b;
+    } catch {
+      return null;
+    }
+  };
+  /** Resolve `p` inside bundleRoot, rejecting traversal/symlink escape BEFORE any
+   *  content read; returns the canonical absolute path or null with violations. */
+  const resolveBundleRef = async (p: string, role: string): Promise<{ abs: string | null; violations: string[] }> => {
+    const violations = await pathGuardViolations(bundleRoot, p, role);
+    if (violations.length > 0) return { abs: null, violations };
+    return { abs: resolve(bundleRoot, p), violations: [] };
+  };
+
+  // Verify artifact refs: file must exist and digest must be unchanged. Reads
+  // resolve against bundleRoot and reuse the readOnce cache (F11).
   if (verify.verifyArtifactRefs !== false) {
     await Promise.all(
       (e.artifactRefs ?? []).map(async (ref: AxisArtifactRef) => {
-        try {
-          const buf = await readFile(ref.path);
-          const actual = sha256OfFileBytes(buf);
-          if (actual !== ref.digest) {
-            issues.push({ code: "ARTIFACT_DIGEST_CHANGED", detail: `artifact ${ref.path} digest changed: recorded ${ref.digest}, actual ${actual}` });
-          }
-        } catch {
+        const { abs, violations } = await resolveBundleRef(ref.path, `artifactRef ${ref.role ?? "?"}`);
+        for (const v of violations) issues.push({ code: "PATH_OUTSIDE_BUNDLE", detail: v });
+        if (abs === null) return;
+        const buf = await readBytes(abs);
+        if (buf === null) {
           issues.push({ code: "ARTIFACT_MISSING", detail: `artifact ${ref.path} missing/unreadable` });
+          return;
+        }
+        const actual = sha256OfFileBytes(buf);
+        if (actual !== ref.digest) {
+          issues.push({ code: "ARTIFACT_DIGEST_CHANGED", detail: `artifact ${ref.path} digest changed: recorded ${ref.digest}, actual ${actual}` });
         }
       }),
     );
@@ -331,33 +367,34 @@ export async function loadPromotionEnvelope(
     if (!baseRef) issues.push({ code: "MISSING_REQUIRED_FIELD", detail: "artifactRefs missing a baseline role" });
     if (!candRef) issues.push({ code: "MISSING_REQUIRED_FIELD", detail: "artifactRefs missing a candidate role" });
     // One file may not impersonate two roles (e.g. baseline ref pointed at the
-    // candidate artifact).
-    if (baseRef && candRef && resolve(baseRef.path) === resolve(candRef.path)) {
-      issues.push({ code: "CROSS_BINDING_MISMATCH", detail: "baseline and candidate artifactRefs resolve to the same file (one file per role)" });
-    }
-
-    // E4-06 #3: every ref must stay inside the trusted bundle root.
-    const bundleRoot = verify.bundleRoot ?? dirname(resolve(path));
-    for (const [role, ref] of [["baseline", baseRef], ["candidate", candRef]] as const) {
-      if (!ref) continue;
-      for (const v of await pathGuardViolations(bundleRoot, ref.path, `${role} artifactRef`)) {
-        issues.push({ code: "PATH_OUTSIDE_BUNDLE", detail: v });
-      }
-    }
-    if (typeof e.decisionArtifactPath === "string") {
-      for (const v of await pathGuardViolations(bundleRoot, e.decisionArtifactPath, "decisionArtifact")) {
-        issues.push({ code: "PATH_OUTSIDE_BUNDLE", detail: v });
+    // candidate artifact). Resolved against bundleRoot so a moved bundle still
+    // compares the same files (F11).
+    if (baseRef && candRef) {
+      const b = await resolveBundleRef(baseRef.path, "baseline artifactRef");
+      const c = await resolveBundleRef(candRef.path, "candidate artifactRef");
+      if (b.abs !== null && c.abs !== null && b.abs === c.abs) {
+        issues.push({ code: "CROSS_BINDING_MISMATCH", detail: "baseline and candidate artifactRefs resolve to the same file (one file per role)" });
       }
     }
 
+    // E4-R04 (F11): every read resolves against the BUNDLE ROOT (never
+    // process.cwd()), and each file is read ONCE — the same bytes are used for
+    // digest verification, strict parse AND evaluator replay, so a file swapped
+    // between "check" and "consume" cannot smuggle different content through.
     const strictLoadV3 = async (ref: AxisArtifactRef | undefined, role: string) => {
       if (!ref) return null;
-      // Full strict load: schema + refs + content digest + summary + eventRecords.
-      // A plain text file, a non-V3 shape, or a V3 whose internal contentDigest
-      // no longer matches its (tampered) outcomes all throw here.
+      // Resolve against bundleRoot (F11), then read ONCE and validate from bytes.
+      const { abs, violations } = await resolveBundleRef(ref.path, `${role} artifactRef`);
+      for (const v of violations) issues.push({ code: "PATH_OUTSIDE_BUNDLE", detail: v });
+      if (abs === null) return null;
+      const bytes = await readBytes(abs);
+      if (bytes === null) {
+        issues.push({ code: "ARTIFACT_NOT_V3", detail: `${role} artifact ${ref.path} unreadable` });
+        return null;
+      }
       try {
-        const { artifact } = await loadExperimentArtifactV3(ref.path);
-        return artifact;
+        const artifacts = validateExperimentArtifactV3FromBytes(bytes.toString("utf8"), abs);
+        return { artifact: artifacts.artifact, digest: sha256OfTrimmedText(bytes) };
       } catch (err) {
         issues.push({ code: "ARTIFACT_NOT_V3", detail: `${role} artifact ${ref.path} fails strict V3 load: ${err instanceof Error ? err.message : String(err)}` });
         return null;
@@ -367,44 +404,75 @@ export async function loadPromotionEnvelope(
     const baseV3 = await strictLoadV3(baseRef, "baseline");
 
     // candidate must be promotion-eligible (strong isolation recorded at run time).
-    if (candV3 && candV3.manifest["promotionEligible"] !== true) {
-      issues.push({ code: "CANDIDATE_NOT_ELIGIBLE", detail: `candidate promotionEligible=${String(candV3.manifest["promotionEligible"])} — insecure/none isolation cannot promote` });
+    if (candV3 && candV3.artifact.manifest["promotionEligible"] !== true) {
+      issues.push({ code: "CANDIDATE_NOT_ELIGIBLE", detail: `candidate promotionEligible=${String(candV3.artifact.manifest["promotionEligible"])} — insecure/none isolation cannot promote` });
     }
 
     // DecisionArtifact: recompute its content digest + cross-bind to the plan.
     if (typeof e.decisionArtifactPath === "string") {
-      try {
-        const buf = await readFile(e.decisionArtifactPath);
-        const parsed = JSON.parse(buf.toString("utf8")) as Record<string, unknown>;
-        const { computeDecisionArtifactContentDigestV3 } = await import("./champion-eval-v3.js");
-        const recomputed = computeDecisionArtifactContentDigestV3(parsed);
-        if (typeof parsed.contentDigest !== "string" || recomputed !== parsed.contentDigest) {
-          issues.push({ code: "DECISION_ARTIFACT_DIGEST_INVALID", detail: `decision artifact contentDigest recomputes to ${recomputed}, recorded ${String(parsed.contentDigest)}` });
-        }
-        if (typeof parsed.candidateId === "string" && parsed.candidateId !== e.candidateId) {
-          issues.push({ code: "CROSS_BINDING_MISMATCH", detail: `decision.candidateId "${String(parsed.candidateId)}" != envelope.candidateId "${e.candidateId}"` });
-        }
-        if (candV3 && parsed.planDigest !== (candV3.manifest["planDigest"] ?? null)) {
-          issues.push({ code: "CROSS_BINDING_MISMATCH", detail: `decision.planDigest ${String(parsed.planDigest)} != candidate manifest.planDigest ${String(candV3.manifest["planDigest"])}` });
-        }
-        if (candV3 && e.sourceSha != null && e.sourceSha !== candV3.provenance.gitSha) {
-          issues.push({ code: "CROSS_BINDING_MISMATCH", detail: `envelope.sourceSha ${String(e.sourceSha)} != candidate provenance.gitSha ${String(candV3.provenance.gitSha)}` });
-        }
-        // E4-06 #4/#5: replay the pure evaluator on the strict-loaded pair and
-        // require the FULL decision payload to match the stored artifact. A file
-        // that says ACCEPT over a pair that actually fails is caught here.
-        if (baseV3 && candV3) {
-          const { verifyDecisionArtifactReplayV3 } = await import("./champion-eval-v3.js");
-          const replayViolations = verifyDecisionArtifactReplayV3(baseV3, candV3, parsed);
-          for (const v of replayViolations) {
-            issues.push({ code: "DECISION_REPLAY_MISMATCH", detail: v });
+      const { abs: daAbs, violations: daViolations } = await resolveBundleRef(e.decisionArtifactPath, "decisionArtifact");
+      for (const v of daViolations) issues.push({ code: "PATH_OUTSIDE_BUNDLE", detail: v });
+      if (daAbs !== null) {
+        try {
+          if (verify.verifyDecisionArtifact !== false) {
+            const buf = await readBytes(daAbs);
+            if (buf === null) {
+              issues.push({ code: "DECISION_ARTIFACT_MISSING", detail: `decision artifact ${e.decisionArtifactPath} missing/unreadable` });
+            } else {
+              const actualDaDigest = sha256OfFileBytes(buf);
+              if (actualDaDigest !== e.decisionArtifactDigest) {
+                issues.push({ code: "DECISION_ARTIFACT_DIGEST_CHANGED", detail: `decision artifact ${e.decisionArtifactPath} digest changed: recorded ${e.decisionArtifactDigest}, actual ${actualDaDigest}` });
+              }
+              const parsed = JSON.parse(buf.toString("utf8")) as Record<string, unknown>;
+              // E4-R04 #4: strict version support — a non-empty string is not enough.
+              if (parsed.schemaVersion !== "3.0.0") {
+                issues.push({ code: "DECISION_ARTIFACT_INVALID", detail: `decision artifact schemaVersion ${JSON.stringify(parsed.schemaVersion)} != supported 3.0.0` });
+              }
+              if (typeof parsed.policyVersion !== "string" || parsed.policyVersion === "") {
+                issues.push({ code: "DECISION_ARTIFACT_INVALID", detail: "decision artifact missing policyVersion" });
+              }
+              if (parsed.decision !== "ACCEPT") {
+                issues.push({ code: "DECISION_ARTIFACT_INVALID", detail: `decision artifact decision="${String(parsed.decision)}" is not ACCEPT` });
+              }
+              if (typeof parsed.contentDigest !== "string" || parsed.contentDigest === "") {
+                issues.push({ code: "DECISION_ARTIFACT_INVALID", detail: "decision artifact missing contentDigest" });
+              }
+              const { computeDecisionArtifactContentDigestV3 } = await import("./champion-eval-v3.js");
+              const recomputed = computeDecisionArtifactContentDigestV3(parsed);
+              if (typeof parsed.contentDigest !== "string" || recomputed !== parsed.contentDigest) {
+                issues.push({ code: "DECISION_ARTIFACT_DIGEST_INVALID", detail: `decision artifact contentDigest recomputes to ${recomputed}, recorded ${String(parsed.contentDigest)}` });
+              }
+              if (typeof parsed.candidateId === "string" && parsed.candidateId !== e.candidateId) {
+                issues.push({ code: "CROSS_BINDING_MISMATCH", detail: `decision.candidateId "${String(parsed.candidateId)}" != envelope.candidateId "${e.candidateId}"` });
+              }
+              if (candV3 && parsed.planDigest !== (candV3.artifact.manifest["planDigest"] ?? null)) {
+                issues.push({ code: "CROSS_BINDING_MISMATCH", detail: `decision.planDigest ${String(parsed.planDigest)} != candidate manifest.planDigest ${String(candV3.artifact.manifest["planDigest"])}` });
+              }
+              if (candV3 && e.sourceSha != null && e.sourceSha !== candV3.artifact.provenance.gitSha) {
+                issues.push({ code: "CROSS_BINDING_MISMATCH", detail: `envelope.sourceSha ${String(e.sourceSha)} != candidate provenance.gitSha ${String(candV3.artifact.provenance.gitSha)}` });
+              }
+              // E4-06 #4/#5 + E4-R04 (F09): replay the pure evaluator on the
+              // strict-loaded pair with digests computed from the ACTUAL bytes
+              // that were read; require the FULL payload to match. A file that
+              // says ACCEPT over a pair that actually fails is caught here.
+              if (baseV3 && candV3) {
+                const { verifyDecisionArtifactReplayV3 } = await import("./champion-eval-v3.js");
+                const replayViolations = verifyDecisionArtifactReplayV3(
+                  baseV3.artifact,
+                  candV3.artifact,
+                  parsed,
+                  baseV3.digest,
+                  candV3.digest,
+                );
+                for (const v of replayViolations) {
+                  issues.push({ code: "DECISION_REPLAY_MISMATCH", detail: v });
+                }
+              }
+            }
           }
+        } catch (replayErr) {
+          process.stderr.write(`[degraded] promotion-envelope decision replay skipped: ${replayErr instanceof Error ? replayErr.message : String(replayErr)}\n`);
         }
-      } catch (replayErr) {
-        // The decision artifact was already reported missing/invalid by the
-        // presence block above; this second read failing is surfaced on the
-        // degraded channel rather than swallowed.
-        process.stderr.write(`[degraded] promotion-envelope decision replay skipped: ${replayErr instanceof Error ? replayErr.message : String(replayErr)}\n`);
       }
     }
   }

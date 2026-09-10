@@ -121,7 +121,7 @@ async function buildV3ArtifactPair(
   const candidateConfigHash = arm.digest;
   const candidateArtifact = buildExperimentArtifactV3({
     arm: { armId: "candidate", candidateId: "adaptive_recovery_v2", candidateConfigHash },
-    manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha, dirty: false, planDigest: sha("plan-v1"), promotionEligible: true, isolationStrength: "strong" },
+    manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha, dirty: false, planDigest: sha("plan-v1"), promotionEligible: true, isolationStrength: "strong", runtimeConfigHash },
     outcomes: [
       // Rep 1: candidate passes all 3 (activation on all three, coverage 3/6
       // overall ≥ 0.5 with ≥3 eligible cases).

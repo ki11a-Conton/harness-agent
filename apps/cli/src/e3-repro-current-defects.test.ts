@@ -281,6 +281,9 @@ describe("R-06: empty perRepetitionDeltas with repetitions=2 gives INVALID [FIXE
       minConclusiveNetDelta: 2,
       tokensDelta: 10000,
       maxTokensDelta: 100000,
+      recoveryCount: 3,
+      recoveredCount: 3,
+      minRecoveryRate: null,
       recommendsRepetition: false,
     });
     // FIXED (E3-06): perRepetitionComplete gate catches empty deltas.
