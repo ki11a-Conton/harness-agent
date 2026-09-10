@@ -55,10 +55,52 @@ export interface ChampionStartupOutcome {
   proof: AppliedProofV1 | null;
 }
 
+/** E4-R05 (F12): the budget-aware completion guidance the champion application
+ *  installs as `completionGuidance` — the SAME behavior text the benchmark uses,
+ *  so the promoted candidate really runs what was evaluated. */
+export const CHAMPION_BUDGET_AWARE_GUIDANCE =
+  "When you are close to the configured budget, prioritize running the verification command and confirming the task is complete. Avoid spending the remaining budget on speculative work when verification would pass.";
+
+/**
+ * E4-R05 (F12): mechanisms a champion may require and whether the production
+ * startup can actually install them TODAY. Only mechanisms with a real install
+ * point may be applied; anything else rejects the candidate startup outright —
+ * a flags-only PROVEN is never written.
+ */
+export function championMechanismInstallPlan(championConfig: {
+  memory?: { enabled?: boolean };
+  budgetAwareCompletion?: boolean;
+  toolSelector?: unknown;
+  contextBudget?: unknown;
+  recovery?: unknown;
+}): { ok: boolean; reason?: string; supported: Record<string, boolean> } {
+  const supported: Record<string, boolean> = { memory: false, budgetAware: false };
+  if (championConfig.memory?.enabled === true || championConfig.memory?.enabled === false) {
+    // memory is installed by the wrapper (enabled true/false both project).
+    supported.memory = true;
+  }
+  if (championConfig.budgetAwareCompletion === true) {
+    supported.budgetAware = true;
+  }
+  const unsupported: string[] = [];
+  if (championConfig.toolSelector !== undefined) unsupported.push("toolSelector (deferred-schema)");
+  if (championConfig.contextBudget !== undefined) unsupported.push("contextBudget (adaptive)");
+  if (championConfig.recovery !== undefined && championConfig.recovery !== null) unsupported.push("recoveryPlanner");
+  if (unsupported.length > 0) {
+    return {
+      ok: false,
+      reason: `champion candidate requires mechanisms with no production install point: ${unsupported.join(", ")} — refusing flags-only PROVEN`,
+      supported,
+    };
+  }
+  return { ok: true, supported };
+}
+
 /** The champion-controlled surface projected from a real resolved config. */
 export function projectChampionFieldChecks(
   championFlags: Record<string, boolean>,
   championMemoryEnabled: boolean | undefined,
+  championBudgetAware: boolean,
   resolved: HarnessConfig,
   origins: ReadonlyMap<string, { source: string }>,
 ): ChampionFieldCheckV1[] {
@@ -80,6 +122,17 @@ export function projectChampionFieldChecks(
       intended: championMemoryEnabled,
       actual,
       origin: origins.get("memory.enabled")?.source ?? "none",
+    });
+  }
+  // E4-R05 (F12): budget-aware completion must be INSTALLED (the config carries
+  // the guidance) and come from the champion application — a fallback or an
+  // environment override is not application.
+  if (championBudgetAware) {
+    checks.push({
+      key: "completionGuidance",
+      intended: CHAMPION_BUDGET_AWARE_GUIDANCE,
+      actual: resolved.completionGuidance ?? null,
+      origin: origins.get("completionGuidance")?.source ?? "none",
     });
   }
   return checks;
@@ -150,6 +203,20 @@ export async function createHarnessWithChampion(
   const championConfig = resolved.harnessConfig;
   const championFlags = championConfig.featureFlags;
   const championMemory = championConfig.memory?.enabled;
+  const championBudgetAware = championConfig.budgetAwareCompletion === true;
+
+  // E4-R05 (F12): a champion whose required mechanisms have no real install
+  // point is REFUSED here — never applied with flags-only PROVEN.
+  const installPlan = championMechanismInstallPlan(championConfig);
+  if (!installPlan.ok) {
+    await recordFailure(state, installPlan.reason ?? "unsupported mechanisms", [], [], now, opts.runtimeEntrypoint, processId, opts.stateFilePath);
+    return {
+      harness: await createHarness(base),
+      status: "profileRejected",
+      reason: installPlan.reason ?? "unsupported mechanisms",
+      proof: null,
+    };
+  }
 
   // Build the harness config the champion prescribes on top of the app's base.
   const championHarnessConfig: HarnessConfig = {
@@ -161,6 +228,9 @@ export async function createHarnessWithChampion(
       : championMemory === false
         ? { memory: { ...(base.memory ?? {}), enabled: false } }
         : {}),
+    // E4-R05 (F12): budget-aware completion is INSTALLED, not a flag — the
+    // harness main agent appends this guidance to the system prompt.
+    ...(championBudgetAware ? { completionGuidance: CHAMPION_BUDGET_AWARE_GUIDANCE } : {}),
   };
 
   let harness: Harness;
@@ -175,6 +245,7 @@ export async function createHarnessWithChampion(
   checks = projectChampionFieldChecks(
     championFlags,
     championMemory,
+    championBudgetAware,
     harness.resolvedConfig.value,
     harness.resolvedConfig.origins,
   );
@@ -226,12 +297,16 @@ export async function createHarnessWithChampion(
   const next = markChampionApplied(state, proof);
   const cas = await writeChampionStateFileCas(next, championStateDigest(state), opts.stateFilePath);
   if (!cas.ok) {
-    // Lost the race: another process advanced the state. Do not overwrite it
-    // and do not claim applied — the next startup re-verifies.
+    // E4-R05 (F13): LOST THE RACE — another process advanced the state while
+    // this one built generation A's harness. NEVER return A: close it (no
+    // timers/stores keep serving) and run the frozen baseline instead.
+    await harness.close().catch((closeErr: unknown) => {
+      process.stderr.write(`[degraded] champion-application stale-harness close failed: ${closeErr instanceof Error ? closeErr.message : String(closeErr)}\n`);
+    });
     return {
-      harness,
+      harness: await createHarness(base),
       status: "applicationFailed",
-      reason: "champion state changed concurrently; applied proof not written (CAS rejected)",
+      reason: "champion state changed concurrently; applied proof not written (CAS rejected); stale champion harness closed",
       proof: null,
     };
   }

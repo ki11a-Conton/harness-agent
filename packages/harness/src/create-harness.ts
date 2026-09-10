@@ -817,16 +817,23 @@ function mainAgent(
   delegationToolNames: string[] = [],
   toolLookupName?: string,
 ): AgentDefinition {
+  // E4-R05 (F12): a champion-applied `completionGuidance` MUST actually reach
+  // the primary agent's prompt — flags alone are not proof of installation.
+  const basePrompt =
+    toolLookupName !== undefined
+      ? `${DEFAULT_MAIN_SYSTEM_PROMPT}\n\nDeferred tool schemas: some tools are advertised with a stub schema. Before calling one, fetch its full input schema with ${toolLookupName}({"names": ["<tool>"]}).`
+      : DEFAULT_MAIN_SYSTEM_PROMPT;
+  const systemPrompt =
+    typeof config.completionGuidance === "string" && config.completionGuidance.length > 0
+      ? `${basePrompt}\n\n${config.completionGuidance}`
+      : basePrompt;
   return {
     id: newAgentId(),
     name: "main",
     description: "default harness agent",
     mode: "primary",
     model: config.model,
-    systemPrompt:
-      toolLookupName !== undefined
-        ? `${DEFAULT_MAIN_SYSTEM_PROMPT}\n\nDeferred tool schemas: some tools are advertised with a stub schema. Before calling one, fetch its full input schema with ${toolLookupName}({"names": ["<tool>"]}).`
-        : DEFAULT_MAIN_SYSTEM_PROMPT,
+    systemPrompt,
     tools: {
       allow: [
         ...PRODUCTION_TOOL_NAMES,

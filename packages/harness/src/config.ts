@@ -85,6 +85,15 @@ export interface HarnessConfig {
    *  returns the subset to inject. Default: identity (all skills indexed). */
   skillSelector?: (entries: SkillIndexEntry[]) => SkillIndexEntry[];
 
+  /**
+   * E4-R05 (F12): optional system-prompt SUFFIX for the main agent installed by
+   * a champion application (e.g. the budget-aware completion guidance). When
+   * present, `mainAgent` appends it after the default prompt so a real turn
+   * exhibits the mechanism; the champion application records it in the
+   * AppliedProof's field checks (origin "champion"). Never contains secrets.
+   */
+  completionGuidance?: string;
+
   /** P7-1/P7-2: progressive tool disclosure — a ToolSelector narrows the
    *  tool schemas advertised to the model per goal. Default: identity (every
    *  schema advertised, pre-P7 behavior). */
