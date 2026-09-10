@@ -1,4 +1,5 @@
-import { mkdtempSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -9,14 +10,11 @@ let ws = "";
 let outside = "";
 
 beforeAll(() => {
-  // E4-R07/F16: canonicalize the fixture paths. resolveExecCwd returns the
-  // CANONICAL (realpath'd) form, and on Windows CI the runner's temp dir is an
-  // 8.3 short path (C:\Users\RUNNER~1\...) whose realpath is the long
-  // (C:\Users\runneradmin\...) form — comparing an un-canonical fixture path
-  // against the canonical result failed there. The security assertions
-  // (containment/rejection) are unchanged; only the equality basis is fixed.
-  ws = realpathSync(mkdtempSync(join(tmpdir(), "ar-exec-ws-")));
-  outside = realpathSync(mkdtempSync(join(tmpdir(), "ar-exec-out-")));
+  // The assertion ORACLE canonicalizes both sides (see `canonical` below), so
+  // the fixture paths may stay lexical; an 8.3-short-path tmpdir resolves to
+  // the same canonical directory either way.
+  ws = mkdtempSync(join(tmpdir(), "ar-exec-ws-"));
+  outside = mkdtempSync(join(tmpdir(), "ar-exec-out-"));
   mkdirSync(join(ws, "sub", "nested"), { recursive: true });
 });
 
@@ -43,20 +41,27 @@ function ctx(cwd = ws): ToolExecutionContext {
 }
 
 describe("resolveExecCwd — E1-02 workspace containment", () => {
+  // E4-R07/F16: the executor returns the CANONICAL (realpath'd) form, and on
+  // Windows CI the runner's tmpdir is an 8.3 short path whose realpath is the
+  // long form — the oracle must be the SAME realpath the executor uses
+  // (node:fs/promises realpath), never the lexical `resolve()` of an aliased
+  // base. Containment/rejection assertions are unchanged.
+  const canonical = (p: string): Promise<string> => realpath(p);
+
   it("no cwd → workspace root", async () => {
-    expect(await resolveExecCwd(undefined, ws)).toBe(resolve(ws));
+    expect(await resolveExecCwd(undefined, ws)).toBe(await canonical(resolve(ws)));
   });
 
   it("'.' → workspace root (NOT host cwd)", async () => {
-    expect(await resolveExecCwd(".", ws)).toBe(resolve(ws));
+    expect(await resolveExecCwd(".", ws)).toBe(await canonical(resolve(ws)));
   });
 
   it("'sub/dir' → normalized absolute inside workspace", async () => {
-    expect(await resolveExecCwd("sub/nested", ws)).toBe(resolve(ws, "sub", "nested"));
+    expect(await resolveExecCwd("sub/nested", ws)).toBe(await canonical(resolve(ws, "sub", "nested")));
   });
 
   it("absolute path inside workspace is allowed", async () => {
-    expect(await resolveExecCwd(resolve(ws, "sub"), ws)).toBe(resolve(ws, "sub"));
+    expect(await resolveExecCwd(resolve(ws, "sub"), ws)).toBe(await canonical(resolve(ws, "sub")));
   });
 
   it("'../outside' is rejected with WORKSPACE_POLICY:cwd-outside", async () => {
@@ -94,7 +99,9 @@ describe("execTool cwd — E1-02 end-to-end", () => {
     const r = await execTool.execute({ command: `${JSON.stringify(NODE)} -e "console.log(process.cwd())"`, cwd: "." }, ctx());
     expect(r.status).toBe("success");
     if (r.status === "success" && r.output !== undefined) {
-      expect(r.output.stdout.trim()).toBe(resolve(ws));
+      // Canonical oracle (same realpath the executor uses) — the runner's temp
+      // dir may be an 8.3 short path; the subprocess reports the long form.
+      expect(r.output.stdout.trim()).toBe(await realpath(resolve(ws)));
     }
   });
 
