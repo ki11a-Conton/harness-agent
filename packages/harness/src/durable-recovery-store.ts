@@ -98,14 +98,37 @@ export interface DurableRecoveryStoreOptions {
 export class DurableRecoveryStore implements RecoveryStore {
   private readonly root: string;
   private readonly now: () => number;
+  /** E4-R06 (F15): a per-instance nonce so each lock acquisition is a distinct
+   *  OWNER TOKEN, even across two clients in one process (tests) or a PID
+   *  reuse after a crash. Release only removes the token it wrote. */
+  private readonly lockNonce: string;
 
   constructor(opts: DurableRecoveryStoreOptions) {
     this.root = join(resolve(opts.dataDir), "recovery");
     this.now = opts.now ?? Date.now;
+    this.lockNonce = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   }
 
   private file(taskId: string): string {
     return join(this.root, `${taskId}.json`);
+  }
+
+  /** E4-R06 (F14): the persistent quarantine markers for a task (files named
+   *  `<task>.json.corrupt-*`). Their mere existence means the record is corrupt
+   *  and must NOT be auto-recreated. */
+  private async corruptMarkers(taskId: string): Promise<string[]> {
+    try {
+      const entries = await readdir(this.root);
+      const prefix = `${taskId}.json.corrupt-`;
+      return entries.filter((e) => e.startsWith(prefix)).map((e) => join(this.root, e));
+    } catch (err) {
+      if (isNodeError(err, "ENOENT")) return [];
+      throw new RecoveryStoreError("IO_ERROR", `corrupt-marker scan failed for ${taskId}: ${String(err)}`);
+    }
+  }
+
+  private async hasCorruptMarker(taskId: string): Promise<boolean> {
+    return (await this.corruptMarkers(taskId)).length > 0;
   }
 
   private async readEnvelope(taskId: string): Promise<RecoveryEnvelope | undefined> {
@@ -114,7 +137,19 @@ export class DurableRecoveryStore implements RecoveryStore {
     try {
       raw = await readFile(file, "utf8");
     } catch (err) {
-      if (isNodeError(err, "ENOENT")) return undefined;
+      if (isNodeError(err, "ENOENT")) {
+        // E4-R06 (F14): a quarantined corrupt file leaves a PERSISTENT marker.
+        // A second / post-restart read must still see the corrupt state —
+        // ENOENT alone would let the actor create a fresh attempt=0 record,
+        // resetting attempts by damage. Only an explicit maintenance delete
+        // clears the marker.
+        for (const marker of await this.corruptMarkers(taskId)) {
+          if (marker !== null) {
+            throw new RecoveryStoreError("CORRUPT_RECORD", `${file}: persistent corrupt marker ${marker} — record remains corrupt; attempts NOT reset (explicit maintenance delete required)`);
+          }
+        }
+        return undefined;
+      }
       throw new RecoveryStoreError("IO_ERROR", `read failed for ${file}: ${String(err)}`);
     }
     let parsed: unknown;
@@ -153,6 +188,12 @@ export class DurableRecoveryStore implements RecoveryStore {
       try {
         const current = await this.readEnvelope(record.taskId);
         const currentVersion = current?.record.version ?? 0;
+        // E4-R06 (F14): a corrupt marker is NOT bypassed by a fresh write — the
+        // actor cannot silently reset a damaged record to attempt=0. Clearing
+        // the damage is an explicit maintenance action (deleteRecord).
+        if (record.version === undefined && await this.hasCorruptMarker(record.taskId)) {
+          throw new RecoveryStoreError("CORRUPT_RECORD", `recovery ${record.taskId}: corrupt quarantine marker present — fresh write refused (attempts NOT reset; explicit maintenance delete required)`);
+        }
         // CAS: a fresh (versionless) write requires no stored record; an update
         // must match the stored version exactly.
         if (record.version === undefined) {
@@ -184,6 +225,15 @@ export class DurableRecoveryStore implements RecoveryStore {
         await unlink(this.file(taskId));
       } catch (err) {
         if (!isNodeError(err, "ENOENT")) throw new RecoveryStoreError("IO_ERROR", `delete failed for ${taskId}: ${String(err)}`);
+      }
+      // E4-R06 (F14): delete IS the explicit maintenance action that clears the
+      // persistent corrupt markers; everything else refuses to remove them.
+      for (const marker of await this.corruptMarkers(taskId)) {
+        try {
+          await unlink(marker);
+        } catch (err) {
+          if (!isNodeError(err, "ENOENT")) degraded(`delete marker ${marker}`, err);
+        }
       }
     });
   }
@@ -222,35 +272,71 @@ export class DurableRecoveryStore implements RecoveryStore {
     return due.slice(0, Math.max(0, limit));
   }
 
-  /** Cross-process advisory lock: atomic create with "wx"; a stale lock (older
-   *  than LOCK_STALE_MS, or whose PID is gone) is removed and retried. Returns a
-   *  release function. Fails fast when a fresh lock is held elsewhere. */
+  /**
+   * Cross-process advisory lock: atomic create with "wx"; the lock file holds
+   * an OWNER TOKEN (`<pid> <per-store-nonce>`). E4-R06 (F15):
+   *   - a lock is only stolen when it is older than LOCK_STALE_MS AND its
+   *     recorded owner PID is no longer alive — a live writer that simply runs
+   *     longer than 10s is never robbed;
+   *   - release only unlinks if the lock file STILL carries THIS owner's token;
+   *     an old owner's finally can never delete a newer owner's lock.
+   * Returns a release function. Fails fast when a fresh lock is held elsewhere.
+   */
   private async acquireFileLock(lockFile: string): Promise<() => Promise<void>> {
+    const myToken = `${process.pid} ${this.lockNonce}`;
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         const handle = await open(lockFile, "wx");
-        await handle.writeFile(`${process.pid} ${this.now()}`);
+        await handle.writeFile(myToken);
         await handle.close();
-        return async () => { await ignoreButReport(unlink(lockFile), "release-lock"); };
+        return async () => {
+          // Fencing: only the CURRENT owner may unlink. If the file no longer
+          // carries our token, someone else owns it — never delete their lock.
+          try {
+            const text = await readFile(lockFile, "utf8");
+            if (text.trim() === myToken) {
+              await unlink(lockFile);
+            } else {
+              degraded(`release-lock (ownership changed, not deleting ${lockFile})`, new Error(`lock token ${JSON.stringify(text.trim())} != mine`));
+            }
+          } catch (err) {
+            if (!isNodeError(err, "ENOENT")) degraded("release-lock", err);
+          }
+        };
       } catch (err) {
         if (!isNodeError(err, "EEXIST")) throw new RecoveryStoreError("IO_ERROR", `lock create failed: ${String(err)}`);
-        let stale = true;
+        // Steal ONLY if older than the stale floor AND the owner is dead.
+        let steal = false;
         try {
           const s = await stat(lockFile);
-          if (this.now() - s.mtimeMs < LOCK_STALE_MS) stale = false;
+          const text = await readFile(lockFile, "utf8").catch(() => "");
+          const ownerPid = Number.parseInt(text.trim().split(" ")[0] ?? "", 10);
+          const ownerAlive = Number.isInteger(ownerPid) && ownerPid > 0 && processExists(ownerPid);
+          if (this.now() - s.mtimeMs >= LOCK_STALE_MS && !ownerAlive) steal = true;
         } catch (statErr) {
-          // Cannot stat the lock (vanished between create-attempt and check):
-          // treat as stale, but report so a flaky FS is visible.
+          // Cannot stat/read the lock (vanished or unreadable): report and treat
+          // as stealable so a flaky FS does not deadlock, but never silently.
           degraded("stat-lock (treating as stale)", statErr);
-          stale = true;
+          steal = true;
         }
-        if (stale) {
+        if (steal) {
           await ignoreButReport(unlink(lockFile), "remove-stale-lock");
           continue;
         }
-        throw new RecoveryStoreError("IO_ERROR", `recovery lock held by another process: ${lockFile}`);
+        throw new RecoveryStoreError("IO_ERROR", `recovery lock held by another ${LOCK_STALE_MS}ms-fresh live process: ${lockFile}`);
       }
     }
     throw new RecoveryStoreError("IO_ERROR", `could not acquire recovery lock: ${lockFile}`);
+  }
+}
+
+/** True when the process (by pid) exists right now. Node's kill(pid, 0) is a
+ *  cross-platform liveness probe (SIGTERM-less on Windows). */
+function processExists(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === "EPERM";
   }
 }

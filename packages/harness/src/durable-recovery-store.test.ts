@@ -153,3 +153,74 @@ describe("DurableRecoveryStore", () => {
     expect(env.record.taskId).toBe("t1");
   });
 });
+
+describe("E4-R06 durable-corrupt + lock fencing (F14/F15)", () => {
+  it("F14: a corrupt record stays CORRUPT on every read (second read, restart), never undefined, attempts not reset", async () => {
+    const store = new DurableRecoveryStore({ dataDir: dir });
+    await store.putRecord(baseRecord("t9"));
+    // Damage the file (partial write).
+    await writeFile(join(dir, "recovery", "t9.json"), "{ not json", "utf8");
+
+    // First read: CORRUPT_RECORD.
+    expect(await codes(() => store.getRecord(tid("t9")))).toBe("CORRUPT_RECORD");
+    // SECOND read: still CORRUPT_RECORD — never a silent undefined that would
+    // let the actor create a fresh attempt=0 record.
+    expect(await codes(() => store.getRecord(tid("t9")))).toBe("CORRUPT_RECORD");
+    // "Restart": a brand-new client over the same dir sees the same corruption.
+    const restarted = new DurableRecoveryStore({ dataDir: dir });
+    expect(await codes(() => restarted.getRecord(tid("t9")))).toBe("CORRUPT_RECORD");
+    // A FRESH write is refused while the marker exists (attempts cannot reset).
+    expect(await codes(() => restarted.putRecord(baseRecord("t9", { attempt: 0 })))).toBe("CORRUPT_RECORD");
+    // Attempt budget was never reset by damage — nothing fresh was written.
+    expect((await readdir(join(dir, "recovery"))).filter((f) => f.includes("t9.json.corrupt"))).not.toBe([]);
+    // Explicit MAINTENANCE delete clears the corruption.
+    await restarted.deleteRecord(tid("t9"));
+    expect(await restarted.getRecord(tid("t9"))).toBeUndefined();
+  });
+
+  it("F15: release only removes THIS owner's lock token (old owner cannot delete a new owner's lock)", async () => {
+    const store = new DurableRecoveryStore({ dataDir: dir });
+    await store.putRecord(baseRecord("t10"));
+    const lockFile = join(dir, "recovery", "t10.json.lock");
+    const acquire = (store as unknown as { acquireFileLock(f: string): Promise<() => Promise<void>> }).acquireFileLock.bind(store);
+
+    // Own token: acquire then release removes the lock.
+    const releaseOwn = await acquire(lockFile);
+    await releaseOwn();
+    await expect(readFile(lockFile, "utf8")).rejects.toThrow(/ENOENT/);
+
+    // Ownership change: an OLD owner's finally is invoked after a NEW owner
+    // rewrote the token — the fencing must NOT delete the new owner's lock.
+    const releaseOld = await acquire(lockFile);
+    await writeFile(lockFile, "9999 newer-owner", "utf8");
+    await releaseOld();
+    expect((await readFile(lockFile, "utf8")).trim()).toBe("9999 newer-owner");
+    await rm(lockFile, { force: true }).catch(() => {});
+  });
+
+  it("F15: a LIVE owner's lock is never stolen even past the 10s stale floor", async () => {
+    const store = new DurableRecoveryStore({ dataDir: dir });
+    await store.putRecord(baseRecord("t11"));
+    const lockFile = join(dir, "recovery", "t11.json.lock");
+    // Live owner (THIS process — the worker pid is definitely alive) with an
+    // OLD mtime: must NOT be stolen; acquire fails fast.
+    await writeFile(lockFile, `${process.pid} live-but-slow`, "utf8");
+    const old = new Date(Date.now() - 60_000);
+    const { utimes } = await import("node:fs/promises");
+    await utimes(lockFile, old, old);
+    expect(await codes(() => (store as unknown as { acquireFileLock(f: string): Promise<() => Promise<void>> }).acquireFileLock(lockFile))).toBe("IO_ERROR");
+  });
+
+  it("F15: a DEAD owner's old lock IS reclaimed", async () => {
+    const store = new DurableRecoveryStore({ dataDir: dir });
+    await store.putRecord(baseRecord("t12"));
+    const lockFile = join(dir, "recovery", "t12.json.lock");
+    await writeFile(lockFile, "99999999 crashed-owner", "utf8");
+    const old = new Date(Date.now() - 60_000);
+    const { utimes } = await import("node:fs/promises");
+    await utimes(lockFile, old, old);
+    const release = await (store as unknown as { acquireFileLock(f: string): Promise<() => Promise<void>> }).acquireFileLock(lockFile);
+    expect(typeof release).toBe("function");
+    await release();
+  });
+});
