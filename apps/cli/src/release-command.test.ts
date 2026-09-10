@@ -319,6 +319,36 @@ describe("P38.2-4/13 repo-owned gate runner (INV-P38.2-004)", () => {
     expect(["windows", "linux", "darwin"]).toContain(gatePlatform());
   });
 
+  it("E4-R19 (N20): the printed verdict derives from the EVIDENCE state — a failed/invalid evidence can never print PASS even with child exit 0", async () => {
+    // `pnpm typecheck` in this (dirty) dev worktree exits 0, but the EVIDENCE
+    // records cleanBefore/cleanAfter=false → state=failed → the console verdict
+    // must be FAIL (the evidence state is the deciding fact, never the raw
+    // child exit code — a dirty-tree PASS would contradict the evidence).
+    const dir = await tmpEvidenceDir();
+    const result = await releaseGateCmd(["typecheck"], { root: process.cwd(), headSha: HEAD, evidenceDir: dir });
+    const out = result.lines.join("\n");
+    const evidence = JSON.parse(await readFile(join(dir, "typecheck.json"), "utf8")) as {
+      passed: boolean;
+      state: string;
+      exitCode: number | null;
+    };
+    if (evidence.passed && evidence.state === "passed") {
+      expect(out).toContain("PASS");
+      expect(result.exitCode).toBe(0);
+    } else {
+      // A failed/invalid evidence (dirty tree, exit 0) must print FAIL with the
+      // evidence state and produce a NON-ZERO CLI exit — never a PASS.
+      expect(out).toContain("FAIL (evidence state=");
+      expect(out).toContain(`evidence state=${evidence.state}`);
+      expect(result.exitCode).toBe(1);
+    }
+    // In EITHER case the console verdict must agree with the evidence's state:
+    // the PASS token appears only when the evidence itself passed.
+    if (!evidence.passed || evidence.state !== "passed") {
+      expect(out).not.toContain("exitCode=0 PASS");
+    }
+  });
+
   it("E4-R12 (N01): a red gate prints the saved log ref + bounded failure summary that names the real cause", async () => {
     // Deterministic red gate: run `pnpm docs:verify` in an EMPTY temp root that
     // is not a pnpm workspace — the canonical command itself fails with a real

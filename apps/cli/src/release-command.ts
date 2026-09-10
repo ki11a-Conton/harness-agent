@@ -10,6 +10,7 @@ import { execFile, execFileSync } from "node:child_process";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { CommandResult } from "./commands.js";
+import type { GateEvidenceV2 } from "@ar/evaluation";
 import {
   GATE_COMMANDS,
   REQUIRED_GATES,
@@ -218,6 +219,12 @@ export interface GateRunResult {
   /** E4-R12 (N01): bounded, redacted failure summary printed to the console so
    *  the CI summary names the REAL failing check. */
   errorSummary?: string;
+  /** E4-R19 (N20): the DECIDING facts — the evidence's own `passed`/`state`
+   *  (a dirty/source-changed/invalid run is NOT a PASS even when the child
+   *  exited 0). The console verdict derives from these, never from the child's
+   *  raw exit code alone. */
+  evidencePassed: boolean;
+  evidenceState: GateEvidenceV2["state"];
 }
 
 /** Detect the OS namespace used by the P38.2-10 evidence layout. */
@@ -312,6 +319,8 @@ export async function runGate(
     gitSha: evidence.gitSha,
     ...(evidence.logRef !== undefined ? { logRef: evidence.logRef } : {}),
     ...(evidence.errorSummary !== undefined ? { errorSummary: evidence.errorSummary } : {}),
+    evidencePassed: evidence.passed,
+    evidenceState: evidence.state,
   };
 }
 
@@ -346,8 +355,12 @@ export async function releaseGateCmd(rest: string[], cliOpts: ReleaseVerifyOptio
   let worstExit = 0;
   for (const gate of gates) {
     const result = await runGate(gate, { root: cliOpts.root ?? process.cwd(), headSha: cliOpts.headSha, evidenceDir });
-    lines.push(`gate ${gate}: exitCode=${result.exitCode} ${result.exitCode === 0 ? "PASS" : "FAIL"} → ${result.evidencePath}`);
-    if (result.exitCode !== 0) worstExit = 1;
+    // E4-R19 (N20): the VERDICT derives from the evidence's own passed/state —
+    // a dirty-tree / source-changed / invalid run is NOT a PASS even when the
+    // child exited 0 (the console must never contradict the evidence).
+    const gateVerdict = result.evidencePassed && result.evidenceState === "passed";
+    lines.push(`gate ${gate}: exitCode=${result.exitCode} ${gateVerdict ? "PASS" : "FAIL"} (evidence state=${result.evidenceState}) → ${result.evidencePath}`);
+    if (!gateVerdict) worstExit = 1;
     // E4-R12 (N01): a red gate prints the SAVED log reference AND the bounded
     // failure summary right in the outer output — the CI summary must point at
     // the REAL failing check, not require grepping for a bare exit code.

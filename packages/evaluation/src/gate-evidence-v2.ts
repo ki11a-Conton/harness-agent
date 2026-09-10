@@ -20,7 +20,7 @@
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { mkdir, open, readFile, rename, writeFile } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { stableStringify } from "./manifest.js";
 
 export const GATE_EVIDENCE_V2_SCHEMA_VERSION = "2.0.0";
@@ -82,13 +82,15 @@ export type GateV2IssueCode =
   | "STALE_HEAD"
   | "COMMAND_MISMATCH"
   | "SOURCE_DIRTY_AFTER"
+  | "SOURCE_CHANGED"
   | "EXIT_CODE_TAMPERED"
   | "DIGEST_MISMATCH"
   | "NOT_RUN"
   | "PAID_BENCHMARK_NOT_AUTHORIZED"
   | "PASS_WITHOUT_EVIDENCE"
   | "PROVIDER_CALLS_ON_OFFLINE"
-  | "MISSING_ARTIFACT_REF";
+  | "MISSING_ARTIFACT_REF"
+  | "INVALID";
 
 export interface GateV2Issue {
   code: GateV2IssueCode;
@@ -142,12 +144,21 @@ export interface GateV2VerifyOptions {
   requireCleanAfter?: boolean;
 }
 
-/** Strict-verify one GateEvidenceV2 instance. Every bind is checked. */
+/** Strict-verify one GateEvidenceV2 instance. Every bind is checked.
+ *  E4-R19 (N19): the verifier FIRST runs the same strict structural parse as
+ *  the loader — a hand-written / incomplete object is rejected here exactly as
+ *  it is everywhere else (never a bare `JSON.parse as` shortcut). The semantic
+ *  checks still run so a tampered-but-well-formed object keeps its SPECIFIC
+ *  codes (EXIT_CODE_TAMPERED etc.) in addition to the structural rejection. */
 export function verifyGateEvidenceV2(
   evidence: GateEvidenceV2,
   opts: GateV2VerifyOptions,
 ): GateV2VerifyResult {
   const issues: GateV2Issue[] = [];
+  const structural = gateEvidenceV2Issues(evidence);
+  for (const d of structural) {
+    issues.push({ code: "INVALID", detail: d });
+  }
 
   // 1. HEAD must match exactly (freshness is HEAD-bound, not wall-clock).
   if (evidence.gitSha !== opts.expectedHead) {
@@ -480,8 +491,12 @@ export async function runGateV2(opts: RunGateV2Options): Promise<GateEvidenceV2>
   // gate run that dirties the tree (or ran on a dirty one) can only record
   // state=failed/invalid, never certify a release.
   const sourceClean = (before?.clean ?? false) && (after?.clean ?? false);
-  const passed = exitCode === 0 && !missingArtifact && sourceClean;
-  const gitSha = before?.sha ?? after?.sha ?? "unknown";
+  // E4-R19 (N17): the gate must run against ONE source snapshot. If the HEAD
+  // CHANGED during the run (clean before AND after, but A→B), the evidence
+  // proves neither A nor B — SOURCE_CHANGED → state=invalid, never passed.
+  const sourceChanged = before !== null && after !== null && before.sha !== after.sha;
+  const passed = exitCode === 0 && !missingArtifact && sourceClean && !sourceChanged;
+  const gitSha = sourceChanged ? (after?.sha ?? before?.sha ?? "unknown") : (before?.sha ?? after?.sha ?? "unknown");
 
   // E4-R12 (N01): persist the FULL (bounded) output log next to the evidence
   // and record a relative reference + byte digest, so a red gate's root cause
@@ -534,10 +549,14 @@ export async function runGateV2(opts: RunGateV2Options): Promise<GateEvidenceV2>
     finishedAtIso,
     exitCode,
     passed,
-    state: passed ? "passed" : "failed",
+    // E4-R19 (N17): a run whose HEAD changed mid-run is INVALID — it proves
+    // neither the before nor the after snapshot.
+    state: passed ? "passed" : sourceChanged ? "invalid" : "failed",
     summary: passed
       ? `${opts.gate}: PASS (exit 0)`
-      : `${opts.gate}: FAIL (exit ${exitCode}${missingArtifact ? ", missing artifact" : ""}${!sourceClean ? ", dirty source tree" : ""})`,
+      : sourceChanged
+        ? `${opts.gate}: INVALID — source HEAD changed during the run (${(before?.sha ?? "?").slice(0, 8)} → ${(after?.sha ?? "?").slice(0, 8)})`
+        : `${opts.gate}: FAIL (exit ${exitCode}${missingArtifact ? ", missing artifact" : ""}${!sourceClean ? ", dirty source tree" : ""})`,
     providerCalls: opts.providerCalls ?? 0,
     ...(opts.environmentClass !== undefined ? { environmentClass: opts.environmentClass } : {}),
     artifactRefs,
@@ -694,7 +713,44 @@ export async function loadGateEvidenceV2(path: string): Promise<GateEvidenceV2> 
   if (issues.length > 0) {
     return notRunEvidence(`invalid GateEvidenceV2 (${path}): ${issues.slice(0, 3).join("; ")}${issues.length > 3 ? ` (+${issues.length - 3} more)` : ""}`);
   }
-  return parsed as GateEvidenceV2;
+  const evidence = parsed as GateEvidenceV2;
+
+  // E4-R19 (N18): re-READ and re-DIGEST every declared artifact ref and the
+  // saved log from disk — an artifact that changed (or vanished) AFTER the
+  // evidence was written invalidates it. The stored `loadedPassed` is never
+  // trusted on its own; the same bytes must still be there.
+  const reverify = async (p: string): Promise<Buffer | null> => {
+    const candidates = isAbsolute(p)
+      ? [p]
+      : [join(dirname(path), p), resolve(p)];
+    for (const candidate of candidates) {
+      try {
+        return await readFile(candidate);
+      } catch {
+        // try the next resolution
+      }
+    }
+    return null;
+  };
+  for (const ref of evidence.artifactRefs ?? []) {
+    const bytes = await reverify(ref.path);
+    if (bytes === null) {
+      return notRunEvidence(`gate evidence artifact ${ref.path} missing after the run — evidence invalid`);
+    }
+    if (sha256Hex(bytes) !== ref.digest) {
+      return notRunEvidence(`gate evidence artifact ${ref.path} digest changed after the run (recorded ${ref.digest}, re-read differs) — evidence invalid`);
+    }
+  }
+  if (evidence.logRef !== undefined && evidence.logRef.digest !== null) {
+    const bytes = await reverify(evidence.logRef.path);
+    if (bytes === null) {
+      return notRunEvidence(`gate evidence log ${evidence.logRef.path} missing after the run — evidence invalid`);
+    }
+    if (sha256Hex(bytes) !== evidence.logRef.digest) {
+      return notRunEvidence(`gate evidence log ${evidence.logRef.path} digest changed after the run — evidence invalid`);
+    }
+  }
+  return evidence;
 }
 
 function notRunEvidence(summary: string): GateEvidenceV2 {

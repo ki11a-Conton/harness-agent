@@ -498,3 +498,79 @@ describe("E4-R12 gate output log preservation + failure diagnostics (N01)", () =
     expect(gateEvidenceV2Issues(ok)).toEqual([]);
   });
 });
+
+describe("E4-R19 gate evidence integrity (N17/N18/N19)", () => {
+  async function tempGitRepo(): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), "e4-r19-repo-"));
+    const { execFileSync } = await import("node:child_process");
+    execFileSync("git", ["init", "-q"], { cwd: dir });
+    await writeFile(join(dir, "f.txt"), "x", "utf8");
+    execFileSync("git", ["add", "."], { cwd: dir });
+    execFileSync("git", ["-c", "user.email=a@b.c", "-c", "user.name=t", "commit", "-qm", "A"], { cwd: dir });
+    return dir;
+  }
+
+  it("N17: a gate run that CHANGES HEAD mid-run (A→B, both clean) is INVALID — it proves neither A nor B", async () => {
+    const dir = await tempGitRepo();
+    try {
+      const { execFileSync } = await import("node:child_process");
+      const beforeSha = String(execFileSync("git", ["rev-parse", "HEAD"], { cwd: dir })).trim();
+      const ev = await runGateV2({
+        gate: "test", command: ["node", "-e", "0"], cwd: dir, toolVersion: "t",
+        run: async () => {
+          execFileSync("git", ["-c", "user.email=a@b.c", "-c", "user.name=t", "commit", "--allow-empty", "-qm", "B"], { cwd: dir });
+          return { exitCode: 0, stdout: "ok", stderr: "" };
+        },
+      });
+      const afterSha = String(execFileSync("git", ["rev-parse", "HEAD"], { cwd: dir })).trim();
+      // Clean before AND after, exit 0 — but the HEAD moved: NOT a pass.
+      expect(afterSha).not.toBe(beforeSha);
+      expect(ev.exitCode).toBe(0);
+      expect(ev.passed).toBe(false);
+      expect(ev.state).toBe("invalid");
+      expect(ev.summary).toContain("INVALID");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("N18: an artifact changed AFTER the evidence was written invalidates the load (never loadedPassed)", async () => {
+    const repo = await tempGitRepo(); // real HEAD — the evidence is structurally valid
+    const artifactDir = await mkdtemp(join(tmpdir(), "e4-r19-art-"));
+    try {
+      const artifact = join(artifactDir, "out.json");
+      await writeFile(artifact, "original", "utf8");
+      const ev = await runGateV2({
+        gate: "test", command: ["node", "-e", "0"], cwd: repo, toolVersion: "t",
+        artifactPaths: [artifact],
+        run: async () => ({ exitCode: 0, stdout: "ok", stderr: "" }),
+      });
+      expect(ev.gitSha).toMatch(/^[0-9a-f]{40}$/);
+      const evPath = join(artifactDir, "gate.json");
+      await writeGateEvidenceV2(ev, evPath);
+      // The artifact content changes AFTER the evidence was written.
+      await writeFile(artifact, "TAMPERED", "utf8");
+      const loaded = await loadGateEvidenceV2(evPath);
+      expect(loaded.passed).toBe(false);
+      expect(loaded.state).toBe("not_run");
+      expect(loaded.summary).toContain("digest changed");
+    } finally {
+      await rm(repo, { recursive: true, force: true });
+      await rm(artifactDir, { recursive: true, force: true });
+    }
+  });
+
+  it("N19: an INCOMPLETE object is rejected at the public verifier (same strictness as parser/loader)", () => {
+    const incomplete = {
+      schemaVersion: GATE_EVIDENCE_V2_SCHEMA_VERSION, gitSha: HEAD, command: CMD,
+      cleanBefore: true, cleanAfter: true, passed: true, exitCode: 0, state: "passed",
+    };
+    const r = verifyGateEvidenceV2(incomplete as unknown as GateEvidenceV2, {
+      expectedHead: HEAD, expectedCommand: CMD,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.issues.map((i) => i.code)).toContain("INVALID");
+    // The SAME object is also rejected by the strict parser and the loader.
+    expect(() => parseGateEvidenceV2(incomplete)).toThrow();
+  });
+});
