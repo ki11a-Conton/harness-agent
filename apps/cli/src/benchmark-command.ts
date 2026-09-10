@@ -26,6 +26,7 @@ import {
   buildActivationEvidenceFromSignalsV2,
   type ObservedActivationSignal,
   buildV3ArtifactsFromPaired,
+  expectedSampleKeysFromPlan,
   writeExperimentArtifactV3,
   loadExperimentArtifactV3,
   buildEffectiveConfig,
@@ -219,8 +220,32 @@ export async function runBenchmarkCommand(
         !!process.env.OPENAI_API_KEY,
       );
 
+  // E4-R13 (N03): the CONFIRMED plan must bind the full authorization surface —
+  // provider/model identity, judge version, source snapshot (real tree
+  // fingerprint), case input fingerprints and the pre-registered decision
+  // policy. These facts are computed from REAL config + a best-effort git probe
+  // (no provider calls) BEFORE preflight, and the executor later consumes the
+  // SAME confirmed plan — confirmation and execution cannot drift apart.
+  const providerId = providerOverride?.id ?? (process.env.OPENAI_API_KEY ? "openai" : STUB_PROVIDER_ID);
+  const modelId = providerId === STUB_PROVIDER_ID
+    ? "stub-model"
+    : (process.env.OPENAI_MODEL ?? DEFAULT_MODEL_ID);
+  const sourceSnapshot = await probeSourceSnapshot(process.cwd());
+  const identityFacts: PreflightIdentityFacts = {
+    providerId,
+    modelId,
+    judgeVersion: DEFAULT_JUDGE_VERSION,
+    sourceSha: sourceSnapshot.sourceSha,
+    treeFingerprint: sourceSnapshot.treeFingerprint,
+    decisionPolicy: { ...DEFAULT_DECISION_POLICY_V3 },
+    thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
+    effectiveModelParams: {
+      budgetTokens: budgetForCapabilities(resolveCapabilities({ providerId, modelId })) ?? opts.budgetTokens,
+    },
+  };
+
   // E3-01: preflight — ALL checks before ANY provider call.
-  const preflight = await preflightBenchmark(opts, cases, billingClass);
+  const preflight = await preflightBenchmark(opts, cases, billingClass, identityFacts);
   if (!preflight.ok) {
     return { exitCode: 1, lines: [`agent benchmark: ${preflight.reason}`] };
   }
@@ -569,32 +594,76 @@ async function runPairedPromotion(
   const scheduleDigest = computePairedPlanDigest(plan);
   const executionPlanDigest = preflight?.planDigest ?? scheduleDigest;
   const promotionEligibleRun = preflight?.promotionEligible === true && processConfinement === "strong";
+
+  // E4-R13 (N03): the executor consumes the CONFIRMED plan — the identity facts
+  // (provider/model, judge version, source snapshot, case fingerprints, policy)
+  // come from the SAME plan the user authorized, never re-derived from a
+  // second, unconfirmed source. Any drift (e.g. the source tree changed between
+  // preflight and execution) is refused BEFORE the first provider call.
+  const confirmedPlan = preflight?.executionPlan;
+  if (confirmedPlan === undefined) {
+    return {
+      exitCode: 1,
+      lines: ["agent benchmark: no confirmed execution plan from preflight — refusing to run a promotion experiment without a bound identity"],
+    };
+  }
+  const identityFacts = {
+    providerId: confirmedPlan.providerId,
+    modelId: confirmedPlan.modelId,
+    judgeVersion: confirmedPlan.judgeVersion,
+    sourceSha: confirmedPlan.sourceSha,
+    treeFingerprint: confirmedPlan.treeFingerprint,
+    decisionPolicy: confirmedPlan.decisionPolicy,
+    thresholdDigest: confirmedPlan.thresholdDigest,
+  };
+  const drift: string[] = [];
+  if (provider.id !== identityFacts.providerId) drift.push(`provider ${provider.id} != confirmed ${identityFacts.providerId}`);
+  if (modelId !== identityFacts.modelId) drift.push(`model ${modelId} != confirmed ${identityFacts.modelId}`);
+  if (manifest.gitSha !== identityFacts.sourceSha) drift.push(`sourceSha ${manifest.gitSha ?? "null"} != confirmed ${identityFacts.sourceSha ?? "null"}`);
+  if (drift.length > 0) {
+    return {
+      exitCode: 1,
+      lines: [`agent benchmark: execution drifted from the confirmed plan — ${drift.join("; ")}. Re-run preflight/dry-run to confirm the current plan.`],
+    };
+  }
+
+  // E4-R13 (N04): real arm config hashes from the candidate registry — never a
+  // literal "baseline" placeholder, and never the runtime config hash standing
+  // in for the candidate's own configuration.
+  const registry = getCandidateRegistry();
+  const baselineConfigHash = computeRuntimeConfigHash(registry.resolve(null).semanticDigest);
+  const candidateConfigHash = opts.candidate !== undefined
+    ? computeRuntimeConfigHash(registry.resolve(opts.candidate).semanticDigest)
+    : null;
+
+  // E4-R13 (N04): a promotion-eligible run on a DIRTY source tree is refused
+  // before any provider call — dirty-tree evidence cannot certify a release,
+  // and the identity must bind a REAL tree fingerprint, never the string
+  // "dirty".
+  if (promotionEligibleRun && (manifest.dirty === true || identityFacts.treeFingerprint !== null)) {
+    return {
+      exitCode: 1,
+      lines: ["agent benchmark: a promotion-eligible run requires a CLEAN source tree (the confirmed plan binds a real tree fingerprint) — commit or stash changes and re-confirm the plan"],
+    };
+  }
+
   const identity = buildExecutionIdentityV1({
     scheduleDigest,
     suite: opts.suite,
-    judgeVersion: manifest.judgeVersion,
+    judgeVersion: identityFacts.judgeVersion,
     repetitions: opts.repeat,
     orderSeed: opts.seed,
     modelSeed: null,
     caseIds: selected.map((c) => c.id),
-    caseFingerprints: Object.fromEntries(
-      selected.map((c) => [c.id, caseInputFingerprintV1({
-        requestMd: c.requestMd,
-        expectedMd: c.expectedMd,
-        fixture: c.fixture,
-        verification: c.verification ?? null,
-        requires: c.requires ?? null,
-        schemaMode: c.schemaMode ?? null,
-      })]),
-    ),
-    baselineConfigHash: "baseline",
+    caseFingerprints: Object.fromEntries(selected.map((c) => [c.id, caseFingerprintFor(c)])),
+    baselineConfigHash,
     candidate: opts.candidate ?? null,
-    candidateConfigHash: manifest.runtimeConfigHash,
-    providerId: provider.id,
-    modelId,
+    candidateConfigHash,
+    providerId: identityFacts.providerId,
+    modelId: identityFacts.modelId,
     effectiveModelParams: { budgetTokens: defaultBudgetTokens },
-    sourceSha: manifest.gitSha,
-    treeFingerprint: manifest.dirty ? "dirty" : null,
+    sourceSha: identityFacts.sourceSha,
+    treeFingerprint: identityFacts.treeFingerprint,
     limits: {
       maxLogicalRuns: opts.maxLogicalRuns,
       maxModelCalls: opts.maxModelCalls,
@@ -605,8 +674,8 @@ async function runPairedPromotion(
     isolationBackendId: preflight?.isolationBackendId ?? "not-probed",
     isolationStrength: processConfinement ?? "none",
     promotionEligible: promotionEligibleRun,
-    decisionPolicy: { ...DEFAULT_DECISION_POLICY_V3 },
-    thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
+    decisionPolicy: { ...identityFacts.decisionPolicy },
+    thresholdDigest: identityFacts.thresholdDigest,
   });
   const executionIdentityDigest = computeExecutionIdentityDigestV1(identity);
   const outDir = resolve(opts.outDir);
@@ -717,11 +786,10 @@ async function runPairedPromotion(
       planDigest: executionPlanDigest,
       executionIdentityDigest,
       scheduleDigest,
-      expectedSampleKeys: plan.pairs.flatMap((p) =>
-        // V3 repetitions are 1-based (E4-03 positive integer, E4-05 canonical
-        // 1..repeat); the paired plan is 0-based. Convert here, once.
-        Array.from({ length: plan.repetitions }, (_, rep) => `${opts.suite}\u0000${p.caseId}\u0000${rep + 1}`),
-      ),
+      // E4-R13 (N05): one expected sample key per PLANNED pair (the plan's
+      // pairs already enumerate every case×repetition once — expanding by
+      // repetitions again would produce C×R² duplicated keys).
+      expectedSampleKeys: expectedSampleKeysFromPlan(plan),
       runComplete,
       incompleteReason: artifact.incompleteReason ?? null,
       gitSha: manifest.gitSha,
@@ -733,6 +801,10 @@ async function runPairedPromotion(
       judgeVersion: manifest.judgeVersion,
       candidateId: opts.candidate ?? null,
       candidateConfigHash,
+      // E4-R13 (N03/N05): preserve the FULL confirmed plan + decision policy in
+      // the V3 manifest so a reader can re-derive the authorization.
+      executionPlan: confirmedPlan,
+      decisionPolicy: identity.decisionPolicy,
       isolationStrength: processConfinement ?? "none",
       promotionEligible: promotionEligibleResult,
     });
@@ -786,18 +858,22 @@ export const PREFLIGHT_ESTIMATE = {
 } as const;
 
 /**
- * E4-01 — the SINGLE canonical benchmark execution plan. Every field that can
- * change what a run actually does (case set, limits, billing, isolation
- * posture, promotion eligibility) lives here and feeds the plan digest, so a
- * `--plan-digest` confirmation binds the exact plan that will execute. Volatile
- * provenance (sourceSha, createdAt) is deliberately EXCLUDED — it belongs in
- * the artifact metadata, not the reproducible digest (same logical plan across
- * runs must yield the same digest).
+ * E4-01 + E4-R13 — the SINGLE canonical benchmark execution plan. Every field
+ * that can change what a run actually does (case set + case INPUT fingerprints,
+ * limits, billing, isolation posture, promotion eligibility, provider/model
+ * identity, judge version, source snapshot and the pre-registered decision
+ * policy) lives here and feeds the plan digest, so a `--plan-digest`
+ * confirmation binds the exact plan that will execute. Volatile wall-clock
+ * provenance (createdAt) is excluded; the source snapshot IS part of the
+ * authorization surface (a changed tree invalidates an old confirmation).
  */
 export interface BenchmarkExecutionPlan {
   schemaVersion: string;
   suite: string;
   caseIds: string[];
+  /** E4-R13 (N03): per-case INPUT fingerprint — editing a case file without
+   *  changing its id still invalidates the confirmed plan. */
+  caseFingerprints: Readonly<Record<string, string>>;
   limit: number;
   repeat: number;
   interleave: boolean;
@@ -816,6 +892,73 @@ export interface BenchmarkExecutionPlan {
   isolationBackendId: string;
   isolationStrength: "strong" | "insecure-local" | "none";
   promotionEligible: boolean;
+  /** E4-R13 (N03): the FULL authorization surface, folded into the plan digest
+   *  so a --plan-digest confirmation covers exactly what will execute: the
+   *  provider/model identity, the judge version, the source snapshot and the
+   *  pre-registered decision policy. Secrets never enter the plan. */
+  providerId: string;
+  modelId: string;
+  judgeVersion: string;
+  sourceSha: string | null;
+  /** Real working-tree fingerprint: sha256 over `git status --porcelain` when
+   *  dirty, null when clean/unavailable — never a literal "dirty" placeholder. */
+  treeFingerprint: string | null;
+  decisionPolicy: Readonly<object>;
+  thresholdDigest: string;
+  /** Effective model parameters bound into the plan (e.g. budgetTokens). */
+  effectiveModelParams: Readonly<Record<string, unknown>>;
+}
+
+/** E4-R13 (N03): identity facts the CONFIRMED plan must bind, computed from
+ *  real (already-resolved) inputs before preflight. */
+export interface PreflightIdentityFacts {
+  providerId: string;
+  modelId: string;
+  judgeVersion: string;
+  sourceSha: string | null;
+  treeFingerprint: string | null;
+  decisionPolicy: Readonly<object>;
+  thresholdDigest: string;
+  effectiveModelParams: Readonly<Record<string, unknown>>;
+}
+
+/** E4-R13 (N04): per-case input fingerprint — the SAME fields the execution
+ *  identity binds, so the plan and the identity cannot drift apart. */
+export function caseFingerprintFor(c: BenchmarkCase): string {
+  return caseInputFingerprintV1({
+    requestMd: c.requestMd,
+    expectedMd: c.expectedMd,
+    fixture: c.fixture,
+    verification: c.verification ?? null,
+    requires: c.requires ?? null,
+    schemaMode: c.schemaMode ?? null,
+  });
+}
+
+/**
+ * E4-R13 (N04): best-effort git source snapshot — HEAD sha + a REAL working
+ * tree fingerprint (sha256 over `git status --porcelain` when dirty, null when
+ * clean). Never a literal "dirty" placeholder; nulls when git is unavailable
+ * (absence is honest). Pure config probing — no provider calls.
+ */
+export async function probeSourceSnapshot(root: string): Promise<{ sourceSha: string | null; treeFingerprint: string | null }> {
+  const { execFile } = await import("node:child_process");
+  const run = (args: string[]): Promise<string> =>
+    new Promise((resolvePromise) => {
+      execFile("git", args, { cwd: root, timeout: 10_000, windowsHide: true, encoding: "utf8" }, (err, stdout) => {
+        resolvePromise(err !== null ? "" : String(stdout));
+      });
+    });
+  try {
+    const head = (await run(["rev-parse", "HEAD"])).trim();
+    const status = (await run(["status", "--porcelain"])).trim();
+    return {
+      sourceSha: head === "" ? null : head,
+      treeFingerprint: status === "" ? null : createHash("sha256").update(status, "utf8").digest("hex"),
+    };
+  } catch {
+    return { sourceSha: null, treeFingerprint: null };
+  }
 }
 
 /** E4-01: build the canonical plan from resolved preflight inputs. */
@@ -826,12 +969,15 @@ export function buildBenchmarkExecutionPlan(input: {
   isolationBackendId: string;
   isolationStrength: BenchmarkExecutionPlan["isolationStrength"];
   promotionEligible: boolean;
+  caseFingerprints: Readonly<Record<string, string>>;
+  identityFacts: PreflightIdentityFacts;
 }): BenchmarkExecutionPlan {
-  const { opts, caseIds, billingClass, isolationBackendId, isolationStrength, promotionEligible } = input;
+  const { opts, caseIds, billingClass, isolationBackendId, isolationStrength, promotionEligible, caseFingerprints, identityFacts } = input;
   return {
     schemaVersion: "e4-01",
     suite: opts.suite,
     caseIds,
+    caseFingerprints,
     limit: opts.limit,
     repeat: opts.repeat,
     interleave: opts.interleave,
@@ -847,6 +993,14 @@ export function buildBenchmarkExecutionPlan(input: {
     isolationBackendId,
     isolationStrength,
     promotionEligible,
+    providerId: identityFacts.providerId,
+    modelId: identityFacts.modelId,
+    judgeVersion: identityFacts.judgeVersion,
+    sourceSha: identityFacts.sourceSha,
+    treeFingerprint: identityFacts.treeFingerprint,
+    decisionPolicy: { ...identityFacts.decisionPolicy },
+    thresholdDigest: identityFacts.thresholdDigest,
+    effectiveModelParams: { ...identityFacts.effectiveModelParams },
   };
 }
 
@@ -873,6 +1027,9 @@ export interface PreflightResult {
    *  identity the executor binds is the same one that was confirmed. */
   isolationBackendId?: string;
   billingClass?: BillingClass;
+  /** E4-R13 (N03): the FULL confirmed execution plan (identity fields bound).
+   *  The executor consumes THIS plan — confirmation and execution cannot drift. */
+  executionPlan?: BenchmarkExecutionPlan;
 }
 
 /**
@@ -884,6 +1041,9 @@ export async function preflightBenchmark(
   opts: BenchmarkCommandOptions,
   cases: BenchmarkCase[],
   billingClass: BillingClass,
+  /** E4-R13 (N03): the identity facts the confirmed plan must bind. Required —
+   *  a plan WITHOUT provider/model/source/policy identity cannot be authorized. */
+  identityFacts: PreflightIdentityFacts,
 ): Promise<PreflightResult> {
   // 1. Cases non-empty + no duplicates (by caseId).
   if (cases.length === 0) {
@@ -1025,6 +1185,10 @@ export async function preflightBenchmark(
   // promotion eligibility, so a --plan-digest confirmation authorizes the exact
   // plan that will run; confirming under one isolation strength and running
   // under another yields a digest mismatch (E4-01 #3/#5).
+  // E4-R13 (N03): the plan ALSO binds provider/model, judge version, the source
+  // snapshot (real tree fingerprint), case INPUT fingerprints and the decision
+  // policy — a changed model / case content / policy / source invalidates an
+  // old confirmation BEFORE any provider call.
   const executionPlan = buildBenchmarkExecutionPlan({
     opts,
     caseIds: selected.map((c) => c.id),
@@ -1032,6 +1196,8 @@ export async function preflightBenchmark(
     isolationBackendId,
     isolationStrength,
     promotionEligible,
+    caseFingerprints: Object.fromEntries(selected.map((c) => [c.id, caseFingerprintFor(c)])),
+    identityFacts,
   });
   const planDigest = computeBenchmarkPlanDigest(executionPlan);
 
@@ -1077,6 +1243,9 @@ export async function preflightBenchmark(
     // E4-R01: carry the confirmed backend identity + billing class forward.
     isolationBackendId,
     billingClass,
+    // E4-R13 (N03): the executor consumes THIS confirmed plan — the same
+    // digest, identity fields and policy that were authorized.
+    executionPlan,
   };
 }
 
@@ -1114,6 +1283,16 @@ export interface DryRunPlan {
   isolationStrength: "strong" | "insecure-local" | "none";
   promotionEligible: boolean;
   providerCalls: 0;
+  // E4-R13 (N03): the identity surface the digest binds — surfaced so the
+  // printed plan matches the digest exactly.
+  providerId: string;
+  modelId: string;
+  judgeVersion: string;
+  sourceSha: string | null;
+  treeFingerprint: string | null;
+  decisionPolicy: Readonly<object>;
+  thresholdDigest: string;
+  effectiveModelParams: Readonly<Record<string, unknown>>;
 }
 
 export function buildDryRunPlan(
@@ -1123,6 +1302,7 @@ export function buildDryRunPlan(
   preflight: PreflightResult,
 ): DryRunPlan {
   const selected = opts.limit > 0 ? cases.slice(0, opts.limit) : cases;
+  const plan = preflight.executionPlan;
   return {
     schemaVersion: "e4-01",
     mode: "dry-run",
@@ -1154,6 +1334,14 @@ export function buildDryRunPlan(
     isolationStrength: preflight.isolationStrength ?? "none",
     promotionEligible: preflight.promotionEligible ?? false,
     providerCalls: 0,
+    providerId: plan?.providerId ?? "",
+    modelId: plan?.modelId ?? "",
+    judgeVersion: plan?.judgeVersion ?? "",
+    sourceSha: plan?.sourceSha ?? null,
+    treeFingerprint: plan?.treeFingerprint ?? null,
+    decisionPolicy: plan?.decisionPolicy ?? {},
+    thresholdDigest: plan?.thresholdDigest ?? "",
+    effectiveModelParams: plan?.effectiveModelParams ?? {},
   };
 }
 
@@ -2332,7 +2520,19 @@ export async function runSmokeBenchmark(): Promise<{ exitCode: number; lines: st
   // point can reach executeBenchmark without passing the same validation the CLI
   // path enforces. Smoke is offline (fake provider, no candidate), so the paid /
   // plan-digest / isolation gates are inert here but the check is uniform.
-  const smokePreflight = await preflightBenchmark(opts, cases, "offline-test");
+  // E4-R13 (N03): the smoke entry binds the SAME identity surface (fake
+  // provider/model, best-effort source snapshot, default policy).
+  const smokeFacts: PreflightIdentityFacts = {
+    providerId: STUB_PROVIDER_ID,
+    modelId: "stub-model",
+    judgeVersion: DEFAULT_JUDGE_VERSION,
+    sourceSha: null,
+    treeFingerprint: null,
+    decisionPolicy: { ...DEFAULT_DECISION_POLICY_V3 },
+    thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
+    effectiveModelParams: { budgetTokens: 0 },
+  };
+  const smokePreflight = await preflightBenchmark(opts, cases, "offline-test", smokeFacts);
   if (!smokePreflight.ok) {
     return { exitCode: 1, lines: [`agent benchmark smoke: preflight rejected — ${smokePreflight.reason}`] };
   }

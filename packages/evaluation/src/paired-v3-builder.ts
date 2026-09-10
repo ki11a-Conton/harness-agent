@@ -32,6 +32,7 @@ import { stableStringify } from "./manifest.js";
 import type { ExperimentArtifactV3, CaseOutcomeV3, ActivationEvidenceV3, SecurityOutcomeV3 } from "./artifact-v3/types.js";
 import type { EvalOutcome } from "./runner.js";
 import type { PairedFinalizedPair } from "./paired-executor.js";
+import type { PairedExperimentPlan } from "./paired-plan.js";
 
 /** Execution-plan facts required to build a promotion-grade V3 artifact. */
 export interface PairedV3Facts {
@@ -56,6 +57,23 @@ export interface PairedV3Facts {
   expectedSampleKeys?: readonly string[];
   runComplete?: boolean;
   incompleteReason?: string | null;
+  /** E4-R13 (N03/N05): the FULL confirmed execution plan and the pre-registered
+   *  decision policy, preserved verbatim in the V3 manifest so a reader can
+   *  verify the authorization that produced the artifact (and so an artifact
+   *  WITHOUT a full plan is distinguishable — diagnostic, never promotion-grade). */
+  executionPlan?: Readonly<object>;
+  decisionPolicy?: Readonly<object>;
+}
+
+/**
+ * E4-R13 (N05): one expected sample key per PLANNED pair. The plan's `pairs`
+ * ALREADY enumerate every (caseId × repetition) exactly once — expanding by
+ * `repetitions` again would yield C×R² duplicated keys. Returns exactly C×R
+ * unique keys `${suite}\0${caseId}\0${repetition+1}` (V3 repetitions are 1-based;
+ * the paired plan is 0-based — convert once at this seam).
+ */
+export function expectedSampleKeysFromPlan(plan: PairedExperimentPlan): string[] {
+  return plan.pairs.map((p) => `${plan.suite}\u0000${p.caseId}\u0000${p.repetition + 1}`);
 }
 
 export interface PairedV3Artifacts {
@@ -243,6 +261,10 @@ export function buildV3ArtifactsFromPaired(
     ...(facts.expectedSampleKeys !== undefined ? { expectedSampleKeys: [...facts.expectedSampleKeys] } : {}),
     ...(facts.runComplete !== undefined ? { runComplete: facts.runComplete } : {}),
     ...(facts.incompleteReason !== undefined && facts.incompleteReason !== null ? { incompleteReason: facts.incompleteReason } : {}),
+    // E4-R13 (N03/N05): preserve the FULL confirmed plan + decision policy so a
+    // reader can re-derive the authorization that produced this artifact.
+    ...(facts.executionPlan !== undefined ? { executionPlan: facts.executionPlan } : {}),
+    ...(facts.decisionPolicy !== undefined ? { decisionPolicy: facts.decisionPolicy } : {}),
   };
   const provenance = {
     sourceManifestPath: null,

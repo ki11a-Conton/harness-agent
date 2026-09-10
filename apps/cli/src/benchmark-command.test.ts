@@ -5,7 +5,24 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ScriptedModelProvider } from "@ar/model";
 import { makeEventId, makeSessionId } from "@ar/contracts";
 import type { EvalOutcome } from "@ar/evaluation";
-import { assertWorkspaceIsolated, effectiveFeaturesFor, runBenchmarkCommand } from "./benchmark-command.js";
+import { assertWorkspaceIsolated, effectiveFeaturesFor, runBenchmarkCommand, type PreflightIdentityFacts } from "./benchmark-command.js";
+
+/** E4-R13 (N03): deterministic identity facts for preflight tests — a plan
+ *  without a bound identity cannot be authorized, so every preflight call in
+ *  the suite passes a fixed (secret-free) identity surface. */
+function testIdentityFacts(over: Partial<PreflightIdentityFacts> = {}): PreflightIdentityFacts {
+  return {
+    providerId: "test-provider",
+    modelId: "test-model",
+    judgeVersion: "1.0.0",
+    sourceSha: "a".repeat(40),
+    treeFingerprint: null,
+    decisionPolicy: { version: "test-policy", minConclusiveNetDelta: 0 },
+    thresholdDigest: "b".repeat(64),
+    effectiveModelParams: { budgetTokens: 32000 },
+    ...over,
+  };
+}
 
 let tempDirs: string[] = [];
 
@@ -1109,7 +1126,7 @@ describe("E3-02: paired promotion path (real PairedExperimentExecutor)", () => {
       planDigest: undefined,
       allowInsecureLocalBenchmark: false,
     };
-    const res = await preflightBenchmark(opts, dupCases as unknown as Parameters<typeof preflightBenchmark>[1], "offline-test");
+    const res = await preflightBenchmark(opts, dupCases as unknown as Parameters<typeof preflightBenchmark>[1], "offline-test", testIdentityFacts());
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.reason).toContain("duplicate case ids");
   });
@@ -1134,7 +1151,7 @@ describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 pr
   it("maxModelCalls=0 (FORBID) is rejected before any provider call", async () => {
     const { preflightBenchmark } = await import("./benchmark-command.js");
     const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
-    const res = await preflightBenchmark({ ...baseOpts(), maxModelCalls: 0 }, cases, "offline-test");
+    const res = await preflightBenchmark({ ...baseOpts(), maxModelCalls: 0 }, cases, "offline-test", testIdentityFacts());
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.reason).toContain("--max-model-calls (0 = forbid)");
   });
@@ -1142,7 +1159,7 @@ describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 pr
   it("paid run with an omitted (unlimited) model-call cap is rejected", async () => {
     const { preflightBenchmark } = await import("./benchmark-command.js");
     const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
-    const res = await preflightBenchmark({ ...baseOpts(), maxModelCalls: null }, cases, "external-billed");
+    const res = await preflightBenchmark({ ...baseOpts(), maxModelCalls: null }, cases, "external-billed", testIdentityFacts());
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.reason).toContain("explicit positive --max-model-calls");
   });
@@ -1150,7 +1167,7 @@ describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 pr
   it("external-billed run WITHOUT --plan-digest is rejected before any provider call", async () => {
     const { preflightBenchmark } = await import("./benchmark-command.js");
     const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
-    const res = await preflightBenchmark(baseOpts(), cases, "external-billed");
+    const res = await preflightBenchmark(baseOpts(), cases, "external-billed", testIdentityFacts());
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.reason).toContain("--plan-digest");
   });
@@ -1158,7 +1175,7 @@ describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 pr
   it("external-billed run with a MISMATCHED digest is rejected", async () => {
     const { preflightBenchmark } = await import("./benchmark-command.js");
     const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
-    const res = await preflightBenchmark({ ...baseOpts(), planDigest: "deadbeef" }, cases, "external-billed");
+    const res = await preflightBenchmark({ ...baseOpts(), planDigest: "deadbeef" }, cases, "external-billed", testIdentityFacts());
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.reason).toContain("mismatch");
   });
@@ -1166,17 +1183,17 @@ describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 pr
   it("external-billed run carrying the EXACT dry-run digest proceeds", async () => {
     const { preflightBenchmark } = await import("./benchmark-command.js");
     const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
-    const dry = await preflightBenchmark({ ...baseOpts(), dryRun: true }, cases, "external-billed");
+    const dry = await preflightBenchmark({ ...baseOpts(), dryRun: true }, cases, "external-billed", testIdentityFacts());
     expect(dry.ok).toBe(true);
     expect(typeof dry.planDigest).toBe("string");
-    const res = await preflightBenchmark({ ...baseOpts(), planDigest: dry.planDigest }, cases, "external-billed");
+    const res = await preflightBenchmark({ ...baseOpts(), planDigest: dry.planDigest }, cases, "external-billed", testIdentityFacts());
     expect(res.ok).toBe(true);
   });
 
   it("offline-test run does NOT require a plan digest (behavior unchanged)", async () => {
     const { preflightBenchmark } = await import("./benchmark-command.js");
     const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
-    const res = await preflightBenchmark(baseOpts(), cases, "offline-test");
+    const res = await preflightBenchmark(baseOpts(), cases, "offline-test", testIdentityFacts());
     expect(res.ok).toBe(true);
   });
 
@@ -1195,7 +1212,7 @@ describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 pr
       const { preflightBenchmark } = await import("./benchmark-command.js");
       const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
       const opts = { ...baseOpts(), candidate: "adaptive_recovery_v2" };
-      const res = await preflightBenchmark(opts, cases, "offline-test");
+      const res = await preflightBenchmark(opts, cases, "offline-test", testIdentityFacts());
       expect(res.ok).toBe(false);
       if (!res.ok) expect(res.reason).toContain("fail-closed");
     } finally {
@@ -1207,8 +1224,8 @@ describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 pr
   it("E4-01 #3: the same logical plan yields the same digest across runs", async () => {
     const { preflightBenchmark } = await import("./benchmark-command.js");
     const cases = oneCase as unknown as Parameters<typeof preflightBenchmark>[1];
-    const a = await preflightBenchmark({ ...baseOpts(), dryRun: true }, cases, "offline-test");
-    const b = await preflightBenchmark({ ...baseOpts(), dryRun: true }, cases, "offline-test");
+    const a = await preflightBenchmark({ ...baseOpts(), dryRun: true }, cases, "offline-test", testIdentityFacts());
+    const b = await preflightBenchmark({ ...baseOpts(), dryRun: true }, cases, "offline-test", testIdentityFacts());
     expect(a.ok).toBe(true);
     expect(a.planDigest).toBe(b.planDigest);
   });
@@ -1236,7 +1253,7 @@ describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 pr
       // Phase 1: strong backend + candidate → promotion-eligible.
       mockProbe(true);
       let mod = await import("./benchmark-command.js");
-      const strong = await mod.preflightBenchmark({ ...baseOpts(), candidate: "adaptive_recovery_v2" }, cases, "offline-test");
+      const strong = await mod.preflightBenchmark({ ...baseOpts(), candidate: "adaptive_recovery_v2" }, cases, "offline-test", testIdentityFacts());
       expect(strong.ok).toBe(true);
       expect(strong.promotionEligible).toBe(true);
       expect(strong.isolationStrength).toBe("strong");
@@ -1250,6 +1267,7 @@ describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 pr
         { ...baseOpts(), candidate: "adaptive_recovery_v2", allowInsecureLocalBenchmark: true },
         cases,
         "offline-test",
+        testIdentityFacts(),
       );
       expect(insecure.ok).toBe(true);
       expect(insecure.promotionEligible).toBe(false);
@@ -1273,6 +1291,8 @@ describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 pr
       isolationBackendId: "bwrap",
       isolationStrength: "strong" as const,
       promotionEligible: true,
+      caseFingerprints: { t1: "fp-t1" },
+      identityFacts: testIdentityFacts(),
     };
     const p1 = buildBenchmarkExecutionPlan(base);
     const p2 = buildBenchmarkExecutionPlan(base);
@@ -1285,5 +1305,168 @@ describe("E4-01: paid runs must confirm the exact plan digest (fail-closed, 0 pr
       promotionEligible: false,
     });
     expect(computeBenchmarkPlanDigest(insecure)).not.toBe(computeBenchmarkPlanDigest(p1));
+  });
+});
+
+describe("E4-R13: confirmed plan binds the full identity (N03/N04/N05)", () => {
+  const oneCase = [
+    { id: "t1", task: "x", requestMd: "x", expectedMd: "x", fixture: {}, expected: { status: "completed" }, suite: "regression", judgeVersion: "1.0.0" },
+  ] as unknown as Parameters<typeof import("./benchmark-command.js").preflightBenchmark>[1];
+  const baseOpts = () => ({
+    casesDir: "cases", outDir: "out", budgetTokens: 32000, limit: 0, allowStub: true,
+    suite: "regression" as const, shuffle: false, seed: 0, caseDelayMs: 0, repeat: 1,
+    interleave: false, dryRun: false, maxLogicalRuns: null as number | null,
+    maxModelCalls: null as number | null, maxEstimatedTokens: null as number | null,
+    maxEstimatedCostUsd: null as number | null, paidAuthorized: false,
+    planDigest: undefined as string | undefined, allowInsecureLocalBenchmark: false,
+  });
+
+  it("N03: the plan digest changes when model, policy, case CONTENT or source changes", async () => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const a = await preflightBenchmark(baseOpts(), oneCase, "offline-test", testIdentityFacts());
+    expect(a.ok).toBe(true);
+    const base = a.planDigest!;
+    // Each single change must invalidate the confirmation — the plan the user
+    // confirmed no longer describes the run.
+    const modelChanged = await preflightBenchmark(baseOpts(), oneCase, "offline-test", testIdentityFacts({ modelId: "other-model" }));
+    expect(modelChanged.planDigest).not.toBe(base);
+    const policyChanged = await preflightBenchmark(baseOpts(), oneCase, "offline-test", testIdentityFacts({ decisionPolicy: { version: "p2", minConclusiveNetDelta: 1 } }));
+    expect(policyChanged.planDigest).not.toBe(base);
+    const sourceChanged = await preflightBenchmark(baseOpts(), oneCase, "offline-test", testIdentityFacts({ sourceSha: "f".repeat(40) }));
+    expect(sourceChanged.planDigest).not.toBe(base);
+    const dirtyChanged = await preflightBenchmark(baseOpts(), oneCase, "offline-test", testIdentityFacts({ treeFingerprint: "d".repeat(64) }));
+    expect(dirtyChanged.planDigest).not.toBe(base);
+    // Editing a case FILE (same id) changes the bound input fingerprint.
+    const editedCase = [
+      { ...(oneCase[0] as { id: string; requestMd: string }), requestMd: "EDITED REQUEST" },
+    ] as unknown as Parameters<typeof import("./benchmark-command.js").preflightBenchmark>[1];
+    const contentChanged = await preflightBenchmark(baseOpts(), editedCase, "offline-test", testIdentityFacts());
+    expect(contentChanged.planDigest).not.toBe(base);
+    // Same facts → same digest (deterministic confirmation).
+    const again = await preflightBenchmark(baseOpts(), oneCase, "offline-test", testIdentityFacts());
+    expect(again.planDigest).toBe(base);
+  });
+
+  it("N03: the confirmed plan is carried into preflight and matches the identity surface", async () => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const facts = testIdentityFacts({ providerId: "prov-x", modelId: "model-y", sourceSha: "c".repeat(40) });
+    const res = await preflightBenchmark(baseOpts(), oneCase, "offline-test", facts);
+    expect(res.ok).toBe(true);
+    const plan = res.executionPlan;
+    expect(plan).toBeDefined();
+    expect(plan!.providerId).toBe("prov-x");
+    expect(plan!.modelId).toBe("model-y");
+    expect(plan!.sourceSha).toBe("c".repeat(40));
+    expect(plan!.caseFingerprints.t1).toMatch(/^[0-9a-f]{64}$/);
+    expect(plan!.decisionPolicy).toEqual(facts.decisionPolicy);
+    expect(plan!.thresholdDigest).toBe(facts.thresholdDigest);
+  });
+
+  it("N04: probeSourceSnapshot returns a REAL tree fingerprint, never a 'dirty' placeholder", async () => {
+    const { probeSourceSnapshot } = await import("./benchmark-command.js");
+    const root = await mkdtemp(join(tmpdir(), "e4-r13-probe-"));
+    tempDirs.push(root);
+    const { execFileSync } = await import("node:child_process");
+    try {
+      execFileSync("git", ["init", "-q"], { cwd: root });
+      execFileSync("git", ["-c", "user.email=a@b.c", "-c", "user.name=t", "commit", "--allow-empty", "-qm", "init"], { cwd: root });
+      const clean = await probeSourceSnapshot(root);
+      expect(clean.sourceSha).toMatch(/^[0-9a-f]{40}$/);
+      expect(clean.treeFingerprint).toBeNull(); // clean tree → no fingerprint, honest
+      await writeFile(join(root, "untracked.txt"), "dirty", "utf8");
+      const dirty = await probeSourceSnapshot(root);
+      expect(dirty.treeFingerprint).toMatch(/^[0-9a-f]{64}$/); // real content fingerprint
+      expect(dirty.treeFingerprint).not.toBe("dirty");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("N05: expectedSampleKeys has exactly C×R unique keys (no C×R² duplication), logical runs = 2×C×R", async () => {
+    const { buildPairedPlan, expectedSampleKeysFromPlan } = await import("@ar/evaluation");
+    const plan = buildPairedPlan({ suite: "holdout", cases: ["a", "b", "c"], repetitions: 2, orderSeed: 7 });
+    expect(plan.pairs).toHaveLength(6);
+    expect(plan.totalLogicalRuns).toBe(12);
+    const keys = expectedSampleKeysFromPlan(plan);
+    expect(keys).toHaveLength(6);
+    expect(new Set(keys).size).toBe(6);
+    expect(keys.sort()).toEqual([
+      "holdout\u0000a\u00001", "holdout\u0000a\u00002",
+      "holdout\u0000b\u00001", "holdout\u0000b\u00002",
+      "holdout\u0000c\u00001", "holdout\u0000c\u00002",
+    ].sort());
+  });
+
+  it("N03/N05: a real paired run writes the V3 manifest with the FULL confirmed plan, policy and a unique sample grid", async () => {
+    const root = await makeCaseDir({
+      "cases/a/request.md": "just finish",
+      "cases/a/expected.md": "done",
+      "cases/a/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+      "cases/b/request.md": "just finish",
+      "cases/b/expected.md": "done",
+      "cases/b/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const provider = new ScriptedModelProvider(Array.from({ length: 16 }, () => ScriptedModelProvider.text("done")));
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--repeat", "2", "--candidate", "memory_retrieval", "--allow-insecure-local-benchmark", "--out", join(root, "out")],
+      provider,
+    );
+    expect(result.exitCode).toBe(0);
+    const { readFile } = await import("node:fs/promises");
+    const cand = JSON.parse(await readFile(join(root, "out", "v3-candidate.json"), "utf8"));
+    // The full confirmed plan + policy are preserved verbatim in the manifest.
+    const manifest = cand.manifest as Record<string, unknown>;
+    expect(manifest.executionPlan).toBeDefined();
+    expect((manifest.executionPlan as { providerId?: string }).providerId).toBe("scripted");
+    expect((manifest.executionPlan as { caseFingerprints?: Record<string, string> }).caseFingerprints).toBeDefined();
+    expect(manifest.decisionPolicy).toBeDefined();
+    // 2 cases × 2 repeats → 4 UNIQUE expected sample keys (not 8 duplicated).
+    const keys = manifest.expectedSampleKeys as string[];
+    expect(keys).toHaveLength(4);
+    expect(new Set(keys).size).toBe(4);
+    expect(manifest.runComplete).toBe(true);
+  });
+
+  it("N04: the journal identity binds REAL arm config hashes — never 'baseline', never the runtime hash", async () => {
+    const root = await makeCaseDir({
+      "cases/a/request.md": "just finish",
+      "cases/a/expected.md": "done",
+      "cases/a/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+      "cases/b/request.md": "just finish",
+      "cases/b/expected.md": "done",
+      "cases/b/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const provider = new ScriptedModelProvider(Array.from({ length: 16 }, () => ScriptedModelProvider.text("done")));
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--candidate", "memory_retrieval", "--allow-insecure-local-benchmark", "--out", join(root, "out")],
+      provider,
+    );
+    expect(result.exitCode).toBe(0);
+    const { readdir, readFile } = await import("node:fs/promises");
+    const journalRoot = join(root, "out", ".paired-journal");
+    const identityDirs = await readdir(journalRoot);
+    expect(identityDirs.length).toBe(1);
+    const header = JSON.parse(await readFile(join(journalRoot, identityDirs[0]!, "identity.json"), "utf8")) as {
+      identity: {
+        baselineConfigHash: string;
+        candidateConfigHash: string | null;
+        treeFingerprint: string | null;
+        providerId: string;
+        modelId: string;
+      };
+    };
+    const id = header.identity;
+    // baselineConfigHash is a REAL 64-hex digest of the baseline arm config.
+    expect(id.baselineConfigHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(id.baselineConfigHash).not.toBe("baseline");
+    // candidateConfigHash is a REAL digest of the candidate arm config.
+    expect(id.candidateConfigHash).toMatch(/^[0-9a-f]{64}$/);
+    // treeFingerprint is never the literal "dirty" placeholder.
+    expect(id.treeFingerprint).not.toBe("dirty");
+    if (id.treeFingerprint !== null) expect(id.treeFingerprint).toMatch(/^[0-9a-f]{64}$/);
+    // The identity binds the SAME provider/model as the confirmed plan.
+    expect(id.providerId).toBe("scripted");
+    expect(typeof id.modelId).toBe("string");
+    expect(id.modelId.length).toBeGreaterThan(0);
   });
 });
