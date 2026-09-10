@@ -724,11 +724,8 @@ export async function loadGateEvidenceV2(path: string): Promise<GateEvidenceV2> 
       ? [p]
       : [join(dirname(path), p), resolve(p)];
     for (const candidate of candidates) {
-      try {
-        return await readFile(candidate);
-      } catch {
-        // try the next resolution
-      }
+      const bytes = await readFile(candidate).catch(() => null);
+      if (bytes !== null) return bytes;
     }
     return null;
   };
