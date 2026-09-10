@@ -121,7 +121,9 @@ jobs:
             # needing full log access.
             if ! node apps/cli/dist/main.js release gate "$gate" --evidence-dir "$EVID" >"$ERR" 2>&1; then
               rc=1
-              tail -n 25 "$ERR" | while IFS= read -r l; do echo "::error file=${GITHUB_WORKFLOW:-ci.yml},title=release gate $gate failed::$l"; done
+              # Annotate the FAILING lines (not just the tail): docs/audit gates
+              # print their failing check near the top/middle of the output.
+              grep -niE "fail|error|✗|inconsistent|missing|expected" "$ERR" | head -n 30 | while IFS= read -r l; do echo "::error file=${GITHUB_WORKFLOW:-ci.yml},title=release gate $gate failed::$l"; done
             fi
           done
           # Every attempted gate's evidence is durable (the generator wrote it
