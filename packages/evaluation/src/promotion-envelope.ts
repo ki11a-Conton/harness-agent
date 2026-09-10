@@ -309,42 +309,13 @@ export async function loadPromotionEnvelope(
     );
   }
 
-  // E3-07: verify the REAL DecisionArtifact that authorized this promotion.
-  // A bare `decisionEnvelopeDigest` string is NOT authority — the decision
-  // artifact must exist, its content digest must match, and it must be a
-  // valid DecisionArtifactV3 with schema + policy + contentDigest + ACCEPT
-  // decision (acceptance #1/#2).
-  if (verify.verifyDecisionArtifact !== false && typeof e.decisionArtifactPath === "string") {
-    try {
-      const buf = await readFile(e.decisionArtifactPath);
-      const actual = sha256OfFileBytes(buf);
-      if (actual !== e.decisionArtifactDigest) {
-        issues.push({ code: "DECISION_ARTIFACT_DIGEST_CHANGED", detail: `decision artifact ${e.decisionArtifactPath} digest changed: recorded ${e.decisionArtifactDigest}, actual ${actual}` });
-      } else {
-        // Digest matches — confirm the artifact is a valid DecisionArtifactV3:
-        // schemaVersion, policyVersion, contentDigest and ACCEPT decision.
-        try {
-          const parsed = JSON.parse(buf.toString("utf8")) as Record<string, unknown>;
-          if (typeof parsed.schemaVersion !== "string" || parsed.schemaVersion === "") {
-            issues.push({ code: "DECISION_ARTIFACT_INVALID", detail: "decision artifact missing schemaVersion" });
-          }
-          if (typeof parsed.policyVersion !== "string" || parsed.policyVersion === "") {
-            issues.push({ code: "DECISION_ARTIFACT_INVALID", detail: "decision artifact missing policyVersion" });
-          }
-          if (parsed.decision !== "ACCEPT") {
-            issues.push({ code: "DECISION_ARTIFACT_INVALID", detail: `decision artifact decision="${String(parsed.decision)}" is not ACCEPT` });
-          }
-          if (typeof parsed.contentDigest !== "string" || parsed.contentDigest === "") {
-            issues.push({ code: "DECISION_ARTIFACT_INVALID", detail: "decision artifact missing contentDigest" });
-          }
-        } catch {
-          issues.push({ code: "DECISION_ARTIFACT_INVALID", detail: "decision artifact is not valid JSON" });
-        }
-      }
-    } catch {
-      issues.push({ code: "DECISION_ARTIFACT_MISSING", detail: `decision artifact ${e.decisionArtifactPath} missing/unreadable` });
-    }
-  }
+  // E4-R15 (N11): the decision artifact is verified through the SAME single
+  // read path as every other bundle ref (the E4-06 block below): resolve
+  // against bundleRoot → containment guard → readBytes (read once) → digest →
+  // strict shape → cross-binding → evaluator replay. The pre-E4-R15 branch
+  // that called `readFile(e.decisionArtifactPath)` directly (resolving a
+  // RELATIVE path against process.cwd() and reading the file a SECOND time)
+  // is REMOVED — there is exactly one read path.
 
   // E4-06 — the envelope is authority ONLY if the referenced artifacts are REAL
   // V3 experiment artifacts + a REAL DecisionArtifact, cross-bound to each
@@ -403,9 +374,21 @@ export async function loadPromotionEnvelope(
     const candV3 = await strictLoadV3(candRef, "candidate");
     const baseV3 = await strictLoadV3(baseRef, "baseline");
 
-    // candidate must be promotion-eligible (strong isolation recorded at run time).
-    if (candV3 && candV3.artifact.manifest["promotionEligible"] !== true) {
-      issues.push({ code: "CANDIDATE_NOT_ELIGIBLE", detail: `candidate promotionEligible=${String(candV3.artifact.manifest["promotionEligible"])} — insecure/none isolation cannot promote` });
+    // candidate must be promotion-eligible (strong isolation recorded at run
+    // time) — AND, per E4-R15 (N09 defense), the eligibility claim is not
+    // trusted as a bare boolean: a promotion-eligible candidate must carry the
+    // full R13 execution plan and the R14 completion marker.
+    if (candV3) {
+      const m = candV3.artifact.manifest as Record<string, unknown>;
+      if (m["promotionEligible"] !== true) {
+        issues.push({ code: "CANDIDATE_NOT_ELIGIBLE", detail: `candidate promotionEligible=${String(m["promotionEligible"])} — insecure/none isolation cannot promote` });
+      }
+      if (typeof m["executionPlan"] !== "object" || m["executionPlan"] === null || Array.isArray(m["executionPlan"])) {
+        issues.push({ code: "CANDIDATE_NOT_ELIGIBLE", detail: "candidate manifest lacks the confirmed execution plan (E4-R13) — a self-declared eligibility boolean cannot promote" });
+      }
+      if (m["runComplete"] !== true) {
+        issues.push({ code: "CANDIDATE_NOT_ELIGIBLE", detail: `candidate manifest runComplete=${String(m["runComplete"])} — an incomplete experiment cannot promote` });
+      }
     }
 
     // DecisionArtifact: recompute its content digest + cross-bind to the plan.
@@ -471,7 +454,9 @@ export async function loadPromotionEnvelope(
             }
           }
         } catch (replayErr) {
-          process.stderr.write(`[degraded] promotion-envelope decision replay skipped: ${replayErr instanceof Error ? replayErr.message : String(replayErr)}\n`);
+          // E4-R15 (N11): a replay THROW is a rejection issue — never a
+          // degraded log that lets the promotion proceed on unverified bytes.
+          issues.push({ code: "DECISION_REPLAY_MISMATCH", detail: `evaluator replay threw: ${replayErr instanceof Error ? replayErr.message : String(replayErr)}` });
         }
       }
     }
