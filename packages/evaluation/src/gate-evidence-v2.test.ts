@@ -10,6 +10,8 @@ import {
   runGateV2,
   writeGateEvidenceV2,
   loadGateEvidenceV2,
+  parseGateEvidenceV2,
+  gateEvidenceV2Issues,
   GATE_EVIDENCE_V2_SCHEMA_VERSION,
   type GateEvidenceV2,
 } from "./gate-evidence-v2.js";
@@ -229,5 +231,74 @@ describe("E4-10 gate evidence generator + loader", () => {
     const v = verify(e, { expectedOutputDigest: digestOf({ stdout: "tampered" }) });
     expect(v.ok).toBe(false);
     expect(v.issues.map((i) => i.code)).toContain("DIGEST_MISMATCH");
+  });
+});
+describe("E4-R09 strict GateEvidenceV2 parse (F18)", () => {
+  function valid(): Record<string, unknown> {
+    return {
+      schemaVersion: GATE_EVIDENCE_V2_SCHEMA_VERSION,
+      gate: "capability_audit",
+      command: ["node", "run.ts"],
+      toolVersion: "e4-09",
+      gitSha: "a".repeat(40),
+      cleanBefore: true,
+      cleanAfter: true,
+      inputDigest: "0".repeat(64),
+      outputDigest: "1".repeat(64),
+      startedAtIso: "2026-01-01T00:00:00.000Z",
+      finishedAtIso: "2026-01-01T00:00:01.000Z",
+      exitCode: 0,
+      passed: true,
+      state: "passed",
+      summary: "PASS",
+      providerCalls: 0,
+      environmentClass: "offline",
+    };
+  }
+
+  const cases: Array<[string, (e: Record<string, unknown>) => void, string]> = [
+    ["missing required field (digest)", (e) => { delete e.outputDigest; }, "outputDigest"],
+    ["bad schemaVersion", (e) => { e.schemaVersion = "1.0.0"; }, "schemaVersion"],
+    ["unknown gate id", (e) => { e.gate = "../evil!"; }, "gate"],
+    ["wrong argv (empty command)", (e) => { e.command = []; }, "command"],
+    ["stale/absent gitSha", (e) => { e.gitSha = "unknown"; }, "gitSha"],
+    ["dirty source cannot pass", (e) => { e.cleanBefore = false; }, "cleanBefore"],
+    ["failed state cannot be passed", (e) => { e.state = "failed"; e.exitCode = 2; e.summary = "FAIL"; }, "passed"],
+    ["passed=true but exit nonzero", (e) => { e.exitCode = 1; }, "exitCode"],
+    ["passed=true with state not passed", (e) => { e.passed = true; e.state = "invalid"; }, "state"],
+    ["non-iso timestamps", (e) => { e.startedAtIso = "yesterday"; }, "startedAtIso"],
+    ["bad artifactRef digest", (e) => { e.artifactRefs = [{ path: "o.json", digest: "short" }]; }, "digest"],
+  ];
+
+  for (const [name, mutate, needle] of cases) {
+    it(`rejects: ${name}`, () => {
+      const e = valid();
+      mutate(e);
+      const issues = gateEvidenceV2Issues(e);
+      expect(issues.length).toBeGreaterThan(0);
+      expect(issues.some((i) => i.includes(needle))).toBe(true);
+      expect(() => parseGateEvidenceV2(e)).toThrow();
+    });
+  }
+
+  it("a complete valid object parses", () => {
+    const parsed = parseGateEvidenceV2(valid());
+    expect(parsed.passed).toBe(true);
+  });
+
+  it("loadGateEvidenceV2 returns NOT_RUN (never PASS) for a missing-field object on disk", async () => {
+    const dir = await (await import("node:fs/promises")).mkdtemp(join(tmpdir(), "e4-r09-"));
+    try {
+      const p = join(dir, "g.json");
+      const e = valid();
+      delete e.inputDigest;
+      await (await import("node:fs/promises")).writeFile(p, JSON.stringify(e), "utf8");
+      const loaded = await loadGateEvidenceV2(p);
+      expect(loaded.passed).toBe(false);
+      expect(loaded.state).toBe("not_run");
+      expect(loaded.summary).toContain("invalid GateEvidenceV2");
+    } finally {
+      await (await import("node:fs/promises")).rm(dir, { recursive: true, force: true });
+    }
   });
 });

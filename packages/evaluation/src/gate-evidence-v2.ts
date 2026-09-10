@@ -356,8 +356,94 @@ export async function writeGateEvidenceV2(evidence: GateEvidenceV2, path: string
 }
 
 /**
+ * E4-R09 (F18): strict parse of a GateEvidenceV2 from unknown bytes. Never a
+ * bare `JSON.parse as` — missing fields, bad schema, unknown gate/platform,
+ * inconsistent state/exitCode/passed, dirty source, stale/absent SHA and
+ * missing digests are ALL rejected. Returns issue strings (empty = valid).
+ */
+export function gateEvidenceV2Issues(value: unknown): string[] {
+  const issues: string[] = [];
+  if (typeof value !== "object" || value === null) {
+    return ["evidence is not an object"];
+  }
+  const e = value as Record<string, unknown>;
+  const hex64 = (v: unknown): boolean => typeof v === "string" && /^[0-9a-f]{64}$/.test(v);
+  const iso = (v: unknown): boolean => typeof v === "string" && !Number.isNaN(Date.parse(v));
+
+  if (e.schemaVersion !== GATE_EVIDENCE_V2_SCHEMA_VERSION) {
+    issues.push(`schemaVersion ${JSON.stringify(e.schemaVersion)} != ${GATE_EVIDENCE_V2_SCHEMA_VERSION}`);
+  }
+  if (typeof e.gate !== "string" || e.gate.length === 0 || !/^[a-z0-9_-]+$/.test(e.gate)) {
+    issues.push(`gate ${JSON.stringify(e.gate)} is not a known gate id`);
+  }
+  if (!Array.isArray(e.command) || e.command.length === 0 || !e.command.every((c) => typeof c === "string" && c.length > 0)) {
+    issues.push("command must be a non-empty string argv");
+  }
+  if (typeof e.toolVersion !== "string" || e.toolVersion.length === 0) {
+    issues.push("toolVersion missing");
+  }
+  if (typeof e.gitSha !== "string" || e.gitSha.length === 0 || e.gitSha === "unknown") {
+    issues.push(`gitSha ${JSON.stringify(e.gitSha)} is not a known HEAD (passing gates need a real SHA)`);
+  }
+  if (typeof e.cleanBefore !== "boolean" || typeof e.cleanAfter !== "boolean") {
+    issues.push("cleanBefore/cleanAfter must be booleans");
+  }
+  if (!hex64(e.inputDigest) || !hex64(e.outputDigest)) {
+    issues.push("inputDigest/outputDigest must be 64-hex");
+  }
+  if (!iso(e.startedAtIso) || !iso(e.finishedAtIso)) {
+    issues.push("startedAtIso/finishedAtIso must be parseable ISO timestamps");
+  }
+  const exitCode = e.exitCode === null ? null : typeof e.exitCode === "number" && Number.isInteger(e.exitCode) ? e.exitCode : Number.NaN;
+  if (exitCode === null && e.state !== "not_run") {
+    issues.push("exitCode null outside not_run");
+  }
+  if (Number.isNaN(exitCode)) issues.push("exitCode must be null or an integer");
+  const state = e.state as GateEvidenceV2State;
+  const KNOWN = new Set<GateEvidenceV2State>(["passed", "failed", "not_run", "blocked", "invalid", "PAID_BENCHMARK_NOT_AUTHORIZED"]);
+  if (typeof state !== "string" || !KNOWN.has(state)) issues.push(`state ${JSON.stringify(state)} unknown`);
+  if (typeof e.passed !== "boolean") issues.push("passed must be a boolean");
+  if (typeof e.summary !== "string") issues.push("summary missing");
+  if (e.providerCalls !== undefined && (typeof e.providerCalls !== "number" || !Number.isInteger(e.providerCalls) || e.providerCalls < 0)) {
+    issues.push("providerCalls must be a non-negative integer");
+  }
+  if (e.environmentClass !== undefined && e.environmentClass !== "offline" && e.environmentClass !== "paid" && e.environmentClass !== "insecure-local") {
+    issues.push(`environmentClass ${JSON.stringify(e.environmentClass)} unknown`);
+  }
+
+  // Cross-field consistency: a PASS means state=passed AND exit 0 AND a known
+  // clean HEAD; a FAILED/INVALID/BLOCKED/NOT_RUN can never be passed=true.
+  if (e.passed === true) {
+    if (state !== "passed") issues.push(`passed=true but state=${String(state)}`);
+    if (exitCode !== 0) issues.push(`passed=true but exitCode=${String(exitCode)}`);
+    if (e.cleanBefore !== true || e.cleanAfter !== true) issues.push("passed=true on a dirty tree (cleanBefore/cleanAfter)");
+    if (e.gitSha === "unknown") issues.push("passed=true with unknown gitSha");
+  } else if (e.passed === false && state === "passed") {
+    issues.push(`state=passed but passed=false`);
+  }
+  if (Array.isArray(e.artifactRefs)) {
+    for (const ref of e.artifactRefs) {
+      const r = ref as { path?: unknown; digest?: unknown };
+      if (typeof r.path !== "string" || r.path.length === 0) issues.push("artifactRef.path missing");
+      if (r.digest !== null && r.digest !== undefined && !hex64(r.digest)) issues.push(`artifactRef ${JSON.stringify(r.path)} digest is not 64-hex`);
+    }
+  }
+  return issues;
+}
+
+export function parseGateEvidenceV2(value: unknown): GateEvidenceV2 {
+  const issues = gateEvidenceV2Issues(value);
+  if (issues.length > 0) {
+    throw new Error(`GateEvidenceV2 invalid: ${issues.join("; ")}`);
+  }
+  return value as GateEvidenceV2;
+}
+
+/**
  * Load a gate's evidence. A missing or unparseable file returns a NOT_RUN
  * sentinel (state=not_run, passed=false) — it is NEVER treated as PASS.
+ * E4-R09 (F18): a JSON object missing fields / with inconsistent fields is
+ * STRICTLY rejected the same way — never `JSON.parse as GateEvidenceV2`.
  */
 export async function loadGateEvidenceV2(path: string): Promise<GateEvidenceV2> {
   let raw: string;
@@ -366,11 +452,17 @@ export async function loadGateEvidenceV2(path: string): Promise<GateEvidenceV2> 
   } catch {
     return notRunEvidence(`missing evidence file: ${path}`);
   }
+  let parsed: unknown;
   try {
-    return JSON.parse(raw) as GateEvidenceV2;
+    parsed = JSON.parse(raw);
   } catch {
     return notRunEvidence(`unparseable evidence file: ${path}`);
   }
+  const issues = gateEvidenceV2Issues(parsed);
+  if (issues.length > 0) {
+    return notRunEvidence(`invalid GateEvidenceV2 (${path}): ${issues.slice(0, 3).join("; ")}${issues.length > 3 ? ` (+${issues.length - 3} more)` : ""}`);
+  }
+  return parsed as GateEvidenceV2;
 }
 
 function notRunEvidence(summary: string): GateEvidenceV2 {
