@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -9,8 +9,14 @@ let ws = "";
 let outside = "";
 
 beforeAll(() => {
-  ws = mkdtempSync(join(tmpdir(), "ar-exec-ws-"));
-  outside = mkdtempSync(join(tmpdir(), "ar-exec-out-"));
+  // E4-R07/F16: canonicalize the fixture paths. resolveExecCwd returns the
+  // CANONICAL (realpath'd) form, and on Windows CI the runner's temp dir is an
+  // 8.3 short path (C:\Users\RUNNER~1\...) whose realpath is the long
+  // (C:\Users\runneradmin\...) form — comparing an un-canonical fixture path
+  // against the canonical result failed there. The security assertions
+  // (containment/rejection) are unchanged; only the equality basis is fixed.
+  ws = realpathSync(mkdtempSync(join(tmpdir(), "ar-exec-ws-")));
+  outside = realpathSync(mkdtempSync(join(tmpdir(), "ar-exec-out-")));
   mkdirSync(join(ws, "sub", "nested"), { recursive: true });
 });
 

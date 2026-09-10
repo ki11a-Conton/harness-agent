@@ -1097,7 +1097,23 @@ async function probeExecutionEvidence(
           gate?: string;
           suite?: string;
           kind?: string;
+          // E4-R09: V2 gate evidence fields (gitSha, argv command, ISO finish).
+          gitSha?: string;
+          command?: unknown;
+          finishedAtIso?: string;
         };
+        // E4-R09 (F19): the audience reads the SAME strict protocol — a V2 gate
+        // evidence's gitSha/argv map onto the V1-style headSha/command here so
+        // freshness checks work identically for both generations.
+        const headSha = raw.headSha ?? raw.gitSha;
+        const rawCommand: unknown = raw.command;
+        const command: string =
+          typeof rawCommand === "string"
+            ? rawCommand
+            : Array.isArray(rawCommand)
+              ? rawCommand.join(" ")
+              : String(rawCommand ?? "");
+        const generatedAt = raw.generatedAt ?? raw.finishedAtIso;
         // P38.2-5: key by the EXPLICIT field, never the file name — a gate file
         // can never collide with a capability key and vice versa.
         const key =
@@ -1116,20 +1132,20 @@ async function probeExecutionEvidence(
           // benchmark to keep test/benchmark claims disjoint (INV-P38.2-005).
           out[`benchmark:${raw.capability}`] = {
             kind: "benchmark_run",
-            headSha: raw.headSha,
-            command: raw.command,
+            headSha,
+            command,
             passed: raw.passed === true,
-            generatedAt: raw.generatedAt,
+            generatedAt,
             ...(raw.artifactRef !== undefined ? { artifactRef: raw.artifactRef } : {}),
           };
           continue;
         }
         out[key] = {
           kind: raw.kind,
-          headSha: raw.headSha,
-          command: raw.command,
+          headSha,
+          command,
           passed: raw.passed === true,
-          generatedAt: raw.generatedAt,
+          generatedAt,
           ...(raw.artifactRef !== undefined ? { artifactRef: raw.artifactRef } : {}),
         };
       } catch {
