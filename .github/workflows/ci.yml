@@ -99,45 +99,27 @@ jobs:
           if-no-files-found: error
 
       # P38.2-4 (INV-P38.2-004): every attempted gate emits truthful evidence
-      # from its REAL exit code. Under `bash -e` a failing command exits before
-      # `$?` is captured, so each gate runs inside `set +e` and the evidence is
-      # written before the step can fail. P38.2-10: evidence is namespaced per
-      # OS (linux/ windows) so platforms never overwrite each other.
-      - name: Generate gate execution evidence (P38.2-4/10)
+      # from its REAL exit code. E4-R09 (F19): the evidence is produced by the
+      # SAME production GateEvidenceV2 generator the verifier/collector consume
+      # (`release gate` -> runGateV2) — never hand-written schemaVersion=1 JSON.
+      # Each `release gate` runs the canonical GATE_COMMANDS command, binds git
+      # state before/after + real exit code + digests, and writes DURABLE V2
+      # evidence before returning; a red gate propagates its own exit code.
+      # P38.2-10: evidence is namespaced per OS (linux/ windows).
+      - name: Generate gate execution evidence (P38.2-4/10, E4-R09 unified V2)
         shell: bash
         run: |
           OS=$(case "${{ matrix.os }}" in *windows*) echo windows;; *) echo linux;; esac)
           EVID=".ci/evidence/gates/$OS"
           mkdir -p "$EVID"
-          run_gate() {
-            local gate="$1"; local cmd="$2"
-            set +e
-            eval "$cmd" >/dev/null 2>&1
-            local rc=$?
-            set -e
-            echo "{\"schemaVersion\":1,\"kind\":\"gate\",\"gate\":\"$gate\",\"headSha\":\"${{ github.sha }}\",\"command\":\"$cmd\",\"exitCode\":$rc,\"passed\":$([ $rc -eq 0 ] && echo true || echo false),\"platform\":\"$OS\",\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > "$EVID/$gate.json"
-          }
-          run_gate typecheck "pnpm typecheck"
-          run_gate test "pnpm test"
-          run_gate build "pnpm build"
-          run_gate benchmark_smoke "pnpm benchmark:smoke"
-          run_gate capability_audit "pnpm capability:audit"
-          run_gate docs "pnpm docs:verify"
-          run_gate protocol "pnpm test:protocol"
-          run_gate security "pnpm test:security"
-          run_gate race "pnpm test:race"
-          run_gate chaos "pnpm test:chaos"
-          # The step fails with the FIRST red gate's real exit code — evidence
-          # for every attempted gate is already durable.
-          for f in "$EVID"/*.json; do
-            [ -s "$f" ] || { echo "ERROR: empty evidence $f"; exit 1; }
-          done
           rc=0
           for gate in typecheck test build benchmark_smoke capability_audit docs protocol security race chaos; do
-            # NOTE: use fs.readFileSync, not require() — `.ci/...` is a bare
-            # module specifier in Node, not a relative path, so `require()`
-            # fails MODULE_NOT_FOUND on both Linux and Windows (P38.2-8/9 CI fix).
-            r=$(node -e "const fs=require('fs'); const j=JSON.parse(fs.readFileSync('$EVID/$gate.json','utf8')); process.exit(j.passed?0:1)") && continue || { echo "GATE FAILED: $gate"; rc=1; }
+            node apps/cli/dist/main.js release gate "$gate" --evidence-dir "$EVID" || rc=1
+          done
+          # Every attempted gate's evidence is durable (the generator wrote it
+          # before returning); fail with the first red gate's rc semantics.
+          for f in "$EVID"/*.json; do
+            [ -s "$f" ] || { echo "ERROR: empty evidence $f"; rc=1; }
           done
           exit $rc
 
@@ -210,18 +192,18 @@ jobs:
           path: coverage/coverage-summary.json
           if-no-files-found: error
 
-      # P38-12: coverage gate evidence — written after the coverage command
-      # succeeds (if it fails, the job terminates before this step).
-      - name: Generate coverage gate evidence (P38-12)
+      # P38-12 + E4-R09 (F19): coverage gate evidence via the SAME V2 generator
+      # (runs the canonical `pnpm test:coverage`, binds real exit + git state +
+      # digests, writes to gates/coverage/ matching the attestation layout).
+      - name: Generate coverage gate evidence (P38-12, E4-R09 V2)
         run: |
-          mkdir -p .ci/evidence
-          echo "{\"schemaVersion\":1,\"kind\":\"gate\",\"gate\":\"coverage\",\"headSha\":\"${{ github.sha }}\",\"command\":\"pnpm test:coverage\",\"exitCode\":0,\"passed\":true,\"platform\":\"coverage\",\"generatedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .ci/evidence/coverage.json
+          node apps/cli/dist/main.js release gate coverage --evidence-dir .ci/evidence/gates/coverage
 
       - name: Upload coverage gate evidence (P38-12)
         uses: actions/upload-artifact@v4
         with:
           name: gate-evidence-coverage
-          path: .ci/evidence/coverage.json
+          path: .ci/evidence/gates/coverage/
           if-no-files-found: error
 
   # P38-12 (INV-P38-014/015): official release attestation REDUCES real gate
