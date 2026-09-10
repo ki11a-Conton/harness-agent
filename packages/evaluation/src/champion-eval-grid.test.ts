@@ -12,9 +12,11 @@
 import { describe, expect, it } from "vitest";
 import { buildExperimentArtifactV3 } from "./artifact-v3/index.js";
 import { deriveV3Decision, loadV3ArtifactPair, type V3ArtifactPair } from "./champion-eval-v3.js";
+import { DEFAULT_DECISION_POLICY_V3, computeThresholdDigestV3 } from "./decision-policy-v3.js";
 import type { CaseOutcomeV3 } from "./artifact-v3/index.js";
 
 const PLAN = "d".repeat(64);
+const policy0 = () => ({ computeThresholdDigestV3, DEFAULT_DECISION_POLICY_V3 });
 
 function outcome(caseId: string, rep: number, armId: "baseline" | "candidate"): CaseOutcomeV3 {
   return {
@@ -22,7 +24,9 @@ function outcome(caseId: string, rep: number, armId: "baseline" | "candidate"): 
     passed: true, grade: "good", terminationReason: "verified_complete",
     verificationPassed: true, failureCategory: null,
     inputTokens: 1000, outputTokens: 500, costUsd: 0.01, latencyMs: 100, toolCalls: 3,
-    recoveryDecisions: [], activationRef: armId === "candidate" ? "act" : null, securityOutcomeRef: null,
+    recoveryDecisions: [], activationRef: armId === "candidate" ? "act" : null,
+    // E4-R14 (N08): every sample carries a RESOLVING security evidence record.
+    securityOutcomeRef: `holdout\u0000${caseId}\u0000${rep}\u0000${armId}`,
     outputDigest: null, workspaceDigest: null, judgeVersion: "1.0.0",
     evaluationContextHash: "a".repeat(64), candidateConfigHash: armId === "candidate" ? "b".repeat(64) : null,
   } as unknown as CaseOutcomeV3;
@@ -36,16 +40,26 @@ const EXPECTED_KEYS = (() => {
 })();
 
 function armArtifact(armId: "baseline" | "candidate", rows: Array<[string, number]>, manifestExtra: Record<string, unknown> = {}) {
+  const { computeThresholdDigestV3, DEFAULT_DECISION_POLICY_V3 } = policy0();
   return buildExperimentArtifactV3({
     arm: { armId, candidateId: armId === "candidate" ? "cand-x" : null, candidateConfigHash: armId === "candidate" ? "b".repeat(64) : null },
     manifest: {
       suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false,
       planDigest: PLAN, promotionEligible: true, isolationStrength: "strong",
-      expectedSampleKeys: EXPECTED_KEYS, runComplete: true, ...manifestExtra,
+      expectedSampleKeys: EXPECTED_KEYS, runComplete: true,
+      // E4-R13/R14: the confirmed plan is REQUIRED for promotion-eligible
+      // artifacts — the fixture carries the same identity the writer preserves.
+      executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: ["a", "b", "c", "d"], repeat: 2 },
+      thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
+      ...manifestExtra,
     },
     outcomes: rows.map(([caseId, rep]) => outcome(caseId, rep, armId)),
     activationEvidence: armId === "candidate" ? [{ id: "act", reasonCodes: ["memory.retrieved"], note: "x" }] : [],
-    securityOutcomes: [],
+    securityOutcomes: rows.map(([caseId, rep]) => ({
+      caseId: `holdout\u0000${caseId}\u0000${rep}\u0000${armId}`,
+      kind: "clean" as const,
+      detail: "no attack attempted (fixture)",
+    })),
     provenance: { sourceManifestPath: "m.json", gitSha: "c".repeat(40), dirty: false, model: "m", provider: "fake", runtimeConfigHash: "e".repeat(64) },
   });
 }

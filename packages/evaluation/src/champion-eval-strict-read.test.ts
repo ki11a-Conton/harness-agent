@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildExperimentArtifactV3, writeExperimentArtifactV3 } from "./artifact-v3/index.js";
 import { runV3ChampionEval, loadV3ArtifactPair } from "./champion-eval-v3.js";
+import { DEFAULT_DECISION_POLICY_V3, computeThresholdDigestV3 } from "./decision-policy-v3.js";
 import type { CaseOutcomeV3 } from "./artifact-v3/index.js";
 
 function outcome(caseId: string, armId: "baseline" | "candidate", rep: number, order: number, passed: boolean, configHash: string | null, activationRef: string | null): CaseOutcomeV3 {
@@ -22,7 +23,9 @@ function outcome(caseId: string, armId: "baseline" | "candidate", rep: number, o
     grade: passed ? "good" : "poor", terminationReason: "verified_complete",
     verificationPassed: passed, failureCategory: null,
     inputTokens: 1000, outputTokens: 500, costUsd: 0.01, latencyMs: 100, toolCalls: 3,
-    recoveryDecisions: [], activationRef, securityOutcomeRef: null,
+    recoveryDecisions: [], activationRef,
+    // E4-R14 (N08): every sample carries a RESOLVING security evidence record.
+    securityOutcomeRef: `holdout\u0000${caseId}\u0000${rep}\u0000${armId}`,
     outputDigest: null, workspaceDigest: null, judgeVersion: "1.0.0",
     evaluationContextHash: "a".repeat(64), candidateConfigHash: configHash,
   } as unknown as CaseOutcomeV3;
@@ -41,17 +44,27 @@ function armArtifact(armId: "baseline" | "candidate", configHash: string | null)
         armId === "candidate" ? `act-${rep}-${c}` : null));
     }
   }
+  const grid = [1, 2].flatMap((rep) => [1, 2, 3].map((c) => `holdout\u0000ho-0${c}\u0000${rep}`));
   return buildExperimentArtifactV3({
     arm: { armId, candidateId: armId === "candidate" ? "cand-x" : null, candidateConfigHash: configHash },
     manifest: {
       suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false,
       planDigest: "d".repeat(64), promotionEligible: true, isolationStrength: "strong", repeat: 2,
+      // E4-R13/R14: the confirmed plan + complete grid + completion marker.
+      expectedSampleKeys: grid,
+      runComplete: true,
+      executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: ["ho-01", "ho-02", "ho-03"], repeat: 2 },
+      thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
     },
     outcomes: rows,
     activationEvidence: armId === "candidate"
       ? [1, 2].flatMap((rep) => [1, 2, 3].map((c) => ({ id: `act-${rep}-${c}`, reasonCodes: ["memory.retrieved"], note: "activated" })))
       : [],
-    securityOutcomes: [],
+    securityOutcomes: rows.map((o) => ({
+      caseId: `holdout\u0000${o.caseId}\u0000${o.repetition}\u0000${armId}`,
+      kind: "clean" as const,
+      detail: "no attack attempted (fixture)",
+    })),
     provenance: { sourceManifestPath: null, gitSha: "c".repeat(40), dirty: false, model: "m", provider: "fake", runtimeConfigHash: "e".repeat(64) },
   });
 }

@@ -34,6 +34,8 @@ import {
   buildExperimentArtifactV3,
   writeExperimentArtifactV3,
   resolveChampionHarness,
+  DEFAULT_DECISION_POLICY_V3,
+  computeThresholdDigestV3,
 } from "@ar/evaluation";
 import { runBenchmarkCommand } from "./benchmark-command.js";
 import { writeChampionStateFileCas, championStateDigest } from "./champion-state-file.js";
@@ -89,7 +91,10 @@ async function buildV3ArtifactPair(
     passed, grade: passed ? "good" : "pass", terminationReason: "verified_complete",
     verificationPassed: passed, failureCategory: null,
     inputTokens: 1000, outputTokens: 500, costUsd: 0.01, latencyMs: 100,
-    toolCalls: 3, recoveryDecisions: [], activationRef, securityOutcomeRef: null,
+    toolCalls: 3, recoveryDecisions: [],
+    activationRef,
+    // E4-R14 (N08): every sample carries a RESOLVING security evidence record.
+    securityOutcomeRef: `holdout\u0000${caseId}\u0000${rep}\u0000${armId}`,
     outputDigest: null, workspaceDigest: null, judgeVersion: "1.0.0",
     evaluationContextHash: sha("ctx"), candidateConfigHash: configHash,
   });
@@ -97,21 +102,30 @@ async function buildV3ArtifactPair(
   const gitSha = "a".repeat(40);
   const baseConfigHash = sha("base");
   const runtimeConfigHash = baseConfigHash; // both arms share the same runtime config
+  const cases = ["ho-01", "ho-02", "ho-03"];
+  const grid = [1, 2].flatMap((rep) => cases.map((c) => `holdout\u0000${c}\u0000${rep}`));
 
   // Baseline: ho-01 fails in both reps; ho-02/03 pass in both reps.
+  const baselineOutcomes = [
+    outcome("ho-01", "baseline", 1, 1, false, baseConfigHash),
+    outcome("ho-02", "baseline", 1, 2, true, baseConfigHash),
+    outcome("ho-03", "baseline", 1, 3, true, baseConfigHash),
+    outcome("ho-01", "baseline", 2, 4, false, baseConfigHash),
+    outcome("ho-02", "baseline", 2, 5, true, baseConfigHash),
+    outcome("ho-03", "baseline", 2, 6, true, baseConfigHash),
+  ];
   const baselineArtifact = buildExperimentArtifactV3({
     arm: { armId: "baseline", candidateId: null, candidateConfigHash: baseConfigHash },
-    manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha, dirty: false },
-    outcomes: [
-      outcome("ho-01", "baseline", 1, 1, false, baseConfigHash),
-      outcome("ho-02", "baseline", 1, 2, true, baseConfigHash),
-      outcome("ho-03", "baseline", 1, 3, true, baseConfigHash),
-      outcome("ho-01", "baseline", 2, 4, false, baseConfigHash),
-      outcome("ho-02", "baseline", 2, 5, true, baseConfigHash),
-      outcome("ho-03", "baseline", 2, 6, true, baseConfigHash),
-    ],
+    manifest: {
+      suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha, dirty: false,
+      // E4-R13/R14: confirmed plan + complete grid + completion marker.
+      expectedSampleKeys: grid, runComplete: true,
+      executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: cases, repeat: 2 },
+      thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
+    },
+    outcomes: baselineOutcomes,
     activationEvidence: [],
-    securityOutcomes: [],
+    securityOutcomes: baselineOutcomes.map((o) => ({ caseId: o.securityOutcomeRef, kind: "clean", detail: "no attack (fixture)" })),
     provenance: { sourceManifestPath: null, gitSha, dirty: false, model: "deepseek-v4-flash",
       provider: "fake", runtimeConfigHash },
   });
@@ -119,27 +133,28 @@ async function buildV3ArtifactPair(
   await writeExperimentArtifactV3(baselineArtifact, baselinePath);
 
   const candidateConfigHash = arm.digest;
+  // E4-R14 (N07): a case is activation-eligible only when EVERY repetition
+  // carries a resolving activationRef — so all 6 candidate outcomes activate.
+  const candidateOutcomes = [
+    outcome("ho-01", "candidate", 1, 1, true, candidateConfigHash, "act-001"),
+    outcome("ho-02", "candidate", 1, 2, true, candidateConfigHash, "act-002"),
+    outcome("ho-03", "candidate", 1, 3, true, candidateConfigHash, "act-003"),
+    outcome("ho-01", "candidate", 2, 4, true, candidateConfigHash, "act-004"),
+    outcome("ho-02", "candidate", 2, 5, true, candidateConfigHash, "act-005"),
+    outcome("ho-03", "candidate", 2, 6, true, candidateConfigHash, "act-006"),
+  ];
   const candidateArtifact = buildExperimentArtifactV3({
     arm: { armId: "candidate", candidateId: "adaptive_recovery_v2", candidateConfigHash },
-    manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha, dirty: false, planDigest: sha("plan-v1"), promotionEligible: true, isolationStrength: "strong", runtimeConfigHash },
-    outcomes: [
-      // Rep 1: candidate passes all 3 (activation on all three, coverage 3/6
-      // overall ≥ 0.5 with ≥3 eligible cases).
-      outcome("ho-01", "candidate", 1, 1, true, candidateConfigHash, "act-001"),
-      outcome("ho-02", "candidate", 1, 2, true, candidateConfigHash, "act-002"),
-      outcome("ho-03", "candidate", 1, 3, true, candidateConfigHash, "act-003"),
-      // Rep 2: candidate passes all 3 (activation refs on rep1 only is fine —
-      // coverage is over ALL candidate outcomes: 3/6 = 0.5).
-      outcome("ho-01", "candidate", 2, 4, true, candidateConfigHash),
-      outcome("ho-02", "candidate", 2, 5, true, candidateConfigHash),
-      outcome("ho-03", "candidate", 2, 6, true, candidateConfigHash),
-    ],
-    activationEvidence: [
-      { id: "act-001", reasonCodes: ["memory.retrieved"], note: "memory retrieval activated" },
-      { id: "act-002", reasonCodes: ["memory.retrieved"], note: "memory retrieval activated" },
-      { id: "act-003", reasonCodes: ["memory.retrieved"], note: "memory retrieval activated" },
-    ],
-    securityOutcomes: [],
+    manifest: {
+      suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha, dirty: false, planDigest: sha("plan-v1"),
+      promotionEligible: true, isolationStrength: "strong", runtimeConfigHash,
+      expectedSampleKeys: grid, runComplete: true,
+      executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: cases, repeat: 2 },
+      thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
+    },
+    outcomes: candidateOutcomes,
+    activationEvidence: candidateOutcomes.map((o) => ({ id: o.activationRef as string, reasonCodes: ["memory.retrieved"], note: "memory retrieval activated" })),
+    securityOutcomes: candidateOutcomes.map((o) => ({ caseId: o.securityOutcomeRef, kind: "clean", detail: "no attack (fixture)" })),
     provenance: { sourceManifestPath: null, gitSha, dirty: false, model: "deepseek-v4-flash",
       provider: "fake", runtimeConfigHash },
   });
@@ -190,7 +205,10 @@ describe("E3-13 production-path offline integration", () => {
     expect(evalResult.decisionArtifact.decision).toBe("ACCEPT");
     // Every gate value is derived from artifact outcomes.
     expect(evalResult.derivedInputs.netPassedDelta).toBe(2); // +1 per rep × 2 reps
-    expect(evalResult.derivedInputs.activationCoverage).toBe(0.5); // 3/6 activated
+    // E4-R14 (N07): activation coverage is over UNIQUE eligible cases — all 3
+    // cases carry a resolving activationRef on EVERY repetition → 3/3 = 1.0.
+    expect(evalResult.derivedInputs.activationCoverage).toBe(1.0);
+    expect(evalResult.derivedInputs.activationEligibleCases).toBe(3);
     expect(evalResult.derivedInputs.securityBreachesCandidate).toBe(0);
     expect(evalResult.derivedInputs.comparable).toBe(true);
     // The decision artifact is a valid DecisionArtifactV3.

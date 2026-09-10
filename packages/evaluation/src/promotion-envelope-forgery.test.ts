@@ -32,6 +32,7 @@ const sha = (s: string): string => createHash("sha256").update(s, "utf8").digest
 const GIT_SHA = "c".repeat(40);
 const PLAN_DIGEST = "d".repeat(64);
 const CAND_CONFIG = "b".repeat(64);
+import { DEFAULT_DECISION_POLICY_V3, computeThresholdDigestV3 } from "./decision-policy-v3.js";
 
 function outcome(caseId: string, armId: string, rep: number, order: number, passed: boolean, activationRef: string | null) {
   return {
@@ -39,7 +40,9 @@ function outcome(caseId: string, armId: string, rep: number, order: number, pass
     passed, grade: passed ? "good" : "poor", verificationPassed: passed,
     terminationReason: "verified_complete", failureCategory: null,
     inputTokens: 1000, outputTokens: 500, costUsd: 0.01, latencyMs: 100, toolCalls: 3,
-    recoveryDecisions: [], activationRef, securityOutcomeRef: null,
+    recoveryDecisions: [], activationRef,
+    // E4-R14 (N08): every sample carries a RESOLVING security evidence record.
+    securityOutcomeRef: `holdout\u0000${caseId}\u0000${rep}\u0000${armId}`,
     outputDigest: null, workspaceDigest: null, judgeVersion: "1.0.0",
     evaluationContextHash: "a".repeat(64),
     candidateConfigHash: armId === "candidate" ? CAND_CONFIG : null,
@@ -54,21 +57,30 @@ async function buildValidBundle(dir: string) {
     planDigest: PLAN_DIGEST, promotionEligible: true, isolationStrength: "strong",
     // E4-R04 #5: the production builder always records the runtime config
     // identity; a genuine bundle must carry it too.
-    runtimeConfigHash: CAND_CONFIG, ...extra,
+    runtimeConfigHash: CAND_CONFIG,
+    // E4-R13/R14: the confirmed plan + complete grid + completion marker are
+    // REQUIRED for promotion-eligible artifacts.
+    expectedSampleKeys: [1, 2].flatMap((rep) => [1, 2, 3].map((k) => `holdout\u0000ho-0${k}\u0000${rep}`)),
+    runComplete: true,
+    executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: ["ho-01", "ho-02", "ho-03"], repeat: 2 },
+    thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
+    ...extra,
   });
+  const rows = (armId: string, passed: boolean) => [1, 2].flatMap((rep) => [0, 1, 2].map((k) => outcome(`ho-0${k + 1}`, armId, rep, (rep - 1) * 3 + k + 1, passed, passed ? `act-${rep}-${k}` : null)));
   const baseline = buildExperimentArtifactV3({
     arm: { armId: "baseline", candidateId: null, candidateConfigHash: null },
     manifest: mk("baseline", {}),
-    outcomes: [1, 2].flatMap((rep) => [0, 1, 2].map((k) => outcome(`ho-0${k + 1}`, "baseline", rep, (rep - 1) * 3 + k + 1, false, null))),
-    activationEvidence: [], securityOutcomes: [],
+    outcomes: rows("baseline", false),
+    activationEvidence: [],
+    securityOutcomes: rows("baseline", false).map((o) => ({ caseId: `holdout\u0000${o.caseId}\u0000${o.repetition}\u0000baseline`, kind: "clean", detail: "no attack (fixture)" })),
     provenance: { sourceManifestPath: null, gitSha: GIT_SHA, dirty: false, model: "deepseek-v4-flash", provider: "fake", runtimeConfigHash: CAND_CONFIG },
   });
   const candidate = buildExperimentArtifactV3({
     arm: { armId: "candidate", candidateId: "cand-x", candidateConfigHash: CAND_CONFIG },
     manifest: mk("candidate", {}),
-    outcomes: [1, 2].flatMap((rep) => [0, 1, 2].map((k) => outcome(`ho-0${k + 1}`, "candidate", rep, (rep - 1) * 3 + k + 1, true, `act-${rep}-${k}`))),
+    outcomes: rows("candidate", true),
     activationEvidence: [1, 2].flatMap((rep) => [0, 1, 2].map((k) => ({ id: `act-${rep}-${k}`, reasonCodes: ["memory.retrieved"], note: "activated" }))),
-    securityOutcomes: [],
+    securityOutcomes: rows("candidate", true).map((o) => ({ caseId: `holdout\u0000${o.caseId}\u0000${o.repetition}\u0000candidate`, kind: "clean", detail: "no attack (fixture)" })),
     provenance: { sourceManifestPath: null, gitSha: GIT_SHA, dirty: false, model: "deepseek-v4-flash", provider: "fake", runtimeConfigHash: CAND_CONFIG },
   });
   const baselinePath = join(dir, "baseline.json");
@@ -189,14 +201,17 @@ describe("E4-06 forged promotion regression", () => {
     // single rep) so the real evaluator says INCONCLUSIVE; forge ACCEPT.
     const baselinePath = join(dir, "baseline.json");
     const candidatePath = join(dir, "candidate.json");
-    const mk = (armId: string, passed: boolean) => buildExperimentArtifactV3({
-      arm: { armId, candidateId: armId === "candidate" ? "cand-x" : null, candidateConfigHash: armId === "candidate" ? CAND_CONFIG : null },
-      manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT_SHA, dirty: false, planDigest: PLAN_DIGEST, promotionEligible: true, isolationStrength: "strong" },
-      outcomes: [1, 2].flatMap((rep) => [0, 1, 2].map((k) => outcome(`ho-0${k + 1}`, armId, rep, (rep - 1) * 3 + k + 1, passed, armId === "candidate" ? `act-${rep}-${k}` : null))),
-      activationEvidence: armId === "candidate" ? [1, 2].flatMap((rep) => [0, 1, 2].map((k) => ({ id: `act-${rep}-${k}`, reasonCodes: ["memory.retrieved"], note: "x" }))) : [],
-      securityOutcomes: [],
-      provenance: { sourceManifestPath: null, gitSha: GIT_SHA, dirty: false, model: "deepseek-v4-flash", provider: "fake", runtimeConfigHash: CAND_CONFIG },
-    });
+    const mk = (armId: string, passed: boolean) => {
+      const outcomes = [1, 2].flatMap((rep) => [0, 1, 2].map((k) => outcome(`ho-0${k + 1}`, armId, rep, (rep - 1) * 3 + k + 1, passed, armId === "candidate" ? `act-${rep}-${k}` : null)));
+      return buildExperimentArtifactV3({
+        arm: { armId, candidateId: armId === "candidate" ? "cand-x" : null, candidateConfigHash: armId === "candidate" ? CAND_CONFIG : null },
+        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT_SHA, dirty: false, planDigest: PLAN_DIGEST, promotionEligible: true, isolationStrength: "strong" },
+        outcomes,
+        activationEvidence: armId === "candidate" ? [1, 2].flatMap((rep) => [0, 1, 2].map((k) => ({ id: `act-${rep}-${k}`, reasonCodes: ["memory.retrieved"], note: "x" }))) : [],
+        securityOutcomes: outcomes.map((o) => ({ caseId: `holdout\u0000${o.caseId}\u0000${o.repetition}\u0000${armId}`, kind: "clean", detail: "no attack (fixture)" })),
+        provenance: { sourceManifestPath: null, gitSha: GIT_SHA, dirty: false, model: "deepseek-v4-flash", provider: "fake", runtimeConfigHash: CAND_CONFIG },
+      });
+    };
     await writeExperimentArtifactV3(mk("baseline", true), baselinePath); // baseline also passes -> net delta 0
     await writeExperimentArtifactV3(mk("candidate", true), candidatePath);
     const real = await runV3ChampionEval({ baselinePath, candidatePath, candidateId: "cand-x" });
@@ -264,21 +279,19 @@ describe("E4-06 forged promotion regression", () => {
   it("candidate promotionEligible=false -> CANDIDATE_NOT_ELIGIBLE", async () => {
     const baselinePath = join(dir, "baseline.json");
     const candidatePath = join(dir, "candidate.json");
-    await writeExperimentArtifactV3(buildExperimentArtifactV3({
-      arm: { armId: "baseline", candidateId: null, candidateConfigHash: null },
-      manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT_SHA, dirty: false, planDigest: PLAN_DIGEST, promotionEligible: true, isolationStrength: "strong" },
-      outcomes: [1, 2].flatMap((rep) => [0, 1, 2].map((k) => outcome(`ho-0${k + 1}`, "baseline", rep, (rep - 1) * 3 + k + 1, false, null))),
-      activationEvidence: [], securityOutcomes: [],
-      provenance: { sourceManifestPath: null, gitSha: GIT_SHA, dirty: false, model: "deepseek-v4-flash", provider: "fake", runtimeConfigHash: CAND_CONFIG },
-    }), baselinePath);
-    await writeExperimentArtifactV3(buildExperimentArtifactV3({
-      arm: { armId: "candidate", candidateId: "cand-x", candidateConfigHash: CAND_CONFIG },
-      manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT_SHA, dirty: false, planDigest: PLAN_DIGEST, promotionEligible: false, isolationStrength: "insecure-local" },
-      outcomes: [1, 2].flatMap((rep) => [0, 1, 2].map((k) => outcome(`ho-0${k + 1}`, "candidate", rep, (rep - 1) * 3 + k + 1, true, `act-${rep}-${k}`))),
-      activationEvidence: [1, 2].flatMap((rep) => [0, 1, 2].map((k) => ({ id: `act-${rep}-${k}`, reasonCodes: ["memory.retrieved"], note: "x" }))),
-      securityOutcomes: [],
-      provenance: { sourceManifestPath: null, gitSha: GIT_SHA, dirty: false, model: "deepseek-v4-flash", provider: "fake", runtimeConfigHash: CAND_CONFIG },
-    }), candidatePath);
+    const mk = (armId: string, promotionEligible: boolean, isolationStrength: string, passed: boolean) => {
+      const outcomes = [1, 2].flatMap((rep) => [0, 1, 2].map((k) => outcome(`ho-0${k + 1}`, armId, rep, (rep - 1) * 3 + k + 1, passed, armId === "candidate" ? `act-${rep}-${k}` : null)));
+      return buildExperimentArtifactV3({
+        arm: { armId, candidateId: armId === "candidate" ? "cand-x" : null, candidateConfigHash: armId === "candidate" ? CAND_CONFIG : null },
+        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT_SHA, dirty: false, planDigest: PLAN_DIGEST, promotionEligible, isolationStrength },
+        outcomes,
+        activationEvidence: armId === "candidate" ? [1, 2].flatMap((rep) => [0, 1, 2].map((k) => ({ id: `act-${rep}-${k}`, reasonCodes: ["memory.retrieved"], note: "x" }))) : [],
+        securityOutcomes: outcomes.map((o) => ({ caseId: `holdout\u0000${o.caseId}\u0000${o.repetition}\u0000${armId}`, kind: "clean", detail: "no attack (fixture)" })),
+        provenance: { sourceManifestPath: null, gitSha: GIT_SHA, dirty: false, model: "deepseek-v4-flash", provider: "fake", runtimeConfigHash: CAND_CONFIG },
+      });
+    };
+    await writeExperimentArtifactV3(mk("baseline", true, "strong", false), baselinePath);
+    await writeExperimentArtifactV3(mk("candidate", false, "insecure-local", true), candidatePath);
     const real = await runV3ChampionEval({ baselinePath, candidatePath, candidateId: "cand-x" });
     const decisionArtifactPath = join(dir, "decision-artifact.json");
     await writeFile(decisionArtifactPath, JSON.stringify(real.decisionArtifact), "utf8");

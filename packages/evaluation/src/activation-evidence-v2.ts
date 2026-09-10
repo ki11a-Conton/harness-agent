@@ -72,6 +72,9 @@ export interface ActivationPayloadV2 {
   action?: string;
   /** Recovery budget snapshot. */
   budget?: number;
+  /** E4-R14 (N10): whether the recovery decision was taken at a budget-exhausted
+   *  state (recorded at the fact site when observable; absent = not observed). */
+  budgetExhausted?: boolean;
   /** Prompt-guidance injected-block length. */
   blockLength?: number;
 }

@@ -24,6 +24,7 @@ import { createHash } from "node:crypto";
 import { buildExperimentArtifactV3, validateArtifactDir } from "./artifact-v3/index.js";
 import { decideChampionV3 } from "./champion-decision-v3.js";
 import { buildPromotionEnvelope, loadPromotionEnvelope } from "./promotion-envelope.js";
+import { DEFAULT_DECISION_POLICY_V3, computeThresholdDigestV3 } from "./decision-policy-v3.js";
 import {
   createInitialChampionState,
   applyPromotion,
@@ -150,37 +151,46 @@ describe("E2-16 final integration acceptance", () => {
     try {
       // 1. Production writer builds a V3 candidate artifact (fake outcomes).
       const arm = getArmFactory().resolveCandidate("adaptive_recovery_v2");
+      const grid = [1, 2].flatMap((rep) => [1, 2, 3, 4, 5, 6].map((k) => `holdout\u0000ho-0${k}\u0000${rep}`));
+      const mkOutcomes = (armId: string, passed: boolean) => Array.from({ length: 12 }, (_, i) => ({
+        caseId: `ho-0${(i % 6) + 1}`,
+        suite: "holdout",
+        armId,
+        attempt: 1,
+        repetition: Math.floor(i / 6) + 1,
+        order: i + 1,
+        passed,
+        grade: passed ? "good" : "poor",
+        verificationPassed: passed,
+        terminationReason: "verified_complete",
+        failureCategory: null,
+        inputTokens: 1000,
+        outputTokens: 500,
+        costUsd: 0.01,
+        latencyMs: 100,
+        toolCalls: 3,
+        recoveryDecisions: armId === "candidate" ? [{ id: "recovery.decided", action: "retry_safe", budgetExhausted: false }] : [],
+        activationRef: armId === "candidate" ? `act-${i + 1}` : null,
+        securityOutcomeRef: `holdout\u0000ho-0${(i % 6) + 1}\u0000${Math.floor(i / 6) + 1}\u0000${armId}`,
+        outputDigest: null,
+        workspaceDigest: null,
+        judgeVersion: "1.0.0",
+        evaluationContextHash: "a".repeat(64),
+        candidateConfigHash: armId === "candidate" ? arm.digest : null,
+      }));
       const artifact = buildExperimentArtifactV3({
         arm: { armId: "candidate", candidateId: "adaptive_recovery_v2", candidateConfigHash: arm.digest },
-        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: "d".repeat(64), promotionEligible: true, isolationStrength: "strong", runtimeConfigHash: arm.digest },
-        outcomes: Array.from({ length: 12 }, (_, i) => ({
-          caseId: `ho-0${(i % 6) + 1}`,
-          suite: "holdout",
-          armId: "candidate",
-          attempt: 1,
-          repetition: Math.floor(i / 6) + 1,
-          order: i + 1,
-          passed: true,
-          grade: "good",
-          verificationPassed: true,
-          terminationReason: "verified_complete",
-          failureCategory: null,
-          inputTokens: 1000,
-          outputTokens: 500,
-          costUsd: 0.01,
-          latencyMs: 100,
-          toolCalls: 3,
-          recoveryDecisions: [{ id: "recovery.decided", action: "retry_safe", budgetExhausted: false }],
-          activationRef: `act-${i + 1}`,
-          securityOutcomeRef: null,
-          outputDigest: null,
-          workspaceDigest: null,
-          judgeVersion: "1.0.0",
-          evaluationContextHash: "a".repeat(64),
-          candidateConfigHash: arm.digest,
-        })),
+        manifest: {
+          suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: "d".repeat(64),
+          promotionEligible: true, isolationStrength: "strong", runtimeConfigHash: arm.digest,
+          // E4-R13/R14: the confirmed plan + complete grid + completion marker.
+          expectedSampleKeys: grid, runComplete: true,
+          executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: [1, 2, 3, 4, 5, 6].map((k) => `ho-0${k}`), repeat: 2 },
+          thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
+        },
+        outcomes: mkOutcomes("candidate", true),
         activationEvidence: Array.from({ length: 12 }, (_, i) => ({ id: `act-${i + 1}`, reasonCodes: ["memory.retrieved"], note: "activation observed" })),
-        securityOutcomes: [],
+        securityOutcomes: mkOutcomes("candidate", true).map((o) => ({ caseId: o.securityOutcomeRef, kind: "clean", detail: "no attack (fixture)" })),
         provenance: { sourceManifestPath: null, gitSha: "c".repeat(40), dirty: false, model: "deepseek-v4-flash", provider: "fake", runtimeConfigHash: arm.digest },
       });
       const artifactPath = join(dir, "candidate-holdout.json");
@@ -190,17 +200,16 @@ describe("E2-16 final integration acceptance", () => {
       // E4-06: a complete promotion bundle also carries the BASELINE artifact.
       const baselineArtifact = buildExperimentArtifactV3({
         arm: { armId: "baseline", candidateId: null, candidateConfigHash: null },
-        manifest: { suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: "d".repeat(64), promotionEligible: true, isolationStrength: "strong", runtimeConfigHash: arm.digest },
-        outcomes: Array.from({ length: 12 }, (_, i) => ({
-          caseId: `ho-0${(i % 6) + 1}`, suite: "holdout", armId: "baseline", attempt: 1, repetition: Math.floor(i / 6) + 1, order: i + 1,
-          passed: false, grade: "poor", verificationPassed: false, terminationReason: "verified_complete",
-          failureCategory: null, inputTokens: 900, outputTokens: 400, costUsd: 0.01, latencyMs: 100,
-          toolCalls: 3, recoveryDecisions: [], activationRef: null, securityOutcomeRef: null,
-          outputDigest: null, workspaceDigest: null, judgeVersion: "1.0.0",
-          evaluationContextHash: "a".repeat(64), candidateConfigHash: null,
-        })),
+        manifest: {
+          suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: "d".repeat(64),
+          promotionEligible: true, isolationStrength: "strong", runtimeConfigHash: arm.digest,
+          expectedSampleKeys: grid, runComplete: true,
+          executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: [1, 2, 3, 4, 5, 6].map((k) => `ho-0${k}`), repeat: 2 },
+          thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
+        },
+        outcomes: mkOutcomes("baseline", false),
         activationEvidence: [],
-        securityOutcomes: [],
+        securityOutcomes: mkOutcomes("baseline", false).map((o) => ({ caseId: o.securityOutcomeRef, kind: "clean", detail: "no attack (fixture)" })),
         provenance: { sourceManifestPath: null, gitSha: "c".repeat(40), dirty: false, model: "deepseek-v4-flash", provider: "fake", runtimeConfigHash: arm.digest },
       });
       const baselinePath = join(dir, "baseline-holdout.json");

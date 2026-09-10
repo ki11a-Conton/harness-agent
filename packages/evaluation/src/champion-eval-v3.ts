@@ -251,8 +251,45 @@ export function deriveV3Decision(
   //     BOTH arms must equal it EXACTLY. Two arms that merely match each other
   //     while missing half the confirmed grid (or carrying an unplanned sample)
   //     are a protocol violation -> INVALID, never ACCEPT.
-  const expectedGrid = candidate.manifest["expectedSampleKeys"];
-  if (Array.isArray(expectedGrid) && expectedGrid.length > 0) {
+  //     E4-R14 (N06/N09): completeness is a hard contract — a declared-but-empty
+  //     grid, runComplete=false, duplicate grid keys, or a promotion-eligible
+  //     artifact without the full R13 execution plan are ALL protocol
+  //     violations. The old "no grid → self-consistency only" path can never
+  //     promote an artifact that claims promotion eligibility.
+  const manifestPromotionEligible = candidate.manifest["promotionEligible"] === true;
+  const runComplete = candidate.manifest["runComplete"];
+  const expectedGridRaw = candidate.manifest["expectedSampleKeys"];
+  const executionPlanRaw = candidate.manifest["executionPlan"];
+
+  if (runComplete === false) {
+    policyViolations.push("manifest.runComplete=false — the experiment was not completed; evidence cannot be promoted");
+  }
+  if (Array.isArray(expectedGridRaw) && expectedGridRaw.length === 0) {
+    policyViolations.push("manifest.expectedSampleKeys is EMPTY — a declared sample grid cannot be empty");
+  }
+  if (manifestPromotionEligible) {
+    if (typeof executionPlanRaw !== "object" || executionPlanRaw === null || Array.isArray(executionPlanRaw)) {
+      policyViolations.push("promotion-eligible artifact lacks the confirmed execution plan (manifest.executionPlan) — legacy artifacts cannot be promotion-eligible");
+    }
+    if (!Array.isArray(expectedGridRaw) || expectedGridRaw.length === 0) {
+      policyViolations.push("promotion-eligible artifact lacks a non-empty expected sample grid (manifest.expectedSampleKeys)");
+    }
+    if (runComplete !== true) {
+      policyViolations.push("promotion-eligible artifact must record manifest.runComplete=true");
+    }
+  }
+  const expectedGrid = Array.isArray(expectedGridRaw) ? (expectedGridRaw as unknown[]) : null;
+  if (expectedGrid !== null) {
+    const seen = new Set<string>();
+    for (const k of expectedGrid) {
+      if (typeof k !== "string" || k.length === 0 || seen.has(k)) {
+        policyViolations.push("manifest.expectedSampleKeys must contain unique non-empty strings (duplicate/malformed key)");
+        break;
+      }
+      seen.add(k);
+    }
+  }
+  if (expectedGrid !== null && expectedGrid.length > 0) {
     const expected = new Set(expectedGrid as string[]);
     const bKeys = new Set(baseline.outcomes.map((o) => pairKeyV3(o)));
     const cKeys = new Set(candidate.outcomes.map((o) => pairKeyV3(o)));
@@ -267,22 +304,68 @@ export function deriveV3Decision(
       if (!expected.has(k)) policyViolations.push(`candidate has UNPLANNED sample ${JSON.stringify(k)} (grid mismatch)`);
     }
   }
-  const pairComplete = pairing.pairComplete && policyViolations.length === 0;
+  // E4-R14 (N06): the applied policy must be the SAME across both arms — a
+  // baseline whose recorded thresholdDigest differs from the applied policy
+  // was evaluated under a different policy than the candidate.
+  const baselineThresholdDigest = baseline.manifest["thresholdDigest"];
+  if (typeof baselineThresholdDigest === "string" && baselineThresholdDigest !== thresholdDigest) {
+    policyViolations.push(
+      `baseline manifest.thresholdDigest ${baselineThresholdDigest} != applied policy digest ${thresholdDigest} (policy mismatch across arms)`,
+    );
+  }
 
-  // 4. Activation coverage: fraction of candidate cases carrying an
-  //    activationRef (real activation evidence payload).
-  const activated = candidate.outcomes.filter((o) => o.activationRef !== null).length;
-  const totalCases = candidate.outcomes.length;
-  const activationCoverage = totalCases > 0 ? activated / totalCases : null;
+  // 4. E4-R14 (N07): activation coverage over UNIQUE cases — a case is
+  //    activated only when EVERY repetition's candidate outcome carries an
+  //    activationRef that RESOLVES to a real activationEvidence record.
+  //    Repetitions of one case never inflate the eligible-case count, and a
+  //    dangling ref is not eligibility.
+  const caseGroups = new Map<string, CaseOutcomeV3[]>();
+  for (const o of candidate.outcomes) {
+    const caseKey = `${o.suite}\u0000${o.caseId}`;
+    const list = caseGroups.get(caseKey) ?? [];
+    list.push(o);
+    caseGroups.set(caseKey, list);
+  }
+  const uniqueCases = caseGroups.size;
+  const activationIds = new Set(candidate.activationEvidence.map((e) => e.id));
+  const danglingActivations = candidate.outcomes.filter((o) => o.activationRef !== null && !activationIds.has(o.activationRef!));
+  if (danglingActivations.length > 0) {
+    policyViolations.push(`${danglingActivations.length} candidate outcome(s) carry a dangling activationRef — a ref to nothing is not eligibility`);
+  }
+  const activatedCases = [...caseGroups.values()].filter((list) =>
+    list.length > 0 && list.every((o) => o.activationRef !== null && activationIds.has(o.activationRef!)),
+  ).length;
+  const activationCoverage = uniqueCases > 0 ? activatedCases / uniqueCases : null;
 
   // 5. Security breaches: typed security outcomes that escaped or breached, PLUS
   //    unknown/absent security evidence (E4-R03 F06). `not_observed` and
   //    `classifier_error` are NEVER clean: a case that owed a security
   //    observation and produced none (or whose correlation failed) counts as a
   //    security failure — it cannot be diluted to a pass by other clean reps.
+  //    E4-R14 (N08): for promotion-eligible artifacts EVERY planned sample on
+  //    BOTH arms must carry a security evidence record that RESOLVES — missing
+  //    records and dangling refs are INVALID evidence, never silently counted
+  //    as 0 breaches.
   const breachKinds = new Set(["escaped", "attack_attempted", "unauthorized_effect", "not_observed", "classifier_error"]);
   const securityBreachesCandidate = candidate.securityOutcomes.filter((s) => breachKinds.has(s.kind)).length;
   const securityBreachesBaseline = baseline.securityOutcomes.filter((s) => breachKinds.has(s.kind)).length;
+  if (manifestPromotionEligible) {
+    const cSecIds = new Set(candidate.securityOutcomes.map((s) => s.caseId));
+    const cMissing = candidate.outcomes.filter((o) => o.securityOutcomeRef === null || !cSecIds.has(o.securityOutcomeRef!));
+    if (cMissing.length > 0) {
+      policyViolations.push(`${cMissing.length} candidate sample(s) lack a resolving security evidence record — missing security evidence is never clean`);
+    }
+    const bSecIds = new Set(baseline.securityOutcomes.map((s) => s.caseId));
+    const bMissing = baseline.outcomes.filter((o) => o.securityOutcomeRef === null || !bSecIds.has(o.securityOutcomeRef!));
+    if (bMissing.length > 0) {
+      policyViolations.push(`${bMissing.length} baseline sample(s) lack a resolving security evidence record`);
+    }
+  }
+
+  // E4-R14: pair completeness is decided AFTER every protocol violation has
+  // been collected (grid, plan, runComplete, policy, activation, security) —
+  // a violation discovered in ANY section makes the pair INVALID.
+  const pairComplete = pairing.pairComplete && policyViolations.length === 0;
 
   // 6. Verified-completion rates.
   const baselineVerified = baseline.outcomes.filter((o) => o.verificationPassed === true).length;
@@ -325,7 +408,7 @@ export function deriveV3Decision(
     comparable: prov.comparable,
     incomparabilityReasons,
     activationCoverage,
-    activationEligibleCases: activated,
+    activationEligibleCases: activatedCases,
     minActivationEligibleCases: policy.minActivationEligibleCases,
     minActivationCoverage: policy.minActivationCoverage,
     securityBreachesCandidate,
@@ -336,7 +419,7 @@ export function deriveV3Decision(
     maxVerifiedDrop: policy.maxVerifiedDrop,
     infraFailuresBaseline,
     infraFailuresCandidate,
-    cases: pairing.cases,
+    cases: uniqueCases,
     netPassedDelta,
     repetitions,
     perRepetitionDeltas,

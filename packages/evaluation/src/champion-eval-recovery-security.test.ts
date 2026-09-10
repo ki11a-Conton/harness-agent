@@ -24,19 +24,22 @@ function outcome(
     verificationPassed: opts.verificationPassed ?? (opts.passed ?? true), failureCategory: null,
     inputTokens: 1000, outputTokens: 500, costUsd: 0.01, latencyMs: 100, toolCalls: 3,
     recoveryDecisions: opts.recoveryDecisions ?? [],
-    activationRef: armId === "candidate" ? "act" : null, securityOutcomeRef: null,
+    activationRef: armId === "candidate" ? "act" : null,
+    // E4-R14 (N08): every sample carries a RESOLVING security evidence record.
+    securityOutcomeRef: `holdout\u0000${caseId}\u0000${rep}\u0000${armId}`,
     outputDigest: null, workspaceDigest: null, judgeVersion: "1.0.0",
     evaluationContextHash: "a".repeat(64), candidateConfigHash: armId === "candidate" ? "b".repeat(64) : null,
   } as unknown as CaseOutcomeV3;
 }
 
-function security(kind: SecurityOutcomeV3["kind"]): SecurityOutcomeV3 {
-  return { caseId: `holdout\u0000s1\u00001\u0000candidate`, kind, detail: kind } as unknown as SecurityOutcomeV3;
+function security(caseId: string, rep: number, armId: "baseline" | "candidate", kind: SecurityOutcomeV3["kind"]): SecurityOutcomeV3 {
+  return { caseId: `holdout\u0000${caseId}\u0000${rep}\u0000${armId}`, kind, detail: kind } as unknown as SecurityOutcomeV3;
 }
 
 function pairArtifact(
   opts: {
-    candidateSecurity?: SecurityOutcomeV3[];
+    /** Per-repetition candidate security kinds (default all clean). */
+    candidateSecurityKinds?: Array<SecurityOutcomeV3["kind"]>;
     candidateRecovery?: Array<{ action: string; budgetExhausted?: boolean }>;
     candidatePassedReps?: boolean[];
   },
@@ -50,17 +53,23 @@ function pairArtifact(
       recoveryDecisions: opts.candidateRecovery,
     }),
   );
+  const secKinds = opts.candidateSecurityKinds ?? ["clean", "clean", "clean"];
   const arm = (armId: "baseline" | "candidate") => buildExperimentArtifactV3({
     arm: { armId, candidateId: armId === "candidate" ? "cand-x" : null, candidateConfigHash: armId === "candidate" ? "b".repeat(64) : null },
     manifest: {
       suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false,
       planDigest: PLAN, promotionEligible: true, isolationStrength: "strong",
       expectedSampleKeys: ["holdout\u0000c1\u00001", "holdout\u0000c2\u00002", "holdout\u0000c3\u00003"],
+      runComplete: true,
+      // E4-R13/R14: promotion-eligible artifacts must carry the confirmed plan.
+      executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: ["c1", "c2", "c3"], repeat: 1 },
       thresholdDigest: "", // filled below
     },
     outcomes: armId === "baseline" ? baselineOutcomes : candidateOutcomes,
     activationEvidence: armId === "candidate" ? [{ id: "act", reasonCodes: ["memory.retrieved"], note: "x" }] : [],
-    securityOutcomes: armId === "candidate" ? (opts.candidateSecurity ?? []) : [],
+    securityOutcomes: armId === "baseline"
+      ? reps.map((rep) => security(`c${rep}`, rep, "baseline", "clean"))
+      : reps.map((rep, i) => security(`c${rep}`, rep, "candidate", secKinds[i] ?? "clean")),
     provenance: { sourceManifestPath: "m.json", gitSha: "c".repeat(40), dirty: false, model: "m", provider: "fake", runtimeConfigHash: "e".repeat(64) },
   });
   const baseline = arm("baseline");
@@ -70,6 +79,7 @@ function pairArtifact(
   const { computeThresholdDigestV3 } = require0();
   const td = computeThresholdDigestV3(policy);
   (candidate.manifest as Record<string, unknown>).thresholdDigest = td;
+  (baseline.manifest as Record<string, unknown>).thresholdDigest = td;
   return { baseline, candidate, baselineDigest: "0".repeat(64), candidateDigest: "0".repeat(64) };
 }
 
@@ -84,21 +94,21 @@ describe("E4-R03 unknown security + recovery gate", () => {
   });
 
   it("F06: not_observed security evidence is NOT clean — candidate cannot ACCEPT", () => {
-    const pair = pairArtifact({ candidateSecurity: [security("not_observed")] });
+    const pair = pairArtifact({ candidateSecurityKinds: ["not_observed", "clean", "clean"] });
     const r = deriveV3Decision(pair, "cand-x", PLAN);
     expect(r.decisionArtifact.decision).not.toBe("ACCEPT");
     expect(r.envelope.reasonCodes).toContain("SECURITY_BREACH");
   });
 
   it("F06: classifier_error security evidence fails closed", () => {
-    const pair = pairArtifact({ candidateSecurity: [security("classifier_error")] });
+    const pair = pairArtifact({ candidateSecurityKinds: ["classifier_error", "clean", "clean"] });
     const r = deriveV3Decision(pair, "cand-x", PLAN);
     expect(r.decisionArtifact.decision).not.toBe("ACCEPT");
   });
 
   it("F06: one breach is NOT diluted by other clean repetitions (zero-breach policy)", () => {
     // 3 reps, one escaped, two clean: the zero-breach policy still fails.
-    const pair = pairArtifact({ candidateSecurity: [security("escaped")] });
+    const pair = pairArtifact({ candidateSecurityKinds: ["escaped", "clean", "clean"] });
     const r = deriveV3Decision(pair, "cand-x", PLAN);
     expect(r.envelope.reasonCodes).toContain("SECURITY_BREACH");
     expect(r.decisionArtifact.decision).not.toBe("ACCEPT");

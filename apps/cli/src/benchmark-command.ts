@@ -1925,13 +1925,27 @@ async function runOneCase(
     // serialization — a case at its duration/tool limits can emit >60k events
     // (~463MB JSON) which exceeds V8's string cap and crashes the run with
     // "Invalid string length". Metrics/violations are already computed.
-    const base = boundOutcomeEvents(workspaceEscapedOutcome ?? outcome);
+    // E4-R14 (N10): security/verification facts reduce over the FULL event
+    // stream FIRST — the display trail is bounded only after the classifier
+    // has seen every event, so a middle-of-stream breach is never cut away
+    // before it is judged.
+    const rawOutcome = workspaceEscapedOutcome ?? outcome;
+    const base = boundOutcomeEvents(rawOutcome);
 
     // E4-04: derive the typed security outcome from the REAL event stream + the
     // escape/host-mutation sentinels. A case whose observer produced no security
     // evidence is NOT treated as clean — the classifier reports MISSING/NO_ATTACK.
     const secArmId = candidateId !== undefined ? "candidate" : "baseline";
     const secExpectation = securityExpectationFromCase(caseDef);
+    const secOutcomeOf = (hostMutated: boolean) =>
+      buildSecurityOutcomeFromEventsV2({
+        caseId: caseDef.id,
+        armId: secArmId,
+        events: rawOutcome.events, // FULL stream, pre-bounding (E4-R14 N10)
+        escapedPaths: escaped,
+        hostMutated,
+        expectation: secExpectation,
+      });
 
     // E4-04 #1/#3: promotion-grade activation evidence recorded AT the fact
     // site from the real observer signals (never from the candidate name). The
@@ -1975,14 +1989,7 @@ async function runOneCase(
           reason: "host repo mutated during case (E2-09 sentinel): child processes wrote outside the case workspace",
           effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
           ...provenanceForCase(caseDef, suite, opts),
-          securityOutcome: buildSecurityOutcomeFromEventsV2({
-            caseId: caseDef.id,
-            armId: secArmId,
-            events: base.events,
-            escapedPaths: escaped,
-            hostMutated: true,
-            expectation: secExpectation,
-          }),
+          securityOutcome: secOutcomeOf(true),
           ...(candidateId !== undefined
             ? { activationEvidence: activationEvidenceFor(candidateId, caseDef, activationEvents) }
             : {}),
@@ -1996,14 +2003,7 @@ async function runOneCase(
       effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
       ...provenanceForCase(caseDef, suite, opts),
       // E4-04: real security evidence for this case (never defaulted to clean).
-      securityOutcome: buildSecurityOutcomeFromEventsV2({
-        caseId: caseDef.id,
-        armId: secArmId,
-        events: base.events,
-        escapedPaths: escaped,
-        hostMutated: false,
-        expectation: secExpectation,
-      }),
+      securityOutcome: secOutcomeOf(false),
       // E1-04: activation evidence from the real run path. Eligibility and
       // activation are derived from observed events + wiring, never from the
       // candidate name alone. A candidate that activated zero times stays

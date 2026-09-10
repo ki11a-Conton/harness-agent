@@ -90,15 +90,18 @@ function assertRealDigest(value: string | null, field: string): void {
   }
 }
 
-/** verificationPassed from REAL verifier events (E4-02 #4), never status. */
+/** verificationPassed from REAL verifier events (E4-02 #4), never status.
+ *  E4-R14 (N10): the TERMINAL verification state of the turn decides — the LAST
+ *  verification event wins, so an early pass followed by a later failure is
+ *  verified=false (never `some(passed)`). */
 function verificationPassedFromEvents(outcome: EvalOutcome): boolean | null {
   const ver = outcome.events.filter(
     (e) => e.type === "verification.completed" || e.type === "verification.failed",
   );
   if (ver.length === 0) return null; // gate never ran → unknown, not "passed"
-  return ver.some(
-    (e) => e.type === "verification.completed" && (e.payload as { passed?: unknown }).passed === true,
-  );
+  const last = ver[ver.length - 1]!;
+  if (last.type === "verification.failed") return false;
+  return (last.payload as { passed?: unknown }).passed === true;
 }
 
 /** sha256 over the real produced output text (model completions). Returns null
@@ -119,9 +122,16 @@ function outputDigestFromEvents(outcome: EvalOutcome): string | null {
 function recoveryDecisionsFromOutcome(outcome: EvalOutcome) {
   const v2 = outcome.activationEvidenceV2;
   if (!v2) return [];
+  // E4-R14 (N10): budgetExhausted comes from the REAL recovery event payload
+  // when recorded — never a fixed false. Absent flag stays false (the decision
+  // was not observed as budget-exhausted).
   return v2.events
     .filter((e) => e.mechanism === "recovery")
-    .map((e) => ({ id: e.eventId, action: String(e.payload.action ?? "recovery"), budgetExhausted: false }));
+    .map((e) => ({
+      id: e.eventId,
+      action: String(e.payload.action ?? "recovery"),
+      budgetExhausted: e.payload.budgetExhausted === true,
+    }));
 }
 
 /** Map one finalized pair's arm outcome to a CaseOutcomeV3. */
