@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -184,5 +184,37 @@ it("1. valid ledger verifies OK (refs exist, digests match, facts recompute)", a
     });
     expect(derived).toEqual({ caseCount: 3, passedCount: 2, totalDurationMs: 300, securityBreaches: null });
     expect(deriveFactsFromHoldout({ results: "not-array" as never })).toBeNull();
+  });
+
+  it("9. E4-R12 (N02): CRLF checkout bytes are NOT silently normalized — DIGEST_MISMATCH stays loud", async () => {
+    const repo = await makeRepo();
+    try {
+      await makeRuns(repo);
+      // Pretty-printed JSON so the artifact actually contains line breaks —
+      // a CRLF checkout then changes the raw bytes (the digest binds LF bytes).
+      const HOLDOUT = JSON.stringify({ results: [{ duration_ms: 50, success: true }] }, null, 2);
+      await writeFile(join(repo, "runs", "candidate.json"), HOLDOUT, "utf8");
+      const ledger = mkLedger({
+        experiments: [{
+          ...mkLedger().experiments[0]!,
+          artifacts: [{ path: "runs/candidate.json", digest: digestOfText(HOLDOUT), role: "candidate" }],
+          derived: { caseCount: 1, passedCount: 1, totalDurationMs: 50, securityBreaches: null },
+        }],
+      });
+      // Simulate a Windows fresh checkout with core.autocrlf rewriting LF→CRLF:
+      // the raw-byte contract must FAIL LOUDLY (never normalize inside the
+      // verifier, which would disguise real tampering as a line-ending quirk).
+      const crlf = await verifyEvolutionLedger(ledger, repo, {
+        readFile: async (p) => (await readFile(p, "utf8")).replace(/\n/g, "\r\n"),
+      });
+      expect(crlf.ok).toBe(false);
+      expect(crlf.issues.some((i) => i.code === "DIGEST_MISMATCH")).toBe(true);
+      // The LF-bytes read (the .gitattributes `text eol=lf` checkout contract)
+      // still verifies — the recorded digests bind to git blob bytes.
+      const lf = await verifyEvolutionLedger(ledger, repo);
+      expect(lf.ok).toBe(true);
+    } finally {
+      await rm(repo, { recursive: true, force: true });
+    }
   });
 });

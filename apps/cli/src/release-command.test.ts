@@ -318,4 +318,36 @@ describe("P38.2-4/13 repo-owned gate runner (INV-P38.2-004)", () => {
   it("gatePlatform maps win32 → windows, else linux/darwin", () => {
     expect(["windows", "linux", "darwin"]).toContain(gatePlatform());
   });
+
+  it("E4-R12 (N01): a red gate prints the saved log ref + bounded failure summary that names the real cause", async () => {
+    // Deterministic red gate: run `pnpm docs:verify` in an EMPTY temp root that
+    // is not a pnpm workspace — the canonical command itself fails with a real
+    // exit code and real stderr (no model calls, nothing written to the repo).
+    const root = await mkdtemp(join(tmpdir(), "release-gate-red-"));
+    cleanupDirs.push(root);
+    const evDir = await tmpEvidenceDir();
+    const result = await releaseGateCmd(["docs"], { root, headSha: HEAD, evidenceDir: evDir });
+    expect(result.exitCode).toBe(1);
+    const out = result.lines.join("\n");
+    expect(out).toContain("gate docs: exitCode=1 FAIL");
+    // The console output must carry the real cause + where the full log lives,
+    // so the CI summary points at the failing item — not at a silent exit code.
+    expect(out).toContain("log:");
+    expect(out).toContain("exitCode=1");
+    expect(/ExitCode=1|exitCode=1/.test(out)).toBe(true);
+    // The evidence on disk carries the same logRef + errorSummary.
+    const evidence = JSON.parse(await readFile(join(evDir, "docs.json"), "utf8")) as {
+      logRef: { path: string; digest: string | null };
+      errorSummary: string;
+      exitCode: number;
+    };
+    expect(evidence.exitCode).toBe(1);
+    expect(evidence.logRef.digest).toMatch(/^[0-9a-f]{64}$/);
+    expect(evidence.errorSummary).toContain("exitCode=1");
+    // The referenced log file exists and its bytes hash to the recorded digest.
+    const { createHash } = await import("node:crypto");
+    const logBytes = await readFile(join(root, evidence.logRef.path), "utf8");
+    expect(createHash("sha256").update(logBytes, "utf8").digest("hex")).toBe(evidence.logRef.digest);
+    expect(logBytes.length).toBeGreaterThan(0);
+  });
 });

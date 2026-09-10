@@ -1,0 +1,10 @@
+# E4-R12 (N02): stable byte contract for hash-constrained evolution evidence.
+#
+# The evolution ledger records sha256 OVER RAW FILE BYTES (LF). A fresh
+# Windows checkout with core.autocrlf=true would rewrite these text files to
+# CRLF and break every recorded digest (verified: an all-CRLF read of the
+# ledger refs produces 11 DIGEST_MISMATCH). These rules force LF checkout on
+# every platform — the storage contract is "git blob bytes", never a silent
+# normalization inside the verifier (historical raw-byte digests stay valid).
+docs/evolution/*.json text eol=lf
+benchmarks/results/**/*.json text eol=lf

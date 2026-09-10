@@ -213,6 +213,11 @@ export interface GateRunResult {
   evidencePath: string;
   /** E4-R09: HEAD the evidence bound to (from the V2 generator's own capture). */
   gitSha?: string;
+  /** E4-R12 (N01): relative reference to the saved output log (root cause). */
+  logRef?: { path: string; digest: string | null };
+  /** E4-R12 (N01): bounded, redacted failure summary printed to the console so
+   *  the CI summary names the REAL failing check. */
+  errorSummary?: string;
 }
 
 /** Detect the OS namespace used by the P38.2-10 evidence layout. */
@@ -232,7 +237,11 @@ export function gatePlatform(): "linux" | "windows" | "darwin" {
  *  other V2 consumer (runGateV2), which binds git state before/after + derives
  *  `passed` from the real exit code and declared artifacts. The runner keeps
  *  the V1 invariants: evidence is durable before the command returns; a red
- *  gate returns its own exit code; the paid key is stripped. */
+ *  gate returns its own exit code; the paid key is stripped.
+ *  E4-R12 (N01): the runner classifies spawn/timeout/maxBuffer/signal failures
+ *  (never collapsing them into a bare exit 1), keeps the exception message even
+ *  when stderr is empty, and persists the gate's FULL output log with a
+ *  relative reference + digest so the root cause survives the run. */
 export async function runGate(
   gate: RequiredGateId,
   opts: { root?: string; headSha?: string; evidenceDir?: string } = {},
@@ -245,7 +254,7 @@ export async function runGate(
   const evidencePath = join(evidenceDir, `${gate}.json`);
   await mkdir(evidenceDir, { recursive: true });
 
-  const { runGateV2, writeGateEvidenceV2 } = await import("@ar/evaluation");
+  const { runGateV2, writeGateEvidenceV2, classifyChildFailure } = await import("@ar/evaluation");
   const evidence = await runGateV2({
     gate,
     command: commandStr.split(/\s+/).filter(Boolean),
@@ -253,12 +262,16 @@ export async function runGate(
     toolVersion: "release-command-v2",
     environmentClass: "offline",
     providerCalls: 0,
+    // E4-R12 (N01): the full output log lives next to the evidence and travels
+    // with it (`.ci/evidence/gates/<os>/logs/`), referenced relatively.
+    logDir: join(evidenceDir, "logs"),
     // Preserve the V1 runner contract: shell execution, paid key stripped,
     // real exit code captured (a red gate never exits the process early).
     run: async (cmd, cwd) => {
       let exitCode = 0;
       let stderr = "";
       let stdout = "";
+      let failure: ReturnType<typeof classifyChildFailure>;
       try {
         const out = execFileSync(cmd.join(" "), {
           cwd,
@@ -267,19 +280,39 @@ export async function runGate(
           encoding: "utf8",
           env: { ...process.env, OPENAI_API_KEY: "" },
           windowsHide: true,
+          timeout: 600_000,
+          maxBuffer: 128 * 1024 * 1024,
         });
         stdout = String(out ?? "");
       } catch (err) {
-        const e = err as { status?: number; stderr?: unknown; stdout?: unknown; message?: string };
-        exitCode = typeof e.status === "number" ? e.status : 1;
+        const e = err as { status?: number; signal?: unknown; killed?: boolean; stderr?: unknown; stdout?: unknown; message?: unknown };
+        // E4-R12 (N01): a real child exit carries a numeric status; everything
+        // else (spawn failure, timeout, maxBuffer, signal) is classified so the
+        // evidence records WHY there is no real exit code.
+        if (typeof e.status === "number") {
+          exitCode = e.status;
+        } else {
+          exitCode = 1;
+          failure = classifyChildFailure(err);
+        }
         stdout = String(e.stdout ?? "");
-        stderr = String(e.stderr ?? (e.message ?? ""));
+        stderr = String(e.stderr ?? "");
+        // E4-R12 (N01): never drop the exception message when stderr is empty.
+        if (stderr === "") stderr = typeof e.message === "string" ? e.message : String(err);
       }
-      return { exitCode, stdout, stderr };
+      return { exitCode, stdout, stderr, failure };
     },
   });
   await writeGateEvidenceV2(evidence, evidencePath);
-  return { gate, command: commandStr, exitCode: evidence.exitCode ?? 0, evidencePath, gitSha: evidence.gitSha };
+  return {
+    gate,
+    command: commandStr,
+    exitCode: evidence.exitCode ?? 0,
+    evidencePath,
+    gitSha: evidence.gitSha,
+    ...(evidence.logRef !== undefined ? { logRef: evidence.logRef } : {}),
+    ...(evidence.errorSummary !== undefined ? { errorSummary: evidence.errorSummary } : {}),
+  };
 }
 
 /** `agent release gate [--all | <gate>...] [--evidence-dir <dir>]` */
@@ -288,6 +321,9 @@ export async function releaseGateCmd(rest: string[], cliOpts: ReleaseVerifyOptio
     const idx = rest.indexOf("--evidence-dir");
     return idx >= 0 ? rest[idx + 1] : undefined;
   })();
+  // E4-R12: honor the programmatic evidenceDir option as well (mirrors
+  // releaseVerifyCmd) — the flag wins when both are present.
+  const evidenceDir = explicitEvidenceDir ?? cliOpts.evidenceDir;
   // Strip --evidence-dir and its value so they never count as gate ids.
   const args = rest.filter((a) => a !== "--all" && a !== "--evidence-dir" && a !== explicitEvidenceDir);
   if (args.some((a) => a.startsWith("--"))) {
@@ -309,9 +345,20 @@ export async function releaseGateCmd(rest: string[], cliOpts: ReleaseVerifyOptio
   const lines: string[] = [];
   let worstExit = 0;
   for (const gate of gates) {
-    const result = await runGate(gate, { root: cliOpts.root ?? process.cwd(), headSha: cliOpts.headSha, evidenceDir: explicitEvidenceDir });
+    const result = await runGate(gate, { root: cliOpts.root ?? process.cwd(), headSha: cliOpts.headSha, evidenceDir });
     lines.push(`gate ${gate}: exitCode=${result.exitCode} ${result.exitCode === 0 ? "PASS" : "FAIL"} → ${result.evidencePath}`);
     if (result.exitCode !== 0) worstExit = 1;
+    // E4-R12 (N01): a red gate prints the SAVED log reference AND the bounded
+    // failure summary right in the outer output — the CI summary must point at
+    // the REAL failing check, not require grepping for a bare exit code.
+    if (result.logRef !== undefined) {
+      lines.push(`  log: ${result.logRef.path} (digest ${result.logRef.digest ?? "null"})`);
+    }
+    if (result.errorSummary !== undefined) {
+      for (const summaryLine of result.errorSummary.split("\n")) {
+        lines.push(`  ${summaryLine}`);
+      }
+    }
   }
   lines.push("", "All attempted gates produced durable evidence (INV-P38.2-004).");
   return { exitCode: worstExit, lines };

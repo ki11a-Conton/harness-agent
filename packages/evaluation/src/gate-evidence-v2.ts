@@ -19,7 +19,8 @@
 
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
-import { open, readFile, rename, stat } from "node:fs/promises";
+import { mkdir, open, readFile, rename, writeFile } from "node:fs/promises";
+import { join, relative } from "node:path";
 import { stableStringify } from "./manifest.js";
 
 export const GATE_EVIDENCE_V2_SCHEMA_VERSION = "2.0.0";
@@ -64,6 +65,17 @@ export interface GateEvidenceV2 {
   /** E4-10 #1: the gate's output artifacts (path + content digest), so a
    *  missing artifact can never be recorded as PASS. */
   artifactRefs?: Array<{ path: string; digest: string | null }>;
+  /** E4-R12 (N01): reference to the SAVED full output log (stdout+stderr) so
+   *  a failing gate's root cause is recoverable after the run. `path` is
+   *  relative to the gate cwd (POSIX separators); `digest` is sha256 over the
+   *  saved log bytes (null only when the log could not be persisted — never
+   *  fabricated). Absent when the caller did not request log persistence. */
+  logRef?: { path: string; digest: string | null };
+  /** E4-R12 (N01): bounded, redacted failure summary — exit code, failure-mode
+   *  classification (spawn/timeout/maxBuffer/signal/runner error) and the
+   *  failing output lines. This is what the release CLI prints so the CI
+   *  summary points at the REAL failing check, not at a silent exit code. */
+  errorSummary?: string;
 }
 
 export type GateV2IssueCode =
@@ -209,6 +221,8 @@ export function buildGateEvidenceV2(input: {
   providerCalls?: number;
   environmentClass?: "offline" | "paid" | "insecure-local";
   artifactRefs?: Array<{ path: string; digest: string | null }>;
+  logRef?: { path: string; digest: string | null };
+  errorSummary?: string;
 }): GateEvidenceV2 {
   return {
     schemaVersion: GATE_EVIDENCE_V2_SCHEMA_VERSION,
@@ -229,6 +243,8 @@ export function buildGateEvidenceV2(input: {
     ...(input.providerCalls !== undefined ? { providerCalls: input.providerCalls } : {}),
     ...(input.environmentClass !== undefined ? { environmentClass: input.environmentClass } : {}),
     ...(input.artifactRefs !== undefined ? { artifactRefs: input.artifactRefs } : {}),
+    ...(input.logRef !== undefined ? { logRef: input.logRef } : {}),
+    ...(input.errorSummary !== undefined ? { errorSummary: input.errorSummary } : {}),
   };
 }
 
@@ -274,13 +290,156 @@ export interface RunGateV2Options {
   input?: unknown;
   /** Output artifact paths to digest (a missing one is recorded null). */
   artifactPaths?: string[];
+  /** Directory to persist the gate's FULL output log into (E4-R12: root-cause
+   *  recovery). The log file is named `<gate>-<ISO-start-without-colons>.log`,
+   *  and `evidence.logRef.path` is recorded relative to `cwd`. */
+  logDir?: string;
+  /** Hard cap for the saved log bytes (a truncation marker is appended). */
+  logMaxBytes?: number;
+  /** Cap for `errorSummary` (the printed/recorded failure summary). */
+  summaryMaxChars?: number;
   /** Provider calls the gate made (0 for offline gates). */
   providerCalls?: number;
   environmentClass?: "offline" | "paid" | "insecure-local";
   /** Injected clock (tests). */
   now?: () => Date;
-  /** Injected runner (tests); defaults to execFile of the argv. */
-  run?: (command: string[], cwd: string) => Promise<{ exitCode: number; stdout: string; stderr: string }>;
+  /** Injected runner (tests); defaults to execFile of the argv. The result
+   *  MAY carry a `failure` classification for spawn/timeout/maxBuffer/signal
+   *  so the evidence never loses the real failure cause. */
+  run?: (command: string[], cwd: string) => Promise<GateV2RunnerResult>;
+}
+
+export type GateRunFailureKind = "spawn" | "timeout" | "maxBuffer" | "signal" | "runner_error";
+
+/** Failure-mode classification produced by the child-process runner: a real
+ *  child exit reports exitCode in the result with NO failure; a process that
+ *  never produced a real exit code (spawn failure, timeout kill, maxBuffer
+ *  overflow, signal) is classified so the evidence stays diagnostic. */
+export interface GateRunFailure {
+  kind: GateRunFailureKind;
+  detail: string;
+}
+
+export interface GateV2RunnerResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  /** Present only when the process did NOT exit on its own (spawn/timeout/
+   *  maxBuffer/signal/runner error). A real nonzero child exit is an
+   *  `exitCode`, never a `failure`. */
+  failure?: GateRunFailure;
+}
+
+/**
+ * E4-R12 (N01): classify a child-process error thrown by execFile/execFileSync.
+ * Returns undefined for a REAL child exit (numeric status/code) — that is
+ * captured as exitCode, not a failure mode. Distinguishes timeout kill,
+ * signal termination, maxBuffer (ENOBUFS) overflow, spawn (ENOENT-like)
+ * failures and unknown runner errors; never drops the exception message.
+ */
+export function classifyChildFailure(err: unknown): GateRunFailure | undefined {
+  if (err === null || err === undefined) return undefined;
+  const e = err as { code?: unknown; status?: unknown; signal?: unknown; killed?: boolean; message?: unknown };
+  if (typeof e.status === "number" || typeof e.code === "number") {
+    // Real child exit code — the caller records it as exitCode.
+    return undefined;
+  }
+  const message = typeof e.message === "string" ? e.message : String(err);
+  if (e.killed === true || e.code === "ETIMEDOUT" || /ETIMEDOUT|timed out/i.test(message)) {
+    return { kind: "timeout", detail: `killed by timeout${typeof e.signal === "string" ? ` (${e.signal})` : ""}` };
+  }
+  if (typeof e.signal === "string" && e.signal !== "") {
+    return { kind: "signal", detail: `terminated by ${e.signal}` };
+  }
+  if (e.code === "ENOBUFS" || /maxBuffer/i.test(message)) {
+    return { kind: "maxBuffer", detail: "output exceeded the capture buffer (ENOBUFS/maxBuffer)" };
+  }
+  if (typeof e.code === "string") {
+    return { kind: "spawn", detail: `${e.code}: ${message}`.slice(0, 300) };
+  }
+  return { kind: "runner_error", detail: message.slice(0, 300) };
+}
+
+// ---------------------------------------------------------------------------
+// E4-R12 (N01): log persistence + bounded failure summary
+// ---------------------------------------------------------------------------
+
+const FAILURE_LINE_PATTERN = /fail|error|✗|inconsistent|missing|expected/i;
+
+/** Extract the lines that look like a failure (same pattern family the CI uses
+ *  to annotate red gates) from a gate's captured output. Bounded: at most
+ *  `maxLines` lines, each truncated to `maxLineChars`. */
+export function extractFailureLines(text: string, maxLines = 15, maxLineChars = 240): string[] {
+  const out: string[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    if (!FAILURE_LINE_PATTERN.test(line)) continue;
+    const trimmed = line.trim();
+    if (trimmed === "") continue;
+    out.push(trimmed.length > maxLineChars ? `${trimmed.slice(0, maxLineChars)}…` : trimmed);
+    if (out.length >= maxLines) break;
+  }
+  return out;
+}
+
+/** Redact known secret/material credential shapes so captured logs and
+ *  summaries never carry provider keys (E4-R12: 日志脱敏，不能带 key). */
+export function redactSecrets(text: string): string {
+  return text
+    .replace(
+      /\b([A-Z][A-Z0-9_]*(?:_API_KEY|_TOKEN|_SECRET|_PASSWORD))\s*=\s*[^\s"'`]+/g,
+      (_, key: string) => `${key}=****`,
+    )
+    .replace(/\bsk-[A-Za-z0-9_-]{8,}/g, "sk-****")
+    .replace(/\b(eyJ[A-Za-z0-9_-]{10,}\.)[A-Za-z0-9_.-]+/g, "$1****");
+}
+
+function boundTail(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  return `…[truncated ${text.length - maxChars} chars] ${text.slice(-maxChars)}`;
+}
+
+/** Build the bounded, redacted failure summary recorded in the evidence and
+ *  printed by the release CLI: exit code + failure-mode classification, then
+ *  the FAILING output lines (falling back to the tail when no failure-pattern
+ *  line matches, so "no FAIL line in child output" is never the end of the
+ *  story). */
+export function buildGateErrorSummary(opts: {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  failure?: GateRunFailure;
+  maxChars?: number;
+  maxLines?: number;
+}): string {
+  const maxChars = opts.maxChars ?? 4_000;
+  const maxLines = opts.maxLines ?? 15;
+  const failure = opts.failure;
+  const header = failure !== undefined
+    ? `exitCode=${opts.exitCode} [${failure.kind}: ${redactSecrets(failure.detail)}]`
+    : `exitCode=${opts.exitCode} (${opts.exitCode === 0 ? "ok" : "failed"})`;
+  // Prefer failure-pattern lines from BOTH streams (stderr first, then stdout)
+  // so a check that prints its failing line to stdout (e.g. docs:verify's
+  // per-check FAIL lines) is still surfaced even when stderr carries a summary.
+  const matched: string[] = [];
+  const seen = new Set<string>();
+  for (const stream of [opts.stderr, opts.stdout]) {
+    for (const line of extractFailureLines(stream, maxLines)) {
+      if (seen.has(line)) continue;
+      seen.add(line);
+      matched.push(line);
+      if (matched.length >= maxLines) break;
+    }
+    if (matched.length >= maxLines) break;
+  }
+  let body: string;
+  if (matched.length > 0) {
+    body = matched.join("\n");
+  } else {
+    const tailSource = opts.stderr.trim() === "" ? opts.stdout : opts.stderr;
+    body = boundTail(redactSecrets(tailSource), Math.floor(maxChars * 0.6));
+  }
+  const joined = `${header}\n${redactSecrets(body)}`;
+  return joined.length > maxChars ? `${joined.slice(0, maxChars)}…` : joined;
 }
 
 /**
@@ -297,14 +456,19 @@ export async function runGateV2(opts: RunGateV2Options): Promise<GateEvidenceV2>
   let exitCode: number;
   let stdout = "";
   let stderr = "";
+  let failure: GateRunFailure | undefined;
   try {
     const r = await runner(opts.command, opts.cwd);
     exitCode = r.exitCode;
     stdout = r.stdout;
     stderr = r.stderr;
+    failure = r.failure;
   } catch (err) {
+    // E4-R12: a runner that THROWS (instead of returning a result) still yields
+    // a classified failure with its message — never a bare silent exit 1.
     exitCode = 1;
     stderr = err instanceof Error ? err.message : String(err);
+    failure = classifyChildFailure(err) ?? { kind: "runner_error", detail: stderr.slice(0, 300) };
   }
   const finishedAtIso = now().toISOString();
   const after = await captureGitState(opts.cwd);
@@ -318,6 +482,45 @@ export async function runGateV2(opts: RunGateV2Options): Promise<GateEvidenceV2>
   const sourceClean = (before?.clean ?? false) && (after?.clean ?? false);
   const passed = exitCode === 0 && !missingArtifact && sourceClean;
   const gitSha = before?.sha ?? after?.sha ?? "unknown";
+
+  // E4-R12 (N01): persist the FULL (bounded) output log next to the evidence
+  // and record a relative reference + byte digest, so a red gate's root cause
+  // survives the run and can be re-read/recomputed later. A failed write is
+  // recorded as digest=null — never a fabricated digest.
+  let logRef: { path: string; digest: string | null } | undefined;
+  if (opts.logDir !== undefined) {
+    const logMaxBytes = opts.logMaxBytes ?? 2 * 1024 * 1024;
+    const fileName = `${opts.gate}-${startedAtIso.replace(/[:.]/g, "-")}.log`;
+    const logPath = join(opts.logDir, fileName);
+    const logText = redactSecrets(
+      `${stdout}${stderr === "" ? "" : `${stdout === "" ? "" : "\n"}--- stderr ---\n${stderr}`}`,
+    );
+    const bounded =
+      logText.length > logMaxBytes
+        ? `${logText.slice(0, logMaxBytes)}\n…[E4-R12] output truncated at ${logMaxBytes} bytes — see evidence.errorSummary for the failing lines`
+        : logText;
+    let digest: string | null = sha256Hex(Buffer.from(bounded, "utf8"));
+    try {
+      await mkdir(opts.logDir, { recursive: true });
+      await writeFile(logPath, bounded, "utf8");
+    } catch {
+      digest = null; // never fake a persisted log
+    }
+    logRef = {
+      // Relative to the gate cwd (POSIX separators) so the ref travels with
+      // the evidence tree; absolute when the log lives outside the cwd.
+      path: relative(opts.cwd, logPath).replace(/\\/g, "/"),
+      digest,
+    };
+  }
+
+  const errorSummary = buildGateErrorSummary({
+    exitCode,
+    stdout,
+    stderr,
+    failure,
+    maxChars: opts.summaryMaxChars,
+  });
   const evidence = buildGateEvidenceV2({
     gate: opts.gate,
     command: opts.command,
@@ -338,20 +541,31 @@ export async function runGateV2(opts: RunGateV2Options): Promise<GateEvidenceV2>
     providerCalls: opts.providerCalls ?? 0,
     ...(opts.environmentClass !== undefined ? { environmentClass: opts.environmentClass } : {}),
     artifactRefs,
+    ...(logRef !== undefined ? { logRef } : {}),
+    errorSummary,
   });
   return evidence;
 }
 
-function defaultRunner(command: string[], cwd: string): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+async function defaultRunner(command: string[], cwd: string): Promise<GateV2RunnerResult> {
   return new Promise((resolvePromise) => {
     const [file, ...args] = command;
     if (file === undefined) {
-      resolvePromise({ exitCode: 1, stdout: "", stderr: "empty command" });
+      resolvePromise({ exitCode: 1, stdout: "", stderr: "empty command", failure: { kind: "runner_error", detail: "empty command" } });
       return;
     }
     execFile(file, args, { cwd, timeout: 600_000, windowsHide: true, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }, (err, stdout, stderr) => {
-      const code = err !== null ? (typeof (err as NodeJS.ErrnoException & { code?: number | string }).code === "number" ? (err as unknown as { code: number }).code : 1) : 0;
-      resolvePromise({ exitCode: code, stdout: String(stdout ?? ""), stderr: String(stderr ?? "") });
+      if (err !== null) {
+        // E4-R12: never collapse an ENOBUFS/timeout/ENOENT into a bare exit 1 —
+        // classify the failure mode so the evidence stays diagnostic.
+        const failure = classifyChildFailure(err);
+        const code = typeof (err as NodeJS.ErrnoException & { code?: number }).code === "number"
+          ? (err as unknown as { code: number }).code
+          : 1;
+        resolvePromise({ exitCode: code, stdout: String(stdout ?? ""), stderr: String(stderr ?? ""), failure });
+        return;
+      }
+      resolvePromise({ exitCode: 0, stdout: String(stdout ?? ""), stderr: String(stderr ?? "") });
     });
   });
 }
@@ -433,6 +647,18 @@ export function gateEvidenceV2Issues(value: unknown): string[] {
       if (typeof r.path !== "string" || r.path.length === 0) issues.push("artifactRef.path missing");
       if (r.digest !== null && r.digest !== undefined && !hex64(r.digest)) issues.push(`artifactRef ${JSON.stringify(r.path)} digest is not 64-hex`);
     }
+  }
+  // E4-R12 (N01): logRef must be a {path, digest} pair — a non-string path or a
+  // non-64-hex (non-null) digest is rejected; errorSummary must be a bounded string.
+  if (e.logRef !== undefined) {
+    const r = e.logRef as { path?: unknown; digest?: unknown };
+    if (typeof r !== "object" || r === null || typeof r.path !== "string" || r.path.length === 0) {
+      issues.push("logRef.path must be a non-empty string (relative reference)");
+    }
+    if (r.digest !== null && !hex64(r.digest)) issues.push("logRef.digest must be null or 64-hex");
+  }
+  if (e.errorSummary !== undefined && (typeof e.errorSummary !== "string" || e.errorSummary.length === 0 || e.errorSummary.length > 16_384)) {
+    issues.push("errorSummary must be a bounded non-empty string (<= 16384 chars)");
   }
   return issues;
 }

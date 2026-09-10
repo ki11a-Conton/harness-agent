@@ -12,6 +12,7 @@ import {
   loadGateEvidenceV2,
   parseGateEvidenceV2,
   gateEvidenceV2Issues,
+  classifyChildFailure,
   GATE_EVIDENCE_V2_SCHEMA_VERSION,
   type GateEvidenceV2,
 } from "./gate-evidence-v2.js";
@@ -315,5 +316,185 @@ describe("E4-R09 strict GateEvidenceV2 parse (F18)", () => {
     } finally {
       await (await import("node:fs/promises")).rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("E4-R12 gate output log preservation + failure diagnostics (N01)", () => {
+  it("runGateV2 persists the FULL output log with a relative ref + byte digest and a summaries errorSummary", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "e4-r12-"));
+    try {
+      const logDir = join(dir, "logs");
+      const ev = await runGateV2({
+        gate: "docs", command: ["pnpm", "docs:verify"], cwd: dir, toolVersion: "t",
+        logDir,
+        run: async () => ({
+          exitCode: 1,
+          stdout: "PASS  some check\nFAIL  current plan entry (E4-00)\n      plan.md references plan(x).md but that spec file is missing\n",
+          stderr: "docs:verify failed: machine-derivable doc facts are untruthful\n",
+        }),
+      });
+      expect(ev.passed).toBe(false);
+      // logRef: relative path (POSIX separators) + real 64-hex digest.
+      expect(ev.logRef).toBeDefined();
+      expect(ev.logRef!.path).not.toContain("\\");
+      expect(ev.logRef!.path.split("/").pop()).toMatch(/^docs-.*\.log$/);
+      expect(ev.logRef!.digest).toMatch(/^[0-9a-f]{64}$/);
+      // The saved log file exists and its bytes hash to the recorded digest.
+      const { readFile } = await import("node:fs/promises");
+      const saved = await readFile(join(dir, ev.logRef!.path), "utf8");
+      const { createHash } = await import("node:crypto");
+      expect(createHash("sha256").update(saved, "utf8").digest("hex")).toBe(ev.logRef!.digest);
+      expect(saved).toContain("FAIL  current plan entry (E4-00)");
+      expect(saved).toContain("--- stderr ---");
+      // errorSummary: bounded, contains the failing check line (not just exit 1).
+      expect(ev.errorSummary).toContain("exitCode=1");
+      expect(ev.errorSummary).toContain("current plan entry");
+      // A FAILURE-LINE-extracted summary must include the real failing item.
+      expect(ev.errorSummary).toContain("FAIL");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("a runner THROW with empty stderr keeps the exception message and classifies it", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "e4-r12-"));
+    try {
+      const ev = await runGateV2({
+        gate: "g", command: ["x"], cwd: dir, toolVersion: "t",
+        run: async () => {
+          throw Object.assign(new Error("spawnSync pnpm ENOENT"), { code: "ENOENT" });
+        },
+      });
+      expect(ev.exitCode).toBe(1);
+      expect(ev.errorSummary).toContain("ENOENT");
+      expect(ev.errorSummary).toContain("spawn");
+      expect(ev.errorSummary).toContain("exitCode=1");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("empty stderr with a real child exit is recorded with exitCode and a stdout fallback summary", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "e4-r12-"));
+    try {
+      const ev = await runGateV2({
+        gate: "g", command: ["x"], cwd: dir, toolVersion: "t",
+        run: async () => ({ exitCode: 2, stdout: "FAIL the-only-failing-check\n", stderr: "" }),
+      });
+      expect(ev.exitCode).toBe(2);
+      expect(ev.errorSummary).toContain("the-only-failing-check");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("long output is bounded in the SAVED LOG with an explicit truncation marker", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "e4-r12-"));
+    try {
+      const ev = await runGateV2({
+        gate: "g", command: ["x"], cwd: dir, toolVersion: "t",
+        logDir: join(dir, "logs"),
+        logMaxBytes: 4096,
+        run: async () => ({ exitCode: 0, stdout: "F".repeat(100_000), stderr: "" }),
+      });
+      const { readFile, stat } = await import("node:fs/promises");
+      const savedPath = join(dir, ev.logRef!.path);
+      const saved = await readFile(savedPath, "utf8");
+      expect(saved.length).toBeLessThan(100_000);
+      expect(saved).toContain("output truncated at 4096 bytes");
+      expect((await stat(savedPath)).size).toBeGreaterThan(0);
+      // The recorded digest still matches the bytes actually saved.
+      const { createHash } = await import("node:crypto");
+      expect(createHash("sha256").update(saved, "utf8").digest("hex")).toBe(ev.logRef!.digest);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("a spawn failure via the REAL defaultRunner (ENOENT) is classified, not a bare exit 1", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "e4-r12-"));
+    try {
+      // No injected runner: defaultRunner execFile → ENOENT on a bogus binary.
+      const ev = await runGateV2({
+        gate: "g", command: ["e4-r12-definitely-not-a-real-binary-xyz-123"], cwd: dir, toolVersion: "t",
+      });
+      expect(ev.exitCode).toBe(1);
+      expect(ev.errorSummary).toMatch(/\[spawn/);
+      expect(ev.errorSummary).toMatch(/ENOENT|not a real/i);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("secrets in captured output are redacted in the summary and the saved log", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "e4-r12-"));
+    try {
+      const ev = await runGateV2({
+        gate: "g", command: ["x"], cwd: dir, toolVersion: "t",
+        logDir: join(dir, "logs"),
+        run: async () => ({ exitCode: 1, stdout: "", stderr: "export OPENAI_API_KEY=sk-abcdef0123456789 leaked\n" }),
+      });
+      expect(ev.errorSummary).not.toContain("sk-abcdef0123456789");
+      expect(ev.errorSummary).toContain("OPENAI_API_KEY=****");
+      const { readFile } = await import("node:fs/promises");
+      const saved = await readFile(join(dir, ev.logRef!.path), "utf8");
+      expect(saved).not.toContain("sk-abcdef0123456789");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("classifyChildFailure distinguishes timeout / signal / maxBuffer / spawn / real exit / unknown", () => {
+    expect(classifyChildFailure(Object.assign(new Error("spawnSync x ETIMEDOUT"), { killed: true, signal: "SIGTERM", code: "ETIMEDOUT" })))
+      .toMatchObject({ kind: "timeout" });
+    expect(classifyChildFailure(Object.assign(new Error("spawnSync x killed"), { signal: "SIGKILL" })))
+      .toMatchObject({ kind: "signal" });
+    expect(classifyChildFailure(Object.assign(new Error("spawnSync x ENOBUFS"), { code: "ENOBUFS" })))
+      .toMatchObject({ kind: "maxBuffer" });
+    expect(classifyChildFailure(Object.assign(new Error("output exceeds maxBuffer"), { code: "ENOBUFS" })))
+      .toMatchObject({ kind: "maxBuffer" });
+    expect(classifyChildFailure(Object.assign(new Error("spawnSync x ENOENT"), { code: "ENOENT" })))
+      .toMatchObject({ kind: "spawn" });
+    // Real child exits are exitCodes, NOT failure modes.
+    expect(classifyChildFailure({ status: 3 })).toBeUndefined();
+    expect(classifyChildFailure({ code: 7 })).toBeUndefined();
+    expect(classifyChildFailure(new Error("boom"))).toMatchObject({ kind: "runner_error" });
+    expect(classifyChildFailure(null)).toBeUndefined();
+  });
+
+  it("strict parse rejects a malformed logRef (non-hex digest) and oversized errorSummary", () => {
+    const valid = (): Record<string, unknown> => ({
+      schemaVersion: GATE_EVIDENCE_V2_SCHEMA_VERSION,
+      gate: "capability_audit",
+      command: ["node", "run.ts"],
+      toolVersion: "e4-12",
+      gitSha: "a".repeat(40),
+      cleanBefore: true,
+      cleanAfter: true,
+      inputDigest: "0".repeat(64),
+      outputDigest: "1".repeat(64),
+      startedAtIso: "2026-01-01T00:00:00.000Z",
+      finishedAtIso: "2026-01-01T00:00:01.000Z",
+      exitCode: 0,
+      passed: true,
+      state: "passed",
+      summary: "PASS",
+      providerCalls: 0,
+      environmentClass: "offline",
+    });
+    const e = valid();
+    e.logRef = { path: "logs/x.log", digest: "not-hex" };
+    expect(gateEvidenceV2Issues(e).some((i) => i.includes("logRef"))).toBe(true);
+    const e2 = valid();
+    e2.logRef = { path: "", digest: null };
+    expect(gateEvidenceV2Issues(e2).some((i) => i.includes("logRef"))).toBe(true);
+    const e3 = valid();
+    e3.errorSummary = "x".repeat(16_385);
+    expect(gateEvidenceV2Issues(e3).some((i) => i.includes("errorSummary"))).toBe(true);
+    // A valid logRef + bounded errorSummary parse cleanly.
+    const ok = valid();
+    ok.logRef = { path: "logs/docs-2026.log", digest: "0".repeat(64) };
+    ok.errorSummary = "exitCode=1 [spawn: ENOENT]";
+    expect(gateEvidenceV2Issues(ok)).toEqual([]);
   });
 });
