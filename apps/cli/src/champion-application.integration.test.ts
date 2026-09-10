@@ -125,7 +125,7 @@ describe("E4-07 real champion application integration suite", () => {
   });
 
   it("E4-R08: Web startup ALSO installs the champion mechanism (main agent prompt carries the guidance)", async () => {
-    await writePendingState("budget_aware_completion_v1", {});
+    await writePendingState("budget_aware_completion_v1");
     const outcome = await createHarnessWithChampion({
       runtimeEntrypoint: "web",
       baseConfig: baseConfig(join(dir, "web-data2")),
@@ -142,7 +142,7 @@ describe("E4-07 real champion application integration suite", () => {
   });
 
   it("E4-R08: if the mechanism install is REMOVED, application FAILS (never applied on flags alone)", async () => {
-    await writePendingState("budget_aware_completion_v1", {});
+    await writePendingState("budget_aware_completion_v1");
     const outcome = await createHarnessWithChampion({
       runtimeEntrypoint: "cli",
       baseConfig: baseConfig(join(dir, "no-mech-data")),
