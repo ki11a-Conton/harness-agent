@@ -60,3 +60,22 @@ execution result already produced by the R task, verified again where cheap.
   HISTORICAL, not rewritten.
 - `runtimeReleaseReady` is an offline engineering gate (engineering gates pass
   locally); `championPromotion` quality conclusion is separate and NOT claimed.
+## CI 复跑确认（2026-09-10，run #103–#108，最终状态）
+
+推送 main 后连续复跑，真实 GitHub Actions 结果（含 check-run 注释核验）:
+
+| 项 | 结果 |
+|---|---|
+| Windows 全量测试（run #103 原始失败的 13 个文件 / F16） | ✅ **已关闭**（`1a97a53` canonical-oracle 修复；run #105–#108 的 windows 测试步骤全绿） |
+| Windows 证据步骤（E4-R09 V2） | 9/10 gate 通过；仅 `docs`（docs:verify）在该 runner **无任何 FAIL 行地静默 exit 1** |
+| ubuntu 矩阵 + V2 证据步骤 + capability_audit | ✅（`a0003fd` audit 读 V2 证据修复） |
+| coverage（ubuntu，V2） | ✅ |
+| release attestation（runtimeReleaseReady） | ⏸ **未产出**——attestation job 在 windows 证据步骤红时按设计 skip（P38.3-7 不硬编码 PASS） |
+
+因此 R10 原“待 CI”清单的实际收口状态:
+1. **Windows 测试 / F16 — 已关闭**（不再“待 CI”）。
+2. **Windows `docs` gate — 未关闭、未绕过**：根因疑为 runner 环境（同内容在本地 Windows 与 ubuntu CI 均 exit 0）；已加 `::error::` 自诊断注释（run #108 注释为 `release gate docs failed / gate docs: exitCode=1 FAIL`，其输出无 FAIL/error 行），完整日志需 admin 在
+   https://github.com/ki11a-Conton/harness-agent/actions/runs/34445963911 的 windows job 中查看。
+3. **attestation / runtimeReleaseReady — 未产出**（依赖 2 变绿）。
+4. CI 侧 V2 发证 — ✅ 已接入并真实运行（ubuntu/coverage/9×windows gates 均以 V2 证据通过）。
+5. 未重新付费；无伪造 ACCEPT；未自动 promote。
