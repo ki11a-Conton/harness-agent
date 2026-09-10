@@ -38,6 +38,7 @@ import {
   buildExecutionIdentityV1,
   computeExecutionIdentityDigestV1,
   caseInputFingerprintV1,
+  BUDGET_AWARE_COMPLETION_GUIDANCE_V1,
   DEFAULT_DECISION_POLICY_V3,
   computeThresholdDigestV3,
   DEFAULT_JUDGE_VERSION,
@@ -1391,19 +1392,11 @@ export const BENCHMARK_SYSTEM_PROMPT = [
 ].join("\n");
 
 /** E1-13: step-budget completion guidance block — appended to the system prompt
- *  when the budget_aware_completion_v1 candidate is active. Instructs the agent
- *  to be aware of its iteration budget and converge / verify when it is close
- *  to exhausting the budget, rather than running out of iterations mid-task. */
-export const BUDGET_AWARE_COMPLETION_GUIDANCE = [
-  "",
-  "Budget-aware completion guidance:",
-  "- You have a limited number of iterations per turn (typically 30 tool calls).",
-  "- When you are close to this limit and have made meaningful progress, prioritize",
-  "  running the verification command and confirming the task is complete.",
-  "- Avoid spending remaining budget on speculative work when verification would pass.",
-  "- If verification fails, you may still have budget to iterate; use it.",
-  "- If you are not close to the budget, proceed normally.",
-].join("\n");
+ *  when the budget_aware_completion_v1 candidate is active. E4-R16 (N12): the
+ *  AUTHORITATIVE text lives in the strategy layer (mechanism-guidance.ts) and
+ *  the champion application installs THE SAME text at startup — what is
+ *  evaluated is what gets installed. */
+export const BUDGET_AWARE_COMPLETION_GUIDANCE = BUDGET_AWARE_COMPLETION_GUIDANCE_V1;
 
 /** P38.4-7/8 — per-case provenance: the evaluation context hash (identical
  *  across baseline/challenger for a case) and the candidate configuration

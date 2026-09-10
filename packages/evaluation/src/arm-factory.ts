@@ -31,6 +31,7 @@
 import { createHash } from "node:crypto";
 import { getCandidateRegistry, type CandidateRegistration } from "./candidate-registry.js";
 import { stableStringify } from "./manifest.js";
+import { budgetAwareCompletionGuidanceDigest } from "./mechanism-guidance.js";
 
 export const ARM_FACTORY_SCHEMA_VERSION = "1.0.0";
 export const ARM_FACTORY_POLICY_VERSION = "e3-03-arm-v1";
@@ -258,7 +259,10 @@ export function wireCandidateMechanism(reg: CandidateRegistration): MechanismWir
         applyRuntime: (base) => ({
           ...base,
           budgetAwareCompletion: true,
-          promptAdditionsDigest: sha256Hex("budget-aware-completion:v1"),
+          // E4-R16 (N12): the digest binds the ACTUAL strategy text (the shared,
+          // versioned mechanism definition) — a rewritten guidance changes the
+          // arm digest, the R13 execution identity and the R15 promotion target.
+          promptAdditionsDigest: budgetAwareCompletionGuidanceDigest(),
         }),
         declaredPaths: ["harnessConfig.completionPolicy"],
       };

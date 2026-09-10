@@ -58,6 +58,7 @@ export * from "./security-evidence-execution.js";
 export * from "./evolution-ledger.js";
 export * from "./gate-evidence-v2.js";
 export * from "./mechanism-contract.js";
+export * from "./mechanism-guidance.js";
 export * from "./paired-executor.js";
 export * from "./paired-v3-builder.js";
 export * from "./paired-key.js";

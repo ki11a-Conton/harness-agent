@@ -31,6 +31,7 @@ import {
   markChampionApplied,
   resolveChampionHarness,
   verifyAppliedProofV1,
+  BUDGET_AWARE_COMPLETION_GUIDANCE_V1,
   type AppliedProofV1,
   type ChampionFieldCheckV1,
   type ChampionState,
@@ -55,11 +56,12 @@ export interface ChampionStartupOutcome {
   proof: AppliedProofV1 | null;
 }
 
-/** E4-R05 (F12): the budget-aware completion guidance the champion application
- *  installs as `completionGuidance` — the SAME behavior text the benchmark uses,
- *  so the promoted candidate really runs what was evaluated. */
-export const CHAMPION_BUDGET_AWARE_GUIDANCE =
-  "When you are close to the configured budget, prioritize running the verification command and confirming the task is complete. Avoid spending the remaining budget on speculative work when verification would pass.";
+/** E4-R05 (F12) + E4-R16 (N12): the budget-aware completion guidance the
+ *  champion application installs as `completionGuidance` — the EXACT SAME
+ *  text the benchmark evaluated (shared strategy-layer definition). A startup
+ *  that installs a different "similar meaning" text would apply a strategy
+ *  that was never measured. */
+export const CHAMPION_BUDGET_AWARE_GUIDANCE = BUDGET_AWARE_COMPLETION_GUIDANCE_V1;
 
 /**
  * E4-R05 (F12): mechanisms a champion may require and whether the production
@@ -181,6 +183,31 @@ export async function createHarnessWithChampion(
   }
 
   const lifecycle = championLifecycleStatus(state);
+
+  // E4-R16 (N12): a PENDING promotion claim is NOT evidence by itself. It may
+  // only be applied when the state carries real promotion provenance — a
+  // concrete evidence reference recorded by the promotion step. A
+  // hand-written / evidence-less quarantined state stays quarantined and can
+  // never flip to PROVEN by application alone.
+  if (lifecycle === "APPLICATION_PENDING" && (state.evidenceRef === null || state.evidenceRef === "")) {
+    await recordFailure(
+      state,
+      "application pending but the promotion claim carries no evidence reference (evidenceRef missing) — refusing to apply an unproven claim",
+      [],
+      [],
+      now,
+      opts.runtimeEntrypoint,
+      processId,
+      opts.stateFilePath,
+    );
+    return {
+      harness: await create(base),
+      status: "profileRejected",
+      reason: "pending champion has no promotion evidence (evidenceRef missing) — claim stays quarantined, never PROVEN",
+      proof: null,
+    };
+  }
+
   const resolved = resolveChampionHarness(
     { level: state.level, candidateId, validity: state.validity, applied: state.applied },
     { level: state.level, candidateId },

@@ -135,7 +135,7 @@ describe("E4-07 real champion application integration suite", () => {
     try {
       expect(outcome.status).toBe("applied");
       const main = outcome.harness.agents.find((a) => a.name === "main");
-      expect(main!.systemPrompt).toContain("prioritize running the verification command");
+      expect(main!.systemPrompt).toContain("running the verification command and confirming the task is complete");
     } finally {
       await outcome.harness.close();
     }

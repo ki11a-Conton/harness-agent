@@ -88,7 +88,7 @@ describe("E4-R05 mechanism installation + CAS race", () => {
     expect(out.status).toBe("applied");
     const main = out.harness.agents.find((a) => a.name === "main");
     expect(main).toBeDefined();
-    expect(main!.systemPrompt).toContain("prioritize running the verification command");
+    expect(main!.systemPrompt).toContain("running the verification command and confirming the task is complete");
     await out.harness.close();
   });
 
@@ -102,7 +102,7 @@ describe("E4-R05 mechanism installation + CAS race", () => {
     });
     expect(out.status).toBe("baseline");
     const main = out.harness.agents.find((a) => a.name === "main");
-    expect(main!.systemPrompt).not.toContain("prioritize running the verification command");
+    expect(main!.systemPrompt).not.toContain("running the verification command and confirming the task is complete");
     await out.harness.close();
   });
 
@@ -121,7 +121,7 @@ describe("E4-R05 mechanism installation + CAS race", () => {
     await out.harness.runtime.runTurn(session.id, turn.id, new AbortController().signal);
     // One real turn reached the provider; its SYSTEM prompt carries the guidance.
     expect(captured.length).toBeGreaterThan(0);
-    expect(captured.join("\n")).toContain("prioritize running the verification command");
+    expect(captured.join("\n")).toContain("running the verification command and confirming the task is complete");
     await out.harness.close();
   });
 
@@ -159,7 +159,7 @@ describe("E4-R05 mechanism installation + CAS race", () => {
     expect(racerClosed).toBe(true);
     // The harness we RUN is the BASELINE, not the old champion: no budget guidance.
     const main = out.harness.agents.find((a) => a.name === "main");
-    expect(main!.systemPrompt).not.toContain("prioritize running the verification command");
+    expect(main!.systemPrompt).not.toContain("running the verification command and confirming the task is complete");
     await out.harness.close();
   });
 });
