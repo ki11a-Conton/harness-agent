@@ -151,12 +151,59 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
     }
     case "usage-audit": {
       // E4-10: classify each key capability as exported/tested/wired/observed
-      // from on-disk evidence. --strict fails (non-zero) unless every key
-      // capability is observed in a production-path e2e.
+      // from on-disk evidence. E4-R24 (F04): --strict fails (non-zero) unless
+      // every key capability is observed in ONE NAMED run (--run <runId>) — a
+      // strict verdict may never fall back to scanning every historical run.
+      // The argument list is strictly parsed: unknown flags, missing values and
+      // unsafe runIds are errors, not noise.
       const { runUsageAudit, renderUsageAudit } = await import("./usage-audit.js");
-      const result = runUsageAudit({ root: process.cwd() });
-      const strict = rest.includes("--strict");
-      return { exitCode: strict && !result.ok ? 1 : 0, lines: renderUsageAudit(result) };
+      const { isSafeObservationRunId } = await import("./observation-evidence.js");
+      let strict = false;
+      let runId: string | undefined;
+      for (let i = 0; i < rest.length; i += 1) {
+        const arg = rest[i]!;
+        if (arg === "--strict") {
+          strict = true;
+        } else if (arg === "--run") {
+          const value = rest[i + 1];
+          if (value === undefined || value.startsWith("--")) {
+            return {
+              exitCode: 1,
+              lines: ["usage: agent usage-audit [--run <runId>] [--strict]  (--run requires a value)"],
+            };
+          }
+          runId = value;
+          i += 1;
+        } else {
+          return {
+            exitCode: 1,
+            lines: [`usage-audit: unknown argument ${JSON.stringify(arg)}`, "usage: agent usage-audit [--run <runId>] [--strict]"],
+          };
+        }
+      }
+      if (runId !== undefined && !isSafeObservationRunId(runId)) {
+        return {
+          exitCode: 1,
+          lines: [`usage-audit: invalid runId ${JSON.stringify(runId)} (runId is a file-name component — path separators and traversal segments are forbidden)`],
+        };
+      }
+      if (strict && runId === undefined) {
+        return {
+          exitCode: 1,
+          lines: [
+            "usage-audit --strict requires --run <runId>: a strict verdict must name ONE committed run",
+            "(without --run the audit is a DIAGNOSTIC scan over every historical run and can never certify release-grade observation)",
+          ],
+        };
+      }
+      const result = runUsageAudit({ root: process.cwd(), runId });
+      const lines = renderUsageAudit(result);
+      if (runId === undefined) {
+        lines.push("usage audit: DIAGNOSTIC scan over all committed runs — NOT release-grade; pass --run <runId> --strict for a strict verdict");
+      } else if (!strict) {
+        lines.push(`usage audit: single run ${runId} (inspection — pass --strict to gate the exit code)`);
+      }
+      return { exitCode: strict && !result.ok ? 1 : 0, lines };
     }
     case "champion": {
       // E1-14/E2-07: `agent champion promote --envelope <path>` — the ONLY

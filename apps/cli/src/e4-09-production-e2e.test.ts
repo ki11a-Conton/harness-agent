@@ -139,12 +139,13 @@ describe("E4-09 real production-path E2E (offline)", () => {
     });
     const outDir = join(root, "out");
 
-    // E4-R18 (N16): observations are COLLECTED during the test and COMMITTED
-    // only after every assertion below passes (test-end hook). A failure at any
-    // point leaves no passed proof behind.
+    // E4-R24 (F04): candidates are collected during the test; the COMMITTED
+    // rows are published by the final-result Vitest reporter for the run named
+    // by E2E_OBSERVATION_RUN_ID (CI/explicit audits). Without the env var the
+    // run is unnamed — candidates stay diagnostic and nothing is committed.
     expect(TESTED_SHA).not.toBeNull(); // a git checkout is required for strict evidence
     const observationRun = createObservationRun({
-      runId: `e4-09-${process.pid}-${Date.now()}`,
+      runId: process.env.E2E_OBSERVATION_RUN_ID ?? `e4-09-${process.pid}-${Date.now()}`,
       testFile: TEST_FILE,
       testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
       testedSourceSha: TESTED_SHA as string,
@@ -328,15 +329,14 @@ describe("E4-09 real production-path E2E (offline)", () => {
         entrypoint: "release", invocation: "runGateV2 executed real commands (exit 0 / exit 2), captured real exit codes + gitSha + providerCalls=0",
       });
 
-      // E4-R18 (N16): every assertion has PASSED — commit the observations now
-      // (the test-end hook) and prove the STRICT audit consumes THIS run.
-      observationRun.commit();
-      const { runUsageAudit } = await import("./usage-audit.js");
-      const audit = runUsageAudit({ root: process.cwd(), runId: observationRun.runId, headSha: TESTED_SHA });
-      expect(audit.ok).toBe(true);
-      for (const c of audit.capabilities) {
-        expect(c.observed).toBe(true);
-      }
+      // E4-R24 (F04): this test body only records CANDIDATE observations. The
+      // committed `runStatus: "passed"` rows are published by the final-result
+      // Vitest reporter AFTER the framework determines this test's final state
+      // (assertions + afterEach/afterAll included), and the STRICT audit of
+      // that run runs as an INDEPENDENT stage (CI: `usage-audit --run <id>
+      // --strict` after the suite; protocol acceptance: the real-subprocess
+      // test in e4-r24-final-result-protocol.test.ts). A test must never have
+      // to write its own success and then assert on it in the same body.
     } finally {
       await startup.harness.close();
     }

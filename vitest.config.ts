@@ -5,6 +5,13 @@ export default defineConfig({
     include: ["packages/*/src/**/*.test.ts", "apps/*/src/**/*.test.ts"],
     environment: "node",
     testTimeout: 300000,
+    // E4-R24 (F04): when a suite run is NAMED (E2E_OBSERVATION_RUN_ID — set by
+    // CI or explicit local audits), the final-result reporter publishes the
+    // committed observation evidence for that run from the framework's own
+    // final test states. Unset (normal local runs) → no reporter, no writes.
+    reporters: process.env.E2E_OBSERVATION_RUN_ID
+      ? ["default", "./apps/cli/test-infra/observation-vitest-reporter.ts"]
+      : "default",
     coverage: {
       provider: "v8",
       enabled: false,

@@ -42,6 +42,15 @@ jobs:
     env:
       # Never let an absent key silently flip a job into "no-op success".
       OPENAI_API_KEY: ""
+      # E4-R24 (F03/F04): NAME this suite run and point committed observation
+      # evidence into the workspace. The suite then runs under the final-result
+      # reporter, which publishes committed (`runStatus: passed`) rows ONLY from
+      # the framework's final test states (assertions + afterEach/afterAll).
+      # A failed test leaves no passed rows behind, and a rerun writes to its
+      # OWN run file — an old green run can never mask a current failure. The
+      # INDEPENDENT strict audit below reads exactly this run.
+      E2E_OBSERVATION_EVIDENCE_DIR: .ci/observation-evidence
+      E2E_OBSERVATION_RUN_ID: e4-r24-${{ matrix.os }}-${{ github.run_id }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
@@ -75,6 +84,29 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # E4-R24 (F03/F04): independent STRICT usage audit over the suite's named
+      # run. The strict verdict is rendered by its own process AFTER the final
+      # results are committed — a test never writes its own success and then
+      # asserts on it in the same body. --strict WITHOUT --run fails by design
+      # (no global-history fallback); here the run IS named, so the only way
+      # this step passes is: the framework's final results + committed rows +
+      # exact testedSourceSha match + testName declared in the test file source.
+      # A red audit fails the job — a green test gate alone cannot certify
+      # release-grade observation.
+      - name: Strict usage audit of the named run (E4-R24 independent stage)
+        shell: bash
+        run: |
+          mkdir -p .ci/observation-evidence
+          node apps/cli/dist/main.js usage-audit --run "$E2E_OBSERVATION_RUN_ID" --strict
+
+      - name: Upload observation evidence (E4-R24)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: observation-evidence-${{ matrix.os }}-${{ github.run_id }}
+          path: .ci/observation-evidence/
+          if-no-files-found: warn
 
       - name: Benchmark smoke (stub/fake provider — no paid model)
         # One adversarial case through the real harness with the stub provider.

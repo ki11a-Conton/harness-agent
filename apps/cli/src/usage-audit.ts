@@ -124,9 +124,11 @@ export function runUsageAudit(deps: {
   // E4-R18 (N15): strict observed requires BOTH the audited HEAD and the row's
   // testedSourceSha to be KNOWN and EXACTLY equal (an unknown SHA is diagnostic
   // only), the row's symbol to match the registered capability symbol, and the
-  // row's testFile to exist under the audited root. The evidence itself was
-  // strict-parsed (digest recomputed, runId isolated, committed after the test
-  // passed).
+  // row's testFile to exist under the audited root.
+  // E4-R24 (F03/F04): the evidence is committed ONLY from the test framework's
+  // FINAL results (runner-published, resultDigest-bound), and the row's inline
+  // runId must equal the requested run (checked by the loader) while the row's
+  // testName must be declared in its testFile's source.
   const headSha = deps.headSha !== undefined ? deps.headSha : gitHeadShaAt(deps.root);
   const evidence = deps.runId !== undefined ? loadObservationEvidence(deps.runId) : loadAllObservationEvidence();
   const evidenceFor = (capability: string, symbol: string): ObservationEvidence[] =>
@@ -140,7 +142,12 @@ export function runUsageAudit(deps: {
       if (headSha === null || e.testedSourceSha !== headSha) return false;
       // E4-R18: the row's testFile must be a real file under the audited root —
       // a fictional/absent test file proves nothing.
-      if (!files.some((f) => f.path === e.testFile)) return false;
+      const file = files.find((f) => f.path === e.testFile);
+      if (file === undefined) return false;
+      // E4-R24 (F03): a testFile EXISTING is not proof its testName ever ran —
+      // the test identity must be declared in that file's source (the it()/test()
+      // title literal). A fabricated testName on a real file is not observed.
+      if (!file.src.includes(e.testName)) return false;
       return true;
     });
   const capabilities: CapabilityUsage[] = [];
