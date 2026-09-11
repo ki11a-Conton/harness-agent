@@ -3,12 +3,10 @@
 ```text
 任务：E4-R22（executionPlan 严格解析与交叉绑定）
 审查基线（reviewedSourceSha）：bcf34b7179152ac2fc24931f268fada8a67f82d9
-被测源码：bcf34b7 之上的本任务工作树（execution-plan.ts 新增；
-      champion-eval-v3.ts / promotion-envelope.ts / paired-v3-builder.ts /
-      benchmark-command.ts / fixtures.ts / index.ts 修改，未提交）
-状态：PASS（本地离线验收全绿；e3-13/e4-09 两个真实 CLI E2E 文件因
-      【既有】干净树门禁对脏工作树拒绝 promotion-eligible 运行而无法在
-      本地复跑——该门禁是 E4-R13 既有正确行为，提交后干净树复验，见 §6）
+被测源码：bcf34b7 之上的本任务提交（8109e1b 协议与三边界 / ed3659a
+      limit 语义与真实链路 / c616b9b e3-13 夹具协议化）
+状态：PASS（本地验收全绿，含 e3-13/e4-09 两个真实 CLI E2E 文件在提交后
+      干净树上的复跑确认——见 §6）
 真实模型网络调用：0（全部测试为离线 fixture + 真实 writer/evaluator/loader）
 ```
 
@@ -120,20 +118,33 @@ pnpm exec vitest run apps/cli/src/benchmark-command.test.ts \
   apps/cli/src/e4-r21-release-reverify.test.ts \
   apps/cli/src/release-command.test.ts apps/cli/src/release-verify.test.ts
 → 4 files / 136 tests passed（exit 0）
+
+# 提交后干净树复验（真实 CLI E2E，c616b9b）：
+pnpm exec vitest run apps/cli/src/e3-13-production-path.test.ts \
+  apps/cli/src/e4-09-production-e2e.test.ts
+→ 2 files / 8 tests passed（exit 0）
+
+# 全仓回归（脏树期间，e4-09 因上述干净树门禁 exit 1 属预期）：
+pnpm test → 312/313 files, 5645 passed | 4 failed（全部为 e4-09 干净树门禁）
+   + 1 skipped；提交后干净树复跑 e4-09 全部通过
 ```
 
 修复前基线：`EMPTY_EXECUTION_PLAN` 复现为 ACCEPT + promotion accepted
 （计划 §2 记录的矛盾）；修复后同一夹具 INVALID + `CANDIDATE_NOT_ELIGIBLE`。
 
-## 6. 残余限制
+## 6. 干净树复验与残余限制
 
-1. **e3-13 / e4-09 两个真实 CLI E2E 文件无法在本地脏工作树复跑**：两者
-   走真实 `runBenchmarkCommand`（strong isolation mock），而 E4-R13 既有
-   门禁"promotion-eligible run 需要干净源码树"会在 `git status --porcelain`
-   非空时拒绝（exit 1：`a promotion-eligible run requires a CLEAN source
-   tree…`）。该门禁**非本轮引入**（E4-R13 提交已存在），且是对的行为。
-   bc…34b7 的 CI（run 34548502173，四 job 全绿）证明两个文件在干净检出
-   上通过；本轮改动提交后将在干净树上本地复跑确认（R26 收口时记录）。
+1. **e3-13 / e4-09 干净树复验（已通过）**：两个文件走真实
+   `runBenchmarkCommand`（strong isolation mock），E4-R13 既有门禁要求
+   promotion-eligible 运行在干净源码树上（`git status --porcelain` 非空即
+   exit 1：`a promotion-eligible run requires a CLEAN source tree…`）。该
+   门禁**非本轮引入**且是正确行为。本轮改动提交（c616b9b）后本地干净树
+   复跑：`e3-13-production-path.test.ts` 3 用例、`e4-09-production-e2e.test.ts`
+   5 用例全部通过（含真实链路 ACCEPT→promote→applied 与四个对抗用例）。
+   e3-13 夹具同步升级：原手写残缺计划（`{schemaVersion, suite, caseIds,
+   repeat}` + `planDigest: sha("plan-v1")` 占位符）在严格协议下 INVALID，
+   现由 `fixtureExecutionPlan` 生成协议完整计划，且 plan/provider/model/
+   gitSha/judge/isolation/candidate 与夹具 manifest/provenance 逐一交叉绑定。
 2. planDigest 重算证明的是"manifest 记录的摘要 ↔ 计划内容"一致；对能
    重写全部产物与摘要的攻击者不设防（计划 §2 F02 边界声明）。
 3. `plan.candidate` 绑定的是 candidate artifact 的 `arm.candidateId`；
