@@ -945,7 +945,10 @@ export function buildBenchmarkExecutionPlan(input: {
     suite: opts.suite,
     caseIds,
     caseFingerprints,
-    limit: opts.limit,
+    // E4-R22 (F02): the protocol's `limit` is null = no case-count cap; the
+    // CLI's `--limit 0`-means-all convention maps to null (a literal 0 would be
+    // rejected by the shared parser — "0 cases planned" is contradictory).
+    limit: opts.limit > 0 ? opts.limit : null,
     repeat: opts.repeat,
     interleave: opts.interleave,
     shuffle: opts.shuffle,

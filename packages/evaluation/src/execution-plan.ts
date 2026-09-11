@@ -34,7 +34,10 @@ export interface ExecutionPlanV1 {
   /** E4-R13 (N03): per-case INPUT fingerprint — editing a case file without
    *  changing its id still invalidates the confirmed plan. */
   caseFingerprints: Readonly<Record<string, string>>;
-  limit: number;
+  /** Maximum number of planned cases (a positive integer cap on the FIRST n
+   *  of caseIds); `null` = no case-count cap — ALL planned cases run. The CLI's
+   *  `--limit 0`-means-all convention maps to null; a literal 0 is rejected. */
+  limit: number | null;
   repeat: number;
   interleave: boolean;
   shuffle: boolean;
@@ -135,7 +138,12 @@ export function parseExecutionPlan(value: unknown): ParsedExecutionPlan {
   str("isolationBackendId");
   str("providerId");
   str("modelId");
-  num("limit", 1);
+  // limit: null = no case-count cap; otherwise a positive integer.
+  if (r["limit"] === null) {
+    // unlimited — the planned case set is caseIds itself
+  } else {
+    num("limit", 1);
+  }
   num("repeat", 1);
   num("seed", Number.NEGATIVE_INFINITY);
   bool("interleave");
