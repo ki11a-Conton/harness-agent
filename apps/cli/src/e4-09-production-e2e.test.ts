@@ -143,11 +143,15 @@ describe("E4-09 real production-path E2E (offline)", () => {
     // rows are published by the final-result Vitest reporter for the run named
     // by E2E_OBSERVATION_RUN_ID (CI/explicit audits). Without the env var the
     // run is unnamed — candidates stay diagnostic and nothing is committed.
+    // The candidate's testName MUST be the test's LITERAL framework name —
+    // final-result binding matches against the reporter's registered identity
+    // (an old style "...-> applied" title would never match the real title
+    // "...-> applied, all real stages" and the candidate would be dropped).
     expect(TESTED_SHA).not.toBeNull(); // a git checkout is required for strict evidence
     const observationRun = createObservationRun({
       runId: process.env.E2E_OBSERVATION_RUN_ID ?? `e4-09-${process.pid}-${Date.now()}`,
       testFile: TEST_FILE,
-      testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied",
+      testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied, all real stages",
       testedSourceSha: TESTED_SHA as string,
       entrypoint: "cli",
     });
