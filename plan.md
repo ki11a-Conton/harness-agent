@@ -2,40 +2,47 @@
 
 **当前执行计划入口** — 本文件是唯一的当前计划入口。
 
-- 当前计划：[plan(20260911-013142).md](plan(20260911-013142).md)
-  （bcf34b7 增量审查与下一轮 Agent 执行计划，2026-09-11）
+- 当前计划：[plan(20260911-072937).md](plan(20260911-072937).md)
+  （E4-R27…E4-R31：晋升隔离资格 / 执行计划字段 / 二进制源码指纹 /
+  恢复存储有限唤醒 / 独立验收收口，2026-09-11）
 - reviewedSourceSha（该计划审查时所依据的提交）：
-  `bcf34b7179152ac2fc24931f268fada8a67f82d9`（main）
-- 比较基线：`36c9c267aff5f32a0ccd9364da3306e28114921c`
+  `493866f03d942e85870cc658eb721cfbf2389ec2`（main）
+- 比较基线：`bcf34b7179152ac2fc24931f268fada8a67f82d9`
 
 ## 历史计划
 
-上一轮 E4 计划 `plan(20260910-070001).md`（2026-09-10，E4-R12 … E4-R20）已由当前
-计划接替，作为历史保留在 git 历史中；其验证结论与产物见
-`docs/E4-R12-report.md` … `docs/E4-R20-report.md`。
+上一轮 E4 计划 `plan(20260911-013142).md`（2026-09-11，E4-R21 … E4-R26）已由当前
+计划接替，作为历史保留在 git 历史中（其文件已从工作树删除，仅存于历史）；其验证结论与
+产物见 `docs/E4-R21-report.md` … `docs/E4-R26-report.md`。
+
+再上一轮 `plan(20260910-070001).md`（E4-R12 … E4-R20）同样作为历史保留在 git 历史中，
+产物见 `docs/E4-R12-report.md` … `docs/E4-R20-report.md`。
 
 > 执行约定与推荐顺序见当前计划第 3 节。任何后续会话都应以本文件指向的计划为准，
 > 不要从历史计划标题推断范围或完成状态。
-## 修订计划执行状态（2026-09-11 计划）
 
-- 状态：E4-R21 … E4-R26 按 plan(20260911-013142).md 执行：
-  - R21（F01 release 证据消费链统一）✅ docs/E4-R21-report.md
-  - R22（F02 executionPlan 严格解析与交叉绑定）✅ docs/E4-R22-report.md
-  - R24（F03/F04 观察记录运行身份与最终结果）✅ docs/E4-R24-report.md
-  - R23（F05 内容级源码指纹与执行参数身份）✅ docs/E4-R23-report.md
-  - R25（V01 恢复复合故障专项验证）✅ docs/E4-R25-report.md
-  - R26（总验收与文档收口）✅ docs/E4-R26-report.md（关闭矩阵 + 全仓门禁：
-    314 files / 5674 tests 通过、docs:verify ALL CHECKS PASS、typecheck exit 0；
-    已推送 origin/main，远端 CI run #112（2b2d3db）四 job 全绿，strict usage-audit 两平台 success）
-- 前一轮（2026-09-10 计划）收口结论保留：E4-R12 … E4-R20 已完成、已推送
-  origin/main；CI run 34548502173（bcf34b7）四 job 全部成功，
-  `runtimeReleaseReady=true`（详见 docs/E4-R20-report.md）。
+## 修订计划执行状态（2026-09-11 计划 E4-R27…R31）
+
+- 状态：E4-R27、E4-R28 已按 plan(20260911-072937).md 完成（本地提交，待推送）：
+  - R27（G01 晋升隔离资格语义）✅ docs/E4-R27-report.md（insecure/none 不可晋升，
+    evaluator/loader/writer 三边界共享语义校验；18 例离线测试）
+  - R28（G02 执行计划字段与规模约束）✅ docs/E4-R28-report.md（四个预算字段真正接入
+    validator、整数合同、limit/caseIds 一致性、网格规模上限；14 例离线测试）
+- 待执行（本轮剩余）：
+  - R29（G03 二进制源码指纹 —— UTF-8 解码碰撞 0x80↔0x81）⏳ 未开始
+  - R30（G04 恢复存储暂时故障的有限唤醒 —— lease/intent 写失败后无 scheduler 回调）⏳ 未开始
+  - R31（独立验收与计划收口 —— G01…G04 关闭矩阵 + 全仓门禁）⏳ 未开始
+- 上一轮（2026-09-11 计划 E4-R21…R26）收口结论保留：E4-R21 … E4-R26 已完成并已推送
+  origin/main；远端 CI run #112（`2b2d3db`）四 job 全绿（含 strict usage-audit
+  两平台 success、release attestation READY=true）。
+- 再上一轮（2026-09-10 计划）收口结论保留：E4-R12 … E4-R20 已完成、已推送
+  origin/main；CI run 34548502173（bcf34b7）四 job 全部成功，`runtimeReleaseReady=true`
+  （详见 docs/E4-R20-report.md）。
 - 已知未完成/待环境项（不因"计划已执行"而消失）：
   1. 真实模型 champion 质量：attestation 记录 `championPromotion.status=NOT_RUN`
      （付费 benchmark 未请求，不为此造假或付费）。
-  2. release 发布动作本身未执行（本计划只到 attestation，不自动发布）。
-  3. R21–R26 已推送 origin/main；Run #112（`2b2d3db`）远端 CI 四 job 全绿
-     （含 strict usage-audit 两平台 success、release attestation READY=true）。
-     后续文档收口提交（documentationCommitSha）会再触发新 run，报告区分两者。
+  2. release 发布动作本身未执行（各轮计划只到 attestation，不自动发布）。
+  3. E4-R27 / E4-R28 本地提交尚未推送 origin/main；推送后由新 CI run 确认新 SHA
+     （testedSourceSha 与 documentationCommitSha 严格区分）。
 - docs:verify 指向本文件作为唯一当前计划入口；历史计划与旧状态段保留为
   HISTORICAL，不做删除或改写。
