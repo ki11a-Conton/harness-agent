@@ -21,4 +21,11 @@ spawnpid.txt
 .pnpm-store/
 # Session workspace (inbound uploads) — never commit.
 /harness-agent-src/
+# E4-R24: throwaway fixtures spawned by the final-result protocol test live in
+# apps/cli/src for ONE vitest subprocess run (never committed, never seen by
+# git status --porcelain). They must stay invisible to the working-tree
+# fingerprint so a concurrent promotion benchmark (e4-09) never sees a dirty
+# tree and refuses to run — the fixture dirt would be a false positive, not a
+# real source change.
+apps/cli/src/e4-r24-fixture-*.test.ts
 
