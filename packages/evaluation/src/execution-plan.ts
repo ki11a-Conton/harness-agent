@@ -20,6 +20,16 @@ import { computeRuntimeConfigHash } from "./manifest.js";
 
 export const EXECUTION_PLAN_SCHEMA_VERSION = "e4-01";
 
+/** E4-R28 (G02): the documented PRODUCT cap on a plan's sample grid
+ *  (repeat × caseCount). Independent of the per-experiment budget fields
+ *  (maxLogicalRuns etc.), this bounds the ARRAYS the grid contract allocates
+ *  (`expectedSampleKeysFromExecutionPlan`, evaluator/writer sets) so a
+ *  pathological plan is rejected with a structured error BEFORE any huge loop.
+ *  A paired benchmark is 2× this many logical arm runs and still must satisfy
+ *  maxLogicalRuns. 1_000_000 planned samples is far above any real
+ *  offline/small experiment yet keeps every grid consumer bounded. */
+export const EXECUTION_PLAN_MAX_PLANNED_SAMPLES = 1_000_000;
+
 export type ExecutionPlanIsolationStrength = "strong" | "insecure-local" | "none";
 
 /**
@@ -110,15 +120,45 @@ export function parseExecutionPlan(value: unknown): ParsedExecutionPlan {
     }
     return v;
   };
-  const nullableNum = (field: string): number | null | undefined => {
+  /** E4-R28 (G02): COUNT-like fields require a SAFE INTEGER (a fractional
+   *  repeat/limit/cap would silently change the grid or the budget). */
+  const safeCount = (field: string, min: number, max = Number.MAX_SAFE_INTEGER): number | null => {
+    const v = r[field];
+    if (typeof v !== "number" || !Number.isSafeInteger(v) || v < min || v > max) {
+      issues.push(`executionPlan.${field} must be a safe integer in [${min}, ${max}] (fractional/unsafe values would change the grid or budget)`);
+      return null;
+    }
+    return v;
+  };
+  /** E4-R28 (G02): nullable COUNT-like budget field — null = unlimited, 0 =
+   *  FORBID, positive = the cap. The field MUST be present (an omitted field is
+   *  NOT silently treated as unlimited; a missing key is a protocol error that
+   *  says "I do not know the budget", which fail-closes). */
+  const nullableCount = (field: string): number | null | undefined => {
     const v = r[field];
     if (v === null) return null;
     if (v === undefined) {
-      issues.push(`executionPlan.${field} key is missing (use null for unlimited)`);
+      issues.push(`executionPlan.${field} key is missing (use null for unlimited, 0 to forbid)`);
+      return undefined;
+    }
+    if (typeof v !== "number" || !Number.isSafeInteger(v) || v < 0) {
+      issues.push(`executionPlan.${field} must be null, a non-negative safe integer (0 = forbid, positive = the cap), or a finite number of the field's unit`);
+      return undefined;
+    }
+    return v;
+  };
+  /** E4-R28 (G02): nullable COST-like field — null = unlimited, 0 = FORBID,
+   *  positive = the cap. Cost allows REASONABLE finite decimals (a fractional
+   *  dollar cap is legal); NaN/Infinity and negatives are rejected. */
+  const nullableCost = (field: string): number | null | undefined => {
+    const v = r[field];
+    if (v === null) return null;
+    if (v === undefined) {
+      issues.push(`executionPlan.${field} key is missing (use null for unlimited, 0 to forbid)`);
       return undefined;
     }
     if (typeof v !== "number" || !Number.isFinite(v) || v < 0) {
-      issues.push(`executionPlan.${field} must be null or a finite number >= 0`);
+      issues.push(`executionPlan.${field} must be null or a finite non-negative number (0 = forbid, positive = the cap)`);
       return undefined;
     }
     return v;
@@ -138,17 +178,27 @@ export function parseExecutionPlan(value: unknown): ParsedExecutionPlan {
   str("isolationBackendId");
   str("providerId");
   str("modelId");
-  // limit: null = no case-count cap; otherwise a positive integer.
+  // limit: null = no case-count cap; otherwise a positive SAFE integer.
   if (r["limit"] === null) {
     // unlimited — the planned case set is caseIds itself
   } else {
-    num("limit", 1);
+    safeCount("limit", 1);
   }
-  num("repeat", 1);
-  num("seed", Number.NEGATIVE_INFINITY);
+  safeCount("repeat", 1); // E4-R28: fractional repeat (2.5) is rejected
+  safeCount("seed", 0); // E4-R28: seed must agree with CLI's non-negative integer PRNG contract
   bool("interleave");
   bool("shuffle");
   bool("promotionEligible");
+
+  // E4-R28 (G02): the four budget fields MUST actually be validated — the
+  // pre-R28 parser defined `nullableNum` but never called it, so a negative
+  // maxModelCalls, a deleted maxLogicalRuns key, and a string
+  // maxEstimatedCostUsd all sailed through as "accepted". Interger-count
+  // fields use safe-count semantics; the USD cap allows finite decimals.
+  nullableCount("maxLogicalRuns");
+  nullableCount("maxModelCalls");
+  nullableCount("maxEstimatedTokens");
+  nullableCost("maxEstimatedCostUsd");
 
   if (r["candidate"] !== null && typeof r["candidate"] !== "string") {
     issues.push("executionPlan.candidate must be a string or null");
@@ -212,6 +262,39 @@ export function parseExecutionPlan(value: unknown): ParsedExecutionPlan {
   }
   if (typeof r["effectiveModelParams"] !== "object" || r["effectiveModelParams"] === null || Array.isArray(r["effectiveModelParams"])) {
     issues.push("executionPlan.effectiveModelParams must be a non-null object");
+  }
+
+  // E4-R28 (G02): grid-scale guard BEFORE any expansion loop. Independent of
+  // the per-field checks above, a plan whose repeat × caseCount would consume
+  // an unbounded array (expectedSampleKeysFromExecutionPlan / the evaluator /
+  // the writer) is rejected HERE with a structured error so no caller ever
+  // runs a huge loop. The cap is a documented product limit (repeat × case
+  // count); paired benchmarks then run 2× that many logical arm runs — the
+  // plan's own maxLogicalRuns budget is the second, per-experiment gate.
+  if (issues.length === 0 && caseIds.length > 0) {
+    const repRaw = r["repeat"];
+    if (typeof repRaw === "number" && Number.isSafeInteger(repRaw) && repRaw >= 1) {
+      const product = repRaw * caseIds.length;
+      if (!Number.isSafeInteger(product)) {
+        issues.push(`executionPlan grid size repeat(${repRaw}) × caseCount(${caseIds.length}) overflows a safe integer`);
+      } else if (product > EXECUTION_PLAN_MAX_PLANNED_SAMPLES) {
+        issues.push(
+          `executionPlan grid size repeat(${repRaw}) × caseCount(${caseIds.length}) = ${product} > the documented ${EXECUTION_PLAN_MAX_PLANNED_SAMPLES} planned-sample cap (refuse before expansion)`,
+        );
+      }
+    }
+    // E4-R28 (G02): LIMIT is the confirmed plan's cap on "the first N of
+    // caseIds" (CLI: `--limit` non-negative, 0 = all → null). The CLI slices
+    // the case set BEFORE building the plan, so a non-null limit that is
+    // SMALLER than the number of caseIds contradicts itself: the plan claims
+    // to cap at N but lists more cases than N. Reject here (both the CLI and
+    // the grid generator use caseIds as the actual selected set).
+    const limitRaw = r["limit"];
+    if (typeof limitRaw === "number" && Number.isSafeInteger(limitRaw) && limitRaw >= 1 && limitRaw < caseIds.length) {
+      issues.push(
+        `executionPlan.limit ${limitRaw} < caseIds.length ${caseIds.length} — the plan caps the first N cases but lists more than N (CLI slices before planning; the grid derives from caseIds)`,
+      );
+    }
   }
 
   if (issues.length > 0) return { plan: null, issues };
