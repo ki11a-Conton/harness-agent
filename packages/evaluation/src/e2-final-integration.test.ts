@@ -25,6 +25,7 @@ import { buildExperimentArtifactV3, validateArtifactDir } from "./artifact-v3/in
 import { decideChampionV3 } from "./champion-decision-v3.js";
 import { buildPromotionEnvelope, loadPromotionEnvelope } from "./promotion-envelope.js";
 import { DEFAULT_DECISION_POLICY_V3, computeThresholdDigestV3 } from "./decision-policy-v3.js";
+import { fixtureExecutionPlan, fixtureExecutionPlanDigest } from "./fixtures.js";
 import {
   createInitialChampionState,
   applyPromotion,
@@ -36,6 +37,21 @@ import { prepareSandboxedExec, ProcessExecutor } from "@ar/tools";
 import { stableStringify } from "./manifest.js";
 
 const sha = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
+
+/** E4-R22 (F02): a protocol-valid confirmed plan matching the 6×2 grid and
+ *  the run-time provenance below (model deepseek-v4-flash, provider fake,
+ *  gitSha c…40). The recorded planDigest is its recomputed digest — never a
+ *  stand-in — so the happy path passes strict parsing + cross-binding. */
+const PLAN_ARGS = {
+  suite: "holdout",
+  caseIds: ["ho-01", "ho-02", "ho-03", "ho-04", "ho-05", "ho-06"],
+  repeat: 2,
+  providerId: "fake",
+  modelId: "deepseek-v4-flash",
+  candidate: "adaptive_recovery_v2",
+};
+const PLAN = fixtureExecutionPlan(PLAN_ARGS);
+const PLAN_DIGEST = fixtureExecutionPlanDigest(PLAN_ARGS);
 
 describe("E2-16 final integration acceptance", () => {
   it("D. recovery T1 terminal before T2 overtakes — covered by core suite", () => {
@@ -181,11 +197,11 @@ describe("E2-16 final integration acceptance", () => {
       const artifact = buildExperimentArtifactV3({
         arm: { armId: "candidate", candidateId: "adaptive_recovery_v2", candidateConfigHash: arm.digest },
         manifest: {
-          suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: "d".repeat(64),
+          suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: PLAN_DIGEST,
           promotionEligible: true, isolationStrength: "strong", runtimeConfigHash: arm.digest,
           // E4-R13/R14: the confirmed plan + complete grid + completion marker.
           expectedSampleKeys: grid, runComplete: true,
-          executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: [1, 2, 3, 4, 5, 6].map((k) => `ho-0${k}`), repeat: 2 },
+          executionPlan: PLAN,
           thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
         },
         outcomes: mkOutcomes("candidate", true),
@@ -201,10 +217,10 @@ describe("E2-16 final integration acceptance", () => {
       const baselineArtifact = buildExperimentArtifactV3({
         arm: { armId: "baseline", candidateId: null, candidateConfigHash: null },
         manifest: {
-          suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: "d".repeat(64),
+          suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false, planDigest: PLAN_DIGEST,
           promotionEligible: true, isolationStrength: "strong", runtimeConfigHash: arm.digest,
           expectedSampleKeys: grid, runComplete: true,
-          executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: [1, 2, 3, 4, 5, 6].map((k) => `ho-0${k}`), repeat: 2 },
+          executionPlan: PLAN,
           thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
         },
         outcomes: mkOutcomes("baseline", false),

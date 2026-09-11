@@ -41,6 +41,8 @@ import {
   BUDGET_AWARE_COMPLETION_GUIDANCE_V1,
   DEFAULT_DECISION_POLICY_V3,
   computeThresholdDigestV3,
+  computeExecutionPlanDigest,
+  type ExecutionPlanV1,
   DEFAULT_JUDGE_VERSION,
   EvalRunner,
   getCandidateRegistry,
@@ -868,47 +870,11 @@ export const PREFLIGHT_ESTIMATE = {
  * provenance (createdAt) is excluded; the source snapshot IS part of the
  * authorization surface (a changed tree invalidates an old confirmation).
  */
-export interface BenchmarkExecutionPlan {
-  schemaVersion: string;
-  suite: string;
-  caseIds: string[];
-  /** E4-R13 (N03): per-case INPUT fingerprint — editing a case file without
-   *  changing its id still invalidates the confirmed plan. */
-  caseFingerprints: Readonly<Record<string, string>>;
-  limit: number;
-  repeat: number;
-  interleave: boolean;
-  shuffle: boolean;
-  seed: number;
-  candidate: string | null;
-  billingClass: BillingClass;
-  /** E4-01 #2: `null` = unlimited, `0` = forbid, positive = the cap. */
-  maxLogicalRuns: number | null;
-  maxModelCalls: number | null;
-  maxEstimatedTokens: number | null;
-  maxEstimatedCostUsd: number | null;
-  /** E4-01 #4: the estimator is deterministic, so this is always "bounded"
-   *  today; a paid run with "unknown" would be refused unless overridden. */
-  estimateStatus: "bounded" | "unknown";
-  isolationBackendId: string;
-  isolationStrength: "strong" | "insecure-local" | "none";
-  promotionEligible: boolean;
-  /** E4-R13 (N03): the FULL authorization surface, folded into the plan digest
-   *  so a --plan-digest confirmation covers exactly what will execute: the
-   *  provider/model identity, the judge version, the source snapshot and the
-   *  pre-registered decision policy. Secrets never enter the plan. */
-  providerId: string;
-  modelId: string;
-  judgeVersion: string;
-  sourceSha: string | null;
-  /** Real working-tree fingerprint: sha256 over `git status --porcelain` when
-   *  dirty, null when clean/unavailable — never a literal "dirty" placeholder. */
-  treeFingerprint: string | null;
-  decisionPolicy: Readonly<object>;
-  thresholdDigest: string;
-  /** Effective model parameters bound into the plan (e.g. budgetTokens). */
-  effectiveModelParams: Readonly<Record<string, unknown>>;
-}
+/** E4-R22 (F02): the execution-plan protocol is SHARED — typed, parsed, and
+ *  digest-bound in @ar/evaluation (ExecutionPlanV1) so the evaluator and the
+ *  promotion loader validate the exact structure the CLI builds. This alias
+ *  keeps the CLI-side name; evaluation never depends on apps/cli. */
+export type BenchmarkExecutionPlan = ExecutionPlanV1;
 
 /** E4-R13 (N03): identity facts the CONFIRMED plan must bind, computed from
  *  real (already-resolved) inputs before preflight. */
@@ -1006,9 +972,11 @@ export function buildBenchmarkExecutionPlan(input: {
 }
 
 /** E4-01: sha256 over the canonical plan's stable JSON. Same logical plan →
- *  same digest across runs (volatile fields are not part of the plan). */
+ *  same digest across runs (volatile fields are not part of the plan).
+ *  E4-R22 (F02): delegates to the SHARED digest so the CLI, the evaluator,
+ *  and the promotion loader can never disagree on the plan's identity. */
 export function computeBenchmarkPlanDigest(plan: BenchmarkExecutionPlan): string {
-  return computeRuntimeConfigHash(plan);
+  return computeExecutionPlanDigest(plan);
 }
 
 export interface PreflightResult {

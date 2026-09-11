@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 import { buildV3ArtifactsFromPaired, type PairedV3Facts } from "./paired-v3-builder.js";
+import { computeExecutionPlanDigest, DEFAULT_DECISION_POLICY_V3, computeThresholdDigestV3, type ExecutionPlanV1 } from "./index.js";
 import type { PairedFinalizedPair } from "./paired-executor.js";
 import type { EvalOutcome } from "./runner.js";
 
@@ -44,27 +45,66 @@ function pair(caseId: string, rep: number, candPassed: boolean): PairedFinalized
   } as unknown as PairedFinalizedPair;
 }
 
-const BASE_FACTS: PairedV3Facts = {
-  planDigest: "c".repeat(64),
-  gitSha: "d".repeat(40),
-  dirty: false,
-  model: "m",
-  provider: "fake",
-  runtimeConfigHash: "e".repeat(64),
-  suiteVersion: "2.1.0",
-  judgeVersion: "1.0.0",
-  candidateId: "cand-x",
-  candidateConfigHash: "b".repeat(64),
-  isolationStrength: "strong",
-  promotionEligible: true,
-};
+/** E4-R22 (F02): promotion-grade builds require the FULL confirmed plan, whose
+ *  digest is the recorded planDigest. One plan helper keeps the fixture's
+ *  facts (suite/judge/provider/model/git) cross-bound. */
+function fixturePlan(caseIds: string[]): ExecutionPlanV1 {
+  return {
+    schemaVersion: "e4-01",
+    suite: "holdout",
+    caseIds,
+    caseFingerprints: Object.fromEntries(caseIds.map((c) => [c, "a".repeat(64)])),
+    limit: 100,
+    repeat: 1,
+    interleave: true,
+    shuffle: false,
+    seed: 7,
+    candidate: "cand-x",
+    billingClass: "offline",
+    maxLogicalRuns: 100,
+    maxModelCalls: 100,
+    maxEstimatedTokens: 1_000_000,
+    maxEstimatedCostUsd: 1,
+    estimateStatus: "bounded",
+    isolationBackendId: "fixture-backend",
+    isolationStrength: "strong",
+    promotionEligible: true,
+    providerId: "fake",
+    modelId: "m",
+    judgeVersion: "1.0.0",
+    sourceSha: "d".repeat(40),
+    treeFingerprint: null,
+    decisionPolicy: { ...DEFAULT_DECISION_POLICY_V3 },
+    thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
+    effectiveModelParams: { budgetTokens: 8192 },
+  };
+}
+
+function baseFacts(caseIds: string[]): PairedV3Facts {
+  const plan = fixturePlan(caseIds);
+  return {
+    planDigest: computeExecutionPlanDigest(plan),
+    gitSha: "d".repeat(40),
+    dirty: false,
+    model: "m",
+    provider: "fake",
+    runtimeConfigHash: "e".repeat(64),
+    suiteVersion: "2.1.0",
+    judgeVersion: "1.0.0",
+    candidateId: "cand-x",
+    candidateConfigHash: "b".repeat(64),
+    isolationStrength: "strong",
+    promotionEligible: true,
+    executionPlan: plan,
+  };
+}
 
 const SAMPLE_KEYS = ["holdout\u0000c1\u00001", "holdout\u0000c2\u00001"];
 
 describe("E4-R01 V3 carries experiment identity and completeness", () => {
   it("complete + strong run records identity, expected sample keys and completion", () => {
     const { candidate } = buildV3ArtifactsFromPaired([pair("c1", 1, true), pair("c2", 1, true)], {
-      ...BASE_FACTS,
+      ...baseFacts(["c1", "c2"]),
       executionIdentityDigest: "f".repeat(64),
       scheduleDigest: "0".repeat(64),
       expectedSampleKeys: SAMPLE_KEYS,
@@ -74,7 +114,7 @@ describe("E4-R01 V3 carries experiment identity and completeness", () => {
     const m = candidate.manifest as Record<string, unknown>;
     expect(m.executionIdentityDigest).toBe("f".repeat(64));
     expect(m.scheduleDigest).toBe("0".repeat(64));
-    expect(m.planDigest).toBe("c".repeat(64));
+    expect(m.planDigest).toBe(baseFacts(["c1", "c2"]).planDigest);
     expect(m.runComplete).toBe(true);
     expect(m.expectedSampleKeys).toEqual(SAMPLE_KEYS);
     expect(m.promotionEligible).toBe(true);
@@ -85,7 +125,7 @@ describe("E4-R01 V3 carries experiment identity and completeness", () => {
   it("F02: a PARTIAL run is recorded not promotion-eligible even though the finished subset pairs exactly", () => {
     // Both delivered pairs are perfectly matched, but the run was cut short.
     const { candidate } = buildV3ArtifactsFromPaired([pair("c1", 1, true)], {
-      ...BASE_FACTS,
+      ...baseFacts(["c1", "c2"]),
       isolationStrength: "strong",
       promotionEligible: false, // CLI: strong AND complete required (F02)
       executionIdentityDigest: "f".repeat(64),
@@ -103,9 +143,46 @@ describe("E4-R01 V3 carries experiment identity and completeness", () => {
   });
 
   it("omitting the new optional facts stays valid (backward compatible)", () => {
-    const { candidate } = buildV3ArtifactsFromPaired([pair("c1", 1, true)], BASE_FACTS);
+    const { candidate } = buildV3ArtifactsFromPaired([pair("c1", 1, true)], baseFacts(["c1"]));
     const m = candidate.manifest as Record<string, unknown>;
     expect("executionIdentityDigest" in m).toBe(false);
     expect("runComplete" in m).toBe(false);
+  });
+});
+
+describe("E4-R22 (F02) write boundary: promotion-grade V3 is refused without a bound plan", () => {
+  it("promotionEligible=true with NO execution plan throws (never written)", () => {
+    const facts = { ...baseFacts(["c1", "c2"]) } as Partial<PairedV3Facts>;
+    delete facts["executionPlan"];
+    expect(() => buildV3ArtifactsFromPaired([pair("c1", 1, true), pair("c2", 1, true)], facts as PairedV3Facts)).toThrow(
+      /confirmed execution plan is required/,
+    );
+  });
+
+  it("an executionPlan that fails the protocol (empty {}) throws", () => {
+    const facts = { ...baseFacts(["c1", "c2"]), executionPlan: {} as never };
+    expect(() => buildV3ArtifactsFromPaired([pair("c1", 1, true), pair("c2", 1, true)], facts)).toThrow(
+      /fails the confirmed-plan protocol/,
+    );
+  });
+
+  it("a planDigest that does not match the plan CONTENT throws (digest recompute at the writer)", () => {
+    // The plan was altered after confirmation (seed tampered) while the
+    // recorded planDigest stayed the ORIGINAL plan's digest.
+    const original = fixturePlan(["c1", "c2"]);
+    const tampered = { ...original, seed: 999 };
+    const facts = { ...baseFacts(["c1", "c2"]), executionPlan: tampered, planDigest: computeExecutionPlanDigest(original) };
+    expect(() => buildV3ArtifactsFromPaired([pair("c1", 1, true), pair("c2", 1, true)], facts)).toThrow(
+      /planDigest .* != recomputed execution plan digest/,
+    );
+  });
+
+  it("expectedSampleKeys disagreeing with the plan-derived grid throws (the plan derives the grid)", () => {
+    // The plan covers c1+c2 but the facts claim a NARROWER grid — the manifest
+    // grid is corroboration, never the authority.
+    const facts = { ...baseFacts(["c1", "c2"]), expectedSampleKeys: ["holdout\u0000c1\u00001"] };
+    expect(() => buildV3ArtifactsFromPaired([pair("c1", 1, true)], facts)).toThrow(
+      /expectedSampleKeys does not equal the grid derived from the confirmed plan/,
+    );
   });
 });

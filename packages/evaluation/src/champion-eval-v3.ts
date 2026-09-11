@@ -24,6 +24,7 @@ import {
   DECISION_POLICY_V3_VERSION,
   type DecisionPolicyV3,
 } from "./decision-policy-v3.js";
+import { parseExecutionPlan, crossBindExecutionPlan, computeExecutionPlanDigest } from "./execution-plan.js";
 import type { CaseOutcomeV3, ExperimentArtifactV3 } from "./artifact-v3/types.js";
 import {
   decideChampionV3,
@@ -270,6 +271,34 @@ export function deriveV3Decision(
   if (manifestPromotionEligible) {
     if (typeof executionPlanRaw !== "object" || executionPlanRaw === null || Array.isArray(executionPlanRaw)) {
       policyViolations.push("promotion-eligible artifact lacks the confirmed execution plan (manifest.executionPlan) — legacy artifacts cannot be promotion-eligible");
+    } else {
+      // E4-R22 (F02): parse + cross-bind the plan via the SHARED protocol. An
+      // empty {} (or any lossy object) previously satisfied "typeof object" and
+      // could still ACCEPT — now the plan is validated, its digest recomputed
+      // and cross-bound to the manifest's recorded planDigest, the derived grid
+      // (manifest.expectedSampleKeys is corroboration), the applied policy
+      // digest, the manifest threshold, and the run-time provenance.
+      const parsed = parseExecutionPlan(executionPlanRaw);
+      if (parsed.plan === null) {
+        for (const issue of parsed.issues) policyViolations.push(issue);
+      } else {
+        // The plan's own digest must equal the manifest's recorded planDigest.
+        const recomputedDigest = computeExecutionPlanDigest(parsed.plan);
+        if (typeof candidate.manifest["planDigest"] === "string" && candidate.manifest["planDigest"] !== recomputedDigest) {
+          policyViolations.push(
+            `manifest.planDigest ${String(candidate.manifest["planDigest"])} != recomputed execution plan digest ${recomputedDigest} (plan content does not match the confirmed digest)`,
+          );
+        }
+        // Cross-bind to the surrounding artifact facts.
+        const bindingViolations = crossBindExecutionPlan(parsed.plan, {
+          manifest: candidate.manifest as Record<string, unknown>,
+          provenance: candidate.provenance as { provider?: string | null; model?: string | null; gitSha?: string | null },
+          otherArmPlanDigest: baseline.manifest["planDigest"],
+          appliedThresholdDigest: thresholdDigest,
+          candidateId: candidate.arm.candidateId,
+        });
+        for (const v of bindingViolations) policyViolations.push(v);
+      }
     }
     if (!Array.isArray(expectedGridRaw) || expectedGridRaw.length === 0) {
       policyViolations.push("promotion-eligible artifact lacks a non-empty expected sample grid (manifest.expectedSampleKeys)");

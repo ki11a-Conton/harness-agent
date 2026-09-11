@@ -18,12 +18,16 @@ import { describe, expect, it } from "vitest";
 import { buildExperimentArtifactV3 } from "./artifact-v3/index.js";
 import { deriveV3Decision, type V3ArtifactPair } from "./champion-eval-v3.js";
 import { DEFAULT_DECISION_POLICY_V3, computeThresholdDigestV3 } from "./decision-policy-v3.js";
+import { fixtureExecutionPlan, fixtureExecutionPlanDigest } from "./fixtures.js";
 import type { CaseOutcomeV3, SecurityOutcomeV3 } from "./artifact-v3/index.js";
 import { buildV3ArtifactsFromPaired, type PairedV3Facts } from "./paired-v3-builder.js";
 import type { PairedFinalizedPair } from "./paired-executor.js";
 import type { EvalOutcome } from "./runner.js";
 
-const PLAN = "d".repeat(64);
+/** E4-R22 (F02): the recorded planDigest is always the recomputed digest of the
+ *  COMPLETE confirmed plan (the default mkPair shape: c1,c2 × 2 reps). */
+const planArgsFor = (cases: readonly string[], reps: readonly number[]) => ({ suite: "holdout" as const, caseIds: cases, repeat: reps.length });
+const PLAN = fixtureExecutionPlanDigest(planArgsFor(["c1", "c2"], [1, 2]));
 const POLICY = DEFAULT_DECISION_POLICY_V3;
 const TD = computeThresholdDigestV3(POLICY);
 
@@ -65,6 +69,10 @@ function mkPair(opts: PairOpts = {}): V3ArtifactPair {
   const reps = opts.reps ?? [1, 2];
   const key = (c: string, r: number) => `holdout\u0000${c}\u0000${r}`;
   const grid = cases.flatMap((c) => reps.map((r) => key(c, r)));
+  // E4-R22 (F02): the COMPLETE confirmed plan, digest-bound (same shape the
+  // production writer records — suite/judge/provider/model/git all agree).
+  const plan = fixtureExecutionPlan(planArgsFor(cases, reps));
+  const planDigest = fixtureExecutionPlanDigest(planArgsFor(cases, reps));
 
   const arm = (armId: "baseline" | "candidate") => {
     const outcomes = cases.flatMap((c) => reps.map((r) => {
@@ -90,9 +98,9 @@ function mkPair(opts: PairOpts = {}): V3ArtifactPair {
       arm: { armId, candidateId: armId === "candidate" ? "cand-x" : null, candidateConfigHash: armId === "candidate" ? "b".repeat(64) : null },
       manifest: {
         suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false,
-        planDigest: PLAN, promotionEligible: true, isolationStrength: "strong",
+        planDigest: planDigest, promotionEligible: true, isolationStrength: "strong",
         expectedSampleKeys: grid, runComplete: true,
-        executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: cases, repeat: reps.length },
+        executionPlan: plan,
         thresholdDigest: opts.baselineThresholdTampered && armId === "baseline" ? "0".repeat(64) : TD,
         ...opts.manifestExtra,
       },
@@ -111,7 +119,7 @@ function mkPair(opts: PairOpts = {}): V3ArtifactPair {
 
 describe("E4-R14 evaluator completeness enforcement (N06/N09)", () => {
   it("control: a full compliant promotion-eligible pair is ACCEPT", () => {
-    const r = deriveV3Decision(mkPair({ cases: ["c1", "c2", "c3"] }), "cand-x", PLAN);
+    const r = deriveV3Decision(mkPair({ cases: ["c1", "c2", "c3"] }), "cand-x", fixtureExecutionPlanDigest(planArgsFor(["c1", "c2", "c3"], [1, 2])));
     expect(r.decisionArtifact.decision).toBe("ACCEPT");
   });
 
@@ -248,10 +256,12 @@ describe("E4-R14 terminal verification state + real recovery payload (N10)", () 
     } as unknown as PairedFinalizedPair;
   }
 
+  const N10_PLAN_ARGS = { suite: "holdout", caseIds: ["c1"], repeat: 1 };
   const FACTS = {
-    planDigest: "c".repeat(64), gitSha: "d".repeat(40), dirty: false, model: "m", provider: "fake",
+    planDigest: fixtureExecutionPlanDigest(N10_PLAN_ARGS), gitSha: "d".repeat(40), dirty: false, model: "m", provider: "fake",
     runtimeConfigHash: "e".repeat(64), suiteVersion: "2.1.0", judgeVersion: "1.0.0",
     candidateId: "cand-x", candidateConfigHash: "b".repeat(64), isolationStrength: "strong", promotionEligible: true,
+    executionPlan: fixtureExecutionPlan(N10_PLAN_ARGS),
   } as PairedV3Facts;
 
   it("an early verification PASS followed by a later FAILURE is verified=false", () => {

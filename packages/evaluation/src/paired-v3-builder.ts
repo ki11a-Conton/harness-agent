@@ -29,6 +29,7 @@
 import { createHash } from "node:crypto";
 import { buildExperimentArtifactV3, buildEventRecordsV3 } from "./artifact-v3/writer.js";
 import { stableStringify } from "./manifest.js";
+import { parseExecutionPlan, computeExecutionPlanDigest, expectedSampleKeysFromExecutionPlan, stringSetEqual } from "./execution-plan.js";
 import type { ExperimentArtifactV3, CaseOutcomeV3, ActivationEvidenceV3, SecurityOutcomeV3 } from "./artifact-v3/types.js";
 import type { EvalOutcome } from "./runner.js";
 import type { PairedFinalizedPair } from "./paired-executor.js";
@@ -224,6 +225,29 @@ export function buildV3ArtifactsFromPaired(
   assertRealDigest(facts.planDigest, "planDigest");
   assertRealDigest(facts.runtimeConfigHash, "runtimeConfigHash");
   assertRealDigest(facts.candidateConfigHash, "candidateConfigHash");
+
+  // E4-R22 (F02): the WRITE boundary cross-validates the complete plan. A
+  // promotion-grade artifact must carry a plan that PARSES under the shared
+  // protocol and whose recomputed digest equals the recorded planDigest — an
+  // empty/lossy object or a plan that does not match its own digest is
+  // refused here, never written as promotion-eligible. (A plan-less artifact
+  // stays writable for DIAGNOSTICS when promotionEligible=false.)
+  if (facts.promotionEligible === true) {
+    if (facts.executionPlan === undefined) {
+      throw new Error("E4-R22: refusing to build promotion-grade V3 — the confirmed execution plan is required (facts.executionPlan missing)");
+    }
+    const parsed = parseExecutionPlan(facts.executionPlan);
+    if (parsed.plan === null) {
+      throw new Error(`E4-R22: refusing to build promotion-grade V3 — executionPlan fails the confirmed-plan protocol: ${parsed.issues.join("; ")}`);
+    }
+    const recomputed = computeExecutionPlanDigest(parsed.plan);
+    if (recomputed !== facts.planDigest) {
+      throw new Error(`E4-R22: refusing to build promotion-grade V3 — planDigest ${facts.planDigest} != recomputed execution plan digest ${recomputed}`);
+    }
+    if (facts.expectedSampleKeys !== undefined && !stringSetEqual(facts.expectedSampleKeys, expectedSampleKeysFromExecutionPlan(parsed.plan))) {
+      throw new Error("E4-R22: refusing to build promotion-grade V3 — expectedSampleKeys does not equal the grid derived from the confirmed plan");
+    }
+  }
 
   const baselineOutcomes: CaseOutcomeV3[] = [];
   const candidateOutcomes: CaseOutcomeV3[] = [];

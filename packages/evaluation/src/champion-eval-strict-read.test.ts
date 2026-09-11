@@ -15,7 +15,10 @@ import { join } from "node:path";
 import { buildExperimentArtifactV3, writeExperimentArtifactV3 } from "./artifact-v3/index.js";
 import { runV3ChampionEval, loadV3ArtifactPair } from "./champion-eval-v3.js";
 import { DEFAULT_DECISION_POLICY_V3, computeThresholdDigestV3 } from "./decision-policy-v3.js";
+import { fixtureExecutionPlan, fixtureExecutionPlanDigest } from "./fixtures.js";
 import type { CaseOutcomeV3 } from "./artifact-v3/index.js";
+
+const PLAN_ARGS = { suite: "holdout", caseIds: ["ho-01", "ho-02", "ho-03"], repeat: 2 };
 
 function outcome(caseId: string, armId: "baseline" | "candidate", rep: number, order: number, passed: boolean, configHash: string | null, activationRef: string | null): CaseOutcomeV3 {
   return {
@@ -49,11 +52,11 @@ function armArtifact(armId: "baseline" | "candidate", configHash: string | null)
     arm: { armId, candidateId: armId === "candidate" ? "cand-x" : null, candidateConfigHash: configHash },
     manifest: {
       suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: "c".repeat(40), dirty: false,
-      planDigest: "d".repeat(64), promotionEligible: true, isolationStrength: "strong", repeat: 2,
+      planDigest: fixtureExecutionPlanDigest(PLAN_ARGS), promotionEligible: true, isolationStrength: "strong", repeat: 2,
       // E4-R13/R14: the confirmed plan + complete grid + completion marker.
       expectedSampleKeys: grid,
       runComplete: true,
-      executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: ["ho-01", "ho-02", "ho-03"], repeat: 2 },
+      executionPlan: fixtureExecutionPlan(PLAN_ARGS),
       thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
     },
     outcomes: rows,

@@ -23,16 +23,29 @@ import {
   runV3ChampionEval,
   buildPromotionEnvelope,
   loadPromotionEnvelope,
+  computeExecutionPlanDigest,
   DEFAULT_DECISION_POLICY_V3,
   computeThresholdDigestV3,
+  fixtureExecutionPlan,
 } from "@ar/evaluation";
 import type { CaseOutcomeV3, SecurityOutcomeV3, ExperimentArtifactV3 } from "@ar/evaluation";
 
 const sha = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
 const GIT = "c".repeat(40);
-const PLAN = "d".repeat(64);
 const CAND = "b".repeat(64);
 const TD = computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3);
+
+/** E4-R22 (F02): the COMPLETE confirmed plan (3 cases × 2 reps) — the recorded
+ *  planDigest is its recomputed digest, so the loader's cross-binding holds. */
+const EXECUTION_PLAN = fixtureExecutionPlan({
+  suite: "holdout",
+  caseIds: ["ho-01", "ho-02", "ho-03"],
+  repeat: 2,
+  providerId: "fake",
+  modelId: "m",
+  sourceSha: GIT,
+});
+const PLAN = computeExecutionPlanDigest(EXECUTION_PLAN);
 
 function outcome(caseId: string, armId: "baseline" | "candidate", rep: number, order: number, passed: boolean, activationRef: string | null): CaseOutcomeV3 {
   return {
@@ -68,7 +81,7 @@ function armArtifact(armId: "baseline" | "candidate", manifestExtra: Record<stri
       suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT, dirty: false,
       planDigest: PLAN, promotionEligible: true, isolationStrength: "strong", runtimeConfigHash: CAND,
       expectedSampleKeys: grid, runComplete: true,
-      executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: ["ho-01", "ho-02", "ho-03"], repeat: 2 },
+      executionPlan: EXECUTION_PLAN,
       thresholdDigest: TD,
       ...manifestExtra,
     },

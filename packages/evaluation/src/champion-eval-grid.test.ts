@@ -13,9 +13,12 @@ import { describe, expect, it } from "vitest";
 import { buildExperimentArtifactV3 } from "./artifact-v3/index.js";
 import { deriveV3Decision, loadV3ArtifactPair, type V3ArtifactPair } from "./champion-eval-v3.js";
 import { DEFAULT_DECISION_POLICY_V3, computeThresholdDigestV3 } from "./decision-policy-v3.js";
+import { fixtureExecutionPlan, fixtureExecutionPlanDigest } from "./fixtures.js";
 import type { CaseOutcomeV3 } from "./artifact-v3/index.js";
 
-const PLAN = "d".repeat(64);
+const PLAN_ARGS = { suite: "holdout", caseIds: ["a", "b", "c", "d"], repeat: 2 };
+const EXECUTION_PLAN = fixtureExecutionPlan(PLAN_ARGS);
+const PLAN = fixtureExecutionPlanDigest(PLAN_ARGS);
 const policy0 = () => ({ computeThresholdDigestV3, DEFAULT_DECISION_POLICY_V3 });
 
 function outcome(caseId: string, rep: number, armId: "baseline" | "candidate"): CaseOutcomeV3 {
@@ -49,7 +52,8 @@ function armArtifact(armId: "baseline" | "candidate", rows: Array<[string, numbe
       expectedSampleKeys: EXPECTED_KEYS, runComplete: true,
       // E4-R13/R14: the confirmed plan is REQUIRED for promotion-eligible
       // artifacts — the fixture carries the same identity the writer preserves.
-      executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: ["a", "b", "c", "d"], repeat: 2 },
+      // E4-R22 (F02): the COMPLETE protocol plan, digest-bound to planDigest.
+      executionPlan: EXECUTION_PLAN,
       thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
       ...manifestExtra,
     },

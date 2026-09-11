@@ -1,6 +1,9 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, resolve, sep } from "node:path";
+import { createHash } from "node:crypto";
+import { computeExecutionPlanDigest, type ExecutionPlanV1, type ExecutionPlanIsolationStrength } from "./execution-plan.js";
+import { DEFAULT_DECISION_POLICY_V3, computeThresholdDigestV3, type DecisionPolicyV3 } from "./decision-policy-v3.js";
 
 const PREFIX = "harness-eval-";
 const createdPaths: string[] = [];
@@ -47,4 +50,66 @@ export async function cleanup(): Promise<void> {
       });
     }
   }
+}
+
+/**
+ * E4-R22 (F02) — build a COMPLETE, protocol-valid execution plan for fixtures.
+ *
+ * Since promotion-grade artifacts require the full confirmed plan (parsed,
+ * digest-bound, cross-bound to the manifest), tests need one canonical way to
+ * construct a plan that agrees with their manifest facts (judge 1.0.0,
+ * provider fake, model m, gitSha "c".repeat(40) by default). The recorded
+ * planDigest is always `computeExecutionPlanDigest(plan)` — never a stand-in
+ * like "d".repeat(64).
+ */
+export function fixtureExecutionPlan(opts: {
+  suite: string;
+  caseIds: readonly string[];
+  repeat: number;
+  judgeVersion?: string;
+  providerId?: string;
+  modelId?: string;
+  sourceSha?: string | null;
+  candidate?: string | null;
+  isolationStrength?: ExecutionPlanIsolationStrength;
+  /** The pre-registered policy the evaluator will APPLY (default: V3 default). */
+  decisionPolicy?: DecisionPolicyV3;
+}): ExecutionPlanV1 {
+  const policy = opts.decisionPolicy ?? DEFAULT_DECISION_POLICY_V3;
+  const fp = (c: string): string => createHash("sha256").update(`${opts.suite}:${c}`, "utf8").digest("hex");
+  return {
+    schemaVersion: "e4-01",
+    suite: opts.suite,
+    caseIds: [...opts.caseIds],
+    caseFingerprints: Object.fromEntries(opts.caseIds.map((c) => [c, fp(c)])),
+    limit: 100,
+    repeat: opts.repeat,
+    interleave: true,
+    shuffle: false,
+    seed: 7,
+    candidate: opts.candidate ?? "cand-x",
+    billingClass: "offline",
+    maxLogicalRuns: 100,
+    maxModelCalls: 100,
+    maxEstimatedTokens: 1_000_000,
+    maxEstimatedCostUsd: 1,
+    estimateStatus: "bounded",
+    isolationBackendId: "fixture-strong",
+    isolationStrength: opts.isolationStrength ?? "strong",
+    promotionEligible: true,
+    providerId: opts.providerId ?? "fake",
+    modelId: opts.modelId ?? "m",
+    judgeVersion: opts.judgeVersion ?? "1.0.0",
+    sourceSha: opts.sourceSha ?? "c".repeat(40),
+    treeFingerprint: null,
+    decisionPolicy: { ...policy },
+    thresholdDigest: computeThresholdDigestV3(policy),
+    effectiveModelParams: { budgetTokens: 8192 },
+  };
+}
+
+/** The plan digest to record in a fixture manifest — always derived from the
+ *  plan itself (E4-R22: the digest must match the plan content). */
+export function fixtureExecutionPlanDigest(opts: Parameters<typeof fixtureExecutionPlan>[0]): string {
+  return computeExecutionPlanDigest(fixtureExecutionPlan(opts));
 }

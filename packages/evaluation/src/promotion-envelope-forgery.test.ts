@@ -30,9 +30,15 @@ import {
 
 const sha = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
 const GIT_SHA = "c".repeat(40);
-const PLAN_DIGEST = "d".repeat(64);
 const CAND_CONFIG = "b".repeat(64);
 import { DEFAULT_DECISION_POLICY_V3, computeThresholdDigestV3 } from "./decision-policy-v3.js";
+import { fixtureExecutionPlan, fixtureExecutionPlanDigest } from "./fixtures.js";
+
+/** E4-R22 (F02): the COMPLETE confirmed plan (3 cases × 2 reps, model
+ *  deepseek-v4-flash to match the fixtures' provenance) — the recorded
+ *  planDigest is its recomputed digest. */
+const PLAN_ARGS = { suite: "holdout", caseIds: ["ho-01", "ho-02", "ho-03"], repeat: 2, modelId: "deepseek-v4-flash" };
+const PLAN_DIGEST = fixtureExecutionPlanDigest(PLAN_ARGS);
 
 function outcome(caseId: string, armId: string, rep: number, order: number, passed: boolean, activationRef: string | null) {
   return {
@@ -62,7 +68,7 @@ async function buildValidBundle(dir: string) {
     // REQUIRED for promotion-eligible artifacts.
     expectedSampleKeys: [1, 2].flatMap((rep) => [1, 2, 3].map((k) => `holdout\u0000ho-0${k}\u0000${rep}`)),
     runComplete: true,
-    executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: ["ho-01", "ho-02", "ho-03"], repeat: 2 },
+    executionPlan: fixtureExecutionPlan(PLAN_ARGS),
     thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
     ...extra,
   });

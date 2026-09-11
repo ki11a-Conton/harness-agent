@@ -27,6 +27,7 @@ import { readFile, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { stableStringify } from "./manifest.js";
 import { loadExperimentArtifactV3, validateExperimentArtifactV3FromBytes } from "./artifact-v3/loader.js";
+import { parseExecutionPlan, crossBindExecutionPlan } from "./execution-plan.js";
 
 export const PROMOTION_ENVELOPE_SCHEMA_VERSION = "3.0.0";
 export const PROMOTION_ENVELOPE_POLICY_VERSION = "e2-07-policy-v1";
@@ -383,8 +384,25 @@ export async function loadPromotionEnvelope(
       if (m["promotionEligible"] !== true) {
         issues.push({ code: "CANDIDATE_NOT_ELIGIBLE", detail: `candidate promotionEligible=${String(m["promotionEligible"])} — insecure/none isolation cannot promote` });
       }
-      if (typeof m["executionPlan"] !== "object" || m["executionPlan"] === null || Array.isArray(m["executionPlan"])) {
-        issues.push({ code: "CANDIDATE_NOT_ELIGIBLE", detail: "candidate manifest lacks the confirmed execution plan (E4-R13) — a self-declared eligibility boolean cannot promote" });
+      // E4-R22 (F02): the plan is parsed and cross-bound via the SHARED
+      // protocol — the previous "non-null object" check let an empty {}
+      // (or any lossy object) certify a promotion. The evaluator replay below
+      // re-runs the full binding; this direct check keeps the eligibility
+      // attribution precise even when the replay is disabled.
+      const planParsed = parseExecutionPlan(m["executionPlan"]);
+      if (planParsed.plan === null) {
+        issues.push({
+          code: "CANDIDATE_NOT_ELIGIBLE",
+          detail: `candidate executionPlan fails the confirmed-plan protocol (E4-R22): ${planParsed.issues.join("; ")}`,
+        });
+      } else {
+        for (const v of crossBindExecutionPlan(planParsed.plan, {
+          manifest: m,
+          provenance: candV3.artifact.provenance as { provider?: string | null; model?: string | null; gitSha?: string | null },
+          candidateId: candV3.artifact.arm.candidateId,
+        })) {
+          issues.push({ code: "CROSS_BINDING_MISMATCH", detail: v });
+        }
       }
       if (m["runComplete"] !== true) {
         issues.push({ code: "CANDIDATE_NOT_ELIGIBLE", detail: `candidate manifest runComplete=${String(m["runComplete"])} — an incomplete experiment cannot promote` });
