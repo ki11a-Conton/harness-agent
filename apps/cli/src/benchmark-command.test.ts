@@ -1,9 +1,10 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ScriptedModelProvider } from "@ar/model";
 import { makeEventId, makeSessionId } from "@ar/contracts";
+import type { ModelEvent, ModelProvider, ModelRef, ProviderConfig } from "@ar/contracts";
 import type { EvalOutcome } from "@ar/evaluation";
 import { assertWorkspaceIsolated, effectiveFeaturesFor, runBenchmarkCommand, type PreflightIdentityFacts } from "./benchmark-command.js";
 
@@ -1373,10 +1374,118 @@ describe("E4-R13: confirmed plan binds the full identity (N03/N04/N05)", () => {
       const clean = await probeSourceSnapshot(root);
       expect(clean.sourceSha).toMatch(/^[0-9a-f]{40}$/);
       expect(clean.treeFingerprint).toBeNull(); // clean tree → no fingerprint, honest
+      expect(clean.clean).toBe(true);
       await writeFile(join(root, "untracked.txt"), "dirty", "utf8");
       const dirty = await probeSourceSnapshot(root);
       expect(dirty.treeFingerprint).toMatch(/^[0-9a-f]{64}$/); // real content fingerprint
       expect(dirty.treeFingerprint).not.toBe("dirty");
+      expect(dirty.clean).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("F05: A→B edit of the SAME file changes the fingerprint although git status text is identical", async () => {
+    const { probeSourceSnapshot } = await import("./benchmark-command.js");
+    const root = await mkdtemp(join(tmpdir(), "e4-r23-probe-"));
+    tempDirs.push(root);
+    const { execFileSync } = await import("node:child_process");
+    const git = (args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8" });
+    try {
+      git(["init", "-q"]);
+      git(["config", "user.email", "a@b.c"]);
+      git(["config", "user.name", "t"]);
+      await writeFile(join(root, "src.ts"), "content A", "utf8");
+      git(["add", "src.ts"]);
+      git(["commit", "-qm", "a"]);
+      // Two DIFFERENT edits (A→B→C): `git status --porcelain` prints
+      // " M src.ts" in BOTH cases — the exact scenario the old status-text
+      // fingerprint could not distinguish.
+      await writeFile(join(root, "src.ts"), "content B", "utf8");
+      const statusB = git(["status", "--porcelain"]);
+      const probeB = await probeSourceSnapshot(root);
+      await writeFile(join(root, "src.ts"), "content C", "utf8");
+      const statusC = git(["status", "--porcelain"]);
+      expect(statusB).toBe(statusC); // SAME status text — the old bug
+      expect(statusC).toMatch(/ M src\.ts/);
+      const probeC = await probeSourceSnapshot(root);
+      expect(probeB.sourceSha).toBe(probeC.sourceSha);
+      expect(probeC.treeFingerprint).toMatch(/^[0-9a-f]{64}$/);
+      expect(probeC.treeFingerprint).not.toBe(probeB.treeFingerprint); // CONTENT read, not status text
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("F05: identical content → fingerprint STABLE (no mtime/status churn); staging a change alters it; ignored outputs do NOT dirty the tree", async () => {
+    const { probeSourceSnapshot } = await import("./benchmark-command.js");
+    const root = await mkdtemp(join(tmpdir(), "e4-r23-probe2-"));
+    tempDirs.push(root);
+    const { execFileSync } = await import("node:child_process");
+    const git = (args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] });
+    try {
+      git(["init", "-q"]);
+      git(["config", "user.email", "a@b.c"]);
+      git(["config", "user.name", "t"]);
+      await writeFile(join(root, "tracked.ts"), "stable", "utf8");
+      git(["add", "tracked.ts"]);
+      git(["commit", "-qm", "base"]);
+      await writeFile(join(root, ".gitignore"), "ignored-out/\n", "utf8");
+      await mkdir(join(root, "ignored-out"), { recursive: true });
+      await writeFile(join(root, "ignored-out", "junk.bin"), "x".repeat(4096), "utf8");
+      // Untracked identical content rewrites → same fingerprint; ignored dirs are never seen.
+      await writeFile(join(root, "scratch.ts"), "same", "utf8");
+      const p1 = await probeSourceSnapshot(root);
+      await writeFile(join(root, "scratch.ts"), "same", "utf8"); // identical bytes again
+      const p2 = await probeSourceSnapshot(root);
+      expect(p1.treeFingerprint).toMatch(/^[0-9a-f]{64}$/);
+      expect(p2.treeFingerprint).toBe(p1.treeFingerprint);
+      // Stage a CHANGE → index state differs → fingerprint changes.
+      await writeFile(join(root, "tracked.ts"), "staged change", "utf8");
+      git(["add", "tracked.ts"]);
+      const p3 = await probeSourceSnapshot(root);
+      expect(p3.treeFingerprint).not.toBe(p1.treeFingerprint);
+      // Remove the ignored dir → still dirty only from scratch.ts; fingerprint stable.
+      await rm(join(root, "ignored-out"), { recursive: true, force: true });
+      const p4 = await probeSourceSnapshot(root);
+      expect(p4.treeFingerprint).toBe(p3.treeFingerprint);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("F05: a deleted tracked file is recorded (content 'missing'), changing the fingerprint", async () => {
+    const { probeSourceSnapshot } = await import("./benchmark-command.js");
+    const root = await mkdtemp(join(tmpdir(), "e4-r23-probe3-"));
+    tempDirs.push(root);
+    const { execFileSync } = await import("node:child_process");
+    const git = (args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] });
+    try {
+      git(["init", "-q"]);
+      git(["config", "user.email", "a@b.c"]);
+      git(["config", "user.name", "t"]);
+      await writeFile(join(root, "gone.ts"), "will be deleted", "utf8");
+      git(["add", "gone.ts"]);
+      git(["commit", "-qm", "base"]);
+      await rm(join(root, "gone.ts"));
+      const p = await probeSourceSnapshot(root);
+      expect(p.clean).toBe(false);
+      expect(p.treeFingerprint).toMatch(/^[0-9a-f]{64}$/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("F05: a NON-repo / probe-failing directory is clean=false — an unknown source state can never certify promotion eligibility", async () => {
+    const { probeSourceSnapshot } = await import("./benchmark-command.js");
+    const root = await mkdtemp(join(tmpdir(), "e4-r23-norepo-"));
+    tempDirs.push(root);
+    try {
+      const probe = await probeSourceSnapshot(root);
+      expect(probe.clean).toBe(false);
+      expect(probe.sourceSha).toBeNull();
+      expect(probe.treeFingerprint).toBeNull();
+      expect(probe.error).toMatch(/no verifiable checkout|HEAD failed/i);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -1469,4 +1578,56 @@ describe("E4-R13: confirmed plan binds the full identity (N03/N04/N05)", () => {
     expect(typeof id.modelId).toBe("string");
     expect(id.modelId.length).toBeGreaterThan(0);
   });
+
+  it("F05: request capture — the effective budget reaches the real provider request as guidance; temperature is NOT a request parameter (manifest-only provenance)", async () => {
+    const root = await makeCaseDir({
+      "cases/a/request.md": "just finish",
+      "cases/a/expected.md": "done",
+      "cases/a/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    // A capturing provider records every ModelRequest it receives — the same
+    // requests a real network provider would serialize.
+    const captured: unknown[] = [];
+    const RecordingProvider = class implements ModelProvider {
+      readonly id = "recording";
+      async listModels() {
+        return [{ id: "recording-model", name: "Recording" }];
+      }
+      createClient(_model: ModelRef, _config: ProviderConfig) {
+        return {
+          async *generate(request: unknown): AsyncIterable<ModelEvent> {
+            captured.push(request);
+            yield* ScriptedModelProvider.text("done");
+          },
+        };
+      }
+    };
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--candidate", "budget_aware_completion_v1", "--allow-insecure-local-benchmark", "--out", join(root, "out")],
+      new RecordingProvider(),
+    );
+    expect(result.exitCode).toBe(0);
+    expect(captured.length).toBeGreaterThan(0);
+    // 1. The budget-aware completion guidance (the effective budget wiring) IS
+    //    in the real request the provider received — the budget affects the
+    //    actual exchange, so binding budgetTokens in effectiveModelParams is a
+    //    request-affecting identity, not a manifest-only claim.
+    const serializedRequests = captured.map((c) => JSON.stringify(c)).join("\n");
+    expect(serializedRequests).toContain("Budget-aware completion guidance:");
+    // 2. temperature is NEVER part of any request today — it is manifest-only
+    //    provenance (recorded for baseline↔candidate comparison, not sent to
+    //    the model). The identity must not claim it is a request parameter.
+    const flatten = (v: unknown, out: string[] = []): string[] => {
+      if (v !== null && typeof v === "object") {
+        for (const [k, value] of Object.entries(v as Record<string, unknown>)) out.push(k, ...flatten(value));
+      }
+      return out;
+    };
+    const keys = flatten(captured);
+    expect(keys).not.toContain("temperature");
+    // 3. No real network call happened (offline scripted provider path).
+    expect(captured.length).toBeGreaterThan(0);
+    const artifact = JSON.parse(await (await import("node:fs/promises")).readFile(join(root, "out", "paired-experiment.json"), "utf8"));
+    expect(artifact.counters.modelCallAttempts).toBeGreaterThan(0); // the provider REALLY ran
+  }, 60_000);
 });

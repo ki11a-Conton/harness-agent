@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -639,14 +638,37 @@ async function runPairedPromotion(
     ? computeRuntimeConfigHash(registry.resolve(opts.candidate).semanticDigest)
     : null;
 
-  // E4-R13 (N04): a promotion-eligible run on a DIRTY source tree is refused
-  // before any provider call — dirty-tree evidence cannot certify a release,
-  // and the identity must bind a REAL tree fingerprint, never the string
-  // "dirty".
-  if (promotionEligibleRun && (manifest.dirty === true || identityFacts.treeFingerprint !== null)) {
+  // E4-R13 (N04) + E4-R23 (F05): a promotion-eligible run is re-probed on the
+  // source tree AT EXECUTION, right before any provider call. The confirmed
+  // plan's snapshot must still hold: a dirty tree, a probe failure (clean=false
+  // — an unknown source state is never "clean"), a different HEAD, or a
+  // content fingerprint drift all refuse the run before the first provider
+  // call. The identity must bind a REAL tree snapshot, never heuristic text.
+  const executionSource = await probeSourceSnapshot(process.cwd());
+  const sourceFacts = [
+    ...(promotionEligibleRun && !executionSource.clean
+      ? [executionSource.error ?? "source tree is not provably clean"]
+      : []),
+    ...(promotionEligibleRun && identityFacts.treeFingerprint !== null
+      ? ["the confirmed plan was made against a dirty tree — re-confirm on a clean tree"]
+      : []),
+    ...(executionSource.sourceSha !== null && confirmedPlan.sourceSha !== null && executionSource.sourceSha !== confirmedPlan.sourceSha
+      ? [`HEAD moved ${confirmedPlan.sourceSha.slice(0, 8)} → ${executionSource.sourceSha.slice(0, 8)} since confirmation`]
+      : []),
+  ];
+  if (promotionEligibleRun && executionSource.sourceSha === null) {
     return {
       exitCode: 1,
-      lines: ["agent benchmark: a promotion-eligible run requires a CLEAN source tree (the confirmed plan binds a real tree fingerprint) — commit or stash changes and re-confirm the plan"],
+      lines: ["agent benchmark: no verifiable git checkout at execution time — a promotion run requires a provable source tree (re-run in the git checkout you confirmed)"],
+    };
+  }
+  if (sourceFacts.length > 0) {
+    return {
+      exitCode: 1,
+      lines: [
+        "agent benchmark: a promotion-eligible run requires a CLEAN, PROVABLE source tree at execution time — commit or stash changes and re-confirm the plan",
+        ...sourceFacts.map((f) => `  - ${f}`),
+      ],
     };
   }
 
@@ -737,7 +759,24 @@ async function runPairedPromotion(
   // COMPLETE run. A halted/interrupted run may keep diagnostic artifacts, but a
   // completed subset of pairs can never be promoted from it.
   const runComplete = result.complete && result.partialPairs.length === 0;
-  const promotionEligibleResult = promotionEligibleRun && runComplete;
+  let promotionEligibleResult = promotionEligibleRun && runComplete;
+  // E4-R23 (F05): source state is re-probed AFTER the experiment, immediately
+  // before any canonical artifact is written. A source change DURING a long
+  // run (tracked content, deletion, untracked input, HEAD move) makes the
+  // confirmed plan stale — the final artifacts are then written honestly as
+  // NOT promotion-eligible (a mid-run change must never be promotable), and
+  // the run reports a degraded channel line.
+  const endSource = await probeSourceSnapshot(process.cwd());
+  const sourceDriftAtEnd =
+    promotionEligibleRun &&
+    (!endSource.clean ||
+      (endSource.sourceSha !== null && confirmedPlan.sourceSha !== null && endSource.sourceSha !== confirmedPlan.sourceSha));
+  if (sourceDriftAtEnd) {
+    promotionEligibleResult = false;
+    process.stderr.write(
+      "[degraded] benchmark.source-snapshot: source tree changed during the run — final artifacts recorded NOT promotion-eligible (confirmed plan bound a snapshot that no longer holds)\n",
+    );
+  }
   const artifact: PairedExperimentArtifact = {
     schemaVersion: "e3-02",
     kind: "paired-experiment",
@@ -777,6 +816,9 @@ async function runPairedPromotion(
           ? "partial-pairs"
           : "interrupted",
   };
+  if (sourceDriftAtEnd) {
+    lines.push("benchmark: source tree changed during the run — final artifacts marked NOT promotion-eligible (re-confirm the plan on the new snapshot before promoting)");
+  }
   const artifactPath = join(outDir, "paired-experiment.json");
   await writeFile(artifactPath, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
 
@@ -902,30 +944,113 @@ export function caseFingerprintFor(c: BenchmarkCase): string {
   });
 }
 
+export interface SourceSnapshotProbe {
+  /** git HEAD sha at probe time (null when no verifiable checkout). */
+  sourceSha: string | null;
+  /**
+   * sha256 over a CONTENT-LEVEL encoding of every deviation from a pristine
+   * tree — tracked worktree content, the index state, deletions, file mode /
+   * rename markers (the porcelain rows), and non-ignored untracked inputs —
+   * in deterministic order. `null` ONLY when the tree is found pristine.
+   * Two DIFFERENT edits of the same file (status text identical, contents
+   * different) yield DIFFERENT fingerprints — the fingerprint is about what
+   * the benchmark would actually read, never about the status string.
+   */
+  treeFingerprint: string | null;
+  /**
+   * true ONLY on a real git checkout whose `git status --porcelain` is empty.
+   * A probe FAILURE (no git, command failure) is clean=false — an unknown
+   * source state can never be certified clean and never earns promotion
+   * eligibility.
+   */
+  clean: boolean;
+  /** Human-readable reason when clean=false and no content was hashed. */
+  error?: string;
+}
+
 /**
- * E4-R13 (N04): best-effort git source snapshot — HEAD sha + a REAL working
- * tree fingerprint (sha256 over `git status --porcelain` when dirty, null when
- * clean). Never a literal "dirty" placeholder; nulls when git is unavailable
- * (absence is honest). Pure config probing — no provider calls.
+ * E4-R13 (N04) + E4-R23 (F05): best-effort git source snapshot — HEAD sha + a
+ * REAL working-tree fingerprint. Pure config probing — no provider calls.
+ *
+ * F05 fix: the fingerprint is now CONTENT-based (sha256 over per-file content
+ * digests + index state + untracked inputs), not sha256 of the porcelain text.
+ * `git status` text is only an ADDITIONAL signal for mode/rename/type changes
+ * that content hashing would miss. This supports the claim that ANY source
+ * content change alters the confirmed identity; it does NOT make the raw
+ * status string the identity.
  */
-export async function probeSourceSnapshot(root: string): Promise<{ sourceSha: string | null; treeFingerprint: string | null }> {
+export async function probeSourceSnapshot(root: string): Promise<SourceSnapshotProbe> {
   const { execFile } = await import("node:child_process");
-  const run = (args: string[]): Promise<string> =>
+  const { createHash } = await import("node:crypto");
+  const { readFileSync, statSync } = await import("node:fs");
+  const { resolve } = await import("node:path");
+  const run = (args: string[]): Promise<{ ok: boolean; stdout: string }> =>
     new Promise((resolvePromise) => {
-      execFile("git", args, { cwd: root, timeout: 10_000, windowsHide: true, encoding: "utf8" }, (err, stdout) => {
-        resolvePromise(err !== null ? "" : String(stdout));
+      execFile("git", args, { cwd: root, timeout: 15_000, windowsHide: true, maxBuffer: 67_108_864, encoding: "utf8" }, (err, stdout) => {
+        resolvePromise({ ok: err === null, stdout: String(stdout) });
       });
     });
-  try {
-    const head = (await run(["rev-parse", "HEAD"])).trim();
-    const status = (await run(["status", "--porcelain"])).trim();
-    return {
-      sourceSha: head === "" ? null : head,
-      treeFingerprint: status === "" ? null : createHash("sha256").update(status, "utf8").digest("hex"),
-    };
-  } catch {
-    return { sourceSha: null, treeFingerprint: null };
+  const hash = (data: string): string => createHash("sha256").update(data, "utf8").digest("hex");
+
+  // 1. A provable checkout is the precondition for a certifiable clean tree.
+  const head = await run(["rev-parse", "HEAD"]);
+  const sourceSha = head.ok && head.stdout.trim() !== "" ? head.stdout.trim() : null;
+  if (!head.ok || sourceSha === null) {
+    return { sourceSha: null, treeFingerprint: null, clean: false, error: "git rev-parse HEAD failed (no verifiable checkout)" };
   }
+
+  // 2. Porcelain decides pristine-vs-deviating (untracked non-ignored included).
+  const status = await run(["status", "--porcelain"]);
+  if (!status.ok) {
+    return { sourceSha, treeFingerprint: null, clean: false, error: "git status --porcelain failed" };
+  }
+  if (status.stdout.trim() === "") {
+    return { sourceSha, treeFingerprint: null, clean: true };
+  }
+
+  // 3. CONTENT-level fingerprint. Every deviation above is hashed as PATH +
+  //    CONTENT (deleted → "missing", gitlink/submodule → its index commit),
+  //    then the porcelain rows are appended as a mode/rename/type signal.
+  const lsFiles = await run(["ls-files", "-s", "-z"]);
+  const untracked = await run(["ls-files", "--others", "--exclude-standard", "-z"]);
+  if (!lsFiles.ok || !untracked.ok) {
+    return { sourceSha, treeFingerprint: null, clean: false, error: "git ls-files failed" };
+  }
+  const indexFor = new Map<string, string>();
+  for (const rec of lsFiles.stdout.split("\0")) {
+    if (rec === "") continue;
+    const tab = rec.indexOf("\t");
+    const meta = rec.slice(0, tab);
+    const path = rec.slice(tab + 1);
+    const blob = meta.split(" ")[1] ?? "";
+    indexFor.set(path, blob);
+  }
+  const lines: string[] = [];
+  for (const path of [...indexFor.keys()].sort()) {
+    const indexBlob = indexFor.get(path) ?? "";
+    let contentHash: string;
+    try {
+      const st = statSync(resolve(root, path));
+      if (st.isFile()) contentHash = hash(readFileSync(resolve(root, path), "utf8"));
+      else contentHash = `gitlink:${indexBlob}`; // submodule / gitlink dir
+    } catch {
+      contentHash = "missing"; // deleted from the worktree (or unreadable)
+    }
+    lines.push(`${indexBlob} ${contentHash} ${path}`);
+  }
+  for (const path of untracked.stdout.split("\0").sort()) {
+    if (path === "" || indexFor.has(path)) continue;
+    let contentHash: string;
+    try {
+      const st = statSync(resolve(root, path));
+      contentHash = st.isFile() ? hash(readFileSync(resolve(root, path), "utf8")) : "dir";
+    } catch {
+      contentHash = "missing";
+    }
+    lines.push(`U ${contentHash} ${path}`);
+  }
+  const fingerprint = hash(`${lines.join("\n")}\n---\n${status.stdout.trim()}`);
+  return { sourceSha, treeFingerprint: fingerprint, clean: false };
 }
 
 /** E4-01: build the canonical plan from resolved preflight inputs. */
