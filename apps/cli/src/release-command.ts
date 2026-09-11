@@ -10,7 +10,7 @@ import { execFile, execFileSync } from "node:child_process";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { CommandResult } from "./commands.js";
-import type { GateEvidenceV2 } from "@ar/evaluation";
+import { reverifyGateEvidenceRefs, type GateEvidenceV2 } from "@ar/evaluation";
 import {
   GATE_COMMANDS,
   REQUIRED_GATES,
@@ -114,6 +114,37 @@ async function readGateEvidence(dir: string, expectedHead: string): Promise<Rele
           expectedPlatform: platform,
           sourcePath: path,
         });
+        // Level 3 — E4-R21 (F01): re-verify the bundle refs (artifact + log
+        // bytes) from disk via the SAME unified function the generic V2 loader
+        // uses. The old lossy mapping dropped logRef/artifactRefs, so the
+        // production path never re-read the bytes a passing evidence pointed
+        // at: a tampered log or artifact stayed READY (F01). Certifying
+        // (would-pass) instances must also carry a persisted, digest-matching
+        // output log; refs resolve against the evidence file's directory (the
+        // trusted bundle root) — never the process cwd.
+        if (raw.v2 !== undefined) {
+          const refChecks = await reverifyGateEvidenceRefs({
+            evidence: raw.v2,
+            sourcePath: path,
+            platform,
+            certifying: validated.state === "passed",
+          });
+          const failedChecks = refChecks.filter((c) => !c.ok);
+          if (failedChecks.length > 0) {
+            const blockedList = byId.get(validated.id) ?? [];
+            blockedList.push({
+              id: validated.id,
+              platform,
+              state: "blocked",
+              headSha: expectedHead,
+              command: GATE_COMMANDS[validated.id],
+              evidenceRef: path,
+              reason: `evidence ref re-verification failed: ${failedChecks.map((c) => c.reason ?? "ref invalid").join("; ")}`,
+            });
+            byId.set(validated.id, blockedList);
+            continue;
+          }
+        }
         const list = byId.get(validated.id) ?? [];
         list.push(validated);
         byId.set(validated.id, list);
@@ -272,6 +303,11 @@ export async function runGate(
     // E4-R12 (N01): the full output log lives next to the evidence and travels
     // with it (`.ci/evidence/gates/<os>/logs/`), referenced relatively.
     logDir: join(evidenceDir, "logs"),
+    // E4-R21 (F01): the log ref is recorded relative to the EVIDENCE directory
+    // (the trusted bundle root the consumer resolves against), not the gate
+    // cwd — the ref then survives upload/download and re-verifies on another
+    // platform (no workspace-absolute, non-portable references).
+    logRefBase: evidenceDir,
     // Preserve the V1 runner contract: shell execution, paid key stripped,
     // real exit code captured (a red gate never exits the process early).
     run: async (cmd, cwd) => {

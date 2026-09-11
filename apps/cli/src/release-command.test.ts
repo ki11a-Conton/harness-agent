@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -24,15 +25,22 @@ async function tmpEvidenceDir(): Promise<string> {
 }
 
 /** Write ONE evidence instance under gates/<platform>/<id>.json with the full
- *  V2 protocol (E4-R09: V1 fixtures are historical and blocked by the verifier). */
+ *  V2 protocol (E4-R09: V1 fixtures are historical and blocked by the verifier).
+ *  E4-R21 (F01): a passing (certifying) instance must declare a persisted,
+ *  digest-bound output log — the fixture writes the real log bytes next to the
+ *  evidence file (logRef path relative to the evidence file's directory). */
 async function writeInstance(
   dir: string,
   id: string,
   platform: ReleasePlatform,
-  opts: { exitCode?: number | null; headSha?: string; command?: string; kind?: string; passed?: boolean; clean?: boolean } = {},
+  opts: { exitCode?: number | null; headSha?: string; command?: string; kind?: string; passed?: boolean; clean?: boolean; dropLogRef?: boolean } = {},
 ): Promise<string> {
-  const path = join(dir, "gates", platform, `${id}.json`);
-  await mkdir(join(dir, "gates", platform), { recursive: true });
+  const gateDir = join(dir, "gates", platform);
+  await mkdir(join(gateDir, "logs"), { recursive: true });
+  const path = join(gateDir, `${id}.json`);
+  const logRel = `logs/${id}-${platform}.log`;
+  const logContent = `full output log for ${id}/${platform}\nexitCode=${String(opts.exitCode ?? 0)}\n`;
+  await writeFile(join(gateDir, logRel), logContent, "utf8");
   const passed = opts.passed ?? ((opts.exitCode ?? 0) === 0);
   const evidence = {
     schemaVersion: "2.0.0",
@@ -53,6 +61,7 @@ async function writeInstance(
     providerCalls: 0,
     environmentClass: "offline",
     kind: opts.kind ?? "gate",
+    ...(opts.dropLogRef ? {} : { logRef: { path: logRel, digest: createHash("sha256").update(logContent, "utf8").digest("hex") } }),
   };
   await writeFile(path, JSON.stringify(evidence));
   return path;
@@ -375,8 +384,10 @@ describe("P38.2-4/13 repo-owned gate runner (INV-P38.2-004)", () => {
     expect(evidence.logRef.digest).toMatch(/^[0-9a-f]{64}$/);
     expect(evidence.errorSummary).toContain("exitCode=1");
     // The referenced log file exists and its bytes hash to the recorded digest.
+    // E4-R21 (F01): the log ref is relative to the EVIDENCE directory (the
+    // trusted bundle root), not the gate cwd.
     const { createHash } = await import("node:crypto");
-    const logBytes = await readFile(join(root, evidence.logRef.path), "utf8");
+    const logBytes = await readFile(join(evDir, evidence.logRef.path), "utf8");
     expect(createHash("sha256").update(logBytes, "utf8").digest("hex")).toBe(evidence.logRef.digest);
     expect(logBytes.length).toBeGreaterThan(0);
   });

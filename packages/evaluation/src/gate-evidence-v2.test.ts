@@ -491,6 +491,15 @@ describe("E4-R12 gate output log preservation + failure diagnostics (N01)", () =
     const e3 = valid();
     e3.errorSummary = "x".repeat(16_385);
     expect(gateEvidenceV2Issues(e3).some((i) => i.includes("errorSummary"))).toBe(true);
+    // E4-R21 (F01): logRef:null is a structural violation (not a crash — the
+    // digest probe must never dereference a null logRef).
+    const e4 = valid();
+    e4.logRef = null;
+    expect(gateEvidenceV2Issues(e4).some((i) => i.includes("logRef"))).toBe(true);
+    // E4-R21 (F01): a logRef object MISSING the digest key is also rejected.
+    const e5 = valid();
+    e5.logRef = { path: "logs/x.log" };
+    expect(gateEvidenceV2Issues(e5).some((i) => i.includes("digest key is missing"))).toBe(true);
     // A valid logRef + bounded errorSummary parse cleanly.
     const ok = valid();
     ok.logRef = { path: "logs/docs-2026.log", digest: "0".repeat(64) };

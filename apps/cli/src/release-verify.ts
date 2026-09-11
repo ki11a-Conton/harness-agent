@@ -13,7 +13,7 @@
  * ready == false.
  */
 
-import { gateEvidenceV2Issues } from "@ar/evaluation";
+import { gateEvidenceV2Issues, type GateEvidenceV2 } from "@ar/evaluation";
 
 export type GateState = "passed" | "failed" | "not_run" | "blocked";
 
@@ -122,6 +122,16 @@ export interface RawGateEvidence {
   /** E4-R09 (F19): V2-only — source cleanness before/after the run. */
   cleanBefore?: boolean;
   cleanAfter?: boolean;
+  /** E4-R21 (F01): V2-only — environment facts preserved from the V2 record.
+   *  The previous lossy mapping dropped them, so the production entry never
+   *  executed the offline providerCalls semantics. */
+  providerCalls?: number;
+  environmentClass?: "offline" | "paid" | "insecure-local";
+  /** E4-R21 (F01): V2-only — the ORIGINAL validated V2 object (logRef and
+   *  artifactRefs included) preserved for the production ref re-verification:
+   *  the release verifier re-reads the referenced bytes from disk exactly like
+   *  the generic V2 loader. */
+  v2?: GateEvidenceV2;
 }
 
 /** P38.3-5: a validated evidence instance — every field is verified against
@@ -313,6 +323,34 @@ export function validateGateEvidenceInstance(opts: {
       reason: `dirty-tree V2 evidence: cleanBefore=${String(evidence.cleanBefore)} cleanAfter=${String(evidence.cleanAfter)} — cannot certify a release`,
     };
   }
+  // E4-R21 (F01): the production entry executes the offline providerCalls
+  // semantics on certifying instances — the previous lossy V2 mapping dropped
+  // these facts, so a violating record could still pass the release gate.
+  // Only PROVEN violations block (absent fields are not fabricated evidence).
+  if (evidence.passed) {
+    if (evidence.environmentClass !== undefined && evidence.environmentClass !== "offline") {
+      return {
+        id: expectedGate,
+        platform: expectedPlatform,
+        state: "blocked",
+        headSha: expectedHead,
+        command: expectedCommand,
+        evidenceRef: sourcePath,
+        reason: `certifying instance must declare environmentClass=offline (got "${evidence.environmentClass}") — paid/insecure evidence cannot certify a release`,
+      };
+    }
+    if ((evidence.providerCalls ?? 0) !== 0) {
+      return {
+        id: expectedGate,
+        platform: expectedPlatform,
+        state: "blocked",
+        headSha: expectedHead,
+        command: expectedCommand,
+        evidenceRef: sourcePath,
+        reason: `offline gate reported ${String(evidence.providerCalls)} provider calls — must be 0`,
+      };
+    }
+  }
   return {
     id: expectedGate,
     platform: expectedPlatform,
@@ -451,6 +489,7 @@ export function parseRawEvidence(json: string, sourcePath: string): RawGateEvide
     const v2 = raw as {
       gate: string; gitSha: string; command: string[]; cleanBefore: boolean; cleanAfter: boolean;
       exitCode: number | null; passed: boolean; finishedAtIso: string; inputDigest: string; outputDigest: string;
+      providerCalls?: number; environmentClass?: "offline" | "paid" | "insecure-local";
     };
     const gate = v2.gate;
     if (!(REQUIRED_GATES as readonly string[]).includes(gate)) {
@@ -469,6 +508,12 @@ export function parseRawEvidence(json: string, sourcePath: string): RawGateEvide
       generatedAt: v2.finishedAtIso,
       cleanBefore: v2.cleanBefore,
       cleanAfter: v2.cleanAfter,
+      // E4-R21 (F01): preserve the environment facts and the ORIGINAL V2
+      // object (logRef/artifactRefs included) — the lossy mapping is what let
+      // the production path skip ref re-verification and offline semantics.
+      providerCalls: v2.providerCalls,
+      environmentClass: v2.environmentClass,
+      v2: raw as GateEvidenceV2,
     };
   }
   const gate = (record.gate ?? record.id) as string | undefined;

@@ -20,7 +20,7 @@
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { mkdir, open, readFile, rename, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative } from "node:path";
 import { stableStringify } from "./manifest.js";
 
 export const GATE_EVIDENCE_V2_SCHEMA_VERSION = "2.0.0";
@@ -303,8 +303,14 @@ export interface RunGateV2Options {
   artifactPaths?: string[];
   /** Directory to persist the gate's FULL output log into (E4-R12: root-cause
    *  recovery). The log file is named `<gate>-<ISO-start-without-colons>.log`,
-   *  and `evidence.logRef.path` is recorded relative to `cwd`. */
+   *  and `evidence.logRef.path` is recorded relative to `logRefBase ?? cwd`. */
   logDir?: string;
+  /** E4-R21 (F01): the directory `evidence.logRef.path` is relativized
+   *  against (default: the gate cwd). The production gate runner passes the
+   *  EVIDENCE directory so the ref is relative to the trusted bundle root
+   *  (the evidence file's directory) — the ref then survives upload,
+   *  download and cross-platform re-verification. */
+  logRefBase?: string;
   /** Hard cap for the saved log bytes (a truncation marker is appended). */
   logMaxBytes?: number;
   /** Cap for `errorSummary` (the printed/recorded failure summary). */
@@ -522,9 +528,12 @@ export async function runGateV2(opts: RunGateV2Options): Promise<GateEvidenceV2>
       digest = null; // never fake a persisted log
     }
     logRef = {
-      // Relative to the gate cwd (POSIX separators) so the ref travels with
-      // the evidence tree; absolute when the log lives outside the cwd.
-      path: relative(opts.cwd, logPath).replace(/\\/g, "/"),
+      // E4-R21 (F01): relative to `logRefBase` (default: the gate cwd), POSIX
+      // separators. The production runner relativizes against the evidence
+      // directory (the trusted bundle root the consumer resolves against), so
+      // the ref travels with the bundle and re-verifies after an upload /
+      // download / cross-platform move.
+      path: relative(opts.logRefBase ?? opts.cwd, logPath).replace(/\\/g, "/"),
       digest,
     };
   }
@@ -660,21 +669,42 @@ export function gateEvidenceV2Issues(value: unknown): string[] {
   } else if (e.passed === false && state === "passed") {
     issues.push(`state=passed but passed=false`);
   }
-  if (Array.isArray(e.artifactRefs)) {
-    for (const ref of e.artifactRefs) {
-      const r = ref as { path?: unknown; digest?: unknown };
-      if (typeof r.path !== "string" || r.path.length === 0) issues.push("artifactRef.path missing");
-      if (r.digest !== null && r.digest !== undefined && !hex64(r.digest)) issues.push(`artifactRef ${JSON.stringify(r.path)} digest is not 64-hex`);
+  // E4-R21 (F01): artifactRefs must be an ARRAY of {path, digest} records — a
+  // non-array value, a null/non-object element, or a missing digest KEY is a
+  // structural violation (fail closed). digest:null is the explicit "declared
+  // but not persisted" marker and remains structurally valid.
+  if (e.artifactRefs !== undefined) {
+    if (!Array.isArray(e.artifactRefs)) {
+      issues.push("artifactRefs must be an array of {path, digest} records");
+    } else {
+      for (const ref of e.artifactRefs) {
+        const r = ref as { path?: unknown; digest?: unknown } | null;
+        if (typeof r !== "object" || r === null) {
+          issues.push("artifactRefs contains a non-object element (null)");
+          continue;
+        }
+        if (typeof r.path !== "string" || r.path.length === 0) issues.push("artifactRef.path missing");
+        if (r.digest === undefined) issues.push(`artifactRef ${JSON.stringify(r.path)} digest key is missing (use null for not-persisted)`);
+        else if (r.digest !== null && !hex64(r.digest)) issues.push(`artifactRef ${JSON.stringify(r.path)} digest is not 64-hex`);
+      }
     }
   }
   // E4-R12 (N01): logRef must be a {path, digest} pair — a non-string path or a
   // non-64-hex (non-null) digest is rejected; errorSummary must be a bounded string.
+  // E4-R21 (F01): logRef:null and a MISSING digest key are also structural
+  // violations (digest:null is the only valid "not persisted" marker).
   if (e.logRef !== undefined) {
     const r = e.logRef as { path?: unknown; digest?: unknown };
     if (typeof r !== "object" || r === null || typeof r.path !== "string" || r.path.length === 0) {
       issues.push("logRef.path must be a non-empty string (relative reference)");
     }
-    if (r.digest !== null && !hex64(r.digest)) issues.push("logRef.digest must be null or 64-hex");
+    if (r !== null && typeof r === "object") {
+      if (r.digest === undefined) {
+        issues.push("logRef.digest key is missing (use null for not-persisted)");
+      } else if (r.digest !== null && !hex64(r.digest)) {
+        issues.push("logRef.digest must be null or 64-hex");
+      }
+    }
   }
   if (e.errorSummary !== undefined && (typeof e.errorSummary !== "string" || e.errorSummary.length === 0 || e.errorSummary.length > 16_384)) {
     issues.push("errorSummary must be a bounded non-empty string (<= 16384 chars)");
@@ -690,11 +720,149 @@ export function parseGateEvidenceV2(value: unknown): GateEvidenceV2 {
   return value as GateEvidenceV2;
 }
 
+// ---------------------------------------------------------------------------
+// E4-R21 (F01) — unified bundle-ref re-verification (one implementation for
+// the generic loader AND the production release verifier)
+// ---------------------------------------------------------------------------
+
+/** Result of re-verifying ONE declared reference (artifact or log) against
+ *  the bytes still on disk. `ok` means the referenced bytes were re-read AND
+ *  their sha256 matches the recorded digest. */
+export interface EvidenceRefCheck {
+  /** Gate the evidence claims (attribution in the production verdict). */
+  gate: string;
+  /** Platform attribution when the caller knows it (production path). */
+  platform?: string;
+  /** Absolute path of the evidence file whose refs were re-verified. */
+  sourcePath: string;
+  /** The reference path exactly as recorded in the evidence. */
+  refPath: string;
+  /** Which kind of reference was checked. */
+  kind: "artifact" | "log";
+  ok: boolean;
+  /** Failure reason (undefined when ok). */
+  reason?: string;
+}
+
+export interface ReverifyGateEvidenceRefsOptions {
+  evidence: GateEvidenceV2;
+  /** Absolute path of the evidence file. Its directory is the TRUSTED BUNDLE
+   *  ROOT: relative refs resolve against it — and ONLY it. A process-cwd
+   *  fallback would let an unrelated file outside the bundle satisfy a
+   *  bundle ref (E4-R21 acceptance: same-path file under cwd cannot change
+   *  the verdict). */
+  sourcePath: string;
+  /** Platform attribution (production path). */
+  platform?: string;
+  /** Certifying context (production release verify): the persisted output
+   *  log is REQUIRED evidence — a missing logRef or a null digest blocks, and
+   *  a declared artifact without a persisted digest blocks. In the generic /
+   *  diagnostic context (default) only declared, digest-bearing refs are
+   *  re-verified; a diagnostic log that was never persisted simply is NOT
+   *  verified (never claimed as such). */
+  certifying?: boolean;
+}
+
+/**
+ * E4-R21 (F01): re-read and re-digest every declared reference of a V2
+ * evidence file from disk. This is the ONE implementation shared by the
+ * generic loader (loadGateEvidenceV2) and the production release verifier —
+ * previously only the generic loader re-verified refs, so a bundle whose log
+ * or artifact bytes changed after the run still produced
+ * `release verify: READY`.
+ *
+ * Path protocol: relative refs resolve against the evidence file's directory
+ * (the trusted bundle root) ONLY; absolute refs resolve as-is. The digest
+ * proves content integrity (the same bytes are still there) and a controlled
+ * evidence-source boundary — never that a third party cannot recompute a
+ * hash.
+ */
+export async function reverifyGateEvidenceRefs(
+  opts: ReverifyGateEvidenceRefsOptions,
+): Promise<EvidenceRefCheck[]> {
+  const certifying = opts.certifying === true;
+  const { evidence, sourcePath, platform } = opts;
+  const bundleRoot = dirname(sourcePath);
+  const resolveRef = (p: string): string => (isAbsolute(p) ? p : join(bundleRoot, p));
+  const checks: EvidenceRefCheck[] = [];
+
+  const checkRef = async (
+    ref: { path: string; digest: string | null },
+    kind: "artifact" | "log",
+  ): Promise<void> => {
+    const base = {
+      gate: evidence.gate,
+      ...(platform !== undefined ? { platform } : {}),
+      sourcePath,
+      refPath: ref.path,
+      kind,
+    };
+    const bytes = await readFile(resolveRef(ref.path)).catch(() => null);
+    if (bytes === null) {
+      checks.push({ ...base, ok: false, reason: `${kind} ${ref.path} missing after the run — evidence invalid` });
+      return;
+    }
+    if (ref.digest === null) {
+      checks.push({ ...base, ok: false, reason: `${kind} ${ref.path} was declared but never persisted (null digest) — cannot be verified` });
+      return;
+    }
+    const actual = sha256Hex(bytes);
+    if (actual !== ref.digest) {
+      checks.push({ ...base, ok: false, reason: `${kind} ${ref.path} digest changed after the run (recorded ${ref.digest}, re-read ${actual}) — evidence invalid` });
+      return;
+    }
+    checks.push({ ...base, ok: true });
+  };
+
+  for (const ref of evidence.artifactRefs ?? []) {
+    await checkRef(ref, "artifact");
+  }
+
+  const logRef = evidence.logRef;
+  if (logRef === undefined) {
+    if (certifying) {
+      checks.push({
+        gate: evidence.gate,
+        ...(platform !== undefined ? { platform } : {}),
+        sourcePath,
+        refPath: "(none)",
+        kind: "log",
+        ok: false,
+        reason: "certifying instance declares no persisted output log (logRef missing) — the run's output cannot be re-verified",
+      });
+    }
+  } else if (logRef.digest === null) {
+    // Diagnostic context: a log that was never persisted is simply not
+    // verified (no check emitted — its absence is never claimed as verified).
+    // Certifying context: it blocks.
+    if (certifying) {
+      checks.push({
+        gate: evidence.gate,
+        ...(platform !== undefined ? { platform } : {}),
+        sourcePath,
+        refPath: logRef.path,
+        kind: "log",
+        ok: false,
+        reason: `log ${logRef.path} was never persisted (digest null) — cannot certify a release`,
+      });
+    }
+  } else {
+    await checkRef(logRef, "log");
+  }
+  return checks;
+}
+
 /**
  * Load a gate's evidence. A missing or unparseable file returns a NOT_RUN
  * sentinel (state=not_run, passed=false) — it is NEVER treated as PASS.
  * E4-R09 (F18): a JSON object missing fields / with inconsistent fields is
  * STRICTLY rejected the same way — never `JSON.parse as GateEvidenceV2`.
+ * E4-R19 (N18): every declared artifact ref and the saved log are re-read and
+ * re-digested from disk. E4-R21 (F01): the ref re-verification is the SAME
+ * unified function the production release verifier calls; relative refs
+ * resolve against the evidence file's directory (the trusted bundle root)
+ * ONLY — the previous cwd fallback could satisfy a bundle ref with an
+ * unrelated file under the process working directory.
  */
 export async function loadGateEvidenceV2(path: string): Promise<GateEvidenceV2> {
   let raw: string;
@@ -715,37 +883,10 @@ export async function loadGateEvidenceV2(path: string): Promise<GateEvidenceV2> 
   }
   const evidence = parsed as GateEvidenceV2;
 
-  // E4-R19 (N18): re-READ and re-DIGEST every declared artifact ref and the
-  // saved log from disk — an artifact that changed (or vanished) AFTER the
-  // evidence was written invalidates it. The stored `loadedPassed` is never
-  // trusted on its own; the same bytes must still be there.
-  const reverify = async (p: string): Promise<Buffer | null> => {
-    const candidates = isAbsolute(p)
-      ? [p]
-      : [join(dirname(path), p), resolve(p)];
-    for (const candidate of candidates) {
-      const bytes = await readFile(candidate).catch(() => null);
-      if (bytes !== null) return bytes;
-    }
-    return null;
-  };
-  for (const ref of evidence.artifactRefs ?? []) {
-    const bytes = await reverify(ref.path);
-    if (bytes === null) {
-      return notRunEvidence(`gate evidence artifact ${ref.path} missing after the run — evidence invalid`);
-    }
-    if (sha256Hex(bytes) !== ref.digest) {
-      return notRunEvidence(`gate evidence artifact ${ref.path} digest changed after the run (recorded ${ref.digest}, re-read differs) — evidence invalid`);
-    }
-  }
-  if (evidence.logRef !== undefined && evidence.logRef.digest !== null) {
-    const bytes = await reverify(evidence.logRef.path);
-    if (bytes === null) {
-      return notRunEvidence(`gate evidence log ${evidence.logRef.path} missing after the run — evidence invalid`);
-    }
-    if (sha256Hex(bytes) !== evidence.logRef.digest) {
-      return notRunEvidence(`gate evidence log ${evidence.logRef.path} digest changed after the run — evidence invalid`);
-    }
+  const checks = await reverifyGateEvidenceRefs({ evidence, sourcePath: path });
+  const failed = checks.filter((c) => !c.ok);
+  if (failed.length > 0) {
+    return notRunEvidence(failed.map((c) => c.reason ?? "ref re-verification failed").join("; "));
   }
   return evidence;
 }

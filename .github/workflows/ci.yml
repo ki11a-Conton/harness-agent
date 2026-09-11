@@ -212,8 +212,12 @@ jobs:
       - name: Upload coverage gate evidence (P38-12)
         uses: actions/upload-artifact@v4
         with:
+          # E4-R21 (F01): upload from the gates/ root so the artifact keeps the
+          # `coverage/` namespace — the attestation job then restores the exact
+          # gates/<platform>/ bundle layout the evidence refs are relative to
+          # (logRef paths are relative to the evidence file's directory).
           name: gate-evidence-coverage
-          path: .ci/evidence/gates/coverage/
+          path: .ci/evidence/gates/
           if-no-files-found: error
 
   # P38-12 (INV-P38-014/015): official release attestation REDUCES real gate
@@ -246,23 +250,29 @@ jobs:
       - name: Build CLI (release:verify runs from dist)
         run: pnpm build
 
+      # E4-R21 (F01): download each artifact into the gates/ root — each upload
+      # preserved its `<platform>/` namespace, so this restores the EXACT
+      # bundle layout the generator wrote (gates/<platform>/<gate>.json +
+      # gates/<platform>/logs/). Evidence refs are relative to the evidence
+      # file's directory, so the downloaded bundle re-verifies on any OS
+      # without workspace-absolute paths.
       - name: Download linux gate evidence
         uses: actions/download-artifact@v4
         with:
           name: gate-evidence-ubuntu-latest
-          path: .ci/evidence/gates/linux/
+          path: .ci/evidence/gates/
 
       - name: Download windows gate evidence
         uses: actions/download-artifact@v4
         with:
           name: gate-evidence-windows-latest
-          path: .ci/evidence/gates/windows/
+          path: .ci/evidence/gates/
 
       - name: Download coverage gate evidence
         uses: actions/download-artifact@v4
         with:
           name: gate-evidence-coverage
-          path: .ci/evidence/gates/coverage/
+          path: .ci/evidence/gates/
 
       - name: Verify evidence SHA and derive release verdict (P38.2-13 / P38.3-7)
         id: release-verify
