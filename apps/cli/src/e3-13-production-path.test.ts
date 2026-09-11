@@ -36,6 +36,8 @@ import {
   resolveChampionHarness,
   DEFAULT_DECISION_POLICY_V3,
   computeThresholdDigestV3,
+  fixtureExecutionPlan,
+  computeExecutionPlanDigest,
 } from "@ar/evaluation";
 import { runBenchmarkCommand } from "./benchmark-command.js";
 import { writeChampionStateFileCas, championStateDigest } from "./champion-state-file.js";
@@ -105,6 +107,25 @@ async function buildV3ArtifactPair(
   const cases = ["ho-01", "ho-02", "ho-03"];
   const grid = [1, 2].flatMap((rep) => cases.map((c) => `holdout\u0000${c}\u0000${rep}`));
 
+  // E4-R22 (F02): the confirmed execution plan must satisfy the shared e4-01
+  // protocol AND cross-bind to the manifest/provenance facts below (provider,
+  // model, gitSha, judge, isolation, thresholds, and the challenger the plan
+  // authorizes) — a hand-truncated partial plan is rejected by the evaluator
+  // and the promotion loader, and the manifest planDigest is the recomputed
+  // digest of this exact plan (never a free-text placeholder).
+  const plan = fixtureExecutionPlan({
+    suite: "holdout",
+    caseIds: cases,
+    repeat: 2,
+    judgeVersion: "1.0.0",
+    providerId: "fake",
+    modelId: "deepseek-v4-flash",
+    sourceSha: gitSha,
+    candidate: "adaptive_recovery_v2",
+    isolationStrength: "strong",
+  });
+  const planDigest = computeExecutionPlanDigest(plan);
+
   // Baseline: ho-01 fails in both reps; ho-02/03 pass in both reps.
   const baselineOutcomes = [
     outcome("ho-01", "baseline", 1, 1, false, baseConfigHash),
@@ -120,7 +141,7 @@ async function buildV3ArtifactPair(
       suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha, dirty: false,
       // E4-R13/R14: confirmed plan + complete grid + completion marker.
       expectedSampleKeys: grid, runComplete: true,
-      executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: cases, repeat: 2 },
+      executionPlan: plan, planDigest,
       thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
     },
     outcomes: baselineOutcomes,
@@ -146,10 +167,10 @@ async function buildV3ArtifactPair(
   const candidateArtifact = buildExperimentArtifactV3({
     arm: { armId: "candidate", candidateId: "adaptive_recovery_v2", candidateConfigHash },
     manifest: {
-      suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha, dirty: false, planDigest: sha("plan-v1"),
+      suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha, dirty: false, planDigest,
       promotionEligible: true, isolationStrength: "strong", runtimeConfigHash,
       expectedSampleKeys: grid, runComplete: true,
-      executionPlan: { schemaVersion: "e4-01", suite: "holdout", caseIds: cases, repeat: 2 },
+      executionPlan: plan,
       thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
     },
     outcomes: candidateOutcomes,
