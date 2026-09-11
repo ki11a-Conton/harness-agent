@@ -73,6 +73,8 @@ function fixturePlan(caseIds: string[]): ExecutionPlanV1 {
     modelId: "m",
     judgeVersion: "1.0.0",
     sourceSha: "d".repeat(40),
+    // E4-R27: a promotion-grade plan is confirmed on a CLEAN tree — the CLI
+    // encodes that as a NULL tree fingerprint (non-null = dirty tree).
     treeFingerprint: null,
     decisionPolicy: { ...DEFAULT_DECISION_POLICY_V3 },
     thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),

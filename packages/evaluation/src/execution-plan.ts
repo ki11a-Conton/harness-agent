@@ -227,6 +227,98 @@ export function computeExecutionPlanDigest(plan: ExecutionPlanV1): string {
   return computeRuntimeConfigHash(plan);
 }
 
+/** Stable codes for the promotion-ELIGIBILITY semantics (E4-R27 / G01). These
+ *  are NOT field-shape errors (those are `executionPlan.*` parse issues) — they
+ *  are requests that are internally consistent yet semantically impossible:
+ *  the fields agree with each other but the combination cannot promote. */
+export type PromotionEligibilityCode =
+  | "ELIGIBILITY_ISOLATION_NOT_STRONG"
+  | "ELIGIBILITY_ISOLATION_BACKEND_UNKNOWN"
+  | "ELIGIBILITY_SOURCE_SHA_MISSING"
+  | "ELIGIBILITY_SOURCE_TREE_DIRTY"
+  | "ELIGIBILITY_CANDIDATE_MISSING";
+
+export interface PromotionEligibilityViolation {
+  code: PromotionEligibilityCode;
+  detail: string;
+}
+
+/**
+ * E4-R27 (G01) — the MINIMUM semantic conditions for `promotionEligible=true`.
+ *
+ * Field consistency is one condition, not a legal combination. The confirmed
+ * plan, the artifact manifest, the V3 writer and the promotion loader all agree
+ * on `promotionEligible=true` + `isolationStrength="insecure-local"` when both
+ * were written that way — and that pair IS internally consistent, so every
+ * existing check passes while the protocol contradicts itself. This function is
+ * the shared authority that decides whether a promotion-eligible CLAIM is
+ * backed by the facts a promotion-grade experiment must carry.
+ *
+ * The contract (fail-closed — an unknown/absent required fact is a violation):
+ *
+ *   1. `isolationStrength === "strong"` — OS-level confinement actually
+ *      available. `insecure-local` and `none` are NEVER promotion-grade, no
+ *      matter how consistent the rest of the record is (mirrors
+ *      benchmark-isolation.promotionEligible for the runtime backend probe).
+ *   2. the isolation backend is a KNOWN, non-empty id — "not-probed" /
+ *      "unknown" cannot back a strong claim.
+ *   3. `sourceSha` is a KNOWN 40-hex commit — a promotion whose source is
+ *      unknown cannot be reproduced or attributed.
+ *   4. `treeFingerprint` is NULL — the plan was confirmed on a CLEAN tree. The
+ *      CLI records a CONTENT fingerprint only when `git status --porcelain` is
+ *      non-empty (`probeSourceSnapshot` returns `treeFingerprint: null` for a
+ *      clean tree), so a non-null fingerprint MEANS the confirmed plan was
+ *      bound to a dirty tree — which the CLI refuses at execution time
+ *      ("the confirmed plan was made against a dirty tree"). Both the plan
+ *      protocol and the CLI therefore agree that a dirty-source plan cannot
+ *      promote.
+ *   5. `candidate` names the challenger — a candidateless pair promotes
+ *      nothing.
+ *
+ * A plan with `promotionEligible=false` is a DIAGNOSTIC record: it may carry
+ * any isolation posture and is never rejected here. Callers treat violations
+ * as "not promotion-grade" (ACCEL/ACCEPT must not follow), never as a
+ * best-effort partial promotion.
+ */
+export function validatePromotionEligibility(plan: ExecutionPlanV1): PromotionEligibilityViolation[] {
+  const violations: PromotionEligibilityViolation[] = [];
+  if (plan.promotionEligible !== true) return violations; // diagnostics are exempt
+
+  if (plan.isolationStrength !== "strong") {
+    violations.push({
+      code: "ELIGIBILITY_ISOLATION_NOT_STRONG",
+      detail: `promotionEligible=true requires isolationStrength="strong" (got ${JSON.stringify(plan.isolationStrength)}) — insecure/none isolation is NEVER promotion-grade`,
+    });
+  }
+  const backend = plan.isolationBackendId;
+  if (typeof backend !== "string" || backend.length === 0 || backend === "not-probed" || backend === "unknown") {
+    violations.push({
+      code: "ELIGIBILITY_ISOLATION_BACKEND_UNKNOWN",
+      detail: `promotionEligible=true requires a KNOWN isolation backend id (got ${JSON.stringify(backend)}) — an unprobed/unknown backend cannot back a strong-isolation claim`,
+    });
+  }
+  if (plan.sourceSha === null) {
+    violations.push({
+      code: "ELIGIBILITY_SOURCE_SHA_MISSING",
+      detail: "promotionEligible=true requires a known sourceSha (40-hex) — an unknown source cannot promote",
+    });
+  }
+  if (plan.treeFingerprint !== null) {
+    violations.push({
+      code: "ELIGIBILITY_SOURCE_TREE_DIRTY",
+      detail:
+        "promotionEligible=true requires a plan confirmed on a CLEAN source tree, but executionPlan.treeFingerprint is set — the CLI records a tree fingerprint ONLY for a dirty tree (probeSourceSnapshot), so this plan would be refused at execution time",
+    });
+  }
+  if (plan.candidate === null) {
+    violations.push({
+      code: "ELIGIBILITY_CANDIDATE_MISSING",
+      detail: "promotionEligible=true requires the plan to NAME the challenger it promotes (plan.candidate is null)",
+    });
+  }
+  return violations;
+}
+
 /**
  * Derive the expected sample grid from the CONFIRMED plan: exactly one key
  * `${suite}\0${caseId}\0${repetition}` for every (caseId × repetition in

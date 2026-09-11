@@ -72,6 +72,12 @@ export function fixtureExecutionPlan(opts: {
   sourceSha?: string | null;
   candidate?: string | null;
   isolationStrength?: ExecutionPlanIsolationStrength;
+  /** E4-R27: a promotion-grade plan must be confirmed on a CLEAN source tree,
+   *  which the CLI encodes as `treeFingerprint === null` (a non-null fingerprint
+   *  MEANS a dirty tree). The default is therefore null; pass a 64-hex value
+   *  only to build a dirty-tree (non-promotion-grade) fixture. */
+  treeFingerprint?: string | null;
+  isolationBackendId?: string;
   /** The pre-registered policy the evaluator will APPLY (default: V3 default). */
   decisionPolicy?: DecisionPolicyV3;
 }): ExecutionPlanV1 {
@@ -87,21 +93,21 @@ export function fixtureExecutionPlan(opts: {
     interleave: true,
     shuffle: false,
     seed: 7,
-    candidate: opts.candidate ?? "cand-x",
+    candidate: opts.candidate === undefined ? "cand-x" : opts.candidate,
     billingClass: "offline",
     maxLogicalRuns: 100,
     maxModelCalls: 100,
     maxEstimatedTokens: 1_000_000,
     maxEstimatedCostUsd: 1,
     estimateStatus: "bounded",
-    isolationBackendId: "fixture-strong",
+    isolationBackendId: opts.isolationBackendId ?? "fixture-strong",
     isolationStrength: opts.isolationStrength ?? "strong",
     promotionEligible: true,
     providerId: opts.providerId ?? "fake",
     modelId: opts.modelId ?? "m",
     judgeVersion: opts.judgeVersion ?? "1.0.0",
-    sourceSha: opts.sourceSha ?? "c".repeat(40),
-    treeFingerprint: null,
+    sourceSha: opts.sourceSha === undefined ? "c".repeat(40) : opts.sourceSha,
+    treeFingerprint: opts.treeFingerprint ?? null,
     decisionPolicy: { ...policy },
     thresholdDigest: computeThresholdDigestV3(policy),
     effectiveModelParams: { budgetTokens: 8192 },

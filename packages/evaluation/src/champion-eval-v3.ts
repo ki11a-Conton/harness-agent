@@ -24,7 +24,7 @@ import {
   DECISION_POLICY_V3_VERSION,
   type DecisionPolicyV3,
 } from "./decision-policy-v3.js";
-import { parseExecutionPlan, crossBindExecutionPlan, computeExecutionPlanDigest } from "./execution-plan.js";
+import { parseExecutionPlan, crossBindExecutionPlan, computeExecutionPlanDigest, validatePromotionEligibility } from "./execution-plan.js";
 import type { CaseOutcomeV3, ExperimentArtifactV3 } from "./artifact-v3/types.js";
 import {
   decideChampionV3,
@@ -298,6 +298,15 @@ export function deriveV3Decision(
           candidateId: candidate.arm.candidateId,
         });
         for (const v of bindingViolations) policyViolations.push(v);
+        // E4-R27 (G01): field consistency is NOT eligibility. A plan whose
+        // fields agree with each other yet declare an insecure/none isolation
+        // posture (or an unknown source/backend/candidate) while claiming
+        // promotionEligible=true is a protocol self-contradiction. The shared
+        // semantic validator rejects it HERE, at the evaluator boundary, so the
+        // decision can never be ACCEPT.
+        for (const v of validatePromotionEligibility(parsed.plan)) {
+          policyViolations.push(`${v.code}: ${v.detail}`);
+        }
       }
     }
     if (!Array.isArray(expectedGridRaw) || expectedGridRaw.length === 0) {

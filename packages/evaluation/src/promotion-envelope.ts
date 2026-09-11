@@ -27,7 +27,7 @@ import { readFile, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { stableStringify } from "./manifest.js";
 import { loadExperimentArtifactV3, validateExperimentArtifactV3FromBytes } from "./artifact-v3/loader.js";
-import { parseExecutionPlan, crossBindExecutionPlan } from "./execution-plan.js";
+import { parseExecutionPlan, crossBindExecutionPlan, validatePromotionEligibility } from "./execution-plan.js";
 
 export const PROMOTION_ENVELOPE_SCHEMA_VERSION = "3.0.0";
 export const PROMOTION_ENVELOPE_POLICY_VERSION = "e2-07-policy-v1";
@@ -402,6 +402,14 @@ export async function loadPromotionEnvelope(
           candidateId: candV3.artifact.arm.candidateId,
         })) {
           issues.push({ code: "CROSS_BINDING_MISMATCH", detail: v });
+        }
+        // E4-R27 (G01): field consistency is NOT eligibility. The loader applies
+        // the SAME shared semantic check as the evaluator and the writer, so an
+        // internally consistent insecure-local record claiming
+        // promotionEligible=true is refused here even when the evaluator replay
+        // is disabled.
+        for (const v of validatePromotionEligibility(planParsed.plan)) {
+          issues.push({ code: "CANDIDATE_NOT_ELIGIBLE", detail: `${v.code}: ${v.detail}` });
         }
       }
       if (m["runComplete"] !== true) {

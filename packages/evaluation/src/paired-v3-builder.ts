@@ -29,7 +29,7 @@
 import { createHash } from "node:crypto";
 import { buildExperimentArtifactV3, buildEventRecordsV3 } from "./artifact-v3/writer.js";
 import { stableStringify } from "./manifest.js";
-import { parseExecutionPlan, computeExecutionPlanDigest, expectedSampleKeysFromExecutionPlan, stringSetEqual } from "./execution-plan.js";
+import { parseExecutionPlan, computeExecutionPlanDigest, expectedSampleKeysFromExecutionPlan, stringSetEqual, validatePromotionEligibility } from "./execution-plan.js";
 import type { ExperimentArtifactV3, CaseOutcomeV3, ActivationEvidenceV3, SecurityOutcomeV3 } from "./artifact-v3/types.js";
 import type { EvalOutcome } from "./runner.js";
 import type { PairedFinalizedPair } from "./paired-executor.js";
@@ -246,6 +246,19 @@ export function buildV3ArtifactsFromPaired(
     }
     if (facts.expectedSampleKeys !== undefined && !stringSetEqual(facts.expectedSampleKeys, expectedSampleKeysFromExecutionPlan(parsed.plan))) {
       throw new Error("E4-R22: refusing to build promotion-grade V3 — expectedSampleKeys does not equal the grid derived from the confirmed plan");
+    }
+    // E4-R27 (G01): the WRITE boundary applies the SAME semantic eligibility
+    // check as the evaluator and the promotion loader. A promotion-grade
+    // artifact is never WRITTEN from a self-contradicting plan (e.g. an
+    // insecure-local plan claiming promotionEligible=true), so the defect cannot
+    // enter the evidence store in the first place.
+    const eligibility = validatePromotionEligibility(parsed.plan);
+    if (eligibility.length > 0) {
+      throw new Error(
+        `E4-R27: refusing to build promotion-grade V3 — the plan claims promotionEligible=true but fails the promotion-eligibility contract: ${eligibility
+          .map((v) => `${v.code}: ${v.detail}`)
+          .join("; ")}`,
+      );
     }
   }
 

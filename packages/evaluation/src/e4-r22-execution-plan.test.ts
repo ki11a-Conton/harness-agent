@@ -74,6 +74,8 @@ function fullPlan(overrides: Record<string, unknown> = {}): Record<string, unkno
     modelId: "m",
     judgeVersion: "1.0.0",
     sourceSha: GIT,
+    // E4-R27: a promotion-grade plan is confirmed on a CLEAN tree (null = clean;
+    // a non-null CLI fingerprint means the tree was dirty).
     treeFingerprint: null,
     decisionPolicy: { ...DEFAULT_DECISION_POLICY_V3 },
     thresholdDigest: TD,
