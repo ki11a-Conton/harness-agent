@@ -18,9 +18,13 @@
 > 不要从历史计划标题推断范围或完成状态。
 ## 修订计划执行状态（2026-09-11 计划）
 
-- 状态：E4-R21 … E4-R26 按 plan(20260911-013142).md 执行中；
-  R21（F01 release 证据消费链统一）与 R22（F02 executionPlan 严格解析与
-  交叉绑定）已完成，产物见 docs/E4-R21-report.md、docs/E4-R22-report.md。
+- 状态：E4-R21 … E4-R26 按 plan(20260911-013142).md 执行：
+  - R21（F01 release 证据消费链统一）✅ docs/E4-R21-report.md
+  - R22（F02 executionPlan 严格解析与交叉绑定）✅ docs/E4-R22-report.md
+  - R24（F03/F04 观察记录运行身份与最终结果）✅ docs/E4-R24-report.md
+  - R23（F05 内容级源码指纹与执行参数身份）✅ docs/E4-R23-report.md
+  - R25（V01 恢复复合故障专项验证）✅ docs/E4-R25-report.md
+  - R26（总验收与文档收口）：见 docs/E4-R26-report.md
 - 前一轮（2026-09-10 计划）收口结论保留：E4-R12 … E4-R20 已完成、已推送
   origin/main；CI run 34548502173（bcf34b7）四 job 全部成功，
   `runtimeReleaseReady=true`（详见 docs/E4-R20-report.md）。
@@ -28,5 +32,7 @@
   1. 真实模型 champion 质量：attestation 记录 `championPromotion.status=NOT_RUN`
      （付费 benchmark 未请求，不为此造假或付费）。
   2. release 发布动作本身未执行（本计划只到 attestation，不自动发布）。
+  3. R21–R25 改动仅在本地 main 提交（未推送）、CI 未运行（NOT_RUN）——
+     本计划默认离线；推送后需以精确 SHA 查 CI 才能写远端验证结论。
 - docs:verify 指向本文件作为唯一当前计划入口；历史计划与旧状态段保留为
   HISTORICAL，不做删除或改写。

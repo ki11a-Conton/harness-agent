@@ -64,12 +64,23 @@ node apps/cli/dist/main.js docs:verify           # documentation truth checks
 
 ### Running with a real model
 
+A paid run must first **dry-run** to get the canonical plan digest, then confirm the
+**exact** plan (digest + explicit spend cap) — `benchmark` refuses a billed
+provider without both (E4-01). No paid call ever happens from this file.
+
 ```bash
 export OPENAI_API_KEY=sk-...
 export OPENAI_BASE_URL=https://api.openai.com/v1   # any OpenAI-compatible endpoint
 export OPENAI_MODEL=gpt-4o-mini                     # or deepseek-v4-flash, etc.
 
-node apps/cli/dist/main.js benchmark --suite adversarial --out .ci/bench
+# 1) dry-run — prints the canonical e4-01 plan + planDigest (0 provider calls, offline)
+node apps/cli/dist/main.js benchmark --suite adversarial --dry-run
+
+# 2) confirm the EXACT plan and cap spend before the run starts
+node apps/cli/dist/main.js benchmark --suite adversarial \
+  --max-model-calls 800 \
+  --plan-digest <planDigest from the dry-run output> \
+  --out .ci/bench
 ```
 
 `deepseek`-style thinking models are supported: `reasoning_content` is parsed from the stream, persisted on the assistant message, and passed back on the next request (required by the API).
@@ -95,7 +106,7 @@ Supported candidates: `adaptive_recovery`, `memory_retrieval`, `tool_selector_de
 | Gate | Command | What it verifies |
 | --- | --- | --- |
 | typecheck / build | `pnpm typecheck` / `pnpm build` | `tsc -b` zero errors |
-| tests | `pnpm test` | full suite (248 files, ~4800 tests) |
+| tests | `pnpm test` | full suite (file/test counts move with the tree — see CI `verify` job; current HEAD: see `pnpm test` output) |
 | coverage | `pnpm test:coverage` | per-package thresholds |
 | docs | `pnpm docs:verify` | documentation truth (incl. package count integrity) |
 | protocol | `pnpm test:protocol` | transport conformance |
