@@ -865,6 +865,22 @@ export class DefaultSessionActor implements SessionActor {
     });
   }
 
+  /** E4-R25 (V01): TRUE when the durable TURN (main store) is terminal — the
+   *  recovery handler's runTurn already finished WITHOUT throwing, so only the
+   *  terminal write/consume remains and the action must NEVER re-run. This is
+   *  the authoritative pending-commit evidence even when the needsReconcile
+   *  marker could not be persisted (compound write outage). */
+  private async durableTurnIsTerminal(turnId: TurnId): Promise<boolean> {
+    if (this.deps.store === undefined) return false;
+    try {
+      const turn = await this.deps.store.getTurn(turnId);
+      if (turn === undefined) return false;
+      return turn.status === "completed" || turn.status === "failed" || turn.status === "cancelled";
+    } catch {
+      return false;
+    }
+  }
+
   /**
    * E3-10 — recover ONE head turn under the same-T bounded retry state
    * machine. Returns the signal for the drain loop:
@@ -893,12 +909,15 @@ export class DefaultSessionActor implements SessionActor {
     // logic. This is what lets a restarted actor continue from attempt/
     // nextAttemptAt instead of resetting the budget (plan E3-10 item 5).
     if (record.state === "RECOVERY_IN_PROGRESS") {
-      // E4-R17 (N13): pending-commit — the recovery ACTION completed once but
-      // its durable TERMINAL transition could not be persisted. NEVER re-run
-      // the action; only re-attempt the terminal write (reconcile). On success
-      // the prompt is consumed and the queue advances; on failure the queue
-      // stays frozen at the head (T2 never overtakes an uncommitted T1).
-      if (recoveryNeedsReconcile(record)) {
+      // E4-R17/N13 + E4-R25 (V01): pending-commit — the recovery ACTION
+      // completed once but its durable TERMINAL transition could not be
+      // persisted (or, in the compound outage, the durable needsReconcile
+      // marker itself never landed). The durable TURN being terminal IS the
+      // authoritative evidence of a finished action: NEVER re-run the action;
+      // only re-attempt the terminal write (reconcile). On success the prompt
+      // is consumed and the queue advances; on failure the queue stays frozen
+      // at the head (T2 never overtakes an uncommitted T1).
+      if (recoveryNeedsReconcile(record) || await this.durableTurnIsTerminal(head.turn.id)) {
         try {
           await this._recoveryStore.putRecord({
             ...record,
@@ -1723,13 +1742,17 @@ export class DefaultSessionActor implements SessionActor {
       const turn = await store.getTurn(p.promotedTurnId);
       if (turn === undefined) continue; // fail-closed in hydrate
       if (turn.status === "completed" || turn.status === "failed" || turn.status === "cancelled") {
-        // E4-R17 (N13): a terminal turn is normally consumed by hydrate — but a
-        // PENDING-COMMIT recovery record (action done, terminal ACK unpersisted)
-        // must still be visible to a restarted actor so it can COMMIT the
-        // terminal and consume the prompt without re-running the action. A
-        // crash after the action but before the ACK is otherwise unrecoverable.
+        // E4-R17 (N13) + E4-R25 (V01): a terminal turn is normally consumed by
+        // hydrate — but a PENDING-COMMIT recovery record (action done, terminal
+        // ACK unpersisted) must still be visible to a restarted actor so it can
+        // COMMIT the terminal and consume the prompt without re-running the
+        // action. A crash after the action but before the ACK is otherwise
+        // unrecoverable. The marker-loss compound outage leaves the record in
+        // RECOVERY_IN_PROGRESS with NO needsReconcile — the terminal TURN is
+        // then the authoritative evidence that the action finished, and the
+        // task is still recoverable for reconcile (never re-run).
         const rec = await this._recoveryStore.getRecord(p.promotedTurnId);
-        if (rec !== undefined && recoveryNeedsReconcile(rec)) {
+        if (rec !== undefined && (recoveryNeedsReconcile(rec) || rec.state === "RECOVERY_IN_PROGRESS")) {
           seen.add(p.promotedTurnId);
           this._recoverableTurns.push({ turn, promptId: p.id });
         }

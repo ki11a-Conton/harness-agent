@@ -65,11 +65,19 @@ function counting(base: AgentRuntime, failRun: boolean) {
   return { runtime, total: () => [...runCalls.values()].reduce((a, b) => a + b, 0) };
 }
 
-/** A RecoveryStore that throws on every write (simulates a downed durable store). */
+/** E4-08: a RecoveryStore that throws on every write (simulates a downed durable store). */
 class FailingStore implements RecoveryStore {
   async getRecord(): Promise<RecoveryRecord | undefined> { return undefined; }
   async putRecord(): Promise<RecoveryRecord> { throw new Error("store down"); }
   async deleteRecord(): Promise<void> { /* noop */ }
+}
+
+/** E4-R25 (V01): a store that refuses EVERY write (reads still work) — the
+ *  fail-closed sanity case: no durable lease/intent ever lands. */
+class TotalWriteFailStore extends MemoryRecoveryStore {
+  override async putRecord(): Promise<RecoveryRecord> {
+    throw new Error("whole recovery store write outage");
+  }
 }
 
 /** E4-R17 (N13): a store that fails ONLY the RECOVERED (terminal-ACK) write —
@@ -80,6 +88,21 @@ class TerminalFailStore extends MemoryRecoveryStore {
   override async putRecord(record: RecoveryRecord): Promise<RecoveryRecord> {
     if (this.failRecoveredWrites && record.state === "RECOVERED") {
       throw new Error("review terminal ACK failure");
+    }
+    return super.putRecord(record);
+  }
+}
+
+/** E4-R25 (V01): the compound outage — the RECOVERED terminal-write AND the
+ *  needsReconcile marker write BOTH fail, while every other recovery-store
+ *  write (lease, intent, retry-state) still succeeds. The marker never lands,
+ *  so no durable pending-commit exists — the ONLY remaining evidence is the
+ *  main store's durable TURN terminal state. */
+class CompoundAckFailStore extends MemoryRecoveryStore {
+  failTerminalWrites = true;
+  override async putRecord(record: RecoveryRecord): Promise<RecoveryRecord> {
+    if (this.failTerminalWrites && (record.state === "RECOVERED" || record.needsReconcile === true)) {
+      throw new Error("compound terminal/marker write outage");
     }
     return super.putRecord(record);
   }
@@ -338,5 +361,105 @@ describe("E4-R17 terminal-ACK failure + lease wake (N13/N14)", () => {
     expect(total()).toBe(1);
     const record = await recovery.getRecord(boundTurnId);
     expect(record?.state).toBe("RECOVERED");
+  });
+});
+
+describe("E4-R25 recovery compound-failure verification (V01)", () => {
+  it("V01-a: RECOVERED terminal-write AND needsReconcile marker both fail — no durable pending-commit exists, the queue does NOT advance and the prompt is NOT consumed", async () => {
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new CompoundAckFailStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    const boundTurnId = await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    const { runtime, total } = counting(base, false);
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => 1000);
+    await actor.drainFollowupsForTest();
+
+    // The action ran exactly once…
+    expect(total()).toBe(1);
+    // …the durable record is the ORIGINAL intent (RECOVERY_IN_PROGRESS) and
+    // NO pending-commit marker exists — a marker is not proof when it cannot land.
+    const record = await recovery.getRecord(boundTurnId);
+    expect(record?.state).toBe("RECOVERY_IN_PROGRESS");
+    expect(record?.needsReconcile).not.toBe(true);
+    // The queue is frozen (no fake shift) and the prompt is NOT consumed.
+    expect(actor["_recoverableTurns"].length).toBe(1);
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeUndefined();
+  });
+
+  it("V01-a-restart: a NEW actor over the marker-loss store sees the terminal TURN — the action is known-done and must only be reconciled, never blindly replayed", async () => {
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new CompoundAckFailStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    const a = counting(base, false);
+    const actorA = await loadActor(a.runtime, store, inbox, s.id, recovery, () => 1000);
+    await actorA.drainFollowupsForTest();
+    expect(a.total()).toBe(1);
+
+    // "Restart": a fresh actor over the same store (the store has HEALED — the
+    // outage was transient). The durable TURN is terminal, so the recovery
+    // handler is KNOWN-done: the terminal must be committed (reconcile), the
+    // prompt consumed, and the action NEVER re-run.
+    recovery.failTerminalWrites = false;
+    const b = counting(base, false);
+    const actorB = await loadActor(b.runtime, store, inbox, s.id, recovery, () => 2000);
+    await actorB.drainFollowupsForTest();
+    expect(b.total()).toBe(0); // NO replay of the known-completed action
+    expect(a.total()).toBe(1);
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeDefined();
+    expect(actorB["_recoverableTurns"].length).toBe(0);
+  });
+
+  it("V01-b: after the terminal-write outage heals, the SAME actor converges — the durable TURN terminal state is respected, the action is NOT re-run", async () => {
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new CompoundAckFailStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    const boundTurnId = await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    const { runtime, total } = counting(base, false);
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => 1000);
+    await actor.drainFollowupsForTest();
+    expect(total()).toBe(1);
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeUndefined();
+
+    // The recovery store heals. The durable TURN is already terminal, so the
+    // next drain must COMMIT the terminal and consume WITHOUT a second run.
+    recovery.failTerminalWrites = false;
+    await actor.drainFollowupsForTest();
+    const record = await recovery.getRecord(boundTurnId);
+    expect(record?.state).toBe("RECOVERED");
+    expect(total()).toBe(1); // conviction: exactly-once across outage + heal
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeDefined();
+    expect(actor["_recoverableTurns"].length).toBe(0);
+  });
+
+  it("V01-c: a WHOLE-store write outage fails closed BEFORE the action — no durable intent, no external side effect (0 runs, safe)", async () => {
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new TotalWriteFailStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    const { runtime, total } = counting(base, false);
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => 1000);
+    await actor.drainFollowupsForTest();
+    // Lease/intent writes fail → fail-closed wait-lease: NOTHING runs, nothing
+    // is fake-consumed or fake-shifted.
+    expect(total()).toBe(0);
+    expect(actor["_recoverableTurns"].length).toBe(1);
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeUndefined();
   });
 });
