@@ -18,15 +18,16 @@
 > 不要从历史计划标题推断范围或完成状态。
 ## 修订计划执行状态（2026-09-10 计划）
 
-- 状态：E4-R12 … E4-R19 已按本计划完成并提交（本地 main，未推送）；E4-R20 为
-  总验收收口，产出见 docs/E4-R12-report.md … docs/E4-R20-report.md。
-- reviewedSourceSha（收口验证所依据的提交）：`f134d14`（E4-R19，R12–R19 全部
+- 状态：E4-R12 … E4-R20 已按本计划完成并提交、**已推送 origin/main**；
+  E4-R20 为总验收收口，产出见 docs/E4-R12-report.md … docs/E4-R20-report.md。
+- reviewedSourceSha（收口验证所依据的提交）：`9a47e42`（R12–R19 全部
   源码修复所在的固定提交，见 docs/E4-R20-report.md）。
+- CI 复核（已推送后执行）：run 34546408621（SHA 9fd0f33e…）Linux/Windows/
+  coverage/release attestation **全部成功**，`runtimeReleaseReady=true`
+  （详见 docs/E4-R20-report.md §3b）。
 - 已知未完成/待环境项（不因“计划已执行”而消失）：
-  1. 完整提交组的 Windows/Linux CI 需推送后由 GitHub 重新运行确认（无本地推送
-     授权）；缺失时 runtimeReleaseReady=false，不伪称 READY。
-  2. release attestation/真实发布证据尚未产生（本计划不自动推送/发布）。
-  3. 真实模型 champion 质量：不要求为填报告额外付费；paid champion quality 与
-     runtime release readiness 分开结论（见 docs/E4-R20-report.md）。
+  1. 真实模型 champion 质量：attestation 记录 `championPromotion.status=NOT_RUN`
+     （付费 benchmark 未请求，不为此造假或付费）。
+  2. release 发布动作本身未执行（本计划只到 attestation，不自动发布）。
 - docs:verify 指向本文件作为唯一当前计划入口；历史计划与旧状态段保留为
   HISTORICAL，不做删除或改写。

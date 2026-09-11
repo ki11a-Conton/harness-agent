@@ -1,13 +1,15 @@
-# E4-R20 报告：逐验收条件收口，修正旧报告的过度关闭
+# E4-R20 报告：逐验收条件收口，修正旧报告的过度关闭（含真实 CI 确认）
 
 ```text
 任务：E4-R20（总验收与文档纠偏）
 起始 SHA：f134d14（E4-R19）
 被测源码 SHA（收口验证的固定提交）：9a47e42（含全部 R12–R20 源码修复与文档；
       docs 报告使用 reviewedSourceSha=9a47e42，不制造 SHA 自引用循环）
+推送后 HEAD：9fd0f33（origin/main，19 个提交全部推送）
 开发工作树 fingerprint：9a47e42 之上干净（`git status` 为空）
-状态：PASS（实现修复层与离线工程门禁层完成；runtimeReleaseReady=false ——
-      Windows/Linux CI 复核需推送后执行，无推送授权，不伪称 READY）
+状态：PASS —— 实现修复层、离线工程门禁层、以及推送后的真实 GitHub CI
+      （Linux/Windows/coverage/release attestation）全部通过；
+      runtimeReleaseReady=true（见 §3b，由真实 attestation 原件确认）
 ```
 
 ## 1. 关闭矩阵（旧任务原验收条目 → 实现位置 → 真实测试 → 本轮 Nxx → 关闭状态）
@@ -50,7 +52,9 @@
 - CRLF 归因：R12 精确复现（11 条 DIGEST_MISMATCH）并落地 `.gitattributes` 契约；
   “当前 Windows job 的失败确由 CRLF 造成”仍为强假设，待新 CI 输出确认（不伪称）。
 
-## 3. 最终验证（固定 SHA 9a47e42，本地）
+## 3. 最终验证（固定 SHA 9fd0f33，本地 + 真实 GitHub CI 确认）
+
+### 3a. 本地验证（固定提交 9a47e42 → 推送后 HEAD 9fd0f33）
 
 | 命令 | 结果 |
 |---|---|
@@ -61,13 +65,34 @@
 | R12–R19 各目标集 | 全部通过（129+44+39+16+… 逐任务记录于各报告） |
 
 - 真实模型网络调用：**0**；fake 调用：0。
-- runtimeReleaseReady：**false**——Linux/Windows/coverage CI 与 release attestation
-  需推送后由 GitHub 运行（无推送授权，按计划 §3-12 不自动推送）；不把 mock 隔离
-  当真实 OS 证明，不把 INCONCLUSIVE 改 ACCEPT。
-- championPromotion：separate——真实模型质量未要求付费复跑，明确分开结论。
+
+### 3b. 真实 GitHub CI（已推送，run 34546408621，SHA 9fd0f33e3699c00d230c28c43861d6c8531d2511）
+
+| Job | 结论 |
+|---|---|
+| verify（ubuntu-latest）—— typecheck / test / build / benchmark-smoke / audit / gate evidence | ✅ success（gate evidence 10/10 passed） |
+| verify（windows-latest）—— 同上 | ✅ success（gate evidence 10/10 passed） |
+| coverage gate（ubuntu）—— 阈值门禁 + coverage V2 evidence | ✅ success（statements 89.95%、branches 81.23%、functions 92.76%、lines 91.74%） |
+| release attestation（P38-12）—— 下载三方 evidence → 校验 SHA/argv → 判定 | ✅ success（`Fail job when release not ready` 步骤被 **skipped** = verify_rc 0） |
+
+- **runtimeReleaseReady：true**（attestation 原件确认：`"runtimeReleaseReady": true`，
+  headSha 9fd0f33e…，generatedAt 2026-09-11T00:29:07Z）。
+- **Windows docs gate 已实机通过**：`gate-evidence-windows/windows/docs.json` 显示
+  `passed=true, state=passed, exitCode=0, cleanBefore/cleanAfter=true`，logRef
+  `.ci/evidence/gates/windows/logs/docs-2026-09-11T00-28-27-418Z.log`，errorSummary
+  为完整的 `ALL CHECKS PASS`——**CRLF 假设获得新 CI 实机确认**：`.gitattributes`
+  的 `text eol=lf` 契约使 Windows fresh checkout 下 ledger 引用文件保持 LF，
+  11 条 DIGEST_MISMATCH 不再出现。
+- Windows 上所有 10 个 gate（typecheck/test/build/benchmark_smoke/capability_audit/
+  docs/protocol/security/race/chaos）evidence 全部 `passed`。
+- **championPromotion：separate（NOT_RUN）**——真实模型付费 benchmark 未请求，
+  与 runtime release readiness 明确分开结论（不把 mock 隔离当真实 OS 证明，
+  不把 INCONCLUSIVE 改 ACCEPT）。
 
 ## 4. 未完成 / 环境依赖
 
-- 推送后的 CI 复核（Windows docs gate、全平台矩阵、coverage、release attestation）。
-- 真实模型 champion 质量结论（可选，不为此付费）。
-- 全部未运行/无法证明项均有具体原因（推送授权缺失），未勾选完成。
+- 真实模型 champion 质量结论（可选，不为此付费；attestation 记录
+  `championPromotion.status=NOT_RUN`）。
+- release 发布动作本身（`agent release` 消费 attestation 做正式发布）未执行——
+  本计划只到 attestation，不自动发布。
+- 全部无法证明项均有具体原因（真实付费模型未请求），未勾选完成。
