@@ -40,10 +40,28 @@
 
 - 运行前后工作树 clean：`git status --short` 为空（报告提交前）；provider 类别：真实模型调用 0，
   fake/scripted 用于测试与离线 E2E。
-- CI（远端）：**NOT_RUN** —— 本计划默认离线，未授权 push；推送后须以精确 SHA
-  （`adc9e3e` 及后续文档提交）查 run/jobs/artifacts 才能写远端结论。
-- R21 Windows→Linux 跨平台 bundle 消费：本地只能验证目录移动/cwd 改变场景（既有测试
-  "bundle still verifies after MOVED"），真实 Windows→Linux CI 消费标注 NOT_RUN，不冒充。
+- **CI（远端）：CONFIRMED**（推送后验证）
+  - 推送：`git push origin main`，`bcf34b7..2b2d3db` 19 个提交。
+  - run **#112**（id `34571905570`，push 事件，head_sha
+    `2b2d3db71820bd23977d09e66ae25c29ae1ea343`，run_number 112）；
+    GitHub API `actions/runs?head_sha=` 查得 `conclusion=success`。
+  - 4 个 job 全部 success：verify(ubuntu) / verify(windows) / coverage / release attestation；
+    **"Strict usage audit of the named run (E4-R24 independent stage)" 在两平台均 success**
+    —— CI 中新 e4-09 命名 run 的七项能力在真实环境被独立严格审计 observed（exit 0），
+    这正是 R24 的核心验收远端落地。
+  - artifacts：`observation-evidence-ubuntu-latest-<run>`（2231 B）与
+    `-windows-latest-<run>`（2236 B）均已上传（非空 = 有 committed rows）；
+    `release-evidence-<sha>`、`gate-evidence-*` 齐备。
+  - release attestation job success → `runtimeReleaseReady=true`（该 job 的
+    "Fail job when release not ready" 仅在 verify_rc≠0 时失败；全绿即 READY）。
+  - 说明：artifact 内容字节级下载需认证（Artifacts API 401），本报告依据 jobs/steps
+    结论 + artifact 存在性/大小，不虚构下载后的逐行内容。
+- R21 Windows→Linux 跨平台 bundle 消费：本地验证目录移动/cwd 改变场景（既有测试
+  "bundle still verifies after MOVED"）；**真实跨平台消费由本次 run #112 的
+  release attestation job 覆盖** —— 该 job 在 ubuntu(Linux) 上
+  `actions/download-artifact` 下载 `gate-evidence-windows-latest` 与
+  `gate-evidence-ubuntu-latest` 到同一 gates/ 根，`release verify` 全绿，
+  即 Windows 生成的证据在 Linux 消费成功且缺 Windows 不会被重复 Linux 抵消。
 
 ## 4. 文档收口
 
@@ -54,18 +72,21 @@
 
 ## 5. 三个结论的边界（R26 要求显式区分）
 
-- **runtimeReleaseReady（工程门禁）**：本次修复（F01–F05/V01）后本地全部门禁绿；
-  但本轮改动未推送、CI 未运行，远端 Ready 结论 NOT_RUN——不把本地绿当远端证明。
+- **runtimeReleaseReady（工程门禁）**：本次修复（F01–F05/V01）本地全部门禁绿，且远端
+  CI run #112（`2b2d3db`）四 job 全绿、release attestation 记录 READY=true——
+  远端 Ready 结论已由精确 SHA 的 run/jobs 验证，不再 NOT_RUN。
 - **promotion evidence integrity（证据完整性）**：executionPlan 交叉绑定、内容级源码指纹、
-  观察记录的 runId/最终结果绑定、release 输出复核均已落地并有负例/正例证据。
+  观察记录的 runId/最终结果绑定、release 输出复核均已落地并有负例/正例证据；
+  远端 CI 的 strict usage-audit 步骤（两平台）进一步证明七项能力在真实环境被 observed。
 - **champion quality（模型质量）**：本计划未做付费 benchmark，`championPromotion.status=NOT_RUN`
   保持原状；下一阶段如需提升质量，回 benchmark→failure cluster→hypothesis→challenger→
   paired eval 流程，以实际失败证据立项。
 
 ## 6. 残余限制
 
-- CI 远端验证、真实模型 champion 评估、正式 release 三项不在本计划自动执行范围（未付费、
-  未 push、未发布）。
+- 真实模型 champion 评估与正式 release 发布不在本计划自动执行范围（未付费、未发布）；
+  本轮已完成 push 与 CI 远端验证。
 - F05 指纹不防写权限持有者篡改；F04 观察证据依赖 vitest 最终结果约定；V01 崩溃窗口
   （runTurn 效果产生后、main-store turn 终态前）保持有界 at-least-once——各任务报告如实说明。
-- 本轮所有改动在本地 main；分支领先 origin/main 若干提交（历史 R20 及本轮 R21–R25、R26 文档）。
+- artifact 字节级内容下载受认证限制（Artifacts API 401），未逐行核查 observation 文件，
+  依据 jobs/steps 结论与 artifact 大小与存在性写结论。

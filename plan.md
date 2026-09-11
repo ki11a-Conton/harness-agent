@@ -25,7 +25,8 @@
   - R23（F05 内容级源码指纹与执行参数身份）✅ docs/E4-R23-report.md
   - R25（V01 恢复复合故障专项验证）✅ docs/E4-R25-report.md
   - R26（总验收与文档收口）✅ docs/E4-R26-report.md（关闭矩阵 + 全仓门禁：
-    314 files / 5674 tests 通过、docs:verify ALL CHECKS PASS、typecheck exit 0；CI NOT_RUN）
+    314 files / 5674 tests 通过、docs:verify ALL CHECKS PASS、typecheck exit 0；
+    已推送 origin/main，远端 CI run #112（2b2d3db）四 job 全绿，strict usage-audit 两平台 success）
 - 前一轮（2026-09-10 计划）收口结论保留：E4-R12 … E4-R20 已完成、已推送
   origin/main；CI run 34548502173（bcf34b7）四 job 全部成功，
   `runtimeReleaseReady=true`（详见 docs/E4-R20-report.md）。
@@ -33,7 +34,8 @@
   1. 真实模型 champion 质量：attestation 记录 `championPromotion.status=NOT_RUN`
      （付费 benchmark 未请求，不为此造假或付费）。
   2. release 发布动作本身未执行（本计划只到 attestation，不自动发布）。
-  3. R21–R25 改动仅在本地 main 提交（未推送）、CI 未运行（NOT_RUN）——
-     本计划默认离线；推送后需以精确 SHA 查 CI 才能写远端验证结论。
+  3. R21–R26 已推送 origin/main；Run #112（`2b2d3db`）远端 CI 四 job 全绿
+     （含 strict usage-audit 两平台 success、release attestation READY=true）。
+     后续文档收口提交（documentationCommitSha）会再触发新 run，报告区分两者。
 - docs:verify 指向本文件作为唯一当前计划入口；历史计划与旧状态段保留为
   HISTORICAL，不做删除或改写。
