@@ -24,7 +24,8 @@
   - R24（F03/F04 观察记录运行身份与最终结果）✅ docs/E4-R24-report.md
   - R23（F05 内容级源码指纹与执行参数身份）✅ docs/E4-R23-report.md
   - R25（V01 恢复复合故障专项验证）✅ docs/E4-R25-report.md
-  - R26（总验收与文档收口）：见 docs/E4-R26-report.md
+  - R26（总验收与文档收口）✅ docs/E4-R26-report.md（关闭矩阵 + 全仓门禁：
+    314 files / 5674 tests 通过、docs:verify ALL CHECKS PASS、typecheck exit 0；CI NOT_RUN）
 - 前一轮（2026-09-10 计划）收口结论保留：E4-R12 … E4-R20 已完成、已推送
   origin/main；CI run 34548502173（bcf34b7）四 job 全部成功，
   `runtimeReleaseReady=true`（详见 docs/E4-R20-report.md）。
