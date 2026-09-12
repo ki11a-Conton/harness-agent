@@ -222,6 +222,37 @@ export function parseExecutionPlan(value: unknown): ParsedExecutionPlan {
   // caseIds: non-empty, unique, non-empty strings.
   const caseIdsRaw = r["caseIds"];
   const caseIds: string[] = [];
+
+  // E4-R33 (H03): CAPACITY GUARD FIRST — O(1), right after the array
+  // type/length check and BEFORE any per-case traversal. The grid contract
+  // (repeat × caseCount) bounds every array the evaluator, the writer, and
+  // expectedSampleKeysFromExecutionPlan allocate, so a pathological plan must be
+  // refused with a STRUCTURED error before any large copy, any large loop, or
+  // any grid expansion. Pre-R33 this ran LAST: an over-cap plan still paid an
+  // O(caseCount) fingerprint binding loop (with an O(caseCount × keyCount)
+  // `caseIds.includes` membership scan), which made the published cap
+  // unimplementable. Only the safe-integer `repeat` participates — a fractional
+  // repeat is rejected by `safeCount("repeat", 1)` above and never inflates here.
+  const gridRepeat = r["repeat"];
+  if (
+    Array.isArray(caseIdsRaw) && caseIdsRaw.length > 0 &&
+    typeof gridRepeat === "number" && Number.isSafeInteger(gridRepeat) && gridRepeat >= 1
+  ) {
+    const product = gridRepeat * caseIdsRaw.length;
+    if (!Number.isSafeInteger(product)) {
+      return {
+        plan: null,
+        issues: [...issues, `executionPlan grid size repeat(${gridRepeat}) × caseCount(${caseIdsRaw.length}) overflows a safe integer`],
+      };
+    }
+    if (product > EXECUTION_PLAN_MAX_PLANNED_SAMPLES) {
+      return {
+        plan: null,
+        issues: [...issues, `executionPlan grid size repeat(${gridRepeat}) × caseCount(${caseIdsRaw.length}) = ${product} > the documented ${EXECUTION_PLAN_MAX_PLANNED_SAMPLES} planned-sample cap (refuse before expansion)`],
+      };
+    }
+  }
+
   if (!Array.isArray(caseIdsRaw) || caseIdsRaw.length === 0) {
     issues.push("executionPlan.caseIds must be a non-empty array");
   } else {
@@ -235,7 +266,25 @@ export function parseExecutionPlan(value: unknown): ParsedExecutionPlan {
       }
       seen.add(c);
     }
-    if (idsOk) caseIds.push(...(caseIdsRaw as string[]));
+    // E4-R33 (H03): copy with a LOOP, never `push(...raw)`. An argument spread
+    // hits the engine's argument-count limit and throws `RangeError: Maximum call
+    // stack size exceeded` for a large-but-legal case list (~130k), so such a
+    // plan could not be parsed at all.
+    if (idsOk) for (const c of caseIdsRaw) caseIds.push(c as string);
+  }
+
+  // E4-R28 (G02): LIMIT is the confirmed plan's cap on "the first N of caseIds"
+  // (CLI: `--limit` non-negative, 0 = all → null). The CLI slices the case set
+  // BEFORE building the plan, so a non-null limit SMALLER than the caseIds count
+  // contradicts itself: the plan claims to cap at N but lists more than N (both
+  // the CLI and the grid generator use caseIds as the actual selected set).
+  if (caseIds.length > 0) {
+    const limitRaw = r["limit"];
+    if (typeof limitRaw === "number" && Number.isSafeInteger(limitRaw) && limitRaw >= 1 && limitRaw < caseIds.length) {
+      issues.push(
+        `executionPlan.limit ${limitRaw} < caseIds.length ${caseIds.length} — the plan caps the first N cases but lists more than N (CLI slices before planning; the grid derives from caseIds)`,
+      );
+    }
   }
 
   // caseFingerprints: a 64-hex entry for EVERY planned case — exactly.
@@ -245,13 +294,17 @@ export function parseExecutionPlan(value: unknown): ParsedExecutionPlan {
   } else {
     const fp = fpRaw as Record<string, unknown>;
     const fpKeys = new Set(Object.keys(fp));
+    // E4-R33 (H03): a SET for membership — `caseIds.includes(k)` inside the key
+    // loop is O(caseCount × keyCount); the documented cap is only reachable with
+    // an O(1) test. Duplicate / missing / unplanned semantics are unchanged.
+    const plannedIds = new Set(caseIds);
     for (const c of caseIds) {
       if (!fpKeys.has(c) || !hex64(fp[c])) {
         issues.push(`executionPlan.caseFingerprints must carry a 64-hex fingerprint for planned case ${JSON.stringify(c)}`);
       }
     }
     for (const k of fpKeys) {
-      if (!caseIds.includes(k)) {
+      if (!plannedIds.has(k)) {
         issues.push(`executionPlan.caseFingerprints carries fingerprint for UNPLANNED case ${JSON.stringify(k)}`);
       }
     }
@@ -262,39 +315,6 @@ export function parseExecutionPlan(value: unknown): ParsedExecutionPlan {
   }
   if (typeof r["effectiveModelParams"] !== "object" || r["effectiveModelParams"] === null || Array.isArray(r["effectiveModelParams"])) {
     issues.push("executionPlan.effectiveModelParams must be a non-null object");
-  }
-
-  // E4-R28 (G02): grid-scale guard BEFORE any expansion loop. Independent of
-  // the per-field checks above, a plan whose repeat × caseCount would consume
-  // an unbounded array (expectedSampleKeysFromExecutionPlan / the evaluator /
-  // the writer) is rejected HERE with a structured error so no caller ever
-  // runs a huge loop. The cap is a documented product limit (repeat × case
-  // count); paired benchmarks then run 2× that many logical arm runs — the
-  // plan's own maxLogicalRuns budget is the second, per-experiment gate.
-  if (issues.length === 0 && caseIds.length > 0) {
-    const repRaw = r["repeat"];
-    if (typeof repRaw === "number" && Number.isSafeInteger(repRaw) && repRaw >= 1) {
-      const product = repRaw * caseIds.length;
-      if (!Number.isSafeInteger(product)) {
-        issues.push(`executionPlan grid size repeat(${repRaw}) × caseCount(${caseIds.length}) overflows a safe integer`);
-      } else if (product > EXECUTION_PLAN_MAX_PLANNED_SAMPLES) {
-        issues.push(
-          `executionPlan grid size repeat(${repRaw}) × caseCount(${caseIds.length}) = ${product} > the documented ${EXECUTION_PLAN_MAX_PLANNED_SAMPLES} planned-sample cap (refuse before expansion)`,
-        );
-      }
-    }
-    // E4-R28 (G02): LIMIT is the confirmed plan's cap on "the first N of
-    // caseIds" (CLI: `--limit` non-negative, 0 = all → null). The CLI slices
-    // the case set BEFORE building the plan, so a non-null limit that is
-    // SMALLER than the number of caseIds contradicts itself: the plan claims
-    // to cap at N but lists more cases than N. Reject here (both the CLI and
-    // the grid generator use caseIds as the actual selected set).
-    const limitRaw = r["limit"];
-    if (typeof limitRaw === "number" && Number.isSafeInteger(limitRaw) && limitRaw >= 1 && limitRaw < caseIds.length) {
-      issues.push(
-        `executionPlan.limit ${limitRaw} < caseIds.length ${caseIds.length} — the plan caps the first N cases but lists more than N (CLI slices before planning; the grid derives from caseIds)`,
-      );
-    }
   }
 
   if (issues.length > 0) return { plan: null, issues };
