@@ -812,12 +812,24 @@ export class DefaultSessionActor implements SessionActor {
     return this.persistRecoveryIntent(leased);
   }
 
-  /** E3-10: release OUR lease (never another owner's). */
+  /** E3-10: release OUR lease (never another owner's).
+   *  E4-R32 (H01): this is a BEST-EFFORT cleanup on the recovery re-entry
+   *  paths. A transient store READ failure here used to escape the failure
+   *  handler, aborting the caller's bounded re-check scheduling and surfacing as
+   *  an unhandled drain rejection (T1 parked, action=0, timer=0). The error is
+   *  now surfaced on the degraded channel and the caller KEEPS its finite
+   *  wake-up path. A lease owned by a different live owner is never touched. */
   private async releaseLease(taskId: TurnId): Promise<void> {
-    const record = await this._recoveryStore.getRecord(taskId);
-    if (record === undefined || record.lease === undefined) return;
-    if (record.lease.owner !== this._ownerId) return;
-    await this.persistRecoveryRecord({ ...record, lease: undefined });
+    try {
+      const record = await this._recoveryStore.getRecord(taskId);
+      if (record === undefined || record.lease === undefined) return;
+      if (record.lease.owner !== this._ownerId) return;
+      await this.persistRecoveryRecord({ ...record, lease: undefined });
+    } catch (releaseErr) {
+      process.stderr.write(
+        `[degraded] session ${this.sessionId} release lease read failed for ${taskId}: ${releaseErr instanceof Error ? releaseErr.message : String(releaseErr)}\n`,
+      );
+    }
   }
 
   /** E3-10: default retry scheduler. With a manual clock (`deps.now` injected,
@@ -900,7 +912,15 @@ export class DefaultSessionActor implements SessionActor {
     this._retryTimer = scheduler.schedule(Math.max(delay, 1), () => {
       this._retryTimer = undefined;
       if (this.closed) return; // an old callback never revives a closed actor
-      void this.drainFollowups();
+      // E4-R32 (H01): a BACKGROUND re-check must never surface as an unhandled
+      // rejection. The re-check is NOT re-entered synchronously (no recursive
+      // drain): the error is recorded and the finite wake-up path is preserved.
+      void this.drainFollowups().catch((drainErr) => {
+        process.stderr.write(
+          `[degraded] session ${this.sessionId} recovery re-check drain failed: ${drainErr instanceof Error ? drainErr.message : String(drainErr)}\n`,
+        );
+        if (!this.closed) this.scheduleStoreRecheck();
+      });
     });
   }
 
@@ -950,7 +970,21 @@ export class DefaultSessionActor implements SessionActor {
     const head = this._recoverableTurns[0]!;
     const policy = this.recoveryPolicy();
     const clock = this.recoveryClock();
-    let record = await this.loadOrCreateRecoveryRecord(head.turn.id, head.promptId);
+    // E4-R32 (H01): the recovery-store READ on the re-check entry can fail while
+    // the store is degraded. The durable state is then UNKNOWN, so NO action may
+    // run — but the read error must not escape as an unhandled drain rejection
+    // and park the actor with no timer. Fail closed and keep a finite wake-up
+    // path (the same self-healing schedule as a refused write).
+    let record: RecoveryRecord;
+    try {
+      record = await this.loadOrCreateRecoveryRecord(head.turn.id, head.promptId);
+    } catch (loadErr) {
+      process.stderr.write(
+        `[degraded] session ${this.sessionId} recovery record load failed for ${head.turn.id}: ${loadErr instanceof Error ? loadErr.message : String(loadErr)}\n`,
+      );
+      this.scheduleStoreRecheck();
+      return "wait-backoff";
+    }
 
     // A prior attempt crashed mid-flight: the durable record is stuck in
     // RECOVERY_IN_PROGRESS with a stale/absent lease. Record the interruption
@@ -1057,8 +1091,6 @@ export class DefaultSessionActor implements SessionActor {
     // happen with no durable record of who owns it. Fail closed to wait-lease.
     try {
       record = await this.acquireLease(record);
-      // The durable write path is healthy again — restart the re-check backoff.
-      this._storeRecheckCount = 0;
     } catch (leaseErr) {
       process.stderr.write(
         `[degraded] session ${this.sessionId} recovery lease failed for ${head.turn.id}: ${leaseErr instanceof Error ? leaseErr.message : String(leaseErr)}\n`,
@@ -1081,6 +1113,14 @@ export class DefaultSessionActor implements SessionActor {
     }
     try {
       attempt = await this.persistRecoveryIntent(attempt);
+      // E4-R32 (H02): the FULL strict write path for this round (lease +
+      // attempt-intent) is now durable — the store is healthy again, so restart
+      // the re-check backoff. Resetting on the LEASE write alone masked a
+      // persistent intent-write outage: every re-check acquired the lease,
+      // reset the counter, then failed the intent and re-checked at the 1s floor
+      // forever (no escalation). The reset point is "this round's necessary
+      // persistence succeeded", not "any single write succeeded".
+      this._storeRecheckCount = 0;
     } catch (persistErr) {
       process.stderr.write(
         `[degraded] session ${this.sessionId} recovery attempt-intent persist failed for ${head.turn.id} — NOT running the action: ${persistErr instanceof Error ? persistErr.message : String(persistErr)}\n`,
