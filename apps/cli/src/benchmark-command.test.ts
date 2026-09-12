@@ -1491,6 +1491,122 @@ describe("E4-R13: confirmed plan binds the full identity (N03/N04/N05)", () => {
     }
   });
 
+  // -------------------------------------------------------------------------
+  // E4-R29 (G03): source fingerprint is over RAW BYTES, not a UTF-8 re-decode.
+  // -------------------------------------------------------------------------
+
+  it("R29 (G03): untracked binary bytes 0x80 vs 0x81 yield DIFFERENT fingerprints (no UTF-8 collision)", async () => {
+    const { probeSourceSnapshot } = await import("./benchmark-command.js");
+    const root = await mkdtemp(join(tmpdir(), "e4-r29-binary-"));
+    tempDirs.push(root);
+    const { execFileSync } = await import("node:child_process");
+    try {
+      execFileSync("git", ["init", "-q"], { cwd: root });
+      execFileSync("git", ["-c", "user.email=a@b.c", "-c", "user.name=t", "commit", "--allow-empty", "-qm", "init"], { cwd: root });
+      // 0x80 and 0x81 are BOTH invalid UTF-8 start bytes → a utf8 re-decode maps
+      // each to U+FFFD → identical strings → the OLD code reported equal:true.
+      await writeFile(join(root, "binary.bin"), Buffer.from([0x80]));
+      const p80 = await probeSourceSnapshot(root);
+      await writeFile(join(root, "binary.bin"), Buffer.from([0x81]));
+      const p81 = await probeSourceSnapshot(root);
+      expect(p80.treeFingerprint).toMatch(/^[0-9a-f]{64}$/);
+      expect(p81.treeFingerprint).toMatch(/^[0-9a-f]{64}$/);
+      expect(p81.treeFingerprint).not.toBe(p80.treeFingerprint); // was EQUAL before R29
+      // Identical bytes re-written → STABLE (no mtime/status churn in the hash).
+      await writeFile(join(root, "binary.bin"), Buffer.from([0x80]));
+      const p80again = await probeSourceSnapshot(root);
+      expect(p80again.treeFingerprint).toBe(p80.treeFingerprint);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("R29 (G03): TRACKED binary bytes 0x80 vs 0x81 yield DIFFERENT fingerprints (same porcelain text)", async () => {
+    const { probeSourceSnapshot } = await import("./benchmark-command.js");
+    const root = await mkdtemp(join(tmpdir(), "e4-r29-tracked-"));
+    tempDirs.push(root);
+    const { execFileSync } = await import("node:child_process");
+    const git = (args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] });
+    try {
+      git(["init", "-q"]);
+      git(["config", "user.email", "a@b.c"]);
+      git(["config", "user.name", "t"]);
+      // Base content differs from BOTH edits, so both are dirty single-byte
+      // worktree edits that print the identical porcelain row " M blob.bin".
+      await writeFile(join(root, "blob.bin"), Buffer.from([0x00]));
+      git(["add", "blob.bin"]);
+      git(["commit", "-qm", "base"]);
+      await writeFile(join(root, "blob.bin"), Buffer.from([0x80]));
+      const p80 = await probeSourceSnapshot(root);
+      await writeFile(join(root, "blob.bin"), Buffer.from([0x81]));
+      const p81 = await probeSourceSnapshot(root);
+      expect(p80.treeFingerprint).toMatch(/^[0-9a-f]{64}$/);
+      expect(p81.treeFingerprint).toMatch(/^[0-9a-f]{64}$/);
+      expect(p81.treeFingerprint).not.toBe(p80.treeFingerprint);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("R29: a tracked file present but unreadable (replaced by a directory) yields UNKNOWN, not a normal 'missing' verification", async () => {
+    const { probeSourceSnapshot } = await import("./benchmark-command.js");
+    const root = await mkdtemp(join(tmpdir(), "e4-r29-unreadable-"));
+    tempDirs.push(root);
+    const { execFileSync } = await import("node:child_process");
+    const git = (args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] });
+    try {
+      git(["init", "-q"]);
+      git(["config", "user.email", "a@b.c"]);
+      git(["config", "user.name", "t"]);
+      await writeFile(join(root, "weird.ts"), "content", "utf8");
+      git(["add", "weird.ts"]);
+      git(["commit", "-qm", "base"]);
+      // The path is PRESENT but cannot be read faithfully — it must NOT be
+      // encoded as a normal deletion (which would certify a bogus fingerprint).
+      await rm(join(root, "weird.ts"));
+      await mkdir(join(root, "weird.ts"), { recursive: true });
+      const probe = await probeSourceSnapshot(root);
+      expect(probe.clean).toBe(false);
+      expect(probe.treeFingerprint).toBeNull(); // unknown — no fingerprint over a fake "missing"
+      expect(probe.error).toMatch(/unreadable/i);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("R29: a treeFingerprint change flows into the REAL execution identity → a different journal bucket", async () => {
+    const { buildExecutionIdentityV1, computeExecutionIdentityDigestV1 } = await import("@ar/evaluation");
+    // The journal directory is named by this exact digest
+    // (benchmark-command.ts: `join(outDir, ".paired-journal", executionIdentityDigest)`),
+    // so a changed source fingerprint cannot land in an earlier experiment's journal.
+    const base = {
+      scheduleDigest: "a".repeat(64),
+      suite: "holdout",
+      judgeVersion: "1.0.0",
+      repetitions: 1,
+      orderSeed: 1,
+      modelSeed: null,
+      caseIds: ["a"],
+      caseFingerprints: { a: "b".repeat(64) },
+      candidate: null,
+      providerId: "test-provider",
+      modelId: "test-model",
+      sourceSha: "c".repeat(40),
+      limits: { maxLogicalRuns: null, maxModelCalls: null, maxEstimatedTokens: null, maxEstimatedCostUsd: null },
+      billingClass: "offline-test",
+      isolationBackendId: "not-probed",
+      isolationStrength: "none",
+      promotionEligible: false,
+      decisionPolicy: { version: "test-policy" },
+      thresholdDigest: "d".repeat(64),
+    };
+    const dirA = computeExecutionIdentityDigestV1(buildExecutionIdentityV1({ ...base, treeFingerprint: "1".repeat(64) }));
+    const dirB = computeExecutionIdentityDigestV1(buildExecutionIdentityV1({ ...base, treeFingerprint: "2".repeat(64) }));
+    expect(dirA).toMatch(/^[0-9a-f]{64}$/);
+    expect(dirB).toMatch(/^[0-9a-f]{64}$/);
+    expect(dirB).not.toBe(dirA);
+  });
+
   it("N05: expectedSampleKeys has exactly C×R unique keys (no C×R² duplication), logical runs = 2×C×R", async () => {
     const { buildPairedPlan, expectedSampleKeysFromPlan } = await import("@ar/evaluation");
     const plan = buildPairedPlan({ suite: "holdout", cases: ["a", "b", "c"], repetitions: 2, orderSeed: 7 });

@@ -969,20 +969,28 @@ export interface SourceSnapshotProbe {
 }
 
 /**
- * E4-R13 (N04) + E4-R23 (F05): best-effort git source snapshot — HEAD sha + a
- * REAL working-tree fingerprint. Pure config probing — no provider calls.
+ * E4-R13 (N04) + E4-R23 (F05) + E4-R29 (G03): best-effort git source snapshot —
+ * HEAD sha + a REAL working-tree fingerprint. Pure config probing — no provider
+ * calls.
  *
- * F05 fix: the fingerprint is now CONTENT-based (sha256 over per-file content
- * digests + index state + untracked inputs), not sha256 of the porcelain text.
- * `git status` text is only an ADDITIONAL signal for mode/rename/type changes
- * that content hashing would miss. This supports the claim that ANY source
- * content change alters the confirmed identity; it does NOT make the raw
- * status string the identity.
+ * F05 fix: the fingerprint is CONTENT-based (per-file content digests + index
+ * state + untracked inputs), not sha256 of the porcelain text. `git status`
+ * text is only an ADDITIONAL signal for mode/rename/type changes that content
+ * hashing would miss.
+ *
+ * R29 (G03) fix: file content is hashed as RAW BYTES (`hash.update(buffer)`),
+ * never after a `readFileSync(path, "utf8")` re-decode. UTF-8 decoding maps
+ * every invalid byte to U+FFFD, so two different raw inputs (e.g. 0x80 and
+ * 0x81) collapsed to the same string and produced the SAME fingerprint. The
+ * per-entry records are now unambiguous JSON, and a source path that is present
+ * but cannot be read faithfully (I/O error, a regular tracked path replaced by
+ * a directory) makes the whole probe UNKNOWN (`treeFingerprint: null` + error)
+ * instead of being encoded as a normal "missing"/deleted row.
  */
 export async function probeSourceSnapshot(root: string): Promise<SourceSnapshotProbe> {
   const { execFile } = await import("node:child_process");
   const { createHash } = await import("node:crypto");
-  const { readFileSync, statSync } = await import("node:fs");
+  const { readFileSync, lstatSync, readlinkSync } = await import("node:fs");
   const { resolve } = await import("node:path");
   const run = (args: string[]): Promise<{ ok: boolean; stdout: string }> =>
     new Promise((resolvePromise) => {
@@ -990,7 +998,11 @@ export async function probeSourceSnapshot(root: string): Promise<SourceSnapshotP
         resolvePromise({ ok: err === null, stdout: String(stdout) });
       });
     });
-  const hash = (data: string): string => createHash("sha256").update(data, "utf8").digest("hex");
+  const hashText = (data: string): string => createHash("sha256").update(data, "utf8").digest("hex");
+  /** E4-R29: the file's ACTUAL bytes — never a UTF-8 re-decode. */
+  const hashBytes = (buf: Buffer): string => createHash("sha256").update(buf).digest("hex");
+  /** ENOENT = a genuine worktree deletion; anything else = an unreadable state. */
+  const isAbsent = (e: unknown): boolean => (e as { code?: string } | null)?.code === "ENOENT";
 
   // 1. A provable checkout is the precondition for a certifiable clean tree.
   const head = await run(["rev-parse", "HEAD"]);
@@ -1008,48 +1020,99 @@ export async function probeSourceSnapshot(root: string): Promise<SourceSnapshotP
     return { sourceSha, treeFingerprint: null, clean: true };
   }
 
-  // 3. CONTENT-level fingerprint. Every deviation above is hashed as PATH +
-  //    CONTENT (deleted → "missing", gitlink/submodule → its index commit),
-  //    then the porcelain rows are appended as a mode/rename/type signal.
+  // 3. CONTENT-level fingerprint over RAW BYTES. Each deviation is one
+  //    unambiguous JSON record (no space/separator ambiguity between path and
+  //    metadata) in deterministic path order.
   const lsFiles = await run(["ls-files", "-s", "-z"]);
   const untracked = await run(["ls-files", "--others", "--exclude-standard", "-z"]);
   if (!lsFiles.ok || !untracked.ok) {
     return { sourceSha, treeFingerprint: null, clean: false, error: "git ls-files failed" };
   }
-  const indexFor = new Map<string, string>();
+  const indexFor = new Map<string, { mode: string; blob: string }>();
   for (const rec of lsFiles.stdout.split("\0")) {
     if (rec === "") continue;
     const tab = rec.indexOf("\t");
     const meta = rec.slice(0, tab);
     const path = rec.slice(tab + 1);
-    const blob = meta.split(" ")[1] ?? "";
-    indexFor.set(path, blob);
+    const [mode, blob] = meta.split(" ");
+    indexFor.set(path, { mode: mode ?? "", blob: blob ?? "" });
   }
-  const lines: string[] = [];
-  for (const path of [...indexFor.keys()].sort()) {
-    const indexBlob = indexFor.get(path) ?? "";
-    let contentHash: string;
+
+  // A present-but-unreadable entry is an UNKNOWN source state: it is never
+  // encoded as a normal "deleted" row and never certifies the tree as verified.
+  let unreadable: string | null = null;
+  const markUnreadable = (abs: string, e: unknown): string => {
+    unreadable = unreadable ?? `${abs}: ${(e as { code?: string } | null)?.code ?? "unreadable"}`;
+    return "unreadable";
+  };
+  const describeTracked = (abs: string, index: { mode: string; blob: string }): string => {
+    let st: ReturnType<typeof lstatSync>;
     try {
-      const st = statSync(resolve(root, path));
-      if (st.isFile()) contentHash = hash(readFileSync(resolve(root, path), "utf8"));
-      else contentHash = `gitlink:${indexBlob}`; // submodule / gitlink dir
-    } catch {
-      contentHash = "missing"; // deleted from the worktree (or unreadable)
+      st = lstatSync(abs);
+    } catch (e) {
+      return isAbsent(e) ? "deleted" : markUnreadable(abs, e);
     }
-    lines.push(`${indexBlob} ${contentHash} ${path}`);
+    if (st.isSymbolicLink()) {
+      try {
+        return `symlink:${readlinkSync(abs)}`; // the LINK identity, not its target's contents
+      } catch (e) {
+        return markUnreadable(abs, e);
+      }
+    }
+    if (st.isDirectory()) {
+      // gitlink/submodule: the index commit IS its identity. A regular tracked
+      // file replaced by a directory is a type conflict we cannot read faithfully.
+      if (index.mode === "160000") return `gitlink:${index.blob}`;
+      return markUnreadable(abs, { code: "EISDIR" });
+    }
+    if (st.isFile()) {
+      try {
+        return `bytes:${hashBytes(readFileSync(abs))}`;
+      } catch (e) {
+        return markUnreadable(abs, e);
+      }
+    }
+    return "other";
+  };
+  const describeUntracked = (abs: string): string => {
+    let st: ReturnType<typeof lstatSync>;
+    try {
+      st = lstatSync(abs);
+    } catch (e) {
+      return isAbsent(e) ? "deleted" : markUnreadable(abs, e);
+    }
+    if (st.isSymbolicLink()) {
+      try {
+        return `symlink:${readlinkSync(abs)}`;
+      } catch (e) {
+        return markUnreadable(abs, e);
+      }
+    }
+    if (st.isFile()) {
+      try {
+        return `bytes:${hashBytes(readFileSync(abs))}`;
+      } catch (e) {
+        return markUnreadable(abs, e);
+      }
+    }
+    return st.isDirectory() ? "dir" : "other";
+  };
+
+  const records: string[] = [];
+  for (const path of [...indexFor.keys()].sort()) {
+    const index = indexFor.get(path) ?? { mode: "", blob: "" };
+    records.push(JSON.stringify(["T", index.mode, index.blob, describeTracked(resolve(root, path), index), path]));
   }
   for (const path of untracked.stdout.split("\0").sort()) {
     if (path === "" || indexFor.has(path)) continue;
-    let contentHash: string;
-    try {
-      const st = statSync(resolve(root, path));
-      contentHash = st.isFile() ? hash(readFileSync(resolve(root, path), "utf8")) : "dir";
-    } catch {
-      contentHash = "missing";
-    }
-    lines.push(`U ${contentHash} ${path}`);
+    records.push(JSON.stringify(["U", describeUntracked(resolve(root, path)), path]));
   }
-  const fingerprint = hash(`${lines.join("\n")}\n---\n${status.stdout.trim()}`);
+
+  if (unreadable !== null) {
+    // Unreadable ≠ deleted: the source state cannot be certified → unknown.
+    return { sourceSha, treeFingerprint: null, clean: false, error: `source snapshot unknown, unreadable entry: ${unreadable}` };
+  }
+  const fingerprint = hashText(`${records.join("\n")}\n---\n${status.stdout.trim()}`);
   return { sourceSha, treeFingerprint: fingerprint, clean: false };
 }
 
