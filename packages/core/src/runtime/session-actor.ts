@@ -669,6 +669,15 @@ function nextRequestId(): string {
 const RECOVERY_LEASE_TTL_MS = 60_000;
 /** E4-R17 (N13): bounded re-check window for a pending-commit (reconcile) task. */
 const RECOVERY_RECONCILE_RETRY_MS = 5_000;
+/** E4-R30 (G04): bounded lower-bound re-check after a TRANSIENT recovery-store
+ *  failure — a refused lease/intent write, or a CAS conflict with another
+ *  owner. Fail-closed is preserved (the recovery ACTION never runs), but the
+ *  actor must self-heal once the store recovers WITHOUT waiting for a new user
+ *  message or an explicit drain. The delay escalates (base × 2ⁿ, capped) so a
+ *  long outage backs off instead of hot-looping; the counter resets as soon as
+ *  a durable write succeeds. */
+const RECOVERY_STORE_RECHECK_BASE_MS = 1_000;
+const RECOVERY_STORE_RECHECK_MAX_MS = 30_000;
 
 /** P25-2/3 + P37-1: the single owner of one live session — unified state. */
 export class DefaultSessionActor implements SessionActor {
@@ -716,6 +725,11 @@ export class DefaultSessionActor implements SessionActor {
 
   /** E3-10 — pending retry timer handle. Cancelled on close. */
   private _retryTimer: { cancel(): void } | undefined;
+
+  /** E4-R30 (G04) — consecutive transient-store-failure re-checks, used to
+   *  escalate the bounded re-check delay. Reset to 0 as soon as a durable
+   *  recovery write succeeds (the store is healthy again). */
+  private _storeRecheckCount = 0;
 
   constructor(private readonly deps: SessionActorDeps) {
     this.inputQueue = new InboxSessionInputQueue({
@@ -865,19 +879,55 @@ export class DefaultSessionActor implements SessionActor {
     });
   }
 
+  /** E4-R30 (G04): a TRANSIENT recovery-store failure (a refused lease/intent
+   *  write, or a lost CAS race with another owner) is fail-closed — the
+   *  recovery ACTION never runs — but it must NOT park the actor forever: with
+   *  no scheduler callback the actor would only resume on a new user message or
+   *  an explicit drain. Schedule ONE bounded re-check (at most one live retry
+   *  timer per actor) with an escalating delay. The callback re-enters through
+   *  `drainFollowups` → `loadOrCreateRecoveryRecord`, so it re-reads DURABLE
+   *  state and never acts on a stale record; it performs no `begin` transition,
+   *  so a store outage consumes NO model-action attempt budget. Fail-closed is
+   *  preserved: the lease/intent write is still required before any action. */
+  private scheduleStoreRecheck(): void {
+    const delay = Math.min(
+      RECOVERY_STORE_RECHECK_BASE_MS * 2 ** this._storeRecheckCount,
+      RECOVERY_STORE_RECHECK_MAX_MS,
+    );
+    this._storeRecheckCount += 1;
+    this._retryTimer?.cancel(); // at most one live retry timer per actor
+    const scheduler = this.deps.scheduler ?? this.defaultRecoveryScheduler();
+    this._retryTimer = scheduler.schedule(Math.max(delay, 1), () => {
+      this._retryTimer = undefined;
+      if (this.closed) return; // an old callback never revives a closed actor
+      void this.drainFollowups();
+    });
+  }
+
   /** E4-R25 (V01): TRUE when the durable TURN (main store) is terminal — the
    *  recovery handler's runTurn already finished WITHOUT throwing, so only the
    *  terminal write/consume remains and the action must NEVER re-run. This is
    *  the authoritative pending-commit evidence even when the needsReconcile
-   *  marker could not be persisted (compound write outage). */
-  private async durableTurnIsTerminal(turnId: TurnId): Promise<boolean> {
-    if (this.deps.store === undefined) return false;
+   *  marker could not be persisted (compound write outage).
+   *
+   *  E4-R30 (G04): returns the tri-state `boolean | "unknown"`. A store READ
+   *  error yields "unknown" (not `false`): an unreadable durable state is not a
+   *  confirmed-nonterminal turn, and treating it as one would re-run a possibly
+   *  completed recovery action. */
+  private async durableTurnIsTerminal(turnId: TurnId): Promise<boolean | "unknown"> {
+    // E4-R30 (G04): a READ FAILURE is NOT evidence that the turn is
+    // nonterminal. Returning `false` here would authorise a retry of an action
+    // that may already have completed — a dangerous duplicate side effect. The
+    // tri-state makes "cannot determine" explicit so the caller waits for
+    // reconciliation instead of blindly re-running. (`store` is a required dep;
+    // a missing store is likewise "cannot determine".)
+    if (this.deps.store === undefined) return "unknown";
     try {
       const turn = await this.deps.store.getTurn(turnId);
-      if (turn === undefined) return false;
+      if (turn === undefined) return false; // no durable turn → definitely not terminal
       return turn.status === "completed" || turn.status === "failed" || turn.status === "cancelled";
     } catch {
-      return false;
+      return "unknown";
     }
   }
 
@@ -917,7 +967,19 @@ export class DefaultSessionActor implements SessionActor {
       // only re-attempt the terminal write (reconcile). On success the prompt
       // is consumed and the queue advances; on failure the queue stays frozen
       // at the head (T2 never overtakes an uncommitted T1).
-      if (recoveryNeedsReconcile(record) || await this.durableTurnIsTerminal(head.turn.id)) {
+      const needsReconcile = recoveryNeedsReconcile(record);
+      const terminal: boolean | "unknown" = needsReconcile
+        ? true
+        : await this.durableTurnIsTerminal(head.turn.id);
+      if (terminal === "unknown") {
+        // E4-R30 (G04): the durable turn could not be READ — we cannot tell
+        // whether the prior action finished. Re-running could duplicate an
+        // external side effect, so park (no action, no attempt consumed) and
+        // re-check on a bounded timer until the store recovers.
+        this.scheduleStoreRecheck();
+        return "wait-backoff";
+      }
+      if (terminal) {
         try {
           await this._recoveryStore.putRecord({
             ...record,
@@ -995,10 +1057,15 @@ export class DefaultSessionActor implements SessionActor {
     // happen with no durable record of who owns it. Fail closed to wait-lease.
     try {
       record = await this.acquireLease(record);
+      // The durable write path is healthy again — restart the re-check backoff.
+      this._storeRecheckCount = 0;
     } catch (leaseErr) {
       process.stderr.write(
         `[degraded] session ${this.sessionId} recovery lease failed for ${head.turn.id}: ${leaseErr instanceof Error ? leaseErr.message : String(leaseErr)}\n`,
       );
+      // E4-R30 (G04): fail-closed (no action) but self-healing — a transient
+      // store outage or a lost CAS race must not park the actor forever.
+      this.scheduleStoreRecheck();
       return "wait-lease";
     }
     let attempt: RecoveryRecord;
@@ -1019,6 +1086,10 @@ export class DefaultSessionActor implements SessionActor {
         `[degraded] session ${this.sessionId} recovery attempt-intent persist failed for ${head.turn.id} — NOT running the action: ${persistErr instanceof Error ? persistErr.message : String(persistErr)}\n`,
       );
       await this.releaseLease(head.turn.id);
+      // E4-R30 (G04): the intent could not be made durable, so the action is
+      // correctly NOT run — schedule a bounded re-check so the actor converges
+      // once the store recovers, without a new user message.
+      this.scheduleStoreRecheck();
       return "wait-lease";
     }
 

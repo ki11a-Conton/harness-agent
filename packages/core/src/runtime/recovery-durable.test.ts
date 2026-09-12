@@ -12,7 +12,7 @@
 
 import { describe, expect, it } from "vitest";
 import type {
-  AdmittedPrompt, AgentDefinition, PromptId, SessionId, TurnId, InboxStore,
+  AdmittedPrompt, AgentDefinition, PromptId, SessionId, Turn, TurnId, InboxStore,
 } from "@ar/contracts";
 import { newAgentId } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
@@ -461,5 +461,285 @@ describe("E4-R25 recovery compound-failure verification (V01)", () => {
     expect(total()).toBe(0);
     expect(actor["_recoverableTurns"].length).toBe(1);
     expect(inbox.prompts.find((p) => p.status === "consumed")).toBeUndefined();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// E4-R30 (G04): a TRANSIENT recovery-store failure is fail-closed (the action
+// never runs) but must ALSO be self-healing — the actor schedules a bounded
+// re-check instead of parking until a new user message or an explicit drain.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** E4-R30: LEASE writes are refused (reads still work) — the "RecoveryStore
+ *  temporarily rejects the lease write" outage. */
+class LeaseWriteFailStore extends MemoryRecoveryStore {
+  failLeaseWrites = true;
+  override async putRecord(record: RecoveryRecord): Promise<RecoveryRecord> {
+    if (this.failLeaseWrites && record.lease !== undefined) {
+      throw new Error("recovery store temporarily refuses the lease write");
+    }
+    return super.putRecord(record);
+  }
+}
+
+/** E4-R30: the lease write lands but the ATTEMPT-INTENT write (begin →
+ *  RECOVERY_IN_PROGRESS) is refused — the second fail-closed gate. */
+class IntentWriteFailStore extends MemoryRecoveryStore {
+  failIntentWrites = true;
+  override async putRecord(record: RecoveryRecord): Promise<RecoveryRecord> {
+    if (this.failIntentWrites && record.lease !== undefined && record.state === "RECOVERY_IN_PROGRESS") {
+      throw new Error("recovery store temporarily refuses the intent write");
+    }
+    return super.putRecord(record);
+  }
+}
+
+/** E4-R30: serves a STALE optimistic-concurrency version on read, so the next
+ *  write loses the CAS race — a deterministic "another owner won" conflict. */
+class StaleReadStore implements RecoveryStore {
+  constructor(private readonly inner: MemoryRecoveryStore) {}
+  async getRecord(taskId: TurnId): Promise<RecoveryRecord | undefined> {
+    const r = await this.inner.getRecord(taskId);
+    return r === undefined ? undefined : { ...r, version: Math.max((r.version ?? 1) - 1, 0) };
+  }
+  putRecord(record: RecoveryRecord): Promise<RecoveryRecord> { return this.inner.putRecord(record); }
+  deleteRecord(taskId: TurnId): Promise<void> { return this.inner.deleteRecord(taskId); }
+}
+
+/** E4-R30: the main session store's TURN reads can be broken on demand. */
+class ReadFailSessionStore extends MemorySessionStore {
+  breakReads = false;
+  override async getTurn(id: TurnId): Promise<Turn | undefined> {
+    if (this.breakReads) throw new Error("session store temporarily unavailable");
+    return super.getTurn(id);
+  }
+}
+
+/** E4-R30: a scheduler that RECORDS every schedule (so a test can assert the
+ *  bounded re-check and fire the callback deterministically) and flags cancels. */
+function recordingScheduler(): {
+  scheduled: Array<{ delay: number; fire: () => void; cancelled: boolean }>;
+  scheduler: { schedule(delayMs: number, cb: () => void): { cancel(): void } };
+} {
+  const scheduled: Array<{ delay: number; fire: () => void; cancelled: boolean }> = [];
+  return {
+    scheduled,
+    scheduler: {
+      schedule: (delayMs: number, cb: () => void) => {
+        const entry = { delay: delayMs, fire: cb, cancelled: false };
+        scheduled.push(entry);
+        return { cancel: () => { entry.cancelled = true; } };
+      },
+    },
+  };
+}
+
+const liveTimers = (scheduled: Array<{ cancelled: boolean }>): number =>
+  scheduled.filter((s) => !s.cancelled).length;
+
+describe("E4-R30 (G04) transient recovery-store failure → bounded self-healing wake", () => {
+  it("R30-a: a refused LEASE write is fail-closed (0 actions) yet schedules exactly ONE bounded re-check", async () => {
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new LeaseWriteFailStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    const boundTurnId = await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    const { runtime, total } = counting(base, false);
+    const { scheduler, scheduled } = recordingScheduler();
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => 1000, scheduler);
+    await actor.drainFollowupsForTest();
+
+    // G04 repro anchor was `scheduled: 0, calls: 0`; the fix keeps calls 0 but
+    // MUST schedule a bounded re-check.
+    expect(total()).toBe(0);
+    expect(scheduled.length).toBe(1);
+    expect(liveTimers(scheduled)).toBe(1);
+    expect(scheduled[0]!.delay).toBeGreaterThan(0);
+    expect(actor["_recoverableTurns"].length).toBe(1);
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeUndefined();
+    // The outage consumed NO model-action attempt budget.
+    expect((await recovery.getRecord(boundTurnId))?.attempt).toBe(0);
+  });
+
+  it("R30-b: after the store heals, firing the RECORDED callback converges with NO new user message", async () => {
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new LeaseWriteFailStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    const boundTurnId = await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    const { runtime, total } = counting(base, false);
+    const { scheduler, scheduled } = recordingScheduler();
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => 1000, scheduler);
+    await actor.drainFollowupsForTest();
+    expect(total()).toBe(0);
+    expect(scheduled.length).toBe(1);
+
+    // The outage heals. Fire the callback the ACTOR scheduled — no manual drain,
+    // no new user message.
+    recovery.failLeaseWrites = false;
+    scheduled[0]!.fire();
+    await waitFor(() => total() >= 1);
+    expect(total()).toBe(1);
+    expect((await recovery.getRecord(boundTurnId))?.state).toBe("RECOVERED");
+    expect(actor["_recoverableTurns"].length).toBe(0);
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeDefined();
+  });
+
+  it("R30-c: a refused INTENT write is fail-closed (0 actions) and schedules a bounded re-check", async () => {
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new IntentWriteFailStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    const boundTurnId = await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    const { runtime, total } = counting(base, false);
+    const { scheduler, scheduled } = recordingScheduler();
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => 1000, scheduler);
+    await actor.drainFollowupsForTest();
+
+    expect(total()).toBe(0);
+    expect(scheduled.length).toBe(1);
+    // The begin() transition never became durable: the budget is untouched and
+    // the record is back to a clean PENDING (lease released) — no fake progress.
+    const rec = await recovery.getRecord(boundTurnId);
+    expect(rec?.state).toBe("PENDING");
+    expect(rec?.attempt).toBe(0);
+    expect(actor["_recoverableTurns"].length).toBe(1);
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeUndefined();
+  });
+
+  it("R30-d: a lost CAS race (another owner won) schedules a bounded re-check, never a stall", async () => {
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const inner = new MemoryRecoveryStore();
+    const recovery = new StaleReadStore(inner);
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    const boundTurnId = await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    // A durable PENDING record exists, but every READ serves a stale version, so
+    // this actor's lease write will lose the CAS race.
+    await inner.putRecord({
+      taskId: boundTurnId, lineageId: "lin", state: "PENDING", attempt: 0,
+      maxRecoveryAttempts: 3, nextAttemptAt: 1000, lastError: null, policyVersion: "e2-10-policy-v1",
+      promptId: "prompt-recover-me" as never,
+    });
+
+    const { runtime, total } = counting(base, false);
+    const { scheduler, scheduled } = recordingScheduler();
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => 1000, scheduler);
+    await actor.drainFollowupsForTest();
+
+    expect(total()).toBe(0);          // the loser never runs the action
+    expect(scheduled.length).toBe(1); // …and does not park forever
+    expect(scheduled[0]!.delay).toBeGreaterThan(0);
+    expect(actor["_recoverableTurns"].length).toBe(1);
+  });
+
+  it("R30-e: an UNREADABLE durable turn is 'unknown' — no dangerous replay, a bounded re-check instead", async () => {
+    const store = new ReadFailSessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new MemoryRecoveryStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    const boundTurnId = await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    // A prior attempt crashed mid-flight: RECOVERY_IN_PROGRESS, NO reconcile
+    // marker — so the ONLY evidence of a finished action is the durable TURN.
+    await recovery.putRecord({
+      taskId: boundTurnId, lineageId: "lin", state: "RECOVERY_IN_PROGRESS", attempt: 1,
+      maxRecoveryAttempts: 3, nextAttemptAt: 1000, lastError: null, policyVersion: "e2-10-policy-v1",
+      promptId: "prompt-recover-me" as never,
+    });
+
+    let t = 1000;
+    const { runtime, total } = counting(base, false);
+    const { scheduler, scheduled } = recordingScheduler();
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => t, scheduler);
+    // Wire the head directly (discovery would read the turn before we break it).
+    const turn = (await store.getTurn(boundTurnId))!;
+    actor["_recoverableChecked"] = true;
+    actor["_recoverableTurns"].push({ turn, promptId: "prompt-recover-me" as never });
+
+    store.breakReads = true; // the main store's turn read now FAILS
+    await actor.drainFollowupsForTest();
+    expect(total()).toBe(0);        // an unknown read is NOT a confirmed-nonterminal turn
+    expect(scheduled.length).toBe(1); // …a bounded re-check is scheduled instead
+    expect(scheduled[0]!.delay).toBeGreaterThan(0);
+
+    // The decisive evidence: an UNKNOWN read must not be treated as "confirmed
+    // nonterminal" and must not advance the recovery record toward a retry.
+    // Pre-R30 the record was pushed to RETRY_SCHEDULED / attempt 2 here — a WAL
+    // write that authorises re-running a possibly-completed action.
+    const rec = await recovery.getRecord(boundTurnId);
+    expect(rec?.state).toBe("RECOVERY_IN_PROGRESS");
+    expect(rec?.attempt).toBe(1);
+
+    // Even well past the backoff window the action must NOT be replayed.
+    t = 5000;
+    await actor.drainFollowupsForTest();
+    expect(total()).toBe(0);
+    expect((await recovery.getRecord(boundTurnId))?.state).toBe("RECOVERY_IN_PROGRESS");
+    expect(actor["_recoverableTurns"].length).toBe(1);
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeUndefined();
+  });
+
+  it("R30-f: close() cancels the timer; a stale callback performs NO action and schedules NO new timer", async () => {
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new LeaseWriteFailStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    const { runtime, total } = counting(base, false);
+    const { scheduler, scheduled } = recordingScheduler();
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => 1000, scheduler);
+    await actor.drainFollowupsForTest();
+    expect(scheduled.length).toBe(1);
+
+    await actor.close();
+    expect(scheduled[0]!.cancelled).toBe(true); // close cancels the pending timer
+
+    scheduled[0]!.fire(); // an already-queued stale callback
+    await new Promise((r) => setTimeout(r, 20));
+    expect(total()).toBe(0);        // no action on a closed actor
+    expect(scheduled.length).toBe(1); // no new timer
+  });
+
+  it("R30-g: a long outage backs off with a BOUNDED delay — never a hot loop, never a permanent stall", async () => {
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new LeaseWriteFailStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    const { runtime, total } = counting(base, false);
+    const { scheduler, scheduled } = recordingScheduler();
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => 1000, scheduler);
+    for (let i = 0; i < 6; i += 1) await actor.drainFollowupsForTest();
+
+    expect(total()).toBe(0);
+    expect(scheduled.length).toBe(6);          // one bounded re-check per attempt
+    expect(liveTimers(scheduled)).toBe(1);     // at most ONE live timer per actor
+    const delays = scheduled.map((x) => x.delay);
+    for (let i = 1; i < delays.length; i += 1) {
+      expect(delays[i]!).toBeGreaterThanOrEqual(delays[i - 1]!);
+    }
+    expect(delays[delays.length - 1]!).toBeGreaterThan(delays[0]!); // escalating
+    expect(Math.max(...delays)).toBeLessThanOrEqual(30_000);        // capped → bounded
   });
 });

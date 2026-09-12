@@ -5,6 +5,15 @@
 - 状态：PASS（确定性复现 + 最小修复 + 全回归；Runtime Freeze 例外：可复现数据一致性缺陷）
 - 真实模型调用：0（全部 fault-injection / scripted）
 
+> **SUPERSEDED (E4-R30, 2026-09-12)** — 本报告的 **marker-loss 修复结论保持有效**
+> （`durableTurnIsTerminal` 以 main store 的 durable TURN 终态协调，V01-a/a-restart/b/c 仍全绿）。
+> 但本报告第 3 节「lease/intent 暂时错误恢复后有有限唤醒」一行的 **验收依据不充分**：
+> 该行引用的是 R17 N14（**外部持有有效 lease** 的到期唤醒），与「**本 actor 自己的 lease/intent
+> 写入被存储暂时拒绝**」不是同一条故障路径。后者在 R25 当时**没有** scheduler callback
+> ——复现为 `{"id":"LEASE_FAILURE_WAKE","scheduled":0,"calls":0}`，即存储恢复后不会自动
+> 重新 drain。该缺口由 **E4-R30 (G04)** 修复，见 `docs/E4-R30-report.md`。
+> 本报告保持其被测 SHA `1175acb…` 与当时证据不变，不追改历史结论。
+
 ## 1. 复现（修复前，确定性可复现测试）
 
 V01 复合故障窗口：**RECOVERED 终态写失败 且 needsReconcile marker 同时写失败**（恢复存储
@@ -49,7 +58,7 @@ V01 复合故障窗口：**RECOVERED 终态写失败 且 needsReconcile marker �
 | 每种故障都有完整状态时间线与 action 调用次数 | ✅ | V01-a/b/c 各断言 action 总数、record state、queue、prompt 状态 |
 | ACK 与 marker 连续失败后不会假 consume/假 shift | ✅ | V01-a：record 保持 RECOVERY_IN_PROGRESS、队列冻结 1、prompt 未消费 |
 | 新 actor 不因丢失内存 marker 静默重放已知完成的 action | ✅ | V01-a-restart：终态 turn 判定 → b.total()=0、消费完成、队列清空 |
-| lease/intent 暂时错误恢复后有有限唤醒，测试真实触发 scheduler callback | ✅ | R17 N14 既有用例通过（scheduler 数组 + 到期 fire） |
+| lease/intent 暂时错误恢复后有有限唤醒，测试真实触发 scheduler callback | ⚠️ SUPERSEDED | R25 当时以 R17 N14（**外部**持有有效 lease 的到期唤醒）代替，**并非**本 actor 自身 lease/intent 写失败的路径。该缺口由 **E4-R30 (G04)** 修复：lease/intent/CAS 各自正负例、有界退避、close 取消 —— 见 `docs/E4-R30-report.md` |
 | action 未知时的行为有明确合同，不伪称 exactly-once | ✅ | 本报告第 2 节事务边界；R17 既有边界文档延续 |
 | 若修改 Runtime，报告明确对应复现与 Freeze 例外类别 | ✅ | 确定性正确性缺陷 + 可重复测试（Freeze 例外 #1）；改动仅 session-actor 恢复协调，未动架构 |
 | 相关 recovery、durability、race/security 回归通过 | ✅ | 见第 4 节 |
@@ -59,7 +68,7 @@ V01 复合故障窗口：**RECOVERED 终态写失败 且 needsReconcile marker �
 | 命令 | 结果 |
 |---|---|
 | `pnpm typecheck`（tsc -b 全仓） | exit 0 |
-| `vitest run packages/core/src/runtime/recovery-durable.test.ts` | 12/12（新增 V01-a / a-restart / b / c 4 例） |
+| `vitest run packages/core/src/runtime/recovery-durable.test.ts` | 12/12（新增 V01-a / a-restart / b / c 4 例）— R25 被测 SHA 当时的值；E4-R30 后同一文件为 **19/19**（另加 R30-a…g 7 例） |
 | `vitest run recovery-state-machine + followup-recovery + durable-recovery-store` | 3 files / 30 tests PASS |
 | `vitest run packages/core packages/harness` | 68 files / **658 tests** PASS |
 | `vitest run session-race + session-race2 + race-split` | 3 files / 15 tests PASS |
@@ -70,6 +79,9 @@ V01 复合故障窗口：**RECOVERED 终态写失败 且 needsReconcile marker �
 
 - 崩溃窗口（`runTurn` 已产生外部效果、但 main-store turn 终态持久化前）仍无法与"动作前崩溃"
   区分，保持有界 at-least-once（attempt budget 封顶）——本报告如实说明。
-- `durableTurnIsTerminal` 依赖 main store 读取；main store 与恢复 store 同时不可读时 fail-closed
-  （返回 false → 走原 interrupted/retry 路径，动作受 attempt budget 约束）。
+- **SUPERSEDED (E4-R30)** — ~~`durableTurnIsTerminal` 依赖 main store 读取；main store 与恢复
+  store 同时不可读时 fail-closed（返回 false → 走原 interrupted/retry 路径，动作受 attempt
+  budget 约束）。~~ 返回 `false` 会把「读取失败」**误当作**「已确认非终态」，从而写出
+  `RETRY_SCHEDULED` 的重试 WAL（授权重跑一个可能已完成的动作）。R30 已改为三态
+  `boolean | "unknown"`：读取失败 = `unknown` → 不重试、按有界退避等待协调。
 - V01 关闭了"marker 丢失"这一具体复合窗口；没有为凑任务数重写 Runtime。
