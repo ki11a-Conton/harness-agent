@@ -140,9 +140,10 @@
 
 ## 修订计划执行状态（2026-09-12 计划 E4-R32…R35）— 一页最终状态
 
-> 以上各段为**历史快照**（其日期/证据保留不改写）。**本段是当前有效结论。**
-> 上一轮（E4-R27…R31）已完成并**已推送** origin/main，其 SHA 的 CI 四 job 全绿
-> （exact SHA/run-id 见 `HANDOVER.md` 文末 Historical 快照）。
+> 以上各段为**历史快照**（其日期/证据保留不改写）。
+> **本段在被 E4-R39 收口时标记为历史**：它描述的是 R32…R35 轮次收口时的状态（当时为当前有效结论），
+> 该轮已完成并**已推送** origin/main，其 SHA 的 CI 四 job 全绿。
+> **当前有效结论见文末「2026-09-12 计划 E4-R36…R39」段。**
 
 - 计划入口：`plan.md` → `plan(20260912-021843).md`。收口交付物：`docs/E4-R35-report.md`。
 - 被测 SHA：`testedSourceSha = d2210647`（**干净工作树**；代码内容 = R32 `d23f1708` /
@@ -179,3 +180,98 @@
   关闭，后者 NOT_RUN。
 - **下一步触发条件**：仅当出现真实 benchmark 失败、生产问题或明确用户需求时新建任务；
   本轮到此停止扩展。
+
+---
+
+## 修订计划执行状态（2026-09-12 计划 E4-R36…R39）— 当前有效结论
+
+> 以上各段为**历史快照**（其日期/证据保留不改写）。**本段是当前有效的收口结论。**
+> 计划入口：`plan.md` → `plan(20260912-180524).md`；收口交付物：`docs/E4-R39-report.md`。
+
+- reviewedSourceSha（本计划审查基线）：`a7950fa1f386b2a1adc9ba35ba84aed0ad9ad50c`（main）。
+- 比较基线：`bcf3f42ca31fcf91c714c46745a90e7c91245f83`。
+- testedSourceSha：`01c4ec74706a590294a8c748972bd85dc00bcd50`（R36/R37/R38 实现提交；
+  被测工作树与它**逐字节一致**，门禁运行期间 `git status --short` 为空）。
+- documentationCommitSha：**本文件与 `docs/E4-R39-report.md` 所在的后续文档提交**（只含文档，
+  不改代码/测试/配置，故上述门禁结果继续适用于该提交的代码 = `01c4ec74`）。
+- 平台：Windows（win32）；`providerCalls = 0`（全部离线 fixture / fault injection）。
+- 计划状态：R36 ✅ · R37 ✅ · R38 ✅ · **R39 ⚠️ PARTIAL**（状态同步与 CI 核实完成；
+  但冻结版本上的全仓 `pnpm test` 未取得绿，见下）。
+
+### J01…J04 关闭矩阵
+
+| ID | 优先级 | 问题 | 实际符号/配置 → 测试名 | 实施 ref | 结果 | 限制 |
+|---|---|---|---|---|---|---|
+| J01 | P1 | 首次恢复发现失败后 `_recoverableChecked` 已为 true：无 timer、不重扫，promoted prompt 滞留 | `session-actor.ts`（`drainFollowupsInner` / `discoverRecoverableTurns`）→ `R36-a…f`（`recovery-durable.test.ts`） | `2341f6ee` | **RESOLVED**（29/29；修复前 6/6 失败） | 只覆盖「暂时性」读取故障；不声称消除外部动作重复 |
+| J02 | P2 | 旧位置 `apps/cli/src/e4-r24-fixture-*.test.ts` 残留仍被根配置收集 | `vitest.config.ts`（根 `exclude`）→ `E4-R37`（`e4-r24-final-result-protocol.test.ts`） | `07c40cfe` | **RESOLVED**（5/5；全局收集集合有/无规则均 5755 点） | 按生成文件名模式排除；`tsc -b` 仍编译 `src` 下的历史残留（R37 报告 §6 已记录该决定） |
+| J03 | P2 | R33 正例用占位 digest、只断言「无 cap issue」，且缺 loader 证据 | `e4-r38-execution-plan-boundary.test.ts` + R33-f → `R38-a/b/c` | `01c4ec74` | **RESOLVED（验收补强）**：3/3；R33 7/7；R27/R28/R33/R38 = 42 passed | **无生产修复**（未发现生产缺陷）；超限负例只改 `repeat` 这一容量因子；容量上限**未被以「放宽」方式验证过** |
+| J04 | P2 | R35 已完成并推送，但 plan/HANDOVER/README 仍写进行中/待推送 | `plan.md` / `HANDOVER.md` / `README.md` / `README.zh-CN.md` / 本文件 | 本轮文档提交 | **RESOLVED** | 历史报告当时状态保留在历史段 |
+
+### 门禁实测（`testedSourceSha = 01c4ec74`，干净工作树，本会话重新实测）
+
+| 命令 | 实测结果 | 退出码 |
+|---|---|---|
+| `pnpm typecheck`（`tsc -b`） | 全包通过 | 0 |
+| `pnpm test` | **318 文件 / `1 failed \| 5738 passed \| 1 skipped (5740)`** | **1** |
+| `pnpm docs:verify` | ALL CHECKS PASS（含 E4-00 计划入口指向 `plan(20260912-180524).md`、HANDOVER 静态真值） | 0 |
+| `pnpm test:race` | 11 文件 / 23 passed | 0 |
+| `pnpm test:security` | 18 文件 / 2133 passed | 0 |
+| `pnpm test:protocol` | 7 文件 / 52 passed | 0 |
+| `pnpm test:chaos` | 1 文件 / 12 passed | 0 |
+
+- **唯一失败（3 次运行 3 次相同）**：`apps/cli/src/e4-09-production-e2e.test.ts >
+  E4-09 adversarial E2E (real chain) > a forged decision field (digest recomputed) …`
+  —— 失败发生在共享 helper `buildRealChain`（第 378 行），
+  `expected 'INVALID' to be 'ACCEPT'`（**有效**候选链被判 `INVALID`），不是被篡改的负例断言。
+- **判别性对照（该文件本身是好的）**：`npx vitest run apps/cli/src/e4-09-production-e2e.test.ts`
+  隔离运行 **5/5 passed**（4 次，其中 1 次在 16 核上跑 8 个 CPU 满载进程）；
+  `npx vitest run apps/cli/src` 整目录 **35 文件 / 419 passed**（2 次）；
+  与 `e4-r24-final-result-protocol.test.ts`、与 `release-command.test.ts` 两两并发均通过。
+- 跑完全量后 `git status --short` 为空（瞬时非空会在下条说明）：干净树门禁真实生效，无残留污染。
+- 旧 G01…G04/复现继续阻断：R27 18/18 · R28 14/14 · R33 7/7；R30/R32 恢复套件 29/29。
+
+### 全量并发下的干扰通道（实测事实 + 未证实的假设）
+
+- **事实**：全量运行期间以 ~120ms 周期轮询 `git status --porcelain`，观测到**工作树瞬时变为
+  非空再回到空**（3 个不同状态，非空窗口 ≲100ms）；同期任一时刻的树是干净的。
+- **代码事实**：benchmark 的宿主机状态哨兵用
+  `captureHostState(process.cwd(), { include: [], excludePrefixes: [] })`，即 `treeDigest = null`，
+  `hostMutated` 只比较 `HEAD` 与 `git status --porcelain`（`benchmark-isolation.ts:221-249`）；
+  而 evaluator 的身份可比性要求 `gitSha/dirty` 可比较（`champion-eval-v3.ts:170`）。
+- **未证实的假设**：上述瞬时脏树是 `buildRealChain` 判 `INVALID` 的原因。
+  **已做的证伪尝试**：在 e4-09 运行时人为制造瞬时未跟踪文件（2 次）**未能复现**；
+  50% CPU 负载（2 次）**未能复现**。故根因保持**未定**，不写成已归因。
+- **未查明**：是哪个用例产生了该瞬时脏状态；`INVALID` 的真实触发条件。
+
+### 远端 CI（只读核实，不用旧绿灯证明新代码）
+
+- 本计划基线 `a7950fa1` 的 run `34685817447` 四 job success（**仅作基线事实**，不用于证明 R36…R38）。
+- **本轮实现提交 `01c4ec74` 自身的 run `34687657690`：整体 conclusion = failure。**
+  - Ubuntu 主门禁 job：全 step success（含 `Unit and integration tests`、`Build`、
+    strict usage audit、benchmark smoke、gate evidence）。coverage gate（ubuntu）：success。
+  - **Windows 主门禁 job：`Unit and integration tests` step 失败**；失败点两次尝试不同：
+    - attempt 1（102.74s）：`apps/cli/src/release-command.test.ts > P38.2-4/13 … > runGate
+      executes the canonical command …` —— `expect(written.passed).toBe(cleanBefore && cleanAfter)`
+      收到 `false`（**树是干净的**，但该测试内嵌套执行的真实 `pnpm typecheck` 返回非零）。
+    - attempt 2（260.00s）：3 例失败 —— `packages/harness/src/delegation-worker.integration.test.ts`
+      的 `child writes to an isolated root…`（`ENOENT … \src\helper.ts`，耗时 **134.6s**）、
+      `packages/memory/src/migration.test.ts` 两例 `Hook timed out in 10000ms`（`beforeEach` 的
+      `mkdtemp`）。attempt 2 汇总：`2 failed | 316 passed (318)` 文件、
+      `3 failed | 5736 passed | 1 skipped (5740)` 用例。
+  - release attestation job：**skipped**（上游 Windows 红）。
+- 未下载 artifacts 逐字节复核：只核实 job/step 状态，故**不声称**已独立重放 release 证据。
+
+### 未完成 / NOT_RUN（不勾选）
+
+- **冻结版本上的全仓 `pnpm test` 未绿**（R39 未通过项）：`e4-09` 有效链在全量并发下判
+  `INVALID`，根因未定；不得用隔离通过或其它门禁的绿来替代该项。
+- **本轮 SHA 的 Windows CI 主门禁失败**（run `34687657690`，两次尝试），根因未定。
+- **真实模型 champion 质量 = NOT_RUN**：未请求付费 benchmark，不造假、不付费。
+- **release 发布动作未执行**：各轮计划只到 attestation，不自动发布。
+- **CI artifact 未下载逐字节复核**：只核实 job/step 状态。
+- **历史间歇失败（R34 的 cross-case contamination 波动）根因未知且本轮未复现**，
+  保持「未复现 / 根因未定」口径；不因清理旧夹具而宣称所有波动均已归因。
+
+- **下一步触发条件 / 最小补足动作**（详见 `docs/E4-R39-report.md` 第 8 节）：
+  先复现（在同一机器上稳定拿到 `e4-09` 全量失败，并定位使树瞬时变脏的用例），
+  再判定是生产侧（宿主机哨兵对并发测试过于敏感）还是测试侧的隔离缺口；不做架构重写。

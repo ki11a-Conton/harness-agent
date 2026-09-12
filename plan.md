@@ -36,8 +36,11 @@ git 历史中，产物分别见 `docs/E4-R27-report.md` … `docs/E4-R31-report.
     `e4-r24-final-result-protocol.test.ts` 5/5）
   - R38（J03：执行计划边界的有效正例与 loader 验收）✅ `docs/E4-R38-report.md`
     （新增 `e4-r38-execution-plan-boundary.test.ts` 3/3 + 强化 R33-f 正例；无生产修复）
-- R39（状态同步与最终门禁收口）：✅ `docs/E4-R39-report.md`
-  —— 关闭矩阵、干净树全仓门禁、远端 CI 只读核实与免责口径均记录于该报告。
+- R39（状态同步与最终门禁收口）：⚠️ **PARTIAL** `docs/E4-R39-report.md`
+  —— 关闭矩阵、干净树门禁实测、远端 CI 只读核实与免责口径均记录于该报告。
+  **未通过项**：冻结版本 `01c4ec74` 上的全仓 `pnpm test` 未取得绿
+  （`e4-09-production-e2e.test.ts` 的 `buildRealChain` 在全量并发下 3/3 把有效链判
+  `INVALID`；隔离 5/5 通过；根因未定），且该 SHA 自身的 Windows CI job 两次尝试均失败。
 - 上一轮（2026-09-12 计划 E4-R32…R35）已完成并**已推送** origin/main：
   R32/R33/R34 收口于 `d212d977`，状态与 CI 补记于 `a7950fa1`；CI run `34685604645`
   与 `34685817447` 四个 job 全绿。逐项结论见 `docs/E4-R32-report.md` … `docs/E4-R35-report.md`。

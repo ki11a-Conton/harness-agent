@@ -286,7 +286,7 @@ mcp-runtime, app-server, release-integrity).
   G02 (execution-plan field/scale constraints), G03 (raw-byte source
   fingerprint), G04 (bounded recovery wake-up) and the independent close-out.
 
-### Completed in this round (2026-09-12 plan E4-R32…R35), pending push + new CI
+### E4-R32 … E4-R35 (2026-09-12 plan) — pushed to origin/main, CI-green at their SHAs
 
 - **E4-R32** (H01/H02 recovery-store combined failure + intent backoff) —
   [`docs/E4-R32-report.md`](./docs/E4-R32-report.md): lease cleanup is now
@@ -308,11 +308,56 @@ mcp-runtime, app-server, release-integrity).
   config that keeps the production reporter; a leftover fixture can no longer
   be collected by the next full run. `e4-r24-final-result-protocol.test.ts`
   4/4.
-- **E4-R35** (post-push status + final acceptance close-out) — in progress;
-  delivers `docs/E4-R35-report.md` and the one-page `docs/E4-STATUS.md`.
+- **E4-R35** (post-push status + final acceptance close-out) —
+  [`docs/E4-R35-report.md`](./docs/E4-R35-report.md): closure matrix, full-repo
+  gates on a clean tree, and read-only remote CI verification, summarised in
+  `docs/E4-STATUS.md`.
+
+### E4-R36 … E4-R39 (2026-09-12 plan) — implemented, pushed, closing out the status
+
+- **E4-R36** (J01 first recovery discovery must be re-scannable) —
+  [`docs/E4-R36-report.md`](./docs/E4-R36-report.md): `_recoverableChecked` now
+  means "a discovery pass COMPLETED", not "one was started". A transient read
+  failure during the very first scan used to escape the drain AND mark discovery
+  done forever (no timer, no re-scan, a promoted prompt left on an unowned
+  turn); the scan now commits atomically (a partial scan enqueues nothing) and a
+  failed pass fail-closes with a bounded, self-healing wake-up.
+  `recovery-durable.test.ts` 29/29 (6 new cases fail without the fix).
+- **E4-R37** (J02 upgraded workspaces must not collect legacy fixtures) —
+  [`docs/E4-R37-report.md`](./docs/E4-R37-report.md): `.gitignore` is not a
+  Vitest exclude. The root config now structurally excludes the generated
+  `apps/cli/src/e4-r24-fixture-*.test.ts` pattern (framework defaults preserved
+  via `configDefaults.exclude`), so a leftover deliberately-failing fixture can
+  never enter the official run — no manual cleanup required.
+  `e4-r24-final-result-protocol.test.ts` 5/5.
+- **E4-R38** (J03 valid positive + promotion-loader boundary) —
+  [`docs/E4-R38-report.md`](./docs/E4-R38-report.md): acceptance hardening, **no
+  production change**. A fully cross-bound baseline pair (real
+  `computeExecutionPlanDigest`, real identity/policy/grid/evidence bindings)
+  reaches a real `ACCEPT` and a real `loader.ok=true`; the over-cap negative is
+  derived from that same pair by changing only `repeat` and is refused by BOTH
+  the evaluator (exactly one calibrated capacity violation) and the promotion
+  loader. `e4-r38-execution-plan-boundary.test.ts` 3/3.
+- **E4-R39** (status sync + final gates) — ⚠️ **PARTIAL** —
+  [`docs/E4-R39-report.md`](./docs/E4-R39-report.md): the J01…J04 closure matrix,
+  the gates measured on the frozen, clean `01c4ec74` tree, and the read-only
+  remote CI verification for this round's own SHA. Green: `pnpm typecheck` (0),
+  `pnpm docs:verify` (ALL CHECKS PASS), `test:race` 23, `test:security` 2133,
+  `test:protocol` 52, `test:chaos` 12. **NOT green: the full `pnpm test`** — 318
+  files, `1 failed | 5738 passed | 1 skipped (5740)`, the same single failure in
+  3/3 runs (`e4-09-production-e2e.test.ts` → `buildRealChain` judges a valid
+  chain `INVALID`), while that file passes 5/5 in isolation (4 runs) and
+  `apps/cli/src` passes as a whole (2 runs). Root cause **undetermined**; two
+  hypotheses (CPU load, transient dirty tree) were tested and **falsified**.
+  The Windows CI job for `01c4ec74` (run `34687657690`) also failed both
+  attempts, with a different failure set each time.
 
 ### Unfinished / NOT_RUN (see [HANDOVER.md](./HANDOVER.md) for the detail)
 
+- **Full-repo `pnpm test` is not green at the frozen revision** — the `e4-09`
+  valid-chain `INVALID` failure above, and the Windows CI job for this round's
+  SHA. Both are recorded as real open gaps with their evidence; neither is
+  explained away as fixture dirt.
 - **Real-model champion quality**: `championPromotion.status=NOT_RUN` — the
   paid real-model benchmark was not requested; no fake readiness is claimed.
 - **Release publish action**: plans stop at attestation; no automatic publish.

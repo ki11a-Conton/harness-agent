@@ -256,7 +256,7 @@ app-server、release-integrity）。
   G01（晋升隔离资格）、G02（执行计划字段/规模约束）、G03（原始字节源码指纹）、
   G04（恢复存储有限唤醒）与独立收口。
 
-### 本轮已完成（2026-09-12 计划 E4-R32…R35），待推送 + 新 CI 确认
+### E4-R32 … E4-R35（2026-09-12 计划）—— 已推送 origin/main，其 SHA 的 CI 全绿
 
 - **E4-R32**（H01/H02 恢复存储组合故障 + intent 退避）——
   [`docs/E4-R32-report.md`](./docs/E4-R32-report.md)：lease 清理改为尽力而为，不再中断
@@ -272,11 +272,43 @@ app-server、release-integrity）。
   [`docs/E4-R34-report.md`](./docs/E4-R34-report.md)：final-result 协议夹具移出根 vitest
   `include`，改放 `apps/cli/test-infra/observation-fixtures/`，并以专用子进程配置保留生产
   reporter；残留夹具不再被下一次全量运行收集。`e4-r24-final-result-protocol.test.ts` 4/4。
-- **E4-R35**（提交后状态更新 + 最终验收收口）—— 进行中；交付 `docs/E4-R35-report.md`
-  与一页 `docs/E4-STATUS.md`。
+- **E4-R35**（提交后状态更新 + 最终验收收口）——
+  [`docs/E4-R35-report.md`](./docs/E4-R35-report.md)：关闭矩阵、干净树全仓门禁与远端 CI
+  只读核实，汇总见 `docs/E4-STATUS.md`。
+
+### E4-R36 … E4-R39（2026-09-12 计划）—— 已实现、已推送，正在收口状态
+
+- **E4-R36**（J01 首次恢复发现必须可重扫）——
+  [`docs/E4-R36-report.md`](./docs/E4-R36-report.md)：`_recoverableChecked` 的语义改为
+  「一次恢复发现已**完整成功**」，而非「曾经开始扫描」。首次扫描的暂时读取故障过去会
+  逃逸出 drain **并**永久标记发现完成（无 timer、不重扫、promoted prompt 滞留在无 owner 的
+  turn 上）；现在扫描**原子提交**（部分扫描不入队任何东西），失败则 fail-closed 并保留
+  有界自愈唤醒。`recovery-durable.test.ts` 29/29（新增 6 例在修复前全部失败）。
+- **E4-R37**（J02 升级后的工作区不得收集旧代夹具）——
+  [`docs/E4-R37-report.md`](./docs/E4-R37-report.md)：`.gitignore` 不是 Vitest 的 exclude。
+  根配置现在按生成文件名模式结构性排除 `apps/cli/src/e4-r24-fixture-*.test.ts`
+  （用 `configDefaults.exclude` 保留框架默认值），残留的故意失败夹具再也不可能进入正式
+  运行——无需用户手工清理。`e4-r24-final-result-protocol.test.ts` 5/5。
+- **E4-R38**（J03 有效正例 + promotion-loader 边界）——
+  [`docs/E4-R38-report.md`](./docs/E4-R38-report.md)：**验收补强，无生产改动**。完整交叉绑定的
+  基准对（真实 `computeExecutionPlanDigest`、真实身份/策略/网格/证据绑定）达到真实 `ACCEPT`
+  与真实 `loader.ok=true`；超限负例由同一基准只改 `repeat` 派生，被 evaluator（恰好一条校准过的
+  容量违规）与 promotion loader 双双拒绝。`e4-r38-execution-plan-boundary.test.ts` 3/3。
+- **E4-R39**（状态同步 + 最终门禁）—— ⚠️ **PARTIAL** ——
+  [`docs/E4-R39-report.md`](./docs/E4-R39-report.md)：J01…J04 关闭矩阵、在冻结的干净版本
+  （`01c4ec74`）上实测的门禁、以及本轮**自身 SHA** 的远端 CI 只读核实。已绿：
+  `pnpm typecheck`（0）、`pnpm docs:verify`（ALL CHECKS PASS）、`test:race` 23、
+  `test:security` 2133、`test:protocol` 52、`test:chaos` 12。**未绿：全仓 `pnpm test`** ——
+  318 文件 / `1 failed | 5738 passed | 1 skipped (5740)`，3 次运行都是同一处失败
+  （`e4-09-production-e2e.test.ts` → `buildRealChain` 把有效链判为 `INVALID`），而该文件
+  隔离运行 5/5 通过（4 次）、`apps/cli/src` 整目录 2/2 通过。根因**未定**；两个假设
+  （CPU 负载、瞬时脏树）经实验**被证伪**。`01c4ec74` 的 Windows CI job（run
+  `34687657690`）两次尝试也都失败，且失败用例集每次不同。
 
 ### 未完成 / NOT_RUN（详情见 [HANDOVER.md](./HANDOVER.md)）
 
+- **冻结版本上的全仓 `pnpm test` 未绿** —— 上述 `e4-09` 有效链判 `INVALID`，以及本轮 SHA 的
+  Windows CI 主门禁失败。两者都按真实缺口记录，证据在案，**不**以「夹具残留」解释掉。
 - **真实模型 champion 质量**：`championPromotion.status=NOT_RUN` —— 未请求付费真实模型
   benchmark；不伪称就绪。
 - **release 发布动作**：各轮计划只到 attestation，不做自动发布。
