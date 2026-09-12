@@ -227,6 +227,10 @@
   隔离运行 **5/5 passed**（4 次，其中 1 次在 16 核上跑 8 个 CPU 满载进程）；
   `npx vitest run apps/cli/src` 整目录 **35 文件 / 419 passed**（2 次）；
   与 `e4-r24-final-result-protocol.test.ts`、与 `release-command.test.ts` 两两并发均通过。
+- **同一版本存在一次留存的绿运行**：`01c4ec74` 提交于 18:05:54，18:06:16 的一次全量运行留存
+  日志为 `318 passed (318)` / `5739 passed | 1 skipped (5740)`（`/tmp/full_test.log`）。
+  与 18:25 起的 3/3 失败同版本 ⇒ 该失败**不是版本的确定性属性**，而是环境/时序相关。
+  该日志不记录当时的工作树状态，故只用于证明「同版本曾绿」，**不**用于证明本轮门禁已通过。
 - 跑完全量后 `git status --short` 为空（瞬时非空会在下条说明）：干净树门禁真实生效，无残留污染。
 - 旧 G01…G04/复现继续阻断：R27 18/18 · R28 14/14 · R33 7/7；R30/R32 恢复套件 29/29。
 
@@ -238,6 +242,10 @@
   `captureHostState(process.cwd(), { include: [], excludePrefixes: [] })`，即 `treeDigest = null`，
   `hostMutated` 只比较 `HEAD` 与 `git status --porcelain`（`benchmark-isolation.ts:221-249`）；
   而 evaluator 的身份可比性要求 `gitSha/dirty` 可比较（`champion-eval-v3.ts:170`）。
+- **另一条实测现象**：`release-command.test.ts` 在套件内嵌套执行真实 `pnpm typecheck`，
+  与 R37 协议测试的瞬时夹具重叠时会在 `apps/cli/dist/` 留下**孤儿编译产物**
+  （`e4-r24-fixture-*-legacy-assert-fail.test.js` 等）。它与本次 `INVALID` 的因果关系**未验证**，
+  仅作为「环境在会话中途发生变化」的记录（详见报告 §4.3）。
 - **未证实的假设**：上述瞬时脏树是 `buildRealChain` 判 `INVALID` 的原因。
   **已做的证伪尝试**：在 e4-09 运行时人为制造瞬时未跟踪文件（2 次）**未能复现**；
   50% CPU 负载（2 次）**未能复现**。故根因保持**未定**，不写成已归因。
