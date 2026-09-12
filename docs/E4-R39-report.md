@@ -154,7 +154,15 @@ TOTAL_DISTINCT_PORCELAIN_STATES=3
 | SHA 角色 | SHA | run | 结果 |
 |---|---|---|---|
 | 本计划基线（**仅作基线事实**） | `a7950fa1` | `34685817447` | 四 job success |
-| **本轮实现提交（testedSourceSha）** | `01c4ec74` | **`34687657690`** | **整体 conclusion = failure** |
+| **本轮实现提交（testedSourceSha）** | `01c4ec74` | **`34687657690`** | **整体 conclusion = failure**（Windows 主门禁红） |
+| 文档提交（本报告所在批次的前一提交） | `a0a99ce0` | `34689017816` | **cancelled** —— 被我自己随后的连续推送按 `concurrency.cancel-in-progress` 取消，**不可用作证据** |
+| 文档提交（本报告所属提交） | `2db1a9cd` | `34689110496` | **success —— 四个 job 全绿**（含 Windows 主门禁） |
+
+> **关键对照**：`01c4ec74` 与 `2db1a9cd` 的**代码与测试完全相同**（后者只改文档），
+> 但 Windows 主门禁在前者**两次尝试都失败**、在后者**一次通过**。
+> 因此那个 Windows 失败**也不是该代码版本的确定性属性**，而是**波动**——
+> 与第 4 节本地 `e4-09` 的结论方向一致（同版本 18:06 曾绿 vs 18:25 起 3/3 红）。
+> 本报告仍**不声称** `01c4ec74` 的 CI 是绿的：它的事实结论就是 failure。
 
 `01c4ec74` 的 run `34687657690` 逐 job / step 状态：
 
@@ -187,6 +195,8 @@ Windows job 的两次尝试，**失败点不同**（这是「同一 job 在不�
 --log-failed`，含 `--attempt 1`）。**未下载并逐字节复核任何 artifact**
 （`test-report.log`、`capability-matrix-*`、`gate-evidence-*` 等均未取回），
 因此**不**声称已独立重放 release 证据，也不声称 gate evidence 的内容正确。
+本报告核实到 run `34689110496`（`2db1a9cd`）为止；若之后再有文档提交，其自身的
+CI 结论不在本报告范围内，不在此追认。
 
 **归因边界（计划第 7 节第 7 条）**：Windows 两次尝试失败点不同、本地全量失败点又是第三处
 （`e4-09`），三处都不在隔离运行时复现 —— 这些**不足以**得出统一根因。既有历史间歇失败
@@ -232,6 +242,8 @@ Windows job 的两次尝试，**失败点不同**（这是「同一 job 在不�
    与两个最可疑干扰源两两并发通过；**根因未定**。
 2. 本轮 SHA 的**远端 Windows CI job 失败**（run `34687657690`），两次尝试失败点不同；
    同 run 的 Ubuntu 主门禁与 coverage 成功，release attestation skipped。
+   **但同一代码的文档提交 `2db1a9cd`（run `34689110496`）四 job 全绿** ⇒
+   该 Windows 失败同样是**波动**而非版本确定性结论；`01c4ec74` 自身的事实结论仍是 failure。
    **不能声称 CI 全绿。**
 
 **NOT_RUN（不勾选）**
@@ -269,3 +281,8 @@ Windows job 的两次尝试，**失败点不同**（这是「同一 job 在不�
 - §4.1 第 8 步之后的第三次全量运行与前两次失败点相同，但三次都在同一台机器、同一时段、
   同一 `node_modules` 状态下进行，不能据此推断其它环境的表现。
 - 本报告不引用自身 SHA；`documentationCommitSha` 的确认以推送后的提交列表为准。
+- **操作失误如实记录**：我把两个文档提交连续推送，触发 workflow 的
+  `concurrency.cancel-in-progress`，导致 `a0a99ce0` 的 run `34689017816` 被**取消**（而非跑完）。
+  该 run 的结论不可用作证据；下一个提交 `2db1a9cd` 的 run 才是有效的文档提交证据。
+- 容量上限的判别性未证实（见本节第一条）与 `INVALID` 根因未定，
+  共同意味着**本轮不能宣称「Runtime + 门禁全绿」**。

@@ -303,7 +303,9 @@ app-server、release-integrity）。
   （`e4-09-production-e2e.test.ts` → `buildRealChain` 把有效链判为 `INVALID`），而该文件
   隔离运行 5/5 通过（4 次）、`apps/cli/src` 整目录 2/2 通过。根因**未定**；两个假设
   （CPU 负载、瞬时脏树）经实验**被证伪**。`01c4ec74` 的 Windows CI job（run
-  `34687657690`）两次尝试也都失败，且失败用例集每次不同。
+  `34687657690`）两次尝试也都失败，且失败用例集每次不同；**只改文档、代码完全相同的**
+  `2db1a9cd`（run `34689110496`）四 job 全绿 ⇒ 该 Windows 失败是**波动**而非版本确定性结论，
+  但 `01c4ec74` 自身的事实结论仍是 failure。
 
 ### 未完成 / NOT_RUN（详情见 [HANDOVER.md](./HANDOVER.md)）
 

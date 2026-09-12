@@ -267,6 +267,11 @@
       `mkdtemp`）。attempt 2 汇总：`2 failed | 316 passed (318)` 文件、
       `3 failed | 5736 passed | 1 skipped (5740)` 用例。
   - release attestation job：**skipped**（上游 Windows 红）。
+- **同代码对照（重要）**：文档提交 `2db1a9cd`（只改文档，代码/测试与 `01c4ec74` 相同）的
+  run `34689110496` = **四 job 全绿**（含 Windows 主门禁）。⇒ 那个 Windows 失败
+  **不是该代码版本的确定性属性**，而是**波动**；`01c4ec74` 自身的事实结论仍是 failure。
+- 操作失误如实记录：文档提交 `a0a99ce0` 的 run `34689017816` 被我随后的连续推送按
+  `concurrency.cancel-in-progress` **取消**，不可用作证据。
 - 未下载 artifacts 逐字节复核：只核实 job/step 状态，故**不声称**已独立重放 release 证据。
 
 ### 未完成 / NOT_RUN（不勾选）
