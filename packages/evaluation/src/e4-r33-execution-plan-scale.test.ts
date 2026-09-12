@@ -166,8 +166,7 @@ describe("E4-R33 (H03) execution-plan scale — bounded before expansion", () =>
     expect(rejects({ ...plan, caseFingerprints: { ...fps, "unplanned-x": HEX64 } }).some((i) => i.includes("UNPLANNED case"))).toBe(true);
   });
 
-  it("R33-f (real boundary): an over-cap plan is refused by the REAL evaluator with an explainable reason — no raw RangeError", async () => {
-    function outcome(caseId: string, armId: "baseline" | "candidate", rep: number, order: number, passed: boolean): CaseOutcomeV3 {
+  it("R33-f (real boundary): an over-cap plan is refused by the REAL evaluator with an explainable reason — no raw RangeError", async () => {    function outcome(caseId: string, armId: "baseline" | "candidate", rep: number, order: number, passed: boolean): CaseOutcomeV3 {
       return {
         caseId, suite: "holdout", armId, attempt: 1, repetition: rep, order,
         passed, grade: passed ? "good" : "poor", verificationPassed: passed,
@@ -190,7 +189,11 @@ describe("E4-R33 (H03) execution-plan scale — bounded before expansion", () =>
         arm: { armId, candidateId: armId === "candidate" ? "cand-x" : null, candidateConfigHash: armId === "candidate" ? CAND : null },
         manifest: {
           suiteVersion: "2.1.0", judgeVersion: "1.0.0", gitSha: GIT, dirty: false,
-          planDigest: "0".repeat(64), promotionEligible: true, isolationStrength: "strong",
+          // E4-R38 (J03): the REAL digest of the plan that is actually written —
+          // never a `"0".repeat(64)` placeholder. A placeholder digest would make
+          // the positive control fail for a reason unrelated to capacity (and
+          // would let a DIGEST error masquerade as a plan-scale rejection).
+          planDigest: computeExecutionPlanDigest(plan as never), promotionEligible: true, isolationStrength: "strong",
           runtimeConfigHash: CAND, expectedSampleKeys: GRID, runComplete: true,
           executionPlan: plan, thresholdDigest: TD,
         },
@@ -216,9 +219,10 @@ describe("E4-R33 (H03) execution-plan scale — bounded before expansion", () =>
     expect(violations.some((v) => v.includes("planned-sample cap"))).toBe(true);
     expect(violations.some((v) => v.includes("RangeError"))).toBe(false);
 
-    // Positive control through the SAME real path: the normal plan is NOT refused
-    // for a plan-scale reason.
-    const okPlan = fixtureExecutionPlan({ suite: "holdout", caseIds: CASES, repeat: 2 });
+    // Positive control through the SAME real path: a fully bound normal plan
+    // reaches a real ACCEPT (E4-R38/J03 — asserting only "no cap issue" would
+    // accept a plan that failed for any OTHER reason).
+    const okPlan = fixtureExecutionPlan({ suite: "holdout", caseIds: CASES, repeat: 2, modelId: "deepseek-v4-flash" });
     const okBase = join(dir, "ok-baseline.json");
     const okCand = join(dir, "ok-candidate.json");
     await writeExperimentArtifactV3(armArtifact("baseline", okPlan), okBase);
@@ -226,5 +230,7 @@ describe("E4-R33 (H03) execution-plan scale — bounded before expansion", () =>
     const okRes = await runV3ChampionEval({ baselinePath: okBase, candidatePath: okCand, candidateId: "cand-x" });
     const okViolations = (okRes.derivedInputs as unknown as { pairingViolations?: string[] }).pairingViolations ?? [];
     expect(okViolations.some((v) => v.includes("planned-sample cap"))).toBe(false);
+    expect(okViolations).toEqual([]);
+    expect(okRes.envelope.decision).toBe("ACCEPT");
   }, 30_000);
 });
