@@ -135,3 +135,45 @@
   真实模型 champion 质量 `NOT_RUN`（不付费/不造假）。
 - `runtimeReleaseReady`（本 SHA 工程门禁）· `promotion evidence integrity`（证据协议）·
   `champion quality`（真实效果）三者严格区分：前者本机通过，中者 G01/G02 关闭，后者 NOT_RUN。
+
+---
+
+## 修订计划执行状态（2026-09-12 计划 E4-R32…R35）— 一页最终状态
+
+> 以上各段为**历史快照**（其日期/证据保留不改写）。**本段是当前有效结论。**
+> 上一轮（E4-R27…R31）已完成并**已推送** origin/main，其 SHA 的 CI 四 job 全绿
+> （exact SHA/run-id 见 `HANDOVER.md` 文末 Historical 快照）。
+
+- 计划入口：`plan.md` → `plan(20260912-021843).md`。收口交付物：`docs/E4-R35-report.md`。
+- 被测 SHA：`testedSourceSha = d2210647`（**干净工作树**；代码内容 = R32 `d23f1708` /
+  R33 `816e767f` / R34 `2ac57611`）。reviewedSourceSha `bcf3f42c`；平台 Windows（win32）；
+  providerCalls **0**（全部离线）。
+- 计划状态：R32 ✅ · R33 ✅ · R34 ✅ · R35 ✅（本页）。
+
+| ID | 缺陷 | 生产符号 | 实施 ref | 复现结果（本机实测） |
+|---|---|---|---|---|
+| H01 | intent 写失败后 release 读取再失败 → 跳过重检（timer=0、drain 拒绝） | `session-actor.ts`（releaseLease/recoverHead/scheduleStoreRecheck） | `d23f1708` | PASS（recovery-durable 23/23） |
+| H02 | 连续 intent 失败时退避被过早清零、延迟不递增 | `session-actor.ts`（`_storeRecheckCount` 重置点） | `d23f1708` | PASS（同上，延迟递增且封顶） |
+| H03 | 13 万 case 低于公开上限却因数组 spread 抛 RangeError；成员查询二次方 | `execution-plan.ts`（parseExecutionPlan） | `816e767f` | PASS（R33 7/7；修复前 RangeError） |
+| H04 | 故意失败夹具落入根 include，残留污染下一次全量 | `e4-r24-final-result-protocol.test.ts` + test-infra 配置 | `2ac57611` | PASS（R34 4/4；旧位置会被收集的判别性证据） |
+
+**全仓门禁（干净树 `d2210647`，真实命令 / 退出码）**
+
+| 命令 | 结果 | 退出码 |
+|---|---|---|
+| `tsc -b` | 全包通过 | 0 |
+| `pnpm test` | **317 文件全通过；5729 passed \| 1 skipped (5730)** | **0** |
+| `pnpm docs:verify` | ALL CHECKS PASS（含 HANDOVER 静态真值 P38.4-10、plan 入口 E4-00） | 0 |
+| `pnpm test:race` / `:security` / `:protocol` / `:chaos` | 23 / 2133 / 52 / 12 passed | 0 |
+| `pnpm e3:repro-current-defects` | 13 passed | 0 |
+| `e4-09-production-e2e.test.ts`（干净树单跑） | **5/5 passed** | 0 |
+
+- 旧 G01…G04 复现继续阻断：R27 18/18 · R28 14/14 · R29（该文件 66/66）· R30 7/7。
+- 过度关闭修正保留：R22「数字边界」→ R28；R25「有限唤醒已验收」→ R30；旧证据未改写。
+- 未完成/待环境项（不勾选）：**真实模型 champion 质量 = NOT_RUN**（不付费/不造假）；
+  **release 发布动作未执行**（各轮只到 attestation）；CI artifact 未逐字节复核（仅查状态）。
+- `runtimeReleaseReady`（工程门禁）· `promotion evidence integrity`（证据协议）·
+  `champion quality`（真实效果）三者严格区分：前者由 exact-SHA CI 承载，中者 G01/H01–H04
+  关闭，后者 NOT_RUN。
+- **下一步触发条件**：仅当出现真实 benchmark 失败、生产问题或明确用户需求时新建任务；
+  本轮到此停止扩展。
