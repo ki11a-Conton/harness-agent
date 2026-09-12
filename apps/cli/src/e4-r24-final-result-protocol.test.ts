@@ -122,9 +122,12 @@ async function runVitestSubprocess(
   });
 }
 
-/** E4-R34 (H04): list what a given config would collect (no test execution). */
-async function listCollectedFiles(configPath: string, filter?: string): Promise<string> {
-  return await new Promise<string>((resolvePromise, rejectPromise) => {
+/** E4-R34 (H04): list what a given config would collect (no test execution).
+ *  E4-R37 (J02): the EXIT CODE is returned too — a config that fails to load
+ *  also prints no tests, and "collected nothing" must never be confused with
+ *  "the collection command itself broke". */
+async function listCollectedFiles(configPath: string, filter?: string): Promise<{ code: number | null; output: string }> {
+  return await new Promise((resolvePromise, rejectPromise) => {
     const args = ["node_modules/vitest/vitest.mjs", "list", "--config", configPath];
     if (filter !== undefined) args.push(filter);
     const child = spawn(process.execPath, args, {
@@ -135,7 +138,26 @@ async function listCollectedFiles(configPath: string, filter?: string): Promise<
     child.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
     child.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
     child.on("error", rejectPromise);
-    child.on("close", () => resolvePromise(`${stdout}\n${stderr}`));
+    child.on("close", (code) => resolvePromise({ code, output: `${stdout}\n${stderr}` }));
+  });
+}
+
+/** E4-R37 (J02): RUN the root config targeting an explicit path. A structurally
+ *  excluded file must be unrunnable even when named directly — that is the
+ *  decisive proof that the residue can never contribute test counts/failures. */
+async function runTargeted(configPath: string, target: string): Promise<{ code: number | null; output: string }> {
+  return await new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn(
+      process.execPath,
+      ["node_modules/vitest/vitest.mjs", "run", "--config", configPath, target],
+      { cwd: REPO_ROOT, env: { ...process.env }, stdio: ["ignore", "pipe", "pipe"] },
+    );
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
+    child.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
+    child.on("error", rejectPromise);
+    child.on("close", (code) => resolvePromise({ code, output: `${stdout}\n${stderr}` }));
   });
 }
 
@@ -271,8 +293,9 @@ describe("E4-R34 (H04) observation-fixture collection isolation", () => {
       //     collected) plus the decisive negative (the leftover is NOT — the
       //     fixture dir has no `src` segment, so the root `include` misses it).
       const rootList = await listCollectedFiles(ROOT_CONFIG, "e4-r24");
-      expect(rootList).toContain("apps/cli/src/e4-r24-final-result-protocol.test.ts");
-      expect(rootList).not.toContain(mineName);
+      expect(rootList.code).toBe(0); // the config loaded — "nothing collected" ≠ "config broken"
+      expect(rootList.output).toContain("apps/cli/src/e4-r24-final-result-protocol.test.ts");
+      expect(rootList.output).not.toContain(mineName);
 
       // (2) The DEDICATED fixture config selects EXACTLY the fixture directory,
       //     and wires the production reporter. The listing is filtered to THIS
@@ -281,8 +304,9 @@ describe("E4-R34 (H04) observation-fixture collection isolation", () => {
       //     other's fixtures mid-cleanup (ERR_MODULE_NOT_FOUND — observed when
       //     two `apps/cli` runs overlap).
       const fixtureList = await listCollectedFiles(FIXTURE_CONFIG, mineName);
-      expect(fixtureList).toContain(mineName);
-      const collected = fixtureList.split(/\r?\n/).filter((l) => l.includes(".test.ts") && l.includes(" > "));
+      expect(fixtureList.code).toBe(0);
+      expect(fixtureList.output).toContain(mineName);
+      const collected = fixtureList.output.split(/\r?\n/).filter((l) => l.includes(".test.ts") && l.includes(" > "));
       expect(collected.length).toBeGreaterThan(0);
       for (const line of collected) expect(line).toContain(`${FIXTURE_DIR_REL}/`);
     } finally {
@@ -296,6 +320,75 @@ describe("E4-R34 (H04) observation-fixture collection isolation", () => {
       expect(await readFile(other, "utf8")).toContain("sibling file owned by another actor"); // intact
       await rm(other, { force: true }); // tidy THIS test's own sibling
       await rm(mine, { force: true });
+    }
+  }, 240_000);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// E4-R37 (J02): an UPGRADED workspace can still hold the OLD-generation fixture
+// in `apps/cli/src/` (R34 only moved the NEW ones). Git-ignore ≠ Vitest exclude,
+// so the root config keeps COLLECTING that residue and a real full run fails on
+// it. The root config now excludes the generated filename pattern structurally.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const LEGACY_DIR_REL = "apps/cli/src";
+/** The exclusion rule that must be present in the LOADED root config. */
+const LEGACY_EXCLUDE = "apps/cli/src/e4-r24-fixture-*.test.ts";
+
+describe("E4-R37 (J02) legacy-location observation fixture is structurally excluded", () => {
+  it("with BOTH residues on disk the root config collects only the real parent test, the residue is unrunnable even when named explicitly, and the dedicated config still selects the new fixture", async () => {
+    const stamp = `${process.pid}-${Date.now()}`;
+    const legacyName = `e4-r24-fixture-${stamp}-legacy-assert-fail.test.ts`;
+    const modernName = `e4-r24-fixture-${stamp}-modern-assert-fail.test.ts`;
+    const legacy = join(REPO_ROOT, "apps", "cli", "src", legacyName);
+    const modern = join(FIXTURE_DIR, modernName);
+    const sibling = join(FIXTURE_DIR, `e4-r24-fixture-${stamp}-sibling.test.ts`);
+    await mkdir(FIXTURE_DIR, { recursive: true });
+    const failing = (label: string): string => `import { it, expect } from "vitest";\nit("${label}", () => { expect(1).toBe(2); });\n`;
+    await writeFile(legacy, failing("legacy residue: must never be collected or run"), "utf8");
+    await writeFile(modern, failing("new-location residue: outside the root include"), "utf8");
+    await writeFile(sibling, failing("sibling file owned by another actor"), "utf8");
+    try {
+      // Both residues really ARE on disk during every assertion below.
+      expect(await readFile(legacy, "utf8")).toContain("legacy residue");
+      expect(await readFile(modern, "utf8")).toContain("new-location residue");
+
+      // (1) ROOT config, filter `e4-r24`: the real parent protocol test is the
+      //     POSITIVE control (so an empty/failed config cannot fake a pass), and
+      //     NEITHER residue is collected.
+      const rootList = await listCollectedFiles(ROOT_CONFIG, "e4-r24");
+      expect(rootList.code).toBe(0);
+      expect(rootList.output).toContain("apps/cli/src/e4-r24-final-result-protocol.test.ts");
+      expect(rootList.output).not.toContain(legacyName);   // was COLLECTED before R37
+      expect(rootList.output).not.toContain(modernName);
+
+      // (2) Determinism: the SAME call twice cannot gain a collected file (or a
+      //     failure) from the residue still sitting in the tree.
+      const rootListAgain = await listCollectedFiles(ROOT_CONFIG, "e4-r24");
+      expect(rootListAgain.code).toBe(0);
+      expect(rootListAgain.output).toBe(rootList.output);
+
+      // (3) Decisive: naming the legacy residue explicitly still runs NOTHING —
+      //     the loaded config prints the exclusion and vitest found no file.
+      const targeted = await runTargeted(ROOT_CONFIG, `${LEGACY_DIR_REL}/${legacyName}`);
+      expect(targeted.code).not.toBe(0);
+      expect(targeted.output).toContain("No test files found");
+      expect(targeted.output).toContain(LEGACY_EXCLUDE);
+
+      // (4) The DEDICATED config still selects the real fixture (its own run), and
+      //     never reaches into the legacy directory.
+      const fixtureList = await listCollectedFiles(FIXTURE_CONFIG, modernName);
+      expect(fixtureList.code).toBe(0);
+      expect(fixtureList.output).toContain(`${FIXTURE_DIR_REL}/${modernName}`);
+      expect(fixtureList.output).not.toContain(`${LEGACY_DIR_REL}/${legacyName}`);
+    } finally {
+      // Cleanup touches ONLY this test's own files; the sibling survives.
+      await rm(legacy, { force: true });
+      await rm(modern, { force: true });
+      await expect(readFile(legacy, "utf8")).rejects.toBeDefined();
+      await expect(readFile(modern, "utf8")).rejects.toBeDefined();
+      expect(await readFile(sibling, "utf8")).toContain("sibling file owned by another actor");
+      await rm(sibling, { force: true });
     }
   }, 240_000);
 });

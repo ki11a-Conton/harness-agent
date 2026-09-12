@@ -1,8 +1,23 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
     include: ["packages/*/src/**/*.test.ts", "apps/*/src/**/*.test.ts"],
+    // E4-R37 (J02): a workspace UPGRADED from the pre-R34 generation can still
+    // carry leftover `apps/cli/src/e4-r24-fixture-*.test.ts` throwaways from an
+    // interrupted final-result-protocol run. `.gitignore` keeps them out of git,
+    // but git-ignore is NOT a Vitest exclude: the root `include` above still
+    // COLLECTS them, so a stale deliberately-failing fixture surfaces as a real
+    // suite failure on the next full run (measured: 318 files / 1 failed before
+    // this rule). Exclude them STRUCTURALLY by their generated filename pattern —
+    // narrow on purpose: never a real e4-r24 protocol test, never other `apps/cli`
+    // suites, never the security/coverage scopes. R34 already moved NEW fixtures
+    // to `apps/cli/test-infra/observation-fixtures/` (outside `include`); this rule
+    // covers the historical location that the move cannot clean up for users.
+    //
+    // `configDefaults.exclude` is spread explicitly because a custom `exclude`
+    // REPLACES the framework defaults (`**/node_modules/**`, `**/.git/**`).
+    exclude: [...configDefaults.exclude, "apps/cli/src/e4-r24-fixture-*.test.ts"],
     environment: "node",
     testTimeout: 300000,
     // E4-R24 (F04): when a suite run is NAMED (E2E_OBSERVATION_RUN_ID — set by
