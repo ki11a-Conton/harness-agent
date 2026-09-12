@@ -25,6 +25,7 @@
 // (runtime finishTurn), release the resource scope, and remove the actor.
 
 import type {
+  AdmittedPrompt,
   EventSink,
   InboxStore,
   PromptId,
@@ -1620,8 +1621,19 @@ export class DefaultSessionActor implements SessionActor {
     // P38.4-2/3 (INV-P38.4-003/004): discover same-T recoverable bound
     // nonterminal turns once per lifetime (never startTurn, no T2).
     if (!this._recoverableChecked) {
+      // E4-R36 (J01): `_recoverableChecked` means "a recovery discovery pass
+      // COMPLETED", not "a pass was STARTED". Committing it before the await let
+      // one transient read failure during the very first scan mark discovery done
+      // forever — no re-scan, no timer, and a promoted prompt leaked onto an
+      // unowned nonterminal turn. A failed pass leaves the actor re-scannable and
+      // stops THIS pass BEFORE any new followup can be promoted: an undiscovered
+      // old turn must never be overtaken by T2.
+      const discovered = await this.discoverRecoverableTurns();
+      if (!discovered) {
+        this.scheduleStoreRecheck(); // fail closed + a bounded, self-healing wake-up
+        return;
+      }
       this._recoverableChecked = true;
-      await this.discoverRecoverableTurns();
     }
     // E3-10: recover same-T BEFORE draining new followups. The head is a
     // PEEK — it is never shift()ed before its recovery record reaches a
@@ -1839,39 +1851,66 @@ export class DefaultSessionActor implements SessionActor {
    * populates `_recoverableTurns`. Execution happens in drainFollowups, which
    * runs exactly one turn at a time through the actor's normal reservation
    * path (single-flight, single live turn per session).
+   *
+   * E4-R36 (J01): returns whether the scan COMPLETED. The scan is committed
+   * ATOMICALLY — candidates are collected into a local buffer and only appended
+   * once every durable read succeeded. A partial scan (T1 readable, T2's read
+   * throws) therefore commits NOTHING: the retry re-scans from scratch, so T1 is
+   * never double-enqueued and T2 is never silently skipped. Errors are recorded
+   * and reported as `false` rather than thrown, so a background re-check never
+   * becomes an unhandled rejection and the caller keeps a bounded wake-up.
    */
-  private async discoverRecoverableTurns(): Promise<void> {
+  private async discoverRecoverableTurns(): Promise<boolean> {
     const inbox = this.deps.inbox;
     const store = this.deps.store;
-    if (inbox === undefined || store === undefined) return;
-    const recoverable = await inbox.listRecoverable(this.sessionId);
-    const seen = new Set<TurnId>();
-    for (const p of recoverable) {
-      if (p.kind !== "followup" || p.status !== "promoted") continue;
-      if (p.promotedTurnId === undefined) continue; // fail-closed in hydrate
-      if (seen.has(p.promotedTurnId)) continue;
-      const turn = await store.getTurn(p.promotedTurnId);
-      if (turn === undefined) continue; // fail-closed in hydrate
-      if (turn.status === "completed" || turn.status === "failed" || turn.status === "cancelled") {
-        // E4-R17 (N13) + E4-R25 (V01): a terminal turn is normally consumed by
-        // hydrate — but a PENDING-COMMIT recovery record (action done, terminal
-        // ACK unpersisted) must still be visible to a restarted actor so it can
-        // COMMIT the terminal and consume the prompt without re-running the
-        // action. A crash after the action but before the ACK is otherwise
-        // unrecoverable. The marker-loss compound outage leaves the record in
-        // RECOVERY_IN_PROGRESS with NO needsReconcile — the terminal TURN is
-        // then the authoritative evidence that the action finished, and the
-        // task is still recoverable for reconcile (never re-run).
-        const rec = await this._recoveryStore.getRecord(p.promotedTurnId);
-        if (rec !== undefined && (recoveryNeedsReconcile(rec) || rec.state === "RECOVERY_IN_PROGRESS")) {
-          seen.add(p.promotedTurnId);
-          this._recoverableTurns.push({ turn, promptId: p.id });
-        }
-        continue;
-      }
-      seen.add(p.promotedTurnId);
-      this._recoverableTurns.push({ turn, promptId: p.id });
+    if (inbox === undefined || store === undefined) return true; // nothing to discover
+    let recoverable: AdmittedPrompt[];
+    try {
+      recoverable = await inbox.listRecoverable(this.sessionId);
+    } catch (listErr) {
+      process.stderr.write(
+        `[degraded] session ${this.sessionId} recovery discovery: inbox listing failed — ${listErr instanceof Error ? listErr.message : String(listErr)}\n`,
+      );
+      return false;
     }
+    // Local buffer: nothing reaches `_recoverableTurns` until the whole scan reads.
+    const candidates: Array<{ turn: Turn; promptId: PromptId }> = [];
+    const seen = new Set<TurnId>(this._recoverableTurns.map((r) => r.turn.id));
+    try {
+      for (const p of recoverable) {
+        if (p.kind !== "followup" || p.status !== "promoted") continue;
+        if (p.promotedTurnId === undefined) continue; // fail-closed in hydrate
+        if (seen.has(p.promotedTurnId)) continue;
+        const turn = await store.getTurn(p.promotedTurnId);
+        if (turn === undefined) continue; // fail-closed in hydrate
+        if (turn.status === "completed" || turn.status === "failed" || turn.status === "cancelled") {
+          // E4-R17 (N13) + E4-R25 (V01): a terminal turn is normally consumed by
+          // hydrate — but a PENDING-COMMIT recovery record (action done, terminal
+          // ACK unpersisted) must still be visible to a restarted actor so it can
+          // COMMIT the terminal and consume the prompt without re-running the
+          // action. A crash after the action but before the ACK is otherwise
+          // unrecoverable. The marker-loss compound outage leaves the record in
+          // RECOVERY_IN_PROGRESS with NO needsReconcile — the terminal TURN is
+          // then the authoritative evidence that the action finished, and the
+          // task is still recoverable for reconcile (never re-run).
+          const rec = await this._recoveryStore.getRecord(p.promotedTurnId);
+          if (rec !== undefined && (recoveryNeedsReconcile(rec) || rec.state === "RECOVERY_IN_PROGRESS")) {
+            seen.add(p.promotedTurnId);
+            candidates.push({ turn, promptId: p.id });
+          }
+          continue;
+        }
+        seen.add(p.promotedTurnId);
+        candidates.push({ turn, promptId: p.id });
+      }
+    } catch (scanErr) {
+      process.stderr.write(
+        `[degraded] session ${this.sessionId} recovery discovery: durable read failed — ${scanErr instanceof Error ? scanErr.message : String(scanErr)}\n`,
+      );
+      return false; // commit nothing; the next pass re-scans from the durable state
+    }
+    this._recoverableTurns.push(...candidates);
+    return true;
   }
 
   /**

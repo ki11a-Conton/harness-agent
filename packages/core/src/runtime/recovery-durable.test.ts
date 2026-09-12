@@ -908,3 +908,263 @@ describe("E4-R32 (H01/H02) compound recovery-store fault + intent backoff", () =
     expect(liveTimers(scheduled)).toBe(0); // close cancels the pending re-check
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// E4-R36 (J01): the FIRST-time recovery DISCOVERY pass.
+// R30/R32 hardened the path for an ALREADY-DISCOVERED head; J01 is one stage
+// upstream: `drainFollowupsInner` committed `_recoverableChecked = true` BEFORE
+// awaiting the scan, so a transient read failure during the very first scan
+// marked discovery "done" forever — no timer, no re-scan, and the promoted
+// prompt was leaked onto a nonterminal turn with no live owner.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** E4-R36: the MAIN-store turn read fails for ONE turn only — the partial scan
+ *  (T1 read fine, T2 read blows up). */
+class SelectiveReadFailSessionStore extends MemorySessionStore {
+  readonly breakIds = new Set<TurnId>();
+  override async getTurn(id: TurnId): Promise<Turn | undefined> {
+    if (this.breakIds.has(id)) throw new Error(`session store unavailable for turn ${id}`);
+    return super.getTurn(id);
+  }
+}
+
+/** E4-R36: the durable inbox LISTING can be broken on demand. */
+class ListFailInbox extends MemInbox {
+  failList = false;
+  override async listRecoverable(s: SessionId): Promise<AdmittedPrompt[]> {
+    if (this.failList) throw new Error("inbox listRecoverable outage");
+    return super.listRecoverable(s);
+  }
+}
+
+/** E4-R36: the recovery-store DISCOVERY lookup fails while terminal writes still
+ *  work — the terminal-turn + pending-commit branch of the scan. */
+class ReconcileDiscoveryReadFailStore extends CompoundAckFailStore {
+  failLookups = false;
+  override async getRecord(taskId: TurnId): Promise<RecoveryRecord | undefined> {
+    if (this.failLookups) throw new Error("recovery store lookup outage");
+    return super.getRecord(taskId);
+  }
+  /** Assertions only — read PAST the injected lookup fault. */
+  peek(taskId: TurnId): Promise<RecoveryRecord | undefined> { return super.getRecord(taskId); }
+}
+
+describe("E4-R36 (J01) first-time recovery discovery must be re-scannable", () => {
+  it("R36-a (J01): a FIRST-scan getTurn failure does NOT complete the scan — bounded wake-up, then the actor converges on its own callback", async () => {
+    const store = new ReadFailSessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new MemoryRecoveryStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    const boundTurnId = await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    const { runtime, total } = counting(base, false);
+    const { scheduler, scheduled } = recordingScheduler();
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => 1000, scheduler);
+
+    store.breakReads = true;
+    // Pre-R36 this await REJECTED out of the drain (unhandled-style) and left
+    // `checked=true, scheduled=0, calls=0, prompt=promoted` — a permanent stall.
+    let drainError: unknown;
+    await actor.drainFollowupsForTest().catch((e) => { drainError = e; });
+    expect(drainError).toBeUndefined();
+
+    expect(total()).toBe(0);                                  // no action on unreadable state
+    expect(actor["_recoverableChecked"]).toBe(false);          // the scan did NOT succeed
+    expect(actor["_recoverableTurns"].length).toBe(0);         // nothing half-committed
+    expect(scheduled.length).toBe(1);                          // exactly one wake-up
+    expect(liveTimers(scheduled)).toBe(1);
+    expect(scheduled[0]!.delay).toBeGreaterThan(0);
+    expect(scheduled[0]!.delay).toBeLessThanOrEqual(30_000);   // finite + capped
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeUndefined();
+
+    // Heal the store and fire ONLY the callback the actor arranged itself — no
+    // new user message, no manual drain.
+    store.breakReads = false;
+    scheduled[0]!.fire();
+    await waitFor(() => total() >= 1);
+    expect(total()).toBe(1);                                   // the old turn runs EXACTLY once
+    expect(actor["_recoverableChecked"]).toBe(true);
+    expect(actor["_recoverableTurns"].length).toBe(0);
+    expect((await recovery.getRecord(boundTurnId))?.state).toBe("RECOVERED");
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeDefined();
+  });
+
+  it("R36-b (J01): persistent listRecoverable failures escalate to a CAP, never hot-loop, never reject, and consume NO attempt budget", async () => {
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new ListFailInbox();
+    const recovery = new MemoryRecoveryStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    const boundTurnId = await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    const { runtime, total } = counting(base, false);
+    const { scheduler, scheduled } = recordingScheduler();
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => 1000, scheduler);
+    inbox.failList = true;
+
+    for (let i = 0; i < 7; i += 1) {
+      let err: unknown;
+      await actor.drainFollowupsForTest().catch((e) => { err = e; });
+      expect(err).toBeUndefined(); // a background scan failure is never an unhandled rejection
+    }
+
+    expect(total()).toBe(0);
+    expect(actor["_recoverableChecked"]).toBe(false);
+    expect(scheduled.length).toBe(7);
+    expect(liveTimers(scheduled)).toBe(1);                     // at most one live timer
+    // Positive floor + escalation + cap: never a 0ms busy loop.
+    expect(scheduled.map((x) => x.delay)).toEqual([1_000, 2_000, 4_000, 8_000, 16_000, 30_000, 30_000]);
+    // The outage never reached the lease/intent path → no model-action attempt spent.
+    expect(await recovery.getRecord(boundTurnId)).toBeUndefined();
+
+    // Heal + fire the LAST arranged callback → converges without a new message.
+    inbox.failList = false;
+    scheduled[scheduled.length - 1]!.fire();
+    await waitFor(() => total() >= 1);
+    expect(total()).toBe(1);
+    expect(actor["_recoverableTurns"].length).toBe(0);
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeDefined();
+  });
+
+  it("R36-c (J01): a scan that reads T1 then FAILS on T2 commits NOTHING — the retry never double-enqueues T1 and both turns run exactly once", async () => {
+    const store = new SelectiveReadFailSessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new MemoryRecoveryStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    const t1 = await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-one");
+    const t2 = await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-two");
+
+    const { runtime, total } = counting(base, false);
+    const { scheduler, scheduled } = recordingScheduler();
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => 1000, scheduler);
+
+    // Partial scan: T1 is readable, T2 is not. Pre-R36 the queue held T1 while
+    // `checked` became true → T2 was lost forever (and a naive retry would have
+    // queued T1 twice).
+    store.breakIds.add(t2);
+    await actor.drainFollowupsForTest();
+    expect(total()).toBe(0);
+    expect(actor["_recoverableTurns"].length).toBe(0);         // NOTHING committed
+    expect(actor["_recoverableChecked"]).toBe(false);
+    expect(scheduled.length).toBe(1);
+
+    store.breakIds.clear();
+    scheduled[0]!.fire();
+    await waitFor(() => total() >= 2);
+    expect(total()).toBe(2);                                   // each turn exactly once
+    expect(actor["_recoverableTurns"].length).toBe(0);
+    expect((await recovery.getRecord(t1))?.state).toBe("RECOVERED");
+    expect((await recovery.getRecord(t2))?.state).toBe("RECOVERED");
+    expect(inbox.prompts.filter((p) => p.status === "consumed").length).toBe(2);
+  });
+
+  it("R36-d (J01): an unresolved scan does NOT let a NEW pending followup overtake the undiscovered old turn", async () => {
+    const store = new ReadFailSessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new MemoryRecoveryStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    const boundTurnId = await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+    // A brand-new followup that was never bound to any turn.
+    await inbox.admit({ id: "prompt-new" as unknown as PromptId, sessionId: s.id, text: "brand-new", kind: "followup", status: "pending", admittedAt: 2 } as AdmittedPrompt);
+
+    const { runtime, total } = counting(base, false);
+    const { scheduler, scheduled } = recordingScheduler();
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => 1000, scheduler);
+
+    store.breakReads = true;
+    await actor.drainFollowupsForTest();
+
+    // The unknown recovery state must stop the pass: no new turn was created and
+    // the pending prompt is still pending (not promoted, not consumed).
+    const turns = await store.listTurns(s.id);
+    expect(turns.length).toBe(1);
+    expect(turns[0]!.id).toBe(boundTurnId);
+    expect(total()).toBe(0);
+    expect(inbox.prompts.find((p) => p.id === ("prompt-new" as unknown as PromptId))?.status).toBe("pending");
+    expect(scheduled.length).toBe(1);
+
+    // Once healed, the OLD turn is recovered before the new followup is promoted.
+    store.breakReads = false;
+    scheduled[0]!.fire();
+    await waitFor(() => total() >= 1);
+    expect((await recovery.getRecord(boundTurnId))?.state).toBe("RECOVERED");
+    expect((await store.getTurn(boundTurnId))!.status).toBe("completed");
+  });
+
+  it("R36-e (J01): a discovery lookup failure on a TERMINAL pending-commit turn is retried — after healing only RECONCILE runs, the finished action is never replayed", async () => {
+    const store = new MemorySessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new ReconcileDiscoveryReadFailStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    const boundTurnId = await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    // Actor A: the action RUNS, its terminal ACK is refused → pending-commit
+    // (durable turn terminal, record RECOVERY_IN_PROGRESS + needsReconcile).
+    const a = counting(base, false);
+    const actorA = await loadActor(a.runtime, store, inbox, s.id, recovery, () => 1000);
+    await actorA.drainFollowupsForTest();
+    expect(a.total()).toBe(1);
+    expect((await store.getTurn(boundTurnId))!.status).toBe("completed");
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeUndefined();
+
+    // Actor B ("restart"): the terminal-ACK write has healed, but the DISCOVERY
+    // lookup is down → the scan must fail closed, fabricate nothing, and keep a
+    // bounded wake-up.
+    recovery.failTerminalWrites = false;
+    recovery.failLookups = true;
+    const b = counting(base, false);
+    const { scheduler, scheduled } = recordingScheduler();
+    const actorB = await loadActor(b.runtime, store, inbox, s.id, recovery, () => 2000, scheduler);
+    await actorB.drainFollowupsForTest();
+    expect(b.total()).toBe(0);
+    expect(actorB["_recoverableChecked"]).toBe(false);
+    expect(actorB["_recoverableTurns"].length).toBe(0);
+    expect(scheduled.length).toBe(1);
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeUndefined();
+
+    // Heal the lookup and fire the arranged callback: the scan now sees the
+    // terminal turn + pending-commit record and RECONCILES only.
+    recovery.failLookups = false;
+    scheduled[0]!.fire();
+    await waitFor(() => (inbox.prompts.find((p) => p.status === "consumed") !== undefined));
+    expect(b.total()).toBe(0);                                 // NO replay of the completed action
+    expect((await recovery.peek(boundTurnId))?.state).toBe("RECOVERED");
+    expect(actorB["_recoverableTurns"].length).toBe(0);
+  });
+
+  it("R36-f (J01): close cancels the discovery wake-up — a stale callback never revives a closed actor", async () => {
+    const store = new ReadFailSessionStore();
+    const events = new MemoryEventStore();
+    const inbox = new MemInbox();
+    const recovery = new MemoryRecoveryStore();
+    const base = newBaseRuntime(store, events, inbox);
+    const s = await base.createSession({ agent: AGENT, cwd: "/w" });
+    await buildBoundNonterminalTurn(base, store, inbox, s.id, "recover-me");
+
+    const { runtime, total } = counting(base, false);
+    const { scheduler, scheduled } = recordingScheduler();
+    const actor = await loadActor(runtime, store, inbox, s.id, recovery, () => 1000, scheduler);
+    store.breakReads = true;
+    await actor.drainFollowupsForTest();
+    expect(liveTimers(scheduled)).toBe(1);
+
+    await actor.close();
+    expect(liveTimers(scheduled)).toBe(0); // close cancels the pending re-check
+
+    // Even a manually fired STALE callback must not resurrect the actor.
+    store.breakReads = false;
+    scheduled[0]!.fire();
+    await new Promise((r) => setTimeout(r, 25));
+    expect(total()).toBe(0);
+    expect(inbox.prompts.find((p) => p.status === "consumed")).toBeUndefined();
+  });
+});
