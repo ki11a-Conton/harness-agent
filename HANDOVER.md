@@ -93,8 +93,10 @@
 - 只读核查本轮实现提交自身的 CI（不用旧 SHA 的绿灯证明新代码）：
   `01c4ec74` 的 run `34687657690` —— Ubuntu 主门禁 + coverage 成功，**Windows 主门禁失败
   （两次尝试、失败点不同）**，release attestation skipped。
-  **同代码对照**：只改文档的 `2db1a9cd`（run `34689110496`）四 job 全绿 ⇒ 该 Windows 失败是
-  **波动**而非版本确定性结论；但 `01c4ec74` 自身的事实结论仍是 failure，**不声称 CI 全绿**。
+  **同代码对照**：只改文档的 `2db1a9cd`（run `34689110496`）与 `40d5588b`
+  （run `34689429297`，最终 head）**四 job 全绿**，后者连 release attestation 也 success
+  ⇒ 该 Windows 失败是**波动**而非版本确定性结论；但 `01c4ec74` 自身的事实结论仍是 failure，
+  **不声称 CI 全绿**。CI 追踪终止于 run `34689429297`。
 - 交付：`docs/E4-R39-report.md` + 一页结论（`docs/E4-STATUS.md`）。
 
 ## 执行约定（每项任务必须遵守）

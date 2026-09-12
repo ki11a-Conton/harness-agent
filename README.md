@@ -350,10 +350,12 @@ mcp-runtime, app-server, release-integrity).
   `apps/cli/src` passes as a whole (2 runs). Root cause **undetermined**; two
   hypotheses (CPU load, transient dirty tree) were tested and **falsified**.
   The Windows CI job for `01c4ec74` (run `34687657690`) also failed both
-  attempts, with a different failure set each time. A docs-only commit with the
-  *same code* (`2db1a9cd`, run `34689110496`) is four-jobs green, so that Windows
-  failure is **flaky rather than revision-determined** — the factual result for
-  `01c4ec74` itself remains a failure.
+  attempts, with a different failure set each time. Two docs-only commits with
+  the *same code* (`2db1a9cd` / run `34689110496`, `40d5588b` / run
+  `34689429297`) are four-jobs green — the latter including the release
+  attestation job — so that Windows failure is **flaky rather than
+  revision-determined**; the factual result for `01c4ec74` itself remains a
+  failure, and CI is not claimed green for it.
 
 ### Unfinished / NOT_RUN (see [HANDOVER.md](./HANDOVER.md) for the detail)
 

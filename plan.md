@@ -41,7 +41,8 @@ git 历史中，产物分别见 `docs/E4-R27-report.md` … `docs/E4-R31-report.
   **未通过项**：冻结版本 `01c4ec74` 上的全仓 `pnpm test` 未取得绿
   （`e4-09-production-e2e.test.ts` 的 `buildRealChain` 在全量并发下 3/3 把有效链判
   `INVALID`；隔离 5/5 通过；根因未定），且该 SHA 自身的 Windows CI job 两次尝试均失败
-  （同代码的文档提交 `2db1a9cd` 四 job 全绿 ⇒ 为波动，但 `01c4ec74` 的事实结论仍是 failure）。
+  （同代码的文档提交 `2db1a9cd` 与 `40d5588b` 四 job 全绿、后者含 release attestation
+  ⇒ 为波动，但 `01c4ec74` 的事实结论仍是 failure）。
   （同一版本另有一次留存的绿运行，见报告 §4.1 —— 该失败是环境/时序相关，不是版本的确定性属性。）
 - 上一轮（2026-09-12 计划 E4-R32…R35）已完成并**已推送** origin/main：
   R32/R33/R34 收口于 `d212d977`，状态与 CI 补记于 `a7950fa1`；CI run `34685604645`

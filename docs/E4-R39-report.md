@@ -157,12 +157,15 @@ TOTAL_DISTINCT_PORCELAIN_STATES=3
 | **本轮实现提交（testedSourceSha）** | `01c4ec74` | **`34687657690`** | **整体 conclusion = failure**（Windows 主门禁红） |
 | 文档提交（本报告所在批次的前一提交） | `a0a99ce0` | `34689017816` | **cancelled** —— 被我自己随后的连续推送按 `concurrency.cancel-in-progress` 取消，**不可用作证据** |
 | 文档提交（本报告所属提交） | `2db1a9cd` | `34689110496` | **success —— 四个 job 全绿**（含 Windows 主门禁） |
+| 文档提交（最终 head） | `40d5588b` | `34689429297` | **success —— 四个 job 全绿**，且 **release attestation job 也 success** |
 
-> **关键对照**：`01c4ec74` 与 `2db1a9cd` 的**代码与测试完全相同**（后者只改文档），
-> 但 Windows 主门禁在前者**两次尝试都失败**、在后者**一次通过**。
-> 因此那个 Windows 失败**也不是该代码版本的确定性属性**，而是**波动**——
+> **关键对照**：`01c4ec74` 与 `2db1a9cd` / `40d5588b` 的**代码与测试完全相同**（后两者只改文档），
+> 但 Windows 主门禁在 `01c4ec74` 上**两次尝试都失败**、在另外两个提交上**通过**，
+> 且 `40d5588b` 连 `release attestation` job 都跑成了 success（`01c4ec74` 那次因上游红而 skipped）。
+> 因此那个 Windows 失败**不是该代码版本的确定性属性**，而是**波动**——
 > 与第 4 节本地 `e4-09` 的结论方向一致（同版本 18:06 曾绿 vs 18:25 起 3/3 红）。
-> 本报告仍**不声称** `01c4ec74` 的 CI 是绿的：它的事实结论就是 failure。
+> 本报告仍**不声称** `01c4ec74` 的 CI 是绿的：它自身的事实结论就是 failure。
+> **追踪终止于 run `34689429297`**；此后任何仅文档的提交，其 CI 结论不在本报告范围内。
 
 `01c4ec74` 的 run `34687657690` 逐 job / step 状态：
 
@@ -195,7 +198,7 @@ Windows job 的两次尝试，**失败点不同**（这是「同一 job 在不�
 --log-failed`，含 `--attempt 1`）。**未下载并逐字节复核任何 artifact**
 （`test-report.log`、`capability-matrix-*`、`gate-evidence-*` 等均未取回），
 因此**不**声称已独立重放 release 证据，也不声称 gate evidence 的内容正确。
-本报告核实到 run `34689110496`（`2db1a9cd`）为止；若之后再有文档提交，其自身的
+本报告核实到 run `34689429297`（`40d5588b`，最终 head）为止；若之后再有文档提交，其自身的
 CI 结论不在本报告范围内，不在此追认。
 
 **归因边界（计划第 7 节第 7 条）**：Windows 两次尝试失败点不同、本地全量失败点又是第三处
@@ -212,7 +215,7 @@ CI 结论不在本报告范围内，不在此追认。
 | R36 有「首次发现失败 → 自动重扫 → 原 turn 恰好一次」的完整证据，且不能拿已有 head 重试测试替代 | ✅ | `R36-a`…`R36-f`；修复前 6/6 失败；`docs/E4-R36-report.md` |
 | R37 同时覆盖旧残留与新夹具；正式测试没有因排除范围过大而减少 | ✅ | 旧残留 + 新残留 + 正式父测试三者同时在库的正负对照；全局收集集合有/无规则均 **5755** 点；`E4-R37` 5/5 |
 | R38 有真实成功基准和目标边界负例；缺项写 PARTIAL，不用总测试数掩盖 | ✅ | `R38-a`（真实 digest → `violations===[]` + `ACCEPT` + `loader.ok`）/ `R38-b`（只改 `repeat`）/ `R38-c`；`E4-R38` 3/3 |
-| 最终全量、类型、文档与相关 Runtime 门禁实际通过，数量来自日志 | **❌ 未通过** | 类型 / 文档 / race / security / protocol / chaos 全绿；**`pnpm test` 退出码 1**（318 文件 / `1 failed \| 5738 passed \| 1 skipped`，3/3 同一失败） |
+| 最终全量、类型、文档与相关 Runtime 门禁实际通过，数量来自日志 | **❌ 本地未通过**（CI 同代码曾全绿） | 类型 / 文档 / race / security / protocol / chaos 全绿；**本地 `pnpm test` 退出码 1**（318 文件 / `1 failed \| 5738 passed \| 1 skipped`，3/3 同一失败），但同版本有留存的绿运行、同代码在远端 CI 上四个 job 全绿（含 release attestation） |
 | plan/HANDOVER/中英文 README/最新报告状态一致，不再同时「已推送」与「待推送」 | ✅ | §3；`docs:verify` ALL CHECKS PASS |
 | 历史间歇失败的事实、推测与未知分开写，不用不同断言路径的证据冒充归因 | ✅ | §4.2、§5 归因边界；两条假设已标注「证伪 / 未复现」 |
 | 有最新提交的 CI 就记录准确 SHA/run；没有则明确远端 NOT_RUN，不借旧绿灯 | ✅（结论为红） | §5：`01c4ec74` / run `34687657690` = failure（Windows job），**不**借用 `a7950fa1` 的绿灯 |
@@ -242,9 +245,11 @@ CI 结论不在本报告范围内，不在此追认。
    与两个最可疑干扰源两两并发通过；**根因未定**。
 2. 本轮 SHA 的**远端 Windows CI job 失败**（run `34687657690`），两次尝试失败点不同；
    同 run 的 Ubuntu 主门禁与 coverage 成功，release attestation skipped。
-   **但同一代码的文档提交 `2db1a9cd`（run `34689110496`）四 job 全绿** ⇒
-   该 Windows 失败同样是**波动**而非版本确定性结论；`01c4ec74` 自身的事实结论仍是 failure。
-   **不能声称 CI 全绿。**
+   **但同一代码的两个文档提交（`2db1a9cd` / run `34689110496`、`40d5588b` / run `34689429297`）
+   四 job 全绿，且 `40d5588b` 的 release attestation job 也 success** ⇒
+   该 Windows 失败是**波动**而非版本确定性结论；`01c4ec74` 自身的事实结论仍是 failure。
+   **就 CI 而言，同一代码存在完整的绿运行（含 release attestation）；但不能声称
+   `01c4ec74` 的 run 是绿的，也不能把本轮的本地全量失败一笔勾销。**
 
 **NOT_RUN（不勾选）**
 
