@@ -169,6 +169,8 @@
 | `e4-09-production-e2e.test.ts`（干净树单跑） | **5/5 passed** | 0 |
 
 - 旧 G01…G04 复现继续阻断：R27 18/18 · R28 14/14 · R29（该文件 66/66）· R30 7/7。
+- 远端 CI：实现 SHA `d212d977` 的 run **34685604645 四 job 全绿**
+  （Ubuntu 主门禁 / Windows 主门禁 / coverage gate / release attestation）。
 - 过度关闭修正保留：R22「数字边界」→ R28；R25「有限唤醒已验收」→ R30；旧证据未改写。
 - 未完成/待环境项（不勾选）：**真实模型 champion 质量 = NOT_RUN**（不付费/不造假）；
   **release 发布动作未执行**（各轮只到 attestation）；CI artifact 未逐字节复核（仅查状态）。

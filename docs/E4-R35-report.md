@@ -5,7 +5,8 @@
   > 该提交的**代码内容**即 R32 `d23f1708` / R33 `816e767f` / R34 `2ac57611` 三提交的累积
   > 结果；`86323c56`（plan 轮换）与 `d2210647`（状态文档）**只改文档**，不改代码。
   > 三级 SHA 严格区分：`reviewedSourceSha`（计划依据）≠ `testedSourceSha`（测试所用）
-  > ≠ `documentationCommitSha`（文档提交，见文末补记）。
+  > ≠ `documentationCommitSha`（文档提交，见 §7 与文末补记）。
+- 已推送实现 SHA（origin/main tip）：`d212d977`
 - 状态：**PASS**（R32…R34 逐项有可追溯证据；最终版本全仓门禁全绿；干净树 promotion E2E 通过）
 - 真实模型调用：**0**（全部离线；scripted/arm-aware provider）
 - 平台：Windows（win32）
@@ -94,9 +95,20 @@ R32…R34 为**边界补充**，不改变 R27/R29 原缺陷的关闭结论。复
 
 ## 7. 远端 CI（exact SHA，只读核查）
 
-- 本地实现提交已推送 origin/main；**最终被测 SHA 为推送后 origin/main 的 tip**。
-- 只读核查：见文末"CI 核查补记"（push 后由该 SHA 自己的 run 确认；不使用
-  `bcf3f42c` 或任何旧 run 证明新代码）。
+- 已推送实现 SHA：`d212d977`（origin/main tip，`bcf3f42c..d212d977` fast-forward）。
+- 该 SHA 触发的 CI：**run `34685604645`，四个 job 全部 success**（`gh run view` 只读核查）：
+
+  | job | 结论 |
+  |---|---|
+  | install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest) | **success** |
+  | install · typecheck · test · build · benchmark-smoke · audit (windows-latest) | **success** |
+  | coverage gate (ubuntu) | **success** |
+  | release attestation (P38-12) | **success** |
+
+  这意味着 R32/R33/R34 的改动在 **Ubuntu 与 Windows 两平台**的 `typecheck/test/build/
+  benchmark-smoke/audit` 与 coverage 门禁上均通过——包括 R34 的夹具隔离（父子收集范围、
+  跨平台路径）与干净树 promotion E2E。
+- 唯一告警为 GitHub Actions 的 Node.js 20 弃用提示（非失败）。
 - 未下载并逐字节复核 CI artifact；仅核对 workflow/job/step 状态时按状态口径报告。
 - `runtimeReleaseReady`（该 SHA 工程门禁）、promotion evidence integrity（证据协议）、
   champion quality（真实模型效果）三者严格区分：本机 `release:verify` /
@@ -124,4 +136,7 @@ R32…R34 为**边界补充**，不改变 R27/R29 原缺陷的关闭结论。复
 
 ### CI 核查补记（push 后填写）
 
-<!-- FILL_AFTER_PUSH -->
+- origin/main tip = `d212d977`；其 CI **run `34685604645` 四 job success**（见 §7 表）。
+- 本报告与 `docs/E4-STATUS.md` 的文档提交（`documentationCommitSha`）为**文档专用**后续提交，
+  不改代码；其自身触发的 CI 为**另一条 run**，与实现 SHA 的 run 分开记录，互不代替。
+- 未使用 `bcf3f42c`（上一轮收口）或任何旧 run 证明本轮新代码。
