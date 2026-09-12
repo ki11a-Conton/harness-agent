@@ -97,3 +97,41 @@
 - 未完成（不勾选）：Windows CI 需推送后在最终提交复跑；release attestation 未产生；
   CI workflow 侧 V2 发证待接入；真实模型 champion 质量 INCONCLUSIVE（无伪造 ACCEPT）。
 - runtimeReleaseReady 为离线工程门禁；championPromotion 质量结论单列，未宣称已证实。
+
+## 修订计划执行状态（2026-09-11 计划 E4-R27…R31）— 一页最终状态
+
+- 计划入口：`plan.md` → `plan(20260911-072937).md`。收口交付物：`docs/E4-R31-report.md`。
+- 被测 SHA：HEAD `964ecc94`（R27 `f2f1b0b` / R28 `fb33ba9` 之后）；**R29/R30 为未提交工作树**。
+  reviewedSourceSha `493866f0`；平台 Windows（win32）；providerCalls **0**（全部离线）。
+- 计划状态：R27 ✅ / R28 ✅（本地提交，待推送）· R29 ✅ / R30 ✅（工作树，待提交）· R31 ✅（本页）。
+
+| 门 | 缺陷 | 修复 ref | 复现结果（本机实测） |
+|---|---|---|---|
+| G01 | insecure-local/none 计划与 manifest 一致却被判可晋升 | `f2f1b0b` | 18/18 PASS |
+| G02 | 四预算字段定义却未调用 → 无校验 | `fb33ba9` | 14/14 PASS |
+| G03 | `probeSourceSnapshot` UTF-8 解码碰撞 0x80↔0x81 | 工作树（基于 `964ecc94`） | 4/4 PASS（该文件 66/66） |
+| G04 | 恢复存储暂时故障后无 scheduler 回调 / 读未知被当非终态 | 工作树（基于 `964ecc94`） | 7/7 PASS（该文件 19/19） |
+
+**全仓门禁（真实命令 / 退出码）**
+
+| 命令 | 结果 | 退出码 |
+|---|---|---|
+| `pnpm typecheck` | 全绿 | 0 |
+| `pnpm test` | 316 文件：315 passed / 1 failed；5718 用例：5713 passed / 4 failed / 1 skipped | 1 |
+| `pnpm docs:verify` | ALL CHECKS PASS | 0 |
+| `pnpm test:race` / `:security` / `:protocol` / `:chaos` | 23 / 2133 / 52 / 12 passed | 0 |
+| `pnpm e3:repro-current-defects` | 13 passed | 0 |
+| `pnpm benchmark:smoke` | `smoke: OK` | 0 |
+
+- 全量测试**唯一失败** = `apps/cli/src/e4-09-production-e2e.test.ts` 4 例，根因**干净树门禁**
+  （`benchmark-command.ts:665`，`promotionEligibleRun && !clean`）。脏工作树（R29/R30 未提交）
+  下**预期失败、非回归**：生产函数直测脏树 `clean=false`、干净树 `clean=true`；
+  `benchmark-command.test.ts` N04 clean 正例 66/66 通过。
+- 本机 `release:verify` / `audit --strict` / `usage-audit --strict` 因缺少 **CI 记录的 gate 证据 /
+  命名运行**而 NOT_RUN（命令正确拒绝，非缺陷）。
+- 过度关闭修正：R22「数字边界」→ R28（G02）；R25「有限唤醒已验收」→ R30（G04）；旧证据未改写。
+- 未完成/待环境项（不勾选）：**远端 CI = NOT_RUN**（未授权 push；R27/R28 已提交待推送，
+  R29/R30 工作树待提交，推送后须由**新 SHA 的新 CI run** 确认）；release 发布动作未执行；
+  真实模型 champion 质量 `NOT_RUN`（不付费/不造假）。
+- `runtimeReleaseReady`（本 SHA 工程门禁）· `promotion evidence integrity`（证据协议）·
+  `champion quality`（真实效果）三者严格区分：前者本机通过，中者 G01/G02 关闭，后者 NOT_RUN。

@@ -28,10 +28,19 @@
     evaluator/loader/writer 三边界共享语义校验；18 例离线测试）
   - R28（G02 执行计划字段与规模约束）✅ docs/E4-R28-report.md（四个预算字段真正接入
     validator、整数合同、limit/caseIds 一致性、网格规模上限；14 例离线测试）
-- 待执行（本轮剩余）：
-  - R29（G03 二进制源码指纹 —— UTF-8 解码碰撞 0x80↔0x81）⏳ 未开始
-  - R30（G04 恢复存储暂时故障的有限唤醒 —— lease/intent 写失败后无 scheduler 回调）⏳ 未开始
-  - R31（独立验收与计划收口 —— G01…G04 关闭矩阵 + 全仓门禁）⏳ 未开始
+- 已完成（工作树改动，尚未提交）：E4-R29、E4-R30（2026-09-12）：
+  - R29（G03 二进制源码指纹——UTF-8 解码碰撞 0x80↔0x81）✅ docs/E4-R29-report.md
+    （`probeSourceSnapshot` 改原始字节哈希 + 无歧义 JSON 记录 + 不可读→UNKNOWN；
+    `benchmark-command.test.ts` 66/66）
+  - R30（G04 恢复存储暂时故障的有限唤醒——lease/intent 写失败后无 scheduler 回调）✅
+    docs/E4-R30-report.md（`scheduleStoreRecheck()` 有界单 timer + `durableTurnIsTerminal`
+    三态 unknown；`recovery-durable.test.ts` 19/19；R25 报告已加 superseded 指引）
+- 已完成：R31（独立验收与计划收口 —— G01…G04 关闭矩阵 + 全仓门禁）✅ docs/E4-R31-report.md
+  （四类复现 18/14/4/7 全 PASS；typecheck/docs:verify/race/security/protocol/chaos 全绿；
+  全量 `pnpm test` 唯一失败 = 4 例干净树门禁，脏工作树下预期、已用生产函数直接证明非回归；
+  远端 CI / push / 真实模型质量 = NOT_RUN）。一页最终状态见 docs/E4-STATUS.md 新增段。
+- 修正过度关闭：R22「数字边界」声明（→ R28）、R25「有限唤醒已验收」（→ R30）均已加
+  superseded 指引，旧证据未改写。
 - 上一轮（2026-09-11 计划 E4-R21…R26）收口结论保留：E4-R21 … E4-R26 已完成并已推送
   origin/main；远端 CI run #112（`2b2d3db`）四 job 全绿（含 strict usage-audit
   两平台 success、release attestation READY=true）。

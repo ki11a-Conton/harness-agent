@@ -10,6 +10,25 @@
 真实模型网络调用：0（全部测试为离线 fixture + 真实 writer/evaluator/loader）
 ```
 
+> **SUPERSEDED (E4-R28, 2026-09-11) — 数字校验的过度关闭**
+>
+> 本报告 §2 第 1 行声称 `parseExecutionPlan` 严格解析涵盖「**数字边界**」，§5 亦据此
+> 把 F02 记为已关闭。**该声明过宽**：`parseExecutionPlan` 定义了 `nullableNum` 却
+> **从未对四个预算字段调用**，`repeat`/`limit` 也只做有限数范围检查、没有整数要求。
+> 单字段变更复现（同一正例派生，一次只改一项）：
+>
+> ```json
+> {"field":"repeat","value":2.5,"accepted":true}
+> {"field":"maxModelCalls","value":-1,"accepted":true}
+> {"field":"maxLogicalRuns","accepted":true}
+> {"field":"maxEstimatedCostUsd","value":"invalid","accepted":true}
+> ```
+>
+> 该缺口由 **E4-R28 (G02)** 修复（`docs/E4-R28-report.md`：四字段真正接入 validator、
+> 安全整数/成本小数合同、`limit`↔`caseIds` 一致性、网格规模上限
+> `EXECUTION_PLAN_MAX_PLANNED_SAMPLES`）。本报告其余结论（空计划/数组/版本/交叉绑定、
+> 写入边界三处负例、干净树 E2E）**保持有效**，未追改其被测 SHA。
+
 ## 1. 问题（F02）与修复前复现
 
 计划 §2 F02 的最小复现：三个 case、两次重复、baseline 不通过、candidate

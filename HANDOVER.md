@@ -12,14 +12,22 @@
 - 已完成并**已推送**：P35…P38 收尾、E4-R12…R20（bcf34b7 CI 四 job 绿）、
   E4-R21…R26（run #112 / 2b2d3db 四 job 绿，attestation READY=true）。
 - 已完成**本地提交、尚未推送**：E4-R27（f2f1b0b）、E4-R28（fb33ba9）。
+- 已完成**工作树改动、尚未提交**：E4-R29、E4-R30、E4-R31（报告见 `docs/E4-R29-report.md`、
+  `docs/E4-R30-report.md`、`docs/E4-R31-report.md`；代码改动文件
+  `apps/cli/src/benchmark-command{,.test}.ts`、`packages/core/src/runtime/session-actor.ts`、
+  `packages/core/src/runtime/recovery-durable.test.ts`；收口另加 `docs/E4-STATUS.md` 新增段、
+  `plan.md`/`HANDOVER.md` 状态更新、R22/R25 superseded 指引）。
   推送后必须由**新 SHA 的新 CI run** 确认，testedSourceSha 与
   documentationCommitSha 严格区分，不能用旧 run 代替。
-- 未完成任务见下；每一项都要按当前计划第 3 节共同规则执行（离线、单因素、真实生产
-  入口验证、逐条验收证据、诚实 NOT_RUN/PARTIAL）。
+- 当前计划（E4-R27…R31）**五项全部完成**（R27/R28 本地提交待推送；R29/R30/R31 工作树改动，
+  未提交）。逐项执行的共同规则：离线、单因素、真实生产入口验证、逐条验收证据、诚实
+  NOT_RUN/PARTIAL。收口结论见 `docs/E4-R31-report.md` 与 `docs/E4-STATUS.md`。
+- 远端 CI = **NOT_RUN**（未授权 push）；下一阶段只有"真实 benchmark 失败、生产问题或
+  明确用户需求"才新建任务。
 
-## 未完成任务（按当前计划 E4-R27…R31 顺序）
+## 已完成任务（按当前计划 E4-R27…R31 顺序）
 
-### 1. E4-R29（G03）—— 二进制源码指纹：原始字节身份 ⏳ 未开始
+### 1. E4-R29（G03）—— 二进制源码指纹：原始字节身份 ✅ 已完成（工作树，未提交）
 
 - 位置：`apps/cli/src/benchmark-command.ts` 的 `probeSourceSnapshot`。
 - 问题：当前对文件 `readFileSync(path, 'utf8')` 后再哈希；无效 UTF-8 字节被解码为
@@ -34,7 +42,7 @@
   影响 journal 归属；报告写明 symlink/submodule/ignored 覆盖边界。
 - 输出：`docs/E4-R29-report.md`（含二进制负例修复前后值 + 复用行为测试）。
 
-### 2. E4-R30（G04）—— 恢复存储暂时故障后的有限唤醒 ⏳ 未开始
+### 2. E4-R30（G04）—— 恢复存储暂时故障后的有限唤醒 ✅ 已完成（工作树，未提交）
 
 - 位置：`packages/core/src/runtime/session-actor.ts` 的 acquireLease /
   persistRecoveryIntent 失败分支；`docs/E4-R25-report.md` 验收矩阵。
@@ -53,23 +61,28 @@
   turn 读取未知时不危险重试；长期故障有界退避。
 - 输出：`docs/E4-R30-report.md`，并修正 `docs/E4-R25-report.md` 的过度关闭声明
   （旧报告保持被测日期/SHA，加 superseded 指引，不改写旧证据）。
+- **验收结果**：新增 `scheduleStoreRecheck()`（每 actor 至多 1 个 timer，延迟
+  `min(1000×2ⁿ, 30000)`，回调重读 durable 状态、不消耗 attempt budget、close 后不复活）；
+  `acquireLease` / `persistRecoveryIntent` 失败分支接入；`durableTurnIsTerminal` 改三态
+  （读取失败 → `"unknown"`，不再当作「已确认非终态」）。`recovery-durable.test.ts`
+  **19/19**（+7 例）；修复前同一过滤 **6 failed \| 1 passed**，复现锚点
+  `scheduled:0, calls:0`。`packages/core/src/runtime` **34 files / 406 tests** PASS，
+  `tsc -b` exit 0。R25 报告已加 superseded 指引（marker-loss 结论保留）。
 
-### 3. E4-R31 —— 独立验收与计划收口 ⏳ 未开始（依赖 R29/R30）
+### 3. E4-R31 —— 独立验收与计划收口 ✅ 已完成（2026-09-12）
 
+- 输出：`docs/E4-R31-report.md`（G01…G04 关闭矩阵 + 全仓门禁实测 + 诚实 NOT_RUN）
+  + 一页最终状态（`docs/E4-STATUS.md` 新增段）。`plan.md` 保持唯一索引。
 - 建立 G01…G04 的准确关闭矩阵（问题 → 生产实现符号 → 修复 commit → 正常正例 →
   单因素负例 → 被测 SHA → 结果 → 限制）。
-- 重新执行四类复现（G01 insecure/none 不可晋升且 strong 正例仍在；G02 非法/缺失预算、
-  小数重复数、规模异常被拒；G03 二进制字节差异改变指纹与身份；G04 暂时 store 故障后
-  scheduler 实际触发自愈且关闭取消正确）。
-- 运行 `pnpm typecheck`、`pnpm test`、`pnpm docs:verify` 及 Runtime 变更所需的
-  race/security/integration 门禁；记录真实命令/退出码/日志，不手填测试数量。
-- 若授权包含 push/CI：按精确 SHA 检查新 run；否则本地可审查结果，远端标 NOT_RUN。
-- 检查 release bundle 复核、named-run observation audit、Windows 平台门禁未回退。
-- 根 `plan.md` 保持唯一索引；按仓库日期命名规则归档本长文并引用。
-- 修正 R22 数字校验与 R25 唤醒的过度关闭（R22 详见 `docs/E4-R22-report.md`）。
-- 严格区分 runtimeReleaseReady（该 SHA 工程门禁）、promotion evidence integrity
-  （证据协议）、champion quality（真实模型效果——本计划不验证）。
-- 输出：`docs/E4-R31-report.md` + 一页最终状态。
+- 重新执行四类复现（G01 18/18、G02 14/14、G03 4/4、G04 7/7，全部 PASS）。
+- 运行 `pnpm typecheck`（0）、`pnpm test`（1：唯一失败 = 4 例干净树门禁，脏工作树下预期）、
+  `pnpm docs:verify`（ALL CHECKS PASS，0）及 race 23 / security 2133 / protocol 52 / chaos 12
+  （均 0）；记录真实命令/退出码/日志，未手填测试数量。
+- 检查 release bundle 复核（`release-command.test.ts` 22/22）、命名运行观察审计
+  （`e4-r24-final-result-protocol.test.ts` 3/3）、Windows 平台门禁（本机 win32 全绿）未回退。
+- 修正 R22 数字校验与 R25 唤醒的过度关闭（均加 superseded 指引，旧证据未改写）。
+- **未授权 push/CI**：远端标 **NOT_RUN**（R29/R30 保持工作树；推送后须由新 SHA 的新 CI run 确认）。
 
 ## 环境依赖项（不因计划完成而消失）
 
