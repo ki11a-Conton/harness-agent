@@ -30,7 +30,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -39,7 +39,16 @@ import { runUsageAudit } from "./usage-audit.js";
 import { gitHeadShaAt, loadObservationEvidence } from "./observation-evidence.js";
 
 const REPO_ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
-const FIXTURE_DIR = join(REPO_ROOT, "apps", "cli", "src");
+// E4-R34 (H04): the generated fixtures live in a DEDICATED directory that the
+// root vitest config does NOT include (no `src` segment) and `tsconfig` does not
+// compile. A leftover fixture from an interrupted cleanup can therefore never be
+// collected by the next full-repo run. `runVitestSubprocess` runs them through
+// the dedicated config, which selects exactly that directory + the production
+// observation reporter.
+const FIXTURE_DIR_REL = "apps/cli/test-infra/observation-fixtures";
+const FIXTURE_DIR = join(REPO_ROOT, "apps", "cli", "test-infra", "observation-fixtures");
+const FIXTURE_CONFIG = "apps/cli/test-infra/observation-vitest.config.ts";
+const ROOT_CONFIG = "vitest.config.ts";
 const HEAD = gitHeadShaAt(REPO_ROOT);
 
 const TEST_NAME = "proto capability chain";
@@ -51,10 +60,11 @@ const OLD_ENV_DIR = process.env.E2E_OBSERVATION_EVIDENCE_DIR;
 
 /** The generated fixture observes candidates and then passes/fails per mode. */
 function fixtureSource(mode: "green" | "assert-fail" | "hook-fail"): string {
+  const EVIDENCE = "../../src/observation-evidence.js"; // fixture dir -> apps/cli/src
   const observe = (testName: string): string => `
     const run = createObservationRun({
       runId: process.env.E2E_OBSERVATION_RUN_ID!,
-      testFile: "apps/cli/src/<FIXTURE_NAME>",
+      testFile: "${FIXTURE_DIR_REL}/<FIXTURE_NAME>",
       testName: ${JSON.stringify(testName)},
       testedSourceSha: "${HEAD}",
       entrypoint: "cli",
@@ -62,14 +72,14 @@ function fixtureSource(mode: "green" | "assert-fail" | "hook-fail"): string {
     run.observe({ capabilityId: "${CAP.capability}", symbol: "${CAP.symbol}", entrypoint: "cli", invocation: "real subprocess chain" });
 `;
   if (mode === "green") {
-    return `import { it } from "vitest";\nimport { createObservationRun } from "./observation-evidence.js";\nit("${TEST_NAME}", () => {${observe(TEST_NAME)}});\n`;
+    return `import { it } from "vitest";\nimport { createObservationRun } from "${EVIDENCE}";\nit("${TEST_NAME}", () => {${observe(TEST_NAME)}});\n`;
   }
   if (mode === "assert-fail") {
-    return `import { it, expect } from "vitest";\nimport { createObservationRun } from "./observation-evidence.js";\nit("${TEST_NAME}", () => {${observe(TEST_NAME)}  expect("observed").toBe("committed"); // FAILS on purpose — after the observation\n});\n`;
+    return `import { it, expect } from "vitest";\nimport { createObservationRun } from "${EVIDENCE}";\nit("${TEST_NAME}", () => {${observe(TEST_NAME)}  expect("observed").toBe("committed"); // FAILS on purpose — after the observation\n});\n`;
   }
   // hook-fail: the OBSERVING test's body passes, but its suite's afterAll fails
   // (twice — two independent observing suites, both invalidated by hooks).
-  return `import { afterAll, describe, it } from "vitest";\nimport { createObservationRun } from "./observation-evidence.js";\ndescribe("observing-suite", () => {\n  afterAll(() => { throw new Error("planned afterAll failure"); });\n  it("${TEST_NAME}", () => {${observe(TEST_NAME)}});\n});\ndescribe("hook-fail-suite", () => {\n  afterAll(() => { throw new Error("planned afterAll failure"); });\n  it("hook fail chain", () => {${observe("hook fail chain")}});\n});\n`;
+  return `import { afterAll, describe, it } from "vitest";\nimport { createObservationRun } from "${EVIDENCE}";\ndescribe("observing-suite", () => {\n  afterAll(() => { throw new Error("planned afterAll failure"); });\n  it("${TEST_NAME}", () => {${observe(TEST_NAME)}});\n});\ndescribe("hook-fail-suite", () => {\n  afterAll(() => { throw new Error("planned afterAll failure"); });\n  it("hook fail chain", () => {${observe("hook fail chain")}});\n});\n`;
 }
 
 interface SubprocessResult {
@@ -78,18 +88,21 @@ interface SubprocessResult {
   stderr: string;
 }
 
-/** Run the REAL `vitest run` subprocess over the fixture with a named run. */
+/** Run the REAL `vitest run` subprocess over the fixture with a named run.
+ *  E4-R34 (H04): the dedicated fixture config (never the root config) is used,
+ *  so the parent suite can never collect the generated fixture. */
 async function runVitestSubprocess(
   mode: "green" | "assert-fail" | "hook-fail",
   runId: string,
 ): Promise<SubprocessResult> {
   const fixtureName = `e4-r24-fixture-${process.pid}-${Date.now()}-${mode}.test.ts`;
+  await mkdir(FIXTURE_DIR, { recursive: true });
   fixturePath = join(FIXTURE_DIR, fixtureName);
   await writeFile(fixturePath, fixtureSource(mode).replaceAll("<FIXTURE_NAME>", fixtureName), "utf8");
   return await new Promise<SubprocessResult>((resolvePromise, rejectPromise) => {
     const child = spawn(
       process.execPath,
-      ["node_modules/vitest/vitest.mjs", "run", `apps/cli/src/${fixtureName}`],
+      ["node_modules/vitest/vitest.mjs", "run", "--config", FIXTURE_CONFIG, `${FIXTURE_DIR_REL}/${fixtureName}`],
       {
         cwd: REPO_ROOT,
         env: {
@@ -107,6 +120,33 @@ async function runVitestSubprocess(
     child.on("error", rejectPromise);
     child.on("close", (code) => resolvePromise({ code, stdout, stderr }));
   });
+}
+
+/** E4-R34 (H04): list what a given config would collect (no test execution). */
+async function listCollectedFiles(configPath: string, filter?: string): Promise<string> {
+  return await new Promise<string>((resolvePromise, rejectPromise) => {
+    const args = ["node_modules/vitest/vitest.mjs", "list", "--config", configPath];
+    if (filter !== undefined) args.push(filter);
+    const child = spawn(process.execPath, args, {
+      cwd: REPO_ROOT, env: { ...process.env }, stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
+    child.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
+    child.on("error", rejectPromise);
+    child.on("close", () => resolvePromise(`${stdout}\n${stderr}`));
+  });
+}
+
+/** The number of tests vitest ACTUALLY executed, per its own summary line.
+ *  Guards against a "0 tests / reporter not wired" false pass.
+ *  vitest colours the summary, so strip ANSI first (the SGR sequences sit
+ *  between "Tests" and the count, e.g. `Tests \x1b[22m \x1b[1m\x1b[32m2 passed`). */
+function ranTestCount(output: string): number | null {
+  const plain = output.replace(/\x1b\[[0-9;]*m/g, "");
+  const m = /Tests\s+(\d+)\s+(?:passed|failed)/.exec(plain);
+  return m === null ? null : Number(m[1]);
 }
 
 async function cleanupFixture(): Promise<void> {
@@ -135,6 +175,9 @@ describe("E4-R24 final-result observation protocol — real Vitest subprocess (F
     const res = await runVitestSubprocess("green", runId);
     try {
       expect(res.code).toBe(0);
+      // E4-R34: the subprocess REALLY ran one test through the fixture config
+      // (guards against a "0 tests" / reporter-not-wired false pass).
+      expect(ranTestCount(res.stdout + res.stderr)).toBe(1);
       expect(res.stderr).toContain(`[observation] run ${runId}: committed 1 row(s), dropped 0 candidate(s)`);
       const rows = loadObservationEvidence(runId);
       expect(rows.length).toBe(1);
@@ -159,6 +202,7 @@ describe("E4-R24 final-result observation protocol — real Vitest subprocess (F
     const res = await runVitestSubprocess("assert-fail", runId);
     try {
       expect(res.code).not.toBe(0); // the assertion failure fails the suite
+      expect(ranTestCount(res.stdout + res.stderr)).toBe(1); // the observing test DID run
       expect(res.stderr).toContain(`[observation] run ${runId}: committed 0 row(s), dropped 1 candidate(s)`);
       // No committed passed row exists for THIS run.
       const rows = loadObservationEvidence(runId);
@@ -189,6 +233,9 @@ describe("E4-R24 final-result observation protocol — real Vitest subprocess (F
     const res = await runVitestSubprocess("hook-fail", runId);
     try {
       expect(res.code).not.toBe(0); // the afterAll failure fails the suite
+      // Both observing tests ran AND both reported "passed" at TEST level — the
+      // only reason nothing is committed is the suite-level afterAll error.
+      expect(ranTestCount(res.stdout + res.stderr)).toBe(2);
       // Both candidates (the hook-failed observing test AND the second
       // hook-fail suite's test) are dropped: 2 candidates, 0 committed.
       expect(res.stderr).toContain(`[observation] run ${runId}: committed 0 row(s), dropped 2 candidate(s)`);
@@ -199,6 +246,56 @@ describe("E4-R24 final-result observation protocol — real Vitest subprocess (F
       expect(audit.ok).toBe(false);
     } finally {
       await cleanupFixture();
+    }
+  }, 240_000);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// E4-R34 (H04): the deliberately-failing fixtures must be STRUCTURALLY isolated
+// from the root collection, so an interrupted cleanup can never make the next
+// full-repo run collect a stray failing test.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("E4-R34 (H04) observation-fixture collection isolation", () => {
+  it("a LEFTOVER failing fixture is NOT collected by the root config, IS selected by the dedicated config, and cleanup only removes its own file", async () => {
+    const stamp = `${process.pid}-${Date.now()}`;
+    const mine = join(FIXTURE_DIR, `e4-r24-fixture-leftover-${stamp}.test.ts`);
+    const other = join(FIXTURE_DIR, `e4-r24-fixture-sibling-${stamp}.test.ts`);
+    await mkdir(FIXTURE_DIR, { recursive: true });
+    const body = (label: string): string => `import { it, expect } from "vitest";\nit("${label}", () => { expect(1).toBe(2); });\n`;
+    await writeFile(mine, body("leftover must never be collected by the root config"), "utf8");
+    await writeFile(other, body("sibling file owned by another actor"), "utf8");
+    const mineName = `e4-r24-fixture-leftover-${stamp}.test.ts`;
+    try {
+      // (1) The ROOT config: a positive control (the parent protocol test IS
+      //     collected) plus the decisive negative (the leftover is NOT — the
+      //     fixture dir has no `src` segment, so the root `include` misses it).
+      const rootList = await listCollectedFiles(ROOT_CONFIG, "e4-r24");
+      expect(rootList).toContain("apps/cli/src/e4-r24-final-result-protocol.test.ts");
+      expect(rootList).not.toContain(mineName);
+
+      // (2) The DEDICATED fixture config selects EXACTLY the fixture directory,
+      //     and wires the production reporter. The listing is filtered to THIS
+      //     run's own file (`mineName`) so that two independent suites running
+      //     concurrently against the shared fixture dir cannot import each
+      //     other's fixtures mid-cleanup (ERR_MODULE_NOT_FOUND — observed when
+      //     two `apps/cli` runs overlap).
+      const fixtureList = await listCollectedFiles(FIXTURE_CONFIG, mineName);
+      expect(fixtureList).toContain(mineName);
+      const collected = fixtureList.split(/\r?\n/).filter((l) => l.includes(".test.ts") && l.includes(" > "));
+      expect(collected.length).toBeGreaterThan(0);
+      for (const line of collected) expect(line).toContain(`${FIXTURE_DIR_REL}/`);
+    } finally {
+      // (3) Cleanup removes ONLY the file it was pointed at — a sibling created
+      //     by another actor is never touched.
+      const saved = fixturePath;
+      fixturePath = mine;
+      await cleanupFixture();
+      fixturePath = saved;
+      await expect(readFile(mine, "utf8")).rejects.toBeDefined(); // gone
+      expect(await readFile(other, "utf8")).toContain("sibling file owned by another actor"); // intact
+      await rm(other, { force: true }); // tidy THIS test's own sibling
+      await rm(mine, { force: true });
     }
   }, 240_000);
 });

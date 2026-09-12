@@ -21,6 +21,8 @@ spawnpid.txt
 .pnpm-store/
 # Session workspace (inbound uploads) — never commit.
 /harness-agent-src/
+# Stray source archive (session scratch, not part of the repo) — never commit.
+/harness-agent-src.zip
 # E4-R24: throwaway fixtures spawned by the final-result protocol test live in
 # apps/cli/src for ONE vitest subprocess run (never committed, never seen by
 # git status --porcelain). They must stay invisible to the working-tree
@@ -28,4 +30,10 @@ spawnpid.txt
 # tree and refuses to run — the fixture dirt would be a false positive, not a
 # real source change.
 apps/cli/src/e4-r24-fixture-*.test.ts
+# E4-R34 (H04): the fixtures moved OUT of the root vitest include into
+# apps/cli/test-infra/observation-fixtures/. They are still throwaway files (the
+# dedicated observation-vitest.config.ts selects that directory), so a leftover
+# from an interrupted cleanup must stay invisible to git as well — otherwise it
+# would be committed as a stray, deliberately-failing test.
+apps/cli/test-infra/observation-fixtures/*.test.ts
 

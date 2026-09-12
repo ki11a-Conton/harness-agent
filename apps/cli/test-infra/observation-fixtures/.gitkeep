@@ -1,0 +1,15 @@
+# E4-R34 (H04) — the observation-fixture collection is isolated here.
+
+The e4-r24 final-result protocol test spawns a REAL `vitest run` over a
+generated, DELIBERATELY-failing fixture (`e4-r24-fixture-*.test.ts`). Those
+files are created at runtime, used, and deleted — but if that cleanup is ever
+interrupted (crash, sandbox file-limit, kill), a leftover file must NOT be
+collected by the next full-repo run.
+
+Keeping them in this directory (outside the root vitest `include` scope and
+outside `tsconfig`'s `src`) makes that structurally impossible. The subprocess
+runs them through `../observation-vitest.config.ts`, which selects exactly this
+directory and wires the production observation reporter.
+
+`.gitkeep` keeps the directory present so the dedicated config always has a
+stable home.
