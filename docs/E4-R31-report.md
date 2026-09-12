@@ -1,12 +1,22 @@
 # E4-R31 Report — 独立验收与计划收口（G01…G04 关闭矩阵）
 
+> **SUPERSEDED / current-state 指引（2026-09-12，E4-R35 追加）**
+>
+> 本报告记录的是**当时（工作树未提交、未推送）**的证据，作为历史保留，**不改写**。
+> 现状已推进：
+> - R29/R30/R31 **已提交并推送** origin/main（收口 SHA `bcf3f42c`），其 SHA 的 CI
+>   四个 job 全绿，**远端 CI 不再是 NOT_RUN**（§7 的 NOT_RUN 是当时状态）。
+> - 本轮的 R32/R33/R34/R35 见 `docs/E4-R32-report.md` … `docs/E4-R35-report.md`；
+>   当前计划入口见 `plan.md` → `plan(20260912-021843).md`。
+> - 本报告的关闭矩阵对 G01…G04 仍然有效（R32…R34 是**边界补充**，不推翻原缺陷关闭）。
+
 - 被测 SHA：git 根 `D:/Download games/harness agent`，HEAD `964ecc94`
-  （R27 `f2f1b0b` / R28 `fb33ba9` 之后）；**R29/R30 为未提交工作树改动**。
+  （R27 `f2f1b0b` / R28 `fb33ba9` 之后）；**R29/R30 为未提交工作树改动**（当时）。
 - 审查基线 reviewedSourceSha：`493866f03d942e85870cc658eb721cfbf2389ec2`（R26 收口 HEAD）。
 - 状态：PASS（四类复现全部关闭 + 全仓门禁实测 + 过度关闭修正 + 诚实 NOT_RUN）
 - 真实模型调用：**0**（全部离线 fixture / fault-injection / scripted provider）
 - 本报告是 2026-09-11 计划 `plan(20260911-072937).md` 的**收口交付物**；`plan.md` 保持唯一索引。
-- 平台：Windows（win32）。远端 CI：**NOT_RUN**（未授权 push，见 §7）。
+- 平台：Windows（win32）。远端 CI：**NOT_RUN**（当时未授权 push，见 §7；已被上方指引取代）。
 
 > 收口原则（HANDOVER §3）：本报告只把**已在本机实测**的结果记为 PASS；未运行的写 NOT_RUN；
 > 部分完成的写 PARTIAL。测试数量全部来自真实命令输出，不手填。旧报告（R22/R25）的过度关闭

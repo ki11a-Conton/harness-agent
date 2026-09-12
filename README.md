@@ -279,36 +279,40 @@ mcp-runtime, app-server, release-integrity).
 - **E4-R21 … E4-R26** (2026-09-11 plan) — `docs/E4-R21-report.md` …
   `docs/E4-R26-report.md`; origin/main CI run #112 (2b2d3db) four jobs green,
   strict usage-audit on both platforms, release attestation READY=true.
+- **E4-R27 … E4-R31** (2026-09-11 plan) — `docs/E4-R27-report.md` …
+  `docs/E4-R31-report.md`; pushed to origin/main and CI-green at their SHAs
+  (four jobs: Ubuntu main gate, Windows main gate, Ubuntu coverage, release
+  attestation). This batch closed G01 (promotion isolation eligibility),
+  G02 (execution-plan field/scale constraints), G03 (raw-byte source
+  fingerprint), G04 (bounded recovery wake-up) and the independent close-out.
 
-### Completed locally, pending push + new CI
+### Completed in this round (2026-09-12 plan E4-R32…R35), pending push + new CI
 
-- **E4-R27** (G01 promotion isolation eligibility) —
-  [`docs/E4-R27-report.md`](./docs/E4-R27-report.md): a shared semantic
-  validator (`validatePromotionEligibility`) enforces strong isolation, a known
-  backend, known source SHA, clean tree and a named candidate for
-  `promotionEligible=true` — at the evaluator, the V3 writer and the promotion
-  loader. `insecure-local` / `none` can never promote, even when both plan and
-  manifest agree and every digest is recomputed (18 offline tests).
-- **E4-R28** (G02 execution-plan field/scale constraints) —
-  [`docs/E4-R28-report.md`](./docs/E4-R28-report.md): the four budget fields are
-  now actually validated (safe-integer counts, finite-decimal USD cap), repeat/
-  limit/seed use explicit integer contracts aligned with the CLI, a non-null
-  limit smaller than the case count is rejected, and grid scale
-  (repeat × caseCount) is bounded by a documented cap before any expansion
-  (14 offline tests).
+- **E4-R32** (H01/H02 recovery-store combined failure + intent backoff) —
+  [`docs/E4-R32-report.md`](./docs/E4-R32-report.md): lease cleanup is now
+  best-effort and cannot abort the bounded re-check; the recovery read entry
+  fail-closes and keeps a finite wake-up path; the backoff counter resets only
+  after the round's strict persistence (lease + intent) succeeds, so a
+  persistent intent-write outage really escalates. `recovery-durable.test.ts`
+  23/23.
+- **E4-R33** (H03 execution-plan scale validation before dangerous work) —
+  [`docs/E4-R33-report.md`](./docs/E4-R33-report.md): `parseExecutionPlan` no
+  longer uses an argument spread (a ~130k-case plan inside the documented cap
+  used to throw `RangeError`), uses a `Set` for case membership (drops the
+  quadratic query), and validates the grid-scale/capacity contract before any
+  per-case traversal. `e4-r33-execution-plan-scale.test.ts` 7/7.
+- **E4-R34** (H04 isolate deliberately-failing fixtures) —
+  [`docs/E4-R34-report.md`](./docs/E4-R34-report.md): the final-result protocol
+  fixtures moved out of the root vitest `include` into
+  `apps/cli/test-infra/observation-fixtures/` with a dedicated subprocess
+  config that keeps the production reporter; a leftover fixture can no longer
+  be collected by the next full run. `e4-r24-final-result-protocol.test.ts`
+  4/4.
+- **E4-R35** (post-push status + final acceptance close-out) — in progress;
+  delivers `docs/E4-R35-report.md` and the one-page `docs/E4-STATUS.md`.
 
-### Unfinished (see [HANDOVER.md](./HANDOVER.md) for the detail)
+### Unfinished / NOT_RUN (see [HANDOVER.md](./HANDOVER.md) for the detail)
 
-- **E4-R29** (G03): binary source fingerprint. `probeSourceSnapshot` reads
-  files as UTF-8 strings before hashing; distinct raw bytes (0x80 vs 0x81)
-  can decode to the same replacement character and collide. Fix: hash raw
-  `Buffer` bytes. Not started.
-- **E4-R30** (G04): recovery-store transient write failure has no bounded
-  auto-retry — when lease/intent persistence fails, the actor correctly keeps
-  `action=0` but nothing schedules a re-check when the store recovers. Fix:
-  bounded wake with a valid single retry timer. Not started.
-- **E4-R31**: independent acceptance + close-out (G01–G04 closure matrix, full
-  repo gates, plan entry update). Blocked on R29/R30.
 - **Real-model champion quality**: `championPromotion.status=NOT_RUN` — the
   paid real-model benchmark was not requested; no fake readiness is claimed.
 - **Release publish action**: plans stop at attestation; no automatic publish.

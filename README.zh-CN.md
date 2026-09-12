@@ -250,28 +250,33 @@ app-server、release-integrity）。
 - **E4-R21 … E4-R26**（2026-09-11 计划）—— `docs/E4-R21-report.md` …
   `docs/E4-R26-report.md`；origin/main CI run #112（2b2d3db）四 job 全绿，
   strict usage-audit 两平台 success，release attestation READY=true。
+- **E4-R27 … E4-R31**（2026-09-11 计划）—— `docs/E4-R27-report.md` …
+  `docs/E4-R31-report.md`；**已推送 origin/main 并在其 SHA 的 CI 全绿**（四 job：
+  Ubuntu 主门禁、Windows 主门禁、Ubuntu coverage、release attestation）。该批次关闭了
+  G01（晋升隔离资格）、G02（执行计划字段/规模约束）、G03（原始字节源码指纹）、
+  G04（恢复存储有限唤醒）与独立收口。
 
-### 已完成本地提交，待推送 + 新 CI 确认
+### 本轮已完成（2026-09-12 计划 E4-R32…R35），待推送 + 新 CI 确认
 
-- **E4-R27**（G01 晋升隔离资格语义）—— [`docs/E4-R27-report.md`](./docs/E4-R27-report.md)：
-  共享语义校验器（`validatePromotionEligibility`）在 evaluator、V3 writer 与
-  promotion loader 三处强制 `promotionEligible=true` 必须满足：strong 隔离、已知后端、
-  已知 source SHA、干净树、具名候选。`insecure-local` / `none` 即使两处一致且全部
-  摘要重算也**永远不能晋升**（18 例离线测试）。
-- **E4-R28**（G02 执行计划字段与规模约束）—— [`docs/E4-R28-report.md`](./docs/E4-R28-report.md)：
-  四个预算字段现在真正接入 validator（计数用安全整数、USD 上限允许有限小数）；
-  repeat/limit/seed 采用与 CLI 对齐的显式整数契约；非 null limit 小于用例数即拒绝；
-  网格规模（repeat × caseCount）在展开前受文档化上限约束（14 例离线测试）。
+- **E4-R32**（H01/H02 恢复存储组合故障 + intent 退避）——
+  [`docs/E4-R32-report.md`](./docs/E4-R32-report.md)：lease 清理改为尽力而为，不再中断
+  有界重检；恢复读取入口 fail-closed 且保留有限唤醒；退避计数仅在本轮严格持久化
+  （lease + intent）成功后重置，使持续的 intent 写故障真正递增退避。
+  `recovery-durable.test.ts` 23/23。
+- **E4-R33**（H03 execution-plan 规模校验先于危险操作）——
+  [`docs/E4-R33-report.md`](./docs/E4-R33-report.md)：`parseExecutionPlan` 不再用实参展开
+  （此前 ~13 万 case、仍在文档上限内的计划会抛 `RangeError`），改用 `Set` 做成员查询
+  （消除二次方），并在任何逐 case 遍历之前校验网格规模/容量合同。
+  `e4-r33-execution-plan-scale.test.ts` 7/7。
+- **E4-R34**（H04 隔离故意失败的测试夹具）——
+  [`docs/E4-R34-report.md`](./docs/E4-R34-report.md)：final-result 协议夹具移出根 vitest
+  `include`，改放 `apps/cli/test-infra/observation-fixtures/`，并以专用子进程配置保留生产
+  reporter；残留夹具不再被下一次全量运行收集。`e4-r24-final-result-protocol.test.ts` 4/4。
+- **E4-R35**（提交后状态更新 + 最终验收收口）—— 进行中；交付 `docs/E4-R35-report.md`
+  与一页 `docs/E4-STATUS.md`。
 
-### 未完成（详情见 [HANDOVER.md](./HANDOVER.md)）
+### 未完成 / NOT_RUN（详情见 [HANDOVER.md](./HANDOVER.md)）
 
-- **E4-R29**（G03）：二进制源码指纹。`probeSourceSnapshot` 先按 UTF-8 字符串读取再哈希；
-  不同的原始字节（0x80 与 0x81）可能解码成同一个替换字符而碰撞。修复：直接哈希原始
-  `Buffer` 字节。未开始。
-- **E4-R30**（G04）：恢复存储暂时写失败没有有界自动重试——lease/intent 持久化失败时
-  actor 正确保持 `action=0`，但没有任何东西在存储恢复后安排重检。修复：有界唤醒 +
-  每 actor 至多一个有效重试 timer。未开始。
-- **E4-R31**：独立验收与收口（G01–G04 关闭矩阵、全仓门禁、计划入口更新）。依赖 R29/R30。
 - **真实模型 champion 质量**：`championPromotion.status=NOT_RUN` —— 未请求付费真实模型
   benchmark；不伪称就绪。
 - **release 发布动作**：各轮计划只到 attestation，不做自动发布。
