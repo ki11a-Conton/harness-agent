@@ -318,6 +318,27 @@ Release SHA: 33de85f9a1b2c3d4e5f60718293a4b5c6d7e8f901 (historical example, not 
     expect(handover.truthful).toBe(true);
   });
 
+  it("E4-00: passes (honestly) when plan.md is absent — no in-progress plan (E4-R50 收口)", async () => {
+    await makeRoot({
+      ...suiteCaseFiles(3),
+      "benchmarks/README.md": README_CLAIMS,
+      "packages/a/package.json": "{}",
+      "HANDOVER.md": HANDOVER,
+      ".github/workflows/ci.yml": CI_WITH_GATES,
+      "CAPABILITY_MATRIX.md": MATRIX_MD,
+      "CAPABILITY_MATRIX.json": MATRIX_JSON,
+    });
+    // Simulate the R50 收口 state: the plan entry and its spec are both gone
+    // (archived in git history). Absent plan.md must NOT fail closed — it is a
+    // truthful "no in-progress plan" signal.
+    await rm(join(root, "plan.md"), { force: true });
+    await rm(join(root, "plan(20260907-004430).md"), { force: true });
+    const result = await verifyDocs({ root });
+    const plan = result.checks.find((c) => c.name === "current plan entry (E4-00)")!;
+    expect(plan.truthful).toBe(true);
+    expect(plan.reason).toMatch(/no plan\.md — no in-progress plan/);
+  });
+
   it("E4-00: fails closed when plan.md does not declare itself the current entry", async () => {
     await makeRoot({
       ...suiteCaseFiles(3),

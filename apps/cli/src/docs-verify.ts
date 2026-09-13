@@ -258,28 +258,38 @@ export async function verifyDocs(deps: { root: string }): Promise<DocVerificatio
       planExists = false;
     }
     const CURRENT_MARKER = "当前执行计划入口";
-    const markedCurrent = planExists && planEntry.includes(CURRENT_MARKER);
-    const specRef = planEntry.match(/plan\((\d{8}-\d{6})\)\.md/);
-    let specExists = false;
-    if (specRef !== null && specRef !== undefined) {
-      specExists = await readFile(join(root, `plan(${specRef[1]}).md`), "utf8")
-        .then(() => true)
-        .catch(() => false);
-    }
-    const truthful = markedCurrent && specExists;
-    checks.push({
-      name: "current plan entry (E4-00)",
-      truthful,
-      reason: !planExists
-        ? "plan.md is missing — there is no current-plan entry"
-        : !markedCurrent
+    // E4-R50 收口（用户指示）：仓库不再维护「当前计划入口」的三文件体系（plan.md
+    // + plan(<时间戳>).md），三个计划文件均从工作树与远端删除，仅存于 git 历史。
+    // 无 plan.md = 无进行中的计划（诚实 PASS）；一旦存在，仍须自洽（fail-closed：
+    // 缺失标记 / 引用不存在的 spec 都判 FALSE）。
+    if (!planExists) {
+      checks.push({
+        name: "current plan entry (E4-00)",
+        truthful: true,
+        reason: "no plan.md — no in-progress plan (E4-R50 收口后计划体系已归档进 git 历史); if a plan.md reappears it must be self-consistent",
+      });
+    } else {
+      const markedCurrent = planEntry.includes(CURRENT_MARKER);
+      const specRef = planEntry.match(/plan\((\d{8}-\d{6})\)\.md/);
+      let specExists = false;
+      if (specRef !== null && specRef !== undefined) {
+        specExists = await readFile(join(root, `plan(${specRef[1]}).md`), "utf8")
+          .then(() => true)
+          .catch(() => false);
+      }
+      const truthful = markedCurrent && specExists;
+      checks.push({
+        name: "current plan entry (E4-00)",
+        truthful,
+        reason: !markedCurrent
           ? "plan.md does not declare itself the current plan entry (missing marker 当前执行计划入口)"
           : specRef === null || specRef === undefined
             ? "plan.md does not reference a detailed plan spec (plan(<YYYYMMDD-HHMMSS>).md)"
             : specExists
               ? `plan.md is the current entry and references an existing spec plan(${specRef[1]}).md`
               : `plan.md references plan(${specRef[1]}).md but that spec file is missing`,
-    });
+      });
+    }
   }
 
   // ---- E4-10 #5: every release-gate command exists as a real package.json

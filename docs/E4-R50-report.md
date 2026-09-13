@@ -99,3 +99,21 @@ AGENTS.md「运行相关安全测试」与 R50 §4「按改动范围执行相关
 R50 报告本身是文档；若需要在 CI run 完成后补记四 job 结论，将新增**纯文档提交**——
 代码与 `109cc5e6` 逐字节相同，故「四 job 全绿」是对同一代码的 CI 结论，不构成新 SHA
 的冒充；该补记只更新本报告 §5，不重跑门禁。
+
+## 9. 收尾：计划文件体系移除与 E4-00 放宽（2026-09-13，用户指示）
+
+- 用户指示：`plan.md`、`plan(20260912-180524).md`、`plan(20260912-144145).md` 三个计划
+  文件全部从工作树与远端删除，仅存 git 历史。R45…R50 执行状态此前记录于 plan.md
+  （随删除进入 git 历史），本报告为树内持久记录：R45–R48 ✅（报告见
+  `docs/E4-R45-report.md` … `docs/E4-R48-report.md`）、R49 ✅（`docs/E4-R49-report.md`）、
+  R50 ✅（本报告，§5 门禁与 CI 四 job 全绿）。
+- `docs-verify` E4-00 放宽：仓库不再维护「当前计划入口」三文件体系——无 `plan.md` =
+  无进行中的计划 → **诚实 PASS**（reason 注明 no plan.md — no in-progress plan，不伪装）；
+  一旦 plan.md 重新出现仍 **fail-closed**（缺当前入口标记 / 引用不存在的 spec 判 FALSE）。
+  新增回归测试覆盖「plan.md 缺失 → PASS」分支。
+- 收尾门禁（收尾提交工作树，非重跑 R50 全量）：typecheck 0；`vitest run
+  apps/cli/src/docs-verify.test.ts` 16 passed / 16；`pnpm docs:verify` ALL CHECKS PASS
+  （E4-00 以无 plan.md 状态通过）。
+- 边界：本收尾提交只改 `docs-verify.ts`/`docs-verify.test.ts`、删除三个 plan 文件、
+  追加本节；不触及 R50 最终门禁（`440b2895`）覆盖的生产代码路径，E4-09 真实链不受影响
+  （其不依赖 plan 文件）。收尾提交本身的远端 CI 结论以 git 历史/Actions 为准，不在此冒充。
