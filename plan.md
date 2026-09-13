@@ -47,7 +47,11 @@
   新增 `e4-r42-gate-isolation.test.ts`：真实 gate 在自有 git 身份/配置/输出缓存的临时 workspace
   执行，green/非零证据自洽且主仓共享 dist+tsbuildinfo 摘要不变；并发跑协议+release+gate 三文件
   29/29、污染 0/0。**历史 INVALID 与 K03 的因果不合并**。）
-- R43（K04：执行计划 999999/1000000/1000001 独立固定边界）：⏳ 待做
+- R43（K04：执行计划 999999/1000000/1000001 独立固定边界）✅ `docs/E4-R43-report.md`
+  （新增 `packages/evaluation/src/e4-r43-execution-plan-capacity.test.ts` 3 例：固定字面量输入
+  max−1/max/max+1 → 接受/接受/拒绝；临时副本把常量 mutation 成 2,000,000 / 999,999 后**真实加载**，
+  固定输入分别"必失败"⇒ 判别力已证。**生产零改动**（合同仍 1,000,000）；未展开百万网格。
+  `docs/E4-R38-report.md` 增 §6.1 修正「断言随常量精确 ≠ 合同锁定」的表述。）
 - R44（K05：证据矩阵与静止工作区最终门禁）：⏳ 待做
 - 上一轮 R39（状态同步与最终门禁收口）：⚠️ **PARTIAL** `docs/E4-R39-report.md`
   —— 关闭矩阵、干净树门禁实测、远端 CI 只读核实与免责口径均记录于该报告。
