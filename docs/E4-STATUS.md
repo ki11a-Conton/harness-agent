@@ -25,7 +25,9 @@
 | `pnpm test:race` | **PASS** | 11 文件 / 23 passed |
 | `pnpm test:chaos` | **PASS** | 1 文件 / 12 passed |
 | 真实模型 champion 质量 | **NOT_RUN** | 未请求付费 benchmark；不为收口造假 |
-| release 发布动作 | **NOT_RUN** | 各轮只到 attestation，不自动发布 |
+| release 发布动作（历史计划范围口径） | **NOT_RUN** | 各轮计划只到 attestation，不自动发布 |
+| GitHub release 存在性（当前仓库事实） | **已存在 v1.8.0** | `gh release` Latest，2026-09-13，携带源码快照资产（R49 补记） |
+| 本轮发布完整性复核 | **未做** | 只核实 job/step 状态与 release 存在，未复核发布二进制/签名/供应链证据 |
 | 远端 CI（本轮实现 SHA，run `34734367541`） | **4/4 job success** | ubuntu / windows 主门禁 + coverage + release attestation |
 
 **本轮结论三分（不混淆）**：
@@ -310,7 +312,9 @@
   `INVALID`，根因未定；不得用隔离通过或其它门禁的绿来替代该项。
 - **本轮 SHA 的 Windows CI 主门禁失败**（run `34687657690`，两次尝试），根因未定。
 - **真实模型 champion 质量 = NOT_RUN**：未请求付费 benchmark，不造假、不付费。
-- **release 发布动作未执行**：各轮计划只到 attestation，不自动发布。
+- **release 发布动作（历史计划范围口径）未执行**：各轮计划只到 attestation，不自动发布。
+  这与「当前仓库已存在 v1.8.0 release」不冲突（R49 补记：release 存在是事实，发布动作
+  属历史计划范围 NOT_RUN，本轮未复核发布二进制/签名/供应链证据）。
 - **CI artifact 未下载逐字节复核**：只核实 job/step 状态。
 - **历史间歇失败（R34 的 cross-case contamination 波动）根因未知且本轮未复现**，
   保持「未复现 / 根因未定」口径；不因清理旧夹具而宣称所有波动均已归因。

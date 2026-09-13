@@ -38,7 +38,9 @@
 - 环境依赖项（不因计划完成而消失）：
   - 真实模型 champion 质量：attestation 记录 `championPromotion.status=NOT_RUN`
     （付费 benchmark 未请求，不为此造假或付费；勿把 mock/stub 隔离当真实 OS 证明）。
-  - release 发布动作本身未执行（各轮计划只到 attestation，不自动发布）。
+  - release 发布动作（历史计划范围口径）：各轮计划只到 attestation，不自动发布。
+    **当前仓库已存在 v1.8.0**（`gh release`，2026-09-13）——这是历史执行事实；发布动作
+    本身仍属 NOT_RUN（本轮未复核发布二进制/签名/供应链证据，见 R49）。二者不冲突。
   - **已归因的历史项（R40/R44）**：R39 的"冻结版本全仓 `pnpm test` 不绿"已归因为
     **运行期干净源树前置条件**（非版本缺陷），并在 R44 的冻结干净版本上取得全绿。
   - **仍未归因（保留真实状态）**：`01c4ec74` 的 Windows CI 主门禁两次尝试失败点不同，

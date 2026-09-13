@@ -3,12 +3,13 @@
 **当前执行计划入口** — 本文件是唯一的当前计划入口。
 
 - 当前计划：[plan(20260912-144145).md](plan(20260912-144145).md)
-  （E4-R40…E4-R44：失败归因诊断包 / 探测错误的显式语义与 fail-closed / 夹具不得进入生产编译
-  边界与共享资源互斥 / 执行计划百万样本边界固定合同 / 证据矩阵与静止工作区最终门禁，
-  2026-09-13）
+  （E4-R45…E4-R50：诊断注册/落盘先于失败发生（R45）/ 跨进程与重复采集不覆盖（R46）/
+  诊断限制真正按字节生效（R47）/ 共享构建快照判别力（R48）/ 统一 release 与计划入口的
+  当前状态（R49）/ 最终门禁与有限收口（R50），2026-09-13。审查基线
+  `d201da5e8071e2780a745ffb86ddb31d3cdf547d`）
 - reviewedSourceSha（该计划审查时所依据的提交）：
-  `67955e0652e5ce5127eb4e7e654f4590515a2571`（main）
-- 比较基线：`a7950fa1f386b2a1adc9ba35ba84aed0ad9ad50c`
+  `d201da5e8071e2780a745ffb86ddb31d3cdf547d`（main，R45…R50 计划审查基线）
+- 比较基线：`67955e0652e5ce5127eb4e7e654f4590515a2571`（上一轮 R40…R44 的审查基线）
 
 ## 历史计划
 
@@ -26,8 +27,30 @@
 > 执行约定与推荐顺序见当前计划第 3 节。任何后续会话都应以本文件指向的计划为准，
 > 不要从历史计划标题推断范围或完成状态。
 
-## 执行状态（2026-09-13 计划 E4-R40…R44）
+## 执行状态（2026-09-13 计划 E4-R45…R50）
 
+
+- R45（K01 补：诊断注册/落盘前移到失败发生之前）✅ `docs/E4-R45-report.md`
+  （`e4-09-production-e2e.test.ts`：`buildRealChain` 增加 testName、四 artifact 路径在任何
+  生产调用前 registerArtifacts、阶段 mark 前移、evaluator 真实结果在 ACCEPT 断言前落盘——
+  非 ACCEPT 决策带真实 reasonCodes 被采集，未写文件如实记 missing。新增
+  `e4-r45-diagnostics-order.test.ts`（验收 A/B/C/E）。typecheck 0；干净树 E2E 5/5 无回归。）
+- R46（K01 补：诊断包目录原子分配，跨进程/重复采集不覆盖）✅ `docs/E4-R46-report.md`
+  （`captureFailure` 改用 `mkdtemp` 原子建目录，不再依赖模块内计数（跨进程同 runId+label
+  曾撞 attempt-1 覆盖）；attempt→captureOrdinal+captureIdentity+ciRunAttempt；CI 上传
+  artifact 名加 `-attempt-<run_attempt>`。新增 `e4-r46-diagnostics-noclobber.test.ts`（3 例
+  跨进程+重复采集）。判别力已证：临时改回固定 attempt-1 目录即必失败。typecheck 0。）
+- R47（K01 补：诊断采集真正按字节有界）✅ `docs/E4-R47-report.md`
+  （`readArtifact` 重构：前置 stat 确定性拒绝缺失/目录（修复前读目录会挂起超时），流式
+  sha256 整文件源摘要（内存不随源增长）、只保留 cap 字节 head；语义分离
+  sourceBytes/sourceDigest vs headBytes/headDigest；超限按字节截取（headBuf 写回）、超限不
+  整体 JSON.parse。新增 `e4-r47-bounded-copy.test.ts`（6 例）。判别力已证：目录当文件修复前
+  挂起 300s → 修复后 EISDIR 确定性失败。typecheck 0。）
+- R48（K03 补：共享构建快照深度判别力）✅ `docs/E4-R48-report.md`
+  （`e4-r42-gate-isolation.test.ts`：`sharedBuildSnapshot` 改 `deepSnapshot`——递归、内容
+  寻址、确定性排序、读失败记 ERROR（不伪装未修改）；受保护范围与 R42 一致。新增判别力
+  测试：同名覆盖/嵌套/增删 → 摘要必变、内容相同仅枚举顺序不同 → 相等。typecheck 0；
+  R42+R48 2 passed。）
 - R40（K01：E4-09 失败归因诊断包）✅ `docs/E4-R40-report.md`
   （新增 `apps/cli/src/e4-09-diagnostics.ts`；`runner.ts`/`benchmark-isolation.ts`/
   `benchmark-command.ts`：把 E2-09 哨兵自身的 before/after 探测记录随 outcome 写入
@@ -71,7 +94,12 @@
 - 已知未完成/待环境项（不因"计划已执行"而消失）：
   1. 真实模型 champion 质量：attestation 记录 `championPromotion.status=NOT_RUN`
      （付费 benchmark 未请求，不为此造假或付费）。
-  2. release 发布动作本身未执行（各轮计划只到 attestation，不自动发布）。
+  2. release 发布动作（历史计划范围口径）：各轮计划**只到 attestation，不自动发布**——
+     这是「历史计划执行范围」的既定口径。它与「当前仓库是否已存在公开 release」是两回事：
+     当前仓库**已有 v1.8.0**（`gh release`，2026-09-13，携带源码快照资产，指向仅文档提交
+     `15a02269`，代码与 attestation 的 `34ab9207` 逐字节相同）。历史口径不取消既有 release，
+     也不等于本轮验证了发布二进制/签名/全部供应链证据（只核实了 job/step 状态与 release 存在）。
+     R49 已把这两层分开写入状态文档，不再用「发布动作未执行」去暗示「仓库没有 release」。
 - **运行前置条件（本轮实测确立）**：E4-09 及其对抗链要求**运行期干净可证源树**，
   因此全量门禁必须在 `git status --short` 为空的已提交版本上运行；携带未提交改动运行会
   触发 benchmark 的干净树拒绝（退出 1），这不是被测版本的缺陷。
