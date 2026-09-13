@@ -33,7 +33,8 @@
 
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { mkdir, mkdtemp, stat, writeFile } from "node:fs/promises";
 import { arch, cpus, platform, release, tmpdir, totalmem } from "node:os";
 import { basename, join, resolve } from "node:path";
 
@@ -131,7 +132,6 @@ const errStack = (err: unknown): string | undefined => {
   }
   return undefined;
 };
-const sha256 = (s: string | Buffer): string => createHash("sha256").update(s).digest("hex");
 const nowIso = (): string => new Date().toISOString();
 
 /** Keep a bounded excerpt of a potentially huge child-process log. */
@@ -325,33 +325,58 @@ export class E4DiagnosticRecorder {
           continue;
         }
         rec["captured"] = true;
-        rec["bytes"] = read.bytes;
-        rec["digest"] = sha256(read.text);
+        // E4-R47: report the SOURCE bytes and the source digest (raw bytes,
+        // streamed over the whole file), then the retained-head bytes and the
+        // head digest (over exactly the bytes we copy) — a digest is never a
+        // single field with two meanings.
+        rec["sourceBytes"] = read.sourceBytes;
+        rec["sourceDigest"] = read.sourceDigest;
         const name = `${spec.role}${extOf(spec.path)}`;
         const target = join(dir, "artifacts", name);
-        if (read.bytes > MAX_COPY_BYTES) {
-          await writeFile(target, `${read.text.slice(0, MAX_COPY_BYTES)}\n…[truncated at ${MAX_COPY_BYTES} of ${read.bytes} bytes]\n`, "utf8");
-          rec["truncated"] = true;
-        } else {
-          await writeFile(target, read.text, "utf8");
-          rec["truncated"] = false;
-        }
-        rec["capturedPath"] = join("artifacts", name);
-        // Reduce for the inline summary; parsing a body is always guarded.
-        let parsed: unknown = null;
-        try {
-          parsed = JSON.parse(read.text);
-        } catch (err) {
-          rec["parseError"] = msg(err);
-        }
-        if (parsed !== null && spec.summarize !== undefined) {
-          try {
-            summaries[spec.role] = spec.summarize(parsed);
-          } catch (err) {
-            summaries[spec.role] = { summarizeError: msg(err) };
+        if (read.truncated === true) {
+          // E4-R47: copy ONLY the bounded head BYTES (byte-accurate: headBytes
+          // is the cap, headDigest is over exactly those bytes). The copy is
+          // bounded by the cap, NOT by character count; an over-cap file's full
+          // body is never JSON.parsed (see parseError below).
+          if (read.headBuf !== undefined) {
+            await writeFile(target, read.headBuf, "binary");
           }
-        } else if (parsed !== null) {
+          rec["truncated"] = true;
+          rec["sourceBytes"] = read.sourceBytes;
+          rec["headBytes"] = read.headBytes;
+          rec["headDigest"] = read.headDigest;
+          rec["capturedPath"] = join("artifacts", name);
+        } else {
+          // Small file: write the verbatim bytes; digest stays the source digest.
+          const text = read.headText ?? "";
+          await writeFile(target, text, "utf8");
+          rec["truncated"] = false;
+          rec["headBytes"] = read.headBytes;
+          rec["headDigest"] = read.headDigest;
+          rec["capturedPath"] = join("artifacts", name);
+        }
+        // Reduce for the inline summary; parsing a body is always guarded. For a
+        // TRUNCATED artifact we do NOT JSON.parse the whole source — the head is
+        // not a valid JSON body, so a parse is skipped and the reason noted.
+        if (read.truncated === true) {
+          rec["parseError"] = "source truncated — body exceeds MAX_COPY_BYTES; full JSON.parse skipped (bounded capture)";
           summaries[spec.role] = null;
+        } else {
+          let parsed: unknown = null;
+          try {
+            parsed = JSON.parse(read.headText ?? "");
+          } catch (err) {
+            rec["parseError"] = msg(err);
+          }
+          if (parsed !== null && spec.summarize !== undefined) {
+            try {
+              summaries[spec.role] = spec.summarize(parsed);
+            } catch (err) {
+              summaries[spec.role] = { summarizeError: msg(err) };
+            }
+          } else if (parsed !== null) {
+            summaries[spec.role] = null;
+          }
         }
         artifactRecords.push(rec);
       }
@@ -411,14 +436,123 @@ export class E4DiagnosticRecorder {
   }
 }
 
-/** Read an artifact without throwing; a missing file is a recorded fact. */
-async function readArtifact(path: string): Promise<{ ok: true; text: string; bytes: number } | { ok: false; error: string }> {
+/**
+ * E4-R47 — bounded, byte-conscious artifact read.
+ *
+ * The old path read the WHOLE file into memory, then base64'd / trimmed by CHAR
+ * count and hashed the decoded text — so a huge artifact's memory use grew
+ * linearly with the file, an over-cap trim was not byte-accurate, and the digest
+ * was over the UTF-8 text, not the source bytes.
+ *
+ * This is the MINIMAL bounded read: a single streaming pass.
+ *   - `sourceBytes` / `sourceDigest` are computed over the WHOLE source file's
+ *     raw bytes via a read stream (streamed sha256 — memory does NOT grow with
+ *     the file; only the bounded head is materialized).
+ *   - `headBytes` / `headDigest` cover ONLY the bytes we actually copy to the
+ *     bundle (`MAX_COPY_BYTES` head), so "the digest of what we kept" is a
+ *     distinct, true fact — it is never conflated with the source digest.
+ *   - `truncated: true` when the source is larger than the cap (head only);
+ *   - a parse is attempted ONLY when the full body fit (not truncated), so an
+ *     over-cap file is never JSON.parsed as a whole.
+ */
+interface BoundedRead {
+  ok: boolean;
+  error?: string;
+  /** Full source size in bytes (accurate for both small and huge files). */
+  sourceBytes?: number;
+  /** sha256 over the FULL source's raw bytes (streamed). */
+  sourceDigest?: string;
+  /** The bytes we actually hold / copy (≤ MAX_COPY_BYTES head). */
+  headBytes?: number;
+  /** sha256 over `headBytes` ONLY (the copy we keep, not the whole source). */
+  headDigest?: string;
+  /** true when the source exceeded the cap and we only kept the head. */
+  truncated?: boolean;
+  /** The retained head as a string (only meaningful when not truncated, and
+   *  only used to write the small-file copy verbatim / parse an in-budget body). */
+  headText?: string;
+  /** E4-R47: the retained head BYTES (only set when truncated) so the caller
+   *  can write the bounded copy byte-for-byte. */
+  headBuf?: Buffer;
+}
+
+async function readArtifact(path: string): Promise<BoundedRead> {
+  // E4-R47 (F/G): stat FIRST so a missing path (ENOENT) or a directory (EISDIR)
+  // fails DETERMINISTICALLY. Opening a read stream on a directory can hang on
+  // some platforms (no data, no 'end', no 'error'), and a missing file must be
+  // a recorded fact, not an unresolved promise.
+  let size = 0;
   try {
-    const buf = await readFile(path);
-    return { ok: true, text: buf.toString("utf8"), bytes: buf.byteLength };
+    const st = await stat(path);
+    size = st.size;
+    if (st.isDirectory()) {
+      return { ok: false, error: "EISDIR: path is a directory, not a file" };
+    }
+    if (!st.isFile()) {
+      return { ok: false, error: "path is not a regular file" };
+    }
   } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === "ENOENT") return { ok: false, error: msg(err) };
     return { ok: false, error: msg(err) };
   }
+  // E4-R47: cap the HEAD buffer allocation to the copy cap (already bounded).
+  const cap = Math.min(MAX_COPY_BYTES, size);
+  return new Promise((resolvePromise) => {
+    let stream: import("node:fs").ReadStream;
+    try {
+      stream = createReadStream(path);
+    } catch (err) {
+      resolvePromise({ ok: false, error: msg(err) });
+      return;
+    }
+    const srcHash = createHash("sha256");
+    const headBuf = Buffer.alloc(cap);
+    let headUsed = 0;
+    let total = 0;
+    let readError: string | undefined;
+    const onData = (chunk: Buffer): void => {
+      srcHash.update(chunk);
+      total += chunk.length;
+      if (headUsed < cap) {
+        const want = Math.min(cap - headUsed, chunk.length);
+        chunk.copy(headBuf, headUsed, 0, want);
+        headUsed += want;
+      }
+    };
+    const done = (): void => {
+      if (readError !== undefined) {
+        resolvePromise({ ok: false, error: readError });
+        return;
+      }
+      const truncated = total > MAX_COPY_BYTES;
+      const head = headBuf.subarray(0, headUsed);
+      const headText = truncated ? undefined : head.toString("utf8");
+      const headDigest = createHash("sha256").update(head).digest("hex");
+      const out: BoundedRead = {
+        ok: true,
+        sourceBytes: total,
+        sourceDigest: srcHash.digest("hex"),
+        headBytes: headUsed,
+        headDigest,
+        truncated,
+        ...(headText !== undefined ? { headText } : {}),
+      };
+      if (truncated) {
+        // E4-R47: keep the actual head BYTES so the caller can write the bounded
+        // copy byte-for-byte (a digest alone cannot reconstruct the copy).
+        out.headBuf = Buffer.from(head);
+      }
+      resolvePromise(out);
+    };
+    stream.on("data", onData);
+    stream.on("error", (err) => {
+      readError = msg(err);
+      // drain so 'end' still fires and we report the error exactly once
+      stream.destroy();
+    });
+    stream.on("end", done);
+  });
 }
 
 function extOf(path: string): string {
