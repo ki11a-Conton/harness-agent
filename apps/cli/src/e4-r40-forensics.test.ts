@@ -153,21 +153,23 @@ describe("E4-R40 diagnostic attribution", () => {
     expect(gate?.["passed"]).toBe(false);
     expect(String(gate?.["stderrExcerpt"])).toContain("gate-budget-exceeded");
 
-    // Two attempts of the same label must land in DISTINCT directories (a retry
+    // Two captures of the same label must land in DISTINCT directories (a retry
     // or a second run can never overwrite the previous attempt's evidence).
     const scratch = await scratchDir();
     const marker = join(scratch, "decision-artifact.json");
     await writeFile(marker, JSON.stringify({ decision: "ACCEPT" }), "utf8");
     const r1 = new E4DiagnosticRecorder({ label: "e4-r40-nooverwrite", testFile: TEST_FILE, testedSha: TESTED_SHA, testName: "attempt A" });
     const r2 = new E4DiagnosticRecorder({ label: "e4-r40-nooverwrite", testFile: TEST_FILE, testedSha: TESTED_SHA, testName: "attempt B" });
-    expect(r1.attempt).not.toBe(r2.attempt);
+    // E4-R46: the same-process ordinal differs; the OUTPUT directory uniqueness
+    // is no longer the ordinal's job (mkdtemp), but the identity fields still differ.
+    expect(r1.captureIdentity).not.toBe(r2.captureIdentity);
     const b1 = await r1.captureFailure({ stage: "a", error: new Error("boom A"), artifacts: [{ role: "decision-artifact", path: marker }] });
     const b2 = await r2.captureFailure({ stage: "b", error: new Error("boom B"), artifacts: [{ role: "decision-artifact", path: marker }] });
     expect(b1?.dir).toBeDefined();
     expect(b2?.dir).toBeDefined();
     expect(b1?.dir).not.toBe(b2?.dir);
-    expect(b1?.bundle["attempt"]).toBe(r1.attempt);
-    expect(b2?.bundle["attempt"]).toBe(r2.attempt);
+    expect(b1?.bundle["captureIdentity"]).toBe(r1.captureIdentity);
+    expect(b2?.bundle["captureIdentity"]).toBe(r2.captureIdentity);
     expect((b1?.bundle["artifacts"] as Array<Record<string, unknown>>)[0]?.["captured"]).toBe(true);
     // Both live on disk simultaneously — the first was never clobbered.
     await expect(readFile(join(b1!.dir, "diagnostic.json"), "utf8")).resolves.toContain("boom A");

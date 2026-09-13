@@ -33,15 +33,19 @@
 
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { arch, cpus, platform, release, tmpdir, totalmem } from "node:os";
 import { basename, join, resolve } from "node:path";
 
 export const E4_DIAGNOSTIC_SCHEMA_VERSION = "1.0.0";
 
-/** Attempt counter — every recorder instance gets a fresh one so two runs in the
- *  same process (or a retried test) never share an output directory. */
-let ATTEMPT_SEQ = 0;
+/** Per-process capture counter. Used ONLY as a human-readable "capture N"
+ *  identity inside a recorder's own bundle (see `captureIdentity`); the OUTPUT
+ *  DIRECTORY uniqueness NEVER depends on it. E4-R46: a module-level counter is
+ *  per-process, so two independent processes with the same run ID + label both
+ *  start at 1 — the directory must instead be allocated atomically (mkdtemp).
+ */
+let CAPTURE_SEQ = 0;
 
 /** Per-file copy cap. A failing run wants the real payload, but an unbounded
  *  artifact must not be able to fill the disk; an over-cap file is recorded with
@@ -173,7 +177,14 @@ export function captureGitFacts(cwd: string): {
 
 export class E4DiagnosticRecorder {
   readonly runId: string;
-  readonly attempt: number;
+  /** E4-R46: a per-recorder capture ordinal (human-readable only). TWO
+   *  recorders with the same label + runId in the SAME process get distinct
+   *  ordinals; across processes the ordinal may collide, which is fine because
+   *  the OUTPUT directory is allocated atomically (mkdtemp), never by ordinal. */
+  readonly captureOrdinal: number;
+  /** A string uniquely identifying this recorder instance in a bundle — ties the
+   *  on-disk directory back to the logical capture. */
+  readonly captureIdentity: string;
   private readonly stages: E4DiagStage[] = [];
   private readonly gates: E4DiagGateRecord[] = [];
   private readonly notes: string[] = [];
@@ -186,9 +197,10 @@ export class E4DiagnosticRecorder {
   private capturedDirs: string[] = [];
 
   constructor(private readonly opts: E4DiagOptions) {
-    this.attempt = ++ATTEMPT_SEQ;
+    this.captureOrdinal = ++CAPTURE_SEQ;
     const envRunId = process.env.E2E_OBSERVATION_RUN_ID;
     this.runId = envRunId !== undefined && envRunId.trim() !== "" ? envRunId.trim() : `${process.pid}-${Date.now()}`;
+    this.captureIdentity = `${process.pid}-${Date.now()}-${this.captureOrdinal}`;
   }
 
   /** Note the stage the run is currently in (cheap; no timing bookkeeping). */
@@ -286,7 +298,17 @@ export class E4DiagnosticRecorder {
       const root = resolveDiagnosticRoot();
       const osSlug = platform() === "win32" ? "windows" : platform();
       const safeRunId = this.runId.replace(/[^A-Za-z0-9._-]+/g, "_").slice(0, 80);
-      const dir = join(root, `${this.opts.label}__${osSlug}__${safeRunId}__attempt-${this.attempt}`);
+      const safeLabel = this.opts.label.replace(/[^A-Za-z0-9._-]+/g, "_").slice(0, 60);
+      const prefix = join(root, `${safeLabel}__${osSlug}__${safeRunId}__`);
+      // E4-R46: allocate the directory ATOMICALLY via mkdtemp. Two independent
+      // processes with the same runId + label (CI: e4-r24-<os>-<run_id>) used to
+      // both compute some `attempt-1` path and — because mkdir was recursive and
+      // writeFile overwrites — could clobber each other's evidence. mkdtemp
+      // guarantees a unique directory at creation time; the human-readable
+      // `captureIdentity` (pid-timestamp-ordinal) is carried INSIDE the bundle,
+      // not used to name the directory. The `attempt-` suffix is retained purely
+      // for stable ordering/readability in listings, never for uniqueness.
+      const dir = await mkdtemp(prefix);
       await mkdir(join(dir, "artifacts"), { recursive: true });
 
       const artifactRecords: Array<Record<string, unknown>> = [];
@@ -339,7 +361,9 @@ export class E4DiagnosticRecorder {
         kind: "e4-09-diagnostic",
         capturedAtIso: nowIso(),
         label: this.opts.label,
-        attempt: this.attempt,
+        captureOrdinal: this.captureOrdinal,
+        captureIdentity: this.captureIdentity,
+        ciRunAttempt: process.env.GITHUB_RUN_ATTEMPT ?? null,
         runId: this.runId,
         test: { file: this.opts.testFile, name: this.opts.testName, frameworkStateAtCapture: "failing" },
         environment: {

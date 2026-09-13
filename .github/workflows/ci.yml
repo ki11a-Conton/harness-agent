@@ -134,17 +134,20 @@ jobs:
           path: .ci/test-report.log
           if-no-files-found: error
 
-      # E4-R40 (K01): when a test fails, upload the attribution bundles the
-      # e4-09 diagnostic recorder wrote BEFORE its temp roots were cleaned
+      # E4-R40 (K01) / E4-R46: when a test fails, upload the attribution bundles
+      # the e4-09 diagnostic recorder wrote BEFORE its temp roots were cleaned
       # (identity/HEAD/cleanliness, real V3+paired+decision bytes with reduced
       # summaries, the real gate child exit/stderr, the benchmark's own CLI
       # exit+output). A green run writes nothing and uploads nothing, so this
       # step only ever fires on a genuinely failing run.
+      # E4-R46: artifact name carries `-attempt-${{ github.run_attempt }}` so a
+      # retry of a failing run in GitHub Actions cannot clash or overwrite the
+      # previous attempt's diagnostic artifact.
       - name: Upload e4-09 diagnostic bundles (E4-R40, failure only)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e4-09-diagnostics-${{ matrix.os }}-${{ github.run_id }}
+          name: e4-09-diagnostics-${{ matrix.os }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: .ci/diagnostics/
           if-no-files-found: ignore
           retention-days: 14
