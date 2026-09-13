@@ -1802,9 +1802,26 @@ describe("E4-R41 promotion-grade host-probe fail-closed (CLI path)", () => {
     );
     // THE CORE ASSERTION: the protected action never executed.
     expect(providerCalls).toBe(0);
-    expect(res.exitCode).not.toBe(0);
-    // And the real reason is the unverifiable probe (not an unrelated refusal).
-    const artifactText = await (await import("node:fs/promises")).readFile(join(root, "out", "paired-experiment.json"), "utf8").catch(() => "");
+    expect(res.lines.join("\n")).toContain("paired experiment artifact written");
+    // A case-level fail-closed is recorded in the ARTIFACT (the paired command
+    // returns exitCode 0 for a completed run — a case failure is not a process
+    // error). The run is therefore judged from the artifact, not the exit code.
+    type ArmRec = { outcome?: { failureCategory?: string; status?: string; violations?: string[] } };
+    const artifactText = await (await import("node:fs/promises")).readFile(join(root, "out", "paired-experiment.json"), "utf8");
     expect(artifactText).toContain("UNVERIFIABLE");
+    const artifact = JSON.parse(artifactText) as {
+      finalizedPairs?: Array<{ baseline: ArmRec | null; candidate: ArmRec | null }>;
+      partialPairs?: Array<{ baseline: ArmRec | null; candidate: ArmRec | null }>;
+    };
+    const arms = [
+      ...(artifact.finalizedPairs ?? []),
+      ...(artifact.partialPairs ?? []),
+    ].flatMap((p) => [p.baseline, p.candidate]).filter((a): a is ArmRec => a !== null && a !== undefined);
+    expect(arms.length).toBeGreaterThan(0);
+    // Every arm is an infrastructure failure carrying the probe reason — never a
+    // scored/clean result, and never a fabricated escape claim.
+    expect(arms.every((a) => a.outcome?.failureCategory === "infrastructure")).toBe(true);
+    expect(arms.every((a) => (a.outcome?.violations ?? []).some((v) => v.includes("UNVERIFIABLE")))).toBe(true);
+    expect(artifactText).not.toContain("canonical V3 artifacts written");
   }, 60_000);
 });
