@@ -36,4 +36,11 @@ apps/cli/src/e4-r24-fixture-*.test.ts
 # from an interrupted cleanup must stay invisible to git as well — otherwise it
 # would be committed as a stray, deliberately-failing test.
 apps/cli/test-infra/observation-fixtures/*.test.ts
+# E4-R46: the diagnostic cross-process fixtures spawned by
+# e4-r46-diagnostics-noclobber.test.ts live in this directory for ONE vitest
+# subprocess run (never committed). Like the observation fixtures, they MUST be
+# invisible to `git status --porcelain`, otherwise a concurrent promotion
+# benchmark (e4-09) can see a dirtied tree while the fixture file is being
+# written/deleted and refuse to run — a false positive, not a real change.
+apps/cli/test-infra/diagnostic-fixtures/*.test.ts
 
