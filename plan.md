@@ -41,7 +41,12 @@
   `compareHostState`（unchanged/changed/unknown）与可注入的 `gitExec` seam；
   `benchmark-command.ts`：promotion-grade 执行前探测不可验证则不启动、执行后不可验证则
   fail-closed。新增 6 例 helper 测试 + 1 例 CLI 路径测试。**K02 与历史 K01 的因果仍需单独证明**。）
-- R42（K03：夹具不得进入生产编译边界；共享 src/dist/tsbuildinfo 互斥）：⏳ 待做
+- R42（K03：夹具不得进入生产编译边界；共享 src/dist/tsbuildinfo 互斥）✅ `docs/E4-R42-report.md`
+  （`apps/cli/tsconfig.json` 窄范围 `exclude`（唯一生产侧改动，一行）；夹具在盘时真实 `tsc -b`
+  产出的 dist 孤儿由 4 个/次 → **0**，排除范围足够窄（36 个正式测试 + 业务源码仍在输入内）；
+  新增 `e4-r42-gate-isolation.test.ts`：真实 gate 在自有 git 身份/配置/输出缓存的临时 workspace
+  执行，green/非零证据自洽且主仓共享 dist+tsbuildinfo 摘要不变；并发跑协议+release+gate 三文件
+  29/29、污染 0/0。**历史 INVALID 与 K03 的因果不合并**。）
 - R43（K04：执行计划 999999/1000000/1000001 独立固定边界）：⏳ 待做
 - R44（K05：证据矩阵与静止工作区最终门禁）：⏳ 待做
 - 上一轮 R39（状态同步与最终门禁收口）：⚠️ **PARTIAL** `docs/E4-R39-report.md`

@@ -392,3 +392,66 @@ describe("E4-R37 (J02) legacy-location observation fixture is structurally exclu
     }
   }, 240_000);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// E4-R42 (K03): "git-ignored" is NOT "tsc-excluded". A legacy-generation fixture
+// left in `apps/cli/src/` was COLLECTED by nothing (root vitest exclude) but
+// still COMPILED by `tsc -b` (include: ["src"]), producing orphan
+// `apps/cli/dist/e4-r24-fixture-*.js`/`.d.ts`/`.map` output. The CLI tsconfig now
+// excludes exactly that temp pattern. This test proves it behaviourally: the
+// residue is really on disk and is NOT in the project's compile input, while
+// real business source and real test files still are.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Print the sources the CLI project actually compiles (no emit, real tsc). */
+async function tscIncludedFiles(): Promise<string[]> {
+  const tsc = join(REPO_ROOT, "node_modules", "typescript", "bin", "tsc");
+  const text = await new Promise<string>((resolvePromise, rejectPromise) => {
+    const child = spawn(
+      process.execPath,
+      [
+        tsc, "-p", "apps/cli/tsconfig.json", "--noEmit",
+        "--composite", "false", "--incremental", "false",
+        "--declaration", "false", "--declarationMap", "false", "--listFiles",
+      ],
+      { cwd: REPO_ROOT, stdio: ["ignore", "pipe", "pipe"] },
+    );
+    let out = "";
+    child.stdout.on("data", (d: Buffer) => { out += d.toString(); });
+    child.stderr.on("data", (d: Buffer) => { out += d.toString(); });
+    child.on("error", rejectPromise);
+    child.on("close", () => resolvePromise(out));
+  });
+  return text.split("\n").map((l) => l.replace(/\\/g, "/").trim()).filter((l) => l !== "");
+}
+
+describe("E4-R42 (K03) legacy fixture never enters the production compile input", () => {
+  it("a legacy-pattern fixture in src/ is excluded from tsc; real source + real tests remain", async () => {
+    const stamp = `${process.pid}-${Date.now()}`;
+    const legacyName = `e4-r24-fixture-${stamp}-legacy-assert-fail.test.ts`;
+    const legacy = join(REPO_ROOT, "apps", "cli", "src", legacyName);
+    await writeFile(legacy, `import { it, expect } from "vitest";\nit("residue", () => { expect(1).toBe(1); });\n`, "utf8");
+    try {
+      // The residue REALLY is on disk during the assertions below.
+      expect(await readFile(legacy, "utf8")).toContain("residue");
+
+      // (1) The loaded config carries the narrow exclusion rule.
+      const cfg = JSON.parse(await readFile(join(REPO_ROOT, "apps", "cli", "tsconfig.json"), "utf8")) as { exclude?: string[] };
+      expect(cfg.exclude ?? []).toContain("src/e4-r24-fixture-*.test.ts");
+
+      // (2) Behaviour: the temp source is NOT a compile input of the CLI project.
+      const files = await tscIncludedFiles();
+      const has = (suffix: string): boolean => files.some((f) => f.endsWith(suffix));
+      expect(files.length).toBeGreaterThan(100); // the real project is still compiled
+      expect(has(`apps/cli/src/${legacyName}`)).toBe(false);
+      // ...while real business source and real tests remain in scope (the
+      // exclusion is narrow, not a blanket removal of tests or source).
+      expect(has("apps/cli/src/main.ts")).toBe(true);
+      expect(has("apps/cli/src/benchmark-command.ts")).toBe(true);
+      expect(files.filter((f) => /apps\/cli\/src\/.+\.test\.ts$/.test(f)).length).toBeGreaterThan(10);
+    } finally {
+      await rm(legacy, { force: true });
+      await expect(readFile(legacy, "utf8")).rejects.toBeDefined();
+    }
+  }, 240_000);
+});

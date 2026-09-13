@@ -297,11 +297,12 @@ describe("P38.2-4/13 repo-owned gate runner (INV-P38.2-004)", () => {
     expect(written.exitCode).toBe(0);
   });
 
-  it("runGate captures a FAILING gate's real exit code and still writes evidence", async () => {
+  it("runGate records the chaos gate's ACTUAL exit code with consistent evidence (a green gate here; the real NON-ZERO path is proven in e4-r42-gate-isolation.test.ts)", async () => {
     const dir = await tmpEvidenceDir();
-    // Run an intentionally failing command via a fake gate dir: `release gate`
-    // only accepts REQUIRED_GATES ids, so we test the runner's failure capture
-    // through the CLI with an unknown-command gate replaced below.
+    // NOTE (E4-R42/K03): this uses a REAL gate whose command legitimately PASSES
+    // on this repo, so it is NOT a non-zero-exit proof. The real failing-child
+    // path (genuine non-zero exit + recoverable stderr, in an isolated
+    // workspace) is covered by e4-r42-gate-isolation.test.ts.
     const result = await runGate("chaos", { root: process.cwd(), headSha: HEAD, evidenceDir: dir });
     // `pnpm test:chaos` may legitimately pass on this repo; what matters is the
     // evidence file records the ACTUAL exit code (passed === exitCode === 0).
