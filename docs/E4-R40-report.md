@@ -199,8 +199,16 @@ $ env -u NODE_OPTIONS pnpm vitest run apps/cli/src/e4-09-production-e2e.test.ts
 
 ## 8. 残余限制
 
-- 诊断包默认落在本机临时目录（CI 用 `E4_09_DIAG_DIR` 指向可上传位置）；本轮**未**改 CI 上传，
-  CI 侧接入留待需要时（R44 可评估）。
+- 诊断包默认落在本机临时目录；CI 用 `E4_09_DIAG_DIR` 指向 `.ci/diagnostics`（已被 `.gitignore`
+  忽略）。CI 侧上传已于后续补丁接入（`81205387`，见 §8.1），验证详见该补丁记录。
+
+## 8.1 补记：CI 上传补丁（`81205387`）
+
+R40 收口后补入 CI 上传：verify job 注入 `E4_09_DIAG_DIR=.ci/diagnostics`，并新增 `if: failure()`
+的 `upload-artifact`（`e4-09-diagnostics-<os>-<run_id>`，`path: .ci/diagnostics/`，`retention-days: 14`）。
+绿时不产生任何产物/上传；只有在测试真实失败时才上传归因包。验证：`pnpm typecheck` 0、本地
+`E4_09_DIAG_DIR=.ci/diagnostics pnpm test:forensics` 落盘 3 个 bundle 且工作树保持干净、远端 CI
+四 job 全绿（含 windows）。
 - `recordGate` 的 `stderrExcerpt` 依赖调用方传入原始输出；`runGateV2` 自身只回 `logRef`/
   `errorSummary`，本轮测试用自采子进程输出演示，未改 `runGateV2` 的返回契约。
 - 诊断包为 best-effort：捕获失败只写 `[degraded]` 到 stderr 并记入 `notes`，**绝不**替换原始失败。
