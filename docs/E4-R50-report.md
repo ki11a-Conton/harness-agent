@@ -66,9 +66,18 @@ AGENTS.md「运行相关安全测试」与 R50 §4「按改动范围执行相关
   `mkdtemp`。本地复现（`E4_09_DIAG_DIR` 指向不存在的多级子目录）修复前必失败、修复后
   R46 3/3 通过。
 
-### 5.2 第二次 CI（`440b2895`）
+### 5.2 第二次 CI（`440b2895` / 最终 `ca46c5cf`）—— 四 job 全绿
 
-（见最终门禁后补记，不无限追踪。）
+- 最终 head SHA：`ca46c5cf786192dce1acddedd1a2182e09a0912c`（含 R46 补丁2 + R50 报告，
+  代码与 `440b2895` 逐字节相同）。
+- run ID：`34751874658`，结论 **success**：
+  - Ubuntu 主门禁（typecheck · test · build · benchmark-smoke · audit）✅ success
+  - Windows 主门禁 ✅ success
+  - Ubuntu coverage gate ✅ success
+  - release attestation（P38-12）✅ success
+
+> 边界说明（R50 §5/§8）：job 状态核实与 artifact 内容复核分开——此处只核实了 job/step
+> 状态为 success，未下载 release 证据逐字节重放（记录为「未复核」，非 PASS 冒充）。
 
 ## 6. testedSourceSha 与未提交改动
 
