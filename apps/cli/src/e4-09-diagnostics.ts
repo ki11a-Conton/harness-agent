@@ -308,6 +308,11 @@ export class E4DiagnosticRecorder {
       // `captureIdentity` (pid-timestamp-ordinal) is carried INSIDE the bundle,
       // not used to name the directory. The `attempt-` suffix is retained purely
       // for stable ordering/readability in listings, never for uniqueness.
+      // E4-R46 (fixup): `mkdtemp` does NOT create the parent directory. On CI
+      // `E4_09_DIAG_DIR` points at `.ci/diagnostics` (only `mkdir -p .ci` ran),
+      // so `mkdtemp(prefix)` fails ENOENT if the root does not exist yet. Make
+      // the root first (recursive + idempotent), then allocate the unique leaf.
+      await mkdir(root, { recursive: true });
       const dir = await mkdtemp(prefix);
       await mkdir(join(dir, "artifacts"), { recursive: true });
 
