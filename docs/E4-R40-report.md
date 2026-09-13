@@ -146,10 +146,40 @@ agent benchmark: a promotion-eligible run requires a CLEAN, PROVABLE source tree
 | `pnpm typecheck` | **PASS**（退出 0） | `tsc -b`；R40 全部改动类型正确 |
 | `pnpm test:forensics` | **按设计非零**（1 failed / 1 passed） | 取证路径证明；落盘包条目见 §5 |
 | `pnpm test` 是否含取证文件 | **已排除** | 保证默认全量不因「按设计失败」而长期为红 |
-| E4-09 干净树运行 | 见附录 A | 必须提交后才能取得干净树 |
+| E4-09 干净树运行 | **PASS 5/5** | 见附录 A —— 同一代码在干净树上全绿，反证根因是干净树前置条件 |
 
 > 全量 `pnpm test`/`docs:verify`/`security`/`protocol`/`race`/`chaos` 属 **R44** 的静止工作区
 > 最终门禁范围，本报告不代其结论。
+
+---
+
+## 附录 A — 干净树运行（根因的决定性反证）
+
+在 R40 实现提交（本报告所属提交，工作树 `git status --short` 为空）上运行：
+
+```
+$ env -u NODE_OPTIONS pnpm vitest run apps/cli/src/e4-09-production-e2e.test.ts
+ ✓ benchmark -> V3 -> evaluator -> promote -> createHarness -> applied, all real stages
+ ✓ editing a real V3 artifact's outcomes while only updating the file SHA breaks the chain
+ ✓ a forged decision field (digest recomputed) is caught by the evaluator replay
+ ✓ a candidate ref pointing outside the bundle root is rejected
+ ✓ provider over-call guard halts the paired run before it can finalize a promotable artifact
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+```
+
+**同一份代码、同一个测试文件**，唯一变量是工作树干净与否：
+
+| 工作树 | E4-09 结果 | benchmark 行为 |
+|---|---|---|
+| 有未提交改动（脏） | **5 failed / 0 passed**（`buildRealChain` 的 `expect(res.exitCode).toBe(0)` 失败，实测 `1`） | 执行前拒绝，退出 1，链不建立 |
+| 已提交（干净） | **5 passed / 5** | 正常运行，ACCEPT |
+
+这把 R39 §4.1/§4.2 的「全量并发下有效链被判 INVALID、根因未定」从**未归因**变为**已归因的
+运行前置条件**：失败源于运行期工作树非干净，而非某个用例的瞬时副作用，也非被测版本的缺陷。
+
+（运行日志中的 `[degraded] store-integrity.syncDir: EPERM … fsync` 为 Windows 环境既有噪声，
+不影响任何断言，与本轮改动无关。）
 
 ---
 

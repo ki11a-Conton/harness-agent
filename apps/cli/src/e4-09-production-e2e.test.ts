@@ -248,6 +248,19 @@ describe("E4-09 real production-path E2E (offline)", () => {
     expect(provider.calls.some((c) => c.arm === "candidate" && c.wrote)).toBe(true);
     expect(provider.calls.every((c) => c.arm === "candidate" || !c.wrote)).toBe(true);
 
+    // E4-R40 (K01): the E2-09 host-mutation sentinel's OWN before/after probe
+    // records travel with each case outcome into paired-experiment.json, so a
+    // failed run is attributable from the evidence that decided it (a post-run
+    // `git status` re-read is a different observation). Assert it is really in
+    // the artifact the executor wrote — not just in memory.
+    const pairedSummary = summarizePairedArtifact(
+      JSON.parse(await readFile(join(outDir, "paired-experiment.json"), "utf8")),
+    ) as { finalizedPairs: { baseline: { hostMutation: unknown } | null; candidate: { hostMutation: unknown } | null }[] };
+    const hostMutationSeen = pairedSummary.finalizedPairs.some(
+      (p) => p.baseline?.hostMutation != null || p.candidate?.hostMutation != null,
+    );
+    expect(hostMutationSeen).toBe(true);
+
     // STAGE 3: real evaluator derives the decision from the real V3 files.
     const evalResult = await runV3ChampionEval({
       baselinePath: v3BaselinePath,
