@@ -51,6 +51,10 @@ jobs:
       # INDEPENDENT strict audit below reads exactly this run.
       E2E_OBSERVATION_EVIDENCE_DIR: .ci/observation-evidence
       E2E_OBSERVATION_RUN_ID: e4-r24-${{ matrix.os }}-${{ github.run_id }}
+      # E4-R40 (K01): where a FAILED e4-09 run drops its attribution bundle.
+      # Recorded relative to the repo root (CI cwd); `.ci/` is git-ignored so
+      # this never dirties the working tree the sentinel inspects.
+      E4_09_DIAG_DIR: .ci/diagnostics
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
@@ -129,6 +133,21 @@ jobs:
           name: test-report-${{ matrix.os }}
           path: .ci/test-report.log
           if-no-files-found: error
+
+      # E4-R40 (K01): when a test fails, upload the attribution bundles the
+      # e4-09 diagnostic recorder wrote BEFORE its temp roots were cleaned
+      # (identity/HEAD/cleanliness, real V3+paired+decision bytes with reduced
+      # summaries, the real gate child exit/stderr, the benchmark's own CLI
+      # exit+output). A green run writes nothing and uploads nothing, so this
+      # step only ever fires on a genuinely failing run.
+      - name: Upload e4-09 diagnostic bundles (E4-R40, failure only)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e4-09-diagnostics-${{ matrix.os }}-${{ github.run_id }}
+          path: .ci/diagnostics/
+          if-no-files-found: ignore
+          retention-days: 14
 
       # P38.2-4 (INV-P38.2-004): every attempted gate emits truthful evidence
       # from its REAL exit code. E4-R09 (F19): the evidence is produced by the
