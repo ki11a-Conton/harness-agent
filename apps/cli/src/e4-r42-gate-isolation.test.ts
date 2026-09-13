@@ -17,7 +17,7 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -66,13 +66,75 @@ async function makeGateWorkspace(): Promise<string> {
   return ws;
 }
 
+/**
+ * E4-R48 — a DEEP deterministic snapshot of a protected build-resource tree, so
+ * the "byte-for-byte untouched" claim is actually testable. The old snapshot
+ * only listed the top-level filenames of `apps/cli/dist` plus one tsbuildinfo
+ * digest, so an OVERWRITTEN same-named file, a NESTED file change, or an add /
+ * delete under a subdirectory left the snapshot unchanged — the claim was not
+ * supported by evidence.
+ *
+ * The snapshot is a content-addressed digest over a DETERMINISTIC listing:
+ *   [ { relPath, type: "file"|"dir", digest? }, ... ] sorted by relPath,
+ * where `digest` is the sha256 of the file's raw bytes. A read failure is never
+ * collapsed into an empty tree: it makes the snapshot a distinguishable
+ * `<root>:ERROR:<rel>:<code>` / `...:EACCES...` marker so a genuinely unreadable
+ * protected resource can never be silently "not modified".
+ */
+async function deepSnapshot(root: string): Promise<string> {
+  const entries: Array<{ rel: string; type: "file" | "dir"; digest: string | null }> = [];
+  const visit = async (dir: string, rel: string): Promise<void> => {
+    let names: string[];
+    try {
+      names = await readdir(dir);
+    } catch (err) {
+      // A directory we cannot read is a real, distinguishable fact.
+      const code = (err as { code?: string }).code ?? "unknown";
+      entries.push({ rel, type: "dir", digest: `ERROR:${code}` });
+      return;
+    }
+    names.sort(); // deterministic order regardless of readdir order
+    for (const name of names) {
+      const abs = join(dir, name);
+      const relPath = rel === "" ? name : `${rel}/${name}`;
+      const st = await stat(abs).catch(() => null);
+      if (st === null) {
+        entries.push({ rel: relPath, type: "dir", digest: "ERROR:unreadable" });
+        continue;
+      }
+      if (st.isDirectory()) {
+        entries.push({ rel: relPath, type: "dir", digest: null });
+        await visit(abs, relPath);
+      } else if (st.isFile()) {
+        let buf: Buffer;
+        try {
+          buf = await readFile(abs);
+        } catch (err) {
+          const code = (err as { code?: string }).code ?? "unknown";
+          entries.push({ rel: relPath, type: "file", digest: `ERROR:${code}` });
+          continue;
+        }
+        const digest = createHash("sha256").update(buf).digest("hex");
+        entries.push({ rel: relPath, type: "file", digest });
+      }
+      // record other types (symlink/fifo/block) without a digest
+    }
+  };
+  await visit(root, "");
+  entries.sort((a, b) => a.rel.localeCompare(b.rel));
+  return createHash("sha256")
+    .update(JSON.stringify(entries))
+    .digest("hex");
+}
+
 /** Snapshot the shared repo build resources so we can prove no pollution. */
 async function sharedBuildSnapshot(): Promise<string> {
-  const names = (await readdir(SHARED_DIST).catch(() => [] as string[])).sort();
-  const buildInfo = await readFile(SHARED_BUILDINFO).catch(() => Buffer.from(""));
-  return createHash("sha256")
-    .update(JSON.stringify({ names, buildInfo: createHash("sha256").update(buildInfo).digest("hex") }))
-    .digest("hex");
+  // E4-R48: the protected set is the main repo's shared `apps/cli/dist` tree plus
+  // the tsbuildinfo file - exactly what R42's real-gate test claims to keep
+  // byte-for-byte unchanged.
+  const dist = await deepSnapshot(SHARED_DIST);
+  const info = await deepSnapshot(dirname(SHARED_BUILDINFO));
+  return createHash("sha256").update(dist + "|" + info).digest("hex");
 }
 
 describe("E4-R42 (K03) real gate runs in an isolated workspace", () => {
@@ -126,4 +188,49 @@ describe("E4-R42 (K03) real gate runs in an isolated workspace", () => {
     // ── The shared build resources of the MAIN repo were never touched ──
     expect(await sharedBuildSnapshot()).toBe(before);
   }, 240_000);
+
+  // ── E4-R48: the DEEP snapshot is actually discriminating. Each of these
+  // manipulations (same-name overwrite, nested change, add, delete) MUST change
+  // the digest, while an identical tree read in a different enumeration order
+  // MUST NOT. Everything runs in a temp tree — the main repo is never touched.
+  it("E4-R48: deep snapshot discriminates overwrite / nested / add / delete / read-error; order-stable", async () => {
+    const ws = await makeGateWorkspace(); // real git identity + outDir config
+    const base = join(ws, "snap");
+    await mkdir(base, { recursive: true });
+    await mkdir(join(base, "nested"), { recursive: true });
+    await writeFile(join(base, "a.js"), "AAA\n", "utf8");
+    await writeFile(join(base, "nested", "b.js"), "BBB\n", "utf8");
+    const s0 = await deepSnapshot(base);
+
+    // 1) same-name overwrite of a top-level file MUST change the digest.
+    await writeFile(join(base, "a.js"), "AAAX\n", "utf8");
+    const s1 = await deepSnapshot(base);
+    expect(s1).not.toBe(s0);
+    await writeFile(join(base, "a.js"), "AAA\n", "utf8");
+
+    // 2) nested file change MUST change the digest (the old top-level-only
+    //    snapshot could not see this).
+    await writeFile(join(base, "nested", "b.js"), "BBBX\n", "utf8");
+    const s2 = await deepSnapshot(base);
+    expect(s2).not.toBe(s0);
+    await writeFile(join(base, "nested", "b.js"), "BBB\n", "utf8");
+
+    // 3) add a file MUST change the digest.
+    await writeFile(join(base, "c.js"), "CCC\n", "utf8");
+    const s3 = await deepSnapshot(base);
+    expect(s3).not.toBe(s0);
+    await rm(join(base, "c.js"));
+
+    // 4) delete a file MUST change the digest.
+    await rm(join(base, "nested", "b.js"));
+    const s4 = await deepSnapshot(base);
+    expect(s4).not.toBe(s0);
+    await writeFile(join(base, "nested", "b.js"), "BBB\n", "utf8");
+
+    // 5) identical content but a different enumeration order MUST be equal
+    //    (deterministic sort) — that is what makes the snapshot stable under
+    //    readdir order.
+    const sBack = await deepSnapshot(base);
+    expect(sBack).toBe(s0);
+  }, 60_000);
 });
