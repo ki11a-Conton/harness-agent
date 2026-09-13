@@ -115,12 +115,18 @@ unknown          任一侧的必要探测失败 ⇒ 既不能确认变化，也�
 ### 5.2 CLI / 真实受保护调用路径（`benchmark-command.test.ts`）
 
 `env -u NODE_OPTIONS pnpm vitest run apps/cli/src/benchmark-command.test.ts`
-→ **66 passed**，新增用例在**脏工作树**上按预期被「干净树门禁」提前拒绝（见 §6 附录）。
-新增用例（promotion-grade：mock 强隔离后端 + mock `captureHostState` 返回不可验证状态）：
+→ **67 passed / 67**（干净树，见附录 A）。新增用例（promotion-grade：mock 强隔离后端 +
+mock `captureHostState` 返回不可验证状态）：
 
 - `expect(providerCalls).toBe(0)` —— **受保护动作从未执行**；
-- `expect(res.exitCode).not.toBe(0)`；
-- 落盘的 `paired-experiment.json` 含 `UNVERIFIABLE` 原因（干净树复验，见附录 A）。
+- `paired-experiment.json` 存在，且每个 arm 的 `outcome.failureCategory === "infrastructure"`、
+  `violations` 含 `UNVERIFIABLE`；
+- 不含 `canonical V3 artifacts written`（没有产出可晋升 V3 产物）。
+
+> **副产物发现**：case 级 fail-closed **不改变进程退出码** —— `runPairedPromotion` 在写完产物后
+> 恒返回 `{ exitCode: 0 }`，case 失败只体现在产物里。因此该用例以**产物**为判据（首次版本误用
+> `exitCode !== 0`，已在 `f61f012b` 修正）。这不是本轮引入的缺陷，但值得记录：**promotion 结果
+> 必须从产物判定，不能从进程退出码判定**。
 
 ---
 
@@ -130,11 +136,45 @@ unknown          任一侧的必要探测失败 ⇒ 既不能确认变化，也�
 |---|---|---|
 | `pnpm typecheck` | **PASS**（退出 0） | 全部改动类型正确 |
 | `benchmark-isolation.test.ts` | **PASS 20/20** | 含 6 个新 K02 用例 |
-| `benchmark-command.test.ts` | **66/67**（新增用例需干净树） | 无回归；见附录 A |
+| `benchmark-command.test.ts` | **PASS 67/67** | 含 1 个新 CLI 路径用例；无回归 |
+| `pnpm test:security` | **PASS 18 files / 2133 tests** | 安全回归矩阵未回退 |
+| R27/R28/R33/R38 + security-evidence + isolation + CLI 合并跑 | **PASS 8 files / 145 tests** | 有效 promotion fixture 全部仍通过 |
+| `e4-09-production-e2e.test.ts` | **PASS 5/5** | R41 的哨兵改动对 R40 诊断链无回归 |
 | 真实模型调用 | **0** | 全部离线 / seam 注入 |
 
-> 全量 `pnpm test` / `docs:verify` / `security` / `protocol` / `race` / `chaos` 属 **R44**
-> 的静止工作区最终门禁范围。
+> 全量 `pnpm test` / `docs:verify` / `race` / `protocol` / `chaos` 属 **R44** 的静止工作区最终门禁范围。
+
+---
+
+## 附录 A — 干净树复验（决定性）
+
+R41 的 CLI 路径用例与 E4-09 一样，受**运行期干净源树**约束（R40 归因的同一个前置条件）。
+因此在 `E4-R41` 实现提交 + 断言修正提交 `f61f012b`（`git status --short` 为空）上复验：
+
+```
+$ env -u NODE_OPTIONS pnpm vitest run apps/cli/src/benchmark-command.test.ts
+ Test Files  1 passed (1)
+      Tests  67 passed (67)
+
+$ env -u NODE_OPTIONS pnpm vitest run apps/cli/src/e4-09-production-e2e.test.ts
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+
+$ env -u NODE_OPTIONS pnpm vitest run packages/evaluation/src/benchmark-isolation.test.ts \
+    packages/evaluation/src/security-evidence-execution.test.ts \
+    packages/evaluation/src/e4-r2*.test.ts packages/evaluation/src/e4-r3*.test.ts \
+    apps/cli/src/benchmark-command.test.ts
+ Test Files  8 passed (8)
+      Tests  145 passed (145)
+
+$ env -u NODE_OPTIONS pnpm test:security
+ Test Files  18 passed (18)
+      Tests  2133 passed (2133)
+```
+
+脏工作树下的对照（同一命令）：CLI 路径用例的 run 会被 benchmark 的干净树门禁提前拒绝
+（`CLEAN, PROVABLE source tree`，退出 1），因此该用例**必须**在已提交的干净树上运行——
+与 R40 §附录 A 的结论一致。
 
 ---
 
