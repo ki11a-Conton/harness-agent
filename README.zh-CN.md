@@ -308,6 +308,36 @@ app-server、release-integrity）。
   后者连 release attestation job 也 success ⇒ 该 Windows 失败是**波动**而非版本确定性结论，
   但 `01c4ec74` 自身的事实结论仍是 failure（不据此声称它的 CI 是绿的）。
 
+### E4-R40 … E4-R44（2026-09-13 计划）—— 归因、探测语义、隔离、合同锁定
+
+- **E4-R40**（K01 失败归因）—— [`docs/E4-R40-report.md`](./docs/E4-R40-report.md)：
+  E4-09 失败时会在清理临时根**之前**落盘最小归因包（`E4_09_DIAG_DIR`，每次 attempt 独立目录、
+  不覆盖）：身份/HEAD/干净性、OS 与运行时、真实 V3/paired/decision **字节副本 + 归约摘要**、
+  gate 子进程真实 exit/stderr、benchmark 自身 CLI exit+输出。**并且顺手关掉了 R39 的悬案**：
+  捕获到的 CLI 原文证明真实链在**脏工作树**上被拒绝
+  （`a promotion-eligible run requires a CLEAN, PROVABLE source tree …`），链根本不建立即读作
+  `INVALID`——同一代码脏树 `5 failed`、已提交干净树 `5 passed`。
+- **E4-R41**（K02 探测语义）—— [`docs/E4-R41-report.md`](./docs/E4-R41-report.md)：
+  `gitOutput` 曾把非零/超时吞成 `""`，使**探测失败**读成"未变化"。现在结构化 `gitProbe` 区分
+  非零退出/超时/信号/spawn 失败，`HostState` 携带逐信号有效性与原因，三态
+  `compareHostState`（unchanged / changed / **unknown**）让缺失证明不再冒充安全证明；
+  promotion-grade 在宿主机状态不可验证时 fail-closed（case 之前**零 provider 调用**），
+  且不把 unknown 写成臆造的越界逃逸。
+- **E4-R42**（K03 构建隔离）—— [`docs/E4-R42-report.md`](./docs/E4-R42-report.md)：
+  **「git 忽略」≠「tsc 排除」**。旧位置 `apps/cli/src/e4-r24-fixture-*.test.ts` 仍是**生产编译输入**，
+  `tsc -b` 会把孤儿夹具产物写进共享 `dist/`。`apps/cli/tsconfig.json` 的**窄范围** `exclude`
+  在根因处消除（夹具在盘上时真实 `tsc -b` 产出孤儿 **0**）；真实 gate 集成测试在自有 git 身份/
+  配置/构建缓存的 workspace 中执行，并证明主仓共享 `dist`+`tsbuildinfo` 逐字节未变。
+- **E4-R43**（K04 合同锁定）—— [`docs/E4-R43-report.md`](./docs/E4-R43-report.md)：
+  R38-b 的输入与预期**同源于同一常量**，调大常量仍然通过。现在用**字面量**固定输入
+  （单 case、`limit: null`、`repeat = 999999 / 1000000 / 1000001` → 接受/接受/拒绝）锁住公开的
+  1,000,000 上限，并用**真实加载的临时副本**（2,000,000 / 999,999）证明固定输入有判别力。
+  **生产零改动。**
+- **E4-R44**（K05 收口）—— [`docs/E4-R44-report.md`](./docs/E4-R44-report.md)：K01…K04 证据矩阵
+  与冻结干净版本上的最终门禁——`pnpm typecheck` 0、**`pnpm test` 320 文件 / 5751 passed /
+  1 skipped / 0 failed**、`pnpm docs:verify` ALL CHECKS PASS、`test:security` 2133、
+  `test:protocol` 52、`test:race` 23、`test:chaos` 12。
+
 ### 未完成 / NOT_RUN（详情见 [HANDOVER.md](./HANDOVER.md)）
 
 - **冻结版本上的全仓 `pnpm test` 未绿** —— 上述 `e4-09` 有效链判 `INVALID`，以及本轮 SHA 的

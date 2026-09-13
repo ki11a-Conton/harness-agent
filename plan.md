@@ -52,7 +52,11 @@
   max−1/max/max+1 → 接受/接受/拒绝；临时副本把常量 mutation 成 2,000,000 / 999,999 后**真实加载**，
   固定输入分别"必失败"⇒ 判别力已证。**生产零改动**（合同仍 1,000,000）；未展开百万网格。
   `docs/E4-R38-report.md` 增 §6.1 修正「断言随常量精确 ≠ 合同锁定」的表述。）
-- R44（K05：证据矩阵与静止工作区最终门禁）：⏳ 待做
+- R44（K05：证据矩阵与静止工作区最终门禁）✅ `docs/E4-R44-report.md`
+  （K01…K04 证据矩阵；冻结干净版本 `9df1c1b3` 上 typecheck 0、**`pnpm test` 320 文件 /
+  5751 passed / 1 skipped / 0 failed**、docs:verify ALL CHECKS PASS、security 2133、protocol 52、
+  race 23、chaos 12；三分结论：当前门禁通过 / K02-K04 独立关闭 / 历史 INVALID 已归因于干净树前置条件。
+  Windows 定向验收本机通过；远端 CI 见报告 §7 补记。）
 - 上一轮 R39（状态同步与最终门禁收口）：⚠️ **PARTIAL** `docs/E4-R39-report.md`
   —— 关闭矩阵、干净树门禁实测、远端 CI 只读核实与免责口径均记录于该报告。
   **未通过项**：冻结版本 `01c4ec74` 上的全仓 `pnpm test` 未取得绿

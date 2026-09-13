@@ -8,7 +8,7 @@
 ## 当前状态速览
 
 - 仓库规模：`packages/（24 个包）`（工作区包，均自带 package.json）。
-- 当前执行计划入口：`plan.md` → `plan(20260912-180524).md`（E4-R36…R39，2026-09-12）。
+- 当前执行计划入口：`plan.md` → `plan(20260912-144145).md`（E4-R40…R44，2026-09-13）。
 - 已推送并 CI 通过的历史批次（截至本文件编写时）：
   - P35…P38、E4-R12…E4-R20、E4-R21…E4-R26：均已推送 origin/main 且其 SHA 的 CI 四 job 全绿，
     详见对应 `docs/E4-R*-report.md` 与各自 CI run 记录。
@@ -23,16 +23,26 @@
   - R37（J02 升级后不再收集旧目录故意失败夹具）✅ 本轮提交 `docs/E4-R37-report.md`
   - R38（J03 执行计划边界的有效正例与 promotion-loader 验收）✅ 本轮提交
     `docs/E4-R38-report.md`（验收补强，无生产修复）
-  - R39（状态同步与最终门禁收口）⚠️ **PARTIAL** 本轮提交 `docs/E4-R39-report.md`：
-    关闭矩阵 + 干净树门禁 + 远端 CI 只读核实已完成；**但冻结版本上的全仓 `pnpm test`
-    未取得绿**（`e4-09` 生产 E2E 在全量并发下 3/3 判 INVALID，隔离 5/5 通过，根因未定），
-    且本轮实现提交自身的 Windows CI job 两次尝试均失败。详见该报告第 5、6 节。
+  - R39（状态同步与最终门禁收口）⚠️ **PARTIAL → 已由 R40 收口** 本轮提交 `docs/E4-R39-report.md`：
+    关闭矩阵 + 干净树门禁 + 远端 CI 只读核实已完成；当时**冻结版本上的全仓 `pnpm test`
+    未取得绿**（`e4-09` 生产 E2E 在全量并发下 3/3 判 INVALID，隔离 5/5 通过，根因未定）。
+    **R40 已给出该失败的确定性根因证据**（benchmark 要求运行期干净可证源树；脏树即拒绝运行，
+    链不建立 ⇒ 决策无差别 INVALID），且 R44 在冻结干净版本上全仓 `pnpm test` **绿**
+    （320 文件 / 5751 passed / 1 skipped / 0 failed）。详见 R39 与 R40/R44 报告。
+- 本轮计划（E4-R40…E4-R44，2026-09-13，入口 `plan(20260912-144145).md`）状态：
+  - R40（K01 失败归因诊断包）+ **R39 根因归因** ✅ `docs/E4-R40-report.md`
+  - R41（K02 宿主机探测失败显式为 unknown + promotion-grade fail-closed）✅ `docs/E4-R41-report.md`
+  - R42（K03 夹具不进生产编译边界 + 真实 gate 隔离 workspace）✅ `docs/E4-R42-report.md`
+  - R43（K04 独立固定输入锁定公开容量合同）✅ `docs/E4-R43-report.md`
+  - R44（K05 证据矩阵 + 静止工作区最终门禁）✅ `docs/E4-R44-report.md`
 - 环境依赖项（不因计划完成而消失）：
   - 真实模型 champion 质量：attestation 记录 `championPromotion.status=NOT_RUN`
     （付费 benchmark 未请求，不为此造假或付费；勿把 mock/stub 隔离当真实 OS 证明）。
   - release 发布动作本身未执行（各轮计划只到 attestation，不自动发布）。
-  - **未关闭的真实缺口（R39 遗留，不是猜测性任务）**：冻结版本上全仓 `pnpm test` 不绿
-    （`e4-09` 有效链在全量并发下判 `INVALID`，根因未定）、本轮 SHA 的 Windows CI 主门禁失败。
+  - **已归因的历史项（R40/R44）**：R39 的"冻结版本全仓 `pnpm test` 不绿"已归因为
+    **运行期干净源树前置条件**（非版本缺陷），并在 R44 的冻结干净版本上取得全绿。
+  - **仍未归因（保留真实状态）**：`01c4ec74` 的 Windows CI 主门禁两次尝试失败点不同，
+    而同代码的仅文档提交四 job 全绿 ⇒ 判为波动，但该 SHA 的事实结论仍是 failure。
 - 权威的"下一轮任务"清单：仅在有**真实 benchmark 失败、生产问题或明确用户需求**时才新建。
   下一轮的最小起点见 `docs/E4-R39-report.md` 第 8 节（复现优先、不做架构重写）。
 

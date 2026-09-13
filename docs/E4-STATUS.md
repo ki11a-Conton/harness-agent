@@ -10,6 +10,32 @@
 >   本状态页记录评审基线 SHA 以保证可追溯，测试断言其为 git 历史中的合法完整 SHA（祖先于 HEAD），
 >   而非逐 commit 自指的相等（那会在提交本页后立即失效，正是 docs:verify 对 HANDOVER 规范段禁止易变 SHA 的原因）。
 
+## 0. 当前状态（E4-R40…R44，2026-09-13）
+
+> 本节由 R44 收口写入，描述**冻结干净版本**上的实测结果（不是承诺未来 HEAD 不变）。
+> 下方的 §1…§N 是历史评审基线（E4-00/E3）的状态页，保留为历史，不逐次改写。
+
+| 门禁 | 结果 | 说明 |
+|---|---|---|
+| `pnpm typecheck`（`tsc -b`） | **PASS**（exit 0） | 24 包 |
+| `pnpm test` | **PASS** | **320 文件 / 5751 passed / 1 skipped / 0 failed** |
+| `pnpm docs:verify` | **PASS** | `ALL CHECKS PASS` |
+| `pnpm test:security` | **PASS** | 18 文件 / 2133 passed |
+| `pnpm test:protocol` | **PASS** | 7 文件 / 52 passed |
+| `pnpm test:race` | **PASS** | 11 文件 / 23 passed |
+| `pnpm test:chaos` | **PASS** | 1 文件 / 12 passed |
+| 真实模型 champion 质量 | **NOT_RUN** | 未请求付费 benchmark；不为收口造假 |
+| release 发布动作 | **NOT_RUN** | 各轮只到 attestation，不自动发布 |
+
+**本轮结论三分（不混淆）**：
+
+1. **当前门禁通过**：上表在冻结干净版本上实测（`pnpm test` 全绿，关闭 R39 的"全量未绿"）。
+2. **独立缺陷关闭**：K02（探测失败语义）与 K03（构建输入污染）各有独立复现与验收，
+   分别由 R41/R42 关闭；K04（合同锁定）由 R43 补足判别力。
+3. **历史间歇失败已归因**：R39 记录的"有效链被判 INVALID"由 R40 归因为
+   **运行期干净源树前置条件**（脏树即拒绝运行），非版本缺陷。
+   仅 `01c4ec74` 的 Windows CI 波动**仍未归因**（同代码文档提交四 job 全绿）。
+
 ## 1. 门禁命令真实状态（评审基线 ad37841）
 
 | 命令 | 状态 | 说明 |

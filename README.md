@@ -357,6 +357,51 @@ mcp-runtime, app-server, release-integrity).
   revision-determined**; the factual result for `01c4ec74` itself remains a
   failure, and CI is not claimed green for it.
 
+### E4-R40 … E4-R44 (2026-09-13 plan) — attribution, probe semantics, isolation, contract lock
+
+- **E4-R40** (K01 failure attribution) —
+  [`docs/E4-R40-report.md`](./docs/E4-R40-report.md): a failed E4-09 run now
+  persists a minimal attribution bundle BEFORE the temp roots are cleaned
+  (`E4_09_DIAG_DIR`, one directory per attempt, never overwriting): identity /
+  HEAD / tree cleanliness, OS+runtime, the REAL V3 / paired / decision bytes
+  plus reduced summaries, the real gate child exit/stderr, and the benchmark
+  CLI's own exit+output. **Bonus: it settled R39's open question.** The captured
+  CLI line proves the chain refuses to build on a DIRTY tree
+  (`a promotion-eligible run requires a CLEAN, PROVABLE source tree …`), so the
+  decision reads `INVALID` without the chain ever building — the same code is
+  `5 failed` on a dirty tree and `5 passed` on a committed clean tree.
+- **E4-R41** (K02 probe semantics) —
+  [`docs/E4-R41-report.md`](./docs/E4-R41-report.md): `gitOutput` used to swallow
+  a non-zero/timeout into `""`, so a FAILED probe read as "unchanged". Now a
+  structured `gitProbe` classifies non-zero/timeout/signal/spawn failure,
+  `HostState` carries per-signal validity + probe errors, and a three-state
+  `compareHostState` (unchanged / changed / **unknown**) means a missing proof is
+  never a security clearance. Promotion-grade runs fail closed when the host
+  state is unverifiable (no provider call at all before the case) and never
+  mislabel unknown as a fabricated escape.
+- **E4-R42** (K03 build isolation) —
+  [`docs/E4-R42-report.md`](./docs/E4-R42-report.md): "git-ignored" is not
+  "tsc-excluded". A legacy `apps/cli/src/e4-r24-fixture-*.test.ts` was still a
+  PRODUCTION compile input, so `tsc -b` wrote orphan fixture output into the
+  shared `dist/`. A narrow `exclude` in `apps/cli/tsconfig.json` removes it at
+  the root (a real `tsc -b` with the fixture on disk now emits 0 orphans), and
+  the real-gate integration test runs in its own workspace with its own git
+  identity / config / build cache, proving the shared `dist` + `tsbuildinfo`
+  stay byte-identical.
+- **E4-R43** (K04 contract lock) —
+  [`docs/E4-R43-report.md`](./docs/E4-R43-report.md): the R38-b negative derived
+  BOTH its input and its expectation from the same constant, so raising the
+  constant still passed. Fixed LITERAL inputs (single case, `limit: null`,
+  `repeat = 999999 / 1000000 / 1000001` → accept / accept / reject) now lock the
+  published 1,000,000 cap, and a mutated temporary COPY of the real source
+  (2,000,000 / 999,999, really loaded) proves the fixed inputs are
+  discriminating. **No production change.**
+- **E4-R44** (K05 close-out) — [`docs/E4-R44-report.md`](./docs/E4-R44-report.md):
+  the K01…K04 evidence matrix and the final gates on the frozen clean tree —
+  `pnpm typecheck` 0, **`pnpm test` 320 files / 5751 passed / 1 skipped / 0
+  failed**, `pnpm docs:verify` ALL CHECKS PASS, `test:security` 2133,
+  `test:protocol` 52, `test:race` 23, `test:chaos` 12.
+
 ### Unfinished / NOT_RUN (see [HANDOVER.md](./HANDOVER.md) for the detail)
 
 - **Full-repo `pnpm test` is not green at the frozen revision** — the `e4-09`
