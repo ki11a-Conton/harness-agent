@@ -71,6 +71,17 @@ export interface EvalOutcome {
    *  recomputable payload digests + case/arm/attempt/repetition lineage, then
    *  validated + aggregated. Replaces the legacy name-based digest claim. */
   activationEvidenceV2?: import("./activation-evidence-execution.js").ActivationEvidenceExecutionResult;
+  /** E4-R40 (K01): the E2-09 host-mutation sentinel's OWN before/after probe
+   *  records for this case, preserved so a failed run can be attributed from
+   *  the evidence that actually decided it (the post-run `git status` view is
+   *  not the same observation). Absent when the sentinel did not run for this
+   *  case (legacy runs / probe unavailable). */
+  hostMutation?: {
+    checked: boolean;
+    mutated: boolean;
+    before: import("./benchmark-isolation.js").HostStateSummary;
+    after: import("./benchmark-isolation.js").HostStateSummary;
+  };
 }
 
 /** Tool events that count as side effects on the environment (§73 forbidden.side_effects). */

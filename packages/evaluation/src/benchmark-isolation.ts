@@ -237,6 +237,26 @@ export async function captureHostState(
   };
 }
 
+/** E4-R40 (K01): the RAW per-signal values that participated in a host-mutation
+ *  decision, small enough to travel inside a case outcome / paired artifact.
+ *  A later `git status` reading (which happens after the case and after the
+ *  temp roots are cleaned) can never prove what the tree looked like DURING the
+ *  case — only these captured records can. */
+export interface HostStateSummary {
+  headSha: string | null;
+  statusPorcelain: string;
+  treeDigest: string | null;
+}
+
+/** E4-R40: reduce a captured HostState to the artifact-safe record. */
+export function hostStateSummary(state: HostState): HostStateSummary {
+  return {
+    headSha: state.headSha,
+    statusPorcelain: state.statusPorcelain,
+    treeDigest: state.treeDigest,
+  };
+}
+
 /** Whether the host state changed between two captures (real mutation).
  *  Primary signal: git HEAD + porcelain status (reflects tracked edits and
  *  untracked writes). Deep tree-digest comparison only applies when BOTH

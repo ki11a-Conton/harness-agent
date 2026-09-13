@@ -2,55 +2,59 @@
 
 **当前执行计划入口** — 本文件是唯一的当前计划入口。
 
-- 当前计划：[plan(20260912-180524).md](plan(20260912-180524).md)
-  （E4-R36…E4-R39：首次恢复发现失败后能够重新扫描并自行恢复 / 升级后不再收集旧目录的故意
-  失败夹具 / 补齐执行计划边界的有效正例与 promotion-loader 验收 / 同步状态并完成最终门禁，
-  2026-09-12）
+- 当前计划：[plan(20260912-144145).md](plan(20260912-144145).md)
+  （E4-R40…E4-R44：失败归因诊断包 / 探测错误的显式语义与 fail-closed / 夹具不得进入生产编译
+  边界与共享资源互斥 / 执行计划百万样本边界固定合同 / 证据矩阵与静止工作区最终门禁，
+  2026-09-13）
 - reviewedSourceSha（该计划审查时所依据的提交）：
-  `a7950fa1f386b2a1adc9ba35ba84aed0ad9ad50c`（main）
-- 比较基线：`bcf3f42ca31fcf91c714c46745a90e7c91245f83`
+  `67955e0652e5ce5127eb4e7e654f4590515a2571`（main）
+- 比较基线：`a7950fa1f386b2a1adc9ba35ba84aed0ad9ad50c`
 
 ## 历史计划
 
-上一轮 E4 计划 `plan(20260912-021843).md`（2026-09-12，E4-R32 … E4-R35）已由当前计划接替，
+上一轮 E4 计划 `plan(20260912-180524).md`（2026-09-12，E4-R36 … E4-R39）已由当前计划接替，
 作为历史保留在 git 历史中（其文件已从工作树删除，仅存于历史）；其验证结论与产物见
-`docs/E4-R32-report.md` … `docs/E4-R35-report.md`。
+`docs/E4-R36-report.md` … `docs/E4-R39-report.md`。
 
-更早的 `plan(20260911-072937).md`（E4-R27 … E4-R31）、`plan(20260911-013142).md`
-（E4-R21 … E4-R26）与 `plan(20260910-070001).md`（E4-R12 … E4-R20）同样作为历史保留在
-git 历史中，产物分别见 `docs/E4-R27-report.md` … `docs/E4-R31-report.md`、
-`docs/E4-R21-report.md` … `docs/E4-R26-report.md` 与
+更早的 `plan(20260912-021843).md`（E4-R32 … E4-R35）、`plan(20260911-072937).md`
+（E4-R27 … E4-R31）、`plan(20260911-013142).md`（E4-R21 … E4-R26）与
+`plan(20260910-070001).md`（E4-R12 … E4-R20）同样作为历史保留在 git 历史中，产物分别见
+`docs/E4-R32-report.md` … `docs/E4-R35-report.md`、`docs/E4-R27-report.md` …
+`docs/E4-R31-report.md`、`docs/E4-R21-report.md` … `docs/E4-R26-report.md` 与
 `docs/E4-R12-report.md` … `docs/E4-R20-report.md`。
 
 > 执行约定与推荐顺序见当前计划第 3 节。任何后续会话都应以本文件指向的计划为准，
 > 不要从历史计划标题推断范围或完成状态。
 
-## 执行状态（2026-09-12 计划 E4-R36…R39）
+## 执行状态（2026-09-13 计划 E4-R40…R44）
 
-- 本轮已完成（本地提交）：
-  - R36（J01：首次恢复发现失败后可重扫、可自愈）✅ `docs/E4-R36-report.md`
-    （`session-actor.ts`：发现完成态只在完整成功路径提交 + 扫描原子提交 + 失败停住本 pass；
-    `recovery-durable.test.ts` 29/29）
-  - R37（J02：升级后不再收集旧目录故意失败夹具）✅ `docs/E4-R37-report.md`
-    （`vitest.config.ts`：窄范围结构性排除 + 保留框架默认 exclude；
-    `e4-r24-final-result-protocol.test.ts` 5/5）
-  - R38（J03：执行计划边界的有效正例与 loader 验收）✅ `docs/E4-R38-report.md`
-    （新增 `e4-r38-execution-plan-boundary.test.ts` 3/3 + 强化 R33-f 正例；无生产修复）
-- R39（状态同步与最终门禁收口）：⚠️ **PARTIAL** `docs/E4-R39-report.md`
+- R40（K01：E4-09 失败归因诊断包）✅ `docs/E4-R40-report.md`
+  （新增 `apps/cli/src/e4-09-diagnostics.ts`；`runner.ts`/`benchmark-isolation.ts`/
+  `benchmark-command.ts`：把 E2-09 哨兵自身的 before/after 探测记录随 outcome 写入
+  `paired-experiment.json`；`e4-09-production-e2e.test.ts` 接入失败即落盘；
+  独立 `e4-r40-forensics.test.ts` + `test:forensics` 证明落盘路径（按设计非零退出，
+  已从默认 `pnpm test` 排除）。**实测归因**：E4-09 真实链要求干净可证源树，
+  工作树一脏即拒绝运行 ⇒ 决策读作 INVALID。）
+- R41（K02：探测/哨兵错误的显式语义与 fail-closed）：⏳ 待做
+- R42（K03：夹具不得进入生产编译边界；共享 src/dist/tsbuildinfo 互斥）：⏳ 待做
+- R43（K04：执行计划 999999/1000000/1000001 独立固定边界）：⏳ 待做
+- R44（K05：证据矩阵与静止工作区最终门禁）：⏳ 待做
+- 上一轮 R39（状态同步与最终门禁收口）：⚠️ **PARTIAL** `docs/E4-R39-report.md`
   —— 关闭矩阵、干净树门禁实测、远端 CI 只读核实与免责口径均记录于该报告。
   **未通过项**：冻结版本 `01c4ec74` 上的全仓 `pnpm test` 未取得绿
   （`e4-09-production-e2e.test.ts` 的 `buildRealChain` 在全量并发下 3/3 把有效链判
-  `INVALID`；隔离 5/5 通过；根因未定），且该 SHA 自身的 Windows CI job 两次尝试均失败
-  （同代码的文档提交 `2db1a9cd` 与 `40d5588b` 四 job 全绿、后者含 release attestation
-  ⇒ 为波动，但 `01c4ec74` 的事实结论仍是 failure）。
-  （同一版本另有一次留存的绿运行，见报告 §4.1 —— 该失败是环境/时序相关，不是版本的确定性属性。）
+  `INVALID`；隔离 5/5 通过）。**R40 已给出该失败的确定性根因证据**：非干净可证源树
+  被 benchmark 在执行前拒绝（见 `docs/E4-R40-report.md` §4）。
 - 上一轮（2026-09-12 计划 E4-R32…R35）已完成并**已推送** origin/main：
-  R32/R33/R34 收口于 `d212d977`，状态与 CI 补记于 `a7950fa1`；CI run `34685604645`
-  与 `34685817447` 四个 job 全绿。逐项结论见 `docs/E4-R32-report.md` … `docs/E4-R35-report.md`。
+  R32/R33/R34 收口于 `d212d977`，状态与 CI 补记于 `a7950fa1`。逐项结论见
+  `docs/E4-R32-report.md` … `docs/E4-R35-report.md`。
 - 更早轮次（E4-R27…R31、E4-R21…R26、E4-R12…R20）已完成并已推送，CI 全绿；详见对应报告。
 - 已知未完成/待环境项（不因"计划已执行"而消失）：
   1. 真实模型 champion 质量：attestation 记录 `championPromotion.status=NOT_RUN`
      （付费 benchmark 未请求，不为此造假或付费）。
   2. release 发布动作本身未执行（各轮计划只到 attestation，不自动发布）。
+- **运行前置条件（本轮实测确立）**：E4-09 及其对抗链要求**运行期干净可证源树**，
+  因此全量门禁必须在 `git status --short` 为空的已提交版本上运行；携带未提交改动运行会
+  触发 benchmark 的干净树拒绝（退出 1），这不是被测版本的缺陷。
 - docs:verify 指向本文件作为唯一当前计划入口；历史计划与旧状态段保留为
   HISTORICAL，不做删除或改写。

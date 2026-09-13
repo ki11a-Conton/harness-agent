@@ -2129,10 +2129,23 @@ async function runOneCase(
     // case start (child-process writes outside the workspace), the case is an
     // infrastructure/policy failure. `hostStateBefore` was captured before
     // execution below.
+    // E4-R40 (K01): the sentinel's OWN before/after probe records are part of
+    // the decision, so they are attached to the outcome and travel into
+    // paired-experiment.json. Re-reading `git status` after the run (or after
+    // the temp roots are cleaned) is a DIFFERENT observation and cannot show
+    // what the tree looked like during the case.
+    let hostMutation: EvalOutcome["hostMutation"];
     if (hostStateBefore !== undefined && hostMutationPossible) {
-      const { captureHostState, hostMutated } = await import("@ar/evaluation");
+      const { captureHostState, hostMutated, hostStateSummary } = await import("@ar/evaluation");
       const hostAfter = await captureHostState(process.cwd(), { include: [], excludePrefixes: [] });
-      if (hostMutated(hostStateBefore, hostAfter)) {
+      const mutated = hostMutated(hostStateBefore, hostAfter);
+      hostMutation = {
+        checked: true,
+        mutated,
+        before: hostStateSummary(hostStateBefore),
+        after: hostStateSummary(hostAfter),
+      };
+      if (mutated) {
         return {
           ...base,
           status: "error",
@@ -2142,6 +2155,7 @@ async function runOneCase(
           effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
           ...provenanceForCase(caseDef, suite, opts),
           securityOutcome: secOutcomeOf(true),
+          hostMutation,
           ...(candidateId !== undefined
             ? { activationEvidence: activationEvidenceFor(candidateId, caseDef, activationEvents) }
             : {}),
@@ -2156,6 +2170,8 @@ async function runOneCase(
       ...provenanceForCase(caseDef, suite, opts),
       // E4-04: real security evidence for this case (never defaulted to clean).
       securityOutcome: secOutcomeOf(false),
+      // E4-R40: the (unchanged) host probe records still travel with the case.
+      ...(hostMutation !== undefined ? { hostMutation } : {}),
       // E1-04: activation evidence from the real run path. Eligibility and
       // activation are derived from observed events + wiring, never from the
       // candidate name alone. A candidate that activated zero times stays

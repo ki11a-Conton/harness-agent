@@ -43,6 +43,12 @@ import {
 import { writeChampionStateFileCas, championStateDigest } from "./champion-state-file.js";
 import { createHarnessWithChampion } from "./champion-application.js";
 import { createObservationRun, gitHeadShaAt } from "./observation-evidence.js";
+import {
+  E4DiagnosticRecorder,
+  summarizeDecisionArtifact,
+  summarizePairedArtifact,
+  summarizeV3Artifact,
+} from "./e4-09-diagnostics.js";
 
 const sha = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
 /** E4-R08: HEAD at run time — the observations below bind to this snapshot. */
@@ -87,7 +93,23 @@ class ArmAwareProvider implements ModelProvider {
 }
 
 let tempDirs: string[] = [];
-afterEach(async () => {
+/** E4-R40 (K01): the diagnostics recorder of the test currently running. Vitest
+ *  executes the tests in a file sequentially, so a module-level binding is safe
+ *  here and keeps the failure hook from having to know the test body. */
+let activeDiag: E4DiagnosticRecorder | null = null;
+
+afterEach(async (ctx) => {
+  // E4-R40: a FAILED run must persist its attribution bundle BEFORE the temp
+  // roots below are deleted. Only the run-time capture (sentinel before/after
+  // probes + the artifacts the real stages wrote) can explain the outcome; a
+  // post-run re-read cannot reconstruct it. Capture is best-effort and NEVER
+  // replaces the test's own failure. (The deliberate-failure proof of this path
+  // lives in `e4-r40-forensics.test.ts`, which is run explicitly.)
+  if (ctx.task.result?.state === "fail" && activeDiag !== null) {
+    const first = ctx.task.result.errors?.[0];
+    await activeDiag.captureFailure({ error: first ?? new Error(`e4-09 test failed: ${ctx.task.name}`) });
+  }
+  activeDiag = null;
   vi.doUnmock("@ar/evaluation");
   vi.resetModules();
   for (const d of tempDirs.splice(0)) {
@@ -139,6 +161,23 @@ describe("E4-09 real production-path E2E (offline)", () => {
     });
     const outDir = join(root, "out");
 
+    // E4-R40 (K01): attribution recorder for THIS test. On failure the afterEach
+    // hook persists a bundle BEFORE the temp roots are deleted — the only
+    // snapshot that can explain an INVALID/ACCEPT discrepancy (R39's post-run
+    // re-read could not reconstruct the case-time sentinel probe). Registering
+    // paths here is inert on success; it only matters if a stage fails below.
+    const diagMain = new E4DiagnosticRecorder({
+      label: "e4-09-main", testFile: TEST_FILE, testedSha: TESTED_SHA,
+      testName: "benchmark -> V3 -> evaluator -> promote -> createHarness -> applied, all real stages",
+    });
+    activeDiag = diagMain;
+    diagMain.mark("setup");
+    diagMain.registerArtifacts([
+      { role: "paired-experiment", path: join(outDir, "paired-experiment.json"), summarize: summarizePairedArtifact },
+      { role: "v3-baseline", path: join(outDir, "v3-baseline.json"), summarize: summarizeV3Artifact },
+      { role: "v3-candidate", path: join(outDir, "v3-candidate.json"), summarize: summarizeV3Artifact },
+    ]);
+
     // E4-R24 (F04): candidates are collected during the test; the COMMITTED
     // rows are published by the final-result Vitest reporter for the run named
     // by E2E_OBSERVATION_RUN_ID (CI/explicit audits). Without the env var the
@@ -163,12 +202,14 @@ describe("E4-09 real production-path E2E (offline)", () => {
       ["--cases", join(root, "cases"), "--candidate", CANDIDATE, "--repeat", "2", "--out", outDir],
       provider,
     );
+    diagMain.addFact("benchmarkCli", { exitCode: res.exitCode, lines: res.lines.slice(0, 200) });
     expect(res.exitCode).toBe(0);
     expect(res.lines.join("\n")).toContain("canonical V3 artifacts written + strict-reloaded");
 
     // STAGE 2: the V3 artifacts are REAL files produced by the executor's writer.
     const v3BaselinePath = join(outDir, "v3-baseline.json");
     const v3CandidatePath = join(outDir, "v3-candidate.json");
+    diagMain.mark("benchmark");
     const candV3 = JSON.parse(await readFile(v3CandidatePath, "utf8")) as {
       manifest: { promotionEligible: boolean; isolationStrength: string };
       outcomes: { passed: boolean }[];
@@ -213,6 +254,7 @@ describe("E4-09 real production-path E2E (offline)", () => {
       candidatePath: v3CandidatePath,
       candidateId: CANDIDATE,
     });
+    diagMain.mark("evaluate");
     expect(evalResult.decisionArtifact.decision).toBe("ACCEPT");
 
     // STAGE 4: real promotion bundle (decision artifact file + envelope).
@@ -220,6 +262,7 @@ describe("E4-09 real production-path E2E (offline)", () => {
     await mkdir(bundleDir, { recursive: true });
     const decisionArtifactPath = join(bundleDir, "decision-artifact.json");
     await writeFile(decisionArtifactPath, JSON.stringify(evalResult.decisionArtifact), "utf8");
+    diagMain.registerArtifacts([{ role: "decision-artifact", path: decisionArtifactPath, summarize: summarizeDecisionArtifact }]);
     const [da, base, cand] = await Promise.all([
       readFile(decisionArtifactPath, "utf8"), readFile(v3BaselinePath, "utf8"), readFile(v3CandidatePath, "utf8"),
     ]);
@@ -240,6 +283,8 @@ describe("E4-09 real production-path E2E (offline)", () => {
     });
     const envPath = join(bundleDir, "envelope.json");
     await writeFile(envPath, JSON.stringify(envelope), "utf8");
+    diagMain.registerArtifacts([{ role: "promotion-envelope", path: envPath }]);
+    diagMain.mark("promotion");
 
     // STAGE 5: real loader verifies the bundle; promote -> applicationPending.
     const statePath = join(root, "champion-state.json");
@@ -267,6 +312,7 @@ describe("E4-09 real production-path E2E (offline)", () => {
 
     // STAGE 6: real createHarness startup applies + proves.
     const dataDir = join(root, "runtime-data");
+    diagMain.mark("createHarness");
     const startup = await createHarnessWithChampion({
       runtimeEntrypoint: "cli",
       baseConfig: {
@@ -344,6 +390,9 @@ describe("E4-09 real production-path E2E (offline)", () => {
     } finally {
       await startup.harness.close();
     }
+    // Only reached when the whole chain succeeded: clear the per-test recorder so
+    // a LATER test's failure can't be attributed to this (now-passing) test.
+    activeDiag = null;
   }, 60_000);
 });
 
@@ -357,6 +406,15 @@ async function buildRealChain(root: string): Promise<{
   v3BaselinePath: string; v3CandidatePath: string; decisionArtifactPath: string;
   evalResult: Awaited<ReturnType<typeof runV3ChampionEval>>;
 }> {
+  // E4-R40 (K01): this shared builder sets the per-test attribution recorder so
+  // EVERY adversarial stage (chain build OR tamper assertion) persists a bundle
+  // on failure. The build's own `expect` calls stay exactly as before.
+  const diag = new E4DiagnosticRecorder({
+    label: "e4-09-adv", testFile: TEST_FILE, testedSha: TESTED_SHA,
+    testName: "adversarial buildRealChain (real chain)",
+  });
+  activeDiag = diag;
+  diag.mark("setup");
   const caseJson = JSON.stringify({ verification: [{ kind: "artifact", path: "out.txt", mustChange: true }] });
   for (const c of ["a", "b", "c"]) {
     const dir = join(root, "cases", c);
@@ -371,6 +429,10 @@ async function buildRealChain(root: string): Promise<{
     ["--cases", join(root, "cases"), "--candidate", CANDIDATE, "--repeat", "2", "--out", outDir],
     new ArmAwareProvider(),
   );
+  // E4-R40: keep the benchmark's REAL CLI exit + output so a failure bundle
+  // explains itself (never only the framework's assertion text).
+  diag.addFact("benchmarkCli", { exitCode: res.exitCode, lines: res.lines.slice(0, 200) });
+  diag.mark("benchmark");
   expect(res.exitCode).toBe(0);
   const v3BaselinePath = join(outDir, "v3-baseline.json");
   const v3CandidatePath = join(outDir, "v3-candidate.json");
@@ -380,6 +442,13 @@ async function buildRealChain(root: string): Promise<{
   await mkdir(bundleDir, { recursive: true });
   const decisionArtifactPath = join(bundleDir, "decision-artifact.json");
   await writeFile(decisionArtifactPath, JSON.stringify(evalResult.decisionArtifact), "utf8");
+  diag.registerArtifacts([
+    { role: "paired-experiment", path: join(outDir, "paired-experiment.json"), summarize: summarizePairedArtifact },
+    { role: "v3-baseline", path: v3BaselinePath, summarize: summarizeV3Artifact },
+    { role: "v3-candidate", path: v3CandidatePath, summarize: summarizeV3Artifact },
+    { role: "decision-artifact", path: decisionArtifactPath, summarize: summarizeDecisionArtifact },
+  ]);
+  diag.mark("chain-built");
   return { v3BaselinePath, v3CandidatePath, decisionArtifactPath, evalResult };
 }
 
