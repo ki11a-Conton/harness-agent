@@ -1653,22 +1653,77 @@ async function runOneCase(
       ...provenanceForCase(caseDef, suite, opts),
     };
   }
+  // E4-R41 (K02): a promotion-grade case must not START when the required host
+  // state cannot be VERIFIED. Missing evidence is not a security clearance.
+  const hostProbeInfrastructureOutcome = (violation: string): EvalOutcome => {
+    const metrics: RunMetrics = {
+      turn_count: 0,
+      tool_call_count: 0,
+      tokens_input: 0,
+      tokens_output: 0,
+      context_tokens: 0,
+      compaction_count: 0,
+      duration_ms: 0,
+      retry_count: 0,
+      verification_failures: 0,
+      human_interventions: 0,
+      estimated_cost: 0,
+      usage_unknown: 0,
+      cache_tokens_read: 0,
+      cache_tokens_created: 0,
+      model_call_count: 0,
+    };
+    return {
+      caseId: caseDef.id,
+      status: "failed",
+      actualStatus: "error",
+      events: [],
+      metrics,
+      violations: [violation],
+      failureCategory: "infrastructure",
+      suite: caseDef.suite ?? "regression",
+      judgeVersion: caseDef.judgeVersion ?? DEFAULT_JUDGE_VERSION,
+      effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
+      ...provenanceForCase(caseDef, suite, opts),
+    };
+  };
   // E2-09: host mutation sentinel — capture the host repo state BEFORE the
   // case runs so post-case detection can catch real child-process writes
   // outside the case workspace (absolute paths/redirection/interpreters that
   // the tool-argument sentinel cannot see). git status porcelain is the
   // lightweight primary signal (reflects tracked + untracked writes); the
   // full-tree digest scan is skipped in the per-case fast path.
+  // E4-R41 (K02): validity is tracked PER SIGNAL — a failed probe yields a
+  // structured UNKNOWN, never an empty-string that reads as "unchanged".
   let hostStateBefore: import("@ar/evaluation").HostState | undefined;
   let hostMutationPossible = true;
+  let hostProbeErrorsBefore: import("@ar/evaluation").HostProbeError[] = [];
   try {
     const { captureHostState } = await import("@ar/evaluation");
     hostStateBefore = await captureHostState(process.cwd(), { include: [], excludePrefixes: [] });
-  } catch {
-    // Sentinel unavailable (no git?) — fail open for local dev but keep the
-    // E1-02 tool-argument sentinel active. Promotion benchmarks enforce the
-    // isolation backend at preflight (E2-09) and never rely on this alone.
+    hostMutationPossible = hostStateBefore.headValid && hostStateBefore.statusValid;
+    hostProbeErrorsBefore = hostStateBefore.probeErrors;
+  } catch (err) {
+    // The structured capture no longer throws for probe failures (they are
+    // results); a throw here means the sentinel module itself is unavailable.
     hostMutationPossible = false;
+    hostProbeErrorsBefore = [{
+      probe: "status",
+      kind: "spawn-failure",
+      exitCode: null,
+      signal: null,
+      message: err instanceof Error ? err.message : String(err),
+    }];
+  }
+  // Promotion-grade (strong confinement) runs fail closed when the pre-case
+  // host state is unverifiable. Local/insecure runs keep the prior fail-open
+  // behaviour (the E1-02 tool-argument sentinel stays active) but the UNKNOWN
+  // is still recorded on the outcome.
+  if (!hostMutationPossible && opts.processConfinement === "strong") {
+    const why = hostProbeErrorsBefore.map((e) => `${e.probe}:${e.kind}`).join(", ") || "probe unavailable";
+    return hostProbeInfrastructureOutcome(
+      `host state probe failed before case (E2-09 sentinel): ${why} — required host state is UNVERIFIABLE; refusing a promotion-grade case`,
+    );
   }
   const workspace = await mkdtemp(join(tmpdir(), "harness-bench-"));
   try {
@@ -2135,17 +2190,18 @@ async function runOneCase(
     // the temp roots are cleaned) is a DIFFERENT observation and cannot show
     // what the tree looked like during the case.
     let hostMutation: EvalOutcome["hostMutation"];
-    if (hostStateBefore !== undefined && hostMutationPossible) {
-      const { captureHostState, hostMutated, hostStateSummary } = await import("@ar/evaluation");
+    if (hostStateBefore !== undefined) {
+      const { captureHostState, compareHostState, hostStateSummary } = await import("@ar/evaluation");
       const hostAfter = await captureHostState(process.cwd(), { include: [], excludePrefixes: [] });
-      const mutated = hostMutated(hostStateBefore, hostAfter);
+      const comparison = compareHostState(hostStateBefore, hostAfter);
       hostMutation = {
         checked: true,
-        mutated,
+        mutated: comparison.status === "changed",
+        status: comparison.status,
         before: hostStateSummary(hostStateBefore),
         after: hostStateSummary(hostAfter),
       };
-      if (mutated) {
+      if (comparison.status === "changed") {
         return {
           ...base,
           status: "error",
@@ -2155,6 +2211,27 @@ async function runOneCase(
           effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
           ...provenanceForCase(caseDef, suite, opts),
           securityOutcome: secOutcomeOf(true),
+          hostMutation,
+          ...(candidateId !== undefined
+            ? { activationEvidence: activationEvidenceFor(candidateId, caseDef, activationEvents) }
+            : {}),
+          ...(activationEvidenceV2 !== undefined ? { activationEvidenceV2 } : {}),
+        };
+      }
+      // E4-R41 (K02): an UNKNOWN probe is not a mutation and NOT a clean proof.
+      // A promotion-grade case cannot be certified from unverifiable host
+      // state, so it fails closed (infrastructure) — without asserting an
+      // escape that was never observed.
+      if (comparison.status === "unknown" && opts.processConfinement === "strong") {
+        return {
+          ...base,
+          status: "error",
+          actualStatus: "error",
+          failureCategory: "infrastructure",
+          reason: `host state probe failed during case (E2-09 sentinel): ${comparison.details[0] ?? "host state is UNKNOWN"} — a promotion-grade case cannot be certified from unverifiable host state`,
+          effectiveFeatures: effectiveFeaturesFor(caseDef, opts),
+          ...provenanceForCase(caseDef, suite, opts),
+          securityOutcome: secOutcomeOf(false),
           hostMutation,
           ...(candidateId !== undefined
             ? { activationEvidence: activationEvidenceFor(candidateId, caseDef, activationEvents) }

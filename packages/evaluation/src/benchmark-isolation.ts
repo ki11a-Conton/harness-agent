@@ -129,13 +129,35 @@ function runQuiet(args: string[]): Promise<void> {
 // Host mutation sentinel
 // ---------------------------------------------------------------------------
 
-/** Lightweight host fingerprint: git HEAD + porcelain status + tree digests. */
+/** E4-R41 (K02): a host probe that could not be VERIFIED. A failed probe is a
+ *  real, structured outcome — never a silent empty string that later reads as
+ *  "verified unchanged". */
+export interface HostProbeError {
+  probe: "rev-parse" | "status";
+  kind: "nonzero-exit" | "timeout" | "signal" | "spawn-failure";
+  exitCode: number | null;
+  signal: string | null;
+  message: string;
+}
+
+/** Lightweight host fingerprint: git HEAD + porcelain status + tree digests.
+ *
+ *  E4-R41 (K02): each git signal carries its own VALIDITY. `headSha === null`
+ *  or `statusPorcelain === ""` is only meaningful when the corresponding probe
+ *  succeeded; a failed probe makes the state UNKNOWN, which must never be read
+ *  as "no change" (a missing proof is not a security clearance). */
 export interface HostState {
   schemaVersion: string;
   headSha: string | null;
   statusPorcelain: string;
   /** sha256 over the sorted (relativePath, digest) pairs of the tracked tree. */
   treeDigest: string | null;
+  /** True only when `git rev-parse HEAD` succeeded for this capture. */
+  headValid: boolean;
+  /** True only when `git status --porcelain` succeeded for this capture. */
+  statusValid: boolean;
+  /** Structured reasons for any probe that failed (empty when all succeeded). */
+  probeErrors: HostProbeError[];
 }
 
 /** Deterministic per-file digest over a directory subset (sorted, relative). */
@@ -205,10 +227,55 @@ export async function treeDigestOf(
   return createHash("sha256").update(stableStringify({ entries, unreadableFiles }), "utf8").digest("hex");
 }
 
-async function gitOutput(args: string[], cwd: string): Promise<string> {
+/** E4-R41 (K02): structured result of one git probe. Exported as the injectable
+ *  test seam so a deterministic failing/succeeding probe can be supplied
+ *  WITHOUT touching the global git, the project PATH or a shared workspace. */
+export interface GitProbeResult {
+  ok: boolean;
+  stdout: string;
+  error: HostProbeError | null;
+}
+
+/** Injectable command-execution seam. Defaults to the real `git` binary. */
+export type GitProbeFn = (
+  probe: "rev-parse" | "status",
+  args: string[],
+  cwd: string,
+) => Promise<GitProbeResult>;
+
+/**
+ * E4-R41 (K02): run `git` and return a STRUCTURED result. A non-zero exit, a
+ * timeout and a spawn failure are real, classified outcomes (ok=false + a
+ * reason) — historically they were collapsed to an empty string, which the
+ * sentinel then read as "no mutation proven", silently clearing a case whose
+ * host state could not actually be observed.
+ */
+async function gitProbe(probe: "rev-parse" | "status", args: string[], cwd: string): Promise<GitProbeResult> {
   return new Promise((resolvePromise) => {
-    execFile("git", args, { cwd, timeout: 10000, windowsHide: true, encoding: "utf8" }, (err, stdout) => {
-      resolvePromise(err !== null ? "" : String(stdout));
+    execFile("git", args, { cwd, timeout: 10000, windowsHide: true, encoding: "utf8" }, (err, stdout, stderr) => {
+      if (err === null) {
+        resolvePromise({ ok: true, stdout: String(stdout), error: null });
+        return;
+      }
+      const e = err as { code?: unknown; signal?: unknown; killed?: boolean; message?: unknown };
+      const exitCode = typeof e.code === "number" ? e.code : null;
+      const signal = typeof e.signal === "string" ? e.signal : null;
+      // execFile kills a timed-out child with a signal and sets `killed`.
+      const kind: HostProbeError["kind"] = e.killed === true && signal !== null
+        ? "timeout"
+        : exitCode !== null
+          ? "nonzero-exit"
+          : signal !== null
+            ? "signal"
+            : "spawn-failure";
+      const detail = String(stderr ?? "").trim() !== ""
+        ? String(stderr).trim()
+        : typeof e.message === "string" ? e.message : String(err);
+      resolvePromise({
+        ok: false,
+        stdout: String(stdout ?? ""),
+        error: { probe, kind, exitCode, signal, message: detail },
+      });
     });
   });
 }
@@ -217,15 +284,25 @@ async function gitOutput(args: string[], cwd: string): Promise<string> {
  *  `git status --porcelain` is the lightweight primary signal (reflects both
  *  tracked modifications and untracked writes, e.g. a child process dropping
  *  a file into the repo). `opts.include` enables the heavier full-tree digest
- *  scan; pass an empty array to skip it (fast path for per-case sentinels). */
+ *  scan; pass an empty array to skip it (fast path for per-case sentinels).
+ *
+ *  E4-R41 (K02): the result records per-signal validity + probe errors, so a
+ *  failed probe yields UNKNOWN rather than a fake "unchanged". */
 export async function captureHostState(
   repoRoot: string,
-  opts: { include: string[]; excludePrefixes: string[] },
+  opts: { include: string[]; excludePrefixes: string[]; gitExec?: GitProbeFn },
 ): Promise<HostState> {
-  const [headSha, statusPorcelain] = await Promise.all([
-    gitOutput(["rev-parse", "HEAD"], repoRoot).then((s) => s.trim() === "" ? null : s.trim()),
-    gitOutput(["status", "--porcelain"], repoRoot),
+  const exec = opts.gitExec ?? gitProbe;
+  const [rev, status] = await Promise.all([
+    exec("rev-parse", ["rev-parse", "HEAD"], repoRoot),
+    exec("status", ["status", "--porcelain"], repoRoot),
   ]);
+  const probeErrors: HostProbeError[] = [];
+  if (rev.error !== null) probeErrors.push(rev.error);
+  if (status.error !== null) probeErrors.push(status.error);
+  // A null head / empty porcelain is only reported when its probe SUCCEEDED.
+  const headSha = rev.ok && rev.stdout.trim() !== "" ? rev.stdout.trim() : null;
+  const statusPorcelain = status.ok ? status.stdout : "";
   const treeDigest = opts.include.length === 0
     ? null
     : await treeDigestOf(repoRoot, opts);
@@ -234,6 +311,9 @@ export async function captureHostState(
     headSha,
     statusPorcelain,
     treeDigest,
+    headValid: rev.ok,
+    statusValid: status.ok,
+    probeErrors,
   };
 }
 
@@ -246,6 +326,12 @@ export interface HostStateSummary {
   headSha: string | null;
   statusPorcelain: string;
   treeDigest: string | null;
+  /** E4-R41 (K02): per-signal validity, so a persisted record can never read a
+   *  failed probe as "verified unchanged". */
+  headValid: boolean;
+  statusValid: boolean;
+  /** Structured probe failures (probe/kind/exit/signal/message). */
+  probeErrors: HostProbeError[];
 }
 
 /** E4-R40: reduce a captured HostState to the artifact-safe record. */
@@ -254,18 +340,77 @@ export function hostStateSummary(state: HostState): HostStateSummary {
     headSha: state.headSha,
     statusPorcelain: state.statusPorcelain,
     treeDigest: state.treeDigest,
+    headValid: state.headValid,
+    statusValid: state.statusValid,
+    probeErrors: state.probeErrors,
   };
 }
 
-/** Whether the host state changed between two captures (real mutation).
- *  Primary signal: git HEAD + porcelain status (reflects tracked edits and
- *  untracked writes). Deep tree-digest comparison only applies when BOTH
- *  sides have a measurable digest (the heavy path). */
+/** E4-R41 (K02): three-state host comparison. `unknown` is a first-class
+ *  outcome — a required probe failed, so a change can NEITHER be confirmed NOR
+ *  ruled out. It must never be presented as a verified mutation or as a clean
+ *  result. */
+export type HostMutationStatus = "unchanged" | "changed" | "unknown";
+
+export interface HostMutationComparison {
+  status: HostMutationStatus;
+  details: string[];
+  before: HostState;
+  after: HostState;
+}
+
+/**
+ * Compare two host captures without conflating "no change observed" with
+ * "observation failed".
+ *
+ *   - `changed`   — at least one VERIFIED signal (head / status / treeDigest)
+ *                   differs between two captures that both succeeded.
+ *   - `unchanged` — both captures verified every required signal and none differ.
+ *   - `unknown`   — a required probe failed on one or both sides.
+ */
+export function compareHostState(before: HostState, after: HostState): HostMutationComparison {
+  const headComparable = before.headValid && after.headValid;
+  const statusComparable = before.statusValid && after.statusValid;
+  const verifiedChanged =
+    (headComparable && before.headSha !== after.headSha) ||
+    (statusComparable && before.statusPorcelain !== after.statusPorcelain) ||
+    (before.treeDigest !== null && after.treeDigest !== null && before.treeDigest !== after.treeDigest);
+
+  if (verifiedChanged) {
+    const details: string[] = [
+      "host state changed during case execution (possible child-process write outside the case workspace)",
+    ];
+    if (headComparable && before.headSha !== after.headSha) details.push(` head: ${before.headSha} -> ${after.headSha}`);
+    if (statusComparable && before.statusPorcelain !== after.statusPorcelain) details.push(" git status changed");
+    if (before.treeDigest !== null && after.treeDigest !== null && before.treeDigest !== after.treeDigest) {
+      details.push(` tree digest: ${before.treeDigest.slice(0, 12)} -> ${after.treeDigest.slice(0, 12)}`);
+    }
+    return { status: "changed", details, before, after };
+  }
+
+  if (headComparable && statusComparable) {
+    return { status: "unchanged", details: [], before, after };
+  }
+
+  const details: string[] = [
+    "host state is UNKNOWN: a required host probe failed, so a change can neither be confirmed nor ruled out",
+  ];
+  for (const pe of [...before.probeErrors, ...after.probeErrors]) {
+    details.push(
+      ` host probe failed (${pe.probe}): ${pe.kind}` +
+        `${pe.exitCode !== null ? ` exit=${pe.exitCode}` : ""}` +
+        `${pe.signal !== null ? ` signal=${pe.signal}` : ""} — ${pe.message}`,
+    );
+  }
+  return { status: "unknown", details, before, after };
+}
+
+/** Whether the host state was VERIFIABLY changed between two captures.
+ *  E4-R41 (K02): an UNKNOWN result is NOT a mutation (so this stays `false` for
+ *  it) — callers that must fail closed on unknown MUST consult
+ *  `compareHostState(...).status` instead of relying on this boolean alone. */
 export function hostMutated(before: HostState, after: HostState): boolean {
-  if (before.headSha !== after.headSha) return true;
-  if (before.statusPorcelain !== after.statusPorcelain) return true;
-  if (before.treeDigest !== null && after.treeDigest !== null && before.treeDigest !== after.treeDigest) return true;
-  return false;
+  return compareHostState(before, after).status === "changed";
 }
 
 /** Target path platform flavor. The host OS must NOT be used to interpret
@@ -286,7 +431,12 @@ export function isPathOutsideWorkspace(path: string, workspaceAbs: string, flavo
 export interface SentinelReport {
   schemaVersion: string;
   hostMutated: boolean;
+  /** E4-R41 (K02): three-state outcome. `unknown` means a required probe failed
+   *  and a change can neither be confirmed nor ruled out. */
+  status: HostMutationStatus;
   details: string[];
+  /** Structured probe failures from either capture (empty when all succeeded). */
+  probeErrors: HostProbeError[];
   workspace: string;
   hostRoot: string;
 }
@@ -296,38 +446,42 @@ export interface SentinelReport {
  * execution and reports real host changes (child-process escapes etc.) that
  * the tool-argument sentinel could never see. Callers decide how to fail the
  * case (here: infrastructure failure).
+ *
+ * E4-R41 (K02): the report distinguishes `changed` from `unknown`; when a
+ * required probe failed on either side the status is `unknown` and the probe
+ * errors are surfaced in `details` — it is NOT silently reported as unchanged
+ * with an empty details list.
  */
 export async function withHostMutationSentinel<T>(
   input: {
     hostRoot: string;
     watchInclude: string[];
     watchExcludePrefixes: string[];
+    /** E4-R41 (K02): optional deterministic probe seam (tests only). */
+    gitExec?: GitProbeFn;
     run: () => Promise<T>;
   },
 ): Promise<{ value: T; report: SentinelReport }> {
   const before = await captureHostState(input.hostRoot, {
     include: input.watchInclude,
     excludePrefixes: input.watchExcludePrefixes,
+    ...(input.gitExec !== undefined ? { gitExec: input.gitExec } : {}),
   });
   const value = await input.run();
   const after = await captureHostState(input.hostRoot, {
     include: input.watchInclude,
     excludePrefixes: input.watchExcludePrefixes,
+    ...(input.gitExec !== undefined ? { gitExec: input.gitExec } : {}),
   });
-  const mutated = hostMutated(before, after);
-  const details: string[] = [];
-  if (mutated) {
-    details.push("host state changed during case execution (possible child-process write outside the case workspace)");
-    if (before.headSha !== after.headSha) details.push(` head: ${before.headSha} -> ${after.headSha}`);
-    if (before.statusPorcelain !== after.statusPorcelain) details.push(" git status changed");
-    if (before.treeDigest !== after.treeDigest) details.push(` tree digest: ${before.treeDigest?.slice(0, 12) ?? "null"} -> ${after.treeDigest?.slice(0, 12) ?? "null"}`);
-  }
+  const comparison = compareHostState(before, after);
   return {
     value,
     report: {
       schemaVersion: BENCHMARK_ISOLATION_SCHEMA_VERSION,
-      hostMutated: mutated,
-      details,
+      hostMutated: comparison.status === "changed",
+      status: comparison.status,
+      details: comparison.details,
+      probeErrors: [...before.probeErrors, ...after.probeErrors],
       workspace: input.hostRoot,
       hostRoot: input.hostRoot,
     },

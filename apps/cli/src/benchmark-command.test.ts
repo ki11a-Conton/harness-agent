@@ -1747,3 +1747,64 @@ describe("E4-R13: confirmed plan binds the full identity (N03/N04/N05)", () => {
     expect(artifact.counters.modelCallAttempts).toBeGreaterThan(0); // the provider REALLY ran
   }, 60_000);
 });
+
+/**
+ * E4-R41 (K02) — CLI path: a promotion-grade run must NOT start (and must make
+ * zero provider calls) when the pre-case host-state probe cannot be verified.
+ * Missing evidence is not a security clearance.
+ */
+describe("E4-R41 promotion-grade host-probe fail-closed (CLI path)", () => {
+  afterEach(() => {
+    vi.doUnmock("@ar/evaluation");
+    vi.resetModules();
+  });
+
+  it("refuses a promotion run (no provider call) when captureHostState returns an UNVERIFIED state", async () => {
+    const root = await makeCaseDir({
+      "cases/a/request.md": "Produce out.txt.",
+      "cases/a/expected.md": "out.txt exists.",
+      "cases/a/case.json": JSON.stringify({ verification: [{ kind: "artifact", path: "out.txt", mustChange: true }] }),
+    });
+    vi.resetModules();
+    vi.doMock("@ar/evaluation", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("@ar/evaluation")>();
+      return {
+        ...actual,
+        // A promotion-grade backend is available → confinement resolves "strong".
+        probeIsolationBackend: (async () => ({
+          schemaVersion: 1, id: "mock-bwrap", platform: "test", strongIsolation: true, note: "k02 test backend",
+        })) as unknown as typeof actual.probeIsolationBackend,
+        // The host probe cannot be VERIFIED: both signals invalid, reasons recorded.
+        captureHostState: (async () => ({
+          schemaVersion: "1.0.0", headSha: null, statusPorcelain: "", treeDigest: null,
+          headValid: false, statusValid: false,
+          probeErrors: [{ probe: "status", kind: "spawn-failure", exitCode: null, signal: null, message: "injected probe failure" }],
+        })) as unknown as typeof actual.captureHostState,
+      };
+    });
+    let providerCalls = 0;
+    const provider: ModelProvider = {
+      id: "k02-probe",
+      async listModels() { return [{ id: "k02-model", name: "K02" }]; },
+      createClient(_m: ModelRef, _c: ProviderConfig) {
+        return {
+          async *generate(): AsyncIterable<ModelEvent> {
+            providerCalls += 1;
+            yield* ScriptedModelProvider.text("done");
+          },
+        };
+      },
+    };
+    const mod = await import("./benchmark-command.js");
+    const res = await mod.runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--candidate", "budget_aware_completion_v1", "--repeat", "1", "--out", join(root, "out")],
+      provider,
+    );
+    // THE CORE ASSERTION: the protected action never executed.
+    expect(providerCalls).toBe(0);
+    expect(res.exitCode).not.toBe(0);
+    // And the real reason is the unverifiable probe (not an unrelated refusal).
+    const artifactText = await (await import("node:fs/promises")).readFile(join(root, "out", "paired-experiment.json"), "utf8").catch(() => "");
+    expect(artifactText).toContain("UNVERIFIABLE");
+  }, 60_000);
+});

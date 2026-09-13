@@ -35,7 +35,12 @@
   独立 `e4-r40-forensics.test.ts` + `test:forensics` 证明落盘路径（按设计非零退出，
   已从默认 `pnpm test` 排除）。**实测归因**：E4-09 真实链要求干净可证源树，
   工作树一脏即拒绝运行 ⇒ 决策读作 INVALID。）
-- R41（K02：探测/哨兵错误的显式语义与 fail-closed）：⏳ 待做
+- R41（K02：探测/哨兵错误的显式语义与 fail-closed）✅ `docs/E4-R41-report.md`
+  （`benchmark-isolation.ts`：`gitOutput`（吞错）→ 结构化 `gitProbe` + `HostProbeError`；
+  `HostState`/`HostStateSummary`/`SentinelReport` 携带有效性与失败原因；新增三态
+  `compareHostState`（unchanged/changed/unknown）与可注入的 `gitExec` seam；
+  `benchmark-command.ts`：promotion-grade 执行前探测不可验证则不启动、执行后不可验证则
+  fail-closed。新增 6 例 helper 测试 + 1 例 CLI 路径测试。**K02 与历史 K01 的因果仍需单独证明**。）
 - R42（K03：夹具不得进入生产编译边界；共享 src/dist/tsbuildinfo 互斥）：⏳ 待做
 - R43（K04：执行计划 999999/1000000/1000001 独立固定边界）：⏳ 待做
 - R44（K05：证据矩阵与静止工作区最终门禁）：⏳ 待做

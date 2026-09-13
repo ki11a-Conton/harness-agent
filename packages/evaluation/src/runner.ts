@@ -78,7 +78,12 @@ export interface EvalOutcome {
    *  case (legacy runs / probe unavailable). */
   hostMutation?: {
     checked: boolean;
+    /** Verifiably changed. E4-R41 (K02): an UNKNOWN probe result is NOT a
+     *  mutation — consult `status` when a caller must fail closed on unknown. */
     mutated: boolean;
+    /** E4-R41 (K02): three-state host comparison. `unknown` = a required host
+     *  probe failed, so a change can neither be confirmed nor ruled out. */
+    status: import("./benchmark-isolation.js").HostMutationStatus;
     before: import("./benchmark-isolation.js").HostStateSummary;
     after: import("./benchmark-isolation.js").HostStateSummary;
   };

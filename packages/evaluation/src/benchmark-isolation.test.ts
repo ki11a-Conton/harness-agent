@@ -9,10 +9,13 @@ import {
   asInsecureLocalBackend,
   treeDigestOf,
   captureHostState,
+  compareHostState,
   hostMutated,
   isPathOutsideWorkspace,
   withHostMutationSentinel,
   type IsolationBackend,
+  type GitProbeResult,
+  type HostProbeError,
 } from "./benchmark-isolation.js";
 import { prepareSandboxedExec, ProcessExecutor, ALLOW_INSECURE_LOCAL_BENCHMARK_FLAG } from "@ar/tools";
 
@@ -261,6 +264,172 @@ describe("E2-09 host mutation sentinel (real child-process escapes)", () => {
       expect(d3).not.toBe(d1);
     } finally {
       await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * E4-R41 (K02) — host probe failure is UNKNOWN, never "unchanged".
+ *
+ * Deterministic command-failure tests via the injectable probe seam: no global
+ * git, no project PATH, no shared workspace is touched. The fake delegates to
+ * real git in the healthy phase and fails deterministically in the faulty one.
+ */
+describe("E4-R41 host probe failure semantics (K02)", () => {
+  const okResult = (stdout: string): GitProbeResult => ({ ok: true, stdout, error: null });
+  const failResult = (
+    probe: "rev-parse" | "status",
+    kind: HostProbeError["kind"],
+    extra: { exitCode?: number | null; signal?: string | null; message?: string } = {},
+  ): GitProbeResult => ({
+    ok: false,
+    stdout: "",
+    error: {
+      probe,
+      kind,
+      exitCode: extra.exitCode ?? null,
+      signal: extra.signal ?? null,
+      message: extra.message ?? `injected ${probe} ${kind}`,
+    },
+  });
+  /** Healthy fake: HEAD + a clean porcelain status. */
+  const healthyExec = async (): Promise<GitProbeResult> => okResult("");
+
+  it("both probes failing yields UNKNOWN — not a mutation and not a clean proof", async () => {
+    const host = await makeTemp();
+    try {
+      const exec = async (probe: "rev-parse" | "status"): Promise<GitProbeResult> =>
+        failResult(probe, probe === "status" ? "nonzero-exit" : "spawn-failure", { exitCode: probe === "status" ? 128 : null });
+      const before = await captureHostState(host, { include: [], excludePrefixes: [], gitExec: exec });
+      const after = await captureHostState(host, { include: [], excludePrefixes: [], gitExec: exec });
+      expect(before.headValid).toBe(false);
+      expect(before.statusValid).toBe(false);
+      expect(before.probeErrors.length).toBe(2);
+      const cmp = compareHostState(before, after);
+      expect(cmp.status).toBe("unknown");
+      // Unknown is NOT a mutation...
+      expect(hostMutated(before, after)).toBe(false);
+      // ...but it is also not "no change": the reasons are surfaced.
+      expect(cmp.details.some((d) => d.includes("UNKNOWN"))).toBe(true);
+      expect(cmp.details.some((d) => d.includes("status"))).toBe(true);
+    } finally {
+      await rm(host, { recursive: true, force: true });
+    }
+  });
+
+  it("an empty porcelain is only 'clean' when the status call SUCCEEDED", async () => {
+    const host = await makeTemp();
+    try {
+      // rev-parse fails, status succeeds with empty output (a legitimately
+      // clean tree). The pair is still UNKNOWN because HEAD is unverifiable.
+      const exec = async (probe: "rev-parse" | "status"): Promise<GitProbeResult> =>
+        probe === "rev-parse" ? failResult("rev-parse", "nonzero-exit", { exitCode: 128 }) : okResult("");
+      const s = await captureHostState(host, { include: [], excludePrefixes: [], gitExec: exec });
+      expect(s.headValid).toBe(false);
+      expect(s.statusValid).toBe(true);
+      expect(s.statusPorcelain).toBe("");
+      const cmp = compareHostState(s, s);
+      expect(cmp.status).toBe("unknown");
+      // A FAILED status call must never be presented as a clean result either.
+      const failedStatus = await captureHostState(host, {
+        include: [], excludePrefixes: [],
+        gitExec: async (probe) => (probe === "status" ? failResult("status", "timeout", { signal: "SIGTERM" }) : okResult("sha\n")),
+      });
+      expect(failedStatus.statusValid).toBe(false);
+      expect(failedStatus.probeErrors.some((e) => e.kind === "timeout" && e.signal === "SIGTERM")).toBe(true);
+    } finally {
+      await rm(host, { recursive: true, force: true });
+    }
+  });
+
+  it("non-zero, timeout and spawn failure are each classified distinctly", async () => {
+    const host = await makeTemp();
+    try {
+      const cases: Array<[HostProbeError["kind"], GitProbeResult]> = [
+        ["nonzero-exit", failResult("status", "nonzero-exit", { exitCode: 3 })],
+        ["timeout", failResult("status", "timeout", { signal: "SIGTERM" })],
+        ["spawn-failure", failResult("status", "spawn-failure", { message: "spawn git ENOENT" })],
+      ];
+      for (const [kind, faulty] of cases) {
+        const s = await captureHostState(host, {
+          include: [], excludePrefixes: [],
+          gitExec: async (probe) => (probe === "status" ? faulty : okResult("deadbeef\n")),
+        });
+        const err = s.probeErrors.find((e) => e.probe === "status");
+        expect(err?.kind).toBe(kind);
+        expect(compareHostState(s, s).status).toBe("unknown");
+      }
+    } finally {
+      await rm(host, { recursive: true, force: true });
+    }
+  });
+
+  it("a failure on EITHER side of the case makes the comparison UNKNOWN", async () => {
+    const host = await makeTemp();
+    try {
+      let calls = 0;
+      // First capture (before) is healthy; the second (after) fails.
+      const exec = async (): Promise<GitProbeResult> => (++calls <= 2 ? okResult("") : failResult("status", "nonzero-exit", { exitCode: 1 }));
+      const before = await captureHostState(host, { include: [], excludePrefixes: [], gitExec: exec });
+      const after = await captureHostState(host, { include: [], excludePrefixes: [], gitExec: exec });
+      expect(compareHostState(before, after).status).toBe("unknown");
+      expect(hostMutated(before, after)).toBe(false);
+    } finally {
+      await rm(host, { recursive: true, force: true });
+    }
+  });
+
+  it("verified change (both probes OK) is still 'changed'; identical verified state is 'unchanged'", async () => {
+    const host = await makeTemp();
+    try {
+      // Both captures fully verified; only HEAD differs → changed.
+      const before = await captureHostState(host, {
+        include: [], excludePrefixes: [],
+        gitExec: async (p) => (p === "rev-parse" ? okResult("aaa\n") : okResult("")),
+      });
+      const after = await captureHostState(host, {
+        include: [], excludePrefixes: [],
+        gitExec: async (p) => (p === "rev-parse" ? okResult("bbb\n") : okResult("")),
+      });
+      expect(compareHostState(before, after).status).toBe("changed");
+      expect(hostMutated(before, after)).toBe(true);
+      // Identical verified state → unchanged (a real "no change" proof).
+      const same = await captureHostState(host, { include: [], excludePrefixes: [], gitExec: healthyExec });
+      expect(compareHostState(same, same).status).toBe("unchanged");
+      expect(hostMutated(same, same)).toBe(false);
+    } finally {
+      await rm(host, { recursive: true, force: true });
+    }
+  });
+
+  it("the REAL sentinel reports status=unknown + probe errors (not hostMutated=false with details=[])", async () => {
+    const host = await makeTemp();
+    const ws = await makeTemp();
+    try {
+      await writeFile(join(host, "tracked.txt"), "original", "utf8");
+      let runExecuted = false;
+      const { value, report } = await withHostMutationSentinel({
+        hostRoot: host,
+        watchInclude: ["tracked.txt"],
+        watchExcludePrefixes: [],
+        gitExec: async (probe) => failResult(probe, probe === "rev-parse" ? "nonzero-exit" : "spawn-failure", { exitCode: probe === "rev-parse" ? 128 : null }),
+        run: async () => {
+          runExecuted = true;
+          return "ran";
+        },
+      });
+      expect(value).toBe("ran");
+      expect(runExecuted).toBe(true);
+      // The K02 bug: it used to be hostMutated=false with details=[].
+      expect(report.status).toBe("unknown");
+      expect(report.hostMutated).toBe(false);
+      expect(report.details.length).toBeGreaterThan(0);
+      expect(report.details[0]).toContain("UNKNOWN");
+      expect(report.probeErrors.length).toBe(4); // 2 probes × 2 captures
+      void ws;
+    } finally {
+      await rm(ws, { recursive: true, force: true });
+      await rm(host, { recursive: true, force: true });
     }
   });
 });
