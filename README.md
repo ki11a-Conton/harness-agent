@@ -268,151 +268,44 @@ mcp-runtime, app-server, release-integrity).
 
 ## Status: completed, in progress, unfinished
 
-### Completed (pushed to origin/main, CI-green at their SHAs)
+### Completed — pushed to `origin/main`, CI-green at their SHAs
 
-- **P35 → P38 closure** — `typecheck/test/coverage/docs/protocol/security/race/
-  chaos/capability-audit/release-verify` all PASS, attestation READY
-  (see `docs/E4-00…E4-11`, `docs/E4-R01…R11`).
-- **E4-R12 … E4-R20** (2026-09-10 plan) — report chain
-  `docs/E4-R12-report.md` … `docs/E4-R20-report.md`; CI run 34548502173
-  (bcf34b7) four jobs green, `runtimeReleaseReady=true`.
-- **E4-R21 … E4-R26** (2026-09-11 plan) — `docs/E4-R21-report.md` …
-  `docs/E4-R26-report.md`; origin/main CI run #112 (2b2d3db) four jobs green,
-  strict usage-audit on both platforms, release attestation READY=true.
-- **E4-R27 … E4-R31** (2026-09-11 plan) — `docs/E4-R27-report.md` …
-  `docs/E4-R31-report.md`; pushed to origin/main and CI-green at their SHAs
-  (four jobs: Ubuntu main gate, Windows main gate, Ubuntu coverage, release
-  attestation). This batch closed G01 (promotion isolation eligibility),
-  G02 (execution-plan field/scale constraints), G03 (raw-byte source
-  fingerprint), G04 (bounded recovery wake-up) and the independent close-out.
+All planned work from **P35 → P38** through **E4-R12 → E4-R44** is implemented,
+pushed to `origin/main`, and CI-green at its SHAs (four jobs: Ubuntu main gate,
+Windows main gate, Ubuntu coverage, release attestation). Per-item reports live
+in `docs/E4-*-report.md`; the machine-checked closure is in `docs/E4-STATUS.md`
+and the unfinished-work handoff is in [`HANDOVER.md`](./HANDOVER.md).
 
-### E4-R32 … E4-R35 (2026-09-12 plan) — pushed to origin/main, CI-green at their SHAs
+**Final gates on the frozen clean tree (E4-R44 / K05):**
 
-- **E4-R32** (H01/H02 recovery-store combined failure + intent backoff) —
-  [`docs/E4-R32-report.md`](./docs/E4-R32-report.md): lease cleanup is now
-  best-effort and cannot abort the bounded re-check; the recovery read entry
-  fail-closes and keeps a finite wake-up path; the backoff counter resets only
-  after the round's strict persistence (lease + intent) succeeds, so a
-  persistent intent-write outage really escalates. `recovery-durable.test.ts`
-  23/23.
-- **E4-R33** (H03 execution-plan scale validation before dangerous work) —
-  [`docs/E4-R33-report.md`](./docs/E4-R33-report.md): `parseExecutionPlan` no
-  longer uses an argument spread (a ~130k-case plan inside the documented cap
-  used to throw `RangeError`), uses a `Set` for case membership (drops the
-  quadratic query), and validates the grid-scale/capacity contract before any
-  per-case traversal. `e4-r33-execution-plan-scale.test.ts` 7/7.
-- **E4-R34** (H04 isolate deliberately-failing fixtures) —
-  [`docs/E4-R34-report.md`](./docs/E4-R34-report.md): the final-result protocol
-  fixtures moved out of the root vitest `include` into
-  `apps/cli/test-infra/observation-fixtures/` with a dedicated subprocess
-  config that keeps the production reporter; a leftover fixture can no longer
-  be collected by the next full run. `e4-r24-final-result-protocol.test.ts`
-  4/4.
-- **E4-R35** (post-push status + final acceptance close-out) —
-  [`docs/E4-R35-report.md`](./docs/E4-R35-report.md): closure matrix, full-repo
-  gates on a clean tree, and read-only remote CI verification, summarised in
-  `docs/E4-STATUS.md`.
+| Gate | Result |
+| --- | --- |
+| `pnpm typecheck` | PASS (0) |
+| `pnpm test` | **320 files / 5751 passed / 1 skipped / 0 failed** |
+| `pnpm docs:verify` | ALL CHECKS PASS |
+| `test:security` / `protocol` / `race` / `chaos` | 2133 / 52 / 23 / 12 |
+| Release attestation (CI) | `runtimeReleaseReady=true`, verdict READY |
 
-### E4-R36 … E4-R39 (2026-09-12 plan) — implemented, pushed, closing out the status
+**Latest release: v1.8.0** (`gh release` Latest), carrying the source-snapshot
+asset per repo convention.
 
-- **E4-R36** (J01 first recovery discovery must be re-scannable) —
-  [`docs/E4-R36-report.md`](./docs/E4-R36-report.md): `_recoverableChecked` now
-  means "a discovery pass COMPLETED", not "one was started". A transient read
-  failure during the very first scan used to escape the drain AND mark discovery
-  done forever (no timer, no re-scan, a promoted prompt left on an unowned
-  turn); the scan now commits atomically (a partial scan enqueues nothing) and a
-  failed pass fail-closes with a bounded, self-healing wake-up.
-  `recovery-durable.test.ts` 29/29 (6 new cases fail without the fix).
-- **E4-R37** (J02 upgraded workspaces must not collect legacy fixtures) —
-  [`docs/E4-R37-report.md`](./docs/E4-R37-report.md): `.gitignore` is not a
-  Vitest exclude. The root config now structurally excludes the generated
-  `apps/cli/src/e4-r24-fixture-*.test.ts` pattern (framework defaults preserved
-  via `configDefaults.exclude`), so a leftover deliberately-failing fixture can
-  never enter the official run — no manual cleanup required.
-  `e4-r24-final-result-protocol.test.ts` 5/5.
-- **E4-R38** (J03 valid positive + promotion-loader boundary) —
-  [`docs/E4-R38-report.md`](./docs/E4-R38-report.md): acceptance hardening, **no
-  production change**. A fully cross-bound baseline pair (real
-  `computeExecutionPlanDigest`, real identity/policy/grid/evidence bindings)
-  reaches a real `ACCEPT` and a real `loader.ok=true`; the over-cap negative is
-  derived from that same pair by changing only `repeat` and is refused by BOTH
-  the evaluator (exactly one calibrated capacity violation) and the promotion
-  loader. `e4-r38-execution-plan-boundary.test.ts` 3/3.
-- **E4-R39** (status sync + final gates) — ⚠️ **PARTIAL** —
-  [`docs/E4-R39-report.md`](./docs/E4-R39-report.md): the J01…J04 closure matrix,
-  the gates measured on the frozen, clean `01c4ec74` tree, and the read-only
-  remote CI verification for this round's own SHA. Green: `pnpm typecheck` (0),
-  `pnpm docs:verify` (ALL CHECKS PASS), `test:race` 23, `test:security` 2133,
-  `test:protocol` 52, `test:chaos` 12. **NOT green: the full `pnpm test`** — 318
-  files, `1 failed | 5738 passed | 1 skipped (5740)`, the same single failure in
-  3/3 runs (`e4-09-production-e2e.test.ts` → `buildRealChain` judges a valid
-  chain `INVALID`), while that file passes 5/5 in isolation (4 runs) and
-  `apps/cli/src` passes as a whole (2 runs). Root cause **undetermined**; two
-  hypotheses (CPU load, transient dirty tree) were tested and **falsified**.
-  The Windows CI job for `01c4ec74` (run `34687657690`) also failed both
-  attempts, with a different failure set each time. Two docs-only commits with
-  the *same code* (`2db1a9cd` / run `34689110496`, `40d5588b` / run
-  `34689429297`) are four-jobs green — the latter including the release
-  attestation job — so that Windows failure is **flaky rather than
-  revision-determined**; the factual result for `01c4ec74` itself remains a
-  failure, and CI is not claimed green for it.
+The final round (**E4-R40…E4-R44**, K01…K05) closed: failure-attribution
+diagnostic bundles that also **settled R39's "full suite not green"** (a
+clean-tree-at-run precondition, not a code defect), probe-failure semantics +
+promotion fail-closed, build-boundary isolation (legacy fixtures no longer a
+`tsc` compile input), the published 1,000,000-sample execution-plan contract
+lock, and the evidence matrix + final gates.
 
-### E4-R40 … E4-R44 (2026-09-13 plan) — attribution, probe semantics, isolation, contract lock
+### Unfinished / NOT_RUN
 
-- **E4-R40** (K01 failure attribution) —
-  [`docs/E4-R40-report.md`](./docs/E4-R40-report.md): a failed E4-09 run now
-  persists a minimal attribution bundle BEFORE the temp roots are cleaned
-  (`E4_09_DIAG_DIR`, one directory per attempt, never overwriting): identity /
-  HEAD / tree cleanliness, OS+runtime, the REAL V3 / paired / decision bytes
-  plus reduced summaries, the real gate child exit/stderr, and the benchmark
-  CLI's own exit+output. **Bonus: it settled R39's open question.** The captured
-  CLI line proves the chain refuses to build on a DIRTY tree
-  (`a promotion-eligible run requires a CLEAN, PROVABLE source tree …`), so the
-  decision reads `INVALID` without the chain ever building — the same code is
-  `5 failed` on a dirty tree and `5 passed` on a committed clean tree.
-- **E4-R41** (K02 probe semantics) —
-  [`docs/E4-R41-report.md`](./docs/E4-R41-report.md): `gitOutput` used to swallow
-  a non-zero/timeout into `""`, so a FAILED probe read as "unchanged". Now a
-  structured `gitProbe` classifies non-zero/timeout/signal/spawn failure,
-  `HostState` carries per-signal validity + probe errors, and a three-state
-  `compareHostState` (unchanged / changed / **unknown**) means a missing proof is
-  never a security clearance. Promotion-grade runs fail closed when the host
-  state is unverifiable (no provider call at all before the case) and never
-  mislabel unknown as a fabricated escape.
-- **E4-R42** (K03 build isolation) —
-  [`docs/E4-R42-report.md`](./docs/E4-R42-report.md): "git-ignored" is not
-  "tsc-excluded". A legacy `apps/cli/src/e4-r24-fixture-*.test.ts` was still a
-  PRODUCTION compile input, so `tsc -b` wrote orphan fixture output into the
-  shared `dist/`. A narrow `exclude` in `apps/cli/tsconfig.json` removes it at
-  the root (a real `tsc -b` with the fixture on disk now emits 0 orphans), and
-  the real-gate integration test runs in its own workspace with its own git
-  identity / config / build cache, proving the shared `dist` + `tsbuildinfo`
-  stay byte-identical.
-- **E4-R43** (K04 contract lock) —
-  [`docs/E4-R43-report.md`](./docs/E4-R43-report.md): the R38-b negative derived
-  BOTH its input and its expectation from the same constant, so raising the
-  constant still passed. Fixed LITERAL inputs (single case, `limit: null`,
-  `repeat = 999999 / 1000000 / 1000001` → accept / accept / reject) now lock the
-  published 1,000,000 cap, and a mutated temporary COPY of the real source
-  (2,000,000 / 999,999, really loaded) proves the fixed inputs are
-  discriminating. **No production change.**
-- **E4-R44** (K05 close-out) — [`docs/E4-R44-report.md`](./docs/E4-R44-report.md):
-  the K01…K04 evidence matrix and the final gates on the frozen clean tree —
-  `pnpm typecheck` 0, **`pnpm test` 320 files / 5751 passed / 1 skipped / 0
-  failed**, `pnpm docs:verify` ALL CHECKS PASS, `test:security` 2133,
-  `test:protocol` 52, `test:race` 23, `test:chaos` 12.
+- **Real-model champion quality**: `championPromotion.status=NOT_RUN` — no paid
+  real-model benchmark was requested; no fake readiness is claimed.
+- **`01c4ec74` Windows CI fluctuation** (the one remaining un-attributed item):
+  that SHA's Windows gate failed two attempts with different failure sets, while
+  byte-identical docs-only commits were four-jobs green — judged a flake, not
+  revision-determined; its factual result stays `failure`.
 
-### Unfinished / NOT_RUN (see [HANDOVER.md](./HANDOVER.md) for the detail)
-
-- **Full-repo `pnpm test` is not green at the frozen revision** — the `e4-09`
-  valid-chain `INVALID` failure above, and the Windows CI job for this round's
-  SHA. Both are recorded as real open gaps with their evidence; neither is
-  explained away as fixture dirt.
-- **Real-model champion quality**: `championPromotion.status=NOT_RUN` — the
-  paid real-model benchmark was not requested; no fake readiness is claimed.
-- **Release publish action**: plans stop at attestation; no automatic publish.
-
-The authoritative, machine-checked list of unfinished tasks lives in
+The authoritative, machine-checked unfinished list is in
 [`HANDOVER.md`](./HANDOVER.md); `plan.md` points at the current plan spec.
 
 ## Verification truth & honesty policy

@@ -239,115 +239,40 @@ app-server、release-integrity）。
 
 ## 状态：已完成 / 进行中 / 未完成
 
-### 已完成（已推送 origin/main，其 SHA 的 CI 全绿）
+### 已完成 —— 已推送 `origin/main`，其 SHA 的 CI 全绿
 
-- **P35 → P38 收尾** —— `typecheck/test/coverage/docs/protocol/security/race/chaos/
-  capability-audit/release-verify` 全部 PASS，attestation READY
-  （见 `docs/E4-00…E4-11`、`docs/E4-R01…R11`）。
-- **E4-R12 … E4-R20**（2026-09-10 计划）—— 报告链
-  `docs/E4-R12-report.md` … `docs/E4-R20-report.md`；CI run 34548502173（bcf34b7）
-  四 job 全绿，`runtimeReleaseReady=true`。
-- **E4-R21 … E4-R26**（2026-09-11 计划）—— `docs/E4-R21-report.md` …
-  `docs/E4-R26-report.md`；origin/main CI run #112（2b2d3db）四 job 全绿，
-  strict usage-audit 两平台 success，release attestation READY=true。
-- **E4-R27 … E4-R31**（2026-09-11 计划）—— `docs/E4-R27-report.md` …
-  `docs/E4-R31-report.md`；**已推送 origin/main 并在其 SHA 的 CI 全绿**（四 job：
-  Ubuntu 主门禁、Windows 主门禁、Ubuntu coverage、release attestation）。该批次关闭了
-  G01（晋升隔离资格）、G02（执行计划字段/规模约束）、G03（原始字节源码指纹）、
-  G04（恢复存储有限唤醒）与独立收口。
+从 **P35 → P38** 到 **E4-R12 → E4-R44** 的全部计划工作均已实现、推送
+`origin/main`，并在各自 SHA 上 CI 全绿（四 job：Ubuntu 主门禁、Windows 主门禁、
+Ubuntu coverage、release attestation）。逐项报告见 `docs/E4-*-report.md`；
+机器可查的收口见 `docs/E4-STATUS.md`，未完成交接见
+[`HANDOVER.md`](./HANDOVER.md)。
 
-### E4-R32 … E4-R35（2026-09-12 计划）—— 已推送 origin/main，其 SHA 的 CI 全绿
+**冻结干净版本上的最终门禁（E4-R44 / K05）：**
 
-- **E4-R32**（H01/H02 恢复存储组合故障 + intent 退避）——
-  [`docs/E4-R32-report.md`](./docs/E4-R32-report.md)：lease 清理改为尽力而为，不再中断
-  有界重检；恢复读取入口 fail-closed 且保留有限唤醒；退避计数仅在本轮严格持久化
-  （lease + intent）成功后重置，使持续的 intent 写故障真正递增退避。
-  `recovery-durable.test.ts` 23/23。
-- **E4-R33**（H03 execution-plan 规模校验先于危险操作）——
-  [`docs/E4-R33-report.md`](./docs/E4-R33-report.md)：`parseExecutionPlan` 不再用实参展开
-  （此前 ~13 万 case、仍在文档上限内的计划会抛 `RangeError`），改用 `Set` 做成员查询
-  （消除二次方），并在任何逐 case 遍历之前校验网格规模/容量合同。
-  `e4-r33-execution-plan-scale.test.ts` 7/7。
-- **E4-R34**（H04 隔离故意失败的测试夹具）——
-  [`docs/E4-R34-report.md`](./docs/E4-R34-report.md)：final-result 协议夹具移出根 vitest
-  `include`，改放 `apps/cli/test-infra/observation-fixtures/`，并以专用子进程配置保留生产
-  reporter；残留夹具不再被下一次全量运行收集。`e4-r24-final-result-protocol.test.ts` 4/4。
-- **E4-R35**（提交后状态更新 + 最终验收收口）——
-  [`docs/E4-R35-report.md`](./docs/E4-R35-report.md)：关闭矩阵、干净树全仓门禁与远端 CI
-  只读核实，汇总见 `docs/E4-STATUS.md`。
+| 门禁 | 结果 |
+| --- | --- |
+| `pnpm typecheck` | PASS（0） |
+| `pnpm test` | **320 文件 / 5751 passed / 1 skipped / 0 failed** |
+| `pnpm docs:verify` | ALL CHECKS PASS |
+| `test:security` / `protocol` / `race` / `chaos` | 2133 / 52 / 23 / 12 |
+| Release attestation（CI） | `runtimeReleaseReady=true`，verdict READY |
 
-### E4-R36 … E4-R39（2026-09-12 计划）—— 已实现、已推送，正在收口状态
+**最新发布：v1.8.0**（`gh release` Latest），按仓库惯例附带源码快照资产。
 
-- **E4-R36**（J01 首次恢复发现必须可重扫）——
-  [`docs/E4-R36-report.md`](./docs/E4-R36-report.md)：`_recoverableChecked` 的语义改为
-  「一次恢复发现已**完整成功**」，而非「曾经开始扫描」。首次扫描的暂时读取故障过去会
-  逃逸出 drain **并**永久标记发现完成（无 timer、不重扫、promoted prompt 滞留在无 owner 的
-  turn 上）；现在扫描**原子提交**（部分扫描不入队任何东西），失败则 fail-closed 并保留
-  有界自愈唤醒。`recovery-durable.test.ts` 29/29（新增 6 例在修复前全部失败）。
-- **E4-R37**（J02 升级后的工作区不得收集旧代夹具）——
-  [`docs/E4-R37-report.md`](./docs/E4-R37-report.md)：`.gitignore` 不是 Vitest 的 exclude。
-  根配置现在按生成文件名模式结构性排除 `apps/cli/src/e4-r24-fixture-*.test.ts`
-  （用 `configDefaults.exclude` 保留框架默认值），残留的故意失败夹具再也不可能进入正式
-  运行——无需用户手工清理。`e4-r24-final-result-protocol.test.ts` 5/5。
-- **E4-R38**（J03 有效正例 + promotion-loader 边界）——
-  [`docs/E4-R38-report.md`](./docs/E4-R38-report.md)：**验收补强，无生产改动**。完整交叉绑定的
-  基准对（真实 `computeExecutionPlanDigest`、真实身份/策略/网格/证据绑定）达到真实 `ACCEPT`
-  与真实 `loader.ok=true`；超限负例由同一基准只改 `repeat` 派生，被 evaluator（恰好一条校准过的
-  容量违规）与 promotion loader 双双拒绝。`e4-r38-execution-plan-boundary.test.ts` 3/3。
-- **E4-R39**（状态同步 + 最终门禁）—— ⚠️ **PARTIAL** ——
-  [`docs/E4-R39-report.md`](./docs/E4-R39-report.md)：J01…J04 关闭矩阵、在冻结的干净版本
-  （`01c4ec74`）上实测的门禁、以及本轮**自身 SHA** 的远端 CI 只读核实。已绿：
-  `pnpm typecheck`（0）、`pnpm docs:verify`（ALL CHECKS PASS）、`test:race` 23、
-  `test:security` 2133、`test:protocol` 52、`test:chaos` 12。**未绿：全仓 `pnpm test`** ——
-  318 文件 / `1 failed | 5738 passed | 1 skipped (5740)`，3 次运行都是同一处失败
-  （`e4-09-production-e2e.test.ts` → `buildRealChain` 把有效链判为 `INVALID`），而该文件
-  隔离运行 5/5 通过（4 次）、`apps/cli/src` 整目录 2/2 通过。根因**未定**；两个假设
-  （CPU 负载、瞬时脏树）经实验**被证伪**。`01c4ec74` 的 Windows CI job（run
-  `34687657690`）两次尝试也都失败，且失败用例集每次不同；**只改文档、代码完全相同的**
-  `2db1a9cd`（run `34689110496`）与 `40d5588b`（run `34689429297`，最终 head）四 job 全绿，
-  后者连 release attestation job 也 success ⇒ 该 Windows 失败是**波动**而非版本确定性结论，
-  但 `01c4ec74` 自身的事实结论仍是 failure（不据此声称它的 CI 是绿的）。
+最后一轮（**E4-R40…E4-R44**，K01…K05）闭环了：失败归因诊断包（并**顺带把 R39
+的「全仓未绿」归因为运行期干净源树前置条件**，而非代码缺陷）、探测失败显式语义 +
+promotion fail-closed、构建边界隔离（旧夹具不再进入 `tsc` 编译输入）、公开的
+1,000,000 样本执行计划合同锁定，以及证据矩阵 + 最终门禁。
 
-### E4-R40 … E4-R44（2026-09-13 计划）—— 归因、探测语义、隔离、合同锁定
+### 未完成 / NOT_RUN
 
-- **E4-R40**（K01 失败归因）—— [`docs/E4-R40-report.md`](./docs/E4-R40-report.md)：
-  E4-09 失败时会在清理临时根**之前**落盘最小归因包（`E4_09_DIAG_DIR`，每次 attempt 独立目录、
-  不覆盖）：身份/HEAD/干净性、OS 与运行时、真实 V3/paired/decision **字节副本 + 归约摘要**、
-  gate 子进程真实 exit/stderr、benchmark 自身 CLI exit+输出。**并且顺手关掉了 R39 的悬案**：
-  捕获到的 CLI 原文证明真实链在**脏工作树**上被拒绝
-  （`a promotion-eligible run requires a CLEAN, PROVABLE source tree …`），链根本不建立即读作
-  `INVALID`——同一代码脏树 `5 failed`、已提交干净树 `5 passed`。
-- **E4-R41**（K02 探测语义）—— [`docs/E4-R41-report.md`](./docs/E4-R41-report.md)：
-  `gitOutput` 曾把非零/超时吞成 `""`，使**探测失败**读成"未变化"。现在结构化 `gitProbe` 区分
-  非零退出/超时/信号/spawn 失败，`HostState` 携带逐信号有效性与原因，三态
-  `compareHostState`（unchanged / changed / **unknown**）让缺失证明不再冒充安全证明；
-  promotion-grade 在宿主机状态不可验证时 fail-closed（case 之前**零 provider 调用**），
-  且不把 unknown 写成臆造的越界逃逸。
-- **E4-R42**（K03 构建隔离）—— [`docs/E4-R42-report.md`](./docs/E4-R42-report.md)：
-  **「git 忽略」≠「tsc 排除」**。旧位置 `apps/cli/src/e4-r24-fixture-*.test.ts` 仍是**生产编译输入**，
-  `tsc -b` 会把孤儿夹具产物写进共享 `dist/`。`apps/cli/tsconfig.json` 的**窄范围** `exclude`
-  在根因处消除（夹具在盘上时真实 `tsc -b` 产出孤儿 **0**）；真实 gate 集成测试在自有 git 身份/
-  配置/构建缓存的 workspace 中执行，并证明主仓共享 `dist`+`tsbuildinfo` 逐字节未变。
-- **E4-R43**（K04 合同锁定）—— [`docs/E4-R43-report.md`](./docs/E4-R43-report.md)：
-  R38-b 的输入与预期**同源于同一常量**，调大常量仍然通过。现在用**字面量**固定输入
-  （单 case、`limit: null`、`repeat = 999999 / 1000000 / 1000001` → 接受/接受/拒绝）锁住公开的
-  1,000,000 上限，并用**真实加载的临时副本**（2,000,000 / 999,999）证明固定输入有判别力。
-  **生产零改动。**
-- **E4-R44**（K05 收口）—— [`docs/E4-R44-report.md`](./docs/E4-R44-report.md)：K01…K04 证据矩阵
-  与冻结干净版本上的最终门禁——`pnpm typecheck` 0、**`pnpm test` 320 文件 / 5751 passed /
-  1 skipped / 0 failed**、`pnpm docs:verify` ALL CHECKS PASS、`test:security` 2133、
-  `test:protocol` 52、`test:race` 23、`test:chaos` 12。
+- **真实模型 champion 质量**：`championPromotion.status=NOT_RUN` —— 未请求付费真实
+  模型 benchmark；不伪称就绪。
+- **`01c4ec74` 的 Windows CI 波动**（唯一仍未归因项）：该 SHA 的 Windows 主门禁两次
+  尝试失败点不同，而字节完全相同的仅文档提交四 job 全绿 —— 判定为波动而非版本确定性
+  结论；其事实结论仍是 `failure`。
 
-### 未完成 / NOT_RUN（详情见 [HANDOVER.md](./HANDOVER.md)）
-
-- **冻结版本上的全仓 `pnpm test` 未绿** —— 上述 `e4-09` 有效链判 `INVALID`，以及本轮 SHA 的
-  Windows CI 主门禁失败。两者都按真实缺口记录，证据在案，**不**以「夹具残留」解释掉。
-- **真实模型 champion 质量**：`championPromotion.status=NOT_RUN` —— 未请求付费真实模型
-  benchmark；不伪称就绪。
-- **release 发布动作**：各轮计划只到 attestation，不做自动发布。
-
-未完成任务的权威、机器可查清单在 [`HANDOVER.md`](./HANDOVER.md)；`plan.md` 指向当前
-计划文件。
+权威的机器可查未完成清单见 [`HANDOVER.md`](./HANDOVER.md)；`plan.md` 指向当前计划文件。
 
 ## 验证真值与诚实政策
 
