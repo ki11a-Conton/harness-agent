@@ -93,3 +93,30 @@ E4-09 的真实链要求运行期干净可证源树（R40 归因）。本轮在*
 - K03 的 tsc `exclude` 依文件名模式；未来若有正式测试沿用同一命名会被一并排除（已知权衡）。
 - `hostMutated()` 保持返回 bool（`unknown → false`）以兼容既有调用方。
 - 全量 `pnpm test` 的绿色依赖**运行前置条件**（已提交干净树）；这是生产策略，不是缺陷。
+
+---
+
+## 7. CI 补记（本轮实现 SHA 的远端核实）
+
+推送 `origin/main`：`67955e06..34ab9207`（本轮 8 个提交）。
+
+**run `34734367541`（headSha `34ab9207`，conclusion `success`）——四个 job：**
+
+| job | 结果 |
+|---|---|
+| install · typecheck · test · build · benchmark-smoke · audit (**ubuntu-latest**) | **success** |
+| install · typecheck · test · build · benchmark-smoke · audit (**windows-latest**) | **success** |
+| coverage gate (ubuntu) | **success** |
+| release attestation (P38-12) | **success** |
+
+即本轮实现 SHA 的 **Ubuntu 与 Windows 主门禁、coverage 与 release attestation 全部绿**——
+满足"Linux 成功不替代 Windows"的定向要求。
+
+**口径（如实）**：
+
+- 只核实 **job/step 状态**；**未**下载并逐字节复核 artifact，故不声称已独立重放 release 证据内容。
+- 基线 `67955e0` 的 run `34689695442` **不**归给本轮实现（那是 R39 基线的 run）。
+- 上表记录的是 run `34734367541`（`34ab9207`）；本报告随后的**仅文档补记提交**按
+  `plan(20260912-144145).md` §8.7 的约定**不**再逐次追踪自己的下一次 CI，以免无限追踪
+  （其代码内容与 `34ab9207` 的代码内容逐字节相同）。
+

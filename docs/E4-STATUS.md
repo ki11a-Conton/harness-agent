@@ -26,6 +26,7 @@
 | `pnpm test:chaos` | **PASS** | 1 文件 / 12 passed |
 | 真实模型 champion 质量 | **NOT_RUN** | 未请求付费 benchmark；不为收口造假 |
 | release 发布动作 | **NOT_RUN** | 各轮只到 attestation，不自动发布 |
+| 远端 CI（本轮实现 SHA，run `34734367541`） | **4/4 job success** | ubuntu / windows 主门禁 + coverage + release attestation |
 
 **本轮结论三分（不混淆）**：
 
