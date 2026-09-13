@@ -109,11 +109,19 @@ R50 报告本身是文档；若需要在 CI run 完成后补记四 job 结论，
   R50 ✅（本报告，§5 门禁与 CI 四 job 全绿）。
 - `docs-verify` E4-00 放宽：仓库不再维护「当前计划入口」三文件体系——无 `plan.md` =
   无进行中的计划 → **诚实 PASS**（reason 注明 no plan.md — no in-progress plan，不伪装）；
-  一旦 plan.md 重新出现仍 **fail-closed**（缺当前入口标记 / 引用不存在的 spec 判 FALSE）。
-  新增回归测试覆盖「plan.md 缺失 → PASS」分支。
+  一旦 plan.md 重新出现仍 **fail-closed**。新增回归测试覆盖「plan.md 缺失 → PASS」分支。
+- **E4-00 自洽三要素**（plan.md 一旦重新出现，必须同时满足，缺一即 FALSE）：
+  ① plan.md 声明「当前执行计划入口」标记；
+  ② plan.md 引用 `plan(<YYYYMMDD-HHMMSS>).md` spec；
+  ③ 引用的 spec 文件实际存在于工作树。
+  未来开新计划：重建 plan.md 并满足三要素，旧 spec 从工作树删除、留 git 历史——
+  不能留「半拉入口」（有 plan.md 却无标记或悬空引用）糊弄过关。
 - 收尾门禁（收尾提交工作树，非重跑 R50 全量）：typecheck 0；`vitest run
   apps/cli/src/docs-verify.test.ts` 16 passed / 16；`pnpm docs:verify` ALL CHECKS PASS
   （E4-00 以无 plan.md 状态通过）。
 - 边界：本收尾提交只改 `docs-verify.ts`/`docs-verify.test.ts`、删除三个 plan 文件、
   追加本节；不触及 R50 最终门禁（`440b2895`）覆盖的生产代码路径，E4-09 真实链不受影响
-  （其不依赖 plan 文件）。收尾提交本身的远端 CI 结论以 git 历史/Actions 为准，不在此冒充。
+  （其不依赖 plan 文件）。
+- 补记（CI 已核实，非门禁重跑）：收尾提交 `1d06c294` 远端 CI run `34761767001`
+  conclusion **success**——ubuntu/windows 主门禁、coverage gate、release attestation
+  四 job 全绿（约 5.5 分钟；仅有 Node.js 20 deprecated 非阻塞注解）。
