@@ -45,7 +45,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { mutateChainOrdering } from "./e4-09-real-chain.js";
 
-const REPO_ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
+const REPO_ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const VITEST_BIN = join(REPO_ROOT, "node_modules", "vitest", "vitest.mjs");
 const CHILD_CONFIG = "apps/cli/test-infra/r55-vitest.config.ts";
 const REAL_CHAIN = join(REPO_ROOT, "apps/cli", "src", "e4-09-real-chain.ts");
