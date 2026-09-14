@@ -240,35 +240,79 @@ export async function buildRealChain(root: string, testName: string, opts: RealC
  * ACCEPT assertion to AFTER it — i.e. restore the pre-R45 ordering. Applied to a
  * generated COPY of this module; the repository's own files are never mutated.
  *
- * Throws when the markers cannot be found, so a silent no-op mutation can never
- * masquerade as a passing negative control.
+ * E4-R58 (G58) — newline compatibility. The old implementation searched for
+ * `\n<marker>\n`. On a Windows checkout (git `core.autocrlf`) the module on disk
+ * is CRLF, so the marker is followed by `\r\n`, the needle never matched, and the
+ * mutation threw `START marker is not a standalone line` — the exact failure the
+ * Windows CI gate reported. The input is now normalised to LF for the GENERATED
+ * COPY only (the repository's line endings are never rewritten, and no global
+ * `core.autocrlf` change is required), and the generated copy is always emitted
+ * as LF: one declared output convention, byte-identical for LF and CRLF inputs.
+ *
+ * Matching stays LINE-ANCHORED. This module's own `MUTATION_*` string constants
+ * contain the same marker text, so a bare `indexOf` would splice the block into a
+ * literal — a bug already hit once during R55 development. Working on the split
+ * line array makes "standalone line" structural rather than textual.
+ *
+ * Every precondition is validated (exactly one START, one END, one ACCEPT
+ * assert, in that order); anything else fails loudly, so a silent no-op or a
+ * corrupted copy can never masquerade as a passing negative control.
  */
 export function mutateChainOrdering(source: string): string {
-  // Both markers (and the assert text) ALSO appear as string literals near the
-  // top of this module, so every search below matches a WHOLE LINE. A bare
-  // `indexOf` would land inside a literal and splice the block into it.
-  const startNeedle = `\n${MUTATION_START}\n`;
-  const endNeedle = `\n${MUTATION_END}\n`;
-  const sIdx = source.indexOf(startNeedle);
-  if (sIdx < 0) throw new Error("R55 mutation: START marker is not a standalone line");
-  const s = sIdx + 1;
-  const eIdx = source.indexOf(endNeedle, s);
-  if (eIdx < 0) throw new Error("R55 mutation: END marker is not a standalone line after START");
-  const e = eIdx + 1;
-  const block = source.slice(s, e + MUTATION_END.length);
-  const withoutBlock = source.slice(0, s) + source.slice(e + MUTATION_END.length);
+  const lines = source.replace(/\r\n/g, "\n").split("\n");
+  const lineIndexes = (line: string): number[] => {
+    const out: number[] = [];
+    for (let i = 0; i < lines.length; i += 1) if (lines[i] === line) out.push(i);
+    return out;
+  };
 
-  const assertNeedle = `\n${MUTATION_ASSERT}\n`;
-  const at = withoutBlock.lastIndexOf(assertNeedle);
-  if (at < 0) throw new Error("R55 mutation: the ACCEPT assert is not a standalone line");
-  const mutated = `${withoutBlock.slice(0, at)}${assertNeedle}${block}\n${withoutBlock.slice(at + assertNeedle.length)}`;
+  const requireExactlyOne = (line: string, label: string): number => {
+    const hits = lineIndexes(line);
+    if (hits.length !== 1) {
+      throw new Error(
+        `R55/R58 mutation: expected exactly ONE standalone ${label} line, found ${hits.length}`,
+      );
+    }
+    return hits[0] as number;
+  };
 
-  if (mutated === source) throw new Error("R55 mutation produced no change");
-  // Sanity: the block must now sit AFTER the assert statement.
-  if (mutated.indexOf(`\n${MUTATION_START}\n`, at) < 0) {
-    throw new Error("R55 mutation did not move the block after the assert");
+  const startAt = requireExactlyOne(MUTATION_START, "START marker");
+  const endAt = requireExactlyOne(MUTATION_END, "END marker");
+  const assertAt = requireExactlyOne(MUTATION_ASSERT, "ACCEPT assert");
+
+  if (endAt < startAt) {
+    throw new Error("R55/R58 mutation: the END marker appears before the START marker");
   }
-  return mutated;
+  if (assertAt < endAt) {
+    throw new Error(
+      "R55/R58 mutation: the ACCEPT assert must appear AFTER the END marker (the source is already mutated or reordered)",
+    );
+  }
+
+  // The block to move, inclusive of both marker lines.
+  const block = lines.slice(startAt, endAt + 1);
+  const withoutBlock = [...lines.slice(0, startAt), ...lines.slice(endAt + 1)];
+  // Re-locate the assert AFTER the removal so the insertion point cannot drift.
+  const insertAfter = withoutBlock.indexOf(MUTATION_ASSERT);
+  if (insertAfter < 0) {
+    throw new Error("R55/R58 mutation: the ACCEPT assert disappeared when the block was removed");
+  }
+  const mutated = [
+    ...withoutBlock.slice(0, insertAfter + 1),
+    ...block,
+    ...withoutBlock.slice(insertAfter + 1),
+  ];
+
+  const out = mutated.join("\n");
+  if (out === source.replace(/\r\n/g, "\n")) {
+    throw new Error("R55/R58 mutation produced no change");
+  }
+  // Sanity: the block must now sit AFTER the assert statement.
+  const outLines = out.split("\n");
+  if (!(outLines.indexOf(MUTATION_START) > outLines.indexOf(MUTATION_ASSERT))) {
+    throw new Error("R55/R58 mutation did not move the block after the assert");
+  }
+  return out;
 }
 
 /** Shared failure-capture hook body used by every suite that drives this chain. */
