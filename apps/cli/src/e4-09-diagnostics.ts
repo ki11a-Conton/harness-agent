@@ -511,12 +511,52 @@ async function readArtifact(path: string): Promise<BoundedRead> {
       resolvePromise({ ok: false, error: msg(err) });
       return;
     }
+    // E4-R51 (F51) — ONE settle-once completion protocol.
+    //
+    // Pre-R51 the promise resolved ONLY from `stream.on("end")`, while the error
+    // handler merely recorded the message and called `stream.destroy()`. A
+    // destroyed stream never emits `end`, so any read error that occurs AFTER a
+    // successful `stat` — i.e. every error `stat` cannot intercept (EIO, a
+    // mid-stream failure, a delete racing the open) — left this promise pending
+    // forever. Because `captureFailure` awaits this per registered artifact, the
+    // failure-forensics path itself hung and the test's `afterEach` never ran.
+    //
+    // Every terminal event now has an explicit, once-only outcome:
+    //   'error' -> structured read failure carrying the real error;
+    //   'end'   -> success (or the recorded error, if one arrived first);
+    //   'close' -> arriving BEFORE 'end' is a FAILURE (premature close), never a
+    //              silent success;
+    //   'close' AFTER 'end'/'error' is a no-op, so the stream's own teardown can
+    //   never flip an already-successful capture into a failure.
+    // This is a completion protocol, not a timeout: nothing waits on wall-clock
+    // time and no error is swallowed.
+    let settled = false;
     const srcHash = createHash("sha256");
     const headBuf = Buffer.alloc(cap);
     let headUsed = 0;
     let total = 0;
     let readError: string | undefined;
-    const onData = (chunk: Buffer): void => {
+
+    function settle(result: BoundedRead): void {
+      if (settled) return;
+      settled = true;
+      // Release the listeners this read owns. The 'error' listener is REPLACED
+      // by a no-op guard rather than removed: a late error on the torn-down
+      // stream would otherwise be an unhandled 'error' event and crash the
+      // process (Node throws when 'error' has no listener).
+      stream.off("data", onData);
+      stream.off("end", onEnd);
+      stream.off("close", onClose);
+      stream.off("error", onError);
+      stream.on("error", () => {});
+      resolvePromise(result);
+    }
+    function fail(error: string): void {
+      if (settled) return;
+      settle({ ok: false, error });
+      if (!stream.destroyed) stream.destroy();
+    }
+    function onData(chunk: Buffer): void {
       srcHash.update(chunk);
       total += chunk.length;
       if (headUsed < cap) {
@@ -524,10 +564,15 @@ async function readArtifact(path: string): Promise<BoundedRead> {
         chunk.copy(headBuf, headUsed, 0, want);
         headUsed += want;
       }
-    };
-    const done = (): void => {
+    }
+    function onError(err: unknown): void {
+      if (settled) return;
+      readError = msg(err);
+      fail(readError);
+    }
+    function onEnd(): void {
       if (readError !== undefined) {
-        resolvePromise({ ok: false, error: readError });
+        fail(readError);
         return;
       }
       const truncated = total > MAX_COPY_BYTES;
@@ -548,15 +593,21 @@ async function readArtifact(path: string): Promise<BoundedRead> {
         // copy byte-for-byte (a digest alone cannot reconstruct the copy).
         out.headBuf = Buffer.from(head);
       }
-      resolvePromise(out);
-    };
+      settle(out);
+    }
+    function onClose(): void {
+      if (settled) return; // close after 'end'/'error' — never a re-decision
+      if (readError !== undefined) {
+        fail(readError);
+        return;
+      }
+      fail("stream closed before 'end' (premature close) — artifact read did not complete");
+    }
+
     stream.on("data", onData);
-    stream.on("error", (err) => {
-      readError = msg(err);
-      // drain so 'end' still fires and we report the error exactly once
-      stream.destroy();
-    });
-    stream.on("end", done);
+    stream.on("error", onError);
+    stream.on("end", onEnd);
+    stream.on("close", onClose);
   });
 }
 
