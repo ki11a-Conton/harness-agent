@@ -24,18 +24,29 @@
  * the chain wiring instead. Nothing in the repository is mutated.
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { E4DiagnosticRecorder } from "../../src/e4-09-diagnostics.js";
 import { gitHeadShaAt } from "../../src/observation-evidence.js";
+// E4-R59 (G59): the chain module is bound to THIS run by the parent through the
+// run-scoped `@r55-chain` alias (see r55-vitest.config.ts). There is no default
+// and no "newest file" scan — the parent points this at the real module for the
+// control run and at its own per-run mutation copy for the mutated run.
+import { CANDIDATE, buildRealChain, captureOnFailure, makeCaseDir } from "@r55-chain";
+import { runV3ChampionEval } from "@ar/evaluation";
 
-const MUTATION = process.env.E4_R55_MUTATION === "1";
-const chainModule = MUTATION
-  ? await import("../../src/e4-r55-mutated-chain.generated.js")
-  : await import("../../src/e4-09-real-chain.js");
+/**
+ * Identity of the chain module THIS run was told to load. Recorded into every
+ * bundle so the parent can check the run loaded what it selected, and so a
+ * mutated run's evidence carries the digest of the mutated copy.
+ */
+const CHAIN_MODULE_PATH = process.env.E4_R55_CHAIN_MODULE ?? "<unset>";
+const CHAIN_MODULE_SHA = await readFile(CHAIN_MODULE_PATH)
+  .then((buf) => createHash("sha256").update(buf).digest("hex"))
+  .catch(() => "missing");
 
-const { CANDIDATE, buildRealChain, captureOnFailure, makeCaseDir } = chainModule;
-const { runV3ChampionEval } = await import("@ar/evaluation");
+const chainFacts = { chainModule: { path: CHAIN_MODULE_PATH, sha256: CHAIN_MODULE_SHA } };
 
 const CHILD_FILE = "apps/cli/test-infra/e4-r55-fixtures/failure-wiring.child.test.ts";
 const TESTED_SHA = gitHeadShaAt(process.cwd());
@@ -71,6 +82,7 @@ describe("E4-R55 child — real production failure wiring", () => {
       testFile: CHILD_FILE,
       testedSha: TESTED_SHA,
       candidateWrites: false,
+      facts: chainFacts,
       onRecorder: (r) => {
         activeDiag = r;
       },
@@ -87,6 +99,7 @@ describe("E4-R55 child — real production failure wiring", () => {
       testFile: CHILD_FILE,
       testedSha: TESTED_SHA,
       candidateWrites: true,
+      facts: chainFacts,
       onRecorder: (r) => {
         activeDiag = r;
       },
@@ -112,6 +125,7 @@ describe("E4-R55 child — real production failure wiring", () => {
       candidateWrites: true,
       evaluate: throwingEvaluator,
       facts: {
+        ...chainFacts,
         evaluatorFaultInjection: true,
         faultInjectionNote:
           "the evaluator call boundary was replaced by a throwing stub; the decision was NOT computed by the real evaluator",
@@ -131,6 +145,7 @@ describe("E4-R55 child — real production failure wiring", () => {
       testFile: CHILD_FILE,
       testedSha: TESTED_SHA,
       casesDir: join(root, "cases-that-do-not-exist"),
+      facts: chainFacts,
       onRecorder: (r) => {
         activeDiag = r;
       },

@@ -61,3 +61,12 @@ apps/cli/src/e4-r55-mutated-chain.generated.ts
 # dirty — a concurrent promotion benchmark (e4-09) refuses to run on a tree that
 # is not provably clean, and that dirt would be a false positive, not a change.
 .tmp-mining-*/
+
+# E4-R59 (G59): per-run directories holding the order-mutation COPY of the chain
+# module. They live under apps/cli/test-infra/ (outside apps/cli's tsconfig
+# `include: ["src"]` and outside the root Vitest include), so their location — not
+# this ignore rule — is what keeps them out of the production build and the test
+# collector. This rule only stops a leftover from an interrupted run from making
+# `git status --porcelain` dirty, which would break concurrent promotion
+# benchmarks (see the fixtures above for the same reasoning).
+apps/cli/test-infra/e4-r55-runs/

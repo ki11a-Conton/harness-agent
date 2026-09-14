@@ -315,6 +315,37 @@ export function mutateChainOrdering(source: string): string {
   return out;
 }
 
+/** The ONE relative import of this module that a relocated copy must rewrite. */
+const DIAGNOSTICS_IMPORT_NEEDLE = 'from "./e4-09-diagnostics.js"';
+
+/**
+ * E4-R59 (G59) — relocate a generated copy's relative import.
+ *
+ * The order-mutation copy used to be written back into `apps/cli/src/`, i.e.
+ * INSIDE `apps/cli/tsconfig.json`'s `include: ["src"]`. It was therefore part of
+ * the production compile input: a real `tsc -b apps/cli` emitted
+ * `dist/e4-r55-mutated-chain.generated.{js,d.ts,js.map,d.ts.map}`, and because
+ * `tsc` does not remove stale outputs those artifacts outlived the source file
+ * (the test deletes it in `afterAll`). Two concurrent parent runs also shared
+ * one fixed path.
+ *
+ * The copy now lives in a per-run directory outside both the production compile
+ * input and the default Vitest include, so its relative import must be rewritten
+ * to reach the REAL diagnostics module — never a stub. This module has exactly
+ * one relative import and the rewrite is asserted, so a future refactor cannot
+ * silently produce an unresolvable copy. Bare `@ar/*` specifiers resolve from
+ * anywhere inside the workspace and need no rewrite.
+ */
+export function rewriteChainRelativeImport(source: string, specifier: string): string {
+  const count = source.split(DIAGNOSTICS_IMPORT_NEEDLE).length - 1;
+  if (count !== 1) {
+    throw new Error(
+      `R59: expected exactly ONE ${DIAGNOSTICS_IMPORT_NEEDLE} in the chain module, found ${count} — a relocated copy cannot be produced safely`,
+    );
+  }
+  return source.replace(DIAGNOSTICS_IMPORT_NEEDLE, `from ${JSON.stringify(specifier)}`);
+}
+
 /** Shared failure-capture hook body used by every suite that drives this chain. */
 export async function captureOnFailure(
   recorder: E4DiagnosticRecorder | null,

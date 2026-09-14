@@ -38,18 +38,27 @@
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
-import { mutateChainOrdering } from "./e4-09-real-chain.js";
+import { mutateChainOrdering, rewriteChainRelativeImport } from "./e4-09-real-chain.js";
 
 const REPO_ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const VITEST_BIN = join(REPO_ROOT, "node_modules", "vitest", "vitest.mjs");
 const CHILD_CONFIG = "apps/cli/test-infra/r55-vitest.config.ts";
 const REAL_CHAIN = join(REPO_ROOT, "apps/cli", "src", "e4-09-real-chain.ts");
-const GENERATED_MUTATION = join(REPO_ROOT, "apps", "cli", "src", "e4-r55-mutated-chain.generated.ts");
+const REAL_DIAGNOSTICS = join(REPO_ROOT, "apps/cli", "src", "e4-09-diagnostics.ts");
+/**
+ * E4-R59 (G59): per-run mutation copies live here — OUTSIDE `apps/cli/tsconfig.json`'s
+ * `include: ["src"]` (so never part of the production compile input) and outside
+ * the root Vitest `include` (`apps/*\/src/**\/*.test.ts`). Each parent run gets its
+ * own `mkdtemp` directory, so two concurrent runs can never share a path.
+ */
+const RUNS_ROOT = join(REPO_ROOT, "apps", "cli", "test-infra", "e4-r55-runs");
+/** The pre-R59 fixed path. Narrow migration guard only — see `afterAll`. */
+const LEGACY_GENERATED = join(REPO_ROOT, "apps", "cli", "src", "e4-r55-mutated-chain.generated.ts");
 
 const NONACCEPT_TITLE =
   "R55 nonaccept: a REAL non-ACCEPT decision is persisted with its reasonCodes before the ACCEPT assert";
@@ -61,10 +70,13 @@ const BENCHFAIL_TITLE =
 
 let tempDirs: string[] = [];
 afterAll(async () => {
-  // The generated mutation copy must never outlive this file: a stray `.ts` in
-  // `src` would be compiled by `tsc -b`.
-  await rm(GENERATED_MUTATION, { force: true }).catch(() => {});
+  // E4-R59: NARROW migration guard for the pre-R59 fixed path only. A leftover
+  // there would sit inside the production compile input, so it is removed if (and
+  // only if) it exists. No batch deletion, no wildcard, no source scanning.
+  await rm(LEGACY_GENERATED, { force: true }).catch(() => {});
   for (const d of tempDirs.splice(0)) await rm(d, { recursive: true, force: true }).catch(() => {});
+  // Remove the runs root only if this run left it empty.
+  await rm(RUNS_ROOT, { recursive: false, force: true }).catch(() => {});
 });
 
 interface ArtifactRecord {
@@ -97,6 +109,8 @@ interface ChildRun {
   diagDir: string;
   bundles: Bundle[];
   results: { title: string; status: string }[];
+  /** The chain module THIS run was bound to (path + digest). */
+  chain: ChainModuleRef;
 }
 
 async function readBundles(diagDir: string): Promise<Bundle[]> {
@@ -113,35 +127,81 @@ async function readBundles(diagDir: string): Promise<Bundle[]> {
   return out;
 }
 
+/** A chain module bound to one child run: where it lives and its digest. */
+interface ChainModuleRef {
+  path: string;
+  sha256: string;
+}
+
+/**
+ * E4-R59 (G59) — select the chain module for ONE run.
+ *
+ *   - `"real"`    -> the repository's own module; no copy is created at all.
+ *   - `"mutated"` -> a fresh copy of the real module with the decision-save block
+ *                    moved after the ACCEPT assert, written into a PER-RUN
+ *                    directory outside the production compile input and outside
+ *                    the default Vitest include. Its single relative import is
+ *                    rewritten so the copy still loads the REAL diagnostics
+ *                    module — not a stub, not a standalone fake implementation.
+ *
+ * The returned path is handed to the child through `E4_R55_CHAIN_MODULE`, which
+ * the child config binds with an alias. The child loads exactly this path or
+ * fails before running a test; nothing scans for "the newest file".
+ */
+async function prepareChainModule(runDir: string, mode: "real" | "mutated"): Promise<ChainModuleRef> {
+  if (mode === "real") {
+    return { path: REAL_CHAIN, sha256: sha256(await readFile(REAL_CHAIN)) };
+  }
+  await mkdir(runDir, { recursive: true });
+  const mutated = mutateChainOrdering(await readFile(REAL_CHAIN, "utf8"));
+  const rel = relative(runDir, REAL_DIAGNOSTICS).split("\\").join("/").replace(/\.ts$/, ".js");
+  const specifier = rel.startsWith(".") ? rel : `./${rel}`;
+  const source = rewriteChainRelativeImport(mutated, specifier);
+  const path = join(runDir, "chain.ts");
+  await writeFile(path, source, "utf8");
+  return { path, sha256: sha256(Buffer.from(source, "utf8")) };
+}
+
 /** Spawn the isolated child and collect its REAL exit code, report and bundles. */
-async function runChild(mutation: boolean): Promise<ChildRun> {
+async function runChild(mode: "real" | "mutated"): Promise<ChildRun> {
   const diagDir = await mkdtemp(join(tmpdir(), "e4-r55-diag-"));
   const reportDir = await mkdtemp(join(tmpdir(), "e4-r55-report-"));
   tempDirs.push(diagDir, reportDir);
-  const reportPath = join(reportDir, "report.json");
-  const proc = spawnSync(
-    process.execPath,
-    [VITEST_BIN, "run", "--config", CHILD_CONFIG, "--reporter=json", `--outputFile=${reportPath}`],
-    {
-      cwd: REPO_ROOT,
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        E4_09_DIAG_DIR: diagDir,
-        E4_R55_MUTATION: mutation ? "1" : "0",
-        // keep the child unnamed so no observation evidence is committed
-        E2E_OBSERVATION_RUN_ID: "",
+  // A PER-RUN directory owned by this invocation only.
+  await mkdir(RUNS_ROOT, { recursive: true });
+  const runDir = await mkdtemp(join(RUNS_ROOT, "run-"));
+  try {
+    const chain = await prepareChainModule(runDir, mode);
+    const reportPath = join(reportDir, "report.json");
+    const proc = spawnSync(
+      process.execPath,
+      [VITEST_BIN, "run", "--config", CHILD_CONFIG, "--reporter=json", `--outputFile=${reportPath}`],
+      {
+        cwd: REPO_ROOT,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          E4_09_DIAG_DIR: diagDir,
+          // Binds THIS run's chain module (the child config aliases it).
+          E4_R55_CHAIN_MODULE: chain.path,
+          E4_R55_CHAIN_SHA: chain.sha256,
+          // keep the child unnamed so no observation evidence is committed
+          E2E_OBSERVATION_RUN_ID: "",
+        },
+        maxBuffer: 64 * 1024 * 1024,
       },
-      maxBuffer: 64 * 1024 * 1024,
-    },
-  );
-  const report = JSON.parse(await readFile(reportPath, "utf8")) as {
-    testResults?: { assertionResults?: { title?: string; status?: string }[] }[];
-  };
-  const results = (report.testResults ?? []).flatMap((f) =>
-    (f.assertionResults ?? []).map((a) => ({ title: String(a.title ?? ""), status: String(a.status ?? "") })),
-  );
-  return { exitCode: proc.status, diagDir, bundles: await readBundles(diagDir), results };
+    );
+    const report = JSON.parse(await readFile(reportPath, "utf8")) as {
+      testResults?: { assertionResults?: { title?: string; status?: string }[] }[];
+    };
+    const results = (report.testResults ?? []).flatMap((f) =>
+      (f.assertionResults ?? []).map((a) => ({ title: String(a.title ?? ""), status: String(a.status ?? "") })),
+    );
+    return { exitCode: proc.status, diagDir, bundles: await readBundles(diagDir), results, chain };
+  } finally {
+    // Each run cleans ONLY the resources it owns.
+    await rm(runDir, { recursive: true, force: true }).catch(() => {});
+  }
 }
 
 const sha256 = (b: Buffer): string => createHash("sha256").update(b).digest("hex");
@@ -206,15 +266,12 @@ describe("E4-R55 real production failure wiring (parent verifier over an isolate
       "E4-R55 requires a CLEAN committed working tree: the production benchmark refuses to produce a promotion-eligible run on a tree that is not provably clean, so every child case would fail for an unrelated reason. Commit or stash first.",
     ).toBe("");
 
-    // The mutated copy is generated from the REAL module by string surgery, so it
-    // cannot drift; it is gitignored and removed in afterAll.
-    const realSource = await readFile(REAL_CHAIN, "utf8");
-    const mutatedSource = mutateChainOrdering(realSource);
-    expect(mutatedSource).not.toBe(realSource);
-    await writeFile(GENERATED_MUTATION, mutatedSource, "utf8");
+    // E4-R59: nothing is written into the production source tree any more. The
+    // mutated copy is generated into a per-run directory inside `runChild`, and
+    // the child is bound to it by `E4_R55_CHAIN_MODULE` (asserted below).
 
     // ── RUN 1: the real wiring, unmodified ──
-    const normal = await runChild(false);
+    const normal = await runChild("real");
 
     // The child's own report: EXACTLY the expected pass/fail set, nothing else.
     expect(normal.results.map((r) => `${r.status} ${r.title}`).sort()).toEqual(
@@ -270,10 +327,30 @@ describe("E4-R55 real production failure wiring (parent verifier over an isolate
     expect(byLabel(normal, "r55-success")).toBeUndefined();
     expect(normal.bundles).toHaveLength(3);
 
-    // ── RUN 2: the SAME acceptance against the ORDER-MUTATED wiring ──
-    const mutated = await runChild(true);
+    // ── 5b. E4-R59: the control run loaded the REAL module, and every bundle
+    //        records the chain identity it was bound to ──
+    expect(normal.chain.path).toBe(REAL_CHAIN);
+    for (const bundle of normal.bundles) {
+      const recorded = bundle.extra["chainModule"] as { path: string; sha256: string } | undefined;
+      expect(recorded, `${bundle.label}: chain identity must be recorded`).toBeDefined();
+      expect(recorded!.path).toBe(normal.chain.path);
+      expect(recorded!.sha256).toBe(normal.chain.sha256);
+    }
+
+    // ── 6. RUN 2: the SAME acceptance against the ORDER-MUTATED wiring ──
+    const mutated = await runChild("mutated");
+    // The mutated copy is a per-run file, NOT the repository's module, and it is
+    // outside the production compile input (asserted structurally below).
+    expect(mutated.chain.path).not.toBe(REAL_CHAIN);
+    expect(mutated.chain.sha256).not.toBe(normal.chain.sha256);
+    expect(mutated.chain.path.startsWith(RUNS_ROOT)).toBe(true);
     const mutatedNonaccept = byLabel(mutated, "r55-nonaccept");
     expect(mutatedNonaccept, "the mutated run must still produce a failure bundle").toBeDefined();
+    // The child loaded exactly the copy this run selected — its identity is in the
+    // bundle, and the alias (not a scan) is what bound it.
+    const mutatedIdentity = mutatedNonaccept!.extra["chainModule"] as { path: string; sha256: string };
+    expect(mutatedIdentity.path).toBe(mutated.chain.path);
+    expect(mutatedIdentity.sha256).toBe(mutated.chain.sha256);
     // The mutated child still fails (at the ACCEPT assert), but the decision save
     // now runs AFTER it — so the decisive evidence is gone.
     const mutatedVerdict = acceptance(mutatedNonaccept);
@@ -284,4 +361,27 @@ describe("E4-R55 real production failure wiring (parent verifier over an isolate
     expect(mutatedVerdict.reasons.join("; ")).toMatch(/decision-artifact/);
     expect(roleOf(mutatedNonaccept!, "decision-artifact")!.captured).toBe(false);
   }, 900_000);
+
+  it("R59: the per-run copy location stays outside the production compile input and the default test include", async () => {
+    // Structural guard: if a future change ever widens `apps/cli/tsconfig.json`'s
+    // include (or moves the runs root under `src`), this fails instead of silently
+    // putting generated code back into the production build.
+    const tsconfig = JSON.parse(
+      await readFile(join(REPO_ROOT, "apps", "cli", "tsconfig.json"), "utf8"),
+    ) as { include?: string[] };
+    const include = tsconfig.include ?? [];
+    expect(include).toContain("src");
+    expect(
+      include.some((p) => p === "test-infra" || p.startsWith("test-infra/") || p === "**" || p === "."),
+      `apps/cli tsconfig include must not cover test-infra, got ${JSON.stringify(include)}`,
+    ).toBe(false);
+
+    const relToApp = relative(join(REPO_ROOT, "apps", "cli"), RUNS_ROOT).split("\\").join("/");
+    expect(relToApp.startsWith("test-infra/")).toBe(true);
+    // The root Vitest include only collects `apps/*/src/**/*.test.ts`, so a path
+    // without a `src` segment can never be collected by the default run.
+    expect(relToApp.includes("/src/")).toBe(false);
+    const rootVitest = await readFile(join(REPO_ROOT, "vitest.config.ts"), "utf8");
+    expect(rootVitest).toContain("apps/*/src/**/*.test.ts");
+  });
 });
