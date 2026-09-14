@@ -775,6 +775,8 @@ export interface PreserveEvidenceInput {
   diagDir?: string;
   /** Extra structured facts (chain identity, bundle labels, ...). */
   extra?: Record<string, unknown>;
+  /** E4-R67/R68 test seam; production callers omit it. */
+  seam?: EvidenceSeam;
 }
 
 /**
@@ -820,7 +822,8 @@ export interface CopyTreeResult {
 }
 
 /** Copy a directory tree, returning a structured, self-describing result. */
-async function copyTree(src: string, dest: string): Promise<CopyTreeResult> {
+async function copyTree(src: string, dest: string, seam?: EvidenceSeam): Promise<CopyTreeResult> {
+  const copyFileImpl = seam?.copyFile ?? ((from: string, to: string) => copyFile(from, to));
   const copied: string[] = [];
   const entries: CopyEntry[] = [];
   let sourceMissing = false;
@@ -887,7 +890,7 @@ async function copyTree(src: string, dest: string): Promise<CopyTreeResult> {
         continue;
       }
       try {
-        await copyFile(srcPath, destPath);
+        await copyFileImpl(srcPath, destPath);
         copied.push(rel);
       } catch (err) {
         record(rel, (err as { code?: string }).code === "ENOENT" ? "missing" : "unreadable", "copyFile", err);
@@ -906,18 +909,70 @@ async function copyTree(src: string, dest: string): Promise<CopyTreeResult> {
 }
 
 /** The archive's overall state, including the case where it could not be made. */
-export type EvidenceIntegrity = CopyIntegrity | "archive-failed";
+export type ArchiveIntegrity = "complete" | "partial" | "archive-failed";
+
+/**
+ * The archive roles that are written BEFORE `run.json` (E4-R67).
+ *
+ * `run.json` itself is deliberately NOT a member: its outcome cannot be recorded
+ * inside the file it describes. It is expressed by `ok` and `archiveIntegrity`
+ * instead — a persisted record exists only if `run.json` was written, and
+ * `archiveIntegrity === "archive-failed"` is exactly the case where it was not.
+ */
+export type EvidenceRole = "stdout" | "stderr" | "raw-report";
+
+export type EvidenceRoleStatus = "written" | "failed" | "not-requested";
+
+export interface EvidenceRoleRecord {
+  role: EvidenceRole;
+  /** Path relative to the archive directory; null when the role was not requested. */
+  path: string | null;
+  requested: boolean;
+  status: EvidenceRoleStatus;
+  operation: "writeFile" | null;
+  /** errno-style code when the platform supplied one. */
+  errorCode: string | null;
+  /** Always non-null unless the role was written. */
+  reason: string | null;
+  /**
+   * Bytes ACTUALLY written to disk. `null` unless `status === "written"` — so it
+   * can never be mistaken for the in-memory `capture.*.capturedBytes` of a log
+   * that failed to reach the disk.
+   */
+  writtenBytes: number | null;
+}
+
+/**
+ * Test seam (E4-R67/R68). It lets a SINGLE role's write — or a SINGLE file's
+ * copy — fail deterministically, so the partial-archive paths are provable
+ * without chmod races or random corruption. Production callers omit it and the
+ * real `node:fs/promises` implementations are used.
+ */
+export interface EvidenceSeam {
+  writeFile?: (path: string, data: string) => Promise<void>;
+  copyFile?: (src: string, dest: string) => Promise<void>;
+}
 
 export interface PreservedEvidence {
-  /** false when the archive could not be written at all. */
+  /**
+   * E4-R67: TRUE means a READABLE, self-describing archive exists — i.e.
+   * `run.json` was written. It deliberately does NOT mean "every role is
+   * complete": a partial archive is still `ok: true` because it is usable.
+   * Use `archiveIntegrity` for completeness.
+   */
   ok: boolean;
   /** Where the archive is — or, when `ok === false`, where it was attempted. */
   dir: string;
-  /** Relative paths of everything written, for the report/log line. */
+  /** Relative paths of files ACTUALLY written, for the report/log line. */
   files: string[];
+  /** E4-R67: describes ONLY the diagnostics tree copy. */
+  diagnosticsCopyIntegrity: CopyIntegrity;
+  /** E4-R67: describes EVERY requested archive role, logs and report included. */
+  archiveIntegrity: ArchiveIntegrity;
+  /** E4-R67: per-role outcome for the content roles. */
+  roles: EvidenceRoleRecord[];
   /** The diagnostics copy outcome; null when `diagDir` was not passed. */
   copy: CopyTreeResult | null;
-  integrity: EvidenceIntegrity;
   /** Why the archive failed; non-null only when `ok === false`. */
   error: string | null;
 }
@@ -933,6 +988,8 @@ export interface PreservedEvidence {
 export async function preserveEvidence(input: PreserveEvidenceInput): Promise<PreservedEvidence> {
   const root = parentEvidenceRoot();
   const files: string[] = [];
+  const writeFileImpl =
+    input.seam?.writeFile ?? ((path: string, data: string) => writeFile(path, data, "utf8"));
   let dir: string;
   try {
     await mkdir(root, { recursive: true });
@@ -946,40 +1003,86 @@ export async function preserveEvidence(input: PreserveEvidenceInput): Promise<Pr
       ok: false,
       dir: root,
       files: [],
+      diagnosticsCopyIntegrity: "not-requested",
+      archiveIntegrity: "archive-failed",
+      roles: [],
       copy: null,
-      integrity: "archive-failed",
       error: messageOf(err),
     };
   }
 
-  const write = async (name: string, body: string): Promise<void> => {
-    await writeFile(join(dir, name), body, "utf8");
-    files.push(name);
-  };
+  const roles: EvidenceRoleRecord[] = [];
 
-  // A log that cannot be written is degraded, not fatal: the copy outcome and
-  // `run.json` are what make the archive decidable.
-  for (const [name, body] of [
-    ["child.stdout.txt", input.outcome.stdout],
-    ["child.stderr.txt", input.outcome.stderr],
-  ] as const) {
+  /**
+   * Write ONE content role and record its outcome (E4-R67). A failed write is no
+   * longer only a stderr line — it becomes a structured fact inside `run.json`,
+   * so an archive reader can tell "the log was never written" from "the log was
+   * empty", and a complete diagnostics copy can no longer hide it.
+   */
+  const writeRole = async (role: EvidenceRole, name: string, body: string): Promise<void> => {
     try {
-      await write(name, body);
+      await writeFileImpl(join(dir, name), body);
+      files.push(name);
+      roles.push({
+        role,
+        path: name,
+        requested: true,
+        status: "written",
+        operation: "writeFile",
+        errorCode: null,
+        reason: null,
+        writtenBytes: Buffer.byteLength(body, "utf8"),
+      });
     } catch (err) {
       reportDegraded(`e4-r55 evidence write ${name}`, err);
+      roles.push({
+        role,
+        path: name,
+        requested: true,
+        status: "failed",
+        operation: "writeFile",
+        errorCode: (err as { code?: string } | null)?.code ?? null,
+        reason: messageOf(err),
+        writtenBytes: null,
+      });
     }
-  }
-  if (input.report.rawText !== null) {
-    try {
-      await write("child-report.json", input.report.rawText);
-    } catch (err) {
-      reportDegraded("e4-r55 evidence write child-report.json", err);
-    }
+  };
+
+  await writeRole("stdout", "child.stdout.txt", input.outcome.stdout);
+  await writeRole("stderr", "child.stderr.txt", input.outcome.stderr);
+
+  if (input.report.rawText === null) {
+    // No raw report was available to save. That is NOT a write failure and NOT a
+    // write success: record it as not-requested and keep the real `report.kind`,
+    // so a reader never reads it as "the source report was missing".
+    roles.push({
+      role: "raw-report",
+      path: null,
+      requested: false,
+      status: "not-requested",
+      operation: null,
+      errorCode: null,
+      reason: `no raw report was available (report.kind=${input.report.kind})`,
+      writtenBytes: null,
+    });
+  } else {
+    await writeRole("raw-report", "child-report.json", input.report.rawText);
   }
 
   const copy =
-    input.diagDir === undefined ? null : await copyTree(input.diagDir, join(dir, "diagnostics"));
+    input.diagDir === undefined
+      ? null
+      : await copyTree(input.diagDir, join(dir, "diagnostics"), input.seam);
   if (copy !== null) files.push(...copy.copied.map((f) => `diagnostics/${f}`));
+
+  // E4-R67 — TWO layers. The diagnostics copy is ONE role among several, so it
+  // must not be reported as the integrity of the whole archive.
+  const diagnosticsCopyIntegrity: CopyIntegrity = copy?.integrity ?? "not-requested";
+  const failedRoles = roles.filter((r) => r.status === "failed").map((r) => r.role);
+  const diagnosticsIncomplete =
+    diagnosticsCopyIntegrity === "partial" || diagnosticsCopyIntegrity === "missing";
+  const archiveIntegrity: ArchiveIntegrity =
+    failedRoles.length > 0 || diagnosticsIncomplete ? "partial" : "complete";
 
   const record = {
     schemaVersion: CHILD_HARNESS_SCHEMA_VERSION,
@@ -1002,10 +1105,12 @@ export async function preserveEvidence(input: PreserveEvidenceInput): Promise<Pr
       durationMs: input.outcome.durationMs,
     },
     /**
-     * E4-R63: the byte contract of the two log files written below. The on-disk
-     * byte count of `child.stdout.txt` / `child.stderr.txt` IS `capturedBytes`
-     * (both are written as UTF-8 text), so an archive reader can verify the
-     * budget from the file alone.
+     * E4-R63: the byte contract of the two log files.
+     *
+     * E4-R67 CAVEAT: `capturedBytes` is the number of bytes captured IN MEMORY.
+     * It is NOT a claim that those bytes reached the disk — check
+     * `evidence.archive.roles[].writtenBytes`, which is non-null only for a role
+     * that was actually written.
      */
     capture: {
       stdout: input.outcome.capture.stdout,
@@ -1018,20 +1123,29 @@ export async function preserveEvidence(input: PreserveEvidenceInput): Promise<Pr
      */
     treeKill: input.outcome.treeKill,
     /**
-     * E4-R65: what the diagnostics copy achieved. Before this, a failed copy was
-     * visible only as a stderr line, and the returned `files` list was the SAME
-     * empty array for "no diagnostics dir was passed", "the directory was empty"
-     * and "the directory could not be read at all".
+     * E4-R67: TWO layers, because a complete diagnostics copy does NOT imply a
+     * complete archive.
+     *   - `diagnostics` keeps the E4-R65 semantics: it describes ONLY the copied
+     *     diagnostics tree (missing / partial / complete / not-requested).
+     *   - `archive` describes EVERY requested role — the top-level logs and the
+     *     raw report included — plus the per-role outcome list.
      */
     evidence: {
-      diagDir: input.diagDir ?? null,
-      requested: copy !== null,
-      integrity: copy?.integrity ?? "not-requested",
-      sourceMissing: copy?.sourceMissing ?? null,
-      empty: copy?.empty ?? null,
-      copiedCount: copy?.copied.length ?? 0,
-      copied: copy?.copied ?? [],
-      entries: copy?.entries ?? [],
+      diagnostics: {
+        diagDir: input.diagDir ?? null,
+        requested: copy !== null,
+        integrity: diagnosticsCopyIntegrity,
+        sourceMissing: copy?.sourceMissing ?? null,
+        empty: copy?.empty ?? null,
+        copiedCount: copy?.copied.length ?? 0,
+        copied: copy?.copied ?? [],
+        entries: copy?.entries ?? [],
+      },
+      archive: {
+        integrity: archiveIntegrity,
+        roles,
+        failedRoles,
+      },
     },
     report: {
       path: input.report.path,
@@ -1050,17 +1164,21 @@ export async function preserveEvidence(input: PreserveEvidenceInput): Promise<Pr
     extra: input.extra ?? {},
   };
   try {
-    await write("run.json", `${JSON.stringify(record, null, 2)}\n`);
+    await writeFileImpl(join(dir, "run.json"), `${JSON.stringify(record, null, 2)}\n`);
+    files.push("run.json");
   } catch (err) {
     // Without run.json the archive cannot explain itself, so it is NOT an
-    // archive: report that instead of returning a usable-looking path.
+    // archive: report that instead of returning a usable-looking path. `dir` is
+    // a LEFTOVER directory, not a successful archive.
     reportDegraded("e4-r55 evidence write run.json", err);
     return {
       ok: false,
       dir,
       files,
+      diagnosticsCopyIntegrity,
+      archiveIntegrity: "archive-failed",
+      roles,
       copy,
-      integrity: "archive-failed",
       error: messageOf(err),
     };
   }
@@ -1069,8 +1187,10 @@ export async function preserveEvidence(input: PreserveEvidenceInput): Promise<Pr
     ok: true,
     dir,
     files,
+    diagnosticsCopyIntegrity,
+    archiveIntegrity,
+    roles,
     copy,
-    integrity: copy?.integrity ?? "not-requested",
     error: null,
   };
 }

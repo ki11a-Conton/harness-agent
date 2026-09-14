@@ -83,7 +83,10 @@ import type {
   ChildTermination,
   ControlledChildOutcome,
   CopyEntry,
+  EvidenceRoleRecord,
+  EvidenceSeam,
   ExpectedChildRun,
+  PreserveEvidenceInput,
   PreservedEvidence,
   ReportRead,
   StreamCapture,
@@ -702,18 +705,22 @@ async function conclude(run: ChildRun, reasons: string[], extra?: Record<string,
           ...extra,
         },
       });
-      // E4-R65: the message must state BOTH where the evidence is and whether
-      // the archive is complete, and must never advertise a location when the
-      // archive could not be written at all.
+      // E4-R65/E4-R67: the message must state BOTH where the evidence is and
+      // whether the archive is complete, and must never advertise a location
+      // when the archive could not be written at all. The ARCHIVE integrity
+      // leads; the diagnostics copy is reported as the separate, narrower fact
+      // it is, so a package with a complete diagnostics copy but a missing log
+      // never reads as a complete package.
       if (preserved.ok) {
         process.stderr.write(
           `[e4-r55] the ${run.mode} run was not decidable — evidence preserved at ${preserved.dir} ` +
-            `(${preserved.files.length} files, diagnostics integrity=${preserved.integrity})\n`,
+            `(${preserved.files.length} files, archive integrity=${preserved.archiveIntegrity}, ` +
+            `diagnostics=${preserved.diagnosticsCopyIntegrity})\n`,
         );
       } else {
         process.stderr.write(
           `[e4-r55] the ${run.mode} run was not decidable — the evidence archive could NOT be written ` +
-            `(${preserved.integrity}: ${preserved.error ?? "unknown reason"}); no downloadable location\n`,
+            `(${preserved.archiveIntegrity}: ${preserved.error ?? "unknown reason"}); no downloadable location\n`,
         );
       }
     } catch (err) {
@@ -1641,14 +1648,23 @@ describe("E4-R65 evidence-copy completeness protocol", () => {
   interface EvidenceRecord {
     reasons: string[];
     evidence: {
-      diagDir: string | null;
-      requested: boolean;
-      integrity: string;
-      sourceMissing: boolean | null;
-      empty: boolean | null;
-      copiedCount: number;
-      copied: string[];
-      entries: CopyEntry[];
+      // E4-R67: layer 1 — describes ONLY the diagnostics tree copy.
+      diagnostics: {
+        diagDir: string | null;
+        requested: boolean;
+        integrity: string;
+        sourceMissing: boolean | null;
+        empty: boolean | null;
+        copiedCount: number;
+        copied: string[];
+        entries: CopyEntry[];
+      };
+      // E4-R67: layer 2 — describes EVERY requested archive role.
+      archive: {
+        integrity: string;
+        roles: EvidenceRoleRecord[];
+        failedRoles: string[];
+      };
     };
   }
 
@@ -1669,11 +1685,11 @@ describe("E4-R65 evidence-copy completeness protocol", () => {
     try {
       expect(preserved.ok).toBe(true);
       expect(preserved.copy).toBeNull();
-      expect(preserved.integrity).toBe("not-requested");
+      expect(preserved.diagnosticsCopyIntegrity).toBe("not-requested");
       const record = await readRecord(preserved.dir);
-      expect(record.evidence.requested).toBe(false);
-      expect(record.evidence.integrity).toBe("not-requested");
-      expect(record.evidence.entries).toEqual([]);
+      expect(record.evidence.diagnostics.requested).toBe(false);
+      expect(record.evidence.diagnostics.integrity).toBe("not-requested");
+      expect(record.evidence.diagnostics.entries).toEqual([]);
     } finally {
       await rm(preserved.dir, { recursive: true, force: true });
     }
@@ -1684,12 +1700,12 @@ describe("E4-R65 evidence-copy completeness protocol", () => {
     const preserved = await preserve(src, "r65-empty");
     try {
       const record = await readRecord(preserved.dir);
-      expect(record.evidence.requested).toBe(true);
-      expect(record.evidence.empty).toBe(true);
-      expect(record.evidence.sourceMissing).toBe(false);
-      expect(record.evidence.integrity).toBe("complete");
-      expect(record.evidence.copied).toEqual([]);
-      expect(record.evidence.entries).toEqual([]);
+      expect(record.evidence.diagnostics.requested).toBe(true);
+      expect(record.evidence.diagnostics.empty).toBe(true);
+      expect(record.evidence.diagnostics.sourceMissing).toBe(false);
+      expect(record.evidence.diagnostics.integrity).toBe("complete");
+      expect(record.evidence.diagnostics.copied).toEqual([]);
+      expect(record.evidence.diagnostics.entries).toEqual([]);
     } finally {
       await rm(preserved.dir, { recursive: true, force: true });
     }
@@ -1700,10 +1716,10 @@ describe("E4-R65 evidence-copy completeness protocol", () => {
     const preserved = await preserve(missing, "r65-missing");
     try {
       const record = await readRecord(preserved.dir);
-      expect(record.evidence.integrity).toBe("missing");
-      expect(record.evidence.sourceMissing).toBe(true);
-      expect(record.evidence.empty).toBe(false);
-      const enoent = record.evidence.entries.find((e) => e.errorCode === "ENOENT");
+      expect(record.evidence.diagnostics.integrity).toBe("missing");
+      expect(record.evidence.diagnostics.sourceMissing).toBe(true);
+      expect(record.evidence.diagnostics.empty).toBe(false);
+      const enoent = record.evidence.diagnostics.entries.find((e) => e.errorCode === "ENOENT");
       expect(enoent, "the ENOENT must be recoverable from run.json alone").toBeDefined();
       expect(enoent?.status).toBe("missing");
       expect(enoent?.operation).toBe("readdir");
@@ -1719,9 +1735,9 @@ describe("E4-R65 evidence-copy completeness protocol", () => {
     const preserved = await preserve(notADir, "r65-unreadable");
     try {
       const record = await readRecord(preserved.dir);
-      expect(record.evidence.integrity).toBe("partial");
-      expect(record.evidence.sourceMissing).toBe(false);
-      const bad = record.evidence.entries[0];
+      expect(record.evidence.diagnostics.integrity).toBe("partial");
+      expect(record.evidence.diagnostics.sourceMissing).toBe(false);
+      const bad = record.evidence.diagnostics.entries[0];
       expect(bad).toBeDefined();
       expect(bad?.status).toBe("unreadable");
       expect(bad?.operation).toBe("readdir");
@@ -1740,16 +1756,16 @@ describe("E4-R65 evidence-copy completeness protocol", () => {
 
     const preserved = await preserve(src, "r65-good");
     try {
-      expect(preserved.integrity).toBe("complete");
+      expect(preserved.diagnosticsCopyIntegrity).toBe("complete");
       expect(preserved.files).toContain("diagnostics/top.json");
       expect(preserved.files).toContain("diagnostics/nested/inner.json");
       expect(await readFile(join(preserved.dir, "diagnostics", "top.json"), "utf8")).toBe('{"a":1}\n');
       expect(await readFile(join(preserved.dir, "diagnostics", "nested", "inner.json"), "utf8")).toBe('{"b":2}\n');
       const record = await readRecord(preserved.dir);
       // Deterministic (sorted) manifest: "nested/..." sorts before "top.json".
-      expect(record.evidence.copied).toEqual(["nested/inner.json", "top.json"]);
-      expect(record.evidence.copiedCount).toBe(2);
-      expect(record.evidence.entries).toEqual([]);
+      expect(record.evidence.diagnostics.copied).toEqual(["nested/inner.json", "top.json"]);
+      expect(record.evidence.diagnostics.copiedCount).toBe(2);
+      expect(record.evidence.diagnostics.entries).toEqual([]);
     } finally {
       await rm(preserved.dir, { recursive: true, force: true });
     }
@@ -1776,9 +1792,9 @@ describe("E4-R65 evidence-copy completeness protocol", () => {
       const preserved = await preserve(src, "r65-skip-fallback");
       try {
         const record = await readRecord(preserved.dir);
-        expect(record.evidence.copied).toEqual(["real.json"]);
-        expect(record.evidence.entries.every((e) => e.status !== "copied")).toBe(true);
-        expect(record.evidence.integrity).toBe("complete");
+        expect(record.evidence.diagnostics.copied).toEqual(["real.json"]);
+        expect(record.evidence.diagnostics.entries.every((e) => e.status !== "copied")).toBe(true);
+        expect(record.evidence.diagnostics.integrity).toBe("complete");
       } finally {
         await rm(preserved.dir, { recursive: true, force: true });
       }
@@ -1787,12 +1803,12 @@ describe("E4-R65 evidence-copy completeness protocol", () => {
     const preserved = await preserve(src, "r65-skip");
     try {
       const record = await readRecord(preserved.dir);
-      expect(record.evidence.copied).toEqual(["real.json"]);
-      const skipped = record.evidence.entries.find((e) => e.status === "skipped");
+      expect(record.evidence.diagnostics.copied).toEqual(["real.json"]);
+      const skipped = record.evidence.diagnostics.entries.find((e) => e.status === "skipped");
       expect(skipped?.path).toBe("link.json");
       expect(skipped?.reason).toContain("not followed");
       // Not following a link is policy, not failure.
-      expect(record.evidence.integrity).toBe("complete");
+      expect(record.evidence.diagnostics.integrity).toBe("complete");
       expect(preserved.files).not.toContain("diagnostics/link.json");
     } finally {
       await rm(preserved.dir, { recursive: true, force: true });
@@ -1807,7 +1823,7 @@ describe("E4-R65 evidence-copy completeness protocol", () => {
     try {
       const preserved = await preserve(undefined, "r65-archive-failed");
       expect(preserved.ok).toBe(false);
-      expect(preserved.integrity).toBe("archive-failed");
+      expect(preserved.archiveIntegrity).toBe("archive-failed");
       expect(preserved.error).toBeTruthy();
       expect(preserved.files).toEqual([]);
     } finally {
@@ -1843,14 +1859,221 @@ describe("E4-R65 evidence-copy completeness protocol", () => {
       // still answer the question without them.
       const empty = await readRecord(emptyArchive.dir);
       const missing = await readRecord(missingArchive.dir);
-      expect(empty.evidence.integrity).toBe("complete");
-      expect(empty.evidence.empty).toBe(true);
-      expect(missing.evidence.integrity).toBe("missing");
-      expect(missing.evidence.sourceMissing).toBe(true);
-      expect(empty.evidence.integrity).not.toBe(missing.evidence.integrity);
+      expect(empty.evidence.diagnostics.integrity).toBe("complete");
+      expect(empty.evidence.diagnostics.empty).toBe(true);
+      expect(missing.evidence.diagnostics.integrity).toBe("missing");
+      expect(missing.evidence.diagnostics.sourceMissing).toBe(true);
+      expect(empty.evidence.diagnostics.integrity).not.toBe(missing.evidence.diagnostics.integrity);
     } finally {
       await rm(emptyArchive.dir, { recursive: true, force: true });
       await rm(missingArchive.dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("E4-R67 archive integrity vs diagnostics-copy integrity", () => {
+  interface ArchiveRecord {
+    reasons: string[];
+    report: { kind: string; error: string | null };
+    capture: { stdout: StreamCapture; stderr: StreamCapture };
+    evidence: {
+      diagnostics: { integrity: string; copied: string[] };
+      archive: { integrity: string; roles: EvidenceRoleRecord[]; failedRoles: string[] };
+    };
+  }
+
+  /** Fail exactly ONE role's write with a real errno-shaped error. */
+  const seamFailingWrite = (fileName: string, code: string): EvidenceSeam => ({
+    writeFile: async (path: string, data: string) => {
+      if (path.endsWith(fileName)) {
+        const err = new Error(`${code}: injected write failure for ${fileName}`) as Error & {
+          code?: string;
+        };
+        err.code = code;
+        throw err;
+      }
+      await writeFile(path, data, "utf8");
+    },
+  });
+
+  const preserve = async (
+    over: Partial<PreserveEvidenceInput>,
+  ): Promise<PreservedEvidence> =>
+    preserveEvidence({
+      label: "r67-archive",
+      outcome: syntheticOutcome({ stdout: "hello", stderr: "warn" }),
+      report: { path: "child-report.json", kind: "ok", error: null, results: [], rawText: '{"ok":1}\n' },
+      reasons: ["probe: the ORIGINAL business failure must survive"],
+      ...over,
+    });
+
+  const readRecord = async (dir: string): Promise<ArchiveRecord> =>
+    JSON.parse(await readFile(join(dir, "run.json"), "utf8")) as ArchiveRecord;
+
+  const roleOf = (roles: EvidenceRoleRecord[], role: string): EvidenceRoleRecord | undefined =>
+    roles.find((r) => r.role === role);
+
+  it("A: every requested role succeeds — complete, and the role list matches the disk", async () => {
+    const diag = await tempDir("e4-r67-diag-");
+    await writeFile(join(diag, "bundle.json"), "{}\n", "utf8");
+    const preserved = await preserve({ diagDir: diag });
+    try {
+      expect(preserved.ok).toBe(true);
+      expect(preserved.archiveIntegrity).toBe("complete");
+      expect(preserved.diagnosticsCopyIntegrity).toBe("complete");
+      expect(preserved.roles.map((r) => r.status)).toEqual(["written", "written", "written"]);
+      expect(preserved.files).toContain("child.stdout.txt");
+      expect(preserved.files).toContain("child.stderr.txt");
+      expect(preserved.files).toContain("child-report.json");
+      expect(preserved.files).toContain("run.json");
+      // writtenBytes is a DISK fact: check it against the real file sizes.
+      for (const role of preserved.roles) {
+        expect(role.path).not.toBeNull();
+        expect((await stat(join(preserved.dir, role.path!))).size).toBe(role.writtenBytes);
+      }
+      expect((await stat(join(preserved.dir, "child.stdout.txt"))).size).toBe(5);
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("B: an EIO on stdout makes the ARCHIVE partial even though the diagnostics copy is complete", async () => {
+    const diag = await tempDir("e4-r67-diag-b-");
+    await writeFile(join(diag, "bundle.json"), "{}\n", "utf8");
+    const preserved = await preserve({ diagDir: diag, seam: seamFailingWrite("child.stdout.txt", "EIO") });
+    try {
+      expect(preserved.ok).toBe(true); // a readable archive still exists
+      expect(preserved.archiveIntegrity).toBe("partial"); // ... but it is NOT complete
+      expect(preserved.diagnosticsCopyIntegrity).toBe("complete"); // the narrow layer is fine
+      expect(preserved.files).not.toContain("child.stdout.txt");
+
+      const stdoutRole = roleOf(preserved.roles, "stdout");
+      expect(stdoutRole?.status).toBe("failed");
+      expect(stdoutRole?.operation).toBe("writeFile");
+      expect(stdoutRole?.errorCode).toBe("EIO");
+      expect(stdoutRole?.writtenBytes).toBeNull();
+      expect(stdoutRole?.reason).toContain("EIO");
+
+      // The other roles survived and are readable.
+      expect(await readFile(join(preserved.dir, "child.stderr.txt"), "utf8")).toBe("warn");
+      expect(await readFile(join(preserved.dir, "child-report.json"), "utf8")).toBe('{"ok":1}\n');
+      expect(await readFile(join(preserved.dir, "diagnostics", "bundle.json"), "utf8")).toBe("{}\n");
+
+      const record = await readRecord(preserved.dir);
+      expect(record.evidence.archive.integrity).toBe("partial");
+      expect(record.evidence.archive.failedRoles).toEqual(["stdout"]);
+      expect(record.evidence.archive.roles.find((r) => r.role === "stdout")?.errorCode).toBe("EIO");
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("C: an EACCES on stderr names the stderr role, not stdout", async () => {
+    const preserved = await preserve({ seam: seamFailingWrite("child.stderr.txt", "EACCES") });
+    try {
+      expect(preserved.archiveIntegrity).toBe("partial");
+      expect(preserved.diagnosticsCopyIntegrity).toBe("not-requested");
+      const record = await readRecord(preserved.dir);
+      expect(record.evidence.archive.failedRoles).toEqual(["stderr"]);
+      expect(roleOf(record.evidence.archive.roles, "stderr")?.errorCode).toBe("EACCES");
+      expect(roleOf(record.evidence.archive.roles, "stdout")?.status).toBe("written");
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("D: a failed RAW-REPORT write is reported as a write failure, never as a missing source report", async () => {
+    const preserved = await preserve({ seam: seamFailingWrite("child-report.json", "EIO") });
+    try {
+      const record = await readRecord(preserved.dir);
+      const role = roleOf(record.evidence.archive.roles, "raw-report");
+      expect(role?.status).toBe("failed");
+      expect(role?.requested).toBe(true);
+      expect(role?.errorCode).toBe("EIO");
+      expect(record.evidence.archive.failedRoles).toEqual(["raw-report"]);
+      // The source report's own state is untouched — it was NOT missing.
+      expect(record.report.kind).toBe("ok");
+      expect(record.report.error).toBeNull();
+      expect(preserved.archiveIntegrity).toBe("partial");
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("E: rawText=null is 'not-requested' — not a fake success and not an unconditional failure", async () => {
+    const preserved = await preserve({
+      report: { path: "child-report.json", kind: "missing", error: "ENOENT", results: [], rawText: null },
+    });
+    try {
+      const record = await readRecord(preserved.dir);
+      const role = roleOf(record.evidence.archive.roles, "raw-report");
+      expect(role?.status).toBe("not-requested");
+      expect(role?.requested).toBe(false);
+      expect(role?.path).toBeNull();
+      expect(role?.writtenBytes).toBeNull();
+      expect(role?.reason).toContain("report.kind=missing");
+      // Not a failure: the archive is still complete for what was requested.
+      expect(record.evidence.archive.integrity).toBe("complete");
+      expect(record.report.kind).toBe("missing"); // the real kind is preserved
+      expect(preserved.files).not.toContain("child-report.json");
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("F: successful logs must NOT cover a missing diagnostics dir — the two layers stay separate", async () => {
+    const missing = join(await tempDir("e4-r67-parent-"), "gone");
+    const preserved = await preserve({ diagDir: missing });
+    try {
+      expect(preserved.diagnosticsCopyIntegrity).toBe("missing");
+      expect(preserved.archiveIntegrity).toBe("partial");
+      const record = await readRecord(preserved.dir);
+      expect(record.evidence.diagnostics.integrity).toBe("missing");
+      expect(record.evidence.archive.integrity).toBe("partial");
+      expect(record.evidence.archive.failedRoles).toEqual([]); // no ROLE failed...
+      expect(roleOf(record.evidence.archive.roles, "stdout")?.status).toBe("written");
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("G: a failed run.json write stays archive-failed and never claims a readable archive", async () => {
+    const preserved = await preserve({ seam: seamFailingWrite("run.json", "EIO") });
+    try {
+      expect(preserved.ok).toBe(false);
+      expect(preserved.archiveIntegrity).toBe("archive-failed");
+      expect(preserved.error).toContain("EIO");
+      // `dir` is a LEFTOVER, not a successful archive.
+      expect(existsSync(join(preserved.dir, "run.json"))).toBe(false);
+      expect(preserved.files).not.toContain("run.json");
+      // The role outcomes are still returned, so the caller can explain itself.
+      expect(preserved.roles.map((r) => r.status)).toEqual(["written", "written", "written"]);
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("H: after the source is gone, run.json ALONE still recovers the top-level write error", async () => {
+    const diag = await tempDir("e4-r67-diag-h-");
+    await writeFile(join(diag, "bundle.json"), "{}\n", "utf8");
+    const preserved = await preserve({ diagDir: diag, seam: seamFailingWrite("child.stdout.txt", "EIO") });
+    try {
+      // Delete every source we copied from, leaving only the archive.
+      await rm(diag, { recursive: true, force: true });
+      const record = await readRecord(preserved.dir);
+      const role = roleOf(record.evidence.archive.roles, "stdout");
+      expect(role?.status).toBe("failed");
+      expect(role?.operation).toBe("writeFile");
+      expect(role?.errorCode).toBe("EIO");
+      expect(role?.reason).toContain("injected write failure");
+      expect(record.evidence.archive.integrity).toBe("partial");
+      expect(record.reasons).toEqual(["probe: the ORIGINAL business failure must survive"]);
+      // capture.*.capturedBytes is an IN-MEMORY number and must not be readable
+      // as "5 bytes are on disk".
+      expect(record.capture.stdout.capturedBytes).toBe(5);
+      expect(role?.writtenBytes).toBeNull();
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
     }
   });
 });
