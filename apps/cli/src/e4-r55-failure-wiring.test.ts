@@ -60,13 +60,14 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, readdir, rm, rmdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, rmdir, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, parse, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { mutateChainOrdering, relocateChainImports } from "./e4-09-real-chain.js";
 import {
+  createStreamCapture,
   judgeChildProcess,
   messageOf,
   parentEvidenceRoot,
@@ -80,6 +81,7 @@ import type {
   ControlledChildOutcome,
   ExpectedChildRun,
   ReportRead,
+  StreamCapture,
 } from "./e4-r55-child-harness.js";
 
 const REPO_ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
@@ -744,6 +746,13 @@ async function waitForProcessGone(pid: number, timeoutMs: number): Promise<boole
 
 /** A synthetic outcome/report pair for the pure verdict tests. */
 function syntheticOutcome(over: Partial<ControlledChildOutcome> = {}): ControlledChildOutcome {
+  const stdout = over.stdout ?? "";
+  const stderr = over.stderr ?? "";
+  // Keep the E4-R63 byte accounting consistent with the text overrides.
+  const captureOf = (text: string): StreamCapture => {
+    const bytes = Buffer.byteLength(text, "utf8");
+    return { text, receivedBytes: bytes, capturedBytes: bytes, truncated: false };
+  };
   return {
     label: "synthetic",
     command: "node",
@@ -755,8 +764,9 @@ function syntheticOutcome(over: Partial<ControlledChildOutcome> = {}): Controlle
     timedOut: false,
     spawnError: null,
     launchFailureCode: null,
-    stdout: "",
-    stderr: "",
+    stdout,
+    stderr,
+    capture: { stdout: captureOf(stdout), stderr: captureOf(stderr) },
     outputOverflow: false,
     durationMs: 1,
     killAttempted: false,
@@ -1238,6 +1248,141 @@ describe("E4-R55 real production failure wiring (parent verifier over an isolate
       expect(relative(distRoot, out).split("\\").join("/")).toMatch(
         /^e4-r55-mutated-chain\.generated\.(js|js\.map|d\.ts|d\.ts\.map)$/,
       );
+    }
+  });
+});
+
+describe("E4-R63 bounded log capture (byte-budget contract)", () => {
+  const capture = (chunks: (Buffer | string)[], cap: number): StreamCapture => {
+    const c = createStreamCapture(cap);
+    for (const chunk of chunks) c.push(typeof chunk === "string" ? Buffer.from(chunk, "utf8") : chunk);
+    return c.finish();
+  };
+
+  it("A: a budget smaller than one character yields EMPTY text, never an over-budget replacement char", () => {
+    // The pre-R63 implementation cut the encoded buffer mid-codepoint and decoded
+    // the fragment: cap=1 on "中" saved U+FFFD — THREE bytes against a 1-byte cap.
+    for (const cap of [1, 2]) {
+      const r = capture(["中"], cap);
+      expect(r.text, `cap=${cap} must not invent a replacement char`).toBe("");
+      expect(r.capturedBytes, `cap=${cap}`).toBe(0);
+      expect(r.capturedBytes).toBeLessThanOrEqual(cap);
+      expect(r.receivedBytes).toBe(3);
+      expect(r.truncated).toBe(true);
+    }
+  });
+
+  it("B: a budget that exactly fits one character captures it whole and is not truncated", () => {
+    const r = capture(["中"], 3);
+    expect(r.text).toBe("中");
+    expect(r.capturedBytes).toBe(3);
+    expect(r.receivedBytes).toBe(3);
+    expect(r.truncated).toBe(false);
+  });
+
+  it("C: the four-byte emoji boundary", () => {
+    const emoji = "😀";
+    expect(Buffer.byteLength(emoji, "utf8")).toBe(4);
+    const short = capture([emoji], 3);
+    expect(short.text).toBe("");
+    expect(short.capturedBytes).toBe(0);
+    const exact = capture([emoji], 4);
+    expect(exact.text).toBe(emoji);
+    expect(exact.capturedBytes).toBe(4);
+    expect(exact.truncated).toBe(false);
+  });
+
+  it("D: an ASCII + CJK mix stops on a character boundary instead of splitting it", () => {
+    // "ab" is 2 bytes and "中" is 3, so at cap 4 the CJK char cannot fit whole.
+    const r = capture(["ab中cd"], 4);
+    expect(r.text).toBe("ab");
+    expect(r.capturedBytes).toBe(2);
+    expect(r.capturedBytes).toBeLessThanOrEqual(4);
+    expect(r.truncated).toBe(true);
+  });
+
+  it("E: empty output is complete, not truncated", () => {
+    const r = capture([], 8);
+    expect(r.text).toBe("");
+    expect(r.capturedBytes).toBe(0);
+    expect(r.receivedBytes).toBe(0);
+    expect(r.truncated).toBe(false);
+  });
+
+  it("F: one character split across several data chunks decodes identically to a single chunk", () => {
+    const whole = capture(["中"], 3);
+    const split = capture([Buffer.from([0xe4]), Buffer.from([0xb8]), Buffer.from([0xad])], 3);
+    expect(split.text).toBe(whole.text);
+    expect(split.text).toBe("中");
+    expect(split.capturedBytes).toBe(3);
+    expect(split.truncated).toBe(false);
+    // Per-chunk decoding is exactly what used to corrupt this: three U+FFFD.
+    expect(split.text.includes("\uFFFD")).toBe(false);
+  });
+
+  it("G: invalid UTF-8 has ONE documented policy — transcoded text, marked truncated, budget still honoured", () => {
+    const raw = Buffer.from([0xff, 0xfe, 0x61]);
+    const r = capture([raw], 3);
+    expect(r.capturedBytes).toBeLessThanOrEqual(3);
+    // The contract is text, so we must never claim the raw bytes back.
+    expect(Buffer.from(r.text, "utf8").equals(raw)).toBe(false);
+    expect(r.truncated).toBe(true);
+  });
+
+  it("H: the budget is PER STREAM — one overflowing stream never eats the other's budget", () => {
+    const out = createStreamCapture(3);
+    const err = createStreamCapture(3);
+    out.push(Buffer.from("中中中", "utf8"));
+    err.push(Buffer.from("中", "utf8"));
+    const o = out.finish();
+    const e = err.finish();
+    expect(o.capturedBytes).toBeLessThanOrEqual(3);
+    expect(o.truncated).toBe(true);
+    expect(e.text).toBe("中");
+    expect(e.capturedBytes).toBe(3);
+    expect(e.truncated).toBe(false);
+  });
+
+  it("I: a REAL child writing a 3-byte character under a 1-byte budget reports empty, bounded output", async () => {
+    const script = await writeTempScript("e4-r63-echo.js", "process.stdout.write('中');\n");
+    const outcome = await runControlledChild({
+      label: "r63-budget",
+      command: process.execPath,
+      args: [script],
+      cwd: REPO_ROOT,
+      env: { ...process.env },
+      timeoutMs: 60_000,
+      maxOutputBytes: 1,
+    });
+    expect(outcome.termination).toBe("exited");
+    expect(outcome.stdout).toBe("");
+    expect(outcome.capture.stdout.capturedBytes).toBe(0);
+    expect(outcome.capture.stdout.receivedBytes).toBe(3);
+    expect(outcome.capture.stdout.truncated).toBe(true);
+    expect(outcome.outputOverflow).toBe(true);
+  });
+
+  it("J: the preserved log files' on-disk byte counts equal the declared capturedBytes", async () => {
+    const outcome = syntheticOutcome({ stdout: "中", stderr: "ok" });
+    const preserved = await preserveEvidence({
+      label: "r63-bytes",
+      outcome,
+      report: syntheticReport([]),
+      reasons: ["probe: byte-budget contract"],
+    });
+    try {
+      const outBytes = (await stat(join(preserved.dir, "child.stdout.txt"))).size;
+      const errBytes = (await stat(join(preserved.dir, "child.stderr.txt"))).size;
+      expect(outBytes).toBe(outcome.capture.stdout.capturedBytes);
+      expect(outBytes).toBe(3);
+      expect(errBytes).toBe(outcome.capture.stderr.capturedBytes);
+      const record = JSON.parse(await readFile(join(preserved.dir, "run.json"), "utf8")) as {
+        capture: { stdout: StreamCapture; stderr: StreamCapture };
+      };
+      expect(record.capture.stdout.capturedBytes).toBe(outBytes);
+      expect(record.capture.stderr.capturedBytes).toBe(errBytes);
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
     }
   });
 });

@@ -140,7 +140,14 @@ export interface ControlledChildOutcome {
   launchFailureCode: number | null;
   stdout: string;
   stderr: string;
-  /** true when either stream exceeded its capture budget (log is truncated). */
+  /**
+   * Per-stream byte accounting (E4-R63). `stdout` / `stderr` above are the text
+   * of `capture.stdout.text` / `capture.stderr.text`; the capture adds the
+   * received-vs-captured byte counts and the truncation state, so a caller can
+   * tell "the child said nothing" from "the budget cut it off".
+   */
+  capture: { stdout: StreamCapture; stderr: StreamCapture };
+  /** true when either stream's capture is truncated (log is incomplete). */
   outputOverflow: boolean;
   durationMs: number;
   /** true when a tree kill was attempted (deadline or abort). */
@@ -149,35 +156,118 @@ export interface ControlledChildOutcome {
   reaped: boolean;
 }
 
-interface OutputBuffer {
+/**
+ * One stream's bounded capture (E4-R63, H63).
+ *
+ * CONTRACT — this is a TEXT contract, and every clause is asserted by the tests:
+ *   - `text` is the longest prefix of the received bytes whose UTF-8 encoding is
+ *     at most the cap AND which ends on a complete character boundary;
+ *   - `capturedBytes === Buffer.byteLength(text, "utf8") <= cap` ALWAYS;
+ *   - a character that does not fit is never partially written, so a budget
+ *     smaller than one character yields an EMPTY string. The previous
+ *     implementation cut mid-codepoint and decoded the fragment to U+FFFD, so a
+ *     cap of 1 byte on "中" produced 3 bytes — the budget was exceeded;
+ *   - `receivedBytes` counts every byte the child wrote, kept or not;
+ *   - `truncated` is true iff the capture does not represent every received byte
+ *     (`capturedBytes !== receivedBytes`), so it is honest about both a dropped
+ *     tail and a replacement-char substitution.
+ *
+ * Invalid UTF-8 inside the retained prefix is decoded with U+FFFD. Because that
+ * substitution can inflate the byte count, the decoded text is trimmed by whole
+ * code points until it fits the cap — the budget invariant holds for invalid
+ * input too. The module therefore never claims byte-for-byte capture fidelity.
+ */
+export interface StreamCapture {
   text: string;
-  textBytes: number;
-  totalBytes: number;
-  overflow: boolean;
+  receivedBytes: number;
+  capturedBytes: number;
+  truncated: boolean;
 }
 
-/** Append a chunk to a bounded buffer, cutting on a real byte boundary. */
-function appendBounded(buf: OutputBuffer, chunk: Buffer, cap: number): void {
-  buf.totalBytes += chunk.byteLength;
-  if (buf.textBytes >= cap) {
-    buf.overflow = true;
-    return;
+/** The end index of the longest COMPLETE UTF-8 prefix of `buf`. */
+function completeUtf8PrefixEnd(buf: Buffer): number {
+  let i = buf.length - 1;
+  let continuations = 0;
+  while (i >= 0 && (buf[i]! & 0xc0) === 0x80) {
+    i -= 1;
+    continuations += 1;
+    // A valid sequence carries at most 3 continuation bytes; more than that is
+    // not a real sequence, so there is no boundary to find and nothing to trim.
+    if (continuations > 3) return buf.length;
   }
-  const text = chunk.toString("utf8");
-  const allowed = cap - buf.textBytes;
-  const encoded = Buffer.from(text, "utf8");
-  if (encoded.byteLength <= allowed) {
-    buf.text += text;
-    buf.textBytes += encoded.byteLength;
-    return;
+  if (i < 0) return buf.length;
+  const lead = buf[i]!;
+  let needed: number;
+  if ((lead & 0x80) === 0) needed = 1;
+  else if ((lead & 0xe0) === 0xc0) needed = 2;
+  else if ((lead & 0xf0) === 0xe0) needed = 3;
+  else if ((lead & 0xf8) === 0xf0) needed = 4;
+  else needed = 1;
+  return buf.length - i >= needed ? buf.length : i;
+}
+
+/** Decode a complete-character byte prefix, guaranteeing it re-encodes to <= cap. */
+function decodeWithinBudget(complete: Buffer, cap: number): string {
+  const text = new TextDecoder("utf-8").decode(complete);
+  let bytes = Buffer.byteLength(text, "utf8");
+  if (bytes <= cap) return text;
+  // Only reachable when invalid input decoded to U+FFFD (3 bytes each), which
+  // can exceed the source byte count. Trim whole CODE POINTS so a surrogate pair
+  // is never split, until the budget holds.
+  const codePoints = Array.from(text);
+  while (codePoints.length > 0 && bytes > cap) {
+    const dropped = codePoints.pop();
+    if (dropped !== undefined) bytes -= Buffer.byteLength(dropped, "utf8");
   }
-  // The cap falls inside this chunk: keep a valid UTF-8 prefix and mark the
-  // capture as truncated. A cut mid-codepoint becomes a replacement char, which
-  // is honest for a log excerpt (the byte budget is what matters here).
-  const piece = encoded.subarray(0, allowed).toString("utf8");
-  buf.text += piece;
-  buf.textBytes += Buffer.byteLength(piece, "utf8");
-  buf.overflow = true;
+  return codePoints.join("");
+}
+
+/**
+ * A bounded, incrementally-fed capture for ONE stream.
+ *
+ * Raw bytes are retained and decoded EXACTLY ONCE, at the end. The previous
+ * implementation decoded every `data` chunk on its own and re-encoded it, which
+ * corrupted any character split across two chunks — a legal multi-byte character
+ * arriving in pieces became replacement characters.
+ */
+export function createStreamCapture(cap: number): {
+  push: (chunk: Buffer) => void;
+  finish: () => StreamCapture;
+} {
+  const parts: Buffer[] = [];
+  let retained = 0;
+  let receivedBytes = 0;
+  return {
+    push(chunk: Buffer): void {
+      receivedBytes += chunk.byteLength;
+      const room = cap - retained;
+      if (room <= 0) return;
+      const take = Math.min(room, chunk.byteLength);
+      if (take > 0) {
+        parts.push(chunk.subarray(0, take));
+        retained += take;
+      }
+    },
+    finish(): StreamCapture {
+      const raw = Buffer.concat(parts, retained);
+      const end = completeUtf8PrefixEnd(raw);
+      const complete = raw.subarray(0, end);
+      const text = decodeWithinBudget(complete, cap);
+      const capturedBytes = Buffer.byteLength(text, "utf8");
+      // LOSSY covers the two ways the text can fail to represent the retained
+      // bytes: an incomplete trailing sequence was dropped, or a decode/trim
+      // changed the bytes (U+FFFD substitution, or a cap trim). `truncated` then
+      // also covers bytes we never even retained. Invalid UTF-8 therefore never
+      // reports "complete" while having been transcoded.
+      const lossy = end !== raw.length || !Buffer.from(text, "utf8").equals(complete);
+      return {
+        text,
+        receivedBytes,
+        capturedBytes,
+        truncated: lossy || capturedBytes !== receivedBytes,
+      };
+    },
+  };
 }
 
 /**
@@ -236,28 +326,33 @@ export async function runControlledChild(spec: ControlledChildSpec): Promise<Con
   const cap = spec.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES;
   const grace = spec.killGraceMs ?? DEFAULT_KILL_GRACE_MS;
 
-  const out: OutputBuffer = { text: "", textBytes: 0, totalBytes: 0, overflow: false };
-  const errBuf: OutputBuffer = { text: "", textBytes: 0, totalBytes: 0, overflow: false };
+  const outCap = createStreamCapture(cap);
+  const errCap = createStreamCapture(cap);
 
-  const build = (over: Partial<ControlledChildOutcome>): ControlledChildOutcome => ({
-    label: spec.label,
-    command: spec.command,
-    args: [...spec.args],
-    cwd: spec.cwd,
-    termination: "spawn-error",
-    exitCode: null,
-    signal: null,
-    timedOut: false,
-    spawnError: null,
-    launchFailureCode: null,
-    stdout: out.text,
-    stderr: errBuf.text,
-    outputOverflow: out.overflow || errBuf.overflow,
-    durationMs: Date.now() - started,
-    killAttempted: false,
-    reaped: false,
-    ...over,
-  });
+  const build = (over: Partial<ControlledChildOutcome>): ControlledChildOutcome => {
+    const stdout = outCap.finish();
+    const stderr = errCap.finish();
+    return {
+      label: spec.label,
+      command: spec.command,
+      args: [...spec.args],
+      cwd: spec.cwd,
+      termination: "spawn-error",
+      exitCode: null,
+      signal: null,
+      timedOut: false,
+      spawnError: null,
+      launchFailureCode: null,
+      stdout: stdout.text,
+      stderr: stderr.text,
+      capture: { stdout, stderr },
+      outputOverflow: stdout.truncated || stderr.truncated,
+      durationMs: Date.now() - started,
+      killAttempted: false,
+      reaped: false,
+      ...over,
+    };
+  };
 
   let child: ChildProcess;
   try {
@@ -302,8 +397,8 @@ export async function runControlledChild(spec: ControlledChildSpec): Promise<Con
       killTree(child);
     };
 
-    child.stdout?.on("data", (chunk: Buffer) => appendBounded(out, chunk, cap));
-    child.stderr?.on("data", (chunk: Buffer) => appendBounded(errBuf, chunk, cap));
+    child.stdout?.on("data", (chunk: Buffer) => outCap.push(chunk));
+    child.stderr?.on("data", (chunk: Buffer) => errCap.push(chunk));
 
     child.on("error", (err) => {
       spawnError = messageOf(err);
@@ -630,6 +725,16 @@ export async function preserveEvidence(input: PreserveEvidenceInput): Promise<Pr
       killAttempted: input.outcome.killAttempted,
       reaped: input.outcome.reaped,
       durationMs: input.outcome.durationMs,
+    },
+    /**
+     * E4-R63: the byte contract of the two log files written below. The on-disk
+     * byte count of `child.stdout.txt` / `child.stderr.txt` IS `capturedBytes`
+     * (both are written as UTF-8 text), so an archive reader can verify the
+     * budget from the file alone.
+     */
+    capture: {
+      stdout: input.outcome.capture.stdout,
+      stderr: input.outcome.capture.stderr,
     },
     report: {
       path: input.report.path,
