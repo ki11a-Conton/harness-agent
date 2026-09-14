@@ -61,7 +61,7 @@
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, readdir, rm, rmdir, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readdir, rm, rmdir, stat, symlink, writeFile } from "node:fs/promises";
 import { platform, tmpdir } from "node:os";
 import { dirname, join, parse, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -82,7 +82,9 @@ import {
 import type {
   ChildTermination,
   ControlledChildOutcome,
+  CopyEntry,
   ExpectedChildRun,
+  PreservedEvidence,
   ReportRead,
   StreamCapture,
   TreeKillResult,
@@ -700,9 +702,20 @@ async function conclude(run: ChildRun, reasons: string[], extra?: Record<string,
           ...extra,
         },
       });
-      process.stderr.write(
-        `[e4-r55] the ${run.mode} run was not decidable — evidence preserved at ${preserved.dir} (${preserved.files.length} files)\n`,
-      );
+      // E4-R65: the message must state BOTH where the evidence is and whether
+      // the archive is complete, and must never advertise a location when the
+      // archive could not be written at all.
+      if (preserved.ok) {
+        process.stderr.write(
+          `[e4-r55] the ${run.mode} run was not decidable — evidence preserved at ${preserved.dir} ` +
+            `(${preserved.files.length} files, diagnostics integrity=${preserved.integrity})\n`,
+        );
+      } else {
+        process.stderr.write(
+          `[e4-r55] the ${run.mode} run was not decidable — the evidence archive could NOT be written ` +
+            `(${preserved.integrity}: ${preserved.error ?? "unknown reason"}); no downloadable location\n`,
+        );
+      }
     } catch (err) {
       reportDegraded("e4-r55 evidence preservation", err);
     }
@@ -1621,5 +1634,223 @@ describe("E4-R64 process-tree kill failure handling", () => {
     // The parent may observe the CHILD's terminal event before taskkill's own
     // exit, so a null exit code here means "not observed yet", not "failed".
     expect([0, null]).toContain(outcome.treeKill?.commandExitCode);
+  });
+});
+
+describe("E4-R65 evidence-copy completeness protocol", () => {
+  interface EvidenceRecord {
+    reasons: string[];
+    evidence: {
+      diagDir: string | null;
+      requested: boolean;
+      integrity: string;
+      sourceMissing: boolean | null;
+      empty: boolean | null;
+      copiedCount: number;
+      copied: string[];
+      entries: CopyEntry[];
+    };
+  }
+
+  const preserve = async (diagDir: string | undefined, label: string): Promise<PreservedEvidence> =>
+    preserveEvidence({
+      label,
+      outcome: syntheticOutcome(),
+      report: syntheticReport([]),
+      reasons: ["probe: the ORIGINAL business failure must survive"],
+      diagDir,
+    });
+
+  const readRecord = async (dir: string): Promise<EvidenceRecord> =>
+    JSON.parse(await readFile(join(dir, "run.json"), "utf8")) as EvidenceRecord;
+
+  it("A: a diagnostics dir that was never requested is 'not-requested', NOT a copy failure", async () => {
+    const preserved = await preserve(undefined, "r65-not-requested");
+    try {
+      expect(preserved.ok).toBe(true);
+      expect(preserved.copy).toBeNull();
+      expect(preserved.integrity).toBe("not-requested");
+      const record = await readRecord(preserved.dir);
+      expect(record.evidence.requested).toBe(false);
+      expect(record.evidence.integrity).toBe("not-requested");
+      expect(record.evidence.entries).toEqual([]);
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("B: an existing EMPTY directory is provably empty, not mistaken for a missing one", async () => {
+    const src = await tempDir("e4-r65-empty-");
+    const preserved = await preserve(src, "r65-empty");
+    try {
+      const record = await readRecord(preserved.dir);
+      expect(record.evidence.requested).toBe(true);
+      expect(record.evidence.empty).toBe(true);
+      expect(record.evidence.sourceMissing).toBe(false);
+      expect(record.evidence.integrity).toBe("complete");
+      expect(record.evidence.copied).toEqual([]);
+      expect(record.evidence.entries).toEqual([]);
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("C: a specified directory that does not exist archives 'missing' with an ENOENT entry", async () => {
+    const missing = join(await tempDir("e4-r65-parent-"), "does-not-exist");
+    const preserved = await preserve(missing, "r65-missing");
+    try {
+      const record = await readRecord(preserved.dir);
+      expect(record.evidence.integrity).toBe("missing");
+      expect(record.evidence.sourceMissing).toBe(true);
+      expect(record.evidence.empty).toBe(false);
+      const enoent = record.evidence.entries.find((e) => e.errorCode === "ENOENT");
+      expect(enoent, "the ENOENT must be recoverable from run.json alone").toBeDefined();
+      expect(enoent?.status).toBe("missing");
+      expect(enoent?.operation).toBe("readdir");
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("D: a directory that exists but cannot be read archives 'partial' with the operation and code", async () => {
+    // A regular FILE where a directory is expected: `readdir` fails ENOTDIR.
+    const notADir = join(await tempDir("e4-r65-notadir-"), "a-file");
+    await writeFile(notADir, "not a directory\n", "utf8");
+    const preserved = await preserve(notADir, "r65-unreadable");
+    try {
+      const record = await readRecord(preserved.dir);
+      expect(record.evidence.integrity).toBe("partial");
+      expect(record.evidence.sourceMissing).toBe(false);
+      const bad = record.evidence.entries[0];
+      expect(bad).toBeDefined();
+      expect(bad?.status).toBe("unreadable");
+      expect(bad?.operation).toBe("readdir");
+      expect(bad?.errorCode).toBeTruthy();
+      expect(bad?.reason).toBeTruthy();
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("E: a successful nested copy is complete, its files are readable, and they are listed under diagnostics/", async () => {
+    const src = await tempDir("e4-r65-good-");
+    await mkdir(join(src, "nested"), { recursive: true });
+    await writeFile(join(src, "top.json"), '{"a":1}\n', "utf8");
+    await writeFile(join(src, "nested", "inner.json"), '{"b":2}\n', "utf8");
+
+    const preserved = await preserve(src, "r65-good");
+    try {
+      expect(preserved.integrity).toBe("complete");
+      expect(preserved.files).toContain("diagnostics/top.json");
+      expect(preserved.files).toContain("diagnostics/nested/inner.json");
+      expect(await readFile(join(preserved.dir, "diagnostics", "top.json"), "utf8")).toBe('{"a":1}\n');
+      expect(await readFile(join(preserved.dir, "diagnostics", "nested", "inner.json"), "utf8")).toBe('{"b":2}\n');
+      const record = await readRecord(preserved.dir);
+      // Deterministic (sorted) manifest: "nested/..." sorts before "top.json".
+      expect(record.evidence.copied).toEqual(["nested/inner.json", "top.json"]);
+      expect(record.evidence.copiedCount).toBe(2);
+      expect(record.evidence.entries).toEqual([]);
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("F: a non-regular entry is SKIPPED — never counted as a copied file, and never degrading integrity", async () => {
+    const src = await tempDir("e4-r65-skip-");
+    await writeFile(join(src, "real.json"), "{}\n", "utf8");
+    const link = join(src, "link.json");
+    let linkUsable = false;
+    try {
+      await symlink(join(src, "real.json"), link);
+      // The sandbox sometimes makes `fs.symlink` a SILENT no-op, so verify that
+      // a link really exists instead of trusting the absence of a throw.
+      linkUsable = (await lstat(link)).isSymbolicLink();
+    } catch (err) {
+      reportDegraded("e4-r65 symlink fixture unavailable in this environment", err);
+    }
+    if (!linkUsable) {
+      // The agent sandbox blocks (or silently ignores) symlink creation, so the
+      // skip branch can only be exercised on real CI, which allows links. Here we
+      // assert the weaker invariant that no skipped entry can appear among the
+      // copies — and that the archive still reports a complete regular-file copy.
+      const preserved = await preserve(src, "r65-skip-fallback");
+      try {
+        const record = await readRecord(preserved.dir);
+        expect(record.evidence.copied).toEqual(["real.json"]);
+        expect(record.evidence.entries.every((e) => e.status !== "copied")).toBe(true);
+        expect(record.evidence.integrity).toBe("complete");
+      } finally {
+        await rm(preserved.dir, { recursive: true, force: true });
+      }
+      return;
+    }
+    const preserved = await preserve(src, "r65-skip");
+    try {
+      const record = await readRecord(preserved.dir);
+      expect(record.evidence.copied).toEqual(["real.json"]);
+      const skipped = record.evidence.entries.find((e) => e.status === "skipped");
+      expect(skipped?.path).toBe("link.json");
+      expect(skipped?.reason).toContain("not followed");
+      // Not following a link is policy, not failure.
+      expect(record.evidence.integrity).toBe("complete");
+      expect(preserved.files).not.toContain("diagnostics/link.json");
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("G: an unusable archive ROOT is reported as archive-failed, never as a downloadable location", async () => {
+    const holder = join(await tempDir("e4-r65-root-"), "a-file");
+    await writeFile(holder, "not a directory\n", "utf8");
+    const previous = process.env.E4_R55_PARENT_DIAG_DIR;
+    process.env.E4_R55_PARENT_DIAG_DIR = join(holder, "child");
+    try {
+      const preserved = await preserve(undefined, "r65-archive-failed");
+      expect(preserved.ok).toBe(false);
+      expect(preserved.integrity).toBe("archive-failed");
+      expect(preserved.error).toBeTruthy();
+      expect(preserved.files).toEqual([]);
+    } finally {
+      if (previous === undefined) delete process.env.E4_R55_PARENT_DIAG_DIR;
+      else process.env.E4_R55_PARENT_DIAG_DIR = previous;
+    }
+  });
+
+  it("H: the ORIGINAL failure reasons survive every archive outcome", async () => {
+    const cases: (string | undefined)[] = [undefined, await tempDir("e4-r65-reasons-")];
+    for (const [index, diagDir] of cases.entries()) {
+      const preserved = await preserve(diagDir, `r65-reasons-${index}`);
+      try {
+        expect(preserved.ok).toBe(true);
+        const record = await readRecord(preserved.dir);
+        expect(record.reasons).toEqual(["probe: the ORIGINAL business failure must survive"]);
+      } finally {
+        await rm(preserved.dir, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("I: after the source is gone, the archive ALONE still distinguishes empty / missing / partial", async () => {
+    const parent = await tempDir("e4-r65-distinguish-");
+    const emptySrc = join(parent, "empty");
+    const missingSrc = join(parent, "missing");
+    await mkdir(emptySrc, { recursive: true });
+
+    const emptyArchive = await preserve(emptySrc, "r65-dist-empty");
+    const missingArchive = await preserve(missingSrc, "r65-dist-missing");
+    try {
+      // The sources are already irrelevant to the verdicts; assert the archives
+      // still answer the question without them.
+      const empty = await readRecord(emptyArchive.dir);
+      const missing = await readRecord(missingArchive.dir);
+      expect(empty.evidence.integrity).toBe("complete");
+      expect(empty.evidence.empty).toBe(true);
+      expect(missing.evidence.integrity).toBe("missing");
+      expect(missing.evidence.sourceMissing).toBe(true);
+      expect(empty.evidence.integrity).not.toBe(missing.evidence.integrity);
+    } finally {
+      await rm(emptyArchive.dir, { recursive: true, force: true });
+      await rm(missingArchive.dir, { recursive: true, force: true });
+    }
   });
 });

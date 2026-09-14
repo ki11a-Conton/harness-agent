@@ -52,7 +52,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import type { Dirent } from "node:fs";
 import { copyFile, mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { platform, tmpdir } from "node:os";
-import { join, relative, resolve } from "node:path";
+import { join, resolve } from "node:path";
 
 export const CHILD_HARNESS_SCHEMA_VERSION = "1.0.0";
 
@@ -777,45 +777,149 @@ export interface PreserveEvidenceInput {
   extra?: Record<string, unknown>;
 }
 
-export interface PreservedEvidence {
-  dir: string;
-  /** Relative paths of everything written, for the report/log line. */
-  files: string[];
+/**
+ * How one entry of a diagnostics tree ended up (E4-R65, H65).
+ *   - `copied`     — a regular file was written to the archive;
+ *   - `missing`    — it (or its directory) did not exist;
+ *   - `unreadable` — it existed but the operation failed for another reason;
+ *   - `skipped`    — deliberately NOT copied (not a regular file, never followed).
+ */
+export type CopyEntryStatus = "copied" | "missing" | "unreadable" | "skipped";
+
+export interface CopyEntry {
+  /** Path relative to the copy destination root. */
+  path: string;
+  status: CopyEntryStatus;
+  operation: "readdir" | "mkdir" | "copyFile";
+  /** errno-style code when the platform supplied one. */
+  errorCode: string | null;
+  /** Always non-null for anything that is not `copied`. */
+  reason: string | null;
 }
 
-/** Copy a directory tree, reporting (never hiding) anything that fails. */
-async function copyTree(src: string, dest: string): Promise<string[]> {
+/**
+ * `complete` means every REGULAR FILE discovered was copied. `skipped`
+ * non-regular entries (links, special files) do not degrade it — not following
+ * them is the deliberate policy, not a failure — but they are still listed so a
+ * reader can see they were left out.
+ */
+export type CopyIntegrity = "complete" | "partial" | "missing" | "not-requested";
+
+export interface CopyTreeResult {
+  source: string;
+  requested: boolean;
+  /** The source ROOT itself did not exist (distinct from an empty directory). */
+  sourceMissing: boolean;
+  /** The source root existed and held no entries at all. */
+  empty: boolean;
+  /** ONLY regular files that were actually written. */
+  copied: string[];
+  /** Every non-`copied` outcome (failures AND deliberate skips). */
+  entries: CopyEntry[];
+  integrity: CopyIntegrity;
+}
+
+/** Copy a directory tree, returning a structured, self-describing result. */
+async function copyTree(src: string, dest: string): Promise<CopyTreeResult> {
   const copied: string[] = [];
-  const walk = async (from: string, to: string): Promise<void> => {
-    let entries: Dirent[];
+  const entries: CopyEntry[] = [];
+  let sourceMissing = false;
+  let empty = false;
+
+  const record = (
+    path: string,
+    status: Exclude<CopyEntryStatus, "copied">,
+    operation: CopyEntry["operation"],
+    err: unknown,
+  ): void => {
+    entries.push({
+      path,
+      status,
+      operation,
+      errorCode: (err as { code?: string } | null)?.code ?? null,
+      reason: messageOf(err),
+    });
+  };
+
+  const walk = async (from: string, to: string, relDir: string): Promise<void> => {
+    let dirents: Dirent[];
     try {
-      entries = await readdir(from, { withFileTypes: true });
+      dirents = await readdir(from, { withFileTypes: true });
     } catch (err) {
-      reportDegraded(`e4-r60 evidence copy: cannot list ${from}`, err);
+      const code = (err as { code?: string }).code;
+      if (relDir === "" && code === "ENOENT") {
+        // The root we were asked to archive simply is not there. That is a
+        // DIFFERENT fact from "it was there and had nothing in it" — and the
+        // ENOENT itself is recorded so the archive alone can explain it.
+        sourceMissing = true;
+        record(".", "missing", "readdir", err);
+        return;
+      }
+      record(relDir === "" ? "." : relDir, code === "ENOENT" ? "missing" : "unreadable", "readdir", err);
       return;
     }
-    await mkdir(to, { recursive: true });
-    for (const entry of entries) {
-      const srcPath = join(from, entry.name);
-      const destPath = join(to, entry.name);
-      if (entry.isDirectory()) {
-        await walk(srcPath, destPath);
+    if (relDir === "" && dirents.length === 0) empty = true;
+    try {
+      await mkdir(to, { recursive: true });
+    } catch (err) {
+      record(relDir === "" ? "." : relDir, "unreadable", "mkdir", err);
+      return;
+    }
+    for (const dirent of dirents) {
+      const srcPath = join(from, dirent.name);
+      const destPath = join(to, dirent.name);
+      const rel = relDir === "" ? dirent.name : `${relDir}/${dirent.name}`;
+      if (dirent.isDirectory()) {
+        await walk(srcPath, destPath, rel);
         continue;
       }
-      if (!entry.isFile()) {
-        copied.push(`${relative(dest, destPath)} (skipped: not a regular file)`);
+      if (!dirent.isFile()) {
+        // Deliberately NOT followed (unchanged protection) and deliberately NOT
+        // listed as a copied file — a consumer must never count a skipped link
+        // as successfully archived evidence.
+        entries.push({
+          path: rel,
+          status: "skipped",
+          operation: "copyFile",
+          errorCode: null,
+          reason: `not a regular file (${dirent.isSymbolicLink() ? "symbolic link" : "special file"}) — not followed`,
+        });
         continue;
       }
       try {
         await copyFile(srcPath, destPath);
-        copied.push(relative(dest, destPath));
+        copied.push(rel);
       } catch (err) {
-        reportDegraded(`e4-r60 evidence copy: cannot copy ${srcPath}`, err);
+        record(rel, (err as { code?: string }).code === "ENOENT" ? "missing" : "unreadable", "copyFile", err);
       }
     }
   };
-  await walk(src, dest);
-  return copied;
+
+  await walk(src, dest, "");
+  const failed = entries.some((e) => e.status === "missing" || e.status === "unreadable");
+  const integrity: CopyIntegrity = sourceMissing ? "missing" : failed ? "partial" : "complete";
+  // Deterministic order: `readdir` returns directory order, which differs
+  // between filesystems and would make an archive's manifest unstable.
+  copied.sort();
+  entries.sort((a, b) => (a.path === b.path ? a.operation.localeCompare(b.operation) : a.path.localeCompare(b.path)));
+  return { source: src, requested: true, sourceMissing, empty, copied, entries, integrity };
+}
+
+/** The archive's overall state, including the case where it could not be made. */
+export type EvidenceIntegrity = CopyIntegrity | "archive-failed";
+
+export interface PreservedEvidence {
+  /** false when the archive could not be written at all. */
+  ok: boolean;
+  /** Where the archive is — or, when `ok === false`, where it was attempted. */
+  dir: string;
+  /** Relative paths of everything written, for the report/log line. */
+  files: string[];
+  /** The diagnostics copy outcome; null when `diagDir` was not passed. */
+  copy: CopyTreeResult | null;
+  integrity: EvidenceIntegrity;
+  /** Why the archive failed; non-null only when `ok === false`. */
+  error: string | null;
 }
 
 /**
@@ -828,27 +932,54 @@ async function copyTree(src: string, dest: string): Promise<string[]> {
  */
 export async function preserveEvidence(input: PreserveEvidenceInput): Promise<PreservedEvidence> {
   const root = parentEvidenceRoot();
-  await mkdir(root, { recursive: true });
-  const safeLabel = input.label.replace(/[^A-Za-z0-9._-]+/g, "_").slice(0, 60);
-  const dir = await mkdtemp(join(root, `${safeLabel}__`));
   const files: string[] = [];
+  let dir: string;
+  try {
+    await mkdir(root, { recursive: true });
+    const safeLabel = input.label.replace(/[^A-Za-z0-9._-]+/g, "_").slice(0, 60);
+    dir = await mkdtemp(join(root, `${safeLabel}__`));
+  } catch (err) {
+    // Even the archive ROOT is unusable. Say so plainly — never hand back a
+    // path that looks downloadable but holds nothing.
+    reportDegraded("e4-r55 evidence root", err);
+    return {
+      ok: false,
+      dir: root,
+      files: [],
+      copy: null,
+      integrity: "archive-failed",
+      error: messageOf(err),
+    };
+  }
 
   const write = async (name: string, body: string): Promise<void> => {
     await writeFile(join(dir, name), body, "utf8");
     files.push(name);
   };
 
-  await write("child.stdout.txt", input.outcome.stdout);
-  await write("child.stderr.txt", input.outcome.stderr);
+  // A log that cannot be written is degraded, not fatal: the copy outcome and
+  // `run.json` are what make the archive decidable.
+  for (const [name, body] of [
+    ["child.stdout.txt", input.outcome.stdout],
+    ["child.stderr.txt", input.outcome.stderr],
+  ] as const) {
+    try {
+      await write(name, body);
+    } catch (err) {
+      reportDegraded(`e4-r55 evidence write ${name}`, err);
+    }
+  }
   if (input.report.rawText !== null) {
-    await write("child-report.json", input.report.rawText);
+    try {
+      await write("child-report.json", input.report.rawText);
+    } catch (err) {
+      reportDegraded("e4-r55 evidence write child-report.json", err);
+    }
   }
 
-  let bundleFiles: string[] = [];
-  if (input.diagDir !== undefined) {
-    bundleFiles = await copyTree(input.diagDir, join(dir, "diagnostics"));
-    files.push(...bundleFiles.map((f) => `diagnostics/${f}`));
-  }
+  const copy =
+    input.diagDir === undefined ? null : await copyTree(input.diagDir, join(dir, "diagnostics"));
+  if (copy !== null) files.push(...copy.copied.map((f) => `diagnostics/${f}`));
 
   const record = {
     schemaVersion: CHILD_HARNESS_SCHEMA_VERSION,
@@ -886,6 +1017,22 @@ export async function preserveEvidence(input: PreserveEvidenceInput): Promise<Pr
      * the tree was actually terminated.
      */
     treeKill: input.outcome.treeKill,
+    /**
+     * E4-R65: what the diagnostics copy achieved. Before this, a failed copy was
+     * visible only as a stderr line, and the returned `files` list was the SAME
+     * empty array for "no diagnostics dir was passed", "the directory was empty"
+     * and "the directory could not be read at all".
+     */
+    evidence: {
+      diagDir: input.diagDir ?? null,
+      requested: copy !== null,
+      integrity: copy?.integrity ?? "not-requested",
+      sourceMissing: copy?.sourceMissing ?? null,
+      empty: copy?.empty ?? null,
+      copiedCount: copy?.copied.length ?? 0,
+      copied: copy?.copied ?? [],
+      entries: copy?.entries ?? [],
+    },
     report: {
       path: input.report.path,
       kind: input.report.kind,
@@ -902,7 +1049,28 @@ export async function preserveEvidence(input: PreserveEvidenceInput): Promise<Pr
     },
     extra: input.extra ?? {},
   };
-  await write("run.json", `${JSON.stringify(record, null, 2)}\n`);
+  try {
+    await write("run.json", `${JSON.stringify(record, null, 2)}\n`);
+  } catch (err) {
+    // Without run.json the archive cannot explain itself, so it is NOT an
+    // archive: report that instead of returning a usable-looking path.
+    reportDegraded("e4-r55 evidence write run.json", err);
+    return {
+      ok: false,
+      dir,
+      files,
+      copy,
+      integrity: "archive-failed",
+      error: messageOf(err),
+    };
+  }
 
-  return { dir, files };
+  return {
+    ok: true,
+    dir,
+    files,
+    copy,
+    integrity: copy?.integrity ?? "not-requested",
+    error: null,
+  };
 }
