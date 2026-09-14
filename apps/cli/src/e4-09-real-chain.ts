@@ -258,8 +258,10 @@ export function mutateChainOrdering(source: string): string {
   if (at < 0) throw new Error("R55 mutation: the ACCEPT assert is not a standalone line");
   const mutated = `${withoutBlock.slice(0, at)}${needle}${block}\n${withoutBlock.slice(at + needle.length)}`;
   if (mutated === source) throw new Error("R55 mutation produced no change");
-  // sanity: the block must now sit AFTER the assert statement
-  if (mutated.indexOf(MUTATION_START) < mutated.lastIndexOf(needle)) {
+  // Sanity: the block must now sit AFTER the assert statement. Both markers are
+  // ALSO present as string literals near the top of this module, so the check
+  // searches for the marker as the start of a LINE, from the assert onwards.
+  if (mutated.indexOf(`\n${MUTATION_START}`, at) < 0) {
     throw new Error("R55 mutation did not move the block after the assert");
   }
   return mutated;
