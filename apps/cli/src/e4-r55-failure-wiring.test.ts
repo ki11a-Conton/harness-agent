@@ -59,16 +59,19 @@
  * wiring defect.
  */
 import { createHash } from "node:crypto";
+import { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, readdir, rm, rmdir, stat, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { platform, tmpdir } from "node:os";
 import { dirname, join, parse, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { mutateChainOrdering, relocateChainImports } from "./e4-09-real-chain.js";
+import type { ChildProcess } from "node:child_process";
 import {
   createStreamCapture,
   judgeChildProcess,
+  killTree,
   messageOf,
   parentEvidenceRoot,
   preserveEvidence,
@@ -82,6 +85,7 @@ import type {
   ExpectedChildRun,
   ReportRead,
   StreamCapture,
+  TreeKillResult,
 } from "./e4-r55-child-harness.js";
 
 const REPO_ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
@@ -770,6 +774,7 @@ function syntheticOutcome(over: Partial<ControlledChildOutcome> = {}): Controlle
     outputOverflow: false,
     durationMs: 1,
     killAttempted: false,
+    treeKill: null,
     reaped: true,
     ...over,
   };
@@ -1384,5 +1389,237 @@ describe("E4-R63 bounded log capture (byte-budget contract)", () => {
     } finally {
       await rm(preserved.dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("E4-R64 process-tree kill failure handling", () => {
+  /** A fake `taskkill` handle we can drive by hand (no PATH/system changes). */
+  const fakeKiller = (): ChildProcess => {
+    const killer = new EventEmitter() as unknown as ChildProcess;
+    (killer as unknown as { unref: () => void }).unref = () => {};
+    return killer;
+  };
+  /** A fake child that counts how many times a direct kill was requested. */
+  const fakeChild = (pid: number | undefined) => {
+    let kills = 0;
+    const child = {
+      pid,
+      kill: () => {
+        kills += 1;
+        return true;
+      },
+    } as unknown as ChildProcess;
+    return { child, kills: () => kills };
+  };
+  const depsFor = (
+    spawnKiller: (
+      command: string,
+      args: string[],
+      options: { stdio: "ignore"; windowsHide: boolean },
+    ) => ChildProcess,
+    killDirect: (child: ChildProcess) => boolean,
+  ) => ({ platform: "win32" as NodeJS.Platform, spawnKiller, killDirect });
+  const directKill = (child: ChildProcess): boolean => {
+    child.kill("SIGKILL");
+    return true;
+  };
+  const emit = (killer: ChildProcess, event: string, arg?: unknown): void => {
+    (killer as unknown as EventEmitter).emit(event, arg);
+  };
+
+  it("A: an ASYNC taskkill launch failure performs the promised direct fallback (pre-R64 it only logged)", () => {
+    const killer = fakeKiller();
+    const { child, kills } = fakeChild(4242);
+    const result = killTree(child, depsFor(() => killer, directKill));
+
+    // The launch failure arrives through the 'error' EVENT, which the try/catch
+    // around spawn() structurally cannot see.
+    emit(killer, "error", new Error("spawn taskkill ENOENT"));
+
+    expect(result.commandLaunched).toBe(false);
+    expect(result.commandError).toContain("ENOENT");
+    expect(result.directFallbackAttempted).toBe(true);
+    expect(result.directChildSignalled).toBe(true);
+    expect(kills()).toBe(1);
+  });
+
+  it("B: a NON-ZERO taskkill exit is a failure and enters the fallback path", () => {
+    const killer = fakeKiller();
+    const { child, kills } = fakeChild(4243);
+    const result = killTree(child, depsFor(() => killer, directKill));
+    expect(result.directFallbackAttempted).toBe(false);
+
+    emit(killer, "close", 1);
+
+    expect(result.commandExitCode).toBe(1);
+    expect(result.commandError).toContain("taskkill exited with 1");
+    expect(result.directFallbackAttempted).toBe(true);
+    expect(kills()).toBe(1);
+  });
+
+  it("C: a successful taskkill (exit 0) does NOT trigger the error fallback", () => {
+    const killer = fakeKiller();
+    const { child, kills } = fakeChild(4244);
+    const result = killTree(child, depsFor(() => killer, directKill));
+
+    emit(killer, "close", 0);
+
+    expect(result.commandExitCode).toBe(0);
+    expect(result.commandError).toBeNull();
+    expect(result.directFallbackAttempted).toBe(false);
+    expect(kills()).toBe(0);
+  });
+
+  it("D: an error followed by a non-zero exit signals the direct child EXACTLY once", () => {
+    const killer = fakeKiller();
+    const { child, kills } = fakeChild(4245);
+    const result = killTree(child, depsFor(() => killer, directKill));
+
+    emit(killer, "error", new Error("boom"));
+    emit(killer, "close", 1);
+
+    expect(result.directFallbackAttempted).toBe(true);
+    expect(kills(), "a second failure must not kill twice").toBe(1);
+    expect(result.commandError, "the FIRST reason is kept").toContain("boom");
+  });
+
+  it("E: a STUCK taskkill reports an unconfirmed command state instead of inventing an exit code", () => {
+    const killer = fakeKiller();
+    const { child, kills } = fakeChild(4246);
+    const result = killTree(child, depsFor(() => killer, directKill));
+
+    // Never emits anything at all.
+    expect(result.requested).toBe(true);
+    expect(result.mechanism).toBe("taskkill");
+    expect(result.commandLaunched).toBe(true);
+    expect(result.commandExitCode).toBeNull();
+    expect(result.commandError).toBeNull();
+    expect(result.directFallbackAttempted).toBe(false);
+    expect(kills()).toBe(0);
+  });
+
+  it("F: a child with no pid requests nothing and signals nothing", () => {
+    const { child, kills } = fakeChild(undefined);
+    const result = killTree(child, depsFor(() => fakeKiller(), directKill));
+    expect(result.requested).toBe(false);
+    expect(result.mechanism).toBe("none");
+    expect(result.command).toBeNull();
+    expect(kills()).toBe(0);
+  });
+
+  it("G: a synchronous spawn throw falls back immediately and is recorded", () => {
+    const { child, kills } = fakeChild(4247);
+    const result = killTree(
+      child,
+      depsFor(() => {
+        throw new Error("sync spawn failure");
+      }, directKill),
+    );
+    expect(result.commandLaunched).toBe(false);
+    expect(result.commandError).toContain("sync spawn failure");
+    expect(result.directFallbackAttempted).toBe(true);
+    expect(kills()).toBe(1);
+  });
+
+  it("H: the direct kill is named 'signalled' — never presented as proof the whole tree died", () => {
+    const killer = fakeKiller();
+    const { child } = fakeChild(4248);
+    const result = killTree(child, depsFor(() => killer, directKill));
+    emit(killer, "error", new Error("nope"));
+    expect(result.directChildSignalled).toBe(true);
+    // There is deliberately no `treeKilled` / `descendantsGone` field to over-read.
+    expect(Object.keys(result)).not.toContain("treeKilled");
+    expect(Object.keys(result)).not.toContain("descendantsGone");
+  });
+
+  it("I: a kill that never produces a terminal event resolves as UNCONFIRMED instead of hanging", async () => {
+    // The child outlives the deadline by seconds, the injected taskkill fails
+    // asynchronously and the injected direct kill does nothing. The parent must
+    // still return promptly, report reaped=false, and release the handles.
+    const script = await writeTempScript("e4-r64-unkillable.js", "setTimeout(() => process.exit(0), 4000);\n");
+    const started = Date.now();
+    const outcome = await runControlledChild({
+      label: "r64-unconfirmed",
+      command: process.execPath,
+      args: [script],
+      cwd: REPO_ROOT,
+      env: { ...process.env },
+      timeoutMs: 400,
+      killGraceMs: 50,
+      killDeps: {
+        platform: "win32",
+        spawnKiller: () => {
+          const killer = fakeKiller();
+          setTimeout(() => emit(killer, "error", new Error("injected taskkill failure")), 10);
+          return killer;
+        },
+        killDirect: () => false,
+      },
+    });
+    const elapsed = Date.now() - started;
+    expect(elapsed, "the parent must not wait for an un-reaped child").toBeLessThan(3000);
+    expect(outcome.termination).toBe("timeout");
+    expect(outcome.timedOut).toBe(true);
+    expect(outcome.reaped).toBe(false);
+    expect(outcome.treeKill?.requested).toBe(true);
+    expect(outcome.treeKill?.directFallbackAttempted).toBe(true);
+    expect(outcome.treeKill?.directChildSignalled).toBe(false);
+    expect(outcome.treeKill?.commandExitCode).toBeNull();
+    expect(outcome.treeKill?.commandError).toContain("injected taskkill failure");
+  });
+
+  it("J: the tree-kill facts reach run.json, not only stderr", async () => {
+    const treeKill: TreeKillResult = {
+      requested: true,
+      mechanism: "taskkill",
+      command: "taskkill /pid 1 /t /f",
+      commandLaunched: false,
+      commandExitCode: null,
+      commandError: "spawn taskkill ENOENT",
+      directFallbackAttempted: true,
+      directChildSignalled: true,
+      settled: true,
+    };
+    const preserved = await preserveEvidence({
+      label: "r64-treekill",
+      outcome: syntheticOutcome({ treeKill, killAttempted: true }),
+      report: syntheticReport([]),
+      reasons: ["probe: tree kill"],
+    });
+    try {
+      const record = JSON.parse(await readFile(join(preserved.dir, "run.json"), "utf8")) as {
+        treeKill: TreeKillResult;
+      };
+      expect(record.treeKill).toEqual(treeKill);
+      expect(record.treeKill.commandError).toContain("ENOENT");
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("K: the REAL Windows taskkill path launches and terminates the tree without a fallback", async () => {
+    if (platform() !== "win32") {
+      // POSIX coverage stays with the existing real process-group tests; this
+      // assertion is Windows-specific by construction.
+      return;
+    }
+    const script = await writeTempScript("e4-r64-real-kill.js", "setInterval(() => {}, 1000);\n");
+    const outcome = await runControlledChild({
+      label: "r64-real-taskkill",
+      command: process.execPath,
+      args: [script],
+      cwd: REPO_ROOT,
+      env: { ...process.env },
+      timeoutMs: 700,
+      killGraceMs: 10_000,
+    });
+    expect(outcome.termination).toBe("timeout");
+    expect(outcome.reaped).toBe(true);
+    expect(outcome.treeKill?.mechanism).toBe("taskkill");
+    expect(outcome.treeKill?.commandLaunched).toBe(true);
+    expect(outcome.treeKill?.directFallbackAttempted).toBe(false);
+    // The parent may observe the CHILD's terminal event before taskkill's own
+    // exit, so a null exit code here means "not observed yet", not "failed".
+    expect([0, null]).toContain(outcome.treeKill?.commandExitCode);
   });
 });

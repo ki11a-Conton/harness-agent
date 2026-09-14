@@ -114,6 +114,13 @@ export interface ControlledChildSpec {
   maxOutputBytes?: number;
   /** Grace to observe the terminal event after a tree kill. */
   killGraceMs?: number;
+  /**
+   * E4-R64 test seam: override the tree-kill dependencies. Production callers
+   * omit it, so the real platform/`taskkill`/`child.kill` are used. It exists so
+   * the async launch-failure and non-zero-exit paths can be exercised WITHOUT
+   * removing the system `taskkill` or editing PATH.
+   */
+  killDeps?: Partial<KillTreeDeps>;
 }
 
 export interface ControlledChildOutcome {
@@ -152,6 +159,12 @@ export interface ControlledChildOutcome {
   durationMs: number;
   /** true when a tree kill was attempted (deadline or abort). */
   killAttempted: boolean;
+  /**
+   * E4-R64: what the tree-kill attempt actually achieved. `null` when no kill
+   * was attempted. Carries the termination command's launch/exit/error facts so
+   * a failed tree kill is visible in `run.json`, not only on stderr.
+   */
+  treeKill: TreeKillResult | null;
   /** true when the child's own terminal event was observed (process reaped). */
   reaped: boolean;
 }
@@ -271,48 +284,148 @@ export function createStreamCapture(cap: number): {
 }
 
 /**
- * Terminate a child's whole process TREE.
+ * The observable outcome of a tree-kill ATTEMPT (E4-R64, H64).
+ *
+ * Every field is a separate fact on purpose: "we asked for a tree kill" is not
+ * "the command started", which is not "the command succeeded", which is not
+ * "the tree is gone". The previous implementation reported none of them — it
+ * only wrote to stderr, so a failed tree kill was invisible in `run.json`.
+ */
+export interface TreeKillResult {
+  /** A tree kill was requested at all (false when the child never got a pid). */
+  requested: boolean;
+  mechanism: "taskkill" | "process-group" | "none";
+  /** The tree-kill command line (null when a process-group signal was used). */
+  command: string | null;
+  /** Did the tree-kill COMMAND process start? null = not applicable / unknown. */
+  commandLaunched: boolean | null;
+  /** The tree-kill command's exit code; null when it never started or is unknown. */
+  commandExitCode: number | null;
+  /** Launch failure or non-zero exit reason. Never a silent failure. */
+  commandError: string | null;
+  /** A direct kill of the DIRECT child was attempted as a fallback. */
+  directFallbackAttempted: boolean;
+  /**
+   * We asked the DIRECT child to die. This is NOT evidence that the whole tree
+   * died — a descendant can outlive its parent, so it is deliberately named
+   * "signalled" rather than "killed".
+   */
+  directChildSignalled: boolean;
+  /** A fallback has already run, so a second failure cannot double-kill. */
+  settled: boolean;
+}
+
+/** Injection seam so the async failure paths are testable without touching PATH. */
+export interface KillTreeDeps {
+  platform: NodeJS.Platform;
+  spawnKiller: KillerSpawner;
+  killDirect: (child: ChildProcess) => boolean;
+}
+
+export type KillerSpawner = (
+  command: string,
+  args: string[],
+  options: { stdio: "ignore"; windowsHide: boolean },
+) => ChildProcess;
+
+function defaultKillDeps(): KillTreeDeps {
+  return {
+    platform: platform(),
+    spawnKiller: (command, args, options) => spawn(command, args, options),
+    killDirect: (child) => {
+      try {
+        child.kill("SIGKILL");
+        return true;
+      } catch (err) {
+        // Already gone is the expected case here; anything else is reported.
+        reportDegraded("e4-r60 direct kill", err);
+        return false;
+      }
+    },
+  };
+}
+
+/**
+ * Terminate a child's whole process TREE, reporting exactly what happened.
  *
  * Windows: `taskkill /pid <pid> /t /f` — the same recipe the production
  * `ProcessExecutor` uses; `child.kill()` alone leaves the descendants behind.
  * POSIX: the child is spawned `detached`, so it leads its own process group and
  * a single negative-pid signal reaches every descendant in that group.
+ *
+ * H64: a `spawn` that cannot start reports through the ASYNC `error` event, which
+ * the surrounding try/catch cannot cover — so the promised direct fallback used
+ * to never run, and a non-zero `taskkill` exit was never checked at all. Both
+ * paths now fall back exactly once.
  */
-function killTree(child: ChildProcess): void {
+export function killTree(child: ChildProcess, deps: KillTreeDeps = defaultKillDeps()): TreeKillResult {
+  const result: TreeKillResult = {
+    requested: false,
+    mechanism: "none",
+    command: null,
+    commandLaunched: null,
+    commandExitCode: null,
+    commandError: null,
+    directFallbackAttempted: false,
+    directChildSignalled: false,
+    settled: false,
+  };
   const pid = child.pid;
-  if (pid === undefined) return;
-  if (platform() === "win32") {
+  if (pid === undefined) return result;
+  result.requested = true;
+
+  // Exactly one fallback, ever: a late second failure must not kill twice.
+  const fallback = (reason: string): void => {
+    if (result.settled) return;
+    result.settled = true;
+    result.directFallbackAttempted = true;
+    result.commandError = result.commandError ?? reason;
+    result.directChildSignalled = deps.killDirect(child);
+  };
+
+  if (deps.platform === "win32") {
+    result.mechanism = "taskkill";
+    const args = ["/pid", String(pid), "/t", "/f"];
+    result.command = `taskkill ${args.join(" ")}`;
+    let killer: ChildProcess;
     try {
-      const killer = spawn("taskkill", ["/pid", String(pid), "/t", "/f"], {
-        stdio: "ignore",
-        windowsHide: true,
-      });
-      // A killer that cannot start must not crash the parent with an unhandled
-      // 'error' event; the direct kill below is the fallback either way.
-      killer.on("error", (err) => reportDegraded("e4-r60 taskkill spawn", err));
-      killer.unref();
+      killer = deps.spawnKiller("taskkill", args, { stdio: "ignore", windowsHide: true });
+      result.commandLaunched = true;
     } catch (err) {
+      result.commandLaunched = false;
       reportDegraded("e4-r60 taskkill", err);
-      killDirect(child);
+      fallback(messageOf(err));
+      return result;
     }
-    return;
+    // NOT covered by the try/catch above: a missing taskkill binary reports here.
+    killer.on("error", (err) => {
+      result.commandLaunched = false;
+      result.commandError = messageOf(err);
+      reportDegraded("e4-r60 taskkill spawn", err);
+      fallback(messageOf(err));
+    });
+    killer.on("close", (code) => {
+      result.commandExitCode = code;
+      if (code !== 0) {
+        const reason = `taskkill exited with ${code === null ? "no code" : code}`;
+        reportDegraded("e4-r60 taskkill exit", reason);
+        fallback(reason);
+      }
+    });
+    killer.unref();
+    return result;
   }
+
+  result.mechanism = "process-group";
   try {
     // Negative pid = the whole process GROUP led by the detached child.
     process.kill(-pid, "SIGKILL");
+    result.settled = true;
   } catch (err) {
     reportDegraded("e4-r60 process-group kill", err);
-    killDirect(child);
+    fallback(messageOf(err));
   }
-}
-
-function killDirect(child: ChildProcess): void {
-  try {
-    child.kill("SIGKILL");
-  } catch (err) {
-    // Already gone is the expected case here; anything else is reported.
-    reportDegraded("e4-r60 direct kill", err);
-  }
+  return result;
 }
 
 /**
@@ -328,6 +441,10 @@ export async function runControlledChild(spec: ControlledChildSpec): Promise<Con
 
   const outCap = createStreamCapture(cap);
   const errCap = createStreamCapture(cap);
+  // E4-R64: production uses the real platform/spawn/kill; a test may override.
+  const deps: KillTreeDeps = { ...defaultKillDeps(), ...spec.killDeps };
+  // Declared out here so `build` can carry it into every terminal outcome.
+  let treeKill: TreeKillResult | null = null;
 
   const build = (over: Partial<ControlledChildOutcome>): ControlledChildOutcome => {
     const stdout = outCap.finish();
@@ -349,6 +466,7 @@ export async function runControlledChild(spec: ControlledChildSpec): Promise<Con
       outputOverflow: stdout.truncated || stderr.truncated,
       durationMs: Date.now() - started,
       killAttempted: false,
+      treeKill,
       reaped: false,
       ...over,
     };
@@ -394,7 +512,31 @@ export async function runControlledChild(spec: ControlledChildSpec): Promise<Con
 
     const doKillTree = (): void => {
       killAttempted = true;
-      killTree(child);
+      treeKill = killTree(child, deps);
+    };
+
+    /**
+     * E4-R64: the grace period expired without a terminal event. The outcome
+     * already reports `reaped: false`; this additionally stops the un-reaped
+     * child from keeping THIS process alive forever by destroying the pipes and
+     * unref'ing the handle. It is not a claim that the child died.
+     */
+    const releaseUnreapedChild = (): void => {
+      try {
+        child.stdout?.destroy();
+      } catch (err) {
+        reportDegraded("e4-r60 stdout release", err);
+      }
+      try {
+        child.stderr?.destroy();
+      } catch (err) {
+        reportDegraded("e4-r60 stderr release", err);
+      }
+      try {
+        child.unref();
+      } catch (err) {
+        reportDegraded("e4-r60 child unref", err);
+      }
     };
 
     child.stdout?.on("data", (chunk: Buffer) => outCap.push(chunk));
@@ -455,7 +597,9 @@ export async function runControlledChild(spec: ControlledChildSpec): Promise<Con
         doKillTree();
         graceTimer = setTimeout(() => {
           // The kill did not produce a terminal event in time. Report that
-          // honestly instead of pretending the child is gone.
+          // honestly instead of pretending the child is gone, and release the
+          // handles so an un-reaped child cannot hang this process (E4-R64).
+          releaseUnreapedChild();
           finish(
             build({
               termination: "timeout",
@@ -736,6 +880,12 @@ export async function preserveEvidence(input: PreserveEvidenceInput): Promise<Pr
       stdout: input.outcome.capture.stdout,
       stderr: input.outcome.capture.stderr,
     },
+    /**
+     * E4-R64: what the tree kill achieved. Before this, a failed `taskkill` was
+     * visible ONLY as a stderr line, so an archive reader could not tell whether
+     * the tree was actually terminated.
+     */
+    treeKill: input.outcome.treeKill,
     report: {
       path: input.report.path,
       kind: input.report.kind,
