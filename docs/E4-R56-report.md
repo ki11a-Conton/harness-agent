@@ -170,3 +170,49 @@ challenger → paired evaluation → 预算）；本轮**没有真实模型质�
 **版本说明**：本条改动发生在 R56 门禁（§4 绑定版本 `c9ccfe0`）**之后**，属于**测试文件 +
 配置文件**改动，不改变 `apps/cli` 诊断采集与文档校验的任何行为。§4 的门禁结论对 `c9ccfe0`
 的代码仍然有效；本补记不声称该改动已被全量门禁覆盖，其自身证据为上表实测。
+
+---
+
+## 11. 补记（2026-09-14，推送后）：CI 实测结果 —— §5 的 NOT_RUN 已被真实运行取代
+
+用户指示推送后，本轮提交已上传远端（`79cba18..9886f6a`，共 15 个提交），CI 随即运行。
+**§5 的 "NOT_RUN" 状态已作废，以下为公开 CI 页面的实测结果**（数据来源：
+`github.com/ki11a-Conton/harness-agent/actions`；job 日志需认证，本环境无法读取）。
+
+| run | head SHA | 范围 | 结果 |
+|---|---|---|---|
+| #133 `34762901299` | `79cba18`（本轮基线） | 基线 | 四 job 全绿（与计划 §0 一致） |
+| **#134 `34797294295`** | `9886f6a`（本轮 15 个提交） | 本轮实现 | **Failure** |
+| #135 `34797858032` | `83f3c61`（+ 缺口修复） | 本轮实现 | 检查时仍 In progress；coverage gate 已报 exit 1 |
+
+**#134 的失败明细（实测）**：
+
+- `install · typecheck · test · build · benchmark-smoke · audit (windows-latest)` → **exit code 1**（2m58s）
+- `coverage gate (ubuntu)` → **exit code 1**
+- `install · ... (ubuntu-latest)` → 无 error annotation（该矩阵作业通过）
+- 产物中含 **`e4-09-diagnostics-windows-latest-34797294295-attempt-1`（2.78 KB）**：
+  说明 Windows 上确有 e4-09 家族的用例失败，**且 R40/R45/R51 建立的失败取证链在 CI 上确实
+  成功落盘了证据包**——这正是该链路的设计目的，本轮 R51/R52 的修复也覆盖了它的读写路径。
+
+**#135 的实测（检查时刻）**：`coverage gate (ubuntu)` 再次 **exit 1**（同一 job，step 6 报错），
+windows-latest 作业尚未完成，尚无 windows 诊断产物。
+
+### 结论与状态变更
+
+1. **CI 未通过。** R56 §6 中"必需 CI"一栏的状态由 **NOT_RUN 更正为 FAILED**；
+   本轮 13+ 个提交**不能**按"纯文档提交"处理（含代码与测试改动）。
+2. **coverage gate 在 #134、#135 两次运行中均可复现失败**，而基线 #133 全绿 ——
+   因此**高度怀疑由本轮改动引入**，但**根因尚未确定**。
+3. **根因未确定的原因（不猜测）**：GitHub 的 job 日志与 artifact 下载均需认证，本环境无法读取；
+   GitHub 连接器不提供 workflow-log / artifact-download 工具。因此本报告**不给出推测性结论**，
+   将其列为**未解决项**。
+4. **本补记不改变 §4 的本地门禁结论**（那是 `c9ccfe0` 的本地结果，仍然成立）；
+   它记录的是同一实现在**权威门禁**上的真实表现。
+
+### 下一轮第一优先（建议）
+
+获取并阅读 #134 / #135 的 `coverage gate (ubuntu)` 与 `windows-latest` 日志（或下载
+`test-report-windows-latest` / `e4-09-diagnostics-windows-latest-*` 产物），据此定位：
+(a) coverage gate 失败是测试失败还是阈值；(b) Windows 上失败的 e4-09 用例及其
+`diagnostic.json` 中的 `failure.stage` / `decision` / artifact 采集情况。
+在有日志之前不应再改代码。
