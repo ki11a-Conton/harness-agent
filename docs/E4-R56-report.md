@@ -140,3 +140,33 @@ F51–F55 的具体缺口已关闭并有可复现证据。按计划 §9，**停�
 若下一步目标是提升 Agent 实际任务完成率，应另立策略层计划（用户场景 → 失败簇 → 假设 →
 challenger → paired evaluation → 预算）；本轮**没有真实模型质量证据**，不宣称 champion
 质量已提升，也不把付费评测作为交付门槛。
+
+---
+
+## 10. 补记（2026-09-14，用户指示）：修复本轮之前就存在的缺口
+
+§8 第 8 条记录的"未归因的历史遗留"已在本轮收尾后**修复**（用户明确指示），提交
+**`413915c`**。原文保留，此处记录实际处置。
+
+**改了什么**（仅测试文件 + `.gitignore`，无生产代码改动）：
+
+1. `packages/evaluation/src/mining.test.ts`：`writeFrozenCase (layout)` 的临时树原本写在
+   `process.cwd()`（**仓库根**）并在 `afterAll` 删除。两处 scratch 路径改为
+   `mkdtemp(join(tmpdir(), "e4-mining-"))` 下的子目录，`afterAll` 只清理该临时根。
+   测试语义不变（断言仍覆盖 request/expected/case.json/fixture 布局与 `../evil.txt` 逃逸拒绝）。
+2. `.gitignore`：追加 `.tmp-mining-*/`，理由是**已存在的机器上**可能仍有被中断的运行留下的
+   同名残留；它们会持续让 `git status --porcelain` 非空。与 R24 / R34 / R46 / R55 的
+   fixture 同口径。
+
+**验证（判别性前后对照，实测）**：
+
+| 步骤 | 修复前 | 修复后 |
+|---|---|---|
+| 磁盘上存在 `.tmp-mining-test/` + `.tmp-mining-escape/` | `git status --porcelain` 非空（`?? .tmp-mining-test/` 等）→ benchmark 见脏树拒跑 | `git status --porcelain` **为空**；`git check-ignore` 命中 `.gitignore:63` |
+| 同上条件下跑 `apps/cli/src/benchmark-command.test.ts` | **1 failed**（`source tree is not provably clean`） | **67 passed (67)** |
+| `packages/evaluation/src/mining.test.ts` | 20 passed，但会在仓库根留下目录 | **20 passed**，仓库根无残留 |
+| `tsc -b packages/evaluation` | — | **exit 0** |
+
+**版本说明**：本条改动发生在 R56 门禁（§4 绑定版本 `c9ccfe0`）**之后**，属于**测试文件 +
+配置文件**改动，不改变 `apps/cli` 诊断采集与文档校验的任何行为。§4 的门禁结论对 `c9ccfe0`
+的代码仍然有效；本补记不声称该改动已被全量门禁覆盖，其自身证据为上表实测。
