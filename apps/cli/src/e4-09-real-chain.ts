@@ -35,11 +35,11 @@ import {
   summarizeDecisionArtifact,
   summarizePairedArtifact,
   summarizeV3Artifact,
-} from "../src/e4-09-diagnostics.js";
+} from "./e4-09-diagnostics.js";
 
 export const GUIDANCE_MARKER = "Budget-aware completion guidance:";
 export const CANDIDATE = "budget_aware_completion_v1";
-export const CHAIN_MODULE_PATH = "apps/cli/test-infra/e4-09-real-chain.ts";
+export const CHAIN_MODULE_PATH = "apps/cli/src/e4-09-real-chain.ts";
 
 /** Markers the R55 order mutation operates on — see `mutateChainOrdering`. */
 export const MUTATION_START = "  // ── R55-MUTATION-TARGET-START ──";

@@ -12,7 +12,7 @@
  * recorder by hand and hand-wrote a `{decision:'REJECT'}` fixture. It never ran
  * the production registration/save wiring, so reverting that wiring to its
  * pre-R45 shape would not have failed a single R45 assertion. Here every case
- * goes through the SHARED real chain (`../e4-09-real-chain.js`), the same module
+ * goes through the SHARED real chain (`../../src/e4-09-real-chain.js`), the same module
  * the real E2E suite uses.
  *
  * Three of these four tests are EXPECTED to fail — that is the point: a failing
@@ -31,8 +31,8 @@ import { gitHeadShaAt } from "../../src/observation-evidence.js";
 
 const MUTATION = process.env.E4_R55_MUTATION === "1";
 const chainModule = MUTATION
-  ? await import("../e4-r55-mutated-chain.generated.js")
-  : await import("../e4-09-real-chain.js");
+  ? await import("../../src/e4-r55-mutated-chain.generated.js")
+  : await import("../../src/e4-09-real-chain.js");
 
 const { CANDIDATE, buildRealChain, captureOnFailure, makeCaseDir } = chainModule;
 const { runV3ChampionEval } = await import("@ar/evaluation");

@@ -58,7 +58,7 @@ import {
   captureOnFailure,
   importBenchmarkWithStrongIsolation,
   makeCaseDir,
-} from "../test-infra/e4-09-real-chain.js";
+} from "./e4-09-real-chain.js";
 
 const sha = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
 /** E4-R08: HEAD at run time — the observations below bind to this snapshot. */
