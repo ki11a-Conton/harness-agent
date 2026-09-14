@@ -26,7 +26,7 @@
 import { expect, vi } from "vitest";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative, resolve } from "node:path";
 import type { ModelEvent, ModelProvider, ModelRef, ProviderConfig } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
 import { runV3ChampionEval } from "@ar/evaluation";
@@ -316,17 +316,8 @@ export function mutateChainOrdering(source: string): string {
 }
 
 /**
- * The ONE relative import of this module that a relocated copy must rewrite.
- *
- * Built by CONCATENATION so this module never contains the literal it searches
- * for — the same defence the P14-6 static scan uses for its own patterns. A
- * verbatim needle would also match its own declaration here (measured: 2 hits,
- * which the count assertion below correctly rejected).
- */
-const DIAGNOSTICS_IMPORT_NEEDLE = ["from", '"./e4-09-diagnostics.js"'].join(" ");
-
-/**
- * E4-R59 (G59) — relocate a generated copy's relative import.
+ * E4-R59 (G59) — relocate a generated copy's relative imports.
+ * E4-R60 (G60) — rewrite ALL of them, and prove the target set is unchanged.
  *
  * The order-mutation copy used to be written back into `apps/cli/src/`, i.e.
  * INSIDE `apps/cli/tsconfig.json`'s `include: ["src"]`. It was therefore part of
@@ -337,20 +328,72 @@ const DIAGNOSTICS_IMPORT_NEEDLE = ["from", '"./e4-09-diagnostics.js"'].join(" ")
  * one fixed path.
  *
  * The copy now lives in a per-run directory outside both the production compile
- * input and the default Vitest include, so its relative import must be rewritten
- * to reach the REAL diagnostics module — never a stub. This module has exactly
- * one relative import and the rewrite is asserted, so a future refactor cannot
- * silently produce an unresolvable copy. Bare `@ar/*` specifiers resolve from
- * anywhere inside the workspace and need no rewrite.
+ * input and the default Vitest include, so its relative specifiers must be
+ * rewritten to reach the REAL modules — never stubs.
+ *
+ * R59 rewrote only the single STATIC diagnostics import. This module also has a
+ * DYNAMIC import of the benchmark command module, and that one was left pointing
+ * at the old location, so the relocated copy could not resolve it at all. The
+ * mutated child then died during setup, and the R55 order-mutation "negative
+ * control" still passed — because a decision artifact that was never produced is
+ * indistinguishable, to a bundle-shaped check, from a decision artifact that was
+ * never persisted. The counterexample was VACUOUS: it proved nothing about the
+ * decision-save ordering. (E4-R60's stricter judging rejected it, which is how
+ * this was found.)
+ *
+ * Every relative specifier — static and dynamic — is therefore resolved against
+ * the ORIGINAL module's directory and re-expressed relative to the copy's
+ * directory, preserving the TypeScript ESM `.js`-specifier convention (a `.js`
+ * specifier denotes the `.ts` source). Bare `@ar/*` specifiers resolve from
+ * anywhere inside the workspace and need no rewrite. A final verification pass
+ * asserts the SET of absolute targets is identical before and after, so a future
+ * relative import can never be silently dropped.
  */
-export function rewriteChainRelativeImport(source: string, specifier: string): string {
-  const count = source.split(DIAGNOSTICS_IMPORT_NEEDLE).length - 1;
-  if (count !== 1) {
+const RELATIVE_SPECIFIER = /(\bfrom\s*|\bimport\s*\(\s*)(["'])(\.\.?\/[^"']*)\2/g;
+
+export function relocateChainImports(
+  source: string,
+  fromDir: string,
+  toDir: string,
+): { source: string; rewrites: { from: string; to: string }[] } {
+  const toSourcePath = (specifier: string, baseDir: string): string =>
+    resolve(baseDir, specifier)
+      .split("\\")
+      .join("/")
+      .replace(/\.js$/, ".ts");
+
+  const targetsOf = (text: string, baseDir: string): string[] =>
+    [...text.matchAll(RELATIVE_SPECIFIER)].map((m) => toSourcePath(String(m[3]), baseDir)).sort();
+
+  const before = targetsOf(source, fromDir);
+  if (before.length === 0) {
     throw new Error(
-      `R59: expected exactly ONE ${DIAGNOSTICS_IMPORT_NEEDLE} in the chain module, found ${count} — a relocated copy cannot be produced safely`,
+      "R60: the chain module has no relative specifier — refusing to relocate a copy that would resolve its dependencies from the wrong directory",
     );
   }
-  return source.replace(DIAGNOSTICS_IMPORT_NEEDLE, `from ${JSON.stringify(specifier)}`);
+
+  const rewrites: { from: string; to: string }[] = [];
+  const out = source.replace(
+    RELATIVE_SPECIFIER,
+    (_match, lead: string, quote: string, specifier: string) => {
+      const target = toSourcePath(specifier, fromDir);
+      const rel = relative(toDir, target)
+        .split("\\")
+        .join("/")
+        .replace(/\.ts$/, ".js");
+      const next = rel.startsWith(".") ? rel : `./${rel}`;
+      rewrites.push({ from: specifier, to: next });
+      return `${lead}${quote}${next}${quote}`;
+    },
+  );
+
+  const after = targetsOf(out, toDir);
+  if (before.length !== after.length || before.some((t, i) => t !== after[i])) {
+    throw new Error(
+      `R60: relocation changed the set of relative import targets — refusing to emit a copy that resolves something else\n  before: ${before.join(", ")}\n  after:  ${after.join(", ")}`,
+    );
+  }
+  return { source: out, rewrites };
 }
 
 /** Shared failure-capture hook body used by every suite that drives this chain. */

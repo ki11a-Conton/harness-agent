@@ -64,7 +64,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
-import { mutateChainOrdering, rewriteChainRelativeImport } from "./e4-09-real-chain.js";
+import { mutateChainOrdering, relocateChainImports } from "./e4-09-real-chain.js";
 import {
   judgeChildProcess,
   messageOf,
@@ -86,6 +86,9 @@ const VITEST_BIN = join(REPO_ROOT, "node_modules", "vitest", "vitest.mjs");
 const CHILD_CONFIG = "apps/cli/test-infra/r55-vitest.config.ts";
 const REAL_CHAIN = join(REPO_ROOT, "apps/cli", "src", "e4-09-real-chain.ts");
 const REAL_DIAGNOSTICS = join(REPO_ROOT, "apps/cli", "src", "e4-09-diagnostics.ts");
+/** E4-R60: the module the chain imports DYNAMICALLY — the specifier R59 left
+ *  behind, which made the order counterexample vacuous. */
+const REAL_BENCHMARK_COMMAND = join(REPO_ROOT, "apps/cli", "src", "benchmark-command.ts");
 /**
  * E4-R59 (G59): per-run mutation copies live here — OUTSIDE `apps/cli/tsconfig.json`'s
  * `include: ["src"]` (so never part of the production compile input) and outside
@@ -196,6 +199,12 @@ interface Bundle {
 interface ChainModuleRef {
   path: string;
   sha256: string;
+  /**
+   * E4-R60: the relative specifiers this run's copy had rewritten, so the
+   * preserved evidence shows exactly how the copy reaches the real modules.
+   * Empty for the control run (it IS the repository module).
+   */
+  relocatedImports: { from: string; to: string }[];
 }
 
 /** Everything one child run produced, INCLUDING the right to clean it up. */
@@ -247,9 +256,16 @@ async function readBundles(
  *   - `"mutated"` -> a fresh copy of the real module with the decision-save block
  *                    moved after the ACCEPT assert, written into a PER-RUN
  *                    directory outside the production compile input and outside
- *                    the default Vitest include. Its single relative import is
- *                    rewritten so the copy still loads the REAL diagnostics
- *                    module — not a stub, not a standalone fake implementation.
+ *                    the default Vitest include. Its relative specifiers are
+ *                    rewritten so the copy still loads the REAL modules — not
+ *                    stubs, not a standalone fake implementation.
+ *
+ * E4-R60 (G60): ALL relative specifiers are rewritten, not just the static
+ * diagnostics import. The dynamic benchmark-command import was previously left
+ * pointing at the old location, so the copy could not load at all and the order
+ * counterexample was vacuous (see `relocateChainImports`). The helper verifies
+ * that the set of absolute import targets is unchanged, so a future relative
+ * import cannot silently break the copy again.
  *
  * The returned path is handed to the child through `E4_R55_CHAIN_MODULE`, which
  * the child config binds with an alias. The child loads exactly this path or
@@ -257,16 +273,14 @@ async function readBundles(
  */
 async function prepareChainModule(runDir: string, mode: "real" | "mutated"): Promise<ChainModuleRef> {
   if (mode === "real") {
-    return { path: REAL_CHAIN, sha256: sha256(await readFile(REAL_CHAIN)) };
+    return { path: REAL_CHAIN, sha256: sha256(await readFile(REAL_CHAIN)), relocatedImports: [] };
   }
   await mkdir(runDir, { recursive: true });
   const mutated = mutateChainOrdering(await readFile(REAL_CHAIN, "utf8"));
-  const rel = relative(runDir, REAL_DIAGNOSTICS).split("\\").join("/").replace(/\.ts$/, ".js");
-  const specifier = rel.startsWith(".") ? rel : `./${rel}`;
-  const source = rewriteChainRelativeImport(mutated, specifier);
+  const { source, rewrites } = relocateChainImports(mutated, dirname(REAL_CHAIN), runDir);
   const path = join(runDir, "chain.ts");
   await writeFile(path, source, "utf8");
-  return { path, sha256: sha256(Buffer.from(source, "utf8")) };
+  return { path, sha256: sha256(Buffer.from(source, "utf8")), relocatedImports: rewrites };
 }
 
 /**
@@ -565,6 +579,25 @@ async function judgeMutatedRun(run: ChildRun, realChainSha: string): Promise<str
     }
     if (identity.sha256 !== run.chain.sha256) {
       reasons.push("the mutated bundle's chain digest is not the copy this run selected");
+    }
+  }
+
+  // E4-R60: the relocation must reach EVERY real module the copy depends on.
+  // R59 left the DYNAMIC benchmark import pointing at the old location, so the
+  // copy could not load, and a run that never reached the evaluator still looked
+  // like a valid "decision not persisted" counterexample. Resolving the copy's
+  // own specifiers guards against that exact regression.
+  const copySpecifiers = [
+    ...(await readFile(run.chain.path, "utf8")).matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*)"(\.\.?\/[^"]*)"/g),
+  ].map((m) =>
+    resolve(dirname(run.chain.path), String(m[1]))
+      .split("\\")
+      .join("/")
+      .replace(/\.js$/, ".ts"),
+  );
+  for (const target of [REAL_DIAGNOSTICS, REAL_BENCHMARK_COMMAND].map((p) => p.split("\\").join("/").replace(/\.ts$/, ""))) {
+    if (!copySpecifiers.includes(target)) {
+      reasons.push(`the mutated copy does not resolve to ${target} — its relative imports were not fully relocated`);
     }
   }
 
@@ -1034,16 +1067,30 @@ describe("E4-R55 real production failure wiring (parent verifier over an isolate
       // Same source -> same mutation, so the copies are interchangeable in content.
       expect(a.sha256).toBe(b.sha256);
 
-      // Each copy's rewritten import must RESOLVE to the real diagnostics module,
-      // whatever directory depth the copy happens to sit at. The specifier uses
-      // the ESM `.js` form (TypeScript resolves `.js` -> the `.ts` source), so the
-      // comparison is made modulo that extension convention.
+      // Each copy's rewritten imports must RESOLVE to the real repository
+      // modules, whatever directory depth the copy happens to sit at. The
+      // specifiers use the ESM `.js` form (TypeScript resolves `.js` -> the `.ts`
+      // source), so the comparison is made modulo that extension convention.
+      // E4-R60: BOTH the static diagnostics import and the dynamic benchmark
+      // import must be relocated — R59 missed the latter, which is what made the
+      // order counterexample vacuous.
+      const expectedTargets = [REAL_DIAGNOSTICS, REAL_BENCHMARK_COMMAND]
+        .map((p) => p.split("\\").join("/"))
+        .sort();
       for (const ref of [a, b]) {
         const src = await readFile(ref.path, "utf8");
-        const spec = /from "([^"]*e4-09-diagnostics\.js)"/.exec(src)?.[1];
-        expect(spec, `${ref.path}: the copy must import the diagnostics module`).toBeDefined();
-        const resolved = resolve(dirname(ref.path), spec as string).replace(/\.js$/, "");
-        expect(resolved).toBe(REAL_DIAGNOSTICS.replace(/\.ts$/, ""));
+        const specs = [...src.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*)"(\.\.?\/[^"]*)"/g)].map((m) => String(m[1]));
+        expect(specs.length, `${ref.path}: the copy must keep every relative import`).toBeGreaterThanOrEqual(2);
+        const resolved = specs
+          .map((spec) =>
+            resolve(dirname(ref.path), spec)
+              .split("\\")
+              .join("/")
+              .replace(/\.js$/, ".ts"),
+          )
+          .sort();
+        expect(resolved, `${ref.path}: every relative import must reach a REAL module`).toEqual(expectedTargets);
+        expect(ref.relocatedImports.length).toBeGreaterThanOrEqual(2);
       }
 
       // Run A cleans ONLY its own directory: B's copy must survive intact.
