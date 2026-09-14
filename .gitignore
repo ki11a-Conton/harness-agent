@@ -50,3 +50,7 @@ apps/cli/test-infra/diagnostic-fixtures/*.test.ts
 # benchmark running INSIDE the child sees a dirtied tree and refuses to run — a
 # false positive that would make the mutation control "fail" for the wrong reason.
 apps/cli/src/e4-r55-mutated-chain.generated.ts
+# Agent workspace data (memory + project scratch). It is NOT a build input and
+# must stay invisible to `git status --porcelain`: the production promotion
+# benchmark refuses to run on a tree that is not provably clean.
+.workbuddy-ai/
