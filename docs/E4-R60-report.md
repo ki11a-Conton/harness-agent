@@ -167,6 +167,39 @@ R59 把变异副本从 `apps/cli/src` 搬到每次 run 独享目录，但只重�
 | `packages/security/src/no-silent-catch.test.ts`（P14-6 静态扫描） | **4 passed** —— 新增 harness 为 `apps/**/src` 非测试源码，**不含任何空 catch**，全部走 `reportDegraded` 上报 |
 | `apps/cli/src/app-server-layering.test.ts`（P30-5 分层扫描） | **3 passed** |
 
+### 6.1 全量 `apps/cli` 套件：16 项失败，**全部归因于代理沙箱**
+
+`vitest run apps/cli`（与 `pnpm test` 相同的 4 项排除）：**458 tests，16 failed / 442 passed**，
+失败分布在 5 个文件。逐项归因如下（这不是本任务引入的回归）：
+
+| 失败文件 | 失败数 | 实测失败原因 | 归因 |
+| --- | --- | --- | --- |
+| `e4-r55-failure-wiring.test.ts` | 2 | `E4-R55 requires a CLEAN committed working tree`；`[safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":80,"threshold":50,"scope":"turn"}` | 代理沙箱：safe-delete 垫片 |
+| `e4-r24-final-result-protocol.test.ts` | 6 | `SAFE_DELETE_BULK_CONFIRM_REQUIRED`（count 77/79/80） | 同上 |
+| `e4-09-production-e2e.test.ts` | 4 | `expected 1 to be +0`（benchmark 因树不洁净拒跑） | 同上（垫片留下的 `_tmp_*` 把树弄脏） |
+| `benchmark-command.test.ts` | 2 | promotion 运行未产出 paired artifact | 同上 |
+| `release-command.test.ts` | 2 | `expected 1 to be +0`（子进程 gate 退出 1） | 沙箱**程序黑名单拦截 `wmic.exe`** |
+
+四项独立证据表明这不是 R60 的回归：
+
+1. **无共享代码路径**：`release-command.test.ts` 只 import `./release-command.js` / `./release-verify.js`，
+   与本轮改动的 `e4-09-real-chain.ts` / `e4-r55-child-harness.ts` **没有任何共同路径**，且它**单独运行也失败**（2 failed / 20 passed）。
+2. **沙箱 stderr 直接点名**：`PROGRAM BLOCKED BY SECURITY POLICY … wmic.exe`。全仓 TS 源码中
+   **没有任何 `wmic` 引用**——它是垫片自己调用的。
+3. **垫片自己删除自己的产物都被拦**：`SAFE_DELETE_BULK_CONFIRM_REQUIRED {"count":90,"threshold":50}`，
+   连 `_tmp_*` 都删不掉（"turn" 作用域，50 次/turn 阈值）。
+4. **隔离运行全绿**：`e4-r55-failure-wiring.test.ts` 在洁净树上**单独运行 11/11 通过**（三次）；
+   `e4-09-production-e2e.test.ts` 单独运行 **5/5 通过**。
+
+机制：垫片在执行删除时会在进程 CWD（仓库根）留下 0 字节的 `_tmp_<pid>_<hash>` 占位文件，
+使 `git status --porcelain` 非空；于是**所有要求"树可证明洁净"的门禁**（生产 benchmark、
+gate evidence 的 `passed`、observation evidence）在并行跑套件时集体失败。
+
+因此本节结论：**本地无法用全量套件作为 R60 的通过证据**；R60 的通过证据是隔离运行的
+11/11（见 §6 表），全量/CI 结论留给 R61，且必须在**无垫片环境**（真实 CI）上取得。
+本轮已把"树不洁净"的断言消息改为**列出具体的脏条目**，使下一次失败能一眼区分
+"真的未提交改动"与"工具链掉落的 `_tmp_*` 垃圾"。
+
 ## 7. 过程中被守卫抓到的第二个缺陷（如实记录）
 
 `relocateChainImports` 的目标集合自校验在纯函数回归测试里立刻报错：
@@ -202,8 +235,9 @@ after:  C:/Users/…/e4-r60-relocate-…/D:/Harness Agent/apps/cli/src/benchmark
 ## 9. NOT_RUN
 
 - 未在真实 CI（Ubuntu / Windows / coverage / release attestation）上验证：留给 R61。
-- 未跑全仓 `pnpm test` / `pnpm test:coverage` / `docs:verify`：留给 R61（本轮只跑了
-  `apps/cli` 全量套件与被改动文件直接相关的 6 个套件）。
+- 未跑 `pnpm test:coverage` / `docs:verify`：留给 R61。
+- 全量 `apps/cli` 套件**已跑**（458 tests / 16 failed），但 16 项失败**全部归因于代理沙箱**
+  （见 §6.1），因此**不作为通过证据**；本地沙箱内无法取得全量绿灯。
 - 未做"两次完整子进程并行父验证"（沿用 R59 的同步屏障方案；完整双跑会把本文件推到约 4 分钟）。
 - 未做付费评测、未发布、未强推。
 
@@ -224,3 +258,10 @@ after:  C:/Users/…/e4-r60-relocate-…/D:/Harness Agent/apps/cli/src/benchmark
    本地证据不会被上传——上传接线已加，但**未在真实 CI 上验证**（见 §9）。
 6. **本任务未处理 R57（coverage 前置构建）、R58（换行）已交付项**，也未取得 R56 收口所需的
    真实 CI 通过——这些分别属于 R57/R58/R61 的范围。
+7. **本地代理沙箱会系统性污染"洁净树"类门禁**（§6.1）。垫片在仓库根留下 0 字节 `_tmp_*`
+   占位文件，且其 50 次/turn 的删除阈值会在并行套件中直接抛错。这是**环境**问题（真实 CI
+   没有垫片），但它使"本地全量绿灯"在本机不可获得；R61 必须在真实 CI 上取证。本轮不把
+   `_tmp_*` 加进 `.gitignore`——那会掩盖一个真实的洁净性信号，而不是隔离它。
+8. **R59 的负控制空转问题（§5）已修，但只覆盖了一种顺序缺陷**：本任务仍只变异
+   "decision 落盘移到断言之后"。计划第 7 条允许"注册或 decision 保存"二选一，R55 报告
+   §8 已记录"注册前移"的变异未做——本轮未扩大该范围。

@@ -1053,9 +1053,15 @@ describe("E4-R55 real production failure wiring (parent verifier over an isolate
     });
     expect(git.termination, `git status could not be run: ${git.spawnError ?? git.stderr}`).toBe("exited");
     expect(git.exitCode).toBe(0);
+    // E4-R60: name the dirty entries. "the tree is not clean" alone cannot
+    // distinguish a real uncommitted change from a stray artifact dropped by the
+    // developer tooling (measured here: the agent sandbox's safe-delete shim
+    // leaves zero-byte `_tmp_<pid>_<hash>` files in the repo root, which makes
+    // this precondition fail for a reason that has nothing to do with the code).
+    const dirtyEntries = git.stdout.trim() === "" ? [] : git.stdout.trim().split("\n");
     expect(
       git.stdout.trim(),
-      "E4-R55 requires a CLEAN committed working tree: the production benchmark refuses to produce a promotion-eligible run on a tree that is not provably clean, so every child case would fail for an unrelated reason. Commit or stash first.",
+      `E4-R55 requires a CLEAN committed working tree: the production benchmark refuses to produce a promotion-eligible run on a tree that is not provably clean, so every child case would fail for an unrelated reason. Commit or stash first.\n      dirty entries (${dirtyEntries.length}):\n        ${dirtyEntries.join("\n        ")}`,
     ).toBe("");
 
     // E4-R59: nothing is written into the production source tree any more. The
