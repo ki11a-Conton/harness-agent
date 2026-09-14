@@ -360,7 +360,48 @@ describe("E4-R55 real production failure wiring (parent verifier over an isolate
     ).toBe(false);
     expect(mutatedVerdict.reasons.join("; ")).toMatch(/decision-artifact/);
     expect(roleOf(mutatedNonaccept!, "decision-artifact")!.captured).toBe(false);
+
+    // ── 7. E4-R59: no per-run copy survives its own run ──
+    const leftover = await readdir(RUNS_ROOT).catch(() => [] as string[]);
+    expect(leftover, `each run must clean only its own directory; leftovers: ${leftover.join(", ")}`).toEqual([]);
   }, 900_000);
+
+  it("R59: two concurrent runs own distinct per-run copies and never clobber each other", async () => {
+    await mkdir(RUNS_ROOT, { recursive: true });
+    const dirA = await mkdtemp(join(RUNS_ROOT, "run-"));
+    const dirB = await mkdtemp(join(RUNS_ROOT, "run-"));
+    try {
+      expect(dirA).not.toBe(dirB); // per-run allocation, not a fixed global path
+
+      // A barrier: BOTH copies are materialised before either is cleaned up, so
+      // this is the interleaving two parallel parent verifications would produce.
+      const [a, b] = await Promise.all([
+        prepareChainModule(dirA, "mutated"),
+        prepareChainModule(dirB, "mutated"),
+      ]);
+      expect(a.path).not.toBe(b.path);
+      // Same source -> same mutation, so the copies are interchangeable in content.
+      expect(a.sha256).toBe(b.sha256);
+
+      // Each copy's rewritten import must RESOLVE to the real diagnostics module,
+      // whatever directory depth the copy happens to sit at.
+      for (const ref of [a, b]) {
+        const src = await readFile(ref.path, "utf8");
+        const spec = /from "([^"]*e4-09-diagnostics\.js)"/.exec(src)?.[1];
+        expect(spec, `${ref.path}: the copy must import the diagnostics module`).toBeDefined();
+        expect(resolve(dirname(ref.path), spec as string)).toBe(REAL_DIAGNOSTICS);
+      }
+
+      // Run A cleans ONLY its own directory: B's copy must survive intact.
+      await rm(dirA, { recursive: true, force: true });
+      expect(await readFile(a.path, "utf8").then(() => true, () => false)).toBe(false);
+      expect(await readFile(b.path, "utf8").then(() => true, () => false)).toBe(true);
+      expect(sha256(await readFile(b.path))).toBe(b.sha256);
+    } finally {
+      await rm(dirA, { recursive: true, force: true }).catch(() => {});
+      await rm(dirB, { recursive: true, force: true }).catch(() => {});
+    }
+  });
 
   it("R59: the per-run copy location stays outside the production compile input and the default test include", async () => {
     // Structural guard: if a future change ever widens `apps/cli/tsconfig.json`'s
