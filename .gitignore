@@ -62,6 +62,16 @@ apps/cli/src/e4-r55-mutated-chain.generated.ts
 # is not provably clean, and that dirt would be a false positive, not a change.
 .tmp-mining-*/
 
+# E4-R60 (G60): the developer tooling's safe-delete shim (agent sandbox) drops
+# zero-byte `_tmp_<pid>_<hash>` placeholders in the process CWD — here, the repo
+# root — for the deletions it performs. Measured: a full `vitest run apps/cli`
+# leaves several behind, and they are the direct cause of the R55 / e4-09 /
+# e4-r24 "tree is not provably clean" failures when the suite runs as a batch.
+# Same reasoning as the mining entry above: tool droppings, not changes, so they
+# must not keep `git status --porcelain` dirty. Real CI has no such shim, so this
+# rule hides nothing there.
+/_tmp_*
+
 # E4-R59 (G59): per-run directories holding the order-mutation COPY of the chain
 # module. They live under apps/cli/test-infra/ (outside apps/cli's tsconfig
 # `include: ["src"]` and outside the root Vitest include), so their location — not
