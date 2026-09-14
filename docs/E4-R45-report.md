@@ -113,3 +113,27 @@ bundle 中），真实 CLI 拒绝原因、真实测试身份、正确 stage 全�
   `e4-09-production-e2e.test.ts` 自身承载。
 - 诊断模块 `e4-09-diagnostics.ts` 的字节限制/摘要语义问题属于 **R47** 范围，未在本任务
   处理。
+---
+
+## 8. 补记（2026-09-14，E4-R55）：本报告三处证据描述过强，予以更正
+
+补记保留历史原文，仅指出当前会误导的表述。E4-R55 已用真实生产接线的父/子验收取代下列
+说法，证据见 `docs/E4-R55-report.md`。
+
+1. **§5「B」称 `decision=REJECT` + `reasonCodes=["capacity"]` 是"真实"结果 —— 不成立。**
+   该断言来自 `e4-r45-diagnostics-order.test.ts` 用例 B 中**手写**的
+   `writeFile(daPath, JSON.stringify({decision:"REJECT", reasonCodes:["capacity"]}))`。
+   它是人工夹具，不是 evaluator 的计算结果，不应被称为"真实"。真实 evaluator 的
+   non-ACCEPT 结果（本仓库实测为 `INCONCLUSIVE` / `["EFFECT_BELOW_THRESHOLD"]`）由
+   R55 的隔离子进程产出。
+2. **§5「E」称该断言"锁定注册前移可被反例发现" —— 不成立。**
+   用例 E 断言的是一个**由测试自己构造、且什么都没注册**的 recorder，它只证明
+   "未注册 ⇒ 角色缺失"这一 recorder 层事实。把**生产**注册顺序改回旧版，A/B/C/E
+   四例**都不会失败**。因此该单元测试并未绑定生产接线（F55）。
+3. **§7「E2E 接线级证据由 `e4-09-production-e2e.test.ts` 自身承载」—— 不成立。**
+   该 E2E 的 5 个用例在**成功路径**上运行，`afterEach` 的失败分支从不触发，因此它不承载
+   任何"失败时确实保存了证据"的接线级证据。R55 通过父验证程序 + 隔离子进程 + 顺序变异
+   反向对照补上了这一环。
+
+同时更正 §7 的一处时效性说明：本任务当时记录的"实现提交后将在干净树复验 5/5"已在
+R55 阶段复验完成——干净树 `e4-09-production-e2e.test.ts` **5/5 通过**。
