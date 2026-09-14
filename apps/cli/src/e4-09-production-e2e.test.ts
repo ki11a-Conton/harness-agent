@@ -22,11 +22,9 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mkdtemp, rm, writeFile, readFile, mkdir } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { rm, writeFile, readFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
-import type { ModelEvent, ModelProvider, ModelRef, ProviderConfig } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
 import { DurableRecoveryStore } from "@ar/harness";
 import {
@@ -49,48 +47,23 @@ import {
   summarizePairedArtifact,
   summarizeV3Artifact,
 } from "./e4-09-diagnostics.js";
+// E4-R55: the REAL chain wiring (registration order + verbatim decision save) is
+// shared with the R55 isolated-child acceptance, so an order mutation of that
+// one module is observable by the parent verifier. This suite no longer keeps a
+// private copy of it.
+import {
+  ArmAwareProvider,
+  CANDIDATE,
+  buildRealChain,
+  captureOnFailure,
+  importBenchmarkWithStrongIsolation,
+  makeCaseDir,
+} from "../test-infra/e4-09-real-chain.js";
 
 const sha = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
 /** E4-R08: HEAD at run time — the observations below bind to this snapshot. */
 const TESTED_SHA = gitHeadShaAt(process.cwd());
 const TEST_FILE = "apps/cli/src/e4-09-production-e2e.test.ts";
-
-const GUIDANCE_MARKER = "Budget-aware completion guidance:";
-const CANDIDATE = "budget_aware_completion_v1";
-
-/**
- * A deterministic fake provider whose behavior keys on the REAL arm config: the
- * candidate arm's system prompt carries the budget-aware guidance (injected by
- * the production runOneCase wiring only when a candidate is active), so it is
- * told to write the file the verifier requires; the baseline arm is not and
- * never writes. The provider records every call for the exact-call-count
- * assertion and the observable behavior check.
- */
-class ArmAwareProvider implements ModelProvider {
-  readonly id = "arm-aware";
-  readonly calls: { seq: number; arm: "candidate" | "baseline"; wrote: boolean }[] = [];
-  private seq = 0;
-  async listModels() {
-    return [{ id: "arm-aware-model", name: "ArmAware" }];
-  }
-  createClient(_model: ModelRef, _config: ProviderConfig) {
-    const self = this;
-    return {
-      async *generate(request: unknown, _signal: AbortSignal): AsyncIterable<ModelEvent> {
-        const req = (request ?? {}) as { system?: unknown; messages?: unknown };
-        const sys = typeof req.system === "string" ? req.system : "";
-        const isCandidate = sys.includes(GUIDANCE_MARKER);
-        const alreadyWrote = JSON.stringify(req.messages ?? "").includes("write_file");
-        const shouldWrite = isCandidate && !alreadyWrote;
-        self.calls.push({ seq: self.seq++, arm: isCandidate ? "candidate" : "baseline", wrote: shouldWrite });
-        const script = shouldWrite
-          ? ScriptedModelProvider.toolCall("write_file", { path: "out.txt", content: "done by candidate\n" })
-          : ScriptedModelProvider.text("done");
-        yield* script;
-      },
-    };
-  }
-}
 
 let tempDirs: string[] = [];
 /** E4-R40 (K01): the diagnostics recorder of the test currently running. Vitest
@@ -104,11 +77,9 @@ afterEach(async (ctx) => {
   // probes + the artifacts the real stages wrote) can explain the outcome; a
   // post-run re-read cannot reconstruct it. Capture is best-effort and NEVER
   // replaces the test's own failure. (The deliberate-failure proof of this path
-  // lives in `e4-r40-forensics.test.ts`, which is run explicitly.)
-  if (ctx.task.result?.state === "fail" && activeDiag !== null) {
-    const first = ctx.task.result.errors?.[0];
-    await activeDiag.captureFailure({ error: first ?? new Error(`e4-09 test failed: ${ctx.task.name}`) });
-  }
+  // lives in `e4-r40-forensics.test.ts` and, for the REAL wiring, in the R55
+  // parent/child acceptance.)
+  await captureOnFailure(activeDiag, ctx);
   activeDiag = null;
   vi.doUnmock("@ar/evaluation");
   vi.resetModules();
@@ -117,38 +88,36 @@ afterEach(async (ctx) => {
   }
 });
 
-async function makeCaseDir(files: Record<string, string>): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "e4-09-"));
+/** Register a temp root for cleanup (the shared `makeCaseDir` does not own it). */
+async function trackedCaseDir(files: Record<string, string>): Promise<string> {
+  const dir = await makeCaseDir(files);
   tempDirs.push(dir);
-  for (const [rel, content] of Object.entries(files)) {
-    const abs = join(dir, ...rel.split("/"));
-    if (rel.includes("/")) await mkdir(join(abs, ".."), { recursive: true });
-    await writeFile(abs, content, "utf8");
-  }
   return dir;
 }
 
-/** Mock the isolation probe so the promotion run is strong / promotion-eligible
- *  (the offline stand-in for a real OS sandbox backend). */
-async function importBenchmarkWithStrongIsolation() {
-  vi.resetModules();
-  vi.doMock("@ar/evaluation", async (importOriginal) => {
-    const actual = await importOriginal<typeof import("@ar/evaluation")>();
-    return {
-      ...actual,
-      probeIsolationBackend: (async () => ({
-        schemaVersion: 1, id: "mock-bwrap", platform: "test", strongIsolation: true, note: "e4-09 test backend",
-      })) as unknown as typeof actual.probeIsolationBackend,
-    };
+/**
+ * E4-R55: build the REAL chain through the SHARED wiring and bind the per-test
+ * attribution recorder, so every adversarial stage (chain build OR tamper
+ * assertion) persists a bundle on failure — exactly what the pre-R55 local
+ * builder did, but now from the single shared implementation.
+ */
+async function buildChainTracked(root: string, testName: string) {
+  return await buildRealChain(root, testName, {
+    testFile: TEST_FILE,
+    testedSha: TESTED_SHA,
+    // Bind the recorder BEFORE the first stage runs, so a benchmark/evaluator
+    // failure inside the build still has an owner for the failure bundle.
+    onRecorder: (r) => {
+      activeDiag = r;
+    },
   });
-  return import("./benchmark-command.js");
 }
 
 describe("E4-09 real production-path E2E (offline)", () => {
   it("benchmark -> V3 -> evaluator -> promote -> createHarness -> applied, all real stages", async () => {
     // 3 cases, each requiring the agent to produce out.txt (artifact verification).
     const caseJson = JSON.stringify({ verification: [{ kind: "artifact", path: "out.txt", mustChange: true }] });
-    const root = await makeCaseDir({
+    const root = await trackedCaseDir({
       "cases/a/request.md": "Produce out.txt.",
       "cases/a/expected.md": "out.txt exists.",
       "cases/a/case.json": caseJson,
@@ -418,74 +387,6 @@ describe("E4-09 real production-path E2E (offline)", () => {
   }, 60_000);
 });
 
-/**
- * E4-09 adversarial E2E — attacks on the REAL chain artifacts. Each proves a
- * tamper of a genuine production-stage artifact is rejected by the next stage,
- * and that the provider-call guard stops an over-budget run before it can
- * produce a promotable artifact.
- */
-async function buildRealChain(root: string, testName: string): Promise<{
-  v3BaselinePath: string; v3CandidatePath: string; decisionArtifactPath: string;
-  evalResult: Awaited<ReturnType<typeof runV3ChampionEval>>;
-}> {
-  // E4-R40 (K01): this shared builder sets the per-test attribution recorder so
-  // EVERY adversarial stage (chain build OR tamper assertion) persists a bundle
-  // on failure. The build's own `expect` calls stay exactly as before.
-  // E4-R45: `testName` is the caller's REAL framework test title — four
-  // adversarial tests must not share an indistinguishable public name.
-  const diag = new E4DiagnosticRecorder({
-    label: "e4-09-adv", testFile: TEST_FILE, testedSha: TESTED_SHA,
-    testName,
-  });
-  activeDiag = diag;
-  diag.mark("setup");
-  const caseJson = JSON.stringify({ verification: [{ kind: "artifact", path: "out.txt", mustChange: true }] });
-  for (const c of ["a", "b", "c"]) {
-    const dir = join(root, "cases", c);
-    await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, "request.md"), "Produce out.txt.", "utf8");
-    await writeFile(join(dir, "expected.md"), "out.txt exists.", "utf8");
-    await writeFile(join(dir, "case.json"), caseJson, "utf8");
-  }
-  const outDir = join(root, "out");
-  const v3BaselinePath = join(outDir, "v3-baseline.json");
-  const v3CandidatePath = join(outDir, "v3-candidate.json");
-  const bundleDir = join(root, "bundle");
-  const decisionArtifactPath = join(bundleDir, "decision-artifact.json");
-  // E4-R45: register the OUTPUT PATHS the benchmark/evaluator are ABOUT to write,
-  // BEFORE any of them runs (the paths do not exist yet — that is fine; a stage
-  // that fails before writing leaves them recorded as `missing`, which is itself
-  // the evidence). Previously this registration ran only AFTER the benchmark
-  // exitCode assert + evaluator + ACCEPT assert + decision write, so those
-  // failures happened with NOTHING registered for the afterEach hook to capture.
-  diag.registerArtifacts([
-    { role: "paired-experiment", path: join(outDir, "paired-experiment.json"), summarize: summarizePairedArtifact },
-    { role: "v3-baseline", path: v3BaselinePath, summarize: summarizeV3Artifact },
-    { role: "v3-candidate", path: v3CandidatePath, summarize: summarizeV3Artifact },
-    { role: "decision-artifact", path: decisionArtifactPath, summarize: summarizeDecisionArtifact },
-  ]);
-  const bench = await importBenchmarkWithStrongIsolation();
-  diag.mark("benchmark"); // stage is set BEFORE the call, not after it succeeds
-  const res = await bench.runBenchmarkCommand(
-    ["--cases", join(root, "cases"), "--candidate", CANDIDATE, "--repeat", "2", "--out", outDir],
-    new ArmAwareProvider(),
-  );
-  // E4-R45: keep the benchmark's REAL CLI exit + output so a failure bundle
-  // explains itself (never only the framework's assertion text).
-  diag.addFact("benchmarkCli", { exitCode: res.exitCode, lines: res.lines.slice(0, 200) });
-  expect(res.exitCode).toBe(0);
-  diag.mark("evaluate"); // stage BEFORE the call
-  const evalResult = await runV3ChampionEval({ baselinePath: v3BaselinePath, candidatePath: v3CandidatePath, candidateId: CANDIDATE });
-  // E4-R45: persist the REAL decision (ACCEPT or not) BEFORE the ACCEPT assert.
-  // The evaluator's actual result is written verbatim — never a rebuilt ACCEPT
-  // object — so a non-ACCEPT decision is captured with its real reasonCodes.
-  await mkdir(bundleDir, { recursive: true });
-  await writeFile(decisionArtifactPath, JSON.stringify(evalResult.decisionArtifact), "utf8");
-  expect(evalResult.decisionArtifact.decision).toBe("ACCEPT");
-  diag.mark("chain-built");
-  return { v3BaselinePath, v3CandidatePath, decisionArtifactPath, evalResult };
-}
-
 async function envelopeFor(root: string, chain: Awaited<ReturnType<typeof buildRealChain>>, mutate?: (env: ReturnType<typeof buildPromotionEnvelope>) => void): Promise<string> {
   const [da, base, cand] = await Promise.all([
     readFile(chain.decisionArtifactPath, "utf8"), readFile(chain.v3BaselinePath, "utf8"), readFile(chain.v3CandidatePath, "utf8"),
@@ -513,8 +414,8 @@ async function envelopeFor(root: string, chain: Awaited<ReturnType<typeof buildR
 
 describe("E4-09 adversarial E2E (real chain)", () => {
   it("editing a real V3 artifact's outcomes while only updating the file SHA breaks the chain", async () => {
-    const root = await makeCaseDir({});
-    const chain = await buildRealChain(root, "editing a real V3 artifact's outcomes while only updating the file SHA breaks the chain");
+    const root = await trackedCaseDir({});
+    const chain = await buildChainTracked(root, "editing a real V3 artifact's outcomes while only updating the file SHA breaks the chain");
     // Tamper the candidate artifact's outcomes; recompute the envelope file SHA.
     const cand = JSON.parse(await readFile(chain.v3CandidatePath, "utf8")) as { outcomes: { passed: boolean }[]; contentDigest: string };
     cand.outcomes[0]!.passed = false; // leave the internal contentDigest stale
@@ -531,8 +432,8 @@ describe("E4-09 adversarial E2E (real chain)", () => {
   }, 60_000);
 
   it("a forged decision field (digest recomputed) is caught by the evaluator replay", async () => {
-    const root = await makeCaseDir({});
-    const chain = await buildRealChain(root, "a forged decision field (digest recomputed) is caught by the evaluator replay");
+    const root = await trackedCaseDir({});
+    const chain = await buildChainTracked(root, "a forged decision field (digest recomputed) is caught by the evaluator replay");
     const da = JSON.parse(await readFile(chain.decisionArtifactPath, "utf8")) as Record<string, unknown>;
     da.statistics = { ...(da.statistics as Record<string, unknown>), netPassedDelta: 999 };
     const { computeDecisionArtifactContentDigestV3 } = await import("@ar/evaluation");
@@ -547,8 +448,8 @@ describe("E4-09 adversarial E2E (real chain)", () => {
   }, 60_000);
 
   it("a candidate ref pointing outside the bundle root is rejected", async () => {
-    const root = await makeCaseDir({});
-    const chain = await buildRealChain(root, "a candidate ref pointing outside the bundle root is rejected");
+    const root = await trackedCaseDir({});
+    const chain = await buildChainTracked(root, "a candidate ref pointing outside the bundle root is rejected");
     const envPath = await envelopeFor(root, chain, (env) => {
       env.artifactRefs.find((r) => r.role === "candidate")!.path = join(root, "..", "outside", "candidate.json");
     });
@@ -560,7 +461,7 @@ describe("E4-09 adversarial E2E (real chain)", () => {
   }, 60_000);
 
   it("provider over-call guard halts the paired run before it can finalize a promotable artifact", async () => {
-    const root = await makeCaseDir({});
+    const root = await trackedCaseDir({});
     const caseJson = JSON.stringify({ verification: [{ kind: "artifact", path: "out.txt", mustChange: true }] });
     for (const c of ["a", "b", "c"]) {
       const dir = join(root, "cases", c);

@@ -44,3 +44,9 @@ apps/cli/test-infra/observation-fixtures/*.test.ts
 # written/deleted and refuse to run — a false positive, not a real change.
 apps/cli/test-infra/diagnostic-fixtures/*.test.ts
 
+# E4-R55: the ORDER-MUTATION copy of the real chain wiring is generated for ONE
+# child run and deleted afterwards. Same reasoning as the fixtures above: it MUST
+# stay invisible to `git status --porcelain`, otherwise the e4-09 promotion
+# benchmark running INSIDE the child sees a dirtied tree and refuses to run — a
+# false positive that would make the mutation control "fail" for the wrong reason.
+apps/cli/test-infra/e4-r55-mutated-chain.generated.ts
