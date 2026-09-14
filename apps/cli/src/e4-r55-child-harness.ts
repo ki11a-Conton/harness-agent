@@ -824,6 +824,8 @@ export interface CopyTreeResult {
 /** Copy a directory tree, returning a structured, self-describing result. */
 async function copyTree(src: string, dest: string, seam?: EvidenceSeam): Promise<CopyTreeResult> {
   const copyFileImpl = seam?.copyFile ?? ((from: string, to: string) => copyFile(from, to));
+  const readdirImpl =
+    seam?.readdir ?? ((from: string) => readdir(from, { withFileTypes: true }));
   const copied: string[] = [];
   const entries: CopyEntry[] = [];
   let sourceMissing = false;
@@ -847,7 +849,7 @@ async function copyTree(src: string, dest: string, seam?: EvidenceSeam): Promise
   const walk = async (from: string, to: string, relDir: string): Promise<void> => {
     let dirents: Dirent[];
     try {
-      dirents = await readdir(from, { withFileTypes: true });
+      dirents = await readdirImpl(from);
     } catch (err) {
       const code = (err as { code?: string }).code;
       if (relDir === "" && code === "ENOENT") {
@@ -951,6 +953,13 @@ export interface EvidenceRoleRecord {
 export interface EvidenceSeam {
   writeFile?: (path: string, data: string) => Promise<void>;
   copyFile?: (src: string, dest: string) => Promise<void>;
+  /**
+   * E4-R68: override a directory listing. This lets a test (a) classify a
+   * NON-REGULAR entry deterministically WITHOUT needing platform symlink
+   * privileges, and (b) control traversal order, so "a failure does not block a
+   * later success / lose an earlier one" becomes provable instead of incidental.
+   */
+  readdir?: (path: string) => Promise<Dirent[]>;
 }
 
 export interface PreservedEvidence {

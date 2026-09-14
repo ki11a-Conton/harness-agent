@@ -61,13 +61,14 @@
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
-import { lstat, mkdir, mkdtemp, readFile, readdir, rm, rmdir, stat, symlink, writeFile } from "node:fs/promises";
+import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rm, rmdir, stat, symlink, writeFile } from "node:fs/promises";
 import { platform, tmpdir } from "node:os";
-import { dirname, join, parse, relative, resolve } from "node:path";
+import { basename, dirname, join, parse, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { mutateChainOrdering, relocateChainImports } from "./e4-09-real-chain.js";
 import type { ChildProcess } from "node:child_process";
+import type { Dirent } from "node:fs";
 import {
   createStreamCapture,
   judgeChildProcess,
@@ -2076,4 +2077,294 @@ describe("E4-R67 archive integrity vs diagnostics-copy integrity", () => {
       await rm(preserved.dir, { recursive: true, force: true });
     }
   });
+});
+
+/**
+ * E4-R68: probe ONCE whether this environment can really create a symlink.
+ *
+ * The agent sandbox was measured to make `fs.symlink` a SILENT no-op (no throw,
+ * no link). Presenting that as "the link branch passed" would be a false claim,
+ * so the platform-real link test is explicitly SKIPPED when this probe fails,
+ * and the probe's own result is asserted by a test that always runs.
+ */
+const R68_SYMLINK_CAPABILITY = await (async (): Promise<{ ok: boolean; detail: string }> => {
+  const dir = await mkdtemp(join(tmpdir(), "e4-r68-capability-"));
+  try {
+    const target = join(dir, "target.txt");
+    const link = join(dir, "link.txt");
+    await writeFile(target, "x", "utf8");
+    await symlink(target, link);
+    const isLink = await lstat(link).then(
+      (s) => s.isSymbolicLink(),
+      () => false,
+    );
+    return isLink
+      ? { ok: true, detail: "fs.symlink created a link that lstat reports as a symlink" }
+      : { ok: false, detail: "fs.symlink did not throw but created no link (silent no-op)" };
+  } catch (err) {
+    return {
+      ok: false,
+      detail: `fs.symlink failed: ${(err as { code?: string }).code ?? messageOf(err)}`,
+    };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+})();
+
+describe("E4-R68 mixed-copy and link-skip acceptance", () => {
+  interface R68Record {
+    evidence: {
+      diagnostics: { integrity: string; copied: string[]; entries: CopyEntry[] };
+      archive: { integrity: string };
+    };
+  }
+
+  /** A Dirent that is neither a directory nor a regular file. */
+  const fakeNonRegular = (name: string): Dirent =>
+    ({
+      name,
+      isDirectory: () => false,
+      isFile: () => false,
+      isSymbolicLink: () => true,
+      isBlockDevice: () => false,
+      isCharacterDevice: () => false,
+      isFIFO: () => false,
+      isSocket: () => false,
+    }) as unknown as Dirent;
+
+  /**
+   * A seam that (a) fixes the traversal ORDER so the "first / last visited"
+   * cases are deterministic, and (b) fails exactly ONE named copy with EIO while
+   * every other copy runs for real.
+   */
+  const orderedFailingCopy = (failOn: string, order: string[]) => {
+    const attempted: string[] = [];
+    const seam: EvidenceSeam = {
+      readdir: async (dir: string) => {
+        const entries = await readdir(dir, { withFileTypes: true });
+        return entries.sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
+      },
+      copyFile: async (from: string, to: string) => {
+        const name = basename(from);
+        attempted.push(name);
+        if (name === failOn) {
+          const err = new Error(`EIO: injected copy failure for ${name}`) as Error & {
+            code?: string;
+          };
+          err.code = "EIO";
+          throw err;
+        }
+        await copyFile(from, to);
+      },
+    };
+    return { seam, attempted };
+  };
+
+  const preserve = async (over: Partial<PreserveEvidenceInput>): Promise<PreservedEvidence> =>
+    preserveEvidence({
+      label: "r68",
+      outcome: syntheticOutcome(),
+      report: syntheticReport([]),
+      reasons: ["probe: the original failure"],
+      ...over,
+    });
+
+  const readRecord = async (dir: string): Promise<R68Record> =>
+    JSON.parse(await readFile(join(dir, "run.json"), "utf8")) as R68Record;
+
+  it("A: in ONE tree a real copy SUCCEEDS while an injected EIO copy FAILS", async () => {
+    const src = await tempDir("e4-r68-mixed-");
+    await writeFile(join(src, "good.json"), '{"good":true}\n', "utf8");
+    await writeFile(join(src, "bad.json"), '{"bad":true}\n', "utf8");
+    const { seam } = orderedFailingCopy("bad.json", ["good.json", "bad.json"]);
+    const preserved = await preserve({ diagDir: src, seam });
+    try {
+      expect(preserved.diagnosticsCopyIntegrity).toBe("partial");
+      expect(preserved.archiveIntegrity, "the whole archive is not complete either").toBe("partial");
+      // The successful copy is REAL and byte-identical to its source.
+      expect(await readFile(join(preserved.dir, "diagnostics", "good.json"), "utf8")).toBe(
+        '{"good":true}\n',
+      );
+      expect(preserved.files).toContain("diagnostics/good.json");
+      expect(preserved.files).not.toContain("diagnostics/bad.json");
+
+      const record = await readRecord(preserved.dir);
+      expect(record.evidence.diagnostics.copied).toEqual(["good.json"]);
+      const bad = record.evidence.diagnostics.entries.find((e) => e.path === "bad.json");
+      expect(bad?.status).toBe("unreadable");
+      expect(bad?.operation).toBe("copyFile");
+      expect(bad?.errorCode).toBe("EIO");
+      expect(bad?.reason).toContain("injected copy failure");
+      // The failed file is never counted as copied.
+      expect(record.evidence.diagnostics.copied).not.toContain("bad.json");
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("B: after the SOURCE is deleted, the archive alone still proves success AND failure", async () => {
+    const src = await tempDir("e4-r68-recover-");
+    await writeFile(join(src, "good.json"), '{"good":true}\n', "utf8");
+    await writeFile(join(src, "bad.json"), '{"bad":true}\n', "utf8");
+    const { seam } = orderedFailingCopy("bad.json", ["good.json", "bad.json"]);
+    const preserved = await preserve({ diagDir: src, seam });
+    try {
+      await rm(src, { recursive: true, force: true });
+      const record = await readRecord(preserved.dir);
+      expect(record.evidence.diagnostics.copied).toEqual(["good.json"]);
+      expect(
+        record.evidence.diagnostics.entries.find((e) => e.path === "bad.json")?.errorCode,
+      ).toBe("EIO");
+      expect(record.evidence.diagnostics.integrity).toBe("partial");
+      // The archived copy is still readable and its digest independently recomputes.
+      const archived = await readFile(join(preserved.dir, "diagnostics", "good.json"));
+      expect(archived.toString("utf8")).toBe('{"good":true}\n');
+      expect(createHash("sha256").update(archived).digest("hex")).toBe(
+        createHash("sha256").update('{"good":true}\n').digest("hex"),
+      );
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("C: a failure on the FIRST-visited file does not block the LATER copies", async () => {
+    const src = await tempDir("e4-r68-first-");
+    for (const n of ["a.json", "b.json", "c.json"]) {
+      await writeFile(join(src, n), `${n}\n`, "utf8");
+    }
+    const { seam, attempted } = orderedFailingCopy("a.json", ["a.json", "b.json", "c.json"]);
+    const preserved = await preserve({ diagDir: src, seam });
+    try {
+      // Deterministic traversal order: the seam pins it, so this is not incidental.
+      expect(attempted).toEqual(["a.json", "b.json", "c.json"]);
+      const record = await readRecord(preserved.dir);
+      expect(record.evidence.diagnostics.copied).toEqual(["b.json", "c.json"]);
+      expect(await readFile(join(preserved.dir, "diagnostics", "b.json"), "utf8")).toBe("b.json\n");
+      expect(await readFile(join(preserved.dir, "diagnostics", "c.json"), "utf8")).toBe("c.json\n");
+      // The failure is still recorded with its path, operation and error.
+      expect(record.evidence.diagnostics.integrity).toBe("partial");
+      const failed = record.evidence.diagnostics.entries.find((e) => e.path === "a.json");
+      expect(failed?.status).toBe("unreadable");
+      expect(failed?.operation).toBe("copyFile");
+      expect(failed?.errorCode).toBe("EIO");
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("D: a failure on the LAST-visited file does not lose the EARLIER copies", async () => {
+    const src = await tempDir("e4-r68-last-");
+    for (const n of ["a.json", "b.json", "c.json"]) {
+      await writeFile(join(src, n), `${n}\n`, "utf8");
+    }
+    const { seam, attempted } = orderedFailingCopy("c.json", ["a.json", "b.json", "c.json"]);
+    const preserved = await preserve({ diagDir: src, seam });
+    try {
+      expect(attempted).toEqual(["a.json", "b.json", "c.json"]);
+      const record = await readRecord(preserved.dir);
+      expect(record.evidence.diagnostics.copied).toEqual(["a.json", "b.json"]);
+      expect(await readFile(join(preserved.dir, "diagnostics", "a.json"), "utf8")).toBe("a.json\n");
+      expect(await readFile(join(preserved.dir, "diagnostics", "b.json"), "utf8")).toBe("b.json\n");
+      // Symmetric to case C: the LAST failure is recorded too.
+      expect(record.evidence.diagnostics.integrity).toBe("partial");
+      const failed = record.evidence.diagnostics.entries.find((e) => e.path === "c.json");
+      expect(failed?.status).toBe("unreadable");
+      expect(failed?.operation).toBe("copyFile");
+      expect(failed?.errorCode).toBe("EIO");
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("E: the SKIP branch itself — a non-regular entry, deterministically, with no symlink privilege", async () => {
+    const src = await tempDir("e4-r68-skip-branch-");
+    await writeFile(join(src, "real.json"), '{"real":true}\n', "utf8");
+    const seam: EvidenceSeam = {
+      readdir: async (dir: string) => {
+        const entries = await readdir(dir, { withFileTypes: true });
+        if (dir === src) entries.push(fakeNonRegular("ghost.link"));
+        return entries;
+      },
+    };
+    const preserved = await preserve({ diagDir: src, seam });
+    try {
+      const record = await readRecord(preserved.dir);
+      // The real file was copied for real.
+      expect(record.evidence.diagnostics.copied).toEqual(["real.json"]);
+      expect(await readFile(join(preserved.dir, "diagnostics", "real.json"), "utf8")).toBe(
+        '{"real":true}\n',
+      );
+      // The non-regular entry is classified as skipped, carries a reason, and is
+      // NEVER listed as a copied file.
+      const skipped = record.evidence.diagnostics.entries.find((e) => e.path === "ghost.link");
+      expect(skipped?.status).toBe("skipped");
+      expect(skipped?.reason).toContain("not followed");
+      expect(skipped?.reason).toContain("symbolic link");
+      expect(preserved.files).not.toContain("diagnostics/ghost.link");
+      expect(existsSync(join(preserved.dir, "diagnostics", "ghost.link"))).toBe(false);
+      // Policy, not failure: regular-file integrity is untouched.
+      expect(record.evidence.diagnostics.integrity).toBe("complete");
+      expect(record.evidence.archive.integrity).toBe("complete");
+    } finally {
+      await rm(preserved.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("F: this environment's real-symlink capability is a recorded fact, not an assumption", () => {
+    process.stdout.write(`\nR68_SYMLINK_CAPABILITY=${JSON.stringify(R68_SYMLINK_CAPABILITY)}\n`);
+    expect(typeof R68_SYMLINK_CAPABILITY.ok).toBe("boolean");
+    expect(R68_SYMLINK_CAPABILITY.detail.length).toBeGreaterThan(0);
+  });
+
+  it.skipIf(!R68_SYMLINK_CAPABILITY.ok)(
+    "G: a REAL symlink is not followed and lands in the skipped list (platform-real)",
+    async () => {
+      const src = await tempDir("e4-r68-real-link-");
+      const target = join(src, "target.json");
+      await writeFile(target, '{"target":true}\n', "utf8");
+      const link = join(src, "link.json");
+      await symlink(target, link);
+      // PRECONDITION: the link must really exist, otherwise this test would be
+      // asserting nothing (a silent no-op `fs.symlink` is a known hazard here).
+      expect((await lstat(link)).isSymbolicLink(), "precondition: the symlink must exist").toBe(true);
+
+      const preserved = await preserve({ diagDir: src });
+      try {
+        const record = await readRecord(preserved.dir);
+        // Record the PLATFORM's own classification instead of assuming it: a
+        // filesystem that does not surface the link as a link to `readdir` cannot
+        // express the no-follow policy, and that must be visible, not hidden.
+        const linkDirent = (await readdir(src, { withFileTypes: true })).find(
+          (e) => e.name === "link.json",
+        );
+        expect(linkDirent, "precondition: the link must be listed").toBeDefined();
+        process.stdout.write(
+          `\nR68_LINK_DIRENT=${JSON.stringify({
+            isSymbolicLink: linkDirent?.isSymbolicLink() ?? null,
+            isFile: linkDirent?.isFile() ?? null,
+          })}\n`,
+        );
+
+        if (linkDirent?.isSymbolicLink() === true) {
+          // The intended branch: not followed, not copied, listed as skipped.
+          expect(record.evidence.diagnostics.copied).toEqual(["target.json"]);
+          const skipped = record.evidence.diagnostics.entries.find((e) => e.path === "link.json");
+          expect(skipped?.status).toBe("skipped");
+          expect(skipped?.reason).toContain("not followed");
+          expect(existsSync(join(preserved.dir, "diagnostics", "link.json"))).toBe(false);
+          expect(preserved.files).not.toContain("diagnostics/link.json");
+          expect(record.evidence.diagnostics.integrity).toBe("complete");
+        } else {
+          // This platform reports the link as a regular file, so copyTree
+          // legitimately treats it as one. Assert THAT, and say so out loud.
+          expect(record.evidence.diagnostics.copied).toContain("link.json");
+          expect(
+            record.evidence.diagnostics.entries.find((e) => e.path === "link.json"),
+          ).toBeUndefined();
+        }
+      } finally {
+        await rm(preserved.dir, { recursive: true, force: true });
+      }
+    },
+  );
 });
