@@ -59,6 +59,7 @@
  * wiring defect.
  */
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, readdir, rm, rmdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, parse, relative, resolve } from "node:path";
@@ -98,6 +99,17 @@ const REAL_BENCHMARK_COMMAND = join(REPO_ROOT, "apps/cli", "src", "benchmark-com
 const RUNS_ROOT = join(REPO_ROOT, "apps", "cli", "test-infra", "e4-r55-runs");
 /** The pre-R59 fixed path. Narrow migration guard only — see `afterAll`. */
 const LEGACY_GENERATED = join(REPO_ROOT, "apps", "cli", "src", "e4-r55-mutated-chain.generated.ts");
+/**
+ * E4-R62 (H62): the four `dist` outputs a real `tsc -b apps/cli` emits for the
+ * legacy module. MEASURED, not guessed: the isolated-copy build in
+ * `docs/E4-R62-report.md` §2 produced exactly `.js`, `.js.map`, `.d.ts` and
+ * `.d.ts.map`. Adding the tsconfig `exclude` stops NEW emission, but `tsc` never
+ * removes a stale output, so a developer who ran the pre-R59 test keeps these
+ * forever. They are named EXACTLY — no glob, no `dist` sweep.
+ */
+const LEGACY_GENERATED_OUTPUTS = ["js", "js.map", "d.ts", "d.ts.map"].map((ext) =>
+  join(REPO_ROOT, "apps", "cli", "dist", `e4-r55-mutated-chain.generated.${ext}`),
+);
 
 /**
  * E4-R60: the child's real deadline. The four child cases take ~15-30s together
@@ -145,6 +157,19 @@ afterAll(async () => {
     await rm(LEGACY_GENERATED, { force: true });
   } catch (err) {
     reportDegraded("e4-r55 legacy mutation-path cleanup", err);
+  }
+  // E4-R62 (H62): the tsconfig `exclude` stops NEW emission of the legacy
+  // module, but `tsc` cannot remove outputs a pre-R59 run already wrote into
+  // `dist` (measured: the exclude alone leaves all four behind). Remove exactly
+  // those four names, and only when they exist — no glob, no `dist` sweep, no
+  // source deletion. A clean CI checkout never has them: the legacy SOURCE only
+  // ever existed on a developer machine that ran the pre-R59 test.
+  for (const orphan of LEGACY_GENERATED_OUTPUTS) {
+    try {
+      if (existsSync(orphan)) await rm(orphan, { force: true });
+    } catch (err) {
+      reportDegraded(`e4-r55 legacy dist-output cleanup of ${orphan}`, err);
+    }
   }
   for (const d of tempDirs.splice(0)) {
     try {
@@ -1159,5 +1184,60 @@ describe("E4-R55 real production failure wiring (parent verifier over an isolate
     expect(relToApp.includes("/src/")).toBe(false);
     const rootVitest = await readFile(join(REPO_ROOT, "vitest.config.ts"), "utf8");
     expect(rootVitest).toContain("apps/*/src/**/*.test.ts");
+  });
+
+  it("R62: the legacy fixed mutation path is excluded from the production compile input, narrowly", async () => {
+    // H62: `include: ["src"]` DOES cover the pre-R59 fixed path, and every gate
+    // entry (`pnpm test` / `pnpm test:coverage`) runs `tsc -b` BEFORE any test
+    // executes — so the parent test's `afterAll` cleanup was structurally too
+    // late to keep it out of the build. The `exclude` entry below is what
+    // actually keeps it out. Remove that entry and this test fails, which is
+    // what makes the counterexample discriminating.
+    const tsconfig = JSON.parse(
+      await readFile(join(REPO_ROOT, "apps", "cli", "tsconfig.json"), "utf8"),
+    ) as { include?: string[]; exclude?: string[] };
+    const include = tsconfig.include ?? [];
+    const exclude = tsconfig.exclude ?? [];
+
+    // 1. The legacy path really IS inside the include glob — that is why an
+    //    exclude is needed at all.
+    const legacyRel = relative(join(REPO_ROOT, "apps", "cli"), LEGACY_GENERATED).split("\\").join("/");
+    expect(legacyRel).toBe("src/e4-r55-mutated-chain.generated.ts");
+    expect(include).toContain("src");
+
+    // 2. It is excluded, by its exact path.
+    expect(
+      exclude,
+      `apps/cli tsconfig exclude must name the legacy fixed path, got ${JSON.stringify(exclude)}`,
+    ).toContain(legacyRel);
+
+    // 3. The exclusion stays NARROW: no directory entry, no broad
+    //    `*.generated.ts` wildcard. The only wildcard allowed is the pre-existing
+    //    R24 fixture pattern this file already documented.
+    for (const entry of exclude) {
+      expect(
+        entry.includes("*") && entry !== "src/e4-r24-fixture-*.test.ts",
+        `unexpected broad exclude entry: ${entry}`,
+      ).toBe(false);
+      expect(entry.endsWith("/"), `exclude must name files, not directories: ${entry}`).toBe(false);
+    }
+    for (const realSource of [
+      "src/e4-09-real-chain.ts",
+      "src/e4-r55-failure-wiring.test.ts",
+      "src/benchmark-command.ts",
+      "src/e4-r55-child-harness.ts",
+    ]) {
+      expect(exclude, `${realSource} must stay in the production compile input`).not.toContain(realSource);
+    }
+
+    // 4. The dist orphans we clean up are exactly the legacy module's, with the
+    //    same basename — the cleanup can never touch another module's output.
+    expect(LEGACY_GENERATED_OUTPUTS).toHaveLength(4);
+    const distRoot = join(REPO_ROOT, "apps", "cli", "dist");
+    for (const out of LEGACY_GENERATED_OUTPUTS) {
+      expect(relative(distRoot, out).split("\\").join("/")).toMatch(
+        /^e4-r55-mutated-chain\.generated\.(js|js\.map|d\.ts|d\.ts\.map)$/,
+      );
+    }
   });
 });

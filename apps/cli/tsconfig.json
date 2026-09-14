@@ -6,7 +6,7 @@
     "tsBuildInfoFile": "../../node_modules/.cache/tsbuildinfo/cli.tsbuildinfo"
   },
   "include": ["src"],
-  "exclude": ["src/e4-r24-fixture-*.test.ts"],
+  "exclude": ["src/e4-r24-fixture-*.test.ts", "src/e4-r55-mutated-chain.generated.ts"],
   "references": [
     { "path": "../../packages/contracts" },
     { "path": "../../packages/core" },
