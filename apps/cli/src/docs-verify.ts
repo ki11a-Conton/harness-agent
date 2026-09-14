@@ -251,7 +251,7 @@ export async function verifyDocs(deps: { root: string }): Promise<DocVerificatio
   // able to find THE current plan, not a stale or ambiguous one.
   {
     // E4-R54 (F54) — "there is no plan.md" and "plan.md cannot be read" are
-    // DIFFERENT facts and must not share an outcome. Pre-R54 a single `catch {}`
+    // DIFFERENT facts and must not share an outcome. Pre-R54 a single bare `catch` clause
     // collapsed EVERY readFile failure into `planExists = false`, which selected
     // the "no in-progress plan" PASS branch: a plan.md that was a DIRECTORY
     // (EISDIR), unreadable (EACCES) or hit an I/O error (EIO) was reported as a
