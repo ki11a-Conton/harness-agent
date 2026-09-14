@@ -124,14 +124,14 @@ Requirements: **Node ≥ 22**, **pnpm ≥ 9** (workspace pinned to pnpm 11.21.0)
 ```bash
 pnpm install --frozen-lockfile   # install (CI uses the frozen lockfile)
 pnpm typecheck                   # tsc -b across all packages
-pnpm test                        # full vitest suite (unit + integration)
+pnpm test                        # tsc -b, then the full vitest suite (unit + integration)
 pnpm build                       # build all packages
 ```
 
 The full suite is the default `pnpm test` command. Dedicated gates:
 
 ```bash
-pnpm test:coverage               # per-package coverage thresholds (CI gate)
+pnpm test:coverage               # tsc -b, then per-package coverage thresholds (CI gate)
 pnpm test:protocol               # transport conformance
 pnpm test:security               # sandbox / canonical-path / process gate
 pnpm test:race                   # same-session race suite (no sleeps)
@@ -141,6 +141,14 @@ pnpm capability:audit            # strict capability audit
 pnpm release:verify              # release verdict from evidence
 pnpm release:gate <gate>         # run ONE gate and write V2 evidence
 ```
+
+**Build-before-test contract (E4-R57).** `pnpm test` and `pnpm test:coverage` both run
+`tsc -b` first, so they work from a clean checkout with no `dist/` and no tsbuildinfo
+cache. This is a precondition, not a convenience: the gate-isolation suite treats
+`apps/cli/dist` and `node_modules/.cache/tsbuildinfo` as **required** protected
+resources, so a build must exist before any concurrent test starts. If the build
+fails the gate stops — it never reports coverage success. The CI `verify` job
+typechecks before testing for the same reason.
 
 ## CLI quick tour
 

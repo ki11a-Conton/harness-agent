@@ -247,6 +247,13 @@ jobs:
         # v8 provider + json-summary reporter emit coverage/coverage-summary.json.
         # A missed per-package threshold exits non-zero — no threshold is ever
         # lowered silently to make this pass (see vitest.config.ts).
+        # E4-R57 (G57): the entry itself runs `tsc -b` first. The gate-isolation
+        # suite treats apps/cli/dist + node_modules/.cache/tsbuildinfo as REQUIRED
+        # protected resources, so a clean checkout (install, no build) produced an
+        # invalid "before" snapshot (ENOENT on both). The build lives in the
+        # `test:coverage` script — not in a duplicated step here — so this job,
+        # the `release gate coverage` CLI (release-verify.ts maps the gate to the
+        # same command) and the documented local entry cannot drift apart.
         run: pnpm test:coverage
 
       - name: Upload coverage summary (P20-4)

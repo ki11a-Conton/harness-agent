@@ -108,14 +108,14 @@ ToolOrchestrator，并受 PermissionEngine 与 SandboxManager 约束。**
 ```bash
 pnpm install --frozen-lockfile   # 安装（CI 使用 frozen lockfile）
 pnpm typecheck                   # 全仓 tsc -b
-pnpm test                        # 完整 vitest 套件（单元 + 集成）
+pnpm test                        # 先 tsc -b，再跑完整 vitest 套件（单元 + 集成）
 pnpm build                       # 构建所有包
 ```
 
 完整套件即默认的 `pnpm test`。专项门禁：
 
 ```bash
-pnpm test:coverage               # 各包覆盖率阈值（CI 门禁）
+pnpm test:coverage               # 先 tsc -b，再查各包覆盖率阈值（CI 门禁）
 pnpm test:protocol               # 传输一致性
 pnpm test:security               # 沙箱 / 规范路径 / 进程门禁
 pnpm test:race                   # 同会话竞态套件（无 sleep）
@@ -125,6 +125,12 @@ pnpm capability:audit            # 严格能力审计
 pnpm release:verify              # 从证据推导发布结论
 pnpm release:gate <gate>         # 运行单个门禁并写 V2 证据
 ```
+
+**先构建后测试的合同（E4-R57）。** `pnpm test` 与 `pnpm test:coverage` 都会先跑
+`tsc -b`，因此在没有 `dist/`、没有 tsbuildinfo 缓存的干净检出上也能直接执行。这是**前置
+条件**而非便利：门禁隔离套件把 `apps/cli/dist` 与 `node_modules/.cache/tsbuildinfo` 视为
+**必需**的受保护资源，所以任何并发测试启动前必须先有构建产物。构建失败则门禁停止，
+绝不会仍出具 coverage 成功。CI 的 `verify` job 同样在测试前先 typecheck。
 
 ## CLI 快速上手
 
