@@ -352,6 +352,13 @@ async function runChild(mode: "real" | "mutated"): Promise<ChildRun> {
 
 const sha256 = (b: Buffer): string => createHash("sha256").update(b).digest("hex");
 
+/**
+ * E4-R60: compare module paths modulo the platform separator and the TypeScript
+ * ESM `.js`-specifier convention (a `.js` specifier denotes the `.ts` source),
+ * so a resolved copy specifier can be compared to a repository source path.
+ */
+const normalizeModulePath = (p: string): string => p.split("\\").join("/").replace(/\.(ts|js)$/, "");
+
 const byLabel = (run: ChildRun, label: string): Bundle | undefined => run.bundles.find((b) => b.label === label);
 const roleOf = (bundle: Bundle, role: string): ArtifactRecord | undefined =>
   bundle.artifacts.find((a) => a.role === role);
@@ -589,13 +596,8 @@ async function judgeMutatedRun(run: ChildRun, realChainSha: string): Promise<str
   // own specifiers guards against that exact regression.
   const copySpecifiers = [
     ...(await readFile(run.chain.path, "utf8")).matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*)"(\.\.?\/[^"]*)"/g),
-  ].map((m) =>
-    resolve(dirname(run.chain.path), String(m[1]))
-      .split("\\")
-      .join("/")
-      .replace(/\.js$/, ".ts"),
-  );
-  for (const target of [REAL_DIAGNOSTICS, REAL_BENCHMARK_COMMAND].map((p) => p.split("\\").join("/").replace(/\.ts$/, ""))) {
+  ].map((m) => normalizeModulePath(resolve(dirname(run.chain.path), String(m[1]))));
+  for (const target of [REAL_DIAGNOSTICS, REAL_BENCHMARK_COMMAND].map(normalizeModulePath)) {
     if (!copySpecifiers.includes(target)) {
       reasons.push(`the mutated copy does not resolve to ${target} — its relative imports were not fully relocated`);
     }
@@ -1074,20 +1076,13 @@ describe("E4-R55 real production failure wiring (parent verifier over an isolate
       // E4-R60: BOTH the static diagnostics import and the dynamic benchmark
       // import must be relocated — R59 missed the latter, which is what made the
       // order counterexample vacuous.
-      const expectedTargets = [REAL_DIAGNOSTICS, REAL_BENCHMARK_COMMAND]
-        .map((p) => p.split("\\").join("/"))
-        .sort();
+      const expectedTargets = [REAL_DIAGNOSTICS, REAL_BENCHMARK_COMMAND].map(normalizeModulePath).sort();
       for (const ref of [a, b]) {
         const src = await readFile(ref.path, "utf8");
         const specs = [...src.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*)"(\.\.?\/[^"]*)"/g)].map((m) => String(m[1]));
         expect(specs.length, `${ref.path}: the copy must keep every relative import`).toBeGreaterThanOrEqual(2);
         const resolved = specs
-          .map((spec) =>
-            resolve(dirname(ref.path), spec)
-              .split("\\")
-              .join("/")
-              .replace(/\.js$/, ".ts"),
-          )
+          .map((spec) => normalizeModulePath(resolve(dirname(ref.path), spec)))
           .sort();
         expect(resolved, `${ref.path}: every relative import must reach a REAL module`).toEqual(expectedTargets);
         expect(ref.relocatedImports.length).toBeGreaterThanOrEqual(2);
