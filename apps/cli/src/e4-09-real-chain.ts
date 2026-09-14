@@ -247,13 +247,19 @@ export function mutateChainOrdering(source: string): string {
   const s = source.indexOf(MUTATION_START);
   const e = source.indexOf(MUTATION_END);
   if (s < 0 || e < 0 || e < s) throw new Error("R55 mutation: marker block not found in the chain module");
-  if (!source.includes(MUTATION_ASSERT)) throw new Error("R55 mutation: ACCEPT assert line not found");
   const block = source.slice(s, e + MUTATION_END.length);
   const withoutBlock = source.slice(0, s) + source.slice(e + MUTATION_END.length);
-  const mutated = withoutBlock.replace(MUTATION_ASSERT, `${MUTATION_ASSERT}\n${block}`);
+  // The assert must be matched as a STANDALONE LINE, and the LAST such line:
+  // `MUTATION_ASSERT` also appears inside this module's own string literal near
+  // the top, and replacing THAT occurrence would splice the block into the
+  // literal and produce an unterminated string.
+  const needle = `\n${MUTATION_ASSERT}\n`;
+  const at = withoutBlock.lastIndexOf(needle);
+  if (at < 0) throw new Error("R55 mutation: the ACCEPT assert is not a standalone line");
+  const mutated = `${withoutBlock.slice(0, at)}${needle}${block}\n${withoutBlock.slice(at + needle.length)}`;
   if (mutated === source) throw new Error("R55 mutation produced no change");
-  // sanity: the block must now sit AFTER the assert
-  if (mutated.indexOf(MUTATION_START) < mutated.indexOf(MUTATION_ASSERT)) {
+  // sanity: the block must now sit AFTER the assert statement
+  if (mutated.indexOf(MUTATION_START) < mutated.lastIndexOf(needle)) {
     throw new Error("R55 mutation did not move the block after the assert");
   }
   return mutated;
