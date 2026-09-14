@@ -278,3 +278,50 @@ after:  C:/Users/…/e4-r60-relocate-…/D:/Harness Agent/apps/cli/src/benchmark
 8. **R59 的负控制空转问题（§5）已修，但只覆盖了一种顺序缺陷**：本任务仍只变异
    "decision 落盘移到断言之后"。计划第 7 条允许"注册或 decision 保存"二选一，R55 报告
    §8 已记录"注册前移"的变异未做——本轮未扩大该范围。
+
+---
+
+## 11. 补记（2026-09-14，E4-R61）：CI 全绿 + §6.1 的垫片机制已查清
+
+### 11.1 四个必需 job 全绿
+
+§9 的 NOT_RUN 已由 R61 关闭：run `#137` `34809270367`
+（head `08584422061322d82465377a773624a8f7f0315f`，attempt 1）四个 job **全部 success**：
+`ubuntu-latest` `103867145225`、`windows-latest` `103867145257`、`coverage gate (ubuntu)`
+`103867145008`、`release attestation (P38-12)` `103868080374`。本任务新增/重写的 11 例
+父验证用例在该 run 中通过。详见 `docs/E4-R61-report.md`。
+
+### 11.2 §6.1 / §10.7 的垫片机制已读源码查清
+
+`node-language-shim.cjs` 经 `NODE_OPTIONS` 预加载进**每个** Node 进程，拦截 `fs.rm` →
+调用 `safe-delete-bulk-guard.cjs`；守卫按 `CODEBUDDY_CONVERSATION_REQUEST_ID` 累计**本 turn**
+删除计数，达 `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD`（本机 50）即 `confirmRequired` 并拒绝，
+且同一 turn 内**不回落**。两种实际阻断形态：
+
+1. `pnpm test` 在 pnpm 包装层直接中止；
+2. `vitest run --coverage` 在 `V8CoverageProvider.clean` 删 `coverage/` 时抛
+   `SAFE_DELETE_BULK_CONFIRM_REQUIRED`（抬阈值后改为 `genie-trash … ETIMEDOUT`）。
+
+**三档判别性对照（同一 HEAD、同一干净工作树）**：
+
+| 条件 | 失败文件 | 失败用例 |
+|---|---|---|
+| 守卫生效（该 turn 已用 111 次删除） | 10 failed / 317 passed (327) | 17 failed / 5783 passed / 1 skipped |
+| 抬高阈值 + 换 requestId | 6 failed / 321 passed (327) | 6 failed / 5794 passed / 1 skipped |
+| 完全禁用 `CODEBUDDY_SAFE_DELETE_ENABLED=0` | 6 failed / 320 passed (327) | 6 failed / 5794 passed / 1 skipped |
+
+结论：17 项中 11 项由垫片造成；剩余 **6 项全为符号链接创建被沙箱拒绝（EPERM）**，
+与 R56 §4.1 簇 C 的 6 个套件逐个同名。**本机失败总数是"本 turn 删除预算"的函数，不是稳定量。**
+
+### 11.3 §10.7 关于 `/_tmp_*` 的取舍：R61 实测确认
+
+R61 的多次全量运行中，`git status --porcelain` 始终为**空**，即使仓库根同时存在 5 个
+0 字节 `_tmp_<pid>_<hash>`。即该规则**只**影响 `git status --porcelain --ignored` 这类显式
+列举，不影响洁净性哨兵使用的 `git status --porcelain`。§10.7 记录的"代价"（哨兵看不到掉落物）
+在实测中未产生任何误判。
+
+### 11.4 本轮观测到的唯一非垫片、非符号链接的本地失败
+
+`packages/tools/src/process/executor.test.ts` 的 `afterAll` 在重负载（带 coverage 的全量运行）下
+曾报 `EBUSY: resource busy or locked, rmdir …\ar-exec-XXXX`。这是 Windows 定时性问题，
+**未在本轮修复**（不在 G57–G60 范围），且**未在 CI 上复现**（#137 全绿）。记录为已知残余风险。

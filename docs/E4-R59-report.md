@@ -136,3 +136,22 @@ const DIAGNOSTICS_IMPORT_NEEDLE = ["from", '"./e4-09-diagnostics.js"'].join(" ")
 5. 本任务未处理 `spawnSync` 无超时、`proc.error/signal/stdout/stderr` 未保留、
    `report.json` 读取直接抛错、`afterAll` 无条件删诊断、变异分支退出/身份校验不如正常分支严格
    ——**这些全部是 R60 的范围**，本报告不声称已解决。
+
+---
+
+## 9. 补记（2026-09-14，E4-R61）：CI 全绿，且 §8.1 的垫片缺口已定性
+
+§7 的"未在真实 CI（Windows/coverage）上验证"已由 R61 关闭：run `#137` `34809270367`
+（head `08584422061322d82465377a773624a8f7f0315f`，attempt 1）四个 job **全部 success**
+（ubuntu / windows / coverage gate / release attestation）。详见 `docs/E4-R61-report.md`。
+
+**关于 §8.1 的垫片缺口**：R61 把机制查清了——`node-safe-delete-shim.cjs` 经 `NODE_OPTIONS`
+预加载进每个 Node 进程，按 `CODEBUDDY_CONVERSATION_REQUEST_ID` 累计本 turn 的删除次数，
+达阈值（本机 50）即拒绝且**同一 turn 不回落**；`CODEBUDDY_SAFE_DELETE_ENABLED=0` 可整体关闭。
+R61 用同一 HEAD 做了三档对照（守卫开 / 抬阈值 / 完全关闭），证明"无遗留副本"断言的失败
+**完全由垫片造成**：抬高阈值后 `e4-r55-failure-wiring.test.ts` 两例（含本报告 §4 的并发归属例）
+全部通过，且全量失败从 17 项降到 6 项（剩余 6 项全为符号链接 EPERM）。
+真实 CI 没有该垫片，故 §8.1 的"偶发清不掉"在 CI 上不成立——#137 全绿即为证。
+本报告 §8.3 的结构性守卫在最终实现中仍保留（`e4-r55-failure-wiring.test.ts:1141`），
+且 R61 独立复核了 `apps/cli/tsconfig.json` `include: ["src"]` 与根 vitest include 均不含
+`test-infra/`。

@@ -138,3 +138,20 @@ AssertionError: before snapshot must be valid —
    且让"构建失败"在日志里有一个独立的失败步骤。
 5. 本任务的证据是**本地**复现（同一断言、同一 ENOENT 路径，与 CI 日志逐字对应）+ 失败注入，
    不等于 CI 已转绿。
+
+---
+
+## 9. 补记（2026-09-14，E4-R61）：coverage job 已在真实 CI 转绿
+
+§7 与 §4 表中"未在本任务内确认"的 `coverage gate`，已由 R61 推送后核实：
+
+| 项 | 值 |
+|---|---|
+| run | `#137` `34809270367`（head `08584422061322d82465377a773624a8f7f0315f`，attempt 1） |
+| job | `coverage gate (ubuntu)` = `103867145008` |
+| 结果 | **success**（05:20:18Z → 05:23:03Z） |
+| 产物 | `coverage-summary`（6677 B）、`gate-evidence-coverage`（13728 B）均已上传 |
+
+`vitest.config.ts` 的阈值**未被改动**（本轮 `79cba18..0858442` 内被覆盖率度量的非测试源码
+改动数为 **0**），因此"原阈值不降低"成立。同一 run 的 `windows-latest` 与
+`release attestation` 亦为 success。详见 `docs/E4-R61-report.md`。

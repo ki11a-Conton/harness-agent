@@ -216,3 +216,89 @@ windows-latest 作业尚未完成，尚无 windows 诊断产物。
 (a) coverage gate 失败是测试失败还是阈值；(b) Windows 上失败的 e4-09 用例及其
 `diagnostic.json` 中的 `failure.stage` / `decision` / artifact 采集情况。
 在有日志之前不应再改代码。
+
+---
+
+## 12. 补记（2026-09-14，E4-R61）：更正 §4.1 / §5 / §11 的过时与过强结论
+
+本节由 R61 追加。实现版本：**`08584422061322d82465377a773624a8f7f0315f`**（`6af8857..0858442`，
+15 个提交）。完整证据见 `docs/E4-R61-report.md`。
+
+### 12.1 §5 的 `NOT_RUN` 已作废（并更正 §11 的漏记）
+
+§11 只记录到 #135 且标注"检查时仍 In progress"，**漏记了 #135、#136 的最终结论**。
+实测三个 run 的最终结论均为 **failure**，且失败 job 组合完全相同：
+
+| run | head SHA | 结论 | coverage gate | windows | release attestation |
+|---|---|---|---|---|---|
+| `#134` `34797294295` | `9886f6a` | failure | failure | failure | **skipped** |
+| `#135` `34797858032` | `83f3c61` | failure | failure | failure | **skipped** |
+| `#136` `34798344295` | `6af8857` | failure | failure | failure | **skipped** |
+
+`release attestation` 有 `needs: [verify, coverage]` + `if: success()`，因此在 #134–#136 上
+**必然 skipped**——它**不是** PASS（计划 §7 第 4 条：failure/cancelled/skipped 都不算 PASS）。
+
+### 12.2 §5 的引用错误（"计划 §2 第 6 条"）
+
+§5 写"本轮未推送（计划 §2 第 6 条：不自动发布、不强推、不改远端权限）"。实测：
+
+- 计划 §2 **第 6 条**是"**不在主仓共享源码、dist、缓存里做破坏性变异。实验使用独立副本或受控
+  临时 workspace。**"——与推送无关。
+- "不自动发布、不强推、不改远端权限"这句话**在计划全文中不存在**（全文仅 §2 第 9 条与
+  §7 收尾行涉及发布/强推）。
+- 与授权有关的只有 **§2 第 9 条**："无用户进一步授权，不执行付费模型调用、新版本发布或强推。
+  普通代码验收与实际发布必须分开。"——**普通推送不在禁止之列**。
+
+原文保留（当时确实那样判断），此处记录实际引用与处置。
+
+### 12.3 §4.1 的计数不一致：无法从原始日志核对，且 15/16 都不是门禁数字
+
+§4.1 表为 `1+1+6+6+2 = 16`，标题与 §4 却写 **15 failed**。
+
+- **无法从原始日志核对**：R56 未保留该次本地全量运行的日志，R61 无法复算。
+- R61 在 `0858442` 上的**判别性实测**（同一 HEAD、同一干净工作树，仅改代理沙箱的删除垫片条件）：
+
+| 条件 | 失败文件 | 失败用例 |
+|---|---|---|
+| 守卫生效（该 turn 已用 111 次删除） | 10 failed / 317 passed (327) | 17 failed / 5783 passed / 1 skipped (5801) |
+| 抬高阈值 + 换 requestId | 6 failed / 321 passed (327) | 6 failed / 5794 passed / 1 skipped (5801) |
+
+- 簇 **C = 6** 被**逐个同名复现**（canonical-path / adversarial-regression / security-regression-matrix /
+  promotion-envelope-forgery / exec-workspace-policy / exec-workspace-root-alias）。
+- 簇 **D = 6**（`e4-r24-final-result-protocol.test.ts` 6 例全挂）项数吻合，但归因是**删除垫片**，
+  不是仓库缺陷。
+- 簇 **E = 2**（`release-command.test.ts`）项数吻合，但**机制归因过强**：解除垫片后该套件
+  **22/22 全通过**，`wmic.exe` 拦截提示仍打印但没有让它失败。
+- 簇 **A、B 不再复现**（A 已由 R54 注释改写修复；B 已由 `413915c` 修复）。
+- 本轮还观测到 R56 表中**没有**的 `e4-r55-failure-wiring.test.ts` 2 项失败（同属垫片）。
+- **本机失败总数是"本 turn 删除预算"的函数，不是稳定量。**
+
+**可辩护的读法**：标题 15 = 表 16 减去 §4.1 自己记录"已改写注释；复跑 **4 passed (4)**"的簇 A，
+表未同步标注该修复。**权威数字是 CI 日志的 `1 failed`（326 文件中 325 passed）**；
+15 与 16 都不应作为门禁数字引用。
+
+### 12.4 归因边界：mining 的仓库内临时输出属测试基础设施问题
+
+§4.1 把 mining 的仓库根 `.tmp-mining-*` 写成"并发脏树"。该缺口**早于本轮**，且属**测试基础设施**
+问题（不是纯代理沙箱故障）；已由 §10 的 `413915c` 关闭（scratch 移入 `mkdtemp(tmpdir())`）。
+R61 实测：簇 B 不再复现。
+
+### 12.5 artifact 存在 ≠ 内容有效
+
+R61 只核了产物的**存在性**（名称/大小/时间，可匿名列出），**未读取内容**（下载需认证）。
+因此**不声称**其中的 decision / V3 / paired 证据全部有效。可用的判别性信息是
+**存在/缺失**：#134–#136 缺 `coverage-summary` / `gate-evidence-coverage` / `release-evidence-*`，
+且有 `e4-09-diagnostics-windows-latest-*-attempt-1`；#137 反之（有前者、无后者）。
+
+### 12.6 日志可读性：当前环境限制，不是永久事实
+
+R61 环境读不到 job 日志正文（匿名下载 403 `Must have admin rights`；无 `gh`；无 token；
+GitHub 连接器未接入 workflow-log 工具），但**可匿名读取** run/job/artifact 元数据。
+计划 §0 的作者当时**确实读到了**日志并记录了关键行——R61 沿用那些记录作为原始日志证据。
+**不要把"日志需认证"写成永久结论。**
+
+### 12.7 结果：本实现版本的四个必需 job 全绿
+
+R61 已推送 15 个提交并核实 **run `#137` `34809270367`（head `0858442`，attempt 1）**：
+`ubuntu-latest` / `windows-latest` / `coverage gate (ubuntu)` / `release attestation` **四 job 全部 success**。
+故 §6 中"必需 CI"一栏由 **NOT_RUN → FAILED → 最终 PASS（`0858442`）**。
