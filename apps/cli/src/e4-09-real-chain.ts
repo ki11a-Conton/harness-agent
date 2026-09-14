@@ -26,7 +26,7 @@
 import { expect, vi } from "vitest";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, relative, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import type { ModelEvent, ModelProvider, ModelRef, ProviderConfig } from "@ar/contracts";
 import { ScriptedModelProvider } from "@ar/model";
 import { runV3ChampionEval } from "@ar/evaluation";
@@ -377,11 +377,18 @@ export function relocateChainImports(
     RELATIVE_SPECIFIER,
     (_match, lead: string, quote: string, specifier: string) => {
       const target = toSourcePath(specifier, fromDir);
-      const rel = relative(toDir, target)
-        .split("\\")
-        .join("/")
-        .replace(/\.ts$/, ".js");
-      const next = rel.startsWith(".") ? rel : `./${rel}`;
+      const rel = relative(toDir, target);
+      // `path.relative` returns an ABSOLUTE path when the two locations are on
+      // different Windows drives, and an absolute string is not a relative
+      // specifier. Emitting it would produce a copy that resolves to nowhere
+      // (the R59 defect, in a new form), so refuse explicitly instead.
+      if (rel === "" || isAbsolute(rel)) {
+        throw new Error(
+          `R60: cannot express ${target} as a relative specifier from ${toDir} — refusing to emit a copy that cannot resolve its dependencies`,
+        );
+      }
+      const spec = rel.split("\\").join("/").replace(/\.ts$/, ".js");
+      const next = spec.startsWith(".") ? spec : `./${spec}`;
       rewrites.push({ from: specifier, to: next });
       return `${lead}${quote}${next}${quote}`;
     },

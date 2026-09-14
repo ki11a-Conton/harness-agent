@@ -61,7 +61,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, readdir, rm, rmdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, parse, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { mutateChainOrdering, relocateChainImports } from "./e4-09-real-chain.js";
@@ -900,6 +900,34 @@ describe("E4-R60 child lifecycle + evidence protocol (lightweight controlled chi
     expect(ok.kind).toBe("ok");
     expect(ok.results).toEqual([{ title: "t", status: "failed" }]);
   }, 60_000);
+
+  it("relocates EVERY relative specifier of a chain copy and preserves the target set", async () => {
+    const realSource = await readFile(REAL_CHAIN, "utf8");
+    // The helper is PURE (string in, string out), so the destination does not
+    // need to exist — it only has to be on the same volume as the repository.
+    const toDir = join(RUNS_ROOT, "probe-relocate", "deep", "nested");
+
+    const { source, rewrites } = relocateChainImports(realSource, dirname(REAL_CHAIN), toDir);
+    // both the static diagnostics import and the DYNAMIC benchmark import
+    expect(rewrites.length).toBeGreaterThanOrEqual(2);
+    const resolved = [...source.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*)"(\.\.?\/[^"]*)"/g)]
+      .map((m) => normalizeModulePath(resolve(toDir, String(m[1]))))
+      .sort();
+    expect(resolved).toEqual([REAL_DIAGNOSTICS, REAL_BENCHMARK_COMMAND].map(normalizeModulePath).sort());
+
+    // the self-check refuses a source with nothing to relocate rather than
+    // emitting a copy that would resolve its dependencies from the wrong place
+    expect(() => relocateChainImports("export const x = 1;\n", dirname(REAL_CHAIN), toDir)).toThrow(
+      /no relative specifier/,
+    );
+
+    // A copy on a DIFFERENT VOLUME cannot be expressed as a relative specifier.
+    // `path.relative` would hand back an absolute path, so the helper must refuse
+    // instead of silently emitting an unresolvable copy (the R59 defect again).
+    if (parse(tmpdir()).root !== parse(REPO_ROOT).root) {
+      expect(() => relocateChainImports(realSource, dirname(REAL_CHAIN), tmpdir())).toThrow(/cannot express/);
+    }
+  });
 
   it("rejects an extra failure, a renamed title, an unexpected success or the wrong signal", () => {
     const expected = resultsOf(EXPECTED_CHILD_RESULTS);
