@@ -1,7 +1,32 @@
-import { mkdir, mkdtemp, writeFile, rm } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+/**
+ * E4-R54 fault seam — inject a read failure for an explicitly registered path.
+ * Only temp fixture roots owned by this suite are ever registered; the repo tree
+ * is never chmod'ed and never mutated.
+ */
+const ioFaults = vi.hoisted(() => ({ failReadFile: new Map<string, string>() }));
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  return {
+    ...actual,
+    readFile: ((p: unknown, ...rest: unknown[]) => {
+      const key = String(p);
+      const code = ioFaults.failReadFile.get(key);
+      if (code !== undefined) {
+        const err = new Error(`${code}: injected read failure, readFile '${key}'`) as NodeJS.ErrnoException;
+        err.code = code;
+        return Promise.reject(err);
+      }
+      return (actual.readFile as unknown as (a: unknown, ...r: unknown[]) => Promise<unknown>)(p, ...rest);
+    }) as typeof actual.readFile,
+  };
+});
+
 import { verifyDocs } from "./docs-verify.js";
 
 let root = "";
@@ -84,8 +109,23 @@ beforeEach(() => {
   root = "";
 });
 afterEach(async () => {
+  ioFaults.failReadFile.clear();
   if (root !== "") await rm(root, { recursive: true, force: true });
 });
+
+/** The common "everything else is fine" fixture, so a test can isolate one fact. */
+const FULL_FIXTURE: Record<string, string> = {
+  ...suiteCaseFiles(3),
+  "benchmarks/README.md": README_CLAIMS,
+  "packages/a/package.json": "{}",
+  "HANDOVER.md": HANDOVER,
+  ".github/workflows/ci.yml": CI_WITH_GATES,
+  "CAPABILITY_MATRIX.md": MATRIX_MD,
+  "CAPABILITY_MATRIX.json": MATRIX_JSON,
+};
+
+const e4_00 = (result: Awaited<ReturnType<typeof verifyDocs>>) =>
+  result.checks.find((c) => c.name === "current plan entry (E4-00)")!;
 
 describe("P20-3 docs:verify — machine truth verification", () => {
   it("passes when every machine-derivable doc fact matches reality", async () => {
@@ -391,5 +431,80 @@ Release SHA: 33de85f9a1b2c3d4e5f60718293a4b5c6d7e8f901 (historical example, not 
     const result = await verifyDocs({ root });
     const plan = result.checks.find((c) => c.name === "current plan entry (E4-00)")!;
     expect(plan.truthful).toBe(true);
+  });
+
+  // ── E4-R54 (F54): "absent" and "unreadable" must not share an outcome ──
+
+  it("E4-R54: plan.md that is a real DIRECTORY fails closed — never reported as 'no in-progress plan'", async () => {
+    await makeRoot({ ...FULL_FIXTURE });
+    await rm(join(root, "plan.md"), { force: true });
+    await mkdir(join(root, "plan.md"), { recursive: true });
+    const result = await verifyDocs({ root });
+    const plan = e4_00(result);
+    expect(plan.truthful).toBe(false);
+    // The pre-R54 catch-all selected the absence branch here, claiming there was
+    // no in-progress plan while a plan entry demonstrably existed.
+    expect(plan.reason).not.toMatch(/no plan\.md — no in-progress plan/);
+    expect(plan.reason).toMatch(/could not be read/);
+    expect(plan.reason).toMatch(/EISDIR/);
+  });
+
+  it("E4-R54: an injected EACCES / EIO on plan.md fails closed and preserves the real error code", async () => {
+    for (const code of ["EACCES", "EIO"]) {
+      await makeRoot({ ...FULL_FIXTURE });
+      const dir = root;
+      ioFaults.failReadFile.set(join(dir, "plan.md"), code);
+      const result = await verifyDocs({ root: dir });
+      const plan = e4_00(result);
+      expect(plan.truthful).toBe(false);
+      expect(plan.reason).toContain(code);
+      expect(plan.reason).not.toMatch(/no plan\.md — no in-progress plan/);
+      ioFaults.failReadFile.clear();
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("E4-R54: a dangling-symlink entry (readFile ENOENT while the entry exists) fails closed", async () => {
+    // Deterministic signature: readFile reports ENOENT while `lstat` still sees
+    // the entry. That is exactly what a dangling symlink looks like from the
+    // reading code's point of view, so it is reproduced by injecting the ENOENT
+    // on a path that really exists (a directory). This does not depend on the
+    // platform being able to create links at all.
+    await makeRoot({ ...FULL_FIXTURE });
+    await rm(join(root, "plan.md"), { force: true });
+    await mkdir(join(root, "plan.md"), { recursive: true });
+    ioFaults.failReadFile.set(join(root, "plan.md"), "ENOENT");
+    const result = await verifyDocs({ root });
+    const plan = e4_00(result);
+    expect(plan.truthful).toBe(false);
+    expect(plan.reason).toMatch(/dangling symlink/);
+    ioFaults.failReadFile.clear();
+
+    // And the REAL thing, when the platform can actually create a link. Measured
+    // on Windows here: `symlink(..., "file")` resolves "ok" yet creates nothing,
+    // so observability (not the syscall's return value) decides whether this
+    // half can run — the limitation is recorded rather than faked green.
+    await makeRoot({ ...FULL_FIXTURE });
+    const dir = root;
+    await rm(join(dir, "plan.md"), { force: true });
+    try {
+      await symlink(join(dir, "definitely-missing-target.md"), join(dir, "plan.md"), "file");
+    } catch {
+      /* recorded below via observability */
+    }
+    const observable = await lstat(join(dir, "plan.md")).then(
+      (st) => st.isSymbolicLink(),
+      () => false,
+    );
+    if (!observable) {
+      expect(observable).toBe(false); // honest: platform cannot create the link
+      await rm(dir, { recursive: true, force: true });
+      return;
+    }
+    const real = await verifyDocs({ root: dir });
+    const realPlan = e4_00(real);
+    expect(realPlan.truthful).toBe(false);
+    expect(realPlan.reason).toMatch(/dangling symlink/);
+    await rm(dir, { recursive: true, force: true });
   });
 });

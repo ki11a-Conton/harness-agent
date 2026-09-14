@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+import { lstat, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 
 /**
@@ -250,25 +250,30 @@ export async function verifyDocs(deps: { root: string }): Promise<DocVerificatio
   // unmarked, or references a spec that does not exist — a later agent must be
   // able to find THE current plan, not a stale or ambiguous one.
   {
-    let planEntry = "";
-    let planExists = true;
+    // E4-R54 (F54) — "there is no plan.md" and "plan.md cannot be read" are
+    // DIFFERENT facts and must not share an outcome. Pre-R54 a single `catch {}`
+    // collapsed EVERY readFile failure into `planExists = false`, which selected
+    // the "no in-progress plan" PASS branch: a plan.md that was a DIRECTORY
+    // (EISDIR), unreadable (EACCES) or hit an I/O error (EIO) was reported as a
+    // truthful absence claim derived from evidence of presence.
+    let planEntry: string | null = null;
+    let readFailure: { code: string; message: string } | null = null;
     try {
       planEntry = await readFile(join(root, "plan.md"), "utf8");
-    } catch {
-      planExists = false;
+    } catch (err) {
+      readFailure = {
+        code: (err as NodeJS.ErrnoException).code ?? "unknown",
+        message: err instanceof Error ? err.message : String(err),
+      };
     }
     const CURRENT_MARKER = "当前执行计划入口";
     // E4-R50 收口（用户指示）：仓库不再维护「当前计划入口」的三文件体系（plan.md
     // + plan(<时间戳>).md），三个计划文件均从工作树与远端删除，仅存于 git 历史。
     // 无 plan.md = 无进行中的计划（诚实 PASS）；一旦存在，仍须自洽（fail-closed：
     // 缺失标记 / 引用不存在的 spec 都判 FALSE）。
-    if (!planExists) {
-      checks.push({
-        name: "current plan entry (E4-00)",
-        truthful: true,
-        reason: "no plan.md — no in-progress plan (E4-R50 收口后计划体系已归档进 git 历史); if a plan.md reappears it must be self-consistent",
-      });
-    } else {
+    // E4-R54 收紧：上述 PASS 只适用于 plan.md **确实不存在**的情况。存在但读不了
+    // （目录 / 不可读 / I/O 错误 / 悬空链接）一律 FALSE，理由给出真实原因。
+    if (readFailure === null && planEntry !== null) {
       const markedCurrent = planEntry.includes(CURRENT_MARKER);
       const specRef = planEntry.match(/plan\((\d{8}-\d{6})\)\.md/);
       let specExists = false;
@@ -288,6 +293,42 @@ export async function verifyDocs(deps: { root: string }): Promise<DocVerificatio
             : specExists
               ? `plan.md is the current entry and references an existing spec plan(${specRef[1]}).md`
               : `plan.md references plan(${specRef[1]}).md but that spec file is missing`,
+      });
+    } else if (readFailure !== null && readFailure.code === "ENOENT") {
+      // A DANGLING SYMLINK also surfaces as ENOENT from readFile, but the entry
+      // genuinely EXISTS (it is a broken link). `lstat` sees the link itself and
+      // is therefore the discriminator: only a path that is absent at the link
+      // level is truly "no plan".
+      const linkLevel = await lstat(join(root, "plan.md")).then(
+        () => "present",
+        (err: unknown) => (err as NodeJS.ErrnoException).code ?? "unknown",
+      );
+      if (linkLevel === "ENOENT") {
+        checks.push({
+          name: "current plan entry (E4-00)",
+          truthful: true,
+          reason: "no plan.md — no in-progress plan (E4-R50 收口后计划体系已归档进 git 历史); if a plan.md reappears it must be self-consistent",
+        });
+      } else if (linkLevel === "present") {
+        checks.push({
+          name: "current plan entry (E4-00)",
+          truthful: false,
+          reason: "plan.md is a dangling symlink — the entry EXISTS but its target is missing; this is not 'no in-progress plan'",
+        });
+      } else {
+        checks.push({
+          name: "current plan entry (E4-00)",
+          truthful: false,
+          reason: `plan.md could not be resolved (lstat ${linkLevel}): the entry may exist but cannot be inspected — this is not 'no in-progress plan'`,
+        });
+      }
+    } else {
+      // E4-R54: the entry exists (or at least is not absent) yet could not be
+      // read. Report the REAL error code; never fall back to the absence claim.
+      checks.push({
+        name: "current plan entry (E4-00)",
+        truthful: false,
+        reason: `plan.md could not be read (${readFailure!.code}): ${readFailure!.message} — this is not 'no in-progress plan'`,
       });
     }
   }
