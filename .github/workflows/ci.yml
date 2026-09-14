@@ -55,6 +55,12 @@ jobs:
       # Recorded relative to the repo root (CI cwd); `.ci/` is git-ignored so
       # this never dirties the working tree the sentinel inspects.
       E4_09_DIAG_DIR: .ci/diagnostics
+      # E4-R60 (G60): where the R55 PARENT VERIFIER drops the logs, raw report
+      # and diagnostic bundle tree of a child run it judged UNDECIDABLE. The
+      # parent preserves this BEFORE releasing the run's temp roots, so it is
+      # separate from (and additional to) the e4-09 hook above. Also `.ci/`,
+      # for the same clean-tree reason.
+      E4_R55_PARENT_DIAG_DIR: .ci/r55-parent-diagnostics
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
@@ -149,6 +155,22 @@ jobs:
         with:
           name: e4-09-diagnostics-${{ matrix.os }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: .ci/diagnostics/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # E4-R60 (G60): the R55 parent verifier preserves the child's bounded
+      # stdout/stderr, its raw report, its diagnostic bundle tree and a
+      # machine-readable run.json with every judgement reason BEFORE it releases
+      # the run's temp roots. Uploading it here means a failed parent
+      # verification is debuggable from the artifact alone — it no longer
+      # depends on the e4-09 hook above, which only covers the e4-09 suite's own
+      # failures. A green run preserves nothing and uploads nothing.
+      - name: Upload R55 parent-verifier diagnostics (E4-R60, failure only)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e4-r55-parent-diagnostics-${{ matrix.os }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: .ci/r55-parent-diagnostics/
           if-no-files-found: ignore
           retention-days: 14
 
