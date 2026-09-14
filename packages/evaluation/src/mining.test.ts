@@ -1,4 +1,4 @@
-import { describe, expect, it, afterAll } from "vitest";
+import { describe, expect, it, afterAll, beforeAll } from "vitest";
 import {
   CaseMiningError,
   defaultExpectedStatus,
@@ -11,10 +11,29 @@ import {
   type CandidateBenchmarkCase,
   type CapturedFailure,
 } from "./mining.js";
-import { readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const T0 = "2026-08-19T00:00:00.000Z";
+
+/**
+ * The `writeFrozenCase (layout)` scratch tree used to be written into
+ * `process.cwd()` — the repository ROOT — and removed in `afterAll`. Between
+ * those two points the `.tmp-mining-*` directories existed as UNTRACKED entries
+ * in the working tree, so `git status --porcelain` was non-empty. Under a
+ * concurrent full-suite run that alone is enough to make the promotion
+ * benchmark (e4-09 / `benchmark-command` E4-R41) refuse to run with
+ * "source tree is not provably clean" — a false positive, not a real change.
+ * The scratch tree now lives in the OS temp directory, so this test can never
+ * dirty the repository; `.gitignore` keeps the historical names invisible as
+ * well, for leftovers already sitting on developer machines.
+ */
+let scratch = "";
+
+beforeAll(async () => {
+  scratch = await mkdtemp(join(tmpdir(), "e4-mining-"));
+});
 
 function confirmedFailure(over: Partial<CapturedFailure> = {}): CapturedFailure {
   return {
@@ -214,7 +233,7 @@ describe("freezeCase (P2-11 step 4)", () => {
 
 describe("writeFrozenCase (layout)", () => {
   it("writes request.md / expected.md / case.json / fixture under suite/id", async () => {
-    const outDir = join(process.cwd(), ".tmp-mining-test");
+    const outDir = join(scratch, "layout");
     const c = mineCandidate(
       confirmedFailure({
         fixture: { "src/index.ts": "export const a = 1;", ".env": "K=sk-abcdefghijklmnopqrstuvwxyz" },
@@ -245,13 +264,12 @@ describe("writeFrozenCase (layout)", () => {
     const c = mineCandidate(confirmedFailure(), { now: () => Date.parse(T0) });
     const bad = { ...c, fixture: { ...c.fixture, "../evil.txt": "x" } };
     const frozen = freezeCase(bad, "1.0.0");
-    await expect(writeFrozenCase(".tmp-mining-escape", frozen)).rejects.toThrow(
+    await expect(writeFrozenCase(join(scratch, "escape"), frozen)).rejects.toThrow(
       CaseMiningError,
     );
   });
 });
 
 afterAll(async () => {
-  await rm(join(process.cwd(), ".tmp-mining-test"), { recursive: true, force: true }).catch(() => {});
-  await rm(join(process.cwd(), ".tmp-mining-escape"), { recursive: true, force: true }).catch(() => {});
+  if (scratch !== "") await rm(scratch, { recursive: true, force: true }).catch(() => {});
 });

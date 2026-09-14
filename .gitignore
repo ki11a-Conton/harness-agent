@@ -54,3 +54,10 @@ apps/cli/src/e4-r55-mutated-chain.generated.ts
 # must stay invisible to `git status --porcelain`: the production promotion
 # benchmark refuses to run on a tree that is not provably clean.
 .workbuddy-ai/
+# E4-R56 gap fix: the case-mining layout test used to build its scratch tree in
+# the REPO ROOT (.tmp-mining-test / .tmp-mining-escape). The test now writes to
+# the OS temp dir, but these names stay ignored so a leftover from an
+# interrupted run on an existing machine cannot keep `git status --porcelain`
+# dirty — a concurrent promotion benchmark (e4-09) refuses to run on a tree that
+# is not provably clean, and that dirt would be a false positive, not a change.
+.tmp-mining-*/
