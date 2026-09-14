@@ -315,8 +315,15 @@ export function mutateChainOrdering(source: string): string {
   return out;
 }
 
-/** The ONE relative import of this module that a relocated copy must rewrite. */
-const DIAGNOSTICS_IMPORT_NEEDLE = 'from "./e4-09-diagnostics.js"';
+/**
+ * The ONE relative import of this module that a relocated copy must rewrite.
+ *
+ * Built by CONCATENATION so this module never contains the literal it searches
+ * for — the same defence the P14-6 static scan uses for its own patterns. A
+ * verbatim needle would also match its own declaration here (measured: 2 hits,
+ * which the count assertion below correctly rejected).
+ */
+const DIAGNOSTICS_IMPORT_NEEDLE = ["from", '"./e4-09-diagnostics.js"'].join(" ");
 
 /**
  * E4-R59 (G59) — relocate a generated copy's relative import.
