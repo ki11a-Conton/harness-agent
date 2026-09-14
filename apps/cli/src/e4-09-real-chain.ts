@@ -244,24 +244,28 @@ export async function buildRealChain(root: string, testName: string, opts: RealC
  * masquerade as a passing negative control.
  */
 export function mutateChainOrdering(source: string): string {
-  const s = source.indexOf(MUTATION_START);
-  const e = source.indexOf(MUTATION_END);
-  if (s < 0 || e < 0 || e < s) throw new Error("R55 mutation: marker block not found in the chain module");
+  // Both markers (and the assert text) ALSO appear as string literals near the
+  // top of this module, so every search below matches a WHOLE LINE. A bare
+  // `indexOf` would land inside a literal and splice the block into it.
+  const startNeedle = `\n${MUTATION_START}\n`;
+  const endNeedle = `\n${MUTATION_END}\n`;
+  const sIdx = source.indexOf(startNeedle);
+  if (sIdx < 0) throw new Error("R55 mutation: START marker is not a standalone line");
+  const s = sIdx + 1;
+  const eIdx = source.indexOf(endNeedle, s);
+  if (eIdx < 0) throw new Error("R55 mutation: END marker is not a standalone line after START");
+  const e = eIdx + 1;
   const block = source.slice(s, e + MUTATION_END.length);
   const withoutBlock = source.slice(0, s) + source.slice(e + MUTATION_END.length);
-  // The assert must be matched as a STANDALONE LINE, and the LAST such line:
-  // `MUTATION_ASSERT` also appears inside this module's own string literal near
-  // the top, and replacing THAT occurrence would splice the block into the
-  // literal and produce an unterminated string.
-  const needle = `\n${MUTATION_ASSERT}\n`;
-  const at = withoutBlock.lastIndexOf(needle);
+
+  const assertNeedle = `\n${MUTATION_ASSERT}\n`;
+  const at = withoutBlock.lastIndexOf(assertNeedle);
   if (at < 0) throw new Error("R55 mutation: the ACCEPT assert is not a standalone line");
-  const mutated = `${withoutBlock.slice(0, at)}${needle}${block}\n${withoutBlock.slice(at + needle.length)}`;
+  const mutated = `${withoutBlock.slice(0, at)}${assertNeedle}${block}\n${withoutBlock.slice(at + assertNeedle.length)}`;
+
   if (mutated === source) throw new Error("R55 mutation produced no change");
-  // Sanity: the block must now sit AFTER the assert statement. Both markers are
-  // ALSO present as string literals near the top of this module, so the check
-  // searches for the marker as the start of a LINE, from the assert onwards.
-  if (mutated.indexOf(`\n${MUTATION_START}`, at) < 0) {
+  // Sanity: the block must now sit AFTER the assert statement.
+  if (mutated.indexOf(`\n${MUTATION_START}\n`, at) < 0) {
     throw new Error("R55 mutation did not move the block after the assert");
   }
   return mutated;
