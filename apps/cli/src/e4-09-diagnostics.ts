@@ -338,37 +338,35 @@ export class E4DiagnosticRecorder {
         rec["sourceDigest"] = read.sourceDigest;
         const name = `${spec.role}${extOf(spec.path)}`;
         const target = join(dir, "artifacts", name);
-        if (read.truncated === true) {
-          // E4-R47: copy ONLY the bounded head BYTES (byte-accurate: headBytes
-          // is the cap, headDigest is over exactly those bytes). The copy is
-          // bounded by the cap, NOT by character count; an over-cap file's full
-          // body is never JSON.parsed (see parseError below).
-          if (read.headBuf !== undefined) {
-            await writeFile(target, read.headBuf, "binary");
-          }
-          rec["truncated"] = true;
-          rec["sourceBytes"] = read.sourceBytes;
-          rec["headBytes"] = read.headBytes;
-          rec["headDigest"] = read.headDigest;
-          rec["capturedPath"] = join("artifacts", name);
-        } else {
-          // Small file: write the verbatim bytes; digest stays the source digest.
-          const text = read.headText ?? "";
-          await writeFile(target, text, "utf8");
-          rec["truncated"] = false;
-          rec["headBytes"] = read.headBytes;
-          rec["headDigest"] = read.headDigest;
-          rec["capturedPath"] = join("artifacts", name);
-        }
+        // E4-R52 (F52): the copy is written from the retained BYTES for EVERY
+        // size — never from a decoded string. Pre-R52 the small-file branch did
+        // `writeFile(target, read.headText ?? "", "utf8")`, so any source that is
+        // not valid UTF-8 was transcoded on the way out (the 4-byte `ff fe 00 61`
+        // landed as the 8-byte `ef bf bd ef bf bd 00 61`) while `headBytes` and
+        // `headDigest` still described the ORIGINAL bytes — a digest that
+        // provably did not describe its own copy. Evidence that lies is worse
+        // than no evidence.
+        await writeFile(target, read.headBuf ?? Buffer.alloc(0));
+        rec["truncated"] = read.truncated === true;
+        rec["headBytes"] = read.headBytes;
+        rec["headDigest"] = read.headDigest;
+        rec["capturedPath"] = join("artifacts", name);
+        // E4-R52: surface the stat/stream size relationship as an explicit fact
+        // rather than leaving a disagreement implied by other fields.
+        rec["statBytes"] = read.statBytes;
+        rec["sourceChangedDuringRead"] = read.sourceChangedDuringRead === true;
         // Reduce for the inline summary; parsing a body is always guarded. For a
-        // TRUNCATED artifact we do NOT JSON.parse the whole source — the head is
-        // not a valid JSON body, so a parse is skipped and the reason noted.
+        // TRUNCATED artifact we do NOT JSON.parse the whole source — the retained
+        // copy is not the whole body, so a parse is skipped and the reason noted.
         if (read.truncated === true) {
-          rec["parseError"] = "source truncated — body exceeds MAX_COPY_BYTES; full JSON.parse skipped (bounded capture)";
+          rec["parseError"] =
+            "source not fully copied — the retained copy is a strict prefix of the bytes read (copy cap or source growth); full JSON.parse skipped (bounded capture)";
           summaries[spec.role] = null;
         } else {
           let parsed: unknown = null;
           try {
+            // E4-R52: `headText` is a UTF-8 DECODE used for the inline summary
+            // ONLY. It must never regenerate the copy on disk (see above).
             parsed = JSON.parse(read.headText ?? "");
           } catch (err) {
             rec["parseError"] = msg(err);
@@ -463,22 +461,34 @@ export class E4DiagnosticRecorder {
 interface BoundedRead {
   ok: boolean;
   error?: string;
-  /** Full source size in bytes (accurate for both small and huge files). */
+  /** The size the pre-read `stat` reported. Kept so a disagreement with
+   *  `sourceBytes` is a visible fact rather than an inferred one (E4-R52). */
+  statBytes?: number;
+  /** true when the bytes actually streamed differ from `statBytes` — i.e. the
+   *  source changed between the `stat` and the read (E4-R52). */
+  sourceChangedDuringRead?: boolean;
+  /** Full source size in bytes AS ACTUALLY READ (accurate for both small and
+   *  huge files; the streamed byte count, not the pre-read stat). */
   sourceBytes?: number;
   /** sha256 over the FULL source's raw bytes (streamed). */
   sourceDigest?: string;
-  /** The bytes we actually hold / copy (≤ MAX_COPY_BYTES head). */
+  /** The bytes we actually hold / copy. */
   headBytes?: number;
   /** sha256 over `headBytes` ONLY (the copy we keep, not the whole source). */
   headDigest?: string;
-  /** true when the source exceeded the cap and we only kept the head. */
+  /** true when the retained copy is a STRICT PREFIX of the bytes actually read
+   *  — because the source exceeded the copy cap, or because it grew between the
+   *  `stat` and the read. Derived from the read facts, never from the pre-read
+   *  stat (E4-R52); a `false` here is a claim that the copy IS the whole source. */
   truncated?: boolean;
-  /** The retained head as a string (only meaningful when not truncated, and
-   *  only used to write the small-file copy verbatim / parse an in-budget body). */
-  headText?: string;
-  /** E4-R47: the retained head BYTES (only set when truncated) so the caller
-   *  can write the bounded copy byte-for-byte. */
+  /** E4-R52: the exact bytes to persist as the copy. Set for EVERY successful
+   *  read (small and over-cap alike) so the copy is written verbatim and can
+   *  never be transcoded by a string round-trip. */
   headBuf?: Buffer;
+  /** E4-R52: a UTF-8 DECODE of the retained head, for the inline JSON summary
+   *  ONLY. It NEVER participates in generating the copy on disk. Only set when
+   *  the retained copy is the whole body (not truncated). */
+  headText?: string;
 }
 
 async function readArtifact(path: string): Promise<BoundedRead> {
@@ -575,24 +585,31 @@ async function readArtifact(path: string): Promise<BoundedRead> {
         fail(readError);
         return;
       }
-      const truncated = total > MAX_COPY_BYTES;
-      const head = headBuf.subarray(0, headUsed);
-      const headText = truncated ? undefined : head.toString("utf8");
+      // E4-R52 (F52) — `truncated` is derived from the READ FACTS, not from the
+      // pre-read stat. Pre-R52 it was `total > MAX_COPY_BYTES` while the head
+      // buffer was allocated from `stat().size`, so a source that grew between
+      // the stat and the read produced `sourceBytes > headBytes` together with
+      // `truncated === false` — a record claiming a COMPLETE capture whose copy
+      // was missing its tail. The honest predicate is simply "the copy is a
+      // strict prefix of what we actually read".
+      const head = Buffer.from(headBuf.subarray(0, headUsed));
+      const truncated = headUsed < total;
       const headDigest = createHash("sha256").update(head).digest("hex");
       const out: BoundedRead = {
         ok: true,
+        statBytes: size,
+        sourceChangedDuringRead: total !== size,
         sourceBytes: total,
         sourceDigest: srcHash.digest("hex"),
         headBytes: headUsed,
         headDigest,
         truncated,
-        ...(headText !== undefined ? { headText } : {}),
+        // E4-R52: the copy's bytes, always present, always exactly `headBytes`.
+        headBuf: head,
+        // E4-R52: decode for the SUMMARY only, and only when the copy is the
+        // whole body — a truncated head is not a parseable JSON body.
+        ...(truncated ? {} : { headText: head.toString("utf8") }),
       };
-      if (truncated) {
-        // E4-R47: keep the actual head BYTES so the caller can write the bounded
-        // copy byte-for-byte (a digest alone cannot reconstruct the copy).
-        out.headBuf = Buffer.from(head);
-      }
       settle(out);
     }
     function onClose(): void {
