@@ -384,12 +384,15 @@ describe("E4-R55 real production failure wiring (parent verifier over an isolate
       expect(a.sha256).toBe(b.sha256);
 
       // Each copy's rewritten import must RESOLVE to the real diagnostics module,
-      // whatever directory depth the copy happens to sit at.
+      // whatever directory depth the copy happens to sit at. The specifier uses
+      // the ESM `.js` form (TypeScript resolves `.js` -> the `.ts` source), so the
+      // comparison is made modulo that extension convention.
       for (const ref of [a, b]) {
         const src = await readFile(ref.path, "utf8");
         const spec = /from "([^"]*e4-09-diagnostics\.js)"/.exec(src)?.[1];
         expect(spec, `${ref.path}: the copy must import the diagnostics module`).toBeDefined();
-        expect(resolve(dirname(ref.path), spec as string)).toBe(REAL_DIAGNOSTICS);
+        const resolved = resolve(dirname(ref.path), spec as string).replace(/\.js$/, "");
+        expect(resolved).toBe(REAL_DIAGNOSTICS.replace(/\.ts$/, ""));
       }
 
       // Run A cleans ONLY its own directory: B's copy must survive intact.
