@@ -147,3 +147,33 @@ R78 交接时在 Linux 上验证。
    隔离检查（V1 修复会加强而非削弱，已留待授权）。
 5. 保留历史：R74 全部文档与旧指纹原样，修订只走 rev1。
 6. 真实基线成绩仍 **NOT_RUN**；费用 **UNKNOWN**。
+---
+
+## 9. 勘误与后续修复（E4-R79，追加，不修改上文历史事实）
+
+本节由 E4-R79 追加。上文第 1～8 节记录的是 R77 当时的事实，**不予改写**。
+
+1. **V1 已在 E4-R79 修复。** 本报告 §8.1 写明「未修 verifier 的 win32 引号缺陷」。
+   E4-R79 已将该缺陷修好：结构化 `command + args` 现在由
+   `ProcessExecutor.runArgv` 以 `spawn(file, args, { shell: false })` 直接执行，
+   `TaskVerifier.checkCommand` 明确分流（有 `args` 走 argv，无 `args` 保留 legacy
+   shell recipe），`shellQuote` 已删除。修复后 6 个冻结 command 用例经**真实
+   TaskVerifier** 判分：错误 fixture 失败、正确实现通过（Windows 与 Ubuntu 一致）。
+
+2. **§8.2 的「command 用例在 win32 系统性 FAIL」不再是现状。** 该条描述的是 R77
+   当时的平台缺陷，现已不成立。R77 当时**没有**把 command 用例在 Windows 上做绿是
+   正确的（那时它确实系统性失败）；本勘误只更正「当前状态」，不否认历史。
+
+3. **新增的注入风险已一并消除。** 原实现把 args 拼进 shell 字符串，参数内的 `&`、
+   `;` 会被当作第二条命令执行（E4-R79 实测复现）。argv 路径下结构上不可能发生。
+
+4. **测试契约变更。** 本报告 §5 依赖的 `runCommandSpecDirectly` 曾是「绕过
+   verifier 的自建 direct-argv helper」。E4-R79 已把它改为调用**真实
+   `TaskVerifier`**——否则 oracle 无法发现生产路径自身的缺陷。该 helper 的名字保留，
+   行为已换。
+
+5. **CI 事实更正。** R77 交付时 CI 在 Ubuntu 上为红：本报告钉住 V1 的测试无条件断言
+   `expect(false)`，而 Ubuntu 上真实 verifier 正确返回 `true`。该断言在 E4-R79 中已被
+   替换为**平台无关的正向契约**（不是加 `skipIf`、不是删除）。
+
+详见 `docs/E4-R79-report.md`；原始实测数据见 `docs/r79-evidence/`。
