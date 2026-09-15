@@ -191,6 +191,34 @@ What each step does and does **not** prove:
 persistence warning. `skills` / `plugins` / `context budget` warnings likewise
 describe configuration that is optional in this flow.
 
+### Running the test suite (commit first, or expect three failures)
+
+`pnpm test` and `pnpm test:coverage` run correctly on a **clean** working tree.
+On a tree with uncommitted changes — including a single untracked scratch file —
+three `apps/cli` suites fail:
+
+```
+apps/cli/src/benchmark-command.test.ts
+apps/cli/src/e4-09-production-e2e.test.ts        (4 tests)
+apps/cli/src/e4-r55-failure-wiring.test.ts
+```
+
+This is **not** a regression and not a flaky test. The promotion path in
+`apps/cli/src/benchmark-command.ts` asserts that the source tree is clean before
+it will produce promotion-grade evidence (`probeSourceSnapshot` is
+module-local, so a test cannot stub it). A dirty tree makes that gate
+*correctly* refuse, and the refusal is what those suites observe. The behaviour
+is identical before and after E4-R79.
+
+So the local workflow is: **commit or stash, then run the gate.** CI always runs
+on a pristine checkout and is unaffected. To convince yourself quickly:
+
+```bash
+git stash -u                      # or commit
+pnpm exec vitest run apps/cli/src/benchmark-command.test.ts   # exit 0
+git stash pop
+```
+
 Both benchmark report files are written next to the suite by default
 (`benchmarks/adversarial.json` and `benchmarks/adversarial-summary.md`) unless you
 pass `--out <dir>`, which writes the same two filenames into that directory:
@@ -212,20 +240,44 @@ the **exact** plan (digest + explicit spend cap) — `benchmark` refuses a bille
 provider without both (E4-01). Set `RUN_PAID_BENCHMARKS=1` to authorize a paid
 run; an API key alone is **not** authorization.
 
+The plan digest binds **who** will be called, not just what will be run: the
+provider, the model and the endpoint. `--provider`, `--model` and `--endpoint`
+state that identity explicitly and take precedence over the environment, so a
+plan can be reviewed — and a digest obtained — **before** any key exists. The
+endpoint is normalised (lower-cased host, default ports stripped, query and
+fragment dropped) and folded in as a digest, so credentials embedded in a URL
+never reach the plan or the digest.
+
 ```bash
 export OPENAI_API_KEY=sk-...
 export OPENAI_BASE_URL=https://api.openai.com/v1   # any OpenAI-compatible endpoint
 export OPENAI_MODEL=gpt-4o-mini                     # or deepseek-v4-flash, etc.
 
-# 1) dry-run — prints the canonical e4-01 plan + planDigest (0 provider calls, offline)
+# 1) dry-run — prints the canonical e4-02 plan + planDigest (0 provider calls, offline)
 node apps/cli/dist/main.js benchmark --suite adversarial --dry-run
 
+# 1b) keyless equivalent: pin the identity explicitly, no key required
+#     (the frozen 8-case baseline; `--limit 0` keeps every case)
+node apps/cli/dist/main.js benchmark --suite regression \
+  --cases benchmarks/baseline-e4-r74 \
+  --provider openai --model gpt-4o-mini \
+  --endpoint https://api.openai.com/v1 \
+  --limit 0 \
+  --max-logical-runs 8 --max-model-calls 80 \
+  --max-estimated-tokens 320000 --max-estimated-cost-usd 0.04 \
+  --dry-run --out .ci/bench
+
 # 2) confirm the EXACT plan and cap spend before the run starts
-node apps/cli/dist/main.js benchmark --suite adversarial \
+node apps/cli/dist/main.js benchmark --suite regression \
+  --cases benchmarks/baseline-e4-r74 \
   --max-model-calls 800 \
   --plan-digest <planDigest from the dry-run output> \
   --out .ci/bench
 ```
+
+A digest obtained from a legacy `e4-01` plan is **not** reusable — re-run the
+dry-run to get an `e4-02` digest bound to the endpoint you actually intend to
+call.
 
 `deepseek`-style thinking models are supported: `reasoning_content` is parsed
 from the stream, persisted on the assistant message, and passed back on the
