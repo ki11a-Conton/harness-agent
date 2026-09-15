@@ -1,0 +1,20 @@
+
+npm warn Unknown project config "verify-deps-before-run". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+ RUN  v4.1.10 D:/Harness Agent
+
+stdout | packages/harness/src/_tmp_r72_validate.test.ts > R72 fix validation (counter-example: old fails, new passes) > OLD implementation + 8s late approval => reproduces the CI ENOENT
+VALIDATION OLD: {"mode":"old","delayMs":8000,"outcome":"completed","mergedOk":false,"readErr":"ENOENT: no such file or directory, open 'C:\\Users\\s5605\\AppData\\Local\\Temp\\ar-r72-v-j1P4zT\\src\\helper.ts'","hasSubagentStarted":false,"hasSubagentCompleted":false,"mergeApplied":false,"danglingPending":2,"backgroundLeftRunning":false}
+
+ ✓ packages/harness/src/_tmp_r72_validate.test.ts > R72 fix validation (counter-example: old fails, new passes) > OLD implementation + 8s late approval => reproduces the CI ENOENT 128788ms
+stdout | packages/harness/src/_tmp_r72_validate.test.ts > R72 fix validation (counter-example: old fails, new passes) > NEW implementation + 8s late approval => passes with real merge
+VALIDATION NEW: {"mode":"new","delayMs":8000,"outcome":"completed","mergedOk":true,"hasSubagentStarted":true,"hasSubagentCompleted":true,"mergeApplied":true,"danglingPending":0,"backgroundLeftRunning":false}
+
+ ✓ packages/harness/src/_tmp_r72_validate.test.ts > R72 fix validation (counter-example: old fails, new passes) > NEW implementation + 8s late approval => passes with real merge 8925ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  10:47:37
+   Duration  142.14s (transform 3.18s, setup 0ms, import 3.90s, tests 137.72s, environment 0ms)
+
+

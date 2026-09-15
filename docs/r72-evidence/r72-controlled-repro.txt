@@ -1,0 +1,28 @@
+
+npm warn Unknown project config "verify-deps-before-run". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+ RUN  v4.1.10 D:/Harness Agent
+
+stdout | packages/harness/src/_tmp_r72_decisive.test.ts > R72 decisive probe: auto-approve loop budget vs late approval > D: no delay (baseline)
+CASE D: {"firstCallDelayMs":0,"outcome":"completed","runTurnMs":1003,"loopExitedAt":3034,"approvalsSeen":1,"mergedOk":true,"types":["approval.created","approval.resolved","subagent.started","subagent.completed"],"danglingPending":0,"decisions":["allow@test"]}
+
+ ✓ packages/harness/src/_tmp_r72_decisive.test.ts > R72 decisive probe: auto-approve loop budget vs late approval > D: no delay (baseline) 3104ms
+stdout | packages/harness/src/_tmp_r72_decisive.test.ts > R72 decisive probe: auto-approve loop budget vs late approval > E: first provider call delayed 2500ms (beyond the 200x10ms budget)
+CASE E: {"firstCallDelayMs":2500,"outcome":"completed","runTurnMs":3615,"loopExitedAt":3091,"approvalsSeen":1,"mergedOk":true,"types":["approval.created","approval.resolved","subagent.started","subagent.completed"],"danglingPending":0,"decisions":["allow@test"]}
+
+ ✓ packages/harness/src/_tmp_r72_decisive.test.ts > R72 decisive probe: auto-approve loop budget vs late approval > E: first provider call delayed 2500ms (beyond the 200x10ms budget) 3642ms
+stdout | packages/harness/src/_tmp_r72_decisive.test.ts > R72 decisive probe: auto-approve loop budget vs late approval > F: first provider call delayed 8000ms (approval raised after the loop is long gone)
+CASE F: {"firstCallDelayMs":8000,"outcome":"completed","runTurnMs":128503,"loopExitedAt":3230,"approvalsSeen":0,"mergedOk":false,"readErr":"ENOENT: no such file or directory, open 'C:\\Users\\s5605\\AppData\\Local\\Temp\\ar-r72-x-8a0CK9\\src\\helper.ts'","types":["approval.created","approval.resolved","approval.created","approval.resolved"],"danglingPending":2,"decisions":[]}
+
+ ✓ packages/harness/src/_tmp_r72_decisive.test.ts > R72 decisive probe: auto-approve loop budget vs late approval > F: first provider call delayed 8000ms (approval raised after the loop is long gone) 128537ms
+stdout | packages/harness/src/_tmp_r72_decisive.test.ts > R72 decisive probe: auto-approve loop budget vs late approval > G: first provider call delayed 61000ms (beyond the 60s approval expiry)
+CASE G: {"firstCallDelayMs":61000,"outcome":"completed","runTurnMs":181391,"loopExitedAt":3200,"approvalsSeen":0,"mergedOk":false,"readErr":"ENOENT: no such file or directory, open 'C:\\Users\\s5605\\AppData\\Local\\Temp\\ar-r72-x-c4HKRJ\\src\\helper.ts'","types":["approval.created","approval.resolved","approval.created","approval.resolved"],"danglingPending":2,"decisions":[]}
+
+ ✓ packages/harness/src/_tmp_r72_decisive.test.ts > R72 decisive probe: auto-approve loop budget vs late approval > G: first provider call delayed 61000ms (beyond the 60s approval expiry) 181403ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  10:39:07
+   Duration  321.38s (transform 3.50s, setup 0ms, import 4.22s, tests 316.69s, environment 0ms)
+
+

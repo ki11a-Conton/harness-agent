@@ -112,8 +112,18 @@ describe("P3-6 end-to-end: delegate_worker writes an isolated copy and merges", 
       const turn = await harness.runtime.startTurn(session.id, "implement the helper");
       // Auto-approve any approval request the delegate_worker tool raises
       // (interactive profile → exec:tool asks for approval).
+      //
+      // R72: this loop must be bound to the TEST's lifecycle, not to a fixed
+      // 200×10ms budget. A fixed budget is a wall-clock race: on a loaded
+      // runner the approval request can be raised after the loop has already
+      // exited, leaving it pending. The turn then blocks until the 60s
+      // approval expiry, the delegation never runs, and the later
+      // `readFile(src/helper.ts)` fails with ENOENT — a misleading failure
+      // that points at the merge path when the real cause is the harness
+      // never approving. The loop now runs until the turn settles.
+      let turnSettled = false;
       const autoApprove = (async () => {
-        for (let i = 0; i < 200; i += 1) {
+        while (!turnSettled) {
           for (const req of harness.approvalStore.listPending()) {
             harness.approvalStore.resolve(req.id, "allow", "test");
           }
@@ -121,19 +131,39 @@ describe("P3-6 end-to-end: delegate_worker writes an isolated copy and merges", 
         }
       })();
       const outcome = await harness.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+      turnSettled = true;
       await autoApprove;
 
       expect(outcome.status).toBe("completed");
+
+      // R72: surface the ACTUAL worker/tool/merge outcome before asserting on
+      // file content, so a failure never degrades into a bare ENOENT that
+      // hides whether the child ran, wrote, or merged. Events are read first
+      // because they are the authoritative record of what happened.
+      const events = await harness.events.list(session.id);
+      const types = events.map((e) => e.type);
+      const childSessionId = events.find((e) => e.type === "subagent.started")?.payload.childSessionId as
+        | string
+        | undefined;
+      const mergeOutput = events.find(
+        (e) => e.type === "tool.completed" && e.payload.tool === "delegate_worker",
+      )?.payload.outputPreview as string | undefined;
+
+      expect(types).toContain("subagent.started");
+      expect(types).toContain("subagent.completed");
+      // The merge must report the file as applied — not conflicted/skipped.
+      expect(mergeOutput).toContain("[workspace merge]");
+      expect(mergeOutput).toContain("applied:");
 
       // The worker's write landed in the PARENT workspace via physical merge.
       const merged = await readFile(join(cwd, "src", "helper.ts"), "utf8");
       expect(merged).toBe(fixtureText);
 
-      // The child workspace itself is gone (disposed after the delegation).
-      const events = await harness.events.list(session.id);
-      const types = events.map((e) => e.type);
-      expect(types).toContain("subagent.started");
-      expect(types).toContain("subagent.completed");
+      // The child session existed and completed its turn; the isolated root is
+      // disposed after the delegation (the patch was already extracted).
+      expect(childSessionId).toBeTruthy();
+      const childTurns = await harness.store.listTurns(childSessionId as never);
+      expect(childTurns.at(-1)?.status).toBe("completed");
     } finally {
       await harness.close();
     }
