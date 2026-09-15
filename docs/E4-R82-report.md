@@ -9,7 +9,8 @@ content, holdout, digest, billing or isolation change, and no paid run.**
 | Field | Value |
 | --- | --- |
 | Starting SHA | `597b34a6…` (R81) |
-| Task SHA | `0ca421e6fed7168bd91463950b76bc15bb63c3e7` |
+| Code SHA (job added) | `0ca421e6fed7168bd91463950b76bc15bb63c3e7` |
+| Final pushed SHA | `cbb8a64c9b3120f23f52b0662ca081c25b39a4d6` |
 | Environment (local) | Windows NT 10.0.19044.0 (win32), Node v24.18.1, pnpm 11.21.0, vitest 4.1.10 |
 | Environment (CI job) | GitHub-hosted `ubuntu-latest`, Node 22, pnpm 11.21.0 |
 | Provider calls | **0** — local and CI |
@@ -39,7 +40,7 @@ because the capability is genuinely absent here — not because an attempt faile
 
 ---
 
-## 2. Local gates (Windows, clean tree at `b0a4dd2`)
+## 2. Local gates (Windows, clean tree)
 
 Run on a **clean** tree (nothing untracked, nothing modified) so the promotion
 path's clean-tree gate cannot be confused with a real failure:
@@ -129,9 +130,9 @@ what is on `main`:
 
 | Field | Value |
 | --- | --- |
-| Run id | `34939903886` |
+| Run id | `34940787769` |
 | Attempt | 1 |
-| Head SHA | `b0a4dd27d3af782acd56ff6beece0218e44178d7` (= pushed `main`) |
+| Head SHA | `cbb8a64c9b3120f23f52b0662ca081c25b39a4d6` (= pushed `main`) |
 | Conclusion | **success** |
 | Runner (cold-start job) | GitHub Actions, `ubuntu-latest`, Node 22, pnpm 11.21.0 |
 
@@ -143,11 +144,12 @@ what is on `main`:
 | `offline cold-start (ubuntu)` | **success** |
 | `release attestation (P38-12)` | success |
 
-The immediately preceding run `34938827497` (attempt 1, head `07adf3f`) was also
-fully green with the same five-job shape; the final commit after it is
-documentation only, and its run was verified rather than assumed for that reason.
+Two earlier runs in this task were also fully green with the same five-job shape:
+`34939903886` (attempt 1, head `b0a4dd2`) and `34938827497` (attempt 1, head
+`07adf3f`). Every commit after those was documentation-only, and each was
+re-verified rather than assumed for exactly that reason.
 
-The `offline cold-start (ubuntu)` job (job id `104285962557`) ran **16/16
+The `offline cold-start (ubuntu)` job (job id `104288760561`) ran **16/16
 productive steps to `success`** — zero non-success steps, none skipped:
 
 ```
@@ -168,7 +170,7 @@ productive steps to `success`** — zero non-success steps, none skipped:
 Step 6 proves the run reused nothing; step 9 proves the workflow carries no paid
 authorization; step 13 machine-checks the artifacts (rather than trusting exit
 codes); step 14 is the POSIX verdict. The run published
-`cold-start-ubuntu-b0a4dd2…-34939903886-attempt-1` (5619 bytes) plus the Ubuntu
+`cold-start-ubuntu-cbb8a64…-34940787769-attempt-1` (5623 bytes) plus the Ubuntu
 `test-report` and `observation-evidence` artifacts. (Artifact **bodies** require
 authentication to download; the step conclusions and artifact listing above are
 the publicly readable evidence, and are what this report relies on. No step
@@ -209,7 +211,7 @@ that gate refuse *by design*; three `apps/cli` suites observe the refusal and
 fail. Measured identical at `7798d3a` (pre-R79), so it is pre-existing.
 
 **CI is unaffected** because it always runs on a pristine checkout — run
-`34939903886`'s `coverage gate (ubuntu)` passed. The trap is local-only, and it
+`34940787769`'s `coverage gate (ubuntu)` passed. The trap is local-only, and it
 is now documented in `README.md`. To reproduce the clean behaviour:
 
 ```bash
@@ -231,16 +233,17 @@ git stash -u && pnpm test:coverage   # or commit first
 
 ## 7. Push
 
-`main` was pushed in two steps, each followed by a re-read of the remote rather
+`main` was pushed in three steps, each followed by a re-read of the remote rather
 than a trust in the push exit code:
 
 ```
 345274b..07adf3f  main -> main
 07adf3f..b0a4dd2  main -> main
+b0a4dd2..cbb8a64  main -> main
 ```
 
 `git ls-remote origin refs/heads/main` was re-read **after** the final push and
-returned `b0a4dd27d3af782acd56ff6beece0218e44178d7`, identical to local `HEAD`.
+returned `cbb8a64c9b3120f23f52b0662ca081c25b39a4d6`, identical to local `HEAD`.
 The CI evidence in §5 is the run for that exact SHA, attempt 1 — not an earlier
 run and not a branch name.
 
@@ -255,4 +258,5 @@ The commits that make up R79–R82, in order:
 | `0ca421e` | R82 — offline Linux cold-start CI job, R81 runbook/helper follow-ups |
 | `99707bc` | R82 — this report |
 | `07adf3f` | README corrections (stale `e4-01`, R81 flags, clean-tree trap) |
-| `b0a4dd2` | R82 — bind this report to run `34939903886`, add the clean-tree matrix |
+| `b0a4dd2` | R82 — bind this report to a green run, add the clean-tree matrix |
+| `cbb8a64` | R82 — bind this report to the run for the pushed tip `cbb8a64` |
