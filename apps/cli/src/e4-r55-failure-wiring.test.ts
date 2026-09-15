@@ -2694,8 +2694,17 @@ describe("E4-R70 cleanup verification is ownership-based", () => {
     await writeFile(aFile, "x\n", "utf8");
     const notUnderADir = await probePathState(join(aFile, "child"));
     expect(notUnderADir.state, "a file as parent must NOT read as 'absent'").toBe("unknown");
-    expect(notUnderADir.operation).toBe("lstat(parent)");
-    expect(notUnderADir.reason).toContain("not a directory");
+    // POSIX reports ENOTDIR directly from lstat(child), while Windows reports
+    // ENOENT and the parent-constraint branch then identifies the file parent.
+    // Both are the same contract: the path cannot be certified absent.
+    if (notUnderADir.errorCode === "ENOTDIR") {
+      expect(notUnderADir.operation).toBe("lstat");
+      expect(notUnderADir.reason).toContain("ENOTDIR");
+    } else {
+      expect(notUnderADir.errorCode).toBe("ENOENT");
+      expect(notUnderADir.operation).toBe("lstat(parent)");
+      expect(notUnderADir.reason).toContain("not a directory");
+    }
 
     // And ENOENT under a real directory IS absent.
     expect((await probePathState(join(root, "never-existed"))).state).toBe("absent");
