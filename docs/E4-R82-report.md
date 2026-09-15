@@ -28,8 +28,7 @@ runner. R79 fixed the verifier; the POSIX half of that verdict can only be
 | Local gate: `pnpm build` | **PASS** | §2 — this machine (Windows) |
 | Local gate: `pnpm test` | **PASS** (328 files / 5924 tests / 3 skipped) | §2 — this machine |
 | Local gate: `pnpm test:coverage` | **PASS** (exit 0, clean tree only) | §2, §5.1 — this machine |
-| Local gate: `pnpm docs:verify` | **PASS** | §2 — this machine |
-| Cold-start job definition (README order on Linux) | **DEFINED** | §3 — `.github/workflows/ci.yml` |
+| Local gate: `pnpm docs:verify` | **PASS** | §2 — this machine || Cold-start job definition (README order on Linux) | **DEFINED** | §3 — `.github/workflows/ci.yml` |
 | `LOCAL_LINUX` (cold start on *the user's own* Linux) | **BLOCKED** | §4 — no Linux/WSL/Docker on this machine |
 | `CI_UBUNTU` (cold start on GitHub `ubuntu-latest`) | **PASS** | §5 — bound to run id / attempt / head SHA |
 | Frozen command specs on Linux through the REAL verifier | **PASS** | §5 — CI step "Linux oracle" |
@@ -40,7 +39,7 @@ because the capability is genuinely absent here — not because an attempt faile
 
 ---
 
-## 2. Local gates (Windows, clean tree at the pushed SHA `07adf3f`)
+## 2. Local gates (Windows, clean tree at `b0a4dd2`)
 
 Run on a **clean** tree (nothing untracked, nothing modified) so the promotion
 path's clean-tree gate cannot be confused with a real failure:
@@ -124,13 +123,15 @@ Explicitly **not** done, per the plan's not-complete conditions:
 
 ## 5. `CI_UBUNTU` — the actual run
 
-Bound to a specific run, not to a branch name or a remembered result:
+Bound to a specific run, not to a branch name or a remembered result. The
+**headline run is the one for the pushed tip**, so the evidence describes exactly
+what is on `main`:
 
 | Field | Value |
 | --- | --- |
-| Run id | `34938827497` |
+| Run id | `34939903886` |
 | Attempt | 1 |
-| Head SHA | `07adf3f62fe01e6671da10b88053c6e509af1fb8` |
+| Head SHA | `b0a4dd27d3af782acd56ff6beece0218e44178d7` (= pushed `main`) |
 | Conclusion | **success** |
 | Runner (cold-start job) | GitHub Actions, `ubuntu-latest`, Node 22, pnpm 11.21.0 |
 
@@ -142,8 +143,12 @@ Bound to a specific run, not to a branch name or a remembered result:
 | `offline cold-start (ubuntu)` | **success** |
 | `release attestation (P38-12)` | success |
 
-The `offline cold-start (ubuntu)` job (job id `104282576189`) ran **16/16
-productive steps to `success`** — none skipped, none tolerated:
+The immediately preceding run `34938827497` (attempt 1, head `07adf3f`) was also
+fully green with the same five-job shape; the final commit after it is
+documentation only, and its run was verified rather than assumed for that reason.
+
+The `offline cold-start (ubuntu)` job (job id `104285962557`) ran **16/16
+productive steps to `success`** — zero non-success steps, none skipped:
 
 ```
 [5]  success  Assert the tested HEAD is the workflow SHA
@@ -162,12 +167,12 @@ productive steps to `success`** — none skipped, none tolerated:
 
 Step 6 proves the run reused nothing; step 9 proves the workflow carries no paid
 authorization; step 13 machine-checks the artifacts (rather than trusting exit
-codes); step 14 is the POSIX verdict. The run published a
-`cold-start-ubuntu-07adf3f…-34938827497-attempt-1` artifact (5619 bytes) plus
-`test-report-ubuntu-latest` and `observation-evidence-ubuntu-latest-34938827497`.
-(Artifact **bodies** need authentication to download; the step conclusions and
-artifact listing above are the publicly readable evidence, and are what this
-report relies on. No step output is paraphrased as if it had been read.)
+codes); step 14 is the POSIX verdict. The run published
+`cold-start-ubuntu-b0a4dd2…-34939903886-attempt-1` (5619 bytes) plus the Ubuntu
+`test-report` and `observation-evidence` artifacts. (Artifact **bodies** require
+authentication to download; the step conclusions and artifact listing above are
+the publicly readable evidence, and are what this report relies on. No step
+output is paraphrased as if it had been read.)
 
 The Linux oracle step ran the real verifier
 (`packages/evaluation/src/e4-r77-baseline-oracle.test.ts`,
@@ -204,7 +209,7 @@ that gate refuse *by design*; three `apps/cli` suites observe the refusal and
 fail. Measured identical at `7798d3a` (pre-R79), so it is pre-existing.
 
 **CI is unaffected** because it always runs on a pristine checkout — run
-`34938827497`'s `coverage gate (ubuntu)` passed. The trap is local-only, and it
+`34939903886`'s `coverage gate (ubuntu)` passed. The trap is local-only, and it
 is now documented in `README.md`. To reproduce the clean behaviour:
 
 ```bash
@@ -226,12 +231,18 @@ git stash -u && pnpm test:coverage   # or commit first
 
 ## 7. Push
 
-`main` was pushed to `07adf3f62fe01e6671da10b88053c6e509af1fb8`
-(`345274b..07adf3f  main -> main`). `git ls-remote origin refs/heads/main` was
-re-read **after** the push and returned the same SHA as local `HEAD`, so the
-verification is bound to what is actually on the remote rather than to the push
-command's exit code. The CI evidence in §5 is the run for that exact SHA,
-attempt 1 — not an earlier run and not a branch name.
+`main` was pushed in two steps, each followed by a re-read of the remote rather
+than a trust in the push exit code:
+
+```
+345274b..07adf3f  main -> main
+07adf3f..b0a4dd2  main -> main
+```
+
+`git ls-remote origin refs/heads/main` was re-read **after** the final push and
+returned `b0a4dd27d3af782acd56ff6beece0218e44178d7`, identical to local `HEAD`.
+The CI evidence in §5 is the run for that exact SHA, attempt 1 — not an earlier
+run and not a branch name.
 
 The commits that make up R79–R82, in order:
 
@@ -244,3 +255,4 @@ The commits that make up R79–R82, in order:
 | `0ca421e` | R82 — offline Linux cold-start CI job, R81 runbook/helper follow-ups |
 | `99707bc` | R82 — this report |
 | `07adf3f` | README corrections (stale `e4-01`, R81 flags, clean-tree trap) |
+| `b0a4dd2` | R82 — bind this report to run `34939903886`, add the clean-tree matrix |
