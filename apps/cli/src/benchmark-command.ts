@@ -295,7 +295,21 @@ export async function runBenchmarkCommand(
   }
 
   // E3-01: resolve provider AFTER preflight + dry-run check.
-  const provider = providerOverride ?? (await resolveModelProvider()).provider;
+  //
+  // E4-R83 (F83-1): the provider is constructed with the SAME identity that was
+  // folded into the plan digest (endpointBaseUrl/modelId above). Before this,
+  // resolveModelProvider() was called with no arguments, so --endpoint and
+  // --model bound only the digest while the actual HTTP request fell back to
+  // the environment or the provider's built-in default — i.e. the confirmed
+  // plan could authorize endpoint A while execution silently contacted endpoint
+  // B with the operator's key. The runtime calls createClient(model, {}) with
+  // an empty config, so constructor-time identity is the only injection point.
+  const provider =
+    providerOverride ??
+    (await resolveModelProvider({
+      baseUrl: endpointBaseUrl,
+      modelId: providerId === REAL_PROVIDER_ID ? modelId : undefined,
+    })).provider;
 
   // E3-01: billing authorization (after resolution, confirm).
   if (billingClass === "external-billed" && !opts.paidAuthorized) {

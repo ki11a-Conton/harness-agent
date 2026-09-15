@@ -74,6 +74,11 @@ export function stubProvider(): ModelProvider {
 export interface ResolveModelProviderOptions {
   apiKey?: string;
   baseUrl?: string;
+  /** E4-R83 (F83-1): explicit model identity. The provider must be constructed
+   *  with the SAME identity the plan digest binds — otherwise the digest is
+   *  bound to --model/--endpoint but the actual HTTP request would fall back
+   *  to the environment or the provider's built-in default. */
+  modelId?: string;
 }
 /**
  * Default model provider resolution: when OPENAI_API_KEY is present, load the
@@ -90,7 +95,7 @@ export async function resolveModelProvider(
   if (apiKey === undefined || apiKey === "") {
     return { provider: stubProvider(), billingClass: "offline-test" };
   }
-  const provider = await tryLoadOpenAICompatibleProvider(apiKey, opts.baseUrl);
+  const provider = await tryLoadOpenAICompatibleProvider(apiKey, opts.baseUrl, opts.modelId);
   if (provider === undefined) {
     return { provider: stubProvider(), billingClass: "offline-test" };
   }
@@ -100,6 +105,7 @@ export async function resolveModelProvider(
 async function tryLoadOpenAICompatibleProvider(
   apiKey: string,
   baseUrl?: string,
+  modelId?: string,
 ): Promise<ModelProvider | undefined> {
   try {
     // @ar/model's OpenAICompatibleProvider (packages/model/src/openai.ts) is
@@ -115,7 +121,11 @@ async function tryLoadOpenAICompatibleProvider(
     };
     const Provider = mod.OpenAICompatibleProvider;
     if (Provider === undefined) return undefined;
-    return new Provider({ apiKey, ...(baseUrl !== undefined ? { baseUrl } : {}) });
+    return new Provider({
+      apiKey,
+      ...(baseUrl !== undefined ? { baseUrl } : {}),
+      ...(modelId !== undefined ? { modelId } : {}),
+    });
   } catch {
     return undefined;
   }

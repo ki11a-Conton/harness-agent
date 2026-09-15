@@ -791,4 +791,33 @@ describe("OpenAICompatibleProvider request timeout (Phase 7 deadline)", () => {
     expect(events.some((e) => e.type === "error")).toBe(true);
     expect(events.some((e) => e.type === "completed")).toBe(false);
   }, 10_000);
+
+  // E4-R83 (F83-1): the runtime calls createClient(model, {}) — an EMPTY
+  // config. Identity (apiKey/baseUrl/modelId) therefore MUST be able to ride
+  // the provider CONSTRUCTOR, or the CLI's --provider/--model/--endpoint flags
+  // would bind the plan digest but the actual HTTP request would go to the
+  // provider's built-in default (api.openai.com / gpt-4o-mini). Measured
+  // defect: with only the flags and no env vars, the harness made ZERO calls
+  // to the flagged endpoint and failed with model_error.
+  it("uses the constructor identity when the runtime passes an empty config (E4-R83)", async () => {
+    stubFetch();
+    mockFetch.mockResolvedValueOnce(
+      sseResponse([sseEvent({ choices: [{ delta: { content: "ok" }, finish_reason: "stop" }] })]),
+    );
+
+    const provider = new OpenAICompatibleProvider({
+      apiKey: KEY,
+      baseUrl: "http://constructor.example/v1",
+      modelId: "constructor-model",
+    });
+    // The runtime signature: createClient(model, {}) — no identity in the call
+    // config, no env vars set, so the ONLY source of identity is the provider.
+    const client = provider.createClient({ providerId: "openai", modelId: "ignored" }, {});
+    for await (const _ev of client.generate({ messages: [] }, new AbortController().signal)) {
+      // consume
+    }
+
+    expect(requestUrl()).toBe("http://constructor.example/v1/chat/completions");
+    expect(requestBody().model).toBe("constructor-model");
+  });
 });

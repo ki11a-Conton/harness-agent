@@ -485,12 +485,35 @@ async function* streamChatCompletion(
  * OpenAI-compatible model provider (OpenAI, Azure OpenAI-compatible
  * gateways, Ollama/OpenAI-proxy endpoints, etc.).
  *
- * The API key is resolved per createClient() call:
- * config.apiKey > OPENAI_API_KEY; a missing key throws MODEL_ERROR with a
- * message that never echoes the key itself.
+ * Identity resolution, per createClient() call:
+ *   config.apiKey/baseUrl/modelId (call-site) >
+ *   constructor identity (E4-R83) >
+ *   OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL env >
+ *   built-in default.
+ *
+ * The runtime calls createClient(model, {}) with an EMPTY call config, so the
+ * constructor identity is what lets the CLI's explicit --provider/--model/
+ * --endpoint flags survive into the actual HTTP request. A missing key throws
+ * MODEL_ERROR with a message that never echoes the key itself.
  */
 export class OpenAICompatibleProvider implements ModelProvider {
   readonly id = "openai";
+
+  /** E4-R83 (F83-1): identity fixed at construction time. Nullable so the
+   *  legacy no-arg construction keeps pure env/default resolution. */
+  private readonly identity: {
+    apiKey?: string;
+    baseUrl?: string;
+    modelId?: string;
+  };
+
+  constructor(identity: {
+    apiKey?: string;
+    baseUrl?: string;
+    modelId?: string;
+  } = {}) {
+    this.identity = identity;
+  }
 
   async listModels(): Promise<ModelInfo[]> {
     // TODO: the real list lives behind GET {baseUrl}/models (needs the API
@@ -501,12 +524,12 @@ export class OpenAICompatibleProvider implements ModelProvider {
   createClient(_ref: ModelRef, config: ProviderConfig): ModelClient {
     const str = (value: unknown): string | undefined =>
       typeof value === "string" && value.length > 0 ? value : undefined;
-    const baseUrl = (str(config.baseUrl) ?? str(process.env.OPENAI_BASE_URL) ?? DEFAULT_BASE_URL).replace(
+    const baseUrl = (str(config.baseUrl) ?? str(this.identity.baseUrl) ?? str(process.env.OPENAI_BASE_URL) ?? DEFAULT_BASE_URL).replace(
       /\/+$/,
       "",
     );
-    const apiKey = str(config.apiKey) ?? str(process.env.OPENAI_API_KEY);
-    const modelId = str(config.modelId) ?? str(process.env.OPENAI_MODEL) ?? DEFAULT_MODEL;
+    const apiKey = str(config.apiKey) ?? str(this.identity.apiKey) ?? str(process.env.OPENAI_API_KEY);
+    const modelId = str(config.modelId) ?? str(this.identity.modelId) ?? str(process.env.OPENAI_MODEL) ?? DEFAULT_MODEL;
     if (!apiKey) {
       throw new AgentError(
         errorInfo("MODEL_ERROR", "OpenAI provider requires an API key: set config.apiKey or the OPENAI_API_KEY environment variable", {
@@ -517,10 +540,11 @@ export class OpenAICompatibleProvider implements ModelProvider {
     }
     // P38.4-real: allow the provider retry budget to be tuned via environment
     // variables (same OPENAI_* convention as apiKey/baseUrl/modelId). TPM-limited
-    // servers need more retries and a longer backoff than the defaults; runtime
-    // calls createClient(model, {}) so env vars are the only injection point
-    // that does not touch the runtime architecture. Explicit config values win
-    // over env vars (tests and callers that pass config keep their behavior).
+    // servers need more retries and a longer backoff than the defaults; the
+    // runtime calls createClient(model, {}), so identity reaches the request via
+    // the call config or (E4-R83) the provider constructor, and the retry budget
+    // via env. Explicit config values win over env vars (tests and callers that
+    // pass config keep their behavior).
     const num = (value: unknown, env: string | undefined, fallback: number): number => {
       const fromValue = typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
       if (fromValue !== undefined) return fromValue;

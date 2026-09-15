@@ -2271,3 +2271,118 @@ describe("E4-R81 (F81): keyless billed planning and endpoint-bound digests", () 
   });
 });
 
+// E4-R83 (F83-1): the explicit --provider/--model/--endpoint identity must
+// reach the ACTUAL provider request, not just the digest.
+//
+// Regression guard for a measured defect: runBenchmarkCommand called
+// resolveModelProvider() with NO arguments, so the flags bound the plan digest
+// (endpointIdentity = sha256 over the flagged endpoint) while the executed
+// HTTP request fell back to OPENAI_BASE_URL/OPENAI_MODEL or the provider's
+// built-in default (https://api.openai.com/v1, gpt-4o-mini). The plan could
+// authorize endpoint A while execution silently contacted endpoint B with the
+// operator's key. The existing suite only ever injected providerOverride, so
+// the real resolution path was never exercised — this test drives it.
+//
+// The HTTP layer is a RECORDING stub (global fetch), so the test is
+// deterministic and offline, but every argument flows through the real
+// OpenAICompatibleProvider → createClient → streamChatCompletion path.
+describe("E4-R83 (F83-1): explicit identity reaches the real provider request", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("a billed --endpoint/--model run requests the flagged URL with the flagged model (real resolution path)", async () => {
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "Confirm the setup by replying once with: OK",
+      "cases/t1/expected.md": "No artifacts required for this smoke case.",
+      "cases/t1/case.json": JSON.stringify({
+        verification: [{ kind: "command", command: "node --version" }],
+      }),
+    });
+
+    const requests: Array<{ url: string; body: Record<string, unknown> }> = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: string, init?: RequestInit) => {
+      let body: Record<string, unknown> = {};
+      try { body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>; } catch { /* ignore */ }
+      requests.push({ url: String(input), body });
+      // A minimal valid SSE completion: text "ok", finish stop — the case fails
+      // verification (no artifact), but this test only asserts WHERE and WITH
+      // WHICH MODEL the request went.
+      const enc = (s: string) => new TextEncoder().encode(s);
+      const chunks = [
+        enc(`data: ${JSON.stringify({ choices: [{ delta: { content: "ok" }, finish_reason: null }] })}\n\n`),
+        enc(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\n`),
+        enc("data: [DONE]\n\n"),
+      ];
+      return {
+        ok: true,
+        status: 200,
+        body: new ReadableStream({
+          start(controller) { for (const c of chunks) controller.enqueue(c); controller.close(); },
+        }),
+      } as unknown as Response;
+    }));
+
+    const flaggedEndpoint = "http://127.0.0.1:59123/v1";
+    const flaggedModel = "flagged-model-r83";
+    const prevKey = process.env.OPENAI_API_KEY;
+    const prevPaid = process.env.RUN_PAID_BENCHMARKS;
+    const prevBase = process.env.OPENAI_BASE_URL;
+    const prevModel = process.env.OPENAI_MODEL;
+    process.env.OPENAI_API_KEY = "sk-test-only-never-real";
+    process.env.RUN_PAID_BENCHMARKS = "1";
+    delete process.env.OPENAI_BASE_URL;
+    delete process.env.OPENAI_MODEL;
+    try {
+      // 1) dry-run (0 provider calls) to obtain the authoritative digest for
+      //    the EXACT identity/budget set, as the runbook prescribes.
+      const dry = await runBenchmarkCommand([
+        "--cases", join(root, CASE_DIR),
+        "--out", join(root, OUT_DIR),
+        "--suite", "regression",
+        "--limit", "1",
+        "--provider", "openai",
+        "--model", flaggedModel,
+        "--endpoint", flaggedEndpoint,
+        "--max-model-calls", "100",
+        "--max-estimated-cost-usd", "5.0",
+        "--dry-run",
+      ]);
+      expect(dry.exitCode, dry.lines.join("\n")).toBe(0);
+      expect(requests.length, "a dry-run must never touch the provider").toBe(0);
+      const digest = (JSON.parse(dry.lines.join("\n")) as { planDigest: string }).planDigest;
+      expect(digest).toMatch(/^[0-9a-f]{64}$/);
+
+      // 2) execute the CONFIRMED plan with a key + paid authorization. The
+      //    regression assertion: the real HTTP request must carry the SAME
+      //    endpoint and model that the digest was computed from.
+      const result = await runBenchmarkCommand([
+        "--cases", join(root, CASE_DIR),
+        "--out", join(root, OUT_DIR),
+        "--suite", "regression",
+        "--limit", "1",
+        "--provider", "openai",
+        "--model", flaggedModel,
+        "--endpoint", flaggedEndpoint,
+        "--max-model-calls", "100",
+        "--max-estimated-cost-usd", "5.0",
+        "--plan-digest", digest,
+      ]);
+      // The run may exit 0 (case failure is recorded, not fatal) or 1; the
+      // regression assertion is about the REQUEST, not the verdict.
+      expect(requests.length, `no provider request; result: exit=${result.exitCode} ${result.lines.join(" | ")}`).toBeGreaterThan(0);
+      for (const req of requests) {
+        expect(req.url).toBe(`${flaggedEndpoint}/chat/completions`);
+        expect(req.body.model).toBe(flaggedModel);
+      }
+    } finally {
+      if (prevKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = prevKey;
+      if (prevPaid === undefined) delete process.env.RUN_PAID_BENCHMARKS; else process.env.RUN_PAID_BENCHMARKS = prevPaid;
+      if (prevBase === undefined) delete process.env.OPENAI_BASE_URL; else process.env.OPENAI_BASE_URL = prevBase;
+      if (prevModel === undefined) delete process.env.OPENAI_MODEL; else process.env.OPENAI_MODEL = prevModel;
+      await rm(root, { recursive: true, force: true }).catch(() => {});
+    }
+  }, 120_000);
+});
+
