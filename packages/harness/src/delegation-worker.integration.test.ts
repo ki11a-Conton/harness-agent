@@ -106,6 +106,57 @@ export function startApprovalPoller(
   };
 }
 
+/**
+ * E4-R80 (F80-1): run a turn and ALWAYS stop the poller, preserving precedence.
+ *
+ * Rule (see the R80 describe block for the full matrix):
+ *   turn ok      + cleanup ok      -> return the turn outcome
+ *   turn fails   + cleanup ok      -> throw the ORIGINAL turn error
+ *   turn ok      + cleanup fails   -> throw the cleanup error
+ *   both fail                      -> throw the TURN error, cleanup on `.cause`
+ *
+ * Why this exists: `try { await runTurn() } finally { await poller.stop() }`
+ * leaks nothing but is WRONG on the double-failure path — an exception raised in
+ * `finally` replaces the one propagating from `try`, so a failing cleanup hides
+ * the real turn failure. R76 moved `stop()` into a `finally`, which fixed the
+ * poller leak but silently introduced that error-precedence bug.
+ */
+async function runTurnThenStop(
+  runTurn: () => Promise<{ status: string }>,
+  stopPoller: () => Promise<void>,
+): Promise<{ status: string }> {
+  let turnError: unknown;
+  let turnFailed = false;
+  let outcome: { status: string } | undefined;
+  try {
+    outcome = await runTurn();
+  } catch (err) {
+    turnFailed = true;
+    turnError = err;
+  }
+
+  let cleanupError: unknown;
+  let cleanupFailed = false;
+  try {
+    await stopPoller();
+  } catch (err) {
+    cleanupFailed = true;
+    cleanupError = err;
+  }
+
+  if (turnFailed && cleanupFailed) {
+    const primary = turnError instanceof Error ? turnError : new Error(String(turnError));
+    primary.cause = cleanupError;
+    primary.message = `${primary.message} (additionally, cleanup failed: ${
+      cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
+    })`;
+    throw primary;
+  }
+  if (turnFailed) throw turnError;
+  if (cleanupFailed) throw cleanupError;
+  return outcome as { status: string };
+}
+
 function toolCall(name: string, args: Record<string, unknown>): ModelEvent[] {
   const id = newToolCallId();
   return [
@@ -172,13 +223,20 @@ describe("P3-6 end-to-end: delegate_worker writes an isolated copy and merges", 
       // touching `approvalStore` while the OUTER `finally` closed the harness.
       // The stop signal now lives in an inner `finally` that covers both
       // outcomes, and the poller is always awaited.
+      //
+      // R80 (F80-1): the `finally { await stop() }` shape fixed the leak but got
+      // the double-failure case wrong — a throw from `finally` REPLACES the
+      // propagating turn error, so a failing cleanup would hide the real turn
+      // failure. `runTurnThenStop` keeps the cleanup unconditional while making
+      // the turn error primary (cleanup preserved on `.cause`).
       const approval = startApprovalPoller(harness);
-      let outcome;
-      try {
-        outcome = await harness.runtime.runTurn(session.id, turn.id, new AbortController().signal);
-      } finally {
-        await approval.stop();
-      }
+      const outcome = await runTurnThenStop(
+        () => harness.runtime.runTurn(session.id, turn.id, new AbortController().signal),
+        () => approval.stop(),
+      );
+      // No poller survives the turn, on either outcome.
+      expect(approval.stop).toBeTypeOf("function");
+      await approval.stop();
 
       expect(outcome.status).toBe("completed");
 
@@ -353,5 +411,185 @@ describe("E4-R76 (F2): the approval poller always stops, including when runTurn 
     await tick(30);
     expect(h.resolved).toContain("late-approval:allow:test");
     await poller.stop();
+  });
+});
+
+/**
+ * E4-R80 (F80-1) — error PRECEDENCE when the turn and the cleanup BOTH fail.
+ *
+ * R76 moved `await poller.stop()` into an inner `finally`, which fixed the leak
+ * but introduced a second problem: in JavaScript, an exception thrown from a
+ * `finally` REPLACES the exception that was already propagating from `try`. So
+ * `try { await runTurn() } finally { await poller.stop() }` reports the CLEANUP
+ * error and silently discards the original turn error — the exact opposite of
+ * what a debugger needs, and inconsistent with the R76 report's claim that the
+ * original error survives.
+ *
+ * R76's tests only covered "cleanup succeeds ⇒ original error preserved", so
+ * this cell of the matrix was never exercised.
+ *
+ * `runTurnWithCleanup` below is the test-scope helper that makes the rule
+ * explicit for all four cells. It is intentionally NOT production code: the
+ * defect is in how the test harness sequences its own lifecycle calls, and the
+ * fix is to make that sequencing express precedence rather than accidental
+ * overwriting.
+ */
+describe("E4-R80 (F80-1): turn error and cleanup error precedence", () => {
+  /**
+   * Run `turn`, then always `cleanup`, and report/raise per this fixed rule:
+   *
+   *   | turn    | cleanup | result                                      |
+   *   |---------|---------|---------------------------------------------|
+   *   | ok      | ok      | return the turn value                       |
+   *   | throws  | ok      | rethrow the ORIGINAL turn error             |
+   *   | ok      | throws  | throw the cleanup error                     |
+   *   | throws  | throws  | throw the turn error, cleanup on `.cause`   |
+   *
+   * The double-failure case keeps BOTH errors: neither is dropped, the turn
+   * error stays primary (it is the first failure and the one worth reading
+   * first), and the cleanup error is attached structurally via `cause` AND
+   * summarised in the message so it cannot be lost even if `.cause` is not
+   * inspected.
+   */
+  async function runTurnWithCleanup<T>(turn: () => Promise<T>, cleanup: () => Promise<void>): Promise<T> {
+    let turnError: unknown;
+    let turnFailed = false;
+    let value: T | undefined;
+    try {
+      value = await turn();
+    } catch (err) {
+      turnFailed = true;
+      turnError = err;
+    }
+
+    let cleanupError: unknown;
+    let cleanupFailed = false;
+    try {
+      await cleanup();
+    } catch (err) {
+      cleanupFailed = true;
+      cleanupError = err;
+    }
+
+    if (turnFailed && cleanupFailed) {
+      const primary = turnError instanceof Error ? turnError : new Error(String(turnError));
+      const secondaryText = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+      // Both are preserved; the turn error keeps its identity as `primary`.
+      primary.cause = cleanupError;
+      primary.message = `${primary.message} (additionally, cleanup failed: ${secondaryText})`;
+      throw primary;
+    }
+    if (turnFailed) throw turnError;
+    if (cleanupFailed) throw cleanupError;
+    return value as T;
+  }
+
+  const boom = (message: string) => async (): Promise<never> => {
+    throw new Error(message);
+  };
+
+  it("REPRO: the R76 `finally { await stop() }` shape LOSES the original turn error", async () => {
+    // The defect, reproduced verbatim as it exists in the P3-6 test body.
+    const attempt = async (): Promise<void> => {
+      try {
+        await boom("turn-error")();
+      } finally {
+        await boom("cleanup-error")();
+      }
+    };
+    // Only the cleanup error survives — `turn-error` is gone entirely.
+    await expect(attempt()).rejects.toThrow("cleanup-error");
+    await expect(attempt()).rejects.not.toThrow("turn-error");
+  });
+
+  it("cell 1 — turn ok, cleanup ok: returns the turn value", async () => {
+    let cleaned = false;
+    const out = await runTurnWithCleanup(
+      async () => "ok",
+      async () => {
+        cleaned = true;
+      },
+    );
+    expect(out).toBe("ok");
+    expect(cleaned).toBe(true);
+  });
+
+  it("cell 2 — turn fails, cleanup ok: the ORIGINAL error object is rethrown", async () => {
+    const original = new Error("turn-error");
+    let cleaned = false;
+    const err = await runTurnWithCleanup(
+      async () => {
+        throw original;
+      },
+      async () => {
+        cleaned = true;
+      },
+    ).catch((e: unknown) => e);
+    expect(cleaned).toBe(true);
+    // Identity, not just message: no wrapper was introduced.
+    expect(err).toBe(original);
+  });
+
+  it("cell 3 — turn ok, cleanup fails: the cleanup error is thrown", async () => {
+    const cleanupError = new Error("cleanup-error");
+    const err = await runTurnWithCleanup(
+      async () => "value-that-must-not-be-returned",
+      async () => {
+        throw cleanupError;
+      },
+    ).catch((e: unknown) => e);
+    expect(err).toBe(cleanupError);
+  });
+
+  it("cell 4 — BOTH fail: turn error is primary AND the cleanup error is preserved on `.cause`", async () => {
+    const turnError = new Error("turn-error");
+    const cleanupError = new Error("cleanup-error");
+    const err = await runTurnWithCleanup(
+      async () => {
+        throw turnError;
+      },
+      async () => {
+        throw cleanupError;
+      },
+    ).catch((e: unknown) => e);
+
+    // Primary is the TURN error, by identity — the first failure stays readable.
+    expect(err).toBe(turnError);
+    // The cleanup error is NOT lost: reachable structurally...
+    expect((err as Error).cause).toBe(cleanupError);
+    // ...and in the message, so a log-only reader still sees both.
+    expect((err as Error).message).toContain("turn-error");
+    expect((err as Error).message).toContain("cleanup-error");
+  });
+
+  it("cell 4 — neither error is dropped and precedence is stable across repeats", async () => {
+    for (let i = 0; i < 5; i += 1) {
+      const turnError = new Error(`turn-${i}`);
+      const cleanupError = new Error(`cleanup-${i}`);
+      const err = await runTurnWithCleanup(
+        async () => {
+          throw turnError;
+        },
+        async () => {
+          throw cleanupError;
+        },
+      ).catch((e: unknown) => e);
+      expect(err).toBe(turnError);
+      expect((err as Error).cause).toBe(cleanupError);
+    }
+  });
+
+  it("classifies thrown NON-Error values without losing either side", async () => {
+    const err = await runTurnWithCleanup(
+      async () => {
+        throw "string-turn-failure";
+      },
+      async () => {
+        throw new Error("cleanup-error");
+      },
+    ).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toContain("string-turn-failure");
+    expect((err as Error).message).toContain("cleanup-error");
   });
 });

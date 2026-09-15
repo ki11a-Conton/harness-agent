@@ -1,0 +1,69 @@
+E4-R80 (F80-1) — offline evidence
+=================================
+
+Environment: Windows NT 10.0.19044.0 (win32), Node v24.18.1, pnpm 11.21.0,
+vitest 4.1.10. No provider constructed; providerCalls = 0.
+
+1. The defect (reproduced as a test, not asserted statically)
+------------------------------------------------------------
+
+`try { await runTurn() } finally { await poller.stop() }` with BOTH failing:
+
+  await expect(attempt()).rejects.toThrow("cleanup-error");       -> PASSES
+  await expect(attempt()).rejects.not.toThrow("turn-error");     -> PASSES
+
+i.e. the thrown error is ONLY "cleanup-error". The original "turn-error" is
+destroyed, because JavaScript replaces an in-flight exception with one raised
+from `finally`. R76's own tests asserted only the cleanup-succeeds path, so this
+cell was never exercised. Test name in the suite:
+
+  E4-R80 (F80-1): turn error and cleanup error precedence
+    > REPRO: the R76 `finally { await stop() }` shape LOSES the original turn error
+
+2. The full four-cell matrix (after the helper)
+-----------------------------------------------
+
+All four cells pass deterministically (no sleeps, no wall-clock dependence):
+
+  cell 1  turn ok    + cleanup ok    -> returns the turn value          PASS
+  cell 2  turn fails + cleanup ok    -> original Error rethrown, __by identity__ PASS
+  cell 3  turn ok    + cleanup fails -> cleanup error thrown            PASS
+  cell 4  BOTH fail                  -> turn error primary, cleanup on `.cause`,
+                                        and BOTH messages present      PASS
+
+Cell 4 also runs 5 times in a loop to show precedence is stable, and a
+non-Error throw (`throw "string-turn-failure"`) is classified without losing
+either side.
+
+3. Full-file result
+-------------------
+
+  pnpm exec vitest run packages/harness/src/delegation-worker.integration.test.ts
+  -> Test Files 1 passed (1); Tests 13 passed (13); exit 0
+
+4. Stability: 10 consecutive runs of the same file
+--------------------------------------------------
+
+  run 1 PASS (13 tests)
+  run 2 PASS (13 tests)
+  run 3 PASS (13 tests)
+  run 4 PASS (13 tests)
+  run 5 PASS (13 tests)
+  run 6 PASS (13 tests)
+  run 7 PASS (13 tests)
+  run 8 PASS (13 tests)
+  run 9 PASS (13 tests)
+  run 10 PASS (13 tests)
+
+  PASS=10 FAIL=0
+
+No failing round was discarded. The suite uses fake harnesses, deferred
+promises and call counters rather than 20-60ms sleeps, so a loaded runner does
+not change the outcome.
+
+5. What was NOT proven
+----------------------
+
+This work does NOT establish that the historical R71 ENOENT had the same root
+cause. It only fixes the error-precedence of the test-scope turn/cleanup
+sequence and pins the poller lifecycle.
