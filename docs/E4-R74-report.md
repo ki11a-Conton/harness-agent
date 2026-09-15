@@ -195,7 +195,10 @@ runbook §0 逐项列出 8 项必须由用户确认的信息，当前**全部未
 1. **真实基线运行：NOT_RUN**（未获模型与预算授权）——这是本轮**有意**的结果，
    不是失败。
 2. **成本：UNKNOWN**，无真实报价或计量来源，未虚构金额。
-3. **未在真实 Windows/Linux CI runner 上验证 R72 修复**（沿用 R72 §7）。
+3. **R72 修复已在真实 Windows CI runner 验证**：推送后 run `34923889986`
+   （head `481badb`）**completed / success**；该 run 同时覆盖本三个提交。
+   残余边界：该 run 的 job 级明细与 artifact 正文未读取（匿名 API 速率限制），
+   且触发历史间歇失败的 runner 侧诱因仍为 UNRESOLVED（R72 §5）。
 4. **未使用 holdout 做任何事**，包括未用于案例选择。
 5. **未提出 challenger、未晋升 champion**：先有真实 baseline 才有策略优化依据。
 6. 本机未提供强隔离后端，因此本次方案记录的运行会是**测量运行**而非

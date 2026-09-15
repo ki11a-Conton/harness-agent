@@ -1,0 +1,23 @@
+E4-R72 real CI verification (recorded after push)
+=================================================
+push           : fe7e1d2..481badb  (fast-forward, NOT a force push)
+remote HEAD    : 481badb729aed9f765601e0526f51154ec6cd2bf  (verified via git ls-remote)
+run id         : 34923889986
+head_sha       : 481badb729aed9f765601e0526f51154ec6cd2bf
+status         : completed
+conclusion     : success
+run_attempt    : 1
+created_at     : 2026-09-15T03:09:09Z
+
+Coverage: this run contains all three commits (R72/R73/R74).
+
+Evidence boundary:
+- The run-level conclusion above is authoritative and was read from the GitHub
+  Actions API.
+- JOB-LEVEL detail and the contents of the uploaded test-report artifacts were
+  NOT read: the anonymous GitHub API hit its rate limit and the gh CLI is not
+  installed on this machine. Run-level success therefore does not carry
+  per-job conclusions or per-test output lines.
+- The R71-recorded historical failure's TIMING was still never observed, so the
+  historical CI event is still NOT proven to share this root cause.
+- The runner-side trigger that delays the approval request remains UNRESOLVED.

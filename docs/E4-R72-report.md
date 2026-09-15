@@ -187,9 +187,35 @@ await autoApprove;
 | 目标测试连续 5 次 | **5/5 passed**，exit 0 |
 | 反例（8s 延迟）新实现 | **passed**，merge applied，残留 pending = 0 |
 | 反例（8s 延迟）旧实现 | **failed**，复现 CI ENOENT |
+| **真实 CI（推送后）** | **run `34923889986` @ `481badb` — completed / success** |
 
 修复后测试耗时由 3055ms 降至 **730ms**——旧实现把时间花在等待满 2s 固定预算上，
 这本身就是「测试等待的是时钟而非被测行为」的直接旁证。
+
+### 4.4 真实 CI 验证（原 §7.1 的 NOT_RUN 已补上）
+
+本报告初稿写作时尚未推送，故 §7.1 记「真实 Windows runner 验证：NOT_RUN」。
+后续已按用户授权推送并观察到 CI 结果，现补记：
+
+| 项 | 值 |
+|---|---|
+| run id | `34923889986` |
+| head SHA | `481badb729aed9f765601e0526f51154ec6cd2bf` |
+| 结果 | **completed / success**（attempt 1） |
+| 推送 | `fe7e1d2..481badb` 快进推送，非强推 |
+
+该 run 覆盖本次三个提交（R72/R73/R74）。因此 R72 的测试同步修复已在**真实
+Windows runner** 上通过，满足计划 §3「确认的修复在 Windows 真实 runner 验证」
+这一条——由原本的 NOT_RUN 转为已验证。
+
+**边界**：取得的是 **run 级** 结论（`completed/success`）。该 run 的
+**job 级明细与测试报告 artifact 正文未读取**（查询时 GitHub 匿名 API 触发速率限制，
+`gh` CLI 未安装），因此：
+
+- 不确认各 job 的独立结论分布，也不确认 R72 目标用例在 Windows job 中的具体输出行；
+- 不据此宣称「历史 CI 那次失败已被证明与本缺陷同因」（§5 的边界继续成立）；
+- 未读取 release attestation / coverage gate 的产物正文，其内容有效性保持未验证。
+
 
 证据：`docs/r72-evidence/r72-fixed-test.txt`
 
@@ -202,8 +228,11 @@ CI 症状（同一文件、同一 ENOENT、同一路径形态）在**机制上�
 **不能断言**：CI 那次具体失败已由本报告逐条证据直接证明同因。理由：
 
 1. 未取得 attempt 1 的 job 日志正文（仅有 R71 转述的错误字符串）；
-2. 未在真实 GitHub Windows runner 上重放；
-3. 未观测到该次运行的实际时序（循环退出时刻 vs 审批创建时刻）。
+2. 未观测到该次运行的实际时序（循环退出时刻 vs 审批创建时刻）。
+
+（原先记的第 3 条「未在真实 GitHub Windows runner 上重放」已部分改变：修复后的实现
+已在真实 runner 上通过 run `34923889986`，见 §4.4。但那次**历史失败的时序**仍未被
+观测，故「同因」结论依旧不成立。）
 
 因此按计划 §3.6 的口径，本项**从「根因未知」提升为「存在已复现的确定性同步缺陷，
 且其失败签名与历史 CI 一致」**，但不宣称历史 CI 事件已被证明。
@@ -222,19 +251,22 @@ CI 症状（同一文件、同一 ENOENT、同一路径形态）在**机制上�
 | 若修同步机制：受控延迟反例证明旧失败/新通过，且无无限循环、无退出后后台任务 | ✅ §3.4 双向验证；`backgroundLeftRunning=false`；循环与 turn 同生命周期 |
 | 若未复现历史失败则标 UNRESOLVED | ⚠️ 部分复现：缺陷本身已复现；**触发该缺陷的 runner 侧诱因仍 UNRESOLVED**（§5） |
 | 不扩大权限、不忽略 worker 错误、不改业务完成语义迁就测试 | ✅ 无权限改动；worker 错误仍会使断言失败；`outcome.status` 断言保留 |
-| 确认的修复在 Windows 真实 runner 验证 | ❌ **NOT_RUN**（见 §7） |
+| 确认的修复在 Windows 真实 runner 验证 | ✅ run `34923889986` @ `481badb` completed / success（§4.4）；**job 级明细未读取** |
 
 ## 7. NOT_RUN 与残余限制
 
-1. **真实 Windows CI runner 验证：NOT_RUN。** 本任务未推送、未触发远端 CI。按项目
-   Runtime Freeze 与「不修改远端」约束，本报告只做本地受控复现；该修复需在真实
-   Windows runner 上确认后方可作为最终关闭依据。
+1. ~~**真实 Windows CI runner 验证：NOT_RUN。**~~ **已补做**：推送后 run
+   `34923889986`（head `481badb`）**completed / success**，见 §4.4。残余限制是该 run 的
+   **job 级明细与测试报告 artifact 正文未读取**（GitHub 匿名 API 速率限制、无 `gh` CLI），
+   因此只确立 run 级结论。
 2. **attempt 1 的原始 job 日志正文：未读取**（沿用 R71 的转述）。
 3. **触发审批延迟的 runner 侧底层原因：UNRESOLVED**，未测量。
 4. **全量 `pnpm test`：NOT_RUN。** 本机长期存在符号链接沙箱限制（R71 §3.1 记录的
    6 个套件）与重负载下 `orchestrator.test.ts` 的 500ms 超时，均与本改动无关；
-   为避免把环境噪声当成回归证据，本轮只运行目标测试与 `tsc -b`。
-5. **未做付费模型调用、未发布 release、未强推、未修改远端权限。**
+   为避免把环境噪声当成回归证据，本轮只运行目标测试与 `tsc -b`。（该目标测试已在
+   真实 CI 中运行，见 §4.4。）
+5. **未做付费模型调用、未发布 release、未强推、未修改远端权限。** 推送为
+   `fe7e1d2..481badb` 快进，非 force push。
 6. 临时探针文件（`_tmp_r72_*.test.ts`）已全部删除；`docs/r72-evidence/` 保留为证据。
 
 ## 8. 为什么不改 Runtime（冻结合规）
