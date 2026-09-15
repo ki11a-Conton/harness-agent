@@ -164,6 +164,47 @@ node apps/cli/dist/main.js release gate <gate>         # one gate + durable V2 e
 node apps/cli/dist/main.js docs:verify                 # documentation truth checks
 ```
 
+### Offline smoke (no API key, no network)
+
+A clean checkout can exercise the whole pipeline without any model credential. Run
+these four commands in order; all four exit `0` and none of them make a provider call:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build                                            # required: the CLI runs from dist/
+node apps/cli/dist/main.js doctor                     # env + store wiring report
+node apps/cli/dist/main.js benchmark --suite adversarial --limit 1 --allow-stub
+node apps/cli/dist/main.js benchmark --suite adversarial --dry-run
+```
+
+What each step does and does **not** prove:
+
+| Step | Proves | Does **not** prove |
+| --- | --- | --- |
+| `doctor` | stores, permissions and sandbox wiring are reachable; environment limits are reported honestly | that the machine has strong isolation, or that a model is configured |
+| `--allow-stub` | the end-to-end harness path runs offline and emits a parseable artifact | anything about model quality — the stub solves no task, so the expected result is `0/N passed` |
+| `--dry-run` | the canonical execution plan + `planDigest` can be generated (`providerCalls: 0`) | that a run was executed or would pass |
+
+`doctor` warnings are diagnostic output, not failures: `stub provider active` and
+`in-memory stores` are the normal state of an unconfigured checkout. Pass
+`--data-dir <dir>` to `doctor` to switch to the JSONL stores and clear the
+persistence warning. `skills` / `plugins` / `context budget` warnings likewise
+describe configuration that is optional in this flow.
+
+Both benchmark report files are written next to the suite by default
+(`benchmarks/adversarial.json` and `benchmarks/adversarial-summary.md`) unless you
+pass `--out <dir>`, which writes the same two filenames into that directory:
+
+```bash
+node apps/cli/dist/main.js benchmark --suite adversarial --limit 1 --allow-stub --out .ci/bench
+```
+
+The stub run is a **measurement**, never a quality verdict: the summary reports
+`success rate 0.0%` and `model calls 0` because no model was invoked. Its manifest
+records the real `git` SHA and platform, so an artifact can always be tied back to
+the exact source it came from. Delete `--out`'s directory (or the two files under
+`benchmarks/`) to clean up after a smoke run.
+
 ## Running with a real model
 
 A paid run must first **dry-run** to get the canonical plan digest, then confirm

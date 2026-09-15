@@ -1,0 +1,9 @@
+R73 clean-checkout acceptance log
+clone=D:\Harness Agent-r73-clean (git clone, no node_modules, no dist)
+node=v24.18.1 pnpm=11.21.0
+install --frozen-lockfile => exit 0
+build (tsc -b) => exit 0, apps/cli/dist/main.js exists
+doctor => exit 0, 7 ok / 5 warning / 0 error
+benchmark --allow-stub --limit 1 => exit 0, 0/1 passed, model_calls=0
+benchmark --dry-run => exit 0, planDigest=bfac22159cf4436a36954aaafec4bc349800684b4cfd82773ffdfbeeecce4868, providerCalls=0
+credentials: all unset; RUN_PAID_BENCHMARKS unset
