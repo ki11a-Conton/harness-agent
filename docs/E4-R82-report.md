@@ -10,7 +10,7 @@ content, holdout, digest, billing or isolation change, and no paid run.**
 | --- | --- |
 | Starting SHA | `597b34a6…` (R81) |
 | Code SHA (job added) | `0ca421e6fed7168bd91463950b76bc15bb63c3e7` |
-| Final pushed SHA | `cbb8a64c9b3120f23f52b0662ca081c25b39a4d6` |
+| Final pushed SHA | `b1efddc8e434d82d1c14332a79d87059c05b5da0` |
 | Environment (local) | Windows NT 10.0.19044.0 (win32), Node v24.18.1, pnpm 11.21.0, vitest 4.1.10 |
 | Environment (CI job) | GitHub-hosted `ubuntu-latest`, Node 22, pnpm 11.21.0 |
 | Provider calls | **0** — local and CI |
@@ -130,9 +130,9 @@ what is on `main`:
 
 | Field | Value |
 | --- | --- |
-| Run id | `34940787769` |
+| Run id | `34941745736` |
 | Attempt | 1 |
-| Head SHA | `cbb8a64c9b3120f23f52b0662ca081c25b39a4d6` (= pushed `main`) |
+| Head SHA | `b1efddc8e434d82d1c14332a79d87059c05b5da0` (= pushed `main`) |
 | Conclusion | **success** |
 | Runner (cold-start job) | GitHub Actions, `ubuntu-latest`, Node 22, pnpm 11.21.0 |
 
@@ -144,13 +144,15 @@ what is on `main`:
 | `offline cold-start (ubuntu)` | **success** |
 | `release attestation (P38-12)` | success |
 
-Two earlier runs in this task were also fully green with the same five-job shape:
-`34939903886` (attempt 1, head `b0a4dd2`) and `34938827497` (attempt 1, head
-`07adf3f`). Every commit after those was documentation-only, and each was
-re-verified rather than assumed for exactly that reason.
+Three earlier runs in this task were also fully green with the same five-job
+shape: `34940787769` (attempt 1, head `cbb8a64`), `34939903886` (attempt 1, head
+`b0a4dd2`) and `34938827497` (attempt 1, head `07adf3f`). Every commit after each
+was documentation-only, and each was re-verified rather than assumed for exactly
+that reason.
 
-The `offline cold-start (ubuntu)` job (job id `104288760561`) ran **16/16
-productive steps to `success`** — zero non-success steps, none skipped:
+The `offline cold-start (ubuntu)` job (job id `104291785820`) ran **16/16
+productive steps to `success`** plus 4 post-steps — 20 steps, **zero non-success**,
+none skipped:
 
 ```
 [5]  success  Assert the tested HEAD is the workflow SHA
@@ -170,7 +172,7 @@ productive steps to `success`** — zero non-success steps, none skipped:
 Step 6 proves the run reused nothing; step 9 proves the workflow carries no paid
 authorization; step 13 machine-checks the artifacts (rather than trusting exit
 codes); step 14 is the POSIX verdict. The run published
-`cold-start-ubuntu-cbb8a64…-34940787769-attempt-1` (5623 bytes) plus the Ubuntu
+`cold-start-ubuntu-b1efddc…-34941745736-attempt-1` (5626 bytes) plus the Ubuntu
 `test-report` and `observation-evidence` artifacts. (Artifact **bodies** require
 authentication to download; the step conclusions and artifact listing above are
 the publicly readable evidence, and are what this report relies on. No step
@@ -211,7 +213,7 @@ that gate refuse *by design*; three `apps/cli` suites observe the refusal and
 fail. Measured identical at `7798d3a` (pre-R79), so it is pre-existing.
 
 **CI is unaffected** because it always runs on a pristine checkout — run
-`34940787769`'s `coverage gate (ubuntu)` passed. The trap is local-only, and it
+`34941745736`'s `coverage gate (ubuntu)` passed. The trap is local-only, and it
 is now documented in `README.md`. To reproduce the clean behaviour:
 
 ```bash
@@ -233,17 +235,18 @@ git stash -u && pnpm test:coverage   # or commit first
 
 ## 7. Push
 
-`main` was pushed in three steps, each followed by a re-read of the remote rather
+`main` was pushed in four steps, each followed by a re-read of the remote rather
 than a trust in the push exit code:
 
 ```
 345274b..07adf3f  main -> main
 07adf3f..b0a4dd2  main -> main
 b0a4dd2..cbb8a64  main -> main
+cbb8a64..b1efddc  main -> main
 ```
 
 `git ls-remote origin refs/heads/main` was re-read **after** the final push and
-returned `cbb8a64c9b3120f23f52b0662ca081c25b39a4d6`, identical to local `HEAD`.
+returned `b1efddc8e434d82d1c14332a79d87059c05b5da0`, identical to local `HEAD`.
 The CI evidence in §5 is the run for that exact SHA, attempt 1 — not an earlier
 run and not a branch name.
 
@@ -259,4 +262,5 @@ The commits that make up R79–R82, in order:
 | `99707bc` | R82 — this report |
 | `07adf3f` | README corrections (stale `e4-01`, R81 flags, clean-tree trap) |
 | `b0a4dd2` | R82 — bind this report to a green run, add the clean-tree matrix |
-| `cbb8a64` | R82 — bind this report to the run for the pushed tip `cbb8a64` |
+| `cbb8a64` | R82 — bind this report to the run for `cbb8a64` |
+| `b1efddc` | R82 — bind this report to the run for the final pushed tip |
