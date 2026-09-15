@@ -41,6 +41,10 @@ import {
   DEFAULT_DECISION_POLICY_V3,
   computeThresholdDigestV3,
   computeExecutionPlanDigest,
+  // E4-R81 (F81-2): the E4-R41 provenance normalizer — sha256 over the
+  // endpoint's host+path, never the raw URL and never userinfo/query tokens.
+  captureEndpointIdentity,
+  EXECUTION_PLAN_SCHEMA_VERSION_V2,
   type ExecutionPlanV1,
   DEFAULT_JUDGE_VERSION,
   EvalRunner,
@@ -97,7 +101,7 @@ import { createFakeMcpTool } from "./fake-mcp.js";
 import { SqliteMemoryStore } from "@ar/memory";
 import { detectPromptInjection, redactSecrets } from "@ar/security";
 import { DEFAULT_MODEL_ID, registerBuiltinTools } from "./main.js";
-import { billingClassForProvider, resolveModelProvider, STUB_PROVIDER_ID } from "./provider.js";
+import { billingClassForProvider, envProviderId, REAL_PROVIDER_ID, resolveModelProvider, STUB_MODEL_ID, STUB_PROVIDER_ID } from "./provider.js";
 import type { BillingClass } from "./provider.js";
 
 export interface BenchmarkCommandOptions {
@@ -152,6 +156,15 @@ export interface BenchmarkCommandOptions {
   allowInsecureLocalBenchmark: boolean;
   /** E3-01: --plan-digest — expected plan digest for confirmation. */
   planDigest: string | undefined;
+  /** E4-R81 (F81-1): --provider — explicit provider id for the planned run.
+   *  Overrides the environment-derived default so a plan can be generated
+   *  WITHOUT an API key present (dry-run never connects to a provider). */
+  providerId?: string;
+  /** E4-R81 (F81-1): --model — explicit model id for the planned run. */
+  modelId?: string;
+  /** E4-R81 (F81-2): --endpoint — explicit provider base URL. Only its
+   *  normalized, non-secret identity (sha256 over host+path) enters the plan. */
+  endpoint?: string;
 }
 
 const SUITES: EvalSuite[] = ["regression", "holdout", "adversarial", "stress"];
@@ -213,14 +226,41 @@ export async function runBenchmarkCommand(
     return { exitCode: 1, lines: [`agent benchmark: failed to load cases: ${err instanceof Error ? err.message : String(err)}`] };
   }
 
-  // E3-01: determine billing class for preflight (before provider resolution).
-  // When a provider override is passed (tests), billing is always offline-test.
+  // E4-R81 (F81-1): the planned identity.
+  //
+  // Before this, the identity was derived ONLY from `OPENAI_API_KEY`'s presence,
+  // so generating a dry-run for a real (billed) run REQUIRED exporting the key
+  // first. That is both a needless secret exposure and a correctness trap: the
+  // keyless dry-run silently produced a STUB plan, and the operator then carried
+  // that stub digest into a billed execution, which failed with a digest
+  // mismatch. The operator must be able to fix the FINAL identity — provider,
+  // model, endpoint — and the whole budget, and get the authoritative digest
+  // WITHOUT any key.
+  //
+  // Precedence: explicit `--provider/--model/--endpoint` > environment > stub.
+  const endpointBaseUrl = opts.endpoint ?? process.env.OPENAI_BASE_URL;
+  const providerId =
+    providerOverride?.id ?? opts.providerId ?? envProviderId();
+  const modelId =
+    providerOverride !== undefined
+      ? (opts.modelId ?? STUB_MODEL_ID)
+      : providerId === STUB_PROVIDER_ID
+        ? STUB_MODEL_ID
+        : (opts.modelId ?? process.env.OPENAI_MODEL ?? DEFAULT_MODEL_ID);
+
+  // E3-01/E4-R81: billing class follows the PLANNED identity, not key presence.
+  // A real provider id means the plan is external-billed even when no key is
+  // present — that is exactly what makes a keyless dry-run meaningful. Tests
+  // (providerOverride) stay offline-test.
   const billingClass: BillingClass = providerOverride !== undefined
     ? "offline-test"
-    : billingClassForProvider(
-        process.env.OPENAI_API_KEY ? "openai" : STUB_PROVIDER_ID,
-        !!process.env.OPENAI_API_KEY,
-      );
+    : billingClassForProvider(providerId, providerId !== STUB_PROVIDER_ID);
+
+  // E4-R81 (F81-2): the endpoint enters the plan as a normalized, non-secret
+  // digest (never the raw URL, and never userinfo/query). `null` = the
+  // provider's built-in default endpoint, which is itself a real choice that the
+  // digest covers.
+  const endpointIdentity = captureEndpointIdentity(endpointBaseUrl);
 
   // E4-R13 (N03): the CONFIRMED plan must bind the full authorization surface —
   // provider/model identity, judge version, source snapshot (real tree
@@ -228,14 +268,11 @@ export async function runBenchmarkCommand(
   // policy. These facts are computed from REAL config + a best-effort git probe
   // (no provider calls) BEFORE preflight, and the executor later consumes the
   // SAME confirmed plan — confirmation and execution cannot drift apart.
-  const providerId = providerOverride?.id ?? (process.env.OPENAI_API_KEY ? "openai" : STUB_PROVIDER_ID);
-  const modelId = providerId === STUB_PROVIDER_ID
-    ? "stub-model"
-    : (process.env.OPENAI_MODEL ?? DEFAULT_MODEL_ID);
   const sourceSnapshot = await probeSourceSnapshot(process.cwd());
   const identityFacts: PreflightIdentityFacts = {
     providerId,
     modelId,
+    endpointIdentity,
     judgeVersion: DEFAULT_JUDGE_VERSION,
     sourceSha: sourceSnapshot.sourceSha,
     treeFingerprint: sourceSnapshot.treeFingerprint,
@@ -299,10 +336,17 @@ async function executeBenchmark(
 ): Promise<{ exitCode: number; lines: string[] }> {
   const lines: string[] = [];
   const selected = opts.limit > 0 ? cases.slice(0, opts.limit) : cases;
+  // E4-R81 (F81-2): derive the executing model id from the CONFIRMED plan, not
+  // from a fresh environment read. Re-deriving here is how a plan confirmed for
+  // model A could execute against model B whenever the environment changed
+  // between dry-run and execution. `opts.modelId` is the explicit operator flag
+  // and the plan already reflects it.
   const modelId =
-    provider.id === STUB_PROVIDER_ID
-      ? "stub-model"
-      : process.env.OPENAI_MODEL ?? DEFAULT_MODEL_ID;
+    preflight.executionPlan?.modelId !== undefined && preflight.executionPlan.modelId !== ""
+      ? preflight.executionPlan.modelId
+      : provider.id === STUB_PROVIDER_ID
+        ? STUB_MODEL_ID
+        : process.env.OPENAI_MODEL ?? DEFAULT_MODEL_ID;
 
   // P1-19: the context budget follows the resolved model context window when
   // the harness default is not explicitly overridden (case-level
@@ -923,6 +967,9 @@ export type BenchmarkExecutionPlan = ExecutionPlanV1;
 export interface PreflightIdentityFacts {
   providerId: string;
   modelId: string;
+  /** E4-R81 (F81-2): normalized, non-secret provider endpoint identity (a
+   *  64-hex digest), or null when the provider's default endpoint is used. */
+  endpointIdentity: string | null;
   judgeVersion: string;
   sourceSha: string | null;
   treeFingerprint: string | null;
@@ -1129,7 +1176,10 @@ export function buildBenchmarkExecutionPlan(input: {
 }): BenchmarkExecutionPlan {
   const { opts, caseIds, billingClass, isolationBackendId, isolationStrength, promotionEligible, caseFingerprints, identityFacts } = input;
   return {
-    schemaVersion: "e4-01",
+    // E4-R81 (F81-2): plans now bind the endpoint, so they are written as the
+    // NEXT schema version. Legacy "e4-01" plans still PARSE (their history is not
+    // erased) but are flagged legacy and are refused as execution authorization.
+    schemaVersion: EXECUTION_PLAN_SCHEMA_VERSION_V2,
     suite: opts.suite,
     caseIds,
     caseFingerprints,
@@ -1153,6 +1203,7 @@ export function buildBenchmarkExecutionPlan(input: {
     promotionEligible,
     providerId: identityFacts.providerId,
     modelId: identityFacts.modelId,
+    endpointIdentity: identityFacts.endpointIdentity,
     judgeVersion: identityFacts.judgeVersion,
     sourceSha: identityFacts.sourceSha,
     treeFingerprint: identityFacts.treeFingerprint,
@@ -1447,6 +1498,9 @@ export interface DryRunPlan {
   // printed plan matches the digest exactly.
   providerId: string;
   modelId: string;
+  /** E4-R81 (F81-2): normalized endpoint identity (64-hex digest) or null when
+   *  the provider's default endpoint is used. */
+  endpointIdentity: string | null;
   judgeVersion: string;
   sourceSha: string | null;
   treeFingerprint: string | null;
@@ -1464,7 +1518,9 @@ export function buildDryRunPlan(
   const selected = opts.limit > 0 ? cases.slice(0, opts.limit) : cases;
   const plan = preflight.executionPlan;
   return {
-    schemaVersion: "e4-01",
+    // E4-R81 (F81-2): mirror the execution plan's schema version so the printed
+    // dry-run plan advertises the SAME protocol the digest is computed under.
+    schemaVersion: plan?.schemaVersion ?? EXECUTION_PLAN_SCHEMA_VERSION_V2,
     mode: "dry-run",
     planDigest: preflight.planDigest ?? "",
     casesDir: opts.casesDir,
@@ -1496,6 +1552,9 @@ export function buildDryRunPlan(
     providerCalls: 0,
     providerId: plan?.providerId ?? "",
     modelId: plan?.modelId ?? "",
+    // E4-R81 (F81-2): the endpoint identity must be PRINTED too — an operator
+    // cannot verify what the digest covers if the plan hides half of it.
+    endpointIdentity: plan?.endpointIdentity ?? null,
     judgeVersion: plan?.judgeVersion ?? "",
     sourceSha: plan?.sourceSha ?? null,
     treeFingerprint: plan?.treeFingerprint ?? null,
@@ -2688,6 +2747,41 @@ function parseBenchmarkArgs(argv: string[]): BenchmarkCommandOptions | Error {
         opts.planDigest = value;
         break;
       }
+      // ---- E4-R81: explicit plan identity (dry-run never connects) ----
+      case "--provider": {
+        const value = requireValue(argv, ++i, "--provider");
+        if (value instanceof Error) return value;
+        if (value !== REAL_PROVIDER_ID) {
+          return new Error(
+            `agent benchmark: --provider must be "${REAL_PROVIDER_ID}" (the only externally-billed provider this build supports); got ${JSON.stringify(value)}`,
+          );
+        }
+        opts.providerId = value;
+        break;
+      }
+      case "--model": {
+        const value = requireValue(argv, ++i, "--model");
+        if (value instanceof Error) return value;
+        if (value.trim() === "") return new Error("agent benchmark: --model must be a non-empty model id");
+        opts.modelId = value;
+        break;
+      }
+      case "--endpoint": {
+        const value = requireValue(argv, ++i, "--endpoint");
+        if (value instanceof Error) return value;
+        // Validate EARLY and fail closed: a malformed endpoint must never reach
+        // a plan whose digest silently covers a different identity.
+        try {
+          const u = new URL(value);
+          if (u.protocol !== "http:" && u.protocol !== "https:") {
+            return new Error("agent benchmark: --endpoint must be an http(s) URL");
+          }
+        } catch {
+          return new Error(`agent benchmark: --endpoint must be a valid absolute URL; got ${JSON.stringify(value)}`);
+        }
+        opts.endpoint = value;
+        break;
+      }
       default:
         if (arg?.startsWith("--")) return new Error(`agent benchmark: unknown flag: ${arg}`);
         return new Error(`agent benchmark: unexpected argument: ${arg}`);
@@ -2769,7 +2863,9 @@ export async function runSmokeBenchmark(): Promise<{ exitCode: number; lines: st
   // provider/model, best-effort source snapshot, default policy).
   const smokeFacts: PreflightIdentityFacts = {
     providerId: STUB_PROVIDER_ID,
-    modelId: "stub-model",
+    modelId: STUB_MODEL_ID,
+    // Smoke never touches a network provider — no endpoint identity applies.
+    endpointIdentity: null,
     judgeVersion: DEFAULT_JUDGE_VERSION,
     sourceSha: null,
     treeFingerprint: null,

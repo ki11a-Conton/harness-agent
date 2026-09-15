@@ -3,6 +3,25 @@ import { errorInfo } from "@ar/contracts";
 
 export const STUB_PROVIDER_ID = "stub";
 
+/** The model id reported for the stub provider (E4-R81: named once, so the plan
+ *  identity and the executor cannot drift apart on the literal). */
+export const STUB_MODEL_ID = "stub-model";
+
+/**
+ * E4-R81 (F81-1): the ONLY externally-billed provider this build supports.
+ *
+ * `--provider` accepts exactly this id. The plan identity must not be an
+ * arbitrary free-text string that merely *looks* configured: an unsupported id
+ * would let an operator authorize a plan naming a provider that cannot actually
+ * be resolved at execution time.
+ */
+export const REAL_PROVIDER_ID = "openai";
+
+/** The provider id the environment currently implies, if any. */
+export function envProviderId(): string {
+  return (process.env.OPENAI_MODEL ?? "") !== "" || process.env.OPENAI_API_KEY ? REAL_PROVIDER_ID : STUB_PROVIDER_ID;
+}
+
 // ---------------------------------------------------------------------------
 // Billing class — E3-01: provider billing classification
 // ---------------------------------------------------------------------------
@@ -56,7 +75,6 @@ export interface ResolveModelProviderOptions {
   apiKey?: string;
   baseUrl?: string;
 }
-
 /**
  * Default model provider resolution: when OPENAI_API_KEY is present, load the
  * OpenAI-compatible provider from @ar/model; otherwise fall back to the stub

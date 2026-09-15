@@ -15,6 +15,9 @@ function testIdentityFacts(over: Partial<PreflightIdentityFacts> = {}): Prefligh
   return {
     providerId: "test-provider",
     modelId: "test-model",
+    // E4-R81 (F81-2): an identity without an endpoint decision is not a plan
+    // identity. `null` = the provider's default endpoint.
+    endpointIdentity: null,
     judgeVersion: "1.0.0",
     sourceSha: "a".repeat(40),
     treeFingerprint: null,
@@ -2013,3 +2016,258 @@ describe("E4-R75 (F1): a dry-run digest only authorizes a plan with identical pa
     expect(output).not.toContain("plan digest mismatch");
   }, 60_000);
 });
+
+/**
+ * E4-R81 (F81-1 / F81-2) — plan identity without a key, and endpoint binding.
+ *
+ * F81-1: the plan identity was derived from `OPENAI_API_KEY`'s PRESENCE, so a
+ * keyless dry-run could only ever produce a STUB plan. An operator following the
+ * runbook therefore either exposed the key early or carried a stub digest into a
+ * billed execution and hit a digest mismatch. Explicit `--provider/--model/
+ * --endpoint` now fix the identity with no key present.
+ *
+ * F81-2: the digest bound provider+model but NOT the endpoint, so switching
+ * `OPENAI_BASE_URL` after confirmation left the digest valid — the authorization
+ * covered less than the run. The endpoint now enters the plan as a normalized,
+ * NON-SECRET digest.
+ *
+ * Every test here uses a FAKE provider or none at all: providerCalls is 0 and no
+ * network is touched.
+ */
+describe("E4-R81 (F81): keyless billed planning and endpoint-bound digests", () => {
+  /** Read the plan JSON a dry-run prints. */
+  const planOf = (lines: string[]): Record<string, unknown> =>
+    JSON.parse(lines.join("\n")) as Record<string, unknown>;
+
+  /** A dry-run argv carrying the FINAL identity + budgets, no key required. */
+  const billedDryRunArgs = (root: string): string[] => [
+    "--cases", join(root, CASE_DIR),
+    "--provider", "openai",
+    "--model", "gpt-4o-mini",
+    "--endpoint", "https://api.example.test/v1",
+    "--limit", "0",
+    "--max-logical-runs", "8",
+    "--max-model-calls", "80",
+    "--max-estimated-tokens", "320000",
+    "--max-estimated-cost-usd", "0.04",
+    "--dry-run",
+    "--out", join(root, "out"),
+  ];
+
+  it("F81-1: dry-run WITHOUT any API key produces an external-billed plan with the explicit identity", async () => {
+    const mod = await import("./benchmark-command.js");
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "x",
+      "cases/t1/expected.md": "x",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    // Guard the premise: no key is present in this environment.
+    expect(process.env.OPENAI_API_KEY ?? "").toBe("");
+
+    const r = await mod.runBenchmarkCommand(billedDryRunArgs(root));
+    expect(r.exitCode).toBe(0);
+    const plan = planOf(r.lines);
+    // The whole point: a REAL, billed, executable-shaped plan — keyless.
+    expect(plan["billingClass"]).toBe("external-billed");
+    expect(plan["providerId"]).toBe("openai");
+    expect(plan["modelId"]).toBe("gpt-4o-mini");
+    expect(plan["providerCalls"]).toBe(0);
+    expect(plan["planDigest"]).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("F81-1: the billed dry-run is NOT blocked by the paid gate (it never executes)", async () => {
+    const mod = await import("./benchmark-command.js");
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "x",
+      "cases/t1/expected.md": "x",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    // RUN_PAID_BENCHMARKS is deliberately unset: a dry-run must not need it.
+    expect(process.env.RUN_PAID_BENCHMARKS ?? "").toBe("");
+    const r = await mod.runBenchmarkCommand(billedDryRunArgs(root));
+    expect(r.exitCode).toBe(0);
+    expect(r.lines.join("\n")).not.toContain("RUN_PAID_BENCHMARKS");
+  });
+
+  it("F81-1: repeated identical dry-runs produce an IDENTICAL digest (the digest is stable)", async () => {
+    const mod = await import("./benchmark-command.js");
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "x",
+      "cases/t1/expected.md": "x",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const a = await mod.runBenchmarkCommand(billedDryRunArgs(root));
+    const b = await mod.runBenchmarkCommand(billedDryRunArgs(root));
+    expect(a.exitCode).toBe(0);
+    expect(b.exitCode).toBe(0);
+    expect(planOf(a.lines)["planDigest"]).toBe(planOf(b.lines)["planDigest"]);
+  });
+
+  it("F81-2 REPRO/FIX: a DIFFERENT endpoint changes the digest", async () => {
+    const mod = await import("./benchmark-command.js");
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "x",
+      "cases/t1/expected.md": "x",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const base = billedDryRunArgs(root);
+    const other = base.map((v) => (v === "https://api.example.test/v1" ? "https://api.other.test/v1" : v));
+
+    const a = await mod.runBenchmarkCommand(base);
+    const b = await mod.runBenchmarkCommand(other);
+    expect(a.exitCode).toBe(0);
+    expect(b.exitCode).toBe(0);
+    // The defect was that these were EQUAL — the authorization did not cover the
+    // endpoint, so repointing the run left the confirmed digest valid.
+    expect(planOf(a.lines)["planDigest"]).not.toBe(planOf(b.lines)["planDigest"]);
+    expect(planOf(a.lines)["endpointIdentity"]).not.toBe(planOf(b.lines)["endpointIdentity"]);
+  });
+
+  it("F81-2: a DIFFERENT model changes the digest too", async () => {
+    const mod = await import("./benchmark-command.js");
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "x",
+      "cases/t1/expected.md": "x",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const base = billedDryRunArgs(root);
+    const other = base.map((v) => (v === "gpt-4o-mini" ? "gpt-4o" : v));
+    const a = await mod.runBenchmarkCommand(base);
+    const b = await mod.runBenchmarkCommand(other);
+    expect(planOf(a.lines)["modelId"]).toBe("gpt-4o-mini");
+    expect(planOf(b.lines)["modelId"]).toBe("gpt-4o");
+    expect(planOf(a.lines)["planDigest"]).not.toBe(planOf(b.lines)["planDigest"]);
+  });
+
+  it("F81-2: endpoint normalization — equivalent spellings agree, real differences do not", async () => {
+    const mod = await import("./benchmark-command.js");
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "x",
+      "cases/t1/expected.md": "x",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const withEndpoint = (url: string): string[] => {
+      const args = billedDryRunArgs(root);
+      return args.map((v) => (v === "https://api.example.test/v1" ? url : v));
+    };
+    const digestFor = async (url: string): Promise<string> => {
+      const r = await mod.runBenchmarkCommand(withEndpoint(url));
+      expect(r.exitCode).toBe(0);
+      return planOf(r.lines)["planDigest"] as string;
+    };
+
+    // Canonically equivalent: host case + a trailing slash must NOT fork a plan.
+    const canonical = await digestFor("https://api.example.test/v1");
+    expect(await digestFor("https://API.Example.Test/v1")).toBe(canonical);
+    expect(await digestFor("https://api.example.test/v1/")).toBe(canonical);
+    // The default port for the scheme is not a real difference.
+    expect(await digestFor("https://api.example.test:443/v1")).toBe(canonical);
+
+    // A genuinely different endpoint MUST invalidate the plan.
+    expect(await digestFor("https://api.example.test/v2")).not.toBe(canonical);
+    expect(await digestFor("http://api.example.test/v1")).not.toBe(canonical);
+  });
+
+  it("F81-2: the plan stores a DIGEST, never the raw URL, userinfo or query token", async () => {
+    const mod = await import("./benchmark-command.js");
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "x",
+      "cases/t1/expected.md": "x",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const secretUrl = "https://user:sup3rsecret@api.example.test/v1?api_key=QUERYTOKEN123";
+    const args = billedDryRunArgs(root).map((v) => (v === "https://api.example.test/v1" ? secretUrl : v));
+
+    const r = await mod.runBenchmarkCommand(args);
+    expect(r.exitCode).toBe(0);
+    const text = r.lines.join("\n");
+    // No raw secret material anywhere in the emitted plan.
+    expect(text).not.toContain("sup3rsecret");
+    expect(text).not.toContain("QUERYTOKEN123");
+    expect(text).not.toContain("user:");
+    expect(text).not.toContain(secretUrl);
+    // The identity is a 64-hex digest.
+    expect(planOf(r.lines)["endpointIdentity"]).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("F81-2: a malformed --endpoint is rejected before any plan is built", async () => {
+    const mod = await import("./benchmark-command.js");
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "x",
+      "cases/t1/expected.md": "x",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const args = billedDryRunArgs(root).map((v) => (v === "https://api.example.test/v1" ? "not-a-url" : v));
+    const r = await mod.runBenchmarkCommand(args);
+    expect(r.exitCode).toBe(1);
+    expect(r.lines.join("\n")).toContain("--endpoint");
+  });
+
+  it("F81-1: --provider rejects a provider this build cannot actually resolve", async () => {
+    const mod = await import("./benchmark-command.js");
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "x",
+      "cases/t1/expected.md": "x",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const args = billedDryRunArgs(root).map((v) => (v === "openai" ? "totally-made-up" : v));
+    const r = await mod.runBenchmarkCommand(args);
+    expect(r.exitCode).toBe(1);
+    expect(r.lines.join("\n")).toContain("--provider");
+  });
+
+  it("F81-1: the keyless billed plan still fails closed at EXECUTION without authorization", async () => {
+    const mod = await import("./benchmark-command.js");
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "x",
+      "cases/t1/expected.md": "x",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const dry = await mod.runBenchmarkCommand(billedDryRunArgs(root));
+    const digest = planOf(dry.lines)["planDigest"] as string;
+
+    // Same identity, dry-run off, NO paid authorization and NO key: refuse.
+    const execArgs = billedDryRunArgs(root).filter((v) => v !== "--dry-run");
+    const r = await mod.runBenchmarkCommand([...execArgs, "--plan-digest", digest]);
+    expect(r.exitCode).toBe(1);
+    const out = r.lines.join("\n");
+    // Fail closed on the AUTHORIZATION, before any provider is constructed.
+    expect(out).toMatch(/RUN_PAID_BENCHMARKS|no model provider configured/);
+    expect(out).not.toContain("plan digest mismatch");
+  });
+
+  it("F81-2: an endpoint change invalidates a previously confirmed digest (fail closed)", async () => {
+    const mod = await import("./benchmark-command.js");
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "x",
+      "cases/t1/expected.md": "x",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const dry = await mod.runBenchmarkCommand(billedDryRunArgs(root));
+    const digest = planOf(dry.lines)["planDigest"] as string;
+
+    // Confirmed against api.example.test, then executed against api.other.test.
+    // Billing is authorized so the DIGEST gate — not the earlier authorization
+    // gate — is what must refuse: the refusal has to come from the endpoint
+    // change, otherwise the test would pass for the wrong reason. The paid
+    // switch is only an env value here; nothing executes because the digest
+    // check rejects first (and no provider can be resolved without a key).
+    const repointed = billedDryRunArgs(root)
+      .filter((v) => v !== "--dry-run")
+      .map((v) => (v === "https://api.example.test/v1" ? "https://api.other.test/v1" : v));
+    const saved = process.env.RUN_PAID_BENCHMARKS;
+    process.env.RUN_PAID_BENCHMARKS = "1";
+    try {
+      const r = await mod.runBenchmarkCommand([...repointed, "--plan-digest", digest]);
+      expect(r.exitCode).toBe(1);
+      const out = r.lines.join("\n");
+      expect(out).toContain("plan digest mismatch");
+      // The billing gate did NOT fire — the digest gate is what refused.
+      expect(out).not.toContain("RUN_PAID_BENCHMARKS=1 is required");
+    } finally {
+      if (saved === undefined) delete process.env.RUN_PAID_BENCHMARKS;
+      else process.env.RUN_PAID_BENCHMARKS = saved;
+    }
+  });
+});
+

@@ -1,0 +1,61 @@
+E4-R79 — CI evidence (bound to run id / attempt / head SHA)
+===========================================================
+
+Source: GitHub REST API, queried from the author's machine.
+  GET /repos/ki11a-Conton/harness-agent/actions/runs?head_sha=345274bf84cb552039231d3c2e4748bc7108329d
+
+1. The RED run that R79 had to fix (the starting state)
+------------------------------------------------------
+
+run id      : 34929969915
+attempt     : 1
+head_sha    : 7798d3a946ad4c8470168a7026166ea280e7b30a
+status      : completed
+conclusion  : failure
+
+jobs:
+  install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest)  failure
+      failing step: "Unit and integration tests"
+  install · typecheck · test · build · benchmark-smoke · audit (windows-latest) success
+  coverage gate (ubuntu)                                                       failure
+      failing step: "Coverage gate (thresholds fail the job)"
+  release attestation (P38-12)                                                 skipped
+
+2. The GREEN run after R79
+--------------------------
+
+run id      : 34934589407
+attempt     : 1
+head_sha    : 345274bf84cb552039231d3c2e4748bc7108329d
+status      : completed
+conclusion  : success
+
+jobs (all four):
+  coverage gate (ubuntu)                                                       success
+  install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest)  success
+  install · typecheck · test · build · benchmark-smoke · audit (windows-latest) success
+  release attestation (P38-12)                                                 success
+
+Every job listed is from the SAME run id and the SAME attempt, at the SAME head
+SHA. No job is skipped, and no conclusion was inferred from a workflow name — the
+per-job conclusions above come from
+  GET /repos/ki11a-Conton/harness-agent/actions/runs/34934589407/jobs
+
+3. What this does and does not show
+-----------------------------------
+
+DOES show:
+  - The P0 is resolved: Ubuntu verify and the coverage gate are green, so the
+    platform-unconditional R77 assertion no longer fails outside Windows.
+  - The fix did not break Windows: the Windows verify job is green too, so the
+    argv verifier path works on BOTH platforms.
+  - release attestation reached its verdict (it is skipped whenever verify or
+    coverage fails, so its success requires both).
+
+DOES NOT show:
+  - Any real-model result. No job sets RUN_PAID_BENCHMARKS, and the workflow
+    pins OPENAI_API_KEY to "" in every job; providerCalls remain 0. The real
+    baseline is still NOT_RUN and its cost is still UNKNOWN.
+  - Anything about Linux cold-start on the author's machine, which has no Linux,
+    WSL or Docker. Ubuntu evidence here is GitHub's ubuntu-latest runner. R82
+    adds a dedicated offline cold-start job for that path.

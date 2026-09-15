@@ -20,6 +20,25 @@ import { computeRuntimeConfigHash } from "./manifest.js";
 
 export const EXECUTION_PLAN_SCHEMA_VERSION = "e4-01";
 
+/**
+ * E4-R81 (F81-2): schema version that additionally binds the provider ENDPOINT.
+ *
+ * Why a NEW version instead of adding an optional field to `e4-01`: an `e4-01`
+ * plan was authorized without any endpoint in its digest. Silently accepting it
+ * under a protocol that claims to bind the endpoint would reinterpret an old
+ * artifact as if it had been endpoint-authorized. Old plans therefore stay
+ * readable as LEGACY and are explicitly non-executable — the operator must
+ * re-run the dry-run under the new version to obtain a digest that covers the
+ * endpoint.
+ */
+export const EXECUTION_PLAN_SCHEMA_VERSION_V2 = "e4-02";
+
+/** Every schema version this build can parse. */
+export const SUPPORTED_EXECUTION_PLAN_SCHEMA_VERSIONS = [
+  EXECUTION_PLAN_SCHEMA_VERSION,
+  EXECUTION_PLAN_SCHEMA_VERSION_V2,
+] as const;
+
 /** E4-R28 (G02): the documented PRODUCT cap on a plan's sample grid
  *  (repeat × caseCount). Independent of the per-experiment budget fields
  *  (maxLogicalRuns etc.), this bounds the ARRAYS the grid contract allocates
@@ -38,7 +57,7 @@ export type ExecutionPlanIsolationStrength = "strong" | "insecure-local" | "none
  * this one) so digests computed on either side agree.
  */
 export interface ExecutionPlanV1 {
-  schemaVersion: typeof EXECUTION_PLAN_SCHEMA_VERSION;
+  schemaVersion: typeof EXECUTION_PLAN_SCHEMA_VERSION | typeof EXECUTION_PLAN_SCHEMA_VERSION_V2;
   suite: string;
   caseIds: string[];
   /** E4-R13 (N03): per-case INPUT fingerprint — editing a case file without
@@ -68,6 +87,12 @@ export interface ExecutionPlanV1 {
    *  never enter the plan. */
   providerId: string;
   modelId: string;
+  /** E4-R81 (F81-2, `e4-02` only): the normalized, NON-SECRET provider endpoint
+   *  identity (sha256 over host+path; never the raw URL, and never userinfo or
+   *  query tokens). `null` = the provider's default endpoint was used. Absent on
+   *  legacy `e4-01` plans, which is exactly why those plans are non-executable:
+   *  their digest never covered the endpoint. */
+  endpointIdentity?: string | null;
   judgeVersion: string;
   sourceSha: string | null;
   treeFingerprint: string | null;
@@ -81,6 +106,11 @@ export interface ParsedExecutionPlan {
   /** The validated plan, or null when ANY protocol issue was found. */
   plan: ExecutionPlanV1 | null;
   issues: string[];
+  /** E4-R81 (F81-2): true when the plan parsed but predates endpoint binding
+   *  (`e4-01`). Such a plan is a LEGACY artifact: it is readable for inspection
+   *  but must never be treated as an executable authorization, because its
+   *  digest does not cover the provider endpoint. */
+  legacy: boolean;
 }
 
 const hex64 = (v: unknown): boolean => typeof v === "string" && /^[0-9a-f]{64}$/.test(v);
@@ -96,12 +126,20 @@ const hex40 = (v: unknown): boolean => typeof v === "string" && /^[0-9a-f]{40}$/
 export function parseExecutionPlan(value: unknown): ParsedExecutionPlan {
   const issues: string[] = [];
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return { plan: null, issues: ["executionPlan must be a non-null object (got null/array/non-object)"] };
+    return { plan: null, issues: ["executionPlan must be a non-null object (got null/array/non-object)"], legacy: false };
   }
   const r = value as Record<string, unknown>;
 
-  if (r["schemaVersion"] !== EXECUTION_PLAN_SCHEMA_VERSION) {
-    issues.push(`executionPlan.schemaVersion ${JSON.stringify(r["schemaVersion"])} != supported ${EXECUTION_PLAN_SCHEMA_VERSION} (unknown protocol version)`);
+  // E4-R81 (F81-2): `e4-01` parses (so old artifacts stay inspectable and their
+  // history is not erased) but is flagged legacy; `e4-02` adds the endpoint
+  // identity. Anything else is an unknown protocol version.
+  const version = r["schemaVersion"];
+  const isV2 = version === EXECUTION_PLAN_SCHEMA_VERSION_V2;
+  const isV1Legacy = version === EXECUTION_PLAN_SCHEMA_VERSION;
+  if (!isV1Legacy && !isV2) {
+    issues.push(
+      `executionPlan.schemaVersion ${JSON.stringify(version)} != supported ${SUPPORTED_EXECUTION_PLAN_SCHEMA_VERSIONS.join(" | ")} (unknown protocol version)`,
+    );
   }
 
   const str = (field: string): string | null => {
@@ -219,6 +257,17 @@ export function parseExecutionPlan(value: unknown): ParsedExecutionPlan {
     issues.push("executionPlan.thresholdDigest must be 64-hex");
   }
 
+  // E4-R81 (F81-2): the endpoint identity is REQUIRED on `e4-02` and must be
+  // null (provider default) or a 64-hex digest — never a raw URL. On legacy
+  // `e4-01` the field is absent by definition and is not an error here; the
+  // `legacy` flag is what makes such a plan non-executable.
+  if (isV2) {
+    const ep = r["endpointIdentity"];
+    if (ep !== null && !hex64(ep)) {
+      issues.push("executionPlan.endpointIdentity must be null or 64-hex (a normalized digest, never a raw URL)");
+    }
+  }
+
   // caseIds: non-empty, unique, non-empty strings.
   const caseIdsRaw = r["caseIds"];
   const caseIds: string[] = [];
@@ -243,12 +292,14 @@ export function parseExecutionPlan(value: unknown): ParsedExecutionPlan {
       return {
         plan: null,
         issues: [...issues, `executionPlan grid size repeat(${gridRepeat}) × caseCount(${caseIdsRaw.length}) overflows a safe integer`],
+        legacy: isV1Legacy,
       };
     }
     if (product > EXECUTION_PLAN_MAX_PLANNED_SAMPLES) {
       return {
         plan: null,
         issues: [...issues, `executionPlan grid size repeat(${gridRepeat}) × caseCount(${caseIdsRaw.length}) = ${product} > the documented ${EXECUTION_PLAN_MAX_PLANNED_SAMPLES} planned-sample cap (refuse before expansion)`],
+        legacy: isV1Legacy,
       };
     }
   }
@@ -317,8 +368,10 @@ export function parseExecutionPlan(value: unknown): ParsedExecutionPlan {
     issues.push("executionPlan.effectiveModelParams must be a non-null object");
   }
 
-  if (issues.length > 0) return { plan: null, issues };
-  return { plan: value as unknown as ExecutionPlanV1, issues: [] };
+  // E4-R81: a legacy `e4-01` plan is readable but NEVER an executable
+  // authorization — its digest predates endpoint binding.
+  if (issues.length > 0) return { plan: null, issues, legacy: isV1Legacy };
+  return { plan: value as unknown as ExecutionPlanV1, issues: [], legacy: isV1Legacy };
 }
 
 /**
@@ -328,6 +381,29 @@ export function parseExecutionPlan(value: unknown): ParsedExecutionPlan {
  */
 export function computeExecutionPlanDigest(plan: ExecutionPlanV1): string {
   return computeRuntimeConfigHash(plan);
+}
+
+/**
+ * E4-R81 (F81-2): whether a parsed plan may be CONSUMED as an execution
+ * authorization.
+ *
+ * A legacy `e4-01` plan is rejected here on purpose. Its digest was computed
+ * without an endpoint identity, so treating it as authorization would let an
+ * operator confirm a plan against one provider endpoint and execute it against
+ * another. The remedy is not to guess: re-run the dry-run under `e4-02` to get a
+ * digest that covers the endpoint.
+ *
+ * `null` endpointIdentity IS executable under `e4-02` — it means "the provider's
+ * default endpoint", which is a real, digest-covered choice.
+ */
+export function executionPlanAuthorizationIssue(parsed: ParsedExecutionPlan): string | null {
+  if (parsed.plan === null) {
+    return `executionPlan is not a valid plan: ${parsed.issues.join("; ")}`;
+  }
+  if (parsed.legacy || parsed.plan.schemaVersion !== EXECUTION_PLAN_SCHEMA_VERSION_V2) {
+    return `executionPlan is a LEGACY ${EXECUTION_PLAN_SCHEMA_VERSION} plan: its digest does not bind the provider endpoint and it is NOT executable — re-run the dry-run to obtain an ${EXECUTION_PLAN_SCHEMA_VERSION_V2} digest`;
+  }
+  return null;
 }
 
 /** Stable codes for the promotion-ELIGIBILITY semantics (E4-R27 / G01). These
