@@ -1825,3 +1825,191 @@ describe("E4-R41 promotion-grade host-probe fail-closed (CLI path)", () => {
     expect(artifactText).not.toContain("canonical V3 artifacts written");
   }, 60_000);
 });
+
+/**
+ * E4-R75 (F1) — the runbook's dry-run/execute parameter pairing.
+ *
+ * The R74 runbook generated the digest WITHOUT budgets (§2) and only added the
+ * four `--max-*` limits at execution (§3). The canonical execution plan binds
+ * those limits, so the "confirmed" digest could never match the executing plan:
+ * the documented flow was blocked by its own confirmation gate before any
+ * provider call. These tests pin the RULE the corrected runbook now states —
+ * dry-run and execute must carry the SAME plan-relevant parameters — against the
+ * real preflight path, not against a re-implementation of it.
+ */
+describe("E4-R75 (F1): a dry-run digest only authorizes a plan with identical parameters", () => {
+  const oneCase = [
+    { id: "t1", task: "x", requestMd: "x", expectedMd: "x", fixture: {}, expected: { status: "completed" }, suite: "regression", judgeVersion: "1.0.0" },
+  ] as unknown as Parameters<typeof import("./benchmark-command.js").preflightBenchmark>[1];
+
+  /** The FINAL parameter set the runbook tells the user to confirm and then run. */
+  const finalOpts = () => ({
+    casesDir: "cases", outDir: "out", budgetTokens: 32000, limit: 0, allowStub: true,
+    suite: "regression" as const, shuffle: false, seed: 0, caseDelayMs: 0, repeat: 1,
+    interleave: false, dryRun: true, maxLogicalRuns: 8 as number | null,
+    maxModelCalls: 80 as number | null, maxEstimatedTokens: 320_000 as number | null,
+    maxEstimatedCostUsd: 0.04 as number | null, paidAuthorized: false,
+    planDigest: undefined as string | undefined, allowInsecureLocalBenchmark: false,
+  });
+
+  it("F1 REPRO: a budget-free dry-run digest is REFUSED by the budgeted execution plan (the R74 §2→§3 flow)", async () => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    // §2 exactly as the R74 runbook wrote it: no `--max-*` flags, and (per the
+    // runbook text) `RUN_PAID_BENCHMARKS` not yet set.
+    const asWritten = await preflightBenchmark(
+      { ...finalOpts(), dryRun: true, maxLogicalRuns: null, maxModelCalls: null, maxEstimatedTokens: null, maxEstimatedCostUsd: null },
+      oneCase, "external-billed", testIdentityFacts(),
+    );
+    expect(asWritten.ok).toBe(true);
+    // §3 exactly as written: the SAME digest, now with all four budgets set.
+    // The refusal must be the DIGEST gate, so authorize billing first — this
+    // proves the digest (not the billing switch) is what blocks the flow.
+    const executed = await preflightBenchmark(
+      { ...finalOpts(), dryRun: false, paidAuthorized: true, planDigest: asWritten.planDigest },
+      oneCase, "external-billed", testIdentityFacts(),
+    );
+    expect(executed.ok).toBe(false);
+    if (!executed.ok) {
+      expect(executed.reason).toContain("plan digest mismatch");
+      // Explicitly NOT the billing gate — otherwise the check order, not the
+      // plan binding, would be doing the work.
+      expect(executed.reason).not.toContain("RUN_PAID_BENCHMARKS");
+    }
+  });
+
+  it("F1 FIX: a dry-run carrying the FULL final parameter set authorizes exactly that execution", async () => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const dry = await preflightBenchmark({ ...finalOpts(), dryRun: true }, oneCase, "external-billed", testIdentityFacts());
+    expect(dry.ok).toBe(true);
+    const executed = await preflightBenchmark(
+      { ...finalOpts(), dryRun: false, paidAuthorized: true, planDigest: dry.planDigest },
+      oneCase, "external-billed", testIdentityFacts(),
+    );
+    expect(executed.ok).toBe(true);
+    expect(executed.planDigest).toBe(dry.planDigest);
+  });
+
+  it("F1: --limit defaults to 1, so a case-sweep plan must pass --limit explicitly (R74 §2 omitted it)", async () => {
+    // The R74 runbook's §2 command omitted `--limit` AND `--max-logical-runs`.
+    // The two effects are independent: even with the budgets fixed, a
+    // default-`--limit` dry-run binds ONE case while the four-budget plan for 8
+    // cases binds all eight. Both must be identical in the corrected runbook.
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const eightCases = Array.from({ length: 8 }, (_, i) => ({
+      id: `t${i + 1}`, task: "x", requestMd: "x", expectedMd: "x", fixture: {},
+      expected: { status: "completed" }, suite: "regression", judgeVersion: "1.0.0",
+    })) as unknown as Parameters<typeof preflightBenchmark>[1];
+
+    const defaultLimit = await preflightBenchmark(
+      { ...finalOpts(), dryRun: true, limit: 1 }, eightCases, "offline-test", testIdentityFacts(),
+    );
+    const allCases = await preflightBenchmark(
+      { ...finalOpts(), dryRun: true, limit: 0 }, eightCases, "offline-test", testIdentityFacts(),
+    );
+    expect(defaultLimit.ok).toBe(true);
+    expect(allCases.ok).toBe(true);
+    expect(defaultLimit.planDigest).not.toBe(allCases.planDigest);
+    expect(defaultLimit.executionPlan!.caseIds).toHaveLength(1);
+    expect(allCases.executionPlan!.caseIds).toHaveLength(8);
+  });
+
+  // Each plan-relevant field must invalidate a stale confirmation on its own —
+  // the runbook's "any bound field change requires re-confirmation" claim.
+  const invalidators: Array<[string, Partial<ReturnType<typeof finalOpts>>]> = [
+    ["--max-logical-runs", { maxLogicalRuns: 7 }],
+    ["--max-model-calls", { maxModelCalls: 40 }],
+    ["--max-estimated-tokens", { maxEstimatedTokens: 160_000 }],
+    ["--max-estimated-cost-usd", { maxEstimatedCostUsd: 0.02 }],
+    ["--repeat", { repeat: 2 }],
+    ["--limit", { limit: 1 }],
+    ["--seed", { seed: 42 }],
+  ];
+
+  it.each(invalidators)("F1 FIX: changing %s invalidates the confirmed digest", async (_flag, change) => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const dry = await preflightBenchmark({ ...finalOpts(), dryRun: true }, oneCase, "offline-test", testIdentityFacts());
+    expect(dry.ok).toBe(true);
+    const changed = await preflightBenchmark(
+      { ...finalOpts(), dryRun: true, ...change } as ReturnType<typeof finalOpts>,
+      oneCase, "offline-test", testIdentityFacts(),
+    );
+    expect(changed.ok).toBe(true);
+    expect(changed.planDigest).not.toBe(dry.planDigest);
+  });
+
+  it("F1 FIX: a stub→billed switch invalidates the digest even with identical limits", async () => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const stubPlan = await preflightBenchmark({ ...finalOpts(), dryRun: true }, oneCase, "offline-test", testIdentityFacts());
+    expect(stubPlan.ok).toBe(true);
+    // Same every-other-parameter plan, only the billing class differs: the
+    // digest the user reviewed for an offline run must not authorize a billed
+    // one.
+    const billedPlan = await preflightBenchmark(
+      { ...finalOpts(), dryRun: true, paidAuthorized: true },
+      oneCase, "external-billed", testIdentityFacts(),
+    );
+    expect(billedPlan.ok).toBe(true);
+    expect(billedPlan.planDigest).not.toBe(stubPlan.planDigest);
+    // Authorized billing + the offline-stub digest must still be refused: the
+    // plan the user reviewed is not the plan that would run.
+    const refused = await preflightBenchmark(
+      { ...finalOpts(), dryRun: false, paidAuthorized: true, planDigest: stubPlan.planDigest },
+      oneCase, "external-billed", testIdentityFacts(),
+    );
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) expect(refused.reason).toContain("plan digest mismatch");
+  });
+
+  it("F1 FIX: digest mismatch is a hard refusal, never a warning or silent re-confirmation", async () => {
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const dry = await preflightBenchmark({ ...finalOpts(), dryRun: true }, oneCase, "external-billed", testIdentityFacts());
+    const refused = await preflightBenchmark(
+      { ...finalOpts(), dryRun: false, paidAuthorized: true, planDigest: "0".repeat(64) },
+      oneCase, "external-billed", testIdentityFacts(),
+    );
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) {
+      expect(refused.reason).toContain("plan digest mismatch");
+      // The refusal carries NO plan to execute — there is no path where a
+      // caller could fall back to the freshly computed one.
+      expect(refused.executionPlan).toBeUndefined();
+      expect(refused.planDigest).toBeUndefined();
+    }
+    expect(dry.planDigest).not.toBe("0".repeat(64));
+  });
+
+  it("F1 FIX: the offline (stub) dry-run makes 0 provider calls and is not blocked by its own gate", async () => {
+    // The R74 flow was blocked BEFORE any provider call; this pins that a
+    // digest produced with the FULL final parameter set is accepted by the
+    // execution entry point rather than refused by its own confirmation gate.
+    const root = await makeCaseDir({
+      "cases/t1/request.md": "test",
+      "cases/t1/expected.md": "done",
+      "cases/t1/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+    const provider = new ScriptedModelProvider([]);
+    const mod = await import("./benchmark-command.js");
+    const finalArgs = [
+      "--cases", join(root, "cases"),
+      "--limit", "0",
+      "--max-logical-runs", "8", "--max-model-calls", "80",
+      "--max-estimated-tokens", "320000", "--max-estimated-cost-usd", "0.04",
+    ];
+    const dry = await mod.runBenchmarkCommand([...finalArgs, "--dry-run", "--out", join(root, "out")], provider);
+    expect(dry.exitCode).toBe(0);
+    const plan = JSON.parse(dry.lines.join("\n")) as { planDigest: string; providerCalls: number };
+    expect(plan.providerCalls).toBe(0);
+    expect(plan.planDigest).toMatch(/^[0-9a-f]{64}$/);
+    expect(provider.calls.length).toBe(0);
+
+    // Same parameters + the confirmed digest, now with billing authorized: the
+    // gate must NOT report a digest mismatch (the plan really is identical).
+    const executed = await mod.runBenchmarkCommand(
+      [...finalArgs, "--plan-digest", plan.planDigest,
+        "--allow-stub", "--out", join(root, "out2")],
+      provider,
+    );
+    const output = executed.lines.join("\n");
+    expect(output).not.toContain("plan digest mismatch");
+  }, 60_000);
+});
