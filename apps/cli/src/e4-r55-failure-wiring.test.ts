@@ -61,7 +61,7 @@
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
-import { copyFile, lstat, mkdir, mkdtemp, open, readFile, readdir, rm, rmdir, stat, symlink, writeFile } from "node:fs/promises";
+import { copyFile, lstat, mkdir, mkdtemp, open, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { platform, tmpdir } from "node:os";
 import { basename, dirname, join, parse, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -192,17 +192,27 @@ afterAll(async () => {
       reportDegraded(`e4-r55 temp-root cleanup of ${d}`, err);
     }
   }
-  // Remove the runs root only if this run left it EMPTY. `rmdir` is the right
-  // primitive: it succeeds on an empty directory and fails ENOTEMPTY when a
-  // concurrent run still owns it. (Pre-R60 this used `rm(..., {recursive:false})`,
-  // which can never remove a directory at all — EISDIR — and the failure was
-  // swallowed by `.catch(() => {})`, so the root silently stayed behind.)
-  try {
-    await rmdir(RUNS_ROOT);
-  } catch (err) {
-    const code = (err as { code?: string }).code;
-    if (code !== "ENOTEMPTY" && code !== "EEXIST" && code !== "ENOENT") {
-      reportDegraded("e4-r55 runs-root cleanup", err);
+  // E4-R70: the SHARED runs root is never deleted by this suite.
+  //
+  // Pre-R70 this called `rmdir(RUNS_ROOT)` "only if empty". That is still a
+  // global, ownership-blind delete attempt: it targets a directory OTHER
+  // processes own, and it is not this suite's to remove (plan §3: "不直接删除整个
+  // RUNS_ROOT"). Measured here: with a foreign `run-YtCeW3/` present the root
+  // listed as NON-empty, `rmdir` returned WITHOUT throwing, and the root — with
+  // the foreign directory inside it — was gone; a minimal vitest probe and plain
+  // node both return ENOTEMPTY for the same call, so the mechanism is not fully
+  // identified. This fix therefore does not depend on it: we simply stop
+  // deleting a directory we do not own.
+  //
+  // What remains is a NON-BLOCKING diagnostic. Removing our OWN per-run
+  // directories is verified by ownership inside the parent test itself.
+  if (existsSync(RUNS_ROOT)) {
+    const remaining = await readdir(RUNS_ROOT).catch(() => null);
+    if (remaining !== null && remaining.length > 0) {
+      process.stderr.write(
+        `[e4-r55] the shared runs root still holds ${remaining.length} entr(y|ies) after this suite ` +
+          `(${remaining.join(", ")}) — left untouched, not this suite's to remove\n`,
+      );
     }
   }
 });
