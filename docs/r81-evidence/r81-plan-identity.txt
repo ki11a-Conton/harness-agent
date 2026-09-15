@@ -1,0 +1,80 @@
+E4-R81 (F81-1 / F81-2) — offline evidence
+===========================================
+
+Environment: Windows NT 10.0.19044.0 (win32), Node v24.18.1, pnpm 11.21.0.
+No API key was set for any plan-phase command. providerCalls = 0 everywhere.
+
+1. Keyless billed plan (explicit identity, no key present)
+---------------------------------------------------------
+
+  .\scripts\baseline-plan.ps1 plan -Model gpt-4o-mini \
+      -Endpoint 'https://user:tok@api.example.test/v1?k=QTOKEN' \
+      -MaxLogicalRuns 8 -MaxModelCalls 80 \
+      -MaxEstimatedTokens 320000 -MaxEstimatedCostUsd 0.04 \
+      -Out '<temp>\r81 plan out'      # path deliberately contains a space
+
+  exit 0. Key fields from the emitted plan:
+    schemaVersion    : e4-02
+    billingClass     : external-billed        <-- with NO key present
+    providerId       : openai
+    modelId          : gpt-4o-mini
+    endpointIdentity : 926a92d8d2ba77bb8ed8e22720d34c741088266d1c63ed014e3674a2780f8811
+    casesTotal       : 8   (all 8 frozen ids present)
+    limits           : maxLogicalRuns=8 maxModelCalls=80 maxEstimatedTokens=320000 maxEstimatedCostUsd=0.04
+    providerCalls    : 0
+    promotionEligible: false
+    planDigest       : 95a97097844d91636f22c6d296c1f124f1a741b8986f50864cbb0cb10d04aa30
+
+2. Secret hygiene
+-----------------
+
+The --endpoint above carried BOTH userinfo (user:tok) and a query token
+(k=QTOKEN). Neither appears anywhere in the emitted plan, the printed
+summary, or the saved digest file:
+
+  plan.digest content length = 64 chars, contains only the hex digest
+  leak check for 'QTOKEN' / 'tok@' / 'example' in plan.digest: clean
+
+3. Two-phase guards (execute refuses without explicit intent)
+------------------------------------------------------------
+
+  execute WITHOUT -AuthorizePaidRun
+    -> 'execute requires the explicit -AuthorizePaidRun switch (paid
+        authorization is never implicit).'
+  execute WITHOUT -PlanDigest
+    -> 'execute requires -PlanDigest <64-hex>. This script will not reuse
+        the last saved digest automatically.'
+  plan missing one budget cap (-MaxLogicalRuns)
+    -> 'all four budget caps are required (they are bound into the plan
+        digest): missing -MaxLogicalRuns'
+  execute with a key present but a WRONG digest (64 x 'f')
+    -> 'plan digest mismatch' — refused BEFORE the first provider call
+
+4. Endpoint normalization (from the vitest suite)
+--------------------------------------------------
+
+  same digest : https://api.example.test/v1
+                https://API.Example.Test/v1     (host case)
+                https://api.example.test/v1/    (trailing slash)
+                https://api.example.test:443/v1 (default port)
+  different   : https://api.example.test/v2       (path)
+                http://api.example.test/v1       (scheme)
+  a different model (gpt-4o) also changes the digest
+
+5. Legacy plan handling
+-----------------------
+
+  An e4-01 plan still PARSES (history is not erased) but is flagged
+  legacy and refused as execution authorization by
+  executionPlanAuthorizationIssue(); the remedy is to re-run the dry-run
+  for an e4-02 digest. Covered by the e4-R22/R28/R33/R38/R43 execution-plan
+  suites, which continue to pass.
+
+6. What was NOT done
+--------------------
+
+  No real provider was contacted. RUN_PAID_BENCHMARKS was never left set
+  (the one guard test sets it only to prove the DIGEST gate refuses first,
+  and restores the previous value). No API key was exported for any plan
+  command. No pricing was invented: the four caps and the estimated cost in
+  the sample plan are placeholders the operator must supply.

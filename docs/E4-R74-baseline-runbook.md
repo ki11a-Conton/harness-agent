@@ -63,23 +63,29 @@ pnpm install --frozen-lockfile
 pnpm build                       # CLI 从 dist/ 运行，必须先构建
 ```
 
-## 2. 第一步：用全部最终参数 dry-run 并确认计划摘要（0 次 provider 调用）
+## 2. 第一步：用**显式身份 + 全部最终参数** dry-run 并确认计划摘要（0 次 provider 调用，无需密钥）
 
-先在与执行**完全相同**的环境里确定最终参数（`provider` / `model` 通过环境变量配置，
-见 §3；此处先把其余参数固定下来）。
+**R81 起身份必须在 dry-run 时就用显式参数固定下来。** 之前 provider/model 只从
+`OPENAI_API_KEY` 是否存在推导，于是「无密钥 dry-run」只能得到 **stub 计划**；用户若照旧
+把这份 stub 摘要带去计费执行，必然 digest mismatch。现在 `--provider` / `--model` /
+`--endpoint` 是计划身份的唯一来源（优先级：显式参数 > 环境变量 > stub），
+**dry-run 不需要也不应提供任何密钥**。
 
-**PowerShell（Windows）**——参数数组只写一次，dry-run 与执行共用：
+**PowerShell（Windows）**——参数数组只写一次，dry-run 与执行共用，身份与预算全部在此固定：
 
 ```powershell
 $BenchArgs = @(
   'apps/cli/dist/main.js','benchmark',
   '--suite','regression',
   '--cases','benchmarks/baseline-e4-r74',
+  '--provider','openai',                 # R81：计划身份，显式
+  '--model','<user-provided model>',     # R81：计划身份，显式
+  '--endpoint','<user-provided endpoint>', # R81：只把规范化后的摘要写进计划
   '--limit','0',
-  '--max-logical-runs','8',
-  '--max-model-calls','80',
-  '--max-estimated-tokens','320000',
-  '--max-estimated-cost-usd','0.04',
+  '--max-logical-runs','<N>',
+  '--max-model-calls','<N>',
+  '--max-estimated-tokens','<N>',
+  '--max-estimated-cost-usd','<N>',
   '--out','benchmarks/results/<YYYY-MM-DD>-<provider>-<model>-baseline'
 )
 node @BenchArgs --dry-run
@@ -92,11 +98,14 @@ BENCH_ARGS=(
   apps/cli/dist/main.js benchmark
   --suite regression
   --cases benchmarks/baseline-e4-r74
+  --provider openai
+  --model "<user-provided model>"
+  --endpoint "<user-provided endpoint>"
   --limit 0
-  --max-logical-runs 8
-  --max-model-calls 80
-  --max-estimated-tokens 320000
-  --max-estimated-cost-usd 0.04
+  --max-logical-runs <N>
+  --max-model-calls <N>
+  --max-estimated-tokens <N>
+  --max-estimated-cost-usd <N>
   --out benchmarks/results/<YYYY-MM-DD>-<provider>-<model>-baseline
 )
 node "${BENCH_ARGS[@]}" --dry-run
@@ -104,13 +113,19 @@ node "${BENCH_ARGS[@]}" --dry-run
 
 > `<N>` 形式的占位符必须由用户在 §0 中给出真实数字（`0` = 禁止）。**不要**照抄本文
 > 示例里的 8 / 80 / 320000 / 0.04——那只是上一轮的规划估算，不是本次预算。
-> **不要**把密钥字面量写进仓库或写进这些示例；使用用户已配置的标准凭据渠道。
+> **不要**把密钥字面量写进仓库或写进这些示例；**dry-run 根本不需要密钥**。
+> `--endpoint` 可以带 userinfo 或 query token：计划里只保留**规范化摘要**，原文不会
+> 进入 artifact 或日志。
 
 需要从输出中核对并记录：
 
 | 字段 | 期望 | 参考（2026-09-15 / `fe7e1d2`） |
 | --- | --- | --- |
 | `mode` | `dry-run` | `dry-run` |
+| `schemaVersion` | `e4-02`（R81 起） | 历史快照为 `e4-01` |
+| `billingClass` | `external-billed`（显式 `--provider openai` 时**无需密钥**） | 历史快照为 `offline-test` |
+| `providerId` / `modelId` | 与 `--provider` / `--model` 一致 | — |
+| `endpointIdentity` | 64 位十六进制摘要（**不是** URL 原文），无 userinfo/query | — |
 | `casesTotal` | `8` | `8` |
 | `caseIds` | 8 个用例 id 齐全 | 见 `docs/E4-R74-baseline-cases.md` §2；R77 的内容修订见 `docs/E4-R77-baseline-cases-rev1.md` |
 | `providerCalls` | **`0`** | `0` |
@@ -124,11 +139,19 @@ node "${BENCH_ARGS[@]}" --dry-run
 - **相同语义计划 + 相同源码快照 → 摘要稳定。** 在同一个工作树状态下重复 dry-run
   会得到**逐字节相同**的输出（已实测）。
 - **任何被绑定的字段变化都需要重新确认**：改预算、改 `--limit`/`--repeat`/`--seed`、
-  换 model、从 stub 切到计费 provider、**审阅摘要后继续编辑任何文档或源码**（源码树
-  指纹会变，进而改变摘要）。
+  换 model、**换 endpoint（R81 起已绑定）**、从 stub 切到计费 provider、
+  **审阅摘要后继续编辑任何文档或源码**（源码树指纹会变，进而改变摘要）。
+- **等价写法不算变化**：endpoint 的主机名大小写、末尾斜杠、协议默认端口
+  （`https://x/v1` = `https://X/v1/` = `https://x:443/v1`）会得到同一摘要；
+  路径或协议真的不同则摘要必须改变。
 
 所以正确用法是「**同一次 dry-run 的输出 → 紧接着传给 `--plan-digest`**」，而不是
 「每次运行 digest 都必然不同」。
+
+### 2.1.1 旧计划（`e4-01`）不可执行
+
+R81 之前的计划不绑定 endpoint。它们仍能被解析（历史不被抹掉），但会被明确判为
+**legacy / 不可执行**。不要试图复用任何 `e4-01` 的摘要——请重新 dry-run 取得 `e4-02` 摘要。
 
 ### 2.2 历史冻结用例 vs 本次执行快照
 
@@ -144,16 +167,43 @@ node "${BENCH_ARGS[@]}" --dry-run
 **边界**：dry-run 成功只证明「执行计划可生成」，**不**代表已执行、**不**代表评测会
 通过。
 
-## 3. 第二步：设置预算与凭据，用**相同参数**执行
+### 2.3 `plan` / `execute` 两段式辅助脚本（Windows，R81）
+
+`scripts/baseline-plan.ps1` 把上面的纪律固化成两个子命令，避免手工复制摘要时出错：
+
+```powershell
+# 第一段：无密钥生成并保存计划（不连接 provider）
+.\scripts\baseline-plan.ps1 plan `
+    -Model "<user-provided model>" `
+    -Endpoint "<user-provided endpoint>" `
+    -MaxLogicalRuns <N> -MaxModelCalls <N> `
+    -MaxEstimatedTokens <N> -MaxEstimatedCostUsd <N>
+
+# 第二段：显式传入刚生成的摘要 + 显式授权开关才会真的执行
+.\scripts\baseline-plan.ps1 execute `
+    -PlanDigest <64-hex digest printed by `plan`, or the saved .digest file> `
+    -AuthorizePaidRun
+```
+
+脚本的硬性约束（有测试钉住）：
+
+- `plan` **不读取、不写入任何密钥**，也不设置 `RUN_PAID_BENCHMARKS`；
+- `execute` **必须**显式收到 `-PlanDigest` 与 `-AuthorizePaidRun`，**不会**自动读取
+  上次生成的摘要后直接付费；
+- 脚本把摘要写到 `out/<...>.digest`，但**只写摘要**，从不写密钥；
+- 路径含空格的 `-Out` / `-Cases` 正常工作。
+
+## 3. 第二步：**只增加密钥与付费授权**，用同一组参数执行
 
 把 §2 dry-run 输出的 `planDigest` 原样传入 `--plan-digest`，其余参数与 §2 完全一致。
+**身份参数（`--provider` / `--model` / `--endpoint`）已经在 §2 固定，本步不得增删或修改**——
+改了任何一个都会让 §2 的摘要失效（这正是 R81 要让 digest 绑定 endpoint 的目的）。
 
 **PowerShell（Windows）**：
 
 ```powershell
-$env:OPENAI_API_KEY  = "<user-provided>"
-$env:OPENAI_BASE_URL = "<user-provided endpoint>"
-$env:OPENAI_MODEL    = "<user-provided model>"
+# 只补凭据与授权；不要在这里新增 --provider/--model/--endpoint。
+$env:OPENAI_API_KEY      = "<user-provided>"
 $env:RUN_PAID_BENCHMARKS = "1"        # 必须由用户显式授权
 
 node @BenchArgs --plan-digest <planDigest from step 2>
@@ -163,12 +213,16 @@ node @BenchArgs --plan-digest <planDigest from step 2>
 
 ```bash
 export OPENAI_API_KEY="<user-provided>"
-export OPENAI_BASE_URL="<user-provided endpoint>"
-export OPENAI_MODEL="<user-provided model>"
 export RUN_PAID_BENCHMARKS=1
 
 node "${BENCH_ARGS[@]}" --plan-digest "<planDigest from step 2>"
 ```
+
+> **R81 变更**：`OPENAI_MODEL` / `OPENAI_BASE_URL` 不再需要在此设置，因为身份已由
+> §2 的显式参数固定。若要改用环境变量方式，则**必须在 §2 就这样做**（dry-run 前），
+> 否则 dry-run 与执行的 endpoint 不一致，执行会被 digest mismatch 拒绝（这是期望行为）。
+> 执行前 CLI 会重新解析实际 provider/model/endpoint 并与已确认计划比对；
+> 任何一项漂移都在**第一次 provider 调用之前**拒绝。
 
 ### 3.1 关于四个上限：runbook 的操作要求 vs CLI 当前强制的契约
 

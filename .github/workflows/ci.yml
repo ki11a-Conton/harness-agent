@@ -303,6 +303,200 @@ jobs:
           path: .ci/evidence/gates/
           if-no-files-found: error
 
+  # ---------------------------------------------------------------------------
+  # E4-R82 (F82-1): offline Linux cold-start.
+  #
+  # The frozen-baseline handoff was only ever validated on the author's Windows
+  # machine; the repo had no job that walks the README's cold-start path on
+  # Linux, so the POSIX half of the command verifier was unproven. The author has
+  # no Linux, WSL or Docker, so this evidence is produced HERE, on GitHub's
+  # ubuntu-latest, and is labelled as such — never passed off as the author's
+  # machine.
+  #
+  # Hard constraints, per the plan:
+  #   - no secrets are configured and none are read;
+  #   - RUN_PAID_BENCHMARKS is never set, so a paid run is structurally
+  #     impossible;
+  #   - every check asserts providerCalls = 0 and a stub/fake provider, so no
+  #     real model is ever contacted;
+  #   - the checkout is a REAL cold start in a path containing a space, and it
+  #     reuses nothing from the verify job's node_modules or dist.
+  # ---------------------------------------------------------------------------
+  cold-start-ubuntu:
+    name: offline cold-start (ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      # Belt and braces: even if a key leaked into the runner environment, the
+      # paid switch stays off for this job.
+      RUN_PAID_BENCHMARKS: ""
+    steps:
+      - name: Check out the repository (into a path containing a space)
+        uses: actions/checkout@v4
+        with:
+          path: "cold start checkout"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # Node 22, the LTS line CI standardises on (not the author's local 24).
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: "cold start checkout/pnpm-lock.yaml"
+
+      - name: Assert the tested HEAD is the workflow SHA
+        working-directory: "cold start checkout"
+        run: |
+          set -euo pipefail
+          HEAD_SHA="$(git rev-parse HEAD)"
+          echo "checked-out HEAD: $HEAD_SHA"
+          echo "github.sha      : ${{ github.sha }}"
+          test "$HEAD_SHA" = "${{ github.sha }}"
+
+      - name: Assert this is a genuine cold start (no node_modules, no dist)
+        working-directory: "cold start checkout"
+        run: |
+          set -euo pipefail
+          test ! -d node_modules || { echo "node_modules already present — not a cold start"; exit 1; }
+          test ! -d apps/cli/dist || { echo "apps/cli/dist already present — not a cold start"; exit 1; }
+          echo "cold start confirmed: no node_modules, no apps/cli/dist"
+
+      - name: README step 1 — install (frozen lockfile)
+        working-directory: "cold start checkout"
+        run: pnpm install --frozen-lockfile
+
+      - name: README step 2 — build
+        working-directory: "cold start checkout"
+        run: pnpm build
+
+      - name: Verify the workflow itself cannot authorize a paid run
+        working-directory: "cold start checkout"
+        run: |
+          set -euo pipefail
+          if grep -nE 'RUN_PAID_BENCHMARKS\s*[:=]\s*["'"'"']?1' .github/workflows/ci.yml; then
+            echo "workflow file contains a paid authorization — refusing"; exit 1
+          fi
+          echo "no paid authorization in the workflow"
+
+      - name: README step 3 — doctor
+        working-directory: "cold start checkout"
+        run: |
+          set -euo pipefail
+          mkdir -p .ci/cold-start
+          node apps/cli/dist/main.js doctor | tee .ci/cold-start/doctor.txt
+          # Machine-check, not just exit 0: no doctor ERRORS may be reported.
+          if grep -qiE '^\s*(error|ERROR)\b' .ci/cold-start/doctor.txt; then
+            echo "doctor reported errors"; exit 1
+          fi
+
+      - name: README step 4 — single adversarial case with the stub provider
+        working-directory: "cold start checkout"
+        run: |
+          set -euo pipefail
+          mkdir -p ".ci/cold start evidence"
+          node apps/cli/dist/main.js benchmark \
+            --suite adversarial --limit 1 --allow-stub \
+            --out ".ci/cold start evidence" | tee .ci/cold-start/stub.txt
+
+      - name: README step 5 — frozen baseline plan (dry-run, no key, 0 provider calls)
+        working-directory: "cold start checkout"
+        run: |
+          set -euo pipefail
+          mkdir -p ".ci/cold start evidence"
+          node apps/cli/dist/main.js benchmark \
+            --suite regression \
+            --cases benchmarks/baseline-e4-r74 \
+            --provider openai \
+            --model cold-start-model \
+            --endpoint https://api.invalid.example/v1 \
+            --limit 0 \
+            --max-logical-runs 8 --max-model-calls 80 \
+            --max-estimated-tokens 320000 --max-estimated-cost-usd 0.04 \
+            --dry-run \
+            --out ".ci/cold start evidence" > .ci/cold-start/plan.json
+          cat .ci/cold-start/plan.json
+
+      - name: Machine-check the artifacts (not just exit codes)
+        working-directory: "cold start checkout"
+        run: |
+          set -euo pipefail
+          node -e '
+            const fs = require("node:fs");
+            const fail = (m) => { console.error("COLD-START CHECK FAILED: " + m); process.exit(1); };
+
+            // 1. stub artifact parses and records ZERO model calls
+            const stub = JSON.parse(fs.readFileSync(".ci/cold start evidence/adversarial.json", "utf8"));
+            const calls = stub.summary?.avg_model_calls ?? stub.summary?.avgModelCalls;
+            if (calls !== 0) fail("stub avg_model_calls = " + JSON.stringify(calls) + " (expected 0)");
+            console.log("stub avg_model_calls = 0 OK");
+
+            // 2. dry-run plan: 8 frozen cases, complete ids, 0 provider calls,
+            //    sourceSha == github.sha, and the endpoint is a digest
+            const plan = JSON.parse(fs.readFileSync(".ci/cold-start/plan.json", "utf8"));
+            if (plan.providerCalls !== 0) fail("plan providerCalls = " + plan.providerCalls);
+            if (plan.casesTotal !== 8) fail("casesTotal = " + plan.casesTotal + " (expected 8)");
+            const expected = ["adv-path-confusion","adv-tool-output-injection","reg-02-fix-reverse",
+              "reg-06-json-parse-test","reg-12-csv-parse","reg-24-error-handling","reg-30-sort-order",
+              "stress-10-subagents"].sort();
+            const got = [...plan.caseIds].sort();
+            if (JSON.stringify(got) !== JSON.stringify(expected)) fail("caseIds mismatch: " + JSON.stringify(got));
+            if (plan.sourceSha !== "${{ github.sha }}") fail("sourceSha " + plan.sourceSha + " != github.sha");
+            if (!/^[0-9a-f]{64}$/.test(plan.endpointIdentity ?? "")) fail("endpointIdentity is not a digest");
+            if (plan.billingClass !== "external-billed") fail("billingClass = " + plan.billingClass);
+            if (plan.schemaVersion !== "e4-02") fail("schemaVersion = " + plan.schemaVersion);
+            console.log("plan: 8 cases, providerCalls=0, sourceSha matches, endpoint digest OK");
+          '
+
+      - name: Linux oracle — the REAL TaskVerifier on the frozen baseline
+        working-directory: "cold start checkout"
+        run: |
+          set -euo pipefail
+          # The POSIX half of E4-R79: the SAME frozen command specs must pass a
+          # correct implementation and fail the original broken fixture, through
+          # the production verifier (not a direct-argv helper).
+          pnpm exec vitest run packages/evaluation/src/e4-r77-baseline-oracle.test.ts \
+            packages/tools/src/verification/task-verifier.test.ts \
+            packages/tools/src/process/executor.test.ts
+
+      - name: Write the reduced cold-start evidence bundle
+        if: always()
+        working-directory: "cold start checkout"
+        run: |
+          set -euo pipefail
+          mkdir -p .ci/cold-start
+          {
+            echo "{"
+            echo "  \"headSha\": \"${{ github.sha }}\","
+            echo "  \"runId\": \"${{ github.run_id }}\","
+            echo "  \"runAttempt\": \"${{ github.run_attempt }}\","
+            echo "  \"runnerOs\": \"$RUNNER_OS\","
+            echo "  \"node\": \"$(node --version)\","
+            echo "  \"pnpm\": \"$(pnpm --version)\","
+            echo "  \"coldStartPathContainsSpace\": true,"
+            echo "  \"paidAuthorizationPresentInWorkflow\": false"
+            echo "}"
+          } > .ci/cold-start/identity.json
+          cat .ci/cold-start/identity.json
+          # Deliberately NO environment dump, no secrets, no full process env.
+
+      - name: Upload cold-start evidence (E4-R82)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cold-start-ubuntu-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            cold start checkout/.ci/cold-start/
+            cold start checkout/.ci/cold start evidence/
+          if-no-files-found: warn
+          retention-days: 14
+
   # P38-12 (INV-P38-014/015): official release attestation REDUCES real gate
   # evidence — it downloads the per-gate execution evidence files generated by
   # the actual gate commands, verifies SHA + command, and derives the release
