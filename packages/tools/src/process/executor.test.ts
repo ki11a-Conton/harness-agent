@@ -110,3 +110,116 @@ describe("ProcessExecutor (EXEC-001)", () => {
     expect(out.stdout).toBe(`${ws}|42`);
   });
 });
+
+/**
+ * E4-R79 (F79-2): structured argv execution.
+ *
+ * The shell path (`command: string`) is the legacy, recipe-shaped contract. It
+ * is unsuitable for STRUCTURED `command + args` because the platform shell
+ * re-interprets the argument text. These tests pin the argv contract that
+ * `TaskVerifier` now uses for structured verification specs: the file is
+ * spawned directly with `shell: false`, so every argument reaches the child
+ * byte-for-byte and no metacharacter can start a second command.
+ */
+describe("E4-R79: ProcessExecutor argv execution (shell:false, no re-interpretation)", () => {
+  /** Echo back the argv the child actually received, as JSON. */
+  const ECHO_ARGV = "process.stdout.write(JSON.stringify(process.argv.slice(1)))";
+
+  it("delivers every argument verbatim, including shell metacharacters", async () => {
+    const exe = new ProcessExecutor();
+    // Each entry would change meaning (or spawn a second command) if it were
+    // ever round-tripped through cmd.exe or /bin/sh.
+    const payload = [
+      "plain",
+      "with space",
+      "single'quote",
+      'double"quote',
+      "back\\slash",
+      "paren(s)",
+      "$DOLLAR",
+      "amp&ersand",
+      "semi;colon",
+      "pipe|x",
+      "glob*star",
+      "angle<gt>",
+      "bang!",
+      "new\nline",
+      "空 格 汉 字",
+      "",
+    ];
+    const out = await exe.runArgv({
+      file: NODE,
+      args: ["-e", ECHO_ARGV, ...payload],
+      cwd: ws,
+    });
+    expect(out.status).toBe("success");
+    expect(JSON.parse(out.stdout)).toEqual(payload);
+  });
+
+  it("does not let a metacharacter argument run a second command", async () => {
+    const exe = new ProcessExecutor();
+    const out = await exe.runArgv({
+      file: NODE,
+      args: ["-e", ECHO_ARGV, "a&echo INJECTED", "b;echo INJECTED", "c|echo INJECTED", "d`echo x`"],
+      cwd: ws,
+    });
+    expect(out.status).toBe("success");
+    // Exactly the four args came back — nothing was split, nothing executed.
+    expect(JSON.parse(out.stdout)).toEqual(["a&echo INJECTED", "b;echo INJECTED", "c|echo INJECTED", "d`echo x`"]);
+    expect(out.stdout).not.toContain("INJECTED\n");
+  });
+
+  it("reports a real nonzero exit code from the argv path", async () => {
+    const exe = new ProcessExecutor();
+    const out = await exe.runArgv({ file: NODE, args: ["-e", "process.exit(7)"], cwd: ws });
+    expect(out.status).toBe("failed");
+    expect(out.exitCode).toBe(7);
+  });
+
+  it("reports error status when the executable does not exist", async () => {
+    const exe = new ProcessExecutor();
+    const out = await exe.runArgv({ file: join(ws, "definitely-not-here-9f3a"), args: [], cwd: ws });
+    expect(out.status).toBe("error");
+    expect(out.exitCode).toBeNull();
+  });
+
+  it("honors timeout, cancellation, output cap and env on the argv path", async () => {
+    const exe = new ProcessExecutor();
+    const timed = await exe.runArgv({
+      file: NODE,
+      args: ["-e", "setTimeout(()=>{}, 10000)"],
+      cwd: ws,
+      timeoutMs: 250,
+    });
+    expect(timed.status).toBe("timeout");
+
+    const ac = new AbortController();
+    const pending = exe.runArgv({ file: NODE, args: ["-e", "setTimeout(()=>{}, 10000)"], cwd: ws, signal: ac.signal });
+    setTimeout(() => ac.abort(), 100);
+    expect((await pending).status).toBe("cancelled");
+
+    const capped = await exe.runArgv({
+      file: NODE,
+      args: ["-e", "process.stdout.write('x'.repeat(10000))"],
+      cwd: ws,
+      maxOutputBytes: 100,
+    });
+    expect(capped.truncated).toBe(true);
+    expect(capped.stdout.length).toBeLessThanOrEqual(100);
+
+    const envd = await exe.runArgv({
+      file: NODE,
+      args: ["-e", "process.stdout.write(String(process.env.ARGV_MARKER))"],
+      cwd: ws,
+      env: { ARGV_MARKER: "ok" },
+    });
+    expect(envd.stdout).toBe("ok");
+  });
+
+  it("rejects a run() call that provides neither a command string nor argv", async () => {
+    const exe = new ProcessExecutor();
+    await expect(
+      exe.run({ cwd: ws } as unknown as Parameters<ProcessExecutor["run"]>[0]),
+    ).rejects.toThrow(/either `command`/i);
+  });
+});

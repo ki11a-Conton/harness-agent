@@ -173,18 +173,36 @@ export class TaskVerifier implements Verifier {
   ): Promise<VerificationResult["checks"][number]> {
     const description = spec.description ?? `command: ${spec.command}`;
     try {
-      // P8-1: args are shell-quoted so planned commands with spaces/braces
-      // (e.g. `node -e "process.exit(0)"` split by the plan builder) survive
-      // the /bin/sh -c assembly. POSIX single-quote escaping; cmd.exe stays
-      // best-effort (verification commands are normally plain tool invocations).
-      const argString = (spec.args ?? []).map(shellQuote).join(" ");
-      const command = argString.length > 0 ? `${spec.command} ${argString}` : spec.command;
-      const outcome = await this.executor.run({
-        command,
-        cwd: context.cwd,
-        timeoutMs: 120_000,
-        maxOutputBytes: 1_048_576,
-      });
+      // E4-R79 (F79-2): EXECUTABLE + ARGV when the spec carries `args`.
+      //
+      // The previous behaviour assembled `command` + shell-quoted `args` into a
+      // single string and handed it to the platform shell. `shellQuote` emits
+      // POSIX single-quote escaping, which cmd.exe does not understand, so on
+      // win32 EVERY structured command spec was mangled and failed regardless
+      // of whether the implementation was correct. It was also injectable: an
+      // argument containing `&` or `;` became a second command.
+      //
+      // The dispatch rule is explicit and must not be guessed at:
+      //   - `args` present  → the spec is a program plus an argument VECTOR.
+      //     It is spawned directly (shell:false); nothing re-parses the text.
+      //   - no `args`       → the spec is a legacy full shell RECIPE. It is
+      //     passed to the shell verbatim (historical behaviour preserved).
+      // We never split, re-quote or otherwise re-interpret a recipe string.
+      const outcome =
+        spec.args !== undefined
+          ? await this.executor.runArgv({
+              file: spec.command,
+              args: spec.args,
+              cwd: context.cwd,
+              timeoutMs: 120_000,
+              maxOutputBytes: 1_048_576,
+            })
+          : await this.executor.run({
+              command: spec.command,
+              cwd: context.cwd,
+              timeoutMs: 120_000,
+              maxOutputBytes: 1_048_576,
+            });
       return {
         id: `command:${spec.command}`,
         kind: "command",
@@ -274,8 +292,3 @@ function normalize(p: string): string {
   return p.split(sep).join("/").toLowerCase();
 }
 
-/** POSIX single-quote escaping (best-effort on cmd.exe). */
-function shellQuote(arg: string): string {
-  if (!/[\s'"\\$`(){};*?[\]<>|&!]/.test(arg)) return arg;
-  return `'${arg.replace(/'/g, `'\\''`)}'`;
-}

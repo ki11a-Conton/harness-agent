@@ -12,12 +12,13 @@
  * never written into the benchmarked fixture directories.
  *
  * FINDINGS RECORDED HERE (see docs/E4-R77-report.md):
- *  - V1: `TaskVerifier.checkCommand` shell-quotes args with POSIX single quotes,
- *    but on win32 the ProcessExecutor runs them through `cmd.exe`. The quoted
- *    command is mangled, so EVERY `kind: "command"` case fails on Windows
- *    regardless of the implementation. The oracle tests therefore assert BOTH
- *    (a) the defect is present and (b) the case's SEMANTIC oracle is sound once
- *    the quoting defect is bypassed (documented as a separate, un-fixed defect).
+ *  - V1: `TaskVerifier.checkCommand` shell-quoted args with POSIX single quotes,
+ *    but on win32 the ProcessExecutor ran them through `cmd.exe`. The quoted
+ *    command was mangled, so EVERY `kind: "command"` case failed on Windows
+ *    regardless of the implementation. **FIXED in E4-R79** (structured
+ *    `command + args` now spawns directly with `shell: false`); the tests below
+ *    assert the FIXED cross-platform contract, not the historical defect. See
+ *    docs/E4-R79-report.md.
  *  - V2: the `artifact` verifier checks existence + changedPaths, NEVER content,
  *    so an EMPTY file satisfies `mustChange`.
  */
@@ -63,16 +64,26 @@ async function specsFor(caseId: string) {
   return caseDef.verification ?? [];
 }
 
-/** Run the case's REAL verification specs through the REAL TaskVerifier. */
+/** Run the case's REAL verification specs through the REAL TaskVerifier.
+ *
+ *  `changedPaths` is supplied exactly as a real run would: the benchmark driver
+ *  reports the files the agent touched, so an `artifact` + `mustChange` spec can
+ *  be satisfied. The oracle is about the COMMAND/content rules, so every path
+ *  the case references is reported as changed — otherwise an artifact spec would
+ *  fail for a reason unrelated to what the oracle is measuring. */
 async function runVerifier(caseId: string, root: string): Promise<{ passed: boolean; messages: string[] }> {
-  const specs = (await specsFor(caseId)).map((spec) => {
+  const raw = await specsFor(caseId);
+  const changedPaths: string[] = [];
+  const specs = raw.map((spec) => {
     if (spec.kind !== "artifact") return spec;
-    return { ...spec, path: isAbsolute(spec.path) ? spec.path : join(root, spec.path) };
+    const abs = isAbsolute(spec.path) ? spec.path : join(root, spec.path);
+    changedPaths.push(abs);
+    return { ...spec, path: abs };
   });
   const verifier = new TaskVerifier();
   const result = await verifier.verify(
     { verification: specs } as unknown as Parameters<TaskVerifier["verify"]>[0],
-    { cwd: root, sessionId: "e4-r77", changedPaths: [] } as unknown as Parameters<TaskVerifier["verify"]>[1],
+    { cwd: root, sessionId: "e4-r77", changedPaths } as unknown as Parameters<TaskVerifier["verify"]>[1],
   );
   return {
     passed: result.passed,
@@ -80,24 +91,11 @@ async function runVerifier(caseId: string, root: string): Promise<{ passed: bool
   };
 }
 
-/** Evaluate the SEMANTIC oracle of a command spec by running its argv DIRECTLY,
- *  bypassing the verifier's platform-mismatched shell quoting. This is what the
- *  verifier would decide on a POSIX host, and what it should decide here. */
+/** Run ONLY the case's command specs through the REAL TaskVerifier contract.
+ *  Used where the question is purely "does the command/content rule hold". */
 async function runCommandSpecDirectly(caseId: string, root: string): Promise<{ passed: boolean; detail: string }> {
-  const specs = (await specsFor(caseId)).filter((s) => s.kind === "command");
-  const executor = new ProcessExecutor();
-  for (const spec of specs) {
-    if (spec.kind !== "command") continue;
-    // Quote every arg cmd.exe-natively (double quotes), unlike the verifier's
-    // POSIX single-quote escaping. The runtime's own exec path does the same.
-    const argv = (spec.args ?? []).map((a) => `"${a.replace(/"/g, '\\"')}"`);
-    const command = [spec.command, ...argv].join(" ");
-    const out = await executor.run({ command, cwd: root, timeoutMs: 120_000, maxOutputBytes: 1_048_576 });
-    if (out.status !== "success") {
-      return { passed: false, detail: `direct run exit=${out.exitCode} stderr=${out.stderr.slice(0, 200)}` };
-    }
-  }
-  return { passed: true, detail: "direct run exit=0" };
+  const r = await runVerifier(caseId, root);
+  return { passed: r.passed, detail: r.messages.join(" | ") };
 }
 
 describe("E4-R77: the 8 frozen cases load through the REAL loader", () => {
@@ -116,32 +114,49 @@ describe("E4-R77: the 8 frozen cases load through the REAL loader", () => {
   });
 });
 
-describe("E4-R77 (V1): command verification is BROKEN on win32 (POSIX quoting into cmd.exe)", () => {
-  it("V1 REPRO: a CORRECT implementation still FAILS the real command verifier on win32", async () => {
-    const root = await materialize(
-      "reg-02-fix-reverse",
-      writeInto("src/strings.js", "export function reverse(s) { return [...s].reverse().join(''); }\n"),
-    );
+describe("E4-R79 (was R77 V1): structured command verification is platform-consistent", () => {
+  const CORRECT = "export function reverse(s) { return [...s].reverse().join(''); }\n";
+
+  it("V1 FIXED: a CORRECT implementation PASSES the real command verifier on every platform", async () => {
+    // Before E4-R79 this assertion was `toBe(false)` and the suite was therefore
+    // platform-dependent: `shellQuote` emitted POSIX single quotes while win32
+    // ran the string through cmd.exe, so Windows failed a correct fix and Ubuntu
+    // passed it. The defect is fixed in the verifier (argv path, shell:false),
+    // so BOTH platforms must now agree that a correct fix passes.
+    const root = await materialize("reg-02-fix-reverse", writeInto("src/strings.js", CORRECT));
     const r = await runVerifier("reg-02-fix-reverse", root);
-    // The defect: a semantically correct fix is judged FAILED on Windows because
-    // the POSIX single-quoting is mangled by cmd.exe.
-    expect(r.passed).toBe(false);
     expect(r.messages.join(" ")).toContain("command");
+    expect(r.passed).toBe(true);
   });
 
-  it("V1: the SAME correct implementation PASSES when the spec argv is run directly (no bad quoting)", async () => {
-    const root = await materialize(
-      "reg-02-fix-reverse",
-      writeInto("src/strings.js", "export function reverse(s) { return [...s].reverse().join(''); }\n"),
-    );
-    const direct = await runCommandSpecDirectly("reg-02-fix-reverse", root);
-    expect(direct.passed).toBe(true);
-  });
-
-  it("V1: the BROKEN fixture fails under direct execution too (so the oracle still discriminates)", async () => {
+  it("V1: the ORIGINAL broken fixture still FAILS the real command verifier", async () => {
     const root = await materialize("reg-02-fix-reverse");
-    const direct = await runCommandSpecDirectly("reg-02-fix-reverse", root);
-    expect(direct.passed).toBe(false);
+    const r = await runVerifier("reg-02-fix-reverse", root);
+    expect(r.passed).toBe(false);
+  });
+
+  it("V1 regression: an argv metacharacter cannot execute a second command", async () => {
+    // The old shell-string assembly let `&`/`;` inside an argument start a
+    // second command. The argv path spawns without a shell, so `cmd /c`-style
+    // injection is structurally impossible; this pins that property through the
+    // REAL verifier rather than through a bespoke helper.
+    const root = await materialize("reg-02-fix-reverse", writeInto("src/strings.js", CORRECT));
+    const verifier = new TaskVerifier();
+    const res = await verifier.verify(
+      {
+        verification: [
+          {
+            kind: "command",
+            command: process.execPath,
+            args: ["-e", "process.exit(0)", "&", "echo", "INJECTED", ";", "exit", "9"],
+          },
+        ],
+      } as unknown as Parameters<TaskVerifier["verify"]>[0],
+      { cwd: root, sessionId: "e4-r79", changedPaths: [] } as unknown as Parameters<TaskVerifier["verify"]>[1],
+    );
+    // exit 0 from the node program: the trailing tokens were argv, not commands.
+    expect(res.passed).toBe(true);
+    expect(res.checks[0]?.evidence?.description).toContain("exit code 0");
   });
 });
 

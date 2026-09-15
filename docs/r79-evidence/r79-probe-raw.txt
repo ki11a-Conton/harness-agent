@@ -1,0 +1,71 @@
+# E4-R79 — offline reproducer evidence (raw)
+
+Captured locally on the author's Windows machine. HEAD before the fix:
+`7798d3a946ad4c8470168a7026166ea280e7b30a` (the R78 tip that made CI red).
+
+```
+platform=win32  node=v24.18.1  pnpm=11.21.0
+```
+
+## 1. The defect (BEFORE the fix)
+
+Frozen case `reg-02-fix-reverse`, correct implementation:
+
+```js
+export function reverse(s) { return [...s].reverse().join(''); }
+```
+
+Its frozen verification spec:
+
+```json
+{"kind":"command","command":"node",
+ "args":["-e","import('./src/strings.js').then(m => { if (m.reverse('hello') !== 'olleh' || m.reverse('') !== '') process.exit(1) })"]}
+```
+
+Result through the REAL `TaskVerifier` at `7798d3a`:
+
+```
+REAL_VERIFIER_CORRECT_IMPL_passed=false
+  check kind=command passed=false err=node: exited with code 1
+```
+
+A semantically correct fix was judged FAILED. Cause: `TaskVerifier.checkCommand`
+joined `command` + `shellQuote(args)` into one string and handed it to the
+platform shell. `shellQuote` produced POSIX single-quote escaping (`'...'`),
+which `cmd.exe` does not implement, so the recipe was mangled before `node` ever
+saw it. The same code passed on Ubuntu — which is why the R77 test (asserting
+the Windows-only verdict unconditionally) failed CI on Ubuntu only.
+
+## 2. The defect was also an injection hole (BEFORE the fix)
+
+Observed while probing the same assembly with metacharacter arguments:
+
+```
+raw_argv_stdout=["a b","c'd","e\"f","g\\h","(i)","$j","k"]
+INJECTED" "l;echo INJECTED2" "<CJK>" ""
+```
+
+The `k&echo INJECTED` and `l;echo INJECTED2` arguments were executed as
+**separate commands** instead of arriving as data. Any argument text reaching a
+structured verification spec could therefore run additional commands.
+
+## 3. AFTER the fix (`shell:false` argv path)
+
+Same case, same correct implementation, same machine:
+
+```
+REAL_VERIFIER_CORRECT_IMPL_passed=true
+  check kind=command passed=true err=
+```
+
+All 6 frozen `kind:"command"` specs, evaluated through the REAL verifier — see
+`r79-frozen-command-specs.txt`: every broken fixture FAILS and every correct
+implementation PASSES.
+
+## 4. How this file was produced
+
+Section 1/2 values come from a throwaway probe test run against `7798d3a`;
+section 3 from the same probe re-run against the fixed tree. The probe was
+deleted after use. Its durable replacement is the `E4-R79 (was R77 V1)` describe
+block in `packages/evaluation/src/e4-r77-baseline-oracle.test.ts`, which asserts
+the platform-INDEPENDENT contract and therefore runs green on Windows AND Ubuntu.

@@ -218,3 +218,100 @@ describe("P8-2: incremental verification evidence", () => {
     expect(result.passed).toBe(true);
   });
 });
+
+/**
+ * E4-R79 (F79-2): the structured-spec dispatch contract.
+ *
+ * `args` present  → executable + argv, spawned with `shell:false`.
+ * `args` absent   → legacy full shell recipe, handed to the shell verbatim.
+ *
+ * These tests pin both halves. The argv half is what makes the Windows frozen
+ * baseline scoreable: before the fix the args were shell-quoted POSIX-style and
+ * re-parsed by cmd.exe, so a correct implementation failed.
+ */
+describe("E4-R79: TaskVerifier command spec dispatch", () => {
+  /** Echo back the argv the verified process actually received. */
+  const ECHO_ARGV = "process.stdout.write(JSON.stringify(process.argv.slice(1)))";
+
+  it("delivers argv byte-for-byte and never executes a metacharacter", async () => {
+    const boundary = [
+      "with space",
+      "single'quote",
+      'double"quote',
+      "back\\slash",
+      "paren(s)",
+      "$DOLLAR",
+      "amp&whoami",
+      "semi;whoami",
+      "pipe|whoami",
+      "glob*star",
+      "angle<gt>",
+      "bang!",
+      "空 格",
+      "",
+    ];
+    const seen: string[] = [];
+    const verifier = new TaskVerifier({
+      executor: {
+        // Record what the verifier asked for; prove it used the ARGV contract.
+        runArgv: async (o: { file: string; args?: string[] }) => {
+          seen.push(o.file, ...(o.args ?? []));
+          return { status: "success" as const, exitCode: 0, durationMs: 1, stdout: "", stderr: "" };
+        },
+        run: async () => {
+          throw new Error("structured spec must NOT go through the shell path");
+        },
+      } as never,
+    });
+    const r = await verifier.verify(task([{ kind: "command", command: NODE, args: ["-e", ECHO_ARGV, ...boundary] }]), context());
+    expect(r.passed).toBe(true);
+    expect(seen).toEqual([NODE, "-e", ECHO_ARGV, ...boundary]);
+  });
+
+  it("keeps the legacy command string on the shell path (no args field)", async () => {
+    const calls: string[] = [];
+    const verifier = new TaskVerifier({
+      executor: {
+        run: async (o: { command: string }) => {
+          calls.push(o.command);
+          return { status: "success" as const, exitCode: 0, durationMs: 1, stdout: "", stderr: "" };
+        },
+        runArgv: async () => {
+          throw new Error("legacy recipe must NOT go through the argv path");
+        },
+      } as never,
+    });
+    const recipe = `${JSON.stringify(NODE)} -e "process.exit(0)" && echo done`;
+    const r = await verifier.verify(task([{ kind: "command", command: recipe }]), context());
+    expect(r.passed).toBe(true);
+    // Passed through verbatim — never split or re-quoted.
+    expect(calls).toEqual([recipe]);
+  });
+
+  it("treats an EMPTY args array as the argv contract, not as a shell recipe", async () => {
+    // `args: []` is an explicit argv vector with zero arguments. It must not
+    // silently degrade to shell interpretation of `command`.
+    let argvUsed = false;
+    const verifier = new TaskVerifier({
+      executor: {
+        runArgv: async () => {
+          argvUsed = true;
+          return { status: "success" as const, exitCode: 0, durationMs: 1, stdout: "", stderr: "" };
+        },
+        run: async () => {
+          throw new Error("empty argv must NOT go through the shell path");
+        },
+      } as never,
+    });
+    const r = await verifier.verify(task([{ kind: "command", command: NODE, args: [] }]), context());
+    expect(r.passed).toBe(true);
+    expect(argvUsed).toBe(true);
+  });
+
+  it("reports the real nonzero exit code through the argv path", async () => {
+    const v = new TaskVerifier();
+    const r = await v.verify(task([{ kind: "command", command: NODE, args: ["-e", "process.exit(5)"] }]), context());
+    expect(r.passed).toBe(false);
+    expect(r.checks[0]?.evidence?.description).toContain("exit code 5");
+  });
+});
