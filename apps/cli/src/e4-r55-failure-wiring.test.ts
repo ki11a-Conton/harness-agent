@@ -61,7 +61,7 @@
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
-import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rm, rmdir, stat, symlink, writeFile } from "node:fs/promises";
+import { copyFile, lstat, mkdir, mkdtemp, open, readFile, readdir, rm, rmdir, stat, symlink, writeFile } from "node:fs/promises";
 import { platform, tmpdir } from "node:os";
 import { basename, dirname, join, parse, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -251,6 +251,8 @@ interface ChildRun {
   outcome: ControlledChildOutcome;
   report: ReportRead;
   diagDir: string;
+  /** E4-R70: the EXACT per-run directory this run allocated and must release. */
+  runDir: string;
   bundles: Bundle[];
   /** Bundle directories that exist but could not be read — evidence of a problem. */
   unreadableBundles: { dir: string; error: string }[];
@@ -332,9 +334,9 @@ async function runChild(mode: "real" | "mutated"): Promise<ChildRun> {
   const diagDir = await mkdtemp(join(tmpdir(), "e4-r55-diag-"));
   const reportDir = await mkdtemp(join(tmpdir(), "e4-r55-report-"));
   tempDirs.push(diagDir, reportDir);
-  // A PER-RUN directory owned by this invocation only.
-  await mkdir(RUNS_ROOT, { recursive: true });
-  const runDir = await mkdtemp(join(RUNS_ROOT, "run-"));
+  // A PER-RUN directory owned by this invocation only. Ownership is recorded at
+  // ALLOCATION time (E4-R70), so a later init failure still leaves it verifiable.
+  const runDir = await allocateOwnedRunDir();
 
   let cleaned = false;
   const cleanup = async (): Promise<void> => {
@@ -374,6 +376,9 @@ async function runChild(mode: "real" | "mutated"): Promise<ChildRun> {
       outcome,
       report,
       diagDir,
+      // E4-R70: the EXACT path this run owns, so the final verification can check
+      // ownership instead of demanding the whole shared root be empty.
+      runDir,
       bundles: read.bundles,
       unreadableBundles: read.unreadable,
       cleanup,
@@ -388,6 +393,142 @@ async function runChild(mode: "real" | "mutated"): Promise<ChildRun> {
 }
 
 const sha256 = (b: Buffer): string => createHash("sha256").update(b).digest("hex");
+
+// ---------------------------------------------------------------------------
+// E4-R70 (K70-A / K70-B) — cleanup is verified by OWNERSHIP, not by global emptiness
+// ---------------------------------------------------------------------------
+
+/**
+ * Every per-run directory THIS PROCESS allocated under the shared runs root.
+ *
+ * Ownership is recorded at ALLOCATION time from the exact `mkdtemp` path — never
+ * inferred from a `run-*` name, a global directory diff, or a timestamp. That is
+ * what makes "a directory allocated before a later init failure" (K70-A, plan
+ * §3.A.4) still covered by the final verification.
+ */
+const ownedRunDirs: string[] = [];
+
+/** Allocate a per-run directory and record ownership of its exact path. */
+async function allocateOwnedRunDir(): Promise<string> {
+  await mkdir(RUNS_ROOT, { recursive: true });
+  const dir = await mkdtemp(join(RUNS_ROOT, "run-"));
+  ownedRunDirs.push(dir);
+  return dir;
+}
+
+/** `unknown` is a FIRST-CLASS outcome: an unreadable probe is not "cleaned up". */
+type PathState = "absent" | "present" | "unknown";
+
+interface PathProbeResult {
+  state: PathState;
+  operation: string;
+  errorCode: string | null;
+  reason: string | null;
+}
+
+type LstatLike = (path: string) => Promise<{ isDirectory?: () => boolean }>;
+
+/**
+ * Probe whether a path still exists, WITHOUT following links (K70-B).
+ *
+ * The ENOENT rule and its PARENT-DIRECTORY CONSTRAINT, stated explicitly so it
+ * cannot be read as "any failure means absent":
+ *   - `lstat` (not `stat`) is used so a DANGLING SYMLINK still counts as a
+ *     leftover: the link itself is a path this run allocated.
+ *   - ONLY `ENOENT` is a candidate for "absent"; every other code (EACCES, EIO,
+ *     EBUSY, ...) is `unknown` and FAILS the acceptance.
+ *   - ENOENT alone is NOT sufficient on every platform. Windows has no ENOTDIR,
+ *     so a parent component that is a FILE also reports ENOENT (measured here).
+ *     The parent is therefore probed too: if the parent exists but is not a
+ *     directory, "not found" cannot mean "cleaned up", so the result is `unknown`.
+ */
+async function probePathState(path: string, lstatImpl: LstatLike = lstat): Promise<PathProbeResult> {
+  try {
+    await lstatImpl(path);
+    return { state: "present", operation: "lstat", errorCode: null, reason: null };
+  } catch (err) {
+    const code = (err as { code?: string }).code ?? null;
+    if (code !== "ENOENT") {
+      return { state: "unknown", operation: "lstat", errorCode: code, reason: messageOf(err) };
+    }
+    const parent = dirname(path);
+    try {
+      const parentStat = await lstatImpl(parent);
+      const isDir = parentStat.isDirectory?.() ?? true;
+      if (!isDir) {
+        return {
+          state: "unknown",
+          operation: "lstat(parent)",
+          errorCode: code,
+          reason: `the parent ${parent} is not a directory, so "not found" cannot mean "cleaned up"`,
+        };
+      }
+    } catch (parentErr) {
+      const parentCode = (parentErr as { code?: string }).code ?? null;
+      if (parentCode !== "ENOENT") {
+        return {
+          state: "unknown",
+          operation: "lstat(parent)",
+          errorCode: parentCode,
+          reason: messageOf(parentErr),
+        };
+      }
+      // The parent is gone as well — the whole tree was removed. That IS absent.
+    }
+    return { state: "absent", operation: "lstat", errorCode: code, reason: null };
+  }
+}
+
+/**
+ * Verify that every directory THIS run owns is gone.
+ *
+ * Returns the reasons it is not — never a boolean, and never an empty list
+ * produced by swallowing a probe error (the pre-R70 `.catch(() => [])` did
+ * exactly that and certified an unreadable root as a successful cleanup).
+ */
+async function verifyOwnedCleanup(
+  owned: string[],
+  lstatImpl: LstatLike = lstat,
+): Promise<string[]> {
+  const reasons: string[] = [];
+  for (const path of owned) {
+    const probe = await probePathState(path, lstatImpl);
+    if (probe.state === "present") {
+      reasons.push(
+        `this run's own per-run directory was NOT cleaned up: ${path} (owner: this process, recorded at allocation)`,
+      );
+    } else if (probe.state === "unknown") {
+      reasons.push(
+        `the cleanup of ${path} could not be CONFIRMED: ${probe.operation} failed with ` +
+          `${probe.errorCode ?? "no code"} — an unreadable probe is not a successful cleanup` +
+          (probe.reason === null ? "" : ` (${probe.reason})`),
+      );
+    }
+  }
+  return reasons;
+}
+
+/**
+ * Report entries under the shared runs root that this run does NOT own.
+ *
+ * NON-BLOCKING BY DESIGN (plan §3.B.5): a foreign historical leftover or another
+ * process's active directory is information, never a cleanup failure of this run
+ * and never an authorization to delete it.
+ */
+async function listForeignEntries(root: string, owned: string[]): Promise<string[]> {
+  let names: string[];
+  try {
+    names = await readdir(root);
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === "ENOENT") return [];
+    reportDegraded("e4-r55 runs-root foreign listing", err);
+    return [];
+  }
+  const ownedNames = new Set(owned.map((p) => basename(p)));
+  return names.filter((n) => !ownedNames.has(n)).sort();
+}
+
 
 /**
  * E4-R60: compare module paths modulo the platform separator and the TypeScript
@@ -1131,20 +1272,47 @@ describe("E4-R55 real production failure wiring (parent verifier over an isolate
 
     // ── RUN 1: the real wiring, unmodified ──
     const normal = await runChild("real");
-    await conclude(normal, await judgeRealRun(normal));
+    const chainReasons: string[] = [];
+    try {
+      await conclude(normal, await judgeRealRun(normal));
+    } catch (err) {
+      chainReasons.push(messageOf(err));
+    }
 
     // ── RUN 2: the SAME acceptance against the ORDER-MUTATED wiring ──
     const mutated = await runChild("mutated");
-    await conclude(mutated, await judgeMutatedRun(mutated, normal.chain.sha256), {
-      controlChainSha: normal.chain.sha256,
-    });
+    try {
+      await conclude(mutated, await judgeMutatedRun(mutated, normal.chain.sha256), {
+        controlChainSha: normal.chain.sha256,
+      });
+    } catch (err) {
+      chainReasons.push(messageOf(err));
+    }
 
-    // ── 7. E4-R59: no per-run copy survives its own run ──
-    const leftover = await readdir(RUNS_ROOT).catch((err) => {
-      reportDegraded("e4-r55 runs-root listing", err);
-      return [] as string[];
-    });
-    expect(leftover, `each run must clean only its own directory; leftovers: ${leftover.join(", ")}`).toEqual([]);
+    // ── 7. E4-R70: cleanup is verified by OWNERSHIP, not by global emptiness ──
+    // The shared runs root may legitimately hold ANOTHER run's active directory
+    // or a historical leftover. Demanding that it be empty conflated "this run
+    // cleaned up after itself" with "nobody else's directory exists" (K70-A), and
+    // the old `.catch(() => [])` turned an UNREADABLE root into a PASS (K70-B).
+    // We now verify the exact directories THIS process allocated, and a probe
+    // that cannot answer FAILS the acceptance instead of passing by default.
+    const cleanupReasons = await verifyOwnedCleanup(ownedRunDirs);
+    const foreign = await listForeignEntries(RUNS_ROOT, ownedRunDirs);
+    if (foreign.length > 0) {
+      // Diagnostic ONLY: never a cleanup failure of this run, and never ours to
+      // delete. Other processes' resources and historical leftovers stay put.
+      process.stderr.write(
+        `[e4-r55] ${foreign.length} entry/entries under the shared runs root are NOT owned by this run ` +
+          `(${foreign.join(", ")}) — left untouched, and NOT a cleanup failure of this run\n`,
+      );
+    }
+
+    // Both classes of failure are reported TOGETHER, so a cleanup failure can
+    // never mask the original chain failure, nor the other way round.
+    expect(
+      [...chainReasons, ...cleanupReasons],
+      "the real chain verdict and this run's own cleanup",
+    ).toEqual([]);
   }, 900_000);
 
   it("R59: two concurrent runs own distinct per-run copies and never clobber each other", async () => {
@@ -2367,4 +2535,190 @@ describe("E4-R68 mixed-copy and link-skip acceptance", () => {
       }
     },
   );
+});
+
+describe("E4-R70 cleanup verification is ownership-based", () => {
+  /** A root that only THIS suite creates and only THIS suite cleans. */
+  const freshRoot = (prefix: string): Promise<string> => tempDir(prefix);
+
+  const mkdirp = async (p: string): Promise<void> => {
+    await mkdir(p, { recursive: true });
+  };
+  const remove = async (p: string): Promise<void> => rm(p, { recursive: true, force: true });
+  const digestOf = async (p: string): Promise<string> =>
+    createHash("sha256").update(await readFile(p)).digest("hex");
+
+  it("A: this run's directories are gone and nothing else is present — verified", async () => {
+    const root = await freshRoot("e4-r70-a-");
+    const owned = [join(root, "run-one"), join(root, "run-two")];
+    for (const d of owned) await mkdirp(d);
+    for (const d of owned) await remove(d);
+
+    expect(await verifyOwnedCleanup(owned)).toEqual([]);
+    expect(await listForeignEntries(root, owned)).toEqual([]);
+  });
+
+  it("B: a FOREIGN historical leftover does not fail this run, and its bytes are untouched", async () => {
+    const root = await freshRoot("e4-r70-b-");
+    const mine = join(root, "run-mine");
+    const owned = [mine];
+    await mkdirp(mine);
+    // The exact shape R69 recorded as causing a same-version suite failure.
+    const foreign = join(root, "run-YtCeW3");
+    await mkdirp(foreign);
+    const marker = join(foreign, "diagnostic.json");
+    await writeFile(marker, '{"historical":true}\n', "utf8");
+    const before = await digestOf(marker);
+
+    await remove(mine);
+
+    expect(await verifyOwnedCleanup(owned), "a foreign dir is NOT our cleanup failure").toEqual([]);
+    expect(await listForeignEntries(root, owned)).toEqual(["run-YtCeW3"]);
+    expect(await digestOf(marker), "foreign content must be byte-identical").toBe(before);
+    expect(existsSync(foreign)).toBe(true);
+
+    // DISCRIMINATING: the pre-R70 rule ("the shared root must be EMPTY") fails on
+    // this very fixture — which is exactly why ownership is the right predicate.
+    expect(await readdir(root), "the old global rule would have failed here").not.toEqual([]);
+  });
+
+  it("C: another run's ACTIVE directory is neither a failure nor cleaned", async () => {
+    const root = await freshRoot("e4-r70-c-");
+    const mine = join(root, "run-mine");
+    const owned = [mine];
+    await mkdirp(mine);
+
+    // A second "run" holds this directory for the WHOLE duration of our cleanup:
+    // an open handle keeps it genuinely in use, so "it existed while we cleaned"
+    // is a fact and not a timing assumption.
+    const active = join(root, "run-other-active");
+    await mkdirp(active);
+    const activeMarker = join(active, "in-flight.json");
+    await writeFile(activeMarker, '{"active":true}\n', "utf8");
+    const hold = await open(activeMarker, "r");
+    try {
+      expect(existsSync(active), "the active dir must exist before our cleanup").toBe(true);
+      await remove(mine);
+      const reasons = await verifyOwnedCleanup(owned);
+      const foreign = await listForeignEntries(root, owned);
+
+      expect(reasons).toEqual([]);
+      expect(foreign).toEqual(["run-other-active"]);
+      expect(existsSync(active), "the active dir must survive our cleanup").toBe(true);
+      expect(await readFile(activeMarker, "utf8")).toBe('{"active":true}\n');
+    } finally {
+      await hold.close();
+    }
+  });
+
+  it("D: a LEAKED owned directory fails the acceptance and is named", async () => {
+    const root = await freshRoot("e4-r70-d-");
+    const leaked = join(root, "run-leaked");
+    const cleaned = join(root, "run-cleaned");
+    await mkdirp(leaked);
+    await mkdirp(cleaned);
+    await remove(cleaned);
+
+    const reasons = await verifyOwnedCleanup([leaked, cleaned]);
+    expect(reasons, "only the leaked one is a reason").toHaveLength(1);
+    expect(reasons[0]).toContain(leaked);
+    expect(reasons[0]).toContain("NOT cleaned up");
+    // A leaked OWN directory is ours — it must never be reported as foreign.
+    expect(await listForeignEntries(root, [leaked, cleaned])).toEqual([]);
+  });
+
+  it.skipIf(!R68_SYMLINK_CAPABILITY.ok)(
+    "E: a DANGLING link at the owned path is a leftover, not a successful cleanup",
+    async () => {
+      const root = await freshRoot("e4-r70-e-");
+      const link = join(root, "run-dangling");
+      await symlink(join(root, "no-such-target"), link);
+      // PRECONDITION: a real dangling link, not a silent no-op.
+      expect((await lstat(link)).isSymbolicLink()).toBe(true);
+
+      // lstat (not stat) is what makes this work: the link itself is the leftover.
+      expect((await probePathState(link)).state).toBe("present");
+      const reasons = await verifyOwnedCleanup([link]);
+      expect(reasons).toHaveLength(1);
+      expect(reasons[0]).toContain("NOT cleaned up");
+    },
+  );
+
+  it("F: an unreadable probe is UNKNOWN — never certified as a successful cleanup", async () => {
+    const root = await freshRoot("e4-r70-f-");
+    const mine = join(root, "run-unreadable");
+    const owned = [mine];
+    await mkdirp(mine);
+    await remove(mine);
+
+    for (const code of ["EACCES", "EIO"]) {
+      const failing: LstatLike = async () => {
+        const err = new Error(`${code}: injected probe failure`) as Error & { code?: string };
+        err.code = code;
+        throw err;
+      };
+      expect((await probePathState(mine, failing)).state, `code=${code}`).toBe("unknown");
+      const reasons = await verifyOwnedCleanup(owned, failing);
+      expect(reasons, `code=${code}`).toHaveLength(1);
+      expect(reasons[0]).toContain("could not be CONFIRMED");
+      expect(reasons[0]).toContain(code);
+
+      // DISCRIMINATING: the pre-R70 shape swallowed the error into an empty list
+      // (or into "absent") and therefore PASSED. That is the defect, not a fix.
+      const swallow = async (): Promise<PathState> => {
+        try {
+          await failing(mine);
+          return "present";
+        } catch {
+          return "absent"; // the old, wrong classification
+        }
+      };
+      expect(await swallow()).toBe("absent");
+      expect(reasons).toHaveLength(1);
+    }
+
+    // A REAL parent-constraint hazard: the parent is a FILE. Windows has no
+    // ENOTDIR (it reports ENOENT — measured here), so the parent probe is what
+    // stops "not found" from being read as "cleaned up".
+    const aFile = join(root, "a-file");
+    await writeFile(aFile, "x\n", "utf8");
+    const notUnderADir = await probePathState(join(aFile, "child"));
+    expect(notUnderADir.state, "a file as parent must NOT read as 'absent'").toBe("unknown");
+    expect(notUnderADir.operation).toBe("lstat(parent)");
+    expect(notUnderADir.reason).toContain("not a directory");
+
+    // And ENOENT under a real directory IS absent.
+    expect((await probePathState(join(root, "never-existed"))).state).toBe("absent");
+  });
+
+  it("G: a directory allocated BEFORE a later init failure is still tracked and verified", async () => {
+    const before = ownedRunDirs.length;
+    let allocated: string | undefined;
+    try {
+      allocated = await allocateOwnedRunDir();
+      throw new Error("simulated init failure AFTER allocation");
+    } catch {
+      // Exactly what `runChild`'s catch path does for an early failure.
+      if (allocated !== undefined) await remove(allocated);
+    }
+    const mine = ownedRunDirs.slice(before);
+    expect(mine, "ownership must be recorded at ALLOCATION, not after success").toEqual([allocated]);
+    expect(await verifyOwnedCleanup(mine)).toEqual([]);
+  });
+
+  it("H: a cleanup failure and the ORIGINAL chain failure are both preserved", async () => {
+    const root = await freshRoot("e4-r70-h-");
+    const leaked = join(root, "run-leaked");
+    await mkdirp(leaked);
+
+    const chainReasons = ["the real chain failed: decision-artifact was never persisted"];
+    const cleanupReasons = await verifyOwnedCleanup([leaked]);
+    expect(cleanupReasons).toHaveLength(1);
+
+    // The exact combined shape the parent verifier now asserts.
+    const combined = [...chainReasons, ...cleanupReasons];
+    expect(combined).toHaveLength(2);
+    expect(combined[0]).toContain("chain failed");
+    expect(combined[1]).toContain("NOT cleaned up");
+  });
 });
