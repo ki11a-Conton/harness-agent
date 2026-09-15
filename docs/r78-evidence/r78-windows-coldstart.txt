@@ -1,0 +1,36 @@
+=== R78 Windows offline cold-start handoff validation ===
+host: Windows NT 10.0.19044.0 (win32), node v24.18.1, pnpm 11.21.0
+checkout: a FRESH git clone at a path containing spaces
+  C:\Users\s5605\AppData\Local\Temp\r78 cold checkout
+HEAD at clone: c4dc6155403b0f97bf6f39140e961eb8b57574aa (E4-R77)
+
+--- README "Offline smoke (no API key, no network)" steps, in order ---
+pnpm install --frozen-lockfile                                                     exit=0
+pnpm build                                                                         exit=0
+node apps/cli/dist/main.js doctor                                                   exit=0
+node apps/cli/dist/main.js benchmark --suite adversarial --limit 1 --allow-stub     exit=0
+node apps/cli/dist/main.js benchmark --suite adversarial --dry-run                  exit=0
+
+--- README claims checked against real output ---
+stub run  : printed "benchmark: 0/1 passed (0.0%)";
+            artifact summary.success_rate = 0, summary.avg_model_calls = 0.
+            README claims "success rate 0.0% and model calls 0 because no model was
+            invoked" -> CONFIRMED.
+dry-run   : the emitted plan JSON contains "providerCalls": 0.
+            README claims providerCalls: 0 -> CONFIRMED.
+manifest  : gitSha   = c4dc6155403b0f97bf6f39140e961eb8b57574aa
+            platform = win32
+            provider = stub
+            model    = stub-model
+            README claims the manifest "records the real git SHA and platform"
+            -> CONFIRMED.
+--out     : `--out "out stub"` (directory name contains a space) wrote
+            adversarial.json (5541 bytes) and adversarial-summary.md (2673 bytes)
+            into that directory; both files present -> CONFIRMED.
+dry plan  : sourceSha       = c4dc6155403b0f97bf6f39140e961eb8b57574aa
+            treeFingerprint = bf4fbfdd3dec5e19a5d75ecf28a463309a0c4e1a7d073289dfdc02746e7be870
+            The clone is clean, so a REAL 64-hex content fingerprint is bound
+            (not the "dirty" placeholder).
+
+NOTE: this validation exercises the OFFLINE (stub / dry-run) path only.
+      No paid provider was contacted and RUN_PAID_BENCHMARKS was never set.

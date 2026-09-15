@@ -1,0 +1,24 @@
+=== R78 Linux cold-start probe (win32) ===
+host: Microsoft Windows NT 10.0.19044.0
+node: v24.18.1
+pnpm: 11.21.0
+
+--- command: wsl --list --verbose ---
+exit=1
+note: stdout is the wsl.exe usage/help text (UTF-16LE, renders as mojibake through a
+UTF-8 pipe). Decoded it begins "Copyright (c) Microsoft Corporation" and lists
+"--install <Distro>" / "--list, -l [Options]" — i.e. no distribution is installed
+and no default distro is registered. A working WSL install prints a distro table
+("NAME  STATE  VERSION") and exits 0 instead.
+
+--- command: wsl --status ---
+exit=1
+note: same usage/help text; no WSL default distribution or version is reported.
+
+--- command: docker --version ---
+exit=1
+note: "docker" is not recognized as a command — no container runtime available
+as a Linux fallback either.
+
+--- command: git rev-parse HEAD ---
+exit=0 sha=8337b3e3d56ac78677c7fac7759fa0141d03e8f5
