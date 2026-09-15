@@ -63,6 +63,49 @@ function text(text: string): ModelEvent[] {
   ];
 }
 
+/**
+ * R76: the minimal approval poller shared by the delegation tests.
+ *
+ * It auto-approves whatever the harness raises until `stop()` is called, and
+ * `stop()` ALWAYS awaits the loop, so the test can prove that no poller
+ * survives the test body (no live timer, no pending `listPending()` call, no
+ * unhandled rejection) on BOTH the success and the rejection path.
+ *
+ * `stop()` is idempotent: calling it twice must not hang or double-resolve.
+ */
+export function startApprovalPoller(
+  harness: { approvalStore: { listPending(): Array<{ id: string }>; resolve(id: string, effect: string, by: string): unknown } },
+  opts: { intervalMs?: number; onPoll?: () => void } = {},
+): { stop(): Promise<void>; polls: () => number } {
+  const intervalMs = opts.intervalMs ?? 10;
+  let stopped = false;
+  let polls = 0;
+  const loop = (async () => {
+    while (!stopped) {
+      polls += 1;
+      opts.onPoll?.();
+      for (const req of harness.approvalStore.listPending()) {
+        harness.approvalStore.resolve(req.id, "allow", "test");
+      }
+      await new Promise((r) => setTimeout(r, intervalMs));
+    }
+  })();
+  // The poller promise must never reject unhandled: a failure inside the loop
+  // is captured and re-surfaced by `stop()` at the await site.
+  const settled = loop.then(
+    () => null,
+    (err: unknown) => err,
+  );
+  return {
+    async stop(): Promise<void> {
+      stopped = true;
+      const err = await settled;
+      if (err !== null) throw err;
+    },
+    polls: () => polls,
+  };
+}
+
 function toolCall(name: string, args: Record<string, unknown>): ModelEvent[] {
   const id = newToolCallId();
   return [
@@ -121,18 +164,21 @@ describe("P3-6 end-to-end: delegate_worker writes an isolated copy and merges", 
       // `readFile(src/helper.ts)` fails with ENOENT — a misleading failure
       // that points at the merge path when the real cause is the harness
       // never approving. The loop now runs until the turn settles.
-      let turnSettled = false;
-      const autoApprove = (async () => {
-        while (!turnSettled) {
-          for (const req of harness.approvalStore.listPending()) {
-            harness.approvalStore.resolve(req.id, "allow", "test");
-          }
-          await new Promise((r) => setTimeout(r, 10));
-        }
-      })();
-      const outcome = await harness.runtime.runTurn(session.id, turn.id, new AbortController().signal);
-      turnSettled = true;
-      await autoApprove;
+      //
+      // R76 (F2): "the turn settled" must ALSO be established when runTurn
+      // REJECTS. In the R72 shape the stop flag was set only after a successful
+      // `await runTurn(...)`, so a rejection skipped it entirely: the approved
+      // false path left the polling loop running past the test body, still
+      // touching `approvalStore` while the OUTER `finally` closed the harness.
+      // The stop signal now lives in an inner `finally` that covers both
+      // outcomes, and the poller is always awaited.
+      const approval = startApprovalPoller(harness);
+      let outcome;
+      try {
+        outcome = await harness.runtime.runTurn(session.id, turn.id, new AbortController().signal);
+      } finally {
+        await approval.stop();
+      }
 
       expect(outcome.status).toBe("completed");
 
@@ -167,5 +213,145 @@ describe("P3-6 end-to-end: delegate_worker writes an isolated copy and merges", 
     } finally {
       await harness.close();
     }
+  });
+});
+
+/**
+ * E4-R76 (F2) — the approval poller must END on the exception path too.
+ *
+ * R72 bound the poller to the turn's lifecycle with `turnSettled = true` placed
+ * AFTER `await runTurn(...)`. That statement only executes on a NORMAL return:
+ * when `runTurn` rejects, the flag is never set, `await autoApprove` is never
+ * reached, and the loop keeps polling `approvalStore` while the test's outer
+ * `finally` closes the harness. These tests drive the exception path in a
+ * CONTROLLED way (a rejecting runTurn, no machine load, no real 60s expiry) and
+ * assert that the poller stops and the original error survives.
+ */
+describe("E4-R76 (F2): the approval poller always stops, including when runTurn rejects", () => {
+  /** Minimal stand-ins: these tests exercise the POLLER CONTRACT, not the
+   *  delegation wiring (which the P3-6 test above already covers end to end). */
+  const fakeHarness = () => {
+    const pending: Array<{ id: string }> = [];
+    const resolved: string[] = [];
+    let listCalls = 0;
+    return {
+      approvalStore: {
+        listPending() {
+          listCalls += 1;
+          return pending;
+        },
+        resolve(id: string, effect: string, by: string) {
+          resolved.push(`${id}:${effect}:${by}`);
+          return true;
+        },
+      },
+      pending,
+      resolved,
+      listCalls: () => listCalls,
+    };
+  };
+
+  const tick = (ms = 25) => new Promise((r) => setTimeout(r, ms));
+
+  it("F2 REPRO: the R72 shape leaks the poller when runTurn rejects (no stop flag reachable)", async () => {
+    // This is the OLD control flow, reproduced verbatim, to prove the defect is
+    // real and not a static-only concern.
+    const h = fakeHarness();
+    let pollsAfterSettle = 0;
+    let settled = false;
+    let turnSettled = false;
+    const autoApprove = (async () => {
+      while (!turnSettled) {
+        h.approvalStore.listPending();
+        if (settled) pollsAfterSettle += 1;
+        await new Promise((r) => setTimeout(r, 10));
+      }
+    })();
+    const runTurn = async (): Promise<void> => {
+      throw new Error("runTurn exploded");
+    };
+    await expect(runTurn()).rejects.toThrow("runTurn exploded");
+    settled = true;
+    // `turnSettled = true` and `await autoApprove` are UNREACHABLE here — this
+    // is exactly the defect. Let the orphaned loop run to prove it is live.
+    await tick(60);
+    expect(turnSettled).toBe(false);
+    expect(pollsAfterSettle).toBeGreaterThan(0);
+    // Clean up the deliberately orphaned loop so this test leaves nothing behind.
+    turnSettled = true;
+    await autoApprove;
+  });
+
+  it("F2 FIX: the inner finally stops the poller and preserves the original error", async () => {
+    const h = fakeHarness();
+    const poller = startApprovalPoller(h);
+    await tick(25); // let it poll at least once
+    const before = h.listCalls();
+    expect(before).toBeGreaterThan(0);
+
+    // The real shape: stop() in an inner finally, so it runs on BOTH outcomes.
+    const runTurn = async (): Promise<never> => {
+      throw new Error("runTurn exploded");
+    };
+    const attempt = async (): Promise<unknown> => {
+      try {
+        return await runTurn();
+      } finally {
+        await poller.stop();
+      }
+    };
+    // The ORIGINAL error must surface — never masked by a cleanup failure.
+    await expect(attempt()).rejects.toThrow("runTurn exploded");
+
+    // The poller is genuinely dead: no further listPending calls after stop.
+    const afterStop = h.listCalls();
+    await tick(60);
+    expect(h.listCalls()).toBe(afterStop);
+  });
+
+  it("F2 FIX: stop() is idempotent and awaiting it leaves no live timer", async () => {
+    const h = fakeHarness();
+    const poller = startApprovalPoller(h, { intervalMs: 5 });
+    await tick(20);
+    await poller.stop();
+    const frozen = h.listCalls();
+    // Double-stop must not hang or re-run the loop.
+    await poller.stop();
+    await tick(30);
+    expect(h.listCalls()).toBe(frozen);
+  });
+
+  it("F2 FIX: a poller that raises still surfaces its error at stop(), not as an unhandled rejection", async () => {
+    const h = fakeHarness();
+    const unhandled: unknown[] = [];
+    const onUnhandled = (err: unknown) => { unhandled.push(err); };
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      const poller = startApprovalPoller(h, {
+        intervalMs: 1,
+        onPoll: () => { throw new Error("listPending blew up"); },
+      });
+      await tick(20);
+      await expect(poller.stop()).rejects.toThrow("listPending blew up");
+      await tick(20);
+      // The loop's rejection was consumed by stop() — it must NOT also appear as
+      // an unhandled rejection.
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
+
+  it("F2: a LATE approval is still consumed (the R72 win is preserved, not reverted)", async () => {
+    // R76 must not regress R72: the poller is lifecycle-bound, NOT budget-bound,
+    // so an approval raised long after the first polls is still approved.
+    const h = fakeHarness();
+    const poller = startApprovalPoller(h, { intervalMs: 5 });
+    await tick(30);
+    // Simulate the approval arriving "late" — well past any fixed small budget.
+    h.pending.push({ id: "late-approval" });
+    await tick(30);
+    expect(h.resolved).toContain("late-approval:allow:test");
+    await poller.stop();
   });
 });

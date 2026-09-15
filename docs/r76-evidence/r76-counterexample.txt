@@ -1,0 +1,30 @@
+
+ RUN  v4.1.10 D:/Harness Agent
+
+[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync
+[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync
+[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync
+[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync
+[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync
+[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync
+stdout | packages/harness/src/_tmp_r76_validate.test.ts > R76 validation (runTurn rejection: old leaks the poller, new stops it) > OLD shape: a rejecting runTurn leaves the poller running past the test body
+VALIDATION OLD: {"mode":"old","runTurnError":"session session_1c2e6e71-141c-45a5-858b-129f3a7687d9 already has an active turn (turn_40f61b55-6e2d-497d-83f6-c48b55214891)","pollsAfterReject":10,"pollerStillRunning":true}
+
+[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync
+[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync
+[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync
+[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync
+[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync
+[degraded] store-integrity.syncDir: EPERM: operation not permitted, fsync
+stdout | packages/harness/src/_tmp_r76_validate.test.ts > R76 validation (runTurn rejection: old leaks the poller, new stops it) > NEW shape: the inner finally stops the poller and the original error survives
+VALIDATION NEW: {"mode":"new","runTurnError":"session session_7efbdc81-9b4e-42fa-a431-c5b56231bcec already has an active turn (turn_5706da1e-9b15-498f-99a2-a32570ff5d10)","polls":1,"listCallsAfterStop":0,"pollerStopped":true}
+
+ ✓ packages/harness/src/_tmp_r76_validate.test.ts (2 tests) 628ms
+     ✓ OLD shape: a rejecting runTurn leaves the poller running past the test body  323ms
+     ✓ NEW shape: the inner finally stops the poller and the original error survives  304ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  11:49:41
+   Duration  5.49s (transform 3.57s, setup 0ms, import 4.30s, tests 628ms, environment 0ms)
+
