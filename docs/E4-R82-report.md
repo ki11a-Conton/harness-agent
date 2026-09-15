@@ -27,6 +27,7 @@ runner. R79 fixed the verifier; the POSIX half of that verdict can only be
 | --- | --- | --- |
 | Local gate: `pnpm build` | **PASS** | §2 — this machine (Windows) |
 | Local gate: `pnpm test` | **PASS** (328 files / 5924 tests / 3 skipped) | §2 — this machine |
+| Local gate: `pnpm test:coverage` | **PASS** (exit 0, clean tree only) | §2, §5.1 — this machine |
 | Local gate: `pnpm docs:verify` | **PASS** | §2 — this machine |
 | Cold-start job definition (README order on Linux) | **DEFINED** | §3 — `.github/workflows/ci.yml` |
 | `LOCAL_LINUX` (cold start on *the user's own* Linux) | **BLOCKED** | §4 — no Linux/WSL/Docker on this machine |
@@ -39,7 +40,7 @@ because the capability is genuinely absent here — not because an attempt faile
 
 ---
 
-## 2. Local gates (Windows, tree at `0ca421e`)
+## 2. Local gates (Windows, clean tree at the pushed SHA `07adf3f`)
 
 Run on a **clean** tree (nothing untracked, nothing modified) so the promotion
 path's clean-tree gate cannot be confused with a real failure:
@@ -48,21 +49,25 @@ path's clean-tree gate cannot be confused with a real failure:
 | --- | --- | --- |
 | `pnpm build` | 0 | `tsc -b` across all packages, no diagnostics |
 | `pnpm test` | 0 | 328 files passed, 5924 tests passed, 3 skipped (5927) |
+| `pnpm test:coverage` | 0 | per-package thresholds met (see §5.1 and below) |
 | `pnpm docs:verify` | 0 | `ALL CHECKS PASS` |
 
-A dirty-tree run of `pnpm test` additionally reports 3 failing files
+A dirty-tree run additionally reports 3 failing files
 (`benchmark-command.test.ts`, `e4-09-production-e2e.test.ts` ×4,
-`e4-r55-failure-wiring.test.ts`). These are **pre-existing and not a regression**:
-the clean-tree gate in the promotion path (`benchmark-command.ts:648-673`)
-preempts them, and `probeSourceSnapshot` is module-local and therefore
-unmockable. Proven by committing the tree and re-running — the same tests pass.
-This is recorded because a reader who runs the suite mid-edit will see them.
+`e4-r55-failure-wiring.test.ts`) — or just the first, if the dirt is a single
+untracked file. These are **pre-existing and not a regression**: the clean-tree
+gate in the promotion path (`benchmark-command.ts:648-673`) refuses on purpose
+and `probeSourceSnapshot` is module-local, so a test cannot stub it. Measured
+identically at `7798d3a`, i.e. **before** R79. §5.1 has the full matrix, and
+`README.md` now documents the trap.
 
 The coverage gate is a separate CI job and a per-package threshold set
-(`vitest.config.ts:52-61`). R79 edited `packages/tools` and R81 edited
-`packages/evaluation`, both of which are gated at `lines: 85`
-(`tools` additionally `branches: 68`), so the coverage job is the one place a
-"more tests, less coverage" tradeoff could have shown up. §5 records its verdict.
+(`vitest.config.ts:52-61`). R79 rewrote `packages/tools/src/verification/task-verifier.ts`
+and R81 changed `packages/evaluation`, both gated at `lines: 85`
+(`tools` additionally `branches: 68`), so coverage was the one place a "more
+tests, less coverage" tradeoff could have surfaced. It did not: measured locally,
+`task-verifier.ts` sits at **98.57% lines / 92.55% branches / 100% functions**
+(98.76% statements), and the run exits 0.
 
 ---
 
@@ -123,10 +128,11 @@ Bound to a specific run, not to a branch name or a remembered result:
 
 | Field | Value |
 | --- | --- |
-| Run id | `34936858530` |
+| Run id | `34938827497` |
 | Attempt | 1 |
-| Head SHA | `0ca421e6fed7168bd91463950b76bc15bb63c3e7` |
+| Head SHA | `07adf3f62fe01e6671da10b88053c6e509af1fb8` |
 | Conclusion | **success** |
+| Runner (cold-start job) | GitHub Actions, `ubuntu-latest`, Node 22, pnpm 11.21.0 |
 
 | Job | Conclusion |
 | --- | --- |
@@ -135,6 +141,33 @@ Bound to a specific run, not to a branch name or a remembered result:
 | `coverage gate (ubuntu)` | success |
 | `offline cold-start (ubuntu)` | **success** |
 | `release attestation (P38-12)` | success |
+
+The `offline cold-start (ubuntu)` job (job id `104282576189`) ran **16/16
+productive steps to `success`** — none skipped, none tolerated:
+
+```
+[5]  success  Assert the tested HEAD is the workflow SHA
+[6]  success  Assert this is a genuine cold start (no node_modules, no dist)
+[7]  success  README step 1 — install (frozen lockfile)
+[8]  success  README step 2 — build
+[9]  success  Verify the workflow itself cannot authorize a paid run
+[10] success  README step 3 — doctor
+[11] success  README step 4 — single adversarial case with the stub provider
+[12] success  README step 5 — frozen baseline plan (dry-run, no key, 0 provider calls)
+[13] success  Machine-check the artifacts (not just exit codes)
+[14] success  Linux oracle — the REAL TaskVerifier on the frozen baseline
+[15] success  Write the reduced cold-start evidence bundle
+[16] success  Upload cold-start evidence (E4-R82)
+```
+
+Step 6 proves the run reused nothing; step 9 proves the workflow carries no paid
+authorization; step 13 machine-checks the artifacts (rather than trusting exit
+codes); step 14 is the POSIX verdict. The run published a
+`cold-start-ubuntu-07adf3f…-34938827497-attempt-1` artifact (5619 bytes) plus
+`test-report-ubuntu-latest` and `observation-evidence-ubuntu-latest-34938827497`.
+(Artifact **bodies** need authentication to download; the step conclusions and
+artifact listing above are the publicly readable evidence, and are what this
+report relies on. No step output is paraphrased as if it had been read.)
 
 The Linux oracle step ran the real verifier
 (`packages/evaluation/src/e4-r77-baseline-oracle.test.ts`,
@@ -146,6 +179,37 @@ For contrast, the run that motivated R79 was `34929969915` (attempt 1, head
 `7798d3a…`): ubuntu `verify` and `coverage` both failed and
 `release attestation` was skipped. R79's intermediate run `34934589407`
 (attempt 1, head `345274b…`) was the first green.
+
+---
+
+## 5.1 What local verification of the gates cost (a real, pre-existing trap)
+
+While validating the gates locally, `pnpm test:coverage` failed with 3 failed
+files / 7 failed tests on a tree that had been clean when the run started. The
+cause is **not** coverage and **not** an R79–R82 regression, and it is worth
+recording because it will bite the next person:
+
+| Tree state | `--coverage` | Result |
+| --- | --- | --- |
+| clean | no | 328 files, 5924 tests, exit **0** |
+| clean | yes | exit **0** |
+| one tracked file modified | no | `benchmark-command.test.ts` fails |
+| one **untracked** scratch file | no | `benchmark-command.test.ts` fails |
+| one tracked file modified | yes | 3 files / 6 tests fail |
+
+The promotion path asserts the source tree is clean before it will emit
+promotion-grade evidence (`apps/cli/src/benchmark-command.ts:648-673`), and
+`probeSourceSnapshot` is module-local so it cannot be stubbed. A dirty tree makes
+that gate refuse *by design*; three `apps/cli` suites observe the refusal and
+fail. Measured identical at `7798d3a` (pre-R79), so it is pre-existing.
+
+**CI is unaffected** because it always runs on a pristine checkout — run
+`34938827497`'s `coverage gate (ubuntu)` passed. The trap is local-only, and it
+is now documented in `README.md`. To reproduce the clean behaviour:
+
+```bash
+git stash -u && pnpm test:coverage   # or commit first
+```
 
 ---
 
@@ -162,6 +226,21 @@ For contrast, the run that motivated R79 was `34929969915` (attempt 1, head
 
 ## 7. Push
 
-`main` was pushed to `0ca421e6fed7168bd91463950b76bc15bb63c3e7`; `git ls-remote
-origin refs/heads/main` was re-read after the push and matched local `HEAD`. The
-CI evidence in §5 is the run for that SHA.
+`main` was pushed to `07adf3f62fe01e6671da10b88053c6e509af1fb8`
+(`345274b..07adf3f  main -> main`). `git ls-remote origin refs/heads/main` was
+re-read **after** the push and returned the same SHA as local `HEAD`, so the
+verification is bound to what is actually on the remote rather than to the push
+command's exit code. The CI evidence in §5 is the run for that exact SHA,
+attempt 1 — not an earlier run and not a branch name.
+
+The commits that make up R79–R82, in order:
+
+| Commit | Task |
+| --- | --- |
+| `78b69ff` | R79 — argv execution path + verifier dispatch |
+| `345274b` | R79 — report + R77 erratum |
+| `edf9b05` | R80 — turn/cleanup error precedence |
+| `597b34a` | R81 — keyless billed planning, explicit identity, endpoint-bound digest |
+| `0ca421e` | R82 — offline Linux cold-start CI job, R81 runbook/helper follow-ups |
+| `99707bc` | R82 — this report |
+| `07adf3f` | README corrections (stale `e4-01`, R81 flags, clean-tree trap) |
