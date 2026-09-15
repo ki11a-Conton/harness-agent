@@ -27,7 +27,7 @@ fixes before the campaign runs.
 | Local gates | **PASS** (328 files / 5926 tests) | §5 |
 | CI incl. Linux cold-start | **PASS** | §5 — run 34958463855 |
 | Real channel (1 case) | **RUNS** (23 calls, no `model_error`) | §6 — pre-fix: 0 calls, `model_error` |
-| Full benchmark campaign | **IN PROGRESS** (serial, per-case persistence) | §7 |
+| Full benchmark campaign | **COMPLETE** — 86/86 stored, 21 passing, 0 run failures | §7, §7.1 |
 
 ---
 
@@ -174,14 +174,57 @@ ran two real cases end to end:
 
 Both reports carry `model: openai/grok-4.5`, `gitSha: 5f2af6e…` (the pushed
 SHA) — i.e. the persisted JSON records exactly which model and which source
-produced it. The full 86-case run (minus the two seeded cases) is executing in
-the background; results land in `.ci/bench-grok/results/` as each case finishes.
+produced it.
+
+### 7.1 Campaign result (all 86 cases, serial, completed)
+
+`CAMPAIGN END total=86 done=86 failed=0` — every case was executed and its
+report persisted locally; **zero process-level run failures**.
+
+| suite | stored / expected | passing | pass rate |
+| --- | --- | --- | --- |
+| adversarial | 13 / 13 | 1 | 7.7% |
+| stress | 11 / 11 | 2 | 18.2% |
+| regression | 30 / 30 | 9 | 30.0% |
+| holdout | 32 / 32 | 9 | 28.1% |
+| **total** | **86 / 86** | **21** | **24.4%** |
+
+Measured totals: **1,327 model calls**, **4,051,523 input / 440,594 output
+tokens**.
+
+Termination distribution (honest; a low pass rate is a *measurement*, not a
+claim about model quality — adversarial cases expect denial, and this model
+attempted the requested actions, so `tool_limit`/`agent_limit` dominate):
+
+| reason | count |
+| --- | --- |
+| verified_complete | 21 |
+| tool_limit (harness per-case tool cap) | 46 |
+| agent_limit (harness `maxIterationsPerTurn`) | 8 |
+| verification_failed | 5 |
+| cancelled (harness timeout/cancel path) | 3 |
+| model_error | 1 |
+| model_stopped | 1 |
+| time_limit | 1 |
+
+**Source SHA note:** reports record their actual HEAD — 8 cases ran at
+`5f2af6e` (before this report existed) and 78 at `dd80676` (after the report
+commit landed mid-campaign). `git diff 5f2af6e dd80676` is **docs-only**
+(187 insertions, the report file), so the measured code is identical across all
+86 cases.
+
+All artifacts: `.ci/bench-grok/results/<suite>/<caseId>/{<suite>.json,run.log}`,
+`.ci/bench-grok/manifest.jsonl`, `.ci/bench-grok/campaign-summary.{json,md}`
+(local only, `.ci/` is gitignored).
 
 ## 8. Not done / honest limits
 
-- The campaign is **running**, results are being recorded; no aggregate
-  conclusion is claimed before it finishes.
+- The campaign **completed** (86/86); the results above are final for this
+  channel/date. No further cases were invented.
 - Actual spend is billed by the channel operator, not known to this tool: the
   CLI's `--max-estimated-cost-usd` is a planning heuristic (0.0005 USD/call),
-  not a price claim.
+  not a price claim. The real usage is recorded per case (tokens above).
+- `model_error` occurred once (ho-22-fix-vuln) after 20 calls/24 tools — a
+  genuine provider-side error mid-case, recorded as such, not retried
+  indefinitely (retries already applied by the provider policy).
 - No paid-result fabrication, no skipped case, no concurrency override.
