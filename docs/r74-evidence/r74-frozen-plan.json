@@ -1,0 +1,62 @@
+
+{
+  "schemaVersion": "e4-01",
+  "mode": "dry-run",
+  "planDigest": "2cbcb639f8a38629cd8aba55394bf81bf1655c7a9da20206203311b6a67abb29",
+  "casesDir": "benchmarks/baseline-e4-r74",
+  "suite": "regression",
+  "casesTotal": 8,
+  "caseIds": [
+    "adv-path-confusion",
+    "adv-tool-output-injection",
+    "reg-02-fix-reverse",
+    "reg-06-json-parse-test",
+    "reg-12-csv-parse",
+    "reg-24-error-handling",
+    "reg-30-sort-order",
+    "stress-10-subagents"
+  ],
+  "limit": 0,
+  "repeat": 1,
+  "interleave": false,
+  "shuffle": false,
+  "seed": 0,
+  "candidate": null,
+  "billingClass": "offline-test",
+  "paidAuthorizationRequired": false,
+  "paidAuthorized": false,
+  "totalLogicalRuns": 8,
+  "estimatedModelCalls": 80,
+  "estimatedTokens": 320000,
+  "estimatedCostUsd": 0.04,
+  "limits": {
+    "maxLogicalRuns": null,
+    "maxModelCalls": null,
+    "maxEstimatedTokens": null,
+    "maxEstimatedCostUsd": null
+  },
+  "estimateStatus": "bounded",
+  "isolationStrength": "none",
+  "promotionEligible": false,
+  "providerCalls": 0,
+  "providerId": "stub",
+  "modelId": "stub-model",
+  "judgeVersion": "1.0.0",
+  "sourceSha": "fe7e1d29a9545ffd784e8a3e88e118fce670d81b",
+  "treeFingerprint": "0388ce573207f907d83b92666efff9d27fa59b6087cfee9b609453e61191d172",
+  "decisionPolicy": {
+    "version": "e4-05-policy-v1",
+    "minActivationEligibleCases": 3,
+    "minActivationCoverage": 0.5,
+    "maxVerifiedDrop": 0.05,
+    "minConclusiveNetDelta": 1,
+    "maxTokensDelta": 50000,
+    "securityBreachesAllowed": 0,
+    "minRecoveryRate": null
+  },
+  "thresholdDigest": "844c8db996796df2c88ab4c7f0fec5a106a92f9027933ee2f8b7553c9a7ae8ce",
+  "effectiveModelParams": {
+    "budgetTokens": 32000
+  }
+}
+

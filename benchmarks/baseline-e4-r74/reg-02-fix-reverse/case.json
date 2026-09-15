@@ -1,0 +1,20 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "bugfix",
+    "javascript"
+  ],
+  "verification": [
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "import('./src/strings.js').then(m => { if (m.reverse('hello') !== 'olleh' || m.reverse('') !== '') process.exit(1) })"
+      ]
+    }
+  ]
+}
