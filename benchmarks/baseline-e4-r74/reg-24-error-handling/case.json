@@ -13,8 +13,9 @@
       "command": "node",
       "args": [
         "-e",
-        "import('./src/io.js').then(m => { if (m.readJson('data/bad.json') !== null) process.exit(1) })"
-      ]
+        "import('./src/io.js').then(m => { if (m.readJson('data/bad.json') !== null) process.exit(1); const ok = m.readJson('data/good.json'); if (!ok || ok.a !== 1) process.exit(1); })"
+      ],
+      "description": "invalid JSON returns null AND valid JSON still returns the object (E4-R77 revision)"
     }
   ]
 }

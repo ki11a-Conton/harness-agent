@@ -1,1 +1,1 @@
-A test exists and `node --test test/` reports 1 passing test.
+test/parse.test.js exists and `node --test test/parse.test.js` reports the test passing.

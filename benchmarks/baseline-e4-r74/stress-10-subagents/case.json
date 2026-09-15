@@ -12,6 +12,15 @@
       "kind": "artifact",
       "path": "out/parts.md",
       "mustChange": true
+    },
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const fs = require('fs'); const n = fs.readFileSync('out/parts.md', 'utf8').split(/\\r?\\n/).filter(l => l.trim() !== '').length; if (n < 10) process.exit(1)"
+      ],
+      "description": "out/parts.md must contain at least 10 non-empty lines (one per part) — an empty or mostly-empty merge file fails (E4-R77 revision)"
     }
   ],
   "requires": [

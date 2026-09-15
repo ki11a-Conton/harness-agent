@@ -13,8 +13,9 @@
       "command": "node",
       "args": [
         "--test",
-        "test/"
-      ]
+        "test/parse.test.js"
+      ],
+      "description": "runs the requested test file explicitly (E4-R77 revision: was `node --test test/`, which this Node treats as a module path and fails for reasons unrelated to the agent; bare `node --test` was rejected too — it exits 0 when NO test file exists, so it cannot discriminate)"
     }
   ]
 }
