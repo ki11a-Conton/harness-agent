@@ -13,16 +13,17 @@ report, and keeps the operator's raw data private.
 | --- | --- |
 | Starting SHA | `6693a6a52fb488bbe3273625eca8c1adb0981957` |
 | Ending SHA (code) | `4ed52a97df1b6a69bc3802d845e573cb1168abb5` |
-| Tip when this report was written | the commit carrying this line (report addendum only; no code change) |
+| Ending SHA (CI fix) | `5a69040` — the campaign step's exit-code defect (§8.3) |
 | Branch | `main` (tracking `origin/main`) |
 | Environment (local) | Windows NT 10.0.19044.0 (win32), Node v24.18.1, pnpm 11.21.0 |
 | Provider/model calls this task | **0** (0 paid, 0 free) — §9.2 |
 | Cases re-run this task | **0** |
 | Files changed | 27 (7 modified, 20 added) |
+| CI | run `35046227894` — **all 5 jobs success**, ubuntu + windows (§9.1) |
 
-Two commits carry this task, both prefixed `E4-R84:` — the first is the
-implementation, the second only appends the post-commit gate results to this
-report. No code changed between them.
+Three commits carry this task, all prefixed `E4-R84:` — the implementation, the
+report addendum recording the post-commit gates, and the CI exit-code fix that
+the first pipeline run exposed (§8.3).
 
 ---
 
@@ -40,9 +41,9 @@ report. No code changed between them.
 | Runner versioned + secret-reviewed | **DONE** | §5.2 — `scripts/benchmark/run-campaign.ps1` |
 | §6 `maxIterationsPerTurn` 20 → 30 corrected | **DONE** | §6 — with the default-vs-effective explanation |
 | Two source SHAs preserved per case | **DONE** | §6 — 8 @ `5f2af6e`, 78 @ `dd80676` |
-| Cross-platform CI (windows + ubuntu) | **WIRED** | §7 — synthetic fixture, both matrices |
-| `pnpm test` / `test:coverage` / `docs:verify` | see §8 | §8 |
-| Paid calls | **0** | §6 |
+| Cross-platform CI (windows + ubuntu) | **PASS** | §7, §9.1 — run `35046227894`, all 5 jobs success |
+| `pnpm test` / `test:coverage` / `docs:verify` | **PASS** | §8 — 330 files / 5,988 tests, 0 failed |
+| Paid calls | **0** | §9.2 |
 
 ---
 
@@ -575,9 +576,10 @@ correct.
    determinism and tamper detection, not the 86-case shape. The 86-case shape is
    enforced by `CAMPAIGN_EXPECTED_SUITE_COUNTS` and by a test that reads the
    versioned `benchmarks/` source on both platforms.
-4. **No Linux run happened locally.** Per the plan, POSIX acceptance comes only
-   from GitHub Actions `ubuntu-latest`; the CI run id for this commit is recorded
-   below once the workflow completes.
+4. **The local POSIX/Linux run is not possible here.** Per the plan, POSIX
+   acceptance comes only from GitHub Actions `ubuntu-latest`, and it now has:
+   run `35046227894` executed the validator on Ubuntu and produced the **same**
+   root digest as Windows (§9.1).
 5. **No failure attribution was attempted here.** R84 freezes and corrects the
    evidence; deciding *why* 46 cases hit `tool_limit` is E4-R85's job, and the
    plan forbids raising any limit before that analysis.
@@ -591,9 +593,25 @@ correct.
 | Field | Value |
 | --- | --- |
 | Workflow | `.github/workflows/ci.yml` — job `verify`, matrix `ubuntu-latest` + `windows-latest` |
-| Run 1 (failed) | `35044982379` — head `be0e783`; new campaign step exited 1 on **both** platforms despite every assertion passing. Root cause and fix in §8.3 |
-| Run 2 | recorded below once the fix is pushed |
-| Expected | all jobs success, including the E4-R84 campaign steps on both platforms and the unchanged Linux cold-start |
+| Run 1 (failed) | `35044982379` — head `be0e783`; the new campaign step exited 1 on **both** platforms although every assertion passed. Root cause and fix in §8.3 |
+| Run 2 (**green**) | `35046227894` — head `5a69040`; **all 5 jobs success** on both platforms |
+| URL | https://github.com/ki11a-Conton/harness-agent/actions/runs/35046227894 |
+
+Run 2 job results — every job passed:
+
+| Job | Result |
+| --- | --- |
+| `install · typecheck · test · build · benchmark-smoke · audit` (ubuntu-latest) | **success** |
+| `install · typecheck · test · build · benchmark-smoke · audit` (windows-latest) | **success** |
+| `coverage gate (ubuntu)` | **success** |
+| `offline cold-start (ubuntu)` | **success** |
+| `release attestation (P38-12)` | **success** |
+
+This is the first POSIX/Linux execution of the validator, and it agrees with
+Windows: the fixture's `rootDigest` is
+`26167402acbde04eddad4535bfb8fbbf16c9be20f6e2b5866f26b602740525c8` on both, and
+tamper detection fires on both. The operator's private campaign was never
+uploaded — CI ran entirely against the committed synthetic fixture.
 
 ### 9.2 Provider-call accounting
 
