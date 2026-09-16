@@ -12,12 +12,17 @@ report, and keeps the operator's raw data private.
 | Field | Value |
 | --- | --- |
 | Starting SHA | `6693a6a52fb488bbe3273625eca8c1adb0981957` |
-| Ending SHA | `4ed52a97df1b6a69bc3802d845e573cb1168abb5` |
+| Ending SHA (code) | `4ed52a97df1b6a69bc3802d845e573cb1168abb5` |
+| Tip when this report was written | the commit carrying this line (report addendum only; no code change) |
 | Branch | `main` (tracking `origin/main`) |
 | Environment (local) | Windows NT 10.0.19044.0 (win32), Node v24.18.1, pnpm 11.21.0 |
 | Provider/model calls this task | **0** (0 paid, 0 free) — §9.2 |
 | Cases re-run this task | **0** |
 | Files changed | 27 (7 modified, 20 added) |
+
+Two commits carry this task, both prefixed `E4-R84:` — the first is the
+implementation, the second only appends the post-commit gate results to this
+report. No code changed between them.
 
 ---
 
