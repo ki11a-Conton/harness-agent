@@ -471,6 +471,9 @@ produced the same `triageDigest` on Windows and Linux. The step was additionally
 executed locally end-to-end (§9) before being committed, so a failure here would
 have indicated a genuine platform difference rather than an untested script.
 
+The final pushed commit `1f4eeb0` (report/numbers only) was re-verified by run
+`35055902751`: **all 5 jobs success** again.
+
 ---
 
 ## 13. Files changed
