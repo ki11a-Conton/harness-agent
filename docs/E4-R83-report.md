@@ -135,13 +135,24 @@ calls by construction there).
 | | Pre-fix | Post-fix |
 | --- | --- | --- |
 | Provider HTTP requests | 0 | 23 model calls, 24 tool calls |
-| Termination | `model_error` (0 calls) | `agent_limit` (harness `maxIterationsPerTurn` = 20) |
+| Termination | `model_error` (0 calls) | `agent_limit` (harness `maxIterationsPerTurn` = 30) |
 | Tokens recorded | 0 | 85,132 in / 18,375 out |
 
 The case ran 23 model calls / 24 tool calls in 342.9 s and stopped at the
-harness's per-case `maxIterationsPerTurn` (= 20) cap; that is a legitimate
+harness's per-case `maxIterationsPerTurn` (= 30) cap; that is a legitimate
 measurement outcome (the task was not completed within the budget), not a
 channel or wiring failure.
+
+> **Correction (E4-R84).** Earlier revisions of this report stated
+> `maxIterationsPerTurn = 20` here and in §7. That was **wrong**: `20` is only
+> the `AgentRuntime` *default* (`packages/core/src/runtime/runtime.ts` —
+> `deps.maxIterationsPerTurn ?? 20`). The benchmark path **passes 30
+> explicitly** at both `apps/cli/src/benchmark-command.ts:2067` (runtime deps)
+> and `:2526` (the effective-config manifest), and both campaign SHAs
+> (`5f2af6e`, `dd80676`) carry `30`. Verified against the raw evidence:
+> `adv-memory-poisoning` records `termination_reason: agent_limit` with
+> `model_calls: 21`, which is consistent with a cap of 30 and inconsistent with
+> 20. The default is never the effective value on this path.
 
 ## 7. Benchmark campaign (user-authorized, serial, persisted locally)
 
@@ -160,8 +171,17 @@ strictly one process at a time:
 - the key is read from `$env:OPENAI_API_KEY` only, never written to a file;
 - safety rails: per-case `maxModelCalls 60 / tokens 1M / cost-usd 2.0`
   (plan-estimate heuristics; the runtime caps are the harness's per-case
-  iteration/duration limits);
+  iteration/duration limits — the effective `maxIterationsPerTurn` on this path
+  is **30**, passed explicitly by `benchmark-command.ts`; see the correction
+  under §6);
 - `.ci/` is gitignored, so everything stays **local** as instructed.
+
+> **E4-R84 note.** The runner above has since been moved out of the git-ignored
+> `.ci/` into version control as `scripts/benchmark/run-campaign.ps1`, with the
+> endpoint/model removed from the file (they are now required parameters) and
+> the key still read only from the environment. The raw campaign artifacts stay
+> local; what is committed is the sanitized, machine-checkable evidence
+> manifest `docs/evidence/e4-r83-campaign-manifest.json`.
 
 **Pipeline selftest (real channel, `-LimitCases 1`):** the full
 stage → dry-run → digest → paid execute → persist → manifest → resume-skip loop
@@ -180,6 +200,13 @@ produced it.
 
 `CAMPAIGN END total=86 done=86 failed=0` — every case was executed and its
 report persisted locally; **zero process-level run failures**.
+
+> **Two different numbers — never substitute one for the other.**
+> *Process execution success* = 86/86 (the runner exited 0 and a report exists
+> on disk). *Case success* = 21/86 (the harness verified the task). The
+> committed evidence manifest records both (`processRunSuccesses: 86`,
+> `passed: 21`) and `agent benchmark campaign validate` prints them in separate
+> sections. "86/86 已运行" is **not** "86/86 通过".
 
 | suite | stored / expected | passing | pass rate |
 | --- | --- | --- | --- |
@@ -200,22 +227,42 @@ attempted the requested actions, so `tool_limit`/`agent_limit` dominate):
 | --- | --- |
 | verified_complete | 21 |
 | tool_limit (harness per-case tool cap) | 46 |
-| agent_limit (harness `maxIterationsPerTurn`) | 8 |
+| agent_limit (harness `maxIterationsPerTurn` = 30) | 8 |
 | verification_failed | 5 |
 | cancelled (harness timeout/cancel path) | 3 |
 | model_error | 1 |
 | model_stopped | 1 |
 | time_limit | 1 |
 
-**Source SHA note:** reports record their actual HEAD — 8 cases ran at
-`5f2af6e` (before this report existed) and 78 at `dd80676` (after the report
-commit landed mid-campaign). `git diff 5f2af6e dd80676` is **docs-only**
-(187 insertions, the report file), so the measured code is identical across all
-86 cases.
+**These 46 `tool_limit` / 8 `agent_limit` results are NOT yet attributed.**
+They may come from model behaviour, the tool protocol, error feedback, the
+verifier, the budget, or a genuine harness defect. Nothing in this campaign
+distinguishes those causes, so the plan forbids raising `maxToolCalls`,
+`maxIterationsPerTurn`, timeouts or retry counts on the strength of this
+distribution alone. Failure attribution is E4-R85's job.
+
+**Source SHA note (two SHAs — this campaign is NOT a single immutable plan):**
+each report records the HEAD it actually ran under. **8 cases ran at
+`5f2af6efe9d596f8e424bbd649229def469ba13c`** and **78 cases ran at
+`dd80676e569cedce8e6903371cd80af6e337ce7a`** — the report commit landed
+mid-campaign. `git diff --stat 5f2af6e dd80676` is exactly
+`docs/E4-R83-report.md | 187 +++` (one file, 187 insertions, docs-only), so the
+measured *code* is identical across all 86 cases; the two SHAs are nevertheless
+preserved **per case**, never collapsed into one. The per-case assignment is
+machine-readable in `docs/evidence/e4-r83-campaign-manifest.json`
+(`cases[].sourceSha`, and `declaredSummary.sourceShaDistribution`:
+`{5f2af6e…: 8, dd80676…: 78}`), and
+`agent benchmark campaign validate` fails the campaign if a stored case reports
+a SHA the summary does not declare.
 
 All artifacts: `.ci/bench-grok/results/<suite>/<caseId>/{<suite>.json,run.log}`,
 `.ci/bench-grok/manifest.jsonl`, `.ci/bench-grok/campaign-summary.{json,md}`
-(local only, `.ci/` is gitignored).
+(local only, `.ci/` is gitignored). Their sanitized, tamper-evident evidence
+chain is committed at `docs/evidence/e4-r83-campaign-manifest.json`
+(root digest `d3247ca8858ae348235414ea1b3515caac821cd952b0e5dd138f4fa85d1782e6`,
+260 artifact hashes, 86 case rows); `agent benchmark campaign validate
+.ci/bench-grok` re-derives every number in this report from the raw reports and
+exits 0 only when they agree.
 
 ## 8. Not done / honest limits
 

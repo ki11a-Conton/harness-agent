@@ -8,3 +8,17 @@
 # normalization inside the verifier (historical raw-byte digests stay valid).
 docs/evolution/*.json text eol=lf
 benchmarks/results/**/*.json text eol=lf
+
+# E4-R84: the campaign evidence fixture is byte-pinned. Its committed root
+# digest (asserted in packages/evaluation/src/campaign-validate.test.ts) and its
+# generator's `--check` mode both compare bytes, so a Windows checkout with
+# core.autocrlf=true must not rewrite it to CRLF.
+scripts/benchmark/fixtures/r84-campaign/** text eol=lf
+
+# E4-R84: the CI workflow blob was historically stored WITH CRLF (`git ls-files
+# --eol` reported `i/crlf`), so every added line carried a CR and
+# `git diff --check` reported it as trailing whitespace — commit 0ca421e
+# produced 194 such warnings on this one file. The file is plain-text YAML and
+# nothing depends on its stored bytes, so pin it to LF; this is the same fix the
+# two rules above already apply to their own files.
+.github/workflows/*.yml text eol=lf

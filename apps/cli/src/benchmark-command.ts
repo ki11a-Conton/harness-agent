@@ -213,6 +213,14 @@ export async function runBenchmarkCommand(
   if (argv[0] === "validate") {
     return runValidateBenchmarkArtifacts(argv.slice(1));
   }
+  // E4-R84 (F84-1): `agent benchmark campaign validate <campaign-root>` — the
+  // CAMPAIGN-level counterpart. Re-derives every aggregate from the raw
+  // per-case reports, checks the versioned case set, the resume manifest, the
+  // artifact hashes and the submitted summary, and fails closed on an empty or
+  // summary-only tree. 0 provider calls by construction.
+  if (argv[0] === "campaign") {
+    return runBenchmarkCampaignCommand(argv.slice(1));
+  }
   const opts = parseBenchmarkArgs(argv);
   if (opts instanceof Error) {
     return { exitCode: 1, lines: [opts.message, "", benchmarkUsage()] };
@@ -3001,6 +3009,13 @@ function benchmarkUsage(): string {
     "  --plan-digest <hex>  expected plan digest (sha256 hex); run only if plan matches (E3-01)",
     "  --allow-insecure-local-benchmark  allow promotion benchmark without a strong OS sandbox (never promotion-eligible, E3-09)",
     "  env: RUN_PAID_BENCHMARKS=1   authorize an external billed provider (E3-01)",
+    "",
+    "subcommands:",
+    "  agent benchmark list [--update-readme]",
+    "  agent benchmark smoke",
+    "  agent benchmark validate <result-dir> [--json]",
+    "  agent benchmark campaign validate <campaign-root> [--json] [--cases <dir>]",
+    "                                  [--summary <file>] [--emit-evidence <file>] (E4-R84)",
   ].join("\n");
 }
 
@@ -3074,6 +3089,223 @@ export async function runValidateBenchmarkArtifacts(
       lines: [
         `agent benchmark validate: ${err instanceof Error ? err.message : String(err)}`,
       ],
+    };
+  }
+}
+
+/**
+ * E4-R84 (F84-1): `agent benchmark campaign <subcommand> <campaign-root>`.
+ *
+ * Subcommands:
+ *   validate <campaign-root> [--json] [--cases <dir>] [--summary <file>]
+ *            [--emit-evidence <file>]
+ *       Fail-closed campaign-level validation. Exit 0 ONLY when every check
+ *       passes. 0 provider calls.
+ *
+ * The campaign root is the directory holding `results/<suite>/<caseId>/...`,
+ * `manifest.jsonl` and the sanitized `campaign-summary.json`.
+ */
+export async function runBenchmarkCampaignCommand(
+  argv: string[],
+): Promise<{ exitCode: number; lines: string[] }> {
+  const sub = argv[0];
+  if (sub === undefined || sub === "--help" || sub === "-h") {
+    return {
+      exitCode: sub === undefined ? 1 : 0,
+      lines: [
+        "Usage: agent benchmark campaign validate <campaign-root> [flags]",
+        "",
+        "Validate a WHOLE benchmark campaign (every suite, every case, the resume",
+        "manifest and the submitted summary) and re-derive every aggregate from the",
+        "raw per-case reports. Fails closed on an empty tree, a missing suite, a",
+        "missing/duplicate/unknown case, a tampered artifact or a summary that does",
+        "not match the raw data. Never runs a model — free deterministic check.",
+        "",
+        "Flags:",
+        "  --json                 emit the machine-readable result on stdout",
+        "  --cases <dir>          versioned benchmark case source (default benchmarks)",
+        "  --suites <a,b,c>       suites this campaign covers (default: the four versioned suites).",
+        "                         With --suites the declared counts are DERIVED from the case",
+        "                         source; without it the fixed 13/11/30/32 shape is enforced.",
+        "  --summary <file>       submitted sanitized summary (default <root>/campaign-summary.json)",
+        "  --emit-evidence <file> write the sanitized evidence manifest (refused when invalid)",
+        "  --evidence <file>      a previously emitted evidence manifest; every recorded artifact",
+        "                         hash AND the root digest must still match, so any changed, added",
+        "                         or removed byte FAILS the campaign (tamper-DETECTING)",
+        "  --expect-digest <hex>  recorded root digest; any byte change then fails (tamper-DETECTING)",
+        "  --expect <sha,...>     accepted source SHA(s); default: the summary's gitShas",
+      ],
+    };
+  }
+  if (sub !== "validate") {
+    return {
+      exitCode: 1,
+      lines: [`agent benchmark campaign: unknown subcommand "${sub}"`, "", "Usage: agent benchmark campaign validate <campaign-root> [--json]"],
+    };
+  }
+
+  const rest = argv.slice(1);
+  const showJson = rest.includes("--json");
+  const flagValue = (flag: string): string | undefined => {
+    const i = rest.indexOf(flag);
+    return i >= 0 ? rest[i + 1] : undefined;
+  };
+  const positional = rest.filter((a, i) => {
+    if (a.startsWith("--")) return false;
+    const prev = rest[i - 1];
+    return prev !== "--cases" && prev !== "--summary" && prev !== "--emit-evidence" &&
+      prev !== "--expect" && prev !== "--suites" && prev !== "--expect-digest" &&
+      prev !== "--evidence";
+  });
+  const campaignRoot = positional[0];
+  if (campaignRoot === undefined) {
+    return { exitCode: 1, lines: ["Usage: agent benchmark campaign validate <campaign-root> [--json]"] };
+  }
+
+  const casesRoot = flagValue("--cases");
+  const expectRaw = flagValue("--expect");
+  const suitesRaw = flagValue("--suites");
+  // With an explicit suite list the declared counts are DERIVED from the case
+  // source (a fixture campaign declares its own shape); without it the fixed
+  // R83 shape (13/11/30/32 = 86) is enforced.
+  let expectedSuiteCounts: Record<string, number> | undefined;
+  let suites: string[] | undefined;
+  if (suitesRaw !== undefined) {
+    suites = suitesRaw.split(",").map((s) => s.trim()).filter((s) => s !== "");
+    if (suites.length === 0) {
+      return { exitCode: 1, lines: ["agent benchmark campaign validate: --suites requires at least one suite name"] };
+    }
+    const { expectedCampaignCases } = await import("@ar/evaluation");
+    const found = await expectedCampaignCases(casesRoot ?? "benchmarks", suites);
+    expectedSuiteCounts = {};
+    for (const suite of suites) expectedSuiteCounts[suite] = 0;
+    for (const c of found) expectedSuiteCounts[c.suite] = (expectedSuiteCounts[c.suite] ?? 0) + 1;
+  }
+  const expectDigest = flagValue("--expect-digest");
+
+  // --evidence <file>: a previously emitted evidence manifest. Its recorded
+  // per-artifact hashes and root digest turn the campaign from tamper-EVIDENT
+  // (a changed byte changes the digest) into tamper-DETECTING (a changed byte
+  // FAILS). This is what makes "any byte changed => non-zero exit" true.
+  let expectedArtifactHashes: Array<{ path: string; sha256: string }> | undefined;
+  let recordedDigest = expectDigest;
+  const evidencePath = flagValue("--evidence");
+  if (evidencePath !== undefined) {
+    let rawEvidence: string;
+    try {
+      const { readFile } = await import("node:fs/promises");
+      rawEvidence = await readFile(evidencePath, "utf8");
+    } catch (err) {
+      return {
+        exitCode: 1,
+        lines: [`agent benchmark campaign validate: cannot read --evidence ${evidencePath}: ${err instanceof Error ? err.message : String(err)}`],
+      };
+    }
+    let parsed: { rootDigest?: unknown; artifactHashes?: unknown };
+    try {
+      parsed = JSON.parse(rawEvidence) as typeof parsed;
+    } catch {
+      return { exitCode: 1, lines: [`agent benchmark campaign validate: --evidence ${evidencePath} is not valid JSON`] };
+    }
+    if (typeof parsed.rootDigest !== "string" || !Array.isArray(parsed.artifactHashes)) {
+      return {
+        exitCode: 1,
+        lines: [`agent benchmark campaign validate: --evidence ${evidencePath} is not a campaign evidence manifest (missing rootDigest/artifactHashes)`],
+      };
+    }
+    const rows: Array<{ path: string; sha256: string }> = [];
+    for (const row of parsed.artifactHashes as Array<Record<string, unknown>>) {
+      if (typeof row?.path !== "string" || typeof row?.sha256 !== "string") {
+        return { exitCode: 1, lines: [`agent benchmark campaign validate: --evidence ${evidencePath} has a malformed artifactHashes row`] };
+      }
+      rows.push({ path: row.path, sha256: row.sha256 });
+    }
+    expectedArtifactHashes = rows;
+    if (recordedDigest !== undefined && recordedDigest !== parsed.rootDigest) {
+      return {
+        exitCode: 1,
+        lines: [`agent benchmark campaign validate: --expect-digest and --evidence disagree on the root digest`],
+      };
+    }
+    recordedDigest = parsed.rootDigest;
+  }
+
+  const options = {
+    root: campaignRoot,
+    ...(casesRoot !== undefined ? { casesRoot } : {}),
+    ...(flagValue("--summary") !== undefined ? { summaryPath: flagValue("--summary") as string } : {}),
+    ...(suites !== undefined ? { suites } : {}),
+    ...(expectedSuiteCounts !== undefined ? { expectedSuiteCounts } : {}),
+    ...(recordedDigest !== undefined ? { expectedRootDigest: recordedDigest } : {}),
+    ...(expectedArtifactHashes !== undefined ? { expectedArtifactHashes } : {}),
+    ...(expectRaw !== undefined
+      ? { allowedSourceShas: expectRaw.split(",").map((s) => s.trim()).filter((s) => s !== "") }
+      : {}),
+  };
+
+  try {
+    const { validateCampaign, buildCampaignEvidenceManifest } = await import("@ar/evaluation");
+    const result = await validateCampaign(options);
+
+    const evidencePath = flagValue("--emit-evidence");
+    let evidenceNote: string | undefined;
+    if (evidencePath !== undefined) {
+      if (!result.ok) {
+        evidenceNote = `refused to emit evidence: campaign does not validate (${result.reasonCodes.join(", ")})`;
+      } else {
+        const built = await buildCampaignEvidenceManifest(options);
+        if ("error" in built) {
+          evidenceNote = `refused to emit evidence: ${built.error}`;
+        } else {
+          await writeFile(evidencePath, `${JSON.stringify(built.manifest, null, 2)}\n`, "utf8");
+          evidenceNote = `evidence manifest written to ${evidencePath}`;
+        }
+      }
+    }
+
+    if (showJson) {
+      return {
+        exitCode: result.ok ? 0 : 1,
+        lines: [JSON.stringify(evidenceNote === undefined ? result : { ...result, evidenceNote }, null, 2)],
+      };
+    }
+
+    const lines: string[] = [];
+    lines.push(`Benchmark campaign in ${campaignRoot}: ${result.ok ? "VALID" : "INVALID"}`);
+    lines.push("");
+    // Process execution success and case success are DIFFERENT numbers and are
+    // reported separately (plan §1: never substitute one for the other).
+    lines.push("  process execution:");
+    lines.push(`    stored cases (runner exit 0 + report on disk): ${result.summary.storedCases}`);
+    lines.push(`    resume manifest ok=true records:               ${result.summary.processRunSuccesses}`);
+    lines.push(`    resume manifest ok=false records:              ${result.summary.processRunFailures}`);
+    lines.push("  case outcome:");
+    lines.push(`    passed (harness verified completion):          ${result.summary.passed}`);
+    lines.push(`    failed:                                        ${result.summary.failed}`);
+    lines.push("");
+    lines.push(`  expected cases (versioned source): ${result.summary.expectedCases}`);
+    lines.push(`  suites:                            ${result.summary.suites}`);
+    lines.push(`  model calls:                       ${result.summary.modelCalls}`);
+    lines.push(`  tool calls:                        ${result.summary.toolCalls}`);
+    lines.push(`  tokens (in/out):                   ${result.summary.tokensInput} / ${result.summary.tokensOutput}`);
+    lines.push(`  root digest:                       ${result.rootDigest}`);
+    const shas = Object.entries(result.summary.sourceShaDistribution);
+    if (shas.length > 0) {
+      lines.push(`  source SHAs (${shas.length}):`);
+      for (const [sha, count] of shas) lines.push(`    ${sha}  ${count} case(s)`);
+    }
+    if (!result.ok) {
+      lines.push("");
+      for (const err of result.errors) {
+        lines.push(`  ERROR: [${err.code}] ${err.detail}${err.file !== undefined ? ` (${err.file})` : ""}`);
+      }
+    }
+    if (evidenceNote !== undefined) lines.push("", `  ${evidenceNote}`);
+    return { exitCode: result.ok ? 0 : 1, lines };
+  } catch (err) {
+    return {
+      exitCode: 1,
+      lines: [`agent benchmark campaign validate: ${err instanceof Error ? err.message : String(err)}`],
     };
   }
 }

@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "generatedAt": "1970-01-01T00:00:00.000Z",
+    "benchmarkVersion": "2.0.0",
+    "model": {
+      "providerId": "test",
+      "modelId": "synthetic-1"
+    },
+    "casesTotal": 1,
+    "suite": "adversarial"
+  },
+  "results": [
+    {
+      "task_id": "syn-adv-1",
+      "suite": "adversarial",
+      "judge_version": "1.0.0",
+      "success": true,
+      "actual_status": "completed",
+      "duration_ms": 1234,
+      "model_calls": 4,
+      "input_tokens": 100,
+      "output_tokens": 20,
+      "tool_calls": 4,
+      "termination_reason": "verified_complete"
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "errors": 0
+  },
+  "manifest": {
+    "gitSha": "aaaa1111",
+    "dirty": false,
+    "model": "synthetic-1",
+    "provider": "test",
+    "judgeVersion": "1.0.0",
+    "platform": "synthetic",
+    "nodeVersion": "v0"
+  }
+}

@@ -131,6 +131,87 @@ jobs:
           path: .ci/bench-smoke/*.md
           if-no-files-found: error
 
+      # E4-R84: the campaign-level evidence chain, validated on BOTH platforms
+      # from a fully SYNTHETIC committed fixture. The operator's real R83
+      # campaign stays on their own machine (it is git-ignored and is never
+      # uploaded); CI proves the VALIDATOR is deterministic and
+      # cross-platform, not that a particular paid run happened.
+      - name: Campaign evidence chain — synthetic fixture validates (E4-R84)
+        shell: pwsh
+        run: |
+          # 1. The fixture must match its committed generator byte-for-byte, so
+          #    it cannot have been hand-tuned to satisfy the validator.
+          pnpm benchmark:campaign:fixture-check
+          # 2. The committed fixture must validate, with the exact numbers the
+          #    generator put in it.
+          pnpm benchmark:campaign:validate
+          # 3. The SAME run must be reproducible: validate twice, same digest.
+          #    (2>$null: the harness prints an advisory context-budget note on
+          #    stderr; --json output on stdout must stay parseable.)
+          $first = (node apps/cli/dist/main.js benchmark campaign validate `
+            scripts/benchmark/fixtures/r84-campaign/campaign `
+            --cases scripts/benchmark/fixtures/r84-campaign/cases `
+            --suites adversarial,stress --json 2>$null) | ConvertFrom-Json
+          $second = (node apps/cli/dist/main.js benchmark campaign validate `
+            scripts/benchmark/fixtures/r84-campaign/campaign `
+            --cases scripts/benchmark/fixtures/r84-campaign/cases `
+            --suites adversarial,stress --json 2>$null) | ConvertFrom-Json
+          if ($first.rootDigest -ne $second.rootDigest) {
+            throw "campaign root digest is not deterministic: $($first.rootDigest) vs $($second.rootDigest)"
+          }
+          if ($first.summary.passed -ne 1 -or $first.summary.processRunSuccesses -ne 3) {
+            throw "fixture summary drifted: passed=$($first.summary.passed) processRunSuccesses=$($first.summary.processRunSuccesses)"
+          }
+          Write-Host "E4-R84 fixture digest (deterministic): $($first.rootDigest)"
+          # 4. Tamper detection: one changed byte must FAIL the campaign.
+          #    The recorded evidence manifest is what makes this DETECTING
+          #    rather than merely evident: the recorded per-file hashes are
+          #    compared against what is on disk now.
+          Copy-Item -Recurse -Force scripts/benchmark/fixtures/r84-campaign/campaign .ci/r84-tamper
+          node apps/cli/dist/main.js benchmark campaign validate .ci/r84-tamper `
+            --cases scripts/benchmark/fixtures/r84-campaign/cases `
+            --suites adversarial,stress --emit-evidence .ci/r84-fixture-evidence.json | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "could not emit the fixture evidence manifest" }
+          $target = ".ci/r84-tamper/results/stress/syn-str-1/stress.json"
+          (Get-Content $target -Raw).Replace('"model_calls": 9', '"model_calls": 10') |
+            Set-Content $target -NoNewline
+          node apps/cli/dist/main.js benchmark campaign validate .ci/r84-tamper `
+            --cases scripts/benchmark/fixtures/r84-campaign/cases `
+            --suites adversarial,stress --evidence .ci/r84-fixture-evidence.json
+          if ($LASTEXITCODE -eq 0) { throw "a tampered campaign validated — tamper detection is broken" }
+          Write-Host "E4-R84 tamper detection OK (tampered campaign rejected, exit $LASTEXITCODE)"
+          # 4b. An ADDED file must also fail.
+          Set-Content .ci/r84-tamper/results/stress/syn-str-1/injected.log "x"
+          node apps/cli/dist/main.js benchmark campaign validate .ci/r84-tamper `
+            --cases scripts/benchmark/fixtures/r84-campaign/cases `
+            --suites adversarial,stress --evidence .ci/r84-fixture-evidence.json
+          if ($LASTEXITCODE -eq 0) { throw "an injected evidence file validated — tamper detection is broken" }
+          Write-Host "E4-R84 injected-file detection OK (exit $LASTEXITCODE)"
+          # 5. A summary-only tree (no raw reports) must FAIL closed.
+          New-Item -ItemType Directory -Force -Path .ci/r84-summary-only | Out-Null
+          Copy-Item scripts/benchmark/fixtures/r84-campaign/campaign/campaign-summary.json .ci/r84-summary-only/
+          node apps/cli/dist/main.js benchmark campaign validate .ci/r84-summary-only `
+            --cases scripts/benchmark/fixtures/r84-campaign/cases `
+            --suites adversarial,stress
+          if ($LASTEXITCODE -eq 0) { throw "a summary-only tree validated — the validator is not fail-closed" }
+          Write-Host "E4-R84 summary-only tree rejected OK (exit $LASTEXITCODE)"
+
+      # E4-R84: the runner's own control flow (stage -> dry-run -> digest ->
+      # persist -> resume-skip -> validate), offline, 0 provider calls.
+      # Windows-only: it drives the PowerShell runner that produced the real
+      # campaign, and its -DryRunOnly path is the free half of that runner.
+      - name: Campaign runner self-check — offline, 0 provider calls (E4-R84)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/benchmark/selfcheck-campaign-runner.ps1
+
+      - name: Upload campaign evidence fixture report (E4-R84)
+        uses: actions/upload-artifact@v4
+        with:
+          name: campaign-evidence-${{ matrix.os }}
+          path: docs/evidence/e4-r83-campaign-manifest.json
+          if-no-files-found: error
+
       - name: Upload test report (P12-5)
         # P37-13: upload even on failure so CI failures are debuggable.
         if: always()

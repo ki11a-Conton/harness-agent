@@ -78,6 +78,10 @@ commands:
   skills                            list discovered skills
   sessions                          list sessions
   benchmark [flags]                 run the fixed benchmark suite and freeze a baseline (plan.md Phase 1)
+  benchmark validate <dir>          validate committed benchmark artifacts (P38.4-6)
+  benchmark campaign validate <root>  campaign-level fail-closed validation of a whole
+                                    campaign tree: versioned case set, resume manifest, artifact
+                                    hashes, re-derived aggregates vs the submitted summary (E4-R84)
   trace <sessionId> <outputDir>     export an episode package (plan §77)
   doctor                            run environment checks (plan §87)
   mechanisms <path>                 validate mechanism manifests (P2-8)

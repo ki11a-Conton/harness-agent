@@ -66,3 +66,4 @@ export * from "./decision-policy-v3.js";
 export * from "./execution-plan.js";
 export * from "./champion-eval-v3.js";
 export * from "./champion-harness-config.js";
+export * from "./campaign-validate.js";

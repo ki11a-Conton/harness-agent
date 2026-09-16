@@ -15,6 +15,8 @@
     "test:soak": "vitest run '**/*.soak.test.ts'",
     "test:coverage": "tsc -b && vitest run --coverage --exclude '**/*.perf.test.ts' --exclude '**/*.soak.test.ts' --exclude '**/e3-repro-current-defects.test.ts' --exclude '**/e4-r40-forensics.test.ts'",
     "benchmark:smoke": "node apps/cli/dist/main.js benchmark smoke",
+    "benchmark:campaign:validate": "node apps/cli/dist/main.js benchmark campaign validate scripts/benchmark/fixtures/r84-campaign/campaign --cases scripts/benchmark/fixtures/r84-campaign/cases --suites adversarial,stress --expect aaaa1111,bbbb2222",
+    "benchmark:campaign:fixture-check": "node scripts/benchmark/fixtures/r84-campaign/generate.mjs --check",
     "docs:verify": "node apps/cli/dist/main.js docs:verify",
     "test:protocol": "vitest run packages/gateway/src/transport-conformance.test.ts packages/sdk/src/conformance.test.ts packages/protocol",
     "test:security": "vitest run packages/security packages/harness/src/security-regression-matrix.test.ts",
