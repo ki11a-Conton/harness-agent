@@ -17,7 +17,7 @@ the paid gate was exercised only to prove its refusal.
 | Started from SHA | `a20373743b56de6a3a110fecdd254737ece71afa` (R86 final, HEAD at start) |
 | Baseline arm source SHA (mechanism) | `e9776ba66190ea63b1bacb685c91aa900b6935e7` (pre-R86) |
 | Candidate arm source SHA | `a20373743b56de6a3a110fecdd254737ece71afa` (R86 fix) |
-| Ending SHA | `a2b0e5e` (HEAD after this task; pushed to `origin/main`) |
+| Ending SHA | `727d04d` (HEAD after this task, incl. the report; pushed with the implementation at `a2b0e5e`) |
 | Branch | `main` (tracking `origin/main`) |
 | Environment (local) | Windows NT 10.0.19044.0 (win32), Node v24.18.1, pnpm 11.21.0, git 2.55.0.windows.3 |
 | Frozen case selection digest | `0d8af323110301e0392c77d595c8c34f5f01851ffe6844f0ed7fab49703465ae` (bound **before** execution) |
@@ -240,9 +240,10 @@ New verify-job step **"Zero-call replay A/B over frozen cases, digest-bound
 (E4-R87 Phase A)"** runs `r87-zero-call-replay-ab.test.ts` on
 `ubuntu-latest` **and** `windows-latest` (verify job matrix).
 
-- push commit: `a2b0e5e9b73540169fd736428601a22c065775ae`
-- workflow run: https://github.com/ki11a-Conton/harness-agent/actions/runs/35085149254
-- run id: `35085149254` — conclusion recorded after completion (see §12).
+- implementation push: `a2b0e5e9b73540169fd736428601a22c065775ae` → run
+  `35085149254` — **success** (all jobs green, R87 step green on windows + ubuntu)
+- final HEAD incl. report: `727d04dc88e4f499b0718a3cc5f0b0d85ea246df` → run
+  `35085694014` — see §12 for the conclusion.
 
 ## 10. Files changed and commits
 
@@ -280,5 +281,9 @@ Files:
 
 ## 12. CI run record
 
-- run id: `35085149254` — conclusion: _pending (recorded after the pipeline finishes)_
-- URL: https://github.com/ki11a-Conton/harness-agent/actions/runs/35085149254
+- run `35085149254` (implementation `a2b0e5e`): **success** — the R87 Phase A
+  suite passed on both `ubuntu-latest` and `windows-latest` (verify job), plus
+  all other jobs green.
+- run `35085694014` (final HEAD `727d04d`, incl. this report): conclusion
+  recorded after the pipeline finishes — _pending_.
+- URL: https://github.com/ki11a-Conton/harness-agent/actions/runs/35085694014
