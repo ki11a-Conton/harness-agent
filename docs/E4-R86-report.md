@@ -14,13 +14,15 @@ improvement — R86 has no paid evidence, so no such claim would be honest.
 | Field | Value |
 | --- | --- |
 | Starting SHA | `e9776ba66190ea63b1bacb685c91aa900b6935e7` |
+| Ending SHA (implementation) | `ec91c286653706c827e34670efc945356619024e` |
 | Branch | `main` (tracking `origin/main`) |
 | Environment (local) | Windows NT 10.0.19044.0 (win32), Node v24.18.1, pnpm 11.21.0, git 2.55.0.windows.3 |
 | Defects fixed | **1** of the maximum 2 (H2). H1 was not eligible (`BELOW_SAMPLE_BAR`). |
 | Provider/model calls this task | **0** (0 paid, 0 free) — §9 |
 | Cases re-run this task | **0** |
 | Holdout data read | **none** — §8 |
-| Verdict | H2 fixed; fix path observable on Windows + Ubuntu (§10) |
+| CI | run `35072796456` — **all 5 jobs success**, R86 step green on windows + ubuntu (§10.3) |
+| Verdict | H2 fixed; fix path observable on Windows + Ubuntu |
 
 ---
 
@@ -406,8 +408,8 @@ mechanisms are unchanged.
 | --- | --- |
 | `pnpm typecheck` | ✅ exit 0 |
 | `pnpm build` | ✅ exit 0 |
-| `pnpm test` | ✅ after commit: 334 files, 0 failed (§10.1.1) |
-| `pnpm test:coverage` | ✅ after commit: all per-package thresholds met |
+| `pnpm test` | ✅ post-commit: **334 files / 6,066 passed / 3 skipped / 0 failed** |
+| `pnpm test:coverage` | ✅ exit 0, **90.29% statements / 81.77% branches**, all per-package thresholds met |
 | `pnpm docs:verify` | ✅ `ALL CHECKS PASS` |
 | `git diff --check` | ✅ exit 0 (§10.1.2) |
 | Provider calls | **0** |
@@ -421,8 +423,18 @@ Running `pnpm test` **before committing** reports 6 failures in
 a promotion-eligible run on an uncommitted tree. They fail on *any* uncommitted
 change and they name the dirty entries in the failure message. The same six fail
 on a clean checkout with an unrelated file touched. They are **not** caused by
-this task's code, and the pre-commit red is **not** claimed as a pass. Re-run
-after committing: green (§10.1).
+this task's code, and the pre-commit red is **not** claimed as a pass.
+
+**Measured, before and after the commit:**
+
+| Run | Files | Passed | Failed |
+| --- | --- | --- | --- |
+| pre-commit (dirty tree) | 3 failed / 331 passed | 6,060 | **6** (clean-tree guards) |
+| post-commit (clean tree) | **334 passed** | **6,066** | **0** |
+
+The six failures disappear purely by committing, with no code change in between —
+which is exactly what a tree-state guard should do, and confirms they were never
+regressions.
 
 #### 10.1.2 A note on `git diff --check` and four CRLF-stored files
 
@@ -484,9 +496,22 @@ script.
 
 ### 10.3 CI verification
 
-Recorded after the push — see the commit message and the run linked there. The
-requirement is that `windows-latest` and `ubuntu-latest` both pass and that
-Ubuntu cold-start succeeds on a fresh checkout.
+Run **`35072796456`** on the implementation commit
+`ec91c286653706c827e34670efc945356619024e` — **all 5 jobs success**:
+
+| Job | Result |
+| --- | --- |
+| `install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest)` | ✅ success |
+| `install · typecheck · test · build · benchmark-smoke · audit (windows-latest)` | ✅ success |
+| `offline cold-start (ubuntu)` | ✅ success |
+| `coverage gate (ubuntu)` | ✅ success |
+| `release attestation (P38-12)` | ✅ success |
+
+The new step *"Stall-gate fix — structured evidence is observable (E4-R86)"*
+executed and passed on **both** `ubuntu-latest` and `windows-latest`, which is the
+plan's cross-platform requirement. Ubuntu cold-start passed on a genuinely fresh
+checkout (its own step asserts `no node_modules, no dist`), so the R86 sources
+build from scratch on Linux and not merely on this Windows dev host.
 
 ---
 
