@@ -502,6 +502,59 @@ previous revision shows the semantic change is exactly the 81 added lines, all
 five jobs (`verify`, `coverage`, `cold-start-ubuntu`, `release-attestation`, and
 the `push` trigger) are intact, and `git diff --check` is now clean.
 
+### 8.3 A real CI defect found by running the pipeline (and fixed)
+
+The first CI run of this task (`35044982379`) **failed** — on both
+`ubuntu-latest` and `windows-latest`, at the new campaign step, in 8s and 5s
+respectively. Every local run of the same commands passed, so the discrepancy
+was investigated rather than papered over.
+
+**Root cause.** GitHub Actions wraps every `shell: pwsh` step as:
+
+```powershell
+$ErrorActionPreference = 'stop'
+<your script>
+if ((Test-Path -LiteralPath variable:\LASTEXITCODE)) { exit $LASTEXITCODE }
+```
+
+This step's entire purpose is to run validations that **must exit non-zero** —
+the last of them is the summary-only check, which is *required* to fail. The
+step therefore inherited `$LASTEXITCODE = 1` from a deliberate failure and
+reported the job as failed even though every assertion had passed.
+
+**How it was proven, not guessed.** The exact `run:` block was extracted from
+the committed YAML, a fresh `git clone` of the pushed commit was built, and the
+block was executed under a hand-written reproduction of the Actions wrapper. It
+printed all four success lines (`fixture digest`, `tamper detection OK`,
+`injected-file detection OK`, `summary-only tree rejected OK`) and still exited
+**1**. A minimal 3-line reproduction confirmed the mechanism (`a=1` bug,
+`b=0` with `exit 0`, `c=1` when a real `throw` precedes `exit 0` — so a real
+failure is never masked).
+
+**Fix**, in the step itself:
+
+1. an explicit `if ($LASTEXITCODE -ne 0) { throw … }` after **each** `pnpm`
+   call, so a genuine failure is caught at its source instead of being silently
+   overwritten later;
+2. a final `exit 0`, which is reached only if every assertion passed (`throw`
+   aborts first);
+3. three guards against vacuous passes that the original block also had:
+   `--json` output is checked for a non-null parsed object and a non-empty
+   `rootDigest`, the tamper copy is confirmed to have materialised, and the
+   tamper `Replace` is asserted to have actually changed the file (otherwise the
+   "tamper detected" assertion would pass for the wrong reason).
+
+Verified after the fix: the same extracted block under the same wrapper now
+exits **0**, and four injected negative controls (fixture-check fails, validate
+fails, mutation becomes a no-op, assertion disabled) all exit **non-zero**
+except the self-referential one that deletes the assertion itself — which no
+step can detect about its own source and which the 41 unit tests and the
+offline self-check cover instead.
+
+This is recorded because it is exactly the class of defect the plan warns about:
+a *process* success/failure signal that had nothing to do with the *work* being
+correct.
+
 ---
 
 ## 9. Unfinished items / honest limits
@@ -538,8 +591,8 @@ the `push` trigger) are intact, and `git diff --check` is now clean.
 | Field | Value |
 | --- | --- |
 | Workflow | `.github/workflows/ci.yml` — job `verify`, matrix `ubuntu-latest` + `windows-latest` |
-| Commit | `4ed52a97df1b6a69bc3802d845e573cb1168abb5` |
-| Run id | recorded after the push carrying this report |
+| Run 1 (failed) | `35044982379` — head `be0e783`; new campaign step exited 1 on **both** platforms despite every assertion passing. Root cause and fix in §8.3 |
+| Run 2 | recorded below once the fix is pushed |
 | Expected | all jobs success, including the E4-R84 campaign steps on both platforms and the unchanged Linux cold-start |
 
 ### 9.2 Provider-call accounting

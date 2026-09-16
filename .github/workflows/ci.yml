@@ -139,12 +139,27 @@ jobs:
       - name: Campaign evidence chain — synthetic fixture validates (E4-R84)
         shell: pwsh
         run: |
+          # E4-R84: GitHub Actions wraps every `shell: pwsh` step as
+          #   $ErrorActionPreference = 'stop'  <script>  exit $LASTEXITCODE
+          # This step's whole point is to run validations that MUST exit
+          # non-zero, so without care the wrapper would inherit the last
+          # deliberate failure and fail the job even though every assertion
+          # passed (observed: exit 1 on both platforms with all checks OK).
+          # Fixes, both required:
+          #   1. check $LASTEXITCODE explicitly after each native command, so a
+          #      real failure is caught HERE rather than being masked later;
+          #   2. end with an explicit `exit 0` — a `throw` above still aborts
+          #      first, so real failures are never swallowed.
+          $ErrorActionPreference = 'stop'
+
           # 1. The fixture must match its committed generator byte-for-byte, so
           #    it cannot have been hand-tuned to satisfy the validator.
           pnpm benchmark:campaign:fixture-check
+          if ($LASTEXITCODE -ne 0) { throw "fixture check failed (exit $LASTEXITCODE)" }
           # 2. The committed fixture must validate, with the exact numbers the
           #    generator put in it.
           pnpm benchmark:campaign:validate
+          if ($LASTEXITCODE -ne 0) { throw "fixture campaign did not validate (exit $LASTEXITCODE)" }
           # 3. The SAME run must be reproducible: validate twice, same digest.
           #    (2>$null: the harness prints an advisory context-budget note on
           #    stderr; --json output on stdout must stay parseable.)
@@ -152,10 +167,18 @@ jobs:
             scripts/benchmark/fixtures/r84-campaign/campaign `
             --cases scripts/benchmark/fixtures/r84-campaign/cases `
             --suites adversarial,stress --json 2>$null) | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw "the --json validation failed (exit $LASTEXITCODE)" }
           $second = (node apps/cli/dist/main.js benchmark campaign validate `
             scripts/benchmark/fixtures/r84-campaign/campaign `
             --cases scripts/benchmark/fixtures/r84-campaign/cases `
             --suites adversarial,stress --json 2>$null) | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw "the second --json validation failed (exit $LASTEXITCODE)" }
+          # Guard the comparisons below against a vacuous pass: two nulls would
+          # compare equal and a missing summary would satisfy nothing.
+          if ($null -eq $first -or $null -eq $second) {
+            throw "--json produced no parseable object (first=$($null -eq $first) second=$($null -eq $second))"
+          }
+          if ([string]::IsNullOrEmpty($first.rootDigest)) { throw "--json carried no rootDigest" }
           if ($first.rootDigest -ne $second.rootDigest) {
             throw "campaign root digest is not deterministic: $($first.rootDigest) vs $($second.rootDigest)"
           }
@@ -167,14 +190,23 @@ jobs:
           #    The recorded evidence manifest is what makes this DETECTING
           #    rather than merely evident: the recorded per-file hashes are
           #    compared against what is on disk now.
+          New-Item -ItemType Directory -Force -Path .ci | Out-Null
           Copy-Item -Recurse -Force scripts/benchmark/fixtures/r84-campaign/campaign .ci/r84-tamper
+          if (-not (Test-Path .ci/r84-tamper/results/stress/syn-str-1/stress.json)) {
+            throw "the tamper copy did not materialise — the rest of this step would be meaningless"
+          }
           node apps/cli/dist/main.js benchmark campaign validate .ci/r84-tamper `
             --cases scripts/benchmark/fixtures/r84-campaign/cases `
             --suites adversarial,stress --emit-evidence .ci/r84-fixture-evidence.json | Out-Null
           if ($LASTEXITCODE -ne 0) { throw "could not emit the fixture evidence manifest" }
           $target = ".ci/r84-tamper/results/stress/syn-str-1/stress.json"
-          (Get-Content $target -Raw).Replace('"model_calls": 9', '"model_calls": 10') |
-            Set-Content $target -NoNewline
+          $original = Get-Content $target -Raw
+          $tampered = $original.Replace('"model_calls": 9', '"model_calls": 10')
+          # If the needle ever stops matching, the Replace is a silent no-op and
+          # the "tamper detected" assertion below would pass for the wrong
+          # reason. Assert the mutation really happened first.
+          if ($tampered -eq $original) { throw "the tamper mutation did not apply — needle not found in $target" }
+          Set-Content $target -Value $tampered -NoNewline
           node apps/cli/dist/main.js benchmark campaign validate .ci/r84-tamper `
             --cases scripts/benchmark/fixtures/r84-campaign/cases `
             --suites adversarial,stress --evidence .ci/r84-fixture-evidence.json
@@ -195,6 +227,11 @@ jobs:
             --suites adversarial,stress
           if ($LASTEXITCODE -eq 0) { throw "a summary-only tree validated — the validator is not fail-closed" }
           Write-Host "E4-R84 summary-only tree rejected OK (exit $LASTEXITCODE)"
+
+          # See the header note: the deliberate failures above are the point of
+          # this step, so the step's own exit status must be set explicitly.
+          # Every assertion reaching this line passed.
+          exit 0
 
       # E4-R84: the runner's own control flow (stage -> dry-run -> digest ->
       # persist -> resume-skip -> validate), offline, 0 provider calls.
