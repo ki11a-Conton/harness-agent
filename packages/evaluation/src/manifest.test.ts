@@ -341,4 +341,32 @@ describe("buildEffectiveConfig (P38.3-10)", () => {
     expect(base.runtimeConfigHash).not.toBe(diffModel.runtimeConfigHash);
     expect(base.runtimeConfigHash).not.toBe(diffProvider.runtimeConfigHash);
   });
+
+  it("E4-R86 (H2): the stall threshold is part of the effective config hash", () => {
+    // Plan §R86.2: the loop-detection threshold MUST enter the effective
+    // config. Two configs that differ ONLY in maxRepeatedIdenticalToolCalls
+    // must hash differently — a threshold change is digest-visible.
+    const baseline = buildEffectiveConfig(BASE);
+    const stricter = buildEffectiveConfig({
+      ...BASE,
+      stallPolicy: {
+        maxRepeatedIdenticalToolCalls: 2,
+        maxStallRecoveries: 1,
+        maxPatternStallRecoveries: 1,
+        enabledStallPatterns: [],
+      },
+    });
+    expect(stricter.runtimeConfigHash).not.toBe(baseline.runtimeConfigHash);
+    // Deterministic: same policy → same hash.
+    const again = buildEffectiveConfig({
+      ...BASE,
+      stallPolicy: {
+        maxRepeatedIdenticalToolCalls: 2,
+        maxStallRecoveries: 1,
+        maxPatternStallRecoveries: 1,
+        enabledStallPatterns: [],
+      },
+    });
+    expect(again.runtimeConfigHash).toBe(stricter.runtimeConfigHash);
+  });
 });

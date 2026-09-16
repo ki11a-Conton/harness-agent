@@ -1,43 +1,37 @@
 /**
- * E4-R85 — minimal synthetic reproducer for the H2 defect, and the pin that
- * R86 must flip.
+ * E4-R85 → E4-R86 — the H2 defect reproducer, now a permanent regression test.
  *
- * ## The defect
+ * ## The defect (as confirmed by R85)
  *
- * Two independent mechanisms in this codebase already know that a repeated call
+ * Two independent mechanisms in this codebase already knew that a repeated call
  * whose RESULT CHANGED is progress, not a stall:
  *
- *   1. `AgentState.recordToolCall` documents it: "The result fingerprint is
+ *   1. `AgentState.recordToolCall` documented it: "The result fingerprint is
  *      supplied by the runtime so an identical call with a DIFFERENT result is
  *      progress, not a stall (avoids false positives)."
- *   2. `AgentState.priorResultChanged` implements exactly that test, and
- *      `ToolCallController.recordStallTrace` calls it for read-only tools.
+ *   2. `AgentState.priorResultChanged` implemented exactly that test, and
+ *      `ToolCallController.recordStallTrace` called it for read-only tools.
  *
- * But the gate that actually TERMINATES the turn — the identical-call streak at
+ * But the gate that actually TERMINATED the turn — the identical-call streak at
  * `AgentState.noteToolCall`, consumed in `runtime.ts` as
- * `run.limit_reached{limit:"maxRepeatedToolCalls"}` — keys the streak on
- * `name:args` ONLY. It never consults the result fingerprint, and
- * `recordProgress`/`clearStallWindow` clear `recentTraces` WITHOUT resetting
- * `identicalToolStreak`. So observable progress cannot cancel the streak.
+ * `run.limit_reached{limit:"maxRepeatedToolCalls"}` — keyed the streak on
+ * `name:args` ONLY. It never consulted the result fingerprint, and
+ * `recordProgress`/`clearStallWindow` cleared `recentTraces` WITHOUT resetting
+ * `identicalToolStreak`. So observable progress could not cancel the streak.
  *
- * Consequence: a turn that repeatedly calls the same tool with the same
- * arguments while every call returns a DIFFERENT (advancing) result is
+ * Consequence: a turn that repeatedly called the same tool with the same
+ * arguments while every call returned a DIFFERENT (advancing) result was
  * terminated as a stall.
  *
- * ## Why this file asserts the DEFECTIVE behaviour
+ * ## History
  *
- * The plan requires `pnpm test` to be GREEN at the end of R85, while R86 must
- * begin by "turning R85's minimal synthetic reproducer into a FAILING test and
- * recording the RED evidence". So R85 commits the reproducer as an executable
- * CHARACTERIZATION test: it pins today's behaviour precisely and documents the
- * assertion R86 must flip. This is deliberately not `it.fails` — a suppressed
- * failure would hide the moment the behaviour changes.
- *
- * R86 will:
- *   1. change `expect(outcome.status).toBe("failed")` to `.toBe("completed")`,
- *      observe it fail (RED), record that output, then
- *   2. fix the narrow layer (cancel the identical-call streak when the same
- *      call+args produced a different result) until it passes.
+ * R85 committed this file as an executable CHARACTERIZATION test: it pinned the
+ * defective behaviour precisely and documented the assertion R86 must flip, so
+ * that `pnpm test` could be GREEN at the end of R85 without suppressing the
+ * defect. R86 flipped those assertions (recorded RED evidence:
+ * `.ci/r86-red-evidence.txt`) and fixed the narrow layer — `noteToolCall` now
+ * keys the streak on the result fingerprint too, so a changed result cancels
+ * the streak exactly as the documented contract always said it should.
  *
  * Fully offline: a scripted provider and a synthetic orchestrator, so this
  * reproducer costs 0 provider calls and needs no API key.
@@ -90,6 +84,7 @@ interface ProbeOutcome {
   status: string;
   toolCallsExecuted: number;
   stallRecoveries: number;
+  progressCancellations: number;
   limits: Array<{ limit?: unknown; used?: unknown; allowed?: unknown }>;
 }
 
@@ -122,39 +117,45 @@ async function runProbe(repeat: number): Promise<ProbeOutcome> {
     status: outcome.status,
     toolCallsExecuted: orchestrator.calls.length,
     stallRecoveries: stored.filter((e) => e.type === "retry.stallRecovery").length,
+    // R86 §4: the fix path itself must be observable, not merely inferred from
+    // the final status. This event fires when a repeated call+args was about to
+    // be counted as a stall and a CHANGED result cancelled it.
+    progressCancellations: stored.filter((e) => e.type === "stall.progress_detected").length,
     limits: stored
       .filter((e) => e.type === "run.limit_reached")
       .map((e) => e.payload as { limit?: unknown; used?: unknown; allowed?: unknown }),
   };
 }
 
-describe("E4-R85 H2 — progress-blind identical-call gate (reproducer)", () => {
-  it("terminates the turn even though every repeated call returned a DIFFERENT result", async () => {
+describe("E4-R85/R86 H2 — progress-blind identical-call gate (regression)", () => {
+  it("completes the turn because every repeated call returned a DIFFERENT result", async () => {
     const probe = await runProbe(6);
 
     // Every call returned new output, so the model was making observable
-    // progress — yet the turn is killed as a stall.
+    // progress. R86: the streak is cancelled by the changed result, so the turn
+    // runs to completion and NO limit is reached.
     expect(probe.toolCallsExecuted).toBe(6);
-    expect(probe.status).toBe("failed");
-    expect(probe.limits).toEqual([{ limit: "maxRepeatedToolCalls", used: 3, allowed: 3 }]);
+    expect(probe.status).toBe("completed");
+    expect(probe.limits).toEqual([]);
 
-    // The stall-recovery budget was offered once and still could not save the
-    // turn, because the streak is reset but the underlying blindness remains.
-    expect(probe.stallRecoveries).toBe(1);
+    // No stall recovery was needed at all: progress was never mistaken for a
+    // stall, so the recovery budget stayed untouched.
+    expect(probe.stallRecoveries).toBe(0);
 
-    // THE ASSERTION R86 MUST FLIP: with changing results this turn must
-    // complete, because the gate is supposed to cancel on changed results.
-    // expect(probe.status).toBe("completed");
+    // ...and the cancellation is visible as structured evidence.
+    expect(probe.progressCancellations).toBeGreaterThan(0);
   });
 
-  it("a SHORT run survives only because stall recovery masks it (4 calls)", async () => {
-    // This is why the defect hid for so long: with few calls the single stall
-    // recovery resets the streak and the turn squeaks through. The defect only
-    // becomes terminal once the model needs more than one recovery window.
+  it("a short run completes without consuming the stall-recovery budget (4 calls)", async () => {
+    // Pre-R86 this case only passed because the single stall recovery reset the
+    // streak — the defect was masked for short runs and only became terminal
+    // once the model needed more than one recovery window. After the fix no
+    // masking is involved: the run simply completes and the budget is intact.
     const probe = await runProbe(4);
     expect(probe.status).toBe("completed");
     expect(probe.toolCallsExecuted).toBe(4);
-    expect(probe.stallRecoveries).toBe(1);
+    expect(probe.stallRecoveries).toBe(0);
+    expect(probe.limits).toEqual([]);
   });
 
   it("a genuinely UNCHANGING repeated call is still treated as a stall (counterexample)", async () => {
@@ -193,7 +194,66 @@ describe("E4-R85 H2 — progress-blind identical-call gate (reproducer)", () => 
     const outcome = await runtime.runTurn(session.id, turn.id, new AbortController().signal);
 
     expect(outcome.status).toBe("failed");
-    const limits = (await events.list(session.id)).filter((e) => e.type === "run.limit_reached");
+    const stored = await events.list(session.id);
+    const limits = stored.filter((e) => e.type === "run.limit_reached");
     expect(limits.length).toBeGreaterThan(0);
+    // A real stall must NOT be reported as progress-cancelled.
+    expect(stored.filter((e) => e.type === "stall.progress_detected")).toHaveLength(0);
+  });
+
+  it("SECURITY regression: the fix path never leaks raw args or output into events", async () => {
+    // The result fingerprint must be redacted: even though every call output
+    // carries a SECRET sentinel (which legitimately changes between calls), the
+    // new stall.progress_detected event must expose ONLY tool name + counts —
+    // never the args, the output, or the sentinel. This is the plan §R86.2
+    // "redacted args / no sensitive info in events" boundary.
+    const SECRET = "S3CR3T-canary-9f8e7d6c";
+    const call = ScriptedModelProvider.toolCall("echo", { text: "same" });
+    const provider = new ScriptedModelProvider([
+      ...Array.from({ length: 4 }, () => call),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const events = new MemoryEventStore();
+    const runtime = new AgentRuntime({
+      store: new MemorySessionStore(),
+      events,
+      modelProvider: provider as unknown as ModelProvider,
+      orchestrator: new (class {
+        private n = 0;
+        async execute(): Promise<ToolResult> {
+          this.n += 1;
+          return { status: "success", output: { progress: `${SECRET}-${this.n}` } };
+        }
+        async executeBound(): Promise<ToolResult> {
+          return await this.execute();
+        }
+      })() as never,
+      agents: [AGENT],
+      maxRepeatedIdenticalToolCalls: 3,
+      maxStallRecoveries: 1,
+      toolRegistry: defaultTestToolCatalog(),
+      permissiveToolResolution: true,
+      toolSemanticsOf: () => ({ ...DEFAULT_TOOL_SEMANTICS, sideEffectScope: "none" as const, readOnly: true }),
+    });
+    const session = await runtime.createSession({ agent: AGENT, cwd: "C:\\work" });
+    const turn = await runtime.startTurn(session.id, "secret probe");
+    const outcome = await runtime.runTurn(session.id, turn.id, new AbortController().signal);
+    expect(outcome.status).toBe("completed");
+
+    const stored = await events.list(session.id);
+    const progressEvents = stored.filter((e) => e.type === "stall.progress_detected");
+    expect(progressEvents.length).toBeGreaterThan(0);
+    // 1. No event of ANY type may carry the secret (fingerprints are hashes).
+    for (const e of stored) {
+      expect(JSON.stringify(e.payload), `${e.type} leaked the secret`).not.toContain(SECRET);
+    }
+    // 2. The new event's payload shape is minimal and secret-free.
+    for (const e of progressEvents) {
+      const keys = Object.keys(e.payload).sort();
+      expect(keys).toEqual(["allowed", "tool", "wouldBeStreak"]);
+      expect(e.payload.tool).toBe("echo");
+      expect(typeof e.payload.wouldBeStreak).toBe("number");
+      expect(typeof e.payload.allowed).toBe("number");
+    }
   });
 });

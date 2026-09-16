@@ -49,11 +49,16 @@ import { defaultSandboxPolicy, rethrowIfKill, RuntimeKilledError } from "./turn-
 import type { FaultPoint, FaultPointContext, TurnContext } from "./turn-helpers.js";
 
 /** Q-1: one executed tool call as returned to the turn loop. `streak` is the
- *  consecutive-identical-call count AFTER this call was recorded. */
+ *  consecutive-identical-call count AFTER this call was recorded.
+ *  E4-R86 (H2): `progressCancelled`/`wouldBeStreak` are set when this repeated
+ *  call+args produced a DIFFERENT result fingerprint — observable progress that
+ *  cancelled the identical-call streak instead of advancing it. */
 export interface ExecutedToolCall {
   call: ToolCall;
   result: ToolResult;
   streak: number;
+  progressCancelled?: boolean;
+  wouldBeStreak?: number;
 }
 
 /** Q-1: everything ToolCallController needs from the runtime. All fields are
@@ -160,7 +165,10 @@ export class ToolCallController {
               status: "cancelled",
               error: errorInfo("USER_CANCELLED", "turn aborted before this tool call started"),
             },
-            streak: state.noteToolCall(pending.name, pending.args),
+            ...this.noteExecutedCall(state, pending, {
+              status: "cancelled",
+              error: errorInfo("USER_CANCELLED", "turn aborted before this tool call started"),
+            }),
           });
         }
         break;
@@ -198,7 +206,7 @@ export class ToolCallController {
           executed.push({
             call: c,
             result,
-            streak: state.noteToolCall(c.name, c.args),
+            ...this.noteExecutedCall(state, c, result),
           });
           this.recordStallTrace(state, c, result);
         }
@@ -218,7 +226,7 @@ export class ToolCallController {
           executed.push({
             call,
             result,
-            streak: state.noteToolCall(call.name, call.args),
+            ...this.noteExecutedCall(state, call, result),
           });
           this.recordStallTrace(state, call, result);
           for (let k = i + 1; k < calls.length; k++) {
@@ -229,7 +237,10 @@ export class ToolCallController {
                 status: "cancelled",
                 error: errorInfo("USER_CANCELLED", "turn aborted before this tool call started"),
               },
-              streak: state.noteToolCall(pending.name, pending.args),
+              ...this.noteExecutedCall(state, pending, {
+                status: "cancelled",
+                error: errorInfo("USER_CANCELLED", "turn aborted before this tool call started"),
+              }),
             });
           }
           break;
@@ -237,7 +248,7 @@ export class ToolCallController {
         executed.push({
           call,
           result,
-          streak: state.noteToolCall(call.name, call.args),
+          ...this.noteExecutedCall(state, call, result),
         });
         this.recordStallTrace(state, call, result);
         i += 1;
@@ -361,6 +372,40 @@ export class ToolCallController {
           });
       });
     });
+  }
+
+  /** E4-R86 (H2): the RESULT fingerprint that keys the identical-call streak.
+   *  Based on normalized result STATUS + redacted output/error code (never raw
+   *  content), matching the plan §R86.2 requirement that a stall fingerprint
+   *  cover "tool name, redacted args, result status". A status change (success
+   *  → failure) or an output change both break the streak — each is feedback
+   *  the model can act on. The pattern-window fingerprint in `recordStallTrace`
+   *  is output-only by design (its classifier distinguishes errorCode
+   *  separately); the streak is intentionally at least as discriminating. */
+  private resultFingerprintOf(result: ToolResult): string {
+    if (result.status === "success") {
+      return computeArgsHash({ status: result.status, output: result.output ?? "" });
+    }
+    if (result.status === "failed" && result.error !== undefined) {
+      return computeArgsHash({ status: result.status, errorCode: result.error.code });
+    }
+    return computeArgsHash({ status: result.status });
+  }
+
+  /** E4-R86 (H2): note one executed call into the identical-call streak,
+   *  result-aware. Returns the streak plus the observability flags: when the
+   *  SAME call+args produced a DIFFERENT result, `progressCancelled` is set and
+   *  `wouldBeStreak` is what the streak would have been without the cancel. */
+  private noteExecutedCall(
+    state: AgentState,
+    call: ToolCall,
+    result: ToolResult,
+  ): { streak: number; progressCancelled?: boolean; wouldBeStreak?: number } {
+    const streak = state.noteToolCall(call.name, call.args, this.resultFingerprintOf(result));
+    if (state.lastCallCancelledStreak) {
+      return { streak, progressCancelled: true, wouldBeStreak: state.lastCallWouldBeStreak };
+    }
+    return { streak };
   }
 
   /** P2-41: record one executed tool call into the turn's stall window. The

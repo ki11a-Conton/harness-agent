@@ -293,6 +293,22 @@ export interface RunLimitReachedPayload {
   pattern?: string;
 }
 
+/** stall.progress_detected — E4-R86 (H2): a repeated call+args was about to be
+ *  counted as an identical-call stall, and a CHANGED result fingerprint
+ *  cancelled the streak. This is the observable fix path: it fires exactly when
+ *  the result-aware identical-call gate decides "progress, not a stall", so a
+ *  future analysis can count how often the fix actually engaged — instead of
+ *  inferring it from the final pass rate. Payload is deliberately minimal and
+ *  secret-free: tool name + counts only (never raw args or output). */
+export interface StallProgressDetectedPayload {
+  tool?: string;
+  /** The identical-call streak that WOULD have been counted had the result not
+   *  changed (the streak value before the cancel). */
+  wouldBeStreak?: number;
+  /** The repeated-call threshold in force (maxRepeatedIdenticalToolCalls). */
+  allowed?: number;
+}
+
 /** turn.completed / turn.failed / turn.cancelled — a turn reached a terminal
  *  state. P19-1: the runtime stamps the verified-completion `grade` and the
  *  bounded `terminationReason` ONCE here; consumers read them from this event
@@ -451,6 +467,7 @@ export interface EventPayloadMap {
   "turn.cancelled": TurnTerminalPayload;
   "recovery.decided": RecoveryDecidedPayload;
   "mcp.connect_failed": McpConnectFailedPayload;
+  "stall.progress_detected": StallProgressDetectedPayload;
   "protocol.repaired": ProtocolRepairPayload;
   "protocol.repair_failed": ProtocolRepairPayload;
   "subagent.started": SubagentPayload;
@@ -515,6 +532,7 @@ export const EVENT_PAYLOAD_TYPES = {
   "turn.cancelled": true,
   "recovery.decided": true,
   "mcp.connect_failed": true,
+  "stall.progress_detected": true,
   "protocol.repaired": true,
   "protocol.repair_failed": true,
   "subagent.started": true,

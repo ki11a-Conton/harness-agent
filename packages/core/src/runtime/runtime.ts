@@ -133,7 +133,7 @@ import { RecoveryController } from "./recovery-controller.js";
  * The rest (alternating loop, repeated error, unchanged repeated read,
  * verification fix loop, no-progress churn) were previously invisible.
  */
-const DEFAULT_ENABLED_STALL_PATTERNS: readonly StallPattern[] = [
+export const DEFAULT_ENABLED_STALL_PATTERNS: readonly StallPattern[] = [
   "alternating_loop",
   "repeated_error",
   "repeated_read_no_change",
@@ -1273,7 +1273,7 @@ export class AgentRuntime {
     budget: RunBudgetTracker,
   ): Promise<ToolResultsAction> {
     const { sessionId, turnId, signal, agent } = ctx;
-        for (const { call, result, streak } of executed) {
+        for (const { call, result, streak, progressCancelled, wouldBeStreak } of executed) {
           // P0-12: update_plan is a runtime-internal tool that applies
           // working state mutations directly — no external execution.
           if (call.name === "update_plan") {
@@ -1333,6 +1333,17 @@ export class AgentRuntime {
               // boundary exists — resume can proceed from it).
               await this.failAt("tool.checkpointed", { sessionId, turnId, toolCallId: call.id, tool: call.name });
             }
+          }
+          // E4-R86 (H2): a repeated call+args whose RESULT CHANGED is observable
+          // progress — the identical-call streak was cancelled, so the turn must
+          // NOT be terminated for it. Emit structured evidence of the fix path
+          // (countable, secret-free: tool name + counts only).
+          if (progressCancelled === true) {
+            await this.emit(sessionId, "stall.progress_detected", {
+              tool: call.name,
+              wouldBeStreak: wouldBeStreak ?? streak,
+              allowed: this.maxRepeatedIdenticalToolCalls,
+            }, turnId);
           }
           if (
             this.maxRepeatedIdenticalToolCalls > 0 &&

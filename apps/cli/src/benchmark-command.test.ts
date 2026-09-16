@@ -1351,6 +1351,33 @@ describe("E4-R13: confirmed plan binds the full identity (N03/N04/N05)", () => {
     expect(again.planDigest).toBe(base);
   });
 
+  it("N03/E4-R86 (H2): a stall-threshold change changes the plan digest (threshold is digest-bound)", async () => {
+    // Plan §R86.2: the loop-detection threshold MUST enter the execution-plan
+    // digest. Two plans differing ONLY in maxRepeatedIdenticalToolCalls must
+    // hash differently.
+    const { preflightBenchmark } = await import("./benchmark-command.js");
+    const a = await preflightBenchmark(baseOpts(), oneCase, "offline-test", testIdentityFacts());
+    expect(a.ok).toBe(true);
+    const base = a.planDigest!;
+    const stricterFacts = testIdentityFacts({
+      effectiveModelParams: {
+        budgetTokens: 32000,
+        stallPolicy: {
+          maxRepeatedIdenticalToolCalls: 2,
+          maxStallRecoveries: 1,
+          maxPatternStallRecoveries: 1,
+          enabledStallPatterns: [],
+        },
+      },
+    });
+    const stricter = await preflightBenchmark(baseOpts(), oneCase, "offline-test", stricterFacts);
+    expect(stricter.ok).toBe(true);
+    expect(stricter.planDigest).not.toBe(base);
+    // Deterministic: same threshold → same digest.
+    const again = await preflightBenchmark(baseOpts(), oneCase, "offline-test", stricterFacts);
+    expect(again.planDigest).toBe(stricter.planDigest);
+  });
+
   it("N03: the confirmed plan is carried into preflight and matches the identity surface", async () => {
     const { preflightBenchmark } = await import("./benchmark-command.js");
     const facts = testIdentityFacts({ providerId: "prov-x", modelId: "model-y", sourceSha: "c".repeat(40) });

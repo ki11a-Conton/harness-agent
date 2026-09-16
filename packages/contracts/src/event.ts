@@ -17,6 +17,7 @@ export const EVENT_TYPES = [
   "model.retry",
   "retry.provider",
   "retry.stallRecovery",
+  "stall.progress_detected",
   "retry.reconciliation",
   "retry.mcpReconnect",
   "mcp.connect_failed",

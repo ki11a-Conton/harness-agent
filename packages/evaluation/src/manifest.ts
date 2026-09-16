@@ -95,6 +95,18 @@ export interface BenchmarkEffectiveConfig {
   };
   /** Effective model-visible tool set (normalized, sorted). */
   tools: string[];
+  /**
+   * E4-R86 (H2): the loop-detection (identical-call stall) threshold in force.
+   * Recorded so a change to stall detection is visible in the effective config
+   * hash instead of silently living in runtime defaults. Optional for
+   * backward compatibility with pre-R86 manifests.
+   */
+  stallPolicy?: {
+    maxRepeatedIdenticalToolCalls: number;
+    maxStallRecoveries: number;
+    maxPatternStallRecoveries: number;
+    enabledStallPatterns: readonly string[];
+  };
   /** sha256 over the stable-serialized normalized tool set. */
   toolSetHash: string;
   /** sha256 over the stable-serialized full effective config (without the

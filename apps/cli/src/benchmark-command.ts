@@ -13,7 +13,7 @@ import type {
 } from "@ar/contracts";
 import { newAgentId, newEventId, newMemoryId, AdaptiveRecoveryPlanner } from "@ar/contracts";
 import type { ContextBlock, MemoryScope } from "@ar/contracts";
-import { AgentRuntime, defaultSandboxPolicy } from "@ar/core";
+import { AgentRuntime, DEFAULT_ENABLED_STALL_PATTERNS, defaultSandboxPolicy } from "@ar/core";
 import { RecoveryPolicy } from "@ar/core";
 import { ContextPipeline } from "@ar/context";
 import { resolveCapabilities, budgetForCapabilities } from "@ar/model";
@@ -288,6 +288,10 @@ export async function runBenchmarkCommand(
     thresholdDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
     effectiveModelParams: {
       budgetTokens: budgetForCapabilities(resolveCapabilities({ providerId, modelId })) ?? opts.budgetTokens,
+      // E4-R86 (H2): the stall threshold is part of the effective model/plan
+      // params — bound into the execution-plan digest (effectiveModelParams is
+      // hashed with the whole plan), so a loop-detection change is visible.
+      stallPolicy: BENCHMARK_STALL_POLICY,
     },
   };
 
@@ -409,6 +413,9 @@ async function executeBenchmark(
       stepBudgetCompletion: armMechanisms.budgetAwareCompletion,
     },
     tools: [readFileTool.name, writeFileTool.name, editFileTool.name, searchFilesTool.name, execTool.name],
+    // E4-R86 (H2): the stall threshold is part of the effective config record
+    // AND its hash — a loop-detection change must be visible in provenance.
+    stallPolicy: BENCHMARK_STALL_POLICY,
   });
   const manifest = await buildRunManifest({
     model: modelId,
@@ -752,7 +759,7 @@ async function runPairedPromotion(
     candidateConfigHash,
     providerId: identityFacts.providerId,
     modelId: identityFacts.modelId,
-    effectiveModelParams: { budgetTokens: defaultBudgetTokens },
+    effectiveModelParams: { budgetTokens: defaultBudgetTokens, stallPolicy: BENCHMARK_STALL_POLICY },
     sourceSha: identityFacts.sourceSha,
     treeFingerprint: identityFacts.treeFingerprint,
     limits: {
@@ -1619,6 +1626,23 @@ export const BENCHMARK_PERMISSIONS: PermissionPolicy = {
   ],
 };
 
+/**
+ * E4-R86 (H2): the benchmark's stall-detection threshold, declared ONCE and
+ * bound into the runtime wiring, the effective config hash AND the
+ * execution-plan digest — so a future change to the loop-detection threshold
+ * is digest-visible instead of silently living in runtime defaults. Values are
+ * the RUNTIME DEFAULTS (maxRepeatedIdenticalToolCalls=3, one stall recovery,
+ * pattern recoveries=1): the R86 fix makes the identical-call streak
+ * result-aware; it does NOT raise any limit (plan §R86 forbids raising
+ * maxToolCalls/iterations/timeout as the fix).
+ */
+export const BENCHMARK_STALL_POLICY = {
+  maxRepeatedIdenticalToolCalls: 3,
+  maxStallRecoveries: 1,
+  maxPatternStallRecoveries: 1,
+  enabledStallPatterns: [...DEFAULT_ENABLED_STALL_PATTERNS],
+} as const;
+
 export const BENCHMARK_SYSTEM_PROMPT = [
   "You are the harness agent working inside a task workspace.",
   "Capabilities:",
@@ -2073,6 +2097,12 @@ async function runOneCase(
         ? { ...defaultSandboxPolicy(), process: { ...defaultSandboxPolicy().process, confinement: opts.processConfinement } }
         : defaultSandboxPolicy(),
       maxIterationsPerTurn: 30,
+      // E4-R86 (H2): the recorded stall threshold is the ACTUALLY WIRED one
+      // (same runtime defaults as before — this binds what was implicit).
+      maxRepeatedIdenticalToolCalls: BENCHMARK_STALL_POLICY.maxRepeatedIdenticalToolCalls,
+      maxStallRecoveries: BENCHMARK_STALL_POLICY.maxStallRecoveries,
+      maxPatternStallRecoveries: BENCHMARK_STALL_POLICY.maxPatternStallRecoveries,
+      enabledStallPatterns: BENCHMARK_STALL_POLICY.enabledStallPatterns,
       context: {
         pipeline: new ContextPipeline(),
         budget: {
@@ -2532,6 +2562,10 @@ function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudgetTokens
       dynamic: mech.adaptiveContextDynamic,
     },
     maxIterationsPerTurn: 30,
+    // E4-R86 (H2): the loop-detection threshold is part of the effective
+    // runtime wiring — a change to stall detection MUST change the effective
+    // config hash (and, via effectiveModelParams below, the plan digest).
+    stallPolicy: BENCHMARK_STALL_POLICY,
     toolOutputBudget: { maxInlineBytes: 16_000 },
     judgeVersion: DEFAULT_JUDGE_VERSION,
     candidate,

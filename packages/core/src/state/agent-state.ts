@@ -91,8 +91,17 @@ export class AgentState {
   private updatedAt: number;
   private completedAt?: number;
   private lastToolKey: string | undefined;
+  private lastToolCallKey: string | undefined;
+  private lastResultFingerprint: string | undefined;
   private identicalToolStreak = 0;
   private stallRecoveriesUsed = 0;
+  /** E4-R86 (H2): the most recent `noteToolCall` cancelled a pending identical
+   *  streak because the same call+args produced a DIFFERENT result (observable
+   *  progress). Read by the runtime to emit `stall.progress_detected`. */
+  private lastCallProgressCancelled = false;
+  /** The identical-call streak that WOULD have been counted had the result not
+   *  changed (the pre-cancel streak + 1). */
+  private pendingWouldBeStreak = 0;
   /** P2-41: rolling window of recent tool executions for pattern-based stall
    *  detection (bounded to STALL_WINDOW_SIZE). Populated by `recordToolCall`;
    *  `recordProgress`/`clearStallWindow` reset it when a progress signal lands. */
@@ -180,14 +189,56 @@ export class AgentState {
 
   /**
    * Stall detection (plan.md Phase 2): track consecutive identical tool calls
-   * (same name + same args, key-stable). Returns the current streak length —
-   * the runtime terminates the turn when it reaches its budget.
+   * (same name + same args + same RESULT, key-stable). Returns the current
+   * streak length — the runtime terminates the turn when it reaches its budget.
+   *
+   * E4-R86 (H2): the streak key now includes the result fingerprint when the
+   * caller supplies one. A repeated call+args whose result CHANGED produces a
+   * different key → the streak resets to 1 (observable progress, not a stall),
+   * exactly as `recordToolCall`/`priorResultChanged` already document. Before
+   * R86 the key was name+args ONLY, so a polling/verification loop that kept
+   * advancing was terminated as a stall. `lastCallProgressCancelled` reports
+   * when this call cancelled a pending streak, so the runtime can emit
+   * `stall.progress_detected` (structured evidence of the fix path).
    */
-  noteToolCall(name: string, args: Record<string, unknown>): number {
-    const key = `${name}:${stableStringify(args)}`;
-    this.identicalToolStreak = key === this.lastToolKey ? this.identicalToolStreak + 1 : 1;
+  noteToolCall(name: string, args: Record<string, unknown>, resultFingerprint?: string): number {
+    const callKey = `${name}:${stableStringify(args)}`;
+    const key = resultFingerprint === undefined ? callKey : `${callKey}:${resultFingerprint}`;
+    const sameCall = callKey === this.lastToolCallKey;
+    if (resultFingerprint === undefined) {
+      // No result information from the caller → keep the ORIGINAL pre-R86
+      // contract (same name+args advances the streak). A caller that cannot
+      // report a result fingerprint must not silently lose stall termination.
+      this.identicalToolStreak = sameCall ? this.identicalToolStreak + 1 : 1;
+      this.lastCallProgressCancelled = false;
+      this.pendingWouldBeStreak = 0;
+    } else {
+      const sameResult =
+        this.lastResultFingerprint !== undefined && resultFingerprint === this.lastResultFingerprint;
+      const wouldBe = this.identicalToolStreak + 1;
+      this.lastCallProgressCancelled = sameCall && !sameResult;
+      this.pendingWouldBeStreak = this.lastCallProgressCancelled ? wouldBe : 0;
+      this.identicalToolStreak = sameCall && sameResult ? wouldBe : 1;
+    }
     this.lastToolKey = key;
+    this.lastToolCallKey = callKey;
+    this.lastResultFingerprint = resultFingerprint;
     return this.identicalToolStreak;
+  }
+
+  /**
+   * E4-R86 (H2): did the most recent `noteToolCall` cancel a pending identical
+   * streak because the same call+args produced a DIFFERENT result? The runtime
+   * emits `stall.progress_detected` when this is true.
+   */
+  get lastCallCancelledStreak(): boolean {
+    return this.lastCallProgressCancelled;
+  }
+
+  /** E4-R86 (H2): the identical-call streak that WOULD have been counted had
+   *  the result not changed (0 when the last call did not cancel a streak). */
+  get lastCallWouldBeStreak(): number {
+    return this.pendingWouldBeStreak;
   }
 
   /**
@@ -217,6 +268,10 @@ export class AgentState {
   resetToolStreak(): void {
     this.identicalToolStreak = 0;
     this.lastToolKey = undefined;
+    this.lastToolCallKey = undefined;
+    this.lastResultFingerprint = undefined;
+    this.lastCallProgressCancelled = false;
+    this.pendingWouldBeStreak = 0;
   }
 
   /**

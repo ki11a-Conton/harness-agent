@@ -769,6 +769,7 @@ describe("P26-2: semantic journal classification", () => {
       "tool.requested", "tool.output", "tool.progress", "tools.selected",
       "context.built", "context.candidate", "context.selected", "context.dropped",
       "security.injection_denied", "security.secret_redacted", "run.limit_reached",
+      "stall.progress_detected",
       "human.message", "human.cancel", "memory.retrieved", "reflection.completed",
       "command.discovered", "runtime.degraded",
     ] as const;

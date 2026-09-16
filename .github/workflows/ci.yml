@@ -307,6 +307,56 @@ jobs:
 
           exit 0
 
+      # E4-R86 (H2): the progress-blind identical-call gate is fixed, and this
+      # step proves the FIX PATH is reachable and observable on BOTH platforms,
+      # not merely that a final pass rate moved. It asserts the structured
+      # evidence the fix emits (`stall.progress_detected`) and the metric that
+      # counts it, using the offline ScriptedModelProvider (0 provider calls,
+      # no API key, no network).
+      - name: Stall-gate fix — structured evidence is observable (E4-R86)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'stop'
+
+          # 1. The offline H2 suites: the flipped R85 reproducer, the
+          #    counterexample + security regression, and the offline replay over
+          #    the committed R85 taxonomy record. All deterministic, no network.
+          pnpm exec vitest run `
+            packages/core/src/runtime/r85-h2-progress-blind-gate.test.ts `
+            packages/core/src/runtime/r86-h2-offline-replay.test.ts `
+            packages/core/src/state/agent-state.test.ts 2>&1 | Write-Host
+          if ($LASTEXITCODE -ne 0) { throw "the R86 H2 suites failed (exit $LASTEXITCODE)" }
+
+          # 2. The threshold must be BOUND INTO the effective config and the
+          #    execution-plan digest, not left implicit in runtime defaults
+          #    (plan R86.2.5). A change to it must move the digest.
+          pnpm exec vitest run apps/cli/src/benchmark-command.test.ts `
+            -t "stall-threshold change changes the plan digest" 2>&1 | Write-Host
+          if ($LASTEXITCODE -ne 0) { throw "the stall-threshold digest binding test failed (exit $LASTEXITCODE)" }
+
+          # 3. The event type is declared, has a typed payload, and is
+          #    OBSERVABILITY-ONLY (never a semantic journal record: the fix must
+          #    not alter durable truth or replay semantics).
+          $eventSrc = Get-Content packages/contracts/src/event.ts -Raw
+          if ($eventSrc -notmatch '"stall\.progress_detected"') { throw "the stall.progress_detected event type is not declared" }
+          $semantic = [regex]::Match($eventSrc, 'SEMANTIC_JOURNAL_EVENTS[^=]*=\s*new Set<EventType>\(\[(.*?)\]\)', 'Singleline').Groups[1].Value
+          if ($semantic -match 'stall\.progress_detected') { throw "stall.progress_detected was added to SEMANTIC_JOURNAL_EVENTS — it must stay observability-only" }
+          $payloadSrc = Get-Content packages/contracts/src/event-payloads.ts -Raw
+          if ($payloadSrc -notmatch 'StallProgressDetectedPayload') { throw "the stall.progress_detected payload type is not declared" }
+
+          # 4. The metric that makes the fix path countable exists.
+          $metricsSrc = Get-Content packages/observability/src/metrics.ts -Raw
+          if ($metricsSrc -notmatch 'stall_progress_cancellations') { throw "the stall_progress_cancellations metric is not derived" }
+
+          # 5. The threshold is recorded in the effective config + digest inputs.
+          $manifestSrc = Get-Content packages/evaluation/src/manifest.ts -Raw
+          if ($manifestSrc -notmatch 'stallPolicy') { throw "the stall policy is not part of the effective config" }
+          $benchSrc = Get-Content apps/cli/src/benchmark-command.ts -Raw
+          if ($benchSrc -notmatch 'BENCHMARK_STALL_POLICY') { throw "the benchmark path does not pin the stall policy" }
+
+          Write-Host "E4-R86 H2 fix path observable on $($env:RUNNER_OS): suites green, event observability-only, metric derived, threshold digest-bound"
+          exit 0
+
       # E4-R84: the runner's own control flow (stage -> dry-run -> digest ->
       # persist -> resume-skip -> validate), offline, 0 provider calls.
       # Windows-only: it drives the PowerShell runner that produced the real

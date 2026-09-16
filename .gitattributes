@@ -22,3 +22,19 @@ scripts/benchmark/fixtures/r84-campaign/** text eol=lf
 # nothing depends on its stored bytes, so pin it to LF; this is the same fix the
 # two rules above already apply to their own files.
 .github/workflows/*.yml text eol=lf
+
+# E4-R86: four source files whose git blobs are historically stored WITH CRLF
+# (`git ls-files --eol` reports `i/crlf` for each). Every line added to them
+# therefore ends in a CR, which `git diff --check` reads as trailing whitespace —
+# the same false positive R84 documented above for ci.yml (commit 0ca421e: 194
+# warnings on one file). Unlike that file these are TypeScript sources whose real
+# change is small, so pinning them to `text eol=lf` would rewrite every line of
+# the blob and bury a ~10-line change under a whole-file renormalization.
+# Declaring the CR as part of the line ending is byte-only (no blob changes at
+# all) and was verified ADDITIVE in a scratch repo: `whitespace=cr-at-eol` still
+# reports genuine trailing whitespace and blank-line-at-EOF, for both LF and CRLF
+# files. It never suppresses a real whitespace error.
+packages/contracts/src/contracts.test.ts whitespace=cr-at-eol
+packages/core/src/state/agent-state.test.ts whitespace=cr-at-eol
+packages/evaluation/src/manifest.ts whitespace=cr-at-eol
+packages/observability/src/metrics.ts whitespace=cr-at-eol

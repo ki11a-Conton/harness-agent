@@ -42,6 +42,11 @@ export interface RunMetrics {
   /** P20-1: model calls with a completed usage record (per-call identity;
    *  every record is attributable by its callId). */
   model_call_count: number;
+  /** E4-R86 (H2): how many times a repeated call+args produced a DIFFERENT
+   *  result and was therefore treated as observable progress instead of a stall
+   *  (`stall.progress_detected` events). Absent when zero — keeps pre-R86
+   *  serialized metrics shape-compatible. */
+  stall_progress_cancellations?: number;
 }
 
 /** Default price assumption (USD per token) used only when no explicit cost is recorded. */
@@ -214,5 +219,8 @@ export function computeMetrics(events: AgentEvent[]): RunMetrics {
     cache_tokens_read: cacheRead,
     cache_tokens_created: cacheCreated,
     model_call_count: modelCallCount,
+    ...(count(events, "stall.progress_detected") > 0
+      ? { stall_progress_cancellations: count(events, "stall.progress_detected") }
+      : {}),
   };
 }
