@@ -15,10 +15,13 @@ promoted to make R86 look productive.
 | Field | Value |
 | --- | --- |
 | Starting SHA | `9da84905abdb60dca11b1f95eb767be1c5b58ef1` |
+| Ending SHA (implementation) | `a60d352c335cb0f5c8cbc656eadd9146acbd03ff` |
+| Ending SHA (acceptance proofs) | `9af4c8b` — leak + validator-agreement tests, CI result |
 | Branch | `main` (tracking `origin/main`) |
 | Environment (local) | Windows NT 10.0.19044.0 (win32), Node v24.18.1, pnpm 11.21.0 |
 | Provider/model calls this task | **0** (0 paid, 0 free) — §8 |
 | Cases re-run this task | **0** |
+| CI | run `35054795007` — **all 5 jobs success**, R85 step green on windows + ubuntu (§12.2) |
 | Verdict | `CONFIRMED_HARNESS_DEFECT` (H2); H1 `BELOW_SAMPLE_BAR` |
 
 ---
@@ -439,7 +442,7 @@ but under-evidenced mechanism for a future round, not smuggled into R86.
 | Gate | Result |
 | --- | --- |
 | `pnpm build` (`tsc -b`) | ✅ clean |
-| `pnpm test` | ✅ 333 files, 6,052 passed, 3 skipped, 0 failed |
+| `pnpm test` | ✅ 333 files, 6,054 passed, 3 skipped, 0 failed |
 | `pnpm test:coverage` | ✅ 90.18% statements |
 | `pnpm docs:verify` | ✅ ALL CHECKS PASS |
 | `git diff --check` | ✅ exit 0 |
@@ -459,9 +462,12 @@ failed.**
 
 ### 12.2 CI run
 
-Run `35054795007` on `a60d352`. The new R85 step executed on **both**
+Run `35054795007` on `a60d352` — **all 5 jobs success**:
+`windows-latest` verify, `ubuntu-latest` verify, ubuntu cold-start, ubuntu
+coverage gate, release attestation. The new R85 step executed on **both**
 `windows-latest` and `ubuntu-latest` and the pinned digest assertion passed on
-both, which is the plan's cross-platform requirement. The step was additionally
+both, which is the plan's cross-platform requirement — the same offline fixture
+produced the same `triageDigest` on Windows and Linux. The step was additionally
 executed locally end-to-end (§9) before being committed, so a failure here would
 have indicated a genuine platform difference rather than an untested script.
 
