@@ -12,11 +12,12 @@ report, and keeps the operator's raw data private.
 | Field | Value |
 | --- | --- |
 | Starting SHA | `6693a6a52fb488bbe3273625eca8c1adb0981957` |
+| Ending SHA | `4ed52a97df1b6a69bc3802d845e573cb1168abb5` |
 | Branch | `main` (tracking `origin/main`) |
 | Environment (local) | Windows NT 10.0.19044.0 (win32), Node v24.18.1, pnpm 11.21.0 |
-| Provider/model calls this task | **0** (0 paid, 0 free) — verified in §6 |
+| Provider/model calls this task | **0** (0 paid, 0 free) — §9.2 |
 | Cases re-run this task | **0** |
-| Ending SHA | see §8 (the commit carrying this report) |
+| Files changed | 27 (7 modified, 20 added) |
 
 ---
 
@@ -436,43 +437,65 @@ outside the repository.
 
 ## 8. Local gate results
 
+All gates below were run **after** committing, on a clean tree
+(`4ed52a9`), because the promotion-chain tests require it (§8.1).
+
 | Command | Exit | Notes |
 | --- | --- | --- |
-| `pnpm typecheck` (`tsc -b`) | **0** | clean |
+| `pnpm typecheck` (`tsc -b`) | **0** | clean, no output |
 | `pnpm build` (`tsc -b`) | **0** | clean |
-| `pnpm exec vitest run packages/evaluation` | **0** | 86 files / 1,096 tests passed |
+| `pnpm test` | **0** | **330 files / 5,988 passed**, 3 skipped, **0 failed** |
+| `pnpm test:coverage` | **0** | thresholds met, incl. `packages/evaluation` lines 85 / branches 70 |
+| `pnpm exec vitest run packages/evaluation` | **0** | 86 files / 1,096 tests |
 | `campaign-validate.test.ts` | **0** | **41 tests passed** |
+| `apps/cli/src/e4-r84-campaign-cli.test.ts` | **0** | **21 tests passed** |
 | `pwsh scripts/benchmark/selfcheck-campaign-runner.ps1` | **0** | **51 assertions passed**, 0 provider calls |
 | `node … benchmark campaign validate .ci/bench-grok` | **0** | VALID — 86 / 21 / 1,327 / 4,051,523 / 440,594 |
+| `node … campaign validate .ci/bench-grok --json` | **0** | `ok=true`, `storedCases=86`, `passed=21`, `processRunSuccesses=86`, `processRunFailures=0`, digest `d3247ca8…1782e6` |
 | `node … campaign validate .ci/bench-grok --evidence …` | **0** | tamper-detecting re-check |
 | 5 negative fixtures | **1** each | stable `CAMPAIGN_*` reason codes (§4.2) |
 | `pnpm docs:verify` | **0** | `ALL CHECKS PASS` |
 | `git diff --check` | **0** | no whitespace errors |
 
-### 8.1 A note on `pnpm test` and the clean-tree requirement
+### 8.1 The clean-tree requirement, and why the pre-commit run was red
 
-`pnpm test` reports 3 failures **while this task's changes are uncommitted**:
-`apps/cli/src/e4-09-production-e2e.test.ts` (4 tests),
-`apps/cli/src/e4-r55-failure-wiring.test.ts` (1 test), and one further file.
+Before committing, `pnpm test` reported **3 failing files / 6 failing tests**:
+`apps/cli/src/e4-09-production-e2e.test.ts` (4), `apps/cli/src/e4-r55-failure-wiring.test.ts` (1),
+and `apps/cli/src/e4-r09-production-e2e.test.ts`-style chain tests (1). This was
+**not** a regression from this task, and it was proven so rather than assumed:
 
-This is **not** a regression from this task. Those tests drive the *real*
-promotion chain, and the benchmark refuses to produce a promotion-eligible run
-on a tree that is not provably clean:
+- the failing assertion is the benchmark refusing to run, not a broken test:
+  ```
+  agent benchmark: a promotion-eligible run requires a CLEAN, PROVABLE source tree
+  at execution time — commit or stash changes and re-confirm the plan
+    - source tree is not provably clean
+    - the confirmed plan was made against a dirty tree — re-confirm on a clean tree
+  ```
+- `e4-r55-failure-wiring.test.ts` states the requirement in its own message
+  ("E4-R55 requires a CLEAN committed working tree … Commit or stash first"), and
+  the dirty-state list it printed **was this task's own change set**;
+- stashing the changes made the same file pass **5/5** at `HEAD`, and restoring
+  them made it fail again — the failure tracks the dirty tree, not the code;
+- after committing, `pnpm test` is **330 files / 5,988 passed / 0 failed**.
 
-```
-agent benchmark: a promotion-eligible run requires a CLEAN, PROVABLE source tree
-at execution time — commit or stash changes and re-confirm the plan
-  - source tree is not provably clean
-  - the confirmed plan was made against a dirty tree — re-confirm on a clean tree
-```
+This is exactly why the plan mandates one commit per task. It is recorded here
+rather than hidden, and the pre-commit red is **not** claimed as a pass.
 
-`e4-r55-failure-wiring.test.ts` says so in its own assertion message ("E4-R55
-requires a CLEAN committed working tree … Commit or stash first"), and its
-expected `git status --short` output was literally the R84 change list. The
-failures were confirmed **not** to reproduce on a clean `HEAD` (stash → the same
-test file passes 5/5 → restore). They disappear once this task is committed,
-which is why the plan mandates one commit per task; the post-commit result is
-recorded in §9.
+### 8.2 A note on `git diff --check` and `.github/workflows/ci.yml`
+
+`git diff --check` initially reported trailing whitespace on **every added line**
+of `ci.yml`. The cause was not this task's content: the file's git blob was
+historically stored **with CRLF** (`git ls-files --eol` reported `i/crlf`), so
+each line ends in `\r`, which the check reads as trailing whitespace. The same
+commit that last touched it (`0ca421e`, E4-R82) produced **194** such warnings on
+that single file.
+
+Rather than leave a noisy check, `.gitattributes` now pins
+`.github/workflows/*.yml` to `text eol=lf` and the file was renormalized once.
+The renormalization is **byte-only**: `git diff --ignore-cr-at-eol` against the
+previous revision shows the semantic change is exactly the 81 added lines, all
+five jobs (`verify`, `coverage`, `cold-start-ubuntu`, `release-attestation`, and
+the `push` trigger) are intact, and `git diff --check` is now clean.
 
 ---
 
@@ -510,5 +533,21 @@ recorded in §9.
 | Field | Value |
 | --- | --- |
 | Workflow | `.github/workflows/ci.yml` — job `verify`, matrix `ubuntu-latest` + `windows-latest` |
+| Commit | `4ed52a97df1b6a69bc3802d845e573cb1168abb5` |
 | Run id | recorded after the push carrying this report |
 | Expected | all jobs success, including the E4-R84 campaign steps on both platforms and the unchanged Linux cold-start |
+
+### 9.2 Provider-call accounting
+
+| Bucket | Count |
+| --- | --- |
+| Paid provider calls | **0** |
+| Free/stub provider calls | **0** |
+| Cases executed | **0** |
+| Cases re-run | **0** |
+| Model HTTP requests | **0** |
+
+The only `node` invocations against the real campaign were read-only
+validations of already-stored JSON. Every test in this task runs offline against
+either a temp fixture or the committed synthetic fixture; the offline runner
+self-check stops each case after the CLI's `--dry-run` plan digest.
