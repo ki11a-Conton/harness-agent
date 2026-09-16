@@ -1,0 +1,169 @@
+{
+  "schemaVersion": "e4-r87-case-selection-v1",
+  "title": "E4-R87 Phase A — frozen zero-call replay case selection (digest-bound before execution)",
+  "boundBeforeExecution": true,
+  "selectionRule": {
+    "universe": "R85 attributed dev-set only: the 54 non-holdout records in docs/evidence/e4-r85-failure-taxonomy.json under suites regression/adversarial/stress. R83 holdout per-case data is NEVER read (only aggregate 9/32 in historical background).",
+    "ruleT": "Select EVERY case whose recorded fingerprint equals the confirmed H2 target fingerprint c1aae66dc97dd795d058737188f59d9a4ccf0da41b3b0054eb86d5c3f14b28d8 (the progress-blind identical-call gate). No cherry-picking: all matching cases are included (exactly 3).",
+    "ruleC": "Deterministic counterexamples, one per recorded termination class that is NOT caused by the target mechanism, selected by smallest recorded toolCalls (tie-break: lexicographic caseId): (1) tool_limit WITH tool_failures>0 (MODEL_BEHAVIOR, H2 record's own named counterexample class), (2) verified_complete, (3) agent_limit (iteration budget). These must be outcome-invariant across arms.",
+    "traceRule": "Each case's replay trace is a minimal scripted reproduction of its recorded termination class (identical calls for tool_limit; different-args calls for verified_complete; text-steps for agent_limit). Replay is a MECHANISM replay (same as E4-R86), not a literal transcript replay: the committed taxonomy records signatures, not transcripts.",
+    "armRule": "Both arms run the same runner with identical identity, limits (maxRepeatedIdenticalToolCalls=3, maxStallRecoveries=1, maxPatternStallRecoveries=1, default stall patterns, maxIterationsPerTurn=20, maxParallelToolCalls=1) and the same case order. The ONLY difference is the pre-declared fix: baseline arm feeds NO result fingerprint (pre-R86 streak semantics, byte-identical to source SHA e9776ba); candidate arm feeds the R86 result fingerprint (source SHA a203737).",
+    "noSwapRule": "This list is frozen and digest-bound BEFORE any replay executes; cases may not be swapped after candidate results are seen.",
+    "failClosedRule": "The runner recomputes this digest from the committed file and aborts on mismatch (plan R87 #5)."
+  },
+  "cases": [
+    {
+      "id": "regression/reg-16-cicd-step",
+      "suite": "regression",
+      "role": "TARGET",
+      "recorded": {
+        "outcome": "failed",
+        "termination": "tool_limit",
+        "modelCalls": 12,
+        "toolCalls": 12,
+        "toolFailures": 0,
+        "stallRecovery": 2,
+        "fingerprint": "c1aae66dc97dd795d058737188f59d9a4ccf0da41b3b0054eb86d5c3f14b28d8"
+      },
+      "trace": { "kind": "identical-changing", "tool": "echo", "args": { "text": "same" }, "callCount": 12 },
+      "expect": {
+        "baseline": { "status": "failed", "h2SignatureFires": true, "note": "progress-blind gate reproduces the recorded H2 fingerprint class" },
+        "candidate": { "status": "completed", "h2SignatureFires": false, "note": "R86 fix: progress detected, identical-call gate must not fire" }
+      }
+    },
+    {
+      "id": "stress/stress-many-artifacts",
+      "suite": "stress",
+      "role": "TARGET",
+      "recorded": {
+        "outcome": "failed",
+        "termination": "tool_limit",
+        "modelCalls": 4,
+        "toolCalls": 4,
+        "toolFailures": 0,
+        "stallRecovery": 1,
+        "fingerprint": "c1aae66dc97dd795d058737188f59d9a4ccf0da41b3b0054eb86d5c3f14b28d8"
+      },
+      "trace": { "kind": "identical-changing", "tool": "echo", "args": { "text": "same" }, "callCount": 4 },
+      "expect": {
+        "baseline": { "status": "failed", "h2SignatureFires": true },
+        "candidate": { "status": "completed", "h2SignatureFires": false }
+      }
+    },
+    {
+      "id": "stress/stress-very-long-json",
+      "suite": "stress",
+      "role": "TARGET",
+      "recorded": {
+        "outcome": "failed",
+        "termination": "tool_limit",
+        "modelCalls": 6,
+        "toolCalls": 6,
+        "toolFailures": 0,
+        "stallRecovery": 2,
+        "fingerprint": "c1aae66dc97dd795d058737188f59d9a4ccf0da41b3b0054eb86d5c3f14b28d8"
+      },
+      "trace": { "kind": "identical-changing", "tool": "echo", "args": { "text": "same" }, "callCount": 6 },
+      "expect": {
+        "baseline": { "status": "failed", "h2SignatureFires": true },
+        "candidate": { "status": "completed", "h2SignatureFires": false }
+      }
+    },
+    {
+      "id": "regression/reg-24-error-handling",
+      "suite": "regression",
+      "role": "COUNTEREXAMPLE",
+      "recorded": {
+        "outcome": "failed",
+        "termination": "tool_limit",
+        "modelCalls": 4,
+        "toolCalls": 4,
+        "toolFailures": 3,
+        "stallRecovery": 1,
+        "fingerprint": "c09e43b1fc99f763907b98d6bb09df0588428e464657892e0d163f6298964252"
+      },
+      "trace": { "kind": "identical-failing", "tool": "echo", "args": { "text": "same" }, "callCount": 4, "errorCode": "TOOL_ERROR" },
+      "expect": {
+        "baseline": { "status": "failed", "h2SignatureFires": false, "note": "tool_failures>0 = MODEL_BEHAVIOR counterexample; gate correctly terminates a real constant-failure stall" },
+        "candidate": { "status": "failed", "h2SignatureFires": false, "note": "outcome must be identical to baseline (constant failed result => same fingerprint => streak advances)" }
+      }
+    },
+    {
+      "id": "regression/reg-03-add-import",
+      "suite": "regression",
+      "role": "COUNTEREXAMPLE",
+      "recorded": {
+        "outcome": "failed",
+        "termination": "tool_limit",
+        "modelCalls": 22,
+        "toolCalls": 22,
+        "toolFailures": 15,
+        "stallRecovery": 2,
+        "fingerprint": "c09e43b1fc99f763907b98d6bb09df0588428e464657892e0d163f6298964252"
+      },
+      "trace": { "kind": "identical-failing", "tool": "echo", "args": { "text": "same" }, "callCount": 6, "errorCode": "TOOL_ERROR" },
+      "expect": {
+        "baseline": { "status": "failed", "h2SignatureFires": false },
+        "candidate": { "status": "failed", "h2SignatureFires": false, "note": "constant-failure MODEL_BEHAVIOR class must stay identical across arms" }
+      }
+    },
+    {
+      "id": "regression/reg-14-stack",
+      "suite": "regression",
+      "role": "COUNTEREXAMPLE",
+      "recorded": {
+        "outcome": "passed",
+        "termination": "verified_complete",
+        "modelCalls": 6,
+        "toolCalls": 5,
+        "toolFailures": 1,
+        "stallRecovery": 0,
+        "fingerprint": "3f2036a571bafe46ea40d4156a0213180518340d10e7ac837dc1dcae63bcde81"
+      },
+      "trace": { "kind": "different-args", "tool": "echo", "args": ["a", "b", "c", "d", "e"], "callCount": 5 },
+      "expect": {
+        "baseline": { "status": "completed", "h2SignatureFires": false },
+        "candidate": { "status": "completed", "h2SignatureFires": false, "note": "verified_complete must not regress" }
+      }
+    },
+    {
+      "id": "regression/reg-17-gcd",
+      "suite": "regression",
+      "role": "COUNTEREXAMPLE",
+      "recorded": {
+        "outcome": "passed",
+        "termination": "verified_complete",
+        "modelCalls": 10,
+        "toolCalls": 9,
+        "toolFailures": 3,
+        "stallRecovery": 0,
+        "fingerprint": "3f2036a571bafe46ea40d4156a0213180518340d10e7ac837dc1dcae63bcde81"
+      },
+      "trace": { "kind": "different-args", "tool": "echo", "args": ["a", "b", "c", "d", "e", "f", "g", "h", "i"], "callCount": 9 },
+      "expect": {
+        "baseline": { "status": "completed", "h2SignatureFires": false },
+        "candidate": { "status": "completed", "h2SignatureFires": false, "note": "verified_complete must not regress" }
+      }
+    },
+    {
+      "id": "regression/reg-06-json-parse-test",
+      "suite": "regression",
+      "role": "COUNTEREXAMPLE",
+      "recorded": {
+        "outcome": "failed",
+        "termination": "agent_limit",
+        "modelCalls": 23,
+        "toolCalls": 20,
+        "toolFailures": 7,
+        "stallRecovery": 1,
+        "fingerprint": "3b983125004d8609c545c9230f763770cb9636136d51d0f932765971f1959d50"
+      },
+      "trace": { "kind": "text-steps", "callCount": 22, "note": "22 scripted text steps exceed maxIterationsPerTurn=20 => agent_limit in BOTH arms; no tools involved so the identical-call gate is untouched" },
+      "expect": {
+        "baseline": { "status": "failed", "h2SignatureFires": false, "termination": "agent_limit" },
+        "candidate": { "status": "failed", "h2SignatureFires": false, "termination": "agent_limit", "note": "iteration-budget class must stay identical across arms" }
+      }
+    }
+  ],
+  "digest": "4541cd555c15f3d604bac216f1f0323b436279323f8968caaf44b687827f7dbd"
+}
