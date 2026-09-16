@@ -17,7 +17,7 @@ the paid gate was exercised only to prove its refusal.
 | Started from SHA | `a20373743b56de6a3a110fecdd254737ece71afa` (R86 final, HEAD at start) |
 | Baseline arm source SHA (mechanism) | `e9776ba66190ea63b1bacb685c91aa900b6935e7` (pre-R86) |
 | Candidate arm source SHA | `a20373743b56de6a3a110fecdd254737ece71afa` (R86 fix) |
-| Ending SHA | `90232d5` (HEAD after this task, incl. the report and CI record) |
+| Ending SHA (validated implementation) | `90232d5` — run `35086483790` all 5 jobs success; the trailing doc-only commit `f42e5f0` records that run in this report |
 | Branch | `main` (tracking `origin/main`) |
 | Environment (local) | Windows NT 10.0.19044.0 (win32), Node v24.18.1, pnpm 11.21.0, git 2.55.0.windows.3 |
 | Frozen case selection digest | `0d8af323110301e0392c77d595c8c34f5f01851ffe6844f0ed7fab49703465ae` (bound **before** execution) |
