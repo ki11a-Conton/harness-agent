@@ -82,7 +82,7 @@
         "stallRecovery": 1,
         "fingerprint": "c09e43b1fc99f763907b98d6bb09df0588428e464657892e0d163f6298964252"
       },
-      "trace": { "kind": "identical-failing", "tool": "echo", "args": { "text": "same" }, "callCount": 6, "errorCode": "TOOL_ERROR", "note": "6 identical failing calls: with sr=1 the identical streak recovers at 3 and terminates at 6 (tool_limit), reproducing the recorded failed/tool_limit class. tool_failures>0 keeps this OUT of the H2 class in both arms." },
+      "trace": { "kind": "identical-failing", "tool": "echo", "args": { "text": "same" }, "callCount": 6, "errorCode": "PROCESS_ERROR", "note": "6 identical failing calls: with sr=1 the identical streak recovers at 3 and terminates at 6 (tool_limit), reproducing the recorded failed/tool_limit class. tool_failures>0 keeps this OUT of the H2 class in both arms." },
       "expect": {
         "baseline": { "status": "failed", "h2SignatureFires": false, "note": "tool_failures>0 = MODEL_BEHAVIOR counterexample; gate correctly terminates a real constant-failure stall" },
         "candidate": { "status": "failed", "h2SignatureFires": false, "note": "outcome must be identical to baseline (constant failed result => same fingerprint => streak advances)" }
@@ -101,7 +101,7 @@
         "stallRecovery": 2,
         "fingerprint": "c09e43b1fc99f763907b98d6bb09df0588428e464657892e0d163f6298964252"
       },
-      "trace": { "kind": "identical-failing", "tool": "echo", "args": { "text": "same" }, "callCount": 6, "errorCode": "TOOL_ERROR" },
+      "trace": { "kind": "identical-failing", "tool": "echo", "args": { "text": "same" }, "callCount": 6, "errorCode": "PROCESS_ERROR" },
       "expect": {
         "baseline": { "status": "failed", "h2SignatureFires": false },
         "candidate": { "status": "failed", "h2SignatureFires": false, "note": "constant-failure MODEL_BEHAVIOR class must stay identical across arms" }
@@ -165,5 +165,5 @@
       }
     }
   ],
-  "digest": "227d00b6f3a76c382e10e75747c5c5ee88ad72247d481273e609b643df19f94d"
+  "digest": "0d8af323110301e0392c77d595c8c34f5f01851ffe6844f0ed7fab49703465ae"
 }
