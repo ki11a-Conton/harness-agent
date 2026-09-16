@@ -233,6 +233,80 @@ jobs:
           # Every assertion reaching this line passed.
           exit 0
 
+      # E4-R85: the failure-attribution pass must be OFFLINE, DETERMINISTIC and
+      # IDENTICAL on Windows and Ubuntu. The digest below is pinned literally:
+      # if the two platforms ever disagree, one of them fails here — which is
+      # the whole point, since the plan requires the same digest on both.
+      # Runs against the same committed synthetic fixture as R84 (0 provider
+      # calls, no API key, no network).
+      - name: Campaign failure triage — offline, deterministic digest (E4-R85)
+        shell: pwsh
+        run: |
+          # See the R84 step header: this step deliberately runs commands that
+          # exit non-zero, so $ErrorActionPreference='stop' plus an explicit
+          # `exit 0` is required or the wrapper inherits the last failure.
+          $ErrorActionPreference = 'stop'
+
+          $fixture = "scripts/benchmark/fixtures/r84-campaign/campaign"
+          $cases = "scripts/benchmark/fixtures/r84-campaign/cases"
+          # The digest that the committed fixture MUST produce on every platform.
+          $expected = "831eabb24f206646a23a123772b79af2f4c42bf195639de50e17d81759dea91b"
+
+          # 1. Triage the fixture twice into separate directories.
+          node apps/cli/dist/main.js benchmark campaign triage $fixture `
+            --out .ci/r85-triage-1 --cases $cases --suites adversarial,stress 2>$null | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "the first triage run failed (exit $LASTEXITCODE)" }
+          node apps/cli/dist/main.js benchmark campaign triage $fixture `
+            --out .ci/r85-triage-2 --cases $cases --suites adversarial,stress 2>$null | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "the second triage run failed (exit $LASTEXITCODE)" }
+
+          # 2. Byte-identical across two consecutive runs (no clock/ordering drift).
+          $a = Get-Content .ci/r85-triage-1/campaign-triage.json -Raw
+          $b = Get-Content .ci/r85-triage-2/campaign-triage.json -Raw
+          if ($a -ne $b) { throw "triage JSON is not byte-identical across two runs" }
+          $mdA = Get-Content .ci/r85-triage-1/campaign-triage.md -Raw
+          $mdB = Get-Content .ci/r85-triage-2/campaign-triage.md -Raw
+          if ($mdA -ne $mdB) { throw "triage markdown is not byte-identical across two runs" }
+
+          # 3. The pinned cross-platform digest must match EXACTLY. This is the
+          #    assertion that makes Windows and Ubuntu provably agree.
+          $parsed = $a | ConvertFrom-Json
+          if ([string]::IsNullOrEmpty($parsed.triageDigest)) { throw "triage JSON carried no triageDigest" }
+          if ($parsed.triageDigest -ne $expected) {
+            throw "triage digest drifted on this platform: got $($parsed.triageDigest), want $expected"
+          }
+          if ($parsed.verdict -ne "NO_CONFIRMED_HARNESS_DEFECT") {
+            throw "the fixture verdict drifted: $($parsed.verdict)"
+          }
+          Write-Host "E4-R85 triage digest (cross-platform): $($parsed.triageDigest)"
+
+          # 4. No secret, endpoint or absolute path may enter the artifact.
+          #    `sk-` is checked as a KEY SHAPE, not a bare substring: the
+          #    literal "task-verifier" contains "sk-" and would make the check
+          #    both noisy and untrustworthy.
+          foreach ($text in @($a, $mdA)) {
+            if ($text -match 'sk-[A-Za-z0-9_-]{16,}') { throw "triage artifact leaked an API-key shape" }
+            if ($text -match 'Bearer\s+\S{16,}') { throw "triage artifact leaked a bearer token" }
+            if ($text -match 'Authorization\s*[:=]') { throw "triage artifact leaked an Authorization header" }
+            if ($text -match 'https?://') { throw "triage artifact leaked an endpoint" }
+            if ($text -match '[A-Za-z]:[\\/]') { throw "triage artifact leaked an absolute path" }
+            if ($text -match '/home/') { throw "triage artifact leaked a POSIX home path" }
+            # A timestamp would make the artifact drift with the clock.
+            if ($text -match '\b20\d\d-\d\d-\d\dT') { throw "triage artifact carries a timestamp" }
+          }
+          Write-Host "E4-R85 redaction OK (no key, endpoint, path or timestamp)"
+
+          # 5. A campaign that does not validate must NOT report success.
+          New-Item -ItemType Directory -Force -Path .ci/r85-missing | Out-Null
+          node apps/cli/dist/main.js benchmark campaign triage .ci/r85-missing `
+            --out .ci/r85-invalid --cases $cases --suites adversarial,stress 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) { throw "triage reported success on an invalid campaign" }
+          $invalid = (Get-Content .ci/r85-invalid/campaign-triage.json -Raw | ConvertFrom-Json)
+          if ($invalid.campaignValid -ne $false) { throw "invalid campaign was marked valid" }
+          Write-Host "E4-R85 invalid-campaign handling OK (exit non-zero, still inspectable)"
+
+          exit 0
+
       # E4-R84: the runner's own control flow (stage -> dry-run -> digest ->
       # persist -> resume-skip -> validate), offline, 0 provider calls.
       # Windows-only: it drives the PowerShell runner that produced the real

@@ -3114,6 +3114,7 @@ export async function runBenchmarkCampaignCommand(
       exitCode: sub === undefined ? 1 : 0,
       lines: [
         "Usage: agent benchmark campaign validate <campaign-root> [flags]",
+        "       agent benchmark campaign triage   <campaign-root> --out <dir> [flags]",
         "",
         "Validate a WHOLE benchmark campaign (every suite, every case, the resume",
         "manifest and the submitted summary) and re-derive every aggregate from the",
@@ -3134,8 +3135,24 @@ export async function runBenchmarkCampaignCommand(
         "                         or removed byte FAILS the campaign (tamper-DETECTING)",
         "  --expect-digest <hex>  recorded root digest; any byte change then fails (tamper-DETECTING)",
         "  --expect <sha,...>     accepted source SHA(s); default: the summary's gitShas",
+        "",
+        "The `triage` subcommand answers a different question from `validate`: not",
+        "\"are these numbers real?\" but \"which failures are the MODEL's fault and which",
+        "are the HARNESS's?\". It is offline and deterministic (0 provider calls), and",
+        "it honours holdout discipline by reading holdout only as aggregate numbers.",
+        "",
+        "Triage flags:",
+        "  --out <dir>            REQUIRED. writes campaign-triage.json + campaign-triage.md",
+        "  --cases <dir>          versioned benchmark case source (default benchmarks)",
+        "  --suites <a,b,c>       suites this campaign covers (default: the four versioned suites)",
+        "  --summary <file>       submitted sanitized summary (default <root>/campaign-summary.json)",
+        "  --restricted <a,b>     suites emitted as AGGREGATE ONLY (default: holdout)",
+        "  --json                 emit the machine-readable triage result on stdout",
       ],
     };
+  }
+  if (sub === "triage") {
+    return await runBenchmarkCampaignTriageCommand(argv.slice(1));
   }
   if (sub !== "validate") {
     return {
@@ -3306,6 +3323,153 @@ export async function runBenchmarkCampaignCommand(
     return {
       exitCode: 1,
       lines: [`agent benchmark campaign validate: ${err instanceof Error ? err.message : String(err)}`],
+    };
+  }
+}
+
+/**
+ * E4-R85 — `agent benchmark campaign triage <campaign-root> --out <dir>`.
+ *
+ * OFFLINE attribution: it reads only the artifacts the runner already stored, so
+ * it makes ZERO provider calls and needs no key. It writes
+ * `campaign-triage.json` (machine-readable, deterministic) and
+ * `campaign-triage.md` (reviewer-facing) into `--out`.
+ *
+ * Two contracts the exit code encodes:
+ *   - a campaign that does not VALIDATE is still triaged (its stored cases are
+ *     real), but the command exits non-zero: attribution on unverified numbers
+ *     must not look like a success;
+ *   - `NO_CONFIRMED_HARNESS_DEFECT` is a SUCCESSFUL outcome, not a failure. It
+ *     means R86 must not invent work (plan R85 §8).
+ */
+async function runBenchmarkCampaignTriageCommand(
+  argv: string[],
+): Promise<{ exitCode: number; lines: string[] }> {
+  if (argv.includes("--help") || argv.includes("-h")) {
+    return {
+      exitCode: 0,
+      lines: [
+        "Usage: agent benchmark campaign triage <campaign-root> --out <dir> [flags]",
+        "",
+        "Attribute every FAILED case in a benchmark campaign to a bounded primary",
+        "class (MODEL_BEHAVIOR, TOOL_PROTOCOL, VERIFIER_OR_ORACLE,",
+        "HARNESS_CONTROL_FLOW, BUDGET_EXHAUSTION_UNATTRIBUTED, PROVIDER_OR_TRANSPORT,",
+        "SECURITY_POLICY_DENIAL, INSUFFICIENT_EVIDENCE) plus optional secondary tags.",
+        "",
+        "Runs entirely offline from the stored per-case reports: 0 provider calls,",
+        "no API key, deterministic output. The holdout suite is read as AGGREGATE",
+        "NUMBERS ONLY (its per-case files are never opened), so triage cannot keep",
+        "contaminating holdout.",
+        "",
+        "Flags:",
+        "  --out <dir>         REQUIRED. directory for campaign-triage.json/.md",
+        "  --cases <dir>       versioned benchmark case source (default benchmarks)",
+        "  --suites <a,b,c>    suites this campaign covers (default: the four versioned suites)",
+        "  --summary <file>    submitted sanitized summary (default <root>/campaign-summary.json)",
+        "  --restricted <a,b>  suites emitted as aggregate only (default: holdout)",
+        "  --json              emit the machine-readable triage result on stdout",
+      ],
+    };
+  }
+
+  const flagValue = (flag: string): string | undefined => {
+    const i = argv.indexOf(flag);
+    return i >= 0 ? argv[i + 1] : undefined;
+  };
+  const valueFlags = ["--out", "--cases", "--suites", "--summary", "--restricted"];
+  const positional = argv.filter((a, i) => !a.startsWith("--") && !valueFlags.includes(argv[i - 1] ?? ""));
+  const campaignRoot = positional[0];
+  const outDir = flagValue("--out");
+  if (campaignRoot === undefined || outDir === undefined) {
+    return {
+      exitCode: 1,
+      lines: ["Usage: agent benchmark campaign triage <campaign-root> --out <dir> [flags]"],
+    };
+  }
+
+  const showJson = argv.includes("--json");
+  const casesRoot = flagValue("--cases");
+  const suitesRaw = flagValue("--suites");
+  const restrictedRaw = flagValue("--restricted");
+  let suites: string[] | undefined;
+  let expectedSuiteCounts: Record<string, number> | undefined;
+  try {
+    const { expectedCampaignCases, triageCampaign, renderTriageJson, renderTriageMarkdown } =
+      await import("@ar/evaluation");
+    if (suitesRaw !== undefined) {
+      suites = suitesRaw.split(",").map((s) => s.trim()).filter((s) => s !== "");
+      if (suites.length === 0) {
+        return { exitCode: 1, lines: ["agent benchmark campaign triage: --suites requires at least one suite name"] };
+      }
+      const found = await expectedCampaignCases(casesRoot ?? "benchmarks", suites);
+      expectedSuiteCounts = {};
+      for (const suite of suites) expectedSuiteCounts[suite] = 0;
+      for (const c of found) expectedSuiteCounts[c.suite] = (expectedSuiteCounts[c.suite] ?? 0) + 1;
+    }
+    const restrictedSuites = restrictedRaw !== undefined
+      ? restrictedRaw.split(",").map((s) => s.trim()).filter((s) => s !== "")
+      : undefined;
+
+    const result = await triageCampaign({
+      root: campaignRoot,
+      ...(casesRoot !== undefined ? { casesRoot } : {}),
+      ...(flagValue("--summary") !== undefined ? { summaryPath: flagValue("--summary") as string } : {}),
+      ...(suites !== undefined ? { suites } : {}),
+      ...(expectedSuiteCounts !== undefined ? { expectedSuiteCounts } : {}),
+      ...(restrictedSuites !== undefined ? { restrictedSuites } : {}),
+    });
+
+    await mkdir(outDir, { recursive: true });
+    const jsonPath = join(outDir, "campaign-triage.json");
+    await writeFile(jsonPath, renderTriageJson(result), "utf8");
+    const mdPath = join(outDir, "campaign-triage.md");
+    await writeFile(mdPath, renderTriageMarkdown(result), "utf8");
+
+    if (showJson) {
+      return { exitCode: result.campaignValid ? 0 : 1, lines: [renderTriageJson(result).trimEnd()] };
+    }
+
+    const lines: string[] = [];
+    lines.push(`Benchmark campaign triage in ${campaignRoot}`);
+    lines.push("");
+    lines.push(`  campaign valid:      ${result.campaignValid ? "yes" : "NO"}`);
+    if (!result.campaignValid) {
+      lines.push(`  validator reasons:   ${result.validationReasonCodes.join(", ")}`);
+    }
+    lines.push(`  cases:               ${result.totals.cases} (attributed per-case: ${result.totals.attributed})`);
+    lines.push(`  passed:              ${result.totals.passed}`);
+    lines.push(`  failed:              ${result.totals.failed}`);
+    lines.push(`  classified:          ${result.totals.classified}`);
+    lines.push(`  insufficient evidence: ${result.totals.insufficientEvidence}`);
+    lines.push("");
+    lines.push("  primary class distribution (failed cases):");
+    for (const [cls, count] of Object.entries(result.totals.byPrimaryClass)) {
+      if (count > 0) lines.push(`    ${cls.padEnd(32)} ${count}`);
+    }
+    lines.push("");
+    lines.push("  termination distribution (attributed suites):");
+    for (const [term, count] of Object.entries(result.totals.byTermination)) {
+      lines.push(`    ${term.padEnd(32)} ${count}`);
+    }
+    lines.push("");
+    lines.push("  holdout (aggregate only — per-case detail is never read or emitted):");
+    lines.push(`    cases: ${result.holdout.cases}  passed: ${result.holdout.passed}  failed: ${result.holdout.failed}`);
+    lines.push(`    model calls: ${result.holdout.modelCalls}  tool calls: ${result.holdout.toolCalls}`);
+    lines.push("");
+    lines.push(`  verdict: ${result.verdict}`);
+    for (const c of result.candidates) {
+      lines.push(`    ${c.id}: ${c.status} (${c.affectedCases} case(s))`);
+    }
+    if (result.candidates.length === 0) lines.push("    no candidate mechanisms were observed");
+    lines.push("");
+    lines.push(`  triage digest: ${result.triageDigest}`);
+    lines.push(`  wrote ${jsonPath}`);
+    lines.push(`  wrote ${mdPath}`);
+    return { exitCode: result.campaignValid ? 0 : 1, lines };
+  } catch (err) {
+    return {
+      exitCode: 1,
+      lines: [`agent benchmark campaign triage: ${err instanceof Error ? err.message : String(err)}`],
     };
   }
 }

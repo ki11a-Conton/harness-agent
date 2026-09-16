@@ -73,9 +73,9 @@ describe("E4-R84 CLI — dispatch and usage", () => {
   });
 
   it("an unknown campaign subcommand is rejected and does not run anything", async () => {
-    const res = await runBenchmarkCommand(["campaign", "triage", FIXTURE_CAMPAIGN], undefined);
+    const res = await runBenchmarkCommand(["campaign", "nonsense-subcommand", FIXTURE_CAMPAIGN], undefined);
     expect(res.exitCode).toBe(1);
-    expect(out(res.lines)).toContain('unknown subcommand "triage"');
+    expect(out(res.lines)).toContain('unknown subcommand "nonsense-subcommand"');
   });
 
   it("`campaign validate` without a campaign root is a usage error", async () => {
