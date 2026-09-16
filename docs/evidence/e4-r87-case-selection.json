@@ -82,7 +82,7 @@
         "stallRecovery": 1,
         "fingerprint": "c09e43b1fc99f763907b98d6bb09df0588428e464657892e0d163f6298964252"
       },
-      "trace": { "kind": "identical-failing", "tool": "echo", "args": { "text": "same" }, "callCount": 4, "errorCode": "TOOL_ERROR" },
+      "trace": { "kind": "identical-failing", "tool": "echo", "args": { "text": "same" }, "callCount": 6, "errorCode": "TOOL_ERROR", "note": "6 identical failing calls: with sr=1 the identical streak recovers at 3 and terminates at 6 (tool_limit), reproducing the recorded failed/tool_limit class. tool_failures>0 keeps this OUT of the H2 class in both arms." },
       "expect": {
         "baseline": { "status": "failed", "h2SignatureFires": false, "note": "tool_failures>0 = MODEL_BEHAVIOR counterexample; gate correctly terminates a real constant-failure stall" },
         "candidate": { "status": "failed", "h2SignatureFires": false, "note": "outcome must be identical to baseline (constant failed result => same fingerprint => streak advances)" }
@@ -158,12 +158,12 @@
         "stallRecovery": 1,
         "fingerprint": "3b983125004d8609c545c9230f763770cb9636136d51d0f932765971f1959d50"
       },
-      "trace": { "kind": "text-steps", "callCount": 22, "note": "22 scripted text steps exceed maxIterationsPerTurn=20 => agent_limit in BOTH arms; no tools involved so the identical-call gate is untouched" },
+      "trace": { "kind": "iteration-tool-steps", "tool": "echo", "args": "distinct-per-call", "callCount": 22, "note": "22 distinct-args echo tool calls exceed maxIterationsPerTurn=20 => the loop exhausts and the turn terminates agent_limit in BOTH arms. Plain text steps would stop on the first text (model_stopped), so tool calls are required to reproduce the recorded agent_limit class. Distinct args avoid any stall signal; the identical-call gate is untouched." },
       "expect": {
         "baseline": { "status": "failed", "h2SignatureFires": false, "termination": "agent_limit" },
         "candidate": { "status": "failed", "h2SignatureFires": false, "termination": "agent_limit", "note": "iteration-budget class must stay identical across arms" }
       }
     }
   ],
-  "digest": "fc7b9c707ffc23c3d658ce5cd026fecfc10e2a8068f98cca73d41de97a499a98"
+  "digest": "227d00b6f3a76c382e10e75747c5c5ee88ad72247d481273e609b643df19f94d"
 }
