@@ -168,6 +168,15 @@ export interface AgentRuntimeDeps {
    *  consecutive identical tool calls (same name+args). Default 3; set 0 to
    *  disable. */
   maxRepeatedIdenticalToolCalls?: number;
+  /** E4-R87 (Phase A): ZERO-CALL replay A/B knob. When `false`, the tool-call
+   *  controller feeds NO result fingerprint into the identical-call streak, so
+   *  `AgentState.noteToolCall(name, args)` keeps the ORIGINAL pre-R86 contract
+   *  (streak keyed on name+args only — byte-identical to source SHA e9776ba,
+   *  pinned by `agent-state.test.ts`). Used only to replay the pre-R86
+   *  mechanism in process for the mandated baseline-vs-candidate A/B;
+   *  DEFAULT `true` = the R86 result-aware behavior (no behavior change for
+   *  any existing caller). */
+  streakResultAware?: boolean;
   /** Stall recovery (retry taxonomy kind "stallRecovery", Phase 11): before
    *  terminating a stalled turn, the runtime may recover this many times —
    *  resetting the streak and injecting a system observation so the model can
@@ -439,6 +448,8 @@ export class AgentRuntime {
   private readonly agents: ReadonlyMap<AgentId, AgentDefinition>;
   private readonly maxIterationsPerTurn: number;
   private readonly maxRepeatedIdenticalToolCalls: number;
+  /** E4-R87 (Phase A): replay-only knob (see AgentRuntimeDeps). */
+  private readonly streakResultAware: boolean;
   private readonly maxStallRecoveries: number;
   /** P2-41: non-identical stall patterns the runtime actively detects. */
   private readonly enabledStallPatterns: ReadonlySet<StallPattern>;
@@ -534,6 +545,7 @@ export class AgentRuntime {
     this.agents = new Map(deps.agents.map((a) => [a.id, a]));
     this.maxIterationsPerTurn = deps.maxIterationsPerTurn ?? 20;
     this.maxRepeatedIdenticalToolCalls = deps.maxRepeatedIdenticalToolCalls ?? 3;
+    this.streakResultAware = deps.streakResultAware ?? true;
     this.maxStallRecoveries = deps.maxStallRecoveries ?? 1;
     this.enabledStallPatterns = new Set(
       deps.enabledStallPatterns ?? DEFAULT_ENABLED_STALL_PATTERNS,
@@ -611,6 +623,7 @@ export class AgentRuntime {
       toolSemanticsOf: (name) => this.semanticsOf(name),
       resourceConflictOf: this.resourceConflictOf,
       maxParallelToolCalls: this.maxParallelToolCalls,
+      streakResultAware: this.streakResultAware,
       delegateSpecialist: this.delegateSpecialist,
     });
     // Q-1: context pipeline + steering + tool-output rendering delegated to

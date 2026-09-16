@@ -102,6 +102,12 @@ export interface ToolCallControllerDeps {
   resourceConflictOf?: (call: ToolCall) => import("@ar/contracts").ResourceConflictKey | undefined;
   /** Max parallel concurrency-safe calls per read batch. */
   maxParallelToolCalls: number;
+  /** E4-R87 (Phase A): when `false`, `noteExecutedCall` passes NO result
+   *  fingerprint to `AgentState.noteToolCall` — the pre-R86 name+args-only
+   *  streak contract (byte-identical to source SHA e9776ba). Default/absent =
+   *  true (R86 result-aware behavior). Replay-only; no existing caller opts
+   *  out. */
+  streakResultAware?: boolean;
   /** P3-9: host-provided specialist delegation. When adaptive recovery picks
    *  `delegate_specialist`, the host decides whether to actually delegate
    *  (budget allows + task decomposable) and returns a bounded observation
@@ -401,7 +407,10 @@ export class ToolCallController {
     call: ToolCall,
     result: ToolResult,
   ): { streak: number; progressCancelled?: boolean; wouldBeStreak?: number } {
-    const streak = state.noteToolCall(call.name, call.args, this.resultFingerprintOf(result));
+    const streak =
+      this.deps.streakResultAware === false
+        ? state.noteToolCall(call.name, call.args)
+        : state.noteToolCall(call.name, call.args, this.resultFingerprintOf(result));
     if (state.lastCallCancelledStreak) {
       return { streak, progressCancelled: true, wouldBeStreak: state.lastCallWouldBeStreak };
     }

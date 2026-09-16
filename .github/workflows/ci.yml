@@ -357,6 +357,25 @@ jobs:
           Write-Host "E4-R86 H2 fix path observable on $($env:RUNNER_OS): suites green, event observability-only, metric derived, threshold digest-bound"
           exit 0
 
+      # E4-R87 Phase A: zero-call replay A/B over the frozen, digest-bound case
+      # selection (plan §R87 — "优先先跑零调用 replay A/B"). Proves the R86
+      # candidate hits the TARGET path: the baseline arm reproduces the recorded
+      # H2 fingerprint class on all 3 TARGET cases, the candidate arm completes
+      # them with progress evidence, counterexamples stay outcome-invariant, and
+      # the paid gate outputs NOT_RUN: PAID_AUTHORIZATION_REQUIRED. 0 provider
+      # calls (ScriptedModelProvider only), no key, no network. The committed
+      # manifest (docs/evidence/e4-r87-phase-a-manifest.json) is re-verified
+      # against a fresh replay (validator can recompute every summary).
+      - name: Zero-call replay A/B over frozen cases, digest-bound (E4-R87 Phase A)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'stop'
+          pnpm exec vitest run `
+            packages/core/src/runtime/r87-zero-call-replay-ab.test.ts 2>&1 | Write-Host
+          if ($LASTEXITCODE -ne 0) { throw "the R87 Phase A replay A/B suite failed (exit $LASTEXITCODE)" }
+          Write-Host "E4-R87 Phase A on $($env:RUNNER_OS): baseline reproduces the H2 class, candidate completes targets, counterexamples invariant, paid path NOT_RUN, manifest re-verified"
+          exit 0
+
       # E4-R84: the runner's own control flow (stage -> dry-run -> digest ->
       # persist -> resume-skip -> validate), offline, 0 provider calls.
       # Windows-only: it drives the PowerShell runner that produced the real
