@@ -484,6 +484,69 @@ describe("E4-R85 — campaign triage over a synthetic fixture", () => {
     expect(result.validationReasonCodes.length).toBeGreaterThan(0);
     expect(result.totals.cases).toBe(0);
   });
+
+  it("aggregates agree with the R84 validator, field by field", async () => {
+    // Plan R85 acceptance: "聚合总数必须与 R84 validator 一致". Assert it against
+    // the validator's OWN output rather than against hardcoded numbers, so the
+    // two can never drift apart silently.
+    const { validateCampaign } = await import("./campaign-validate.js");
+    const validation = await validateCampaign(options(FIXTURE_CAMPAIGN));
+    const result = await triageCampaign(options(FIXTURE_CAMPAIGN));
+
+    expect(result.rootDigest).toBe(validation.rootDigest);
+    expect(result.campaignValid).toBe(validation.ok);
+    expect(result.totals.cases).toBe(validation.summary.storedCases);
+    expect(result.totals.attributed + result.holdout.cases).toBe(validation.summary.storedCases);
+    expect(result.totals.passed).toBe(validation.summary.passed);
+    expect(result.totals.failed).toBe(validation.summary.failed);
+    // The attributed per-case rows must reproduce the validator's case list.
+    expect(result.cases.map((c) => `${c.suite}/${c.caseId}`).sort())
+      .toEqual(validation.cases.map((c) => `${c.suite}/${c.caseId}`).sort());
+  });
+
+  it("never emits a raw violation string or a full model output", async () => {
+    // Plan R85 acceptance: the FULL output must not enter the artifact. The
+    // stored `reason` is where the runner's own bounded text lands, so plant a
+    // long distinctive blob there and in the violations, then prove only
+    // CATEGORIES survive.
+    const blob = `FULL-MODEL-OUTPUT-${"x".repeat(4000)}-END`;
+    const dir = await tempDir();
+    const root = join(dir, "campaign");
+    const casesRoot = join(dir, "cases");
+    await writeSyntheticCampaign(root, casesRoot);
+
+    const opts = {
+      root, casesRoot, suites: ["regression", "stress"],
+      expectedSuiteCounts: { regression: 5, stress: 2 },
+    };
+    // Baseline size BEFORE the blob, so the assertion below is about the
+    // artifact's growth rather than its unrelated absolute size.
+    const before = renderTriageJson(await triageCampaign(opts)).length;
+
+    const reportPath = join(root, "results", "stress", "syn-timeout", "stress.json");
+    const doc = JSON.parse(await readFile(reportPath, "utf8")) as { results: Array<Record<string, unknown>> };
+    // Embed the blob in `reason` AND inside an EXISTING violation shape, so the
+    // violation KIND is unchanged. That way the size comparison below measures
+    // blob leakage only, not a legitimately new category string.
+    doc.results[0]!.reason = blob;
+    doc.results[0]!.violations = [`expected completed but turn failed ${blob}`];
+    await writeFile(reportPath, `${JSON.stringify(doc, null, 2)}\n`, "utf8");
+
+    const result = await triageCampaign(opts);
+    const raw = renderTriageJson(result);
+    const md = renderTriageMarkdown(result);
+
+    // The blob (and its distinctive head/tail) must be absent from BOTH files.
+    expect(raw).not.toContain("FULL-MODEL-OUTPUT");
+    expect(raw).not.toContain("-END");
+    expect(md).not.toContain("FULL-MODEL-OUTPUT");
+    // The artifact must NOT grow with the blob: 4KB of output adds ZERO bytes.
+    expect(raw.length).toBe(before);
+    // ...while the case is still classified and the category IS recorded.
+    const row = result.cases.find((c) => c.caseId === "syn-timeout")!;
+    expect(row.violationKinds).toContain("expected_status_mismatch");
+    expect(row.primary).toBe("BUDGET_EXHAUSTION_UNATTRIBUTED");
+  });
 });
 
 // ---------------------------------------------------------------------------

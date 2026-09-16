@@ -113,7 +113,7 @@ Writes `campaign-triage.json` (deterministic, machine-readable) and
 
 | File | Tests | Covers |
 | --- | --- | --- |
-| `packages/evaluation/src/campaign-triage.test.ts` | 47 | taxonomy, classifier, fingerprint, redaction, determinism, all 7 fixtures |
+| `packages/evaluation/src/campaign-triage.test.ts` | 49 | taxonomy, classifier, fingerprint, redaction, determinism, all 7 fixtures, validator agreement |
 | `apps/cli/src/e4-r85-triage-cli.test.ts` | 14 | dispatch, `--out` required, exit codes, no-leak, relocation |
 | `packages/core/src/runtime/r85-h2-progress-blind-gate.test.ts` | 3 | the H2 reproducer + its counterexample |
 
@@ -247,8 +247,23 @@ no `sk-…` key shape, no `Bearer` token, no `Authorization` header, and **no
 timestamp** (which would make the artifact drift with the clock). Redaction runs
 **before** hashing, so a fingerprint is a hash of redacted content only.
 
+**Full output is proven absent, not merely assumed.** A test plants a
+4,000-character distinctive blob in the stored `reason` *and* inside an existing
+violation string, then asserts the blob never appears in the JSON or Markdown
+**and that the artifact grows by exactly zero bytes** — i.e. only violation
+*categories* survive, never the text that produced them. The category and the
+classification are still recorded, so nothing is lost by the redaction.
+
 `containsSensitiveMaterial()` is asserted to be able to *fire*, so the leak tests
 cannot pass vacuously.
+
+### 6.2 Aggregates are checked against the R84 validator itself
+
+Plan §R85 acceptance requires the aggregates to match R84. Rather than hardcode
+expected numbers (which could drift), a test calls `validateCampaign` and asserts
+agreement field by field: same `rootDigest`, same `storedCases`, same
+`passed`/`failed`, `attributed + holdout === storedCases`, and an identical
+attributed case list.
 
 ---
 
@@ -424,9 +439,9 @@ but under-evidenced mechanism for a future round, not smuggled into R86.
 | Gate | Result |
 | --- | --- |
 | `pnpm build` (`tsc -b`) | ✅ clean |
-| `pnpm test` | ✅ 6,046 passed, 3 skipped (§12.1) |
-| `pnpm test:coverage` | ✅ |
-| `pnpm docs:verify` | ✅ |
+| `pnpm test` | ✅ 333 files, 6,052 passed, 3 skipped, 0 failed |
+| `pnpm test:coverage` | ✅ 90.18% statements |
+| `pnpm docs:verify` | ✅ ALL CHECKS PASS |
 | `git diff --check` | ✅ exit 0 |
 | Provider calls | **0** |
 
@@ -439,7 +454,16 @@ Running `pnpm test` **before committing** reports 6 failures in
 a promotion-eligible run on an uncommitted tree. They fail on *any* uncommitted
 change, and they name the dirty entries in the failure message. They are not
 caused by this task's code; the same six fail on a clean checkout with an
-unrelated file touched. They pass once the work is committed.
+unrelated file touched. **Re-run after committing: 333 files, 6,052 passed, 0
+failed.**
+
+### 12.2 CI run
+
+Run `35054795007` on `a60d352`. The new R85 step executed on **both**
+`windows-latest` and `ubuntu-latest` and the pinned digest assertion passed on
+both, which is the plan's cross-platform requirement. The step was additionally
+executed locally end-to-end (§9) before being committed, so a failure here would
+have indicated a genuine platform difference rather than an untested script.
 
 ---
 
