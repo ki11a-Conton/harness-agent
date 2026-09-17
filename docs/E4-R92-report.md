@@ -248,8 +248,55 @@ later produced a *different* digest, so the user would have approved a value the
 gate must then refuse. Three consecutive driver runs now yield the identical
 digest `ffe3bea7…`, and a test asserts `createdAt` equals the commit timestamp.
 
-## 8. Enforcement status — the honest gap
+## 7b. A red CI gate found on `origin/main` — and fixed here
 
+Plan §R92 line 223 requires the Ubuntu cold-start/offline gates to **keep
+passing in CI**. Checking that claim rather than assuming it exposed a real
+failure: `origin/main` was `567ca03` (E4-R89), and its CI run was **red** —
+https://github.com/ki11a-Conton/harness-agent/actions/runs/35173144683
+
+| Run | Commit | Result |
+| --- | --- | --- |
+| 35167911660 | `20f01b9` (R88) | success |
+| 35173144683 | `567ca03` (R89) | **failure** — job `offline cold-start (ubuntu)`, step *"Verify the workflow itself cannot authorize a paid run"* |
+
+**Root cause, reproduced locally.** The E4-R82 cold-start job scans
+`.github/workflows/ci.yml` for a paid-authorization literal:
+
+```
+grep -nE 'RUN_PAID_BENCHMARKS\s*[:=]\s*["'"'"']?1' .github/workflows/ci.yml
+```
+
+E4-R89 added a **negative control** to the same workflow, spelling that literal
+out in full inside a PowerShell regex (`ci.yml` line 576). The guard therefore
+matched its own control string and exited 1. Reproduced by running the exact
+bash grep against the workflow at `b10e01f` (fails), `20f01b9` (passes) and
+`567ca03` (fails) — the introduction point is confirmed by `git log -S`.
+
+This was invisible locally because the guard lives **only** in the cold-start
+job; `pnpm test` never executes it, and R90–R92 were never pushed, so no CI run
+covered them either.
+
+**Fix.** The control is now assembled from fragments, so the contiguous literal
+never appears in the file while the control still exercises the detector:
+
+```powershell
+$controlSample = '$env:RUN_PAID_BENCHMARKS' + ' = ' + '"1"'
+```
+
+Verified both directions: the bash guard now passes on `ci.yml`, the assembled
+sample still matches the detector regex (`control matches = 1`), and a new local
+mirror of the guard runs under `pnpm test`
+(`packages/security/src/workflow-paid-authorization.test.ts`) so this class of
+defect can no longer reach CI unseen. The mirror includes a non-vacuity check
+that the pattern still detects the original defect shape.
+
+The E4-R89 conclusion (F3/F4/F5 fixed, RED and GREEN reproduced locally) is
+unaffected: the workflow *guard* broke, not the runner contract. R89's report
+never claimed CI was green — its §10 said the run id was still to be filled in —
+and it now records this follow-up.
+
+## 8. Enforcement status — the honest gap
 The gate is implemented and its refusals are **proven** offline (§6). It is,
 however, **not yet wired into the generic `agent benchmark` path**. The three
 environment variables are therefore currently a convention enforced by the R92

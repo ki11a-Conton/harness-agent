@@ -254,6 +254,39 @@ negative control detects old bug (want >0): 1
 To be filled with the run id after pushing (this report's commit is the ending
 SHA).
 
+### 10.1 Post-push follow-up (found during E4-R92, fixed there)
+
+The push at `567ca03` **failed CI**, and the failure is this task's fault. The
+`offline cold-start (ubuntu)` job runs a guard from E4-R82 that scans
+`.github/workflows/ci.yml` for a paid-authorization literal:
+
+```
+grep -nE 'RUN_PAID_BENCHMARKS\s*[:=]\s*["'"'"']?1' .github/workflows/ci.yml
+```
+
+§8's negative control was written with the literal spelled out —
+`[regex]::Matches('$env:RUN_PAID_BENCHMARKS = "1"', …)` — so the guard matched
+**its own control string** and the job exited 1. Run:
+https://github.com/ki11a-Conton/harness-agent/actions/runs/35173144683
+
+Every local gate stayed green, because that guard lives only in the cold-start
+job and `pnpm test` never executes it. The defect went unnoticed because R90,
+R91 and R92 were never pushed, so no CI run covered them either.
+
+Fixed in E4-R92 by assembling the control from fragments, so the contiguous
+literal never appears in the workflow while the control still exercises the
+detector:
+
+```powershell
+$controlSample = '$env:RUN_PAID_BENCHMARKS' + ' = ' + '"1"'
+```
+
+A local mirror of the guard now runs under `pnpm test`
+(`packages/security/src/workflow-paid-authorization.test.ts`), so this class of
+defect can no longer reach CI unseen. The historical R89 conclusion (F3/F4/F5
+fixed, RED and GREEN reproduced) is unaffected — the *workflow guard* broke, not
+the runner contract.
+
 ## 11. Not done / out of scope
 
 - **R90–R92** are separate dependent tasks (evidence-grade correction, Windows

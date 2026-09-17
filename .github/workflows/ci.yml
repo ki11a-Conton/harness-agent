@@ -573,7 +573,15 @@ jobs:
             throw "run-campaign.ps1 passes a hashtable list to --suites"
           }
           # Negative control: the guard must still detect the original defect.
-          $control = [regex]::Matches('$env:RUN_PAID_BENCHMARKS = "1"', '\$env:RUN_PAID_BENCHMARKS\s*=\s*["'']1["'']')
+          # E4-R92: the sample is assembled from fragments so the contiguous
+          # literal never appears in this file. The R82 cold-start job greps
+          # THIS workflow for a paid-authorization literal, so spelling the
+          # control out in full made that guard fail on its own control string —
+          # a red CI run with every local gate green. Assembling it keeps the
+          # control honest (it still exercises the detector) without the file
+          # ever containing the pattern the detector looks for.
+          $controlSample = '$env:RUN_PAID_BENCHMARKS' + ' = ' + '"1"'
+          $control = [regex]::Matches($controlSample, '\$env:RUN_PAID_BENCHMARKS\s*=\s*["'']1["'']')
           if ($control.Count -eq 0) {
             throw "the RUN_PAID_BENCHMARKS guard is broken (it no longer detects the original defect)"
           }
