@@ -29,6 +29,7 @@ per-case.
 | **F7** (R92) | The R92 plan builder **could not run in CI**: it derived `createdAt` and H2-fix ancestry from `git show`/`git merge-base` on historical commits, which `actions/checkout`'s **shallow (depth 1)** clone does not contain | `87f83e3` | `r92-plan.test.ts` failed **10 of 11** in a depth-1 clone with `fatal: bad object a20373743…` (reproduced in a real shallow clone) | timestamps pinned as constants; ancestry three-valued (`true`/`false` on git exit 1/`null` when absent); `null` renders `UNKNOWN`, never `false`; drift guard asserts the pins against `git show` when history exists and **skips** in a shallow clone (mutation-tested: a 1 s shift fails it) | pending — verified locally in a depth-1 clone (12/12) |
 | **F8** (R92) | A **Windows-only** test ran on Linux: `runs a real .cmd shim resolved by BARE NAME…` spawns a `.cmd` shim but sat in an **unguarded** `describe`, so on POSIX the bare name reaches `spawn` with no `PATHEXT` → `ENOENT` | `87f83e3` | forcing `process.platform="linux"` reproduces it: the test went `×` failed (10 failed / 6 skipped) | `it.skipIf(!isWindows)` → the same run reports `↓` skipped (9 failed / 7 skipped), a delta of exactly that one test; `windows-fixture-guard.test.ts` statically fails any unguarded `.cmd`/`.bat`/`.ps1` fixture reference | pending — verified locally under simulated POSIX |
 | **NEW** (R92) | `origin/main` CI was **RED**: the E4-R82 cold-start guard scans `ci.yml` for a paid-authorization literal, and E4-R89's negative control spelled that literal out, so the guard matched its own control | `bb909de` | local mirror `packages/security/src/workflow-paid-authorization.test.ts` failed naming `ci.yml` line 576 | control assembled from fragments; bash guard passes; control still matches (1 match); local mirror runs under `pnpm test` | run 35185496622 (`bb909de`) — **RED** (the fix landed in the same commit, so this run could not have been green) |
+| **F9** (R92) | Two tests in an **unguarded** `describe` relied on the host **folding case**: they wrote a lowercase `toolname.cmd`/`casetool.cmd` fixture, then resolved it by **bare name**. `resolveWindowsCommand` appends the PATHEXT spelling VERBATIM (`.CMD`) and asks the filesystem — Windows folds, **ext4 does not**, so the bare name resolved to `null` on Linux only | `7941f32` | faithful ext4 emulation (see below): the **pre-fix** `executor.test.ts` gave **4 failed / 26 passed**; the fixed file gives **30 passed** | fixtures written under **both** casings, so the tests assert *our* resolution logic rather than the host's case folding (on Windows the two writes collapse to one file); a second independent static scan `unguardedCaseFoldingReliance` mutation-tested against the pre-fix file reports exactly `435: writes toolname…` and `520: writes casetool…` | run 35191203869 (`fd6a5f5`) — **RED** on 3 ubuntu jobs, green on windows; fixed in `7941f32` |
 
 **On CI coverage — corrected.** An earlier revision of this table cited run
 35185496622 (`bb909de`) as the CI evidence for F6a–F6e, H1 and the workflow-guard
@@ -38,6 +39,28 @@ pushed run; R90, R91 and R92 did **not** — they accumulated locally and reache
 CI together at `bb909de`, whose run was red. The two defects F7 and F8 above are
 what that red run actually exposed, and both were found *because* the run was
 inspected rather than assumed green.
+
+**The run after that was red too — F9.** `87f83e3` fixed F7 and F8 and the
+`windows-latest` job went green, which is what made F8's fix measurable. But run
+35191203869 (`fd6a5f5`) still failed three **ubuntu** jobs:
+`Unit and integration tests`, `coverage gate (thresholds fail the job)`, and
+`offline cold-start (ubuntu)` at its `Linux oracle` step. All three trace to the
+one cause above: the first two run the whole suite (the coverage gate runs
+`pnpm test:coverage`, i.e. every test, *then* checks thresholds), and the third
+runs `executor.test.ts` directly. **This was not a coverage-threshold dip** — all
+8 packages pass on Windows, and `packages/tools` projects to 85.33 % lines /
+72.01 % branches under POSIX against an 85/68 gate. A failing Linux test was the
+common cause.
+
+**Why F9 needed an emulation rather than a reproduction.** Windows *physically
+collapses* `tool.cmd` and `tool.CMD` into a single file, so the obvious check —
+write both casings and read the directory back — cannot distinguish the fix from
+the bug; it reports the same one file either way. The decisive harness therefore
+records the **exact spelling** of every path written and answers `existsSync`
+only for an exact-case hit (falling back to a readdir exact-match for real
+repository files). Under it, the pre-fix file fails exactly where Linux fails and
+the fixed file passes. Both halves were run against the same emulation, so the
+RED/GREEN pair is identity-consistent.
 
 **Withdrawn claim.** An intermediate diagnosis asserted that CI's tree was
 **dirty** at `pnpm test` time, based on reproducing `e4-09-production-e2e` and
@@ -50,6 +73,14 @@ the run. Replaying `install --frozen-lockfile` → `typecheck` → `build` leave
 tree clean at every step, and `core.autocrlf=true` (GitHub's Windows default)
 yields 0 porcelain lines. There is no CI-specific dirt source. F7 and F8 are the
 complete explanation of that run's four red jobs.
+
+**The lesson worth keeping.** Three separate CI failures — F7, F8, F9 — all
+shared one shape: **the local environment was not the CI environment**, and every
+local gate was green because the difference was invisible from Windows. F7 needed
+a *shallow* clone (CI clones depth 1); F8 needed a *non-Windows* platform; F9
+needed a *case-sensitive* filesystem. None of the three could be found by running
+the suite harder on the machine that wrote it. What found them was reading the CI
+run's failing job list and asking what each job does that the local run does not.
 
 
 ## 2. Remaining unknown historical impact
@@ -65,8 +96,9 @@ matter — they are the boundaries of what the stored evidence can prove.
 | **F6c** | The 27 real attributions are now `INSUFFICIENT_EVIDENCE`, not `MODEL_BEHAVIOR` and not `HARNESS_CONTROL_FLOW`. R85's original "count is 1" defect count is accurate as a *development-suite* count and misleading as a defect count. |
 | **F6d** | `rootDigest` proves content integrity after CRLF→LF normalization; it does **not** prove byte immutability. Any earlier claim of byte-level immutability is unsupported. |
 | **H1** | The defect was live during the R83 campaign (`78b69ff` is an ancestor of both campaign SHAs), but only `regression/reg-25-shell-script` records the `ENOENT` signature, because most `bash` cases are holdout and holdout per-case detail was never read. Six holdout cases (`ho-02`, `ho-06`, `ho-11`, `ho-25`, `ho-31`, `ho-32`) are now **refused** rather than fixed — fail-closed, not a regression, since pre-R91 they failed earlier with `spawn bash ENOENT`. Repairing them means rewriting verifiers as interpreter + script + argv, which changes case content and is therefore a case-definition change, not a runtime fix. |
-| **NEW** | CI was red from `567ca03` (R89) through `bb909de` (R92) and `f8e3355`; the `87f83e3` fix is not yet confirmed green by a CI run. No artifact was corrupted — the failing job aborts before the cold-start README steps run — but the *cold-start acceptance evidence* for that window was never produced. |
+| **NEW** | CI was red from `567ca03` (R89) through `bb909de` (R92), `f8e3355` and `fd6a5f5`; the `87f83e3` fix is not yet confirmed green by a CI run. No artifact was corrupted — the failing job aborts before the cold-start README steps run — but the *cold-start acceptance evidence* for that window was never produced. |
 | **F7/F8** | Both defects were **test/plan-harness defects, not production-runtime defects**, so no benchmark result is invalidated by them. F7 means the R92 authorization plan could not be regenerated in CI (so the digest could not be independently re-derived there); F8 means one R91 test asserted Windows-only behaviour on POSIX. Neither affected the R83 campaign data or any stored verdict. |
+| **F9** | A **test-portability defect, not a runtime defect**: `resolveWindowsCommand` is correct on Windows (case folding is a real property of the platform it targets). Only the *tests* were wrong, by asserting that property of whatever host ran them. So no production behaviour, benchmark result, or stored verdict is affected. The honest limit: F9's RED/GREEN rests on a **faithful ext4 emulation**, not on a real Linux host — no WSL distro and no Docker are available in this environment, so the emulation is the strongest available evidence short of the CI run itself, and the pushed run is what confirms it. |
 | **R92** | The authorization gate is implemented and its refusals proven offline, but it is **not wired into the generic `agent benchmark` path**. Until the R92 campaign driver calls it as its first action, the three environment variables are a convention, not a mechanism. This is the single most important open item before any paid run. |
 
 ## 3. Verification gates (measured, on a clean tree)
@@ -79,6 +111,7 @@ matter — they are the boundaries of what the stored evidence can prove.
 | R91 | PASS | 336 files, 6131 passed / 3 skipped, 0 failed | PASS |
 | R92 | PASS | **340 files, 6193 passed / 3 skipped, 0 failed** | PASS |
 | R92 fixes (`87f83e3`) | PASS | **341 files, 6198 passed / 3 skipped, 0 failed** — measured on a **clean depth-1 clone** with CI's exact env vars (`CI`, `OPENAI_API_KEY=""`, `E2E_OBSERVATION_*`, `E4_09_DIAG_DIR`, `E4_R55_PARENT_DIAG_DIR`), exit 0, and `git status --porcelain` empty **after** the run | PASS |
+| R92 fix (`7941f32`) | PASS | **341 files, 6199 passed / 3 skipped, 0 failed** — measured on a clean full-history tree; the same file passes **30/30** under the ext4 emulation that makes the pre-fix file fail | PASS |
 
 The depth-1 clone matters: it is the only environment that reproduces F7. The
 same suite on a full-history checkout passes while CI fails, which is precisely

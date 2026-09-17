@@ -377,6 +377,103 @@ There is no CI-specific dirt source; the hypothesis is withdrawn.
 The lesson worth keeping: a scratch-clone reproduction must be proven clean
 *before* its failures are attributed to CI.
 
+## 7d. A third red run — one defect, three ubuntu jobs
+
+Fixing §7c's two defects made the **windows** job go green, which is what makes
+F8's fix measurable rather than asserted. But the run was still red:
+
+| Run | Commit | Result |
+| --- | --- | --- |
+| 35191203869 | `fd6a5f5` | **failure — 3 ubuntu jobs**: `Unit and integration tests`, `coverage gate (thresholds fail the job)`, `offline cold-start (ubuntu)` at `Linux oracle`. `install · … (windows-latest)` = **success** |
+
+All three trace to **one** cause. The first two run the whole suite — the coverage
+gate runs `pnpm test:coverage`, i.e. every test, and only *then* checks the
+per-package thresholds — and the third runs `executor.test.ts` directly at its
+`Linux oracle` step. So a single failing Linux test reddens all three.
+
+**It was not a coverage-threshold dip.** Every one of the 8 packages passes on
+Windows, and under POSIX `packages/tools` projects to **85.33 % lines / 72.01 %
+branches** against an 85/68 gate. The gate's design (full suite first) is why a
+test failure and a threshold failure are indistinguishable from the job list
+alone — worth knowing before concluding the thresholds are too tight.
+
+**Defect 3 — two tests relied on the host folding case.**
+In the *unguarded* `describe("E4-R91: argv launch planning
+(platform-parameterised)")` — deliberately unguarded so the decision table is
+exercised on both platforms — two tests wrote a lowercase fixture
+(`toolname.cmd`, `casetool.cmd`) and then resolved it by **bare name**:
+
+```ts
+const shim = join(dir, "toolname.cmd");
+writeFileSync(shim, "@echo off\r\n", "utf8");
+expect(eq(resolveWindowsCommand("toolname", env), shim)).toBe(true);
+```
+
+`resolveWindowsCommand` appends the **PATHEXT spelling verbatim** — uppercase
+`.CMD` — and asks the filesystem whether that path exists. Windows folds case, so
+one lowercase file answers a probe for `toolname.CMD`; that is why the production
+path is correct and why these tests passed on every Windows gate, including the
+author's box. **ext4 does not fold case**, so the probe misses, the bare name
+resolves to `null`, and the assertion fails *only* on Linux.
+
+Fixed by writing each fixture under **both** casings, so the tests assert *our*
+resolution logic (append the PATHEXT extension, search PATH) instead of
+accidentally asserting the host filesystem's case folding. On Windows the two
+writes collapse into one file, so the fixture is unchanged there.
+
+**Why this needed an emulation.** The obvious check — write both casings and read
+the directory back — **cannot distinguish the fix from the bug on Windows**:
+Windows physically collapses `tool.cmd` and `tool.CMD` into a single directory
+entry, so the check reports the same one file either way. (It reported exactly
+that when first tried, which is what exposed the flaw in the check.) The decisive
+harness instead records the **exact spelling** of every path written and answers
+`existsSync` only for an exact-case hit, falling back to a readdir exact-match for
+real repository files. Under that emulation:
+
+```
+original committed executor.test.ts  ->  4 failed / 26 passed
+fixed    executor.test.ts            ->  30 passed
+```
+
+Both halves ran against the **same** emulation, so the RED/GREEN pair is
+identity-consistent. Two of the four pre-fix failures sit inside
+`skipIf(!isWindows)` blocks and are skipped on a real Linux host; the two in the
+unguarded `describe` are precisely what runs on ubuntu-latest.
+
+**A second regression guard, and a vacuity trap in it.** `windows-fixture-guard.test.ts`
+gains an independent static scan, `unguardedCaseFoldingReliance`, flagging any
+unguarded test that calls `resolveWindowsCommand` while only ever writing a
+lowercase script fixture. Mutation-tested against the pre-fix file it names
+exactly the two offenders:
+
+```
+435: writes toolname, toolname but probes the PATHEXT spelling
+520: writes casetool but probes the PATHEXT spelling
+```
+
+The **first version of that scan was vacuous**, and the way it failed is worth
+recording: E4-R91's own explanatory comment contains the prose
+``PATHEXT spelling (`.CMD`)``, and the "an uppercase fixture is already present"
+escape hatch matched that backtick-quoted text — so the scan **passed against the
+very file it was written to catch**. It was caught only by mutation-testing the
+guard against the known-bad input, not by reading it. Comments are now blanked
+(length-preserving, so reported line numbers stay exact) before scanning, and the
+uppercase pattern requires a non-empty stem.
+
+**Honest limit.** F9's RED/GREEN rests on a faithful **emulation**, not on a real
+Linux host: this environment has no WSL distribution and no Docker, so no ext4
+filesystem is reachable. The emulation models exactly the property in question
+(exact-case existence) and nothing else, and the pushed CI run is what confirms
+it. The defect itself is not in doubt — `existsSync(join(dir, "toolname.CMD"))`
+is unambiguously false on ext4 when only `toolname.cmd` was written.
+
+**The pattern across all three red runs.** F7, F8 and F9 share one shape: the
+local environment was not the CI environment, and the difference was invisible
+from Windows. F7 needed a *shallow* clone, F8 a *non-Windows* platform, F9 a
+*case-sensitive* filesystem. None could be found by running the suite harder on
+the machine that wrote it; what found them was reading the failing job list and
+asking what each job does that the local run does not.
+
 ## 8. Enforcement status — the honest gap
 The gate is implemented and its refusals are **proven** offline (§6). It is,
 however, **not yet wired into the generic `agent benchmark` path**. The three
