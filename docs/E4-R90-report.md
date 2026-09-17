@@ -312,6 +312,24 @@ The R88 step likewise now asserts v1 **and** the superseded v2 are both intact
 and unmodified, and the previously-present
 `expectedRecords === observedRecords` check was retained.
 
+### 7.3 CI coverage of R90 — corrected
+
+R90 was never pushed on its own. Its first CI coverage came at `bb909de` (run
+35185496622), and **that run failed four jobs**, so it is not evidence that R90
+passed in CI. The failures were two unrelated defects, both diagnosed and fixed
+in E4-R92 (see `docs/E4-R92-report.md` §7c):
+
+1. the R92 plan builder read git history that a **shallow** `actions/checkout`
+   clone does not contain (`fatal: bad object a20373743…`, 10 of 11 tests);
+2. an R91 test that spawned a `.cmd` shim ran unguarded on Linux
+   (`spawn r91endtoend ENOENT`).
+
+Neither is an R90 defect: R90's own assertions (schemaVersion 2, the
+mechanism/attribution split, the `MODEL_BEHAVIOR` prohibition) were not implicated.
+The local verification table in §7 stands on its own measurements. What is
+withdrawn is any implication that `bb909de`'s run certified R90 in CI — it did
+not, and a green run at the corrected HEAD is still pending.
+
 ---
 
 ## 8. Acceptance criteria (plan §R90 怎么验收)

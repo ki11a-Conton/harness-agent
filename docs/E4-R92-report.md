@@ -296,6 +296,87 @@ unaffected: the workflow *guard* broke, not the runner contract. R89's report
 never claimed CI was green — its §10 said the run id was still to be filled in —
 and it now records this follow-up.
 
+## 7c. The next run was red too — two more real defects, both fixed
+
+Fixing §7b produced a new red run, which is the honest state of the record:
+
+| Run | Commit | Result |
+| --- | --- | --- |
+| 35185496622 | `bb909de` | **failure — 4 jobs**: `install · … (ubuntu-latest)`, `install · … (windows-latest)`, `coverage gate (ubuntu)`, `offline cold-start (ubuntu)` |
+
+This run is the **first and only** CI coverage R90, R91 and R92 ever received
+(none was pushed individually). It failed, so it cannot be cited as evidence
+that those revisions pass in CI. Two independent real defects caused all four
+jobs, and both were invisible on the author's Windows box:
+
+**Defect 1 — the R92 plan builder could not run in CI at all.**
+`r92-plan.test.ts` failed **10 of 11** tests with
+`fatal: bad object a20373743b56de6a3a110fecdd254737ece71afa`. The builder called
+`git show -s --format=%cI <sha>` and `git merge-base --is-ancestor` on historical
+commits to derive `createdAt` and the H2-fix ancestry. `actions/checkout` clones
+**shallow (depth 1)**, so those objects are absent in CI — while passing locally,
+where the full history exists. A plan that cannot be regenerated in CI cannot be
+verified there, which defeats the artifact's whole purpose.
+
+Fixed by pinning `R92_BASELINE_COMMITTED_AT` / `R92_CANDIDATE_COMMITTED_AT` as
+constants and making ancestry **three-valued**: `true` on success, `false` only on
+git's documented exit 1, and `null` when the object is missing. A `null` now
+renders as `UNKNOWN (commit absent from this clone)`; previously
+`String(undefined)`-style coercion would have printed `false`, asserting the H2
+fix is *absent* from a revision that was merely uninspectable — a false claim
+dressed as a fact.
+
+A drift guard was added so a pinned constant cannot silently diverge from the
+commit it describes: the test asserts both constants against `git show` when
+history is present, and **skips** in a depth-1 clone rather than passing
+vacuously. It was mutation-tested — shifting the pin by one second fails it
+(`expected '2026-09-16T08:27:46.000Z' to be '2026-09-16T08:27:47.000Z'`).
+
+**Defect 2 — a Windows-only test ran on Linux.**
+The `offline cold-start (ubuntu)` job failed on
+`runs a real .cmd shim resolved by BARE NAME through runArgv end-to-end`. That
+test spawns a `.cmd` shim but sat in an **unguarded** `describe` block, so it ran
+on Linux, where `planArgvLaunch` correctly hands the bare name to POSIX `spawn`
+and POSIX has no `PATHEXT` — the file exists only as `r91endtoend.cmd`, so
+`spawn r91endtoend ENOENT`. Fixed with `it.skipIf(!isWindows)` (`skipIf`, not an
+early `return`, so a POSIX run reports **SKIPPED** and cannot be mistaken for a
+pass). RED→GREEN proven by forcing `process.platform = "linux"`: the test went
+`×` failed → `↓` skipped, a delta of exactly that one test.
+
+A regression guard now prevents the whole class:
+`packages/tools/src/process/windows-fixture-guard.test.ts` statically fails when
+a test file references a `.cmd`/`.bat`/`.ps1` fixture without a platform guard,
+and includes its own non-vacuity checks.
+
+### Correction to an earlier claim in this report
+
+An intermediate diagnosis in this work asserted that CI's tree was **dirty** at
+`pnpm test` time, on the strength of reproducing `e4-09-production-e2e` and
+`benchmark-command` failures in a scratch clone. **That claim was wrong.** The
+dirt was self-inflicted: the scratch clone had fixed sources `Copy-Item`'d into
+it (`git status` showed ` M packages/evaluation/src/r92-plan.{ts,test.ts}`), which
+is exactly what the promotion clean-tree gate refuses. With a genuinely clean
+clone those two suites pass.
+
+Confirmed directly rather than argued: a **clean depth-1 clone** at this lineage
+with CI's exact env vars (`CI`, `OPENAI_API_KEY=""`, `E2E_OBSERVATION_*`,
+`E4_09_DIAG_DIR`, `E4_R55_PARENT_DIAG_DIR`) gives
+
+```
+Test Files  341 passed (341)
+     Tests  6198 passed | 3 skipped (6201)
+```
+
+exit 0, 0 failed — and `git status --porcelain` is empty **after** the run, not
+only before it. The CI sequence was also replayed step by step
+(`install --frozen-lockfile` → `typecheck` → `build`), checking for dirt after
+each: clean throughout. `core.autocrlf=true` (GitHub's Windows runner default)
+was tested and produces **0** porcelain lines, ruling out line-ending churn.
+There is no CI-specific dirt source; the hypothesis is withdrawn.
+
+The lesson worth keeping: a scratch-clone reproduction must be proven clean
+*before* its failures are attributed to CI.
+
 ## 8. Enforcement status — the honest gap
 The gate is implemented and its refusals are **proven** offline (§6). It is,
 however, **not yet wired into the generic `agent benchmark` path**. The three

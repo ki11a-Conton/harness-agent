@@ -286,6 +286,39 @@ caught rather than shipped.
 6. **Local reproduction is Windows-only.** Ubuntu acceptance comes from the CI
    matrix; no WSL/Docker was used locally.
 
+## 9b. Post-push follow-up: a POSIX regression found by CI (fixed in E4-R92)
+
+R91 was never pushed on its own. Its first CI coverage came at `bb909de`, whose
+run **failed** — and one of the failures was an R91 defect that local Windows
+testing structurally could not see.
+
+The `offline cold-start (ubuntu)` job failed on
+`runs a real .cmd shim resolved by BARE NAME through runArgv end-to-end`. That
+test spawns a `.cmd` shim, but it sat in an **unguarded** `describe` block, so it
+also ran on Linux. There, `planArgvLaunch` does the correct thing — it passes the
+bare name straight to POSIX `spawn` — but POSIX has no `PATHEXT`, so a file that
+exists only as `r91endtoend.cmd` is simply not found:
+
+```
+POSIX plan:    {"ok":true,"file":"r91endtoend","args":["arg"],"via":"direct"}
+POSIX outcome: {"status":"error","error":"ENOENT: spawn r91endtoend ENOENT"}
+```
+
+The **production code is right**; the **test** was wrong to claim a Windows-only
+behaviour on every platform. Fixed with `it.skipIf(!isWindows)` — `skipIf` rather
+than an early `return`, so a POSIX run reports **SKIPPED** and can never be
+mistaken for a real pass. RED→GREEN was proven by forcing
+`process.platform = "linux"`: the test went `×` failed (10 failed / 6 skipped) →
+`↓` skipped (9 failed / 7 skipped), a delta of exactly that one test.
+
+This is also why R91's own §9 item 6 ("Local reproduction is Windows-only.
+Ubuntu acceptance comes from the CI matrix") was the right thing to flag: the CI
+matrix is what caught this, and it is the only thing that could have.
+
+A static regression guard now covers the class:
+`packages/tools/src/process/windows-fixture-guard.test.ts` fails when a test file
+references a `.cmd`/`.bat`/`.ps1` fixture without a platform guard.
+
 ## 10. What R91 does not touch
 
 * No benchmark `case.json` was modified → **no case-content digest moved**, so
