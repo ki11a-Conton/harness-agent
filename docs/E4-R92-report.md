@@ -391,11 +391,18 @@ gate runs `pnpm test:coverage`, i.e. every test, and only *then* checks the
 per-package thresholds — and the third runs `executor.test.ts` directly at its
 `Linux oracle` step. So a single failing Linux test reddens all three.
 
-**It was not a coverage-threshold dip.** Every one of the 8 packages passes on
-Windows, and under POSIX `packages/tools` projects to **85.33 % lines / 72.01 %
-branches** against an 85/68 gate. The gate's design (full suite first) is why a
-test failure and a threshold failure are indistinguishable from the job list
-alone — worth knowing before concluding the thresholds are too tight.
+**It was not a coverage-threshold dip — measured, not argued.** Every one of the
+8 packages passes on Windows. The remaining doubt was whether *skipping* the
+Windows-only tests on Linux could drop `packages/tools` below its 85/68 gate,
+since that is the only package whose tests are platform-conditional. It does not:
+running the full `pnpm test:coverage` with `isWindows` forced to `false` — exactly
+the test set ubuntu executes — gives `tools/src` **89.84 % lines / 79.38 %
+branches** and **exit 0**. The coverage job was therefore red purely because a
+test failed inside it, which is the gate's design: it runs the whole suite and
+only then checks thresholds, making a test failure and a threshold failure
+indistinguishable from the job list alone.
+
+**Outcome: the next run was fully green.**
 
 **Defect 3 — two tests relied on the host folding case.**
 In the *unguarded* `describe("E4-R91: argv launch planning
@@ -460,12 +467,35 @@ guard against the known-bad input, not by reading it. Comments are now blanked
 (length-preserving, so reported line numbers stay exact) before scanning, and the
 uppercase pattern requires a non-empty stem.
 
-**Honest limit.** F9's RED/GREEN rests on a faithful **emulation**, not on a real
-Linux host: this environment has no WSL distribution and no Docker, so no ext4
-filesystem is reachable. The emulation models exactly the property in question
-(exact-case existence) and nothing else, and the pushed CI run is what confirms
-it. The defect itself is not in doubt — `existsSync(join(dir, "toolname.CMD"))`
-is unambiguously false on ext4 when only `toolname.cmd` was written.
+**Honest limit, and how it was closed.** F9's RED/GREEN rests on a faithful
+**emulation**, not on a real Linux host: this environment has no WSL distribution
+and no Docker, so no ext4 filesystem is reachable. The emulation models exactly
+the property in question (exact-case existence) and nothing else. The defect
+itself is not in doubt — `existsSync(join(dir, "toolname.CMD"))` is unambiguously
+false on ext4 when only `toolname.cmd` was written — but the emulation was, until
+the run below, the strongest available evidence rather than direct proof.
+
+**Confirmed by CI — the run went green.**
+
+| Run | Commit | Result |
+| --- | --- | --- |
+| 35195500738 | `5d04b2c` | **success — all 5 jobs** |
+
+```
+success  install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest)
+success  install · typecheck · test · build · benchmark-smoke · audit (windows-latest)
+success  coverage gate (ubuntu)
+success  offline cold-start (ubuntu)
+success  release attestation (P38-12)
+```
+
+This is the first fully green run since `20f01b9` (R88), and it is the run that
+retires the emulation caveat: `ubuntu-latest` has a genuine case-sensitive
+filesystem, and the three jobs that were red at `fd6a5f5` are green at `5d04b2c`.
+It also independently confirms the two claims that rested on local measurement —
+that `coverage gate` was red because of a failing test rather than a threshold
+dip, and that `offline cold-start`'s `Linux oracle` step passes once the
+case-folding dependency is removed.
 
 **The pattern across all three red runs.** F7, F8 and F9 share one shape: the
 local environment was not the CI environment, and the difference was invisible
