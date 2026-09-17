@@ -537,7 +537,19 @@ describe("E4-R91: argv launch planning (platform-parameterised)", () => {
     }
   });
 
-  it("runs a real .cmd shim resolved by BARE NAME through runArgv end-to-end", async () => {
+  // E4-R92 fix: this test SPAWNS a `.cmd` shim, so it is Windows-only.
+  //
+  // It previously sat in an unguarded describe block and ran on Linux too,
+  // where it failed: `planArgvLaunch` correctly passes the bare name straight to
+  // POSIX spawn, and POSIX has no PATHEXT, so a file that exists only as
+  // `r91endtoend.cmd` is not found (`spawn r91endtoend ENOENT`). The defect was
+  // invisible locally because the author's box is Windows, and it surfaced only
+  // as a red `offline cold-start (ubuntu)` job — the one job that runs these
+  // executor tests on Linux. `skipIf` rather than an early `return`, so a POSIX
+  // run reports SKIPPED and cannot be mistaken for a real pass. The POSIX
+  // DECISION is still covered above by "POSIX passes the file through
+  // untouched", which is pure and needs no spawn.
+  it.skipIf(!isWindows)("runs a real .cmd shim resolved by BARE NAME through runArgv end-to-end", async () => {
     // The unit-level plan test above cannot catch a PATH that the executor
     // itself dropped, so this asserts the whole path: runArgv must resolve the
     // bare name from the ambient environment and actually execute it.

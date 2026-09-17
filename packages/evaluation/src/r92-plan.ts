@@ -54,6 +54,26 @@ export const R92_H2_FIX_SHA = "ec91c286653706c827e34670efc945356619024e";
 /** The candidate revision the R87 selection binds (baseline + the H2 fix). */
 export const R92_CANDIDATE_SHA = "a20373743b56de6a3a110fecdd254737ece71afa";
 
+/**
+ * Committer timestamps of the two bound commits, as UTC ISO.
+ *
+ * E4-R92 portability fix: these are PINNED CONSTANTS rather than read from git
+ * at plan-build time. `actions/checkout` clones SHALLOW (depth 1), so the
+ * historical commits are not present in CI and `git show`/`git merge-base` fail
+ * there with `bad object` / `Not a valid commit name`. Reading history at build
+ * time therefore made the plan unbuildable in CI while passing locally, where
+ * the full history exists. A plan that cannot be regenerated in CI cannot be
+ * verified there, so the values are recorded here instead. `r92-plan.test.ts`
+ * asserts them against git whenever the history IS present, so the constants
+ * cannot silently drift from the commits they claim to describe.
+ *
+ * `git show -s --format=%cI <sha>` at the time of writing:
+ *   e9776ba… → 2026-09-16T12:39:03+08:00
+ *   a203737… → 2026-09-16T16:27:46+08:00
+ */
+export const R92_BASELINE_COMMITTED_AT = "2026-09-16T04:39:03.000Z";
+export const R92_CANDIDATE_COMMITTED_AT = "2026-09-16T08:27:46.000Z";
+
 /** The provider's real default base URL, as declared by the model package. The
  *  endpoint identity bound into the plan is the normalized DIGEST of this, never
  *  the raw URL, so the approval package carries no host or token material. */
@@ -85,10 +105,12 @@ export interface R92PlanBuildOptions {
 export interface R92PlanFacts {
   /** Facts the pre-provider gate compares against at execution time. */
   gateFacts: R92GateFacts;
-  /** True when the candidate revision's history contains the H2 fix commit. */
-  candidateContainsH2Fix: boolean;
-  /** True when the baseline revision's history contains the H2 fix commit. */
-  baselineContainsH2Fix: boolean;
+  /** Whether the candidate revision's history contains the H2 fix commit.
+   *  `null` = UNKNOWN because the commit is absent from this (shallow) clone. */
+  candidateContainsH2Fix: boolean | null;
+  /** Whether the baseline revision's history contains the H2 fix commit.
+   *  `null` = UNKNOWN because the commit is absent from this (shallow) clone. */
+  baselineContainsH2Fix: boolean | null;
   /** Number of case verifiers that resolve to a Windows script shim (R91
    *  surface). Zero means the H2 delta cannot be confounded by the R91 fix. */
   shimAffectedVerifiers: number;
@@ -157,21 +179,25 @@ async function countShimVerifiers(repoRoot: string, caseId: string): Promise<num
   return list.filter((v) => typeof (v as { command?: unknown }).command === "string" && shims.has((v as { command: string }).command)).length;
 }
 
-/** True when `sha` is an ancestor of (or equal to) `descendant`. */
-async function isAncestor(repoRoot: string, sha: string, descendant: string): Promise<boolean> {
+/**
+ * True when `sha` is an ancestor of (or equal to) `descendant`.
+ *
+ * Returns `null` when git cannot answer — which is the NORMAL case in CI, where
+ * `actions/checkout` clones shallow and the historical commits are absent. A
+ * `null` means UNKNOWN, and callers must not read it as `false`: "the commit is
+ * not an ancestor" and "the commit is not in this clone" are different claims.
+ */
+async function isAncestor(repoRoot: string, sha: string, descendant: string): Promise<boolean | null> {
   try {
     await run("git", ["merge-base", "--is-ancestor", sha, descendant], { cwd: repoRoot });
     return true;
-  } catch {
-    return false;
+  } catch (err) {
+    const e = err as { code?: number; stderr?: string };
+    // Exit 1 is git's documented "not an ancestor". Anything else (128 /
+    // "Not a valid commit name" / "bad object") means the object is missing.
+    if (e.code === 1) return false;
+    return null;
   }
-}
-
-/** The committer timestamp of `sha`, normalized to UTC ISO. Deterministic for a
- *  given commit, which is what makes the plan digest re-derivable. */
-async function commitTimestamp(repoRoot: string, sha: string): Promise<string> {
-  const { stdout } = await run("git", ["show", "-s", "--format=%cI", sha], { cwd: repoRoot });
-  return new Date(stdout.trim()).toISOString();
 }
 
 export async function buildR92AuthorizationPlan(opts: R92PlanBuildOptions): Promise<R92AuthorizationPlan> {
@@ -179,10 +205,11 @@ export async function buildR92AuthorizationPlan(opts: R92PlanBuildOptions): Prom
   // The digest binds createdAt, so a wall-clock default would make the approved
   // value irreproducible: the user approves digest X and a later regeneration
   // yields Y, which the gate must then refuse. Anchoring createdAt to the
-  // candidate commit's own timestamp makes the digest a pure function of
-  // repository facts plus the declared validity window, so anyone can re-derive
-  // and verify the exact digest that was approved.
-  const createdAt = opts.now ?? (await commitTimestamp(repoRoot, R92_CANDIDATE_SHA));
+  // candidate commit's timestamp makes the digest a pure function of repository
+  // facts plus the declared validity window, so anyone can re-derive and verify
+  // the exact digest that was approved. The timestamp is a pinned constant, not
+  // a git read, because CI clones shallow (see R92_CANDIDATE_COMMITTED_AT).
+  const createdAt = opts.now ?? R92_CANDIDATE_COMMITTED_AT;
   const validityDays = opts.validityDays ?? 30;
   const expiresAt = new Date(Date.parse(createdAt) + validityDays * 86_400_000).toISOString();
 
@@ -365,7 +392,11 @@ function renderApprovalMarkdown(
   lines.push("");
   lines.push(`- Arm identity mode: **${auth.armIdentityMode}**. Both revisions are built and run separately; a simulated`);
   lines.push("  switch is never recorded as a historical checkout.");
-  lines.push(`- Candidate contains the H2 fix: \`${String(facts.candidateContainsH2Fix)}\`  ·  baseline contains it: \`${String(facts.baselineContainsH2Fix)}\``);
+  // `null` means the commit is absent from this clone (CI checks out shallow),
+  // which is UNKNOWN — never render it as "false", which would assert the fix is
+  // missing from a revision we simply could not inspect.
+  const anc = (v: boolean | null) => (v === null ? "UNKNOWN (commit absent from this clone)" : String(v));
+  lines.push(`- Candidate contains the H2 fix: \`${anc(facts.candidateContainsH2Fix)}\`  ·  baseline contains it: \`${anc(facts.baselineContainsH2Fix)}\``);
   lines.push("");
   lines.push("## Fix scope — H2 alone vs several fixes jointly");
   lines.push("");
