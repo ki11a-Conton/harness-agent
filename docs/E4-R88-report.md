@@ -200,12 +200,28 @@ work is committed — see §10.
 - `docs/evidence/e4-r88-phase-a-manifest.json` — emitted v2 manifest (NEW)
 - `.github/workflows/ci.yml` — R88 CI step (both OSes) + legacy/v2 manifest assertions
 - `docs/E4-R88-report.md` — this report (NEW)
-- `scripts/e4/r88-red-evidence.mjs` — standalone RED reproducer (NEW)`n- `docs/evidence/e4-r87-phase-a-manifest.json` — **unchanged** (legacy preserved)
+- `scripts/e4/r88-red-evidence.mjs` — standalone RED reproducer (NEW)
+- `docs/evidence/e4-r87-phase-a-manifest.json` — **unchanged** (legacy preserved)
 
 ## 10. CI
 
-To be filled with the run id after pushing (this report's commit is the ending
-SHA).
+Run **`35167911660`** (run number 176) on the ending SHA
+`20f01b988fe999638218a8be9dd5e57a78e36c29` — **completed / success**, all 5 jobs:
+
+| Job | Conclusion |
+| --- | --- |
+| `install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest)` | success |
+| `install · typecheck · test · build · benchmark-smoke · audit (windows-latest)` | success |
+| `offline cold-start (ubuntu)` | success |
+| `coverage gate (ubuntu)` | success |
+| `release attestation (P38-12)` | success |
+
+The R88 offline validator and the legacy/v2 manifest assertions therefore ran
+green on **both** operating systems, which is the Linux evidence the Windows-only
+dev host cannot produce locally.
+
+Post-commit local verification on the same SHA: `pnpm test` → 336 files passed,
+6103 passed / 3 skipped (6106), exit 0; `pnpm test:coverage` exit 0.
 
 ## 11. Not done / out of scope
 

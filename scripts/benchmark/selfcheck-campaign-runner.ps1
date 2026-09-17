@@ -116,7 +116,12 @@ Assert-True ($seedBefore -eq 3) "the seeded manifest has 3 records (got $seedBef
 
 $seedArgs = @(
     "-Endpoint", "https://api.invalid.example/v1",
-    "-Model", "selfcheck-model",
+    # E4-R89: completion is now IDENTITY-bound, so a relaunch must present the
+    # same provider/model the stored evidence records. The committed fixture's
+    # reports name provider "test" / model "synthetic-1"; using a different model
+    # here is a DIFFERENT experiment and is correctly refused (not skipped).
+    "-Model", "synthetic-1",
+    "-Provider", "test",
     "-Root", $seedRoot,
     "-CasesRoot", $casesRoot,
     "-Suites", "adversarial,stress"

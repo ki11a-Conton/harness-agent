@@ -415,6 +415,43 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File scripts/benchmark/selfcheck-campaign-runner.ps1
 
+      # E4-R89 (F3/F4/F5): the campaign runner's authorization gate must READ its
+      # inputs and never create them; completion must be identity-bound rather
+      # than "the report file exists"; and the --suites value must be the
+      # comma-joined suite list, never a hashtable. The whole suite drives a FAKE
+      # CLI, so it makes zero provider calls and needs no key.
+      #
+      # Runs on BOTH OSes: the offline contract must hold on Windows and on
+      # Ubuntu/pwsh alike (pwsh is preinstalled on the GitHub-hosted runners).
+      - name: Campaign runner authorization/identity/argv contract (E4-R89)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File scripts/benchmark/selfcheck-r89-runner.ps1
+          if ($LASTEXITCODE -ne 0) { throw "E4-R89 self-check failed ($LASTEXITCODE)" }
+          # The runner must never grant itself the paid authorization. Scan the
+          # runner's CODE with comments removed (the file documents the rule in
+          # its comment-based help, so a raw text scan would match its own
+          # documentation). A legitimate restore assigns a saved VARIABLE; only a
+          # literal "1" is the historical defect.
+          $raw = Get-Content scripts/benchmark/run-campaign.ps1 -Raw
+          $noBlockComments = [regex]::Replace($raw, '(?s)<#.*?#>', '')
+          $code = ($noBlockComments -split "`n" | ForEach-Object { ($_ -replace '#.*$', '') }) -join "`n"
+          $bad = [regex]::Matches($code, '\$env:RUN_PAID_BENCHMARKS\s*=\s*["'']1["'']')
+          if ($bad.Count -gt 0) {
+            throw "run-campaign.ps1 SETS RUN_PAID_BENCHMARKS itself ($($bad.Count) site(s)) — authorization must be read, never created"
+          }
+          # A hashtable must never reach --suites.
+          if (Select-String -Path scripts/benchmark/run-campaign.ps1 -Pattern '--suites",\s*\$suiteList' -Quiet) {
+            throw "run-campaign.ps1 passes a hashtable list to --suites"
+          }
+          # Negative control: the guard must still detect the original defect.
+          $control = [regex]::Matches('$env:RUN_PAID_BENCHMARKS = "1"', '\$env:RUN_PAID_BENCHMARKS\s*=\s*["'']1["'']')
+          if ($control.Count -eq 0) {
+            throw "the RUN_PAID_BENCHMARKS guard is broken (it no longer detects the original defect)"
+          }
+          Write-Host "E4-R89 on $($env:RUNNER_OS): authorization read-not-created, completion identity-bound, argv contract held, 0 provider calls"
+          exit 0
+
       - name: Upload campaign evidence fixture report (E4-R84)
         uses: actions/upload-artifact@v4
         with:
