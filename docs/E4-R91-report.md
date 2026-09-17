@@ -227,7 +227,7 @@ assertion both removes that flake and proves the stronger property.
 | Executor suite | `vitest run packages/tools/src/process/executor.test.ts` | 30/30 PASS |
 | Verifier suite | `vitest run packages/tools/src/verification/task-verifier.test.ts` | 20/20 PASS |
 | Tools package | `vitest run packages/tools` | 291/291 PASS |
-| Full suite | `pnpm test` | PASS on a clean tree (§7.1) |
+| Full suite | `pnpm test` | **PASS** — 336 files, 6131 passed / 3 skipped, 0 failed (clean tree) |
 | CI probe | `node scripts/e4/r91-shim-probe.mjs` | all checks PASS |
 
 ### 7.1 On the dirty-tree failures
