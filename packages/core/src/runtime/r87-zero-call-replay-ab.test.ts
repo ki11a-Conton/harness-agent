@@ -35,6 +35,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   R87_SELECTION_DIGEST,
+  REPLAY_LIMITS,
+  REPLAY_CONFIG_DIFFERENCES,
   loadCaseSelection,
   verifySelectionDigest,
   runReplayAb,
@@ -43,6 +45,7 @@ import {
   validateManifest,
   computeSummary,
   paidAuthorizationStatus,
+  experimentIdentity,
   buildManifest,
   type FrozenCaseSelection,
 } from "./r87-zero-call-replay-ab.js";
@@ -279,15 +282,21 @@ describe("E4-R87 Phase A — zero-call replay A/B over the frozen case selection
     });
   });
 
-  it("EMIT MODE (env R88_EMIT_MANIFEST=1): writes the v2 manifest WITHOUT touching the legacy R87 file", async () => {
+  it("EMIT MODE (env R90_EMIT_MANIFEST=1): writes the v3 manifest WITHOUT touching v1 or the superseded v2", async () => {
     const out = fileURLToPath(
-      new URL("../../../../docs/evidence/e4-r88-phase-a-manifest.json", import.meta.url),
+      new URL("../../../../docs/evidence/e4-r90-phase-a-manifest.json", import.meta.url),
     );
     const legacyPath = fileURLToPath(
       new URL("../../../../docs/evidence/e4-r87-phase-a-manifest.json", import.meta.url),
     );
+    const supersededPath = fileURLToPath(
+      new URL("../../../../docs/evidence/e4-r88-phase-a-manifest.json", import.meta.url),
+    );
     const legacyBefore = existsSync(legacyPath) ? readFileSync(legacyPath, "utf8") : undefined;
-    if (process.env.R88_EMIT_MANIFEST !== "1") {
+    // R90: the v2 artifact is a preserved ERRATUM. Emitting v3 must never
+    // rewrite it — a versioned correction is appended, not substituted.
+    const supersededBefore = existsSync(supersededPath) ? readFileSync(supersededPath, "utf8") : undefined;
+    if (process.env.R90_EMIT_MANIFEST !== "1") {
       // Normal runs do not write into the repo tree.
       expect(true).toBe(true);
       return;
@@ -313,6 +322,80 @@ describe("E4-R87 Phase A — zero-call replay A/B over the frozen case selection
     if (legacyBefore !== undefined) {
       expect(readFileSync(legacyPath, "utf8")).toBe(legacyBefore);
     }
+    // The superseded v2 erratum must also remain byte-identical.
+    if (supersededBefore !== undefined) {
+      expect(readFileSync(supersededPath, "utf8")).toBe(supersededBefore);
+    }
+  });
+
+  it("R90: the manifest records the EXECUTED sha, labels the baseline EMULATED, and declares the synthetic mapping", () => {
+    // R90 F6: `implementationSha` alone let a reader believe the historical
+    // baseline build was detected and executed. It never was: the baseline arm
+    // is the SAME runtime with `streakResultAware: false` (emulated semantics),
+    // and the 3 TARGET labels are three labels of ONE synthetic trace.
+    const identity = experimentIdentity({
+      selection,
+      arms: ["baseline", "candidate"],
+      implementationSha: CANDIDATE_SHA,
+    });
+    expect(identity.executedSourceSha).toBe(CANDIDATE_SHA);
+    expect(identity.historicalReferenceSha).toBe(BASELINE_SHA);
+    expect(identity.baselineMode).toBe("emulated_semantics");
+    expect(identity.experimentKind).toBe("synthetic_mechanism");
+    // The executed sha is NEVER the historical one: claiming a real version A/B
+    // requires two real SHAs in isolated checkouts/builds, which this is not.
+    expect(identity.executedSourceSha).not.toBe(identity.historicalReferenceSha);
+    // The mapping is declared: how many INDEPENDENT mechanism scenarios the
+    // TARGET labels actually represent.
+    expect(identity.syntheticScenarios).toEqual({
+      independentScenarioCount: 1,
+      targetLabels: 3,
+      counterexampleLabels: 5,
+      traceKind: "identical-changing",
+    });
+  });
+
+  it("R90: a v2 manifest (no executed/reference split) is never blessed as verified evidence", async () => {
+    const v2Path = fileURLToPath(
+      new URL("../../../../docs/evidence/e4-r88-phase-a-manifest.json", import.meta.url),
+    );
+    if (!existsSync(v2Path)) {
+      expect(true).toBe(true);
+      return;
+    }
+    const v2 = JSON.parse(readFileSync(v2Path, "utf8")) as { schemaVersion: string };
+    // The historical v2 artifact stays on disk and stays readable (a versioned
+    // erratum, never a deletion) — but it is NOT re-blessed as evidence.
+    expect(v2.schemaVersion).toBe("e4-r88-phase-a-manifest-v2");
+    expect(validateManifest(v2, selection).status).toBe("LEGACY_UNVERIFIED");
+  });
+
+  it("R90: the corrected v3 manifest is VALID and carries the honest identity", async () => {
+    const { records } = await runReplayAb(selection, { arms: ["baseline", "candidate"], now: () => 0 });
+    const manifest = buildManifest({
+      selection,
+      records,
+      arms: ["baseline", "candidate"],
+      implementationSha: CANDIDATE_SHA,
+      baselineSha: BASELINE_SHA,
+      candidateSha: CANDIDATE_SHA,
+      gate: paidAuthorizationStatus({}),
+    });
+    expect(manifest.schemaVersion).toBe("e4-r90-phase-a-manifest-v3");
+    expect(manifest.identity.executedSourceSha).toBe(CANDIDATE_SHA);
+    expect(manifest.identity.historicalReferenceSha).toBe(BASELINE_SHA);
+    expect(manifest.identity.baselineMode).toBe("emulated_semantics");
+    expect(validateManifest(manifest, selection).status).toBe("VALID");
+  });
+
+  it("R90: REPLAY_LIMITS 20 vs the benchmark's 30 is declared a config difference, not retro-claimed", () => {
+    // Plan R90: the replay runs maxIterationsPerTurn=20 while the benchmark's
+    // effective cap is 30. That difference is a declared experimental config,
+    // and the historical evidence is NEVER retro-described as 30.
+    expect(REPLAY_LIMITS.maxIterationsPerTurn).toBe(20);
+    expect(REPLAY_CONFIG_DIFFERENCES.maxIterationsPerTurn.replay).toBe(20);
+    expect(REPLAY_CONFIG_DIFFERENCES.maxIterationsPerTurn.benchmark).toBe(30);
+    expect(REPLAY_CONFIG_DIFFERENCES.maxIterationsPerTurn.retroClaimed).toBe(false);
   });
 
   it("LEGACY: the committed R87 manifest stays readable and its v1 hashes are reproducible", async () => {

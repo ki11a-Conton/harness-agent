@@ -250,7 +250,13 @@ jobs:
           $fixture = "scripts/benchmark/fixtures/r84-campaign/campaign"
           $cases = "scripts/benchmark/fixtures/r84-campaign/cases"
           # The digest that the committed fixture MUST produce on every platform.
-          $expected = "831eabb24f206646a23a123772b79af2f4c42bf195639de50e17d81759dea91b"
+          # R90: re-pinned deliberately. The taxonomy no longer equates a tool
+          # failure with a model-behaviour error and each candidate now separates
+          # a reproduced MECHANISM from confirmed HISTORICAL attribution, so the
+          # triage schema went 1 -> 2 and the digest legitimately changed. The
+          # gate itself is NOT weakened: the digest is still pinned exactly, and
+          # the extra R90 assertions below are added, not removed.
+          $expected = "8481ee0be8f07e2fa262fd32f8ecab1ed7baa6701e7f6c3c9cb233806a33456c"
 
           # 1. Triage the fixture twice into separate directories.
           node apps/cli/dist/main.js benchmark campaign triage $fixture `
@@ -279,6 +285,40 @@ jobs:
             throw "the fixture verdict drifted: $($parsed.verdict)"
           }
           Write-Host "E4-R85 triage digest (cross-platform): $($parsed.triageDigest)"
+
+          # 3b. R90: the taxonomy schema is v2, and every candidate MUST separate
+          #     the reproduced mechanism from confirmed historical attribution.
+          #     A candidate count may never be presented as a confirmed count.
+          if ($parsed.schemaVersion -ne 2) { throw "triage schema is not v2 (got $($parsed.schemaVersion))" }
+          foreach ($c in @($parsed.candidates)) {
+            if ($c.mechanismStatus -notin @('MECHANISM_REPRODUCED','MECHANISM_NOT_REPRODUCED','UNKNOWN')) {
+              throw "candidate $($c.id) has an invalid mechanismStatus: $($c.mechanismStatus)"
+            }
+            if ($c.caseAttributionStatus -notin @('CONFIRMED_AFFECTED','CANDIDATE_ONLY','UNKNOWN')) {
+              throw "candidate $($c.id) has an invalid caseAttributionStatus: $($c.caseAttributionStatus)"
+            }
+            if ($c.confirmedAffectedCases.Count -gt $c.candidateCases.Count) {
+              throw "candidate $($c.id) claims more confirmed cases than candidates"
+            }
+            if ($c.affectedCases -ne $c.candidateCases.Count) {
+              throw "candidate $($c.id) affectedCases does not equal its candidateCases count"
+            }
+            if ($c.confirmedAffectedCases.Count -eq 0 -and $c.caseAttributionStatus -eq 'CONFIRMED_AFFECTED') {
+              throw "candidate $($c.id) claims CONFIRMED_AFFECTED with no confirmed case"
+            }
+          }
+          Write-Host "E4-R90 candidate evidence split OK (mechanism vs. confirmed historical attribution)"
+
+          # 3c. R90: no case may be convicted of MODEL_BEHAVIOR on a tool-failure
+          #     COUNT alone. Without recorded feedback the class must be
+          #     INSUFFICIENT_EVIDENCE carrying the provenance-unknown tag.
+          foreach ($case in @($parsed.cases)) {
+            if ($case.primary -ne 'MODEL_BEHAVIOR') { continue }
+            if ($case.toolFailures -gt 0 -and $case.toolFailureFeedback -ne 'tool_error_reported') {
+              throw "case $($case.caseId) was attributed to MODEL_BEHAVIOR without feedback evidence"
+            }
+          }
+          Write-Host "E4-R90 no tool-failure-count-only MODEL_BEHAVIOR attribution OK"
 
           # 4. No secret, endpoint or absolute path may enter the artifact.
           #    `sk-` is checked as a KEY SHAPE, not a bare substring: the
@@ -397,13 +437,64 @@ jobs:
           # manifest must still be present, readable and NOT blessed as verified.
           $legacy = Get-Content docs/evidence/e4-r87-phase-a-manifest.json -Raw | ConvertFrom-Json
           if ($legacy.schemaVersion -ne 'e4-r87-phase-a-manifest-v1') { throw "the legacy R87 manifest was rewritten or removed" }
+          # R90: the emitted manifest is now v3. The superseded v2 artifact stays
+          # on disk as a versioned ERRATUM (never deleted, never re-blessed),
+          # because its `sourceSha` implied a historical checkout that never ran.
           $v2 = Get-Content docs/evidence/e4-r88-phase-a-manifest.json -Raw | ConvertFrom-Json
-          if ($v2.schemaVersion -ne 'e4-r88-phase-a-manifest-v2') { throw "the R88 manifest schema is not v2" }
+          if ($v2.schemaVersion -ne 'e4-r88-phase-a-manifest-v2') { throw "the superseded R88 manifest was rewritten or removed" }
           if ($v2.summary.completeness -ne 'COMPLETE') { throw "the R88 manifest is not COMPLETE" }
           if ($v2.summary.expectedRecords -ne $v2.summary.observedRecords) { throw "the R88 manifest matrix is incomplete" }
           if ($v2.providerCalls -ne 0) { throw "the R88 manifest claims provider calls" }
           if ($v2.gate.status -ne 'NOT_RUN') { throw "the R88 paid gate did not stop at NOT_RUN" }
-          Write-Host "E4-R88 on $($env:RUNNER_OS): incomplete/foreign evidence refused, resume identity bound, validator offline, legacy v1 preserved unverified"
+          Write-Host "E4-R88 on $($env:RUNNER_OS): incomplete/foreign evidence refused, resume identity bound, validator offline, legacy v1 + superseded v2 preserved unverified"
+          exit 0
+
+      # E4-R90: evidence-grade correction (F6). The manifest must record what
+      # ACTUALLY executed, label the baseline as an emulated semantic switch
+      # rather than a checked-out historical build, and declare how many
+      # independent mechanism scenarios the synthetic labels represent. Offline,
+      # 0 provider calls.
+      - name: Evidence-grade correction — executed identity, emulated baseline, raw-byte audit (E4-R90)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'stop'
+          pnpm exec vitest run `
+            packages/core/src/runtime/r87-zero-call-replay-ab.test.ts `
+            packages/core/src/runtime/r88-replay-evidence-gate.test.ts `
+            packages/evaluation/src/campaign-triage.test.ts `
+            packages/evaluation/src/campaign-validate.test.ts 2>&1 | Write-Host
+          if ($LASTEXITCODE -ne 0) { throw "the E4-R90 suites failed (exit $LASTEXITCODE)" }
+
+          # 1. The v3 manifest separates the EXECUTED sha from the historical
+          #    reference, and declares the emulated baseline.
+          $v3 = Get-Content docs/evidence/e4-r90-phase-a-manifest.json -Raw | ConvertFrom-Json
+          if ($v3.schemaVersion -ne 'e4-r90-phase-a-manifest-v3') { throw "the R90 manifest schema is not v3" }
+          if ([string]::IsNullOrEmpty($v3.identity.executedSourceSha)) { throw "the R90 manifest records no executedSourceSha" }
+          if ($v3.identity.executedSourceSha -ne $v3.identity.implementationSha) { throw "executedSourceSha disagrees with the executed implementation" }
+          if ($v3.identity.executedSourceSha -eq $v3.identity.historicalReferenceSha) { throw "the R90 manifest conflates the executed and historical revisions" }
+          if ($v3.identity.baselineMode -ne 'emulated_semantics') { throw "the R90 baseline is not declared emulated" }
+          if ($v3.identity.experimentKind -ne 'synthetic_mechanism') { throw "the R90 experiment is not declared synthetic" }
+          if ($v3.scope.historicalReferenceCheckedOut -ne $false) { throw "the R90 manifest claims the historical revision was checked out" }
+          if ($v3.identity.syntheticScenarios.independentScenarioCount -ne 1) { throw "the R90 manifest overstates the independent scenario count" }
+          if ($v3.identity.syntheticScenarios.targetLabels -ne 3) { throw "the R90 manifest lost the 3-target label mapping" }
+          if ($v3.providerCalls -ne 0) { throw "the R90 manifest claims provider calls" }
+          if ($v3.gate.status -ne 'NOT_RUN') { throw "the R90 paid gate did not stop at NOT_RUN" }
+          Write-Host "E4-R90 executed identity / emulated baseline / synthetic mapping OK"
+
+          # 2. A versioned erratum, not a deletion: v1 AND the superseded v2 must
+          #    both still be present and unmodified in their declared schemas.
+          $v1 = Get-Content docs/evidence/e4-r87-phase-a-manifest.json -Raw | ConvertFrom-Json
+          if ($v1.schemaVersion -ne 'e4-r87-phase-a-manifest-v1') { throw "the historical v1 manifest was rewritten" }
+          $v2 = Get-Content docs/evidence/e4-r88-phase-a-manifest.json -Raw | ConvertFrom-Json
+          if ($v2.schemaVersion -ne 'e4-r88-phase-a-manifest-v2') { throw "the superseded v2 manifest was rewritten" }
+          Write-Host "E4-R90 history preserved (v1 legacy + v2 superseded erratum both intact)"
+
+          # 3. The normalized digest and the raw-byte digest are SEPARATE facts.
+          #    A CRLF-only change must move rawRootDigest while leaving the
+          #    normalized rootDigest (and therefore the pinned fixture digest)
+          #    untouched. Asserted by the validator suite above; re-stated here so
+          #    the CI log names the distinction explicitly.
+          Write-Host "E4-R90 normalized content integrity and raw-byte audit are declared separately"
           exit 0
 
       # E4-R84: the runner's own control flow (stage -> dry-run -> digest ->

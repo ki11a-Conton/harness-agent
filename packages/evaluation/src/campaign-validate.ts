@@ -152,9 +152,16 @@ export interface CampaignValidationResult {
   checks: CampaignCheck[];
   errors: CampaignCheck[];
   summary: CampaignSummary;
-  /** sha256 over the sorted `<path>\0<sha256>\n` evidence listing. */
+  /**
+   * sha256 over the sorted `<path>\0<sha256>\n` evidence listing, computed on
+   * CRLF→LF NORMALIZED content. This is a CONTENT-integrity digest: it is
+   * deliberately line-ending agnostic so one campaign has one cross-platform
+   * value, and it is NOT a byte-level immutability proof (see `rawRootDigest`).
+   */
   rootDigest: string;
-  artifactHashes: Array<{ path: string; sha256: string }>;
+  /** R90 §4: the same listing computed over RAW bytes (no normalization). */
+  rawRootDigest: string;
+  artifactHashes: Array<{ path: string; sha256: string; rawSha256: string }>;
   cases: CampaignCaseRecord[];
 }
 
@@ -226,6 +233,19 @@ function sha256Bytes(buf: Buffer): string {
 
 async function hashFile(abs: string): Promise<string> {
   return sha256Bytes(normalizedBytes(await readFile(abs)));
+}
+
+/**
+ * R90 §4: the RAW byte hash of a file, with NO CRLF→LF normalization.
+ *
+ * `sha256` above proves normalized CONTENT integrity — it is deliberately
+ * line-ending agnostic so one campaign yields one digest on Windows and Linux.
+ * That is NOT byte-level immutability, and the two facts must never be
+ * conflated. `rawSha256` is the byte-audit companion: it changes when a single
+ * `\r` is added, which is exactly what a forensic byte comparison needs.
+ */
+async function rawHashFile(abs: string): Promise<string> {
+  return sha256Bytes(await readFile(abs));
 }
 
 /** Recursively list every regular file under `dir`, POSIX-relative to `base`. */
@@ -536,7 +556,7 @@ export async function validateCampaign(
   const storedByKey = new Map<string, { suite: string; caseId: string; abs: string; rel: string }>();
   const duplicates: string[] = [];
   const unknown: string[] = [];
-  const artifactHashes: Array<{ path: string; sha256: string }> = [];
+  const artifactHashes: Array<{ path: string; sha256: string; rawSha256: string }> = [];
   const reportFiles: string[] = [];
 
   if (await exists(resultsDir)) {
@@ -590,10 +610,23 @@ export async function validateCampaign(
   if (!summaryRel.startsWith("..") && (await exists(summaryPath))) evidenceFiles.push(summaryRel);
   const sortedEvidence = [...new Set(evidenceFiles)].sort();
   for (const rel of sortedEvidence) {
-    artifactHashes.push({ path: rel, sha256: await hashFile(join(root, rel)) });
+    artifactHashes.push({
+      path: rel,
+      sha256: await hashFile(join(root, rel)),
+      // R90 §4: recorded ALONGSIDE (never instead of) the normalized digest, so
+      // a byte auditor can detect a line-ending-only change while every existing
+      // normalized digest stays compatible.
+      rawSha256: await rawHashFile(join(root, rel)),
+    });
   }
   const rootDigest = sha256Bytes(Buffer.from(
     artifactHashes.map((a) => `${a.path}\u0000${a.sha256}\n`).join(""),
+    "utf8",
+  ));
+  // The byte-level companion digest. It is NOT the tamper gate (the normalized
+  // root digest remains authoritative) — it exists so byte identity is auditable.
+  const rawRootDigest = sha256Bytes(Buffer.from(
+    artifactHashes.map((a) => `${a.path}\u0000${a.rawSha256}\n`).join(""),
     "utf8",
   ));
 
@@ -977,15 +1010,16 @@ export async function validateCampaign(
       : "campaign is empty (no expected cases and/or no stored artifacts) — an empty directory is never VALID",
   );
 
-  return finish(checks, summary, artifactHashes, cases, rootDigest);
+  return finish(checks, summary, artifactHashes, cases, rootDigest, rawRootDigest);
 }
 
 function finish(
   checks: CampaignCheck[],
   summary: CampaignSummary,
-  artifactHashes: Array<{ path: string; sha256: string }>,
+  artifactHashes: Array<{ path: string; sha256: string; rawSha256: string }>,
   cases: CampaignCaseRecord[],
   rootDigest = "",
+  rawRootDigest = "",
 ): CampaignValidationResult {
   const errors = checks.filter((c) => !c.passed);
   const reasonCodes = [...new Set(errors.map((e) => e.code))].sort() as CampaignReasonCode[];
@@ -996,6 +1030,7 @@ function finish(
     errors,
     summary,
     rootDigest,
+    rawRootDigest,
     artifactHashes,
     cases,
   };

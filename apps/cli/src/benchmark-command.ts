@@ -3492,7 +3492,14 @@ async function runBenchmarkCampaignTriageCommand(
     lines.push("");
     lines.push(`  verdict: ${result.verdict}`);
     for (const c of result.candidates) {
-      lines.push(`    ${c.id}: ${c.status} (${c.affectedCases} case(s))`);
+      // R90 §1: the reproduced MECHANISM and the confirmed HISTORICAL impact are
+      // separate facts and are printed separately, so a candidate count can
+      // never be misread as a confirmed-victim count.
+      lines.push(
+        `    ${c.id}: ${c.status} (${c.affectedCases} candidate case(s), ` +
+        `${c.confirmedAffectedCases.length} confirmed affected) ` +
+        `[mechanism=${c.mechanismStatus}, attribution=${c.caseAttributionStatus}]`,
+      );
     }
     if (result.candidates.length === 0) lines.push("    no candidate mechanisms were observed");
     lines.push("");

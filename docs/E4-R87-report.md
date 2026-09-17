@@ -27,6 +27,41 @@ the paid gate was exercised only to prove its refusal.
 | Verdict | `MECHANISM_VALIDATED` (mechanism metric 3 → 0; counterexamples invariant; 0 security violations; verified completion not worsened) |
 | CI | run `35086483790` on `90232d5` — **all 5 jobs success** (§9.2 / §12) |
 
+> ### R90 correction — what this experiment actually is
+>
+> Appended by **E4-R90**; the rows above are preserved as the historical record.
+> Two facts in this report were stated too loosely and are corrected here.
+>
+> **1. It is a synthetic MECHANISM experiment, not a replay of history.**
+> The trace is built by a scripted provider, not replayed from a recorded
+> transcript. The three TARGET cases are **three labels of ONE independent
+> mechanism scenario** (`identical-changing`), not three independently recorded
+> historical traces. The number of independent scenarios is **1**, and the
+> target:scenario mapping is now declared in the manifest
+> (`identity.syntheticScenarios`) instead of being left to inference.
+>
+> **2. The executed code identity was under-specified.**
+> `sourceSha` for the baseline arm named a historical revision
+> (`e9776ba…`), which invited the reading that that build had been checked out
+> and executed. **It never was.** Both arms ran the SAME built runtime; the
+> baseline arm merely drove it with the pre-fix switch
+> (`streakResultAware: false`). The corrected manifest records
+> `executedSourceSha` (what actually ran),
+> `historicalReferenceSha` (reference only, never checked out) and
+> `baselineMode: emulated_semantics`.
+>
+> **Consequence for the verdict.** `MECHANISM_VALIDATED` remains correct and
+> unchanged: the mechanism was reproduced and removed under controlled
+> conditions. What this experiment does **not** establish is that any specific
+> historical campaign case was affected — see the R90 report's
+> `caseAttributionStatus`, which is `UNKNOWN` wherever the stored artifacts lack
+> per-call result events.
+>
+> **Config difference.** The replay bounds `maxIterationsPerTurn` at **20**
+> while the benchmark's effective cap is **30**. That is a declared experimental
+> configuration difference (`REPLAY_CONFIG_DIFFERENCES`); the historical
+> evidence is **not** retro-described as 20 or as 30.
+
 ---
 
 ## 1. Status summary

@@ -44,7 +44,34 @@ export const R88_RUN_STATE_SCHEMA = "e4-r88-run-state-v1";
 /** E4-R88 manifest schema. The legacy `e4-r87-phase-a-manifest-v1` file stays
  *  on disk untouched and is reported as LEGACY_UNVERIFIED, never blessed. */
 export const R88_MANIFEST_SCHEMA = "e4-r88-phase-a-manifest-v2";
+/**
+ * E4-R90 manifest schema. The v2 artifact stays on disk untouched (a versioned
+ * erratum, never a deletion) but is no longer blessed, because `sourceSha`
+ * alone let a reader infer that the historical baseline build had been checked
+ * out and executed. It never was: the baseline arm is the SAME runtime with
+ * `streakResultAware: false`. v3 records that honestly via
+ * `executedSourceSha` / `historicalReferenceSha` / `baselineMode`.
+ */
+export const R90_MANIFEST_SCHEMA = "e4-r90-phase-a-manifest-v3";
 export const LEGACY_MANIFEST_SCHEMA = "e4-r87-phase-a-manifest-v1";
+
+/**
+ * R90 §2: how the baseline arm was realised.
+ *   - `emulated_semantics` — the SAME built runtime driven with the pre-fix
+ *     switch (`streakResultAware: false`). This is a legitimate MECHANISM
+ *     experiment but it is NOT a real two-version A/B.
+ *   - `isolated_build` — two real SHAs, each checked out and built separately.
+ *     Only this mode may support a claim about real historical versions.
+ */
+export type BaselineMode = "emulated_semantics" | "isolated_build";
+
+/**
+ * R90 §2: what kind of experiment produced a result.
+ *   - `synthetic_mechanism` — a scripted trace, not a recorded transcript.
+ *   - `real_version_ab` — real provider traffic over two real builds.
+ */
+export type ExperimentKind = "synthetic_mechanism" | "real_version_ab";
+
 /** Version of the scripted trace builder below — part of the fixture digest. */
 export const TRACE_BUILDER_VERSION = "e4-r87-buildTrace-v1";
 
@@ -109,6 +136,47 @@ export const REPLAY_LIMITS: ReplayLimits = {
   maxParallelToolCalls: 1,
 };
 
+/**
+ * R90 §7: the replay runs `maxIterationsPerTurn: 20` while the benchmark's
+ * effective iteration cap is 30. That is a DECLARED experimental configuration
+ * difference, not a retro-description of history: the historical R83 evidence
+ * was produced under the benchmark's own limit and is never re-labelled as 20
+ * or as 30 by this experiment.
+ */
+export const REPLAY_CONFIG_DIFFERENCES = {
+  maxIterationsPerTurn: {
+    replay: 20,
+    benchmark: 30,
+    /** R90: the historical evidence is NEVER retro-claimed as 20. */
+    retroClaimed: false,
+    note:
+      "The replay bounds iterations at 20 to keep the scripted mechanism trace " +
+      "short. The benchmark's effective cap is 30. The two numbers describe two " +
+      "different configurations and neither rewrites the recorded history.",
+  },
+} as const;
+
+/**
+ * R90 §2: the honest description of what the synthetic case set represents.
+ *
+ * The three TARGET labels are three LABELS of ONE scripted mechanism trace
+ * (`identical-changing`), not three independent historical transcripts replayed
+ * exactly. Declaring the mapping prevents a reader from reading "3 targets" as
+ * "3 independent confirmations".
+ */
+export const SYNTHETIC_SCENARIO_MAPPING = {
+  independentScenarioCount: 1,
+  targetLabels: 3,
+  counterexampleLabels: 5,
+  traceKind: "identical-changing",
+  note:
+    "One synthetic mechanism scenario (a repeated identical call whose result " +
+    "CHANGES) is labelled against three frozen target cases. The labels reuse the " +
+    "same scripted trace; they are not three independently recorded historical " +
+    "traces. Counterexample labels exercise outcome-invariance, not the mechanism.",
+} as const;
+
+
 export interface ArmCaseRecord {
   caseId: string;
   suite: string;
@@ -151,7 +219,27 @@ export interface ExperimentIdentity {
   experimentId: string;
   selectionSchema: string;
   selectionDigest: string;
+  /**
+   * R90 §2: the source SHA of the code that ACTUALLY RAN. Kept under its
+   * historical name for compatibility, but it is now explicitly the executed
+   * identity — never a stand-in for "the historical build was checked out".
+   */
   implementationSha: string;
+  /** R90 §2: the source SHA that actually executed in this process. */
+  executedSourceSha: string;
+  /** R90 §2: a REFERENCE-ONLY historical SHA. Nothing was checked out from it. */
+  historicalReferenceSha: string;
+  /** R90 §2: how the baseline arm was realised (see `BaselineMode`). */
+  baselineMode: BaselineMode;
+  /** R90 §2: synthetic mechanism experiment vs. real version A/B. */
+  experimentKind: ExperimentKind;
+  /** R90 §2: how many INDEPENDENT mechanism scenarios the labels represent. */
+  syntheticScenarios: {
+    independentScenarioCount: number;
+    targetLabels: number;
+    counterexampleLabels: number;
+    traceKind: string;
+  };
   arms: ArmSemantics[];
   limits: ReplayLimits;
   fixtureDigest: string;
@@ -300,14 +388,31 @@ export function fixtureDigest(): string {
   });
 }
 
+/**
+ * R90 §2: the historical pre-R86 source SHA the baseline arm's SEMANTICS were
+ * derived from. It is a REFERENCE ONLY: this experiment never checks out or
+ * builds that revision, so it must never be presented as the executed code.
+ */
+export const R87_BASELINE_REFERENCE_SHA = "e9776ba66190ea63b1bacb685c91aa900b6935e7";
+
 /** Build the experiment identity for a run. `experimentId` is the canonical
  *  digest of the whole identity payload (excluding the id itself). The arm
  *  semantics bound here always cover BOTH arms, so a single-arm intermediate
- *  state is not a different experiment from the later full A/B. */
+ *  state is not a different experiment from the later full A/B.
+ *
+ *  R90 §2: `implementationSha` is the code that ACTUALLY RAN. The historical
+ *  baseline is recorded separately as a reference, and the baseline MODE is
+ *  declared explicitly so `sourceSha` can never imply a real two-version A/B. */
 export function experimentIdentity(opts: {
   selection: FrozenCaseSelection;
   arms: ReplayArm[];
   implementationSha: string;
+  /** R90: defaults to the pre-R86 reference SHA. Reference-only, never executed. */
+  historicalReferenceSha?: string;
+  /** R90: defaults to `emulated_semantics` — the honest description of R87. */
+  baselineMode?: BaselineMode;
+  /** R90: defaults to `synthetic_mechanism` — a scripted trace, not a transcript. */
+  experimentKind?: ExperimentKind;
 }): ExperimentIdentity {
   void opts.arms; // declared-arm subset is NOT part of the experiment identity
   const payload = {
@@ -315,6 +420,18 @@ export function experimentIdentity(opts: {
     selectionSchema: opts.selection.schemaVersion,
     selectionDigest: opts.selection.digest,
     implementationSha: opts.implementationSha,
+    // R90: bound into the digest too, so a manifest that silently re-labels the
+    // executed identity or the baseline mode is a DIFFERENT experiment.
+    executedSourceSha: opts.implementationSha,
+    historicalReferenceSha: opts.historicalReferenceSha ?? R87_BASELINE_REFERENCE_SHA,
+    baselineMode: opts.baselineMode ?? "emulated_semantics",
+    experimentKind: opts.experimentKind ?? "synthetic_mechanism",
+    syntheticScenarios: {
+      independentScenarioCount: SYNTHETIC_SCENARIO_MAPPING.independentScenarioCount,
+      targetLabels: SYNTHETIC_SCENARIO_MAPPING.targetLabels,
+      counterexampleLabels: SYNTHETIC_SCENARIO_MAPPING.counterexampleLabels,
+      traceKind: SYNTHETIC_SCENARIO_MAPPING.traceKind,
+    },
     arms: armSemantics(["baseline", "candidate"]),
     limits: REPLAY_LIMITS,
     fixtureDigest: fixtureDigest(),
@@ -1012,7 +1129,9 @@ export interface ManifestArm {
 export interface Manifest {
   schemaVersion: string;
   /** E4-R88: the full experiment identity (selection digest, implementation SHA,
-   *  arm semantics, limits, fixture digest) — not just the selection digest. */
+   *  arm semantics, limits, fixture digest) — not just the selection digest.
+   *  R90 §2: it now also carries `executedSourceSha`, `historicalReferenceSha`,
+   *  `baselineMode` and the synthetic-scenario mapping. */
   identity: ExperimentIdentity;
   selectionDigest: string;
   baselineSha: string;
@@ -1026,6 +1145,20 @@ export interface Manifest {
   gate: PaidGateStatus;
   limits: ReplayLimits;
   caseOrder: string[];
+  /**
+   * R90 §2: a reviewer-facing statement of what this manifest does and does not
+   * prove, so no reader has to infer it from `sourceSha`.
+   */
+  scope: {
+    experimentKind: ExperimentKind;
+    baselineMode: BaselineMode;
+    executedSourceSha: string;
+    historicalReferenceSha: string;
+    historicalReferenceCheckedOut: false;
+    independentMechanismScenarios: number;
+    targetLabels: number;
+    statement: string;
+  };
 }
 
 /**
@@ -1035,6 +1168,11 @@ export interface Manifest {
  * arm that has no records at all (a "summary" over one arm is not evidence),
  * and binds the full experiment identity so the manifest cannot be replayed
  * against a different selection/config/implementation.
+ *
+ * R90 §2: emits schema v3, which records the EXECUTED source SHA, labels the
+ * baseline as emulated semantics (the same runtime behind a switch, NOT a
+ * checked-out historical build) and declares how many independent mechanism
+ * scenarios the synthetic target labels actually represent.
  */
 export function buildManifest(opts: {
   selection: FrozenCaseSelection;
@@ -1044,12 +1182,21 @@ export function buildManifest(opts: {
   baselineSha: string;
   candidateSha: string;
   gate: PaidGateStatus;
+  /** R90: defaults to `emulated_semantics` — the honest R87 description. */
+  baselineMode?: BaselineMode;
+  /** R90: defaults to `synthetic_mechanism`. */
+  experimentKind?: ExperimentKind;
 }): Manifest {
   verifySelectionDigest(opts.selection);
+  const baselineMode = opts.baselineMode ?? "emulated_semantics";
+  const experimentKind = opts.experimentKind ?? "synthetic_mechanism";
   const identity = experimentIdentity({
     selection: opts.selection,
     arms: opts.arms,
     implementationSha: opts.implementationSha,
+    historicalReferenceSha: opts.baselineSha,
+    baselineMode,
+    experimentKind,
   });
   const semantics = armSemantics(opts.arms);
   const arms = {} as Record<ReplayArm, ManifestArm>;
@@ -1066,7 +1213,7 @@ export function buildManifest(opts: {
     };
   }
   return {
-    schemaVersion: R88_MANIFEST_SCHEMA,
+    schemaVersion: R90_MANIFEST_SCHEMA,
     identity,
     selectionDigest: opts.selection.digest,
     baselineSha: opts.baselineSha,
@@ -1077,6 +1224,24 @@ export function buildManifest(opts: {
     gate: opts.gate,
     limits: REPLAY_LIMITS,
     caseOrder: opts.selection.cases.map((c) => c.id),
+    scope: {
+      experimentKind,
+      baselineMode,
+      executedSourceSha: opts.implementationSha,
+      historicalReferenceSha: opts.baselineSha,
+      historicalReferenceCheckedOut: false,
+      independentMechanismScenarios: SYNTHETIC_SCENARIO_MAPPING.independentScenarioCount,
+      targetLabels: SYNTHETIC_SCENARIO_MAPPING.targetLabels,
+      statement:
+        `synthetic mechanism experiment: the code that executed is ${opts.implementationSha}. ` +
+        `The baseline arm is the SAME runtime with streakResultAware=false ` +
+        `(baselineMode=${baselineMode}); the historical revision ${opts.baselineSha} was NOT ` +
+        `checked out or built and is a reference only. The ${SYNTHETIC_SCENARIO_MAPPING.targetLabels} ` +
+        `target labels are labels of ${SYNTHETIC_SCENARIO_MAPPING.independentScenarioCount} ` +
+        `independent scripted scenario (${SYNTHETIC_SCENARIO_MAPPING.traceKind}), not independent ` +
+        `historical transcripts. This manifest therefore proves the MECHANISM and does not by ` +
+        `itself prove that any historical case was affected.`,
+    },
   };
 }
 
@@ -1109,7 +1274,23 @@ export function validateManifest(
         "produced by the pre-R88 completeness-blind summary and is NOT verified evidence",
     };
   }
-  if (m.schemaVersion !== R88_MANIFEST_SCHEMA) {
+  if (m.schemaVersion === R88_MANIFEST_SCHEMA) {
+    // R90 §2: v2 is a versioned ERRATUM, never a deletion. It stays readable for
+    // history, but it is no longer blessed: its `sourceSha` field let a reader
+    // infer that the historical baseline build had been checked out and
+    // executed, which never happened.
+    return {
+      status: "LEGACY_UNVERIFIED",
+      reasonCodes: ["LEGACY_SCHEMA"],
+      detail:
+        "superseded e4-r88-phase-a-manifest-v2: readable for history, but it recorded the " +
+        "historical baseline SHA without declaring that the baseline arm is an EMULATED " +
+        "semantic switch rather than a checked-out build. Superseded by " +
+        `${R90_MANIFEST_SCHEMA}, which separates executedSourceSha from ` +
+        "historicalReferenceSha and declares baselineMode. NOT verified evidence",
+    };
+  }
+  if (m.schemaVersion !== R90_MANIFEST_SCHEMA) {
     return {
       status: "INVALID",
       reasonCodes: ["SCHEMA_UNSUPPORTED"],
@@ -1136,6 +1317,11 @@ export function validateManifest(
       selection,
       arms: declaredArms,
       implementationSha: m.identity.implementationSha,
+      // R90: recompute with the manifest's OWN declared framing, so the digest
+      // covers (and therefore validates) the executed/reference split.
+      historicalReferenceSha: m.identity.historicalReferenceSha,
+      baselineMode: m.identity.baselineMode,
+      experimentKind: m.identity.experimentKind,
     });
     if (recomputedIdentity.experimentId !== m.identity.experimentId) {
       reasonCodes.push("EXPERIMENT_ID_MISMATCH");
@@ -1144,6 +1330,15 @@ export function validateManifest(
       reasonCodes.push("EXPERIMENT_ID_MISMATCH");
     }
     if (m.identity.fixtureDigest !== fixtureDigest()) reasonCodes.push("EXPERIMENT_ID_MISMATCH");
+    // R90 §2: an experiment must not claim to have executed code it did not.
+    if (m.identity.executedSourceSha !== m.identity.implementationSha) {
+      reasonCodes.push("EXPERIMENT_ID_MISMATCH");
+    }
+    // A real-version A/B claim requires isolated builds; the emulated switch
+    // cannot support it.
+    if (m.identity.experimentKind === "real_version_ab" && m.identity.baselineMode !== "isolated_build") {
+      reasonCodes.push("EXPERIMENT_ID_MISMATCH");
+    }
   }
 
   const armsObj = (m.arms ?? {}) as Partial<Record<ReplayArm, ManifestArm>>;

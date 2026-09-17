@@ -36,7 +36,7 @@ the first pipeline run exposed (§8.3).
 | Campaign-level fail-closed validator | **NEW** | §3 — `packages/evaluation/src/campaign-validate.ts` |
 | Offline CLI: `benchmark campaign validate` | **NEW** | §3, §4 — 0 provider calls |
 | Validator re-derives the R83 numbers | **PASS** | §4 — 86 / 21 / 1,327 / 4,051,523 / 440,594 |
-| Tamper detection (any byte change ⇒ non-zero) | **PASS** | §4.2 — 5 negative fixtures |
+| Tamper detection (normalized content change ⇒ non-zero) | **PASS** | §4.2 — 5 negative fixtures (**R90 correction**: the original row read "any byte change ⇒ non-zero", which overstated the guarantee — see §10) |
 | Sanitized committed evidence manifest | **DONE** | §5 — `docs/evidence/e4-r83-campaign-manifest.json` |
 | Runner versioned + secret-reviewed | **DONE** | §5.2 — `scripts/benchmark/run-campaign.ps1` |
 | §6 `maxIterationsPerTurn` 20 → 30 corrected | **DONE** | §6 — with the default-vs-effective explanation |
@@ -138,8 +138,21 @@ Two semantics the plan calls out explicitly are implemented as hard rules:
 Hash stability across platforms is deliberate: file bytes are **CRLF→LF
 normalized** before hashing, and paths are **POSIX-normalized and sorted**. A
 Windows and an Ubuntu checkout of identical content therefore produce an
-identical `rootDigest`. (A lone `\r` is consequently not treated as tamper;
-that is the intended contract, and it is asserted by a test.)
+identical `rootDigest`.
+
+**What `rootDigest` does and does not prove (R90 correction — see §10).** The
+original text above is retained verbatim as the historical claim. It is
+correct but was read too strongly: `rootDigest` is a **normalized
+CONTENT-integrity** digest, *not* a byte-level immutability proof. A lone `\r`
+is deliberately not treated as tamper, so a CRLF↔LF rewrite of the same text
+leaves `rootDigest` unchanged. That is the intended cross-platform contract and
+it is asserted by a test. Where byte-level identity must be audited, R90 added a
+separate, non-substituting companion — `rawRootDigest` plus a per-artifact
+`rawSha256` — computed over **raw bytes with no normalization**. The two are
+recorded side by side: `rootDigest` stays authoritative for the tamper gate and
+keeps every previously pinned digest compatible, while `rawRootDigest` moves on
+a line-ending-only change. A line-ending rewrite is thus a *content-preserving*
+change, not a content change.
 
 ### 3.2 `agent benchmark campaign validate` (new subcommand)
 
@@ -627,3 +640,45 @@ The only `node` invocations against the real campaign were read-only
 validations of already-stored JSON. Every test in this task runs offline against
 either a temp fixture or the committed synthetic fixture; the offline runner
 self-check stops each case after the CLI's `--dry-run` plan digest.
+
+---
+
+## 10. R90 erratum — the digest is content-integrity, not byte immutability
+
+Appended by **E4-R90**. Nothing above is deleted or rewritten: this section is
+the versioned correction the plan requires (plan §R90 怎么做: "提交带
+schema/version 的勘误，而非删除历史记录").
+
+**The corrected claim.** Two places in this report described the hash guarantee
+in byte-level terms:
+
+| Location | Original wording | Correction |
+| --- | --- | --- |
+| §1 status table | "Tamper detection (**any byte change** ⇒ non-zero)" | The guarantee is over **normalized content**. `sha256` is computed after CRLF→LF normalization, so a line-ending-only rewrite is *not* detected — by design, because that is what makes one campaign yield one digest on Windows and Ubuntu. |
+| §3.1 | "file bytes are **CRLF→LF normalized** before hashing … (a lone `\r` is consequently not treated as tamper; that is the intended contract)" | Correct as written, but the parenthetical was easy to miss next to the §1 row. It is now stated as a first-class distinction. |
+
+**Why it matters.** A reader who believed `rootDigest` proved byte-level
+immutability could wrongly conclude that a CRLF↔LF rewrite of a committed
+artifact is either impossible or detected. Neither is true. The digest proves
+that the *content* is unchanged; it does not and was never intended to prove
+that the *bytes* are unchanged.
+
+**What R90 added (additive, no compatibility break).**
+
+- `CampaignValidationResult.rawRootDigest` — the same sorted
+  `<path>\0<rawSha256>\n` listing, hashed over **raw bytes with no
+  normalization**.
+- `artifactHashes[].rawSha256` — the per-artifact raw byte hash, recorded
+  **alongside** (never instead of) the existing normalized `sha256`.
+
+`rootDigest` and every previously pinned digest — including this report's
+fixture value `26167402acbde04eddad4535bfb8fbbf16c9be20f6e2b5866f26b602740525c8`
+and the R85 `triageDigest` — keep their exact previous meaning and value. The
+new fields are strictly additional, so byte auditing is now possible without
+retroactively redefining what the old digests asserted.
+
+**Verification.** `packages/evaluation/src/campaign-validate.test.ts` asserts
+both halves of the distinction on one file: writing `a\nb\n` and then
+`a\r\nb\r\n` must leave `rootDigest` **identical** while moving
+`rawSha256`/`rawRootDigest`. A single test can therefore not pass by
+accidentally collapsing the two facts.

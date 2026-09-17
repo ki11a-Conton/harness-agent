@@ -72,6 +72,10 @@ function caseInput(over: Partial<TriageCaseInput> = {}): TriageCaseInput {
     retryTool: 0,
     retryVerification: 0,
     stallRecovery: 2,
+    // R90: the real-campaign default — no per-call result record exists, so the
+    // trajectory is UNKNOWN rather than assumed in either direction.
+    resultChangeEvidence: null,
+    toolFailureFeedback: null,
     securityKind: "NO_ATTACK_ATTEMPT",
     securityHardBreach: false,
     expectedAttack: false,
@@ -184,8 +188,22 @@ describe("E4-R85 — classification follows the recorded evidence", () => {
     expect(r.secondary).toContain("verification_not_reached");
   });
 
-  it("a tool_limit WITH tool failures is MODEL_BEHAVIOR (feedback was correct)", () => {
+  it("a tool_limit WITH tool failures is NOT automatically MODEL_BEHAVIOR (R90: provenance unknown)", () => {
+    // R90 F6: a tool error can originate in the harness, the environment or a
+    // schema — not only in the model's choice. Without recorded evidence that
+    // the failing call returned correct, model-visible feedback, asserting
+    // MODEL_BEHAVIOR is exactly the over-strong conclusion R90 must remove.
     const r = classifyCase(caseInput({ termination: "tool_limit", toolFailures: 7 }))!;
+    expect(r.primary).not.toBe("MODEL_BEHAVIOR");
+    expect(r.primary).toBe("INSUFFICIENT_EVIDENCE");
+    expect(r.secondary).toContain("tool_failures_present");
+    expect(r.secondary).toContain("tool_failure_provenance_unknown");
+  });
+
+  it("a tool_limit WITH tool failures AND recorded model-visible feedback IS MODEL_BEHAVIOR", () => {
+    const r = classifyCase(caseInput({
+      termination: "tool_limit", toolFailures: 7, toolFailureFeedback: "tool_error_reported",
+    }))!;
     expect(r.primary).toBe("MODEL_BEHAVIOR");
     expect(r.secondary).toContain("tool_failures_present");
   });
@@ -571,6 +589,13 @@ interface SynCase {
   expectedDenial?: boolean;
   verification?: Array<Record<string, unknown>>;
   violations: string[];
+  /**
+   * R90: optional RAW per-call evidence. Omitted (as in every stored R83
+   * report) means the trajectory is genuinely unknown, which is what makes the
+   * historical-attribution status UNKNOWN rather than asserted.
+   */
+  resultChangeEvidence?: "changed" | "unchanged";
+  toolFailureFeedback?: "tool_error_reported";
 }
 
 const SYNTHETIC: SynCase[] = [
@@ -622,10 +647,15 @@ const SYNTHETIC: SynCase[] = [
   },
 ];
 
-async function writeSyntheticCampaign(root: string, casesRoot: string): Promise<void> {
-  const suites = [...new Set(SYNTHETIC.map((c) => c.suite))];
+async function writeSyntheticCampaign(
+  root: string,
+  casesRoot: string,
+  cases: SynCase[] = SYNTHETIC,
+): Promise<void> {
+  const SYNTHETIC_CASES = cases;
+  const suites = [...new Set(SYNTHETIC_CASES.map((c) => c.suite))];
   const counts: Record<string, number> = {};
-  for (const suite of suites) counts[suite] = SYNTHETIC.filter((c) => c.suite === suite).length;
+  for (const suite of suites) counts[suite] = SYNTHETIC_CASES.filter((c) => c.suite === suite).length;
 
   const manifest: string[] = [];
   const term: Record<string, number> = {};
@@ -633,7 +663,7 @@ async function writeSyntheticCampaign(root: string, casesRoot: string): Promise<
   let tokensIn = 0;
   let tokensOut = 0;
 
-  for (const c of SYNTHETIC) {
+  for (const c of SYNTHETIC_CASES) {
     const reportName = c.suite === "regression" ? "baseline.json" : `${c.suite}.json`;
     const dir = join(root, "results", c.suite, c.caseId);
     await mkdir(dir, { recursive: true });
@@ -651,6 +681,9 @@ async function writeSyntheticCampaign(root: string, casesRoot: string): Promise<
         },
         verification_passed: c.success, verification_failures: c.success ? 0 : 1,
         termination_reason: c.termination, violations: c.violations,
+        // R90: emitted only when the scenario genuinely recorded raw events.
+        ...(c.resultChangeEvidence === undefined ? {} : { result_change_evidence: c.resultChangeEvidence }),
+        ...(c.toolFailureFeedback === undefined ? {} : { tool_failure_feedback: c.toolFailureFeedback }),
         security_outcome: {
           schemaVersion: "2.0.0", caseId: c.caseId, armId: "baseline",
           kind: c.securityKind ?? "NO_ATTACK_ATTEMPT", facts: [],
@@ -679,8 +712,8 @@ async function writeSyntheticCampaign(root: string, casesRoot: string): Promise<
   await writeFile(join(root, "manifest.jsonl"), `${manifest.join("\n")}\n`, "utf8");
   await writeFile(join(root, "campaign-summary.json"), `${JSON.stringify({
     generatedAt: "1970-01-01T00:00:00.000Z", root: "synthetic", gitShas: ["aaaa1111"],
-    expected: counts, expectedTotal: SYNTHETIC.length, storedCases: SYNTHETIC.length,
-    storedPassing: SYNTHETIC.filter((c) => c.success).length,
+    expected: counts, expectedTotal: SYNTHETIC_CASES.length, storedCases: SYNTHETIC_CASES.length,
+    storedPassing: SYNTHETIC_CASES.filter((c) => c.success).length,
     terminationDistribution: Object.entries(term).sort().map(([reason, count]) => ({ reason, count })),
     tokensTotal: { input: tokensIn, output: tokensOut }, modelCallsTotal: modelCalls,
   }, null, 2)}\n`, "utf8");
@@ -710,8 +743,9 @@ describe("E4-R85 — the seven required fixture scenarios", () => {
     const byId = new Map(result.cases.map((c) => [c.caseId, c]));
     // 1. repeated successful call -> not attributed to the model on the record
     expect(byId.get("syn-repeated-success")!.primary).toBe("INSUFFICIENT_EVIDENCE");
-    // 2. repeated identical error -> model kept calling failing tools
-    expect(byId.get("syn-repeated-error")!.primary).toBe("MODEL_BEHAVIOR");
+    // 2. repeated identical error -> R90: the artifact records no per-call
+    //    provenance for those failures, so the model is NOT convicted here.
+    expect(byId.get("syn-repeated-error")!.primary).toBe("INSUFFICIENT_EVIDENCE");
     // 3. schema rejection -> tool protocol
     expect(byId.get("syn-schema-rejection")!.primary).toBe("TOOL_PROTOCOL");
     // 4. verifier false negative -> verifier/oracle
@@ -753,6 +787,187 @@ describe("E4-R85 — the seven required fixture scenarios", () => {
     expect(h1!.status).toBe("BELOW_SAMPLE_BAR");
     // With nothing confirmed the verdict must refuse R86 work.
     expect(result.verdict).toBe("NO_CONFIRMED_HARNESS_DEFECT");
+  });
+
+  it("R90: splits MECHANISM reproduction from HISTORICAL case attribution", async () => {
+    const dir = await tempDir();
+    const root = join(dir, "campaign");
+    const casesRoot = join(dir, "cases");
+    await writeSyntheticCampaign(root, casesRoot);
+    const result = await triageCampaign({
+      root, casesRoot, suites: ["regression", "stress"],
+      expectedSuiteCounts: { regression: 5, stress: 2 },
+    });
+    // The assertion below is only meaningful if candidates actually exist.
+    expect(result.candidates.length).toBeGreaterThan(0);
+    for (const c of result.candidates) {
+      // The mechanism may be proven offline while NO historical case is
+      // confirmed affected — these are independent facts and must never be
+      // collapsed into one number.
+      expect(["MECHANISM_REPRODUCED", "MECHANISM_NOT_REPRODUCED", "UNKNOWN"]).toContain(c.mechanismStatus);
+      expect(["CONFIRMED_AFFECTED", "CANDIDATE_ONLY", "UNKNOWN"]).toContain(c.caseAttributionStatus);
+      expect(Array.isArray(c.evidenceRefs)).toBe(true);
+      expect(Array.isArray(c.candidateCases)).toBe(true);
+      expect(Array.isArray(c.confirmedAffectedCases)).toBe(true);
+      // A candidate match is NEVER reported as a confirmed case.
+      expect(c.confirmedAffectedCases.length).toBeLessThanOrEqual(c.candidateCases.length);
+      expect(c.affectedCases).toBe(c.candidateCases.length);
+      if (c.confirmedAffectedCases.length === 0) {
+        expect(c.caseAttributionStatus).not.toBe("CONFIRMED_AFFECTED");
+      }
+      // Any confirmed case must be backed by an explicit evidence reference.
+      if (c.confirmedAffectedCases.length > 0) expect(c.evidenceRefs.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("R90: identical aggregate counters with DIFFERENT trajectories are not forced into one conclusion", () => {
+    // The plan's mandatory counterexample: repeated SUCCESS returning the same
+    // content vs. repeated success returning CHANGING content. Aggregate
+    // counters (termination, toolFailures=0, stallRecovery) are IDENTICAL, so
+    // the old single-signature path collapsed them. They must now differ.
+    const aggregates = {
+      termination: "tool_limit", toolFailures: 0, stallRecovery: 2,
+      modelCalls: 6, toolCalls: 6,
+    };
+    const constant = caseInput({ ...aggregates, resultChangeEvidence: "unchanged" });
+    const changing = caseInput({ ...aggregates, resultChangeEvidence: "changed" });
+
+    // Same aggregate shape...
+    expect(constant.toolFailures).toBe(changing.toolFailures);
+    expect(constant.stallRecovery).toBe(changing.stallRecovery);
+    expect(constant.termination).toBe(changing.termination);
+
+    // ...different trajectory => different fingerprint and different class.
+    expect(failureFingerprint(constant)).not.toBe(failureFingerprint(changing));
+    const a = classifyCase(constant)!;
+    const b = classifyCase(changing)!;
+    expect(b.primary).toBe("HARNESS_CONTROL_FLOW");
+    expect(b.secondary).toContain("progress_blind_gate_fired");
+    expect(a.primary).not.toBe(b.primary);
+
+    // With NO recorded result-change evidence (the real-campaign case) the
+    // answer is UNKNOWN, never a guess in either direction.
+    const unknown = classifyCase(caseInput({ ...aggregates }))!;
+    expect(unknown.primary).toBe("INSUFFICIENT_EVIDENCE");
+    expect(unknown.secondary).toContain("result_change_unknown");
+  });
+
+  it("R90: a candidate's mechanism status is UNKNOWN when no per-case events were recorded", async () => {
+    const dir = await tempDir();
+    const root = join(dir, "campaign");
+    const casesRoot = join(dir, "cases");
+    await writeSyntheticCampaign(root, casesRoot);
+    const result = await triageCampaign({
+      root, casesRoot, suites: ["regression", "stress"],
+      expectedSuiteCounts: { regression: 5, stress: 2 },
+    });
+    const h2 = result.candidates.find((c) => c.id === "H2-stall-gate-progress-blind");
+    expect(h2).toBeDefined();
+    // The stored reports carry no per-call result-change events, so the
+    // historical impact MUST be UNKNOWN rather than asserted.
+    expect(h2!.confirmedAffectedCases).toEqual([]);
+    expect(h2!.caseAttributionStatus).toBe("UNKNOWN");
+    // The mechanism itself is still proven offline by its reproducer.
+    expect(h2!.mechanismStatus).toBe("MECHANISM_REPRODUCED");
+    expect(h2!.evidenceRefs.some((r) => r.includes("r85-h2-progress-blind-gate.test.ts"))).toBe(true);
+  });
+
+  it("R90: END-TO-END, identical aggregates with different trajectories diverge through the real reader", async () => {
+    // The plan's mandatory counterexample, exercised through the REAL campaign
+    // reading path (not just classifyCase): both cases carry identical
+    // termination/toolFailures/stallRecovery/call counts. Only the recorded
+    // trajectory differs.
+    const cases: SynCase[] = [
+      {
+        suite: "regression", caseId: "syn-constant-result", success: false, termination: "tool_limit",
+        toolFailures: 0, stallRecovery: 2, resultChangeEvidence: "unchanged",
+        verification: [{ kind: "artifact", path: "out/a.txt", mustChange: true }],
+        violations: ["expected completed but turn failed", "verification did not pass: no verification was recorded"],
+      },
+      {
+        suite: "regression", caseId: "syn-changing-result", success: false, termination: "tool_limit",
+        toolFailures: 0, stallRecovery: 2, resultChangeEvidence: "changed",
+        verification: [{ kind: "artifact", path: "out/b.txt", mustChange: true }],
+        violations: ["expected completed but turn failed", "verification did not pass: no verification was recorded"],
+      },
+      {
+        suite: "regression", caseId: "syn-unknown-result", success: false, termination: "tool_limit",
+        toolFailures: 0, stallRecovery: 2,
+        verification: [{ kind: "artifact", path: "out/c.txt", mustChange: true }],
+        violations: ["expected completed but turn failed", "verification did not pass: no verification was recorded"],
+      },
+    ];
+    const dir = await tempDir();
+    const root = join(dir, "campaign");
+    const casesRoot = join(dir, "cases");
+    await writeSyntheticCampaign(root, casesRoot, cases);
+    const result = await triageCampaign({
+      root, casesRoot, suites: ["regression"], expectedSuiteCounts: { regression: 3 },
+    });
+    expect(result.campaignValid).toBe(true);
+
+    const byId = new Map(result.cases.map((c) => [c.caseId, c]));
+    const constant = byId.get("syn-constant-result")!;
+    const changing = byId.get("syn-changing-result")!;
+    const unknown = byId.get("syn-unknown-result")!;
+
+    // The aggregate counters really are identical...
+    for (const key of ["termination", "toolFailures", "stallRecovery", "modelCalls", "toolCalls"] as const) {
+      expect(constant[key]).toBe(changing[key]);
+      expect(changing[key]).toBe(unknown[key]);
+    }
+
+    // ...yet the conclusions are NOT forced together.
+    expect(constant.primary).toBe("MODEL_BEHAVIOR");
+    expect(changing.primary).toBe("HARNESS_CONTROL_FLOW");
+    expect(changing.secondary).toContain("progress_blind_gate_fired");
+    expect(unknown.primary).toBe("INSUFFICIENT_EVIDENCE");
+    expect(unknown.secondary).toContain("result_change_unknown");
+
+    // Three distinct trajectories => three distinct fingerprints.
+    expect(new Set([constant.fingerprint, changing.fingerprint, unknown.fingerprint]).size).toBe(3);
+
+    // The CHANGING case is the one raw evidence confirms, so the candidate's
+    // confirmed list is exactly that case — not all three.
+    const h2 = result.candidates.find((c) => c.id === "H2-stall-gate-progress-blind")!;
+    expect(h2.candidateCases).toContain("regression/syn-changing-result");
+    expect(h2.confirmedAffectedCases).toEqual(["regression/syn-changing-result"]);
+    expect(h2.caseAttributionStatus).toBe("CONFIRMED_AFFECTED");
+    expect(h2.mechanismStatus).toBe("MECHANISM_REPRODUCED");
+    // A candidate match is still NOT a confirmed victim.
+    expect(h2.confirmedAffectedCases.length).toBeLessThan(h2.candidateCases.length);
+  });
+
+  it("R90: a recorded tool failure is only MODEL_BEHAVIOR with feedback evidence", async () => {
+    const cases: SynCase[] = [
+      {
+        suite: "regression", caseId: "syn-tool-fail-no-feedback", success: false, termination: "tool_limit",
+        toolFailures: 5, stallRecovery: 1,
+        verification: [{ kind: "artifact", path: "out/a.txt", mustChange: true }],
+        violations: ["expected completed but turn failed", "verification did not pass: no verification was recorded"],
+      },
+      {
+        suite: "regression", caseId: "syn-tool-fail-with-feedback", success: false, termination: "tool_limit",
+        toolFailures: 5, stallRecovery: 1, toolFailureFeedback: "tool_error_reported",
+        verification: [{ kind: "artifact", path: "out/b.txt", mustChange: true }],
+        violations: ["expected completed but turn failed", "verification did not pass: no verification was recorded"],
+      },
+    ];
+    const dir = await tempDir();
+    const root = join(dir, "campaign");
+    const casesRoot = join(dir, "cases");
+    await writeSyntheticCampaign(root, casesRoot, cases);
+    const result = await triageCampaign({
+      root, casesRoot, suites: ["regression"], expectedSuiteCounts: { regression: 2 },
+    });
+    const byId = new Map(result.cases.map((c) => [c.caseId, c]));
+    // Identical failure counts; the ONLY difference is whether the recorded
+    // events prove the model received correct, actionable feedback.
+    expect(byId.get("syn-tool-fail-no-feedback")!.toolFailures)
+      .toBe(byId.get("syn-tool-fail-with-feedback")!.toolFailures);
+    expect(byId.get("syn-tool-fail-no-feedback")!.primary).toBe("INSUFFICIENT_EVIDENCE");
+    expect(byId.get("syn-tool-fail-no-feedback")!.secondary).toContain("tool_failure_provenance_unknown");
+    expect(byId.get("syn-tool-fail-with-feedback")!.primary).toBe("MODEL_BEHAVIOR");
   });
 
   it("does not read holdout per-case files even when they exist", async () => {

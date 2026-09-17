@@ -433,6 +433,26 @@ describe("E4-R84 campaign validator — fail-closed negative cases", () => {
     expect(crlf.rootDigest).toBe(lf.rootDigest);
   });
 
+  it("R90: the NORMALIZED digest is CRLF/LF-equivalent but rawSha256 is NOT (byte audit)", async () => {
+    // The plan's correction: `rootDigest` proves normalized CONTENT integrity,
+    // not byte-level immutability. A byte auditor needs a separate raw hash, so
+    // the two facts must be declared separately and must actually differ.
+    const built = await buildCampaign({ extraEvidenceFile: { suite: "alpha", caseId: "a-1", name: "run.log", text: "a\nb\n" } });
+    const lf = await validate(built);
+    expect(lf.ok).toBe(true);
+    const lfRaw = lf.artifactHashes.find((a) => a.path === "results/alpha/a-1/run.log")?.rawSha256;
+    expect(lfRaw).toMatch(/^[0-9a-f]{64}$/);
+
+    await writeFile(join(built.root, "results", "alpha", "a-1", "run.log"), "a\r\nb\r\n", "utf8");
+    const crlf = await validate(built);
+    // Normalized: identical (that is the cross-platform guarantee)...
+    expect(crlf.rootDigest).toBe(lf.rootDigest);
+    // ...but the raw bytes genuinely changed, and the raw hash says so.
+    const crlfRaw = crlf.artifactHashes.find((a) => a.path === "results/alpha/a-1/run.log")?.rawSha256;
+    expect(crlfRaw).not.toBe(lfRaw);
+    expect(crlf.rawRootDigest).not.toBe(lf.rawRootDigest);
+  });
+
   it("accepts both Windows and POSIX separators for the campaign root", async () => {
     const built = await buildCampaign();
     const posixRoot = built.root.split("\\").join("/");

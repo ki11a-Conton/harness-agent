@@ -82,6 +82,16 @@ export const TRIAGE_SECONDARY_TAGS = [
   "stall_gate_termination",
   "stall_recovery_exhausted",
   "tool_failures_present",
+  /**
+   * R90: tool failures were recorded but nothing says WHO produced them. A tool
+   * error can originate in the harness, the environment or a schema, so the
+   * failure count alone cannot convict the model.
+   */
+  "tool_failure_provenance_unknown",
+  /** R90: raw events show the repeated call's result CHANGED and the gate fired. */
+  "progress_blind_gate_fired",
+  /** R90: no per-call result record exists, so progress vs. stall is undecidable. */
+  "result_change_unknown",
   "verifier_command_unavailable",
   "verifier_command_failed",
   "verification_not_reached",
@@ -106,6 +116,29 @@ export type TriageSecondaryTag = (typeof TRIAGE_SECONDARY_TAGS)[number];
 export type TriageCandidateStatus =
   | "CONFIRMED_HARNESS_DEFECT"
   | "BELOW_SAMPLE_BAR";
+
+/**
+ * R90 §1: whether the DEFECT MECHANISM has been reproduced under controlled
+ * conditions. This is a fact about the code, provable offline with a
+ * deterministic reproducer, and it is INDEPENDENT of whether any historical
+ * campaign case was actually affected by it.
+ */
+export type TriageMechanismStatus =
+  | "MECHANISM_REPRODUCED"
+  | "MECHANISM_NOT_REPRODUCED"
+  | "UNKNOWN";
+
+/**
+ * R90 §1: whether recorded per-case EVENTS prove a historical case was hit.
+ * A case that merely matches the candidate's aggregate feature is a
+ * `CANDIDATE_ONLY`; only raw events (the result actually changed AND the gate
+ * fired) may promote it to `CONFIRMED_AFFECTED`. When the events are absent
+ * from the stored artifact the honest answer is `UNKNOWN`.
+ */
+export type TriageCaseAttributionStatus =
+  | "CONFIRMED_AFFECTED"
+  | "CANDIDATE_ONLY"
+  | "UNKNOWN";
 
 /** The plan's fixed agent-limit values, used to detect a counting mismatch. */
 export const BENCHMARK_EFFECTIVE_MAX_ITERATIONS = 30;
@@ -267,6 +300,11 @@ export function failureSignature(input: TriageCaseInput): string {
     `term=${input.termination}`,
     `verify=${input.verificationPassed === true ? "passed" : "not_passed"}`,
     `tool_failures=${input.toolFailures === 0 ? "none" : "some"}`,
+    // R90: the TRAJECTORY is part of the failure shape. Two runs with identical
+    // aggregate counters but opposite result-change evidence are different
+    // failures and must not share a fingerprint.
+    `result_change=${input.resultChangeEvidence ?? "unknown"}`,
+    `tool_feedback=${input.toolFailureFeedback ?? "unknown"}`,
     `calls=[${calls}]`,
     `kinds=[${extractViolationKinds(input.violations).join(",")}]`,
   ].join("|");
@@ -314,6 +352,21 @@ export interface TriageCaseInput {
   retryTool: number;
   retryVerification: number;
   stallRecovery: number;
+  /**
+   * R90 §1: what the RAW per-call events say about the repeated call's result.
+   * `"changed"` means the same call+args returned a DIFFERENT result (observable
+   * progress), `"unchanged"` means a genuinely constant result, and `null` (the
+   * real-campaign default) means the stored artifact carries no such event at
+   * all. Aggregate counters cannot substitute for this: two runs with identical
+   * counters but opposite trajectories must NOT receive one causal conclusion.
+   */
+  resultChangeEvidence: "changed" | "unchanged" | null;
+  /**
+   * R90 §3: whether the recorded events prove the model SAW correct, actionable
+   * feedback for its tool failures. Only then may a tool failure be attributed
+   * to the model's choice rather than to the harness/environment/schema.
+   */
+  toolFailureFeedback: "tool_error_reported" | null;
   securityKind: string | null;
   securityHardBreach: boolean;
   /** The case's own expectation flags, when recorded. */
@@ -338,6 +391,10 @@ export interface TriageCaseRow {
   toolCalls: number | null;
   toolFailures: number | null;
   stallRecovery: number;
+  /** R90: the recorded trajectory fact, or null when no event was stored. */
+  resultChangeEvidence: "changed" | "unchanged" | null;
+  /** R90: whether recorded feedback proved the model saw correct errors. */
+  toolFailureFeedback: "tool_error_reported" | null;
   securityKind: string | null;
   /** Redacted violation KINDS only — never the raw strings. */
   violationKinds: string[];
@@ -447,21 +504,41 @@ export function classifyCase(input: TriageCaseInput): TriageClassification | nul
     add("stall_gate_termination");
     if (input.stallRecovery > 0) add("stall_recovery_exhausted");
     if (input.toolFailures !== null && input.toolFailures > 0) {
-      // Tools returned errors and the model kept driving them. The feedback was
-      // correct; the model's choices were not.
       add("tool_failures_present");
-      return { primary: "MODEL_BEHAVIOR", secondary };
+      // R90 §3 (F6): a recorded tool FAILURE is not, by itself, evidence that
+      // the MODEL chose wrongly. The error may have originated in the harness,
+      // the environment or a schema, and the model may never have received
+      // usable feedback. Convicting the model requires the recorded event that
+      // shows correct, actionable feedback was actually surfaced.
+      if (input.toolFailureFeedback === "tool_error_reported") {
+        return { primary: "MODEL_BEHAVIOR", secondary };
+      }
+      add("tool_failure_provenance_unknown");
+      return { primary: "INSUFFICIENT_EVIDENCE", secondary };
     }
     // NOT ONE tool call failed, yet the run was stopped for "repeating work".
-    // Two explanations fit these exact recorded fields, and the stored artifact
-    // cannot separate them:
+    // Two explanations fit the same aggregate counters, and only RAW EVENTS can
+    // separate them:
     //   (a) the model repeated an identical call whose result never changed
     //       (a genuine stall -> MODEL_BEHAVIOR), or
     //   (b) the model repeated an identical call whose result DID change
     //       (observable progress -> a false positive of the identical-call gate).
+    // R90 §2: identical aggregates with different trajectories must NOT be
+    // forced into the same conclusion, so the trajectory is read explicitly.
+    if (input.resultChangeEvidence === "changed") {
+      add("progress_blind_gate_fired");
+      return { primary: "HARNESS_CONTROL_FLOW", secondary };
+    }
+    if (input.resultChangeEvidence === "unchanged") {
+      // The result genuinely never changed: the gate's premise held, and the
+      // model kept repeating a no-op. That IS a model-behaviour failure.
+      add("verification_not_reached");
+      return { primary: "MODEL_BEHAVIOR", secondary };
+    }
     // Per-case reports carry no per-call result record, so guessing here would
     // be exactly the fabrication R85 forbids. The mechanism itself is examined
     // separately as a candidate, where it can be proven with a reproducer.
+    add("result_change_unknown");
     add("verification_not_reached");
     return { primary: "INSUFFICIENT_EVIDENCE", secondary };
   }
@@ -531,6 +608,30 @@ export interface TriageCandidate {
   fingerprint: string;
   primary: TriagePrimaryClass;
   status: TriageCandidateStatus;
+  /**
+   * R90 §1: the DEFECT MECHANISM was reproduced under controlled conditions.
+   * This is a property of the code and is proven offline, independently of any
+   * historical campaign case.
+   */
+  mechanismStatus: TriageMechanismStatus;
+  /**
+   * R90 §1: whether recorded per-case EVENTS prove a historical case was hit.
+   * NEVER inferred from `affectedCases` (which counts candidates, not victims).
+   */
+  caseAttributionStatus: TriageCaseAttributionStatus;
+  /** Artifacts that justify `mechanismStatus` (reproducers, source paths). */
+  evidenceRefs: string[];
+  /**
+   * R90 §1: development cases matching the candidate FEATURE. A match is a
+   * hypothesis, not a diagnosis — repeated reads of unchanged content satisfy
+   * the same aggregate shape.
+   */
+  candidateCases: string[];
+  /**
+   * R90 §1: the subset of `candidateCases` whose RAW EVENTS actually prove the
+   * defect fired. Empty whenever the stored artifacts lack those events.
+   */
+  confirmedAffectedCases: string[];
   /** How many development (non-holdout) cases show this exact failure shape. */
   affectedCases: number;
   samples: string[];
@@ -546,7 +647,14 @@ export interface TriageCandidate {
 export type TriageVerdict = "CONFIRMED_HARNESS_DEFECT" | "NO_CONFIRMED_HARNESS_DEFECT";
 
 export interface TriageResult {
-  schemaVersion: 1;
+  /**
+   * R90: bumped 1 -> 2. The taxonomy no longer equates a tool failure with a
+   * model-behaviour error, and each candidate now separates the reproduced
+   * MECHANISM from confirmed HISTORICAL case attribution. Consumers must not
+   * read a v2 file as v1: the same evidence can legitimately yield different
+   * candidate counts.
+   */
+  schemaVersion: 2;
   kind: "campaign-triage";
   generatedFrom: { campaignRoot: string; casesRoot: string };
   rootDigest: string;
@@ -591,6 +699,13 @@ interface RawResultRecord {
   };
   reason?: unknown;
   violations?: unknown;
+  /**
+   * R90: optional RAW per-call evidence. Absent from every stored R83 report
+   * (and from the fixture), which is exactly why historical attribution is
+   * reported as UNKNOWN rather than inferred from aggregate counters.
+   */
+  result_change_evidence?: unknown;
+  tool_failure_feedback?: unknown;
 }
 
 function num(value: unknown): number | null {
@@ -702,6 +817,11 @@ export async function triageCampaign(options: TriageOptions): Promise<TriageResu
         ? r.security_outcome.expectation.expectedDenial : null,
       reason: typeof r.reason === "string" && r.reason !== "" ? redactTriageText(r.reason) : null,
       violations,
+      resultChangeEvidence:
+        r.result_change_evidence === "changed" || r.result_change_evidence === "unchanged"
+          ? r.result_change_evidence : null,
+      toolFailureFeedback:
+        r.tool_failure_feedback === "tool_error_reported" ? "tool_error_reported" : null,
       artifactSha256: record.artifactSha256,
     };
     const classification = classifyCase(input);
@@ -719,6 +839,8 @@ export async function triageCampaign(options: TriageOptions): Promise<TriageResu
       toolCalls: input.toolCalls,
       toolFailures: input.toolFailures,
       stallRecovery: input.stallRecovery,
+      resultChangeEvidence: input.resultChangeEvidence,
+      toolFailureFeedback: input.toolFailureFeedback,
       securityKind: input.securityKind,
       violationKinds: extractViolationKinds(violations),
       toolSequence: calls.map((c) => `${c.name}:${c.status}`),
@@ -776,7 +898,7 @@ export async function triageCampaign(options: TriageOptions): Promise<TriageResu
     : "NO_CONFIRMED_HARNESS_DEFECT";
 
   const body = {
-    schemaVersion: 1 as const,
+    schemaVersion: 2 as const,
     kind: "campaign-triage" as const,
     rootDigest: validation.rootDigest,
     campaignValid: validation.ok,
@@ -831,6 +953,8 @@ function signatureFromRow(row: TriageCaseRow): string {
     `term=${row.termination}`,
     `verify=${row.verificationPassed === true ? "passed" : "not_passed"}`,
     `tool_failures=${row.toolFailures === 0 ? "none" : "some"}`,
+    `result_change=${row.resultChangeEvidence ?? "unknown"}`,
+    `tool_feedback=${row.toolFailureFeedback ?? "unknown"}`,
     `calls=[${row.toolSequence.join(",")}]`,
     `kinds=[${row.violationKinds.join(",")}]`,
   ].join("|");
@@ -856,9 +980,34 @@ function signatureFromRow(row: TriageCaseRow): string {
 function buildCandidates(rows: readonly TriageCaseRow[]): TriageCandidate[] {
   const out: TriageCandidate[] = [];
   const labels = (group: readonly TriageCaseRow[]): string[] =>
-    group.map((r) => `${r.suite}/${r.caseId}`).sort();
-  const groupOf = (predicate: (row: TriageCaseRow) => boolean): TriageCaseRow[] => rows.filter(predicate);
+    group.map((r) => `${r.suite}/${r.caseId}`).sort();  const groupOf = (predicate: (row: TriageCaseRow) => boolean): TriageCaseRow[] => rows.filter(predicate);
   const fpOf = (group: readonly TriageCaseRow[]): string => group[0]?.fingerprint ?? "";
+
+  /**
+   * R90 §1: derive the historical-attribution status from RAW EVENTS only.
+   * A candidate-feature match is never a diagnosis. When the stored artifacts
+   * carry no per-call event at all we cannot even call a case a candidate
+   * victim, so the honest answer is UNKNOWN rather than a count.
+   */
+  const attributionOf = (
+    group: readonly TriageCaseRow[],
+    confirmed: (row: TriageCaseRow) => boolean,
+    eventsAvailable: (row: TriageCaseRow) => boolean,
+  ): Pick<TriageCandidate, "candidateCases" | "confirmedAffectedCases" | "caseAttributionStatus"> => {
+    const candidateCases = labels(group);
+    const confirmedAffectedCases = labels(group.filter(confirmed));
+    let caseAttributionStatus: TriageCaseAttributionStatus;
+    if (confirmedAffectedCases.length > 0) {
+      caseAttributionStatus = "CONFIRMED_AFFECTED";
+    } else if (candidateCases.length > 0 && group.every(eventsAvailable)) {
+      // The events WERE recorded and none of them shows the defect firing, so
+      // these cases match the feature but are not victims.
+      caseAttributionStatus = "CANDIDATE_ONLY";
+    } else {
+      caseAttributionStatus = "UNKNOWN";
+    }
+    return { candidateCases, confirmedAffectedCases, caseAttributionStatus };
+  };
 
   // ---- H2: the repeated-call stall gate terminates a turn in which NO tool
   // call ever failed, and the gate cannot distinguish repetition from progress.
@@ -872,6 +1021,22 @@ function buildCandidates(rows: readonly TriageCaseRow[]): TriageCandidate[] {
       fingerprint: fpOf(h2),
       primary: "HARNESS_CONTROL_FLOW",
       status: h2.length >= MIN_NON_HOLDOUT_SAMPLES ? "CONFIRMED_HARNESS_DEFECT" : "BELOW_SAMPLE_BAR",
+      // R90 §1: the MECHANISM is proven offline by a deterministic reproducer,
+      // independently of whether any historical case was actually hit.
+      mechanismStatus: "MECHANISM_REPRODUCED",
+      // R90 §1: the candidate FEATURE is only a hypothesis. Confirmation needs
+      // the raw event showing the result changed AND the gate fired; the stored
+      // R83 reports carry no per-call result record, so this is UNKNOWN.
+      ...attributionOf(
+        h2,
+        (r) => r.resultChangeEvidence === "changed",
+        (r) => r.resultChangeEvidence !== null,
+      ),
+      evidenceRefs: [
+        "packages/core/src/runtime/r85-h2-progress-blind-gate.test.ts",
+        "packages/core/src/state/agent-state.ts",
+        "packages/core/src/runtime/runtime.ts",
+      ],
       affectedCases: h2.length,
       samples: labels(h2),
       sharedPattern:
@@ -879,9 +1044,10 @@ function buildCandidates(rows: readonly TriageCaseRow[]): TriageCandidate[] {
         "retry_taxonomy.stallRecovery>0 (the stall-recovery budget was fully consumed), and an " +
         "artifact verifier whose check was never reached because the turn was terminated first.",
       counterexample:
-        "tool_limit cases WITH tool_failures>0 are NOT included: there the tools returned errors, " +
-        "the feedback was correct, and the model kept choosing failing actions — that is " +
-        "MODEL_BEHAVIOR, and the gate is not blanket-accused.",
+        "tool_limit cases WITH tool_failures>0 are NOT included as victims: a tool error may come " +
+        "from the harness, the environment or a schema, and the model may never have received " +
+        "usable feedback. R90 therefore does not equate a tool failure with a model-behaviour " +
+        "error; absent recorded feedback the case is INSUFFICIENT_EVIDENCE, not MODEL_BEHAVIOR.",
       minimalRepro:
         "packages/core/src/runtime/r85-h2-progress-blind-gate.test.ts — call the SAME tool with the " +
         "SAME args six times while every call returns a DIFFERENT result; the runtime ends with " +
@@ -920,6 +1086,16 @@ function buildCandidates(rows: readonly TriageCaseRow[]): TriageCandidate[] {
       fingerprint: fpOf(h1),
       primary: "VERIFIER_OR_ORACLE",
       status: h1.length >= MIN_NON_HOLDOUT_SAMPLES ? "CONFIRMED_HARNESS_DEFECT" : "BELOW_SAMPLE_BAR",
+      mechanismStatus: "MECHANISM_REPRODUCED",
+      // Unlike H2, the CONFIRMING EVENT is itself stored: the runner recorded
+      // `spawn <cmd> ENOENT` as a violation, which is the raw event that proves
+      // the verifier never executed. Every case in this group is therefore a
+      // confirmed victim, not merely a feature match.
+      ...attributionOf(h1, () => true, () => true),
+      evidenceRefs: [
+        "packages/tools/src/process/executor.ts",
+        "packages/tools/src/verification/task-verifier.ts",
+      ],
       affectedCases: h1.length,
       samples: labels(h1),
       sharedPattern:

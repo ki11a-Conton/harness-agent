@@ -27,6 +27,7 @@ import {
   validateManifest,
   R87_SELECTION_DIGEST,
   R88_MANIFEST_SCHEMA,
+  R90_MANIFEST_SCHEMA,
   type ArmCaseRecord,
   type FrozenCaseSelection,
   type ReplayArm,
@@ -404,7 +405,9 @@ describe("E4-R88 — incomplete or foreign evidence must never be validated", ()
       candidateSha: "c",
       gate: { status: "NOT_RUN", code: "PAID_AUTHORIZATION_REQUIRED", reason: "x" },
     });
-    expect(manifest.schemaVersion).toBe(R88_MANIFEST_SCHEMA);
+    // R90 §2: the emitted schema is now v3. The v2 artifact stays on disk as a
+    // versioned erratum but is no longer blessed (see the v2 case below).
+    expect(manifest.schemaVersion).toBe(R90_MANIFEST_SCHEMA);
     const ok = validateManifest(manifest, selection);
     expect(ok.status).toBe("VALID");
     expect(ok.reasonCodes).toEqual([]);
@@ -458,6 +461,38 @@ describe("E4-R88 — incomplete or foreign evidence must never be validated", ()
     const res = validateManifest(legacy, selection);
     expect(res.status).toBe("LEGACY_UNVERIFIED");
     expect(res.detail).toMatch(/legacy|unverified/i);
+  });
+
+  it("R90: the superseded v2 manifest stays readable but is NOT re-blessed", () => {
+    const v2Path = join(process.cwd(), "docs", "evidence", "e4-r88-phase-a-manifest.json");
+    if (!existsSync(v2Path)) {
+      expect(true).toBe(true);
+      return;
+    }
+    const v2 = JSON.parse(readFileSync(v2Path, "utf8")) as { schemaVersion: string };
+    // A versioned erratum: the historical artifact is preserved on disk, never
+    // deleted, and never silently re-blessed under the corrected schema.
+    expect(v2.schemaVersion).toBe("e4-r88-phase-a-manifest-v2");
+    const res = validateManifest(v2, selection);
+    expect(res.status).toBe("LEGACY_UNVERIFIED");
+    expect(res.detail).toMatch(/emulated|executedSourceSha|superseded/i);
+  });
+
+  it("R90: an emulated-switch experiment may not claim a real version A/B", () => {
+    const lying = buildManifest({
+      selection,
+      records: full,
+      arms: ARMS,
+      implementationSha: "impl",
+      baselineSha: "b",
+      candidateSha: "c",
+      gate: { status: "NOT_RUN", code: "PAID_AUTHORIZATION_REQUIRED", reason: "x" },
+      experimentKind: "real_version_ab",
+      baselineMode: "emulated_semantics",
+    });
+    const res = validateManifest(lying, selection);
+    expect(res.status).toBe("INVALID");
+    expect(res.reasonCodes).toContain("EXPERIMENT_ID_MISMATCH");
   });
 
   it("the validator is offline: it constructs no provider and opens no network", () => {
