@@ -39,6 +39,8 @@ import {
   verifySelectionDigest,
   runReplayAb,
   armHash,
+  legacyArmHash,
+  validateManifest,
   computeSummary,
   paidAuthorizationStatus,
   buildManifest,
@@ -145,7 +147,7 @@ describe("E4-R87 Phase A — zero-call replay A/B over the frozen case selection
 
   it("PRIMARY mechanism metric: 3 → 0 target H2 fires, zero counterexample diffs, verdict MECHANISM_VALIDATED", async () => {
     const { records } = await runReplayAb(selection, { arms: ["baseline", "candidate"], now: () => 0 });
-    const summary = computeSummary(records);
+    const summary = computeSummary(records, selection, ["baseline", "candidate"]);
     expect(summary.mechanismMetric.baselineTargetFires).toBe(3);
     expect(summary.mechanismMetric.candidateTargetFires).toBe(0);
     expect(summary.mechanismMetric.improvement).toBe(3);
@@ -164,27 +166,31 @@ describe("E4-R87 Phase A — zero-call replay A/B over the frozen case selection
       runStatePath: statePath,
     });
     expect(executed.length).toBe(selection.cases.length * 2);
-    // Every (case, arm) is persisted as a JSON line (atomic tmp+rename).
+    // E4-R88: line 1 is the identity header; every (case, arm) follows as an
+    // atomically-persisted record line (tmp+rename).
     const lines = readFileSync(statePath, "utf8").trim().split("\n");
-    expect(lines.length).toBe(selection.cases.length * 2);
-    for (const line of lines) {
-      const obj = JSON.parse(line);
+    expect(lines.length).toBe(selection.cases.length * 2 + 1);
+    expect((JSON.parse(lines[0]!) as { kind: string }).kind).toBe("header");
+    for (const line of lines.slice(1)) {
+      const obj = JSON.parse(line) as { kind: string; caseId: string; arm: string };
+      expect(obj.kind).toBe("record");
       expect(obj.caseId).toBeTruthy();
       expect(["baseline", "candidate"]).toContain(obj.arm);
     }
 
-    // Interruption simulation: half the arms are already completed.
-    const partial = lines.slice(0, Math.floor(lines.length / 2)).join("\n") + "\n";
-    writeFileSync(statePath, partial);
+    // Interruption simulation: the header plus half the arms are already done.
+    const kept = [lines[0]!, ...lines.slice(1, 1 + Math.floor((lines.length - 1) / 2))];
+    writeFileSync(statePath, kept.join("\n") + "\n");
     const { executed: executedAgain } = await runReplayAb(selection, {
       arms: ["baseline", "candidate"],
       now: () => 0,
       runStatePath: statePath,
     });
     // Completed arms are NOT re-billed; only the missing half runs.
-    expect(executedAgain.length).toBe(lines.length - Math.floor(lines.length / 2));
+    expect(executedAgain.length).toBe(lines.length - kept.length);
     const finalLines = readFileSync(statePath, "utf8").trim().split("\n");
     expect(finalLines.length).toBe(lines.length);
+    expect(records.length).toBe(selection.cases.length * 2);
   });
 
   it("per-arm hashes are deterministic and a validator can recompute every summary from the records", async () => {
@@ -201,6 +207,8 @@ describe("E4-R87 Phase A — zero-call replay A/B over the frozen case selection
     const manifest = buildManifest({
       selection,
       records,
+      arms: ["baseline", "candidate"],
+      implementationSha: CANDIDATE_SHA,
       baselineSha: BASELINE_SHA,
       candidateSha: CANDIDATE_SHA,
       gate: paidAuthorizationStatus({}),
@@ -240,6 +248,8 @@ describe("E4-R87 Phase A — zero-call replay A/B over the frozen case selection
     const manifest = buildManifest({
       selection,
       records,
+      arms: ["baseline", "candidate"],
+      implementationSha: CANDIDATE_SHA,
       baselineSha: BASELINE_SHA,
       candidateSha: CANDIDATE_SHA,
       gate: paidAuthorizationStatus({}),
@@ -269,8 +279,15 @@ describe("E4-R87 Phase A — zero-call replay A/B over the frozen case selection
     });
   });
 
-  it("EMIT MODE (env R87_EMIT_MANIFEST=1): writes the sanitized manifest to docs/evidence and it is self-consistent", async () => {
-    if (process.env.R87_EMIT_MANIFEST !== "1") {
+  it("EMIT MODE (env R88_EMIT_MANIFEST=1): writes the v2 manifest WITHOUT touching the legacy R87 file", async () => {
+    const out = fileURLToPath(
+      new URL("../../../../docs/evidence/e4-r88-phase-a-manifest.json", import.meta.url),
+    );
+    const legacyPath = fileURLToPath(
+      new URL("../../../../docs/evidence/e4-r87-phase-a-manifest.json", import.meta.url),
+    );
+    const legacyBefore = existsSync(legacyPath) ? readFileSync(legacyPath, "utf8") : undefined;
+    if (process.env.R88_EMIT_MANIFEST !== "1") {
       // Normal runs do not write into the repo tree.
       expect(true).toBe(true);
       return;
@@ -279,38 +296,45 @@ describe("E4-R87 Phase A — zero-call replay A/B over the frozen case selection
     const manifest = buildManifest({
       selection,
       records,
+      arms: ["baseline", "candidate"],
+      implementationSha: CANDIDATE_SHA,
       baselineSha: BASELINE_SHA,
       candidateSha: CANDIDATE_SHA,
       gate: paidAuthorizationStatus({}),
     });
-    const out = fileURLToPath(new URL("../../../../docs/evidence/e4-r87-phase-a-manifest.json", import.meta.url));
     writeFileSync(out, JSON.stringify(manifest, null, 2) + "\n");
-    // Self-consistency: the written manifest recomputes to the same values.
+    // Self-consistency: the written manifest validates against its own records.
     const written = JSON.parse(readFileSync(out, "utf8")) as typeof manifest;
+    expect(validateManifest(written, selection).status).toBe("VALID");
     expect(written.arms.baseline.hash).toBe(manifest.arms.baseline.hash);
     expect(written.arms.candidate.hash).toBe(manifest.arms.candidate.hash);
     expect(written.summary.verdict).toBe("MECHANISM_VALIDATED");
+    // The historical v1 manifest must remain byte-identical (never overwritten).
+    if (legacyBefore !== undefined) {
+      expect(readFileSync(legacyPath, "utf8")).toBe(legacyBefore);
+    }
   });
 
-  it("VALIDATOR: the committed manifest (when present) is consistent with a fresh replay", async () => {
+  it("LEGACY: the committed R87 manifest stays readable and its v1 hashes are reproducible", async () => {
     const committedPath = fileURLToPath(
       new URL("../../../../docs/evidence/e4-r87-phase-a-manifest.json", import.meta.url),
     );
     if (!existsSync(committedPath)) {
-      // Not emitted yet — this is fine before the first emit; the emit test
-      // creates it and the report records the CI/local gate.
       expect(true).toBe(true);
       return;
     }
     const committed = JSON.parse(readFileSync(committedPath, "utf8")) as {
+      schemaVersion: string;
       selectionDigest: string;
       arms: { baseline: { hash: string }; candidate: { hash: string } };
-      summary: { verdict: string };
     };
+    expect(committed.schemaVersion).toBe("e4-r87-phase-a-manifest-v1");
     expect(committed.selectionDigest).toBe(selection.digest);
+    // The v1 hash is reproducible via the preserved legacy projection...
     const { records } = await runReplayAb(selection, { arms: ["baseline", "candidate"], now: () => 0 });
-    expect(armHash(records.filter((r) => r.arm === "baseline"))).toBe(committed.arms.baseline.hash);
-    expect(armHash(records.filter((r) => r.arm === "candidate"))).toBe(committed.arms.candidate.hash);
-    expect(computeSummary(records).verdict).toBe(committed.summary.verdict);
+    expect(legacyArmHash(records.filter((r) => r.arm === "baseline"))).toBe(committed.arms.baseline.hash);
+    expect(legacyArmHash(records.filter((r) => r.arm === "candidate"))).toBe(committed.arms.candidate.hash);
+    // ...but it is NEVER blessed as verified evidence (plan §R88: legacy/unverified).
+    expect(validateManifest(committed, selection).status).toBe("LEGACY_UNVERIFIED");
   });
 });

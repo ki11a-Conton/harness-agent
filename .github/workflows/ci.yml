@@ -376,6 +376,36 @@ jobs:
           Write-Host "E4-R87 Phase A on $($env:RUNNER_OS): baseline reproduces the H2 class, candidate completes targets, counterexamples invariant, paid path NOT_RUN, manifest re-verified"
           exit 0
 
+      # E4-R88 (F1/F2): the A/B verdict and resume path must REFUSE incomplete or
+      # foreign evidence. The suite proves: a baseline-only / zero-candidate
+      # result set can never be MECHANISM_VALIDATED; the expected matrix comes
+      # from the FROZEN selection; duplicate/unknown/mis-suite/mis-role records,
+      # non-finite or negative metrics and unmet expectations are REJECTED; the
+      # resume state binds schema + selection digest + implementation SHA + arm
+      # semantics + limits + fixture digest; foreign/stale/truncated state fails
+      # closed BEFORE any arm runs; and the offline validator recomputes every
+      # hash and the verdict without touching a model or the network.
+      - name: Incomplete/foreign evidence is refused by the A/B gate (E4-R88)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'stop'
+          pnpm exec vitest run `
+            packages/core/src/runtime/r88-replay-evidence-gate.test.ts `
+            packages/core/src/runtime/r87-zero-call-replay-ab.test.ts 2>&1 | Write-Host
+          if ($LASTEXITCODE -ne 0) { throw "the R88 evidence-gate suites failed (exit $LASTEXITCODE)" }
+          # The emitted v2 manifest must validate offline, and the historical v1
+          # manifest must still be present, readable and NOT blessed as verified.
+          $legacy = Get-Content docs/evidence/e4-r87-phase-a-manifest.json -Raw | ConvertFrom-Json
+          if ($legacy.schemaVersion -ne 'e4-r87-phase-a-manifest-v1') { throw "the legacy R87 manifest was rewritten or removed" }
+          $v2 = Get-Content docs/evidence/e4-r88-phase-a-manifest.json -Raw | ConvertFrom-Json
+          if ($v2.schemaVersion -ne 'e4-r88-phase-a-manifest-v2') { throw "the R88 manifest schema is not v2" }
+          if ($v2.summary.completeness -ne 'COMPLETE') { throw "the R88 manifest is not COMPLETE" }
+          if ($v2.summary.expectedRecords -ne $v2.summary.observedRecords) { throw "the R88 manifest matrix is incomplete" }
+          if ($v2.providerCalls -ne 0) { throw "the R88 manifest claims provider calls" }
+          if ($v2.gate.status -ne 'NOT_RUN') { throw "the R88 paid gate did not stop at NOT_RUN" }
+          Write-Host "E4-R88 on $($env:RUNNER_OS): incomplete/foreign evidence refused, resume identity bound, validator offline, legacy v1 preserved unverified"
+          exit 0
+
       # E4-R84: the runner's own control flow (stage -> dry-run -> digest ->
       # persist -> resume-skip -> validate), offline, 0 provider calls.
       # Windows-only: it drives the PowerShell runner that produced the real
