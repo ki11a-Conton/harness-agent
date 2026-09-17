@@ -266,6 +266,13 @@ tamper-*evident* (the digest moves), but only a recorded manifest makes a change
 byte an outright failure. Both properties are asserted in the test suite, and the
 offline self-check exercises both on the committed fixture.
 
+**R90 precision on case 4 (see §10).** The mutated byte was a *content* byte
+(`"model_calls": 9` → `"model_calls": 10`), which is why it fails. A
+line-ending-only mutation (`\n` → `\r\n`) is normalized before hashing and
+would **not** fail — by design, since that is what lets Windows and Ubuntu agree
+on one digest. The row is therefore accurate as performed and is not a claim
+that every possible byte difference fails.
+
 ---
 
 ## 5. The committed evidence chain
@@ -581,10 +588,14 @@ correct.
    the repository can verify the *format and integrity* of the committed
    manifest and reproduce the fixture digest, but cannot independently confirm
    the original paid run — that requires the operator's local artifacts.
-2. **`--evidence` is what makes a byte change fail.** Without a recorded
+2. **`--evidence` is what makes a content change fail.** Without a recorded
    manifest, a change moves the root digest (tamper-evident) rather than failing
    (tamper-detecting). Both behaviours are intentional and tested; the plan's
    "any byte changed ⇒ non-zero exit" requirement is met through `--evidence`.
+   **R90 correction:** the requirement is met for *normalized content* changes.
+   A line-ending-only rewrite (`\r`) is deliberately normalized away before
+   hashing, so it does **not** fail — see §10. Byte-level auditing is available
+   separately via the additive `rawSha256`/`rawRootDigest`.
 3. **The fixture is synthetic and small (3 cases).** It proves cross-platform
    determinism and tamper detection, not the 86-case shape. The 86-case shape is
    enforced by `CAMPAIGN_EXPECTED_SUITE_COUNTS` and by a test that reads the
