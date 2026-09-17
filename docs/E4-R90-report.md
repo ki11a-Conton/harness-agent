@@ -245,9 +245,20 @@ The emit-mode test asserts both older files remain byte-identical while v3 is
 written, so a future change cannot silently rewrite history.
 
 Reports were corrected **in place, additively**: the original wording is
-retained and the correction is appended as a dated, attributable section
-(`docs/E4-R84-report.md` §10; `docs/E4-R87-report.md` R90 note). The R84 status
-table row now reads "normalized content change" with a pointer to the erratum.
+retained and the correction is appended as a dated, attributable section. The
+R84 status table row now reads "normalized content change" with a pointer to the
+erratum.
+
+| Report | Correction |
+| --- | --- |
+| `docs/E4-R84-report.md` | §1 row reworded; new **§10** erratum explaining normalized content integrity vs byte immutability and the additive `rawSha256`/`rawRootDigest` |
+| `docs/E4-R87-report.md` | R90 note: synthetic mechanism experiment, 1 independent scenario, emulated baseline, executed-vs-reference SHA, 20-vs-30 config difference |
+| `docs/E4-R85-report.md` | §5.1 class-distribution correction (27 → 0 `MODEL_BEHAVIOR`, 5 → 32 `INSUFFICIENT_EVIDENCE`), §7 fixture-scenario row marked superseded, §10.1 H2 row re-labelled candidates/UNKNOWN, §11 limit #4 corrected |
+
+The R85 report needed the same F6c correction as the code: it had justified the
+27 `MODEL_BEHAVIOR` cases with "the tools returned errors, the feedback was
+correct", which is the count-to-cause inference this task removes. That claim is
+preserved verbatim and marked superseded rather than silently edited.
 
 ---
 

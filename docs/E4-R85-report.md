@@ -177,6 +177,36 @@ node apps/cli/dist/main.js benchmark campaign triage .ci/bench-grok --out .ci/r8
 correct, and the model kept driving failing actions. That is the model's
 problem, and saying so is the point of the taxonomy.
 
+> **R90 correction (appended; the text above is preserved as the historical
+> claim).** This reasoning is **invalid as stated**, and the row above is
+> superseded. "The tools returned errors" does not establish "the feedback was
+> correct", and it certainly does not establish that the *model* caused the
+> errors: a tool error can originate in the harness, the environment or a
+> schema, and the model may never have received usable feedback at all. The
+> inference from a failure **count** to a failure **cause** was the defect
+> (finding F6).
+>
+> Under R90, `toolFailures > 0` alone yields `INSUFFICIENT_EVIDENCE` with the
+> `tool_failure_provenance_unknown` tag. `MODEL_BEHAVIOR` is now assigned only
+> when recorded events prove the model received correct, actionable feedback
+> (`toolFailureFeedback === "tool_error_reported"`). Re-running the classifier
+> over the real campaign gives:
+>
+> | Class | R85 (count-only rule) | R90 (evidence rule) |
+> | --- | --- | --- |
+> | `MODEL_BEHAVIOR` | 27 | **0** |
+> | `INSUFFICIENT_EVIDENCE` | 5 | **32** |
+> | `BUDGET_EXHAUSTION_UNATTRIBUTED` | 7 | 7 |
+> | `HARNESS_CONTROL_FLOW` | 2 | 2 |
+> | `VERIFIER_OR_ORACLE` | 1 | 1 |
+>
+> The change is a **reduction in claimed knowledge**, not a new finding: none of
+> those 27 cases is asserted to be model-caused *or* harness-caused, because the
+> stored reports lack the per-call evidence that would decide it. See
+> `docs/E4-R90-report.md` for the full correction and the versioned erratum.
+> The `H2` counterexample row in §7 (line 337) is corrected the same way: cases
+> with `tool_failures > 0` are not "`MODEL_BEHAVIOR`", they are un-attributed.
+
 Zero `PROVIDER_OR_TRANSPORT`: no `model_error` termination, no provider retry
 and no transport signal appears in any development case. Zero
 `SECURITY_POLICY_DENIAL`: the two security `ESCAPE` cases are boundary
@@ -231,12 +261,20 @@ repetition**. Each is built on disk and asserted to land in a distinct class:
 | Scenario | Expected class | Result |
 | --- | --- | --- |
 | repeated successful call | `INSUFFICIENT_EVIDENCE` | ✅ |
-| repeated identical error | `MODEL_BEHAVIOR` | ✅ |
+| repeated identical error | `MODEL_BEHAVIOR` | ⚠️ **superseded by R90** — now `INSUFFICIENT_EVIDENCE` |
 | schema rejection | `TOOL_PROTOCOL` | ✅ |
 | verifier false negative | `VERIFIER_OR_ORACLE` | ✅ |
 | real provider error | `PROVIDER_OR_TRANSPORT` | ✅ |
 | timeout/cancel | `BUDGET_EXHAUSTION_UNATTRIBUTED` | ✅ |
 | normal long task, no repetition | passes, `primary: null` | ✅ |
+
+**R90 correction.** The "repeated identical error" row asserted
+`MODEL_BEHAVIOR` from `tool_failures = 9` alone — the same invalid
+count-to-cause inference corrected in §5.1. The scenario itself is unchanged and
+still classified deterministically; only its expected class moved to
+`INSUFFICIENT_EVIDENCE`, because the fixture records no per-call feedback
+proving the model saw actionable errors. Six of the seven scenarios are
+unaffected.
 
 The first row is the honest one: a repeated *successful* call is exactly the
 shape the H2 defect produces, yet the stored report cannot prove the results
@@ -331,10 +369,10 @@ harness location, and an offline reproducer.
 
 | Evidence item | Value |
 | --- | --- |
-| Affected development cases | **3** (bar is 2) |
+| Affected development cases | **3** (bar is 2) — **R90**: these are **candidate** cases. `confirmedAffectedCases` is **0** and `caseAttributionStatus` is **UNKNOWN**, because the stored reports carry no per-call result event proving the gate fired on a *changing* result. The mechanism is proven separately by its offline reproducer (`mechanismStatus: MECHANISM_REPRODUCED`). |
 | Samples | `regression/reg-16-cicd-step`, `stress/stress-many-artifacts`, `stress/stress-very-long-json` |
 | Shared pattern | `termination_reason=tool_limit` with `tool_failures=0` (not one tool call failed), `stallRecovery>0` (recovery budget fully consumed), artifact verifier never reached |
-| Counterexample | `tool_limit` cases **with** `tool_failures>0` → `MODEL_BEHAVIOR`, not accused here |
+| Counterexample | `tool_limit` cases **with** `tool_failures>0` are not accused here — and, per the R90 correction in §5.1, they are **not** `MODEL_BEHAVIOR` either: a failure count does not identify a cause, so they are `INSUFFICIENT_EVIDENCE` |
 | Fix layer | `packages/core/src/state/agent-state.ts` as consumed by `packages/core/src/runtime/runtime.ts` |
 | Provider calls to reproduce | 0 |
 
@@ -432,6 +470,12 @@ but under-evidenced mechanism for a future round, not smuggled into R86.
    recorded evidence shows correct tool feedback and ineffective model choices.
    It is the largest class because the largest termination reason (`tool_limit`,
    30/42) is dominated by cases where tools actually failed.
+   **R90 correction:** the second sentence is exactly the invalid inference
+   corrected in §5.1. "Tools actually failed" does not imply "the feedback was
+   correct" nor "the model chose badly" — the failure may be harness-,
+   environment- or schema-caused. After R90 this class is **0** on the
+   development set, and the first sentence stands as the *standard* a case must
+   meet rather than a description of what the 27 cases had established.
 5. **No pass-rate claim.** Nothing here re-ran a model; no statement about real
    channel improvement is made or implied (plan §R86.6 / §R87).
 
