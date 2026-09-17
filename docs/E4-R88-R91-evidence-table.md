@@ -128,7 +128,15 @@ matter — they are the boundaries of what the stored evidence can prove.
 | R91 | PASS | 336 files, 6131 passed / 3 skipped, 0 failed | PASS |
 | R92 | PASS | **340 files, 6193 passed / 3 skipped, 0 failed** | PASS |
 | R92 fixes (`87f83e3`) | PASS | **341 files, 6198 passed / 3 skipped, 0 failed** — measured on a **clean depth-1 clone** with CI's exact env vars (`CI`, `OPENAI_API_KEY=""`, `E2E_OBSERVATION_*`, `E4_09_DIAG_DIR`, `E4_R55_PARENT_DIAG_DIR`), exit 0, and `git status --porcelain` empty **after** the run | PASS |
-| R92 fix (`7941f32`) | PASS | **341 files, 6199 passed / 3 skipped, 0 failed** — measured on a clean full-history tree; the same file passes **30/30** under the ext4 emulation that makes the pre-fix file fail | PASS |
+| R92 fix (`7941f32`) | PASS | **341 files, 6204 passed / 3 skipped, 0 failed** — measured on a clean full-history tree (6199 + the 5 new portability-guard checks); the same `executor.test.ts` passes **30/30** under the ext4 emulation that makes the pre-fix file fail **4/30** | PASS |
+
+**Final state: `e964d0c` is green in CI.** Run **35196708782** reports
+`completed successfully`, and the `main` branch badge reads **`ci - passing`**.
+That run is the end-to-end acceptance evidence for plan §R92 line 223
+("Windows 实验流程可用，Ubuntu 的冷启动和离线门禁继续在 CI 通过"): the Windows and
+Ubuntu `install · typecheck · test · build · benchmark-smoke · audit` jobs, the
+Ubuntu `coverage gate`, the Ubuntu `offline cold-start`, and `release attestation`
+all pass together.
 
 The depth-1 clone matters: it is the only environment that reproduces F7. The
 same suite on a full-history checkout passes while CI fails, which is precisely
