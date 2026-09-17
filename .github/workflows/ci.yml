@@ -497,6 +497,43 @@ jobs:
           Write-Host "E4-R90 normalized content integrity and raw-byte audit are declared separately"
           exit 0
 
+      # E4-R91 (H1): Windows verifier determinism. The point of this step is to
+      # REALLY START the fixtures on windows-latest — not to assert mock spawn
+      # arguments. Before R91, `spawn(..., {shell:false})` could not execute a
+      # `.cmd`/`.bat` shim at all (EINVAL for a full path, ENOENT for a bare
+      # name) nor a `.ps1` (EFTYPE), so every `npx`/`bash` command verifier was
+      # unspawnable on Windows while the same case passed elsewhere.
+      - name: Windows script-shim determinism — real launches, no injection (E4-R91)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'stop'
+
+          # The suite contains Windows-only REAL execution tests (skipped on
+          # Ubuntu, which cannot run .cmd/.ps1) plus a platform-parameterised
+          # decision table that runs everywhere.
+          pnpm exec vitest run packages/tools/src/process/executor.test.ts packages/tools/src/verification/task-verifier.test.ts 2>&1 | Write-Host
+          if ($LASTEXITCODE -ne 0) { throw "the E4-R91 suites failed (exit $LASTEXITCODE)" }
+
+          # The R79 boundary must still hold: no argument may start a second
+          # command, and the argv path must never hand a joined string to a shell.
+          $executorSrc = Get-Content packages/tools/src/process/executor.ts -Raw
+          if ($executorSrc -notmatch 'shell: false') { throw "the argv path no longer spawns with shell:false" }
+          if ($executorSrc -match 'shell: true') { throw "the argv path must never enable shell:true" }
+          Write-Host "E4-R91 argv path still uses shell:false and never shell:true"
+
+          if ($IsWindows) {
+            # Prove it end-to-end with the REAL executor via a committed probe
+            # script (kept out of the workflow so it is reviewable and runnable
+            # locally). It starts real .cmd/.ps1 fixtures and asserts that a
+            # metacharacter argument is refused without creating a sentinel.
+            node scripts/e4/r91-shim-probe.mjs
+            if ($LASTEXITCODE -ne 0) { throw "the E4-R91 real Windows launch probe failed (exit $LASTEXITCODE)" }
+            Write-Host "E4-R91 real Windows launches verified (bare-name .cmd ran; .ps1 args literal; injection refused)"
+          } else {
+            Write-Host "E4-R91: not Windows — the platform-parameterised decision table ran; the real shim launches are Windows-only and were skipped"
+          }
+          exit 0
+
       # E4-R84: the runner's own control flow (stage -> dry-run -> digest ->
       # persist -> resume-skip -> validate), offline, 0 provider calls.
       # Windows-only: it drives the PowerShell runner that produced the real

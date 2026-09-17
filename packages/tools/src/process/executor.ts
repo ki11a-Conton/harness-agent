@@ -1,4 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type { SandboxExecutionOption, SandboxExecutionProvenance } from "./sandbox-executor.js";
 import { buildSandboxLaunch, policyDigestOf, SANDBOX_BACKEND_DENIED } from "./sandbox-executor.js";
 
@@ -70,6 +72,164 @@ export interface ExecArgvOptions {
  * explicit, testable injection point; we never evaluate command syntax here.
  */
 export const EXECUTOR_MARKER = "verbatim-recipe-v3";
+
+/**
+ * E4-R91 (H1): characters that cmd.exe re-interprets.
+ *
+ * MEASURED on Windows: when a `.cmd` shim is launched through cmd.exe, an
+ * argument such as `a&echo PWNED>file&rem` is NOT inert. The shim's own `%*`
+ * re-expansion re-parses it, and the second command runs — with `shell:false`
+ * and separate argv. There is no quoting strategy that makes cmd.exe transport
+ * `&`/`|`/`%`/`^`/`"` faithfully (see the R91 report's measurement table), so
+ * the only safe contract is to REFUSE such an argument rather than to escape it
+ * and hope.
+ *
+ * This is deliberately conservative: a benchmark verifier argument that needs a
+ * cmd metacharacter fails closed with an actionable reason instead of silently
+ * executing something else. Space and `/` are absent on purpose — they are
+ * transported correctly by ordinary argv quoting.
+ */
+export const CMD_METACHARACTERS = /[&|<>^%!"()\r\n]/;
+
+/** A resolved launch plan: exactly what to hand to `spawn` with `shell:false`. */
+export type ArgvLaunch =
+  | { ok: true; file: string; args: string[]; via: "direct" | "cmd" | "powershell" }
+  | { ok: false; reason: string };
+
+/** PATHEXT extensions that are real executable images CreateProcess accepts. */
+const DIRECT_EXTENSIONS = new Set(["", ".exe", ".com"]);
+/** Script extensions we can launch deterministically. */
+const CMD_SCRIPT_EXTENSIONS = new Set([".cmd", ".bat"]);
+/** Script extensions we deliberately do NOT launch, with the reason. */
+const UNSUPPORTED_SCRIPT_EXTENSIONS = new Set([".ps1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh", ".msc", ".cpl"]);
+
+function extensionOf(file: string): string {
+  const base = file.slice(file.lastIndexOf("\\") + 1).slice(file.lastIndexOf("/") + 1);
+  const dot = base.lastIndexOf(".");
+  return dot <= 0 ? "" : base.slice(dot).toLowerCase();
+}
+
+/**
+ * Read an environment variable case-insensitively.
+ *
+ * Windows stores ONE variable whose name may be reported in any casing:
+ * `process.env.PATH` is a getter for the real `Path` entry, so `{ ...process.env }`
+ * copies `Path` and the literal key `PATH` disappears. Looking up only
+ * `env.PATH` therefore fails on a spread environment — which is exactly how the
+ * first version of this fix passed its unit tests while still producing
+ * `spawn npx ENOENT` end-to-end.
+ */
+function envValue(env: NodeJS.ProcessEnv, name: string): string | undefined {
+  const direct = env[name];
+  if (direct !== undefined) return direct;
+  const upper = name.toUpperCase();
+  for (const key of Object.keys(env)) {
+    if (key.toUpperCase() === upper) return env[key];
+  }
+  return undefined;
+}
+
+/**
+ * Resolve a bare command name the way a shell would: search `PATH` and try each
+ * `PATHEXT` extension in order. Node's `spawn` does NOT do this — it appends
+ * only `.exe` — which is exactly why `npx`/`bash` (`.cmd` shims on Windows)
+ * failed with ENOENT. A name that already contains a separator is a path and is
+ * returned as-is.
+ */
+export function resolveWindowsCommand(file: string, env: NodeJS.ProcessEnv): string | null {
+  if (file.includes("\\") || file.includes("/")) return existsSync(file) ? file : null;
+
+  const pathExt = (envValue(env, "PATHEXT") ?? ".COM;.EXE;.BAT;.CMD").split(";").map((e) => e.trim()).filter(Boolean);
+  const dirs = (envValue(env, "PATH") ?? "").split(";").map((d) => d.trim()).filter(Boolean);
+  const hasKnownExt = pathExt.some((ext) => file.toUpperCase().endsWith(ext.toUpperCase()));
+
+  for (const dir of dirs) {
+    if (hasKnownExt) {
+      const candidate = join(dir, file);
+      if (existsSync(candidate)) return candidate;
+      continue;
+    }
+    for (const ext of pathExt) {
+      const candidate = join(dir, file + ext);
+      if (existsSync(candidate)) return candidate;
+    }
+  }
+  return null;
+}
+
+/**
+ * Decide HOW to launch `file` with `args` under `shell:false`.
+ *
+ * Pure and platform-parameterised so the decision table is testable on Linux
+ * too; only the `.cmd`/`.ps1` executions themselves are Windows-specific.
+ */
+export function planArgvLaunch(
+  file: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  platform: NodeJS.Platform = process.platform,
+): ArgvLaunch {
+  if (platform !== "win32") {
+    // POSIX: the kernel executes scripts via their shebang. `shell:false` is
+    // already correct and nothing needs resolving.
+    return { ok: true, file, args, via: "direct" };
+  }
+
+  const resolved = resolveWindowsCommand(file, env);
+  // Unresolvable: fall through to a direct spawn so the platform's own ENOENT
+  // is reported rather than a guessed reason.
+  if (resolved === null) return { ok: true, file, args, via: "direct" };
+
+  const ext = extensionOf(resolved);
+
+  if (CMD_SCRIPT_EXTENSIONS.has(ext)) {
+    for (let i = 0; i < args.length; i++) {
+      const arg = args[i] ?? "";
+      if (CMD_METACHARACTERS.test(arg)) {
+        return {
+          ok: false,
+          reason:
+            `refused to launch ${resolved} via cmd.exe: argument ${i} contains a cmd metacharacter ` +
+            `(${JSON.stringify(arg)}). cmd.exe re-parses such arguments and could run a second command. ` +
+            `Declare the verifier as a real executable (e.g. node + script argument) or remove the metacharacter.`,
+        };
+      }
+    }
+    const comspec = envValue(env, "ComSpec") ?? "cmd.exe";
+    // `/d` skips AutoRun, `/c` runs the command. Arguments stay SEPARATE argv
+    // entries; only benign arguments ever reach this point.
+    return { ok: true, file: comspec, args: ["/d", "/c", resolved, ...args], via: "cmd" };
+  }
+
+  if (ext === ".ps1") {
+    const shell = resolveWindowsCommand("pwsh", env) ?? resolveWindowsCommand("powershell", env) ?? "powershell.exe";
+    // `-File` with SEPARATE argv is faithful: `$args` receives every argument
+    // literally, including dash-leading ones such as `--noEmit`.
+    return {
+      ok: true,
+      file: shell,
+      args: ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", resolved, ...args],
+      via: "powershell",
+    };
+  }
+
+  if (DIRECT_EXTENSIONS.has(ext)) return { ok: true, file: resolved, args, via: "direct" };
+
+  if (UNSUPPORTED_SCRIPT_EXTENSIONS.has(ext)) {
+    return {
+      ok: false,
+      reason:
+        `cannot launch ${resolved} deterministically: ${ext} scripts need a host interpreter that ` +
+        `would re-parse the arguments. Declare the verifier with an explicit executable plus arguments ` +
+        `(e.g. \`node script.js\`) instead of relying on a ${ext} shim.`,
+    };
+  }
+
+  return {
+    ok: false,
+    reason: `cannot launch ${resolved}: unsupported executable type ${ext || "(none)"} on win32`,
+  };
+}
 
 /** E4-R79: shared bounded-collect + timeout + cancel + tree-kill lifecycle.
  *  Both the legacy shell path and the argv path use EXACTLY this machinery, so
@@ -459,12 +619,35 @@ export class ProcessExecutor {
     const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const maxOutputBytes = opts.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES;
 
-    const child = spawn(opts.file, opts.args ?? [], {
+    // E4-R91 (H1): decide HOW to launch before spawning. On win32 a `.cmd`/`.bat`
+    // shim cannot be executed by CreateProcess at all (EINVAL/ENOENT), so it is
+    // routed through cmd.exe — but ONLY when no argument contains a cmd
+    // metacharacter, because cmd.exe re-parses and could run a second command.
+    // `.ps1` is routed through PowerShell with separate argv. Unsupported script
+    // types fail closed. See `planArgvLaunch`.
+    const env = { ...process.env, ...opts.env };
+    const plan = planArgvLaunch(opts.file, opts.args ?? [], env);
+    if (!plan.ok) {
+      return {
+        status: "error",
+        exitCode: null,
+        stdout: "",
+        stderr: "",
+        truncated: false,
+        durationMs: Date.now() - started,
+        error: plan.reason,
+      };
+    }
+
+    const child = spawn(plan.file, plan.args, {
       cwd: opts.cwd,
-      env: { ...process.env, ...opts.env },
+      env,
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
-      // The whole point: no shell re-interprets the argument text.
+      // The whole point: no shell re-interprets the argument text. For the
+      // `.cmd` route cmd.exe IS the launched program, but it is still spawned
+      // with `shell:false` and a real argv vector — Node never concatenates a
+      // command string.
       shell: false,
     });
 

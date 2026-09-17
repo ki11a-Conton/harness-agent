@@ -448,6 +448,43 @@ Promoting H1 on holdout evidence would violate holdout discipline; promoting it
 on one sample would violate the evidence bar. It is therefore recorded as a real
 but under-evidenced mechanism for a future round, not smuggled into R86.
 
+> **R91 resolution (appended; the text above is preserved as the historical
+> call).** R91 took exactly the path this section asked for — *"a richer per-case
+> record, not a relaxed bar"* was one option, and reproducing the mechanism
+> deterministically was the other, which plan §R91 authorises for a
+> deterministic code defect without waiting for a second paid sample.
+>
+> **H1 is `REPRODUCED` and fixed.** A raw `spawn(file, args, {shell:false})`
+> probe on Windows confirms the recorded signature and extends it:
+>
+> | Shape | Measured |
+> | --- | --- |
+> | `C:\…\x.cmd` (full path) | `EINVAL` |
+> | bare `npm`/`npx` → `*.cmd` | `ENOENT` (this is the `bash: spawn bash ENOENT` record) |
+> | `C:\…\x.ps1` | `EFTYPE` |
+> | `node.exe` / bare `node` | runs |
+>
+> The blast radius was under-counted here for a reason worth naming: the
+> benchmark set declares **58** command verifiers, of which `bash` (10) and `npx`
+> (1) resolve to `.cmd` shims on Windows — so **11** declared verifiers could not
+> start, not one. Only two of those sit in the development suites
+> (`reg-25-shell-script`, `reg-27-type-annotation`); the other nine are holdout
+> and were invisible to this bar by design. The "count is 1" statement above is
+> accurate as a *development-suite* count and misleading as a *defect* count.
+>
+> R91 also shows the obvious repairs are wrong: `shell:true` recreates the R79
+> injection (measured — it creates a sentinel file), and no cmd.exe quoting
+> strategy transports `&`/`|`/`%`/`^`/`"` faithfully (six measured). The adopted
+> contract resolves `PATH`+`PATHEXT`, routes `.cmd`/`.bat` through cmd.exe **only**
+> when no argument carries a metacharacter, routes `.ps1` through
+> `powershell -File` with separate argv, and fails closed otherwise — all still
+> with `shell:false`. See `docs/E4-R91-report.md`.
+>
+> The limit #2 above ("the honest path is a richer per-case record") remains
+> correct for *historical attribution*: R91 proves the mechanism and repairs it,
+> but does not retroactively establish which campaign cases it changed, because
+> the stored reports do not carry the per-call record that would show it.
+
 ---
 
 ## 11. Honest limits
