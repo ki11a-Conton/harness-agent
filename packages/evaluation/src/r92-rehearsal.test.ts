@@ -75,6 +75,11 @@ describe("E4-R92 rehearsal drives the whole matrix with zero external requests",
       // The cap is a ceiling: the run must never exceed it.
       expect(s.observed.modelCallAttempts).toBeLessThanOrEqual(s.observed.maxModelCalls);
       expect(s.observed.hitCap).toBe(true);
+      // Exactly ONE request may reach the transport: the arm attempts two, and
+      // the second must be refused by the budgeted provider at the call site.
+      // If both reached the transport the cap would be advisory, not enforced.
+      expect(s.providerRequests).toBe(1);
+      expect(s.observed.modelCallAttempts).toBe(1);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

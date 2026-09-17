@@ -531,6 +531,7 @@ export async function runR92Rehearsal(opts: R92RehearsalOptions): Promise<R92Reh
   // ---- Budget exhaustion: halt AT the cap, never past it ------------------
   {
     let calls = 0;
+    let budgetStopObserved: string | null = null;
     // The budgeted provider counts attempts; the arm body deliberately makes an
     // extra call so the cap is reached mid-pair.
     const provider = scriptedProvider({ id: "rehearsal", onCall: () => { calls += 1; note(); } });
@@ -542,14 +543,22 @@ export async function runR92Rehearsal(opts: R92RehearsalOptions): Promise<R92Reh
       identity,
       journalDir: join(opts.workDir, "budget-journal"),
       runArm: async (arm, _caseDef, ctx) => {
-        // Exercise the budgeted provider so the cap is genuinely consumed.
+        // Attempt TWO calls against a cap of 1. The first consumes the budget;
+        // the second must be refused by the budgeted provider BEFORE it reaches
+        // the transport. That refusal-at-the-call-site is what makes the cap
+        // runtime-enforced rather than a preflight estimate.
         const client = ctx.provider.createClient({ providerId: "rehearsal", modelId: "m" } as ModelRef, {} as ProviderConfig);
-        try {
-          for await (const _ of client.generate({} as ModelRequest, new AbortController().signal)) {
-            void _;
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          try {
+            for await (const _ of client.generate({} as ModelRequest, new AbortController().signal)) {
+              void _;
+            }
+          } catch (err) {
+            // The budget throwing IS the expected stop, but it must be OBSERVED,
+            // not swallowed — the scenario asserts on the recorded reason below.
+            budgetStopObserved = err instanceof Error ? err.message : String(err);
+            break;
           }
-        } catch {
-          // The budget throwing is the expected stop.
         }
         return fakeOutcome(arm.caseId, true);
       },
@@ -565,7 +574,13 @@ export async function runR92Rehearsal(opts: R92RehearsalOptions): Promise<R92Reh
       code: null,
       providerRequests: calls,
       // The cap is a ceiling: hitting it is agreement, exceeding it is not.
-      stoppedAsAgreed: !refused(result) && hitCap && attempts <= 1,
+      // `budgetStopObserved` proves the budget actually threw at the call site
+      // rather than the arm merely finishing early on its own.
+      stoppedAsAgreed:
+        !refused(result) &&
+        hitCap &&
+        attempts <= 1 &&
+        budgetStopObserved !== null,
       observed,
     });
   }
@@ -625,6 +640,7 @@ export async function runR92Rehearsal(opts: R92RehearsalOptions): Promise<R92Reh
     const blockedPath = join(opts.workDir, "persist-blocker");
     await writeFile(blockedPath, "not a directory");
     let surfaced = false;
+    let persistenceError: string | null = null;
     let result: PairedExperimentRunResult | null = null;
     try {
       result = await runPairedExperiment({
@@ -636,8 +652,11 @@ export async function runR92Rehearsal(opts: R92RehearsalOptions): Promise<R92Reh
         journalDir: join(blockedPath, "journal"),
         runArm: async (arm) => fakeOutcome(arm.caseId, true),
       });
-    } catch {
+    } catch (err) {
+      // The failure must SURFACE, so it is recorded and asserted on rather than
+      // swallowed — a swallowed persistence error would look like a clean stop.
       surfaced = true;
+      persistenceError = err instanceof Error ? err.message : String(err);
     }
     const observed =
       result === null || result.status !== "ok"
@@ -651,7 +670,8 @@ export async function runR92Rehearsal(opts: R92RehearsalOptions): Promise<R92Reh
       code: null,
       providerRequests: calls,
       // Surfacing the failure is the agreement; silently scoring would not be.
-      stoppedAsAgreed: surfaced && observed.scoredPairs === 0,
+      // The recorded message proves a real error surfaced, not an empty flag.
+      stoppedAsAgreed: surfaced && persistenceError !== null && observed.scoredPairs === 0,
       observed,
     });
   }
@@ -670,6 +690,10 @@ export async function runR92Rehearsal(opts: R92RehearsalOptions): Promise<R92Reh
       return fakeOutcome(arm.caseId, true);
     };
     // Stop after the 1st logical run by throwing from the observability hook.
+    // The injected stop must be OBSERVED: if the first phase did not actually
+    // throw, the "resume" below would be a plain first run and the scenario
+    // would prove nothing about resumption.
+    let injectedStopObserved: string | null = null;
     await runPairedExperiment({
       plan,
       cases,
@@ -681,7 +705,9 @@ export async function runR92Rehearsal(opts: R92RehearsalOptions): Promise<R92Reh
         if (logicalRuns >= 1) throw new Error("injected mid-run stop");
       },
       runArm: armBody,
-    }).catch(() => undefined);
+    }).catch((err: unknown) => {
+      injectedStopObserved = err instanceof Error ? err.message : String(err);
+    });
 
     // Resume the same journal with the same identity.
     const resumed = await runPairedExperiment({
@@ -704,6 +730,8 @@ export async function runR92Rehearsal(opts: R92RehearsalOptions): Promise<R92Reh
       stoppedAsAgreed:
         !refused(resumed) &&
         resumed.status === "ok" &&
+        // The first phase must have really stopped, or there was no resume.
+        injectedStopObserved !== null &&
         observed.duplicateArmRuns === 0 &&
         observed.missingArmRuns === 0 &&
         resumed.finalizedPairs.length === REHEARSAL_CASES.length,
