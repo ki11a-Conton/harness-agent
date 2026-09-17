@@ -268,10 +268,25 @@ describe.skipIf(!isWindows)("E4-R91: Windows script shims run deterministically 
 
   afterAll(() => rmSync(shimDir, { recursive: true, force: true }));
 
-  /** A .cmd shim that echoes its arguments and exits 0. */
+  /**
+   * A .cmd shim that echoes its arguments and exits 0.
+   *
+   * E4-R92 portability: the file is written under BOTH casings of its extension.
+   * `resolveWindowsCommand` appends the PATHEXT spelling VERBATIM (`.CMD`) and
+   * then asks the filesystem whether that path exists. Windows folds case, so one
+   * lowercase `r91tool.cmd` on disk answers both `r91tool.CMD` and `r91tool.cmd`
+   * — which is why the production path is correct. A case-SENSITIVE filesystem
+   * (ext4) answers only the exact spelling, so a test that reaches a shim by BARE
+   * NAME would depend on the host's case folding rather than on our resolution
+   * logic. Writing both spellings removes that accidental dependency and keeps
+   * these tests asserting what they claim to assert.
+   */
   function writeCmd(name: string, body: string): string {
     const p = join(shimDir, name);
     writeFileSync(p, body, "utf8");
+    if (name.toLowerCase().endsWith(".cmd")) {
+      writeFileSync(join(shimDir, `${name.slice(0, -4)}.CMD`), body, "utf8");
+    }
     return p;
   }
 
@@ -410,6 +425,30 @@ describe.skipIf(!isWindows)("E4-R91: Windows script shims run deterministically 
 describe("E4-R91: argv launch planning (platform-parameterised)", () => {
   const winEnv: NodeJS.ProcessEnv = { PATHEXT: ".COM;.EXE;.BAT;.CMD", ComSpec: "C:\\Windows\\system32\\cmd.exe" };
 
+  /**
+   * E4-R92 portability: write a Windows script fixture under EVERY casing the
+   * resolver may probe, and return the PATHEXT-cased path.
+   *
+   * `resolveWindowsCommand` appends the PATHEXT spelling VERBATIM (`.CMD`) and
+   * then asks the filesystem whether that path exists. Windows folds case, so a
+   * single lowercase `npx.cmd` on disk answers both `npx.CMD` and `npx.cmd` —
+   * which is why the production path is correct. Linux does not fold case, so a
+   * test that hard-codes a lowercase file on disk while probing the uppercase
+   * PATHEXT spelling passes on a Windows dev box and FAILS in CI.
+   *
+   * Writing both spellings emulates the one Windows behaviour the production
+   * path relies on. That keeps these tests asserting OUR resolution logic
+   * (append the PATHEXT extension, search PATH) rather than accidentally
+   * asserting the host filesystem's case folding.
+   */
+  const writeShimBothCasings = (dir: string, stem: string): string => {
+    const upper = join(dir, `${stem}.CMD`);
+    const body = "@echo off\r\n";
+    writeFileSync(upper, body, "utf8");
+    writeFileSync(join(dir, `${stem}.cmd`), body, "utf8");
+    return upper;
+  };
+
   it("POSIX passes the file through untouched (the kernel handles shebangs)", () => {
     const plan = planArgvLaunch("bash", ["-c", "true"], winEnv, "linux");
     expect(plan).toEqual({ ok: true, file: "bash", args: ["-c", "true"], via: "direct" });
@@ -436,8 +475,7 @@ describe("E4-R91: argv launch planning (platform-parameterised)", () => {
     const dir = mkdtempSync(join(tmpdir(), "ar-r91-path-"));
     try {
       // PATHEXT order is .COM;.EXE;.BAT;.CMD — with no .exe present, .cmd wins.
-      const shim = join(dir, "toolname.cmd");
-      writeFileSync(shim, "@echo off\r\n", "utf8");
+      const shim = writeShimBothCasings(dir, "toolname");
       const env = { ...winEnv, PATH: dir };
       // The resolved spelling takes the extension from PATHEXT (`.CMD`), which
       // Windows treats as the same file as the on-disk lowercase name — so
@@ -520,8 +558,10 @@ describe("E4-R91: argv launch planning (platform-parameterised)", () => {
   it("resolves PATH case-insensitively, so an env SPREAD does not lose it", () => {
     const dir = mkdtempSync(join(tmpdir(), "ar-r91-case-"));
     try {
-      const shim = join(dir, "casetool.cmd");
-      writeFileSync(shim, "@echo off\r\n", "utf8");
+      // Both casings on disk, for the reason documented on writeShimBothCasings:
+      // the resolver probes the PATHEXT spelling (`.CMD`), and only a
+      // case-insensitive filesystem would answer for a lowercase file.
+      const shim = writeShimBothCasings(dir, "casetool");
       const eq = (a: string | null) => a !== null && a.toLowerCase() === shim.toLowerCase();
       // Every casing Windows itself may report for the same variable.
       for (const key of ["PATH", "Path", "path", "pAtH"]) {
@@ -556,8 +596,12 @@ describe("E4-R91: argv launch planning (platform-parameterised)", () => {
     const exe = new ProcessExecutor();
     const dir = mkdtempSync(join(tmpdir(), "ar-r91-e2e-"));
     try {
-      const shim = join(dir, "r91endtoend.cmd");
-      writeFileSync(shim, ["@echo off", "echo E2E_OK %1", "exit /b 0", ""].join("\r\n"), "utf8");
+      // Both casings, for the same reason as writeCmd above: the bare-name probe
+      // asks for `r91endtoend.CMD` (the PATHEXT spelling) and only Windows would
+      // answer for a lowercase file on disk.
+      const body = ["@echo off", "echo E2E_OK %1", "exit /b 0", ""].join("\r\n");
+      writeFileSync(join(dir, "r91endtoend.cmd"), body, "utf8");
+      writeFileSync(join(dir, "r91endtoend.CMD"), body, "utf8");
       const out = await exe.runArgv({
         file: "r91endtoend",
         args: ["arg"],
