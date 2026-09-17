@@ -190,9 +190,10 @@ i.e. the happy path exercises provider + budget + journal + pair finalization, n
 a canned arm body. The 5 refusal scenarios all stop at **0 provider requests**,
 which is the line-221 requirement that refusal happen before the first provider
 request; the global `providerRequests: 81` is asserted too, so those zeros cannot
-pass vacuously.
+pass vacuously. The budget scenario shows **1** request: the arm attempts two
+against a cap of 1, and the second is refused at the call site.
 
-### Two defects this rehearsal caught (both fixed)
+### Three defects this rehearsal caught (all fixed)
 
 1. **The happy path was vacuous.** It originally passed `runArm: async (arm) =>
    fakeOutcome(...)` with `maxModelCalls: 4`, so it never touched the provider and
@@ -206,6 +207,8 @@ pass vacuously.
    running scenario carries a `refused(result)` guard so a `resume-rejected`
    result can never be read as agreement. A regression test fails with
    `expected +0 to be 81` without the fix.
+3. **The budget scenario under-proved its claim.** See §7 — the arm now attempts
+   two calls against a cap of 1 so the refusal is observed *at the call site*.
 
 ## 7. Verification
 
@@ -213,9 +216,30 @@ pass vacuously.
 | --- | --- |
 | `pnpm typecheck` | exit 0 |
 | R92 suites | 3 files, 60 tests passed |
-| `pnpm test` | PASS on a clean tree |
+| `pnpm test` | **PASS** — 339 files, 6191 passed / 3 skipped, 0 failed (clean tree) |
 | `pnpm docs:verify` | ALL CHECKS PASS |
 | External provider requests during any R92 check | **0** |
+
+The full suite initially failed with **2 failures** in
+`packages/security/src/no-silent-catch.test.ts` (P14-6): the rehearsal contained
+two silent `catch {}` blocks and one `.catch(() => undefined)`. The scan is right
+that comments are not observability, so each catch now records its error and the
+scenario asserts on it. That change was not cosmetic — it exposed a real gap:
+
+- **budget-exhaustion was proving less than it claimed.** With a cap of 1 the arm
+  made exactly one call, so the budget never threw *at the call site*; the stop
+  came from the executor's post-arm check. The arm now attempts **two** calls
+  against a cap of 1, so the second is refused by the budgeted provider *before*
+  reaching the transport. The test asserts exactly one request reaches the
+  transport — the property that makes the cap runtime-enforced rather than
+  advisory.
+- **mid-run-stop could have been vacuous.** The injected stop was swallowed, so a
+  failed injection would have turned the "resume" into a plain first run. The
+  stop is now observed and asserted.
+- **persistence-failure** now asserts a real error message surfaced, so
+  `surfaced` cannot be true for an empty reason.
+
+The 12-scenario verdicts are unchanged; only their evidential strength increased.
 
 The digest is a pure function of repository facts plus the validity window:
 `createdAt` is anchored to the candidate commit's committer timestamp rather than
