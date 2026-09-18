@@ -285,6 +285,31 @@ if (-not $rootAbs.StartsWith($repoAbs, [System.StringComparison]::OrdinalIgnoreC
 # repository root and the output root redirects every write — results, staging,
 # quarantine, and the attempt state — somewhere else, while the path still LOOKS
 # contained. Walk the real components and refuse if any is a reparse point.
+# Is `$path` itself a LINK (Windows junction/symlink/mount point, or a POSIX
+# symlink)?
+#
+# E4-R94 fix: `Attributes -band ReparsePoint` is a WINDOWS-ONLY signal. On Linux
+# the flag is never set for a symlink, so the containment refusal below silently
+# did NOTHING there — MEASURED in CI run 35308487074: ubuntu-latest failed §8d
+# ("an output root behind a link is refused" / "...is a configuration error") with
+# exit 0, while windows-latest passed the same section. An output root behind a
+# symlink could therefore have redirected every write outside the repository on
+# Linux while the path still LOOKED contained.
+#
+# `LinkType`/`LinkTarget` are populated by PowerShell 7 on EVERY platform, and
+# `ResolveLinkTarget(..., false)` asks the filesystem directly without following
+# the link. All three are checked; a HARD link is deliberately not treated as a
+# link here, because it cannot redirect a directory tree.
+function Test-IsLink([string]$path) {
+    try { $item = Get-Item -LiteralPath $path -Force -ErrorAction Stop } catch { return $false }
+    if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { return $true }
+    $lt = $item.PSObject.Properties['LinkType']
+    if ($null -ne $lt -and $lt.Value -in @('SymbolicLink', 'Junction')) { return $true }
+    try { if ($null -ne [System.IO.Directory]::ResolveLinkTarget($path, $false)) { return $true } } catch { }
+    try { if ($null -ne [System.IO.File]::ResolveLinkTarget($path, $false)) { return $true } } catch { }
+    return $false
+}
+
 function Test-ReparsePointInPath([string]$base, [string]$target) {
     $rel = $target.Substring($base.Length).TrimStart('\', '/')
     $cur = $base
@@ -292,8 +317,7 @@ function Test-ReparsePointInPath([string]$base, [string]$target) {
         $cur = Join-Path $cur $part
         if (-not (Test-Path -LiteralPath $cur)) { continue }
         try {
-            $item = Get-Item -LiteralPath $cur -Force -ErrorAction Stop
-            if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { return $cur }
+            if (Test-IsLink $cur) { return $cur }
         } catch { return $cur }
     }
     return $null
