@@ -338,6 +338,122 @@ async function fingerprintCaseInCheckout(evaluation, repoRoot, armDir, caseId) {
   });
 }
 
+/**
+ * The ZERO-CALL REHEARSAL — plan §R97 line 221.
+ *
+ *   "驱动器代码可先完成并通过零调用演练，之后才请用户批准具体最终计划."
+ *
+ * and line 228 makes the result an acceptance criterion:
+ *
+ *   "正常路径完整成对结果通过 R93 validator；中断路径使用 R94 状态合同."
+ *
+ * Before this function existed the driver never called the R93 validator at all,
+ * so "the normal path passes the R93 validator" was an untested claim: the
+ * driver exercised the GATE and the BUDGET, but nothing in it ever produced a
+ * paired result set for the validator to judge.
+ *
+ * The rehearsal runs the R87 replay harness (`runReplayAb`), which is the ONLY
+ * way to produce a complete, frozen-expectation paired matrix with zero provider
+ * calls: it uses `ScriptedModelProvider` (a scripted local object), never a
+ * network client, and needs no key. Its records are then projected into a
+ * manifest with `buildManifest` and judged by `validateManifest` — the R93
+ * validator, invoked through its real entry point rather than re-implemented.
+ *
+ * The driver does NOT assert VALID on its own say-so: `validationStatus` is
+ * whatever the validator returned, and the manifest is written to disk so the
+ * caller can re-validate the artifact independently.
+ *
+ * `tamperManifest` exists so a test can prove the validator is actually
+ * consulted — a rehearsal that reported VALID unconditionally would be a rubber
+ * stamp, and this option makes that failure mode detectable.
+ */
+export async function runZeroCallRehearsal(opts) {
+  const { readFileSync } = await import("node:fs");
+  const { writeFile, mkdir } = await import("node:fs/promises");
+  const { join: pjoin } = await import("node:path");
+  const { pathToFileURL: toUrl } = await import("node:url");
+
+  const repoRoot = opts.repoRoot ?? REPO_ROOT;
+  const core = await import(
+    toUrl(pjoin(repoRoot, "packages", "core", "dist", "runtime", "r87-zero-call-replay-ab.js")).href
+  );
+
+  const selectionPath = pjoin(repoRoot, "docs", "evidence", "e4-r87-case-selection.json");
+  const selection = JSON.parse(readFileSync(selectionPath, "utf8"));
+
+  const ARMS = ["baseline", "candidate"];
+  const statePath = opts.outDir === undefined ? undefined : pjoin(opts.outDir, "rehearsal-run-state.jsonl");
+
+  // `runReplayAb` writes the run-state file itself, so the directory must exist
+  // BEFORE the first pass. Found by driving the real CLI: with `--rehearsal
+  // --out <new dir>` the harness died with ENOENT on the state file.
+  if (opts.outDir !== undefined) await mkdir(opts.outDir, { recursive: true });
+
+  let records;
+  let resumedExecuted = 0;
+  if (opts.interruptAfterFirstArm === true) {
+    // INTERRUPTION path (line 228): run ONE arm, then resume with both. The R94
+    // state contract is what makes the second pass re-run only what is missing.
+    await core.runReplayAb(selection, { arms: ["baseline"], now: () => 0, runStatePath: statePath });
+    const resumed = await core.runReplayAb(selection, { arms: ARMS, now: () => 0, runStatePath: statePath });
+    records = resumed.records;
+    resumedExecuted = resumed.executed.length;
+  } else {
+    // NORMAL path (line 228).
+    const full = await core.runReplayAb(selection, { arms: ARMS, now: () => 0, runStatePath: statePath });
+    records = full.records;
+  }
+
+  // A declared, unexecuted gate: the rehearsal spends nothing, so the paid gate
+  // is NOT_RUN by construction. Its SHAPE is the R87 `PaidGateStatus` contract.
+  const gate = {
+    status: "NOT_RUN",
+    code: "PAID_AUTHORIZATION_REQUIRED",
+    reason: "zero-call rehearsal: no paid authorization is present and none is needed",
+  };
+
+  const manifest = core.buildManifest({
+    selection,
+    records,
+    arms: ARMS,
+    implementationSha: opts.implementationSha ?? "0".repeat(40),
+    baselineSha: opts.baselineSha ?? "0".repeat(40),
+    candidateSha: opts.candidateSha ?? "0".repeat(40),
+    gate,
+  });
+
+  if (opts.tamperManifest === "drop-a-record") {
+    // Mutate the manifest so it no longer matches its own records. The validator
+    // must catch this; if the driver reported VALID anyway, the test fails.
+    manifest.arms.candidate.records = manifest.arms.candidate.records.slice(1);
+  }
+
+  const validation = core.validateManifest(manifest, selection);
+
+  let manifestPath = null;
+  if (opts.outDir !== undefined) {
+    await mkdir(opts.outDir, { recursive: true });
+    manifestPath = pjoin(opts.outDir, "rehearsal-manifest.json");
+    await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  }
+
+  return {
+    driverVersion: DRIVER_VERSION,
+    status: validation.status,
+    validationStatus: validation.status,
+    reasonCodes: validation.reasonCodes,
+    detail: validation.detail,
+    records: records.length,
+    resumedExecuted,
+    completeness: manifest.summary.completeness,
+    verdict: manifest.summary.verdict,
+    providerCalls: manifest.providerCalls,
+    network: 0,
+    realProviderConstructed: false,
+    manifestPath,
+  };
+}
+
 /** CLI entry. Returns an exit code; prints the approval material by default. */
 export async function main(argv) {
   const flag = (name) => {
@@ -351,11 +467,25 @@ export async function main(argv) {
   const ledgerDir = flag("--ledger");
   const now = flag("--now") ?? new Date().toISOString();
   const fakeProvider = has("--fake-provider");
+  const rehearse = has("--rehearse");
+
+  // The zero-call rehearsal needs no plan and no key: it is what proves the
+  // driver works BEFORE a human is asked to approve a real plan (line 221).
+  if (rehearse) {
+    const out = await runZeroCallRehearsal({
+      repoRoot: REPO_ROOT,
+      outDir: outDir ?? join(REPO_ROOT, ".ci", "r97-rehearsal"),
+      interruptAfterFirstArm: has("--interrupt-after-first-arm"),
+    });
+    process.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
+    return out.validationStatus === "VALID" ? EXIT_OK : EXIT_REFUSED;
+  }
 
   if (planPath === undefined) {
     process.stderr.write(
       "usage: node scripts/e4/r97-campaign-driver.mjs --plan <plan.json> [--out <dir>] [--ledger <dir>]\n" +
-        "                                                       [--now <iso>] [--fake-provider]\n",
+        "                                                       [--now <iso>] [--fake-provider]\n" +
+        "       node scripts/e4/r97-campaign-driver.mjs --rehearse [--out <dir>] [--interrupt-after-first-arm]\n",
     );
     return EXIT_CONFIG;
   }

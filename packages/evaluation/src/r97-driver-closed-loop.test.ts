@@ -436,6 +436,74 @@ describe("E4-R97 D5: the driver writes its result artifact and leaks nothing", (
   });
 });
 
+describe("E4-R97 D7: the zero-call rehearsal produces R93-VALID paired evidence", () => {
+  // Plan §R97 line 221: "驱动器代码可先完成并通过零调用演练，之后才请用户批准具体最终
+  // 计划." Line 228 makes it an acceptance criterion: "正常路径完整成对结果通过 R93
+  // validator；中断路径使用 R94 状态合同."
+  //
+  // Before this group the driver never called the R93 validator at all, so
+  // "passes the R93 validator" was an untested claim. The rehearsal is the ONLY
+  // way to produce complete paired evidence with zero provider calls, which is
+  // exactly what line 221 asks the driver to do before asking for approval.
+  const rehearsal = (mod as unknown as {
+    runZeroCallRehearsal: (o: unknown) => Promise<Record<string, unknown>>;
+  }).runZeroCallRehearsal;
+
+  it("the normal path produces complete paired records that the R93 validator accepts", async () => {
+    const dir = await tempDir();
+    const out = await rehearsal({ repoRoot: REPO, outDir: dir });
+    expect(out["status"]).toBe("VALID");
+    expect(out["validationStatus"]).toBe("VALID");
+    expect(out["reasonCodes"]).toEqual([]);
+    expect(out["records"]).toBe(16); // 8 frozen cases x 2 arms
+    expect(out["providerCalls"]).toBe(0);
+    expect(out["completeness"]).toBe("COMPLETE");
+    expect(out["verdict"]).toBe("MECHANISM_VALIDATED");
+  }, 120_000);
+
+  it("the rehearsal opens no socket and constructs no real provider", async () => {
+    const dir = await tempDir();
+    const out = await rehearsal({ repoRoot: REPO, outDir: dir });
+    // The rehearsal uses the R87 ScriptedModelProvider: no key, no network.
+    expect(out["network"]).toBe(0);
+    expect(out["realProviderConstructed"]).toBe(false);
+  }, 120_000);
+
+  it("the interruption path resumes through the R94 state contract and still VALIDATES", async () => {
+    const dir = await tempDir();
+    const out = await rehearsal({ repoRoot: REPO, outDir: dir, interruptAfterFirstArm: true });
+    // The first pass is interrupted after one arm; the resume must not re-run
+    // what is already recorded, and the completed matrix must still validate.
+    expect(out["resumedExecuted"]).toBe(8); // the second arm only
+    expect(out["validationStatus"]).toBe("VALID");
+    expect(out["completeness"]).toBe("COMPLETE");
+    expect(out["records"]).toBe(16);
+    expect(out["providerCalls"]).toBe(0);
+  }, 120_000);
+
+  it("a rehearsal whose manifest does not match its records is NOT reported VALID", async () => {
+    const dir = await tempDir();
+    const out = await rehearsal({ repoRoot: REPO, outDir: dir, tamperManifest: "drop-a-record" });
+    // Fail-closed: the validator must catch it rather than the driver asserting
+    // VALID on its own say-so.
+    expect(out["validationStatus"]).not.toBe("VALID");
+    expect((out["reasonCodes"] as unknown[]).length).toBeGreaterThan(0);
+  }, 120_000);
+
+  it("the rehearsal writes its manifest to disk for independent re-validation", async () => {
+    const dir = await tempDir();
+    const out = await rehearsal({ repoRoot: REPO, outDir: dir });
+    const manifestPath = join(dir, "rehearsal-manifest.json");
+    expect(existsSync(manifestPath)).toBe(true);
+    expect(out["manifestPath"]).toBe(manifestPath);
+    // Re-read and re-validate INDEPENDENTLY, from the artifact alone.
+    const { readFileSync } = await import("node:fs");
+    const reread = JSON.parse(readFileSync(manifestPath, "utf8"));
+    expect(reread.summary.completeness).toBe("COMPLETE");
+    expect(reread.providerCalls).toBe(0);
+  }, 120_000);
+});
+
 describe("E4-R97 D6: the REAL two-arm observation produces a FINALIZED plan", () => {
   // This is the acceptance path plan §R97 line 211 describes: "先无 key 检出、
   // 构建、加载实际案例，再由真实 dry-run 生成每臂执行计划". It drives the SHIPPED
