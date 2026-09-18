@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import type { SandboxExecutionOption, SandboxExecutionProvenance } from "./sandbox-executor.js";
 import { buildSandboxLaunch, policyDigestOf, SANDBOX_BACKEND_DENIED } from "./sandbox-executor.js";
 
@@ -110,6 +110,18 @@ function extensionOf(file: string): string {
 }
 
 /**
+ * Absolute in the WINDOWS sense, independent of the host running the test.
+ *
+ * `path.isAbsolute` is host-specific: on Linux `C:\x` is NOT absolute, so a
+ * win32-parameterised test would resolve it against a POSIX cwd and produce a
+ * nonsense path. The decision table is asserted on every platform (that is what
+ * makes it CI-coverable), so the check has to be platform-independent.
+ */
+function isAbsolutePath(p: string): boolean {
+  return isAbsolute(p) || /^[A-Za-z]:[\\/]/.test(p) || /^\\\\/.test(p);
+}
+
+/**
  * Read an environment variable case-insensitively.
  *
  * Windows stores ONE variable whose name may be reported in any casing:
@@ -130,27 +142,99 @@ function envValue(env: NodeJS.ProcessEnv, name: string): string | undefined {
 }
 
 /**
+ * Characters that cmd.exe re-interprets, for the SCRIPT PATH.
+ *
+ * MEASURED on Windows (harmless temp fixtures, `cmd.exe /d /c <path>`,
+ * `shell:false`, this machine):
+ *
+ *   path contains   result
+ *   -------------   -------------------------------------------------------
+ *   space, CJK      ran the script (exit 0) — SAFE, accepted below
+ *   `(` `)`         'C:\…\par' is not recognized — the path was TRUNCATED
+ *   `&`             'C:\…\am' is not recognized
+ *   `^`             the system cannot find the path
+ *   `;` `=`         'C:\…\semi' / 'C:\…\eq' is not recognized
+ *   `%`             ran ONLY because no variable named `cent` existed: with
+ *                   `cent=XXX` defined, `per%cent%` failed. Environment-
+ *                   dependent, so refused.
+ *   `!`             ran only because delayed expansion is off by default; that
+ *                   is a cmd.exe option, not a property of the path. Refused.
+ *
+ * Space and non-ASCII are deliberately ABSENT: they are transported correctly,
+ * and refusing them would break the ordinary Windows path with a space in it.
+ *
+ * SCOPE OF TRUST. This check constrains the SCRIPT PATH only, and only for the
+ * cmd.exe route. It is not a sandbox:
+ *   - `PATH` and `ComSpec` come from the caller's environment and are TRUSTED as
+ *     given. An attacker who can set either can already choose what runs, so
+ *     re-validating them here would add no protection — the boundary that matters
+ *     is the one that decides which environment reaches this call.
+ *   - the interpreter search (`pwsh`, then `powershell`) is likewise a PATH
+ *     lookup and inherits that same trust.
+ *   - a `.ps1` path is NOT restricted: MEASURED, `-File` transports `& % ! ^ ( )`
+ *     in a path correctly, because PowerShell is not cmd.exe. Copying the cmd
+ *     rule to a route that does not need it would be an unjustified restriction.
+ * The check exists because cmd.exe re-parses `/c <path>`, which turns an
+ * ordinary-looking path into a different command.
+ */
+export const CMD_PATH_METACHARACTERS = /[&|<>^%!()\r\n;=,]/;
+
+/**
  * Resolve a bare command name the way a shell would: search `PATH` and try each
  * `PATHEXT` extension in order. Node's `spawn` does NOT do this — it appends
  * only `.exe` — which is exactly why `npx`/`bash` (`.cmd` shims on Windows)
  * failed with ENOENT. A name that already contains a separator is a path and is
  * returned as-is.
+ *
+ * `cwd` is the directory the process will ACTUALLY run in (`opts.cwd`), and it
+ * is the base for every RELATIVE resolution here:
+ *   - a relative script path (`./tool.cmd`, `.\tool.cmd`) is resolved against it;
+ *   - a relative `PATH` entry (`.`) is resolved against it.
+ *
+ * This must be the SAME cwd the caller passes to `spawn`. Deciding existence
+ * against the parent process's cwd instead is finding G: with a different
+ * execution cwd the resolver either misses the real script — so a `.cmd` is NOT
+ * routed through cmd.exe and the spawn fails with EINVAL/ENOENT — or, worse,
+ * finds a SAME-NAMED script under the parent's cwd and hands THAT path to
+ * cmd.exe, silently running the wrong file.
+ *
+ * A BARE name is still a pure PATH lookup: no implicit current-directory search
+ * is added, because that would let an unrelated file in the working directory
+ * hijack a resolved command.
  */
-export function resolveWindowsCommand(file: string, env: NodeJS.ProcessEnv): string | null {
-  if (file.includes("\\") || file.includes("/")) return existsSync(file) ? file : null;
+export function resolveWindowsCommand(file: string, env: NodeJS.ProcessEnv, cwd?: string): string | null {
+  const base = cwd !== undefined && cwd.length > 0 ? cwd : process.cwd();
+
+  if (file.includes("\\") || file.includes("/")) {
+    // Normalize the separator to `/` before resolving, and always route the
+    // result through `resolve` so the HOST re-spells it in its own convention
+    // (`resolve("C:\\a", "b/c")` → `C:\a\b\c`; POSIX → `/a/b/c`). Two reasons:
+    //
+    //   - This is a WINDOWS resolver, so `.\tool.cmd` must mean what cmd.exe
+    //     means, and must not depend on the host path module — POSIX treats `\`
+    //     as an ordinary character, which would make the decision table
+    //     uncoverable by the Linux CI job.
+    //   - Passing the normalized form straight to cmd.exe is NOT safe: cmd.exe
+    //     reads `/` as a switch character. The host spelling is what production
+    //     sees, so the spelling is preserved rather than hand-built.
+    const candidate = resolve(base, file.replace(/\\/g, "/"));
+    return existsSync(candidate) ? candidate : null;
+  }
 
   const pathExt = (envValue(env, "PATHEXT") ?? ".COM;.EXE;.BAT;.CMD").split(";").map((e) => e.trim()).filter(Boolean);
   const dirs = (envValue(env, "PATH") ?? "").split(";").map((d) => d.trim()).filter(Boolean);
   const hasKnownExt = pathExt.some((ext) => file.toUpperCase().endsWith(ext.toUpperCase()));
 
   for (const dir of dirs) {
+    // A relative PATH entry is relative to the EXECUTION cwd, not the parent's.
+    const absDir = isAbsolutePath(dir) ? dir : resolve(base, dir);
     if (hasKnownExt) {
-      const candidate = join(dir, file);
+      const candidate = join(absDir, file);
       if (existsSync(candidate)) return candidate;
       continue;
     }
     for (const ext of pathExt) {
-      const candidate = join(dir, file + ext);
+      const candidate = join(absDir, file + ext);
       if (existsSync(candidate)) return candidate;
     }
   }
@@ -168,6 +252,7 @@ export function planArgvLaunch(
   args: string[],
   env: NodeJS.ProcessEnv,
   platform: NodeJS.Platform = process.platform,
+  cwd?: string,
 ): ArgvLaunch {
   if (platform !== "win32") {
     // POSIX: the kernel executes scripts via their shebang. `shell:false` is
@@ -175,7 +260,7 @@ export function planArgvLaunch(
     return { ok: true, file, args, via: "direct" };
   }
 
-  const resolved = resolveWindowsCommand(file, env);
+  const resolved = resolveWindowsCommand(file, env, cwd);
   // Unresolvable: fall through to a direct spawn so the platform's own ENOENT
   // is reported rather than a guessed reason.
   if (resolved === null) return { ok: true, file, args, via: "direct" };
@@ -183,14 +268,32 @@ export function planArgvLaunch(
   const ext = extensionOf(resolved);
 
   if (CMD_SCRIPT_EXTENSIONS.has(ext)) {
+    // The SCRIPT PATH is inside the execution boundary too. cmd.exe re-parses
+    // `/c <path>`, so a metacharacter in the path can truncate or redirect what
+    // actually runs — MEASURED above. This is checked BEFORE the arguments,
+    // because an unexpressible path is not fixable by removing an argument.
+    if (CMD_PATH_METACHARACTERS.test(resolved)) {
+      return {
+        ok: false,
+        reason:
+          `refused to launch a .cmd/.bat script whose PATH contains a cmd metacharacter: ` +
+          `${JSON.stringify(resolved)}. cmd.exe re-parses the path and would run a different ` +
+          `command or a truncated path. Move the script to a path without & | < > ^ % ! ( ) ; = , ` +
+          `(a space or non-ASCII characters are fine) and declare it again.`,
+      };
+    }
     for (let i = 0; i < args.length; i++) {
       const arg = args[i] ?? "";
       if (CMD_METACHARACTERS.test(arg)) {
+        // The offending VALUE is deliberately NOT echoed: a verifier argument
+        // can carry a credential, and plan §R96 line 181 forbids any secret
+        // value in a returned error, event or log. The INDEX and the reason are
+        // what an operator needs to fix the declaration.
         return {
           ok: false,
           reason:
-            `refused to launch ${resolved} via cmd.exe: argument ${i} contains a cmd metacharacter ` +
-            `(${JSON.stringify(arg)}). cmd.exe re-parses such arguments and could run a second command. ` +
+            `refused to launch ${resolved} via cmd.exe: argument ${i} contains a cmd metacharacter. ` +
+            `cmd.exe re-parses such arguments and could run a second command. ` +
             `Declare the verifier as a real executable (e.g. node + script argument) or remove the metacharacter.`,
         };
       }
@@ -202,9 +305,18 @@ export function planArgvLaunch(
   }
 
   if (ext === ".ps1") {
-    const shell = resolveWindowsCommand("pwsh", env) ?? resolveWindowsCommand("powershell", env) ?? "powershell.exe";
     // `-File` with SEPARATE argv is faithful: `$args` receives every argument
-    // literally, including dash-leading ones such as `--noEmit`.
+    // literally, including dash-leading ones such as `--noEmit`, and the PATH is
+    // not re-parsed. MEASURED: `& % ! ^ ( )` in a `.ps1` path all execute the
+    // right script through this route, so no path restriction is imposed here —
+    // the cmd.exe path rule above must not be copied to a route that does not
+    // need it.
+    //
+    // `-ExecutionPolicy Bypass` relaxes the PowerShell execution policy for THIS
+    // process only. It does NOT override an OS or organisational control
+    // (AppLocker, WDAC, group policy) that forbids the script: such a refusal
+    // surfaces as a non-zero exit and is reported, never worked around.
+    const shell = resolveWindowsCommand("pwsh", env, cwd) ?? resolveWindowsCommand("powershell", env, cwd) ?? "powershell.exe";
     return {
       ok: true,
       file: shell,
@@ -626,7 +738,9 @@ export class ProcessExecutor {
     // `.ps1` is routed through PowerShell with separate argv. Unsupported script
     // types fail closed. See `planArgvLaunch`.
     const env = { ...process.env, ...opts.env };
-    const plan = planArgvLaunch(opts.file, opts.args ?? [], env);
+    // `opts.cwd` is passed to BOTH the planner and `spawn`, so the script that
+    // is resolved is the script that is executed (finding G).
+    const plan = planArgvLaunch(opts.file, opts.args ?? [], env, process.platform, opts.cwd);
     if (!plan.ok) {
       return {
         status: "error",
