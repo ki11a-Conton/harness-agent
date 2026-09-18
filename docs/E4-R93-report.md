@@ -182,7 +182,42 @@ A strict validator can be satisfied by rejecting everything. Three defences:
 | `pnpm vitest run …/r87-zero-call-replay-ab.test.ts …/r88-replay-evidence-gate.test.ts` | **43 passed** (16 + 27) |
 | `pnpm vitest run packages/core` | 46 files, **615 passed**, 0 failed |
 | `pnpm typecheck` | exit 0 |
+| `pnpm build` | exit 0 |
 | `git diff --check` | exit 0 (no whitespace errors) |
+| `pnpm test` in an isolated clean checkout at `399c311` | 342 files, **6295 passed \| 3 skipped**, exit 0 |
+
+### 6.1 The dirty-tree precondition, and the isolated clean re-verification
+
+The plan (§1, line 46) requires that when the pre-existing clean-tree guard fires because
+of a dirty working tree, that is recorded as an **environment precondition** and re-verified
+in an isolated clean checkout — never resolved by stashing or deleting the user's files.
+
+Running `pnpm test` in the working tree at `399c311` produced:
+
+```
+Test Files  3 failed | 339 passed (342)
+     Tests  6 failed | 6289 passed | 3 skipped (6298)
+[exit code: 1]
+```
+
+All six failures are the documented clean-tree guard — `e4-r55-failure-wiring`,
+`e4-09-production-e2e` (×4) and `benchmark-command` — and the dirty entries were exactly
+the user's own two plan files (`D plan(20260917-001821).md`, `?? plan(20260917-083737).md`).
+They were left untouched.
+
+Re-verified in a detached worktree of the same commit, with an empty `git status --porcelain`:
+
+```
+git worktree add D:\r93-clean-wt 399c311
+# HEAD 399c31172cc792074cbf96a9808cac37873f17cf, porcelain empty
+pnpm test
+Test Files  342 passed (342)
+     Tests  6295 passed | 3 skipped (6298)
+[exit code: 0]
+```
+
+The six failures are therefore attributable **only** to the dirty-tree precondition, not to
+this change. The clean worktree was removed after the run.
 
 Preserved behaviour, explicitly re-checked: legacy v1 and superseded v2 stay
 `LEGACY_UNVERIFIED` with `LEGACY_SCHEMA`; an unknown schema is `INVALID` with
