@@ -128,6 +128,28 @@ export async function runDriver(opts) {
     authorization: null,
   };
 
+  // ---- STEP 0: is this plan bound to THIS driver? --------------------------
+  // Plan §R97 line 214 freezes 驱动器版本 and line 229 requires that changing any
+  // bound field invalidates the old approval. `driverVersion` is inside the
+  // envelope, so it is covered by `planDigest` — but that only proves the HUMAN
+  // approved this version. It does not prove the code RUNNING here is that
+  // version, so the comparison has to happen in the executor, BEFORE the gate
+  // and therefore before any provider can exist.
+  //
+  // Measured defect this closes: the driver was rewritten while the approved
+  // digest stayed byte-identical, because the version was outside the envelope
+  // and nothing compared it.
+  const boundDriver = (plan.authorization ?? null)?.driverVersion;
+  if (boundDriver !== DRIVER_VERSION) {
+    result.status = "NOT_RUN";
+    result.code = "DRIVER_VERSION_MISMATCH";
+    result.reason =
+      boundDriver === undefined
+        ? `the plan binds no driver version; this driver is ${DRIVER_VERSION} and will not run a plan that does not name its executor`
+        : `the plan is bound to driver ${String(boundDriver)} but this is ${DRIVER_VERSION}`;
+    return result;
+  }
+
   // ---- STEP 1: the R92 gate. NOTHING provider-shaped exists yet. -----------
   const facts = gateFactsFrom(observation);
   const authorization = plan.authorization ?? null;

@@ -407,6 +407,21 @@ export function r97ReadinessIssues(input: {
   for (const i of declarationIssues) issues.push({ code: "CAP_DECLARATION_INVALID", detail: i });
   for (const i of r92CapViolations(input.caps)) issues.push({ code: "CAP_NOT_ENFORCEABLE", detail: i });
 
+  // (9) The plan must bind the EXECUTOR. The shared R92 schema keeps
+  //     `driverVersion` optional so the R92 plan (whose driver did not exist yet)
+  //     stays representable, so the requirement is enforced HERE, at the step
+  //     that decides whether a plan may finalize. A plan that names no executor
+  //     cannot be checked against the code that would run, and the driver refuses
+  //     such a plan — so it must never reach FINALIZED_AUTHORIZATION_PLAN.
+  const boundDriver = input.authorizationForCaps.driverVersion;
+  if (typeof boundDriver !== "string" || boundDriver.trim().length === 0) {
+    issues.push({
+      code: "DRIVER_VERSION_UNBOUND",
+      detail:
+        "the authorization binds no driverVersion — a finalized plan must name the executor it authorizes, or the approval does not cover the code that would run",
+    });
+  }
+
   return issues;
 }
 
@@ -535,6 +550,11 @@ export async function buildR97AuthorizationPlan(opts: R97PlanBuildOptions): Prom
       "Provider-side rate limits and any provider-enforced spend cap are outside the harness's control and are not claimed here.",
     ],
     outputDir: opts.outputDir,
+    // The executor is bound INTO the envelope, so `planDigest` covers the driver
+    // version and a rewritten driver invalidates an old approval (plan §R97
+    // lines 214 and 229). The driver asserts equality with its own version
+    // before it constructs a provider.
+    driverVersion: R97_DRIVER_VERSION,
     promotionEligible: false,
   };
 

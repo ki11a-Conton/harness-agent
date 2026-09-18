@@ -9,18 +9,21 @@ emit only the approval material, executing no real model.
 
 **Scope.** `packages/evaluation/src/r97-{budget-ledger,plan}.ts` (+ tests),
 `packages/evaluation/src/r97-driver-closed-loop.test.ts`,
-`packages/evaluation/src/index.ts`, `scripts/e4/r97-campaign-driver.mjs`.
+`packages/evaluation/src/index.ts`, `scripts/e4/r97-campaign-driver.mjs`,
+`docs/E4-R97-report.md`.
 
 | Item | Value |
 | --- | --- |
-| Implementation SHA | `e584cdd` (`e584cddfce39602d904f68b8918c782722e64352`) |
-| CI run | [`35315586748`](https://github.com/ki11a-Conton/harness-agent/actions/runs/35315586748) — ubuntu-latest **3/3 jobs success** |
+| Implementation SHA | `f8b3df5` (`f8b3df554b955220ab4405bac9143b47943e6d9f`) — `e584cdd` is the driver/ledger/plan commit it builds on |
+| CI run | [`35317337663`](https://github.com/ki11a-Conton/harness-agent/actions/runs/35317337663) — **5/5 jobs success**, incl. **windows-latest** and **ubuntu-latest**, `offline cold-start (ubuntu)`, `coverage gate`, `release attestation` |
 | Real provider calls | **0** — no provider is constructed on any path exercised here |
 | Network | none (a real `node` child process is spawned; no socket is opened) |
 | Paid steps executed | **none** |
 | `pnpm typecheck` (working tree **and** clean checkout) | exit 0 |
 | `pnpm build` (working tree **and** clean checkout) | exit 0 |
-| R97 tests | 82 passed / 82 (3 files: ledger 25, plan 31, driver 26) — the 77-test subset present at `e584cdd` also passes identically in a clean `e584cdd` checkout |
+| R97 tests | 86 passed / 86 (3 files: ledger 25, plan 31, driver 30) — identical in the working tree and in a clean checkout |
+| `packages/evaluation` suite | 94 files, 1363 passed |
+| R93 / R92+R95 / R94 gates (clean checkout) | 91 passed / 98 passed / 106 assertions PASSED |
 | `pnpm docs:verify` | ALL CHECKS PASS |
 | `git diff --check` | clean |
 
@@ -247,7 +250,69 @@ before the first pass. This is the same class of defect as the shape mismatches
 in §2.4 — visible only by running the actual entry point, invisible to a unit
 test of the pure function.
 
-## 4. RED → GREEN
+## 4. A third defect: the plan advertised a bound field it did not bind
+
+Plan line 214 lists 驱动器版本 (driver version) among the values the finalized
+material must freeze, and line 229 requires that changing any bound field
+invalidates the old approval. The R97 approval package printed, in its
+"What is being authorized" list:
+
+```
+- Driver that would execute it: `e4-r97-campaign-driver-v1`
+```
+
+That line was **not true as a binding**. `driverVersion` was a top-level field of
+the plan result, outside the authorization envelope, so it was **outside
+`planDigest`**, and nothing in the driver ever compared its own version to the
+plan's. Measured, with the tamper applied to a real plan artifact:
+
+```
+driver DRIVER_VERSION:      e4-r97-campaign-driver-v1
+tampered plan.driverVersion: e4-r97-campaign-driver-v99-IMPOSSIBLE
+planDigest unchanged by the tamper: true
+```
+
+This was not hypothetical: commit `f8b3df5` rewrote the driver (adding the whole
+rehearsal and changing its refusal surface) while the approved digest
+`b5ac1fb4…` stayed byte-identical. An approval that does not cover the executor
+does not cover the code that would run.
+
+### 4.1 The fix
+
+- `driverVersion` is now a field of `R92AuthorizationV1`, so it is covered by
+  `computeR92AuthorizationDigestV1` and therefore by `planDigest`.
+- The driver asserts equality with its **own** `DRIVER_VERSION` as **STEP 0**,
+  before the gate and therefore before any provider can exist, returning
+  `NOT_RUN` / `DRIVER_VERSION_MISMATCH`. Binding into the digest proves a *human*
+  approved that version; only the executor comparing itself proves the code
+  *running* is that version. Both halves are required.
+- A plan that binds **no** driver version is refused too — absent is not
+  "compatible with everything".
+- `driverVersion` stays **optional** in the shared R92 type on purpose: the R92
+  plan is a real committed artifact whose own text says its driver *"does not
+  exist yet and will be written only after you approve"*, so R92 could not name
+  one. Requiring it there would be a retroactive lie. R97's readiness check is
+  what **requires** it (`DRIVER_VERSION_UNBOUND` → `NOT_READY`), so the
+  requirement lands at the step that decides whether a plan may finalize.
+
+Verified with the real artifact:
+
+```
+driverVersion in envelope : "e4-r97-campaign-driver-v1"
+recomputed == approved   : true
+tampered digest differs  : true
+issues with REAL caps, driver unbound : ["DRIVER_VERSION_UNBOUND"]
+issues with REAL caps, driver bound   : []
+```
+
+Mutation-checked: disabling the STEP 0 comparison (`if (false)`) makes **2** D8
+tests fail; restoring it passes 4/4.
+
+**The approved digest therefore changed: `b5ac1fb4…` → `676e8774…`.** That is the
+correct outcome of the fix — the old digest did not cover the executor, so it is
+superseded rather than reused.
+
+## 5. RED → GREEN
 
 Every item was written as a failing test first:
 
@@ -255,16 +320,17 @@ Every item was written as a failing test first:
 | --- | --- | --- |
 | `r97-budget-ledger.test.ts` | 25 tests — no ledger module existed | 25 passed |
 | `r97-plan.test.ts` | 31 tests — no DRAFT/FINALIZED distinction existed | 31 passed |
-| `r97-driver-closed-loop.test.ts` | 26 tests — no driver existed; D7 first failed as `TypeError: rehearsal is not a function` (5 failures), then failed for the right reason | 26 passed |
+| `r97-driver-closed-loop.test.ts` | 30 tests — no driver existed; D7 first failed as `TypeError: rehearsal is not a function` (5 failures), D8 as `expected undefined to be 'e4-r97-campaign-driver-v1'` + 2× `expected 'REFUSED' to be 'NOT_RUN'` | 30 passed |
 
 The strongest RED is the driver closed loop: before R97 there was no entry point
-to drive, so D1–D7 could not even be expressed. Three tests were **rewritten**
+to drive, so D1–D8 could not even be expressed. Three tests were **rewritten**
 after measuring the real behaviour — the array-equality order assertion, the P5
 parse shape, and the D7 rehearsal — because each original expectation encoded a
 contract the real entry point does not have; the corrected tests assert the
-measured contract.
+measured contract. D8 is the opposite case: a defect found by re-reading the
+acceptance criteria against the code, with the RED written before the fix.
 
-## 5. Acceptance, against plan §R97 lines 224–232
+## 6. Acceptance, against plan §R97 lines 224–232
 
 | Plan requirement | Evidence |
 | --- | --- |
@@ -275,12 +341,12 @@ measured contract.
 | Zero-call rehearsal before asking for approval | §3: 16 records, 0 provider calls, 0 network, no real provider constructed |
 | Finalized plan digest **exactly equals** the real dry-run digest | §2.3 table; both arms' digests are the CLI's own |
 | Changing any bound field invalidates the old approval | P4 approval package + P3 readiness refusals |
-| Clean checkout succeeds on Windows **and** Ubuntu offline CI | Windows: `D:\r97-clean` @ `e584cdd` — typecheck 0, build 0, R97 77/77, R93 91/91, R94 106 assertions, R92+R95 98/98. Ubuntu: run `35315586748`, 3/3 jobs success |
-| Original Ubuntu cold-start preserved | job `offline cold-start (ubuntu)` success on `e584cdd` |
+| Clean checkout succeeds on Windows **and** Ubuntu offline CI | Windows: `D:\r97-clean` @ `f8b3df5` — typecheck 0, build 0, R97 82/82, R93 91/91, R94 106 assertions, R92+R95 98/98. Ubuntu + Windows: run `35317337663`, **5/5 jobs success** |
+| Original Ubuntu cold-start preserved | job `offline cold-start (ubuntu)` success on `f8b3df5` |
 | Deliverable is `READY_FOR_AUTHORIZATION` / `NOT_RUN` with exact digest, SHA, cases, executable caps, unknown cost | §5 below |
 | **0** real HTTP requests without new approval; no automatic 86-case run, no holdout, no new paid cases | Driver default prints `NOT_RUN`; no provider constructed; holdout untouched |
 
-### 5.1 The clean-checkout run, verbatim
+### 6.1 The clean-checkout run, verbatim
 
 `D:\r97-clean` is a `git worktree add --detach`, `git status --porcelain` empty,
 installed with `pnpm install --frozen-lockfile --offline`. Run at `f8b3df5`
@@ -290,7 +356,7 @@ the subset that existed then:
 ```
 TYPECHECK_EXIT=0
 BUILD_EXIT=0
-R97:      Test Files 3 passed (3)   Tests  82 passed (82)   [was 77 at e584cdd]
+R97:      Test Files 3 passed (3)   Tests  86 passed (86)   [was 77 at e584cdd, 82 at f8b3df5]
 R93:      Test Files 1 passed (1)   Tests  91 passed (91)
 R92+R95:  Test Files 2 passed (2)   Tests  98 passed (98)
 R94 selfcheck: PASSED (0 provider calls, 0 network, 0 cost), 106 assertions
@@ -302,9 +368,9 @@ honestly: the *working tree* is not clean (the user's two plan files), so the
 clean claim is made against a genuine clean checkout rather than by stashing
 someone else's files.
 
-### 5.2 Why the working-tree `pnpm test` shows 6 failures, and why they are not R97
+### 6.2 Why the working-tree `pnpm test` shows 6 failures, and why they are not R97
 
-In the **working tree** `pnpm test` reports `6 failed | 6460 passed | 3 skipped`.
+In the **working tree** `pnpm test` reports `6 failed | 6464 passed | 3 skipped`.
 All six failures are one precondition, stated by the test itself:
 
 ```
@@ -328,15 +394,15 @@ Test Files  3 passed (3)     Tests  161 passed | 2 skipped (163)
 ```
 
 **0 failures.** The six are therefore attributable to the dirty tree and not to
-any R97 change. The passed count moved `6455 → 6460` (+5), exactly the five D7
-tests added, and no previously passing test regressed.
+any R97 change. The passed count moved `6455 → 6464` (+9), exactly the nine tests
+added (5 in D7, 4 in D8), and no previously passing test regressed.
 
-## 6. The deliverable — exact values
+## 7. The deliverable — exact values
 
 | Field | Value |
 | --- | --- |
 | Status | **`FINALIZED_AUTHORIZATION_PLAN` — READY_FOR_AUTHORIZATION / NOT_RUN** |
-| **Plan digest (approve this exact value)** | `b5ac1fb4f046cae0e1f8298a13f45066e735b1591f14ac15c3254fd8bf6620ab` |
+| **Plan digest (approve this exact value)** | `676e8774c3a9691a62f3113480490711701f0040f1df2e46d76c52e3aceca7cb` |
 | Created | `2026-09-18T06:33:43.269Z` |
 | **Expires** | `2026-10-18T06:33:43.269Z` |
 | Driver version | `e4-r97-campaign-driver-v1` |
@@ -352,7 +418,7 @@ tests added, and no previously passing test regressed.
 Artifacts: `.ci/r97-final/plan.json`, `observations.json`, `approval-package.md`
 (git-ignored working material, not committed).
 
-## 7. Runtime Freeze assessment (P38.4-11)
+## 8. Runtime Freeze assessment (P38.4-11)
 
 R97 adds new modules under `packages/evaluation` and a new script; it modifies no
 existing runtime behaviour. The one change to an existing file is two
@@ -361,8 +427,19 @@ therefore not engaged for this change, and nothing here rewrites Runtime. The
 R94 `Test-IsLink` fix and the `9840130` fixture fix belong to R94 and qualify
 there as release-integrity defects in the runner's containment control.
 
-## 8. Honest limits
+## 9. Honest limits
 
+- **`driverVersion` is a LABEL, not a code hash.** Binding it means a *renamed*
+  driver is refused and a rewritten driver is expected to bump the label. Nothing
+  forces that bump: a change made without editing `DRIVER_VERSION` still runs
+  under an unchanged digest. The honest bound would be a hash of the driver
+  source; a version string is what plan line 214 names, and it is strictly
+  stronger than the previous state (where the field was outside the digest and
+  unchecked entirely).
+- **The R92 plan still binds no driver version, and that is deliberate.** Its own
+  committed text says its driver "does not exist yet", so requiring one would be a
+  retroactive claim. R92's envelope therefore keeps `driverVersion` absent; only
+  R97's readiness check requires it.
 - **The rehearsal proves the DRIVER, not the campaign.** It runs the R87
   scripted-replay harness over the frozen selection with `ScriptedModelProvider`.
   It proves the driver can produce a complete, R93-valid paired matrix with zero
@@ -404,14 +481,15 @@ there as release-integrity defects in the runner's containment control.
 - **`maxToolCalls`/`maxDurationMs` were not raised.** No limit, timeout, retry
   count or iteration cap was changed to make any acceptance criterion green.
 
-## 9. Files
+## 10. Files
 
 | File | Change |
 | --- | --- |
 | `packages/evaluation/src/r97-budget-ledger.ts` | **new** — file-backed campaign budget: reserve/commit/abandon/recover, unknown-at-reserved, bootstrap under the lock |
 | `packages/evaluation/src/r97-budget-ledger.test.ts` | **new** — 25 tests / 6 describes, incl. a real cross-process spawn and the deterministic lock regression |
-| `packages/evaluation/src/r97-plan.ts` | **new** — DRAFT / FINALIZED_AUTHORIZATION_PLAN / NOT_READY derivation, arm observation parsing, readiness checks |
+| `packages/evaluation/src/r97-plan.ts` | **new** — DRAFT / FINALIZED_AUTHORIZATION_PLAN / NOT_READY derivation, arm observation parsing, readiness checks incl. `DRIVER_VERSION_UNBOUND` |
 | `packages/evaluation/src/r97-plan.test.ts` | **new** — 30 tests / 6 describes, incl. the anti-copy and hostile-parse groups |
-| `packages/evaluation/src/r97-driver-closed-loop.test.ts` | **new** — 21 tests / 6 describes, incl. the real two-arm E2E |
+| `packages/evaluation/src/r97-driver-closed-loop.test.ts` | **new** — 30 tests / 8 describes, incl. the real two-arm E2E, the zero-call rehearsal (D7), and the driver-version binding (D8) |
+| `packages/evaluation/src/r92-authorization.ts` | `driverVersion?: string` on `R92AuthorizationV1`, so it is covered by the authorization digest; non-empty when present |
 | `packages/evaluation/src/index.ts` | 2 `export *` lines |
 | `scripts/e4/r97-campaign-driver.mjs` | **new** — the real driver; `--fake-provider` default `NOT_RUN`; `runZeroCallRehearsal` + `--rehearse` for the R93-validated zero-call rehearsal |

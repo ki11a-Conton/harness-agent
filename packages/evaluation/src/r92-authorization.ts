@@ -228,6 +228,26 @@ export interface R92AuthorizationV1 {
   caps: R92CapDeclaration[];
   unknownCostItems: string[];
   outputDir: string;
+  /**
+   * The executor that would run this plan, bound so the approval covers the
+   * CODE and not merely the inputs.
+   *
+   * Plan §R97 line 214 lists 驱动器版本 among the values a finalized plan must
+   * freeze, and line 229 requires that changing any bound field invalidates the
+   * old approval. Measured defect this field closes: the R97 approval package
+   * printed "Driver that would execute it: e4-r97-campaign-driver-v1" as a bound
+   * value, but the version sat OUTSIDE the envelope, so it was outside
+   * `planDigest` — a driver could be rewritten while the approved digest stayed
+   * byte-identical, and nothing compared the running driver to the plan's.
+   *
+   * Because it is an envelope field it is covered by
+   * `computeR92AuthorizationDigestV1`, and the executor must additionally assert
+   * equality with its OWN version before constructing a provider.
+   *
+   * Optional in the type so the R92 plan (whose driver did not exist yet) stays
+   * representable; R97's readiness check requires it before finalizing.
+   */
+  driverVersion?: string;
   promotionEligible: false;
 }
 
@@ -659,6 +679,18 @@ export function r92AuthorizationIssuesV1(auth: R92AuthorizationV1): string[] {
   }
 
   if (!nonEmpty(auth.outputDir)) issues.push("outputDir is required (the plan must name where results would land)");
+
+  // The executor is a BOUND field for a FINALIZED plan (plan §R97 line 214).
+  //
+  // It is optional in THIS shared schema on purpose: the R92 plan is a real,
+  // committed artifact whose own text says its driver "does not exist yet and
+  // will be written only after you approve", so R92 could not name one.
+  // Demanding it here would be a retroactive lie. R97's readiness check is what
+  // REQUIRES it before a plan may finalize, and the driver refuses to run a plan
+  // that names no executor. When present it must be a real value.
+  if (auth.driverVersion !== undefined && !nonEmpty(auth.driverVersion)) {
+    issues.push("driverVersion, when present, must be a non-empty executor version");
+  }
 
   if (!Array.isArray(auth.caps) || auth.caps.length === 0) {
     issues.push("caps must declare the call/token/time budget surface");

@@ -504,6 +504,73 @@ describe("E4-R97 D7: the zero-call rehearsal produces R93-VALID paired evidence"
   }, 120_000);
 });
 
+describe("E4-R97 D8: the plan is bound to the driver that would execute it", () => {
+  // Plan §R97 line 214 lists 驱动器版本 among the values the finalized material
+  // must FREEZE, and line 229 requires that changing any bound field invalidates
+  // the old approval ("更改任意绑定字段后旧审批失效").
+  //
+  // Measured defect: the approval package prints "Driver that would execute it:
+  // e4-r97-campaign-driver-v1" in its "What is being authorized" list, but
+  // `driverVersion` sat OUTSIDE the authorization envelope — so it was not in
+  // `planDigest`. A driver could therefore be rewritten (this commit rewrote it)
+  // while the approved digest stayed byte-identical, and nothing in the driver
+  // ever compared its own version against the plan's. The advertised bound field
+  // was not bound.
+
+  it("driverVersion is part of the envelope and therefore covered by planDigest", async () => {
+    const plan = await finalizedPlan();
+    expect(plan.authorization!.driverVersion).toBe(mod.DRIVER_VERSION);
+    // Changing ONLY the driver version must move the digest. If it does not, the
+    // field is decorative and the approval does not cover the executor.
+    const other = { ...plan.authorization!, driverVersion: "e4-r97-campaign-driver-v99" };
+    const recomputed = (evaluation["computeR92AuthorizationDigestV1"] as (a: unknown) => string)(other);
+    expect(recomputed).not.toBe(plan.planDigest);
+  });
+
+  it("the digest equals the R92 canonical digest of the envelope that carries driverVersion", async () => {
+    const plan = await finalizedPlan();
+    const recomputed = (evaluation["computeR92AuthorizationDigestV1"] as (a: unknown) => string)(
+      plan.authorization!,
+    );
+    // Proves the approved value IS the digest of the driver-bound envelope.
+    expect(recomputed).toBe(plan.planDigest);
+  });
+
+  it("a plan bound to a DIFFERENT driver version is refused before any provider exists", async () => {
+    const plan = await finalizedPlan();
+    const forged = {
+      ...plan.authorization!,
+      driverVersion: "e4-r97-campaign-driver-v99",
+    };
+    const forgedDigest = (evaluation["computeR92AuthorizationDigestV1"] as (a: unknown) => string)(forged);
+    // Fully authorized: the env digest matches the FORGED envelope, so the gate
+    // itself would pass. The refusal must come from the driver-version binding.
+    const { result, providerConstructions } = await drive({
+      plan: { ...plan, authorization: forged, planDigest: forgedDigest },
+      env: AUTHORIZED_ENV(forgedDigest),
+    });
+    expect(result["status"]).toBe("NOT_RUN");
+    expect(result["code"]).toBe("DRIVER_VERSION_MISMATCH");
+    expect(result["providerRequests"]).toBe(0);
+    expect(providerConstructions).toBe(0);
+  });
+
+  it("a plan with NO bound driver version is refused, never assumed compatible", async () => {
+    const plan = await finalizedPlan();
+    const stripped = { ...plan.authorization! } as Record<string, unknown>;
+    delete stripped["driverVersion"];
+    const digest = (evaluation["computeR92AuthorizationDigestV1"] as (a: unknown) => string)(stripped);
+    const { result, providerConstructions } = await drive({
+      plan: { ...plan, authorization: stripped as never, planDigest: digest },
+      env: AUTHORIZED_ENV(digest),
+    });
+    // Fail closed: an absent binding is not "compatible with everything".
+    expect(result["status"]).toBe("NOT_RUN");
+    expect(result["providerRequests"]).toBe(0);
+    expect(providerConstructions).toBe(0);
+  });
+});
+
 describe("E4-R97 D6: the REAL two-arm observation produces a FINALIZED plan", () => {
   // This is the acceptance path plan §R97 line 211 describes: "先无 key 检出、
   // 构建、加载实际案例，再由真实 dry-run 生成每臂执行计划". It drives the SHIPPED
