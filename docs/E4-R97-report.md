@@ -14,8 +14,8 @@ emit only the approval material, executing no real model.
 
 | Item | Value |
 | --- | --- |
-| Implementation SHA | `f8b3df5` (`f8b3df554b955220ab4405bac9143b47943e6d9f`) — `e584cdd` is the driver/ledger/plan commit it builds on |
-| CI run | [`35317337663`](https://github.com/ki11a-Conton/harness-agent/actions/runs/35317337663) — **5/5 jobs success**, incl. **windows-latest** and **ubuntu-latest**, `offline cold-start (ubuntu)`, `coverage gate`, `release attestation` |
+| Implementation SHA | `a437252` — the R97 chain is `e584cdd` (driver/ledger/plan) → `f8b3df5` (zero-call rehearsal) → `a437252` (driver-version binding) |
+| CI run | [`35317337663`](https://github.com/ki11a-Conton/harness-agent/actions/runs/35317337663) @ `f8b3df5` — **5/5 jobs success**, incl. **windows-latest** and **ubuntu-latest**, `offline cold-start (ubuntu)`, `coverage gate`, `release attestation`. `a437252`'s run is [`35319690746`](https://github.com/ki11a-Conton/harness-agent/actions/runs/35319690746) |
 | Real provider calls | **0** — no provider is constructed on any path exercised here |
 | Network | none (a real `node` child process is spawned; no socket is opened) |
 | Paid steps executed | **none** |
@@ -241,7 +241,7 @@ makes the tamper test **FAIL** (`1 failed | 21 skipped`), then passes again when
 restored. The `VALID` in the table above is the validator's verdict, not the
 driver's opinion of itself.
 
-### 3.3 A second defect the CLI found
+### 3.3 Another defect the CLI found
 
 Driving the real CLI with `--rehearse --out <new dir>` died with
 `ENOENT: ... rehearsal-run-state.jsonl`: `runReplayAb` writes the run-state file
@@ -250,7 +250,7 @@ before the first pass. This is the same class of defect as the shape mismatches
 in §2.4 — visible only by running the actual entry point, invisible to a unit
 test of the pure function.
 
-## 4. A third defect: the plan advertised a bound field it did not bind
+## 4. A further defect: the plan advertised a bound field it did not bind
 
 Plan line 214 lists 驱动器版本 (driver version) among the values the finalized
 material must freeze, and line 229 requires that changing any bound field
@@ -340,18 +340,18 @@ acceptance criteria against the code, with the RED written before the fix.
 | Normal path's complete paired result **passes the R93 validator**; interruption path uses the R94 state contract | §3: `--rehearse` → `VALID`; `--interrupt-after-first-arm` → `VALID` with `resumedExecuted: 8`; mutation-checked so a rubber stamp fails |
 | Zero-call rehearsal before asking for approval | §3: 16 records, 0 provider calls, 0 network, no real provider constructed |
 | Finalized plan digest **exactly equals** the real dry-run digest | §2.3 table; both arms' digests are the CLI's own |
-| Changing any bound field invalidates the old approval | P4 approval package + P3 readiness refusals |
-| Clean checkout succeeds on Windows **and** Ubuntu offline CI | Windows: `D:\r97-clean` @ `f8b3df5` — typecheck 0, build 0, R97 82/82, R93 91/91, R94 106 assertions, R92+R95 98/98. Ubuntu + Windows: run `35317337663`, **5/5 jobs success** |
+| Changing any bound field invalidates the old approval | §4: `driverVersion` is inside the digest, so changing it moves `planDigest` (D8); P4 approval package + P3 readiness refusals |
+| Clean checkout succeeds on Windows **and** Ubuntu offline CI | Windows: `D:\r97-clean` @ `a437252` — typecheck 0, build 0, R97 86/86, R93 91/91, R94 106 assertions, R92+R95 98/98. Ubuntu + Windows: run `35317337663` @ `f8b3df5`, **5/5 jobs success** |
 | Original Ubuntu cold-start preserved | job `offline cold-start (ubuntu)` success on `f8b3df5` |
-| Deliverable is `READY_FOR_AUTHORIZATION` / `NOT_RUN` with exact digest, SHA, cases, executable caps, unknown cost | §5 below |
+| Deliverable is `READY_FOR_AUTHORIZATION` / `NOT_RUN` with exact digest, SHA, cases, executable caps, unknown cost | §7 below |
 | **0** real HTTP requests without new approval; no automatic 86-case run, no holdout, no new paid cases | Driver default prints `NOT_RUN`; no provider constructed; holdout untouched |
 
 ### 6.1 The clean-checkout run, verbatim
 
 `D:\r97-clean` is a `git worktree add --detach`, `git status --porcelain` empty,
-installed with `pnpm install --frozen-lockfile --offline`. Run at `f8b3df5`
-(the commit that adds the rehearsal), with the `e584cdd` figures in brackets for
-the subset that existed then:
+installed with `pnpm install --frozen-lockfile --offline`. Run at `a437252` (the
+commit that binds the driver version), with earlier figures in brackets for the
+subsets that existed then:
 
 ```
 TYPECHECK_EXIT=0
@@ -403,9 +403,9 @@ added (5 in D7, 4 in D8), and no previously passing test regressed.
 | --- | --- |
 | Status | **`FINALIZED_AUTHORIZATION_PLAN` — READY_FOR_AUTHORIZATION / NOT_RUN** |
 | **Plan digest (approve this exact value)** | `676e8774c3a9691a62f3113480490711701f0040f1df2e46d76c52e3aceca7cb` |
-| Created | `2026-09-18T06:33:43.269Z` |
-| **Expires** | `2026-10-18T06:33:43.269Z` |
-| Driver version | `e4-r97-campaign-driver-v1` |
+| Created | `2026-09-18T07:22:16.027Z` |
+| **Expires** | `2026-10-18T07:22:16.027Z` |
+| Driver version (bound into the digest) | `e4-r97-campaign-driver-v1` |
 | Output dir | `.ci/r97-ab` (nothing written there) |
 | Promotion-eligible | `false` |
 | Fix scope | `single-fix-H2` |
@@ -420,11 +420,24 @@ Artifacts: `.ci/r97-final/plan.json`, `observations.json`, `approval-package.md`
 
 ## 8. Runtime Freeze assessment (P38.4-11)
 
-R97 adds new modules under `packages/evaluation` and a new script; it modifies no
-existing runtime behaviour. The one change to an existing file is two
-`export * from` lines in `packages/evaluation/src/index.ts`. The freeze is
-therefore not engaged for this change, and nothing here rewrites Runtime. The
-R94 `Test-IsLink` fix and the `9840130` fixture fix belong to R94 and qualify
+R97 adds two new modules under `packages/evaluation`, a new test file, and a new
+script. It changes two existing files:
+
+- `packages/evaluation/src/index.ts` — two `export *` lines;
+- `packages/evaluation/src/r92-authorization.ts` — adds the optional
+  `driverVersion` field to the authorization envelope (§4), so it is covered by
+  the existing digest function.
+
+The freeze is therefore assessed rather than assumed. §4 qualifies under
+**criterion 3 (release integrity defect)**: an approval document advertised a
+bound executor version that the approved digest did not cover, so a rewritten
+driver could run under a byte-identical approval. That is an integrity defect in
+the authorization artifact itself, with a deterministic reproducer (the
+`driverVersion` tamper leaves `planDigest` unchanged). No existing behaviour is
+rewritten: the field is optional, no R92/R95 test changed, and all 98 of those
+tests plus the 11 R92-rehearsal tests pass unmodified.
+
+The R94 `Test-IsLink` fix and the `9840130` fixture fix belong to R94 and qualify
 there as release-integrity defects in the runner's containment control.
 
 ## 9. Honest limits
