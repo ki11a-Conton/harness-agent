@@ -254,6 +254,7 @@ have passed vacuously:
 | R95 | `pnpm vitest run packages/evaluation/src/r95-authorization-strictness.test.ts` | 60 passed |
 | R92 regression | `pnpm vitest run …r92-authorization.test.ts …r92-plan.test.ts …r92-rehearsal.test.ts` | 62 passed |
 | Package | `pnpm vitest run packages/evaluation` | 91 files, 1277 tests passed |
+| Full suite (clean tree) | `pnpm test` in `D:\r95-clean-wt` at `481f9f1` | 343 files, 6355 passed, 3 skipped, exit 0 |
 | Docs | `pnpm docs:verify` | `ALL CHECKS PASS` |
 | Whitespace | `git diff --check` | exit 0 |
 
@@ -266,7 +267,21 @@ requests, 0 external requests**, and the R92 plan still builds and still reports
 Per plan §1 line 46, the full `pnpm test` run triggers the repository's existing
 clean-tree guard on a dirty working tree. This is recorded as an environment
 precondition and re-verified in an isolated clean checkout — the user's
-uncommitted changes are **not** stashed or deleted. See §5.3.
+uncommitted changes are **not** stashed or deleted.
+
+`git worktree add --detach D:\r95-clean-wt 481f9f1` → `HEAD` at
+`481f9f157d57644dfd2e5a5612ffd92d541b409b`, `git status --porcelain` **empty**:
+
+```text
+pnpm test   (in D:\r95-clean-wt)
+ Test Files  343 passed (343)
+      Tests  6355 passed | 3 skipped (6358)
+   Duration  233.41s
+EXIT=0
+```
+
+The three skipped tests are the pre-existing Windows-only skips
+(`it.skipIf`), unchanged by R95.
 
 ### 5.2 The plan digest moved — and why that is not a fact change
 
