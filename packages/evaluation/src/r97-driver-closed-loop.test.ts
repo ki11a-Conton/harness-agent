@@ -337,14 +337,9 @@ describe("E4-R97 D2: the normal path runs the pair within the campaign budget", 
   it("a campaign budget smaller than the pair stops EARLY and reports PARTIAL", async () => {
     const plan = await finalizedPlan();
     const dir = await tempDir();
-    // Grant exactly 3: arm A takes 2, arm B gets 1, then the budget is gone.
-    const l = await (evaluation["openR97BudgetLedger"] as (d: string, o: unknown) => Promise<unknown>)(dir, {
-      planDigest: plan.planDigest!,
-      campaignModelCalls: 320,
-    });
-    expect(l).toBeDefined();
-    // Re-open with a 3-call grant would be refused (different allowance), so the
-    // small-grant case is proven by consuming 317 first.
+    // The ledger is bound to the plan's own grant (320) and refuses to be
+    // re-opened with a different allowance, so a 3-call campaign is produced by
+    // consuming 317 first and leaving exactly 3.
     const led = (await (evaluation["openR97BudgetLedger"] as (d: string, o: unknown) => Promise<{
       reserve: (a: string, n: number) => Promise<{ ok: boolean; reservationId: string | null }>;
       commit: (id: string, n: number) => Promise<unknown>;
@@ -355,9 +350,24 @@ describe("E4-R97 D2: the normal path runs the pair within the campaign budget", 
     const { result } = await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: dir });
     expect(result["status"]).toBe("PARTIAL");
     expect(result["code"]).toBe("BUDGET_EXHAUSTED");
-    // Only the 3 remaining calls could happen: 2 in arm A, 1 in arm B.
+    // Only the 3 remaining calls could happen, and no more.
     expect(result["logicalCalls"]).toBe(3);
     expect(result["providerRequests"]).toBe(3);
+
+    // The MEASURED distribution, not an assumed one. The driver is serial by
+    // construction (plan §R97 line 218 fixes serialism at 1) and consumes the
+    // arms in order, so a 3-call remainder is spent entirely inside the FIRST
+    // arm. Plan §R97 line 227's requirement is that the second arm gets "at most
+    // 1" — 0 satisfies that, and the point of the fixture is that the remainder
+    // is NOT refreshed for the second arm. The literal "arm A 2, arm B 1" split
+    // is proven at the ledger level (G1/G5), where reservation order is chosen
+    // by the caller rather than by the driver's arm loop.
+    const byArm = (result["reservations"] as { arm: string }[]).reduce<Record<string, number>>((a, r) => {
+      a[r.arm] = (a[r.arm] ?? 0) + 1;
+      return a;
+    }, {});
+    expect(byArm).toEqual({ baseline: 3 });
+    expect(byArm["candidate"] ?? 0).toBeLessThanOrEqual(1);
   });
 
   it("the fake provider is what runs: it never opens a socket", async () => {
