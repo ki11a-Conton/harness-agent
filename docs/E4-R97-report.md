@@ -282,22 +282,54 @@ measured contract.
 
 ### 5.1 The clean-checkout run, verbatim
 
-`D:\r97-clean` is a `git worktree add --detach` of `e584cdd`, `git status
---porcelain` empty, installed with `pnpm install --frozen-lockfile --offline`:
+`D:\r97-clean` is a `git worktree add --detach`, `git status --porcelain` empty,
+installed with `pnpm install --frozen-lockfile --offline`. Run at `f8b3df5`
+(the commit that adds the rehearsal), with the `e584cdd` figures in brackets for
+the subset that existed then:
 
 ```
 TYPECHECK_EXIT=0
 BUILD_EXIT=0
-R97:      Test Files 3 passed (3)   Tests  77 passed (77)
+R97:      Test Files 3 passed (3)   Tests  82 passed (82)   [was 77 at e584cdd]
 R93:      Test Files 1 passed (1)   Tests  91 passed (91)
 R92+R95:  Test Files 2 passed (2)   Tests  98 passed (98)
 R94 selfcheck: PASSED (0 provider calls, 0 network, 0 cost), 106 assertions
+rehearsal via the clean CLI: validationStatus VALID, 16 records, COMPLETE, providerCalls 0
 ```
 
 This is plan §R97 line 230 and §R96's clean-tree precondition satisfied
 honestly: the *working tree* is not clean (the user's two plan files), so the
 clean claim is made against a genuine clean checkout rather than by stashing
 someone else's files.
+
+### 5.2 Why the working-tree `pnpm test` shows 6 failures, and why they are not R97
+
+In the **working tree** `pnpm test` reports `6 failed | 6460 passed | 3 skipped`.
+All six failures are one precondition, stated by the test itself:
+
+```
+AssertionError: E4-R55 requires a CLEAN committed working tree: the production
+benchmark refuses to produce a promotion-eligible run on a tree that is not
+provably clean, so every child case would fail for an unrelated reason.
+Commit or stash first.   (apps/cli/src/e4-r55-failure-wiring.test.ts:1277)
+```
+
+The working tree carries the user's two plan files — `plan(20260917-001821).md`
+deleted and `plan(20260917-083737).md` untracked — which plan §1 line 46 records
+as an environment precondition that must **not** be resolved by deleting or
+stashing the user's changes.
+
+The same three test files were run in the clean `f8b3df5` checkout:
+
+```
+apps/cli/src/e4-r55-failure-wiring.test.ts + e4-09-production-e2e.test.ts
+  + benchmark-command.test.ts
+Test Files  3 passed (3)     Tests  161 passed | 2 skipped (163)
+```
+
+**0 failures.** The six are therefore attributable to the dirty tree and not to
+any R97 change. The passed count moved `6455 → 6460` (+5), exactly the five D7
+tests added, and no previously passing test regressed.
 
 ## 6. The deliverable — exact values
 
