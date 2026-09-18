@@ -163,7 +163,7 @@ Planning-only, per plan §R92 line 197. Full detail in `docs/E4-R92-report.md`.
 | --- | --- |
 | Status | **`READY_FOR_AUTHORIZATION` / `NOT_RUN`** |
 | Real provider calls | **0** |
-| Plan digest (approve this exact value) | `ffe3bea77e27283917847536a08d351e33f26d2ac0773b59fc590926868970f1` |
+| Plan digest (approve this exact value) | `f81cc6700bd0b1b0134e02942b5307e28103e2e2a66dc3aefd98afa7f61b6d8a` |
 | Expires | `2026-10-16T08:27:46.000Z` |
 | Baseline SHA | `e9776ba66190ea63b1bacb685c91aa900b6935e7` |
 | Candidate SHA | `a20373743b56de6a3a110fecdd254737ece71afa` |
@@ -172,7 +172,7 @@ Planning-only, per plan §R92 line 197. Full detail in `docs/E4-R92-report.md`.
 | Arm identity mode | `isolated-checkout-build` (two real checkouts; H2 is unreachable as a `--candidate` switch) |
 | Fix scope | `single-fix-H2` — `e9776ba..a203737` contains exactly one functional commit |
 | Endpoint identity | `ee071e382ae11baecc06ca51545a6d4f3fa74cb3ea12b605d63d0b19ae84fea7` (normalized digest, never a raw URL) |
-| Call cap | 320 campaign-wide, **runtime-enforced** |
+| Call cap | 320 campaign-wide, **runtime-enforced** (logical generate calls only — not a physical HTTP/retry bound) |
 | Time cap | 600 000 ms per case, **runtime-enforced** |
 | Tool-call cap | 100 per case, **runtime-enforced** |
 | Token cap | **none declared** — no runtime token layer exists |

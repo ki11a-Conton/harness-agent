@@ -56,6 +56,73 @@ export const R92_AUTHORIZATION_SCHEMA = "e4-r92-authorization-v1";
 export const R92_MIN_CASES = 6;
 export const R92_MAX_CASES = 10;
 
+/**
+ * The development-set suites a REAL campaign may select cases from. The rule is
+ * an allow-list, not the old `^holdout/` denylist: `adversarial`, `tools`,
+ * `baseline-e4-r74` and a bare case id are all refused — and so is `holdout`,
+ * the generalization set, which plan §R92 excludes outright.
+ */
+export const R92_SUPPORTED_SUITES: readonly string[] = ["regression", "stress"];
+
+/**
+ * The synthetic suite the OFFLINE rehearsal (`r92-rehearsal.ts`) uses for its
+ * in-process cases. It is accepted by the same case-id rule so the rehearsal
+ * exercises the real validator rather than a relaxed copy of it, and it is kept
+ * OUT of `R92_SUPPORTED_SUITES` so no real plan can select it: the real plan's
+ * case list is read from the frozen R87 selection, which contains only
+ * `regression/` and `stress/` cases.
+ */
+export const R92_REHEARSAL_SUITE = "rehearsal";
+
+/**
+ * The suites the case-id rule accepts. `R92_SUPPORTED_SUITES` is the REAL
+ * campaign's set; the rehearsal suite is added because the offline rehearsal
+ * must pass the SAME validator rather than a relaxed copy of it. It is exported
+ * separately so a test can still assert that no real plan may select it.
+ */
+const R92_ALLOWED_CASE_SUITES: readonly string[] = [...R92_SUPPORTED_SUITES, R92_REHEARSAL_SUITE];
+
+/**
+ * The time contract. A contract timestamp is an ISO-8601 instant that MUST carry
+ * a timezone designator: without one the instant is ambiguous, so the same
+ * envelope would authorize different windows in different places. Date-only
+ * strings and free-form strings `Date.parse` happens to accept are not contract
+ * times.
+ */
+export const R92_TIMESTAMP_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
+
+/** Days per month, so a syntactically valid but impossible date is refused. */
+const R92_DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/**
+ * Parse a contract timestamp to epoch milliseconds, or `null` when the input is
+ * not a contract timestamp. Returning `null` — never `NaN` — is the whole point:
+ * the previous `Number.isFinite(Date.parse(...))` guard turned a malformed
+ * timestamp into a SKIPPED comparison, so a garbage `expiresAt` read as
+ * "not expired" and a garbage `createdAt` read as "already valid".
+ *
+ * The calendar fields are range-checked independently of `Date.parse`, because
+ * `Date.parse` silently rolls impossible dates over (`2026-02-30` becomes
+ * March 2), which would accept a date that does not exist.
+ */
+export function parseR92Timestamp(value: unknown): number | null {
+  if (typeof value !== "string" || !R92_TIMESTAMP_PATTERN.test(value)) return null;
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
+  const hour = Number(value.slice(11, 13));
+  const minute = Number(value.slice(14, 16));
+  const second = Number(value.slice(17, 19));
+  if (month < 1 || month > 12) return null;
+  const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const maxDay = month === 2 && leap ? 29 : R92_DAYS_IN_MONTH[month - 1]!;
+  if (day < 1 || day > maxDay) return null;
+  if (hour > 23 || minute > 59 || second > 59) return null;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+}
+
 /** How the two arms are realised. These two are NEVER mixed in one experiment
  *  (plan §R92 做什么 #2): an isolated-checkout-build experiment really builds
  *  both revisions, a controlled-switch experiment runs ONE build and flips a
@@ -190,67 +257,216 @@ const nonEmpty = (v: unknown): boolean => typeof v === "string" && v.trim().leng
  *     the campaign. It is also the global budget a paid plan must declare, so a
  *     missing value is BLOCKED.
  */
+/**
+ * The scope/enforcement/blocked triple a cap MUST have, derived ONLY from the
+ * cap's name, its declared value and the invocation mode — never from the
+ * declaration's own `enforcement`/`blocked` fields.
+ *
+ * This is the single source of truth for both `classifyR92Caps` (which builds a
+ * declaration) and `r92CapDeclarationIssues` (which checks one). Sharing it is
+ * what makes "the envelope's self-report is not evidence" structural: an
+ * envelope cannot assert a capability the measured call sites do not have,
+ * because the expected label is computed here rather than read from the input.
+ */
+function capContract(
+  cap: R92CapName,
+  value: number | null,
+  invocationMode: R92InvocationMode,
+): { scope: R92CapScope; enforcement: R92Enforcement; blocked: boolean } {
+  switch (cap) {
+    case "maxModelCalls": {
+      // The ONLY cost cap with a real runtime enforcer, and only when one
+      // invocation owns the whole campaign.
+      const enforced = value !== null && invocationMode === "single-invocation-over-frozen-list";
+      return {
+        scope: "campaign-wide",
+        enforcement: enforced ? "runtime-enforced" : "preflight-only",
+        blocked: !enforced,
+      };
+    }
+    case "maxLogicalRuns":
+      // cases x repeat x arms is exact and checked before all spend, so the
+      // bound holds even though nothing re-checks it later.
+      return { scope: "campaign-wide", enforcement: "preflight-only", blocked: false };
+    case "maxEstimatedTokens":
+      // Declared-but-unenforceable is the blocked case; undeclared is an honest
+      // unknown that must be listed in unknownCostItems instead.
+      return { scope: "campaign-wide", enforcement: "preflight-only", blocked: value !== null };
+    case "maxEstimatedCostUsd":
+      return { scope: "campaign-wide", enforcement: "unprovable", blocked: value !== null };
+    case "maxToolCalls":
+      return { scope: "per-case", enforcement: "runtime-enforced", blocked: false };
+    case "maxDurationMs":
+      return { scope: "per-case", enforcement: "runtime-enforced", blocked: false };
+  }
+}
+
 export function classifyR92Caps(intent: R92CapIntent): R92CapDeclaration[] {
   const singleInvocation = intent.invocationMode === "single-invocation-over-frozen-list";
   const plannedRuns = intent.caseCount * intent.repetitions * intent.armCount;
-
-  const campaignCallsEnforced = intent.campaignModelCalls !== null && singleInvocation;
-  const campaignCalls: R92CapDeclaration = {
-    cap: "maxModelCalls",
-    scope: "campaign-wide",
-    value: intent.campaignModelCalls,
-    enforcement: campaignCallsEnforced ? "runtime-enforced" : "preflight-only",
-    blocked: !campaignCallsEnforced,
-    evidence: singleInvocation
-      ? "paired-executor.ts createBudgetedProvider throws before the call, sets hitCap and breaks the arm loop; benchmark-command.ts forwards maxModelCalls into runPairedExperiment, so one invocation enforces the whole campaign's budget"
-      : "run-campaign.ps1 passes a PER-CASE --max-model-calls and keeps no campaign-wide counter, so no single process can enforce a global model-call cap across per-case invocations",
-  };
+  const contract = (
+    cap: R92CapName,
+    value: number | null,
+    evidence: string,
+  ): R92CapDeclaration => ({ cap, value, evidence, ...capContract(cap, value, intent.invocationMode) });
 
   return [
-    campaignCalls,
-    {
-      cap: "maxLogicalRuns",
-      scope: "campaign-wide",
-      value: intent.maxLogicalRuns,
-      enforcement: "preflight-only",
-      blocked: false,
-      evidence: `benchmark-command.ts compares the exact planned ${plannedRuns} logical runs (cases x repeat x arms) against --max-logical-runs before any provider call; because the count is exact and precedes all spend, the bound holds even though nothing re-checks it later`,
-    },
-    {
-      cap: "maxEstimatedTokens",
-      scope: "campaign-wide",
-      value: intent.maxEstimatedTokens,
-      // Declared-but-unenforceable is the blocked case; an undeclared cap is an
-      // honest unknown that must be listed in unknownCostItems instead.
-      enforcement: "preflight-only",
-      blocked: intent.maxEstimatedTokens !== null,
-      evidence: "benchmark-command.ts multiplies PREFLIGHT_ESTIMATE.tokensPerCall by the planned call count and compares once, preflight; ACTUAL token use is never compared to it, so a declared token hard cap is not executable",
-    },
-    {
-      cap: "maxEstimatedCostUsd",
-      scope: "campaign-wide",
-      value: intent.maxEstimatedCostUsd,
-      enforcement: "unprovable",
-      blocked: intent.maxEstimatedCostUsd !== null,
-      evidence: "benchmark-command.ts checks a PREFLIGHT_ESTIMATE cost constant before the first call; run-budget.ts isHardLimit returns false for maxEstimatedCostUsd, so it cannot terminate a run, and no per-token price is bound anywhere the runner can read",
-    },
-    {
-      cap: "maxToolCalls",
-      scope: "per-case",
-      value: intent.perCaseToolCalls,
-      enforcement: "runtime-enforced",
-      blocked: false,
-      evidence: "benchmark-command.ts sets per-case limits.maxToolCalls=100 and run-budget.ts RunBudgetTracker.onToolCall is consulted during the run and terminates it",
-    },
-    {
-      cap: "maxDurationMs",
-      scope: "per-case",
-      value: intent.perCaseDurationMs,
-      enforcement: "runtime-enforced",
-      blocked: false,
-      evidence: "benchmark-command.ts sets per-case limits.maxDurationMs (case maxDurationMs ?? 600000) and runtime.ts consults budget.onDurationCheck(), terminating with RESOURCE_LIMIT",
-    },
+    contract(
+      "maxModelCalls",
+      intent.campaignModelCalls,
+      singleInvocation
+        ? "paired-executor.ts createBudgetedProvider throws before the call, sets hitCap and breaks the arm loop; benchmark-command.ts forwards maxModelCalls into runPairedExperiment, so one invocation enforces the whole campaign's budget. UNIT: this bounds LOGICAL generate calls, not physical HTTP attempts — a transport retry is a separate request that this cap does not count, so it is not a fully-qualified billing bound."
+        : "run-campaign.ps1 passes a PER-CASE --max-model-calls and keeps no campaign-wide counter, so no single process can enforce a global model-call cap across per-case invocations. UNIT: even where a count exists it bounds LOGICAL generate calls only; physical HTTP/retry attempts are not counted.",
+    ),
+    contract(
+      "maxLogicalRuns",
+      intent.maxLogicalRuns,
+      `benchmark-command.ts compares the exact planned ${plannedRuns} logical runs (cases x repeat x arms) against --max-logical-runs before any provider call; because the count is exact and precedes all spend, the bound holds even though nothing re-checks it later`,
+    ),
+    contract(
+      "maxEstimatedTokens",
+      intent.maxEstimatedTokens,
+      "benchmark-command.ts multiplies PREFLIGHT_ESTIMATE.tokensPerCall by the planned call count and compares once, preflight; ACTUAL token use is never compared to it, so a declared token hard cap is not executable",
+    ),
+    contract(
+      "maxEstimatedCostUsd",
+      intent.maxEstimatedCostUsd,
+      "benchmark-command.ts checks a PREFLIGHT_ESTIMATE cost constant before the first call; run-budget.ts isHardLimit returns false for maxEstimatedCostUsd, so it cannot terminate a run, and no per-token price is bound anywhere the runner can read",
+    ),
+    contract(
+      "maxToolCalls",
+      intent.perCaseToolCalls,
+      "benchmark-command.ts sets per-case limits.maxToolCalls=100 and run-budget.ts RunBudgetTracker.onToolCall is consulted during the run and terminates it",
+    ),
+    contract(
+      "maxDurationMs",
+      intent.perCaseDurationMs,
+      "benchmark-command.ts sets per-case limits.maxDurationMs (case maxDurationMs ?? 600000) and runtime.ts consults budget.onDurationCheck(), terminating with RESOURCE_LIMIT",
+    ),
   ];
+}
+
+/** The closed field set of one cap declaration. */
+const R92_CAP_FIELDS: readonly string[] = ["cap", "scope", "value", "enforcement", "blocked", "evidence"];
+const R92_CAP_NAMES: readonly string[] = [
+  "maxModelCalls",
+  "maxLogicalRuns",
+  "maxEstimatedTokens",
+  "maxEstimatedCostUsd",
+  "maxToolCalls",
+  "maxDurationMs",
+];
+
+/** A declared value must be a POSITIVE safe integer: a negative, fractional,
+ *  non-finite or unsafe value is not a budget any layer could execute, and zero
+ *  leaves a paid plan no headroom at all. */
+function capValueIssue(cap: string, value: unknown): string | null {
+  if (typeof value !== "number") {
+    return `${cap}.value must be a number (got ${typeof value})`;
+  }
+  if (!Number.isFinite(value)) {
+    return `${cap}.value must be finite (got ${String(value)})`;
+  }
+  if (!Number.isSafeInteger(value)) {
+    return `${cap}.value must be a safe integer (got ${String(value)})`;
+  }
+  if (value <= 0) {
+    return `${cap}.value must be strictly positive (got ${String(value)})`;
+  }
+  return null;
+}
+
+/**
+ * Validate the cap DECLARATION against the measured call sites and the plan's
+ * own shape. Every problem is reported as a field path plus a reason; a cap's
+ * own `enforcement`/`blocked`/`evidence` fields are INPUT to be checked, never
+ * evidence that the capability exists.
+ *
+ * The issues are reported per cap name so the caller can tell a missing global
+ * budget (unusable at any price) from a merely mis-declared cap.
+ */
+export function r92CapDeclarationIssues(
+  caps: readonly R92CapDeclaration[],
+  auth: R92AuthorizationV1,
+): string[] {
+  const issues: string[] = [];
+  if (!Array.isArray(caps)) return ["caps must be an array of cap declarations"];
+
+  const seen = new Map<string, R92CapDeclaration>();
+  for (const raw of caps as readonly unknown[]) {
+    if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+      issues.push("caps[] must be an object (got a non-object entry)");
+      continue;
+    }
+    const entry = raw as Record<string, unknown>;
+    const name = typeof entry.cap === "string" ? entry.cap : String(entry.cap);
+    const path = `caps[${name}]`;
+
+    for (const key of Object.keys(entry)) {
+      if (!R92_CAP_FIELDS.includes(key)) {
+        issues.push(`${path} carries an unknown field "${key}" — the cap schema is closed`);
+      }
+    }
+    if (!R92_CAP_NAMES.includes(name)) {
+      issues.push(`${path} is not a known cap name`);
+      continue;
+    }
+
+    if (seen.has(name)) {
+      const prior = seen.get(name)!;
+      const conflict = prior.value !== entry.value || prior.scope !== entry.scope;
+      issues.push(
+        conflict
+          ? `${path} is a DUPLICATE of an earlier ${name} entry that declares a different value or scope (${String(prior.value)}/${prior.scope} vs ${String(entry.value)}/${String(entry.scope)}) — a conflicting duplicate has no single authoritative bound`
+          : `${path} is a DUPLICATE: each cap must appear exactly once`,
+      );
+    } else {
+      seen.set(name, entry as unknown as R92CapDeclaration);
+    }
+
+    const expected = capContract(name as R92CapName, entry.value as number | null, auth.invocationMode);
+    if (entry.scope !== expected.scope) {
+      issues.push(
+        `${path}.scope is "${String(entry.scope)}" but a ${name} cap has ${expected.scope} scope — the declared scope must match the layer that owns the cap`,
+      );
+    }
+    if (entry.enforcement !== expected.enforcement) {
+      issues.push(
+        `${path}.enforcement claims "${String(entry.enforcement)}" but the measured layer for ${name} is ${expected.enforcement} — a self-reported capability is not evidence`,
+      );
+    }
+    if (entry.blocked !== expected.blocked) {
+      issues.push(
+        `${path}.blocked claims ${String(entry.blocked)} but the measured layer for ${name} is ${expected.blocked ? "BLOCKED" : "not blocked"}`,
+      );
+    }
+    if (entry.value !== null) {
+      const valueIssue = capValueIssue(path, entry.value);
+      if (valueIssue !== null) issues.push(valueIssue);
+    }
+    if (typeof entry.evidence !== "string" || entry.evidence.trim().length === 0) {
+      issues.push(`${path}.evidence must name the measured call site that justifies the label`);
+    } else if (name === "maxModelCalls" && !/logical|physical|retry/i.test(entry.evidence)) {
+      issues.push(
+        `${path}.evidence must state whether this cap bounds LOGICAL generate calls or physical HTTP/retry attempts — a logical-call cap is not a fully-qualified billing bound`,
+      );
+    }
+
+    // The run cap must be able to CONTAIN the plan it authorizes.
+    if (name === "maxLogicalRuns" && typeof entry.value === "number" && Number.isFinite(entry.value)) {
+      const required = auth.caseIds.length * 2 * auth.repetitions;
+      if (entry.value < required) {
+        issues.push(
+          `${path} is ${String(entry.value)} but the plan needs at least ${required} logical runs (${auth.caseIds.length} cases x 2 arms x ${String(auth.repetitions)} repetition(s)) — a cap below the plan size cannot contain it`,
+        );
+      }
+    }
+  }
+
+  for (const name of R92_CAP_NAMES) {
+    if (!seen.has(name)) issues.push(`caps is missing the required ${name} declaration`);
+  }
+  return issues;
 }
 
 /** A cap is a violation when it is blocked, or when it claims an enforcement
@@ -303,11 +519,24 @@ export function r92AuthorizationIssuesV1(auth: R92AuthorizationV1): string[] {
     issues.push(`schemaVersion must be ${R92_AUTHORIZATION_SCHEMA} (got ${String(auth.schemaVersion)})`);
   }
   if (!nonEmpty(auth.authorizationId)) issues.push("authorizationId must be a non-empty id");
-  if (!nonEmpty(auth.createdAt)) issues.push("createdAt must be a timestamp");
-  if (!nonEmpty(auth.expiresAt)) issues.push("expiresAt must be a timestamp");
-  const created = Date.parse(auth.createdAt);
-  const expires = Date.parse(auth.expiresAt);
-  if (Number.isFinite(created) && Number.isFinite(expires) && expires <= created) {
+
+  // ---- Time contract -----------------------------------------------------
+  // Every comparison below is guarded by a parse that returns `null` for a
+  // malformed input, so a garbage timestamp is REFUSED rather than silently
+  // skipping the rule it was supposed to satisfy.
+  const created = parseR92Timestamp(auth.createdAt);
+  const expires = parseR92Timestamp(auth.expiresAt);
+  if (created === null) {
+    issues.push(
+      `createdAt must be a timezone-bearing ISO-8601 timestamp (e.g. 2026-09-17T00:00:00.000Z) — got ${JSON.stringify(auth.createdAt)}`,
+    );
+  }
+  if (expires === null) {
+    issues.push(
+      `expiresAt must be a timezone-bearing ISO-8601 timestamp (e.g. 2026-10-17T00:00:00.000Z) — got ${JSON.stringify(auth.expiresAt)}`,
+    );
+  }
+  if (created !== null && expires !== null && expires <= created) {
     issues.push("expiresAt must be strictly after createdAt (an already-expired authorization is not an authorization)");
   }
 
@@ -344,7 +573,17 @@ export function r92AuthorizationIssuesV1(auth: R92AuthorizationV1): string[] {
   }
   if (new Set(auth.caseIds).size !== auth.caseIds.length) issues.push("caseIds must be unique");
   for (const id of auth.caseIds) {
-    if (/^holdout\//.test(id)) issues.push(`case ${id} is a holdout case — plan §R92 requires non-holdout cases only`);
+    // An ALLOW-LIST, not the old `^holdout/` denylist: excluding one prefix left
+    // every other suite (and a bare id) selectable. The suite the id names must
+    // be one this plan is allowed to draw from.
+    const suite = typeof id === "string" ? (id.split("/")[0] ?? "") : "";
+    const caseSegment = typeof id === "string" ? (id.split("/")[1] ?? "") : "";
+    const hasCaseSegment = caseSegment.length > 0;
+    if (!hasCaseSegment || !R92_ALLOWED_CASE_SUITES.includes(suite)) {
+      issues.push(
+        `case ${String(id)} is not in a supported development-set suite — case ids must be <suite>/<case> with suite in ${R92_SUPPORTED_SUITES.join(", ")} (holdout is excluded)`,
+      );
+    }
     if (!hex64(auth.caseFingerprints?.[id])) {
       issues.push(`caseFingerprints must carry a 64-hex input fingerprint for ${id}`);
     }
@@ -457,17 +696,136 @@ export interface R92GateFacts {
   observedEndpointIdentity: string | null;
 }
 
-export type R92GateCode =
-  | "PAID_AUTHORIZATION_REQUIRED"
-  | "AUTHORIZATION_EXPIRED"
-  | "AUTHORIZATION_DIGEST_MISMATCH"
-  | "IDENTITY_DRIFT"
-  | "CASE_CONTENT_DRIFT"
-  | "ARM_IDENTITY_MIXED"
-  | "ARM_BUILD_DRIFT"
-  | "CAP_NOT_ENFORCEABLE"
-  | "BUDGET_INCOMPLETE"
-  | "PLAN_INVALID";
+/**
+ * The CLOSED set of gate codes. Derived from the array so the runtime list and
+ * the type cannot drift apart, and so a caller can assert the set is closed.
+ */
+export const R92_GATE_CODES = [
+  "PAID_AUTHORIZATION_REQUIRED",
+  "AUTHORIZATION_EXPIRED",
+  "AUTHORIZATION_NOT_YET_VALID",
+  "AUTHORIZATION_TIME_INVALID",
+  "AUTHORIZATION_DIGEST_MISMATCH",
+  "IDENTITY_DRIFT",
+  "CASE_CONTENT_DRIFT",
+  "ARM_IDENTITY_MIXED",
+  "ARM_BUILD_DRIFT",
+  "CAP_INVALID",
+  "CAP_NOT_ENFORCEABLE",
+  "BUDGET_INCOMPLETE",
+  "PLAN_INVALID",
+] as const;
+
+export type R92GateCode = (typeof R92_GATE_CODES)[number];
+
+/** The closed top-level field set of the envelope. */
+const R92_AUTH_FIELDS: readonly string[] = [
+  "schemaVersion",
+  "authorizationId",
+  "createdAt",
+  "expiresAt",
+  "scopeStatement",
+  "selectionDigest",
+  "caseIds",
+  "caseFingerprints",
+  "arms",
+  "armIdentityMode",
+  "fixScope",
+  "fixScopeStatement",
+  "jointAttributionNote",
+  "invocationMode",
+  "providerId",
+  "modelId",
+  "endpointIdentity",
+  "effectiveModelParams",
+  "repetitions",
+  "serialism",
+  "caps",
+  "unknownCostItems",
+  "outputDir",
+  "promotionEligible",
+];
+
+const R92_ARM_FIELDS: readonly string[] = ["sha", "executionPlanDigest", "buildMode"];
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** Report the keys of `obj` that are not in `allowed`, naming the KEY only —
+ *  never the value, which may be a credential. */
+function unknownFieldIssues(obj: Record<string, unknown>, allowed: readonly string[], prefix: string): string[] {
+  return Object.keys(obj)
+    .filter((k) => !allowed.includes(k))
+    .map((k) => `${prefix}${k} is not a field of this schema — the envelope schema is closed`);
+}
+
+/**
+ * Parse an authorization envelope from `unknown`. Never throws: every problem is
+ * returned as a field path plus a reason, and `authorization` is non-null ONLY
+ * when there is nothing to report.
+ *
+ * The whitelist is the point. An envelope that carries an extra field is not the
+ * envelope a human approved, and `now` in particular must never be accepted from
+ * the envelope: the executor's clock is the only trusted time source, so a plan
+ * that tries to supply its own `now` is refused rather than silently honoured.
+ */
+export function parseR92AuthorizationV1(raw: unknown): {
+  authorization: R92AuthorizationV1 | null;
+  issues: string[];
+} {
+  if (!isPlainObject(raw)) {
+    return {
+      authorization: null,
+      issues: [`authorization must be a JSON object (got ${Array.isArray(raw) ? "array" : typeof raw})`],
+    };
+  }
+
+  const issues: string[] = [];
+  issues.push(...unknownFieldIssues(raw, R92_AUTH_FIELDS, ""));
+
+  // ---- Structural type checks -------------------------------------------
+  const arrayFields = ["caseIds", "caps", "unknownCostItems"] as const;
+  for (const field of arrayFields) {
+    if (!Array.isArray(raw[field])) issues.push(`${field} must be an array`);
+  }
+  const objectFields = ["caseFingerprints", "effectiveModelParams"] as const;
+  for (const field of objectFields) {
+    if (!isPlainObject(raw[field])) issues.push(`${field} must be an object`);
+  }
+
+  const arms = raw.arms;
+  if (!isPlainObject(arms)) {
+    issues.push("arms must be an object binding both the baseline and candidate identities");
+  } else {
+    for (const key of ["baseline", "candidate"] as const) {
+      const a = arms[key];
+      if (!isPlainObject(a)) {
+        issues.push(`arms.${key} is required and must be an object`);
+        continue;
+      }
+      issues.push(...unknownFieldIssues(a, R92_ARM_FIELDS, `arms.${key}.`));
+    }
+  }
+
+  if (Array.isArray(raw.caps)) {
+    raw.caps.forEach((entry, i) => {
+      if (!isPlainObject(entry)) {
+        issues.push(`caps[${i}] must be an object`);
+        return;
+      }
+      issues.push(...unknownFieldIssues(entry, R92_CAP_FIELDS, `caps[${i}].`));
+    });
+  }
+
+  if (issues.length > 0) return { authorization: null, issues };
+
+  // The shape is confirmed, so the semantic validator can read every field
+  // without a defensive dance; its findings are reported the same way.
+  const typed = raw as unknown as R92AuthorizationV1;
+  const semantic = r92AuthorizationIssuesV1(typed);
+  if (semantic.length > 0) return { authorization: null, issues: semantic };
+  return { authorization: typed, issues: [] };
+}
 
 export interface R92GateResult {
   /** True ONLY when every precondition holds. Never implies a run happened. */
@@ -500,29 +858,161 @@ export function r92AuthorizationGate(input: R92GateInput): R92GateResult {
   const { env, authorization, facts } = input;
   const notRun = { runStatus: "NOT_RUN" as const };
 
+  /** A refusal that is a property of the PLAN, so the plan is NOT authorizable
+   *  as written and no human decision could make it so. */
+  const notReady = (code: R92GateCode, reason: string, issues: string[] = []): R92GateResult => ({
+    authorizedToExecute: false,
+    planStatus: "NOT_READY",
+    ...notRun,
+    code,
+    reason,
+    issues,
+  });
+  /** A refusal that is a property of the AUTHORIZATION, so the plan itself stays
+   *  approvable (`READY_FOR_AUTHORIZATION`) and simply has not been approved. */
+  const ready = (code: R92GateCode, reason: string, issues: string[] = []): R92GateResult => ({
+    authorizedToExecute: false,
+    planStatus: "READY_FOR_AUTHORIZATION",
+    ...notRun,
+    code,
+    reason,
+    issues,
+  });
+
   if (authorization === null) {
-    return {
-      authorizedToExecute: false,
-      planStatus: "NOT_READY",
-      ...notRun,
-      code: "PAID_AUTHORIZATION_REQUIRED",
-      reason: "no R92 authorization envelope was supplied — nothing to authorize, nothing to run",
-      issues: [],
-    };
+    return notReady(
+      "PAID_AUTHORIZATION_REQUIRED",
+      "no R92 authorization envelope was supplied — nothing to authorize, nothing to run",
+    );
   }
 
+  // =========================================================================
+  // PHASE 1 — READINESS. Is this plan authorizable AT ALL?
+  //
+  // Readiness is a property of the PLAN and is computed BEFORE the environment
+  // is consulted. Checking the auth env vars first (the finding-D defect) meant
+  // a plan with an unenforceable budget or a malformed envelope reported
+  // `READY_FOR_AUTHORIZATION` whenever nobody had exported the variables yet —
+  // i.e. it reported the plan as approvable precisely because it had not been
+  // examined.
+  // =========================================================================
+
+  // (1) The time contract, against the EXECUTOR's injected clock. The envelope's
+  // own timestamps are inputs; `facts.now` is the only trusted reading of "now",
+  // and it is never copied from the plan. An unparseable value on either side is
+  // refused rather than skipped: `Number.isFinite(NaN)` being false is exactly
+  // how a malformed expiry used to read as "not expired".
+  //
+  // This precedes the general static check so a malformed timestamp is reported
+  // as the TIME defect it is, not as a generic PLAN_INVALID.
+  const nowMs = parseR92Timestamp(facts.now);
+  const expiresMs = parseR92Timestamp(authorization.expiresAt);
+  const createdMs = parseR92Timestamp(authorization.createdAt);
+  if (nowMs === null) {
+    return notReady(
+      "AUTHORIZATION_TIME_INVALID",
+      `the executor's clock reading is not a timezone-bearing ISO-8601 timestamp — refusing to evaluate expiry against an unreadable clock`,
+    );
+  }
+  if (expiresMs === null || createdMs === null) {
+    return notReady(
+      "AUTHORIZATION_TIME_INVALID",
+      `the envelope carries an unparseable createdAt/expiresAt — an unreadable validity window cannot be treated as open`,
+    );
+  }
+  if (createdMs > nowMs) {
+    return notReady(
+      "AUTHORIZATION_NOT_YET_VALID",
+      `the authorization is not valid yet: createdAt ${authorization.createdAt} is in the future (now ${facts.now}) — no clock tolerance is granted`,
+    );
+  }
+  // The boundary is INCLUSIVE: the instant the window closes is already closed.
+  if (nowMs >= expiresMs) {
+    return ready(
+      "AUTHORIZATION_EXPIRED",
+      `authorization expired at ${authorization.expiresAt} (now ${facts.now}) — a stale authorization must be re-issued, not reused`,
+    );
+  }
+
+  // (2) Structure and static self-consistency.
   const staticIssues = r92AuthorizationIssuesV1(authorization);
   if (staticIssues.length > 0) {
-    return {
-      authorizedToExecute: false,
-      planStatus: "NOT_READY",
-      ...notRun,
-      code: "PLAN_INVALID",
-      reason: `the authorization envelope is incomplete or self-inconsistent (${staticIssues.length} issue(s)) — a malformed plan is refused, never best-effort executed`,
-      issues: staticIssues,
-    };
+    return notReady(
+      "PLAN_INVALID",
+      `the authorization envelope is incomplete or self-inconsistent (${staticIssues.length} issue(s)) — a malformed plan is refused, never best-effort executed`,
+      staticIssues,
+    );
   }
 
+  // (3) Mode capability and the budget surface. A cap the measured layer cannot
+  // enforce, a duplicate/conflicting cap, a cap with the wrong scope or a value
+  // no layer could execute, and a missing global budget all make the plan
+  // unapprovable — regardless of whether anyone has authorized it.
+  const declarationIssues = r92CapDeclarationIssues(authorization.caps, authorization);
+  if (declarationIssues.length > 0) {
+    const budgetRelated = declarationIssues.some((i) => i.includes("maxModelCalls"));
+    return notReady(
+      budgetRelated ? "BUDGET_INCOMPLETE" : "CAP_INVALID",
+      budgetRelated
+        ? `the global budget is not enforceable or not declared as required: ${declarationIssues.join("; ")}`
+        : `the cap declaration is invalid and no layer could execute it as stated: ${declarationIssues.join("; ")}`,
+      declarationIssues,
+    );
+  }
+  const capIssues = r92CapViolations(authorization.caps);
+  if (capIssues.length > 0) {
+    // The historical split is preserved: a defective GLOBAL BUDGET is reported
+    // as a budget problem, any other unenforceable cap as a cap problem.
+    const budgetRelated = capIssues.some((i) => i.includes("maxModelCalls"));
+    return notReady(
+      budgetRelated ? "BUDGET_INCOMPLETE" : "CAP_NOT_ENFORCEABLE",
+      budgetRelated
+        ? `the global budget is not runtime-enforceable as declared: ${capIssues.join("; ")}`
+        : `a declared cap cannot be enforced by the layer that would have to enforce it: ${capIssues.join("; ")}`,
+      capIssues,
+    );
+  }
+
+  // (4) Required observations. These are facts the executor must be able to
+  // observe; a plan whose arms or cases were never observed is not authorizable.
+  if (facts.executingSourceSha !== authorization.arms.candidate.sha) {
+    return ready(
+      "IDENTITY_DRIFT",
+      `sourceSha drift: executing ${facts.executingSourceSha} but the authorization binds candidate sha ${authorization.arms.candidate.sha}`,
+    );
+  }
+
+  for (const id of authorization.caseIds) {
+    const expected = authorization.caseFingerprints[id];
+    const observed = facts.observedCaseFingerprints[id];
+    if (observed === undefined) {
+      return ready(
+        "CASE_CONTENT_DRIFT",
+        `case ${id} was not observed at execution time — an unobserved planned case is drift, not a skip`,
+      );
+    }
+    if (observed !== expected) {
+      return ready("CASE_CONTENT_DRIFT", `case content drift for ${id}: authorized ${expected} but observed ${observed}`);
+    }
+  }
+
+  if (facts.observedProviderId !== authorization.providerId || facts.observedModelId !== authorization.modelId) {
+    return ready(
+      "IDENTITY_DRIFT",
+      `provider/model drift: authorized ${authorization.providerId}/${authorization.modelId} but observed ${facts.observedProviderId}/${facts.observedModelId}`,
+    );
+  }
+
+  if (facts.observedEndpointIdentity !== authorization.endpointIdentity) {
+    return ready(
+      "IDENTITY_DRIFT",
+      `endpointIdentity drift: authorized ${String(authorization.endpointIdentity)} but observed ${String(facts.observedEndpointIdentity)}`,
+    );
+  }
+
+  // =========================================================================
+  // PHASE 2 — AUTHORIZATION. The plan is ready; has a human approved THIS one?
+  // =========================================================================
   const hasR92Auth = env.E4_R92_PAID_AUTH === "1";
   const hasSharedSwitch = env.RUN_PAID_BENCHMARKS === "1";
   const suppliedDigest = env.E4_R92_PAID_AUTH_DIGEST;
@@ -542,52 +1032,6 @@ export function r92AuthorizationGate(input: R92GateInput): R92GateResult {
         : "PAID_AUTHORIZATION_REQUIRED",
       reason: `not authorized: missing ${missing.join(", ")}. The plan below is complete and awaiting a human decision; R83/R87 authorization does not carry over.`,
       issues: [],
-    };
-  }
-
-  const nowMs = Date.parse(facts.now);
-  const expiresMs = Date.parse(authorization.expiresAt);
-  if (Number.isFinite(nowMs) && Number.isFinite(expiresMs) && nowMs > expiresMs) {
-    return {
-      authorizedToExecute: false,
-      planStatus: "READY_FOR_AUTHORIZATION",
-      ...notRun,
-      code: "AUTHORIZATION_EXPIRED",
-      reason: `authorization expired at ${authorization.expiresAt} (now ${facts.now}) — a stale authorization must be re-issued, not reused`,
-      issues: [],
-    };
-  }
-
-  if (facts.executingSourceSha !== authorization.arms.candidate.sha) {
-    return {
-      authorizedToExecute: false,
-      planStatus: "READY_FOR_AUTHORIZATION",
-      ...notRun,
-      code: "IDENTITY_DRIFT",
-      reason: `sourceSha drift: executing ${facts.executingSourceSha} but the authorization binds candidate sha ${authorization.arms.candidate.sha}`,
-      issues: [],
-    };
-  }
-
-  const capIssues = r92CapViolations(authorization.caps);
-  if (capIssues.some((i) => i.includes("maxModelCalls"))) {
-    return {
-      authorizedToExecute: false,
-      planStatus: "READY_FOR_AUTHORIZATION",
-      ...notRun,
-      code: "BUDGET_INCOMPLETE",
-      reason: `the global budget is not runtime-enforceable as declared: ${capIssues.join("; ")}`,
-      issues: capIssues,
-    };
-  }
-  if (capIssues.length > 0) {
-    return {
-      authorizedToExecute: false,
-      planStatus: "READY_FOR_AUTHORIZATION",
-      ...notRun,
-      code: "CAP_NOT_ENFORCEABLE",
-      reason: `a declared cap cannot be enforced by the layer that would have to enforce it: ${capIssues.join("; ")}`,
-      issues: capIssues,
     };
   }
 

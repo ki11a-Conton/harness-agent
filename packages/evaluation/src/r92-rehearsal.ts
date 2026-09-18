@@ -51,10 +51,15 @@ export const R92_REHEARSAL_SCHEMA = "e4-r92-rehearsal-v1";
 const REHEARSAL_SUITE = "rehearsal";
 
 /** Case ids are synthetic: the rehearsal proves the RUNNER's behaviour, so it
- *  must not consume the frozen dev-set selection it is validating. Eight cases
- *  keeps the rehearsal envelope inside the plan's 6–10 window, so the rehearsal
- *  exercises the same envelope shape the real campaign would use. */
-const REHEARSAL_CASES = ["r-c1", "r-c2", "r-c3", "r-c4", "r-c5", "r-c6", "r-c7", "r-c8"];
+ *  must not consume the frozen dev-set selection it is validating. They carry
+ *  the `rehearsal/` suite prefix so the envelope passes the SAME case-id
+ *  allow-list a real plan passes — a rehearsal validated by a relaxed copy of
+ *  the rule would prove nothing about the rule. Eight cases keeps the rehearsal
+ *  envelope inside the plan's 6–10 window, so the rehearsal exercises the same
+ *  envelope shape the real campaign would use. */
+const REHEARSAL_CASES = ["r-c1", "r-c2", "r-c3", "r-c4", "r-c5", "r-c6", "r-c7", "r-c8"].map(
+  (id) => `${REHEARSAL_SUITE}/${id}`,
+);
 
 /** 8 cases x 1 repetition x 2 arms = 16 logical runs. */
 const REHEARSAL_PLANNED_RUNS = REHEARSAL_CASES.length * 2;

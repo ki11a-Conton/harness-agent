@@ -14,7 +14,7 @@ request**. Plan §R92 line 197 is explicit that the deliverable is the plan.
 | Cases selected | 8, non-holdout dev set (R87-frozen) |
 | Arm identity mode | `isolated-checkout-build` |
 | Fix scope | `single-fix-H2` |
-| Plan digest | `ffe3bea77e27283917847536a08d351e33f26d2ac0773b59fc590926868970f1` |
+| Plan digest | `f81cc6700bd0b1b0134e02942b5307e28103e2e2a66dc3aefd98afa7f61b6d8a` |
 | Expires | `2026-10-16T08:27:46.000Z` (created from the candidate commit time + 30 days) |
 | `pnpm typecheck` | PASS |
 | `pnpm test` | PASS on a clean tree (see §7) |
@@ -536,14 +536,14 @@ Produced by `node scripts/e4/r92-authorization-request.mjs` into `.ci/r92-auth/`
 
 | Item | Value |
 | --- | --- |
-| Plan digest (approve this exact value) | `ffe3bea77e27283917847536a08d351e33f26d2ac0773b59fc590926868970f1` |
+| Plan digest (approve this exact value) | `f81cc6700bd0b1b0134e02942b5307e28103e2e2a66dc3aefd98afa7f61b6d8a` |
 | Expires | `2026-10-16T08:27:46.000Z` |
 | Baseline SHA | `e9776ba66190ea63b1bacb685c91aa900b6935e7` |
 | Candidate SHA | `a20373743b56de6a3a110fecdd254737ece71afa` |
 | Case list | 8 non-holdout dev-set cases (R87-frozen order, §4) |
 | Selection digest | `0d8af323110301e0392c77d595c8c34f5f01851ffe6844f0ed7fab49703465ae` |
 | Endpoint identity | `ee071e382ae11baecc06ca51545a6d4f3fa74cb3ea12b605d63d0b19ae84fea7` (normalized digest, never a raw URL) |
-| Call cap | 320 campaign-wide, runtime-enforced |
+| Call cap | 320 campaign-wide, runtime-enforced (bounds **logical** generate calls — not physical HTTP/retry attempts) |
 | Time cap | 600 000 ms per case, runtime-enforced |
 | Token cap | **none declared** — no runtime token layer exists |
 | Cost-unknown items | USD total; token total; provider-side rate/spend limits |
@@ -551,3 +551,38 @@ Produced by `node scripts/e4/r92-authorization-request.mjs` into `.ci/r92-auth/`
 
 To authorize, the run requires `E4_R92_PAID_AUTH=1`, `RUN_PAID_BENCHMARKS=1` and
 `E4_R92_PAID_AUTH_DIGEST=<the digest above>` — plus a human decision on this plan.
+
+### Digest supersession (R95)
+
+The digest above **supersedes** `ffe3bea77e27283917847536a08d351e33f26d2ac0773b59fc590926868970f1`,
+which this report carried before R95. The value moved because R95 changed the
+CONTENT of the cap declarations, not because the plan's facts changed:
+
+- `maxModelCalls` now states in its own `evidence` that it bounds **logical
+  generate calls, not physical HTTP/retry attempts** — required by plan §R95
+  line 146 ("不能将有限逻辑调用误称为完全限定账单").
+- The cap/enforcement/scope/blocked labels are now derived by one shared
+  `capContract` function that both `classifyR92Caps` and the validator call, so
+  a declaration can no longer assert a capability the measured call sites lack.
+
+Both digests describe the same experiment: same SHAs, same 8 cases, same
+selection digest, same endpoint, same expiry. Neither was ever authorized, so no
+approval is invalidated. `ffe3bea7…` remains in git history as the R92 value and
+is **not** to be used for authorization.
+
+## 11. R95 hardening of this envelope
+
+R95 found and fixed four defects in the module this report describes. The plan's
+capabilities are unchanged; what changed is that invalid input is now refused
+instead of silently accepted. Detail in `docs/E4-R95-report.md`.
+
+| Defect | Before | After |
+| --- | --- | --- |
+| Malformed timestamp | `Number.isFinite(NaN)` was false, so the comparison was SKIPPED and a garbage `expiresAt` read as "not expired" | `parseR92Timestamp` returns `null`, and a non-contract timestamp is refused as `AUTHORIZATION_TIME_INVALID` |
+| Expiry boundary | `now > expiresAt` — the closing instant was still valid | `now >= expiresAt` — the boundary is inclusive |
+| Future `createdAt` | Not checked at all | `AUTHORIZATION_NOT_YET_VALID`, no clock tolerance |
+| Readiness order | Auth env vars were checked FIRST, so an unenforceable plan reported `READY_FOR_AUTHORIZATION` merely because no one had exported the variables | Readiness (time → structure → mode capability → budget → observations) is computed BEFORE the env check; only a legal-but-unapproved plan is `READY_FOR_AUTHORIZATION` |
+| Cap values | No numeric contract; NaN, `Infinity`, negatives, strings, unsafe integers, duplicates and wrong scopes all passed | Explicit positive-safe-integer contract, per-cap uniqueness, scope-vs-name check, and `maxLogicalRuns` must contain `cases × arms × repetitions` |
+| Self-reported caps | `enforcement`/`blocked` were trusted as written | Re-derived from the invocation mode and compared; a lie is a refusal |
+| Case selection | Only the `holdout/` PREFIX was excluded, so `tools/…` or a bare id could be selected | An explicit allow-list (`R92_SUPPORTED_SUITES`) |
+| Input trust | The envelope was trusted by TypeScript type | `parseR92AuthorizationV1(unknown)` with a closed field whitelist; refusals name a path and never echo a secret value |
