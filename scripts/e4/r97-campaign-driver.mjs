@@ -56,8 +56,11 @@ export function makeCountingFakeProvider() {
       return {
         async *generate() {
           state.requests += 1;
-          // One text event, then stop: a complete, harmless turn.
-          yield { type: "text", text: "fake" };
+          // One text delta, then a terminal `completed` event — the same
+          // terminal shape the real provider emits (openai.ts), so the driver's
+          // outcome contract is exercised identically in fake and real modes.
+          yield { type: "text_delta", text: "fake", timestamp: Date.now() };
+          yield { type: "completed", result: { finishReason: "stop", text: "fake" }, timestamp: Date.now() };
         },
       };
     },
@@ -69,6 +72,27 @@ export function makeCountingFakeProvider() {
 export async function loadFinalizedPlan(planPath) {
   const raw = JSON.parse(await readFile(planPath, "utf8"));
   return raw;
+}
+
+/** Render a provider error event (or thrown value) into a short, non-secret
+ *  failure text. The real provider pre-summarizes and redacts its error
+ *  messages; this is a belt-and-braces cap so a failure string can never carry
+ *  raw keys/endpoints into the persisted result (D5). */
+export function failureTextOf(value) {
+  let text = "";
+  if (value && typeof value === "object") {
+    text =
+      typeof value.message === "string" && value.message.length > 0
+        ? value.message
+        : typeof value.code === "string" && value.code.length > 0
+          ? value.code
+          : JSON.stringify(value);
+  } else if (typeof value === "string" && value.length > 0) {
+    text = value;
+  } else {
+    text = "unknown provider error";
+  }
+  return text.replace(/\s+/g, " ").trim().slice(0, 300);
 }
 
 /**
@@ -125,6 +149,9 @@ export async function runDriver(opts) {
     transportRetries: 0,
     budget: null,
     reservations: [],
+    // D10: per (arm, caseId) failure records for calls that ended in an
+    // error event, an exception, a cancellation, or an incomplete stream.
+    failures: [],
     authorization: null,
   };
 
@@ -210,20 +237,40 @@ export async function runDriver(opts) {
       // requests happened", independent of the ledger.
       let consumed = 0;
       let retries = 0;
+      // TERMINAL-OUTCOME tracking (measured defect D10): the REAL provider
+      // (packages/model/src/openai.ts) does not throw on a failed completion —
+      // it YIELDS `{ type: "error" }` (after optional `retry` events), and only
+      // `{ type: "completed" }` on success. The loop below previously counted
+      // only `retry` events, so an error event was silently recorded as a
+      // consumed logical call and the campaign reported COMPLETE with 16 calls
+      // even when every call failed. Every logical call must now end in one of:
+      //   - `completed` (any finish reason except "cancelled") -> success
+      //   - `error` event or an exception            -> FAILED, recorded once
+      //   - stream ends without a terminal event      -> FAILED (incomplete)
+      let outcome = null; // null = unknown yet, "ok" | failure message
       try {
         for await (const ev of client.generate({ messages: [{ role: "user", content: "r97" }] }, new AbortController().signal)) {
           if (ev.type === "retry") retries += 1;
+          else if (ev.type === "error") outcome = failureTextOf(ev.error);
+          else if (ev.type === "completed") {
+            const finish = ev.result?.finishReason;
+            outcome = finish === "cancelled" ? "call cancelled before completion" : "ok";
+          }
         }
+        if (outcome === null) outcome = "stream ended without a terminal event";
         consumed = 1;
       } catch (err) {
         // A failed call is still a dispatched attempt: commit it as consumed so
         // the allowance is not silently returned.
         consumed = 1;
-        result.reason = `arm ${arm} case ${caseId} failed: ${err instanceof Error ? err.message : String(err)}`;
+        outcome = err instanceof Error ? err.message : String(err);
       }
       await ledger.commit(reservation.reservationId, consumed, retries);
       result.logicalCalls += consumed;
       result.transportRetries += retries;
+      if (outcome !== "ok") {
+        result.failures.push({ arm, caseId, error: outcome });
+      }
       // A hard ceiling on the FAKE provider, so a test can prove the driver
       // cannot exceed what it was given.
       if (maxProviderCalls > 0 && state.requests > maxProviderCalls) {
@@ -244,6 +291,17 @@ export async function runDriver(opts) {
     result.status = "PARTIAL";
     result.code = "BUDGET_EXHAUSTED";
     result.reason = `stopped at arm ${stopped.arm} case ${stopped.caseId}: ${stopped.reason}`;
+    return result;
+  }
+
+  if (result.failures.length > 0) {
+    // Plan §R97 line 226/232: a run whose calls failed is NOT a success. The
+    // calls were dispatched and the ledger accounts for them, but the campaign
+    // must not claim COMPLETE — an operator must see the failures.
+    result.status = "PARTIAL";
+    result.code = "CASE_FAILURES";
+    const first = result.failures[0];
+    result.reason = `arm ${first.arm} case ${first.caseId} failed: ${first.error} (${result.failures.length} failed logical call(s) of ${result.logicalCalls} dispatched)`;
     return result;
   }
 

@@ -382,6 +382,90 @@ describe("E4-R97 D2: the normal path runs the pair within the campaign budget", 
   });
 });
 
+describe("E4-R97 D10: a provider ERROR event is a FAILED call, never a silent COMPLETE", () => {
+  // The REAL OpenAICompatibleProvider (packages/model/src/openai.ts) does not
+  // throw on a failed completion: it YIELDS `{ type: "error", error }` events
+  // (and possibly `retry` events before them). The driver's STEP 4 previously
+  // only counted `retry` events, so an error event was treated as a consumed
+  // logical call with no failure recorded — the campaign would report
+  // `COMPLETE` with 16 logical calls even when EVERY call failed (measured
+  // false-success, reproduced live against the user's endpoint whose upstream
+  // returns 400 on every completion).
+  function makeErrorEventProvider() {
+    const state = { requests: 0, created: 0 };
+    const provider = {
+      id: "fake-error-r97",
+      async listModels() {
+        return [];
+      },
+      createClient() {
+        state.created += 1;
+        return {
+          async *generate() {
+            state.requests += 1;
+            // Mirror the real provider's failure shape: a retry, then an error.
+            yield {
+              type: "retry",
+              attempt: 1,
+              error: { code: "MODEL_ERROR", message: "transient" },
+              timestamp: Date.now(),
+            };
+            yield {
+              type: "error",
+              error: { code: "MODEL_ERROR", message: "upstream 400: rejected" },
+              timestamp: Date.now(),
+            };
+          },
+        };
+      },
+    };
+    return { provider, state };
+  }
+
+  async function driveErrorCase() {
+    const plan = await finalizedPlan();
+    const dir = await tempDir();
+    const made = new Map<string, { provider: unknown; state: { requests: number; created: number } }>();
+    const result = await mod.runDriver({
+      modules: { evaluation },
+      plan,
+      env: AUTHORIZED_ENV(plan.planDigest!),
+      observation: observationFor(plan),
+      ledgerDir: dir,
+      makeProvider: () => {
+        const p = makeErrorEventProvider();
+        made.set(p.state.requests.toString(), p);
+        return p;
+      },
+    });
+    return { plan, result, made };
+  }
+
+  it("every call failing with an error event is reported ONCE, as failed, not COMPLETE", async () => {
+    const { plan, result } = await driveErrorCase();
+    const caseCount = plan.authorization!.caseIds.length;
+    // The calls WERE dispatched: the ledger must still account for them.
+    expect(result["logicalCalls"]).toBe(caseCount * 2);
+    expect(result["providerRequests"]).toBe(caseCount * 2);
+    // But the outcome must never be a silent COMPLETE.
+    expect(result["status"]).not.toBe("COMPLETE");
+    expect(result["status"]).toBe("PARTIAL");
+    expect(result["code"]).toBe("CASE_FAILURES");
+    // The failures are recorded per (arm, case), one per failed logical call.
+    const failures = result["failures"] as { arm: string; caseId: string; error: string }[];
+    expect(failures.length).toBe(caseCount * 2);
+    expect(failures[0]!.error).toContain("upstream 400: rejected");
+    // The failure reason names the first broken call instead of a success line.
+    expect(result["reason"]).toContain("failed");
+  });
+
+  it("a PARTIAL run is never promotion-eligible or reported as a success line", async () => {
+    const { result } = await driveErrorCase();
+    expect(result["code"]).toBe("CASE_FAILURES");
+    expect(result["authorization"]).toBeDefined();
+  });
+});
+
 describe("E4-R97 D3: the driver cannot exceed the ceiling it was given", () => {
   it("a provider call ceiling below the plan size is reported, never exceeded", async () => {
     const plan = await finalizedPlan();

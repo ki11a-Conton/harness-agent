@@ -22,7 +22,7 @@ emit only the approval material, executing no real model.
 | Paid steps executed | **none** |
 | `pnpm typecheck` (working tree **and** clean checkout) | exit 0 |
 | `pnpm build` (working tree **and** clean checkout) | exit 0 |
-| R97 tests | 88 passed / 88 (3 files: ledger 25, plan 31, driver 32) — identical in the working tree and in a clean checkout |
+| R97 tests | 90 passed / 90 (3 files: ledger 25, plan 31, driver 34 — D10 adds 2) — identical in the working tree and in a clean checkout |
 | `packages/evaluation` suite | 94 files, 1365 passed |
 | R93 / R92+R95 / R94 gates (clean checkout) | 91 passed / 98 passed / 106 assertions PASSED |
 | `pnpm docs:verify` | ALL CHECKS PASS |
@@ -369,7 +369,35 @@ Every item was written as a failing test first:
 | --- | --- | --- |
 | `r97-budget-ledger.test.ts` | 25 tests — no ledger module existed | 25 passed |
 | `r97-plan.test.ts` | 31 tests — no DRAFT/FINALIZED distinction existed | 31 passed |
-| `r97-driver-closed-loop.test.ts` | 32 tests — no driver existed; D7 first failed as `TypeError: rehearsal is not a function` (5 failures), D8 as `expected undefined to be 'e4-r97-campaign-driver-v1'` + 2× `expected 'REFUSED' to be 'NOT_RUN'`, D9 as 2× `--fake-provider needs the plan artifact to carry an 'observation' block` | 32 passed |
+| `r97-driver-closed-loop.test.ts` | 32 tests — no driver existed; D7 first failed as `TypeError: rehearsal is not a function` (5 failures), D8 as `expected undefined to be 'e4-r97-campaign-driver-v1'` + 2× `expected 'REFUSED' to be 'NOT_RUN'`, D9 as 2× `--fake-provider needs the plan artifact to carry an 'observation' block` | 34 passed |
+| `r97-driver-closed-loop.test.ts` — **D10** | 2 failures: `expected 'COMPLETE' not to be 'COMPLETE'` and `expected null to be 'CASE_FAILURES'` — the driver reported a silent COMPLETE with 16 logical calls while every provider call yielded an `error` event | 2 added, 34/34 passed |
+
+### 6.1 D10: a provider ERROR event must never be a silent COMPLETE
+
+The real provider (`packages/model/src/openai.ts`) does not throw on a failed
+completion — it **yields** `{ type: "error" }` events (after optional `retry`
+events). The driver's STEP 4 previously counted only `retry` events, so an error
+event was recorded as a consumed logical call with no failure note, and the
+campaign ended `COMPLETE` with 16 logical calls even when **every** call failed.
+Measured live with a fake provider that mirrors the real failure shape:
+
+```
+status       : COMPLETE          # FALSE SUCCESS
+logicalCalls : 16                # 16 error events, 0 completed
+reason       : both arms ran over 8 case(s) within a 320-call campaign budget
+```
+
+This matters for the paid step: an operator pointed at a failing upstream (the
+user's endpoint currently returns `upstream_status 400/429` on every completion)
+would be told the campaign was COMPLETE with zero real output. STEP 4 now tracks
+the terminal event of every call (`completed` with a non-cancelled finish reason
+= ok; `error` event / thrown exception / cancelled / stream ended without a
+terminal event = a recorded failure), reports `PARTIAL` + `CASE_FAILURES`
+naming the first failed (arm, case), and the ledger still accounts for the
+dispatched attempt (plan §R97 line 219: a failed call is still a dispatched
+attempt; the allowance is not silently returned). The fake provider now emits the
+real `text_delta` → `completed(finishReason: "stop")` terminal shape so fake and
+real modes exercise the identical outcome contract.
 
 The strongest RED is the driver closed loop: before R97 there was no entry point
 to drive, so D1–D9 could not even be expressed. Three tests were **rewritten**
