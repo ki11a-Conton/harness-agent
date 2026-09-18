@@ -543,6 +543,19 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File scripts/benchmark/selfcheck-campaign-runner.ps1
 
+      # E4-R94 (findings B/C): the campaign runner's interruption-recovery
+      # contract. Resume must RE-OBSERVE the current case identity and the report
+      # content hash (never compare the stored digest with itself); the durable
+      # `in_flight` intent must be written BEFORE any billable child starts; a
+      # corrupt/conflicting manifest must be a stable DAMAGED state; and a
+      # dispatched attempt with no terminal record must be OUTCOME_UNKNOWN, never
+      # silently re-billed. Drives the FAKE CLI, so 0 provider calls, 0 network.
+      - name: Campaign runner interruption-recovery contract (E4-R94)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File scripts/benchmark/selfcheck-r94-runner.ps1
+          if ($LASTEXITCODE -ne 0) { throw "E4-R94 self-check failed ($LASTEXITCODE)" }
+
       # E4-R89 (F3/F4/F5): the campaign runner's authorization gate must READ its
       # inputs and never create them; completion must be identity-bound rather
       # than "the report file exists"; and the --suites value must be the

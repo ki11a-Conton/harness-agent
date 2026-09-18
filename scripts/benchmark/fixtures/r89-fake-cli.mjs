@@ -11,18 +11,53 @@
 //                       exit1 | noreport | dryrunfail
 //   FAKE_CLI_STATE_DIR  where the "request sent" marker is written (crash sim)
 //
+// E4-R94 additions (the six termination points of the interruption contract):
+//   FAKE_CLI_CRASH      after-start | after-request | after-report |
+//                       before-completion   (unset = no crash)
+//   FAKE_CLI_SLOW_MS    busy-wait before the request phase (lock/concurrency tests)
+//   FAKE_CLI_SLOW_AFTER_REPORT_MS
+//                       busy-wait AFTER the durable report, before exiting
+//   FAKE_CLI_HANG       before-report -> never write a report, never exit
+//   FAKE_CLI_PID_FILE   write this process's pid, so a test can kill exactly it
+//
 // Supported shapes (mirroring the real CLI contract):
 //   benchmark --suite <s> --cases <dir> ... --dry-run
 //       -> prints {"planDigest":"<hex>"} and exits 0
 //   benchmark --suite <s> --cases <dir> ... --plan-digest <d> --out <dir>
 //       -> writes <dir>/<baseline|suite>.json and exits 0
-import { appendFileSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+//
+// E4-R94: the dry-run digest is derived from the ACTUAL case source contents, so
+// a case edit at an unchanged git SHA produces a DIFFERENT plan digest. The
+// pre-R94 runner passed the OLD digest back to itself and therefore could not
+// notice such an edit; a fixture with a constant digest could not expose that.
+import { appendFileSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 
 const argv = process.argv.slice(2);
 const mode = process.env.FAKE_CLI_MODE ?? "ok";
 const logPath = process.env.FAKE_CLI_LOG;
 const stateDir = process.env.FAKE_CLI_STATE_DIR;
+const crash = process.env.FAKE_CLI_CRASH ?? "";
+const slowMs = Number.parseInt(process.env.FAKE_CLI_SLOW_MS ?? "0", 10) || 0;
+const slowAfterReportMs = Number.parseInt(process.env.FAKE_CLI_SLOW_AFTER_REPORT_MS ?? "0", 10) || 0;
+const hang = process.env.FAKE_CLI_HANG ?? "";
+const pidFile = process.env.FAKE_CLI_PID_FILE;
+
+function busyWait(ms) {
+  const until = Date.now() + ms;
+  while (Date.now() < until) {
+    /* deliberate busy wait: no timers, so the process cannot be reaped early */
+  }
+}
+
+if (pidFile) {
+  try {
+    writeFileSync(pidFile, String(process.pid));
+  } catch {
+    /* best effort */
+  }
+}
 
 if (logPath) {
   // Record whether the child could SEE a key in OPENAI_API_KEY — the variable the
@@ -66,16 +101,54 @@ if (casesDir) {
   }
 }
 
+// A content-derived digest: <relative path>=<sha256 of bytes>, sorted, hashed.
+// Any edit to any case file changes it, so "the case changed but HEAD did not"
+// is detectable by the runner.
+function dirDigest(dir) {
+  const rows = [];
+  const walk = (d, rel) => {
+    for (const e of readdirSync(d, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
+      const p = join(d, e.name);
+      const r = rel ? `${rel}/${e.name}` : e.name;
+      if (e.isDirectory()) walk(p, r);
+      else if (statSync(p).isFile()) {
+        rows.push(`${r}=${createHash("sha256").update(readFileSync(p)).digest("hex")}`);
+      }
+    }
+  };
+  try {
+    walk(dir, "");
+  } catch {
+    /* an unreadable case dir still yields a stable (empty) digest */
+  }
+  return createHash("sha256").update(rows.join("\n")).digest("hex");
+}
+
 if (isDryRun) {
   if (mode === "dryrunfail") {
     process.stderr.write("fake cli: dry run failed\n");
     process.exit(7);
   }
-  process.stdout.write(JSON.stringify({ planDigest: "f".repeat(64), suite, caseId }) + "\n");
+  const planDigest = casesDir ? dirDigest(casesDir) : "f".repeat(64);
+  process.stdout.write(JSON.stringify({ planDigest, suite, caseId }) + "\n");
   process.exit(0);
 }
 
 // --- execution phase -------------------------------------------------------
+// The interruption contract's FIRST point: the child was spawned but died
+// before it did anything. The runner has already written its durable in-flight
+// intent, so it must still be conservative — a child that dies this early may
+// or may not have been billed.
+if (crash === "after-start") {
+  process.stderr.write("fake cli: died immediately after start, before any request\n");
+  process.exit(8);
+}
+
+// A slow child, so the single-instance-lock test has a real concurrency window.
+if (slowMs > 0) {
+  busyWait(slowMs);
+}
+
 // A crash simulation: the request was already sent, the outcome was not
 // persisted. The runner must treat this as OUTCOME_UNKNOWN, never as "done".
 if (stateDir) {
@@ -90,7 +163,7 @@ if (stateDir) {
 // FAKE_CLI_CRASH=after-request: the request went out, then the process died
 // before any report was written. This is the exact window in which no
 // exactly-once guarantee is possible.
-if (process.env.FAKE_CLI_CRASH === "after-request") {
+if (crash === "after-request") {
   process.stderr.write("fake cli: crashed after the request was sent, before persisting the outcome\n");
   process.exit(9);
 }
@@ -103,6 +176,14 @@ if (!outDir) {
 const base = suite === "regression" ? "baseline" : suite;
 const reportPath = join(outDir, `${base}.json`);
 mkdirSync(outDir, { recursive: true });
+
+// The "dispatched, no durable report, still running" point: the request marker
+// has been written, so a request may have gone out, but nothing is durable. A
+// test kills THIS pid, reproducing a hard kill between request and report.
+if (hang === "before-report") {
+  busyWait(600000);
+  process.exit(12);
+}
 
 if (mode === "noreport") {
   process.exit(0);
@@ -149,6 +230,24 @@ if (mode === "truncate") {
   writeFileSync(reportPath, serialized.slice(0, Math.floor(serialized.length / 2)));
 } else {
   writeFileSync(reportPath, serialized);
+}
+
+// The report is now durable, but the process lingers. A test kills it here,
+// reproducing "the report is on disk, the runner never recorded completion".
+if (slowAfterReportMs > 0) {
+  busyWait(slowAfterReportMs);
+}
+
+// The report is now durable, but the process never reached a clean exit. The
+// runner's in-flight state is still on disk, so recovery must re-derive the
+// completion offline rather than re-bill.
+if (crash === "after-report") {
+  process.stderr.write("fake cli: report is durable, the process died before exiting cleanly\n");
+  process.exit(10);
+}
+if (crash === "before-completion") {
+  process.stderr.write("fake cli: died in the window between the durable report and the completion record\n");
+  process.exit(11);
 }
 
 process.exit(mode === "exit1" ? 1 : 0);
