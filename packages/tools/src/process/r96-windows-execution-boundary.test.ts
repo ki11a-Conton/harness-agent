@@ -62,10 +62,26 @@ function tmpDir(label: string): string {
   return mkdtempSync(join(tmpdir(), `ar-r96-${label}-`));
 }
 
-/** Write a `.cmd` that echoes `marker` and exits 0. */
-function writeCmd(dir: string, marker: string, name = "tool.cmd"): string {
+/**
+ * Write a `.cmd` that echoes `marker` and exits 0.
+ *
+ * The fixture is written under EVERY casing the resolver may probe. E4-R92 (F9)
+ * measured why: `resolveWindowsCommand` appends the PATHEXT spelling VERBATIM
+ * (`.CMD`) and then asks the filesystem whether that path exists. Windows folds
+ * case, so one lowercase `tool.cmd` answers both `tool.CMD` and `tool.cmd` — but
+ * ext4 does not, so a bare-name probe for `r96rel.CMD` MISSES a lowercase file on
+ * disk and the test passes locally while failing on the Linux CI job. That is
+ * exactly how this file first failed ubuntu-latest's "Unit and integration tests".
+ * Writing both spellings keeps the test asserting OUR resolution logic rather than
+ * the host filesystem's case folding.
+ */
+function writeShimBothCasings(dir: string, marker: string, name = "tool.cmd"): string {
   const p = join(dir, name);
-  writeFileSync(p, ["@echo off", `echo ${marker}`, "exit /b 0", ""].join("\r\n"), "utf8");
+  const body = ["@echo off", `echo ${marker}`, "exit /b 0", ""].join("\r\n");
+  writeFileSync(p, body, "utf8");
+  if (name.toLowerCase().endsWith(".cmd")) {
+    writeFileSync(join(dir, `${name.slice(0, -4)}.CMD`), body, "utf8");
+  }
   return p;
 }
 
@@ -78,8 +94,8 @@ describe("E4-R96 G1: resolution and spawn agree on ONE cwd", () => {
       // Both directories hold a same-named script: the decoy in the parent (the
       // process cwd) and the real one in the execution cwd. Resolving against the
       // wrong directory is therefore not a miss — it is the WRONG SCRIPT.
-      writeCmd(parent, "DECOY");
-      writeCmd(child, "REAL");
+      writeShimBothCasings(parent, "DECOY");
+      writeShimBothCasings(child, "REAL");
 
       const resolved = resolveWindowsCommand("./tool.cmd", WIN_ENV, child);
       expect(resolved, "a relative script path must resolve under the execution cwd").not.toBeNull();
@@ -94,7 +110,7 @@ describe("E4-R96 G1: resolution and spawn agree on ONE cwd", () => {
   it("resolves a backslash relative path too", () => {
     const child = tmpDir("child-bs");
     try {
-      const real = writeCmd(child, "REAL");
+      const real = writeShimBothCasings(child, "REAL");
       const resolved = resolveWindowsCommand(".\\tool.cmd", WIN_ENV, child);
       expect(resolved).not.toBeNull();
       expect(resolved!.toLowerCase()).toBe(real.toLowerCase());
@@ -115,7 +131,7 @@ describe("E4-R96 G1: resolution and spawn agree on ONE cwd", () => {
   it("still returns an ABSOLUTE existing path unchanged", () => {
     const dir = tmpDir("abs");
     try {
-      const real = writeCmd(dir, "REAL");
+      const real = writeShimBothCasings(dir, "REAL");
       const resolved = resolveWindowsCommand(real, WIN_ENV, "C:\\somewhere\\else");
       expect(resolved).not.toBeNull();
       expect(resolved!.toLowerCase()).toBe(real.toLowerCase());
@@ -129,7 +145,7 @@ describe("E4-R96 G1: resolution and spawn agree on ONE cwd", () => {
     // bare name is a PATH lookup and nothing else, even when the cwd holds it.
     const dir = tmpDir("bare");
     try {
-      writeCmd(dir, "REAL", "r96bare.cmd");
+      writeShimBothCasings(dir, "REAL", "r96bare.cmd");
       expect(resolveWindowsCommand("r96bare", WIN_ENV, dir)).toBeNull();
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -139,7 +155,7 @@ describe("E4-R96 G1: resolution and spawn agree on ONE cwd", () => {
   it("resolves a RELATIVE PATH entry against the execution cwd", () => {
     const child = tmpDir("relpath");
     try {
-      const real = writeCmd(child, "REAL", "r96rel.cmd");
+      const real = writeShimBothCasings(child, "REAL", "r96rel.cmd");
       const env = { ...WIN_ENV, PATH: "." };
       const resolved = resolveWindowsCommand("r96rel", env, child);
       expect(resolved, "a relative PATH entry must be resolved against the execution cwd").not.toBeNull();
@@ -153,8 +169,8 @@ describe("E4-R96 G1: resolution and spawn agree on ONE cwd", () => {
     const parent = tmpDir("plan-parent");
     const child = tmpDir("plan-child");
     try {
-      writeCmd(parent, "DECOY");
-      const real = writeCmd(child, "REAL");
+      writeShimBothCasings(parent, "DECOY");
+      const real = writeShimBothCasings(child, "REAL");
       const plan = planArgvLaunch("./tool.cmd", [], WIN_ENV, "win32", child);
       expect(plan.ok).toBe(true);
       if (plan.ok) {
@@ -181,7 +197,7 @@ describe("E4-R96 G2: the resolved SCRIPT PATH is inside the execution boundary",
       for (const shape of ["par(en)", "am&p", "car^et", "semi;colon", "eq=uals", "per%cent", "ex!cl"]) {
         const dir = join(base, shape);
         mkdirSync(dir, { recursive: true });
-        const script = writeCmd(dir, "RAN");
+        const script = writeShimBothCasings(dir, "RAN");
         const plan = planArgvLaunch(script, [], WIN_ENV, "win32");
         expect(plan.ok, `a .cmd path containing ${JSON.stringify(shape)} must be refused`).toBe(false);
         if (!plan.ok) expect(plan.reason).toMatch(/metacharacter|refus/i);
@@ -197,7 +213,7 @@ describe("E4-R96 G2: the resolved SCRIPT PATH is inside the execution boundary",
       for (const shape of ["sp ace", "中文", "dash-and_underscore.dot"]) {
         const dir = join(base, shape);
         mkdirSync(dir, { recursive: true });
-        const script = writeCmd(dir, "RAN");
+        const script = writeShimBothCasings(dir, "RAN");
         const plan = planArgvLaunch(script, [], WIN_ENV, "win32");
         expect(plan.ok, `a .cmd path containing ${JSON.stringify(shape)} is transportable`).toBe(true);
         if (plan.ok) expect(plan.via).toBe("cmd");
@@ -210,7 +226,7 @@ describe("E4-R96 G2: the resolved SCRIPT PATH is inside the execution boundary",
   it("keeps the ARGUMENT metacharacter refusal, so the R79/R91 boundary is unchanged", () => {
     const dir = tmpDir("argmeta");
     try {
-      const script = writeCmd(dir, "RAN");
+      const script = writeShimBothCasings(dir, "RAN");
       for (const bad of ["a&b", "a|b", "a>b", "a^b", "a%b%", 'a"b', "a!b", "a(b)", "a\nb"]) {
         const plan = planArgvLaunch(script, [bad], WIN_ENV, "win32");
         expect(plan.ok, `must still refuse argument ${JSON.stringify(bad)}`).toBe(false);
@@ -285,7 +301,7 @@ describe("E4-R96 G3: a refusal names the reason, never the secret", () => {
   it("does not echo an argument that carries a credential", () => {
     const dir = tmpDir("secret-arg");
     try {
-      const script = writeCmd(dir, "RAN");
+      const script = writeShimBothCasings(dir, "RAN");
       const plan = planArgvLaunch(script, [`--token=${SECRET}&x`], WIN_ENV, "win32");
       expect(plan.ok).toBe(false);
       if (!plan.ok) {
@@ -302,7 +318,7 @@ describe("E4-R96 G3: a refusal names the reason, never the secret", () => {
   it("does not echo ANY argument when a DIFFERENT argument is the offender", () => {
     const dir = tmpDir("secret-other");
     try {
-      const script = writeCmd(dir, "RAN");
+      const script = writeShimBothCasings(dir, "RAN");
       const plan = planArgvLaunch(script, [`--api-key=${SECRET}`, "a&b"], WIN_ENV, "win32");
       expect(plan.ok).toBe(false);
       if (!plan.ok) {
@@ -319,7 +335,7 @@ describe("E4-R96 G3: a refusal names the reason, never the secret", () => {
     try {
       const dir = join(base, "am&p");
       mkdirSync(dir, { recursive: true });
-      const script = writeCmd(dir, "RAN");
+      const script = writeShimBothCasings(dir, "RAN");
       const plan = planArgvLaunch(script, [`--token=${SECRET}`], WIN_ENV, "win32");
       expect(plan.ok).toBe(false);
       if (!plan.ok) expect(plan.reason).not.toContain(SECRET);
@@ -332,7 +348,7 @@ describe("E4-R96 G3: a refusal names the reason, never the secret", () => {
     if (!isWindows) return;
     const dir = tmpDir("secret-e2e");
     try {
-      const script = writeCmd(dir, "RAN");
+      const script = writeShimBothCasings(dir, "RAN");
       const exe = new ProcessExecutor();
       const out = await exe.runArgv({ file: script, args: [`--token=${SECRET}&x`], cwd: dir });
       expect(out.status).toBe("error");
@@ -415,8 +431,8 @@ describe.skipIf(!isWindows)("E4-R96 real Windows processes: the cwd boundary hol
     try {
       // The decoy is the one a parent-cwd resolution would pick. It is the
       // dangerous outcome: the plan is silently satisfied by the WRONG script.
-      writeCmd(parent, "DECOY_RAN");
-      writeCmd(child, "REAL_RAN");
+      writeShimBothCasings(parent, "DECOY_RAN");
+      writeShimBothCasings(child, "REAL_RAN");
 
       process.chdir(parent);
       const exe = new ProcessExecutor();
@@ -437,7 +453,7 @@ describe.skipIf(!isWindows)("E4-R96 real Windows processes: the cwd boundary hol
     try {
       const dir = join(base, "sp ace", "中文");
       mkdirSync(dir, { recursive: true });
-      const script = writeCmd(dir, "SAFE_RAN");
+      const script = writeShimBothCasings(dir, "SAFE_RAN");
       const exe = new ProcessExecutor();
       const out = await exe.runArgv({ file: script, args: [], cwd: base });
       expect(out.status).toBe("success");
@@ -452,7 +468,7 @@ describe.skipIf(!isWindows)("E4-R96 real Windows processes: the cwd boundary hol
     try {
       const dir = join(base, "am&p");
       mkdirSync(dir, { recursive: true });
-      const script = writeCmd(dir, "RAN");
+      const script = writeShimBothCasings(dir, "RAN");
       const sentinel = join(base, "PWNED-r96.txt");
       const exe = new ProcessExecutor();
       const out = await exe.runArgv({ file: script, args: [], cwd: base });

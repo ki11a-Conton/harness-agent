@@ -14,14 +14,31 @@
 // together with a spawn, then checks the test itself and every enclosing
 // `describe` for a platform guard.
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = process.cwd();
 
-/** Test files that spawn Windows-only script fixtures. Each must guard them. */
-const FILES = [join(ROOT, "packages", "tools", "src", "process", "executor.test.ts")];
+/**
+ * Test files that spawn Windows-only script fixtures. Each must guard them.
+ *
+ * E4-R96: this was a hand-maintained list holding only `executor.test.ts`, so a
+ * NEW file (`r96-windows-execution-boundary.test.ts`) was invisible to the scan
+ * and reintroduced the exact case-folding defect (F9) the scan exists to catch —
+ * it probed `r96rel.CMD` while writing only `r96rel.cmd`, passing on Windows and
+ * failing ubuntu-latest's unit-test job. The list is now DISCOVERED rather than
+ * hand-written, so a new test file cannot opt out by being forgotten.
+ */
+function discoverSpawnFixtureTestFiles(root: string): string[] {
+  const dir = join(root, "packages", "tools", "src", "process");
+  return readdirSync(dir)
+    .filter((f) => f.endsWith(".test.ts") && f !== "windows-fixture-guard.test.ts")
+    .map((f) => join(dir, f))
+    .sort();
+}
+
+const FILES = discoverSpawnFixtureTestFiles(ROOT);
 
 /** A Windows-only script fixture, e.g. `join(dir, "tool.cmd")`. */
 const WINDOWS_FIXTURE = /\.(?:cmd|bat|ps1)["'`]/;
@@ -111,7 +128,17 @@ const LOWER_SCRIPT_LITERAL = /["'`]([A-Za-z0-9_.-]*?)\.(?:cmd|bat|ps1)["'`]/g;
  * the scan believe an uppercase fixture already exists.
  */
 const UPPER_SCRIPT_LITERAL = /["'`][A-Za-z0-9_-][A-Za-z0-9_.-]*\.(?:CMD|BAT|PS1)["'`]/;
-/** The documented helper that writes a fixture under every probed casing. */
+/**
+ * The documented helper that writes a fixture under every probed casing.
+ *
+ * HONEST LIMIT: this is matched by NAME. A static scan cannot tell a live branch
+ * from a dead one, so a helper whose uppercase write sits inside `if (false) { … }`
+ * still satisfies it. That is why the fixture writers are checked behaviourally
+ * where it matters: `r96-windows-execution-boundary.test.ts` writes the uppercase
+ * spelling EXPLICITLY in every test that probes a bare name, so those tests are
+ * cleared by the per-body `UPPER_SCRIPT_LITERAL` rule below rather than by this
+ * escape hatch.
+ */
 const BOTH_CASINGS_HELPER = /\bwriteShimBothCasings\s*\(/;
 
 /**

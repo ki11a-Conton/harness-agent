@@ -15,7 +15,8 @@ contract, and remove sensitive-argument echo from failure messages.
 | `pnpm typecheck` | exit 0 |
 | `pnpm build` | exit 0 |
 | R96 test file | 25 passed / 25 |
-| `packages/tools` suite | 25 files, 325 tests, all passed |
+| `packages/tools` suite | 25 files, 329 tests, all passed |
+| `windows-fixture-guard` | 13 assertions (was 9) — now discovers its targets |
 
 ---
 
@@ -174,7 +175,7 @@ reproduced, not merely missing API:
 ### GREEN (after implementation)
 
 `Tests 25 passed (25)`, and the regression suites unchanged:
-`packages/tools` 25 files / **325 passed**, including the existing R91
+`packages/tools` 25 files / **329 passed**, including the existing R91
 `executor.test.ts` (30), `task-verifier.test.ts` (20) and the static
 `windows-fixture-guard.test.ts` (9).
 
@@ -200,7 +201,7 @@ restored byte-identically and the restore verified by SHA256
 | --- | --- | --- |
 | Types | `pnpm typecheck` | exit 0 |
 | R96 | `pnpm vitest run packages/tools/src/process/r96-windows-execution-boundary.test.ts` | 25 passed |
-| Package | `pnpm vitest run packages/tools` | 25 files, 325 tests passed |
+| Package | `pnpm vitest run packages/tools` | 25 files, 329 tests passed |
 | Whitespace | `git diff --check` | exit 0 |
 | Line endings | no file is mixed CRLF/LF | verified |
 
@@ -210,6 +211,37 @@ passes), and only the real-process describe is `describe.skipIf(!isWindows)`, so
 POSIX reports SKIPPED rather than a silent pass. Plan §R96 line 190 is satisfied:
 Ubuntu's native execution is unchanged and the Windows-only real-execution tests
 are explicitly skipped there. No Linux installation was required or performed.
+
+### 6.1 A portability defect this work introduced, and how it was caught
+
+The FIRST version of the R96 test file repeated the E4-R92 F9 defect: it probed a
+bare name (`r96rel`) while writing only the lowercase `r96rel.cmd`. The resolver
+appends the PATHEXT spelling VERBATIM (`.CMD`), so on Windows the probe hit the
+file by case folding, and on ext4 it missed. CI reported it exactly:
+
+```text
+install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest)
+  FAILED STEP: Unit and integration tests      (run 35309519252)
+```
+
+It was **not** caught locally because the guard that exists for this class,
+`windows-fixture-guard.test.ts`, held a hand-written `FILES` list containing only
+`executor.test.ts`. A new test file was therefore invisible to the scan. Two fixes:
+
+- the fixture writer now writes **both** casings, and the affected tests write the
+  uppercase spelling explicitly;
+- the guard **discovers** its targets (`readdirSync` over
+  `packages/tools/src/process/*.test.ts`) instead of listing them, so a new file
+  cannot opt out by being forgotten. The scan grew from 9 to 13 assertions.
+
+**Honest limit on that guard:** `BOTH_CASINGS_HELPER` matches the helper by NAME,
+so a helper whose uppercase write sits in a dead branch still satisfies it. A
+mutation test confirmed this escape (`if (false) {` around the uppercase write kept
+the scan green). A behavioural variant that inspected the helper's body was written
+and then withdrawn, because it produced a false positive on a legitimate fixture
+name built with a template literal — a guard that cries wolf is worse than one with
+a documented limit. The limit is now stated in the source, and the tests that
+matter are cleared by the per-body uppercase-literal rule rather than the hatch.
 
 ## 7. Honest limits
 
