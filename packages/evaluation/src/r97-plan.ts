@@ -453,6 +453,22 @@ export interface R97PlanResult {
   planDigest: string | null;
   /** Facts the executor's gate compares against, derived from OBSERVATIONS. */
   gateFacts: R92GateFacts;
+  /**
+   * The PLAN-TIME observations the executor's gate compares the envelope
+   * against, in the shape the driver consumes.
+   *
+   * Plan §R97 line 213: "正式材料必须无需修改就能执行" — the finalized material must
+   * be executable WITHOUT modification. The driver already read
+   * `plan.observation`, but the builder never emitted it, so the artifact a
+   * human was asked to approve could not be run without hand-editing it.
+   *
+   * This is deliberately OUTSIDE the authorization envelope and therefore NOT
+   * part of `planDigest`: it is the INDEPENDENT side of the comparison the gate
+   * performs. Putting it inside the digest would make the check circular.
+   *
+   * `null` for a DRAFT (nothing was observed to record).
+   */
+  observation: R97PlanObservation | null;
   readinessIssues: R97ReadinessIssue[];
   /** True ONLY for a FINALIZED plan with zero readiness issues. */
   authorizable: boolean;
@@ -461,6 +477,23 @@ export interface R97PlanResult {
   passRateClaim: false;
   /** The driver that would execute this plan. Bound so the plan names its code. */
   driverVersion: string;
+}
+
+/**
+ * The observation block a driver compares the envelope against. Mirrors
+ * `gateFactsFrom(observation)` in `scripts/e4/r97-campaign-driver.mjs`, which is
+ * the consumer; both sides must agree on this shape or the artifact is not
+ * executable as written.
+ */
+export interface R97PlanObservation {
+  now: string;
+  executingSourceSha: string;
+  armShas: { baseline: string; candidate: string };
+  armDigests: { baseline: string; candidate: string };
+  caseFingerprints: Record<string, string>;
+  providerId: string;
+  modelId: string;
+  endpointIdentity: string | null;
 }
 
 /**
@@ -619,6 +652,25 @@ export async function buildR97AuthorizationPlan(opts: R97PlanBuildOptions): Prom
     authorization: authorizable ? envelope : null,
     planDigest,
     gateFacts,
+    // The plan-time observations, so the delivered artifact runs as-is. `null`
+    // for a DRAFT: there is nothing observed to record, and a draft is not
+    // executable anyway.
+    observation:
+      opts.baseline === null || opts.candidate === null
+        ? null
+        : {
+            now: opts.now,
+            executingSourceSha: candidateSha,
+            armShas: { baseline: baselineSha, candidate: candidateSha },
+            armDigests: {
+              baseline: opts.baseline.planDigest,
+              candidate: opts.candidate.planDigest,
+            },
+            caseFingerprints: { ...opts.candidate.caseFingerprints },
+            providerId: opts.candidate.providerId,
+            modelId: opts.candidate.modelId,
+            endpointIdentity: opts.candidate.endpointIdentity,
+          },
     readinessIssues: allIssues,
     authorizable,
     approvalMarkdown: renderR97Markdown({

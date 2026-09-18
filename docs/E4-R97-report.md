@@ -22,8 +22,8 @@ emit only the approval material, executing no real model.
 | Paid steps executed | **none** |
 | `pnpm typecheck` (working tree **and** clean checkout) | exit 0 |
 | `pnpm build` (working tree **and** clean checkout) | exit 0 |
-| R97 tests | 86 passed / 86 (3 files: ledger 25, plan 31, driver 30) — identical in the working tree and in a clean checkout |
-| `packages/evaluation` suite | 94 files, 1363 passed |
+| R97 tests | 88 passed / 88 (3 files: ledger 25, plan 31, driver 32) — identical in the working tree and in a clean checkout |
+| `packages/evaluation` suite | 94 files, 1365 passed |
 | R93 / R92+R95 / R94 gates (clean checkout) | 91 passed / 98 passed / 106 assertions PASSED |
 | `pnpm docs:verify` | ALL CHECKS PASS |
 | `git diff --check` | clean |
@@ -313,7 +313,55 @@ tests fail; restoring it passes 4/4.
 correct outcome of the fix — the old digest did not cover the executor, so it is
 superseded rather than reused.
 
-## 5. RED → GREEN
+## 5. A further defect: the artifact the user is asked to approve would not run
+
+Plan line 213 requires "正式材料必须无需修改就能执行" — the finalized material must be
+executable **without modification**. Measured against the delivered artifact:
+
+```
+$ node scripts/e4/r97-campaign-driver.mjs --plan .ci/r97-final/plan.json --fake-provider
+E4-R97: --fake-provider needs the plan artifact to carry an `observation` block
+EXIT=2
+```
+
+The driver already read `plan.observation` (§2.5's design), but `buildR97AuthorizationPlan`
+never **emitted** it. So the plan a human was asked to approve could not be executed
+until they hand-edited it — exactly what line 213 forbids. The plan already carried
+the same values in `gateFacts`; the driver was demanding a second, redundant copy
+that nothing produced.
+
+### 5.1 The fix, and why the block stays OUTSIDE the digest
+
+`R97PlanResult.observation` is now emitted (`null` for a DRAFT), in the shape the
+driver's `gateFactsFrom` consumes.
+
+It is deliberately **outside** the authorization envelope and therefore **not part
+of `planDigest`**. That is the security property, not an oversight: the observation
+is the *independent* side of the comparison the gate performs. Folding it into the
+digest would make the check circular — the plan would be comparing itself with
+itself, which is the very anti-copy defect §2.2 exists to prevent.
+
+Tamper-checked, fully authorized, with only the observation's candidate SHA altered:
+
+```
+status: NOT_RUN
+code:   ARM_BUILD_DRIFT
+reason: arm "candidate" sha drift: authorized a203737... but observed 999999...
+providerRequests: 0     logicalCalls: 0     EXIT=1
+```
+
+The digest-bound envelope is what catches it, so the block is safe to keep out of
+the digest. And the delivered artifact now runs as-is:
+
+```
+$ node scripts/e4/r97-campaign-driver.mjs --plan .ci/r97-final/plan.json --fake-provider   # authorized
+status: COMPLETE     providerRequests: 16     logicalCalls: 16     transportRetries: 0     EXIT=0
+```
+
+`planDigest` for a fixed `createdAt` is reproducible across builds (verified by
+building the same plan twice).
+
+## 6. RED → GREEN
 
 Every item was written as a failing test first:
 
@@ -321,17 +369,18 @@ Every item was written as a failing test first:
 | --- | --- | --- |
 | `r97-budget-ledger.test.ts` | 25 tests — no ledger module existed | 25 passed |
 | `r97-plan.test.ts` | 31 tests — no DRAFT/FINALIZED distinction existed | 31 passed |
-| `r97-driver-closed-loop.test.ts` | 30 tests — no driver existed; D7 first failed as `TypeError: rehearsal is not a function` (5 failures), D8 as `expected undefined to be 'e4-r97-campaign-driver-v1'` + 2× `expected 'REFUSED' to be 'NOT_RUN'` | 30 passed |
+| `r97-driver-closed-loop.test.ts` | 32 tests — no driver existed; D7 first failed as `TypeError: rehearsal is not a function` (5 failures), D8 as `expected undefined to be 'e4-r97-campaign-driver-v1'` + 2× `expected 'REFUSED' to be 'NOT_RUN'`, D9 as 2× `--fake-provider needs the plan artifact to carry an 'observation' block` | 32 passed |
 
 The strongest RED is the driver closed loop: before R97 there was no entry point
-to drive, so D1–D8 could not even be expressed. Three tests were **rewritten**
+to drive, so D1–D9 could not even be expressed. Three tests were **rewritten**
 after measuring the real behaviour — the array-equality order assertion, the P5
 parse shape, and the D7 rehearsal — because each original expectation encoded a
 contract the real entry point does not have; the corrected tests assert the
-measured contract. D8 is the opposite case: a defect found by re-reading the
-acceptance criteria against the code, with the RED written before the fix.
+measured contract. D8 and D9 are the opposite case: defects found by re-reading
+the acceptance criteria against the code and by running the delivered artifact,
+with the RED written before each fix.
 
-## 6. Acceptance, against plan §R97 lines 224–232
+## 7. Acceptance, against plan §R97 lines 224–232
 
 | Plan requirement | Evidence |
 | --- | --- |
@@ -344,7 +393,8 @@ acceptance criteria against the code, with the RED written before the fix.
 | Changing any bound field invalidates the old approval | §4: `driverVersion` is inside the digest, so changing it moves `planDigest` (D8); P4 approval package + P3 readiness refusals |
 | Clean checkout succeeds on Windows **and** Ubuntu offline CI | Windows: `D:\r97-clean` @ `a437252` — typecheck 0, build 0, R97 86/86, R93 91/91, R94 106 assertions, R92+R95 98/98, `test:coverage` 6470 passed / 0 failed. Ubuntu + Windows: run `35319690746` @ `a437252`, **5/5 jobs success** |
 | Original Ubuntu cold-start preserved | job `offline cold-start (ubuntu)` success on `a437252` and `f8b3df5` |
-| Deliverable is `READY_FOR_AUTHORIZATION` / `NOT_RUN` with exact digest, SHA, cases, executable caps, unknown cost | §7 below |
+| Deliverable is `READY_FOR_AUTHORIZATION` / `NOT_RUN` with exact digest, SHA, cases, executable caps, unknown cost | §8 below |
+| The finalized material is executable **without modification** | §5: the delivered `plan.json` runs as-is → `COMPLETE`, 16 logical calls, exit 0; a tampered observation → `ARM_BUILD_DRIFT`, 0 requests |
 | **0** real HTTP requests without new approval; no automatic 86-case run, no holdout, no new paid cases | Driver default prints `NOT_RUN`; no provider constructed; holdout untouched |
 
 ### 6.1 The clean-checkout run, verbatim
@@ -372,7 +422,7 @@ someone else's files.
 
 ### 6.2 Why the working-tree `pnpm test` shows 6 failures, and why they are not R97
 
-In the **working tree** `pnpm test` reports `6 failed | 6464 passed | 3 skipped`.
+In the **working tree** `pnpm test` reports `6 failed | 6466 passed | 3 skipped`.
 All six failures are one precondition, stated by the test itself:
 
 ```
@@ -405,20 +455,20 @@ Test Files  347 passed (347)
 ```
 
 **0 failed, 347/347 files.** So the six are attributable to the dirty tree and
-not to any R97 change. The working-tree passed count moved `6455 → 6464` (+9),
-exactly the nine tests added (5 in D7, 4 in D8), and no previously passing test
-regressed. The clean-checkout total (6470) is higher than the working-tree
-`passed` (6464) by exactly those six, which are the ones the precondition blocks
-— the arithmetic closes.
+not to any R97 change. The working-tree passed count moved `6455 → 6466` (+11),
+exactly the eleven tests added (5 in D7, 4 in D8, 2 in D9), and no previously
+passing test regressed. The clean-checkout total (6472) is higher than the
+working-tree `passed` (6466) by exactly those six, which are the ones the
+precondition blocks — the arithmetic closes.
 
-## 7. The deliverable — exact values
+## 8. The deliverable — exact values
 
 | Field | Value |
 | --- | --- |
 | Status | **`FINALIZED_AUTHORIZATION_PLAN` — READY_FOR_AUTHORIZATION / NOT_RUN** |
-| **Plan digest (approve this exact value)** | `676e8774c3a9691a62f3113480490711701f0040f1df2e46d76c52e3aceca7cb` |
-| Created | `2026-09-18T07:22:16.027Z` |
-| **Expires** | `2026-10-18T07:22:16.027Z` |
+| **Plan digest (approve this exact value)** | `e5d4c3625fd1d7708bb246b02c81f4e50ef8961268e27934c435c932f8b98ccb` |
+| Created | `2026-09-18T07:54:13.000Z` |
+| **Expires** | `2026-10-18T07:54:13.000Z` |
 | Driver version (bound into the digest) | `e4-r97-campaign-driver-v1` |
 | Output dir | `.ci/r97-ab` (nothing written there) |
 | Promotion-eligible | `false` |
@@ -432,7 +482,7 @@ regressed. The clean-checkout total (6470) is higher than the working-tree
 Artifacts: `.ci/r97-final/plan.json`, `observations.json`, `approval-package.md`
 (git-ignored working material, not committed).
 
-## 8. Runtime Freeze assessment (P38.4-11)
+## 9. Runtime Freeze assessment (P38.4-11)
 
 R97 adds two new modules under `packages/evaluation`, a new test file, and a new
 script. It changes two existing files:
@@ -454,7 +504,7 @@ tests plus the 11 R92-rehearsal tests pass unmodified.
 The R94 `Test-IsLink` fix and the `9840130` fixture fix belong to R94 and qualify
 there as release-integrity defects in the runner's containment control.
 
-## 9. Honest limits
+## 10. Honest limits
 
 - **`driverVersion` is a LABEL, not a code hash.** Binding it means a *renamed*
   driver is refused and a rewritten driver is expected to bump the label. Nothing
@@ -467,6 +517,13 @@ there as release-integrity defects in the runner's containment control.
   committed text says its driver "does not exist yet", so requiring one would be a
   retroactive claim. R92's envelope therefore keeps `driverVersion` absent; only
   R97's readiness check requires it.
+- **The observation block is not covered by `planDigest`, by design.** It is the
+  independent side of the gate comparison, so putting it in the digest would make
+  the check circular. The consequence to state plainly: an attacker who can edit
+  the plan artifact can edit the observation — and the gate then catches the
+  resulting drift (`ARM_BUILD_DRIFT`, 0 requests), because the digest-bound
+  envelope is what it is compared against. The block is a convenience for
+  executability, never a trust anchor.
 - **The rehearsal proves the DRIVER, not the campaign.** It runs the R87
   scripted-replay harness over the frozen selection with `ScriptedModelProvider`.
   It proves the driver can produce a complete, R93-valid paired matrix with zero
@@ -508,7 +565,7 @@ there as release-integrity defects in the runner's containment control.
 - **`maxToolCalls`/`maxDurationMs` were not raised.** No limit, timeout, retry
   count or iteration cap was changed to make any acceptance criterion green.
 
-## 10. Files
+## 11. Files
 
 | File | Change |
 | --- | --- |
@@ -516,7 +573,7 @@ there as release-integrity defects in the runner's containment control.
 | `packages/evaluation/src/r97-budget-ledger.test.ts` | **new** — 25 tests / 6 describes, incl. a real cross-process spawn and the deterministic lock regression |
 | `packages/evaluation/src/r97-plan.ts` | **new** — DRAFT / FINALIZED_AUTHORIZATION_PLAN / NOT_READY derivation, arm observation parsing, readiness checks incl. `DRIVER_VERSION_UNBOUND` |
 | `packages/evaluation/src/r97-plan.test.ts` | **new** — 30 tests / 6 describes, incl. the anti-copy and hostile-parse groups |
-| `packages/evaluation/src/r97-driver-closed-loop.test.ts` | **new** — 30 tests / 8 describes, incl. the real two-arm E2E, the zero-call rehearsal (D7), and the driver-version binding (D8) |
+| `packages/evaluation/src/r97-driver-closed-loop.test.ts` | **new** — 32 tests / 9 describes, incl. the real two-arm E2E, the zero-call rehearsal (D7), the driver-version binding (D8), and executable-as-written (D9) |
 | `packages/evaluation/src/r92-authorization.ts` | `driverVersion?: string` on `R92AuthorizationV1`, so it is covered by the authorization digest; non-empty when present |
 | `packages/evaluation/src/index.ts` | 2 `export *` lines |
 | `scripts/e4/r97-campaign-driver.mjs` | **new** — the real driver; `--fake-provider` default `NOT_RUN`; `runZeroCallRehearsal` + `--rehearse` for the R93-validated zero-call rehearsal |

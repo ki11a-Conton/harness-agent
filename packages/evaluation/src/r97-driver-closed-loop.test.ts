@@ -27,6 +27,8 @@ import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import * as childProcess from "node:child_process";
+import * as nodeUtil from "node:util";
 import { buildR97AuthorizationPlan, type R97ArmObservation } from "./r97-plan.js";
 
 const DRIVER = pathToFileURL(join(process.cwd(), "scripts", "e4", "r97-campaign-driver.mjs")).href;
@@ -385,6 +387,79 @@ describe("E4-R97 D3: the driver cannot exceed the ceiling it was given", () => {
     // one call in flight — it is a detector, not a hard limiter.
     expect(result["providerRequests"]).toBeLessThanOrEqual(3);
   });
+});
+
+describe("E4-R97 D9: the finalized plan is executable WITHOUT modification", () => {
+  // Plan §R97 line 213: "正式材料必须无需修改就能执行" — the finalized material must be
+  // executable as-is. Measured defect: `plan.json` as written by the plan builder
+  // carried no `observation` block, and the CLI refused it with exit 2
+  // ("--fake-provider needs the plan artifact to carry an `observation` block"),
+  // so the artifact the user is asked to approve could not be run without hand-
+  // editing it. The plan ALREADY carries the observed values in `gateFacts`; the
+  // driver was demanding a second, redundant copy.
+  const { execFile } = childProcess;
+  const { promisify } = nodeUtil;
+  const run = promisify(execFile);
+
+  it("the plan artifact the approval package describes runs as-is, with no edit", async () => {
+    const dir = await tempDir();
+    const plan = await finalizedPlan();
+    const planPath = join(dir, "plan.json");
+    // Written EXACTLY as the plan builder produced it — no injected observation.
+    await writeFile(planPath, JSON.stringify(plan, null, 2), "utf8");
+
+    const { stdout } = await run(
+      process.execPath,
+      [
+        join(REPO, "scripts", "e4", "r97-campaign-driver.mjs"),
+        "--plan", planPath,
+        "--fake-provider",
+        "--ledger", join(dir, "ledger"),
+      ],
+      {
+        cwd: REPO,
+        timeout: 120_000,
+        env: { ...process.env, ...AUTHORIZED_ENV(plan.planDigest!) },
+      },
+    );
+    const parsed = JSON.parse(stdout);
+    // It RUNS: not exit 2 for a missing block, and not a refusal.
+    expect(parsed.status).toBe("COMPLETE");
+    expect(parsed.logicalCalls).toBe(plan.authorization!.caseIds.length * 2);
+    expect(parsed.providerRequests).toBe(parsed.logicalCalls);
+  }, 180_000);
+
+  it("an unauthorized run of the same unmodified artifact is NOT_RUN with 0 requests", async () => {
+    const dir = await tempDir();
+    const plan = await finalizedPlan();
+    const planPath = join(dir, "plan.json");
+    await writeFile(planPath, JSON.stringify(plan, null, 2), "utf8");
+    // No auth env at all. The artifact must still be READABLE and refused
+    // cleanly — never a configuration error, and never a provider call.
+    const env = { ...process.env };
+    delete env["E4_R92_PAID_AUTH"];
+    delete env["RUN_PAID_BENCHMARKS"];
+    delete env["E4_R92_PAID_AUTH_DIGEST"];
+    // A refusal is a NON-ZERO exit by design (EXIT_REFUSED), so `execFile`
+    // rejects. The JSON is still on stdout, which is the contract being tested.
+    const stdout = await run(
+      process.execPath,
+      [
+        join(REPO, "scripts", "e4", "r97-campaign-driver.mjs"),
+        "--plan", planPath,
+        "--fake-provider",
+        "--ledger", join(dir, "ledger"),
+      ],
+      { cwd: REPO, timeout: 120_000, env },
+    )
+      .then((r) => r.stdout)
+      .catch((err: { stdout?: string }) => err.stdout ?? "");
+    expect(stdout.length).toBeGreaterThan(0);
+    const parsed = JSON.parse(stdout);
+    expect(parsed.status).toBe("NOT_RUN");
+    expect(parsed.providerRequests).toBe(0);
+    expect(parsed.logicalCalls).toBe(0);
+  }, 180_000);
 });
 
 describe("E4-R97 D4: the CLI entry refuses to build a real provider by default", () => {
