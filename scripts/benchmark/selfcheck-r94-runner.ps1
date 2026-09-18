@@ -642,31 +642,93 @@ Assert-True (@(Get-CaseExecs $log8c3).Count -eq 0) "8c: adoption is offline (0 p
 Write-Host "== 8d. the output root cannot escape through a junction/symlink =="
 # A lexical containment check passes for a link that points outside the
 # repository, so the runner must refuse to walk through one. Windows uses a
-# junction; Unix uses a symlink. Both surface as FileAttributes.ReparsePoint.
+# junction; Unix uses a symlink.
+#
+# E4-R97 FIXTURE DEFECT (MEASURED, CI run 35310573537 on ubuntu-latest): this
+# section used to trust `New-Item -ItemType <kind> -Target $outside` to have
+# created a REDIRECTING link. On Linux it did not — the `escape` path ended up a
+# PLAIN DIRECTORY — yet `$madeLink` was still true, so the section ran and
+# blamed the RUNNER for the fixture's failure:
+#
+#     [failure] 8d: an output root behind a link is refused
+#     [failure] 8d: the link refusal is a configuration error (got exit 0)
+#
+# The giveaway is the assertion that did NOT fail: "nothing was written outside
+# the repository" PASSED. Had `escape` really been a link to $outside, the runner
+# (which exited 0, i.e. did not refuse) would have created $outside/out and that
+# assertion would have failed too. Reproduced 1:1 on Windows by substituting a
+# plain directory for the link.
+#
+# So the fixture must PROVE its own precondition instead of assuming it: create
+# the link, then write a sentinel THROUGH it and require the sentinel to appear
+# at the far end. Only a construct that demonstrably redirects is used; anything
+# else is a visible SKIP, never a false runner failure.
 $linkParent = Join-Path $workAbs "link-parent"
 New-Item -ItemType Directory -Force -Path $linkParent | Out-Null
 $tmpBase = if ($env:TEMP) { $env:TEMP } elseif ($env:TMPDIR) { $env:TMPDIR } else { "/tmp" }
 $outside = Join-Path $tmpBase "r94-outside-$([guid]::NewGuid().ToString('n'))"
 New-Item -ItemType Directory -Force -Path $outside | Out-Null
 $junction = Join-Path $linkParent "escape"
+
+# Does a write through $candidate land in $outside? This is the ONLY test that
+# matters: it is what "redirecting link" means, and it cannot be satisfied by a
+# plain directory.
+function Test-Redirects([string]$candidate, [string]$target) {
+    $sentinel = "r94-redirect-$([guid]::NewGuid().ToString('n')).marker"
+    try {
+        Set-Content -LiteralPath (Join-Path $candidate $sentinel) -Value "x" -ErrorAction Stop
+    } catch {
+        return $false
+    }
+    $arrived = Test-Path -LiteralPath (Join-Path $target $sentinel)
+    Remove-Item -LiteralPath (Join-Path $target $sentinel) -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath (Join-Path $candidate $sentinel) -Force -ErrorAction SilentlyContinue
+    return $arrived
+}
+
 $madeLink = $false
+$kindUsed = "<none>"
+# Remove a link WITHOUT recursing: `Remove-Item -Recurse` on a directory link can
+# descend into the target and delete the far side. This only ever removes a path
+# that has just been proven NOT to redirect (or an empty directory), but the
+# non-recursive form makes that safety independent of the proof.
+function Remove-LinkOnly([string]$path) {
+    if (-not (Test-Path -LiteralPath $path)) { return }
+    try { [System.IO.Directory]::Delete($path, $false); return } catch { }
+    Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+}
 foreach ($kind in @("Junction", "SymbolicLink")) {
-    if ($madeLink) { break }
+    Remove-LinkOnly $junction
     try {
         New-Item -ItemType $kind -Path $junction -Target $outside -ErrorAction Stop | Out-Null
+    } catch {
+        continue
+    }
+    # A created path is not evidence of a link. Require the redirect.
+    if (Test-Redirects $junction $outside) {
         $madeLink = $true
-    } catch { $madeLink = $false }
+        $kindUsed = $kind
+        break
+    }
+    Remove-LinkOnly $junction
 }
+Write-Host "  link kind that demonstrably redirects: $kindUsed"
 if ($madeLink) {
     $rootRel = "$workRoot/link-parent/escape/out"
     $r8d = Invoke-Runner (New-Args $rootRel (New-CasesCopy "s8d") "-Suites solo -DryRunOnly") @{
         RUN_PAID_BENCHMARKS = "1"; OPENAI_API_KEY = $FAKE_KEY
     }
-    Assert-True ($r8d.Output -match "reparse point") "8d: an output root behind a link is refused"
+    Assert-True ($r8d.Output -match "reparse point") "8d: an output root behind a link is refused ($kindUsed)"
     Assert-True ($r8d.Exit -eq 2) "8d: the link refusal is a configuration error (got exit $($r8d.Exit))"
     Assert-True (-not (Test-Path (Join-Path $outside "out"))) "8d: nothing was written outside the repository"
 } else {
-    Write-Host "  SKIP  8d: this platform could not create a junction/symlink (not a contract failure)"
+    # A SKIP is honest but weak, so it is REPORTED as a skip with the platform
+    # named. It is deliberately not an assertion failure: a platform that cannot
+    # express a redirecting link cannot test the refusal, and failing here would
+    # repeat the very defect this comment documents.
+    Write-Host "  SKIP  8d: this platform could not create a redirecting link (not a contract failure)"
+    $osName = if ($env:RUNNER_OS) { $env:RUNNER_OS } else { "unknown" }
+    Write-Annotation "warning" "R94 8d skipped" "no redirecting link could be created on $osName; the containment refusal was NOT exercised here"
 }
 Remove-Item -Recurse -Force $outside -ErrorAction SilentlyContinue
 
