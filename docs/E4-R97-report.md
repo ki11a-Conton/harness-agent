@@ -15,7 +15,8 @@ emit only the approval material, executing no real model.
 | Item | Value |
 | --- | --- |
 | Implementation SHA | `a437252` — the R97 chain is `e584cdd` (driver/ledger/plan) → `f8b3df5` (zero-call rehearsal) → `a437252` (driver-version binding) |
-| CI run | [`35317337663`](https://github.com/ki11a-Conton/harness-agent/actions/runs/35317337663) @ `f8b3df5` — **5/5 jobs success**, incl. **windows-latest** and **ubuntu-latest**, `offline cold-start (ubuntu)`, `coverage gate`, `release attestation`. `a437252`'s run is [`35319690746`](https://github.com/ki11a-Conton/harness-agent/actions/runs/35319690746) |
+| CI run | [`35319690746`](https://github.com/ki11a-Conton/harness-agent/actions/runs/35319690746) @ `a437252` — **5/5 jobs success**: windows-latest, ubuntu-latest, `offline cold-start (ubuntu)`, `coverage gate`, `release attestation`. (`f8b3df5`'s run [`35317337663`](https://github.com/ki11a-Conton/harness-agent/actions/runs/35317337663) was also 5/5.) |
+| `pnpm test:coverage` (clean checkout) | **347 files passed, 6470 passed | 3 skipped, 0 failed**; 92.2% lines / 90.49% statements |
 | Real provider calls | **0** — no provider is constructed on any path exercised here |
 | Network | none (a real `node` child process is spawned; no socket is opened) |
 | Paid steps executed | **none** |
@@ -341,8 +342,8 @@ acceptance criteria against the code, with the RED written before the fix.
 | Zero-call rehearsal before asking for approval | §3: 16 records, 0 provider calls, 0 network, no real provider constructed |
 | Finalized plan digest **exactly equals** the real dry-run digest | §2.3 table; both arms' digests are the CLI's own |
 | Changing any bound field invalidates the old approval | §4: `driverVersion` is inside the digest, so changing it moves `planDigest` (D8); P4 approval package + P3 readiness refusals |
-| Clean checkout succeeds on Windows **and** Ubuntu offline CI | Windows: `D:\r97-clean` @ `a437252` — typecheck 0, build 0, R97 86/86, R93 91/91, R94 106 assertions, R92+R95 98/98. Ubuntu + Windows: run `35317337663` @ `f8b3df5`, **5/5 jobs success** |
-| Original Ubuntu cold-start preserved | job `offline cold-start (ubuntu)` success on `f8b3df5` |
+| Clean checkout succeeds on Windows **and** Ubuntu offline CI | Windows: `D:\r97-clean` @ `a437252` — typecheck 0, build 0, R97 86/86, R93 91/91, R94 106 assertions, R92+R95 98/98, `test:coverage` 6470 passed / 0 failed. Ubuntu + Windows: run `35319690746` @ `a437252`, **5/5 jobs success** |
+| Original Ubuntu cold-start preserved | job `offline cold-start (ubuntu)` success on `a437252` and `f8b3df5` |
 | Deliverable is `READY_FOR_AUTHORIZATION` / `NOT_RUN` with exact digest, SHA, cases, executable caps, unknown cost | §7 below |
 | **0** real HTTP requests without new approval; no automatic 86-case run, no holdout, no new paid cases | Driver default prints `NOT_RUN`; no provider constructed; holdout untouched |
 
@@ -361,6 +362,7 @@ R93:      Test Files 1 passed (1)   Tests  91 passed (91)
 R92+R95:  Test Files 2 passed (2)   Tests  98 passed (98)
 R94 selfcheck: PASSED (0 provider calls, 0 network, 0 cost), 106 assertions
 rehearsal via the clean CLI: validationStatus VALID, 16 records, COMPLETE, providerCalls 0
+pnpm test:coverage: 347 files passed, 6470 passed | 3 skipped, 0 failed (92.2% lines)
 ```
 
 This is plan §R97 line 230 and §R96's clean-tree precondition satisfied
@@ -385,7 +387,7 @@ deleted and `plan(20260917-083737).md` untracked — which plan §1 line 46 reco
 as an environment precondition that must **not** be resolved by deleting or
 stashing the user's changes.
 
-The same three test files were run in the clean `f8b3df5` checkout:
+The same three test files were run in the clean checkout:
 
 ```
 apps/cli/src/e4-r55-failure-wiring.test.ts + e4-09-production-e2e.test.ts
@@ -393,9 +395,21 @@ apps/cli/src/e4-r55-failure-wiring.test.ts + e4-09-production-e2e.test.ts
 Test Files  3 passed (3)     Tests  161 passed | 2 skipped (163)
 ```
 
-**0 failures.** The six are therefore attributable to the dirty tree and not to
-any R97 change. The passed count moved `6455 → 6464` (+9), exactly the nine tests
-added (5 in D7, 4 in D8), and no previously passing test regressed.
+**0 failures.** Stronger still, the **entire** suite in the clean checkout at
+`a437252`:
+
+```
+pnpm test:coverage
+Test Files  347 passed (347)
+     Tests  6470 passed | 3 skipped (6473)
+```
+
+**0 failed, 347/347 files.** So the six are attributable to the dirty tree and
+not to any R97 change. The working-tree passed count moved `6455 → 6464` (+9),
+exactly the nine tests added (5 in D7, 4 in D8), and no previously passing test
+regressed. The clean-checkout total (6470) is higher than the working-tree
+`passed` (6464) by exactly those six, which are the ones the precondition blocks
+— the arithmetic closes.
 
 ## 7. The deliverable — exact values
 
