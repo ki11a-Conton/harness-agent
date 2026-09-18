@@ -48,13 +48,44 @@ $workAbs = Join-Path $repoRoot $workRoot
 $logDir = Join-Path $repoRoot ".ci/r94-selfcheck-argv"
 
 $script:failures = 0
+$script:lastLabel = "<none>"
 function Assert-True([bool]$condition, [string]$label) {
+    $script:lastLabel = $label
     if ($condition) {
         Write-Host "  PASS  $label"
     } else {
         Write-Host "  FAIL  $label" -ForegroundColor Red
         $script:failures++
+        # A red gate must be diagnosable from the CI checks UI alone. The job log
+        # needs repository admin rights to download, so a failure whose only
+        # record is the log is effectively undebuggable from outside the org.
+        # `::error::` is the GitHub Actions workflow command that turns this line
+        # into a check annotation, which IS readable through the public API.
+        # MEASURED: the first CI run of this gate (35306276313) failed on both
+        # OSes and the reason could not be recovered without this.
+        Write-Annotation "error" "R94 self-check assertion failed" $label
     }
+}
+
+# Emit a GitHub Actions annotation when running in CI. Escaping follows the
+# documented workflow-command rules: `%`, CR and LF must be percent-encoded or
+# the runner truncates the message at the newline.
+function Write-Annotation([string]$level, [string]$title, [string]$message) {
+    if ($env:GITHUB_ACTIONS -ne "true") { return }
+    $e = $message.Replace("%", "%25").Replace("`r", "%0D").Replace("`n", "%0A")
+    $t = $title.Replace("%", "%25").Replace("`r", "%0D").Replace("`n", "%0A")
+    Write-Host "::$level title=$t::$e"
+}
+
+# `$ErrorActionPreference = "Stop"` means ANY unexpected terminating error aborts
+# the script with no assertion failure recorded — the gate would exit non-zero
+# with an empty annotation set, which is exactly the undebuggable shape above.
+# This trap makes an abort as diagnosable as a failed assertion.
+trap {
+    $msg = "ABORTED after assertion '$($script:lastLabel)': $($_.Exception.Message)"
+    Write-Host "  ABORT $msg" -ForegroundColor Red
+    Write-Annotation "error" "R94 self-check aborted" $msg
+    exit 1
 }
 
 $FAKE_KEY = "sk-r94-fake-key-not-a-real-credential"
@@ -668,7 +699,18 @@ $pinned = @{
 foreach ($rel in $pinned.Keys) {
     $p = Join-Path $repoRoot $rel
     $h = if (Test-Path $p) { (Get-FileHash $p -Algorithm SHA256).Hash.ToLowerInvariant() } else { "<missing>" }
-    Assert-True ($h -eq $pinned[$rel]) "9: $rel is unchanged ($h)"
+    # A mismatch here is a CHECKOUT/line-ending question before it is a content
+    # question: these blobs are stored LF, and a Windows checkout with
+    # core.autocrlf=true rewrites them to CRLF (measured: 372/389/1409 CR bytes,
+    # digests 0633c28e/eb56d679/c2195cce). Report the byte shape in the label so
+    # the CI annotation alone distinguishes "the file changed" from "the checkout
+    # rewrote the line endings".
+    $shape = if (Test-Path $p) {
+        $b = [System.IO.File]::ReadAllBytes($p)
+        $cr = 0; foreach ($x in $b) { if ($x -eq 13) { $cr++ } }
+        "bytes=$($b.Length) CR=$cr"
+    } else { "missing" }
+    Assert-True ($h -eq $pinned[$rel]) "9: $rel is unchanged ($h; $shape)"
 }
 
 # ===========================================================================

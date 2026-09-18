@@ -9,6 +9,19 @@
 docs/evolution/*.json text eol=lf
 benchmarks/results/**/*.json text eol=lf
 
+# E4-R94 (finding C follow-up): the committed evidence manifests and the frozen
+# case selection are read by RAW BYTES. scripts/benchmark/selfcheck-r94-runner.ps1
+# section 9 pins the sha256 of three of them, and the R90 raw-byte audit separates
+# rawRootDigest (bytes) from rootDigest (normalized content) for exactly this reason.
+# Without a rule here, a fresh windows-latest checkout with core.autocrlf=true
+# rewrites every one of them to CRLF and the pinned digests no longer match -
+# MEASURED: run 35306276313 failed on BOTH windows-latest and ubuntu-latest, because
+# that run was the first to execute the R94 selfcheck in CI. The blobs are already
+# stored LF (git ls-files --eol reports i/lf for all of them), so this rule changes
+# NO committed byte; it only stops the checkout from rewriting them. Same fix and
+# same rationale as the two rules above.
+docs/evidence/**/*.json text eol=lf
+
 # E4-R84: the campaign evidence fixture is byte-pinned. Its committed root
 # digest (asserted in packages/evaluation/src/campaign-validate.test.ts) and its
 # generator's `--check` mode both compare bytes, so a Windows checkout with
