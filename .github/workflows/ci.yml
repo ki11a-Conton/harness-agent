@@ -933,7 +933,14 @@ jobs:
           mkdir -p .ci
           # Exit code is preserved by `set -o pipefail` while the log is kept for
           # the assertions in the next steps and for the uploaded artifact.
-          pnpm exec vitest run \
+          # MEASURED (run 35482804955): the default reporter only prints a
+          # PASSING test's own line for slow tests, so a fast test name (e.g.
+          # `passes --plan-digest to the dispatch`, a few ms) never appears in
+          # the log and any name-based `grep ... ✓` assertion fails even though
+          # the suite is green. --reporter=verbose prints EVERY test on its own
+          # line (`✓ <file> > <describe> > <name>`), which the assertion steps
+          # below depend on; `↓` marks skipped and `×` marks failed.
+          pnpm exec vitest run --reporter=verbose \
             packages/evaluation/src/r97-budget-ledger.test.ts \
             packages/evaluation/src/r97-execution-state.test.ts \
             packages/evaluation/src/r97-plan.test.ts \
@@ -952,6 +959,12 @@ jobs:
           # replaced by a real per-case execution. The contract test asserts that
           # by requiring report-derived verdict text, so the check here is that
           # the test that proves it RAN and PASSED.
+          # The suite ran with --reporter=verbose, so every PASSING test has its
+          # own line (MEASURED byte layout: ` ✓ <file> > <describe> > <name>`,
+          # one leading space before the checkmark; `↓` marks skipped and `×`
+          # marks failed — a failure would already have failed the suite step).
+          # A name line that also carries `✓` is therefore a PASS, and one that
+          # carries `↓` (skipped) or `×` (failed) is correctly refused.
           for name in \
             "executes the case and records a verdict that can ONLY come from the real report" \
             "TWO DIFFERENT CASES each enter their OWN context"
@@ -964,7 +977,9 @@ jobs:
           done
           # The dispatch argv must carry --plan-digest. Assert the test that pins
           # it passed, so a regression to the measured P0 (no case could ever run)
-          # cannot go green.
+          # cannot go green. MEASURED (run 35482804955): under the default
+          # reporter this fast (few-ms) test never gets its own line, so the
+          # assertion failed on a GREEN suite; the verbose format fixes that.
           if ! grep -F "passes --plan-digest to the dispatch" "$LOG" | grep -qF "✓"; then
             echo "::error::the --plan-digest dispatch assertion did not execute/pass — the P0 regression is unpinned"
             exit 1
@@ -981,33 +996,35 @@ jobs:
             exit 1
           fi
 
-          # The driver file's own summary line looks like:
-          #   ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts (39 tests)
-          # `skipped` is fatal BY ITSELF: finding F7 IS the silent-skip defect, so
-          # a green suite that skipped the D6 path must never be reported green.
-          line="$(grep -E 'r97-driver-closed-loop\.test\.ts' "$LOG" | grep -E '[0-9]+ tests?' | tail -n 1 || true)"
-          if [ -z "$line" ]; then
-            echo "::error::the driver test file produced no summary line — it did not run"
+          # --reporter=verbose prints one line per test:
+          #   ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > D6 … > <name>
+          # (measured: one leading space before the `✓`). A passing line carries
+          # `✓`; a SKIPPED line carries `↓`; `skipped` is fatal BY ITSELF:
+          # finding F7 IS the silent-skip defect, so a green suite that skipped
+          # the D6 path must never be reported green.
+          FILE='packages/evaluation/src/r97-driver-closed-loop.test.ts'
+          count="$(grep -cF "✓ ${FILE}" "$LOG" || true)"
+          skipped="$(grep -cF "↓ ${FILE}" "$LOG" || true)"
+          if [ -z "$count" ]; then
+            echo "::error::no executed-test lines for the driver file — it did not run"
             grep -nE 'r97-driver-closed-loop' "$LOG" || true
             exit 1
           fi
-          echo "driver summary: $line"
+          echo "driver file: ${count} executed, ${skipped} skipped"
 
-          if echo "$line" | grep -qE '[0-9]+ skipped'; then
+          if [ "${skipped}" -gt 0 ]; then
             echo "::error::the driver closed-loop file SKIPPED tests — finding F7: a missing arm precondition must be an explicit FAILURE, never a skip"
-            echo "$line"
             exit 1
           fi
 
-          count="$(echo "$line" | grep -oE '[0-9]+ tests?' | grep -oE '[0-9]+' | head -n 1)"
-          # MEASURED: the file declares 39 `it(` blocks, two of which are the D6
-          # acceptance path. A threshold (rather than an exact pin) keeps this
-          # gate from breaking on an unrelated added test while still catching a
-          # silently-skipped D6 — with `skipped` already fatal above, a shortfall
-          # here means the file did not run its declared suite at all.
+          # MEASURED: the file declares 45 `it(` blocks. A threshold (rather than
+          # an exact pin) keeps this gate from breaking on an unrelated added
+          # test while still catching a silently-skipped D6 — with `skipped`
+          # already fatal above, a shortfall here means the file did not run its
+          # declared suite at all.
           EXPECTED_MIN=36
-          if [ -z "$count" ] || [ "$count" -lt "$EXPECTED_MIN" ]; then
-            echo "::error::the driver file executed ${count:-0} test(s), fewer than the required ${EXPECTED_MIN} — the closed loop did not really run"
+          if [ "$count" -lt "$EXPECTED_MIN" ]; then
+            echo "::error::the driver file executed ${count} test(s), fewer than the required ${EXPECTED_MIN} — the closed loop did not really run"
             exit 1
           fi
           echo "PASS  r97-driver-closed-loop.test.ts executed ${count} test(s) (>= ${EXPECTED_MIN}) with 0 skipped"
@@ -1015,20 +1032,21 @@ jobs:
           # The D6 acceptance path itself must be present in the run. Its two
           # tests are named; assert their NAMES appear as executed (the `✓`
           # marker), which is what distinguishes "ran and passed" from "skipped".
-          if ! grep -qE '✓.*both arms are observed by the real CLI dry-run' "$LOG"; then
+          if ! grep -F "both arms are observed by the real CLI dry-run" "$LOG" | grep -qF "✓"; then
             echo "::error::the D6 two-arm observation test did not execute/pass — the real two-checkout path is UNPROVEN"
             exit 1
           fi
           echo "PASS  D6 two-arm observation test executed and passed"
 
-          # Every other required file must also have reported a summary line.
+          # Every other required file must also have executed, with zero skips.
           for f in r97-budget-ledger r97-execution-state r97-plan; do
-            if ! grep -E "${f}\.test\.ts" "$LOG" | grep -qE '[0-9]+ tests?'; then
-              echo "::error::${f}.test.ts produced no summary line — it did not run"
+            cnt="$(grep -cF "✓ packages/evaluation/src/${f}.test.ts" "$LOG" || true)"
+            skip="$(grep -cF "↓ packages/evaluation/src/${f}.test.ts" "$LOG" || true)"
+            if [ -z "$cnt" ] || [ "$cnt" -lt 1 ]; then
+              echo "::error::${f}.test.ts executed no tests — it did not run"
               exit 1
             fi
-            skipped="$(grep -E "${f}\.test\.ts" "$LOG" | grep -E '[0-9]+ tests?' | tail -n 1 || true)"
-            if echo "$skipped" | grep -qE '[0-9]+ skipped'; then
+            if [ "${skip}" -gt 0 ]; then
               echo "::error::${f}.test.ts SKIPPED tests, which the §R98/§R101 acceptance depends on"
               exit 1
             fi
@@ -1061,7 +1079,7 @@ jobs:
           # Independent corroboration: the suite really did start child node
           # processes (the ledger test spawns `node --input-type=module`). If it
           # silently never spawned, the in-process path was all that ran.
-          if ! grep -qE "G5: the budget holds ACROSS PROCESSES" "$LOG"; then
+          if ! grep -F "G5: the budget holds ACROSS PROCESSES" "$LOG" | grep -qF "✓"; then
             echo "::error::the G5 cross-process group did not run at all"
             exit 1
           fi

@@ -193,7 +193,14 @@ async function recordCampaignClaim(campaignId: string, dir: string, now: () => n
       await writeFile(claimPathFor(campaignId), `${JSON.stringify(next, null, 2)}\n`, "utf8");
       return previous;
     } finally {
-      await rm(lockPath, { force: true }).catch(() => {});
+      // P14-6: best-effort cleanup failures must be OBSERVABLE, never swallowed.
+      // A stale lock file is harmless (acquireClaimLock is bounded and stale
+      // locks are recovered), but a silent empty-callback catch is forbidden.
+      await rm(lockPath, { force: true }).catch((cleanupErr) => {
+        process.stderr.write(
+          `[degraded] r97-budget-ledger.claim-lock-cleanup: ${cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)}\n`,
+        );
+      });
       void token;
     }
   } catch {
