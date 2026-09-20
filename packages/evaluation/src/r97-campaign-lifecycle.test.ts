@@ -47,6 +47,7 @@ import {
   R97_CAMPAIGN_DIR_CONFLICT,
 } from "./r97-campaign-lifecycle.js";
 import { campaignIdOf, R97_CAMPAIGN_CLAIMS_DIR_ENV, R97_LEDGER_FILENAME } from "./r97-budget-ledger.js";
+import { R97_EXEC_FILENAME } from "./r97-execution-state.js";
 
 let dirs: string[] = [];
 async function tempDir(): Promise<string> {
@@ -275,5 +276,51 @@ describe("R98-A L4: the lifecycle refuses identity drift", () => {
     await expect(
       openR97Campaign(dir, { planDigest: plan, campaignModelCalls: GRANT, mode: "auto" }),
     ).rejects.toThrow(/CAMPAIGN_HEADER_CORRUPT/);
+  });
+});
+
+describe("R98-A L5: an established campaign has ALL THREE artifacts at once", () => {
+  it("creates the case state in the same step as the header and the ledger", async () => {
+    // ORDER IS THE CONTRACT, and this is its last part. If the case state were
+    // created lazily — by the driver, on its way to the first unit — there would
+    // be a window in which a fully authorized campaign (header + ledger present)
+    // had NO state file, and a resume inside that window would be
+    // indistinguishable from a DELETED state file. Creating all three together
+    // closes the window by construction.
+    const dir = await tempDir();
+    const plan = freshPlan();
+    const campaign = await openR97Campaign(dir, { planDigest: plan, campaignModelCalls: GRANT, mode: "first-run" });
+    expect(await campaign.execState.records()).toEqual([]);
+    // All three artifacts are on disk right now.
+    await expect(readFile(join(dir, R97_CAMPAIGN_HEADER_FILENAME), "utf8")).resolves.toBeTruthy();
+    await expect(readFile(join(dir, R97_LEDGER_FILENAME), "utf8")).resolves.toBeTruthy();
+    await expect(readFile(join(dir, R97_EXEC_FILENAME), "utf8")).resolves.toBeTruthy();
+  });
+
+  it("a resume adopts the SAME state, and a DELETED state file is a named loss", async () => {
+    const dir = await tempDir();
+    const plan = freshPlan();
+    const first = await openR97Campaign(dir, { planDigest: plan, campaignModelCalls: GRANT, mode: "first-run" });
+    // Record some work, so the store is not trivially empty.
+    const key = { experimentId: plan, caseId: "c1", suite: "regression", arm: "baseline", repetition: 1 };
+    const attempt = await first.execState.begin(key, { reservationId: "r1", inputDigest: "d1" });
+    await first.execState.complete(attempt, { resultHash: "h1" });
+
+    // A resume sees the SAME completed unit — the campaign handle is the store.
+    const resumed = await openR97Campaign(dir, { planDigest: plan, campaignModelCalls: GRANT, mode: "auto" });
+    expect(resumed.mode).toBe("resume");
+    expect(await resumed.execState.isDone(key)).toBe(true);
+
+    // Now the state file is DELETED. The campaign is established (header +
+    // ledger survive), so this is a LOSS, not a blank slate: re-running would
+    // re-execute and re-bill every unit.
+    await rm(join(dir, R97_EXEC_FILENAME), { force: true });
+    await expect(
+      openR97Campaign(dir, { planDigest: plan, campaignModelCalls: GRANT, mode: "auto" }),
+    ).rejects.toThrow(/EXEC_STATE_MISSING/);
+    // ...and the refusal did NOT create a fresh empty store.
+    await expect(readFile(join(dir, R97_EXEC_FILENAME), "utf8")).rejects.toThrow();
+    // The ledger is untouched by the refusal.
+    await expect(readFile(join(dir, R97_LEDGER_FILENAME), "utf8")).resolves.toBeTruthy();
   });
 });

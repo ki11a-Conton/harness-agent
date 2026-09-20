@@ -196,6 +196,10 @@ export async function runDriver(opts) {
     skippedUnits: 0,
     // R98 (F2): in-flight units a crashed process left behind, now quarantined.
     recoveredUnits: 0,
+    // R98-B: units left `running` by an owner on ANOTHER HOST. They cannot be
+    // judged dead, so they are conservatively left alone and reported here
+    // rather than silently quarantined or re-dispatched.
+    foreignOwnerUnits: 0,
     // R98 (F2): terminal units in the durable state after this run.
     completedUnits: 0,
     // R99: which executor ran the units, and — in arm-worker mode — what the
@@ -222,6 +226,8 @@ export async function runDriver(opts) {
     // R98-A (N2): which campaign root this run resolved to, and whether any
     // OTHER directory claims the same authorization.
     campaign: null,
+    // R98-B: units an operator re-opened with an explicit `retry`.
+    reopenedForRetryUnits: 0,
     authorization: null,
   };
 
@@ -363,6 +369,10 @@ export async function runDriver(opts) {
       planDigest: plan.planDigest,
       campaignModelCalls: plan.authorization.caps.find((c) => c.cap === "maxModelCalls").value,
       mode: "auto",
+      // Test seam: process liveness is not observable deterministically from
+      // inside a test process, so a caller may inject the probe. Production
+      // callers pass nothing and the real `process.kill(pid, 0)` probe is used.
+      ...(opts.isAlive === undefined ? {} : { isAlive: opts.isAlive }),
     });
     ledger = campaign.ledger;
     result.campaign = {
@@ -389,14 +399,22 @@ export async function runDriver(opts) {
     // The ledger answers "how many calls may still be made"; this answers "which
     // units are already finished". Without it a second run of the SAME plan
     // committed another 2N calls (measured: 16 then 16 = 32).
-    execState = await evaluation.openR97ExecutionState(ledgerDir, {
-      experimentId: plan.planDigest,
-      planDigest: plan.planDigest,
-    });
-    // A unit left `running` by a dead process is quarantined as outcome_unknown:
-    // it is neither skipped as a success nor silently re-dispatched.
-    const inFlight = await execState.recoverInFlight();
+    //
+    // It comes from the CAMPAIGN HANDLE, not a second open (finding N2/N3). The
+    // lifecycle created it in the same ordered step as the header and the ledger,
+    // so "established" means all three artifacts exist and a missing state file
+    // is unambiguously a DELETION rather than a campaign that never got that far.
+    // Opening it separately here would reintroduce exactly that ambiguity.
+    execState = campaign.execState;
+    // A unit left `running` by a process that is PROVABLY GONE is quarantined as
+    // outcome_unknown: it is neither skipped as a success nor silently
+    // re-dispatched. A unit whose owner is still alive is left alone, so a
+    // second process cannot steal a running unit (finding N3).
+    const inFlight = await execState.recoverInFlight(
+      opts.isAlive === undefined ? {} : { isAlive: opts.isAlive },
+    );
     result.recoveredUnits = inFlight.unknown;
+    result.foreignOwnerUnits = inFlight.foreign;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     result.status = "REFUSED";
@@ -606,10 +624,31 @@ export async function runDriver(opts) {
       result.reservations.push({ arm, caseId, id: reservation.reservationId });
       // Persist `running` BEFORE the request is allowed to leave (plan §R98:
       // "先持久化 running/reservation，再允许请求发出").
-      const attemptId = await execState.begin(unitKey, {
-        reservationId: reservation.reservationId,
-        inputDigest: inputDigestOf(plan, caseId),
-      });
+      //
+      // `begin` can REFUSE (finding N3): another attempt still owns this unit
+      // (EXEC_BUSY), or a finished unit's inputs have drifted (EXEC_INPUT_DRIFT).
+      // Both mean "do not dispatch", so the reservation is abandoned — nothing
+      // left this process, so returning the allowance is correct — and the run
+      // stops with a named code instead of an uncaught exception.
+      let attemptId;
+      try {
+        attemptId = await execState.begin(unitKey, {
+          reservationId: reservation.reservationId,
+          inputDigest: inputDigestOf(plan, caseId),
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        await ledger.abandon(reservation.reservationId, `begin refused: ${redactFailureText(message)}`);
+        result.status = "REFUSED";
+        result.code = /EXEC_BUSY/.test(message)
+          ? "UNIT_ALREADY_RUNNING"
+          : /EXEC_INPUT_DRIFT/.test(message)
+            ? "UNIT_INPUT_DRIFT"
+            : "UNIT_BEGIN_REFUSED";
+        result.reason = `unit ${arm}/${caseId} could not be started: ${redactFailureText(message)}`;
+        result.budget = await ledger.view();
+        return result;
+      }
       // The call. `state.requests` is the ground truth for "how many provider
       // requests happened", independent of the ledger.
       let consumed = 0;
@@ -675,9 +714,16 @@ export async function runDriver(opts) {
   result.providerRequests = providerState === null ? 0 : providerState.requests;
   result.executionMode = executionMode;
   result.budget = await ledger.view();
+  // TERMINAL units: those that reached a verdict of their own. A unit an
+  // operator reconciled for a RETRY is deliberately NOT counted here, because
+  // `isDone` reports it as still pending (finding N3) — counting it as finished
+  // would let a run claim more completed work than it actually has.
   result.completedUnits = (await execState.records()).filter(
-    (r) => r.status === "completed" || r.status === "failed",
+    (r) => (r.status === "completed" || r.status === "failed") && r.reconciledForRetry !== true,
   ).length;
+  // Units an operator re-opened: counted separately so "how much of this
+  // campaign is settled?" is answerable without subtracting two other numbers.
+  result.reopenedForRetryUnits = (await execState.records()).filter((r) => r.reconciledForRetry === true).length;
   // HOW MANY UNITS THE VERIFIER ACTUALLY PASSED. Computed HERE, before the
   // exit-path branches, so EVERY outcome — PARTIAL included — reports the same
   // field. Leaving it to the COMPLETE branch alone made a PARTIAL run report

@@ -56,6 +56,7 @@ import {
   type R97BudgetLedger,
   type R97LedgerOpenMode,
 } from "./r97-budget-ledger.js";
+import { openR97ExecutionState, type R97ExecutionState } from "./r97-execution-state.js";
 
 export const R97_CAMPAIGN_HEADER_SCHEMA = "e4-r97-campaign-header-v1";
 export const R97_CAMPAIGN_HEADER_FILENAME = "campaign-header.json";
@@ -185,6 +186,16 @@ export interface R97Campaign {
    *  exposed so a resumed campaign can still report it. */
   readonly duplicateCampaignDirs: readonly string[];
   readonly ledger: R97BudgetLedger;
+  /**
+   * The durable case×arm×repetition state, created in the SAME ordered step as
+   * the header and the ledger.
+   *
+   * It is part of the campaign handle because "established" must mean all three
+   * artifacts exist. A lazily-created state file would leave a window in which a
+   * fully authorized campaign has no state, making a resume there
+   * indistinguishable from a DELETED state file — the loss the store refuses.
+   */
+  readonly execState: R97ExecutionState;
 }
 
 /**
@@ -340,6 +351,27 @@ export async function openR97Campaign(dir: string, opts: R97CampaignOpenOptions)
     duplicateCampaignDirs = ledger.duplicateCampaignDirs;
   }
 
+  // ---- 7. Establish the CASE STATE in the SAME ordered step. --------------
+  //
+  // ORDER IS THE CONTRACT, and this is the last part of it. The execution state
+  // is what proves which units already ran, so "the state file is missing" must
+  // mean "it was DELETED", never "this campaign never got that far". If the
+  // state were created lazily — by the driver, on its way to the first unit —
+  // there would be a window in which a fully authorized campaign (header +
+  // ledger on disk) had no state file, and a resume inside that window would be
+  // indistinguishable from a deleted state file. Creating it HERE, in the same
+  // ordered sequence as the header and the ledger, closes that window by
+  // construction: an established campaign always has all three artifacts.
+  //
+  // A resume re-opens the existing state in the SAME resolved mode, so a state
+  // file that really has gone missing is the named EXEC_STATE_MISSING refusal
+  // rather than a silently blank slate.
+  const execState = await openR97ExecutionState(root, {
+    experimentId: opts.planDigest,
+    planDigest: opts.planDigest,
+    mode: resolvedMode,
+  });
+
   return {
     dir: root,
     planDigest: opts.planDigest,
@@ -348,5 +380,6 @@ export async function openR97Campaign(dir: string, opts: R97CampaignOpenOptions)
     header: effectiveHeader,
     duplicateCampaignDirs,
     ledger,
+    execState,
   };
 }

@@ -91,7 +91,7 @@ describe("E4-R98 S1: the unit state machine is durable and resume-safe", () => {
 
     // A NEW process opens the same directory (the crashed owner is gone).
     const resumed = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
-    const recovered = await resumed.recoverInFlight();
+    const recovered = await resumed.recoverInFlight({ isAlive: () => false });
     expect(recovered.unknown).toBe(1);
     expect(await resumed.statusOf(k)).toBe("outcome_unknown");
     // An unknown unit is NOT skippable-as-success and NOT silently re-runnable.
@@ -236,7 +236,11 @@ describe("E4-R98 S4: reconciliation of outcome_unknown is explicit and never sil
     const first = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
     await first.begin(k, { reservationId: "r-crash", inputDigest: "in-crash" });
     const resumed = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
-    expect((await resumed.recoverInFlight()).unknown).toBe(1);
+    // The owner is PROVABLY GONE. Recovery no longer quarantines every `running`
+    // record unconditionally (that was finding N3: "当前活进程的 running 被 recover
+    // 改成 unknown"), so a crash must be expressed as what it actually is — a
+    // dead owner — rather than as "somebody opened the store again".
+    expect((await resumed.recoverInFlight({ isAlive: () => false })).unknown).toBe(1);
     expect(await resumed.statusOf(k)).toBe("outcome_unknown");
   }
 
@@ -255,7 +259,11 @@ describe("E4-R98 S4: reconciliation of outcome_unknown is explicit and never sil
     // `retry` is NOT "delete the record": the unit is terminal for the attempt
     // that may have been billed, and re-runnable by the caller.
     expect(await s.mustNotRetry(k)).toBe(false);
-    expect(await s.isDone(k)).toBe(true);
+    // ...but it is NOT `isDone`. Finding N3: the old store left `isDone === true`
+    // after a retry reconciliation, so the driver skipped the unit FOREVER and
+    // the operator's retry never happened. A unit awaiting its authorised retry
+    // must be re-selected.
+    expect(await s.isDone(k), "a reconciled-for-retry unit must be re-selected").toBe(false);
 
     // ...and a caller CAN begin it again. The new attempt starts `running`, so
     // it is no longer "done" until it reaches a terminal state of its own.
@@ -391,7 +399,7 @@ describe("E4-R98 S4: reconciliation of outcome_unknown is explicit and never sil
     const s = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
     await s.begin(other, { reservationId: "r-15", inputDigest: "in-15" });
     await s.begin(k, { reservationId: "r-16", inputDigest: "in-16" });
-    await s.recoverInFlight();
+    await s.recoverInFlight({ isAlive: () => false });
 
     const before = await s.records();
     expect(before.length).toBe(2);
@@ -423,7 +431,7 @@ describe("E4-R98 S4: reconciliation of outcome_unknown is explicit and never sil
     // `accept-as-failed` is the same kind of closure and must NOT reopen either.
     const kAccepted = key("reg-11-binary-search");
     await s.begin(kAccepted, { reservationId: "r-19", inputDigest: "in-19" });
-    await s.recoverInFlight();
+    await s.recoverInFlight({ isAlive: () => false });
     await s.reconcile(kAccepted, { action: "accept-as-failed", resultHash: "h-19" });
     await expect(s.begin(kAccepted, { reservationId: "r-20", inputDigest: "in-19" })).rejects.toThrow(/already failed/i);
 
@@ -431,7 +439,7 @@ describe("E4-R98 S4: reconciliation of outcome_unknown is explicit and never sil
     // a hand-edited store carries it: the status check comes first.
     const kDrift = key("reg-12-anagram");
     await s.begin(kDrift, { reservationId: "r-21", inputDigest: "in-21" });
-    await s.recoverInFlight();
+    await s.recoverInFlight({ isAlive: () => false });
     await s.reconcile(kDrift, { action: "retry" });
     // A reconciled retry must run the SAME inputs — changed inputs are drift.
     await expect(s.begin(kDrift, { reservationId: "r-22", inputDigest: "in-CHANGED" })).rejects.toThrow(/INPUT_DRIFT|input digest/i);

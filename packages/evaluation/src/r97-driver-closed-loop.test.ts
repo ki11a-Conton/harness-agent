@@ -30,11 +30,27 @@ import { pathToFileURL } from "node:url";
 import * as childProcess from "node:child_process";
 import * as nodeUtil from "node:util";
 import { buildR97AuthorizationPlan, type R97ArmObservation } from "./r97-plan.js";
+import type { R97Campaign } from "./r97-campaign-lifecycle.js";
 
 const DRIVER = pathToFileURL(join(process.cwd(), "scripts", "e4", "r97-campaign-driver.mjs")).href;
 const EVAL = pathToFileURL(join(process.cwd(), "packages", "evaluation", "dist", "index.js")).href;
 
 const REPO = process.cwd();
+
+/**
+ * Open a REAL campaign through the production lifecycle.
+ *
+ * Tests seed durable state (a consumed budget, a crashed unit) and must do so
+ * the way production does: through `openR97Campaign`. A hand-written ledger with
+ * no campaign header is a state the production entry can no longer produce — it
+ * is refused (finding N2) — so seeding one would test an unreachable world.
+ */
+async function openCampaign(dir: string, planDigest: string, campaignModelCalls: number): Promise<R97Campaign> {
+  const mod = evaluation as unknown as {
+    openR97Campaign: (d: string, o: Record<string, unknown>) => Promise<R97Campaign>;
+  };
+  return mod.openR97Campaign(dir, { planDigest, campaignModelCalls, mode: "first-run" });
+}
 const ENDPOINT = "e".repeat(64);
 const CREATED = "2026-09-17T00:00:00.000Z";
 const NOW = "2026-09-18T00:00:00.000Z";
@@ -121,6 +137,9 @@ async function drive(opts: {
   observation?: Record<string, unknown>;
   ledgerDir?: string;
   maxProviderCalls?: number;
+  /** Simulate a crashed owner: the real probe is `process.kill(pid, 0)`, which
+   *  cannot be made to report "dead" for the process running the test. */
+  isAlive?: (pid: number) => boolean;
 }) {
   const made = { calls: 0 };
   const result = await mod.runDriver({
@@ -130,6 +149,7 @@ async function drive(opts: {
     observation: opts.observation ?? observationFor(opts.plan),
     ledgerDir: opts.ledgerDir,
     maxProviderCalls: opts.maxProviderCalls,
+    isAlive: opts.isAlive,
     makeProvider: () => {
       made.calls += 1;
       return mod.makeCountingFakeProvider();
@@ -364,13 +384,14 @@ describe("E4-R97 D1: every refusal path makes ZERO provider requests", () => {
   it("BUDGET EXHAUSTED by a pre-existing ledger: 0 requests, provider never constructed", async () => {
     const plan = await finalizedPlan();
     const dir = await tempDir();
-    // A previous process consumed the whole grant.
-    const l = await (evaluation["openR97BudgetLedger"] as (d: string, o: unknown) => Promise<{
-      reserve: (a: string, n: number) => Promise<{ ok: boolean; reservationId: string | null }>;
-      commit: (id: string, n: number) => Promise<unknown>;
-    }>)(dir, { planDigest: plan.planDigest!, campaignModelCalls: 320 });
-    const r = await l.reserve("baseline", 320);
-    await l.commit(r.reservationId!, 320);
+    // A previous process consumed the whole grant. It is seeded through the REAL
+    // campaign lifecycle, because that is the only way a directory becomes an
+    // established campaign: the driver now refuses a bare ledger that no
+    // campaign header vouches for (finding N2), so hand-writing one would test a
+    // state the production entry can never produce.
+    const campaign = await openCampaign(dir, plan.planDigest!, 320);
+    const r = await campaign.ledger.reserve("baseline", 320);
+    await campaign.ledger.commit(r.reservationId!, 320);
 
     const { result, providerConstructions } = await drive({
       plan,
@@ -527,10 +548,16 @@ describe("E4-R97 D2: the normal path runs the pair within the campaign budget", 
       }>;
     };
     // One unit finished cleanly; a second was left mid-flight by the crash.
-    const seed = await evaluation2.openR97ExecutionState(dir, {
-      experimentId: plan.planDigest!,
-      planDigest: plan.planDigest!,
-    });
+    // The campaign is established FIRST (through the real lifecycle), so the
+    // state store the crash leaves behind is a legitimate resume of an
+    // authorized campaign rather than an orphaned file. Its own state handle is
+    // used, because the lifecycle already created that artifact — opening a
+    // second one would be a different store instance over the same file.
+    const campaign = await openCampaign(dir, plan.planDigest!, 320);
+    const seed = campaign.execState as unknown as {
+      begin: (k: unknown, o: unknown) => Promise<string>;
+      complete: (id: string, o: unknown) => Promise<void>;
+    };
     const doneAttempt = await seed.begin(
       { experimentId: plan.planDigest!, caseId: cases[1]!, suite: cases[1]!.split("/")[0], arm: "baseline", repetition: 1 },
       { reservationId: "seed-done", inputDigest: "seeded" },
@@ -541,10 +568,18 @@ describe("E4-R97 D2: the normal path runs the pair within the campaign budget", 
       { reservationId: "seed-crashed", inputDigest: "seeded" },
     );
 
-    const resumed = await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: dir });
-
-    // The crashed unit was quarantined, not re-dispatched, and the run is not a
-    // clean COMPLETE because an ambiguous outcome exists.
+    const resumed = await drive({
+      plan,
+      env: AUTHORIZED_ENV(plan.planDigest!),
+      ledgerDir: dir,
+      // The crash is simulated by seeding the `running` record from THIS process,
+      // so the recorded owner pid is this (live) test process. Recovery
+      // deliberately leaves a live owner alone (finding N3: a second process must
+      // not steal a running unit), so the test states the fact it is simulating —
+      // the process that wrote that record is GONE — through the same probe seam
+      // production uses with the real `process.kill(pid, 0)` check.
+      isAlive: () => false,
+    });
     expect(resumed.result["recoveredUnits"]).toBe(1);
     expect(resumed.result["status"]).not.toBe("COMPLETE");
     const failures = resumed.result["failures"] as { caseId: string; error: string }[];
@@ -586,13 +621,11 @@ describe("E4-R97 D2: the normal path runs the pair within the campaign budget", 
     const dir = await tempDir();
     // The ledger is bound to the plan's own grant (320) and refuses to be
     // re-opened with a different allowance, so a 3-call campaign is produced by
-    // consuming 317 first and leaving exactly 3.
-    const led = (await (evaluation["openR97BudgetLedger"] as (d: string, o: unknown) => Promise<{
-      reserve: (a: string, n: number) => Promise<{ ok: boolean; reservationId: string | null }>;
-      commit: (id: string, n: number) => Promise<unknown>;
-    }>)(dir, { planDigest: plan.planDigest!, campaignModelCalls: 320 }));
-    const seed = await led.reserve("seed", 317);
-    await led.commit(seed.reservationId!, 317);
+    // consuming 317 first and leaving exactly 3. Seeded through the REAL
+    // lifecycle so the directory is a properly established campaign.
+    const campaign = await openCampaign(dir, plan.planDigest!, 320);
+    const seed = await campaign.ledger.reserve("seed", 317);
+    await campaign.ledger.commit(seed.reservationId!, 317);
 
     const { result } = await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: dir });
     expect(result["status"]).toBe("PARTIAL");

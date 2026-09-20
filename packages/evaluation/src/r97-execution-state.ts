@@ -49,6 +49,7 @@
 
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { hostname } from "node:os";
 import { join } from "node:path";
 
 export const R97_EXEC_SCHEMA = "e4-r97-execution-state-v1";
@@ -59,6 +60,42 @@ export const R97_EXEC_STATE_CORRUPT = "EXEC_STATE_CORRUPT";
 export const R97_EXEC_INPUT_DRIFT = "EXEC_INPUT_DRIFT";
 /** A reconciliation was attempted on a unit that is not `outcome_unknown`. */
 export const R97_EXEC_NOT_RECONCILABLE = "EXEC_NOT_RECONCILABLE";
+/**
+ * An ESTABLISHED campaign's execution state is gone.
+ *
+ * MEASURED DEFECT (plan §0.2 N3, §0.3): "execution-state 的 read 在文件缺失时返回空
+ * 状态" — so deleting `execution-state.json` made the next run see "nothing has
+ * ever run" and re-execute every unit. The probe measured exactly that:
+ * "仅删除 execution-state.json | 同计划再运行新增 2 次，累计 committed 从 2 变 4."
+ *
+ * A campaign that has run work is ESTABLISHED (its budget ledger exists in the
+ * same directory), so a missing state file is a LOSS and fails closed rather
+ * than re-granting every unit.
+ */
+export const R97_EXEC_STATE_MISSING = "EXEC_STATE_MISSING";
+/** Another attempt already owns this unit and has not finished. */
+export const R97_EXEC_BUSY = "EXEC_BUSY";
+/** A terminal write from an attempt that is no longer the unit's live attempt. */
+export const R97_EXEC_ATTEMPT_STALE = "EXEC_ATTEMPT_STALE";
+
+/**
+ * How an open is allowed to treat durable state.
+ *
+ *  - `"first-run"` — the caller is STARTING a campaign: it may CREATE the file.
+ *  - `"resume"` — the caller is RECOVERING one: the file MUST exist, and a
+ *    missing one is `R97_EXEC_STATE_MISSING`.
+ *  - `"auto"` (default) — fails closed by INFERRING from the campaign directory.
+ *    If the campaign's budget ledger is present, this is an established campaign
+ *    and the open behaves exactly like `"resume"` (a missing state file is a
+ *    LOSS, never a blank slate). If no ledger is present, nothing has been
+ *    established here and the open may create the state.
+ *
+ * The LEDGER is the inference signal because it is the campaign's own durable
+ * marker and lives in the same directory (the driver passes one `ledgerDir` for
+ * both). That is what makes "delete the state file" a refusal while a genuine
+ * first run — which has no ledger yet — still works.
+ */
+export type R97ExecOpenMode = "first-run" | "resume" | "auto";
 
 /** Terminal states are `completed` and `failed`. `outcome_unknown` is a
  *  quarantine state: not terminal for skipping, and never auto-retried. */
@@ -73,22 +110,56 @@ export interface R97UnitKey {
   repetition: number;
 }
 
+/**
+ * One ATTEMPT at a unit, kept as an audit record.
+ *
+ * WHY THIS EXISTS (plan §T2 怎么做 7): "保留旧 attempt 的审计记录。不要用新 attempt
+ * 覆盖唯一一条记录后丢掉旧 reservation；可以扩展现有 journal，不要求新增数据库."
+ *
+ * The previous record was a single mutable row, so a reconciled retry OVERWROTE
+ * the crashed attempt — losing which reservation may already have been billed.
+ * The unit record now keeps every attempt, and the top-level fields mirror the
+ * LATEST one so existing readers keep working.
+ */
+export interface R97UnitAttempt {
+  attemptId: string;
+  /** The budget reservation that paid for THIS attempt. */
+  reservationId: string;
+  /** Digest of the inputs used for this attempt. */
+  inputDigest: string;
+  status: R97UnitStatus;
+  startedAt: number;
+  endedAt: number | null;
+  resultHash: string | null;
+  /** Owning process, so a dead owner's attempt can be found. */
+  ownerPid: number;
+  /** Owning host, so a foreign owner is never mistaken for a dead one. */
+  ownerHost: string;
+  detail: string | null;
+}
+
 export interface R97UnitRecord extends R97UnitKey {
   schemaVersion: string;
   /** Bound to the authorization this work belongs to. */
   planDigest: string;
   status: R97UnitStatus;
-  /** Stable id for THIS attempt, so a late writer cannot overwrite a newer one. */
+  /** Stable id for the CURRENT attempt, so a late writer cannot overwrite a newer one. */
   attemptId: string;
   /** Digest of the inputs actually used (case content + build identity). */
   inputDigest: string;
-  /** The budget reservation that paid for this unit. */
+  /** The budget reservation that paid for the CURRENT attempt. */
   reservationId: string;
   /** Set for terminal states: the digest of the stored result. */
   resultHash: string | null;
   startedAt: number;
   endedAt: number | null;
   detail: string | null;
+  /** Owning process id for the CURRENT attempt. */
+  ownerPid: number;
+  /** Owning host for the CURRENT attempt. */
+  ownerHost: string;
+  /** EVERY attempt at this unit, oldest first — the audit trail. */
+  attempts: R97UnitAttempt[];
   /**
    * True ONLY on a record produced by `reconcile({action:"retry"})`.
    *
@@ -133,13 +204,19 @@ export interface R97ExecutionState {
   recordFor(key: R97UnitKey): Promise<R97UnitRecord | null>;
   /** A unit that must NOT be automatically retried (crashed mid-flight). */
   mustNotRetry(key: R97UnitKey): Promise<boolean>;
-  /** Persist `running` BEFORE the request is dispatched. Returns the attemptId. */
+  /** Persist `running` BEFORE the request is dispatched. Returns the attemptId.
+   *
+   *  REFUSES a second begin while another attempt still owns the unit
+   *  (`R97_EXEC_BUSY`), so two processes cannot both dispatch the same unit. */
   begin(key: R97UnitKey, opts: { reservationId: string; inputDigest: string; now?: number }): Promise<string>;
   complete(attemptId: string, opts: { resultHash: string; detail?: string; now?: number }): Promise<void>;
   fail(attemptId: string, opts: { resultHash: string; detail?: string; now?: number }): Promise<void>;
-  /** Reclassify every in-flight unit as `outcome_unknown` (a crashed process
-   *  cannot still be running once a NEW process holds the store). */
-  recoverInFlight(): Promise<{ unknown: number }>;
+  /** Reclassify in-flight units whose owner is provably GONE as `outcome_unknown`.
+   *
+   *  A LIVE owner is left alone (plan §T2 怎么做 5: "recover 先验证 owner。活 owner 是
+   *  BUSY"), and an owner on ANOTHER HOST is conservatively left alone rather
+   *  than assumed dead ("跨主机无法判断时保守停止，不能把'不知道'视为死亡"). */
+  recoverInFlight(opts?: { isAlive?: (pid: number) => boolean; host?: string }): Promise<{ unknown: number; foreign: number }>;
   /**
    * The EXPLICIT reconciliation act for an `outcome_unknown` unit (plan §R98:
    * "提供明确的单独 reconciliation 操作").
@@ -183,6 +260,7 @@ export function parseR97ExecutionState(raw: unknown): { state: R97ExecutionState
 
   const records: R97UnitRecord[] = [];
   const seen = new Set<string>();
+  const seenAttempts = new Set<string>();
   const validStatus = ["pending", "running", "completed", "failed", "outcome_unknown"];
   for (const [i, r] of (o["records"] as unknown[]).entries()) {
     if (typeof r !== "object" || r === null || Array.isArray(r)) {
@@ -192,6 +270,22 @@ export function parseR97ExecutionState(raw: unknown): { state: R97ExecutionState
     const str = (v: unknown): v is string => typeof v === "string" && v !== "";
     for (const field of ["experimentId", "caseId", "suite", "arm", "attemptId", "inputDigest", "reservationId"] as const) {
       if (!str(e[field])) return { state: null, issue: `execution state records[${i}].${field} must be a non-empty string` };
+    }
+    // Plan §T2 怎么做 8: "parser 严格检查每条记录的 experimentId/planDigest 与 header 一致."
+    // A record from another campaign inside this store is either a copy/paste
+    // error or a forgery; either way it must not be usable as a skip.
+    if (e["experimentId"] !== o["experimentId"]) {
+      return {
+        state: null,
+        issue: `execution state records[${i}].experimentId is ${JSON.stringify(e["experimentId"])} but the store belongs to ${JSON.stringify(o["experimentId"])}`,
+      };
+    }
+    const recordPlan: unknown = e["planDigest"] ?? o["planDigest"];
+    if (recordPlan !== o["planDigest"]) {
+      return {
+        state: null,
+        issue: `execution state records[${i}].planDigest is ${JSON.stringify(recordPlan)} but the store belongs to ${JSON.stringify(o["planDigest"])}`,
+      };
     }
     if (typeof e["repetition"] !== "number" || !Number.isSafeInteger(e["repetition"]) || e["repetition"] < 1) {
       return { state: null, issue: `execution state records[${i}].repetition must be a positive safe integer` };
@@ -209,6 +303,31 @@ export function parseR97ExecutionState(raw: unknown): { state: R97ExecutionState
     if ((status === "completed" || status === "failed") && !str(resultHash)) {
       return { state: null, issue: `execution state records[${i}] is ${status} without a resultHash` };
     }
+    // Plan §T2 怎么做 8: "不能把缺 startedAt 静默变成 0." A timestamp that is
+    // absent or not a number is structural damage, because every ordering and
+    // staleness decision in this store reads it.
+    if (typeof e["startedAt"] !== "number" || !Number.isFinite(e["startedAt"])) {
+      return { state: null, issue: `execution state records[${i}].startedAt must be a finite number` };
+    }
+    const endedAt = e["endedAt"];
+    if (endedAt !== null && endedAt !== undefined && (typeof endedAt !== "number" || !Number.isFinite(endedAt))) {
+      return { state: null, issue: `execution state records[${i}].endedAt must be null or a finite number` };
+    }
+    // A terminal record must be CLOSED: an open interval cannot describe a
+    // finished attempt.
+    if ((status === "completed" || status === "failed") && (endedAt === null || endedAt === undefined)) {
+      return { state: null, issue: `execution state records[${i}] is ${status} without an endedAt` };
+    }
+    // Owner evidence. It is what makes "is the owner still alive?" answerable,
+    // so a record that cannot answer it is refused rather than assumed dead.
+    const ownerPid = e["ownerPid"];
+    if (typeof ownerPid !== "number" || !Number.isSafeInteger(ownerPid)) {
+      return { state: null, issue: `execution state records[${i}].ownerPid must be a safe integer` };
+    }
+    const ownerHost = e["ownerHost"];
+    if (typeof ownerHost !== "string" || ownerHost === "") {
+      return { state: null, issue: `execution state records[${i}].ownerHost must be a non-empty string` };
+    }
     const key = unitKeyOf({
       experimentId: e["experimentId"] as string,
       caseId: e["caseId"] as string,
@@ -218,6 +337,120 @@ export function parseR97ExecutionState(raw: unknown): { state: R97ExecutionState
     });
     if (seen.has(key)) return { state: null, issue: `execution state records[${i}] duplicates unit ${key}` };
     seen.add(key);
+    // Attempt ids must be globally unique: `complete`/`fail` address a record BY
+    // attempt id, so a duplicate would let one unit's terminal write land on
+    // another unit's record.
+    const attemptId = e["attemptId"] as string;
+    if (seenAttempts.has(attemptId)) {
+      return { state: null, issue: `execution state records[${i}].attemptId "${attemptId}" is duplicated across records` };
+    }
+    seenAttempts.add(attemptId);
+
+    // ---- The attempts journal. --------------------------------------------
+    // A record written before the journal existed is ACCEPTED and synthesised
+    // from its own current fields, so an upgrade does not invalidate a live
+    // campaign's state. Every record this store WRITES carries a real one.
+    const rawAttempts = Array.isArray(e["attempts"]) ? e["attempts"] : null;
+    let attempts: R97UnitAttempt[];
+    if (rawAttempts === null) {
+      attempts = [
+        {
+          attemptId,
+          reservationId: e["reservationId"] as string,
+          inputDigest: e["inputDigest"] as string,
+          status,
+          startedAt: e["startedAt"] as number,
+          endedAt: typeof endedAt === "number" ? endedAt : null,
+          resultHash: str(resultHash) ? resultHash : null,
+          ownerPid,
+          ownerHost,
+          detail: typeof e["detail"] === "string" ? e["detail"] : null,
+        },
+      ];
+    } else {
+      attempts = [];
+      const seenLocalAttempts = new Set<string>();
+      for (const [j, a] of rawAttempts.entries()) {
+        if (typeof a !== "object" || a === null || Array.isArray(a)) {
+          return { state: null, issue: `execution state records[${i}].attempts[${j}] is not an object` };
+        }
+        const at = a as Record<string, unknown>;
+        for (const field of ["attemptId", "reservationId", "inputDigest"] as const) {
+          if (!str(at[field])) {
+            return { state: null, issue: `execution state records[${i}].attempts[${j}].${field} must be a non-empty string` };
+          }
+        }
+        const aAttemptId = at["attemptId"] as string;
+        if (seenLocalAttempts.has(aAttemptId)) {
+          return { state: null, issue: `execution state records[${i}] duplicates attempt ${aAttemptId} in its journal` };
+        }
+        seenLocalAttempts.add(aAttemptId);
+        if (!validStatus.includes(String(at["status"]))) {
+          return { state: null, issue: `execution state records[${i}].attempts[${j}].status is not a known status` };
+        }
+        const aStatus = String(at["status"]) as R97UnitStatus;
+        if (typeof at["startedAt"] !== "number" || !Number.isFinite(at["startedAt"])) {
+          return { state: null, issue: `execution state records[${i}].attempts[${j}].startedAt must be a finite number` };
+        }
+        const aEnded = at["endedAt"];
+        if (aEnded !== null && aEnded !== undefined && (typeof aEnded !== "number" || !Number.isFinite(aEnded))) {
+          return { state: null, issue: `execution state records[${i}].attempts[${j}].endedAt must be null or a finite number` };
+        }
+        const aHash = at["resultHash"];
+        if (aHash !== null && aHash !== undefined && !str(aHash)) {
+          return { state: null, issue: `execution state records[${i}].attempts[${j}].resultHash must be null or a non-empty string` };
+        }
+        if ((aStatus === "completed" || aStatus === "failed") && !str(aHash)) {
+          return { state: null, issue: `execution state records[${i}].attempts[${j}] is ${aStatus} without a resultHash` };
+        }
+        if (typeof at["ownerPid"] !== "number" || !Number.isSafeInteger(at["ownerPid"])) {
+          return { state: null, issue: `execution state records[${i}].attempts[${j}].ownerPid must be a safe integer` };
+        }
+        if (typeof at["ownerHost"] !== "string" || at["ownerHost"] === "") {
+          return { state: null, issue: `execution state records[${i}].attempts[${j}].ownerHost must be a non-empty string` };
+        }
+        attempts.push({
+          attemptId: aAttemptId,
+          reservationId: at["reservationId"] as string,
+          inputDigest: at["inputDigest"] as string,
+          status: aStatus,
+          startedAt: at["startedAt"] as number,
+          endedAt: typeof aEnded === "number" ? aEnded : null,
+          resultHash: str(aHash) ? aHash : null,
+          ownerPid: at["ownerPid"] as number,
+          ownerHost: at["ownerHost"] as string,
+          detail: typeof at["detail"] === "string" ? at["detail"] : null,
+        });
+      }
+      // The CURRENT attempt must be the LAST entry of the journal: the
+      // top-level fields identify the live attempt, and a mismatch means the
+      // record was assembled by hand.
+      //
+      // The reservation and input digest MUST agree, because they are the
+      // identity of the work the attempt did. The STATUS may legitimately
+      // differ: a reconciled unit's top level carries the operator's decision
+      // (`failed`) while the attempt itself still records what actually
+      // happened (`outcome_unknown` — the crash). Collapsing those two would
+      // erase the very distinction reconciliation exists to preserve.
+      const last = attempts[attempts.length - 1];
+      if (last === undefined || last.attemptId !== attemptId) {
+        return {
+          state: null,
+          issue: `execution state records[${i}] current attemptId ${attemptId} is not the last entry of its attempts journal`,
+        };
+      }
+      if (last.reservationId !== e["reservationId"] || last.inputDigest !== e["inputDigest"]) {
+        return {
+          state: null,
+          issue: `execution state records[${i}] current attempt ${attemptId} disagrees with its own journal entry on reservationId/inputDigest`,
+        };
+      }
+    }
+    for (const a of attempts) {
+      if (seenAttempts.has(a.attemptId) && a.attemptId !== attemptId) {
+        return { state: null, issue: `execution state records[${i}] reuses attempt id ${a.attemptId} from another record` };
+      }
+    }
 
     records.push({
       schemaVersion: R97_EXEC_SCHEMA,
@@ -226,15 +459,18 @@ export function parseR97ExecutionState(raw: unknown): { state: R97ExecutionState
       suite: e["suite"] as string,
       arm: e["arm"] as string,
       repetition: e["repetition"] as number,
-      planDigest: typeof e["planDigest"] === "string" ? e["planDigest"] : o["planDigest"],
+      planDigest: recordPlan as string,
       status,
-      attemptId: e["attemptId"] as string,
+      attemptId,
       inputDigest: e["inputDigest"] as string,
       reservationId: e["reservationId"] as string,
       resultHash: str(resultHash) ? resultHash : null,
-      startedAt: typeof e["startedAt"] === "number" ? e["startedAt"] : 0,
-      endedAt: typeof e["endedAt"] === "number" ? e["endedAt"] : null,
+      startedAt: e["startedAt"] as number,
+      endedAt: typeof endedAt === "number" ? endedAt : null,
       detail: typeof e["detail"] === "string" ? e["detail"] : null,
+      ownerPid,
+      ownerHost,
+      attempts,
       // Strictly boolean: any other JSON value (including the string "true") is
       // treated as absent, so only a record THIS store wrote can re-open a
       // terminal unit.
@@ -279,14 +515,49 @@ async function writeStateAtomic(dir: string, state: R97ExecutionStateFile): Prom
  */
 export async function openR97ExecutionState(
   dir: string,
-  opts: { experimentId: string; planDigest: string; now?: () => number },
+  opts: { experimentId: string; planDigest: string; now?: () => number; mode?: R97ExecOpenMode },
 ): Promise<R97ExecutionState> {
   await mkdir(dir, { recursive: true });
   const now = opts.now ?? (() => Date.now());
+  const mode: R97ExecOpenMode = opts.mode ?? "auto";
+
+  /**
+   * Whether this directory holds an ESTABLISHED campaign.
+   *
+   * The signal is the campaign's own budget ledger in the SAME directory (the
+   * driver passes one directory for both). A ledger proves work was authorized
+   * and possibly done here, so a missing execution state is a LOSS — the
+   * measured defect N3 was that a missing file read as an empty state, so
+   * deleting it re-ran (and re-billed) every unit.
+   *
+   * The import is deferred to break the module cycle: the ledger does not know
+   * about the execution state, and this is the only direction that needs it.
+   */
+  const campaignIsEstablished = async (): Promise<boolean> => {
+    try {
+      const { readR97LedgerFile } = await import("./r97-budget-ledger.js");
+      return (await readR97LedgerFile(dir)) !== null;
+    } catch {
+      // A DAMAGED ledger is still evidence that a campaign was established here.
+      return true;
+    }
+  };
+
+  const resolvedMode: "first-run" | "resume" =
+    mode === "resume" ? "resume" : mode === "first-run" ? "first-run" : (await campaignIsEstablished()) ? "resume" : "first-run";
 
   const read = async (): Promise<R97ExecutionStateFile> => {
     const present = await readR97ExecutionStateFile(dir);
-    if (present === null) return emptyState(opts.experimentId, opts.planDigest);
+    if (present === null) {
+      // FAIL CLOSED. A resume — explicit or inferred from an established
+      // campaign — must never read a lost state file as "nothing has run".
+      if (resolvedMode === "resume") {
+        throw new Error(
+          `E4-R97: ${R97_EXEC_STATE_MISSING}: this campaign is established in ${dir} but its execution state is gone — refusing to treat a lost record of completed units as "nothing has run"; restore ${R97_EXEC_FILENAME}, or start a new authorization`,
+        );
+      }
+      return emptyState(opts.experimentId, opts.planDigest);
+    }
     if (present.experimentId !== opts.experimentId) {
       throw new Error(
         `E4-R97: ${R97_EXEC_STATE_MISMATCH}: the execution state in ${dir} belongs to a different experiment (${present.experimentId}) than this run (${opts.experimentId})`,
@@ -307,6 +578,11 @@ export async function openR97ExecutionState(
   {
     const present = await readR97ExecutionStateFile(dir);
     if (present === null) {
+      if (resolvedMode === "resume") {
+        throw new Error(
+          `E4-R97: ${R97_EXEC_STATE_MISSING}: this campaign is established in ${dir} but its execution state is gone — refusing to treat a lost record of completed units as "nothing has run"; restore ${R97_EXEC_FILENAME}, or start a new authorization`,
+        );
+      }
       await writeStateAtomic(dir, emptyState(opts.experimentId, opts.planDigest));
     } else {
       if (present.experimentId !== opts.experimentId) {
@@ -339,16 +615,76 @@ export async function openR97ExecutionState(
   const byAttempt = async (attemptId: string): Promise<R97UnitRecord> => {
     const state = await read();
     const record = state.records.find((r) => r.attemptId === attemptId);
-    if (record === undefined) throw new Error(`E4-R97: no execution unit for attempt ${attemptId}`);
-    return record;
+    if (record !== undefined) return record;
+    // Not the CURRENT attempt of any unit — but it may still be a SUPERSEDED
+    // attempt preserved in a journal. That is a staleness error, not a
+    // missing-record error, and the caller must be told which one it is.
+    const superseded = state.records.find((r) => r.attempts.some((a) => a.attemptId === attemptId));
+    if (superseded !== undefined) {
+      throw new Error(
+        `E4-R97: ${R97_EXEC_ATTEMPT_STALE}: attempt ${attemptId} has been superseded by ${superseded.attemptId} — a stale attempt may not write a terminal record`,
+      );
+    }
+    throw new Error(`E4-R97: no execution unit for attempt ${attemptId}`);
+  };
+
+  /**
+   * Is this record's unit DONE for the purposes of a resume skip?
+   *
+   * Plan §T2 怎么做 10 / finding N4: a skip must not rest on the status field
+   * alone. A `failed` record that an operator reconciled for a RETRY is NOT
+   * done — the whole point of the reconciliation is that the dispatcher picks the
+   * unit up again, and the previous version left `isDone === true` forever, so
+   * "reconcile(retry) 后 isDone=true 导致 driver 永远跳过" (§0.3).
+   */
+  const doneOf = (r: R97UnitRecord | null): boolean => {
+    if (r === null) return false;
+    if (r.status === "completed") return true;
+    if (r.status === "failed") {
+      // An operator authorised a NEW attempt: the unit is pending again until
+      // that attempt reaches its own terminal state.
+      return r.reconciledForRetry !== true;
+    }
+    return false;
+  };
+
+  /** Build the attempt-journal entry for the record's CURRENT attempt. */
+  const currentAttemptOf = (r: R97UnitRecord): R97UnitAttempt => ({
+    attemptId: r.attemptId,
+    reservationId: r.reservationId,
+    inputDigest: r.inputDigest,
+    status: r.status,
+    startedAt: r.startedAt,
+    endedAt: r.endedAt,
+    resultHash: r.resultHash,
+    ownerPid: r.ownerPid,
+    ownerHost: r.ownerHost,
+    detail: r.detail,
+  });
+
+  /**
+   * Replace the LAST entry of the attempts journal with the record's current
+   * state, so the journal always ends at the live attempt and the top-level
+   * fields mirror it.
+   */
+  const withSyncedAttempts = (r: R97UnitRecord): R97UnitRecord => {
+    const attempts = [...r.attempts];
+    const last = attempts[attempts.length - 1];
+    if (last === undefined || last.attemptId !== r.attemptId) {
+      // Should be impossible for a record this store wrote; keep the invariant
+      // rather than trusting it.
+      attempts.push(currentAttemptOf(r));
+    } else {
+      attempts[attempts.length - 1] = currentAttemptOf(r);
+    }
+    return { ...r, attempts };
   };
 
   return {
     dir,
 
     async isDone(key) {
-      const r = await findRecord(key);
-      return r !== null && (r.status === "completed" || r.status === "failed");
+      return doneOf(await findRecord(key));
     },
     async statusOf(key) {
       return (await findRecord(key))?.status ?? null;
@@ -361,6 +697,14 @@ export async function openR97ExecutionState(
     async begin(key, opts2) {
       const existing = await findRecord(key);
       if (existing !== null) {
+        if (existing.status === "running") {
+          // ONE OWNER AT A TIME (plan §T2 怎么做 4: "running 状态拒绝第二次 begin").
+          // Two processes racing the same unit both observed "not running" in the
+          // old store, so both dispatched it — one unit, two bills.
+          throw new Error(
+            `E4-R97: ${R97_EXEC_BUSY}: unit ${unitKeyOf(key)} is already running as attempt ${existing.attemptId} (owner pid ${existing.ownerPid} on ${existing.ownerHost}) — a unit has one owner at a time`,
+          );
+        }
         if (existing.status === "completed" || existing.status === "failed") {
           // A terminal unit is skipped EXCEPT when an operator explicitly
           // reconciled it for a retry. `reconcile({action:"retry"})` types the
@@ -381,7 +725,7 @@ export async function openR97ExecutionState(
                 `E4-R97: ${R97_EXEC_INPUT_DRIFT}: reconciled unit ${unitKeyOf(key)} was quarantined with input digest ${existing.inputDigest} but is being retried with ${opts2.inputDigest}`,
               );
             }
-          } else if (existing.status === "completed" || existing.status === "failed") {
+          } else {
             // A finished unit is only skipped when its INPUTS are identical. A
             // changed input digest is drift, and re-running it under the old
             // result would attribute the old result to new inputs.
@@ -402,7 +746,20 @@ export async function openR97ExecutionState(
           );
         }
       }
-      const attemptId = `a-${now()}-${process.pid}-${Math.abs(hashString(unitKeyOf(key)))}`;
+      const startedAt = opts2.now ?? now();
+      const attemptId = `a-${startedAt}-${process.pid}-${Math.abs(hashString(unitKeyOf(key)))}-${(existing?.attempts.length ?? 0) + 1}`;
+      const attempt: R97UnitAttempt = {
+        attemptId,
+        reservationId: opts2.reservationId,
+        inputDigest: opts2.inputDigest,
+        status: "running",
+        startedAt,
+        endedAt: null,
+        resultHash: null,
+        ownerPid: process.pid,
+        ownerHost: hostname(),
+        detail: null,
+      };
       const record: R97UnitRecord = {
         schemaVersion: R97_EXEC_SCHEMA,
         ...key,
@@ -412,9 +769,16 @@ export async function openR97ExecutionState(
         inputDigest: opts2.inputDigest,
         reservationId: opts2.reservationId,
         resultHash: null,
-        startedAt: opts2.now ?? now(),
+        startedAt,
         endedAt: null,
         detail: null,
+        ownerPid: process.pid,
+        ownerHost: hostname(),
+        // The PREVIOUS attempts are carried forward, never discarded: the old
+        // reservation may already have been billed (plan §T2 怎么做 7).
+        attempts: [...(existing?.attempts ?? []), attempt],
+        // A NEW attempt clears the retry marker: it is no longer awaiting a
+        // retry, it IS the retry.
       };
       await writeRecord(record);
       return attemptId;
@@ -422,46 +786,85 @@ export async function openR97ExecutionState(
 
     async complete(attemptId, opts2) {
       const record = await byAttempt(attemptId);
+      // A terminal write is only legal from the unit's CURRENT attempt. A stale
+      // attempt (superseded by a reconciliation and a new begin) must not be
+      // able to write a result over the live one.
+      if (record.attemptId !== attemptId) {
+        throw new Error(
+          `E4-R97: ${R97_EXEC_ATTEMPT_STALE}: attempt ${attemptId} has been superseded by ${record.attemptId} — a stale attempt may not write a terminal record`,
+        );
+      }
       if (record.status !== "running") {
         throw new Error(`E4-R97: attempt ${attemptId} is ${record.status} — only a running unit can be completed`);
       }
       if (opts2.resultHash === "") throw new Error("E4-R97: a completed unit requires a non-empty result hash");
-      await writeRecord({
-        ...record,
-        status: "completed",
-        resultHash: opts2.resultHash,
-        detail: opts2.detail ?? null,
-        endedAt: opts2.now ?? now(),
-      });
+      const endedAt = opts2.now ?? now();
+      await writeRecord(
+        withSyncedAttempts({
+          ...record,
+          status: "completed",
+          resultHash: opts2.resultHash,
+          detail: opts2.detail ?? null,
+          endedAt,
+        }),
+      );
     },
 
     async fail(attemptId, opts2) {
       const record = await byAttempt(attemptId);
+      if (record.attemptId !== attemptId) {
+        throw new Error(
+          `E4-R97: ${R97_EXEC_ATTEMPT_STALE}: attempt ${attemptId} has been superseded by ${record.attemptId} — a stale attempt may not write a terminal record`,
+        );
+      }
       if (record.status !== "running") {
         throw new Error(`E4-R97: attempt ${attemptId} is ${record.status} — only a running unit can be failed`);
       }
       if (opts2.resultHash === "") throw new Error("E4-R97: a failed unit requires a non-empty result hash");
-      await writeRecord({
-        ...record,
-        status: "failed",
-        resultHash: opts2.resultHash,
-        detail: opts2.detail ?? null,
-        endedAt: opts2.now ?? now(),
-      });
+      const endedAt = opts2.now ?? now();
+      await writeRecord(
+        withSyncedAttempts({
+          ...record,
+          status: "failed",
+          resultHash: opts2.resultHash,
+          detail: opts2.detail ?? null,
+          endedAt,
+        }),
+      );
     },
 
-    async recoverInFlight() {
+    async recoverInFlight(opts2 = {}) {
+      const isAlive = opts2.isAlive ?? defaultIsAlive;
+      const localHost = opts2.host ?? hostname();
       const state = await read();
       let unknown = 0;
+      let foreign = 0;
       const records = state.records.map((r) => {
         if (r.status !== "running") return r;
+        // AN OWNER ON ANOTHER HOST CANNOT BE JUDGED. Plan §T2 怎么做 5: "跨主机无法
+        // 判断时保守停止，不能把'不知道'视为死亡." A pid is only meaningful on the
+        // machine that issued it, so a foreign owner is left RUNNING and reported
+        // separately — never quarantined on a guess.
+        if (r.ownerHost !== localHost) {
+          foreign += 1;
+          return r;
+        }
+        // A LIVE owner is BUSY, not crashed. The old recovery quarantined every
+        // running record unconditionally, so a second process stole a live
+        // process's unit (§0.3: "当前活进程的 running 被 recover 改成 unknown").
+        if (isAlive(r.ownerPid)) return r;
         unknown += 1;
         // The allowance stays consumed and the unit is quarantined: a dispatched
         // attempt may have been billed, and only an operator decision resolves it.
-        return { ...r, status: "outcome_unknown" as const, endedAt: r.endedAt ?? now() };
+        const endedAt = r.endedAt ?? now();
+        return withSyncedAttempts({
+          ...r,
+          status: "outcome_unknown" as const,
+          endedAt,
+        });
       });
       if (unknown > 0) await writeStateAtomic(dir, { ...state, records });
-      return { unknown };
+      return { unknown, foreign };
     },
 
     async reconcile(key, decision) {
@@ -514,6 +917,14 @@ export async function openR97ExecutionState(
 
       // The record is MUTATED in place, never deleted and never re-appended: the
       // tombstone this reconciliation leaves is what proves an attempt happened.
+      //
+      // The ATTEMPTS journal is deliberately NOT rewritten here. Reconciliation
+      // is a decision about the UNIT, not about what the attempt did: the
+      // attempt still crashed (`outcome_unknown`), and the unit now carries the
+      // operator's verdict (`failed`) on top of it. Overwriting the journal
+      // entry would destroy the evidence that the outcome was ever unknown —
+      // and with it the reason the reservation may have been billed. The journal
+      // is preserved so that fact stays auditable (plan §T2 怎么做 7).
       const reconciled: R97UnitRecord = {
         ...record,
         status: "failed",
@@ -532,6 +943,16 @@ export async function openR97ExecutionState(
       return (await read()).records;
     },
   };
+}
+
+/** Process-liveness probe: `EPERM` means the process exists but is not ours. */
+function defaultIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as { code?: string }).code === "EPERM";
+  }
 }
 
 /** Truncate a long operator/error message so `detail` stays one readable line.
