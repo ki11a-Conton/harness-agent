@@ -275,11 +275,16 @@ Four new tests in `r97-driver-closed-loop.test.ts`:
 
 ## 3. R101 — the closed loop on a clean runner
 
-### 3.1 Status: PARTIAL — implemented and locally verified; **CI NOT_RUN**
+### 3.1 Status: DONE for the offline closed loop — CI ran and is green (§3.5); paid experiment NOT_RUN (§3.4)
 
-**No CI run URL is reported, because no CI run has been executed.** The workflow
-cannot be run from this machine. Everything below is a local measurement plus a
-structural inspection of the workflow; none of it is CI evidence.
+CI has now really executed, on GitHub's ubuntu runners, and its failures drove
+the fixes — the first two runs and what each one proved:
+
+| run | head | outcome | what it proved / fix |
+|---|---|---|---|
+| [35482804955](https://github.com/ki11a-Conton/harness-agent/actions/runs/35482804955) | `6113675` | **FAILURE** (3 jobs) | (a) `r97-r98-closed-loop` failed the R99 `--plan-digest` assertion on a **green** suite — the default vitest reporter never prints a fast test's own line, so a name-based `grep ✓` can fail even when the test passed; (b) main test + coverage jobs failed — the D6 precondition test (F7: missing arms = explicit FAILURE) fails on any runner without the arm checkouts, and the general `pnpm test` has none; (c) `P14-6` security scan flagged `.catch(() => {})` in `r97-budget-ledger.ts` |
+| [35486451101](https://github.com/ki11a-Conton/harness-agent/actions/runs/35486451101) | `7aa8b72` | **FAILURE** (only the closed-loop job) | main test (win+ubuntu), coverage gate and cold-start all **green** — the verbose-reporter fix, the D6 file exclusion and the P14-6 fix hold on a clean runner. The closed-loop KEY-tests step then failed its driver-file count: `grep -cF "✓ packages/evaluation/src/…"` counted 0 on ubuntu while the name-based greps in the same step matched — the verbose lines carry the file path in a form the exact pattern did not assume (relative vs absolute). Counts now go through "lines mentioning the file name that carry `✓`/`↓`", with a diagnostic dump on any shortfall |
+| [35487313801](https://github.com/ki11a-Conton/harness-agent/actions/runs/35487313801) | `1ed8b92` | **SUCCESS — all six jobs green** | the whole workflow is green on a clean runner: main test suite (win+ubuntu), coverage gate, cold-start, and the closed-loop job with every assertion step passing (R99 arm-worker execution, KEY-tests count 45/0, D6 two-arm observation, G5 cross-process contention, evidence recorded and uploaded) |
 
 ### 3.2 The author-machine dependency is removed
 
@@ -314,21 +319,32 @@ FAIL  the two real arm builds MUST exist — a missing arm is a FAILURE, never a
 
 ### 3.3 CI job changes
 
-`.github/workflows/ci.yml`, job `r97-r98-closed-loop`:
+`.github/workflows/ci.yml`, job `r97-r98-closed-loop` (as finally fixed):
 
-- the suite step now also runs `r97-arm-worker-contract.test.ts`,
-  `r97-redaction.test.ts` and `r98-fixture-cases.test.ts`;
+- the suite step runs the seven R97/R98 files with `--reporter=verbose`, because
+  the default reporter only prints a *slow* passing test's own line — measured
+  on run 35482804955 when the fast `--plan-digest` test was invisible to a
+  name-based grep even though the suite was green;
+- assertion steps match test lines by **name + `✓` marker** (skipped lines carry
+  `↓`, failed lines `×`, so neither can satisfy a `✓` check), never by an exact
+  path prefix — measured on run 35486451101 when an exact
+  `✓ packages/evaluation/src/…` count was 0 on ubuntu while name greps matched;
+  any count shortfall dumps the first matching log lines;
+- the arms-gated file `r97-driver-closed-loop.test.ts` is **excluded from the
+  general `pnpm test` / `pnpm test:coverage`** (same `--exclude` mechanism
+  already used for perf/soak/forensics) and runs for real only in this job,
+  which builds both arms at their frozen SHAs — a general test run without arms
+  must not fail on a precondition the general job cannot satisfy, and F7 still
+  forbids a silent skip where the arms ARE the point;
 - a new step asserts the **arm-worker execution tests passed** by name —
   including the `--plan-digest` dispatch assertion, so the P0 regression above
   cannot return green;
-- the existing "not skipped" gate is unchanged in intent; its `EXPECTED_MIN` is
-  36 against a measured **44** declared `it(` blocks (updated from 38).
+- the "not skipped" gate counts `✓`-carrying lines mentioning each file name;
+  `EXPECTED_MIN` is 36 against a measured **45** declared `it(` blocks.
 
-Structural checks performed (not a substitute for a CI run): job-name extraction
-shows `verify`, `coverage`, `r97-r98-closed-loop`, `cold-start-ubuntu`,
-`release-attestation`; **0 tab characters**; YAML could **not** be parsed
-programmatically because `js-yaml` is not a dependency of this repo, so the file
-was inspected by hand and by these structural probes only.
+`ci.yml` remains structurally validated only (job-name extraction, **0 tab
+characters**, manual inspection) because `js-yaml` is not a dependency of this
+repo.
 
 ### 3.4 The paid experiment remains NOT_RUN
 
@@ -337,6 +353,33 @@ with HTTP 429 / `upstream_status: 400`. R98–R101 require **zero external model
 calls**, so they are unaffected — but no paid two-version experiment can be run
 against that gateway, and none was attempted. `OFFLINE_ACCEPTED` is kept distinct
 from "the experiment executed".
+
+### 3.5 Final verdict
+
+**Run [35487313801](https://github.com/ki11a-Conton/harness-agent/actions/runs/35487313801)
+(head `1ed8b92`): SUCCESS — all six jobs green on a clean runner.**
+
+- `install · typecheck · test · build · benchmark-smoke · audit`
+  (ubuntu-latest **and** windows-latest): **success** — the general suite is
+  green on both platforms with the arms-gated driver file excluded from it;
+- `coverage gate (ubuntu)`: **success** — all eight per-package threshold gates
+  hold (matches the local packages-only coverage run, exit 0);
+- `offline cold-start (ubuntu)`: **success**;
+- `r97-r98 closed loop (ubuntu)`: **success** — the two arm checkouts were
+  built at their frozen historical SHAs on the runner, all seven R97/R98 files
+  executed with `--reporter=verbose`, and every assertion step passed: R99
+  arm-worker real execution (report-derived verdict + two distinct case
+  contexts), the `--plan-digest` dispatch pin, the driver file count
+  (45 executed / 0 skipped ≥ 36), the D6 two-arm observation path, the G5
+  cross-process budget contention tests, and the evidence record/upload;
+- `release attestation (P38-12)`: **success** (it only runs when the dependent
+  jobs are green).
+
+Scope of this green, stated: it proves the **offline** two-checkout closed loop
+runs and is verified on a clean CI runner — R101's acceptance
+("Windows/Ubuntu required integration job真跑两臂路径且成功"). It does **not**
+prove the paid two-version experiment ran (see §3.4), and no case PASSED its
+verification offline (the stub provider yields `MODEL_ERROR`; §1.6).
 
 ---
 
@@ -355,6 +398,11 @@ and `RUN_PAID_BENCHMARKS` unset in the parent shell.
 | `node --check scripts/e4/r97-campaign-driver.mjs` | exit 0 |
 | `node --check scripts/e4/r97-observe-arms.mjs` | exit 0 |
 | `node scripts/e4/r97-observe-arms.mjs --root <fresh temp dir>` | exit 0, both arms built and clean |
+| `vitest run --reporter=verbose` (7 R97–R99 files, bash `tee`) | **220 passed / 220**, 0 skipped |
+| closed-loop assertion replica over that verbose log | ALL CLOSED-LOOP ASSERTIONS PASSED (driver 45 executed / 0 skipped, D6 + G5 present) |
+| `vitest run packages/security/src/no-silent-catch.test.ts packages/evaluation/src/r97-budget-ledger.test.ts` | 54 passed (P14-6 fix holds) |
+| `vitest run --exclude '**/r97-driver-closed-loop.test.ts' packages/evaluation` with `R97_ARM_*_DIR` → nonexistent | 97 files / 1452 passed, exit 0 (a fresh runner's main-suite view) |
+| `vitest run --coverage` over `packages/**` with the same exclude | exit 0 — all 8 per-package threshold gates hold |
 
 Per-file counts: `r97-budget-ledger` 50, `r97-execution-state` 22,
 `r97-plan` **55**, `r97-driver-closed-loop` **45** (0 skipped, includes the real
@@ -385,7 +433,8 @@ GREEN命令及结果：同上 -> "case did not pass: model_error (verification_p
             （判定来自真实 baseline.json）；双真实历史臂 16 单元全部执行，
             16 调用计入共享预算；resume 再跑 0 单元 0 调用
 实际执行环境：Windows / Node v24.18.1 / 两臂 worktree e9776ba + a203737 各自构建
-CI run URL / head SHA：无（未运行 CI）
+CI run URL / head SHA：https://github.com/ki11a-Conton/harness-agent/actions/runs/35486451101 （7aa8b72，
+              closed-loop 的 R99 断言步骤通过）；本地 bash-tee 复刻 220/220 全绿
 外部provider请求：0
 历史数据变化：无
 剩余限制：离线 stub 无法产生 pass；逐例多轮调用未与账本对账；
@@ -401,10 +450,11 @@ CI run URL / head SHA：无（未运行 CI）
             suite inventory 未被报告消费；verifiedPasses 在 PARTIAL 路径为 undefined
 RED复现命令及关键失败：移除 fallback 前，缺失 arm 案例会回退到 driver 副本并产生指纹；
             首次把新检查放在 R92 gate 之前 -> 7 个既有 refusal 测试失败（code 被改名）
-GREEN命令及结果：r97-driver-closed-loop 44 passed / 0 skipped，含 4 个新 R100 用例
+GREEN命令及结果：r97-driver-closed-loop 45 passed / 0 skipped，含 4 个新 R100 用例
             （execObs ok、driver build drift、顶层 relabel、suite inventory）
 实际执行环境：Windows / Node v24.18.1
-CI run URL / head SHA：无（未运行 CI）
+CI run URL / head SHA：https://github.com/ki11a-Conton/harness-agent/actions/runs/35486451101 （7aa8b72，
+              主测试 win+ubuntu 与 coverage gate 全绿；R100 用例随 closed-loop job 全文件执行）
 外部provider请求：0
 历史数据变化：无
 剩余限制：CI 未运行；js-yaml 缺失导致 ci.yml 只能结构性校验
@@ -412,28 +462,34 @@ CI run URL / head SHA：无（未运行 CI）
 
 ```text
 任务：R101
-状态：PARTIAL（本机可验证部分 DONE；CI 与付费实验 NOT_RUN）
+状态：DONE（离线闭环，CI 已真跑并修复至 green，见 §3.5）/ NOT_RUN（付费双版本实验）
 起始SHA：d5af97493319bdf349ca54cc49bef855809bc3ce
 修复的发现：F7 —— D6 依赖作者私有 D:/r97-arm-* 且缺失时静默 skip；
             CI job 未运行 arm worker 契约测试
 RED复现命令及关键失败：R97_ARM_*_DIR 指向不存在目录
             -> "FAIL the two real arm builds MUST exist"（旧行为为 skip=绿）
 GREEN命令及结果：真实两臂构建存在时 D6 两个用例通过；ci.yml 新增断言步骤
-实际执行环境：Windows / Node v24.18.1
-CI run URL / head SHA：无 —— 未运行 CI，故不列 URL
+实际执行环境：Windows / Node v24.18.1（CI：ubuntu-latest 的 closed-loop job）
+CI run URL / head SHA：https://github.com/ki11a-Conton/harness-agent/actions/runs/35487313801 （1ed8b92，
+              全 workflow SUCCESS，closed-loop job 全部断言步骤通过，含双臂真实构建）
 外部provider请求：0
 历史数据变化：无
-剩余限制：CI 未运行；付费授权缺失，最终状态为 OFFLINE_ACCEPTED / NOT_RUN
+剩余限制：付费授权缺失，最终状态为 OFFLINE_ACCEPTED / NOT_RUN（CI 已真跑全绿，见 §3.5）
 ```
 
 ---
 
 ## 6. Remaining work, stated plainly
 
-1. **CI has not run.** The job is written and locally reasoned about, but
-   `r97-r98-closed-loop` has never executed on a runner. Until it does, R101's
-   acceptance ("Windows/Ubuntu required integration job真跑两臂路径且成功") is
-   unproven.
+1. **CI ran, twice, and is now fixed — the third run's verdict is in §3.5.**
+   Run 35482804955 (head `6113675`) proved the R99 `--plan-digest` assertion
+   could fail on a green suite (default reporter hides fast tests) and exposed
+   the D6-without-arms failure and the P14-6 silent catch; run 35486451101
+   (head `7aa8b72`) proved the main suite (win+ubuntu), the coverage gate and
+   the cold-start are green and narrowed the remaining closed-loop failure to a
+   path-prefix-sensitive count, fixed in `1ed8b92` with a diagnostic dump. The
+   final closed-loop verdict — including whether the whole workflow is green —
+   is recorded in §3.5.
 2. **No verified pass, and no per-case ledger reconciliation** (§1.6).
 3. **`R97_DRIVER_ARTIFACTS` did not list the arm worker — FIXED during this
    round.** The driver's build digest covered the driver and three evaluation
@@ -460,10 +516,14 @@ CI run URL / head SHA：无 —— 未运行 CI，故不列 URL
 
 ### 6.1 What is NOT claimed
 
-- That CI is green. It has not run.
+- That CI was green on the first two attempts. It was not; each failure is
+  itemised in §3.1 and §3.5. The green claim, if any, is scoped to the specific
+  run recorded there — and the closed-loop job's verdict is only as recent as
+  the last run.
 - That any case PASSED its verification. Offline, none can.
 - That the paid two-version experiment ran. It did not, and the gateway needed
   for it is broken upstream.
 - That the arm worktrees created for this report are reproducible by a single
   committed command on a fresh machine — `r97-observe-arms.mjs` implements that,
-  but it has been exercised only on this machine.
+  and the CI closed-loop job now rebuilds both arms on a clean runner, but the
+  command itself has been exercised only on this machine.
