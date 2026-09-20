@@ -13,21 +13,31 @@
  *      a draft or an unverifiable plan is NOT_READY/DRAFT, and only a plan whose
  *      every bound value is observed is FINALIZED_AUTHORIZATION_PLAN.
  *
+ * Groups P1–P6 cover §R97. Group P7 covers E4-R98/R100 (§0.1 finding F5): the
+ * plan-time observation SNAPSHOT is evidence for review, and every fact a run
+ * depends on is RE-OBSERVED at the execution boundary.
+ *
  * The real two-arm observation is driven by `scripts/e4/r97-plan-driver.mjs` and
  * proven in `r97-driver-closed-loop.test.ts`. This file uses synthetic
  * observations so each refusal path is testable deterministically.
  */
 
 import { describe, expect, it } from "vitest";
+import { join } from "node:path";
 import {
   buildR97AuthorizationPlan,
+  checkExecutionObservationV1,
+  computeDriverBuildDigestV1,
+  loadR97FrozenSelection,
   parseR97ArmObservation,
   r97ReadinessIssues,
+  R97_DRIVER_ARTIFACTS,
   R97_DRAFT_SCHEMA,
   R97_PLAN_SCHEMA,
   type R97ArmObservation,
+  type R97ExecutionObservationV1,
 } from "./r97-plan.js";
-import { classifyR92Caps, type R92AuthorizationV1 } from "./r92-authorization.js";
+import { classifyR92Caps, computeR92AuthorizationDigestV1, type R92AuthorizationV1 } from "./r92-authorization.js";
 
 const REPO = process.cwd();
 const NOW = "2026-09-18T00:00:00.000Z";
@@ -426,7 +436,7 @@ describe("E4-R97 P6: readiness is computed from observations, independently of a
     // variable, no authorization flag and no clock is consulted here.
     const envelope = { caps, endpointIdentity: ENDPOINT, caseIds: [], repetitions: 1, armCount: 2 } as unknown as R92AuthorizationV1;
     const issues = r97ReadinessIssues({
-      selection: { caseIds: [], digest: "d", caseFingerprints: {} },
+      selection: { caseIds: [], digest: "d", caseFingerprints: {}, caseSuites: {} },
       baseline: null,
       candidate: null,
       caps,
@@ -443,3 +453,385 @@ describe("E4-R97 P6: readiness is computed from observations, independently of a
     const p = await build();
     expect(p.readinessIssues).toEqual([]);
   });});
+
+describe("E4-R98/R100 P7: execution-time facts are re-observed, never inherited from the plan snapshot", () => {
+  // Plan §0.1 F5 ("真实执行前必修"): "fake CLI 从 plan.observation 读取快照；runDriver
+  // 不重新观测 checkout." And §R100 做什么 #1: "分开计划期观测快照和执行期新观测；快照
+  // 可用于审阅，不能充当当前事实."
+  //
+  // §R100 怎么验收 states the acceptance property these tests prove:
+  //
+  //   "计划生成后修改实际case、构建文件、模型参数、endpoint、driver字节，而保留旧
+  //    observation：每项均在首个外部请求前失败."
+  //
+  // Every test below changes EXACTLY ONE bound fact while KEEPING the plan-time
+  // snapshot intact, and asserts that the execution-time check refuses with the
+  // NAMED code for that fact. That is what makes "the snapshot is not current
+  // fact" a checked property rather than a comment.
+
+  /** A FRESH observation that MATCHES the finalized envelope exactly. */
+  async function freshMatch(plan: Awaited<ReturnType<typeof build>>, over: Partial<R97ExecutionObservationV1> = {}): Promise<R97ExecutionObservationV1> {
+    const a = plan.authorization!;
+    return {
+      now: NOW,
+      armShas: { baseline: a.arms.baseline.sha, candidate: a.arms.candidate.sha },
+      armDigests: {
+        baseline: a.arms.baseline.executionPlanDigest,
+        candidate: a.arms.candidate.executionPlanDigest,
+      },
+      caseFingerprints: { ...a.caseFingerprints },
+      providerId: a.providerId,
+      modelId: a.modelId,
+      endpointIdentity: a.endpointIdentity,
+      driverBuildDigest: a.driverBuildDigest!,
+      expandedPlanDigest: plan.planDigest!,
+      ...over,
+    };
+  }
+
+  async function check(plan: Awaited<ReturnType<typeof build>>, over: Partial<R97ExecutionObservationV1> = {}) {
+    return checkExecutionObservationV1({ plan, observed: await freshMatch(plan, over) });
+  }
+
+  it("1. a freshly observed set of facts that MATCHES the envelope passes with ok:true and NO codes", async () => {
+    const plan = await build();
+    expect(plan.status).toBe("FINALIZED_AUTHORIZATION_PLAN");
+    const result = await check(plan);
+    expect(result.issues).toEqual([]);
+    expect(result.codes).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("1b. the plan snapshot is HISTORY for review, and `observation` is the SAME object as `planObservation`", async () => {
+    // The split is only meaningful if the two names cannot describe different
+    // worlds: `observation` is the back-compat alias the driver reads, and
+    // `planObservation` is the review snapshot. A divergence between them would
+    // reintroduce exactly the two-sources-of-truth defect F5 names.
+    const plan = await build();
+    expect(plan.planObservation).not.toBeNull();
+    expect(plan.observation).toBe(plan.planObservation);
+    // The check API takes NO snapshot argument at all: there is no parameter a
+    // caller could fill from `plan.planObservation`, so "compare the envelope
+    // against its own snapshot" is unrepresentable rather than discouraged.
+    const drift = await check(plan, { caseFingerprints: { ...plan.authorization!.caseFingerprints } });
+    expect(drift.ok).toBe(true);
+  });
+
+  // ---- 2. Each drift code fires IN ISOLATION ------------------------------
+
+  it("2a. EXEC_OBS_ARM_SHA_DRIFT fires alone when one arm's HEAD moved", async () => {
+    const plan = await build();
+    const r = await check(plan, {
+      armShas: { baseline: "9".repeat(40), candidate: plan.authorization!.arms.candidate.sha },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toEqual(["EXEC_OBS_ARM_SHA_DRIFT"]);
+    expect(r.issues.join(" ")).toContain('arm "baseline"');
+    expect(r.issues.join(" ")).toContain("sourceSha");
+  });
+
+  it("2b. EXEC_OBS_ARM_PLAN_DIGEST_DRIFT fires alone when an arm's real dry-run digest changed", async () => {
+    const plan = await build();
+    const r = await check(plan, {
+      armDigests: { baseline: plan.authorization!.arms.baseline.executionPlanDigest, candidate: "9".repeat(64) },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toEqual(["EXEC_OBS_ARM_PLAN_DIGEST_DRIFT"]);
+    expect(r.issues.join(" ")).toContain('arm "candidate"');
+    expect(r.issues.join(" ")).toContain("executionPlanDigest");
+  });
+
+  it("2c. EXEC_OBS_CASE_DRIFT fires for ONE case and NAMES that case id", async () => {
+    const plan = await build();
+    const approved = plan.authorization!.caseIds;
+    // Change exactly ONE case's content, leaving every other fact matching.
+    const changed = approved[2]!;
+    const drifted = { ...plan.authorization!.caseFingerprints, [changed]: "7".repeat(64) };
+    const r = await check(plan, { caseFingerprints: drifted });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toEqual(["EXEC_OBS_CASE_DRIFT"]);
+    // The refusal must identify the OFFENDING CASE, not merely say "a case drifted".
+    expect(r.issues.join(" ")).toContain(changed);
+    expect(r.issues.join(" ")).toContain("fingerprint");
+    // And it must NOT name any other case.
+    for (const other of approved.filter((id) => id !== changed)) {
+      expect(r.issues.join(" ")).not.toContain(other);
+    }
+  });
+
+  it("2c2. a case approved but NOT observed is EXEC_OBS_CASE_MISSING, not a silent skip", async () => {
+    const plan = await build();
+    const dropped = plan.authorization!.caseIds[0]!;
+    const partial = { ...plan.authorization!.caseFingerprints };
+    delete partial[dropped];
+    const r = await check(plan, { caseFingerprints: partial });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toEqual(["EXEC_OBS_CASE_MISSING"]);
+    expect(r.issues.join(" ")).toContain(dropped);
+  });
+
+  it("2d. EXEC_OBS_IDENTITY_DRIFT fires alone for a changed provider id", async () => {
+    const plan = await build();
+    const r = await check(plan, { providerId: "some-other-provider" });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toEqual(["EXEC_OBS_IDENTITY_DRIFT"]);
+    expect(r.issues.join(" ")).toContain("providerId");
+  });
+
+  it("2e. EXEC_OBS_IDENTITY_DRIFT fires alone for a changed model id", async () => {
+    const plan = await build();
+    const r = await check(plan, { modelId: "gpt-4o" });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toEqual(["EXEC_OBS_IDENTITY_DRIFT"]);
+    expect(r.issues.join(" ")).toContain("modelId");
+  });
+
+  it("2f. EXEC_OBS_IDENTITY_DRIFT fires alone for a changed endpoint identity", async () => {
+    const plan = await build();
+    const r = await check(plan, { endpointIdentity: "d".repeat(64) });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toEqual(["EXEC_OBS_IDENTITY_DRIFT"]);
+    expect(r.issues.join(" ")).toContain("endpointIdentity");
+  });
+
+  it("2g. EXEC_OBS_DRIVER_BUILD_DRIFT fires alone when the driver's BYTES changed under an unchanged version label", async () => {
+    // The measured defect: `driverVersion` is a human label that does not move
+    // when the code changes, so a rewritten driver passed every check. The build
+    // digest is derived from the executor's bytes and is bound beside the label.
+    const plan = await build();
+    expect(plan.authorization!.driverVersion).toBe(plan.driverVersion);
+    expect(plan.authorization!.driverBuildDigest).toBe(plan.driverBuildDigest);
+    const r = await check(plan, { driverBuildDigest: "0".repeat(64) });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toEqual(["EXEC_OBS_DRIVER_BUILD_DRIFT"]);
+    expect(r.issues.join(" ")).toContain("driverBuildDigest");
+  });
+
+  it("2h. EXEC_OBS_PLAN_DIGEST_MISMATCH fires alone for a changed expanded plan digest", async () => {
+    const plan = await build();
+    const r = await check(plan, { expandedPlanDigest: "1".repeat(64) });
+    expect(r.ok).toBe(false);
+    // Reported twice: the reported expansion disagrees with BOTH the approved
+    // label and the envelope's own recomputation. Same named code either way.
+    expect(new Set(r.codes)).toEqual(new Set(["EXEC_OBS_PLAN_DIGEST_MISMATCH"]));
+    expect(r.issues.join(" ")).toContain("planDigest");
+  });
+
+  it("2h2. a top-level-digest-only edit cannot pass: the label and the BODY must agree", async () => {
+    // §R100 怎么做: "拒绝只改顶层digest的对象." Rewriting `planDigest` alone leaves
+    // the envelope body describing a different plan, and the check recomputes the
+    // digest FROM THE BODY.
+    const plan = await build();
+    const forged = { ...plan, planDigest: "2".repeat(64) };
+    const r = await checkExecutionObservationV1({ plan: forged, observed: await freshMatch(plan, { expandedPlanDigest: "2".repeat(64) }) });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toContain("EXEC_OBS_PLAN_DIGEST_MISMATCH");
+  });
+
+  // ---- 3. Expiry / not-yet-valid / unreadable clock ------------------------
+
+  it("3a. EXEC_OBS_EXPIRED refuses a plan whose validity window has passed", async () => {
+    const plan = await build({ createdAt: CREATED, validityDays: 1 });
+    const r = await check(plan, { now: "2030-01-02T00:00:00.000Z" });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toEqual(["EXEC_OBS_EXPIRED"]);
+    expect(r.issues.join(" ")).toContain("expiresAt");
+    expect(r.issues.join(" ")).toMatch(/expiry is never extended/);
+  });
+
+  it("3b. EXEC_OBS_NOT_YET_VALID refuses a plan whose window has not started", async () => {
+    const plan = await build({ createdAt: "2030-01-01T00:00:00.000Z" });
+    const r = await check(plan, { now: "2026-09-18T00:00:00.000Z" });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toEqual(["EXEC_OBS_NOT_YET_VALID"]);
+    expect(r.issues.join(" ")).toContain("createdAt");
+  });
+
+  it("3c. an unreadable execution clock is refused, never treated as inside the window", async () => {
+    const plan = await build();
+    const r = await check(plan, { now: "not-a-timestamp" });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toEqual(["EXEC_OBS_TIME_INVALID"]);
+  });
+
+  // ---- 4. A TAMPERED SELECTION FILE is refused when the plan module loads it
+
+  it("4. a selection whose case list was edited while keeping the OLD digest is REFUSED", async () => {
+    // Plan §R100 怎么做: "验证冻结selection内容与digest，不能只读取 parsed.digest 当真."
+    // The tampered file is written into a TEMP directory; the committed evidence
+    // file under docs/ is never modified.
+    const { mkdtemp, rm, writeFile, mkdir, cp, readFile } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const dir = await mkdtemp(join(tmpdir(), "r97-sel-"));
+    try {
+      const raw = JSON.parse(await readFile(join(REPO, "docs", "evidence", "e4-r87-case-selection.json"), "utf8")) as {
+        cases: Array<{ id: string }>;
+        digest: string;
+      };
+      const originalDigest = raw.digest;
+      // Swap the last case for a different one, leaving `digest` UNCHANGED — the
+      // exact "swap after binding" attack the freeze exists to stop.
+      raw.cases[raw.cases.length - 1] = { ...raw.cases[raw.cases.length - 1], id: "regression/not-a-frozen-case" } as { id: string };
+
+      await mkdir(join(dir, "docs", "evidence"), { recursive: true });
+      await writeFile(join(dir, "docs", "evidence", "e4-r87-case-selection.json"), JSON.stringify(raw, null, 2), "utf8");
+      // The case files must exist for the loader to get as far as the digest
+      // check on a NON-tampered run; copy the benchmark tree.
+      await cp(join(REPO, "benchmarks"), join(dir, "benchmarks"), { recursive: true });
+
+      await expect(loadR97FrozenSelection(dir)).rejects.toMatchObject({ code: "SELECTION_DIGEST_MISMATCH" });
+      // And the refusal NAMES both digests, so a reader can see what changed.
+      await expect(loadR97FrozenSelection(dir)).rejects.toThrow(/recomputed selection digest .* != the committed digest/s);
+
+      // Control: the SAME tampered file with a CORRECTLY recomputed digest now
+      // fails a DIFFERENT check (the swapped-in case does not exist on disk),
+      // proving the digest check is what caught the first one.
+      const { canonicalDigestV1 } = await import("./r97-plan.js");
+      const { digest: _drop, ...payload } = raw;
+      void originalDigest;
+      const reDigested = { ...payload, digest: canonicalDigestV1(payload) };
+      await writeFile(join(dir, "docs", "evidence", "e4-r87-case-selection.json"), JSON.stringify(reDigested, null, 2), "utf8");
+      await expect(loadR97FrozenSelection(dir)).rejects.toMatchObject({ code: "SELECTION_CASE_UNREADABLE" });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("4b. the committed frozen selection still VERIFIES against its own digest", async () => {
+    // The control that makes test 4 meaningful: the real evidence file is honest.
+    const sel = await loadR97FrozenSelection(REPO);
+    expect(sel.caseIds.length).toBe(8);
+    expect(sel.digest).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  // ---- 5. The case inventory carries the TRUE suite, and is DIGEST-COVERED --
+
+  it("5a. the case inventory labels the two stress/* cases `stress`, NOT `regression`", async () => {
+    // Plan §R100 怎么做: "mixed-suite 用显式 case inventory 保留真实 suite，不能悄悄将
+    // stress 全重标 regression 再宣称完全相同实验."
+    const plan = await build();
+    const inventory = plan.authorization!.caseInventory!;
+    expect(inventory.length).toBe(plan.authorization!.caseIds.length);
+
+    const stressCases = plan.authorization!.caseIds.filter((id) => id.startsWith("stress/"));
+    const regressionCases = plan.authorization!.caseIds.filter((id) => id.startsWith("regression/"));
+    // The frozen selection spans TWO suites — this is the premise of the test.
+    expect(stressCases.length).toBe(2);
+    expect(regressionCases.length).toBe(6);
+
+    for (const id of stressCases) {
+      const entry = inventory.find((e) => e.caseId === id);
+      expect(entry, `inventory must record ${id}`).toBeDefined();
+      expect(entry!.suite).toBe("stress");
+      expect(entry!.suite).not.toBe("regression");
+      // The CLI's single-valued `--suite` adaptation is RECORDED, not erased.
+      expect(entry!.plannedUnderSuite).toBe("regression");
+      expect(entry!.relabelled).toBe(true);
+    }
+    for (const id of regressionCases) {
+      expect(inventory.find((e) => e.caseId === id)!.suite).toBe("regression");
+    }
+    // The approval package shows the true suite, so a reader cannot mistake it.
+    expect(plan.approvalMarkdown).toContain("mixed-suite");
+    expect(plan.approvalMarkdown).toContain("TRUE suite");
+    expect(plan.approvalMarkdown).toContain("**stress**");
+  });
+
+  it("5b. the inventory is INSIDE the envelope, so relabelling a case moves planDigest", async () => {
+    const plan = await build();
+    // It is an envelope field — not merely a result field — which is what makes
+    // it digest-covered.
+    expect(plan.authorization!.caseInventory).toBeDefined();
+    const tampered = {
+      ...plan.authorization!,
+      caseInventory: plan.authorization!.caseInventory!.map((e) =>
+        e.caseId.startsWith("stress/") ? { ...e, suite: "regression", relabelled: false } : e,
+      ),
+    };
+    const recomputed = computeR92AuthorizationDigestV1(tampered);
+    expect(recomputed).not.toBe(plan.planDigest);
+  });
+
+  it("5c. execution-time refuses an inventory that disagrees with the case ids", async () => {
+    const plan = await build();
+    const relabelled = {
+      ...plan.authorization!,
+      caseInventory: plan.authorization!.caseInventory!.map((e) =>
+        e.caseId.startsWith("stress/") ? { ...e, suite: "regression", relabelled: false } : e,
+      ),
+    };
+    const r = await checkExecutionObservationV1({
+      plan: { ...plan, authorization: relabelled, planDigest: computeR92AuthorizationDigestV1(relabelled) },
+      observed: await freshMatch(plan, { expandedPlanDigest: computeR92AuthorizationDigestV1(relabelled) }),
+    });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toContain("EXEC_OBS_SUITE_INVENTORY_DRIFT");
+    expect(r.issues.join(" ")).toContain("stress/");
+  });
+
+  // ---- 6. Every single bound field moves planDigest ------------------------
+
+  it("6. changing ANY single bound envelope field moves planDigest", async () => {
+    // Plan §R97 line 229: "更改任意绑定字段后旧审批失效." This extends the D8
+    // driverVersion case in `r97-driver-closed-loop.test.ts` to EVERY field the
+    // R100 work adds, plus the fields a drift code depends on. A field that does
+    // NOT move the digest is decorative: the approval would not cover it.
+    const plan = await build();
+    const base = plan.authorization!;
+    const mutations: Record<string, (a: typeof base) => typeof base> = {
+      driverVersion: (a) => ({ ...a, driverVersion: "e4-r97-campaign-driver-v99" }),
+      driverBuildDigest: (a) => ({ ...a, driverBuildDigest: "0".repeat(64) }),
+      caseInventory: (a) => ({
+        ...a,
+        caseInventory: a.caseInventory!.map((e, i) => (i === 0 ? { ...e, suite: "adversarial", relabelled: true } : e)),
+      }),
+      providerId: (a) => ({ ...a, providerId: "other" }),
+      modelId: (a) => ({ ...a, modelId: "other" }),
+      endpointIdentity: (a) => ({ ...a, endpointIdentity: "f".repeat(64) }),
+      caseIds: (a) => ({ ...a, caseIds: [...a.caseIds].reverse() }),
+      caseFingerprints: (a) => {
+        const first = a.caseIds[0]!;
+        return { ...a, caseFingerprints: { ...a.caseFingerprints, [first]: "0".repeat(64) } };
+      },
+      arms: (a) => ({ ...a, arms: { ...a.arms, baseline: { ...a.arms.baseline, sha: "0".repeat(40) } } }),
+      expiresAt: (a) => ({ ...a, expiresAt: "2027-01-01T00:00:00.000Z" }),
+      outputDir: (a) => ({ ...a, outputDir: ".ci/elsewhere" }),
+    };
+    for (const [field, mutate] of Object.entries(mutations)) {
+      const recomputed = computeR92AuthorizationDigestV1(mutate(base));
+      expect(recomputed, `changing ${field} must move planDigest`).not.toBe(plan.planDigest);
+    }
+  });
+
+  it("6b. a DRAFT/NOT_READY plan with no envelope is refused by the check, never run", async () => {
+    const draft = await build({ baseline: null, candidate: null });
+    const r = checkExecutionObservationV1({
+      plan: draft,
+      observed: {
+        now: NOW,
+        armShas: { baseline: null, candidate: null },
+        armDigests: { baseline: null, candidate: null },
+        caseFingerprints: {},
+        providerId: "openai",
+        modelId: "gpt-4o-mini",
+        endpointIdentity: ENDPOINT,
+        driverBuildDigest: "0".repeat(64),
+        expandedPlanDigest: "0".repeat(64),
+      },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toContain("EXEC_OBS_NOT_AUTHORIZED");
+  });
+
+  it("6c. the driver build digest is derived from the enumerated artifacts, not a version label", async () => {
+    const d1 = await computeDriverBuildDigestV1(REPO);
+    expect(d1).toMatch(/^[0-9a-f]{64}$/);
+    // Deterministic: the same bytes give the same digest.
+    expect(await computeDriverBuildDigestV1(REPO)).toBe(d1);
+    // The covered set is explicit and small — never the whole workspace.
+    expect(R97_DRIVER_ARTIFACTS).toContain("scripts/e4/r97-campaign-driver.mjs");
+    expect(R97_DRIVER_ARTIFACTS.length).toBeLessThan(10);
+    // A missing artifact is an error, never a silently smaller covered set.
+    await expect(computeDriverBuildDigestV1(join(REPO, "does-not-exist"))).rejects.toThrow(/must never shrink silently/);
+  });
+});

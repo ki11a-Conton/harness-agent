@@ -15,17 +15,20 @@
  * constructed and no network call is made anywhere in this file.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  campaignIdOf,
   openR97BudgetLedger,
   parseR97Ledger,
   readR97BudgetView,
+  readR97CampaignClaim,
   readR97LedgerFile,
   viewOfR97Ledger,
+  R97_CAMPAIGN_CLAIMS_DIR_ENV,
   R97_LEDGER_FILENAME,
   R97_LEDGER_LOCK_FILENAME,
   R97_LEDGER_SCHEMA,
@@ -42,6 +45,19 @@ afterEach(async () => {
   for (const d of dirs.splice(0)) await rm(d, { recursive: true, force: true }).catch(() => {});
 });
 
+/**
+ * The per-authorization CLAIM anchor (plan §R98 line 121's cross-directory
+ * guard) lives outside any single campaign directory. Point it at a scratch
+ * directory for this whole file so no test reads or writes machine-level state,
+ * and so the pre-existing tests keep their isolated-directory behaviour.
+ */
+const CLAIMS_DIR = await mkdtemp(join(tmpdir(), "r97-claims-"));
+process.env[R97_CAMPAIGN_CLAIMS_DIR_ENV] = CLAIMS_DIR;
+afterAll(async () => {
+  delete process.env[R97_CAMPAIGN_CLAIMS_DIR_ENV];
+  await rm(CLAIMS_DIR, { recursive: true, force: true }).catch(() => {});
+});
+
 const PLAN = "a".repeat(64);
 const OTHER_PLAN = "b".repeat(64);
 
@@ -50,6 +66,7 @@ function ledger(entries: Partial<R97LedgerFile["entries"][number]>[], grant = 3)
     schemaVersion: R97_LEDGER_SCHEMA,
     planDigest: PLAN,
     campaignModelCalls: grant,
+    campaignId: campaignIdOf(PLAN, grant),
     entries: entries.map((e, i) => ({
       reservationId: e.reservationId ?? `r${i}`,
       arm: e.arm ?? "baseline",
@@ -605,5 +622,328 @@ describe("E4-R97 G8: lock ownership is by live owner token, not by age (R98 / F4
     ).rejects.toThrow(/lock/i);
     expect(await readFile(lockPath, "utf8")).toContain("third-party-token");
     await rm(lockPath, { force: true });
+  });
+});
+
+describe("E4-R97 G9: one authorization cannot be spent twice through a different directory", () => {
+  // Plan §R98 怎么做 (line 121): "campaign 初始化与 resume 用明确模式或持久 header
+  // 区分；命令行换 ledgerDir/outDir 不得静默启动同一授权的另一个空预算."
+  //
+  // MEASURED DEFECT this closes: the ledger used to be identified ONLY by
+  // (directory, planDigest, campaignModelCalls). Pointing `--ledger`/`--out` at
+  // a different directory therefore started a brand-new EMPTY budget for the
+  // SAME approved plan, so one authorization could be spent twice — in two
+  // directories, with nothing anywhere recording that fact.
+  //
+  // The fix is a PERSISTED campaign identity (`campaignId`, derived from the
+  // authorization) plus an explicit open MODE. These tests drive the real
+  // module against real temp directories; the tamper tests use raw `writeFile`
+  // and never touch a committed fixture.
+
+  const writeLedgerBody = async (dir: string, body: unknown): Promise<void> => {
+    await writeFile(join(dir, R97_LEDGER_FILENAME), `${JSON.stringify(body, null, 2)}\n`, "utf8");
+  };
+
+  /**
+   * A plan digest unique to ONE test.
+   *
+   * The claim anchor is keyed by `campaignId`, i.e. by the authorization — so
+   * two tests that both use `PLAN` would share an anchor and the second would
+   * see the first's claim. That is the FEATURE working, but it makes tests
+   * order-dependent, so each test derives its own authorization. (Tests that
+   * deliberately exercise the cross-directory conflict share ONE digest on
+   * purpose.)
+   */
+  let digestCounter = 0;
+  const freshPlan = (): string => (++digestCounter).toString(16).padStart(64, "c");
+
+  it("campaignIdOf is deterministic and binds BOTH the plan digest and the grant", () => {
+    // Deterministic: the same authorization derives the same identity every
+    // time, in this process and any other.
+    expect(campaignIdOf(PLAN, 3)).toBe(campaignIdOf(PLAN, 3));
+    expect(campaignIdOf(PLAN, 3)).not.toBe("");
+
+    // A different PLAN is a different authorization.
+    expect(campaignIdOf(OTHER_PLAN, 3)).not.toBe(campaignIdOf(PLAN, 3));
+    // A different GRANT is also a different authorization: 3 calls and 320 calls
+    // are not the same approved spend, so they must not share an identity.
+    expect(campaignIdOf(PLAN, 320)).not.toBe(campaignIdOf(PLAN, 3));
+    // And a one-character plan difference must not collide.
+    expect(campaignIdOf(`${"a".repeat(63)}b`, 3)).not.toBe(campaignIdOf(PLAN, 3));
+  });
+
+  it("REFUSES a first-run in directory B when the same authorization already owns directory A", async () => {
+    // This is the "silly to start an empty budget elsewhere" case. Arm A spends
+    // 2 of the 3 approved calls in A; pointing the CLI's `--ledger` at a fresh
+    // directory B must NOT silently produce another full grant of 3.
+    const a = await tempDir();
+    const b = await tempDir();
+    const plan = freshPlan();
+
+    const first = await openR97BudgetLedger(a, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" });
+    const r = await first.reserve("baseline", 2);
+    expect(r.ok).toBe(true);
+    await first.commit(r.reservationId!, 2);
+
+    // The refusal. The error NAMES the conflict and the other directory, so an
+    // operator can see that this authorization is already in use elsewhere.
+    await expect(
+      openR97BudgetLedger(b, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" }),
+    ).rejects.toThrow(/BUDGET_CAMPAIGN_DIR_DUPLICATE/);
+    await expect(
+      openR97BudgetLedger(b, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" }),
+    ).rejects.toThrow(new RegExp(a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+
+    // The refusal must be durable and non-destructive: B is left WITHOUT a
+    // ledger (it did not bootstrap an empty budget), and A still holds its 1
+    // remaining call.
+    expect(await readR97LedgerFile(b)).toBeNull();
+    expect((await readR97BudgetView(a))?.remaining).toBe(1);
+  });
+
+  it("RECORDS the competing directory durably, so the double-spend is DETECTABLE", async () => {
+    // The honest limitation: a fresh directory B cannot SEE A's ledger — the
+    // ledger is directory-local by construction, and no directory-local file can
+    // observe a sibling. So the evidence lives in a durable per-authorization
+    // CLAIM ANCHOR instead of being implied by a file's location.
+    //
+    // This is the LENIENT half of the design, and it is deliberate: a strict
+    // machine-global veto would permanently wedge legitimate re-runs (a cleaned
+    // CI workspace, a fresh machine, a deliberately relocated --out) and, being
+    // bypassable by deleting one anchor file, would buy no real security — plan
+    // §R98 line 121 scopes the guarantee to local recovery integrity. What is
+    // NOT acceptable is silence, so under the default `auto` mode the conflict
+    // is recorded AND surfaced on the handle rather than hidden.
+    const a = await tempDir();
+    const b = await tempDir();
+    // One authorization, exercised across two directories on purpose.
+    const plan = freshPlan();
+    const id = campaignIdOf(plan, 3);
+
+    await openR97BudgetLedger(a, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" });
+    expect((await readR97CampaignClaim(id))?.claimedDirs).toContain(a);
+
+    // A default (auto) open in a DIFFERENT directory does not throw — that is
+    // the documented lenient behaviour — but it cannot hide the conflict.
+    const second = await openR97BudgetLedger(b, { planDigest: plan, campaignModelCalls: 3 });
+    expect(second.duplicateCampaignDirs).toContain(a);
+    expect(second.duplicateCampaignDirs).not.toContain(b);
+    // Re-opening the FIRST directory now also reports the competing directory:
+    // the conflict is a property of the AUTHORIZATION, not of whichever handle
+    // happened to be created first, so neither handle may hide it. (Asserting
+    // `[]` here would contradict the durable-anchor assertion below.)
+    const firstHandle = await openR97BudgetLedger(a, { planDigest: plan, campaignModelCalls: 3 });
+    expect(firstHandle.duplicateCampaignDirs).toContain(b);
+    expect(firstHandle.duplicateCampaignDirs).not.toContain(a);
+
+    // And the evidence is durable: the anchor names BOTH directories, so the
+    // double-spend is inspectable after the fact even though B's own ledger
+    // started empty.
+    const claim = await readR97CampaignClaim(id);
+    expect(claim?.claimedDirs).toContain(a);
+    expect(claim?.claimedDirs).toContain(b);
+
+    // A DIFFERENT authorization has its own, independent claim.
+    const otherId = campaignIdOf(freshPlan(), 3);
+    expect(otherId).not.toBe(id);
+    expect(await readR97CampaignClaim(otherId)).toBeNull();
+  });
+
+  it("a first-run into its OWN already-claimed directory is NOT a conflict", async () => {
+    // The guard must not break the ordinary re-run: re-opening the SAME
+    // directory for the same authorization is the normal adopt/resume path.
+    const a = await tempDir();
+    const plan = freshPlan();
+    await openR97BudgetLedger(a, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" });
+    const again = await openR97BudgetLedger(a, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" });
+    expect(again.duplicateCampaignDirs).toEqual([]);
+    expect((await again.view()).remaining).toBe(3);
+    // An adopted open reports that it RESUMED rather than created.
+    expect(again.mode).toBe("resume");
+  });
+
+  it("REGRESSION: a first-run cannot hide behind a ledger an earlier auto open already created", async () => {
+    // The cross-directory guard must not be a CREATE-only check. If it ran only
+    // on the create path, an `auto` open in the new directory B would bootstrap
+    // B's ledger first, and a subsequent explicit `first-run` in B would then
+    // find a ledger, "adopt" it, and never consult the claim anchor at all —
+    // silently starting a second full budget for an authorization already spent
+    // in A. MEASURED before the fix: with A claimed, an auto open in B followed
+    // by `first-run` in B did NOT throw.
+    const a = await tempDir();
+    const b = await tempDir();
+    const plan = freshPlan();
+
+    await openR97BudgetLedger(a, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" });
+    // The lenient default open in B is allowed to create B's own ledger...
+    const autoB = await openR97BudgetLedger(b, { planDigest: plan, campaignModelCalls: 3 });
+    expect(autoB.duplicateCampaignDirs).toContain(a);
+    expect(await readR97LedgerFile(b)).not.toBeNull();
+
+    // ...but the EXPLICIT first-run in B must STILL refuse, even though B now
+    // has a perfectly valid ledger of its own to adopt.
+    await expect(
+      openR97BudgetLedger(b, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" }),
+    ).rejects.toThrow(/BUDGET_CAMPAIGN_DIR_DUPLICATE/);
+
+    // A resume in B remains legal: that is the supported way to continue.
+    const resumedB = await openR97BudgetLedger(b, { planDigest: plan, campaignModelCalls: 3, mode: "resume" });
+    expect(resumedB.duplicateCampaignDirs).toContain(a);
+  });
+
+  it("REFUSES a resume against a directory with NO ledger, and creates nothing", async () => {
+    const dir = await tempDir();
+    const plan = freshPlan();
+    // A resume may NOT create: it promises "recover the state that exists".
+    await expect(
+      openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "resume" }),
+    ).rejects.toThrow(/BUDGET_STATE_MISSING/);
+
+    // The discriminator for "must NOT create anything": no ledger file exists
+    // afterwards. (A created-but-empty ledger would be the silent re-grant.)
+    expect(await readR97LedgerFile(dir)).toBeNull();
+    const { readdir } = await import("node:fs/promises");
+    const names = await readdir(dir);
+    expect(names).not.toContain(R97_LEDGER_FILENAME);
+  });
+
+  it("resume ADOPTS an existing ledger that carries the matching campaign identity", async () => {
+    const dir = await tempDir();
+    const plan = freshPlan();
+    const first = await openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" });
+    const r = await first.reserve("baseline", 2);
+    await first.commit(r.reservationId!, 2);
+
+    // A genuine resume sees the spend and does NOT refresh the allowance.
+    const resumed = await openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "resume" });
+    expect((await resumed.view()).remaining).toBe(1);
+    expect((await resumed.read()).campaignId).toBe(campaignIdOf(plan, 3));
+    expect(resumed.mode).toBe("resume");
+  });
+
+  it("REFUSES a TAMPERED campaignId on both the resume open AND a later reserve()", async () => {
+    const dir = await tempDir();
+    const plan = freshPlan();
+    // Establish a valid ledger first...
+    const l = await openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" });
+    await l.reserve("baseline", 1);
+
+    // ...then rewrite ONLY the identity field, leaving every counter legal.
+    const onDisk = JSON.parse(await readFile(join(dir, R97_LEDGER_FILENAME), "utf8")) as Record<string, unknown>;
+    expect(onDisk["campaignId"]).toBe(campaignIdOf(plan, 3));
+    onDisk["campaignId"] = campaignIdOf(freshPlan(), 3); // a DIFFERENT authorization's id
+    await writeLedgerBody(dir, onDisk);
+
+    // (1) The resume OPEN refuses it.
+    await expect(
+      openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "resume" }),
+    ).rejects.toThrow(/BUDGET_STATE_MISMATCH/);
+
+    // (2) The ALREADY-OPEN handle must also refuse at mutate time: the identity
+    // is re-validated inside the locked read-modify-write, not only at open.
+    await expect(l.reserve("candidate", 1)).rejects.toThrow(/BUDGET_STATE_MISMATCH/);
+  });
+
+  it("handles a LEGACY ledger with NO campaignId strictly: refused as BUDGET_STATE_MISMATCH", async () => {
+    // DECISION: a file written before this change (no `campaignId`) is REJECTED,
+    // not silently adopted. Rationale: the whole point of the identity is to
+    // prove that the budget in THIS directory belongs to THIS authorization. A
+    // file that carries no identity cannot prove that, and "I cannot verify the
+    // identity" must never degrade into "assume it is mine" — that is exactly
+    // the silent double-spend the campaign id exists to prevent. Because the
+    // field is absent rather than contradictory, the honest named code is
+    // MISMATCH (found: none, expected: the derived id), and the error message
+    // says so explicitly so an operator can recognise an old file.
+    const dir = await tempDir();
+    const plan = freshPlan();
+    const legacy = {
+      schemaVersion: R97_LEDGER_SCHEMA,
+      planDigest: plan,
+      campaignModelCalls: 3,
+      entries: [],
+      // NOTE: no campaignId at all.
+    };
+    await writeLedgerBody(dir, legacy);
+
+    // The parse layer itself does not invent an identity for it.
+    const parsed = parseR97Ledger(legacy);
+    expect(parsed.ledger?.campaignId ?? null).toBeNull();
+
+    await expect(
+      openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "resume" }),
+    ).rejects.toThrow(/BUDGET_STATE_MISMATCH/);
+    // ...and the refusal names the missing identity, not a generic parse error.
+    await expect(
+      openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" }),
+    ).rejects.toThrow(/campaignId/i);
+  });
+
+  it("reserve() inside the LOCKED MUTATE path refuses a plan-digest swap (not just read())", async () => {
+    // The existing G7 test proves `read()` refuses a swapped plan. That is NOT
+    // enough: `reserve` is a READ-MODIFY-WRITE that runs under the lock, and if
+    // the identity check lived only in `read()`/open, a swap landing between the
+    // bootstrap and a mutate could still be written through. This test names
+    // that distinction: it asserts the SAME check runs inside withLedger.
+    const dir = await tempDir();
+    const plan = freshPlan();
+    const foreign = freshPlan();
+    const l = await openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" });
+
+    // Externally replace the ledger with a VALID file for a DIFFERENT plan.
+    await writeLedgerBody(dir, {
+      schemaVersion: R97_LEDGER_SCHEMA,
+      planDigest: foreign,
+      campaignModelCalls: 3,
+      campaignId: campaignIdOf(foreign, 3),
+      entries: [],
+    });
+
+    // The mutate path — not merely a read — must refuse and must not persist.
+    await expect(l.reserve("baseline", 1)).rejects.toThrow(/BUDGET_STATE_MISMATCH/);
+    await expect(l.commit("r-nope", 1)).rejects.toThrow(/BUDGET_STATE_MISMATCH/);
+    await expect(l.recover()).rejects.toThrow(/BUDGET_STATE_MISMATCH/);
+  });
+
+  it("reserve() inside the LOCKED MUTATE path refuses a SCHEMA swap", async () => {
+    // The same uniformity claim for the schema version: every locked
+    // read-modify-write re-checks it, and the failure is CORRUPT (the file is
+    // structurally not our ledger) rather than MISMATCH.
+    const dir = await tempDir();
+    const plan = freshPlan();
+    const l = await openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" });
+    await writeLedgerBody(dir, {
+      schemaVersion: "e4-r97-budget-ledger-v0",
+      planDigest: plan,
+      campaignModelCalls: 3,
+      campaignId: campaignIdOf(plan, 3),
+      entries: [],
+    });
+    await expect(l.reserve("baseline", 1)).rejects.toThrow(/BUDGET_STATE_CORRUPT/);
+  });
+
+  it("a first-run may ADOPT an existing ledger only when the identity matches", async () => {
+    const dir = await tempDir();
+    const plan = freshPlan();
+    const first = await openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" });
+    const r = await first.reserve("baseline", 3);
+    await first.commit(r.reservationId!, 3);
+    expect((await first.view()).remaining).toBe(0);
+
+    // A re-run with the SAME authorization adopts the ledger and sees 0 left —
+    // it does NOT re-create an empty one.
+    const again = await openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" });
+    expect((await again.view()).remaining).toBe(0);
+    expect((await again.reserve("candidate", 1)).ok).toBe(false);
+  });
+
+  it("a first-run ADOPTS the existing ledger but REFUSES a different grant for the same plan", async () => {
+    // The grant is part of the authorization, so a re-open that declares a
+    // different cap is refused even in the directory that owns the campaign.
+    const dir = await tempDir();
+    const plan = freshPlan();
+    await openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "first-run" });
+    await expect(
+      openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 320, mode: "first-run" }),
+    ).rejects.toThrow(/BUDGET_STATE_MISMATCH/);
   });
 });

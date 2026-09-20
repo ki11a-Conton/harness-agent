@@ -9,6 +9,11 @@
  * running/reservation，再允许请求发出；结果与 completed 关联后才允许 resume
  * skip。已完成结果 hash 或身份错则停止，不直接重跑。"
  *
+ * Plan §R98 line 125 — "UNKNOWN 停止自动重发并保留占用额度，提供明确的单独
+ * reconciliation 操作；不承诺跨网络 exactly-once" — is the clause S4 below
+ * covers: leaving `outcome_unknown` recoverable is only safe if the ONE way out
+ * of it is an explicit, auditable operator decision.
+ *
  * MEASURED defect this closes (plan §0.1 F2): the driver had only a call budget
  * and no completed-unit set, so a second run of the SAME plan added another 16
  * calls (16 + 16 = 32 committed) instead of skipping the completed cases.
@@ -221,5 +226,214 @@ describe("E4-R98 S3: the full 8×2 matrix resumes with zero new work", () => {
     const resumed = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
     expect(await resumed.isDone(key("c1"))).toBe(true);
     expect(await resumed.isDone(key("c4"))).toBe(false);
+  });
+});
+
+describe("E4-R98 S4: reconciliation of outcome_unknown is explicit and never silent", () => {
+  /** Drive a unit into `outcome_unknown` the only way it can happen: a process
+   *  that persisted `running` and then died, observed by a NEW store handle. */
+  async function quarantined(dir: string, k: R97UnitKey): Promise<void> {
+    const first = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+    await first.begin(k, { reservationId: "r-crash", inputDigest: "in-crash" });
+    const resumed = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+    expect((await resumed.recoverInFlight()).unknown).toBe(1);
+    expect(await resumed.statusOf(k)).toBe("outcome_unknown");
+  }
+
+  it("a recovered unit can be reconciled with `retry`, and then begins AGAIN", async () => {
+    const dir = await tempDir();
+    const k = key("reg-16-cicd-step");
+    await quarantined(dir, k);
+    const s = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+
+    // Without a decision, the unit is still refused (the quarantine holds).
+    await expect(s.begin(k, { reservationId: "r-10", inputDigest: "in-crash" })).rejects.toThrow(/outcome_unknown/i);
+    expect(await s.mustNotRetry(k)).toBe(true);
+
+    const reconciled = await s.reconcile(k, { action: "retry" });
+    expect(reconciled.status).toBe("failed");
+    // `retry` is NOT "delete the record": the unit is terminal for the attempt
+    // that may have been billed, and re-runnable by the caller.
+    expect(await s.mustNotRetry(k)).toBe(false);
+    expect(await s.isDone(k)).toBe(true);
+
+    // ...and a caller CAN begin it again. The new attempt starts `running`, so
+    // it is no longer "done" until it reaches a terminal state of its own.
+    const attempt2 = await s.begin(k, { reservationId: "r-11", inputDigest: "in-crash" });
+    expect(attempt2).not.toBe(reconciled.attemptId);
+    expect(await s.statusOf(k)).toBe("running");
+    expect(await s.isDone(k)).toBe(false);
+
+    await s.complete(attempt2, { resultHash: "fresh-result" });
+    expect(await s.isDone(k)).toBe(true);
+    expect(await s.statusOf(k)).toBe("completed");
+    expect((await s.recordFor(k))?.resultHash).toBe("fresh-result");
+  });
+
+  it("`retry` keeps the evidence: the record names the reconciliation and carries a hash", async () => {
+    const dir = await tempDir();
+    const k = key("reg-14-stack");
+    await quarantined(dir, k);
+    const s = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+
+    const reconciled = await s.reconcile(k, { action: "retry", detail: "the upstream 400 is now fixed", now: 1_700_000_000_000 });
+    expect(reconciled.detail).toMatch(/reconcil/i);
+    expect(reconciled.detail).toMatch(/operator/i);
+    expect(reconciled.detail).toContain("the upstream 400 is now fixed");
+    // The hash is a reconciliation MARKER, never an empty string: the parser
+    // refuses a terminal record without one.
+    expect(reconciled.resultHash).not.toBeNull();
+    expect(reconciled.resultHash).not.toBe("");
+    expect(String(reconciled.resultHash).length).toBeGreaterThan(16);
+    // `recoverInFlight` already stamped endedAt; reconciliation must not RE-date
+    // evidence that already has a time, and must never leave it null.
+    const quarantinedRecord = await s.recordFor(k);
+    expect(reconciled.endedAt).not.toBeNull();
+    expect(reconciled.endedAt).toBe(quarantinedRecord?.endedAt);
+  });
+
+  it("`retry` persists an operator-supplied hash instead of inventing a marker", async () => {
+    const dir = await tempDir();
+    const k = key("reg-08-dedupe", "candidate");
+    await quarantined(dir, k);
+    const s = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+
+    // persisted BEFORE the decision, so the timestamp is not re-derived later.
+    const before = await s.recordFor(k);
+    const withHash = await s.reconcile(k, { action: "retry", resultHash: "observed-hash" });
+    expect(withHash.resultHash).toBe("observed-hash");
+    // The marker path is only for the case where the operator has NO hash: an
+    // empty hash would be an unsubstantiated terminal record.
+    expect(withHash.resultHash).not.toBe("");
+    expect((await s.recordFor(k))?.resultHash).toBe("observed-hash");
+    // An explicitly EMPTY hash is a caller bug, not a decision. The unit is
+    // already terminal here, so the guard that fires is the state guard — the
+    // point is that NOTHING was written.
+    await expect(s.reconcile(k, { action: "retry", resultHash: "" })).rejects.toThrow(/NOT_RECONCILABLE|empty resultHash/i);
+    expect((await s.recordFor(k))?.resultHash).toBe("observed-hash");
+    expect(before?.resultHash).not.toBe("");
+  });
+
+  it("`accept-as-failed` closes the unit as terminal and failed", async () => {
+    const dir = await tempDir();
+    const k = key("reg-17-gcd", "candidate");
+    await quarantined(dir, k);
+    const s = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+
+    const rec = await s.reconcile(k, { action: "accept-as-failed", resultHash: "h-unknown-1", detail: "provider refused to confirm" });
+    expect(rec.status).toBe("failed");
+    expect(rec.resultHash).toBe("h-unknown-1");
+    expect(rec.detail).toContain("provider refused to confirm");
+    expect(await s.isDone(k)).toBe(true);
+    expect(await s.statusOf(k)).toBe("failed");
+    expect(await s.mustNotRetry(k)).toBe(false);
+    // A terminal unit is skipped, not restarted — the operator closed it.
+    await expect(s.begin(k, { reservationId: "r-12", inputDigest: "in-crash" })).rejects.toThrow(/already failed/i);
+  });
+
+  it("`accept-as-failed` WITHOUT a result hash throws", async () => {
+    const dir = await tempDir();
+    const k = key("reg-24-error-handling");
+    await quarantined(dir, k);
+    const s = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+
+    await expect(s.reconcile(k, { action: "accept-as-failed" })).rejects.toThrow(/resultHash|result hash/i);
+    await expect(s.reconcile(k, { action: "accept-as-failed", resultHash: "" })).rejects.toThrow(/resultHash|result hash/i);
+    // The refusal left the unit exactly as it was: still quarantined.
+    expect(await s.statusOf(k)).toBe("outcome_unknown");
+  });
+
+  it("reconciling a unit that is NOT outcome_unknown throws (running, completed, missing)", async () => {
+    const dir = await tempDir();
+    const s = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+
+    // A `running` unit may still be written by its live owner.
+    const kRunning = key("reg-06-json-parse-test");
+    await s.begin(kRunning, { reservationId: "r-13", inputDigest: "in-13" });
+    await expect(s.reconcile(kRunning, { action: "retry" })).rejects.toThrow(/running|outcome_unknown/i);
+
+    // A `completed` unit already carries its decision.
+    const kDone = key("reg-03-add-import");
+    const attempt = await s.begin(kDone, { reservationId: "r-14", inputDigest: "in-14" });
+    await s.complete(attempt, { resultHash: "h-14" });
+    await expect(s.reconcile(kDone, { action: "accept-as-failed", resultHash: "h-x" })).rejects.toThrow(
+      /completed|outcome_unknown/i,
+    );
+
+    // A unit with NO record at all: reconciliation resolves an outcome, it does
+    // not manufacture one.
+    const kMissing = key("reg-20-never-started");
+    expect(await s.recordFor(kMissing)).toBeNull();
+    await expect(s.reconcile(kMissing, { action: "retry" })).rejects.toThrow(/no execution record|NOT_RECONCILABLE/i);
+  });
+
+  it("a reconciliation is DURABLE across store handles", async () => {
+    const dir = await tempDir();
+    const k = key("stress-many-artifacts");
+    await quarantined(dir, k);
+    const a = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+    await a.reconcile(k, { action: "accept-as-failed", resultHash: "h-durable", detail: "accepted after review" });
+
+    // A fresh process (a resume) reads the SAME decision, not the old quarantine.
+    const b = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+    const seen = await b.recordFor(k);
+    expect(seen?.status).toBe("failed");
+    expect(seen?.resultHash).toBe("h-durable");
+    expect(seen?.detail).toContain("accepted after review");
+    expect(await b.isDone(k)).toBe(true);
+    expect(await b.mustNotRetry(k)).toBe(false);
+  });
+
+  it("reconciliation MUTATES one record and never appends a duplicate", async () => {
+    const dir = await tempDir();
+    const k = key("reg-17-gcd");
+    const other = key("reg-17-gcd", "candidate");
+    const s = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+    await s.begin(other, { reservationId: "r-15", inputDigest: "in-15" });
+    await s.begin(k, { reservationId: "r-16", inputDigest: "in-16" });
+    await s.recoverInFlight();
+
+    const before = await s.records();
+    expect(before.length).toBe(2);
+    const attemptIdBefore = (await s.recordFor(k))?.attemptId;
+
+    await s.reconcile(k, { action: "retry" });
+
+    const after = await s.records();
+    expect(after.length).toBe(before.length);
+    expect(after.length).toBe(2);
+    // Same attempt identity, same key — it was edited in place.
+    expect((await s.recordFor(k))?.attemptId).toBe(attemptIdBefore);
+    expect(after.filter((r) => unitKeyOf(r) === unitKeyOf(k)).length).toBe(1);
+    // The neighbour was untouched by the decision.
+    expect(await s.statusOf(other)).toBe("outcome_unknown");
+  });
+
+  it("only an OPERATOR retry reopens a terminal unit — a plain failure does not", async () => {
+    const dir = await tempDir();
+    const s = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+
+    // An ordinary `fail()` is terminal and stays terminal: the retry door is
+    // opened by the reconciliation decision, not by the status alone.
+    const kFailed = key("reg-07-nested-loop");
+    const attempt = await s.begin(kFailed, { reservationId: "r-17", inputDigest: "in-17" });
+    await s.fail(attempt, { resultHash: "h-17", detail: "verification_failed" });
+    await expect(s.begin(kFailed, { reservationId: "r-18", inputDigest: "in-17" })).rejects.toThrow(/already failed/i);
+
+    // `accept-as-failed` is the same kind of closure and must NOT reopen either.
+    const kAccepted = key("reg-11-binary-search");
+    await s.begin(kAccepted, { reservationId: "r-19", inputDigest: "in-19" });
+    await s.recoverInFlight();
+    await s.reconcile(kAccepted, { action: "accept-as-failed", resultHash: "h-19" });
+    await expect(s.begin(kAccepted, { reservationId: "r-20", inputDigest: "in-19" })).rejects.toThrow(/already failed/i);
+
+    // A `completed` unit can never be reopened through the retry marker, even if
+    // a hand-edited store carries it: the status check comes first.
+    const kDrift = key("reg-12-anagram");
+    await s.begin(kDrift, { reservationId: "r-21", inputDigest: "in-21" });
+    await s.recoverInFlight();
+    await s.reconcile(kDrift, { action: "retry" });
+    // A reconciled retry must run the SAME inputs — changed inputs are drift.
+    await expect(s.begin(kDrift, { reservationId: "r-22", inputDigest: "in-CHANGED" })).rejects.toThrow(/INPUT_DRIFT|input digest/i);
   });
 });

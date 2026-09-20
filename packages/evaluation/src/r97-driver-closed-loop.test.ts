@@ -427,6 +427,79 @@ describe("E4-R97 D2: the normal path runs the pair within the campaign budget", 
     expect(String(resumed.result["reason"])).toMatch(/CORRUPT|not valid JSON|damaged/i);
   });
 
+  it("F2: an interruption quarantines the in-flight unit and never silently re-dispatches it", async () => {
+    // Plan §R98 怎么验收: "中途终止后只运行从未启动且身份合法的单位；unknown 不自动
+    // 重试." Plan §R98 怎么做: "UNKNOWN 停止自动重发并保留占用额度."
+    //
+    // Simulate the crash window: a unit was persisted as `running` (the state the
+    // driver writes BEFORE a request may leave), then the process died. The old
+    // driver had no such record at all, so the next run simply re-billed the unit.
+    const plan = await finalizedPlan();
+    const dir = await tempDir();
+    const cases = plan.authorization!.caseIds;
+    const crashedCase = cases[0]!;
+
+    const evaluation2 = evaluation as unknown as {
+      openR97ExecutionState: (d: string, o: unknown) => Promise<{
+        begin: (k: unknown, o: unknown) => Promise<string>;
+        complete: (id: string, o: unknown) => Promise<void>;
+      }>;
+    };
+    // One unit finished cleanly; a second was left mid-flight by the crash.
+    const seed = await evaluation2.openR97ExecutionState(dir, {
+      experimentId: plan.planDigest!,
+      planDigest: plan.planDigest!,
+    });
+    const doneAttempt = await seed.begin(
+      { experimentId: plan.planDigest!, caseId: cases[1]!, suite: cases[1]!.split("/")[0], arm: "baseline", repetition: 1 },
+      { reservationId: "seed-done", inputDigest: "seeded" },
+    );
+    await seed.complete(doneAttempt, { resultHash: "seeded-hash" });
+    await seed.begin(
+      { experimentId: plan.planDigest!, caseId: crashedCase, suite: crashedCase.split("/")[0], arm: "baseline", repetition: 1 },
+      { reservationId: "seed-crashed", inputDigest: "seeded" },
+    );
+
+    const resumed = await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: dir });
+
+    // The crashed unit was quarantined, not re-dispatched, and the run is not a
+    // clean COMPLETE because an ambiguous outcome exists.
+    expect(resumed.result["recoveredUnits"]).toBe(1);
+    expect(resumed.result["status"]).not.toBe("COMPLETE");
+    const failures = resumed.result["failures"] as { caseId: string; error: string }[];
+    const quarantined = failures.filter((f) => f.caseId === crashedCase);
+    expect(quarantined.length).toBeGreaterThan(0);
+    expect(quarantined[0]!.error).toMatch(/outcome_unknown/);
+    // The already-completed BASELINE unit was skipped. (The candidate arm still
+    // runs this case — the two arms are distinct units, which is the whole point
+    // of keying on arm; asserting on caseId alone would be vacuous here.)
+    const reservations = resumed.result["reservations"] as { caseId: string; arm: string }[];
+    expect(reservations.some((r) => r.caseId === cases[1]! && r.arm === "baseline")).toBe(false);
+    expect(reservations.some((r) => r.caseId === cases[1]! && r.arm === "candidate")).toBe(true);
+    // The quarantined BASELINE unit was NOT re-dispatched. The candidate unit for
+    // the same case is a DIFFERENT unit that never started, so it does run — that
+    // asymmetry is exactly what per-(arm, repetition) keys are for.
+    const quarantinedReservations = reservations.filter((r) => r.caseId === crashedCase);
+    expect(quarantinedReservations.map((r) => r.arm)).toEqual(["candidate"]);
+    // And the crashed unit is still quarantined in the durable store afterwards.
+    const recs = await (evaluation as unknown as {
+      openR97ExecutionState: (d: string, o: unknown) => Promise<{
+        statusOf: (k: unknown) => Promise<string | null>;
+      }>;
+    })
+      .openR97ExecutionState(dir, { experimentId: plan.planDigest!, planDigest: plan.planDigest! })
+      .then((s) =>
+        s.statusOf({
+          experimentId: plan.planDigest!,
+          caseId: crashedCase,
+          suite: crashedCase.split("/")[0],
+          arm: "baseline",
+          repetition: 1,
+        }),
+      );
+    expect(recs).toBe("outcome_unknown");
+  });
+
   it("a campaign budget smaller than the pair stops EARLY and reports PARTIAL", async () => {
     const plan = await finalizedPlan();
     const dir = await tempDir();
