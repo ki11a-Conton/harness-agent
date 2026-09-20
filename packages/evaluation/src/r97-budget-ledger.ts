@@ -329,6 +329,32 @@ export interface R97LedgerOpenOptions {
   now?: () => number;
   /** Injectable liveness probe, so tests can simulate a dead owner. */
   isAlive?: (pid: number) => boolean;
+  /**
+   * Injectable liveness probe for a cross-directory CLAIM, so a claim left by a
+   * directory that no longer exists does not wedge a legitimate new run.
+   * Defaults to `defaultIsLiveClaimDir` (that directory still holds a ledger
+   * bound to this campaign id).
+   */
+  isLiveClaimDir?: (dir: string, campaignId: string) => Promise<boolean>;
+}
+
+/**
+ * The DEFAULT liveness test for a cross-directory claim: the named directory
+ * still holds a ledger that belongs to the SAME campaign.
+ *
+ * A directory that is gone, unreadable, or holds no/foreign ledger is a STALE
+ * claim — the campaign it recorded no longer exists there, so it is not evidence
+ * that this authorization is currently in use.
+ */
+async function defaultIsLiveClaimDir(dir: string, campaignId: string): Promise<boolean> {
+  try {
+    const file = await readR97LedgerFile(dir);
+    return file !== null && file.campaignId === campaignId;
+  } catch {
+    // A damaged ledger is still SOMETHING: treat it as live rather than
+    // silently ignoring a directory that may be in use.
+    return true;
+  }
 }
 
 export interface R97BudgetLedger {
@@ -350,6 +376,14 @@ export interface R97BudgetLedger {
   /** Return a reservation made for an attempt that PROVABLY never dispatched.
    *  Only legal while the reservation is still outstanding. */
   abandon(reservationId: string): Promise<R97LedgerView>;
+  /** Mark a DISPATCHED reservation whose outcome was never observed.
+   *
+   *  Plan T1 怎么验收: "已发送后进程终止的 reservation 保留 unknown 占用，不自动退款
+   *  或重发." Unlike `abandon` — which is only legal for a provably-undispatched
+   *  attempt — this is the settlement for a request that DID leave and whose
+   *  result nobody saw. The allowance stays counted, because it may already have
+   *  been billed. */
+  markUnknown(reservationId: string): Promise<R97LedgerView>;
   /** Mark outstanding reservations whose owner is gone as `unknown`. Their
    *  allowance is NOT returned. Returns how many were reclassified. */
   recover(): Promise<{ unknown: number; view: R97LedgerView }>;
@@ -965,10 +999,28 @@ export async function openR97BudgetLedger(dir: string, opts: R97LedgerOpenOption
       // `first-run` additionally THROWS: the caller has declared "I am starting a
       // new campaign", which is exactly the claim the anchor contradicts, and an
       // explicit mode that ignored its own evidence would defeat its purpose.
+      //
+      // STALENESS IS CHECKED, and it is what keeps this rule from becoming a
+      // permanent wedge. The anchor is machine-global and deliberately advisory,
+      // so a directory it names may since have been DELETED — a cleaned CI
+      // workspace, a pruned temp directory, a removed worktree. A claim whose
+      // directory no longer holds a budget for this SAME campaign is not
+      // evidence that the authorization is in use; vetoing on it would refuse
+      // every later legitimate first run for the rest of the machine's life. So
+      // only a claim that is still LIVE refuses the new directory. The default
+      // liveness test is "does that directory still hold a ledger bound to this
+      // campaign id", and a caller with a stronger notion of campaign existence
+      // (the lifecycle header) may inject `isLiveClaimDir`.
       const campaignId = campaignIdOf(opts.planDigest, opts.campaignModelCalls);
       const priorClaim = await recordCampaignClaim(campaignId, dir, now);
       if (priorClaim !== null) {
-        duplicateCampaignDirs = priorClaim.claimedDirs.filter((d) => d !== dir);
+        const others = priorClaim.claimedDirs.filter((d) => d !== dir);
+        const live = [];
+        for (const other of others) {
+          const probe = opts.isLiveClaimDir ?? defaultIsLiveClaimDir;
+          if (await probe(other, campaignId)) live.push(other);
+        }
+        duplicateCampaignDirs = live;
       }
       if ((mode === "first-run" || opts.mode === "first-run") && duplicateCampaignDirs.length > 0) {
         throw new Error(
@@ -1087,6 +1139,26 @@ export async function openR97BudgetLedger(dir: string, opts: R97LedgerOpenOption
         }
         const entries = [...ledger.entries];
         entries[i] = { ...entry, status: "abandoned", consumed: 0 };
+        const next: R97LedgerFile = { ...ledger, entries };
+        return { next, result: viewOfR97Ledger(next) };
+      });
+    },
+
+    async markUnknown(reservationId: string): Promise<R97LedgerView> {
+      return withLedger((ledger) => {
+        const i = ledger.entries.findIndex((e) => e.reservationId === reservationId);
+        if (i < 0) throw new Error(`E4-R97: no reservation ${reservationId} to mark unknown`);
+        const entry = ledger.entries[i]!;
+        if (entry.status !== "reserved") {
+          throw new Error(
+            `E4-R97: reservation ${reservationId} is already ${entry.status} — only an outstanding reservation can be marked unknown`,
+          );
+        }
+        const entries = [...ledger.entries];
+        // `consumed: null` matches the parser's (status, consumed) contract for
+        // `unknown`: the amount is the RESERVED count (see `viewOfR97Ledger`),
+        // and the allowance is deliberately not returned.
+        entries[i] = { ...entry, status: "unknown", consumed: null };
         const next: R97LedgerFile = { ...ledger, entries };
         return { next, result: viewOfR97Ledger(next) };
       });

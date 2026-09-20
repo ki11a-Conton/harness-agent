@@ -58,16 +58,30 @@ const SECOND_CASE_ID = "r98-tool-write-second";
 
 interface ArmUnitRecord {
   workerVersion: string;
+  execVersion?: string;
   unit: { caseId: string; suite: string; arm: string; repetition: number };
   build: { checkoutDir: string; sourceSha: string | null; buildDigest: string | null };
   status: string;
   failureCategory: string | null;
   reservationId: string;
+  reservationIds?: string[];
   resultHash: string;
   durationMs: number;
   detail: string | null;
   caseSource?: string;
   verifierPassed?: boolean;
+  consumed?: number;
+  budget?: { logicalCalls: number; transportRetries: number; unknownCalls: number; refusedCalls: number; reservationIds: string[] } | null;
+  execution?: { digest: string; files: number } | null;
+  capturedRequests: Array<{ messageCount: number; messages: Array<{ role: string; content: string }>; digest: string }>;
+  report: {
+    task_id: string | null;
+    success: boolean;
+    verification_passed: boolean;
+    model_calls: number | null;
+    reportHash: string;
+    [k: string]: unknown;
+  } | null;
 }
 
 const mod = (await import(WORKER)) as {
@@ -86,6 +100,7 @@ const mod = (await import(WORKER)) as {
   inputDigestFor: (o: Record<string, unknown>) => string;
   classifyReport: (report: unknown, caseId: string) => { passed: boolean; category: string | null; detail: string };
   runArmUnit: (o: Record<string, unknown>) => Promise<ArmUnitRecord>;
+  reportRowFor: (report: unknown, caseId: string) => ArmUnitRecord["report"];
   parsePlanDigest: (stdout: string) => string | null;
   main: (argv: string[]) => Promise<number>;
 };
@@ -370,7 +385,7 @@ describe("R99 W7: the CLI entry refuses misuse instead of guessing", () => {
   });
 });
 
-describe("R99 W8: THE REAL EXECUTION — the arm's own CLI actually runs the case", () => {
+describe("R99 W8: THE REAL EXECUTION — the arm's own build actually runs the case", () => {
   it("executes the case and records a verdict that can ONLY come from the real report", async () => {
     const { record, root } = await runUnit();
 
@@ -380,32 +395,47 @@ describe("R99 W8: THE REAL EXECUTION — the arm's own CLI actually runs the cas
     expect(record.build.buildDigest).toMatch(/^[0-9a-f]{64}$/);
 
     // THE DISCRIMINATOR. `verification_passed=` appears in `classifyReport`'s
-    // pass/fail sentence, which is built ONLY from a parsed `baseline.json`. A
-    // unit that never dispatched (the pre-fix behaviour: "plan digest mismatch")
-    // or one whose child died before writing a report (infrastructure) cannot
-    // produce this text.
+    // pass/fail sentence, which is built ONLY from a parsed report. A unit that
+    // never dispatched or one whose execution died before writing a report
+    // (infrastructure) cannot produce this text.
     expect(record.detail, "the verdict must come from the arm CLI's own report").toContain("verification_passed=");
     expect(record.failureCategory).not.toBe("infrastructure");
-    // The offline stub yields a MODEL_ERROR, so the honest offline outcome is a
-    // negative; the point is that it is a MEASURED negative.
-    expect(record.status).toBe("failed");
-    expect(record.verifierPassed).toBe(false);
-    expect(record.detail).toContain("model_error");
+
+    // A REAL VERIFIED PASS, OFFLINE. This is what plan §0.4 established: the
+    // arm's own exported `runBenchmarkCommand(argv, providerOverride)` runs the
+    // real request, tool loop and TaskVerifier against an injected scripted
+    // provider, so a passing case can be demonstrated with ZERO external
+    // requests. Before the in-process seam existed the worker could only spawn
+    // the child CLI, whose keyless transport is the stub — and a stub always
+    // yields MODEL_ERROR, so the old assertion here had to pin `failed` +
+    // `model_error`. That was a limitation of the route, not a property of the
+    // harness, and it is now removed.
+    expect(record.status).toBe("completed");
+    expect(record.verifierPassed).toBe(true);
+    expect(record.detail).toContain("verification_passed=true");
     expect(record.durationMs).toBeGreaterThan(0);
 
     // The case was found and staged from a REAL case directory.
     expect(record.caseSource).toContain(CASE_ID);
     expect(existsSync(record.caseSource!)).toBe(true);
 
-    // BUDGET: the ledger exists, the reservation is terminal, and exactly ONE
-    // logical call was charged — a dispatched unit is charged, not free.
+    // BUDGET: the ledger exists and EVERY logical call the arm's runtime made
+    // has its own terminal reservation. This is finding N1's fix — the old
+    // worker charged one call per UNIT no matter how many the arm actually made.
     const ledger = await readJson(join(root, "ledger", LEDGER_FILE));
     expect(ledger, "a dispatched unit must leave a durable ledger").not.toBeNull();
     const entries = ledger!["entries"] as Array<Record<string, unknown>>;
-    expect(entries).toHaveLength(1);
-    expect(entries[0]!["status"]).toBe("committed");
-    expect(entries[0]!["reserved"]).toBe(1);
-    expect(entries[0]!["consumed"]).toBe(1);
+    const measured = Number(record.budget!.logicalCalls);
+    expect(measured, "the arm really called the provider more than once").toBeGreaterThan(1);
+    expect(entries, "one reservation per real logical call, not per unit").toHaveLength(measured);
+    expect(entries.every((e) => e["status"] === "committed" && e["consumed"] === 1)).toBe(true);
+    // Every reservation id the channel handed out is DISTINCT: a single ledger
+    // entry may never stand behind two real calls (measured regression — the
+    // pre-taken reservation was per-CLIENT, so each client the runtime built
+    // adopted the same entry and the ledger under-counted the spend).
+    expect(new Set(record.reservationIds).size, "each real call owns its own reservation").toBe(measured);
+    // The unit's own report of what it charged is the MEASURED count, not 1.
+    expect(record.consumed).toBe(measured);
     // The envelope digest — not the arm CLI digest — is what binds the ledger.
     expect(ledger!["planDigest"]).toBe("a".repeat(64));
 
@@ -415,15 +445,36 @@ describe("R99 W8: THE REAL EXECUTION — the arm's own CLI actually runs the cas
     expect(state, "a terminal unit must leave durable state").not.toBeNull();
     const records = state!["records"] as Array<Record<string, unknown>>;
     expect(records).toHaveLength(1);
-    expect(records[0]!["status"]).toBe("failed");
+    expect(records[0]!["status"]).toBe("completed");
     expect(records[0]!["caseId"]).toBe(CASE_ID);
     expect(records[0]!["arm"]).toBe("baseline");
     expect(String(records[0]!["resultHash"])).toMatch(/^[0-9a-f]{64}$/);
+    // N3 item 9: `begin` takes a NUMBER, so a real timestamp is stored rather
+    // than the literal 0 that passing the `now` FUNCTION produced.
+    expect(records[0]!["startedAt"], "startedAt must be a real clock reading").toBeGreaterThan(0);
 
-    // The reservation is recorded on the durable record, so the spend and the
-    // unit can be tied together after the fact.
+    // The FIRST reservation — the one recorded on the durable `running` record —
+    // is a genuine ledger entry, and it precedes the dispatch by construction.
     expect(records[0]!["reservationId"]).toBe(record.reservationId);
     expect(record.reservationId).not.toBe("");
+    expect(entries.map((e) => e["reservationId"])).toContain(record.reservationId);
+
+    // THE ARM'S OWN REPORT ROW IS PRESERVED as evidence (finding N5: the old
+    // worker deleted the only copy in `finally`).
+    expect(record.report, "the arm's report row must survive the unit").not.toBeNull();
+    expect(record.report!.task_id).toBe(CASE_ID);
+    expect(record.report!.success).toBe(true);
+    expect(record.report!.verification_passed).toBe(true);
+    expect(record.report!.reportHash).toMatch(/^[0-9a-f]{64}$/);
+    // The arm's self-report and the channel's measured count AGREE — and the
+    // accounting uses the measured one, not this field.
+    expect(record.report!.model_calls).toBe(measured);
+
+    // The arm's ACTUAL executed bytes are identified by content (N7: the old
+    // identity covered only main.js and missed the module that runs the case).
+    expect(record.execution, "the executed-bytes identity must be established").not.toBeNull();
+    expect(record.execution!.digest).toMatch(/^[0-9a-f]{64}$/);
+    expect(record.execution!.files).toBeGreaterThan(10);
   }, 240_000);
 
   it("TWO DIFFERENT CASES each enter their OWN context — no single placeholder request", async () => {
@@ -460,13 +511,36 @@ describe("R99 W8: THE REAL EXECUTION — the arm's own CLI actually runs the cas
     expect(second.resultHash).toMatch(/^[0-9a-f]{64}$/);
     expect(first.resultHash).not.toBe(second.resultHash);
 
-    // BOTH units are durable and BOTH were charged exactly once.
+    // THE STRONGER PROPERTY plan §T4 怎么做 4 demands: "捕获实际模型输入及工具动作，
+    // 不能用两个不同 caseId 产生不同 resultHash 代替上下文验证." The captured
+    // requests prove the two cases entered DIFFERENT contexts, and each case's
+    // OWN request text is what the model saw.
+    expect(first.capturedRequests.length).toBeGreaterThan(0);
+    expect(second.capturedRequests.length).toBeGreaterThan(0);
+    const firstText = first.capturedRequests.map((r) => r.messages.map((m) => m.content).join(" ")).join(" ");
+    const secondText = second.capturedRequests.map((r) => r.messages.map((m) => m.content).join(" ")).join(" ");
+    // Each case's request.md content reached the model, and the two differ.
+    expect(firstText).toContain("r98-request.txt");
+    expect(secondText).toContain("r98-second.txt");
+    expect(firstText).not.toContain("r98-second.txt");
+    expect(secondText).not.toContain("r98-request.txt");
+    // The context digests are therefore distinct — and NOT because the caseId
+    // label differs, but because the captured message lists differ.
+    expect(first.capturedRequests[0]!.digest).not.toBe(second.capturedRequests[0]!.digest);
+
+    // Each case wrote ITS OWN artifact with ITS OWN content.
+    expect(first.report!.task_id).toBe(CASE_ID);
+    expect(second.report!.task_id).toBe(SECOND_CASE_ID);
+
+    // BOTH units are durable and BOTH were charged PER REAL CALL.
     const state = await readJson(join(root, "state", EXEC_FILE));
     const records = state!["records"] as Array<Record<string, unknown>>;
     expect(records.map((r) => r["caseId"]).sort()).toEqual([CASE_ID, SECOND_CASE_ID].sort());
     const ledger = await readJson(join(root, "ledger", LEDGER_FILE));
     const entries = ledger!["entries"] as Array<Record<string, unknown>>;
-    expect(entries).toHaveLength(2);
+    const totalMeasured = Number(first.budget!.logicalCalls) + Number(second.budget!.logicalCalls);
+    expect(totalMeasured).toBeGreaterThan(2);
+    expect(entries).toHaveLength(totalMeasured);
     expect(entries.every((e) => e["status"] === "committed" && e["consumed"] === 1)).toBe(true);
   }, 300_000);
 

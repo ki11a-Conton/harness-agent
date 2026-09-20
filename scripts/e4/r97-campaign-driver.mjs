@@ -219,6 +219,9 @@ export async function runDriver(opts) {
     // R100: the execution-boundary re-observation's verdict (null when the run
     // stopped before reaching it, e.g. at the R92 gate).
     executionObservation: null,
+    // R98-A (N2): which campaign root this run resolved to, and whether any
+    // OTHER directory claims the same authorization.
+    campaign: null,
     authorization: null,
   };
 
@@ -339,11 +342,43 @@ export async function runDriver(opts) {
   // COMPLETE."
   let ledger;
   let execState;
+  let campaign = null;
   try {
-    ledger = await evaluation.openR97BudgetLedger(ledgerDir, {
+    // ---- STEP 2a: the CAMPAIGN LIFECYCLE (plan T1 / finding N2). -----------
+    //
+    // MEASURED DEFECT N2: the driver opened the ledger with NO mode, so it took
+    // the ambiguous `"auto"` default and could CREATE a fresh full allowance
+    // whenever the file was absent — including on a restart whose ledger had
+    // been deleted. `duplicateCampaignDirs` was computed and then never read, so
+    // a second directory claiming the same authorization was recorded and
+    // ignored.
+    //
+    // `openR97Campaign` fixes both: it keeps a DURABLE header inside the campaign
+    // root (so a lost ledger is BUDGET_STATE_MISSING, never a fresh grant, and a
+    // relocated copy is CAMPAIGN_ROOT_MISMATCH), and it ENFORCES the
+    // cross-directory conflict instead of only reporting it. `mode: "auto"` is
+    // now fail-closed because the header — not a guess — decides whether this is
+    // a creation or a recovery.
+    campaign = await evaluation.openR97Campaign(ledgerDir, {
       planDigest: plan.planDigest,
       campaignModelCalls: plan.authorization.caps.find((c) => c.cap === "maxModelCalls").value,
+      mode: "auto",
     });
+    ledger = campaign.ledger;
+    result.campaign = {
+      mode: campaign.mode,
+      campaignId: campaign.campaignId,
+      rootDir: campaign.dir,
+      duplicateCampaignDirs: [...campaign.duplicateCampaignDirs],
+    };
+    // A resumed campaign that is ALSO claimed elsewhere is reported, so the
+    // conflict reaches the run result rather than staying on an unused handle.
+    if (campaign.duplicateCampaignDirs.length > 0) {
+      result.status = "REFUSED";
+      result.code = "CAMPAIGN_DIR_CONFLICT";
+      result.reason = `this authorization is also claimed by ${campaign.duplicateCampaignDirs.join(", ")} — one approval must not be spent in two roots`;
+      return result;
+    }
 
     // A recovery pass FIRST: a reservation left by a dead process becomes
     // `unknown` and KEEPS its allowance, so a restart cannot re-spend it.
@@ -365,13 +400,21 @@ export async function runDriver(opts) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     result.status = "REFUSED";
-    result.code = /BUDGET_STATE_MISSING/.test(message)
-      ? "BUDGET_STATE_MISSING"
-      : /BUDGET_STATE_CORRUPT|not valid JSON|damaged/.test(message)
-        ? "BUDGET_STATE_CORRUPT"
-        : /BUDGET_STATE_MISMATCH|different plan|different experiment/.test(message)
-          ? "BUDGET_STATE_MISMATCH"
-          : "DURABLE_STATE_UNAVAILABLE";
+    result.code = /CAMPAIGN_DIR_CONFLICT/.test(message)
+      ? "CAMPAIGN_DIR_CONFLICT"
+      : /CAMPAIGN_HEADER_CORRUPT/.test(message)
+        ? "CAMPAIGN_HEADER_CORRUPT"
+        : /CAMPAIGN_HEADER_MISSING/.test(message)
+          ? "CAMPAIGN_HEADER_MISSING"
+          : /CAMPAIGN_ROOT_MISMATCH/.test(message)
+            ? "CAMPAIGN_ROOT_MISMATCH"
+            : /BUDGET_STATE_MISSING/.test(message)
+              ? "BUDGET_STATE_MISSING"
+              : /BUDGET_STATE_CORRUPT|not valid JSON|damaged/.test(message)
+                ? "BUDGET_STATE_CORRUPT"
+                : /BUDGET_STATE_MISMATCH|different plan|different experiment|different authorization/.test(message)
+                  ? "BUDGET_STATE_MISMATCH"
+                  : "DURABLE_STATE_UNAVAILABLE";
     result.reason = redactFailureText(message);
     return result;
   }

@@ -91,6 +91,14 @@ import { cp, mkdir, readFile, readdir, rm } from "node:fs/promises";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  ARM_EXEC_VERSION,
+  armExecutionDigest,
+  armIsBuilt,
+  loadArmModules,
+  readCaseDef,
+  runArmCaseInProcess,
+} from "./r97-arm-exec.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(here, "..", "..");
@@ -98,7 +106,7 @@ const REPO_ROOT = resolve(here, "..", "..");
 /** The worker's own identity, recorded on every unit so a paired report can
  *  name the executor that produced a row (plan §R99: a report must bind the
  *  thing that executed, not just a version string of the driver). */
-export const ARM_WORKER_VERSION = "e4-r98-arm-worker-v1";
+export const ARM_WORKER_VERSION = "e4-r98-arm-worker-v2";
 
 /** Exit codes, matching the driver: 0 ok · 1 refused/error · 2 config/usage. */
 export const EXIT_OK = 0;
@@ -738,7 +746,18 @@ export async function runArmUnit(opts) {
   const modelId = opts.modelId ?? DEFAULT_MODEL_ID;
   const maxModelCalls = opts.maxModelCalls ?? 10;
   const allowStub = opts.allowStub ?? true;
-  // The one logical model call this unit reserves. See header limitation (b).
+  // The number of logical calls this unit reserves UP FRONT, before `begin`.
+  //
+  // WHY EXACTLY ONE, AND WHY THAT IS NOT THE OLD DEFECT. The execution state's
+  // `running` record must carry a REAL reservation id that was taken BEFORE the
+  // dispatch (plan §R98: "先持久化 running/reservation"), but how many calls a
+  // case will need is unknowable until it has made them. So the unit reserves
+  // ONE call, records it on `begin`, and hands it to the budget channel as the
+  // pre-taken reservation for the FIRST call; every SUBSEQUENT call reserves its
+  // own. The ledger therefore bounds real `generate()` attempts — which is what
+  // the old `reservationCount = 1` + `consumed = 1` pair did NOT do, because it
+  // charged one call per UNIT no matter how many the arm actually made
+  // (measured defect N1).
   const reservationCount = 1;
 
   assertUnitIdentity(opts);
@@ -754,17 +773,34 @@ export async function runArmUnit(opts) {
 
   const record = {
     workerVersion: ARM_WORKER_VERSION,
+    execVersion: ARM_EXEC_VERSION,
     unit,
     build,
     status: "failed",
     failureCategory: "infrastructure",
     reservationId: "",
+    // Every reservation this unit took, in order. The FIRST is the one recorded
+    // on the durable `running` record; the rest were taken by the budget channel
+    // as the case made further calls. A report can therefore show that a
+    // multi-round case really did take multiple reservations, instead of one
+    // unit-level charge standing in for them.
+    reservationIds: [],
     resultHash: "",
     durationMs: 0,
     detail: null,
     // Set on every return path: how many logical model calls this unit actually
     // charged. `0` for a unit that never dispatched.
     consumed: 0,
+    // The MEASURED per-call accounting, when the unit reached the executor.
+    budget: null,
+    // The arm's own executed-bytes digest (N7: the previous identity covered
+    // only main.js and missed the modules that actually run the case).
+    execution: null,
+    // The ACTUAL model contexts this case entered, so a test can prove two
+    // cases differ rather than inferring it from two result hashes.
+    capturedRequests: [],
+    // The arm CLI's REAL per-case report row, persisted by T3 as evidence.
+    report: null,
   };
 
   const finish = (failureCategory, detail) => {
@@ -784,6 +820,17 @@ export async function runArmUnit(opts) {
     return finish(
       "infrastructure",
       `E4-R98: the arm checkout ${checkoutDir} has no built CLI at ${cliEntry} — refusing to substitute another tree's build`,
+    );
+  }
+  // The budgeted execution seam needs the arm's EXPORTED entry points, not just
+  // its runnable main.js: `runBenchmarkCommand` (plan §0.4) and its own
+  // `ScriptedModelProvider`. A build that has one but not the others cannot be
+  // driven under a budget, and substituting the repo's copies would make the
+  // arm's identity a claim rather than a fact.
+  if (!armIsBuilt(checkoutDir)) {
+    return finish(
+      "infrastructure",
+      `E4-R98: the arm checkout ${checkoutDir} does not export the offline execution seam (apps/cli/dist/benchmark-command.js + packages/model/dist/index.js) — the budgeted path cannot run this arm's own build`,
     );
   }
   if (build.buildDigest === null || build.sourceSha === null) {
@@ -819,20 +866,28 @@ export async function runArmUnit(opts) {
   const evaluation = await loadEvaluation(repoRoot);
 
   // ---- STEP 1: the shared budget, BEFORE anything can be dispatched. -------
+  //
+  // The campaign LIFECYCLE wraps the ledger (plan T1 / finding N2). The worker
+  // used to open the raw ledger with `mode: "auto"`, which could CREATE a fresh
+  // full allowance whenever the file was absent — including on a restart whose
+  // ledger had been deleted. `openR97Campaign` keeps a durable header in the
+  // campaign root, so a lost ledger is BUDGET_STATE_MISSING and a relocated copy
+  // is CAMPAIGN_ROOT_MISMATCH, while a genuine first run still works.
   let ledger;
+  let campaign = null;
   try {
-    ledger = await evaluation.openR97BudgetLedger(opts.ledgerDir, {
+    campaign = await evaluation.openR97Campaign(opts.ledgerDir, {
       planDigest: opts.planDigest,
       campaignModelCalls: opts.campaignModelCalls ?? maxModelCalls,
       // See R97LedgerOpenMode. The worker cannot know whether the DRIVER is
-      // starting the campaign or resuming it, and guessing "first-run" would
-      // let a relocated output directory mint a second allowance for the same
+      // starting the campaign or resuming it, and guessing "first-run" would let
+      // a relocated output directory mint a second allowance for the same
       // authorization — the exact double-spend the mode exists to stop. "auto"
-      // fails closed by CONSTRUCTION: it creates only when no ledger exists and
-      // otherwise adopts strictly resume semantics, refusing a foreign
-      // identity with BUDGET_STATE_MISMATCH.
+      // now fails closed BY CONSTRUCTION: the header, not a guess, decides
+      // whether this is a creation or a recovery.
       mode: "auto",
     });
+    ledger = campaign.ledger;
   } catch (err) {
     // Acceptance 5: no ledger, no child. Not one process is started.
     return finish("budget", `E4-R98: the budget ledger could not be opened: ${redact(err)}`);
@@ -849,20 +904,10 @@ export async function runArmUnit(opts) {
   }
   record.reservationId = reservation.reservationId;
 
-  // ---- STEP 2: stage the case and bind the digest to THIS build. -----------
+  // ---- STEP 2: stage the case and prepare the execution seam. --------------
   const scratch = join(resolve(opts.outDir), ".r98-work", `${opts.arm}-${opts.caseId.replace(/[\\/]/g, "-")}`);
   const stagedCasesDir = join(scratch, "cases");
   const runOutDir = join(scratch, "run");
-  const dispatchOpts = {
-    cliEntry,
-    suite: opts.suite,
-    stagedCasesDir,
-    providerId,
-    modelId,
-    maxModelCalls,
-    outDir: runOutDir,
-    allowStub,
-  };
 
   let verdict;
   let consumed = 0;
@@ -871,6 +916,8 @@ export async function runArmUnit(opts) {
   // write land on another unit's record.
   let execState = null;
   let attemptId = null;
+  // The MEASURED budget accounting from the channel, when the unit reached it.
+  let budgetStats = null;
   try {
     await mkdir(runOutDir, { recursive: true });
     // WHICH case source was chosen is recorded: a run whose case silently came
@@ -879,34 +926,13 @@ export async function runArmUnit(opts) {
     const staged = await stageCase({ repoRoot, checkoutDir, caseId: opts.caseId, stagedCasesDir });
     record.caseSource = staged.caseSource;
 
-    const dry = await runChild({
-      args: dryRunArgs(dispatchOpts),
-      cwd: checkoutDir,
-      // The SAME environment the dispatch will use, so "the digest of the run
-      // that will execute" is not measured under different conditions.
-      env: childEnvironment({ allowRealProvider: opts.allowRealProvider === true }),
-      timeoutMs: Math.min(timeoutMs, DRY_RUN_TIMEOUT_MS),
-    });
-    const computedPlanDigest = parsePlanDigest(dry.stdout);
-    if (dry.timedOut) {
-      verdict = { category: "timeout", detail: "E4-R98: the arm's dry run exceeded its deadline; no dispatch was made" };
-    } else if (computedPlanDigest === null) {
-      verdict = {
-        category: "harness",
-        detail: `E4-R98: the arm's dry run produced no plan digest (exit ${String(dry.code)}): ${firstUsefulLine(dry.stderr) ?? firstUsefulLine(dry.stdout) ?? "no output"}`,
-      };
-    } else if (buildMismatch !== null) {
-      // Unreachable by construction: a build mismatch returns BEFORE the child
-      // is spawned (see the arm build binding above), so nothing is dispatched
-      // and no budget is touched. Kept as an explicit refusal rather than a
-      // silent pass so that if the ordering is ever changed the unit still
-      // fails closed instead of running an unapproved build.
-      verdict = {
-        category: "harness",
-        detail: `E4-R98: refusing to run arm ${opts.arm} — ${buildMismatch}`,
-      };
-    } else {
-      // ---- STEP 3: `running` becomes durable BEFORE the request may leave. --
+    // ---- STEP 3: `running` becomes durable BEFORE the request may leave. ---
+    //
+    // The reservation taken above is handed to the budget channel as the
+    // PRE-TAKEN reservation for this unit's first call, so the durable record's
+    // `reservationId` names a real ledger entry that provably precedes the
+    // dispatch, while every FURTHER call the case makes reserves its own.
+    {
       const inputDigest = inputDigestFor({
         planDigest: opts.planDigest,
         inputsDigest: opts.inputsDigest,
@@ -928,78 +954,100 @@ export async function runArmUnit(opts) {
           detail: `E4-R98: unit ${unitKeyText(unitKey)} is outcome_unknown — it requires an explicit reconciliation decision before it may run again`,
         };
       } else {
-        attemptId = await execState.begin(unitKey, { reservationId: reservation.reservationId, inputDigest, now });
+        // `now` is a FUNCTION on the state handle and a NUMBER on `begin`;
+        // passing the function made every `startedAt` the literal 0 (finding N3
+        // item 9: "修复 worker 传 `now` 函数给 begin 的 `now?: number` 字段的问题").
+        attemptId = await execState.begin(unitKey, { reservationId: reservation.reservationId, inputDigest, now: now() });
 
-        // ---- STEP 4: the real dispatch, under a real deadline. -------------
-        // The digest computed by THIS build's own dry run, over the SAME staged
-        // cases and the same `--out`, is what authorizes the dispatch. The
-        // child re-computes it at preflight and refuses if it moved, so the
-        // approval and the execution cannot describe different plans.
-        const dispatch = await runChild({
-          args: dispatchArgs({ ...dispatchOpts, dispatchPlanDigest: computedPlanDigest }),
-          cwd: checkoutDir,
-          env: childEnvironment({ allowRealProvider: opts.allowRealProvider === true }),
-          timeoutMs,
+        // ---- STEP 4: the REAL execution, inside the ARM'S OWN build, under the
+        // shared campaign budget. -------------------------------------------
+        //
+        // Plan §0.4 / T1 怎么做 3: drive each arm's EXPORTED `runBenchmarkCommand`
+        // with an injected offline provider, so the real request, tool loop and
+        // TaskVerifier run while every `generate()` reserves from the ledger
+        // BEFORE it leaves. The child-CLI route this replaces could not enforce a
+        // per-call ceiling at all: the child resolved its own transport, so the
+        // parent could only charge the unit (measured defect N1).
+        const bareCase = opts.caseId.split("/").pop() ?? opts.caseId;
+        const caseDef = await readCaseDef(join(stagedCasesDir, bareCase), opts.caseId);
+        const executed = await runArmCaseInProcess({
+          evaluation,
+          arm: { label: opts.arm, checkoutDir },
+          caseDef,
+          // WHICH script shape this unit uses is the CALLER's decision, so the
+          // two cases can be driven as a real pass and a real negative.
+          scriptShape: opts.scriptShape ?? "write-then-stop",
+          stagedCasesDir,
+          outDir: runOutDir,
+          suite: opts.suite,
+          modelId,
+          maxModelCalls,
+          ledger,
+          firstReservationId: reservation.reservationId,
         });
-        consumed = 1; // a dispatch was attempted; the reservation is not refunded
+        budgetStats = executed.budget;
+        record.budget = executed.budget;
+        record.execution = executed.execution;
+        record.capturedRequests = executed.capturedRequests;
+        // The channel's own count of admitted calls is the MEASURED spend for
+        // this unit. It is read from the channel rather than from the arm's
+        // self-report (`model_calls`), which is exactly the field plan §T1
+        // 怎么做 1 says must not be the basis of the accounting.
+        consumed = executed.budget.logicalCalls;
+        record.reservationIds = [...executed.budget.reservationIds];
 
-        if (dispatch.timedOut) {
+        if (executed.report === null) {
+          // A run that produced no report measured nothing, whatever its exit
+          // code. Never a pass.
           verdict = {
-            category: "timeout",
-            detail: `E4-R98: the arm's CLI was aborted at its ${timeoutMs}ms deadline (signal ${String(dispatch.signal)})`,
-          };
-        } else if (dispatch.spawnFailed !== null) {
-          verdict = { category: "infrastructure", detail: `E4-R98: the arm's CLI could not be started: ${dispatch.spawnFailed}` };
-        } else if (dispatch.code !== 0) {
-          verdict = {
-            category: "provider",
-            detail: `E4-R98: the arm's CLI exited ${String(dispatch.code)}: ${firstUsefulLine(dispatch.stderr) ?? firstUsefulLine(dispatch.stdout) ?? "no output"}`,
+            category: "infrastructure",
+            detail: `E4-R98: the arm's benchmark run wrote no report at ${executed.reportPath} (exit ${String(executed.exitCode)}): ${firstUsefulLine((executed.lines ?? []).join("\n")) ?? "no output"}`,
           };
         } else {
-          const reportPath = reportPathOf(runOutDir, opts.suite);
-          const report = await readJsonOrNull(reportPath);
-          if (report === null) {
-            // A zero exit with no report is a broken unit, never a pass.
-            verdict = { category: "infrastructure", detail: `E4-R98: the arm's CLI exited 0 but wrote no report at ${reportPath}` };
-          } else {
-            const classified = classifyReport(report, opts.caseId);
-            verdict = { category: classified.category, detail: classified.detail };
-            // The verdict is the CLI's. It is recorded on the record so a
-            // consumer never has to infer a pass from `status === "completed"`.
-            record.verifierPassed = classified.passed === true;
-          }
+          const classified = classifyReport(executed.report, opts.caseId);
+          verdict = { category: classified.category, detail: classified.detail };
+          // The verdict is the arm CLI's own. It is recorded on the record so a
+          // consumer never has to infer a pass from `status === "completed"`.
+          record.verifierPassed = classified.passed === true;
+          // T3: the arm's REAL report row is persisted as evidence rather than
+          // deleted in `finally` (finding N5: "finally 删除原报告").
+          record.report = reportRowFor(executed.report, opts.caseId);
         }
       }
     }
   } catch (err) {
     verdict = { category: "infrastructure", detail: `E4-R98: ${redact(err)}` };
   } finally {
-    // The staged case and the per-unit report are working files. Removing them
-    // keeps a campaign's output directory to its evidence, and stops a retry
-    // from reading a PREVIOUS attempt's report.
-    await rm(scratch, { recursive: true, force: true }).catch(() => {});
+    // Only the STAGED CASE is a working file, and only it is removed. The arm's
+    // own report is EVIDENCE and is preserved on the record (finding N5: the
+    // previous version deleted the only copy of the report here).
+    await rm(stagedCasesDir, { recursive: true, force: true }).catch((cleanupErr) => {
+      // P14-6: a best-effort cleanup failure must be OBSERVABLE, never swallowed.
+      process.stderr.write(
+        `[degraded] r97-arm-worker.staging-cleanup: ${cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)}\n`,
+      );
+    });
   }
 
   // ---- STEP 5: settle the budget, then write the terminal record. ----------
-  // The commit happens BEFORE the terminal write on purpose: if the terminal
-  // write fails, the ledger must already show the spend (an unspent reservation
-  // would let a restart re-spend it), whereas the reverse order could lose the
-  // consumption entirely.
   //
-  // WHAT IS COMMITTED IS THE MEASURED `consumed`, NOT A FUNCTION OF THE VERDICT.
-  // The previous `consumedFor(category)` returned 1 for EVERY category, so a
-  // unit that never dispatched at all — a dry-run digest mismatch, a refused
-  // reservation check, a build with no CLI — still charged the campaign a
-  // logical call it never made. `consumed` is set to 1 at exactly one place:
-  // immediately after the dispatch child is actually started. Committing less
-  // than reserved is legal and returns the difference (see `viewOfR97Ledger`:
-  // "A committed record reports what was ACTUALLY consumed. A caller that
-  // consumed less than it reserved returns the difference implicitly."), which
-  // is the honest accounting rather than a fabricated spend.
-  try {
-    await ledger.commit(reservation.reservationId, consumed, 0);
-  } catch (err) {
-    verdict = { category: "budget", detail: `E4-R98: the reservation could not be settled: ${redact(err)} (${verdict.detail})` };
+  // THE PRE-TAKEN RESERVATION IS OWNED BY THE CHANNEL. The unit reserved ONE
+  // call before `begin` and handed that id to `createLedgerBudgetedProvider`,
+  // which commits it when the first call completes (or marks it unknown when the
+  // outcome was never observed). The worker must therefore NOT commit it again.
+  //
+  // What the worker DOES settle is the case where the unit never reached the
+  // channel at all — a skip, a build refusal, a staging failure, an exception
+  // before the first call. The reservation is then genuinely outstanding and is
+  // RETURNED, because nothing was dispatched: `abandon` is legal exactly for a
+  // provably-undispatched attempt. Burning it would charge the campaign for work
+  // that provably never happened.
+  if (budgetStats === null) {
+    try {
+      await ledger.abandon(reservation.reservationId);
+    } catch (err) {
+      verdict = { category: "budget", detail: `E4-R98: the unused reservation could not be returned: ${redact(err)} (${verdict.detail})` };
+    }
   }
 
   const resultHash = resultHashFor({ unit, build, verdict });
@@ -1036,6 +1084,50 @@ function resultHashFor(opts) {
     `detail:${opts.verdict.detail}`,
   ].join("\n");
   return createHash("sha256").update(material).digest("hex");
+}
+
+/**
+ * The arm's OWN report row for one case, kept as durable evidence (finding N5).
+ *
+ * Plan T3 做什么 1: "持久保存本次单例报告、必要事件和结果身份，不在 finally 中删除
+ * 唯一证据." The previous worker deleted the entire scratch tree — including the
+ * only copy of the arm CLI's report — in `finally`, so nothing on disk could
+ * substantiate a verdict after the fact and an independent validator had no
+ * artifact to re-derive from.
+ *
+ * This extracts the ONE row that belongs to this case, redacted and bounded, so
+ * the campaign keeps the evidence that produced the verdict without storing a
+ * whole report per unit. `reportHash` is the sha256 of the ROW as stored, which
+ * is what a resume re-computes to detect tampering (T3 怎么验收: "修改/删除任意已
+ * 关联原始报告或 resultHash，恢复及独立 validator 都非零退出").
+ *
+ * The row is found by EXACT `task_id` match — never `results[0]` (finding N5:
+ * "classifyReport 找不到 task_id 时使用 results[0]").
+ */
+export function reportRowFor(report, caseId) {
+  const results = Array.isArray(report?.results) ? report.results : [];
+  const bare = caseId.split("/").pop() ?? caseId;
+  const entry = results.find((r) => r?.task_id === caseId) ?? results.find((r) => r?.task_id === bare);
+  if (entry === undefined) return null;
+  // Only the fields that describe the MEASUREMENT are kept: no prompts, no
+  // headers, no paths outside the run. A report row carries no credential, but
+  // it is bounded anyway so one row cannot flood the campaign journal.
+  const row = {
+    task_id: entry.task_id ?? null,
+    suite: entry.suite ?? null,
+    judge_version: entry.judge_version ?? null,
+    success: entry.success === true,
+    actual_status: entry.actual_status ?? null,
+    verification_passed: entry.verification_passed === true,
+    verification_failures: entry.verification_failures ?? null,
+    model_calls: entry.model_calls ?? null,
+    tool_calls: entry.tool_calls ?? null,
+    retries: entry.retries ?? null,
+    termination_reason: entry.termination_reason ?? null,
+    failure_category: entry.failure_category ?? null,
+    duration_ms: entry.duration_ms ?? null,
+  };
+  return { ...row, reportHash: createHash("sha256").update(JSON.stringify(row)).digest("hex") };
 }
 
 function unitKeyText(unit) {
@@ -1102,6 +1194,7 @@ export async function main(argv) {
   const planDigest = flag("--plan-digest");
   const state = flag("--state");
   const ledgerDir = flag("--ledger");
+  const scriptShape = flag("--script-shape");
 
   if (
     checkout === undefined ||
@@ -1133,12 +1226,10 @@ export async function main(argv) {
       executionStateDir: state,
       ledgerDir,
       inputsDigest: null,
-      // This module never constructs a provider. The CLI child resolves its own
-      // (see the header's limitation (a)), so the callback exists only to make
-      // the "a provider arrives through the caller" convention explicit.
-      makeProvider: () => {
-        throw new Error("E4-R98: the arm worker never constructs a provider — the arm's CLI resolves its own");
-      },
+      // WHICH scripted response this unit uses. It is a caller decision because
+      // the campaign drives two cases as a real PASS and a real NEGATIVE
+      // control (plan T4 怎么做 4 / T6 验收矩阵 "写文件成功 / 只说完成但未写文件").
+      scriptShape: scriptShape ?? "write-then-stop",
       outDir: join(resolve(state), "..", "r98-worker-units"),
     });
   } catch (err) {
