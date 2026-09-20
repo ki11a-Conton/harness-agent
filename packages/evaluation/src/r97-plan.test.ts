@@ -834,4 +834,37 @@ describe("E4-R98/R100 P7: execution-time facts are re-observed, never inherited 
     // A missing artifact is an error, never a silently smaller covered set.
     await expect(computeDriverBuildDigestV1(join(REPO, "does-not-exist"))).rejects.toThrow(/must never shrink silently/);
   });
+
+  it("6d. the ARM WORKER is inside the driver build digest (E4-R99)", async () => {
+    // Once the driver routes units through the arm worker, the worker's bytes
+    // decide what executes a case. If it were NOT covered, rewriting the worker
+    // would leave an old approval valid — the exact defect `driverBuildDigest`
+    // exists to close.
+    expect(R97_DRIVER_ARTIFACTS).toContain("scripts/e4/r97-arm-worker.mjs");
+    // The file must really be readable at that path, so the containment above is
+    // about a real artifact rather than a name that would throw at digest time.
+    const { readFile } = await import("node:fs/promises");
+    await expect(readFile(join(REPO, "scripts/e4/r97-arm-worker.mjs"))).resolves.toBeDefined();
+    // NEGATIVE CONTROL: changing a covered artifact's BYTES changes the digest.
+    // Without this, "the worker is covered" could be true while the digest
+    // ignored content entirely.
+    const { mkdtemp, mkdir, cp, rm } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const copy = await mkdtemp(join(tmpdir(), "r99-artifacts-"));
+    try {
+      for (const rel of R97_DRIVER_ARTIFACTS) {
+        const dest = join(copy, rel);
+        await mkdir(join(dest, ".."), { recursive: true });
+        await cp(join(REPO, rel), dest);
+      }
+      const before = await computeDriverBuildDigestV1(copy);
+      expect(before).toBe(await computeDriverBuildDigestV1(REPO));
+      // Rewrite ONLY the worker.
+      const { writeFile } = await import("node:fs/promises");
+      await writeFile(join(copy, "scripts/e4/r97-arm-worker.mjs"), "// a rewritten worker\n");
+      expect(await computeDriverBuildDigestV1(copy)).not.toBe(before);
+    } finally {
+      await rm(copy, { recursive: true, force: true }).catch(() => {});
+    }
+  });
 });

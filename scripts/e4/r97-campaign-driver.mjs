@@ -198,6 +198,27 @@ export async function runDriver(opts) {
     recoveredUnits: 0,
     // R98 (F2): terminal units in the durable state after this run.
     completedUnits: 0,
+    // R99: which executor ran the units, and — in arm-worker mode — what the
+    // worker actually did. Plan §R99 做什么 5 requires the run's COMPLETENESS,
+    // the task PASS RATE and any MECHANISM improvement to be separate fields, so
+    // a per-unit record set is kept instead of a single scalar.
+    executionMode: "provider",
+    workerUnits: 0,
+    workerConsumedCalls: 0,
+    unitResults: [],
+    // R99: run completeness vs task pass rate, kept as SEPARATE fields. A
+    // `case_failed` unit reached a verdict (measured) without passing, so
+    // `measuredUnits` and `verifiedPasses` answer different questions.
+    verifiedPasses: 0,
+    measuredUnits: 0,
+    // R100: the approved case→TRUE-suite inventory, and the distinct suites it
+    // covers. A mixed-suite campaign must be visible AS mixed rather than
+    // summarised under the CLI's single-valued `--suite` label.
+    suiteInventory: [],
+    suitesPresent: [],
+    // R100: the execution-boundary re-observation's verdict (null when the run
+    // stopped before reaching it, e.g. at the R92 gate).
+    executionObservation: null,
     authorization: null,
   };
 
@@ -241,6 +262,65 @@ export async function runDriver(opts) {
     result.code = gate.code ?? "NOT_AUTHORIZED";
     result.reason = gate.reason;
     return result;
+  }
+
+  // ---- STEP 1b: RE-OBSERVE IDENTITY AT THE EXECUTION BOUNDARY (E4-R100). ---
+  //
+  // Plan §R100 做什么 #1: "分开计划期观测快照和执行期新观测；快照可用于审阅，不能充当
+  // 当前事实." The driver NEVER reads `plan.planObservation`: the facts it checks
+  // come from the caller's INDEPENDENT `observation` (a fresh arm dry-run plus
+  // fresh case fingerprints) together with two values THIS PROCESS derives —
+  // its own build digest over its own bytes, and the envelope digest as
+  // expanded NOW.
+  //
+  // WHY IT RUNS AFTER THE GATE rather than before: the R92 gate already refuses
+  // the identity drifts it owns (`IDENTITY_DRIFT`, `AUTHORIZATION_*`), and its
+  // named codes are the operator-facing vocabulary for those. This check adds
+  // what the gate does NOT do — the driver's own build digest, and the
+  // agreement between the envelope's stored digest label and its body — so it
+  // runs second and its codes are the more specific ones. Ordering it first
+  // would relabel every existing gate refusal, which would be a vocabulary
+  // change masquerading as a new check.
+  //
+  // Plan §R100 怎么验收: "计划生成后修改实际case、构建文件、模型参数、endpoint、
+  // driver字节，而保留旧observation：每项均在首个外部请求前失败." Every one of
+  // those is caught before `makeProvider`, so no request can leave.
+  //
+  // `driverBuildDigest` is recomputed from the artifact list rather than read
+  // from the plan: a plan that named a digest while its executor's bytes changed
+  // must be refused, and reading the bound value back would compare the plan
+  // against itself.
+  if (authorization !== null) {
+    let driverBuildDigest;
+    try {
+      driverBuildDigest = await evaluation.computeDriverBuildDigestV1(opts.repoRoot ?? REPO_ROOT);
+    } catch (err) {
+      result.status = "REFUSED";
+      result.code = "DRIVER_BUILD_UNREADABLE";
+      result.reason = redactFailureText(err instanceof Error ? err.message : String(err));
+      return result;
+    }
+    const executionObservation = {
+      now: observation.now,
+      armShas: { baseline: observation.armShas?.baseline ?? null, candidate: observation.armShas?.candidate ?? null },
+      armDigests: { baseline: observation.armDigests?.baseline ?? null, candidate: observation.armDigests?.candidate ?? null },
+      caseFingerprints: observation.caseFingerprints ?? {},
+      providerId: observation.providerId,
+      modelId: observation.modelId,
+      endpointIdentity: observation.endpointIdentity,
+      driverBuildDigest,
+      expandedPlanDigest: evaluation.computeR92AuthorizationDigestV1(authorization),
+    };
+    const execCheck = evaluation.checkExecutionObservationV1({ plan, observed: executionObservation });
+    result.executionObservation = { ok: execCheck.ok, codes: execCheck.codes, issues: execCheck.issues };
+    if (!execCheck.ok) {
+      // The refusal names every drifted field, so an operator sees WHICH fact
+      // moved rather than only that something did.
+      result.status = "REFUSED";
+      result.code = execCheck.codes[0] ?? "EXECUTION_OBSERVATION_DRIFT";
+      result.reason = execCheck.issues.join("; ");
+      return result;
+    }
   }
 
   // ---- STEP 2: the campaign-wide ledger, shared across arms/processes. -----
@@ -297,10 +377,67 @@ export async function runDriver(opts) {
   }
 
   // ---- STEP 3: only NOW may a provider exist. -----------------------------
-  const { provider, state } = makeProvider();
-  const modelRef = { id: observation.modelId };
-  const client = provider.createClient(modelRef, {});
   const budgetTotal = plan.authorization.caps.find((c) => c.cap === "maxModelCalls").value;
+
+  // TWO EXECUTION MODES, and the difference is stated in the result rather than
+  // left for a reader to infer (plan §R99 做什么 5: "明确运行完整度、任务通过率和
+  // 机制改善是不同字段").
+  //
+  //   "provider" (default) — the caller's provider drives ONE logical call per
+  //      unit. This is the zero-call fake/rehearsal mode the R97 tests use.
+  //   "arm-worker"         — each unit is executed by `scripts/e4/
+  //      r97-arm-worker.mjs` inside ITS OWN arm checkout, which dispatches that
+  //      arm's OWN built CLI and reads the report its verifier produced.
+  //
+  // Plan §R99 做什么 1 replaces the fixed `content: "r97"` placeholder with real
+  // per-case work; plan §R99 怎么做 states the split explicitly: "父 driver 排序/
+  // 预算/授权/持久化，arm worker 在对应 checkout 的构建里执行 case."
+  const armWorker = opts.armWorker ?? null;
+  const executionMode = armWorker === null ? "provider" : "arm-worker";
+
+  // ---- THE SUITE INVENTORY (plan §R100 怎么做, line 205). ------------------
+  //
+  // The CLI's `--suite` is SINGLE-VALUED, but the frozen selection spans TWO
+  // suites (regression 6 + stress 2). The plan already records each case's TRUE
+  // suite in `authorization.caseInventory` so the adaptation cannot be passed off
+  // as "the same experiment under one label". The driver must USE that inventory
+  // rather than re-derive a suite from the case id's prefix, because the prefix
+  // is a naming convention and the inventory is the approved fact.
+  //
+  // Plan §R100 怎么做: "mixed-suite 用显式 case inventory 保留真实 suite，不能悄悄将
+  // stress 全重标 regression 再宣称完全相同实验."
+  const inventoryByCase = new Map();
+  for (const entry of authorization?.caseInventory ?? []) {
+    if (entry !== null && typeof entry === "object" && typeof entry.caseId === "string") {
+      inventoryByCase.set(entry.caseId, entry);
+    }
+  }
+  /** The TRUE suite of a case, from the approved inventory when it is present. */
+  const trueSuiteOf = (caseId) => inventoryByCase.get(caseId)?.suite ?? caseId.split("/")[0] ?? "regression";
+  result.suiteInventory = [...inventoryByCase.values()].map((e) => ({
+    caseId: e.caseId,
+    suite: e.suite,
+    plannedUnderSuite: e.plannedUnderSuite,
+    relabelled: e.relabelled === true,
+  }));
+  // The suites the campaign actually covers, so a reader can see a mixed-suite
+  // run is mixed rather than trusting a single `--suite` label.
+  result.suitesPresent = [...new Set(result.suiteInventory.map((e) => e.suite))].sort();
+
+  // In `provider` mode a provider is constructed HERE — still after the gate and
+  // after the ledger, so the R97 ordering guarantee is unchanged. In
+  // `arm-worker` mode the driver constructs NO provider at all: each unit's own
+  // CLI resolves its own transport, which is what makes "两臂均加载自身构建"
+  // mechanically true instead of asserted.
+  let provider = null;
+  let providerState = null;
+  let client = null;
+  if (armWorker === null) {
+    const made = makeProvider();
+    provider = made.provider;
+    providerState = made.state;
+    client = provider.createClient({ id: observation.modelId }, {});
+  }
 
   // ---- STEP 4: serial execution, one reservation per logical call. --------
   // Serialism is fixed at 1 (plan §R97 line 218). Each arm's calls are reserved
@@ -309,10 +446,11 @@ export async function runDriver(opts) {
   let stopped = null;
   for (const arm of arms) {
     for (const caseId of plan.authorization.caseIds) {
+      const suite = trueSuiteOf(caseId);
       const unitKey = {
         experimentId: plan.planDigest,
         caseId,
-        suite: caseId.split("/")[0] ?? "regression",
+        suite,
         arm,
         repetition: 1,
       };
@@ -326,6 +464,97 @@ export async function runDriver(opts) {
         result.failures.push({ arm, caseId, error: "outcome_unknown: the previous attempt may have been billed and requires an explicit reconciliation" });
         continue;
       }
+
+      // ---- ARM-WORKER MODE: the unit owns its own reserve/begin/commit. ----
+      // The worker performs the SAME ordered protocol (reserve → begin →
+      // dispatch → commit → terminal write) against the SAME ledger and state
+      // directories, so the driver must NOT also reserve for this unit: doing
+      // both would charge one case twice. The driver's job here is ordering,
+      // skip decisions and reporting — exactly the split plan §R99 做什么 3 asks
+      // for.
+      if (armWorker !== null) {
+        const dir = armWorker.armDirs?.[arm];
+        if (typeof dir !== "string" || dir === "") {
+          result.status = "REFUSED";
+          result.code = "ARM_DIRECTORY_REQUIRED";
+          result.reason = `arm-worker mode needs the ${arm} arm's checkout directory, so the unit can run that arm's OWN build`;
+          return result;
+        }
+        let record;
+        try {
+          record = await armWorker.runArmUnit({
+            checkoutDir: dir,
+            repoRoot: opts.repoRoot ?? REPO_ROOT,
+            caseId,
+            suite,
+            arm,
+            repetition: 1,
+            // The ENVELOPE digest binds the ledger and the execution state; the
+            // arm's approved SOURCE SHA binds the build that may execute. They
+            // are different kinds of value and are passed separately so neither
+            // can be silently used as the other.
+            planDigest: plan.planDigest,
+            approvedSourceSha: plan.authorization.arms?.[arm]?.sha ?? null,
+            // THE CAMPAIGN GRANT, not the per-unit call allowance. The worker
+            // opens the SAME ledger file the driver already opened, and the
+            // ledger refuses any process that declares a different allowance
+            // (`BUDGET_STATE_MISMATCH`: "a process must never re-grant itself a
+            // different allowance"). Passing the worker's own per-unit maximum
+            // here made EVERY unit refuse with a budget error — measured — so the
+            // value must be the one the authorization granted.
+            campaignModelCalls: budgetTotal,
+            executionStateDir: ledgerDir,
+            ledgerDir,
+            outDir: armWorker.outDir ?? join(ledgerDir, "units"),
+            timeoutMs: armWorker.timeoutMs,
+            allowRealProvider: armWorker.allowRealProvider === true,
+            now: opts.now,
+          });
+        } catch (err) {
+          // A worker that THROWS is a caller/contract defect (a bad identity, an
+          // unknown suite). It is reported as a failure rather than swallowed,
+          // and it never becomes a pass.
+          record = {
+            status: "failed",
+            failureCategory: "harness",
+            detail: `E4-R98: the arm worker threw for ${arm}/${caseId}: ${redactFailureText(err instanceof Error ? err.message : String(err))}`,
+            consumed: 0,
+            reservationId: "",
+            resultHash: "",
+          };
+        }
+        result.workerUnits += 1;
+        result.workerConsumedCalls += Number(record.consumed ?? 0);
+        result.logicalCalls += Number(record.consumed ?? 0);
+        if (record.reservationId) result.reservations.push({ arm, caseId, id: record.reservationId });
+        result.unitResults.push({
+          arm,
+          caseId,
+          suite,
+          status: record.status,
+          failureCategory: record.failureCategory ?? null,
+          verifierPassed: record.verifierPassed === true,
+          resultHash: record.resultHash ?? "",
+          build: record.build ?? null,
+          detail: record.detail ?? null,
+        });
+        // THE VERDICT MAPPING, and it is the plan's own distinction rather than
+        // a convenience: `COMPLETE 表示预定单位都有终态，passed/failed 表示验证
+        // 结果`, and "不要让'模型 error'被当有效评分，也不要让合法的低分结果与基础
+        // 设施失败混淆."
+        //
+        //   null        → the verifier PASSED: a terminal result.
+        //   case_failed → the case RAN and failed its task: a VALID NEGATIVE, a
+        //                 terminal result, and NOT a campaign failure.
+        //   anything else (provider/timeout/harness/infrastructure/budget) →
+        //                 the unit measured NOTHING, so it is a failure and the
+        //                 campaign cannot be COMPLETE.
+        if (record.failureCategory !== null && record.failureCategory !== "case_failed") {
+          result.failures.push({ arm, caseId, error: record.detail ?? String(record.failureCategory) });
+        }
+        continue;
+      }
+
       const reservation = await ledger.reserve(arm, 1);
       if (!reservation.ok) {
         stopped = { arm, caseId, reason: reservation.reason };
@@ -383,21 +612,40 @@ export async function runDriver(opts) {
       }
       // A hard ceiling on the FAKE provider, so a test can prove the driver
       // cannot exceed what it was given.
-      if (maxProviderCalls > 0 && state.requests > maxProviderCalls) {
+      if (maxProviderCalls > 0 && providerState.requests > maxProviderCalls) {
         result.status = "REFUSED";
         result.code = "PROVIDER_CALL_CEILING_EXCEEDED";
-        result.reason = `the fake provider was called ${state.requests} times, above the ${maxProviderCalls} ceiling`;
-        result.providerRequests = state.requests;
+        result.reason = `the fake provider was called ${providerState.requests} times, above the ${maxProviderCalls} ceiling`;
+        result.providerRequests = providerState.requests;
         return result;
       }
     }
     if (stopped !== null) break;
   }
 
-  result.providerRequests = state.requests;
+  // `providerRequests` is the number of requests the DRIVER'S OWN provider saw.
+  // In arm-worker mode the driver constructs no provider, so this stays 0 and is
+  // NOT a claim that no model call happened: the units' calls are counted
+  // separately in `workerConsumedCalls`, and each arm's child CLI resolves its
+  // own transport. Reporting 0 here while units ran would be a false negative
+  // dressed as a safety property, so `executionMode` travels with it.
+  result.providerRequests = providerState === null ? 0 : providerState.requests;
+  result.executionMode = executionMode;
   result.budget = await ledger.view();
   result.completedUnits = (await execState.records()).filter(
     (r) => r.status === "completed" || r.status === "failed",
+  ).length;
+  // HOW MANY UNITS THE VERIFIER ACTUALLY PASSED. Computed HERE, before the
+  // exit-path branches, so EVERY outcome — PARTIAL included — reports the same
+  // field. Leaving it to the COMPLETE branch alone made a PARTIAL run report
+  // `undefined`, which is indistinguishable from "not measured" and would let a
+  // consumer read a task pass rate off a run that never reported one.
+  result.verifiedPasses = result.unitResults.filter((u) => u.verifierPassed === true).length;
+  // The measured units that reached a verdict the verifier produced, whether or
+  // not the task passed. This is the RUN-COMPLETENESS figure plan §R99 asks to
+  // be kept apart from the task pass rate.
+  result.measuredUnits = result.unitResults.filter(
+    (u) => u.failureCategory === null || u.failureCategory === "case_failed",
   ).length;
 
   if (stopped !== null) {
@@ -414,12 +662,37 @@ export async function runDriver(opts) {
     result.status = "PARTIAL";
     result.code = "CASE_FAILURES";
     const first = result.failures[0];
-    result.reason = `arm ${first.arm} case ${first.caseId} failed: ${first.error} (${result.failures.length} failed logical call(s) of ${result.logicalCalls} dispatched)`;
+    // The unit count is the honest denominator in arm-worker mode: a unit that
+    // was refused before dispatch consumed no logical call, so dividing by
+    // `logicalCalls` alone would understate how much of the campaign was
+    // attempted. The sentence names the units, and the calls are reported
+    // separately.
+    result.reason =
+      executionMode === "arm-worker"
+        ? `arm ${first.arm} case ${first.caseId} failed: ${first.error} (${result.failures.length} of ${result.workerUnits} unit(s) measured nothing; ${result.workerConsumedCalls} logical call(s) consumed)`
+        : `arm ${first.arm} case ${first.caseId} failed: ${first.error} (${result.failures.length} failed logical call(s) of ${result.logicalCalls} dispatched)`;
     return result;
   }
 
   result.status = "COMPLETE";
   const caseCount = plan.authorization.caseIds.length;
+  // COMPLETE means every scheduled unit reached a TERMINAL state — it does NOT
+  // mean the cases passed. Plan §R99 怎么验收: "COMPLETE 表示预定单位都有终态，
+  // passed/failed 表示验证结果." In arm-worker mode the two are reported apart,
+  // and the verified pass count is stated so a reader cannot mistake completeness
+  // for task success. (`verifiedPasses`/`measuredUnits` are computed above, on
+  // every exit path, so this branch does not re-derive them.)
+  if (executionMode === "arm-worker") {
+    result.reason =
+      `both arms covered ${caseCount} case(s) within a ${budgetTotal}-call campaign budget — ` +
+      `${result.workerUnits} unit(s) reached a terminal state (${result.skippedUnits} already terminal and NOT re-executed), ` +
+      `${result.workerConsumedCalls} logical call(s) consumed; ` +
+      // Deliberately NOT phrased as a pass rate: a `case_failed` unit ran
+      // correctly and failed its task, and the offline stub cannot pass at all.
+      `verifier passes: ${result.verifiedPasses}/${result.workerUnits} (${result.measuredUnits} unit(s) reached a verifier verdict). ` +
+      "COMPLETE describes RUN COMPLETENESS, not task success or mechanism improvement.";
+    return result;
+  }
   result.reason =
     result.skippedUnits > 0
       ? `both arms covered ${caseCount} case(s) within a ${budgetTotal}-call campaign budget — ${result.skippedUnits} unit(s) were already terminal and were NOT re-executed (${result.logicalCalls} new logical call(s))`
@@ -514,17 +787,49 @@ export async function observeArms(opts) {
   return observations;
 }
 
-/** Fingerprint one case from the case files in a SPECIFIC arm checkout. */
-async function fingerprintCaseInCheckout(evaluation, repoRoot, armDir, caseId) {
+/**
+ * Fingerprint one case from the case files in a SPECIFIC arm checkout.
+ *
+ * Plan §R100 怎么做 (line 204) forbids the fallback that used to live here:
+ * "删除 fingerprintCaseInCheckout 中静默 fallback。shallow clone 缺历史不等于缺当前
+ * checkout 文件；缺文件或读失败要 NOT_READY，不能拿 driver 副本冒充."
+ *
+ * WHAT WAS WRONG: the previous version did
+ *
+ *     await loadBenchmarkCase(join(armDir, …)).catch(() => loadBenchmarkCase(join(repoRoot, …)))
+ *
+ * so a case MISSING from an arm was silently fingerprinted from the DRIVER's own
+ * tree. The observation then claimed to describe the arm's build while actually
+ * describing a different one — and because both arms would fall back to the same
+ * tree, the two "independent" observations could agree by construction. That is
+ * exactly the "one harness run twice" failure the whole round exists to remove,
+ * and it also defeats the R100 acceptance criterion "缺 arm 文件不会回退".
+ *
+ * NOW: a case that cannot be read FROM THAT ARM is a named `NOT_READY` refusal.
+ * The error quotes the arm directory and the case, so an operator can see which
+ * checkout is incomplete rather than receiving a fingerprint that means nothing.
+ *
+ * EXPORTED so a test can drive this exact rule with a synthetic arm directory,
+ * without needing a built CLI in it. The R100 acceptance criterion is about THIS
+ * function's fallback ("缺 arm 文件不会回退"), and the previous fallback lived
+ * only here — so testing it directly is testing the whole rule, at a fraction of
+ * the cost of a full arm build.
+ */
+export async function fingerprintCaseInCheckout(evaluation, repoRoot, armDir, caseId) {
   const { join: pjoin } = await import("node:path");
   const { loadBenchmarkCase } = evaluation;
-  // Prefer the arm's own checkout; fall back to the driver's tree only if the
-  // case is absent there (a shallow arm checkout), and say so by returning the
-  // same value the selection computed — the caller compares, so a mismatch is
-  // visible rather than silent.
-  const c = await loadBenchmarkCase(pjoin(armDir, "benchmarks", caseId)).catch(() =>
-    loadBenchmarkCase(pjoin(repoRoot, "benchmarks", caseId)),
-  );
+  const armCasePath = pjoin(armDir, "benchmarks", caseId);
+  let c;
+  try {
+    c = await loadBenchmarkCase(armCasePath);
+  } catch (err) {
+    // NO fallback. `repoRoot` is deliberately not consulted: a fingerprint taken
+    // from another tree is not an observation of this arm.
+    throw new Error(
+      `E4-R97: NOT_READY: case ${caseId} could not be loaded from arm checkout ${armDir} (${armCasePath}): ` +
+        `${err instanceof Error ? err.message : String(err)} — a missing arm case is NOT_READY, never a fingerprint borrowed from ${repoRoot}`,
+    );
+  }
   return evaluation.caseInputFingerprintV1({
     requestMd: c.requestMd,
     expectedMd: c.expectedMd,

@@ -144,6 +144,13 @@ export const R97_DRIVER_VERSION = "e4-r97-campaign-driver-v1";
  */
 export const R97_DRIVER_ARTIFACTS: readonly string[] = [
   "scripts/e4/r97-campaign-driver.mjs",
+  // E4-R99: the ARM WORKER is part of the executor. Once the driver routes units
+  // through it (plan §R99 怎么做: "arm worker 在对应 checkout 的构建里执行 case"),
+  // the worker's bytes decide what actually runs a case — so leaving it out would
+  // mean a rewritten worker could not invalidate an approval. That is precisely
+  // the defect `driverBuildDigest` exists to close ("版本字符串不变而执行代码变化，
+  // 应使旧计划失效"), and the artifact list is where it has to be closed.
+  "scripts/e4/r97-arm-worker.mjs",
   "packages/evaluation/src/r97-budget-ledger.ts",
   "packages/evaluation/src/r97-execution-state.ts",
   "packages/evaluation/src/r97-plan.ts",

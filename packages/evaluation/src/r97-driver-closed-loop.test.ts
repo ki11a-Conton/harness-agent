@@ -280,6 +280,87 @@ describe("E4-R97 D1: every refusal path makes ZERO provider requests", () => {
     expect(providerConstructions).toBe(0);
   });
 
+  it("R100: the execution-boundary check RUNS on the authorized path and reports its own result", async () => {
+    const plan = await finalizedPlan();
+    const { result } = await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: await tempDir() });
+    // The check is not decorative: the driver records what it observed and
+    // whether it agreed, on the run that actually proceeds.
+    const check = result["executionObservation"] as { ok: boolean; codes: string[] } | undefined;
+    expect(check, "an authorized run must report the execution-boundary check").toBeDefined();
+    expect(check!.ok).toBe(true);
+    expect(check!.codes).toEqual([]);
+  });
+
+  it("R100: a DRIVER BUILD change is refused before any provider exists", async () => {
+    const plan = await finalizedPlan();
+    // Simulate "the driver's code changed after approval" in the only way that
+    // ISOLATES this check: re-bind the envelope's `driverBuildDigest` to a
+    // different value AND re-sign the envelope so its stored label describes its
+    // stored body. Without the re-sign, the R92 gate refuses first on
+    // AUTHORIZATION_DIGEST_MISMATCH and this check would never be reached — which
+    // would make the test pass for the wrong reason.
+    const fakeBuildDigest = "0".repeat(64);
+    const tamperedAuth = { ...plan.authorization!, driverBuildDigest: fakeBuildDigest };
+    const resigned = {
+      ...plan,
+      authorization: tamperedAuth,
+      planDigest: (evaluation["computeR92AuthorizationDigestV1"] as (a: unknown) => string)(tamperedAuth),
+    };
+    const { result, providerConstructions } = await drive({
+      plan: resigned as typeof plan,
+      env: AUTHORIZED_ENV(resigned.planDigest),
+      ledgerDir: await tempDir(),
+    });
+    // The driver recomputes its OWN digest from its own bytes, so it cannot
+    // agree with the forged value.
+    expect(result["executionObservation"]).toMatchObject({
+      ok: false,
+      codes: ["EXEC_OBS_DRIVER_BUILD_DRIFT"],
+    });
+    expect(result["code"]).toBe("EXEC_OBS_DRIVER_BUILD_DRIFT");
+    expect(result["status"]).toBe("REFUSED");
+    expect(result["providerRequests"]).toBe(0);
+    expect(providerConstructions).toBe(0);
+  });
+
+  it("R100: a TAMPERED envelope whose top-level digest was relabelled is refused", async () => {
+    const plan = await finalizedPlan();
+    // The classic forgery: edit the body, then rewrite the top-level label so a
+    // naive equality check on the label alone would pass.
+    const tamperedBody = { ...plan.authorization!, modelId: "gpt-4o" };
+    const relabelled = { ...plan, planDigest: "f".repeat(64), authorization: tamperedBody };
+    const { result, providerConstructions } = await drive({
+      plan: relabelled as typeof plan,
+      env: AUTHORIZED_ENV("f".repeat(64)),
+      ledgerDir: await tempDir(),
+    });
+    expect(result["status"]).not.toBe("COMPLETE");
+    expect(result["providerRequests"]).toBe(0);
+    expect(providerConstructions).toBe(0);
+  });
+
+  it("R100: the report carries the TRUE per-case suite inventory, not one --suite label", async () => {
+    const plan = await finalizedPlan();
+    const { result } = await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: await tempDir() });
+
+    // The frozen selection is genuinely MIXED (regression + stress), so a
+    // campaign that reported a single suite would be misdescribing itself.
+    const inventory = result["suiteInventory"] as Array<{ caseId: string; suite: string }>;
+    expect(inventory).toHaveLength(plan.authorization!.caseIds.length);
+    expect(new Set(inventory.map((e) => e.caseId)).size).toBe(inventory.length);
+    // The inventory's suites agree with the approved envelope, case for case —
+    // the driver must not re-derive a suite from the case id's prefix.
+    for (const entry of inventory) {
+      const approved = plan.authorization!.caseInventory?.find((e) => e.caseId === entry.caseId);
+      expect(approved, `${entry.caseId} must be in the approved inventory`).toBeDefined();
+      expect(entry.suite).toBe(approved!.suite);
+    }
+    const suites = result["suitesPresent"] as string[];
+    expect(suites.length).toBeGreaterThan(1);
+    expect(suites).toContain("stress");
+    expect(suites).toContain("regression");
+  });
+
   it("BUDGET EXHAUSTED by a pre-existing ledger: 0 requests, provider never constructed", async () => {
     const plan = await finalizedPlan();
     const dir = await tempDir();
@@ -912,14 +993,45 @@ describe("E4-R97 D6: the REAL two-arm observation produces a FINALIZED plan", ()
   // `observeArms` against the two real arm checkouts and builds the plan from
   // those observations.
   //
-  // The arm checkouts are created by `scripts/e4/r97-observe-arms.mjs`, which is
-  // what CI and a human run. When they are absent (a plain clone with no arm
-  // worktrees) the test SKIPS with a stated reason rather than passing vacuously.
-  const BASE = "D:/r97-arm-baseline";
-  const CAND = "D:/r97-arm-candidate";
+  // WHERE THE ARMS COME FROM — and why this is no longer a hard-coded `D:/` path.
+  //
+  // R101 (finding F7) removes the author-machine dependency: the directories are
+  // read from the environment (`R97_ARM_BASELINE_DIR` / `R97_ARM_CANDIDATE_DIR`),
+  // which is what the CI job's arm-setup step publishes into `$GITHUB_ENV`. A
+  // hard-coded `D:/r97-arm-*` could only ever be satisfied on one Windows box, so
+  // the acceptance path was unreachable on every runner — which is exactly how it
+  // came to be SKIPPED instead of failing.
+  //
+  // THE SKIP IS GONE, DELIBERATELY. `it.skipIf(!haveArms)` turned "the two real
+  // arm builds are missing" into a GREEN result, so a runner with no arms
+  // reported success for a path it never executed. Plan §R101 做什么 2: "让正式
+  // driver 的端到端路径在 CI 必跑，缺条件是明确失败而非 skip." A missing arm now
+  // FAILS this test with the exact directories it looked in and the two ways to
+  // satisfy it. There is no silent third outcome — no skip, no early return.
+  const BASE = process.env["R97_ARM_BASELINE_DIR"] ?? "D:/r97-arm-baseline";
+  const CAND = process.env["R97_ARM_CANDIDATE_DIR"] ?? "D:/r97-arm-candidate";
   const haveArms = existsSync(join(BASE, "apps", "cli", "dist", "main.js")) && existsSync(join(CAND, "apps", "cli", "dist", "main.js"));
+  /** How to satisfy the precondition, quoted in the failure message. */
+  const ARM_HELP =
+    `Set R97_ARM_BASELINE_DIR and R97_ARM_CANDIDATE_DIR to two checkouts built at the frozen revisions ` +
+    `(or run \`node scripts/e4/r97-observe-arms.mjs\`). Looked for a built CLI at ` +
+    `${join(BASE, "apps", "cli", "dist", "main.js")} and ${join(CAND, "apps", "cli", "dist", "main.js")}.`;
 
-  it.skipIf(!haveArms)("both arms are observed by the real CLI dry-run and the plan FINALIZES", async () => {
+  it("the two real arm builds MUST exist — a missing arm is a FAILURE, never a skip", () => {
+    // The precondition itself is now asserted, so "the arms were absent" can no
+    // longer masquerade as a pass. This replaces the old
+    // `expect(haveArms).toBe(false)` branch, which asserted that the precondition
+    // was missing and called that success.
+    expect(haveArms, `the D6 two-arm acceptance path cannot run: ${ARM_HELP}`).toBe(true);
+  });
+
+  it("both arms are observed by the real CLI dry-run and the plan FINALIZES", async () => {
+    if (!haveArms) {
+      // Unreachable in a normal run: the test above already failed. Kept so this
+      // test can never silently pass on a machine where the previous assertion is
+      // somehow skipped — a skipped test must not become a green closed loop.
+      throw new Error(`the D6 two-arm acceptance path cannot run: ${ARM_HELP}`);
+    }
     const driver = (await import(DRIVER)) as {
       observeArms: (o: unknown) => Promise<Record<string, R97ArmObservation>>;
     };
@@ -972,12 +1084,79 @@ describe("E4-R97 D6: the REAL two-arm observation produces a FINALIZED plan", ()
     expect(plan.authorization!.arms.candidate.executionPlanDigest).toBe(observations["candidate"]!.planDigest);
   }, 180_000);
 
-  it("the arm checkouts are optional: their absence is reported, never faked", () => {
-    if (!haveArms) {
-      // A plain clone has no arm worktrees. Stating that is the honest outcome.
-      expect(haveArms).toBe(false);
-    } else {
-      expect(haveArms).toBe(true);
+  it("R100 NEGATIVE CONTROL: a case missing from an arm is NOT_READY — never borrowed from another tree", async () => {
+    // Plan §R100 怎么做 (line 204): "删除 fingerprintCaseInCheckout 中静默 fallback…
+    // 缺文件或读失败要 NOT_READY，不能拿 driver 副本冒充." The previous
+    // implementation did `.catch(() => loadBenchmarkCase(repoRoot/…))`, so an arm
+    // missing a case silently reported the DRIVER's copy — and because both arms
+    // would fall back to the SAME tree, the two "independent" observations could
+    // agree by construction. That is the "one harness run twice" failure.
+    //
+    // This drives the exported function DIRECTLY, with an empty synthetic arm:
+    // the rule under test is this function's fallback, and the case below is
+    // genuinely present in the driver's tree, so a fallback WOULD have succeeded.
+    const driver = (await import(DRIVER)) as {
+      fingerprintCaseInCheckout: (
+        evaluation: unknown,
+        repoRoot: string,
+        armDir: string,
+        caseId: string,
+      ) => Promise<string>;
+    };
+    const emptyArm = await tempDir();
+    const sel = await (evaluation["loadR97FrozenSelection"] as (r: string) => Promise<{ caseIds: string[] }>)(REPO);
+    const victim = sel.caseIds[0]!;
+
+    // CONTROL PRECONDITION: the case is absent from the arm but PRESENT in the
+    // repo, so the old fallback had something to find and would have returned a
+    // fingerprint instead of failing.
+    expect(existsSync(join(emptyArm, "benchmarks", victim))).toBe(false);
+    expect(existsSync(join(REPO, "benchmarks", victim))).toBe(true);
+
+    await expect(driver.fingerprintCaseInCheckout(evaluation, REPO, emptyArm, victim)).rejects.toThrow(/NOT_READY/);
+    // The refusal names BOTH sides, so an operator can see which checkout is
+    // incomplete and that no substitution happened.
+    await expect(driver.fingerprintCaseInCheckout(evaluation, REPO, emptyArm, victim)).rejects.toThrow(
+      new RegExp(victim.replace(/[/\\]/g, ".")),
+    );
+    await expect(driver.fingerprintCaseInCheckout(evaluation, REPO, emptyArm, victim)).rejects.toThrow(/never a fingerprint borrowed/);
+  }, 60_000);
+
+  it("R101: the arm-setup command EXISTS and agrees with the SHAs this file asserts", async () => {
+    // The D6 help text tells an operator to run `scripts/e4/r97-observe-arms.mjs`.
+    // That instruction was FALSE: the file did not exist, so the only thing that
+    // ever prepared the arms was an ad-hoc sequence typed into one machine. A
+    // documented-but-missing setup command is worse than none, because it reads
+    // as reproducible.
+    const setupPath = join(REPO, "scripts", "e4", "r97-observe-arms.mjs");
+    expect(existsSync(setupPath), "the arm-setup command the D6 path points at must exist").toBe(true);
+
+    const setup = (await import(pathToFileURL(setupPath).href)) as {
+      DEFAULT_BASELINE_SHA: string;
+      DEFAULT_CANDIDATE_SHA: string;
+      ARM_DIR_ENV: { baseline: string; candidate: string };
+      parseArgs: (argv: string[]) => { printEnv: boolean; baseline?: string };
+    };
+
+    // ONE source of truth for the revisions: the script's defaults must be the
+    // exact SHAs the acceptance test above asserts against.
+    expect(setup.DEFAULT_BASELINE_SHA).toBe("e9776ba66190ea63b1bacb685c91aa900b6935e7");
+    expect(setup.DEFAULT_CANDIDATE_SHA).toBe("a20373743b56de6a3a110fecdd254737ece71afa");
+
+    // The environment variable NAMES must be the ones this file reads, or the
+    // setup command would publish variables the test ignores.
+    expect(setup.ARM_DIR_ENV.baseline).toBe("R97_ARM_BASELINE_DIR");
+    expect(setup.ARM_DIR_ENV.candidate).toBe("R97_ARM_CANDIDATE_DIR");
+
+    // ...and the CI job must use the SAME names and SHAs, so a locally prepared
+    // pair and a CI-prepared pair describe the same experiment.
+    const { readFile } = await import("node:fs/promises");
+    const ci = await readFile(join(REPO, ".github", "workflows", "ci.yml"), "utf8");
+    for (const sha of [setup.DEFAULT_BASELINE_SHA, setup.DEFAULT_CANDIDATE_SHA]) {
+      expect(ci, `ci.yml must bind the frozen revision ${sha}`).toContain(sha);
+    }
+    for (const name of Object.values(setup.ARM_DIR_ENV)) {
+      expect(ci, `ci.yml must publish ${name}`).toContain(name);
     }
   });
 });
