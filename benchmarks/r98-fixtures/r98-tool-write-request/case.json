@@ -1,0 +1,25 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "tools",
+    "write"
+  ],
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "out/r98-request.txt",
+      "mustChange": true
+    },
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const fs=require('node:fs');if(!fs.existsSync('out/r98-request.txt'))process.exit(1);if(fs.readFileSync('out/r98-request.txt','utf8').trim()!=='r98-request-first-write')process.exit(1)"
+      ]
+    }
+  ]
+}

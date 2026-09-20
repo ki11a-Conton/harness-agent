@@ -250,28 +250,51 @@ export async function runDriver(opts) {
     result.reason = "an authorized run must supply a budget ledger directory — the global cap cannot be enforced without one";
     return result;
   }
-  const ledger = await evaluation.openR97BudgetLedger(ledgerDir, {
-    planDigest: plan.planDigest,
-    campaignModelCalls: plan.authorization.caps.find((c) => c.cap === "maxModelCalls").value,
-  });
 
-  // A recovery pass FIRST: a reservation left by a dead process becomes
-  // `unknown` and KEEPS its allowance, so a restart cannot re-spend it.
-  const recovered = await ledger.recover();
-  result.budget = recovered.view;
+  // Durable state that cannot be trusted is a STRUCTURED refusal, not an
+  // exception: a resume whose ledger or case state is missing/corrupt/foreign
+  // must surface as a non-COMPLETE result an operator (or CI) can read, and it
+  // must happen here — before `makeProvider` — so no provider is ever built.
+  // Plan §R98 怎么验收: "修改 grant、planDigest 或结果hash，恢复非零退出，不给出
+  // COMPLETE."
+  let ledger;
+  let execState;
+  try {
+    ledger = await evaluation.openR97BudgetLedger(ledgerDir, {
+      planDigest: plan.planDigest,
+      campaignModelCalls: plan.authorization.caps.find((c) => c.cap === "maxModelCalls").value,
+    });
 
-  // ---- STEP 2b: the durable case×arm×repetition state (plan §R98 / F2). ----
-  // The ledger answers "how many calls may still be made"; this answers "which
-  // units are already finished". Without it a second run of the SAME plan
-  // committed another 2N calls (measured: 16 then 16 = 32).
-  const execState = await evaluation.openR97ExecutionState(ledgerDir, {
-    experimentId: plan.planDigest,
-    planDigest: plan.planDigest,
-  });
-  // A unit left `running` by a dead process is quarantined as outcome_unknown:
-  // it is neither skipped as a success nor silently re-dispatched.
-  const inFlight = await execState.recoverInFlight();
-  result.recoveredUnits = inFlight.unknown;
+    // A recovery pass FIRST: a reservation left by a dead process becomes
+    // `unknown` and KEEPS its allowance, so a restart cannot re-spend it.
+    const recovered = await ledger.recover();
+    result.budget = recovered.view;
+
+    // ---- STEP 2b: the durable case×arm×repetition state (plan §R98 / F2). --
+    // The ledger answers "how many calls may still be made"; this answers "which
+    // units are already finished". Without it a second run of the SAME plan
+    // committed another 2N calls (measured: 16 then 16 = 32).
+    execState = await evaluation.openR97ExecutionState(ledgerDir, {
+      experimentId: plan.planDigest,
+      planDigest: plan.planDigest,
+    });
+    // A unit left `running` by a dead process is quarantined as outcome_unknown:
+    // it is neither skipped as a success nor silently re-dispatched.
+    const inFlight = await execState.recoverInFlight();
+    result.recoveredUnits = inFlight.unknown;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    result.status = "REFUSED";
+    result.code = /BUDGET_STATE_MISSING/.test(message)
+      ? "BUDGET_STATE_MISSING"
+      : /BUDGET_STATE_CORRUPT|not valid JSON|damaged/.test(message)
+        ? "BUDGET_STATE_CORRUPT"
+        : /BUDGET_STATE_MISMATCH|different plan|different experiment/.test(message)
+          ? "BUDGET_STATE_MISMATCH"
+          : "DURABLE_STATE_UNAVAILABLE";
+    result.reason = redactFailureText(message);
+    return result;
+  }
 
   // ---- STEP 3: only NOW may a provider exist. -----------------------------
   const { provider, state } = makeProvider();
@@ -345,7 +368,7 @@ export async function runDriver(opts) {
         // A failed call is still a dispatched attempt: commit it as consumed so
         // the allowance is not silently returned.
         consumed = 1;
-        outcome = err instanceof Error ? err.message : String(err);
+        outcome = redactFailureText(err instanceof Error ? err.message : String(err));
       }
       await ledger.commit(reservation.reservationId, consumed, retries);
       result.logicalCalls += consumed;

@@ -1,0 +1,25 @@
+{
+  "expected": {
+    "status": "completed"
+  },
+  "suite": "regression",
+  "tags": [
+    "tools",
+    "write"
+  ],
+  "verification": [
+    {
+      "kind": "artifact",
+      "path": "notes/r98-second.txt",
+      "mustChange": true
+    },
+    {
+      "kind": "command",
+      "command": "node",
+      "args": [
+        "-e",
+        "const fs=require('node:fs');if(!fs.existsSync('notes/r98-second.txt'))process.exit(1);if(fs.readFileSync('notes/r98-second.txt','utf8').trim()!=='r98-second-distinct-write')process.exit(1)"
+      ]
+    }
+  ]
+}

@@ -386,6 +386,47 @@ describe("E4-R97 D2: the normal path runs the pair within the campaign budget", 
     expect(run.result["completedUnits"]).toBe(caseCount * 2);
   });
 
+  it("F2/F4: a resumed campaign whose durable state was REPLACED is refused, never COMPLETE", async () => {
+    // Plan §R98 怎么验收: "修改 grant、planDigest 或结果hash，恢复非零退出，不给出
+    // COMPLETE." A resume must not be able to adopt another authorization's state
+    // and then report success.
+    const plan = await finalizedPlan();
+    const dir = await tempDir();
+    await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: dir });
+
+    // Swap in a ledger that belongs to a DIFFERENT plan, leaving the old grant.
+    const { writeFile: wf } = await import("node:fs/promises");
+    await wf(
+      join(dir, "budget-ledger.json"),
+      `${JSON.stringify(
+        { schemaVersion: "e4-r97-budget-ledger-v1", planDigest: "c".repeat(64), campaignModelCalls: 320, entries: [] },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
+    const resumed = await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: dir });
+    expect(resumed.result["status"]).not.toBe("COMPLETE");
+    expect(resumed.result["logicalCalls"]).toBe(0);
+    expect(resumed.result["providerRequests"]).toBe(0);
+    expect(String(resumed.result["reason"])).toMatch(/MISMATCH|damaged|refus/i);
+  });
+
+  it("F2/F4: a resumed campaign whose execution state was CORRUPTED is refused, never COMPLETE", async () => {
+    const plan = await finalizedPlan();
+    const dir = await tempDir();
+    await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: dir });
+
+    const { writeFile: wf } = await import("node:fs/promises");
+    await wf(join(dir, "execution-state.json"), "{ corrupted", "utf8");
+
+    const resumed = await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: dir });
+    expect(resumed.result["status"]).not.toBe("COMPLETE");
+    expect(resumed.result["providerRequests"]).toBe(0);
+    expect(String(resumed.result["reason"])).toMatch(/CORRUPT|not valid JSON|damaged/i);
+  });
+
   it("a campaign budget smaller than the pair stops EARLY and reports PARTIAL", async () => {
     const plan = await finalizedPlan();
     const dir = await tempDir();
