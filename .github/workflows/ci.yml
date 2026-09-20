@@ -1002,9 +1002,14 @@ jobs:
           # `✓`; a SKIPPED line carries `↓`; `skipped` is fatal BY ITSELF:
           # finding F7 IS the silent-skip defect, so a green suite that skipped
           # the D6 path must never be reported green.
-          FILE='packages/evaluation/src/r97-driver-closed-loop.test.ts'
-          count="$(grep -cF "✓ ${FILE}" "$LOG" || true)"
-          skipped="$(grep -cF "↓ ${FILE}" "$LOG" || true)"
+          # The path prefix is intentionally NOT anchored: run 35486451101
+          # measured that the verbose lines can carry the file as relative OR
+          # absolute (the name+✓ greps below passed while an exact
+          # `✓ packages/evaluation/src/…` pattern counted 0), so each count is
+          # "lines mentioning the file name that also carry `✓`/`↓`".
+          FILE='r97-driver-closed-loop.test.ts'
+          count="$(grep -F "${FILE}" "$LOG" | grep -cF "✓" || true)"
+          skipped="$(grep -F "${FILE}" "$LOG" | grep -cF "↓" || true)"
           if [ -z "$count" ]; then
             echo "::error::no executed-test lines for the driver file — it did not run"
             grep -nE 'r97-driver-closed-loop' "$LOG" || true
@@ -1025,6 +1030,8 @@ jobs:
           EXPECTED_MIN=36
           if [ "$count" -lt "$EXPECTED_MIN" ]; then
             echo "::error::the driver file executed ${count} test(s), fewer than the required ${EXPECTED_MIN} — the closed loop did not really run"
+            echo "diagnostic lines mentioning the file:"
+            grep -F "${FILE}" "$LOG" | head -n 6 || true
             exit 1
           fi
           echo "PASS  r97-driver-closed-loop.test.ts executed ${count} test(s) (>= ${EXPECTED_MIN}) with 0 skipped"
@@ -1039,9 +1046,10 @@ jobs:
           echo "PASS  D6 two-arm observation test executed and passed"
 
           # Every other required file must also have executed, with zero skips.
+          # Same unanchored form as above (relative or absolute path prefix).
           for f in r97-budget-ledger r97-execution-state r97-plan; do
-            cnt="$(grep -cF "✓ packages/evaluation/src/${f}.test.ts" "$LOG" || true)"
-            skip="$(grep -cF "↓ packages/evaluation/src/${f}.test.ts" "$LOG" || true)"
+            cnt="$(grep -F "${f}.test.ts" "$LOG" | grep -cF "✓" || true)"
+            skip="$(grep -F "${f}.test.ts" "$LOG" | grep -cF "↓" || true)"
             if [ -z "$cnt" ] || [ "$cnt" -lt 1 ]; then
               echo "::error::${f}.test.ts executed no tests — it did not run"
               exit 1
