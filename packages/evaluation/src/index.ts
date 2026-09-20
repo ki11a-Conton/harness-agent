@@ -75,4 +75,5 @@ export * from "./r97-budget-ledger.js";
 export * from "./r97-budget-channel.js";
 export * from "./r97-campaign-lifecycle.js";
 export * from "./r97-execution-state.js";
+export * from "./r97-campaign-evidence.js";
 export * from "./r97-plan.js";

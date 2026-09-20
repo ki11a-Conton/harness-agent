@@ -41,7 +41,7 @@
  */
 
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -594,4 +594,82 @@ describe("R99 W9: failure text is redacted before it can reach a caller", () => 
   it("exposes `redactFailureText` as the SAME function, not a second implementation", () => {
     expect(mod.redactFailureText).toBe(mod.redact);
   });
+});
+
+describe("R99 W10: the worker's report SURVIVES it, linked and hashed", () => {
+  // Plan §T3 怎么做 1: "持久保存本次单例报告、必要事件和结果身份，不在 finally 中删除
+  // 唯一证据." The previous worker deleted the arm's only report in `finally`
+  // (finding N5), so after a campaign ended nothing on disk could substantiate a
+  // verdict.
+  //
+  // Plan §T3 怎么验收: "worker 结束后原报告仍存在."
+
+  it("leaves a real evidence file on disk after the worker returns", async () => {
+    const { record, root } = await runUnit({ timeoutMs: 300_000 });
+
+    // The unit really executed, so there IS a report to preserve.
+    expect(record.detail).toContain("verification_passed=");
+    expect(record.report).not.toBeNull();
+
+    const link = (record as unknown as { evidence?: { path: string; sha256: string } | null }).evidence;
+    expect(link, "a terminal unit must name the evidence its verdict rests on").toBeTruthy();
+    expect(link!.path).toMatch(/^attempts\//);
+    expect(link!.sha256).toMatch(/^[0-9a-f]{64}$/);
+
+    // The file is there, and its bytes hash to exactly what the record claims.
+    const abs = join(root, "ledger", ...link!.path.split("/"));
+    expect(existsSync(abs), `the evidence file must still exist at ${abs}`).toBe(true);
+    const bytes = await readFile(abs);
+    const { createHash } = await import("node:crypto");
+    expect(createHash("sha256").update(bytes).digest("hex")).toBe(link!.sha256);
+
+    // ...and the file carries the SAME row the record reports, so the evidence
+    // is the proof rather than a parallel copy that could drift.
+    const envelope = JSON.parse(bytes.toString("utf8")) as {
+      unit: { caseId: string; arm: string };
+      report: Record<string, unknown> | null;
+      resultHash: string;
+    };
+    expect(envelope.unit.caseId).toBe(CASE_ID);
+    expect(envelope.report!["task_id"]).toBe(record.report!.task_id);
+    expect(envelope.report!["reportHash"]).toBe(record.report!.reportHash);
+    // The record's resultHash IS the evidence's, so a validator can recompute it.
+    expect(record.resultHash).toBe(envelope.resultHash);
+  }, 300_000);
+
+  it("keeps the staging scratch out of the evidence, and only the scratch", async () => {
+    // The `finally` cleanup is still a cleanup: it removes the STAGED CASE, which
+    // is a working copy, and nothing else. A worker that stopped cleaning up
+    // would leave the campaign's evidence directory full of scratch trees.
+    const { record, root } = await runUnit({ timeoutMs: 300_000 });
+    const link = (record as unknown as { evidence?: { path: string } | null }).evidence;
+    expect(link).toBeTruthy();
+    // The attempt directory holds exactly the evidence file.
+    const { readdir } = await import("node:fs/promises");
+    const dir = join(root, "ledger", ...link!.path.split("/").slice(0, -1));
+    expect(await readdir(dir)).toEqual([link!.path.split("/").pop()]);
+  }, 300_000);
+
+  it("the stored evidence row is REDACTED: no credential-shaped text reaches it", async () => {
+    const { record, root } = await runUnit({ timeoutMs: 300_000 });
+    const link = (record as unknown as { evidence?: { path: string } | null }).evidence;
+    const bytes = await readFile(join(root, "ledger", ...link!.path.split("/")), "utf8");
+    // No API-key shape, no Authorization header, no URL userinfo.
+    expect(bytes).not.toMatch(/\bsk-[A-Za-z0-9_-]{16,}\b/);
+    expect(bytes).not.toMatch(/[Bb]earer\s+[A-Za-z0-9._-]{16,}/);
+    expect(bytes).not.toMatch(/https?:\/\/[^/\s:@]+:[^/\s:@]+@/);
+  }, 300_000);
+
+  it("a REFUSED unit still records evidence, because its refusal is the result", async () => {
+    // A unit refused before dispatch has no report — and that ABSENCE is the fact
+    // its verdict rests on, so the envelope must record `report: null` rather
+    // than being skipped. Otherwise "refused" and "the evidence was deleted"
+    // would look the same to a validator.
+    const { record, root } = await runUnit({ approvedSourceSha: "0".repeat(40), arm: "candidate" });
+    expect(record.status).toBe("failed");
+    // Refused BEFORE any state existed: there is no attempt, hence no evidence,
+    // and the record says so by carrying no link rather than a dangling one.
+    expect((record as unknown as { evidence?: unknown }).evidence ?? null).toBeNull();
+    expect(existsSync(join(root, "state", EXEC_FILE))).toBe(false);
+  }, 120_000);
 });

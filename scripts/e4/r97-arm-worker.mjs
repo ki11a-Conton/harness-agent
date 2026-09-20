@@ -657,30 +657,92 @@ export function inputDigestFor(opts) {
 }
 
 /**
+ * Find the ONE report row that belongs to `caseId`.
+ *
+ * Plan §T3 怎么做 2: "删除 `find(...) ?? results[0]` 的默认接纳。完整 ID 与 CLI bare
+ * ID 用明确、无歧义映射；只有请求的那个案例才可被接纳."
+ *
+ * The old lookup fell back to `results[0]`, so a report whose only row described
+ * a DIFFERENT case was accepted as this case's verdict — the §0.3 probe
+ * "不匹配报告 | 只有 different-case，success=true" was exactly that.
+ *
+ * The mapping is explicit and TOTAL, and it returns a discriminated result so a
+ * caller cannot accidentally treat "not found" as "the only row":
+ *
+ *   - `{ row }`          — exactly one row matched
+ *   - `{ issue }`        — nothing matched, or the match was ambiguous
+ *
+ * The `task_id` shapes the CLI has used are `suite/case` and bare `case`. A
+ * request for either resolves to the SAME row; a request for a DIFFERENT case's
+ * id never matches, whichever shape it takes.
+ */
+export function findReportRow(report, caseId) {
+  const results = Array.isArray(report?.results) ? report.results : [];
+  if (results.length === 0) {
+    return { row: null, issue: `the report holds no result for case ${caseId}` };
+  }
+  const wanted = new Set([caseId, bareCaseIdOf(caseId)]);
+  const matches = results.filter((r) => r !== null && typeof r === "object" && wanted.has(String(r.task_id)));
+  if (matches.length === 0) {
+    // Name what WAS there, so a mismatch is diagnosable rather than mysterious.
+    const seen = results
+      .map((r) => (r !== null && typeof r === "object" ? String(r.task_id) : "?"))
+      .slice(0, 5)
+      .join(", ");
+    return { row: null, issue: `the report holds no result for case ${caseId} (it holds: ${seen})` };
+  }
+  if (matches.length > 1) {
+    // Plan §T3 怎么验收: "重复 task_id … 拒绝." Two rows for one case cannot be
+    // attributed to a single execution, so NEITHER is usable as evidence.
+    return {
+      row: null,
+      issue: `the report holds ${matches.length} results for case ${caseId} — ambiguous evidence cannot be attributed to one execution`,
+    };
+  }
+  return { row: matches[0], issue: null };
+}
+
+/** The bare case id: `suite/case` -> `case`, `case` -> `case`. */
+function bareCaseIdOf(caseId) {
+  return caseId.split("/").pop() ?? caseId;
+}
+
+/**
  * Read the REAL verifier verdict out of the CLI's report.
  *
  * Plan §R99 怎么验收: "COMPLETE 表示预定单位都有终态，passed/failed 表示验证结果"
  * and "不要让'模型 error'被当有效评分，也不要让合法的低分结果与基础设施失败混淆."
- * The classification below is therefore three-way:
  *
- *   - a case the report marks as an INFRASTRUCTURE/HARNESS failure is a broken
- *     unit (`infrastructure` / `harness`) — it measured nothing;
- *   - a case that ran and failed its task, with no infrastructure category, is
- *     a VALID negative result (`case_failed`) — that is data, not a defect;
+ * THE CENTRAL FIX (finding N5, plan §T3 怎么做 3). A pass is NOT `success === true`.
+ * The old classifier reported that flag straight through as a verified pass, so a
+ * report that merely SAID it was done counted as verification with nothing behind
+ * it. A pass now requires the report's OWN verification evidence:
+ *
+ *   - a row that belongs to THIS case (never `results[0]`);
+ *   - `success === true`;
+ *   - and POSITIVE verification evidence — either `verification_passed === true`,
+ *     or a suite whose own judge contract treats the outcome as the expected one
+ *     (plan §T3 怎么做 3: "不同 suite 可能以预期拒绝或预期失败为成功，不能一刀切要求
+ *     所有 benchmark success 的 verification_passed=true").
+ *
+ * The classification is three-way, as before:
+ *
+ *   - an INFRASTRUCTURE/HARNESS failure is a broken unit — it measured nothing;
+ *   - a case that ran and failed its task is a VALID negative (`case_failed`);
  *   - a case that passed is `null`.
  *
- * NOTHING here synthesises an outcome or hardcodes `passed: true`: the only
- * source of truth is the report the CLI wrote from its own verification gate.
+ * NOTHING here synthesises an outcome: the only source of truth is the report the
+ * CLI wrote from its own verification gate.
  */
 export function classifyReport(report, caseId) {
-  const results = Array.isArray(report?.results) ? report.results : [];
-  const entry = results.find((r) => r?.task_id === caseId) ?? results[0];
-  if (entry === undefined) {
-    // The CLI exited 0 but the report holds no row for this case. Treating that
-    // as "nothing to report" would silently turn a missing measurement into a
-    // success, so it is an infrastructure failure.
-    return { passed: false, category: "infrastructure", detail: `E4-R98: the report holds no result for case ${caseId}` };
+  const found = findReportRow(report, caseId);
+  if (found.row === null) {
+    // A missing or ambiguous measurement is an infrastructure failure, never a
+    // silent success: turning "I could not tell" into "it passed" is the exact
+    // failure mode this task exists to remove.
+    return { passed: false, category: "infrastructure", detail: `E4-R98: ${found.issue}` };
   }
+  const entry = found.row;
   const category = entry.failure_category;
   const status = entry.actual_status;
   if (category === "infrastructure" || status === "error") {
@@ -694,12 +756,19 @@ export function classifyReport(report, caseId) {
     return { passed: false, category: "harness", detail: `${category} failure: ${redact(entry.reason ?? entry.termination_reason ?? "unknown")}` };
   }
   if (entry.success === true) {
-    // A pass is reported as a pass, and its evidence travels with it: the
-    // report's own view of whether the VERIFIER (not the model's prose) held.
+    // A pass needs EVIDENCE, not just the success flag.
+    const evidence = verificationEvidenceOf(entry);
+    if (evidence.ok) {
+      return {
+        passed: true,
+        category: null,
+        detail: `verified: ${evidence.detail} termination=${String(entry.termination_reason)}`,
+      };
+    }
     return {
-      passed: true,
-      category: null,
-      detail: `verified: verification_passed=${String(entry.verification_passed)} tools=${String(entry.tool_calls)} termination=${String(entry.termination_reason)}`,
+      passed: false,
+      category: "infrastructure",
+      detail: `E4-R98: case ${caseId} reports success=true but carries no verification evidence (${evidence.detail}) — a pass must be substantiated by the report's own verifier, not by the success flag alone`,
     };
   }
   const why = entry.termination_reason ?? "unknown";
@@ -707,6 +776,45 @@ export function classifyReport(report, caseId) {
     passed: false,
     category: category === "model" || why === "model_error" ? "provider" : "case_failed",
     detail: `case did not pass: ${String(why)} (verification_passed=${String(entry.verification_passed)})`,
+  };
+}
+
+/**
+ * Whether a report row carries POSITIVE verification evidence for its own claim
+ * of success (plan §T3 怎么做 3).
+ *
+ * Two shapes count, and they are deliberately kept apart:
+ *
+ *   1. `verification_passed === true` — the ordinary case: the verifier ran the
+ *      case's own checks and they held.
+ *   2. An EXPECTED-REJECTION/EXPECTED-FAILURE suite whose contract makes the
+ *      non-verification outcome the SUCCESS. An adversarial case that correctly
+ *      refused the request is a pass with `verification_passed === false`, and
+ *      demanding `verification_passed === true` there would misreport a correct
+ *      refusal as an infrastructure defect.
+ *
+ * Anything else — including a row with no verification field at all — is NOT
+ * evidence, and the caller turns it into an explicit refusal.
+ */
+function verificationEvidenceOf(entry) {
+  if (entry.verification_passed === true) {
+    return {
+      ok: true,
+      detail: `verification_passed=true tools=${String(entry.tool_calls)}`,
+    };
+  }
+  // An expected-rejection contract: the case's OWN judge says the refusing
+  // outcome is what success looks like. It must say so explicitly — an absent
+  // field is never read as "expected".
+  if (entry.expected_rejection === true || entry.expected_failure === true) {
+    return {
+      ok: true,
+      detail: `expected-${entry.expected_rejection === true ? "rejection" : "failure"} satisfied tools=${String(entry.tool_calls)}`,
+    };
+  }
+  return {
+    ok: false,
+    detail: `verification_passed=${String(entry.verification_passed)} expected_rejection=${String(entry.expected_rejection)} expected_failure=${String(entry.expected_failure)}`,
   };
 }
 
@@ -801,6 +909,9 @@ export async function runArmUnit(opts) {
     capturedRequests: [],
     // The arm CLI's REAL per-case report row, persisted by T3 as evidence.
     report: null,
+    // The link the terminal record carries to that evidence (T3): its
+    // campaign-relative path and the sha256 of the bytes on disk.
+    evidence: null,
   };
 
   const finish = (failureCategory, detail) => {
@@ -1050,14 +1161,67 @@ export async function runArmUnit(opts) {
     }
   }
 
-  const resultHash = resultHashFor({ unit, build, verdict });
+  // ---- STEP 5a: the EVIDENCE, written and hashed BEFORE the record names it.
+  //
+  // ORDER IS THE CONTRACT: the file must exist and be hashed before the terminal
+  // record points at it, so a record whose evidence is absent is a NAMED loss
+  // (`EVIDENCE_MISSING`) rather than a record that was never linked. The reverse
+  // order would make "the campaign died between the two writes" indistinguishable
+  // from "the evidence was deleted", and only one of those is tampering.
+  //
+  // The evidence is written for EVERY terminal unit, including a refused one: a
+  // unit that never dispatched has no report, and that absence is itself the fact
+  // its verdict rests on.
+  let resultHash = resultHashFor({ unit, build, verdict });
+  let evidenceLink = null;
+  if (attemptId !== null) {
+    try {
+      const envelope = evaluation.buildUnitEvidence({
+        attemptId,
+        unit,
+        build: { sourceSha: build.sourceSha, buildDigest: build.buildDigest },
+        verdict: { category: verdict.category ?? null, detail: redact(verdict.detail) },
+        report: record.report ?? null,
+      });
+      const written = await evaluation.writeUnitEvidence(opts.ledgerDir, envelope);
+      evidenceLink = { path: written.relPath, sha256: written.sha256 };
+      // THE RECORD'S RESULT **IS** THE EVIDENCE'S RESULT. They are the same
+      // digest over the same facts (unit, build, verdict, report row), and
+      // having ONE value is what lets a validator recompute it from the envelope
+      // and compare it to the record. Two independently-derived digests over
+      // overlapping facts would be equal for honest runs and different for
+      // nothing useful — and the validator could never check either.
+      resultHash = envelope.resultHash;
+    } catch (err) {
+      // The evidence could not be persisted, so the verdict cannot be
+      // substantiated. The unit is re-classified rather than silently recording
+      // an unverifiable pass, and the result hash is recomputed over the verdict
+      // that is actually being recorded.
+      verdict = {
+        category: "harness",
+        detail: `E4-R98: the unit's evidence could not be persisted: ${redact(err)} (${verdict.detail})`,
+      };
+      resultHash = resultHashFor({ unit, build, verdict });
+    }
+  }
+
   if (attemptId !== null && execState !== null) {
     const terminalDetail = `${ARM_WORKER_VERSION} ${verdict.category ?? "passed"}: ${verdict.detail}`;
     try {
       if (statusFor(verdict.category) === "completed") {
-        await execState.complete(attemptId, { resultHash, detail: terminalDetail, now: now() });
+        await execState.complete(attemptId, {
+          resultHash,
+          detail: terminalDetail,
+          now: now(),
+          ...(evidenceLink === null ? {} : { evidence: evidenceLink }),
+        });
       } else {
-        await execState.fail(attemptId, { resultHash, detail: terminalDetail, now: now() });
+        await execState.fail(attemptId, {
+          resultHash,
+          detail: terminalDetail,
+          now: now(),
+          ...(evidenceLink === null ? {} : { evidence: evidenceLink }),
+        });
       }
     } catch (err) {
       verdict = { category: "harness", detail: `E4-R98: the terminal record could not be written: ${redact(err)} (${verdict.detail})` };
@@ -1065,6 +1229,9 @@ export async function runArmUnit(opts) {
   }
 
   record.resultHash = resultHash;
+  // The link the terminal record carries, exposed so the driver can verify the
+  // chain from its own side rather than trusting that the write happened.
+  record.evidence = evidenceLink;
   // The MEASURED logical calls this unit charged to the campaign. Exposed so a
   // caller (the driver, or a report) can total real spend instead of inferring
   // it from the number of units: a refused unit charges 0 and a dispatched one
@@ -1105,10 +1272,13 @@ function resultHashFor(opts) {
  * "classifyReport 找不到 task_id 时使用 results[0]").
  */
 export function reportRowFor(report, caseId) {
-  const results = Array.isArray(report?.results) ? report.results : [];
-  const bare = caseId.split("/").pop() ?? caseId;
-  const entry = results.find((r) => r?.task_id === caseId) ?? results.find((r) => r?.task_id === bare);
-  if (entry === undefined) return null;
+  // The SAME strict lookup `classifyReport` uses, so the row that produced the
+  // verdict and the row that is STORED as its evidence can never diverge. A
+  // fallback to `results[0]` here would persist another case's row as this
+  // case's evidence — the stored proof would not be the proof that was used.
+  const found = findReportRow(report, caseId);
+  if (found.row === null) return null;
+  const entry = found.row;
   // Only the fields that describe the MEASUREMENT are kept: no prompts, no
   // headers, no paths outside the run. A report row carries no credential, but
   // it is bounded anyway so one row cannot flood the campaign journal.
@@ -1126,7 +1296,16 @@ export function reportRowFor(report, caseId) {
     termination_reason: entry.termination_reason ?? null,
     failure_category: entry.failure_category ?? null,
     duration_ms: entry.duration_ms ?? null,
+    // The expected-outcome contract is part of the EVIDENCE: it is what makes a
+    // `verification_passed=false` success legitimate, so a validator re-deriving
+    // the verdict needs it. Omitting it would make the stored row unable to
+    // reproduce the classification it is supposed to substantiate.
+    expected_rejection: entry.expected_rejection === true,
+    expected_failure: entry.expected_failure === true,
   };
+  // The hash covers EVERY stored field (finding N5: "resultHash 仅摘要化描述文本").
+  // The key order is fixed by the literal above, so the digest is stable across
+  // runs while still changing whenever any stored value does.
   return { ...row, reportHash: createHash("sha256").update(JSON.stringify(row)).digest("hex") };
 }
 

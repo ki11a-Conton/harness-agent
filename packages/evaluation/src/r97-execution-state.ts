@@ -51,6 +51,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { hostname } from "node:os";
 import { join } from "node:path";
+import { isSafeEvidenceRelPath, type R97EvidenceLink } from "./r97-campaign-evidence.js";
 
 export const R97_EXEC_SCHEMA = "e4-r97-execution-state-v1";
 export const R97_EXEC_FILENAME = "execution-state.json";
@@ -136,6 +137,14 @@ export interface R97UnitAttempt {
   /** Owning host, so a foreign owner is never mistaken for a dead one. */
   ownerHost: string;
   detail: string | null;
+  /**
+   * The evidence THIS attempt produced, when it reached a terminal state.
+   *
+   * Kept per-attempt (not only on the record) so an OLD attempt's report stays
+   * attributable after a reconciliation and a retry. Plan §T3 怎么做 5:
+   * "并发 attempt 和 repetition 使用不同路径，避免旧报告冒充新执行产物."
+   */
+  evidence?: R97EvidenceLink | null;
 }
 
 export interface R97UnitRecord extends R97UnitKey {
@@ -170,6 +179,17 @@ export interface R97UnitRecord extends R97UnitKey {
    * recovered by string matching. A record without it is never re-begun.
    */
   reconciledForRetry?: boolean;
+  /**
+   * The EVIDENCE this terminal record's verdict rests on (plan §T3 怎么做 4).
+   *
+   * A terminal record without it asserts a result nobody can re-derive: the
+   * previous worker deleted the arm's only report in `finally`, so a resume
+   * could only trust a `status` string (finding N5). `path` is
+   * campaign-relative and `sha256` is over the bytes on disk, so deleting or
+   * editing either the file or this link is DETECTABLE — which is the whole
+   * point of storing it here rather than only inside the evidence file.
+   */
+  evidence?: R97EvidenceLink | null;
 }
 
 export interface R97ExecutionStateFile {
@@ -209,8 +229,14 @@ export interface R97ExecutionState {
    *  REFUSES a second begin while another attempt still owns the unit
    *  (`R97_EXEC_BUSY`), so two processes cannot both dispatch the same unit. */
   begin(key: R97UnitKey, opts: { reservationId: string; inputDigest: string; now?: number }): Promise<string>;
-  complete(attemptId: string, opts: { resultHash: string; detail?: string; now?: number }): Promise<void>;
-  fail(attemptId: string, opts: { resultHash: string; detail?: string; now?: number }): Promise<void>;
+  complete(
+    attemptId: string,
+    opts: { resultHash: string; detail?: string; now?: number; evidence?: R97EvidenceLink },
+  ): Promise<void>;
+  fail(
+    attemptId: string,
+    opts: { resultHash: string; detail?: string; now?: number; evidence?: R97EvidenceLink },
+  ): Promise<void>;
   /** Reclassify in-flight units whose owner is provably GONE as `outcome_unknown`.
    *
    *  A LIVE owner is left alone (plan §T2 怎么做 5: "recover 先验证 owner。活 owner 是
@@ -409,6 +435,28 @@ export function parseR97ExecutionState(raw: unknown): { state: R97ExecutionState
         if (typeof at["ownerHost"] !== "string" || at["ownerHost"] === "") {
           return { state: null, issue: `execution state records[${i}].attempts[${j}].ownerHost must be a non-empty string` };
         }
+        // The attempt's own evidence link, validated by the same rule as the
+        // record-level one — a journal entry is what a later reader uses to
+        // attribute an OLD attempt's report, so a malformed link here is damage.
+        const aEvidence = at["evidence"];
+        let parsedAttemptEvidence: R97EvidenceLink | null | undefined;
+        if (aEvidence === undefined || aEvidence === null) {
+          parsedAttemptEvidence = aEvidence === null ? null : undefined;
+        } else if (typeof aEvidence === "object" && !Array.isArray(aEvidence)) {
+          const link = aEvidence as Record<string, unknown>;
+          if (!str(link["path"]) || !str(link["sha256"]) || !/^[0-9a-f]{64}$/.test(link["sha256"] as string)) {
+            return { state: null, issue: `execution state records[${i}].attempts[${j}].evidence must name a path and a sha256` };
+          }
+          if (!isSafeEvidenceRelPath(link["path"] as string)) {
+            return {
+              state: null,
+              issue: `execution state records[${i}].attempts[${j}].evidence.path ${JSON.stringify(link["path"])} is not a legal campaign-relative evidence path`,
+            };
+          }
+          parsedAttemptEvidence = { path: link["path"] as string, sha256: link["sha256"] as string };
+        } else {
+          return { state: null, issue: `execution state records[${i}].attempts[${j}].evidence must be null or an object` };
+        }
         attempts.push({
           attemptId: aAttemptId,
           reservationId: at["reservationId"] as string,
@@ -420,6 +468,7 @@ export function parseR97ExecutionState(raw: unknown): { state: R97ExecutionState
           ownerPid: at["ownerPid"] as number,
           ownerHost: at["ownerHost"] as string,
           detail: typeof at["detail"] === "string" ? at["detail"] : null,
+          ...(parsedAttemptEvidence === undefined ? {} : { evidence: parsedAttemptEvidence }),
         });
       }
       // The CURRENT attempt must be the LAST entry of the journal: the
@@ -452,6 +501,42 @@ export function parseR97ExecutionState(raw: unknown): { state: R97ExecutionState
       }
     }
 
+    // ---- The evidence link (plan §T3 怎么做 4). ---------------------------
+    //
+    // The link is validated STRICTLY WHEN PRESENT: a malformed path or a hash
+    // that is not a sha256 is structural damage, because the link is what a
+    // resume re-checks to detect a deleted or edited report.
+    //
+    // Its PRESENCE is not required here, and that is deliberate rather than
+    // lenient. This store is shared by BOTH execution modes: the "provider"
+    // rehearsal path drives a fake provider and produces no arm report, so a
+    // terminal record there legitimately has nothing to link. Requiring a link
+    // in the store would either break that path or force it to fabricate one.
+    // The requirement therefore lives where the mode IS known — the driver's
+    // resume, which refuses an unlinked terminal record in arm-worker mode.
+    const rawEvidence = e["evidence"];
+    let parsedEvidence: R97EvidenceLink | null | undefined;
+    if (rawEvidence === undefined || rawEvidence === null) {
+      parsedEvidence = rawEvidence === null ? null : undefined;
+    } else if (typeof rawEvidence === "object" && !Array.isArray(rawEvidence)) {
+      const link = rawEvidence as Record<string, unknown>;
+      if (!str(link["path"])) {
+        return { state: null, issue: `execution state records[${i}].evidence.path must be a non-empty string` };
+      }
+      if (!str(link["sha256"]) || !/^[0-9a-f]{64}$/.test(link["sha256"] as string)) {
+        return { state: null, issue: `execution state records[${i}].evidence.sha256 must be a sha256 hex digest` };
+      }
+      if (!isSafeEvidenceRelPath(link["path"] as string)) {
+        return {
+          state: null,
+          issue: `execution state records[${i}].evidence.path ${JSON.stringify(link["path"])} is not a legal campaign-relative evidence path`,
+        };
+      }
+      parsedEvidence = { path: link["path"] as string, sha256: link["sha256"] as string };
+    } else {
+      return { state: null, issue: `execution state records[${i}].evidence must be null or an object` };
+    }
+
     records.push({
       schemaVersion: R97_EXEC_SCHEMA,
       experimentId: e["experimentId"] as string,
@@ -475,6 +560,7 @@ export function parseR97ExecutionState(raw: unknown): { state: R97ExecutionState
       // treated as absent, so only a record THIS store wrote can re-open a
       // terminal unit.
       ...(e["reconciledForRetry"] === true ? { reconciledForRetry: true } : {}),
+      ...(parsedEvidence === undefined ? {} : { evidence: parsedEvidence }),
     });
   }
   return { state: { schemaVersion: R97_EXEC_SCHEMA, experimentId: o["experimentId"], planDigest: o["planDigest"], records }, issue: null };
@@ -660,6 +746,9 @@ export async function openR97ExecutionState(
     ownerPid: r.ownerPid,
     ownerHost: r.ownerHost,
     detail: r.detail,
+    // The evidence travels with the attempt, so a retry does not orphan the
+    // report the PREVIOUS attempt produced.
+    ...(r.evidence === undefined ? {} : { evidence: r.evidence }),
   });
 
   /**
@@ -806,6 +895,7 @@ export async function openR97ExecutionState(
           resultHash: opts2.resultHash,
           detail: opts2.detail ?? null,
           endedAt,
+          ...(opts2.evidence === undefined ? {} : { evidence: opts2.evidence }),
         }),
       );
     },
@@ -829,6 +919,7 @@ export async function openR97ExecutionState(
           resultHash: opts2.resultHash,
           detail: opts2.detail ?? null,
           endedAt,
+          ...(opts2.evidence === undefined ? {} : { evidence: opts2.evidence }),
         }),
       );
     },

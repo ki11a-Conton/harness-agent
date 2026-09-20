@@ -445,3 +445,101 @@ describe("E4-R98 S4: reconciliation of outcome_unknown is explicit and never sil
     await expect(s.begin(kDrift, { reservationId: "r-22", inputDigest: "in-CHANGED" })).rejects.toThrow(/INPUT_DRIFT|input digest/i);
   });
 });
+
+describe("R99-A E5: the evidence link travels with the terminal record and its attempt", () => {
+  // Plan §T3 怎么做 4: "原始报告落入 campaign 的不可混淆 attempt 目录，校验后计算字节
+  // hash 和相对路径，再原子写 terminal journal." The link is what makes a DELETED or
+  // EDITED report detectable on a resume, so it must survive a round trip through
+  // the file — and it must stay attached to the attempt that produced it.
+
+  const EVIDENCE = { path: "attempts/baseline/reg-01/1/a-1.json", sha256: "b".repeat(64) };
+
+  it("round-trips a completed record's evidence link through the file", async () => {
+    const dir = await tempDir();
+    const k = key("reg-01-two-sum");
+    const first = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+    const attempt = await first.begin(k, { reservationId: "r-31", inputDigest: "in-31" });
+    await first.complete(attempt, { resultHash: "h-31", detail: "passed", evidence: EVIDENCE });
+
+    // A SECOND open re-reads the file, so this asserts the persisted bytes and
+    // not an in-memory object that merely happens to still hold the link.
+    const second = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN, mode: "resume" });
+    const record = await second.recordFor(k);
+    expect(record?.evidence).toEqual(EVIDENCE);
+    expect(record?.attempts[0]?.evidence).toEqual(EVIDENCE);
+  });
+
+  it("keeps a FAILED record's evidence too — a negative is a result", async () => {
+    const dir = await tempDir();
+    const k = key("reg-02-add-two");
+    const s = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+    const attempt = await s.begin(k, { reservationId: "r-32", inputDigest: "in-32" });
+    await s.fail(attempt, { resultHash: "h-32", detail: "verification_failed", evidence: EVIDENCE });
+
+    const reopened = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN, mode: "resume" });
+    expect((await reopened.recordFor(k))?.evidence).toEqual(EVIDENCE);
+  });
+
+  it("an OLD attempt keeps its own evidence after a retry, so it stays attributable", async () => {
+    const dir = await tempDir();
+    const k = key("reg-03-reverse");
+    const s = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+    const crashed = await s.begin(k, { reservationId: "r-33", inputDigest: "in-33" });
+    await s.recoverInFlight({ isAlive: () => false });
+    await s.reconcile(k, { action: "retry" });
+    const retried = await s.begin(k, { reservationId: "r-34", inputDigest: "in-33" });
+    const secondEvidence = { path: "attempts/baseline/reg-03/1/a-2.json", sha256: "c".repeat(64) };
+    await s.fail(retried, { resultHash: "h-34", detail: "verification_failed", evidence: secondEvidence });
+
+    const record = await s.recordFor(k);
+    // The crash produced no evidence; the retry's is on BOTH the record and the
+    // journal entry for the retry — and the two attempts are distinct entries.
+    expect(record?.attempts.length).toBe(2);
+    expect(record?.attempts[0]?.attemptId).toBe(crashed);
+    expect(record?.attempts[0]?.evidence ?? null).toBeNull();
+    expect(record?.attempts[1]?.attemptId).toBe(retried);
+    expect(record?.attempts[1]?.evidence).toEqual(secondEvidence);
+    expect(record?.evidence).toEqual(secondEvidence);
+  });
+
+  it("REFUSES a malformed link rather than silently dropping it", async () => {
+    const dir = await tempDir();
+    const k = key("reg-04-merge");
+    const s = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+    const attempt = await s.begin(k, { reservationId: "r-35", inputDigest: "in-35" });
+    await s.complete(attempt, { resultHash: "h-35", evidence: EVIDENCE });
+
+    // A path that escapes the campaign root, and a hash that is not a sha256:
+    // each is damage, and a store that ignored either would let a record point
+    // its evidence anywhere and still "verify".
+    const raw = JSON.parse(await readFile(join(dir, R97_EXEC_FILENAME), "utf8")) as {
+      records: Array<Record<string, unknown>>;
+    };
+    for (const bad of [
+      { path: "../outside.json", sha256: "b".repeat(64) },
+      { path: "attempts/baseline/reg-04/1/a.json", sha256: "not-a-digest" },
+      { path: "", sha256: "b".repeat(64) },
+    ]) {
+      const tampered = { ...raw, records: raw.records.map((r) => ({ ...r, evidence: bad })) };
+      await writeFile(join(dir, R97_EXEC_FILENAME), JSON.stringify(tampered), "utf8");
+      await expect(
+        openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN, mode: "resume" }),
+      ).rejects.toThrow(/EVIDENCE|evidence/);
+    }
+  });
+
+  it("accepts a record with NO link, because the provider mode has no report to link", async () => {
+    // The store is shared by both execution modes. A rehearsal record has no arm
+    // report, so requiring a link HERE would force the fake-provider path to
+    // fabricate one. The requirement lives in the driver's arm-worker resume,
+    // where the mode is known.
+    const dir = await tempDir();
+    const k = key("reg-05-lru");
+    const s = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN });
+    const attempt = await s.begin(k, { reservationId: "r-36", inputDigest: "in-36" });
+    await s.complete(attempt, { resultHash: "h-36", detail: "rehearsal" });
+
+    const reopened = await openR97ExecutionState(dir, { experimentId: EXPERIMENT, planDigest: PLAN, mode: "resume" });
+    expect((await reopened.recordFor(k))?.evidence ?? null).toBeNull();
+  });
+});

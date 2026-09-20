@@ -39,6 +39,35 @@ export const EXIT_REFUSED = 1;
 export const EXIT_CONFIG = 2;
 
 /**
+ * Recover a unit's terminal category from the durable `detail` the worker wrote.
+ *
+ * The worker's terminal write is
+ *
+ *   `${ARM_WORKER_VERSION} ${verdict.category ?? "passed"}: ${verdict.detail}`
+ *
+ * so the category is the token between the version and the first colon. This is
+ * the contract that lets a RESUME re-derive the campaign's aggregate from its own
+ * history (plan §T3 怎么做 8): the record persists a verdict, and a later process
+ * must be able to read it without the worker that wrote it.
+ *
+ * It returns `null` for a record it cannot parse — a foreign or hand-edited
+ * record is NOT assumed to be a pass. That is deliberate: the aggregate must
+ * never be improvable by corrupting the store.
+ */
+export function unitCategoryOf(detail) {
+  if (typeof detail !== "string") return null;
+  const m = /^(\S+)\s+([a-z_]+):/.exec(detail);
+  if (m === null) return null;
+  const category = m[2];
+  // Only the categories the worker can actually write. Anything else is not a
+  // verdict this driver understands, so it counts as nothing rather than as a
+  // pass by default.
+  return ["passed", "case_failed", "provider", "harness", "infrastructure", "budget", "timeout"].includes(category)
+    ? category
+    : null;
+}
+
+/**
  * A fake provider that COUNTS every generate() attempt and never touches a
  * socket. It is the only provider this driver can construct without an explicit
  * real-provider opt-in, which is what makes "fake provider 的越界请求数 0"
@@ -228,6 +257,19 @@ export async function runDriver(opts) {
     campaign: null,
     // R98-B: units an operator re-opened with an explicit `retry`.
     reopenedForRetryUnits: 0,
+    // ---- R99-A: NEW work vs CUMULATIVE history (plan §T3 怎么做 8). ---------
+    // `new*` fields describe THIS process only; the cumulative fields describe the
+    // whole campaign, read from durable state. They are separate so a resume that
+    // dispatched nothing cannot be mistaken for a campaign that has no history.
+    newCalls: 0,
+    newUnits: 0,
+    // The evidence-chain outcome, filled by the arm-worker resume.
+    evidence: null,
+    newFailures: 0,
+    newMeasuredUnits: 0,
+    cumulativeCalls: 0,
+    cumulativeUnits: 0,
+    historicalFailures: 0,
     authorization: null,
   };
 
@@ -714,26 +756,125 @@ export async function runDriver(opts) {
   result.providerRequests = providerState === null ? 0 : providerState.requests;
   result.executionMode = executionMode;
   result.budget = await ledger.view();
+  // The campaign's durable history, read ONCE and used for every aggregate below.
+  // Reading it repeatedly would let the numbers describe different snapshots.
+  const history = await execState.records();
   // TERMINAL units: those that reached a verdict of their own. A unit an
   // operator reconciled for a RETRY is deliberately NOT counted here, because
   // `isDone` reports it as still pending (finding N3) — counting it as finished
   // would let a run claim more completed work than it actually has.
-  result.completedUnits = (await execState.records()).filter(
+  result.completedUnits = history.filter(
     (r) => (r.status === "completed" || r.status === "failed") && r.reconciledForRetry !== true,
   ).length;
   // Units an operator re-opened: counted separately so "how much of this
   // campaign is settled?" is answerable without subtracting two other numbers.
-  result.reopenedForRetryUnits = (await execState.records()).filter((r) => r.reconciledForRetry === true).length;
-  // HOW MANY UNITS THE VERIFIER ACTUALLY PASSED. Computed HERE, before the
-  // exit-path branches, so EVERY outcome — PARTIAL included — reports the same
-  // field. Leaving it to the COMPLETE branch alone made a PARTIAL run report
-  // `undefined`, which is indistinguishable from "not measured" and would let a
-  // consumer read a task pass rate off a run that never reported one.
-  result.verifiedPasses = result.unitResults.filter((u) => u.verifierPassed === true).length;
-  // The measured units that reached a verdict the verifier produced, whether or
-  // not the task passed. This is the RUN-COMPLETENESS figure plan §R99 asks to
-  // be kept apart from the task pass rate.
-  result.measuredUnits = result.unitResults.filter(
+  result.reopenedForRetryUnits = history.filter((r) => r.reconciledForRetry === true).length;
+  // ---- AGGREGATION: history + this run, kept apart (plan §T3 怎么做 8). -----
+  //
+  // MEASURED DEFECT N4 (plan §0.2, §0.3): "driver 汇总只看本次新增结果" — the summary
+  // was computed from `unitResults`, which holds ONLY the units THIS process
+  // dispatched. A resume therefore reported its own empty list as the campaign's
+  // state, and the probe caught exactly that:
+  //
+  //   "provider 失败后恢复 | 首次 PARTIAL / 2 failures；第二次 COMPLETE / 0 failures /
+  //    0 measuredUnits / 0 新调用"
+  //
+  // A resume that dispatched nothing ERASED the first run's failures and reported
+  // success. The fix is to read the DURABLE per-unit records — the campaign's own
+  // history — and aggregate over history plus this run, while still exposing this
+  // run's own numbers separately so "what did this run do?" stays answerable.
+  // Only units that reached a verdict of their own count. A unit an operator
+  // reconciled for a RETRY is deliberately excluded: `isDone` reports it as still
+  // pending, and counting it as settled would claim more finished work than the
+  // campaign has.
+  const settled = history.filter(
+    (r) => (r.status === "completed" || r.status === "failed") && r.reconciledForRetry !== true,
+  );
+  // This run's OWN numbers, named so they can never be mistaken for the totals.
+  result.newCalls = result.logicalCalls;
+  result.newUnits = result.unitResults.length;
+  // The campaign totals, derived from durable state rather than from memory.
+  result.cumulativeCalls = result.budget.committed;
+  result.cumulativeUnits = settled.length;
+
+  // ---- THE EVIDENCE CHAIN (plan §T3 怎么做 4/7, 怎么验收 5). ----------------
+  //
+  // "修改/删除任意已关联原始报告或 resultHash，恢复及独立 validator 都非零退出."
+  //
+  // The skip decision above rests on the DURABLE record, and a record is only
+  // worth trusting if the report behind it is still there and still the report
+  // that produced it. Without this pass, deleting the evidence changed nothing
+  // observable: the resume would skip the unit and report COMPLETE over a
+  // verdict nothing substantiates — which is exactly the state finding N5 left
+  // the campaign in.
+  //
+  // The check runs ONLY in arm-worker mode, because that is the only mode that
+  // produces evidence: the "provider" rehearsal path drives a fake provider and
+  // has no arm report to link.
+  if (executionMode === "arm-worker") {
+    const verified = await evaluation.verifyCampaignEvidence(ledgerDir, settled);
+    result.evidence = {
+      ok: verified.ok,
+      checked: verified.checked,
+      failures: verified.failures,
+    };
+    if (!verified.ok) {
+      result.status = "REFUSED";
+      result.code = "EVIDENCE_CHAIN_BROKEN";
+      result.reason = verified.detail;
+      return result;
+    }
+  }
+
+  // HISTORICAL FAILURES. A record's terminal detail already encodes the category
+  // it was written with (`<workerVersion> <category>: <detail>`), so the category
+  // is recoverable without a second store. Only a unit that measured NOTHING is a
+  // failure: `completed` is a terminal result and `case_failed` is a VALID
+  // negative, exactly as the live path distinguishes them.
+  //
+  // The failure list is rebuilt from history rather than appended to, so a resume
+  // cannot double-count a failure that this run happened to re-observe.
+  const historicalFailures = settled
+    .filter((r) => r.status === "failed")
+    .map((r) => ({
+      arm: r.arm,
+      caseId: r.caseId,
+      error: r.detail ?? "a previous attempt failed without recording a detail",
+      historical: true,
+    }));
+  // Failures observed by THIS run (already collected above), marked so a consumer
+  // can tell a fresh failure from an inherited one.
+  const newFailures = result.failures.map((f) => ({ ...f, historical: false }));
+  result.newFailures = newFailures.length;
+  result.historicalFailures = historicalFailures.length;
+  // The union, keyed by unit so one unit contributes exactly one failure entry.
+  const failureByUnit = new Map();
+  for (const f of [...historicalFailures, ...newFailures]) {
+    failureByUnit.set(`${f.arm}|${f.caseId}`, f);
+  }
+  result.failures = [...failureByUnit.values()];
+
+  // HOW MANY UNITS THE VERIFIER ACTUALLY PASSED. Computed over HISTORY plus this
+  // run, so a resume reports the campaign's pass count rather than zero.
+  //
+  // The category is recovered from the durable terminal `detail`, whose prefix
+  // the worker writes as `<workerVersion> <category|passed>: <detail>` — see
+  // `unitCategoryOf`. That prefix IS the contract between the two scripts, and
+  // it is the only place a historical verdict survives: the report row is kept
+  // as evidence but is not a category, and `resultHash` is deliberately not
+  // invertible.
+  result.verifiedPasses =
+    settled.filter((r) => unitCategoryOf(r.detail) === "passed").length +
+    result.unitResults.filter((u) => u.verifierPassed === true).length;
+  // Units that reached a verifier verdict at all. `completed` is exactly that
+  // status in BOTH execution modes: the worker maps a pass AND a valid negative
+  // (`case_failed`) to `completed`, and maps provider/harness/infrastructure
+  // failures to `failed`. So the status alone is the run-completeness figure, and
+  // reading it from HISTORY is what keeps a resume from reporting zero.
+  // Plan §R99 asks this to stay apart from the task pass rate.
+  result.measuredUnits = settled.filter((r) => r.status === "completed").length;
+  // The same figures restricted to THIS run, so the two are never conflated.
+  result.newMeasuredUnits = result.unitResults.filter(
     (u) => u.failureCategory === null || u.failureCategory === "case_failed",
   ).length;
 

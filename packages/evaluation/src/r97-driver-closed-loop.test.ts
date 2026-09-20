@@ -158,6 +158,43 @@ async function drive(opts: {
   return { result, providerConstructions: made.calls };
 }
 
+/**
+ * A provider that mirrors the REAL `OpenAICompatibleProvider` failure shape: it
+ * does not throw, it YIELDS `{ type: "retry" }` and then `{ type: "error" }`.
+ * Shared by D10 (a failed call must not be a silent COMPLETE) and D8 (a resume
+ * must not erase those failures from the aggregate).
+ */
+function makeErrorEventProvider() {
+  const state = { requests: 0, created: 0 };
+  const provider = {
+    id: "fake-error-r97",
+    async listModels() {
+      return [];
+    },
+    createClient() {
+      state.created += 1;
+      return {
+        async *generate() {
+          state.requests += 1;
+          // Mirror the real provider's failure shape: a retry, then an error.
+          yield {
+            type: "retry",
+            attempt: 1,
+            error: { code: "MODEL_ERROR", message: "transient" },
+            timestamp: Date.now(),
+          };
+          yield {
+            type: "error",
+            error: { code: "MODEL_ERROR", message: "upstream 400: rejected" },
+            timestamp: Date.now(),
+          };
+        },
+      };
+    },
+  };
+  return { provider, state };
+}
+
 const AUTHORIZED_ENV = (digest: string) => ({
   E4_R92_PAID_AUTH: "1",
   RUN_PAID_BENCHMARKS: "1",
@@ -671,36 +708,8 @@ describe("E4-R97 D10: a provider ERROR event is a FAILED call, never a silent CO
   // `COMPLETE` with 16 logical calls even when EVERY call failed (measured
   // false-success, reproduced live against the user's endpoint whose upstream
   // returns 400 on every completion).
-  function makeErrorEventProvider() {
-    const state = { requests: 0, created: 0 };
-    const provider = {
-      id: "fake-error-r97",
-      async listModels() {
-        return [];
-      },
-      createClient() {
-        state.created += 1;
-        return {
-          async *generate() {
-            state.requests += 1;
-            // Mirror the real provider's failure shape: a retry, then an error.
-            yield {
-              type: "retry",
-              attempt: 1,
-              error: { code: "MODEL_ERROR", message: "transient" },
-              timestamp: Date.now(),
-            };
-            yield {
-              type: "error",
-              error: { code: "MODEL_ERROR", message: "upstream 400: rejected" },
-              timestamp: Date.now(),
-            };
-          },
-        };
-      },
-    };
-    return { provider, state };
-  }
+  // `makeErrorEventProvider` is defined at module scope: D8's resume
+  // aggregation needs the very same failure shape.
 
   async function driveErrorCase() {
     const plan = await finalizedPlan();
@@ -743,6 +752,97 @@ describe("E4-R97 D10: a provider ERROR event is a FAILED call, never a silent CO
     const { result } = await driveErrorCase();
     expect(result["code"]).toBe("CASE_FAILURES");
     expect(result["authorization"]).toBeDefined();
+  });
+});
+
+describe("E4-R99-A D8: a resume aggregates the FULL history, not just this run", () => {
+  /**
+   * Drive a run whose every provider call fails with an error event, twice over
+   * the SAME campaign directory.
+   *
+   * Plan §T3 怎么做 8: "汇总读取'历史已验证结果 + 本次新结果'。将 newCalls/newUnits 与
+   * cumulativeCalls/measuredUnits/failures 分开；不能用本次 unitResults=[] 得出历史没有
+   * 失败."
+   *
+   * The §0.3 probe this pins: "provider 失败后恢复 | 首次 PARTIAL / 2 failures；第二次
+   * COMPLETE / 0 failures / 0 measuredUnits / 0 新调用" — a resume ERASED the first
+   * run's failures and reported success.
+   */
+  async function driveErrorTwice() {
+    const plan = await finalizedPlan();
+    const dir = await tempDir();
+    const run = () =>
+      mod.runDriver({
+        modules: { evaluation },
+        plan,
+        env: AUTHORIZED_ENV(plan.planDigest!),
+        observation: observationFor(plan),
+        ledgerDir: dir,
+        makeProvider: () => makeErrorEventProvider(),
+      });
+    const first = await run();
+    const second = await run();
+    return { plan, dir, first, second };
+  }
+
+  it("a resumed run does NOT report COMPLETE when history holds failures", async () => {
+    const { plan, first, second } = await driveErrorTwice();
+    const caseCount = plan.authorization!.caseIds.length;
+
+    // The first run measured real, failed calls and said so.
+    expect(first["status"]).toBe("PARTIAL");
+    expect(first["code"]).toBe("CASE_FAILURES");
+    const firstFailures = first["failures"] as unknown[];
+    expect(firstFailures.length).toBe(caseCount * 2);
+
+    // The resume dispatches NOTHING — that part was already correct.
+    expect(second["logicalCalls"]).toBe(0);
+    expect(second["providerRequests"]).toBe(0);
+    expect((second["reservations"] as unknown[]).length).toBe(0);
+    expect(second["newUnits"]).toBe(0);
+
+    // ...but it must NOT conclude the campaign is fine. The history still holds
+    // the same failures, and the aggregate must say so.
+    expect(second["status"], "a resume must not turn history's failures into COMPLETE").toBe("PARTIAL");
+    expect(second["code"]).toBe("CASE_FAILURES");
+    const secondFailures = second["failures"] as unknown[];
+    expect(secondFailures.length, "the historical failures must survive the resume").toBe(caseCount * 2);
+    expect(second["measuredUnits"]).toBe(0);
+  });
+
+  it("keeps NEW work and CUMULATIVE history as separate, honest numbers", async () => {
+    const { plan, second } = await driveErrorTwice();
+    const caseCount = plan.authorization!.caseIds.length;
+
+    // This run did nothing...
+    expect(second["newCalls"]).toBe(0);
+    expect(second["newUnits"]).toBe(0);
+    // ...while the campaign as a whole holds 2N terminal units and 2N calls.
+    expect(second["cumulativeCalls"]).toBe(caseCount * 2);
+    expect(second["completedUnits"]).toBe(caseCount * 2);
+    // The history-derived view is present even though `unitResults` is empty:
+    // that emptiness is exactly what used to make a resume look clean.
+    expect((second["unitResults"] as unknown[]).length).toBe(0);
+  });
+
+  it("a resume of a CLEAN run stays COMPLETE with the same aggregates", async () => {
+    // The mirror property: the aggregation must not manufacture failures either.
+    const plan = await finalizedPlan();
+    const dir = await tempDir();
+    const run = () => drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: dir });
+    const first = await run();
+    const second = await run();
+    const caseCount = plan.authorization!.caseIds.length;
+
+    expect(first.result["status"]).toBe("COMPLETE");
+    expect(second.result["status"]).toBe("COMPLETE");
+    expect(second.result["code"]).toBeNull();
+    expect((second.result["failures"] as unknown[]).length).toBe(0);
+    // The denominators and numerators are IDENTICAL across the resume
+    // (plan §T3 怎么验收: "累计分母、分子和 budget 完全一致").
+    expect(second.result["cumulativeCalls"]).toBe(first.result["cumulativeCalls"]);
+    expect(second.result["completedUnits"]).toBe(caseCount * 2);
+    expect(second.result["budget"]).toEqual(first.result["budget"]);
   });
 });
 
