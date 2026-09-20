@@ -260,20 +260,41 @@ export async function readCaseDef(caseDir, caseId) {
  * through. The list is enumerated from the filesystem but bounded to those trees,
  * which is the "清晰构建产物清单" plan §R100 line 209 asks for.
  */
+/**
+ * The relative paths `armExecutionDigest` covers, in digest order.
+ *
+ * Exported separately from the digest so a test (or an operator) can assert WHICH
+ * modules the identity covers rather than inferring an omission from a hash that
+ * merely looks different. Plan §T4 怎么做 8 names the required scope —
+ * "benchmark-command、runtime、provider/verification 的实际执行依赖与 adapter" — and
+ * a list is the only form in which that claim can be checked directly.
+ */
+export async function executionManifest(checkoutDir) {
+  const dir = resolve(checkoutDir);
+  const files = [];
+  for (const tree of EXECUTION_DIGEST_TREES) {
+    for (const rel of await listJsFiles(join(dir, ...tree))) files.push(rel);
+  }
+  files.sort();
+  return files.map((abs) => abs.slice(dir.length + 1).replace(/\\/g, "/"));
+}
+
+/** The built trees whose bytes can execute a benchmark case. */
+const EXECUTION_DIGEST_TREES = [
+  ["apps", "cli", "dist"],
+  ["packages", "model", "dist"],
+  ["packages", "core", "dist"],
+  ["packages", "evaluation", "dist"],
+  ["packages", "contracts", "dist"],
+  ["packages", "tools", "dist"],
+  ["packages", "harness", "dist"],
+];
+
 export async function armExecutionDigest(checkoutDir) {
   const dir = resolve(checkoutDir);
-  const trees = [
-    join(dir, "apps", "cli", "dist"),
-    join(dir, "packages", "model", "dist"),
-    join(dir, "packages", "core", "dist"),
-    join(dir, "packages", "evaluation", "dist"),
-    join(dir, "packages", "contracts", "dist"),
-    join(dir, "packages", "tools", "dist"),
-    join(dir, "packages", "harness", "dist"),
-  ];
   const files = [];
-  for (const tree of trees) {
-    for (const rel of await listJsFiles(tree)) files.push(rel);
+  for (const tree of EXECUTION_DIGEST_TREES) {
+    for (const rel of await listJsFiles(join(dir, ...tree))) files.push(rel);
   }
   if (files.length === 0) return null;
   files.sort();
@@ -355,12 +376,27 @@ export async function runArmCaseInProcess(opts) {
     ...(opts.firstReservationId === undefined ? {} : { firstReservationId: opts.firstReservationId }),
   });
 
-  // ---- Capture the ACTUAL requests and tool actions. ----------------------
+  // ---- Capture the ACTUAL requests, tool actions and MODEL REF. -----------
+  //
+  // `createClient(modelRef, config)` is called by the CORE RUNTIME with the
+  // agent's own model (`runtime.ts`: `this.modelProvider.createClient(ctx.agent.model, {})`),
+  // so `modelRef` is the identity the runtime ACTUALLY resolved — not a
+  // restatement of the argv this module passed. Capturing it is what makes the
+  // acceptance criterion "实际捕获请求中的 model/目标地址与批准一致" measurable
+  // rather than assumed: if the CLI ignored `--model` and fell back to its own
+  // default, the ref captured here would show it.
   const capturedRequests = [];
+  let executedModelRef = null;
   const capturing = {
     id: provider.id,
     listModels: () => provider.listModels(),
     createClient(modelRef, config) {
+      if (executedModelRef === null && modelRef !== null && typeof modelRef === "object") {
+        executedModelRef = {
+          providerId: typeof modelRef.providerId === "string" ? modelRef.providerId : null,
+          modelId: typeof modelRef.modelId === "string" ? modelRef.modelId : null,
+        };
+      }
       const c = provider.createClient(modelRef, config);
       return {
         async *generate(request, signal) {
@@ -371,15 +407,42 @@ export async function runArmCaseInProcess(opts) {
     },
   };
 
+  // ---- THE APPROVED IDENTITY, passed to the arm's own CLI. ----------------
+  //
+  // MEASURED DEFECT N6 (plan §0.2, P0): this argv hardcoded `"--provider",
+  // "openai"` and defaulted the model, so a plan approved for a local test
+  // endpoint and a non-default model executed as the default pair. Plan §T4
+  // 怎么做 6: "worker 必须使用它们构造请求；不能回落到 openai/gpt-4o-mini 或环境里的
+  // 另一 endpoint."
+  //
+  // `--endpoint` is passed ONLY when the approval names one. Omitting it lets the
+  // CLI fall back to `OPENAI_BASE_URL`, which is precisely the "另一 endpoint"
+  // the plan forbids: an approval that names NO endpoint means the provider's
+  // built-in default, so the environment must not be able to redirect it.
   const args = [
     "--suite", opts.suite,
     "--cases", opts.stagedCasesDir,
-    "--provider", "openai",
-    "--model", opts.modelId ?? "gpt-4o-mini",
+    "--provider", opts.providerId,
+    "--model", opts.modelId,
     "--max-model-calls", String(opts.maxModelCalls ?? 10),
     "--out", opts.outDir,
     "--allow-stub",
   ];
+  if (typeof opts.endpointBaseUrl === "string" && opts.endpointBaseUrl !== "") {
+    args.push("--endpoint", opts.endpointBaseUrl);
+  }
+
+  // ---- The PLAN the arm itself built for this exact argv. ----------------
+  //
+  // A `--dry-run` over the SAME argv makes the arm's own CLI print the execution
+  // plan it derived — including the `providerId`, `modelId` and normalized
+  // `endpointIdentity` it will bind. That is the arm's MEASUREMENT of the
+  // approval, made by the code that will execute it, and it costs ZERO provider
+  // calls. Reading the identity out of this instead of echoing the caller's own
+  // argv is the difference between "the flag was passed" and "the arm resolved
+  // the identity the plan approved".
+  const dryRun = await modules.runBenchmarkCommand([...args, "--dry-run"], capturing);
+  const declaredPlan = parseDryRunPlan(dryRun.lines);
 
   const res = await modules.runBenchmarkCommand(args, capturing);
 
@@ -394,6 +457,58 @@ export async function runArmCaseInProcess(opts) {
     report = null;
   }
 
+  // The identity the unit ACTUALLY executed under. Three independent sources are
+  // reported so a caller can see any disagreement rather than only one view:
+  //
+  //   declared  — what the ARM'S OWN dry-run plan bound for this argv;
+  //   runtime   — the ModelRef the CORE RUNTIME handed to `createClient`;
+  //   approved  — what the caller said was approved.
+  //
+  // THE MODEL AND THE ENDPOINT MUST MATCH THE APPROVAL EXACTLY. They are the two
+  // facts the acceptance criterion names — "实际捕获请求中的 model/目标地址与批准一致"
+  // — so a disagreement is real drift and the worker refuses the unit rather than
+  // reporting a pass under an identity nobody approved.
+  //
+  // THE PROVIDER ID IS DELIBERATELY NOT COMPARED. On the offline path the
+  // approved provider id is the BILLED identity the plan digest binds (the CLI
+  // accepts exactly one, `openai`), while the transport that actually runs is the
+  // injected scripted provider — that substitution IS the offline seam, and
+  // `assertOfflineProvider` above proves the substitute cannot reach the network
+  // (it refuses the real ids and any provider carrying a key). Flagging it as
+  // drift would refuse every legitimate offline run. The relationship is still
+  // RECORDED, so a reader sees both facts and can judge them.
+  const executionIdentity = {
+    declaredProviderId: declaredPlan?.providerId ?? null,
+    declaredModelId: declaredPlan?.modelId ?? null,
+    declaredEndpointIdentity: declaredPlan?.endpointIdentity ?? null,
+    runtimeProviderId: executedModelRef?.providerId ?? null,
+    runtimeModelId: executedModelRef?.modelId ?? null,
+    approvedProviderId: opts.providerId,
+    approvedModelId: opts.modelId,
+    approvedEndpointIdentity: evaluation.captureEndpointIdentity(opts.endpointBaseUrl ?? null),
+    // The provider that actually ran, and whether it is provably offline.
+    executingProviderId: inner.id,
+    providerIsOfflineSubstitute: inner.id !== opts.providerId,
+    drift: [],
+  };
+  if (executionIdentity.declaredModelId !== null && executionIdentity.declaredModelId !== opts.modelId) {
+    executionIdentity.drift.push(`the arm bound model ${executionIdentity.declaredModelId} but the approval names ${opts.modelId}`);
+  }
+  // The RUNTIME's own model ref is a second, independent measurement: the CLI's
+  // plan could name the approved model while the runtime quietly asked for
+  // another. A disagreement here is drift even if the plan agreed.
+  if (executionIdentity.runtimeModelId !== null && executionIdentity.runtimeModelId !== opts.modelId) {
+    executionIdentity.drift.push(`the runtime asked for model ${executionIdentity.runtimeModelId} but the approval names ${opts.modelId}`);
+  }
+  if (
+    executionIdentity.declaredEndpointIdentity !== null &&
+    executionIdentity.declaredEndpointIdentity !== executionIdentity.approvedEndpointIdentity
+  ) {
+    executionIdentity.drift.push(
+      `the arm bound endpoint ${executionIdentity.declaredEndpointIdentity} but the approval names ${String(executionIdentity.approvedEndpointIdentity)}`,
+    );
+  }
+
   return {
     execVersion: ARM_EXEC_VERSION,
     arm: arm.label,
@@ -405,8 +520,37 @@ export async function runArmCaseInProcess(opts) {
     capturedRequests,
     budget: { ...stats },
     scriptShape,
+    // The identity the request ACTUALLY carried, measured rather than assumed.
+    executionIdentity,
     // The arm's own executed bytes, hashed by content (N7 / T4 怎么做 8).
     execution: await armExecutionDigest(arm.checkoutDir),
+  };
+}
+
+/**
+ * The execution plan the arm's own CLI printed for a `--dry-run`.
+ *
+ * The CLI emits the plan as a single JSON document on its own stdout (see
+ * `buildDryRunPlan` / `runBenchmarkCommand`'s dry-run branch). A line that is not
+ * JSON, or a document without the identity fields, yields `null`: this is a
+ * MEASUREMENT, so "the arm did not tell us" must not be silently filled in from
+ * the caller's argv — that is exactly the substitution the identity check exists
+ * to prevent.
+ */
+export function parseDryRunPlan(lines) {
+  const text = (Array.isArray(lines) ? lines : []).join("\n");
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  return {
+    planDigest: typeof parsed.planDigest === "string" ? parsed.planDigest : null,
+    providerId: typeof parsed.providerId === "string" ? parsed.providerId : null,
+    modelId: typeof parsed.modelId === "string" ? parsed.modelId : null,
+    endpointIdentity: typeof parsed.endpointIdentity === "string" ? parsed.endpointIdentity : null,
   };
 }
 

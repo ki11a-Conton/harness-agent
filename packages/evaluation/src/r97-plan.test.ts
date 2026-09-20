@@ -867,4 +867,43 @@ describe("E4-R98/R100 P7: execution-time facts are re-observed, never inherited 
       await rm(copy, { recursive: true, force: true }).catch(() => {});
     }
   });
+
+  it("6e. the driver build digest covers the artifacts that EXECUTE, not only their sources (E4-R100-A / T4)", async () => {
+    // Plan §T4 怎么做 9: "当前 driver digest 哈希了若干 src/*.ts，但运行导入的是 dist.
+    // 修为构建产物身份或可验证的 source→artifact 映射；仅更改执行 dist 也必须导致旧批准
+    // 失效."
+    //
+    // MEASURED: the list held `packages/evaluation/src/r97-budget-ledger.ts` etc.,
+    // but every process that runs a campaign imports `packages/evaluation/dist/
+    // index.js`. A change that reached ONLY the built output — a rebuild from an
+    // edited tree, a hand-patched dist, a stale source with a fresh build — left
+    // the approved digest byte-identical while the code that executed had changed.
+    expect(R97_DRIVER_ARTIFACTS).toContain("packages/evaluation/dist/index.js");
+    // The offline executor is part of the driver's execution surface too: it is
+    // what drives each arm's own CLI.
+    expect(R97_DRIVER_ARTIFACTS).toContain("scripts/e4/r97-arm-exec.mjs");
+
+    // NEGATIVE CONTROL, and the one the paragraph actually names: changing ONLY
+    // the executing dist must invalidate the identity.
+    const { mkdtemp, mkdir, cp, rm, writeFile } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const copy = await mkdtemp(join(tmpdir(), "r100-driver-artifacts-"));
+    try {
+      for (const rel of R97_DRIVER_ARTIFACTS) {
+        const dest = join(copy, rel);
+        await mkdir(join(dest, ".."), { recursive: true });
+        await cp(join(REPO, rel), dest);
+      }
+      const before = await computeDriverBuildDigestV1(copy);
+      expect(before).toBe(await computeDriverBuildDigestV1(REPO));
+      // Rewrite ONLY the built evaluation package — every source file untouched.
+      await writeFile(join(copy, "packages/evaluation/dist/index.js"), "// a rebuilt executor\n");
+      expect(
+        await computeDriverBuildDigestV1(copy),
+        "changing the executing dist alone must invalidate the old approval",
+      ).not.toBe(before);
+    } finally {
+      await rm(copy, { recursive: true, force: true }).catch(() => {});
+    }
+  });
 });

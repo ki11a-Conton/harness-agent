@@ -205,7 +205,7 @@ export function gateFactsFrom(observation) {
  */
 export async function runDriver(opts) {
   const { evaluation } = opts.modules;
-  const { plan, env, observation, ledgerDir, makeProvider, maxProviderCalls = 0 } = opts;
+  const { plan, env, observation, ledgerDir, makeProvider, maxProviderCalls = 0, endpointBaseUrl = null } = opts;
 
   const result = {
     driverVersion: DRIVER_VERSION,
@@ -498,6 +498,51 @@ export async function runDriver(opts) {
   const armWorker = opts.armWorker ?? null;
   const executionMode = armWorker === null ? "provider" : "arm-worker";
 
+  // ---- THE APPROVED ENDPOINT, resolved ONCE and checked against the plan. --
+  //
+  // Plan §T4 怎么做 6: the approved provider/model/endpoint must reach the worker
+  // explicitly. The authorization stores the endpoint as a normalized DIGEST
+  // (a raw URL may carry tokens), so the driver must resolve the actual URL from
+  // the environment the campaign is running under and prove it hashes to the
+  // approved identity. If it does not, the campaign is running against a
+  // DIFFERENT endpoint than the one approved — the exact substitution the
+  // acceptance criterion "污染环境默认值不能改变请求目的地" forbids — and it is
+  // refused before any provider or worker exists.
+  //
+  // THIS CHECK BELONGS TO THE ARM-WORKER PATH. That is the only path where the
+  // driver resolves a destination and hands it to something else: each unit's own
+  // CLI turns it into a real transport. In `provider` mode the destination is
+  // whatever provider object the caller injected — the driver neither reads nor
+  // forwards an endpoint there, so comparing one would be checking a value that
+  // never reaches a request.
+  //
+  // `null` in the plan means "the provider's built-in endpoint", which is itself
+  // an approved choice: the worker is then given `null` so it cannot be redirected
+  // by an environment default either.
+  const approvedEndpointIdentity = authorization?.endpointIdentity ?? null;
+  let approvedEndpointBaseUrl = null;
+  if (armWorker !== null) {
+    const resolvedEndpointBaseUrl = endpointBaseUrl ?? process.env.OPENAI_BASE_URL ?? null;
+    if (approvedEndpointIdentity !== null) {
+      const observed = evaluation.captureEndpointIdentity(resolvedEndpointBaseUrl);
+      if (observed !== approvedEndpointIdentity) {
+        result.status = "REFUSED";
+        result.code = "ENDPOINT_IDENTITY_MISMATCH";
+        result.reason =
+          `the campaign resolved endpoint ${String(resolvedEndpointBaseUrl)} (identity ${String(observed)}) but the approved plan binds ` +
+          `${String(approvedEndpointIdentity)} — an approved run may not be redirected to a different destination by the environment`;
+        return result;
+      }
+      approvedEndpointBaseUrl = resolvedEndpointBaseUrl;
+    }
+  }
+  result.approvedIdentity = {
+    providerId: authorization?.providerId ?? null,
+    modelId: authorization?.modelId ?? null,
+    endpointIdentity: approvedEndpointIdentity,
+    endpointBaseUrl: approvedEndpointBaseUrl,
+  };
+
   // ---- THE SUITE INVENTORY (plan §R100 怎么做, line 205). ------------------
   //
   // The CLI's `--suite` is SINGLE-VALUED, but the frozen selection spans TWO
@@ -585,6 +630,22 @@ export async function runDriver(opts) {
         }
         let record;
         try {
+          // ---- THE APPROVED IDENTITY, taken from the PLAN. ------------------
+          //
+          // MEASURED DEFECT N6 (plan §0.2, P0): "driver 不把批准的 provider/model/
+          // endpoint/input digest 传给 worker." The worker therefore fell back to
+          // its own defaults, so a plan approved for a non-default model and a
+          // local test endpoint would have executed as `openai`/`gpt-4o-mini`
+          // against the built-in endpoint — and the acceptance criterion
+          // "批准非默认模型和本地测试 endpoint，实际捕获请求中的 model/目标地址与批准一致"
+          // could not have held.
+          //
+          // Plan §T4 怎么做 6: "显式向 worker 传递批准的 providerId/modelId/endpoint
+          // 以及输入摘要." The provider and model come from the AUTHORIZATION (the
+          // approved plan), never from the driver's own options, so what runs is
+          // what was approved. The endpoint is the one the driver resolved and
+          // whose identity the plan binds — checked just below, because the plan
+          // stores the DIGEST (a raw URL may carry tokens) rather than the URL.
           record = await armWorker.runArmUnit({
             checkoutDir: dir,
             repoRoot: opts.repoRoot ?? REPO_ROOT,
@@ -598,6 +659,10 @@ export async function runDriver(opts) {
             // can be silently used as the other.
             planDigest: plan.planDigest,
             approvedSourceSha: plan.authorization.arms?.[arm]?.sha ?? null,
+            // The approved identity, not the worker's defaults (T4 / N6).
+            providerId: plan.authorization.providerId,
+            modelId: plan.authorization.modelId,
+            endpointBaseUrl: approvedEndpointBaseUrl,
             // THE CAMPAIGN GRANT, not the per-unit call allowance. The worker
             // opens the SAME ledger file the driver already opened, and the
             // ledger refuses any process that declares a different allowance
@@ -1186,6 +1251,72 @@ export async function runZeroCallRehearsal(opts) {
   };
 }
 
+/**
+ * The official campaign CLI's help text.
+ *
+ * Plan §T4 做什么 1: "提供版本化、help 可发现的 campaign CLI，实际进入 arm-worker
+ * 路径." A mode that cannot be discovered is not an entry point, so this text names
+ * every flag an approved run needs — including the approved IDENTITY flags the
+ * plan's §怎么做 6 requires be passed explicitly to the worker.
+ *
+ * MEASURED DEFECT N9: the arm-worker path existed only as an API option
+ * (`opts.armWorker`) with no command line behind it, so the acceptance criterion
+ * "一个已提交的正式命令从 plan 到两臂执行" had no committed command: an operator
+ * had to write an ad-hoc `.ci/*.mjs`, which that criterion forbids.
+ */
+export const DRIVER_HELP = `e4-r97 campaign driver (${DRIVER_VERSION})
+
+USAGE
+  node scripts/e4/r97-campaign-driver.mjs --plan <plan.json> [options]
+  node scripts/e4/r97-campaign-driver.mjs --rehearse [--out <dir>] [--interrupt-after-first-arm]
+  node scripts/e4/r97-campaign-driver.mjs --help
+
+MODES
+  (default)         PLAN PRINTER ONLY. Prints a NOT_RUN result and constructs no
+                    provider at all. Without an explicit execution mode this
+                    driver never touches a network.
+  --arm-worker      Execute each scheduled unit through the ARM'S OWN built CLI
+                    (scripts/e4/r97-arm-worker.mjs), inside that arm's checkout.
+                    Requires --baseline-dir and --candidate-dir. The driver
+                    constructs NO provider in this mode: each unit's own build
+                    resolves its own transport, which is what makes "both arms
+                    load their own build" mechanically true.
+  --fake-provider   Development tool. Runs the built-in counting fake provider
+                    through the driver's own provider path. It CANNOT produce a
+                    formal campaign result: the result is labelled
+                    DEV_TOOL_NOT_A_CAMPAIGN so a fake run can never be mistaken
+                    for a real one.
+  --rehearse        The zero-call rehearsal: R93-validated paired evidence with
+                    no provider and no key.
+
+OPTIONS
+  --plan <path>          The finalized authorization plan (required unless --rehearse).
+  --out <dir>            Output directory for driver-result.json.
+  --ledger <dir>         The campaign budget ledger directory (shared across arms).
+  --baseline-dir <dir>   The baseline arm's built checkout (required by --arm-worker).
+  --candidate-dir <dir>  The candidate arm's built checkout (required by --arm-worker).
+  --provider <id>        The approved provider id. Defaults to the plan's approval.
+  --model <id>           The approved model id. Defaults to the plan's approval.
+  --endpoint <url>       The approved endpoint base URL. Must hash to the endpoint
+                         identity the plan binds, or the run is refused before any
+                         provider or worker exists.
+  --timeout-ms <n>       Per-unit deadline for the arm worker.
+  --now <iso>            A TEST clock. Only honoured together with --fake-provider
+                         or --rehearse; a production run always reads the real clock.
+  --help                 Print this text and exit 0.
+
+EXIT CODES
+  0 COMPLETE (or a printed plan/help)   1 refused/not complete   2 usage error
+`;
+
+/** Every flag this CLI accepts, so an unknown one is a usage error rather than
+ *  being silently ignored (plan §T4 怎么做 2: "参数校验"). */
+const KNOWN_FLAGS = new Set([
+  "--plan", "--out", "--ledger", "--baseline-dir", "--candidate-dir",
+  "--provider", "--model", "--endpoint", "--timeout-ms", "--now",
+  "--arm-worker", "--fake-provider", "--rehearse", "--interrupt-after-first-arm", "--help",
+]);
+
 /** CLI entry. Returns an exit code; prints the approval material by default. */
 export async function main(argv) {
   const flag = (name) => {
@@ -1194,12 +1325,42 @@ export async function main(argv) {
   };
   const has = (name) => argv.includes(name);
 
+  // ---- USAGE VALIDATION, before anything is loaded or constructed. ---------
+  //
+  // Plan §T4 怎么做 2: "实现启动/恢复入口、参数校验和 help." An unknown flag is a
+  // typo an operator must see, never a silently ignored argument: `--baseline-dri`
+  // would otherwise produce a refusal that blamed a missing directory rather than
+  // the misspelling.
+  for (const a of argv) {
+    if (a.startsWith("--") && !KNOWN_FLAGS.has(a)) {
+      process.stderr.write(`E4-R97: unknown flag ${a}\n\n${DRIVER_HELP}`);
+      return EXIT_CONFIG;
+    }
+  }
+  if (has("--help")) {
+    process.stdout.write(DRIVER_HELP);
+    return EXIT_OK;
+  }
+
   const planPath = flag("--plan");
   const outDir = flag("--out");
   const ledgerDir = flag("--ledger");
   const now = flag("--now") ?? new Date().toISOString();
   const fakeProvider = has("--fake-provider");
   const rehearse = has("--rehearse");
+  const armWorkerMode = has("--arm-worker");
+
+  // A TEST CLOCK IS AN OFFLINE-ONLY AFFORDANCE. Plan §T4 怎么做 12: "正式执行时间
+  // 来自实际时钟 … `--now` 之类测试时钟只允许隔离离线模式，不作为生产过期判断." An
+  // approved campaign that could be told the date would be able to run an EXPIRED
+  // authorization, which is exactly what the expiry check exists to prevent.
+  if (flag("--now") !== undefined && !fakeProvider && !rehearse) {
+    process.stderr.write(
+      "E4-R97: --now is a TEST clock and is only honoured with --fake-provider or --rehearse; " +
+        "a formal campaign reads the real clock so an expired authorization cannot be run\n",
+    );
+    return EXIT_CONFIG;
+  }
 
   // The zero-call rehearsal needs no plan and no key: it is what proves the
   // driver works BEFORE a human is asked to approve a real plan (line 221).
@@ -1214,21 +1375,49 @@ export async function main(argv) {
   }
 
   if (planPath === undefined) {
-    process.stderr.write(
-      "usage: node scripts/e4/r97-campaign-driver.mjs --plan <plan.json> [--out <dir>] [--ledger <dir>]\n" +
-        "                                                       [--now <iso>] [--fake-provider]\n" +
-        "       node scripts/e4/r97-campaign-driver.mjs --rehearse [--out <dir>] [--interrupt-after-first-arm]\n",
-    );
+    process.stderr.write(DRIVER_HELP);
     return EXIT_CONFIG;
+  }
+
+  // ---- --arm-worker: THE OFFICIAL EXECUTION ENTRY (T4 做什么 1). ----------
+  //
+  // Both arm directories are REQUIRED, and their absence is a usage error rather
+  // than a fallback. Plan §T4 怎么验收: "缺 arm 输入不会从 driver repo 回退" — the
+  // worker refuses a missing arm input, and this entry must not paper over that by
+  // quietly pointing both arms at the driver's own tree.
+  let armDirs = null;
+  if (armWorkerMode) {
+    const baselineDir = flag("--baseline-dir");
+    const candidateDir = flag("--candidate-dir");
+    if (baselineDir === undefined || candidateDir === undefined) {
+      process.stderr.write(
+        "E4-R97: --arm-worker requires --baseline-dir <dir> and --candidate-dir <dir>; " +
+          "there is deliberately no fallback to the driver's own checkout, because both arms " +
+          "running one tree is not an A/B\n",
+      );
+      return EXIT_CONFIG;
+    }
+    armDirs = { baseline: resolve(baselineDir), candidate: resolve(candidateDir) };
   }
 
   const evaluation = await import(pathToFileURL(join(REPO_ROOT, "packages", "evaluation", "dist", "index.js")).href);
   const plan = await loadFinalizedPlan(planPath);
 
-  if (!fakeProvider) {
+  // ---- THE DEVELOPMENT TOOL IS ISOLATED FROM THE FORMAL PATH. -------------
+  //
+  // Plan §T4 怎么做 1: "删除或隔离固定 `messages:[{role:"user",content:"r97"}]` 的
+  // provider 冒烟路径。若保留开发工具，必须有独立类型/命令，不能生成正式 campaign
+  // COMPLETE."
+  //
+  // MEASURED: the fixed placeholder content lived in the driver's provider path and
+  // a run through it could reach `status: "COMPLETE"` — a formal-looking verdict
+  // produced by a provider that sent the same one-word message for every case. The
+  // fake provider is now confined to `--fake-provider`, its result is labelled
+  // `DEV_TOOL_NOT_A_CAMPAIGN`, and it can never carry COMPLETE.
+  if (!fakeProvider && !armWorkerMode) {
     // Plan §R97 line 219: with no authorization, do NOT construct a real
-    // provider. Without --fake-provider this driver is a PLAN PRINTER only.
-    process.stdout.write(`${JSON.stringify({ driverVersion: DRIVER_VERSION, status: "NOT_RUN", reason: "no --fake-provider: this driver never constructs a real provider by default" }, null, 2)}\n`);
+    // provider. Without an execution mode this driver is a PLAN PRINTER only.
+    process.stdout.write(`${JSON.stringify({ driverVersion: DRIVER_VERSION, status: "NOT_RUN", reason: "no execution mode: this driver never constructs a real provider by default (see --arm-worker, or --fake-provider for the isolated development tool)" }, null, 2)}\n`);
     return EXIT_OK;
   }
 
@@ -1238,25 +1427,67 @@ export async function main(argv) {
   // envelope: `observation` is a separate input.
   const observation = plan.observation;
   if (observation === undefined) {
-    process.stderr.write("E4-R97: --fake-provider needs the plan artifact to carry an `observation` block\n");
+    process.stderr.write("E4-R97: an execution mode needs the plan artifact to carry an `observation` block\n");
     return EXIT_CONFIG;
   }
+
+  // The observation's own `now` is the approval's clock; the RESULT's `now` is
+  // when this run happened. Keeping them separate is what lets the expiry check
+  // compare the authorization's instant against a real one.
+  const observationForRun = { ...observation, now: observation.now ?? now };
 
   const result = await runDriver({
     modules: { evaluation },
     plan,
     env: process.env,
-    observation: { ...observation, now },
+    observation: observationForRun,
     ledgerDir: ledgerDir ?? (outDir === undefined ? undefined : join(outDir, "ledger")),
-    makeProvider: makeCountingFakeProvider,
+    // In arm-worker mode the driver builds NO provider: `runDriver` never calls
+    // `makeProvider`, and this stub would throw if it somehow did.
+    makeProvider: armWorkerMode
+      ? () => {
+          throw new Error("E4-R97: --arm-worker must not construct a provider in the driver");
+        }
+      : makeCountingFakeProvider,
+    armWorker: armWorkerMode
+      ? {
+          runArmUnit: (await import(pathToFileURL(join(REPO_ROOT, "scripts", "e4", "r97-arm-worker.mjs")).href)).runArmUnit,
+          armDirs,
+          outDir: outDir === undefined ? undefined : join(outDir, "units"),
+          ...(flag("--timeout-ms") === undefined ? {} : { timeoutMs: Number(flag("--timeout-ms")) }),
+        }
+      : null,
+    // The endpoint the campaign resolved. Only the arm-worker path consumes it,
+    // where it is checked against the plan's approved identity before use.
+    ...(flag("--endpoint") === undefined ? {} : { endpointBaseUrl: flag("--endpoint") }),
   });
+
+  // The DEVELOPMENT TOOL's verdict is deliberately not a campaign verdict.
+  // Plan §T4 怎么做 1: a retained dev tool "不能生成正式 campaign COMPLETE". Only a
+  // status that WOULD have claimed the campaign ran is relabelled — a NOT_RUN or a
+  // REFUSED is already honest and must keep its own code, because a refusal's
+  // identity (`EXEC_OBS_DRIVER_BUILD_DRIFT`, `CAMPAIGN_DIR_CONFLICT`, …) is the
+  // fact an operator acts on.
+  if (fakeProvider && result.status !== "NOT_RUN" && result.status !== "REFUSED") {
+    result.campaignStatus = result.status;
+    result.status = "DEV_TOOL_NOT_A_CAMPAIGN";
+    result.devTool = true;
+    result.devToolNote =
+      "produced by --fake-provider, the isolated development tool: it uses a synthetic provider and " +
+      "cannot produce a formal campaign verdict";
+  }
 
   if (outDir !== undefined) {
     await mkdir(outDir, { recursive: true });
     await writeFile(join(outDir, "driver-result.json"), `${JSON.stringify(result, null, 2)}\n`, "utf8");
   }
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-  return result.status === "COMPLETE" ? EXIT_OK : EXIT_REFUSED;
+  // The DEV TOOL's exit code follows the measurement it actually made
+  // (`campaignStatus`), not its relabelled status. A development run that
+  // completed cleanly is not an error, and reporting it as one would make the
+  // tool unusable in a script; the honest label lives in `status`/`devTool`.
+  const exitBasis = fakeProvider ? result.campaignStatus : result.status;
+  return exitBasis === "COMPLETE" ? EXIT_OK : EXIT_REFUSED;
 }
 
 // Run only when invoked directly, so the module stays importable by tests.

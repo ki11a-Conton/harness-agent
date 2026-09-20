@@ -41,7 +41,7 @@
  */
 
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, cp, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -93,6 +93,8 @@ const mod = (await import(WORKER)) as {
   redact: (v: unknown) => string;
   redactFailureText: (v: unknown) => string;
   armBuildIdentity: (dir: string) => { checkoutDir: string; sourceSha: string | null; buildDigest: string | null };
+  /** The explicit artifact manifest the build identity covers (T4 / N7). */
+  BUILD_ARTIFACT_PATHS: readonly (readonly string[])[];
   cliEntryOf: (dir: string) => string;
   reportPathOf: (outDir: string, suite: string) => string;
   dispatchArgs: (o: Record<string, unknown>) => string[];
@@ -111,6 +113,21 @@ async function tempDir(): Promise<string> {
   dirs.push(d);
   return d;
 }
+
+/**
+ * Redirect the machine-global advisory claim anchor to a per-suite scratch
+ * directory.
+ *
+ * The ledger's claim anchor defaults to a directory under the SYSTEM temp dir, so
+ * every test file that opens a ledger shares one namespace keyed by campaign id.
+ * Two suites running in parallel workers then refuse each other with
+ * `BUDGET_CAMPAIGN_DIR_DUPLICATE` — a collision between unrelated tests, not a
+ * fact about the worker. The other R97 ledger suites already do this; the worker
+ * contract suite must too now that it opens real campaigns.
+ */
+const CLAIMS_DIR = await mkdtemp(join(tmpdir(), "r99-claims-"));
+process.env["R97_CAMPAIGN_CLAIMS_DIR"] = CLAIMS_DIR;
+
 afterEach(async () => {
   for (const d of dirs.splice(0)) await rm(d, { recursive: true, force: true }).catch(() => {});
 });
@@ -121,6 +138,13 @@ afterEach(async () => {
  * `approvedSourceSha` defaults to the checkout's REAL sha, so the default is an
  * APPROVED unit — the tests that must refuse pass an explicit wrong sha rather
  * than relying on an accident.
+ *
+ * E4-R100-A (T4): the APPROVED IDENTITY is now REQUIRED. `runArmUnit` refuses a
+ * unit with no `providerId`/`modelId` rather than defaulting to
+ * `openai`/`gpt-4o-mini` (measured defect N6: "driver 不把批准的 provider/model/
+ * endpoint 传给 worker"), so the default here supplies an explicit, non-default
+ * pair — which is also what makes the identity assertions meaningful: a test can
+ * see that the value it passed is the value that ran.
  */
 async function runUnit(over: Record<string, unknown> = {}): Promise<{ record: ArmUnitRecord; root: string }> {
   const root = await tempDir();
@@ -137,6 +161,10 @@ async function runUnit(over: Record<string, unknown> = {}): Promise<{ record: Ar
     // produces (a different digest kind over a different case set).
     planDigest: "a".repeat(64),
     approvedSourceSha: build.sourceSha,
+    // The approved identity (T4 怎么做 6). Explicit, never defaulted.
+    providerId: "openai",
+    modelId: "approved-model-x",
+    endpointBaseUrl: "http://127.0.0.1:9/v1",
     executionStateDir: join(root, "state"),
     ledgerDir: join(root, "ledger"),
     outDir: join(root, "out"),
@@ -264,10 +292,14 @@ describe("R99 W3: build identity is observed, never fabricated", () => {
   it("changing the build changes the digest: a different tree is a different identity", async () => {
     const a = mod.armBuildIdentity(REPO);
     const other = await tempDir();
-    await mkdir(join(other, "apps", "cli", "dist"), { recursive: true });
-    await mkdir(join(other, "packages", "evaluation", "dist"), { recursive: true });
-    await writeFile(join(other, "apps", "cli", "dist", "main.js"), "// a DIFFERENT build\n");
-    await writeFile(join(other, "packages", "evaluation", "dist", "index.js"), "// a DIFFERENT build\n");
+    // EVERY covered path must be present, or the digest is `null` rather than an
+    // identity — so the fake tree mirrors the manifest instead of a hardcoded
+    // subset that would silently stop covering a newly-added artifact.
+    for (const parts of mod.BUILD_ARTIFACT_PATHS) {
+      const abs = join(other, ...parts);
+      await mkdir(join(abs, ".."), { recursive: true });
+      await writeFile(abs, "// a DIFFERENT build\n");
+    }
     const b = mod.armBuildIdentity(other);
     // Both are "established" (files exist), so this compares two real identities
     // rather than comparing a digest against null.
@@ -383,6 +415,27 @@ describe("R99 W7: the CLI entry refuses misuse instead of guessing", () => {
     const code = await mod.main(["--checkout", REPO, "--case", CASE_ID]);
     expect(code).toBe(mod.EXIT_CONFIG);
   });
+
+  it("the approved identity is REQUIRED — the CLI cannot dodge it by omitting flags (T4)", async () => {
+    // Plan §T4 怎么做 6: "worker 必须使用它们构造请求；不能回落到 openai/gpt-4o-mini
+    // 或环境里的另一 endpoint。缺必需字段直接拒绝." A CLI that let a caller omit
+    // `--provider`/`--model` would be an escape hatch around the very refusal the
+    // library enforces, so the flag set is checked BEFORE any work starts.
+    const dir = await tempDir();
+    const full = [
+      "--checkout", REPO,
+      "--case", CASE_ID,
+      "--suite", "regression",
+      "--arm", "baseline",
+      "--plan-digest", "a".repeat(64),
+      "--state", join(dir, "state"),
+      "--ledger", join(dir, "ledger"),
+    ];
+    // Everything EXCEPT the identity: refused as usage, not silently defaulted.
+    expect(await mod.main(full)).toBe(mod.EXIT_CONFIG);
+    // Adding only the provider is still incomplete: the model is required too.
+    expect(await mod.main([...full, "--provider", "openai"])).toBe(mod.EXIT_CONFIG);
+  });
 });
 
 describe("R99 W8: THE REAL EXECUTION — the arm's own build actually runs the case", () => {
@@ -491,6 +544,10 @@ describe("R99 W8: THE REAL EXECUTION — the arm's own build actually runs the c
       repetition: 1,
       planDigest: "a".repeat(64),
       approvedSourceSha: build.sourceSha,
+      // The approved identity is REQUIRED (T4 怎么做 6 / measured defect N6).
+      providerId: "openai",
+      modelId: "approved-model-x",
+      endpointBaseUrl: "http://127.0.0.1:9/v1",
       executionStateDir: join(root, "state"),
       ledgerDir: join(root, "ledger"),
       outDir: join(root, "out"),
@@ -561,6 +618,58 @@ describe("R99 W8: THE REAL EXECUTION — the arm's own build actually runs the c
     // that provably never happened.
     expect(existsSync(join(root, "ledger", LEDGER_FILE))).toBe(false);
     expect(existsSync(join(root, "state", EXEC_FILE))).toBe(false);
+  }, 120_000);
+
+  it("a case MISSING from the arm is refused — never borrowed from the driver repo (T4 怎么做 7)", async () => {
+    // Plan §T4 怎么做 7: "staging 后再次验证实际字节，worker 不得悄悄找 driver repo 的
+    // 替代案例." and §T4 怎么验收: "缺 arm 输入不会从 driver repo 回退."
+    //
+    // The staging search used to carry an arm-then-repo candidate list. That second
+    // entry is a genuine fallback, and for a case the ARM does not carry it
+    // substituted the DRIVER's copy — so the unit executed a case the arm's build
+    // had never been observed against, while reporting the arm's build identity.
+    //
+    // The arm here is a REAL, complete build (its dist artifacts are copied from
+    // this repo, so the build identity and the CLI entry are established, and it
+    // carries a real git HEAD so the build binding is established too) that simply
+    // has NO `benchmarks/`. `repoRoot` is the real repo, which DOES have the case.
+    // A fallback would find it there and run; a refusal cannot.
+    const fakeArm = await tempDir();
+    for (const parts of mod.BUILD_ARTIFACT_PATHS) {
+      const dest = join(fakeArm, ...parts);
+      await mkdir(join(dest, ".."), { recursive: true });
+      await cp(join(REPO, ...parts), dest);
+    }
+    const { execFileSync } = await import("node:child_process");
+    const git = (args: string[]) => execFileSync("git", args, { cwd: fakeArm, stdio: "ignore" });
+    git(["init", "-q"]);
+    git(["-c", "user.email=t@e.st", "-c", "user.name=test", "commit", "-q", "--allow-empty", "-m", "an arm with no benchmarks"]);
+    // The approved sha is the FAKE ARM's own, so the build binding is SATISFIED and
+    // the run reaches the staging step. Otherwise the unit would refuse for the
+    // build mismatch and this test would prove nothing about the case source.
+    const fakeBuild = mod.armBuildIdentity(fakeArm);
+    expect(fakeBuild.sourceSha).toMatch(/^[0-9a-f]{40}$/);
+    const root = await tempDir();
+    const { record } = await runUnit({
+      checkoutDir: fakeArm,
+      approvedSourceSha: fakeBuild.sourceSha,
+      executionStateDir: join(root, "state"),
+      ledgerDir: join(root, "ledger"),
+      outDir: join(root, "out"),
+    });
+    expect(record.status).toBe("failed");
+    // A missing arm input is an INFRASTRUCTURE failure: it says the checkout is
+    // incomplete, not that the campaign's own plumbing refused. Either way it is a
+    // failure and never a pass.
+    expect(record.failureCategory).toBe("infrastructure");
+    // The refusal names the ARM it searched, so the operator knows which checkout
+    // is incomplete — and it proves the driver's tree was never consulted.
+    expect(String(record.detail)).toContain(fakeArm);
+    expect(String(record.detail)).toMatch(/not found/i);
+    // It must NOT have executed anything: a fallback would have produced a real
+    // verdict from the driver's own copy of the case.
+    expect(String(record.detail)).not.toContain("verification_passed=");
+    expect(record.caseSource ?? null).toBeNull();
   }, 120_000);
 });
 

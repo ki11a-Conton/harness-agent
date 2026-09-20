@@ -32,6 +32,12 @@
 //     --provider <id> --model <id> --plan-digest <digest> \
 //     --max-model-calls <n> --out <outDir>
 //
+// The `--provider`/`--model` pair is the APPROVED identity, passed through from
+// the plan (plan §T4 怎么做 6). It is never defaulted here: a worker that invented
+// a provider or model would execute a different identity than the one approved,
+// which is measured defect N6 ("driver 不把批准的 provider/model/endpoint 传给
+// worker").
+//
 // and then parses the REAL report that CLI writes. The alternative — driving
 // `runOneCase` in-process — is not reachable from here at all: `runOneCase` is
 // module-private in `apps/cli/src/benchmark-command.ts` and is NOT re-exported
@@ -120,17 +126,47 @@ export const EXIT_CONFIG = 2;
  * 构建产物清单界定 hash 范围，不搞整个工作区不可控 hash." Hashing a whole
  * checkout would be slow, would change when unrelated files (logs, caches,
  * `.git`) are touched, and would therefore make a build identity that says
- * nothing about what actually EXECUTES a case. These two files ARE the
- * executable surface of one arm: the CLI entry point and the evaluation library
- * it links.
+ * nothing about what actually EXECUTES a case. These files ARE the executable
+ * surface of one arm.
  *
- * A missing entry is a `null` SIZE, and `buildDigest` then returns `null`
- * rather than a digest of a tree that cannot run — the same fail-closed rule as
- * `armBuildIdentity`'s `sourceSha`.
+ * ---- E4-R100-A (T4): WHY THIS LIST GREW, AND WHY IT IS NOW BYTES ONLY ------
+ *
+ * MEASURED DEFECT N7 (plan §0.2): "armBuildIdentity 漏掉实际导入的执行模块."
+ * The previous list was TWO paths, and only ONE of them (`main.js`) was hashed by
+ * content — everything else entered the digest as `size:mtime`. Two consequences,
+ * both fatal to the property the digest exists for:
+ *
+ *   1. The module that actually RUNS a case is `benchmark-command.js` (the
+ *      exported `runBenchmarkCommand` seam, plan §0.4), and it was not covered at
+ *      all. A rewritten executor left the approved build identity UNCHANGED.
+ *   2. A rebuild preserving size and mtime (a checkout restored from an archive,
+ *      a fast incremental build) left `main.js`'s contribution unchanged too.
+ *
+ * Plan §T4 怎么做 8 states the rule this now follows:
+ *
+ *   "构建摘要覆盖实际加载的执行产物及必要本地依赖，使用字节 hash，不依赖 mtime/size.
+ *    至少覆盖 benchmark-command、runtime、provider/verification 的实际执行依赖与
+ *    adapter；范围用构建清单定义."
+ *
+ * So: EVERY entry is now hashed by content, and the list names the modules the
+ * executor really imports — the CLI entry, the CLI's own exported benchmark seam,
+ * the model package (the provider the runtime calls), the evaluation package (the
+ * verifier/decision code), and the core runtime that drives the tool loop. The
+ * scope is still an EXPLICIT manifest rather than the whole workspace, which is
+ * the boundary the same paragraph draws.
+ *
+ * A missing entry still makes `buildDigest` `null` — the fail-closed rule is
+ * unchanged, because "the build cannot be established" must never be represented
+ * by a digest of the files that happen to be there.
  */
-const BUILD_ARTIFACT_PATHS = [
+/** Exported so a test can assert WHICH modules the build identity covers rather
+ *  than trusting the digest to reveal an omission. */
+export const BUILD_ARTIFACT_PATHS = [
   ["apps", "cli", "dist", "main.js"],
+  ["apps", "cli", "dist", "benchmark-command.js"],
+  ["packages", "model", "dist", "index.js"],
   ["packages", "evaluation", "dist", "index.js"],
+  ["packages", "core", "dist", "index.js"],
 ];
 
 /**
@@ -162,9 +198,68 @@ const DRY_RUN_TIMEOUT_MS = 120_000;
  * by the ABSENCE of a key rather than by a flag. The worker passes the id the
  * arm's plan was built with; what actually runs in an offline test is the stub,
  * because tests must not set `OPENAI_API_KEY` (limitation (a) in the header).
+ *
+ * ---- E4-R100-A (T4): THESE ARE NO LONGER SILENT FALLBACKS -------------------
+ *
+ * MEASURED DEFECT N6 (plan §0.2, P0): "driver 不把批准的 provider/model/endpoint
+ * 传给 worker." The executor's argv hardcoded `--provider openai` and defaulted
+ * the model, so a plan approved for a local test endpoint and a non-default model
+ * would have executed as the default pair — and the acceptance criterion "批准非默认
+ * 模型和本地测试 endpoint，实际捕获请求中的 model/目标地址与批准一致" could not have
+ * held.
+ *
+ * Plan §T4 怎么做 6 is explicit: "不能回落到 openai/gpt-4o-mini 或环境里的另一
+ * endpoint。缺必需字段直接拒绝." These constants survive ONLY as the documented
+ * default for the offline SELF-TEST entry point, which is a development tool that
+ * cannot produce a campaign COMPLETE. `runArmUnit` requires an explicit identity
+ * (see `requiredIdentityOf`) and refuses without one.
  */
 const DEFAULT_PROVIDER_ID = "openai";
 const DEFAULT_MODEL_ID = "gpt-4o-mini";
+
+/**
+ * The identity a unit MUST be given, validated rather than defaulted.
+ *
+ * Plan §T4 怎么做 6: "显式向 worker 传递批准的 providerId/modelId/endpoint 以及输入
+ * 摘要。worker 必须使用它们构造请求 … 缺必需字段直接拒绝."
+ *
+ * Returns `{ providerId, modelId, endpointBaseUrl, issue }`. A non-null `issue`
+ * means the caller must refuse BEFORE touching the ledger or the state: an
+ * incomplete approval cannot be allowed to charge a campaign for work it may not
+ * legitimately run.
+ *
+ * `endpointBaseUrl === null` is a VALID approval meaning "the provider's built-in
+ * endpoint" — that is a real choice the plan digest covers, not a missing field.
+ * An empty or malformed string is not a choice, so it is refused.
+ */
+export function requiredIdentityOf(opts) {
+  const providerId = typeof opts.providerId === "string" ? opts.providerId.trim() : "";
+  if (providerId === "") {
+    return { providerId: "", modelId: "", endpointBaseUrl: null, issue: "the approved providerId is missing — the worker may not default to a provider the plan did not approve" };
+  }
+  const modelId = typeof opts.modelId === "string" ? opts.modelId.trim() : "";
+  if (modelId === "") {
+    return { providerId, modelId: "", endpointBaseUrl: null, issue: "the approved modelId is missing — the worker may not default to a model the plan did not approve" };
+  }
+  const raw = opts.endpointBaseUrl;
+  let endpointBaseUrl = null;
+  if (raw !== null && raw !== undefined) {
+    if (typeof raw !== "string" || raw.trim() === "") {
+      return { providerId, modelId, endpointBaseUrl: null, issue: `the approved endpoint is not a URL: ${JSON.stringify(raw)}` };
+    }
+    let parsed;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      return { providerId, modelId, endpointBaseUrl: null, issue: `the approved endpoint is not a valid absolute URL: ${JSON.stringify(raw)}` };
+    }
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return { providerId, modelId, endpointBaseUrl: null, issue: `the approved endpoint must be http(s), got ${parsed.protocol}` };
+    }
+    endpointBaseUrl = raw;
+  }
+  return { providerId, modelId, endpointBaseUrl, issue: null };
+}
 
 /**
  * Directories never descended into when staging a case.
@@ -253,11 +348,26 @@ export const redactFailureText = redact;
  * worse than a missing one, because it would let a campaign claim it ran a
  * revision it never checked out.
  *
- * `buildDigest` is a sha256 over an SMALL, ENUMERATED artifact set (see
- * `BUILD_ARTIFACT_PATHS`): for each path, its relative name, its size and its
- * mtime, with the file BYTES hashed only for the entry point. Two arms whose
- * `main.js` differ in content therefore cannot share a build digest, while an
- * unrelated file elsewhere in the checkout cannot change it.
+ * `buildDigest` is a sha256 over an EXPLICIT, ENUMERATED artifact set (see
+ * `BUILD_ARTIFACT_PATHS`): for each path, its relative name and the sha256 of its
+ * BYTES. Two arms whose executed modules differ in content therefore cannot share
+ * a build digest, while an unrelated file elsewhere in the checkout cannot change
+ * it.
+ *
+ * ---- E4-R100-A (T4): BYTES ONLY, NEVER size/mtime --------------------------
+ *
+ * MEASURED DEFECT N7: the previous digest mixed `size` and `mtime` into the
+ * material and hashed the BYTES of exactly one path. Plan §T4 怎么做 8 forbids
+ * precisely that: "使用字节 hash，不依赖 mtime/size." A rebuild that preserves
+ * size and mtime — a checkout restored from an archive, an incremental build that
+ * rewrites the same length — left the identity unchanged while the code that runs
+ * a case had changed, so an approval would silently cover a build that no longer
+ * existed.
+ *
+ * The stat fields are still READ, but only to answer "is there a readable file
+ * here?": a path that cannot be read makes the whole digest `null` rather than
+ * being skipped, because a digest over "the files that happened to be present" is
+ * exactly how a covered set shrinks without anyone noticing.
  *
  * Returns `{ checkoutDir, sourceSha, buildDigest }` where either digest value
  * may be `null`; `null` is the honest "not established", never a substitute.
@@ -286,31 +396,24 @@ export function armBuildIdentity(checkoutDir) {
   for (const parts of BUILD_ARTIFACT_PATHS) {
     const abs = join(dir, ...parts);
     const rel = parts.join("/");
-    let size = null;
-    let mtimeMs = null;
+    // `statSyncOrNull` answers only "is there a readable regular file here?".
+    // Its size and mtime are deliberately NOT part of the digest material: a
+    // digest that moves when a file is merely touched is a poor identity, and one
+    // that does NOT move when same-length content changes is no identity at all.
+    const st = statSyncOrNull(abs);
     let contentHash = null;
-    try {
-      const st = statSyncOrNull(abs);
-      if (st === null) {
-        allPresent = false;
-      } else {
-        size = st.size;
-        mtimeMs = Math.trunc(st.mtimeMs);
-        // The entry point's BYTES are hashed, not just its stat: a rebuild that
-        // happens to preserve size+mtime (a checkout restored from an archive)
-        // must still change the identity.
-        if (rel === "apps/cli/dist/main.js") {
-          contentHash = createHash("sha256").update(readFileSyncOrNull(abs) ?? Buffer.alloc(0)).digest("hex");
-        }
-      }
-    } catch {
+    if (st === null || !st.isFile()) {
       allPresent = false;
+    } else {
+      const bytes = readFileSyncOrNull(abs);
+      if (bytes === null) allPresent = false;
+      else contentHash = createHash("sha256").update(bytes).digest("hex");
     }
-    materials.push(`${rel}:${size === null ? "missing" : String(size)}:${mtimeMs === null ? "missing" : String(mtimeMs)}:${contentHash ?? "-"}`);
+    materials.push(`${rel}:${contentHash ?? "missing"}`);
   }
 
   const buildDigest = allPresent
-    ? createHash("sha256").update(`e4-r98-build-digest-v1\n${materials.join("\n")}`).digest("hex")
+    ? createHash("sha256").update(`e4-r100-build-digest-v2\n${materials.join("\n")}`).digest("hex")
     : null;
 
   return { checkoutDir: dir, sourceSha, buildDigest };
@@ -413,20 +516,35 @@ function assertUnitIdentity(opts) {
  *   - and, when the caller supplied a suite-qualified id, the declared suite to
  *     match that qualifier.
  *
- * The arm's OWN checkout is tried first. There is deliberately NO fallback that
- * substitutes another tree's case for a missing one — a missing arm case is a
+ * The arm's OWN checkout is the ONLY source. There is deliberately NO fallback
+ * that substitutes another tree's case for a missing one — a missing arm case is a
  * refusal (plan §R100 line 204: "缺文件或读失败要 NOT_READY，不能拿 driver 副本
- * 冒充"). The repository root is consulted only as the second candidate when the
- * arm checkout simply does not carry the case, and the chosen source is
- * reported on the dispatch so a caller can see which tree it came from.
+ * 冒充").
+ *
+ * ---- E4-R100-A (T4 怎么做 7): THE driver-repo FALLBACK IS REMOVED ------------
+ *
+ * Plan §T4 怎么做 7: "明确冻结输入来源 … staging 后再次验证实际字节，worker 不得
+ * 悄悄找 driver repo 的替代案例." and §T4 怎么验收: "缺 arm 输入不会从 driver repo
+ * 回退."
+ *
+ * MEASURED: this function searched `[<arm>/benchmarks, <repoRoot>/benchmarks]`. The
+ * second entry is a real fallback, and for a case an ARM does not carry it
+ * substituted the DRIVER's copy — so the unit executed a case the arm's build had
+ * never been observed against while reporting that arm's build identity. Worse, if
+ * BOTH arms lacked the case they would both silently run the driver's copy and
+ * their "independent" results could agree by construction, which is the
+ * one-harness-run-twice failure the whole round exists to remove.
+ *
+ * `repoRoot` is still accepted (callers pass it, and the parameter is part of the
+ * seam) but it is NEVER consulted as a case source.
  */
 async function stageCase(opts) {
-  const { repoRoot, caseId, stagedCasesDir } = opts;
+  const { caseId, stagedCasesDir } = opts;
   const bare = caseId.split("/").pop();
   if (bare === undefined || bare === "") throw new Error(`E4-R98: caseId ${JSON.stringify(caseId)} has no case directory`);
   const qualifier = caseId.includes("/") ? caseId.split("/")[0] : null;
 
-  const roots = [join(opts.checkoutDir, "benchmarks"), join(repoRoot, "benchmarks")];
+  const roots = [join(opts.checkoutDir, "benchmarks")];
   const tried = [];
   let source = null;
   for (const root of roots) {
@@ -452,7 +570,12 @@ async function stageCase(opts) {
     if (source !== null) break;
   }
   if (source === null) {
-    throw new Error(`E4-R98: case ${caseId} was not found under any of ${tried.join(", ")}`);
+    // The refusal names the ARM it looked in, so an operator sees which checkout
+    // is incomplete rather than receiving a path list with no owner.
+    throw new Error(
+      `E4-R98: case ${caseId} was not found in arm checkout ${opts.checkoutDir} (tried ${tried.join(", ")}) — ` +
+        `a missing arm case is a refusal, never a case borrowed from another tree`,
+    );
   }
 
   await rm(stagedCasesDir, { recursive: true, force: true });
@@ -461,6 +584,27 @@ async function stageCase(opts) {
     recursive: true,
     filter: (src) => !DENIED_STAGE_DIRS.has(src.split(/[\\/]/).pop() ?? ""),
   });
+
+  // ---- THE STAGED BYTES ARE RE-VERIFIED AFTER THE COPY (T4 怎么做 7). -----
+  //
+  // "staging 后再次验证实际字节." A copy that silently truncated, or a source that
+  // changed between the probe and the copy, would mean the unit executed bytes
+  // nobody fingerprinted. The verification re-reads the STAGED case's own
+  // `case.json` and requires it to parse with the same declared suite the probe
+  // saw, so a half-written or substituted staging directory is refused here —
+  // before the state is marked `running` and before any request can leave.
+  const stagedSuite = await readCaseSuite(join(stagedCasesDir, bare));
+  if (stagedSuite === undefined) {
+    throw new Error(
+      `E4-R98: the staged case at ${join(stagedCasesDir, bare)} does not load as a case — ` +
+        `the staged bytes are not the bytes that were probed at ${source}`,
+    );
+  }
+  if (qualifier !== null && stagedSuite !== qualifier) {
+    throw new Error(
+      `E4-R98: the staged case at ${join(stagedCasesDir, bare)} declares suite ${stagedSuite} but ${caseId} is qualified ${qualifier}`,
+    );
+  }
   return { stagedCasesDir, stagedCaseDir: join(stagedCasesDir, bare), caseSource: source };
 }
 
@@ -844,14 +988,61 @@ function statusFor(category) {
  * caller defects (a bad identity, an unknown suite); every runtime failure is
  * an honest record, because a refused unit still has to be reportable.
  */
+/**
+ * The record a unit gets when its APPROVED IDENTITY is incomplete.
+ *
+ * It carries the same shape as a fully-initialised unit record so every consumer
+ * (the driver, a report, the validator) can read it without a special case, and
+ * it is marked `harness` — the category that means "the campaign's own plumbing
+ * refused", never a model or verifier outcome. `consumed` is 0 because nothing
+ * was dispatched, and no ledger or state file is created: a refusal that touched
+ * the budget would charge for work that provably never happened.
+ */
+function refuseIdentity(opts, issue) {
+  const build = armBuildIdentity(resolve(opts.checkoutDir));
+  return {
+    workerVersion: ARM_WORKER_VERSION,
+    execVersion: ARM_EXEC_VERSION,
+    unit: { caseId: opts.caseId, suite: opts.suite, arm: opts.arm, repetition: opts.repetition },
+    build,
+    status: "failed",
+    failureCategory: "harness",
+    reservationId: "",
+    reservationIds: [],
+    resultHash: "",
+    durationMs: 0,
+    detail: redact(`E4-R98: the approved execution identity is incomplete: ${issue}`),
+    consumed: 0,
+    budget: null,
+    execution: null,
+    executionIdentity: null,
+    capturedRequests: [],
+    report: null,
+    evidence: null,
+  };
+}
+
 export async function runArmUnit(opts) {
   const started = Date.now();
   const now = opts.now ?? (() => Date.now());
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const repoRoot = opts.repoRoot ?? REPO_ROOT;
   const checkoutDir = resolve(opts.checkoutDir);
-  const providerId = opts.providerId ?? DEFAULT_PROVIDER_ID;
-  const modelId = opts.modelId ?? DEFAULT_MODEL_ID;
+  // ---- STEP 0: the APPROVED identity, validated BEFORE anything else. ------
+  //
+  // Plan §T4 怎么做 6: "worker 必须使用它们构造请求；不能回落到 openai/gpt-4o-mini
+  // 或环境里的另一 endpoint。缺必需字段直接拒绝." This runs before the ledger, the
+  // state and any child process, so an incomplete approval cannot charge a
+  // campaign for a unit it may not legitimately run.
+  const identity = requiredIdentityOf(opts);
+  if (identity.issue !== null) {
+    // A REFUSAL, not a throw: an incomplete approval is an operator-visible
+    // verdict about a unit, and a thrown error would bypass the report.
+    return refuseIdentity(opts, identity.issue);
+  }
+  const providerId = identity.providerId;
+  const modelId = identity.modelId;
+  const endpointBaseUrl = identity.endpointBaseUrl;
   const maxModelCalls = opts.maxModelCalls ?? 10;
   const allowStub = opts.allowStub ?? true;
   // The number of logical calls this unit reserves UP FRONT, before `begin`.
@@ -904,6 +1095,9 @@ export async function runArmUnit(opts) {
     // The arm's own executed-bytes digest (N7: the previous identity covered
     // only main.js and missed the modules that actually run the case).
     execution: null,
+    // The identity the unit ACTUALLY executed under, read back from the arm's
+    // own plan/report rather than restated from the caller's argv (T4 / N6).
+    executionIdentity: null,
     // The ACTUAL model contexts this case entered, so a test can prove two
     // cases differ rather than inferring it from two result hashes.
     capturedRequests: [],
@@ -1091,7 +1285,10 @@ export async function runArmUnit(opts) {
           stagedCasesDir,
           outDir: runOutDir,
           suite: opts.suite,
+          // The APPROVED identity, threaded to the arm's own CLI (T4 / N6).
+          providerId,
           modelId,
+          endpointBaseUrl,
           maxModelCalls,
           ledger,
           firstReservationId: reservation.reservationId,
@@ -1100,6 +1297,23 @@ export async function runArmUnit(opts) {
         record.budget = executed.budget;
         record.execution = executed.execution;
         record.capturedRequests = executed.capturedRequests;
+        // ---- THE IDENTITY THE REQUEST ACTUALLY CARRIED ------------------
+        //
+        // Plan §T4 怎么做 6: the worker must USE the approved identity, not fall
+        // back to a default. `executed.executionIdentity` is measured by the arm's
+        // own CLI (its dry-run plan) and by the core runtime (the ModelRef it
+        // handed to `createClient`), so a disagreement with the approval is a
+        // REAL drift rather than a restatement. A drifted unit is refused with a
+        // `harness` verdict: reporting a pass under an identity nobody approved
+        // would make the campaign's evidence describe a run that never happened.
+        record.executionIdentity = executed.executionIdentity;
+        if (Array.isArray(executed.executionIdentity?.drift) && executed.executionIdentity.drift.length > 0) {
+          verdict = {
+            category: "harness",
+            detail: `E4-R98: the arm executed under an identity the plan did not approve — ${executed.executionIdentity.drift.join("; ")}`,
+          };
+          record.verifierPassed = false;
+        }
         // The channel's own count of admitted calls is the MEASURED spend for
         // this unit. It is read from the channel rather than from the arm's
         // self-report (`model_calls`), which is exactly the field plan §T1
@@ -1374,6 +1588,17 @@ export async function main(argv) {
   const state = flag("--state");
   const ledgerDir = flag("--ledger");
   const scriptShape = flag("--script-shape");
+  // ---- THE APPROVED IDENTITY (T4 怎么做 6). --------------------------------
+  //
+  // These are REQUIRED, not optional: `runArmUnit` refuses a unit without them
+  // rather than defaulting to `openai`/`gpt-4o-mini` (measured defect N6), and the
+  // CLI must not offer a way around that by omitting the flags. `--endpoint` is
+  // optional in the sense that its ABSENCE is itself an approval (the provider's
+  // built-in endpoint); an empty string is not.
+  const providerId = flag("--provider");
+  const modelId = flag("--model");
+  const endpointBaseUrl = flag("--endpoint");
+  const approvedSourceSha = flag("--source-sha");
 
   if (
     checkout === undefined ||
@@ -1382,12 +1607,18 @@ export async function main(argv) {
     arm === undefined ||
     planDigest === undefined ||
     state === undefined ||
-    ledgerDir === undefined
+    ledgerDir === undefined ||
+    providerId === undefined ||
+    modelId === undefined
   ) {
     process.stderr.write(
       "usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>\n" +
+        "                                                --provider <id> --model <id> [--endpoint <url>]\n" +
         "                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>\n" +
-        "                                                [--json]\n",
+        "                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]\n" +
+        "\n" +
+        "The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a\n" +
+        "different identity than the plan approved (plan T4 怎么做 6).\n",
     );
     return EXIT_CONFIG;
   }
@@ -1402,6 +1633,11 @@ export async function main(argv) {
       arm,
       repetition: 1,
       planDigest,
+      // The approved identity, passed through unchanged (T4 / N6).
+      providerId,
+      modelId,
+      ...(endpointBaseUrl === undefined ? {} : { endpointBaseUrl }),
+      ...(approvedSourceSha === undefined ? {} : { approvedSourceSha }),
       executionStateDir: state,
       ledgerDir,
       inputsDigest: null,

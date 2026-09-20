@@ -151,6 +151,28 @@ export const R97_DRIVER_ARTIFACTS: readonly string[] = [
   // the defect `driverBuildDigest` exists to close ("版本字符串不变而执行代码变化，
   // 应使旧计划失效"), and the artifact list is where it has to be closed.
   "scripts/e4/r97-arm-worker.mjs",
+  // E4-R100-A (T4 怎么做 9): the offline EXECUTOR is the third script in this
+  // pipeline — it is what loads an arm's own `runBenchmarkCommand` and drives it.
+  // Its bytes decide what executes just as much as the worker's do.
+  "scripts/e4/r97-arm-exec.mjs",
+  // ---- THE ARTIFACTS THAT ACTUALLY RUN, NOT MERELY THEIR SOURCES. ----------
+  //
+  // Plan §T4 怎么做 9: "当前 driver digest 哈希了若干 src/*.ts，但运行导入的是 dist.
+  // 修为构建产物身份或可验证的 source→artifact 映射；仅更改执行 dist 也必须导致旧批准
+  // 失效."
+  //
+  // MEASURED: this list held `packages/evaluation/src/*.ts`, but EVERY process
+  // that runs a campaign imports `packages/evaluation/dist/index.js`. The approved
+  // digest therefore described files nobody loaded: a rebuilt dist — a stale
+  // source with a fresh build, a hand-patched artifact, a build from a different
+  // tree — left the approval byte-identical while the executing code had changed.
+  //
+  // The `.ts` entries are KEPT alongside the built ones. They are not redundant:
+  // the sources record the INTENT an operator reviewed, and dropping them would
+  // make a source-only change (before any rebuild) invisible. Covering both is the
+  // "可验证的 source→artifact 映射" the paragraph offers as the alternative, in its
+  // strongest form — either side moving invalidates the plan.
+  "packages/evaluation/dist/index.js",
   "packages/evaluation/src/r97-budget-ledger.ts",
   "packages/evaluation/src/r97-execution-state.ts",
   "packages/evaluation/src/r97-plan.ts",
