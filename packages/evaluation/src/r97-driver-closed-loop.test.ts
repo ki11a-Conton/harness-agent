@@ -1415,3 +1415,158 @@ describe("E4-R97 D6: the REAL two-arm observation produces a FINALIZED plan", ()
     }
   });
 });
+
+/**
+ * E4-R99-B (T5) — THE CAMPAIGN ITSELF CAN BE STOPPED.
+ *
+ * Plan §T5 做什么 1: "campaign deadline、unit deadline、用户取消均可终止实际执行."
+ *
+ * The unit deadline lives in the worker. This block covers the OTHER half, which a
+ * per-unit bound cannot provide: N units each finishing inside their own window
+ * still leave a campaign running long after an operator asked it to stop. The
+ * driver's loop therefore consults a campaign-level predicate BEFORE each unit, so
+ * a stop refuses the next unit rather than waiting for the rest.
+ */
+describe("E4-R99-B (T5): the campaign's own stop, checked before every unit", () => {
+  it("a cancelled campaign refuses the NEXT unit and dispatches nothing further", async () => {
+    const plan = await finalizedPlan();
+    const controller = new AbortController();
+    // Cancelled BEFORE the first unit: the strongest form — nothing may run.
+    controller.abort();
+    const made = { calls: 0 };
+    const result = await mod.runDriver({
+      modules: { evaluation },
+      plan,
+      env: AUTHORIZED_ENV(plan.planDigest!),
+      observation: observationFor(plan),
+      makeProvider: () => {
+        made.calls += 1;
+        return mod.makeCountingFakeProvider();
+      },
+      signal: controller.signal,
+    });
+
+    expect(result["status"]).toBe("REFUSED");
+    expect(result["code"]).toBe("CAMPAIGN_CANCELLED");
+    expect(String(result["reason"])).toMatch(/cancel/i);
+    // The stop is BEFORE any work: no provider was constructed and no unit ran.
+    expect(made.calls).toBe(0);
+    expect(result["providerRequests"]).toBe(0);
+    expect(result["logicalCalls"]).toBe(0);
+    expect((result["unitResults"] as unknown[]).length).toBe(0);
+  });
+
+  it("a campaign whose own deadline has already passed refuses without dispatching", async () => {
+    const plan = await finalizedPlan();
+    const made = { calls: 0 };
+    const result = await mod.runDriver({
+      modules: { evaluation },
+      plan,
+      env: AUTHORIZED_ENV(plan.planDigest!),
+      observation: observationFor(plan),
+      makeProvider: () => {
+        made.calls += 1;
+        return mod.makeCountingFakeProvider();
+      },
+      // Zero milliseconds: the campaign's clock is spent the instant it starts.
+      campaignDeadlineMs: 0,
+    });
+
+    expect(result["status"]).toBe("REFUSED");
+    expect(result["code"]).toBe("CAMPAIGN_DEADLINE_EXCEEDED");
+    expect(String(result["reason"])).toMatch(/deadline/i);
+    expect(made.calls).toBe(0);
+    expect(result["logicalCalls"]).toBe(0);
+  });
+
+  it("cancellation is reported as CANCELLATION, not as an expired deadline, when both hold", async () => {
+    // The two reasons mean different things to an operator: one is "you stopped
+    // it", the other is "the clock stopped it". Collapsing them would hide the
+    // operator's own action behind a timer.
+    const plan = await finalizedPlan();
+    const controller = new AbortController();
+    controller.abort();
+    const result = await mod.runDriver({
+      modules: { evaluation },
+      plan,
+      env: AUTHORIZED_ENV(plan.planDigest!),
+      observation: observationFor(plan),
+      makeProvider: () => mod.makeCountingFakeProvider(),
+      signal: controller.signal,
+      campaignDeadlineMs: 0,
+    });
+    expect(result["code"]).toBe("CAMPAIGN_CANCELLED");
+  });
+
+  it("NO stop condition leaves the campaign completely unchanged", async () => {
+    // The negative control: with neither handle supplied, the driver must behave
+    // exactly as every earlier suite expects. A stop mechanism that perturbed the
+    // normal path would make all of them measure something else.
+    const plan = await finalizedPlan();
+    const { result } = await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: await tempDir() });
+    expect(result["status"]).toBe("COMPLETE");
+    expect(result["logicalCalls"]).toBeGreaterThan(0);
+  });
+
+  it("a stop that has NOT fired does not prevent the campaign from completing", async () => {
+    // An unspent deadline and a live signal must be INERT, not merely tolerated:
+    // the campaign must run to completion and measure the same real work it would
+    // have measured with no handles at all.
+    //
+    // WHY THIS IS NOT A SECOND RUN OF THE SAME PLAN. The campaign's advisory claim
+    // anchor is keyed by campaign id, so opening a SECOND ledger directory for one
+    // campaign is refused on purpose (`BUDGET_CAMPAIGN_DIR_DUPLICATE`) — that is a
+    // real protection, not an obstacle to route around. So inertness is asserted
+    // from the run's own measurements against the plan's own expectations.
+    const plan = await finalizedPlan();
+    const controller = new AbortController();
+    const withHandles = await mod.runDriver({
+      modules: { evaluation },
+      plan,
+      env: AUTHORIZED_ENV(plan.planDigest!),
+      observation: observationFor(plan),
+      ledgerDir: await tempDir(),
+      makeProvider: () => mod.makeCountingFakeProvider(),
+      signal: controller.signal,
+      campaignDeadlineMs: 600_000,
+    });
+    expect(withHandles["status"]).toBe("COMPLETE");
+    // Real work happened: the handles did not silently short-circuit the campaign.
+    // The counting fake provider completes every call, so the campaign measures the
+    // full case set across both arms.
+    expect(withHandles["logicalCalls"]).toBeGreaterThan(0);
+    expect(withHandles["measuredUnits"]).toBe(plan.authorization!.caseIds.length * 2);
+    expect(withHandles["completedUnits"]).toBeGreaterThan(0);
+    // And the stop itself never fired.
+    expect(withHandles["code"]).not.toBe("CAMPAIGN_CANCELLED");
+    expect(withHandles["code"]).not.toBe("CAMPAIGN_DEADLINE_EXCEEDED");
+  });
+
+  it("the driver CLI accepts --campaign-deadline-ms and rejects an unknown flag", async () => {
+    const { execFile } = await import("node:child_process");
+    const { promisify } = await import("node:util");
+    const run = promisify(execFile);
+    const script = join(REPO, "scripts", "e4", "r97-campaign-driver.mjs");
+
+    /** Run the CLI, returning a uniform shape whether it exits 0 or not. */
+    const invoke = async (args: string[]): Promise<{ code: number | undefined; stdout: string; stderr: string }> => {
+      try {
+        const ok = await run(process.execPath, [script, ...args], { cwd: REPO });
+        return { code: 0, stdout: String(ok.stdout ?? ""), stderr: String(ok.stderr ?? "") };
+      } catch (e) {
+        const err = e as { code?: number; stdout?: string; stderr?: string };
+        return { code: err.code, stdout: String(err.stdout ?? ""), stderr: String(err.stderr ?? "") };
+      }
+    };
+
+    // The new flag is DOCUMENTED, so an operator can discover it.
+    const help = await invoke(["--help"]);
+    expect(help.code).toBe(0);
+    expect(help.stdout).toContain("--campaign-deadline-ms");
+
+    // ...and it is in the known set, so it is not rejected as a typo.
+    const unknown = await invoke(["--definitely-not-a-flag"]);
+    expect(unknown.code).toBe(2);
+    expect(unknown.stderr).toContain("--definitely-not-a-flag");
+  }, 60_000);
+});

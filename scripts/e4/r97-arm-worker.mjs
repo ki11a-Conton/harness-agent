@@ -184,8 +184,446 @@ export const BUILD_ARTIFACT_PATHS = [
 const DEFAULT_TIMEOUT_MS = 900_000;
 
 /** Kill-grace before SIGKILL. A provider stream that ignores SIGTERM must not
- *  keep the unit (and its reservation) alive forever. */
-const SIGKILL_GRACE_MS = 2_000;
+ *  keep the unit (and its reservation) alive forever.
+ *
+ * ---- E4-R99-B (T5): THIS CONSTANT WAS DECLARED AND NEVER READ ---------------
+ *
+ * MEASURED DEFECT N8 (plan §0.2): "runChild 只发送 SIGTERM，SIGKILL_GRACE_MS 未使用."
+ * `runChild`'s only stop was `controller.abort()`, which signals the child and
+ * then waits forever, so a child that installed a SIGTERM handler kept the
+ * promise — and therefore the unit, its reservation and the whole campaign —
+ * alive indefinitely. This value is now the real grace in `boundedStop` below:
+ * the polite signal goes first, and a forced kill follows after exactly this
+ * long.
+ *
+ * TWO SECONDS, AND WHY THAT IS THE RIGHT ORDER OF MAGNITUDE: a cooperative child
+ * needs long enough to flush its report and exit cleanly, and a hostile one must
+ * not hold a campaign hostage. The value is small because it is a GRACE, not a
+ * budget — the deadline has already elapsed by the time it starts. */
+export const SIGKILL_GRACE_MS = 2_000;
+
+/**
+ * The byte ceiling for one child's captured stdout or stderr.
+ *
+ * ---- E4-R99-B (T5): A BYTE LIMIT, NOT A CHUNK COUNT -------------------------
+ *
+ * MEASURED DEFECT N8: the old check was `if (stdoutChunks.length < MAX_BUFFER)`,
+ * comparing a COUNT OF CHUNKS against a constant documented as bytes. Both
+ * directions were wrong: ONE 64 MiB chunk was accepted whole (one chunk is well
+ * under any count limit), and 33 million one-byte chunks were accepted whole too
+ * (the array only stops growing once it reaches the limit, by which point the
+ * process has already buffered far more than the limit). `ByteCap` accumulates
+ * `Buffer.byteLength`, so the bound is the number it claims to be.
+ */
+export const MAX_CHILD_OUTPUT_BYTES = 33_554_432;
+
+/**
+ * A bounded byte accumulator for one child stream.
+ *
+ * INVARIANT: `bytes <= limit`, ALWAYS. `bytes` is what was RETAINED, so a reader
+ * who asks "how much output do I have" gets an answer that respects the bound.
+ * The total that was offered is reported separately as `offered`, so dropping is
+ * visible rather than silent.
+ *
+ * Keeping `bytes` bounded matters because it is the field a caller would use to
+ * decide whether more output can be accepted. Reporting the OFFERED total there
+ * would make the accumulator's own accounting exceed its own ceiling — the
+ * arithmetic form of the defect this replaces.
+ *
+ * `push` accepts a Buffer or a string; a string is measured by its UTF-8 encoding,
+ * never by `String.length` (a character count would let a multi-byte stream
+ * through at up to 4x the limit).
+ *
+ * A partial chunk is retained up to the remaining allowance, and the slice is
+ * taken on the BUFFER so a multi-byte character is never split.
+ */
+export class ByteCap {
+  constructor(limit) {
+    this.limit = Math.max(0, Number(limit));
+    /** Retained bytes. Never exceeds `limit`. */
+    this.bytes = 0;
+    /** Every byte offered, including those dropped. */
+    this.offered = 0;
+    this.truncated = false;
+    this.chunks = [];
+  }
+
+  push(chunk) {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), "utf8");
+    this.offered += buf.length;
+    const room = this.limit - this.bytes;
+    if (room <= 0) {
+      if (buf.length > 0) this.truncated = true;
+      return;
+    }
+    if (buf.length <= room) {
+      this.chunks.push(buf);
+      this.bytes += buf.length;
+      return;
+    }
+    this.chunks.push(buf.subarray(0, room));
+    this.bytes += room;
+    this.truncated = true;
+  }
+
+  text() {
+    // Decoded once, at the end. `toString` on the concatenated buffer keeps a
+    // truncated multi-byte tail from becoming a replacement character mid-stream.
+    return Buffer.concat(this.chunks).toString("utf8");
+  }
+}
+
+/** The closed set of reasons a bounded stop can report.
+ *
+ * Plan §T5 怎么做 5 requires the three start cases be told apart — "区分确定未启动、
+ * 已启动已发送、结果未知" — and §怎么做 7 requires an interrupt be named rather than
+ * disguised as `case_failed` or a verified pass. A caller switches on this value,
+ * so it is an enumerated set, not free text.
+ */
+export const BOUNDED_STOP_REASONS = ["exited", "timeout", "cancelled", "spawn_failed", "output_limit"];
+
+/**
+ * Run a child under a REAL deadline, a REAL cancellation handle and a REAL byte
+ * cap, and ALWAYS return within a bounded time.
+ *
+ * ---- E4-R99-B (T5): WHY THIS REPLACES `runChild` ---------------------------
+ *
+ * Plan §T5 怎么做 2 states the required sequence exactly:
+ *
+ *   "实现有界停止流程：请求取消→有限宽限→平台适配的强制结束→等待 close/回收."
+ *
+ * `runChild` did the FIRST step and then waited forever. This function performs
+ * the whole sequence:
+ *
+ *   1. the deadline (or the caller's `signal`) asks the child to stop;
+ *   2. a bounded grace of `graceMs` lets a cooperative child flush and exit;
+ *   3. a PLATFORM-ADAPTED forced kill ends the whole TREE — `taskkill /t /f` on
+ *      Windows, a process-group `SIGKILL` on POSIX — so a tool grandchild cannot
+ *      keep writing after its parent is gone (plan §T5 怎么做 2: "不要只停止父进程
+ *      而留下工具子孙进程继续写文件");
+ *   4. `close` is awaited so the exit is RECORDED, not merely requested.
+ *
+ * The promise settles EXACTLY ONCE. `close`, `error`, the deadline, the abort
+ * signal and the forced kill can all race; whichever arrives first wins and every
+ * timer and listener is released, so a unit cannot be resolved twice or leak a
+ * listener into the next unit.
+ *
+ * `started` distinguishes "definitely never launched" from "launched and
+ * signalled", which is what lets a caller settle an interrupted attempt honestly
+ * instead of guessing.
+ *
+ * Returns `{ reason, started, exitCode, signal, stdout, stderr, truncated, bytes,
+ * forced, durationMs, spawnError? }`.
+ */
+export function boundedStop(opts) {
+  const deadlineMs = Number.isFinite(opts.deadlineMs) ? opts.deadlineMs : DEFAULT_TIMEOUT_MS;
+  const graceMs = Number.isFinite(opts.graceMs) ? opts.graceMs : SIGKILL_GRACE_MS;
+  const capLimit = Number.isFinite(opts.maxOutputBytes) ? opts.maxOutputBytes : MAX_CHILD_OUTPUT_BYTES;
+  const started = Date.now();
+  const outCap = new ByteCap(capLimit);
+  const errCap = new ByteCap(capLimit);
+
+  return new Promise((resolvePromise) => {
+    let settled = false;
+    let forced = false;
+    let reason = null;
+    let spawnError = null;
+    let child = null;
+    let deadlineTimer = null;
+    let graceTimer = null;
+    let hardSettleTimer = null;
+    const listeners = [];
+
+    // ---- AN ALREADY-CANCELLED CALL MUST NOT LAUNCH ANYTHING -----------------
+    //
+    // Plan §T5 怎么做 5: "区分确定未启动、已启动已发送、结果未知." A caller who
+    // cancelled before this function was entered must not have a process started
+    // on their behalf — starting one and immediately killing it would report
+    // `started: true` for work that provably never had to happen, and on a billed
+    // path "immediately killed" is not the same fact as "never dispatched".
+    if (opts.signal !== undefined && opts.signal.aborted) {
+      resolvePromise({
+        reason: "cancelled",
+        started: false,
+        exitCode: null,
+        signal: null,
+        stdout: "",
+        stderr: "",
+        truncated: false,
+        bytes: { stdout: 0, stderr: 0, offered: { stdout: 0, stderr: 0 } },
+        forced: false,
+        durationMs: Date.now() - started,
+      });
+      return;
+    }
+
+    const cleanup = () => {
+      if (deadlineTimer !== null) clearTimeout(deadlineTimer);
+      if (graceTimer !== null) clearTimeout(graceTimer);
+      if (hardSettleTimer !== null) clearTimeout(hardSettleTimer);
+      for (const off of listeners.splice(0)) {
+        try {
+          off();
+        } catch (err) {
+          process.stderr.write(`[degraded] r99b.bounded-stop.cleanup: ${err instanceof Error ? err.message : String(err)}\n`);
+        }
+      }
+    };
+
+    const settle = (over) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolvePromise({
+        reason: reason ?? over.reason ?? "exited",
+        started: child !== null && child.pid !== undefined,
+        exitCode: over.exitCode ?? null,
+        signal: over.signal ?? null,
+        stdout: outCap.text(),
+        stderr: errCap.text(),
+        truncated: outCap.truncated || errCap.truncated,
+        bytes: { stdout: outCap.bytes, stderr: errCap.bytes, offered: { stdout: outCap.offered, stderr: errCap.offered } },
+        forced,
+        durationMs: Date.now() - started,
+        ...(spawnError === null ? {} : { spawnError }),
+      });
+    };
+
+    /**
+     * Kill the child AND ITS DESCENDANTS, adapted per platform.
+     *
+     * A parent-only kill is the specific failure plan §T5 怎么做 2 names: a tool
+     * grandchild would survive and keep writing files after the unit was reported
+     * as stopped. `taskkill /t /f` walks the Windows tree; on POSIX the child is
+     * spawned `detached` so it leads its own process group and the whole group can
+     * be signalled at once.
+     */
+    const killTree = () => {
+      if (child === null || child.pid === undefined) return;
+      forced = true;
+      try {
+        if (process.platform === "win32") {
+          // `taskkill` is the platform's own tree-kill. `/t` includes descendants,
+          // `/f` forces. It is spawned detached and unref'd so the killer itself
+          // cannot hold this promise open.
+          const killer = spawn("taskkill", ["/pid", String(child.pid), "/t", "/f"], {
+            stdio: "ignore",
+            windowsHide: true,
+          });
+          killer.on("error", (err) => {
+            process.stderr.write(`[degraded] r99b.bounded-stop.taskkill: ${err instanceof Error ? err.message : String(err)}\n`);
+            try {
+              child.kill("SIGKILL");
+            } catch {
+              // The child is already gone; nothing to escalate to.
+            }
+          });
+          killer.unref();
+        } else {
+          // `detached: true` made the child a process-group leader, so a negative
+          // pid signals the whole group — the POSIX equivalent of `taskkill /t`.
+          try {
+            process.kill(-child.pid, "SIGKILL");
+          } catch {
+            child.kill("SIGKILL");
+          }
+        }
+      } catch (err) {
+        process.stderr.write(`[degraded] r99b.bounded-stop.kill: ${err instanceof Error ? err.message : String(err)}\n`);
+        try {
+          child.kill("SIGKILL");
+        } catch {
+          // Already dead.
+        }
+      }
+    };
+
+    /** The one shared stop sequence: polite signal, bounded grace, forced kill. */
+    const beginStop = (why) => {
+      if (settled || reason !== null) return;
+      reason = why;
+      // STEP 1: ask the child to stop. On POSIX this is the process GROUP when the
+      // child leads one, so a tool grandchild gets the polite signal too.
+      try {
+        if (process.platform !== "win32" && child !== null && child.pid !== undefined) {
+          try {
+            process.kill(-child.pid, "SIGTERM");
+          } catch {
+            child.kill("SIGTERM");
+          }
+        } else {
+          child?.kill("SIGTERM");
+        }
+      } catch {
+        // A child that is already gone needs no signal; `close` will settle us.
+      }
+      // STEP 2 + 3: after the grace, force the TREE down. The timer is what makes
+      // the stop BOUNDED rather than a hope that the child cooperates.
+      graceTimer = setTimeout(() => {
+        killTree();
+        // STEP 4, the last line of the bound: `close` is AWAITED, but if the OS
+        // never reports it (a wedged handle on a killed tree), the promise still
+        // settles from what was measured. Without this the "bounded" stop would
+        // depend on the very event whose absence caused the original hang.
+        hardSettleTimer = setTimeout(() => settle({}), Math.max(250, graceMs));
+        hardSettleTimer.unref?.();
+      }, Math.max(0, graceMs));
+      graceTimer.unref?.();
+    };
+
+    try {
+      child = spawn(opts.file, opts.args ?? [], {
+        cwd: opts.cwd,
+        env: opts.env,
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
+        // POSIX only: a process-group leader is what makes a tree kill possible.
+        detached: process.platform !== "win32",
+      });
+    } catch (err) {
+      spawnError = redact(err);
+      reason = "spawn_failed";
+      settle({});
+      return;
+    }
+
+    child.stdout?.on("data", (chunk) => outCap.push(chunk));
+    child.stderr?.on("data", (chunk) => errCap.push(chunk));
+
+    // `error` before `close` means the launch itself failed (ENOENT, EACCES). It
+    // is `spawn_failed`, DISTINCT from a timeout: nothing ran, so nothing is
+    // outstanding.
+    child.on("error", (err) => {
+      // An AbortError is our own deadline firing, which `beginStop` already
+      // classified; it must not be re-reported as a launch failure.
+      if (err?.name === "AbortError") return;
+      if (reason === null) reason = "spawn_failed";
+      spawnError = redact(err);
+      settle({});
+    });
+
+    child.on("close", (code, signal) => {
+      if (reason === null) reason = "exited";
+      settle({ exitCode: code, signal: signal ?? null });
+    });
+
+    deadlineTimer = setTimeout(() => beginStop("timeout"), deadlineMs);
+
+    // The caller's cancellation handle (plan §T5 怎么做 4). `once` plus the
+    // explicit listener removal in `cleanup` keeps a long campaign from
+    // accumulating one listener per unit. An already-aborted signal was handled
+    // before the spawn, so by here the signal is live.
+    if (opts.signal !== undefined) {
+      const onAbort = () => beginStop("cancelled");
+      opts.signal.addEventListener("abort", onAbort, { once: true });
+      listeners.push(() => opts.signal.removeEventListener("abort", onAbort));
+    }
+  });
+}
+
+/**
+ * ONE deadline shared by every phase of a unit, so no phase can re-grant itself a
+ * full allowance.
+ *
+ * ---- E4-R99-B (T5): WHY A SHARED BUDGET, NOT A PER-PHASE TIMEOUT -------------
+ *
+ * Plan §T5 怎么做 4 is explicit:
+ *
+ *   "给外层调用提供 AbortSignal 或等价明确取消句柄。dry-run/staging/dispatch 共用剩余
+ *    总期限，不能每个阶段重新获得一整份 campaign 时间."
+ *
+ * A per-phase `setTimeout(fullTimeout)` is a subtle way for a bound to be untrue:
+ * a unit whose deadline is 900s could spend 900s in the dry run, then get a fresh
+ * 900s for the dispatch, then a fresh 900s in cleanup — a "900-second" unit that
+ * runs for 45 minutes. This object is created ONCE per unit and every phase reads
+ * `remainingForPhase()`, so the phases SHARE the total rather than each receiving
+ * a copy of it.
+ *
+ * It also carries the `signal` a phase passes to `boundedStop`, so the campaign
+ * deadline and a user cancellation reach the actual execution instead of stopping
+ * at the worker's own bookkeeping.
+ */
+export class DeadlineBudget {
+  /**
+   * @param totalMs the whole unit's allowance, in milliseconds
+   * @param now injectable clock, so a test can advance time without sleeping
+   */
+  constructor(totalMs, now = () => Date.now()) {
+    this.now = now;
+    this.startedAt = now();
+    this.totalMs = Math.max(0, Number(totalMs));
+    this.controller = new AbortController();
+    this.fired = false;
+    this.timer = null;
+    if (this.totalMs > 0) {
+      this.timer = setTimeout(() => {
+        this.fired = true;
+        this.controller.abort();
+      }, this.totalMs);
+      // A pending deadline must not be the reason the process stays alive: the
+      // worker may finish a unit early and exit.
+      this.timer.unref?.();
+    } else {
+      this.fired = true;
+      this.controller.abort();
+    }
+  }
+
+  /** Milliseconds left in the shared allowance; never negative. */
+  remaining() {
+    return Math.max(0, this.totalMs - (this.now() - this.startedAt));
+  }
+
+  /** What a phase may use. Identical to `remaining()` — the point is that the
+   *  name says the phase inherits the remainder instead of a fresh allowance, so
+   *  a reader cannot mistake it for a per-phase budget. */
+  remainingForPhase() {
+    return this.remaining();
+  }
+
+  /** True once the shared allowance is spent. */
+  expired() {
+    return this.fired || this.remaining() <= 0;
+  }
+
+  /** The cancellation handle a phase passes to `boundedStop`. */
+  get signal() {
+    return this.controller.signal;
+  }
+
+  /** Cancel early (a user cancellation), reporting the same reason a deadline
+   *  does not: the caller distinguishes them by reading `reason`. */
+  cancel() {
+    if (!this.controller.signal.aborted) this.controller.abort();
+  }
+
+  /** Release the timer. Called in a `finally`, so a finished unit leaves nothing
+   *  armed and no listener behind. */
+  dispose() {
+    if (this.timer !== null) clearTimeout(this.timer);
+    this.timer = null;
+  }
+}
+
+/**
+ * A child process whose output is BOUNDED BY BYTES, under the same stop contract
+ * as `boundedStop`.
+ *
+ * Kept as a named wrapper because callers (and tests) read better with it, and
+ * because it is the seam a future in-process provider deadline would use.
+ */
+export function runChild(opts) {
+  return boundedStop({
+    file: opts.file ?? process.execPath,
+    args: opts.args,
+    cwd: opts.cwd,
+    env: opts.env,
+    deadlineMs: opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    graceMs: opts.graceMs ?? SIGKILL_GRACE_MS,
+    maxOutputBytes: opts.maxOutputBytes,
+    signal: opts.signal,
+  });
+}
 
 /** How long `--dry-run` may take. A dry run makes ZERO provider calls and only
  *  estimates, so it is bounded far more tightly than a dispatch. */
@@ -717,68 +1155,6 @@ function childEnvironment(opts = {}) {
 }
 
 /**
- * Run a child process under a REAL deadline.
- *
- * Plan §R99 怎么做 line 166 is explicit: "当前新建 AbortController 却从不触发取消
- * 不算超时实现." So the deadline here is not a decorative AbortController: the
- * timer aborts the controller, the abort kills the child, and an abort leaves a
- * `timeout` outcome rather than a `null` result nobody reads. Buffers are
- * capped, so a child that streams forever cannot exhaust memory before the
- * deadline fires.
- */
-function runChild(opts) {
-  return new Promise((resolvePromise) => {
-    const controller = new AbortController();
-    const stdoutChunks = [];
-    const stderrChunks = [];
-    const MAX_BUFFER = 33_554_432;
-    let timedOut = false;
-    let spawnFailed = null;
-
-    let child;
-    try {
-      child = spawn(process.execPath, opts.args, {
-        cwd: opts.cwd,
-        env: opts.env,
-        signal: controller.signal,
-        stdio: ["ignore", "pipe", "pipe"],
-        windowsHide: true,
-      });
-    } catch (err) {
-      resolvePromise({ code: null, signal: null, stdout: "", stderr: "", timedOut: false, spawnFailed: redact(err) });
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, opts.timeoutMs);
-
-    child.stdout?.on("data", (chunk) => {
-      if (stdoutChunks.length < MAX_BUFFER) stdoutChunks.push(chunk);
-    });
-    child.stderr?.on("data", (chunk) => {
-      if (stderrChunks.length < MAX_BUFFER) stderrChunks.push(chunk);
-    });
-    child.on("error", (err) => {
-      // `AbortError` is our own deadline firing, not a start failure.
-      if (err?.name !== "AbortError") spawnFailed = redact(err);
-    });
-    child.on("close", (code, signal) => {
-      clearTimeout(timer);
-      resolvePromise({
-        code,
-        signal: signal ?? null,
-        stdout: Buffer.concat(stdoutChunks).toString("utf8"),
-        stderr: Buffer.concat(stderrChunks).toString("utf8"),
-        timedOut,
-        spawnFailed,
-      });
-    });
-  });
-}
-
-/**
  * Digest of the inputs that determined a unit's result.
  *
  * Plan §R98 怎么验收: "修改 grant、planDigest 或结果 hash，恢复非零退出." The
@@ -1026,6 +1402,19 @@ export async function runArmUnit(opts) {
   const started = Date.now();
   const now = opts.now ?? (() => Date.now());
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  // ---- ONE deadline for the WHOLE unit (T5 怎么做 4). ------------------------
+  //
+  // Every phase below reads `deadline.remainingForPhase()` and passes
+  // `deadline.signal` to the execution seam, so staging, the arm's dry run, the
+  // dispatch and the evidence write all draw on the SAME allowance. A per-phase
+  // `setTimeout(timeoutMs)` would let a "900s" unit run for 45 minutes by
+  // re-granting itself a full window at each step, which is the specific way plan
+  // §T5 怎么做 4 says a bound must not be implemented.
+  //
+  // The budget is created BEFORE the identity check so a caller's cancellation is
+  // honoured even for a unit that refuses, and disposed in a `finally` at the end
+  // of this function.
+  const deadline = new DeadlineBudget(timeoutMs, now);
   const repoRoot = opts.repoRoot ?? REPO_ROOT;
   const checkoutDir = resolve(opts.checkoutDir);
   // ---- STEP 0: the APPROVED identity, validated BEFORE anything else. ------
@@ -1038,6 +1427,7 @@ export async function runArmUnit(opts) {
   if (identity.issue !== null) {
     // A REFUSAL, not a throw: an incomplete approval is an operator-visible
     // verdict about a unit, and a thrown error would bypass the report.
+    deadline.dispose();
     return refuseIdentity(opts, identity.issue);
   }
   const providerId = identity.providerId;
@@ -1059,6 +1449,12 @@ export async function runArmUnit(opts) {
   // (measured defect N1).
   const reservationCount = 1;
 
+  // ---- The unit's whole body runs under ONE deadline (T5 怎么做 4). ---------
+  //
+  // The `finally` releases the shared timer on EVERY exit path — an early refusal,
+  // a thrown assertion, or the normal terminal record — so a finished unit leaves
+  // nothing armed and no abort listener behind.
+  try {
   assertUnitIdentity(opts);
 
   const build = armBuildIdentity(checkoutDir);
@@ -1292,6 +1688,10 @@ export async function runArmUnit(opts) {
           maxModelCalls,
           ledger,
           firstReservationId: reservation.reservationId,
+          // THE UNIT'S ONE DEADLINE, shared with the dry run and the dispatch
+          // (T5 怎么做 4). The executor checks it before the dry run, between the
+          // dry run and the dispatch, and inside every provider call.
+          deadline,
         });
         budgetStats = executed.budget;
         record.budget = executed.budget;
@@ -1321,7 +1721,20 @@ export async function runArmUnit(opts) {
         consumed = executed.budget.logicalCalls;
         record.reservationIds = [...executed.budget.reservationIds];
 
-        if (executed.report === null) {
+        // ---- THE DEADLINE STOP IS ITS OWN VERDICT (T5 怎么做 7). -----------
+        //
+        // Plan §T5 怎么做 7: "记录 timeout/cancel/output_limit，而非伪装为
+        // case_failed 或 verified pass." A unit stopped by the shared deadline is
+        // reported as `timeout`, NOT as a case that failed and NOT as a pass: the
+        // arm never got to produce a verdict, so claiming one would invent a fact.
+        //
+        // This is checked BEFORE the report, because a unit stopped mid-call may
+        // still have written a PARTIAL report — and classifying that partial report
+        // would let an interrupted run be scored as if it had finished.
+        if (typeof executed.deadlineStop === "string" && executed.deadlineStop !== "") {
+          verdict = { category: "timeout", detail: `E4-R98: ${executed.deadlineStop}` };
+          record.verifierPassed = false;
+        } else if (executed.report === null) {
           // A run that produced no report measured nothing, whatever its exit
           // code. Never a pass.
           verdict = {
@@ -1452,6 +1865,12 @@ export async function runArmUnit(opts) {
   // charges 1, and those are different facts.
   record.consumed = consumed;
   return finish(verdict.category, verdict.detail);
+  } finally {
+    // ONE release point for the shared deadline. On every path — refusal, throw
+    // or terminal record — the timer is cleared, so a completed unit cannot leave
+    // a pending abort that fires during a LATER unit and cancels it.
+    deadline.dispose();
+  }
 }
 
 /** Digest of the unit's stored result. It commits to the verdict, NOT to a

@@ -195,6 +195,63 @@ export function gateFactsFrom(observation) {
 }
 
 /**
+ * Resolve the campaign's own stop condition into ONE predicate.
+ *
+ * ---- E4-R99-B (T5): THE CAMPAIGN NEEDS A STOP TOO --------------------------
+ *
+ * Plan §T5 做什么 1 names THREE things that must be able to end the real
+ * execution: "campaign deadline、unit deadline、用户取消". The unit deadline lives in
+ * the worker; this is the campaign-level half, and it exists because a per-unit
+ * bound does NOT bound a campaign: N units each finishing comfortably inside their
+ * own window can still run long after the operator asked to stop.
+ *
+ * The returned object is a small, explicit contract — `{ stopped(), code, reason }`
+ * — rather than a thrown error, so a cancelled campaign produces a NAMED refusal
+ * (`CAMPAIGN_CANCELLED`) that an operator can act on, distinct from a campaign
+ * that exhausted its own clock (`CAMPAIGN_DEADLINE_EXCEEDED`).
+ *
+ * A caller that supplies neither handle gets an inert stop: the driver behaves
+ * exactly as before, which is what keeps every earlier suite measuring the same
+ * thing.
+ */
+export function makeCampaignStop(opts) {
+  const signal = opts.signal;
+  const deadlineMs = Number.isFinite(opts.campaignDeadlineMs) ? opts.campaignDeadlineMs : null;
+  if (deadlineMs === null && (signal === undefined || signal === null)) {
+    return { stopped: () => false, code: null, reason: "", dispose: () => {} };
+  }
+  const startedAt = typeof opts.now === "function" ? opts.now() : Date.now();
+  const clock = typeof opts.now === "function" ? opts.now : () => Date.now();
+  return {
+    stopped() {
+      // CANCELLATION IS CHECKED FIRST: an operator's explicit stop is the more
+      // specific fact, and reporting a deadline when both are true would hide the
+      // operator's action behind a clock.
+      if (signal !== undefined && signal !== null && signal.aborted) return true;
+      return deadlineMs !== null && clock() - startedAt >= deadlineMs;
+    },
+    get code() {
+      if (signal !== undefined && signal !== null && signal.aborted) return "CAMPAIGN_CANCELLED";
+      return deadlineMs !== null && clock() - startedAt >= deadlineMs ? "CAMPAIGN_DEADLINE_EXCEEDED" : null;
+    },
+    get reason() {
+      if (signal !== undefined && signal !== null && signal.aborted) {
+        return "the campaign was cancelled by its caller; no further unit was dispatched";
+      }
+      if (deadlineMs !== null && clock() - startedAt >= deadlineMs) {
+        return `the campaign's own deadline of ${deadlineMs}ms expired; no further unit was dispatched`;
+      }
+      return "";
+    },
+    dispose() {
+      // No timer is armed (the predicate is polled, not scheduled), so there is
+      // nothing to release. The method exists so a caller has ONE symmetric
+      // teardown shape for the worker's `DeadlineBudget` and this object.
+    },
+  };
+}
+
+/**
  * Run the driver.
  *
  * ORDER IS THE CONTRACT. The gate is evaluated before `makeProvider` is called
@@ -206,6 +263,21 @@ export function gateFactsFrom(observation) {
 export async function runDriver(opts) {
   const { evaluation } = opts.modules;
   const { plan, env, observation, ledgerDir, makeProvider, maxProviderCalls = 0, endpointBaseUrl = null } = opts;
+
+  // ---- THE CAMPAIGN-LEVEL STOP (T5 做什么 1). -------------------------------
+  //
+  // Plan §T5 做什么 1: "campaign deadline、unit deadline、用户取消均可终止实际执行."
+  // The unit deadline is enforced inside the worker; this is the OTHER half — a
+  // stop that applies to the campaign as a whole, so an operator who cancels (or
+  // an authorization window that closes) does not have to wait for every
+  // remaining unit to finish its own allowance first.
+  //
+  // `opts.signal` is the caller's cancellation handle (plan §T5 怎么做 4: "给外层
+  // 调用提供 AbortSignal 或等价明确取消句柄"), and `opts.campaignDeadlineMs` bounds
+  // the whole run. Both are resolved ONCE, here, into a single predicate the loop
+  // consults before each unit, so the two reasons stay distinguishable in the
+  // report (`CAMPAIGN_CANCELLED` vs `CAMPAIGN_DEADLINE_EXCEEDED`).
+  const campaignStop = makeCampaignStop(opts);
 
   const result = {
     driverVersion: DRIVER_VERSION,
@@ -372,6 +444,26 @@ export async function runDriver(opts) {
       result.reason = execCheck.issues.join("; ");
       return result;
     }
+  }
+
+  // ---- STEP 1c: THE CAMPAIGN'S OWN STOP, BEFORE any durable state exists. ---
+  //
+  // Plan §T5 做什么 1: "campaign deadline、unit deadline、用户取消均可终止实际执行."
+  // A campaign that has already been cancelled (or whose own clock is spent) must
+  // not create a ledger, write a campaign header, or open a case state: those are
+  // real side effects, and performing them for a run that will do no work would
+  // leave durable artifacts describing a campaign that never started.
+  //
+  // It runs AFTER the gate and the execution-observation check so those named
+  // refusals keep their own vocabulary — an unauthorized plan is still reported as
+  // unauthorized, not as cancelled — and BEFORE the ledger so the stop costs
+  // nothing. The loop below re-checks it before every unit, so a stop that arrives
+  // MID-run is honoured too.
+  if (campaignStop.stopped()) {
+    result.status = "REFUSED";
+    result.code = campaignStop.code;
+    result.reason = campaignStop.reason;
+    return result;
   }
 
   // ---- STEP 2: the campaign-wide ledger, shared across arms/processes. -----
@@ -594,6 +686,24 @@ export async function runDriver(opts) {
   let stopped = null;
   for (const arm of arms) {
     for (const caseId of plan.authorization.caseIds) {
+      // ---- THE CAMPAIGN'S OWN STOP, checked BEFORE each unit (T5 做什么 1). --
+      //
+      // Plan §T5 做什么 1: "campaign deadline、unit deadline、用户取消均可终止实际
+      // 执行." A unit deadline alone is not enough: a campaign of many units each
+      // finishing inside its own window could still run for hours after the
+      // operator asked it to stop, or after the authorization's own window closed.
+      //
+      // The check is at the TOP of the loop, before any skip decision and before
+      // any unit is dispatched, so a stopped campaign never starts another unit.
+      // It is a REFUSAL with a named code rather than a thrown error: an operator
+      // who cancelled must get a report saying so, not a stack trace.
+      if (campaignStop !== null && campaignStop.stopped()) {
+        result.status = "REFUSED";
+        result.code = campaignStop.code;
+        result.reason = campaignStop.reason;
+        return result;
+      }
+
       const suite = trueSuiteOf(caseId);
       const unitKey = {
         experimentId: plan.planDigest,
@@ -1301,6 +1411,10 @@ OPTIONS
                          identity the plan binds, or the run is refused before any
                          provider or worker exists.
   --timeout-ms <n>       Per-unit deadline for the arm worker.
+  --campaign-deadline-ms <n>
+                         Deadline for the WHOLE campaign (T5). Checked before
+                         each unit, so a stop does not wait for the remaining
+                         units to each exhaust their own per-unit allowance.
   --now <iso>            A TEST clock. Only honoured together with --fake-provider
                          or --rehearse; a production run always reads the real clock.
   --help                 Print this text and exit 0.
@@ -1313,7 +1427,7 @@ EXIT CODES
  *  being silently ignored (plan §T4 怎么做 2: "参数校验"). */
 const KNOWN_FLAGS = new Set([
   "--plan", "--out", "--ledger", "--baseline-dir", "--candidate-dir",
-  "--provider", "--model", "--endpoint", "--timeout-ms", "--now",
+  "--provider", "--model", "--endpoint", "--timeout-ms", "--campaign-deadline-ms", "--now",
   "--arm-worker", "--fake-provider", "--rehearse", "--interrupt-after-first-arm", "--help",
 ]);
 
@@ -1436,7 +1550,31 @@ export async function main(argv) {
   // compare the authorization's instant against a real one.
   const observationForRun = { ...observation, now: observation.now ?? now };
 
-  const result = await runDriver({
+  // ---- THE OPERATOR'S CANCEL HANDLE (T5 做什么 1, 怎么做 4). -----------------
+  //
+  // Plan §T5 做什么 1: "campaign deadline、unit deadline、用户取消均可终止实际执行."
+  // For a CLI, "user cancellation" IS Ctrl-C, so the driver turns the real
+  // SIGINT/SIGTERM into an AbortSignal and hands it to `runDriver`, whose loop
+  // consults it before each unit — so a stop refuses the NEXT unit rather than
+  // waiting for the remaining ones to each finish their own allowance.
+  //
+  // The handlers are installed only for the duration of the run and removed in the
+  // `finally`: this function is called many times in one process (every test
+  // does), so an un-removed listener per call would accumulate without bound and
+  // would keep the process alive.
+  const cancelController = new AbortController();
+  const onCancelSignal = (name) => {
+    cancelController.abort();
+    process.stderr.write(`E4-R97: received ${name}; stopping the campaign after the current unit\n`);
+  };
+  const sigint = () => onCancelSignal("SIGINT");
+  const sigterm = () => onCancelSignal("SIGTERM");
+  process.on("SIGINT", sigint);
+  process.on("SIGTERM", sigterm);
+
+  let result;
+  try {
+  result = await runDriver({
     modules: { evaluation },
     plan,
     env: process.env,
@@ -1460,6 +1598,12 @@ export async function main(argv) {
     // The endpoint the campaign resolved. Only the arm-worker path consumes it,
     // where it is checked against the plan's approved identity before use.
     ...(flag("--endpoint") === undefined ? {} : { endpointBaseUrl: flag("--endpoint") }),
+    // The CAMPAIGN-level stop (T5). Checked before each unit, so a cancelled or
+    // over-deadline campaign refuses the next unit rather than starting it.
+    ...(flag("--campaign-deadline-ms") === undefined
+      ? {}
+      : { campaignDeadlineMs: Number(flag("--campaign-deadline-ms")) }),
+    ...(cancelController.signal === null ? {} : { signal: cancelController.signal }),
   });
 
   // The DEVELOPMENT TOOL's verdict is deliberately not a campaign verdict.
@@ -1488,6 +1632,13 @@ export async function main(argv) {
   // tool unusable in a script; the honest label lives in `status`/`devTool`.
   const exitBasis = fakeProvider ? result.campaignStatus : result.status;
   return exitBasis === "COMPLETE" ? EXIT_OK : EXIT_REFUSED;
+  } finally {
+    // ONE removal point for the cancel handlers, on every path — a completed run,
+    // a refusal, or a throw. Without it, calling `main` repeatedly in one process
+    // (as the test suite does) would accumulate listeners without bound.
+    process.removeListener("SIGINT", sigint);
+    process.removeListener("SIGTERM", sigterm);
+  }
 }
 
 // Run only when invoked directly, so the module stays importable by tests.

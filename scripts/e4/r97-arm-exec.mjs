@@ -355,6 +355,23 @@ export async function runArmCaseInProcess(opts) {
   const { evaluation, arm, caseDef, scriptShape } = opts;
   const modules = opts.modules ?? (await loadArmModules(arm.checkoutDir));
 
+  // ---- THE SHARED DEADLINE (T5 怎么做 4). -----------------------------------
+  //
+  // `opts.deadline` is the unit's ONE deadline object, created by the worker
+  // BEFORE this phase and shared with staging and the arm's own dry run. Reading
+  // `remainingForPhase()` here — rather than starting a fresh timer — is what
+  // makes "dry-run/staging/dispatch 共用剩余总期限" true: a case that begins after
+  // the dry run has already spent most of the allowance inherits only what is
+  // left.
+  //
+  // This module deliberately does NOT construct a default by importing the
+  // worker: the worker imports THIS module, so the dependency runs one way and a
+  // cycle would make the executor unloadable on its own. The seam is instead an
+  // explicit, minimal contract — `{ remainingForPhase(), expired(), signal }` —
+  // which the worker's `DeadlineBudget` satisfies and a test can satisfy with a
+  // four-line stub.
+  const deadline = opts.deadline ?? null;
+
   // The arm's own scripted provider, in the arm's own object shape.
   const SP = modules.ScriptedModelProvider;
   const script = scriptForCase(caseDef, scriptShape);
@@ -387,6 +404,10 @@ export async function runArmCaseInProcess(opts) {
   // default, the ref captured here would show it.
   const capturedRequests = [];
   let executedModelRef = null;
+  // Set when the shared deadline stopped a call. Reported so the worker can
+  // classify the unit as `timeout` rather than inferring a failure from a
+  // truncated stream or a missing report.
+  let deadlineStop = null;
   const capturing = {
     id: provider.id,
     listModels: () => provider.listModels(),
@@ -400,8 +421,30 @@ export async function runArmCaseInProcess(opts) {
       const c = provider.createClient(modelRef, config);
       return {
         async *generate(request, signal) {
+          // ---- THE DEADLINE REACHES THE ACTUAL CALL (T5 怎么做 1/7). --------
+          //
+          // Plan §T5 做什么 1 requires the campaign deadline to be able to end the
+          // REAL execution, and §怎么验收 2 lists "provider 流 hang" as a case that
+          // must end. Checking here — at the point the arm's own provider is about
+          // to be driven — is what makes a hung provider stream stop: the check is
+          // inside the loop the arm drives, so it cannot be outlived by a provider
+          // that never yields.
+          //
+          // The check runs BEFORE the request is recorded, so a refused call is not
+          // counted as one that left.
+          if (deadline !== null && deadline.expired()) {
+            deadlineStop = "the unit's shared deadline expired before the next provider call";
+            throw new Error(`E4-R99-B: ${deadlineStop}`);
+          }
           capturedRequests.push(summarizeRequest(request));
-          yield* c.generate(request, signal);
+          // The arm's own signal and the unit's shared deadline are BOTH honoured:
+          // a provider that respects its signal now also stops when the campaign
+          // says so, rather than only when the arm decides to give up.
+          const merged = mergeSignals(signal, deadline === null ? undefined : deadline.signal);
+          yield* c.generate(request, merged);
+          if (deadline !== null && deadline.expired() && deadlineStop === null) {
+            deadlineStop = "the unit's shared deadline expired during the provider call";
+          }
         },
       };
     },
@@ -441,8 +484,53 @@ export async function runArmCaseInProcess(opts) {
   // calls. Reading the identity out of this instead of echoing the caller's own
   // argv is the difference between "the flag was passed" and "the arm resolved
   // the identity the plan approved".
+  // The DRY RUN is a phase of the same unit, so it draws on the SAME allowance
+  // (T5 怎么做 4). A dry run is refused outright when the allowance is already
+  // spent: it costs zero provider calls but it is not free — it is wall clock the
+  // dispatch then does not have, and letting it run would re-grant the phase a
+  // window the unit no longer owns.
+  if (deadline !== null && deadline.expired()) {
+    return {
+      execVersion: ARM_EXEC_VERSION,
+      arm: arm.label,
+      checkoutDir: modules.dir,
+      exitCode: null,
+      lines: [],
+      report: null,
+      reportPath: null,
+      capturedRequests: [],
+      budget: { ...stats },
+      scriptShape,
+      executionIdentity: null,
+      execution: null,
+      deadlineStop: "the unit's shared deadline expired before the arm's dry run",
+    };
+  }
   const dryRun = await modules.runBenchmarkCommand([...args, "--dry-run"], capturing);
   const declaredPlan = parseDryRunPlan(dryRun.lines);
+
+  // A dispatch is only attempted while the unit still owns time. `deadlineStop`
+  // is what the worker turns into a `timeout` verdict, so an expired unit is
+  // reported as stopped rather than as a case that mysteriously produced no
+  // report (T5 怎么做 7: "记录 timeout/cancel/output_limit，而非伪装为 case_failed
+  // 或 verified pass").
+  if (deadline !== null && deadline.expired()) {
+    return {
+      execVersion: ARM_EXEC_VERSION,
+      arm: arm.label,
+      checkoutDir: modules.dir,
+      exitCode: null,
+      lines: dryRun.lines,
+      report: null,
+      reportPath: null,
+      capturedRequests,
+      budget: { ...stats },
+      scriptShape,
+      executionIdentity: null,
+      execution: null,
+      deadlineStop: "the unit's shared deadline expired between the dry run and the dispatch",
+    };
+  }
 
   const res = await modules.runBenchmarkCommand(args, capturing);
 
@@ -524,6 +612,9 @@ export async function runArmCaseInProcess(opts) {
     executionIdentity,
     // The arm's own executed bytes, hashed by content (N7 / T4 怎么做 8).
     execution: await armExecutionDigest(arm.checkoutDir),
+    // Non-null when the SHARED deadline stopped this unit mid-phase (T5). The
+    // worker reads it to report `timeout` rather than inferring a cause.
+    deadlineStop,
   };
 }
 
@@ -552,6 +643,42 @@ export function parseDryRunPlan(lines) {
     modelId: typeof parsed.modelId === "string" ? parsed.modelId : null,
     endpointIdentity: typeof parsed.endpointIdentity === "string" ? parsed.endpointIdentity : null,
   };
+}
+
+/**
+ * Combine the arm's own cancellation signal with the unit's shared deadline.
+ *
+ * The arm's provider contract takes ONE `AbortSignal`, but two independent things
+ * must be able to stop a call: the arm's own decision (it may give up on its own)
+ * and the campaign's deadline (T5: "campaign deadline ... 均可终止实际执行"). This
+ * returns a signal that aborts when EITHER does, so neither reason is lost and the
+ * arm cannot outlive the campaign by ignoring the one it was handed.
+ *
+ * The merged signal is returned as-is when only one input exists, so the common
+ * path allocates nothing.
+ */
+export function mergeSignals(armSignal, deadlineSignal) {
+  if (deadlineSignal === undefined) return armSignal;
+  if (armSignal === undefined) return deadlineSignal;
+  if (armSignal === deadlineSignal) return armSignal;
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.any === "function") {
+    return AbortSignal.any([armSignal, deadlineSignal]);
+  }
+  // Fallback for a runtime without `AbortSignal.any`: a small controller that
+  // follows both, with the listeners removed once it aborts so a long campaign
+  // does not accumulate them.
+  const controller = new AbortController();
+  const follow = (sig) => {
+    if (sig.aborted) {
+      controller.abort();
+      return;
+    }
+    const onAbort = () => controller.abort();
+    sig.addEventListener("abort", onAbort, { once: true });
+  };
+  follow(armSignal);
+  follow(deadlineSignal);
+  return controller.signal;
 }
 
 /**
