@@ -411,3 +411,199 @@ describe("E4-R97 G5: the budget holds ACROSS PROCESSES, not just in memory", () 
     await rm(lockPath, { force: true });
   });
 });
+
+describe("E4-R97 G6: hostile budget data can never INCREASE the allowance (R98 / F3)", () => {
+  // Plan §R98 怎么做: "严格校验 consumed、reserved、transportRetries、pid、时间、状态
+  // 组合和唯一 reservationId … committed 必須满足 0 <= consumed <= reserved … 任何
+  // 计算结果违反 0 <= remaining <= granted 必须拒绝，不能靠 clamp 掩盖错误."
+  //
+  // MEASURED RED (plan §0.2): {"grant":3,"consumed":-100,"remaining":103} was
+  // ACCEPTED by parseR97Ledger.
+
+  const writeLedger = async (dir: string, body: unknown): Promise<void> => {
+    await writeFile(join(dir, R97_LEDGER_FILENAME), `${JSON.stringify(body, null, 2)}\n`, "utf8");
+  };
+
+  it("REFUSES a negative consumed instead of inflating the remaining budget", async () => {
+    const dir = await tempDir();
+    await writeLedger(dir, {
+      schemaVersion: R97_LEDGER_SCHEMA,
+      planDigest: PLAN,
+      campaignModelCalls: 3,
+      entries: [
+        { reservationId: "r0", arm: "baseline", pid: 1, reservedAt: 0, reserved: 1, status: "committed", consumed: -100, transportRetries: 0 },
+      ],
+    });
+    await expect(readR97LedgerFile(dir)).rejects.toThrow(/consumed|negative|safe integer|0 <= consumed/i);
+    // And no reader may report the inflated view either.
+    await expect(readR97BudgetView(dir)).rejects.toThrow();
+  });
+
+  it("parseR97Ledger names the defect for every illegal counter", () => {
+    const base = { schemaVersion: R97_LEDGER_SCHEMA, planDigest: PLAN, campaignModelCalls: 3 };
+    const bad: Array<[string, unknown]> = [
+      ["negative consumed", { ...base, entries: [{ reservationId: "r0", reserved: 1, status: "committed", consumed: -1 }] }],
+      ["non-integer consumed", { ...base, entries: [{ reservationId: "r0", reserved: 1, status: "committed", consumed: 1.5 }] }],
+      ["consumed above reserved", { ...base, entries: [{ reservationId: "r0", reserved: 1, status: "committed", consumed: 2 }] }],
+      ["negative reserved", { ...base, entries: [{ reservationId: "r0", reserved: -1, status: "reserved" }] }],
+      ["negative transportRetries", { ...base, entries: [{ reservationId: "r0", reserved: 1, status: "committed", consumed: 1, transportRetries: -5 }] }],
+      ["non-integer transportRetries", { ...base, entries: [{ reservationId: "r0", reserved: 1, status: "committed", consumed: 1, transportRetries: 0.5 }] }],
+      ["duplicate reservationId", { ...base, entries: [
+        { reservationId: "dup", reserved: 1, status: "committed", consumed: 1 },
+        { reservationId: "dup", reserved: 1, status: "committed", consumed: 1 },
+      ] }],
+      ["committed without consumed", { ...base, entries: [{ reservationId: "r0", reserved: 1, status: "committed", consumed: null }] }],
+      ["abandoned with non-zero consumed", { ...base, entries: [{ reservationId: "r0", reserved: 1, status: "abandoned", consumed: 3 }] }],
+      ["unknown with a consumed count", { ...base, entries: [{ reservationId: "r0", reserved: 1, status: "unknown", consumed: 1 }] }],
+      ["grant above safe integer", { schemaVersion: R97_LEDGER_SCHEMA, planDigest: PLAN, campaignModelCalls: Number.MAX_SAFE_INTEGER + 2, entries: [] }],
+    ];
+    for (const [name, body] of bad) {
+      const { ledger: parsed, issue } = parseR97Ledger(body);
+      expect(parsed, `${name} must be REFUSED`).toBeNull();
+      expect(issue, `${name} must name a defect`).toBeTruthy();
+    }
+  });
+
+  it("viewOfR97Ledger never reports remaining outside [0, granted] and never clamps", () => {
+    // A well-formed file cannot produce an out-of-range view; the invariant is
+    // asserted on the pure projection for a range of legal entry mixes.
+    const cases: R97LedgerFile[] = [
+      ledger([]),
+      ledger([{ status: "committed", consumed: 3, reserved: 3 }]),
+      ledger([{ status: "unknown", reserved: 3 }]),
+      ledger([{ status: "reserved", reserved: 3 }]),
+      ledger([{ status: "abandoned", consumed: 0, reserved: 2 }]),
+    ];
+    for (const l of cases) {
+      const v = viewOfR97Ledger(l);
+      expect(v.remaining, JSON.stringify(l.entries)).toBeGreaterThanOrEqual(0);
+      expect(v.remaining, JSON.stringify(l.entries)).toBeLessThanOrEqual(v.granted);
+    }
+  });
+
+  it("a commit cannot record a negative or fractional consumed count", async () => {
+    const dir = await tempDir();
+    const l = await openR97BudgetLedger(dir, { planDigest: PLAN, campaignModelCalls: 3 });
+    const r = await l.reserve("baseline", 1);
+    await expect(l.commit(r.reservationId!, -1)).rejects.toThrow();
+    await expect(l.commit(r.reservationId!, 0.5)).rejects.toThrow();
+    // The reservation is still open after the refused commits.
+    expect((await l.view()).outstanding).toBe(1);
+  });
+
+  it("refuses a transportRetries count that is not a non-negative safe integer", async () => {
+    const dir = await tempDir();
+    const l = await openR97BudgetLedger(dir, { planDigest: PLAN, campaignModelCalls: 3 });
+    const r = await l.reserve("baseline", 1);
+    await expect(l.commit(r.reservationId!, 1, -2)).rejects.toThrow();
+    await expect(l.commit(r.reservationId!, 1, 1.25)).rejects.toThrow();
+  });
+});
+
+describe("E4-R97 G7: an ESTABLISHED campaign with missing/foreign state fails closed (R98 / F4)", () => {
+  // Plan §R98 怎么做: "`read() ?? emptyLedger()` 只能用于明确的首次创建。恢复时账本
+  // 不存在、JSON损坏、被替换为别的计划，都报 BUDGET_STATE_MISSING/CORRUPT/MISMATCH，
+  // 不能刷新额度."
+  //
+  // MEASURED RED: after the grant was fully consumed, deleting the ledger file
+  // inside the diagnostic directory let the SAME open handle reserve again.
+
+  it("REFUSES to refresh the allowance when the ledger disappears after open", async () => {
+    const dir = await tempDir();
+    const l = await openR97BudgetLedger(dir, { planDigest: PLAN, campaignModelCalls: 3 });
+    const r = await l.reserve("baseline", 3);
+    expect(r.ok).toBe(true);
+    await l.commit(r.reservationId!, 3);
+    expect((await l.view()).remaining).toBe(0);
+
+    // The deletion a faulty/attacker filesystem could perform.
+    await rm(join(dir, R97_LEDGER_FILENAME), { force: true });
+
+    await expect(l.reserve("candidate", 1)).rejects.toThrow(/BUDGET_STATE_MISSING|missing|disappear/i);
+    await expect(l.view()).rejects.toThrow(/BUDGET_STATE_MISSING|missing|disappear/i);
+  });
+
+  it("REFUSES to reuse a ledger that was replaced by another plan's state", async () => {
+    const dir = await tempDir();
+    const l = await openR97BudgetLedger(dir, { planDigest: PLAN, campaignModelCalls: 3 });
+    // Another campaign's ledger lands in the same directory.
+    await writeFile(
+      join(dir, R97_LEDGER_FILENAME),
+      `${JSON.stringify({ schemaVersion: R97_LEDGER_SCHEMA, planDigest: OTHER_PLAN, campaignModelCalls: 3, entries: [] }, null, 2)}\n`,
+      "utf8",
+    );
+    await expect(l.reserve("baseline", 1)).rejects.toThrow(/BUDGET_STATE_MISMATCH|different plan/i);
+  });
+
+  it("REFUSES to treat a corrupted ledger as an empty (full) budget on a resume", async () => {
+    const dir = await tempDir();
+    const l = await openR97BudgetLedger(dir, { planDigest: PLAN, campaignModelCalls: 3 });
+    await writeFile(join(dir, R97_LEDGER_FILENAME), "{ this is not json", "utf8");
+    await expect(l.reserve("baseline", 1)).rejects.toThrow(/CORRUPT|not valid JSON|damaged/i);
+  });
+
+  it("still bootstraps normally when NO ledger exists yet (true first creation)", async () => {
+    const dir = await tempDir();
+    const l = await openR97BudgetLedger(dir, { planDigest: PLAN, campaignModelCalls: 3 });
+    const r = await l.reserve("baseline", 1);
+    expect(r.ok).toBe(true);
+    expect((await l.view()).remaining).toBe(2);
+  });
+});
+
+describe("E4-R97 G8: lock ownership is by live owner token, not by age (R98 / F4)", () => {
+  // Plan §R98 怎么做: "锁采用 owner token + 进程存活判断；年龄只能作为检查线索。活
+  // owner 超时返回占用错误，不能删锁。释放时只能删除自己仍持有的 token."
+  //
+  // MEASURED RED: a lock older than 60s whose owner was ALIVE was taken over.
+
+  it("REFUSES to steal a lock whose owner is still alive, however old it is", async () => {
+    const dir = await tempDir();
+    const lockPath = join(dir, R97_LEDGER_LOCK_FILENAME);
+    // A lock owned by THIS live process, with an mtime far beyond the stale age.
+    await writeFile(lockPath, JSON.stringify({ token: "other-owner-token", pid: process.pid }), "utf8");
+    const ancient = new Date(Date.now() - 10 * 60_000);
+    const { utimes } = await import("node:fs/promises");
+    await utimes(lockPath, ancient, ancient);
+
+    await expect(
+      openR97BudgetLedger(dir, { planDigest: PLAN, campaignModelCalls: 3, lockTimeoutMs: 200 }),
+    ).rejects.toThrow(/lock/i);
+
+    // And the live owner's lock is STILL THERE — never deleted by the loser.
+    expect(await readFile(lockPath, "utf8")).toContain("other-owner-token");
+    await rm(lockPath, { force: true });
+  });
+
+  it("takes over a lock whose owner is truly dead, even when it is young", async () => {
+    const dir = await tempDir();
+    const lockPath = join(dir, R97_LEDGER_LOCK_FILENAME);
+    // A REAL child process that has already exited: its pid is a dead owner.
+    const { execFile } = await import("node:child_process");
+    const { promisify } = await import("node:util");
+    const run = promisify(execFile);
+    const { stdout } = await run(process.execPath, ["-e", "process.stdout.write(String(process.pid))"]);
+    const deadPid = Number(stdout.trim());
+    expect(Number.isSafeInteger(deadPid)).toBe(true);
+    await writeFile(lockPath, JSON.stringify({ token: "dead-owner-token", pid: deadPid }), "utf8");
+
+    const l = await openR97BudgetLedger(dir, { planDigest: PLAN, campaignModelCalls: 3, lockTimeoutMs: 2_000 });
+    const r = await l.reserve("baseline", 1);
+    expect(r.ok).toBe(true);
+  });
+
+  it("a taker's release never deletes a lock another owner has since acquired", async () => {
+    const dir = await tempDir();
+    const l = await openR97BudgetLedger(dir, { planDigest: PLAN, campaignModelCalls: 3 });
+    // While the handle is open and idle, another owner's lock appears.
+    const lockPath = join(dir, R97_LEDGER_LOCK_FILENAME);
+    await l.reserve("baseline", 1);
+    await writeFile(lockPath, JSON.stringify({ token: "third-party-token", pid: process.pid }), "utf8");
+    // A refused acquisition must leave that foreign lock in place.
+    await expect(
+      openR97BudgetLedger(dir, { planDigest: PLAN, campaignModelCalls: 3, lockTimeoutMs: 150 }),
+    ).rejects.toThrow(/lock/i);
+    expect(await readFile(lockPath, "utf8")).toContain("third-party-token");
+    await rm(lockPath, { force: true });
+  });
+});

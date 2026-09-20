@@ -334,6 +334,58 @@ describe("E4-R97 D2: the normal path runs the pair within the campaign budget", 
     expect(after.remaining).toBe(320 - caseCount * 2);
   });
 
+  it("F2: a SECOND run of the same plan executes ZERO new units (case resume)", async () => {
+    // Plan §0.1 F2 / §R98 怎么验收: "完成8例×2臂后，第二次正常 resume 新增调用0，
+    // 完成记录数量仍16." MEASURED RED before R98: the first run committed 16 calls
+    // and the second run committed ANOTHER 16 (total 32) because nothing recorded
+    // which case×arm units were already finished.
+    const plan = await finalizedPlan();
+    const dir = await tempDir();
+    const caseCount = plan.authorization!.caseIds.length;
+
+    const first = await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: dir });
+    expect(first.result["status"]).toBe("COMPLETE");
+    expect(first.result["logicalCalls"]).toBe(caseCount * 2);
+    const armed = await (evaluation["readR97BudgetView"] as (d: string) => Promise<{ committed: number }>)(dir);
+    expect(armed.committed).toBe(caseCount * 2);
+
+    // The resume: same plan, same ledger, same output dir.
+    const second = await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: dir });
+    expect(second.result["status"]).toBe("COMPLETE");
+    expect(second.result["logicalCalls"]).toBe(0);
+    expect(second.result["providerRequests"]).toBe(0);
+    expect((second.result["reservations"] as unknown[]).length).toBe(0);
+
+    // The budget did NOT move, and the completed set is still exactly 2N.
+    const after = await (evaluation["readR97BudgetView"] as (d: string) => Promise<{ committed: number }>)(dir);
+    expect(after.committed).toBe(caseCount * 2);
+    expect(second.result["completedUnits"]).toBe(caseCount * 2);
+  });
+
+  it("F2: a partial run resumes ONLY the missing units", async () => {
+    const plan = await finalizedPlan();
+    const dir = await tempDir();
+    const caseCount = plan.authorization!.caseIds.length;
+    // Pre-complete the whole baseline arm through the public store API.
+    const cases = plan.authorization!.caseIds;
+    const state = await (evaluation["openR97ExecutionState"] as (d: string, o: unknown) => Promise<{
+      begin: (k: unknown, o: unknown) => Promise<string>;
+      complete: (id: string, o: unknown) => Promise<void>;
+    }>)(dir, { experimentId: plan.planDigest!, planDigest: plan.planDigest! });
+    for (const caseId of cases) {
+      const attempt = await state.begin(
+        { experimentId: plan.planDigest!, caseId, suite: caseId.split("/")[0], arm: "baseline", repetition: 1 },
+        { reservationId: `seed-${caseId}`, inputDigest: "seeded" },
+      );
+      await state.complete(attempt, { resultHash: `seeded-${caseId}` });
+    }
+
+    const run = await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: dir });
+    // Only the candidate arm's N units remained.
+    expect(run.result["logicalCalls"]).toBe(caseCount);
+    expect(run.result["completedUnits"]).toBe(caseCount * 2);
+  });
+
   it("a campaign budget smaller than the pair stops EARLY and reports PARTIAL", async () => {
     const plan = await finalizedPlan();
     const dir = await tempDir();

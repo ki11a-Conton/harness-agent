@@ -23,6 +23,7 @@
 // 函数，要驱动实际 CLI/driver 入口."
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -75,9 +76,10 @@ export async function loadFinalizedPlan(planPath) {
 }
 
 /** Render a provider error event (or thrown value) into a short, non-secret
- *  failure text. The real provider pre-summarizes and redacts its error
- *  messages; this is a belt-and-braces cap so a failure string can never carry
- *  raw keys/endpoints into the persisted result (D5). */
+ *  failure text. Plan §R98 / F6 requires the text to be REDACTED, not merely
+ *  truncated: the measured defect was that a synthetic `Bearer <canary>` and
+ *  `sk-…` survived verbatim into the result. Redaction happens BEFORE the
+ *  length cap, so a secret can never be half-printed. */
 export function failureTextOf(value) {
   let text = "";
   if (value && typeof value === "object") {
@@ -92,7 +94,45 @@ export function failureTextOf(value) {
   } else {
     text = "unknown provider error";
   }
+  return redactFailureText(text);
+}
+
+/**
+ * Redact credentials and endpoint secrets from a failure string.
+ *
+ * Allowlist-by-construction is not possible for a free-form provider message, so
+ * this removes the shapes that carry secrets: bearer tokens, `sk-`-style API
+ * keys, URL userinfo, and query parameters that commonly hold keys. Anything
+ * that could be a credential is replaced by a placeholder, then the result is
+ * collapsed and capped.
+ */
+export function redactFailureText(raw) {
+  let text = String(raw);
+  // Authorization headers / bearer tokens (the measured canary shape).
+  text = text.replace(/\b(Bearer|Token|ApiKey|Api-Key)\s+[^\s,;)"']+/gi, "$1 <redacted>");
+  // Provider API keys (sk-…, rk-…, pk-…, and long base64-ish assignments).
+  text = text.replace(/\b(sk|rk|pk|api)[-_][A-Za-z0-9][A-Za-z0-9_-]{6,}/gi, "<redacted-key>");
+  // Credentials embedded in the query string.
+  text = text.replace(/([?&](?:api[_-]?key|key|token|access[_-]?token|password|secret)=)[^&\s]+/gi, "$1<redacted>");
+  // URL userinfo (user:password@host).
+  text = text.replace(/([a-z][a-z0-9+.-]*:\/\/)[^/\s@]+@/gi, "$1<redacted>@");
   return text.replace(/\s+/g, " ").trim().slice(0, 300);
+}
+
+/** Digest of the inputs that determined a unit's result: the plan's frozen case
+ *  fingerprint plus the arm and observed build. A changed case content, arm
+ *  build or model therefore changes the digest, so a resume cannot attribute an
+ *  old result to new inputs (plan §R98 怎么做). */
+export function inputDigestOf(plan, caseId) {
+  const fingerprint = plan.authorization.caseFingerprints?.[caseId] ?? "unknown";
+  return `case:${caseId}|fp:${fingerprint}|exec:${plan.observation?.executingSourceSha ?? "?"}|driver:${DRIVER_VERSION}`;
+}
+
+/** Digest of the stored result of one unit. The driver records what KIND of
+ *  terminal outcome it was; the real per-case result artifacts are attached by
+ *  the R99 execution path, which replaces this with the artifact hash. */
+export function resultHashOf(arm, caseId, outcome) {
+  return createHash("sha256").update(`${arm}|${caseId}|${outcome}`).digest("hex");
 }
 
 /**
@@ -152,6 +192,12 @@ export async function runDriver(opts) {
     // D10: per (arm, caseId) failure records for calls that ended in an
     // error event, an exception, a cancellation, or an incomplete stream.
     failures: [],
+    // R98 (F2): units found already terminal in the durable execution state.
+    skippedUnits: 0,
+    // R98 (F2): in-flight units a crashed process left behind, now quarantined.
+    recoveredUnits: 0,
+    // R98 (F2): terminal units in the durable state after this run.
+    completedUnits: 0,
     authorization: null,
   };
 
@@ -214,6 +260,19 @@ export async function runDriver(opts) {
   const recovered = await ledger.recover();
   result.budget = recovered.view;
 
+  // ---- STEP 2b: the durable case×arm×repetition state (plan §R98 / F2). ----
+  // The ledger answers "how many calls may still be made"; this answers "which
+  // units are already finished". Without it a second run of the SAME plan
+  // committed another 2N calls (measured: 16 then 16 = 32).
+  const execState = await evaluation.openR97ExecutionState(ledgerDir, {
+    experimentId: plan.planDigest,
+    planDigest: plan.planDigest,
+  });
+  // A unit left `running` by a dead process is quarantined as outcome_unknown:
+  // it is neither skipped as a success nor silently re-dispatched.
+  const inFlight = await execState.recoverInFlight();
+  result.recoveredUnits = inFlight.unknown;
+
   // ---- STEP 3: only NOW may a provider exist. -----------------------------
   const { provider, state } = makeProvider();
   const modelRef = { id: observation.modelId };
@@ -227,12 +286,35 @@ export async function runDriver(opts) {
   let stopped = null;
   for (const arm of arms) {
     for (const caseId of plan.authorization.caseIds) {
+      const unitKey = {
+        experimentId: plan.planDigest,
+        caseId,
+        suite: caseId.split("/")[0] ?? "regression",
+        arm,
+        repetition: 1,
+      };
+      // RESUME SKIP: a unit with a terminal record is not re-run, so a resumed
+      // campaign spends nothing on work it already finished.
+      if (await execState.isDone(unitKey)) {
+        result.skippedUnits += 1;
+        continue;
+      }
+      if (await execState.mustNotRetry(unitKey)) {
+        result.failures.push({ arm, caseId, error: "outcome_unknown: the previous attempt may have been billed and requires an explicit reconciliation" });
+        continue;
+      }
       const reservation = await ledger.reserve(arm, 1);
       if (!reservation.ok) {
         stopped = { arm, caseId, reason: reservation.reason };
         break;
       }
       result.reservations.push({ arm, caseId, id: reservation.reservationId });
+      // Persist `running` BEFORE the request is allowed to leave (plan §R98:
+      // "先持久化 running/reservation，再允许请求发出").
+      const attemptId = await execState.begin(unitKey, {
+        reservationId: reservation.reservationId,
+        inputDigest: inputDigestOf(plan, caseId),
+      });
       // The call. `state.requests` is the ground truth for "how many provider
       // requests happened", independent of the ledger.
       let consumed = 0;
@@ -270,6 +352,11 @@ export async function runDriver(opts) {
       result.transportRetries += retries;
       if (outcome !== "ok") {
         result.failures.push({ arm, caseId, error: outcome });
+        // A failed unit is TERMINAL too: it is recorded so a resume does not
+        // silently re-bill a call that already produced a result (of failure).
+        await execState.fail(attemptId, { resultHash: resultHashOf(arm, caseId, outcome), detail: outcome });
+      } else {
+        await execState.complete(attemptId, { resultHash: resultHashOf(arm, caseId, "ok") });
       }
       // A hard ceiling on the FAKE provider, so a test can prove the driver
       // cannot exceed what it was given.
@@ -286,6 +373,9 @@ export async function runDriver(opts) {
 
   result.providerRequests = state.requests;
   result.budget = await ledger.view();
+  result.completedUnits = (await execState.records()).filter(
+    (r) => r.status === "completed" || r.status === "failed",
+  ).length;
 
   if (stopped !== null) {
     result.status = "PARTIAL";
@@ -306,7 +396,11 @@ export async function runDriver(opts) {
   }
 
   result.status = "COMPLETE";
-  result.reason = `both arms ran over ${plan.authorization.caseIds.length} case(s) within a ${budgetTotal}-call campaign budget`;
+  const caseCount = plan.authorization.caseIds.length;
+  result.reason =
+    result.skippedUnits > 0
+      ? `both arms covered ${caseCount} case(s) within a ${budgetTotal}-call campaign budget — ${result.skippedUnits} unit(s) were already terminal and were NOT re-executed (${result.logicalCalls} new logical call(s))`
+      : `both arms ran over ${caseCount} case(s) within a ${budgetTotal}-call campaign budget`;
   return result;
 }
 
