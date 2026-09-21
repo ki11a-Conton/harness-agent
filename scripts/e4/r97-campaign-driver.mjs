@@ -240,6 +240,33 @@ export function inputDigestOf(plan, caseId) {
   return `case:${caseId}|fp:${fingerprint}|exec:${plan.observation?.executingSourceSha ?? "?"}|driver:${DRIVER_VERSION}`;
 }
 
+/**
+ * The arm build identity as it may be PUBLISHED.
+ *
+ * MEASURED (CI run 35560959837, ubuntu-latest): the driver result was published as
+ * acceptance evidence and carried the runner's own filesystem layout —
+ *
+ *   "rootDir": "/tmp/r97-driver-rmsDgP/out/ledger"
+ *
+ * which failed D5 ("the persisted driver result carries no key, endpoint or host
+ * path"). The identical field was written on Windows too; the assertion only failed
+ * on Linux because `JSON.stringify` escapes `\`, so the Windows artifact hid the
+ * path behind `\\` rather than omitting it.
+ *
+ * The arm's identity is `sourceSha` + `buildDigest` — WHAT ran. `checkoutDir` is
+ * merely WHERE it happened to run, and the durable execution state already records
+ * it for the machine that owns the campaign. A published artifact is read on other
+ * machines, so a host path in it is both a layout leak and a value that cannot be
+ * re-checked where it is read. The identity is kept; the location is dropped.
+ */
+export function publishedBuildOf(build) {
+  if (build === null || build === undefined || typeof build !== "object") return null;
+  return {
+    sourceSha: build.sourceSha ?? null,
+    buildDigest: build.buildDigest ?? null,
+  };
+}
+
 /** Digest of the stored result of one unit. The driver records what KIND of
  *  terminal outcome it was; the real per-case result artifacts are attached by
  *  the R99 execution path, which replaces this with the artifact hash. */
@@ -595,7 +622,12 @@ export async function runDriver(opts) {
     result.campaign = {
       mode: campaign.mode,
       campaignId: campaign.campaignId,
-      rootDir: campaign.dir,
+      // `rootDir` is deliberately NOT published. It is an absolute host path, and
+      // this result is durable acceptance evidence read on other machines; the
+      // campaign's own durable header already records the root for the machine that
+      // owns it (`R97_CAMPAIGN_ROOT_MISMATCH` is checked there, not here), so
+      // publishing it added a leak and no consumer. MEASURED: it was the single
+      // field that failed D5 on ubuntu-latest in CI run 35560959837.
       duplicateCampaignDirs: [...campaign.duplicateCampaignDirs],
     };
     // A resumed campaign that is ALSO claimed elsewhere is reported, so the
@@ -901,7 +933,11 @@ export async function runDriver(opts) {
           // have produced a pass of its own.
           passStrength: record.passStrength ?? null,
           resultHash: record.resultHash ?? "",
-          build: record.build ?? null,
+          // The arm identity, published without the host location (see
+          // `publishedBuildOf`): `sourceSha`/`buildDigest` say WHAT ran, which is
+          // what a reader can re-check; `checkoutDir` only said WHERE this machine
+          // happened to put it, and leaked that path into the evidence artifact.
+          build: publishedBuildOf(record.build),
           detail: record.detail ?? null,
         });
         // THE VERDICT MAPPING, and it is the plan's own distinction rather than

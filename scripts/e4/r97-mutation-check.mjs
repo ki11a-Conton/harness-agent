@@ -134,6 +134,77 @@ function hashOf(path) {
 }
 
 /**
+ * Reduce a string's line endings to LF.
+ *
+ * WHY THIS EXISTS (MEASURED, CI run 35560959837)
+ * ----------------------------------------------
+ * The gate originally compared its anchors with a plain `source.split(find)`. Two
+ * of the five anchors span more than one line, so they contain an interior `\n` —
+ * and `\n` is not what a Windows checkout holds. `git ls-files --eol` reports
+ * `i/lf` for all five target files, but `core.autocrlf=true` (true in this repo and
+ * in a fresh clone) rewrites a Windows working tree to CRLF, so those two anchors
+ * matched 0 times and the gate refused to run:
+ *
+ *   skip-verifier: the anchor appears 0 time(s) in scripts/e4/r97-arm-worker.mjs
+ *
+ * That failed the `r97-r98 closed loop (windows-latest)` job AND the Windows
+ * `Unit and integration tests` job, while ubuntu-latest — which checks out LF —
+ * passed. The line ending a checkout happens to use is not part of the program, so
+ * the matcher must not treat it as significant.
+ */
+export function normalizeEol(text) {
+  return String(text).replace(/\r\n/g, "\n");
+}
+
+/**
+ * The original index of every character of `normalizeEol(text)`.
+ *
+ * Normalizing only ever DROPS a `\r`, so the normalized text is a subsequence of
+ * the original and each normalized index maps to exactly one original index. The
+ * mapping is what lets the mutation be applied to the ORIGINAL bytes: every byte
+ * outside the replaced span is preserved exactly, so a file with mixed line
+ * endings is not silently rewritten end to end.
+ */
+function normalizedIndexMap(text) {
+  const map = [];
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] === "\r" && text[i + 1] === "\n") continue;
+    map.push(i);
+  }
+  return map;
+}
+
+/**
+ * How many times `find` occurs in `source`, ignoring a line-ending difference
+ * between the two. This is the count the gate's "exactly once" rule is about.
+ */
+export function anchorOccurrences(source, find) {
+  const needle = normalizeEol(find);
+  if (needle === "") return 0;
+  return normalizeEol(source).split(needle).length - 1;
+}
+
+/**
+ * Apply a mutation, tolerating a line-ending difference between the anchor and the
+ * file. Returns `{ ok, occurrences, text }`; when `ok` is false, `text` is the
+ * input unchanged, so a caller cannot accidentally write a half-applied mutation.
+ */
+export function applyAnchor(source, find, replace) {
+  const hay = normalizeEol(source);
+  const needle = normalizeEol(find);
+  const occurrences = needle === "" ? 0 : hay.split(needle).length - 1;
+  if (occurrences !== 1) return { ok: false, occurrences, text: source };
+  const map = normalizedIndexMap(source);
+  const at = hay.indexOf(needle);
+  const start = map[at];
+  const end = map[at + needle.length - 1] + 1;
+  // The replacement adopts the FILE's line endings, so a mutated CRLF checkout
+  // stays uniformly CRLF rather than gaining mixed endings.
+  const body = /\r\n/.test(source) ? normalizeEol(replace).replace(/\n/g, "\r\n") : replace;
+  return { ok: true, occurrences, text: source.slice(0, start) + body + source.slice(end) };
+}
+
+/**
  * Apply a mutation, run its test, and restore the file.
  *
  * The restoration is in a `finally`, so an exception thrown by the test run cannot
@@ -145,20 +216,20 @@ function runOne(mutation) {
   const target = join(REPO_ROOT, mutation.file);
   const original = readFileSync(target, "utf8");
   const originalHash = hashOf(target);
-  const occurrences = original.split(mutation.find).length - 1;
-  if (occurrences !== 1) {
+  const applied = applyAnchor(original, mutation.find, mutation.replace);
+  if (!applied.ok) {
     return {
       id: mutation.id,
       planWording: mutation.planWording,
       ok: false,
       applied: false,
-      reason: `the mutation anchor appears ${occurrences} time(s) in ${mutation.file}; exactly 1 is required, so the mutation would be ambiguous or a no-op`,
+      reason: `the mutation anchor appears ${applied.occurrences} time(s) in ${mutation.file}; exactly 1 is required, so the mutation would be ambiguous or a no-op`,
     };
   }
 
   let result;
   try {
-    writeFileSync(target, original.replace(mutation.find, mutation.replace), "utf8");
+    writeFileSync(target, applied.text, "utf8");
     // The mutated code must be TYPED, not just textual: the tests import the BUILT
     // evaluation package, so a mutation applied to `src` is invisible until the
     // package is rebuilt. A build failure is reported as a broken mutation rather

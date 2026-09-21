@@ -65,6 +65,34 @@ afterEach(async () => {
   for (const d of dirs.splice(0)) await rm(d, { recursive: true, force: true }).catch(() => {});
 });
 
+/**
+ * Every string in a parsed JSON tree, with the JSON path that reaches it.
+ *
+ * WHY THIS IS NOT A `toContain` (MEASURED, CI run 35560959837)
+ * -----------------------------------------------------------
+ * D5 asserted `serialized).not.toContain(dir)`. On Windows that assertion PASSES
+ * while the host path is still in the file, because `JSON.stringify` escapes the
+ * separator: the value `C:\Users\…\Temp\r97-driver-x\out\ledger` is written as
+ * `C:\\Users\\…`, which does not contain the single-backslash `dir`. On Linux the
+ * separator is `/`, nothing is escaped, and the same assertion FAILED —
+ *
+ *   expected '{\n  "driverVersion": "e4-r97-campaig…' not to contain
+ *   '/tmp/r97-driver-rmsDgP'
+ *
+ * So the leak existed on both platforms and only one of them could see it. Walking
+ * the parsed tree asks the question the assertion was trying to ask — "is this path
+ * anywhere in the artifact?" — and NAMES the field that carries it, instead of
+ * depending on how the platform's serializer happens to escape a separator.
+ */
+function stringPaths(value: unknown, at = "$"): Array<{ at: string; value: string }> {
+  if (typeof value === "string") return [{ at, value }];
+  if (Array.isArray(value)) return value.flatMap((v, i) => stringPaths(v, `${at}[${i}]`));
+  if (value !== null && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>).flatMap(([k, v]) => stringPaths(v, `${at}.${k}`));
+  }
+  return [];
+}
+
 const mod = (await import(DRIVER)) as {
   runDriver: (o: unknown) => Promise<Record<string, unknown>>;
   makeCountingFakeProvider: () => { provider: unknown; state: { requests: number; created: number } };
@@ -1112,6 +1140,40 @@ describe("E4-R97 D4: the CLI entry refuses to build a real provider by default",
 
 describe("E4-R100-A (T4): the OFFICIAL, help-discoverable arm-worker entry", () => {
   /**
+   * The wall-clock budget for ONE invocation of the driver CLI from a test.
+   *
+   * MEASURED DEFECT (CI run 35560959837, windows-latest, and reproduced in a clean
+   * CRLF clone): this helper used a flat `timeout: 120_000`, but the arm-worker
+   * campaign below legitimately takes longer than that. Observed durations for the
+   * SAME test on the SAME machine:
+   *
+   *   125_613 ms  — failed: the cap fired, the child was killed, stdout was empty,
+   *                 and the test reported `the driver printed nothing; code=1`
+   *   117_225 ms  — passed with 2.8 s of margin
+   *   107_703 ms  — passed, run alone on an idle machine
+   *
+   * So the binding limit was the test's OWN subprocess cap, not the work: the test
+   * killed its subject and then reported the killing as a defect in the subject.
+   * That is a flake by construction — it passes on an idle machine and fails on a
+   * loaded CI runner — and it would fail the plan's "两平台专用 job 全通过"
+   * requirement at random.
+   *
+   * The value is 4.8x the worst measured run, and it stays BELOW the enclosing
+   * test's own 900 s budget on purpose: the inner cap is what produces a diagnosable
+   * failure, so it should fire before vitest's outer one does.
+   */
+  const DRIVER_CLI_TIMEOUT_MS = 600_000;
+
+  it("allows the arm-worker campaign more time than the work really takes", () => {
+    // The regression guard for the defect above: lowering this constant back under
+    // the measured runtime reintroduces a flake that only shows up under load.
+    expect(
+      DRIVER_CLI_TIMEOUT_MS,
+      "the driver CLI cap must exceed the measured 125.6 s campaign, with headroom",
+    ).toBeGreaterThanOrEqual(300_000);
+  });
+
+  /**
    * Plan §T4 做什么 1 and 怎么做 2:
    *
    *   "提供版本化、help 可发现的 campaign CLI，实际进入 arm-worker 路径."
@@ -1132,7 +1194,12 @@ describe("E4-R100-A (T4): the OFFICIAL, help-discoverable arm-worker entry", () 
     const run = promisify(execFile);
     return run(process.execPath, [join(REPO, "scripts", "e4", "r97-campaign-driver.mjs"), ...args], {
       cwd: REPO,
-      timeout: 120_000,
+      // NOT a flat 120 s. The arm-worker campaign this helper drives is the longest
+      // thing in the file (measured 107–126 s), so a cap at the low end of that
+      // range kills the child mid-campaign and surfaces as "the driver printed
+      // nothing" — a failure the test would blame on the driver. See
+      // DRIVER_CLI_TIMEOUT_MS.
+      timeout: DRIVER_CLI_TIMEOUT_MS,
       maxBuffer: 33_554_432,
       // The formal entry reads the REAL clock, so the paid-authorization env is the
       // only way to reach it from a test. Passing it here keeps every other
@@ -1303,6 +1370,42 @@ describe("E4-R97 D5: the driver writes its result artifact and leaks nothing", (
     expect(serialized).not.toContain(dir);
     // The plan digest IS recorded — it is a digest, not a secret.
     expect(serialized).toContain(plan.planDigest!);
+  });
+
+  it("carries NO host path in ANY field, on every platform's separator", async () => {
+    // MEASURED (CI run 35560959837, ubuntu-latest): the run failed with
+    //   expected '{\n  "driverVersion": "e4-r97-campaig…' not to contain '/tmp/r97-driver-rmsDgP'
+    // because `result.campaign.rootDir` held the campaign's ABSOLUTE host
+    // directory. The identical field was present on Windows too; the sibling
+    // assertion above simply could not see it through the escaped separator.
+    //
+    // The artifact is durable evidence, read on other machines by other people,
+    // so a host path in it is both a leak of the machine's layout and a value that
+    // cannot be re-checked where it is read. This walks the whole tree, so a NEW
+    // field carrying a path is caught rather than needing a new assertion.
+    const plan = await finalizedPlan();
+    const dir = await tempDir();
+    const outDir = join(dir, "out");
+    const { result } = await drive({ plan, env: AUTHORIZED_ENV(plan.planDigest!), ledgerDir: join(outDir, "ledger") });
+
+    const offenders = stringPaths(result).filter(
+      (s) => s.value.includes(dir) || s.value.includes(dir.replace(/\\/g, "/")),
+    );
+    expect(
+      offenders.map((o) => o.at),
+      `the driver result embeds the host path ${dir} at: ${offenders.map((o) => `${o.at} = ${o.value}`).join("; ")}`,
+    ).toEqual([]);
+
+    // The host path is absent from the SERIALIZED artifact too, and the campaign
+    // block still answers what it was added to answer (T1 / finding N2): which root
+    // this run resolved to, and whether another directory claims the approval.
+    const serialized = JSON.stringify(result, null, 2);
+    expect(serialized).not.toContain(dir);
+    expect(serialized).not.toContain(dir.replace(/\\/g, "\\\\"));
+    const campaign = result["campaign"] as Record<string, unknown>;
+    expect(campaign["campaignId"]).toEqual(expect.any(String));
+    expect(campaign["mode"]).toEqual(expect.any(String));
+    expect(campaign["duplicateCampaignDirs"]).toEqual([]);
   });
 });
 

@@ -55,6 +55,7 @@ const mod = (await import(SCRIPT)) as {
   }>;
   parseArgs: (argv: string[]) => { only?: string; out?: string };
   main: (argv: string[]) => Promise<number>;
+  anchorOccurrences: (source: string, find: string) => number;
 };
 
 describe("E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations", () => {
@@ -99,9 +100,14 @@ describe("E4-R101-A (T6) X2: every mutation really LANDS on its target", () => {
     // THE LOAD-BEARING CHECK. Without it, a rename upstream turns the mutation into
     // a no-op, the test passes, and the gate reports a MISS that reads like a
     // defect in the test rather than in the anchor.
+    //
+    // It counts through the gate's OWN matcher rather than a raw `split`, because
+    // the gate normalizes line endings (X5): a raw split would fail on a CRLF
+    // checkout for a reason that has nothing to do with the anchor, which is
+    // exactly what happened in CI run 35560959837.
     for (const m of mod.MUTATIONS) {
       const src = await readFile(join(REPO, m.file), "utf8");
-      const occurrences = src.split(m.find).length - 1;
+      const occurrences = mod.anchorOccurrences(src, m.find);
       expect(occurrences, `${m.id}: the anchor appears ${occurrences} time(s) in ${m.file}, expected 1`).toBe(1);
     }
   });
@@ -111,6 +117,56 @@ describe("E4-R101-A (T6) X2: every mutation really LANDS on its target", () => {
       expect(m.file, `${m.id} mutates a test file, which proves nothing about production`).not.toMatch(
         /\.test\.ts$/,
       );
+    }
+  });
+});
+
+describe("E4-R101-A (T6) X5: an anchor is matched independently of the checkout's EOL policy", () => {
+  /**
+   * MEASURED (CI run 35560959837): `r97-r98 closed loop (windows-latest)` failed
+   * with
+   *
+   *   skip-verifier: the anchor appears 0 time(s) in scripts/e4/r97-arm-worker.mjs,
+   *   expected 1
+   *
+   * and the Windows `Unit and integration tests` job failed the same assertion.
+   * Ubuntu passed, and `pnpm test:coverage` (which includes this file) passed too,
+   * which is what pinned the cause to the checkout rather than to the anchor.
+   *
+   * The cause is EOL rewriting, not a stale anchor: `git ls-files --eol` reports
+   * `i/lf` for all five target files, while `core.autocrlf=true` (true in the repo
+   * and in a fresh clone) rewrites a Windows checkout to CRLF. The two anchors that
+   * span more than one line — `skip-verifier` and `resume-loses-history` — are the
+   * only ones affected, because only they contain an interior newline. Measured
+   * directly: rewriting the real file to CRLF makes exactly those two anchors
+   * match 0 times.
+   *
+   * An anchor is a SOURCE-level construct. The line ending a particular checkout
+   * happens to use is not part of the program, so the matcher must not treat it as
+   * significant — otherwise this gate silently degrades to "0 occurrences" on one
+   * of the two platforms T6 requires.
+   */
+  it("still finds its anchor when the checkout rewrote the file to CRLF", async () => {
+    expect(typeof mod.anchorOccurrences, "the gate exposes no EOL-insensitive anchor matcher").toBe("function");
+    for (const m of mod.MUTATIONS) {
+      const src = await readFile(join(REPO, m.file), "utf8");
+      const crlf = src.replace(/\r\n/g, "\n").replace(/\n/g, "\r\n");
+      expect(
+        mod.anchorOccurrences(crlf, m.find),
+        `${m.id}: the anchor is invisible in ${m.file} on a CRLF checkout`,
+      ).toBe(1);
+    }
+  });
+
+  it("finds an anchor that itself arrived with CRLF line endings", async () => {
+    expect(typeof mod.anchorOccurrences, "the gate exposes no EOL-insensitive anchor matcher").toBe("function");
+    for (const m of mod.MUTATIONS) {
+      const src = await readFile(join(REPO, m.file), "utf8");
+      const crlfFind = m.find.replace(/\r\n/g, "\n").replace(/\n/g, "\r\n");
+      expect(
+        mod.anchorOccurrences(src, crlfFind),
+        `${m.id}: an anchor written with CRLF is invisible in ${m.file}`,
+      ).toBe(1);
     }
   });
 });
