@@ -69,6 +69,10 @@ const mod = (await import(DRIVER)) as {
   runDriver: (o: unknown) => Promise<Record<string, unknown>>;
   makeCountingFakeProvider: () => { provider: unknown; state: { requests: number; created: number } };
   DRIVER_VERSION: string;
+  aggregateVerdicts: (
+    settled: Record<string, unknown>[],
+    unitResults: Record<string, unknown>[],
+  ) => { verifiedPasses: number; measuredUnits: number; units: number; strongPasses: number; weakPasses: number };
 };
 const evaluation = (await import(EVAL)) as Record<string, unknown>;
 
@@ -844,6 +848,133 @@ describe("E4-R99-A D8: a resume aggregates the FULL history, not just this run",
     expect(second.result["completedUnits"]).toBe(caseCount * 2);
     expect(second.result["budget"]).toEqual(first.result["budget"]);
   });
+
+  /**
+   * MEASURED DEFECT, found by running the real offline acceptance campaign
+   * (`node scripts/e4/r97-offline-acceptance.mjs --all`) and reading its own
+   * driver result:
+   *
+   *   workerUnits 16 · measuredUnits 16 · verifiedPasses 12
+   *
+   * Twelve passes over sixteen units in a campaign whose per-unit table shows
+   * exactly SIX passing units (the three artifact cases in each of the two arms)
+   * and ten honest `case_failed` negatives. The figure DOUBLE COUNTED: a unit this
+   * run dispatched appears in BOTH `settled` (the durable history, read after the
+   * run) and `result.unitResults` (this run's own list), and `verifiedPasses`
+   * SUMMED the two filters instead of UNIONING them.
+   *
+   * Plan §T3 怎么做 8 asks for "历史已验证结果 + 本次新结果" to be aggregated, and
+   * its acceptance criterion is that a resume reports the SAME cumulative
+   * numerator and denominator ("累计分母、分子和 budget 完全一致"). A sum satisfies
+   * neither: the number grows on every resume, so it is not a campaign total, and
+   * it is not even a count of units.
+   *
+   * The aggregation is exercised through the exported pure function because the
+   * doubling only manifests in arm-worker mode (in provider mode `unitResults` is
+   * empty and no unit reaches a verifier), and driving the real arms here would
+   * make a two-line arithmetic property cost a full campaign.
+   */
+  describe("the pass aggregate is a UNION over units, never a SUM over lists", () => {
+    const unit = (arm: string, caseId: string) => ({ arm, caseId, suite: "regression", repetition: 1 });
+
+    it("counts a unit present in BOTH history and this run exactly once", () => {
+      const settled = [
+        { ...unit("baseline", "a"), status: "completed", detail: "e4-r98-arm-worker-v2 passed: verified: ok" },
+        { ...unit("candidate", "a"), status: "completed", detail: "e4-r98-arm-worker-v2 passed: verified: ok" },
+      ];
+      const unitResults = [
+        { ...unit("baseline", "a"), status: "completed", failureCategory: null, verifierPassed: true },
+        { ...unit("candidate", "a"), status: "completed", failureCategory: null, verifierPassed: true },
+      ];
+      const agg = mod.aggregateVerdicts(settled, unitResults);
+      // The measured defect returned 4 here for 2 units.
+      expect(agg.verifiedPasses, "two units that passed are two passes").toBe(2);
+      expect(agg.measuredUnits).toBe(2);
+    });
+
+    it("does not lose a pass that only THIS run recorded", () => {
+      // The worker can throw before it writes a terminal record, and the driver
+      // then synthesises a `harness` failure for the unit. Conversely a unit whose
+      // record the driver holds but whose history entry is missing must still
+      // count — hence a UNION rather than "prefer history".
+      const unitResults = [
+        { ...unit("baseline", "b"), status: "completed", failureCategory: null, verifierPassed: true },
+      ];
+      const agg = mod.aggregateVerdicts([], unitResults);
+      expect(agg.verifiedPasses).toBe(1);
+    });
+
+    it("does not lose a pass that only HISTORY recorded", () => {
+      const settled = [
+        { ...unit("baseline", "c"), status: "completed", detail: "e4-r98-arm-worker-v2 passed: verified: ok" },
+      ];
+      const agg = mod.aggregateVerdicts(settled, []);
+      expect(agg.verifiedPasses).toBe(1);
+      expect(agg.measuredUnits).toBe(1);
+    });
+
+    it("never counts a `case_failed` unit as a pass, on either side", () => {
+      const settled = [
+        { ...unit("baseline", "d"), status: "completed", detail: "e4-r98-arm-worker-v2 case_failed: case did not pass" },
+      ];
+      const unitResults = [
+        { ...unit("baseline", "d"), status: "completed", failureCategory: "case_failed", verifierPassed: false },
+      ];
+      const agg = mod.aggregateVerdicts(settled, unitResults);
+      expect(agg.verifiedPasses).toBe(0);
+      // A `case_failed` unit DID reach a verdict, so it is measured — that is the
+      // plan's own distinction between run completeness and task success.
+      expect(agg.measuredUnits).toBe(1);
+    });
+
+    it("a resume reports the SAME numerator as the run it resumed", () => {
+      // The plan's "累计分母、分子和 budget 完全一致": the second observation of the
+      // same settled campaign must not change the figure.
+      const settled = [
+        { ...unit("baseline", "e"), status: "completed", detail: "e4-r98-arm-worker-v2 passed: verified: ok" },
+        { ...unit("candidate", "e"), status: "completed", detail: "e4-r98-arm-worker-v2 case_failed: nope" },
+      ];
+      const first = mod.aggregateVerdicts(settled, []);
+      const second = mod.aggregateVerdicts(settled, []);
+      expect(second.verifiedPasses).toBe(first.verifiedPasses);
+      expect(second.verifiedPasses).toBe(1);
+    });
+
+    it("splits this run's passes into STRONG and WEAK, never one undifferentiated number", () => {
+      // MEASURED: the real acceptance run reported 6 passes of 16 units, and they
+      // were not the same kind of pass. The three artifact-only frozen cases pass
+      // because `TaskVerifier`'s artifact rule checks only that a path EXISTS and
+      // was touched; the R98 fixtures' own command verifiers check the bytes.
+      // Reporting one number presents the weak passes as solved cases.
+      const unitResults = [
+        { ...unit("baseline", "a"), status: "completed", failureCategory: null, verifierPassed: true, passStrength: "strong" },
+        { ...unit("candidate", "a"), status: "completed", failureCategory: null, verifierPassed: true, passStrength: "strong" },
+        { ...unit("baseline", "b"), status: "completed", failureCategory: null, verifierPassed: true, passStrength: "weak" },
+        { ...unit("candidate", "b"), status: "completed", failureCategory: null, verifierPassed: true, passStrength: "weak" },
+        { ...unit("baseline", "c"), status: "completed", failureCategory: null, verifierPassed: true, passStrength: "weak" },
+        { ...unit("baseline", "d"), status: "completed", failureCategory: "case_failed", verifierPassed: false, passStrength: null },
+      ];
+      const agg = mod.aggregateVerdicts([], unitResults);
+      expect(agg.verifiedPasses).toBe(5);
+      expect(agg.strongPasses, "a command-verified pass is the strong kind").toBe(2);
+      expect(agg.weakPasses, "an artifact-only pass proves only that a write landed").toBe(3);
+      // A `case_failed` unit is a pass of NEITHER kind.
+      expect(agg.strongPasses + agg.weakPasses).toBe(agg.verifiedPasses);
+    });
+
+    it("does not claim this run's strong/weak split from HISTORY it did not observe", () => {
+      // The durable terminal `detail` carries the category but deliberately not
+      // the strength, so a resume must not invent one. It reports 0/0 — the honest
+      // reading — while `verifiedPasses` still reflects the cumulative campaign.
+      const settled = [
+        { ...unit("baseline", "f"), status: "completed", detail: "e4-r98-arm-worker-v2 passed: verified: ok" },
+      ];
+      const agg = mod.aggregateVerdicts(settled, []);
+      expect(agg.verifiedPasses).toBe(1);
+      expect(agg.strongPasses).toBe(0);
+      expect(agg.weakPasses).toBe(0);
+    });
+  });
 });
 
 describe("E4-R97 D3: the driver cannot exceed the ceiling it was given", () => {
@@ -995,7 +1126,7 @@ describe("E4-R100-A (T4): the OFFICIAL, help-discoverable arm-worker entry", () 
    * `--help` must EXIT 0 and name the mode, because a mode an operator cannot
    * discover is not an entry point.
    */
-  const runDriverCli = async (args: string[]) => {
+  const runDriverCli = async (args: string[], env: Record<string, string> = {}) => {
     const { execFile } = await import("node:child_process");
     const { promisify } = await import("node:util");
     const run = promisify(execFile);
@@ -1003,6 +1134,10 @@ describe("E4-R100-A (T4): the OFFICIAL, help-discoverable arm-worker entry", () 
       cwd: REPO,
       timeout: 120_000,
       maxBuffer: 33_554_432,
+      // The formal entry reads the REAL clock, so the paid-authorization env is the
+      // only way to reach it from a test. Passing it here keeps every other
+      // variable the runner already had.
+      env: { ...process.env, ...env },
     }).then(
       (r: { stdout: string; stderr: string }) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
       (e: { code?: number; stdout?: string; stderr?: string }) => ({
@@ -1061,6 +1196,16 @@ describe("E4-R100-A (T4): the OFFICIAL, help-discoverable arm-worker entry", () 
     // The strongest form of "actually enters the arm-worker path": drive the real
     // CLI against two REAL arm checkouts and require the result to name them. The
     // arms are the frozen R97 revisions, prepared by the committed setup command.
+    //
+    // MEASURED DEFECT this test now avoids. It used to pass `finalizedPlan()` —
+    // which binds SYNTHETIC shas (`1`*40 / `2`*40) and synthetic digests — together
+    // with `--now`, which the formal entry refuses outright ("--now is a TEST clock
+    // and is only honoured with --fake-provider or --rehearse"). Because the arms
+    // were unset in every environment that ran it, the test returned early and the
+    // defect was invisible: a test that proved nothing while reporting green is
+    // exactly finding F7. So the plan is now built from the SHIPPED `observeArms`
+    // measurement of the two real arms, and the real clock is used, because that is
+    // the only plan the formal entry will execute.
     const baseDir = process.env["R97_ARM_BASELINE_DIR"];
     const candDir = process.env["R97_ARM_CANDIDATE_DIR"];
     if (baseDir === undefined || candDir === undefined) {
@@ -1071,23 +1216,77 @@ describe("E4-R100-A (T4): the OFFICIAL, help-discoverable arm-worker entry", () 
       return;
     }
     const dir = await tempDir();
-    const plan = await finalizedPlan();
+    // STEP 1: observe BOTH arms with the shipped measurement, so the plan's bound
+    // identities are the ones each arm's own build really reported.
+    const driver = mod as unknown as {
+      observeArms: (o: Record<string, unknown>) => Promise<Record<string, { sourceSha: string; planDigest: string }>>;
+    };
+    const observations = await driver.observeArms({
+      modules: { evaluation },
+      repoRoot: REPO,
+      armDirs: { baseline: baseDir, candidate: candDir },
+      stagedCasesDir: join(dir, "staged"),
+      suite: "regression",
+      providerId: "openai",
+      modelId: "gpt-4o-mini",
+      endpointBaseUrl: "https://api.openai.com/v1",
+    });
+    // STEP 2: finalize a plan over those REAL observations, under the real clock so
+    // the authorization window contains "now". The endpoint identity must be the
+    // one the arms actually measured: the plan builder refuses an envelope whose
+    // declared endpoint disagrees with either arm's observation
+    // (`ARM_ENDPOINT_MISMATCH`), which is the binding working as intended.
+    const createdAt = new Date().toISOString();
+    const observedEndpoint = (observations["candidate"] as { endpointIdentity?: string }).endpointIdentity;
+    const plan = await finalizedPlan({
+      baseline: observations["baseline"],
+      candidate: observations["candidate"],
+      endpointIdentity: observedEndpoint,
+      createdAt,
+      now: createdAt,
+    });
     const planPath = join(dir, "plan.json");
-    await writeFile(planPath, JSON.stringify({ ...plan, observation: observationFor(plan) }), "utf8");
-    const res = await runDriverCli([
-      "--plan", planPath,
-      "--arm-worker",
-      "--baseline-dir", baseDir,
-      "--candidate-dir", candDir,
-      "--ledger", join(dir, "ledger"),
-      "--out", join(dir, "out"),
-      "--now", NOW,
-    ]);
+    // The observation's `now` IS the driver's clock for the authorization window,
+    // so it must be the same real instant the envelope was created at. Using the
+    // fixture's frozen `NOW` here made the driver refuse with
+    // AUTHORIZATION_NOT_YET_VALID — the plan's createdAt was in that clock's future.
+    await writeFile(planPath, JSON.stringify({ ...plan, observation: observationFor(plan, { now: createdAt }) }), "utf8");
+    // STEP 3: run the OFFICIAL entry, with the paid-authorization env the formal
+    // path requires and no key at all. The approved provider/model/endpoint are
+    // passed EXPLICITLY (T4 怎么做 6): the driver resolves the real destination from
+    // them and refuses if it does not hash to the approved identity, so omitting
+    // them would measure the refusal path instead of the execution path.
+    const res = await runDriverCli(
+      [
+        "--plan", planPath,
+        "--arm-worker",
+        "--baseline-dir", baseDir,
+        "--candidate-dir", candDir,
+        "--ledger", join(dir, "ledger"),
+        "--out", join(dir, "out"),
+        "--provider", "openai",
+        "--model", "gpt-4o-mini",
+        "--endpoint", "https://api.openai.com/v1",
+      ],
+      AUTHORIZED_ENV(plan.planDigest!),
+    );
     // Whatever the verdict, the result must be a real driver result that reports
     // arm-worker mode — not the "no --fake-provider" plan printer.
+    if (res.stdout.trim() === "") {
+      // A silent failure here is exactly finding F7's shape, so the diagnosis is
+      // surfaced rather than left as "Unexpected end of JSON input".
+      throw new Error(`the driver printed nothing; code=${res.code} stderr=${res.stderr}`);
+    }
     const parsed = JSON.parse(res.stdout);
-    expect(parsed.executionMode).toBe("arm-worker");
+    expect(parsed.executionMode, `driver said: ${String(parsed.code)} — ${String(parsed.reason)}`).toBe("arm-worker");
     expect(parsed.workerUnits ?? 0).toBeGreaterThan(0);
+    // The driver constructs NO provider of its own in this mode: each unit's own
+    // build resolves its own transport, which is what makes "both arms load their
+    // own build" mechanically true rather than asserted.
+    expect(parsed.providerRequests).toBe(0);
+    // Both arms really ran, and each unit names the arm whose build executed it.
+    const arms = new Set((parsed.unitResults as { arm: string }[]).map((u) => u.arm));
+    expect([...arms].sort()).toEqual(["baseline", "candidate"]);
   }, 900_000);
 });
 
@@ -1405,13 +1604,23 @@ describe("E4-R97 D6: the REAL two-arm observation produces a FINALIZED plan", ()
 
     // ...and the CI job must use the SAME names and SHAs, so a locally prepared
     // pair and a CI-prepared pair describe the same experiment.
+    //
+    // The names are no longer written into the workflow by hand: `ci.yml` invokes
+    // `scripts/e4/r97-closed-loop.mjs`, which sets them on the child's ENVIRONMENT
+    // (a shell's env FILE has a different writer per platform, which is why the
+    // workflow is no longer the place they live). So the assertion follows the
+    // indirection: the workflow must invoke the runner, and the runner must
+    // publish exactly the names this file reads.
     const { readFile } = await import("node:fs/promises");
     const ci = await readFile(join(REPO, ".github", "workflows", "ci.yml"), "utf8");
     for (const sha of [setup.DEFAULT_BASELINE_SHA, setup.DEFAULT_CANDIDATE_SHA]) {
       expect(ci, `ci.yml must bind the frozen revision ${sha}`).toContain(sha);
     }
+    const RUNNER = "scripts/e4/r97-closed-loop.mjs";
+    expect(ci, `ci.yml must invoke ${RUNNER}, which publishes the arm variables`).toContain(RUNNER);
+    const runner = await readFile(join(REPO, "scripts", "e4", "r97-closed-loop.mjs"), "utf8");
     for (const name of Object.values(setup.ARM_DIR_ENV)) {
-      expect(ci, `ci.yml must publish ${name}`).toContain(name);
+      expect(runner, `the closed-loop runner must publish ${name}`).toContain(name);
     }
   });
 });

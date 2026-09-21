@@ -175,6 +175,13 @@ passing**, driving the real module (never a mock):
 
 ### 1.6 Honest limits (unchanged and newly measured)
 
+> **CORRECTED IN E4-R101-A (T6) — see §7.4.** Item 1 below was written against the
+> child-CLI dispatch and is **false** of the seam T6 adopted: injecting a scripted
+> provider through each arm's own `runBenchmarkCommand(argv, providerOverride)`
+> produces a real verified PASS offline (measured 6/16, all `weak`). The text is
+> kept as written so the change of belief is visible, and the corrected reading is
+> in §7.4.
+
 1. **No verified PASS is reachable offline.** The stub yields `MODEL_ERROR` for
    every case, so every offline unit ends `provider`/`case_failed` with
    `verifierPassed === false`. Proving "the verifier passes a real tool write"
@@ -378,8 +385,16 @@ from "the experiment executed".
 Scope of this green, stated: it proves the **offline** two-checkout closed loop
 runs and is verified on a clean CI runner — R101's acceptance
 ("Windows/Ubuntu required integration job真跑两臂路径且成功"). It does **not**
-prove the paid two-version experiment ran (see §3.4), and no case PASSED its
-verification offline (the stub provider yields `MODEL_ERROR`; §1.6).
+prove the paid two-version experiment ran (see §3.4).
+
+> **CORRECTED IN E4-R101-A (T6):** the sentence that followed here said "no case
+> PASSED its verification offline (the stub provider yields `MODEL_ERROR`)". That
+> was true of the child-CLI dispatch described in this section, and is **false** of
+> the seam T6 adopted, which produces real verified passes offline. See §7.4 for
+> the measurement (`6/16`, all `weak`) and for why that is still not a model-quality
+> claim. This section's description of the CI job is also superseded by §7.3: the
+> job is now a Windows+Ubuntu matrix running one cross-platform Node command, with
+> the bash steps removed.
 
 ---
 
@@ -404,18 +419,95 @@ and `RUN_PAID_BENCHMARKS` unset in the parent shell.
 | `vitest run --exclude '**/r97-driver-closed-loop.test.ts' packages/evaluation` with `R97_ARM_*_DIR` → nonexistent | 97 files / 1452 passed, exit 0 (a fresh runner's main-suite view) |
 | `vitest run --coverage` over `packages/**` with the same exclude | exit 0 — all 8 per-package threshold gates hold |
 
+### 4.1 E4-R101-A (T6) — the final integration block, re-run
+
+Run on Windows (pwsh), Node v24.18.1, `OPENAI_API_KEY` and `RUN_PAID_BENCHMARKS`
+unset, with `R97_ARM_BASELINE_DIR`/`R97_ARM_CANDIDATE_DIR` pointed at the two real
+arm builds at `D:\r101-arms-local\{baseline,candidate}`.
+
+| Command | Result |
+|---|---|
+| `pnpm typecheck` | exit 0 |
+| `pnpm build` | exit 0 |
+| `pnpm test` | **6759 passed / 6768**, 3 skipped, **6 failed** — all 6 in three files that require a CLEAN COMMITTED TREE (§4.2) |
+| `pnpm test:coverage` | same 6 failures; **with those three files excluded the thresholds all hold: 359 files / 6604 passed, exit 0** |
+| `pnpm test:security` | **2135 passed / 2135**, exit 0 |
+| `pnpm docs:verify` | `ALL CHECKS PASS`, exit 0 |
+| `vitest run --reporter=verbose` over the plan's 7 named files | **253 passed / 253**, 7 files, 0 skipped |
+| `node scripts/e4/r97-closed-loop.mjs --all --arms-root D:/r101-arms-local` | **5/5 phases OK** — setup, acceptance `OFFLINE_ACCEPTED 6/16`, suite **448/448**, matrix **9/9**, identity |
+| `node scripts/e4/r97-mutation-check.mjs` | **5/5 mutations CAUGHT**, every file restored and re-hashed |
+
+### 4.2 The 6 failures are a DIRTY-TREE guard, not a defect — measured
+
+The three files (`e4-09-production-e2e`, `e4-r55-failure-wiring`,
+`benchmark-command`) all assert that the production benchmark refuses a
+promotion-eligible run on a tree whose `git status --porcelain` is non-empty. This
+was proven rather than assumed, in three steps:
+
+1. **They pass on a clean tree.** A detached worktree at `HEAD` (`e491258`) with
+   none of the T6 changes present: `e4-09` **5/5 passed**, `e4-r55` **63 passed /
+   2 skipped**, `benchmark-command` **93/93 passed**.
+2. **Dirtiness alone reproduces them.** In that same clean worktree, adding ONE
+   unrelated untracked file (none of the T6 changes present) reproduced **exactly**
+   the same `e4-09` failures (`4 failed | 1 passed`).
+3. **The pre-existing deletion alone reproduces them.** In the clean worktree,
+   deleting only `plan(20260917-001821).md` — the user's own pre-existing ` D`,
+   untouched by this round — reproduced the same `4 failed | 1 passed`.
+
+The R55 guard names its own cause, listing all 17 dirty entries, every one of which
+is either this round's T6 work or the user's pre-existing plan deletion:
+
+```
+E4-R55 requires a CLEAN committed working tree: the production benchmark refuses to
+produce a promotion-eligible run on a tree that is not provably clean, so every child
+case would fail for an unrelated reason. Commit or stash first.
+dirty entries (17): M .github/workflows/ci.yml … D plan(20260917-001821).md …
+```
+
+**Consequence, stated precisely — committing this round's work is NOT sufficient.**
+The guard reads `git status --porcelain` (line 1261), so it stays red as long as ANY
+entry is dirty. The user's ` D plan(20260917-001821).md` is such an entry, and it
+predates this round: step 3 above shows that deleting **only** that file in an
+otherwise clean tree reproduces the same `4 failed | 1 passed`. Clearing these 6
+therefore requires the user's own deletion to be resolved (committed, restored, or
+stashed) — which plan §0 forbids this round from doing — **in addition** to committing
+the T6 work.
+
+So the claim is scoped, and the scope matters: **the 6 failures are pre-existing
+clean-tree guards; they are not caused by, and cannot be cleared by, the T6 code
+alone; and every other test in the repository passes.** No attempt was made to make
+them pass by weakening the guard, which exists to stop a promotion-eligible run being
+produced on an unprovable tree.
+
+### 4.3 A measurement error worth recording
+
+An ad-hoc `vitest run --coverage` of my own (without the repo's `--exclude` list)
+reported a **fourth** failing file, `e4-r40-forensics.test.ts`. That file is
+**excluded from both `test` and `test:coverage` by `package.json`** and fails
+whenever it is run directly — in the clean worktree too. The "extra failure" was
+an artifact of bypassing the repo's own test selection, not a finding. Recorded
+because a command that reports MORE failures than the project's own gate is
+measuring the wrong thing.
+
 Per-file counts: `r97-budget-ledger` 50, `r97-execution-state` 22,
 `r97-plan` **55**, `r97-driver-closed-loop` **45** (0 skipped, includes the real
 D6 path), `r97-arm-worker-contract` **28**, `r97-redaction` 12,
 `r98-fixture-cases` 8.
 
+> **UPDATED IN E4-R101-A (T6):** the seven files above now report **253** tests, and
+> the closed-loop suite covers **19** R97–R101 files / **448** tests. The counts in
+> this paragraph describe the R99–R101 state and are left as measured then.
+
 **External provider requests: 0.** No test sets `OPENAI_API_KEY`; the arm worker
 deletes it from every child environment it builds.
 
-### 4.1 Historical data changes
+### 4.4 Historical data changes
 
 None. No prior report, SHA or measured figure was overwritten. The R97 report's
 errata section stands as written; this document adds to it rather than revising it.
+The T6 errata in §7.4/§7.5 **keep** the superseded text and mark it as superseded,
+rather than deleting it — a corrected claim whose original is invisible cannot be
+audited.
 
 ---
 
@@ -439,6 +531,14 @@ CI run URL / head SHA：https://github.com/ki11a-Conton/harness-agent/actions/ru
 历史数据变化：无
 剩余限制：离线 stub 无法产生 pass；逐例多轮调用未与账本对账；
             resultHash 不是逐例产物 hash
+【T6 更正，2026-09-20】本行"离线 stub 无法产生 pass"已被证伪，见 §7.4：
+            用 §0.4 的 `runBenchmarkCommand(argv, providerOverride)` 注入
+            ScriptedModelProvider 可离线产生真实 verifier pass（实测 6/16，
+            全为 weak）。但**"已有 keyless MODEL_ERROR 冒烟"不等于"成功工具链
+            验收"**：MODEL_ERROR 只证明进程起来并撞上了 stub，不证明模型请求、
+            工具循环与 verifier 真的跑通；后者才是 T6 的验收对象。同时，
+            离线 pass 也不能被读作"模型解出 6 例"——provider 由本仓库编写，
+            故 `modelCapabilityClaim: "none"`、`promotable: false`。
 ```
 
 ```text
@@ -475,6 +575,57 @@ CI run URL / head SHA：https://github.com/ki11a-Conton/harness-agent/actions/ru
 外部provider请求：0
 历史数据变化：无
 剩余限制：付费授权缺失，最终状态为 OFFLINE_ACCEPTED / NOT_RUN（CI 已真跑全绿，见 §3.5）
+```
+
+```text
+任务：E4-R101-A（T1–T6 收尾）
+状态：DONE（六个任务全部实现且离线验收全绿）/ NOT_RUN（付费双版本实验，未被请求）
+起始 SHA / 实现 SHA：e491258443081d10ed92fe3a8016970b47b3406d（本轮起点）/
+            168c2b7（本轮实现提交，E4-R101-A T6）
+对应发现：N1、N3、N4、N5、N6、N7、N8、N9（另在写本节时新发现 §7.7 的冗余 prepare）
+RED：① node scripts/e4/r97-offline-acceptance.mjs --all
+        预期：离线闭环通过；实际："driver status: PARTIAL / CASE_FAILURES …
+        10 of 16 unit(s) measured nothing; 20 logical call(s) consumed"
+        ——五例"仅命令型"案例被抛成 infrastructure，从未到达自己的 verifier
+    ② 同一运行预期 verifiedPasses 为 6；实际 12（历史与本次被求和而非取并集）
+    ③ node scripts/e4/r97-mutation-check.mjs
+        预期：五个变异全部被测试捕获；实际：固定 request=r97 未被捕获
+        ——seam 测试只断言脚本形状，未断言文本含自身 caseId
+GREEN：node scripts/e4/r97-closed-loop.mjs --all --arms-root D:/r101-arms-local
+        退出码 0 —— [1/5] setup OK · [2/5] acceptance OK status=OFFLINE_ACCEPTED
+        passes=6/16 · [3/5] suite OK 448/448 · [4/5] matrix OK 9/9 · [5/5] identity OK
+       node scripts/e4/r97-mutation-check.mjs 退出码 0 —— 5/5 mutations CAUGHT
+       计划 §最终集成命令块 7 文件 退出码 0 —— 253 passed / 253（0 skipped）
+       pnpm typecheck / pnpm build / pnpm test:security / pnpm docs:verify 退出码 0
+       pnpm test 与 pnpm test:coverage 有 6 项失败，全部是三个要求"干净已提交工作树"
+       的既有守卫；§4.2 用干净 worktree 逐步证明（单个无关未跟踪文件即可复现），
+       排除这三个文件后 coverage 全部 8 个包阈值通过（359 files / 6604 passed，退出码 0）
+provider generate / transport retry / 外部请求次数：generate 42（全部来自本仓库的
+            ScriptedModelProvider）/ transport retry 0 / 外部请求 0 / providerRequests 0
+持久证据路径与 validator 命令：.ci/r97-r98/{closed-loop-run.json, closed-loop-identity.json,
+            r97-r98.json, acceptance-matrix.json, mutation-report.json} 与
+            .ci/r97-r98/acceptance/{plan.json, driver-result.json, acceptance-summary.json,
+            campaign-summary.json, case-report.json, validator-report.json, ledger/*}
+            validator：node scripts/e4/r97-offline-acceptance.mjs --validate
+            （实测 [5/6] validate OK，evidence ok true checked 16）
+本地环境 / Windows CI / Ubuntu CI：本地 Windows / Node v24.18.1 全绿（上表）。
+            CI 侧：job 已改为 ubuntu-latest + windows-latest 矩阵，两平台跑同一条
+            跨平台 Node 命令，bash 步骤全部删除——但**本轮尚未在真实 runner 上执行过**，
+            故不得声称两平台 CI 已绿（见剩余限制⑤）
+CI URL 与 head SHA：本轮尚未推送运行。上一个已核实的运行是
+            https://github.com/ki11a-Conton/harness-agent/actions/runs/35487313801 （1ed8b92，
+            旧的仅 ubuntu 的 closed-loop job 全绿）；矩阵 job 的本地等价物 5/5 通过
+剩余限制：① 离线 pass 全为 weak（strongPasses 0 / weakPasses 6）：TaskVerifier 的
+            artifact 规则只查"存在且被 touched"，从不检查内容，故"6 个已验证通过"
+            不得读作"解出 6 例"；strong 路径离线只由单测覆盖（两个 R98 fixture 案例
+            不在冻结选集内）。
+            ② 逐例多轮调用仍未与账本对账（账本记的是每次 generate 的预留，不是与
+            arm 报告 model_calls 的逐例对账）。
+            ③ resultHash 不是逐例产物 hash。
+            ④ 付费双版本实验仍为 NOT_RUN，且未请求用户付费（计划 怎么做 6）。
+            ⑤ 矩阵 job 尚未在真实 CI runner 上执行；本轮"两平台"证据是本地 win32
+            加一条跨平台命令，不等于两次真实 runner 运行。
+            ⑥ 三个要求干净工作树的既有守卫在本地为红；需先提交本轮工作再复跑。
 ```
 
 ---
@@ -520,10 +671,244 @@ CI run URL / head SHA：https://github.com/ki11a-Conton/harness-agent/actions/ru
   itemised in §3.1 and §3.5. The green claim, if any, is scoped to the specific
   run recorded there — and the closed-loop job's verdict is only as recent as
   the last run.
-- That any case PASSED its verification. Offline, none can.
+- That any case PASSED its verification **by a model**. Offline, the provider is
+  scripted (see §7.4 for the correction to this section's earlier form).
 - That the paid two-version experiment ran. It did not, and the gateway needed
   for it is broken upstream.
 - That the arm worktrees created for this report are reproducible by a single
   committed command on a fresh machine — `r97-observe-arms.mjs` implements that,
   and the CI closed-loop job now rebuilds both arms on a clean runner, but the
   command itself has been exercised only on this machine.
+
+---
+
+## 7. E4-R101-A (T6) — closing the acceptance gaps
+
+Scope: plan `plan(20260920-053219).md`, six closing tasks T1–T6. Plan §0 line 14:
+"本轮只做六个收尾任务，不新增通用框架，不安排模型调优或扩大实验规模." Nothing in
+this section tunes a model, enlarges the experiment, or adds a framework.
+
+### 7.1 The finding that dominates this round
+
+**The offline closed loop could not accept itself.** Running the real campaign
+(`node scripts/e4/r97-offline-acceptance.mjs --all`) against the two real arm
+builds produced:
+
+```
+driver status: PARTIAL / CASE_FAILURES
+reason: "arm baseline case regression/reg-03-add-import failed:
+         E4-R98: E4-R98: case regression/reg-03-add-import declares no
+         artifact path, so a write script cannot be derived from it
+         (10 of 16 unit(s) measured nothing; 20 logical call(s) consumed)"
+```
+
+Ten of sixteen units reported **nothing**, and twelve passes were reported over
+six passing units. Both are defects in the seam that drives the campaign, not in
+the campaign. The plan named the shape of the first one in advance; the second
+was found only by running it.
+
+### 7.2 The six tasks, and what each one changed
+
+| Task | The gap | The change | Evidence |
+|---|---|---|---|
+| **T1** | N1: the worker charged the ledger **one call per unit**, so a ceiling on units was presented as a ceiling on model calls | the worker now drives each arm's own `runBenchmarkCommand(argv, providerOverride)` with a budget-wrapped scripted provider, so **every `generate()` reserves before it can leave** | `logicalCalls 42` for 16 units (not 16); `providerRequests 0`; `r97-budget-ledger.test.ts`, `r97-campaign-lifecycle.test.ts` |
+| **T2** | N3: `begin` overwrote a live `running` record; `recoverInFlight` ignored the owner; a retry left `isDone` true | ownership is checked before adoption, and a retry is eligible only via `reconciledForRetry` | `r97-execution-state.test.ts`, `r97-execution-state-ownership.test.ts` |
+| **T3** | N4/N5: the driver summary read only this run's new results; `classifyReport` fell back to `results[0]`, treated `success=true` as a pass, and deleted the report in `finally` | strict `findReportRow` (0 → named refusal, >1 → ambiguity refusal); a pass requires the report's own `verification_passed`; the report is persisted | §7.4; `r97-arm-report-evidence.test.ts` |
+| **T4** | N6/N7: the driver never passed the approved provider/model/endpoint/input digest to the worker; `armBuildIdentity` missed the modules actually imported | the approved identity is bound to the execution that really ran, and re-observed at the boundary | `r97-execution-identity.test.ts`, `r97-plan.test.ts` |
+| **T5** | N8: `runChild` sent only SIGTERM; `SIGKILL_GRACE_MS` was unused; `stdoutChunks.length` was treated as a byte cap | a bounded stop with a real byte cap and a tree kill after the grace period | `r97-bounded-stop.test.ts` |
+| **T6** | N9: no arm-worker CLI mode, D6 was dry-run only, the dedicated job was ubuntu-only | the official entry really executes; a Windows+Ubuntu matrix runs the whole offline loop | §7.3 |
+
+### 7.3 The closed loop now runs as one command, on both platforms
+
+`.github/workflows/ci.yml`, job `r97-r98-closed-loop`, is now a **matrix**
+(`ubuntu-latest` + `windows-latest`, `fail-fast: false`) and its ~200 lines of
+bash setup/build/suite/grep/evidence steps are **gone**. The job runs one
+cross-platform Node command:
+
+```
+node scripts/e4/r97-closed-loop.mjs --all --out .ci/r97-r98 --arms-root "${{ runner.temp }}/r97-arms"
+```
+
+That runner performs five phases and exits non-zero on any of them:
+
+| phase | what it proves |
+|---|---|
+| `setup` | both arms built at their frozen SHAs and **clean** (`r97-observe-arms.mjs`) |
+| `acceptance` | the real campaign through the **official** arm-worker entry, then re-derived by the shipped validator |
+| `suite` | 448 tests across 19 R97–R101 files, via `--reporter=verbose --reporter=json` |
+| `matrix` | the plan's **9-row acceptance matrix**, evaluated from that JSON report |
+| `identity` | a machine-readable statement of what ran and what did not |
+
+Measured locally (Windows, Node v24.18.1, `OPENAI_API_KEY` unset):
+
+```
+[1/5] setup      OK  D:\r101-arms-local
+[2/5] acceptance OK  status=OFFLINE_ACCEPTED passes=6/16
+[3/5] suite      OK  448/448 test(s)
+[4/5] matrix     OK  9/9 row(s)
+[5/5] identity   OK  .ci\r97-r98\closed-loop-identity.json
+```
+
+**The bash removal is itself the fix, not a simplification.** Plan 怎么做 1–2
+forbade continuing to patch "终端符号、相对路径和阈值"; the old job grepped for a
+`✓` glyph and counted lines whose path prefix matched, and it failed on ubuntu
+twice for exactly that reason (§3.1). A matrix row is now satisfied by a test's
+own JSON `status`, which is a fact about the run rather than a fact about how a
+reporter chose to print it.
+
+### 7.4 ERRATUM — "no verified PASS is reachable offline" was WRONG
+
+**§1.6 item 1 and §6.1 bullet 2 above are corrected here, and the old text is
+kept rather than rewritten so the change of belief is visible.**
+
+Those sections said a verified PASS is unreachable offline, because `--provider`
+accepts only `openai` and the keyless stub yields `MODEL_ERROR`. That is true of
+the **child-CLI dispatch** those sections were written against. It is false of
+the seam T6 adopted.
+
+Plan §0.4 identified the interface: both frozen arms export
+`runBenchmarkCommand(argv, providerOverride)` from their own
+`apps/cli/dist/benchmark-command.js`, and `ScriptedModelProvider` from their own
+`packages/model/dist`. Injecting a scripted provider through that override drives
+the **real** request, the **real** tool loop and the **real** `TaskVerifier`, with
+**zero** external requests. Measured on the acceptance run: `verifiedPasses 6` of
+`measuredUnits 16`, with `providerRequests 0`.
+
+**What this does and does not mean.** It means the toolchain's verification path
+is exercised end to end offline, which is what T6 had to prove. It does **not**
+mean a model solved six cases: the provider is authored by this repository, so
+`modelCapabilityClaim` is `"none"` and `promotable` is `false` in the run's own
+output.
+
+**And the six passes are WEAK, which the run states rather than hides:**
+
+```
+strongPasses: 0   weakPasses: 6
+```
+
+The three artifact-only frozen cases pass in each arm because `TaskVerifier`'s
+artifact rule is `exists && (mustChange !== true || touched)` — it never inspects
+content. `weak` therefore means "an artifact verifier was satisfied", not "the
+case was solved". A `strong` pass requires content recovered from the case's own
+command literal; the two R98 fixture cases that would be `strong` are not in the
+frozen selection, so offline the strong path is exercised by unit tests only.
+
+### 7.5 ERRATUM — the false pass that a `null` write produced
+
+Found by running, not by reading. `writeTargetOf` returned `content: null` for an
+artifact-only case. `write_file`'s own schema is `content: z.string()`, so the
+tool call **failed**; the runtime recovered; and the artifact verifier then
+reported **PASS** because the fixture file already existed and `mustChange` only
+requires the path to appear in `changedPaths` — and `changedPaths` is built from
+`events.onRequested`, i.e. **attempted** writes. A write that never happened
+produced a verified pass.
+
+This is recorded because it is a general property of the verifier, not a bug in
+one case: **an artifact-verifier pass is only as strong as the write it depends
+on.** The fix was applied in the **seam** (supply real, labelled content), never
+by relaxing `mustChange` — weakening the verifier to make a case pass would have
+destroyed the measurement the campaign exists to make.
+
+### 7.6 The anti-cheat mutations really turn their tests RED
+
+Plan 怎么做 7: "mutation/反例直接改变行为：让两臂都用一个构建、跳过 verifier、固定
+request=r97、绕过预算、resume 丢历史失败，对应测试必须失败."
+
+`scripts/e4/r97-mutation-check.mjs` applies each of the five to the **real
+production source**, runs the test that exists to catch it, and requires that test
+to **fail**. Each file is restored in a `finally` and **re-hashed**, so a mutation
+cannot survive the gate.
+
+```
+[CAUGHT] same-build-for-both-arms      -> r97-plan.test.ts fails as required
+[CAUGHT] skip-verifier                 -> r97-arm-worker-contract.test.ts fails
+[CAUGHT] fixed-request-placeholder     -> r97-offline-seam.test.ts fails
+[CAUGHT] bypass-budget                 -> r97-budget-ledger.test.ts fails
+[CAUGHT] resume-loses-history          -> r97-driver-closed-loop.test.ts fails
+
+r101-mutation: 5/5 mutation(s) CAUGHT by their tests
+```
+
+**The gate found two real coverage gaps on its first run, which is the point of
+having it:**
+
+1. `固定 request=r97` was **not caught**. The seam test asserted the script's
+   *shape* (`script[0][0] === "text"`) but never that the text named its own case,
+   so replacing every claim with the literal `"r97"` left the suite green. The
+   assertion was added (`gives DIFFERENT cases DIFFERENT claim text`), and the
+   mutation is now caught.
+2. `跳过 verifier` was caught only after the test for that branch was **written**:
+   the "`success=true` without the report's own verification evidence" branch had
+   **no test at all**. A mutation is only caught by a test that exercises the
+   branch, so an untested branch and a working one are indistinguishable.
+
+A mutation that does not COMPILE is reported as broken rather than as caught — it
+would be testing the type system instead of the behaviour. This happened on the
+first attempt: `if (false)` made `baseline` possibly-`null` (TS18047), so the
+mutation was rewritten to keep the narrowing.
+
+### 7.7 A defect found while writing this section
+
+`r97-offline-acceptance.mjs --all` with **explicit** `--baseline-dir` /
+`--candidate-dir` still ran `--prepare`, because `--all` implies it. `stepPrepare`
+ignored the explicit pair and built a **second** pair of arm worktrees (two
+`pnpm install` + `pnpm build`) into a throwaway temp root — while the campaign ran
+against the caller's arms and the summary recorded the **temp root** as the arms
+used. The artifact therefore described a different pair than the one measured.
+
+Fixed: an explicit pair suppresses the *inferred* prepare (an explicit `--prepare`
+is still honoured), and the summary now records `baselineDir`/`candidateDir` and
+reports `armsRoot: null` when the run built no arms rather than naming a directory
+nothing read. Pinned by `C6: an explicit arm pair is USED, never re-prepared`.
+
+Recorded here because the finding is more useful than the fix: **a summary that
+names the wrong input is worse than no summary**, because it reads as evidence.
+
+### 7.8 A matrix row that an UNRELATED test satisfied
+
+Found by reading the produced `acceptance-matrix.json` rather than by a failing
+test. The row **"外部 provider 未获授权"** (an unauthorized external provider) listed
+as its third leg:
+
+```
+… C5: a pass is labelled STRONG or WEAK, never just 'passed'
+   labels a banner-derived pass as weak
+```
+
+That test is about pass **labelling**. It has nothing to do with authorization and
+passes whether or not the gate works. A row that goes green on an unrelated test is
+worse than a row with no test at all: it reports coverage it does not have, which is
+precisely the "green while the scenario is broken" failure the matrix exists to
+prevent. The leg now names `… D1: every refusal path makes ZERO provider requests
+UNAUTHORIZED: no auth env -> refused, 0 requests, provider never constructed` — the
+strongest form of the row's own expectation ("provider 未构造"), because it requires
+the refusal to happen **before** a provider exists rather than after one was built.
+
+Pinned by `M7: a row is satisfied only by tests about ITS OWN scenario`, which
+requires every row's tests to share vocabulary with the scenario the row names. The
+check is deliberately a **keyword** check rather than a semantic one: it cannot prove
+relevance, but it does catch an entry sharing no vocabulary at all with its row —
+which is what happened.
+
+### 7.9 T6 verdict
+
+```
+status:                    OFFLINE_ACCEPTED
+paidStatus:                PAID_NOT_RUN
+experimentKind:            offline_closed_loop
+executionMode:             arm-worker
+verifiedPasses / units:    6 / 16   (strong 0, weak 6)
+logicalCalls:              42
+providerCalls:             0
+suite:                     448 / 448
+matrix:                    9 / 9
+promotable:                false
+modelCapabilityClaim:      none — the offline provider is scripted
+```
+
+`OFFLINE_ACCEPTED / PAID_NOT_RUN`, per plan 怎么验收 5 ("无外部付费执行时标为
+`OFFLINE_ACCEPTED / PAID_NOT_RUN`"). This is not a claim that the paid two-version
+experiment ran, and not a claim about model capability or win rate. The formal
+transport's budget and identity are wired and exercised offline; the **paid**
+execution itself was never attempted and is not being requested (plan 怎么做 6:
+never write `OFFLINE_ACCEPTED` early, and never ask the user to pay).

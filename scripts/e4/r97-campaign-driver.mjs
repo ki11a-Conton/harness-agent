@@ -68,6 +68,89 @@ export function unitCategoryOf(detail) {
 }
 
 /**
+ * Aggregate the campaign's verdicts over UNITS, not over lists.
+ *
+ * MEASURED DEFECT this function exists to fix. Running the real offline acceptance
+ * campaign (`node scripts/e4/r97-offline-acceptance.mjs --all`) and reading its own
+ * driver result gave:
+ *
+ *   workerUnits 16 · measuredUnits 16 · verifiedPasses 12
+ *
+ * while the per-unit table held exactly SIX passing units — the three artifact
+ * cases in each of the two arms — and ten honest `case_failed` negatives. The
+ * figure double counted because a unit this run dispatched appears in BOTH
+ * `settled` (the durable history, read after the run) and `unitResults` (this
+ * run's own list), and the previous implementation SUMMED two filters over them:
+ *
+ *   settled.filter(passed).length + unitResults.filter(verifierPassed).length
+ *
+ * Plan §T3 怎么做 8 asks for "历史已验证结果 + 本次新结果" to be aggregated, and its
+ * acceptance criterion is that a resume reports the SAME cumulative numerator and
+ * denominator ("累计分母、分子和 budget 完全一致"). A sum satisfies neither: the
+ * number grows on every resume, so it is not a campaign total, and it is not even
+ * a count of units.
+ *
+ * The fix is to key both sources by the unit's own identity and UNION them, with
+ * history taking precedence when a unit appears in both — the durable record is
+ * the one a later process can still read, so it is the one whose verdict is
+ * authoritative. A unit that only this run recorded is still counted, because the
+ * driver synthesises a `harness` failure for a worker that threw before it could
+ * write a record.
+ *
+ * `measuredUnits` is a unit count for the same reason: a unit that reached a
+ * verifier verdict is `completed` in the durable record, and `completed` is
+ * exactly the run-completeness status in BOTH execution modes.
+ */
+export function aggregateVerdicts(settled, unitResults) {
+  // The union of units, keyed exactly as the failure list is keyed, so one unit
+  // contributes exactly one entry here just as it does there.
+  const byUnit = new Map();
+  for (const r of settled ?? []) {
+    byUnit.set(`${r.arm}|${r.caseId}`, {
+      passed: unitCategoryOf(r.detail) === "passed",
+      measured: r.status === "completed",
+      fromHistory: true,
+    });
+  }
+  for (const u of unitResults ?? []) {
+    const key = `${u.arm}|${u.caseId}`;
+    if (byUnit.has(key)) continue; // history wins; never add a second entry
+    byUnit.set(key, {
+      passed: u.verifierPassed === true,
+      measured: u.failureCategory === null || u.failureCategory === "case_failed",
+      fromHistory: false,
+    });
+  }
+  let verifiedPasses = 0;
+  let measuredUnits = 0;
+  for (const entry of byUnit.values()) {
+    if (entry.passed) verifiedPasses += 1;
+    if (entry.measured) measuredUnits += 1;
+  }
+  // ---- HOW MUCH THOSE PASSES PROVE (T6 怎么做 5). --------------------------
+  //
+  // MEASURED, from the real acceptance run: 6 of 16 units passed, and they were
+  // NOT all the same kind of pass. The three artifact-only frozen cases pass
+  // because `TaskVerifier`'s artifact rule only checks that the path EXISTS and
+  // was touched — never what it contains — while the R98 fixtures' own command
+  // verifiers check the written bytes. Reporting one number presents the weak
+  // passes as evidence the cases were solved, which they are not.
+  //
+  // The strength comes from THIS run's unit results, because it is a property of
+  // the script the seam supplied and the durable terminal `detail` deliberately
+  // does not carry it. `strongPasses + weakPasses` therefore counts this run's
+  // passes only, and a resume reports 0 for both — which is the honest reading,
+  // and the reason they are named separately from the cumulative `verifiedPasses`.
+  const strongPasses = (unitResults ?? []).filter(
+    (u) => u.verifierPassed === true && u.passStrength === "strong",
+  ).length;
+  const weakPasses = (unitResults ?? []).filter(
+    (u) => u.verifierPassed === true && u.passStrength === "weak",
+  ).length;
+  return { verifiedPasses, measuredUnits, units: byUnit.size, strongPasses, weakPasses };
+}
+
+/**
  * A fake provider that COUNTS every generate() attempt and never touches a
  * socket. It is the only provider this driver can construct without an explicit
  * real-provider opt-in, which is what makes "fake provider 的越界请求数 0"
@@ -812,6 +895,11 @@ export async function runDriver(opts) {
           status: record.status,
           failureCategory: record.failureCategory ?? null,
           verifierPassed: record.verifierPassed === true,
+          // WHAT A PASS HERE PROVES (T6 怎么做 5): carried through from the worker
+          // so the campaign summary can report strong and weak passes apart. A
+          // `null` means the seam wrote nothing for this case, so it could never
+          // have produced a pass of its own.
+          passStrength: record.passStrength ?? null,
           resultHash: record.resultHash ?? "",
           build: record.build ?? null,
           detail: record.detail ?? null,
@@ -1029,8 +1117,13 @@ export async function runDriver(opts) {
   }
   result.failures = [...failureByUnit.values()];
 
-  // HOW MANY UNITS THE VERIFIER ACTUALLY PASSED. Computed over HISTORY plus this
-  // run, so a resume reports the campaign's pass count rather than zero.
+  // HOW MANY UNITS THE VERIFIER ACTUALLY PASSED. Computed over the UNION of
+  // history and this run, keyed by unit, so a unit this run dispatched — which
+  // appears in BOTH `settled` and `unitResults` — is counted ONCE.
+  //
+  // MEASURED: the previous implementation summed two filters over the two lists
+  // and reported `verifiedPasses 12` for a campaign with 16 units of which exactly
+  // 6 passed. See `aggregateVerdicts` for the full measurement.
   //
   // The category is recovered from the durable terminal `detail`, whose prefix
   // the worker writes as `<workerVersion> <category|passed>: <detail>` — see
@@ -1038,16 +1131,21 @@ export async function runDriver(opts) {
   // it is the only place a historical verdict survives: the report row is kept
   // as evidence but is not a category, and `resultHash` is deliberately not
   // invertible.
-  result.verifiedPasses =
-    settled.filter((r) => unitCategoryOf(r.detail) === "passed").length +
-    result.unitResults.filter((u) => u.verifierPassed === true).length;
+  const verdicts = aggregateVerdicts(settled, result.unitResults);
+  result.verifiedPasses = verdicts.verifiedPasses;
+  // How much those passes PROVE, this run only (T6 怎么做 5). A "strong" pass came
+  // from a case whose own command verifier checks the written bytes; a "weak" pass
+  // came from an artifact verifier that only checks existence/touch. Kept apart so
+  // a reader cannot mistake six passes for six solved cases.
+  result.strongPasses = verdicts.strongPasses;
+  result.weakPasses = verdicts.weakPasses;
   // Units that reached a verifier verdict at all. `completed` is exactly that
   // status in BOTH execution modes: the worker maps a pass AND a valid negative
   // (`case_failed`) to `completed`, and maps provider/harness/infrastructure
   // failures to `failed`. So the status alone is the run-completeness figure, and
   // reading it from HISTORY is what keeps a resume from reporting zero.
   // Plan §R99 asks this to stay apart from the task pass rate.
-  result.measuredUnits = settled.filter((r) => r.status === "completed").length;
+  result.measuredUnits = verdicts.measuredUnits;
   // The same figures restricted to THIS run, so the two are never conflated.
   result.newMeasuredUnits = result.unitResults.filter(
     (u) => u.failureCategory === null || u.failureCategory === "case_failed",
@@ -1094,7 +1192,11 @@ export async function runDriver(opts) {
       `${result.workerConsumedCalls} logical call(s) consumed; ` +
       // Deliberately NOT phrased as a pass rate: a `case_failed` unit ran
       // correctly and failed its task, and the offline stub cannot pass at all.
-      `verifier passes: ${result.verifiedPasses}/${result.workerUnits} (${result.measuredUnits} unit(s) reached a verifier verdict). ` +
+      // The strong/weak split is stated because an artifact verifier only checks
+      // that a path exists and was touched — a pass there is NOT evidence the case
+      // was solved (T6 怎么做 5).
+      `verifier passes: ${result.verifiedPasses}/${result.workerUnits} (${result.measuredUnits} unit(s) reached a verifier verdict; ` +
+      `this run: ${result.strongPasses} strong, ${result.weakPasses} weak). ` +
       "COMPLETE describes RUN COMPLETENESS, not task success or mechanism improvement.";
     return result;
   }

@@ -781,14 +781,16 @@ jobs:
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
-  # E4-R101 (plan §R101 / finding F7): the R97/R98 offline closed loop on a
-  # clean runner.
+  # E4-R101-A (plan §T6 怎么做 1/2/3/5, 怎么验收 1/2): the R97/R98 offline closed
+  # loop on a CLEAN runner, on WINDOWS and on UBUNTU.
   #
   # PROVES: with NO developer-private directory (`D:/r97-arm-*` is gone), two REAL
-  # arm checkouts are built from THIS repository at their historical SHAs and the
-  # frozen selection is planned by each arm's own built CLI; the R97/R98 suites
-  # run; and the key test files are asserted to have EXECUTED — a `skipped` count
-  # in the driver file is a RED job (finding F7 was exactly that silent skip).
+  # arm checkouts are built from THIS repository at their historical SHAs; the
+  # frozen selection is planned by each arm's own built CLI; the OFFICIAL campaign
+  # entry (`r97-campaign-driver.mjs --arm-worker`) runs the real worker→benchmark
+  # execution inside EACH arm's OWN build; the shipped validator re-derives every
+  # verdict; and the plan's nine-row acceptance matrix is asserted against vitest's
+  # STRUCTURED report, where a `skipped` test FAILS its row.
   #
   # DOES NOT PROVE: the paid two-version experiment. This is OFFLINE with 0
   # provider calls, no key and no network; it shows the loop is RUNNABLE, never
@@ -796,18 +798,34 @@ jobs:
   # NEVER be reported as "the real two-version experiment ran" (plan §R101:
   # 实验结果可运行 ≠ 真实实验已运行).
   #
-  # COST: each arm gets a real `pnpm install --frozen-lockfile` + `pnpm build`.
-  # MEASURED: `dist/` is git-ignored and absent at BOTH historical SHAs, so no
-  # cheaper step can produce `<arm>/apps/cli/dist/main.js` and fabricating it is
-  # forbidden. Verified locally for this exact recipe: install+build leaves the
-  # arm's `git status --porcelain` EMPTY (node_modules and dist are ignored) —
-  # which is what the D6 `clean: true` assertion needs — and the built arm CLI's
-  # `--dry-run` reports `mode: dry-run` with 0 provider calls.
+  # WHY THE WHOLE JOB IS NOW ONE NODE COMMAND (plan 怎么做 1)
+  # -------------------------------------------------------
+  # This job used to be ~200 lines of bash: `git worktree`, `${!var}` indirection,
+  # `set -euo pipefail`, `tr`, `grep -cF`. MEASURED: none of that runs on a Windows
+  # runner, so the Windows half of the plan's matrix was unreachable, and an
+  # operator on Windows could not reproduce the job without translating it by hand.
+  # `scripts/e4/r97-closed-loop.mjs` performs the same sequence with Node's own
+  # spawn/read/resolve, which behave identically on both platforms. The arm
+  # directories reach the test child through its ENVIRONMENT rather than through
+  # the shell's `$GITHUB_ENV` file, whose writer differs per shell.
+  #
+  # COST: each arm gets a real `pnpm install --frozen-lockfile` + `pnpm build`, on
+  # BOTH platforms. MEASURED: `dist/` is git-ignored and absent at BOTH historical
+  # SHAs, so no cheaper step can produce `<arm>/apps/cli/dist/main.js` and
+  # fabricating it is forbidden. Verified locally for this exact recipe:
+  # install+build leaves the arm's `git status --porcelain` EMPTY (node_modules and
+  # dist are ignored) — which is what the D6 `clean: true` assertion needs.
   # ---------------------------------------------------------------------------
   r97-r98-closed-loop:
-    name: r97-r98 closed loop (ubuntu)
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
+    name: r97-r98 closed loop (${{ matrix.os }})
+    strategy:
+      # A failure on one platform must not hide the other: the plan requires BOTH
+      # legs' evidence, and `fail-fast` would cancel the second before it reported.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     permissions:
       contents: read
     env:
@@ -817,6 +835,11 @@ jobs:
       # resolution returns the offline stub (`resolveModelProvider` falls back to
       # the stub when the key is absent). The guard that makes a billed call
       # impossible is the missing KEY, not this variable.
+      #
+      # The empty string is also what keeps `workflow-paid-authorization.test.ts`
+      # green: that scan requires ZERO contiguous paid-switch assignments of the
+      # value one anywhere in this file, so this comment must not spell the literal
+      # out either — a matrix job must not reintroduce one, not even in prose.
       OPENAI_API_KEY: ""
       RUN_PAID_BENCHMARKS: ""
       # The historical arm revisions, quoted so YAML cannot coerce them.
@@ -849,283 +872,66 @@ jobs:
         # built CLI, so the tested revision must be built before anything runs.
         run: pnpm build
 
-      - name: Create the two arm checkouts at their real historical SHAs
-        shell: bash
-        run: |
-          set -euo pipefail
-          # R101: never a hard-coded D:/r97-arm-* path — the arms live in the
-          # runner's temp directory and are named by the runner, not the author.
-          ARMS_ROOT="${RUNNER_TEMP}/r97-arms"
-          rm -rf "$ARMS_ROOT"
-          mkdir -p "$ARMS_ROOT"
-          export R97_ARM_BASELINE_DIR="${ARMS_ROOT}/baseline"
-          export R97_ARM_CANDIDATE_DIR="${ARMS_ROOT}/candidate"
-          # Publish the two directories for the later steps of THIS job.
-          {
-            echo "R97_ARM_BASELINE_DIR=${R97_ARM_BASELINE_DIR}"
-            echo "R97_ARM_CANDIDATE_DIR=${R97_ARM_CANDIDATE_DIR}"
-          } >> "$GITHUB_ENV"
+      # -----------------------------------------------------------------------
+      # THE WHOLE CLOSED LOOP, ONE PLATFORM-NEUTRAL COMMAND (plan 怎么做 1/2/3).
+      #
+      # `--all` runs, in order: setup (the committed `r97-observe-arms.mjs` creates
+      # and builds BOTH arms — a build failure or a missing arm is a SETUP FAILURE,
+      # never a skip), acceptance (the OFFICIAL arm-worker entry over the frozen
+      # selection, in each arm's own build, then the shipped validator), suite (the
+      # R97/R98 files with the real arm dirs in the child env), matrix (the
+      # nine-row acceptance matrix from the STRUCTURED vitest JSON), and identity.
+      #
+      # The `run:` shell differs per platform (pwsh on Windows, bash on Linux), but
+      # the command is the same Node invocation, which is the point.
+      # -----------------------------------------------------------------------
+      - name: Run the offline closed loop (setup -> acceptance -> suite -> matrix -> identity)
+        run: node scripts/e4/r97-closed-loop.mjs --all --out .ci/r97-r98 --arms-root "${{ runner.temp }}/r97-arms"
 
-          # Fetch just the two SHAs if this checkout lacks them (a shallow or
-          # filtered clone). A failure here is a SETUP failure and must be loud.
-          for sha in "$R97_ARM_BASELINE_SHA" "$R97_ARM_CANDIDATE_SHA"; do
-            if ! git cat-file -e "${sha}^{commit}" 2>/dev/null; then
-              echo "fetching arm revision $sha"
-              git fetch --no-tags --depth 1 origin "$sha"
-            fi
-            git cat-file -e "${sha}^{commit}"
-          done
+      # -----------------------------------------------------------------------
+      # THE ANTI-CHEAT MUTATIONS (plan §T6 怎么做 7).
+      #
+      #   "mutation/反例直接改变行为：让两臂都用一个构建、跳过 verifier、固定
+      #    request=r97、绕过预算、resume 丢历史失败，对应测试必须失败."
+      #
+      # Each of the five is APPLIED to the real production source, the test that
+      # exists to catch it is run, and that test MUST FAIL. Without this, a suite
+      # that passes while every mutation goes undetected looks identical to a suite
+      # that would catch a real regression.
+      #
+      # This step is deliberately AFTER the closed loop and must not run
+      # concurrently with it: it mutates files on disk, so a mutation in flight
+      # would make an unrelated test fail. It restores every file in a `finally`
+      # and re-hashes it, so a failure here cannot leave the tree mutated.
+      #
+      # `continue-on-error` is NOT set: a mutation that escapes is a real finding
+      # about the suite and must fail the job.
+      # -----------------------------------------------------------------------
+      - name: Prove the suite CATCHES the plan's five anti-cheat mutations
+        run: node scripts/e4/r97-mutation-check.mjs --out .ci/r97-r98/mutation-report.json
 
-          # Detached checkouts at the exact historical revisions.
-          git worktree add --detach "$R97_ARM_BASELINE_DIR" "$R97_ARM_BASELINE_SHA"
-          git worktree add --detach "$R97_ARM_CANDIDATE_DIR" "$R97_ARM_CANDIDATE_SHA"
-
-          # Assert the checkouts really ARE those revisions: the D6 assertions
-          # below compare against these exact SHAs, so a wrong checkout would
-          # otherwise fail later with a confusing message.
-          test "$(git -C "$R97_ARM_BASELINE_DIR" rev-parse HEAD)" = "$R97_ARM_BASELINE_SHA"
-          test "$(git -C "$R97_ARM_CANDIDATE_DIR" rev-parse HEAD)" = "$R97_ARM_CANDIDATE_SHA"
-          echo "baseline arm:  $R97_ARM_BASELINE_DIR @ $(git -C "$R97_ARM_BASELINE_DIR" rev-parse HEAD)"
-          echo "candidate arm: $R97_ARM_CANDIDATE_DIR @ $(git -C "$R97_ARM_CANDIDATE_DIR" rev-parse HEAD)"
-
-      - name: Build each arm (real install + build; never fabricated)
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Each arm needs its OWN apps/cli/dist/main.js: `dist/` is git-ignored
-          # and absent at both historical SHAs, so it can only come from a real
-          # build in that checkout. Any failure FAILS THE JOB — no observation is
-          # ever fabricated (plan §R101: 网络依赖失败记录为 setup failure).
-          for arm in baseline candidate; do
-            var="R97_ARM_$(echo "$arm" | tr '[:lower:]' '[:upper:]')_DIR"
-            dir="${!var}"
-            echo "::group::building arm ${arm} at ${dir}"
-            if [ ! -d "$dir" ]; then
-              echo "::error::arm ${arm} checkout ${dir} does not exist — the arm setup step failed"
-              exit 1
-            fi
-            (
-              cd "$dir"
-              pnpm install --frozen-lockfile
-              pnpm build
-            ) || { echo "::error::arm ${arm} install/build FAILED — refusing to continue with a fabricated observation"; exit 1; }
-            if [ ! -f "${dir}/apps/cli/dist/main.js" ]; then
-              echo "::error::arm ${arm} has no apps/cli/dist/main.js after a successful build"
-              exit 1
-            fi
-            # The D6 test requires each arm to be observed as a CLEAN checkout
-            # (`clean: true` ⇔ `git status --porcelain` is empty). node_modules
-            # and dist are git-ignored, so this must hold after install+build —
-            # assert it here rather than discover it inside the suite.
-            if [ -n "$(git -C "$dir" status --porcelain)" ]; then
-              echo "::error::arm ${arm} is DIRTY after install/build — the plan would be refused as non-reproducible"
-              git -C "$dir" status --porcelain | head -n 40
-              exit 1
-            fi
-            echo "arm ${arm} built and clean: ${dir}/apps/cli/dist/main.js"
-            echo "::endgroup::"
-          done
-
-      - name: Run the R97/R98 suites and capture the report
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p .ci
-          # Exit code is preserved by `set -o pipefail` while the log is kept for
-          # the assertions in the next steps and for the uploaded artifact.
-          # MEASURED (run 35482804955): the default reporter only prints a
-          # PASSING test's own line for slow tests, so a fast test name (e.g.
-          # `passes --plan-digest to the dispatch`, a few ms) never appears in
-          # the log and any name-based `grep ... ✓` assertion fails even though
-          # the suite is green. --reporter=verbose prints EVERY test on its own
-          # line (`✓ <file> > <describe> > <name>`), which the assertion steps
-          # below depend on; `↓` marks skipped and `×` marks failed.
-          pnpm exec vitest run --reporter=verbose \
-            packages/evaluation/src/r97-budget-ledger.test.ts \
-            packages/evaluation/src/r97-execution-state.test.ts \
-            packages/evaluation/src/r97-plan.test.ts \
-            packages/evaluation/src/r97-driver-closed-loop.test.ts \
-            packages/evaluation/src/r97-arm-worker-contract.test.ts \
-            packages/evaluation/src/r97-redaction.test.ts \
-            packages/evaluation/src/r98-fixture-cases.test.ts \
-            2>&1 | tee .ci/r97-r98-suite.log
-
-      - name: Assert the ARM WORKER really executed a case (R99)
-        shell: bash
-        run: |
-          set -euo pipefail
-          LOG=.ci/r97-r98-suite.log
-          # R99's whole point is that the fixed `content: "r97"` placeholder was
-          # replaced by a real per-case execution. The contract test asserts that
-          # by requiring report-derived verdict text, so the check here is that
-          # the test that proves it RAN and PASSED.
-          # The suite ran with --reporter=verbose, so every PASSING test has its
-          # own line (MEASURED byte layout: ` ✓ <file> > <describe> > <name>`,
-          # one leading space before the checkmark; `↓` marks skipped and `×`
-          # marks failed — a failure would already have failed the suite step).
-          # A name line that also carries `✓` is therefore a PASS, and one that
-          # carries `↓` (skipped) or `×` (failed) is correctly refused.
-          for name in \
-            "executes the case and records a verdict that can ONLY come from the real report" \
-            "TWO DIFFERENT CASES each enter their OWN context"
-          do
-            if ! grep -F "$name" "$LOG" | grep -qF "✓"; then
-              echo "::error::the arm-worker execution test did not execute/pass: \"$name\""
-              exit 1
-            fi
-            echo "PASS  executed: $name"
-          done
-          # The dispatch argv must carry --plan-digest. Assert the test that pins
-          # it passed, so a regression to the measured P0 (no case could ever run)
-          # cannot go green. MEASURED (run 35482804955): under the default
-          # reporter this fast (few-ms) test never gets its own line, so the
-          # assertion failed on a GREEN suite; the verbose format fixes that.
-          if ! grep -F "passes --plan-digest to the dispatch" "$LOG" | grep -qF "✓"; then
-            echo "::error::the --plan-digest dispatch assertion did not execute/pass — the P0 regression is unpinned"
-            exit 1
-          fi
-          echo "PASS  the dispatch argv carries --plan-digest"
-
-      - name: Assert the KEY tests actually EXECUTED (not skipped)
-        shell: bash
-        run: |
-          set -euo pipefail
-          LOG=.ci/r97-r98-suite.log
-          if [ ! -s "$LOG" ]; then
-            echo "::error::no vitest output was captured — the assertion would be vacuous"
-            exit 1
-          fi
-
-          # --reporter=verbose prints one line per test:
-          #   ✓ packages/evaluation/src/r97-driver-closed-loop.test.ts > D6 … > <name>
-          # (measured: one leading space before the `✓`). A passing line carries
-          # `✓`; a SKIPPED line carries `↓`; `skipped` is fatal BY ITSELF:
-          # finding F7 IS the silent-skip defect, so a green suite that skipped
-          # the D6 path must never be reported green.
-          # The path prefix is intentionally NOT anchored: run 35486451101
-          # measured that the verbose lines can carry the file as relative OR
-          # absolute (the name+✓ greps below passed while an exact
-          # `✓ packages/evaluation/src/…` pattern counted 0), so each count is
-          # "lines mentioning the file name that also carry `✓`/`↓`".
-          FILE='r97-driver-closed-loop.test.ts'
-          count="$(grep -F "${FILE}" "$LOG" | grep -cF "✓" || true)"
-          skipped="$(grep -F "${FILE}" "$LOG" | grep -cF "↓" || true)"
-          if [ -z "$count" ]; then
-            echo "::error::no executed-test lines for the driver file — it did not run"
-            grep -nE 'r97-driver-closed-loop' "$LOG" || true
-            exit 1
-          fi
-          echo "driver file: ${count} executed, ${skipped} skipped"
-
-          if [ "${skipped}" -gt 0 ]; then
-            echo "::error::the driver closed-loop file SKIPPED tests — finding F7: a missing arm precondition must be an explicit FAILURE, never a skip"
-            exit 1
-          fi
-
-          # MEASURED: the file declares 45 `it(` blocks. A threshold (rather than
-          # an exact pin) keeps this gate from breaking on an unrelated added
-          # test while still catching a silently-skipped D6 — with `skipped`
-          # already fatal above, a shortfall here means the file did not run its
-          # declared suite at all.
-          EXPECTED_MIN=36
-          if [ "$count" -lt "$EXPECTED_MIN" ]; then
-            echo "::error::the driver file executed ${count} test(s), fewer than the required ${EXPECTED_MIN} — the closed loop did not really run"
-            echo "diagnostic lines mentioning the file:"
-            grep -F "${FILE}" "$LOG" | head -n 6 || true
-            exit 1
-          fi
-          echo "PASS  r97-driver-closed-loop.test.ts executed ${count} test(s) (>= ${EXPECTED_MIN}) with 0 skipped"
-
-          # The D6 acceptance path itself must be present in the run. Its two
-          # tests are named; assert their NAMES appear as executed (the `✓`
-          # marker), which is what distinguishes "ran and passed" from "skipped".
-          if ! grep -F "both arms are observed by the real CLI dry-run" "$LOG" | grep -qF "✓"; then
-            echo "::error::the D6 two-arm observation test did not execute/pass — the real two-checkout path is UNPROVEN"
-            exit 1
-          fi
-          echo "PASS  D6 two-arm observation test executed and passed"
-
-          # Every other required file must also have executed, with zero skips.
-          # Same unanchored form as above (relative or absolute path prefix).
-          for f in r97-budget-ledger r97-execution-state r97-plan; do
-            cnt="$(grep -F "${f}.test.ts" "$LOG" | grep -cF "✓" || true)"
-            skip="$(grep -F "${f}.test.ts" "$LOG" | grep -cF "↓" || true)"
-            if [ -z "$cnt" ] || [ "$cnt" -lt 1 ]; then
-              echo "::error::${f}.test.ts executed no tests — it did not run"
-              exit 1
-            fi
-            if [ "${skip}" -gt 0 ]; then
-              echo "::error::${f}.test.ts SKIPPED tests, which the §R98/§R101 acceptance depends on"
-              exit 1
-            fi
-          done
-          echo "PASS  all four required R97/R98 files executed with 0 skipped"
-
-      - name: Required gate — the ledger's REAL cross-process contention test ran
-        shell: bash
-        run: |
-          set -euo pipefail
-          LOG=.ci/r97-r98-suite.log
-          # Finding F4/G5: the budget ledger's cross-process claim is only proven
-          # by a test that SPAWNS node children and races them. A summary count
-          # cannot show this, so assert the two strongest test NAMES executed and
-          # passed — both spawn real `node` child processes.
-          for name in \
-            "a second PROCESS sees the first process's consumption" \
-            "two processes racing for the last call do not both win"
-          do
-            if ! grep -qF "✓" "$LOG"; then
-              echo "::error::no passing markers in the log — assertion would be vacuous"
-              exit 1
-            fi
-            if ! grep -F "$name" "$LOG" | grep -qF "✓"; then
-              echo "::error::the child-process contention test did not execute/pass: \"$name\""
-              exit 1
-            fi
-            echo "PASS  executed: $name"
-          done
-          # Independent corroboration: the suite really did start child node
-          # processes (the ledger test spawns `node --input-type=module`). If it
-          # silently never spawned, the in-process path was all that ran.
-          if ! grep -F "G5: the budget holds ACROSS PROCESSES" "$LOG" | grep -qF "✓"; then
-            echo "::error::the G5 cross-process group did not run at all"
-            exit 1
-          fi
-          echo "PASS  R97 G5 cross-process budget group executed"
-
-      - name: Record the closed-loop evidence and its honest scope
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p .ci/r97-r98
-          {
-            echo "{"
-            echo "  \"headSha\": \"${{ github.sha }}\","
-            echo "  \"runId\": \"${{ github.run_id }}\","
-            echo "  \"runAttempt\": \"${{ github.run_attempt }}\","
-            echo "  \"runnerOs\": \"$RUNNER_OS\","
-            echo "  \"armBaselineSha\": \"$R97_ARM_BASELINE_SHA\","
-            echo "  \"armCandidateSha\": \"$R97_ARM_CANDIDATE_SHA\","
-            echo "  \"armBaselineDir\": \"$R97_ARM_BASELINE_DIR\","
-            echo "  \"armCandidateDir\": \"$R97_ARM_CANDIDATE_DIR\","
-            echo "  \"providerCalls\": 0,"
-            echo "  \"paidAuthorizationPresentInWorkflow\": false,"
-            echo "  \"experimentKind\": \"offline_closed_loop\","
-            echo "  \"paidTwoVersionExperimentRan\": false,"
-            echo "  \"scopeNote\": \"Proves the offline two-checkout closed loop RUNS on a clean runner. Does NOT prove the paid two-version experiment ran.\""
-            echo "}"
-          } > .ci/r97-r98/closed-loop-identity.json
-          cat .ci/r97-r98/closed-loop-identity.json
-          # Deliberately NO environment dump, no secrets, no full process env.
+      # -----------------------------------------------------------------------
+      # NO BASH IN THIS JOB (plan 怎么做 1: "不要求 bash、WSL 或 Docker").
+      #
+      # The previous job was ~200 lines of bash, including the name-based
+      # `grep … ✓` assertions that pinned the measured regressions. Those pins are
+      # NOT dropped: `r97-acceptance-matrix.mjs` carries them in
+      # `PINNED_REGRESSIONS` and refuses a report in which a pinned test is ABSENT
+      # or `skipped`. Reading them from vitest's JSON report is strictly stronger
+      # than grepping a checkmark out of the verbose text, and it needs no shell.
+      #
+      # The verbose log is still produced and uploaded as AUXILIARY evidence, which
+      # is what plan 怎么做 5 permits ("现有 verbose grep 可以保留为辅助").
+      # -----------------------------------------------------------------------
 
       - name: Upload the closed-loop evidence (E4-R101)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: r97-r98-closed-loop-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          # Per-platform names so BOTH legs' evidence survives; the plan requires
+          # each platform's own run, and one artifact name would have them overwrite.
+          name: r97-r98-closed-loop-${{ matrix.os }}-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
-            .ci/r97-r98-suite.log
             .ci/r97-r98/
           if-no-files-found: warn
           retention-days: 14

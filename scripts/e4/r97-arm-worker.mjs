@@ -104,6 +104,7 @@ import {
   loadArmModules,
   readCaseDef,
   runArmCaseInProcess,
+  withArmExecTag,
 } from "./r97-arm-exec.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -1497,6 +1498,11 @@ export async function runArmUnit(opts) {
     // The ACTUAL model contexts this case entered, so a test can prove two
     // cases differ rather than inferring it from two result hashes.
     capturedRequests: [],
+    // How much a PASS on this unit would prove (T6 怎么做 5): "strong" when the
+    // case's own command verifier checks the written bytes, "weak" when the
+    // artifact verifier only checks existence/touch, `null` when the seam wrote
+    // nothing. Set from the executed result; stays `null` for a refused unit.
+    passStrength: null,
     // The arm CLI's REAL per-case report row, persisted by T3 as evidence.
     report: null,
     // The link the terminal record carries to that evidence (T3): its
@@ -1697,6 +1703,12 @@ export async function runArmUnit(opts) {
         record.budget = executed.budget;
         record.execution = executed.execution;
         record.capturedRequests = executed.capturedRequests;
+        // WHAT A PASS HERE PROVES (T6 怎么做 5): "strong" when the case's own
+        // command verifier checks the written bytes, "weak" when the artifact
+        // verifier only checks existence/touch, `null` when this seam wrote
+        // nothing. Carried on the record so the campaign summary can report the
+        // two apart instead of presenting a weak pass as a solved case.
+        record.passStrength = executed.passStrength ?? null;
         // ---- THE IDENTITY THE REQUEST ACTUALLY CARRIED ------------------
         //
         // Plan §T4 怎么做 6: the worker must USE the approved identity, not fall
@@ -1754,7 +1766,7 @@ export async function runArmUnit(opts) {
       }
     }
   } catch (err) {
-    verdict = { category: "infrastructure", detail: `E4-R98: ${redact(err)}` };
+    verdict = { category: "infrastructure", detail: withArmExecTag(redact(err)) };
   } finally {
     // Only the STAGED CASE is a working file, and only it is removed. The arm's
     // own report is EVIDENCE and is preserved on the record (finding N5: the

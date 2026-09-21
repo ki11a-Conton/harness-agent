@@ -9,7 +9,14 @@
  * gate 函数，要驱动实际 CLI/driver 入口." So this file does NOT re-implement the
  * worker's logic and does NOT mock it: it imports `scripts/e4/r97-arm-worker.mjs`
  * and drives `runArmUnit` / `main` against the REAL repo build, the REAL budget
- * ledger and the REAL execution state, with the arm's OWN CLI child process.
+ * ledger and the REAL execution state.
+ *
+ * The execution itself goes through each arm's OWN BUILD: `r97-arm-exec.mjs` loads
+ * THAT arm's `apps/cli/dist/benchmark-command.js` and `packages/model/dist`, so the
+ * code under test is the arm's shipped code rather than a re-implementation. (It is
+ * loaded in-process rather than as a child CLI — see the header of `r97-arm-exec.mjs`
+ * for why: a child that resolves its own provider makes the campaign BUDGET
+ * unenforceable, which was measured defect N1.)
  *
  * WHAT MAKES THESE TESTS NON-VACUOUS
  * ----------------------------------
@@ -27,14 +34,29 @@
  *
  * HONEST LIMITS OF THE OFFLINE PATH (stated, not hidden)
  * ------------------------------------------------------
- * `--provider` in the arm CLI accepts exactly one id (`openai`), and the
- * keyless "stub" transport is selected by the ABSENCE of a key rather than by a
- * flag. This test therefore CANNOT produce a verified PASS: the stub yields a
- * `MODEL_ERROR`, so every offline unit ends as an honest negative
- * (`provider`/`case_failed`) with `verifierPassed === false`. That is exactly
- * what the assertions below pin. A `verification_passed=true` run requires the
- * billed provider, which is out of scope for this round (plan §R99: "不为本任务
- * 调用实际付费模型"). The suite proves EXECUTION and VERIFICATION, not success.
+ * THIS SECTION WAS CORRECTED in E4-R101 (T6). It used to say that this file
+ * "CANNOT produce a verified PASS", because `--provider` in the arm CLI accepts
+ * exactly one id (`openai`) and the keyless "stub" transport is chosen by the
+ * ABSENCE of a key — so the stub yields a `MODEL_ERROR` and every offline unit ends
+ * as an honest negative. That was true of the CHILD-CLI dispatch, and it is FALSE
+ * of the seam this suite now drives (see `scripts/e4/r97-arm-exec.mjs`).
+ *
+ * Plan §0.4 found the interface that changes it: both frozen arms export
+ * `runBenchmarkCommand(argv, providerOverride)` from their OWN
+ * `apps/cli/dist/benchmark-command.js`, and `ScriptedModelProvider` from their own
+ * `packages/model/dist`. Injecting a scripted provider through that override drives
+ * the REAL request, the REAL tool loop and the REAL `TaskVerifier` with ZERO
+ * external requests, and a case CAN therefore reach a verified
+ * `verification_passed=true`. The W8 tests below measure exactly that, and they
+ * assert a REAL pass rather than a negative.
+ *
+ * WHAT REMAINS TRUE, AND IS THE POINT OF THE DISTINCTION
+ * -----------------------------------------------------
+ * A pass produced this way is a pass of the TOOLCHAIN, not of a model. The scripted
+ * provider is authored by this repository, so nothing here supports any claim about
+ * model quality, win rate or promotability. The offline path also does not prove
+ * the PAID two-version experiment ran; that remains `NOT_RUN` (plan §T6 怎么验收 5:
+ * 无外部付费执行时标为 `OFFLINE_ACCEPTED / PAID_NOT_RUN`).
  *
  * ZERO external requests: no test sets `OPENAI_API_KEY`, and `runArmUnit` deletes
  * it from the child environment it builds.
@@ -384,6 +406,53 @@ describe("R99 W5: report classification is three-way and never invents a pass", 
     expect(empty.category).toBe("infrastructure");
     // The message names the missing case, so the cause is readable.
     expect(empty.detail).toContain(CASE_ID);
+  });
+
+  it("success=true WITHOUT the report's own verification evidence is infrastructure, not a pass", () => {
+    // Plan §T6 怎么做 7's "跳过 verifier" mutation, as a test. The whole point of
+    // `classifyReport` is that a pass must be SUBSTANTIATED: `success: true` on its
+    // own is the case asserting it did the work, and a case can assert anything.
+    // MEASURED: this branch had NO test before — the mutation gate found the gap,
+    // because a mutation is only caught by a test that exercises the branch.
+    const unsubstantiated = mod.classifyReport(
+      { results: [{ task_id: CASE_ID, success: true, tool_calls: 3, termination_reason: "completed" }] },
+      CASE_ID,
+    );
+    expect(unsubstantiated.passed, "an unsubstantiated success must never be a pass").toBe(false);
+    expect(unsubstantiated.category).toBe("infrastructure");
+    expect(unsubstantiated.detail).toContain("carries no verification evidence");
+
+    // The NEGATIVE CONTROL: the SAME row WITH the evidence is a pass, so the
+    // refusal above is about the missing evidence rather than about the row shape.
+    const substantiated = mod.classifyReport(
+      {
+        results: [
+          { task_id: CASE_ID, success: true, verification_passed: true, tool_calls: 3, termination_reason: "completed" },
+        ],
+      },
+      CASE_ID,
+    );
+    expect(substantiated.passed).toBe(true);
+    expect(substantiated.category).toBeNull();
+
+    // And a report that claims success while its own verifier says it FAILED is a
+    // case failure, never a pass — the stronger form of the same rule.
+    const contradicted = mod.classifyReport(
+      {
+        results: [
+          {
+            task_id: CASE_ID,
+            success: true,
+            verification_passed: false,
+            actual_status: "failed",
+            termination_reason: "verification_failed",
+          },
+        ],
+      },
+      CASE_ID,
+    );
+    expect(contradicted.passed).toBe(false);
+    expect(contradicted.category).not.toBeNull();
   });
 });
 

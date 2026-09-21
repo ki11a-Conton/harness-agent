@@ -183,11 +183,21 @@ const TAIL_COMPLETIONS = 8;
 export function scriptForCase(caseDef, shape) {
   const target = caseDef.writeTarget;
   let prefix;
-  if (shape === "text-only") {
+  if (shape === "text-only" || target === null) {
     // Claim completion, write nothing.
+    //
+    // MEASURED DEFECT this branch fixes (plan §T6 怎么做 5): a case that declares
+    // ONLY a `kind:"command"` verifier — five of the eight frozen R87 cases — has
+    // no artifact path to write to, and the previous version THREW here. The
+    // worker's catch-all turned that throw into `infrastructure`, so the case
+    // never reached its own verifier and the unit measured nothing. Claiming
+    // completion instead drives the case to its REAL verifier: measured, all five
+    // of those commands genuinely fail against the as-staged fixtures, so each
+    // becomes an honest `case_failed` negative rather than a phantom
+    // infrastructure failure. A `case_failed` unit is a VALID NEGATIVE that the
+    // driver deliberately excludes from `failures[]`, so the campaign can still
+    // reach COMPLETE without any case being silently dropped.
     prefix = [["text", `done: ${caseDef.caseId}`]];
-  } else if (target === null) {
-    throw new Error(`E4-R98: case ${caseDef.caseId} declares no artifact path, so a write script cannot be derived from it`);
   } else {
     prefix = [
       ["tool", { path: target.path, content: target.content }],
@@ -196,6 +206,43 @@ export function scriptForCase(caseDef, shape) {
   }
   const tail = Array.from({ length: TAIL_COMPLETIONS }, () => ["text", "nothing further to do"]);
   return [...prefix, ...tail];
+}
+
+/**
+ * The banner written when a case demands an artifact but its own files carry no
+ * literal the seam can recover.
+ *
+ * WHY A BANNER AND NOT A THROW OR A `null`: `write_file`'s own schema is
+ * `content: z.string()`, so `content: null` is REFUSED and the tool call fails.
+ * MEASURED with a probe against the baseline arm: the failed write still left the
+ * artifact verifier PASSING whenever the fixture file already existed, because
+ * `TaskVerifier`'s artifact rule is `exists && (mustChange !== true || touched)`
+ * and `touched` comes from ATTEMPTED `write_file` requests rather than verified
+ * writes — a false pass produced by a write that never happened. Supplying REAL
+ * non-null bytes makes the write genuinely succeed, so the pass is real under the
+ * verifier's actual contract.
+ *
+ * The banner NAMES ITSELF so the pass cannot be mistaken for model output: the
+ * frozen artifact verifiers only require the path to exist and to have been
+ * touched, so these passes are WEAK, and the campaign summary says so.
+ */
+export function offlineBannerFor(caseId, artifactPath) {
+  return [
+    "offline-acceptance banner — no model authored this file.",
+    "",
+    `case: ${caseId}`,
+    `artifact: ${artifactPath}`,
+    "",
+    "Written by the scripted provider of the E4-R101 offline acceptance run",
+    "(scripts/e4/r97-offline-acceptance.mjs). Its purpose is to prove that the",
+    "arm's own build really executes the case, that the write reaches the",
+    "sandboxed workspace, and that the case's own verifier then runs.",
+    "",
+    "It is NOT a solution to this case. The frozen artifact verifier requires only",
+    "that this path exists and was touched, so a pass here is a WEAK pass and is",
+    "reported as such; it supports no claim about model capability.",
+    "",
+  ].join("\n");
 }
 
 /**
@@ -208,7 +255,7 @@ export function scriptForCase(caseDef, shape) {
  * which is the property we want rather than a script that trivially satisfies a
  * hardcoded expectation.
  */
-export function writeTargetOf(caseDef) {
+export function writeTargetOf(caseDef, ctx) {
   const specs = Array.isArray(caseDef?.verification) ? caseDef.verification : [];
   const artifact = specs.find((s) => s?.kind === "artifact" && typeof s.path === "string");
   if (artifact === undefined) return null;
@@ -227,20 +274,93 @@ export function writeTargetOf(caseDef) {
     }
     if (content !== null) break;
   }
-  return { path: artifact.path, content };
+  if (content !== null) {
+    return { path: artifact.path, content, contentSource: "command-literal" };
+  }
+  // ---- MEASURED DEFECT (plan §T6 怎么做 5): `content: null` ------------------
+  //
+  // Three of the eight frozen cases declare an artifact verifier and NO command
+  // verifier, so no literal exists to recover and the previous version returned
+  // `content: null`. `write_file`'s schema is `content: z.string()`, so that call
+  // FAILED — and the artifact verifier still reported PASS whenever the fixture
+  // file already existed, because `changedPaths` is built from ATTEMPTED writes.
+  // Real bytes are therefore supplied instead, labelled as what they are.
+  return {
+    path: artifact.path,
+    content: offlineBannerFor(ctx?.caseId ?? "unknown-case", artifact.path),
+    contentSource: "offline-banner",
+  };
+}
+
+/**
+ * How much a PASS on this case actually proves.
+ *
+ * MEASURED, from the real acceptance run's own per-unit table: of sixteen units,
+ * six passed — and the six are NOT the same kind of pass.
+ *
+ *   `"strong"` — the case's own `kind:"command"` verifier embeds the exact literal
+ *                the seam writes (`!== '<content>'`). The case's OWN command
+ *                checked the bytes, so a pass means the artifact really held what
+ *                the case demanded. (The two R98 fixture cases.)
+ *
+ *   `"weak"`   — the case declares an artifact verifier and no recoverable
+ *                literal, so the seam wrote a labelled banner. `TaskVerifier`'s
+ *                artifact rule is `exists && (mustChange !== true || touched)`,
+ *                which checks that the path EXISTS and was touched — never what
+ *                it CONTAINS. So the pass is real under the verifier's actual
+ *                contract but proves only that the write reached the workspace.
+ *                (The three artifact-only frozen cases.)
+ *
+ *   `null`     — the seam wrote nothing (a command-only case, scripted as the
+ *                claim-only negative control), so this seam produced no pass at
+ *                all. Any verdict such a case reaches is its own verifier's.
+ *
+ * Reporting one undifferentiated `verifiedPasses` number would present a weak
+ * pass as evidence a case was solved. Plan §T6 怎么做 8 requires exactly this kind
+ * of distinction for the campaign as a whole ("已有 keyless MODEL_ERROR 冒烟"
+ * 不等于"成功工具链验收"); it applies one level down too.
+ */
+export function passStrengthOf(writeTarget) {
+  if (writeTarget === null || writeTarget === undefined) return null;
+  if (writeTarget.contentSource === "command-literal") return "strong";
+  if (writeTarget.contentSource === "offline-banner") return "weak";
+  return null;
 }
 
 /** Read one case's own files, so the executor knows what the case asks for. */
 export async function readCaseDef(caseDir, caseId) {
   const raw = await readFile(join(caseDir, "case.json"), "utf8");
   const parsed = JSON.parse(raw);
+  const writeTarget = writeTargetOf(parsed, { caseId });
   return {
     caseId,
     requestMd: await readFile(join(caseDir, "request.md"), "utf8").catch(() => ""),
     expectedMd: await readFile(join(caseDir, "expected.md"), "utf8").catch(() => ""),
     verification: parsed.verification ?? [],
-    writeTarget: writeTargetOf(parsed),
+    writeTarget,
+    // Travelling WITH the case definition rather than re-derived by a later
+    // reader: the strength describes what THIS seam did, and a consumer holding
+    // only the executed record must be able to state it.
+    passStrength: passStrengthOf(writeTarget),
   };
+}
+
+/**
+ * Prefix a message with this executor's tag, exactly once.
+ *
+ * MEASURED DEFECT (plan §T6 怎么做 5): the driver's reason line read
+ *   "arm baseline case regression/reg-03-add-import failed: E4-R98: E4-R98: …"
+ * because the worker's catch-all prefixes `E4-R98: ` onto a message that already
+ * carries the tag. The doubled tag is the signature of a pass-through nobody
+ * read, and it makes a log harder to scan for the real failure. Collapsing it is
+ * a presentation fix, not a change to any verdict.
+ */
+export function withArmExecTag(message) {
+  const text = String(message).trim();
+  const tag = "E4-R98:";
+  let body = text;
+  while (body.startsWith(tag)) body = body.slice(tag.length).trim();
+  return `${tag} ${body}`;
 }
 
 /**
@@ -608,6 +728,10 @@ export async function runArmCaseInProcess(opts) {
     capturedRequests,
     budget: { ...stats },
     scriptShape,
+    // WHAT A PASS ON THIS CASE WOULD PROVE (T6 怎么做 5). Recorded with the run so
+    // a summary can report strong and weak passes apart instead of presenting a
+    // weak pass as evidence the case was solved.
+    passStrength: caseDef.passStrength ?? passStrengthOf(caseDef.writeTarget),
     // The identity the request ACTUALLY carried, measured rather than assumed.
     executionIdentity,
     // The arm's own executed bytes, hashed by content (N7 / T4 怎么做 8).
