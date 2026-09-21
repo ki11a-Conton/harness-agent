@@ -1257,3 +1257,31 @@ nothing about model quality, win rate or promotion eligibility: the provider is
 scripted, `providerCalls` is 0, and the paid two-version experiment remains `NOT_RUN`.
 Per plan 怎么验收 5 the scope label stays `OFFLINE_ACCEPTED / PAID_NOT_RUN`.
 
+### 7.20 The end conditions of plan §2, verified against this round's own artifacts
+
+Plan §2 lists six conditions that must hold together for the round to close. Each is
+checked below against the artifacts the command in §7.18 produced, not against a
+restatement of intent.
+
+| # | Plan §2 condition | Measured | Where |
+| --- | --- | --- | --- |
+| 1 | 每次实际调用受同一预算约束，恢复和换路径不授予新额度 | grant 320, committed 42; `logicalCalls 42` = `workerConsumedCalls 42`, all of it consumed by the 16 worker units (`measuredUnits 16`, `workerUnits 16`); a second ledger dir for one campaign id is refused `BUDGET_CAMPAIGN_DIR_DUPLICATE` | `driver-result.json`, §7.12 |
+| 2 | 状态所有权正确；结果 hash、输入身份和原报告都在恢复时被验证 | `executionMode arm-worker`; `recoveredUnits 0`, `foreignOwnerUnits 0`, `reopenedForRetryUnits 0`; evidence chain re-checked 16/16 | `driver-result.json`, validator |
+| 3 | 失败不会在恢复中消失；累计汇总可以从原结果独立重算 | `historicalFailures 0` on this fresh campaign; the resume-loses-history mutation is CAUGHT by its test; validator recomputes 16 terminal records from their own hashes, and forged/deleted detail both exit 1 | mutation gate, §7.10 |
+| 4 | 正式入口确实执行两份构建、真实工具和 verifier；批准参数就是实际参数 | `workerUnits 16`, `providerRequests 0`, both arms present, **2 distinct `sourceSha`** across units, `checkoutDir` no longer published | `driver-result.json` |
+| 5 | 超时与取消能结束真实进程树 | the bounded-stop suite passes in the CI matrix on both platforms; note the measured platform asymmetry — Windows has no SIGTERM delivery, so the POSIX path is exercised on ubuntu-latest | `r97-bounded-stop.test.ts` |
+| 6 | Windows/Ubuntu CI 覆盖同一闭环，没有作者机器私有前提 | run `35569887542` on head `5a76beb`: all 7 jobs success; the loop needs only Node, no bash/WSL/Docker | §7.19 |
+
+Independent recompute of this round's real artifacts:
+
+```
+node scripts/e4/r97-validate-campaign.mjs --campaign .ci/r97-r98/acceptance/ledger
+  -> exit 0, ok=true, reasonCodes=[], terminal 16, evidenceChecked 16, evidenceFailures []
+tampered detail (forged) -> exit 1      deleted detail -> exit 1      restored -> exit 0
+```
+
+With all six conditions measured, the round closes under plan §2's own instruction:
+"达到以上条件后停止这轮基础设施修改". No R102+ framework work was started and no
+experiment was enlarged. The paid authorization does not cover the final plan, so the
+status stays `PAID_NOT_RUN`.
+
