@@ -899,11 +899,14 @@ which is what happened.
 
 ### 7.9 T6 verdict
 
-> **SUPERSEDED — see §7.14.** The block below is the verdict as first written. It
-> predates the three defects in §7.10–7.12, two of which were integrity defects that
-> made plan 怎么验收 3 **false** at the time (a forged PASS validated clean). It is kept
-> verbatim as the historical record, per plan 怎么做 8 ("保留旧事实与 SHA，追加勘误");
-> the counts moved 448→460 and 253→255 when the new tests were added.
+> **SUPERSEDED — see §7.14, and then §7.17–7.18.** The block below is the verdict as
+> first written. It predates the three defects in §7.10–7.12, two of which were
+> integrity defects that made plan 怎么验收 3 **false** at the time (a forged PASS
+> validated clean). It also predates the first real two-platform CI run, which
+> **failed on both platforms** (§7.17). It is kept verbatim as the historical record,
+> per plan 怎么做 8 ("保留旧事实与 SHA，追加勘误"); the counts moved 448→460 and
+> 253→255 when the new tests were added, and then 460→464 when the CI defects were
+> fixed (§7.18).
 
 ```
 status:                    OFFLINE_ACCEPTED
@@ -1087,6 +1090,11 @@ ledger and the evidence to the original row.
 
 ### 7.16 What is still NOT satisfied, stated plainly
 
+> **RESOLVED — see §7.17 and §7.19.** The first bullet below was an inference when it
+> was written ("has **not** executed on a real CI runner"). The job has since run, it
+> first **failed on both platforms**, the causes were fixed, and the rerun is green on
+> both. The text is kept as written, per plan 怎么做 8.
+
 - **怎么验收 1 (两平台专用 job 全通过).** The `r97-r98-closed-loop` matrix job
   (`os: [ubuntu-latest, windows-latest]`) is committed and every phase it runs passes
   locally on win32, but it has **not** executed on a real CI runner. The claim "runs
@@ -1099,4 +1107,153 @@ ledger and the evidence to the original row.
   (` D plan(20260917-001821).md`) that this round must not resolve unilaterally.
 - The paid two-version experiment remains `NOT_RUN`, was never attempted, and is not
   being requested.
+
+### 7.17 ERRATUM — §7.16 above was written before the job ever ran, and it FAILED on both platforms
+
+The paragraph above said the two-platform job "has not executed on a real CI runner".
+It has now executed, and the first real run failed. That is recorded here rather than
+quietly edited away, because the claim in §7.16 was an inference and the measurement
+contradicted it.
+
+**Run 35560959837, head `a793456`** — the first execution of the `r97-r98-closed-loop`
+matrix on a real runner:
+
+| Job | Result |
+| --- | --- |
+| `coverage gate (ubuntu)` | success |
+| `offline cold-start (ubuntu)` | success |
+| `r97-r98 closed loop (windows-latest)` | **failure** |
+| `r97-r98 closed loop (ubuntu-latest)` | **failure** |
+| `install · typecheck · test · build · benchmark-smoke · audit (windows-latest)` | **failure** (step `Unit and integration tests`) |
+| `install · … (ubuntu-latest)` | cancelled (superseded by run `35561161204` under `cancel-in-progress`) |
+
+Two independent root causes, each visible on exactly one platform, plus a third latent
+flake found while reproducing the second on a clean checkout.
+
+#### RC1 — the mutation gate's anchors were EOL-fragile (windows-latest only)
+
+`r97-mutation-check.test.ts` X2 compared anchors with a raw
+`source.split(find).length - 1`. Two of the five anchors (`skip-verifier`,
+`resume-loses-history`) span more than one line, so they contain an interior `\n`.
+`git ls-files --eol` reports `i/lf` for all five target files, but `core.autocrlf=true`
+— true in this repo and in a fresh clone — rewrites a Windows working tree to CRLF.
+Measured in a clean clone of the failing head: the file holds 2123 CRLF endings and the
+anchor matches **0** times, so the gate refused to run:
+
+```
+skip-verifier: the anchor appears 0 time(s) in scripts/e4/r97-arm-worker.mjs, expected 1
+```
+
+Ubuntu checks out LF and passed; `coverage gate (ubuntu)` — which runs
+`pnpm test:coverage`, and that includes this file — also passed. Those two green jobs
+are what pinned the cause to the checkout rather than to a stale anchor.
+
+The line ending a checkout happens to use is not part of the program. Fixed by matching
+through the gate's own EOL-insensitive `anchorOccurrences`, which normalizes both sides
+and is now used by X2 **and** by `runOne`. The mutation is still applied to the
+ORIGINAL bytes through an index map, so a file with mixed endings is not silently
+rewritten end to end, and the replacement adopts the file's own ending.
+
+#### RC2 — the driver result published an absolute host path (ubuntu-latest only)
+
+D5 asserts the persisted driver result carries no host path, and on Linux it failed:
+
+```
+AssertionError: expected '{\n  "driverVersion": "e4-r97-campaig…' not to contain '/tmp/r97-driver-rmsDgP'
+```
+
+The leaking field was `result.campaign.rootDir`, the campaign's absolute directory.
+The same field was written on Windows, where the assertion could not see it:
+`JSON.stringify` escapes `\`, so the stored `C:\\Users\\…` never contains the raw
+`dir`. **The leak was present on both platforms and observable on one** — the
+assertion was passing on Windows for the wrong reason.
+
+`rootDir` had no consumer. The campaign's durable header records the root, and
+`R97_CAMPAIGN_ROOT_MISMATCH` is checked there, so publishing it into the result added
+a leak and nothing else. `unitResults[].build.checkoutDir` was the same kind of value,
+so it is now published as `publishedBuildOf(build)`: the identity
+(`sourceSha`/`buildDigest`) is kept — that is what a reader can re-check — and the
+location is dropped. D5 additionally walks the whole result tree, so a NEW field
+carrying a path is caught rather than needing another assertion.
+
+#### RC3 — the T4 arm-worker test killed its own subject (both platforms, load-dependent)
+
+Found while reproducing RC2 in the clean clone, where the full loop first reported
+462/463. The failing test was the T4 arm-worker entry, and its message was
+`the driver printed nothing; code=1 stderr=`.
+
+Its `runDriverCli` helper used a flat `timeout: 120_000`, while the campaign it drives
+legitimately takes longer. Measured durations for the SAME test on the SAME machine:
+
+| Run | Duration | Outcome |
+| --- | --- | --- |
+| clean clone, full suite | 125_613 ms | cap fired → child killed → empty stdout |
+| clean clone, full suite | 117_225 ms | passed, 2.8 s of margin |
+| clean clone, run alone | 107_703 ms | passed |
+
+So the binding limit was the test's own subprocess cap, not the work: the test killed
+its subject and then reported the killing as a defect in the subject. Raised to
+600_000 ms — 4.8× the worst measured run, and deliberately below the enclosing 900 s
+test budget so the inner cap still produces the diagnosable failure first — with a
+guard test that fails if it is lowered back under the measured runtime.
+
+**What this pair of root causes says about the pre-T6 job.** The previous ubuntu-only
+job at `0075f72` ran this same test file and passed, but its gate counted
+`grep -F "✓"` lines per file against `EXPECTED_MIN=36` and asserted a few named D6
+tests. It never consulted a per-test status, so a single failing test stayed
+invisible. Replacing that with a structured JSON gate is exactly what plan 怎么做 5
+asked for ("使用结构化测试结果/稳定断言…不要继续为终端符号、相对路径和阈值写大量修补
+逻辑") — and it is what surfaced RC2.
+
+### 7.18 T6 verdict, after the fixes, on a clean checkout
+
+Verified on a fresh clone of `00826e9` with `core.autocrlf=true` — the CRLF condition
+that broke RC1 — with `git status --porcelain` empty so the tree matches CI:
+
+```
+closed loop      [1/5] setup OK · [2/5] acceptance OK status=OFFLINE_ACCEPTED passes=6/16
+                 [3/5] suite OK 464/464 · [4/5] matrix OK 9/9 · [5/5] identity OK
+mutation gate    5/5 CAUGHT
+pnpm test        362/362 files, 6781 passed, 0 failed
+pnpm typecheck   exit 0
+pnpm test:security 2135/2135
+pnpm docs:verify   ALL CHECKS PASS
+plan 7-file block  257/257
+```
+
+The suite total moved from 460 to 464 because this round added four tests: three for
+the two new defects (X5's CRLF pair, D5's host-path walk) and one guard for RC3.
+
+### 7.19 怎么验收 1 — MEASURED green on both platforms
+
+The fixes above were pushed as `00826e9`, and the rerun is the first fully green
+two-platform execution of this workflow.
+
+**Run [35568591000](https://github.com/ki11a-Conton/harness-agent/actions/runs/35568591000),
+head `00826e977077563463479af50a9a1802b052e7b6`, conclusion `success`:**
+
+| Job | Result |
+| --- | --- |
+| `r97-r98 closed loop (windows-latest)` | **success** |
+| `r97-r98 closed loop (ubuntu-latest)` | **success** |
+| `install · typecheck · test · build · benchmark-smoke · audit (windows-latest)` | success |
+| `install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest)` | success |
+| `coverage gate (ubuntu)` | success |
+| `offline cold-start (ubuntu)` | success |
+| `release attestation (P38-12)` | success |
+
+All seven jobs green. Both platforms of the dedicated matrix job passed, so plan
+怎么验收 1 ("两平台专用 job 全通过，关键场景没有 skip") is now a **measurement rather
+than an inference** — and the two failures it took to get here are recorded in §7.17
+rather than removed from the record.
+
+怎么验收 2 (reproduction from a clean checkout) is also measured: every number in §7.18
+came from a fresh clone at `00826e9` with an empty `git status --porcelain`, which is
+the CI condition. The only reproduction caveat that remains is the pre-existing
+deletion in the author's workspace (§4.2), which is the user's to resolve.
+
+**What this still does not prove.** The offline loop being green on two platforms says
+nothing about model quality, win rate or promotion eligibility: the provider is
+scripted, `providerCalls` is 0, and the paid two-version experiment remains `NOT_RUN`.
+Per plan 怎么验收 5 the scope label stays `OFFLINE_ACCEPTED / PAID_NOT_RUN`.
 
