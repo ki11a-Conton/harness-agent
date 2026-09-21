@@ -752,6 +752,10 @@ Measured locally (Windows, Node v24.18.1, `OPENAI_API_KEY` unset):
 [5/5] identity   OK  .ci\r97-r98\closed-loop-identity.json
 ```
 
+> **Counts superseded:** the suite is now **460/460** (the §7.10–7.12 fixes added 12
+> tests). The block above is the run as first measured and is kept as the historical
+> record; §7.14 carries the current figures.
+
 **The bash removal is itself the fix, not a simplification.** Plan 怎么做 1–2
 forbade continuing to patch "终端符号、相对路径和阈值"; the old job grepped for a
 `✓` glyph and counted lines whose path prefix matched, and it failed on ubuntu
@@ -895,6 +899,12 @@ which is what happened.
 
 ### 7.9 T6 verdict
 
+> **SUPERSEDED — see §7.14.** The block below is the verdict as first written. It
+> predates the three defects in §7.10–7.12, two of which were integrity defects that
+> made plan 怎么验收 3 **false** at the time (a forged PASS validated clean). It is kept
+> verbatim as the historical record, per plan 怎么做 8 ("保留旧事实与 SHA，追加勘误");
+> the counts moved 448→460 and 253→255 when the new tests were added.
+
 ```
 status:                    OFFLINE_ACCEPTED
 paidStatus:                PAID_NOT_RUN
@@ -915,3 +925,149 @@ experiment ran, and not a claim about model capability or win rate. The formal
 transport's budget and identity are wired and exercised offline; the **paid**
 execution itself was never attempted and is not being requested (plan 怎么做 6:
 never write `OFFLINE_ACCEPTED` early, and never ask the user to pay).
+
+### 7.10 A forged PASS was undetectable — plan 怎么验收 3, found by tampering real artifacts
+
+Plan 怎么验收 3 states the criterion that this section closes:
+
+> 最终报告能够由独立命令从这次真实产物重算，summary 篡改会失败.
+> (The final report can be recomputed from this round's real artifacts by an
+> independent command, and tampering with the summary fails.)
+
+That criterion was **not** satisfied when §7.9 was first written. It was checked by
+tampering the real 16-unit acceptance campaign rather than by reading the code, and
+the first two tamper attempts passed correctly while the third did not:
+
+| Tamper | Result before | Result now |
+| --- | --- | --- |
+| Rewrite the linked evidence FILE's verdict | refused (`EVIDENCE_BROKEN`) | refused |
+| Change the record's `resultHash` | refused (`EVIDENCE_RESULT_MISMATCH`) | refused |
+| **Rewrite only `execution-state.json`'s `detail`** | **`ok: true`, exit 0** | refused (`EVIDENCE_DETAIL_MISMATCH`) |
+
+The third row is the defect. The chain bound `record.resultHash` to the envelope and
+re-derived the envelope's hash from its own fields — but never bound the record's
+`detail`, the verdict text. `resultHash` is deliberately not invertible, so it proves
+the EVIDENCE is intact while saying nothing about the record's own prose.
+
+**Why that field decides the number.** `r97-campaign-driver.mjs` derives the
+campaign's headline `verifiedPasses` from `unitCategoryOf(r.detail)` — i.e. from the
+`<category>:` prefix of that very string. Measured: rewriting the `detail` of all 16
+records to `"e4-r98-arm-worker-v2 passed: verification_passed=true"`, leaving every
+`resultHash` and every evidence file untouched, made the independent validator report
+`ok: true, reasonCodes: []` and exit 0 while the aggregate reported **16/16 verified
+passes**. The forged summary validated clean.
+
+**The fix.** `verifyUnitEvidence` now binds both halves of the record's verdict text
+— the category the aggregate reads, and the sentence — to the envelope's verdict
+(`EVIDENCE_DETAIL_MISMATCH`, helper `verdictPartsOf`). Because agreement can only be
+checked for a field that exists, presence is enforced one level up in
+`r97-validate-campaign.mjs` (`VALIDATOR_DETAIL_MISSING`), exactly as `resultHash`
+presence already was: deleting the field would otherwise turn a result into
+`unitCategoryOf(undefined) === null`, a silent erasure.
+
+Verified on the committed artifacts:
+
+```
+honest campaign              exit 0
+detail rewritten to a PASS   exit 1   (EVIDENCE_DETAIL_MISMATCH, 16/16)
+detail deleted               exit 1   (VALIDATOR_DETAIL_MISSING)
+```
+
+### 7.11 A second defect the fix exposed: the record leaked what the evidence redacted
+
+Adding the binding immediately failed a real unit, which is how the second defect
+surfaced. `r97-arm-worker.mjs` built the two verdict texts from **different** inputs:
+
+```js
+envelope.verdict.detail = redact(verdict.detail)          // redacted
+record.detail           = `${VERSION} ${cat}: ${verdict.detail}`   // RAW
+```
+
+`redact()` does alter text — measured on five samples, three were rewritten
+(`Bearer sk-…` → `Bearer <redacted>`, `api_key=…` → `api_key=<redacted-key>`,
+`ghp_…` → `<redacted>`). So a verdict whose detail carries a credential produced a
+record that (a) wrote the credential in cleartext into `execution-state.json`, and
+(b) **disagreed** with the hashed evidence it points at. Measured with a secret-shaped
+`caseId`, whose "not found" refusal embeds the caseId verbatim:
+
+```
+record   : …infrastructure: E4-R98: the report holds no result for case sk-abc1234567890abcdef
+evidence : E4-R98: the report holds no result for case <redacted-key>
+```
+
+The leak is the security half; the disagreement is the integrity half — and it means
+the new binding would have refused an **honest** run. Both texts are now built from one
+redacted body via the exported `terminalDetailFor`, so there is no longer a second
+place the raw text can enter. This is the honest limit of the earlier redaction test:
+it asserted the *evidence* was redacted and never looked at the record.
+
+### 7.12 A reused `--out` failed five steps in, with no code of its own
+
+Found by running the closed loop twice, which is an ordinary thing to do.
+`authorization.createdAt` is inside the plan digest, so the digest differs on every
+run — measured: `94d77641…` then `cbb5f00f…`. A second run into the same `--out`
+therefore always presents a NEW authorization to a ledger bound to the OLD campaign
+header, and the driver correctly refuses `BUDGET_STATE_MISMATCH`: one budget may not
+serve two authorizations (T1). The driver was right; the runner was wrong. It
+discovered this five steps in — after building arms and writing a plan — and reported
+a bare `status=FAILED`, indistinguishable from a genuine campaign failure.
+
+An exported `ledgerReuseRefusal` pre-flight now runs **before any dispatch** and names
+itself, so an operator can act on it:
+
+```
+[4/6] run FAILED  status=REFUSED
+E4-R101: OFFLINE_OUT_REUSED: <out>/ledger already holds the campaign header of an
+earlier run (campaign 88ea1b9e…, plan 94d77641…). This run would present a NEW
+authorization … Point --out at a fresh directory, or delete the existing one.
+```
+
+### 7.13 Corrected fixtures — corrected, not weakened
+
+Two test fixtures encoded the defect. They placed the worker's
+`<version> <category>: ` prefix inside the **envelope's** `verdict.detail`, which the
+real worker never does: measured on all 16 records of the acceptance campaign, the
+envelope holds a **bare** sentence and only the terminal record carries the prefix.
+The fixtures were corrected to mirror the real shape rather than the check being
+relaxed to accept a shape the worker cannot produce.
+
+### 7.14 T6 verdict, restated after 7.10–7.13
+
+```
+status:                    OFFLINE_ACCEPTED
+paidStatus:                PAID_NOT_RUN
+experimentKind:            offline_closed_loop
+executionMode:             arm-worker
+verifiedPasses / units:    6 / 16   (strong 0, weak 6)
+logicalCalls:              42
+providerCalls:             0
+suite:                     460 / 460
+matrix:                    9 / 9
+plan 7-file block:         255 / 255
+mutation gate:             5 / 5 CAUGHT
+independent validator:     honest exit 0 · forged detail exit 1 · deleted detail exit 1
+promotable:                false
+modelCapabilityClaim:      none — the offline provider is scripted
+```
+
+Plan 怎么验收 3 is now satisfied against this round's real artifacts. 怎么验收 1 and
+2 (the two-platform CI job, and reproduction from a clean checkout) remain the
+outstanding items and are **not** claimed here: the Windows+Ubuntu matrix job has not
+yet run on a real CI runner, so the cross-platform claim still rests on local win32
+plus the cross-platform command. See §7.15.
+
+### 7.15 What is still NOT satisfied, stated plainly
+
+- **怎么验收 1 (两平台专用 job 全通过).** The `r97-r98-closed-loop` matrix job
+  (`os: [ubuntu-latest, windows-latest]`) is committed and every phase it runs passes
+  locally on win32, but it has **not** executed on a real CI runner. The claim "runs
+  on both platforms" is therefore still an inference from a local run plus a
+  platform-agnostic command, not a measurement. This is the one acceptance row this
+  round cannot close from the author machine.
+- **怎么验收 2 (从干净 checkout 的命令能复现).** The commands are in the repo and need
+  no hand-written temporary script, but the six `clean-tree` guard failures in the
+  user's workspace (§4.2) are caused by an unrelated pre-existing deletion
+  (` D plan(20260917-001821).md`) that this round must not resolve unilaterally.
+- The paid two-version experiment remains `NOT_RUN`, was never attempted, and is not
+  being requested.
+
