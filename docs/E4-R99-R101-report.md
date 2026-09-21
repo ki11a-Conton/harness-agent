@@ -752,9 +752,10 @@ Measured locally (Windows, Node v24.18.1, `OPENAI_API_KEY` unset):
 [5/5] identity   OK  .ci\r97-r98\closed-loop-identity.json
 ```
 
-> **Counts superseded:** the suite is now **460/460** (the §7.10–7.12 fixes added 12
-> tests). The block above is the run as first measured and is kept as the historical
-> record; §7.14 carries the current figures.
+> **Counts superseded:** the suite is now **464/464**. It moved 448→460 when the
+> §7.10–7.12 fixes added 12 tests, and 460→464 when the CI defects in §7.17 added four
+> more. The block above is the run as first measured and is kept as the historical
+> record; §7.14 and §7.18 carry the current figures.
 
 **The bash removal is itself the fix, not a simplification.** Plan 怎么做 1–2
 forbade continuing to patch "终端符号、相对路径和阈值"; the old job grepped for a
