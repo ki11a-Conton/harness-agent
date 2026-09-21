@@ -1054,9 +1054,38 @@ Plan 怎么验收 3 is now satisfied against this round's real artifacts. 怎么
 2 (the two-platform CI job, and reproduction from a clean checkout) remain the
 outstanding items and are **not** claimed here: the Windows+Ubuntu matrix job has not
 yet run on a real CI runner, so the cross-platform claim still rests on local win32
-plus the cross-platform command. See §7.15.
+plus the cross-platform command. See §7.16.
 
-### 7.15 What is still NOT satisfied, stated plainly
+### 7.15 The plan 怎么做 6 artifact list, mapped one item at a time
+
+Plan 怎么做 6 names seven artifacts to publish: "plan、观察摘要、ledger、journal、脱敏单例
+报告、最终汇总和 validator 输出". Six map onto files this round writes; one needs an
+explicit statement rather than an assumed correspondence:
+
+| Plan item | Artifact this round publishes | How it is produced |
+| --- | --- | --- |
+| plan | `.ci/r97-r98/acceptance/plan.json` | `stepPlan`, the authorization envelope |
+| 观察摘要 | `observation-summary.json` | `stepObserve` |
+| ledger | `ledger/` — `campaign-header.json`, `budget-ledger.json`, `execution-state.json` | the ledger store, opened by the driver |
+| journal | **`ledger/attempts/**` — the per-unit evidence envelopes** | `writeUnitEvidence`, one per terminal unit |
+| 脱敏单例报告 | `case-report.json` | `stepSummarize`, redacted |
+| 最终汇总 | `acceptance-summary.json`, `campaign-summary.json` | `stepSummarize` |
+| validator 输出 | `validator-report.json` | `stepValidate`, the shipped validator |
+
+**On "journal":** the term comes from the paired-experiment path, where it names the
+append-only per-run record. The R97 campaign has no file with that name; its
+equivalent is the `ledger/attempts/**` tree, where every terminal unit gets an
+immutable, content-hashed envelope recording the unit, the build, the verdict and the
+redacted report row. That tree is published and is what the validator re-derives from.
+The correspondence is stated here rather than left implicit because a reviewer looking
+for a literal `journal` file would otherwise find nothing and have to guess whether the
+item was dropped.
+
+**Traceability is measured, not asserted:** all 16 terminal records' stored report rows
+re-derive from their own `reportHash` (16/16), so the summary traces back through the
+ledger and the evidence to the original row.
+
+### 7.16 What is still NOT satisfied, stated plainly
 
 - **怎么验收 1 (两平台专用 job 全通过).** The `r97-r98-closed-loop` matrix job
   (`os: [ubuntu-latest, windows-latest]`) is committed and every phase it runs passes
