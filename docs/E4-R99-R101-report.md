@@ -581,7 +581,10 @@ CI run URL / head SHA：https://github.com/ki11a-Conton/harness-agent/actions/ru
 任务：E4-R101-A（T1–T6 收尾）
 状态：DONE（六个任务全部实现且离线验收全绿）/ NOT_RUN（付费双版本实验，未被请求）
 起始 SHA / 实现 SHA：e491258443081d10ed92fe3a8016970b47b3406d（本轮起点）/
-            168c2b7（本轮实现提交，E4-R101-A T6）
+            ff1d882（本轮实现提交，E4-R101-A T6）
+            注：报告随后有一次仅修文本的提交（把本行 SHA 从 amend 前的 168c2b7 更正为
+            ff1d882）。按计划要求，不为追求"最终 SHA == 报告 SHA"而继续制造纯文档提交；
+            实现提交可用 `git log --oneline -2` 复核
 对应发现：N1、N3、N4、N5、N6、N7、N8、N9（另在写本节时新发现 §7.7 的冗余 prepare）
 RED：① node scripts/e4/r97-offline-acceptance.mjs --all
         预期：离线闭环通过；实际："driver status: PARTIAL / CASE_FAILURES …
