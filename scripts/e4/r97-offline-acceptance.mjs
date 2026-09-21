@@ -282,9 +282,90 @@ export async function stepPlan(opts, observations) {
  * switch is absent and the key is absent, so a billed call is impossible by
  * construction rather than by promise.
  */
+/**
+ * Refuse an `--out` directory that already holds a DIFFERENT campaign.
+ *
+ * WHY THIS EXISTS (E4-R101-A / T6, found by running the closed loop twice)
+ * -----------------------------------------------------------------------
+ * `stepRun` opens `<out>/ledger` and lets the DRIVER decide what to do with it.
+ * The plan digest is NOT stable across runs — `authorization.createdAt` differs,
+ * measured: two consecutive `--all` runs into distinct directories produced
+ * `94d77641…` and `cbb5f00f…`. So a second run into the SAME `--out` always
+ * presents a NEW authorization to a ledger holding the OLD campaign header, and
+ * the driver correctly refuses:
+ *
+ *   status REFUSED · code BUDGET_STATE_MISMATCH
+ *   "the campaign header in <out>/ledger belongs to a different authorization"
+ *
+ * The DRIVER is right — one budget may not serve two authorizations (T1). The
+ * runner was wrong: it discovered this five steps in, after building arms and
+ * writing a plan, and reported a bare `status=FAILED` with no code of its own, so
+ * an operator could not tell "you pointed me at a used directory" from "the
+ * campaign genuinely failed".
+ *
+ * Re-running an acceptance command is ordinary, so the refusal must be immediate
+ * and must NAME itself. Returns `null` when the directory is safe to use.
+ */
+export async function ledgerReuseRefusal(dir) {
+  // The filename is `R97_CAMPAIGN_HEADER_FILENAME` in the evaluation package.
+  // It is written as a literal here rather than imported so this pre-flight needs
+  // no build of the package it is guarding — a pre-flight that required `dist` to
+  // exist would refuse before the very step that builds it.
+  const headerPath = join(dir, "campaign-header.json");
+  if (!existsSync(headerPath)) return null;
+  // A header exists, so this directory is already an established campaign root.
+  // Read it rather than assuming: a corrupt header is a different problem and the
+  // driver's own reader will report it precisely.
+  let campaignId = "unknown";
+  let planDigest = "unknown";
+  try {
+    const header = JSON.parse(await readFile(headerPath, "utf8"));
+    campaignId = String(header?.campaignId ?? "unknown");
+    planDigest = String(header?.planDigest ?? "unknown");
+  } catch {
+    // Leave the placeholders: the point of THIS refusal is reuse, and the driver
+    // reports header corruption with its own code.
+  }
+  return (
+    `E4-R101: OFFLINE_OUT_REUSED: ${dir} already holds the campaign header of an earlier run ` +
+    `(campaign ${campaignId}, plan ${planDigest}). This run would present a NEW authorization ` +
+    `(the plan digest embeds \`authorization.createdAt\`, so it differs on every run) to a ledger ` +
+    `bound to the old one, and the driver would refuse with BUDGET_STATE_MISMATCH after building ` +
+    `arms and writing a plan. Point --out at a fresh directory, or delete the existing one.`
+  );
+}
+
+/**
+ * Run the driver, which really executes both arms and the cases.
+ *
+ * `--arm-worker` with BOTH arm directories, as a CHILD PROCESS. Running it as a
+ * child rather than in-process is deliberate: it is the command an operator
+ * types, so what CI exercises is the shipped CLI and not a library call that
+ * happens to share its implementation.
+ *
+ * The environment is built explicitly rather than inherited wholesale: the paid
+ * switch is absent and the key is absent, so a billed call is impossible by
+ * construction rather than by promise.
+ */
 export async function stepRun(opts, planDigest) {
   const ledgerDir = join(opts.outDir, "ledger");
   const runOutDir = join(opts.outDir, "run");
+  // BEFORE any dispatch: is this directory already somebody else's campaign?
+  const reused = await ledgerReuseRefusal(ledgerDir);
+  if (reused !== null) {
+    return {
+      step: "run",
+      ok: false,
+      code: 1,
+      ledgerDir,
+      runOutDir,
+      status: "REFUSED",
+      // The runner's OWN code, distinct from the driver's, so an operator can tell
+      // "used directory" from "campaign failed" without reading the prose.
+      reasonCode: "OFFLINE_OUT_REUSED",
+      output: reused,
+    };
+  }
   await mkdir(ledgerDir, { recursive: true });
   await mkdir(runOutDir, { recursive: true });
   const args = [

@@ -64,6 +64,28 @@ export const R97_EVIDENCE_RESULT_MISMATCH = "EVIDENCE_RESULT_MISMATCH";
 export const R97_EVIDENCE_REPORT_MISMATCH = "EVIDENCE_REPORT_MISMATCH";
 /** The envelope describes a different unit than the record does. */
 export const R97_EVIDENCE_CASE_MISMATCH = "EVIDENCE_CASE_MISMATCH";
+/**
+ * The record's own verdict TEXT disagrees with the evidence it points at.
+ *
+ * WHY THIS CODE EXISTS (E4-R101-A / T6, found by tampering a real campaign)
+ * ------------------------------------------------------------------------
+ * The chain used to bind only `resultHash`, and `resultHash` is deliberately NOT
+ * invertible — it proves the evidence is intact, not that the record's own prose
+ * still describes it. Measured on the real 16-unit acceptance campaign: rewriting
+ * ONLY `execution-state.json`'s `detail` on all 16 records to
+ * `"e4-r98-arm-worker-v2 passed: verification_passed=true"`, leaving every
+ * `resultHash` and every evidence file untouched, made
+ * `r97-validate-campaign.mjs` report `ok: true, reasonCodes: []`.
+ *
+ * That field is load-bearing: `r97-campaign-driver.mjs` derives the campaign's
+ * headline `verifiedPasses` from `unitCategoryOf(r.detail)`, i.e. from the detail's
+ * `<category>:` prefix. So the forged state reported **16/16 verified passes** to
+ * the aggregate while the "independent" validator called the campaign intact.
+ *
+ * Plan §T6 怎么验收 3 requires the opposite: "最终报告能够由独立命令从这次真实产物
+ * 重算，summary 篡改会失败."
+ */
+export const R97_EVIDENCE_DETAIL_MISMATCH = "EVIDENCE_DETAIL_MISMATCH";
 
 export interface R97EvidenceUnit {
   caseId: string;
@@ -112,6 +134,29 @@ export interface R97EvidenceLink {
 export function reportRowHash(row: Record<string, unknown>): string {
   const { reportHash: _ignored, ...rest } = row;
   return createHash("sha256").update(JSON.stringify(rest)).digest("hex");
+}
+
+/**
+ * Split a terminal record's verdict text into its `<category>` and its remainder.
+ *
+ * The worker writes exactly `${ARM_WORKER_VERSION} ${category ?? "passed"}: ${detail}`,
+ * and `r97-campaign-driver.mjs`'s `unitCategoryOf` reads the SECOND token as the
+ * category. Both halves are returned so a caller can compare the category AND the
+ * prose: comparing only the category would accept a record whose sentence was
+ * rewritten to describe a different case, and comparing only the prose would accept
+ * a record whose prefix was flipped to `passed`.
+ *
+ * Returns `null` when the text does not carry the prefix contract at all, which is
+ * itself a refusal: a record whose detail cannot be parsed cannot be reconciled.
+ */
+export function verdictPartsOf(detail: unknown): { category: string; detail: string } | null {
+  if (typeof detail !== "string") return null;
+  // `\s?` after the colon tolerates both `": "` and a bare `":"`, because the
+  // contract is `<category>: <detail>` and a worker that wrote an empty detail
+  // would otherwise be unparseable rather than recognisably empty.
+  const m = /^\S+\s+([a-z_]+):\s?([\s\S]*)$/.exec(detail);
+  if (m === null) return null;
+  return { category: m[1] as string, detail: m[2] as string };
 }
 
 /** A path component safe to embed in a campaign-relative evidence path. */
@@ -329,6 +374,15 @@ export interface R97EvidenceBearingRecord {
   attemptId: string;
   resultHash: string | null;
   evidence?: R97EvidenceLink | null;
+  /**
+   * The terminal record's verdict text, when the caller has one.
+   *
+   * OPTIONAL by design: this function is a general link-checker and some callers
+   * hand it records that carry no prose. When it IS present it must AGREE with the
+   * evidence — see `R97_EVIDENCE_DETAIL_MISMATCH`. Presence is enforced one level
+   * up by `r97-validate-campaign.mjs`, exactly as `resultHash` presence is.
+   */
+  detail?: string | null;
 }
 
 export type R97EvidenceVerdict =
@@ -402,6 +456,35 @@ export async function verifyUnitEvidence(
       code: R97_EVIDENCE_RESULT_MISMATCH,
       detail: `${label}: the record asserts result ${String(record.resultHash)} but the evidence asserts ${envelope.resultHash}`,
     };
+  }
+  // The record's verdict TEXT must agree with the evidence it points at.
+  //
+  // `resultHash` above proves the EVIDENCE is intact; it cannot prove the RECORD's
+  // own prose still describes it, because the hash is deliberately not invertible
+  // and the prose is not inside it. That gap was measured on the real campaign: a
+  // state file with all 16 `detail` values rewritten to a forged PASS verified
+  // `ok: true`, while the driver's `verifiedPasses` — which reads
+  // `unitCategoryOf(r.detail)` — reported 16/16.
+  //
+  // Checked only when the caller supplies a detail (see the interface), and then in
+  // BOTH halves: the category prefix the aggregate reads, and the sentence.
+  if (record.detail !== undefined && record.detail !== null) {
+    const parts = verdictPartsOf(record.detail);
+    if (parts === null) {
+      return {
+        ok: false,
+        code: R97_EVIDENCE_DETAIL_MISMATCH,
+        detail: `${label}: the record's verdict text ${JSON.stringify(record.detail)} does not carry the '<version> <category>: <detail>' prefix the driver's aggregate reads, so it cannot be reconciled with its evidence`,
+      };
+    }
+    const expectedCategory = envelope.verdict.category ?? "passed";
+    if (parts.category !== expectedCategory || parts.detail !== envelope.verdict.detail) {
+      return {
+        ok: false,
+        code: R97_EVIDENCE_DETAIL_MISMATCH,
+        detail: `${label}: the record asserts verdict ${JSON.stringify(parts.category)}/${JSON.stringify(parts.detail)} but the evidence asserts ${JSON.stringify(expectedCategory)}/${JSON.stringify(envelope.verdict.detail)}`,
+      };
+    }
   }
   // Re-derive the digest from the envelope's own fields: a record and an
   // envelope that were BOTH edited to agree still have to survive this.

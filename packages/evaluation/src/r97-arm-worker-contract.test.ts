@@ -114,6 +114,15 @@ const mod = (await import(WORKER)) as {
   FAILURE_CATEGORIES: string[];
   redact: (v: unknown) => string;
   redactFailureText: (v: unknown) => string;
+  /**
+   * The terminal record's verdict text.
+   *
+   * Exported as the SINGLE SOURCE OF TRUTH for the record↔evidence contract: the
+   * record's `detail` and the evidence envelope's `verdict.detail` must be the same
+   * string modulo the `<version> <category>: ` prefix, or the validator that
+   * re-derives the campaign refuses an honest run.
+   */
+  terminalDetailFor: (v: { category: string | null; detail: string }) => string;
   armBuildIdentity: (dir: string) => { checkoutDir: string; sourceSha: string | null; buildDigest: string | null };
   /** The explicit artifact manifest the build identity covers (T4 / N7). */
   BUILD_ARTIFACT_PATHS: readonly (readonly string[])[];
@@ -836,6 +845,78 @@ describe("R99 W10: the worker's report SURVIVES it, linked and hashed", () => {
     expect(bytes).not.toMatch(/\bsk-[A-Za-z0-9_-]{16,}\b/);
     expect(bytes).not.toMatch(/[Bb]earer\s+[A-Za-z0-9._-]{16,}/);
     expect(bytes).not.toMatch(/https?:\/\/[^/\s:@]+:[^/\s:@]+@/);
+  }, 300_000);
+
+  it("the TERMINAL RECORD is redacted too, and agrees with the evidence it links to", async () => {
+    /**
+     * MEASURED DEFECT (E4-R101-A / T6), found while fixing the forged-PASS hole.
+     *
+     * `r97-arm-worker.mjs` built the two verdict texts from DIFFERENT inputs:
+     *   - the envelope:  `verdict: { detail: redact(verdict.detail) }`
+     *   - the record:    `terminalDetail = \`${ARM_WORKER_VERSION} ${cat}: ${verdict.detail}\``
+     *
+     * The record used the RAW text. So a verdict detail that `redact()` rewrites
+     * produced a record that (a) carried the credential in cleartext into
+     * `execution-state.json`, and (b) DISAGREED with the hashed evidence it points
+     * at. Measured with a secret-shaped caseId, whose "not found" refusal embeds the
+     * caseId verbatim:
+     *
+     *   record   : "…infrastructure: E4-R98: the report holds no result for case sk-abc1234567890abcdef"
+     *   evidence : "E4-R98: the report holds no result for case <redacted-key>"
+     *
+     * The leak is the security half; the disagreement is the integrity half, and it
+     * matters because the campaign validator now binds the record's detail to the
+     * evidence. An unredacted record would make that binding refuse an HONEST run.
+     *
+     * The property is stated directly: whatever text the record carries must be the
+     * text the evidence hashes, and it must be redacted.
+     */
+    const SECRET = "sk-abc1234567890abcdef";
+    const raw = { category: "infrastructure", detail: `E4-R98: the report holds no result for case ${SECRET}` };
+
+    const terminal = mod.terminalDetailFor(raw);
+    // (a) No credential-shaped text in the record's own text.
+    expect(terminal, "the terminal record must not carry the raw credential").not.toContain(SECRET);
+    expect(terminal).toMatch(/<redacted/);
+    // (b) The record's remainder IS the evidence's text, so the validator's binding
+    //     holds for honest runs.
+    const evidenceText = mod.redact(raw.detail);
+    expect(terminal).toBe(`${mod.ARM_WORKER_VERSION} ${raw.category}: ${evidenceText}`);
+    // ...and the shape the driver's `unitCategoryOf` reads is preserved, so the
+    // aggregate still classifies the unit instead of seeing "nothing".
+    expect(terminal.startsWith(`${mod.ARM_WORKER_VERSION} ${raw.category}: `)).toBe(true);
+
+    // The NEGATIVE CONTROL: an ordinary detail is passed through UNCHANGED. A
+    // redactor that mangled every sentence would also satisfy the assertions above
+    // while corrupting every verdict in every campaign.
+    const plain = { category: "case_failed", detail: "case did not pass: verification_failed (verification_passed=false)" };
+    expect(mod.terminalDetailFor(plain)).toBe(`${mod.ARM_WORKER_VERSION} case_failed: case did not pass: verification_failed (verification_passed=false)`);
+  });
+
+  it("the record's detail AGREES with its own evidence on a REAL unit", async () => {
+    // The end-to-end form over a real run, reading the PERSISTED artifacts back off
+    // disk — `execution-state.json` and the linked envelope — because those are
+    // exactly what `r97-validate-campaign.mjs` reconciles.
+    //
+    // NOTE the distinction that this test exists to pin: `runArmUnit`'s RETURNED
+    // `record.detail` is the bare verdict sentence, while the persisted terminal
+    // record carries the `<version> <category>: ` prefix the driver's
+    // `unitCategoryOf` reads. Only the persisted form is the validator's input, so
+    // only the persisted form is asserted here.
+    const { root } = await runUnit({ timeoutMs: 300_000 });
+    const state = await readJson(join(root, "state", EXEC_FILE));
+    const records = state!["records"] as Array<Record<string, unknown>>;
+    expect(records, "a real unit persists exactly one terminal record").toHaveLength(1);
+    const persisted = records[0]!;
+    const link = persisted["evidence"] as { path: string } | null;
+    expect(link, "the persisted record links its evidence").toBeTruthy();
+
+    const envelope = JSON.parse(await readFile(join(root, "ledger", ...link!.path.split("/")), "utf8")) as {
+      verdict: { category: string | null; detail: string };
+    };
+
+    const expected = `${mod.ARM_WORKER_VERSION} ${envelope.verdict.category ?? "passed"}: ${envelope.verdict.detail}`;
+    expect(persisted["detail"], "the persisted record must carry the evidence's own verdict text").toBe(expected);
   }, 300_000);
 
   it("a REFUSED unit still records evidence, because its refusal is the result", async () => {

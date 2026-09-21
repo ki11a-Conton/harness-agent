@@ -51,6 +51,7 @@ export const VALIDATOR_CODES = {
   NO_RECORDS: "VALIDATOR_NO_TERMINAL_RECORDS",
   EVIDENCE_BROKEN: "VALIDATOR_EVIDENCE_BROKEN",
   RESULT_HASH_MISSING: "VALIDATOR_RESULT_HASH_MISSING",
+  DETAIL_MISSING: "VALIDATOR_DETAIL_MISSING",
   USAGE: "VALIDATOR_USAGE",
 };
 
@@ -125,6 +126,22 @@ export async function validateCampaignRoot(root, opts = {}) {
     unhashed.length === 0
       ? `every terminal record carries a resultHash (${terminal.length} record(s))`
       : `${unhashed.length} terminal record(s) carry no resultHash: ${unhashed.slice(0, 5).map((r) => `${r.arm}/${r.caseId}`).join(", ")}`,
+  );
+  // The verdict TEXT must be present as well as the hash.
+  //
+  // `verifyCampaignEvidence` checks that a detail AGREES with the evidence, but it
+  // can only compare a detail that exists. Deleting the field would dodge the
+  // comparison and turn a pass into `unitCategoryOf(undefined) === null` — i.e. a
+  // unit that "measured nothing" rather than a forged pass. That is still a silent
+  // erasure of a result, so presence is enforced HERE, at the same level as
+  // `resultHash` presence, for the same reason.
+  const untexted = terminal.filter((r) => typeof r.detail !== "string" || r.detail === "");
+  check(
+    VALIDATOR_CODES.DETAIL_MISSING,
+    untexted.length === 0,
+    untexted.length === 0
+      ? `every terminal record carries its verdict text (${terminal.length} record(s))`
+      : `${untexted.length} terminal record(s) carry no verdict text, so the aggregate that reads it cannot be reconciled: ${untexted.slice(0, 5).map((r) => `${r.arm}/${r.caseId}`).join(", ")}`,
   );
   check(
     VALIDATOR_CODES.NO_RECORDS,

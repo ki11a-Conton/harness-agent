@@ -119,7 +119,13 @@ async function establishedCampaign(over: { report?: Record<string, unknown> | nu
     attemptId,
     unit: UNIT,
     build: BUILD,
-    verdict: { category: null, detail: "e4-r98-arm-worker-v2 passed: verification_passed=true" },
+    // The envelope holds the BARE verdict sentence; the terminal RECORD carries the
+    // `<version> <category>: ` prefix. That asymmetry is the real worker's shape,
+    // measured on all 16 records of the R101 acceptance campaign
+    // (`r97-arm-worker.mjs`: the envelope gets `redact(verdict.detail)`, the record
+    // gets `terminalDetailFor(verdict)`). This fixture previously put the prefixed
+    // form in BOTH, which encoded the defect the validator now refuses.
+    verdict: { category: null, detail: "verification_passed=true" },
     report,
   });
   const written = await writeUnitEvidence(dir, envelope);
@@ -216,6 +222,64 @@ describe("R99 V2: an intact campaign verifies, and every break makes it exit non
     // The record now disagrees with the evidence's own result, which is the
     // "resultHash 被修改" half of the acceptance criterion.
     expect((JSON.parse(stdout) as { reasonCodes: string[] }).reasonCodes).toContain("VALIDATOR_EVIDENCE_BROKEN");
+  });
+
+  it("exits 1 when the record's VERDICT TEXT is rewritten to forge a pass", async () => {
+    /**
+     * MEASURED DEFECT (E4-R101-A / T6). This is the tamper that used to succeed.
+     *
+     * `resultHash` is deliberately not invertible, so the chain that bound only the
+     * hash could not tell that the record's own PROSE had been rewritten. On the real
+     * 16-unit acceptance campaign, rewriting ONLY `execution-state.json`'s `detail` on
+     * all 16 records to `"e4-r98-arm-worker-v2 passed: verification_passed=true"` —
+     * leaving every `resultHash` and every evidence file untouched — made this
+     * validator report `ok: true, reasonCodes: []` and exit 0.
+     *
+     * The field is load-bearing: `r97-campaign-driver.mjs` derives the campaign's
+     * headline `verifiedPasses` from `unitCategoryOf(r.detail)`, i.e. from the detail's
+     * `<category>:` prefix. So the forged state reported 16/16 verified passes while
+     * the independent validator called the campaign intact.
+     *
+     * Plan §T6 怎么验收 3: "最终报告能够由独立命令从这次真实产物重算，summary 篡改会
+     * 失败." Here the honest fixture's evidence says `passed`; the tamper rewrites the
+     * record to claim the same category but a DIFFERENT sentence, which is the
+     * smallest possible edit that the hash cannot see.
+     */
+    const { dir } = await establishedCampaign();
+    const statePath = join(dir, "execution-state.json");
+    const state = JSON.parse(await readFile(statePath, "utf8")) as { records: Array<Record<string, unknown>> };
+    // Every other field — resultHash, evidence path, evidence sha256 — is untouched.
+    state.records[0]!["detail"] = "e4-r98-arm-worker-v2 passed: verification_passed=true (forged)";
+    await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+
+    const { code, stdout } = await runValidator(["--campaign", dir]);
+    expect(code, "a forged verdict text must not validate").toBe(1);
+    expect((JSON.parse(stdout) as { reasonCodes: string[] }).reasonCodes).toContain("VALIDATOR_EVIDENCE_BROKEN");
+  });
+
+  it("exits 1 when the record's verdict text is DELETED, rather than silently ignored", async () => {
+    // The companion hole: deleting the field would dodge the comparison entirely and
+    // turn the unit into `unitCategoryOf(undefined) === null` — "measured nothing"
+    // rather than a forged pass. That is still a silent erasure of a result, so
+    // presence is enforced at this level, as it is for `resultHash`.
+    const { dir } = await establishedCampaign();
+    const statePath = join(dir, "execution-state.json");
+    const state = JSON.parse(await readFile(statePath, "utf8")) as { records: Array<Record<string, unknown>> };
+    delete state.records[0]!["detail"];
+    await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+
+    const { code, stdout } = await runValidator(["--campaign", dir]);
+    expect(code).toBe(1);
+    expect((JSON.parse(stdout) as { reasonCodes: string[] }).reasonCodes).toContain("VALIDATOR_DETAIL_MISSING");
+  });
+
+  it("the UNTAMPERED fixture still exits 0, so the two refusals above are not vacuous", async () => {
+    // The negative control for the pair: a check that refused every campaign would
+    // also "catch" both tampers. The honest fixture must keep verifying.
+    const { dir } = await establishedCampaign();
+    const { code, stdout } = await runValidator(["--campaign", dir]);
+    expect(code, stdout).toBe(0);
+    expect((JSON.parse(stdout) as { ok: boolean }).ok).toBe(true);
   });
 
   it("exits 1 when the stored report ROW is tampered with and the envelope re-hashed", async () => {

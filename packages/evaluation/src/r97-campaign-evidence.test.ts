@@ -46,6 +46,7 @@ import {
   R97_EVIDENCE_REPORT_MISMATCH,
   R97_EVIDENCE_CASE_MISMATCH,
   R97_EVIDENCE_NOT_LINKED,
+  R97_EVIDENCE_DETAIL_MISMATCH,
   evidenceRelPathFor,
   evidenceAbsPathFor,
   buildUnitEvidence,
@@ -69,6 +70,17 @@ afterEach(async () => {
 const UNIT = { caseId: "r98-tool-write-request", suite: "regression", arm: "baseline", repetition: 1 };
 const BUILD = { sourceSha: "e".repeat(40), buildDigest: "f".repeat(64) };
 const ATTEMPT = "a-1700000000000-4242-12345-1";
+
+/**
+ * The arm worker's version tag, which is the FIRST token of a terminal record's
+ * `detail` (`r97-arm-worker.mjs`: `${ARM_WORKER_VERSION} ${category ?? "passed"}: …`).
+ *
+ * It is duplicated here deliberately rather than imported: this is a CONTRACT test,
+ * so the literal must be written down where a change to the worker's tag is visible
+ * as a failing assertion rather than silently followed. `r97-arm-worker-contract.test.ts`
+ * pins the worker's own value.
+ */
+const WORKER_VERSION = "e4-r98-arm-worker-v2";
 
 /** A real-shaped arm report row, as `reportRowFor` stores it. */
 function reportRow(over: Record<string, unknown> = {}): Record<string, unknown> {
@@ -98,7 +110,11 @@ function makeEnvelope(over: Record<string, unknown> = {}): R97UnitEvidenceEnvelo
     attemptId: ATTEMPT,
     unit: UNIT,
     build: BUILD,
-    verdict: { category: null, detail: "e4-r98-arm-worker-v2 passed: verification_passed=true" },
+    // The BARE verdict sentence, which is what the envelope really holds: the real
+    // worker stores `redact(verdict.detail)` here and puts the
+    // `<version> <category>: ` prefix only on the terminal RECORD
+    // (`terminalDetailFor`). See R99 E5, which binds the two.
+    verdict: { category: null, detail: "verification_passed=true" },
     report: reportRow(),
     ...over,
   });
@@ -354,5 +370,152 @@ describe("R99 E4: the whole campaign is verified in one pass", () => {
     const empty = await verifyCampaignEvidence(root, []);
     expect(empty.ok).toBe(false);
     expect(empty.checked).toBe(0);
+  });
+});
+
+describe("R99 E5: the record's own VERDICT TEXT is bound to the hashed evidence", () => {
+  /**
+   * MEASURED DEFECT (E4-R101-A / T6), found by tampering a real campaign ledger
+   * rather than by a failing test.
+   *
+   * The chain checked `record.resultHash === envelope.resultHash` and re-derived
+   * the envelope's hash from its own fields — but it NEVER bound the record's
+   * `detail` (the verdict text) to the envelope it points at. Measured on the real
+   * 16-unit acceptance campaign: rewriting ONLY `execution-state.json`'s
+   * `detail` on all 16 records to
+   * `"e4-r98-arm-worker-v2 passed: verification_passed=true"`, leaving every
+   * `resultHash` and every evidence file untouched, made
+   * `r97-validate-campaign.mjs` report `ok: true, reasonCodes: []` — exit 0.
+   *
+   * That is the load-bearing field. `r97-campaign-driver.mjs` derives the
+   * campaign's headline `verifiedPasses` from `unitCategoryOf(r.detail)`, i.e. from
+   * the detail's `<category>:` prefix. So the tampered state made the aggregate
+   * report **16/16 verified passes** while the independent validator called the
+   * campaign intact.
+   *
+   * Plan §T6 怎么验收 3 requires the opposite in as many words:
+   *   "最终报告能够由独立命令从这次真实产物重算，summary 篡改会失败."
+   *
+   * The binding must hold in the direction that matters: the evidence is the
+   * authority for what the verdict WAS, so the record's detail must agree with the
+   * envelope's verdict rather than the record being trusted on its own.
+   */
+  const PASS_DETAIL = "e4-r98-arm-worker-v2 passed: verification_passed=true";
+
+  /**
+   * Build the GENUINE terminal detail for an envelope, the way the worker does.
+   *
+   * Derived from the envelope rather than hard-coded, because the envelope's
+   * `verdict.detail` is itself an opaque string: a fixture whose verdict text
+   * happens to look like a terminal detail would otherwise make a correct
+   * implementation fail. The shape is the contract — the worker writes
+   * `${ARM_WORKER_VERSION} ${category ?? "passed"}: ${verdict.detail}`.
+   */
+  const genuineDetailFor = (env: R97UnitEvidenceEnvelope): string =>
+    `${WORKER_VERSION} ${env.verdict.category ?? "passed"}: ${env.verdict.detail}`;
+
+  it("REFUSES a record whose detail claims a PASS the evidence does not support", async () => {
+    const root = await tempDir();
+    // The evidence says `case_failed`; the record will claim `passed`. Everything
+    // else — resultHash, path, byte hash — is left EXACTLY as written, which is the
+    // whole point: those are the fields the old chain already checked.
+    const { record, envelope } = await stored(root, {
+      verdict: { category: "case_failed", detail: "case did not pass: verification_failed" },
+    });
+
+    // The NEGATIVE CONTROL first: the genuine detail verifies, so the refusal below
+    // is about the forgery and not about the fixture's shape.
+    const honest = await verifyUnitEvidence(root, { ...record, detail: genuineDetailFor(envelope) });
+    expect(honest.ok, honest.ok ? "" : honest.detail).toBe(true);
+
+    const forged = { ...record, detail: PASS_DETAIL };
+    const verdict = await verifyUnitEvidence(root, forged);
+    expect(verdict.ok, "a forged PASS must not verify").toBe(false);
+    expect(verdict.ok === false && verdict.code).toBe(R97_EVIDENCE_DETAIL_MISMATCH);
+  });
+
+  it("ACCEPTS the genuine detail the worker writes, so the binding is not vacuous", async () => {
+    // The NEGATIVE CONTROL. A check that rejected every detail would also "catch"
+    // the forgery while breaking every honest campaign, so the genuine shape must
+    // pass. This is the exact text `r97-arm-worker.mjs` writes: the terminal record
+    // carries `<ARM_WORKER_VERSION> <category|passed>: <verdict.detail>`.
+    const root = await tempDir();
+    const { record, envelope } = await stored(root, {
+      verdict: { category: "case_failed", detail: "case did not pass: verification_failed" },
+    });
+
+    const verdict = await verifyUnitEvidence(root, { ...record, detail: genuineDetailFor(envelope) });
+    expect(verdict.ok, verdict.ok ? "" : verdict.detail).toBe(true);
+  });
+
+  it("REFUSES a detail whose category prefix DISAGREES with the evidence's category", async () => {
+    // The prefix is what the aggregate reads, so it is checked as a category rather
+    // than as free text: a record may not report `passed` while the evidence says
+    // `case_failed`, even if the rest of the sentence looks plausible.
+    const root = await tempDir();
+    const { record, envelope } = await stored(root, {
+      verdict: { category: "case_failed", detail: "case did not pass: verification_failed" },
+    });
+
+    for (const wrong of ["passed", "timeout", "provider"]) {
+      const detail = `${WORKER_VERSION} ${wrong}: ${envelope.verdict.detail}`;
+      const verdict = await verifyUnitEvidence(root, { ...record, detail });
+      expect(verdict.ok, `a record claiming ${JSON.stringify(detail)} must be refused`).toBe(false);
+      expect(verdict.ok === false && verdict.code).toBe(R97_EVIDENCE_DETAIL_MISMATCH);
+    }
+
+    // ...and a rewritten SENTENCE under the CORRECT category is refused too: the
+    // prefix alone is not the whole binding, because the sentence is what the
+    // evidence hashed.
+    const sentenceSwap = await verifyUnitEvidence(root, {
+      ...record,
+      detail: `${WORKER_VERSION} case_failed: a different failure entirely`,
+    });
+    expect(sentenceSwap.ok, "a rewritten sentence under the right category must be refused").toBe(false);
+    expect(sentenceSwap.ok === false && sentenceSwap.code).toBe(R97_EVIDENCE_DETAIL_MISMATCH);
+  });
+
+  it("binds detail AGREEMENT when present — presence itself is the validator's check", async () => {
+    // LAYERING, stated because it decides where a hole could reopen. This function
+    // checks AGREEMENT: a record that carries a detail must carry the RIGHT one. It
+    // does NOT require a detail to be present, because `verifyUnitEvidence` is a
+    // general link-checker and several callers hand it records that legitimately
+    // have no verdict text.
+    //
+    // Presence is enforced one level up, by `r97-validate-campaign.mjs`, exactly as
+    // `resultHash` presence is: the validator refuses a campaign whose terminal
+    // records carry no detail (`VALIDATOR_DETAIL_MISSING`). Without that companion
+    // check a tamperer could delete the field to dodge the comparison — which would
+    // turn a pass into "measured nothing" rather than into a forged pass, but is
+    // still a silent erasure and must be refused.
+    const root = await tempDir();
+    const { record } = await stored(root);
+    // No `detail` at all: this link is simply not exercised, and the record verifies.
+    const verdict = await verifyUnitEvidence(root, { ...record, detail: undefined });
+    expect(verdict.ok, verdict.ok ? "" : verdict.detail).toBe(true);
+  });
+
+  it("the WHOLE-CAMPAIGN verdict fails when even one record's detail is forged", async () => {
+    // The end-to-end form, matching the measured tamper: one forged record must
+    // make the campaign invalid rather than being averaged away.
+    const root = await tempDir();
+    const a = await stored(root);
+    const b = await stored(root, { unit: { ...UNIT, arm: "candidate" }, attemptId: "a-1700000000002-4242-12345-3" });
+
+    const honest = await verifyCampaignEvidence(root, [
+      { ...a.record, detail: genuineDetailFor(a.envelope) },
+      { ...b.record, detail: genuineDetailFor(b.envelope) },
+    ]);
+    expect(honest.ok, honest.ok ? "" : honest.detail).toBe(true);
+
+    // Forge ONE of the two: its evidence still says `passed`, but the record claims
+    // `case_failed` — the direction that would HIDE a pass, which is the mirror of
+    // the measured tamper that invented six.
+    const forged = await verifyCampaignEvidence(root, [
+      { ...a.record, detail: `${WORKER_VERSION} case_failed: verification_failed` },
+      { ...b.record, detail: genuineDetailFor(b.envelope) },
+    ]);
+    expect(forged.ok, "one forged detail must invalidate the campaign").toBe(false);
+    expect(forged.failures.some((f) => f.code === R97_EVIDENCE_DETAIL_MISMATCH)).toBe(true);
   });
 });

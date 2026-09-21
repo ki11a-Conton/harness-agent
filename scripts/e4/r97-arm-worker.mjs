@@ -779,6 +779,32 @@ export function redact(value) {
 export const redactFailureText = redact;
 
 /**
+ * The terminal record's verdict text, built from the SAME redacted body the
+ * evidence envelope hashes.
+ *
+ * WHY THIS IS A FUNCTION AND NOT AN INLINE TEMPLATE (E4-R101-A / T6)
+ * -----------------------------------------------------------------
+ * The record and the envelope used to be built from DIFFERENT inputs:
+ *
+ *   envelope.verdict.detail = redact(verdict.detail)
+ *   record.detail           = `${ARM_WORKER_VERSION} ${category}: ${verdict.detail}`   // RAW
+ *
+ * Measured consequence, with a secret-shaped `caseId` (whose "not found" refusal
+ * embeds the caseId verbatim): the record carried `sk-abc1234567890abcdef` in
+ * cleartext into `execution-state.json` while the evidence stored
+ * `<redacted-key>`. That is a credential leak AND an integrity break — the two
+ * texts disagreed, so the campaign validator, which binds the record's detail to
+ * the evidence, would refuse an HONEST run.
+ *
+ * Building both from one redacted body is the only shape that cannot drift: there
+ * is no longer a second place where the raw text can enter.
+ */
+export function terminalDetailFor(verdict) {
+  const category = verdict.category ?? "passed";
+  return `${ARM_WORKER_VERSION} ${category}: ${redact(verdict.detail)}`;
+}
+
+/**
  * The identity of one ARM'S BUILD.
  *
  * `sourceSha` comes from git and is `null` on ANY failure. Plan §R100 怎么做
@@ -1819,6 +1845,8 @@ export async function runArmUnit(opts) {
         attemptId,
         unit,
         build: { sourceSha: build.sourceSha, buildDigest: build.buildDigest },
+        // The SAME redacted body the terminal record carries (`terminalDetailFor`),
+        // so the record and its evidence cannot disagree. See that function's note.
         verdict: { category: verdict.category ?? null, detail: redact(verdict.detail) },
         report: record.report ?? null,
       });
@@ -1845,7 +1873,7 @@ export async function runArmUnit(opts) {
   }
 
   if (attemptId !== null && execState !== null) {
-    const terminalDetail = `${ARM_WORKER_VERSION} ${verdict.category ?? "passed"}: ${verdict.detail}`;
+    const terminalDetail = terminalDetailFor(verdict);
     try {
       if (statusFor(verdict.category) === "completed") {
         await execState.complete(attemptId, {

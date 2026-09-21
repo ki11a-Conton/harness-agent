@@ -165,6 +165,58 @@ describe("E4-R101-A (T6) C6: an explicit arm pair is USED, never re-prepared", (
   });
 });
 
+describe("E4-R101-A (T6) C7: a REUSED --out is refused up front, not deep inside the run", () => {
+  it("pre-flights the ledger and refuses a foreign campaign header with its own code", async () => {
+    /**
+     * MEASURED DEFECT (found by running the closed loop twice, not by a test).
+     *
+     * `stepRun` opens `<out>/ledger` and lets the DRIVER decide what to do with it.
+     * The plan digest is NOT stable across runs — `authorization.createdAt` differs,
+     * measured: two consecutive `--all` runs into distinct dirs produced
+     * `94d77641…` and `cbb5f00f…`. So a second run into the SAME `--out` always
+     * presents a NEW authorization to a ledger that already holds the OLD campaign
+     * header, and the driver correctly refuses:
+     *
+     *   status REFUSED · code BUDGET_STATE_MISMATCH
+     *   "the campaign header in <out>/ledger belongs to a different authorization"
+     *
+     * The driver is RIGHT — mixing two authorizations in one budget is exactly what
+     * T1 forbids. The defect is the runner's: it discovers this five steps in, after
+     * building arms and writing a plan, and reports `status=FAILED` with no code of
+     * its own, so an operator cannot tell "you pointed me at a used directory" from
+     * "the campaign genuinely failed". Re-running an acceptance command is ordinary,
+     * so the refusal must be immediate and NAME itself.
+     */
+    const runner = await readFile(join(REPO, "scripts", "e4", "r97-offline-acceptance.mjs"), "utf8");
+    // A stable, greppable code of its own — not the driver's.
+    expect(runner, "the runner must name its own refusal code").toContain("OFFLINE_OUT_REUSED");
+    // Checked BEFORE the run step dispatches, so no budget or arm build is wasted.
+    const preflightAt = runner.indexOf("OFFLINE_OUT_REUSED");
+    const runStepAt = runner.indexOf("export async function stepRun");
+    expect(preflightAt, "the code must exist").toBeGreaterThan(-1);
+    expect(runStepAt, "stepRun must exist").toBeGreaterThan(-1);
+    expect(
+      preflightAt,
+      "the reuse check must be defined before stepRun, so it runs before any dispatch",
+    ).toBeLessThan(runStepAt);
+  });
+
+  it("does NOT refuse a fresh directory, so the pre-flight is not a blanket block", async () => {
+    // The negative control: a check that refused every --out would also "fix" the
+    // reuse case while making the command unrunnable. A directory with no campaign
+    // header must pass. This is asserted against the real function rather than the
+    // source text, because the distinction IS the behaviour.
+    const mod = (await import(pathToFileURL(join(REPO, "scripts", "e4", "r97-offline-acceptance.mjs")).href)) as {
+      ledgerReuseRefusal?: (dir: string) => Promise<string | null>;
+    };
+    expect(mod.ledgerReuseRefusal, "the pre-flight must be exported so it can be tested directly").toBeTypeOf("function");
+    const { mkdtemp } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const fresh = await mkdtemp(join(tmpdir(), "r101-fresh-"));
+    expect(await mod.ledgerReuseRefusal!(fresh), "a fresh directory must not be refused").toBeNull();
+  });
+});
+
 describe("E4-R101-A (T6) C1: the seam reads the case's OWN contract", () => {
   it("recovers the literal from a case whose command verifier embeds it", async () => {
     // The R98 fixture states its expectation in its own verifier, so the script
