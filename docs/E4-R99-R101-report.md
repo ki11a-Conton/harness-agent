@@ -1405,7 +1405,6 @@ the run that corresponds to the report as it now stands, per plan T6 怎么验�
 ---
 
 ## 8. The closing pass — four gaps found AFTER §7.21 was written
-
 §7.21 closed the round at head `31efd9c` / run `35673784338`. That head is **not** the
 head of the repository this section is written against. Four commits landed after it,
 two of them behaviour fixes, and the report above never mentions them: a full-text
@@ -1582,7 +1581,8 @@ The suite total moved **464 → 471** because §8.2, §8.3 and §8.4 added tests
 and §7.18 were written. The plan's seven named files still sum to **257** (re-derived
 per file: `r97-arm-worker-contract` 37, `r97-budget-ledger` 50, `r97-driver-closed-loop`
 67, `r97-execution-state` 27, `r97-plan` 56, `r97-redaction` 12, `r98-fixture-cases` 8);
-the 19-file closed-loop suite is 471 across 20 files.
+the closed-loop suite is 471 across **20** files (the 19 in §7.3 plus
+`r97-budget-write-fault.test.ts`, which §8.4 adds to `SUITE_FILES`).
 
 The independent validator and the anti-cheat gate were re-run against the SAME fresh
 artifacts:
@@ -1607,7 +1607,46 @@ from the earlier run:
 | all 16 `resultHash` set to 64 zeros | **exit 1** — `VALIDATOR_EVIDENCE_BROKEN` |
 | the linked evidence FILE's verdict rewritten | **exit 1** — `VALIDATOR_EVIDENCE_BROKEN` |
 
-### 8.7 What §8 does NOT change
+### 8.7 The two-platform CI run that corresponds to THIS head
+
+Everything in §8.1–§8.6 was measured locally first. The four commits were then pushed as
+`7378aca`, and the workflow ran on a real runner at exactly that head:
+
+**Run [35693782588](https://github.com/ki11a-Conton/harness-agent/actions/runs/35693782588),
+run_number 210, head `7378aca08708e6eced66e13a8adebaec3d4bd16a`, conclusion `success`:**
+
+| Job | Conclusion |
+| --- | --- |
+| `r97-r98 closed loop (windows-latest)` | **success** |
+| `r97-r98 closed loop (ubuntu-latest)` | **success** |
+| `install · typecheck · test · build · benchmark-smoke · audit (windows-latest)` | success |
+| `install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest)` | success |
+| `coverage gate (ubuntu)` | success |
+| `offline cold-start (ubuntu)` | success |
+| `release attestation (P38-12)` | success |
+
+All seven jobs green, none skipped and none cancelled. Both legs of the dedicated matrix
+job reported success on every step, including **"Run the offline closed loop (setup ->
+acceptance -> suite -> matrix -> identity)"** and **"Prove the suite CATCHES the plan's
+five anti-cheat mutations"** — so the suite list §8.4 changed, the write-fault file it
+added, and the mutation gate all executed on a real runner on both platforms. Each leg
+uploaded its own `r97-r98-closed-loop-<os>-7378aca…-35693782588-attempt-1` artifact.
+
+**The scope of this claim, stated precisely.** The run-level conclusion and the per-job
+conclusions above were read from the GitHub API. The uploaded artifacts themselves could
+NOT be downloaded to re-derive the suite total inside them, because the artifact-download
+endpoint returned `401 Requires authentication` and no token is available in this
+environment. So the runner-side `471/471` is **inferred** from a green step that fails
+non-zero on any unsatisfied phase, not re-read from the runner's own JSON — which is
+exactly the distinction §7.16 drew and got wrong once. The locally measured `471/471` in
+§8.6 stands on its own artifacts.
+
+怎么验收 1 ("两平台专用 job 全通过，关键场景没有 skip") and 怎么验收 4 ("CI head 明确对应实施
+提交") are therefore satisfied at `7378aca`: the implementation commits `6860ee5`,
+`ab82bb4`, `64d95cb` are all ancestors of this head, and this is the first run in which
+they were exercised on a runner at all.
+
+### 8.8 What §8 does NOT change
 
 - **The paid two-version experiment remains `NOT_RUN`.** The provider is still scripted,
   `providerCalls` is 0, and no authorization covering a final plan exists. Per plan
@@ -1618,4 +1657,23 @@ from the earlier run:
 - **No new framework.** The four commits in §8.1 fix two reproduced defects, add one
   missing counterexample, and correct documentation. No R102+ work was started and no
   experiment was enlarged, per plan §2 ("达到以上条件后停止这轮基础设施修改").
+
+### 8.9 The plan §2 end conditions, re-verified at `7378aca`
+
+Plan §2 requires six conditions to hold together. §7.20 checked them against the
+`00826e9` artifacts; this is the same table re-derived from the **`7378aca`** artifacts,
+because two of the six were affected by §8.2–§8.5.
+
+| # | Plan §2 condition | Measured at `7378aca` | Where |
+| --- | --- | --- | --- |
+| 1 | 每次实际调用受同一预算约束，恢复和换路径不授予新额度 | grant 320, committed 42, remaining 278; `logicalCalls 42` = `workerConsumedCalls 42` over 16 worker units; a failed ledger WRITE is now itself a counterexample (`r97-budget-write-fault.test.ts`, RED→GREEN) | `acceptance-summary.json`, validator, §8.4 |
+| 2 | 状态所有权正确；结果 hash、输入身份和原报告都在恢复时被验证 | `executionMode arm-worker`, `recoveredUnits 0`, `foreignOwnerUnits 0`; the state store's read-modify-write is now LOCKED, re-measured by a two-process barrier probe: same unit 1 winner, distinct units 2 records | `driver-result.json`, §8.3 |
+| 3 | 失败不会在恢复中消失；累计汇总可以从原结果独立重算 | validator exit 0 over 16 terminal records; forged `detail`, deleted `detail`, changed `resultHash` and a rewritten evidence file each exit 1 | §8.6 |
+| 4 | 正式入口确实执行两份构建、真实工具和 verifier；批准参数就是实际参数 | `workerUnits 16`, `providerRequests 0`, 2 distinct `sourceSha`, suite **471/471**, matrix **9/9** | `closed-loop-identity.json`, §8.6 |
+| 5 | 超时与取消能结束真实进程树 | bounded-stop 24/24, including the flood case that now settles as `output_limit` rather than running to the deadline | §8.2 |
+| 6 | Windows/Ubuntu CI 覆盖同一闭环，没有作者机器私有前提 | run `35693782588` at head `7378aca`: all 7 jobs success, both closed-loop legs green on every step; the loop needs only Node — no bash, WSL or Docker | §8.7 |
+
+With all six measured at a head that has a green two-platform CI run, the round closes
+under plan §2's own instruction. The paid authorization still does not cover a final
+plan, so the status remains `OFFLINE_ACCEPTED / PAID_NOT_RUN`.
 
