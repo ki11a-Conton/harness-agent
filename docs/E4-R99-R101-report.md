@@ -1131,6 +1131,17 @@ matrix on a real runner:
 | `r97-r98 closed loop (ubuntu-latest)` | **failure** |
 | `install · typecheck · test · build · benchmark-smoke · audit (windows-latest)` | **failure** (step `Unit and integration tests`) |
 | `install · … (ubuntu-latest)` | cancelled (superseded by run `35561161204` under `cancel-in-progress`) |
+| `release attestation (P38-12)` | cancelled (its dependencies never went green) |
+
+> **CORRECTED — the run-level conclusion is `cancelled`, not `failure`.** This table
+> originally listed six jobs and the section described the run as a failure. The
+> GitHub API returns seven jobs for run 35560959837 and a **workflow-level
+> conclusion of `cancelled`**, because `cancel-in-progress` superseded the ubuntu
+> main job and the release-attestation job while the two closed-loop jobs were
+> failing. "The closed-loop job failed on both platforms" is true at the JOB level
+> and is what this section's analysis rests on; "the run failed" is not what the API
+> says. Found by re-querying the API during the §7.21 verification pass rather than
+> by reading the report.
 
 Two independent root causes, each visible on exactly one platform, plus a third latent
 flake found while reproducing the second on a clean checkout.
@@ -1338,4 +1349,24 @@ Two things this changes and one it does not:
 - **It does not change the paid status.** The provider is still scripted,
   `externalProviderCalls` is 0, and the two-version experiment remains `PAID_NOT_RUN`.
   A clean local tree is not a model-quality result.
+
+**Run [35673784338](https://github.com/ki11a-Conton/harness-agent/actions/runs/35673784338),
+run_number 208, head `31efd9c150a5e860721be0e364a4653fcd456f05`, conclusion `success`** —
+the pushed closure commits verified on a real runner:
+
+| Job | Conclusion |
+| --- | --- |
+| `coverage gate (ubuntu)` | success |
+| `offline cold-start (ubuntu)` | success |
+| `r97-r98 closed loop (ubuntu-latest)` | success |
+| `r97-r98 closed loop (windows-latest)` | success |
+| `install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest)` | success |
+| `install · typecheck · test · build · benchmark-smoke · audit (windows-latest)` | success |
+| `release attestation (P38-12)` | success |
+
+All seven jobs green, none skipped or cancelled, and the closed-loop matrix ran on
+BOTH platforms with every step — including "Run the offline closed loop" and "Prove
+the suite CATCHES the plan's five anti-cheat mutations" — reporting success. This is
+the run that corresponds to the report as it now stands, per plan T6 怎么验收 4
+("CI head 明确对应实施提交").
 
