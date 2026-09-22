@@ -768,6 +768,11 @@ Measured locally (Windows, Node v24.18.1, `OPENAI_API_KEY` unset):
 > §7.10–7.12 fixes added 12 tests, and 460→464 when the CI defects in §7.17 added four
 > more. The block above is the run as first measured and is kept as the historical
 > record; §7.14 and §7.18 carry the current figures.
+>
+> **Superseded once more — see §8.6: the suite is 471/471.** The §8.2–§8.4 fixes added
+> seven tests after this note was written, so 464 is no longer the current figure either.
+> This is the third time this one number has moved; §8.6 is the only place that states it
+> as measured against the current head.
 
 **The bash removal is itself the fix, not a simplification.** Plan 怎么做 1–2
 forbade continuing to patch "终端符号、相对路径和阈值"; the old job grepped for a
@@ -1262,6 +1267,11 @@ plan 7-file block  257/257
 The suite total moved from 460 to 464 because this round added four tests: three for
 the two new defects (X5's CRLF pair, D5's host-path walk) and one guard for RC3.
 
+> **Superseded — see §8.6.** This block is the state at `00826e9`. The current head is
+> `64d95cb`, where the closed loop reports **471/471** and `pnpm test` reports
+> **363/363 files, 6788 passed, 0 failed, exit 0**; the §8.2–§8.4 fixes added seven more
+> tests after this was written. Kept as measured then, per plan 怎么做 8.
+
 ### 7.19 怎么验收 1 — MEASURED green on both platforms
 
 The fixes above were pushed as `00826e9`, and the rerun is the first fully green
@@ -1348,7 +1358,7 @@ this machine, with `git status --porcelain` empty:
 | Command | Before | After |
 | --- | --- | --- |
 | the 3 guard files | 6 failed / 155 passed / 2 skipped, exit 1 | **161 passed / 2 skipped, exit 0** |
-| `pnpm test` | 6 failed (§4.1) | **362/362 files, 6781 passed, 3 skipped, 0 failed, exit 0** |
+| `pnpm test` | 6 failed (§4.1) | **362/362 files, 6781 passed, 3 skipped, 0 failed, exit 0** — and at the current head `64d95cb` it is **363/363 files, 6788 passed, 0 failed** (§8.5) |
 | `pnpm typecheck` | exit 0 | exit 0 |
 | `pnpm test:security` | 2135/2135 | **2135/2135, exit 0** |
 | `pnpm docs:verify` | ALL CHECKS PASS | ALL CHECKS PASS, exit 0 |
@@ -1391,4 +1401,221 @@ BOTH platforms with every step — including "Run the offline closed loop" and "
 the suite CATCHES the plan's five anti-cheat mutations" — reporting success. This is
 the run that corresponds to the report as it now stands, per plan T6 怎么验收 4
 ("CI head 明确对应实施提交").
+
+---
+
+## 8. The closing pass — four gaps found AFTER §7.21 was written
+
+§7.21 closed the round at head `31efd9c` / run `35673784338`. That head is **not** the
+head of the repository this section is written against. Four commits landed after it,
+two of them behaviour fixes, and the report above never mentions them: a full-text
+search for `output_limit`, `withR97CampaignLock`, `6860ee5` and `ab82bb4` in this
+document returned **zero** hits before this section existed. This section closes that
+gap rather than leaving the round described by a head it no longer has.
+
+### 8.1 What moved after the last cited CI run
+
+```
+31efd9c  docs(E4-R101-A): record 怎么验收 2 as measured in the author's workspace   <- run 35673784338 head
+   |
+   +-- 6860ee5  fix(E4-R99-B): an output flood now ENDS the child, not just bounds memory   [T5]
+   +-- ab82bb4  fix(E4-R98-B): the execution-state store now locks its read-modify-write    [T2]
+   +-- 631027b  docs(E4-R99-R101): correct the three remaining unsupported test counts
+   +-- 64d95cb  test(E4-R98-A): the ledger's FAILED WRITE refuses the call, and T6 now runs it [T1]
+```
+
+`origin/main` stood at `e23d541` — i.e. **four commits of this round were unpushed**, so
+no CI run corresponded to them at all. That is the concrete sense in which "the round
+was closed" was true of the report and not yet true of the repository.
+
+### 8.2 T5 — an output flood bounded MEMORY and then never stopped anything
+
+Plan T5 怎么验收 5 requires that a timeout, a cancel **and excess output** each end
+execution. The third case was false: `BOUNDED_STOP_REASONS` listed `output_limit`, but
+nothing ever settled with it. `ByteCap` bounded memory correctly and then said nothing,
+so a flooding child ran until the **deadline** killed it. The old test encoded the
+defect by asserting `reason === "timeout"` for a flood.
+
+The fix points `ByteCap`'s new one-shot `onLimit` at the EXISTING `beginStop` sequence
+with reason `output_limit`, so the polite signal, bounded grace, forced tree kill,
+close await, single settle and cleanup are inherited rather than re-implemented.
+`beginStop`'s own settled/reason guard plus the one-shot signal mean a flood cannot
+resolve twice. `DRY_RUN_TIMEOUT_MS` — declared and never read, the same
+declared-but-unused defect that made `SIGKILL_GRACE_MS` the original N8 bug — was
+removed rather than wired.
+
+Measured by the Lead on the current tree:
+
+```
+pnpm exec vitest run packages/evaluation/src/r97-bounded-stop.test.ts -t output_limit
+  ✓ an output flood past the cap ends the child as `output_limit`, long before the deadline
+  Tests  1 passed | 23 skipped (24)   exit 0
+```
+
+The commit's own RED record: with the wiring neutralised the new test fails with
+`Expected output_limit, Received timeout` — the pre-fix behaviour.
+
+### 8.3 T2 — the execution-state store's read-modify-write was UNLOCKED
+
+Plan T2 怎么验收 2 requires that two processes racing the same
+`case×arm×repetition` produce exactly ONE successful `begin`, and that concurrent
+INDEPENDENT units do not lose records. Both clauses failed. The cause was not the atomic
+write: `writeStateAtomic`'s temp-file-then-rename makes a single WRITE atomic, but the
+read→mutate→write **sequence** had no mutual exclusion, so the second writer rebuilt the
+whole `records` array from a snapshot taken before the first wrote (last-writer-wins).
+
+The fix reuses the budget ledger's existing lock rather than inventing a third one:
+`r97-budget-ledger.ts` exports `withR97CampaignLock`, and `r97-execution-state.ts` routes
+every mutator through a new `withLockedState` that reads INSIDE the lock, mutates, and
+writes before releasing. `begin`'s "one owner at a time" check and its write are now one
+critical section.
+
+**Re-measured independently by the Lead on the current tree**, with a two-process
+file-barrier probe (`.ci/lead-race-probe.mjs` — real `node` children that rendezvous on a
+`ready-*`/`go` barrier, not sleeps and not in-process promises):
+
+```
+=== SAME unit, two processes ===
+  BEGIN_REFUSED 1 :: E4-R97: EXEC_BUSY: unit probe-exp|c1|probe|baseline|1 is already running …
+  BEGIN_OK count : 1   (want 1)   -> OK
+  records in file: 1
+=== DIFFERENT units, two processes ===
+  BEGIN_OK count : 2   (want 2)   -> OK
+  records in file: 2
+```
+
+Before the fix the same probe reported `BEGIN_OK count 2` for the same unit and **1**
+record for two distinct units.
+
+### 8.4 T1 — 故障写盘 had no counterexample at all
+
+Plan T1 怎么验收 5 names three fail-closed conditions:
+
+> 缺少预算 IPC/ledger、故障写盘、超过授权预算时，真实与离线模式都不会绕过检查.
+
+Two of the three had counterexamples. The third — **a failed disk write** — had none:
+`ENOSPC|EACCES|EROFS|EDQUOT` returned zero hits across
+`packages/evaluation/src/r97-*.test.ts`, and only the `BUDGET_EXHAUSTED` branch was ever
+exercised. The plan asserted the property and nothing demonstrated it.
+
+`packages/evaluation/src/r97-budget-write-fault.test.ts` supplies the missing
+counterexample. It occupies the ATOMIC TEMP PATH with a **directory**, so the real
+`writeFile` fails with a real errno while the real `budget-ledger.json` stays readable and
+valid — the failure lands on the WRITE, not on the read/lock/open paths. The rejected
+alternatives are recorded in the file with the measurement that rejected each; the
+important one is `chmod 0o444`, which is green on Windows but **vacuous on POSIX**,
+because `rename(2)` replaces a read-only destination using the directory's permissions.
+
+**RED→GREEN measured by the Lead, independently of the suite** (`.ci/lead-write-fault-red.mjs`):
+
+```
+target sha256 (before): dc7a18002c96b8eb9401e5aedec85f47e3ef45c6e074850724c732da8aaff218
+MUTATED (write failure swallowed): exit 1 (RED)
+    Tests  2 failed | 2 passed (4)
+    Error: expected the call to be REFUSED, but it completed without throwing
+target sha256 (after) : dc7a18002c96b8eb9401e5aedec85f47e3ef45c6e074850724c732da8aaff218
+restored: byte-identical
+RESTORED: exit 0 (GREEN)
+```
+
+The file alone would have been a counterexample **no gate executes**, which T1 怎么验收
+forbids ("并在 T6 必跑"), so it is added to `SUITE_FILES` in
+`scripts/e4/r97-closed-loop.mjs`.
+
+**Provenance, stated rather than glossed.** This file was found UNCOMMITTED in the working
+tree at the start of this closing pass (created 11:31; no script in the repository
+references its name). It is adopted here only after the independent RED→GREEN above, and
+it is the file whose untracked status was causing six clean-tree-guard failures in
+`pnpm test` — see §8.5.
+
+### 8.5 The six "pre-existing clean-tree guard" failures are now gone
+
+§4.2 and §7.16 explained six `pnpm test` failures as a dirty-tree guard caused by the
+user's pre-existing ` D plan(20260917-001821).md`. That deletion was indeed one cause.
+It was **not the only one**: after `01bba90` recorded the plan bookkeeping, the guard
+listed exactly one remaining dirty entry —
+
+```
+E4-R55 requires a CLEAN committed working tree … Commit or stash first.
+dirty entries (1):
+  ?? packages/evaluation/src/r97-budget-write-fault.test.ts
+```
+
+— i.e. the uncommitted §8.4 file. Committing it (§8.4, `64d95cb`) clears the guard.
+Measured on a clean tree at `64d95cb`:
+
+| Command | Before | After |
+| --- | --- | --- |
+| `pnpm test` | 6 failed / 6782 passed, exit 1 | **363/363 files, 6788 passed, 3 skipped, 0 failed, exit 0** |
+| `pnpm typecheck` | exit 0 | exit 0 |
+| `pnpm docs:verify` | ALL CHECKS PASS | ALL CHECKS PASS, exit 0 |
+
+This is a correction to §4.2's scope, not a contradiction of it: the deletion was
+**sufficient** to reproduce the failures in a clean worktree, and it was not the only
+entry keeping them red in this one.
+
+### 8.6 T6 verdict, re-measured on the current head
+
+The closed loop was re-run from scratch after §8.4's suite-list change, into a fresh
+`--out` (the §7.12 reuse guard refuses a stale one):
+
+```
+[1/5] setup      OK  D:\r101-arms-local
+[2/5] acceptance OK  status=OFFLINE_ACCEPTED passes=6/16
+[3/5] suite      OK  471/471 test(s)
+[4/5] matrix     OK  9/9 row(s)
+[5/5] identity   OK  .ci/r97-r98-v2/closed-loop-identity.json
+```
+
+| Field | Value |
+| --- | --- |
+| `executionMode` | `arm-worker` |
+| `verifiedPasses` / `measuredUnits` | 6 / 16 (strong 0, weak 6 — see §7.4) |
+| `logicalCalls` | 42 |
+| `providerCalls` | **0** |
+| `suitePassedTests` / `suiteTotalTests` | **471 / 471** (was 464) |
+| `matrixRowsSatisfied` / `matrixRowsTotal` | 9 / 9 |
+| `promotable` | false |
+| `modelCapabilityClaim` | none — the offline provider is scripted |
+
+The suite total moved **464 → 471** because §8.2, §8.3 and §8.4 added tests after §7.14
+and §7.18 were written. The plan's seven named files still sum to **257** (re-derived
+per file: `r97-arm-worker-contract` 37, `r97-budget-ledger` 50, `r97-driver-closed-loop`
+67, `r97-execution-state` 27, `r97-plan` 56, `r97-redaction` 12, `r98-fixture-cases` 8);
+the 19-file closed-loop suite is 471 across 20 files.
+
+The independent validator and the anti-cheat gate were re-run against the SAME fresh
+artifacts:
+
+```
+node scripts/e4/r97-validate-campaign.mjs --campaign .ci/r97-r98-v2/acceptance/ledger
+  -> exit 0, ok=true, reasonCodes=[], terminal 16, evidenceChecked 16, evidenceFailures []
+     grant 320, committed 42, remaining 278
+
+node scripts/e4/r97-mutation-check.mjs --out .ci/r97-r98-v2/mutation-report.json
+  -> 5/5 mutation(s) CAUGHT by their tests
+```
+
+And the §7.10 tamper matrix was re-run by the Lead on those artifacts, not inherited
+from the earlier run:
+
+| Tamper | Result |
+| --- | --- |
+| honest campaign | **exit 0**, `ok: true`, `reasonCodes: []` |
+| all 16 `detail` fields rewritten to a PASS | **exit 1** — `EVIDENCE_DETAIL_MISMATCH`, 16/16 |
+| `detail` field deleted | **exit 1** — `VALIDATOR_DETAIL_MISSING` |
+| all 16 `resultHash` set to 64 zeros | **exit 1** — `VALIDATOR_EVIDENCE_BROKEN` |
+| the linked evidence FILE's verdict rewritten | **exit 1** — `VALIDATOR_EVIDENCE_BROKEN` |
+
+### 8.7 What §8 does NOT change
+
+- **The paid two-version experiment remains `NOT_RUN`.** The provider is still scripted,
+  `providerCalls` is 0, and no authorization covering a final plan exists. Per plan
+  怎么做 6 this round neither performs nor requests a paid run.
+- **No model-quality or promotion claim.** `promotable: false`,
+  `modelCapabilityClaim: "none"`, and the six passes are `weak` (§7.4) — an artifact
+  verifier was satisfied, not a case solved.
+- **No new framework.** The four commits in §8.1 fix two reproduced defects, add one
+  missing counterexample, and correct documentation. No R102+ work was started and no
+  experiment was enlarged, per plan §2 ("达到以上条件后停止这轮基础设施修改").
 
