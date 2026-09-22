@@ -197,6 +197,12 @@ passing, driving the real module (never a mock):
    reserves 1 logical call per unit; the child's real per-case consumption is
    visible in its report (`model_calls`) but is not reconciled against the
    ledger. §R98 forbids assuming one call per case, and this is the remaining gap.
+
+   > **PARTLY SUPERSEDED — re-measured in §8.10.** The first sentence is now FALSE
+   > of the ledger: the worker still takes ONE reservation up front for the
+   > `running` record, but the budget channel takes one per REAL call, so the
+   > ledger is a measurement rather than a promise. The second sentence survives
+   > only at PER-CASE granularity, and for a different reason than stated here.
 3. **`resultHash` digests `arm|case|verdict|detail`**, not a per-case artifact
    hash. An artifact-level hash is not implemented.
 4. **Two arms on one revision would be refused.** `ARMS_NOT_DISTINCT` in
@@ -1682,4 +1688,68 @@ because two of the six were affected by §8.2–§8.5.
 With all six measured at a head that has a green two-platform CI run, the round closes
 under plan §2's own instruction. The paid authorization still does not cover a final
 plan, so the status remains `OFFLINE_ACCEPTED / PAID_NOT_RUN`.
+
+### 8.10 §1.6 item 2, re-measured: the ledger IS a measurement, but not per case
+
+§1.6 item 2 claimed two things, and they have different fates. This section separates
+them because collapsing them is what let the claim survive four commits that changed it.
+
+**Claim A — "the worker charges one reservation per unit, so the ledger counts case
+starts, not model calls."** **This is FALSE now.** The worker still takes ONE
+reservation up front, because the durable `running` record must carry a real
+reservation id before dispatch. But that reservation is handed to the budget channel as
+the pre-taken reservation for the FIRST call, and **every subsequent call reserves its
+own**. Measured on the `7378aca` campaign artifacts
+(`.ci/lead-reconciliation-check.mjs`, read-only):
+
+```
+=== LEDGER ===
+  campaignModelCalls (grant) : 320
+  entries / committed        : 42 / 42
+  sum(consumed)              : 42
+  distinct reservationIds    : 42
+
+=== PER-ARM RECONCILIATION (the finest join the artifacts allow) ===
+  arm        units  ledger.consumed  report.model_calls   retries  agree
+  baseline      8              21                 21        0  YES
+  candidate     8              21                 21        0  YES
+
+  units (case x arm)                    : 16
+  ledger committed entries == consumed  : true  (one entry per real call, all ids distinct)
+  ledger total == report total          : 42 == 42 -> true
+  calls per unit (NOT 1 per case-start) : 2.63
+```
+
+16 units produced **42** ledger entries, and the arms' own `model_calls` sum to the same
+42 per arm. A unit therefore costs **2.63 calls on average, not 1** — which is exactly
+the quantity plan §T1 怎么验收 6 requires ("不把 case 数或进程启动次数当模型调用数"). The
+unit-level form of the same invariant is pinned in the suite:
+`r97-arm-worker-contract.test.ts` asserts `entries.toHaveLength(measured)`,
+`record.reservationIds` are all distinct, `record.consumed === measured`, and
+`record.report.model_calls === measured`.
+
+**Claim B — "the child's per-case consumption is not reconciled against the ledger."**
+**This survives, but for a narrower reason than §1.6 gave.** A ledger entry is
+`{ reservationId, arm, pid, reservedAt, reserved, status, consumed, transportRetries }`
+— it carries **no `caseId`**. So the finest durable join is **per arm**, not per case.
+Per-arm reconciliation holds exactly (21 = 21 on each side, 0 retries); a per-CASE join
+is not merely unverified, it is **not expressible against the current ledger schema**.
+
+**What this does and does not change:**
+
+- Plan §T1 怎么验收 6 is **satisfied**: the accounting basis is the channel's measured
+  admitted-call count, the arm's self-report agrees with it per arm, and no case count
+  or process-start count is used as a model-call count.
+- §1.6 item 2's first sentence was **wrong from `8504a45` onward** and is now marked
+  superseded in place rather than deleted.
+- The remaining limitation is stated precisely: **per-case** reconciliation would
+  require a `caseId` on the ledger entry, which does not exist. Adding it is a schema
+  change and was NOT made here — the plan's §2 closing instruction is to stop
+  infrastructure modification, and the acceptance criterion it names is per-arm
+  agreement plus a measured (not assumed) call count, both of which hold.
+- `transportRetries` is 0 on every entry, so the retry half of §T1 怎么验收 6 is
+  vacuously satisfied on this run and is not evidence that the retry path was exercised;
+  the ledger's `commit(reservationId, consumed, transportRetries)` validates and stores
+  it, and `r97-budget-ledger.test.ts` covers a non-zero value. Stated so the 0 is not
+  read as proof.
 
