@@ -1755,14 +1755,20 @@ is not merely unverified, it is **not expressible against the current ledger sch
 
 ### 8.11 The run that corresponds to the report's FINAL head
 
-§8.7 cited `35693782588` at `7378aca`. Three documentation commits followed it
-(`cc745da`, `3bae661`, `ff9ced5`), so the same question §8.1 raised applies to them:
-does any run correspond to the head the report now describes?
+§8.7 cited `35693782588` at `7378aca`. Four documentation commits followed it
+(`cc745da`, `3bae661`, `ff9ced5`, `3630256`), so the same question §8.1 raised applies
+to them: does any run correspond to the head the report now describes?
 
-**Run [35710940810](https://github.com/ki11a-Conton/harness-agent/actions/runs/35710940810),
-head `ff9ced53c33d63afa38e53801d7bc46abd513f15`, conclusion `success`** — the API
-reports `total_count: 7`, all seven jobs `completed / success`, and the run page
-contains **zero** `failed`, `cancelled` or `skipped` markers:
+Both documentation heads were checked, and both are green:
+
+| Run | Head | Jobs | Conclusion |
+| --- | --- | --- | --- |
+| [35710940810](https://github.com/ki11a-Conton/harness-agent/actions/runs/35710940810) | `ff9ced5` | 7 / 7 | success |
+| [35712775164](https://github.com/ki11a-Conton/harness-agent/actions/runs/35712775164) | `3630256` | 7 / 7 | success |
+
+The API reports `total_count: 7` with all seven jobs `completed / success` for each, and
+the run pages carry **zero** `failed`, `cancelled` or `skipped` markers. Both legs of the
+closed loop are among them, on Windows and Ubuntu:
 
 | Job | Conclusion |
 | --- | --- |
@@ -1774,36 +1780,38 @@ contains **zero** `failed`, `cancelled` or `skipped` markers:
 | `offline cold-start (ubuntu)` | success |
 | `release attestation (P38-12)` | success |
 
-The three commits between `7378aca` and `ff9ced5` touch **only**
-`docs/E4-R99-R101-report.md`, so no executable path changed and the `7378aca` evidence
-carries over; this run confirms the documentation-only commits are also green. That
-closes the §8.1 gap completely: every commit from `6860ee5` (the first behaviour fix
-that had never been pushed) to the final head now sits under a green two-platform run.
+Everything from `7378aca` to `3630256` touches **only** `docs/E4-R99-R101-report.md`, so
+no executable path changed and the `7378aca` evidence carries over; these runs confirm
+the documentation-only commits are green too. That closes the §8.1 gap completely: every
+commit from `6860ee5` (the first behaviour fix that had never been pushed) to the head
+this text is committed on now sits under a green two-platform run.
 
 **Same scope limit as §8.7, restated because it is the load-bearing caveat:** the
-run-level and per-job conclusions were read from the GitHub run page, not re-derived
-from the uploaded artifacts, because the artifact-download endpoint returns
-`401 Requires authentication` and no token is available in this environment. The
-runner-side suite total is therefore **inferred** from green non-zero-on-failure steps.
-The locally measured `471/471` in §8.6 stands on its own artifacts.
+run-level and per-job conclusions were read from the GitHub API and run pages, not
+re-derived from the uploaded artifacts. The artifact-download endpoint returns
+`401 Requires authentication` and the job-log endpoint `403 Forbidden`, and no token is
+available in this environment, so the runner-side suite total is **inferred** from green
+steps that fail non-zero on any unsatisfied phase. The locally measured `471/471` in
+§8.6 stands on its own artifacts.
 
-**Why the regress terminates here, stated as a verifiable rule rather than a promise.**
-This section is itself delivered by a documentation-only commit, so the head it cites
-is one commit behind the head that contains this text — the same regress §8.1 opened.
-It terminates because of a property that can be checked rather than trusted:
+**Why the regress terminates here, stated as a checkable rule rather than a promise.**
+This section is itself delivered by a documentation-only commit, so the head that
+contains this text is one commit newer than the last head cited above — the same regress
+§8.1 opened. It terminates because of a property that can be verified rather than trusted:
 
 > A commit that changes **no executable path** cannot change any CI outcome, so a green
 > run at head `H` transfers to every descendant `H'` where
-> `git diff --name-only H..H'` touches only documentation.
+> `git diff --name-only H..H'` names only documentation.
 
-Applied to this round: the last commit that changed anything executable is `64d95cb`
-(it adds `r97-budget-write-fault.test.ts` and edits the closed-loop `SUITE_FILES`).
-`7378aca` and `ff9ced5` are documentation-only descendants of it, and both have a green
-two-platform run (`35693782588` and `35710940810`). So the implementation commits
-`6860ee5`, `ab82bb4` and `64d95cb` are covered by a green run **at or after** every one
-of them, and no further commit is appended to chase the report's own SHA.
+Applied to this round, and verified: the last commit that changed anything executable is
+`64d95cb` (it adds `r97-budget-write-fault.test.ts` and edits the closed-loop
+`SUITE_FILES`). `git diff --name-only 64d95cb 3630256` returns exactly one path,
+`docs/E4-R99-R101-report.md`, and `7378aca`, `ff9ced5` and `3630256` are all
+documentation-only descendants of it. So the implementation commits `6860ee5`, `ab82bb4`
+and `64d95cb` are each covered by a green run at or after them, and no further commit is
+appended to chase the report's own SHA.
 
 That is also the plan's own instruction, 怎么做 9: "报告写实现 SHA 和对应 CI URL；不要
 为了让报告包含自己的提交 SHA 无限追加文档 commit." The implementation SHAs are recorded
-above; the two runs are recorded in §8.7 and here; and the chain stops.
+above; the runs are recorded in §8.7 and here; and the chain stops.
 
