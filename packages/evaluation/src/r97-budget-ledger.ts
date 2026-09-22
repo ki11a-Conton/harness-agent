@@ -403,6 +403,50 @@ function defaultIsAlive(pid: number): boolean {
   }
 }
 
+/**
+ * ---- E4-R98-B (T2): ONE CAMPAIGN LOCK, REUSED -----------------------------
+ *
+ * Plan §T2 怎么做 3 is explicit: "用同一已有 campaign lock/事务合同保护
+ * read-modify-write。仅靠写临时文件再 rename 不能防两个 writer 互相覆盖；不要再造
+ * 第三套锁实现."
+ *
+ * MEASURED DEFECT (reproduced by the Lead with a two-process file-barrier probe):
+ * the execution-state store did its read-modify-write with NO lock at all, so
+ *   - two processes calling `begin` on the SAME unit BOTH succeeded (one unit,
+ *     two owners, two bills), and
+ *   - two processes calling `begin` on DIFFERENT units lost one record entirely,
+ *     because `writeStateAtomic`'s read-modify-write rewrote the whole `records`
+ *     array from a stale snapshot (last-writer-wins).
+ * `writeStateAtomic`'s temp-file-then-rename is atomic per WRITE but is not a
+ * mutual-exclusion mechanism, which is exactly the distinction the plan draws.
+ *
+ * This exports the lock that already exists here — the same `acquireLock` /
+ * `releaseLock` pair, the same lock file name, the same dead-owner takeover and
+ * the same token discipline that stops a stale owner deleting a new owner's lock.
+ * It is deliberately the ONLY lock in the R97 stack; the execution-state store
+ * calls this rather than growing a second implementation.
+ *
+ * The callback runs with the lock held and the lock is released in a `finally`,
+ * so an exception cannot leak it. Note the timeout default: a caller that holds
+ * the lock across a long operation must still finish inside `timeoutMs`, or the
+ * next acquirer takes over a lock it believes is dead.
+ */
+export async function withR97CampaignLock<T>(
+  dir: string,
+  fn: () => Promise<T>,
+  opts: { lockTimeoutMs?: number; isAlive?: (pid: number) => boolean; now?: () => number } = {},
+): Promise<T> {
+  const lockTimeoutMs = opts.lockTimeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS;
+  const isAlive = opts.isAlive ?? defaultIsAlive;
+  const now = opts.now ?? (() => Date.now());
+  const { lockPath, token } = await acquireLock(dir, lockTimeoutMs, isAlive, now);
+  try {
+    return await fn();
+  } finally {
+    await releaseLock(lockPath, token);
+  }
+}
+
 /** Derive the view from the raw file. Pure, so it can be asserted directly.
  *
  *  `clamp` (default true) floors `remaining` at 0 for DISPLAY of a well-formed

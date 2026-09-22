@@ -629,6 +629,47 @@ export async function openR97ExecutionState(
     }
   };
 
+  /**
+   * ---- E4-R98-B (T2): EVERY read-modify-write runs UNDER THE CAMPAIGN LOCK ---
+   *
+   * MEASURED DEFECT, reproduced by the Lead with a real two-process file-barrier
+   * probe against the unfixed store:
+   *   - two processes calling `begin` on the SAME unit key: BOTH returned OK
+   *     (exactly one must win), and the file ended with a single record — the
+   *     loser's reservation and owner were overwritten;
+   *   - two processes calling `begin` on DIFFERENT unit keys: only ONE record
+   *     survived, because the write replaces the whole `records` array from a
+   *     snapshot taken before the other process wrote (last-writer-wins).
+   *
+   * `writeStateAtomic` was never the problem: temp-file-then-rename makes a
+   * single WRITE atomic. What was missing is MUTUAL EXCLUSION across the
+   * read→mutate→write SEQUENCE, which is precisely what plan §T2 怎么做 3 asks
+   * for ("仅靠写临时文件再 rename 不能防两个 writer 互相覆盖").
+   *
+   * `mutate` therefore receives the state read INSIDE the lock and returns the
+   * next state; the write happens before the lock is released. Holding the lock
+   * across the whole sequence — rather than locking the read and the write
+   * separately — is the point: two separate acquisitions still allow the
+   * interleaving that produced the lost update.
+   *
+   * The lock is the budget ledger's own `withR97CampaignLock`; no second lock
+   * implementation is introduced. The import is deferred for the same reason the
+   * established-campaign probe defers it (module cycle).
+   *
+   * LOCK ORDER: the state lock is taken and released without ever calling into
+   * the ledger's own locked operations while holding it, so the two locks are
+   * never held simultaneously and cannot invert.
+   */
+  const withLockedState = async <T>(mutate: (current: R97ExecutionStateFile) => Promise<{ next: R97ExecutionStateFile | null; result: T }>): Promise<T> => {
+    const { withR97CampaignLock } = await import("./r97-budget-ledger.js");
+    return withR97CampaignLock(dir, async () => {
+      const current = await read();
+      const { next, result } = await mutate(current);
+      if (next !== null) await writeStateAtomic(dir, next);
+      return result;
+    });
+  };
+
   const resolvedMode: "first-run" | "resume" =
     mode === "resume" ? "resume" : mode === "first-run" ? "first-run" : (await campaignIsEstablished()) ? "resume" : "first-run";
 
@@ -661,27 +702,36 @@ export async function openR97ExecutionState(
   // to compare against. An EXISTING store is validated here as well as on every
   // read: opening a store that belongs to another experiment/plan must fail
   // immediately, not at the first isDone() call.
+  //
+  // This is a read-modify-write like every other, so it runs UNDER THE LOCK. The
+  // unfixed version read `null` and wrote an empty state unlocked: two processes
+  // opening the same fresh campaign could both observe "no file" and both write,
+  // which is the same lost-update shape as the ledger's bootstrap race (see
+  // `openR97BudgetLedger`'s comment on that).
   {
-    const present = await readR97ExecutionStateFile(dir);
-    if (present === null) {
-      if (resolvedMode === "resume") {
-        throw new Error(
-          `E4-R97: ${R97_EXEC_STATE_MISSING}: this campaign is established in ${dir} but its execution state is gone — refusing to treat a lost record of completed units as "nothing has run"; restore ${R97_EXEC_FILENAME}, or start a new authorization`,
-        );
+    const { withR97CampaignLock } = await import("./r97-budget-ledger.js");
+    await withR97CampaignLock(dir, async () => {
+      const present = await readR97ExecutionStateFile(dir);
+      if (present === null) {
+        if (resolvedMode === "resume") {
+          throw new Error(
+            `E4-R97: ${R97_EXEC_STATE_MISSING}: this campaign is established in ${dir} but its execution state is gone — refusing to treat a lost record of completed units as "nothing has run"; restore ${R97_EXEC_FILENAME}, or start a new authorization`,
+          );
+        }
+        await writeStateAtomic(dir, emptyState(opts.experimentId, opts.planDigest));
+      } else {
+        if (present.experimentId !== opts.experimentId) {
+          throw new Error(
+            `E4-R97: ${R97_EXEC_STATE_MISMATCH}: the execution state in ${dir} belongs to a different experiment (${present.experimentId}) than this run (${opts.experimentId})`,
+          );
+        }
+        if (present.planDigest !== opts.planDigest) {
+          throw new Error(
+            `E4-R97: ${R97_EXEC_STATE_MISMATCH}: the execution state in ${dir} belongs to a different plan (${present.planDigest}) than this authorization (${opts.planDigest})`,
+          );
+        }
       }
-      await writeStateAtomic(dir, emptyState(opts.experimentId, opts.planDigest));
-    } else {
-      if (present.experimentId !== opts.experimentId) {
-        throw new Error(
-          `E4-R97: ${R97_EXEC_STATE_MISMATCH}: the execution state in ${dir} belongs to a different experiment (${present.experimentId}) than this run (${opts.experimentId})`,
-        );
-      }
-      if (present.planDigest !== opts.planDigest) {
-        throw new Error(
-          `E4-R97: ${R97_EXEC_STATE_MISMATCH}: the execution state in ${dir} belongs to a different plan (${present.planDigest}) than this authorization (${opts.planDigest})`,
-        );
-      }
-    }
+    });
   }
 
   const findRecord = async (key: R97UnitKey): Promise<R97UnitRecord | null> => {
@@ -690,12 +740,44 @@ export async function openR97ExecutionState(
     return state.records.find((r) => unitKeyOf(r) === wanted) ?? null;
   };
 
+  /**
+   * Apply ONE read-modify-write to the record for `key`, atomically.
+   *
+   * `mutate` receives the state and the CURRENT record (both read under the lock)
+   * and returns the record to store (or `null` to leave the file untouched). The
+   * lookup, the decision and the write therefore happen as one critical section,
+   * which is what makes `begin`'s "only one owner" check meaningful across
+   * processes. The old shape — `findRecord()` outside, `writeRecord()` inside —
+   * let two processes both observe "not running" and both write.
+   */
+  const mutateRecord = async <T>(
+    key: R97UnitKey,
+    mutate: (current: R97ExecutionStateFile, existing: R97UnitRecord | null) => { next: R97UnitRecord | null; result: T },
+  ): Promise<T> =>
+    withLockedState(async (current) => {
+      const wanted = unitKeyOf(key);
+      const existing = current.records.find((r) => unitKeyOf(r) === wanted) ?? null;
+      const { next, result } = mutate(current, existing);
+      if (next === null) return { next: null, result };
+      const records = current.records.map((r) => (unitKeyOf(r) === wanted ? next : r));
+      if (!current.records.some((r) => unitKeyOf(r) === wanted)) records.push(next);
+      return { next: { ...current, records }, result };
+    });
+
   const writeRecord = async (record: R97UnitRecord): Promise<void> => {
     const state = await read();
     const wanted = unitKeyOf(record);
     const records = state.records.map((r) => (unitKeyOf(r) === wanted ? record : r));
     if (!state.records.some((r) => unitKeyOf(r) === wanted)) records.push(record);
     await writeStateAtomic(dir, { ...state, records });
+  };
+
+  /** Replace one record by its unit key, leaving every other record untouched. */
+  const replaceRecordIn = (state: R97ExecutionStateFile, record: R97UnitRecord): R97ExecutionStateFile => {
+    const wanted = unitKeyOf(record);
+    const records = state.records.map((r) => (unitKeyOf(r) === wanted ? record : r));
+    if (!state.records.some((r) => unitKeyOf(r) === wanted)) records.push(record);
+    return { ...state, records };
   };
 
   const byAttempt = async (attemptId: string): Promise<R97UnitRecord> => {
@@ -784,7 +866,13 @@ export async function openR97ExecutionState(
     },
 
     async begin(key, opts2) {
-      const existing = await findRecord(key);
+      // ---- THE WHOLE CHECK-AND-WRITE IS ONE CRITICAL SECTION (T2 怎么做 3) ----
+      //
+      // Reading the existing record, deciding whether the unit is startable, and
+      // writing the `running` record happen under ONE acquisition of the campaign
+      // lock. Splitting them — as the unfixed store did — is what let two
+      // processes both see "not running" and both dispatch the same unit.
+      return mutateRecord(key, (state, existing) => {
       if (existing !== null) {
         if (existing.status === "running") {
           // ONE OWNER AT A TIME (plan §T2 怎么做 4: "running 状态拒绝第二次 begin").
@@ -869,101 +957,112 @@ export async function openR97ExecutionState(
         // A NEW attempt clears the retry marker: it is no longer awaiting a
         // retry, it IS the retry.
       };
-      await writeRecord(record);
-      return attemptId;
+      return { next: record, result: attemptId };
+      });
     },
 
     async complete(attemptId, opts2) {
-      const record = await byAttempt(attemptId);
-      // A terminal write is only legal from the unit's CURRENT attempt. A stale
-      // attempt (superseded by a reconciliation and a new begin) must not be
-      // able to write a result over the live one.
-      if (record.attemptId !== attemptId) {
-        throw new Error(
-          `E4-R97: ${R97_EXEC_ATTEMPT_STALE}: attempt ${attemptId} has been superseded by ${record.attemptId} — a stale attempt may not write a terminal record`,
-        );
-      }
-      if (record.status !== "running") {
-        throw new Error(`E4-R97: attempt ${attemptId} is ${record.status} — only a running unit can be completed`);
-      }
-      if (opts2.resultHash === "") throw new Error("E4-R97: a completed unit requires a non-empty result hash");
-      const endedAt = opts2.now ?? now();
-      await writeRecord(
-        withSyncedAttempts({
+      // The terminal write is a read-modify-write like any other: the record is
+      // re-read and the staleness/status checks re-applied INSIDE the lock, so a
+      // concurrent `begin` (a retry) cannot slip between the check and the write
+      // and have its new attempt overwritten by this one's terminal record.
+      return withLockedState(async (current) => {
+        const record = current.records.find((r) => r.attemptId === attemptId) ?? (await byAttempt(attemptId));
+        // A terminal write is only legal from the unit's CURRENT attempt. A stale
+        // attempt (superseded by a reconciliation and a new begin) must not be
+        // able to write a result over the live one.
+        if (record.attemptId !== attemptId) {
+          throw new Error(
+            `E4-R97: ${R97_EXEC_ATTEMPT_STALE}: attempt ${attemptId} has been superseded by ${record.attemptId} — a stale attempt may not write a terminal record`,
+          );
+        }
+        if (record.status !== "running") {
+          throw new Error(`E4-R97: attempt ${attemptId} is ${record.status} — only a running unit can be completed`);
+        }
+        if (opts2.resultHash === "") throw new Error("E4-R97: a completed unit requires a non-empty result hash");
+        const endedAt = opts2.now ?? now();
+        const next = withSyncedAttempts({
           ...record,
-          status: "completed",
+          status: "completed" as const,
           resultHash: opts2.resultHash,
           detail: opts2.detail ?? null,
           endedAt,
           ...(opts2.evidence === undefined ? {} : { evidence: opts2.evidence }),
-        }),
-      );
+        });
+        return { next: replaceRecordIn(current, next), result: undefined };
+      });
     },
 
     async fail(attemptId, opts2) {
-      const record = await byAttempt(attemptId);
-      if (record.attemptId !== attemptId) {
-        throw new Error(
-          `E4-R97: ${R97_EXEC_ATTEMPT_STALE}: attempt ${attemptId} has been superseded by ${record.attemptId} — a stale attempt may not write a terminal record`,
-        );
-      }
-      if (record.status !== "running") {
-        throw new Error(`E4-R97: attempt ${attemptId} is ${record.status} — only a running unit can be failed`);
-      }
-      if (opts2.resultHash === "") throw new Error("E4-R97: a failed unit requires a non-empty result hash");
-      const endedAt = opts2.now ?? now();
-      await writeRecord(
-        withSyncedAttempts({
+      return withLockedState(async (current) => {
+        const record = current.records.find((r) => r.attemptId === attemptId) ?? (await byAttempt(attemptId));
+        if (record.attemptId !== attemptId) {
+          throw new Error(
+            `E4-R97: ${R97_EXEC_ATTEMPT_STALE}: attempt ${attemptId} has been superseded by ${record.attemptId} — a stale attempt may not write a terminal record`,
+          );
+        }
+        if (record.status !== "running") {
+          throw new Error(`E4-R97: attempt ${attemptId} is ${record.status} — only a running unit can be failed`);
+        }
+        if (opts2.resultHash === "") throw new Error("E4-R97: a failed unit requires a non-empty result hash");
+        const endedAt = opts2.now ?? now();
+        const next = withSyncedAttempts({
           ...record,
-          status: "failed",
+          status: "failed" as const,
           resultHash: opts2.resultHash,
           detail: opts2.detail ?? null,
           endedAt,
           ...(opts2.evidence === undefined ? {} : { evidence: opts2.evidence }),
-        }),
-      );
+        });
+        return { next: replaceRecordIn(current, next), result: undefined };
+      });
     },
 
     async recoverInFlight(opts2 = {}) {
       const isAlive = opts2.isAlive ?? defaultIsAlive;
       const localHost = opts2.host ?? hostname();
-      const state = await read();
-      let unknown = 0;
-      let foreign = 0;
-      const records = state.records.map((r) => {
-        if (r.status !== "running") return r;
-        // AN OWNER ON ANOTHER HOST CANNOT BE JUDGED. Plan §T2 怎么做 5: "跨主机无法
-        // 判断时保守停止，不能把'不知道'视为死亡." A pid is only meaningful on the
-        // machine that issued it, so a foreign owner is left RUNNING and reported
-        // separately — never quarantined on a guess.
-        if (r.ownerHost !== localHost) {
-          foreign += 1;
-          return r;
-        }
-        // A LIVE owner is BUSY, not crashed. The old recovery quarantined every
-        // running record unconditionally, so a second process stole a live
-        // process's unit (§0.3: "当前活进程的 running 被 recover 改成 unknown").
-        if (isAlive(r.ownerPid)) return r;
-        unknown += 1;
-        // The allowance stays consumed and the unit is quarantined: a dispatched
-        // attempt may have been billed, and only an operator decision resolves it.
-        const endedAt = r.endedAt ?? now();
-        return withSyncedAttempts({
-          ...r,
-          status: "outcome_unknown" as const,
-          endedAt,
+      // Recovery is a read-modify-write over EVERY record, so it runs under the
+      // same lock: without it, a recovery scanning the file while another process
+      // begins a unit would rewrite the whole `records` array from its stale
+      // snapshot and drop that new record.
+      return withLockedState(async (state) => {
+        let unknown = 0;
+        let foreign = 0;
+        const records = state.records.map((r) => {
+          if (r.status !== "running") return r;
+          // AN OWNER ON ANOTHER HOST CANNOT BE JUDGED. Plan §T2 怎么做 5: "跨主机无法
+          // 判断时保守停止，不能把'不知道'视为死亡." A pid is only meaningful on the
+          // machine that issued it, so a foreign owner is left RUNNING and reported
+          // separately — never quarantined on a guess.
+          if (r.ownerHost !== localHost) {
+            foreign += 1;
+            return r;
+          }
+          // A LIVE owner is BUSY, not crashed. The old recovery quarantined every
+          // running record unconditionally, so a second process stole a live
+          // process's unit (§0.3: "当前活进程的 running 被 recover 改成 unknown").
+          if (isAlive(r.ownerPid)) return r;
+          unknown += 1;
+          // The allowance stays consumed and the unit is quarantined: a dispatched
+          // attempt may have been billed, and only an operator decision resolves it.
+          const endedAt = r.endedAt ?? now();
+          return withSyncedAttempts({
+            ...r,
+            status: "outcome_unknown" as const,
+            endedAt,
+          });
         });
+        return { next: unknown > 0 ? { ...state, records } : null, result: { unknown, foreign } };
       });
-      if (unknown > 0) await writeStateAtomic(dir, { ...state, records });
-      return { unknown, foreign };
     },
 
     async reconcile(key, decision) {
       const wanted = unitKeyOf(key);
-      // `findRecord` re-validates the store identity (experiment + plan digest)
-      // on this read, so a reconciliation can never be applied to a store this
-      // authorization does not own.
-      const record = await findRecord(key);
+      // The read, the status guard and the mutation are ONE critical section: a
+      // concurrent `begin` must not be able to change the record between the
+      // "is it outcome_unknown?" check and the write.
+      return withLockedState(async (state) => {
+      const record = state.records.find((r) => unitKeyOf(r) === wanted) ?? null;
       if (record === null) {
         throw new Error(
           `E4-R97: ${R97_EXEC_NOT_RECONCILABLE}: unit ${wanted} has no execution record — reconciliation resolves an ambiguous outcome and cannot create one`,
@@ -1026,8 +1125,8 @@ export async function openR97ExecutionState(
         // marker absent, so the unit stays skipped for the rest of the campaign.
         ...(decision.action === "retry" ? { reconciledForRetry: true } : {}),
       };
-      await writeRecord(reconciled);
-      return reconciled;
+      return { next: replaceRecordIn(state, reconciled), result: reconciled };
+      });
     },
 
     async records() {

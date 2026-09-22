@@ -29,10 +29,11 @@
  */
 
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { hostname } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   openR97ExecutionState,
   readR97ExecutionStateFile,
@@ -346,5 +347,143 @@ describe("R98-B S5: a skip is only legitimate when the RECORD is trustworthy", (
     file.records[1].attemptId = a1; // duplicate
     await writeFile(join(dir, R97_EXEC_FILENAME), JSON.stringify(file), "utf8");
     await expect(s.records()).rejects.toThrow(/duplicate/i);
+  });
+});
+
+/**
+ * R98-B S6 — THE CROSS-PROCESS CONTRACT (plan §T2 怎么验收 2).
+ *
+ *   "两个进程竞争同一 case×arm×repetition：只有一个 begin 成功，另一个得到命名拒绝；
+ *    独立单位并发不丢记录."
+ *
+ * METHODOLOGY — WHY A BARRIER AND NOT A SLEEP.
+ *
+ * The claim is about a RACE, so a test that merely starts two processes and hopes
+ * they overlap proves nothing: on a fast machine the first finishes before the
+ * second starts, and the test passes against a store with NO lock at all. An
+ * earlier audit of this suite found exactly that weakness in the plan's §T2-7
+ * methodology bullet ("no handshake/barrier exists").
+ *
+ * So both children RENDEZVOUS on a file barrier: each writes `ready-<id>` and then
+ * spins (bounded) until the parent creates `go`. The parent releases them only
+ * after BOTH are ready, so the `begin` calls are genuinely simultaneous and the
+ * interleaving is forced rather than hoped for.
+ *
+ * MEASURED BEFORE THE FIX (the Lead's independent two-process probe against the
+ * unlocked store): both processes returned OK for the SAME unit, and for
+ * DIFFERENT units only one record survived — `writeStateAtomic` replaced the whole
+ * `records` array from a stale snapshot. Both clauses below failed.
+ *
+ * These are REAL OS processes (`execFile` of `node`), not in-process promises:
+ * only a separate process can exercise the file-lock path, and an in-process
+ * `Promise.all` shares the module instance and the lock token.
+ */
+describe("R98-B S6: two REAL processes racing the same store", () => {
+  const STATE_MODULE = pathToFileURL(join(process.cwd(), "packages", "evaluation", "dist", "r97-execution-state.js")).href;
+
+  /** Spawn a child that opens the store, waits at the barrier, then begins. */
+  async function childBegin(
+    dir: string,
+    barrierDir: string,
+    id: string,
+    caseId: string,
+  ): Promise<{ ok: boolean; reason: string; attemptId: string | null }> {
+    const script = `
+      import { existsSync, writeFileSync } from "node:fs";
+      import { join } from "node:path";
+      const dir = ${JSON.stringify(dir)};
+      const barrierDir = ${JSON.stringify(barrierDir)};
+      const id = ${JSON.stringify(id)};
+      const caseId = ${JSON.stringify(caseId)};
+      const m = await import(${JSON.stringify(STATE_MODULE)});
+      const s = await m.openR97ExecutionState(dir, {
+        experimentId: ${JSON.stringify(EXPERIMENT)},
+        planDigest: ${JSON.stringify(PLAN)},
+        mode: "first-run",
+      });
+      // Rendezvous: announce readiness, then WAIT for the peer (bounded, so a
+      // broken barrier fails the test instead of hanging the suite).
+      writeFileSync(join(barrierDir, "ready-" + id), "1");
+      const deadline = Date.now() + 20_000;
+      while (!existsSync(join(barrierDir, "go"))) {
+        if (Date.now() > deadline) { process.stdout.write(JSON.stringify({ ok: false, reason: "BARRIER_TIMEOUT", attemptId: null })); process.exit(0); }
+        await new Promise((r) => setTimeout(r, 5));
+      }
+      try {
+        const attemptId = await s.begin(
+          { experimentId: ${JSON.stringify(EXPERIMENT)}, caseId, suite: "regression", arm: "baseline", repetition: 1 },
+          { reservationId: "res-" + id, inputDigest: "digest-" + id },
+        );
+        process.stdout.write(JSON.stringify({ ok: true, reason: "", attemptId }));
+      } catch (err) {
+        process.stdout.write(JSON.stringify({ ok: false, reason: String(err && err.message), attemptId: null }));
+      }
+    `;
+    const { execFile } = await import("node:child_process");
+    const { promisify } = await import("node:util");
+    const run = promisify(execFile);
+    return run(process.execPath, ["--input-type=module", "-e", script], { timeout: 40_000 }).then(
+      ({ stdout }) => JSON.parse(String(stdout)) as { ok: boolean; reason: string; attemptId: string | null },
+    );
+  }
+
+  /**
+   * Run `n` children that all `begin` together. The parent creates the barrier
+   * directory, launches every child, waits until ALL are ready, then releases
+   * them with one `go` file.
+   */
+  async function raceTogether(
+    specs: { id: string; caseId: string }[],
+  ): Promise<{ dir: string; results: { ok: boolean; reason: string; attemptId: string | null }[] }> {
+    const dir = await tempDir();
+    const barrierDir = await mkdtemp(join(tmpdir(), "r97-barrier-"));
+    dirs.push(barrierDir);
+    const pending = specs.map((s) => childBegin(dir, barrierDir, s.id, s.caseId));
+    // Wait for EVERY child to reach the barrier before releasing any of them.
+    const deadline = Date.now() + 30_000;
+    for (;;) {
+      let ready = 0;
+      for (const s of specs) {
+        if (await stat(join(barrierDir, `ready-${s.id}`)).then(() => true, () => false)) ready += 1;
+      }
+      if (ready === specs.length || Date.now() > deadline) break;
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    await writeFile(join(barrierDir, "go"), "1");
+    return { dir, results: await Promise.all(pending) };
+  }
+
+  it("two processes beginning the SAME unit: exactly ONE wins, the other gets EXEC_BUSY", async () => {
+    const { dir, results } = await raceTogether([
+      { id: "p1", caseId: "c1" },
+      { id: "p2", caseId: "c1" },
+    ]);
+    const winners = results.filter((r) => r.ok);
+    // The clause is "only one begin succeeds" — not "one succeeds and the other
+    // errors out for an unrelated reason", so the refusal is checked by NAME.
+    expect(winners).toHaveLength(1);
+    const loser = results.find((r) => !r.ok);
+    expect(loser?.reason).toContain(R97_EXEC_BUSY);
+
+    // And the FILE must agree: one record, one attempt, owned by the winner.
+    const file = (await readR97ExecutionStateFile(dir))!;
+    expect(file.records).toHaveLength(1);
+    expect(file.records[0]!.attempts).toHaveLength(1);
+    expect(file.records[0]!.attemptId).toBe(winners[0]!.attemptId);
+  });
+
+  it("two processes beginning DIFFERENT units: BOTH records survive", async () => {
+    const { dir, results } = await raceTogether([
+      { id: "p1", caseId: "c1" },
+      { id: "p2", caseId: "c2" },
+    ]);
+    // Independent units do not contend, so neither may be refused...
+    expect(results.filter((r) => r.ok)).toHaveLength(2);
+    // ...and crucially the loser of the WRITE must not be erased. Before the fix
+    // this file held ONE record: the second writer rebuilt `records` from a
+    // snapshot taken before the first wrote (last-writer-wins).
+    const file = (await readR97ExecutionStateFile(dir))!;
+    expect(file.records).toHaveLength(2);
+    expect(new Set(file.records.map((r) => r.caseId))).toEqual(new Set(["c1", "c2"]));
   });
 });
