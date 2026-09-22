@@ -89,6 +89,12 @@ export const EXIT_CONFIG = 2;
 export const SUITE_FILES = [
   "packages/evaluation/src/r97-budget-ledger.test.ts",
   "packages/evaluation/src/r97-budget-channel.test.ts",
+  // Plan §T1 怎么验收 5 names a FAILED DISK WRITE explicitly ("缺少预算 IPC/ledger、
+  // 故障写盘、超过授权预算时，真实与离线模式都不会绕过检查"), and §T1 怎么验收 requires
+  // the new budget integration test to run in T6. Without this entry the write-fault
+  // counterexample existed but NO gate executed it — the "test exists, nothing runs
+  // it" state the matrix gate exists to prevent.
+  "packages/evaluation/src/r97-budget-write-fault.test.ts",
   "packages/evaluation/src/r97-campaign-lifecycle.test.ts",
   "packages/evaluation/src/r97-execution-state.test.ts",
   "packages/evaluation/src/r97-execution-state-ownership.test.ts",
