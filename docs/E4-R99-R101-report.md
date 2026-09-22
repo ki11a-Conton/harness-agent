@@ -1402,6 +1402,12 @@ the suite CATCHES the plan's five anti-cheat mutations" — reporting success. T
 the run that corresponds to the report as it now stands, per plan T6 怎么验收 4
 ("CI head 明确对应实施提交").
 
+> **SUPERSEDED — see §8.7.** "The report as it now stands" was true of `31efd9c`. Four
+> commits landed after it, two of them behaviour fixes, so this run no longer describes
+> the repository. The run that corresponds to the current head is `35693782588` at
+> `7378aca`, cited in §8.7; the sentence above is kept because a superseded claim whose
+> original is invisible cannot be audited (plan 怎么做 8).
+
 ---
 
 ## 8. The closing pass — four gaps found AFTER §7.21 was written
