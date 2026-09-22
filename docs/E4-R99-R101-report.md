@@ -1106,6 +1106,10 @@ ledger and the evidence to the original row.
   no hand-written temporary script, but the six `clean-tree` guard failures in the
   user's workspace (§4.2) are caused by an unrelated pre-existing deletion
   (` D plan(20260917-001821).md`) that this round must not resolve unilaterally.
+  > **RESOLVED — see §7.21.** The user resolved it by recording both plan entries
+  > (`01bba90`), which made the tree provably clean: the three guard files went from
+  > `6 failed / 155 passed` to `161 passed / 2 skipped`, and `pnpm test` to
+  > `362/362 files, 6781 passed, 0 failed`.
 - The paid two-version experiment remains `NOT_RUN`, was never attempted, and is not
   being requested.
 
@@ -1285,4 +1289,53 @@ With all six conditions measured, the round closes under plan §2's own instruct
 "达到以上条件后停止这轮基础设施修改". No R102+ framework work was started and no
 experiment was enlarged. The paid authorization does not cover the final plan, so the
 status stays `PAID_NOT_RUN`.
+
+### 7.21 怎么验收 2 is now MEASURED in the author's workspace, not only in a clone
+
+§7.16 bullet 2 and §7.19 recorded one item this round could not close from the author
+machine: six tests in `e4-09-production-e2e.test.ts`, `e4-r55-failure-wiring.test.ts`
+and `benchmark-command.test.ts` assert that `git status --porcelain` is empty, and the
+author's workspace held two entries — the user's pre-existing
+` D plan(20260917-001821).md` and the untracked `plan(20260920-053219).md` this round
+was handed. §4.2 measured that the deletion ALONE reproduces the failures, so
+committing the T6 code was never going to be sufficient.
+
+The user resolved it, and chose the first of the three options §4.2 named: record both
+entries rather than reverse either.
+
+```
+01bba90  chore: record the R88-R92 plan removal and add the R98-R101 closing plan
+         D plan(20260917-001821).md   -> recorded, not restored
+         ?? plan(20260920-053219).md  -> now tracked
+```
+
+The commit touches no source, test, report or measured figure. Measured after it, on
+this machine, with `git status --porcelain` empty:
+
+| Command | Before | After |
+| --- | --- | --- |
+| the 3 guard files | 6 failed / 155 passed / 2 skipped, exit 1 | **161 passed / 2 skipped, exit 0** |
+| `pnpm test` | 6 failed (§4.1) | **362/362 files, 6781 passed, 3 skipped, 0 failed, exit 0** |
+| `pnpm typecheck` | exit 0 | exit 0 |
+| `pnpm test:security` | 2135/2135 | **2135/2135, exit 0** |
+| `pnpm docs:verify` | ALL CHECKS PASS | ALL CHECKS PASS, exit 0 |
+| 7-file block | 253–257 passed | **257 passed, exit 0** |
+| closed loop (fresh `--out`) | — | **5/5 phases: acceptance `OFFLINE_ACCEPTED 6/16`, suite 464/464, matrix 9/9, identity OK** |
+| mutation gate | 5/5 CAUGHT | **5/5 CAUGHT, exit 0** |
+| validator on fresh artifacts | exit 0 | **exit 0 — 16 terminal, 16 evidence checked, 0 failures; grant 320, committed 42** |
+
+Two things this changes and one it does not:
+
+- **怎么验收 2** ("从干净 checkout 的命令能复现，用户无需手写临时脚本") is no longer
+  qualified by the author's dirty tree. The six failures were, as §4.2 claimed,
+  entirely a clean-tree guard and not a defect; committing the plan bookkeeping turns
+  them green without weakening any guard.
+- **The closed loop's `--out` reuse guard was exercised by accident and behaved
+  correctly.** The first re-run against the pre-existing `.ci/r97-r98` failed
+  `[2/5] acceptance` with `OFFLINE_OUT_REUSED`, naming the campaign and plan digest it
+  would have collided with (§7.12). A fresh `--out` then passed 5/5. That is the guard
+  from §7.12 firing on a real stale directory rather than on a test fixture.
+- **It does not change the paid status.** The provider is still scripted,
+  `externalProviderCalls` is 0, and the two-version experiment remains `PAID_NOT_RUN`.
+  A clean local tree is not a model-quality result.
 
