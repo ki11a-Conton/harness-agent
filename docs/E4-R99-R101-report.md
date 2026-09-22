@@ -160,8 +160,14 @@ contract holding through the new execution path.
 
 ### 1.5 The contract test
 
-`packages/evaluation/src/r97-arm-worker-contract.test.ts` — **28 tests, all
-passing**, driving the real module (never a mock):
+`packages/evaluation/src/r97-arm-worker-contract.test.ts` — **28 tests at the time
+this section was written; 37 today**, all
+passing, driving the real module (never a mock):
+
+> **CORRECTED:** the file has grown from 28 to **37** tests as T4/T6 added the
+> identity, missing-case and evidence-survival cases. Re-derived from
+> `.ci/r97-r98-fresh/r97-r98.json` during the §7.21 pass. The 28 below describes the
+> state this section was written against and is kept as measured then.
 
 - the two real-execution tests assert report-derived verdict text, durable
   ledger entries and durable execution-state records;
@@ -494,9 +500,15 @@ Per-file counts: `r97-budget-ledger` 50, `r97-execution-state` 22,
 D6 path), `r97-arm-worker-contract` **28**, `r97-redaction` 12,
 `r98-fixture-cases` 8.
 
-> **UPDATED IN E4-R101-A (T6):** the seven files above now report **253** tests, and
-> the closed-loop suite covers **19** R97–R101 files / **448** tests. The counts in
+> **UPDATED IN E4-R101-A (T6):** the seven files above now report **257** tests, and
+> the closed-loop suite covers **19** R97–R101 files / **464** tests. The counts in
 > this paragraph describe the R99–R101 state and are left as measured then.
+>
+> Re-derived from `.ci/r97-r98-fresh/r97-r98.json` during the §7.21 pass, per file:
+> `r97-arm-worker-contract` **37**, `r97-budget-ledger` 50, `r97-driver-closed-loop`
+> **67**, `r97-execution-state` **27**, `r97-plan` **56**, `r97-redaction` 12,
+> `r98-fixture-cases` 8 — sum **257**. The 253/448 in the paragraph above was an
+> intermediate figure from before §7.17's four CI-defect tests were added.
 
 **External provider requests: 0.** No test sets `OPENAI_API_KEY`; the arm worker
 deletes it from every child environment it builds.
@@ -1047,12 +1059,22 @@ logicalCalls:              42
 providerCalls:             0
 suite:                     460 / 460
 matrix:                    9 / 9
-plan 7-file block:         255 / 255
+plan 7-file block:         257 / 257
 mutation gate:             5 / 5 CAUGHT
 independent validator:     honest exit 0 · forged detail exit 1 · deleted detail exit 1
 promotable:                false
 modelCapabilityClaim:      none — the offline provider is scripted
 ```
+
+> **CORRECTED:** this block originally read `suite: 460 / 460` and
+> `plan 7-file block: 255 / 255`. Re-derived from the artifacts during the §7.21
+> verification pass: the closed-loop suite reports **464/464**, and the seven files
+> the plan names sum to **257**, not 255
+> (`r97-arm-worker-contract` 37, `r97-budget-ledger` 50, `r97-driver-closed-loop` 67,
+> `r97-execution-state` 27, `r97-plan` 56, `r97-redaction` 12, `r98-fixture-cases` 8).
+> The counts moved because §7.10–§7.13 and §7.17 added tests after this block was
+> written; §7.18 and §7.21 already carried the corrected figures, so this block was
+> the one place still disagreeing with them.
 
 Plan 怎么验收 3 is now satisfied against this round's real artifacts. 怎么验收 1 and
 2 (the two-platform CI job, and reproduction from a clean checkout) remain the
