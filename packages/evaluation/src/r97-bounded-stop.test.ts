@@ -398,13 +398,95 @@ describe("R99-B S3: cancellation and spawn failure are distinct, named outcomes"
     expect(outcome["stdout"]).toBe("done");
   }, 30_000);
 
-  it("an output flood is capped AND still ends as a named outcome", async () => {
+  /**
+   * ---- E4-R99-B (T5): THE CAP MUST END THE CHILD, NOT ONLY BOUND MEMORY ------
+   *
+   * Plan §T5 怎么验收 5 requires "超时、取消和超量输出都能结束执行且留下正确状态" —
+   * a TIMEOUT, a CANCEL **and an EXCESS-OUTPUT condition** must each END execution.
+   *
+   * MEASURED DEFECT (the one this test exists for): `BOUNDED_STOP_REASONS` listed
+   * `output_limit`, but nothing ever settled with it. `ByteCap` bounded memory
+   * correctly and then said nothing, so a child that flooded stdout ran on until
+   * the DEADLINE killed it. That is why this test previously asserted
+   * `reason === "timeout"`: the assertion was recording the defect, not the
+   * contract. It now asserts the reason the contract names.
+   *
+   * The deadline is deliberately FAR AWAY (20s, and 120s for the tree case) and the
+   * cap is small (64 KiB), so `timeout` is not merely the wrong label here — it is
+   * unreachable within the test's own lifetime. An implementation that still waited
+   * for the deadline would fail on the reason, on the elapsed bound, and on the
+   * suite timeout.
+   */
+  it("an output flood past the cap ends the child as `output_limit`, long before the deadline", async () => {
     const dir = await tempDir();
     const child = join(dir, "flood.mjs");
+    const heartbeat = join(dir, "flood-heartbeat.txt");
     await writeFile(
       child,
       [
+        'import { appendFileSync } from "node:fs";',
+        'import { join } from "node:path";',
+        "const heartbeat = join(process.argv[2], 'flood-heartbeat.txt');",
+        // A heartbeat is the only way the TEST can prove the child is really gone
+        // rather than merely unobserved: `boundedStop` returns no pid.
+        "appendFileSync(heartbeat, 'alive\\n');",
+        "setInterval(() => appendFileSync(heartbeat, 'alive\\n'), 20);",
         // One huge chunk, then an unbounded trickle: both paths must be capped.
+        "process.stdout.write('x'.repeat(2 * 1024 * 1024));",
+        "setInterval(() => process.stdout.write('y'.repeat(4096)), 5);",
+      ].join("\n"),
+      "utf8",
+    );
+    const deadlineMs = 20_000;
+    const began = Date.now();
+    const outcome = await worker.boundedStop({
+      file: process.execPath,
+      args: [child, dir],
+      cwd: dir,
+      deadlineMs,
+      graceMs: worker.SIGKILL_GRACE_MS,
+      maxOutputBytes: 64 * 1024,
+    });
+    const elapsed = Date.now() - began;
+
+    // The NAMED reason for an excess-output stop (plan §T5 怎么做 7).
+    expect(outcome["reason"]).toBe("output_limit");
+    expect(outcome["started"]).toBe(true);
+    expect(outcome["truncated"]).toBe(true);
+    // The retained text is bounded by the BYTE limit, not by luck.
+    expect(Buffer.byteLength(String(outcome["stdout"]), "utf8")).toBeLessThanOrEqual(64 * 1024);
+    // WELL BEFORE the deadline: a quarter of it is already an order of magnitude
+    // more than the cap + grace needs, so this bound cannot be met by waiting.
+    expect(elapsed, `the cap took ${elapsed}ms to end a ${deadlineMs}ms unit`).toBeLessThan(deadlineMs / 4);
+
+    // And the child is really GONE: its heartbeat stops growing.
+    const { stat } = await import("node:fs/promises");
+    const sizeAtStop = (await stat(heartbeat)).size;
+    expect(sizeAtStop).toBeGreaterThan(0);
+    await new Promise((r) => setTimeout(r, 800));
+    const sizeLater = (await stat(heartbeat)).size;
+    expect(sizeLater, "the flooding child kept writing after the bounded stop returned").toBe(sizeAtStop);
+  }, 60_000);
+
+  it("leaves NO descendant behind when the CAP is what stops the tree", async () => {
+    // Plan §T5 怎么做 2: "不要只停止父进程而留下工具子孙进程继续写文件." The stop
+    // reason must not change which machinery runs: an `output_limit` stop reuses
+    // the SAME polite-signal → bounded-grace → forced tree-kill sequence, so a
+    // grandchild that ignores signals must be reaped here too.
+    const dir = await tempDir();
+    const grandchild = await writeStubbornChild(dir);
+    const parent = join(dir, "flood-parent.mjs");
+    await writeFile(
+      parent,
+      [
+        'import { spawn } from "node:child_process";',
+        'import { writeFileSync } from "node:fs";',
+        'import { join } from "node:path";',
+        "const dir = process.argv[2];",
+        "const gc = process.argv[3];",
+        'const c = spawn(process.execPath, [gc, dir], { stdio: "ignore", windowsHide: true });',
+        'writeFileSync(join(dir, "grandchild.pid"), String(c.pid));',
+        'process.on("SIGTERM", () => {});',
         "process.stdout.write('x'.repeat(2 * 1024 * 1024));",
         "setInterval(() => process.stdout.write('y'.repeat(4096)), 5);",
       ].join("\n"),
@@ -412,16 +494,35 @@ describe("R99-B S3: cancellation and spawn failure are distinct, named outcomes"
     );
     const outcome = await worker.boundedStop({
       file: process.execPath,
-      args: [child],
+      args: [parent, dir, grandchild],
       cwd: dir,
-      deadlineMs: 1_200,
+      deadlineMs: 20_000,
       graceMs: worker.SIGKILL_GRACE_MS,
       maxOutputBytes: 64 * 1024,
     });
-    expect(outcome["reason"]).toBe("timeout");
-    expect(outcome["truncated"]).toBe(true);
-    // The retained text is bounded by the BYTE limit, not by luck.
-    expect(Buffer.byteLength(String(outcome["stdout"]), "utf8")).toBeLessThanOrEqual(64 * 1024);
+    expect(outcome["reason"]).toBe("output_limit");
+
+    const { readFile } = await import("node:fs/promises");
+    let pid: number | null = null;
+    try {
+      pid = Number((await readFile(join(dir, "grandchild.pid"), "utf8")).trim());
+    } catch {
+      pid = null;
+    }
+    if (pid !== null && Number.isFinite(pid) && pid > 0) {
+      const alive = await (async () => {
+        for (let i = 0; i < 40; i += 1) {
+          try {
+            process.kill(pid, 0);
+          } catch {
+            return false;
+          }
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        return true;
+      })();
+      expect(alive, `descendant pid ${pid} survived an output_limit stop`).toBe(false);
+    }
   }, 60_000);
 });
 

@@ -237,9 +237,22 @@ export const MAX_CHILD_OUTPUT_BYTES = 33_554_432;
  *
  * A partial chunk is retained up to the remaining allowance, and the slice is
  * taken on the BUFFER so a multi-byte character is never split.
+ *
+ * ---- E4-R99-B (T5): BOUNDING MEMORY IS NOT STOPPING THE CHILD ----------------
+ *
+ * MEASURED DEFECT: this class bounded `bytes` correctly and then said nothing, so
+ * `BOUNDED_STOP_REASONS` listed `output_limit` while nothing ever settled with it.
+ * A child that flooded stdout kept running until the DEADLINE killed it, which
+ * made plan §T5 怎么验收 5 ("超时、取消和超量输出都能结束执行") false for the third
+ * case: the cap bounded memory and did not end execution.
+ *
+ * `onLimit` is the seam that closes it. It is called AT MOST ONCE, on the
+ * transition from "under the cap" to "over it", so the stop it triggers is a
+ * one-shot event rather than a callback fired per dropped chunk. It is optional:
+ * a bare `ByteCap` (as the byte-accounting tests use) stays a pure accumulator.
  */
 export class ByteCap {
-  constructor(limit) {
+  constructor(limit, onLimit) {
     this.limit = Math.max(0, Number(limit));
     /** Retained bytes. Never exceeds `limit`. */
     this.bytes = 0;
@@ -247,6 +260,18 @@ export class ByteCap {
     this.offered = 0;
     this.truncated = false;
     this.chunks = [];
+    /** The one-shot "the cap was exceeded" signal, or `null` for a pure
+     *  accumulator. */
+    this.onLimit = typeof onLimit === "function" ? onLimit : null;
+    /** Guards `onLimit` so it cannot fire twice, however many chunks follow. */
+    this.signalled = false;
+  }
+
+  /** Fire the one-shot limit signal. Idempotent by construction. */
+  signalLimit() {
+    if (this.onLimit === null || this.signalled) return;
+    this.signalled = true;
+    this.onLimit();
   }
 
   push(chunk) {
@@ -254,7 +279,12 @@ export class ByteCap {
     this.offered += buf.length;
     const room = this.limit - this.bytes;
     if (room <= 0) {
-      if (buf.length > 0) this.truncated = true;
+      // Already at the ceiling and more arrived: dropped, and the cap is
+      // exceeded. `signalLimit` is what turns that fact into a bounded stop.
+      if (buf.length > 0) {
+        this.truncated = true;
+        this.signalLimit();
+      }
       return;
     }
     if (buf.length <= room) {
@@ -265,6 +295,7 @@ export class ByteCap {
     this.chunks.push(buf.subarray(0, room));
     this.bytes += room;
     this.truncated = true;
+    this.signalLimit();
   }
 
   text() {
@@ -321,8 +352,18 @@ export function boundedStop(opts) {
   const graceMs = Number.isFinite(opts.graceMs) ? opts.graceMs : SIGKILL_GRACE_MS;
   const capLimit = Number.isFinite(opts.maxOutputBytes) ? opts.maxOutputBytes : MAX_CHILD_OUTPUT_BYTES;
   const started = Date.now();
-  const outCap = new ByteCap(capLimit);
-  const errCap = new ByteCap(capLimit);
+  // ---- THE CAP'S STOP SEAM, HOISTED SO THE CAPS CAN CARRY IT (T5) ----------
+  //
+  // `ByteCap` must be constructed before the spawn, but the stop sequence it has
+  // to trigger is defined inside the promise body (it closes over the child, the
+  // timers and `settle`). This indirection is the minimal way to give the cap the
+  // EXISTING stop machinery rather than a second mechanism: the caps call
+  // `onOutputLimit`, which the promise body points at `beginStop("output_limit")`
+  // as soon as that function exists. Before that point no data event can arrive,
+  // because no child exists yet.
+  let onOutputLimit = () => {};
+  const outCap = new ByteCap(capLimit, () => onOutputLimit());
+  const errCap = new ByteCap(capLimit, () => onOutputLimit());
 
   return new Promise((resolvePromise) => {
     let settled = false;
@@ -471,6 +512,20 @@ export function boundedStop(opts) {
       }, Math.max(0, graceMs));
       graceTimer.unref?.();
     };
+
+    // ---- THE CAP'S STOP SEAM, WIRED TO THE ONE EXISTING SEQUENCE (T5) -------
+    //
+    // Plan §T5 怎么验收 5 requires the excess-output case to END execution, not
+    // only to bound memory. This is that wiring: exceeding either byte cap calls
+    // the SAME `beginStop` the deadline and the abort signal call, with the
+    // reason the closed set already names. No second stop mechanism exists, so
+    // the guarantees are inherited rather than re-implemented — the polite
+    // signal, the bounded grace, the forced tree kill, the `close` await, the
+    // single `settle`, and `cleanup()` of every timer and listener.
+    //
+    // `beginStop` is itself guarded by `settled || reason !== null`, and `ByteCap`
+    // fires `onLimit` at most once, so a flood cannot resolve twice.
+    onOutputLimit = () => beginStop("output_limit");
 
     try {
       child = spawn(opts.file, opts.args ?? [], {
@@ -626,9 +681,28 @@ export function runChild(opts) {
   });
 }
 
-/** How long `--dry-run` may take. A dry run makes ZERO provider calls and only
- *  estimates, so it is bounded far more tightly than a dispatch. */
-const DRY_RUN_TIMEOUT_MS = 120_000;
+/** ---- E4-R99-B (T5): `DRY_RUN_TIMEOUT_MS` WAS DECLARED AND NEVER READ --------
+ *
+ * MEASURED DEFECT: this module carried `const DRY_RUN_TIMEOUT_MS = 120_000;` with
+ * the comment "How long `--dry-run` may take", and NO call site ever read it — the
+ * same "declared but unused constant" shape that made `SIGKILL_GRACE_MS` the
+ * original N8 bug, where a bound that is named but not applied reads as protection
+ * that does not exist.
+ *
+ * WHY IT WAS DELETED RATHER THAN WIRED IN. The dry run it was written for used to
+ * be a CHILD PROCESS (`runChild(dryRunArgs(...))`) with its own `timeoutMs`, and
+ * that path is gone: the dispatch is now the arm's EXPORTED in-process
+ * `runBenchmarkCommand` seam (plan §0.4 / T1 怎么做 3, see `runArmCaseInProcess`),
+ * so `--dry-run` is a PHASE of the unit rather than a process of its own.
+ *
+ * A phase must NOT hold a fresh allowance — that is precisely what plan §T5 怎么做 4
+ * forbids ("dry-run/staging/dispatch 共用剩余总期限，不能每个阶段重新获得一整份
+ * campaign 时间"). The dry run already reads `deadline.remainingForPhase()` and
+ * refuses to start when `deadline.expired()`, so re-introducing a second, private
+ * 120s bound would re-grant the phase time the unit no longer owns — the exact
+ * defect the shared `DeadlineBudget` exists to remove. Wiring it in would therefore
+ * have made the bound LESS true, not more, so the constant is removed and the
+ * shared deadline stays the single source of the dry run's bound. */
 
 /** Default provider/model identity for the CLI dispatch.
  *
