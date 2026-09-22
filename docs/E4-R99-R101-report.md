@@ -1753,3 +1753,57 @@ is not merely unverified, it is **not expressible against the current ledger sch
   it, and `r97-budget-ledger.test.ts` covers a non-zero value. Stated so the 0 is not
   read as proof.
 
+### 8.11 The run that corresponds to the report's FINAL head
+
+§8.7 cited `35693782588` at `7378aca`. Three documentation commits followed it
+(`cc745da`, `3bae661`, `ff9ced5`), so the same question §8.1 raised applies to them:
+does any run correspond to the head the report now describes?
+
+**Run [35710940810](https://github.com/ki11a-Conton/harness-agent/actions/runs/35710940810),
+head `ff9ced53c33d63afa38e53801d7bc46abd513f15`, conclusion `success`** — the API
+reports `total_count: 7`, all seven jobs `completed / success`, and the run page
+contains **zero** `failed`, `cancelled` or `skipped` markers:
+
+| Job | Conclusion |
+| --- | --- |
+| `r97-r98 closed loop (ubuntu-latest)` | success |
+| `r97-r98 closed loop (windows-latest)` | success |
+| `install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest)` | success |
+| `install · typecheck · test · build · benchmark-smoke · audit (windows-latest)` | success |
+| `coverage gate (ubuntu)` | success |
+| `offline cold-start (ubuntu)` | success |
+| `release attestation (P38-12)` | success |
+
+The three commits between `7378aca` and `ff9ced5` touch **only**
+`docs/E4-R99-R101-report.md`, so no executable path changed and the `7378aca` evidence
+carries over; this run confirms the documentation-only commits are also green. That
+closes the §8.1 gap completely: every commit from `6860ee5` (the first behaviour fix
+that had never been pushed) to the final head now sits under a green two-platform run.
+
+**Same scope limit as §8.7, restated because it is the load-bearing caveat:** the
+run-level and per-job conclusions were read from the GitHub run page, not re-derived
+from the uploaded artifacts, because the artifact-download endpoint returns
+`401 Requires authentication` and no token is available in this environment. The
+runner-side suite total is therefore **inferred** from green non-zero-on-failure steps.
+The locally measured `471/471` in §8.6 stands on its own artifacts.
+
+**Why the regress terminates here, stated as a verifiable rule rather than a promise.**
+This section is itself delivered by a documentation-only commit, so the head it cites
+is one commit behind the head that contains this text — the same regress §8.1 opened.
+It terminates because of a property that can be checked rather than trusted:
+
+> A commit that changes **no executable path** cannot change any CI outcome, so a green
+> run at head `H` transfers to every descendant `H'` where
+> `git diff --name-only H..H'` touches only documentation.
+
+Applied to this round: the last commit that changed anything executable is `64d95cb`
+(it adds `r97-budget-write-fault.test.ts` and edits the closed-loop `SUITE_FILES`).
+`7378aca` and `ff9ced5` are documentation-only descendants of it, and both have a green
+two-platform run (`35693782588` and `35710940810`). So the implementation commits
+`6860ee5`, `ab82bb4` and `64d95cb` are covered by a green run **at or after** every one
+of them, and no further commit is appended to chase the report's own SHA.
+
+That is also the plan's own instruction, 怎么做 9: "报告写实现 SHA 和对应 CI URL；不要
+为了让报告包含自己的提交 SHA 无限追加文档 commit." The implementation SHAs are recorded
+above; the two runs are recorded in §8.7 and here; and the chain stops.
+
