@@ -3093,3 +3093,18 @@ holdout 的隐藏 expected/verifier。
 | 证据保存 | 成对 run 的 paired-experiment.json + V2 激活证据 + 独立 validator 结论 |
 | 状态 | **PAID_NOT_RUN**——需明确预算与授权后另行执行；离线 scripted 结果不支持任何模型能力结论 |
 
+本地验证（`93d7ba5` 实现提交，之后 `pnpm test` 要求干净树，故按 §A7 怎么做 7 在**已提交的
+干净工作树**上运行；命令 → 退出码 → 观测）：
+
+| 命令 | 退出码 | 观测 |
+| --- | --- | --- |
+| `pnpm typecheck` | 0 | `tsc -b` 全仓通过 |
+| `pnpm test`（整仓主 suite，clean tree） | 0 | **6874 passed / 10 skipped，0 failed**（364 files） |
+| `pnpm docs:verify` | 0 | ALL CHECKS PASS |
+| `node scripts/e4/r97-closed-loop.mjs --all --out .ci/n5-closeout --arms-root .ci/n5-arms` | 0 | setup OK · acceptance OFFLINE_ACCEPTED 6/16 · suite 561/561 · matrix 9/9 · identity OK |
+| `node scripts/e4/r97-mutation-check.mjs --out .ci/n5-closeout/mutation-report.json` | 0 | 13/13 CAUGHT（T6 5/5、A7 7/7、N2 1/1），treeRestored true |
+
+注：在**脏工作树**上 `pnpm test` 会出现 6 条 clean-tree 守卫失败（`e4-r41` host-probe、
+`e4-09-production-e2e` 4 条、`e4-r55-failure-wiring`）；它们的前置条件是"可证明的干净工作树"，
+提交本轮的实现/文档后干净树上全绿（上表）。这与 §10.3 记录的现象同源。
+
