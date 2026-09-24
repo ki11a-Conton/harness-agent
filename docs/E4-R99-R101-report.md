@@ -3022,13 +3022,14 @@ verified completion 的提升必须超过预先固定的门槛，且无 regressi
 
 ```text
 任务：N5 / 仅实现有依据的 Agent challenger，准备成对评估
-状态：BLOCKED（前置 N3 的两平台 CI 未运行；未实现任何 packages/agents 改动）
-原因：计划规定"只有 N3 完成，才从基础设施收口进入下一轮 Agent 策略迭代"。N3 的
-      CI 部分因本沙箱无 push 凭据而 NOT_RUN（§10.3）。
-已就绪：N4（§10.4）已给出聚类（agent_limit，27/59）、逐用例证据与一个可证伪假设、
-      以及需避免的历史先例（budget_aware_completion_v1 已 REJECT）。
-未做：未修改 packages/agents、未改动 core Runtime/判题器/benchmark 答案/安全边界、
-      未发起任何付费成对评估（PAID_NOT_RUN）、未预填任何胜率或结果。
+状态：DONE（离线 challenger 已实现并接线；正式付费成对评估 PAID_NOT_RUN）
+前置说明：计划要求"只有 N3 完成，才从基础设施收口进入 Agent 策略迭代"。N3 的 CI 部分因
+      本沙箱无 push 凭据仍为 NOT_RUN（§10.3）。N5 的代码实现与离线守卫不依赖 CI，
+      已在本轮完成；但 N5 的效果结论与正式成对实验仍受"需 N3 两平台 CI 绿灯"约束，
+      因此这里只宣称"候选准备完成、外部调用 0、付费实验未执行"，不宣称任何模型质量提升。
+已就绪：N4（§10.4）给出聚类（agent_limit，27/59）、逐用例证据与可证伪假设；
+      需避免的历史先例（budget_aware_completion_v1 已 REJECT）。
+本轮实现：tool_call_efficiency_v1（§10.7）。
 外部模型请求数：0。
 ```
 
@@ -3040,8 +3041,55 @@ verified completion 的提升必须超过预先固定的门槛，且无 regressi
 | N2 | **DONE**（本地） | 13480a5 | 6h 用例 D'≠D；mutation gate 13/13，新增 N2 反例 CAUGHT |
 | N3 | **OPEN**（本地 DONE，CI NOT_RUN/BLOCKED） | 13480a5 | typecheck/build/定向/闭环/mutation 全绿；两平台 CI 待推送 |
 | N4 | **DONE**（只读证据扫描） | — | agent_limit 27/59，逐用例证据见 §10.4 |
-| N5 | **BLOCKED**（待 N3） | — | 未实现；PAID_NOT_RUN；外部请求 0 |
+| N5 | **DONE**（离线 challenger；PAID_NOT_RUN） | 93d7ba5 | tool_call_efficiency_v1：接线+激活信号+契约+离线 RED/GREEN；见 §10.7 |
 
 外部模型请求数：**0**。所有本地放行结论均由本节的命令与退出码支持；未被触达的场景一律
 标 NOT_RUN/BLOCKED，未用"已通过"概括。
+
+### 10.7 N5 — tool_call_efficiency_v1（离线 challenger + 待批准成对方案）
+
+针对 N4 选定的 `agent_limit` 聚类（§10.4），本轮在 **Agent 策略层**实现一个可切换的
+challenger：`tool_call_efficiency_v1`。机制是**工具调用效率策略**——它攻击"迭代为何被浪费"
+（重复/重试失败的工具调用），与已被 REJECT 的 `budget_aware_completion_v1`（只改最后几轮
+怎么花）是**不同**机制。未改动 core Runtime、judge、benchmark 题目/答案或安全边界；未触碰
+holdout 的隐藏 expected/verifier。
+
+变更文件（均在策略/评估层）：
+
+| 文件 | 变更 | 作用 |
+| --- | --- | --- |
+| `packages/evaluation/src/mechanism-guidance.ts` | 新增 `TOOL_CALL_EFFICIENCY_GUIDANCE_V1` + `toolCallEfficiencyGuidanceDigest()` | 单一权威策略文本及其 sha256 摘要 |
+| `packages/evaluation/src/candidate-registry.ts` | 注册 `tool_call_efficiency_v1`（layer=agent-strategy） | 候选可被基准框架识别，且产生真实语义 delta |
+| `packages/evaluation/src/arm-factory.ts` | `RuntimeMechanisms.toolCallEfficiency` + 接线分支 | 把真实文本摘要绑定进 arm/执行身份 |
+| `packages/evaluation/src/activation-evidence-execution.ts` | 新增信号 `tool_call_efficiency_guidance_injected` 与映射 | 运行时事实可被观测 |
+| `packages/evaluation/src/activation-evidence.ts` | `activationEvidenceFor` 分支 | 注入才算激活；零注入即 `activation_zero`（fail closed） |
+| `packages/evaluation/src/mechanism-contract.ts` | 机制契约 | 目标聚类 `agent_limit`；minEligibleCases 5 |
+| `apps/cli/src/benchmark-command.ts` | 系统提示注入 + 激活事件 + 信号转发白名单 | 让 guidance 真正进入模型可见 prompt |
+
+离线 RED/GREEN 证据（零外部调用）：
+
+- RED（真实接线缺口）：`activationSignals` 的转发白名单未包含新信号类型，导致新信号虽被
+  记录却不会进入 V2 激活证据——新候选会被误报为"未激活"。新增的 runner 级用例
+  `apps/cli/src/benchmark-command.test.ts > N5: tool_call_efficiency_v1 injects …`
+  在补齐白名单**前**失败（`guidanceEvent` 为 `undefined`），补齐后 GREEN。
+- GREEN：同一用例捕获真实 provider 请求，断言候选臂的模型可见 system prompt **确实包含**
+  策略文本、基线臂**不包含**、且与预算 guidance 互斥；并断言 V2 激活事件的
+  `mechanism=prompt-guidance`、`evidenceType=prompt-guidance-injected`、`validation.ok=true`。
+- 策略层单测 `packages/evaluation/src/tool-call-efficiency.test.ts`（6 用例）：摘要确定性且
+  与预算 guidance 不同（falsify 契约的 forbidden no-op 条件）；arm 接线 ON 且 baseline OFF
+  （无因果污染）；契约指向 `agent_limit`；注入才算激活、零注入 fail closed；V2 记录器映射正确；
+  其它候选该机制保持 OFF（回归守卫）。
+
+待批准成对方案（**PAID_NOT_RUN**，未执行、未预填任何胜率）：
+
+| 项 | 固定值 |
+| --- | --- |
+| champion / challenger | baseline（标准 prompt） / `tool_call_efficiency_v1` |
+| 目标 case 集 | regression + holdout 中命中 `agent_limit` 的用例（N4 §10.4 逐用例清单），含 regression 守卫 |
+| provider / model / endpoint | 与历史付费 run 相同（deepseek-v4-flash），两臂完全一致 |
+| 预算与停止条件 | 每臂同一 30-call 预算、同一迭代上限、同一停止条件 |
+| verifier / judge | 同一 verifier、judge 1.0.0（与历史 SHA 匹配才可比） |
+| 预先固定指标 | regression+holdout 的 verified completion 提升须超过预先固定门槛，且无 regression/holdout 回退 |
+| 证据保存 | 成对 run 的 paired-experiment.json + V2 激活证据 + 独立 validator 结论 |
+| 状态 | **PAID_NOT_RUN**——需明确预算与授权后另行执行；离线 scripted 结果不支持任何模型能力结论 |
 
