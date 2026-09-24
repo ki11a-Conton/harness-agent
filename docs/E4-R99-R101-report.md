@@ -2838,3 +2838,210 @@ inheriting A7's.
 - 两平台 CI 未运行，缺的动作同 §9.8。
 ```
 
+---
+
+## 10. Round N — N1/N2 修复、N3 收口、N4 证据扫描、N5 状态
+
+审查基线：`b58dec273db60f90cfbd9029ea3060620785bdcd`（= 上一节记录的上一个 head）。
+本节记录本轮对 **F1（claim 非原子覆盖）** 与 **F2（被 spawn 的 child runner 不在批准
+构建身份内）** 的修复，并诚实区分"本地实测"与"两平台 CI 未运行"。
+
+### 10.1 N1 — claim anchor 的原子替换
+
+```text
+任务：N1 / claim 写入原子化与同一批准的并发安全
+状态：DONE（本地实测全绿；两平台 CI 为 NOT_RUN）
+审查基线：b58dec273db60f90cfbd9029ea3060620785bdcd
+实施 HEAD / 差异范围：13480a5；packages/evaluation/src/r97-budget-ledger.ts
+            （+ 其测试）
+
+问题与影响：
+- withClaimLock 在持锁时直接 writeFile(claimPathFor(...), JSON)：这会先 TRUNCATE 目标
+  文件再写入新字节。openR97Campaign 在锁外读 claim、readR97CampaignClaim 又是公开
+  检查 API，所以并发读者可能读到空/半写的 JSON，被拒绝为 CAMPAIGN_CLAIM_CORRUPT —— 
+  这正是 CI 35978421250 在 r97-campaign-lifecycle.test.ts:564 的真实失败。claim 是
+  单次授权的持久证据，写入中断不能留下半份权威状态。
+
+修改：
+- 新增 writeClaimAtomic：在 SAME 目录写一个每次唯一的临时文件（.tmp-<pid>-<token>），
+  完整写入后用 rename 原子替换 claimPathFor(...)；不再在目标路径原地截断。
+- 失败时只清理自己那个唯一临时文件；清理失败经 [degraded] stderr 报告（不静默吞掉，
+  符合 no-silent-catch 门）。已提交的 anchor 在该路径上从不被触碰，所以中断写入保留
+  的是上一个完整版本。
+- 区分保持不变：ENOENT（真的没有 claim）、有效旧/新版、真实损坏、I/O 错误；
+  rename/write 失败保持 CAMPAIGN_CLAIM_WRITE_FAILED，绝不退化为"初次批准可以启动"。
+- 未改动 model-call ledger 的 reserve/commit/refund 计数合同。
+
+反例：
+- 输入/注入点：真实双进程 reader/writer，barrier 让二者按构造重叠；anchor 刻意放大
+  （2500 个长目录名）以拉宽旧实现的截断窗口。
+- 修复前 RED：在未修复源码上同一对进程实测 345/1053 次读为 CORRUPT。
+- 修复后 GREEN：R98-N1 用例实测 corrupt=0、torn=0、nulls=0；每次成功读都是完整的
+  旧版或新版。另有两条判别用例：故意写坏的 JSON 仍抛 CAMPAIGN_CLAIM_CORRUPT 且不铸
+  预算；claim 目录不可写时抛 CAMPAIGN_CLAIM_WRITE_FAILED 且不铸预算；同一根目录重复
+  打开按 resume 处理，且不留 .tmp- 文件被误当批准。
+
+验证：
+- 命令与退出码：pnpm typecheck → 0；r97-budget-ledger.test.ts →
+  60 passed (60)（含 a REAL reader process ... never CORRUPT 一条）。
+- 外部模型请求数：0。
+- CI run URL / head / attempt / 两平台 job 状态：NOT_RUN（§10.3）。
+
+剩余问题：
+- 两平台 CI 未运行；需要先推送 13480a5（见 §10.3）。
+```
+
+### 10.2 N2 — 实际 spawn 的 child runner 纳入批准构建身份
+
+```text
+任务：N2 / 把实际执行的 child runner 纳入批准的构建身份
+状态：DONE（本地实测全绿；两平台 CI 为 NOT_RUN）
+审查基线：b58dec273db60f90cfbd9029ea3060620785bdcd
+实施 HEAD / 差异范围：13480a5；packages/evaluation/src/r97-plan.ts、r97-plan.test.ts、
+            scripts/e4/r97-mutation-check.mjs、r97-mutation-check.test.ts
+
+问题与影响：
+- r97-arm-worker.mjs 把 scripts/e4/r97-arm-child-runner.mjs 作为 spawn(process.execPath,
+  [join(repoRoot, ARM_CHILD_RUNNER_REL)]) 的实际执行脚本；该路径是 spawn 的字符串参数，
+  不是 ESM import，静态 import walker 追踪不到。R97_DRIVER_BUILD_ENTRIES 此前只有
+  driver、worker、arm-exec 与 evaluation dist 入口，因此直接改 child runner 字节不会改变
+  driverBuildDigest，旧批准仍可运行被修改的脚本。
+
+修改：
+- 在 R97_DRIVER_BUILD_ENTRIES 增加 "scripts/e4/r97-arm-child-runner.mjs"（DECLARED 入口，
+  由既有共享 computeExecutionIdentityV1 按字节哈希）。既有静态 ESM 闭包未缩小。
+- 仅补实际观察到的这一处 spawn 边界；child 自身的动态 import（r97-arm-exec.mjs、
+  packages/evaluation/dist/index.js）此前已在清单内，未扩大 hash 范围。
+- 未改可序列化的批准 schema/字段语义（只扩充既有入口，digest 自然改变），因此不升版本号。
+
+反例：
+- 输入/注入点：synthetic driver root 中把 child runner 改成"等长、恢复同 mtime、不同字节"
+  的合法脚本；以及删除该文件。
+- 修复前 RED（静态结论的再现）：runner 不在 entries 时，编辑其字节后 D' = D。
+- 修复后 GREEN：6h 用例实测 D' ≠ D；删除文件时 computeDriverBuildDigestV1 拒绝而非
+  返回部分摘要（rejects.toThrow(/r97-arm-child-runner/)）。
+- mutation gate：新增 n2-child-runner-outside-driver-identity（从 entries 删除该行），
+  绑定的 6h 用例实测 RED；本地整门 13/13 CAUGHT（T6 5/5、A7 7/7、N2 1/1），
+  每次 restored=true。
+
+验证：
+- 命令与退出码：pnpm typecheck → 0；r97-plan.test.ts + r97-execution-identity.test.ts
+  + r97-mutation-check.test.ts 全绿；node scripts/e4/r97-mutation-check.mjs → 0，
+  13/13 CAUGHT。
+- 离线闭环：node scripts/e4/r97-closed-loop.mjs --all → setup OK / acceptance
+  OFFLINE_ACCEPTED 6-16 / suite 561/561 / matrix 9/9 / identity OK。
+- 外部模型请求数：0。
+- 旧批准处理：digest 因新增入口自然改变；旧摘要与新执行字节不符时按既有门拒绝，
+  必须重生计划。历史两臂的 sourceSha 未被改动。
+- CI run URL / head / attempt / 两平台 job 状态：NOT_RUN（§10.3）。
+
+剩余问题：
+- 两平台 CI 未运行；需要先推送 13480a5（见 §10.3）。
+```
+
+### 10.3 N3 — 同一修复提交的跨平台验收（本地已做，CI 未运行）
+
+修复提交：`13480a5`（本地 `main`，**未推送**）。工作树 `git status --porcelain` 现存一条
+与本次工作无关的既有改动 `.trae-html-share-packages/apps/web/public/index.html.zip`
+（由 HEAD `b58dec2` 提交的构建产物在本机被 IDE 重新生成），本轮未提交、未回滚它。
+
+本地已实际运行的收口检查（命令 → 退出码 → 观测）：
+
+| 命令 | 退出码 | 观测 |
+| --- | --- | --- |
+| `pnpm typecheck` | 0 | `tsc -b` 全仓通过 |
+| `pnpm build` | 0 | `tsc -b` 全仓通过 |
+| `npx vitest run r97-budget-ledger / r97-campaign-lifecycle / r97-plan / r97-execution-identity / r97-mutation-check` | 0 | 198 passed (198) |
+| `node scripts/e4/r97-closed-loop.mjs --all` | 0 | setup OK · acceptance OFFLINE_ACCEPTED 6/16 · suite 561/561 · matrix 9/9 · identity OK（linux 本机） |
+| `node scripts/e4/r97-mutation-check.mjs --out …` | 0 | 13/13 CAUGHT（T6 5/5、A7 7/7、N2 1/1），treeRestored true |
+| `pnpm test`（整仓主 suite） | 1 | **6 failed / 6861 passed / 10 skipped** |
+
+`pnpm test` 的 6 条失败**全部**是本仓既有的 clean-tree 守卫，与 N1/N2 无关，也非本轮新
+引入：`benchmark-command.test.ts`（E4-R41 host-probe）、`e4-09-production-e2e.test.ts`
+（4 条 E4-09 E2E）、`e4-r55-failure-wiring.test.ts`（E4-R55）。它们的前置条件是"可证明
+干净的工作树"（生产 benchmark 拒绝在脏树上产出 promotion-eligible run），而本机工作树
+因上述既有 zip 产物为脏。这些守卫在干净 checkout 上通过——§9.7 已逐条记录其本地成因，
+且上一 head `98ac6ad` 的两平台 CI（run 35976720516）在这些守卫上全绿。
+
+**两平台 CI：NOT_RUN（BLOCKED，缺 push 授权）。** 本沙箱的远端是
+`https://github.com/ki11a-Conton/harness-agent`，无 token、无 credential helper；
+`git push --dry-run` 以 `could not read Username for 'https://github.com'` 失败。
+因此无法触发 Actions。缺的动作与 §9.8 相同且此处更明确：**推送 `13480a5`，然后读取
+新产生的双平台 run 的每个必需 job 结论**（常规 Windows/Ubuntu、专用 closed-loop 两平台、
+Ubuntu coverage、Ubuntu offline cold-start、release attestation）。在这些 job 于
+`13480a5` 全绿之前，不得据本地绿灯或 98ac6ad 的历史绿灯给本 head 的发布链路背书。
+
+### 10.4 N4 — 真实 benchmark 证据的失败聚类（只读扫描）
+
+在 N3 的两平台闭环未完成前，本节**只做只读的证据整理**，不宣称任何模型质量提升，也不
+进入 N5 的挑战者实现。
+
+现有**真实付费**运行来源（`benchmarks/results/`，manifest 标 `source:"paid-real-model-run"`、
+`qualityEvidence:true`、`releaseEvidence:false`）：
+
+| run 目录 | suite | cases/passed | sourceSha | judge | 证据路径 |
+| --- | --- | --- | --- | --- | --- |
+| 2026-08-27-deepseek-v4-flash | regression | 3/30 | 6423dbe | 1.0.0 | `…/regression-runs.sanitized.json` |
+| 同上 | holdout | 9/30 | fbf6797 | 1.0.0 | `…/holdout-runs.sanitized.json` |
+| 同上 | adversarial | 8/13 | fbf6797 | 1.0.0 | `…/adversarial-runs.sanitized.json` |
+| 同上 | stress | 5/11 | fbf6797 | 1.0.0 | `…/stress-runs.sanitized.json` |
+
+按 `termination_reason` 逐用例聚合（读自上述 sanitized 结果，非报告中的二手汇总）：
+
+| suite | agent_limit | verification_failed | model_error | tool_limit | 其它 |
+| --- | --- | --- | --- | --- | --- |
+| regression (30) | **16** | 5 | 5 | 1 | — |
+| holdout (30) | **9** | 7 | 5 | — | — |
+| stress (11) | **2** | — | — | — | cancelled 3、time_limit 1 |
+| adversarial (13) | — | — | 1 | — | model_stopped 6 |
+
+**主导聚类 = `agent_limit`（27/59 失败），与 manifest 自述一致。** 逐用例证据：每个
+agent_limit 用例的 `model_calls` 都恰为 30（迭代上限），且伴随显著的工具失败：
+`reg-08-quicksort` tool_failures=14、`reg-06-json-parse-test`=12、`reg-02-fix-reverse`=12、
+`ho-10-validate-schema`=9、`ho-02-parse-log`=11、`stress-huge-generated-logs`=9。
+
+归因：这些是 **Agent 策略**行为（在固定的 30 次模型调用预算内效率不足、把迭代消耗在失败
+的工具调用上），不是 Harness/judge/provider 异常——`termination_reason` 是 harness 记录的
+事实，`model_error` 已单列且数量小。两份独立检视按同一记录会得到相同分类。
+
+可证伪假设（供 N5，但**尚未**进入实现）：**在同一 30-call 预算与同一 verifier 下，减少
+失败工具调用所消耗的迭代（例如在派发前对工具参数做校验、对可重试的工具错误就地恢复而不
+消耗整轮模型往返），能提高 regression+holdout 的 verified completion，且不降低既有通过
+用例。** 判据：同模型/同输入/同预算/同 verifier 的成对评估，regression+holdout 上
+verified completion 的提升必须超过预先固定的门槛，且无 regression/holdout 回退。
+
+历史先例（必须避免重复）：`docs/evolution/e1-failure-cluster-backlog.json` 已把 agent_limit
+列为最大聚类并试过 `budget_aware_completion_v1` → REJECT（netDelta 0，+968K tokens）；
+`adaptive_recovery` 重做为 v2 后被接受为 Champion C1。因此任何新挑战者必须是**不同**机制
+（工具调用效率），而不是再次调 step-budget。
+
+结论：**有真实、可追溯的失败聚类（agent_limit）与一个可证伪假设**，但 N4/N5 的正式启动
+受计划约束以 N3 完成为前置；N3 的两平台 CI 尚未运行。
+
+### 10.5 N5 — 状态
+
+```text
+任务：N5 / 仅实现有依据的 Agent challenger，准备成对评估
+状态：BLOCKED（前置 N3 的两平台 CI 未运行；未实现任何 packages/agents 改动）
+原因：计划规定"只有 N3 完成，才从基础设施收口进入下一轮 Agent 策略迭代"。N3 的
+      CI 部分因本沙箱无 push 凭据而 NOT_RUN（§10.3）。
+已就绪：N4（§10.4）已给出聚类（agent_limit，27/59）、逐用例证据与一个可证伪假设、
+      以及需避免的历史先例（budget_aware_completion_v1 已 REJECT）。
+未做：未修改 packages/agents、未改动 core Runtime/判题器/benchmark 答案/安全边界、
+      未发起任何付费成对评估（PAID_NOT_RUN）、未预填任何胜率或结果。
+外部模型请求数：0。
+```
+
+### 10.6 本轮交付清单
+
+| 任务 | 状态 | 变更 SHA | 关键证据 |
+| --- | --- | --- | --- |
+| N1 | **DONE**（本地） | 13480a5 | 双进程 race 0 CORRUPT；损坏/不可写仍 fail closed；R98-N1 用例 |
+| N2 | **DONE**（本地） | 13480a5 | 6h 用例 D'≠D；mutation gate 13/13，新增 N2 反例 CAUGHT |
+| N3 | **OPEN**（本地 DONE，CI NOT_RUN/BLOCKED） | 13480a5 | typecheck/build/定向/闭环/mutation 全绿；两平台 CI 待推送 |
+| N4 | **DONE**（只读证据扫描） | — | agent_limit 27/59，逐用例证据见 §10.4 |
+| N5 | **BLOCKED**（待 N3） | — | 未实现；PAID_NOT_RUN；外部请求 0 |
+
+外部模型请求数：**0**。所有本地放行结论均由本节的命令与退出码支持；未被触达的场景一律
+标 NOT_RUN/BLOCKED，未用"已通过"概括。
+
