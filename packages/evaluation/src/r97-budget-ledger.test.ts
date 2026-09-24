@@ -1201,3 +1201,194 @@ describe("E4-R97 G10: a DELETED ledger is never a fresh allowance (deletion inje
     await expect(l.view()).resolves.toBeDefined();
   });
 });
+
+/**
+ * FINDING F1 (plan §N1) — THE CLAIM ANCHOR MUST BE REPLACED ATOMICALLY.
+ *
+ * The anchor is read OUTSIDE the claim lock on purpose: `openR97Campaign` consults
+ * it before it opens any budget, and `readR97CampaignClaim` is a public inspection
+ * API. The previous writer did `writeFile(claimPath, …)`, which TRUNCATES the anchor
+ * in place before the new bytes land, so a concurrent reader could observe an EMPTY
+ * or HALF-WRITTEN file and be refused with `CAMPAIGN_CLAIM_CORRUPT` — a REAL Ubuntu
+ * CI failure (run 35978421250, `r97-campaign-lifecycle.test.ts:564`) and, measured
+ * here on the unfixed source with these very two processes, 345 CORRUPT reads out
+ * of 1053. The fix writes a unique temp file in the same directory and renames it
+ * over the anchor.
+ *
+ * WHY A REAL READER/WRITER PROCESS PAIR. The defect is a filesystem race between a
+ * writer and a reader that are NOT the same process (the reader deliberately does
+ * not hold the lock). A single process would have to inject a write seam that does
+ * not exist, so the honest reproduction is two real processes: a barrier makes them
+ * overlap, and the reader hammers the public reader for the whole time the writer is
+ * rewriting the anchor. Asserting a COUNT OF CORRUPT READS of zero, plus "every
+ * successful read is a COMPLETE version", is the property the fix has to hold — it
+ * is not the assertion `r97-campaign-lifecycle.test.ts:564` that would be widened by
+ * adding CORRUPT to its allow-list.
+ *
+ * THE ANCHOR IS MADE LARGE ON PURPOSE so the OLD in-place rewrite had a wide
+ * truncate-then-write window and the RED is dependable rather than a lucky timing
+ * window; the reader stops when the writer signals completion, so the test cannot
+ * pass by the two never overlapping.
+ */
+describe("R98-N1: the claim anchor is replaced atomically — a real reader never sees a torn anchor", () => {
+  it("a REAL reader process observing a REAL writer sees only COMPLETE versions, never CORRUPT", async () => {
+    const plan = "c".repeat(64);
+    const campaignId = campaignIdOf(plan, 1);
+    const writerDir = "/e4-r97-n1/writer-dir";
+    const claimPath = join(CLAIMS_DIR, `claim-${campaignId}.json`);
+    const donePath = join(CLAIMS_DIR, `n1-writer-done-${campaignId}`);
+    const barrier = await tempDir();
+
+    // V0 = the whole previous version; V1 = the whole next version. Both are
+    // LARGE (thousands of long directory names) so the in-place rewrite the old
+    // code performed spent a real amount of time with the anchor truncated.
+    const seedDirs = Array.from({ length: 2500 }, (_, i) => `/seed/dir-${i}-${"x".repeat(110)}`);
+    const v0 = { campaignId, dir: seedDirs[0], claimedDirs: seedDirs, establishedDirs: seedDirs, firstClaimedAt: 1 };
+    await writeFile(claimPath, `${JSON.stringify(v0, null, 2)}\n`, "utf8");
+
+    const ledgerModule = pathToFileURL(join(process.cwd(), "packages", "evaluation", "dist", "r97-budget-ledger.js"))
+      .href;
+
+    const childScript = (name: string, body: string): string => `
+      const fs = await import("node:fs/promises");
+      const barrier = ${JSON.stringify(barrier)};
+      await fs.mkdir(barrier, { recursive: true });
+      await fs.writeFile(barrier + "/ready-" + ${JSON.stringify(name)}, "1");
+      // THE BARRIER: neither process proceeds until BOTH are ready, so the read
+      // and the write overlap by construction rather than by timing luck.
+      for (;;) {
+        let n = 0;
+        for (const t of ["writer", "reader"]) {
+          try { await fs.access(barrier + "/ready-" + t); n++; } catch {}
+        }
+        if (n === 2) break;
+        await new Promise((r) => setTimeout(r, 2));
+      }
+      const m = await import(${JSON.stringify(ledgerModule)});
+      ${body}
+    `;
+
+    const writerBody = `
+      let writes = 0;
+      while (writes < 400) {
+        await m.markR97CampaignClaimEstablished(${JSON.stringify(campaignId)}, ${JSON.stringify(writerDir)});
+        writes++;
+      }
+      await fs.writeFile(${JSON.stringify(donePath)}, "1");
+      process.stdout.write(JSON.stringify({ writes }));
+    `;
+
+    const readerBody = `
+      let reads = 0, corrupt = 0, torn = 0, nulls = 0; const samples = new Set();
+      // Regenerated here rather than passed on argv, which would blow the exec
+      // argument limit for a deliberately large anchor.
+      const seedDirs = Array.from({ length: ${seedDirs.length} }, (_, i) => \`/seed/dir-\${i}-\${"x".repeat(110)}\`);
+      const v0 = JSON.stringify(seedDirs);
+      const v1 = JSON.stringify([...seedDirs, ${JSON.stringify(writerDir)}]);
+      const deadline = Date.now() + 60_000;
+      for (;;) {
+        if (Date.now() > deadline) break;
+        let c;
+        try { c = await m.readR97CampaignClaim(${JSON.stringify(campaignId)}); }
+        catch (e) {
+          const s = String(e);
+          if (s.includes("CAMPAIGN_CLAIM_CORRUPT")) corrupt++;
+          else if (samples.size < 3) samples.add(s.slice(0, 160));
+          continue;
+        }
+        if (c === null) { nulls++; continue; }
+        reads++;
+        const dirs = JSON.stringify(c.claimedDirs);
+        if (dirs !== v0 && dirs !== v1) torn++;
+        let done = false;
+        try { await fs.access(${JSON.stringify(donePath)}); done = true; } catch {}
+        // Keep reading for a moment AFTER the writer finishes, so the last version
+        // is observed too — the stop condition cannot hide a torn read.
+        if (done && reads >= 5) break;
+      }
+      process.stdout.write(JSON.stringify({ reads, corrupt, torn, nulls, samples: [...samples] }));
+    `;
+
+    const { execFile } = await import("node:child_process");
+    const { promisify } = await import("node:util");
+    const run = promisify(execFile);
+    const [rw, rr] = await Promise.all([
+      run(process.execPath, ["--input-type=module", "-e", childScript("writer", writerBody)], { timeout: 120_000 }),
+      run(process.execPath, ["--input-type=module", "-e", childScript("reader", readerBody)], { timeout: 120_000 }),
+    ]);
+    const wrote = JSON.parse(rw.stdout) as { writes: number };
+    const read = JSON.parse(rr.stdout) as { reads: number; corrupt: number; torn: number; nulls: number; samples: string[] };
+
+    // The writer MUST have written and the reader MUST have read, or the test
+    // proved nothing about overlap (the failure mode of a vacuous race test).
+    expect(wrote.writes, "the writer must have rewritten the anchor many times").toBeGreaterThanOrEqual(20);
+    expect(read.reads, "the reader must have observed the anchor many times").toBeGreaterThanOrEqual(20);
+
+    // THE PROPERTY: never a torn anchor, never a false CORRUPT, never a spurious
+    // "unclaimed". Every successful read is COMPLETE V0 or COMPLETE V1.
+    expect(read.corrupt, `a torn anchor must never be reported as CORRUPT (samples: ${read.samples.join(" | ")})`).toBe(0);
+    expect(read.torn, "every read must be a complete previous or new version").toBe(0);
+    expect(read.nulls, "the anchor must never appear absent while it is being rewritten").toBe(0);
+  }, 180_000);
+
+  it("a GENUINELY damaged anchor is STILL refused by name — the fix is not leniency toward corruption", async () => {
+    // The discriminator for the test above: a real torn file (truncated JSON) must
+    // keep producing CORRUPT. Without this, "zero CORRUPT" could be achieved by
+    // simply swallowing the error, which is exactly what must NOT happen.
+    const plan = "e".repeat(64);
+    const campaignId = campaignIdOf(plan, 1);
+    const claimPath = join(CLAIMS_DIR, `claim-${campaignId}.json`);
+    await writeFile(claimPath, '{ "campaignId": "x", "dir": "x", "claimedDirs": ["x"', "utf8");
+
+    await expect(readR97CampaignClaim(campaignId)).rejects.toThrow(/CAMPAIGN_CLAIM_CORRUPT/);
+
+    // And the refusal still happens BEFORE any budget can be minted.
+    const dir = await tempDir();
+    await expect(
+      openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 1, mode: "first-run" }),
+    ).rejects.toThrow(/CAMPAIGN_CLAIM_CORRUPT/);
+    expect(existsSync(join(dir, R97_LEDGER_FILENAME))).toBe(false);
+  });
+
+  it("an unwritable claim location is a NAMED refusal that mints no budget", async () => {
+    // FAIL CLOSED ON A WRITE-LOCATION FAILURE. The claim directory path is put
+    // UNDER a regular file, so `mkdir(…, { recursive: true })` fails on both POSIX
+    // and Windows (ENOTDIR / ENOENT), and the claim cannot be recorded. The refusal
+    // must be the named `CAMPAIGN_CLAIM_WRITE_FAILED` — never a silent "no anchor,
+    // therefore this approval is unclaimed".
+    const dir = await tempDir();
+    const plan = "f".repeat(64);
+    const notADir = join(dir, "a-regular-file");
+    await writeFile(notADir, "not a directory", "utf8");
+    process.env[R97_CAMPAIGN_CLAIMS_DIR_ENV] = join(notADir, "claims");
+
+    await expect(
+      openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 1, mode: "first-run" }),
+    ).rejects.toThrow(/CAMPAIGN_CLAIM_WRITE_FAILED/);
+    // The failure left NO budget behind: a claim that cannot be made durable must
+    // not become a fresh allowance.
+    expect(existsSync(join(dir, R97_LEDGER_FILENAME))).toBe(false);
+  });
+
+  it("re-opening the SAME root resumes under the original contract and leaves no temp file that could be read as an approval", async () => {
+    const dir = await tempDir();
+    const plan = "1".repeat(64);
+    const campaignId = campaignIdOf(plan, 2);
+    const first = await openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 2, mode: "first-run" });
+    expect(first.mode).toBe("first-run");
+
+    // A second open of the SAME root adopts what is there — it does not mint
+    // another allowance, and it does not mistake the atomic write's temp file for
+    // a new claim.
+    const second = await openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 2, mode: "auto" });
+    expect(second.mode).toBe("resume");
+    expect((await second.view()).remaining).toBe(2);
+
+    const entries = await readdir(CLAIMS_DIR);
+    expect(entries, "the anchor is exactly one complete record").toContain(`claim-${campaignId}.json`);
+    expect(
+      entries.filter((n) => n.includes(".tmp-")),
+      "no atomic-write temp file may survive to be mistaken for a claim",
+    ).toEqual([]);
+  });
+});

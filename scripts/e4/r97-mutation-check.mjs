@@ -334,6 +334,31 @@ export const MUTATIONS = [
     catchExpectation:
       "an ENTERED call whose settlement write failed is routed to the refund path instead of being kept outstanding, so the worker reports `could not be returned` and silently re-grants a spend that may already have been billed",
   },
+  // =========================================================================
+  // THE N2 COUNTEREXAMPLE MUTATION (plan §N2 / finding F2).
+  // =========================================================================
+  {
+    id: "n2-child-runner-outside-driver-identity",
+    // 被 spawn 的 child runner 不在批准构建身份内
+    planWording: "被 spawn 的 child runner 不在批准构建身份内",
+    round: "N2",
+    file: "packages/evaluation/src/r97-plan.ts",
+    // FINDING F2. `r97-arm-worker.mjs` runs each case in a separate process by
+    // spawning `scripts/e4/r97-arm-child-runner.mjs`, whose path is a bare STRING
+    // argument to `spawn` — not an ESM import — so the import walker could not reach
+    // it. Dropping the DECLARED entry restores the pre-fix behaviour: the runner's
+    // bytes fall out of the approved driver build identity, editing them leaves
+    // `driverBuildDigest` unchanged, and an OLD approval keeps running the MODIFIED
+    // script. The two-line anchor is required because the single line also appears
+    // inside the entry's own doc comment, where a one-line anchor would not be unique.
+    find: `  "scripts/e4/r97-arm-exec.mjs",
+  "scripts/e4/r97-arm-child-runner.mjs",`,
+    replace: `  "scripts/e4/r97-arm-exec.mjs",`,
+    suite: "packages/evaluation/src/r97-plan.test.ts",
+    test: "6h. the child runner the ARM WORKER SPAWNS is inside the driver identity",
+    catchExpectation:
+      "the spawned child runner falls outside the approved driver build identity, so editing its bytes leaves driverBuildDigest unchanged and an old approval keeps executing the modified script",
+  },
 ];
 
 /**

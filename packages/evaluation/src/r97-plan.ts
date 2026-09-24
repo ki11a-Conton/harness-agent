@@ -245,12 +245,25 @@ export function computeArmBuildDigestV1(armDir: string): string {
   }).digest;
 }
 
-/** The DRIVER's real execution entries: the three scripts that stage, dispatch and
- *  score a unit, plus the evaluation barrel every one of them imports. */
+/** The DRIVER's real execution entries: the scripts that stage, dispatch, score and
+ *  RUN a unit, plus the evaluation barrel every one of them imports.
+ *
+ *  FINDING F2 (plan §N2). `r97-arm-worker.mjs` runs each case in a SEPARATE process
+ *  by spawning `scripts/e4/r97-arm-child-runner.mjs` (see `ARM_CHILD_RUNNER_REL`).
+ *  That path is a bare STRING handed to `spawn`, NOT an ESM import, so the static
+ *  import walker that derives the closure could not reach it: without it declared
+ *  here, editing the runner's bytes left `driverBuildDigest` byte-identical and an
+ *  OLD approval kept running the MODIFIED script. It is a DECLARED entry because it
+ *  is loaded dynamically rather than imported; the closure below then hashes its
+ *  bytes exactly like every other covered file. It is the ONLY repo-local script
+ *  reached by `spawn`/dynamic import from this set that was missing — the child's own
+ *  dynamic imports (`r97-arm-exec.mjs`, `packages/evaluation/dist/index.js`) are
+ *  already covered, so nothing wider is added. */
 export const R97_DRIVER_BUILD_ENTRIES: readonly string[] = [
   "scripts/e4/r97-campaign-driver.mjs",
   "scripts/e4/r97-arm-worker.mjs",
   "scripts/e4/r97-arm-exec.mjs",
+  "scripts/e4/r97-arm-child-runner.mjs",
   "packages/evaluation/dist/index.js",
 ];
 

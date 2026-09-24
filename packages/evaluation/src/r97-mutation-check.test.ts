@@ -47,8 +47,10 @@ const mod = (await import(SCRIPT)) as {
   MUTATIONS: Array<{
     id: string;
     planWording: string;
-    /** Which round's defect list this mutation came from: T6's five, or A7's five. */
-    round: "T6" | "A7";
+    /** Which round's defect list this mutation came from: T6's five, A7's seven, or
+     *  N2's one (finding F2: the spawned child runner must be inside the approved
+     *  driver build identity). */
+    round: "T6" | "A7" | "N2";
     file: string;
     find: string;
     replace: string;
@@ -133,8 +135,17 @@ describe("E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations"
     // untagged entry would be invisible to BOTH, so it is a failure rather than a
     // silently-ignored extra.
     for (const m of mod.MUTATIONS) {
-      expect(["T6", "A7"], `${m.id} has no round tag`).toContain(m.round);
+      expect(["T6", "A7", "N2"], `${m.id} has no round tag`).toContain(m.round);
     }
+  });
+
+  it("declares the N2 counterexample mutation for the spawned child runner", () => {
+    // N2 (finding F2): the driver's approved build identity must cover the child
+    // runner `r97-arm-worker.mjs` SPAWNS. Pinned as an exact set of one so a gate
+    // that quietly dropped it would not still report "all mutations caught".
+    const n2 = mod.MUTATIONS.filter((m) => m.round === "N2");
+    expect(n2, "N2 must add exactly the child-runner identity mutation").toHaveLength(1);
+    expect(n2.map((m) => m.planWording).join("\n")).toContain("被 spawn 的 child runner 不在批准构建身份内");
   });
 
   it("gives every mutation a unique id and a stated expectation", () => {

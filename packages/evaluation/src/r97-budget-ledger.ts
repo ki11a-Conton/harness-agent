@@ -243,6 +243,63 @@ export async function readR97CampaignClaim(campaignId: string): Promise<R97Campa
   };
 }
 
+/**
+ * Atomically replace the claim anchor: write a UNIQUE temp file in the SAME
+ * directory, then `rename` it over the anchor path.
+ *
+ * FINDING F1 (plan §N1). The previous version called
+ * `writeFile(claimPathFor(campaignId), …)`, which TRUNCATES the anchor in place
+ * and then streams the new bytes into it. The anchor is read on PURPOSE outside
+ * this lock — `openR97Campaign` consults it (§5) before any budget is opened, and
+ * `readR97CampaignClaim` is a public inspection API — so a concurrent reader could
+ * observe an EMPTY or HALF-WRITTEN file and be refused with
+ * `CAMPAIGN_CLAIM_CORRUPT` even though the authorization was perfectly intact.
+ * Measured on the unfixed source with a real reader/writer process pair: 345 of
+ * 1053 reads came back CORRUPT. Rename is atomic (POSIX `rename(2)`; Windows
+ * `MoveFileEx` with `MOVEFILE_REPLACE_EXISTING`), so a reader now sees either the
+ * COMPLETE previous version or the COMPLETE new one and never a torn one. The temp
+ * name is unique per call, so two writers cannot share it, and it lives in the SAME
+ * directory, so the rename can never cross a filesystem boundary (where it would
+ * degrade to a copy and lose atomicity).
+ *
+ * IN-PROGRESS VERSIONS DO NOT BECOME AUTHORITATIVE. A reader only ever opens
+ * `claimPathFor(...)`; a temp file is invisible to it, so an interrupted write
+ * leaves the PREVIOUS complete anchor in place — never half of the new one. Every
+ * failure here is a NAMED refusal (`CAMPAIGN_CLAIM_WRITE_FAILED`), so a claim that
+ * cannot be made durable never degrades into "this approval was free".
+ *
+ * DURABILITY BOUNDARY (matches `writeLedgerAtomic`): the rename makes a complete
+ * version VISIBLE atomically, but is not followed by an `fsync` of the file or its
+ * directory, so a host power loss can still lose the most recent rename. That is the
+ * same boundary the ledger's own atomic write draws; stating it here keeps it
+ * explicit rather than implied.
+ */
+async function writeClaimAtomic(campaignId: string, next: R97CampaignClaim): Promise<void> {
+  const target = claimPathFor(campaignId);
+  const tmp = `${target}.tmp-${process.pid}-${newLockToken()}`;
+  try {
+    await writeFile(tmp, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+    await rename(tmp, target);
+  } catch (err) {
+    // Clean up ONLY our own unique temp file. The committed anchor at `target` is
+    // never touched on this path, so a failed write cannot destroy the last good
+    // version — which is what keeps an interrupted write from becoming a loss.
+    // A cleanup failure is REPORTED through the `[degraded]` channel rather than
+    // swallowed: a leftover temp file is invisible to every reader (only
+    // `claimPathFor(...)` is ever opened), but it is still a fact worth stating.
+    try {
+      await rm(tmp, { force: true });
+    } catch (cleanupErr) {
+      process.stderr.write(
+        `[degraded] r97-budget-ledger.claim-tmp-cleanup: could not remove ${tmp}: ${cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)}\n`,
+      );
+    }
+    throw new Error(
+      `E4-R97: ${R97_CAMPAIGN_CLAIM_WRITE_FAILED}: the claim anchor for campaign ${campaignId} could not be written (${err instanceof Error ? err.message : String(err)}) — refusing to start a budget whose single-use record cannot be made durable`,
+    );
+  }
+}
+
 /** Read + write the claim anchor under its own lock. `mutate` sees the record as
  *  it is on disk (or `null`) and returns the next one. */
 async function withClaimLock<T>(
@@ -268,13 +325,9 @@ async function withClaimLock<T>(
     const previous = await readR97CampaignClaim(campaignId);
     const { next, result } = await mutate(previous);
     if (next !== null) {
-      try {
-        await writeFile(claimPathFor(campaignId), `${JSON.stringify(next, null, 2)}\n`, "utf8");
-      } catch (err) {
-        throw new Error(
-          `E4-R97: ${R97_CAMPAIGN_CLAIM_WRITE_FAILED}: the claim anchor for campaign ${campaignId} could not be written (${err instanceof Error ? err.message : String(err)}) — refusing to start a budget whose single-use record cannot be made durable`,
-        );
-      }
+      // FINDING F1: this used to be an in-place `writeFile` over the anchor, which
+      // truncates it before the new bytes land. See `writeClaimAtomic`.
+      await writeClaimAtomic(campaignId, next);
     }
     return result;
   } finally {

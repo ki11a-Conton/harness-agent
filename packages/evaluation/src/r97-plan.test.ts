@@ -977,6 +977,10 @@ describe("E4-R98/R100 P7: execution-time facts are re-observed, never inherited 
       ].join("\n"),
       "scripts/e4/r97-arm-worker.mjs": "export const worker = 1;\n",
       "scripts/e4/r97-arm-exec.mjs": "export const exec = 1;\n",
+      // The child runner the worker SPAWNS. Nothing IMPORTS it — it is named only
+      // as a path argument to `spawn` — so the import graph cannot reach it. It is
+      // present here so the N2 test can mutate its bytes in isolation.
+      "scripts/e4/r97-arm-child-runner.mjs": "export const runner = 1;\n",
       // The reviewed SOURCE. Nothing imports it, so it is outside the identity.
       "packages/evaluation/src/r97-plan.ts": "// the reviewed source, never imported by the driver\n",
     };
@@ -1031,6 +1035,61 @@ describe("E4-R98/R100 P7: execution-time facts are re-observed, never inherited 
       await expect(computeDriverBuildDigestV1(root)).rejects.toThrow(/r97-budget-channel/);
     } finally {
       await rm(root, { recursive: true, force: true }).catch(() => {});
+    }
+  });
+
+  it("6h. the child runner the ARM WORKER SPAWNS is inside the driver identity (N2 / F2)", async () => {
+    // FINDING F2 (plan §N2). The worker runs every case in a SEPARATE process by
+    // spawning `ARM_CHILD_RUNNER_REL` = scripts/e4/r97-arm-child-runner.mjs. That
+    // path is a bare STRING handed to `spawn`, NOT an ESM import, so the static
+    // import walker that derives the closure could not see it. With the runner
+    // outside `R97_DRIVER_BUILD_ENTRIES`, editing its bytes left `driverBuildDigest`
+    // byte-identical and an OLD approval kept running the MODIFIED script.
+    const identity = computeExecutionIdentityV1({ rootDir: REPO, entries: R97_DRIVER_BUILD_ENTRIES });
+    const paths = identity.files.map((f) => f.path);
+    expect(
+      paths,
+      "the spawned child runner must be inside the driver's execution identity",
+    ).toContain("scripts/e4/r97-arm-child-runner.mjs");
+
+    // It is the file that is REALLY spawned, not a bystander: the covered path is
+    // bound to the worker's own spawn boundary, so the test cannot be satisfied by
+    // covering some unrelated file with the same name.
+    const { readFile, writeFile, stat, utimes, rm } = await import("node:fs/promises");
+    const workerSrc = await readFile(join(REPO, "scripts", "e4", "r97-arm-worker.mjs"), "utf8");
+    expect(workerSrc).toMatch(
+      /ARM_CHILD_RUNNER_REL\s*=\s*join\(\s*"scripts",\s*"e4",\s*"r97-arm-child-runner\.mjs"\s*\)/,
+    );
+    expect(workerSrc).toMatch(/spawn\(\s*process\.execPath,\s*\[\s*join\(repoRoot,\s*ARM_CHILD_RUNNER_REL\)/);
+
+    // SAME LENGTH + SAME mtime, DIFFERENT bytes: only the content changes, so a
+    // digest that still matched would be proving size/mtime rather than the bytes
+    // that execute.
+    const root = await syntheticDriverRoot();
+    try {
+      const target = join(root, "scripts", "e4", "r97-arm-child-runner.mjs");
+      const before = await computeDriverBuildDigestV1(root);
+      const original = await readFile(target, "utf8");
+      const st = await stat(target);
+      const mutated = original.replace("1", "2");
+      expect(mutated.length, "the mutation must not change the file SIZE").toBe(original.length);
+      await writeFile(target, mutated, "utf8");
+      await utimes(target, st.atime, st.mtime);
+      expect(
+        await computeDriverBuildDigestV1(root),
+        "editing the spawned child runner must invalidate the old approval",
+      ).not.toBe(before);
+    } finally {
+      await rm(root, { recursive: true, force: true }).catch(() => {});
+    }
+
+    // DELETION is a REFUSAL, never a digest over the files that remain.
+    const root2 = await syntheticDriverRoot();
+    try {
+      await rm(join(root2, "scripts", "e4", "r97-arm-child-runner.mjs"));
+      await expect(computeDriverBuildDigestV1(root2)).rejects.toThrow(/r97-arm-child-runner/);
+    } finally {
+      await rm(root2, { recursive: true, force: true }).catch(() => {});
     }
   });
 });
