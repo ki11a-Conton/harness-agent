@@ -273,13 +273,55 @@ export async function readR97CampaignClaim(campaignId: string): Promise<R97Campa
  * directory, so a host power loss can still lose the most recent rename. That is the
  * same boundary the ledger's own atomic write draws; stating it here keeps it
  * explicit rather than implied.
+ *
+ * WINDOWS AVAILABILITY SEMANTICS (plan §N1 怎么做 2: "覆盖 Windows 可用语义").
+ * The replace is not merely "atomic" on Windows, it is also CONTENDED: a reader
+ * that has `claimPathFor(...)` open at the instant the writer calls
+ * `MoveFileEx(REPLACE_EXISTING)` makes it fail with a TRANSIENT sharing
+ * violation — `EPERM`/`EACCES`/`EBUSY`, not a corruption and not a permanent
+ * denial. Measured on the Windows CI leg of the N1 race test (real reader +
+ * real writer): the writer's rename returned
+ * `EPERM: operation not permitted, rename '…tmp-…' -> '…claim-….json'` while the
+ * reader held the anchor for a few microseconds, and the write was refused even
+ * though the location was perfectly writable. Because a reader reading the
+ * anchor OUTSIDE this lock is the whole point of the atomic replace, this is a
+ * real production path, so the write is retried with bounded backoff instead of
+ * being reported as a durability failure. The retry covers ONLY the transient
+ * sharing errnos: a permanent errno (a missing directory, a permissions problem)
+ * is thrown on the FIRST attempt, and an exhausted transient still ends in the
+ * named `CAMPAIGN_CLAIM_WRITE_FAILED` refusal below — so no retry can ever turn
+ * a write that is truly impossible into "this approval was free".
  */
+const RENAME_RETRY_ATTEMPTS = 5;
+const RENAME_RETRY_BASE_MS = 50;
+
+/** Windows `MoveFileEx` reports a momentary sharing conflict as EPERM/EACCES; a
+ *  busy volume reports EBUSY. None of them means "the target is corrupt" or
+ *  "the caller may never write here". */
+function isTransientRenameError(err: unknown): boolean {
+  const code = (err as { code?: string } | null)?.code;
+  return code === "EPERM" || code === "EACCES" || code === "EBUSY";
+}
+
+/** `rename`, retried ONLY for transient sharing violations (see above). */
+async function renameWithTransientRetry(from: string, to: string): Promise<void> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await rename(from, to);
+      return;
+    } catch (err) {
+      if (attempt >= RENAME_RETRY_ATTEMPTS || !isTransientRenameError(err)) throw err;
+      await new Promise((resolve) => setTimeout(resolve, RENAME_RETRY_BASE_MS * attempt));
+    }
+  }
+}
+
 async function writeClaimAtomic(campaignId: string, next: R97CampaignClaim): Promise<void> {
   const target = claimPathFor(campaignId);
   const tmp = `${target}.tmp-${process.pid}-${newLockToken()}`;
   try {
     await writeFile(tmp, `${JSON.stringify(next, null, 2)}\n`, "utf8");
-    await rename(tmp, target);
+    await renameWithTransientRetry(tmp, target);
   } catch (err) {
     // Clean up ONLY our own unique temp file. The committed anchor at `target` is
     // never touched on this path, so a failed write cannot destroy the last good
