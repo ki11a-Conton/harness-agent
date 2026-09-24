@@ -938,15 +938,16 @@ jobs:
       #    generator finally 结算、允许丢失根目录重新领取、把正式时钟改回快照、恢复
       #    verdict 覆盖、断开当前 unit 的取消."                          (A7)
       #
-      # TWELVE mutations now: T6's five, plus one per counterexample A1–A6 closed, plus
-      # A1's SECOND — the worker-level settlement-failure branch. That branch was the
-      # one residual gap A7 left open ("A1 的 worker 级 settlement-failure 分支未被测试
-      # 覆盖", §9.9/§9.10): the channel layer proved the settlement fails, but nothing
-      # proved the WORKER refuses to refund and refuses to report a success when it
-      # does. Each mutation is APPLIED to the real production source, the test bound to
-      # it is run, and that test MUST go RED. Without this, a suite that passes while
-      # every mutation goes undetected looks identical to a suite that would catch a
-      # real regression.
+      # THIRTEEN mutations now: T6's five, plus one per counterexample A1–A6 closed,
+      # plus A1's SECOND — the worker-level settlement-failure branch (that branch was
+      # the one residual gap A7 left open: "A1 的 worker 级 settlement-failure 分支未被
+      # 测试覆盖", §9.9/§9.10 — the channel layer proved the settlement fails, but
+      # nothing proved the WORKER refuses to refund and refuses to report a success
+      # when it does), plus N2's child-runner-outside-driver-identity, the counterexample
+      # for finding F2. Each mutation is APPLIED to the real production source, the test
+      # bound to it is run, and that test MUST go RED. Without this, a suite that passes
+      # while every mutation goes undetected looks identical to a suite that would catch
+      # a real regression.
       #
       # A CAUGHT mutation requires a FAILED TEST, not merely a non-zero exit: the gate
       # refuses a build failure, a collection error and an unrelated timeout, so a
@@ -961,7 +962,7 @@ jobs:
       # `continue-on-error` is NOT set: a mutation that escapes is a real finding
       # about the suite and must fail the job.
       # -----------------------------------------------------------------------
-      - name: Prove the suite CATCHES the twelve anti-cheat mutations (T6's five + A7/A1's seven)
+      - name: Prove the suite CATCHES the thirteen anti-cheat mutations (T6's five + A7/A1's seven + N2's one)
         run: node scripts/e4/r97-mutation-check.mjs --out .ci/r97-r98/mutation-report.json
 
       # -----------------------------------------------------------------------
