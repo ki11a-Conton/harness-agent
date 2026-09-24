@@ -2116,12 +2116,14 @@ reading these recorded causes, never by clearing the tree to make the red disapp
 
 ### 9.8 CI status: run 35972462139 on the published head `d46cf6c`
 
-> **SUPERSEDED.** The text below records the state as it stood *before* this round was
-> published: `HEAD` was `735c22a`, the work was uncommitted, and CI was `NOT_RUN`. The round
-> was subsequently **committed and pushed** — `d46cf6c` is now `origin/main`'s tip — and the
-> workflow ran. The measured result of that run is recorded in §9.8d; this section is left as
-> written then rather than rewritten, so the "missing action" it named can be checked against
-> what was actually done.
+> **SUPERSEDED — and the run it describes is now explained.** The text below records the state
+> as it stood *before* this round was published: `HEAD` was `735c22a`, the work was
+> uncommitted, and CI was `NOT_RUN`. The round was subsequently **committed and pushed** —
+> `d46cf6c` became `origin/main`'s tip — and the workflow ran. That run (35972462139) failed
+> the mutation step on both platforms for a reason that had nothing to do with the round's
+> code: **§9.8d** diagnoses it and fixes it, and **§9.8e** records the green re-run at
+> `4295caf`. This section is left as written then rather than rewritten, so the "missing
+> action" it named can be checked against what was actually done.
 
 Plan §A7 怎么做 8 asks for a real run containing the final code, test and workflow changes,
 on both platforms, with run ID, head SHA, attempt, artifact names and step status. **That
@@ -2421,6 +2423,43 @@ only a 20-line tail and that mutation's failing-test line was truncated out. Its
 fully explained by the same ANSI cause (all twelve share the identical rejection sentence), and
 it is CAUGHT locally, but the artifact alone does not prove it — so it is recorded as
 not-judgeable rather than counted as recovered.
+
+### 9.8e CI run 35974959143: the published head is GREEN on both platforms
+
+After the ANSI fix (`4295caf`), the workflow ran again and **every job passed on both
+platforms**. This closes the `NOT_RUN` that §9.8 recorded and the regression §9.8d diagnosed.
+
+| Field | Value |
+| --- | --- |
+| Run | [35974959143](https://github.com/ki11a-Conton/harness-agent/actions/runs/35974959143) |
+| Head SHA | `4295caf70d095a8020533c181165b56e815af583` (= `origin/main`) |
+| Attempt | 1 |
+| Conclusion | **success** (7/7 jobs) |
+
+| Job | Conclusion |
+| --- | --- |
+| `install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest)` | success |
+| `install · typecheck · test · build · benchmark-smoke · audit (windows-latest)` | success |
+| `r97-r98 closed loop (ubuntu-latest)` | **success** |
+| `r97-r98 closed loop (windows-latest)` | **success** |
+| `coverage gate (ubuntu)` | success |
+| `offline cold-start (ubuntu)` | success |
+| `release attestation (P38-12)` | success |
+
+**The mutation gate, read from the two uploaded artifacts** (not from the job's green tick):
+
+| Artifact | `ok` | caught | T6 | A7 | `treeRestored` | platform |
+| --- | --- | --- | --- | --- | --- | --- |
+| `r97-r98-closed-loop-ubuntu-latest-4295caf…-35974959143-attempt-1` | true | **12/12** | 5/5 | 7/7 | true | linux |
+| `r97-r98-closed-loop-windows-latest-4295caf…-35974959143-attempt-1` | true | **12/12** | 5/5 | 7/7 | true | win32 |
+
+The offline closed-loop suite reported **20 files, 555 passed (555)** on ubuntu-latest, so the
+new worker-level settlement case and the six `G10` ledger cases run inside the must-run suite on
+a real runner, on both platforms — not only on this development host.
+
+That is the round's acceptance evidence: the A1 worker-level gap is closed, the twelve
+mutations are caught by their bound tests on both platforms, and the working tree is verified
+restored by the gate itself.
 
 ### 9.9 A7 in the plan's required delivery format
 
