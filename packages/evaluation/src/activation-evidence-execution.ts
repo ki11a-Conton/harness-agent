@@ -22,12 +22,14 @@
 import { createHash } from "node:crypto";
 import {
   createActivationRecorderV2,
+  guidanceBlockDigest,
   validateActivationV2,
   aggregateActivationV2,
   ACTIVATION_EVIDENCE_V2_SCHEMA_VERSION,
   type ActivationEventV2,
   type ActivationMechanism,
   type ActivationEvidenceType,
+  type ActivationPayloadV2,
   type ActivationValidationResultV2,
   type ActivationAggregationV2,
 } from "./activation-evidence-v2.js";
@@ -56,6 +58,11 @@ export interface ActivationEvidenceExecutionInput {
   /** Whether this case is ELIGIBLE for the candidate's mechanism (from the
    *  case contract + wiring), not from the candidate name. */
   eligible: boolean;
+  /** P2: the resolved arm's approved prompt-additions digest (sha256 of the
+   *  authoritative strategy text). When present, a prompt-guidance event's
+   *  digest MUST equal it, so activation is bound to the real model-visible
+   *  bytes rather than a self-reported label. */
+  approvedPromptAdditionsDigest?: string;
 }
 
 export interface ActivationEvidenceExecutionResult {
@@ -109,6 +116,27 @@ export function buildActivationEvidenceFromSignalsV2(
   for (const signal of input.signals) {
     const mapped = SIGNAL_MAP[signal.type];
     if (mapped === undefined) continue; // unknown signal — never fabricate an event
+
+    // P2: prompt-guidance activation is a digest of the ACTUAL injected block
+    // bytes (captured at the real model-request boundary), never the old fixed
+    // {guidance:"…"} label. `blockText` is consumed here to derive the digest
+    // and is NOT copied into the event/artifact (no raw prompt is persisted).
+    let payload: ActivationPayloadV2;
+    if (mapped.mechanism === "prompt-guidance") {
+      const blockText = typeof signal.payload?.blockText === "string" ? signal.payload.blockText : "";
+      const guidanceVersion = typeof signal.payload?.guidanceVersion === "string" ? signal.payload.guidanceVersion : "";
+      payload = {
+        digest: blockText.length > 0 ? guidanceBlockDigest(blockText) : "",
+        guidanceVersion,
+        blockLength: blockText.length,
+      };
+    } else {
+      payload = {
+        digest: payloadDigest(signal.payload),
+        ...(mapped.mechanism === "memory" ? { entryCount: entryCountOf(signal.payload) } : {}),
+      };
+    }
+
     const event: ActivationEventV2 = {
       eventId: `${input.caseId}:${input.armId}:r${input.repetition}:${signal.type}:${seq}`,
       schemaVersion: ACTIVATION_EVIDENCE_V2_SCHEMA_VERSION,
@@ -121,10 +149,7 @@ export function buildActivationEvidenceFromSignalsV2(
         attempt: input.attempt,
         repetition: input.repetition,
       },
-      payload: {
-        digest: payloadDigest(signal.payload),
-        ...(mapped.mechanism === "memory" ? { entryCount: entryCountOf(signal.payload) } : {}),
-      },
+      payload,
     };
     recorder.record(event);
     seq += 1;
@@ -134,6 +159,9 @@ export function buildActivationEvidenceFromSignalsV2(
   const validation = validateActivationV2(events, {
     expectedCandidateId: input.candidateId,
     expectedArmId: input.armId,
+    ...(input.approvedPromptAdditionsDigest !== undefined
+      ? { approvedPromptAdditionsDigest: input.approvedPromptAdditionsDigest }
+      : {}),
   });
   const aggregation = aggregateActivationV2(
     events,

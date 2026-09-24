@@ -25,7 +25,16 @@
  * legacy compat; this module is the promotion-grade path.
  */
 
+import { createHash } from "node:crypto";
+
 export const ACTIVATION_EVIDENCE_V2_SCHEMA_VERSION = "2.0.0";
+
+/** sha256 over the ACTUAL injected prompt-guidance block bytes. Body of a
+ *  prompt-guidance activation digest — a real function of what the model saw,
+ *  never a hard-coded label. */
+export function guidanceBlockDigest(blockText: string): string {
+  return createHash("sha256").update(blockText, "utf8").digest("hex");
+}
 
 // ---------------------------------------------------------------------------
 // Event schema
@@ -77,6 +86,10 @@ export interface ActivationPayloadV2 {
   budgetExhausted?: boolean;
   /** Prompt-guidance injected-block length. */
   blockLength?: number;
+  /** Prompt-guidance strategy version id (e.g. "tool-call-efficiency:v2"). A
+   *  prompt-guidance event WITHOUT this is a legacy label-only activation and
+   *  fails closed (PROMPT_GUIDANCE_UNBOUND). */
+  guidanceVersion?: string;
 }
 
 export interface ActivationEventV2 {
@@ -133,6 +146,7 @@ export type ActivationValidationCode =
   | "LINEAGE_MISMATCH"
   | "SELF_REPORTED_ACTIVATION"
   | "EMPTY_MEMORY_INJECTION"
+  | "PROMPT_GUIDANCE_UNBOUND"
   | "INVALID_MECHANISM"
   | "INVALID_EVIDENCE_TYPE";
 
@@ -176,6 +190,12 @@ export interface OutcomeLineageV2 {
  * @param opts.recomputeDigest     (event, digestSource) => sha256 — returns the
  *                                 recomputed digest; when provided, DIGEST_MISMATCH
  *                                 is detected for events carrying digestSource
+ * @param opts.approvedPromptAdditionsDigest  the arm's approved prompt-additions
+ *                                 digest (sha256 of the authoritative strategy
+ *                                 text). A prompt-guidance event's digest MUST
+ *                                 equal it, else PROMPT_GUIDANCE_UNBOUND — this
+ *                                 binds activation to the real model-visible
+ *                                 bytes, not a self-reported 64-hex label.
  */
 export function validateActivationV2(
   events: ActivationEventV2[],
@@ -185,6 +205,7 @@ export function validateActivationV2(
     outcomeLineages?: Map<string, OutcomeLineageV2[]>;
     recomputeDigest?: (event: ActivationEventV2, source: unknown) => string;
     digestSources?: Map<string, unknown>;
+    approvedPromptAdditionsDigest?: string;
   } = { expectedCandidateId: "", expectedArmId: "" },
 ): ActivationValidationResultV2 {
   const issues: ActivationValidationIssue[] = [];
@@ -254,6 +275,35 @@ export function validateActivationV2(
     // Empty memory injection while a seed exists: eligible but NOT activated.
     if (e.evidenceType === "memory-block-injected" && (e.payload.entryCount ?? 0) === 0) {
       issues.push({ code: "EMPTY_MEMORY_INJECTION", eventId: e.eventId, detail: "memory source existed but injection was empty — eligibleButNotActivated, never activated" });
+    }
+
+    // P2: a prompt-guidance event must bind the ACTUAL model-visible block, not
+    // a fixed label. Missing version, or a digest that disagrees with the
+    // approved arm's prompt-additions digest, fails closed and is never counted
+    // as activation.
+    if (e.mechanism === "prompt-guidance") {
+      const version = e.payload.guidanceVersion;
+      if (typeof version !== "string" || version.length === 0) {
+        issues.push({
+          code: "PROMPT_GUIDANCE_UNBOUND",
+          eventId: e.eventId,
+          detail: "prompt-guidance event has no guidanceVersion — legacy label-only activation is not promotion-grade",
+        });
+      } else if (opts.approvedPromptAdditionsDigest !== undefined) {
+        if (e.payload.digest !== opts.approvedPromptAdditionsDigest) {
+          issues.push({
+            code: "PROMPT_GUIDANCE_UNBOUND",
+            eventId: e.eventId,
+            detail: `injected block digest ${e.payload.digest} != approved arm prompt-additions digest ${opts.approvedPromptAdditionsDigest} — the model did not see the evaluated strategy text`,
+          });
+        }
+      } else if (opts.recomputeDigest === undefined || opts.digestSources === undefined) {
+        issues.push({
+          code: "PROMPT_GUIDANCE_UNBOUND",
+          eventId: e.eventId,
+          detail: "no approved prompt-additions digest and no recompute source — cannot bind the injected block to the evaluated arm",
+        });
+      }
     }
   }
 

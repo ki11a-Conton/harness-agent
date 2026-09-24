@@ -5,6 +5,7 @@ import {
   buildRunManifest,
   computeCandidateConfigHash,
   computeEvaluationContextHash,
+  computePromptDigest,
   computeRuntimeConfigHash,
   computeToolSetHash,
   normalizeToolSet,
@@ -274,8 +275,10 @@ describe("buildEffectiveConfig (P38.3-10)", () => {
       mcp: false,
       deferredSchema: false,
       stepBudgetCompletion: false,
+      toolCallEfficiency: false,
     },
     tools: ["read_file", "write_file", "exec"],
+    modelVisibleSystemPromptDigest: computePromptDigest("base prompt"),
   };
 
   it("baseline hash != adaptive_recovery hash", () => {
@@ -368,5 +371,35 @@ describe("buildEffectiveConfig (P38.3-10)", () => {
       },
     });
     expect(again.runtimeConfigHash).toBe(stricter.runtimeConfigHash);
+  });
+
+  it("N5/P3: baseline hash != tool_call_efficiency hash", () => {
+    const baseline = buildEffectiveConfig(BASE);
+    const tce = buildEffectiveConfig({
+      ...BASE,
+      candidate: "tool_call_efficiency_v1",
+      mechanisms: { ...BASE.mechanisms, toolCallEfficiency: true },
+      modelVisibleSystemPromptDigest: computePromptDigest("base prompt + tool-call efficiency guidance"),
+    });
+    expect(baseline.runtimeConfigHash).not.toBe(tce.runtimeConfigHash);
+  });
+
+  it("N5/P3: editing the strategy text (same candidate id) changes the effective-config hash", () => {
+    // The mechanism flag and the candidate id are IDENTICAL — only the
+    // model-visible prompt bytes differ. The recorded identity MUST move.
+    const original = buildEffectiveConfig({
+      ...BASE,
+      candidate: "tool_call_efficiency_v1",
+      mechanisms: { ...BASE.mechanisms, toolCallEfficiency: true },
+      modelVisibleSystemPromptDigest: computePromptDigest("base prompt + STRATEGY-A"),
+    });
+    const edited = buildEffectiveConfig({
+      ...BASE,
+      candidate: "tool_call_efficiency_v1",
+      mechanisms: { ...BASE.mechanisms, toolCallEfficiency: true },
+      modelVisibleSystemPromptDigest: computePromptDigest("base prompt + STRATEGY-B"),
+    });
+    expect(edited.modelVisibleSystemPromptDigest).not.toBe(original.modelVisibleSystemPromptDigest);
+    expect(edited.runtimeConfigHash).not.toBe(original.runtimeConfigHash);
   });
 });

@@ -30,7 +30,7 @@ import {
  */
 describe("N5 tool_call_efficiency_v1 — agent-strategy challenger", () => {
   it("guidance text + digest are deterministic and distinct from budget guidance (no-op guard)", () => {
-    expect(TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION).toBe("tool-call-efficiency:v1");
+    expect(TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION).toBe("tool-call-efficiency:v2");
     expect(TOOL_CALL_EFFICIENCY_GUIDANCE_V1.length).toBeGreaterThan(0);
     // Forbidden no-op condition (mechanism-contract): the text must NOT be a
     // copy of the budget guidance — otherwise it is the rejected mechanism again.
@@ -101,8 +101,14 @@ describe("N5 tool_call_efficiency_v1 — agent-strategy challenger", () => {
       attempt: 1,
       repetition: 1,
       eligible: true,
+      // P2: the signal carries the ACTUAL injected block bytes, so the digest is
+      // bound to what the model saw; the approved arm digest must match.
+      approvedPromptAdditionsDigest: toolCallEfficiencyGuidanceDigest(),
       signals: [
-        { type: "tool_call_efficiency_guidance_injected", payload: { guidance: "tool-call-efficiency-v1" } },
+        {
+          type: "tool_call_efficiency_guidance_injected",
+          payload: { guidanceVersion: TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION, blockText: TOOL_CALL_EFFICIENCY_GUIDANCE_V1 },
+        },
       ],
     });
     expect(result.validation.ok).toBe(true);
@@ -110,8 +116,21 @@ describe("N5 tool_call_efficiency_v1 — agent-strategy challenger", () => {
     const event = result.events[0]!;
     expect(event.mechanism).toBe("prompt-guidance");
     expect(event.evidenceType).toBe("prompt-guidance-injected");
-    expect(event.payload.digest).toMatch(/^[0-9a-f]{64}$/);
+    expect(event.payload.digest).toBe(toolCallEfficiencyGuidanceDigest());
     expect(result.aggregation.activated).toBe(1);
+  });
+
+  it("P4: the guidance states the REAL counter relationship and allows legitimate retries", () => {
+    const text = TOOL_CALL_EFFICIENCY_GUIDANCE_V1;
+    // The v1 text claimed tool calls and model calls were 1:1, disproved by the
+    // historical counts (reg-08 30 model calls / 39 tool calls; ho-10 30 / 42).
+    expect(text).not.toContain("every tool call you issue spends one");
+    expect(text).toContain("MODEL CALLS, not tool calls");
+    // The over-broad "a tool failing twice is permanently off" rule is gone;
+    // a retry after fixing the cause is explicitly allowed.
+    expect(text).not.toContain("If the same tool fails twice, stop retrying it");
+    expect(text).toContain("re-running the test command");
+    expect(text).toContain("unless it changed");
   });
 
   it("regression guard: the mechanism is OFF for every other candidate", () => {

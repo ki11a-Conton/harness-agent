@@ -92,9 +92,21 @@ export interface BenchmarkEffectiveConfig {
     deferredSchema: boolean;
     /** E1-13: step-budget completion guidance injected into the system prompt. */
     stepBudgetCompletion: boolean;
+    /** N5/P3: tool-call efficiency guidance injected into the system prompt.
+     *  Recorded so the mechanism that changed the model-visible prompt is part
+     *  of the effective config identity (and its hash). */
+    toolCallEfficiency: boolean;
   };
   /** Effective model-visible tool set (normalized, sorted). */
   tools: string[];
+  /**
+   * N5/P3: sha256 over the EXACT model-visible system-prompt bytes for this run
+   * (base benchmark prompt + any injected guidance). Distinct in purpose from
+   * `toolSetHash` and `runtimeConfigHash`: this binds the run-provenance record
+   * to the prompt the model actually saw, so editing the strategy text under the
+   * SAME candidate id changes the recorded identity instead of being invisible.
+   */
+  modelVisibleSystemPromptDigest: string;
   /**
    * E4-R86 (H2): the loop-detection (identical-call stall) threshold in force.
    * Recorded so a change to stall detection is visible in the effective config
@@ -214,6 +226,17 @@ export async function buildRunManifest(opts: BuildRunManifestOptions): Promise<R
  */
 export function computeRuntimeConfigHash(config: unknown): string {
   return createHash("sha256").update(stableStringify(config)).digest("hex");
+}
+
+/**
+ * N5/P3: sha256 over the raw prompt bytes (utf8), NOT a stable-serialization of
+ * a container. Used for `modelVisibleSystemPromptDigest` so the digest is a
+ * direct function of the exact text the model received — editing one byte
+ * changes it. Deliberately separate from `computeRuntimeConfigHash` (which
+ * hashes a config object): the two domains are never conflated.
+ */
+export function computePromptDigest(prompt: string): string {
+  return createHash("sha256").update(prompt, "utf8").digest("hex");
 }
 
 /** Deterministic key-ordered serialization (Q-5 stable serialization). */

@@ -46,6 +46,9 @@ export interface ChampionHarnessConfig {
   completionPolicy?: string;
   /** Whether bundle/completion guidance is injected. */
   budgetAwareCompletion?: boolean;
+  /** N5/P1: whether the tool-call-efficiency guidance is injected. Mutually
+   *  exclusive with `budgetAwareCompletion` (both occupy `completionGuidance`). */
+  toolCallEfficiency?: boolean;
   /** Runtime mechanisms digest for audit. */
   runtimeDigest: string;
 }
@@ -107,6 +110,13 @@ export function championHarnessConfigFromProfile(
   if (rc.budgetAwareCompletion) {
     config.completionPolicy = "budget_aware";
     config.budgetAwareCompletion = true;
+  }
+
+  // N5/P1: the tool-call-efficiency guidance is a real install requirement —
+  // carry it so the production application installs (and verifies) it rather
+  // than recording a flags-only PROVEN.
+  if (rc.toolCallEfficiency) {
+    config.toolCallEfficiency = true;
   }
 
   return config;

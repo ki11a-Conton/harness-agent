@@ -6,8 +6,17 @@ import { ScriptedModelProvider } from "@ar/model";
 import { makeEventId, makeSessionId } from "@ar/contracts";
 import type { ModelEvent, ModelProvider, ModelRef, ModelRequest, ProviderConfig } from "@ar/contracts";
 import type { EvalOutcome } from "@ar/evaluation";
-import { TOOL_CALL_EFFICIENCY_GUIDANCE_V1, BUDGET_AWARE_COMPLETION_GUIDANCE_V1 } from "@ar/evaluation";
-import { assertWorkspaceIsolated, effectiveFeaturesFor, runBenchmarkCommand, type PreflightIdentityFacts } from "./benchmark-command.js";
+import { TOOL_CALL_EFFICIENCY_GUIDANCE_V1, TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION, BUDGET_AWARE_COMPLETION_GUIDANCE_V1, toolCallEfficiencyGuidanceDigest, computePromptDigest, computeRuntimeConfigHash, getArmFactory } from "@ar/evaluation";
+import {
+  assertWorkspaceIsolated,
+  effectiveFeaturesFor,
+  runBenchmarkCommand,
+  BENCHMARK_SYSTEM_PROMPT,
+  benchmarkModelVisibleSystemPrompt,
+  runtimeConfigForHash,
+  type BenchmarkCommandOptions,
+  type PreflightIdentityFacts,
+} from "./benchmark-command.js";
 
 /** E4-R13 (N03): deterministic identity facts for preflight tests — a plan
  *  without a bound identity cannot be authorized, so every preflight call in
@@ -1026,6 +1035,106 @@ describe("E3-02: paired promotion path (real PairedExperimentExecutor)", () => {
     expect(guidanceEvent.evidenceType).toBe("prompt-guidance-injected");
     expect(cand.activationEvidenceV2.validation.ok).toBe(true);
     expect(cand.activationEvidenceV2.aggregation.activated).toBeGreaterThanOrEqual(1);
+  });
+
+  it("P2: activation evidence digest binds the REAL model-visible block bytes", async () => {
+    const root = await makePairCases();
+    const provider = new ScriptedModelProvider(Array.from({ length: 16 }, () => ScriptedModelProvider.text("done")));
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--candidate", "tool_call_efficiency_v1", "--allow-insecure-local-benchmark", "--out", join(root, "out")],
+      provider,
+    );
+    expect(result.exitCode).toBe(0);
+
+    const { readFile } = await import("node:fs/promises");
+    const artifact = JSON.parse(await readFile(join(root, "out", "paired-experiment.json"), "utf8"));
+
+    // The candidate's activation digest is the sha256 of the injected block —
+    // identical to the approved arm's prompt-additions digest. The old
+    // label-only {guidance:"tool-call-efficiency-v1"} digest is a DIFFERENT
+    // value and must never be what gets recorded.
+    const cand = artifact.finalizedPairs[0].candidate.outcome;
+    const ev = cand.activationEvidenceV2.events.find(
+      (e: { mechanism: string }) => e.mechanism === "prompt-guidance",
+    );
+    expect(ev).toBeDefined();
+    expect(ev.payload.digest).toBe(toolCallEfficiencyGuidanceDigest());
+    expect(ev.payload.guidanceVersion).toBe(TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION);
+    expect(ev.payload.blockLength).toBe(TOOL_CALL_EFFICIENCY_GUIDANCE_V1.length);
+    expect(cand.activationEvidenceV2.validation.ok).toBe(true);
+
+    // The BASELINE arm never carries this candidate's guidance event.
+    const baseline = artifact.finalizedPairs[0].baseline.outcome;
+    const baselineGuidance = (baseline.activationEvidenceV2?.events ?? []).find(
+      (e: { mechanism: string }) => e.mechanism === "prompt-guidance",
+    );
+    expect(baselineGuidance).toBeUndefined();
+  });
+
+  it("P3: the run identity hash covers the EXACT model-visible prompt bytes (not just the candidate id)", () => {
+    const mk = (candidate?: string): BenchmarkCommandOptions =>
+      ({ suite: "regression", candidate } as unknown as BenchmarkCommandOptions);
+    const baseline = runtimeConfigForHash(mk(), 32000);
+    const cand = runtimeConfigForHash(mk("tool_call_efficiency_v1"), 32000);
+    const budget = runtimeConfigForHash(mk("budget_aware_completion_v1"), 32000);
+
+    // The prompt recorded in the run identity is the SAME builder the real
+    // request uses — the strategy bytes are inside the hashed domain.
+    expect(baseline.systemPrompt).toBe(BENCHMARK_SYSTEM_PROMPT);
+    expect(cand.systemPrompt).toBe(BENCHMARK_SYSTEM_PROMPT + TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
+    expect(budget.systemPrompt).toBe(BENCHMARK_SYSTEM_PROMPT + BUDGET_AWARE_COMPLETION_GUIDANCE_V1);
+    expect((cand.mechanisms as Record<string, boolean>).toolCallEfficiency).toBe(true);
+    expect((baseline.mechanisms as Record<string, boolean>).toolCallEfficiency).toBe(false);
+    expect(computeRuntimeConfigHash(cand)).not.toBe(computeRuntimeConfigHash(baseline));
+    // Baseline never gains the new strategy; budget-aware keeps its own text.
+    expect(String(baseline.systemPrompt)).not.toContain(TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
+    expect(String(budget.systemPrompt)).not.toContain(TOOL_CALL_EFFICIENCY_GUIDANCE_V1);
+  });
+
+  it("P3: manifest prompt digest is a pure function of the real request's system prompt", async () => {
+    const root = await makePairCases();
+    const seen: ModelRequest[] = [];
+    const inner = new ScriptedModelProvider(Array.from({ length: 16 }, () => ScriptedModelProvider.text("done")));
+    const capturing: ModelProvider = {
+      id: inner.id,
+      listModels: () => inner.listModels(),
+      createClient(model: ModelRef, config: ProviderConfig) {
+        const client = inner.createClient(model, config);
+        return {
+          generate: async function* (request: ModelRequest, signal: AbortSignal) {
+            seen.push(request);
+            yield* client.generate(request, signal);
+          },
+        };
+      },
+    };
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--candidate", "tool_call_efficiency_v1", "--allow-insecure-local-benchmark", "--out", join(root, "out")],
+      capturing,
+    );
+    expect(result.exitCode).toBe(0);
+
+    // The identity the manifest records for this candidate run.
+    const identityPrompt = benchmarkModelVisibleSystemPrompt(
+      getArmFactory().resolveRuntimeMechanisms("tool_call_efficiency_v1"),
+    );
+    const manifestPromptDigest = computePromptDigest(identityPrompt);
+
+    // The REAL candidate request carries those exact bytes as a contiguous
+    // block, so the recorded digest is reproducible from a captured request.
+    const candidateRequests = seen.filter((r) => (r.system ?? "").includes(TOOL_CALL_EFFICIENCY_GUIDANCE_V1));
+    expect(candidateRequests.length).toBeGreaterThanOrEqual(1);
+    for (const r of candidateRequests) {
+      expect(r.system ?? "").toContain(identityPrompt);
+    }
+    // Baseline requests never carry the identity prompt (they get no strategy).
+    const baselineRequests = seen.filter((r) => !(r.system ?? "").includes(TOOL_CALL_EFFICIENCY_GUIDANCE_V1));
+    expect(baselineRequests.length).toBeGreaterThanOrEqual(1);
+    for (const r of baselineRequests) {
+      expect(r.system ?? "").not.toContain(identityPrompt);
+    }
+    // One byte of drift in the strategy surface changes the recorded digest.
+    expect(computePromptDigest(`${identityPrompt}x`)).not.toBe(manifestPromptDigest);
   });
 
   it("E4-02: paired run emits canonical V3 in-process (no paired-to-v3.mjs), facts from execution", async () => {

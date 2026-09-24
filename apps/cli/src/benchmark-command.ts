@@ -7,7 +7,10 @@ import type {
   EventStore,
   ModelEvent,
   ModelProvider,
+  ModelRef,
+  ModelRequest,
   PermissionPolicy,
+  ProviderConfig,
   SessionId,
   TurnId,
 } from "@ar/contracts";
@@ -24,6 +27,7 @@ import {
   securityExpectationFromCase,
   buildActivationEvidenceFromSignalsV2,
   type ObservedActivationSignal,
+  type ObservedActivationSignalType,
   buildV3ArtifactsFromPaired,
   expectedSampleKeysFromPlan,
   writeExperimentArtifactV3,
@@ -32,13 +36,16 @@ import {
   buildPairedPlan,
   buildRunManifest,
   computeRuntimeConfigHash,
+  computePromptDigest,
   computeEvaluationContextHash,
   computePairedPlanDigest,
   buildExecutionIdentityV1,
   computeExecutionIdentityDigestV1,
   caseInputFingerprintV1,
   BUDGET_AWARE_COMPLETION_GUIDANCE_V1,
+  BUDGET_AWARE_COMPLETION_GUIDANCE_VERSION,
   TOOL_CALL_EFFICIENCY_GUIDANCE_V1,
+  TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION,
   DEFAULT_DECISION_POLICY_V3,
   computeThresholdDigestV3,
   computeExecutionPlanDigest,
@@ -412,8 +419,13 @@ async function executeBenchmark(
       mcp: false,
       deferredSchema: armMechanisms.deferredSchema,
       stepBudgetCompletion: armMechanisms.budgetAwareCompletion,
+      toolCallEfficiency: armMechanisms.toolCallEfficiency,
     },
     tools: [readFileTool.name, writeFileTool.name, editFileTool.name, searchFilesTool.name, execTool.name],
+    // N5/P3: bind the effective-config identity to the EXACT model-visible
+    // prompt bytes (same builder used for the real request), so a strategy-text
+    // edit under the same candidate id changes this run's recorded identity.
+    modelVisibleSystemPromptDigest: computePromptDigest(benchmarkModelVisibleSystemPrompt(armMechanisms)),
     // E4-R86 (H2): the stall threshold is part of the effective config record
     // AND its hash — a loop-detection change must be visible in provenance.
     stallPolicy: BENCHMARK_STALL_POLICY,
@@ -1669,6 +1681,57 @@ export const BUDGET_AWARE_COMPLETION_GUIDANCE = BUDGET_AWARE_COMPLETION_GUIDANCE
  *  what is evaluated is what would be installed. */
 export const TOOL_CALL_EFFICIENCY_GUIDANCE = TOOL_CALL_EFFICIENCY_GUIDANCE_V1;
 
+/** N5/P3: the SINGLE model-visible system-prompt builder. The real model request
+ *  (runOneCase), the run manifest's effective config and `runtimeConfigForHash`
+ *  all derive the prompt through THIS function, so the bytes the model sees and
+ *  the bytes the run identity hashes can never drift apart. The two guidance
+ *  mechanisms are mutually exclusive (both occupy `completionGuidance`), so at
+ *  most one is appended. */
+export function benchmarkModelVisibleSystemPrompt(
+  mech: Pick<RuntimeMechanisms, "budgetAwareCompletion" | "toolCallEfficiency">,
+): string {
+  if (mech.budgetAwareCompletion) return BENCHMARK_SYSTEM_PROMPT + BUDGET_AWARE_COMPLETION_GUIDANCE;
+  if (mech.toolCallEfficiency) return BENCHMARK_SYSTEM_PROMPT + TOOL_CALL_EFFICIENCY_GUIDANCE;
+  return BENCHMARK_SYSTEM_PROMPT;
+}
+
+/** P2: wrap a provider so the REAL model-request boundary reports which bytes
+ *  were appended to the benchmark system prompt. Activation evidence is then a
+ *  digest of what the model actually saw — a candidate cannot claim activation
+ *  from a fixed label, and a run that never reaches the model reports none.
+ *
+ *  The runtime composes the model-visible system from context blocks, so the
+ *  guidance is located by the base prompt it follows and read up to the block
+ *  separator — the observed bytes are derived from the request, not assumed
+ *  from the constant. */
+function observeGuidanceRequest(
+  provider: ModelProvider,
+  basePrompt: string,
+  onBlock: (block: string) => void,
+): ModelProvider {
+  const BLOCK_SEPARATOR = "\n\n---\n\n";
+  return {
+    id: provider.id,
+    listModels: () => provider.listModels(),
+    createClient(model: ModelRef, config: ProviderConfig) {
+      const client = provider.createClient(model, config);
+      return {
+        generate: async function* (request: ModelRequest, signal: AbortSignal) {
+          const sys = request.system ?? "";
+          const idx = sys.indexOf(basePrompt);
+          if (idx >= 0) {
+            const rest = sys.slice(idx + basePrompt.length);
+            const sep = rest.indexOf(BLOCK_SEPARATOR);
+            const block = sep >= 0 ? rest.slice(0, sep) : rest;
+            if (block.length > 0) onBlock(block);
+          }
+          yield* client.generate(request, signal);
+        },
+      };
+    },
+  };
+}
+
 /** P38.4-7/8 — per-case provenance: the evaluation context hash (identical
  *  across baseline/challenger for a case) and the candidate configuration
  *  hash (differs when the experiment claims a challenger). Computed
@@ -1973,22 +2036,24 @@ async function runOneCase(
     // activation observation (a real wiring decision, not a name/flag claim).
     // E3-03: driven by the resolved arm.
     const budgetAwareActive = armMechanisms.budgetAwareCompletion;
-    if (budgetAwareActive && candidateId !== undefined) {
-      activationEvents.push({ type: "budget_guidance_injected", payload: { guidance: "step-budget-completion-v1" } });
-    }
     // N5: tool_call_efficiency_v1 — inject the tool-call efficiency guidance into
-    // the system prompt. The activation observation is recorded ONLY when the
-    // guidance is actually present in the model-visible prompt, so a candidate
-    // that merely flips a flag (no prompt change) can never claim activation.
+    // the system prompt.
     const toolCallEfficiencyActive = armMechanisms.toolCallEfficiency;
-    const systemPrompt = budgetAwareActive
-      ? BENCHMARK_SYSTEM_PROMPT + BUDGET_AWARE_COMPLETION_GUIDANCE
+    // P3: built through the SAME single builder the manifest identity uses.
+    const systemPrompt = benchmarkModelVisibleSystemPrompt(armMechanisms);
+
+    // P2: the guidance activation signal is produced from the REAL model-request
+    // boundary (see observeGuidanceRequest), not a fixed label. `activeGuidance`
+    // says which mechanism/version is expected; the block bytes come from what
+    // the provider actually received during the run.
+    const activeGuidance:
+      | { signal: ObservedActivationSignalType; version: string }
+      | undefined = budgetAwareActive
+      ? { signal: "budget_guidance_injected", version: BUDGET_AWARE_COMPLETION_GUIDANCE_VERSION }
       : toolCallEfficiencyActive
-        ? BENCHMARK_SYSTEM_PROMPT + TOOL_CALL_EFFICIENCY_GUIDANCE
-        : BENCHMARK_SYSTEM_PROMPT;
-    if (toolCallEfficiencyActive && !budgetAwareActive && candidateId !== undefined) {
-      activationEvents.push({ type: "tool_call_efficiency_guidance_injected", payload: { guidance: "tool-call-efficiency-v1" } });
-    }
+        ? { signal: "tool_call_efficiency_guidance_injected", version: TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION }
+        : undefined;
+    let observedGuidanceBlock: string | undefined;
 
     const agent: AgentDefinition = {
       id: newAgentId(),
@@ -2076,7 +2141,14 @@ async function runOneCase(
     const runtime = new AgentRuntime({
       store,
       events,
-      modelProvider: opts.provider,
+      // P2: observe the real model-request boundary so the prompt-guidance
+      // activation digest reflects the bytes the model actually received.
+      modelProvider:
+        activeGuidance !== undefined && candidateId !== undefined
+          ? observeGuidanceRequest(opts.provider, BENCHMARK_SYSTEM_PROMPT, (block) => {
+              if (observedGuidanceBlock === undefined) observedGuidanceBlock = block;
+            })
+          : opts.provider,
       orchestrator,
       // P23-1: the process catalog is read once per step to freeze the step
       // tool world; never consulted mid-step.
@@ -2287,6 +2359,15 @@ async function runOneCase(
     // site from the real observer signals (never from the candidate name). The
     // legacy V1 `activationEvidenceFor` is kept alongside until the V2 path
     // fully replaces it in the artifact (E4-02 in-process builder).
+    // P2: the prompt-guidance signal is emitted ONLY when the real model request
+    // carried the block; its payload carries the ACTUAL block bytes so the
+    // evidence digest is bound to what the model saw (never a fixed label).
+    if (activeGuidance !== undefined && candidateId !== undefined && observedGuidanceBlock !== undefined) {
+      activationEvents.push({
+        type: activeGuidance.signal,
+        payload: { guidanceVersion: activeGuidance.version, blockText: observedGuidanceBlock },
+      });
+    }
     const activationSignals = activationEvents.filter(
       (e): e is ObservedActivationSignal =>
         e.type === "tool_lookup_called" ||
@@ -2307,6 +2388,9 @@ async function runOneCase(
             repetition: opts.repetition ?? 1,
             signals: activationSignals,
             eligible: activationEligible,
+            ...(armMechanisms.promptAdditionsDigest !== null
+              ? { approvedPromptAdditionsDigest: armMechanisms.promptAdditionsDigest }
+              : {}),
           })
         : undefined;
 
@@ -2556,8 +2640,10 @@ async function listWorkspaceFiles(root: string): Promise<string[]> {
 /** P0-6 manifest: the runtime wiring shared by every case in this run.
  *  P38.3-10: the config MUST include the candidate and its mechanism effects
  *  (adaptive recovery, memory retrieval, deferred schema, adaptive context
- *  policy) — two behaviorally different runs must never share a hash. */
-function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudgetTokens: number): Record<string, unknown> {
+ *  policy) — two behaviorally different runs must never share a hash.
+ *  N5/P3: exported so a test can prove the EXACT model-visible prompt bytes
+ *  (built by benchmarkModelVisibleSystemPrompt) enter the run identity. */
+export function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudgetTokens: number): Record<string, unknown> {
   const candidate = opts.candidate ?? null;
   // E3-03: candidate-driven mechanism wiring from the resolved arm.
   const mech = getArmFactory().resolveRuntimeMechanisms(candidate);
@@ -2565,9 +2651,9 @@ function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudgetTokens
     benchmarkVersion: "2.0.0",
     suite: opts.suite,
     defaultBudgetTokens,
-    systemPrompt: mech.budgetAwareCompletion
-      ? BENCHMARK_SYSTEM_PROMPT + BUDGET_AWARE_COMPLETION_GUIDANCE
-      : BENCHMARK_SYSTEM_PROMPT,
+    // N5/P3: the SAME builder the real request and effective config use — a
+    // prompt-text edit (same candidate id) must change this hash.
+    systemPrompt: benchmarkModelVisibleSystemPrompt(mech),
     permissions: BENCHMARK_PERMISSIONS,
     sandbox: defaultSandboxPolicy(),
     tools: [readFileTool.name, writeFileTool.name, editFileTool.name, searchFilesTool.name, execTool.name],
@@ -2595,6 +2681,7 @@ function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudgetTokens
       mcp: false,
       deferredSchema: mech.deferredSchema,
       stepBudgetCompletion: mech.budgetAwareCompletion,
+      toolCallEfficiency: mech.toolCallEfficiency,
     },
   };
 }
