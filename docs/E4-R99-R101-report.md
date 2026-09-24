@@ -2885,10 +2885,11 @@ inheriting A7's.
 - 命令与退出码：pnpm typecheck → 0；r97-budget-ledger.test.ts →
   60 passed (60)（含 a REAL reader process ... never CORRUPT 一条）。
 - 外部模型请求数：0。
-- CI run URL / head / attempt / 两平台 job 状态：NOT_RUN（§10.3）。
+- CI run URL / head / attempt / 两平台 job 状态：run 36015197663（head `03c064a`，attempt 1），
+  七个必需 job 全绿（§10.3）。
 
 剩余问题：
-- 两平台 CI 未运行；需要先推送 13480a5（见 §10.3）。
+- 无（两平台 CI 已在 `03c064a` 全绿，见 §10.3）。
 ```
 
 ### 10.2 N2 — 实际 spawn 的 child runner 纳入批准构建身份
@@ -2933,43 +2934,54 @@ inheriting A7's.
 - 外部模型请求数：0。
 - 旧批准处理：digest 因新增入口自然改变；旧摘要与新执行字节不符时按既有门拒绝，
   必须重生计划。历史两臂的 sourceSha 未被改动。
-- CI run URL / head / attempt / 两平台 job 状态：NOT_RUN（§10.3）。
+- CI run URL / head / attempt / 两平台 job 状态：run 36015197663（head `03c064a`，attempt 1），
+  七个必需 job 全绿（§10.3）。
 
 剩余问题：
-- 两平台 CI 未运行；需要先推送 13480a5（见 §10.3）。
+- 无（两平台 CI 已在 `03c064a` 全绿，见 §10.3）。
 ```
 
-### 10.3 N3 — 同一修复提交的跨平台验收（本地已做，CI 未运行）
+### 10.3 N3 — 同一修复提交的跨平台验收（CI 已运行，两平台全绿）
 
-修复提交：`13480a5`（本地 `main`，**未推送**）。工作树 `git status --porcelain` 现存一条
-与本次工作无关的既有改动 `.trae-html-share-packages/apps/web/public/index.html.zip`
-（由 HEAD `b58dec2` 提交的构建产物在本机被 IDE 重新生成），本轮未提交、未回滚它。
+推送后的修复链（`origin/main`）：
 
-本地已实际运行的收口检查（命令 → 退出码 → 观测）：
+| SHA | 提交 | 内容 |
+| --- | --- | --- |
+| `b58dec2` | 审查基线 | 触发 N1 的 head：Ubuntu 常规测试在 `r97-campaign-lifecycle.test.ts:564` 报 `CAMPAIGN_CLAIM_CORRUPT`（run 35978421250） |
+| `13480a5` | `fix(e4-r97): N1 atomic claim anchor write + N2 spawned child runner in driver identity` | N1 原子 claim 写入 + N2 child runner 纳入 driver 构建身份 |
+| `cafd3c7` | `fix(e4-r97): retry a transient Windows rename when replacing the claim anchor` | 首次把 claim-anchor replace 的瞬时争用纳入有界重试 |
+| `03c064a` | `fix(e4-r97): widen the claim-anchor replace retry for the Windows contention tail` | 把重试预算放宽（20 次、指数退避 + 抖动），修掉 Windows 常规测试与 Windows 专用闭环的 `R98-N1` 失败 |
+
+本 head（写入本节时）：`03c064a`。
+
+本地（Linux 沙箱）实际运行的收口检查（命令 → 退出码 → 观测）：
 
 | 命令 | 退出码 | 观测 |
 | --- | --- | --- |
 | `pnpm typecheck` | 0 | `tsc -b` 全仓通过 |
 | `pnpm build` | 0 | `tsc -b` 全仓通过 |
-| `npx vitest run r97-budget-ledger / r97-campaign-lifecycle / r97-plan / r97-execution-identity / r97-mutation-check` | 0 | 198 passed (198) |
-| `node scripts/e4/r97-closed-loop.mjs --all` | 0 | setup OK · acceptance OFFLINE_ACCEPTED 6/16 · suite 561/561 · matrix 9/9 · identity OK（linux 本机） |
-| `node scripts/e4/r97-mutation-check.mjs --out …` | 0 | 13/13 CAUGHT（T6 5/5、A7 7/7、N2 1/1），treeRestored true |
-| `pnpm test`（整仓主 suite） | 1 | **6 failed / 6861 passed / 10 skipped** |
+| `npx vitest run r97-claim-anchor-rename r97-budget-ledger` | 0 | 63 passed (63)（含双进程 race 与注入 EPERM/ENOENT 的重试语义） |
+| `node scripts/e4/r97-closed-loop.mjs --all --out .ci/r97-r98 --arms-root /tmp/r97-arms` | 0 | setup OK · acceptance OFFLINE_ACCEPTED 6/16 · suite 561/561 · matrix 9/9 · identity OK |
+| `node scripts/e4/r97-mutation-check.mjs --out .ci/r97-r98/mutation-report.json` | 0 | 13/13 CAUGHT（T6 5/5、A7 7/7、N2 1/1），working tree RESTORED |
 
-`pnpm test` 的 6 条失败**全部**是本仓既有的 clean-tree 守卫，与 N1/N2 无关，也非本轮新
-引入：`benchmark-command.test.ts`（E4-R41 host-probe）、`e4-09-production-e2e.test.ts`
-（4 条 E4-09 E2E）、`e4-r55-failure-wiring.test.ts`（E4-R55）。它们的前置条件是"可证明
-干净的工作树"（生产 benchmark 拒绝在脏树上产出 promotion-eligible run），而本机工作树
-因上述既有 zip 产物为脏。这些守卫在干净 checkout 上通过——§9.7 已逐条记录其本地成因，
-且上一 head `98ac6ad` 的两平台 CI（run 35976720516）在这些守卫上全绿。
+**两平台 CI：run [36015197663](https://github.com/ki11a-Conton/harness-agent/actions/runs/36015197663)（head `03c064a`，attempt 1，run conclusion = success）。** 七个必需 job 全部 `completed / success`，无关键步骤被跳过：
 
-**两平台 CI：NOT_RUN（BLOCKED，缺 push 授权）。** 本沙箱的远端是
-`https://github.com/ki11a-Conton/harness-agent`，无 token、无 credential helper；
-`git push --dry-run` 以 `could not read Username for 'https://github.com'` 失败。
-因此无法触发 Actions。缺的动作与 §9.8 相同且此处更明确：**推送 `13480a5`，然后读取
-新产生的双平台 run 的每个必需 job 结论**（常规 Windows/Ubuntu、专用 closed-loop 两平台、
-Ubuntu coverage、Ubuntu offline cold-start、release attestation）。在这些 job 于
-`13480a5` 全绿之前，不得据本地绿灯或 98ac6ad 的历史绿灯给本 head 的发布链路背书。
+| Job | Conclusion |
+| --- | --- |
+| `install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest)` | success（含 `Unit and integration tests`） |
+| `install · typecheck · test · build · benchmark-smoke · audit (windows-latest)` | success（同上） |
+| `r97-r98 closed loop (ubuntu-latest)` | success |
+| `r97-r98 closed loop (windows-latest)` | success |
+| `coverage gate (ubuntu)` | success |
+| `offline cold-start (ubuntu)` | success |
+| `release attestation (P38-12)` | success |
+
+被跳过的步骤只有在失败时才运行的诊断（`Publish failing test names…`、两组 failure-only 上传）与平台专属步骤（Windows 的 Campaign runner self-check）；release attestation 的 `Fail job when release not ready` 未运行，即表示发布就绪判定为 ready。
+
+**这个 head 之前确实红过，且失败点随修复链移动。** run [36010819289](https://github.com/ki11a-Conton/harness-agent/actions/runs/36010819289)（head `e4ab83d`）的 Ubuntu 常规测试已绿（N1 修好了 `:564` 的 CORRUPT），但**同一 SHA 的 Windows 常规测试与 Windows 专用闭环都因 `R98-N1` 双进程 race 的 writer 收到**
+`E4-R97: CAMPAIGN_CLAIM_WRITE_FAILED … (EPERM: operation not permitted, rename …)` 而失败（step 7）。成因不是无锁读者（Windows 上每个 `node:fs` open 都带 `FILE_SHARE_DELETE`，读者无法阻塞 `MoveFileEx(REPLACE_EXISTING)`），而是新写出的临时文件上的**外部瞬时锁**（实时杀毒/索引器扫描一批新建文件）——首次预算（5 次 / ~0.5s）只压低了发生率而没压掉尾部。`03c064a` 因此改为**宽松的指数退避 + 抖动**；重试只覆盖瞬时 errno，永久 errno 仍首次即拒、重试耗尽仍落到命名拒绝 `CAMPAIGN_CLAIM_WRITE_FAILED`，故不削弱 fail-closed 语义。
+
+**范围说明**：run/job/step 结论通过带 token 的 GitHub API 读取（本会话有 token），并逐 job 审计了步骤；本节不把历史绿灯（`98ac6ad` / run 35976720516）当作本 head 的证据。
 
 ### 10.4 N4 — 真实 benchmark 证据的失败聚类（只读扫描）
 
@@ -3015,18 +3027,18 @@ verified completion 的提升必须超过预先固定的门槛，且无 regressi
 `adaptive_recovery` 重做为 v2 后被接受为 Champion C1。因此任何新挑战者必须是**不同**机制
 （工具调用效率），而不是再次调 step-budget。
 
-结论：**有真实、可追溯的失败聚类（agent_limit）与一个可证伪假设**，但 N4/N5 的正式启动
-受计划约束以 N3 完成为前置；N3 的两平台 CI 尚未运行。
+结论：**有真实、可追溯的失败聚类（agent_limit）与一个可证伪假设**，且计划的前置条件已满足
+——N3 的两平台 CI 已在 `03c064a` 全绿（§10.3）。
 
 ### 10.5 N5 — 状态
 
 ```text
 任务：N5 / 仅实现有依据的 Agent challenger，准备成对评估
 状态：DONE（离线 challenger 已实现并接线；正式付费成对评估 PAID_NOT_RUN）
-前置说明：计划要求"只有 N3 完成，才从基础设施收口进入 Agent 策略迭代"。N3 的 CI 部分因
-      本沙箱无 push 凭据仍为 NOT_RUN（§10.3）。N5 的代码实现与离线守卫不依赖 CI，
-      已在本轮完成；但 N5 的效果结论与正式成对实验仍受"需 N3 两平台 CI 绿灯"约束，
-      因此这里只宣称"候选准备完成、外部调用 0、付费实验未执行"，不宣称任何模型质量提升。
+前置说明：计划要求"只有 N3 完成，才从基础设施收口进入 Agent 策略迭代"。N3 的两平台 CI 已在
+      `03c064a` 全绿（run 36015197663，七 job 全绿，§10.3），前置条件已满足。N5 的效果结论
+      与正式成对实验仍需独立预算与授权，因此这里只宣称"候选准备完成、外部调用 0、付费实验未执行"，
+      不宣称任何模型质量提升。
 已就绪：N4（§10.4）给出聚类（agent_limit，27/59）、逐用例证据与可证伪假设；
       需避免的历史先例（budget_aware_completion_v1 已 REJECT）。
 本轮实现：tool_call_efficiency_v1（§10.7）。
@@ -3037,11 +3049,11 @@ verified completion 的提升必须超过预先固定的门槛，且无 regressi
 
 | 任务 | 状态 | 变更 SHA | 关键证据 |
 | --- | --- | --- | --- |
-| N1 | **DONE**（本地） | 13480a5 | 双进程 race 0 CORRUPT；损坏/不可写仍 fail closed；R98-N1 用例 |
-| N2 | **DONE**（本地） | 13480a5 | 6h 用例 D'≠D；mutation gate 13/13，新增 N2 反例 CAUGHT |
-| N3 | **OPEN**（本地 DONE，CI NOT_RUN/BLOCKED） | 13480a5 | typecheck/build/定向/闭环/mutation 全绿；两平台 CI 待推送 |
+| N1 | **DONE** | `13480a5` + `03c064a` | 双进程 race 0 CORRUPT；损坏/不可写仍 fail closed；R98-N1 用例；Windows 争用重试（§10.3） |
+| N2 | **DONE** | `13480a5` | 6h 用例 D'≠D；mutation gate 13/13，新增 N2 反例 CAUGHT |
+| N3 | **DONE** | `03c064a` | run [36015197663](https://github.com/ki11a-Conton/harness-agent/actions/runs/36015197663) 七 job 全绿（两平台常规、两平台闭环、coverage、cold-start、release attestation）；本地 typecheck/build/定向/闭环/mutation 全绿（§10.3） |
 | N4 | **DONE**（只读证据扫描） | — | agent_limit 27/59，逐用例证据见 §10.4 |
-| N5 | **DONE**（离线 challenger；PAID_NOT_RUN） | 93d7ba5 | tool_call_efficiency_v1：接线+激活信号+契约+离线 RED/GREEN；见 §10.7 |
+| N5 | **DONE**（离线 challenger；PAID_NOT_RUN） | `93d7ba5` | tool_call_efficiency_v1：接线+激活信号+契约+离线 RED/GREEN；见 §10.7 |
 
 外部模型请求数：**0**。所有本地放行结论均由本节的命令与退出码支持；未被触达的场景一律
 标 NOT_RUN/BLOCKED，未用"已通过"概括。
