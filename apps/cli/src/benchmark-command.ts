@@ -38,6 +38,7 @@ import {
   computeExecutionIdentityDigestV1,
   caseInputFingerprintV1,
   BUDGET_AWARE_COMPLETION_GUIDANCE_V1,
+  TOOL_CALL_EFFICIENCY_GUIDANCE_V1,
   DEFAULT_DECISION_POLICY_V3,
   computeThresholdDigestV3,
   computeExecutionPlanDigest,
@@ -1662,6 +1663,12 @@ export const BENCHMARK_SYSTEM_PROMPT = [
  *  evaluated is what gets installed. */
 export const BUDGET_AWARE_COMPLETION_GUIDANCE = BUDGET_AWARE_COMPLETION_GUIDANCE_V1;
 
+/** N5 (agent_limit cluster): tool-call efficiency guidance block — appended to
+ *  the system prompt when the tool_call_efficiency_v1 candidate is active. The
+ *  AUTHORITATIVE text lives in the strategy layer (mechanism-guidance.ts) so
+ *  what is evaluated is what would be installed. */
+export const TOOL_CALL_EFFICIENCY_GUIDANCE = TOOL_CALL_EFFICIENCY_GUIDANCE_V1;
+
 /** P38.4-7/8 — per-case provenance: the evaluation context hash (identical
  *  across baseline/challenger for a case) and the candidate configuration
  *  hash (differs when the experiment claims a challenger). Computed
@@ -1969,6 +1976,19 @@ async function runOneCase(
     if (budgetAwareActive && candidateId !== undefined) {
       activationEvents.push({ type: "budget_guidance_injected", payload: { guidance: "step-budget-completion-v1" } });
     }
+    // N5: tool_call_efficiency_v1 — inject the tool-call efficiency guidance into
+    // the system prompt. The activation observation is recorded ONLY when the
+    // guidance is actually present in the model-visible prompt, so a candidate
+    // that merely flips a flag (no prompt change) can never claim activation.
+    const toolCallEfficiencyActive = armMechanisms.toolCallEfficiency;
+    const systemPrompt = budgetAwareActive
+      ? BENCHMARK_SYSTEM_PROMPT + BUDGET_AWARE_COMPLETION_GUIDANCE
+      : toolCallEfficiencyActive
+        ? BENCHMARK_SYSTEM_PROMPT + TOOL_CALL_EFFICIENCY_GUIDANCE
+        : BENCHMARK_SYSTEM_PROMPT;
+    if (toolCallEfficiencyActive && !budgetAwareActive && candidateId !== undefined) {
+      activationEvents.push({ type: "tool_call_efficiency_guidance_injected", payload: { guidance: "tool-call-efficiency-v1" } });
+    }
 
     const agent: AgentDefinition = {
       id: newAgentId(),
@@ -1976,9 +1996,7 @@ async function runOneCase(
       description: "benchmark agent",
       mode: "primary",
       model: { providerId: opts.provider.id, modelId: opts.modelId },
-      systemPrompt: budgetAwareActive
-        ? BENCHMARK_SYSTEM_PROMPT + BUDGET_AWARE_COMPLETION_GUIDANCE
-        : BENCHMARK_SYSTEM_PROMPT,
+      systemPrompt,
       // P4-10: the benchmark agent exposes the SAME tool profile as the
       // production harness (PRODUCTION_TOOL_NAMES — the P0-5 single source).
       // Benchmark must never run with a narrower/different tool set than
@@ -2274,7 +2292,8 @@ async function runOneCase(
         e.type === "tool_lookup_called" ||
         e.type === "recovery_decision" ||
         e.type === "memory_retrieved" ||
-        e.type === "budget_guidance_injected",
+        e.type === "budget_guidance_injected" ||
+        e.type === "tool_call_efficiency_guidance_injected",
     );
     const hasSeedMemory = ((caseDef as { sources?: { memory?: unknown[] } }).sources?.memory?.length ?? 0) > 0;
     const activationEligible = armMechanisms.memoryRetrieval ? hasSeedMemory : true;

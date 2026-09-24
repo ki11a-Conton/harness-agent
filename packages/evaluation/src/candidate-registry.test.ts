@@ -21,6 +21,7 @@ describe("CandidateRegistry (E1-03)", () => {
       "adaptive_scheduler",
       "budget_aware_completion_v1",
       "adaptive_recovery_v2",
+      "tool_call_efficiency_v1",
     ]);
   });
 
@@ -34,7 +35,7 @@ describe("CandidateRegistry (E1-03)", () => {
 
   it("marks wired candidates experimental and validates them", () => {
     const registry = createCandidateRegistry();
-    for (const id of ["adaptive_recovery", "adaptive_recovery_v2", "tool_selector_deferred_schema", "memory_retrieval", "adaptive_context_policy", "delegation"]) {
+    for (const id of ["adaptive_recovery", "adaptive_recovery_v2", "tool_selector_deferred_schema", "memory_retrieval", "adaptive_context_policy", "delegation", "tool_call_efficiency_v1"]) {
       expect(registry.find(id)!.status).toBe("experimental");
       expect(() => registry.validateActive(id)).not.toThrow();
     }
@@ -60,7 +61,7 @@ describe("CandidateRegistry (E1-03)", () => {
     const registry = createCandidateRegistry();
     const baseline = registry.resolveBaseline();
     // Every experimental candidate must produce a real semantic delta.
-    for (const id of ["adaptive_recovery", "adaptive_recovery_v2", "tool_selector_deferred_schema", "memory_retrieval", "adaptive_context_policy", "delegation", "budget_aware_completion_v1"]) {
+    for (const id of ["adaptive_recovery", "adaptive_recovery_v2", "tool_selector_deferred_schema", "memory_retrieval", "adaptive_context_policy", "delegation", "budget_aware_completion_v1", "tool_call_efficiency_v1"]) {
       const resolved = registry.resolve(id);
       expect(resolved.hasSemanticDelta).toBe(true);
       expect(resolved.semanticDigest).not.toBe(baseline.semanticDigest);

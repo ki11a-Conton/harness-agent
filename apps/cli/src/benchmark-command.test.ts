@@ -4,8 +4,9 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ScriptedModelProvider } from "@ar/model";
 import { makeEventId, makeSessionId } from "@ar/contracts";
-import type { ModelEvent, ModelProvider, ModelRef, ProviderConfig } from "@ar/contracts";
+import type { ModelEvent, ModelProvider, ModelRef, ModelRequest, ProviderConfig } from "@ar/contracts";
 import type { EvalOutcome } from "@ar/evaluation";
+import { TOOL_CALL_EFFICIENCY_GUIDANCE_V1, BUDGET_AWARE_COMPLETION_GUIDANCE_V1 } from "@ar/evaluation";
 import { assertWorkspaceIsolated, effectiveFeaturesFor, runBenchmarkCommand, type PreflightIdentityFacts } from "./benchmark-command.js";
 
 /** E4-R13 (N03): deterministic identity facts for preflight tests — a plan
@@ -972,6 +973,57 @@ describe("E3-02: paired promotion path (real PairedExperimentExecutor)", () => {
     expect(Number.isInteger(ev.lineage.repetition)).toBe(true);
     expect(ev.lineage.repetition).toBeGreaterThanOrEqual(0);
     // Validation passes and the case counts as activated (not a name claim).
+    expect(cand.activationEvidenceV2.validation.ok).toBe(true);
+    expect(cand.activationEvidenceV2.aggregation.activated).toBeGreaterThanOrEqual(1);
+  });
+
+  it("N5: tool_call_efficiency_v1 injects its guidance into the model-visible prompt (candidate only)", async () => {
+    const root = await makePairCases();
+    // Capture the REAL model-visible request each arm sends (offline, zero cost).
+    const seen: ModelRequest[] = [];
+    const inner = new ScriptedModelProvider(Array.from({ length: 16 }, () => ScriptedModelProvider.text("done")));
+    const capturing: ModelProvider = {
+      id: inner.id,
+      listModels: () => inner.listModels(),
+      createClient(model: ModelRef, config: ProviderConfig) {
+        const client = inner.createClient(model, config);
+        return {
+          generate: async function* (request: ModelRequest, signal: AbortSignal) {
+            seen.push(request);
+            yield* client.generate(request, signal);
+          },
+        };
+      },
+    };
+    const result = await runBenchmarkCommand(
+      ["--cases", join(root, "cases"), "--candidate", "tool_call_efficiency_v1", "--allow-insecure-local-benchmark", "--out", join(root, "out")],
+      capturing,
+    );
+    expect(result.exitCode).toBe(0);
+
+    const { readFile } = await import("node:fs/promises");
+    const artifact = JSON.parse(await readFile(join(root, "out", "paired-experiment.json"), "utf8"));
+    const cand = artifact.finalizedPairs[0].candidate.outcome;
+
+    // The strategy block is really present in the model-visible system prompt
+    // for the candidate arm, and ABSENT for the baseline arm.
+    const candidatePrompts = seen.map((r) => r.system ?? "").filter((s) => s.includes(TOOL_CALL_EFFICIENCY_GUIDANCE_V1));
+    const baselinePrompts = seen.map((r) => r.system ?? "").filter((s) => !s.includes(TOOL_CALL_EFFICIENCY_GUIDANCE_V1));
+    expect(candidatePrompts.length).toBeGreaterThanOrEqual(1);
+    expect(baselinePrompts.length).toBeGreaterThanOrEqual(1);
+    // Mutual exclusion with the rejected budget mechanism: never both at once.
+    for (const r of seen) {
+      const s = r.system ?? "";
+      expect(s.includes(TOOL_CALL_EFFICIENCY_GUIDANCE_V1) && s.includes(BUDGET_AWARE_COMPLETION_GUIDANCE_V1)).toBe(false);
+    }
+
+    // Activation evidence comes from the real fact site (prompt-guidance), not a name.
+    expect(cand.activationEvidenceV2).toBeDefined();
+    const guidanceEvent = cand.activationEvidenceV2.events.find(
+      (e: { mechanism: string }) => e.mechanism === "prompt-guidance",
+    );
+    expect(guidanceEvent).toBeDefined();
+    expect(guidanceEvent.evidenceType).toBe("prompt-guidance-injected");
     expect(cand.activationEvidenceV2.validation.ok).toBe(true);
     expect(cand.activationEvidenceV2.aggregation.activated).toBeGreaterThanOrEqual(1);
   });

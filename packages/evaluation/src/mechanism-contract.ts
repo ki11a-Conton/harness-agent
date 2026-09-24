@@ -130,6 +130,16 @@ const CONTRACTS: Record<string, MechanismContract> = {
     requiredActivationEvents: ["tool_lookup.called"],
     forbiddenNoOpConditions: ["advertised schema set identical to baseline"],
   },
+  tool_call_efficiency_v1: {
+    schemaVersion: MECHANISM_CONTRACT_SCHEMA_VERSION,
+    candidateId: "tool_call_efficiency_v1",
+    modelVisibleSurface: "tool-call efficiency guidance present in the final model-visible messages",
+    eligibilityRule: "case with a bounded iteration budget where tool calls may fail (long task)",
+    minEligibleCases: 5,
+    expectedFailureCluster: "agent_limit (iterations burned on failed tool calls)",
+    requiredActivationEvents: ["tool-call-efficiency-guidance-injected"],
+    forbiddenNoOpConditions: ["guidance only logged in CLI, absent from model-visible messages", "text identical to budget_aware_completion_v1 guidance"],
+  },
 };
 
 export function mechanismContractFor(candidateId: string): MechanismContract | undefined {

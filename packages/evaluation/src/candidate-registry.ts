@@ -71,6 +71,7 @@ const BASELINE_CONFIG: Record<string, unknown> = {
   toolSelector: undefined,
   scheduler: undefined,
   reviewer: undefined,
+  toolCallEfficiency: undefined,
 };
 
 const CANDIDATES: CandidateRegistration[] = [
@@ -172,6 +173,18 @@ const CANDIDATES: CandidateRegistration[] = [
     // marks the semantic switch; the digest differs from both baseline and v1.
     enabledPatch: { adaptiveRecovery: "conservative-v1" },
     disabledPatch: { adaptiveRecovery: undefined },
+  },
+  {
+    id: "tool_call_efficiency_v1",
+    description: "tool-call efficiency strategy — system prompt instructs the agent to stop retrying failing tool calls and to gather reads in fewer calls, targeting the agent_limit cluster where iterations are burned on failed tool calls (N5)",
+    status: "experimental",
+    layer: "agent-strategy",
+    // Agent-strategy layer: the real effect is a systemPrompt injection in the
+    // benchmark runner (tool-call efficiency guidance). The config field marks
+    // the semantic switch; the digest changes so a baseline run and a candidate
+    // run are never the same configuration.
+    enabledPatch: { toolCallEfficiency: "v1" },
+    disabledPatch: { toolCallEfficiency: undefined },
   },
 ];
 

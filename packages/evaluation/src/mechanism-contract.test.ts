@@ -111,6 +111,7 @@ describe("E2-14 mechanism contract readiness", () => {
         delegation: el(["d1", "d2", "d3"]),
         budget_aware_completion_v1: el(["b1", "b2", "b3", "b4", "b5"]),
         tool_selector_deferred_schema: el(["t1", "t2", "t3"]),
+        tool_call_efficiency_v1: el(["e1", "e2", "e3", "e4", "e5"]),
       },
       {
         adaptive_recovery_v2: ev({ adaptive_recovery_v2: true }, { adaptive_recovery_v2: { "recovery.decided": true } }),
@@ -118,12 +119,18 @@ describe("E2-14 mechanism contract readiness", () => {
         delegation: ev({}),
         budget_aware_completion_v1: ev({ budget_aware_completion_v1: true }, { budget_aware_completion_v1: { "budget-guidance-injected": true } }),
         tool_selector_deferred_schema: ev({ tool_selector_deferred_schema: true }, { tool_selector_deferred_schema: { "tool_lookup.called": true } }),
+        tool_call_efficiency_v1: ev(
+          { tool_call_efficiency_v1: true },
+          { tool_call_efficiency_v1: { "tool-call-efficiency-guidance-injected": true } },
+        ),
       },
     );
-    expect(matrix.length).toBe(5);
+    expect(matrix.length).toBe(6);
     const table = readinessMatrixTable(matrix);
     const ar2 = table.find((r) => r.candidateId === "adaptive_recovery_v2")!;
     expect(ar2.readiness).toBe("READY");
+    // N5: the tool-call efficiency challenger is causally ready on eligible cases.
+    expect(table.find((r) => r.candidateId === "tool_call_efficiency_v1")!.readiness).toBe("READY");
     // provider-zero proof: no helper here ever calls a provider.
     expect(mechanismContractFor("adaptive_recovery_v2")!.requiredActivationEvents).toContain("recovery.decided");
   });

@@ -31,7 +31,7 @@
 import { createHash } from "node:crypto";
 import { getCandidateRegistry, type CandidateRegistration } from "./candidate-registry.js";
 import { stableStringify } from "./manifest.js";
-import { budgetAwareCompletionGuidanceDigest } from "./mechanism-guidance.js";
+import { budgetAwareCompletionGuidanceDigest, toolCallEfficiencyGuidanceDigest } from "./mechanism-guidance.js";
 
 export const ARM_FACTORY_SCHEMA_VERSION = "1.0.0";
 export const ARM_FACTORY_POLICY_VERSION = "e3-03-arm-v1";
@@ -118,6 +118,8 @@ export interface RuntimeMechanisms {
   adaptiveContextDynamic: number;
   /** Budget-aware completion guidance injected into the system prompt. */
   budgetAwareCompletion: boolean;
+  /** Tool-call efficiency guidance injected into the system prompt (N5). */
+  toolCallEfficiency: boolean;
   /** Digest of prompt/system additions (null = none). */
   promptAdditionsDigest: string | null;
   /** Policy version that produced these mechanisms. */
@@ -181,6 +183,7 @@ const BASELINE_RUNTIME_MECHANISMS: RuntimeMechanisms = {
   deferredSchema: false,
   adaptiveContextDynamic: 0,
   budgetAwareCompletion: false,
+  toolCallEfficiency: false,
   promptAdditionsDigest: null,
   policyVersion: ARM_FACTORY_POLICY_VERSION,
 };
@@ -265,6 +268,20 @@ export function wireCandidateMechanism(reg: CandidateRegistration): MechanismWir
           promptAdditionsDigest: budgetAwareCompletionGuidanceDigest(),
         }),
         declaredPaths: ["harnessConfig.completionPolicy"],
+      };
+    case "tool_call_efficiency_v1":
+      return {
+        constructorId: "completion:tool-call-efficiency-guide-v1",
+        apply: (config) => ({ ...config, toolCallEfficiency: "v1" }),
+        isActive: (config) => config.toolCallEfficiency === "v1",
+        applyRuntime: (base) => ({
+          ...base,
+          toolCallEfficiency: true,
+          // Binds the ACTUAL strategy text to the arm digest / execution
+          // identity, exactly like budget_aware_completion_v1 (E4-R16 N12).
+          promptAdditionsDigest: toolCallEfficiencyGuidanceDigest(),
+        }),
+        declaredPaths: ["harnessConfig.toolCallEfficiency"],
       };
     default:
       // Unsupported or not-yet-wired candidates fail closed.

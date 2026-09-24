@@ -27,6 +27,7 @@ export type ActivationReasonCode =
   | "context_dynamic_allocated"
   | "context_dynamic_used"
   | "budget_guidance_injected"
+  | "tool_call_efficiency_guidance_injected"
   | "eligible_case"
   | "not_eligible_no_seed"
   | "not_eligible_no_mechanism"
@@ -329,6 +330,26 @@ export function activationEvidenceFor(
         reasonCodes: injections.length > 0 ? ["budget_guidance_injected"] : ["activation_zero"],
         baselineMechanismDigest: "benchmark-standard-prompt",
         candidateMechanismDigest: "benchmark-prompt+step-budget-guidance",
+        summary: { injectionCount: injections.length },
+      };
+    }
+    case "tool_call_efficiency_v1": {
+      // N5: activation is observed when the tool-call efficiency guidance was
+      // actually injected into the agent's system prompt (a real wiring decision
+      // made by the benchmark runner for this candidate). The baseline digest is
+      // the standard benchmark prompt; the candidate digest reflects the
+      // tool-call efficiency guidance block.
+      const injections = activationEvents.filter((e) => e.type === "tool_call_efficiency_guidance_injected");
+      return {
+        schemaVersion: ACTIVATION_EVIDENCE_SCHEMA_VERSION,
+        candidateId,
+        caseId: caseDef.id,
+        eligible: true,
+        activated: injections.length > 0,
+        activationCount: injections.length,
+        reasonCodes: injections.length > 0 ? ["tool_call_efficiency_guidance_injected"] : ["activation_zero"],
+        baselineMechanismDigest: "benchmark-standard-prompt",
+        candidateMechanismDigest: "benchmark-prompt+tool-call-efficiency-guidance",
         summary: { injectionCount: injections.length },
       };
     }

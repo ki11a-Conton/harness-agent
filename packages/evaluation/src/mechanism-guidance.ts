@@ -42,3 +42,43 @@ export const BUDGET_AWARE_COMPLETION_GUIDANCE_V1 = [
 export function budgetAwareCompletionGuidanceDigest(): string {
   return createHash("sha256").update(BUDGET_AWARE_COMPLETION_GUIDANCE_V1, "utf8").digest("hex");
 }
+
+// ---------------------------------------------------------------------------
+// N5 (agent_limit cluster) — tool-call efficiency strategy.
+//
+// Evidence (docs/E4-R99-R101-report.md §10.4): the largest real failure cluster is
+// `agent_limit` (27/59), where every failing case hits the 30-model-call cap with
+// a high number of FAILED tool calls (reg-08 tool_failures=14, reg-06/reg-02=12,
+// ho-02=11, ho-10=9, stress-huge-logs=9). The iterations are consumed retrying
+// tools that fail rather than making progress, so the task never converges.
+//
+// This is a DIFFERENT mechanism from budget_aware_completion_v1 (which was tried
+// and REJECTED — netDelta 0): that one changed HOW the agent spends its last
+// iterations (converge + verify); this one attacks WHY the iterations are wasted
+// in the first place (redundant / repeating failing tool calls).
+// ---------------------------------------------------------------------------
+
+/** Version identity of the tool-call efficiency strategy implementation. */
+export const TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION = "tool-call-efficiency:v1";
+
+/** The SINGLE authoritative strategy text for tool_call_efficiency_v1. */
+export const TOOL_CALL_EFFICIENCY_GUIDANCE_V1 = [
+  "",
+  "Tool-call efficiency guidance:",
+  "- You have a limited number of iterations per turn (typically 30 model calls),",
+  "  and every tool call you issue spends one.",
+  "- Never repeat a tool call that just failed with the same arguments. Change the",
+  "  arguments, or change the approach.",
+  "- If the same tool fails twice, stop retrying it. Switch to a different tool or",
+  "  a different plan instead of issuing a third attempt.",
+  "- Read every file you need in as few calls as possible, and do not re-read a",
+  "  file you have already read unless it changed.",
+  "- Make each edit complete before moving on, so the verification command you run",
+  "  near the end reflects finished work rather than a half-applied change.",
+].join("\n");
+
+/** sha256 over the ACTUAL tool-call efficiency strategy text — binds the arm
+ *  digest, the execution identity and the promotion target to the real text. */
+export function toolCallEfficiencyGuidanceDigest(): string {
+  return createHash("sha256").update(TOOL_CALL_EFFICIENCY_GUIDANCE_V1, "utf8").digest("hex");
+}
