@@ -2461,6 +2461,14 @@ That is the round's acceptance evidence: the A1 worker-level gap is closed, the 
 mutations are caught by their bound tests on both platforms, and the working tree is verified
 restored by the gate itself.
 
+**The final head's own run.** §9.8e's record above is documentation-only after `4295caf`, so the
+tip was re-run to confirm no earlier run is being borrowed: run
+[35976720516](https://github.com/ki11a-Conton/harness-agent/actions/runs/35976720516) at head
+`98ac6ad12d203191ff8f21d8ed199d9cbcdfee2f` (= `origin/main`, attempt 1) also concluded
+**success**, with both `r97-r98 closed loop` jobs green and no failing job on either platform.
+Unlike the earlier §8.11 caveat, this is a run OF the cited head rather than an inference from a
+later one.
+
 ### 9.9 A7 in the plan's required delivery format
 
 ```text
