@@ -93,29 +93,23 @@ jobs:
           pnpm test 2>&1 | tee .ci/test-report.log
 
       # -----------------------------------------------------------------------
-      # TEMP (N3 diagnostics) — publish the failing test names into the PUBLIC
-      # job summary AND as check annotations, so the Windows regression can be
-      # read without an authenticated log download. Remove once diagnosed.
+      # N3 DIAGNOSTICS — publish the failing test names into the PUBLIC job
+      # summary and as check annotations, so a cross-platform regression can be
+      # read without an authenticated log download.
+      #
+      # The diagnostic itself is a NODE script invoked with `node`, with no
+      # `shell:` key at all, so it behaves the same under bash and under pwsh.
+      # That is required rather than cosmetic: `r97-closed-loop.test.ts`
+      # ("uses NO bash step in the closed-loop job") FAILS the suite if any step
+      # in that job names `shell: bash`, and it caught an earlier revision of
+      # this diagnostic (measured locally: 1 failed, 23 passed in
+      # `r97-closed-loop.test.ts`). The `verify` job may use bash, but the same
+      # Node script is used in both places so the two platforms cannot diverge.
       # -----------------------------------------------------------------------
-      - name: TEMP N3 diagnostics (verify)
+      - name: Publish failing test names to the public job summary
         if: failure()
         continue-on-error: true
-        shell: bash
-        run: |
-          {
-            echo '### TEMP N3 diagnostics (verify)'
-            echo ''
-            echo '```text'
-            if [ -f .ci/test-report.log ]; then
-              grep -aE 'Failed Tests|Test Files|Tests +[0-9]+|FAIL |AssertionError|Error:' .ci/test-report.log | head -120
-            else
-              echo '(no .ci/test-report.log)'
-            fi
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          grep -aE 'FAIL |Failed Tests|AssertionError' .ci/test-report.log 2>/dev/null | head -8 | while IFS= read -r l; do
-            l="${l//%/%25}"; l="${l//$'\r'/}"; echo "::error::$l"
-          done
+        run: node scripts/e4/r97-ci-diagnostics.mjs --label verify --log .ci/test-report.log
 
       - name: Build
         run: pnpm build
@@ -911,41 +905,28 @@ jobs:
       # the command is the same Node invocation, which is the point.
       # -----------------------------------------------------------------------
       - name: Run the offline closed loop (setup -> acceptance -> suite -> matrix -> identity)
-        shell: bash
-        run: |
-          mkdir -p .ci/r97-r98
-          node scripts/e4/r97-closed-loop.mjs --all --out .ci/r97-r98 --arms-root "${{ runner.temp }}/r97-arms" 2>&1 | tee .ci/r97-r98/closed-loop.out
+        run: node scripts/e4/r97-closed-loop.mjs --all --out .ci/r97-r98 --arms-root "${{ runner.temp }}/r97-arms"
 
       # -----------------------------------------------------------------------
-      # TEMP (N3 diagnostics) — publish the closed-loop phase failure and the
-      # failing test names into the PUBLIC job summary / annotations. Remove
-      # once the Windows regression is diagnosed.
+      # N3 DIAGNOSTICS — publish the closed-loop phase failure and the failing
+      # test names into the PUBLIC job summary / annotations, so a cross-platform
+      # regression can be read without an authenticated log download.
+      #
+      # NOTE THE ABSENT `shell:` KEY, which is deliberate and test-pinned: this
+      # job must not name the bash shell on ANY step (the Windows leg has no
+      # bash), and `r97-closed-loop.test.ts` fails the suite if it does. An
+      # earlier revision of this diagnostic named that shell and was caught by
+      # exactly that test (measured locally: `1 failed | 23 passed` in
+      # `r97-closed-loop.test.ts`). That test is a RAW substring check over this
+      # whole job body, so this comment must not spell the pinned literal out
+      # either — not even in prose. The step also no longer needs the `tee` pipe
+      # the earlier revision used: the runner already writes its own
+      # `r97-r98.json` (structured vitest report) and `r97-r98-suite.log`.
       # -----------------------------------------------------------------------
-      - name: TEMP N3 diagnostics (closed loop)
+      - name: Publish the closed-loop phase + failing tests to the public summary
         if: failure()
         continue-on-error: true
-        shell: bash
-        run: |
-          {
-            echo '### TEMP N3 diagnostics (closed loop)'
-            echo ''
-            echo '```text'
-            for f in .ci/r97-r98/closed-loop.out .ci/r97-r98/r97-r98-suite.log; do
-              if [ -f "$f" ]; then
-                echo "--- $f ---"
-                grep -aE 'phase|ok|code|Failed Tests|Test Files|Tests +[0-9]+|FAIL |AssertionError|Error:' "$f" | head -120
-              else
-                echo "(no $f)"
-              fi
-            done
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          {
-            grep -aE 'FAIL |Failed Tests|AssertionError|"phase"' .ci/r97-r98/closed-loop.out 2>/dev/null
-            grep -aE 'FAIL |Failed Tests|AssertionError' .ci/r97-r98/r97-r98-suite.log 2>/dev/null
-          } | head -8 | while IFS= read -r l; do
-            l="${l//%/%25}"; l="${l//$'\r'/}"; echo "::error::$l"
-          done
+        run: node scripts/e4/r97-ci-diagnostics.mjs --label closed-loop --out .ci/r97-r98
 
       # -----------------------------------------------------------------------
       # THE ANTI-CHEAT MUTATIONS (plan §T6 怎么做 7, extended by §A7 怎么做 3).
