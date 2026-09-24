@@ -3120,3 +3120,43 @@ holdout 的隐藏 expected/verifier。
 `e4-09-production-e2e` 4 条、`e4-r55-failure-wiring`）；它们的前置条件是"可证明的干净工作树"，
 提交本轮的实现/文档后干净树上全绿（上表）。这与 §10.3 记录的现象同源。
 
+### 10.8 P5/P6 — 预注册严格成对实验（零调用）与收口
+
+**P5 — 预注册工具调用效率成对实验**（实施提交 `30d56f7`，provider 调用 **0**）
+
+P1–P4 已证明挑战者能被**真实安装**（champion application 在生产启动时注入策略文本，
+`champion-application-p1.test.ts` 断言模型可见 prompt 以 `TOOL_CALL_EFFICIENCY_GUIDANCE_V1`
+结尾、移除安装即 `applicationFailed`）、其**激活**绑定到实际提示字节（
+`activation-evidence-v2.ts`：prompt-guidance 事件必须携带 `guidanceVersion`，且注入块摘要须等于
+被批准臂的 prompt-additions 摘要，否则 `PROMPT_GUIDANCE_UNBOUND` fail closed），且策略文本在
+P4 修正为**真实资源语义**（迭代上限计的是 model calls 而非 tool calls；停止规则收窄为
+"同参数 + 状态未变"，修复原因后的重试被明确允许）。
+
+P5 在**花钱之前**关闭下一个缺口：实验本身必须先被**预注册**为一个确定性、严格、预算有界的
+成对方案，使日后的付费运行无法被悄悄改写（不同 case 集、不同重复数、不同臂序，或欠预算）。
+
+新增（**纯函数**：无 provider、无 key、无网络、无 I/O）：
+
+| 文件 | 作用 |
+| --- | --- |
+| `packages/evaluation/src/tool-call-efficiency-preregistration.ts` | `buildToolCallEfficiencyPreregistration()` 复用既有 `buildPairedPlan` / `preflightPairedPlan` / `dryRunPairedPlan`（不重新实现）；把**候选 + 机制契约**、将被注入的**策略文本摘要**（`promptAdditionsDigest`）、冻结的**合格 case 列表**、**严格成对计划摘要**（`2 × repetitions × cases`）与**预算上限**绑进一个 `preregistrationDigest`。`providerCalls` 结构性为 0（构造器从不接收/构造 provider）。 |
+| `packages/evaluation/src/tool-call-efficiency-preregistration.test.ts` | 9 用例：严格成对计数与 AB/BA 平衡、零调用、未授权 preflight 拒绝 vs 授权 preflight 放行、策略文本摘要绑定、合格 case 少于契约下限与欠预算均 fail closed。 |
+| `packages/evaluation/src/index.ts` | 导出新模块（`export * from "./tool-call-efficiency-preregistration.js"`）。 |
+
+**P6 — 新 HEAD 双平台门禁与报告收口**
+
+本地门禁（在已提交的干净工作树上运行；命令 → 退出码 → 观测）：
+
+| 命令 | 退出码 | 观测 |
+| --- | --- | --- |
+| `pnpm typecheck` | 0 | `tsc -b` 全仓通过 |
+| `pnpm test` | 0 | **367 files / 6899 passed / 10 skipped / 0 failed** |
+| `pnpm docs:verify` | 0 | ALL CHECKS PASS |
+
+双平台门禁（Windows/Ubuntu GitHub Actions）：**NOT_RUN**。本沙箱**无 git push 凭证**
+（`gh` 未登录、无 token / credential helper），无法把本轮实现的 `main` 推到远程以触发 CI；
+缺少的动作是 **push 到远程 `main`**。不把本地绿灯写成"两平台成功"。
+
+**P7 — 真实成对评价**：**BLOCKED / PAID_NOT_RUN**。需要用户另行明确批准具体预算后才能执行；
+本轮外部付费模型调用为 **0**，未用离线 scripted 结果支撑任何模型能力结论。
+
