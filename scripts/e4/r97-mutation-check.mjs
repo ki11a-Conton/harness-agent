@@ -590,6 +590,29 @@ function runOne(mutation) {
 }
 
 /**
+ * Remove ANSI SGR/CSI escape sequences from a string.
+ *
+ * WHY THIS EXISTS (MEASURED, CI run 35972462139): vitest colors its reporter when
+ * stdout looks like a terminal, and a GitHub runner makes it look like one. The
+ * verbose reporter's failing-test line is then
+ *
+ *   "\u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m packages/… > … > <name>"
+ *
+ * so any matcher anchored on a line START (like `/^\s*FAIL\s+\S/m`) silently stops
+ * matching — the gate reported 0/12 caught on BOTH platforms while every mutated test
+ * was in fact failing correctly. Locally vitest emits no color (stdout is not a TTY),
+ * which is exactly why this was invisible before the push.
+ *
+ * Only escape sequences are removed; the surrounding text is untouched, so a stripped
+ * and an unstripped run produce the same verdict.
+ */
+export function stripAnsi(text) {
+  // CSI sequences (SGR color, cursor moves) and the two-character ESC forms.
+  // eslint-disable-next-line no-control-regex
+  return String(text).replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, "").replace(/\u001b[@-Z\\-_]/g, "");
+}
+
+/**
  * Decide whether a mutated run really CAUGHT the defect (plan §A7 怎么做 4).
  *
  *   "断言对应测试真正 RED，不接受语法错误、构建失败或 unrelated timeout 冒充捕获了
@@ -612,9 +635,28 @@ function runOne(mutation) {
  */
 export function classifyCatch(opts) {
   const { exitCode, output, testFilter } = opts;
-  const failedTestMarker = /^\s*FAIL\s+\S/m.test(output);
-  const namesTheFilteredTest = output.includes(testFilter);
-  const collectionError = /No test files found|No tests found|Failed to load|Cannot find module/i.test(output);
+  // ---- THE PER-TEST FAILED MARKER MUST BE FOUND IN COLORED OUTPUT TOO. -------
+  //
+  // MEASURED DEFECT (CI run 35972462139, BOTH platforms, 0/12 "caught"): vitest
+  // colors its reporter when it believes stdout is a terminal, and on a GitHub
+  // runner it does. The verbose reporter's failing-test line then arrives as
+  //
+  //   "\u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m packages/… > … > <name>"
+  //
+  // — the literal `FAIL` is preceded by ANSI SGR sequences, so `/^\s*FAIL\s+\S/m`
+  // did not match, `failedTestMarker` was false, and EVERY mutation was reported as
+  // "exited 1 with no per-test FAILED marker … an infrastructure abort or a timeout".
+  // The suite was not broken: the stored output for `same-build-for-both-arms` shows
+  // the correct assertion failing (`expected 1 to be 2`) on the correct test.
+  //
+  // This is why the failure was invisible locally and appeared only in CI: vitest
+  // omits color when stdout is not a TTY, so the same gate passed on this machine.
+  // The ANSI sequences are stripped before matching, so the marker is recognized
+  // identically in a colored and an uncolored run.
+  const plain = stripAnsi(output);
+  const failedTestMarker = /^\s*FAIL\s+\S/m.test(plain);
+  const namesTheFilteredTest = plain.includes(testFilter);
+  const collectionError = /No test files found|No tests found|Failed to load|Cannot find module/i.test(plain);
   const failedTestNamed = failedTestMarker && namesTheFilteredTest;
   if (exitCode === 0) {
     return {
@@ -685,7 +727,7 @@ function build() {
 }
 
 /** Run a command, returning `{ code, out }`. A non-zero exit is data. */
-function run(cmd, args, timeout) {
+function run(cmd, args, timeout, extraEnv) {
   try {
     const out = execFileSync(cmd, args, {
       cwd: REPO_ROOT,
@@ -694,6 +736,7 @@ function run(cmd, args, timeout) {
       timeout,
       maxBuffer: 128 * 1024 * 1024,
       shell: false,
+      env: extraEnv === undefined ? process.env : { ...process.env, ...extraEnv },
     });
     return { code: 0, out: String(out) };
   } catch (err) {
@@ -704,12 +747,29 @@ function run(cmd, args, timeout) {
   }
 }
 
-/** Run vitest's real `.mjs` entry directly (no `.cmd` shim, which needs a shell). */
+/**
+ * Run vitest's real `.mjs` entry directly (no `.cmd` shim, which needs a shell).
+ *
+ * COLOR IS FORCED OFF, AND THAT IS A CORRECTNESS REQUIREMENT RATHER THAN TIDINESS.
+ * CI run 35972462139 reported `0/12` caught on BOTH platforms: on a GitHub runner
+ * vitest believes stdout is a terminal, colors the reporter, and the verbose failing
+ * line becomes `"\u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m …"` — which the
+ * line-anchored `/^\s*FAIL\s+\S/m` did not match, so every mutation was rejected as
+ * "an infrastructure abort or a timeout" while the mutated tests were failing
+ * correctly. Locally stdout is not a TTY, so no color was emitted and the gate passed;
+ * the defect was only reachable in CI.
+ *
+ * `classifyCatch` also strips ANSI (belt and braces, and it is pinned by a test), but
+ * the PARSER must not depend on a heuristic the environment can flip. `NO_COLOR` is
+ * the conventional opt-out vitest honours; `FORCE_COLOR=0` covers the other direction.
+ * With both set the reporter's text is the same bytes on a laptop and on a runner.
+ */
 function runVitest(suite, testFilter) {
   return run(
     process.execPath,
     [join(REPO_ROOT, "node_modules", "vitest", "vitest.mjs"), "run", suite, "-t", testFilter, "--reporter=verbose"],
     900_000,
+    { NO_COLOR: "1", FORCE_COLOR: "0" },
   );
 }
 

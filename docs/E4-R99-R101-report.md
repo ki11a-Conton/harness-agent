@@ -2114,7 +2114,14 @@ are stored verbatim, so the cause is the artifact's claim, not a guess. `git sta
 forbidden by this plan's hard rules, so the clean-tree precondition is established by
 reading these recorded causes, never by clearing the tree to make the red disappear.
 
-### 9.8 CI status: `NOT_RUN`, and the exact missing action
+### 9.8 CI status: run 35972462139 on the published head `d46cf6c`
+
+> **SUPERSEDED.** The text below records the state as it stood *before* this round was
+> published: `HEAD` was `735c22a`, the work was uncommitted, and CI was `NOT_RUN`. The round
+> was subsequently **committed and pushed** — `d46cf6c` is now `origin/main`'s tip — and the
+> workflow ran. The measured result of that run is recorded in §9.8d; this section is left as
+> written then rather than rewritten, so the "missing action" it named can be checked against
+> what was actually done.
 
 Plan §A7 怎么做 8 asks for a real run containing the final code, test and workflow changes,
 on both platforms, with run ID, head SHA, attempt, artifact names and step status. **That
@@ -2351,6 +2358,69 @@ tests (`X7`, 26 passing in that file).
 
 The `bypass-budget` MISS in the first run was collateral of the broken tree; it is CAUGHT on the
 repaired tree, both alone and in the full run.
+
+### 9.8d CI run 35972462139: the mutation gate's ANSI-color regression, and its fix
+
+The first run of the published head `d46cf6c` is **run 35972462139**. Five of the seven
+jobs passed on both platforms — `install · typecheck · test · build · benchmark-smoke · audit`
+(ubuntu **and** windows), `coverage gate`, `offline cold-start`, `release attestation`. The
+`r97-r98 closed loop` job failed on **both** platforms, and only at one step:
+
+```
+r101-mutation: 0/12 mutation(s) CAUGHT by their tests (T6 0/5, A7 0/7), working tree RESTORED
+##[error]Process completed with exit code 1.
+```
+
+**The suite was not broken — the gate's PARSER was.** Every mutation was rejected with the
+same sentence: *"the run exited 1 with no per-test FAILED marker, which is what an
+infrastructure abort or a timeout looks like"*. The artifact the runner uploaded
+(`mutation-report.json`, artifact 10796314985) contains the reporter's output byte for byte,
+and for `same-build-for-both-arms` it shows the **correct** assertion failing on the
+**correct** test:
+
+```
+AssertionError: expected 1 to be 2 // Object.is equality
+ ❯ packages/evaluation/src/r97-plan.test.ts:268:84
+```
+
+**Root cause.** On a GitHub runner vitest believes stdout is a terminal and colors the
+reporter, so the verbose failing-test line arrives as
+
+```
+"\u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m packages/evaluation/src/r97-plan.test.ts > … > <name>"
+```
+
+— the literal `FAIL` is preceded by ANSI SGR sequences, so the line-anchored
+`/^\s*FAIL\s+\S/m` did not match, `failedTestMarker` was false, and **every** mutation was
+reported as an infrastructure abort. Measured on the artifact: the regex returns `false` on
+the stored colored line and `true` after stripping. This is why it passed locally and failed
+only in CI: vitest omits color when stdout is not a TTY, so the gate on this machine never saw
+the shape the runner produces.
+
+**The fix, in two layers, because a parser must not depend on a heuristic the environment can
+flip.**
+
+1. `classifyCatch` now strips ANSI escapes (`stripAnsi`) before matching the marker, the
+   filter text and the collection-error signature. Belt and braces: it makes an already-captured
+   colored log re-judgeable.
+2. `runVitest` now runs the child with `NO_COLOR=1` and `FORCE_COLOR=0`, so the reporter's text
+   is the same bytes on a laptop and on a runner. This is the layer that makes the gate
+   deterministic rather than merely tolerant.
+
+**Evidence.**
+
+| Check | Result |
+| --- | --- |
+| Replay of the REAL CI artifact through the fixed `classifyCatch` | **11/11 judgeable mutations CAUGHT** (was 0/12); `a6` is not judgeable because its failing line fell outside the gate's own 20-line tail |
+| Local `node scripts/e4/r97-mutation-check.mjs` after the fix | **EXIT 0 — 12/12 CAUGHT (T6 5/5, A7 7/7)**, `treeRestored: true` |
+| New tests pinning the regression | 3 added (colored RED counts; `stripAnsi` behaviour; a colored abort is still refused) — `r97-mutation-check.test.ts` **29 passed (29)** |
+| Local reproduction attempt | vitest emits **no** color on this host even with `FORCE_COLOR=3` (measured `hasAnsi=false`, 14,046 bytes), which is exactly why the artifact — not a simulation — is the proof |
+
+Honest limit: the a6 mutation could not be re-judged from the artifact because the gate stores
+only a 20-line tail and that mutation's failing-test line was truncated out. Its `0/12` in CI is
+fully explained by the same ANSI cause (all twelve share the identical rejection sentence), and
+it is CAUGHT locally, but the artifact alone does not prove it — so it is recorded as
+not-judgeable rather than counted as recovered.
 
 ### 9.9 A7 in the plan's required delivery format
 

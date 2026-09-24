@@ -71,6 +71,12 @@ const mod = (await import(SCRIPT)) as {
    */
   isPreexistingMutation: (opts: { findCount: number; replaceCount: number }) => boolean;
   preexistingMutationReason: (mutation: { file: string }, replaceCount: number) => string;
+  /**
+   * E4-R101-A (A8): the ANSI stripper. CI run 35972462139 reported 0/12 caught on both
+   * platforms because vitest colors its reporter on a runner and the line-anchored
+   * FAILED marker stopped matching. Exported so the colored case is pinned by a test.
+   */
+  stripAnsi: (text: string) => string;
 };
 describe("E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations", () => {
   it("carries a version so a report can be tied to the gate that produced it", () => {
@@ -354,6 +360,55 @@ describe("E4-R101-A (A7) X6: only a real FAILED TEST counts as catching the muta
     const v = mod.classifyCatch({
       exitCode: 1,
       output: `Error: timed out after 900000ms\n${FILTER}`,
+      testFilter: FILTER,
+    });
+    expect(v.caught).toBe(false);
+    expect(v.reason).toMatch(/no per-test FAILED marker/);
+  });
+
+  it("counts a genuine RED when the reporter COLORED its output (CI run 35972462139)", () => {
+    // MEASURED REGRESSION, both platforms, 0/12 "caught". On a GitHub runner vitest
+    // colors the reporter, so the failing-test line arrives as
+    //
+    //   "\u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m packages/… > … > <name>"
+    //
+    // and the line-anchored `/^\s*FAIL\s+\S/m` stopped matching. Every mutation was
+    // then rejected as "exited 1 with no per-test FAILED marker … an infrastructure
+    // abort or a timeout" even though the mutated test was failing correctly. Locally
+    // stdout is not a TTY, vitest emits no color, and the gate passed — which is why
+    // the push was needed to see it.
+    //
+    // This is the EXACT byte sequence the CI artifact's mutation-report.json stored
+    // for `same-build-for-both-arms` (ESC[41m ESC[1m " FAIL " ESC[22m ESC[49m).
+    const COLORED = [
+      "\u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m packages/evaluation/src/r97-plan.test.ts > E4-R97 P3: readiness refuses a plan that is not executable as written > " +
+        FILTER,
+      "\u001b[31mAssertionError\u001b[39m: expected 1 to be 2 // Object.is equality",
+      "\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[31m1 failed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m",
+    ].join("\n");
+    const v = mod.classifyCatch({ exitCode: 1, output: COLORED, testFilter: FILTER });
+    expect(v.caught, "a colored per-test FAILED marker must still count as caught").toBe(true);
+    expect(v.failedTestNamed).toBe(true);
+    expect(v.reason).toBeNull();
+  });
+
+  it("strips ANSI escapes without touching the surrounding text", () => {
+    expect(typeof mod.stripAnsi, "the gate exposes no ANSI stripper").toBe("function");
+    expect(mod.stripAnsi("\u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m x")).toBe(" FAIL  x");
+    // A string with no escapes is returned unchanged.
+    expect(mod.stripAnsi("plain text")).toBe("plain text");
+    // Stripping is what makes a colored and an uncolored run agree.
+    const colored = "\u001b[1m FAIL \u001b[22m file > name";
+    expect(/^\s*FAIL\s+\S/m.test(mod.stripAnsi(colored))).toBe(true);
+    expect(/^\s*FAIL\s+\S/m.test(colored)).toBe(false);
+  });
+
+  it("still REFUSES an infrastructure abort even when the output is colored", () => {
+    // The stripper must not weaken the rule it exists to preserve: a colored abort
+    // with no per-test marker is still not a catch.
+    const v = mod.classifyCatch({
+      exitCode: 1,
+      output: "\u001b[31mError\u001b[39m: timed out after 900000ms\n" + FILTER,
       testFilter: FILTER,
     });
     expect(v.caught).toBe(false);
