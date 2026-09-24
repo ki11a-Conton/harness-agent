@@ -275,43 +275,56 @@ export async function readR97CampaignClaim(campaignId: string): Promise<R97Campa
  * explicit rather than implied.
  *
  * WINDOWS AVAILABILITY SEMANTICS (plan §N1 怎么做 2: "覆盖 Windows 可用语义").
- * The replace is not merely "atomic" on Windows, it is also CONTENDED: a reader
- * that has `claimPathFor(...)` open at the instant the writer calls
- * `MoveFileEx(REPLACE_EXISTING)` makes it fail with a TRANSIENT sharing
- * violation — `EPERM`/`EACCES`/`EBUSY`, not a corruption and not a permanent
- * denial. Measured on the Windows CI leg of the N1 race test (real reader +
- * real writer): the writer's rename returned
- * `EPERM: operation not permitted, rename '…tmp-…' -> '…claim-….json'` while the
- * reader held the anchor for a few microseconds, and the write was refused even
- * though the location was perfectly writable. Because a reader reading the
- * anchor OUTSIDE this lock is the whole point of the atomic replace, this is a
- * real production path, so the write is retried with bounded backoff instead of
- * being reported as a durability failure. The retry covers ONLY the transient
- * sharing errnos: a permanent errno (a missing directory, a permissions problem)
- * is thrown on the FIRST attempt, and an exhausted transient still ends in the
- * named `CAMPAIGN_CLAIM_WRITE_FAILED` refusal below — so no retry can ever turn
- * a write that is truly impossible into "this approval was free".
+ * The replace is not merely "atomic" on Windows, it is also CONTENDED. Measured
+ * on the Windows CI leg of the N1 race test (real reader + real writer, run
+ * 36010819289): the writer's rename returned
+ * `EPERM: operation not permitted, rename '…tmp-…' -> '…claim-….json'` and, with
+ * the FIRST retry budget (5 attempts / ~0.5s), the whole write was refused even
+ * though the location was perfectly writable.
+ *
+ * The blocker is NOT the lock-free reader: every `node:fs` open on Windows passes
+ * `FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE` (libuv fs.c, "to match
+ * UNIX semantics … the file can be deleted even whilst it's open"), so a reader
+ * holding `claimPathFor(...)` open cannot make `MoveFileEx(REPLACE_EXISTING)`
+ * fail. `EPERM`/`EACCES`/`EBUSY` on this path is an EXTERNAL, TRANSIENT lock on
+ * the freshly closed temp file — real-time antivirus / a filesystem indexer
+ * scanning a burst of newly created files — which releases on its own. That is
+ * why the first budget only reduced the rate and not the tail: the process was
+ * creating hundreds of temp files back to back. The op is therefore retried with
+ * a deliberately GENEROUS exponential backoff + jitter (so concurrent processes
+ * do not retry in lockstep) instead of being reported as a durability failure.
+ *
+ * The retry covers ONLY the transient contention errnos: a permanent errno (a
+ * missing directory, a permissions problem) is thrown on the FIRST attempt, and
+ * an exhausted transient still ends in the named `CAMPAIGN_CLAIM_WRITE_FAILED`
+ * refusal below — so no retry can ever turn a write that is truly impossible into
+ * "this approval was free".
  */
-const RENAME_RETRY_ATTEMPTS = 5;
-const RENAME_RETRY_BASE_MS = 50;
+const FS_CONTENTION_RETRY_ATTEMPTS = 20;
+const FS_CONTENTION_RETRY_BASE_MS = 25;
+const FS_CONTENTION_RETRY_MAX_DELAY_MS = 500;
 
-/** Windows `MoveFileEx` reports a momentary sharing conflict as EPERM/EACCES; a
- *  busy volume reports EBUSY. None of them means "the target is corrupt" or
- *  "the caller may never write here". */
-function isTransientRenameError(err: unknown): boolean {
+/** Windows `MoveFileEx` reports a momentary external lock (an antivirus/scanner
+ *  holding the just-closed temp file) as EPERM/EACCES; a busy volume reports
+ *  EBUSY. None of them means "the target is corrupt" or "the caller may never
+ *  write here". */
+function isTransientContentionError(err: unknown): boolean {
   const code = (err as { code?: string } | null)?.code;
   return code === "EPERM" || code === "EACCES" || code === "EBUSY";
 }
 
-/** `rename`, retried ONLY for transient sharing violations (see above). */
-async function renameWithTransientRetry(from: string, to: string): Promise<void> {
+/** Run a filesystem op, retried ONLY for transient contention errnos (see
+ *  above), with exponential backoff and jitter. A permanent errno is thrown on
+ *  the FIRST attempt, so the retry can never hide a real, non-transient failure. */
+async function withTransientContentionRetry<T>(op: () => Promise<T>): Promise<T> {
   for (let attempt = 1; ; attempt += 1) {
     try {
-      await rename(from, to);
-      return;
+      return await op();
     } catch (err) {
-      if (attempt >= RENAME_RETRY_ATTEMPTS || !isTransientRenameError(err)) throw err;
-      await new Promise((resolve) => setTimeout(resolve, RENAME_RETRY_BASE_MS * attempt));
+      if (attempt >= FS_CONTENTION_RETRY_ATTEMPTS || !isTransientContentionError(err)) throw err;
+      const capped = Math.min(FS_CONTENTION_RETRY_BASE_MS * 2 ** (attempt - 1), FS_CONTENTION_RETRY_MAX_DELAY_MS);
+      const delay = Math.round(capped * (0.75 + Math.random() * 0.5));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 }
@@ -320,8 +333,8 @@ async function writeClaimAtomic(campaignId: string, next: R97CampaignClaim): Pro
   const target = claimPathFor(campaignId);
   const tmp = `${target}.tmp-${process.pid}-${newLockToken()}`;
   try {
-    await writeFile(tmp, `${JSON.stringify(next, null, 2)}\n`, "utf8");
-    await renameWithTransientRetry(tmp, target);
+    await withTransientContentionRetry(() => writeFile(tmp, `${JSON.stringify(next, null, 2)}\n`, "utf8"));
+    await withTransientContentionRetry(() => rename(tmp, target));
   } catch (err) {
     // Clean up ONLY our own unique temp file. The committed anchor at `target` is
     // never touched on this path, so a failed write cannot destroy the last good

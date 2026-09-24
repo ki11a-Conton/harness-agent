@@ -10,11 +10,15 @@
  *
  * The atomic claim replace (r97-budget-ledger.ts, `writeClaimAtomic`) renames a
  * unique same-directory temp file over the anchor. On Windows that replace is
- * CONTENDED: a reader holding `claim-<id>.json` open at the instant of
- * `MoveFileEx(REPLACE_EXISTING)` makes the rename fail with a TRANSIENT sharing
- * violation (`EPERM`/`EACCES`/`EBUSY`). The Windows CI leg of the N1 race test
- * produced exactly that — `EPERM: operation not permitted, rename …` — even
- * though the location was writable, which is why a bounded retry was added.
+ * CONTENDED: an EXTERNAL, transient lock on the freshly closed temp file (a
+ * real-time antivirus / filesystem indexer scanning a burst of new files) makes
+ * the rename fail with `EPERM`/`EACCES`/`EBUSY`. The Windows CI leg of the N1
+ * race test produced exactly that — `EPERM: operation not permitted, rename …`
+ * (run 36010819289) — even though the location was writable, and the FIRST
+ * budget (5 attempts / ~0.5s) was not enough for the burst, which is why the
+ * retry is now generous and exponential. (It is NOT the lock-free reader: every
+ * `node:fs` open passes `FILE_SHARE_DELETE`, so a reader cannot block the
+ * replace.)
  *
  * That behavior cannot be reproduced deterministically OFF Windows, and the
  * Windows leg that does reproduce it is intermittent by nature, so a real
@@ -174,7 +178,7 @@ describe("R98-N1: the claim-anchor rename — transient contention retried, ever
     );
     // Bounded: the retry gives up (it does not loop forever), and it never
     // degrades into "this approval was free".
-    expect(calls, "transient retries must be bounded").toBe(5);
+    expect(calls, "transient retries must be bounded").toBe(20);
     expect(await readFile(path, "utf8")).toBe(text);
   });
 });
