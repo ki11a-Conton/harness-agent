@@ -58,9 +58,19 @@ function fingerprints(seed = 0): Record<string, string> {
 
 /** One arm's build identity. Two isolated checkouts necessarily produce two
  *  different execution-plan digests, because the plan binds sourceSha and
- *  treeFingerprint — so identity is bound PER ARM, never once for both. */
-function arm(sha: string, digest: string, mode: R92ArmBuildMode = "isolated-checkout") {
-  return { sha, executionPlanDigest: digest, buildMode: mode };
+ *  treeFingerprint — so identity is bound PER ARM, never once for both.
+ *
+ *  `build` is the arm's EXECUTION build digest (E4-R104 / A4). It is a fourth,
+ *  independent value on purpose: `executionPlanDigest` is derived from git
+ *  (`treeFingerprint`), and `dist/` is gitignored, so a rebuilt executor moves
+ *  THIS digest and neither of the other two. */
+function arm(
+  sha: string,
+  digest: string,
+  mode: R92ArmBuildMode = "isolated-checkout",
+  build: string = h("7"),
+) {
+  return { sha, executionPlanDigest: digest, buildMode: mode, buildDigest: build };
 }
 
 /** A complete, self-consistent envelope. Individual tests perturb one field. */
@@ -123,8 +133,16 @@ function facts(over: Partial<R92GateFacts> = {}): R92GateFacts {
     now: "2026-09-20T00:00:00.000Z",
     executingSourceSha: auth.arms.candidate.sha,
     observedArmBuilds: {
-      baseline: { sha: auth.arms.baseline.sha, executionPlanDigest: auth.arms.baseline.executionPlanDigest },
-      candidate: { sha: auth.arms.candidate.sha, executionPlanDigest: auth.arms.candidate.executionPlanDigest },
+      baseline: {
+        sha: auth.arms.baseline.sha,
+        executionPlanDigest: auth.arms.baseline.executionPlanDigest,
+        buildDigest: auth.arms.baseline.buildDigest ?? null,
+      },
+      candidate: {
+        sha: auth.arms.candidate.sha,
+        executionPlanDigest: auth.arms.candidate.executionPlanDigest,
+        buildDigest: auth.arms.candidate.buildDigest ?? null,
+      },
     },
     observedCaseFingerprints: fingerprints(),
     observedProviderId: auth.providerId,
@@ -338,6 +356,129 @@ describe("E4-R92 static envelope validation", () => {
     ).toContain("endpointIdentity");
   });
 
+  // -------------------------------------------------------------------------
+  // E4-R104 (A4) 怎么做 8 — the CONTRACT VERSION is part of the refusal.
+  // -------------------------------------------------------------------------
+  //
+  // "更新 schema/版本和拒绝信息；旧材料缺新身份字段应明确拒绝重新生成，不能静默补字段后
+  //  继续使用旧授权."
+  //
+  // The closed arm allow-list gained `buildDigest`, so the SHAPE of an accepted
+  // envelope changed. Leaving the label at v1 would make material written under
+  // the old shape indistinguishable from material written under the new one —
+  // and because the field is legitimately optional at this layer, an old envelope
+  // that simply omits it would reach the gate with no build comparison at all.
+  // The label is what turns "this predates the contract" into a CHECKABLE fact
+  // rather than an assumption, so it must move — and the refusal must name the
+  // remedy (regenerate) instead of only the mismatch.
+  it("refuses an envelope written under the SUPERSEDED schema label, naming regeneration", () => {
+    const stale = baseAuth({ schemaVersion: "e4-r92-authorization-v1" as never });
+    const issues = r92AuthorizationIssuesV1(stale).join(" ");
+    expect(issues).toContain("schemaVersion");
+    expect(issues).toMatch(/regenerat/i);
+  });
+
+  it("carries a schema label that is NOT the superseded pre-A4 contract", () => {
+    // The regression guard for the bump itself: reverting the label would make
+    // the test above unreachable for real material, because new and old envelopes
+    // would once again share one name.
+    expect(R92_AUTHORIZATION_SCHEMA).not.toBe("e4-r92-authorization-v1");
+    expect(r92AuthorizationIssuesV1(baseAuth())).toEqual([]);
+  });
+
+  // -------------------------------------------------------------------------
+  // E4-R104 (A4) — the arm's EXECUTION build digest is a bound identity.
+  // -------------------------------------------------------------------------
+  //
+  // MEASURED DEFECT F4 (plan §A4): the formal envelope had NO slot for the arm's
+  // execution build digest, so nothing bound the bytes that actually execute a
+  // case. `executionPlanDigest` cannot substitute: it is derived from git, and
+  // `dist/` is gitignored, so a rebuilt executor does not move it.
+  //
+  // The layering mirrors `driverBuildDigest`: the R92 layer is the general
+  // envelope contract and validates the field WHEN PRESENT (a malformed value is
+  // never acceptable); the R97 formal campaign, which really holds both
+  // checkouts, makes it MANDATORY. `r97-plan.test.ts` proves the mandatory half.
+  it("refuses a malformed per-arm build digest — a bad value is never 'no opinion'", () => {
+    for (const bad of ["", "   ", "\t", "not-a-digest", "A".repeat(64)]) {
+      const issues = r92AuthorizationIssuesV1(
+        baseAuth({
+          arms: {
+            baseline: { ...arm(sha("e"), h("b")), buildDigest: bad },
+            candidate: arm(sha("f"), h("c")),
+          },
+        }),
+      ).join(" ");
+      expect(issues, `a build digest spelled ${JSON.stringify(bad)} must be refused`).toContain(
+        "baseline.buildDigest",
+      );
+    }
+
+    // The complete envelope is clean, and an envelope that simply OMITS the field
+    // is left to the R97 layer to refuse (it is optional in the R92 contract).
+    expect(r92AuthorizationIssuesV1(baseAuth()).join(" ")).not.toContain("buildDigest");
+    const omitted = baseAuth({
+      arms: {
+        baseline: { sha: sha("e"), executionPlanDigest: h("b"), buildMode: "isolated-checkout" },
+        candidate: arm(sha("f"), h("c")),
+      } as unknown as R92AuthorizationV1["arms"],
+    });
+    expect(r92AuthorizationIssuesV1(omitted).join(" ")).not.toContain("buildDigest");
+  });
+
+  it("binds the arm build digest into the authorization digest, so it cannot be edited after approval", () => {
+    const base = computeR92AuthorizationDigestV1(baseAuth());
+    const moved = computeR92AuthorizationDigestV1(
+      baseAuth({
+        arms: {
+          baseline: arm(sha("e"), h("b"), "isolated-checkout", h("8")),
+          candidate: arm(sha("f"), h("c")),
+        },
+      }),
+    );
+    expect(moved, "changing the arm's execution build digest must move the approved digest").not.toBe(base);
+  });
+
+  it("refuses an arm whose OBSERVED build digest drifted, naming the field", () => {
+    // The gate-level half of the same defect: an approval that recorded digest D
+    // must refuse a run whose arm no longer hashes to D — even when the sha and
+    // the execution-plan digest are both unchanged, which is exactly the rebuilt-
+    // dist case (`dist/` is gitignored, so neither of those moves).
+    const auth = baseAuth();
+    const r = r92AuthorizationGate({
+      env: envFor(auth),
+      authorization: auth,
+      facts: facts({
+        observedArmBuilds: {
+          baseline: { ...facts().observedArmBuilds.baseline, buildDigest: h("9") },
+          candidate: facts().observedArmBuilds.candidate,
+        },
+      }),
+    });
+    expect(r.authorizedToExecute).toBe(false);
+    expect(r.code).toBe("ARM_BUILD_DRIFT");
+    expect(r.reason).toContain("buildDigest");
+  });
+
+  it("refuses when an arm's OBSERVED build digest could not be established at all", () => {
+    // `null` is "the closure could not be established in that checkout", which is
+    // drift — never a skip. The sha and plan digest still agree, so only the build
+    // comparison can catch it.
+    const auth = baseAuth();
+    const r = r92AuthorizationGate({
+      env: envFor(auth),
+      authorization: auth,
+      facts: facts({
+        observedArmBuilds: {
+          baseline: { ...facts().observedArmBuilds.baseline, buildDigest: null },
+          candidate: facts().observedArmBuilds.candidate,
+        },
+      }),
+    });
+    expect(r.authorizedToExecute).toBe(false);
+    expect(r.code).toBe("ARM_BUILD_DRIFT");
+  });
+
   it("keeps the case count inside the planned 6-10 dev-set window", () => {
     const issues = r92AuthorizationIssuesV1(baseAuth({ caseIds: CASE_IDS.slice(0, 3) })).join(" ");
     expect(issues).toContain("6-10");
@@ -445,8 +586,8 @@ describe("E4-R92 gate refuses before the first provider request", () => {
       authorization: auth,
       facts: facts({
         observedArmBuilds: {
-          baseline: { sha: auth.arms.baseline.sha, executionPlanDigest: auth.arms.baseline.executionPlanDigest },
-          candidate: { sha: auth.arms.candidate.sha, executionPlanDigest: h("5") },
+          baseline: { sha: auth.arms.baseline.sha, executionPlanDigest: auth.arms.baseline.executionPlanDigest, buildDigest: auth.arms.baseline.buildDigest ?? null },
+          candidate: { sha: auth.arms.candidate.sha, executionPlanDigest: h("5"), buildDigest: auth.arms.candidate.buildDigest ?? null },
         },
       }),
     });
@@ -458,8 +599,8 @@ describe("E4-R92 gate refuses before the first provider request", () => {
       authorization: auth,
       facts: facts({
         observedArmBuilds: {
-          baseline: { sha: auth.arms.baseline.sha, executionPlanDigest: h("5") },
-          candidate: { sha: auth.arms.candidate.sha, executionPlanDigest: auth.arms.candidate.executionPlanDigest },
+          baseline: { sha: auth.arms.baseline.sha, executionPlanDigest: h("5"), buildDigest: auth.arms.baseline.buildDigest ?? null },
+          candidate: { sha: auth.arms.candidate.sha, executionPlanDigest: auth.arms.candidate.executionPlanDigest, buildDigest: auth.arms.candidate.buildDigest ?? null },
         },
       }),
     });
@@ -477,8 +618,8 @@ describe("E4-R92 gate refuses before the first provider request", () => {
       authorization: auth,
       facts: facts({
         observedArmBuilds: {
-          baseline: { sha: auth.arms.candidate.sha, executionPlanDigest: auth.arms.baseline.executionPlanDigest },
-          candidate: { sha: auth.arms.candidate.sha, executionPlanDigest: auth.arms.candidate.executionPlanDigest },
+          baseline: { sha: auth.arms.candidate.sha, executionPlanDigest: auth.arms.baseline.executionPlanDigest, buildDigest: auth.arms.baseline.buildDigest ?? null },
+          candidate: { sha: auth.arms.candidate.sha, executionPlanDigest: auth.arms.candidate.executionPlanDigest, buildDigest: auth.arms.candidate.buildDigest ?? null },
         },
       }),
     });
@@ -501,8 +642,8 @@ describe("E4-R92 gate refuses before the first provider request", () => {
       facts: facts({
         executingSourceSha: auth.arms.candidate.sha,
         observedArmBuilds: {
-          baseline: { sha: auth.arms.baseline.sha, executionPlanDigest: auth.arms.baseline.executionPlanDigest },
-          candidate: { sha: auth.arms.candidate.sha, executionPlanDigest: auth.arms.candidate.executionPlanDigest },
+          baseline: { sha: auth.arms.baseline.sha, executionPlanDigest: auth.arms.baseline.executionPlanDigest, buildDigest: auth.arms.baseline.buildDigest ?? null },
+          candidate: { sha: auth.arms.candidate.sha, executionPlanDigest: auth.arms.candidate.executionPlanDigest, buildDigest: auth.arms.candidate.buildDigest ?? null },
         },
       }),
     });
@@ -515,8 +656,8 @@ describe("E4-R92 gate refuses before the first provider request", () => {
       facts: facts({
         executingSourceSha: auth.arms.candidate.sha,
         observedArmBuilds: {
-          baseline: { sha: sha("9"), executionPlanDigest: auth.arms.baseline.executionPlanDigest },
-          candidate: { sha: auth.arms.candidate.sha, executionPlanDigest: auth.arms.candidate.executionPlanDigest },
+          baseline: { sha: sha("9"), executionPlanDigest: auth.arms.baseline.executionPlanDigest, buildDigest: auth.arms.baseline.buildDigest ?? null },
+          candidate: { sha: auth.arms.candidate.sha, executionPlanDigest: auth.arms.candidate.executionPlanDigest, buildDigest: auth.arms.candidate.buildDigest ?? null },
         },
       }),
     });
@@ -531,8 +672,8 @@ describe("E4-R92 gate refuses before the first provider request", () => {
       authorization: auth,
       facts: facts({
         observedArmBuilds: {
-          baseline: { sha: auth.arms.baseline.sha, executionPlanDigest: auth.arms.baseline.executionPlanDigest },
-          candidate: { sha: null, executionPlanDigest: null },
+          baseline: { sha: auth.arms.baseline.sha, executionPlanDigest: auth.arms.baseline.executionPlanDigest, buildDigest: auth.arms.baseline.buildDigest ?? null },
+          candidate: { sha: null, executionPlanDigest: null, buildDigest: null },
         },
       }),
     });

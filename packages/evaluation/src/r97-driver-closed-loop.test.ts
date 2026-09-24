@@ -21,8 +21,8 @@
  * exercised by its own gate.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
-import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { mkdtemp, rm, writeFile, mkdir, rename } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -31,6 +31,7 @@ import * as childProcess from "node:child_process";
 import * as nodeUtil from "node:util";
 import { buildR97AuthorizationPlan, type R97ArmObservation } from "./r97-plan.js";
 import type { R97Campaign } from "./r97-campaign-lifecycle.js";
+import { R97_CAMPAIGN_CLAIMS_DIR_ENV } from "./r97-budget-ledger.js";
 
 const DRIVER = pathToFileURL(join(process.cwd(), "scripts", "e4", "r97-campaign-driver.mjs")).href;
 const EVAL = pathToFileURL(join(process.cwd(), "packages", "evaluation", "dist", "index.js")).href;
@@ -61,7 +62,32 @@ async function tempDir(): Promise<string> {
   dirs.push(d);
   return d;
 }
+
+/**
+ * ONE FRESH CLAIM ANCHOR PER TEST (plan §A2 怎么做 6: "普通测试应使用独立的 claim
+ * namespace/独立批准 ID").
+ *
+ * `finalizedPlan()` is deterministic on purpose — the plan artifact must hash
+ * the same way every time — so EVERY test in this file drives the SAME
+ * `planDigest`, while each one gets its own temporary `ledgerDir` that the
+ * cleanup below deletes. Under finding F2 that combination is exactly the
+ * double-spend shape: the anchor records that the approval ESTABLISHED a budget
+ * in the deleted directory, so a later test's brand-new directory would be
+ * refused as a LOSS of an approval an earlier test already spent.
+ *
+ * Isolating the namespace keeps each test measuring its OWN approval, which is
+ * what these tests were always about. Subprocesses inherit this through
+ * `process.env` (see the `execFile` calls below).
+ */
+let claimsDirs: string[] = [];
+beforeEach(async () => {
+  const c = await mkdtemp(join(tmpdir(), "r97-driver-claims-"));
+  claimsDirs.push(c);
+  process.env[R97_CAMPAIGN_CLAIMS_DIR_ENV] = c;
+});
 afterEach(async () => {
+  delete process.env[R97_CAMPAIGN_CLAIMS_DIR_ENV];
+  for (const c of claimsDirs.splice(0)) await rm(c, { recursive: true, force: true }).catch(() => {});
   for (const d of dirs.splice(0)) await rm(d, { recursive: true, force: true }).catch(() => {});
 });
 
@@ -107,6 +133,10 @@ const evaluation = (await import(EVAL)) as Record<string, unknown>;
 /** Build a FINALIZED plan from the real selection, so the case list is genuine. */
 async function finalizedPlan(over: Record<string, unknown> = {}) {
   const sel = await (evaluation["loadR97FrozenSelection"] as (r: string) => Promise<{ caseIds: string[]; caseFingerprints: Record<string, string> }>)(REPO);
+  // The endpoint identity the plan's ARMS carry. A caller that will run with a
+  // concrete `endpointBaseUrl` overrides it, so the authorization, the observations
+  // and the resolved destination all name ONE identity instead of three.
+  const armEndpointIdentity = typeof over["endpointIdentity"] === "string" ? (over["endpointIdentity"] as string) : ENDPOINT;
   const mk = (arm: "baseline" | "candidate", sha: string, dg: string): R97ArmObservation => ({
     arm,
     checkoutDir: `D:/wt/${arm}`,
@@ -114,9 +144,13 @@ async function finalizedPlan(over: Record<string, unknown> = {}) {
     treeFingerprint: null,
     clean: true,
     planDigest: dg,
+    // E4-R104 (A4): the arm's EXECUTION build digest. This fixture is synthetic —
+    // no checkout exists — so the value is a placeholder; what it proves is that
+    // the plan binds a build identity PER ARM and carries it into the envelope.
+    buildDigest: `b${arm === "baseline" ? "1" : "2"}`.padEnd(64, "0"),
     providerId: "openai",
     modelId: "gpt-4o-mini",
-    endpointIdentity: ENDPOINT,
+    endpointIdentity: armEndpointIdentity,
     caseIds: sel.caseIds,
     cliCaseIds: sel.caseIds.map((id) => id.split("/").pop() ?? id),
     caseFingerprints: sel.caseFingerprints,
@@ -136,8 +170,7 @@ async function finalizedPlan(over: Record<string, unknown> = {}) {
     createdAt: CREATED,
     campaignModelCalls: 320,
     ...over,
-  });
-  if (p.planDigest === null || p.authorization === null) {
+  });  if (p.planDigest === null || p.authorization === null) {
     throw new Error(`fixture plan did not finalize: ${JSON.stringify(p.readinessIssues)}`);
   }
   return p;
@@ -153,6 +186,14 @@ function observationFor(plan: Awaited<ReturnType<typeof finalizedPlan>>, over: R
     armDigests: {
       baseline: a.arms.baseline.executionPlanDigest,
       candidate: a.arms.candidate.executionPlanDigest,
+    },
+    // E4-R104 (A4): the arms' EXECUTION build digests, re-derived at the execution
+    // boundary. The gate compares them against the envelope, so a fixture that
+    // omitted them would be refused as build drift — which is the point of the
+    // check, not a fixture detail.
+    armBuildDigests: {
+      baseline: a.arms.baseline.buildDigest ?? null,
+      candidate: a.arms.candidate.buildDigest ?? null,
     },
     caseFingerprints: { ...a.caseFingerprints },
     providerId: a.providerId,
@@ -220,6 +261,40 @@ function makeErrorEventProvider() {
             error: { code: "MODEL_ERROR", message: "upstream 400: rejected" },
             timestamp: Date.now(),
           };
+        },
+      };
+    },
+  };
+  return { provider, state };
+}
+
+/**
+ * A provider whose `generate` really takes TIME — the fixture the A6 stop tests
+ * need, because "the unit was in flight when the stop arrived" is only measurable
+ * against a unit that is genuinely still running.
+ *
+ * `setTimeout` rather than a resolved promise: a microtask-only delay would let the
+ * whole unit finish inside the cancellation's own turn, so the test would prove
+ * nothing about terminating work that is still in progress.
+ *
+ * `state.started` counts calls whose generator was actually ENTERED, which is what
+ * makes "the unit really was in flight" a measurement instead of an assumption.
+ */
+function makeSlowProvider(callMs = 30_000) {
+  const state = { started: 0, finished: 0, created: 0 };
+  const provider = {
+    id: "fake-slow-r97",
+    async listModels() {
+      return [];
+    },
+    createClient() {
+      state.created += 1;
+      return {
+        async *generate() {
+          state.started += 1;
+          await new Promise((resolve) => setTimeout(resolve, callMs));
+          state.finished += 1;
+          yield { type: "text", text: "slow" };
         },
       };
     },
@@ -1854,6 +1929,181 @@ describe("E4-R99-B (T5): the campaign's own stop, checked before every unit", ()
     expect(withHandles["code"]).not.toBe("CAMPAIGN_DEADLINE_EXCEEDED");
   });
 
+  // =======================================================================
+  // E4-R106 (A6 / F6): THE STOP MUST REACH THE UNIT THAT IS RUNNING.
+  // =======================================================================
+  //
+  // MEASURED DEFECT F6 (plan §A6):
+  //
+  //   "boundedStop 工具已经能杀进程，但实际 worker 改成进程内 await
+  //    runBenchmarkCommand" — a cancel at 40 ms still PASSes ~412 ms later; a unit
+  //   timeout of 80 ms returns ~421 ms later, "driver 从不向 worker 传递取消信号或
+  //   campaign 剩余时间".
+  //
+  // Every stop test above cancels BETWEEN units, which the loop's pre-check handles.
+  // These two pin the DRIVER'S half of the fix — the two values it must hand to the
+  // worker so the worker's terminable boundary can end a unit already in flight:
+  //
+  //   * the cancellation handle, and
+  //   * the campaign's REMAINING time (not its total — see below).
+  //
+  // Plan §A6 怎么做 2: "effective unit deadline 取 unit 上限与 campaign 剩余时间的较小
+  // 值，并保留触发原因."
+  //
+  // WHY THESE ASSERT ON THE FORWARDED OPTIONS RATHER THAN ON A WALL CLOCK. The
+  // end-to-end termination is proven where it belongs — in
+  // `r97-arm-worker-contract.test.ts`, against the REAL worker path, with the hung
+  // dry run and dispatch fixtures. Asserting it here as well would mean the driver
+  // test could only pass by ALSO running a real arm, which this suite deliberately
+  // does not do (it injects a counting fake provider and never enters `armWorker`
+  // mode). What is uniquely the DRIVER's responsibility is that these two values
+  // ARRIVE, and that is what is measured here — deterministically, with no sleeps.
+  it("A6: the driver forwards the cancellation signal and the campaign's REMAINING time to every unit", async () => {
+    // WHY THIS DRIVES `armWorker` AT ALL. The two values under test are handed to the
+    // WORKER, so the assertion must observe the worker's call. `armWorker.runArmUnit`
+    // is a recording stand-in that completes immediately, so nothing waits on a real
+    // arm or on a timer and the FORWARDING is the only thing measured.
+    //
+    // `syntheticArms()`-style fixture: a plan whose ARMS, authorization and
+    // observation all name ONE endpoint identity, so the run reaches the unit loop
+    // instead of refusing over a placeholder identity. Written inline because the
+    // shared helper is scoped to a later describe block.
+    const dir = await tempDir();
+    const ledgerDir = join(dir, "ledger");
+    const endpointIdentity = (evaluation["captureEndpointIdentity"] as (u: string) => string | null)(
+      "https://api.openai.com/v1",
+    );
+    const sel = await (evaluation["loadR97FrozenSelection"] as (r: string) => Promise<{ caseIds: string[]; caseFingerprints: Record<string, string> }>)(REPO);
+    const arm = (label: "baseline" | "candidate", sha: string, dg: string): R97ArmObservation => ({
+      arm: label,
+      checkoutDir: `D:/wt/${label}`,
+      sourceSha: sha,
+      treeFingerprint: null,
+      clean: true,
+      planDigest: dg,
+      // E4-R104 (A4): the arm's EXECUTION build digest, bound PER ARM. This
+      // fixture is synthetic — no checkout exists — so the value is a distinct
+      // placeholder; what it proves is that the plan carries a build identity per
+      // arm into the envelope rather than one value shared by both.
+      buildDigest: (label === "baseline" ? "b1" : "b2").padEnd(64, "0"),
+      providerId: "openai",
+      modelId: "gpt-4o-mini",
+      endpointIdentity,
+      caseIds: sel.caseIds,
+      cliCaseIds: sel.caseIds.map((id) => id.split("/").pop() ?? id),
+      caseFingerprints: sel.caseFingerprints,
+      effectiveModelParams: { budgetTokens: 32_000 },
+      totalLogicalRuns: sel.caseIds.length * 2,
+      suite: "regression",
+    });
+    const plan = await finalizedPlan({
+      baseline: arm("baseline", "1".repeat(40), "a".repeat(64)),
+      candidate: arm("candidate", "2".repeat(40), "b".repeat(64)),
+      endpointIdentity,
+    });
+    const controller = new AbortController();
+    // EVERY unit the worker was asked to run, in order, with the options it received.
+    const seen: Array<Record<string, unknown>> = [];
+    const result = await mod.runDriver({
+      modules: { evaluation },
+      plan,
+      env: AUTHORIZED_ENV(plan.planDigest!),
+      observation: observationFor(plan),
+      ledgerDir,
+      endpointBaseUrl: "https://api.openai.com/v1",
+      // The campaign's own clock: 600 s, so the remaining time is a large but
+      // FINITE number that must shrink as units run. Nothing waits on it.
+      campaignDeadlineMs: 600_000,
+      signal: controller.signal,
+      unitTimeoutMs: 1_000,
+      armWorker: {
+        armDirs: { baseline: REPO, candidate: REPO },
+        // A recording stand-in for `runArmUnit`: it observes the FORWARDING and
+        // completes immediately, so the unit cap above is never reached and the test
+        // is not a race against a timer.
+        runArmUnit: async (unitOpts: Record<string, unknown>) => {
+          seen.push(unitOpts);
+          return {
+            status: "completed",
+            verifierPassed: true,
+            failureCategory: null,
+            detail: "recording stand-in",
+            consumed: 0,
+            reservationId: "",
+            resultHash: "",
+            build: null,
+          };
+        },
+      },
+    });
+
+    expect(
+      seen.length,
+      `the driver dispatched at least one arm unit (code=${String(result["code"])} reason=${String(result["reason"])})`,
+    ).toBeGreaterThan(0);
+
+    for (const unit of seen) {
+      // 1. THE CANCELLATION HANDLE ARRIVES, and it is the caller's own signal.
+      expect(
+        unit["signal"],
+        "a unit must receive the campaign's cancellation handle, or a unit in flight cannot be stopped",
+      ).toBe(controller.signal);
+
+      // 2. THE CAMPAIGN'S REMAINING TIME ARRIVES — a NUMBER, not the total and not
+      //    undefined. `null` would mean "no campaign bound", which is a different
+      //    fact from "the campaign still has time".
+      expect(
+        typeof unit["campaignRemainingMs"],
+        "a unit must receive the campaign's remaining time, or the effective deadline cannot be min(unit cap, remaining)",
+      ).toBe("number");
+      expect(unit["campaignRemainingMs"]).toBeGreaterThan(0);
+      expect(
+        unit["campaignRemainingMs"],
+        "the campaign's REMAINING time must not exceed its total — re-granting the full allowance per unit is the defect",
+      ).toBeLessThanOrEqual(600_000);
+    }
+
+    // A MONOTONE CLOCK, NOT A FRESH ALLOWANCE: later units see no MORE time than
+    // earlier ones. This is the property that makes "每个阶段都不能重新获得一整份
+    // campaign 时间" hold for the units too.
+    for (let i = 1; i < seen.length; i += 1) {
+      expect(Number(seen[i]!["campaignRemainingMs"])).toBeLessThanOrEqual(Number(seen[i - 1]!["campaignRemainingMs"]));
+    }
+  }, 120_000);
+
+  it("A6: an ALREADY-CANCELLED campaign never dispatches a unit at all", async () => {
+    // The negative control for the forwarding above: the pre-check still wins, so
+    // forwarding the signal did not accidentally turn "refuse before dispatching"
+    // into "dispatch and then cancel" — which would spend budget on work the operator
+    // had already stopped.
+    const plan = await finalizedPlan();
+    const dir = await tempDir();
+    const controller = new AbortController();
+    controller.abort();
+    const seen: Array<Record<string, unknown>> = [];
+    const result = await mod.runDriver({
+      modules: { evaluation },
+      plan,
+      env: AUTHORIZED_ENV(plan.planDigest!),
+      observation: observationFor(plan),
+      ledgerDir: dir,
+      endpointBaseUrl: "https://api.openai.com/v1",
+      signal: controller.signal,
+      armWorker: {
+        armDirs: { baseline: REPO, candidate: REPO },
+        runArmUnit: async (unitOpts: Record<string, unknown>) => {
+          seen.push(unitOpts);
+          return { status: "completed", verifierPassed: true, failureCategory: null, detail: "", consumed: 0, reservationId: "", resultHash: "" };
+        },
+      },
+    });
+
+    expect(result["status"]).toBe("REFUSED");
+    expect(result["code"]).toBe("CAMPAIGN_CANCELLED");
+    expect(seen.length, "a cancelled campaign must not dispatch anything").toBe(0);
+    expect(result["logicalCalls"]).toBe(0);
+  }, 120_000);
+
   it("the driver CLI accepts --campaign-deadline-ms and rejects an unknown flag", async () => {
     const { execFile } = await import("node:child_process");
     const { promisify } = await import("node:util");
@@ -1881,4 +2131,554 @@ describe("E4-R99-B (T5): the campaign's own stop, checked before every unit", ()
     expect(unknown.code).toBe(2);
     expect(unknown.stderr).toContain("--definitely-not-a-flag");
   }, 60_000);
+});
+
+// ===========================================================================
+// E4-R103 (A3) — THE FORMAL CLI USES THE EXECUTION CLOCK, THE CURRENT
+// OBSERVATION AND THE ACTUAL STAGED INPUTS.
+// ===========================================================================
+//
+// Plan §A3 做什么:
+//   1. "正式执行的 now 来自执行器时钟；plan 中的 observation 仅是审阅快照."
+//   2. "开始和恢复执行前，重新读取两臂的当前 HEAD、构建身份、实际案例字节和执行参数."
+//   3. "worker 接到明确批准的案例指纹，并校验自己复制后真正要运行的内容."
+//
+// Every case below drives the REAL `main` of `scripts/e4/r97-campaign-driver.mjs`
+// through a child process, so the assertion is about the entry an operator would
+// actually run. Cases marked REAL GATE + FORMAL MAIN use `--arm-worker` (the
+// formal mode); the ones marked REAL GATE + DEV TOOL use `--fake-provider`, which
+// is the isolated development tool — a dev-tool RESULT is never presented as
+// authorization acceptance, only its REFUSAL code is asserted, and the refusal
+// comes from the same `r92AuthorizationGate` the formal path calls.
+describe("E4-R103 (A3): the formal CLI uses the execution clock and current inputs", () => {
+  const runCli = async (
+    args: string[],
+    env: Record<string, string> = {},
+  ): Promise<{ code: number; stdout: string; stderr: string }> => {
+    const { execFile } = await import("node:child_process");
+    const { promisify } = await import("node:util");
+    const run = promisify(execFile);
+    return run(process.execPath, [join(REPO, "scripts", "e4", "r97-campaign-driver.mjs"), ...args], {
+      cwd: REPO,
+      timeout: 900_000,
+      maxBuffer: 33_554_432,
+      env: { ...process.env, ...env },
+    }).then(
+      (r: { stdout: string; stderr: string }) => ({ code: 0, stdout: r.stdout, stderr: r.stderr }),
+      (e: { code?: number; stdout?: string; stderr?: string }) => ({
+        code: typeof e.code === "number" ? e.code : 1,
+        stdout: e.stdout ?? "",
+        stderr: e.stderr ?? "",
+      }),
+    );
+  };
+
+  /**
+   * A plan whose approval window has ALREADY CLOSED against the wall clock while
+   * the plan-time observation still records an instant INSIDE it.
+   *
+   * The dates are derived from `Date.now()` so the fixture cannot rot: the
+   * approval was created three days ago, expired one day later, and its own
+   * snapshot was taken an hour after creation. `plan.observation.now` therefore
+   * satisfies the window while the executor's clock does not — which is exactly
+   * the "old snapshot stands in for the current clock" defect (F3).
+   */
+  const EXPIRED_AT = Date.now() - 3 * 86_400_000;
+  const EXPIRED_CREATED = new Date(EXPIRED_AT).toISOString();
+  const EXPIRED_SNAPSHOT = new Date(EXPIRED_AT + 3_600_000).toISOString();
+
+  async function expiredPlan() {
+    return finalizedPlan({
+      createdAt: EXPIRED_CREATED,
+      now: EXPIRED_SNAPSHOT,
+      validityDays: 1,
+    });
+  }
+
+  it("REAL GATE + DEV TOOL: an approval expired against the execution clock is REFUSED with 0 calls, even though plan.observation.now is still inside the window", async () => {
+    const dir = await tempDir();
+    const plan = await expiredPlan();
+    // PRECONDITIONS, asserted so a fixture that stopped describing the defect
+    // cannot quietly turn this into a vacuous pass.
+    expect(plan.observation, "the plan-time review snapshot must be RETAINED").not.toBeNull();
+    expect(plan.observation!.now).toBe(EXPIRED_SNAPSHOT);
+    expect(Date.parse(plan.observation!.now)).toBeLessThan(Date.parse(plan.authorization!.expiresAt));
+    expect(Date.now()).toBeGreaterThanOrEqual(Date.parse(plan.authorization!.expiresAt));
+
+    const planPath = join(dir, "plan.json");
+    await writeFile(planPath, JSON.stringify(plan, null, 2), "utf8");
+    const res = await runCli(
+      ["--plan", planPath, "--fake-provider", "--ledger", join(dir, "ledger")],
+      AUTHORIZED_ENV(plan.planDigest!),
+    );
+    const parsed = JSON.parse(res.stdout) as Record<string, unknown>;
+    expect(parsed["authorization"]).toMatchObject({ authorizedToExecute: false, code: "AUTHORIZATION_EXPIRED" });
+    expect(parsed["providerRequests"]).toBe(0);
+    expect(parsed["logicalCalls"]).toBe(0);
+    expect(parsed["status"]).toBe("NOT_RUN");
+  }, 120_000);
+
+  /** Two synthetic arm observations that agree with each other and with the
+   *  REAL endpoint identity, so a plan built from them passes every readiness
+   *  check and the ONLY thing wrong is what the test changes. */
+  async function syntheticArms(over: Record<string, unknown> = {}) {
+    const sel = await (
+      evaluation["loadR97FrozenSelection"] as (r: string) => Promise<{ caseIds: string[]; caseFingerprints: Record<string, string> }>
+    )(REPO);
+    const endpointIdentity = (evaluation["captureEndpointIdentity"] as (u: string) => string | null)(
+      "https://api.openai.com/v1",
+    );
+    const mk = (arm: "baseline" | "candidate", sha: string, dg: string): R97ArmObservation => ({
+      arm,
+      checkoutDir: `D:/wt/${arm}`,
+      sourceSha: sha,
+      treeFingerprint: null,
+      clean: true,
+      planDigest: dg,
+      // E4-R104 (A4): the arm's EXECUTION build digest, bound PER ARM. This
+      // fixture is synthetic — no checkout exists — so the value is a distinct
+      // placeholder; what it proves is that the plan carries a build identity per
+      // arm into the envelope rather than one value shared by both.
+      buildDigest: (arm === "baseline" ? "b1" : "b2").padEnd(64, "0"),
+      providerId: "openai",
+      modelId: "gpt-4o-mini",
+      endpointIdentity,
+      caseIds: sel.caseIds,
+      cliCaseIds: sel.caseIds.map((id) => id.split("/").pop() ?? id),
+      caseFingerprints: sel.caseFingerprints,
+      effectiveModelParams: { budgetTokens: 32_000 },
+      totalLogicalRuns: sel.caseIds.length * 2,
+      suite: "regression",
+      ...over,
+    });
+    return {
+      baseline: mk("baseline", "1".repeat(40), "a".repeat(64)),
+      candidate: mk("candidate", "2".repeat(40), "b".repeat(64)),
+      endpointIdentity,
+    };
+  }
+
+  it("REAL GATE + FORMAL MAIN: a polluted environment endpoint is refused and the sentinel token never reaches stdout", async () => {
+    const dir = await tempDir();
+    const arms = await syntheticArms();
+    const plan = await finalizedPlan({
+      baseline: arms.baseline,
+      candidate: arms.candidate,
+      endpointIdentity: arms.endpointIdentity,
+    });
+    const planPath = join(dir, "plan.json");
+    await writeFile(planPath, JSON.stringify(plan, null, 2), "utf8");
+
+    const SENTINEL = "sentinel-token-do-not-publish";
+    // NO `--endpoint`: the environment is the only place a destination could come
+    // from, and it must not be able to redirect an approved run.
+    const res = await runCli(
+      [
+        "--plan", planPath,
+        "--arm-worker",
+        "--baseline-dir", join(dir, "baseline"),
+        "--candidate-dir", join(dir, "candidate"),
+        "--ledger", join(dir, "ledger"),
+        "--out", join(dir, "out"),
+      ],
+      { ...AUTHORIZED_ENV(plan.planDigest!), OPENAI_BASE_URL: `https://${SENTINEL}.example/v1` },
+    );
+    const parsed = JSON.parse(res.stdout) as Record<string, unknown>;
+    expect(parsed["code"]).toBe("ENDPOINT_IDENTITY_MISMATCH");
+    expect(parsed["workerUnits"] ?? 0).toBe(0);
+    expect(parsed["providerRequests"]).toBe(0);
+    // The refusal must be diagnosable WITHOUT republishing a URL that may carry a
+    // credential: the identity digest is the publishable form.
+    expect(res.stdout).not.toContain(SENTINEL);
+  }, 120_000);
+
+  it("REAL GATE + FORMAL MAIN: a model flag that disagrees with the approval is refused, never accepted-and-ignored", async () => {
+    const dir = await tempDir();
+    const arms = await syntheticArms();
+    const plan = await finalizedPlan({
+      baseline: arms.baseline,
+      candidate: arms.candidate,
+      endpointIdentity: arms.endpointIdentity,
+    });
+    const planPath = join(dir, "plan.json");
+    await writeFile(planPath, JSON.stringify(plan, null, 2), "utf8");
+    const res = await runCli(
+      [
+        "--plan", planPath,
+        "--arm-worker",
+        "--baseline-dir", join(dir, "baseline"),
+        "--candidate-dir", join(dir, "candidate"),
+        "--endpoint", "https://api.openai.com/v1",
+        "--model", "a-model-the-plan-never-approved",
+        "--ledger", join(dir, "ledger"),
+        "--out", join(dir, "out"),
+      ],
+      AUTHORIZED_ENV(plan.planDigest!),
+    );
+    const parsed = JSON.parse(res.stdout) as Record<string, unknown>;
+    expect(parsed["code"]).toBe("APPROVED_MODEL_MISMATCH");
+    expect(parsed["workerUnits"] ?? 0).toBe(0);
+  }, 120_000);
+
+  it("REAL GATE + FORMAL MAIN: an unparseable or negative numeric flag is a configuration error, not a silent NaN", async () => {
+    const dir = await tempDir();
+    const plan = await finalizedPlan();
+    const planPath = join(dir, "plan.json");
+    await writeFile(planPath, JSON.stringify(plan, null, 2), "utf8");
+    for (const bad of ["not-a-number", "-1", "NaN"]) {
+      const res = await runCli([
+        "--plan", planPath,
+        "--arm-worker",
+        "--baseline-dir", join(dir, "baseline"),
+        "--candidate-dir", join(dir, "candidate"),
+        "--timeout-ms", bad,
+      ]);
+      expect(res.code, `--timeout-ms ${bad} must be a usage error`).toBe(2);
+    }
+  }, 120_000);
+
+  it("REAL GATE + FORMAL MAIN: the gate judges the CURRENT checkouts, not the plan's review snapshot", async () => {
+    // The headline A3 case, through the OFFICIAL entry with the TWO REAL arms.
+    //
+    // The plan is a genuine, unexpired approval built from a real `observeArms`
+    // measurement. Its REVIEW SNAPSHOT is then made stale — it names a different
+    // revision and a different case fingerprint than the world does now — while
+    // the ENVELOPE keeps the real values. `observation` is outside `planDigest`, so
+    // the artifact is still a valid approval; what changed is that a driver which
+    // judged the snapshot would decide against a world that no longer exists.
+    //
+    // `--campaign-deadline-ms 0` is the cheap probe for "did it get past the gate":
+    // the campaign stop fires at the top of the first unit, so a run that reaches
+    // the loop refuses with ZERO units dispatched. That makes the assertion about
+    // the GATE, not about a long execution.
+    const dir = await tempDir();
+    const stage = await tempDir();
+    const baseDir = process.env["R97_ARM_BASELINE_DIR"] ?? "D:/r97-arm-baseline";
+    const candDir = process.env["R97_ARM_CANDIDATE_DIR"] ?? "D:/r97-arm-candidate";
+    const driver = mod as unknown as {
+      observeArms: (o: Record<string, unknown>) => Promise<
+        Record<string, { sourceSha: string; planDigest: string; endpointIdentity: string | null; caseFingerprints: Record<string, string> }>
+      >;
+    };
+    const observations = await driver.observeArms({
+      modules: { evaluation },
+      repoRoot: REPO,
+      armDirs: { baseline: baseDir, candidate: candDir },
+      stagedCasesDir: join(stage, "cases"),
+      suite: "regression",
+      providerId: "openai",
+      modelId: "gpt-4o-mini",
+      endpointBaseUrl: "https://api.openai.com/v1",
+    });
+    const createdAt = new Date().toISOString();
+    const plan = await finalizedPlan({
+      baseline: observations["baseline"],
+      candidate: observations["candidate"],
+      endpointIdentity: observations["candidate"]!.endpointIdentity,
+      createdAt,
+      now: createdAt,
+    });
+    const victim = plan.authorization!.caseIds[0]!;
+    const realSha = observations["candidate"]!.sourceSha;
+    const realFingerprint = plan.authorization!.caseFingerprints[victim]!;
+    const staleSnapshot = {
+      ...plan.observation!,
+      armShas: { baseline: "7".repeat(40), candidate: "9".repeat(40) },
+      caseFingerprints: { ...plan.observation!.caseFingerprints, [victim]: "8".repeat(64) },
+    };
+    const planPath = join(dir, "plan.json");
+    await writeFile(planPath, JSON.stringify({ ...plan, observation: staleSnapshot }), "utf8");
+
+    const res = await runCli(
+      [
+        "--plan", planPath,
+        "--arm-worker",
+        "--baseline-dir", baseDir,
+        "--candidate-dir", candDir,
+        "--endpoint", "https://api.openai.com/v1",
+        "--ledger", join(dir, "ledger"),
+        "--out", join(dir, "out"),
+        "--campaign-deadline-ms", "0",
+      ],
+      AUTHORIZED_ENV(plan.planDigest!),
+    );
+    const parsed = JSON.parse(res.stdout) as Record<string, unknown>;
+    // IT GOT PAST THE GATE — the stale snapshot did not decide the outcome, which
+    // is precisely what the old `{ ...plan.observation, now }` made impossible.
+    expect(parsed["authorization"]).toMatchObject({ authorizedToExecute: true });
+    expect(parsed["executionObservation"]).toMatchObject({ ok: true, codes: [] });
+    expect(parsed["code"]).toBe("CAMPAIGN_DEADLINE_EXCEEDED");
+    expect(parsed["workerUnits"]).toBe(0);
+    expect(parsed["logicalCalls"]).toBe(0);
+    expect(parsed["providerRequests"]).toBe(0);
+
+    // THE MEASUREMENT: what was judged is the CURRENT world.
+    const judged = parsed["judgedObservation"] as {
+      now: string;
+      armShas: { baseline: string; candidate: string };
+      caseFingerprints: Record<string, string>;
+    };
+    expect(judged.armShas.candidate).toBe(realSha);
+    expect(judged.armShas.candidate).not.toBe("9".repeat(40));
+    expect(judged.caseFingerprints[victim]).toBe(realFingerprint);
+    expect(judged.caseFingerprints[victim]).not.toBe("8".repeat(64));
+    // The clock is the executor's, not the plan's: it is not the snapshot's `now`.
+    expect(judged.now).not.toBe(plan.observation!.now);
+    expect(Math.abs(Date.parse(judged.now) - Date.now())).toBeLessThan(120_000);
+  }, 600_000);
+
+  it("REAL GATE + FORMAL MAIN: a checkout that has MOVED since approval is refused before any unit", async () => {
+    // The complementary case: the plan's bound revisions are synthetic, the REAL
+    // arms are the ones on disk, so the fresh observation disagrees with the
+    // envelope and the gate refuses — with zero units and zero calls. A driver that
+    // read the snapshot would have seen agreement and dispatched.
+    const dir = await tempDir();
+    const baseDir = process.env["R97_ARM_BASELINE_DIR"] ?? "D:/r97-arm-baseline";
+    const candDir = process.env["R97_ARM_CANDIDATE_DIR"] ?? "D:/r97-arm-candidate";
+    const arms = await syntheticArms();
+    const plan = await finalizedPlan({
+      baseline: arms.baseline,
+      candidate: arms.candidate,
+      endpointIdentity: arms.endpointIdentity,
+      createdAt: new Date().toISOString(),
+      now: new Date().toISOString(),
+    });
+    const planPath = join(dir, "plan.json");
+    await writeFile(planPath, JSON.stringify(plan, null, 2), "utf8");
+    const res = await runCli(
+      [
+        "--plan", planPath,
+        "--arm-worker",
+        "--baseline-dir", baseDir,
+        "--candidate-dir", candDir,
+        "--endpoint", "https://api.openai.com/v1",
+        "--ledger", join(dir, "ledger"),
+        "--out", join(dir, "out"),
+      ],
+      AUTHORIZED_ENV(plan.planDigest!),
+    );
+    const parsed = JSON.parse(res.stdout) as Record<string, unknown>;
+    expect(parsed["authorization"]).toMatchObject({ authorizedToExecute: false });
+    expect(["IDENTITY_DRIFT", "CASE_CONTENT_DRIFT"]).toContain((parsed["authorization"] as Record<string, unknown>)["code"]);
+    expect(parsed["workerUnits"] ?? 0).toBe(0);
+    expect(parsed["logicalCalls"]).toBe(0);
+    expect(parsed["providerRequests"]).toBe(0);
+  }, 600_000);
+
+  it("REAL GATE + FORMAL DRIVER: a resume verifies the OLD evidence before it spends any new budget", async () => {
+    // Plan §A3 怎么验收 2 asks that a resume fail "在发现旧证据损坏前先花预算执行其他单位"
+    // — the ordering, not just the detection.
+    //
+    // The campaign below is a genuine first run that SETTLED exactly one unit and
+    // left its evidence on disk, exactly as the worker writes it. The plan has 15
+    // units still pending, so a driver that verified evidence AFTER the loop would
+    // dispatch them (and charge for them) before noticing. The `runArmUnit` double
+    // counts dispatches, and a double is the right instrument HERE: the claim is
+    // about how many units the driver STARTED, which is observable without running
+    // any arm.
+    //
+    // THE SAME CAMPAIGN IS RUN TWICE — once with the evidence file moved aside,
+    // once with it restored. That is what makes "0 dispatches" mean "refused early"
+    // rather than "there was nothing to do".
+    const dir = await tempDir();
+    const ledgerDir = join(dir, "ledger");
+    const arms = await syntheticArms();
+    const plan = await finalizedPlan({
+      baseline: arms.baseline,
+      candidate: arms.candidate,
+      endpointIdentity: arms.endpointIdentity,
+    });
+    const budgetTotal = plan.authorization!.caps.find((c) => c.cap === "maxModelCalls")!.value ?? 0;
+
+    // ---- Seed the durable state through the PRODUCTION lifecycle. -----------
+    const campaign = await openCampaign(ledgerDir, plan.planDigest!, budgetTotal);
+    const execState = campaign.execState;
+    const caseId = plan.authorization!.caseIds[0]!;
+    const unit = { caseId, suite: "regression", arm: "baseline" as const, repetition: 1 };
+    const key = { experimentId: plan.planDigest!, ...unit };
+    const attemptId = await execState.begin(key, {
+      reservationId: "seeded-reservation",
+      inputDigest: "c".repeat(64),
+      now: Date.now(),
+    });
+    const verdictDetail = "the case failed its task";
+    const envelope = (evaluation["buildUnitEvidence"] as (o: Record<string, unknown>) => Record<string, unknown>)({
+      attemptId,
+      unit,
+      build: { sourceSha: arms.baseline.sourceSha, buildDigest: "d".repeat(64) },
+      verdict: { category: "case_failed", detail: verdictDetail },
+      report: null,
+    });
+    const written = await (
+      evaluation["writeUnitEvidence"] as (r: string, e: Record<string, unknown>) => Promise<{ relPath: string; sha256: string }>
+    )(ledgerDir, envelope);
+    await execState.complete(attemptId, {
+      resultHash: String(envelope["resultHash"]),
+      detail: `e4-r98-arm-worker-v2 case_failed: ${verdictDetail}`,
+      now: Date.now(),
+      evidence: { path: written.relPath, sha256: written.sha256 },
+    });
+    // PRECONDITION: the seeded evidence really verifies while it is present, so
+    // the run below measures the DELETION rather than a broken fixture.
+    const intact = await (
+      evaluation["verifyCampaignEvidence"] as (r: string, rec: unknown[]) => Promise<{ ok: boolean; detail: string }>
+    )(ledgerDir, await execState.records());
+    expect(intact.ok, `the seeded evidence must verify: ${intact.detail}`).toBe(true);
+
+    const dispatches: Record<string, unknown>[] = [];
+    const stubRunArmUnit = async (o: Record<string, unknown>) => {
+      dispatches.push(o);
+      return {
+        status: "failed",
+        failureCategory: "harness",
+        detail: "e4-r98-arm-worker-v2 harness: dispatch double",
+        consumed: 0,
+        reservationId: "",
+        resultHash: "",
+        build: null,
+        verifierPassed: false,
+      };
+    };
+    const runResume = () =>
+      mod.runDriver({
+        modules: { evaluation },
+        plan,
+        env: AUTHORIZED_ENV(plan.planDigest!),
+        observation: observationFor(plan),
+        ledgerDir,
+        endpointBaseUrl: "https://api.openai.com/v1",
+        armWorker: {
+          armDirs: { baseline: "D:/wt/baseline", candidate: "D:/wt/candidate" },
+          outDir: join(dir, "units"),
+          runArmUnit: stubRunArmUnit,
+        },
+      });
+
+    // ---- RUN 1: the evidence is MISSING. -----------------------------------
+    const evidenceAbs = join(ledgerDir, ...written.relPath.split("/"));
+    await rename(evidenceAbs, `${evidenceAbs}.moved-aside`);
+    const broken = await runResume();
+    expect(broken["code"]).toBe("EVIDENCE_CHAIN_BROKEN");
+    expect(broken["status"]).toBe("REFUSED");
+    expect(dispatches.length, "no unit may be dispatched once the old evidence is known broken").toBe(0);
+    expect(broken["workerUnits"] ?? 0).toBe(0);
+    expect(broken["logicalCalls"] ?? 0).toBe(0);
+
+    // ---- RUN 2: the SAME campaign, evidence restored. ----------------------
+    // The negative above is only decisive because the pending work EXISTS.
+    await rename(`${evidenceAbs}.moved-aside`, evidenceAbs);
+    const resumed = await runResume();
+    expect(resumed["code"]).not.toBe("EVIDENCE_CHAIN_BROKEN");
+    expect(dispatches.length, "the remaining units must be pending").toBeGreaterThan(0);
+    expect(resumed["workerUnits"]).toBe(dispatches.length);
+  }, 600_000);
+});
+
+// ===========================================================================
+// E4-R104 (A4) — THE FORMAL PATH BINDS AND FORWARDS THE ARM'S EXECUTED BYTES.
+// ===========================================================================
+//
+// MEASURED DEFECT F4, formal-path half (plan §A4 做什么 3). The build identity was
+// derived correctly and the WORKER already refused a mismatched
+// `approvedBuildDigest` — but only where a caller opted in, because the formal
+// envelope had no slot for the value and the driver never passed it. Measured
+// before the fix (`.ci/team-verify/a4/probe-optin.log`):
+//
+//   J3_OMITTED      refusalFired=false
+//   J4_EMPTY_STRING refusalFired=false
+//   J5_WHITESPACE   refusalFired=false
+//
+// so a plan could be approved with NOTHING binding the bytes that execute a case.
+// `dist/` is gitignored (`.gitignore:2`), so neither the sha nor the git-derived
+// plan digest could notice a rebuilt executor.
+//
+// The plan-level half of the binding (the readiness refusal and the execution-time
+// build-drift codes) lives in `r97-plan.test.ts`; this block measures what is
+// uniquely the DRIVER's responsibility — that the approved value ARRIVES at the
+// unit, per arm.
+describe("E4-R104 (A4): the driver forwards the approved build identity", () => {
+  it("A4: the driver forwards the APPROVED build digest to every unit, so a rebuilt arm is refused", async () => {
+    // This drives `armWorker` with a recording stand-in, so nothing waits on a real
+    // arm and the FORWARDING is the only thing measured.
+    const dir = await tempDir();
+    const ledgerDir = join(dir, "ledger");
+    const endpointIdentity = (evaluation["captureEndpointIdentity"] as (u: string) => string | null)(
+      "https://api.openai.com/v1",
+    );
+    const sel = await (evaluation["loadR97FrozenSelection"] as (r: string) => Promise<{ caseIds: string[]; caseFingerprints: Record<string, string> }>)(REPO);
+    const mkArm = (label: "baseline" | "candidate", sha: string, dg: string, build: string): R97ArmObservation => ({
+      arm: label,
+      checkoutDir: `D:/wt/${label}`,
+      sourceSha: sha,
+      treeFingerprint: null,
+      clean: true,
+      planDigest: dg,
+      buildDigest: build,
+      providerId: "openai",
+      modelId: "gpt-4o-mini",
+      endpointIdentity,
+      caseIds: sel.caseIds,
+      cliCaseIds: sel.caseIds.map((id) => id.split("/").pop() ?? id),
+      caseFingerprints: sel.caseFingerprints,
+      effectiveModelParams: { budgetTokens: 32_000 },
+      totalLogicalRuns: sel.caseIds.length * 2,
+      suite: "regression",
+    });
+    const baselineBuild = "1a".padEnd(64, "0");
+    const candidateBuild = "2b".padEnd(64, "0");
+    const plan = await finalizedPlan({
+      baseline: mkArm("baseline", "1".repeat(40), "a".repeat(64), baselineBuild),
+      candidate: mkArm("candidate", "2".repeat(40), "b".repeat(64), candidateBuild),
+      endpointIdentity,
+    });
+    // The plan really binds both digests, per arm — the precondition for the
+    // forwarding below to be meaningful at all.
+    expect(plan.authorization!.arms.baseline.buildDigest).toBe(baselineBuild);
+    expect(plan.authorization!.arms.candidate.buildDigest).toBe(candidateBuild);
+
+    const seen: Array<{ arm: string; opts: Record<string, unknown> }> = [];
+    const result = await mod.runDriver({
+      modules: { evaluation },
+      plan,
+      env: AUTHORIZED_ENV(plan.planDigest!),
+      observation: observationFor(plan),
+      ledgerDir,
+      endpointBaseUrl: "https://api.openai.com/v1",
+      unitTimeoutMs: 1_000,
+      armWorker: {
+        armDirs: { baseline: REPO, candidate: REPO },
+        runArmUnit: async (unitOpts: Record<string, unknown>) => {
+          seen.push({ arm: String(unitOpts["arm"]), opts: unitOpts });
+          return {
+            status: "completed",
+            verifierPassed: true,
+            failureCategory: null,
+            detail: "recording stand-in",
+            consumed: 0,
+            reservationId: "",
+            resultHash: "",
+            build: null,
+          };
+        },
+      },
+    });
+
+    expect(
+      seen.length,
+      `the driver dispatched at least one arm unit (code=${String(result["code"])} reason=${String(result["reason"])})`,
+    ).toBeGreaterThan(0);
+
+    for (const unit of seen) {
+      const expected = unit.arm === "baseline" ? baselineBuild : candidateBuild;
+      expect(
+        unit.opts["approvedBuildDigest"],
+        `arm ${unit.arm}: the unit must receive the APPROVED build digest, or a rebuilt arm runs under an old approval`,
+      ).toBe(expected);
+      // And it is the arm's OWN digest, not one value shared by both — a single
+      // shared digest would hide one arm's build exactly as a shared sha would.
+      expect(unit.opts["approvedBuildDigest"]).not.toBe(
+        unit.arm === "baseline" ? candidateBuild : baselineBuild,
+      );
+    }
+  }, 120_000);
 });

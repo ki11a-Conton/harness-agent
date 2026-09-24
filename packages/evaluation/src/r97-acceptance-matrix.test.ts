@@ -35,10 +35,19 @@ const MATRIX = pathToFileURL(join(REPO, "scripts", "e4", "r97-acceptance-matrix.
 interface RowResult {
   id: string;
   planExpectation: string;
+  planRows: string[];
   ok: boolean;
   missing: string[];
   notPassed: string[];
   tests: Array<{ name: string; present: boolean; status: string; ok: boolean }>;
+}
+
+interface PlanRowResult {
+  id: string;
+  requirement: string;
+  minimumEvidence: string;
+  coveredBy: string[];
+  ok: boolean;
 }
 
 interface MatrixResult {
@@ -47,13 +56,17 @@ interface MatrixResult {
   passedTests: number;
   duplicateNames: string[];
   rows: RowResult[];
+  planRows: PlanRowResult[];
+  uncoveredPlanRows: string[];
+  unsatisfiedPlanRows: string[];
   missingPinned: string[];
   notPassedPinned: string[];
   ok: boolean;
 }
 
 const mod = (await import(MATRIX)) as {
-  ACCEPTANCE_MATRIX: Array<{ id: string; planExpectation: string; tests: string[] }>;
+  ACCEPTANCE_MATRIX: Array<{ id: string; planExpectation: string; planRows: string[]; tests: string[] }>;
+  PLAN_BEHAVIOR_MATRIX: Array<{ id: string; requirement: string; minimumEvidence: string }>;
   MATRIX_VERSION: string;
   PINNED_REGRESSIONS: string[];
   evaluateMatrix: (report: unknown) => MatrixResult;
@@ -285,6 +298,18 @@ describe("E4-R101-A (T6) M5: the matrix names tests that REALLY EXIST in the sui
     "r97-offline-seam.test.ts",
     "r97-execution-state.test.ts",
     "r97-driver-closed-loop.test.ts",
+    // Added by A7. The closing plan's M2 row ("已消费 campaign 整目录删除后重新打开")
+    // is evidenced by the A2/F2 counterexamples, which live in this file. Leaving it
+    // out would have made those names unresolvable here, and dropping the names
+    // instead would have left M2 covered by nothing.
+    "r97-campaign-lifecycle.test.ts",
+    // Added when A4's formal-path binding was closed. `r97-plan.test.ts` is the file
+    // that declares the plan-level half of that binding — the readiness refusal
+    // (`ARM_BUILD_UNBOUND`) and the execution-time build-drift codes — and it was
+    // ALREADY part of the closed-loop run (`r97-closed-loop.mjs` SUITE_FILES). Its
+    // absence from this scan list meant the M5 row could not name those tests: the
+    // guard would have reported a correct entry as "no test the suites declare".
+    "r97-plan.test.ts",
   ];
 
   it("finds each named test's own title in one of the R97 suites", async () => {
@@ -373,5 +398,112 @@ describe("E4-R101-A (T6) M7: a row is satisfied only by tests about ITS OWN scen
     const row = mod.ACCEPTANCE_MATRIX.find((r) => r.id.includes("外部 provider"));
     expect(row).toBeDefined();
     expect(row!.tests.join("\n")).toContain("provider never constructed");
+  });
+});
+
+/**
+ * E4-R101-A (T6) M8 — the CLOSING plan's own M1–M9 table is ENFORCED, not described.
+ *
+ * Plan §A7 怎么做 2: "acceptance matrix 建立下面的行为映射。用具体测试名/证据关联各行，
+ * 不允许一个无关测试让多行自动通过." The failure this guards against is a matrix that
+ * documents nine scenarios in a comment while nothing checks that all nine are
+ * actually claimed by a row — a mapping that is only prose can silently lose an M
+ * row when a row's tests are rewritten.
+ *
+ * So each acceptance row DECLARES the M rows it evidences (`planRows`), and
+ * `evaluateMatrix` computes the reverse index. An M row that no row claims is a
+ * hard failure, whether or not the run was green.
+ */
+describe("E4-R101-A (A7) M8: the closing plan's M1–M9 table is covered by rows that pass", () => {
+  it("declares the nine rows of plan §A7's behavior matrix, with their minimum evidence", () => {
+    expect(mod.PLAN_BEHAVIOR_MATRIX).toHaveLength(9);
+    expect(mod.PLAN_BEHAVIOR_MATRIX.map((m) => m.id)).toEqual([
+      "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9",
+    ]);
+    for (const m of mod.PLAN_BEHAVIOR_MATRIX) {
+      // A row with no stated requirement is a row nobody can check.
+      expect(m.requirement.length, `${m.id} states no requirement`).toBeGreaterThan(0);
+      expect(m.minimumEvidence.length, `${m.id} states no minimum evidence`).toBeGreaterThan(0);
+    }
+  });
+
+  it("leaves NO M row unclaimed — every scenario has an acceptance row behind it", () => {
+    const result = mod.evaluateMatrix(reportOf(EVERY_NAME.map((n): [string, string] => [n, "passed"])));
+    expect(result.uncoveredPlanRows, "these plan rows are claimed by no acceptance row").toEqual([]);
+    expect(result.unsatisfiedPlanRows).toEqual([]);
+    // The reverse index really is populated, so the assertion above is not vacuous.
+    for (const row of result.planRows) {
+      expect(row.coveredBy.length, `${row.id} is claimed by no acceptance row`).toBeGreaterThan(0);
+    }
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects a plan row claimed by NO acceptance row, even when every test passed", () => {
+    // The gap that a prose-only mapping cannot catch: M4 (the staged-bytes scenario)
+    // silently loses its last claimant. Every test still passes, so ONLY the mapping
+    // check can notice that a scenario the plan names is no longer evidenced.
+    const saved = mod.ACCEPTANCE_MATRIX.map((r) => [...r.planRows]);
+    try {
+      for (const r of mod.ACCEPTANCE_MATRIX) r.planRows = r.planRows.filter((m) => m !== "M4");
+      const result = mod.evaluateMatrix(reportOf(EVERY_NAME.map((n): [string, string] => [n, "passed"])));
+      expect(result.uncoveredPlanRows).toEqual(["M4"]);
+      expect(result.ok, "a scenario the plan names may not be silently unevidenced").toBe(false);
+      // Every individual acceptance row is still satisfied — the failure is purely
+      // the missing mapping, which is what makes this a distinct check.
+      expect(result.rows.every((r) => r.ok)).toBe(true);
+    } finally {
+      mod.ACCEPTANCE_MATRIX.forEach((r, i) => {
+        r.planRows = saved[i]!;
+      });
+    }
+  });
+
+  it("rejects a plan row whose claiming acceptance row did NOT pass", () => {
+    // Coverage claimed by a FAILING row is not coverage. The M row must inherit the
+    // failure rather than being reported satisfied because it is claimed.
+    const target = mod.ACCEPTANCE_MATRIX.find((r) => r.planRows.includes("M7"))!;
+    const victim = target.tests[0]!;
+    const result = mod.evaluateMatrix(
+      reportOf(EVERY_NAME.map((n): [string, string] => [n, n === victim ? "skipped" : "passed"])),
+    );
+    expect(result.unsatisfiedPlanRows).toContain("M7");
+    expect(result.ok).toBe(false);
+  });
+
+  it("refuses an acceptance row that claims a plan row the plan never declared", () => {
+    const saved = mod.ACCEPTANCE_MATRIX[0]!.planRows;
+    try {
+      mod.ACCEPTANCE_MATRIX[0]!.planRows = ["M99"];
+      expect(() => mod.evaluateMatrix(reportOf(EVERY_NAME.map((n): [string, string] => [n, "passed"])))).toThrow(
+        /claims unknown plan row M99/,
+      );
+    } finally {
+      mod.ACCEPTANCE_MATRIX[0]!.planRows = saved;
+    }
+  });
+
+  it("binds each round counterexample to the M row it was written for", () => {
+    // The A7 additions are not decoration: each closed defect (A1–A6) must appear as
+    // evidence in the M row whose scenario it is. Without this, the new tests could
+    // exist and still leave the plan's matrix unchanged.
+    const byM = new Map(mod.PLAN_BEHAVIOR_MATRIX.map((m) => [m.id, []] as [string, string[]]));
+    for (const r of mod.ACCEPTANCE_MATRIX) {
+      for (const m of r.planRows) byM.get(m)!.push(r.tests.join("\n"));
+    }
+    const expected: Array<[string, string]> = [
+      ["M1", "R99 W11 (A1/F1)"],
+      ["M2", "R98-A L3c: a SPENT authorization is not refreshed by deleting its root"],
+      ["M3", "E4-R103 (A3)"],
+      ["M4", "E4-R103 (A3): the worker stages the bytes it was approved for"],
+      ["M5", "E4-R104 (A4)"],
+      ["M6", "R105 (A5/F5)"],
+      ["M7", "E4-R106 (A6/F6)"],
+      ["M8", "R99 W8: THE REAL EXECUTION"],
+      ["M9", "E4-R103 (A3): the formal CLI uses the execution clock"],
+    ];
+    for (const [m, needle] of expected) {
+      const haystack = byM.get(m)!.join("\n");
+      expect(haystack, `${m} is not evidenced by the counterexample it names (${needle})`).toContain(needle);
+    }
   });
 });

@@ -62,12 +62,15 @@
  * it from the child environment it builds.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdtemp, mkdir, cp, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { openR97BudgetLedger, viewOfR97Ledger } from "./r97-budget-ledger.js";
+import { verifyUnitEvidence } from "./r97-campaign-evidence.js";
 
 const REPO = process.cwd();
 const WORKER = pathToFileURL(join(REPO, "scripts", "e4", "r97-arm-worker.mjs")).href;
@@ -93,8 +96,56 @@ interface ArmUnitRecord {
   caseSource?: string;
   verifierPassed?: boolean;
   consumed?: number;
-  budget?: { logicalCalls: number; transportRetries: number; unknownCalls: number; refusedCalls: number; reservationIds: string[] } | null;
+  budget?: {
+    logicalCalls: number;
+    transportRetries: number;
+    unknownCalls: number;
+    refusedCalls: number;
+    reservationIds: string[];
+    /**
+     * The channel's EXPLICIT per-reservation dispatch state (A1/F1), in order.
+     *
+     * It is a MEASUREMENT taken as the call proceeds rather than an inference from
+     * a return value, so it survives the throw: `entered === true && settled ===
+     * false` is the measured fact that a call was ADMITTED and that its terminal
+     * ledger write did NOT land.
+     */
+    dispatches?: Array<{
+      reservationId: string;
+      entered: boolean;
+      completed: boolean;
+      settled: boolean;
+      settlement: string | null;
+    }>;
+    /** Admitted calls whose terminal ledger write FAILED. Non-zero means the
+     *  ledger still shows an outstanding reservation. */
+    settlementFailures?: number;
+    /** The last settlement failure message, so the verdict can name the cause. */
+    lastSettlementError?: string | null;
+  } | null;
   execution?: { digest: string; files: number } | null;
+  /**
+   * The identity the unit ACTUALLY executed under (T4 / N6, extended by A5).
+   *
+   * `declared*` comes from the arm's own dry-run plan, `runtime*` from the
+   * `ModelRef` the core runtime handed to `createClient`, and `approved*` from
+   * the caller's envelope — three INDEPENDENT views, so a disagreement is a
+   * measurement rather than a restatement. `drift` is the diagnostic list of
+   * disagreements; `null` when the unit never reached the executor.
+   */
+  executionIdentity?: {
+    declaredProviderId?: string | null;
+    declaredModelId?: string | null;
+    declaredEndpointIdentity?: string | null;
+    runtimeProviderId?: string | null;
+    runtimeModelId?: string | null;
+    approvedProviderId?: string | null;
+    approvedModelId?: string | null;
+    approvedEndpointIdentity?: string | null;
+    executingProviderId?: string | null;
+    providerIsOfflineSubstitute?: boolean;
+    drift?: string[];
+  } | null;
   capturedRequests: Array<{ messageCount: number; messages: Array<{ role: string; content: string }>; digest: string }>;
   report: {
     task_id: string | null;
@@ -126,6 +177,12 @@ const mod = (await import(WORKER)) as {
   armBuildIdentity: (dir: string) => { checkoutDir: string; sourceSha: string | null; buildDigest: string | null };
   /** The explicit artifact manifest the build identity covers (T4 / N7). */
   BUILD_ARTIFACT_PATHS: readonly (readonly string[])[];
+  /**
+   * E4-R104 (A4): the DERIVED closure of those declared entries, as root-relative
+   * POSIX paths. A fixture that has to be "a real, complete build" must copy THIS,
+   * because the digest covers the closure rather than the declared list.
+   */
+  armBuildClosurePaths: (dir: string) => string[];
   cliEntryOf: (dir: string) => string;
   reportPathOf: (outDir: string, suite: string) => string;
   dispatchArgs: (o: Record<string, unknown>) => string[];
@@ -136,6 +193,17 @@ const mod = (await import(WORKER)) as {
   reportRowFor: (report: unknown, caseId: string) => ArmUnitRecord["report"];
   parsePlanDigest: (stdout: string) => string | null;
   main: (argv: string[]) => Promise<number>;
+  /**
+   * E4-R105 (A5): the verdict priority table and the fold that applies it. The
+   * record-level tests below drive real units; these two are exported so the
+   * TABLE itself can be asserted directly, entry by entry, rather than inferred
+   * from one unit's outcome.
+   */
+  R97_VERDICT_PRIORITY: readonly string[];
+  foldR97Verdict: (
+    current: { category: string | null; detail: string } | null,
+    next: { category: string | null; detail: string },
+  ) => { category: string | null; detail: string };
 };
 
 let dirs: string[] = [];
@@ -156,10 +224,29 @@ async function tempDir(): Promise<string> {
  * fact about the worker. The other R97 ledger suites already do this; the worker
  * contract suite must too now that it opens real campaigns.
  */
-const CLAIMS_DIR = await mkdtemp(join(tmpdir(), "r99-claims-"));
-process.env["R97_CAMPAIGN_CLAIMS_DIR"] = CLAIMS_DIR;
-
+/**
+ * ONE FRESH CLAIM ANCHOR PER TEST (plan §A2 怎么做 6: "普通测试应使用独立的 claim
+ * namespace/独立批准 ID").
+ *
+ * The ledger's claim anchor defaults to a directory under the SYSTEM temp dir, so
+ * every test file that opens a ledger shares one namespace keyed by campaign id.
+ * Two suites in parallel workers would refuse each other with
+ * `BUDGET_CAMPAIGN_DIR_DUPLICATE`. And since finding F2 an anchor that records
+ * "this approval ESTABLISHED a budget here" is no longer ignorable just because a
+ * test cleaned its directory up — several tests in THIS file reuse the same plan
+ * digest in a brand-new temporary ledger dir, which under F2 is exactly the
+ * double-spend shape. Isolating the namespace per test keeps each test measuring
+ * its own approval.
+ */
+let CLAIMS_DIR = "";
+beforeEach(async () => {
+  CLAIMS_DIR = await mkdtemp(join(tmpdir(), "r99-claims-"));
+  process.env["R97_CAMPAIGN_CLAIMS_DIR"] = CLAIMS_DIR;
+});
 afterEach(async () => {
+  delete process.env["R97_CAMPAIGN_CLAIMS_DIR"];
+  if (CLAIMS_DIR !== "") await rm(CLAIMS_DIR, { recursive: true, force: true }).catch(() => {});
+  CLAIMS_DIR = "";
   for (const d of dirs.splice(0)) await rm(d, { recursive: true, force: true }).catch(() => {});
 });
 
@@ -712,11 +799,19 @@ describe("R99 W8: THE REAL EXECUTION — the arm's own build actually runs the c
     // carries a real git HEAD so the build binding is established too) that simply
     // has NO `benchmarks/`. `repoRoot` is the real repo, which DOES have the case.
     // A fallback would find it there and run; a refusal cannot.
+    //
+    // E4-R104 (A4): "its dist artifacts" now means the DERIVED CLOSURE, not the
+    // declared list. The digest is a walk of the real import graph, so a tree that
+    // carries the five declared entry files but not what they import (measured:
+    // `packages/model/dist/index.js` imports `./registry.js`) has no establishable
+    // identity at all — and this test needs one, because it measures the CASE
+    // lookup, not the identity. The fixture therefore materialises exactly what the
+    // manifest derives from the repo it copies from.
     const fakeArm = await tempDir();
-    for (const parts of mod.BUILD_ARTIFACT_PATHS) {
-      const dest = join(fakeArm, ...parts);
+    for (const rel of mod.armBuildClosurePaths(REPO)) {
+      const dest = join(fakeArm, ...rel.split("/"));
       await mkdir(join(dest, ".."), { recursive: true });
-      await cp(join(REPO, ...parts), dest);
+      await cp(join(REPO, ...rel.split("/")), dest);
     }
     const { execFileSync } = await import("node:child_process");
     const git = (args: string[]) => execFileSync("git", args, { cwd: fakeArm, stdio: "ignore" });
@@ -931,4 +1026,1143 @@ describe("R99 W10: the worker's report SURVIVES it, linked and hashed", () => {
     expect((record as unknown as { evidence?: unknown }).evidence ?? null).toBeNull();
     expect(existsSync(join(root, "state", EXEC_FILE))).toBe(false);
   }, 120_000);
+});
+
+/**
+ * A PROTOCOL FIXTURE arm whose exported `runBenchmarkCommand` reproduces the
+ * measured F1 shape: it consumes ONE non-terminal event from the injected
+ * (budgeted) provider — so the request really left — and then DIES.
+ *
+ * This is labelled a protocol fixture deliberately: it is a synthetic arm
+ * export, not a real frozen benchmark arm, and nothing here is evidence about
+ * model quality or a benchmark score. What it measures is the CAMPAIGN's
+ * budget bookkeeping on an exception path, which is the only thing A1 asserts.
+ *
+ * The synthetic model package is SELF-CONTAINED on purpose: a copied
+ * `packages/model/dist` would need the workspace's `@ar/*` links, and linking
+ * them would make this fixture depend on the machine's install layout rather
+ * than on the worker's contract.
+ */
+const SYNTHETIC_MODEL = `export class ScriptedModelProvider {
+  constructor(scripts) {
+    this.scripts = scripts;
+    this.calls = [];
+    this.index = 0;
+    this.id = "scripted";
+  }
+  async listModels() {
+    return [{ id: "scripted-model", name: "Scripted" }];
+  }
+  createClient() {
+    const p = this;
+    return {
+      generate: async function* () {
+        const i = p.index;
+        p.index += 1;
+        p.calls.push(i);
+        const script = p.scripts[i];
+        if (script) yield* script;
+      },
+    };
+  }
+  static text(text) {
+    return [
+      { type: "started", timestamp: 0 },
+      { type: "text_delta", text, timestamp: 0 },
+      { type: "completed", result: { finishReason: "stop", text }, timestamp: 0 },
+    ];
+  }
+  static toolCall(name, args = {}) {
+    const id = "tc-" + Math.random().toString(16).slice(2);
+    return [
+      { type: "started", timestamp: 0 },
+      { type: "tool_call_delta", toolCall: { id, name, args }, timestamp: 0 },
+      { type: "completed", result: { finishReason: "tool_calls", toolCalls: [{ id, name, args }] }, timestamp: 0 },
+    ];
+  }
+}
+`;
+
+const SYNTHETIC_CLI = `import { appendFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { ScriptedModelProvider } from "../../../packages/model/dist/index.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const SENTINEL = join(here, "synthetic-dispatch.log");
+
+export { ScriptedModelProvider };
+
+export async function runBenchmarkCommand(argv, providerOverride) {
+  if (Array.isArray(argv) && argv.includes("--dry-run")) {
+    return {
+      exitCode: 0,
+      lines: [JSON.stringify({ planDigest: null, providerId: "openai", modelId: "approved-model-x", endpointIdentity: null })],
+    };
+  }
+  const client = providerOverride.createClient({ providerId: "openai", modelId: "approved-model-x" }, {});
+  const controller = new AbortController();
+  for await (const ev of client.generate({ messages: [{ role: "user", content: "r98" }] }, controller.signal)) {
+    appendFileSync(SENTINEL, ev.type + "\\n");
+    break;
+  }
+  throw new Error("E4-R98: synthetic arm CLI died after the request left");
+}
+`;
+
+const SYNTHETIC_LOG = "synthetic-dispatch.log";
+
+/**
+ * The env var that tells the settlement-failure fixture WHERE the campaign ledger
+ * is.
+ *
+ * The arm CLI is loaded INSIDE the child process (`r97-arm-child-runner.mjs` ->
+ * `r97-arm-exec.mjs` -> the arm's own `runBenchmarkCommand`), and that child
+ * inherits this process's environment (`runArmCaseAtBoundary` spawns it with
+ * `env: process.env`). Handing the fixture the path through the environment is
+ * therefore a real, inherited channel — the fixture never GUESSES the ledger's
+ * location, and the test owns the path it passed to `runArmUnit`.
+ */
+const LEDGER_DELETE_ENV = "R97_TEST_LEDGER_TO_DELETE";
+
+/**
+ * The synthetic arm used by the SETTLEMENT-FAILURE test.
+ *
+ * It is the SAME shape as `SYNTHETIC_CLI` — it drives the injected provider, reads
+ * ONE event, then dies — with one added step placed at the exact instant that
+ * makes the failure land on the SETTLEMENT write rather than on the OPEN:
+ *
+ *   1. the child process OPENS the ledger with `mode: "resume"` (the file must
+ *      still exist here, and it does — the parent bootstrapped it during
+ *      `openR97Campaign`);
+ *   2. the first `generate()` ADOPTS the pre-taken reservation and enters the
+ *      inner provider (`dispatch.entered = true`), which is why an event is
+ *      readable at all;
+ *   3. the ledger FILE is deleted (`rmSync` — cross-platform; `chmod` is a no-op
+ *      on Windows and is deliberately NOT used);
+ *   4. `break` ends the generator, so the channel's `finally` runs `settle()`,
+ *      which is a locked read-modify-write: `withLedger` calls `read()` INSIDE the
+ *      lock BEFORE the mutation, and a DELETED ledger on an ESTABLISHED handle
+ *      throws `BUDGET_STATE_MISSING`. The failure is therefore on the SETTLE, not
+ *      on the open, and `settled` stays false while `entered` is true.
+ *
+ * Deleting in `beforeStageCopy` would NOT do: that hook runs before the child
+ * opens, so the child would refuse at OPEN, no reservation would be taken and
+ * nothing would be dispatched — a different branch entirely.
+ */
+const SYNTHETIC_SETTLEMENT_FAILURE_CLI = `import { appendFileSync, rmSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { ScriptedModelProvider } from "../../../packages/model/dist/index.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const SENTINEL = join(here, "synthetic-dispatch.log");
+const LEDGER_TO_DELETE = process.env.R97_TEST_LEDGER_TO_DELETE ?? "";
+
+export { ScriptedModelProvider };
+
+export async function runBenchmarkCommand(argv, providerOverride) {
+  if (Array.isArray(argv) && argv.includes("--dry-run")) {
+    return {
+      exitCode: 0,
+      lines: [JSON.stringify({ planDigest: null, providerId: "openai", modelId: "approved-model-x", endpointIdentity: null })],
+    };
+  }
+  const client = providerOverride.createClient({ providerId: "openai", modelId: "approved-model-x" }, {});
+  const controller = new AbortController();
+  for await (const ev of client.generate({ messages: [{ role: "user", content: "r98" }] }, controller.signal)) {
+    appendFileSync(SENTINEL, ev.type + "\\n");
+    // THE INJECTION POINT: the reservation is taken and the inner provider has
+    // already been ENTERED (an event was yielded), and the channel's settlement
+    // has NOT yet run (it runs when the consumer ends the generator). Deleting
+    // here makes the settlement's locked read fail closed.
+    if (LEDGER_TO_DELETE !== "") rmSync(LEDGER_TO_DELETE, { force: true });
+    break;
+  }
+  throw new Error("E4-R98: synthetic arm CLI died after the request left");
+}
+`;
+
+/** Build a loadable synthetic arm with a REAL build identity and ONE real case. */
+async function syntheticArm(opts: { cli?: string } = {}): Promise<{ dir: string; sha: string }> {
+  const dir = await tempDir();
+  // Every artifact `armBuildIdentity` covers must EXIST (the digest is computed
+  // over all of them), and the two the executor actually LOADS are the
+  // synthetic ones written below.
+  //
+  // E4-R104 (A4): the covered set is the DERIVED closure, so the fixture copies the
+  // closure the repo's own manifest derives — the five declared entries alone do
+  // not resolve (`packages/model/dist/index.js` imports `./registry.js`). The two
+  // synthetic overwrites below then REPLACE modules inside that closure, which can
+  // only shrink what the walk reaches, never break it: every relative specifier
+  // they keep still resolves inside the copied tree, and the bare specifiers the
+  // copies name are recorded as externals.
+  for (const rel of mod.armBuildClosurePaths(REPO)) {
+    const dest = join(dir, ...rel.split("/"));
+    await mkdir(join(dest, ".."), { recursive: true });
+    await cp(join(REPO, ...rel.split("/")), dest);
+  }
+  await writeFile(join(dir, "packages", "model", "dist", "index.js"), SYNTHETIC_MODEL, "utf8");
+  await writeFile(join(dir, "apps", "cli", "dist", "benchmark-command.js"), opts.cli ?? SYNTHETIC_CLI, "utf8");
+  await mkdir(join(dir, "benchmarks", "r98-fixtures"), { recursive: true });
+  await cp(join(REPO, "benchmarks", "r98-fixtures", CASE_ID), join(dir, "benchmarks", "r98-fixtures", CASE_ID), {
+    recursive: true,
+  });
+  const { execFileSync } = await import("node:child_process");
+  const git = (args: string[]) => execFileSync("git", args, { cwd: dir, stdio: "ignore" });
+  git(["init", "-q"]);
+  git(["-c", "user.email=t@e.st", "-c", "user.name=test", "commit", "-q", "--allow-empty", "-m", "synthetic arm"]);
+  const build = mod.armBuildIdentity(dir);
+  return { dir, sha: build.sourceSha! };
+}
+
+describe("R99 W11 (A1/F1): a DISPATCHED call is never refunded when the arm CLI dies afterwards", () => {
+  it("grant=1, the consumer breaks mid-stream and the CLI throws: innerCalls=1, NOT abandoned, remaining=0, second reserve refused", async () => {
+    // MEASURED DEFECT F1 (plan §0.2, P0):
+    //   "inner generator 已进入 1 次；消费者读一个事件后 break，CLI 再抛错；worker
+    //    consumed=0，reservation=`abandoned`，grant=1 时另一次 reserve 仍成功"
+    //
+    // `budgetStats` was only assigned on the executor's SUCCESSFUL return, so an
+    // exception after a real dispatch left it `null` and the worker read that as
+    // "nothing was sent" — refunding a call that really entered the provider.
+    const arm = await syntheticArm();
+    const root = await tempDir();
+    const planDigest = "b".repeat(64);
+    const record = await mod.runArmUnit({
+      checkoutDir: arm.dir,
+      repoRoot: REPO,
+      caseId: CASE_ID,
+      suite: "regression",
+      arm: "baseline",
+      repetition: 1,
+      planDigest,
+      approvedSourceSha: arm.sha,
+      providerId: "openai",
+      modelId: "approved-model-x",
+      endpointBaseUrl: "http://127.0.0.1:9/v1",
+      maxModelCalls: 1,
+      campaignModelCalls: 1,
+      executionStateDir: join(root, "state"),
+      ledgerDir: join(root, "ledger"),
+      outDir: join(root, "out"),
+      timeoutMs: 120_000,
+    });
+
+    // GROUND TRUTH: the request really entered the inner provider. The synthetic
+    // arm appends one line per event it READ from the budgeted provider, so this
+    // is a real side effect, not a self-reported counter.
+    const sentinel = join(arm.dir, "apps", "cli", "dist", SYNTHETIC_LOG);
+    expect(existsSync(sentinel), "the synthetic arm really drove the injected provider").toBe(true);
+    expect((await readFile(sentinel, "utf8")).trim().split("\n")).toEqual(["started"]);
+
+    // THE DISCRIMINATOR: the reservation is settled, NOT refunded.
+    const ledgerOnDisk = JSON.parse(await readFile(join(root, "ledger", LEDGER_FILE), "utf8")) as {
+      entries: Array<{ reservationId: string; status: string; consumed: number | null }>;
+      campaignModelCalls: number;
+    };
+    expect(ledgerOnDisk.entries, "one reservation per real call").toHaveLength(1);
+    expect(ledgerOnDisk.entries[0]!.reservationId).toBe(record.reservationId);
+    expect(ledgerOnDisk.entries[0]!.status, "an ENTERED call is never refunded as abandoned").toBe("unknown");
+    expect(viewOfR97Ledger(ledgerOnDisk as never).remaining, "the spent allowance is gone").toBe(0);
+
+    // The unit is an honest FAILURE (the arm CLI died), but its spend is REAL.
+    expect(record.status).toBe("failed");
+    expect(record.failureCategory).toBe("infrastructure");
+    expect(record.consumed, "the channel measured ONE admitted logical call").toBe(1);
+    expect(record.budget?.logicalCalls, "the live channel stats reach the caller even on the throw path").toBe(1);
+    expect(record.reservationIds).toContain(record.reservationId);
+
+    // And the SAME approval cannot spend a second call.
+    const reopened = await openR97BudgetLedger(join(root, "ledger"), {
+      planDigest,
+      campaignModelCalls: 1,
+      mode: "resume",
+    });
+    const second = await reopened.reserve("baseline", 1);
+    expect(second.ok, "a spent allowance must not be re-granted").toBe(false);
+  }, 180_000);
+
+  /**
+   * THE WORKER-LEVEL END-TO-END COVERAGE THE REPORT SAYS IS MISSING.
+   *
+   * `docs/E4-R99-R101-report.md:2370` records the residual gap verbatim:
+   *
+   *   "worker 级的 settlement-write-failure 分支未被端到端覆盖（只在 channel 层覆盖）"
+   *
+   * The channel's own suite drives `createLedgerBudgetedProvider` directly, so it
+   * proves the `finally` settlement fails when the ledger write fails. It does NOT
+   * prove what the WORKER does with that fact: that `runArmUnit`'s STEP 5 reads the
+   * child's live dispatch record, takes the Case-3 branch
+   * (`entered === true && settled !== true`) at `scripts/e4/r97-arm-worker.mjs:2731`,
+   * folds a `budget` verdict over the boundary's `infrastructure` one, KEEPS the
+   * allowance outstanding, and never refunds it.
+   *
+   * That is the branch measured here, through the REAL `runArmUnit` and the REAL
+   * child process. The report's `:2317` note is the other half of the same gap.
+   *
+   * THE INJECTION IS A DELETED LEDGER FILE, chosen because `rm` is cross-platform
+   * (Windows and Ubuntu) while `chmod` is a no-op on Windows. It is applied from
+   * INSIDE the arm's own CLI, at the one instant that lands the failure on the
+   * SETTLEMENT write: after the first event was read (so the reservation IS taken
+   * and the inner provider IS entered) and before the consumer ends the generator
+   * (so `settle()` has not run yet). Deleting earlier — in `beforeStageCopy`, say —
+   * would make the child refuse at OPEN, with no reservation and no dispatch.
+   */
+  it("a SETTLEMENT write failure on an ENTERED call is refused as `budget` and the allowance is NOT refunded", async () => {
+    const arm = await syntheticArm({ cli: SYNTHETIC_SETTLEMENT_FAILURE_CLI });
+    const root = await tempDir();
+    const planDigest = "c".repeat(64);
+    const ledgerPath = join(root, "ledger", LEDGER_FILE);
+    // The child inherits this environment (`runArmCaseAtBoundary` spawns it with
+    // the parent's `process.env`), so the fixture learns the ledger's location
+    // from the TEST rather than guessing it.
+    process.env[LEDGER_DELETE_ENV] = ledgerPath;
+    let record: ArmUnitRecord;
+    try {
+      record = await mod.runArmUnit({
+        checkoutDir: arm.dir,
+        repoRoot: REPO,
+        caseId: CASE_ID,
+        suite: "regression",
+        arm: "baseline",
+        repetition: 1,
+        planDigest,
+        approvedSourceSha: arm.sha,
+        providerId: "openai",
+        modelId: "approved-model-x",
+        endpointBaseUrl: "http://127.0.0.1:9/v1",
+        maxModelCalls: 1,
+        campaignModelCalls: 1,
+        executionStateDir: join(root, "state"),
+        ledgerDir: join(root, "ledger"),
+        outDir: join(root, "out"),
+        timeoutMs: 120_000,
+      });
+    } finally {
+      delete process.env[LEDGER_DELETE_ENV];
+    }
+
+    // ---- GROUND TRUTH: the call really ENTERED the inner provider. ----------
+    //
+    // The fixture appends one line per event it READ from the budgeted provider,
+    // and it deletes the ledger only AFTER that read. So this sentinel is what
+    // proves the injection happened at the settlement boundary rather than before
+    // the open: a refusal at OPEN would have produced no event at all.
+    const sentinel = join(arm.dir, "apps", "cli", "dist", SYNTHETIC_LOG);
+    expect(existsSync(sentinel), "the synthetic arm really drove the injected provider").toBe(true);
+    expect((await readFile(sentinel, "utf8")).trim().split("\n")).toEqual(["started"]);
+
+    // ---- THE DISCRIMINATOR: ENTERED, NOT SETTLED. ---------------------------
+    //
+    // `entered === true` says the reservation was ADOPTED and a request was
+    // admitted. `settled === false` with `settlement === null` says the terminal
+    // ledger write did NOT land — measured, not inferred, which is exactly what
+    // A1/F1 moved the settlement onto the live `stats` object for.
+    const dispatches = record.budget?.dispatches ?? [];
+    expect(dispatches, "one dispatch record per admitted call").toHaveLength(1);
+    expect(dispatches[0]!.reservationId).toBe(record.reservationId);
+    expect(dispatches[0]!.entered, "the call was ADMITTED before the ledger was deleted").toBe(true);
+    expect(dispatches[0]!.settled, "the terminal write did NOT land").toBe(false);
+    expect(dispatches[0]!.settlement).toBeNull();
+
+    // ---- THE SETTLEMENT FAILURE IS NAMED, NOT SWALLOWED. -------------------
+    expect(record.budget?.settlementFailures, "the channel counted the failed settle").toBe(1);
+    expect(
+      String(record.budget?.lastSettlementError),
+      "the failure names the lost-state refusal, so the cause is diagnosable",
+    ).toMatch(/BUDGET_STATE_MISSING/);
+
+    // ---- THE WORKER'S VERDICT: `budget`, AND AN HONEST FAILURE. ------------
+    //
+    // Case 3 FOLDS a `budget` verdict (rank 1) over the boundary's
+    // `infrastructure` one (rank 3), refuses to report a success, and keeps the
+    // allowance outstanding. The pre-A1 behaviour — falling through to
+    // `ledger.abandon(...)` — is the mutation `a1-worker-settlement-failure-refunded`
+    // in `scripts/e4/r97-mutation-check.mjs`, which this test must catch.
+    expect(record.status).toBe("failed");
+    expect(record.failureCategory).toBe("budget");
+    expect(record.verifierPassed).toBe(false);
+    expect(record.consumed, "the admitted call is charged").toBe(1);
+    expect(record.detail ?? "").toMatch(/could not be settled/);
+    // THE BRANCH ITSELF IS THE MEASUREMENT. Case 3 keeps the entry outstanding;
+    // the refund path (the `else` that calls `ledger.abandon`) says something
+    // different and would be taken for an entered-but-unsettled dispatch under the
+    // pre-A1 behaviour. Naming the difference here is what makes the mutation
+    // `a1-worker-settlement-failure-refunded` fail for the RIGHT reason rather than
+    // by an unrelated accident.
+    expect(record.detail ?? "", "an ENTERED call is never routed to the refund path").not.toMatch(
+      /could not be returned/,
+    );
+
+    // ---- THE ALLOWANCE IS NOT RETURNED. ------------------------------------
+    //
+    // THE LOAD-BEARING ASSERTION: a refund would have to WRITE the ledger, and
+    // every settle path fails closed at the READ because the handle is
+    // `established`. So the file must still be ABSENT — the physical proof that no
+    // refund write happened, and therefore that the spend is still outstanding
+    // rather than silently re-granted.
+    expect(existsSync(ledgerPath), "no refund write recreated the ledger").toBe(false);
+  }, 180_000);
+});
+
+// ===========================================================================
+// E4-R105 (A5 / F5) — AN IDENTITY REFUSAL IS A VERDICT, NOT A DETAIL THE NEXT
+// SUCCESSFUL REPORT MAY OVERWRITE.
+// ===========================================================================
+//
+// MEASURED DEFECT F5 (plan §A5):
+//
+//   "`runArmUnit` 已发现 executionIdentity.drift，但后续报告分类会覆盖它."
+//
+// The worker DID detect the drift and DID set a `harness` verdict — and then an
+// INDEPENDENT `if/else` below it ran `classifyReport` and unconditionally
+// assigned `record.verifierPassed = classified.passed === true`, so a report that
+// merely CLAIMED `verification_passed=true` turned a refused unit into
+// `status: "completed"`, `failureCategory: null`, `verifierPassed: true`.
+//
+// PLAN §A5 怎么做 2 states the required shape: "将 verdict 决策写成明确、互斥的状态
+// 转换 … 不能后续无条件赋值覆盖。不要只在最后把 verifierPassed 置 false 而仍写
+// completed/passed detail." The fix is a total, ordered VERDICT PRIORITY TABLE and a
+// fold that applies it, so the FIRST blocking fact keeps its rank and every later
+// fact is retained only as a diagnostic.
+//
+// ---- WHAT THESE ARMS ARE, AND WHAT THEY ARE NOT --------------------------
+//
+// The arms below are PROTOCOL FIXTURES: synthetic `apps/cli/dist/benchmark-command.js`
+// exports written by this test, NOT the frozen benchmark arms. Nothing here is
+// evidence about model quality, a benchmark score, or promotability. What they
+// measure is the CAMPAIGN's verdict priority — which fact a terminal record is
+// allowed to report when several hold at once. The one PASS they produce is a
+// protocol-fixture pass and must never be counted into a real benchmark result.
+//
+// Every fact they assert is a SIDE EFFECT on disk (the client ref the fixture
+// really handed to `createClient`, whether a dispatch happened at all), never a
+// self-reported counter, so the tests cannot pass vacuously.
+
+const APPROVED_MODEL = "approved-model";
+
+/** What one protocol-fixture arm is told to do. */
+interface IdentityFixtureSpec {
+  /** What the arm's OWN dry-run plan declares. `null` = an unparseable plan. */
+  declaredModelId: string | null;
+  /** The dry run's exit code. Non-zero = the dry run FAILED. */
+  dryRunExitCode: number;
+  /** The model the REAL `createClient` is handed. `null` = a null identity. */
+  runtimeModelId: string | null;
+  /**
+   * The report the arm writes, if any.
+   *
+   *   `"pass"`        — claims `verification_passed=true` (the synthetic PASS that
+   *                     must NOT be allowed to outrank an identity refusal);
+   *   `"case_failed"` — the LEGITIMATE NEGATIVE: the case ran and its own task
+   *                     failed. Plan §A5 怎么做 7 requires this to stay a
+   *                     `case_failed` and not be collapsed into an infrastructure
+   *                     error by an over-broad refusal;
+   *   `null`          — no report at all.
+   */
+  reportOutcome: "pass" | "case_failed" | null;
+}
+
+/**
+ * The fixture arm's CLI source.
+ *
+ * `providerId` is deliberately held constant: plan §A5 怎么做 4 allows the
+ * offline-substitute relationship ("离线 scripted 替身与批准 provider 的差异可按既有
+ * offline-test 合同允许") but requires it to be MODELLED SEPARATELY rather than
+ * generalised away — the worker records it as
+ * `executingProviderId`/`providerIsOfflineSubstitute`. This fixture varies only the
+ * MODEL, which is the fact the plan names ("createClient/generate 边界核对真实
+ * modelRef").
+ */
+function identityFixtureCli(spec: IdentityFixtureSpec): string {
+  return `import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { ScriptedModelProvider } from "../../../packages/model/dist/index.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const DISPATCH_LOG = join(here, "identity-fixture-dispatch.log");
+const CLIENT_LOG = join(here, "identity-fixture-clients.json");
+
+const DRY_RUN_EXIT = ${spec.dryRunExitCode};
+const DECLARED_MODEL = ${JSON.stringify(spec.declaredModelId)};
+const RUNTIME_MODEL = ${JSON.stringify(spec.runtimeModelId)};
+const REPORT_OUTCOME = ${JSON.stringify(spec.reportOutcome)};
+const CASE_ID = ${JSON.stringify(CASE_ID)};
+
+export { ScriptedModelProvider };
+
+function argOf(argv, flag) {
+  const i = Array.isArray(argv) ? argv.indexOf(flag) : -1;
+  return i >= 0 ? argv[i + 1] : null;
+}
+
+export async function runBenchmarkCommand(argv, providerOverride) {
+  if (Array.isArray(argv) && argv.includes("--dry-run")) {
+    if (DRY_RUN_EXIT !== 0) {
+      return { exitCode: DRY_RUN_EXIT, lines: ["synthetic identity fixture: the dry run FAILED"] };
+    }
+    if (DECLARED_MODEL === null) {
+      return { exitCode: 0, lines: ["synthetic identity fixture: no plan to parse"] };
+    }
+    return {
+      exitCode: 0,
+      lines: [JSON.stringify({ planDigest: null, providerId: "openai", modelId: DECLARED_MODEL, endpointIdentity: null })],
+    };
+  }
+  appendFileSync(DISPATCH_LOG, "dispatch\\n");
+  writeFileSync(CLIENT_LOG, JSON.stringify(RUNTIME_MODEL === null ? [] : [{ providerId: "openai", modelId: RUNTIME_MODEL }]));
+  try {
+    const client = providerOverride.createClient({ providerId: "openai", modelId: RUNTIME_MODEL }, {});
+    const controller = new AbortController();
+    for await (const _ev of client.generate({ messages: [{ role: "user", content: "a5" }] }, controller.signal)) {
+      // Drain the scripted stream.
+    }
+  } catch (err) {
+    appendFileSync(DISPATCH_LOG, "refused: " + (err && err.message ? err.message : String(err)) + "\\n");
+  }
+  if (REPORT_OUTCOME !== null) {
+    const out = argOf(argv, "--out");
+    const suite = argOf(argv, "--suite") || "regression";
+    mkdirSync(out, { recursive: true });
+    // The two rows are DIFFERENT MEASUREMENTS, and the difference is the whole
+    // point of the legitimate-negative control: a PASS row carries positive
+    // verification evidence, a case_failed row carries none and names the
+    // termination the case's own verifier produced.
+    const row =
+      REPORT_OUTCOME === "pass"
+        ? {
+            task_id: CASE_ID,
+            suite: suite,
+            success: true,
+            actual_status: "completed",
+            verification_passed: true,
+            verification_failures: [],
+            model_calls: 1,
+            tool_calls: 0,
+            termination_reason: "stop",
+            failure_category: null,
+          }
+        : {
+            task_id: CASE_ID,
+            suite: suite,
+            success: false,
+            actual_status: "failed",
+            verification_passed: false,
+            verification_failures: ["the case's own check did not hold"],
+            model_calls: 1,
+            tool_calls: 0,
+            termination_reason: "verification_failed",
+            failure_category: null,
+          };
+    writeFileSync(
+      join(out, suite === "regression" ? "baseline.json" : suite + ".json"),
+      JSON.stringify({ results: [row] }, null, 2),
+    );
+  }
+  return { exitCode: 0, lines: ["synthetic identity fixture: done"] };
+}
+`;
+}
+
+/** The derived closure is the same for every fixture arm, so it is copied once
+ *  per spec but enumerated once per file. */
+let CLOSURE_CACHE: string[] | null = null;
+function closurePaths(): string[] {
+  CLOSURE_CACHE ??= mod.armBuildClosurePaths(REPO);
+  return CLOSURE_CACHE;
+}
+
+/**
+ * Build one PROTOCOL FIXTURE arm: a real, loadable build with a real git HEAD and
+ * ONE real case, whose CLI is the source above.
+ *
+ * The closure is COPIED rather than hand-written because `armBuildIdentity` hashes
+ * the DERIVED closure (A4): a tree that is missing a reachable module is "not
+ * established" and the unit would be refused before the facts under test.
+ */
+async function identityFixtureArm(spec: IdentityFixtureSpec): Promise<{
+  dir: string;
+  sha: string;
+  dispatchLog: string;
+  clientLog: string;
+}> {
+  const dir = await tempDir();
+  for (const rel of closurePaths()) {
+    const dest = join(dir, ...rel.split("/"));
+    await mkdir(join(dest, ".."), { recursive: true });
+    await cp(join(REPO, ...rel.split("/")), dest);
+  }
+  await writeFile(join(dir, "packages", "model", "dist", "index.js"), SYNTHETIC_MODEL, "utf8");
+  await writeFile(join(dir, "apps", "cli", "dist", "benchmark-command.js"), identityFixtureCli(spec), "utf8");
+  await mkdir(join(dir, "benchmarks", "r98-fixtures"), { recursive: true });
+  await cp(join(REPO, "benchmarks", "r98-fixtures", CASE_ID), join(dir, "benchmarks", "r98-fixtures", CASE_ID), {
+    recursive: true,
+  });
+  const { execFileSync } = await import("node:child_process");
+  const git = (args: string[]) => execFileSync("git", args, { cwd: dir, stdio: "ignore" });
+  git(["init", "-q"]);
+  git(["-c", "user.email=t@e.st", "-c", "user.name=test", "commit", "-q", "--allow-empty", "-m", "identity fixture arm"]);
+  const build = mod.armBuildIdentity(dir);
+  return {
+    dir,
+    sha: build.sourceSha!,
+    dispatchLog: join(dir, "apps", "cli", "dist", "identity-fixture-dispatch.log"),
+    clientLog: join(dir, "apps", "cli", "dist", "identity-fixture-clients.json"),
+  };
+}
+
+/** Drive ONE protocol-fixture unit with an explicitly APPROVED model. */
+async function runFixtureUnit(spec: IdentityFixtureSpec) {
+  const arm = await identityFixtureArm(spec);
+  const root = await tempDir();
+  const planDigest = createHash("sha256").update(JSON.stringify(spec)).digest("hex");
+  const record = await mod.runArmUnit({
+    checkoutDir: arm.dir,
+    repoRoot: REPO,
+    caseId: CASE_ID,
+    suite: "regression",
+    arm: "baseline",
+    repetition: 1,
+    planDigest,
+    approvedSourceSha: arm.sha,
+    providerId: "openai",
+    modelId: APPROVED_MODEL,
+    // NO approved endpoint: `null` is a legitimate approval meaning "the
+    // provider's built-in endpoint", and it keeps this fixture's only variable the
+    // MODEL, which is the fact F5 is about.
+    endpointBaseUrl: null,
+    executionStateDir: join(root, "state"),
+    ledgerDir: join(root, "ledger"),
+    outDir: join(root, "out"),
+    timeoutMs: 120_000,
+  });
+  return { record, root, arm, planDigest };
+}
+
+describe("R105 (A5/F5): an identity refusal outranks a report that claims a PASS", () => {
+  it("PROTOCOL FIXTURE: the runtime's model ref disagrees with the approval, and the synthetic PASS report must not win", async () => {
+    const { record, root, arm } = await runFixtureUnit({
+      declaredModelId: APPROVED_MODEL,
+      dryRunExitCode: 0,
+      runtimeModelId: "unapproved-model",
+      reportOutcome: "pass",
+    });
+
+    // ---- GROUND TRUTH, NOT A SELF-REPORT. --------------------------------
+    //
+    // The fixture wrote down the ref it really handed to `createClient`, so "the
+    // runtime asked for another model" is a fact on disk. The dry run declared the
+    // APPROVED model, so this drift is invisible in the arm's own plan: only the
+    // runtime's actual `createClient` argument exposes it.
+    expect(JSON.parse(await readFile(arm.clientLog, "utf8"))).toEqual([
+      { providerId: "openai", modelId: "unapproved-model" },
+    ]);
+    const identity = record.executionIdentity as {
+      approvedModelId?: string | null;
+      declaredModelId?: string | null;
+      runtimeModelId?: string | null;
+      drift?: string[];
+    } | null;
+    expect(identity, "the worker must record the identity the unit executed under").not.toBeNull();
+    expect(identity!.approvedModelId).toBe(APPROVED_MODEL);
+    expect(identity!.declaredModelId, "the arm's own dry run declared the approved model").toBe(APPROVED_MODEL);
+    expect(identity!.runtimeModelId, "the runtime really asked for another model").toBe("unapproved-model");
+    expect((identity!.drift ?? []).join(" ")).toContain("unapproved-model");
+
+    // ---- THE MEASURED DEFECT (F5). ---------------------------------------
+    //
+    // Before the fix this unit reported `status: "completed"`,
+    // `failureCategory: null`, `verifierPassed: true` — a PASS under an identity
+    // the plan never approved.
+    expect(record.status, "a drifted unit is not a completed pass").toBe("failed");
+    expect(record.failureCategory).toBe("harness");
+    expect(record.verifierPassed).toBe(false);
+    expect(record.detail ?? "").toMatch(/did not approve/i);
+    expect(record.detail ?? "", "the terminal detail must not read as a pass").not.toMatch(
+      /^e4-r\d+-arm-worker-v\d+ passed:/,
+    );
+
+    // ---- THE SYNTHETIC REPORT IS KEPT AS DIAGNOSTIC EVIDENCE. -----------
+    //
+    // Plan §A5 怎么做 6: "确保保存的 report 是诊断证据，不是覆盖身份失败的权威." The
+    // row is NOT deleted and it still says `verification_passed=true` — which is
+    // exactly why the verdict, not the row, has to be the authority.
+    expect(record.report).not.toBeNull();
+    expect(record.report!.verification_passed).toBe(true);
+
+    // ---- THE BOUNDARY: NO REQUEST LEFT. --------------------------------
+    //
+    // Plan §A5 怎么验收 2: "实际 modelRef 与批准不同：inner generate 次数为 0." The
+    // request is only recorded once the arm's provider is about to be driven, so an
+    // empty list IS the measurement that the inner `generate` was never entered.
+    expect(record.capturedRequests).toEqual([]);
+    expect(await readFile(arm.dispatchLog, "utf8")).toMatch(/refused:[\s\S]*unapproved-model/);
+
+    // ---- THE INDEPENDENT VALIDATOR SEES AN EVIDENCE-COMPLETE FAILURE. ---
+    //
+    // Plan §A5 怎么验收 6: the same refused result, checked by the evidence
+    // validator, must be a FAILURE whose evidence is intact — never a task pass.
+    const state = await readJson(join(root, "state", EXEC_FILE));
+    const persisted = (state!["records"] as Array<Record<string, unknown>>)[0]!;
+    expect(persisted["status"], "a refused unit is TERMINAL, so a resume skips it").toBe("failed");
+    expect(String(persisted["detail"])).toMatch(/harness:/);
+    const checked = await verifyUnitEvidence(join(root, "ledger"), {
+      caseId: String(persisted["caseId"]),
+      suite: String(persisted["suite"]),
+      arm: String(persisted["arm"]),
+      repetition: Number(persisted["repetition"]),
+      attemptId: String(persisted["attemptId"]),
+      resultHash: persisted["resultHash"] as string,
+      evidence: persisted["evidence"] as never,
+      detail: persisted["detail"] as string,
+    });
+    expect(checked.ok, JSON.stringify(checked)).toBe(true);
+    expect(checked.ok && checked.envelope.verdict.category).toBe("harness");
+  }, 300_000);
+
+  it("PROTOCOL FIXTURE: a NULL runtime model ref is a refusal, never 'no drift'", async () => {
+    // Plan §A5 怎么做 3: "不能将 null 身份解释为'没有漂移'." The runtime handed
+    // `createClient` a model ref with no `modelId`; the old drift test was
+    // `runtimeModelId !== null && runtimeModelId !== approved`, so a NULL identity
+    // skipped the comparison entirely and the synthetic PASS report was accepted.
+    const { record } = await runFixtureUnit({
+      declaredModelId: APPROVED_MODEL,
+      dryRunExitCode: 0,
+      runtimeModelId: null,
+      reportOutcome: "pass",
+    });
+    expect(record.status).toBe("failed");
+    expect(record.failureCategory).toBe("harness");
+    expect(record.verifierPassed).toBe(false);
+    expect(record.detail ?? "").toMatch(/model/i);
+    expect(record.capturedRequests).toEqual([]);
+  }, 300_000);
+
+  it("PROTOCOL FIXTURE: a FAILED dry run ends the unit BEFORE any dispatch", async () => {
+    // Plan §A5 怎么做 3: "dry-run 未成功 … 在实际 dispatch 前结束." The old code read
+    // the dry run's lines for an identity and never consulted its EXIT CODE, so a
+    // failed dry run left `declaredPlan === null`, every `declared*` comparison
+    // short-circuited, and the real case ran anyway.
+    const { record, arm } = await runFixtureUnit({
+      declaredModelId: APPROVED_MODEL,
+      dryRunExitCode: 3,
+      runtimeModelId: APPROVED_MODEL,
+      reportOutcome: "pass",
+    });
+    expect(record.status).toBe("failed");
+    expect(record.failureCategory).toBe("harness");
+    expect(record.verifierPassed).toBe(false);
+    // NOTHING was dispatched: the fixture only writes this log on its real path.
+    expect(existsSync(arm.dispatchLog), "a failed dry run must not reach the real path").toBe(false);
+    expect(record.capturedRequests).toEqual([]);
+    expect(record.consumed, "nothing was dispatched, so nothing was charged").toBe(0);
+  }, 300_000);
+
+  it("PROTOCOL FIXTURE: an APPROVED-and-matching unit still reaches a verified PASS", async () => {
+    // THE CONTROL. A priority table that refuses everything would satisfy the
+    // three tests above and be useless, so the same fixture with a matching model
+    // must still produce the pass its own report claims. This pass is a
+    // PROTOCOL-FIXTURE pass and supports no claim about model capability.
+    const { record } = await runFixtureUnit({
+      declaredModelId: APPROVED_MODEL,
+      dryRunExitCode: 0,
+      runtimeModelId: APPROVED_MODEL,
+      reportOutcome: "pass",
+    });
+    expect(record.status).toBe("completed");
+    expect(record.failureCategory).toBeNull();
+    expect(record.verifierPassed).toBe(true);
+    expect(record.detail ?? "").toMatch(/verification_passed=true/);
+  }, 300_000);
+
+  it("PROTOCOL FIXTURE: a LEGITIMATE negative stays `case_failed`, not infrastructure", async () => {
+    // Plan §A5 怎么做 7: "将通过、合法 case_failed、provider/harness/infrastructure 失败
+    // 保持区分；本任务不能把所有低分案例都改成基础设施失败." A priority table that
+    // turned every non-pass into a refusal would satisfy the three refusal tests
+    // above while destroying the campaign's ability to tell "the case failed its
+    // task" (a VALID NEGATIVE the driver deliberately excludes from `failures[]`)
+    // from "the unit measured nothing".
+    const { record } = await runFixtureUnit({
+      declaredModelId: APPROVED_MODEL,
+      dryRunExitCode: 0,
+      runtimeModelId: APPROVED_MODEL,
+      reportOutcome: "case_failed",
+    });
+    // The case RAN — its report is real and its own row was persisted as evidence.
+    expect(record.report).not.toBeNull();
+    expect(record.report!.success).toBe(false);
+    expect(record.report!.verification_passed).toBe(false);
+    // And its outcome is its OWN verifier's negative, not a harness refusal.
+    expect(record.failureCategory).toBe("case_failed");
+    expect(record.verifierPassed).toBe(false);
+    expect(record.status, "a valid negative is a TERMINAL result, not a failed unit").toBe("completed");
+    expect(record.detail ?? "").not.toMatch(/did not approve|infrastructure/i);
+  }, 300_000);
+});
+
+describe("R105 P: the verdict priority table is a real, ordered contract", () => {
+  it("ranks every failure category, and a PASS is the LOWEST priority", () => {
+    expect(mod.R97_VERDICT_PRIORITY[0]).toBe("harness");
+    expect(mod.R97_VERDICT_PRIORITY[mod.R97_VERDICT_PRIORITY.length - 1]).toBe("passed");
+    for (const category of mod.FAILURE_CATEGORIES) {
+      expect(mod.R97_VERDICT_PRIORITY, `${category} must have a rank`).toContain(category);
+    }
+  });
+
+  it("never lets a later assignment overwrite a more blocking fact, in EITHER order", () => {
+    const harness = { category: "harness", detail: "identity refused" };
+    const pass = { category: null, detail: "verified: verification_passed=true" };
+    const timeout = { category: "timeout", detail: "deadline expired" };
+    const caseFailed = { category: "case_failed", detail: "case did not pass" };
+
+    // The F5 shape, and its mirror: whichever ORDER the facts arrive in, the
+    // blocking one wins and the other survives only as a diagnostic. This is what
+    // makes the outcome independent of `if` statement order (plan §A5 怎么验收 7).
+    const harnessThenPass = mod.foldR97Verdict(harness, pass);
+    expect(harnessThenPass.category).toBe("harness");
+    expect(harnessThenPass.detail).toContain("identity refused");
+    expect(harnessThenPass.detail).toContain("verification_passed=true");
+
+    const passThenHarness = mod.foldR97Verdict(pass, harness);
+    expect(passThenHarness.category).toBe("harness");
+    expect(passThenHarness.detail).toContain("identity refused");
+
+    // identity vs timeout: ONE stable answer in both orders.
+    expect(mod.foldR97Verdict(timeout, harness).category).toBe("harness");
+    expect(mod.foldR97Verdict(harness, timeout).category).toBe("harness");
+
+    // A legitimate negative is neither a pass nor an identity refusal, and the
+    // table must not collapse the two (plan §A5 怎么做 7).
+    expect(mod.foldR97Verdict(caseFailed, pass).category).toBe("case_failed");
+    expect(mod.foldR97Verdict(pass, caseFailed).category).toBe("case_failed");
+
+    // A pass is only a pass when nothing else was established.
+    const onlyPass = mod.foldR97Verdict(null, pass);
+    expect(onlyPass.category).toBeNull();
+    expect(onlyPass.detail).toBe("verified: verification_passed=true");
+  });
+});
+
+// ===========================================================================
+// E4-R106 (A6 / F6) — A UNIT THAT HANGS IS REALLY TERMINATED, NOT MERELY
+// OUTLIVED.
+// ===========================================================================
+//
+// MEASURED DEFECT F6 (plan §A6):
+//
+//   "boundedStop 能杀进程，但实际 worker 改成进程内 `await runBenchmarkCommand`"
+//   — a cancel at 40 ms still PASSes ~412 ms later; a unit timeout of 80 ms
+//   returns ~421 ms later.
+//
+// `runArmCaseInProcess` awaits the ARM's exported `runBenchmarkCommand` INSIDE
+// this process. `boundedStop` is never called on that await, so a dry run or a
+// dispatch that simply never returns keeps the unit — and its reservation and the
+// whole campaign — alive indefinitely. A `Promise.race` that abandons the hung
+// promise would not help either: the hung code keeps running, keeps its
+// `setInterval` alive and would keep writing files.
+//
+// This fixture is that hostile arm, and the assertions are about the
+// IMPLEMENTATION ending it:
+//
+//   * the unit returns within the declared bound (not minutes later),
+//   * the cause is the named `timeout`, with the deadline named in the detail,
+//   * the reservation is NOT refunded if a call was dispatched,
+//   * the hung code is REALLY STOPPED — the sentinel it writes on a timer gets no
+//     further bytes after the unit returns.
+//
+// The sentinel is not simulated: `setInterval` + `appendFileSync` is exactly what
+// a provider, a verifier or a tool that ignores `AbortSignal` looks like from the
+// outside, and it is what the plan's anti-cheat rule is about ("仅返回 Promise 不算
+// 通过").
+const HANG_LOG = "a6-hang-sentinel.log";
+
+/**
+ * A PROTOCOL FIXTURE arm whose `runBenchmarkCommand` NEVER RETURNS.
+ *
+ * `hang: "dry-run"` hangs inside the arm's own dry run — before any request
+ * exists. `hang: "dispatch"` completes the dry run and then hangs inside the
+ * dispatch, AFTER the provider boundary has been crossed and one logical call
+ * admitted.
+ *
+ * Both write the same sentinel on a 25 ms timer, so "did the hung code really
+ * stop?" is a measurement rather than an inference, and both are OFFLINE: no
+ * transport is constructed.
+ */
+function hangingArmCli(hang: "dry-run" | "dispatch"): string {
+  return `import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { ScriptedModelProvider } from "../../../packages/model/dist/index.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const SENTINEL = join(here, ${JSON.stringify(HANG_LOG)});
+const MODE = ${JSON.stringify(hang)};
+
+export { ScriptedModelProvider };
+
+function argOf(argv, flag) {
+  const i = Array.isArray(argv) ? argv.indexOf(flag) : -1;
+  return i >= 0 ? argv[i + 1] : null;
+}
+
+// The hung code is ALIVE and OBSERVABLE: it keeps appending on a timer. A unit
+// that only stops WAITING for this leaves it running, and the test can see that.
+function hangForever() {
+  writeFileSync(SENTINEL, "hung\\n");
+  setInterval(() => appendFileSync(SENTINEL, "still-here\\n"), 25);
+  return new Promise(() => {});
+}
+
+export async function runBenchmarkCommand(argv, providerOverride) {
+  if (Array.isArray(argv) && argv.includes("--dry-run")) {
+    if (MODE === "dry-run") return hangForever();
+    return {
+      exitCode: 0,
+      lines: [JSON.stringify({ planDigest: null, providerId: "openai", modelId: "approved-model-x", endpointIdentity: null })],
+    };
+  }
+  const out = argOf(argv, "--out");
+  const suite = argOf(argv, "--suite") || "regression";
+  if (MODE === "dispatch") {
+    // ONE real admitted call, then the hang: this is what makes "dispatched then
+    // killed must NOT be refunded" measurable rather than assumed.
+    try {
+      const client = providerOverride.createClient({ providerId: "openai", modelId: "approved-model-x" }, {});
+      const controller = new AbortController();
+      for await (const _ev of client.generate({ messages: [{ role: "user", content: "a6" }] }, controller.signal)) {
+        break;
+      }
+    } catch (err) {
+      appendFileSync(SENTINEL, "dispatch-error: " + (err && err.message ? err.message : String(err)) + "\\n");
+    }
+    return hangForever();
+  }
+  mkdirSync(out, { recursive: true });
+  return { exitCode: 0, lines: [] , out, suite };
+}
+`;
+}
+
+/**
+ * An arm whose CLI is the hanging fixture above, built out of THIS repo's real
+ * derived closure.
+ *
+ * The closure is copied for the same reason `syntheticArm()` copies it (E4-R104):
+ * the build identity is computed over the derived closure, and replacing the CLI
+ * inside it can only shrink what the walk reaches. The arm is otherwise a real,
+ * complete checkout, so the worker's identity, staging and staging-digest phases
+ * all behave exactly as they do for a historical arm.
+ */
+/**
+ * Write the arm's OWN `packages/model/dist/index.js`.
+ *
+ * The build closure is copied file-by-file, so the tree holds the repo's model
+ * build — which re-exports modules importing the workspace package
+ * `@ar/contracts`. That was invisible while the case ran IN-PROCESS (vitest's
+ * resolver found the workspace package), and it breaks now that the case runs in
+ * a CHILD process under plain Node ("Cannot find package '@ar/contracts'").
+ *
+ * Linking the real `node_modules` is NOT an option: the A4 identity walker
+ * refuses a dependency that resolves outside the checkout root, so the arm's
+ * `buildDigest` became `null` and the unit was refused before it could hang —
+ * measured. The honest repair is to make the fixture SELF-CONTAINED, exactly as
+ * it already does for `benchmark-command.js`: a scripted provider needs nothing
+ * from the workspace, and the seam's only requirement is the documented shape
+ * (`ScriptedModelProvider` with static `text`/`toolCall` and `createClient`).
+ *
+ * The shape below is the contract `r97-arm-exec.mjs` actually consumes:
+ * `SP.text(...)`, `SP.toolCall(...)`, `new SP(events)`, a non-empty `id` that is
+ * not a billed identity, no credentials, and `createClient().generate()`.
+ */
+function hangingArmModel(): string {
+  return `export class ScriptedModelProvider {
+  constructor(events) {
+    this.events = Array.isArray(events) ? events : [];
+    this.id = "offline-test";
+  }
+  static text(content) { return { kind: "text", content }; }
+  static toolCall(name, args) { return { kind: "tool", name, args }; }
+  createClient() {
+    const events = this.events;
+    return {
+      async *generate() {
+        for (const ev of events) {
+          yield ev.kind === "tool"
+            ? { type: "tool_call", name: ev.name, arguments: ev.args }
+            : { type: "text", text: ev.content };
+        }
+        yield { type: "completed", stopReason: "end_turn" };
+      },
+    };
+  }
+}
+`;
+}
+
+async function hangingArm(hang: "dry-run" | "dispatch"): Promise<{ dir: string; sha: string }> {
+  const dir = await tempDir();
+  for (const rel of mod.armBuildClosurePaths(REPO)) {
+    const dest = join(dir, ...rel.split("/"));
+    await mkdir(join(dest, ".."), { recursive: true });
+    await cp(join(REPO, ...rel.split("/")), dest);
+  }
+  await writeFile(join(dir, "apps", "cli", "dist", "benchmark-command.js"), hangingArmCli(hang), "utf8");
+  await writeFile(join(dir, "packages", "model", "dist", "index.js"), hangingArmModel(), "utf8");
+  await mkdir(join(dir, "benchmarks", "r98-fixtures"), { recursive: true });
+  await cp(join(REPO, "benchmarks", "r98-fixtures", CASE_ID), join(dir, "benchmarks", "r98-fixtures", CASE_ID), {
+    recursive: true,
+  });
+  const { execFileSync } = await import("node:child_process");
+  const git = (args: string[]) => execFileSync("git", args, { cwd: dir, stdio: "ignore" });
+  git(["init", "-q"]);
+  git(["-c", "user.email=t@e.st", "-c", "user.name=test", "commit", "-q", "--allow-empty", "-m", "hanging arm"]);
+  const build = mod.armBuildIdentity(dir);
+  return { dir, sha: build.sourceSha! };
+}
+
+/** Count the sentinel's lines, or 0 when it does not exist yet. */
+async function sentinelLines(armDir: string, log: string): Promise<number> {
+  const p = join(armDir, "apps", "cli", "dist", log);
+  if (!existsSync(p)) return 0;
+  const text = await readFile(p, "utf8");
+  return text === "" ? 0 : text.trimEnd().split("\n").length;
+}
+
+describe("E4-R106 (A6/F6): a HANGING arm is really TERMINATED, within the declared bound", () => {
+  it("a dry run that never returns is stopped by the unit deadline, and its code does NOT outlive the unit", async () => {
+    // Plan §A6 怎么验收 3: "dry-run hang、provider 忽略 signal、工具/verifier hang、
+    // 持续输出四类 fixture 都能通过实际 worker 路径被终止."
+    //
+    // The bound is small ON PURPOSE and the assertion is tight: plan §A6 says a
+    // test may allow a scheduling margin, but may NOT hide an ineffective short
+    // deadline behind a multi-minute timeout. 4 s is the unit cap; the walk to
+    // RECOGNISE the deadline must fit inside grace + scheduling tolerance, so 20 s
+    // is generous for CI and still refutes "it never stops".
+    const arm = await hangingArm("dry-run");
+    const root = await tempDir();
+    const unitCapMs = 10_000;
+    const unitFloorMs = 20_000;
+
+    const started = Date.now();
+    const record = await mod.runArmUnit({
+      checkoutDir: arm.dir,
+      repoRoot: REPO,
+      caseId: CASE_ID,
+      suite: "regression",
+      arm: "baseline",
+      repetition: 1,
+      planDigest: "c".repeat(64),
+      approvedSourceSha: arm.sha,
+      providerId: "openai",
+      modelId: "approved-model-x",
+      endpointBaseUrl: "http://127.0.0.1:9/v1",
+      maxModelCalls: 1,
+      campaignModelCalls: 1,
+      executionStateDir: join(root, "state"),
+      ledgerDir: join(root, "ledger"),
+      outDir: join(root, "out"),
+      timeoutMs: unitCapMs,
+    });
+    const elapsed = Date.now() - started;
+
+    // ---- 1. THE BOUND. -------------------------------------------------
+    expect(
+      elapsed,
+      `a ${unitCapMs}ms unit cap must end the unit; it returned after ${elapsed}ms, so the hung dry run was merely outlived`,
+    ).toBeLessThan(unitFloorMs);
+
+    // ---- 2. THE CAUSE IS THE NAMED ONE, NOT infrastructure. -------------
+    //
+    // Plan §A6 怎么做 9: "统一 timeout/cancelled/output_limit 的原因与证据. 异常发生
+    // 在 deadline 之后也不能统统落入 infrastructure catch."
+    expect(record.status).toBe("failed");
+    expect(
+      record.failureCategory,
+      `a deadline stop is a \`timeout\`, never an \`infrastructure\` fault — detail=${String(record.detail)}`,
+    ).toBe("timeout");
+    expect(String(record.detail), "the detail must name the deadline that stopped it").toMatch(/deadline|timeout/i);
+
+    // ---- 3. NOTHING WAS DISPATCHED, SO THE RESERVATION IS RELEASED. -----
+    //
+    // Plan §A6 怎么验收 6: "启动失败或明确未 dispatch：零调用，释放未使用预留".
+    expect(record.consumed, "the hang was in the dry run, before any request existed").toBe(0);
+
+    // ---- 4. THE HUNG CODE IS REALLY GONE. ------------------------------
+    //
+    // Plan §A6 怎么验收 4: "终止后父进程、子进程和孙进程均不继续写 sentinel 文件；
+    // 仅返回 Promise 不算通过." A `Promise.race` that abandons the hung promise
+    // leaves the `setInterval` appending forever, which this measures.
+    const afterStop = await sentinelLines(arm.dir, HANG_LOG);
+    expect(afterStop, "the hung arm must have STARTED (else this proves nothing about stopping it)").toBeGreaterThan(0);
+    await new Promise((r) => setTimeout(r, 400));
+    const later = await sentinelLines(arm.dir, HANG_LOG);
+    expect(
+      later,
+      `the hung arm wrote ${later - afterStop} more sentinel line(s) after the unit returned — the execution boundary did not stop it`,
+    ).toBe(afterStop);
+  }, 180_000);
+
+  it("a DISPATCH that never returns is stopped too, and the admitted call is NOT refunded", async () => {
+    // Plan §A6 怎么验收 6, second half: "已进入后被强制终止：预算不恢复."
+    //
+    // This is the case that separates an honest stop from a refund: the provider
+    // boundary WAS crossed, one logical call was admitted, and the arm then hung.
+    // The reservation must survive as spent/unknown, exactly as A1 required for a
+    // dispatch that is followed by a different kind of death.
+    const arm = await hangingArm("dispatch");
+    const root = await tempDir();
+    const unitCapMs = 6_000;
+    const unitFloorMs = 25_000;
+
+    const started = Date.now();
+    const record = await mod.runArmUnit({
+      checkoutDir: arm.dir,
+      repoRoot: REPO,
+      caseId: CASE_ID,
+      suite: "regression",
+      arm: "baseline",
+      repetition: 1,
+      planDigest: "d".repeat(64),
+      approvedSourceSha: arm.sha,
+      providerId: "openai",
+      modelId: "approved-model-x",
+      endpointBaseUrl: "http://127.0.0.1:9/v1",
+      maxModelCalls: 1,
+      campaignModelCalls: 1,
+      executionStateDir: join(root, "state"),
+      ledgerDir: join(root, "ledger"),
+      outDir: join(root, "out"),
+      timeoutMs: unitCapMs,
+    });
+    const elapsed = Date.now() - started;
+
+    expect(elapsed, `a ${unitCapMs}ms unit cap must end a hung DISPATCH; it returned after ${elapsed}ms`).toBeLessThan(unitFloorMs);
+    expect(record.status).toBe("failed");
+    expect(
+      record.failureCategory,
+      `the unit's own deadline is the cause, even though the arm hung after dispatch — detail=${String(record.detail)}`,
+    ).toBe("timeout");
+
+    // The call really was admitted before the hang. The ledger's REAL filename is
+    // `budget-ledger.json` (the module's `R97_LEDGER_FILENAME`); reading a guessed
+    // `ledger.json` would make this assertion vacuous.
+    const ledgerOnDisk = JSON.parse(await readFile(join(root, "ledger", "budget-ledger.json"), "utf8")) as {
+      entries: Array<{ reservationId: string; status: string }>;
+    };
+    expect(ledgerOnDisk.entries.length, "one reservation for the one admitted call").toBe(1);
+    expect(
+      ledgerOnDisk.entries[0]!.status,
+      "an ADMITTED call is never refunded just because the arm hung afterwards",
+    ).not.toBe("abandoned");
+
+    // And the hung dispatch is really gone.
+    const afterStop = await sentinelLines(arm.dir, HANG_LOG);
+    expect(afterStop).toBeGreaterThan(0);
+    await new Promise((r) => setTimeout(r, 400));
+    expect(
+      await sentinelLines(arm.dir, HANG_LOG),
+      "the hung dispatch kept running after the unit returned",
+    ).toBe(afterStop);
+  }, 180_000);
 });

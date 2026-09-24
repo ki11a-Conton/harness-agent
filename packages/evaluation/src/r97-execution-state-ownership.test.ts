@@ -28,7 +28,7 @@
  * constructed and no network call is made anywhere in this file.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { hostname } from "node:os";
@@ -45,7 +45,11 @@ import {
   R97_EXEC_INPUT_DRIFT,
   type R97UnitKey,
 } from "./r97-execution-state.js";
-import { openR97BudgetLedger, R97_LEDGER_FILENAME } from "./r97-budget-ledger.js";
+import {
+  openR97BudgetLedger,
+  R97_CAMPAIGN_CLAIMS_DIR_ENV,
+  R97_LEDGER_FILENAME,
+} from "./r97-budget-ledger.js";
 
 let dirs: string[] = [];
 async function tempDir(): Promise<string> {
@@ -55,6 +59,37 @@ async function tempDir(): Promise<string> {
 }
 afterEach(async () => {
   for (const d of dirs.splice(0)) await rm(d, { recursive: true, force: true }).catch(() => {});
+});
+
+/**
+ * The cross-directory CLAIM anchor is machine-global BY DESIGN, so this file
+ * redirects it at a scratch directory — exactly as `r97-budget-ledger.test.ts`,
+ * `r97-budget-channel.test.ts`, `r97-budget-write-fault.test.ts`,
+ * `r97-campaign-lifecycle.test.ts` and `r97-driver-closed-loop.test.ts` already do.
+ *
+ * WHY THIS IS REQUIRED RATHER THAN TIDY (MEASURED — this file failed in the A7
+ * closed loop before the redirect was added):
+ *
+ * This file deliberately uses ONE fixed `planDigest` (`PLAN`) for every test, so
+ * every `openR97BudgetLedger(dir, { planDigest: PLAN, ... })` call claims the SAME
+ * `campaignId`. A2 made a spent approval's claim DURABLE: once a directory has
+ * ESTABLISHED a budget, that directory's later disappearance is a LOSS
+ * (`CAMPAIGN_STATE_LOST`) rather than a stale claim to be ignored. So the SECOND
+ * test to establish a campaign for `PLAN` was refused with the first test's
+ * (already deleted) temp directory named as the lost root — a failure with nothing
+ * to do with the ownership behaviour the test is measuring.
+ *
+ * The refusal is CORRECT and is what A2/F2 asks for ("同批准拒绝；没有新调用"). The
+ * defect was the fixture: a machine-global namespace was shared across tests, so a
+ * durable cross-run fact from an earlier run on the same machine leaked into an
+ * unrelated test. Redirecting the anchor gives each run a fresh namespace and keeps
+ * every test measuring its OWN approval.
+ */
+const CLAIMS_DIR = await mkdtemp(join(tmpdir(), "r97-state-claims-"));
+process.env[R97_CAMPAIGN_CLAIMS_DIR_ENV] = CLAIMS_DIR;
+afterAll(async () => {
+  delete process.env[R97_CAMPAIGN_CLAIMS_DIR_ENV];
+  await rm(CLAIMS_DIR, { recursive: true, force: true }).catch(() => {});
 });
 
 const PLAN = "f".repeat(64);

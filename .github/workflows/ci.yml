@@ -889,25 +889,39 @@ jobs:
         run: node scripts/e4/r97-closed-loop.mjs --all --out .ci/r97-r98 --arms-root "${{ runner.temp }}/r97-arms"
 
       # -----------------------------------------------------------------------
-      # THE ANTI-CHEAT MUTATIONS (plan §T6 怎么做 7).
+      # THE ANTI-CHEAT MUTATIONS (plan §T6 怎么做 7, extended by §A7 怎么做 3).
       #
       #   "mutation/反例直接改变行为：让两臂都用一个构建、跳过 verifier、固定
-      #    request=r97、绕过预算、resume 丢历史失败，对应测试必须失败."
+      #    request=r97、绕过预算、resume 丢历史失败，对应测试必须失败."   (T6)
       #
-      # Each of the five is APPLIED to the real production source, the test that
-      # exists to catch it is run, and that test MUST FAIL. Without this, a suite
-      # that passes while every mutation goes undetected looks identical to a suite
-      # that would catch a real regression.
+      #   "mutation gate 保留现有有效覆盖，并补能破坏本轮关键不变量的最小变异，例如跳过
+      #    generator finally 结算、允许丢失根目录重新领取、把正式时钟改回快照、恢复
+      #    verdict 覆盖、断开当前 unit 的取消."                          (A7)
+      #
+      # TWELVE mutations now: T6's five, plus one per counterexample A1–A6 closed, plus
+      # A1's SECOND — the worker-level settlement-failure branch. That branch was the
+      # one residual gap A7 left open ("A1 的 worker 级 settlement-failure 分支未被测试
+      # 覆盖", §9.9/§9.10): the channel layer proved the settlement fails, but nothing
+      # proved the WORKER refuses to refund and refuses to report a success when it
+      # does. Each mutation is APPLIED to the real production source, the test bound to
+      # it is run, and that test MUST go RED. Without this, a suite that passes while
+      # every mutation goes undetected looks identical to a suite that would catch a
+      # real regression.
+      #
+      # A CAUGHT mutation requires a FAILED TEST, not merely a non-zero exit: the gate
+      # refuses a build failure, a collection error and an unrelated timeout, so a
+      # broken mutation cannot be reported as a caught one (plan §A7 怎么做 4).
       #
       # This step is deliberately AFTER the closed loop and must not run
       # concurrently with it: it mutates files on disk, so a mutation in flight
-      # would make an unrelated test fail. It restores every file in a `finally`
-      # and re-hashes it, so a failure here cannot leave the tree mutated.
+      # would make an unrelated test fail. It restores every file in a `finally`,
+      # re-hashes it, and compares the whole tracked tree before and after, so a
+      # failure here cannot leave the tree mutated.
       #
       # `continue-on-error` is NOT set: a mutation that escapes is a real finding
       # about the suite and must fail the job.
       # -----------------------------------------------------------------------
-      - name: Prove the suite CATCHES the plan's five anti-cheat mutations
+      - name: Prove the suite CATCHES the twelve anti-cheat mutations (T6's five + A7/A1's seven)
         run: node scripts/e4/r97-mutation-check.mjs --out .ci/r97-r98/mutation-report.json
 
       # -----------------------------------------------------------------------

@@ -132,8 +132,16 @@ function facts(over: Partial<R92GateFacts> = {}): R92GateFacts {
     now: "2026-09-20T00:00:00.000Z",
     executingSourceSha: auth.arms.candidate.sha,
     observedArmBuilds: {
-      baseline: { sha: auth.arms.baseline.sha, executionPlanDigest: auth.arms.baseline.executionPlanDigest },
-      candidate: { sha: auth.arms.candidate.sha, executionPlanDigest: auth.arms.candidate.executionPlanDigest },
+      baseline: {
+        sha: auth.arms.baseline.sha,
+        executionPlanDigest: auth.arms.baseline.executionPlanDigest,
+        buildDigest: auth.arms.baseline.buildDigest ?? null,
+      },
+      candidate: {
+        sha: auth.arms.candidate.sha,
+        executionPlanDigest: auth.arms.candidate.executionPlanDigest,
+        buildDigest: auth.arms.candidate.buildDigest ?? null,
+      },
     },
     observedCaseFingerprints: fingerprints(),
     observedProviderId: auth.providerId,

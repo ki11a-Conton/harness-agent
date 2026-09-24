@@ -46,7 +46,9 @@
  */
 
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtemp, mkdir, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, mkdir, readFile, rm, stat, utimes, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -54,6 +56,7 @@ import { pathToFileURL } from "node:url";
 const REPO = process.cwd();
 const WORKER = pathToFileURL(join(REPO, "scripts", "e4", "r97-arm-worker.mjs")).href;
 const EXEC = pathToFileURL(join(REPO, "scripts", "e4", "r97-arm-exec.mjs")).href;
+const EVAL = pathToFileURL(join(REPO, "packages", "evaluation", "dist", "index.js")).href;
 
 const worker = (await import(WORKER)) as {
   armBuildIdentity: (dir: string) => { checkoutDir: string; sourceSha: string | null; buildDigest: string | null };
@@ -66,6 +69,18 @@ const worker = (await import(WORKER)) as {
 const exec = (await import(EXEC)) as {
   armExecutionDigest: (dir: string) => Promise<{ digest: string; files: number } | null>;
   executionManifest: (dir: string) => Promise<readonly string[]>;
+};
+
+const evaluation = (await import(EVAL)) as {
+  loadBenchmarkCase: (dir: string) => Promise<{
+    requestMd: unknown;
+    expectedMd: unknown;
+    fixture: unknown;
+    verification?: unknown;
+    requires?: unknown;
+    schemaMode?: unknown;
+  }>;
+  caseInputFingerprintV1: (parts: Record<string, unknown>) => string;
 };
 
 let dirs: string[] = [];
@@ -349,4 +364,353 @@ describe("R100 I3: the build identity is a BYTE hash over the modules that actua
     expect(roots.has("packages/core")).toBe(true);
     expect(roots.has("apps/cli")).toBe(true);
   });
+});
+
+// ===========================================================================
+// E4-R103 (A3 怎么做 3/5) — THE WORKER RUNS THE BYTES IT WAS APPROVED FOR.
+// ===========================================================================
+//
+// Plan §A3 怎么做 3: "worker 接到明确批准的案例指纹，并校验自己复制后真正要运行的内容."
+// Plan §A3 怎么做 5: "将 approved case fingerprint / inputsDigest 显式传给 worker；缺少
+// 必需摘要直接拒绝. 消除 `repo:unknown` 可以用于正式执行的路径."
+//
+// MEASURED DEFECTS this block pins:
+//
+//   F3(b) `inputDigestFor` built `repo:${opts.inputsDigest ?? "unknown"}` and the
+//         formal caller never passed one, so every formal unit's durable input
+//         digest was the literal `repo:unknown` — the drift check the execution
+//         state implements had a constant to compare.
+//   F3(d) `stageCase` verified only that the staged `case.json` PARSED and that its
+//         declared suite matched. The bytes that would actually execute
+//         (`request.md`, `expected.md`, `fixture/**`) were never compared to the
+//         approved fingerprint, so unapproved content ran under an approved name.
+describe("E4-R103 (A3): the worker stages the bytes it was approved for", () => {
+  const CASE_ID = "r98-tool-write-request";
+  const CASE_SRC = join(REPO, "benchmarks", "r98-fixtures", CASE_ID);
+  const fingerprintOf = async (dir: string) => {
+    const c = await evaluation.loadBenchmarkCase(dir);
+    return evaluation.caseInputFingerprintV1({
+      requestMd: c.requestMd,
+      expectedMd: c.expectedMd,
+      fixture: c.fixture,
+      verification: c.verification ?? null,
+      requires: c.requires ?? null,
+      schemaMode: c.schemaMode ?? null,
+    });
+  };
+
+  /**
+   * Run one unit against an explicit checkout, with its own campaign claim anchor
+   * so this suite cannot collide with a ledger another test file opened.
+   */
+  async function runUnitIn(checkoutDir: string, over: Record<string, unknown> = {}) {
+    const root = await tempDir();
+    const anchor = await tempDir();
+    const previous = process.env["R97_CAMPAIGN_CLAIMS_DIR"];
+    process.env["R97_CAMPAIGN_CLAIMS_DIR"] = anchor;
+    try {
+      return await worker.runArmUnit({
+        checkoutDir,
+        repoRoot: REPO,
+        caseId: CASE_ID,
+        suite: "regression",
+        arm: "baseline",
+        repetition: 1,
+        planDigest: "d".repeat(64),
+        // The build binding is exercised elsewhere; this block measures the INPUT
+        // binding, so the sha check is deliberately out of the way.
+        approvedSourceSha: null,
+        providerId: "openai",
+        modelId: "approved-model-x",
+        endpointBaseUrl: "http://127.0.0.1:9/v1",
+        executionStateDir: join(root, "state"),
+        ledgerDir: join(root, "ledger"),
+        outDir: join(root, "out"),
+        timeoutMs: 120_000,
+        ...over,
+      });
+    } finally {
+      if (previous === undefined) delete process.env["R97_CAMPAIGN_CLAIMS_DIR"];
+      else process.env["R97_CAMPAIGN_CLAIMS_DIR"] = previous;
+    }
+  }
+
+  /** A minimal arm tree: the five artifacts the build identity covers, a real git
+   *  HEAD (the build identity refuses a checkout whose revision is unknown), and a
+   *  real copy of the case under test. Nothing here is ever imported — the units
+   *  below refuse during STAGING, which is the point. */
+  async function armTreeWithCase() {
+    const dir = await tempDir();
+    for (const [rel, content] of Object.entries({
+      "apps/cli/dist/main.js": "// stub main\n",
+      "apps/cli/dist/benchmark-command.js": "export async function runBenchmarkCommand() { throw new Error('stub'); }\n",
+      "packages/model/dist/index.js": "export class ScriptedModelProvider {}\n",
+      "packages/evaluation/dist/index.js": "export const stub = true;\n",
+      "packages/core/dist/index.js": "export const stub = true;\n",
+    })) {
+      const abs = join(dir, ...rel.split("/"));
+      await mkdir(join(abs, ".."), { recursive: true });
+      await writeFile(abs, content);
+    }
+    const dest = join(dir, "benchmarks", "r98-fixtures", CASE_ID);
+    await mkdir(join(dest, ".."), { recursive: true });
+    await cp(CASE_SRC, dest, { recursive: true });
+    // `armBuildIdentity` reads `git rev-parse HEAD`, and a checkout whose revision
+    // cannot be established is refused before staging. One empty commit gives this
+    // tree a real HEAD without needing any of the arm's history.
+    const git = (args: string[]) => execFileSync("git", ["-C", dir, ...args], { stdio: "ignore" });
+    git(["init", "--quiet"]);
+    git(["-c", "user.email=a3@example.invalid", "-c", "user.name=a3", "commit", "--quiet", "--allow-empty", "-m", "arm tree"]);
+    return dir;
+  }
+
+  it("REFUSES a unit dispatched with NO approved fingerprint, before the ledger exists", async () => {
+    const root = await tempDir();
+    const anchor = await tempDir();
+    const previous = process.env["R97_CAMPAIGN_CLAIMS_DIR"];
+    process.env["R97_CAMPAIGN_CLAIMS_DIR"] = anchor;
+    let record: Record<string, unknown>;
+    try {
+      record = await worker.runArmUnit({
+        checkoutDir: REPO,
+        repoRoot: REPO,
+        caseId: CASE_ID,
+        suite: "regression",
+        arm: "baseline",
+        repetition: 1,
+        planDigest: "d".repeat(64),
+        approvedSourceSha: null,
+        providerId: "openai",
+        modelId: "approved-model-x",
+        endpointBaseUrl: "http://127.0.0.1:9/v1",
+        executionStateDir: join(root, "state"),
+        ledgerDir: join(root, "ledger"),
+        outDir: join(root, "out"),
+        // THE FORMAL CALLER'S DECLARATION: an approved input digest is required.
+        requireInputsDigest: true,
+      });
+    } finally {
+      if (previous === undefined) delete process.env["R97_CAMPAIGN_CLAIMS_DIR"];
+      else process.env["R97_CAMPAIGN_CLAIMS_DIR"] = previous;
+    }
+    expect(record["status"]).toBe("failed");
+    expect(record["failureCategory"]).toBe("harness");
+    expect(String(record["detail"])).toMatch(/approved case fingerprint|inputsDigest/i);
+    expect(record["consumed"]).toBe(0);
+    // "Before the ledger exists" is the stronger property: a unit with no approved
+    // inputs cannot even open the campaign's allowance.
+    expect(existsSync(join(root, "ledger"))).toBe(false);
+  }, 120_000);
+
+  it("REFUSES when the staged bytes do not match the approved fingerprint", async () => {
+    // The case is real and stages cleanly; only the APPROVED value is wrong. This
+    // is the shape of "the checkout's case content changed after approval": the
+    // unit must refuse rather than execute bytes nobody fingerprinted.
+    const record = await runUnitIn(REPO, {
+      inputsDigest: "f".repeat(64),
+      requireInputsDigest: true,
+    });
+    expect(record["status"]).toBe("failed");
+    expect(record["failureCategory"]).toBe("harness");
+    const detail = String(record["detail"]);
+    // Both sides are named, so an operator can see WHICH bytes changed rather than
+    // receiving "mismatch".
+    expect(detail).toContain("f".repeat(64));
+    expect(detail).toMatch(/fingerprint as [0-9a-f]{64}/);
+    expect(detail).toMatch(/content nobody approved/);
+    // NOTHING was dispatched: no report, no captured request, no charge.
+    expect(record["report"]).toBeNull();
+    expect(record["capturedRequests"]).toEqual([]);
+    expect(record["consumed"]).toBe(0);
+    expect(record["stagedCaseFingerprint"]).toBeNull();
+  }, 180_000);
+
+  it("REFUSES when the SOURCE changes inside the copy window (probe → copy)", async () => {
+    // Plan §A3 怎么做 5: "staging 完成后重新计算实际字节的指纹，与批准值比较". The window
+    // between "which case did I find?" and "what did I copy?" is exactly where a
+    // checkout can move underneath the unit, and a check that runs BEFORE the copy
+    // cannot see it. The barrier makes that window deterministic instead of racy.
+    const checkout = await armTreeWithCase();
+    const approved = await fingerprintOf(join(checkout, "benchmarks", "r98-fixtures", CASE_ID));
+    const record = await runUnitIn(checkout, {
+      inputsDigest: approved,
+      requireInputsDigest: true,
+      beforeStageCopy: async ({ source }: { source: string }) => {
+        // The source is mutated AFTER it was probed and BEFORE it is copied.
+        await writeFile(join(source, "request.md"), "MUTATED DURING THE COPY WINDOW\n");
+      },
+    });
+    expect(record["status"]).toBe("failed");
+    expect(record["failureCategory"]).toBe("harness");
+    expect(String(record["detail"])).toMatch(/content nobody approved/);
+    expect(record["consumed"]).toBe(0);
+    expect(record["stagedCaseFingerprint"]).toBeNull();
+  }, 180_000);
+
+  it("ACCEPTS matching bytes and records the fingerprint it actually staged", async () => {
+    // The negative cases above are only meaningful if the check is not simply
+    // refusing everything: the SAME call with the CORRECT fingerprint must get past
+    // staging and record what it staged.
+    const checkout = await armTreeWithCase();
+    const approved = await fingerprintOf(join(checkout, "benchmarks", "r98-fixtures", CASE_ID));
+    const record = await runUnitIn(checkout, {
+      inputsDigest: approved,
+      requireInputsDigest: true,
+    });
+    expect(record["stagedCaseFingerprint"]).toBe(approved);
+    // It got PAST staging: whatever happened next (this stub tree cannot execute a
+    // case) is not a fingerprint refusal.
+    expect(String(record["detail"] ?? "")).not.toMatch(/content nobody approved/);
+    expect(String(record["caseSource"] ?? "")).toContain(CASE_ID);
+  }, 180_000);
+});
+
+// ===========================================================================
+// E4-R104 (A4) — THE APPROVED BUILD IDENTITY COVERS WHAT REALLY EXECUTES.
+// ===========================================================================
+//
+// MEASURED DEFECT F4 (release integrity, plan §A4):
+//
+//   "armBuildIdentity 的 BUILD_ARTIFACT_PATHS 是手写的五个文件名；packages/core/
+//    dist/runtime/runtime.js、packages/evaluation/dist/r97-budget-channel.js 等
+//    真正执行 case 的模块既不在清单里、也不在其传递闭包里。改写它们不会移动
+//    buildDigest，旧批准继续有效."
+//
+// The three tests below are the three halves of that defect, and each one names the
+// production change that makes it fail:
+//
+//   1. coverage — a change to a module reached THROUGH the real import graph (not
+//      named by any list) must move the digest;
+//   2. fail-closed — an execution dependency that cannot be resolved must make the
+//      identity "not established" (`null`), never a digest over what is left;
+//   3. refusal — an approval that recorded digest D must be REFUSED before the
+//      first call once the build no longer hashes to D.
+describe("E4-R104 (A4): the arm build identity is derived from the real import graph", () => {
+  const A4_CASE_ID = "r98-tool-write-request";
+
+  /**
+   * A synthetic arm whose EXECUTOR really imports a TRANSITIVE module.
+   *
+   * The link is the whole point: `benchmark-command.js` is a genuine entry file,
+   * and the module that drives the runtime sits two hops below it, behind a
+   * relative specifier. A hand-written file list never sees it.
+   */
+  async function linkedArm(runtimeBody = 'export const RT = "AAAA";\n'): Promise<string> {
+    const dir = await tempDir();
+    const when = new Date("2020-01-01T00:00:00Z");
+    const files: Record<string, string> = {
+      "apps/cli/dist/main.js": "// stub main\n",
+      "apps/cli/dist/benchmark-command.js": [
+        'import "../../../packages/model/dist/index.js";',
+        'import "../../../packages/core/dist/index.js";',
+        'export async function runBenchmarkCommand() { throw new Error("stub"); }',
+        "",
+      ].join("\n"),
+      "packages/model/dist/index.js": "export class ScriptedModelProvider {}\n",
+      "packages/core/dist/index.js": 'import "./runtime/runtime.js";\nexport const stub = true;\n',
+      "packages/core/dist/runtime/runtime.js": runtimeBody,
+      "packages/evaluation/dist/index.js": "export const stub = true;\n",
+    };
+    for (const [rel, content] of Object.entries(files)) {
+      const abs = join(dir, ...rel.split("/"));
+      await mkdir(join(abs, ".."), { recursive: true });
+      await writeFile(abs, content);
+      await utimes(abs, when, when);
+    }
+    // `armBuildIdentity` reads `git rev-parse HEAD`, and a checkout whose revision
+    // cannot be established is refused before staging.
+    const git = (args: string[]) => execFileSync("git", ["-C", dir, ...args], { stdio: "ignore" });
+    git(["init", "--quiet"]);
+    git(["-c", "user.email=a4@example.invalid", "-c", "user.name=a4", "commit", "--quiet", "--allow-empty", "-m", "arm tree"]);
+    return dir;
+  }
+
+  it("1. CHANGES when a TRANSITIVELY imported module changes, at identical size and mtime", async () => {
+    const dir = await linkedArm('export const RT = "AAAA";\n');
+    const before = worker.armBuildIdentity(dir);
+    expect(before.buildDigest, "the fixture must establish an identity at all").toMatch(/^[0-9a-f]{64}$/);
+
+    // The module is two hops from the entry file and is named by NO list. It is
+    // rewritten to a string of the SAME LENGTH, and the original mtime is put back,
+    // so only a content hash can notice.
+    const runtime = join(dir, "packages", "core", "dist", "runtime", "runtime.js");
+    const st = await stat(runtime);
+    await writeFile(runtime, 'export const RT = "BBBB";\n');
+    await utimes(runtime, st.atime, st.mtime);
+    const after = await stat(runtime);
+    expect(after.size).toBe(st.size);
+    expect(Math.trunc(after.mtimeMs)).toBe(Math.trunc(st.mtimeMs));
+
+    expect(
+      worker.armBuildIdentity(dir).buildDigest,
+      "a change to a module reached through the real import graph must invalidate the approved build",
+    ).not.toBe(before.buildDigest);
+  }, 120_000);
+
+  it("2. is NOT ESTABLISHED (null) when an execution dependency cannot be resolved", async () => {
+    // Deleting a dependency the executor imports must not produce a digest of the
+    // remaining files: that is a smaller covered set wearing the same name, and it
+    // would let a broken checkout look approved.
+    const dir = await linkedArm();
+    expect(worker.armBuildIdentity(dir).buildDigest).toMatch(/^[0-9a-f]{64}$/);
+    await rm(join(dir, "packages", "core", "dist", "runtime", "runtime.js"));
+    expect(
+      worker.armBuildIdentity(dir).buildDigest,
+      "an unresolvable execution dependency means the build identity is NOT ESTABLISHED",
+    ).toBeNull();
+  }, 120_000);
+
+  it("3. REFUSES a unit whose approved build digest no longer matches, before the ledger opens", async () => {
+    // Recording that a build changed is NOT the same as refusing to run a changed
+    // build: the refusal has to happen before the first external call, and before
+    // the campaign is charged for work it may not run.
+    const dir = await linkedArm();
+    const approved = worker.armBuildIdentity(dir);
+    expect(approved.buildDigest).toMatch(/^[0-9a-f]{64}$/);
+
+    const runtime = join(dir, "packages", "core", "dist", "runtime", "runtime.js");
+    const st = await stat(runtime);
+    await writeFile(runtime, 'export const RT = "BBBB";\n');
+    await utimes(runtime, st.atime, st.mtime);
+
+    const root = await tempDir();
+    const anchor = await tempDir();
+    const previous = process.env["R97_CAMPAIGN_CLAIMS_DIR"];
+    process.env["R97_CAMPAIGN_CLAIMS_DIR"] = anchor;
+    let record: Record<string, unknown>;
+    try {
+      record = await worker.runArmUnit({
+        checkoutDir: dir,
+        repoRoot: REPO,
+        caseId: A4_CASE_ID,
+        suite: "regression",
+        arm: "baseline",
+        repetition: 1,
+        planDigest: "d".repeat(64),
+        approvedSourceSha: approved.sourceSha,
+        // THE APPROVAL'S OWN BUILD BINDING. Without it a unit runs whatever bytes
+        // happen to be on disk, which is the defect.
+        approvedBuildDigest: approved.buildDigest,
+        providerId: "openai",
+        modelId: "approved-model-x",
+        endpointBaseUrl: "http://127.0.0.1:9/v1",
+        executionStateDir: join(root, "state"),
+        ledgerDir: join(root, "ledger"),
+        outDir: join(root, "out"),
+        timeoutMs: 30_000,
+      });
+    } finally {
+      if (previous === undefined) delete process.env["R97_CAMPAIGN_CLAIMS_DIR"];
+      else process.env["R97_CAMPAIGN_CLAIMS_DIR"] = previous;
+    }
+    expect(record["status"]).toBe("failed");
+    expect(record["failureCategory"]).toBe("harness");
+    expect(String(record["detail"] ?? ""), "the refusal must NAME the build digest it refused").toMatch(
+      /build digest/i,
+    );
+    // NOTHING was dispatched and NOTHING was charged — not even a ledger was opened.
+    expect(record["consumed"]).toBe(0);
+    expect(record["capturedRequests"]).toEqual([]);
+    expect(existsSync(join(root, "ledger"))).toBe(false);
+  }, 120_000);
 });

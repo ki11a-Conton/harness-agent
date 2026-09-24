@@ -28,11 +28,13 @@ import {
   buildR97AuthorizationPlan,
   checkExecutionObservationV1,
   computeDriverBuildDigestV1,
+  computeExecutionIdentityV1,
   loadR97FrozenSelection,
   parseR97ArmObservation,
   r97ReadinessIssues,
-  R97_DRIVER_ARTIFACTS,
+  R97_DRIVER_BUILD_ENTRIES,
   R97_DRAFT_SCHEMA,
+  R97_EXECUTION_IDENTITY_SCHEMA,
   R97_PLAN_SCHEMA,
   type R97ArmObservation,
   type R97ExecutionObservationV1,
@@ -55,6 +57,9 @@ function obs(over: Partial<R97ArmObservation> = {}): R97ArmObservation {
     treeFingerprint: null,
     clean: true,
     planDigest: "a".repeat(64),
+    // E4-R104 (A4): the arm's EXECUTION build digest — the bytes that really run
+    // a case. Distinct per arm so a test that conflates the two arms is caught.
+    buildDigest: "7".repeat(64),
     providerId: "openai",
     modelId: "gpt-4o-mini",
     endpointIdentity: ENDPOINT,
@@ -84,7 +89,12 @@ async function observedPair(overB: Partial<R97ArmObservation> = {}, overC: Parti
   const caseFingerprints = await selectionFps();
   const base = obs({ arm: "baseline", sourceSha: "1".repeat(40), planDigest: "a".repeat(64), caseIds, caseFingerprints });
   const cand = obs({ arm: "candidate", sourceSha: "2".repeat(40), planDigest: "b".repeat(64), caseIds, caseFingerprints });
-  return { baseline: { ...base, ...overB }, candidate: { ...cand, ...overC } };
+  return {
+    baseline: { ...base, ...overB },
+    // The two arms are different builds, so their build digests MUST differ —
+    // `buildDigest: "8"` is set before `overC` so a test can still override it.
+    candidate: { ...cand, buildDigest: "8".repeat(64), ...overC },
+  };
 }
 
 async function build(over: Partial<Parameters<typeof buildR97AuthorizationPlan>[0]> = {}) {
@@ -143,6 +153,20 @@ describe("E4-R97 P1: DRAFT vs FINALIZED_AUTHORIZATION_PLAN is structural", () =>
   });
   it("the draft schema and the finalized schema are DIFFERENT values", () => {
     expect(R97_DRAFT_SCHEMA).not.toBe(R97_PLAN_SCHEMA);
+  });
+
+  // -------------------------------------------------------------------------
+  // E4-R104 (A4) 怎么做 8 — the PLAN artifact's version moved with the contract.
+  // -------------------------------------------------------------------------
+  //
+  // A4 added `planObservation.armBuildDigests` and moved the embedded envelope to
+  // the v2 contract, so the plan artifact's SHAPE changed. Leaving the label at
+  // v1 would let a plan written under the pre-A4 shape claim to be current
+  // material. The label must move so "this predates the execution-identity
+  // contract" is a checkable fact rather than an assumption.
+  it("carries a plan schema label that is NOT the superseded pre-A4 contract", () => {
+    expect(R97_PLAN_SCHEMA).not.toBe("e4-r97-finalized-authorization-plan-v1");
+    expect(R97_DRAFT_SCHEMA).not.toBe("e4-r97-draft-authorization-plan-v1");
   });
 });
 
@@ -479,6 +503,10 @@ describe("E4-R98/R100 P7: execution-time facts are re-observed, never inherited 
         baseline: a.arms.baseline.executionPlanDigest,
         candidate: a.arms.candidate.executionPlanDigest,
       },
+      armBuildDigests: {
+        baseline: a.arms.baseline.buildDigest ?? null,
+        candidate: a.arms.candidate.buildDigest ?? null,
+      },
       caseFingerprints: { ...a.caseFingerprints },
       providerId: a.providerId,
       modelId: a.modelId,
@@ -811,6 +839,7 @@ describe("E4-R98/R100 P7: execution-time facts are re-observed, never inherited 
         now: NOW,
         armShas: { baseline: null, candidate: null },
         armDigests: { baseline: null, candidate: null },
+        armBuildDigests: { baseline: null, candidate: null },
         caseFingerprints: {},
         providerId: "openai",
         modelId: "gpt-4o-mini",
@@ -823,87 +852,410 @@ describe("E4-R98/R100 P7: execution-time facts are re-observed, never inherited 
     expect(r.codes).toContain("EXEC_OBS_NOT_AUTHORIZED");
   });
 
-  it("6c. the driver build digest is derived from the enumerated artifacts, not a version label", async () => {
+  it("6c. the driver build digest is derived from the real dependency closure, not a version label", async () => {
     const d1 = await computeDriverBuildDigestV1(REPO);
     expect(d1).toMatch(/^[0-9a-f]{64}$/);
     // Deterministic: the same bytes give the same digest.
     expect(await computeDriverBuildDigestV1(REPO)).toBe(d1);
-    // The covered set is explicit and small — never the whole workspace.
-    expect(R97_DRIVER_ARTIFACTS).toContain("scripts/e4/r97-campaign-driver.mjs");
-    expect(R97_DRIVER_ARTIFACTS.length).toBeLessThan(10);
-    // A missing artifact is an error, never a silently smaller covered set.
+    // The ENTRY set is explicit and small — never the whole workspace. What is
+    // large is the closure DERIVED from it, which is the point of E4-R104.
+    expect(R97_DRIVER_BUILD_ENTRIES).toContain("scripts/e4/r97-campaign-driver.mjs");
+    expect(R97_DRIVER_BUILD_ENTRIES.length).toBeLessThan(10);
+    // A missing entry is an error, never a silently smaller covered set.
     await expect(computeDriverBuildDigestV1(join(REPO, "does-not-exist"))).rejects.toThrow(/must never shrink silently/);
   });
 
-  it("6d. the ARM WORKER is inside the driver build digest (E4-R99)", async () => {
+  it("6d. the ARM WORKER is inside the driver's derived closure (E4-R99)", async () => {
     // Once the driver routes units through the arm worker, the worker's bytes
     // decide what executes a case. If it were NOT covered, rewriting the worker
     // would leave an old approval valid — the exact defect `driverBuildDigest`
     // exists to close.
-    expect(R97_DRIVER_ARTIFACTS).toContain("scripts/e4/r97-arm-worker.mjs");
-    // The file must really be readable at that path, so the containment above is
-    // about a real artifact rather than a name that would throw at digest time.
-    const { readFile } = await import("node:fs/promises");
-    await expect(readFile(join(REPO, "scripts/e4/r97-arm-worker.mjs"))).resolves.toBeDefined();
+    const identity = computeExecutionIdentityV1({ rootDir: REPO, entries: R97_DRIVER_BUILD_ENTRIES });
+    expect(identity.schema).toBe(R97_EXECUTION_IDENTITY_SCHEMA);
+    expect(identity.entries).toContain("scripts/e4/r97-arm-worker.mjs");
+    expect(identity.files.map((f) => f.path)).toContain("scripts/e4/r97-arm-worker.mjs");
     // NEGATIVE CONTROL: changing a covered artifact's BYTES changes the digest.
     // Without this, "the worker is covered" could be true while the digest
     // ignored content entirely.
-    const { mkdtemp, mkdir, cp, rm } = await import("node:fs/promises");
-    const { tmpdir } = await import("node:os");
-    const copy = await mkdtemp(join(tmpdir(), "r99-artifacts-"));
+    const { writeFile, rm } = await import("node:fs/promises");
+    const root = await syntheticDriverRoot();
     try {
-      for (const rel of R97_DRIVER_ARTIFACTS) {
-        const dest = join(copy, rel);
-        await mkdir(join(dest, ".."), { recursive: true });
-        await cp(join(REPO, rel), dest);
-      }
-      const before = await computeDriverBuildDigestV1(copy);
-      expect(before).toBe(await computeDriverBuildDigestV1(REPO));
+      const before = await computeDriverBuildDigestV1(root);
       // Rewrite ONLY the worker.
-      const { writeFile } = await import("node:fs/promises");
-      await writeFile(join(copy, "scripts/e4/r97-arm-worker.mjs"), "// a rewritten worker\n");
-      expect(await computeDriverBuildDigestV1(copy)).not.toBe(before);
+      await writeFile(join(root, "scripts/e4/r97-arm-worker.mjs"), "// a rewritten worker\n");
+      expect(await computeDriverBuildDigestV1(root)).not.toBe(before);
     } finally {
-      await rm(copy, { recursive: true, force: true }).catch(() => {});
+      await rm(root, { recursive: true, force: true }).catch(() => {});
     }
   });
 
-  it("6e. the driver build digest covers the artifacts that EXECUTE, not only their sources (E4-R100-A / T4)", async () => {
+  it("6e. the digest covers the EXECUTING dist closure — and a src-only edit does NOT move it (E4-R104 / A4)", async () => {
     // Plan §T4 怎么做 9: "当前 driver digest 哈希了若干 src/*.ts，但运行导入的是 dist.
     // 修为构建产物身份或可验证的 source→artifact 映射；仅更改执行 dist 也必须导致旧批准
-    // 失效."
-    //
-    // MEASURED: the list held `packages/evaluation/src/r97-budget-ledger.ts` etc.,
-    // but every process that runs a campaign imports `packages/evaluation/dist/
-    // index.js`. A change that reached ONLY the built output — a rebuild from an
-    // edited tree, a hand-patched dist, a stale source with a fresh build — left
-    // the approved digest byte-identical while the code that executed had changed.
-    expect(R97_DRIVER_ARTIFACTS).toContain("packages/evaluation/dist/index.js");
-    // The offline executor is part of the driver's execution surface too: it is
-    // what drives each arm's own CLI.
-    expect(R97_DRIVER_ARTIFACTS).toContain("scripts/e4/r97-arm-exec.mjs");
+    // 失效." MEASURED: the old list named `packages/evaluation/src/*.ts`, but every
+    // process that runs a campaign imports `packages/evaluation/dist/index.js`. The
+    // approved digest therefore described files nobody loaded.
+    const identity = computeExecutionIdentityV1({ rootDir: REPO, entries: R97_DRIVER_BUILD_ENTRIES });
+    const paths = identity.files.map((f) => f.path);
+    expect(paths).toContain("packages/evaluation/dist/index.js");
+    expect(paths).toContain("scripts/e4/r97-arm-exec.mjs");
+    // Normalized + sorted: the digest must not depend on walk order or on the host
+    // path separator.
+    expect([...paths].sort()).toEqual(paths);
+    for (const p of paths) expect(p).not.toContain("\\");
+    // A SOURCE file is NOT what the driver imports, so it is not covered. Plan §A4
+    // 怎么验收: "只改 src 不误报为'执行了新源码'."
+    expect(paths.some((p) => p.startsWith("packages/evaluation/src/"))).toBe(false);
+    // The identity is still BOUNDED — plan §R100: "不搞整个工作区不可控hash".
+    expect(paths.some((p) => p.includes("node_modules"))).toBe(false);
+    expect(identity.externals.length).toBeGreaterThan(0);
+    expect(identity.externals).toContain("node:fs");
 
-    // NEGATIVE CONTROL, and the one the paragraph actually names: changing ONLY
-    // the executing dist must invalidate the identity.
-    const { mkdtemp, mkdir, cp, rm, writeFile } = await import("node:fs/promises");
-    const { tmpdir } = await import("node:os");
-    const copy = await mkdtemp(join(tmpdir(), "r100-driver-artifacts-"));
+    const { writeFile, rm } = await import("node:fs/promises");
+
+    // ---- (a) a change to the EXECUTING dist moves the digest. ------------
+    const distRoot = await syntheticDriverRoot();
     try {
-      for (const rel of R97_DRIVER_ARTIFACTS) {
-        const dest = join(copy, rel);
-        await mkdir(join(dest, ".."), { recursive: true });
-        await cp(join(REPO, rel), dest);
-      }
-      const before = await computeDriverBuildDigestV1(copy);
-      expect(before).toBe(await computeDriverBuildDigestV1(REPO));
-      // Rewrite ONLY the built evaluation package — every source file untouched.
-      await writeFile(join(copy, "packages/evaluation/dist/index.js"), "// a rebuilt executor\n");
+      const before = await computeDriverBuildDigestV1(distRoot);
+      await writeFile(join(distRoot, "packages/evaluation/dist/index.js"), "// a rebuilt executor\n");
       expect(
-        await computeDriverBuildDigestV1(copy),
+        await computeDriverBuildDigestV1(distRoot),
         "changing the executing dist alone must invalidate the old approval",
       ).not.toBe(before);
     } finally {
-      await rm(copy, { recursive: true, force: true }).catch(() => {});
+      await rm(distRoot, { recursive: true, force: true }).catch(() => {});
+    }
+
+    // ---- (b) a SOURCE-only edit is NOT an execution change. --------------
+    const srcRoot = await syntheticDriverRoot();
+    try {
+      const before = await computeDriverBuildDigestV1(srcRoot);
+      await writeFile(join(srcRoot, "packages/evaluation/src/r97-plan.ts"), "// an edited source, never rebuilt\n");
+      expect(
+        await computeDriverBuildDigestV1(srcRoot),
+        "a source-only edit must NOT be reported as a change to what executes",
+      ).toBe(before);
+    } finally {
+      await rm(srcRoot, { recursive: true, force: true }).catch(() => {});
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // E4-R104 (A4) — the covered set is DERIVED, not enumerated by hand.
+  // -------------------------------------------------------------------------
+  //
+  // MEASURED DEFECT F4 (plan §A4): the driver's covered set was a hand-written
+  // nine-name list. Every module the driver reaches through
+  // `packages/evaluation/dist/index.js` — the budget channel, the campaign
+  // lifecycle, the authorization gate — was outside it, so patching one of those
+  // left `driverBuildDigest` byte-identical and the old approval valid.
+  //
+  // The tests below use a SYNTHETIC root whose import graph has the same SHAPE as
+  // the real one. The real repo is not used for the mutation tests because a
+  // faithful copy of the real closure would have to recreate the workspace
+  // `node_modules/@ar/*` links, and a link that still pointed at the real repo
+  // would be testing that repo rather than the copy. Coverage of the REAL closure
+  // is asserted separately, against `REPO`, in 6d/6e/6f.
+  async function syntheticDriverRoot(): Promise<string> {
+    const { mkdtemp, mkdir, writeFile } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const root = await mkdtemp(join(tmpdir(), "r104-synthetic-driver-"));
+    const files: Record<string, string> = {
+      // The barrel re-exports the modules that really run a campaign. This is the
+      // hop the old file list could not see.
+      "packages/evaluation/dist/index.js": [
+        'export * from "./r97-budget-channel.js";',
+        'export * from "./r97-campaign-lifecycle.js";',
+        "",
+      ].join("\n"),
+      "packages/evaluation/dist/r97-budget-channel.js": "export const channel = 1;\n",
+      "packages/evaluation/dist/r97-campaign-lifecycle.js": "export const lifecycle = 1;\n",
+      "scripts/e4/r97-campaign-driver.mjs": [
+        'import "../../packages/evaluation/dist/index.js";',
+        "export const driver = 1;",
+        "",
+      ].join("\n"),
+      "scripts/e4/r97-arm-worker.mjs": "export const worker = 1;\n",
+      "scripts/e4/r97-arm-exec.mjs": "export const exec = 1;\n",
+      // The reviewed SOURCE. Nothing imports it, so it is outside the identity.
+      "packages/evaluation/src/r97-plan.ts": "// the reviewed source, never imported by the driver\n",
+    };
+    for (const [rel, content] of Object.entries(files)) {
+      const abs = join(root, ...rel.split("/"));
+      await mkdir(join(abs, ".."), { recursive: true });
+      await writeFile(abs, content);
+    }
+    return root;
+  }
+
+  it("6f. a driver-loaded module that NO hand-written list names is inside the digest", async () => {
+    // `packages/evaluation/dist/r97-budget-channel.js` is reached only through the
+    // `./r97-budget-channel.js` specifier inside `dist/index.js`. A file list can
+    // miss it; an import graph cannot.
+    const identity = computeExecutionIdentityV1({ rootDir: REPO, entries: R97_DRIVER_BUILD_ENTRIES });
+    const paths = identity.files.map((f) => f.path);
+    for (const rel of [
+      "packages/evaluation/dist/r97-budget-channel.js",
+      "packages/evaluation/dist/r97-campaign-lifecycle.js",
+      "packages/evaluation/dist/r92-authorization.js",
+      // The security and tool-execution surfaces the acceptance criteria name.
+      "packages/security/dist/index.js",
+    ]) {
+      expect(paths, `${rel} must be inside the driver's execution identity`).toContain(rel);
+    }
+
+    const { writeFile, rm } = await import("node:fs/promises");
+    const root = await syntheticDriverRoot();
+    try {
+      const before = await computeDriverBuildDigestV1(root);
+      expect(before).toMatch(/^[0-9a-f]{64}$/);
+      await writeFile(join(root, "packages/evaluation/dist/r97-budget-channel.js"), "// a patched budget channel\n");
+      expect(
+        await computeDriverBuildDigestV1(root),
+        "patching a module the driver really loads must invalidate the old approval",
+      ).not.toBe(before);
+    } finally {
+      await rm(root, { recursive: true, force: true }).catch(() => {});
+    }
+  });
+
+  it("6g. a driver dependency that cannot be resolved makes the digest NOT ESTABLISHED", async () => {
+    // Fail closed: a missing dependency must be a REFUSAL, never a digest over the
+    // files that happen to remain — a silently smaller covered set is exactly what
+    // the digest exists to prevent.
+    const { rm } = await import("node:fs/promises");
+    const root = await syntheticDriverRoot();
+    try {
+      expect(await computeDriverBuildDigestV1(root)).toMatch(/^[0-9a-f]{64}$/);
+      await rm(join(root, "packages/evaluation/dist/r97-budget-channel.js"));
+      await expect(computeDriverBuildDigestV1(root)).rejects.toThrow(/r97-budget-channel/);
+    } finally {
+      await rm(root, { recursive: true, force: true }).catch(() => {});
     }
   });
 });
+
+// ===========================================================================
+// E4-R104 (A4) — THE FORMAL PATH BINDS THE ARM'S EXECUTED BYTES.
+// ===========================================================================
+//
+// MEASURED DEFECT F4, formal-path half (plan §A4 做什么 3):
+//
+//   "明确旧摘要合同的处理；新合同需要重新生成批准材料."
+//
+// WHAT WAS STILL WRONG AFTER THE FIRST A4 ROUND. The build identity was derived
+// correctly and the WORKER refused a mismatched `approvedBuildDigest` — but only
+// where a caller opted in, because the formal envelope had no slot for the value
+// and the driver never passed it. Measured (`a4/probe-optin.log`):
+//
+//   J1        namesBuildDigest=true,  ledgerCreated=false
+//   J3_OMITTED      refusalFired=false
+//   J4_EMPTY_STRING refusalFired=false
+//   J5_WHITESPACE   refusalFired=false
+//
+// i.e. the omitted / empty / whitespace spellings of the field were all silently
+// read as "no opinion" instead of as an unbound identity. A plan could therefore
+// be approved with nothing at all binding the bytes that run a case — and because
+// `dist/` is gitignored (`.gitignore:2`), neither `sha` nor `executionPlanDigest`
+// could notice a rebuilt executor.
+//
+// The tests below are the three halves of the fix:
+//   1. the FORMAL plan REFUSES to finalize when an arm binds no build digest;
+//   2. an approval that binds one is REFUSED at execution time when the bytes
+//      move — with the sha and the plan digest both deliberately unchanged, which
+//      is exactly the rebuilt-dist case;
+//   3. the refusal happens with NO provider call, so a changed build cannot cost
+//      anything before it is caught.
+describe("E4-R104 (A4): the formal plan binds the arm's EXECUTED bytes", () => {
+  const NEW_BUILD_CODE = "ARM_BUILD_UNBOUND";
+
+  it("1. REFUSES to finalize an arm that binds no EXECUTION build digest", async () => {
+    // The formal layer is where the binding is MANDATORY. An arm whose closure
+    // could not be established has `buildDigest: null`, and the plan must say so
+    // rather than approve material that covers no bytes.
+    for (const spelling of [null, ""] as const) {
+      const pair = await observedPair({ buildDigest: spelling });
+      const plan = await buildR97AuthorizationPlan({
+        repoRoot: REPO,
+        baseline: pair.baseline,
+        candidate: pair.candidate,
+        providerId: "openai",
+        modelId: "gpt-4o-mini",
+        endpointIdentity: ENDPOINT,
+        outputDir: ".ci/r97-ab",
+        now: NOW,
+        createdAt: CREATED,
+        campaignModelCalls: 320,
+      });
+      expect(plan.status, `buildDigest ${JSON.stringify(spelling)} must not finalize`).not.toBe(
+        "FINALIZED_AUTHORIZATION_PLAN",
+      );
+      expect(plan.authorizable).toBe(false);
+      expect(plan.planDigest).toBeNull();
+      const codes = plan.readinessIssues.map((i) => i.code);
+      expect(codes, `buildDigest ${JSON.stringify(spelling)} must be refused by name`).toContain(NEW_BUILD_CODE);
+      expect(plan.readinessIssues.map((i) => i.detail).join(" ")).toMatch(/build digest/i);
+    }
+  });
+
+  it("1b. the refusal NAMES the arm, so an operator knows which checkout to rebuild", async () => {
+    const pair = await observedPair({}, { buildDigest: null });
+    const plan = await buildR97AuthorizationPlan({
+      repoRoot: REPO,
+      baseline: pair.baseline,
+      candidate: pair.candidate,
+      providerId: "openai",
+      modelId: "gpt-4o-mini",
+      endpointIdentity: ENDPOINT,
+      outputDir: ".ci/r97-ab",
+      now: NOW,
+      createdAt: CREATED,
+      campaignModelCalls: 320,
+    });
+    const details = plan.readinessIssues.filter((i) => i.code === NEW_BUILD_CODE).map((i) => i.detail);
+    expect(details).toHaveLength(1);
+    expect(details[0]).toContain('arm "candidate"');
+  });
+
+  it("2. a fully-observed pair binds the digest PER ARM and FINALIZES", async () => {
+    // The positive half: with both builds established the plan finalizes, and the
+    // two arms carry DIFFERENT build digests — one shared value would hide an arm.
+    const plan = await build();
+    expect(plan.status).toBe("FINALIZED_AUTHORIZATION_PLAN");
+    expect(plan.readinessIssues).toEqual([]);
+    const a = plan.authorization!;
+    expect(a.arms.baseline.buildDigest).toMatch(/^[0-9a-f]{64}$/);
+    expect(a.arms.candidate.buildDigest).toMatch(/^[0-9a-f]{64}$/);
+    expect(a.arms.baseline.buildDigest).not.toBe(a.arms.candidate.buildDigest);
+    // It is a REAL envelope field, so it is covered by the approved digest.
+    const moved = computeR92AuthorizationDigestV1({
+      ...a,
+      arms: { ...a.arms, baseline: { ...a.arms.baseline, buildDigest: "0".repeat(64) } },
+    });
+    expect(moved).not.toBe(plan.planDigest);
+  });
+
+  it("3. REFUSES at execution time when the arm's BYTES moved, with sha and plan digest UNCHANGED", async () => {
+    // This is the exact rebuilt-`dist` case. `dist/` is gitignored, so the sha and
+    // the git-derived plan digest are both byte-identical while the code that runs
+    // a case has changed. Only the build digest can see it.
+    const plan = await build();
+    const a = plan.authorization!;
+    const r = checkExecutionObservationV1({
+      plan,
+      observed: {
+        now: NOW,
+        armShas: { baseline: a.arms.baseline.sha, candidate: a.arms.candidate.sha },
+        armDigests: {
+          baseline: a.arms.baseline.executionPlanDigest,
+          candidate: a.arms.candidate.executionPlanDigest,
+        },
+        armBuildDigests: {
+          baseline: a.arms.baseline.buildDigest!,
+          // The executor was rebuilt: same commit, same plan, different bytes.
+          candidate: "9".repeat(64),
+        },
+        caseFingerprints: { ...a.caseFingerprints },
+        providerId: a.providerId,
+        modelId: a.modelId,
+        endpointIdentity: a.endpointIdentity,
+        driverBuildDigest: a.driverBuildDigest!,
+        expandedPlanDigest: plan.planDigest!,
+      },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toEqual(["EXEC_OBS_ARM_BUILD_DRIFT"]);
+    expect(r.issues.join(" ")).toContain('arm "candidate"');
+    expect(r.issues.join(" ")).toContain("buildDigest");
+  });
+
+  it("4. REFUSES an arm whose build digest could NOT be established at execution time", async () => {
+    // `null` is "the closure could not be established in that checkout" — drift,
+    // never a skip. A missing dependency must not read as an unchanged build.
+    const plan = await build();
+    const a = plan.authorization!;
+    const r = checkExecutionObservationV1({
+      plan,
+      observed: {
+        now: NOW,
+        armShas: { baseline: a.arms.baseline.sha, candidate: a.arms.candidate.sha },
+        armDigests: {
+          baseline: a.arms.baseline.executionPlanDigest,
+          candidate: a.arms.candidate.executionPlanDigest,
+        },
+        armBuildDigests: { baseline: a.arms.baseline.buildDigest!, candidate: null },
+        caseFingerprints: { ...a.caseFingerprints },
+        providerId: a.providerId,
+        modelId: a.modelId,
+        endpointIdentity: a.endpointIdentity,
+        driverBuildDigest: a.driverBuildDigest!,
+        expandedPlanDigest: plan.planDigest!,
+      },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toEqual(["EXEC_OBS_ARM_BUILD_DRIFT"]);
+    expect(r.issues.join(" ")).toMatch(/could not be established/);
+  });
+
+  it("5. REFUSES an approval that binds NO build digest, naming regeneration", async () => {
+    // The execution-time half of (1): an envelope that predates this contract must
+    // be regenerated, not run. Reached when material was written by an older
+    // builder or edited; the code names the remedy rather than a generic drift.
+    const plan = await build();
+    const a = plan.authorization!;
+    const stale = {
+      ...plan,
+      authorization: {
+        ...a,
+        arms: {
+          baseline: { ...a.arms.baseline, buildDigest: undefined },
+          candidate: a.arms.candidate,
+        },
+      } as typeof a,
+    };
+    const r = checkExecutionObservationV1({
+      plan: stale,
+      observed: {
+        now: NOW,
+        armShas: { baseline: a.arms.baseline.sha, candidate: a.arms.candidate.sha },
+        armDigests: {
+          baseline: a.arms.baseline.executionPlanDigest,
+          candidate: a.arms.candidate.executionPlanDigest,
+        },
+        armBuildDigests: {
+          baseline: a.arms.baseline.buildDigest!,
+          candidate: a.arms.candidate.buildDigest!,
+        },
+        caseFingerprints: { ...a.caseFingerprints },
+        providerId: a.providerId,
+        modelId: a.modelId,
+        endpointIdentity: a.endpointIdentity,
+        driverBuildDigest: a.driverBuildDigest!,
+        // The stale body is internally consistent, so the plan-digest check is
+        // satisfied and ONLY the build binding is missing.
+        expandedPlanDigest: computeR92AuthorizationDigestV1({
+          ...a,
+          arms: { baseline: { ...a.arms.baseline, buildDigest: undefined }, candidate: a.arms.candidate } as typeof a.arms,
+        } as typeof a),
+      },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.codes).toContain("EXEC_OBS_ARM_BUILD_UNBOUND");
+    expect(r.issues.join(" ")).toMatch(/regenerated/);
+  });
+
+  it("6. the shared ARM build contract derives the SAME digest the worker records", async () => {
+    // Plan §A4 怎么做 5: "让计划生成、执行前复核、worker record 和 evidence 使用同一身份
+    // 合同." One contract, one value: the exported `computeArmBuildDigestV1` is what
+    // the plan, the driver's re-observation and the worker all call, so they cannot
+    // drift into describing different builds.
+    const { computeArmBuildDigestV1, R97_ARM_BUILD_ENTRIES } = await import("./r97-plan.js");
+    expect(typeof computeArmBuildDigestV1).toBe("function");
+    // The declared entries are the real barrels the offline executor loads; the
+    // closure derived from them is a superset of any hand-written list.
+    expect(R97_ARM_BUILD_ENTRIES).toContain("apps/cli/dist/benchmark-command.js");
+    expect(R97_ARM_BUILD_ENTRIES).toContain("packages/core/dist/index.js");
+    expect(R97_ARM_BUILD_ENTRIES).toContain("packages/evaluation/dist/index.js");
+  });
+});
+

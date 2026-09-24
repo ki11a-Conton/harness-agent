@@ -94,7 +94,7 @@
 import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cp, mkdir, readFile, readdir, rm } from "node:fs/promises";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
@@ -160,6 +160,35 @@ export const EXIT_CONFIG = 2;
  * unchanged, because "the build cannot be established" must never be represented
  * by a digest of the files that happen to be there.
  */
+/**
+ * ---- E4-R104 (A4): THE MANIFEST IS DECLARED, THE COVERAGE IS DERIVED --------
+ *
+ * MEASURED DEFECT F4 (plan §A4): "armBuildIdentity 的 BUILD_ARTIFACT_PATHS 是手写的
+ * 五个文件名；packages/core/dist/runtime/runtime.js、packages/evaluation/dist/
+ * r97-budget-channel.js 等真正执行 case 的模块既不在清单里、也不在其传递闭包里。
+ * 改写它们不会移动 buildDigest，旧批准继续有效."
+ *
+ * The list below is therefore the DECLARED ENTRY list and nothing more. It is what
+ * the walk STARTS from; what the digest COVERS is the closure DERIVED from those
+ * entries by `computeExecutionIdentityV1` — the shared contract in
+ * `packages/evaluation/dist/r97-plan.js`, which the driver's `driverBuildDigest`,
+ * the plan's pre-execution re-check, this worker's record and the campaign
+ * evidence all use. Plan §A4 怎么做 5: "让计划生成、执行前复核、worker record 和
+ * evidence 使用同一身份合同." Plan §A4 怎么做 2: "不能以转导出的 index.js 代替其下层
+ * 模块" — which is exactly what a derived closure fixes and a file list cannot.
+ *
+ * `R97_ARM_BUILD_ENTRIES` in the plan names the three modules the OFFLINE EXECUTOR
+ * loads directly; the two extra entries here (`packages/core/dist/index.js` and
+ * `packages/evaluation/dist/index.js`) are the runtime and verifier barrels the
+ * plan's acceptance criteria name explicitly, and declaring them makes them
+ * entries in their own right rather than reachable-only-by-accident. The closure
+ * is a SUPERSET of either list, so declaring more can only widen coverage.
+ *
+ * A missing entry, a missing relative dependency, an unreadable file or a
+ * dependency that resolves outside the checkout still makes `buildDigest` `null`:
+ * the fail-closed rule is unchanged, because "the build cannot be established"
+ * must never be represented by a digest of the files that happen to be there.
+ */
 /** Exported so a test can assert WHICH modules the build identity covers rather
  *  than trusting the digest to reveal an omission. */
 export const BUILD_ARTIFACT_PATHS = [
@@ -169,6 +198,85 @@ export const BUILD_ARTIFACT_PATHS = [
   ["packages", "evaluation", "dist", "index.js"],
   ["packages", "core", "dist", "index.js"],
 ];
+
+/** The shared identity contract, loaded from THIS repo's built evaluation package.
+ *
+ *  ---- WHY THIS IS A TOP-LEVEL `await import` AND NOT A `require` -------------
+ *
+ *  `armBuildIdentity` is SYNCHRONOUS by contract — the CLI, `refuseIdentity` and
+ *  the contract tests all read it without awaiting, and a promise there would turn
+ *  every refusal path into an async one — so the module is loaded ONCE, before any
+ *  caller can run, and the binding below is then a plain synchronous lookup.
+ *
+ *  `require` would be the obvious way to load an ESM module synchronously (Node 24
+ *  supports `require(esm)`), and it works under plain Node. It does NOT work under
+ *  the test runner: the workspace packages declare a `"development"` export
+ *  condition ahead of `"default"`
+ *  (`packages/contracts/package.json`: `exports["."].development = "./src/index.ts"`),
+ *  the runner activates that condition, and the `require` path then loads
+ *  `packages/contracts/src/index.ts`, whose `./ids.js` specifier has no on-disk
+ *  `.js` sibling — measured: `Cannot find module '...\packages\contracts\src\ids.js'
+ *  imported from ...\packages\contracts\src\index.ts`. The dynamic-import path
+ *  applies the source↔artifact extension mapping and loads cleanly, so it is the
+ *  path that works in BOTH environments.
+ *
+ *  A load failure is RECORDED rather than thrown: an unbuilt evaluation package
+ *  must make the build identity NOT ESTABLISHED (fail closed, `buildDigest: null`),
+ *  not make the worker module itself unimportable. */
+let identityContract = null;
+let identityContractError = null;
+try {
+  identityContract = await import(
+    pathToFileURL(join(REPO_ROOT, "packages", "evaluation", "dist", "r97-plan.js")).href
+  );
+} catch (err) {
+  identityContractError = err;
+}
+
+/** The DECLARED entry list, as root-relative POSIX paths. */
+function armBuildEntries() {
+  return BUILD_ARTIFACT_PATHS.map((parts) => parts.join("/"));
+}
+
+/**
+ * The DERIVED closure of one arm checkout — the files the build identity covers.
+ *
+ * THROWS when the closure cannot be established (a missing entry, an unresolvable
+ * relative dependency, an unreadable file, a dependency outside the checkout), so
+ * every caller decides for itself whether that is a `null` identity or an error.
+ *
+ * `unresolvableBareSpecifier: "external"` is the ARM-side policy, and it is
+ * deliberately NOT the driver's: an arm checkout is a build-output tree whose own
+ * modules are resolved relatively and must therefore all be present, while a bare
+ * specifier names a `node_modules` dependency. The real arms carry their own
+ * `node_modules` (see `r97-observe-arms.mjs`: `pnpm install` then `pnpm build`), so
+ * this policy is inert for them — every bare specifier resolves exactly as it does
+ * on the driver side. It matters only for a synthetic or archived tree that
+ * carries no `node_modules`, where the honest statement is "this checkout's own
+ * bytes are all covered, and here are the bare dependencies it names but does not
+ * carry" rather than either a fabricated file set or a refusal that would make the
+ * tree's identity unobservable.
+ */
+export function armBuildClosure(checkoutDir) {
+  if (identityContract === null) {
+    throw new Error(
+      `E4-R104: the shared identity contract could not be loaded from ` +
+        `${join(REPO_ROOT, "packages", "evaluation", "dist", "r97-plan.js")} — the build identity cannot be ` +
+        `established: ${identityContractError instanceof Error ? identityContractError.message : String(identityContractError)}`,
+    );
+  }
+  return identityContract.computeExecutionIdentityV1({
+    rootDir: resolve(checkoutDir),
+    entries: armBuildEntries(),
+    unresolvableBareSpecifier: "external",
+  });
+}
+
+/** The root-relative POSIX paths of that closure, for a caller that has to
+ *  materialise the same tree (the contract suite's fixtures). */
+export function armBuildClosurePaths(checkoutDir) {
+  return armBuildClosure(checkoutDir).files.map((file) => file.path);
+}
 
 /**
  * Backstop for the per-unit deadline when the caller supplies none.
@@ -365,6 +473,19 @@ export function boundedStop(opts) {
   const outCap = new ByteCap(capLimit, () => onOutputLimit());
   const errCap = new ByteCap(capLimit, () => onOutputLimit());
 
+  // ---- AN ADOPTED CHILD (E4-R106 / A6). ------------------------------------
+  //
+  // A caller that has ALREADY spawned the process it wants stopped — because it had
+  // to put a payload on that process's stdin, which cannot be done through an argv
+  // after the fact — hands it over here instead of letting this function spawn a
+  // second one. Re-spawning would run the case TWICE, and on a billed path running
+  // the same case twice is the worst bug available.
+  //
+  // The stop contract is identical either way: the same polite signal, the same
+  // bounded grace, the same forced TREE kill and the same single settle. Adoption
+  // changes only WHO created the process, never how it is ended.
+  const adopted = opts.adopt ?? null;
+
   return new Promise((resolvePromise) => {
     let settled = false;
     let forced = false;
@@ -528,14 +649,16 @@ export function boundedStop(opts) {
     onOutputLimit = () => beginStop("output_limit");
 
     try {
-      child = spawn(opts.file, opts.args ?? [], {
-        cwd: opts.cwd,
-        env: opts.env,
-        stdio: ["ignore", "pipe", "pipe"],
-        windowsHide: true,
-        // POSIX only: a process-group leader is what makes a tree kill possible.
-        detached: process.platform !== "win32",
-      });
+      child =
+        adopted ??
+        spawn(opts.file, opts.args ?? [], {
+          cwd: opts.cwd,
+          env: opts.env,
+          stdio: ["ignore", "pipe", "pipe"],
+          windowsHide: true,
+          // POSIX only: a process-group leader is what makes a tree kill possible.
+          detached: process.platform !== "win32",
+        });
     } catch (err) {
       spawnError = redact(err);
       reason = "spawn_failed";
@@ -681,6 +804,305 @@ export function runChild(opts) {
   });
 }
 
+/** ---- E4-R106 (A6 / F6): THE TERMINABLE EXECUTION BOUNDARY -------------------
+ *
+ * MEASURED DEFECT F6 (plan §A6):
+ *
+ *   "boundedStop 工具已经能杀进程，但实际 worker 改成进程内 await
+ *    runBenchmarkCommand" — a cancel at 40 ms still PASSES ~412 ms later; a unit
+ *    timeout of 80 ms returns ~421 ms later.
+ *
+ * `runArmCaseInProcess` awaits the arm's exported `runBenchmarkCommand` INSIDE the
+ * worker process. `boundedStop` can end a PROCESS, but an `await` is not a process,
+ * so nothing could terminate that call: a dry run or a dispatch that never returns
+ * kept the unit, its reservation and the whole campaign alive indefinitely.
+ *
+ * WHY THIS IS A CHILD PROCESS AND NOT A `Promise.race`. Plan §A6 怎么做 5 is
+ * explicit: "单独 Promise.race 返回后放任后台执行继续，不算修复." A race would
+ * resolve the unit and leave the hung provider's `setInterval`, its open handles and
+ * its grandchildren WRITING FILES afterwards — the unit would be *reported* stopped
+ * while the work carried on, which is worse than an honest hang. A child process is
+ * the only boundary here that can end code which ignores `AbortSignal` ENTIRELY,
+ * because the operating system, not the code, is what stops it.
+ *
+ * WHAT THE CHILD OWNS, AND WHAT IT MUST NOT. The child loads the SPECIFIED arm's own
+ * `benchmark-command.js` export (`arm.checkoutDir`), runs the ONE case, and reports
+ * its `ArmCaseResult` back as JSON on stdout. It is handed the SAME ledger directory
+ * as the parent, so every `generate()` still reserves through the campaign's single
+ * ledger implementation and the per-call ceiling is unchanged (plan §A6 怎么做 7:
+ * "不能为隔离而退回'每 unit 固定收费 1'或绕过预算"). Isolation must not buy a second
+ * budget implementation, so the child re-enters the SAME A1 channel rather than a
+ * simplified one.
+ *
+ * THE SETTLE-ONCE CONTRACT IS INHERITED, NOT REIMPLEMENTED. `boundedStop` already
+ * performs polite signal → bounded grace → forced process-TREE kill → await `close`
+ * → settle exactly once and release every timer and listener. Reusing it is what
+ * makes a provider, a verifier, a tool AND their descendants stop together, and what
+ * gives this boundary its `reason` (`timeout` / `cancelled` / `output_limit`) rather
+ * than a guess.
+ *
+ * The runner is passed as a `--eval`-free FILE path so nothing about the case's
+ * payload has to survive an argv round trip, and the case is handed over on stdin as
+ * JSON so a large or hostile case definition cannot be mangled by shell quoting.
+ */
+export const ARM_CHILD_RUNNER_REL = join("scripts", "e4", "r97-arm-child-runner.mjs");
+
+/** The stdout marker the boundary child prefixes its one result line with.
+ *
+ * A SENTINEL rather than bare JSON, because the child loads a third-party arm build
+ * that may print whatever it likes; the last line carrying this marker is the result
+ * and nothing else can be mistaken for it. Shared as a constant so the runner and the
+ * parser cannot drift apart. */
+export const ARM_CHILD_SENTINEL = "__A6_RESULT__";
+
+/**
+ * The effective unit deadline: `min(unit cap, campaign remaining)`.
+ *
+ * Plan §A6 怎么做 2: "effective unit deadline 取 unit 上限与 campaign 剩余时间的较小
+ * 值，并保留触发原因."
+ *
+ * THE CAUSE IS THE POINT. When the campaign's remaining time is the smaller value,
+ * the stop is the CAMPAIGN's deadline (`CAMPAIGN_DEADLINE_EXCEEDED`), not the unit's
+ * own cap — and a cancellation outranks both, because an operator's explicit stop is
+ * a more specific fact than a clock. Collapsing the three into one number would lose
+ * exactly the distinction plan §A6 怎么做 9 requires be preserved.
+ *
+ * Returns `{ deadlineMs, cause }` where `cause` is `"cancelled"`, `"campaign_deadline"`
+ * or `"unit_cap"`. `campaignRemainingMs` may be `null` (no campaign bound), which is
+ * how an unmodified caller keeps its previous single-bound behaviour.
+ */
+export function effectiveUnitDeadline(opts) {
+  const unitCapMs = Number.isFinite(opts.unitCapMs) ? Math.max(0, opts.unitCapMs) : DEFAULT_TIMEOUT_MS;
+  const remaining = Number.isFinite(opts.campaignRemainingMs) ? Math.max(0, opts.campaignRemainingMs) : null;
+  if (opts.signal !== undefined && opts.signal !== null && opts.signal.aborted) {
+    return { deadlineMs: 0, cause: "cancelled" };
+  }
+  if (remaining !== null && remaining < unitCapMs) {
+    return { deadlineMs: remaining, cause: "campaign_deadline" };
+  }
+  return { deadlineMs: unitCapMs, cause: "unit_cap" };
+}
+
+/** The verdict a boundary stop produces, from its cause alone.
+ *
+ * Plan §A6 怎么验收 5: "判定原因分别为 timeout/cancelled/output_limit." The category a
+ * caller sees is `timeout` for BOTH a unit-cap expiry and a campaign-deadline
+ * expiry, because the campaign's remaining time IS the unit's effective deadline —
+ * the two are the same clock seen from two places, and plan §A6 怎么做 2 requires the
+ * SMALLER of the two be applied while the trigger is preserved. `cancelled` is kept
+ * distinct, because "the operator stopped it" and "the clock ran out" are different
+ * facts about a campaign.
+ *
+ * The detail NAMES the cause, so an operator reading the record can tell a unit cap
+ * from a campaign deadline without cross-referencing the driver's report.
+ */
+export function stoppedVerdictOf(stop) {
+  if (stop === null || stop === undefined) return null;
+  if (stop.reason === "cancelled") {
+    return { category: "timeout", detail: `E4-R106: the unit was cancelled while it was executing (${stop.detail ?? ""})`.trim() };
+  }
+  if (stop.reason === "output_limit") {
+    return { category: "infrastructure", detail: `E4-R106: the unit exceeded its output bound while it was executing (${stop.detail ?? ""})`.trim() };
+  }
+  if (stop.reason === "spawn_failed" || stop.reason === "runner_failed") {
+    return { category: "infrastructure", detail: `E4-R106: the unit's execution boundary could not complete the case (${stop.detail ?? ""})`.trim() };
+  }
+  // `timeout` — the effective deadline expired, whether it came from the unit's cap
+  // or from the campaign's remaining time.
+  return { category: "timeout", detail: `E4-R106: the unit's deadline expired while it was executing (${stop.detail ?? ""})`.trim() };
+}
+
+/**
+ * Run ONE case behind a terminable process boundary, and say exactly how it ended.
+ *
+ * Plan §A6 怎么做 4: "对实际 arm 执行建立可终止的隔离边界，优先复用现有 child
+ * runner/boundedStop. 独立子进程加载指定 arm 的导出入口并复用同一 ledger."
+ *
+ * Returns `{ executed, stop, dispatched }`:
+ *
+ *   * `executed`  — the arm's `ArmCaseResult` when the child FINISHED and reported
+ *                   one, else `null`.
+ *   * `stop`      — `null` when the child ran to completion; otherwise
+ *                   `{ reason, cause, detail, forced, durationMs, exitCode, signal }`
+ *                   naming WHY it was ended. Plan §A6 怎么做 9 requires this be a
+ *                   preserved cause rather than an inference from a missing report.
+ *   * `dispatched` — whether a provider call was ADMITTED before the stop, read from
+ *                   the LEDGER rather than self-reported, because plan §A6 怎么验收 6
+ *                   splits "never dispatched ⇒ release the reservation" from
+ *                   "dispatched then killed ⇒ do not refund" on exactly this fact.
+ *
+ * WHY THE CHILD'S OWN WORD IS NOT TRUSTED FOR THE STOP. A killed process writes
+ * nothing. So the ORDER is: if the child reported a result, that result is the
+ * execution (even if the process then died); only when NO result arrived does the
+ * stop reason decide the unit's fate. That ordering is what keeps a case that
+ * legitimately finished — and merely took a while — from being reported as a
+ * timeout, and what keeps a hang from being reported as a missing report.
+ */
+export async function runArmCaseAtBoundary(opts) {
+  const repoRoot = opts.repoRoot ?? REPO_ROOT;
+  // The ledger's real filename, supplied by the caller that opened it (the worker
+  // reads it from the loaded evaluation build). Guessing it here silently broke
+  // the "was a call admitted?" measurement — see `ledgerHasEntries`.
+  const ledgerFilename = opts.ledgerFilename ?? "budget-ledger.json";
+  const child = spawn(process.execPath, [join(repoRoot, ARM_CHILD_RUNNER_REL)], {
+    cwd: repoRoot,
+    stdio: ["pipe", "pipe", "pipe"],
+    windowsHide: true,
+    // `detached` makes the child the leader of its own process GROUP on POSIX, which
+    // is what lets the forced kill reach its descendants as a group. On Windows
+    // `taskkill /t` walks the tree instead. Both are the existing platform adaptation
+    // inside `boundedStop`, reused rather than duplicated.
+    detached: process.platform !== "win32",
+  });
+
+  const payload = JSON.stringify({
+    evaluationDir: join(repoRoot, "packages", "evaluation", "dist"),
+    execDir: join(repoRoot, "scripts", "e4"),
+    checkoutDir: opts.arm.checkoutDir,
+    arm: opts.arm.label,
+    caseDef: opts.caseDef,
+    scriptShape: opts.scriptShape,
+    stagedCasesDir: opts.stagedCasesDir,
+    outDir: opts.outDir,
+    suite: opts.suite,
+    providerId: opts.providerId,
+    modelId: opts.modelId,
+    endpointBaseUrl: opts.endpointBaseUrl,
+    maxModelCalls: opts.maxModelCalls,
+    ledgerDir: opts.ledgerDir,
+    planDigest: opts.planDigest,
+    campaignModelCalls: opts.campaignModelCalls,
+    firstReservationId: opts.firstReservationId,
+  });
+  child.stdin.end(payload, "utf8");
+
+  // The effective bound: `min(unit cap, campaign remaining)`, with the cause kept
+  // (plan §A6 怎么做 2).
+  const effective = effectiveUnitDeadline({
+    unitCapMs: opts.deadline === null || opts.deadline === undefined ? DEFAULT_TIMEOUT_MS : opts.deadline.remainingForPhase(),
+    campaignRemainingMs: opts.campaignRemainingMs ?? null,
+    signal: opts.signal ?? null,
+  });
+
+  // ADOPT the process spawned above rather than spawning a second one: the payload
+  // is already on its stdin, so a re-spawn would run the case twice — which on a
+  // billed path is the worst possible bug.
+  const outcome = await boundedStop({
+    file: process.execPath,
+    args: [],
+    cwd: repoRoot,
+    env: process.env,
+    deadlineMs: effective.deadlineMs,
+    graceMs: opts.graceMs ?? SIGKILL_GRACE_MS,
+    maxOutputBytes: opts.maxOutputBytes ?? MAX_CHILD_OUTPUT_BYTES,
+    signal: opts.signal ?? undefined,
+    adopt: child,
+  });
+
+  const result = parseArmChildResult(outcome.stdout);
+  const dispatched = await ledgerHasEntries(opts.ledgerDir, ledgerFilename);
+  if (result !== null && result.ok) {
+    return { executed: result.executed, stats: result.stats ?? null, stop: null, dispatched };
+  }
+
+  // ---- TWO DIFFERENT FACTS, AND THEY MUST NOT BE CONFLATED. ---------------
+  //
+  //   1. THE RUNNER REACHED ITS OWN CONCLUSION (`result.ok === false`). The child
+  //      loaded, ran, and FAILED — so the child's report is the cause, and the unit
+  //      is an infrastructure failure of the execution, not a stop. This is the case
+  //      the boundary cannot distinguish from a `close` event alone: the child exits
+  //      normally (code 1) after reporting.
+  //   2. NOTHING WAS REPORTED (`result === null`). The child was killed mid-case (or
+  //      could not start), so the STOP is the only fact available and it decides the
+  //      unit's fate — plan §A6 怎么做 9 ("异常发生在 deadline 之后也不能统统落入
+  //      infrastructure catch").
+  //
+  // Reading (1) as a `timeout` would blame the clock for a genuine failure; reading
+  // (2) as an infrastructure fault is the defect A6 exists to remove. So the reason
+  // is taken from the RUNNER when it spoke, and from the STOP when it could not.
+  if (result !== null && result.ok === false) {
+    return {
+      executed: null,
+      stats: result.stats ?? null,
+      dispatched,
+      stop: {
+        // `spawn_failed` when the process never really ran (a missing module, a bad
+        // interpreter): `started` is false, so nothing was dispatched either way.
+        reason: outcome.started === false ? "spawn_failed" : "runner_failed",
+        cause: effective.cause,
+        detail: result.error,
+        forced: outcome.forced === true,
+        durationMs: outcome.durationMs,
+        exitCode: outcome.exitCode,
+        signal: outcome.signal,
+      },
+    };
+  }
+
+  const detail = `${outcome.reason}${outcome.forced ? " (forced)" : ""}`;
+  return {
+    executed: null,
+    stats: null,
+    dispatched,
+    stop: {
+      reason: outcome.spawnError !== undefined && outcome.spawnError !== null ? "spawn_failed" : outcome.reason,
+      cause: effective.cause,
+      detail,
+      forced: outcome.forced === true,
+      durationMs: outcome.durationMs,
+      exitCode: outcome.exitCode,
+      signal: outcome.signal,
+    },
+  };
+}
+
+/** Pull the sentinel line out of the child's stdout, or `null` when it wrote none.
+ *
+ * The sentinel (rather than bare JSON) is what keeps an unrelated `console.log` from
+ * a third-party module being parsed as the arm's result. A last-line match is used
+ * because a module may legitimately print after the result. */
+export function parseArmChildResult(stdout) {
+  const lines = String(stdout ?? "").split("\n");
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    const line = lines[i];
+    if (!line.startsWith(ARM_CHILD_SENTINEL)) continue;
+    try {
+      return JSON.parse(line.slice(ARM_CHILD_SENTINEL.length));
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/** Whether the campaign's ledger has ANY entry on disk.
+ *
+ * This is the measurement behind "never dispatched ⇒ release; dispatched then killed
+ * ⇒ do not refund" (plan §A6 怎么验收 6). It reads the LEDGER FILE, so a child that
+ * was killed before it could say anything still leaves the honest fact behind — the
+ * reservation A1 wrote BEFORE the call left.
+ */
+/**
+ * Did the child admit a REAL call before it died?
+ *
+ * This is a MEASUREMENT, not a self-report: it reads the campaign's own ledger
+ * file. The filename must be the ledger's real one (`R97_LEDGER_FILENAME`,
+ * `budget-ledger.json`) — reading a guessed `ledger.json` made this return
+ * `false` for every stopped child, so an admitted call looked like "never
+ * dispatched" and its allowance was REFUNDED. That is the silent re-grant A1
+ * removed, reintroduced through a wrong filename. Measured: a hung DISPATCH
+ * reported `budget` (from the failed refund) instead of `timeout`.
+ */
+async function ledgerHasEntries(ledgerDir, ledgerFilename = "budget-ledger.json") {
+  try {
+    const raw = await readFile(join(ledgerDir, ledgerFilename), "utf8");
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed?.entries) && parsed.entries.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 /** ---- E4-R99-B (T5): `DRY_RUN_TIMEOUT_MS` WAS DECLARED AND NEVER READ --------
  *
  * MEASURED DEFECT: this module carried `const DRY_RUN_TIMEOUT_MS = 120_000;` with
@@ -797,6 +1219,92 @@ export const FAILURE_CATEGORIES = [
 ];
 
 /**
+ * THE VERDICT PRIORITY TABLE (E4-R105 / A5).
+ *
+ * WHY A TABLE AND NOT AN `if/else` CHAIN (plan §A5 怎么做 2)
+ * ---------------------------------------------------------
+ * MEASURED DEFECT F5 (plan §A5):
+ *
+ *   "`runArmUnit` 已发现 executionIdentity.drift，但后续报告分类会覆盖它."
+ *
+ * The worker detected the drift and set a `harness` verdict — and then an
+ * INDEPENDENT `if/else` further down ran `classifyReport` and unconditionally
+ * assigned `record.verifierPassed = classified.passed === true`. A report that
+ * merely CLAIMED `verification_passed=true` therefore turned a refused unit into
+ * `status: "completed"`, `failureCategory: null`, `verifierPassed: true`: a PASS
+ * under an identity the plan never approved.
+ *
+ * Plan §A5 怎么做 2 names the required shape — "将 verdict 决策写成明确、互斥的状态
+ * 转换 … 不能后续无条件赋值覆盖。不要只在最后把 verifierPassed 置 false 而仍写
+ * completed/passed detail" — and §A5 怎么验收 7 requires the conclusion to be stable
+ * "不受 if 语句顺序偶然影响".
+ *
+ * This list IS that shape: a total order over the verdict vocabulary, most
+ * blocking first. Every fact a unit establishes is folded through
+ * `foldR97Verdict`, which keeps the highest-ranked fact as the verdict and
+ * retains the others as DIAGNOSTICS. Nothing is ever overwritten, and reordering
+ * the folds cannot change the outcome.
+ *
+ * WHY `harness` IS FIRST. It means "the campaign's own plumbing refused": a
+ * drifted identity, a build that changed, inputs nobody fingerprinted, evidence
+ * that could not be written. A unit refused on those grounds measured nothing
+ * that may be scored, so no later observation — a timeout, a missing report, or a
+ * report claiming success — can outrank it. `budget` follows, for the same
+ * reason: an unsettled reservation means the spend itself is unknown.
+ *
+ * WHY `case_failed` IS NOT A FAILURE OF THE HARNESS. Plan §A5 怎么做 7: "将通过、
+ * 合法 case_failed、provider/harness/infrastructure 失败保持区分；本任务不能把所有
+ * 低分案例都改成基础设施失败." A case that ran and failed its own task is a VALID
+ * NEGATIVE, and it outranks only `passed`.
+ *
+ * `"passed"` is the sentinel for the `null` category (a verified pass), so the
+ * table covers the whole vocabulary including the absence of a failure.
+ */
+export const R97_VERDICT_PRIORITY = [
+  "harness",
+  "budget",
+  "timeout",
+  "infrastructure",
+  "provider",
+  "case_failed",
+  "passed",
+];
+
+/** The rank of one verdict category: lower is more blocking. An unknown category
+ *  is treated as the MOST blocking rather than the least, because a verdict
+ *  vocabulary this module does not recognise must never be silently outranked by
+ *  a pass. */
+function verdictRank(category) {
+  const index = R97_VERDICT_PRIORITY.indexOf(category ?? "passed");
+  return index === -1 ? 0 : index;
+}
+
+/**
+ * Fold one newly-established verdict fact into the verdict so far.
+ *
+ * THE CONTRACT (plan §A5 怎么做 2): the more blocking fact keeps its category, and
+ * the other fact is RETAINED as a diagnostic suffix rather than discarded. A
+ * caller therefore sees both "the identity was refused" and "the report claimed a
+ * pass", which is the whole evidence the refusal rests on — instead of a single
+ * sentence whose meaning depends on which `if` happened to run last.
+ *
+ * `current === null`/`undefined` (no fact yet) returns `next` UNCHANGED, so the
+ * ordinary path — one report, one verdict — is byte-identical to the previous
+ * behaviour.
+ */
+export function foldR97Verdict(current, next) {
+  if (current === null || current === undefined) return { category: next.category ?? null, detail: next.detail };
+  const winner = verdictRank(current.category) <= verdictRank(next.category) ? current : next;
+  const loser = winner === current ? next : current;
+  const winnerDetail = winner.detail ?? "";
+  const loserDetail = loser.detail ?? "";
+  if (loserDetail === "" || winnerDetail.includes(loserDetail)) {
+    return { category: winner.category ?? null, detail: winnerDetail };
+  }
+  return { category: winner.category ?? null, detail: `${winnerDetail} — also observed: ${loserDetail}` };
+}
+
+/**
  * Render a provider error event, a child's stderr, or a thrown value into a
  * short, NON-SECRET failure text.
  *
@@ -903,10 +1411,9 @@ export function terminalDetailFor(verdict) {
  * a case had changed, so an approval would silently cover a build that no longer
  * existed.
  *
- * The stat fields are still READ, but only to answer "is there a readable file
- * here?": a path that cannot be read makes the whole digest `null` rather than
- * being skipped, because a digest over "the files that happened to be present" is
- * exactly how a covered set shrinks without anyone noticing.
+ * The stat fields are no longer read at all: the digest is over BYTES, and the
+ * only question left is "can the closure be established?", which the shared walker
+ * answers by THROWING rather than by returning a smaller set.
  *
  * Returns `{ checkoutDir, sourceSha, buildDigest }` where either digest value
  * may be `null`; `null` is the honest "not established", never a substitute.
@@ -930,52 +1437,25 @@ export function armBuildIdentity(checkoutDir) {
     sourceSha = null;
   }
 
-  const materials = [];
-  let allPresent = true;
-  for (const parts of BUILD_ARTIFACT_PATHS) {
-    const abs = join(dir, ...parts);
-    const rel = parts.join("/");
-    // `statSyncOrNull` answers only "is there a readable regular file here?".
-    // Its size and mtime are deliberately NOT part of the digest material: a
-    // digest that moves when a file is merely touched is a poor identity, and one
-    // that does NOT move when same-length content changes is no identity at all.
-    const st = statSyncOrNull(abs);
-    let contentHash = null;
-    if (st === null || !st.isFile()) {
-      allPresent = false;
-    } else {
-      const bytes = readFileSyncOrNull(abs);
-      if (bytes === null) allPresent = false;
-      else contentHash = createHash("sha256").update(bytes).digest("hex");
-    }
-    materials.push(`${rel}:${contentHash ?? "missing"}`);
+  // ---- THE DIGEST IS THE DERIVED CLOSURE (E4-R104 / A4). --------------------
+  //
+  // A walk that cannot complete is `null`, never a digest over the files that
+  // happened to be readable: the two must not be representable by the same value,
+  // or a checkout with a deleted execution dependency would look approved.
+  let buildDigest = null;
+  try {
+    buildDigest = armBuildClosure(dir).digest;
+  } catch {
+    buildDigest = null;
   }
-
-  const buildDigest = allPresent
-    ? createHash("sha256").update(`e4-r100-build-digest-v2\n${materials.join("\n")}`).digest("hex")
-    : null;
 
   return { checkoutDir: dir, sourceSha, buildDigest };
 }
 
-// `statSync`/`readFileSync` are wrapped so the digest never throws on a
-// permission error or a directory sitting where a file belongs: both become the
-// explicit "missing" marker above.
-function statSyncOrNull(path) {
-  try {
-    return statSync(path);
-  } catch {
-    return null;
-  }
-}
-
-function readFileSyncOrNull(path) {
-  try {
-    return readFileSync(path);
-  } catch {
-    return null;
-  }
-}
+// `statSyncOrNull` / `readFileSyncOrNull` lived here while the digest was built
+// from an enumerated list. E4-R104 (A4) replaced that with the DERIVED closure, so
+// there is no longer a "missing" marker to produce: the walker refuses instead of
+// reporting a hole, and the wrappers have no callers left.
 
 /** Where an arm checkout's runnable CLI entry lives. */
 export function cliEntryOf(checkoutDir) {
@@ -1117,6 +1597,17 @@ async function stageCase(opts) {
     );
   }
 
+  // ---- A SYNCHRONOUS BARRIER FOR THE COPY WINDOW (A3 怎么做 3). -------------
+  //
+  // Inert in production (`undefined` on every real call). It exists so a test can
+  // mutate the SOURCE between the probe above and the copy below — the exact
+  // window the fingerprint check exists to close — without having to race a real
+  // filesystem write. A seam that is only reachable from a test is honest; a check
+  // that cannot be shown to fire is not.
+  if (typeof opts.beforeStageCopy === "function") {
+    await opts.beforeStageCopy({ source, checkoutDir: opts.checkoutDir, caseId });
+  }
+
   await rm(stagedCasesDir, { recursive: true, force: true });
   await mkdir(stagedCasesDir, { recursive: true });
   await cp(source, join(stagedCasesDir, bare), {
@@ -1144,7 +1635,77 @@ async function stageCase(opts) {
       `E4-R98: the staged case at ${join(stagedCasesDir, bare)} declares suite ${stagedSuite} but ${caseId} is qualified ${qualifier}`,
     );
   }
-  return { stagedCasesDir, stagedCaseDir: join(stagedCasesDir, bare), caseSource: source };
+
+  // ---- THE STAGED BYTES ARE FINGERPRINTED AGAINST THE APPROVAL (A3 3/5). ----
+  //
+  // Plan §A3 怎么做 3: "worker 接到明确批准的案例指纹，并校验自己复制后真正要运行的内容."
+  // and 怎么做 5: "staging 完成后重新计算实际字节的指纹，与批准值比较，再执行第一次 generate."
+  //
+  // MEASURED DEFECT F3(d): `stageCase` checked only that the staged `case.json`
+  // PARSED and that its declared suite matched. The bytes that would actually be
+  // executed — `request.md`, `expected.md`, `fixture/**` — were never compared to
+  // the fingerprint the plan approved. A checkout whose case content changed after
+  // approval (or a source that changed mid-copy) therefore executed unapproved
+  // content while reporting the approved identity.
+  //
+  // The comparison uses the SAME canonical contract the observation uses
+  // (`caseInputFingerprintV1` over the loaded case), so "the bytes this unit will
+  // run" and "the bytes that were fingerprinted" are the same measurement rather
+  // than two implementations that could drift apart.
+  let stagedCaseFingerprint = null;
+  const approvedCaseFingerprint =
+    typeof opts.approvedCaseFingerprint === "string" && opts.approvedCaseFingerprint !== ""
+      ? opts.approvedCaseFingerprint
+      : null;
+  if (approvedCaseFingerprint !== null) {
+    const evaluation = opts.evaluation;
+    if (evaluation === undefined || typeof evaluation.loadBenchmarkCase !== "function") {
+      throw new Error(
+        `E4-R98: an approved case fingerprint was supplied for ${caseId} but no evaluation module was, ` +
+          `so the staged bytes cannot be re-fingerprinted — refusing rather than executing unverified content`,
+      );
+    }
+    const stagedDir = join(stagedCasesDir, bare);
+    let loaded;
+    try {
+      loaded = await evaluation.loadBenchmarkCase(stagedDir);
+    } catch (err) {
+      const e = new Error(
+        `E4-R98: the staged case at ${stagedDir} could not be loaded for fingerprinting: ` +
+          `${err instanceof Error ? err.message : String(err)}`,
+      );
+      e.code = "CASE_INPUT_FINGERPRINT_MISMATCH";
+      throw e;
+    }
+    stagedCaseFingerprint = evaluation.caseInputFingerprintV1({
+      requestMd: loaded.requestMd,
+      expectedMd: loaded.expectedMd,
+      fixture: loaded.fixture,
+      verification: loaded.verification ?? null,
+      requires: loaded.requires ?? null,
+      schemaMode: loaded.schemaMode ?? null,
+    });
+    if (stagedCaseFingerprint !== approvedCaseFingerprint) {
+      // The `code` is what makes this a HARNESS verdict rather than an
+      // infrastructure one: the harness refused the unit on its INPUTS, which is a
+      // legitimate refusal about the approval, not a broken machine. Without it the
+      // outer catch would classify a stale case as an infrastructure failure and an
+      // operator would go looking at the host.
+      const e = new Error(
+        `E4-R98: the bytes staged for ${caseId} fingerprint as ${stagedCaseFingerprint} but the approval binds ` +
+          `${approvedCaseFingerprint} — the unit may not execute content nobody approved ` +
+          `(staged at ${stagedDir}, copied from ${source})`,
+      );
+      e.code = "CASE_INPUT_FINGERPRINT_MISMATCH";
+      throw e;
+    }
+  }
+  return {
+    stagedCasesDir,
+    stagedCaseDir: join(stagedCasesDir, bare),
+    caseSource: source,
+    stagedCaseFingerprint,
+  };
 }
 
 /** The non-hidden subdirectories of a root, or `[]` when it cannot be read.
@@ -1608,6 +2169,10 @@ export async function runArmUnit(opts) {
     // The link the terminal record carries to that evidence (T3): its
     // campaign-relative path and the sha256 of the bytes on disk.
     evidence: null,
+    // The fingerprint of the bytes this unit ACTUALLY staged, when an approved
+    // fingerprint was supplied (A3 3/5). `null` for a standalone call that had no
+    // approval to compare against.
+    stagedCaseFingerprint: null,
   };
 
   const finish = (failureCategory, detail) => {
@@ -1618,6 +2183,36 @@ export async function runArmUnit(opts) {
     record.detail = detail === null ? null : redact(detail);
     return record;
   };
+
+  // ---- THE APPROVED CASE FINGERPRINT IS REQUIRED ON THE FORMAL PATH (A3 3). --
+  //
+  // Plan §A3 怎么做 5: "将 approved case fingerprint / inputsDigest 显式传给 worker；
+  // 缺少必需摘要直接拒绝. 消除 `repo:unknown` 可以用于正式执行的路径."
+  //
+  // MEASURED DEFECT F3(b): `inputDigestFor` builds `repo:${opts.inputsDigest ?? "unknown"}`
+  // and the formal caller never passed one, so EVERY formal unit's durable input
+  // digest was the literal `repo:unknown`. The execution state's drift check then
+  // had a constant to compare, and a resume could not tell a changed case from an
+  // unchanged one.
+  //
+  // The requirement is OPT-IN (`requireInputsDigest`) rather than unconditional:
+  // `runArmUnit` is also a library seam that standalone harnesses call without a
+  // plan, and turning those into refusals would change what they measure. The
+  // FORMAL entry — `r97-campaign-driver.mjs --arm-worker` — always sets it, so the
+  // `unknown` fallback is unreachable from the formal path.
+  const approvedInputsDigest =
+    typeof opts.inputsDigest === "string" && opts.inputsDigest.trim() !== "" ? opts.inputsDigest : null;
+  if (opts.requireInputsDigest === true && approvedInputsDigest === null) {
+    // Before the ledger, before the state, before any child process: an
+    // unapproved input digest is a contract defect, and it must not be able to
+    // charge a campaign for a unit whose inputs nobody approved.
+    return finish(
+      "harness",
+      `E4-R98: this unit was dispatched with NO approved case fingerprint (inputsDigest absent) — ` +
+        `the durable input digest would fall back to "repo:unknown", which can never describe an approved ` +
+        `case, so the unit is refused before it can be dispatched`,
+    );
+  }
 
   const cliEntry = cliEntryOf(checkoutDir);
   if (!existsSync(cliEntry)) {
@@ -1670,6 +2265,45 @@ export async function runArmUnit(opts) {
     return finish("harness", `E4-R98: ${buildMismatch} — a unit may only run under the build it was approved for`);
   }
 
+  // ---- THE APPROVED BUILD DIGEST, re-derived and compared (E4-R104 / A4). ---
+  //
+  // Plan §A4 做什么 1: "批准材料包含实际执行字节的稳定 manifest/digest；正式执行在加载/
+  // 调用前重新计算并比较." Plan §A4 怎么验收: "改 core runtime 的被导入模块、入口不变：
+  // digest 变化；旧计划在第一调用前被拒绝."
+  //
+  // WHY THE SOURCE SHA IS NOT ENOUGH. `sourceSha` binds a REVISION, and a revision
+  // is a claim about the working tree that git does not verify: a checkout whose
+  // `dist` was rebuilt, patched or restored from an archive keeps the same HEAD
+  // while the bytes that execute a case change. The digest is the binding that
+  // actually moves in that case — measured by the two RED fixtures this change
+  // closes (a same-length, same-mtime rewrite of `packages/core/dist/runtime/
+  // runtime.js`, and a deletion of it).
+  //
+  // OPT-IN, exactly like `requireInputsDigest`, and for the same reason: this is
+  // the FORMAL caller's declaration. `r97-campaign-driver.mjs --arm-worker` passes
+  // the digest its authorization envelope approved; a standalone harness that has
+  // no approval to compare against omits the field and keeps its previous
+  // behaviour. The requirement is never silently satisfied by the absence of a
+  // value.
+  //
+  // ORDER: after the revision binding (a swapped checkout is the coarser refusal
+  // and names both SHAs, which is the more actionable message) and BEFORE
+  // `loadEvaluation` and the ledger open below — so a changed build can never
+  // charge a campaign, and `existsSync(<ledgerDir>)` stays false on this path.
+  const approvedBuildDigest =
+    typeof opts.approvedBuildDigest === "string" && opts.approvedBuildDigest.trim() !== ""
+      ? opts.approvedBuildDigest
+      : null;
+  if (approvedBuildDigest !== null && approvedBuildDigest !== build.buildDigest) {
+    return finish(
+      "harness",
+      `E4-R98: the observed build digest ${String(build.buildDigest)} is not the approved build digest ` +
+        `${approvedBuildDigest} for arm ${opts.arm} — the bytes that execute a case changed under an ` +
+        `unchanged revision, so the old approval no longer covers this build and the unit is refused ` +
+        `before anything is loaded, dispatched or charged`,
+    );
+  }
+
   const evaluation = await loadEvaluation(repoRoot);
 
   // ---- STEP 1: the shared budget, BEFORE anything can be dispatched. -------
@@ -1682,10 +2316,20 @@ export async function runArmUnit(opts) {
   // is CAMPAIGN_ROOT_MISMATCH, while a genuine first run still works.
   let ledger;
   let campaign = null;
+  // THE RESOLVED CAMPAIGN GRANT, not the caller's raw option.
+  //
+  // The ledger is opened with `opts.campaignModelCalls ?? maxModelCalls`, so the
+  // file on disk records the RESOLVED allowance. A child that is handed the raw
+  // `opts.campaignModelCalls` (often `undefined`) then declares a different grant
+  // and is refused with `BUDGET_STATE_MISMATCH: the budget ledger grants 10 calls
+  // but this authorization declares undefined — a process must never re-grant
+  // itself a different allowance`. Measured on the ordinary happy path. The child
+  // must therefore be given the SAME number the parent opened with.
+  const resolvedCampaignModelCalls = opts.campaignModelCalls ?? maxModelCalls;
   try {
     campaign = await evaluation.openR97Campaign(opts.ledgerDir, {
       planDigest: opts.planDigest,
-      campaignModelCalls: opts.campaignModelCalls ?? maxModelCalls,
+      campaignModelCalls: resolvedCampaignModelCalls,
       // See R97LedgerOpenMode. The worker cannot know whether the DRIVER is
       // starting the campaign or resuming it, and guessing "first-run" would let
       // a relocated output directory mint a second allowance for the same
@@ -1723,15 +2367,49 @@ export async function runArmUnit(opts) {
   // write land on another unit's record.
   let execState = null;
   let attemptId = null;
-  // The MEASURED budget accounting from the channel, when the unit reached it.
-  let budgetStats = null;
+  // ---- THE LIVE BUDGET-CHANNEL STATE (A1 / F1). -----------------------------
+  //
+  // MEASURED DEFECT F1 (plan §0.2): the worker inferred "nothing was dispatched"
+  // from `budgetStats === null`, but `budgetStats` was only assigned on the
+  // executor's SUCCESSFUL return. An exception after a real dispatch therefore
+  // left it `null`, and `ledger.abandon()` refunded a call that really entered
+  // the provider.
+  //
+  // `budgetState` is the fix: a holder the worker creates BEFORE the arm call and
+  // the executor fills in with the channel's LIVE `stats` object as soon as the
+  // channel exists. The object keeps being mutated as the call proceeds, so it is
+  // readable even when the executor throws. `stats.dispatches` is the explicit
+  // per-reservation state (not-entered / entered / completed / settled) that the
+  // settlement below is decided on — never on a missing return value.
+  const budgetState = { stats: null };
+  // ---- THE EXECUTION BOUNDARY'S STOP (E4-R106 / A6). ------------------------
+  //
+  // Set when the case was ended by the terminable boundary rather than by finishing.
+  // It carries the CAUSE (`reason` + which bound produced it) and whether a call had
+  // been ADMITTED, because plan §A6 怎么验收 6 splits the two budget outcomes on
+  // exactly that fact: never dispatched ⇒ release the reservation; dispatched then
+  // killed ⇒ do NOT refund. Kept OUT of `budgetState` so it cannot be confused with
+  // the channel's own accounting.
+  let stoppedByBoundary = null;
   try {
     await mkdir(runOutDir, { recursive: true });
     // WHICH case source was chosen is recorded: a run whose case silently came
     // from somewhere other than intended is exactly the class of defect this
     // whole round exists to remove, so it is evidence rather than an internal.
-    const staged = await stageCase({ repoRoot, checkoutDir, caseId: opts.caseId, stagedCasesDir });
+    const staged = await stageCase({
+      repoRoot,
+      checkoutDir,
+      caseId: opts.caseId,
+      stagedCasesDir,
+      // ---- A3 3/5: THE APPROVED FINGERPRINT, AND THE MODULE THAT MEASURES IT.
+      // The worker re-fingerprints the bytes it ACTUALLY staged and refuses a
+      // mismatch BEFORE the first `generate()`.
+      evaluation,
+      approvedCaseFingerprint: approvedInputsDigest,
+      beforeStageCopy: opts.beforeStageCopy,
+    });
     record.caseSource = staged.caseSource;
+    record.stagedCaseFingerprint = staged.stagedCaseFingerprint;
 
     // ---- STEP 3: `running` becomes durable BEFORE the request may leave. ---
     //
@@ -1742,7 +2420,7 @@ export async function runArmUnit(opts) {
     {
       const inputDigest = inputDigestFor({
         planDigest: opts.planDigest,
-        inputsDigest: opts.inputsDigest,
+        inputsDigest: approvedInputsDigest,
         ...unit,
         build,
       });
@@ -1777,30 +2455,92 @@ export async function runArmUnit(opts) {
         // parent could only charge the unit (measured defect N1).
         const bareCase = opts.caseId.split("/").pop() ?? opts.caseId;
         const caseDef = await readCaseDef(join(stagedCasesDir, bareCase), opts.caseId);
-        const executed = await runArmCaseInProcess({
+        // ---- E4-R106 (A6 / F6): THE EXECUTION RUNS BEHIND A REAL BOUNDARY ----
+        //
+        // MEASURED DEFECT F6 (plan §A6): the arm used to run HERE, in this process,
+        // as `await runArmCaseInProcess(...)`. `boundedStop` could end a PROCESS, but
+        // an `await` is not a process — so a dry run or a dispatch that never
+        // returned kept the unit, its reservation and the campaign alive forever, and
+        // both the unit deadline and an operator's cancellation were merely
+        // outlived.
+        //
+        // The case now runs in a CHILD PROCESS (`r97-arm-child-runner.mjs`) under
+        // `boundedStop`, which supplies the whole stop sequence the campaign already
+        // relies on: polite signal → bounded grace → forced process-TREE kill → await
+        // `close` → settle exactly once. That is the ONLY boundary that can end code
+        // ignoring `AbortSignal`, and it ends its descendants with it (plan §A6
+        // 怎么做 4-6).
+        const boundary = await runArmCaseAtBoundary({
           evaluation,
+          repoRoot,
           arm: { label: opts.arm, checkoutDir },
           caseDef,
-          // WHICH script shape this unit uses is the CALLER's decision, so the
-          // two cases can be driven as a real pass and a real negative.
           scriptShape: opts.scriptShape ?? "write-then-stop",
           stagedCasesDir,
           outDir: runOutDir,
           suite: opts.suite,
-          // The APPROVED identity, threaded to the arm's own CLI (T4 / N6).
           providerId,
           modelId,
           endpointBaseUrl,
           maxModelCalls,
-          ledger,
+          // The SAME ledger directory the parent already opened: the child shares
+          // the campaign's ledger rather than opening its own, so a unit that
+          // dispatched a real call is still charged exactly once (plan §A6 怎么做 4).
+          ledgerDir: opts.ledgerDir,
+          ledgerFilename: evaluation.R97_LEDGER_FILENAME,
+          planDigest: opts.planDigest,
+          campaignModelCalls: resolvedCampaignModelCalls,
           firstReservationId: reservation.reservationId,
-          // THE UNIT'S ONE DEADLINE, shared with the dry run and the dispatch
-          // (T5 怎么做 4). The executor checks it before the dry run, between the
-          // dry run and the dispatch, and inside every provider call.
+          // THE UNIT'S ONE DEADLINE, now enforced where it can actually bite: the
+          // child's whole process tree, from staging through the dry run, the
+          // dispatch and the cleanup (plan §A6 怎么做 2).
           deadline,
+          // The caller's cancellation handle for THIS unit — the campaign's stop and
+          // an operator's SIGINT reach the running case through this, instead of
+          // only refusing the NEXT unit (plan §A6 怎么做 1).
+          signal: opts.signal,
+          // The LIVE channel state, published by the executor BEFORE the arm can
+          // run (see the `budgetState` declaration above).
+          budgetState,
         });
-        budgetStats = executed.budget;
-        record.budget = executed.budget;
+        const executed = boundary.executed;
+        // A STOP IS NOT AN EXECUTION RESULT, and it must not be read as one.
+        //
+        // Plan §A6 怎么做 9: "统一 timeout/cancelled/output_limit 的原因与证据. 异常
+        // 发生在 deadline 之后也不能统统落入 infrastructure catch." The boundary names
+        // the cause, so the unit's verdict is derived from THAT rather than from the
+        // missing report a killed child leaves behind — which is what used to make a
+        // deadline look like an `infrastructure` fault.
+        if (boundary.stop !== null) {
+          record.execution = null;
+          record.capturedRequests = [];
+          // THE RESERVATION'S FATE IS DECIDED BY WHAT REALLY HAPPENED, not by the
+          // fact that the process died (plan §A6 怎么验收 6): a call admitted before
+          // the stop is spent; a stop that provably preceded any dispatch releases
+          // it. `boundary.dispatched` is measured from the ledger's own on-disk
+          // entries, so this is not a self-report.
+          stoppedByBoundary = { ...boundary.stop, dispatched: boundary.dispatched };
+          // The child may have been killed AFTER it admitted a call, in which case
+          // the LIVE channel stats it published on its way out are the only record of
+          // that spend. Re-publishing them into `budgetState` is what lets the
+          // existing A1 settlement below see the truth; without it, a killed child
+          // would look like a channel that never existed and the reservation would be
+          // refunded — the exact silent re-grant A1 removed.
+          if (boundary.stats !== null && budgetState.stats === null) budgetState.stats = boundary.stats;
+          verdict = stoppedVerdictOf(stoppedByBoundary);
+        } else {
+        // THE CHILD'S CHANNEL STATS ARE THIS PROCESS'S ONLY RECORD OF THE SPEND.
+        //
+        // The case ran in the CHILD, so the parent never held the channel and
+        // `budgetState.stats` is `null` on the ordinary success path. The A1
+        // settlement below reads that object to decide whether the pre-taken
+        // reservation was ever adopted; without the child's stats it concludes
+        // "Case 1: provably never dispatched" and tries to `abandon` a reservation
+        // the child already COMMITTED — which throws and folds a `budget` verdict
+        // over a real pass. Measured: `verification_passed=true, consumed=2` with
+        // `failureCategory=budget`. Publishing the child's own accounting is what
+        // makes the parent's settlement read the truth.
+        if (boundary.stats !== null && budgetState.stats === null) budgetState.stats = boundary.stats;
         record.execution = executed.execution;
         record.capturedRequests = executed.capturedRequests;
         // WHAT A PASS HERE PROVES (T6 怎么做 5): "strong" when the case's own
@@ -1819,12 +2559,41 @@ export async function runArmUnit(opts) {
         // `harness` verdict: reporting a pass under an identity nobody approved
         // would make the campaign's evidence describe a run that never happened.
         record.executionIdentity = executed.executionIdentity;
-        if (Array.isArray(executed.executionIdentity?.drift) && executed.executionIdentity.drift.length > 0) {
-          verdict = {
+        // ---- THE IDENTITY REFUSAL IS FOLDED IN, NEVER OVERWRITTEN (F5). ----
+        //
+        // Plan §A5 怎么做 1: "身份、预算、执行停止等拒绝不能被成功报告覆盖."
+        //
+        // MEASURED DEFECT F5: this branch set the `harness` verdict and then the
+        // report classification BELOW reassigned `verdict` and
+        // `record.verifierPassed` unconditionally, so a report claiming
+        // `verification_passed=true` reported the unit as a completed pass under an
+        // identity the plan never approved.
+        //
+        // The fact is now FOLDED through the priority table, so `harness` keeps its
+        // rank no matter what the report later says, and the report's own claim is
+        // retained as a diagnostic instead of replacing it.
+        //
+        // `executed.identityRefusal` is the structured FIRST blocking identity fact
+        // (A5 怎么做 3/4): a failed or unparseable dry run, a missing model in the
+        // plan, or a model ref the boundary guard refused before `inner.generate`
+        // was entered. `drift` remains the diagnostic list, so a refusal reached
+        // only AFTER execution is still refused here (A5 怎么做 5).
+        const identityRefusal = typeof executed.identityRefusal === "string" && executed.identityRefusal !== "" ? executed.identityRefusal : null;
+        const drift = Array.isArray(executed.executionIdentity?.drift) ? executed.executionIdentity.drift : [];
+        if (identityRefusal !== null || drift.length > 0) {
+          // The structured refusal is the FIRST fact, so it leads the sentence. The
+          // remaining drift is appended as the ADDITIONAL measurements it is —
+          // deduplicated against the refusal, because the executor records the
+          // boundary refusal in `drift` too and repeating one sentence twice would
+          // make the verdict read as two separate findings.
+          const rest = drift.filter((d) => d !== identityRefusal);
+          const body = identityRefusal ?? rest.join("; ");
+          verdict = foldR97Verdict(verdict, {
             category: "harness",
-            detail: `E4-R98: the arm executed under an identity the plan did not approve — ${executed.executionIdentity.drift.join("; ")}`,
-          };
-          record.verifierPassed = false;
+            detail: `E4-R98: the arm executed under an identity the plan did not approve — ${body}${
+              identityRefusal !== null && rest.length > 0 ? ` (also measured: ${rest.join("; ")})` : ""
+            }`,
+          });
         }
         // The channel's own count of admitted calls is the MEASURED spend for
         // this unit. It is read from the channel rather than from the arm's
@@ -1843,30 +2612,49 @@ export async function runArmUnit(opts) {
         // This is checked BEFORE the report, because a unit stopped mid-call may
         // still have written a PARTIAL report — and classifying that partial report
         // would let an interrupted run be scored as if it had finished.
+        //
+        // It is FOLDED rather than assigned (A5 怎么做 2): an identity refusal
+        // already established above outranks it, and the stop is retained as a
+        // diagnostic. Plan §A5 怎么验收 7 requires exactly that stability when
+        // "身份失败与 timeout 同时出现".
         if (typeof executed.deadlineStop === "string" && executed.deadlineStop !== "") {
-          verdict = { category: "timeout", detail: `E4-R98: ${executed.deadlineStop}` };
-          record.verifierPassed = false;
+          verdict = foldR97Verdict(verdict, { category: "timeout", detail: `E4-R98: ${executed.deadlineStop}` });
         } else if (executed.report === null) {
           // A run that produced no report measured nothing, whatever its exit
           // code. Never a pass.
-          verdict = {
+          verdict = foldR97Verdict(verdict, {
             category: "infrastructure",
             detail: `E4-R98: the arm's benchmark run wrote no report at ${executed.reportPath} (exit ${String(executed.exitCode)}): ${firstUsefulLine((executed.lines ?? []).join("\n")) ?? "no output"}`,
-          };
+          });
         } else {
           const classified = classifyReport(executed.report, opts.caseId);
-          verdict = { category: classified.category, detail: classified.detail };
-          // The verdict is the arm CLI's own. It is recorded on the record so a
-          // consumer never has to infer a pass from `status === "completed"`.
-          record.verifierPassed = classified.passed === true;
-          // T3: the arm's REAL report row is persisted as evidence rather than
-          // deleted in `finally` (finding N5: "finally 删除原报告").
+          // ---- THE REPORT IS EVIDENCE, NOT THE AUTHORITY (A5 怎么做 6). -----
+          //
+          // "确保保存的 report 是诊断证据，不是覆盖身份失败的权威." The row is
+          // persisted FIRST and the verdict is FOLDED, so a report that claims
+          // `verification_passed=true` cannot outrank a refusal already
+          // established. `record.verifierPassed` is derived from the FINAL verdict
+          // further below rather than assigned here, which is what makes the
+          // record's `status`, its `failureCategory`, its `verifierPassed` and its
+          // evidence envelope describe ONE conclusion (A5 怎么做 3).
           record.report = reportRowFor(executed.report, opts.caseId);
+          verdict = foldR97Verdict(verdict, { category: classified.category, detail: classified.detail });
+        }
         }
       }
     }
   } catch (err) {
-    verdict = { category: "infrastructure", detail: withArmExecTag(redact(err)) };
+    // A refusal about the INPUTS is a HARNESS verdict, not an infrastructure one
+    // (A3 怎么做 5): "the bytes staged for this case are not the bytes the approval
+    // fingerprints" is a fact about the approval and the checkout, and classifying
+    // it as infrastructure would send an operator to inspect a host that is fine.
+    const category = err !== null && typeof err === "object" && err.code === "CASE_INPUT_FINGERPRINT_MISMATCH"
+      ? "harness"
+      : "infrastructure";
+    // FOLDED, never assigned (A5 怎么做 2): an identity refusal established earlier
+    // in the unit must survive a later infrastructure fault, and both facts must
+    // remain readable in the verdict.
+    verdict = foldR97Verdict(verdict, { category, detail: withArmExecTag(redact(err)) });
   } finally {
     // Only the STAGED CASE is a working file, and only it is removed. The arm's
     // own report is EVIDENCE and is preserved on the record (finding N5: the
@@ -1881,22 +2669,89 @@ export async function runArmUnit(opts) {
 
   // ---- STEP 5: settle the budget, then write the terminal record. ----------
   //
-  // THE PRE-TAKEN RESERVATION IS OWNED BY THE CHANNEL. The unit reserved ONE
-  // call before `begin` and handed that id to `createLedgerBudgetedProvider`,
-  // which commits it when the first call completes (or marks it unknown when the
-  // outcome was never observed). The worker must therefore NOT commit it again.
+  // THE PRE-TAKEN RESERVATION IS OWNED BY THE CHANNEL once the channel has
+  // ADOPTED it as the first call. Whether it did is read from the channel's own
+  // explicit dispatch record — a MEASURED fact that survives an exception — not
+  // inferred from whether a stats object came back (finding F1).
   //
-  // What the worker DOES settle is the case where the unit never reached the
-  // channel at all — a skip, a build refusal, a staging failure, an exception
-  // before the first call. The reservation is then genuinely outstanding and is
-  // RETURNED, because nothing was dispatched: `abandon` is legal exactly for a
-  // provably-undispatched attempt. Burning it would charge the campaign for work
-  // that provably never happened.
-  if (budgetStats === null) {
+  // Three cases, and only the first is legal for `abandon`:
+  //
+  //   1. the channel never took this reservation -> nothing entered the provider,
+  //      so the unused allowance is RETURNED;
+  //   2. the channel took it and settled it     -> the channel owns it, done;
+  //   3. the channel took it and the settlement write FAILED -> the allowance is
+  //      NOT returned (it may already have been billed) and the unit is refused
+  //      rather than reported as a success; the entry stays outstanding so
+  //      `recover()` or a human decision can resolve it.
+  const liveStats = budgetState.stats;
+  if (liveStats !== null) {
+    // The MEASURED accounting, available even when the executor threw: the
+    // channel's live object was created before the arm call and mutated as the
+    // call proceeded.
+    record.budget = { ...liveStats };
+    record.reservationIds = [...(liveStats.reservationIds ?? [])];
+    consumed = Number(liveStats.logicalCalls ?? 0);
+  }
+  const unitDispatch =
+    liveStats === null
+      ? null
+      : ((liveStats.dispatches ?? []).find((d) => d !== null && d !== undefined && d.reservationId === reservation.reservationId) ?? null);
+
+  // A STOPPED CHILD'S DISPATCH IS MEASURED FROM THE LEDGER, NOT FROM MEMORY.
+  //
+  // When the boundary KILLED the child, this process never held the channel, so
+  // `liveStats` is `null` and `unitDispatch` is `null` — which used to mean "Case
+  // 1: provably never dispatched", and therefore "abandon the unused
+  // reservation". That is wrong for a stopped child that DID admit a call: the
+  // child had already settled the entry, so `abandon` THREW ("already unknown")
+  // and the throw folded a `budget` verdict OVER the correct stop cause.
+  // Measured: a hung DISPATCH reported `budget` instead of `timeout`.
+  //
+  // `boundary.dispatched` is read from the ledger's own on-disk entries, so it is
+  // the measurement, not a self-report. A call that may already have been billed
+  // is never refunded (plan §A6 怎么验收 6), and settlement bookkeeping must not
+  // manufacture a new fault over the STOP's named cause (plan §A5 怎么做 2).
+  const boundarySaysDispatched = stoppedByBoundary !== null && stoppedByBoundary.dispatched === true;
+
+  if (boundarySaysDispatched && unitDispatch === null) {
+    // The allowance stays spent and the STOP's verdict stands unchanged. The
+    // entry remains outstanding for `recover()` or a human decision, exactly as
+    // Case 3 treats a settlement that could not be written.
+  } else if (unitDispatch === null) {
+    // Case 1: provably never dispatched through the channel.
     try {
       await ledger.abandon(reservation.reservationId);
     } catch (err) {
-      verdict = { category: "budget", detail: `E4-R98: the unused reservation could not be returned: ${redact(err)} (${verdict.detail})` };
+      verdict = foldR97Verdict(verdict, {
+        category: "budget",
+        detail: `E4-R98: the unused reservation could not be returned: ${redact(err)}`,
+      });
+    }
+  } else if (unitDispatch.settled !== true) {
+    if (unitDispatch.entered === true) {
+      // Case 3: a REAL call whose terminal write failed. Refuse to report a
+      // success, and keep the allowance — refunding it would be exactly the
+      // silent re-grant this whole channel exists to prevent.
+      //
+      // FOLDED, not assigned (A5 怎么做 2): `budget` outranks a report's claim of
+      // success, but it does not outrank an identity refusal, which must survive.
+      verdict = foldR97Verdict(verdict, {
+        category: "budget",
+        detail: `E4-R98: reservation ${reservation.reservationId} entered the provider but could not be settled; it is kept outstanding for reconciliation (${redact(
+          liveStats === null ? null : liveStats.lastSettlementError,
+        )})`,
+      });
+    } else {
+      // Never entered, so returning it is still correct; a failed return is
+      // reported rather than hidden.
+      try {
+        await ledger.abandon(reservation.reservationId);
+      } catch (err) {
+        verdict = foldR97Verdict(verdict, {
+          category: "budget",
+          detail: `E4-R98: the unused reservation could not be returned: ${redact(err)}`,
+        });
+      }
     }
   }
 
@@ -1938,10 +2793,10 @@ export async function runArmUnit(opts) {
       // substantiated. The unit is re-classified rather than silently recording
       // an unverifiable pass, and the result hash is recomputed over the verdict
       // that is actually being recorded.
-      verdict = {
+      verdict = foldR97Verdict(verdict, {
         category: "harness",
-        detail: `E4-R98: the unit's evidence could not be persisted: ${redact(err)} (${verdict.detail})`,
-      };
+        detail: `E4-R98: the unit's evidence could not be persisted: ${redact(err)}`,
+      });
       resultHash = resultHashFor({ unit, build, verdict });
     }
   }
@@ -1965,7 +2820,10 @@ export async function runArmUnit(opts) {
         });
       }
     } catch (err) {
-      verdict = { category: "harness", detail: `E4-R98: the terminal record could not be written: ${redact(err)} (${verdict.detail})` };
+      verdict = foldR97Verdict(verdict, {
+        category: "harness",
+        detail: `E4-R98: the terminal record could not be written: ${redact(err)}`,
+      });
     }
   }
 
@@ -1973,6 +2831,22 @@ export async function runArmUnit(opts) {
   // The link the terminal record carries, exposed so the driver can verify the
   // chain from its own side rather than trusting that the write happened.
   record.evidence = evidenceLink;
+  // ---- THE ONE PLACE `verifierPassed` IS DECIDED (E4-R105 / A5 怎么做 2). ----
+  //
+  // MEASURED DEFECT F5: `verifierPassed` used to be assigned in FOUR independent
+  // places — the drift branch, the timeout branch, the report branch and the budget
+  // branch — each of them an unconditional write. The LAST one to run won, so the
+  // report classification silently overwrote an identity refusal. Deriving it ONCE,
+  // from the FINAL verdict, is what makes the record's `status`, its
+  // `failureCategory`, its `verifierPassed` and its evidence envelope describe the
+  // SAME conclusion (plan §A5 怎么做 3), and it is why no later fact can flip a
+  // refusal into a pass.
+  //
+  // A verified pass is exactly "the verdict established no failure category": the
+  // `null` category means the arm's own report carried positive verification
+  // evidence (see `classifyReport`), and every other category — `case_failed`
+  // included — is not a pass.
+  record.verifierPassed = verdict.category === null;
   // The MEASURED logical calls this unit charged to the campaign. Exposed so a
   // caller (the driver, or a report) can total real spend instead of inferring
   // it from the number of units: a refused unit charges 0 and a dispatched one

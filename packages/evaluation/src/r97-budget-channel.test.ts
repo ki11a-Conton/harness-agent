@@ -30,8 +30,8 @@
  * ZERO external requests: the wrapped provider is a local scripted object.
  */
 
-import { afterAll, afterEach, describe, expect, it } from "vitest";
-import { mkdtemp, rm } from "node:fs/promises";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ScriptedModelProvider } from "@ar/model";
@@ -40,7 +40,12 @@ import {
   R97_BUDGET_REFUSED,
   R97_UNKNOWN_OUTCOME,
 } from "./r97-budget-channel.js";
-import { openR97BudgetLedger, viewOfR97Ledger, R97_CAMPAIGN_CLAIMS_DIR_ENV } from "./r97-budget-ledger.js";
+import {
+  openR97BudgetLedger,
+  viewOfR97Ledger,
+  R97_CAMPAIGN_CLAIMS_DIR_ENV,
+  R97_LEDGER_FILENAME,
+} from "./r97-budget-ledger.js";
 
 let dirs: string[] = [];
 async function tempDir(): Promise<string> {
@@ -101,6 +106,17 @@ async function drain(client: { generate: (r: unknown, s: AbortSignal) => AsyncIt
     types.push(ev.type);
   }
   return types;
+}
+
+/**
+ * Begin ONE generate() and hand back the raw async iterator, so a test can
+ * drive the stream by hand — `next()` / `return()` / `break` at an exact point.
+ * The request is a loose `unknown`: the channel's request typing is exercised
+ * through `drain`, and these tests are about the SETTLEMENT, not the payload.
+ */
+function beginStream(client: unknown, signal?: AbortSignal): AsyncGenerator<{ type: string }> {
+  const loose = client as { generate: (r: unknown, s: AbortSignal) => AsyncGenerator<{ type: string }> };
+  return loose.generate({ messages: [{ role: "user", content: "x" }] }, signal ?? new AbortController().signal);
 }
 
 const TEXT = ScriptedModelProvider.text("done");
@@ -322,5 +338,264 @@ describe("R98-A C3: a PRE-TAKEN reservation is adopted, not double-charged", () 
     expect(new Set(stats.reservationIds).size, "one reservation per real call").toBe(2);
     expect((await ledger.read()).entries).toHaveLength(2);
     expect(viewOfR97Ledger(await ledger.read()).remaining).toBe(0);
+  });
+});
+
+/**
+ * E4-R98-A / A1 (finding F1) — AN EARLY CLOSE OR AN EXCEPTION MUST STILL SETTLE.
+ *
+ * MEASURED DEFECT F1 (plan §0.2, P0):
+ *
+ *   "inner generator 已进入 1 次；消费者读一个事件后 break，CLI 再抛错；worker
+ *    consumed=0，reservation=`abandoned`，grant=1 时另一次 reserve 仍成功"
+ *
+ * The settlement used to live AFTER the `for await` loop. A consumer `break`,
+ * an explicit `iterator.return()`, or an exception after the reservation was
+ * taken all produce a completion that SKIPS the code after the loop, so the
+ * ledger entry stayed `reserved` — and the worker, seeing no stats, refunded it.
+ *
+ * These tests are the CHANNEL half of the fix, deliberately separate from the
+ * worker half: they distinguish "the generator never settled" from "the worker
+ * mis-refunded a settled entry". Every assertion counts calls that ACTUALLY
+ * entered the wrapped provider and cross-checks the REAL ledger file on disk.
+ */
+describe("R98-A C4: an early close or an exception after dispatch still settles exactly once", () => {
+  it("a consumer that BREAKS after a non-terminal event keeps the allowance (unknown) and never refunds it", async () => {
+    const dir = await tempDir();
+    const ledger = await openR97BudgetLedger(dir, { planDigest: freshPlan(), campaignModelCalls: 1, mode: "first-run" });
+    const inner = countingProvider([TEXT]);
+    const { provider, stats } = createLedgerBudgetedProvider({ provider: inner, ledger, arm: "baseline" });
+    const client = provider.createClient({ providerId: "scripted", modelId: "m" }, {});
+
+    const seen: string[] = [];
+    for await (const ev of beginStream(client)) {
+      seen.push(ev.type);
+      // The consumer stops reading mid-stream, exactly as the arm CLI does when
+      // its own code throws after the request has left.
+      break;
+    }
+    expect(seen, "the consumer really stopped after ONE non-terminal event").toEqual(["started"]);
+    expect(inner.calls, "the request really entered the inner provider").toHaveLength(1);
+
+    const view = viewOfR97Ledger(await ledger.read());
+    expect(view.unknown, "an entered call whose outcome nobody saw is UNKNOWN, not refunded").toBe(1);
+    expect(view.outstanding, "the reservation may not be left dangling").toBe(0);
+    expect(view.committed).toBe(0);
+    expect(view.remaining).toBe(0);
+    expect(stats.unknownCalls).toBe(1);
+
+    const second = await ledger.reserve("baseline", 1);
+    expect(second.ok, "a spent allowance must not be re-granted").toBe(false);
+  });
+
+  it("an explicit iterator.return() after a non-terminal event settles as unknown, exactly once", async () => {
+    const dir = await tempDir();
+    const ledger = await openR97BudgetLedger(dir, { planDigest: freshPlan(), campaignModelCalls: 1, mode: "first-run" });
+    const inner = countingProvider([TEXT]);
+    const { provider } = createLedgerBudgetedProvider({ provider: inner, ledger, arm: "baseline" });
+    const it = beginStream(provider.createClient({ providerId: "scripted", modelId: "m" }, {}));
+
+    const first = await it.next();
+    expect(first.value!.type).toBe("started");
+    await it.return(undefined);
+
+    const entries = (await ledger.read()).entries;
+    expect(entries, "exactly ONE ledger entry per real call").toHaveLength(1);
+    expect(entries[0]!.status, "the entered call is settled as unknown").toBe("unknown");
+    expect(entries[0]!.consumed).toBeNull();
+    expect(viewOfR97Ledger(await ledger.read()).remaining).toBe(0);
+
+    // Closing again must not write a second terminal record.
+    await it.return(undefined);
+    expect((await ledger.read()).entries).toHaveLength(1);
+    expect(inner.calls).toHaveLength(1);
+  });
+
+  it("stopping right after the COMPLETED event commits exactly once and leaves nothing dangling", async () => {
+    const dir = await tempDir();
+    const ledger = await openR97BudgetLedger(dir, { planDigest: freshPlan(), campaignModelCalls: 1, mode: "first-run" });
+    const inner = countingProvider([TEXT]);
+    const { provider, stats } = createLedgerBudgetedProvider({ provider: inner, ledger, arm: "baseline" });
+
+    const seen: string[] = [];
+    for await (const ev of beginStream(provider.createClient({ providerId: "scripted", modelId: "m" }, {}))) {
+      seen.push(ev.type);
+      if (ev.type === "completed") break;
+    }
+    expect(seen).toEqual(["started", "text_delta", "completed"]);
+
+    const view = viewOfR97Ledger(await ledger.read());
+    expect(view.committed, "an observed terminal event commits the reservation").toBe(1);
+    expect(view.outstanding, "nothing is left dangling").toBe(0);
+    expect(view.unknown).toBe(0);
+    expect(view.remaining).toBe(0);
+    expect(stats.unknownCalls).toBe(0);
+    expect((await ledger.read()).entries).toHaveLength(1);
+  });
+
+  it("a CONSUMER that throws while reading settles the reservation as unknown, exactly once", async () => {
+    const dir = await tempDir();
+    const ledger = await openR97BudgetLedger(dir, { planDigest: freshPlan(), campaignModelCalls: 1, mode: "first-run" });
+    const inner = countingProvider([TEXT]);
+    const { provider, stats } = createLedgerBudgetedProvider({ provider: inner, ledger, arm: "baseline" });
+
+    // The consumer's own body throws after ONE non-terminal event, so the
+    // `for await` closes the channel with a throw completion.
+    await expect(
+      (async () => {
+        for await (const ev of beginStream(provider.createClient({ providerId: "scripted", modelId: "m" }, {}))) {
+          if (ev.type === "started") throw new Error("the consumer died mid-stream");
+        }
+      })(),
+    ).rejects.toThrow(/consumer died mid-stream/);
+
+    expect(inner.calls, "the request really entered the inner provider").toHaveLength(1);
+    const view = viewOfR97Ledger(await ledger.read());
+    expect(view.unknown).toBe(1);
+    expect(view.outstanding).toBe(0);
+    expect(view.remaining).toBe(0);
+    expect(stats.unknownCalls).toBe(1);
+    expect((await ledger.read()).entries).toHaveLength(1);
+  });
+
+  it("a CANCEL that aborts the signal mid-stream settles as unknown and is not refunded", async () => {
+    const dir = await tempDir();
+    const ledger = await openR97BudgetLedger(dir, { planDigest: freshPlan(), campaignModelCalls: 1, mode: "first-run" });
+    // The CONSUMER's own controller. It is handed to the channel explicitly
+    // below, so the signal the provider receives is the very one this test
+    // aborts — aborting any other object would prove nothing.
+    const controller = new AbortController();
+    let signalReachedProvider: AbortSignal | null = null;
+    // A provider that honours the signal it was GIVEN: it emits `started`,
+    // cancels that same signal, and then refuses to continue.
+    const cancelled = {
+      id: "scripted",
+      async listModels() {
+        return [];
+      },
+      createClient() {
+        return {
+          async *generate(_request: unknown, signal: AbortSignal): AsyncGenerator<{ type: string }> {
+            signalReachedProvider = signal;
+            yield { type: "started" };
+            controller.abort();
+            if (signal.aborted) throw new DOMException("aborted", "AbortError");
+            yield { type: "completed" };
+          },
+        };
+      },
+    };
+    const { provider, stats } = createLedgerBudgetedProvider({ provider: cancelled as never, ledger, arm: "baseline" });
+
+    // Drive the stream by hand with the consumer's own signal and collect the
+    // rejection ourselves, so the assertion below cannot be satisfied by a
+    // stream that merely ended.
+    const it = beginStream(provider.createClient({ providerId: "scripted", modelId: "m" }, {}), controller.signal);
+    const seen: string[] = [];
+    let failure: unknown = null;
+    try {
+      for (;;) {
+        const step = await it.next();
+        if (step.done === true) break;
+        seen.push(step.value.type);
+      }
+    } catch (err) {
+      failure = err;
+    }
+
+    expect(signalReachedProvider, "the provider was handed a signal at all").not.toBeNull();
+    expect(signalReachedProvider!.aborted, "the provider was handed the CONSUMER's own signal").toBe(true);
+    expect(seen, "the call was cancelled before any terminal event").toEqual(["started"]);
+    expect(String(failure), "the cancelled call rejects rather than completing").toMatch(/aborted/);
+
+    const entries = (await ledger.read()).entries;
+    expect(entries, "one reservation per real call").toHaveLength(1);
+    const view = viewOfR97Ledger(await ledger.read());
+    expect(view.unknown, "a cancelled in-flight call keeps its allowance").toBe(1);
+    expect(view.committed).toBe(0);
+    expect(view.outstanding).toBe(0);
+    expect(view.remaining, "the allowance is NOT refunded").toBe(0);
+    expect(entries[0]!.status).toBe("unknown");
+    expect(entries[0]!.consumed).toBeNull();
+    expect(stats.unknownCalls).toBe(1);
+  });
+
+  it("a stream that ends with NO terminal event is unknown, never committed", async () => {
+    const dir = await tempDir();
+    const ledger = await openR97BudgetLedger(dir, { planDigest: freshPlan(), campaignModelCalls: 1, mode: "first-run" });
+    const inner = countingProvider([[{ type: "started", timestamp: 0 }, { type: "text_delta", text: "x", timestamp: 0 }]]);
+    const { provider, stats } = createLedgerBudgetedProvider({ provider: inner, ledger, arm: "baseline" });
+
+    await drain(provider.createClient({ providerId: "scripted", modelId: "m" }, {}) as never);
+
+    const view = viewOfR97Ledger(await ledger.read());
+    expect(view.unknown).toBe(1);
+    expect(view.committed).toBe(0);
+    expect(view.remaining).toBe(0);
+    expect(stats.unknownCalls).toBe(1);
+  });
+
+  it("a call whose inner provider was PROVABLY never entered RETURNS its reservation", async () => {
+    // The other half of the contract (plan §A1 怎么做 7): a failure that never
+    // reached the inner provider must NOT be charged. The provider here throws
+    // from `generate()` itself, so no iterator was ever advanced.
+    const dir = await tempDir();
+    const ledger = await openR97BudgetLedger(dir, { planDigest: freshPlan(), campaignModelCalls: 1, mode: "first-run" });
+    const neverEntered = {
+      id: "scripted",
+      async listModels() {
+        return [];
+      },
+      createClient() {
+        return {
+          generate(): AsyncGenerator<never> {
+            throw new Error("the inner provider refused to start");
+          },
+        };
+      },
+    };
+    const { provider, stats } = createLedgerBudgetedProvider({ provider: neverEntered as never, ledger, arm: "baseline" });
+
+    await expect(
+      drain(provider.createClient({ providerId: "scripted", modelId: "m" }, {}) as never),
+    ).rejects.toThrow(/refused to start/);
+
+    const entries = (await ledger.read()).entries;
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.status, "nothing entered the provider, so the reservation is returned").toBe("abandoned");
+    expect(viewOfR97Ledger(await ledger.read()).remaining, "the unused allowance comes back").toBe(1);
+    expect(stats.unknownCalls, "an un-entered call is NOT an unknown outcome").toBe(0);
+  });
+
+  it("a SETTLEMENT write failure is reported, not swallowed, and leaves a recoverable state", async () => {
+    const dir = await tempDir();
+    const FIXED_NOW = 1_700_000_000_000;
+    const spy = vi.spyOn(Date, "now").mockReturnValue(FIXED_NOW);
+    try {
+      const ledger = await openR97BudgetLedger(dir, { planDigest: freshPlan(), campaignModelCalls: 1, mode: "first-run" });
+      const inner = countingProvider([TEXT]);
+      const { provider, stats } = createLedgerBudgetedProvider({ provider: inner, ledger, arm: "baseline" });
+      const it = beginStream(provider.createClient({ providerId: "scripted", modelId: "m" }, {}));
+
+      // Drive to the reserve: the ledger write SUCCEEDS and the entry exists.
+      await it.next();
+      // ...then occupy the atomic-write temp path, so the NEXT write (the
+      // commit) fails with a real errno while the ledger stays readable.
+      await mkdir(join(dir, `${R97_LEDGER_FILENAME}.tmp-${process.pid}-${FIXED_NOW}`));
+      await it.next(); // text_delta
+      await it.next(); // completed
+
+      await expect(it.next()).rejects.toThrow(/EISDIR|EPERM|EACCES/);
+
+      // The failure is NAMED, not swallowed: the channel reports it and the
+      // ledger keeps the reservation outstanding so `recover()` can resolve it.
+      expect(stats.settlementFailures, "the settlement failure is counted").toBe(1);
+      expect(String(stats.lastSettlementError)).toMatch(/EISDIR|EPERM|EACCES/);
+      const entries = (await ledger.read()).entries;
+      expect(entries).toHaveLength(1);
+      expect(entries[0]!.status, "a failed settlement leaves a RECOVERABLE outstanding reservation").toBe("reserved");
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

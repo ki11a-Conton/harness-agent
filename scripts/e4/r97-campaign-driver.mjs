@@ -22,8 +22,9 @@
 // point instead of a re-implementation. Plan §R97 line 219: "不要只测试纯 gate
 // 函数，要驱动实际 CLI/driver 入口."
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -241,6 +242,71 @@ export function inputDigestOf(plan, caseId) {
 }
 
 /**
+ * The publishable label for an endpoint identity.
+ *
+ * ---- E4-R103 (A3 怎么做 8) ------------------------------------------------
+ *
+ * "检查当前 approvedIdentity.endpointBaseUrl 和拒绝 reason：公开结果中保留 endpoint
+ * identity/脱敏信息，不原样输出可能含 token 的 URL."
+ *
+ * An endpoint base URL is not a secret by design, but it is the ONE field an
+ * operator can put a credential into by accident — `https://tok-…@host/v1`, or a
+ * `?api_key=…` the URL redactor does not know about — and the driver result is
+ * durable acceptance evidence read on other machines. So the RAW URL never leaves
+ * this process: what is published is derived from the IDENTITY digest, which is
+ * the value the plan actually binds and the value a reader can compare against
+ * the approval.
+ */
+export function endpointLabelOf(endpointIdentity) {
+  if (endpointIdentity === null || endpointIdentity === undefined || endpointIdentity === "") return null;
+  return `endpoint:${String(endpointIdentity).slice(0, 16)}`;
+}
+
+/**
+ * Turn two FRESH arm observations into the execution observation the gate judges.
+ *
+ * ---- E4-R103 (A3 做什么 1/2) ----------------------------------------------
+ *
+ * "正式执行的 now 来自执行器时钟；plan 中的 observation 仅是审阅快照."
+ * "开始和恢复执行前，重新读取两臂的当前 HEAD、构建身份、实际案例字节和执行参数."
+ *
+ * MEASURED DEFECT F3: `main` fed `{ ...plan.observation, now: observation.now ?? now }`
+ * into the real gate. The plan's `observation` records what was true when a human
+ * was asked to approve the campaign; nothing ever re-checked it against the
+ * world. A plan whose approval window had ALREADY CLOSED therefore still
+ * authorized a run, because the gate was asked to compare the envelope against
+ * the very instant the envelope was built — and a checkout that had moved on
+ * since approval was described by a snapshot that could not notice.
+ *
+ * `now` is a PARAMETER and is never read from the observations. The clock belongs
+ * to the executor; no plan content and no arm observation can move it.
+ */
+export function observationFromArms(observations, now) {
+  const baseline = observations?.baseline;
+  const candidate = observations?.candidate;
+  if (baseline === undefined || candidate === undefined) {
+    throw new Error("E4-R97: observationFromArms needs BOTH arm observations — one checkout is not an A/B");
+  }
+  return {
+    now,
+    executingSourceSha: candidate.sourceSha,
+    armShas: { baseline: baseline.sourceSha, candidate: candidate.sourceSha },
+    armDigests: { baseline: baseline.planDigest, candidate: candidate.planDigest },
+    // E4-R104 (A4): the arms' EXECUTION build digests, beside their git-derived
+    // plan digests. The two are different kinds of value: `dist/` is gitignored,
+    // so a rebuilt executor moves only this one.
+    armBuildDigests: {
+      baseline: baseline.buildDigest ?? null,
+      candidate: candidate.buildDigest ?? null,
+    },
+    caseFingerprints: { ...candidate.caseFingerprints },
+    providerId: candidate.providerId,
+    modelId: candidate.modelId,
+    endpointIdentity: candidate.endpointIdentity,
+  };
+}
+
+/**
  * The arm build identity as it may be PUBLISHED.
  *
  * MEASURED (CI run 35560959837, ubuntu-latest): the driver result was published as
@@ -291,10 +357,14 @@ export function gateFactsFrom(observation) {
       baseline: {
         sha: observation.armShas.baseline,
         executionPlanDigest: observation.armDigests.baseline,
+        // E4-R104 (A4): the bytes that execute a case. `null` when the closure
+        // could not be established — which the gate treats as drift, not a skip.
+        buildDigest: observation.armBuildDigests?.baseline ?? null,
       },
       candidate: {
         sha: observation.armShas.candidate,
         executionPlanDigest: observation.armDigests.candidate,
+        buildDigest: observation.armBuildDigests?.candidate ?? null,
       },
     },
     observedCaseFingerprints: observation.caseFingerprints,
@@ -328,7 +398,14 @@ export function makeCampaignStop(opts) {
   const signal = opts.signal;
   const deadlineMs = Number.isFinite(opts.campaignDeadlineMs) ? opts.campaignDeadlineMs : null;
   if (deadlineMs === null && (signal === undefined || signal === null)) {
-    return { stopped: () => false, code: null, reason: "", dispose: () => {} };
+    // `remainingMs` is part of the shape on EVERY path, including this one. It is
+    // read as a call-site ARGUMENT (`campaignRemainingMs: campaignStop.remainingMs()`),
+    // and arguments are evaluated before the callee runs — so omitting it here threw
+    // a TypeError for every caller that ran without a campaign clock, even when
+    // `runArmUnit` was a test double. `null` is the honest value: a campaign with no
+    // deadline has no remaining time to forward, and the worker then uses the unit's
+    // own cap (see `effectiveUnitDeadline`).
+    return { stopped: () => false, code: null, reason: "", dispose: () => {}, remainingMs: () => null };
   }
   const startedAt = typeof opts.now === "function" ? opts.now() : Date.now();
   const clock = typeof opts.now === "function" ? opts.now : () => Date.now();
@@ -357,6 +434,30 @@ export function makeCampaignStop(opts) {
       // No timer is armed (the predicate is polled, not scheduled), so there is
       // nothing to release. The method exists so a caller has ONE symmetric
       // teardown shape for the worker's `DeadlineBudget` and this object.
+    },
+    /**
+     * The campaign's REMAINING allowance, or `null` when it has no clock.
+     *
+     * ---- E4-R106 (A6 / F6). ------------------------------------------------
+     *
+     * MEASURED DEFECT F6 (plan §A6): this predicate was consulted only BEFORE
+     * dispatching a unit, so a unit already in flight ran to its own completion —
+     * "a cancel at 40ms still PASSes ~412ms later; a unit timeout of 80ms returns
+     * ~421ms later". Stopping between units is not stopping.
+     *
+     * Plan §A6 怎么做 2 requires the unit's effective deadline be the SMALLER of its own
+     * cap and what the campaign has left:
+     *
+     *   "effective unit deadline 取 unit 上限与 campaign 剩余时间的较小值，并保留触发原因."
+     *
+     * Only the object that owns the campaign's clock can compute that, so it is
+     * exposed here rather than re-derived by the caller — a second derivation is how
+     * two bounds drift apart. `null` (no deadline configured) is a REAL answer: it
+     * tells the worker that no campaign bound applies and its own cap stands alone.
+     */
+    remainingMs() {
+      if (deadlineMs === null) return null;
+      return Math.max(0, deadlineMs - (clock() - startedAt));
     },
   };
 }
@@ -478,6 +579,33 @@ export async function runDriver(opts) {
   }
 
   // ---- STEP 1: the R92 gate. NOTHING provider-shaped exists yet. -----------
+  //
+  // ---- WHAT THE DRIVER OBSERVED AT EXECUTION TIME (A3 怎么做 2). -----------
+  //
+  // The observation the gate is about to judge is PUBLISHED, so "the formal CLI
+  // uses the current observation" is evidence a reader can check rather than a
+  // claim about code. It is the SAME object the gate consumes, so it cannot
+  // describe a different world than the decision did.
+  //
+  // Leak-free by construction: revisions, digests and ids only. The endpoint is
+  // its identity digest, never a URL (A3 怎么做 8).
+  result.judgedObservation = {
+    now: observation.now,
+    executingSourceSha: observation.executingSourceSha ?? null,
+    armShas: {
+      baseline: observation.armShas?.baseline ?? null,
+      candidate: observation.armShas?.candidate ?? null,
+    },
+    armDigests: {
+      baseline: observation.armDigests?.baseline ?? null,
+      candidate: observation.armDigests?.candidate ?? null,
+    },
+    caseFingerprints: { ...(observation.caseFingerprints ?? {}) },
+    providerId: observation.providerId ?? null,
+    modelId: observation.modelId ?? null,
+    endpointIdentity: observation.endpointIdentity ?? null,
+  };
+
   const facts = gateFactsFrom(observation);
   const authorization = plan.authorization ?? null;
   const gate = evaluation.r92AuthorizationGate({ env, authorization, facts });
@@ -537,6 +665,10 @@ export async function runDriver(opts) {
       now: observation.now,
       armShas: { baseline: observation.armShas?.baseline ?? null, candidate: observation.armShas?.candidate ?? null },
       armDigests: { baseline: observation.armDigests?.baseline ?? null, candidate: observation.armDigests?.candidate ?? null },
+      armBuildDigests: {
+        baseline: observation.armBuildDigests?.baseline ?? null,
+        candidate: observation.armBuildDigests?.candidate ?? null,
+      },
       caseFingerprints: observation.caseFingerprints ?? {},
       providerId: observation.providerId,
       modelId: observation.modelId,
@@ -675,13 +807,22 @@ export async function runDriver(opts) {
           ? "CAMPAIGN_HEADER_MISSING"
           : /CAMPAIGN_ROOT_MISMATCH/.test(message)
             ? "CAMPAIGN_ROOT_MISMATCH"
-            : /BUDGET_STATE_MISSING/.test(message)
-              ? "BUDGET_STATE_MISSING"
-              : /BUDGET_STATE_CORRUPT|not valid JSON|damaged/.test(message)
-                ? "BUDGET_STATE_CORRUPT"
-                : /BUDGET_STATE_MISMATCH|different plan|different experiment|different authorization/.test(message)
-                  ? "BUDGET_STATE_MISMATCH"
-                  : "DURABLE_STATE_UNAVAILABLE";
+            // Plan §A2 怎么做 2: the THIRD case — "already claimed, but the data
+            // is gone" — must have its own stable code, distinct from "never
+            // claimed" (a first run) and from "resume". It is checked BEFORE the
+            // generic corruption bucket so a lost root is never reported as a
+            // damaged ledger.
+            : /CAMPAIGN_STATE_LOST/.test(message)
+              ? "CAMPAIGN_STATE_LOST"
+              : /CAMPAIGN_CLAIM_CORRUPT|CAMPAIGN_CLAIM_UNREADABLE|CAMPAIGN_CLAIM_WRITE_FAILED/.test(message)
+                ? "CAMPAIGN_CLAIM_UNAVAILABLE"
+                : /BUDGET_STATE_MISSING/.test(message)
+                  ? "BUDGET_STATE_MISSING"
+                  : /BUDGET_STATE_CORRUPT|not valid JSON|damaged/.test(message)
+                    ? "BUDGET_STATE_CORRUPT"
+                    : /BUDGET_STATE_MISMATCH|different plan|different experiment|different authorization/.test(message)
+                      ? "BUDGET_STATE_MISMATCH"
+                      : "DURABLE_STATE_UNAVAILABLE";
     result.reason = redactFailureText(message);
     return result;
   }
@@ -735,19 +876,31 @@ export async function runDriver(opts) {
       if (observed !== approvedEndpointIdentity) {
         result.status = "REFUSED";
         result.code = "ENDPOINT_IDENTITY_MISMATCH";
+        // ---- A3 怎么做 8: THE REASON CARRIES THE IDENTITY, NOT THE URL. -----
+        //
+        // MEASURED: this reason interpolated `String(resolvedEndpointBaseUrl)`
+        // verbatim, so a polluted `OPENAI_BASE_URL` — which is precisely the
+        // input this refusal exists to reject — was republished into the result
+        // and into stdout. The identity digest is the diagnosable form and the
+        // only form the approval binds.
         result.reason =
-          `the campaign resolved endpoint ${String(resolvedEndpointBaseUrl)} (identity ${String(observed)}) but the approved plan binds ` +
-          `${String(approvedEndpointIdentity)} — an approved run may not be redirected to a different destination by the environment`;
+          `the campaign resolved endpoint identity ${String(observed)} but the approved plan binds ` +
+          `${String(approvedEndpointIdentity)} — an approved run may not be redirected to a different ` +
+          `destination by the environment; the resolved URL is withheld because a base URL may carry a token`;
         return result;
       }
       approvedEndpointBaseUrl = resolvedEndpointBaseUrl;
     }
   }
+  // The raw URL is used INTERNALLY (it is handed to the worker, which is the only
+  // component that may build a transport from it) but it is NOT published: see
+  // `endpointLabelOf`.
   result.approvedIdentity = {
     providerId: authorization?.providerId ?? null,
     modelId: authorization?.modelId ?? null,
     endpointIdentity: approvedEndpointIdentity,
-    endpointBaseUrl: approvedEndpointBaseUrl,
+    endpointBaseUrl: null,
+    endpointLabel: endpointLabelOf(approvedEndpointIdentity),
   };
 
   // ---- THE SUITE INVENTORY (plan §R100 怎么做, line 205). ------------------
@@ -797,6 +950,41 @@ export async function runDriver(opts) {
   // ---- STEP 4: serial execution, one reservation per logical call. --------
   // Serialism is fixed at 1 (plan §R97 line 218). Each arm's calls are reserved
   // BEFORE the call, so the ledger is always ahead of the spend.
+  //
+  // ---- THE RESUME GATE: OLD EVIDENCE IS JUDGED BEFORE NEW BUDGET IS SPENT. --
+  //
+  // Plan §A3 怎么做 7: "resume 先验证批准身份、当前输入和已有结果证据，再决定 skip/执行剩余
+  // 单位. 不能因单位已 completed 就忽略其输入漂移，也不能在发现旧证据损坏前先花预算执行其他
+  // 单位."
+  //
+  // THE APPROVAL IDENTITY AND THE CURRENT INPUTS are already judged above: the
+  // gate ran against a FRESH observation of both checkouts (`observeArms` in
+  // `main`), so a changed case byte, a moved arm HEAD or a drifted build is a
+  // named refusal BEFORE this point. A unit that merely happens to be `completed`
+  // cannot hide that — the observation covers every approved case, not only the
+  // pending ones.
+  //
+  // THE EVIDENCE was the part still ordered wrongly: it was verified AFTER the
+  // unit loop, so a resume whose remaining units were still pending spent their
+  // budget first and only then discovered that an older unit's report had been
+  // deleted or edited. This pass runs BEFORE the loop, so a broken chain stops
+  // the campaign with zero new calls.
+  if (executionMode === "arm-worker") {
+    const settledBefore = (await execState.records()).filter(
+      (r) => (r.status === "completed" || r.status === "failed") && r.reconciledForRetry !== true,
+    );
+    if (settledBefore.length > 0) {
+      const preVerified = await evaluation.verifyCampaignEvidence(ledgerDir, settledBefore);
+      if (!preVerified.ok) {
+        result.evidence = { ok: preVerified.ok, checked: preVerified.checked, failures: preVerified.failures };
+        result.status = "REFUSED";
+        result.code = "EVIDENCE_CHAIN_BROKEN";
+        result.reason = preVerified.detail;
+        return result;
+      }
+    }
+  }
+
   const arms = ["baseline", "candidate"];
   let stopped = null;
   for (const arm of arms) {
@@ -884,6 +1072,16 @@ export async function runDriver(opts) {
             // can be silently used as the other.
             planDigest: plan.planDigest,
             approvedSourceSha: plan.authorization.arms?.[arm]?.sha ?? null,
+            // E4-R104 (A4): the approved EXECUTION build digest, so the worker
+            // refuses a unit whose bytes no longer match what was approved. This
+            // is the formal-path half of F4: the option existed but the driver
+            // never passed it, so the refusal could only fire where a caller
+            // opted in — measured `refusalFired: false` for the omitted / empty /
+            // whitespace spellings. The field is now part of the envelope
+            // contract, and this line is what makes it binding in a real run.
+            ...(typeof plan.authorization.arms?.[arm]?.buildDigest === "string"
+              ? { approvedBuildDigest: plan.authorization.arms[arm].buildDigest }
+              : {}),
             // The approved identity, not the worker's defaults (T4 / N6).
             providerId: plan.authorization.providerId,
             modelId: plan.authorization.modelId,
@@ -902,6 +1100,41 @@ export async function runDriver(opts) {
             timeoutMs: armWorker.timeoutMs,
             allowRealProvider: armWorker.allowRealProvider === true,
             now: opts.now,
+            // ---- THE APPROVED CASE FINGERPRINT (A3 怎么做 3/5). --------------
+            //
+            // MEASURED DEFECT F3(b): the worker computed
+            // `repo:${opts.inputsDigest ?? "unknown"}` and the driver NEVER passed
+            // one, so every formal unit's durable `inputDigest` was the literal
+            // string `repo:unknown`. A resume therefore could not tell a changed
+            // case from an unchanged one — the drift check the execution state
+            // implements had nothing to compare.
+            //
+            // The value is the APPROVED fingerprint from the envelope, which the
+            // gate has just re-checked against a fresh observation of this arm's
+            // checkout. `requireInputsDigest` makes its absence a REFUSAL rather
+            // than a silent `unknown`: the fallback may not be reachable from the
+            // formal entry.
+            inputsDigest: plan.authorization.caseFingerprints?.[caseId] ?? null,
+            requireInputsDigest: true,
+            // ---- E4-R106 (A6 / F6): THE TWO VALUES THAT END A RUNNING UNIT. ----
+            //
+            // MEASURED DEFECT F6 (plan §A6): this call forwarded `timeoutMs` and
+            // nothing else, so a unit already executing could not be stopped — the
+            // campaign's cancellation and its own deadline were both merely
+            // OUTLIVED ("a cancel at 40ms still PASSes ~412ms later"). The worker now
+            // runs the arm behind a terminable child-process boundary, and these are
+            // the two handles that boundary needs.
+            //
+            // The cancellation handle reaches the RUNNING case rather than only
+            // refusing the NEXT unit (plan §A6 怎么验收 1). It is the same signal the
+            // loop's pre-check consults, so "operator stopped it" stays ONE fact.
+            ...(opts.signal === undefined || opts.signal === null ? {} : { signal: opts.signal }),
+            // The campaign's REMAINING time, so the worker's `effectiveUnitDeadline`
+            // can take `min(unit cap, campaign remaining)` and keep the CAUSE
+            // (plan §A6 怎么做 2). Passing the campaign's TOTAL would be wrong: by the
+            // time a later unit starts, most of that time may already be spent, and
+            // each unit would silently re-acquire a fresh campaign-length allowance.
+            campaignRemainingMs: campaignStop.remainingMs(),
           });
         } catch (err) {
           // A worker that THROWS is a caller/contract defect (a bad identity, an
@@ -1318,7 +1551,32 @@ export async function observeArms(opts) {
       caseFingerprints[id] = await fingerprintCaseInCheckout(evaluation, opts.repoRoot, dir, id);
     }
 
-    const { observation, issues } = evaluation.parseR97ArmObservation(arm, dir, parsed, caseFingerprints);
+    // ---- E4-R104 (A4): the arm's EXECUTION build digest, re-derived HERE. ----
+    //
+    // Plan §A4 怎么做 5: "让计划生成、执行前复核、worker record 和 evidence 使用同一
+    // 身份合同." This is that one contract: the closure is walked from the arm's OWN
+    // checkout with the shared `computeArmBuildDigestV1`, so the value bound at
+    // plan time and the value re-checked at execution time are the same
+    // computation rather than two implementations that could drift.
+    //
+    // A walk that cannot complete is `null` — the honest "not established" — and
+    // the plan then refuses with `ARM_BUILD_UNBOUND` rather than approving an arm
+    // whose bytes nobody bound. It is deliberately NOT a thrown error here: a
+    // synthetic/partial arm must be able to produce a REPORTABLE refusal.
+    let armBuildDigest = null;
+    try {
+      armBuildDigest = evaluation.computeArmBuildDigestV1(dir);
+    } catch {
+      // Deliberately swallowed: the SAME `null` the worker's own
+      // `armBuildIdentity` produces for an unestablished closure (see its
+      // `armBuildClosure(dir).digest` catch). The refusal is raised downstream by
+      // name — `ARM_BUILD_UNBOUND` at plan time, `EXEC_OBS_ARM_BUILD_DRIFT` at the
+      // execution boundary — so the caller reports a NAMED refusal rather than a
+      // stack trace, and the two identity contracts stay one behaviour.
+      armBuildDigest = null;
+    }
+
+    const { observation, issues } = evaluation.parseR97ArmObservation(arm, dir, parsed, caseFingerprints, armBuildDigest);
     if (observation === null) throw new Error(`E4-R97: arm ${arm} observation invalid: ${issues.join("; ")}`);
 
     // Map the CLI's BARE ids onto the frozen suite-prefixed ids, refusing an
@@ -1597,22 +1855,56 @@ export async function main(argv) {
   const planPath = flag("--plan");
   const outDir = flag("--out");
   const ledgerDir = flag("--ledger");
-  const now = flag("--now") ?? new Date().toISOString();
+  const testClock = flag("--now");
   const fakeProvider = has("--fake-provider");
   const rehearse = has("--rehearse");
   const armWorkerMode = has("--arm-worker");
+  const requestedProviderId = flag("--provider");
+  const requestedModelId = flag("--model");
+  const requestedEndpoint = flag("--endpoint");
 
   // A TEST CLOCK IS AN OFFLINE-ONLY AFFORDANCE. Plan §T4 怎么做 12: "正式执行时间
   // 来自实际时钟 … `--now` 之类测试时钟只允许隔离离线模式，不作为生产过期判断." An
   // approved campaign that could be told the date would be able to run an EXPIRED
   // authorization, which is exactly what the expiry check exists to prevent.
-  if (flag("--now") !== undefined && !fakeProvider && !rehearse) {
+  //
+  // ---- E4-R103 (A3 怎么做 1/2): THE FORMAL MODE CANNOT BE GIVEN A CLOCK. -----
+  //
+  // The old guard only asked whether `--fake-provider`/`--rehearse` was present,
+  // so `--arm-worker --fake-provider --now <past>` slipped through and the formal
+  // entry accepted a caller-supplied date. The formal mode is refused a clock
+  // outright, so no combination of flags can move the instant an approval is
+  // judged against.
+  if (testClock !== undefined && (armWorkerMode || (!fakeProvider && !rehearse))) {
     process.stderr.write(
       "E4-R97: --now is a TEST clock and is only honoured with --fake-provider or --rehearse; " +
         "a formal campaign reads the real clock so an expired authorization cannot be run\n",
     );
     return EXIT_CONFIG;
   }
+
+  // ---- NUMERIC FLAGS ARE VALIDATED, NOT COERCED (A3 怎么做 9). --------------
+  //
+  // "值缺失、NaN、负数、拼错 flag 给配置错误." MEASURED: `--timeout-ms not-a-number`
+  // became `NaN` and was threaded into the worker's deadline budget, producing a
+  // run that refused for a reason that had nothing to do with the argument the
+  // operator typed. A malformed bound is a usage error, and it is reported as one
+  // before any plan, ledger or arm is touched.
+  const numericFlagNames = ["--timeout-ms", "--campaign-deadline-ms"];
+  for (const name of numericFlagNames) {
+    const raw = flag(name);
+    if (raw === undefined) continue;
+    const value = Number(raw);
+    if (raw.trim() === "" || !Number.isFinite(value) || value < 0) {
+      process.stderr.write(
+        `E4-R97: ${name} needs a finite, non-negative number of milliseconds; got ${JSON.stringify(raw)}\n`,
+      );
+      return EXIT_CONFIG;
+    }
+  }
+  const timeoutMs = flag("--timeout-ms") === undefined ? undefined : Number(flag("--timeout-ms"));
+  const campaignDeadlineMs =
+    flag("--campaign-deadline-ms") === undefined ? undefined : Number(flag("--campaign-deadline-ms"));
 
   // The zero-call rehearsal needs no plan and no key: it is what proves the
   // driver works BEFORE a human is asked to approve a real plan (line 221).
@@ -1673,20 +1965,171 @@ export async function main(argv) {
     return EXIT_OK;
   }
 
-  // In fake mode the observations are read from the plan artifact the caller
-  // supplies, because the driver is being exercised offline. The VALUES are
-  // still observed ones (produced by `observeArms`), never copied from the
-  // envelope: `observation` is a separate input.
-  const observation = plan.observation;
-  if (observation === undefined) {
-    process.stderr.write("E4-R97: an execution mode needs the plan artifact to carry an `observation` block\n");
+  // ---- THE EXECUTION CLOCK IS THE EXECUTOR'S, NEVER THE PLAN'S (A3 1/2). ---
+  //
+  // "正式执行的 now 来自执行器时钟；plan 中的 observation 仅是审阅快照."
+  //
+  // MEASURED DEFECT F3: this line used to be
+  //
+  //     const observationForRun = { ...observation, now: observation.now ?? now };
+  //
+  // so the instant the gate judged the approval against was the instant the
+  // approval itself recorded. A plan whose window had already closed was still
+  // authorized, because the comparison was self-referential. `--now` cannot move
+  // this either: it is refused above whenever `--arm-worker` is present.
+  const executionNow = testClock ?? new Date().toISOString();
+
+  // A plan printer's `observation` is the DEV TOOL's input. The formal path does
+  // not read it at all — see the re-observation below.
+  const planObservation = plan.observation;
+  if (!armWorkerMode && planObservation === undefined) {
+    process.stderr.write("E4-R97: --fake-provider needs the plan artifact to carry an `observation` block\n");
     return EXIT_CONFIG;
   }
 
-  // The observation's own `now` is the approval's clock; the RESULT's `now` is
-  // when this run happened. Keeping them separate is what lets the expiry check
-  // compare the authorization's instant against a real one.
-  const observationForRun = { ...observation, now: observation.now ?? now };
+  const approvedProviderId = plan.authorization?.providerId ?? null;
+  const approvedModelId = plan.authorization?.modelId ?? null;
+  const approvedEndpointIdentity = plan.authorization?.endpointIdentity ?? null;
+
+  /**
+   * Publish a pre-run refusal in the SAME shape a completed run uses, so an
+   * operator's tooling does not need a second parser for "refused before the
+   * campaign started". The raw endpoint URL is deliberately absent (A3 8).
+   */
+  const publishRefusal = async (code, reason) => {
+    const refusal = {
+      driverVersion: DRIVER_VERSION,
+      status: "REFUSED",
+      code,
+      reason: redactFailureText(reason),
+      providerRequests: 0,
+      logicalCalls: 0,
+      workerUnits: 0,
+      approvedIdentity: {
+        providerId: approvedProviderId,
+        modelId: approvedModelId,
+        endpointIdentity: approvedEndpointIdentity,
+        endpointBaseUrl: null,
+        endpointLabel: endpointLabelOf(approvedEndpointIdentity),
+      },
+    };
+    if (outDir !== undefined) {
+      await mkdir(outDir, { recursive: true });
+      await writeFile(join(outDir, "driver-result.json"), `${JSON.stringify(refusal, null, 2)}\n`, "utf8");
+    }
+    process.stdout.write(`${JSON.stringify(refusal, null, 2)}\n`);
+    return EXIT_REFUSED;
+  };
+
+  // ---- A FLAG THAT DISAGREES WITH THE APPROVAL IS REFUSED (A3 怎么做 9). ----
+  //
+  // "批准已决定的 model/provider flag 若保留，必须校验一致，不能接受后忽略."
+  //
+  // MEASURED: `--provider` and `--model` were parsed and then IGNORED — the run
+  // used `plan.authorization.*` regardless, so an operator who typed a different
+  // model got a run that silently did something else while `--help` presented the
+  // flag as authoritative. Accept-and-ignore is worse than either accepting or
+  // rejecting, because the operator's own command line is the evidence they will
+  // read afterwards.
+  for (const [name, requested, approved] of [
+    ["--provider", requestedProviderId, approvedProviderId],
+    ["--model", requestedModelId, approvedModelId],
+  ]) {
+    if (requested === undefined || approved === null) continue;
+    if (requested !== approved) {
+      return publishRefusal(
+        name === "--model" ? "APPROVED_MODEL_MISMATCH" : "APPROVED_PROVIDER_MISMATCH",
+        `${name} asked for ${JSON.stringify(requested)} but the approved plan binds ${JSON.stringify(approved)} — ` +
+          `the approval decides what runs, and a flag that disagrees with it is refused rather than ignored`,
+      );
+    }
+  }
+
+  // ---- THE DESTINATION IS RESOLVED AND PROVEN BEFORE ANY OBSERVATION (A3 8). -
+  //
+  // The authorization stores the endpoint as a normalized DIGEST (a raw URL may
+  // carry tokens), so the driver resolves the actual URL from its own flag or the
+  // environment and proves it hashes to the approved identity. Resolving it HERE,
+  // before either arm is touched, means a polluted `OPENAI_BASE_URL` costs nothing
+  // and cannot redirect an approved run.
+  const resolvedEndpointBaseUrl = requestedEndpoint ?? process.env.OPENAI_BASE_URL ?? null;
+  if (armWorkerMode && approvedEndpointIdentity !== null) {
+    const observed = evaluation.captureEndpointIdentity(resolvedEndpointBaseUrl);
+    if (observed !== approvedEndpointIdentity) {
+      return publishRefusal(
+        "ENDPOINT_IDENTITY_MISMATCH",
+        `the campaign resolved endpoint identity ${String(observed)} but the approved plan binds ` +
+          `${String(approvedEndpointIdentity)} — an approved run may not be redirected to a different ` +
+          `destination by the environment; the resolved URL is withheld because a base URL may carry a token`,
+      );
+    }
+  }
+
+  // ---- RE-OBSERVE THE WORLD, THEN JUDGE (A3 怎么做 2). ---------------------
+  //
+  // "开始和恢复执行前，重新读取两臂的当前 HEAD、构建身份、实际案例字节和执行参数."
+  //
+  // MEASURED DEFECT F3(a): the formal entry fed the PLAN'S STORED SNAPSHOT into the
+  // real gate. The gate therefore compared the approval against a description of
+  // the world taken when the approval was written — it could not notice that a
+  // checkout had moved, that a case byte had changed, or (see the clock above)
+  // that the window had closed. The driver already OWNED the ability to observe:
+  // `observeArms` is exported and is exactly what the offline acceptance harness
+  // uses. The formal entry now calls the same function, on the same two real
+  // checkouts, rather than renaming a copied snapshot.
+  //
+  // The CLI's `--suite` is SINGLE-VALUED, so the label the arms must be planned
+  // under is the one the approved inventory actually recorded. A mixed inventory
+  // is refused rather than guessed: observing the arms under a label the approval
+  // never used would compare a different experiment.
+  let observationForRun;
+  let observationScratch = null;
+  if (armWorkerMode) {
+    const plannedSuites = [
+      ...new Set(
+        (plan.authorization?.caseInventory ?? [])
+          .map((e) => e?.plannedUnderSuite)
+          .filter((s) => typeof s === "string" && s !== ""),
+      ),
+    ];
+    if (plannedSuites.length !== 1) {
+      return publishRefusal(
+        "EXECUTION_SUITE_AMBIGUOUS",
+        `the approved inventory records ${plannedSuites.length} CLI suite label(s) ` +
+          `(${plannedSuites.map((s) => JSON.stringify(s)).join(", ") || "none"}) — the arms cannot be re-observed ` +
+          `under a single --suite without describing a different experiment`,
+      );
+    }
+    observationScratch = await mkdtemp(join(tmpdir(), "e4-r97-observe-"));
+    let observations;
+    try {
+      observations = await observeArms({
+        modules: { evaluation },
+        repoRoot: REPO_ROOT,
+        armDirs,
+        stagedCasesDir: join(observationScratch, "cases"),
+        suite: plannedSuites[0],
+        providerId: approvedProviderId,
+        modelId: approvedModelId,
+        endpointBaseUrl: resolvedEndpointBaseUrl,
+      });
+    } catch (err) {
+      // An arm that cannot be observed is a REFUSAL with a name, not a stack
+      // trace: "one of the two checkouts is incomplete" is an operator-visible
+      // fact, and it must arrive before anything has been spent.
+      return publishRefusal(
+        "EXECUTION_OBSERVATION_FAILED",
+        `the campaign could not re-observe its two arms from their own checkouts: ${failureTextOf(err)}`,
+      );
+    }
+    // `now` comes from the executor, never from the observations.
+    observationForRun = observationFromArms(observations, executionNow);
+  } else {
+    // The DEV TOOL is offline by construction: its arm facts come from the plan
+    // artifact. Its CLOCK does not — a plan may not tell the driver what time it
+    // is, even here, because the gate it feeds is the same real gate.
+    observationForRun = { ...planObservation, now: executionNow };
+  }
 
   // ---- THE OPERATOR'S CANCEL HANDLE (T5 做什么 1, 怎么做 4). -----------------
   //
@@ -1730,17 +2173,17 @@ export async function main(argv) {
           runArmUnit: (await import(pathToFileURL(join(REPO_ROOT, "scripts", "e4", "r97-arm-worker.mjs")).href)).runArmUnit,
           armDirs,
           outDir: outDir === undefined ? undefined : join(outDir, "units"),
-          ...(flag("--timeout-ms") === undefined ? {} : { timeoutMs: Number(flag("--timeout-ms")) }),
+          ...(timeoutMs === undefined ? {} : { timeoutMs }),
         }
       : null,
     // The endpoint the campaign resolved. Only the arm-worker path consumes it,
-    // where it is checked against the plan's approved identity before use.
-    ...(flag("--endpoint") === undefined ? {} : { endpointBaseUrl: flag("--endpoint") }),
+    // where it is checked against the plan's approved identity before use. It is
+    // passed as the RESOLVED value (flag or environment) so `runDriver` judges the
+    // same destination this function already proved.
+    ...(armWorkerMode ? { endpointBaseUrl: resolvedEndpointBaseUrl } : requestedEndpoint === undefined ? {} : { endpointBaseUrl: requestedEndpoint }),
     // The CAMPAIGN-level stop (T5). Checked before each unit, so a cancelled or
     // over-deadline campaign refuses the next unit rather than starting it.
-    ...(flag("--campaign-deadline-ms") === undefined
-      ? {}
-      : { campaignDeadlineMs: Number(flag("--campaign-deadline-ms")) }),
+    ...(campaignDeadlineMs === undefined ? {} : { campaignDeadlineMs }),
     ...(cancelController.signal === null ? {} : { signal: cancelController.signal }),
   });
 
@@ -1776,6 +2219,12 @@ export async function main(argv) {
     // (as the test suite does) would accumulate listeners without bound.
     process.removeListener("SIGINT", sigint);
     process.removeListener("SIGTERM", sigterm);
+    // The observation scratch holds a COPY of every frozen case and is only read
+    // while `observeArms` runs; it is removed on every path so a formal run leaves
+    // no case copies behind on the host.
+    if (observationScratch !== null) {
+      await rm(observationScratch, { recursive: true, force: true }).catch(() => {});
+    }
   }
 }
 

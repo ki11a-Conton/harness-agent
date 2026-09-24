@@ -69,6 +69,33 @@ export const R97_BUDGET_REFUSED = R97_BUDGET_EXHAUSTED;
 /** The code naming a dispatched-but-unobserved outcome. */
 export const R97_UNKNOWN_OUTCOME = "BUDGET_OUTCOME_UNKNOWN";
 
+/**
+ * The EXPLICIT per-call dispatch state of ONE admitted `generate()`.
+ *
+ * WHY THIS TYPE EXISTS (A1 / finding F1). The settlement used to be inferred
+ * from "did the caller get a stats object back". That inference is wrong in
+ * both directions: an exception after a real dispatch lost the stats (so a
+ * dispatched call looked un-sent and was refunded), and an early return left
+ * the reservation outstanding forever. The state below is a MEASUREMENT taken
+ * as the call proceeds — not-entered / entered / completed-observed / settled —
+ * and it lives on the LIVE `stats` object the caller already holds, so it is
+ * readable even when the generator never returns.
+ */
+export interface R97BudgetDispatchRecord {
+  reservationId: string;
+  /** True once the inner provider's stream was actually going to be advanced.
+   *  While false, the reservation is PROVABLY unused and may be abandoned. */
+  entered: boolean;
+  /** True once a `completed` event was observed. */
+  completed: boolean;
+  /** True once the ledger write that ends this reservation SUCCEEDED. A false
+   *  value on a returned channel means the settlement failed and the ledger
+   *  still shows the reservation as outstanding. */
+  settled: boolean;
+  /** How it was settled, or `null` while unsettled. */
+  settlement: "committed" | "unknown" | "abandoned" | null;
+}
+
 /** Per-channel accounting. Every field is a MEASURED count, never a projection:
  *  `logicalCalls` is incremented only after the ledger admitted the call. */
 export interface R97BudgetChannelStats {
@@ -83,6 +110,15 @@ export interface R97BudgetChannelStats {
   /** Reservation ids in the order they were taken, for cross-checking a report
    *  against the ledger's own entry list. */
   reservationIds: string[];
+  /** The explicit dispatch state of every admitted call, in order. */
+  dispatches: R97BudgetDispatchRecord[];
+  /** Admitted calls whose terminal ledger write FAILED. Non-zero means the
+   *  ledger still shows an outstanding reservation, so the unit must not be
+   *  reported as a success; the entry stays recoverable through `recover()`. */
+  settlementFailures: number;
+  /** The last settlement failure message, so a verdict can name the cause
+   *  instead of reporting a generic failure. */
+  lastSettlementError: string | null;
 }
 
 export interface R97BudgetChannelOptions {
@@ -133,6 +169,9 @@ export function createLedgerBudgetedProvider(opts: R97BudgetChannelOptions): {
     unknownCalls: 0,
     refusedCalls: 0,
     reservationIds: [],
+    dispatches: [],
+    settlementFailures: 0,
+    lastSettlementError: null,
   };
 
   // The caller's pre-taken reservation, spent by the FIRST admitted call
@@ -195,78 +234,112 @@ export function createLedgerBudgetedProvider(opts: R97BudgetChannelOptions): {
           stats.reservationIds.push(reservationId);
           stats.logicalCalls += 1;
 
-          // ---- THE CALL. --------------------------------------------------
-          // `retries` counts `retry` events; `terminal` records whether the
+          // ---- THE EXPLICIT DISPATCH STATE (A1 / F1). ----------------------
+          //
+          // Settlement used to run AFTER the `for await` loop. A consumer
+          // `break`, an explicit `iterator.return()`, or an exception all end
+          // the generator with a completion that SKIPS code after the loop, so
+          // the reservation stayed `reserved` and the worker refunded it. The
+          // settlement now lives in the `finally` below and consults this
+          // record instead of inferring anything from a missing return value.
+          const dispatch: R97BudgetDispatchRecord = {
+            reservationId,
+            entered: false,
+            completed: false,
+            settled: false,
+            settlement: null,
+          };
+          stats.dispatches.push(dispatch);
+
+          // `retries` counts `retry` events; `completed` records whether the
           // stream ever reported a completion. Both decide how the reservation
           // is settled, and neither is guessed after the fact.
           let retries = 0;
           let completed = false;
-          let errorEvent: string | null = null;
+          let bodyError: unknown = null;
+          let settleStarted = false;
+
+          /**
+           * Settle the reservation EXACTLY ONCE, from measured state:
+           *
+           *   never entered the inner provider -> ABANDON (return the allowance;
+           *     provably nothing left the process);
+           *   entered + observed `completed`   -> COMMIT (consumed = 1, retries
+           *     recorded separately);
+           *   entered + anything else          -> UNKNOWN (the allowance is NOT
+           *     returned: a dispatched request may already have been billed).
+           *
+           * A FAILED write is not swallowed: it propagates so the caller can
+           * refuse to report a success, and `stats.settlementFailures` names it.
+           */
+          const settle = async (): Promise<void> => {
+            if (settleStarted) return;
+            settleStarted = true;
+            if (!dispatch.entered) {
+              await opts.ledger.abandon(reservationId);
+              dispatch.settlement = "abandoned";
+              dispatch.settled = true;
+              return;
+            }
+            if (completed) {
+              await opts.ledger.commit(reservationId, 1, retries);
+              dispatch.settlement = "committed";
+              dispatch.settled = true;
+              return;
+            }
+            await opts.ledger.markUnknown(reservationId);
+            stats.unknownCalls += 1;
+            dispatch.settlement = "unknown";
+            dispatch.settled = true;
+          };
+
           try {
-            for await (const ev of inner.generate(request, signal)) {
+            // `inner.generate(...)` is called INSIDE the guarded region, and
+            // `dispatch.entered` is set only once it returned an iterable: a
+            // provider that throws before producing a stream was provably never
+            // entered, so its reservation is returned rather than charged.
+            const stream = inner.generate(request, signal);
+            dispatch.entered = true;
+            for await (const ev of stream) {
               if (ev.type === "retry") {
                 retries += 1;
                 stats.transportRetries += 1;
               } else if (ev.type === "completed") {
                 completed = true;
-              } else if (ev.type === "error") {
-                errorEvent = "error";
+                dispatch.completed = true;
               }
               yield ev;
             }
           } catch (err) {
-            // The request WAS sent (the reservation was taken before entering
-            // the inner generator), so its outcome is unknown rather than free.
-            stats.unknownCalls += 1;
-            await settleUnknown(opts.ledger, reservationId, err);
+            // Kept so a settlement failure can be reported WITHOUT erasing the
+            // provider's own error.
+            bodyError = err;
             throw err;
+          } finally {
+            try {
+              await settle();
+            } catch (settleErr) {
+              stats.settlementFailures += 1;
+              stats.lastSettlementError = settleErr instanceof Error ? settleErr.message : String(settleErr);
+              if (bodyError !== null) {
+                throw new AggregateError(
+                  [bodyError, settleErr],
+                  `E4-R98: ${R97_UNKNOWN_OUTCOME}: reservation ${reservationId} could not be settled AND the provider call failed`,
+                );
+              }
+              // A call whose terminal ledger write failed is NOT a success: the
+              // reservation is still outstanding and only `recover()` or a human
+              // decision may resolve it. Reporting it as committed would hide a
+              // real over-spend risk.
+              throw new Error(
+                `E4-R98: ${R97_UNKNOWN_OUTCOME}: reservation ${reservationId} could not be settled, so this call is NOT reported as a success (the ledger still shows it outstanding): ${stats.lastSettlementError}`,
+              );
+            }
           }
-
-          // A stream that ended with an error event, or that ended without any
-          // terminal event, is NOT a completed logical call: the request left
-          // but no result was observed.
-          if (!completed) {
-            stats.unknownCalls += 1;
-            await settleUnknown(
-              opts.ledger,
-              reservationId,
-              errorEvent === null ? new Error("the provider stream ended without a terminal event") : new Error("the provider reported an error event"),
-            );
-            return;
-          }
-
-          // Completed: the call is consumed, with its physical retries recorded
-          // separately. Committing AFTER the call is what makes `consumed`
-          // measured rather than assumed.
-          await opts.ledger.commit(reservationId, 1, retries);
         },
       };
     },
   };
 
   return { provider: wrapped, stats };
-}
-
-/**
- * Settle a reservation whose outcome was never observed.
- *
- * The allowance is deliberately NOT returned: a dispatched request may already
- * have been billed, and refunding it automatically is how a campaign silently
- * exceeds its authorization. The ledger marks the entry `unknown`, which keeps
- * counting it as consumed while naming the state for a human to reconcile.
- *
- * A settlement failure is reported on stderr rather than swallowed, because a
- * reservation that stays `reserved` forever is a worse (silent) state than a
- * loud one — P14-6 forbids the empty-callback catch that used to hide this.
- */
-async function settleUnknown(ledger: R97BudgetLedger, reservationId: string, cause: unknown): Promise<void> {
-  try {
-    await ledger.markUnknown(reservationId);
-  } catch (err) {
-    process.stderr.write(
-      `[degraded] r97-budget-channel.unknown-settlement: reservation ${reservationId} could not be marked ${R97_UNKNOWN_OUTCOME} (${
-        cause instanceof Error ? cause.message : String(cause)
-      }): ${err instanceof Error ? err.message : String(err)}\n`,
-    );
-  }
 }

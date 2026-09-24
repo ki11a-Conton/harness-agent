@@ -298,8 +298,16 @@ function rehearsalFacts(over: Partial<Parameters<typeof r92AuthorizationGate>[0]
     now: "2026-09-20T00:00:00.000Z",
     executingSourceSha: SHA_CANDIDATE,
     observedArmBuilds: {
-      baseline: { sha: auth.arms.baseline.sha, executionPlanDigest: auth.arms.baseline.executionPlanDigest },
-      candidate: { sha: auth.arms.candidate.sha, executionPlanDigest: auth.arms.candidate.executionPlanDigest },
+      baseline: {
+        sha: auth.arms.baseline.sha,
+        executionPlanDigest: auth.arms.baseline.executionPlanDigest,
+        buildDigest: auth.arms.baseline.buildDigest ?? null,
+      },
+      candidate: {
+        sha: auth.arms.candidate.sha,
+        executionPlanDigest: auth.arms.candidate.executionPlanDigest,
+        buildDigest: auth.arms.candidate.buildDigest ?? null,
+      },
     },
     observedCaseFingerprints: { ...auth.caseFingerprints },
     observedProviderId: auth.providerId,

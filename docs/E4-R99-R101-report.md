@@ -9,6 +9,14 @@ Baseline SHA when this work started: `d5af97493319bdf349ca54cc49bef855809bc3ce`.
 Every claim below is either a command whose output is quoted, or an explicit
 `NOT_RUN` / `BLOCKED`. Nothing in this report is inferred from a green suite.
 
+> **CURRENT STATUS — read §9 first.** §9 is the latest pass (plan
+> `plan(20260922-140723).md` §A7) and is the only section that describes the current
+> state: the closed-loop suite is **532**, the behaviour matrix covers **M1–M9**, the
+> mutation gate runs **ten** mutations, and the two-platform CI for this head is
+> **`NOT_RUN`** (this round's work is uncommitted). Sections 0–8 are kept as measured
+> history. In particular, §8.6's `471/471`, §8.7's run `35693782588` at `7378aca` and
+> §8.11's runs describe **earlier** heads and do **not** cover §9's code.
+
 ---
 
 ## 0. The finding that dominates this round
@@ -1567,6 +1575,12 @@ entry keeping them red in this one.
 
 ### 8.6 T6 verdict, re-measured on the current head
 
+> **SUPERSEDED BY §9.** The numbers below were measured at the §8 head. §9's pass moved
+> the closed-loop suite **471 → 532**, added the M1–M9 behaviour matrix and the ten-mutation
+> gate, and re-ran the whole loop into `.ci/r97-a7-final`. The `5/5 mutation(s)` figure at
+> the end of this section is likewise historical: the gate now runs **ten**. This section is
+> left as measured then, not rewritten.
+
 The closed loop was re-run from scratch after §8.4's suite-list change, into a fresh
 `--out` (the §7.12 reuse guard refuses a stale one):
 
@@ -1814,4 +1828,896 @@ appended to chase the report's own SHA.
 That is also the plan's own instruction, 怎么做 9: "报告写实现 SHA 和对应 CI URL；不要
 为了让报告包含自己的提交 SHA 无限追加文档 commit." The implementation SHAs are recorded
 above; the runs are recorded in §8.7 and here; and the chain stops.
+
+---
+
+## 9. E4-R101-A (A7) — the counterexamples enter the real closed loop
+
+Plan `plan(20260922-140723).md` §A7: "把反例接入双平台闭环，更新结论后结束本轮" —
+integrate A1–A6's counterexamples into the **real** Windows/Ubuntu must-run path, update
+the conclusions, and stop this round of infrastructure work. This section is that pass,
+and it also **supersedes the suite total in §8.6**: the closed-loop suite is now **532**,
+not 471.
+
+### 9.1 Current status (this is the index §A7 怎么做 9 asks for)
+
+| Claim | Status | Where it is measured |
+| --- | --- | --- |
+| A1–A6 counterexamples run in the dedicated suite | **DONE** | §9.3, `r97-a7-final/r97-r98-suite.log` |
+| M1–M9 behaviour matrix covered, no row satisfied by an unrelated test | **DONE** | §9.4, `r97-a7-final/acceptance-matrix.json` |
+| Ten anti-cheat mutations really turn their own test RED | **DONE** | §9.5, `r97-a7-final/mutation-report.json` |
+| Two frozen arms + real tools + verifier + independent validator still run | **DONE** | §9.2, `r97-a7-final/acceptance/` |
+| `pnpm typecheck` | **exit 0** | §9.6 |
+| `pnpm test` | **6 failed / 6845 passed / 3 skipped (6854)** — all 6 are the pre-existing dirty-tree guards (§4.2); the one failure this pass introduced is fixed (§9.7c). The Lead re-ran all three files and recorded each one's own cause, so the shared cause is per-test evidence (§9.7) | §9.7 |
+| `pnpm docs:verify` | **exit 0**, `ALL CHECKS PASS` | §9.6 |
+| A4's formal-path build-identity binding | **DONE** — `buildDigest` is a field of the arm identity in the closed envelope schema, mandatory at the R97 layer (`ARM_BUILD_UNBOUND`), compared by the gate and at the execution boundary, and forwarded per arm by the driver (§9.8b) | §9.8b |
+| Two-platform CI run for this head | **`NOT_RUN`** — not pushed (see §9.8 for the exact missing action) | §9.8 |
+| Paid two-version experiment | **`PAID_NOT_RUN`** — never attempted | §9.2 |
+
+Final state: **`OFFLINE_ACCEPTED / PAID_NOT_RUN`**, with CI explicitly `NOT_RUN` rather
+than inferred. No `DONE` is claimed for anything not measured below.
+
+### 9.2 The normal closed loop still runs the two real arms
+
+`--out` is single-use (plan §A7 怎么做 6 keeps the guard), so this pass used a **fresh**
+directory, `.ci/r97-a7-final`, after the earlier `.ci/r97-a7-closeout` had been consumed:
+
+```
+node scripts/e4/r97-closed-loop.mjs --all --out .ci/r97-a7-final --arms-root .ci/r97-review-arms
+[1/5] setup      OK  D:\Harness Agent\.ci\r97-review-arms
+[2/5] acceptance OK  status=OFFLINE_ACCEPTED passes=6/16
+[3/5] suite      OK  532/532 test(s)
+[4/5] matrix     OK  9/9 row(s)
+[5/5] identity   OK  .ci/r97-a7-final/closed-loop-identity.json
+CLOSED_LOOP_EXIT=0
+```
+
+Both frozen arms were **built and really executed** — this is not a synthetic report:
+
+| Field | Value |
+| --- | --- |
+| `armBaselineSha` | `e9776ba66190ea63b1bacb685c91aa900b6935e7` |
+| `armCandidateSha` | `a20373743b56de6a3a110fecdd254737ece71afa` |
+| `executionMode` | `arm-worker` (16 worker units, `skippedUnits 0`) |
+| `verifiedPasses` / `measuredUnits` | 6 / 16 (strong 0, weak 6 — unchanged from §7.4) |
+| `logicalCalls` / `providerCalls` | 42 / **0** |
+| `suitePassedTests` / `suiteTotalTests` | **532 / 532** (was 471 in §8.6) |
+| `matrixRowsSatisfied` / `matrixRowsTotal` | 9 / 9 |
+| `planRowsSatisfied` / `planRowsTotal` | **9 / 9**, `planRowsUncovered: []` |
+| `promotable` / `modelCapabilityClaim` | `false` / `none` — the offline provider is scripted |
+
+The independent validator re-derived the verdicts from that run's own ledger, not from the
+summary the run produced:
+
+```
+node scripts/e4/r97-validate-campaign.mjs --campaign .ci/r97-a7-final/acceptance/ledger
+  -> exit 0, ok=true, reasonCodes=[]
+     terminal 16, evidenceChecked 16, evidenceFailures []
+     grant 320, committed 42, remaining 278
+```
+
+So plan §A7 怎么验收 4 ("validator 独立检查本次结果") holds on this run's artifacts.
+
+**The Lead re-ran the whole loop independently, at a third fresh `--out`**, rather than
+accepting the above as the last word. Nothing was building elsewhere during either run:
+
+```
+node scripts/e4/r97-closed-loop.mjs --all --out .ci/r97-lead-final
+[1/5] setup      OK  (both arms prepared from the frozen SHAs)
+[2/5] acceptance OK  status=OFFLINE_ACCEPTED passes=6/16
+[3/5] suite      OK  532/532 test(s)
+[4/5] matrix     OK  9/9 row(s)
+[5/5] identity   OK  .ci/r97-lead-final/closed-loop-identity.json
+CLOSED_LOOP_EXIT=0
+```
+
+`acceptance-matrix.json` from that run reports `rows=9 uncovered=0 unsatisfied=0`, and
+`closed-loop-identity.json` repeats `suitePassedTests 532/532`, `matrixRowsSatisfied 9/9`,
+`planRowsUncovered []`, `providerCalls 0`, `promotable false`. Two independent executions
+at two different heads of the same uncommitted tree agreeing on every count is what makes
+the numbers above evidence rather than one run's report.
+
+A **third** run was executed after this section's own prose was finalised, at
+`.ci/r97-lead-final2`, so that the last measurement follows the last edit rather than
+preceding it — `[1/5] setup OK · [2/5] acceptance OK status=OFFLINE_ACCEPTED passes=6/16 ·
+[3/5] suite OK 532/532 · [4/5] matrix OK 9/9 · [5/5] identity OK`, `CLOSED_LOOP_EXIT=0`.
+All three runs agree on every count.
+
+**A fourth run, after A4's formal-path binding was closed (§9.8b).** The numbers above are
+from the tree BEFORE that fix; the suite grew by the tests that measure it, so the loop was
+re-run at `.ci/r97-a4-final`:
+
+```
+node scripts/e4/r97-closed-loop.mjs --all --out .ci/r97-a4-final
+[1/5] setup      OK  C:\Users\s5605\AppData\Local\Temp\r101-arms-0enHtR
+[2/5] acceptance OK  status=OFFLINE_ACCEPTED passes=6/16
+[3/5] suite      OK  540/540 test(s)
+[4/5] matrix     OK  9/9 row(s)
+[5/5] identity   OK  .ci\r97-a4-final\closed-loop-identity.json
+CLOSED_LOOP_EXIT=0
+```
+
+`closed-loop-identity.json` from that run: `suitePassedTests 540/540`,
+`matrixRowsSatisfied 9/9`, `planRowsUncovered []`, `providerCalls 0`, `promotable false`.
+The acceptance plan it produced binds a **distinct** build digest per arm, with no readiness
+issues — the direct evidence that the fix holds on the real two-arm path:
+
+```
+status                = FINALIZED_AUTHORIZATION_PLAN
+readinessIssues       = 0
+baseline.buildDigest  = cb79975d17817de76d5c2f2a7098b48c2cd4f6f9005dc3b96d49caa137b571f8
+candidate.buildDigest = 74cb2d8a6d502a232fc461bb6fb817a345d797b36a103aac04fcf6d5d9f0aae5
+distinct              = True
+```
+
+### 9.3 A1–A6's counterexamples are in the must-run path
+
+Plan §A7 怎么做 1 asks for a re-review of `SUITE_FILES` against the exclusions in the root
+`package.json`. The exclusions are **basename globs**
+(`**/*.perf.test.ts`, `**/*.soak.test.ts`, `**/e3-repro-current-defects.test.ts`,
+`**/e4-r40-forensics.test.ts`, `**/r97-driver-closed-loop.test.ts`), and the file the
+counterexamples live in is the one exclusion that matters most.
+
+A new assertion in `r97-closed-loop.test.ts` is the audit, and it is a real check rather
+than a comment: it parses the `--exclude '<glob>'` patterns out of `package.json`, strips
+the leading `**/`, requires `r97-driver-closed-loop.test.ts` to be named in `SUITE_FILES`,
+and requires every exact-file exclusion to be either in `SUITE_FILES` or named by another
+script. Measured: **532 tests ran**, up from 471 — the round's new counterexamples are in
+the suite that actually executes, not in a file nothing runs.
+
+The three suite-phase failures this round *first* produced are recorded in §9.7 rather
+than hidden: they were a real concurrency hazard and a real fixture leak.
+
+### 9.4 The M1–M9 behaviour matrix, bound test-by-test
+
+Plan §A7 怎么做 2: "用具体测试名/证据关联各行，不允许一个无关测试让多行自动通过." The
+matrix now carries `PLAN_BEHAVIOR_MATRIX` with the nine rows' `requirement` and
+`minimumEvidence` **verbatim** from the plan, and every row maps to the acceptance row
+that covers it. `evaluateMatrix` computes the reverse index and fails on an uncovered
+row, an unsatisfied row, or a claimed M row that does not exist.
+
+| Row | Scenario | Covered by (acceptance row) | This round's counterexample bound to it | ok |
+| --- | --- | --- | --- | --- |
+| M1 | 流提前 break/return 后 CLI 异常 | 多轮与子代理共享预算 3 次 | `R99 W11 (A1/F1)` — grant=1, break mid-stream, CLI throws: `innerCalls=1`, not abandoned, remaining=0, second reserve refused | ✅ |
+| M2 | 已消费 campaign 整目录删除后重新打开 | 缺 state/ledger、换目录、hash 改动 | `R98-A L3c` / `L3b` — a spent authorization is NOT refreshed by deleting its root | ✅ |
+| M3 | 旧 observation.now + 当前时间已过期 | 外部 provider 未获授权 | `E4-R103 (A3)` — expired against the execution clock, refused with 0 calls while `plan.observation.now` is still inside the window | ✅ |
+| M4 | 计划后修改实际 case/staged 字节 | 缺 state/ledger、换目录、hash 改动 | `E4-R103 (A3)` — staged bytes vs approved fingerprint, including the probe→copy window | ✅ |
+| M5 | 只改被导入 dist 子模块 | 输入/构建/model/endpoint 漂移 | `E4-R104 (A4)` — changes on a TRANSITIVELY imported module at identical size/mtime; refuses before the ledger opens | ✅ |
+| M6 | 身份漂移 + 成功报告 | 输入/构建/model/endpoint 漂移 | `R105 (A5/F5)` — a synthetic PASS report does not outrank the identity refusal | ✅ |
+| M7 | 当前 unit 中取消/总 deadline/output_limit | 超时/取消/输出过量 | `E4-R106 (A6/F6)` — a hanging arm is really terminated; `E4-R99-B (T5)` forwards the signal | ✅ |
+| M8 | 正常双 arm 工具/verifier 路径 | 两个不同 arm + 两种不同 request；写文件成功 / 只说完成但未写文件 | the real two-arm rows themselves | ✅ |
+| M9 | 正常/失败/unknown 的 resume | 成功、有效负例、provider 失败后的恢复 | `E4-R99-A D8` (union, not sum) + `E4-R103 (A3)` (a resume verifies OLD evidence before spending) | ✅ |
+
+Measured on the fresh run: `planRowsSatisfied 9 / planRowsTotal 9`,
+`uncoveredPlanRows: []`, `unsatisfiedPlanRows: []`, `matrixRowsTotal 9 / 9`. The
+self-test pins the refusal directions too — an uncovered M row is rejected **even when
+every acceptance test passes**, and an unknown claimed M row throws rather than being
+ignored.
+
+### 9.5 The ten mutations, and what counts as CAUGHT
+
+Plan §A7 怎么做 3 asks the existing gate to keep its coverage and add one minimal mutation
+per invariant this round closed. It now runs **ten**: T6's five
+(`same-build-for-both-arms`, `skip-verifier`, `fixed-request-placeholder`,
+`bypass-budget`, `resume-loses-history`) plus five for A1, A2, A3, A5 and A6.
+
+The rule plan §A7 怎么做 4 requires — "不接受语法错误、构建失败或 unrelated timeout 冒充捕获了
+缺陷" — is implemented as an exported pure `classifyCatch`, and pinned by its own tests. A
+catch requires **all** of: a non-zero exit; the verbose reporter's per-test `FAIL` marker;
+the selected filter's own text in the output; and no collection-error signature.
+
+```
+node scripts/e4/r97-mutation-check.mjs --out .ci/r97-a7-final/mutation-report.json
+  r101-mutation: 10/10 mutation(s) CAUGHT by their tests (T6 5/5, A7 5/5), working tree RESTORED
+  MUTATION_EXIT=0
+```
+
+| Mutation | Round | Target | Caught by | exit | tree |
+| --- | --- | --- | --- | --- | --- |
+| `same-build-for-both-arms` | T6 | `r97-plan.ts` | `r97-plan.test.ts` | 1 | restored |
+| `skip-verifier` | T6 | `r97-arm-worker.mjs` | `r97-arm-worker-contract.test.ts` | 1 | restored |
+| `fixed-request-placeholder` | T6 | `r97-arm-exec.mjs` | `r97-offline-seam.test.ts` | 1 | restored |
+| `bypass-budget` | T6 | `r97-budget-ledger.ts` | `r97-budget-ledger.test.ts` | 1 | restored |
+| `resume-loses-history` | T6 | `r97-campaign-driver.mjs` | `r97-driver-closed-loop.test.ts` | 1 | restored |
+| `a1-skip-generator-finally-settlement` | A7 | `r97-budget-channel.ts` | `r97-arm-worker-contract.test.ts` | 1 | restored |
+| `a2-deleted-root-can-be-reclaimed` | A7 | `r97-budget-ledger.ts` | `r97-campaign-lifecycle.test.ts` | 1 | restored |
+| `a3-formal-clock-reverts-to-plan-snapshot` | A7 | `r97-campaign-driver.mjs` | `r97-driver-closed-loop.test.ts` | 1 | restored |
+| `a5-verdict-overwrite-restored` | A7 | `r97-arm-worker.mjs` | `r97-arm-worker-contract.test.ts` | 1 | restored |
+| `a6-running-unit-cancellation-disconnected` | A7 | `r97-campaign-driver.mjs` | `r97-driver-closed-loop.test.ts` | 1 | restored |
+
+Every entry records `failedTestNamed: true`, and the gate now also snapshots the whole
+tracked tree with `git status --porcelain` before the first mutation and compares it after
+the last — `treeRestored: true`, `treeDiff: null`. That is the plan's "结束校验工作树恢复"
+made checkable rather than asserted, and it fails closed (with the reason distinguishing
+"git could not answer" from "the tree changed") if either snapshot is unavailable.
+
+The earlier standalone probe of `a3-formal-clock-reverts-to-plan-snapshot` produced real
+assertion evidence rather than an infrastructure exit — the mutation turned
+`"code": "AUTHORIZATION_EXPIRED"` into `"authorizedToExecute": true, "code": null`, and the
+test failed on exactly that.
+
+### 9.6 Typecheck, docs, and the full suite
+
+| Command | Result |
+| --- | --- |
+| `pnpm typecheck` | **exit 0** (`TYPECHECK_EXIT=0`), re-run after the fix in §9.7 |
+| `pnpm docs:verify` | **exit 0**, `ALL CHECKS PASS` |
+| `pnpm test` | **6 failed / 6845 passed / 3 skipped (6854)**, 3 files — see §9.7 |
+
+### 9.7 Three real findings, and one of them was mine
+
+This pass found three defects. Two were in the round's own infrastructure; the third was
+introduced by this pass and is fixed.
+
+**(a) The mutation gate must never run concurrently with the suite.** The first full
+closed loop failed its suite phase with `528/531`, three failures, all in
+`r97-driver-closed-loop.test.ts` and `r97-execution-state-ownership.test.ts`. The cause was
+not the tests: a single-mutation probe was running at the same time, and the gate mutates
+production **source** and runs `tsc -b`, which rewrites `packages/evaluation/dist` **while
+the suite is importing it**. The driver tests observed a driver build that changed
+mid-run and correctly refused with an empty inventory and 0 calls. Both tests pass when run
+alone (the driver file alone: **76/76**, 240s). The gate's own header already warned about
+this; the warning is now load-bearing, and every run in §9.2–§9.6 was executed with nothing
+else building.
+
+**(b) A fixture shared a machine-global namespace, and A2 made that observable.** The third
+failure was
+`r97-execution-state-ownership.test.ts > REFUSES to treat a deleted state file as 'nothing has run'`,
+refusing with `CAMPAIGN_STATE_LOST` and listing 60+ deleted temp directories. **The refusal
+is correct** — it is exactly the behaviour A2/F2 requires ("同批准拒绝；没有新调用"). The
+defect was the fixture: that file used ONE fixed `planDigest` for every test, so every
+campaign it opened claimed the same machine-global `campaignId`, and once A2 made a spent
+approval's claim durable, the second test was refused with the first test's deleted temp
+directory as the "lost" root. Reproduced in isolation, and confirmed by pointing the
+anchor at a fresh directory (the file then passed **20/20**). Fixed by redirecting the
+anchor per test, exactly as its six sibling suites already do.
+
+A structural guard now prevents the whole class: a new assertion scans `SUITE_FILES` for
+files that open a campaign and requires each to isolate the anchor. Its first version was
+itself wrong — it looked only for the exported constant `R97_CAMPAIGN_CLAIMS_DIR_ENV` and
+so flagged `r97-arm-worker-contract.test.ts` and `r97-campaign-validator-cli.test.ts`,
+which isolate correctly using the variable's literal name `"R97_CAMPAIGN_CLAIMS_DIR"`. Both
+were verified safe (47/47 and 17/17, the latter twice consecutively); the predicate now
+requires an actual assignment to `process.env` under **either** spelling, which keeps the
+audit honest in both directions — a file that merely mentions the name in a comment is
+still an offender.
+
+**(c) This pass introduced two silent catches, and the P14-6 gate caught them.** The
+`pnpm test` run in §9.6 reported `no-silent-catch.test.ts` failing on two
+`.catch(() => {})` callbacks in the claim-lock takeover path I added to
+`r97-budget-ledger.ts`. That gate is right: `packages/security/src/no-silent-catch.test.ts`
+forbids fire-and-forget swallows in production source. Both now report through the
+`[degraded]` stderr channel the sibling cleanup code in the same file already uses, and the
+scan is **4/4 green**.
+
+The remaining **6 failures are the pre-existing clean-tree guards** §4.2 already
+characterised and proved (a detached clean worktree passes them; a single unrelated
+untracked file reproduces them). They are re-confirmed here rather than re-litigated: the
+R55 guard names its own cause and lists **35** dirty entries, every one of which is this
+round's work or the user's pre-existing ` D plan(20260920-053219).md`. Clearing them
+requires that pre-existing deletion to be resolved, which this round does not do.
+
+The other five were re-run at this head and each now has its own recorded cause, so the
+shared-cause claim is evidence per test and not an inference from the first one:
+
+| failing test | file | recorded cause |
+| --- | --- | --- |
+| `benchmark -> V3 -> evaluator -> promote -> createHarness -> applied` | `e4-09-production-e2e.test.ts` | `exitCode 1`; CLI printed "a promotion-eligible run requires a CLEAN, PROVABLE source tree …" (diagnostic bundle `e4-09-main`, `extra.benchmarkCli`) |
+| three `E4-09 adversarial E2E` tests | `e4-09-production-e2e.test.ts` | same verbatim first line, three `e4-09-adv` bundles, `exitCode 1` |
+| `E4-R41 promotion-grade host-probe fail-closed` | `benchmark-command.test.ts` | refused before any provider call: "source tree is not provably clean" + "the confirmed plan was made against a dirty tree" |
+| `E4-R55` production benchmark wiring | `e4-r55-failure-wiring.test.ts` | the guard's own message, naming all 35 dirty entries |
+
+Four of these were not read from stdout but from the E4-R40 diagnostic bundles the failing
+tests persist under `%TEMP%\harness-agent-e4-09-diagnostics`, which is exactly the
+attribution the recorder exists to provide — the CLI's `exitCode` and first output lines
+are stored verbatim, so the cause is the artifact's claim, not a guess. `git stash` is
+forbidden by this plan's hard rules, so the clean-tree precondition is established by
+reading these recorded causes, never by clearing the tree to make the red disappear.
+
+### 9.8 CI status: `NOT_RUN`, and the exact missing action
+
+Plan §A7 怎么做 8 asks for a real run containing the final code, test and workflow changes,
+on both platforms, with run ID, head SHA, attempt, artifact names and step status. **That
+run does not exist for this head, and this section does not pretend otherwise.**
+
+- The repository remote is `https://github.com/ki11a-Conton/harness-agent.git`; `HEAD` is
+  `735c22a83e8718a33248167b0086822ca7577461`, which is also `origin/main`'s tip.
+- This round's work is **uncommitted** — `git status --porcelain` reports **30** entries:
+  25 modified, 4 untracked, 1 deletion. No commit and no push was made.
+- Credentials that would allow a push **are** present on this machine (`git push --dry-run`
+  to a throwaway ref succeeded), so the missing action is not authentication; it is the
+  **decision to publish**. Committing and pushing to `main` is an external, user-visible
+  action outside this task's scope, so it was not taken.
+- Consequently the last runs cited in §8.7/§8.11 (`35693782588` at `7378aca`,
+  `35710940810` at `ff9ced5`, `35712775164` at `3630256`) describe **earlier** heads and do
+  **not** cover this round's code. They are historical evidence, not evidence for §9.
+
+The workflow itself is ready: `.github/workflows/ci.yml` runs the dedicated
+`r97-r98-closed-loop` job on `windows-latest` **and** `ubuntu-latest`, its step is named
+"Prove the suite CATCHES the ten anti-cheat mutations (T6's five + A7's five)", and
+`continue-on-error` is not set. What has never happened is a runner executing *this* head.
+Per plan §A7's own instruction — "如无远端推送/运行权限，先完成本地可审查差异和离线证据，把 CI
+状态标为 `NOT_RUN` 并说明缺的是哪一个动作；不得把本地推测写成两平台成功" — the status is
+`NOT_RUN` with the missing action named: **commit the working tree and push, then read the
+resulting two-platform run.**
+
+One caveat §8.11 drew is deliberately **not** reused here. This pass does not argue that
+the head is covered because a later commit is documentation-only; the new code changed
+executable paths, so no earlier run transfers to it. The regression is closed by running
+CI, not by inference.
+
+### 9.8b A4's formal-path wiring — CLOSED in this round
+
+Plan §A4 做什么 3 asks that the approved build identity cover the real execution
+dependencies **on the formal path**, not only where a caller asks for it. It was recorded
+here as **PARTIAL** at the end of §9.8, and it has since been **fixed and re-measured**.
+The record below keeps both halves, because the defect and its removal are the evidence.
+
+**What was wrong (measured).** The arm identity had no home for a build digest:
+`R92_ARM_FIELDS = ["sha", "executionPlanDigest", "buildMode"]` is a strict allow-list, and a
+field not on it is dropped. A4's digest computation therefore only ran where a caller passed
+the opt-in `approvedBuildDigest`. Measured by `probe-optin.mjs` (`.ci/team-verify/a4/probe-optin.log`):
+
+```text
+J1_APPROVED_BUILD_DIGEST_MISMATCH  namesBuildDigest=true,  ledgerCreated=false
+J3_OMITTED                         refusalFired=false
+J4_EMPTY_STRING                    refusalFired=false
+J5_WHITESPACE                      refusalFired=false
+```
+
+The root cause is one line of `.gitignore`: **`dist/` is gitignored** (`.gitignore:2`), so a
+rebuilt `packages/core/dist/runtime/runtime.js` moves neither the working tree's status nor
+`treeFingerprint`, and therefore cannot move the arm's `executionPlanDigest` either. The
+sha and the plan digest both stay byte-identical while the code that runs a case changes.
+
+**The fix.** `buildDigest` is now a field of the arm identity, in the same layering the
+codebase already uses for `driverBuildDigest`:
+
+| Layer | Contract |
+| --- | --- |
+| `R92ArmIdentity` | `buildDigest?: string` — validated when PRESENT (empty/whitespace/garbage refused, never "no opinion"); omitted is left to the R97 layer, because the R92 development-mechanism plan names two historical commits that are not checked out here and so has no build to hash. |
+| `R92_ARM_FIELDS` | `buildDigest` added, so the closed envelope schema has a home for it. |
+| `r92AuthorizationGate` | compares it when bound; a drift — or a `null` observation — is `ARM_BUILD_DRIFT`. |
+| `r97ReadinessIssues` | **mandatory** for the formal campaign: an arm with no 64-hex build digest is `ARM_BUILD_UNBOUND` and the plan cannot finalize. |
+| `checkExecutionObservationV1` | `armBuildDigests` per arm; a moved build is `EXEC_OBS_ARM_BUILD_DRIFT`, an unbound approval is `EXEC_OBS_ARM_BUILD_UNBOUND`. |
+| `r97-campaign-driver.mjs` | `observeArms` re-derives each arm's digest from its OWN checkout via the shared `computeArmBuildDigestV1`, and the driver now forwards `approvedBuildDigest` per arm to every unit. |
+
+Plan §A4 怎么做 5 ("让计划生成、执行前复核、worker record 和 evidence 使用同一身份合同") is
+satisfied structurally: one exported `computeArmBuildDigestV1` over one declared entry list
+(`R97_ARM_BUILD_ENTRIES`) is what the plan, the driver's re-observation and the worker all
+call, so they cannot drift into describing different builds.
+
+**Re-measured evidence.**
+
+- RED (checks disabled, watched failing for the right reason): 5 of the 7 new formal-path
+  tests fail — `1`, `1b`, `3`, `4`, `5` — while the two positive/structural ones (`2`, `6`)
+  correctly stay green.
+- GREEN: the same 7 pass; the real end-to-end plan now binds **distinct** per-arm digests and
+  finalizes with 0 readiness issues:
+
+```text
+status                  = FINALIZED_AUTHORIZATION_PLAN
+baseline.sha            = e9776ba66190ea63b1bacb685c91aa900b6935e7
+baseline.buildDigest    = cb79975d17817de76d5c2f2a7098b48c2cd4f6f9005dc3b96d49caa137b571f8
+candidate.sha           = a20373743b56de6a3a110fecdd254737ece71afa
+candidate.buildDigest   = 74cb2d8a6d502a232fc461bb6fb817a345d797b36a103aac04fcf6d5d9f0aae5
+distinct                = True
+readinessIssues         = 0
+```
+
+- The formal-path binding is itself mutation-tested: `a4-formal-path-build-binding-removed`
+  (removing the driver's `approvedBuildDigest` forwarding) is **CAUGHT** by the new
+  `A4: the driver forwards the APPROVED build digest to every unit` test, taking the gate to
+  **11/11 CAUGHT (T6 5/5, A7 6/6)**.
+
+So plan §A4's 8 items now stand at **8/8 implemented and enforced**, item 3 included.
+
+### 9.8c A4 item 8 — the schema/version move (the one item §9.8b left open)
+
+§9.8b closed item 3 but recorded item 8 as "schema 版本字符串未变". That was a real gap,
+and it was found by re-reading the plan's own wording:
+
+> 怎么做 8: "更新 schema/版本和拒绝信息；旧材料缺新身份字段应明确拒绝重新生成，不能静默补字段后
+> 继续使用旧授权."
+
+**Why leaving the label at v1 was a defect, not a stylistic choice.** `R92_ARM_FIELDS` is a
+CLOSED allow-list; A4 added `buildDigest` to it, which changed the SHAPE of an accepted
+envelope. But `buildDigest` is legitimately OPTIONAL at the R92 layer (the R92
+development-mechanism plan names two historical commits that are not checked out here, so
+there is no build to hash). The consequence: an envelope written under the OLD shape that
+simply omits the field reached the gate with **no build comparison at all**, and nothing in
+the material said it predated the contract. The version label is the only mechanism that
+turns "this is old material" into a checkable fact.
+
+**RED, watched failing for the right reason.**
+
+```
+FAIL  r92-authorization.test.ts > E4-R92 static envelope validation
+      > refuses an envelope written under the SUPERSEDED schema label, naming regeneration
+AssertionError: expected '' to contain 'schemaVersion'
+```
+
+The empty string is the whole point: `e4-r92-authorization-v1` **was** the current label, so
+`r92AuthorizationIssuesV1` reported no issue for old material at all.
+
+**The fix.**
+
+| Constant | Before | After |
+| --- | --- | --- |
+| `R92_AUTHORIZATION_SCHEMA` | `e4-r92-authorization-v1` | `e4-r92-authorization-v2` |
+| `R92_AUTHORIZATION_SCHEMA_SUPERSEDED` | — | `["e4-r92-authorization-v1"]` |
+| `R97_PLAN_SCHEMA` | `e4-r97-finalized-authorization-plan-v1` | `…-v2` |
+| `R97_DRAFT_SCHEMA` | `e4-r97-draft-authorization-plan-v1` | `…-v2` |
+
+A superseded label is now refused with the remedy named — "must be REGENERATED as
+`e4-r92-authorization-v2`, never patched in place" — rather than a generic mismatch that
+reads like a typo. Nothing is silently upgraded.
+
+**Blast radius, checked rather than assumed.** `git grep` for all three v1 literals across
+the whole repository (excluding `node_modules`/`.git`) returns only their two definition
+sites; no committed artifact carries a v1 label, so no issued approval is invalidated by
+this move. Every test references the constants, not the literals, so the bump is contained.
+
+**GREEN.** `r97-plan` + `r92-authorization` + `r95-authorization-strictness` → **170 passed
+(170)**, EXIT 0; `pnpm typecheck` → EXIT 0. Two regression guards (one per layer) assert the
+labels are no longer the v1 literals, so a revert cannot silently restore the gap.
+
+With item 8 done, plan §A4's 8 items stand at **8/8 implemented and enforced** — this time
+including the version contract, which is what §9.8b's "8/8" claim had omitted.
+
+### 9.8c The A1 worker-level settlement gap — CLOSED, and the gate defect found while closing it
+
+§9.9 recorded one residual gap: "A1 的 worker 级 settlement-failure 分支未被测试覆盖" — the
+channel proved that a settlement write could fail, but nothing proved what the **worker** does
+when it does. This round closed it, and closing it exposed a second, larger defect in the gate
+that was supposed to be watching.
+
+**Step 1 — confirm what `read()` does after the ledger file is deleted.** The plan's first
+action was to establish this empirically before designing an injection. Measured on win32 /
+node v24.18.1 against the built `packages/evaluation/dist` (`probe-read-after-delete.mjs`,
+log `probe-read-after-delete.log`), and independently reproduced by a second probe:
+
+| State | Observed |
+| --- | --- |
+| never established, absent, `auto` | open SUCCEEDS, `mode="first-run"`, 0 entries, file IS created |
+| never established, absent, `resume` | `BUDGET_STATE_MISSING: mode "resume" requires an existing budget ledger…`; nothing created |
+| ESTABLISHED, then `rm` | `BUDGET_STATE_MISSING` from **all seven** entry points — `read`, `view`, `reserve`, `commit`, `abandon`, `markUnknown`, **and `recover`**; ledger NOT re-created; **no stale lock** |
+| path replaced by a DIRECTORY | established: `BUDGET_STATE_CORRUPT: EISDIR…` |
+| file replaced by invalid JSON | `BUDGET_STATE_CORRUPT: … not valid JSON — refusing to treat an unreadable budget as an empty one` |
+
+The settle is a read-modify-write (`withLedger` calls `read()` INSIDE the lock before
+`mutate`), so deleting **only the file** is sufficient. `rm` is cross-platform while `chmod` is
+not — the same reasoning `r97-budget-write-fault.test.ts` already records for rejecting
+`chmod`. `recover()` refusing matters: a lost ledger cannot be reconciled automatically either,
+so the reservation stays outstanding until a human decides.
+
+**Step 2 — the worker-level test.** A new case in `r97-arm-worker-contract.test.ts` drives the
+REAL `runArmUnit`. The ledger file is deleted from INSIDE the synthetic arm's CLI, after the
+first provider event was read and before `break` ends the generator — so the reservation IS
+adopted and the failure lands on the SETTLEMENT write. Deleting earlier (`beforeStageCopy`)
+would make the child refuse at OPEN, with no reservation and no dispatch: a different branch.
+
+**Step 3 — the finding. Repairing the tree revealed three LIVE defects.** Running the gate for
+the first time produced `9/12 CAUGHT`. Three mutations were **already applied in the working
+tree** before the gate ran:
+
+| Mutation | File | Defect left live |
+| --- | --- | --- |
+| `a2-deleted-root-can-be-reclaimed` | `r97-budget-ledger.ts` | F2 — one `rm -rf` of a spent root re-grants the approval |
+| `a3-formal-clock-reverts-to-plan-snapshot` | `r97-campaign-driver.mjs` | F3 — an expired approval is judged against its own snapshot |
+| `a5-verdict-overwrite-restored` | `r97-arm-worker.mjs` | F5 — a synthetic PASS overwrites an identity refusal |
+
+Not cosmetic: with the `a2` leftover in place,
+`r97-campaign-lifecycle.test.ts -t "REFUSES a new root after the root that SPENT the authorization was deleted"`
+failed with `AssertionError: deleting the spent root must NOT re-grant the approval: expected null not to be null`
+— i.e. **A2's fix was reverted in the tree**. After repair: EXIT 0, `1 passed | 22 skipped`.
+
+**Why both existing guards missed it.** The gate's restoration proof is *self-referential*: it
+reads the file when it starts and compares the file against that same text after writing it
+back, so a target that was ALREADY mutated has `original` == the mutated text, the restore
+"succeeds", the hashes agree, and the run reports `restored: true`. The whole-run `treeRestored`
+check cannot see it either — it compares `git status --porcelain`, which carries only
+path+status, and the repo is deliberately dirty, so a content change inside a file already
+listed as ` M` yields a byte-identical porcelain line. `treeRestored: true` was reported in the
+same run that left three defects live. A pre-existing mutation was also **mislabelled**: it
+surfaced as "the anchor appears 0 time(s) … ambiguous or a no-op", which reads like an upstream
+rename and was never repaired, so it persisted into every later run.
+
+**The fix.** `runOne` now counts both anchors BEFORE writing anything, and refuses when the
+fixed text is ABSENT while the mutated text is PRESENT, reporting `preexistingMutation: true`
+and a reason that names the live defect. **Both halves are required**, and the reason is
+measured rather than assumed: `a2`'s `replace` drops the second line of a two-line anchor, so it
+is a strict SUBSTRING of its `find` — on a healthy tree that anchor counts `find=1, replace=1`,
+so a `replace`-only check would false-positive and wedge the gate. (Measured over the gate's own
+list, `a2` is the only such entry; the condition is stated for the general shape. This
+correction comes from the independent verifier, which refuted an earlier draft that had named
+`bypass-budget` as a second case — it is not one.) The decision is an exported pure function
+(`isPreexistingMutation` / `preexistingMutationReason`) pinned in both directions by four new
+tests (`X7`, 26 passing in that file).
+
+**Measured, after the repair:**
+
+| Command | Result |
+| --- | --- |
+| `node scripts/e4/r97-mutation-check.mjs` | **EXIT 0 — `12/12 CAUGHT (T6 5/5, A7 7/7)`, `treeRestored: true`** |
+| sha256 of all 11 target files, before vs after the run | **all identical** (content, not porcelain) |
+| `diagnose-left-mutated.mjs` | `0 of 12 target(s) left in their MUTATED state` |
+| the new guard, healthy tree (`--only a2`, `--only bypass-budget`) | still CAUGHT, EXIT 0 — no false positive |
+| the new guard, deliberately re-mutated `a2` | REFUSES with the new reason, EXIT 1; file restored byte-identically (`300437d8…` before and after) |
+| `r97-arm-worker-contract.test.ts` | EXIT 0 — **48 passed (48)** |
+| `r97-budget-ledger.test.ts` + `r97-budget-write-fault.test.ts` | EXIT 0 — **60 passed (60)** |
+| `r97-mutation-check.test.ts` | EXIT 0 — **26 passed (26)** |
+| `pnpm typecheck` | EXIT 0 |
+
+The `bypass-budget` MISS in the first run was collateral of the broken tree; it is CAUGHT on the
+repaired tree, both alone and in the full run.
+
+### 9.9 A7 in the plan's required delivery format
+
+```text
+任务：A7 / 把反例接入双平台闭环，更新结论后结束本轮
+状态：PARTIAL — 离线验收全部 DONE；两平台 CI 为 NOT_RUN（本轮未推送，见 §9.8）
+审查基线：735c22a83e8718a33248167b0086822ca7577461
+实施 HEAD / 差异范围：未提交工作树（25 modified + 4 untracked，见 §9.8）；
+            差异范围 = packages/evaluation/src/{r97-*,r98-*}、scripts/e4/r97-*、
+            .github/workflows/ci.yml、docs/E4-R99-R101-report.md
+
+问题与影响：
+- A1–A6 的反例此前只存在于测试文件，未接入专用必跑 suite 与行为矩阵；
+  M1–M9 没有"一个无关测试让多行自动通过"的检查；mutation gate 只覆盖 T6 的五个变异。
+
+修改：
+- r97-closed-loop.test.ts 新增排除项审计（解析 package.json 的 --exclude glob），
+  并新增 claim anchor 隔离守卫；SUITE_FILES 覆盖 driver 专用文件。
+- r97-acceptance-matrix.mjs 新增 PLAN_BEHAVIOR_MATRIX（M1–M9 逐字取自计划）与
+  planRows 反向索引；evaluateMatrix 对未覆盖/未满足/未知 M 行均失败。
+- r97-mutation-check.mjs 扩到十一个变异（T6 五个 + A1/A2/A3/A5/A6/A4 各一），
+  导出纯函数 classifyCatch 定义"捕获"的四条必要条件，并快照/比对整棵工作树。
+- ci.yml 的 mutation step 更名并保留 continue-on-error 未设置。
+- A4 形式路径（本轮补做，见 §9.8b）：R92ArmIdentity 增加 buildDigest 字段并进入
+  R92_ARM_FIELDS；R97 层 ARM_BUILD_UNBOUND 强制绑定；执行期 EXEC_OBS_ARM_BUILD_DRIFT
+  拒绝；driver 按臂转发 approvedBuildDigest。schema 版本未变，但**批准材料格式已变**
+  （新增必填字段），旧材料必须重新生成 —— 这正是计划 §A4 做什么 3 要求的处理。
+
+反例：
+- 输入/注入点：见 §9.5 的十一行表（每条变异的目标文件与捕获测试）。
+- 实际调用计数：logicalCalls 42，providerCalls 0，外部请求 0。
+- 持久状态：grant 320 / committed 42 / remaining 278；16 terminal records。
+- 修复前 RED：① mutation 并发运行时 suite 528/531，driver 测试收到空 inventory；
+  ② r97-execution-state-ownership 第二个测试被 CAMPAIGN_STATE_LOST 拒绝（A2 生效后的
+  fixture 泄漏）；③ no-silent-catch 命中我新增的两个 .catch(() => {})。
+- 修复后 GREEN：同一批断言全绿——540/540、11/11 CAUGHT、no-silent-catch 4/4。
+
+验证：
+- 实际运行的命令、退出码、关键观测值：见 §9.2、§9.5、§9.6。
+- 外部模型请求数：0。
+- 协议 fixture 与真实路径的区分：M1/M3/M4/M5/M6/M7/M9 由协议 fixture 与真实 gate/main
+  驱动；M8 与 acceptance 阶段运行两个真实历史 arm 的构建、工具与 verifier（§9.2）。
+- CI run URL、head、attempt、两平台 job 状态：NOT_RUN（§9.8）。
+
+剩余问题：
+- 两平台 CI 未运行：缺的动作是"提交并推送本轮工作树，然后读取新产生的双平台 run"。
+- A4 的形式路径绑定已于本轮完成（§9.8b）：R92ArmIdentity.buildDigest 进入
+  R92_ARM_FIELDS，R97 层 ARM_BUILD_UNBOUND 强制、执行期 EXEC_OBS_ARM_BUILD_DRIFT
+  拒绝、driver 按臂转发。计划 §A4 做什么 3 由 PARTIAL 转为 DONE。
+- A3 的 baseline-RED 未被独立验证（verify-a3 的 clock.log 被 A4 的在飞守卫打断）。
+- A1 的 worker 级 settlement-failure 分支未被测试覆盖。
+  **已由 §9.8c 关闭**：新增真实 runArmUnit 的端到端用例 + 第十二个变异
+  `a1-worker-settlement-failure-refunded`，门在修复后的树上实测 12/12 CAUGHT、EXIT 0。
+  同轮还发现并修复了三处**遗留变异**（a2/a3/a5 使 F2/F3/F5 在树中复活）以及门的
+  自指恢复证明缺陷（详见 §9.8c）。
+- 付费双版本实验仍为 PAID_NOT_RUN；离线 provider 是 scripted，不支持任何模型能力结论。
+- 6 项既有 clean-tree 守卫在本地为红，逐一确认了原因（§9.7 表）：它们要求一棵已提交的
+  干净树，而本轮工作树有 25 modified + 4 untracked + 1 个用户既有的 plan 删除。转绿需要
+  提交本轮工作树（含用户既有的那处删除），这不是本轮可做的动作。
+- 不新增与当前反例无关的大型重构计划；本轮基础设施修改到此停止（计划 §3）。
+```
+
+### 9.10 A1–A6 in the plan's required delivery format
+
+Plan §2 requires the same eight-field block for **every** task, not only for the closing one.
+A1–A6's blocks follow. Their 状态 is `DONE` for the offline acceptance they were given; none
+of them claims a two-platform CI run, and each names its own residual gap rather than
+inheriting A7's.
+
+```text
+任务：A1 / 流提前关闭或异常后不得把已进入的调用当成免费调用
+状态：DONE（离线验收全绿）
+审查基线：735c22a83e8718a33248167b0086822ca7577461
+实施 HEAD / 差异范围：未提交工作树；packages/evaluation/src/r97-budget-channel.ts（+ 其测试）、
+            scripts/e4/r97-arm-exec.mjs
+
+问题与影响：
+- createLedgerBudgetedProvider 只在 yield 循环正常结束后结算。消费者 break/return 或
+  dispatch 之后抛异常时预留保持未结算，worker 又把 budgetStats===null 读成"从未 dispatch"，
+  于是 ledger.abandon() 把一次真的进入了内层 provider 的调用退成免费。
+
+修改：
+- generator 的 finally 成为唯一结算点：无论 return()、抛异常还是正常耗尽，都已 dispatch 的
+  预留都会写终态；只有从未进入内层 provider 的失败才归还预留。
+- 结算写盘失败不再被当成成功（BUDGET_OUTCOME_UNKNOWN），并保留原错误为 AggregateError。
+- schema / 批准摘要 / 恢复兼容性：无变化。
+
+反例：
+- 输入/注入点：grant=1，消费者在流中途 break 后让 CLI 抛异常；另有 iterator.return /
+  consumer throw / provider throw / 无终态流 / cancel 五种。
+- 实际调用计数：innerCalls=1（未被 abandon），remaining=0，第二次 reserve 被拒。
+- 修复前 RED（.ci/team-verify/red-a1-baseline.log）：Tests 6 failed | 2 passed | 31 skipped；
+  断言 stats.settlementFailures 与 lastSettlementError 未通过。
+- 修复后 GREEN：packages/evaluation/src/r97-budget-channel.test.ts +
+  r97-budget-write-fault.test.ts + r97-arm-worker-contract.test.ts 实测
+  3 files passed (3) / 68 passed (68)，EXIT 0。
+- 探针（.ci/team-verify/probe-a1.log）：P5 写盘失败 → rejected=true,
+  BUDGET_OUTCOME_UNKNOWN, settlementFailures=1, entries=["reserved"]；P6 主体抛异常且结算也失败
+  → AggregateError 同时保留两个原因。6/6 passed。
+
+验证：
+- 命令与退出码：pnpm typecheck → 0；上述 vitest 文件 → 0。
+- 外部模型请求数：0（provider 全部来自本仓库 fixture）。
+- 协议 fixture 与真实路径：结算语义由协议 fixture 覆盖；W11 由真实 arm CLI 子进程驱动。
+- CI run URL / head / attempt / 两平台 job 状态：NOT_RUN（§9.8）。
+
+剩余问题：
+- worker 级的 settlement-write-failure 分支未被端到端覆盖（只在 channel 层覆盖）。
+- 两平台 CI 未运行，缺的动作同 §9.8。
+```
+
+```text
+任务：A2 / 删除 campaign 输出后同一批准不得重新授额
+状态：DONE（离线验收全绿）
+审查基线：735c22a83e8718a33248167b0086822ca7577461
+实施 HEAD / 差异范围：未提交工作树；packages/evaluation/src/r97-budget-ledger.ts、
+            r97-campaign-lifecycle.ts（+ 其测试）、r97-execution-state-ownership.test.ts
+
+问题与影响：
+- openR97Campaign 把"claim 还在、但目录已不存在"当作垃圾。删除 campaign 根目录（保留
+  claim anchor）后，同一 planDigest + grant 会以 first-run 重新开一个新根并铸出第二份额度。
+
+修改：
+- 持久化的"该批准已建立过 campaign"成为权威事实：根目录缺失是 STATE LOST
+  （CAMPAIGN_STATE_LOST），不是 first-run。
+- first-run 的准入放进既有 claim lock；claim 记录新增 establishedDirs，并把过期锁的接管
+  改成原子 rename 到墓地 + 重新读取校验（避免两个进程都 rm+open(wx) 时输家删掉赢家的锁）。
+- schema / 批准摘要 / 恢复兼容性：新增字段，未改变既有格式；旧 header 仍可读。
+
+反例：
+- 输入/注入点：隔离 claims 目录 + campaign A，grant=1，一次 reserve/commit，删除 A，保留
+  claims，再以同一 planDigest 开 B。
+- 实际调用计数：provider 构造与调用均为 0；B 被 CAMPAIGN_STATE_LOST 拒绝。
+- 修复前 RED（.ci/team-verify/red-a2-baseline.log）：Tests 6 failed | 16 passed (22)。
+- 修复后 GREEN：r97-campaign-lifecycle + r97-budget-ledger + r97-driver-closed-loop 全绿
+  （上列 9 文件合计 217 passed 包含 lifecycle 与 ledger；driver 文件另在闭环 suite 内 532/532）。
+- 竞态探针（.ci/team-verify/probe-a2c.log）：两个 barrier 同步的 first-run + 一个过期锁
+  → winners=1，输家收到 BUDGET_CAMPAIGN_DIR_DUPLICATE，anchor 记录两个 claimedDirs 而
+  establishedDirs 只有一个。修复前的同一探针 winners=2。
+
+验证：
+- 命令与退出码：pnpm typecheck → 0；上述 vitest 文件 → 0。
+- 外部模型请求数：0。
+- 协议 fixture 与真实路径：删除/篡改类由协议 fixture 覆盖；并发抢占由两个真实进程驱动。
+- CI run URL / head / attempt / 两平台 job 状态：NOT_RUN（§9.8）。
+
+剩余问题：
+- 两平台 CI 未运行，缺的动作同 §9.8。
+```
+
+```text
+任务：A3 / 正式 CLI 使用当前观测、真实时钟和实际 staged 输入
+状态：DONE（离线验收全绿）；baseline-RED 未被独立复现
+审查基线：735c22a83e8718a33248167b0086822ca7577461
+实施 HEAD / 差异范围：未提交工作树；scripts/e4/r97-campaign-driver.mjs、r97-observe-arms.mjs、
+            r97-arm-worker.mjs、packages/evaluation/src/r97-plan.ts（+ 其测试）
+
+问题与影响：
+- 正式 CLI main 读取 plan.observation 并优先用其中保存的 now（observation.now ?? now）；
+  inputsDigest 为空/未知；stageCase 只检查 case.json 能解析且 suite 匹配。
+
+修改：
+- 正式 main 无条件使用可信执行时钟（测试时钟只能经显式隔离的测试入口）。
+- observeArms 重新观测两臂当前 HEAD/build/实际 case 字节/执行参数；批准的 case 指纹
+  透传给 worker；缺失指纹直接拒绝（正式路径不再退回 repo:unknown）；首次 generate 前
+  重算 staged 字节指纹；resume 也校验当前输入与既有证据。
+- schema / 批准摘要 / 恢复兼容性：新增 inputsDigest 字段。
+
+反例：
+- 输入/注入点：plan 期 observation 保留且其 now 仍在窗口内，但对当前执行时钟已过期。
+- 实际调用计数：workerUnits=0，providerRequests=0（拒绝发生在任何 worker/provider 之前）。
+- staged 字节探针（.ci/team-verify/a3/staged.log，STAGED_BYTES_VERDICT=PASS）：7 个场景全部
+  按预期拒绝——改写 request、改 fixture、copy 窗口内改动、resume 同一被改单元、无指纹
+  （ledgerExists=false，拒绝发生在 ledger 之前），且正例 accepted 时 staged==approved。
+- endpoint 哨兵探针（a3/sentinel.log，SENTINEL_VERDICT=PASS）：5 个场景，0 worker units、
+  0 provider requests、哨兵值不出现在 stdout/stderr/JSON/文件。
+
+验证：
+- 命令与退出码：pnpm typecheck → 0；r97-driver-closed-loop + r97-plan + r97-execution-identity
+  + r97-redaction → 0。
+- 外部模型请求数：0。
+- 协议 fixture 与真实路径：以上探针都驱动真实的 driver/worker 可执行文件（日志记录了
+  WORKER_SHA256 与 DRIVER_SHA256），不是对函数的直接调用。
+- CI run URL / head / attempt / 两平台 job 状态：NOT_RUN（§9.8）。
+
+剩余问题：
+- baseline-RED 未被独立复现：verify-a3 的 clock.log 在生成过期 plan 时被 A4 当时的在飞
+  守卫打断（"driver build digest cannot cover E4-R97-IDENTITY … resolves outside …"），
+  所以"修复前该场景是绿的"没有独立证据。RED 方向由 M3 矩阵行与当前测试覆盖，但未被
+  二次确认。
+- 两平台 CI 未运行，缺的动作同 §9.8。
+```
+
+```text
+任务：A4 / 把真实执行依赖纳入批准的构建身份
+状态：DONE（离线验收全绿）— 机制 DONE，正式路径绑定已于 §9.8b 补做，
+      且 item 8 的 schema/版本更新已于本轮补齐（见下方「修改」与 §9.8c）
+审查基线：735c22a83e8718a33248167b0086822ca7577461
+实施 HEAD / 差异范围：未提交工作树；packages/evaluation/src/r97-plan.ts（+ 其测试）、
+            scripts/e4/r97-arm-worker.mjs、r97-arm-exec.mjs
+
+问题与影响：
+- 批准的 arm 构建身份只覆盖少数入口文件，改动 packages/core/dist/runtime/runtime.js
+  这种真的被导入执行的模块不会改变 buildDigest；更广的执行 digest 在执行之后才算，
+  从不参与批准拒绝。
+
+修改：
+- armBuildClosure / armBuildClosurePaths 从真实的静态 ESM import 图推导清单（复用共享
+  walker），显式 schema e4-r97-execution-identity-v1，按路径排序后逐字节 hash；只 hash
+  字节，绝不使用 mtime/size；闭包在 node_modules 处停止；裸说明符按
+  R97BareSpecifierPolicy（refuse|external）处理，r97ResolveBare 返回 null 而非抛出。
+- 正式路径绑定（本轮补做，§9.8b）：R92ArmIdentity 增加 buildDigest 并进入
+  R92_ARM_FIELDS（闭合 schema 有了它的位置）；R97 层以 ARM_BUILD_UNBOUND 强制绑定，
+  执行期以 EXEC_OBS_ARM_BUILD_DRIFT / EXEC_OBS_ARM_BUILD_UNBOUND 拒绝；driver 经共享
+  computeArmBuildDigestV1 按臂重算并转发 approvedBuildDigest。
+- schema / 批准摘要 / 恢复兼容性（item 8，本轮补齐）：`R92_ARM_FIELDS` 是**闭合**
+  allow-list，A4 加入 `buildDigest` 即改变了被接受信封的**形状**。此前版本串仍停在 v1，
+  于是旧形状材料与新形状材料同名——而该字段在本层是合法可选的，所以一个省略它的旧信封
+  会直接通过 R92 gate，**根本不做任何 build 比较**。版本标签是唯一能把「这早于新合同」
+  变成可检查事实的机制，因此：
+  - `R92_AUTHORIZATION_SCHEMA` → `e4-r92-authorization-v2`；新增
+    `R92_AUTHORIZATION_SCHEMA_SUPERSEDED`，被取代的标签给出「必须 REGENERATED」的明确
+    拒绝，而不是读起来像拼错的通用版本不符。
+  - `R97_PLAN_SCHEMA` / `R97_DRAFT_SCHEMA` → `…-v2`（A4 同时改变了 plan 产物的形状：
+    `planObservation.armBuildDigests` 新增、内嵌信封升到 v2）。
+  - 升级**不会静默补字段**：旧材料被拒绝并要求重新生成，正是计划所要求的处理。
+    仓库内不存在任何已提交的 v1 产物（`git grep` 仅命中两处源码常量），故无既有批准因此失效。
+
+反例：
+- 输入/注入点：在被传递导入的 dist 子模块上做等大小、等 mtime 的内容修改。
+- 修复前 RED（.ci/team-verify/a4/probe-identity.log，RED_BASELINE_5FILE_MANIFEST）：
+  sizeSame=true, contentChanged=true, digestBefore==digestAfter，digestMoved=false。
+- 正式路径修复前 RED（.ci/team-verify/a4/probe-optin.log）：J1 namesBuildDigest=true,
+  ledgerCreated=false；但 J3_OMITTED / J4_EMPTY_STRING / J5_WHITESPACE 全部
+  refusalFired=false —— 不传 approvedBuildDigest 就没有任何拒绝。
+- 正式路径修复后 RED→GREEN：把三条新检查逐个短路后，7 个新测试中 5 个（1、1b、3、4、5）
+  按预期失败，两个正向/结构测试（2、6）保持绿色；恢复后 7/7 绿。
+- 修复后 GREEN（同日志 GREEN_CURRENT_CLOSURE）：digestMoved=true，
+  baselineDeclared=5 → currentClosureFiles=8，coversVictim=true；真实仓库闭包 350 files，
+  covers runtime/budgetChannel/lifecycle 均为 true。
+- 其他边界（probe-graph.log）：F_STAT_INDEPENDENCE sizeUnchangedAcrossEdit=true,
+  mtimeRestored=true, mtimeOnlyTouchMovedDigest=false, sameSizeContentEditMovedDigest=true；
+  G_SRC_ONLY_EDIT digestMoved=false（仅改 src 不算"执行了新源码"）；
+  E_ESCAPE_VIA_DOTDOT 与 E2_OUTSIDE_ROOT 均拒绝并指明越界路径；
+  D_LINK_REMOVED digestMoved=false, silentlySmaller=false；
+  C4_REAL_WORKSPACE_LINK 在链接移除后 digest 改变（files 7 → 6）。
+- H_DETERMINISM：同树两次、拷贝树、另一个进程另一个 cwd，四处 digest 一致。
+
+验证：
+- 命令与退出码：pnpm typecheck → 0；r97-execution-identity + r97-plan +
+  r97-driver-closed-loop → 0；r97-plan + r92-authorization + r95-authorization-strictness
+  → 170 passed (170)，EXIT 0。
+- item 8 的 RED/GREEN：先写「refuses an envelope written under the SUPERSEDED schema
+  label, naming regeneration」，RED 实测 `expected '' to contain 'schemaVersion'`
+  —— 证明旧标签当时**就是**当前标签，旧材料被当作现行合同接受；升到 v2 后 GREEN。
+  另有两条回归守卫（R92 与 R97 各一）断言标签不再是 v1 字面量，防止回退。
+- 外部模型请求数：0。
+- 协议 fixture 与真实路径：探针构造真实 checkout 与真实 dist 字节（日志含
+  A4_PROBE1..4_WORKER_SHA256），并对真实仓库跑出 350 文件的闭包。真实离线验收产出的
+  plan.json 现在绑定两臂各自的 buildDigest 且互不相同（§9.8b）。
+- 变异门：a4-formal-path-build-binding-removed（移除 driver 的 approvedBuildDigest 转发）
+  被新测试捕获，门从 10/10 升到 11/11 CAUGHT。
+- CI run URL / head / attempt / 两平台 job 状态：NOT_RUN（§9.8）。
+
+剩余问题：
+- 两平台 CI 未运行，缺的动作同 §9.8。
+- A4 的正式路径绑定已由 PARTIAL 转为 DONE（§9.8b）：R92_ARM_FIELDS 现在包含 buildDigest，
+  R97 层强制、执行期拒绝、driver 按臂转发。旧批准材料必须重新生成。
+- A4 item 8 的 schema/版本更新已补齐（本轮）：R92 与 R97 两处标签升至 v2，被取代的标签
+  给出「必须 REGENERATED」的明确拒绝。计划 §A4 做什么 8 由 PARTIAL 转为 DONE。
+```
+
+```text
+任务：A5 / 身份不符必须拒绝，不能被后续 PASS 覆盖
+状态：DONE（离线验收全绿）
+审查基线：735c22a83e8718a33248167b0086822ca7577461
+实施 HEAD / 差异范围：未提交工作树；scripts/e4/r97-arm-worker.mjs、r97-arm-exec.mjs、
+            packages/evaluation/src/r97-campaign-evidence.ts（+ 其测试）；
+            另加 scripts/e4/A5-verdict-priority.md 与 a5-drift-counterexample.mjs
+
+问题与影响：
+- runArmUnit 已发现 executionIdentity.drift 并置了 harness 判定，但后面一个独立的
+  if/else 跑 classifyReport 并无条件覆盖 verdict，于是"跑了未批准的模型"仍以
+  status=completed / failureCategory=null / verifierPassed=true 结束。
+
+修改：
+- R97_VERDICT_PRIORITY 成为判定词汇的全序（harness > budget > timeout > infrastructure >
+  provider > case_failed > passed），所有事实经 foldR97Verdict 折叠，保留更阻塞者并把
+  落败者留作"— also observed: "诊断；未识别的类别排在最阻塞处。
+- verifierPassed 只在唯一一处由最终判定派生。
+- 拒绝提前到 createClient(modelRef, config) 边界；dry run 失败 / 身份缺失也在此前结束；
+  null identity 不再等于"无漂移"；执行后才发现的漂移仍拒绝结果但保留预算花费。
+- schema / 批准摘要 / 恢复兼容性：无变化。
+
+反例：
+- 输入/注入点：协议 fixture——批准 approved-model，dry run 声明 approved-model，
+  真实 createClient 收到 unapproved-model，合成报告声称 verification_passed=true。
+- 修复前 RED（scripts/e4/A5-verdict-priority.md §1 逐字记录）：
+  {"status":"completed","failureCategory":null,"verifierPassed":true,
+   "drift":["the runtime asked for model unapproved-model but the approval names approved-model"],
+   "reportVerificationPassed":true} —— drift 非空却仍然 PASS。
+- 修复后 GREEN：同一 fixture 拒绝；r97-arm-worker-contract 的 R105 组（含 null model ref、
+  失败的 dry run、合法负例保持 case_failed、以及"要么顺序都不覆盖"的双向断言）全绿。
+- 复现命令：node scripts/e4/a5-drift-counterexample.mjs
+
+验证：
+- 命令与退出码：pnpm typecheck → 0；r97-execution-identity + r97-arm-worker-contract +
+  r97-arm-report-evidence + r97-campaign-validator-cli → 0。
+- 外部模型请求数：0。
+- 协议 fixture 与真实路径：A5 的反例按计划要求标注为 protocol fixture（合成 PASS 报告
+  是刻意注入的）；判定优先级表本身是纯函数契约测试。
+- CI run URL / head / attempt / 两平台 job 状态：NOT_RUN（§9.8）。
+
+剩余问题：
+- 两平台 CI 未运行，缺的动作同 §9.8。
+```
+
+```text
+任务：A6 / 取消、deadline、output_limit 必须终止当前实际执行及其进程树
+状态：DONE（离线验收全绿）
+审查基线：735c22a83e8718a33248167b0086822ca7577461
+实施 HEAD / 差异范围：未提交工作树；新增 scripts/e4/r97-arm-child-runner.mjs；
+            改 scripts/e4/r97-arm-worker.mjs、r97-campaign-driver.mjs（+ 其测试）
+
+问题与影响：
+- boundedStop 能杀进程，但真实 worker 是进程内跑臂（runArmCaseInProcess 直接 await
+  runBenchmarkCommand），所以 40ms 取消后单元仍在 ~412ms 后才 PASS，80ms 的单元超时
+  也在 ~421ms 后才返回；driver 从不把信号或 campaign 剩余时间转给 worker。
+
+修改：
+- driver 把 signal 与 campaignStop.remainingMs() 转给每个单元；
+  effectiveUnitDeadline(opts) = min(单元上限, campaign 剩余)，并保留触发原因
+  （cancelled | campaign_deadline | unit_cap）。
+- 真实臂执行移入子进程 scripts/e4/r97-arm-child-runner.mjs：加载指定的臂导出入口、
+  共享同一 ledger（mode:"resume"）、不安装自己的 SIGTERM 处理器，因此忽略 AbortSignal 的
+  provider/verifier/tool 及其子进程、孙进程会被真的杀掉；子进程用一行
+  __A6_RESULT__<json> 上报，被杀死时什么都不报，父进程从 STOP 归类。
+- 复用既有 boundedStop 顺序：礼貌信号 → 有界宽限（SIGKILL_GRACE_MS=2000）→ 强制进程树
+  杀死（Windows taskkill /t /f；POSIX 进程组 SIGKILL）→ await close → 恰好结算一次。
+  output_limit 走同一路径并有字节上限（ByteCap + 一次性 onLimit）。
+- 设计判断：采用计划 §A6 怎么做 4 首选的"子进程"方案，因为怎么做 5 明确拒绝会留下
+  后台工作的 Promise.race，且验收 3/4（provider/verifier/tool 挂起；停止后无孙进程写盘）
+  要求真实的进程边界。
+- schema / 批准摘要 / 恢复兼容性：无变化。
+
+反例：
+- 输入/注入点：协议 fixture 的挂起臂（dry run 或 dispatch 永不返回）；以及真实 driver
+  在单元中途取消。
+- 修复前 RED：单元在取消后仍然完成/超时后仍然越界（§A6 引用的 ~412ms / ~421ms）。
+- 修复后 GREEN：E4-R106 组——挂起的 dry run 被单元 deadline 停止且其代码不活过单元；
+  挂起的 dispatch 同样被停止且已进入的调用不被退还。
+- 修复过程中修掉四个真实缺陷（都先看到 RED）：ledgerDir 未传导致子进程读错账本；
+  ledgerHasEntries 读的是 ledger.json 而不是 budget-ledger.json，使被杀死子进程的
+  已进入调用看起来"未 dispatch"；子进程收到未解析的 campaignModelCalls 导致
+  BUDGET_STATE_MISMATCH；makeCampaignStop 的早返回分支缺 remainingMs，对没有 campaign
+  时钟的调用方抛 TypeError。
+
+验证：
+- 命令与退出码：pnpm typecheck → 0；r97-bounded-stop + r97-driver-closed-loop +
+  r97-arm-worker-contract → 0。A6 验收集实测 3 passed (3) / 147 passed (147)，EXIT 0；
+  稳定性重复 r97-bounded-stop + r97-arm-worker-contract 两次均 71 passed。
+- 外部模型请求数：0；无 Bash/WSL 依赖（Node/pnpm on Windows）。
+- 协议 fixture 与真实路径：挂起臂是协议 fixture；信号/剩余时间的转发由真实 driver
+  驱动（r97-driver-closed-loop 的 A6 两条用例）。
+- CI run URL / head / attempt / 两平台 job 状态：NOT_RUN（§9.8）。
+
+剩余问题：
+- 两平台 CI 未运行，缺的动作同 §9.8。
+```
 

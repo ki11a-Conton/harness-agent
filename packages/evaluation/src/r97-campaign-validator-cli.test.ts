@@ -18,7 +18,7 @@
  * Nothing here re-implements the store or fabricates a plausible-looking file.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -46,7 +46,33 @@ async function tempDir(): Promise<string> {
   dirs.push(d);
   return d;
 }
+
+/**
+ * ONE FRESH CLAIM ANCHOR PER TEST (plan §A2 怎么做 6: "普通测试应使用独立的 claim
+ * namespace/独立批准 ID").
+ *
+ * MEASURED, and the reason this block exists. Every test here builds a campaign
+ * under the SAME fixed `PLAN_DIGEST` in a brand-new temp directory, and the claim
+ * anchor — which is machine-global and, since finding F2, records which
+ * directories ESTABLISHED a budget — then holds the PREVIOUS test's directory.
+ * That directory has been removed by `afterEach`, so A2's refusal is correct and
+ * exact: `CAMPAIGN_STATE_LOST`, "a deleted root is a LOSS of the consumed record,
+ * not a fresh allowance".
+ *
+ * That refusal is the FIX WORKING, not a bug in it. What was wrong is the
+ * ISOLATION: two unrelated tests sharing one authorization namespace. A fresh
+ * anchor per test restores what each test actually measures — its own campaign,
+ * in its own directory — exactly as the six sibling R97 suites already do.
+ */
+let CLAIMS_DIR = "";
+beforeEach(async () => {
+  CLAIMS_DIR = await mkdtemp(join(tmpdir(), "r99-validate-claims-"));
+  process.env["R97_CAMPAIGN_CLAIMS_DIR"] = CLAIMS_DIR;
+});
 afterEach(async () => {
+  delete process.env["R97_CAMPAIGN_CLAIMS_DIR"];
+  if (CLAIMS_DIR !== "") await rm(CLAIMS_DIR, { recursive: true, force: true }).catch(() => {});
+  CLAIMS_DIR = "";
   for (const d of dirs.splice(0)) await rm(d, { recursive: true, force: true }).catch(() => {});
 });
 

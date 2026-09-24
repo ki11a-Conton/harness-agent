@@ -513,6 +513,22 @@ export async function runArmCaseInProcess(opts) {
     ...(opts.firstReservationId === undefined ? {} : { firstReservationId: opts.firstReservationId }),
   });
 
+  // ---- PUBLISH THE LIVE BUDGET STATE BEFORE THE ARM MAY RUN (A1 / F1). -----
+  //
+  // MEASURED DEFECT F1 (plan §0.2): the caller used to receive `budget: {...stats}`
+  // — a COPY built on the SUCCESSFUL return path only. An exception after a real
+  // dispatch therefore left the caller with no accounting at all, and the worker
+  // read that absence as "nothing was sent", refunding a call that really entered
+  // the provider. Handing the caller the LIVE `stats` object here, before the
+  // arm's own code is invoked, is what makes the measurement survive the throw:
+  // the object keeps being mutated by the channel as the call proceeds.
+  //
+  // The returned `budget` copy below is kept for callers that only read the
+  // successful path; it is no longer the only way to observe the spend.
+  if (opts.budgetState !== null && opts.budgetState !== undefined) {
+    opts.budgetState.stats = stats;
+  }
+
   // ---- Capture the ACTUAL requests, tool actions and MODEL REF. -----------
   //
   // `createClient(modelRef, config)` is called by the CORE RUNTIME with the
@@ -528,15 +544,61 @@ export async function runArmCaseInProcess(opts) {
   // classify the unit as `timeout` rather than inferring a failure from a
   // truncated stream or a missing report.
   let deadlineStop = null;
+  // ---- THE MODEL-REF BOUNDARY CHECK (E4-R105 / A5 怎么做 4). -----------------
+  //
+  // MEASURED DEFECT F5 (plan §A5): the identity check ran only AFTER the whole
+  // case had executed, so an unapproved model could drive the request, the tool
+  // loop and the verifier before anyone noticed — and the report classification
+  // that followed then overwrote the refusal. Plan §A5 怎么做 4 requires the check
+  // at the point the identity is actually resolved:
+  //
+  //   "createClient/generate 边界核对真实 modelRef；不匹配时不进入 inner generate."
+  //
+  // `createClient(modelRef, …)` is where the CORE RUNTIME hands over the model it
+  // ACTUALLY resolved, so it is the last place a wrong identity can still be
+  // stopped before a request exists. A mismatch (or a model ref with no
+  // `modelId` at all) records the blocking fact and THROWS, so the inner
+  // `generate` is never entered.
+  //
+  // ONLY THE MODEL IS COMPARED, and that is the offline-test contract, not an
+  // oversight: plan §A5 怎么做 4 allows the scripted substitute to differ from the
+  // approved PROVIDER ("离线 scripted 替身与批准 provider 的差异可按既有 offline-test
+  // 合同允许"), and that relationship is recorded separately below
+  // (`executingProviderId` / `providerIsOfflineSubstitute`) rather than
+  // generalised into "all provider differences are ignored".
+  let boundaryRefusal = null;
+  /**
+   * EVERY `ModelRef` the runtime handed to `createClient`, in order.
+   *
+   * The runtime builds a client per agent/turn, so the first ref is not the only
+   * one a multi-turn case produces. `executedModelRef` above records the first for
+   * the three-way comparison; this list is the fuller measurement, and it is what
+   * lets a reader see a LATER turn drifting even when the first matched.
+   */
+  const clientModelRefs = [];
   const capturing = {
     id: provider.id,
     listModels: () => provider.listModels(),
     createClient(modelRef, config) {
-      if (executedModelRef === null && modelRef !== null && typeof modelRef === "object") {
-        executedModelRef = {
-          providerId: typeof modelRef.providerId === "string" ? modelRef.providerId : null,
-          modelId: typeof modelRef.modelId === "string" ? modelRef.modelId : null,
-        };
+      const refProviderId =
+        modelRef !== null && typeof modelRef === "object" && typeof modelRef.providerId === "string" ? modelRef.providerId : null;
+      const refModelId =
+        modelRef !== null && typeof modelRef === "object" && typeof modelRef.modelId === "string" ? modelRef.modelId : null;
+      if (executedModelRef === null) {
+        executedModelRef = { providerId: refProviderId, modelId: refModelId };
+      }
+      clientModelRefs.push({ providerId: refProviderId, modelId: refModelId });
+      if (refModelId === null) {
+        // Plan §A5 怎么做 3: "不能将 null 身份解释为'没有漂移'." A ref that names no
+        // model is an UNESTABLISHED identity, which is a refusal — the old
+        // post-hoc check was `runtimeModelId !== null && …`, so a null identity
+        // skipped the comparison entirely and the unit was scored as a pass.
+        boundaryRefusal ??= `the core runtime asked for a model with NO modelId (provider ${String(refProviderId)}) — an unestablished identity is not the absence of drift`;
+        throw new Error(`E4-R105: ${boundaryRefusal}`);
+      }
+      if (refModelId !== opts.modelId) {
+        boundaryRefusal ??= `the core runtime asked for model ${refModelId} but the approval names ${opts.modelId}`;
+        throw new Error(`E4-R105: ${boundaryRefusal}`);
       }
       const c = provider.createClient(modelRef, config);
       return {
@@ -623,6 +685,7 @@ export async function runArmCaseInProcess(opts) {
       scriptShape,
       executionIdentity: null,
       execution: null,
+      identityRefusal: null,
       deadlineStop: "the unit's shared deadline expired before the arm's dry run",
     };
   }
@@ -648,11 +711,98 @@ export async function runArmCaseInProcess(opts) {
       scriptShape,
       executionIdentity: null,
       execution: null,
+      identityRefusal: null,
       deadlineStop: "the unit's shared deadline expired between the dry run and the dispatch",
     };
   }
 
-  const res = await modules.runBenchmarkCommand(args, capturing);
+  // ---- THE DRY RUN MUST HAVE SUCCEEDED, AND NAMED THE APPROVED IDENTITY -----
+  //
+  // Plan §A5 怎么做 3: "dry-run 未成功、必要身份缺失或不匹配时，在实际 dispatch 前结束；
+  // 不能将 null 身份解释为'没有漂移'." Plan §A5 怎么验收 3 lists the four shapes:
+  // "dry-run exit 非零、无法解析身份、缺必要字段、endpoint 不符".
+  //
+  // MEASURED DEFECT F5 (its second half): the old code read the dry run's LINES for
+  // an identity and never consulted its EXIT CODE. A failed dry run therefore left
+  // `declaredPlan === null`, every `declared*` comparison short-circuited on
+  // `!== null`, and the real case was dispatched anyway — under an identity nobody
+  // had confirmed. The same shape covered an unparseable plan and a plan with no
+  // `modelId`: all three were "no measurement", which the old code read as "no
+  // disagreement".
+  //
+  // These refusals happen HERE, before `runBenchmarkCommand(args, …)` below, so the
+  // request can never leave. `identityRefusal` is the structured, blocking fact;
+  // `drift` below stays the list of DIAGNOSTIC disagreements.
+  const approvedEndpointIdentity = evaluation.captureEndpointIdentity(opts.endpointBaseUrl ?? null);
+  let identityRefusal = null;
+  if (dryRun.exitCode !== 0) {
+    identityRefusal =
+      `the arm's own dry run failed (exit ${String(dryRun.exitCode)}), so the identity this unit would execute under was never established: ` +
+      `${firstUsefulLineOf(dryRun.lines)}`;
+  } else if (declaredPlan === null) {
+    identityRefusal =
+      "the arm's own dry run printed no parseable execution plan, so the identity this unit would execute under was never established — " +
+      "an unmeasured identity is a refusal, never the absence of drift";
+  } else if (declaredPlan.modelId === null) {
+    identityRefusal =
+      "the arm's own dry run named NO model, so the identity this unit would execute under was never established — " +
+      "a null identity is a refusal, never the absence of drift";
+  } else if (declaredPlan.modelId !== opts.modelId) {
+    identityRefusal = `the arm bound model ${declaredPlan.modelId} but the approval names ${opts.modelId}`;
+  } else if (declaredPlan.endpointIdentity !== null && declaredPlan.endpointIdentity !== approvedEndpointIdentity) {
+    identityRefusal = `the arm bound endpoint ${declaredPlan.endpointIdentity} but the approval names ${String(approvedEndpointIdentity)}`;
+  }
+  if (identityRefusal !== null) {
+    return {
+      execVersion: ARM_EXEC_VERSION,
+      arm: arm.label,
+      checkoutDir: modules.dir,
+      exitCode: dryRun.exitCode,
+      lines: dryRun.lines,
+      report: null,
+      reportPath: null,
+      // Provably empty: the dispatch below was never reached.
+      capturedRequests,
+      budget: { ...stats },
+      scriptShape,
+      executionIdentity: {
+        declaredProviderId: declaredPlan?.providerId ?? null,
+        declaredModelId: declaredPlan?.modelId ?? null,
+        declaredEndpointIdentity: declaredPlan?.endpointIdentity ?? null,
+        runtimeProviderId: null,
+        runtimeModelId: null,
+        approvedProviderId: opts.providerId,
+        approvedModelId: opts.modelId,
+        approvedEndpointIdentity,
+        executingProviderId: inner.id,
+        providerIsOfflineSubstitute: inner.id !== opts.providerId,
+        drift: [identityRefusal],
+      },
+      execution: null,
+      identityRefusal,
+      deadlineStop: null,
+    };
+  }
+
+  // ---- THE DISPATCH, WITH THE MODEL-REF BOUNDARY GUARDED. -------------------
+  //
+  // The `createClient` guard installed above THROWS on a model ref the approval
+  // does not name, so the arm's own call rejects here instead of running the case
+  // under a wrong identity. That throw is a REFUSAL, not an infrastructure fault:
+  // the arm did exactly what it was told and the campaign's own boundary stopped
+  // it. It is therefore captured and returned as a structured `identityRefusal`
+  // rather than propagated, so the worker's catch-all cannot reclassify it as
+  // `infrastructure` (which would send an operator to inspect a machine that is
+  // fine).
+  let res;
+  let dispatchError = null;
+  try {
+    res = await modules.runBenchmarkCommand(args, capturing);
+  } catch (err) {
+    if (boundaryRefusal === null) throw err;
+    dispatchError = err;
+    res = { exitCode: null, lines: [redactBoundaryError(err)] };
+  }
 
   // The arm's own report is the ONLY source of the verdict — never synthesised.
   // The naming mirrors the CLI's own `writeBaselineFiles`: `baseline.json` for
@@ -693,7 +843,7 @@ export async function runArmCaseInProcess(opts) {
     runtimeModelId: executedModelRef?.modelId ?? null,
     approvedProviderId: opts.providerId,
     approvedModelId: opts.modelId,
-    approvedEndpointIdentity: evaluation.captureEndpointIdentity(opts.endpointBaseUrl ?? null),
+    approvedEndpointIdentity,
     // The provider that actually ran, and whether it is provably offline.
     executingProviderId: inner.id,
     providerIsOfflineSubstitute: inner.id !== opts.providerId,
@@ -705,8 +855,31 @@ export async function runArmCaseInProcess(opts) {
   // The RUNTIME's own model ref is a second, independent measurement: the CLI's
   // plan could name the approved model while the runtime quietly asked for
   // another. A disagreement here is drift even if the plan agreed.
-  if (executionIdentity.runtimeModelId !== null && executionIdentity.runtimeModelId !== opts.modelId) {
-    executionIdentity.drift.push(`the runtime asked for model ${executionIdentity.runtimeModelId} but the approval names ${opts.modelId}`);
+  //
+  // ---- A NULL IDENTITY IS DRIFT, NOT ITS ABSENCE (E4-R105 / A5 怎么做 3). ----
+  //
+  // MEASURED DEFECT F5: this test used to be
+  // `runtimeModelId !== null && runtimeModelId !== opts.modelId`, so a runtime that
+  // handed over a ref with NO `modelId` skipped the comparison entirely — and the
+  // report classification that followed scored the unit as a pass. "We could not
+  // establish the identity" and "the identity matched" are different facts and
+  // must not share a branch.
+  //
+  // SKIPPED WHEN THE BOUNDARY GUARD ALREADY NAMED THE SAME FACT. `executedModelRef`
+  // records the FIRST ref, and the guard fires on that same first ref, so a
+  // mismatch would otherwise be reported twice — once as the boundary refusal and
+  // once as this line, in two near-identical sentences. The guard's sentence is
+  // strictly more informative (it names the `createClient` boundary), so it is the
+  // one kept. A LATER turn drifting is still caught by the guard, and there
+  // `executedModelRef` matches, so this branch would have been silent anyway.
+  if (boundaryRefusal === null) {
+    if (executionIdentity.runtimeModelId === null) {
+      executionIdentity.drift.push(
+        `the core runtime asked for a model with NO modelId (provider ${String(executionIdentity.runtimeProviderId)}) — an unestablished identity is not the absence of drift`,
+      );
+    } else if (executionIdentity.runtimeModelId !== opts.modelId) {
+      executionIdentity.drift.push(`the runtime asked for model ${executionIdentity.runtimeModelId} but the approval names ${opts.modelId}`);
+    }
   }
   if (
     executionIdentity.declaredEndpointIdentity !== null &&
@@ -715,6 +888,14 @@ export async function runArmCaseInProcess(opts) {
     executionIdentity.drift.push(
       `the arm bound endpoint ${executionIdentity.declaredEndpointIdentity} but the approval names ${String(executionIdentity.approvedEndpointIdentity)}`,
     );
+  }
+  // The boundary refusal is the FIRST blocking fact when it exists, and it is
+  // reported as such rather than only as one more drift line: it names the exact
+  // model the runtime asked for, which is the measurement plan §A5 怎么验收 2
+  // requires ("实际 modelRef 与批准不同：inner generate 次数为 0").
+  if (boundaryRefusal !== null) {
+    identityRefusal = boundaryRefusal;
+    if (!executionIdentity.drift.includes(boundaryRefusal)) executionIdentity.drift.unshift(boundaryRefusal);
   }
 
   return {
@@ -734,12 +915,39 @@ export async function runArmCaseInProcess(opts) {
     passStrength: caseDef.passStrength ?? passStrengthOf(caseDef.writeTarget),
     // The identity the request ACTUALLY carried, measured rather than assumed.
     executionIdentity,
+    // EVERY model ref the runtime handed `createClient`, in order. `executionIdentity`
+    // reports the FIRST (the one the three-way comparison is made against); this is
+    // the whole measurement, so a later turn drifting is visible rather than hidden
+    // behind a matching first ref.
+    clientModelRefs,
     // The arm's own executed bytes, hashed by content (N7 / T4 怎么做 8).
     execution: await armExecutionDigest(arm.checkoutDir),
+    // THE FIRST BLOCKING IDENTITY FACT, or `null`. `drift` above is the diagnostic
+    // list; this is the one the worker's priority table ranks, so a refusal can
+    // never be overwritten by a later successful report.
+    identityRefusal,
+    // The error the boundary guard raised, kept so a caller can see WHY the arm's
+    // own call rejected without parsing its message out of `lines`.
+    boundaryError: dispatchError === null ? null : redactBoundaryError(dispatchError),
     // Non-null when the SHARED deadline stopped this unit mid-phase (T5). The
     // worker reads it to report `timeout` rather than inferring a cause.
     deadlineStop,
   };
+}
+
+/** The first non-empty line of a child's output, bounded — used to name WHY a dry
+ *  run failed without embedding a whole stream in a verdict. */
+function firstUsefulLineOf(lines) {
+  for (const line of Array.isArray(lines) ? lines : []) {
+    const text = String(line).trim();
+    if (text !== "") return text.slice(0, 300);
+  }
+  return "no output";
+}
+
+/** A bounded, non-secret rendering of an error the boundary guard raised. */
+function redactBoundaryError(err) {
+  return String(err instanceof Error ? err.message : err).slice(0, 300);
 }
 
 /**

@@ -87,8 +87,9 @@
  */
 
 import { createHash } from "node:crypto";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { loadBenchmarkCase } from "./baseline.js";
 import { caseInputFingerprintV1 } from "./paired-execution-identity.js";
 import {
@@ -103,8 +104,21 @@ import {
   type R92GateFacts,
 } from "./r92-authorization.js";
 
-export const R97_PLAN_SCHEMA = "e4-r97-finalized-authorization-plan-v1";
-export const R97_DRAFT_SCHEMA = "e4-r97-draft-authorization-plan-v1";
+/**
+ * The plan artifact's contract version.
+ *
+ * ---- WHY THIS MOVED TO v2 (E4-R104 / plan §A4 怎么做 8) ---------------------
+ *
+ * A4 changed the SHAPE of a finalized plan in two ways: `planObservation` gained
+ * `armBuildDigests` (the arms' executed-bytes digests), and the embedded
+ * authorization envelope moved to `R92_AUTHORIZATION_SCHEMA` v2. A plan written
+ * under the old shape therefore describes a world the current reader must not
+ * treat as equivalent — most importantly, its arms may bind no executed bytes at
+ * all. The label is what makes that a checkable fact, so it moves with the
+ * contract; old material must be regenerated rather than read as current.
+ */
+export const R97_PLAN_SCHEMA = "e4-r97-finalized-authorization-plan-v2";
+export const R97_DRAFT_SCHEMA = "e4-r97-draft-authorization-plan-v2";
 
 /** The frozen R87 selection: case choice and ORDER, frozen before execution. */
 export const R97_SELECTION_PATH = "docs/evidence/e4-r87-case-selection.json";
@@ -114,106 +128,406 @@ export const R97_SELECTION_PATH = "docs/evidence/e4-r87-case-selection.json";
 export const R97_DRIVER_VERSION = "e4-r97-campaign-driver-v1";
 
 /**
- * The driver artifacts the BUILD DIGEST covers — an explicitly enumerated,
- * deliberately SMALL set, per plan §R100 怎么做:
+ * ---- E4-R104 (A4) — ONE EXECUTION-IDENTITY CONTRACT ------------------------
+ *
+ * Plan §A4 怎么做 1/2/3:
+ *
+ *   "从真实构建/导入依赖推导清单，而非按文件名猜."
+ *   "归一化 + 排序 + 字节 hash，并用显式 schema 域分隔."
+ *   "计划生成、执行前复核、worker 记录与证据使用同一个身份合同."
+ *
+ * MEASURED DEFECT F4 (release integrity). The covered set used to be a
+ * hand-written list of file names. The modules that really execute a case —
+ * `packages/core/dist/runtime/runtime.js`, `packages/evaluation/dist/
+ * r97-budget-channel.js`, `r97-campaign-lifecycle.js`, the tools/security trees —
+ * were neither named nor reachable from anything that was: `dist/index.js` is a
+ * RE-EXPORT barrel, so hashing that one file says nothing about the modules it
+ * re-exports. Rewriting any of them left the approved digest byte-identical, so an
+ * approval kept covering a build that no longer existed.
+ *
+ * The contract below walks the STATIC ESM import graph from declared REAL entry
+ * files, so the covered set is DERIVED from what the runtime will actually load
+ * rather than guessed from file names. It stays bounded — plan §R100 怎么做:
  *
  *   "支持由清晰构建产物清单界定hash范围，不搞整个工作区不可控hash."
- *   (Bound the hash by a clear build-artifact list; do not hash the whole
- *    workspace uncontrollably.)
  *
- * What is hashed, and why exactly this:
+ * — because the closure starts at named entries and STOPS at `node_modules`, whose
+ * contents are recorded as `externals` (specifier + version) and never hashed.
+ * Their provenance is the lockfile, not these bytes.
  *
- *   scripts/e4/r97-campaign-driver.mjs       — the executor itself. This is the
- *                                              file that constructs the provider,
- *                                              calls the gate and writes results.
- *   packages/evaluation/src/r97-budget-ledger.ts
- *                                            — the cross-process campaign budget
- *                                              the executor reserves from.
- *   packages/evaluation/src/r97-execution-state.ts
- *                                            — the durable case×arm×repetition
- *                                              state the executor skips/completes
- *                                              against.
- *   packages/evaluation/src/r97-plan.ts      — the plan/envelope contract itself,
- *                                              because a change to the authorized
- *                                              shape changes what execution means.
+ * FAIL CLOSED. A missing, unreadable or root-escaping artifact is a REFUSAL, never
+ * a digest over whatever happened to be present. A smaller covered set wearing the
+ * same name is exactly the property this identity exists to prevent, and a digest
+ * of "what is left" is how an approval would survive a broken checkout.
  *
- * What is deliberately NOT hashed: the whole workspace (unstable — build output,
- * node_modules, editor state, generated evidence), and any file that does not
- * participate in executing this campaign. A `driverVersion` label alone cannot
- * detect a code change; this digest can.
+ * The hash is over `path\0sha256(content)` rows in SORTED, normalized
+ * root-relative POSIX-path order, under an explicit schema label — so it depends
+ * on the bytes and on nothing else: not on walk order, not on the host path
+ * separator, not on mtime or size.
  */
-export const R97_DRIVER_ARTIFACTS: readonly string[] = [
-  "scripts/e4/r97-campaign-driver.mjs",
-  // E4-R99: the ARM WORKER is part of the executor. Once the driver routes units
-  // through it (plan §R99 怎么做: "arm worker 在对应 checkout 的构建里执行 case"),
-  // the worker's bytes decide what actually runs a case — so leaving it out would
-  // mean a rewritten worker could not invalidate an approval. That is precisely
-  // the defect `driverBuildDigest` exists to close ("版本字符串不变而执行代码变化，
-  // 应使旧计划失效"), and the artifact list is where it has to be closed.
-  "scripts/e4/r97-arm-worker.mjs",
-  // E4-R100-A (T4 怎么做 9): the offline EXECUTOR is the third script in this
-  // pipeline — it is what loads an arm's own `runBenchmarkCommand` and drives it.
-  // Its bytes decide what executes just as much as the worker's do.
-  "scripts/e4/r97-arm-exec.mjs",
-  // ---- THE ARTIFACTS THAT ACTUALLY RUN, NOT MERELY THEIR SOURCES. ----------
-  //
-  // Plan §T4 怎么做 9: "当前 driver digest 哈希了若干 src/*.ts，但运行导入的是 dist.
-  // 修为构建产物身份或可验证的 source→artifact 映射；仅更改执行 dist 也必须导致旧批准
-  // 失效."
-  //
-  // MEASURED: this list held `packages/evaluation/src/*.ts`, but EVERY process
-  // that runs a campaign imports `packages/evaluation/dist/index.js`. The approved
-  // digest therefore described files nobody loaded: a rebuilt dist — a stale
-  // source with a fresh build, a hand-patched artifact, a build from a different
-  // tree — left the approval byte-identical while the executing code had changed.
-  //
-  // The `.ts` entries are KEPT alongside the built ones. They are not redundant:
-  // the sources record the INTENT an operator reviewed, and dropping them would
-  // make a source-only change (before any rebuild) invisible. Covering both is the
-  // "可验证的 source→artifact 映射" the paragraph offers as the alternative, in its
-  // strongest form — either side moving invalidates the plan.
-  "packages/evaluation/dist/index.js",
-  "packages/evaluation/src/r97-budget-ledger.ts",
-  "packages/evaluation/src/r97-execution-state.ts",
-  "packages/evaluation/src/r97-plan.ts",
-] as const;
 
-/** The schema label used to domain-separate the driver build digest, so a digest
- *  computed here can never collide with a digest over some other artifact list. */
-export const R97_DRIVER_BUILD_SCHEMA = "e4-r97-driver-build-v1";
+/** Domain separator. A digest computed under this schema can never collide with a
+ *  digest over some other artifact list, and material carrying an older schema is
+ *  REFUSED rather than silently reinterpreted. */
+export const R97_EXECUTION_IDENTITY_SCHEMA = "e4-r97-execution-identity-v1";
+
+/** One covered file: root-relative POSIX path, byte hash and size. */
+export interface R97ExecutionIdentityFileV1 {
+  readonly path: string;
+  readonly sha256: string;
+  readonly bytes: number;
+}
+
+/** The identity of one built execution surface. */
+export interface R97ExecutionIdentityV1 {
+  readonly schema: string;
+  /** sha256 over the schema label and the sorted `path\0sha256` rows. */
+  readonly digest: string;
+  /** The DECLARED real entry files the walk started from. */
+  readonly entries: readonly string[];
+  /** The DERIVED closure, normalized to root-relative POSIX paths and sorted. */
+  readonly files: readonly R97ExecutionIdentityFileV1[];
+  /** Bare specifiers that resolved into `node_modules`. Recorded, never hashed. */
+  readonly externals: readonly string[];
+}
+
+/** Thrown whenever an identity cannot be established. Never swallowed silently. */
+export class R97ExecutionIdentityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "R97ExecutionIdentityError";
+  }
+}
+
+/** The ARM's real execution entries. `benchmark-command.js` is what the offline
+ *  executor imports to run a case, `main.js` is the CLI's own entry, and
+ *  `model/dist/index.js` is the provider implementation the case calls. Every other
+ *  executing module is reached THROUGH these. */
+export const R97_ARM_BUILD_ENTRIES: readonly string[] = [
+  "apps/cli/dist/main.js",
+  "apps/cli/dist/benchmark-command.js",
+  "packages/model/dist/index.js",
+  // E4-R104 (A4) 怎么做 2: the two BARRELS the offline executor and the verifier
+  // really load. Declaring them makes them entries in their own right rather than
+  // reachable-only-by-accident, so the closure is a SUPERSET of the three-module
+  // list instead of a set that depends on which of them happened to be imported.
+  "packages/core/dist/index.js",
+  "packages/evaluation/dist/index.js",
+];
 
 /**
- * Recompute the driver BUILD digest over `R97_DRIVER_ARTIFACTS`.
+ * The ARM's EXECUTION build digest — the sha256 of the closure derived from
+ * `R97_ARM_BUILD_ENTRIES` in `armDir`.
  *
- * Plan §R100 怎么做: "除 driverVersion 标签外记录 driver构建/源hash；版本字符串不变
- * 而执行代码变化，应使旧计划失效." A version LABEL is a human convention and does
- * not move when the code changes, so the approved digest was blind to a driver
- * rewrite. This digest is derived from the artifact BYTES.
+ * This is the ONE identity contract plan §A4 怎么做 5 requires ("让计划生成、执行前
+ * 复核、worker record 和 evidence 使用同一身份合同"). It lives here, in the shared
+ * evaluation package, so the plan builder, the execution-time re-check, the
+ * worker's own record and the campaign evidence all derive the SAME value from
+ * the SAME walker rather than each re-implementing it.
  *
- * Fail-closed: a listed artifact that cannot be read is an ERROR, never skipped.
- * Skipping would silently shrink the covered set, which is exactly the property
- * the digest exists to guarantee.
+ * `unresolvableBareSpecifier: "external"` is the ARM-side policy: an arm checkout
+ * is a build-output tree whose own modules resolve relatively and must all be
+ * present, while a bare specifier names a `node_modules` dependency the real arms
+ * carry. The real arms therefore resolve every bare specifier exactly as they do
+ * on the driver side, and the policy is inert for them; it matters only for a
+ * synthetic or archived tree, where the honest statement is "this checkout's own
+ * bytes are all covered, and here are the bare dependencies it names".
  *
- * The digest is over `path\0sha256(content)` rows in LIST ORDER, so reordering
- * the list (a contract change, not a content change) also moves the digest.
+ * THROWS when the closure cannot be established, so the caller decides whether
+ * that is a `null` identity or an error. `null` is the honest "not established",
+ * never a digest over the files that happened to be readable.
  */
-export async function computeDriverBuildDigestV1(repoRoot: string): Promise<string> {
-  const rows: string[] = [];
-  for (const rel of R97_DRIVER_ARTIFACTS) {
-    let content: Buffer;
-    try {
-      content = await readFile(join(repoRoot, rel));
-    } catch (err) {
-      throw new Error(
-        `E4-R97: driver build digest cannot cover ${rel}: ${err instanceof Error ? err.message : String(err)} — the covered artifact set must never shrink silently`,
+export function computeArmBuildDigestV1(armDir: string): string {
+  return computeExecutionIdentityV1({
+    rootDir: armDir,
+    entries: R97_ARM_BUILD_ENTRIES,
+    unresolvableBareSpecifier: "external",
+  }).digest;
+}
+
+/** The DRIVER's real execution entries: the three scripts that stage, dispatch and
+ *  score a unit, plus the evaluation barrel every one of them imports. */
+export const R97_DRIVER_BUILD_ENTRIES: readonly string[] = [
+  "scripts/e4/r97-campaign-driver.mjs",
+  "scripts/e4/r97-arm-worker.mjs",
+  "scripts/e4/r97-arm-exec.mjs",
+  "packages/evaluation/dist/index.js",
+];
+
+/**
+ * @deprecated Renamed to `R97_DRIVER_BUILD_ENTRIES` in E4-R104. Kept as an alias so
+ * callers outside this module keep compiling. Note the change of MEANING: this is
+ * the DECLARED ENTRY list, and the digest covers the closure DERIVED from it.
+ */
+export const R97_DRIVER_ARTIFACTS: readonly string[] = R97_DRIVER_BUILD_ENTRIES;
+
+/** @deprecated Superseded by `R97_EXECUTION_IDENTITY_SCHEMA` in E4-R104. */
+export const R97_DRIVER_BUILD_SCHEMA = R97_EXECUTION_IDENTITY_SCHEMA;
+
+// Statement-anchored on purpose. A loose `import` regex also matches the word
+// inside string and template literals — regex sources in `symbol-index.js`, the
+// trace exporter's own code samples — and those false positives would either
+// invent dependencies that do not exist or refuse a build that is perfectly fine.
+const R97_IDENTITY_STATIC_RE = /^[ \t]*(?:import|export)\b[^\n]*?\bfrom\s*["']([^"']+)["']/gm;
+const R97_IDENTITY_SIDE_EFFECT_RE = /^[ \t]*import\s*["']([^"']+)["']/gm;
+const R97_IDENTITY_DYNAMIC_RE = /^[ \t]*import\s*\(\s*["']([^"']+)["']\s*\)/gm;
+
+/** Every module specifier a source file names, in first-seen order. */
+function r97SpecifiersOf(source: string): string[] {
+  const out = new Set<string>();
+  for (const re of [R97_IDENTITY_STATIC_RE, R97_IDENTITY_SIDE_EFFECT_RE, R97_IDENTITY_DYNAMIC_RE]) {
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(source)) !== null) out.add(m[1]!);
+  }
+  return [...out];
+}
+
+function r97RealOf(path: string): string | null {
+  try {
+    return realpathSync(path);
+  } catch {
+    return null;
+  }
+}
+
+/** `abs` as a normalized root-relative POSIX path, or `null` if it leaves `rootDir`.
+ *  Leaving the root is a REFUSAL: it is how a checkout that resolves a dependency
+ *  into ANOTHER tree would otherwise be digested as if it were this one. */
+function r97RelativeInside(rootDir: string, abs: string): string | null {
+  const rel = relative(rootDir, abs).split("\\").join("/");
+  if (rel === "" || rel === ".." || rel.startsWith("../") || isAbsolute(rel)) return null;
+  return rel;
+}
+
+interface R97BareResolution {
+  readonly kind: "file" | "external";
+  readonly abs: string;
+  readonly label: string;
+}
+
+/**
+ * Resolve a bare specifier the way Node's ESM resolver would for a workspace.
+ *
+ * A hit whose realpath still contains a `node_modules` segment is a THIRD-PARTY
+ * dependency and becomes an external. A hit that resolves OUT of `node_modules` is
+ * a pnpm workspace link (`apps/cli/node_modules/@ar/core` -> `packages/core`), so
+ * the package's declared `exports["."]` entry is followed and its real file is
+ * covered.
+ *
+ * Returns `null` — rather than throwing — when no `node_modules` anywhere up the
+ * tree carries the specifier. `null` is the honest "this checkout does not contain
+ * this dependency", and it is the CALLER that decides whether that is fatal
+ * (`unresolvableBareSpecifier: "refuse"`, the default) or a recorded external. A
+ * hit that DOES exist but has no readable entry stays an ERROR: that is a broken
+ * workspace link, not an absent dependency, and the two must not be conflated.
+ */
+function r97ResolveBare(fromDir: string, spec: string): R97BareResolution | null {
+  let dir = fromDir;
+  for (;;) {
+    const candidate = join(dir, "node_modules", spec);
+    if (existsSync(candidate)) {
+      const real = r97RealOf(candidate) ?? candidate;
+      if (real.split(/[\\/]/).includes("node_modules")) {
+        let version: string | null = null;
+        try {
+          const pkg = JSON.parse(readFileSync(join(real, "package.json"), "utf8")) as { version?: string };
+          version = pkg.version ?? null;
+        } catch {
+          version = null;
+        }
+        return { kind: "external", abs: real, label: `${spec}@${version ?? "?"}` };
+      }
+      let entry: string | null = null;
+      try {
+        const pkg = JSON.parse(readFileSync(join(real, "package.json"), "utf8")) as {
+          exports?: Record<string, unknown>;
+          main?: string;
+        };
+        const dot = pkg.exports?.["."];
+        const rel =
+          typeof dot === "string"
+            ? dot
+            : ((dot as { default?: string } | undefined)?.default ??
+              (dot as { import?: string } | undefined)?.import ??
+              pkg.main ??
+              "./index.js");
+        entry = resolve(real, rel);
+      } catch {
+        entry = null;
+      }
+      if (entry !== null && existsSync(entry)) return { kind: "file", abs: r97RealOf(entry) ?? entry, label: spec };
+      throw new R97ExecutionIdentityError(
+        `E4-R97-IDENTITY: workspace package ${spec} has no readable entry under ${real}`,
       );
     }
-    const sha = createHash("sha256").update(content).digest("hex");
-    rows.push(`${rel}\u0000${sha}`);
+    const up = dirname(dir);
+    if (up === dir) break;
+    dir = up;
   }
-  return createHash("sha256")
-    .update(`${R97_DRIVER_BUILD_SCHEMA}\n${rows.join("\n")}`)
+  return null;
+}
+
+/**
+ * How a bare specifier this checkout cannot locate is treated.
+ *
+ * - `"refuse"` (the DEFAULT, and the DRIVER's policy): an unresolved bare
+ *   specifier makes the identity NOT ESTABLISHED. This is the fail-closed rule the
+ *   driver's approval rests on, and it is what `r97-plan.test.ts` 6g pins.
+ * - `"external"` (the ARM WORKER's policy): the specifier is recorded as an
+ *   external labelled `<spec>@?` — "a dependency this checkout does not carry, so
+ *   its version cannot be read from here" — and the walk continues. The ARM side
+ *   needs this because an arm checkout is a BUILD OUTPUT tree: its own modules are
+ *   resolved RELATIVELY and are always present (a missing one is still fatal — see
+ *   the `cannot be resolved` refusal below), while a bare specifier names a
+ *   dependency that lives in `node_modules`. A checkout that carries no
+ *   `node_modules` cannot execute at all, so recording the dependency it names is
+ *   the honest statement about the bytes it DOES carry; silently shrinking the
+ *   covered file set is not what happens, because the label appears in
+ *   `externals` and the digest is over the same files either way.
+ *
+ * The default is unchanged, so every existing caller keeps the strict contract.
+ */
+export type R97BareSpecifierPolicy = "refuse" | "external";
+
+/**
+ * Derive the execution identity of the build rooted at `rootDir` by walking the
+ * static ESM import graph from `entries`.
+ *
+ * Throws `R97ExecutionIdentityError` — never returns a partial digest — when an
+ * entry or a transitive dependency is missing, unreadable, or resolves outside
+ * `rootDir`.
+ */
+export function computeExecutionIdentityV1(opts: {
+  rootDir: string;
+  entries: readonly string[];
+  unresolvableBareSpecifier?: R97BareSpecifierPolicy;
+}): R97ExecutionIdentityV1 {
+  if (opts.entries.length === 0) {
+    throw new R97ExecutionIdentityError("E4-R97-IDENTITY: an empty entry list cannot establish an identity");
+  }
+  const resolvedRoot = resolve(opts.rootDir);
+  const rootDir = r97RealOf(resolvedRoot) ?? resolvedRoot;
+  const entries = [...opts.entries];
+
+  const covered = new Map<string, R97ExecutionIdentityFileV1>();
+  const externals = new Set<string>();
+  const seen = new Set<string>();
+  const stack: string[] = [];
+
+  for (const entry of entries) {
+    const abs = resolve(rootDir, entry);
+    if (!existsSync(abs) || !statSync(abs).isFile()) {
+      throw new R97ExecutionIdentityError(
+        `E4-R97-IDENTITY: declared entry ${entry} is not a readable file under ${rootDir}`,
+      );
+    }
+    stack.push(r97RealOf(abs) ?? abs);
+  }
+
+  while (stack.length > 0) {
+    const file = stack.pop()!;
+    if (seen.has(file)) continue;
+    seen.add(file);
+
+    const rel = r97RelativeInside(rootDir, file);
+    if (rel === null) {
+      throw new R97ExecutionIdentityError(`E4-R97-IDENTITY: ${file} resolves outside ${rootDir}`);
+    }
+
+    let bytes: Buffer;
+    try {
+      bytes = readFileSync(file);
+    } catch (err) {
+      throw new R97ExecutionIdentityError(
+        `E4-R97-IDENTITY: cannot read ${rel}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    covered.set(rel, {
+      path: rel,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+      bytes: bytes.length,
+    });
+
+    for (const spec of r97SpecifiersOf(bytes.toString("utf8"))) {
+      if (spec.startsWith("node:") || spec.startsWith("bun:")) {
+        externals.add(spec);
+        continue;
+      }
+      if (spec.startsWith("./") || spec.startsWith("../") || spec.startsWith("/")) {
+        const abs = isAbsolute(spec) ? spec : resolve(dirname(file), spec);
+        if (!existsSync(abs)) {
+          throw new R97ExecutionIdentityError(
+            `E4-R97-IDENTITY: ${rel} imports "${spec}", which cannot be resolved — the covered artifact set must never shrink silently`,
+          );
+        }
+        const real = r97RealOf(abs) ?? abs;
+        if (r97RelativeInside(rootDir, real) === null) {
+          throw new R97ExecutionIdentityError(
+            `E4-R97-IDENTITY: ${rel} imports "${spec}", which resolves outside ${rootDir} (${real})`,
+          );
+        }
+        stack.push(real);
+        continue;
+      }
+      const resolved = r97ResolveBare(dirname(file), spec);
+      if (resolved === null) {
+        if (opts.unresolvableBareSpecifier === "external") {
+          // See `R97BareSpecifierPolicy`. The label says explicitly that the
+          // version is UNREADABLE from here (`@?`), so an external row can never
+          // be mistaken for a resolved third-party dependency with a known
+          // provenance.
+          externals.add(`${spec}@?`);
+          continue;
+        }
+        throw new R97ExecutionIdentityError(`E4-R97-IDENTITY: unresolved bare specifier ${spec}`);
+      }
+      if (resolved.kind === "external") {
+        externals.add(resolved.label);
+        continue;
+      }
+      if (r97RelativeInside(rootDir, resolved.abs) === null) {
+        throw new R97ExecutionIdentityError(
+          `E4-R97-IDENTITY: ${rel} imports "${spec}", which resolves outside ${rootDir} (${resolved.abs})`,
+        );
+      }
+      stack.push(resolved.abs);
+    }
+  }
+
+  const files = [...covered.values()].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  const digest = createHash("sha256")
+    .update(`${R97_EXECUTION_IDENTITY_SCHEMA}\n${files.map((f) => `${f.path}\u0000${f.sha256}`).join("\n")}`)
     .digest("hex");
+  return {
+    schema: R97_EXECUTION_IDENTITY_SCHEMA,
+    digest,
+    entries,
+    files,
+    externals: [...externals].sort(),
+  };
+}
+
+/**
+ * Recompute the driver BUILD digest over the closure derived from
+ * `R97_DRIVER_BUILD_ENTRIES`.
+ *
+ * Plan §R100 怎么做: "除 driverVersion 标签外记录 driver构建/源hash；版本字符串不变
+ * 而执行代码变化，应使旧计划失效." A version LABEL is a human convention and does not
+ * move when the code changes, so a label alone was blind to a driver rewrite.
+ *
+ * Fail-closed: a dependency that cannot be resolved is an ERROR, never skipped.
+ * Skipping would silently shrink the covered set, which is exactly the property the
+ * digest exists to guarantee.
+ */
+export async function computeDriverBuildDigestV1(repoRoot: string): Promise<string> {
+  try {
+    return computeExecutionIdentityV1({ rootDir: repoRoot, entries: R97_DRIVER_BUILD_ENTRIES }).digest;
+  } catch (err) {
+    throw new Error(
+      `E4-R97: driver build digest cannot cover ${err instanceof Error ? err.message : String(err)} — the covered artifact set must never shrink silently`,
+    );
+  }
 }
 
 /** Plan status. Only FINALIZED may be presented for a human decision. */
@@ -243,6 +557,17 @@ export interface R97ArmObservation {
   clean: boolean;
   /** The CLI's `planDigest` — the REAL execution-plan digest for this arm. */
   planDigest: string;
+  /**
+   * The arm's EXECUTION build digest (E4-R104 / A4): the sha256 of the closure
+   * derived from the arm's real static ESM import graph. `null` means the closure
+   * could not be established in that checkout — which is NOT ESTABLISHED, never a
+   * digest over the files that happened to be readable.
+   *
+   * This is the value that binds the BYTES which execute a case. It is separate
+   * from `planDigest` because that one is derived from git and `dist/` is
+   * gitignored, so a rebuilt executor moves this and not that.
+   */
+  buildDigest: string | null;
   providerId: string;
   modelId: string;
   endpointIdentity: string | null;
@@ -315,6 +640,7 @@ export function parseR97ArmObservation(
   checkoutDir: string,
   raw: unknown,
   caseFingerprints: Record<string, string> = {},
+  buildDigest: string | null = null,
 ): { observation: R97ArmObservation | null; issues: string[] } {
   const issues: string[] = [];
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
@@ -355,6 +681,13 @@ export function parseR97ArmObservation(
       treeFingerprint,
       clean: treeFingerprint === null,
       planDigest,
+      // E4-R104 (A4): the executed BYTES. Passed IN rather than parsed from the
+      // dry-run JSON, because the dry-run output is the CLI's plan (a git-derived
+      // digest) and cannot describe a build closure it never walks. The caller
+      // derives it from the arm's own checkout with the shared identity contract
+      // (`computeArmBuildDigestV1`), so plan generation, the execution-time
+      // re-check and the worker's record all use ONE contract.
+      buildDigest,
       providerId,
       modelId,
       endpointIdentity: typeof o["endpointIdentity"] === "string" ? o["endpointIdentity"] : null,
@@ -799,6 +1132,38 @@ export function r97ReadinessIssues(input: {
     }
   }
 
+  // (12) E4-R104 (A4) 做什么 3: each arm must bind the BYTES that will execute it.
+  //
+  //      This is the FORMAL layer's mandatory half of the build-identity contract.
+  //      The R92 envelope contract validates the field only when it is present
+  //      (that contract is shared with the R92 development-mechanism plan, which
+  //      names two historical commits that are not checked out here and so has no
+  //      build to hash). The R97 campaign really does hold both checkouts, so an
+  //      arm without a build digest is an UNBOUND identity here.
+  //
+  //      Refusing — rather than silently defaulting — is what plan §A4 做什么 3
+  //      requires: "明确旧摘要合同的处理；新合同需要重新生成批准材料." Old approval
+  //      material that predates this field must be REGENERATED, never upgraded in
+  //      place, because an upgraded envelope would describe a build nobody
+  //      approved.
+  //
+  //      WHY `executionPlanDigest` CANNOT SUBSTITUTE: it is derived from git
+  //      (`sourceSha` + `treeFingerprint`), and `dist/` is gitignored, so the
+  //      bytes that actually execute a case are invisible to it. That is defect F4.
+  for (const arm of ["baseline", "candidate"] as const) {
+    const observedArm = arm === "baseline" ? baseline : candidate;
+    // A DRAFT has no envelope and no arm to bind, so this rule is only meaningful
+    // once an arm has been observed; `ARM_NOT_OBSERVED` already names that case.
+    if (observedArm === null) continue;
+    const bound = observedArm.buildDigest;
+    if (typeof bound !== "string" || !/^[0-9a-f]{64}$/.test(bound)) {
+      issues.push({
+        code: "ARM_BUILD_UNBOUND",
+        detail: `arm "${arm}" binds no EXECUTION build digest (got ${String(bound)}) — the arm's executed bytes must be bound at plan time, and the execution-plan digest cannot stand in for it (it is derived from git, and dist/ is gitignored). This approval material predates the E4-R104 identity contract and must be REGENERATED.`,
+      });
+    }
+  }
+
   return issues;
 }
 
@@ -909,6 +1274,14 @@ export interface R97PlanObservation {
   executingSourceSha: string;
   armShas: { baseline: string; candidate: string };
   armDigests: { baseline: string; candidate: string };
+  /**
+   * The arms' EXECUTION build digests (E4-R104 / A4), mirroring the execution-time
+   * observation's `armBuildDigests`. Kept in the snapshot so the DEV TOOL's offline
+   * path — whose arm facts legitimately come from the plan artifact — compares the
+   * same fact set the formal path re-observes, rather than a shape that silently
+   * lacks the build binding.
+   */
+  armBuildDigests: { baseline: string | null; candidate: string | null };
   caseFingerprints: Record<string, string>;
   providerId: string;
   modelId: string;
@@ -1001,6 +1374,10 @@ export const R97_EXECUTION_CODES = [
   "EXEC_OBS_ARM_SHA_DRIFT",
   /** An arm's real CLI dry-run execution-plan digest changed. */
   "EXEC_OBS_ARM_PLAN_DIGEST_DRIFT",
+  /** The approval binds no arm build digest at all — regenerate the material. */
+  "EXEC_OBS_ARM_BUILD_UNBOUND",
+  /** An arm's executed BYTES changed, or could not be established (E4-R104 / A4). */
+  "EXEC_OBS_ARM_BUILD_DRIFT",
   /** A case's input fingerprint changed. The offending case id is named. */
   "EXEC_OBS_CASE_DRIFT",
   /** A case in the approved list was not observed at all at execution time. */
@@ -1039,6 +1416,14 @@ export interface R97ExecutionObservationV1 {
   armShas: { baseline: string | null; candidate: string | null };
   /** Re-derived real CLI dry-run execution-plan digest per arm. */
   armDigests: { baseline: string | null; candidate: string | null };
+  /**
+   * Re-derived EXECUTION build digest per arm (E4-R104 / A4). `null` = the closure
+   * could not be established in that checkout, which is drift, never a skip.
+   *
+   * Separate from `armDigests` on purpose: that one is the arm's git-derived plan
+   * digest, and `dist/` is gitignored, so a rebuilt executor moves only this.
+   */
+  armBuildDigests: { baseline: string | null; candidate: string | null };
   /** Fingerprints recomputed from the case files the CLI actually planned. */
   caseFingerprints: Record<string, string>;
   /** Re-observed provider identity. */
@@ -1218,6 +1603,33 @@ export function checkExecutionObservationV1(input: R97ExecutionCheckInput): R97E
       fail(
         "EXEC_OBS_ARM_PLAN_DIGEST_DRIFT",
         `arm "${arm}" executionPlanDigest is ${observedPlan} but the approval binds ${approvedPlan}`,
+      );
+    }
+
+    // (5b) The arm's EXECUTION build digest — the bytes that really run a case
+    //      (E4-R104 / A4). Checked BESIDE the plan digest because the two move
+    //      independently: `dist/` is gitignored, so patching the executor leaves
+    //      the sha and the git-derived plan digest untouched. Without this the
+    //      approval would cover code that no longer exists.
+    const approvedBuild = auth.arms[arm].buildDigest;
+    const observedBuild = observed.armBuildDigests?.[arm] ?? null;
+    if (typeof approvedBuild !== "string" || approvedBuild === "") {
+      // The R97 readiness layer refuses this at plan time (`ARM_BUILD_UNBOUND`);
+      // reaching here means the envelope was edited, which the digest check above
+      // already catches. Named separately so the reason is unambiguous.
+      fail(
+        "EXEC_OBS_ARM_BUILD_UNBOUND",
+        `arm "${arm}" binds no buildDigest in the approval — the executed bytes are not covered, so this material must be regenerated rather than run`,
+      );
+    } else if (observedBuild === null) {
+      fail(
+        "EXEC_OBS_ARM_BUILD_DRIFT",
+        `arm "${arm}" buildDigest could not be established at execution time (armBuildDigests.${arm} is null) — an unestablished identity is drift, never a skip`,
+      );
+    } else if (observedBuild !== approvedBuild) {
+      fail(
+        "EXEC_OBS_ARM_BUILD_DRIFT",
+        `arm "${arm}" buildDigest is ${observedBuild} but the approval binds ${approvedBuild} — the bytes that execute a case changed`,
       );
     }
   }
@@ -1410,8 +1822,22 @@ export async function buildR97AuthorizationPlan(opts: R97PlanBuildOptions): Prom
       // Each arm's digest is the arm's REAL dry-run digest. `null` is impossible
       // here because a null-observed arm never finalizes; a DRAFT carries no
       // envelope at all, so no placeholder digest can ever be approved.
-      baseline: { sha: baselineSha, executionPlanDigest: opts.baseline?.planDigest ?? "", buildMode: "isolated-checkout" },
-      candidate: { sha: candidateSha, executionPlanDigest: opts.candidate?.planDigest ?? "", buildMode: "isolated-checkout" },
+      baseline: {
+        sha: baselineSha,
+        executionPlanDigest: opts.baseline?.planDigest ?? "",
+        // E4-R104 (A4): the arm's executed BYTES, beside its plan digest. Spread
+        // conditionally so an arm whose closure could not be established binds
+        // NOTHING rather than the string "null" — an unbound identity must be
+        // absent, and `ARM_BUILD_UNBOUND` below then refuses the plan.
+        ...(opts.baseline?.buildDigest == null ? {} : { buildDigest: opts.baseline.buildDigest }),
+        buildMode: "isolated-checkout",
+      },
+      candidate: {
+        sha: candidateSha,
+        executionPlanDigest: opts.candidate?.planDigest ?? "",
+        ...(opts.candidate?.buildDigest == null ? {} : { buildDigest: opts.candidate.buildDigest }),
+        buildMode: "isolated-checkout",
+      },
     },
     armIdentityMode: "isolated-checkout-build",
     fixScope: "single-fix-H2",
@@ -1465,8 +1891,16 @@ export async function buildR97AuthorizationPlan(opts: R97PlanBuildOptions): Prom
     now: opts.now,
     executingSourceSha: candidateSha,
     observedArmBuilds: {
-      baseline: { sha: opts.baseline?.sourceSha ?? null, executionPlanDigest: opts.baseline?.planDigest ?? null },
-      candidate: { sha: opts.candidate?.sourceSha ?? null, executionPlanDigest: opts.candidate?.planDigest ?? null },
+      baseline: {
+        sha: opts.baseline?.sourceSha ?? null,
+        executionPlanDigest: opts.baseline?.planDigest ?? null,
+        buildDigest: opts.baseline?.buildDigest ?? null,
+      },
+      candidate: {
+        sha: opts.candidate?.sourceSha ?? null,
+        executionPlanDigest: opts.candidate?.planDigest ?? null,
+        buildDigest: opts.candidate?.buildDigest ?? null,
+      },
     },
     observedCaseFingerprints: { ...(opts.candidate?.caseFingerprints ?? {}) },
     observedProviderId: opts.candidate?.providerId ?? "",
@@ -1516,6 +1950,10 @@ export async function buildR97AuthorizationPlan(opts: R97PlanBuildOptions): Prom
           armDigests: {
             baseline: opts.baseline.planDigest,
             candidate: opts.candidate.planDigest,
+          },
+          armBuildDigests: {
+            baseline: opts.baseline.buildDigest,
+            candidate: opts.candidate.buildDigest,
           },
           caseFingerprints: { ...opts.candidate.caseFingerprints },
           providerId: opts.candidate.providerId,

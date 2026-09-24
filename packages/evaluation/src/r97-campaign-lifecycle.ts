@@ -40,10 +40,20 @@
  * is the direction that would silently mint a second allowance.
  *
  * WHAT THIS IS NOT: it is not a second lock, not a second ledger, and not a
- * defence against an operator who deletes the ENTIRE campaign directory. The
- * plan states that boundary explicitly (§T1 怎么做 9: "不承诺能防御操作者删除整个机器
- * 所有证据"), and this module keeps to it: it guarantees that the NORMAL start /
- * resume / relocate paths cannot re-grant one authorization.
+ * defence against an operator who deletes the ENTIRE campaign directory AND the
+ * machine-global claim anchor. The plan states that boundary explicitly (§T1 怎么做
+ * 9: "不承诺能防御操作者删除整个机器所有证据"), and this module keeps to it: it
+ * guarantees that the NORMAL start / resume / relocate paths cannot re-grant one
+ * authorization.
+ *
+ * FINDING F2 (plan §A2) — the boundary above was measured to be crossed by ONE
+ * `rm -rf` of the campaign root, which is an ordinary cleanup, not an attack on
+ * every piece of evidence on the machine. The claim anchor survives that, and it
+ * now records which directories ESTABLISHED a budget, so a vanished root is a
+ * named LOSS (CAMPAIGN_STATE_LOST) instead of a fresh full allowance. The honest
+ * limit is unchanged: deleting the campaign root AND the claim anchor is still
+ * indistinguishable from a genuinely new authorization, and the plan does not ask
+ * for more.
  */
 
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
@@ -53,6 +63,7 @@ import {
   openR97BudgetLedger,
   readR97CampaignClaim,
   readR97LedgerFile,
+  R97_CAMPAIGN_STATE_LOST,
   type R97BudgetLedger,
   type R97LedgerOpenMode,
 } from "./r97-budget-ledger.js";
@@ -266,15 +277,17 @@ export async function openR97Campaign(dir: string, opts: R97CampaignOpenOptions)
   // This is the plan's §T1 怎么做 8 requirement that `duplicateCampaignDirs`
   // AFFECT the outcome rather than sit unused on a handle.
   //
-  // STALENESS IS CHECKED, and that check is what keeps the rule honest rather
-  // than merely strict. The claim anchor is machine-global and deliberately
-  // advisory, so a directory it names may since have been DELETED — a cleaned CI
-  // workspace, a pruned temp directory, a removed worktree. A claim whose
-  // directory no longer holds an established campaign is NOT evidence that this
-  // authorization is in use: vetoing on it would wedge every later legitimate
-  // first run for the rest of the machine's life. So only a claim that is still
-  // LIVE — the named directory still carries a header for this same campaign —
-  // refuses the new root.
+  // FINDING F2 (plan §A2): the rule below used to refuse ONLY while the claiming
+  // directory was still READABLE. That made the refusal depend on the one thing
+  // an operator deletes: `rm -rf out` turned an authorization that had already
+  // SPENT its allowance back into a first run, with a full second budget. The
+  // anchor is the durable record of "this approval established a campaign", so it
+  // — not the presence of the directory — decides.
+  //
+  // The distinction that keeps this honest: a directory that was only PROBED
+  // (an open that recorded the claim but never created a budget) is still safely
+  // ignorable, so a failed first run cannot wedge the authorization forever. Only
+  // an ESTABLISHED claim is authoritative.
   let duplicateCampaignDirs: readonly string[] = [];
   if (resolvedMode === "first-run") {
     const claim = await readR97CampaignClaim(campaignId);
@@ -299,6 +312,19 @@ export async function openR97Campaign(dir: string, opts: R97CampaignOpenOptions)
       if (live.length > 0) {
         throw new Error(
           `E4-R97: ${R97_CAMPAIGN_DIR_CONFLICT}: this authorization (campaign ${campaignId}) is already established in ${live.join(", ")} — starting it again in ${root} would grant a SECOND budget for one approval; resume it at its own root, or use a new authorization`,
+        );
+      }
+
+      // Nothing is LIVE, so this open would CREATE a budget. If the anchor says
+      // this approval already established one — HERE (the path was deleted and
+      // recreated) or ELSEWHERE (the other root was deleted) — that is a LOSS of
+      // the consumption record, not a fresh start.
+      const lostHere = claim.establishedDirs.some((d) => resolve(d) === root);
+      const lostElsewhere = claim.establishedDirs.filter((d) => resolve(d) !== root);
+      const lost = lostHere ? [root, ...lostElsewhere] : lostElsewhere;
+      if (lost.length > 0) {
+        throw new Error(
+          `E4-R97: ${R97_CAMPAIGN_STATE_LOST}: this authorization (campaign ${campaignId}) already ESTABLISHED a campaign in ${lost.join(", ")}, and no campaign header is readable there now — a deleted root is a LOSS of the consumed record, not a fresh allowance; restore that campaign, or use a new authorization`,
         );
       }
     }

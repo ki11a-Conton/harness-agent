@@ -38,7 +38,7 @@
  * watchdog did NOT have to fire.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -75,18 +75,36 @@ async function tempDir(): Promise<string> {
 }
 
 /**
- * Redirect the machine-global advisory claim anchor to a per-suite scratch dir.
+ * Redirect the machine-global advisory claim anchor to a scratch dir — ONE FRESH
+ * ONE PER TEST.
  *
  * The ledger's claim anchor defaults to a directory under the SYSTEM temp dir, so
  * every suite that opens a ledger shares one namespace keyed by campaign id, and
  * two suites in parallel workers refuse each other with
  * `BUDGET_CAMPAIGN_DIR_DUPLICATE`. That is a collision between unrelated tests,
  * not a fact about the deadline.
+ *
+ * WHY PER TEST AND NOT PER SUITE (R98-A / finding F2): the anchor is now
+ * AUTHORITATIVE about the fact "this authorization already established a campaign
+ * somewhere". Every test in this file drives `runUnit`, and each one builds its
+ * own temporary ledger directory — so reusing one anchor across the file would
+ * mean the FIRST test establishes the authorization and every LATER test is
+ * correctly refused with `CAMPAIGN_STATE_LOST` for opening the same approval in a
+ * different directory. That refusal is the F2 fix working, not a fact about
+ * deadlines, and it made these tests pass or fail according to their position in
+ * the file. A fresh namespace per test restores what each test actually measures:
+ * its own approval, in its own directory.
  */
-const CLAIMS_DIR = await mkdtemp(join(tmpdir(), "r99b-claims-"));
-process.env["R97_CAMPAIGN_CLAIMS_DIR"] = CLAIMS_DIR;
+let CLAIMS_DIR = "";
+beforeEach(async () => {
+  CLAIMS_DIR = await mkdtemp(join(tmpdir(), "r99b-claims-"));
+  process.env["R97_CAMPAIGN_CLAIMS_DIR"] = CLAIMS_DIR;
+});
 
 afterEach(async () => {
+  delete process.env["R97_CAMPAIGN_CLAIMS_DIR"];
+  if (CLAIMS_DIR !== "") await rm(CLAIMS_DIR, { recursive: true, force: true }).catch(() => {});
+  CLAIMS_DIR = "";
   for (const d of dirs.splice(0)) await rm(d, { recursive: true, force: true }).catch(() => {});
 });
 

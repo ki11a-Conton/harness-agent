@@ -303,10 +303,16 @@ export async function buildR92AuthorizationPlan(opts: R92PlanBuildOptions): Prom
         baseline: {
           sha: authorization.arms.baseline.sha,
           executionPlanDigest: authorization.arms.baseline.executionPlanDigest,
+          // E4-R104 (A4): this plan names two HISTORICAL commits that are not
+          // checked out in this repository, so there is no build here to hash.
+          // `null` is the honest "not established" — the R97 formal campaign,
+          // which really holds both checkouts, is what binds a real digest.
+          buildDigest: null,
         },
         candidate: {
           sha: authorization.arms.candidate.sha,
           executionPlanDigest: authorization.arms.candidate.executionPlanDigest,
+          buildDigest: null,
         },
       },
       observedCaseFingerprints: { ...caseFingerprints },

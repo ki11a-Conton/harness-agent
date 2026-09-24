@@ -336,6 +336,14 @@ export async function phaseMatrix(opts) {
     reportPath: outPath,
     rowsSatisfied: parsed === null ? null : parsed.rows.filter((r) => r.ok).length,
     rowsTotal: parsed === null ? null : parsed.rows.length,
+    // The closing plan's own M1–M9 table (plan §A7 怎么做 2). Recorded separately from
+    // the acceptance rows because they answer different questions: the rows ask "was
+    // this scenario measured", the M rows ask "does the plan's own table have a row
+    // behind it, and did that row pass". A green run that left an M row unclaimed
+    // would satisfy every acceptance row and still not cover the plan.
+    planRowsSatisfied: parsed === null ? null : parsed.planRows.filter((p) => p.ok).length,
+    planRowsTotal: parsed === null ? null : parsed.planRows.length,
+    planRowsUncovered: parsed === null ? null : parsed.uncoveredPlanRows,
     ...(res.code === 0 ? {} : { output: tail(`${res.stdout}\n${res.stderr}`) }),
   };
 }
@@ -380,6 +388,12 @@ export async function phaseIdentity(opts, phases) {
     suitePassedTests: suite?.passedTests ?? null,
     matrixRowsSatisfied: matrix?.rowsSatisfied ?? null,
     matrixRowsTotal: matrix?.rowsTotal ?? null,
+    // The closing plan's own M1–M9 behavior matrix (plan §A7 怎么做 2), recorded in
+    // FIELDS rather than as prose so "the plan's table is covered" is a fact a reader
+    // can check. `planRowsUncovered` is the list of M rows no acceptance row claimed.
+    planRowsSatisfied: matrix?.planRowsSatisfied ?? null,
+    planRowsTotal: matrix?.planRowsTotal ?? null,
+    planRowsUncovered: matrix?.planRowsUncovered ?? null,
     // ---- THE HONEST SCOPE. ------------------------------------------------
     providerCalls: 0,
     paidAuthorizationPresentInWorkflow: false,

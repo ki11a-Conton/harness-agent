@@ -6,9 +6,10 @@
  *   "mutation/反例直接改变行为：让两臂都用一个构建、跳过 verifier、固定 request=r97、
  *    绕过预算、resume 丢历史失败，对应测试必须失败."
  *
- * `r97-mutation-check.mjs` applies each of those five mutations to the real
- * production source, runs the test that exists to catch it, and requires that test
- * to FAIL. A mutation gate is only worth its runtime if its mutations really LAND:
+ * `r97-mutation-check.mjs` applies each of those five mutations (plus A7's and A8's
+ * counterexample mutations) to the real production source, runs the test that exists
+ * to catch it, and requires that test to FAIL. A mutation gate is only worth its
+ * runtime if its mutations really LAND:
  * a `find` string that no longer matches the file makes the "mutation" a no-op, the
  * test passes, and the gate would report... nothing, because a no-op mutation is
  * indistinguishable from a caught one unless the anchor is checked.
@@ -46,6 +47,8 @@ const mod = (await import(SCRIPT)) as {
   MUTATIONS: Array<{
     id: string;
     planWording: string;
+    /** Which round's defect list this mutation came from: T6's five, or A7's five. */
+    round: "T6" | "A7";
     file: string;
     find: string;
     replace: string;
@@ -56,23 +59,76 @@ const mod = (await import(SCRIPT)) as {
   parseArgs: (argv: string[]) => { only?: string; out?: string };
   main: (argv: string[]) => Promise<number>;
   anchorOccurrences: (source: string, find: string) => number;
+  classifyCatch: (opts: { exitCode: number; output: string; testFilter: string }) => {
+    caught: boolean;
+    failedTestNamed: boolean;
+    reason: string | null;
+  };
+  /**
+   * E4-R101-A (A8): the pre-existing-mutation guard. Exported as a pure function so
+   * BOTH directions — it fires on a mutated target, and it does NOT fire on a healthy
+   * one — can be pinned here rather than only observed when a mutation misfires.
+   */
+  isPreexistingMutation: (opts: { findCount: number; replaceCount: number }) => boolean;
+  preexistingMutationReason: (mutation: { file: string }, replaceCount: number) => string;
 };
-
 describe("E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations", () => {
   it("carries a version so a report can be tied to the gate that produced it", () => {
     expect(mod.MUTATION_VERSION).toMatch(/^e4-r101-mutation-check-v\d+$/);
   });
 
-  it("declares exactly the five mutations plan 怎么做 7 names", () => {
-    expect(mod.MUTATIONS).toHaveLength(5);
-    const wording = mod.MUTATIONS.map((m) => m.planWording).join("\n");
-    // The plan's own list, verbatim. A gate that quietly dropped one of these would
-    // still report "all mutations caught".
+  it("declares exactly the five T6 mutations plan 怎么做 7 names, alongside A7's five", () => {
+    // A7 ADDED five mutations (plan §A7 怎么做 3) to the SAME list, because the
+    // restoration discipline must have one home. The T6 five are still pinned as an
+    // exact SET rather than as "at least five": a gate that quietly dropped one of
+    // the plan's original five would otherwise still report "all mutations caught",
+    // which is the failure this assertion exists to prevent.
+    const t6 = mod.MUTATIONS.filter((m) => m.round === "T6");
+    expect(t6, "the T6 mutation set must be exactly the plan's five").toHaveLength(5);
+    const wording = t6.map((m) => m.planWording).join("\n");
+    // The plan's own list, verbatim.
     expect(wording).toContain("让两臂都用一个构建");
     expect(wording).toContain("跳过 verifier");
     expect(wording).toContain("固定 request=r97");
     expect(wording).toContain("绕过预算");
     expect(wording).toContain("resume 丢历史失败");
+  });
+
+  it("declares one A7 counterexample mutation per closed counterexample, plus A4's formal path", () => {
+    // The A7 set was FIVE while A4's formal-path binding was still PARTIAL: the
+    // counterexamples A1, A2, A3, A5 and A6 each got one mutation, and A4 could not
+    // have one because the defect it names was not fixed on the formal path yet.
+    // A4's formal path is now closed (§9.8b), so its mutation joins this set and the
+    // count became SIX. A8 added the WORKER-LEVEL half of A1/F1 — the residual gap
+    // `docs/E4-R99-R101-report.md:2370` names — bringing it to SEVEN: the existing
+    // `a1-skip-generator-finally-settlement` covers the CHANNEL's settlement, and
+    // `a1-worker-settlement-failure-refunded` covers the WORKER's handling of it.
+    // Pinned as an exact SET rather than "at least": a gate that quietly dropped one
+    // would otherwise still report "all mutations caught".
+    const a7 = mod.MUTATIONS.filter((m) => m.round === "A7");
+    expect(a7, "A7 must add one mutation per counterexample it closed").toHaveLength(7);
+    const wording = a7.map((m) => m.planWording).join("\n");
+    expect(wording).toContain("跳过 generator finally 结算");
+    expect(wording).toContain("允许丢失根目录重新领取");
+    expect(wording).toContain("把正式时钟改回快照");
+    expect(wording).toContain("恢复 verdict 覆盖");
+    expect(wording).toContain("断开当前 unit 的取消");
+    // A4/F4's formal-path half: removing the driver's `approvedBuildDigest`
+    // forwarding restores the pre-fix behaviour, where a rebuilt `dist/` could run
+    // under an old approval because nothing bound the executed bytes.
+    expect(wording).toContain("移除正式路径的构建身份绑定");
+    // The worker-level half of A1/F1: routing an ENTERED-but-unsettled dispatch to
+    // the refund path restores the pre-A1 behaviour the report's :2370 gap is about.
+    expect(wording).toContain("已进入但未结算的调用被退款");
+  });
+
+  it("tags every mutation with the round whose defect list it came from", () => {
+    // The tag is what lets the two sets above be asserted as exact sets. An
+    // untagged entry would be invisible to BOTH, so it is a failure rather than a
+    // silently-ignored extra.
+    for (const m of mod.MUTATIONS) {
+      expect(["T6", "A7"], `${m.id} has no round tag`).toContain(m.round);
+    }
   });
 
   it("gives every mutation a unique id and a stated expectation", () => {
@@ -214,5 +270,167 @@ describe("E4-R101-A (T6) X4: the gate refuses to run on a bad request", () => {
 
   it("selects the whole set when no --only is given", () => {
     expect(mod.parseArgs([]).only).toBeUndefined();
+  });
+});
+
+/**
+ * E4-R101-A (A7) X6 — a CAUGHT mutation means the SELECTED TEST went red, not merely
+ * that something exited non-zero.
+ *
+ * Plan §A7 怎么做 4: "断言对应测试真正 RED，不接受语法错误、构建失败或 unrelated timeout
+ * 冒充捕获了缺陷." This is the decision at the centre of the whole gate: if a build
+ * failure or a timeout counted as "caught", every mutation would appear caught and
+ * the gate would certify a suite that detects nothing.
+ *
+ * The cases below are the exact shapes those false positives take in vitest's output.
+ */
+describe("E4-R101-A (A7) X6: only a real FAILED TEST counts as catching the mutation", () => {
+  const FILTER = "grant=1, the consumer breaks mid-stream and the CLI throws";
+  /** The verbose reporter's own failing-test line for the selected test. */
+  const REAL_RED = [
+    " FAIL  packages/evaluation/src/r97-arm-worker-contract.test.ts > R99 W11 (A1/F1): a DISPATCHED call is never refunded when the arm CLI dies afterwards > " +
+      FILTER,
+    "AssertionError: an ENTERED call is never refunded as abandoned: expected 'reserved' to be 'unknown'",
+    " Test Files  1 failed (1)",
+    "      Tests  1 failed (1)",
+  ].join("\n");
+
+  it("counts a genuine failing assertion as CAUGHT", () => {
+    const v = mod.classifyCatch({ exitCode: 1, output: REAL_RED, testFilter: FILTER });
+    expect(v.caught).toBe(true);
+    expect(v.failedTestNamed).toBe(true);
+    expect(v.reason).toBeNull();
+  });
+
+  it("REFUSES a passing run, even though the gate would like it to be red", () => {
+    const v = mod.classifyCatch({
+      exitCode: 0,
+      output: ` ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts (56 tests)\n  ${FILTER}`,
+      testFilter: FILTER,
+    });
+    expect(v.caught).toBe(false);
+    expect(v.reason).toMatch(/PASSED with the mutation applied/);
+  });
+
+  it("REFUSES a BUILD failure — it tests the compiler, not the behaviour", () => {
+    // The build is checked separately before this point, but a `tsc` error surfacing
+    // through the test child looks exactly like this.
+    const v = mod.classifyCatch({
+      exitCode: 1,
+      output: `Error: Transform failed with 1 error:\nsrc/x.ts:1:1: ERROR: Expected ";" but found "}"`,
+      testFilter: FILTER,
+    });
+    expect(v.caught).toBe(false);
+    expect(v.reason).toMatch(/infrastructure abort or a timeout/);
+  });
+
+  it("REFUSES a COLLECTION error — a suite that never loaded proved nothing", () => {
+    const v = mod.classifyCatch({
+      exitCode: 1,
+      output: `Failed to load url ./missing.ts\nNo test files found, exiting with code 1\n${FILTER}`,
+      testFilter: FILTER,
+    });
+    expect(v.caught).toBe(false);
+    expect(v.reason).toMatch(/did not COLLECT/);
+  });
+
+  it("REFUSES a failure of a DIFFERENT test, which the filter happened to also select", () => {
+    // The filter text must appear, or the red test is not the one bound to the
+    // mutation — a mutation caught by an unrelated test proves nothing about the
+    // invariant it was written to break.
+    const v = mod.classifyCatch({
+      exitCode: 1,
+      output: [
+        " FAIL  packages/evaluation/src/r97-arm-worker-contract.test.ts > some OTHER test entirely",
+        "AssertionError: something unrelated",
+      ].join("\n"),
+      testFilter: FILTER,
+    });
+    expect(v.caught).toBe(false);
+    expect(v.reason).toMatch(/failed a DIFFERENT test/);
+  });
+
+  it("REFUSES a timeout with no per-test marker", () => {
+    const v = mod.classifyCatch({
+      exitCode: 1,
+      output: `Error: timed out after 900000ms\n${FILTER}`,
+      testFilter: FILTER,
+    });
+    expect(v.caught).toBe(false);
+    expect(v.reason).toMatch(/no per-test FAILED marker/);
+  });
+});
+
+/**
+ * E4-R101-A (A8) X7 — a target ALREADY in its mutated state is a refusal, not a catch.
+ *
+ * MEASURED DEFECT (this round). The gate's restoration proof is SELF-REFERENTIAL: it
+ * reads the file when it starts and compares the file against that same text after
+ * writing it back. A target that was ALREADY mutated when the gate started therefore
+ * has `original` == the MUTATED text, the restore "succeeds", the hashes agree, and
+ * the mutation is reported `restored: true` — while the defect it models stays LIVE
+ * and the fix this campaign closed stays reverted.
+ *
+ * That is not hypothetical. Three targets were found in exactly this state while
+ * closing the A1 worker-level settlement gap:
+ *
+ *   a2-deleted-root-can-be-reclaimed        (r97-budget-ledger.ts)   F2 reverted
+ *   a3-formal-clock-reverts-to-plan-snapshot (r97-campaign-driver.mjs) F3 reverted
+ *   a5-verdict-overwrite-restored            (r97-arm-worker.mjs)     F5 reverted
+ *
+ * and they were invisible to BOTH existing guards: the per-file hash compares the
+ * tree against itself, and `treeRestored` compares `git status --porcelain`, which
+ * carries only path+status — so a content change inside a file ALREADY listed as ` M`
+ * yields a byte-identical porcelain line. The consequence was measurable, not
+ * cosmetic: with the a2 leftover in place, the A2 regression failed with
+ * `expected null not to be null` — deleting a spent root re-granted the approval.
+ */
+describe("E4-R101-A (A8) X7: a target left in its mutated state is refused, not silently 'restored'", () => {
+  it("detects the mutated state: the fixed text is ABSENT and the mutated text is PRESENT", () => {
+    expect(typeof mod.isPreexistingMutation, "the gate exposes no pre-existing-mutation check").toBe("function");
+    expect(mod.isPreexistingMutation({ findCount: 0, replaceCount: 1 })).toBe(true);
+    expect(mod.isPreexistingMutation({ findCount: 0, replaceCount: 2 })).toBe(true);
+  });
+
+  it("does NOT fire on a healthy tree, where the fixed text is present", () => {
+    expect(mod.isPreexistingMutation({ findCount: 1, replaceCount: 0 })).toBe(false);
+    // BOTH HALVES ARE REQUIRED, and the reason is MEASURED, not assumed.
+    // `a2-deleted-root-can-be-reclaimed` drops the second line of a two-line anchor,
+    // so its `replace` is a strict SUBSTRING of its `find` — on a HEALTHY tree that
+    // anchor counts `find=1, replace=1`. A `replace`-only check would report a false
+    // positive here and wedge the gate on a perfectly healthy checkout.
+    expect(mod.isPreexistingMutation({ findCount: 1, replaceCount: 1 })).toBe(false);
+    // The genuinely ambiguous case (anchor renamed upstream, mutated text also
+    // absent) is NOT this defect and keeps its own separate refusal.
+    expect(mod.isPreexistingMutation({ findCount: 0, replaceCount: 0 })).toBe(false);
+  });
+
+  it("is REQUIRED for real: a2's replace text really is a substring of its find", async () => {
+    // The measured fact the two-half condition exists for. Asserted against the real
+    // list rather than asserted in prose: if `a2`'s anchor is ever rewritten so the
+    // two texts stop overlapping, this test says so and the justification is revisited
+    // instead of silently becoming folklore.
+    const a2 = mod.MUTATIONS.find((m) => m.id === "a2-deleted-root-can-be-reclaimed");
+    expect(a2, "the a2 mutation is gone from the gate").toBeDefined();
+    expect(a2!.find.includes(a2!.replace), "a2's replace is no longer a substring of its find").toBe(true);
+    // And on the healthy tree the check must not fire for ANY mutation.
+    for (const m of mod.MUTATIONS) {
+      const src = await readFile(join(REPO, m.file), "utf8");
+      const findCount = mod.anchorOccurrences(src, m.find);
+      const replaceCount = mod.anchorOccurrences(src, m.replace);
+      expect(findCount, `${m.id}: the fixed anchor must be present on a healthy tree`).toBe(1);
+      expect(
+        mod.isPreexistingMutation({ findCount, replaceCount }),
+        `${m.id}: the pre-existing check fired on a HEALTHY tree`,
+      ).toBe(false);
+    }
+  });
+
+  it("names the live defect in its refusal, so an operator knows the tree is not trustworthy", () => {
+    const m = { file: "packages/evaluation/src/r97-budget-ledger.ts" };
+    const reason = mod.preexistingMutationReason(m, 1);
+    expect(reason).toMatch(/ALREADY in its mutated state/);
+    expect(reason).toMatch(/is LIVE in the tree right now/);
+    expect(reason).toContain(m.file);
   });
 });

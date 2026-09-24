@@ -39,6 +39,38 @@ export const R97_BUDGET_STATE_CORRUPT = "BUDGET_STATE_CORRUPT";
 export const R97_BUDGET_STATE_MISMATCH = "BUDGET_STATE_MISMATCH";
 export const R97_LOCK_HELD = "BUDGET_LOCK_HELD";
 
+/**
+ * Plan §A2 怎么验收: "claims 文件损坏/不可读/写入失败均拒绝执行，且错误可诊断."
+ *
+ * These are deliberately NOT folded into "the anchor is absent". An anchor that
+ * exists but cannot be read is not evidence that the authorization is
+ * unclaimed — reading it that way is exactly how a damaged anchor becomes a
+ * licence to mint a second full allowance. Only ENOENT means "never claimed".
+ */
+export const R97_CAMPAIGN_CLAIM_CORRUPT = "CAMPAIGN_CLAIM_CORRUPT";
+export const R97_CAMPAIGN_CLAIM_UNREADABLE = "CAMPAIGN_CLAIM_UNREADABLE";
+export const R97_CAMPAIGN_CLAIM_WRITE_FAILED = "CAMPAIGN_CLAIM_WRITE_FAILED";
+
+/**
+ * The claim anchor's OWN lock could not be acquired, so its read-modify-write
+ * was refused rather than performed unserialized.
+ *
+ * WHY THIS IS A REFUSAL AND NOT A WARNING: the anchor is what decides whether an
+ * approval may establish a budget. Two processes that write it without
+ * serialization can each observe "not yet established" and each mint a full
+ * allowance for ONE approval — the double-spend this whole module exists to
+ * prevent. An availability failure (a leftover lock file) must therefore never be
+ * converted into a correctness failure.
+ */
+export const R97_CAMPAIGN_CLAIM_LOCK_HELD = "CAMPAIGN_CLAIM_LOCK_HELD";
+
+/**
+ * Plan §A2 / finding F2 — the approval ESTABLISHED a budget somewhere, and that
+ * campaign is no longer readable. A deleted root is a LOSS of the consumed
+ * record, never a fresh allowance.
+ */
+export const R97_CAMPAIGN_STATE_LOST = "CAMPAIGN_STATE_LOST";
+
 /** The ledger file name inside the campaign output directory. */
 export const R97_LEDGER_FILENAME = "budget-ledger.json";
 /** The exclusive lock guarding one read-modify-write of the ledger. */
@@ -101,6 +133,22 @@ export interface R97CampaignClaim {
   /** Every directory that has claimed it, oldest first. More than one entry is
    *  the double-spend signal this file exists to make DETECTABLE. */
   claimedDirs: string[];
+  /**
+   * The subset of `claimedDirs` that went on to CREATE a budget — i.e. that this
+   * approval actually spent (or could spend) calls in.
+   *
+   * WHY THIS FIELD EXISTS (finding F2). `claimedDirs` alone cannot tell "this
+   * directory was probed once and produced nothing" from "this directory ran the
+   * campaign and was then deleted". The old rule treated BOTH as stale and let
+   * the same approval start a second full budget — one `rm -rf` away from
+   * double-spend. An entry here is a durable fact that the approval has been
+   * ESTABLISHED, so the directory's later disappearance is a LOSS of the
+   * consumption record rather than evidence that nothing was ever spent.
+   *
+   * A directory that is only in `claimedDirs` is still safely ignorable, which is
+   * what keeps a failed first run from wedging the authorization forever.
+   */
+  establishedDirs: string[];
   firstClaimedAt: number;
 }
 
@@ -143,27 +191,103 @@ function claimPathFor(campaignId: string): string {
   return join(campaignClaimsDir(), `claim-${campaignId}.json`);
 }
 
-/** Read a claim record without creating one. `null` = never claimed here. */
+/** Read a claim record without creating one. `null` = never claimed here.
+ *
+ *  ABSENT and DAMAGED are deliberately different outcomes (plan §A2 怎么验收:
+ *  "claims 文件损坏/不可读/写入失败均拒绝执行，且错误可诊断"). An anchor that exists
+ *  but cannot be read is NOT evidence that the authorization is unclaimed —
+ *  reading it that way is precisely how a damaged anchor becomes a licence to
+ *  mint a second allowance. Only ENOENT degrades to `null`. */
 export async function readR97CampaignClaim(campaignId: string): Promise<R97CampaignClaim | null> {
   let text: string;
   try {
     text = await readFile(claimPathFor(campaignId), "utf8");
-  } catch {
-    return null; // absent OR unreadable: treat as "no evidence", never as a veto
+  } catch (err) {
+    if ((err as { code?: string }).code === "ENOENT") return null;
+    throw new Error(
+      `E4-R97: ${R97_CAMPAIGN_CLAIM_UNREADABLE}: the claim anchor for campaign ${campaignId} exists but could not be read (${err instanceof Error ? err.message : String(err)}) — an unreadable anchor is not evidence that this approval is unclaimed`,
+    );
   }
+  let raw: unknown;
   try {
-    const o = JSON.parse(text) as Record<string, unknown>;
-    const dir = o["dir"];
-    const dirs = o["claimedDirs"];
-    if (typeof dir !== "string") return null;
-    return {
-      campaignId,
-      dir,
-      claimedDirs: Array.isArray(dirs) ? dirs.filter((d): d is string => typeof d === "string") : [dir],
-      firstClaimedAt: typeof o["firstClaimedAt"] === "number" ? o["firstClaimedAt"] : 0,
-    };
+    raw = JSON.parse(text);
   } catch {
-    return null; // a damaged anchor is not evidence about the budget
+    throw new Error(
+      `E4-R97: ${R97_CAMPAIGN_CLAIM_CORRUPT}: the claim anchor for campaign ${campaignId} is not valid JSON — refusing to guess whether this approval was already claimed`,
+    );
+  }
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    throw new Error(`E4-R97: ${R97_CAMPAIGN_CLAIM_CORRUPT}: the claim anchor for campaign ${campaignId} is not a JSON object`);
+  }
+  const o = raw as Record<string, unknown>;
+  const dir = o["dir"];
+  const dirs = o["claimedDirs"];
+  if (typeof dir !== "string" || dir === "") {
+    throw new Error(`E4-R97: ${R97_CAMPAIGN_CLAIM_CORRUPT}: the claim anchor for campaign ${campaignId} names no directory`);
+  }
+  const claimedDirs = Array.isArray(dirs) ? dirs.filter((d): d is string => typeof d === "string") : [dir];
+  if (claimedDirs.length === 0) claimedDirs.push(dir);
+  const established = o["establishedDirs"];
+  return {
+    campaignId,
+    dir,
+    claimedDirs,
+    // FAIL CLOSED ON A LEGACY ANCHOR. An anchor written before `establishedDirs`
+    // existed carries no evidence either way; reading its directories as "never
+    // established" would re-open the very hole this field closes, so an absent
+    // list is read as "every claimed directory may have been established".
+    establishedDirs: Array.isArray(established)
+      ? established.filter((d): d is string => typeof d === "string")
+      : [...claimedDirs],
+    firstClaimedAt: typeof o["firstClaimedAt"] === "number" ? o["firstClaimedAt"] : 0,
+  };
+}
+
+/** Read + write the claim anchor under its own lock. `mutate` sees the record as
+ *  it is on disk (or `null`) and returns the next one. */
+async function withClaimLock<T>(
+  campaignId: string,
+  now: () => number,
+  isAlive: (pid: number) => boolean,
+  mutate: (previous: R97CampaignClaim | null) => Promise<{ next: R97CampaignClaim | null; result: T }> | { next: R97CampaignClaim | null; result: T },
+): Promise<T> {
+  let lockPath: string;
+  try {
+    await mkdir(campaignClaimsDir(), { recursive: true });
+    lockPath = `${claimPathFor(campaignId)}.lock`;
+  } catch (err) {
+    throw new Error(
+      `E4-R97: ${R97_CAMPAIGN_CLAIM_WRITE_FAILED}: the claim anchor directory for campaign ${campaignId} could not be created (${err instanceof Error ? err.message : String(err)})`,
+    );
+  }
+  // A lock that cannot be acquired is a REFUSAL, never a silent unlocked write:
+  // proceeding here is what let two processes both observe "not established" and
+  // each mint a full allowance for one approval.
+  const { token } = await acquireClaimLock(lockPath, now, isAlive);
+  try {
+    const previous = await readR97CampaignClaim(campaignId);
+    const { next, result } = await mutate(previous);
+    if (next !== null) {
+      try {
+        await writeFile(claimPathFor(campaignId), `${JSON.stringify(next, null, 2)}\n`, "utf8");
+      } catch (err) {
+        throw new Error(
+          `E4-R97: ${R97_CAMPAIGN_CLAIM_WRITE_FAILED}: the claim anchor for campaign ${campaignId} could not be written (${err instanceof Error ? err.message : String(err)}) — refusing to start a budget whose single-use record cannot be made durable`,
+        );
+      }
+    }
+    return result;
+  } finally {
+    // Release ONLY a lock we still own. The previous version removed the path
+    // unconditionally, so a process that had timed out (and was therefore writing
+    // without the lock) deleted the REAL owner's lock on its way out — turning one
+    // process's contention into another process's unserialized write.
+    await releaseClaimLock(lockPath, token).catch((cleanupErr) => {
+      // P14-6: best-effort cleanup failures must be OBSERVABLE, never swallowed.
+      process.stderr.write(
+        `[degraded] r97-budget-ledger.claim-lock-cleanup: ${cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)}\n`,
+      );
+    });
   }
 }
 
@@ -171,58 +295,214 @@ export async function readR97CampaignClaim(campaignId: string): Promise<R97Campa
  * Record that `dir` claims `campaignId`, and report what was already recorded.
  *
  * Returns the claim as it was BEFORE this call, so a caller can tell a genuine
- * first claim from a duplicate one. Never throws on I/O trouble: the anchor is
- * supporting evidence, and failing a campaign because a scratch directory is
- * unwritable would be a worse outcome than losing the advisory record.
+ * first claim from a duplicate one.
+ *
+ * This NO LONGER swallows I/O trouble (plan §A2 怎么验收: "写入失败均拒绝执行"). An
+ * earlier version degraded to "no evidence" here, which made an unwritable anchor
+ * indistinguishable from an unclaimed authorization — and a failure to RECORD a
+ * claim is exactly the moment a second allowance would go unnoticed.
  */
-async function recordCampaignClaim(campaignId: string, dir: string, now: () => number): Promise<R97CampaignClaim | null> {
-  try {
-    await mkdir(campaignClaimsDir(), { recursive: true });
-    const lockPath = `${claimPathFor(campaignId)}.lock`;
-    const { token } = await acquireClaimLock(lockPath, now);
+async function recordCampaignClaim(campaignId: string, dir: string, now: () => number, isAlive: (pid: number) => boolean): Promise<R97CampaignClaim | null> {
+  return withClaimLock(campaignId, now, isAlive, (previous) => {
+    const claimedDirs = previous === null ? [] : [...previous.claimedDirs];
+    if (!claimedDirs.includes(dir)) claimedDirs.push(dir);
+    const next: R97CampaignClaim = {
+      campaignId,
+      dir,
+      claimedDirs,
+      establishedDirs: previous === null ? [] : [...previous.establishedDirs],
+      firstClaimedAt: previous?.firstClaimedAt ?? now(),
+    };
+    return { next, result: previous };
+  });
+}
+
+/**
+ * Mark `dir` as having ESTABLISHED a budget for `campaignId` (finding F2).
+ *
+ * Called at the one moment a budget actually comes into existence, so the anchor
+ * records "this approval has been spent from here" durably. Later, if that
+ * directory is deleted, the anchor still says the approval was established — and
+ * a missing root becomes a LOSS instead of a fresh allowance.
+ */
+export async function markR97CampaignClaimEstablished(
+  campaignId: string,
+  dir: string,
+  now: () => number = () => Date.now(),
+  isAlive: (pid: number) => boolean = defaultIsAlive,
+): Promise<void> {
+  await withClaimLock(campaignId, now, isAlive, (previous) => {
+    if (previous === null) return { next: null, result: undefined };
+    const claimedDirs = [...previous.claimedDirs];
+    if (!claimedDirs.includes(dir)) claimedDirs.push(dir);
+    const establishedDirs = [...previous.establishedDirs];
+    if (!establishedDirs.includes(dir)) establishedDirs.push(dir);
+    const next: R97CampaignClaim = {
+      campaignId,
+      dir: previous.dir,
+      claimedDirs,
+      establishedDirs,
+      firstClaimedAt: previous.firstClaimedAt,
+    };
+    return { next, result: undefined };
+  });
+}
+
+/**
+ * The claim anchor's lock.
+ *
+ * ---- FINDING (independent verifier probe P16/P17, plan §A2 怎么验收 4) --------
+ *
+ * The previous version wrote a BARE TOKEN, had no staleness recovery, and — the
+ * fatal part — returned `{token: ""}` when it timed out, after which
+ * `withClaimLock` performed its read-modify-write ANYWAY and its `finally`
+ * deleted a lock file it had never owned. A single leftover lock file from a
+ * crashed process therefore disabled the anchor's mutual exclusion entirely:
+ * two processes released by a real barrier each observed "not established" and
+ * each minted a FULL budget for one approval.
+ *
+ * This now follows the SAME contract as the ledger's own lock (see
+ * `acquireLock`): an owner record with a token and pid, takeover ONLY when the
+ * owner is provably dead, and a NAMED REFUSAL on timeout instead of an unlocked
+ * write. Plan §R98 怎么做: "锁采用 owner token + 进程存活判断；年龄只能作为检查线索。
+ * 活 owner 超时返回占用错误，不能删锁."
+ *
+ * AGE IS USED FOR EXACTLY ONE CASE, and it is not a live owner: a lock whose
+ * content cannot be parsed at all (the legacy bare-token form, or garbage) names
+ * no owner to check, so an old one is treated as debris from a crashed writer and
+ * taken over. A lock whose owner record IS parseable is never taken over on age —
+ * only when its pid is provably gone.
+ *
+ * THE BOUND IS DELIBERATELY SHORTER THAN THE ACQUIRE DEADLINE. If debris were
+ * only reclaimable after `DEFAULT_LOCK_TIMEOUT_MS`, the very first acquisition
+ * would always give up before the takeover could happen, so a single leftover
+ * file would refuse every attempt — converting a crash into a permanent outage.
+ * Every writer of the CURRENT format leaves a parseable record, and the legacy
+ * writer's critical section was a single write, so 5s is far longer than any
+ * holder whose record we cannot read could legitimately need.
+ */
+const CLAIM_LOCK_STALE_MS = 5_000;
+
+async function acquireClaimLock(lockPath: string, now: () => number, isAlive: (pid: number) => boolean): Promise<{ token: string }> {
+  const deadline = now() + DEFAULT_LOCK_TIMEOUT_MS;
+  for (;;) {
+    const token = newLockToken();
     try {
-      const previous = await readR97CampaignClaim(campaignId);
-      const claimedDirs = previous === null ? [] : [...previous.claimedDirs];
-      if (!claimedDirs.includes(dir)) claimedDirs.push(dir);
-      const next: R97CampaignClaim = {
-        campaignId,
-        dir,
-        claimedDirs,
-        firstClaimedAt: previous?.firstClaimedAt ?? now(),
-      };
-      await writeFile(claimPathFor(campaignId), `${JSON.stringify(next, null, 2)}\n`, "utf8");
-      return previous;
-    } finally {
-      // P14-6: best-effort cleanup failures must be OBSERVABLE, never swallowed.
-      // A stale lock file is harmless (acquireClaimLock is bounded and stale
-      // locks are recovered), but a silent empty-callback catch is forbidden.
-      await rm(lockPath, { force: true }).catch((cleanupErr) => {
+      const fh = await open(lockPath, "wx");
+      try {
+        const record: R97LockRecord = { token, pid: process.pid, host: hostname(), acquiredAt: now() };
+        await fh.writeFile(JSON.stringify(record), "utf8");
+      } finally {
+        await fh.close();
+      }
+      return { token };
+    } catch (err) {
+      if ((err as { code?: string }).code !== "EEXIST") throw err;
+    }
+
+    // The lock exists. Decide whether its owner is still alive.
+    let holder: R97LockRecord | null = null;
+    let age = 0;
+    try {
+      const [text, st] = await Promise.all([readFile(lockPath, "utf8"), stat(lockPath)]);
+      holder = parseLockRecord(text);
+      age = Math.max(0, now() - st.mtimeMs);
+    } catch {
+      // The holder released it between our open() and this read: retry at once.
+      continue;
+    }
+
+    // A provably dead owner — the crash this exists to survive. Age is NOT
+    // required: a fast crash must not deadlock the campaign.
+    const ownerGone = holder !== null && holder.token !== "" && !isAlive(holder.pid);
+    // An UNPARSEABLE lock names no owner, so there is no liveness to check. Only
+    // an old one is debris; a fresh one is conservatively occupied, because
+    // stealing a lock we cannot identify is the worse error.
+    const unparseableDebris = holder === null && age >= CLAIM_LOCK_STALE_MS;
+
+    if (ownerGone || unparseableDebris) {
+      // THE TAKEOVER MUST BE ATOMIC, and `rm` is not.
+      //
+      // Two processes that both see the same stale lock would both `rm` it and
+      // both then `open(…, "wx")` successfully — because the LOSER'S `rm` can
+      // land AFTER the winner has already created its own lock, deleting the
+      // winner's lock and letting the loser in too. That is exactly the
+      // double-grant this lock exists to prevent, and it was measured: two
+      // barrier-released processes produced winners=2.
+      //
+      // `rename` is atomic on both POSIX and Windows/NTFS: for a given source
+      // path exactly ONE concurrent caller can succeed, and the others get
+      // ENOENT. So the winner moves the debris to a PRIVATE name (so it can
+      // never delete anyone else's live lock) and only then creates its own;
+      // the losers simply see ENOENT and retry. `rm` of the private name is
+      // best-effort cleanup of our own file, never someone else's.
+      const graveyard = `${lockPath}.debris-${newLockToken()}`;
+      try {
+        await rename(lockPath, graveyard);
+      } catch {
+        // Another process won the takeover, or the owner released it. Either
+        // way there is nothing for us to do but look again.
+        continue;
+      }
+      // VERIFY WHAT WE ACTUALLY TOOK. Our "this is debris" decision was made from
+      // an EARLIER read, so between that read and this rename the path may have
+      // been replaced by a LIVE owner's lock. Renaming is atomic, but it is not a
+      // compare-and-swap, so we must not destroy a lock we did not intend to
+      // take: re-read what we moved, and if it names a living owner, put it back
+      // and retry. Otherwise two processes could each end up believing they hold
+      // the anchor — the exact double-grant this exists to prevent.
+      let taken: R97LockRecord | null = null;
+      try {
+        taken = parseLockRecord(await readFile(graveyard, "utf8"));
+      } catch {
+        taken = null; // unreadable ⇒ genuine debris
+      }
+      const tookLiveLock = taken !== null && taken.token !== "" && isAlive(taken.pid);
+      if (tookLiveLock) {
+        // We raced a legitimate owner. Restore it and back off. If the path was
+        // re-created in the meantime the restore fails, and that is still safe:
+        // WE simply do not proceed without a lock we own.
+        await rename(graveyard, lockPath).catch((restoreErr) => {
+          // P14-6: a best-effort restore failure must be OBSERVABLE. Swallowing it
+          // would hide the one case where a live owner's lock stays in our private
+          // debris name instead of being put back — a state an operator needs to see.
+          process.stderr.write(
+            `[degraded] r97-budget-ledger.claim-lock-restore: ${restoreErr instanceof Error ? restoreErr.message : String(restoreErr)}\n`,
+          );
+        });
+        continue;
+      }
+      await rm(graveyard, { force: true }).catch((cleanupErr) => {
+        // P14-6: our OWN debris cleanup is still a filesystem failure; report it
+        // rather than leaving an unexplained debris file behind.
         process.stderr.write(
-          `[degraded] r97-budget-ledger.claim-lock-cleanup: ${cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)}\n`,
+          `[degraded] r97-budget-ledger.claim-lock-debris-cleanup: ${cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)}\n`,
         );
       });
-      void token;
+      continue;
     }
-  } catch {
-    return null;
+
+    if (now() >= deadline) {
+      const who = holder === null ? "an unreadable owner" : `pid ${holder.pid}`;
+      throw new Error(
+        `E4-R97: ${R97_CAMPAIGN_CLAIM_LOCK_HELD}: could not acquire the claim anchor lock within ${DEFAULT_LOCK_TIMEOUT_MS}ms (${lockPath}) — it is held by ${who} (age ${age}ms); refusing to write the claim anchor unserialized, because two unserialized writers can each grant one approval a full budget`,
+      );
+    }
+    await new Promise((r) => setTimeout(r, LOCK_RETRY_MS));
   }
 }
 
-/** A tiny best-effort lock so two racing processes do not lose a claimed dir.
- *  Bounded and non-fatal: on timeout the caller proceeds and may simply
- *  overwrite, which at worst loses one advisory entry. */
-async function acquireClaimLock(lockPath: string, now: () => number): Promise<{ token: string }> {
-  const token = newLockToken();
-  const deadline = now() + 2_000;
-  for (;;) {
-    try {
-      await writeFile(lockPath, token, { encoding: "utf8", flag: "wx" });
-      return { token };
-    } catch {
-      if (now() >= deadline) return { token: "" };
-      await new Promise((r) => setTimeout(r, LOCK_RETRY_MS));
-    }
+/** Release the claim lock ONLY if we still own it. */
+async function releaseClaimLock(lockPath: string, token: string): Promise<void> {
+  if (token === "") return;
+  try {
+    const text = await readFile(lockPath, "utf8");
+    const holder = parseLockRecord(text);
+    if (holder === null || holder.token !== token) return; // no longer ours
+  } catch {
+    return; // already gone
   }
+  await rm(lockPath, { force: true });
 }
 
 /** A reservation whose owning process is gone and which has no terminal record.
@@ -1056,7 +1336,7 @@ export async function openR97BudgetLedger(dir: string, opts: R97LedgerOpenOption
       // campaign id", and a caller with a stronger notion of campaign existence
       // (the lifecycle header) may inject `isLiveClaimDir`.
       const campaignId = campaignIdOf(opts.planDigest, opts.campaignModelCalls);
-      const priorClaim = await recordCampaignClaim(campaignId, dir, now);
+      const priorClaim = await recordCampaignClaim(campaignId, dir, now, isAlive);
       if (priorClaim !== null) {
         const others = priorClaim.claimedDirs.filter((d) => d !== dir);
         const live = [];
@@ -1066,6 +1346,34 @@ export async function openR97BudgetLedger(dir: string, opts: R97LedgerOpenOption
         }
         duplicateCampaignDirs = live;
       }
+
+      // ---- The F2 guard: a CREATE for an already-ESTABLISHED approval. -----
+      //
+      // STALENESS IS STILL CHECKED, but it is no longer the whole rule. The
+      // anchor distinguishes two kinds of claim: a directory that was only
+      // PROBED (recorded, but no budget ever came into existence there) and one
+      // that ESTABLISHED a budget. A probed claim stays ignorable — that is what
+      // keeps a failed first run from wedging the authorization forever. An
+      // ESTABLISHED claim whose directory is no longer readable is a LOSS of the
+      // consumption record, and re-creating there would grant a SECOND allowance
+      // for one approval (finding F2: one `rm -rf` was enough).
+      //
+      // Scoped to opens that would CREATE: a resume adopts what exists and
+      // cannot mint anything, so it is never refused by this rule.
+      const wouldCreate = present === null && mode !== "resume";
+      if (wouldCreate) {
+        const anchor = await readR97CampaignClaim(campaignId);
+        const establishedDirs = anchor === null ? [] : anchor.establishedDirs;
+        const lostHere = establishedDirs.includes(dir) ? [dir] : [];
+        const lostElsewhere = establishedDirs.filter((d) => d !== dir && !duplicateCampaignDirs.includes(d));
+        const lost = [...lostHere, ...lostElsewhere];
+        if (lost.length > 0) {
+          throw new Error(
+            `E4-R97: ${R97_CAMPAIGN_STATE_LOST}: this authorization (campaign ${campaignId}) already ESTABLISHED a budget in ${lost.join(", ")}, and no campaign is readable there now — a deleted root is a LOSS of the consumed record, not a fresh allowance; restore that campaign, or use a new authorization`,
+          );
+        }
+      }
+
       if ((mode === "first-run" || opts.mode === "first-run") && duplicateCampaignDirs.length > 0) {
         throw new Error(
           `E4-R97: ${R97_DUPLICATE_CAMPAIGN_DIR}: mode "first-run" would start a SECOND budget for an authorization already claimed by ${duplicateCampaignDirs.join(", ")} (campaign ${campaignId}, this directory ${dir}) — resume the existing campaign with mode "resume", or use a new authorization`,
@@ -1082,6 +1390,12 @@ export async function openR97BudgetLedger(dir: string, opts: R97LedgerOpenOption
         established = true;
         resolvedMode = "first-run";
       }
+      // Record durably that this approval has been ESTABLISHED here (F2). This is
+      // the one moment a budget comes into existence, so it is the one moment the
+      // "this approval has been spent from here" fact becomes true. A failure to
+      // record it is a refusal, not a warning: an unrecorded establishment is
+      // exactly the state in which a later `rm -rf` goes unnoticed.
+      await markR97CampaignClaimEstablished(campaignId, dir, now, isAlive);
     } finally {
       await releaseLock(lockPath, token);
     }

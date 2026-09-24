@@ -50,7 +50,37 @@
 
 import { computeRuntimeConfigHash, stableStringify } from "./manifest.js";
 
-export const R92_AUTHORIZATION_SCHEMA = "e4-r92-authorization-v1";
+/**
+ * The CURRENT approval-material contract version.
+ *
+ * ---- WHY THIS MOVED TO v2 (E4-R104 / plan §A4 怎么做 8) ---------------------
+ *
+ * "更新 schema/版本和拒绝信息；旧材料缺新身份字段应明确拒绝重新生成，不能静默补字段后
+ *  继续使用旧授权."
+ *
+ * `R92_ARM_FIELDS` is a CLOSED allow-list, and A4 added `buildDigest` to it. That
+ * changed the SHAPE of an accepted envelope. A version label is the only thing
+ * that makes "this material predates the new contract" a CHECKABLE fact: with the
+ * label left at v1, an envelope written under the old shape is indistinguishable
+ * from one written under the new shape, and — because the field is legitimately
+ * optional at this layer (see `R92ArmIdentity.buildDigest`) — an old envelope that
+ * simply omits it would reach the gate with no build comparison performed at all.
+ *
+ * Bumping the label does NOT silently upgrade anything: old material is REFUSED
+ * and must be regenerated, which is exactly what the plan asks for. Nothing in
+ * this repository is a pre-existing v1 artifact, so no issued approval is
+ * invalidated by this move.
+ */
+export const R92_AUTHORIZATION_SCHEMA = "e4-r92-authorization-v2";
+
+/**
+ * Schema labels this contract SUPERSEDES.
+ *
+ * Named explicitly so the refusal can tell an operator that their material
+ * predates the execution-identity contract and must be regenerated, rather than
+ * reporting a generic version mismatch that reads like a typo.
+ */
+export const R92_AUTHORIZATION_SCHEMA_SUPERSEDED: readonly string[] = ["e4-r92-authorization-v1"];
 
 /** Plan §R92: 6–10 non-holdout development-set cases. */
 export const R92_MIN_CASES = 6;
@@ -194,6 +224,38 @@ export interface R92ArmIdentity {
    * single shared digest would silently hide one arm's build identity.
    */
   executionPlanDigest: string;
+  /**
+   * The arm's EXECUTION BUILD digest — the sha256 of the bytes that actually run
+   * a case, derived from the real static ESM import graph (E4-R104 / A4).
+   *
+   * ---- WHY THIS IS A SEPARATE FIELD AND NOT PART OF `executionPlanDigest` -----
+   *
+   * MEASURED DEFECT F4 (plan §A4): `executionPlanDigest` is derived from git —
+   * the CLI binds `sourceSha` and `treeFingerprint`. `dist/` is GITIGNORED
+   * (`.gitignore:2`), so a rebuilt `packages/core/dist/runtime/runtime.js` moves
+   * neither the working tree's status nor, therefore, this digest. Rewriting the
+   * code that executes a case left the approved identity byte-identical and the
+   * old approval valid.
+   *
+   * The two values answer different questions and both are required by the FORMAL
+   * campaign:
+   *   - `executionPlanDigest` — "which revision/plan did the arm declare?"
+   *   - `buildDigest`          — "which BYTES will actually execute?"
+   *
+   * ---- WHY IT IS OPTIONAL HERE AND REQUIRED BY R97 ---------------------------
+   *
+   * This is the SAME layering as `driverBuildDigest`: the R92 layer is a general
+   * envelope contract, and the R92 development-mechanism plan names two HISTORICAL
+   * pinned commits that are not checked out in this repository, so it has no build
+   * to hash. Fabricating one there would be exactly the dishonesty this plan
+   * fights. The R97 formal campaign — which really does hold both checkouts — makes
+   * the field MANDATORY (`ARM_BUILD_UNBOUND`), so old material lacking it is
+   * refused and must be regenerated rather than silently reused
+   * (plan §A4 做什么 3: "新合同需要重新生成批准材料").
+   *
+   * When it IS present, the R92 gate compares it like any other bound identity.
+   */
+  buildDigest?: string;
   buildMode: R92ArmBuildMode;
 }
 
@@ -536,7 +598,18 @@ export function r92AuthorizationIssuesV1(auth: R92AuthorizationV1): string[] {
   const issues: string[] = [];
 
   if (auth.schemaVersion !== R92_AUTHORIZATION_SCHEMA) {
-    issues.push(`schemaVersion must be ${R92_AUTHORIZATION_SCHEMA} (got ${String(auth.schemaVersion)})`);
+    // E4-R104 (A4 怎么做 8): a SUPERSEDED label is refused with the remedy named.
+    // The distinction matters operationally: "you typed the version wrong" and
+    // "your approval predates the execution-identity contract and the arms it
+    // names bind no executed bytes" call for different actions, and only the
+    // second requires regenerating the material rather than editing a field.
+    if (R92_AUTHORIZATION_SCHEMA_SUPERSEDED.includes(String(auth.schemaVersion))) {
+      issues.push(
+        `schemaVersion is the SUPERSEDED contract ${String(auth.schemaVersion)}; this material predates the execution-identity contract (its arms bind no executed bytes) and must be REGENERATED as ${R92_AUTHORIZATION_SCHEMA}, never patched in place`,
+      );
+    } else {
+      issues.push(`schemaVersion must be ${R92_AUTHORIZATION_SCHEMA} (got ${String(auth.schemaVersion)})`);
+    }
   }
   if (!nonEmpty(auth.authorizationId)) issues.push("authorizationId must be a non-empty id");
 
@@ -633,6 +706,24 @@ export function r92AuthorizationIssuesV1(auth: R92AuthorizationV1): string[] {
       if (!hex64(a.executionPlanDigest)) {
         issues.push(`arms.${key}.executionPlanDigest must be 64-hex (the arm's own execution-plan digest)`);
       }
+      // E4-R104 (A4): the arm's EXECUTION build digest. When the field is
+      // PRESENT it must be a real 64-hex digest — an empty/whitespace/garbage
+      // value is never "no opinion", because it would read as a bound identity
+      // while binding nothing. When it is OMITTED entirely the R92 layer stays
+      // silent and the R97 formal campaign refuses it (`ARM_BUILD_UNBOUND`):
+      // this envelope contract is shared with the R92 development-mechanism plan,
+      // which names two historical commits that are not checked out here and so
+      // has no build to hash. Fabricating one there would be the dishonesty this
+      // plan fights. Plan §A4 做什么 3: "新合同需要重新生成批准材料."
+      if (a.buildDigest !== undefined) {
+        if (typeof a.buildDigest !== "string" || a.buildDigest.trim() === "") {
+          issues.push(
+            `arms.${key}.buildDigest is present but empty — an unbound identity must be OMITTED or regenerated, never spelled as a blank value`,
+          );
+        } else if (!hex64(a.buildDigest)) {
+          issues.push(`arms.${key}.buildDigest must be 64-hex (the sha256 of the arm's executed build closure)`);
+        }
+      }
       if (a.buildMode !== expectedMode) {
         issues.push(
           `arms.${key}.buildMode is "${String(a.buildMode)}" but armIdentityMode "${String(auth.armIdentityMode)}" requires "${expectedMode}" — the two experiment kinds must not be mixed`,
@@ -714,6 +805,11 @@ export function computeR92AuthorizationDigestV1(auth: R92AuthorizationV1): strin
 export interface R92ObservedArmBuild {
   sha: string | null;
   executionPlanDigest: string | null;
+  /**
+   * The arm's re-derived EXECUTION build digest (E4-R104 / A4). `null` means the
+   * closure could not be established in that checkout — a refusal, never a skip.
+   */
+  buildDigest: string | null;
 }
 
 /** Facts observed at execution time, compared field-by-field against the
@@ -778,7 +874,15 @@ const R92_AUTH_FIELDS: readonly string[] = [
   "promotionEligible",
 ];
 
-const R92_ARM_FIELDS: readonly string[] = ["sha", "executionPlanDigest", "buildMode"];
+/**
+ * The closed field set of one arm's identity.
+ *
+ * `buildDigest` is on this list because it is a REQUIRED part of the envelope
+ * contract (E4-R104 / A4), not an optional extension: the closed-schema rule
+ * exists so an envelope cannot carry a field a human never approved, and an
+ * arm's executed bytes are precisely something a human must approve.
+ */
+const R92_ARM_FIELDS: readonly string[] = ["sha", "executionPlanDigest", "buildDigest", "buildMode"];
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
@@ -1185,6 +1289,27 @@ export function r92AuthorizationGate(input: R92GateInput): R92GateResult {
         ...notRun,
         code: "ARM_BUILD_DRIFT",
         reason: `arm "${key}" execution-plan digest drift: authorized ${authorizedArm.executionPlanDigest} but observed ${String(observed.executionPlanDigest)}`,
+        issues: [],
+      };
+    }
+    // E4-R104 (A4): the executed BYTES. This is the comparison that catches a
+    // rebuilt `dist/` — the sha and the execution-plan digest both stay put
+    // because `dist/` is gitignored, so without this line a patched executor ran
+    // under an approval that described different code. `null` is an unestablished
+    // identity and is drift, exactly like an unobserved arm.
+    //
+    // Only compared when the envelope actually BINDS a value: an omitted field is
+    // the R92 development-mechanism plan's honest "no build was checked out to
+    // hash", and the R97 formal layer is what makes the binding mandatory
+    // (`ARM_BUILD_UNBOUND`). Stripping a bound field is not a way through — the
+    // envelope body is covered by `planDigest`, so removal is a digest mismatch.
+    if (authorizedArm.buildDigest !== undefined && observed.buildDigest !== authorizedArm.buildDigest) {
+      return {
+        authorizedToExecute: false,
+        planStatus: "READY_FOR_AUTHORIZATION",
+        ...notRun,
+        code: "ARM_BUILD_DRIFT",
+        reason: `arm "${key}" buildDigest drift: authorized ${authorizedArm.buildDigest} but observed ${String(observed.buildDigest)} — the bytes that execute a case changed`,
         issues: [],
       };
     }

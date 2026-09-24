@@ -15,8 +15,9 @@
  * constructed and no network call is made anywhere in this file.
  */
 
-import { afterAll, afterEach, describe, expect, it } from "vitest";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { existsSync, statSync } from "node:fs";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -28,6 +29,8 @@ import {
   readR97CampaignClaim,
   readR97LedgerFile,
   viewOfR97Ledger,
+  R97_BUDGET_STATE_CORRUPT,
+  R97_BUDGET_STATE_MISSING,
   R97_CAMPAIGN_CLAIMS_DIR_ENV,
   R97_LEDGER_FILENAME,
   R97_LEDGER_LOCK_FILENAME,
@@ -48,14 +51,27 @@ afterEach(async () => {
 /**
  * The per-authorization CLAIM anchor (plan §R98 line 121's cross-directory
  * guard) lives outside any single campaign directory. Point it at a scratch
- * directory for this whole file so no test reads or writes machine-level state,
- * and so the pre-existing tests keep their isolated-directory behaviour.
+ * directory so no test reads or writes machine-level state.
+ *
+ * ONE FRESH ANCHOR PER TEST (plan §A2 怎么做 6: "普通测试应使用独立的 claim
+ * namespace/独立批准 ID"). Several tests here deliberately reuse the same
+ * `PLAN` in a brand-new temporary directory, and the suite removes its
+ * directories afterwards. Under finding F2 an anchor that records "this approval
+ * ESTABLISHED a budget here" is no longer ignorable just because the directory
+ * was cleaned up — which is the whole point of the fix — so sharing one anchor
+ * across tests would make each later test look like a double-spend of an
+ * approval an earlier test already spent. Isolating the namespace preserves the
+ * tests' original intent exactly: each test measures its OWN approval.
  */
-const CLAIMS_DIR = await mkdtemp(join(tmpdir(), "r97-claims-"));
-process.env[R97_CAMPAIGN_CLAIMS_DIR_ENV] = CLAIMS_DIR;
-afterAll(async () => {
+let CLAIMS_DIR = "";
+beforeEach(async () => {
+  CLAIMS_DIR = await mkdtemp(join(tmpdir(), "r97-claims-"));
+  process.env[R97_CAMPAIGN_CLAIMS_DIR_ENV] = CLAIMS_DIR;
+});
+afterEach(async () => {
   delete process.env[R97_CAMPAIGN_CLAIMS_DIR_ENV];
-  await rm(CLAIMS_DIR, { recursive: true, force: true }).catch(() => {});
+  if (CLAIMS_DIR !== "") await rm(CLAIMS_DIR, { recursive: true, force: true }).catch(() => {});
+  CLAIMS_DIR = "";
 });
 
 const PLAN = "a".repeat(64);
@@ -945,5 +961,243 @@ describe("E4-R97 G9: one authorization cannot be spent twice through a different
     await expect(
       openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 320, mode: "first-run" }),
     ).rejects.toThrow(/BUDGET_STATE_MISMATCH/);
+  });
+});
+
+describe("E4-R97 G10: a DELETED ledger is never a fresh allowance (deletion injection)", () => {
+  // Plan §R98 怎么做: "`read() ?? emptyLedger()` 只能用于明确的首次创建。恢复时账本
+  // 不存在、JSON损坏、被替换为别的计划，都报 BUDGET_STATE_MISSING/CORRUPT/MISMATCH，
+  // 不能刷新额度."
+  //
+  // WHY THIS BLOCK EXISTS, AND WHY THE FAULT IS A DELETION.
+  // -------------------------------------------------------
+  // G7 above already proves the headline property with a loose `/MISSING|missing|
+  // disappear/i` matcher on two methods. This block PINS the property exactly:
+  // the named code, on EVERY entry point including all four settle paths, with the
+  // on-disk state asserted afterwards (no re-created ledger, no stale lock).
+  //
+  // The fault is `rm` of `budget-ledger.json`, and that choice is deliberate:
+  //   * `rm`/unlink(2) removes a DIRECTORY ENTRY and is governed by the
+  //     DIRECTORY's permission, not the file's mode. It behaves identically on
+  //     Windows and on ubuntu-latest, so this test needs NO platform branch.
+  //   * `chmod 0o444` was REJECTED for exactly the opposite reason — see the
+  //     header of `r97-budget-write-fault.test.ts`, candidate (b). MEASURED there
+  //     on Windows it makes `rename` fail with EPERM, but on POSIX the atomic
+  //     write creates a NEW temp file and `rename(2)` replaces a read-only
+  //     destination using only the directory's permission, so the injection stops
+  //     producing a failure at all. A chmod test would be green here and vacuous
+  //     on the Linux half of the matrix.
+  //
+  // MEASURED by the independent probe `.ci/team-verify/probe-ledger-read-deleted.mjs`
+  // (log `.ci/team-verify/probe-ledger-read-deleted.log`, win32, node v24.18.1),
+  // whose verbatim values these tests encode: read/view/reserve/commit/abandon/
+  // markUnknown/recover all throw BUDGET_STATE_MISSING, the ledger is NOT
+  // re-created, and NO stale lock is left behind.
+  //
+  // WHY THIS IS NOT "PASSING FOR THE WRONG REASON". A deletion-based test could be
+  // green merely because a path is MISSING for an incidental reason (an errno, a
+  // typo in the filename, a directory that was never created). Three guards:
+  //   1. The message is asserted to CONTAIN `BUDGET_STATE_MISSING` AND to contain
+  //      NONE of `EPERM|EACCES|ENOENT|EISDIR` — so the refusal cannot be an
+  //      errno that happens to look like a refusal.
+  //   2. The NEGATIVE CONTROL drives a genuinely fresh directory and shows the
+  //      very same assertions do NOT hold there, so a refusal is not an artefact
+  //      of the harness.
+  //   3. The establishment is ASSERTED (reserve succeeded, remaining dropped)
+  //      BEFORE the deletion, so the test cannot be green because the ledger was
+  //      never there in the first place.
+  const LEDGER_PATH = (dir: string): string => join(dir, R97_LEDGER_FILENAME);
+
+  let digestCounter = 0;
+  const freshPlan = (): string => (++digestCounter).toString(16).padStart(64, "d");
+
+  /** Establish a ledger, spend 2 of the 3 calls, and assert the spend landed. */
+  async function establishedWithSpend(dir: string, plan: string) {
+    const l = await openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "auto" });
+    const r = await l.reserve("baseline", 2);
+    expect(r.ok).toBe(true);
+    await l.commit(r.reservationId!, 2);
+    expect((await l.view()).remaining).toBe(1);
+    expect(existsSync(LEDGER_PATH(dir))).toBe(true);
+    return l;
+  }
+
+  /** Every mutation entry point, so the settle paths are pinned too, not just read(). */
+  function allEntryPoints(l: Awaited<ReturnType<typeof openR97BudgetLedger>>, rid: string) {
+    return [
+      ["read()", () => l.read()],
+      ["view()", () => l.view()],
+      ['reserve("candidate", 1)', () => l.reserve("candidate", 1)],
+      [`commit("${rid}", 1)`, () => l.commit(rid, 1)],
+      [`abandon("${rid}")`, () => l.abandon(rid)],
+      [`markUnknown("${rid}")`, () => l.markUnknown(rid)],
+      ["recover()", () => l.recover()],
+    ] as const;
+  }
+
+  it("REGRESSION (probe c): after establishment, a deleted ledger is BUDGET_STATE_MISSING on EVERY entry point", async () => {
+    const dir = await tempDir();
+    const plan = freshPlan();
+    const l = await establishedWithSpend(dir, plan);
+    const rid = (await l.read()).entries[0]!.reservationId;
+
+    // The deletion. `force` keeps this idempotent; the file is asserted present
+    // immediately before, so this cannot pass on an already-missing path.
+    await rm(LEDGER_PATH(dir), { force: true });
+    expect(existsSync(LEDGER_PATH(dir))).toBe(false);
+
+    for (const [label, call] of allEntryPoints(l, rid)) {
+      const message = (await thrownBy(call)).message;
+      expect(message, `${label} must name the MISSING state`).toContain(R97_BUDGET_STATE_MISSING);
+      // Guard 1: the refusal is the NAMED state, not an errno wearing its name.
+      expect(message, `${label} must not refuse for an errno reason`).not.toMatch(/EPERM|EACCES|ENOENT|EISDIR|EEXIST/);
+      // A lost budget is not a lost CAMPAIGN and not a foreign ledger: the code
+      // is specifically MISSING, so a future refactor cannot widen it silently.
+      expect(message, `${label} must not be reported as CORRUPT/MISMATCH`).not.toMatch(
+        /BUDGET_STATE_CORRUPT|BUDGET_STATE_MISMATCH/,
+      );
+    }
+  });
+
+  it("REGRESSION (probe c): the failed settles leave NO ledger file and NO stale lock behind", async () => {
+    const dir = await tempDir();
+    const plan = freshPlan();
+    const l = await establishedWithSpend(dir, plan);
+    const rid = (await l.read()).entries[0]!.reservationId;
+    await rm(LEDGER_PATH(dir), { force: true });
+
+    for (const [label, call] of allEntryPoints(l, rid)) {
+      await expect(call(), `${label} must refuse`).rejects.toThrow(/BUDGET_STATE_MISSING/);
+      // The whole DIRECTORY LISTING is read, not just the ledger path: a
+      // silently re-created EMPTY ledger (the exact defect this closes) and a
+      // stale lock are both visible here and nowhere else.
+      const names = await readdir(dir);
+      expect(names, `${label} must not re-create the ledger`).not.toContain(R97_LEDGER_FILENAME);
+      expect(names, `${label} must not leave a stale lock`).not.toContain(R97_LEDGER_LOCK_FILENAME);
+      expect(names, `${label} must leave the directory empty`).toEqual([]);
+    }
+    expect(existsSync(LEDGER_PATH(dir))).toBe(false);
+  });
+
+  it("REGRESSION (probe c2): re-opening the emptied directory cannot mint a fresh allowance either", async () => {
+    const dir = await tempDir();
+    const plan = freshPlan();
+    await establishedWithSpend(dir, plan);
+    await rm(LEDGER_PATH(dir), { force: true });
+
+    // mode "resume" promises "recover what exists" and may never create.
+    await expect(
+      openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "resume" }),
+    ).rejects.toThrow(/BUDGET_STATE_MISSING/);
+    expect(existsSync(LEDGER_PATH(dir))).toBe(false);
+
+    // Even a CREATE-capable mode is refused, because the approval is recorded as
+    // having ESTABLISHED a budget here (finding F2: a deleted root is a LOSS of
+    // the consumed record, not a fresh allowance). This is the strongest form of
+    // "the deletion is never silently repaired".
+    await expect(
+      openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "auto" }),
+    ).rejects.toThrow(/CAMPAIGN_STATE_LOST/);
+    expect(existsSync(LEDGER_PATH(dir))).toBe(false);
+  });
+
+  /** Capture the thrown error, so the NAMED code can be asserted exactly. */
+  async function thrownBy(call: () => Promise<unknown>): Promise<Error> {
+    const err = await call().then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(err).toBeInstanceOf(Error);
+    return err as Error;
+  }
+
+  it("REGRESSION (probe d1): a DIRECTORY at the ledger path is CORRUPT, never an empty budget", async () => {
+    // Established handle: the reader's errno is NAMED, not leaked.
+    const dir = await tempDir();
+    const plan = freshPlan();
+    const l = await establishedWithSpend(dir, plan);
+    await rm(LEDGER_PATH(dir), { force: true });
+    await mkdir(LEDGER_PATH(dir), { recursive: true });
+    // Evidence that the path really is a directory, so this is not a missing path.
+    expect(statSync(LEDGER_PATH(dir)).isDirectory()).toBe(true);
+
+    for (const [label, call] of [
+      ["read()", () => l.read()],
+      ["view()", () => l.view()],
+      ['reserve("candidate", 1)', () => l.reserve("candidate", 1)],
+    ] as const) {
+      const message = (await thrownBy(call)).message;
+      expect(message, `${label} must name the CORRUPT state`).toContain(R97_BUDGET_STATE_CORRUPT);
+      // The refusal must NOT be reported as the missing state.
+      expect(message, `${label} must not be the missing state`).not.toContain(R97_BUDGET_STATE_MISSING);
+    }
+
+    // Never-established open: the raw reader error propagates unwrapped (there is
+    // no prior durable state to make it a "corrupt ESTABLISHED ledger"), and it
+    // still must NOT be treated as an empty full allowance.
+    const freshDirB = await tempDir();
+    const planB = freshPlan();
+    await mkdir(LEDGER_PATH(freshDirB), { recursive: true });
+    await expect(
+      openR97BudgetLedger(freshDirB, { planDigest: planB, campaignModelCalls: 3, mode: "auto" }),
+    ).rejects.toThrow(/EISDIR/);
+    // No ledger was written: the directory is still the only entry.
+    expect((await readdir(freshDirB)).sort()).toEqual([R97_LEDGER_FILENAME]);
+  });
+
+  it("REGRESSION (probe d2): an invalid-JSON ledger is CORRUPT and is never read as empty", async () => {
+    // Established handle.
+    const dir = await tempDir();
+    const plan = freshPlan();
+    const l = await establishedWithSpend(dir, plan);
+    const corrupt = "{ this is not json";
+    await writeFile(LEDGER_PATH(dir), corrupt, "utf8");
+
+    for (const [label, call] of [
+      ["read()", () => l.read()],
+      ["view()", () => l.view()],
+      ['reserve("candidate", 1)', () => l.reserve("candidate", 1)],
+    ] as const) {
+      const message = (await thrownBy(call)).message;
+      expect(message, `${label} must name the CORRUPT state`).toContain(R97_BUDGET_STATE_CORRUPT);
+      expect(message, `${label} must not be the missing state`).not.toContain(R97_BUDGET_STATE_MISSING);
+    }
+    // The corrupt bytes are LEFT ALONE: the refusal must not "repair" the file by
+    // overwriting it with a fresh empty ledger, which would re-grant the budget.
+    expect(await readFile(LEDGER_PATH(dir), "utf8")).toBe(corrupt);
+
+    // Never-established open over the same corruption.
+    const dirB = await tempDir();
+    const planB = freshPlan();
+    await writeFile(LEDGER_PATH(dirB), corrupt, "utf8");
+    await expect(
+      openR97BudgetLedger(dirB, { planDigest: planB, campaignModelCalls: 3, mode: "auto" }),
+    ).rejects.toThrow(/not valid JSON/);
+    expect(await readFile(LEDGER_PATH(dirB), "utf8")).toBe(corrupt);
+  });
+
+  it("NEGATIVE CONTROL: a GENUINE first run does NOT reproduce the missing-state refusal", async () => {
+    // The discriminator the plan demands: the SAME assertions that hold after a
+    // deletion must NOT hold for a fresh directory. Without this, the block above
+    // could be green merely because the harness always throws.
+    const dir = await tempDir();
+    const plan = freshPlan();
+    expect(existsSync(LEDGER_PATH(dir))).toBe(false);
+
+    const l = await openR97BudgetLedger(dir, { planDigest: plan, campaignModelCalls: 3, mode: "auto" });
+    expect(l.mode).toBe("first-run");
+    // (a) The read RESOLVES rather than throwing...
+    const file = await l.read();
+    expect(file.entries).toEqual([]);
+    expect((await l.view()).remaining).toBe(3);
+    // ...and the first run DOES create the file on disk.
+    expect(existsSync(LEDGER_PATH(dir))).toBe(true);
+    // (b) ...and a reservation is ADMITTED, not refused.
+    const r = await l.reserve("baseline", 1);
+    expect(r.ok).toBe(true);
+    expect((await l.view()).remaining).toBe(2);
+    // The assertions from the deletion block are asserted FALSE here, explicitly.
+    await expect(l.read()).resolves.toBeDefined();
+    await expect(l.view()).resolves.toBeDefined();
   });
 });

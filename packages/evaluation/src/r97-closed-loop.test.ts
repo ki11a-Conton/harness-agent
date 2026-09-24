@@ -133,6 +133,56 @@ describe("E4-R101-A (T6) L2: the suite list covers every file the matrix names",
     expect(new Set(mod.SUITE_FILES).size).toBe(mod.SUITE_FILES.length);
   });
 
+  it("every suite file that opens a campaign ISOLATES the machine-global claim anchor", async () => {
+    // MEASURED DEFECT, found by running this round's closed loop (A7).
+    //
+    // The cross-directory claim anchor lives OUTSIDE any campaign directory
+    // (`os.tmpdir()/e4-r97-campaign-claims`) and is keyed by `campaignId`. A2 made a
+    // spent approval's claim durable: once a directory has ESTABLISHED a budget, that
+    // directory's later disappearance is a LOSS (`CAMPAIGN_STATE_LOST`), not a stale
+    // claim to ignore. That is the behaviour A2/F2 asks for.
+    //
+    // The consequence for FIXTURES is that any file which opens a campaign with a
+    // FIXED `planDigest` now shares one machine-global namespace across every test in
+    // it — and across every earlier run on the machine. `r97-execution-state-
+    // ownership.test.ts` used one fixed digest, so its second campaign-establishing
+    // test was refused with the first test's deleted temp directory as the "lost"
+    // root. The refusal was correct; the fixture leaked.
+    //
+    // Five files already redirected the anchor; that file did not, which is exactly
+    // the kind of omission a per-file audit misses. This test is the audit: a suite
+    // file that opens a campaign must either redirect the anchor or not open one.
+    //
+    // The check is on the MECHANISM — an ASSIGNMENT to `process.env` — not on a
+    // mention of the name and not on the exported constant's identifier. MEASURED:
+    // an earlier version of this guard looked only for `R97_CAMPAIGN_CLAIMS_DIR_ENV`
+    // and so reported `r97-arm-worker-contract.test.ts` and
+    // `r97-campaign-validator-cli.test.ts` as offenders even though both assign
+    // `process.env["R97_CAMPAIGN_CLAIMS_DIR"]` — the same variable, spelled
+    // literally. They were isolating correctly; the guard was wrong. Requiring an
+    // actual assignment keeps the audit honest in the other direction too: a file
+    // that merely mentions the name in a comment is still an offender.
+    const srcDir = join(REPO, "packages", "evaluation", "src");
+    const offenders: string[] = [];
+    const ISOLATES =
+      /process\.env\s*\[\s*(?:"R97_CAMPAIGN_CLAIMS_DIR"|'R97_CAMPAIGN_CLAIMS_DIR'|R97_CAMPAIGN_CLAIMS_DIR_ENV)\s*\]\s*=/;
+    for (const f of mod.SUITE_FILES) {
+      if (!f.startsWith("packages/evaluation/src/")) continue;
+      const src = await readFile(join(REPO, f), "utf8");
+      const opensCampaign =
+        /openR97BudgetLedger\s*\(|openR97Campaign\s*\(|\bopenCampaign\s*\(/.test(src);
+      if (!opensCampaign) continue;
+      // Redirecting the anchor is the fix; a file that only READS a ledger it was
+      // handed still opens one, so the check is on the env var, not on intent.
+      if (!ISOLATES.test(src)) offenders.push(f);
+    }
+    expect(
+      offenders,
+      "these suite files open a campaign against the machine-global claim anchor without isolating it — " +
+        "a durable claim from another test or an earlier run will refuse an unrelated fresh directory",
+    ).toEqual([]);
+  });
+
   it("covers every file that declares a test the acceptance matrix requires", async () => {
     // This is the load-bearing cross-check. The matrix gate FAILS a row whose test
     // is absent from the report, so a matrix-named test living in a file this list
@@ -170,6 +220,72 @@ describe("E4-R101-A (T6) L2: the suite list covers every file the matrix names",
     // listed files report 409 passing tests on the tree this floor was set for.
     expect(mod.SUITE_MIN_TESTS).toBeGreaterThan(300);
     expect(mod.SUITE_MIN_TESTS).toBeLessThanOrEqual(409);
+  });
+
+  it("still RUNS the files `pnpm test` excludes, so the dedicated job is what covers them", async () => {
+    // Plan §A7 怎么验收 3: "typecheck 与全套测试通过；driver 专用测试没有因 package.json
+    // 排除而漏跑." `pnpm test` deliberately excludes the heavy end-to-end files —
+    // `r97-driver-closed-loop.test.ts` among them, because it drives real arm builds.
+    // That exclusion is legitimate ONLY while some other gate really runs them, and
+    // this job is that gate. If a future edit dropped the file from SUITE_FILES, the
+    // exclusion would silently become "never run anywhere" — a suite that cannot
+    // fail is not a suite.
+    //
+    // Two kinds of exclusion are distinguished, because they need different cover:
+    //   * a GLOB CLASS (`**/*.perf.test.ts`, `**/*.soak.test.ts`) is covered by its
+    //     own named script (`test:perf`, `test:soak`), so it is checked against the
+    //     scripts table rather than against SUITE_FILES;
+    //   * an EXACT FILE is a single test file nobody else would run, so it must be
+    //     in the closed-loop suite.
+    const pkg = JSON.parse(await readFile(join(REPO, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    const testScript = pkg.scripts["test"] ?? "";
+    const excluded = [...testScript.matchAll(/--exclude\s+'([^']+)'/g)].map((m) => m[1] ?? "");
+    expect(excluded.length, "the test script must exclude something for this check to mean anything").toBeGreaterThan(0);
+
+    // The patterns are BASENAME globs (`**/r97-driver-closed-loop.test.ts`), so the
+    // leading `**/` is stripped before deciding whether a pattern is an exact file
+    // (a basename with no wildcard) or a glob CLASS.
+    const patterns = excluded.map((e) => e.replace(/^\*\*\//, ""));
+    const exactBasenames = patterns.filter((e) => !e.includes("*") && e.endsWith(".test.ts"));
+    const suiteBasenames = mod.SUITE_FILES.map((f) => f.split("/").pop() ?? f);
+    // The one that matters for this round: the driver's end-to-end file.
+    expect(exactBasenames, "this check is stale — the driver test is no longer excluded").toContain(
+      "r97-driver-closed-loop.test.ts",
+    );
+    expect(
+      suiteBasenames,
+      "the driver test is excluded from `pnpm test` and must be run by the closed-loop suite",
+    ).toContain("r97-driver-closed-loop.test.ts");
+
+    // EVERY exact-file exclusion must still be run by SOMETHING. Two legitimate
+    // covers exist and the check accepts either:
+    //   * the closed-loop suite (this job), which is what covers the driver test;
+    //   * a script that names the file (e.g. `e3:repro-current-defects`,
+    //     `test:forensics`), which is how the two forensics files stay reachable.
+    // What is NOT allowed is an exact file that nothing runs — that is the state in
+    // which an exclusion turns a suite into a suite that cannot fail.
+    for (const b of exactBasenames) {
+      const inSuite = suiteBasenames.includes(b);
+      const inSomeScript = Object.entries(pkg.scripts).some(
+        ([name, body]) => name !== "test" && name !== "test:coverage" && body.includes(b),
+      );
+      expect(
+        inSuite || inSomeScript,
+        `${b} is excluded from \`pnpm test\` and neither the closed-loop suite nor any other script runs it — it runs NOWHERE`,
+      ).toBe(true);
+    }
+
+    // Every glob CLASS must be named by some OTHER script, or the exclusion removes
+    // it from the only run that had it.
+    for (const pattern of patterns.filter((e) => e.includes("*"))) {
+      const kind = (pattern.split("/").pop() ?? pattern).replace(/^\*/, "").replace(/^\./, "");
+      const covered = Object.entries(pkg.scripts).some(
+        ([name, body]) => name !== "test" && name !== "test:coverage" && body.includes(kind),
+      );
+      expect(covered, `${pattern} is excluded from \`pnpm test\` and no other script runs it`).toBe(true);
+    }
   });
 });
 
@@ -244,7 +360,16 @@ describe("E4-R101-A (T6) L5: the identity record states the OFFLINE scope in fie
           },
         },
         { phase: "suite", ok: true, code: 0, totalTests: 500, passedTests: 500 },
-        { phase: "matrix", ok: true, code: 0, rowsSatisfied: 9, rowsTotal: 9 },
+        {
+          phase: "matrix",
+          ok: true,
+          code: 0,
+          rowsSatisfied: 9,
+          rowsTotal: 9,
+          planRowsSatisfied: 9,
+          planRowsTotal: 9,
+          planRowsUncovered: [],
+        },
       ],
     );
     const identity = JSON.parse(await readFile(written.identityPath, "utf8"));
@@ -258,10 +383,33 @@ describe("E4-R101-A (T6) L5: the identity record states the OFFLINE scope in fie
     // The honest pass split travels with the record.
     expect(identity.strongPasses).toBe(0);
     expect(identity.weakPasses).toBe(6);
+    // The closing plan's own M1–M9 coverage travels with the record too, so "the
+    // plan's behavior matrix is covered" is checkable from the artifact rather than
+    // from a claim about the run.
+    expect(identity.planRowsSatisfied).toBe(9);
+    expect(identity.planRowsTotal).toBe(9);
+    expect(identity.planRowsUncovered).toEqual([]);
     // The platform is recorded, because the matrix runs on two and a Windows pass
     // is not equivalent evidence for a POSIX signal test.
     expect(typeof identity.platform).toBe("string");
     expect(identity.platform.length).toBeGreaterThan(0);
+  });
+
+  it("does NOT report the plan's matrix as covered when a phase never ran", async () => {
+    // A missing phase must leave the coverage fields NULL rather than defaulting to
+    // "all covered": a run that never reached the matrix phase has no evidence about
+    // the plan's table, and reporting 9/9 for it would be an invented fact.
+    const outDir = join(REPO, ".ci", "probe-closed-loop-identity");
+    const { mkdir } = await import("node:fs/promises");
+    await mkdir(outDir, { recursive: true });
+    const written = await mod.phaseIdentity(
+      { outDir, baseline: "a".repeat(40), candidate: "b".repeat(40) },
+      [{ phase: "suite", ok: true, code: 0, totalTests: 500, passedTests: 500 }],
+    );
+    const identity = JSON.parse(await readFile(written.identityPath, "utf8"));
+    expect(identity.planRowsSatisfied).toBeNull();
+    expect(identity.planRowsTotal).toBeNull();
+    expect(identity.planRowsUncovered).toBeNull();
   });
 });
 
