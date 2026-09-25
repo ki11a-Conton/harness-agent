@@ -59,6 +59,12 @@ export interface CommandDeps {
   /** P27-2/5: the resolved config stack (layers + per-key origins +
    *  fingerprint) for `agent config explain`. */
   resolvedConfig?: ResolvedConfig<HarnessConfig>;
+  /** P28/N2: the harness adapter for the pre-registration-gated paired run
+   *  (`agent prereg validate|run`). Absent → those subcommands refuse rather
+   *  than fabricate an execution identity. */
+  preregRunner?: import("./prereg-command.js").PreregRunnerAdapter;
+  /** Injectable clock for the formal run gate (tests). */
+  preregNow?: () => number;
 }
 
 export interface CommandResult {
@@ -82,6 +88,13 @@ commands:
   benchmark campaign validate <root>  campaign-level fail-closed validation of a whole
                                     campaign tree: versioned case set, resume manifest, artifact
                                     hashes, re-derived aggregates vs the submitted summary (E4-R84)
+  prereg build <config.json> --out <prereg.json>
+                                    construct the canonical pre-registration v2 artifact (0 provider calls)
+  prereg validate <prereg.json>     re-observe the execution identity and compare it with the artifact (0 provider calls)
+  prereg run <prereg.json> --authorization <auth.json> --budget-dir <dir> --out <dir> [--mode first-run|resume]
+                                    execute the FROZEN paired schedule — refuses before any provider
+                                    unless the artifact, the re-observed identity, an independent
+                                    authorization and the atomic budget ledger all pass (N2/N5)
   trace <sessionId> <outputDir>     export an episode package (plan §77)
   doctor                            run environment checks (plan §87)
   mechanisms <path>                 validate mechanism manifests (P2-8)
@@ -120,6 +133,13 @@ export async function runCommand(argv: string[], deps: CommandDeps): Promise<Com
       return sessionsCmd(deps);
     case "benchmark":
       return benchmarkCmd(rest);
+    case "prereg": {
+      const { preregCmd } = await import("./prereg-command.js");
+      return preregCmd(rest, {
+        ...(deps.preregRunner !== undefined ? { runner: deps.preregRunner } : {}),
+        ...(deps.preregNow !== undefined ? { now: deps.preregNow } : {}),
+      });
+    }
     case "trace":
       return traceCmd(rest, deps);
     case "doctor":
