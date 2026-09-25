@@ -25,12 +25,17 @@
  * budget-exhausted campaign can never produce ACCEPT.
  */
 
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ModelProvider } from "@ar/contracts";
 import { stableStringify } from "./manifest.js";
 import { armRunIdOf, orderedArmRunsFlat, type OrderedArmRun } from "./paired-executor.js";
 import type { ArmRunRef } from "./paired-plan.js";
+import {
+  PREREG_RUN_EVIDENCE_DIRNAME,
+  verifyArmEvidenceFromArtifacts,
+  type PreregRunIdentity,
+} from "./prereg-run-evidence.js";
 import {
   decideChampionV3,
   type ChampionDecisionEnvelopeV3,
@@ -88,8 +93,12 @@ export interface PreregisteredArmOutcome {
   tokensUsed?: number;
   /** Free-form, non-secret detail. */
   reason?: string;
-  /** REQUIRED objective evidence; see `PreregisteredArmEvidence`. */
-  evidence: PreregisteredArmEvidence;
+  /** The DECLARED evidence for a non-error run. REQUIRED for `passed`/`failed`;
+   *  absent for `error` (a failed infrastructure run has no verifier verdict).
+   *  A6: every field here is corroborated against the raw artifacts the runner
+   *  wrote into the driver-created evidence directory — an unsupported claim is
+   *  UNVERIFIED, never trusted. */
+  evidence?: PreregisteredArmEvidence;
 }
 
 export interface PreregisteredArmContext {
@@ -99,6 +108,9 @@ export interface PreregisteredArmContext {
   arm: ArmRunRef;
   preregistrationDigest: string;
   planDigest: string;
+  /** A6 — the driver-created directory this run's raw artifacts MUST be written
+   *  to (manifest.json / verifier.json / activation.json / security.json). */
+  evidenceDir: string;
 }
 
 export type PreregisteredArmRunner = (
@@ -118,6 +130,10 @@ export interface PreregisteredRunRecord {
   repetition: number;
   orderIndex: number;
   outcome: PreregisteredArmOutcome;
+  /** A6 — TRUE only when the raw artifacts in this run's evidence directory were
+   *  read back and corroborate the declared evidence. Stamped by the DRIVER from
+   *  bytes, never supplied by the runner; a forged claim is `false` → INVALID. */
+  evidenceVerified: boolean;
   completedAt: number;
 }
 
@@ -128,20 +144,29 @@ export interface PreregisteredRunRecord {
 export type PreregisteredCampaignErrorCode =
   | "RESUME_IDENTITY_MISMATCH"
   | "RESUME_STATE_CORRUPT"
+  | "RESUME_STATE_UNEXPECTED_FILE"
+  | "RESUME_NOT_REQUESTED"
   | "RUN_EVIDENCE_INVALID";
 
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 
 /**
- * F2/S4 — the problems that make a run's evidence unusable. EMPTY means the
- * evidence is well-formed (an executor identity, a 64-hex trace digest, a
- * boolean verifier verdict, a non-negative security count and a null-or-digest
- * activation reference). Used both to refuse at record time and to DERIVE
- * `digestValid` in the aggregate — never hardcoded to `true`.
+ * F2/S4 — the problems that make a run's declared evidence well-formed. EMPTY
+ * means the evidence is shaped correctly (an executor identity, a 64-hex trace
+ * digest, a boolean verifier verdict, a non-negative security count and a
+ * null-or-digest activation reference). An `error` outcome carries NO evidence,
+ * so it has no shape problems (it is excluded from the pair, not judged).
+ *
+ * This is the SHAPE gate only; corroborating the shape against raw bytes is
+ * A6's `verifyArmEvidenceFromArtifacts`.
  */
-export function armEvidenceProblems(e: PreregisteredArmEvidence | undefined): string[] {
-  const problems: string[] = [];
+export function armEvidenceProblems(
+  e: PreregisteredArmEvidence | undefined,
+  status?: "passed" | "failed" | "error",
+): string[] {
+  if (status === "error") return [];
   if (e === undefined || typeof e !== "object") return ["evidence object is missing"];
+  const problems: string[] = [];
   if (typeof e.executorId !== "string" || e.executorId.length === 0) problems.push("executorId must be a non-empty string");
   if (typeof e.traceDigest !== "string" || !SHA256_HEX.test(e.traceDigest)) problems.push("traceDigest must be a 64-hex sha256");
   if (typeof e.verifiedCompletion !== "boolean") problems.push("verifiedCompletion must be a boolean");
@@ -152,8 +177,8 @@ export function armEvidenceProblems(e: PreregisteredArmEvidence | undefined): st
   return problems;
 }
 
-function assertArmEvidence(e: PreregisteredArmEvidence | undefined, armRunId: string): void {
-  const problems = armEvidenceProblems(e);
+function assertArmEvidence(e: PreregisteredArmEvidence | undefined, armRunId: string, status: "passed" | "failed" | "error"): void {
+  const problems = armEvidenceProblems(e, status);
   if (problems.length > 0) {
     throw new PreregisteredCampaignError("RUN_EVIDENCE_INVALID", `run ${armRunId}: ${problems.join("; ")}`);
   }
@@ -220,21 +245,83 @@ async function readRecord(dir: string, armRunId: string): Promise<PreregisteredR
   if (rec.armRunId !== armRunId || typeof rec.preregistrationDigest !== "string" || typeof rec.planDigest !== "string") {
     throw new PreregisteredCampaignError("RESUME_STATE_CORRUPT", `run record ${armRunId}.json is missing its identity`);
   }
-  // F2/S4: a resumed record is only reusable if its EVIDENCE is still intact —
-  // a tampered outcome must not be silently adopted.
-  assertArmEvidence(rec.outcome?.evidence, armRunId);
+  // F2/S4: a resumed record is only reusable if its EVIDENCE is still shaped
+  // correctly — a tampered outcome must not be silently adopted. (A6 re-derives
+  // whether the bytes behind it still corroborate the claim, in the caller.)
+  assertArmEvidence(rec.outcome?.evidence, armRunId, rec.outcome?.status ?? "error");
   return rec;
+}
+
+/** The exact identity every artifact and record of a run must agree on. */
+function identityOf(
+  preregistrationDigest: string,
+  planDigest: string,
+  run: OrderedArmRun,
+): PreregRunIdentity {
+  return {
+    preregistrationDigest,
+    planDigest,
+    armRunId: armRunIdOf(run.pairId, run.armId),
+    armId: run.armId,
+    caseId: run.caseId,
+    repetition: run.repetition,
+    orderIndex: run.orderIndex,
+  };
+}
+
+/**
+ * F5/A6 — the resume/state integrity scan. It runs BEFORE any arm is adopted or
+ * executed and refuses the two cases a naive resume gets wrong:
+ *
+ *   - a results directory that already holds run records while the caller did
+ *     NOT ask to resume (`RESUME_NOT_REQUESTED`) — a first run must not silently
+ *     adopt someone else's records;
+ *   - an entry the frozen plan did not write — a foreign/extra file
+ *     (`RESUME_STATE_UNEXPECTED_FILE`), which would otherwise be invisible.
+ */
+async function assertResultsDirIntegrity(
+  resultsDir: string,
+  expectedFiles: ReadonlySet<string>,
+  resume: boolean,
+): Promise<void> {
+  let entries: string[];
+  try {
+    entries = await readdir(resultsDir);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw err;
+  }
+  const recordFiles = entries.filter((e) => e.endsWith(".json"));
+  if (!resume && recordFiles.length > 0) {
+    throw new PreregisteredCampaignError(
+      "RESUME_NOT_REQUESTED",
+      `the results directory already holds ${recordFiles.length} run record(s) but this run did not request a resume — refusing to adopt them`,
+    );
+  }
+  const allowed = new Set<string>([...expectedFiles, PREREG_RUN_EVIDENCE_DIRNAME]);
+  for (const entry of entries) {
+    if (!allowed.has(entry)) {
+      throw new PreregisteredCampaignError(
+        "RESUME_STATE_UNEXPECTED_FILE",
+        `the results directory holds "${entry}", which the frozen plan did not write — refusing to resume over unaccounted state`,
+      );
+    }
+  }
 }
 
 /**
  * Execute the pre-registered schedule exactly, stamping every record with the
- * root identity. A record that exists but binds a DIFFERENT identity is a
- * refusal — never silently overwritten or reused.
+ * root identity. A record that exists but binds a DIFFERENT identity — including
+ * a different `orderIndex` — is a refusal, never silently overwritten or reused.
+ * Every freshly produced record is stamped with `evidenceVerified`, derived by
+ * reading the run's raw artifacts; a forged claim is recorded as UNVERIFIED and
+ * (through the aggregate) can never reach ACCEPT.
  */
 export async function runPreregisteredCampaign(
   opts: RunPreregisteredCampaignOptions,
 ): Promise<PreregisteredCampaignRun> {
   const { admission, prereg, resultsDir, runArm } = opts;
+  const resume = opts.resume === true;
   const now = opts.now ?? (() => Date.now());
   const preregistrationDigest = admission.preregistrationDigest;
   const planDigest = admission.plan.planDigest;
@@ -250,6 +337,9 @@ export async function runPreregisteredCampaign(
       orderIndex: run.orderIndex,
     });
   }
+  const evidenceRoot = join(resultsDir, PREREG_RUN_EVIDENCE_DIRNAME);
+  const expectedFiles = new Set(orderedRuns.map((r) => `${armRunIdOf(r.pairId, r.armId)}.json`));
+  await assertResultsDirIntegrity(resultsDir, expectedFiles, resume);
 
   const records: PreregisteredRunRecord[] = [];
   const resumedArmRunIds: string[] = [];
@@ -257,6 +347,8 @@ export async function runPreregisteredCampaign(
   for (const run of orderedRuns) {
     const armRunId = armRunIdOf(run.pairId, run.armId);
     const arm = armById.get(armRunId)!;
+    const identity = identityOf(preregistrationDigest, planDigest, run);
+    const evidenceDir = join(evidenceRoot, armRunId);
     const existing = await readRecord(resultsDir, armRunId);
     if (existing !== null) {
       if (
@@ -265,14 +357,22 @@ export async function runPreregisteredCampaign(
         existing.pairId !== run.pairId ||
         existing.caseId !== run.caseId ||
         existing.repetition !== run.repetition ||
-        existing.armId !== run.armId
+        existing.armId !== run.armId ||
+        existing.orderIndex !== run.orderIndex
       ) {
         throw new PreregisteredCampaignError(
           "RESUME_IDENTITY_MISMATCH",
           `run record ${armRunId} belongs to a different experiment (digest ${existing.preregistrationDigest.slice(0, 12)}… plan ${existing.planDigest.slice(0, 12)}…) — refusing to mix runs`,
         );
       }
-      records.push(existing);
+      // A6 — a resumed record's evidence is re-derived from its raw artifacts,
+      // with the SAME validator the fresh path uses; a deleted/tampered artifact
+      // demotes the record to UNVERIFIED rather than adopting the old claim.
+      const verified =
+        existing.outcome.status === "error" || existing.outcome.evidence === undefined
+          ? existing.outcome.status === "error"
+          : verifyArmEvidenceFromArtifacts(evidenceDir, identity, existing.outcome.evidence).verified;
+      records.push({ ...existing, evidenceVerified: verified });
       resumedArmRunIds.push(armRunId);
       continue;
     }
@@ -282,10 +382,19 @@ export async function runPreregisteredCampaign(
       arm,
       preregistrationDigest,
       planDigest,
+      evidenceDir,
     });
     // F2/S4: refuse a result whose evidence is missing/malformed AT RECORD TIME,
     // so a bare-boolean outcome never even reaches the aggregate.
-    assertArmEvidence(outcome.evidence, armRunId);
+    assertArmEvidence(outcome.evidence, armRunId, outcome.status);
+    // A6 — corroborate the claim by reading the raw artifacts back. An `error`
+    // outcome has no evidence to verify; a non-error outcome with no artifacts
+    // is stamped UNVERIFIED (never trusted).
+    const evidenceVerified =
+      outcome.status === "error"
+        ? true
+        : outcome.evidence !== undefined &&
+          verifyArmEvidenceFromArtifacts(evidenceDir, identity, outcome.evidence).verified;
     const record: PreregisteredRunRecord = {
       schemaVersion: PREREGISTERED_CAMPAIGN_SCHEMA,
       preregistrationDigest,
@@ -297,6 +406,7 @@ export async function runPreregisteredCampaign(
       repetition: run.repetition,
       orderIndex: run.orderIndex,
       outcome,
+      evidenceVerified,
       completedAt: now(),
     };
     await writeRecordAtomic(resultsDir, record);
@@ -348,7 +458,7 @@ export interface PreregisteredAggregate {
  * layer never trusts the runner's own boolean.
  */
 function verifiedPass(r: PreregisteredRunRecord): boolean {
-  return r.outcome.status === "passed" && r.outcome.evidence.verifiedCompletion === true;
+  return r.outcome.status === "passed" && r.outcome.evidence?.verifiedCompletion === true;
 }
 
 function rate(records: PreregisteredRunRecord[]): number {
@@ -377,7 +487,7 @@ export function aggregatePreregisteredCampaign(
   // F2/S4 — CONTAMINATION is a non-null activation-evidence digest on a
   // BASELINE record, not a self-reported flag.
   const contaminatedPairs = run.records
-    .filter((r) => r.armId === "baseline" && r.outcome.evidence.activationEvidenceDigest !== null)
+    .filter((r) => r.armId === "baseline" && (r.outcome.evidence?.activationEvidenceDigest ?? null) !== null)
     .map((r) => r.pairId);
 
   // Per-repetition net-passed deltas, over pairs where BOTH arms are present.
@@ -403,7 +513,7 @@ export function aggregatePreregisteredCampaign(
   // F2/S4 — activation is a request-bound evidence digest on a CANDIDATE record,
   // not a self-reported boolean.
   const eligibleCandidateRecords = candidate.filter((r) => r.outcome.status !== "error");
-  const activated = eligibleCandidateRecords.filter((r) => r.outcome.evidence.activationEvidenceDigest !== null).length;
+  const activated = eligibleCandidateRecords.filter((r) => (r.outcome.evidence?.activationEvidenceDigest ?? null) !== null).length;
   const activationCoverage = eligibleCandidateRecords.length === 0 ? null : activated / eligibleCandidateRecords.length;
 
   const infraFailuresBaseline = baseline.filter((r) => r.outcome.status === "error").length;
@@ -419,11 +529,19 @@ export function aggregatePreregisteredCampaign(
   // is hardcoded to `true`/`0`: a single malformed evidence record makes the
   // whole campaign INVALID, a security event blocks ACCEPT, and the repetition
   // recommendation follows the pre-registered minimum.
-  const digestValid = run.records.every((r) => armEvidenceProblems(r.outcome.evidence).length === 0);
-  const securityBreachesCandidate = candidate.reduce((s, r) => s + r.outcome.evidence.securityViolations, 0);
-  const securityBreachesBaseline = baseline.reduce((s, r) => s + r.outcome.evidence.securityViolations, 0);
-  const recoveryCount = run.records.reduce((s, r) => s + (r.outcome.evidence.recoveries ?? 0), 0);
-  const recoveredCount = run.records.reduce((s, r) => s + (r.outcome.evidence.recovered ?? 0), 0);
+  //
+  // A6 — `digestValid` is NOT the shape check alone: the evidence must ALSO have
+  // been corroborated against the raw artifacts the executor wrote
+  // (`record.evidenceVerified`). A well-SHAPED forgery (`"a".repeat(64)` with no
+  // manifest/verifier/activation bytes on disk) is stamped `false` by the driver,
+  // so it fails `artifactIntegrity` → INVALID and can never reach ACCEPT.
+  const digestValid = run.records.every(
+    (r) => r.evidenceVerified && armEvidenceProblems(r.outcome.evidence, r.outcome.status).length === 0,
+  );
+  const securityBreachesCandidate = candidate.reduce((s, r) => s + (r.outcome.evidence?.securityViolations ?? 0), 0);
+  const securityBreachesBaseline = baseline.reduce((s, r) => s + (r.outcome.evidence?.securityViolations ?? 0), 0);
+  const recoveryCount = run.records.reduce((s, r) => s + (r.outcome.evidence?.recoveries ?? 0), 0);
+  const recoveredCount = run.records.reduce((s, r) => s + (r.outcome.evidence?.recovered ?? 0), 0);
 
   const input: DecisionGateInputV3 = {
     digestValid,

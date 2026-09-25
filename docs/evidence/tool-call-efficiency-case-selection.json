@@ -1,0 +1,140 @@
+{
+  "schemaVersion": "tool-call-efficiency-case-selection-v1",
+  "candidateId": "tool_call_efficiency_v1",
+  "suiteId": "tool-call-efficiency",
+  "suiteVersion": "1.0.0",
+  "ruleVersion": "tcce-selection-v1",
+  "selectionRule": "TCCE-A1 v1: from the attributed (non-holdout) R85 taxonomy, select EVERY case whose recorded termination is agent_limit or tool_limit AND whose recorded toolFailures > 0 (a long task whose bounded iteration budget was burned while tool calls were failing — the tool_call_efficiency_v1 target cluster). Cases are ordered by (suite, caseId). No cherry-picking: all matching cases are included.",
+  "eligibilityRule": "termination in {agent_limit, tool_limit} AND toolFailures > 0",
+  "holdoutPolicy": "holdout per-case data is NEVER read; only the attributed suites (regression/adversarial/stress) of the committed R85 taxonomy are used, and every selected case is re-checked to be outside benchmarks/holdout",
+  "evidenceKind": "e4-r85-failure-taxonomy",
+  "evidencePath": "docs/evidence/e4-r85-failure-taxonomy.json",
+  "evidenceDigest": "861557f093fdaac69df56e08c1ac900e1e2462e09fd241d6b78a33bbde3454e8",
+  "cases": [
+    {
+      "caseId": "adv-artifact-injection",
+      "suite": "adversarial"
+    },
+    {
+      "caseId": "adv-credential-exfil-filenames",
+      "suite": "adversarial"
+    },
+    {
+      "caseId": "adv-dependency-install-attempt",
+      "suite": "adversarial"
+    },
+    {
+      "caseId": "adv-encoded-shell-tricks",
+      "suite": "adversarial"
+    },
+    {
+      "caseId": "adv-memory-poisoning",
+      "suite": "adversarial"
+    },
+    {
+      "caseId": "adv-nested-shell-wrappers",
+      "suite": "adversarial"
+    },
+    {
+      "caseId": "adv-skill-poisoning",
+      "suite": "adversarial"
+    },
+    {
+      "caseId": "adv-subagent-poisoning",
+      "suite": "adversarial"
+    },
+    {
+      "caseId": "adv-symlink-escape",
+      "suite": "adversarial"
+    },
+    {
+      "caseId": "adv-tool-output-injection",
+      "suite": "adversarial"
+    },
+    {
+      "caseId": "adv-unexpected-binary-exec",
+      "suite": "adversarial"
+    },
+    {
+      "caseId": "reg-03-add-import",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-05-off-by-one",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-06-json-parse-test",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-09-null-check",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-10-env-config",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-11-binary-search",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-12-csv-parse",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-15-infinite-loop",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-18-date-format",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-19-config-validator",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-20-linked-list",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-21-regex",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-22-api-stub",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-24-error-handling",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-27-type-annotation",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-28-logging",
+      "suite": "regression"
+    },
+    {
+      "caseId": "reg-29-palindrome",
+      "suite": "regression"
+    },
+    {
+      "caseId": "stress-deep-directory",
+      "suite": "stress"
+    },
+    {
+      "caseId": "stress-huge-generated-logs",
+      "suite": "stress"
+    },
+    {
+      "caseId": "stress-repeated-tool-failures",
+      "suite": "stress"
+    }
+  ],
+  "selectionProvenanceDigest": "51397419243655d53dc637c5395f6409be6d5575e33b0f210889a6c10f0b7879"
+}

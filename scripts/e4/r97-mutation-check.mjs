@@ -488,7 +488,7 @@ export const MUTATIONS = [
     // baseline record, DERIVED from evidence — never a self-reported flag. This
     // mutation stops deriving it, so a baseline that observed a candidate event
     // is no longer disqualified and the pair can be concluded.
-    find: `    .filter((r) => r.armId === "baseline" && r.outcome.evidence.activationEvidenceDigest !== null)`,
+    find: `    .filter((r) => r.armId === "baseline" && (r.outcome.evidence?.activationEvidenceDigest ?? null) !== null)`,
     replace: `    .filter(() => false) // S0 mutation: contamination is no longer derived from evidence`,
     suite: "packages/evaluation/src/tool-call-efficiency-formal-gaps.test.ts",
     test: "treats a baseline activation digest as contamination and refuses ACCEPT",

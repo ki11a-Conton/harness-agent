@@ -25,20 +25,28 @@
  *   candidateArmDigest       (R97_ARM_BASELINE_DIR / R97_ARM_CANDIDATE_DIR)
  *   caseContentDigests     real `benchmarks/<suite>/<caseId>/` files
  *
- * For identity the build CANNOT independently establish (`runtimeConfigDigest`,
- * `requestProfileDigest`, and the declared `usdMicrosPerCall`), it reports
- * `UNOBSERVABLE` / `null` rather than guessing. Because those never equal a
- * bound value, the formal gate REFUSES (`PREREGISTRATION_IDENTITY_DRIFT`, or
- * `PRICING_UNKNOWN` for an unknown price on a money-bounded campaign) with
- * `providerFactoryCalls = 0`. "Cannot certify" is expressed as a refusal, which
- * is exactly the fail-closed contract — never as a fabricated match.
+ * For identity the build CANNOT independently establish (the two frozen arm
+ * checkouts when they are absent), it reports `UNOBSERVABLE` rather than
+ * guessing. Because those never equal a bound value, the formal gate REFUSES
+ * (`PREREGISTRATION_IDENTITY_DRIFT`) with `providerFactoryCalls = 0`.
+ * "Cannot certify" is expressed as a refusal, which is exactly the fail-closed
+ * contract — never as a fabricated match.
  *
- * EXECUTION (`runArm`) is NOT wired here. No production paired-arm executor
- * exists for the v2 API, so this adapter REFUSES to fabricate a run result. That
- * is deliberate: a placeholder `{status:"passed"}` would be the "self-reported
- * outcome" defect (F2) this chain exists to prevent. Admission happens before
- * `runArm`, so a real operator still gets the full preflight; execution fails
- * closed with a stable reason code until a real executor is provided.
+ * The runtime/request-profile identity, the provider/model/endpoint identity
+ * and the per-call price are DERIVED from the real execution sources in
+ * `prereg-execution-identity.ts` (A2) — the SAME source `prereg build` writes
+ * from — so a legal frozen experiment can be certified, and any drift refuses.
+ *
+ * A5 — EXECUTION (`runArm`) is now wired to the REAL arm executor
+ * (`prereg-arm-executor.ts`): it resolves the arm's frozen checkout, runs the
+ * real case through the benchmark harness with the budget-wrapped provider the
+ * gate returned, invokes the real verifier and writes the raw evidence
+ * artifacts A6 re-reads. Every prerequisite it cannot establish — a missing arm
+ * checkout (`ARM_CHECKOUT_MISSING`), an unreadable build closure
+ * (`ARM_BUILD_UNRESOLVABLE`), one build for both arms (`ARM_BUILD_IDENTICAL`), a
+ * case outside the frozen selection (`ARM_CASE_NOT_FOUND`), an evidence
+ * directory (`ARM_EVIDENCE_DIR_MISSING`), a provider — is a stable refusal,
+ * never a fabricated `{status:"passed"}`.
  */
 
 import { execFileSync } from "node:child_process";
@@ -54,13 +62,16 @@ import {
   computeArmBuildDigestV1,
   computeThresholdDigestV3,
   mechanismContractFor,
+  resolveBenchmarkCaseDir,
   toolCallEfficiencyGuidanceDigest,
-  type PreregisteredArmRunner,
   type PreregisteredCampaignObservationV2,
   type ToolCallEfficiencyPreregistrationV2,
 } from "@ar/evaluation";
 import { stableStringify } from "@ar/evaluation";
-import { REAL_PROVIDER_ID, STUB_PROVIDER_ID, resolveModelProvider } from "./provider.js";
+import { PROVIDER_DEFAULT_ENDPOINT_DIGEST } from "@ar/evaluation";
+import { createPreregArmExecutor } from "./prereg-arm-executor.js";
+import { resolveModelProvider } from "./provider.js";
+import { formalExecutionProfile, resolveUsdMicrosPerCall } from "./prereg-execution-identity.js";
 import type { PreregRunnerAdapter } from "./prereg-command.js";
 
 /**
@@ -117,10 +128,13 @@ export function observeExecutionIdentity(
 ): PreregisteredCampaignObservationV2 {
   const head = git(root, ["rev-parse", "HEAD"]);
   const porcelain = git(root, ["status", "--porcelain"]);
-  const baseUrl = env["OPENAI_BASE_URL"];
-  const apiKey = env["OPENAI_API_KEY"];
-  const model = env["OPENAI_MODEL"];
-  const providerConfigured = (model !== undefined && model !== "") || (apiKey !== undefined && apiKey !== "");
+  // A2 — the runtime/request-profile identity, the provider/model/endpoint
+  // identity and the per-call price are derived from the SAME source the
+  // execution path uses (`resolveModelProvider` + the pinned harness wiring +
+  // the versioned pricing snapshot). Echoing the artifact's own claims would be
+  // the drift defect this observer exists to prevent.
+  const { provider, runtimeConfigDigest, requestProfileDigest } = formalExecutionProfile(env);
+  const endpointDigest = captureEndpointIdentity(provider.endpointBaseUrl) ?? PROVIDER_DEFAULT_ENDPOINT_DIGEST;
   return {
     // A non-40-hex (or unreadable) HEAD can never equal a bound sha → refusal.
     candidateSourceSha: head !== null && /^[0-9a-f]{40}$/.test(head) ? head : "",
@@ -130,20 +144,19 @@ export function observeExecutionIdentity(
     candidateArmDigest: armDigest(env["R97_ARM_CANDIDATE_DIR"]),
     guidanceDigest: toolCallEfficiencyGuidanceDigest(),
     contractDigest: sha256Hex(stableStringify(mechanismContractFor(TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2))),
-    // No independent production source for the runtime-config digest.
-    runtimeConfigDigest: UNOBSERVABLE,
-    providerId: providerConfigured ? REAL_PROVIDER_ID : STUB_PROVIDER_ID,
-    modelId: model ?? "",
-    endpointDigest:
-      captureEndpointIdentity(baseUrl !== undefined && baseUrl !== "" ? baseUrl : null) ?? UNOBSERVABLE,
-    // No independent production source for the request-profile digest.
-    requestProfileDigest: UNOBSERVABLE,
+    runtimeConfigDigest,
+    providerId: provider.providerId,
+    modelId: provider.modelId,
+    endpointDigest,
+    requestProfileDigest,
     // Filled per-artifact by `observeCaseContentDigests`.
     caseContentDigests: {},
     decisionPolicyDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
-    // No declared price source in this build → `null` (= unknown). On a
-    // money-bounded campaign the gate refuses with `PRICING_UNKNOWN`.
-    usdMicrosPerCall: null,
+    // A2 — a VERSIONED per-call price: a genuinely observable `0` for the
+    // unbilled stub, an explicit snapshot for a known real provider, and `null`
+    // (unknown) otherwise, which the money-bounded gate refuses as
+    // `PRICING_UNKNOWN` — never a silent zero.
+    usdMicrosPerCall: resolveUsdMicrosPerCall(provider.providerId),
   };
 }
 
@@ -164,19 +177,17 @@ function readFixture(dir: string): Record<string, string> {
   return out;
 }
 
-/** Locate a real benchmark case directory, or `null` when it is not present. */
-function locateCaseDir(root: string, suite: string, caseId: string): string | null {
-  for (const candidate of [join(root, "benchmarks", suite, caseId), join(root, "benchmarks", caseId)]) {
-    if (isDir(candidate)) return candidate;
-  }
-  return null;
-}
-
 /**
  * Re-derive each BOUND case's content digest from the real case files, using the
- * SAME canonical contract the builder uses (`catalogEntryFromCase`). A case that
- * cannot be located is OMITTED — never guessed — so the observed id set differs
- * from the bound one and the gate refuses.
+ * SAME canonical contract the builder uses (`catalogEntryFromCase`) and the SAME
+ * path boundary the production selection uses (`resolveBenchmarkCaseDir`). A
+ * case that cannot be located — an unsafe `suite`/`caseId` (separator, `..`,
+ * absolute), the `holdout` suite, a symlink escaping `benchmarks/`, or simply a
+ * missing directory — is OMITTED, never guessed, so the observed id set differs
+ * from the bound set and the formal gate refuses.
+ *
+ * NOTE: only CONTENT is re-derived here. Independent re-derivation of
+ * ELIGIBILITY is the separate A2 item and is NOT claimed by this function.
  */
 export function observeCaseContentDigests(
   root: string,
@@ -184,8 +195,12 @@ export function observeCaseContentDigests(
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const c of prereg.dataset.cases) {
-    const dir = locateCaseDir(root, c.suite, c.caseId);
-    if (dir === null) continue;
+    const dir = resolveBenchmarkCaseDir(root, c.suite, c.caseId);
+    if (dir === null) {
+      // Refused by the boundary (unsafe segment / holdout / escape / missing).
+      process.stderr.write(`[degraded] prereg observer refused case ${c.suite}/${c.caseId}: not a readable benchmarks case directory\n`);
+      continue;
+    }
     try {
       out[c.caseId] = catalogEntryFromCase(
         {
@@ -212,15 +227,6 @@ export function observeCaseContentDigests(
   return out;
 }
 
-/** A `runArm` that refuses to invent an outcome, with a stable reason code. */
-async function runArmNotWired(): Promise<never> {
-  const err = new Error(
-    `${ARM_EXECUTOR_NOT_WIRED}: no production paired-arm executor is wired for this build — refusing to fabricate a run result (a placeholder outcome would defeat the evidence requirement this chain exists to enforce)`,
-  );
-  (err as { code?: string }).code = ARM_EXECUTOR_NOT_WIRED;
-  throw err;
-}
-
 export interface ProductionPreregRunnerOptions {
   /** Checkout the identity is observed from; defaults to `process.cwd()`. */
   rootDir?: string;
@@ -242,6 +248,9 @@ export function createProductionPreregRunner(opts: ProductionPreregRunnerOptions
       caseContentDigests: observeCaseContentDigests(rootDir, prereg),
     }),
     makeProvider: async (): Promise<ModelProvider> => (await resolveModelProvider()).provider,
-    runArm: runArmNotWired as PreregisteredArmRunner,
+    // A5 — the REAL executor. It fails closed (`ARM_CHECKOUT_MISSING` /
+    // `ARM_BUILD_IDENTICAL` / `ARM_CASE_NOT_FOUND` / `ARM_EVIDENCE_DIR_MISSING`)
+    // rather than fabricating a run result.
+    runArm: createPreregArmExecutor({ rootDir, env }),
   };
 }

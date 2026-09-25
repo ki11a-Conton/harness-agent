@@ -1610,7 +1610,7 @@ export function buildDryRunPlan(
 // Per-case run
 // ---------------------------------------------------------------------------
 
-interface RunOneCaseOptions {
+export interface RunOneCaseOptions {
   provider: ModelProvider;
   modelId: string;
   budgetTokens: number;
@@ -1774,7 +1774,7 @@ function provenanceForCase(
   return { evaluationContextHash, candidateConfigHash, controlledDifference };
 }
 
-async function runOneCase(
+export async function runOneCase(
   caseDef: BenchmarkCase,
   opts: RunOneCaseOptions,
   suite: EvalSuite,

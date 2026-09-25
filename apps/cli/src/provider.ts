@@ -7,6 +7,11 @@ export const STUB_PROVIDER_ID = "stub";
  *  identity and the executor cannot drift apart on the literal). */
 export const STUB_MODEL_ID = "stub-model";
 
+/** Default model id for a REAL provider when `OPENAI_MODEL` is unset. Named
+ *  once here (the provider-identity source) so the observer, the prerun
+ *  resolution and `main.ts`'s `DEFAULT_MODEL_ID` cannot drift apart. */
+export const DEFAULT_REAL_MODEL_ID = "gpt-4o-mini";
+
 /**
  * E4-R81 (F81-1): the ONLY externally-billed provider this build supports.
  *

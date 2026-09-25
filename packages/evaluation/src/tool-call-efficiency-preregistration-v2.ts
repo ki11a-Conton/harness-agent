@@ -67,11 +67,22 @@ export const TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2 = "tool_call_efficiency_v1";
  *  champion decision: `repetitions >= 2`). */
 export const PREREG_V2_MIN_REPETITIONS = 2;
 
+/**
+ * The endpoint digest bound when the provider has no explicit base URL: the
+ * provider's own DEFAULT endpoint, which is itself a real, bound choice. Named
+ * once so the builder and the production observer (which must re-derive the
+ * same value) cannot drift apart on the literal.
+ */
+export const PROVIDER_DEFAULT_ENDPOINT_DIGEST = "provider-default-endpoint";
+
 /** Structured, code-carrying failure so callers/tests can assert the REASON. */
 export class PreregistrationV2Error extends Error {
   readonly code: string;
   constructor(code: string, message: string) {
-    super(`${TOOL_CALL_EFFICIENCY_PREREGISTRATION_V2_SCHEMA}: ${message}`);
+    // The reason code is part of the MESSAGE as well as the property: a refusal
+    // that only lives in a property is invisible to the CLI text/log surface the
+    // operator actually reads (and to a message-matching test).
+    super(`${TOOL_CALL_EFFICIENCY_PREREGISTRATION_V2_SCHEMA}[${code}]: ${message}`);
     this.name = "PreregistrationV2Error";
     this.code = code;
   }
@@ -445,7 +456,7 @@ export function buildToolCallEfficiencyPreregistrationV2(
     providerId: requireNonEmptyString(opts.provider?.providerId, "provider.providerId"),
     modelId: requireNonEmptyString(opts.provider?.modelId, "provider.modelId"),
     // A null endpoint means the provider default endpoint — itself a bound choice.
-    endpointDigest: endpointDigest ?? "provider-default-endpoint",
+    endpointDigest: endpointDigest ?? PROVIDER_DEFAULT_ENDPOINT_DIGEST,
     requestProfileDigest: createHash("sha256")
       .update(stableStringify(opts.provider?.requestProfile ?? {}), "utf8")
       .digest("hex"),
@@ -654,9 +665,23 @@ function expectNonNegInt(v: unknown, field: string): number {
  * `candidateSourceSha` / `maxUsdMicros` past a digest check. Scan the raw bytes
  * and refuse ANY repeated key at any object level before the value is used.
  *
+ * The comparison is on the DECODED key, not the raw escape text: `"x"` and
+ * `"\u0078"` are the SAME JSON key, so a scanner that compares raw fragments
+ * would miss `{"x":1,"\u0078":2}`. Decoding via `JSON.parse` also collapses any
+ * other escape wording (`"\n"` vs `"\u000a"`) to one key.
+ *
  * Only called AFTER a successful `JSON.parse`, so the text is known-valid JSON
  * and a string literal immediately followed by `:` is unambiguously a key.
  */
+function decodeJsonKeyLiteral(raw: string): string {
+  try {
+    const decoded: unknown = JSON.parse(`"${raw}"`);
+    return typeof decoded === "string" ? decoded : raw;
+  } catch {
+    return raw;
+  }
+}
+
 function assertNoDuplicateJsonKeys(json: string): void {
   const stack: Set<string>[] = [];
   const n = json.length;
@@ -666,16 +691,16 @@ function assertNoDuplicateJsonKeys(json: string): void {
     const c = json[i];
     if (c === '"') {
       let j = i + 1;
-      let key = "";
+      let raw = "";
       while (j < n) {
         const ch = json[j];
         if (ch === "\\") {
-          key += json.slice(j, j + 2);
+          raw += json.slice(j, j + 2);
           j += 2;
           continue;
         }
         if (ch === '"') break;
-        key += ch;
+        raw += ch;
         j += 1;
       }
       const end = j + 1;
@@ -683,6 +708,8 @@ function assertNoDuplicateJsonKeys(json: string): void {
       while (k < n && isWs(json[k])) k += 1;
       const top = stack[stack.length - 1];
       if (json[k] === ":" && top !== undefined) {
+        // Compare the DECODED key so escape-equivalent spellings collide.
+        const key = decodeJsonKeyLiteral(raw);
         if (top.has(key)) {
           throw new PreregistrationV2Error(
             "DUPLICATE_JSON_KEY",
@@ -939,6 +966,21 @@ export function parseAndValidatePreregistrationV2(json: string): ToolCallEfficie
   const expectedRoot = computePreregistrationV2Digest(artifact);
   if (artifact.preregistrationDigest !== expectedRoot) {
     throw new PreregistrationV2Error("ROOT_DIGEST_MISMATCH", "preregistrationDigest does not match the canonical source body");
+  }
+  // F7 — the raw bytes must BE the canonical serialization. A semantically
+  // identical but differently-encoded input (`"\u0044"` for `"D"`, reordered or
+  // pretty-printed keys) is refused: a value that a digest check cannot see
+  // (because JSON.parse normalized it away) must never be accepted as canonical.
+  // Placed LAST so a genuinely tampered artifact still reports its precise
+  // schema/derivation code rather than a generic encoding one.
+  // A single trailing newline is the one tolerated difference (files conventionally
+  // end with one, and the committed evidence fixture carries it).
+  const canonical = serializePreregistrationV2(artifact);
+  if (json !== canonical && json !== `${canonical}\n`) {
+    throw new PreregistrationV2Error(
+      "CANONICAL_BYTES_REQUIRED",
+      "input is not the canonical serialization of this artifact (escape-equivalent, reordered or otherwise non-canonical raw bytes are refused)",
+    );
   }
   return artifact;
 }
