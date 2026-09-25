@@ -106,17 +106,25 @@ function fakeProvider(): { provider: ModelProvider; calls: () => number } {
   return { provider, calls: () => calls };
 }
 
-/** The deterministic arm runner: candidate passes and activates; baseline fails. */
+/** The deterministic arm runner: candidate passes and activates; baseline fails.
+ *  The pass/activation claims are corroborated by per-run EVIDENCE (F2/S4) — the
+ *  aggregate derives the decision from this, not from a bare boolean. */
 const armRunner: PreregisteredArmRunner = async (arm, ctx) => {
   const client = ctx.provider.createClient({ providerId: "fake", modelId: "m" } as never, {} as ProviderConfig);
   for await (const _ev of client.generate({} as ModelRequest, new AbortController().signal)) {
     // consume
   }
+  const candidate = arm.armId === "candidate";
   return {
-    status: arm.armId === "candidate" ? "passed" : "failed",
-    candidateActivated: arm.armId === "candidate",
-    baselineContaminated: false,
+    status: candidate ? "passed" : "failed",
     tokensUsed: 15,
+    evidence: {
+      executorId: "n5-offline-fake-executor",
+      traceDigest: "a".repeat(64),
+      verifiedCompletion: candidate,
+      securityViolations: 0,
+      activationEvidenceDigest: candidate ? "b".repeat(64) : null,
+    },
   };
 };
 

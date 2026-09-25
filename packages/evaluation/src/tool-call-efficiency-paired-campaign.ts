@@ -37,7 +37,7 @@ import {
   type DecisionGateInputV3,
 } from "./champion-decision-v3.js";
 import { DEFAULT_DECISION_POLICY_V3 } from "./decision-policy-v3.js";
-import type { ToolCallEfficiencyPreregistrationV2 } from "./tool-call-efficiency-preregistration-v2.js";
+import { PREREG_V2_MIN_REPETITIONS, type ToolCallEfficiencyPreregistrationV2 } from "./tool-call-efficiency-preregistration-v2.js";
 import type { FormalRunAdmission } from "./tool-call-efficiency-formal-run.js";
 
 export const PREREGISTERED_CAMPAIGN_SCHEMA = "tool-call-efficiency-paired-campaign-v1";
@@ -48,19 +48,48 @@ export const PREREGISTERED_CAMPAIGN_SCHEMA = "tool-call-efficiency-paired-campai
 
 export type PreregisteredArmFailureCategory = "model" | "harness" | "judge" | "infrastructure";
 
+/**
+ * F2/S4 — the OBJECTIVE, per-run evidence a runner must return. The decision
+ * layer derives `passed`/activation/security from THIS, never from a bare
+ * runner boolean: a runner that only asserts "passed" (or "activated") without
+ * an executor identity, a trace digest and a real verifier verdict cannot
+ * produce an ACCEPT.
+ *
+ * (This raises the bar from "trust 32 booleans" to "every record must carry
+ * auditable evidence"; binding that evidence to the trusted execution
+ * manifest/ledger is the remaining S4 item and is NOT claimed here.)
+ */
+export interface PreregisteredArmEvidence {
+  /** Identity of the executor that produced this run's result. */
+  executorId: string;
+  /** sha256 (64-hex) of the immutable per-run trace/artifact. */
+  traceDigest: string;
+  /** The REAL verifier's completion verdict for THIS run. A `passed` status is
+   *  ignored unless this is true. */
+  verifiedCompletion: boolean;
+  /** Security events the executor observed for THIS run (>= 0). */
+  securityViolations: number;
+  /** Request-bound activation evidence digest. Non-null ONLY when this run
+   *  observed the pre-registered mechanism activation (candidate) — and, for a
+   *  baseline run, a non-null value means CONTAMINATION. */
+  activationEvidenceDigest: string | null;
+  /** Stall recoveries OBSERVED for this run (optional; offline adapters report 0). */
+  recoveries?: number;
+  /** Recoveries that succeeded (optional). */
+  recovered?: number;
+}
+
 export interface PreregisteredArmOutcome {
   status: "passed" | "failed" | "error";
   /** Present for `status: "error"`. Infrastructure/harness/judge/model failures
    *  are excluded from the pair (never silently counted as a task failure). */
   failureCategory?: PreregisteredArmFailureCategory;
-  /** Did the CANDIDATE arm observe the pre-registered guidance activation? */
-  candidateActivated?: boolean;
-  /** Did a BASELINE arm observe a candidate event/digest? Contamination. */
-  baselineContaminated?: boolean;
   /** Token cost of this arm run (for the bounded-cost gate). */
   tokensUsed?: number;
   /** Free-form, non-secret detail. */
   reason?: string;
+  /** REQUIRED objective evidence; see `PreregisteredArmEvidence`. */
+  evidence: PreregisteredArmEvidence;
 }
 
 export interface PreregisteredArmContext {
@@ -98,7 +127,37 @@ export interface PreregisteredRunRecord {
 
 export type PreregisteredCampaignErrorCode =
   | "RESUME_IDENTITY_MISMATCH"
-  | "RESUME_STATE_CORRUPT";
+  | "RESUME_STATE_CORRUPT"
+  | "RUN_EVIDENCE_INVALID";
+
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+
+/**
+ * F2/S4 — the problems that make a run's evidence unusable. EMPTY means the
+ * evidence is well-formed (an executor identity, a 64-hex trace digest, a
+ * boolean verifier verdict, a non-negative security count and a null-or-digest
+ * activation reference). Used both to refuse at record time and to DERIVE
+ * `digestValid` in the aggregate — never hardcoded to `true`.
+ */
+export function armEvidenceProblems(e: PreregisteredArmEvidence | undefined): string[] {
+  const problems: string[] = [];
+  if (e === undefined || typeof e !== "object") return ["evidence object is missing"];
+  if (typeof e.executorId !== "string" || e.executorId.length === 0) problems.push("executorId must be a non-empty string");
+  if (typeof e.traceDigest !== "string" || !SHA256_HEX.test(e.traceDigest)) problems.push("traceDigest must be a 64-hex sha256");
+  if (typeof e.verifiedCompletion !== "boolean") problems.push("verifiedCompletion must be a boolean");
+  if (!Number.isSafeInteger(e.securityViolations) || e.securityViolations < 0) problems.push("securityViolations must be a non-negative integer");
+  if (e.activationEvidenceDigest !== null && (typeof e.activationEvidenceDigest !== "string" || !SHA256_HEX.test(e.activationEvidenceDigest))) {
+    problems.push("activationEvidenceDigest must be null or a 64-hex sha256");
+  }
+  return problems;
+}
+
+function assertArmEvidence(e: PreregisteredArmEvidence | undefined, armRunId: string): void {
+  const problems = armEvidenceProblems(e);
+  if (problems.length > 0) {
+    throw new PreregisteredCampaignError("RUN_EVIDENCE_INVALID", `run ${armRunId}: ${problems.join("; ")}`);
+  }
+}
 
 export class PreregisteredCampaignError extends Error {
   readonly code: PreregisteredCampaignErrorCode;
@@ -161,6 +220,9 @@ async function readRecord(dir: string, armRunId: string): Promise<PreregisteredR
   if (rec.armRunId !== armRunId || typeof rec.preregistrationDigest !== "string" || typeof rec.planDigest !== "string") {
     throw new PreregisteredCampaignError("RESUME_STATE_CORRUPT", `run record ${armRunId}.json is missing its identity`);
   }
+  // F2/S4: a resumed record is only reusable if its EVIDENCE is still intact —
+  // a tampered outcome must not be silently adopted.
+  assertArmEvidence(rec.outcome?.evidence, armRunId);
   return rec;
 }
 
@@ -221,6 +283,9 @@ export async function runPreregisteredCampaign(
       preregistrationDigest,
       planDigest,
     });
+    // F2/S4: refuse a result whose evidence is missing/malformed AT RECORD TIME,
+    // so a bare-boolean outcome never even reaches the aggregate.
+    assertArmEvidence(outcome.evidence, armRunId);
     const record: PreregisteredRunRecord = {
       schemaVersion: PREREGISTERED_CAMPAIGN_SCHEMA,
       preregistrationDigest,
@@ -276,10 +341,20 @@ export interface PreregisteredAggregate {
   budgetRemaining: number;
 }
 
+/**
+ * A run only counts as PASSED when BOTH the runner's status and the REAL
+ * verifier's completion verdict agree. A bare `status: "passed"` with
+ * `verifiedCompletion: false` is counted as a failure (F2/S4) — the decision
+ * layer never trusts the runner's own boolean.
+ */
+function verifiedPass(r: PreregisteredRunRecord): boolean {
+  return r.outcome.status === "passed" && r.outcome.evidence.verifiedCompletion === true;
+}
+
 function rate(records: PreregisteredRunRecord[]): number {
   const measured = records.filter((r) => r.outcome.status !== "error");
   if (measured.length === 0) return 0;
-  return measured.filter((r) => r.outcome.status === "passed").length / measured.length;
+  return measured.filter(verifiedPass).length / measured.length;
 }
 
 /**
@@ -299,8 +374,10 @@ export function aggregatePreregisteredCampaign(
   const baseline = run.records.filter((r) => r.armId === "baseline");
   const candidate = run.records.filter((r) => r.armId === "candidate");
 
+  // F2/S4 — CONTAMINATION is a non-null activation-evidence digest on a
+  // BASELINE record, not a self-reported flag.
   const contaminatedPairs = run.records
-    .filter((r) => r.armId === "baseline" && r.outcome.baselineContaminated === true)
+    .filter((r) => r.armId === "baseline" && r.outcome.evidence.activationEvidenceDigest !== null)
     .map((r) => r.pairId);
 
   // Per-repetition net-passed deltas, over pairs where BOTH arms are present.
@@ -315,17 +392,18 @@ export function aggregatePreregisteredCampaign(
       const b = byArmRunId.get(armRunIdOf(pair.pairId, "baseline"));
       const c = byArmRunId.get(armRunIdOf(pair.pairId, "candidate"));
       if (b === undefined || c === undefined) continue;
-      const bp = b.outcome.status === "passed" ? 1 : 0;
-      const cp = c.outcome.status === "passed" ? 1 : 0;
+      const bp = verifiedPass(b) ? 1 : 0;
+      const cp = verifiedPass(c) ? 1 : 0;
       delta += cp - bp;
     }
     perRepetitionDeltas.push(delta);
   }
   const netPassedDelta = perRepetitionDeltas.reduce((a, b) => a + b, 0);
 
-  // Activation coverage over ELIGIBLE candidate arms.
+  // F2/S4 — activation is a request-bound evidence digest on a CANDIDATE record,
+  // not a self-reported boolean.
   const eligibleCandidateRecords = candidate.filter((r) => r.outcome.status !== "error");
-  const activated = eligibleCandidateRecords.filter((r) => r.outcome.candidateActivated === true).length;
+  const activated = eligibleCandidateRecords.filter((r) => r.outcome.evidence.activationEvidenceDigest !== null).length;
   const activationCoverage = eligibleCandidateRecords.length === 0 ? null : activated / eligibleCandidateRecords.length;
 
   const infraFailuresBaseline = baseline.filter((r) => r.outcome.status === "error").length;
@@ -337,19 +415,29 @@ export function aggregatePreregisteredCampaign(
 
   const contaminated = contaminatedPairs.length > 0;
 
+  // F2/S4 — every gate input is DERIVED from the records' evidence. Nothing here
+  // is hardcoded to `true`/`0`: a single malformed evidence record makes the
+  // whole campaign INVALID, a security event blocks ACCEPT, and the repetition
+  // recommendation follows the pre-registered minimum.
+  const digestValid = run.records.every((r) => armEvidenceProblems(r.outcome.evidence).length === 0);
+  const securityBreachesCandidate = candidate.reduce((s, r) => s + r.outcome.evidence.securityViolations, 0);
+  const securityBreachesBaseline = baseline.reduce((s, r) => s + r.outcome.evidence.securityViolations, 0);
+  const recoveryCount = run.records.reduce((s, r) => s + (r.outcome.evidence.recoveries ?? 0), 0);
+  const recoveredCount = run.records.reduce((s, r) => s + (r.outcome.evidence.recovered ?? 0), 0);
+
   const input: DecisionGateInputV3 = {
-    digestValid: true,
+    digestValid,
     pairComplete: run.pairComplete && !contaminated,
     comparable: !contaminated,
     incomparabilityReasons: contaminated
       ? [`baseline arms observed a candidate event in ${contaminatedPairs.length} pair(s)`]
       : [],
     activationCoverage,
-    activationEligibleCases: eligibleCandidateRecords.filter((r) => r.outcome.candidateActivated === true).length,
+    activationEligibleCases: activated,
     minActivationEligibleCases: prereg.evaluation.minEligibleCases,
     minActivationCoverage: policy.minActivationCoverage,
-    securityBreachesCandidate: 0,
-    securityBreachesBaseline: 0,
+    securityBreachesCandidate,
+    securityBreachesBaseline,
     securityBreachesAllowed: policy.securityBreachesAllowed,
     baselineVerifiedRate: rate(baseline),
     candidateVerifiedRate: rate(candidate),
@@ -363,11 +451,11 @@ export function aggregatePreregisteredCampaign(
     minConclusiveNetDelta: policy.minConclusiveNetDelta,
     tokensDelta,
     maxTokensDelta: policy.maxTokensDelta,
-    // The pre-registration enforces repetitions >= 2, so the frozen schedule
-    // already satisfies the decision's repetition requirement.
-    recommendsRepetition: false,
-    recoveryCount: 0,
-    recoveredCount: 0,
+    // Derived from the pre-registered repetition minimum (which the builder
+    // enforces at >= PREREG_V2_MIN_REPETITIONS) — not a literal `false`.
+    recommendsRepetition: repetitions < PREREG_V2_MIN_REPETITIONS,
+    recoveryCount,
+    recoveredCount,
     minRecoveryRate: policy.minRecoveryRate,
   };
 

@@ -357,6 +357,32 @@ describe("N1 pre-registration v2 — fail-closed parsing", () => {
     obj.preregistrationDigest = recomputed; // keep the root consistent so ONLY the guidance check fires
     expectCode(() => parseAndValidatePreregistrationV2(JSON.stringify(obj)), "GUIDANCE_MISMATCH");
   });
+
+  // F7 — the "strict JSON" claim must actually hold: JSON.parse silently keeps
+  // the LAST duplicate key, so the loader must scan the raw bytes itself.
+  it("rejects a duplicate JSON object key (F7)", () => {
+    const dup = `{"schemaVersion":"tool-call-efficiency-preregistration-v2",${json.slice(1)}`;
+    expect(JSON.parse(dup)).toBeTypeOf("object"); // JSON.parse itself accepts it
+    expectCode(() => parseAndValidatePreregistrationV2(dup), "DUPLICATE_JSON_KEY");
+  });
+
+  it("rejects a duplicate key NESTED inside an object (F7)", () => {
+    const dup = json.replace('"maxUsdMicros":', '"maxUsdMicros":null,"maxUsdMicros":');
+    expect(json).not.toBe(dup);
+    expectCode(() => parseAndValidatePreregistrationV2(dup), "DUPLICATE_JSON_KEY");
+  });
+
+  it("rejects a subject.cleanTreePolicy it does not support (F7)", () => {
+    const obj = JSON.parse(json) as Record<string, unknown>;
+    (obj.subject as Record<string, unknown>).cleanTreePolicy = "allow-dirty";
+    expectCode(() => parseAndValidatePreregistrationV2(JSON.stringify(obj)), "INVALID_FIELD");
+  });
+
+  it("rejects a budget.pricingUnknownPolicy it does not support (F7)", () => {
+    const obj = JSON.parse(json) as Record<string, unknown>;
+    (obj.budget as Record<string, unknown>).pricingUnknownPolicy = "allow-unknown";
+    expectCode(() => parseAndValidatePreregistrationV2(JSON.stringify(obj)), "INVALID_FIELD");
+  });
 });
 
 describe("N4 — the unified eligible minimum is one frozen, re-derived number", () => {

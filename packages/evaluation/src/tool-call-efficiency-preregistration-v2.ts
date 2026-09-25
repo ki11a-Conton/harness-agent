@@ -648,6 +648,58 @@ function expectNonNegInt(v: unknown, field: string): number {
   return v;
 }
 
+/**
+ * F7 — strict canonical input. `JSON.parse` silently DROPS a duplicate object
+ * key (last one wins), so a hand-edited artifact could smuggle a second
+ * `candidateSourceSha` / `maxUsdMicros` past a digest check. Scan the raw bytes
+ * and refuse ANY repeated key at any object level before the value is used.
+ *
+ * Only called AFTER a successful `JSON.parse`, so the text is known-valid JSON
+ * and a string literal immediately followed by `:` is unambiguously a key.
+ */
+function assertNoDuplicateJsonKeys(json: string): void {
+  const stack: Set<string>[] = [];
+  const n = json.length;
+  const isWs = (c: string | undefined) => c === " " || c === "\t" || c === "\n" || c === "\r";
+  let i = 0;
+  while (i < n) {
+    const c = json[i];
+    if (c === '"') {
+      let j = i + 1;
+      let key = "";
+      while (j < n) {
+        const ch = json[j];
+        if (ch === "\\") {
+          key += json.slice(j, j + 2);
+          j += 2;
+          continue;
+        }
+        if (ch === '"') break;
+        key += ch;
+        j += 1;
+      }
+      const end = j + 1;
+      let k = end;
+      while (k < n && isWs(json[k])) k += 1;
+      const top = stack[stack.length - 1];
+      if (json[k] === ":" && top !== undefined) {
+        if (top.has(key)) {
+          throw new PreregistrationV2Error(
+            "DUPLICATE_JSON_KEY",
+            `duplicate object key ${JSON.stringify(key)} — canonical input forbids repeated keys`,
+          );
+        }
+        top.add(key);
+      }
+      i = end;
+      continue;
+    }
+    if (c === "{") stack.push(new Set());
+    else if (c === "}") stack.pop();
+    i += 1;
+  }
+}
+
 function parseCaseEntry(raw: unknown, i: number): PreregCaseEntryV2 {
   const o = expectObject(raw, `dataset.cases[${i}]`);
   expectKeys(o, ["caseId", "suite", "contentDigest", "eligibilityDigest"], `dataset.cases[${i}]`);
@@ -671,6 +723,8 @@ export function parseAndValidatePreregistrationV2(json: string): ToolCallEfficie
   } catch {
     throw new PreregistrationV2Error("NOT_JSON", "artifact is not valid JSON");
   }
+  // F7: a duplicate key is valid to JSON.parse but NOT a canonical artifact.
+  assertNoDuplicateJsonKeys(json);
   const root = expectObject(raw, "artifact");
   const schemaVersion = expectString(root.schemaVersion, "schemaVersion");
   if (schemaVersion !== TOOL_CALL_EFFICIENCY_PREREGISTRATION_V2_SCHEMA) {
@@ -687,6 +741,13 @@ export function parseAndValidatePreregistrationV2(json: string): ToolCallEfficie
 
   const subj = expectObject(root.subject, "subject");
   expectKeys(subj, ["candidateSourceSha", "baselineArmDigest", "candidateArmDigest", "cleanTreePolicy", "runtimeConfigDigest"], "subject");
+  // F7: validate the policy VALUE (do not silently normalize a caller's input).
+  if (subj.cleanTreePolicy !== "require-clean") {
+    throw new PreregistrationV2Error(
+      "INVALID_FIELD",
+      `subject.cleanTreePolicy must be "require-clean", got ${JSON.stringify(subj.cleanTreePolicy)}`,
+    );
+  }
   const subject: PreregSubjectSourceV2 = {
     candidateSourceSha: requireSha40(subj.candidateSourceSha, "subject.candidateSourceSha"),
     baselineArmDigest: expectString(subj.baselineArmDigest, "subject.baselineArmDigest"),
@@ -811,6 +872,13 @@ export function parseAndValidatePreregistrationV2(json: string): ToolCallEfficie
     ["maxModelCallsPerRun", "maxToolCalls", "maxDurationMs", "maxInputTokens", "maxOutputTokens", "maxTotalTokens", "maxUsdMicros", "pricingUnknownPolicy", "campaignWorstCaseModelCalls"],
     "budget",
   );
+  // F7: validate the policy VALUE (do not silently normalize a caller's input).
+  if (bg.pricingUnknownPolicy !== "refuse") {
+    throw new PreregistrationV2Error(
+      "INVALID_FIELD",
+      `budget.pricingUnknownPolicy must be "refuse", got ${JSON.stringify(bg.pricingUnknownPolicy)}`,
+    );
+  }
   const maxUsdMicros = bg.maxUsdMicros === null ? null : expectNonNegInt(bg.maxUsdMicros, "budget.maxUsdMicros");
   const budget: PreregBudgetV2 = {
     maxModelCallsPerRun: expectNonNegInt(bg.maxModelCallsPerRun, "budget.maxModelCallsPerRun"),

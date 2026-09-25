@@ -181,33 +181,21 @@ afterEach(async () => {
 // F2 — ACCEPT must not be reachable from self-reported outcome booleans
 // ---------------------------------------------------------------------------
 
-describe("S0/F2 — a self-reported arm outcome cannot manufacture ACCEPT", () => {
-  // KNOWN GAP (S4/F2): `aggregatePreregisteredCampaign` still trusts the
-  // runner's `status`/`candidateActivated` booleans (and hardcodes
-  // `digestValid: true`, `securityBreaches*: 0`, `recommendsRepetition: false`),
-  // so a runner that returns `{status:"passed", candidateActivated:true}` with no
-  // verifier / request-bound activation evidence reaches ACCEPT. This pins the
-  // REQUIRED invariant and is `it.fails` until S4 derives the decision inputs
-  // from real verifier/activation/ledger evidence — at which point it will start
-  // passing and MUST be promoted to `it(...)` (vitest fails a stale `it.fails`).
-  it.fails("refuses ACCEPT when the only evidence is 32 forged passed/activated outcomes", async () => {
-    const dir = await tempDir();
-    const artifact = prereg();
-    const preregJson = serializePreregistrationV2(artifact);
+describe("S4/F2 — a bare runner boolean cannot manufacture ACCEPT", () => {
+  // FIXED (S4/F2): the aggregate DERIVES passed/activation/security/`digestValid`
+  // from per-run EVIDENCE, never from the runner's `status`/activation booleans.
+  const evidence = (over: Partial<PreregisteredArmOutcome["evidence"]> = {}): PreregisteredArmOutcome["evidence"] => ({
+    executorId: "forged",
+    traceDigest: "a".repeat(64),
+    verifiedCompletion: false,
+    securityViolations: 0,
+    activationEvidenceDigest: null,
+    ...over,
+  });
 
-    // The forged runner: no verifier, no request-bound activation evidence, no
-    // per-run trace — it simply returns the booleans that today's aggregate
-    // reads as truth.
-    const forged: PreregisteredArmRunner = async (arm): Promise<PreregisteredArmOutcome> => ({
-      status: arm.armId === "candidate" ? "passed" : "failed",
-      candidateActivated: arm.armId === "candidate",
-      baselineContaminated: false,
-      tokensUsed: 1,
-      reason: "forged",
-    });
-
+  async function admitAndRun(dir: string, artifact: ToolCallEfficiencyPreregistrationV2, runArm: PreregisteredArmRunner) {
     const admission = await openPreregisteredCampaignGate({
-      preregistrationJson: preregJson,
+      preregistrationJson: serializePreregistrationV2(artifact),
       authorizationJson: authorizationFor(artifact),
       observation: observationFor(),
       budgetDir: join(dir, "budget"),
@@ -215,23 +203,88 @@ describe("S0/F2 — a self-reported arm outcome cannot manufacture ACCEPT", () =
       now: () => NOW,
       makeProvider: () => retryingProvider({ retries: 0 }).provider,
     });
-    expect(admission.status, "the forged campaign must at least reach admission").toBe("ADMITTED");
-    if (admission.status !== "ADMITTED") return;
-
+    expect(admission.status).toBe("ADMITTED");
+    if (admission.status !== "ADMITTED") throw new Error("setup: campaign not admitted");
     const run = await runPreregisteredCampaign({
       admission,
       prereg: artifact,
       resultsDir: join(dir, "runs"),
-      runArm: forged,
+      runArm,
       now: () => NOW,
     });
-    const aggregate = aggregatePreregisteredCampaign(run, artifact, {
+    return aggregatePreregisteredCampaign(run, artifact, {
       providerCalls: 0,
       budgetRemaining: artifact.budget.campaignWorstCaseModelCalls,
     });
+  }
 
-    // THE INVARIANT: booleans that no verifier produced cannot decide a champion.
+  it("refuses ACCEPT when `status` claims passed/activated but the evidence does not corroborate", async () => {
+    const dir = await tempDir();
+    const artifact = prereg();
+    // The forged runner ASSERTS success in `status`, but its evidence (the real
+    // verifier verdict + request-bound activation digest) says otherwise.
+    const forged: PreregisteredArmRunner = async (arm) => ({
+      status: arm.armId === "candidate" ? "passed" : "failed",
+      tokensUsed: 1,
+      reason: "forged",
+      evidence: evidence(),
+    });
+    const aggregate = await admitAndRun(dir, artifact, forged);
     expect(aggregate.decision.decision).not.toBe("ACCEPT");
+  });
+
+  it("refuses ACCEPT when a security event is present in the candidate evidence", async () => {
+    const dir = await tempDir();
+    const artifact = prereg();
+    // Everything else looks like a clean win; ONE security event must block it.
+    const runner: PreregisteredArmRunner = async (arm) => ({
+      status: arm.armId === "candidate" ? "passed" : "failed",
+      tokensUsed: 1,
+      evidence:
+        arm.armId === "candidate"
+          ? evidence({ verifiedCompletion: true, activationEvidenceDigest: "b".repeat(64), securityViolations: 1 })
+          : evidence(),
+    });
+    const aggregate = await admitAndRun(dir, artifact, runner);
+    expect(aggregate.decision.decision).not.toBe("ACCEPT");
+  });
+
+  it("treats a baseline activation digest as contamination and refuses ACCEPT", async () => {
+    const dir = await tempDir();
+    const artifact = prereg();
+    const runner: PreregisteredArmRunner = async (arm) => ({
+      status: arm.armId === "candidate" ? "passed" : "failed",
+      tokensUsed: 1,
+      evidence:
+        arm.armId === "baseline"
+          ? evidence({ activationEvidenceDigest: "c".repeat(64) }) // baseline saw a candidate event
+          : evidence({ verifiedCompletion: true, activationEvidenceDigest: "b".repeat(64) }),
+    });
+    const aggregate = await admitAndRun(dir, artifact, runner);
+    expect(aggregate.decision.decision).not.toBe("ACCEPT");
+    expect(aggregate.contaminatedPairs.length).toBeGreaterThan(0);
+  });
+
+  it("refuses a run record whose evidence is malformed (RUN_EVIDENCE_INVALID)", async () => {
+    const dir = await tempDir();
+    const artifact = prereg();
+    const forged: PreregisteredArmRunner = async () => ({
+      status: "passed",
+      evidence: { executorId: "x", traceDigest: "not-a-digest", verifiedCompletion: true, securityViolations: 0, activationEvidenceDigest: null },
+    });
+    const admission = await openPreregisteredCampaignGate({
+      preregistrationJson: serializePreregistrationV2(artifact),
+      authorizationJson: authorizationFor(artifact),
+      observation: observationFor(),
+      budgetDir: join(dir, "budget"),
+      mode: "first-run",
+      now: () => NOW,
+      makeProvider: () => retryingProvider({ retries: 0 }).provider,
+    });
+    if (admission.status !== "ADMITTED") throw new Error("setup: campaign not admitted");
+    await expect(
+      runPreregisteredCampaign({ admission, prereg: artifact, resultsDir: join(dir, "runs"), runArm: forged, now: () => NOW }),
+    ).rejects.toThrow(/RUN_EVIDENCE_INVALID/);
   });
 });
 
