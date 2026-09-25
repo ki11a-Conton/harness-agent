@@ -10,8 +10,8 @@
 - 外部付费模型调用：N0–N6 = **0**；S0–S6 = **0**；N7 / S7 = **PAID_NOT_RUN**。
 - 模型效果 / champion promotion：**UNKNOWN / NOT_RUN**（离线正确性证据不等于模型效果证据）。
 - N0–N6 结论：**PASS**（N5 可执行闭环已由两平台 CI 验证，见 §N6）；N7：**BLOCKED / PAID_NOT_RUN**。
-- S0–S6 结论：**PASS**（离线，见 §S；远端 CI 对实现提交 `7fb389e` 为 **NOT_RUN**，未 push）；
-  S7：**BLOCKED / PAID_NOT_RUN**。
+- S0–S6 结论：**PASS**（离线，见 §S）；远端 CI 对 `801774d`（含实现 `7fb389e`）run `36130057745`
+  **七 job 全 success**（含两平台 closed-loop）；S7：**BLOCKED / PAID_NOT_RUN**。
 
 ---
 
@@ -287,9 +287,15 @@ digest）。环境中不存在 API key 不构成授权；`preflightPaid.ok=true`
 | `node scripts/e4/r97-mutation-check.mjs --only <S0 id>` | 0 | 两条 S0 mutation **各自 CAUGHT**（`s2-prereg-not-dispatched-before-provider` → `prereg-production-wiring.test.ts` RED；`s4-contamination-ignores-evidence` → `tool-call-efficiency-formal-gaps.test.ts` RED）；工作树 RESTORED |
 
 - mutation set 现为 **20 项**：T6 5 · A7 7 · N2 1 · N5 5 · S0 2。本会话本地只对**新增的 2 条**逐条跑过
-  全流程；其余 18 条沿用 N6 在 `f5d5045` 的两平台 CI 证据（不把旧结果冒充本次新证据）。
-- 远端 CI：本会话**未** push，故 `7fb389e` 的双平台 job 状态为 **NOT_RUN**；不得据此声称两平台成功。
-  新 HEAD 的 CI 需在推送后由该 SHA 自己的 run 确认。
+  全流程；其余 18 条沿用 N6 在 `f5d5045` 的两平台 CI 证据（不把旧结果冒充本次新证据）；推送后
+  新 HEAD 的 CI 已在两平台重跑整个 20 项 gate。
+- 远端 CI（只读核实 job/step 状态）：`801774d` 的 run **`36130057745` 七 job 全 success** ——
+  `install · typecheck · test · build · benchmark-smoke · audit`（ubuntu/windows 两个）、
+  `coverage gate (ubuntu)`、`offline cold-start (ubuntu)`、`release attestation (P38-12)`，以及
+  **`r97-r98 closed loop (ubuntu-latest)` 与 `(windows-latest)`**（N5 离线闭环 + 20 项 mutation gate
+  在这两个 job 内运行）。未下载 artifact 逐字节复核，故只声称 job/step 状态为 success。
+- 边界（不因 CI 转绿而放宽）：该 job 是**离线**闭环（0 provider call、无 key、无网络），
+  "CI 全绿" ≠ "真实付费实验已运行"；S7 仍为 `PAID_NOT_RUN`。
 
 ---
 
