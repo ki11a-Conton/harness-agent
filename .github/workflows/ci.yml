@@ -941,9 +941,13 @@ jobs:
       # then REBUILDS the pre-registration artifact from the ONE committed
       # fixture through the BUILT package and records the digests it actually
       # hashed. The step REFUSES to run if a paid provider key or the paid switch
-      # is present, and reports externalProviderFactoryCalls=0 /
-      # externalProviderCalls=0 / cost=0. Evidence is identity-bound to the
-      # workflow's own checkout SHA.
+      # is present, and reports externalProviderFactoryCalls /
+      # externalProviderCalls / networkRequests / costUsdMicros as NOT_OBSERVED —
+      # this script constructs no provider and cannot see a child vitest process's
+      # transport, so a literal `0` would be an unverifiable claim dressed as
+      # evidence. The MEASURED zero-call proof lives in the suites themselves and
+      # in the A7 production-offline E2E's instrumented composition root. Evidence
+      # is identity-bound to the workflow's own checkout SHA.
       # -----------------------------------------------------------------------
       - name: N5 — run the offline pre-registration closed loop (0 provider calls)
         run: node scripts/e4/n5-prereg-closed-loop.mjs --out .ci/r97-r98/n5-prereg-evidence.json
