@@ -225,7 +225,7 @@ async function main() {
       `${tests.failed > 0 ? `, ${tests.failed} failed` : ""}; ` +
       `root ${identity?.preregistrationDigest?.slice(0, 12) ?? "(none)"}…, ` +
       `${identity?.logicalRuns ?? "?"} logical run(s), worst-case ${identity?.campaignWorstCaseModelCalls ?? "?"} model call(s); ` +
-      `external provider factory calls ${report.externalProviderFactoryCalls}\n` +
+      `external provider factory calls ${report.observedCounts.externalProviderFactoryCalls}\n` +
       `  evidence: ${outPath}\n`,
   );
   if (tests.failed > 0) {

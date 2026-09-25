@@ -22,6 +22,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ModelEvent, ModelProvider, ModelRequest, ProviderConfig } from "@ar/contracts";
 import {
   DEFAULT_DECISION_POLICY_V3,
+  PREREG_RUN_EVIDENCE_FILENAMES,
+  PREREG_RUN_MANIFEST_SCHEMA,
+  PREREG_RUN_SECURITY_SCHEMA,
+  PREREG_RUN_VERIFIER_SCHEMA,
   TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2,
   buildToolCallEfficiencyPreregistrationV2,
   captureEndpointIdentity,
@@ -30,6 +34,8 @@ import {
   selectionFromFrozenEvidence,
   serializePreregistrationV2,
   toolCallEfficiencyGuidanceDigest,
+  type PreregisteredArmContext,
+  type PreregisteredArmEvidence,
   type PreregistrationV2Options,
   type PreregisteredArmRunner,
   type PreregisteredCampaignObservationV2,
@@ -157,6 +163,49 @@ function fakeProvider(): { provider: ModelProvider; calls: () => number } {
   return { provider, calls: () => calls };
 }
 
+/**
+ * Write the raw per-run evidence artifacts an A6 re-verification reads back, and
+ * return the declared evidence whose digests are the sha256 of EXACTLY those
+ * bytes. Without this the fake runner would declare a well-SHAPED forgery
+ * (`"a".repeat(64)`) with no artifact on disk, which A6 records as UNVERIFIED and
+ * the aggregate renders INVALID — never ACCEPT.
+ */
+async function writeEvidence(
+  ctx: PreregisteredArmContext,
+  opts: { executorId: string; verifiedCompletion: boolean; activate: boolean },
+): Promise<PreregisteredArmEvidence> {
+  await mkdir(ctx.evidenceDir, { recursive: true });
+  const manifestText = `${stableStringify({
+    schemaVersion: PREREG_RUN_MANIFEST_SCHEMA,
+    executorId: opts.executorId,
+    preregistrationDigest: ctx.preregistrationDigest,
+    planDigest: ctx.planDigest,
+    armRunId: ctx.armRunId,
+    armId: ctx.arm.armId,
+    caseId: ctx.arm.caseId,
+    repetition: ctx.arm.repetition,
+    orderIndex: ctx.arm.orderIndex,
+  })}\n`;
+  const verifierText = `${stableStringify({ schemaVersion: PREREG_RUN_VERIFIER_SCHEMA, verifiedCompletion: opts.verifiedCompletion })}\n`;
+  const securityText = `${stableStringify({ schemaVersion: PREREG_RUN_SECURITY_SCHEMA, violations: 0 })}\n`;
+  await writeFile(join(ctx.evidenceDir, PREREG_RUN_EVIDENCE_FILENAMES.manifest), manifestText, "utf8");
+  await writeFile(join(ctx.evidenceDir, PREREG_RUN_EVIDENCE_FILENAMES.verifier), verifierText, "utf8");
+  await writeFile(join(ctx.evidenceDir, PREREG_RUN_EVIDENCE_FILENAMES.security), securityText, "utf8");
+  let activationEvidenceDigest: string | null = null;
+  if (opts.activate) {
+    const activationText = `${stableStringify({ schemaVersion: "prereg-run-activation-v1", armRunId: ctx.armRunId, activated: true })}\n`;
+    await writeFile(join(ctx.evidenceDir, PREREG_RUN_EVIDENCE_FILENAMES.activation), activationText, "utf8");
+    activationEvidenceDigest = sha(activationText);
+  }
+  return {
+    executorId: opts.executorId,
+    traceDigest: sha(manifestText),
+    verifiedCompletion: opts.verifiedCompletion,
+    securityViolations: 0,
+    activationEvidenceDigest,
+  };
+}
+
 /** The deterministic arm runner: candidate passes and activates; baseline fails.
  *  The pass/activation claims are corroborated by per-run EVIDENCE (F2/S4) — the
  *  aggregate derives the decision from this, not from a bare boolean. */
@@ -166,16 +215,15 @@ const armRunner: PreregisteredArmRunner = async (arm, ctx) => {
     // consume
   }
   const candidate = arm.armId === "candidate";
+  const evidence = await writeEvidence(ctx, {
+    executorId: "n5-offline-fake-executor",
+    verifiedCompletion: candidate,
+    activate: candidate,
+  });
   return {
     status: candidate ? "passed" : "failed",
     tokensUsed: 15,
-    evidence: {
-      executorId: "n5-offline-fake-executor",
-      traceDigest: "a".repeat(64),
-      verifiedCompletion: candidate,
-      securityViolations: 0,
-      activationEvidenceDigest: candidate ? "b".repeat(64) : null,
-    },
+    evidence,
   };
 };
 
@@ -335,7 +383,7 @@ describe("N5 — the offline closed loop executes exactly the frozen schedule", 
       ["prereg", "run", path, "--authorization", authPath, "--budget-dir", join(dir, "budget"), "--out", outDir, "--mode", "first-run"],
       d,
     );
-    expect(res.exitCode).toBe(0);
+    expect(res.exitCode, res.lines.join("\n")).toBe(0);
     expect(res.lines.join("\n")).toContain(`executed ${LOGICAL_RUNS} logical run(s)`);
     expect(factory).toHaveBeenCalledTimes(1);
     expect(fake.calls()).toBe(LOGICAL_RUNS);
@@ -365,7 +413,7 @@ describe("N5 — the offline closed loop executes exactly the frozen schedule", 
 
     const second = deps({ provider: fakeProvider().provider });
     const res = await runCommand(["prereg", "run", path, "--authorization", authPath, "--budget-dir", budgetDir, "--out", outDir, "--mode", "resume"], second.deps);
-    expect(res.exitCode).toBe(0);
+    expect(res.exitCode, res.lines.join("\n")).toBe(0);
     expect(res.lines.join("\n")).toContain(`resumed ${LOGICAL_RUNS}`);
     expect(second.factory).toHaveBeenCalledTimes(1);
     expect((second.deps as never as { provider?: unknown }) === undefined).toBe(false);
@@ -536,7 +584,7 @@ describe("N5 — resume only continues the SAME frozen experiment", () => {
       ["prereg", "run", path, "--authorization", authPath, "--budget-dir", budgetDir, "--out", outDir, "--mode", "first-run"],
       deps({ provider: fakeProvider().provider }).deps,
     );
-    expect(res.exitCode).toBe(0);
+    expect(res.exitCode, res.lines.join("\n")).toBe(0);
     return { path, authPath, budgetDir, outDir };
   }
 

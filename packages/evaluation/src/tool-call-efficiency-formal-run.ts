@@ -327,6 +327,13 @@ export interface CostBudgetCapsV2 {
   maxToolCalls: number;
   maxDurationMs: number;
   maxUsdMicros: number | null;
+  /**
+   * The pre-registered campaign worst-case LOGICAL call count. Recorded here so
+   * the per-call DURATION reservation can be derived as a share of
+   * `maxDurationMs` (see `perCallDurationMsCeiling`) rather than reserving the
+   * whole campaign wall-clock against every single call.
+   */
+  maxModelCalls: number;
 }
 
 export interface CostBudgetFile {
@@ -381,7 +388,35 @@ const ZERO_RESERVATION: CostReservationDelta = { inputTokens: 0, outputTokens: 0
  */
 export const FORMAL_PER_CALL_INPUT_TOKEN_CEILING = 32_000;
 export const FORMAL_PER_CALL_OUTPUT_TOKEN_CEILING = 32_000;
+
+/**
+ * Absolute cap on one call's WALL-CLOCK reservation.
+ *
+ * Unlike a token ceiling (a call provably cannot emit more tokens than the
+ * model's maximum), a wall-clock reservation cannot be a true upper bound — a
+ * call's duration is only known once it is over. The per-call duration
+ * reservation is therefore a SCHEDULING SHARE of the campaign's `maxDurationMs`
+ * (see `perCallDurationMsCeiling`): the campaign's pre-registered worst-case
+ * schedule (`maxModelCalls`) must each fit within the authorized total, or no
+ * call could ever be reserved against a cap as small as one call's ceiling.
+ *
+ * `maxDurationMs` is still an absolute cap: it is charged from the ACTUAL
+ * elapsed duration (settled after the call), and once charged+reserved would
+ * exceed it, further calls are refused before they leave.
+ */
 export const FORMAL_PER_CALL_DURATION_MS_CEILING = 600_000;
+
+/**
+ * The per-call duration reservation for a campaign: the largest uniform share
+ * of `maxDurationMs` that keeps the pre-registered worst-case schedule
+ * (`maxModelCalls` calls) within the cap, never above the absolute per-call
+ * ceiling, and never below 1ms (a zero reservation would make the duration
+ * dimension unbounded).
+ */
+export function perCallDurationMsCeiling(caps: Pick<CostBudgetCapsV2, "maxDurationMs" | "maxModelCalls">): number {
+  const share = Math.ceil(caps.maxDurationMs / Math.max(1, caps.maxModelCalls));
+  return Math.max(1, Math.min(FORMAL_PER_CALL_DURATION_MS_CEILING, share));
+}
 
 let reservationCounter = 0;
 
@@ -405,6 +440,7 @@ export class CostBudget {
       maxToolCalls: prereg.budget.maxToolCalls,
       maxDurationMs: prereg.budget.maxDurationMs,
       maxUsdMicros: prereg.budget.maxUsdMicros,
+      maxModelCalls: prereg.budget.campaignWorstCaseModelCalls,
     };
     await mkdir(dir, { recursive: true });
     return withR97CampaignLock(dir, async () => {
@@ -671,7 +707,7 @@ export function createFormalBudgetedProvider(opts: {
             inputTokens: FORMAL_PER_CALL_INPUT_TOKEN_CEILING,
             outputTokens: FORMAL_PER_CALL_OUTPUT_TOKEN_CEILING,
             toolCalls: 0,
-            durationMs: FORMAL_PER_CALL_DURATION_MS_CEILING,
+            durationMs: perCallDurationMsCeiling(opts.costBudget.view().caps),
             usdMicros: usdCeiling,
           });
           if (!reservation.ok) {
