@@ -590,6 +590,21 @@ describe("F6 — strict CLI argument surface", () => {
     const extraPositional = await preregCmd(["build", cfgPath, out2, "--out", out1]);
     expect(extraPositional.exitCode, `extra positional accepted: ${extraPositional.lines.join(" | ")}`).not.toBe(0);
 
+    // A3 — `prereg run` must state its mode explicitly. An omitted `--mode` is
+    // refused at the argument surface (never defaulted to `auto`), and an unknown
+    // mode value is refused too. Both are decided BEFORE any file is read or any
+    // observer runs, so dummy paths are sufficient to prove the CLI surface.
+    const noMode = await preregCmd([
+      "run", "prereg.json", "--authorization", "auth.json", "--budget-dir", join(dir, "b"), "--out", join(dir, "o"),
+    ]);
+    expect(noMode.exitCode, `omitted --mode accepted: ${noMode.lines.join(" | ")}`).not.toBe(0);
+
+    const badMode = await preregCmd([
+      "run", "prereg.json", "--authorization", "auth.json", "--budget-dir", join(dir, "b"), "--out", join(dir, "o"), "--mode", "auto",
+    ]);
+    expect(badMode.exitCode, `--mode auto accepted: ${badMode.lines.join(" | ")}`).not.toBe(0);
+    expect(badMode.lines.join("\n")).toContain("--mode");
+
     expect(existsSync(out2), "a refused command must not have written its output").toBe(false);
   });
 });

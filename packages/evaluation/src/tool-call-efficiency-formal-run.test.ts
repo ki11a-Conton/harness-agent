@@ -474,6 +474,23 @@ describe("N3 — authorization artifact is read-only and strict", () => {
     expect(() => parseAndValidateAuthorizationV2(JSON.stringify({ schemaVersion: "nope" }))).toThrow(/WRONG_SCHEMA/);
   });
 
+  // A3/F7 — the authorization is the second canonical-input boundary. `JSON.parse`
+  // keeps only the LAST repeated key, so an approval could smuggle a second
+  // `paid` / `maxUsdMicros` past a parsed-object check. The raw-byte scan must
+  // refuse it, and the refusal must use THIS boundary's own reason code.
+  it("rejects a duplicate object key (even an escape-equivalent spelling)", () => {
+    const json = JSON.stringify(authorizationFor(artifact));
+    // Plain duplicate: the trailing `paid` wins under JSON.parse.
+    const dup = json.replace('"paid":', '"paid":false,"paid":');
+    expect(JSON.parse(dup)).toBeTypeOf("object");
+    expect(() => parseAndValidateAuthorizationV2(dup)).toThrow(/DUPLICATE_JSON_KEY/);
+    // Escape-equivalent: `"paid"` and `"\u0070aid"` decode to the SAME key, so a
+    // scanner comparing raw fragments would miss this.
+    const escaped = json.replace('"paid":', '"\\u0070aid":false,"paid":');
+    expect(JSON.parse(escaped)).toEqual(JSON.parse(dup));
+    expect(() => parseAndValidateAuthorizationV2(escaped)).toThrow(/DUPLICATE_JSON_KEY/);
+  });
+
   it("checkAuthorizationV2 agrees with the gate's verdict", () => {
     const auth = authorizationFor(artifact);
     expect(checkAuthorizationV2(auth, artifact, 1_700_000_000_000)).toEqual({ ok: true });

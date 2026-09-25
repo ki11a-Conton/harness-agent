@@ -74,10 +74,12 @@ subcommands:
   validate <prereg.json> [--json]
       Re-observe the CURRENT execution identity and compare it with the
       artifact. Strictly read-only (0 provider calls).
-  run <prereg.json> --authorization <auth.json> --budget-dir <dir> --out <dir> [--mode first-run|resume]
+  run <prereg.json> --authorization <auth.json> --budget-dir <dir> --out <dir> --mode first-run|resume
       Execute the frozen schedule through the formal gate. An API key or
       RUN_PAID_BENCHMARKS is NOT authorization: without a valid
       artifact-bound authorization this REFUSES before any provider exists.
+      --mode is REQUIRED and explicit — a paid path is never entered by an
+      implicit default.
 
   An execution-semantic override (cases/repetitions/provider/model/budget) is
   not accepted on the command line: it would authorize a different experiment.`;
@@ -149,7 +151,10 @@ function parseArgs(rest: string[], spec: ArgSpec): ParsedArgs | PreregCommandRes
     return cliUsage(`expected at most ${spec.maxPositionals} positional argument(s), got ${positionals.length}: ${positionals.slice(spec.maxPositionals).join(", ")}`);
   }
   for (const f of spec.requiredFlags ?? []) {
-    if (!(f in values)) return usage();
+    // A3 — a MISSING required flag is an explicit `CLI_USAGE` refusal with the
+    // flag named, not a bare usage banner: "the command ran and printed help" is
+    // indistinguishable from success to a caller that only checks the exit code.
+    if (!(f in values)) return cliUsage(`required flag ${f} is missing`);
   }
   return { positionals, values, bools };
 }
@@ -301,12 +306,12 @@ async function loadArtifact(path: string): Promise<ToolCallEfficiencyPreregistra
   }
 }
 
-/** `agent prereg run <prereg.json> --authorization <auth.json> --budget-dir <dir> --out <dir> [--mode …]` */
+/** `agent prereg run <prereg.json> --authorization <auth.json> --budget-dir <dir> --out <dir> --mode first-run|resume` */
 async function runCmd(rest: string[], deps: PreregCommandDeps): Promise<PreregCommandResult> {
   const parsed = parseArgs(rest, {
     valueFlags: ["--authorization", "--budget-dir", "--out", "--mode"],
     boolFlags: [],
-    requiredFlags: ["--authorization", "--budget-dir", "--out"],
+    requiredFlags: ["--authorization", "--budget-dir", "--out", "--mode"],
     minPositionals: 1,
     maxPositionals: 1,
   });
@@ -315,9 +320,13 @@ async function runCmd(rest: string[], deps: PreregCommandDeps): Promise<PreregCo
   const authPath = parsed.values["--authorization"]!;
   const budgetDir = parsed.values["--budget-dir"]!;
   const outDir = parsed.values["--out"]!;
+  // A3 — the mode is REQUIRED and explicit: a paid path is never entered through
+  // an implicit `auto` default. `first-run` vs `resume` is a real semantic choice
+  // (a resume must adopt, never re-create, an existing allowance), so the
+  // operator must state it rather than let an omitted flag decide.
   const mode = parsed.values["--mode"];
-  if (mode !== undefined && mode !== "first-run" && mode !== "resume") {
-    return cliUsage(`--mode must be first-run or resume, got ${mode}`);
+  if (mode !== "first-run" && mode !== "resume") {
+    return cliUsage(`--mode must be first-run or resume, got ${String(mode)}`);
   }
   // A3 — the run-record directory and the budget ledger must not alias or nest:
   // overlapping paths would let one overwrite or reuse the other's state.
@@ -359,7 +368,7 @@ async function runCmd(rest: string[], deps: PreregCommandDeps): Promise<PreregCo
     authorizationJson,
     observation,
     budgetDir,
-    mode: mode ?? "auto",
+    mode: mode,
     now: deps.now,
     makeProvider: deps.runner.makeProvider,
   });

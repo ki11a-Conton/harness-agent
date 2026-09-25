@@ -372,6 +372,15 @@ describe("N1 pre-registration v2 — fail-closed parsing", () => {
     expectCode(() => parseAndValidatePreregistrationV2(dup), "DUPLICATE_JSON_KEY");
   });
 
+  // A3/F7 — `"x"` and `"\u0078"` are the SAME JSON key after decoding, so a
+  // scanner that compares raw escape TEXT (rather than the decoded key) would
+  // accept this. The scan must decode before comparing.
+  it("rejects an escape-equivalent duplicate key (F7)", () => {
+    const dup = json.replace('"schemaVersion":', '"\\u0073chemaVersion":"x","schemaVersion":');
+    expect(JSON.parse(dup)).toBeTypeOf("object");
+    expectCode(() => parseAndValidatePreregistrationV2(dup), "DUPLICATE_JSON_KEY");
+  });
+
   it("rejects a subject.cleanTreePolicy it does not support (F7)", () => {
     const obj = JSON.parse(json) as Record<string, unknown>;
     (obj.subject as Record<string, unknown>).cleanTreePolicy = "allow-dirty";

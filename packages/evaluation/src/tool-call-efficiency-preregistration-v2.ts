@@ -682,7 +682,7 @@ function decodeJsonKeyLiteral(raw: string): string {
   }
 }
 
-function assertNoDuplicateJsonKeys(json: string): void {
+export function assertNoDuplicateJsonKeys(json: string): void {
   const stack: Set<string>[] = [];
   const n = json.length;
   const isWs = (c: string | undefined) => c === " " || c === "\t" || c === "\n" || c === "\r";

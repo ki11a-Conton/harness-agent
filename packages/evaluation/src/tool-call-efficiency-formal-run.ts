@@ -37,6 +37,8 @@ import type { ModelEvent, ModelProvider, ModelRef, ProviderConfig, ModelRequest 
 import { stableStringify } from "./manifest.js";
 import {
   assertFormalExecutionPreregistration,
+  assertNoDuplicateJsonKeys,
+  PreregistrationV2Error,
   TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2,
   TOOL_CALL_EFFICIENCY_PREREGISTRATION_V2_SCHEMA,
   type ToolCallEfficiencyPreregistrationV2,
@@ -124,6 +126,22 @@ function authKeys(obj: Record<string, unknown>, allowed: readonly string[], fiel
 
 /** Strictly parse an owner-provided authorization. Never creates one. */
 export function parseAndValidateAuthorizationV2(json: string): ToolCallEfficiencyAuthorizationV2 {
+  // A3/F7 — the authorization is the OTHER canonical-input boundary, and it was
+  // the one F7 left open: `JSON.parse` keeps only the LAST of a repeated key, so
+  // a hand-edited approval could carry a second `maxUsdMicros` / `paid` /
+  // `preregistrationDigest` that a byte-scan would see but the parsed object
+  // silently drops. The SAME decoded-key scan the pre-registration uses is
+  // applied here (escape-equivalent spellings collide), and its refusal is
+  // re-labelled with this boundary's own error so a caller can distinguish the
+  // two documents. Refused BEFORE any field is read.
+  try {
+    assertNoDuplicateJsonKeys(json);
+  } catch (err) {
+    if (err instanceof PreregistrationV2Error) {
+      authFail("DUPLICATE_JSON_KEY", "authorization contains a repeated object key — canonical input forbids repeated keys");
+    }
+    throw err;
+  }
   let raw: unknown;
   try {
     raw = JSON.parse(json);

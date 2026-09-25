@@ -62,6 +62,7 @@ import {
   runBaseline,
   runPairedExperiment,
   writeBaselineFiles,
+  TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2,
   type RuntimeMechanisms,
 } from "@ar/evaluation";
 import type {
@@ -1314,6 +1315,32 @@ export async function preflightBenchmark(
 
   // 2. Candidate preflight — must be READY (causal delta within declared
   //    paths), not unsupported / unknown / no-op.
+  //
+  // A3 — the LEGACY paid entry for the pre-registered experiment is CLOSED here.
+  //
+  // `benchmark --candidate tool_call_efficiency_v1` is a real, registered
+  // candidate, so with an external provider id it can reach a billed provider.
+  // It carries its OWN guards (plan-digest confirmation + explicit cap + the
+  // `RUN_PAID_BENCHMARKS` flag); those are NOT removed and still protect every
+  // other candidate and every plain benchmark. But for THIS candidate they are
+  // NOT equivalent to the v2 gate: they bind a plan the operator confirmed, not
+  // a frozen pre-registration digest plus an INDEPENDENT authorization. So a run
+  // that could reach a real, billed provider is refused HERE — before
+  // `resolveModelProvider` is ever called — with a migration hint to the formal
+  // chain. The offline/test path (a provider override, hence the `offline-test`
+  // billing class) is untouched, so the existing guidance / activation tests
+  // keep running with 0 external calls.
+  if (opts.candidate === TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2 && billingClass === "external-billed") {
+    return {
+      ok: false,
+      reason:
+        `candidate "${TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2}" is a pre-registered experiment and does not run through the ` +
+        `legacy benchmark candidate path on a billed provider — use the formal pre-registration gate instead: ` +
+        `\`agent prereg build <config.json> --out <prereg.json>\`, \`agent prereg validate <prereg.json>\`, then ` +
+        `\`agent prereg run <prereg.json> --authorization <auth.json> --budget-dir <dir> --out <dir>\`. ` +
+        `(This refusal happens before any provider construction; other candidates are unaffected.)`,
+    };
+  }
   if (opts.candidate !== undefined) {
     const { getArmFactory } = await import("@ar/evaluation");
     try {

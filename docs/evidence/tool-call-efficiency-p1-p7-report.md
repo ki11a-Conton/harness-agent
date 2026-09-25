@@ -248,7 +248,10 @@ digest）。环境中不存在 API key 不构成授权；`preflightPaid.ok=true`
 
 ## S — 把预注册离线闭环推进到可信的正式执行（S0–S7）
 
-结论：**S0–S6 = PASS（离线，0 外部调用）**；**S7 = BLOCKED / PAID_NOT_RUN**（无用户书面付费授权）。
+结论（**已按 A 轮实测更正**）：**S0、S2–S6 = PASS（离线，0 外部调用）**；**S1 = PARTIAL**
+（S 轮自述为 PASS 是过宽——该轮报告的表里根本没有 S1 行，而 S1 的“真实选择/执行身份”当时并未交付，
+由本文件 §A 的 A1/A2 补上）；**S7 = BLOCKED / PAID_NOT_RUN**（无用户书面付费授权）。
+判定 `productionOfflineReady` 必须读 §A 的四个独立 readiness 等级，不能只读这张表。
 
 > 本段绑定实现提交 `7fb389e`（S2/S5/S6 收尾）与其前序 `0ef6c4d`（S0/S3）、`2209abd`（S2/S4）。
 > 本段文字在该实现提交**之后**更新，故不引用本段自身所在文档提交的 SHA——"实现提交已验收"与
@@ -257,6 +260,7 @@ digest）。环境中不存在 API key 不构成授权；`preflightPaid.ok=true`
 | 轮 | 目标（不变量） | 落点 | 结论 |
 | --- | --- | --- | --- |
 | S0 | 为正式执行边界缺口写可复现的 RED：F1a/F1b（release CLI 装配）、F2/F3/F4（正式边界） | `prereg-production-wiring.test.ts`、`tool-call-efficiency-formal-gaps.test.ts` | PASS |
+| S1 | 真实样本/选择与执行身份可**独立复算**（build 不再读自报 catalog；observer 不把 artifact 自述回显为"已观测"） | `selectionFromFrozenEvidence`（`tool-call-efficiency-case-selection.ts`）、`apps/cli/src/prereg-execution-identity.ts` | PARTIAL（S 轮**未交付**且表内缺行；A1/A2 交付，见 §A） |
 | S2 | release CLI 真正装配生产 `PreregRunnerAdapter`：重新观测当前执行身份，绝不把 artifact 的自述回显为"已观测" | `apps/cli/src/prereg-production-runner.ts` + `preregCommandDeps()` | PASS（F1b FIXED） |
 | S3 | 每个计费物理请求都必须"先预留后发送"：内部 retry 的预留被拒即停流；价格绑定到**观测到的**执行身份，金额受限计划遇到未知价格按 `PRICING_UNKNOWN` 拒绝；`allowResume=false` 是真禁止 | `tool-call-efficiency-formal-run.ts` | PASS |
 | S4 | ACCEPT 的输入必须**由证据推导**，不能来自 runner 自报布尔 | `PreregisteredArmEvidence`（executorId / traceDigest / verifiedCompletion / securityViolations / request-bound activationEvidenceDigest）+ `aggregatePreregisteredCampaign` | PASS（F2 FIXED） |
@@ -296,6 +300,71 @@ digest）。环境中不存在 API key 不构成授权；`preflightPaid.ok=true`
   在这两个 job 内运行）。未下载 artifact 逐字节复核，故只声称 job/step 状态为 success。
 - 边界（不因 CI 转绿而放宽）：该 job 是**离线**闭环（0 provider call、无 key、无网络），
   "CI 全绿" ≠ "真实付费实验已运行"；S7 仍为 `PAID_NOT_RUN`。
+
+---
+
+## A — 从“安全拒绝”走到“可验证地执行”（A0–A7）
+
+结论：**A0–A7 = PASS（离线）**；四个 readiness 等级**分别**陈述，不合并。
+`productionOfflineReady` 的判据是**发行版入口的实测**，不是 122 个注入 fixture 的绿灯。
+
+> 本段绑定 plan.md 的 A0–A8 序列（`/workspace/plan.md`）。所有计数来自本机实测或标注
+> `NOT_OBSERVED`；本机为干净工作树（`git status --porcelain` 为空）下运行，故发行版的
+> `require-clean` observer 可以认证。0 外部付费请求；无 key、无付费开关。
+
+| readiness | 结论 | 依据（实测） |
+| --- | --- | --- |
+| `offlineFixtureReady` | **PASS** | `scripts/e4/n5-prereg-closed-loop.mjs`：注入 adapter 的离线闭环 + canonical 字节往返；外部计数按 `NOT_OBSERVED` 申报（不冒充 0） |
+| `productionOfflineReady` | **PASS** | `scripts/e4/prereg-production-e2e.mjs`：发行版 `node apps/cli/dist/main.js` 的负向矩阵 9/9 拒绝（0 HTTP）、0 provider 认证（build+validate）、以及经**出厂** observer+arm executor 的完整成对 schedule（推进后见下表） |
+| `paidExperimentRun` | **NOT_RUN** | 无付费授权；脚本在 key/开关可选时拒绝运行；传输为进程内计数 fake |
+| `championPromotion` | **NOT_RUN** | 推广是独立的后续审批，绝不从离线证据推断 |
+
+### A3 — 严格授权输入、canonical JSON 与唯一 candidate 入口
+
+| 反例（plan §A3） | 修复落点 | 断言 |
+| --- | --- | --- |
+| 未知 `--flag` / 重复 `--out` / 多余 positional | `apps/cli/src/prereg-command.ts` 的显式参数白名单（`parseArgs`） | 在 observer/provider **之前** `CLI_USAGE` 拒绝；providerFactory/client/HTTP = 0 |
+| 缺失必填 flag（含 `--mode`）被静默当成功 | 同上：`requiredFlags` 缺失返回带 flag 名的 `CLI_USAGE`，不是裸 usage banner | `prereg run` 省略 `--mode` → `REFUSED (CLI_USAGE) required flag --mode is missing` |
+| `--mode auto`（隐式续跑） | 同上：只允许显式 `first-run`/`resume` | 付费路径永不因默认值进入 |
+| `--out` 与 `--budget-dir` 相等/互相嵌套 | 同上：`pathsOverlap` | `CLI_USAGE` 拒绝 |
+| 转义等价重复 key（`"x"` vs `"\u0078"`） | `tool-call-efficiency-preregistration-v2.ts` 的 `assertNoDuplicateJsonKeys`（按**解码后的 key** 比较） | prereg 与 **authorization** 两端都拒绝 `DUPLICATE_JSON_KEY` |
+| 旧 `benchmark --candidate tool_call_efficiency_v1` 付费旁路 | `apps/cli/src/benchmark-command.ts` | 在**任何 provider 构造之前**拒绝并给迁移提示；其他 candidate/普通 benchmark 保护不变 |
+
+### A7 — 发行版入口的离线正反 E2E、实测计数与诚实文档
+
+`scripts/e4/prereg-production-e2e.mjs` 的两段证据：
+
+- **负向矩阵（发行版 CLI，真实子进程）**：9 个 preflight 反例（F6/F7/A1/A3/A4）全部拒绝，
+  每个都断言**原因码**而非仅退出码；一段 **loopback 计数 HTTP stub** 证明拒绝过程物理请求 = 0。
+- **正向认证（发行版 CLI，真实子进程）**：`prereg build` 从**真实冻结选择**写出 canonical artifact，
+  `prereg validate` 认证**当前**执行身份；两者都是 0 provider 命令。
+- **正向执行（进程内，同一出厂 adapter）**：完整成对 schedule 经出厂 observer + 出厂 arm executor
+  （真实 case + 真实 verifier）执行，传输是**计数 fake provider**；每个 arm 的 evidence 从它写下的
+  **原始 bytes** 重新复验。
+
+实测（本机，干净工作树；计数为 stub/fake 自身计数器）：
+
+| 量 | 观测 |
+| --- | --- |
+| 负向矩阵 | 9/9 拒绝，HTTP stub = 0 |
+| 正向认证 | build 退出码 0、validate 退出码 0、HTTP stub = 0 |
+| 正向执行 schedule | 124 个 arm run（`armStatuses`: failed 96 / passed 28）；`physicalProviderCalls` = 316；`providerFactoryCalls` = 1（admission 后） |
+| evidence 复验 | 124/124 从原始 bytes 验证通过（0 unverified） |
+| 判定 | `REJECT`（计数 fake 模型只解出 28/124 个 arm；判定基于被复验的证据，是诚实结果，不是伪造的 PASS） |
+
+- **mutation gate 27/27 CAUGHT**（T6 5 · A7 14 · N2 1 · N5 5 · S0 2）。A7 第二批 7 条各自
+  撤销一个 A 轮反例所钉住的修复：假 evidence 被接受、`resume=false` 偷用旧记录、丢失的
+  cost ledger 被重开为新额度、duration 维度不计、转义等价重复 key、旧 candidate 付费路径重开、
+  出厂 adapter 从不执行；`同一构建两臂` 由既有 `same-build-for-both-arms`（T6）覆盖，不重复。
+  mutation 会真实改写源码并要求对应测试 RED（构建失败/语法错误/无关超时不算捕获），`finally` 恢复。
+- **两类 suite 分开统计**：历史 N5（注入 fixture，回归用）与发行版入口 E2E（production wiring 证明）
+  各自出证据；发行版 E2E 已加进 `.github/workflows/ci.yml` 的 `r97-r98-closed-loop`
+  （`ubuntu-latest` + `windows-latest`），紧接 `pnpm build`，以便正向阶段消费到**干净树**。
+- **诚实计数（plan §A7/F8）**：`n5-prereg-closed-loop.mjs` 的四个外部计数已由字面 `0` 改为
+  `NOT_OBSERVED`（该脚本不构造 provider、也看不到子 vitest 进程的传输），`MEASURED` 的零调用证明
+  改由进程内带计数器的 fake 承担；发行版 E2E 只在**自己测量**的量上写数字。
+- 边界：`productionOfflineReady=PASS` 证明的是**发行版可以在离线 fake 传输下走完形式链**，
+  它**不**证明模型效果、**不**证明付费实验已运行、**不**证明 candidate 优于 baseline。
 
 ---
 
