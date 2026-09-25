@@ -60,6 +60,7 @@ export * from "./gate-evidence-v2.js";
 export * from "./mechanism-contract.js";
 export * from "./mechanism-guidance.js";
 export * from "./tool-call-efficiency-preregistration.js";
+export * from "./tool-call-efficiency-preregistration-v2.js";
 export * from "./paired-executor.js";
 export * from "./paired-v3-builder.js";
 export * from "./paired-key.js";
