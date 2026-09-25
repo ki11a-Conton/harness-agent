@@ -1,0 +1,71 @@
+{
+  "subject": {
+    "candidateSourceSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "baselineArmDigest": "baseline-arm-digest",
+    "candidateArmDigest": "candidate-arm-digest",
+    "cleanTreePolicy": "require-clean",
+    "runtimeConfigDigest": "runtime-config-digest"
+  },
+  "candidateId": "tool_call_efficiency_v1",
+  "provider": {
+    "providerId": "deepseek",
+    "modelId": "deepseek-v4-flash",
+    "endpointBaseUrl": "https://api.example.com/v1",
+    "requestProfile": {
+      "budgetTokens": 32000,
+      "stallPolicy": "default"
+    }
+  },
+  "catalog": [
+    { "caseId": "reg-01", "suite": "regression", "contentDigest": "content-reg-01", "eligibilityDigest": "elig-reg-01", "holdout": false, "eligible": true },
+    { "caseId": "reg-02", "suite": "regression", "contentDigest": "content-reg-02", "eligibilityDigest": "elig-reg-02", "holdout": false, "eligible": true },
+    { "caseId": "reg-06", "suite": "regression", "contentDigest": "content-reg-06", "eligibilityDigest": "elig-reg-06", "holdout": false, "eligible": true },
+    { "caseId": "reg-08", "suite": "regression", "contentDigest": "content-reg-08", "eligibilityDigest": "elig-reg-08", "holdout": false, "eligible": true },
+    { "caseId": "adv-03", "suite": "regression", "contentDigest": "content-adv-03", "eligibilityDigest": "elig-adv-03", "holdout": false, "eligible": true },
+    { "caseId": "adv-07", "suite": "regression", "contentDigest": "content-adv-07", "eligibilityDigest": "elig-adv-07", "holdout": false, "eligible": true },
+    { "caseId": "st-02", "suite": "regression", "contentDigest": "content-st-02", "eligibilityDigest": "elig-st-02", "holdout": false, "eligible": true },
+    { "caseId": "st-05", "suite": "regression", "contentDigest": "content-st-05", "eligibilityDigest": "elig-st-05", "holdout": false, "eligible": true }
+  ],
+  "selection": {
+    "caseIds": ["reg-01", "reg-02", "reg-06", "reg-08", "adv-03", "adv-07", "st-02", "st-05"],
+    "selectionRule": "R87 frozen dev-set selection",
+    "selectionProvenanceDigest": "r87-selection-digest",
+    "holdoutPolicy": "holdout is never read"
+  },
+  "suiteId": "tool-call-efficiency",
+  "suiteVersion": "1.0.0",
+  "evaluation": {
+    "judgeId": "judge-1",
+    "judgeDigest": "judge-digest",
+    "verifierDigest": "verifier-digest",
+    "scorerDigest": "scorer-digest",
+    "decisionPolicy": {
+      "version": "e4-05-policy-v1",
+      "minActivationEligibleCases": 3,
+      "minActivationCoverage": 0.5,
+      "maxVerifiedDrop": 0.05,
+      "minConclusiveNetDelta": 1,
+      "maxTokensDelta": 50000,
+      "securityBreachesAllowed": 0,
+      "minRecoveryRate": null
+    }
+  },
+  "schedule": { "repetitions": 2, "orderSeed": 7 },
+  "budget": {
+    "maxModelCallsPerRun": 30,
+    "maxToolCalls": 100,
+    "maxDurationMs": 600000,
+    "maxInputTokens": 320000,
+    "maxOutputTokens": 64000,
+    "maxTotalTokens": 384000,
+    "maxUsdMicros": 5000000,
+    "pricingUnknownPolicy": "refuse"
+  },
+  "isolation": {
+    "driverSchema": "r97-driver-v1",
+    "workerSchema": "r97-worker-v1",
+    "isolationBackendId": "process-exec",
+    "isolationStrength": "process",
+    "resumeStateSchema": "r97-execution-state-v1"
+  }
+}

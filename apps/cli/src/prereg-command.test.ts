@@ -13,7 +13,8 @@
  */
 
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -36,68 +37,29 @@ import { stableStringify } from "@ar/evaluation";
 import { runCommand, type CommandDeps } from "./commands.js";
 
 const NOW = 1_700_000_000_000;
-const SHA_A = "a".repeat(40);
-const ENDPOINT = "https://api.example.com/v1";
-const REQUEST_PROFILE = { budgetTokens: 32000, stallPolicy: "default" };
-const CASE_IDS = ["reg-01", "reg-02", "reg-06", "reg-08", "adv-03", "adv-07", "st-02", "st-05"];
+
+/**
+ * The ONE canonical, secret-free fixture (plan N1: "输出一个不含 secret 的 v2
+ * fixture"). It is READ rather than rebuilt inline so this E2E test and
+ * `scripts/e4/n5-prereg-closed-loop.mjs` derive the SAME root digest from the
+ * SAME bytes — a digest published in CI evidence that no test actually hashed
+ * would be the "derived field as identity" defect the plan forbids.
+ */
+const FIXTURE = JSON.parse(
+  readFileSync(new URL("../../../scripts/e4/fixtures/n5-prereg-config.json", import.meta.url), "utf8"),
+) as PreregistrationV2Options;
+
+const SHA_A = FIXTURE.subject.candidateSourceSha;
+const ENDPOINT = FIXTURE.provider.endpointBaseUrl!;
+const REQUEST_PROFILE = FIXTURE.provider.requestProfile;
+const CASE_IDS = FIXTURE.selection.caseIds;
 
 function sha(s: string): string {
   return createHash("sha256").update(s, "utf8").digest("hex");
 }
 
 function preregOptions(): PreregistrationV2Options {
-  return {
-    subject: {
-      candidateSourceSha: SHA_A,
-      baselineArmDigest: "baseline-arm-digest",
-      candidateArmDigest: "candidate-arm-digest",
-      cleanTreePolicy: "require-clean",
-      runtimeConfigDigest: "runtime-config-digest",
-    },
-    candidateId: TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2,
-    provider: { providerId: "deepseek", modelId: "deepseek-v4-flash", endpointBaseUrl: ENDPOINT, requestProfile: REQUEST_PROFILE },
-    catalog: CASE_IDS.map((caseId) => ({
-      caseId,
-      suite: "regression",
-      contentDigest: `content-${caseId}`,
-      eligibilityDigest: `elig-${caseId}`,
-      holdout: false,
-      eligible: true,
-    })),
-    selection: {
-      caseIds: [...CASE_IDS],
-      selectionRule: "R87 frozen dev-set selection",
-      selectionProvenanceDigest: "r87-selection-digest",
-      holdoutPolicy: "holdout is never read",
-    },
-    suiteId: "tool-call-efficiency",
-    suiteVersion: "1.0.0",
-    evaluation: {
-      judgeId: "judge-1",
-      judgeDigest: "judge-digest",
-      verifierDigest: "verifier-digest",
-      scorerDigest: "scorer-digest",
-      decisionPolicy: { ...DEFAULT_DECISION_POLICY_V3 },
-    },
-    schedule: { repetitions: 2, orderSeed: 7 },
-    budget: {
-      maxModelCallsPerRun: 30,
-      maxToolCalls: 100,
-      maxDurationMs: 600_000,
-      maxInputTokens: 320_000,
-      maxOutputTokens: 64_000,
-      maxTotalTokens: 384_000,
-      maxUsdMicros: 5_000_000,
-      pricingUnknownPolicy: "refuse",
-    },
-    isolation: {
-      driverSchema: "r97-driver-v1",
-      workerSchema: "r97-worker-v1",
-      isolationBackendId: "process-exec",
-      isolationStrength: "process",
-      resumeStateSchema: "r97-execution-state-v1",
-    },
-  };
+  return structuredClone(FIXTURE);
 }
 
 function observationFor(over: Partial<PreregisteredCampaignObservationV2> = {}): PreregisteredCampaignObservationV2 {
@@ -407,6 +369,38 @@ describe("N5 — every pre-provider violation refuses with 0 provider factory ca
     await refusal("provider", () => ({ observation: observationFor({ providerId: "other-provider" }) }));
   });
 
+  it("refuses a different model identity", async () => {
+    await refusal("model", () => ({ observation: observationFor({ modelId: "other-model" }) }));
+  });
+
+  it("refuses a different baseline arm build", async () => {
+    await refusal("baseline arm", () => ({ observation: observationFor({ baselineArmDigest: "other-baseline" }) }));
+  });
+
+  it("refuses a different candidate arm build", async () => {
+    await refusal("candidate arm", () => ({ observation: observationFor({ candidateArmDigest: "other-candidate" }) }));
+  });
+
+  it("refuses a changed runtime config", async () => {
+    await refusal("runtime config", () => ({ observation: observationFor({ runtimeConfigDigest: "other-runtime" }) }));
+  });
+
+  it("refuses a changed request profile", async () => {
+    await refusal("request profile", () => ({ observation: observationFor({ requestProfileDigest: "other-profile" }) }));
+  });
+
+  it("refuses a changed mechanism contract", async () => {
+    await refusal("contract", () => ({ observation: observationFor({ contractDigest: "other-contract" }) }));
+  });
+
+  it("refuses a case set whose observed ids do not match the selection", async () => {
+    await refusal("case list", () => {
+      const { [CASE_IDS[0]!]: _dropped, ...rest } = observationFor().caseContentDigests;
+      void _dropped;
+      return { observation: observationFor({ caseContentDigests: rest }) };
+    });
+  });
+
   it("refuses a different endpoint", async () => {
     await refusal("endpoint", () => ({ observation: observationFor({ endpointDigest: captureEndpointIdentity("https://api.other.com/v1")! }) }));
   });
@@ -442,5 +436,85 @@ describe("N5 — every pre-provider violation refuses with 0 provider factory ca
       o.caps.maxModelCalls = artifact.budget.campaignWorstCaseModelCalls - 1;
       return { authJson: JSON.stringify(o) };
     });
+  });
+
+  it("refuses an approval that narrows a token cap", async () => {
+    await refusal("token cap", ({ authJson, artifact }) => {
+      const o = JSON.parse(authJson) as { caps: { maxTotalTokens: number } };
+      o.caps.maxTotalTokens = artifact.budget.maxTotalTokens - 1;
+      return { authJson: JSON.stringify(o) };
+    });
+  });
+
+  it("refuses a tampered derived field in the artifact (logicalRuns)", async () => {
+    await refusal("derived runs", ({ preregJson }) => {
+      const o = JSON.parse(preregJson) as Record<string, unknown>;
+      (o.schedule as Record<string, unknown>).logicalRuns = 34;
+      return { preregJson: JSON.stringify(o) };
+    });
+  });
+
+  it("refuses a tampered case-set digest in the artifact", async () => {
+    await refusal("case-set digest", ({ preregJson }) => {
+      const o = JSON.parse(preregJson) as Record<string, unknown>;
+      (o.dataset as Record<string, unknown>).caseSetDigest = "tampered";
+      return { preregJson: JSON.stringify(o) };
+    });
+  });
+});
+
+describe("N5 — resume only continues the SAME frozen experiment", () => {
+  async function firstRun(dir: string): Promise<{ path: string; authPath: string; budgetDir: string; outDir: string }> {
+    const { path, artifact } = await buildViaCli(dir);
+    const authPath = join(dir, "auth.json");
+    await writeFile(authPath, authorizationFor(artifact), "utf8");
+    const budgetDir = join(dir, "budget");
+    const outDir = join(dir, "out");
+    const res = await runCommand(
+      ["prereg", "run", path, "--authorization", authPath, "--budget-dir", budgetDir, "--out", outDir, "--mode", "first-run"],
+      deps({ provider: fakeProvider().provider }).deps,
+    );
+    expect(res.exitCode).toBe(0);
+    return { path, authPath, budgetDir, outDir };
+  }
+
+  it("refuses to resume when a run record binds a DIFFERENT experiment identity", async () => {
+    const dir = await tempDir();
+    const { path, authPath, budgetDir, outDir } = await firstRun(dir);
+    // Tamper ONE run record so it claims a different root digest — a resume must
+    // never mix a foreign run into this campaign.
+    const runsDir = join(outDir, "runs");
+    const [one] = (await readdir(runsDir)).filter((f) => f.endsWith(".json"));
+    const recPath = join(runsDir, one!);
+    const rec = JSON.parse(await readFile(recPath, "utf8")) as Record<string, unknown>;
+    rec.preregistrationDigest = "9".repeat(64);
+    await writeFile(recPath, JSON.stringify(rec), "utf8");
+    // Drop the first run's decision so we can prove a refused resume emits none.
+    await rm(join(outDir, "aggregate.json"), { force: true });
+
+    const res = await runCommand(
+      ["prereg", "run", path, "--authorization", authPath, "--budget-dir", budgetDir, "--out", outDir, "--mode", "resume"],
+      deps({ provider: fakeProvider().provider }).deps,
+    );
+    expect(res.exitCode).toBe(1);
+    const text = res.lines.join("\n");
+    expect(text).toContain("RESUME_IDENTITY_MISMATCH");
+    // A refused resume must NOT emit a decision — nothing is aggregated.
+    await expect(readFile(join(outDir, "aggregate.json"), "utf8")).rejects.toThrow();
+  });
+
+  it("refuses to resume when the run records are corrupt", async () => {
+    const dir = await tempDir();
+    const { path, authPath, budgetDir, outDir } = await firstRun(dir);
+    const runsDir = join(outDir, "runs");
+    const [one] = (await readdir(runsDir)).filter((f) => f.endsWith(".json"));
+    await writeFile(join(runsDir, one!), "{ not json", "utf8");
+
+    const res = await runCommand(
+      ["prereg", "run", path, "--authorization", authPath, "--budget-dir", budgetDir, "--out", outDir, "--mode", "resume"],
+      deps({ provider: fakeProvider().provider }).deps,
+    );
+    expect(res.exitCode).toBe(1);
+    expect(res.lines.join("\n")).toContain("RESUME_STATE_CORRUPT");
   });
 });

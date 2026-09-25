@@ -36,6 +36,7 @@ import {
   aggregatePreregisteredCampaign,
   type PreregisteredArmRunner,
   type PreregisteredCampaignObservationV2,
+  type PreregisteredCampaignRun,
 } from "@ar/evaluation";
 
 export interface PreregRunnerAdapter {
@@ -249,15 +250,31 @@ async function runCmd(rest: string[], deps: PreregCommandDeps): Promise<PreregCo
     };
   }
 
+  // The schedule driver is post-admission, but it must still fail CLOSED: a run
+  // record that binds a DIFFERENT experiment, or a corrupt resume state, is a
+  // stable refusal with a reason code — never an unhandled rejection.
   const resultsDir = join(outDir, "runs");
-  const run = await runPreregisteredCampaign({
-    admission,
-    prereg: artifact,
-    resultsDir,
-    runArm: deps.runner.runArm,
-    resume: mode === "resume",
-    now: deps.now,
-  });
+  let run: PreregisteredCampaignRun;
+  try {
+    run = await runPreregisteredCampaign({
+      admission,
+      prereg: artifact,
+      resultsDir,
+      runArm: deps.runner.runArm,
+      resume: mode === "resume",
+      now: deps.now,
+    });
+  } catch (err) {
+    const code = (err as { code?: string }).code ?? "CAMPAIGN_DRIVER_FAILED";
+    return {
+      exitCode: 1,
+      lines: [
+        `prereg run: REFUSED (${code})`,
+        `  ${err instanceof Error ? err.message : String(err)}`,
+        `  providerFactoryCalls: ${admission.providerFactoryCalls}`,
+      ],
+    };
+  }
   const ledgerView = await admission.ledger.view();
   const aggregate = aggregatePreregisteredCampaign(run, artifact, {
     providerCalls: ledgerView.committed,

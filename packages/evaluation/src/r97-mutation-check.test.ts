@@ -47,10 +47,11 @@ const mod = (await import(SCRIPT)) as {
   MUTATIONS: Array<{
     id: string;
     planWording: string;
-    /** Which round's defect list this mutation came from: T6's five, A7's seven, or
+    /** Which round's defect list this mutation came from: T6's five, A7's seven,
      *  N2's one (finding F2: the spawned child runner must be inside the approved
-     *  driver build identity). */
-    round: "T6" | "A7" | "N2";
+     *  driver build identity), or N5's five (the pre-registration closed loop's
+     *  invariants — plan §N5). */
+    round: "T6" | "A7" | "N2" | "N5";
     file: string;
     find: string;
     replace: string;
@@ -131,12 +132,27 @@ describe("E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations"
   });
 
   it("tags every mutation with the round whose defect list it came from", () => {
-    // The tag is what lets the two sets above be asserted as exact sets. An
+    // The tag is what lets the sets above be asserted as exact sets. An
     // untagged entry would be invisible to BOTH, so it is a failure rather than a
     // silently-ignored extra.
     for (const m of mod.MUTATIONS) {
-      expect(["T6", "A7", "N2"], `${m.id} has no round tag`).toContain(m.round);
+      expect(["T6", "A7", "N2", "N5"], `${m.id} has no round tag`).toContain(m.round);
     }
+  });
+
+  it("declares the N5 mutations for the pre-registration closed loop's invariants", () => {
+    // N5 (plan §N5 怎么做): "至少证明测试能捕获：executor 跳过 preregistration 验证、
+    // budget 改用低估值、decision 允许 1 repetition、case digest 不验证、provider 在
+    // preflight 前构造." Pinned as an exact set of five so a gate that quietly dropped
+    // one would not still report "all mutations caught".
+    const n5 = mod.MUTATIONS.filter((m) => m.round === "N5");
+    expect(n5, "N5 must add one mutation per closed-loop invariant").toHaveLength(5);
+    const wording = n5.map((m) => m.planWording).join("\n");
+    expect(wording).toContain("executor 跳过 preregistration 验证");
+    expect(wording).toContain("budget 改用低估值");
+    expect(wording).toContain("decision 允许 1 repetition");
+    expect(wording).toContain("case digest 不验证");
+    expect(wording).toContain("provider 在 preflight 前构造");
   });
 
   it("declares the N2 counterexample mutation for the spawned child runner", () => {

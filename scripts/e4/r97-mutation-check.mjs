@@ -359,6 +359,95 @@ export const MUTATIONS = [
     catchExpectation:
       "the spawned child runner falls outside the approved driver build identity, so editing its bytes leaves driverBuildDigest unchanged and an old approval keeps executing the modified script",
   },
+  // =========================================================================
+  // THE N5 MUTATIONS (plan §N5 怎么做): the FIVE invariants the pre-registration
+  // closed loop exists to enforce. Each one breaks a different production guard,
+  // so a suite that still passes proves the loop is only described, not enforced.
+  //   "至少证明测试能捕获：executor 跳过 preregistration 验证、budget 改用低估值、
+  //    decision 允许 1 repetition、case digest 不验证、provider 在 preflight 前构造."
+  // =========================================================================
+  {
+    id: "n5-formal-gate-skips-preregistration-validation",
+    // executor 跳过 preregistration 验证
+    planWording: "executor 跳过 preregistration 验证",
+    round: "N5",
+    file: "packages/evaluation/src/tool-call-efficiency-preregistration-v2.ts",
+    // The FORMAL execution entry point is the ONE place every paid/preflight path
+    // goes through. This mutation makes it trust the artifact bytes verbatim, so
+    // a v1 artifact (or a tampered derived field) is accepted instead of refused.
+    find: `export function assertFormalExecutionPreregistration(json: string): ToolCallEfficiencyPreregistrationV2 {
+  return parseAndValidatePreregistrationV2(json);
+}`,
+    replace: `export function assertFormalExecutionPreregistration(json: string): ToolCallEfficiencyPreregistrationV2 {
+  // N5 mutation: the formal-execution gate trusts the artifact bytes.
+  return JSON.parse(json) as ToolCallEfficiencyPreregistrationV2;
+}`,
+    suite: "packages/evaluation/src/tool-call-efficiency-preregistration-v2.test.ts",
+    test: "refuses a v1 artifact outright",
+    catchExpectation: "the formal gate no longer refuses a v1 artifact, so any schema can reach formal execution",
+  },
+  {
+    id: "n5-budget-from-low-estimate",
+    // budget 改用低估值
+    planWording: "budget 改用低估值",
+    round: "N5",
+    file: "packages/evaluation/src/tool-call-efficiency-preregistration-v2.ts",
+    // FINDING F3: the campaign budget must be the REAL worst case
+    // (maxModelCallsPerRun × logical runs), never a caller/v1-style estimate of
+    // 1 call per run. This mutation restores the v1 `?? 1` estimate.
+    find: `  const campaignWorstCaseModelCalls = budget.maxModelCallsPerRun * derived.logicalRuns;`,
+    replace: `  const campaignWorstCaseModelCalls = derived.logicalRuns; // N5 mutation: a low estimate of 1 call per run`,
+    suite: "packages/evaluation/src/tool-call-efficiency-preregistration-v2.test.ts",
+    test: "derives logical runs and worst case from the REAL per-run ceiling",
+    catchExpectation: "the campaign worst case no longer reflects the real per-run ceiling, so the budget is a low estimate",
+  },
+  {
+    id: "n5-decision-allows-one-repetition",
+    // decision 允许 1 repetition
+    planWording: "decision 允许 1 repetition",
+    round: "N5",
+    file: "packages/evaluation/src/champion-decision-v3.ts",
+    // FINDING F2: the champion decision requires repetitions >= 2. This mutation
+    // restores the permissive `>= 1`, so a single-run campaign can be concluded.
+    find: `    repetitionSufficient: input.repetitions >= 2 && !input.recommendsRepetition,`,
+    replace: `    repetitionSufficient: input.repetitions >= 1 && !input.recommendsRepetition, // N5 mutation: a single run is sufficient`,
+    suite: "packages/evaluation/src/champion-decision-v3.test.ts",
+    test: "golden: single run 32 cases",
+    catchExpectation: "a single-run campaign is no longer refused for repetition, so a non-decision-ready plan can conclude",
+  },
+  {
+    id: "n5-case-content-digest-not-verified",
+    // case digest 不验证
+    planWording: "case digest 不验证",
+    round: "N5",
+    file: "packages/evaluation/src/tool-call-efficiency-formal-run.ts",
+    // FINDING F4: freezing a case ID is not enough — the CONTENT digest must be
+    // re-observed and compared. This mutation drops that comparison, so a
+    // rewritten case body no longer drifts and the run proceeds past the boundary.
+    find: "      cmp(`dataset.cases.${c.caseId}.contentDigest`, c.contentDigest, obs.caseContentDigests[c.caseId]);",
+    replace: "      void c; // N5 mutation: the per-case content digest is not verified",
+    suite: "apps/cli/src/prereg-command.test.ts",
+    test: "refuses a changed case content digest",
+    catchExpectation: "a changed case body no longer drifts from the pre-registration, so the run reaches the provider",
+  },
+  {
+    id: "n5-provider-constructed-before-preflight",
+    // provider 在 preflight 前构造
+    planWording: "provider 在 preflight 前构造",
+    round: "N5",
+    file: "packages/evaluation/src/tool-call-efficiency-formal-run.ts",
+    // The plan requires a refusal to happen BEFORE the provider factory is even
+    // called (constructing a provider can read a key or probe the network).
+    // This mutation constructs it at STEP 0, before every preflight.
+    find: `  // STEP 0: experiment-semantic overrides are refused. Only the artifact may
+  // determine cases / repetitions / provider / model / budget.`,
+    replace: `  void (await opts.makeProvider()); // N5 mutation: the provider is constructed BEFORE any preflight
+  // STEP 0: experiment-semantic overrides are refused. Only the artifact may
+  // determine cases / repetitions / provider / model / budget.`,
+    suite: "apps/cli/src/prereg-command.test.ts",
+    test: "refuses a source-sha drift",
+    catchExpectation: "the provider factory is invoked before any identity check, so a refusal constructs a provider",
+  },
 ];
 
 /**
@@ -891,6 +980,9 @@ export async function main(argv) {
     t6Caught: results.filter((r) => r.round === "T6" && r.ok).length,
     a7Mutations: results.filter((r) => r.round === "A7").length,
     a7Caught: results.filter((r) => r.round === "A7" && r.ok).length,
+    // N5 (plan §N5): the five invariants of the pre-registration closed loop.
+    n5Mutations: results.filter((r) => r.round === "N5").length,
+    n5Caught: results.filter((r) => r.round === "N5" && r.ok).length,
     mutations: results,
     // The whole-tree restoration, reported separately from the per-file hashes.
     treeRestored,
@@ -912,7 +1004,8 @@ export async function main(argv) {
   }
   process.stdout.write(
     `\nr101-mutation: ${report.caught}/${report.totalMutations} mutation(s) CAUGHT by their tests ` +
-      `(T6 ${report.t6Caught}/${report.t6Mutations}, A7 ${report.a7Caught}/${report.a7Mutations}), ` +
+      `(T6 ${report.t6Caught}/${report.t6Mutations}, A7 ${report.a7Caught}/${report.a7Mutations}, ` +
+      `N5 ${report.n5Caught}/${report.n5Mutations}), ` +
       `working tree ${treeRestored ? "RESTORED" : "NOT RESTORED"}\n`,
   );
   return report.ok ? EXIT_OK : EXIT_FAILED;

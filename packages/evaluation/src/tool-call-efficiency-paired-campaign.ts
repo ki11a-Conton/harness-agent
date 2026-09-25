@@ -137,7 +137,9 @@ async function writeRecordAtomic(dir: string, record: PreregisteredRunRecord): P
   const target = join(dir, `${record.armRunId}.json`);
   const tmp = join(dir, `.tmp-${record.armRunId}-${process.pid}-${Math.random().toString(36).slice(2, 8)}`);
   await writeFile(tmp, `${stableStringify(record)}\n`, "utf8");
-  await rm(target, { force: true }).catch(() => undefined);
+  // `force` already tolerates a missing target; any OTHER failure (EPERM/EBUSY) is
+  // real and must NOT be swallowed — it propagates so the run record write fails closed.
+  await rm(target, { force: true });
   await rename(tmp, target);
 }
 

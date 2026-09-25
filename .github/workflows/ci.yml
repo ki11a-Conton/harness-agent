@@ -908,6 +908,21 @@ jobs:
         run: node scripts/e4/r97-closed-loop.mjs --all --out .ci/r97-r98 --arms-root "${{ runner.temp }}/r97-arms"
 
       # -----------------------------------------------------------------------
+      # N5/N6 — THE PRE-REGISTRATION CLOSED LOOP, ON BOTH PLATFORMS.
+      #
+      # Runs the targeted N5 suites (the offline E2E over the real CLI, the N1
+      # identity contract, the N4 decision contract) with a spy/fake provider,
+      # then REBUILDS the pre-registration artifact from the ONE committed
+      # fixture through the BUILT package and records the digests it actually
+      # hashed. The step REFUSES to run if a paid provider key or the paid switch
+      # is present, and reports externalProviderFactoryCalls=0 /
+      # externalProviderCalls=0 / cost=0. Evidence is identity-bound to the
+      # workflow's own checkout SHA.
+      # -----------------------------------------------------------------------
+      - name: N5 — run the offline pre-registration closed loop (0 provider calls)
+        run: node scripts/e4/n5-prereg-closed-loop.mjs --out .ci/r97-r98/n5-prereg-evidence.json
+
+      # -----------------------------------------------------------------------
       # N3 DIAGNOSTICS — publish the closed-loop phase failure and the failing
       # test names into the PUBLIC job summary / annotations, so a cross-platform
       # regression can be read without an authenticated log download.
@@ -938,16 +953,19 @@ jobs:
       #    generator finally 结算、允许丢失根目录重新领取、把正式时钟改回快照、恢复
       #    verdict 覆盖、断开当前 unit 的取消."                          (A7)
       #
-      # THIRTEEN mutations now: T6's five, plus one per counterexample A1–A6 closed,
+      # EIGHTEEN mutations now: T6's five, plus one per counterexample A1–A6 closed,
       # plus A1's SECOND — the worker-level settlement-failure branch (that branch was
       # the one residual gap A7 left open: "A1 的 worker 级 settlement-failure 分支未被
       # 测试覆盖", §9.9/§9.10 — the channel layer proved the settlement fails, but
       # nothing proved the WORKER refuses to refund and refuses to report a success
       # when it does), plus N2's child-runner-outside-driver-identity, the counterexample
-      # for finding F2. Each mutation is APPLIED to the real production source, the test
-      # bound to it is run, and that test MUST go RED. Without this, a suite that passes
-      # while every mutation goes undetected looks identical to a suite that would catch
-      # a real regression.
+      # for finding F2, plus N5's FIVE — the invariants the pre-registration closed loop
+      # exists to enforce (plan §N5 怎么做: "至少证明测试能捕获：executor 跳过
+      # preregistration 验证、budget 改用低估值、decision 允许 1 repetition、case digest
+      # 不验证、provider 在 preflight 前构造"). Each mutation is APPLIED to the real
+      # production source, the test bound to it is run, and that test MUST go RED.
+      # Without this, a suite that passes while every mutation goes undetected looks
+      # identical to a suite that would catch a real regression.
       #
       # A CAUGHT mutation requires a FAILED TEST, not merely a non-zero exit: the gate
       # refuses a build failure, a collection error and an unrelated timeout, so a
@@ -962,7 +980,7 @@ jobs:
       # `continue-on-error` is NOT set: a mutation that escapes is a real finding
       # about the suite and must fail the job.
       # -----------------------------------------------------------------------
-      - name: Prove the suite CATCHES the thirteen anti-cheat mutations (T6's five + A7/A1's seven + N2's one)
+      - name: Prove the suite CATCHES the eighteen anti-cheat mutations (T6's five + A7/A1's seven + N2's one + N5's five)
         run: node scripts/e4/r97-mutation-check.mjs --out .ci/r97-r98/mutation-report.json
 
       # -----------------------------------------------------------------------

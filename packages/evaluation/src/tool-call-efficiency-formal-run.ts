@@ -447,7 +447,9 @@ export class CostBudget {
 async function writeAtomic(path: string, value: unknown): Promise<void> {
   const tmp = `${path}.tmp-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
   await writeFile(tmp, `${stableStringify(value)}\n`, "utf8");
-  await rm(path, { force: true }).catch(() => undefined);
+  // `force` already tolerates a missing target; any OTHER failure (EPERM/EBUSY) is
+  // real and must NOT be swallowed — it propagates so the atomic write fails closed.
+  await rm(path, { force: true });
   await rename(tmp, path);
 }
 
