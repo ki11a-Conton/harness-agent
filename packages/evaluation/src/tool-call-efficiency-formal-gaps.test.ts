@@ -9,7 +9,10 @@
  *   F2 — an ACCEPT must not be reachable from a runner SELF-REPORTING outcome
  *        booleans. Forging `{status:"passed", candidateActivated:true}` with no
  *        verifier / request-bound activation evidence must not produce ACCEPT.
- *        STILL OPEN: tracked as `it.fails` (see the F2 block for the S4 target).
+ *        FIXED (S4): the aggregate now DERIVES its decision inputs from
+ *        `PreregisteredArmEvidence` (executorId, traceDigest, verifiedCompletion,
+ *        securityViolations, request-bound activationEvidenceDigest), so a bare
+ *        boolean cannot manufacture ACCEPT.
  *   F3 — every billed physical attempt must reserve BEFORE it is sent. A
  *        provider-internal retry whose reservation is refused must not be
  *        allowed to continue; an unknown price must not be admitted as free.

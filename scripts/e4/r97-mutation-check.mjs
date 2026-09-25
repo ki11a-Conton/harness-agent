@@ -448,6 +448,53 @@ export const MUTATIONS = [
     test: "refuses a source-sha drift",
     catchExpectation: "the provider factory is invoked before any identity check, so a refusal constructs a provider",
   },
+  // =========================================================================
+  // THE S0/S2 WIRING MUTATIONS — the release-CLI + evidence invariants the S0
+  // reproducers pin. Each one undoes a guard added this round, so the reproducer
+  // written for that guard must go RED.
+  // =========================================================================
+  {
+    id: "s2-prereg-not-dispatched-before-provider",
+    // prereg 在 provider 解析之后才分发
+    planWording: "prereg 在 provider 解析之后才分发",
+    round: "S0",
+    file: "apps/cli/src/main.ts",
+    // F1a: `main()` must dispatch the `prereg` chain BEFORE `createDefaultDeps()`
+    // (which resolves a model provider from the environment). This mutation makes
+    // the pre-provider predicate always false, so `prereg validate` falls through
+    // to the interactive host and a billable provider is resolved first.
+    //
+    // `&& false` rather than deleting the condition: `args` stays referenced, so
+    // the mutation changes the BEHAVIOUR under test instead of tripping an
+    // unused-parameter diagnostic.
+    find: `  return args[0] === "prereg";`,
+    replace: `  return args[0] === "prereg" && false; // S0 mutation: prereg is dispatched after the provider is resolved`,
+    suite: "apps/cli/src/prereg-production-wiring.test.ts",
+    // NOTE: the `-t` filter is a REGEX, so it must not carry the test title's
+    // parentheses — `(0-call command)` would be read as a group and match nothing,
+    // skipping every test in the file and reporting a false MISS. This is the
+    // title's prefix, which is unique and matches verbatim.
+    test: "prereg validate resolves NO provider",
+    catchExpectation:
+      "a 0-call prereg command resolves/constructs a provider first, so the release path builds a billable provider before dispatch",
+  },
+  {
+    id: "s4-contamination-ignores-evidence",
+    // 污染不再由证据推导
+    planWording: "污染不再由证据推导",
+    round: "S0",
+    file: "packages/evaluation/src/tool-call-efficiency-paired-campaign.ts",
+    // F2/S4: contamination is a NON-NULL request-bound activation digest on a
+    // baseline record, DERIVED from evidence — never a self-reported flag. This
+    // mutation stops deriving it, so a baseline that observed a candidate event
+    // is no longer disqualified and the pair can be concluded.
+    find: `    .filter((r) => r.armId === "baseline" && r.outcome.evidence.activationEvidenceDigest !== null)`,
+    replace: `    .filter(() => false) // S0 mutation: contamination is no longer derived from evidence`,
+    suite: "packages/evaluation/src/tool-call-efficiency-formal-gaps.test.ts",
+    test: "treats a baseline activation digest as contamination and refuses ACCEPT",
+    catchExpectation:
+      "a baseline that observed a candidate event is no longer contaminating, so a contaminated pair reaches a decision",
+  },
 ];
 
 /**
@@ -983,6 +1030,11 @@ export async function main(argv) {
     // N5 (plan §N5): the five invariants of the pre-registration closed loop.
     n5Mutations: results.filter((r) => r.round === "N5").length,
     n5Caught: results.filter((r) => r.round === "N5" && r.ok).length,
+    // S0 (plan §S0): the release-CLI wiring + evidence invariants the S0
+    // reproducers pin (F1a pre-provider dispatch, F2/S4 evidence-derived
+    // contamination).
+    s0Mutations: results.filter((r) => r.round === "S0").length,
+    s0Caught: results.filter((r) => r.round === "S0" && r.ok).length,
     mutations: results,
     // The whole-tree restoration, reported separately from the per-file hashes.
     treeRestored,
@@ -1005,7 +1057,7 @@ export async function main(argv) {
   process.stdout.write(
     `\nr101-mutation: ${report.caught}/${report.totalMutations} mutation(s) CAUGHT by their tests ` +
       `(T6 ${report.t6Caught}/${report.t6Mutations}, A7 ${report.a7Caught}/${report.a7Mutations}, ` +
-      `N5 ${report.n5Caught}/${report.n5Mutations}), ` +
+      `N5 ${report.n5Caught}/${report.n5Mutations}, S0 ${report.s0Caught}/${report.s0Mutations}), ` +
       `working tree ${treeRestored ? "RESTORED" : "NOT RESTORED"}\n`,
   );
   return report.ok ? EXIT_OK : EXIT_FAILED;

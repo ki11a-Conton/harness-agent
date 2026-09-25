@@ -49,9 +49,10 @@ const mod = (await import(SCRIPT)) as {
     planWording: string;
     /** Which round's defect list this mutation came from: T6's five, A7's seven,
      *  N2's one (finding F2: the spawned child runner must be inside the approved
-     *  driver build identity), or N5's five (the pre-registration closed loop's
-     *  invariants — plan §N5). */
-    round: "T6" | "A7" | "N2" | "N5";
+     *  driver build identity), N5's five (the pre-registration closed loop's
+     *  invariants — plan §N5), or S0's two (the release-CLI pre-provider dispatch
+     *  F1a and the evidence-derived contamination F2/S4). */
+    round: "T6" | "A7" | "N2" | "N5" | "S0";
     file: string;
     find: string;
     replace: string;
@@ -136,8 +137,20 @@ describe("E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations"
     // untagged entry would be invisible to BOTH, so it is a failure rather than a
     // silently-ignored extra.
     for (const m of mod.MUTATIONS) {
-      expect(["T6", "A7", "N2", "N5"], `${m.id} has no round tag`).toContain(m.round);
+      expect(["T6", "A7", "N2", "N5", "S0"], `${m.id} has no round tag`).toContain(m.round);
     }
+  });
+
+  it("declares the S0 mutations for the release-CLI wiring + evidence invariants", () => {
+    // S0 (plan §S0): the formal-execution gaps F1a/F1b (release-CLI wiring) and
+    // F2 (decision derived from evidence, not self-report). Pinned as an exact set
+    // of two so a gate that quietly dropped one would not still report
+    // "all mutations caught".
+    const s0 = mod.MUTATIONS.filter((m) => m.round === "S0");
+    expect(s0, "S0 must add one mutation per release-CLI/evidence invariant").toHaveLength(2);
+    const wording = s0.map((m) => m.planWording).join("\n");
+    expect(wording).toContain("prereg 在 provider 解析之后才分发");
+    expect(wording).toContain("污染不再由证据推导");
   });
 
   it("declares the N5 mutations for the pre-registration closed loop's invariants", () => {

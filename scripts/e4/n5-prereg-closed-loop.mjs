@@ -33,10 +33,15 @@ const FIXTURE_PATH = join(here, "fixtures", "n5-prereg-config.json");
 const SCHEMA = "n5-prereg-closed-loop-evidence-v1";
 
 /** The suites the plan binds to N5 (the E2E loop + the N1 identity contract + the
- *  N4 decision contract). Kept as ONE list so local and CI run the same set. */
+ *  N4 decision contract) plus the S0 reproducers of the formal-execution gaps
+ *  (F1a/F1b release-CLI wiring, F2/F3/F4 formal boundary). Kept as ONE list so
+ *  local and CI run the same set — the S0 files are the must-run path for the
+ *  gap fixes, not an optional extra. */
 const SUITE_FILES = [
   "apps/cli/src/prereg-command.test.ts",
+  "apps/cli/src/prereg-production-wiring.test.ts",
   "packages/evaluation/src/tool-call-efficiency-preregistration-v2.test.ts",
+  "packages/evaluation/src/tool-call-efficiency-formal-gaps.test.ts",
   "packages/evaluation/src/champion-decision-v3.test.ts",
 ];
 

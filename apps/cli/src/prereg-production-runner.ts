@@ -197,8 +197,16 @@ export function observeCaseContentDigests(
         },
         { eligible: true, holdout: false, evidence: {} },
       ).contentDigest;
-    } catch {
-      // Unreadable bytes are NOT an observation — leave the case omitted.
+    } catch (err) {
+      // Unreadable bytes are NOT an observation — leave the case omitted (the
+      // observed id set then differs from the bound set and the gate refuses).
+      // Reported, not swallowed: a silent skip would be indistinguishable from
+      // "the case was never bound" (P14-6 requires observability).
+      process.stderr.write(
+        `[degraded] prereg observer could not digest case ${c.suite}/${c.caseId}: ${
+          err instanceof Error ? err.message : String(err)
+        }\n`,
+      );
     }
   }
   return out;

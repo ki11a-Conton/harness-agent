@@ -11,10 +11,11 @@
  *   F1a — a 0-call command (`prereg validate`) must not resolve/construct a
  *         provider at all. FIXED: `main()` now dispatches `prereg` before
  *         `createDefaultDeps()`, so the resolution count is 0.
- *   F1b — the release CLI must actually BE able to run the formal chain. STILL
- *         OPEN: `preregRunner` is not yet wired in production, so
- *         `prereg validate`/`run` refuse with "no harness adapter wired" no
- *         matter how valid the artifact is. Tracked as `it.fails` until S2.
+ *   F1b — the release CLI must actually BE able to run the formal chain. FIXED:
+ *         `preregCommandDeps()` wires the production `PreregRunnerAdapter`, so
+ *         the shipped path re-observes identity and reaches the gate; any
+ *         refusal that follows is an identity refusal, never "no harness
+ *         adapter wired".
  *
  * `resolveModelProvider` is mocked so the resolution COUNT is observable and the
  * test itself performs 0 external calls. `main()` writes to stdout, so that is
@@ -156,14 +157,13 @@ describe("S0/F1 — the release CLI must not build a provider before dispatch", 
 });
 
 describe("S0/F1 — the release CLI must be able to run the formal chain", () => {
-  // KNOWN GAP (S2/F1b): `main()` now dispatches `prereg` before
-  // `createDefaultDeps()` (no provider is resolved — see the F1a test above),
-  // but the release CLI still injects no production `PreregRunnerAdapter`, so
-  // `prereg run` refuses with "no harness adapter wired". This pins the REQUIRED
-  // invariant and is `it.fails` until S2 wires a real observer + paired arm
-  // runner — at which point it will start passing and MUST be promoted to
-  // `it(...)` (vitest fails a stale `it.fails`).
-  it.fails("prereg run does not refuse with 'no harness adapter wired'", async () => {
+  // S2/F1b FIXED: `preregCommandDeps()` now wires the PRODUCTION
+  // `PreregRunnerAdapter`, so `prereg run` no longer refuses with "no harness
+  // adapter wired". The refusal that remains is about the artifact's IDENTITY —
+  // the fixture's placeholder source sha cannot match the real checkout the
+  // production observer re-derives — and it still happens BEFORE any provider
+  // factory call.
+  it("prereg run does not refuse with 'no harness adapter wired'", async () => {
     const dir = await tempDir();
     const { preregPath, authPath } = await writeArtifact(dir);
 

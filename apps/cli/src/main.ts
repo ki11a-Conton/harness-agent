@@ -12,6 +12,7 @@ import {
 import type { CommandDeps } from "./commands.js";
 import { runCommand } from "./commands.js";
 import { preregCmd, type PreregCommandDeps } from "./prereg-command.js";
+import { createProductionPreregRunner } from "./prereg-production-runner.js";
 import { resolveModelProvider, STUB_PROVIDER_ID } from "./provider.js";
 
 /**
@@ -102,12 +103,17 @@ export function isPreProviderCommand(args: string[]): boolean {
 
 /**
  * The `prereg` chain runs against its OWN adapter and never needs the
- * interactive host. Until a production arm runner/observer is wired, no runner
- * is injected, so `validate`/`run` REFUSE with 0 provider resolutions rather
- * than fabricate an execution identity from a test seam.
+ * interactive host. S2/F1b wires the PRODUCTION adapter here, so the shipped
+ * `node apps/cli/dist/main.js prereg …` path can actually run the formal chain:
+ * `observe` re-derives the CURRENT execution identity from the real checkout
+ * (git HEAD, clean-tree, arm checkouts, benchmark case bytes) and the
+ * environment the provider will be resolved from. It never echoes the
+ * artifact's own claims back as "observed", and anything it cannot certify is
+ * reported unobservable so the gate REFUSES rather than fabricating a match.
+ * `makeProvider` is invoked only after the fail-closed gate admits.
  */
 export function preregCommandDeps(): PreregCommandDeps {
-  return {};
+  return { runner: createProductionPreregRunner() };
 }
 
 function writeLines(lines: readonly string[], exitCode: number): number {
