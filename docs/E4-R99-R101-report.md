@@ -3153,9 +3153,22 @@ P5 在**花钱之前**关闭下一个缺口：实验本身必须先被**预注�
 | `pnpm test` | 0 | **367 files / 6899 passed / 10 skipped / 0 failed** |
 | `pnpm docs:verify` | 0 | ALL CHECKS PASS |
 
-双平台门禁（Windows/Ubuntu GitHub Actions）：**NOT_RUN**。本沙箱**无 git push 凭证**
-（`gh` 未登录、无 token / credential helper），无法把本轮实现的 `main` 推到远程以触发 CI；
-缺少的动作是 **push 到远程 `main`**。不把本地绿灯写成"两平台成功"。
+双平台门禁（Windows/Ubuntu GitHub Actions）：**PASS**。实现已 push 到 `main`（`138dbdd`），
+CI run [36045254606](https://github.com/ki11a-Conton/harness-agent/actions/runs/36045254606)
+（`event=push`、`headSha=138dbdd`）**七 job 全 success**：
+
+| job | 结论 |
+| --- | --- |
+| install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest) | success |
+| install · typecheck · test · build · benchmark-smoke · audit (windows-latest) | success |
+| r97-r98 closed loop (ubuntu-latest) | success |
+| r97-r98 closed loop (windows-latest) | success |
+| coverage gate (ubuntu) | success |
+| offline cold-start (ubuntu) | success |
+| release attestation (P38-12) | success |
+
+注：以上结论来自**读取该 run 的 job 状态**；未下载其 artifact 复核内部数字。本报告 §10.8 的
+文档提交是对上述实现的补充说明，其自身 CI 结论不改变"实现提交已验收"这一事实。
 
 **P7 — 真实成对评价**：**BLOCKED / PAID_NOT_RUN**。需要用户另行明确批准具体预算后才能执行；
 本轮外部付费模型调用为 **0**，未用离线 scripted 结果支撑任何模型能力结论。
