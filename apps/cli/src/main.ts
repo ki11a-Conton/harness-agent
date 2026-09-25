@@ -11,6 +11,7 @@ import {
 } from "@ar/tools";
 import type { CommandDeps } from "./commands.js";
 import { runCommand } from "./commands.js";
+import { preregCmd, type PreregCommandDeps } from "./prereg-command.js";
 import { resolveModelProvider, STUB_PROVIDER_ID } from "./provider.js";
 
 /**
@@ -75,12 +76,43 @@ export function registerBuiltinTools(registry: ToolRegistry): void {
 export async function main(argv: string[]): Promise<number> {
   const { args, dataDir } = extractDataDirFlag(argv.slice(2));
   const dir = dataDir ?? process.env.HARNESS_DATA_DIR;
+
+  // The pre-registration chain is dispatched BEFORE the interactive host is
+  // constructed. `prereg validate` performs 0 provider calls, and `prereg run`
+  // may only construct a provider AFTER the fail-closed formal gate admits the
+  // campaign — so routing through `createDefaultDeps` (which resolves a model
+  // provider from the environment) would build a billable provider first.
+  if (isPreProviderCommand(args)) {
+    const result = await preregCmd(args.slice(1), preregCommandDeps());
+    return writeLines(result.lines, result.exitCode);
+  }
+
   const deps = await createDefaultDeps({ ...(dir !== undefined && dir.length > 0 ? { dataDir: dir } : {}) });
   const result = await runCommand(args, deps);
   for (const line of result.lines) {
     process.stdout.write(`${line}\n`);
   }
   return result.exitCode;
+}
+
+/** Commands dispatchable without the interactive host (no provider/harness). */
+export function isPreProviderCommand(args: string[]): boolean {
+  return args[0] === "prereg";
+}
+
+/**
+ * The `prereg` chain runs against its OWN adapter and never needs the
+ * interactive host. Until a production arm runner/observer is wired, no runner
+ * is injected, so `validate`/`run` REFUSE with 0 provider resolutions rather
+ * than fabricate an execution identity from a test seam.
+ */
+export function preregCommandDeps(): PreregCommandDeps {
+  return {};
+}
+
+function writeLines(lines: readonly string[], exitCode: number): number {
+  for (const line of lines) process.stdout.write(`${line}\n`);
+  return exitCode;
 }
 
 /** Pull `--data-dir <path>` / `--data-dir=<path>` out of argv before command

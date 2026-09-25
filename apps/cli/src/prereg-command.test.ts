@@ -79,6 +79,9 @@ function observationFor(over: Partial<PreregisteredCampaignObservationV2> = {}):
     requestProfileDigest: sha(stableStringify(REQUEST_PROFILE)),
     caseContentDigests,
     decisionPolicyDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
+    // A KNOWN, non-null observed price: the fixture is money-bounded, so a
+    // missing/undefined price would be refused as PRICING_UNKNOWN.
+    usdMicrosPerCall: 0,
     ...over,
   };
 }

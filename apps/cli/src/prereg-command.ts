@@ -190,7 +190,7 @@ async function loadArtifact(path: string): Promise<ToolCallEfficiencyPreregistra
 
 /** `agent prereg run <prereg.json> --authorization <auth.json> --budget-dir <dir> --out <dir> [--mode …]` */
 async function runCmd(rest: string[], deps: PreregCommandDeps): Promise<PreregCommandResult> {
-  const preregPath = positionals(rest, ["--authorization", "--budget-dir", "--out", "--mode", "--usd-micros-per-call"])[0];
+  const preregPath = positionals(rest, ["--authorization", "--budget-dir", "--out", "--mode"])[0];
   const authPath = flag(rest, "--authorization");
   const budgetDir = flag(rest, "--budget-dir");
   const outDir = flag(rest, "--out");

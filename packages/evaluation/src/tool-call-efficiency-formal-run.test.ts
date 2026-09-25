@@ -113,6 +113,9 @@ function observationFor(a: ToolCallEfficiencyPreregistrationV2, over: Partial<Pr
     requestProfileDigest: sha(stableStringify(REQUEST_PROFILE)),
     caseContentDigests,
     decisionPolicyDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
+    // A KNOWN, non-null price: the fixture is money-bounded, so a null price
+    // would (correctly) be refused as PRICING_UNKNOWN before admission.
+    usdMicrosPerCall: 0,
     ...over,
   };
 }

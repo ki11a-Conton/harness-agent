@@ -270,6 +270,15 @@ export interface PreregisteredCampaignObservationV2 {
   /** caseId -> content digest, re-derived from the real case files. */
   caseContentDigests: Record<string, string>;
   decisionPolicyDigest: string;
+  /**
+   * The DECLARED per-call price snapshot (integer USD micros) for the resolved
+   * provider/model, or `null` when the price is NOT known.
+   *
+   * It is observed (never a CLI override) because the money bound is part of the
+   * execution identity: on a money-bounded campaign a `null` price is a refusal
+   * (`PRICING_UNKNOWN`) — a silent zero would authorize unlimited spend.
+   */
+  usdMicrosPerCall: number | null;
 }
 
 /** Compare the artifact's bound identity against a fresh observation. */
@@ -557,12 +566,18 @@ export function createFormalBudgetedProvider(opts: {
                 retries += 1;
                 stats.retries += 1;
                 // A retry is a NEW physical request that may be billed, so it
-                // takes its OWN reservation immediately.
+                // must take its OWN reservation immediately — and a refused
+                // reservation must STOP the stream. Silently continuing would
+                // let an unbilled request leave the process.
                 const retryReservation = await opts.ledger.reserve(opts.arm, 1);
-                if (retryReservation.ok && retryReservation.reservationId !== null) {
-                  await opts.ledger.commit(retryReservation.reservationId, 1, 1);
-                  stats.logicalCalls += 1;
+                if (!retryReservation.ok || retryReservation.reservationId === null) {
+                  stats.refusedCalls += 1;
+                  throw new Error(
+                    `E4-N3: BUDGET_EXHAUSTED: retry reservation refused (${retryReservation.reason}) — refusing to continue an unbilled retry`,
+                  );
                 }
+                await opts.ledger.commit(retryReservation.reservationId, 1, 1);
+                stats.logicalCalls += 1;
               } else if (ev.type === "usage") {
                 inputTokens = Math.max(inputTokens, ev.usage.inputTokens);
                 outputTokens = Math.max(outputTokens, ev.usage.outputTokens);
@@ -599,6 +614,8 @@ export type FormalRunCode =
   | "AUTHORIZATION_DIGEST_MISMATCH"
   | "AUTHORIZATION_SUBJECT_MISMATCH"
   | "AUTHORIZATION_CAP_MISMATCH"
+  | "RESUME_NOT_ALLOWED"
+  | "PRICING_UNKNOWN"
   | "BUDGET_STATE_REJECTED";
 
 export interface FormalRunRefusal {
@@ -633,8 +650,6 @@ export interface PreregisteredCampaignOptions {
   now?: () => number;
   /** The provider factory. Called ONLY after every preflight passed. */
   makeProvider: () => ModelProvider | Promise<ModelProvider>;
-  /** USD micros charged per call, or `null` when not money-bounded. */
-  usdMicrosPerCall?: number | null;
 }
 
 function refusal(code: FormalRunCode, reason: string): FormalRunRefusal {
@@ -650,9 +665,7 @@ export async function openPreregisteredCampaignGate(
 ): Promise<FormalRunRefusal | FormalRunAdmission> {
   // STEP 0: experiment-semantic overrides are refused. Only the artifact may
   // determine cases / repetitions / provider / model / budget.
-  if (opts.usdMicrosPerCall !== undefined && opts.usdMicrosPerCall !== null && opts.usdMicrosPerCall < 0) {
-    return refusal("OVERRIDE_REJECTED", "usdMicrosPerCall must be null or non-negative");
-  }
+  const mode = opts.mode ?? "auto";
 
   // STEP 1: strict pre-registration validation (recomputes every derived field).
   let artifact: ToolCallEfficiencyPreregistrationV2;
@@ -668,6 +681,21 @@ export async function openPreregisteredCampaignGate(
     return refusal("PREREGISTRATION_IDENTITY_DRIFT", `execution identity drifted from the pre-registration: ${drift.join("; ")}`);
   }
 
+  // STEP 2b: the money bound. A campaign that BOUND USD must declare a real
+  // per-call price in its observed identity; a missing/null price is an unknown
+  // price, and an unknown price on a money-bounded campaign is a refusal — not a
+  // silent zero that would let spend run past the bound.
+  const usdMicrosPerCall = opts.observation.usdMicrosPerCall;
+  if (usdMicrosPerCall !== null && (!Number.isSafeInteger(usdMicrosPerCall) || usdMicrosPerCall < 0)) {
+    return refusal("PRICING_UNKNOWN", `observed usdMicrosPerCall ${String(usdMicrosPerCall)} is not a non-negative integer`);
+  }
+  if (artifact.budget.maxUsdMicros !== null && usdMicrosPerCall === null) {
+    return refusal(
+      "PRICING_UNKNOWN",
+      "the pre-registration is money-bounded (maxUsdMicros is set) but the observed per-call price is unknown — refusing rather than treating an unknown price as free",
+    );
+  }
+
   // STEP 3: independent authorization, bound exactly.
   let auth;
   try {
@@ -679,10 +707,15 @@ export async function openPreregisteredCampaignGate(
   const authCheck = checkAuthorizationV2(auth, artifact, nowMs);
   if (!authCheck.ok) return refusal(authCheck.code, authCheck.reason);
 
+  // STEP 3b: `allowResume: false` is a REAL prohibition. A requested resume is
+  // refused before any budget is opened.
+  if (mode === "resume" && !auth.allowResume) {
+    return refusal("RESUME_NOT_ALLOWED", "the authorization forbids resuming (allowResume is false)");
+  }
+
   // STEP 4 + 5: open the SAME digest's atomic call ledger and cost budget. A
   // resume must not create a fresh allowance; a first run must not adopt a
   // foreign one.
-  const mode = opts.mode ?? "auto";
   let ledger: R97BudgetLedger;
   let costBudget: CostBudget;
   try {
@@ -691,7 +724,30 @@ export async function openPreregisteredCampaignGate(
       campaignModelCalls: artifact.budget.campaignWorstCaseModelCalls,
       mode,
     });
-    costBudget = await CostBudget.open(opts.budgetDir, artifact, { allowCreate: mode !== "resume" });
+  } catch (err) {
+    return refusal("BUDGET_STATE_REJECTED", err instanceof Error ? err.message : String(err));
+  }
+
+  // The LEDGER, not the requested mode, decides whether this open RESUMED an
+  // existing campaign. `auto`/`first-run` against an existing ledger both adopt
+  // it, and an adopted campaign must honour `allowResume` exactly like an
+  // explicit resume.
+  if (ledger.mode === "resume" && !auth.allowResume) {
+    return refusal("RESUME_NOT_ALLOWED", "this campaign already exists and the authorization forbids resuming (allowResume is false)");
+  }
+
+  // On the PAID v2 path, "this approval is still live in another directory" is a
+  // refusal — never a silent second allowance. The generic R97 ledger RECORDS
+  // the duplicate for other callers; the formal gate must not admit it.
+  if (ledger.duplicateCampaignDirs.length > 0) {
+    return refusal(
+      "BUDGET_STATE_REJECTED",
+      `this authorization is still live in ${ledger.duplicateCampaignDirs.join(", ")} — refusing to open a second budget for one approval`,
+    );
+  }
+
+  try {
+    costBudget = await CostBudget.open(opts.budgetDir, artifact, { allowCreate: ledger.mode !== "resume" });
   } catch (err) {
     return refusal("BUDGET_STATE_REJECTED", err instanceof Error ? err.message : String(err));
   }
@@ -709,7 +765,7 @@ export async function openPreregisteredCampaignGate(
     ledger,
     costBudget,
     arm: TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2,
-    usdMicrosPerCall: opts.usdMicrosPerCall ?? null,
+    usdMicrosPerCall,
   });
   return {
     status: "ADMITTED",
