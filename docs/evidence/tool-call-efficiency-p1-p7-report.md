@@ -8,6 +8,7 @@
 - 上一轮审查基线：`6d027c8936bccefa6ecb47d1ebfa56a56c89efe3`
 - 外部付费模型调用：N0–N6 = **0**；N7 = **PAID_NOT_RUN**。
 - 模型效果 / champion promotion：**UNKNOWN / NOT_RUN**（离线正确性证据不等于模型效果证据）。
+- N0–N6 结论：**PASS**（N5 可执行闭环已由两平台 CI 验证，见 §N6）；N7：**BLOCKED / PAID_NOT_RUN**。
 
 ---
 
@@ -93,7 +94,7 @@
 | `af79700` | N2 + N3 | feat(evaluation)：正式 paired run 以 v2 预注册为门禁（含 authorization + 原子 ledger 预算） |
 | `e434637` | N4 | fix(evaluation)：统一 eligibility 与 champion decision 契约 |
 | `711e932` | N5-A/B/C | feat：paired-campaign 驱动 + CLI `prereg build/validate/run` + 离线 E2E |
-| （本阶段提交） | N5-D/E + N6 | tamper matrix 扩展、18 项 mutation gate、双平台 CI 证据脚本与文档 |
+| `f5d5045` | N5-D/E + N6 | tamper matrix 扩展、18 项 mutation gate、双平台 CI 证据脚本与文档 |
 
 ---
 
@@ -188,8 +189,8 @@
 
 ## N6 — 双平台 CI 与诚实文档
 
-结论：**PARTIAL**（CI 步骤与证据脚本已实现并在本机验证；新 HEAD 的 Windows/Ubuntu run 证据待 push 后由
-Actions 产生并在本节回填）
+结论：**PASS**（新 HEAD 的 Windows/Ubuntu 闭环 job 已由 Actions 产生并全绿，N5 步骤与其 identity-bound
+证据在两侧 artifact 中可查）
 
 - `.github/workflows/ci.yml`：在既有 `r97-r98-closed-loop`（`ubuntu-latest` + `windows-latest`）中新增
   `N5 — run the offline pre-registration closed loop (0 provider calls)` 步骤，运行
@@ -206,8 +207,23 @@ Actions 产生并在本节回填）
 | `node scripts/e4/n5-prereg-closed-loop.mjs` | 0 | **105/105 passed**；root `e22e3fd6…`；32 logical runs；worst-case 960；externalProviderFactoryCalls 0 |
 | `node scripts/e4/r97-mutation-check.mjs` | 0 | **18/18 CAUGHT**（T6 5/5, A7 7/7, N5 5/5）；工作树 RESTORED |
 
-- 剩余缺口（未完成前不得把 N6 写成 PASS）：本 HEAD 的两平台 Actions run 尚未产生，`requiredEvidenceFresh`
-  类历史 evidence 的 freshness 不因本任务转绿。
+- CI 观测（HEAD `f5d50457f5e3e8361cd62eef8ead7ed9b1fcd476`，workflow run `36098440696`）：
+  > 本节证据绑定**实现提交** `f5d5045`（N5-D/E + N6 代码与 CI 步骤）；本节文字在该提交**之后**更新，
+  > 故文档提交不引用自身 SHA——"实现提交已验收"与"文档又更新了"是两件事。
+
+| job | 平台 | 结论 | 时间（UTC） |
+| --- | --- | --- | --- |
+| `r97-r98 closed loop (ubuntu-latest)` | linux | success | 05:26:51 → 05:29:02 |
+| `r97-r98 closed loop (windows-latest)` | win32 | success | 05:24:44 → 05:29:41 |
+
+- 两侧 artifact（`r97-r98-closed-loop-<os>-f5d5045…-36098440696-attempt-1`）内的
+  `n5-prereg-evidence.json` 与本机一致：`treeClean=true`、`105/105 passed`、同一 root
+  `e22e3fd68987…`、`logicalRuns=32`、`campaignWorstCaseModelCalls=960`、
+  `externalProviderFactoryCalls=0`、`ok=true`（ubuntu `platform=linux` / windows `platform=win32`）；
+  两侧 `mutation-report.json` 均为 `18/18 CAUGHT`、`treeRestored=true`。
+- 边界（不因 N6 转 PASS 而放宽）：该 job 是**离线**闭环（0 provider call、无 key、无网络），
+  "CI 全绿" ≠ "真实双版本实验已运行"；`requiredEvidenceFresh` 类历史 evidence 的 freshness
+  不因本任务转绿。
 
 ---
 
