@@ -7,11 +7,13 @@
  * provider: pre-registration is pure.
  */
 
+import { readFile } from "node:fs/promises";
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_DECISION_POLICY_V3 } from "./decision-policy-v3.js";
 import {
   assertFormalExecutionPreregistration,
   buildToolCallEfficiencyPreregistrationV2,
+  computeCaseSetDigestV2,
   computePreregistrationV2Digest,
   parseAndValidatePreregistrationV2,
   serializePreregistrationV2,
@@ -357,6 +359,64 @@ describe("N1 pre-registration v2 — fail-closed parsing", () => {
   });
 });
 
+describe("N4 — the unified eligible minimum is one frozen, re-derived number", () => {
+  it("binds min(contract, policy) as max(contract 5, policy 3) = 5", () => {
+    const a = buildToolCallEfficiencyPreregistrationV2(baseOptions());
+    expect(a.evaluation.minEligibleCases).toBe(5);
+  });
+
+  it("a policy minimum ABOVE the contract raises the effective minimum and refuses a 5-case selection", () => {
+    const five = CASE_IDS.slice(0, 5);
+    expectCode(
+      () =>
+        buildToolCallEfficiencyPreregistrationV2(
+          baseOptions({
+            catalog: five.map((id) => catalogEntry(id)),
+            selection: { caseIds: [...five], selectionRule: "r", selectionProvenanceDigest: "d", holdoutPolicy: "h" },
+            evaluation: {
+              ...baseOptions().evaluation,
+              decisionPolicy: { ...DEFAULT_DECISION_POLICY_V3, minActivationEligibleCases: 6 },
+            },
+          }),
+        ),
+      "TOO_FEW_CASES",
+    );
+  });
+
+  it("changing the policy minimum changes the root digest (the approval must be re-issued)", () => {
+    const canonical = buildToolCallEfficiencyPreregistrationV2(baseOptions());
+    const raised = buildToolCallEfficiencyPreregistrationV2(
+      baseOptions({
+        evaluation: {
+          ...baseOptions().evaluation,
+          decisionPolicy: { ...DEFAULT_DECISION_POLICY_V3, minActivationEligibleCases: 6 },
+        },
+      }),
+    );
+    expect(raised.evaluation.minEligibleCases).toBe(6);
+    expect(raised.preregistrationDigest).not.toBe(canonical.preregistrationDigest);
+  });
+
+  it("refuses a hand-edited (smaller) minEligibleCases as DERIVED_TAMPERED", () => {
+    const obj = JSON.parse(serializePreregistrationV2(buildToolCallEfficiencyPreregistrationV2(baseOptions()))) as Record<string, unknown>;
+    (obj.evaluation as Record<string, unknown>).minEligibleCases = 3;
+    expectCode(() => parseAndValidatePreregistrationV2(JSON.stringify(obj)), "DERIVED_TAMPERED");
+  });
+
+  it("refuses a consistent-root artifact whose case count is below the unified minimum", () => {
+    // Build a legitimate 8-case artifact, then drop to 3 cases and RE-COMPUTE
+    // every derived value and the root digest — so ONLY the unified-minimum
+    // count check can refuse it. This proves the check is not merely a digest
+    // echo: a self-consistent artifact is still refused.
+    const obj = JSON.parse(serializePreregistrationV2(buildToolCallEfficiencyPreregistrationV2(baseOptions()))) as Record<string, unknown>;
+    const dataset = obj.dataset as Record<string, unknown>;
+    dataset.cases = (dataset.cases as unknown[]).slice(0, 3);
+    dataset.caseSetDigest = computeCaseSetDigestV2(dataset.cases as Parameters<typeof computeCaseSetDigestV2>[0]);
+    obj.preregistrationDigest = computePreregistrationV2Digest(obj as unknown as Parameters<typeof computePreregistrationV2Digest>[0]);
+    expectCode(() => parseAndValidatePreregistrationV2(JSON.stringify(obj)), "TOO_FEW_CASES");
+  });
+});
+
 describe("N1 pre-registration v2 — zero provider calls", () => {
   it("never constructs a provider (spy factory stays at 0) across accept and reject paths", () => {
     const providerFactory = vi.fn(() => {
@@ -368,5 +428,19 @@ describe("N1 pre-registration v2 — zero provider calls", () => {
     expectCode(() => buildToolCallEfficiencyPreregistrationV2(baseOptions({ schedule: { repetitions: 1, orderSeed: 0 } })), "REPETITIONS_TOO_LOW");
     expectCode(() => parseAndValidatePreregistrationV2("{not json"), "NOT_JSON");
     expect(providerFactory).toHaveBeenCalledTimes(0);
+  });
+});
+
+describe("evidence fixture — the committed v2 artifact stays parseable and self-consistent", () => {
+  it("parses, reserializes to identical bytes, and re-derives the unified minimum", async () => {
+    const url = new URL("../../../docs/evidence/tool-call-efficiency-preregistration-v2.fixture.json", import.meta.url);
+    const bytes = await readFile(url, "utf8");
+    const parsed = parseAndValidatePreregistrationV2(bytes);
+    // parse -> reserialize must reproduce the exact committed bytes (fail-closed
+    // parsing would otherwise let the fixture drift from the schema unnoticed).
+    expect(serializePreregistrationV2(parsed)).toBe(bytes.trim());
+    expect(parsed.evaluation.minEligibleCases).toBe(5);
+    expect(parsed.schedule.repetitions).toBe(2);
+    expect(parsed.budget.campaignWorstCaseModelCalls).toBe(960);
   });
 });

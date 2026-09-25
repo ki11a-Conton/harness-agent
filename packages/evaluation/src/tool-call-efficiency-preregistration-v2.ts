@@ -151,6 +151,17 @@ export interface PreregEvaluationV2 {
   /** The FULL pre-registered decision policy (never a partial threshold set). */
   decisionPolicy: DecisionPolicyV3;
   decisionPolicyDigest: string;
+  /**
+   * The UNIFIED minimum eligible activation coverage: exactly
+   * `max(contract.minEligibleCases, decisionPolicy.minActivationEligibleCases)`.
+   *
+   * DERIVED and bound in the root digest. It exists so a plan can never be
+   * pre-registered against one minimum (the mechanism contract's) while the
+   * champion decision interprets a DIFFERENT, smaller one (the policy's) — the
+   * effective threshold is one explicit, frozen number, re-derived on every
+   * load and refused on any mismatch.
+   */
+  minEligibleCases: number;
 }
 
 export interface PreregScheduleV2 {
@@ -233,7 +244,7 @@ export interface PreregistrationV2Options {
   };
   suiteId: string;
   suiteVersion: string;
-  evaluation: Omit<PreregEvaluationV2, "decisionPolicyDigest">;
+  evaluation: Omit<PreregEvaluationV2, "decisionPolicyDigest" | "minEligibleCases">;
   schedule: { repetitions: number; orderSeed: number };
   budget: Omit<PreregBudgetV2, "campaignWorstCaseModelCalls">;
   isolation: PreregIsolationV2;
@@ -282,6 +293,7 @@ function sourceBody(a: ToolCallEfficiencyPreregistrationV2): Record<string, unkn
       scorerDigest: a.evaluation.scorerDigest,
       decisionPolicy: a.evaluation.decisionPolicy,
       decisionPolicyDigest: a.evaluation.decisionPolicyDigest,
+      minEligibleCases: a.evaluation.minEligibleCases,
     },
     schedule: {
       repetitions: a.schedule.repetitions,
@@ -486,6 +498,11 @@ export function buildToolCallEfficiencyPreregistrationV2(
     throw new PreregistrationV2Error("MISSING_POLICY", "evaluation.decisionPolicy is required (full pre-registered policy)");
   }
   const policyDigest = computeThresholdDigestV3(decisionPolicy);
+  // The ONE effective eligible minimum: never the contract alone, never the
+  // policy alone. A plan whose selected cases clear the contract but not the
+  // policy (or vice versa) is refused; the frozen number is bound in the digest
+  // so the champion decision cannot later interpret a smaller threshold.
+  const minEligibleCases = Math.max(contract.minEligibleCases, decisionPolicy.minActivationEligibleCases);
   const evaluation: PreregEvaluationV2 = {
     judgeId: requireNonEmptyString(opts.evaluation?.judgeId, "evaluation.judgeId"),
     judgeDigest: requireNonEmptyString(opts.evaluation?.judgeDigest, "evaluation.judgeDigest"),
@@ -493,7 +510,15 @@ export function buildToolCallEfficiencyPreregistrationV2(
     scorerDigest: requireNonEmptyString(opts.evaluation?.scorerDigest, "evaluation.scorerDigest"),
     decisionPolicy,
     decisionPolicyDigest: policyDigest,
+    minEligibleCases,
   };
+  if (entries.length < minEligibleCases) {
+    throw new PreregistrationV2Error(
+      "TOO_FEW_CASES",
+      `${entries.length} eligible case(s) < unified minimum ${minEligibleCases} ` +
+        `(max(contract ${contract.minEligibleCases}, policy ${decisionPolicy.minActivationEligibleCases}))`,
+    );
+  }
 
   // --- schedule -------------------------------------------------------------
   const repetitions = requirePositiveInt(opts.schedule?.repetitions, "schedule.repetitions");
@@ -720,7 +745,7 @@ export function parseAndValidatePreregistrationV2(json: string): ToolCallEfficie
   }
 
   const ev = expectObject(root.evaluation, "evaluation");
-  expectKeys(ev, ["judgeId", "judgeDigest", "verifierDigest", "scorerDigest", "decisionPolicy", "decisionPolicyDigest"], "evaluation");
+  expectKeys(ev, ["judgeId", "judgeDigest", "verifierDigest", "scorerDigest", "decisionPolicy", "decisionPolicyDigest", "minEligibleCases"], "evaluation");
   // Strictly validate the FULL policy (rejects malformed/out-of-range
   // thresholds); the digest is computed over the normalized policy so a
   // partially-declared threshold set cannot masquerade as the real policy.
@@ -731,6 +756,10 @@ export function parseAndValidatePreregistrationV2(json: string): ToolCallEfficie
     throw new PreregistrationV2Error("INVALID_POLICY", err instanceof Error ? err.message : String(err));
   }
   const policyDigest = computeThresholdDigestV3(decisionPolicy);
+  const contract = mechanismContractFor(TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2);
+  if (contract === undefined) {
+    throw new PreregistrationV2Error("NO_CONTRACT", `no mechanism contract for ${TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2}`);
+  }
   const evaluation: PreregEvaluationV2 = {
     judgeId: expectString(ev.judgeId, "evaluation.judgeId"),
     judgeDigest: expectString(ev.judgeDigest, "evaluation.judgeDigest"),
@@ -738,9 +767,26 @@ export function parseAndValidatePreregistrationV2(json: string): ToolCallEfficie
     scorerDigest: expectString(ev.scorerDigest, "evaluation.scorerDigest"),
     decisionPolicy,
     decisionPolicyDigest: expectString(ev.decisionPolicyDigest, "evaluation.decisionPolicyDigest"),
+    minEligibleCases: expectNonNegInt(ev.minEligibleCases, "evaluation.minEligibleCases"),
   };
   if (evaluation.decisionPolicyDigest !== policyDigest) {
     throw new PreregistrationV2Error("DERIVED_TAMPERED", "evaluation.decisionPolicyDigest does not match the decision policy");
+  }
+  // Re-derive the UNIFIED minimum and refuse a plan that carries a different
+  // one — a hand-edited (smaller) minimum would otherwise let a 3-case selection
+  // be judged against the contract's 5.
+  const expectedMinEligibleCases = Math.max(contract.minEligibleCases, decisionPolicy.minActivationEligibleCases);
+  if (evaluation.minEligibleCases !== expectedMinEligibleCases) {
+    throw new PreregistrationV2Error(
+      "DERIVED_TAMPERED",
+      `evaluation.minEligibleCases ${evaluation.minEligibleCases} != unified max(contract ${contract.minEligibleCases}, policy ${decisionPolicy.minActivationEligibleCases}) = ${expectedMinEligibleCases}`,
+    );
+  }
+  if (cases.length < evaluation.minEligibleCases) {
+    throw new PreregistrationV2Error(
+      "TOO_FEW_CASES",
+      `${cases.length} selected case(s) < unified minimum ${evaluation.minEligibleCases}`,
+    );
   }
 
   const sc = expectObject(root.schedule, "schedule");
