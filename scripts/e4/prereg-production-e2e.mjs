@@ -57,7 +57,7 @@
  * Usage: node scripts/e4/prereg-production-e2e.mjs [--out <path>]
  */
 
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -190,6 +190,44 @@ function runCli(args, env) {
     env: { ...process.env, ...env },
   });
   return { code: res.status ?? 1, out: `${res.stdout ?? ""}\n${res.stderr ?? ""}` };
+}
+
+/**
+ * The ASYNC twin of `runCli`, for the one phase that must NOT block this
+ * process: POS-FWD.
+ *
+ * WHY IT MUST BE ASYNC — the loopback COUNTING stub lives in THIS process. A
+ * `spawnSync` blocks this event loop for the whole child lifetime, so the stub's
+ * server callback never runs: the child's HTTP request is accepted by the kernel
+ * but never answered, its client timeout fires, the model client emits a `retry`,
+ * and B2 then reserves cost for that second physical attempt against a frozen
+ * budget that has no retry headroom — the run refuses with BUDGET_EXHAUSTED and
+ * the stub counter stays at 0. That is an artefact of the harness deadlocking
+ * itself, not a property of the release CLI, so it must not be mistaken for one.
+ * Running the child asynchronously keeps the event loop free to serve the stub,
+ * which is what makes "physical requests === ledger.committed" a real
+ * MEASUREMENT instead of a number that can only ever be 0.
+ */
+function runCliAsync(args, env) {
+  return new Promise((resolvePromise) => {
+    const child = spawn(process.execPath, [CLI_ENTRY, ...args], {
+      cwd: REPO_ROOT,
+      windowsHide: true,
+      env: { ...process.env, ...env },
+    });
+    let out = "";
+    child.stdout.on("data", (c) => {
+      out += c;
+    });
+    child.stderr.on("data", (c) => {
+      out += c;
+    });
+    const timer = setTimeout(() => child.kill(), 900_000);
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      resolvePromise({ code: code ?? 1, out });
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -699,10 +737,10 @@ async function runPositiveForward(stub, dir, env) {
 
   // 1. build + validate on the release entry (0 provider, 0 HTTP).
   const httpBeforeBuild = stub.count();
-  const build = runCli(["prereg", "build", cfgPath, "--out", preregPath], env);
+  const build = await runCliAsync(["prereg", "build", cfgPath, "--out", preregPath], env);
   const afterBuild = stub.count();
   if (build.code !== 0) return forwardRefusal("build", build, afterBuild - httpBeforeBuild);
-  const validate = runCli(["prereg", "validate", preregPath, "--json"], env);
+  const validate = await runCliAsync(["prereg", "validate", preregPath, "--json"], env);
   const afterCertify = stub.count();
   if (validate.code !== 0) return forwardRefusal("validate", validate, afterCertify - afterBuild);
 
@@ -739,7 +777,7 @@ async function runPositiveForward(stub, dir, env) {
 
   // 3. the FULL forward schedule through the shipped release CLI subprocess.
   const before = stub.count();
-  const run = runCli(
+  const run = await runCliAsync(
     ["prereg", "run", preregPath, "--authorization", authPath, "--budget-dir", budgetDir, "--out", outDir, "--mode", "first-run"],
     env,
   );
