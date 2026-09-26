@@ -287,6 +287,18 @@ export interface PreregisteredCampaignObservationV2 {
   requestProfileDigest: string;
   /** caseId -> content digest, re-derived from the real case files. */
   caseContentDigests: Record<string, string>;
+  /**
+   * B1 — caseId -> ELIGIBILITY digest, independently re-derived from the frozen
+   * taxonomy the selection was frozen against. The old observer only re-derived
+   * case CONTENT, so `selectionRule` / eligibility / provenance were whatever the
+   * artifact self-declared.
+   */
+  eligibilityDigests: Record<string, string>;
+  /**
+   * B1 — the selection's own provenance digest, RECOMPUTED from the frozen
+   * selection artifact body (never echoed from the artifact under validation).
+   */
+  selectionProvenanceDigest: string;
   decisionPolicyDigest: string;
   /**
    * The DECLARED per-call price snapshot (integer USD micros) for the resolved
@@ -320,6 +332,10 @@ export function observationViolationsV2(
   cmp("provider.endpointDigest", artifact.provider.endpointDigest, obs.endpointDigest);
   cmp("provider.requestProfileDigest", artifact.provider.requestProfileDigest, obs.requestProfileDigest);
   cmp("evaluation.decisionPolicyDigest", artifact.evaluation.decisionPolicyDigest, obs.decisionPolicyDigest);
+  // B1 — the selection's provenance and every case's eligibility are compared
+  // against values the observer RE-DERIVED from the frozen selection/taxonomy,
+  // never against the artifact's own claims.
+  cmp("dataset.selectionProvenanceDigest", artifact.dataset.selectionProvenanceDigest, obs.selectionProvenanceDigest);
   const boundIds = artifact.dataset.cases.map((c) => c.caseId).join(",");
   const observedIds = Object.keys(obs.caseContentDigests).join(",");
   if (boundIds !== observedIds) {
@@ -327,6 +343,15 @@ export function observationViolationsV2(
   } else {
     for (const c of artifact.dataset.cases) {
       cmp(`dataset.cases.${c.caseId}.contentDigest`, c.contentDigest, obs.caseContentDigests[c.caseId]);
+    }
+  }
+  const boundEligIds = artifact.dataset.cases.map((c) => c.caseId).join(",");
+  const observedEligIds = Object.keys(obs.eligibilityDigests).join(",");
+  if (boundEligIds !== observedEligIds) {
+    issues.push(`dataset.eligibility: bound [${boundEligIds}] != observed [${observedEligIds}]`);
+  } else {
+    for (const c of artifact.dataset.cases) {
+      cmp(`dataset.cases.${c.caseId}.eligibilityDigest`, c.eligibilityDigest, obs.eligibilityDigests[c.caseId]);
     }
   }
   return issues;
@@ -578,15 +603,60 @@ export class CostBudget {
 
   /**
    * Settle a reservation against the ACTUAL usage observed: the reservation is
-   * released and the real numbers are charged, in ONE locked transaction. An
-   * unknown outcome must charge the reserved upper bound (never a refund).
+   * released and the real numbers are charged, in ONE locked transaction.
+   *
+   * B2 — the settle is now REFUSABLE, not a blind `+=`:
+   *   - an id that was never reserved is refused (the old code settled it as a
+   *     ZERO-held "free" charge, which is a ledger forgery);
+   *   - a negative / NaN / non-integer actual is refused (a negative would
+   *     silently REFUND the ledger);
+   *   - repeated settle of the SAME id is refused by the same rule (the id is
+   *     consumed by the first settle);
+   *   - a token / USD actual that exceeds the HELD pre-send upper bound is
+   *     refused: the bound was supposed to dominate the real cost, so an overrun
+   *     is a bound violation that must freeze the campaign, never be charged as
+   *     if it were planned. Duration is EXCLUDED from that bound check because
+   *     its reservation is an explicit scheduling SHARE (a call's wall-clock is
+   *     not provable in advance) — it is charged from the actual elapsed time
+   *     and binds by refusing the NEXT call once charged+reserved reaches the
+   *     cap. An unknown outcome must charge the reserved upper bound (never a
+   *     refund).
    */
   async settle(id: string, actual: { inputTokens?: number; outputTokens?: number; toolCalls?: number; durationMs?: number; usdMicros?: number; unknown?: boolean }): Promise<CostBudgetView> {
+    // Static validation is done OUTSIDE the lock: a malformed call must never
+    // take the campaign lock, and a NaN/negative can never enter the ledger.
+    const dims = ["inputTokens", "outputTokens", "toolCalls", "durationMs", "usdMicros"] as const;
+    for (const k of dims) {
+      const v = actual[k];
+      if (v === undefined) continue;
+      if (!Number.isSafeInteger(v) || v < 0) {
+        throw new Error(`cost budget settle refused: ${k} must be a non-negative safe integer (got ${String(v)})`);
+      }
+    }
     return withR97CampaignLock(this.dir, async () => {
       const file = JSON.parse(await readFile(join(this.dir, COST_BUDGET_FILENAME), "utf8")) as CostBudgetFile;
       file.reserved = { ...ZERO_RESERVATION, ...(file.reserved ?? {}) };
       file.reservations = file.reservations ?? {};
-      const held = file.reservations[id] ?? { ...ZERO_RESERVATION };
+      const held = file.reservations[id];
+      if (held === undefined) {
+        // A settle for an id nobody reserved would otherwise be charged with a
+        // zero-held reservation — i.e. a FREE call. That is a ledger loss, so it
+        // is refused. This also covers a REPEATED settle: the first one deleted
+        // the id, so the second finds nothing and is refused instead of charging
+        // twice.
+        throw new Error(`cost budget settle refused: reservation id ${id} is not outstanding (unknown, already settled, or never reserved)`);
+      }
+      // B2 — the held reservation is the trusted pre-send upper bound. Token/USD
+      // actuals may not exceed it; a real overrun freezes the campaign instead of
+      // being charged (see method docstring for the duration exception).
+      for (const k of ["inputTokens", "outputTokens", "usdMicros"] as const) {
+        const v = actual[k];
+        if (v !== undefined && v > held[k]) {
+          throw new Error(
+            `cost budget settle refused: ${k} actual ${v} exceeds the pre-send reservation ${held[k]} — the bound did not dominate the cost, so the campaign is frozen rather than charged`,
+          );
+        }
+      }
       file.reserved.inputTokens -= held.inputTokens;
       file.reserved.outputTokens -= held.outputTokens;
       file.reserved.toolCalls -= held.toolCalls;
@@ -716,23 +786,32 @@ export function createFormalBudgetedProvider(opts: {
       const inner = opts.provider.createClient(model, config);
       return {
         async *generate(request: ModelRequest, signal: AbortSignal): AsyncGenerator<ModelEvent> {
-          // A4 — RESERVE every billed dimension's conservative per-call upper
-          // bound BEFORE the request is sent. If the frozen budget cannot prove
-          // the call fits, it is never dispatched: the cap is never exceeded by
-          // an unreserved request.
           const usdCeiling = opts.usdMicrosPerCall ?? 0;
-          const reservation = await opts.costBudget.reserve({
+          // The conservative per-call upper bound reserved for EVERY physical
+          // attempt (the initial send AND each internal retry — B2). A retry is a
+          // real second HTTP request that may be billed, so it must fit the frozen
+          // budget on EVERY dimension before it leaves.
+          const costDeltaForAttempt = (): CostReservationDelta => ({
             inputTokens: FORMAL_PER_CALL_INPUT_TOKEN_CEILING,
             outputTokens: FORMAL_PER_CALL_OUTPUT_TOKEN_CEILING,
             toolCalls: 0,
             durationMs: perCallDurationMsCeiling(opts.costBudget.view().caps),
             usdMicros: usdCeiling,
           });
-          if (!reservation.ok) {
-            stats.refusedCalls += 1;
-            throw new Error(`E4-N3: BUDGET_EXHAUSTED: ${reservation.reason} — refusing to send a call the frozen budget cannot afford`);
-          }
-          const costReservationId = reservation.id;
+          const reserveCost = async (what: string): Promise<string> => {
+            const r = await opts.costBudget.reserve(costDeltaForAttempt());
+            if (!r.ok) {
+              stats.refusedCalls += 1;
+              throw new Error(`E4-N3: BUDGET_EXHAUSTED: ${what} cost reservation refused (${r.reason}) — refusing to send a call the frozen budget cannot afford`);
+            }
+            return r.id;
+          };
+
+          // A4/B2 — RESERVE every billed dimension's conservative per-call upper
+          // bound BEFORE the request is sent. If the frozen budget cannot prove
+          // the call fits, it is never dispatched: the cap is never exceeded by
+          // an unreserved request.
+          const costReservationId = await reserveCost("initial");
           const reserved = await opts.ledger.reserve(opts.arm, 1);
           if (!reserved.ok || reserved.reservationId === null) {
             // The call-ledger reservation was refused: release the cost
@@ -744,6 +823,10 @@ export function createFormalBudgetedProvider(opts: {
           const reservationId = reserved.reservationId;
           stats.logicalCalls += 1;
 
+          // Every physical attempt's cost reservation id, in send order. The
+          // FIRST belongs to the request whose usage the stream reports; the rest
+          // belong to retries and are settled at their reserved upper bound.
+          const costReservationIds: string[] = [costReservationId];
           let entered = false;
           let completed = false;
           let inputTokens = 0;
@@ -757,30 +840,33 @@ export function createFormalBudgetedProvider(opts: {
             if (settleStarted) return;
             settleStarted = true;
             const durationMs = Math.max(0, Date.now() - startedAt);
+            const delta = costDeltaForAttempt();
+            const primary = costReservationIds[0];
+            if (primary === undefined) {
+              // Unreachable: the initial reservation is pushed before the stream
+              // starts. Guarded so a future edit cannot settle an absent id.
+              throw new Error("E4-N3: BUDGET_STATE_REJECTED: no cost reservation exists for a dispatched call");
+            }
+            const extraAttempts = costReservationIds.slice(1);
             if (!entered) {
               await opts.ledger.abandon(reservationId);
-              // Nothing was sent: release the cost reservation in full.
-              await opts.costBudget.release(costReservationId);
+              // Nothing was sent: release every cost reservation in full.
+              for (const id of costReservationIds) await opts.costBudget.release(id);
               return;
             }
-            if (completed) {
-              await opts.ledger.commit(reservationId, 1, retries);
-            } else {
+            if (!completed) {
               await opts.ledger.markUnknown(reservationId);
               stats.unknownCalls += 1;
               // A dispatched call whose outcome nobody saw may already be
               // billed: settle at the RESERVED upper bound (never a refund).
-              await opts.costBudget.settle(costReservationId, {
-                inputTokens: FORMAL_PER_CALL_INPUT_TOKEN_CEILING,
-                outputTokens: FORMAL_PER_CALL_OUTPUT_TOKEN_CEILING,
-                durationMs,
-                usdMicros: usdCeiling,
-                unknown: true,
-              });
+              for (const id of costReservationIds) {
+                await opts.costBudget.settle(id, { ...delta, unknown: true });
+              }
               return;
             }
+            await opts.ledger.commit(reservationId, 1, retries);
             const chargedMicros = Math.max(usdMicros, usdCeiling);
-            const view = await opts.costBudget.settle(costReservationId, {
+            const view = await opts.costBudget.settle(primary, {
               inputTokens,
               outputTokens,
               durationMs,
@@ -790,6 +876,12 @@ export function createFormalBudgetedProvider(opts: {
             stats.chargedOutputTokens += outputTokens;
             stats.chargedUsdMicros += chargedMicros;
             void view;
+            // Each retry WAS a physical send. Its own usage is not separately
+            // reported, so it is charged at its reserved upper bound — the
+            // conservative settlement, never a refund.
+            for (const id of extraAttempts) {
+              await opts.costBudget.settle(id, { ...delta, unknown: true });
+            }
           };
 
           try {
@@ -800,17 +892,24 @@ export function createFormalBudgetedProvider(opts: {
                 retries += 1;
                 stats.retries += 1;
                 // A retry is a NEW physical request that may be billed, so it
-                // must take its OWN reservation immediately — and a refused
-                // reservation must STOP the stream. Silently continuing would
-                // let an unbilled request leave the process.
+                // must take its OWN reservation — on BOTH the call ledger AND
+                // every cost dimension — before it leaves. A refused reservation
+                // must STOP the stream; silently continuing would let an
+                // unbilled request leave the process. The reservations are taken
+                // at the `retry` event, which the client emits immediately BEFORE
+                // the next fetch, so a refusal here aborts the generator before
+                // that fetch runs.
+                const retryCostId = await reserveCost("retry");
                 const retryReservation = await opts.ledger.reserve(opts.arm, 1);
                 if (!retryReservation.ok || retryReservation.reservationId === null) {
+                  await opts.costBudget.release(retryCostId);
                   stats.refusedCalls += 1;
                   throw new Error(
                     `E4-N3: BUDGET_EXHAUSTED: retry reservation refused (${retryReservation.reason}) — refusing to continue an unbilled retry`,
                   );
                 }
                 await opts.ledger.commit(retryReservation.reservationId, 1, 1);
+                costReservationIds.push(retryCostId);
                 stats.logicalCalls += 1;
               } else if (ev.type === "usage") {
                 inputTokens = Math.max(inputTokens, ev.usage.inputTokens);

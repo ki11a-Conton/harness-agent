@@ -25,7 +25,7 @@
  * budget-exhausted campaign can never produce ACCEPT.
  */
 
-import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, readdir, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import type { ModelProvider } from "@ar/contracts";
 import { stableStringify } from "./manifest.js";
@@ -217,14 +217,42 @@ export interface PreregisteredCampaignRun {
   pairComplete: boolean;
 }
 
+/**
+ * B4/G6 — write a run record atomically with NO missing-file window.
+ *
+ * The previous version did `rm(target)` then `rename(tmp, target)`, so a crash
+ * between the two left the record ABSENT — a resume would then see "no record"
+ * for a run that actually executed, and re-running it would spend budget twice.
+ * `rename` over an existing file is atomic on POSIX and on Windows (libuv uses
+ * MOVEFILE_REPLACE_EXISTING), so the temp file is fsynced and then renamed
+ * OVER the target in one step; the target is never deleted first.
+ */
 async function writeRecordAtomic(dir: string, record: PreregisteredRunRecord): Promise<void> {
   const target = join(dir, `${record.armRunId}.json`);
   const tmp = join(dir, `.tmp-${record.armRunId}-${process.pid}-${Math.random().toString(36).slice(2, 8)}`);
-  await writeFile(tmp, `${stableStringify(record)}\n`, "utf8");
-  // `force` already tolerates a missing target; any OTHER failure (EPERM/EBUSY) is
-  // real and must NOT be swallowed — it propagates so the run record write fails closed.
-  await rm(target, { force: true });
-  await rename(tmp, target);
+  const fh = await open(tmp, "w");
+  try {
+    await fh.writeFile(`${stableStringify(record)}\n`, "utf8");
+    await fh.sync();
+  } finally {
+    await fh.close();
+  }
+  try {
+    await rename(tmp, target);
+  } catch (err) {
+    // A failed cleanup must not mask the rename failure, but it must not be a
+    // silent swallow either (P14-6): report the leftover temp file, then re-throw.
+    try {
+      await rm(tmp, { force: true });
+    } catch (cleanupErr) {
+      process.stderr.write(
+        `[degraded] run-record temp cleanup failed for ${tmp}: ${
+          cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)
+        }\n`,
+      );
+    }
+    throw err;
+  }
 }
 
 async function readRecord(dir: string, armRunId: string): Promise<PreregisteredRunRecord | null> {

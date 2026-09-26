@@ -32,7 +32,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { realpathSync, statSync } from "node:fs";
+import { lstatSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { readFileSync, readdirSync } from "node:fs";
 import { stableStringify } from "./manifest.js";
@@ -289,27 +289,105 @@ export function taxonomyRecordEligible(record: TaxonomyRecord, attributed: Reado
   return terminationOk && typeof record.toolFailures === "number" && record.toolFailures > 0;
 }
 
-function readFixture(dir: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  const fixtureDir = join(dir, "fixture");
-  let stat;
+/**
+ * B1 — a HARDENED case-file reader. Every descendant of the resolved case dir
+ * (request.md, expected.md and the whole `fixture/` subtree) is checked with
+ * `lstat` so a SYMLINK (including a Windows junction/reparse point, which is the
+ * same `isSymbolicLink()` shape to Node) is refused rather than followed. A
+ * `statSync(...).isDirectory()` walk — the previous behavior — silently FOLLOWS a
+ * link and can read outside `benchmarks/` or loop forever.
+ *
+ * Refusals are `CASE_PATH_ESCAPE` (fail closed): the caller treats them exactly
+ * like an unresolvable case dir. `visited` guards against a directory cycle even
+ * if a future edit admits links, and every file's `realpath` must stay under the
+ * resolved case dir so an ancestor link cannot smuggle bytes in.
+ */
+export function readCaseFiles(caseDir: string): { requestMd: string; expectedMd: string; fixture: Record<string, string> } {
+  let realCaseDir: string;
   try {
-    stat = statSync(fixtureDir);
+    realCaseDir = realpathSync(caseDir);
   } catch {
-    return out;
+    throw new CaseSelectionError("CASE_PATH_ESCAPE", "case directory could not be resolved to a real path");
   }
-  if (!stat.isDirectory()) return out;
-  const walk = (rel: string): void => {
-    const abs = rel === "" ? fixtureDir : join(fixtureDir, rel);
-    for (const name of readdirSync(abs).sort()) {
-      const childRel = rel === "" ? name : `${rel}/${name}`;
-      const childAbs = join(fixtureDir, childRel);
-      if (statSync(childAbs).isDirectory()) walk(childRel);
-      else out[childRel] = readFileSync(childAbs, "utf8");
+
+  const assertInside = (abs: string): void => {
+    let real: string;
+    try {
+      real = realpathSync(abs);
+    } catch {
+      throw new CaseSelectionError("CASE_PATH_ESCAPE", "case file could not be resolved to a real path");
+    }
+    const rel = relative(realCaseDir, real);
+    if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) {
+      throw new CaseSelectionError("CASE_PATH_ESCAPE", "case file resolves outside the allowed case directory");
     }
   };
-  walk("");
-  return out;
+
+  const readPlainFile = (abs: string): string => {
+    let st;
+    try {
+      st = lstatSync(abs);
+    } catch {
+      throw new CaseSelectionError("CASE_PATH_ESCAPE", "case file is missing or unreadable");
+    }
+    if (st.isSymbolicLink()) {
+      throw new CaseSelectionError("CASE_PATH_ESCAPE", "case file is a symlink, which is never followed");
+    }
+    if (!st.isFile()) {
+      throw new CaseSelectionError("CASE_PATH_ESCAPE", "case file is not a regular file");
+    }
+    assertInside(abs);
+    return readFileSync(abs, "utf8");
+  };
+
+  const fixture: Record<string, string> = {};
+  const visited = new Set<string>();
+  const walk = (abs: string, rel: string): void => {
+    let st;
+    try {
+      st = lstatSync(abs);
+    } catch {
+      return;
+    }
+    if (st.isSymbolicLink()) {
+      throw new CaseSelectionError("CASE_PATH_ESCAPE", "fixture descendant is a symlink, which is never followed");
+    }
+    if (!st.isDirectory()) return;
+    assertInside(abs);
+    const realDir = realpathSync(abs);
+    if (visited.has(realDir)) {
+      throw new CaseSelectionError("CASE_PATH_ESCAPE", "fixture directory cycle detected");
+    }
+    visited.add(realDir);
+    for (const name of readdirSync(abs).sort()) {
+      const childAbs = join(abs, name);
+      const childRel = rel === "" ? name : `${rel}/${name}`;
+      let childSt;
+      try {
+        childSt = lstatSync(childAbs);
+      } catch {
+        throw new CaseSelectionError("CASE_PATH_ESCAPE", "fixture descendant is missing or unreadable");
+      }
+      if (childSt.isSymbolicLink()) {
+        throw new CaseSelectionError("CASE_PATH_ESCAPE", "fixture descendant is a symlink, which is never followed");
+      }
+      if (childSt.isDirectory()) walk(childAbs, childRel);
+      else fixture[childRel] = readPlainFile(childAbs);
+    }
+  };
+  const fixtureDir = join(caseDir, "fixture");
+  try {
+    if (lstatSync(fixtureDir).isDirectory()) walk(fixtureDir, "");
+  } catch (err) {
+    if (err instanceof CaseSelectionError) throw err;
+    // The fixture directory does not exist: an empty fixture is valid.
+  }
+
+  return {
+    requestMd: readPlainFile(join(caseDir, "request.md")),
+    expectedMd: readPlainFile(join(caseDir, "expected.md")),
+    fixture,
+  };
 }
 
 export interface FrozenSelectionResolution {
@@ -392,14 +470,15 @@ export function selectionFromFrozenEvidence(opts: SelectionFromFrozenEvidenceOpt
     if (!taxonomyRecordEligible(record, attributed)) {
       throw new CaseSelectionError("ELIGIBILITY_UNPROVEN", "selected case does not satisfy the frozen eligibility rule");
     }
+    const files = readCaseFiles(dir);
     catalog.push(
       catalogEntryFromCase(
         {
           id: ref.caseId,
           suite: ref.suite,
-          requestMd: readFileSync(join(dir, "request.md"), "utf8"),
-          expectedMd: readFileSync(join(dir, "expected.md"), "utf8"),
-          fixture: readFixture(dir),
+          requestMd: files.requestMd,
+          expectedMd: files.expectedMd,
+          fixture: files.fixture,
         },
         { eligible: true, holdout: false, evidence: record },
       ),

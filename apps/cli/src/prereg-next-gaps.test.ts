@@ -38,7 +38,7 @@ import {
   resolveUsdMicrosPerCall,
 } from "./prereg-execution-identity.js";
 import { observeExecutionIdentity } from "./prereg-production-runner.js";
-import { REAL_PROVIDER_ID, STUB_PROVIDER_ID } from "./provider.js";
+import { REAL_PROVIDER_ID, STUB_PROVIDER_ID, DEFAULT_REAL_MODEL_ID } from "./provider.js";
 
 const REPO_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 
@@ -97,20 +97,28 @@ describe("B0 RED — G4: the per-call USD ceiling is one planning scalar, not a 
   it("[G4/B2] an unknown (proxy) endpoint must not be priced as if it were the default endpoint", () => {
     // The unbilled stub is a genuinely observable 0.
     expect(resolveUsdMicrosPerCall(STUB_PROVIDER_ID)).toBe(0);
-    // A real provider behind an arbitrary proxy endpoint has UNKNOWN billing.
-    // Today both resolve to the SAME scalar, because neither the model nor the
-    // endpoint participates in the price — a paid path cannot claim a USD bound
-    // on that basis.
+    // B2: the price must be bound to provider/model/ENDPOINT. The counterexample
+    // holds the model fixed and varies ONLY the endpoint, so today's single
+    // scalar (which ignores the endpoint entirely) returns the SAME value for
+    // both — a paid path cannot claim a USD bound on a proxy whose billing terms
+    // it never observed.
     const withProxy = observeExecutionIdentity(REPO_ROOT, {
       OPENAI_API_KEY: "TEST_ONLY-not-a-real-key",
-      OPENAI_MODEL: "arbitrary-model",
+      OPENAI_MODEL: DEFAULT_REAL_MODEL_ID,
       OPENAI_BASE_URL: "https://proxy.example.com/v1",
     });
     const withoutProxy = observeExecutionIdentity(REPO_ROOT, {
       OPENAI_API_KEY: "TEST_ONLY-not-a-real-key",
-      OPENAI_MODEL: "arbitrary-model",
+      OPENAI_MODEL: DEFAULT_REAL_MODEL_ID,
     });
-    expect(withProxy.usdMicrosPerCall).not.toBe(withoutProxy.usdMicrosPerCall);
+    expect(withoutProxy.usdMicrosPerCall).not.toBeNull();
+    expect(withProxy.usdMicrosPerCall).toBeNull();
+    // An unlisted model is equally unknown (no arbitrary-model pricing).
+    const unknownModel = observeExecutionIdentity(REPO_ROOT, {
+      OPENAI_API_KEY: "TEST_ONLY-not-a-real-key",
+      OPENAI_MODEL: "arbitrary-unlisted-model",
+    });
+    expect(unknownModel.usdMicrosPerCall).toBeNull();
     expect(resolveUsdMicrosPerCall(REAL_PROVIDER_ID)).not.toBeNull();
   });
 });

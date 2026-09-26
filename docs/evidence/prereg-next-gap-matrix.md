@@ -61,24 +61,25 @@ npx vitest run --config apps/cli/test-infra/red-next-gaps-vitest.config.ts -t "<
 ## 2. 反例 × 旧代码实测结果
 
 以下均为本地离线实测（`vitest`，无网络、无 provider、无 key）。"旧代码结果"是 HEAD 上的
-**失败输出**，即你要求"先记录旧代码的失败输出"。
+**失败输出**，即你要求"先记录旧代码的失败输出"。完整日志：`.ci/b0/red-next-gaps.log`
+（`git status --porcelain` 不跟踪 `.ci/`）；汇总：**14 failed (14)**，退出码 1。
 
-| 测试名 | 旧代码结果（HEAD 实测） | 目标（GREEN 判据） |
+| 测试名 | 旧代码结果（HEAD 实测，逐字） | 目标（GREEN 判据） |
 | --- | --- | --- |
-| `[G2/B2] a retry whose per-call token reservation cannot be afforded must NOT reach a second physical send` | `expected 2 to be 1`（物理发送发生了 2 次；无 `BUDGET_EXHAUSTED`） | 物理发送 = 1，且抛 `BUDGET_EXHAUSTED` |
-| `[G3/B2] settling a reservation id that was never reserved must be refused, not charged as a free call` | 断言 `.rejects.toThrow()` 失败：未预约 ID 结算成功，`charged.inputTokens = 1000` | 抛错，`charged.inputTokens = 0` |
-| `[G3/B2] a negative actual must be refused (it would silently refund the ledger)` | 断言 `.rejects.toThrow()` 失败：负数被接受 | 抛错 |
-| `[G3/B2] settling the SAME reservation twice must not charge a second time` | 断言 `.rejects.toThrow()` 失败：第二次仍入账（`charged.inputTokens = 200`） | 第二次抛错，`charged.inputTokens = 100` |
-| `[G6/B4] manifest.json = null with a byte-correct sha256 must verify=false` | `expected true to be false`（`verified === true`） | `verified === false`，`problems` 含 `manifest` |
-| `[G5/B1] the run observation must re-derive selection provenance + eligibility, not only case content` | 观察键集不含 `selectionProvenanceDigest` / `eligibilityDigests` | 两键均存在 |
-| `[G1/B3] the arm executor must launch the arm's own build as an isolated worker (stdio/IPC child)` | `prereg-arm-executor.ts` 无 `node:child_process` / `node:worker_threads` 导入 | 存在隔离 worker seam |
-| `[G1/B3] the production E2E must not synthesize an arm build from export {} stubs` | 源中匹配到 `export {}; // arm:` | 该合成构建已从 production-ready 判据移除 |
-| `[G4/B2] the pricing snapshot must be a versioned per-model/endpoint source with an invalidation window` | 快照键集缺 `invalidatedAtMs` / `requestBoundByModel`，且 `source` 含 "planning" | 键齐 + 来源可追溯 |
-| `[G4/B2] the per-call USD ceiling must dominate the worst case implied by the per-call token ceilings` | 可计算反例：`boundUsd (0.0005) < worstCaseUsd`（按每 1M token 15 USD、64k tokens/次） | 上界 ≥ 最坏情形（或明确拒绝付费） |
-| `[G4/B2] an unknown (proxy) endpoint must not be priced as if it were the default endpoint` | 两个不同 endpoint 得到**相同** `usdMicrosPerCall` | 未知代理端点 → `null`（`PRICING_UNKNOWN`） |
-| `[G7/B5] the forward execution must record its transport so in-process ≠ release-subprocess` | 源中无 `transport: "release-cli..."` / `executionBackend: "release-cli..."` | 正向执行记录传输来源 |
-| `[G7/B5] the aggregate must not be fed injected fake counts / the initial budget as the ledger` | 源中匹配到 `providerCalls: fake.entered()` 与 `budgetRemaining: artifact.budget.campaignWorstCaseModelCalls` | 不再注入，读 durable ledger |
-| `[G7/B6] productionOfflineReady must not claim the full forward schedule is proven by the in-process fake` | 源中含 "executes the full paired schedule through the shipped observer+executor with a counting fake transport" | readiness 拆分为 PARTIAL/NOT_READY |
+| `[G2/B2] a retry whose per-call token reservation cannot be afforded must NOT reach a second physical send` | `AssertionError: expected 2 to be 1`（物理发送发生 2 次，无 `BUDGET_EXHAUSTED`） | 物理发送 = 1，且抛 `BUDGET_EXHAUSTED` |
+| `[G3/B2] settling a reservation id that was never reserved must be refused, not charged as a free call` | `AssertionError: promise resolved "{ caps: { …(7) }, …(7) }" instead of rejecting` | 抛错，`charged.inputTokens = 0` |
+| `[G3/B2] a negative actual must be refused (it would silently refund the ledger)` | `AssertionError: promise resolved "{ caps: { …(7) }, …(7) }" instead of rejecting` | 抛错 |
+| `[G3/B2] settling the SAME reservation twice must not charge a second time` | `AssertionError: promise resolved "{ caps: { …(7) }, …(7) }" instead of rejecting` | 第二次抛错，`charged.inputTokens = 100` |
+| `[G6/B4] manifest.json = null with a byte-correct sha256 must verify=false` | `AssertionError: expected true to be false`（`verified === true`） | `verified === false`，`problems` 含 `manifest` |
+| `[G5/B1] the run observation must re-derive selection provenance + eligibility, not only case content` | `AssertionError: expected [ 'candidateSourceSha', …(13) ] to include 'selectionProvenanceDigest'` | `selectionProvenanceDigest` / `eligibilityDigests` 两键均存在 |
+| `[G1/B3] the arm executor must launch the arm's own build as an isolated worker (stdio/IPC child)` | `AssertionError: expected false to be true`（源无 `node:child_process` / `node:worker_threads`） | 存在隔离 worker seam |
+| `[G1/B3] the production E2E must not synthesize an arm build from export {} stubs` | `AssertionError: expected '#!/usr/bin/env node…' not to match /export \{\}; \/\/ arm:/` | 该合成构建已从 production-ready 判据移除 |
+| `[G4/B2] the pricing snapshot must be a versioned per-model/endpoint source with an invalidation window` | `AssertionError: expected [ 'version', 'source', …(1) ] to deeply equal ArrayContaining{…}` | 键齐（含 `invalidatedAtMs` / `requestBoundByModel`）+ 来源可追溯 |
+| `[G4/B2] the per-call USD ceiling must dominate the worst case implied by the per-call token ceilings` | `AssertionError: expected 0.0005 to be greater than or equal to 0.96`（64k tokens × 15 USD/1M） | 上界 ≥ 最坏情形（或明确拒绝付费） |
+| `[G4/B2] an unknown (proxy) endpoint must not be priced as if it were the default endpoint` | `AssertionError: expected 500 not to be 500`（两端点同为 500 micros） | 未知代理端点 → `null`（`PRICING_UNKNOWN`） |
+| `[G7/B5] the forward execution must record its transport so in-process ≠ release-subprocess` | `AssertionError: expected false to be true` | 正向执行记录 `transport`/`executionBackend` |
+| `[G7/B5] the aggregate must not be fed injected fake counts / the initial budget as the ledger` | `AssertionError: expected '#!/usr/bin/env node…' not to match /providerCalls:\s*fake\.entered\(\)/` | 不再注入，读 durable ledger |
+| `[G7/B6] productionOfflineReady must not claim the full forward schedule is proven by the in-process fake` | `AssertionError: expected '#!/usr/bin/env node…' not to match /executes the full paired schedule thr…/` | readiness 拆分为 PARTIAL/NOT_READY |
 
 ### 2.1 关于 G1 / G7 反例的性质（如实说明）
 

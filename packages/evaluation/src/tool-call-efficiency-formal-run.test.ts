@@ -98,7 +98,11 @@ function sha(s: string): string {
 
 function observationFor(a: ToolCallEfficiencyPreregistrationV2, over: Partial<PreregisteredCampaignObservationV2> = {}): PreregisteredCampaignObservationV2 {
   const caseContentDigests: Record<string, string> = {};
-  for (const c of a.dataset.cases) caseContentDigests[c.caseId] = c.contentDigest;
+  const eligibilityDigests: Record<string, string> = {};
+  for (const c of a.dataset.cases) {
+    caseContentDigests[c.caseId] = c.contentDigest;
+    eligibilityDigests[c.caseId] = c.eligibilityDigest;
+  }
   return {
     candidateSourceSha: a.subject.candidateSourceSha,
     cleanTree: true,
@@ -112,6 +116,8 @@ function observationFor(a: ToolCallEfficiencyPreregistrationV2, over: Partial<Pr
     endpointDigest: captureEndpointIdentity(ENDPOINT)!,
     requestProfileDigest: sha(stableStringify(REQUEST_PROFILE)),
     caseContentDigests,
+    eligibilityDigests,
+    selectionProvenanceDigest: a.dataset.selectionProvenanceDigest,
     decisionPolicyDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
     // A KNOWN, non-null price: the fixture is money-bounded, so a null price
     // would (correctly) be refused as PRICING_UNKNOWN before admission.
@@ -392,7 +398,16 @@ describe("N3 — the ledger is the real authority on the call ceiling", () => {
   });
 
   it("bills provider-internal retries as further calls", async () => {
-    const a = buildToolCallEfficiencyPreregistrationV2(preregOptions());
+    // B2 — each physical attempt (the initial send AND every internal retry)
+    // now reserves its OWN cost dimensions, so the budget must afford THREE
+    // per-attempt output ceilings (3 × 32_000). The fixture's 64_000 affords
+    // only two attempts, which would (correctly) refuse the second retry; this
+    // test is about the call LEDGER counting retries, so the budget is raised to
+    // let all three attempts through.
+    const a = buildToolCallEfficiencyPreregistrationV2({
+      ...preregOptions(),
+      budget: { ...preregOptions().budget, maxOutputTokens: 96_000, maxTotalTokens: 416_000 },
+    });
     const dir = await tempDir();
     const fake = fakeProvider({ retries: 2 });
     const { result } = await gate({ artifact: a, budgetDir: dir, makeProvider: () => fake.provider });

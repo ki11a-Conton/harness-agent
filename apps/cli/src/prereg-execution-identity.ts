@@ -43,7 +43,6 @@ import {
 } from "@ar/evaluation";
 import {
   BENCHMARK_STALL_POLICY,
-  PREFLIGHT_ESTIMATE,
   runtimeConfigForHash,
   type BenchmarkCommandOptions,
 } from "./benchmark-command.js";
@@ -137,34 +136,69 @@ export function formalExecutionProfile(env: NodeJS.ProcessEnv = process.env): Fo
 }
 
 /**
- * A VERSIONED per-call USD ceiling. The single source is the benchmark
- * preflight's conservative `costPerCallUsd` (a worst-case planning ceiling, not
- * a claim) — see `PREFLIGHT_ESTIMATE`. Rounding to micro-USD keeps the value an
- * integer, as the observation type requires.
+ * B2 — a VERSIONED, TRACEABLE per-model / per-endpoint per-call USD bound.
  *
- * A2 — `usdMicrosPerCall` is read LAZILY (a getter) rather than at module-eval
- * time: `benchmark-command.ts` and this module sit on a module cycle (the CLI
- * entry point imports the prereg command, which imports the benchmark factory),
- * so a top-level `PREFLIGHT_ESTIMATE` read would hit the temporal dead zone and
- * crash every entry that loads `main`. The getter defers the read until after
- * all modules are initialized.
+ * The previous version was ONE scalar read from the benchmark preflight's
+ * `PREFLIGHT_ESTIMATE.costPerCallUsd` — a PLANNING number applied to every real
+ * provider, model and endpoint alike. A planning estimate is not a billing fact:
+ * it cannot bound a given model's worst case, it is blind to a proxy/gateway
+ * endpoint's own markup, and it can silently go stale. The paid gate must not
+ * claim a USD bound on that basis.
+ *
+ * This snapshot instead binds:
+ *   - `version`               the snapshot revision (bump on any change);
+ *   - `source`                an external, traceable rate source (not the planner);
+ *   - `invalidatedAtMs`       the wall-clock after which the bound is VOID (a
+ *                             stale snapshot resolves to `null` → PRICING_UNKNOWN);
+ *   - `requestBoundByModel`   the worst-case USD micros ONE request may cost for
+ *                             a KNOWN model on the FIRST-PARTY endpoint. It must
+ *                             dominate the per-call token ceilings at published
+ *                             rates (see `FORMAL_PER_CALL_*_TOKEN_CEILING`).
+ *
+ * A custom `OPENAI_BASE_URL` (a proxy) and an unlisted model both resolve to
+ * `null`: unknown billing is a refusal, never the first-party price.
  */
 export const PRICING_SNAPSHOT_V1 = {
-  version: "pricing-snapshot-v1",
-  source: "apps/cli/src/benchmark-command.ts PREFLIGHT_ESTIMATE.costPerCallUsd (conservative per-call planning ceiling)",
-  get usdMicrosPerCall(): number {
-    return Math.round(PREFLIGHT_ESTIMATE.costPerCallUsd * 1_000_000);
-  },
+  version: "pricing-snapshot-v2",
+  source: "provider published rate card (list price, highest tier), recorded out of band in docs/evidence",
+  invalidatedAtMs: 1_893_456_000_000, // 2030-01-01T00:00:00Z — after this the bound is void
+  requestBoundByModel: {
+    [DEFAULT_REAL_MODEL_ID]: 2_500_000,
+  } as Readonly<Record<string, number>>,
+  /** The default model's per-call bound (kept as a scalar for simple readers). */
+  usdMicrosPerCall: 2_500_000,
 } as const;
 
+/** TRUE while the snapshot is inside its validity window. */
+export function pricingSnapshotValid(nowMs: number = Date.now()): boolean {
+  return nowMs < PRICING_SNAPSHOT_V1.invalidatedAtMs;
+}
+
+export interface PriceQuery {
+  /** The model the run will actually use; defaults to the first-party model. */
+  modelId?: string;
+  /** The explicit base URL, or `null`/absent for the provider default endpoint. */
+  endpointBaseUrl?: string | null;
+}
+
 /**
- * The observed per-call price for a provider, or `null` when it cannot be
- * established. The stub makes no externally-billed call, so its price is a
- * genuinely observable `0`; any other provider without a snapshot entry is
- * `null` (unknown), which the money-bounded gate refuses as `PRICING_UNKNOWN`.
+ * The observed per-call price for a provider/model/endpoint, or `null` when it
+ * cannot be established. The stub makes no externally-billed call, so its price
+ * is a genuinely observable `0`. A real provider is priced ONLY when the
+ * snapshot is current AND the request targets the FIRST-PARTY endpoint AND the
+ * model has a published bound; a proxy endpoint or an unlisted model is `null`
+ * (unknown), which the money-bounded gate refuses as `PRICING_UNKNOWN`.
  */
-export function resolveUsdMicrosPerCall(providerId: string): number | null {
+export function resolveUsdMicrosPerCall(providerId: string, query: PriceQuery = {}): number | null {
   if (providerId === STUB_PROVIDER_ID) return 0;
-  if (providerId === REAL_PROVIDER_ID) return PRICING_SNAPSHOT_V1.usdMicrosPerCall;
-  return null;
+  if (providerId !== REAL_PROVIDER_ID) return null;
+  if (!pricingSnapshotValid()) return null;
+  const baseUrl = query.endpointBaseUrl ?? null;
+  if (baseUrl !== null && baseUrl !== "") {
+    // A proxy/gateway's billing terms are not this snapshot's to claim.
+    return null;
+  }
+  const modelId = query.modelId ?? DEFAULT_REAL_MODEL_ID;
+  const bound = PRICING_SNAPSHOT_V1.requestBoundByModel[modelId];
+  return typeof bound === "number" ? bound : null;
 }

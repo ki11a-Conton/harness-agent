@@ -1,5 +1,5 @@
 /**
- * A5 — the PRODUCTION paired-arm executor for the v2 pre-registered campaign.
+ * A5/B3 — the PRODUCTION paired-arm executor for the v2 pre-registered campaign.
  *
  * WHY THIS EXISTS
  * ---------------
@@ -9,46 +9,52 @@
  * was the correct fail-closed stop, but a campaign that only ever refuses is not
  * a runner. This module supplies the executor seam.
  *
- * WHAT IT ACTUALLY DOES (per `(case, repetition, arm, orderIndex)`)
- * -----------------------------------------------------------------
- *   1. Resolve the arm's FROZEN checkout from `R97_ARM_BASELINE_DIR` /
- *      `R97_ARM_CANDIDATE_DIR` and derive its real build digest. A missing
- *      checkout is `ARM_CHECKOUT_MISSING`, a checkout whose declared execution
- *      closure cannot be established is `ARM_BUILD_UNRESOLVABLE`, and two arms
- *      resolving to the SAME build digest is `ARM_BUILD_IDENTICAL` — an
- *      experiment that runs one build twice is not a paired experiment.
- *   2. Locate the case in the FROZEN selection (never from a caller claim),
- *      load its real `request.md`/`expected.md`/`fixture`/`case.json`, and run
- *      it through the REAL benchmark harness (`runOneCase`) in an isolated
- *      workspace — the same `ToolOrchestrator` / sandbox policy / real
- *      `TaskVerifier` production uses. The arm's mechanism difference is wired
- *      by the resolved arm (`candidate` for the candidate arm, `undefined` for
- *      the baseline), never by a flag on the command line.
- *   3. Write the IMMUTABLE per-run evidence artifacts (`manifest.json`,
- *      `verifier.json`, `security.json`, and `activation.json` for an activated
- *      candidate) into the driver-created evidence directory, and return the
- *      declared evidence whose digests are the sha256 of EXACTLY those bytes.
- *      A6 re-reads them; a fabricated digest has nothing to hash.
+ * MEASURED GAP G1 (plan(20260926-070459).md §G1) — NOW CLOSED
+ * -----------------------------------------------------------
+ * The first A5 executor computed two checkout DIGESTS and then ran the DRIVER
+ * process's own `runOneCase` with a `candidate` flag. Two different digests did
+ * not mean two different builds ran: both arms were ONE build under two names,
+ * so the "pair" was not a pair. B3 replaces that with a real ISOLATED WORKER:
  *
- * THE PROVIDER IS INJECTED, NEVER CONSTRUCTED. `ctx.provider` is the
- * budget-wrapped provider the A4 gate built — this executor never reads a key,
- * never resolves an env provider and never opens a second network path. If the
- * driver does not hand one over, the run refuses rather than fabricating a call.
+ *   1. The driver resolves each arm's FROZEN checkout and PRE-FLIGHT verifies it
+ *      before any request: the declared execution closure must resolve
+ *      (`computeArmBuildDigestV1`), the entry file must exist, and — when
+ *      `R97_ARM_REQUIRE_GIT=1` — the checkout must be a git work tree with a
+ *      readable HEAD and a clean `status --porcelain`. Two arms resolving to the
+ *      SAME build digest is `ARM_BUILD_IDENTICAL`; an unsupported isolation
+ *      backend is `ARM_ISOLATION_UNSUPPORTED`.
+ *   2. The driver spawns `scripts/e4/prereg-arm-isolated-worker.mjs` as a real
+ *      CHILD PROCESS and hands it the ONE case plus the checkout to load. The
+ *      child loads `apps/cli/dist/benchmark-command.js` FROM ITS OWN CHECKOUT,
+ *      reads the versioned mechanism probe that build exports, hashes the entry
+ *      bytes it actually loaded, and runs the case through THAT build's own
+ *      `runOneCase`.
+ *   3. Every model request the child's build makes is a stdio frame back to the
+ *      driver, serviced by the ONE budget-wrapped `ctx.provider` (the A4/B2
+ *      channel). The child owns no provider and reads no key; the physical-call
+ *      count is measured where the call really happens.
+ *   4. The driver INDEPENDENTLY compares the child's reported entry hash + probe
+ *      to its own pre-flight values. A mismatch is `ARM_BUILD_PROBE_MISMATCH`, so
+ *      a driver-only flag can no longer make two arms look different.
+ *   5. The IMMUTABLE per-run evidence (`manifest.json`, `verifier.json`,
+ *      `security.json`, and `activation.json` for an activated candidate) is
+ *      written into the driver-created evidence directory, and A6 re-reads it.
  *
  * HONEST LIMITS (not claimed here)
  * --------------------------------
- *   - The harness runs IN this process (the driver's build) with the arm's
- *     mechanism wiring; it does not spawn the arm checkout's own compiled
- *     `benchmark-command.js` in a child process. Cross-process arm-build
- *     isolation is the R97 worker path and remains a separate item.
  *   - Hashing a manifest is an INTEGRITY check, not proof of honest execution;
- *     binding the manifest to the trusted budget journal is a further A6 item.
+ *     binding the manifest to the trusted budget journal is a further B4 item.
+ *   - `R97_ARM_REQUIRE_GIT=1` is the strict git-identity switch. Off by default
+ *     so an offline fixture checkout (a plain directory, not a work tree) can
+ *     still exercise the worker protocol; a production run turns it on.
  */
 
+import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
-import { statSync } from "node:fs";
 import { join } from "node:path";
+import type { ModelEvent, ModelProvider } from "@ar/contracts";
 import {
   PREREG_RUN_EVIDENCE_FILENAMES,
   PREREG_RUN_MANIFEST_SCHEMA,
@@ -63,13 +69,11 @@ import {
   stableStringify,
   type BenchmarkCase,
   type EvalOutcome,
-  type EvalSuite,
   type PreregisteredArmContext,
   type PreregisteredArmEvidence,
   type PreregisteredArmOutcome,
   type PreregisteredArmRunner,
 } from "@ar/evaluation";
-import { runOneCase, type RunOneCaseOptions } from "./benchmark-command.js";
 import { formalExecutionProfile } from "./prereg-execution-identity.js";
 
 /** A stable, machine-readable reason code for every fail-closed refusal here. */
@@ -79,12 +83,40 @@ export const ARM_BUILD_UNRESOLVABLE = "ARM_BUILD_UNRESOLVABLE";
 export const ARM_BUILD_IDENTICAL = "ARM_BUILD_IDENTICAL";
 export const ARM_CASE_NOT_FOUND = "ARM_CASE_NOT_FOUND";
 export const ARM_EVIDENCE_DIR_MISSING = "ARM_EVIDENCE_DIR_MISSING";
+/** B3 — the pre-registration's isolation backend cannot be honoured here. */
+export const ARM_ISOLATION_UNSUPPORTED = "ARM_ISOLATION_UNSUPPORTED";
+/** B3 — the arm's own build entry is missing/unreadable in its checkout. */
+export const ARM_WORKER_ENTRY_MISSING = "ARM_WORKER_ENTRY_MISSING";
+/** B3 — the child reported a build identity the driver cannot corroborate. */
+export const ARM_BUILD_PROBE_MISMATCH = "ARM_BUILD_PROBE_MISMATCH";
+/** B3 — the child process failed, exited early, or produced no result. */
+export const ARM_WORKER_FAILED = "ARM_WORKER_FAILED";
+/** B3 — the child exceeded its wall-clock bound and was killed. */
+export const ARM_WORKER_TIMEOUT = "ARM_WORKER_TIMEOUT";
 
 /** The activation artifact schema (only written for an activated candidate). */
 export const PREREG_RUN_ACTIVATION_SCHEMA = "prereg-run-activation-v1";
 
 /** Identity stamped on every manifest this executor writes. */
 export const PREREG_ARM_EXECUTOR_ID = "prereg-arm-executor-v1";
+
+/** B3 — the shipped child worker, relative to the repo root. */
+export const PREREG_ARM_WORKER_REL = join("scripts", "e4", "prereg-arm-isolated-worker.mjs");
+/** The one result line the child writes on stdout. */
+export const ARM_WORKER_RESULT_SENTINEL = "__PREREG_ARM_RESULT__";
+
+/** B3 — the isolation backends this executor can actually honour. A pre-registered
+ *  experiment naming anything else is refused before any request. */
+const SUPPORTED_ISOLATION: Record<string, readonly string[]> = {
+  "process-exec": ["process"],
+};
+
+/** B3 — the mechanism probe export every real arm build carries. */
+export const ARM_PROBE_EXPORT = "R97_ARM_PROBE";
+
+/** Environment variables the worker must NOT inherit: it owns no provider and
+ *  reads no key. Stripping them is defence in depth on top of the proxy design. */
+const PROVIDER_ENV_KEYS = ["OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL", "RUN_PAID_BENCHMARKS"] as const;
 
 function sha256Hex(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
@@ -105,6 +137,14 @@ function refuse(code: string, message: string): never {
   throw err;
 }
 
+function git(root: string, args: readonly string[]): string | null {
+  try {
+    return execFileSync("git", ["-C", root, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  } catch {
+    return null;
+  }
+}
+
 /**
  * The arm's real build digest, or a STABLE refusal. A directory that exists but
  * whose declared execution closure cannot be established (a missing/moved
@@ -116,9 +156,6 @@ function armBuildDigestOrRefuse(armId: "baseline" | "candidate", dir: string): s
   try {
     return computeArmBuildDigestV1(dir);
   } catch {
-    // The underlying identity error embeds an absolute path; it is deliberately
-    // NOT echoed into a refusal message (plan §A1/A2: no absolute paths in
-    // public output).
     refuse(
       ARM_BUILD_UNRESOLVABLE,
       `the ${armId} arm checkout exists but its declared execution closure (${R97_ARM_BUILD_ENTRIES.length} entries, R97_ARM_${armId.toUpperCase()}_DIR) cannot be established — the checkout is not a built tree`,
@@ -126,27 +163,101 @@ function armBuildDigestOrRefuse(armId: "baseline" | "candidate", dir: string): s
   }
 }
 
+/** The arm's own build entry, hashed. Missing/unreadable → the arm cannot run. */
+function armEntryPathOrRefuse(armId: "baseline" | "candidate", dir: string): { path: string; sha256: string } {
+  // `R97_ARM_BUILD_ENTRIES[1]` is `apps/cli/dist/benchmark-command.js`, the entry
+  // the worker loads. Reading the position from the shared constant keeps the
+  // worker's target and the driver's pre-flight the same file.
+  const rel = R97_ARM_BUILD_ENTRIES.find((e) => e.endsWith("benchmark-command.js"));
+  if (rel === undefined) refuse(ARM_WORKER_ENTRY_MISSING, "the shared arm build entry list names no benchmark-command.js");
+  const path = join(dir, rel);
+  try {
+    if (!statSync(path).isFile()) throw new Error("not a file");
+  } catch {
+    refuse(ARM_WORKER_ENTRY_MISSING, `the ${armId} arm has no readable build entry ${rel} in its checkout — the arm cannot be launched`);
+  }
+  return { path, sha256: sha256Hex(readFileSync(path, "utf8")) };
+}
+
+/** The worker must not inherit provider credentials: it uses the driver's channel. */
+function sanitizedWorkerEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = { ...env };
+  for (const k of PROVIDER_ENV_KEYS) delete out[k];
+  return out;
+}
+
+/** A line-delimited reader over a child stream that never loses a frame. */
+function createLineReader(stream: NodeJS.ReadableStream): { next: () => Promise<string | null> } {
+  let buffer = "";
+  const queued: string[] = [];
+  const waiters: Array<(line: string | null) => void> = [];
+  let ended = false;
+  stream.setEncoding("utf8");
+  stream.on("data", (chunk: string) => {
+    buffer += chunk;
+    let nl: number;
+    while ((nl = buffer.indexOf("\n")) !== -1) {
+      const line = buffer.slice(0, nl);
+      buffer = buffer.slice(nl + 1);
+      if (line.trim() === "") continue;
+      if (waiters.length > 0) waiters.shift()!(line);
+      else queued.push(line);
+    }
+  });
+  stream.on("end", () => {
+    ended = true;
+    while (waiters.length > 0) waiters.shift()!(null);
+  });
+  stream.on("error", () => {
+    ended = true;
+    while (waiters.length > 0) waiters.shift()!(null);
+  });
+  return {
+    next(): Promise<string | null> {
+      if (queued.length > 0) return Promise.resolve(queued.shift()!);
+      if (ended) return Promise.resolve(null);
+      return new Promise((resolve) => waiters.push(resolve));
+    },
+  };
+}
+
+interface WorkerReport {
+  ok: boolean;
+  code?: string;
+  error?: string;
+  armBuildReport?: { entryRel: string; entrySha256: string; probe: string } | null;
+  outcome?: EvalOutcome;
+  proxyBudget?: { modelCalls: number };
+}
+
 export interface PreregArmExecutorDeps {
   /** Repository root the frozen selection and the real cases are read from. */
   rootDir: string;
   /** Environment the arm checkouts and the execution profile are read from. */
   env: NodeJS.ProcessEnv;
-  /** Override the per-case runner (tests inject a deterministic one). The
-   *  default is the REAL benchmark harness. */
-  runCase?: (caseDef: BenchmarkCase, opts: RunOneCaseOptions, suite: EvalSuite) => Promise<EvalOutcome>;
+  /** B3 — the pre-registration's isolation contract. Defaults to the shipped
+   *  `process-exec`/`process` backend; anything else is refused. */
+  isolation?: { isolationBackendId?: string; isolationStrength?: string };
+  /** B3 — override the child worker path (tests). Defaults to the shipped one. */
+  workerPath?: string;
+  /** B3 — the wall-clock bound on one arm-run child process. */
+  workerTimeoutMs?: number;
 }
 
 /**
  * Build the real `runArm`. Every prerequisite the executor cannot establish —
  * a frozen checkout, two distinct arm builds, a real case, an evidence
- * directory, a budgeted provider — is a refusal with a stable code, never a
+ * directory, a budgeted provider, a supported isolation backend, a child that
+ * actually ran the arm's own build — is a refusal with a stable code, never a
  * fabricated `{ status: "passed" }`.
  */
 export function createPreregArmExecutor(deps: PreregArmExecutorDeps): PreregisteredArmRunner {
   const root = deps.rootDir;
   const env = deps.env;
-  const runCase = deps.runCase ?? ((caseDef, opts, suite) => runOneCase(caseDef, opts, suite));
   const profile = formalExecutionProfile(env);
+  const workerPath = deps.workerPath ?? join(root, PREREG_ARM_WORKER_REL);
+  const workerTimeoutMs = deps.workerTimeoutMs ?? 600_000;
+  const requireGit = env["R97_ARM_REQUIRE_GIT"] === "1";
 
   // The frozen selection is the ONLY source of `caseId -> suite`. It is read
   // once, lazily, so construction stays free of I/O.
@@ -160,6 +271,19 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
   };
 
   return async (arm, ctx: PreregisteredArmContext): Promise<PreregisteredArmOutcome> => {
+    // --- 0. the isolation contract the pre-registration actually named ------
+    const backendId = deps.isolation?.isolationBackendId ?? "process-exec";
+    const strength = deps.isolation?.isolationStrength ?? "process";
+    const allowed = SUPPORTED_ISOLATION[backendId];
+    if (allowed === undefined || !allowed.includes(strength)) {
+      refuse(
+        ARM_ISOLATION_UNSUPPORTED,
+        `the pre-registered isolation backend ${backendId}/${strength} cannot be honoured by this build (supported: ${Object.entries(SUPPORTED_ISOLATION)
+          .map(([b, s]) => `${b}/${s.join("|")}`)
+          .join(", ")})`,
+      );
+    }
+
     // --- 1. the frozen arm checkout and its real build digest ---------------
     const armDir = arm.armId === "candidate" ? env["R97_ARM_CANDIDATE_DIR"] : env["R97_ARM_BASELINE_DIR"];
     if (!isDir(armDir)) {
@@ -176,6 +300,26 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
         `${arm.armId} and its counterpart resolve to the SAME build digest (${armBuildDigest.slice(0, 12)}…) — an experiment with one build is not a paired experiment`,
       );
     }
+    // Pre-flight the entry the worker will load, and (when required) the git
+    // identity of BOTH checkouts — all BEFORE any request leaves.
+    const entry = armEntryPathOrRefuse(arm.armId, armDir);
+    if (requireGit) {
+      for (const [id, dir] of [
+        [arm.armId, armDir],
+        [arm.armId === "candidate" ? "baseline" : "candidate", otherDir],
+      ] as const) {
+        if (!isDir(dir)) continue;
+        const head = git(dir, ["rev-parse", "HEAD"]);
+        const porcelain = git(dir, ["status", "--porcelain"]);
+        if (head === null || !/^[0-9a-f]{40}$/.test(head) || porcelain !== "") {
+          refuse(
+            ARM_BUILD_UNRESOLVABLE,
+            `R97_ARM_REQUIRE_GIT=1 but the ${id} arm checkout is not a clean git work tree (head=${head === null ? "unreadable" : head.slice(0, 12)}, dirty=${porcelain !== ""})`,
+          );
+        }
+      }
+    }
+
     // --- 2. the evidence directory the A6 re-verification reads back --------
     if (typeof ctx.evidenceDir !== "string" || ctx.evidenceDir.length === 0) {
       refuse(
@@ -193,13 +337,19 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
     if (caseDir === null) {
       refuse(ARM_CASE_NOT_FOUND, `case ${suite}/${arm.caseId} is not a readable benchmarks/<suite>/<caseId> directory`);
     }
+    if (!existsSync(workerPath)) {
+      refuse(ARM_WORKER_ENTRY_MISSING, `the isolated arm worker ${PREREG_ARM_WORKER_REL} is not present in this checkout`);
+    }
     const caseDef = await loadBenchmarkCase(caseDir);
 
-    // --- 4. run it through the real harness with the INJECTED provider ------
-    const evaluated = await runCase(
+    // --- 4. run the arm's OWN build in an isolated child process ------------
+    const launched = await launchArmWorker({
+      workerPath,
+      env,
+      timeoutMs: workerTimeoutMs,
+      checkoutDir: armDir,
       caseDef,
-      {
-        provider: ctx.provider,
+      runOptions: {
         modelId: profile.provider.modelId,
         budgetTokens: profile.budgetTokens,
         // The mechanism difference IS the arm: candidate → the pre-registered
@@ -209,11 +359,155 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
         repetition: arm.repetition + 1,
         attempt: 1,
       },
-      (caseDef.suite ?? "regression") as EvalSuite,
-    );
+      provider: ctx.provider,
+    });
 
-    return writeArmEvidence({ arm, ctx, armBuildDigest, evaluated });
+    // --- 5. independently corroborate the reported build identity ----------
+    const report = launched.report;
+    if (report.armBuildReport === null || report.armBuildReport === undefined) {
+      refuse(ARM_BUILD_PROBE_MISMATCH, `the ${arm.armId} worker ran no arm build (no build report was returned)`);
+    }
+    if (report.armBuildReport.entrySha256 !== entry.sha256) {
+      refuse(
+        ARM_BUILD_PROBE_MISMATCH,
+        `the ${arm.armId} worker loaded a build entry (${report.armBuildReport.entrySha256.slice(0, 12)}…) that is not the pre-flight verified entry (${entry.sha256.slice(0, 12)}…)`,
+      );
+    }
+    if (report.armBuildReport.entryRel !== R97_ARM_BUILD_ENTRIES.find((e) => e.endsWith("benchmark-command.js"))) {
+      refuse(ARM_BUILD_PROBE_MISMATCH, `the ${arm.armId} worker loaded ${report.armBuildReport.entryRel}, not the declared build entry`);
+    }
+    if (report.outcome === undefined) {
+      refuse(ARM_WORKER_FAILED, `the ${arm.armId} worker ran the build but returned no case outcome`);
+    }
+
+    return writeArmEvidence({
+      arm,
+      ctx,
+      armBuildDigest,
+      armEntrySha256: entry.sha256,
+      armProbe: report.armBuildReport.probe,
+      workerModelCalls: report.proxyBudget?.modelCalls ?? null,
+      evaluated: report.outcome,
+    });
   };
+}
+
+// ---------------------------------------------------------------------------
+// The child-process boundary
+// ---------------------------------------------------------------------------
+
+interface LaunchArmWorkerOptions {
+  workerPath: string;
+  env: NodeJS.ProcessEnv;
+  timeoutMs: number;
+  checkoutDir: string;
+  caseDef: BenchmarkCase;
+  runOptions: Record<string, unknown>;
+  /** The ONE budget-wrapped provider. The child owns none. */
+  provider: ModelProvider;
+}
+
+interface LaunchArmWorkerResult {
+  report: WorkerReport;
+  /** MEASURED physical provider entries this driver serviced for the child. */
+  physicalProviderCalls: number;
+  exitCode: number | null;
+}
+
+/**
+ * Spawn the isolated worker, service every model request it makes with the ONE
+ * budget-wrapped provider, and return the single result frame it writes.
+ *
+ * The child is given a SANITIZED environment (no provider keys), so it cannot
+ * open a second, unbudgeted transport even by accident. A child that dies, times
+ * out, or writes no result is a stable refusal — never a fabricated outcome.
+ */
+async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmWorkerResult> {
+  const child = spawn(process.execPath, [opts.workerPath], {
+    stdio: ["pipe", "pipe", "pipe"],
+    env: sanitizedWorkerEnv(opts.env),
+    windowsHide: true,
+  });
+  const reader = createLineReader(child.stdout);
+  let physicalProviderCalls = 0;
+  let stderr = "";
+  child.stderr?.setEncoding("utf8");
+  child.stderr?.on("data", (chunk: string) => {
+    stderr += chunk;
+  });
+
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    child.kill();
+  }, opts.timeoutMs);
+  timer.unref?.();
+
+  const exited = new Promise<number | null>((resolve) => {
+    child.on("exit", (code) => resolve(code));
+    child.on("error", () => resolve(null));
+  });
+
+  // Kick the child off with its single options line.
+  child.stdin?.write(
+    `${JSON.stringify({ checkoutDir: opts.checkoutDir, case: opts.caseDef, runOptions: opts.runOptions })}\n`,
+  );
+
+  let report: WorkerReport | null = null;
+  let sawResult = false;
+  try {
+    for (;;) {
+      const line = await reader.next();
+      if (line === null) break;
+      if (line.startsWith(ARM_WORKER_RESULT_SENTINEL)) {
+        sawResult = true;
+        report = JSON.parse(line.slice(ARM_WORKER_RESULT_SENTINEL.length)) as WorkerReport;
+        break;
+      }
+      let frame: { t?: string; id?: number; request?: unknown };
+      try {
+        frame = JSON.parse(line) as typeof frame;
+      } catch {
+        continue; // a non-frame line is ignored
+      }
+      if (frame.t !== "request" || typeof frame.id !== "number") continue;
+      // Service the call with the ONE budget channel and stream the events back.
+      try {
+        const client = opts.provider.createClient({ id: opts.runOptions["modelId"] as string } as never, {} as never);
+        physicalProviderCalls += 1;
+        for await (const event of client.generate(frame.request as never, new AbortController().signal)) {
+          child.stdin?.write(`${JSON.stringify({ t: "event", id: frame.id, event })}\n`);
+          if ((event as ModelEvent).type === "completed" || (event as ModelEvent).type === "error") break;
+        }
+        child.stdin?.write(`${JSON.stringify({ t: "done", id: frame.id })}\n`);
+      } catch (err) {
+        child.stdin?.write(
+          `${JSON.stringify({ t: "error", id: frame.id, message: err instanceof Error ? err.message : String(err) })}\n`,
+        );
+      }
+    }
+  } finally {
+    clearTimeout(timer);
+    child.stdin?.end();
+  }
+  const exitCode = await exited;
+
+  if (timedOut) {
+    refuse(ARM_WORKER_TIMEOUT, `the arm worker exceeded its ${opts.timeoutMs} ms bound and was killed`);
+  }
+  if (!sawResult || report === null) {
+    refuse(
+      ARM_WORKER_FAILED,
+      `the arm worker produced no result (exit=${exitCode ?? "unreadable"})${stderr.trim() === "" ? "" : `: ${stderr.trim().slice(0, 200)}`}`,
+    );
+  }
+  if (!report.ok) {
+    refuse(report.code ?? ARM_WORKER_FAILED, `the arm worker refused: ${report.error ?? "unknown error"}`);
+  }
+  if (exitCode !== 0) {
+    refuse(ARM_WORKER_FAILED, `the arm worker reported a result but exited ${exitCode}`);
+  }
+  return { report, physicalProviderCalls, exitCode };
 }
 
 /**
@@ -225,9 +519,12 @@ async function writeArmEvidence(input: {
   arm: PreregisteredArmContext["arm"];
   ctx: PreregisteredArmContext;
   armBuildDigest: string;
+  armEntrySha256: string;
+  armProbe: string;
+  workerModelCalls: number | null;
   evaluated: EvalOutcome;
 }): Promise<PreregisteredArmOutcome> {
-  const { arm, ctx, armBuildDigest, evaluated } = input;
+  const { arm, ctx, armBuildDigest, armEntrySha256, armProbe, workerModelCalls, evaluated } = input;
   const status: PreregisteredArmOutcome["status"] =
     evaluated.status === "error" ? "error" : evaluated.status === "passed" ? "passed" : "failed";
   const tokensUsed = evaluated.metrics.tokens_input + evaluated.metrics.tokens_output;
@@ -257,6 +554,9 @@ async function writeArmEvidence(input: {
     repetition: arm.repetition,
     orderIndex: arm.orderIndex,
     armBuildDigest,
+    // B3 — the identity of the arm build that ACTUALLY ran in the child.
+    armEntrySha256,
+    armProbe,
   })}\n`;
   const traceDigest = sha256Hex(manifestText);
 
@@ -307,7 +607,7 @@ async function writeArmEvidence(input: {
     status,
     ...(evaluated.failureCategory !== undefined ? { failureCategory: evaluated.failureCategory } : {}),
     tokensUsed,
-    reason: `harness: verified=${verifiedCompletion} violations=${securityViolations} termination=${evaluated.terminationReason ?? "unknown"} arm=${armBuildDigest.slice(0, 12)}`,
+    reason: `harness: verified=${verifiedCompletion} violations=${securityViolations} termination=${evaluated.terminationReason ?? "unknown"} arm=${armBuildDigest.slice(0, 12)} probe=${armProbe} workerCalls=${workerModelCalls ?? "unknown"}`,
     evidence,
   };
 }

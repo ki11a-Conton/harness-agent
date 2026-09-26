@@ -125,7 +125,11 @@ function sha(s: string): string {
 
 function observationFor(a: ToolCallEfficiencyPreregistrationV2, over: Partial<PreregisteredCampaignObservationV2> = {}): PreregisteredCampaignObservationV2 {
   const caseContentDigests: Record<string, string> = {};
-  for (const c of a.dataset.cases) caseContentDigests[c.caseId] = c.contentDigest;
+  const eligibilityDigests: Record<string, string> = {};
+  for (const c of a.dataset.cases) {
+    caseContentDigests[c.caseId] = c.contentDigest;
+    eligibilityDigests[c.caseId] = c.eligibilityDigest;
+  }
   return {
     candidateSourceSha: a.subject.candidateSourceSha,
     cleanTree: true,
@@ -139,6 +143,8 @@ function observationFor(a: ToolCallEfficiencyPreregistrationV2, over: Partial<Pr
     endpointDigest: captureEndpointIdentity(ENDPOINT)!,
     requestProfileDigest: sha(stableStringify(REQUEST_PROFILE)),
     caseContentDigests,
+    eligibilityDigests,
+    selectionProvenanceDigest: a.dataset.selectionProvenanceDigest,
     decisionPolicyDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
     usdMicrosPerCall: 0,
     ...over,

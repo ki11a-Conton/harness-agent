@@ -577,13 +577,13 @@ export const MUTATIONS = [
     // A4/F3: the duration dimension is a real ledger dimension charged from the
     // ACTUAL elapsed time. This mutation settles it at 0, so `maxDurationMs` is
     // never exercised and the cap can never bind.
-    find: `            const view = await opts.costBudget.settle(costReservationId, {
+    find: `            const view = await opts.costBudget.settle(primary, {
               inputTokens,
               outputTokens,
               durationMs,
               usdMicros: chargedMicros,
             });`,
-    replace: `            const view = await opts.costBudget.settle(costReservationId, {
+    replace: `            const view = await opts.costBudget.settle(primary, {
               inputTokens,
               outputTokens,
               durationMs: 0, // A7 mutation: the duration dimension is never charged

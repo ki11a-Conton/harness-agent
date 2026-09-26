@@ -41,6 +41,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { assertNoDuplicateJsonKeys } from "./tool-call-efficiency-preregistration-v2.js";
 
 export const PREREG_RUN_MANIFEST_SCHEMA = "prereg-run-manifest-v1";
 export const PREREG_RUN_VERIFIER_SCHEMA = "prereg-run-verifier-v1";
@@ -110,6 +111,56 @@ const IDENTITY_KEYS = [
 ] as const;
 
 /**
+ * The EXACT field set a run manifest may carry. `armBuildDigest` is optional
+ * (older fixtures omit it) but no OTHER key is admitted: an unknown key is a
+ * document this validator does not understand and must not bless.
+ *
+ * B3 — `armEntrySha256` (the sha256 of the arm build entry the isolated worker
+ * actually loaded) and `armProbe` (the versioned mechanism probe that build
+ * exports) are admitted so the identity of the build that RAN travels with the
+ * manifest instead of living only in the runner's word.
+ */
+const MANIFEST_KEYS = ["schemaVersion", "executorId", ...IDENTITY_KEYS, "armBuildDigest", "armEntrySha256", "armProbe"] as const;
+const MANIFEST_REQUIRED = ["schemaVersion", "executorId", ...IDENTITY_KEYS] as const;
+
+/**
+ * Parse `text` as a STRICT JSON object, or record a problem and return `null`.
+ *
+ * B4/G6 — the previous check did `parsed = JSON.parse(text)` and then tested
+ * `parsed !== null && typeof parsed === "object"`. A manifest whose bytes are the
+ * literal `null` parses to `null`, which is indistinguishable from the FAILED
+ * parse sentinel, so NEITHER the "is an object" branch nor the "not an object"
+ * branch ran and a byte-correct `null` was accepted as verified. This helper
+ * separates "did it parse" from "what did it parse to", so a valid-JSON
+ * non-object (null / [] / number / string / boolean) is an explicit problem.
+ *
+ * Duplicate object keys are refused first: `JSON.parse` keeps only the LAST of a
+ * repeated key, so a hand-edited artifact could otherwise carry a second
+ * `armId` / `verifiedCompletion` that a byte-scan sees but the parsed object
+ * silently drops.
+ */
+function parseJsonObjectStrict(text: string, artifact: string, problems: string[]): Record<string, unknown> | null {
+  try {
+    assertNoDuplicateJsonKeys(text);
+  } catch {
+    problems.push(`${artifact} contains a repeated object key`);
+    return null;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    problems.push(`${artifact} is not valid JSON`);
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    problems.push(`${artifact} is not a JSON object`);
+    return null;
+  }
+  return parsed as Record<string, unknown>;
+}
+
+/**
  * Read the raw artifacts in `evidenceDir` and decide whether they corroborate
  * `declared`. Never throws: every failure is a `problem`, so the caller can
  * record an explicitly UNVERIFIED run instead of guessing.
@@ -135,15 +186,13 @@ export function verifyArmEvidenceFromArtifacts(
     if (sha256Hex(manifestText) !== declared.traceDigest) {
       problems.push("traceDigest does not match the manifest bytes");
     }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(manifestText);
-    } catch {
-      problems.push("manifest is not valid JSON");
-      parsed = null;
-    }
-    if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
-      const man = parsed as Record<string, unknown>;
+    const man = parseJsonObjectStrict(manifestText, "manifest", problems);
+    if (man !== null) {
+      const extra = Object.keys(man).filter((k) => !(MANIFEST_KEYS as readonly string[]).includes(k));
+      if (extra.length > 0) problems.push(`manifest has unknown key(s): ${extra.join(", ")}`);
+      for (const k of MANIFEST_REQUIRED) {
+        if (!(k in man)) problems.push(`manifest is missing ${k}`);
+      }
       if (man.schemaVersion !== PREREG_RUN_MANIFEST_SCHEMA) {
         problems.push("manifest schemaVersion is not the expected run-manifest schema");
       }
@@ -155,40 +204,34 @@ export function verifyArmEvidenceFromArtifacts(
           problems.push(`manifest ${key} does not match this run's identity`);
         }
       }
-    } else if (parsed !== null) {
-      problems.push("manifest is not a JSON object");
     }
   }
 
   // --- verifier: a bare boolean is not a verdict ----------------------------
   const verifierText = readArtifact(PREREG_RUN_EVIDENCE_FILENAMES.verifier);
   if (verifierText !== null) {
-    try {
-      const v = JSON.parse(verifierText) as Record<string, unknown>;
+    const v = parseJsonObjectStrict(verifierText, "verifier", problems);
+    if (v !== null) {
       if (v.schemaVersion !== PREREG_RUN_VERIFIER_SCHEMA) {
         problems.push("verifier schemaVersion is not the expected schema");
       }
       if (v.verifiedCompletion !== declared.verifiedCompletion) {
         problems.push("verifier verdict does not corroborate the declared verifiedCompletion");
       }
-    } catch {
-      problems.push("verifier artifact is not valid JSON");
     }
   }
 
   // --- security: an unobserved event count is not a cleared campaign --------
   const securityText = readArtifact(PREREG_RUN_EVIDENCE_FILENAMES.security);
   if (securityText !== null) {
-    try {
-      const s = JSON.parse(securityText) as Record<string, unknown>;
+    const s = parseJsonObjectStrict(securityText, "security", problems);
+    if (s !== null) {
       if (s.schemaVersion !== PREREG_RUN_SECURITY_SCHEMA) {
         problems.push("security schemaVersion is not the expected schema");
       }
       if (s.violations !== declared.securityViolations) {
         problems.push("security log does not corroborate the declared securityViolations");
       }
-    } catch {
-      problems.push("security artifact is not valid JSON");
     }
   }
 

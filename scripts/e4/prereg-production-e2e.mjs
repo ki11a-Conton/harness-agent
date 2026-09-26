@@ -25,7 +25,17 @@
  *       of the frozen experiment is executed through `createProductionPreregRunner`
  *       (the shipped `runArm`, the shipped observer), a real frozen case and the
  *       real verifier, with a COUNTING fake provider as the transport. Every arm's
- *       raw evidence is re-verified from the bytes it wrote.
+ *       raw evidence is re-verified from the bytes it wrote. Kept as a UNIT
+ *       regression (it exercises the adapter in the test process).
+ *   POS-FWD (release CLI, real subprocess) — B5. The SHIPPED entry point runs
+ *       `prereg build` → `prereg validate` → `prereg run` end to end over the
+ *       full frozen schedule (31 cases × 2 repetitions × 2 arms = 124 arm runs),
+ *       with the TWO real executable arm builds launched as isolated workers and
+ *       the ONLY reachable transport the loopback counting stub. The per-arm
+ *       records, the raw evidence bytes and the DURABLE ledger written by the
+ *       subprocess are read back and cross-checked here (physicalFetches vs the
+ *       ledger's own committed count). This — not POS-EXEC — is what proves the
+ *       release CLI can walk the formal forward path offline.
  *
  * HONEST COUNTS (plan §A7)
  * ------------------------
@@ -50,7 +60,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -60,6 +70,17 @@ const CLI_ENTRY = join(REPO_ROOT, "apps", "cli", "dist", "main.js");
 const EVAL_ENTRY = join(REPO_ROOT, "packages", "evaluation", "dist", "index.js");
 const RUNNER_ENTRY = join(REPO_ROOT, "apps", "cli", "dist", "prereg-production-runner.js");
 const IDENTITY_ENTRY = join(REPO_ROOT, "apps", "cli", "dist", "prereg-execution-identity.js");
+
+/** B3/B5 — the declared arm build entry the isolated worker loads. POSIX on
+ *  purpose: it must equal the `R97_ARM_BUILD_ENTRIES` row the executor compares
+ *  against, and `path.join` accepts forward slashes on Windows too. */
+const ARM_ENTRY_REL = "apps/cli/dist/benchmark-command.js";
+/** B3 — the versioned mechanism probe every real arm build must export. */
+const ARM_PROBE_EXPORT = "R97_ARM_PROBE";
+/** TEST_ONLY sentinel: an invalid key that can never bill anything. The ONLY
+ *  endpoint any phase may reach is the loopback counting stub below. */
+const TEST_ONLY_API_KEY = "TEST_ONLY-not-a-real-key";
+const R97_LEDGER_FILE = "budget-ledger.json";
 
 const SCHEMA = "prereg-production-offline-e2e-v1";
 const WORKSPACE = join(REPO_ROOT, ".ci", "prereg-production-e2e");
@@ -325,7 +346,14 @@ async function selectionEvidence(dir, env) {
       maxInputTokens: 320_000,
       maxOutputTokens: 64_000,
       maxTotalTokens: 384_000,
-      maxUsdMicros: 5_000_000,
+      // B5 — NULL, deliberately. The only reachable endpoint in this offline gate
+      // is the loopback counting stub: a `127.0.0.1` proxy whose billing terms
+      // this snapshot cannot claim, so `resolveUsdMicrosPerCall` returns `null`
+      // (unknown). A money-bounded artifact would then (correctly) refuse with
+      // `PRICING_UNKNOWN`. An offline run spends nothing, so the honest choice is
+      // to NOT declare a USD bound rather than fabricate one; USD enforcement
+      // itself is proven by the B2 unit tests, not by this gate.
+      maxUsdMicros: null,
       pricingUnknownPolicy: "refuse",
     },
     isolation: {
@@ -378,13 +406,89 @@ function countingFakeProvider() {
   return { provider, entered: () => entered };
 }
 
-/** Two DISTINCT frozen arm checkouts (the declared build closure, unbuilt stubs). */
-function writeArmCheckout(dir, marker, entries) {
+/**
+ * B3/B5 — a REAL, loadable arm build. After B3 the executor spawns the arm's
+ * OWN build as an isolated worker which imports `apps/cli/dist/benchmark-command.js`
+ * FROM ITS CHECKOUT, so an inert placeholder module can no longer represent an
+ * arm: B3 forbids synthesizing a checkout from empty module stubs, and every
+ * entry here is a genuine loadable module. This entry
+ * exports the versioned mechanism probe and a real `runOneCase` whose one model
+ * call is resolved through the stdio proxy provider the worker hands it (which
+ * the driver services with the ONE budget channel → the loopback stub). A
+ * per-build `marker` and `activate` flag make the two arms genuinely distinct —
+ * different entry bytes ⇒ different build-closure digest AND a different
+ * observable probe.
+ */
+function armEntrySource(marker, activate) {
+  return [
+    `export const ${ARM_PROBE_EXPORT} = ${JSON.stringify(`probe:${marker}`)};`,
+    "export async function runOneCase(caseDef, opts, _suite) {",
+    "  const client = opts.provider.createClient({ id: 'arm-fixture' }, {});",
+    "  let input = 0;",
+    "  let output = 0;",
+    "  for await (const ev of client.generate({ messages: [] }, new AbortController().signal)) {",
+    "    if (ev.type === 'usage') { input += ev.usage.inputTokens; output += ev.usage.outputTokens; }",
+    "    if (ev.type === 'completed' || ev.type === 'error') break;",
+    "  }",
+    "  const outcome = {",
+    "    caseId: caseDef.id,",
+    "    status: 'failed',",
+    "    actualStatus: 'completed',",
+    "    events: [],",
+    "    metrics: { turn_count: 1, tool_call_count: 0, tokens_input: input, tokens_output: output, context_tokens: 0, compaction_count: 0, duration_ms: 0, retry_count: 0, verification_failures: 0, human_interventions: 0, estimated_cost: 0, usage_unknown: 0, cache_tokens_read: 0, cache_tokens_created: 0, model_call_count: 1 },",
+    "    violations: [],",
+    `    reason: ${JSON.stringify(`arm-probe:${marker}`)},`,
+    "    suite: caseDef.suite || 'regression',",
+    "    judgeVersion: '1.0.0',",
+    "    terminationReason: 'verified_incomplete',",
+    "  };",
+    ...(activate ? [`  outcome.activationEvidenceV2 = { events: [{ eventId: ${JSON.stringify(`probe:${marker}`)} }] };`] : []),
+    "  return outcome;",
+    "}",
+    "",
+  ].join("\n");
+}
+
+/**
+ * Two REAL, loadable frozen arm checkouts. The declared entry
+ * (`apps/cli/dist/benchmark-command.js`) is a genuine module exporting
+ * `R97_ARM_PROBE` + `runOneCase`; the other declared closure entries are real
+ * modules too (distinct per arm), so the shared closure walker resolves a
+ * build-closure digest from the arm's OWN bytes.
+ */
+function writeArmCheckout(dir, marker, activate, entries) {
   for (const rel of entries) {
     const abs = join(dir, rel);
     mkdirSync(dirname(abs), { recursive: true });
-    writeFileSync(abs, `export {}; // arm:${marker}\n`, "utf8");
+    const source = rel === ARM_ENTRY_REL
+      ? armEntrySource(marker, activate)
+      : `export const R97_ARM_SIBLING_STUB = ${JSON.stringify(`sibling:${marker}`)};\n`;
+    writeFileSync(abs, source, "utf8");
   }
+}
+
+/** The durable R97 ledger view, re-derived from the file the subprocess wrote. */
+function ledgerViewFromFile(budgetDir) {
+  const file = JSON.parse(readFileSync(join(budgetDir, R97_LEDGER_FILE), "utf8"));
+  let committed = 0;
+  let outstanding = 0;
+  let unknown = 0;
+  let transportRetries = 0;
+  for (const e of file.entries) {
+    if (e.status === "committed") {
+      committed += e.consumed ?? e.reserved;
+      transportRetries += e.transportRetries ?? 0;
+    } else if (e.status === "reserved") outstanding += e.reserved;
+    else if (e.status === "unknown") unknown += e.reserved;
+  }
+  return {
+    granted: file.campaignModelCalls,
+    committed,
+    outstanding,
+    unknown,
+    transportRetries,
+    remaining: file.campaignModelCalls - committed - outstanding - unknown,
+  };
 }
 
 async function runPositiveExecution(dir, env) {
@@ -514,9 +618,13 @@ async function runPositiveExecution(dir, env) {
     }
   }
 
+  // B5 — the aggregate is fed the DURABLE ledger view the gate opened, never an
+  // injected fake counter or the artifact's initial worst case ("不向 aggregate
+  // 注入 fake.entered() 或初始 campaignWorstCaseModelCalls 当真实账本数").
+  const ledgerView = await admission.ledger.view();
   const aggregate = evalMod.aggregatePreregisteredCampaign(run, artifact, {
-    providerCalls: fake.entered(),
-    budgetRemaining: artifact.budget.campaignWorstCaseModelCalls,
+    providerCalls: ledgerView.committed,
+    budgetRemaining: ledgerView.remaining,
   });
 
   const statuses = run.records.reduce((acc, r) => {
@@ -525,12 +633,16 @@ async function runPositiveExecution(dir, env) {
   }, {});
 
   const out = {
+    transport: "in-process-adapter",
+    executionBackend: "in-process",
     preregistrationDigest: artifact.preregistrationDigest,
     planDigest: artifact.schedule.planDigest,
     logicalRuns: artifact.schedule.logicalRuns,
     scheduledArmRuns: run.records.length,
     armStatuses: statuses,
     physicalProviderCalls: fake.entered(),
+    ledgerCommitted: ledgerView.committed,
+    ledgerRemaining: ledgerView.remaining,
     providerFactoryCalls: admission.providerFactoryCalls,
     evidenceVerified: verified,
     evidenceUnverified: unverified,
@@ -540,6 +652,165 @@ async function runPositiveExecution(dir, env) {
     ok: run.records.length > 0 && fake.entered() > 0 && verified + unverified === run.records.filter((r) => r.outcome.status !== "error" && r.outcome.evidence !== undefined).length && unverified === 0,
   };
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// POS-FWD — B5: the SHIPPED release CLI walks the FULL forward schedule
+// ---------------------------------------------------------------------------
+
+/** A POS-FWD refusal keeps the SAME shape as a success so a reader cannot tell a
+ *  refused phase from a corrupt report: `ok:false` + the stage that stopped. */
+function forwardRefusal(stage, res, httpDuring) {
+  return {
+    transport: "release-cli-subprocess",
+    executionBackend: "release-cli-subprocess",
+    ok: false,
+    stage,
+    exitCode: res.code,
+    httpRequestsDuring: httpDuring,
+    lines: res.out.trim().split(/\r?\n/).slice(0, 10),
+  };
+}
+
+/**
+ * B5 — the FULL frozen schedule through the SHIPPED release entry point as a
+ * real SUBPROCESS (`node apps/cli/dist/main.js`), never the in-process adapter.
+ *
+ * `prereg build` → `prereg validate` → `prereg run --mode first-run` over all 31
+ * cases × 2 repetitions × 2 arms. The subprocess's ONLY reachable transport is
+ * the loopback counting stub — its `OPENAI_BASE_URL` points at it and its
+ * `TEST_ONLY` sentinel key resolves a real provider against that endpoint — so
+ * every physical model call is counted at the stub rather than inferred. The two
+ * arms are executed by the B3 isolated workers, each loading its OWN checkout's
+ * build. The per-arm records, their raw evidence bytes and the DURABLE ledger
+ * the subprocess wrote are read back and cross-checked:
+ * `physicalStubRequests === ledger.committed`, `ledger.unknown === 0`, and every
+ * record's evidence re-verifies from the bytes it wrote.
+ */
+async function runPositiveForward(stub, dir, env) {
+  const evalMod = await import(pathToFileURL(EVAL_ENTRY).href);
+  const selection = await selectionEvidence(dir, env);
+  const cfgPath = join(dir, "pos-fwd-config.json");
+  writeFileSync(cfgPath, `${JSON.stringify(selection.config, null, 2)}\n`, "utf8");
+  const preregPath = join(dir, "pos-fwd-prereg.json");
+  const authPath = join(dir, "pos-fwd-auth.json");
+  const budgetDir = join(dir, "pos-fwd-budget");
+  const outDir = join(dir, "pos-fwd-out");
+
+  // 1. build + validate on the release entry (0 provider, 0 HTTP).
+  const httpBeforeBuild = stub.count();
+  const build = runCli(["prereg", "build", cfgPath, "--out", preregPath], env);
+  const afterBuild = stub.count();
+  if (build.code !== 0) return forwardRefusal("build", build, afterBuild - httpBeforeBuild);
+  const validate = runCli(["prereg", "validate", preregPath, "--json"], env);
+  const afterCertify = stub.count();
+  if (validate.code !== 0) return forwardRefusal("validate", validate, afterCertify - afterBuild);
+
+  // 2. the independent authorization BINDS the artifact the release CLI wrote.
+  const artifact = JSON.parse(readFileSync(preregPath, "utf8"));
+  const authorization = {
+    schemaVersion: "tool-call-efficiency-authorization-v2",
+    preregistrationDigest: artifact.preregistrationDigest,
+    candidateSourceSha: artifact.subject.candidateSourceSha,
+    baselineArmDigest: artifact.subject.baselineArmDigest,
+    candidateArmDigest: artifact.subject.candidateArmDigest,
+    providerId: artifact.provider.providerId,
+    modelId: artifact.provider.modelId,
+    endpointDigest: artifact.provider.endpointDigest,
+    caps: {
+      maxModelCalls: artifact.budget.campaignWorstCaseModelCalls,
+      maxToolCalls: artifact.budget.maxToolCalls,
+      maxDurationMs: artifact.budget.maxDurationMs,
+      maxInputTokens: artifact.budget.maxInputTokens,
+      maxOutputTokens: artifact.budget.maxOutputTokens,
+      maxTotalTokens: artifact.budget.maxTotalTokens,
+      maxUsdMicros: artifact.budget.maxUsdMicros,
+    },
+    issuedAtMs: 1_000,
+    expiresAtMs: 9_000_000_000_000,
+    approvalId: "e2e-offline-TEST_ONLY-forward-approval",
+    allowResume: false,
+    // TEST_ONLY — the authorization SEMANTIC. It bills nothing: the ONLY
+    // reachable transport is the loopback counting stub and this script refuses
+    // to run when a real key/switch is selectable.
+    paid: true,
+  };
+  writeFileSync(authPath, `${JSON.stringify(authorization, null, 2)}\n`, "utf8");
+
+  // 3. the FULL forward schedule through the shipped release CLI subprocess.
+  const before = stub.count();
+  const run = runCli(
+    ["prereg", "run", preregPath, "--authorization", authPath, "--budget-dir", budgetDir, "--out", outDir, "--mode", "first-run"],
+    env,
+  );
+  const after = stub.count();
+  if (run.code !== 0) return forwardRefusal("run", run, after - before);
+
+  // 4. read back the DURABLE ledger and EVERY per-arm record the subprocess wrote.
+  const ledger = ledgerViewFromFile(budgetDir);
+  const runsDir = join(outDir, "runs");
+  const recordFiles = readdirSync(runsDir).filter((f) => f.endsWith(".json"));
+  const records = recordFiles.map((f) => JSON.parse(readFileSync(join(runsDir, f), "utf8")));
+
+  // 5. re-verify every arm's evidence from the bytes the subprocess wrote.
+  const evidenceRoot = join(runsDir, evalMod.PREREG_RUN_EVIDENCE_DIRNAME);
+  let verified = 0;
+  let unverified = 0;
+  const verifyProblems = [];
+  for (const record of records) {
+    if (record.outcome.status === "error" || record.outcome.evidence === undefined) continue;
+    const v = evalMod.verifyArmEvidenceFromArtifacts(
+      join(evidenceRoot, record.armRunId),
+      {
+        preregistrationDigest: record.preregistrationDigest,
+        planDigest: record.planDigest,
+        armRunId: record.armRunId,
+        armId: record.armId,
+        caseId: record.caseId,
+        repetition: record.repetition,
+        orderIndex: record.orderIndex,
+      },
+      record.outcome.evidence,
+    );
+    if (v.verified) verified += 1;
+    else {
+      unverified += 1;
+      verifyProblems.push(...v.problems);
+    }
+  }
+
+  const aggregate = JSON.parse(readFileSync(join(outDir, "aggregate.json"), "utf8"));
+  const physical = after - before;
+  const expectArmRuns = artifact.schedule.logicalRuns;
+  const ok =
+    records.length === expectArmRuns &&
+    physical === expectArmRuns &&
+    ledger.committed === physical &&
+    ledger.unknown === 0 &&
+    verified + unverified === records.filter((r) => r.outcome.status !== "error" && r.outcome.evidence !== undefined).length &&
+    unverified === 0;
+  return {
+    transport: "release-cli-subprocess",
+    executionBackend: "release-cli-subprocess",
+    preregistrationDigest: artifact.preregistrationDigest,
+    planDigest: artifact.schedule.planDigest,
+    expectArmRuns,
+    scheduledArmRuns: records.length,
+    physicalStubRequests: physical,
+    httpRequestsDuringBuildAndValidate: afterCertify - httpBeforeBuild,
+    ledgerGranted: ledger.granted,
+    ledgerCommitted: ledger.committed,
+    ledgerRemaining: ledger.remaining,
+    ledgerUnknown: ledger.unknown,
+    ledgerTransportRetries: ledger.transportRetries,
+    evidenceVerified: verified,
+    evidenceUnverified: unverified,
+    verifyProblems: verifyProblems.slice(0, 5),
+    decision: aggregate.decision?.decision ?? null,
+    decisionReasonCodes: aggregate.decision?.reasonCodes ?? null,
+    ok,
+    lines: run.out.trim().split(/\r?\n/).slice(0, 10),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -574,12 +845,13 @@ async function main() {
   let negative = [];
   let positiveCert = null;
   let positiveExec = null;
+  let positiveForward = null;
   let blocked = null;
 
   try {
     negative = await runNegativeMatrix(stub, WORKSPACE);
 
-    // POS/POS-EXEC require the `require-clean` precondition the observer enforces.
+    // POS/POS-EXEC/POS-FWD require the `require-clean` precondition the observer enforces.
     if (!clean) {
       blocked = "CLEAN_TREE_REQUIRED: the formal observer refuses a dirty checkout, so the positive phases cannot be certified here";
     } else {
@@ -587,8 +859,8 @@ async function main() {
       const baselineDir = join(armRoot, "baseline");
       const candidateDir = join(armRoot, "candidate");
       const evalMod = await import(pathToFileURL(EVAL_ENTRY).href);
-      writeArmCheckout(baselineDir, "baseline", evalMod.R97_ARM_BUILD_ENTRIES);
-      writeArmCheckout(candidateDir, "candidate", evalMod.R97_ARM_BUILD_ENTRIES);
+      writeArmCheckout(baselineDir, "baseline", false, evalMod.R97_ARM_BUILD_ENTRIES);
+      writeArmCheckout(candidateDir, "candidate", true, evalMod.R97_ARM_BUILD_ENTRIES);
       const claimsDir = join(WORKSPACE, "claims");
       mkdirSync(claimsDir, { recursive: true });
       const env = {
@@ -598,12 +870,29 @@ async function main() {
       };
       positiveCert = await runPositiveCertification(stub, WORKSPACE, env);
       positiveExec = await runPositiveExecution(WORKSPACE, env);
+      // B5 — the SAME two frozen arm builds, but the schedule is now driven by
+      // the SHIPPED release CLI as a real subprocess. Its ONLY endpoint is the
+      // loopback counting stub, reached through the `TEST_ONLY` sentinel key.
+      const forwardEnv = {
+        ...env,
+        OPENAI_API_KEY: TEST_ONLY_API_KEY,
+        OPENAI_BASE_URL: stub.baseUrl,
+      };
+      positiveForward = await runPositiveForward(stub, WORKSPACE, forwardEnv);
     }
   } finally {
     await stub.close();
   }
 
-  const ready = negative.length > 0 && negative.every((c) => c.ok) && positiveCert !== null && positiveCert.ok && positiveExec !== null && positiveExec.ok;
+  const ready =
+    negative.length > 0 &&
+    negative.every((c) => c.ok) &&
+    positiveCert !== null &&
+    positiveCert.ok &&
+    positiveExec !== null &&
+    positiveExec.ok &&
+    positiveForward !== null &&
+    positiveForward.ok;
   const report = {
     schema: SCHEMA,
     head: (() => {
@@ -618,10 +907,11 @@ async function main() {
     treeClean: clean,
     blocked,
     authorizationFixture:
-      "TEST_ONLY: the POS-EXEC authorization carries paid:true (the gate's authorization semantic) with approvalId " +
-      "'e2e-offline-TEST_ONLY-approval'. It authorizes NOTHING billable: the transport is the in-process counting fake, " +
-      "the artifact's provider identity is the unbilled stub (usdMicrosPerCall=0), and this script refuses to run if a real " +
-      "key or RUN_PAID_BENCHMARKS is selectable. paidExperimentRun remains NOT_RUN.",
+      "TEST_ONLY: the POS-EXEC / POS-FWD authorizations carry paid:true (the gate's authorization semantic) with approvalIds " +
+      "'e2e-offline-TEST_ONLY-approval' / 'e2e-offline-TEST_ONLY-forward-approval'. They authorize NOTHING billable: POS-EXEC's " +
+      "transport is the in-process counting fake, POS-FWD's ONLY endpoint is the loopback counting stub reached through a " +
+      "TEST_ONLY sentinel key, and this script refuses to run if a real key or RUN_PAID_BENCHMARKS is selectable. " +
+      "paidExperimentRun remains NOT_RUN.",
     negative: {
       cases: negative.length,
       refusalsOk: negative.filter((c) => c.ok).length,
@@ -630,25 +920,37 @@ async function main() {
     },
     positiveCertification: positiveCert,
     positiveExecution: positiveExec,
+    positiveForward: positiveForward,
     counts: {
       httpRequestsAgainstTheLoopbackStub: "MEASURED: the stub's own request counter (0 for every refusal and the 0-provider certification)",
       physicalProviderCalls: positiveExec === null ? "NOT_OBSERVED" : `MEASURED: the fake provider's generate() entry counter = ${positiveExec.physicalProviderCalls}`,
       providerFactoryCalls: positiveExec === null ? "NOT_OBSERVED" : `MEASURED: the gate's providerFactoryCalls = ${positiveExec.providerFactoryCalls}`,
+      forwardPhysicalStubRequests: positiveForward === null ? "NOT_OBSERVED" : `MEASURED: the loopback stub's request counter over the POS-FWD subprocess run = ${positiveForward.physicalStubRequests}`,
+      forwardLedgerCommitted: positiveForward === null ? "NOT_OBSERVED" : `MEASURED: the durable R97 ledger the subprocess wrote committed = ${positiveForward.ledgerCommitted}`,
       externalProviderCalls: "NOT_OBSERVED: no externally-billed provider exists in this environment (a key/switch is refused above)",
       costUsdMicros: "NOT_OBSERVED: no provider was billed; a paid run is BLOCKED",
       loopbackStubBaseUrlDigest: sha256Hex(httpBaseUrl),
     },
-    // The plan's FOUR readiness levels are reported SEPARATELY so an offline
-    // pass can never be read as a paid run or a promotion.
+    // The plan's FOUR readiness levels are reported SEPARATELY, and
+    // `productionOfflineReady` is SPLIT into the three distinct claims the plan
+    // §B6 requires — an offline pass must never be readable as a paid run, a
+    // promotion, or as the release CLI having proven more than it measured.
     readiness: {
       offlineFixtureReady:
         "PASS (reported by scripts/e4/n5-prereg-closed-loop.mjs, not this script): the injected-adapter fixture chain runs offline",
       productionOfflineReady: ready
-        ? "PASS: the SHIPPED entry point (real subprocess CLI) refuses every preflight counterexample with 0 HTTP, certifies a frozen identity with 0 provider, and executes the full paired schedule through the shipped observer+executor with a counting fake transport, every arm re-verified from raw bytes"
+        ? "PASS: (1) the SHIPPED entry point (real subprocess CLI) refuses every preflight counterexample with 0 HTTP; (2) it certifies a frozen identity with 0 provider; (3) the in-process shipped adapter executes the full paired schedule against a counting fake transport; (4) the SHIPPED release CLI subprocess executes the FULL forward schedule over two real isolated arm builds against a loopback counting stub, with its durable ledger and every arm's raw evidence re-checked. None of this is a paid run or a promotion."
         : blocked !== null
           ? `NOT_READY: ${blocked}`
           : "NOT_READY: at least one phase did not pass",
-      paidExperimentRun: "NOT_RUN: no paid authorization exists; this script refuses a selectable paid key/switch and the transport is an in-process fake",
+      productionOfflineReadiness: {
+        releaseCliNegativeAndCertification:
+          negative.length > 0 && negative.every((c) => c.ok) && positiveCert !== null && positiveCert.ok ? "PASS" : "FAIL",
+        inProcessAdapterForward: positiveExec !== null && positiveExec.ok ? "PASS" : "FAIL",
+        releaseCliSubprocessForward: positiveForward !== null && positiveForward.ok ? "PASS" : "NOT_READY",
+        overall: ready ? "PASS" : blocked !== null ? "BLOCKED" : "PARTIAL",
+      },
+      paidExperimentRun: "NOT_RUN: no paid authorization exists; this script refuses a selectable paid key/switch and every transport is local (in-process fake or a loopback counting stub)",
       championPromotion: "NOT_RUN: promotion is a separate, later approval and is never inferred from this evidence",
     },
     ok: ready,
@@ -661,8 +963,9 @@ async function main() {
     `prereg-production-e2e: ${report.ok ? "PASS" : blocked !== null ? "BLOCKED" : "FAIL"}\n` +
       `  negative: ${report.negative.refusalsOk}/${report.negative.cases} refusals on the release CLI (0 HTTP)\n` +
       `  positive certification: ${positiveCert === null ? blocked : `${positiveCert.ok ? "ok" : "FAIL"} (build ${positiveCert.build.exitCode}, validate ${positiveCert.validate.exitCode}, ${positiveCert.httpRequestsDuring} HTTP)`}\n` +
-      `  positive execution: ${positiveExec === null ? blocked : `decision=${positiveExec.decision ?? positiveExec.code} arms=${positiveExec.scheduledArmRuns ?? "?"} physicalCalls=${positiveExec.physicalProviderCalls ?? "?"} verified=${positiveExec.evidenceVerified ?? "?"}`}\n` +
-      `  productionOfflineReady: ${report.readiness.productionOfflineReady}\n` +
+      `  positive execution (in-process): ${positiveExec === null ? blocked : `decision=${positiveExec.decision ?? positiveExec.code} arms=${positiveExec.scheduledArmRuns ?? "?"} physicalCalls=${positiveExec.physicalProviderCalls ?? "?"} verified=${positiveExec.evidenceVerified ?? "?"}`}\n` +
+      `  positive forward (release CLI subprocess): ${positiveForward === null ? blocked : `stage=${positiveForward.stage ?? "ok"} decision=${positiveForward.decision ?? "?"} arms=${positiveForward.scheduledArmRuns ?? "?"} physicalStubRequests=${positiveForward.physicalStubRequests ?? "?"} ledgerCommitted=${positiveForward.ledgerCommitted ?? "?"} verified=${positiveForward.evidenceVerified ?? "?"}`}\n` +
+      `  productionOfflineReadiness: negative+cert=${report.readiness.productionOfflineReadiness.releaseCliNegativeAndCertification} in-process=${report.readiness.productionOfflineReadiness.inProcessAdapterForward} release-subprocess=${report.readiness.productionOfflineReadiness.releaseCliSubprocessForward} overall=${report.readiness.productionOfflineReadiness.overall}\n` +
       `  paidExperimentRun=${report.readiness.paidExperimentRun.split(":")[0]} championPromotion=${report.readiness.championPromotion.split(":")[0]}\n` +
       `  evidence: ${outPath}\n`,
   );

@@ -62,7 +62,9 @@ import {
   computeArmBuildDigestV1,
   computeThresholdDigestV3,
   mechanismContractFor,
+  readCaseFiles,
   resolveBenchmarkCaseDir,
+  selectionFromFrozenEvidence,
   toolCallEfficiencyGuidanceDigest,
   type PreregisteredCampaignObservationV2,
   type ToolCallEfficiencyPreregistrationV2,
@@ -151,30 +153,25 @@ export function observeExecutionIdentity(
     requestProfileDigest,
     // Filled per-artifact by `observeCaseContentDigests`.
     caseContentDigests: {},
+    // B1 — the eligibility/provenance fields are NOT derivable from the checkout
+    // + env alone: they need the committed frozen selection evidence. A raw
+    // identity observation therefore carries the FAIL-CLOSED placeholder (an
+    // empty map and an unobservable provenance digest), which can never equal a
+    // bound value — `createProductionPreregRunner` overwrites them with the
+    // independently re-derived values via `observeFrozenSelectionEvidence`.
+    eligibilityDigests: {},
+    selectionProvenanceDigest: UNOBSERVABLE,
     decisionPolicyDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
-    // A2 — a VERSIONED per-call price: a genuinely observable `0` for the
-    // unbilled stub, an explicit snapshot for a known real provider, and `null`
-    // (unknown) otherwise, which the money-bounded gate refuses as
-    // `PRICING_UNKNOWN` — never a silent zero.
-    usdMicrosPerCall: resolveUsdMicrosPerCall(provider.providerId),
+    // A2/B2 — a VERSIONED per-model/per-endpoint price: a genuinely observable
+    // `0` for the unbilled stub, an explicit snapshot bound for a known model on
+    // the first-party endpoint, and `null` (unknown) for a proxy endpoint or an
+    // unlisted model — which the money-bounded gate refuses as `PRICING_UNKNOWN`,
+    // never a silent zero.
+    usdMicrosPerCall: resolveUsdMicrosPerCall(provider.providerId, {
+      modelId: provider.modelId,
+      endpointBaseUrl: provider.endpointBaseUrl,
+    }),
   };
-}
-
-/** Read a fixture directory into a deterministic `relative path -> text` map. */
-function readFixture(dir: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  if (!isDir(dir)) return out;
-  const walk = (rel: string): void => {
-    const abs = rel === "" ? dir : join(dir, rel);
-    for (const name of readdirSync(abs).sort()) {
-      const childRel = rel === "" ? name : `${rel}/${name}`;
-      const childAbs = join(dir, childRel);
-      if (isDir(childAbs)) walk(childRel);
-      else out[childRel] = readFileSync(childAbs, "utf8");
-    }
-  };
-  walk("");
-  return out;
 }
 
 /**
@@ -202,13 +199,14 @@ export function observeCaseContentDigests(
       continue;
     }
     try {
+      const files = readCaseFiles(dir);
       out[c.caseId] = catalogEntryFromCase(
         {
           id: c.caseId,
           suite: c.suite,
-          requestMd: readFileSync(join(dir, "request.md"), "utf8"),
-          expectedMd: readFileSync(join(dir, "expected.md"), "utf8"),
-          fixture: readFixture(join(dir, "fixture")),
+          requestMd: files.requestMd,
+          expectedMd: files.expectedMd,
+          fixture: files.fixture,
         },
         { eligible: true, holdout: false, evidence: {} },
       ).contentDigest;
@@ -235,6 +233,39 @@ export interface ProductionPreregRunnerOptions {
 }
 
 /**
+ * B1 — the frozen-selection observation, re-derived READ-ONLY from the
+ * committed evidence, never echoed from the artifact under validation.
+ *
+ * `selectionFromFrozenEvidence` is the SAME production derivation `prereg build`
+ * uses: it re-reads the frozen selection artifact at its fixed trusted path,
+ * binds the taxonomy bytes by digest, re-derives each case's CONTENT from the
+ * real `benchmarks/<suite>/<caseId>/` files and each case's ELIGIBILITY from the
+ * taxonomy, and RECOMPUTES the selection's own provenance digest from its body.
+ * A missing/edited/inconsistent evidence source THROWS (fail closed), so the
+ * `observe` step refuses before any provider factory is touched.
+ *
+ * The returned `eligibilityDigests` are keyed by the FROZEN selection's case ids:
+ * comparing that key set to the artifact's bound case set (`observationViolationsV2`)
+ * is what makes a forged catalog / swapped eligibility a refusal.
+ */
+export interface FrozenSelectionObservation {
+  caseIds: string[];
+  eligibilityDigests: Record<string, string>;
+  selectionProvenanceDigest: string;
+}
+
+export function observeFrozenSelectionEvidence(root: string): FrozenSelectionObservation {
+  const frozen = selectionFromFrozenEvidence({ root });
+  const eligibilityDigests: Record<string, string> = {};
+  for (const entry of frozen.catalog) eligibilityDigests[entry.caseId] = entry.eligibilityDigest;
+  return {
+    caseIds: frozen.catalog.map((c) => c.caseId),
+    eligibilityDigests,
+    selectionProvenanceDigest: frozen.selection.selectionProvenanceDigest,
+  };
+}
+
+/**
  * The production adapter the release CLI wires into `preregCommandDeps()`. It
  * performs NO I/O at construction — `observe`/`makeProvider` are the only
  * side-effecting calls, and `makeProvider` is invoked only after the gate admits.
@@ -243,10 +274,19 @@ export function createProductionPreregRunner(opts: ProductionPreregRunnerOptions
   const rootDir = opts.rootDir ?? process.cwd();
   const env = opts.env ?? process.env;
   return {
-    observe: async (prereg) => ({
-      ...observeExecutionIdentity(rootDir, env),
-      caseContentDigests: observeCaseContentDigests(rootDir, prereg),
-    }),
+    observe: async (prereg) => {
+      // B1 — re-derive the selection provenance + eligibility from the frozen
+      // evidence BEFORE returning the observation. If the frozen evidence is
+      // absent/inconsistent this THROWS, so the gate refuses with zero provider
+      // factory calls rather than certifying a self-declared catalog.
+      const frozen = observeFrozenSelectionEvidence(rootDir);
+      return {
+        ...observeExecutionIdentity(rootDir, env),
+        caseContentDigests: observeCaseContentDigests(rootDir, prereg),
+        eligibilityDigests: frozen.eligibilityDigests,
+        selectionProvenanceDigest: frozen.selectionProvenanceDigest,
+      };
+    },
     makeProvider: async (): Promise<ModelProvider> => (await resolveModelProvider()).provider,
     // A5 — the REAL executor. It fails closed (`ARM_CHECKOUT_MISSING` /
     // `ARM_BUILD_IDENTICAL` / `ARM_CASE_NOT_FOUND` / `ARM_EVIDENCE_DIR_MISSING`)

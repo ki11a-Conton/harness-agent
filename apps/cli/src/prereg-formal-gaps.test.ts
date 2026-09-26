@@ -86,7 +86,11 @@ function prereg(over: Partial<PreregistrationV2Options> = {}): ToolCallEfficienc
 /** The observed identity the fixture is bound to (a TEST observation, not a real one). */
 function observationFor(over: Partial<PreregisteredCampaignObservationV2> = {}): PreregisteredCampaignObservationV2 {
   const caseContentDigests: Record<string, string> = {};
-  for (const caseId of CASE_IDS) caseContentDigests[caseId] = `content-${caseId}`;
+  const eligibilityDigests: Record<string, string> = {};
+  for (const caseId of CASE_IDS) {
+    caseContentDigests[caseId] = `content-${caseId}`;
+    eligibilityDigests[caseId] = `elig-${caseId}`;
+  }
   return {
     candidateSourceSha: FIXTURE.subject.candidateSourceSha,
     cleanTree: true,
@@ -100,6 +104,8 @@ function observationFor(over: Partial<PreregisteredCampaignObservationV2> = {}):
     endpointDigest: captureEndpointIdentity(FIXTURE.provider.endpointBaseUrl ?? null)!,
     requestProfileDigest: sha(stableStringify(FIXTURE.provider.requestProfile)),
     caseContentDigests,
+    eligibilityDigests,
+    selectionProvenanceDigest: FIXTURE.selection.selectionProvenanceDigest,
     decisionPolicyDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
     usdMicrosPerCall: 0,
     ...over,
@@ -219,6 +225,57 @@ async function admit(
 
 const ARM: ArmRunRef = { armId: "candidate", caseId: CASE_IDS[0]!, repetition: 0, orderIndex: 0 };
 
+/** B3 — the arm entry the isolated worker loads (POSIX: the executor compares it
+ *  to the `R97_ARM_BUILD_ENTRIES` row, which is forward-slashed). */
+const ARM_ENTRY_REL = "apps/cli/dist/benchmark-command.js";
+
+/**
+ * B3 — a REAL, loadable arm build entry. The executor spawns the arm's OWN build
+ * as an isolated child which imports this file FROM ITS CHECKOUT, so a synthetic
+ * `export {}` stub can no longer represent an arm. It exports the versioned
+ * mechanism probe and a real `runOneCase` resolving its one model call through
+ * the stdio proxy provider the worker supplies.
+ */
+function armEntrySource(marker: string, activate: boolean): string {
+  return [
+    'export const R97_ARM_PROBE = "probe:' + marker + '";',
+    "export async function runOneCase(caseDef, opts, _suite) {",
+    "  const client = opts.provider.createClient({ id: 'arm-fixture' }, {});",
+    "  let input = 0;",
+    "  let output = 0;",
+    "  for await (const ev of client.generate({ messages: [] }, new AbortController().signal)) {",
+    "    if (ev.type === 'usage') { input += ev.usage.inputTokens; output += ev.usage.outputTokens; }",
+    "    if (ev.type === 'completed' || ev.type === 'error') break;",
+    "  }",
+    "  const outcome = {",
+    "    caseId: caseDef.id,",
+    "    status: 'failed',",
+    "    actualStatus: 'completed',",
+    "    events: [],",
+    "    metrics: { turn_count: 1, tool_call_count: 0, tokens_input: input, tokens_output: output, context_tokens: 0, compaction_count: 0, duration_ms: 0, retry_count: 0, verification_failures: 0, human_interventions: 0, estimated_cost: 0, usage_unknown: 0, cache_tokens_read: 0, cache_tokens_created: 0, model_call_count: 1 },",
+    "    violations: [],",
+    `    reason: 'arm-probe:${marker}',`,
+    "    suite: caseDef.suite || 'regression',",
+    "    judgeVersion: '1.0.0',",
+    "    terminationReason: 'verified_incomplete',",
+    "  };",
+    ...(activate ? [`  outcome.activationEvidenceV2 = { events: [{ eventId: 'probe:${marker}' }] };`] : []),
+    "  return outcome;",
+    "}",
+    "",
+  ].join("\n");
+}
+
+/** Build a real, loadable arm checkout: the declared entries, entry bytes distinct. */
+async function makeArmCheckout(dir: string, marker: string, activate = false): Promise<void> {
+  for (const rel of R97_ARM_BUILD_ENTRIES) {
+    const abs = join(dir, rel);
+    await mkdir(join(abs, ".."), { recursive: true });
+    const source = rel === ARM_ENTRY_REL ? armEntrySource(marker, activate) : `export {}; // stub:${marker}\n`;
+    await writeFile(abs, source, "utf8");
+  }
+}
+
 // ---------------------------------------------------------------------------
 // F1 — the production command still cannot walk the execution chain
 // ---------------------------------------------------------------------------
@@ -233,10 +290,6 @@ describe("F1 — production execution identity and executor", () => {
     //   (b) two distinct frozen builds + a real frozen case -> the executor
     //       returns a real outcome whose evidence A6 corroborates.
     //
-    // The arm checkouts are five `export {};` stubs: an arm build digest is the
-    // closure walk from `R97_ARM_BUILD_ENTRIES`, so this establishes a real,
-    // stable, distinct digest with no compiled tree (CI runs `pnpm test` before
-    // `pnpm build`).
     const noCheckout = createProductionPreregRunner({ rootDir: REPO_ROOT, env: {} });
     await expect(
       noCheckout.runArm(ARM, {
@@ -248,20 +301,16 @@ describe("F1 — production execution identity and executor", () => {
         evidenceDir: join(await scratch("f1-runarm-none"), "ev"),
       }),
     ).rejects.toThrow(/ARM_CHECKOUT_MISSING/);
-
-    // (b) the real executor, the real frozen case, the real verifier.
+    //
+    // The arm checkouts are two REAL loadable builds (B3): the executor spawns
+    // the arm's own build as an isolated child, so a synthetic `export {}` stub
+    // can no longer represent an arm. Each checkout's entry exports a distinct
+    // mechanism probe and a real `runOneCase`, so the build-closure digest AND
+    // the observable mechanism output differ between the arms.
     const base = await scratch("f1-runarm-base");
     const cand = await scratch("f1-runarm-cand");
-    for (const [dir, marker] of [
-      [base, "baseline"],
-      [cand, "candidate"],
-    ] as const) {
-      for (const rel of R97_ARM_BUILD_ENTRIES) {
-        const abs = join(dir, rel);
-        await mkdir(join(abs, ".."), { recursive: true });
-        await writeFile(abs, `export {}; // arm:${marker}\n`, "utf8");
-      }
-    }
+    await makeArmCheckout(base, "baseline");
+    await makeArmCheckout(cand, "candidate", true);
     const evidenceDir = join(await scratch("f1-runarm-ev"), "pair-real");
     const runner = createProductionPreregRunner({
       rootDir: REPO_ROOT,

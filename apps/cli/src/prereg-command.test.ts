@@ -122,6 +122,9 @@ function cliConfig(): Record<string, unknown> {
 
 function observationFor(over: Partial<PreregisteredCampaignObservationV2> = {}): PreregisteredCampaignObservationV2 {
   const caseContentDigests: Record<string, string> = { ...CONTENT_DIGEST_BY_ID };
+  const eligibilityDigests: Record<string, string> = Object.fromEntries(
+    RESOLVED.catalog.map((c) => [c.caseId, c.eligibilityDigest]),
+  );
   return {
     candidateSourceSha: SHA_A,
     cleanTree: true,
@@ -135,6 +138,8 @@ function observationFor(over: Partial<PreregisteredCampaignObservationV2> = {}):
     endpointDigest: captureEndpointIdentity(PROFILE.provider.endpointBaseUrl) ?? "provider-default-endpoint",
     requestProfileDigest: sha(stableStringify(REQUEST_PROFILE)),
     caseContentDigests,
+    eligibilityDigests,
+    selectionProvenanceDigest: RESOLVED.selection.selectionProvenanceDigest,
     decisionPolicyDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
     // A KNOWN, non-null observed price: the fixture is money-bounded, so a
     // missing/undefined price would be refused as PRICING_UNKNOWN.

@@ -78,7 +78,11 @@ function prereg(over: Partial<PreregistrationV2Options> = {}): ToolCallEfficienc
 
 function observationFor(over: Partial<PreregisteredCampaignObservationV2> = {}): PreregisteredCampaignObservationV2 {
   const caseContentDigests: Record<string, string> = {};
-  for (const caseId of CASE_IDS) caseContentDigests[caseId] = `content-${caseId}`;
+  const eligibilityDigests: Record<string, string> = {};
+  for (const caseId of CASE_IDS) {
+    caseContentDigests[caseId] = `content-${caseId}`;
+    eligibilityDigests[caseId] = `elig-${caseId}`;
+  }
   return {
     candidateSourceSha: FIXTURE.subject.candidateSourceSha,
     cleanTree: true,
@@ -92,6 +96,8 @@ function observationFor(over: Partial<PreregisteredCampaignObservationV2> = {}):
     endpointDigest: captureEndpointIdentity(FIXTURE.provider.endpointBaseUrl ?? null)!,
     requestProfileDigest: sha(stableStringify(FIXTURE.provider.requestProfile)),
     caseContentDigests,
+    eligibilityDigests,
+    selectionProvenanceDigest: FIXTURE.selection.selectionProvenanceDigest,
     decisionPolicyDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
     // A KNOWN, non-null price so a money-bounded campaign is not refused as
     // `PRICING_UNKNOWN`; the price-unknown test overrides this with `null`.
