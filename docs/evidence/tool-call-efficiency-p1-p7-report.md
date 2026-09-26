@@ -14,6 +14,8 @@
 - N0–N6 结论：**PASS**（N5 可执行闭环已由两平台 CI 验证，见 §N6）；N7：**BLOCKED / PAID_NOT_RUN**。
 - S0–S6 结论：**PASS**（离线，见 §S）；远端 CI 对 `801774d`（含实现 `7fb389e`）run `36130057745`
   **七 job 全 success**（含两平台 closed-loop）；S7：**BLOCKED / PAID_NOT_RUN**。
+- B0–B6 结论：**PASS**（离线，见 §B）；远端 CI 对 `320d0d4` run `36247292401` **七 job 全 success**，
+  两平台 `r97-r98 closed loop` 的 A7 E2E、N5 闭环与 27 项 mutation 步骤均为 success；B7：**BLOCKED / PAID_NOT_AUTHORIZED**。
 
 ---
 
@@ -527,11 +529,29 @@ pnpm docs:verify
 
 **Ubuntu（GitHub Actions）**
 
-- 本 HEAD 的 Actions URL：**`NOT_OBSERVED`**。取得本 HEAD 证据的唯一方式：推送后由
-  `.github/workflows/ci.yml` 的 `r97-r98 closed loop`（`ubuntu-latest` + `windows-latest`）运行
-  `n5-prereg-closed-loop.mjs`、`prereg-production-e2e.mjs` 与 27 项 mutation gate；届时以该 run 的
-  job/step 状态与 artifact 为准。**不得**把上一 HEAD 的 run `36217188308`（审查基线 `3ff8946`）当作本 HEAD 证据。
-- 未取得该 run 前，本节只声称**本机（linux 沙箱）**实测值；跨平台冷启动与故障注入仍待 CI。
+- 本轮验证 HEAD（B0–B6 实现 + 缺陷修复）`320d0d40…` 的 Actions URL：
+  `https://github.com/ki11a-Conton/harness-agent/actions/runs/36247292401`（**七 job 全 success**）。
+  本节文字在该提交**之后**更新，故只绑定该 run，不把后续文字提交当作新证据。
+- 两平台 `r97-r98 closed loop`（`ubuntu-latest` + `windows-latest`）的步骤状态均为 success：
+  `A7 — production-offline E2E on the release CLI`（跑 `prereg-production-e2e.mjs`）、
+  `N5 — run the offline pre-registration closed loop (0 provider calls)`、
+  `Prove the suite CATCHES the twenty-seven anti-cheat mutations`。
+- 交叉核对见 [B0 缺口矩阵 §0](file:///workspace/docs/evidence/prereg-next-gap-matrix.md)：上表"基线 CI"
+  绑定的是审查基线 `3ff8946` 的 run `36217188308`，**不得**当作本 HEAD 证据。
+
+**本轮一次真实修正（由 CI 暴露，非模型质量问题）**
+
+- `3ec6c65` 的 run `36233497814` 两个 closed-loop job **FAIL**：POS-FWD 停在 `stage=run`、
+  `httpRequestsDuring=0`，子进程报 `PREREG_WORKER_PROVIDER_ERROR: BUDGET_EXHAUSTED: retry cost
+  reservation refused`。本机在 `3ec6c65` 复现同一条。
+- 根因（Harness 缺陷，非发行版行为）：POS-FWD 用 `spawnSync` 启动子进程，阻塞了 E2E 自身事件循环，
+  使同进程内的 loopback 计数 stub 无法应答；子进程请求超时 → 模型客户端发出 `retry` → B2 为第二次物理
+  尝试预留成本 → 冻结预算无 retry 余量 → 拒绝。表现为 stub 计数恒为 0 的"自锁"，不是发行版的性质。
+- 修复：`scripts/e4/prereg-production-e2e.mjs` 新增异步 `runCliAsync`（`spawn`），POS-FWD 的
+  build/validate/run 改用它。修复后本机与 CI 均 PASS：POS-FWD `arms=124`、
+  `physicalStubRequests=124 == ledgerCommitted=124`、`unknown=0`、evidence `124/124` 复验。
+- 适用性：这属于"有复现器的确定性 Harness 缺陷"（`AGENTS.md` Runtime Freeze 第 4 条），
+  改动落在 `scripts/e4` 证据脚本层，**未触及** Runtime / PermissionEngine / SandboxManager / ToolOrchestrator。
 
 **重新审查触发条件**
 
