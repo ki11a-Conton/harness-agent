@@ -113,10 +113,18 @@ describe("E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations"
     // `docs/E4-R99-R101-report.md:2370` names — bringing it to SEVEN: the existing
     // `a1-skip-generator-finally-settlement` covers the CHANNEL's settlement, and
     // `a1-worker-settlement-failure-refunded` covers the WORKER's handling of it.
+    // A7's SECOND BATCH (plan §A7 怎么做 3, second half) added SEVEN more, one per
+    // A-round counterexample the A-round tests pin: forged evidence accepted,
+    // `resume=false` reusing old records, a lost cost ledger re-created as a fresh
+    // allowance, the duration dimension left at zero, an escape-equivalent duplicate
+    // key, the legacy candidate paid path re-opened, and the release adapter never
+    // executing — bringing the A7 set to FOURTEEN. (`同一构建两臂` is the eighth name
+    // on the plan's list and is ALREADY covered by `same-build-for-both-arms` (T6),
+    // so it is not duplicated.)
     // Pinned as an exact SET rather than "at least": a gate that quietly dropped one
     // would otherwise still report "all mutations caught".
     const a7 = mod.MUTATIONS.filter((m) => m.round === "A7");
-    expect(a7, "A7 must add one mutation per counterexample it closed").toHaveLength(7);
+    expect(a7, "A7 must add one mutation per counterexample it closed").toHaveLength(14);
     const wording = a7.map((m) => m.planWording).join("\n");
     expect(wording).toContain("跳过 generator finally 结算");
     expect(wording).toContain("允许丢失根目录重新领取");
@@ -130,6 +138,14 @@ describe("E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations"
     // The worker-level half of A1/F1: routing an ENTERED-but-unsettled dispatch to
     // the refund path restores the pre-A1 behaviour the report's :2370 gap is about.
     expect(wording).toContain("已进入但未结算的调用被退款");
+    // A7's second batch, one per closed A-round counterexample (plan §A7 怎么做 3).
+    expect(wording).toContain("假 evidence 被接受");
+    expect(wording).toContain("resume=false 偷用旧结果");
+    expect(wording).toContain("cost budget 无法原子恢复");
+    expect(wording).toContain("tool/duration 未计量");
+    expect(wording).toContain("转义等价重复 key");
+    expect(wording).toContain("旧 candidate 旁路");
+    expect(wording).toContain("真实 CLI adapter 从未跑通");
   });
 
   it("tags every mutation with the round whose defect list it came from", () => {

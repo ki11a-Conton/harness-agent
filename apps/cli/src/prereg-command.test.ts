@@ -16,18 +16,26 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ModelEvent, ModelProvider, ModelRequest, ProviderConfig } from "@ar/contracts";
 import {
   DEFAULT_DECISION_POLICY_V3,
+  PREREG_RUN_EVIDENCE_FILENAMES,
+  PREREG_RUN_MANIFEST_SCHEMA,
+  PREREG_RUN_SECURITY_SCHEMA,
+  PREREG_RUN_VERIFIER_SCHEMA,
   TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2,
   buildToolCallEfficiencyPreregistrationV2,
   captureEndpointIdentity,
   computeThresholdDigestV3,
   mechanismContractFor,
+  selectionFromFrozenEvidence,
   serializePreregistrationV2,
   toolCallEfficiencyGuidanceDigest,
+  type PreregisteredArmContext,
+  type PreregisteredArmEvidence,
   type PreregistrationV2Options,
   type PreregisteredArmRunner,
   type PreregisteredCampaignObservationV2,
@@ -35,36 +43,85 @@ import {
 } from "@ar/evaluation";
 import { stableStringify } from "@ar/evaluation";
 import { runCommand, type CommandDeps } from "./commands.js";
+import { formalExecutionProfile } from "./prereg-execution-identity.js";
 
 const NOW = 1_700_000_000_000;
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
 /**
- * The ONE canonical, secret-free fixture (plan N1: "输出一个不含 secret 的 v2
- * fixture"). It is READ rather than rebuilt inline so this E2E test and
- * `scripts/e4/n5-prereg-closed-loop.mjs` derive the SAME root digest from the
- * SAME bytes — a digest published in CI evidence that no test actually hashed
- * would be the "derived field as identity" defect the plan forbids.
+ * A2 — the identity the execution path derives from the CURRENT environment.
+ * `prereg build` writes exactly these values, and `observationFor` re-derives
+ * them the same way, so the CLI bytes and this test's expectation come from ONE
+ * source of truth (a self-declared identity in the fixture would drift).
+ */
+const PROFILE = formalExecutionProfile();
+const REQUEST_PROFILE = PROFILE.requestProfile;
+
+/**
+ * The fixture supplies the non-dataset identity (subject/provider/evaluation/
+ * schedule/budget/isolation). Its `catalog`/`selection` placeholders are TEST_ONLY
+ * and are NEVER sent to the CLI: A1 requires the sample set to be DERIVED
+ * read-only from the frozen selection artifact, so the CLI config supplies only
+ * `selectionEvidence` and the catalog is recomputed here for the expected bytes.
  */
 const FIXTURE = JSON.parse(
   readFileSync(new URL("../../../scripts/e4/fixtures/n5-prereg-config.json", import.meta.url), "utf8"),
 ) as PreregistrationV2Options;
 
+/** The frozen selection, re-derived read-only from committed evidence — the SAME
+ *  derivation the CLI performs, so the CLI's bytes and this test's expectation
+ *  come from one source of truth. */
+const RESOLVED = selectionFromFrozenEvidence({ root: REPO_ROOT });
+const CONTENT_DIGEST_BY_ID: Record<string, string> = Object.fromEntries(
+  RESOLVED.catalog.map((c) => [c.caseId, c.contentDigest]),
+);
+
 const SHA_A = FIXTURE.subject.candidateSourceSha;
-const ENDPOINT = FIXTURE.provider.endpointBaseUrl!;
-const REQUEST_PROFILE = FIXTURE.provider.requestProfile;
-const CASE_IDS = FIXTURE.selection.caseIds;
+const CASE_IDS = RESOLVED.selection.caseIds;
+const LOGICAL_RUNS = CASE_IDS.length * FIXTURE.schedule.repetitions * 2;
+const WORST_CASE_CALLS = LOGICAL_RUNS * FIXTURE.budget.maxModelCallsPerRun;
 
 function sha(s: string): string {
   return createHash("sha256").update(s, "utf8").digest("hex");
 }
 
+/** The expected artifact options: the DERIVED identity (A2) + the DERIVED dataset. */
 function preregOptions(): PreregistrationV2Options {
-  return structuredClone(FIXTURE);
+  const { catalog: _catalog, selection: _selection, ...rest } = structuredClone(FIXTURE) as unknown as Record<
+    string,
+    unknown
+  >;
+  void _catalog;
+  void _selection;
+  return {
+    ...(rest as unknown as PreregistrationV2Options),
+    catalog: RESOLVED.catalog,
+    selection: RESOLVED.selection,
+    suiteId: RESOLVED.suiteId,
+    suiteVersion: RESOLVED.suiteVersion,
+    subject: { ...FIXTURE.subject, runtimeConfigDigest: PROFILE.runtimeConfigDigest },
+    provider: {
+      providerId: PROFILE.provider.providerId,
+      modelId: PROFILE.provider.modelId,
+      endpointBaseUrl: PROFILE.provider.endpointBaseUrl,
+      requestProfile: PROFILE.requestProfile,
+    },
+  };
+}
+
+/** The CLI config: identity only — NO self-declared catalog/selection. */
+function cliConfig(): Record<string, unknown> {
+  const { catalog: _catalog, selection: _selection, ...rest } = structuredClone(FIXTURE) as unknown as Record<
+    string,
+    unknown
+  >;
+  void _catalog;
+  void _selection;
+  return { ...rest, selectionEvidence: { root: REPO_ROOT } };
 }
 
 function observationFor(over: Partial<PreregisteredCampaignObservationV2> = {}): PreregisteredCampaignObservationV2 {
-  const caseContentDigests: Record<string, string> = {};
-  for (const caseId of CASE_IDS) caseContentDigests[caseId] = `content-${caseId}`;
+  const caseContentDigests: Record<string, string> = { ...CONTENT_DIGEST_BY_ID };
   return {
     candidateSourceSha: SHA_A,
     cleanTree: true,
@@ -72,10 +129,10 @@ function observationFor(over: Partial<PreregisteredCampaignObservationV2> = {}):
     candidateArmDigest: "candidate-arm-digest",
     guidanceDigest: toolCallEfficiencyGuidanceDigest(),
     contractDigest: sha(stableStringify(mechanismContractFor(TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2))),
-    runtimeConfigDigest: "runtime-config-digest",
-    providerId: "deepseek",
-    modelId: "deepseek-v4-flash",
-    endpointDigest: captureEndpointIdentity(ENDPOINT)!,
+    runtimeConfigDigest: PROFILE.runtimeConfigDigest,
+    providerId: PROFILE.provider.providerId,
+    modelId: PROFILE.provider.modelId,
+    endpointDigest: captureEndpointIdentity(PROFILE.provider.endpointBaseUrl) ?? "provider-default-endpoint",
     requestProfileDigest: sha(stableStringify(REQUEST_PROFILE)),
     caseContentDigests,
     decisionPolicyDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
@@ -106,6 +163,49 @@ function fakeProvider(): { provider: ModelProvider; calls: () => number } {
   return { provider, calls: () => calls };
 }
 
+/**
+ * Write the raw per-run evidence artifacts an A6 re-verification reads back, and
+ * return the declared evidence whose digests are the sha256 of EXACTLY those
+ * bytes. Without this the fake runner would declare a well-SHAPED forgery
+ * (`"a".repeat(64)`) with no artifact on disk, which A6 records as UNVERIFIED and
+ * the aggregate renders INVALID — never ACCEPT.
+ */
+async function writeEvidence(
+  ctx: PreregisteredArmContext,
+  opts: { executorId: string; verifiedCompletion: boolean; activate: boolean },
+): Promise<PreregisteredArmEvidence> {
+  await mkdir(ctx.evidenceDir, { recursive: true });
+  const manifestText = `${stableStringify({
+    schemaVersion: PREREG_RUN_MANIFEST_SCHEMA,
+    executorId: opts.executorId,
+    preregistrationDigest: ctx.preregistrationDigest,
+    planDigest: ctx.planDigest,
+    armRunId: ctx.armRunId,
+    armId: ctx.arm.armId,
+    caseId: ctx.arm.caseId,
+    repetition: ctx.arm.repetition,
+    orderIndex: ctx.arm.orderIndex,
+  })}\n`;
+  const verifierText = `${stableStringify({ schemaVersion: PREREG_RUN_VERIFIER_SCHEMA, verifiedCompletion: opts.verifiedCompletion })}\n`;
+  const securityText = `${stableStringify({ schemaVersion: PREREG_RUN_SECURITY_SCHEMA, violations: 0 })}\n`;
+  await writeFile(join(ctx.evidenceDir, PREREG_RUN_EVIDENCE_FILENAMES.manifest), manifestText, "utf8");
+  await writeFile(join(ctx.evidenceDir, PREREG_RUN_EVIDENCE_FILENAMES.verifier), verifierText, "utf8");
+  await writeFile(join(ctx.evidenceDir, PREREG_RUN_EVIDENCE_FILENAMES.security), securityText, "utf8");
+  let activationEvidenceDigest: string | null = null;
+  if (opts.activate) {
+    const activationText = `${stableStringify({ schemaVersion: "prereg-run-activation-v1", armRunId: ctx.armRunId, activated: true })}\n`;
+    await writeFile(join(ctx.evidenceDir, PREREG_RUN_EVIDENCE_FILENAMES.activation), activationText, "utf8");
+    activationEvidenceDigest = sha(activationText);
+  }
+  return {
+    executorId: opts.executorId,
+    traceDigest: sha(manifestText),
+    verifiedCompletion: opts.verifiedCompletion,
+    securityViolations: 0,
+    activationEvidenceDigest,
+  };
+}
+
 /** The deterministic arm runner: candidate passes and activates; baseline fails.
  *  The pass/activation claims are corroborated by per-run EVIDENCE (F2/S4) — the
  *  aggregate derives the decision from this, not from a bare boolean. */
@@ -115,16 +215,15 @@ const armRunner: PreregisteredArmRunner = async (arm, ctx) => {
     // consume
   }
   const candidate = arm.armId === "candidate";
+  const evidence = await writeEvidence(ctx, {
+    executorId: "n5-offline-fake-executor",
+    verifiedCompletion: candidate,
+    activate: candidate,
+  });
   return {
     status: candidate ? "passed" : "failed",
     tokensUsed: 15,
-    evidence: {
-      executorId: "n5-offline-fake-executor",
-      traceDigest: "a".repeat(64),
-      verifiedCompletion: candidate,
-      securityViolations: 0,
-      activationEvidenceDigest: candidate ? "b".repeat(64) : null,
-    },
+    evidence,
   };
 };
 
@@ -153,7 +252,7 @@ afterEach(async () => {
 
 async function writeConfig(dir: string): Promise<string> {
   const path = join(dir, "config.json");
-  await writeFile(path, JSON.stringify(preregOptions()), "utf8");
+  await writeFile(path, JSON.stringify(cliConfig()), "utf8");
   return path;
 }
 
@@ -218,8 +317,8 @@ describe("N5 — agent prereg build is canonical and makes 0 provider calls", ()
   it("writes the exact canonical bytes and prints the root digest", async () => {
     const dir = await tempDir();
     const { artifact } = await buildViaCli(dir);
-    expect(artifact.schedule.logicalRuns).toBe(32);
-    expect(artifact.budget.campaignWorstCaseModelCalls).toBe(960);
+    expect(artifact.schedule.logicalRuns).toBe(LOGICAL_RUNS);
+    expect(artifact.budget.campaignWorstCaseModelCalls).toBe(WORST_CASE_CALLS);
   });
 
   it("requires --out (usage error, no artifact written)", async () => {
@@ -251,7 +350,7 @@ describe("N5 — agent prereg validate re-observes identity with 0 provider call
     ["a different model", { modelId: "other-model" }],
     ["a different endpoint", { endpointDigest: captureEndpointIdentity("https://api.other.com/v1")! }],
     ["a changed request profile", { requestProfileDigest: "other-profile" }],
-    ["a changed case content", { caseContentDigests: Object.fromEntries(CASE_IDS.map((id) => [id, id === "reg-01" ? "changed" : `content-${id}`])) }],
+    ["a changed case content", { caseContentDigests: Object.fromEntries(CASE_IDS.map((id) => [id, id === CASE_IDS[0] ? "changed" : CONTENT_DIGEST_BY_ID[id]!])) }],
     ["a changed decision policy", { decisionPolicyDigest: "other-policy" }],
   ];
   it.each(drifts)("refuses %s", async (_label, over) => {
@@ -271,7 +370,7 @@ describe("N5 — agent prereg validate re-observes identity with 0 provider call
 });
 
 describe("N5 — the offline closed loop executes exactly the frozen schedule", () => {
-  it("runs 32 logical arm runs with one root digest and reaches ACCEPT", async () => {
+  it("runs the frozen schedule with one root digest and reaches ACCEPT", async () => {
     const dir = await tempDir();
     const { path, artifact } = await buildViaCli(dir);
     const authPath = join(dir, "auth.json");
@@ -284,10 +383,10 @@ describe("N5 — the offline closed loop executes exactly the frozen schedule", 
       ["prereg", "run", path, "--authorization", authPath, "--budget-dir", join(dir, "budget"), "--out", outDir, "--mode", "first-run"],
       d,
     );
-    expect(res.exitCode).toBe(0);
-    expect(res.lines.join("\n")).toContain("executed 32 logical run(s)");
+    expect(res.exitCode, res.lines.join("\n")).toBe(0);
+    expect(res.lines.join("\n")).toContain(`executed ${LOGICAL_RUNS} logical run(s)`);
     expect(factory).toHaveBeenCalledTimes(1);
-    expect(fake.calls()).toBe(32);
+    expect(fake.calls()).toBe(LOGICAL_RUNS);
 
     const aggregate = JSON.parse(await readFile(join(outDir, "aggregate.json"), "utf8")) as {
       preregistrationDigest: string;
@@ -298,7 +397,7 @@ describe("N5 — the offline closed loop executes exactly the frozen schedule", 
     expect(aggregate.preregistrationDigest).toBe(artifact.preregistrationDigest);
     expect(aggregate.planDigest).toBe(artifact.schedule.planDigest);
     expect(aggregate.decision.decision).toBe("ACCEPT");
-    expect(aggregate.providerCalls).toBe(32);
+    expect(aggregate.providerCalls).toBe(LOGICAL_RUNS);
   });
 
   it("resumes the SAME digest without re-spending calls", async () => {
@@ -314,8 +413,8 @@ describe("N5 — the offline closed loop executes exactly the frozen schedule", 
 
     const second = deps({ provider: fakeProvider().provider });
     const res = await runCommand(["prereg", "run", path, "--authorization", authPath, "--budget-dir", budgetDir, "--out", outDir, "--mode", "resume"], second.deps);
-    expect(res.exitCode).toBe(0);
-    expect(res.lines.join("\n")).toContain("resumed 32");
+    expect(res.exitCode, res.lines.join("\n")).toBe(0);
+    expect(res.lines.join("\n")).toContain(`resumed ${LOGICAL_RUNS}`);
     expect(second.factory).toHaveBeenCalledTimes(1);
     expect((second.deps as never as { provider?: unknown }) === undefined).toBe(false);
   });
@@ -367,7 +466,7 @@ describe("N5 — every pre-provider violation refuses with 0 provider factory ca
   it("refuses a changed case content digest", async () => {
     await refusal("case content", () => ({
       observation: observationFor({
-        caseContentDigests: Object.fromEntries(CASE_IDS.map((id) => [id, id === "reg-02" ? "changed" : `content-${id}`])),
+        caseContentDigests: Object.fromEntries(CASE_IDS.map((id) => [id, id === CASE_IDS[1] ? "changed" : CONTENT_DIGEST_BY_ID[id]!])),
       }),
     }));
   });
@@ -485,7 +584,7 @@ describe("N5 — resume only continues the SAME frozen experiment", () => {
       ["prereg", "run", path, "--authorization", authPath, "--budget-dir", budgetDir, "--out", outDir, "--mode", "first-run"],
       deps({ provider: fakeProvider().provider }).deps,
     );
-    expect(res.exitCode).toBe(0);
+    expect(res.exitCode, res.lines.join("\n")).toBe(0);
     return { path, authPath, budgetDir, outDir };
   }
 

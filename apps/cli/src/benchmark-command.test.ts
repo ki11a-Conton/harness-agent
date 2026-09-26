@@ -910,6 +910,86 @@ describe("E3-01: paid guard — external billed provider requires RUN_PAID_BENCH
   });
 });
 
+// A3 — the OLD `benchmark --candidate tool_call_efficiency_v1` paid entry must
+// not be a side door around the v2 pre-registration gate. This asserts BOTH
+// halves of the plan's requirement: the pre-registered candidate is refused
+// before any provider is constructed, and every OTHER candidate / plain
+// benchmark keeps the legacy guard it already had.
+describe("A3 — the legacy `--candidate tool_call_efficiency_v1` paid entry is closed", () => {
+  const oneCase = () =>
+    makeCaseDir({
+      "cases/a/request.md": "just finish",
+      "cases/a/expected.md": "done",
+      "cases/a/case.json": JSON.stringify({ verification: [{ kind: "command", command: "echo ok" }] }),
+    });
+
+  it("a billed legacy run is refused before provider construction, pointing at `agent prereg`", async () => {
+    const root = await oneCase();
+    const prevKey = process.env.OPENAI_API_KEY;
+    const prevPaid = process.env.RUN_PAID_BENCHMARKS;
+    // EVERYTHING a legacy paid run would need is present — a key AND the paid
+    // switch — so the only thing that can refuse this is the A3 gate. Without it
+    // the `--dry-run` below would exit 0 and print a plan for a candidate that
+    // can only be authorized through `agent prereg`.
+    process.env.OPENAI_API_KEY = "sk-test-probe-never-real";
+    process.env.RUN_PAID_BENCHMARKS = "1";
+    try {
+      const result = await runBenchmarkCommand([
+        "--cases", join(root, "cases"),
+        "--candidate", "tool_call_efficiency_v1",
+        "--allow-insecure-local-benchmark",
+        "--dry-run",
+        "--out", join(root, "out"),
+      ]);
+      expect(result.exitCode).toBe(1);
+      const out = result.lines.join("\n");
+      expect(out).toContain("prereg"); // the migration hint
+      // It refused BEFORE the legacy billing guard, not through it.
+      expect(out).not.toContain("RUN_PAID_BENCHMARKS=1 is required");
+    } finally {
+      if (prevKey !== undefined) process.env.OPENAI_API_KEY = prevKey;
+      else delete process.env.OPENAI_API_KEY;
+      if (prevPaid !== undefined) process.env.RUN_PAID_BENCHMARKS = prevPaid;
+      else delete process.env.RUN_PAID_BENCHMARKS;
+    }
+  });
+
+  it("other candidates and plain benchmarks keep the existing RUN_PAID guard (no regression)", async () => {
+    const root = await oneCase();
+    const prevKey = process.env.OPENAI_API_KEY;
+    const prevPaid = process.env.RUN_PAID_BENCHMARKS;
+    process.env.OPENAI_API_KEY = "sk-test-probe-never-real";
+    delete process.env.RUN_PAID_BENCHMARKS;
+    try {
+      // A different registered candidate: the legacy guard still fires, never the
+      // pre-registration refusal.
+      const other = await runBenchmarkCommand([
+        "--cases", join(root, "cases"),
+        "--candidate", "memory_retrieval",
+        "--allow-insecure-local-benchmark",
+        "--out", join(root, "out"),
+      ]);
+      expect(other.exitCode).toBe(1);
+      const otherOut = other.lines.join("\n");
+      expect(otherOut).toContain("RUN_PAID_BENCHMARKS");
+      expect(otherOut).not.toContain("agent prereg build");
+
+      // A plain (candidate-less) benchmark: same legacy guard, unchanged.
+      const plain = await runBenchmarkCommand([
+        "--cases", join(root, "cases"),
+        "--out", join(root, "out"),
+      ]);
+      expect(plain.exitCode).toBe(1);
+      expect(plain.lines[0]).toContain("RUN_PAID_BENCHMARKS");
+    } finally {
+      if (prevKey !== undefined) process.env.OPENAI_API_KEY = prevKey;
+      else delete process.env.OPENAI_API_KEY;
+      if (prevPaid !== undefined) process.env.RUN_PAID_BENCHMARKS = prevPaid;
+      else delete process.env.RUN_PAID_BENCHMARKS;
+    }
+  });
+});
+
 describe("E3-02: paired promotion path (real PairedExperimentExecutor)", () => {
   function makePairCases(): Promise<string> {
     return makeCaseDir({

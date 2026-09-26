@@ -185,12 +185,35 @@ async function main() {
     vitestExitCode: vitest.code,
     identity,
     ...(identityError === null ? {} : { identityError }),
-    // Zero-external-call proof: no key and no paid switch, the suites use a
-    // spy/fake provider, and this script never constructs a provider at all.
-    externalProviderFactoryCalls: 0,
-    externalProviderCalls: 0,
-    networkRequests: 0,
-    costUsdMicros: 0,
+    // F8/A7 — every count below is either MEASURED here or explicitly
+    // NOT_OBSERVED. A literal `0` for a quantity this script never measured
+    // would be an unverifiable claim dressed as evidence, so the four
+    // external-call counts are NOT_OBSERVED: this script never constructs a
+    // provider and cannot observe the child vitest processes' transports. The
+    // MEASURED zero-call proof lives in the suites themselves (in-process fake
+    // providers with real call counters) and in the production-offline E2E's
+    // instrumented composition root.
+    countsProvenance: {
+      tests: "measured: parsed from vitest's own JSON report",
+      vitestExitCode: "measured: the child vitest process exit code",
+      head: "measured: `git rev-parse HEAD` in this checkout",
+      treeClean: "measured: `git status --porcelain` is empty",
+      identity: "measured: this script re-hashes the built package's canonical bytes",
+      externalProviderFactoryCalls: "NOT_OBSERVED: this script constructs no provider; the suite-level spy counters are the measured source",
+      externalProviderCalls: "NOT_OBSERVED: the child vitest processes' transports are not visible to this script",
+      networkRequests: "NOT_OBSERVED: no in-process network instrumentation spans the child vitest processes",
+      costUsdMicros: "NOT_OBSERVED: no provider was billed by this script; a paid run is out of scope and BLOCKED",
+    },
+    observedCounts: {
+      externalProviderFactoryCalls: "NOT_OBSERVED",
+      externalProviderCalls: "NOT_OBSERVED",
+      networkRequests: "NOT_OBSERVED",
+      costUsdMicros: "NOT_OBSERVED",
+    },
+    // A weak, environment-level precondition (NOT a count): no paid key and no
+    // paid switch is selectable while this evidence is produced. It is a guard,
+    // not a measurement of calls.
+    paidEnvironmentPresent: paid.hasKey || paid.hasPaidSwitch,
     ok: vitest.code === 0 && tests.total > 0 && tests.failed === 0 && identity !== null && identityError === null,
   };
 
@@ -202,7 +225,7 @@ async function main() {
       `${tests.failed > 0 ? `, ${tests.failed} failed` : ""}; ` +
       `root ${identity?.preregistrationDigest?.slice(0, 12) ?? "(none)"}…, ` +
       `${identity?.logicalRuns ?? "?"} logical run(s), worst-case ${identity?.campaignWorstCaseModelCalls ?? "?"} model call(s); ` +
-      `external provider factory calls ${report.externalProviderFactoryCalls}\n` +
+      `external provider factory calls ${report.observedCounts.externalProviderFactoryCalls}\n` +
       `  evidence: ${outPath}\n`,
   );
   if (tests.failed > 0) {

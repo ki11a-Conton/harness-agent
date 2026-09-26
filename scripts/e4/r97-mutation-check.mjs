@@ -23,6 +23,15 @@
  * for the gap `docs/E4-R99-R101-report.md:2370` records — the channel's own
  * settlement failure was covered, the WORKER's handling of it was not.
  *
+ * A7's SECOND batch (plan §A7 怎么做 3, second half) adds SEVEN more, each undoing
+ * the FIX a named A-round counterexample test pins: forged evidence accepted,
+ * `resume=false` reusing old records, a lost cost ledger re-created as a fresh
+ * allowance, the duration dimension left at zero, an escape-equivalent duplicate
+ * key, the legacy candidate paid path re-opened, and the release adapter never
+ * executing. `同一构建两臂` is the eighth name on that list and is ALREADY covered
+ * by `same-build-for-both-arms` (T6), so it is not duplicated. Coverage is
+ * reported PER ROUND, so a regression in one batch cannot hide behind another.
+ *
  * This is deliberately not a test file. It mutates production code on disk, so it
  * must never run as part of an ordinary suite where a crash could leave the tree
  * modified. It is a separate, explicitly invoked gate, and it restores the file in
@@ -488,12 +497,162 @@ export const MUTATIONS = [
     // baseline record, DERIVED from evidence — never a self-reported flag. This
     // mutation stops deriving it, so a baseline that observed a candidate event
     // is no longer disqualified and the pair can be concluded.
-    find: `    .filter((r) => r.armId === "baseline" && r.outcome.evidence.activationEvidenceDigest !== null)`,
+    find: `    .filter((r) => r.armId === "baseline" && (r.outcome.evidence?.activationEvidenceDigest ?? null) !== null)`,
     replace: `    .filter(() => false) // S0 mutation: contamination is no longer derived from evidence`,
     suite: "packages/evaluation/src/tool-call-efficiency-formal-gaps.test.ts",
     test: "treats a baseline activation digest as contamination and refuses ACCEPT",
     catchExpectation:
       "a baseline that observed a candidate event is no longer contaminating, so a contaminated pair reaches a decision",
+  },
+  // =========================================================================
+  // THE A7 COUNTEREXAMPLE MUTATIONS — the second half of plan §A7 怎么做 3. The
+  // plan names eight behaviours a suite must be able to catch:
+  //
+  //   "假 evidence 被接受、resume=false 偷用旧结果、cost budget 无法原子恢复、
+  //    tool/duration 未计量、转义等价重复 key、旧 candidate 旁路、同一构建两臂、
+  //    真实 CLI adapter 从未跑通."
+  //
+  // `同一构建两臂` is ALREADY covered by `same-build-for-both-arms` (T6) in this
+  // same list, so it is not duplicated. The other SEVEN each undo the FIX that a
+  // specific A-round test was written for and are bound to THAT test, so the pair
+  // checks the fix rather than the file it happens to live in.
+  // =========================================================================
+  {
+    id: "a6-forged-evidence-accepted",
+    // 假 evidence 被接受
+    planWording: "假 evidence 被接受",
+    round: "A7",
+    file: "packages/evaluation/src/prereg-run-evidence.ts",
+    // A6/F4: a run's DECLARED evidence is trusted only after its raw artifacts
+    // are read back and hashed. This mutation reports every claim as corroborated,
+    // so a forged `traceDigest: "a".repeat(64)` with no manifest/verifier/
+    // activation bytes on disk is stamped `evidenceVerified`, and the fabricated
+    // pair reaches ACCEPT.
+    find: `  return { verified: problems.length === 0, problems };`,
+    replace: `  return { verified: true, problems }; // A7 mutation: the declared evidence is trusted without reading the raw artifacts`,
+    suite: "apps/cli/src/prereg-formal-gaps.test.ts",
+    test: "forged 64-hex evidence with no real trace cannot ACCEPT",
+    catchExpectation:
+      "a fabricated outcome with no raw trace/verifier/activation bytes is stamped verified, so the forged pair reaches ACCEPT",
+  },
+  {
+    id: "a6-resume-false-reuses-records",
+    // resume=false 偷用旧结果
+    planWording: "resume=false 偷用旧结果",
+    round: "A7",
+    file: "packages/evaluation/src/tool-call-efficiency-paired-campaign.ts",
+    // A6/F5: a FIRST run (`resume:false`) must not adopt records it did not
+    // write. This mutation disables the guard, so an existing results directory is
+    // silently reused and no arm is ever re-run.
+    find: `  if (!resume && recordFiles.length > 0) {`,
+    replace: `  if (recordFiles.length > 0 && false && !resume) { // A7 mutation: a first run silently adopts an existing results directory`,
+    suite: "apps/cli/src/prereg-formal-gaps.test.ts",
+    test: "resume:false must not reuse an existing run record",
+    catchExpectation:
+      "a first run adopts records it was never authorized to reuse instead of refusing with RESUME_NOT_REQUESTED",
+  },
+  {
+    id: "a4-cost-budget-resume-creates-fresh-allowance",
+    // cost budget 无法原子恢复（resume 重新领取额度）
+    planWording: "cost budget 无法原子恢复",
+    round: "A7",
+    file: "packages/evaluation/src/tool-call-efficiency-formal-run.ts",
+    // A4: a cost ledger lost between `rm` and `rename` is a LOSS, never a fresh
+    // allowance. This mutation removes the `allowCreate` gate, so a resume over a
+    // deleted `cost-budget.json` opens a brand-new full allowance instead of
+    // refusing the re-open.
+    find: `        if (!opts.allowCreate) {`,
+    replace: `        if (false && !opts.allowCreate) { // A7 mutation: a resume may recreate a missing allowance`,
+    suite: "packages/evaluation/src/tool-call-efficiency-formal-gaps.test.ts",
+    test: "refuses a re-open that would recreate a deleted cost budget",
+    catchExpectation:
+      "a campaign whose cost ledger was lost mid-crash re-opens with a FRESH allowance instead of treating the loss as a refusal",
+  },
+  {
+    id: "a4-duration-dimension-unmetered",
+    // tool/duration 未计量
+    planWording: "tool/duration 未计量",
+    round: "A7",
+    file: "packages/evaluation/src/tool-call-efficiency-formal-run.ts",
+    // A4/F3: the duration dimension is a real ledger dimension charged from the
+    // ACTUAL elapsed time. This mutation settles it at 0, so `maxDurationMs` is
+    // never exercised and the cap can never bind.
+    find: `            const view = await opts.costBudget.settle(costReservationId, {
+              inputTokens,
+              outputTokens,
+              durationMs,
+              usdMicros: chargedMicros,
+            });`,
+    replace: `            const view = await opts.costBudget.settle(costReservationId, {
+              inputTokens,
+              outputTokens,
+              durationMs: 0, // A7 mutation: the duration dimension is never charged
+              usdMicros: chargedMicros,
+            });`,
+    suite: "apps/cli/src/prereg-formal-gaps.test.ts",
+    test: "the duration dimension is charged, not left at zero",
+    catchExpectation:
+      "a completed call charges 0ms, so maxDurationMs is never exercised and the duration cap cannot bind",
+  },
+  {
+    id: "a3-authorization-escape-equivalent-key",
+    // 转义等价重复 key
+    planWording: "转义等价重复 key",
+    round: "A7",
+    file: "packages/evaluation/src/tool-call-efficiency-preregistration-v2.ts",
+    // A3/F7: the canonical-input scan must compare the DECODED key, not the raw
+    // escape text — otherwise `{"paid":false,"\u0070aid":true}` (ONE key after
+    // decoding) slips a second value past `JSON.parse`. This mutation restores the
+    // raw-fragment comparison. It is bound to the AUTHORIZATION boundary because
+    // that document has no canonical-bytes check to mask the defect; the
+    // pre-registration's own escaped-key test is also caught by
+    // `CANONICAL_BYTES_REQUIRED`, so it cannot isolate this behaviour.
+    find: `    const decoded: unknown = JSON.parse(\`"\${raw}"\`);
+    return typeof decoded === "string" ? decoded : raw;`,
+    replace: `    return raw; // A7 mutation: the key is compared as raw escape TEXT, so an escape-equivalent duplicate is missed`,
+    suite: "packages/evaluation/src/tool-call-efficiency-formal-run.test.ts",
+    test: "rejects a duplicate object key",
+    catchExpectation:
+      "an authorization whose repeated key is spelled with a \\u escape is accepted, because the scanner compares the escape text instead of the decoded key",
+  },
+  {
+    id: "a3-legacy-candidate-paid-path-open",
+    // 旧 candidate 旁路
+    planWording: "旧 candidate 旁路",
+    round: "A7",
+    file: "apps/cli/src/benchmark-command.ts",
+    // A3: the legacy `benchmark --candidate tool_call_efficiency_v1` billed entry
+    // is closed before any provider construction. This mutation removes that
+    // refusal, so the pre-registered candidate runs through the legacy paid path
+    // again (its own plan-digest/cap guards are not the v2 gate).
+    find: `  if (opts.candidate === TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2 && billingClass === "external-billed") {`,
+    replace: `  if (false && opts.candidate === TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2 && billingClass === "external-billed") { // A7 mutation: the legacy candidate paid path is open again`,
+    suite: "apps/cli/src/benchmark-command.test.ts",
+    test: "a billed legacy run is refused before provider construction",
+    catchExpectation:
+      "the pre-registered candidate reaches the legacy billed path again, so the v2 pre-registration gate is bypassed",
+  },
+  {
+    id: "a5-real-cli-adapter-never-wired",
+    // 真实 CLI adapter 从未跑通
+    planWording: "真实 CLI adapter 从未跑通",
+    round: "A7",
+    file: "apps/cli/src/prereg-production-runner.ts",
+    // A5/F1: the release adapter's `runArm` is the REAL executor. This mutation
+    // restores the pre-A5 `ARM_EXECUTOR_NOT_WIRED` stop, so a legal experiment can
+    // be admitted and then never executed. `void createPreregArmExecutor;` keeps
+    // the import referenced so the mutation changes BEHAVIOUR rather than tripping
+    // an unused-import diagnostic (which would test the toolchain, not the defect).
+    find: `    runArm: createPreregArmExecutor({ rootDir, env }),`,
+    replace: `    // A7 mutation: the release CLI never executes an arm (pre-A5 behaviour).
+    runArm: async () => {
+      void createPreregArmExecutor;
+      throw new Error(\`\${ARM_EXECUTOR_NOT_WIRED}: A7 mutation — the release CLI never executes an arm\`);
+    },`,
+    suite: "apps/cli/src/prereg-formal-gaps.test.ts",
+    test: "the production adapter refuses without a checkout and EXECUTES a real case with one",
+    catchExpectation:
+      "the release adapter refuses with ARM_EXECUTOR_NOT_WIRED even when a real frozen checkout exists, so a legal experiment can never execute",
   },
 ];
 

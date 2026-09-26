@@ -30,13 +30,15 @@
  * preflight is always `providerFactoryCalls = 0`, `providerCalls = 0`.
  */
 
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import type { ModelEvent, ModelProvider, ModelRef, ProviderConfig, ModelRequest } from "@ar/contracts";
 import { stableStringify } from "./manifest.js";
 import {
   assertFormalExecutionPreregistration,
+  assertNoDuplicateJsonKeys,
+  PreregistrationV2Error,
   TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2,
   TOOL_CALL_EFFICIENCY_PREREGISTRATION_V2_SCHEMA,
   type ToolCallEfficiencyPreregistrationV2,
@@ -124,6 +126,22 @@ function authKeys(obj: Record<string, unknown>, allowed: readonly string[], fiel
 
 /** Strictly parse an owner-provided authorization. Never creates one. */
 export function parseAndValidateAuthorizationV2(json: string): ToolCallEfficiencyAuthorizationV2 {
+  // A3/F7 — the authorization is the OTHER canonical-input boundary, and it was
+  // the one F7 left open: `JSON.parse` keeps only the LAST of a repeated key, so
+  // a hand-edited approval could carry a second `maxUsdMicros` / `paid` /
+  // `preregistrationDigest` that a byte-scan would see but the parsed object
+  // silently drops. The SAME decoded-key scan the pre-registration uses is
+  // applied here (escape-equivalent spellings collide), and its refusal is
+  // re-labelled with this boundary's own error so a caller can distinguish the
+  // two documents. Refused BEFORE any field is read.
+  try {
+    assertNoDuplicateJsonKeys(json);
+  } catch (err) {
+    if (err instanceof PreregistrationV2Error) {
+      authFail("DUPLICATE_JSON_KEY", "authorization contains a repeated object key — canonical input forbids repeated keys");
+    }
+    throw err;
+  }
   let raw: unknown;
   try {
     raw = JSON.parse(json);
@@ -327,6 +345,13 @@ export interface CostBudgetCapsV2 {
   maxToolCalls: number;
   maxDurationMs: number;
   maxUsdMicros: number | null;
+  /**
+   * The pre-registered campaign worst-case LOGICAL call count. Recorded here so
+   * the per-call DURATION reservation can be derived as a share of
+   * `maxDurationMs` (see `perCallDurationMsCeiling`) rather than reserving the
+   * whole campaign wall-clock against every single call.
+   */
+  maxModelCalls: number;
 }
 
 export interface CostBudgetFile {
@@ -342,10 +367,27 @@ export interface CostBudgetFile {
     usdMicros: number;
     unknownCalls: number;
   };
+  /**
+   * The aggregate currently RESERVED (pre-send upper bounds not yet settled).
+   * A reservation is removed when its call settles (replaced by the real usage)
+   * or is released. It is durable so a crash mid-call cannot refund the bound.
+   */
+  reserved: CostReservationDelta;
+  /** Outstanding reservations by id, so each can be released/settled exactly. */
+  reservations: Record<string, CostReservationDelta>;
+}
+
+/** One reservation's per-dimension upper bound (all non-negative integers). */
+export interface CostReservationDelta {
+  inputTokens: number;
+  outputTokens: number;
+  toolCalls: number;
+  durationMs: number;
+  usdMicros: number;
 }
 
 export interface CostBudgetView extends CostBudgetFile {
-  /** True once ANY dimension is at or over its cap. */
+  /** True once ANY dimension is at or over its cap (charged OR reserved). */
   exhausted: boolean;
   /** Human-readable exhausted dimensions. */
   exhaustedDimensions: string[];
@@ -353,10 +395,56 @@ export interface CostBudgetView extends CostBudgetFile {
 
 const COST_BUDGET_FILENAME = "cost-budget.json";
 
+const ZERO_RESERVATION: CostReservationDelta = { inputTokens: 0, outputTokens: 0, toolCalls: 0, durationMs: 0, usdMicros: 0 };
+
+/**
+ * Conservative PER-CALL upper bounds used to RESERVE budget before a request is
+ * sent (plan A4). A call is only dispatched when its worst-case consumption is
+ * provably within the remaining allowance; the real usage settles the
+ * reservation afterwards. These are deliberately conservative ceilings, not
+ * predictions.
+ */
+export const FORMAL_PER_CALL_INPUT_TOKEN_CEILING = 32_000;
+export const FORMAL_PER_CALL_OUTPUT_TOKEN_CEILING = 32_000;
+
+/**
+ * Absolute cap on one call's WALL-CLOCK reservation.
+ *
+ * Unlike a token ceiling (a call provably cannot emit more tokens than the
+ * model's maximum), a wall-clock reservation cannot be a true upper bound — a
+ * call's duration is only known once it is over. The per-call duration
+ * reservation is therefore a SCHEDULING SHARE of the campaign's `maxDurationMs`
+ * (see `perCallDurationMsCeiling`): the campaign's pre-registered worst-case
+ * schedule (`maxModelCalls`) must each fit within the authorized total, or no
+ * call could ever be reserved against a cap as small as one call's ceiling.
+ *
+ * `maxDurationMs` is still an absolute cap: it is charged from the ACTUAL
+ * elapsed duration (settled after the call), and once charged+reserved would
+ * exceed it, further calls are refused before they leave.
+ */
+export const FORMAL_PER_CALL_DURATION_MS_CEILING = 600_000;
+
+/**
+ * The per-call duration reservation for a campaign: the largest uniform share
+ * of `maxDurationMs` that keeps the pre-registered worst-case schedule
+ * (`maxModelCalls` calls) within the cap, never above the absolute per-call
+ * ceiling, and never below 1ms (a zero reservation would make the duration
+ * dimension unbounded).
+ */
+export function perCallDurationMsCeiling(caps: Pick<CostBudgetCapsV2, "maxDurationMs" | "maxModelCalls">): number {
+  const share = Math.ceil(caps.maxDurationMs / Math.max(1, caps.maxModelCalls));
+  return Math.max(1, Math.min(FORMAL_PER_CALL_DURATION_MS_CEILING, share));
+}
+
+let reservationCounter = 0;
+
 /**
  * A digest-bound, same-lock cost budget. It reuses `withR97CampaignLock` (the
  * SINGLE campaign lock) rather than implementing a third lock. Its caps must
  * equal the pre-registration's; anything else is refused.
+ *
+ * A4: every dimension is RESERVED before the request and settled afterwards, so
+ * a cap can never be exceeded by a request that was never reserved.
  */
 export class CostBudget {
   private constructor(private readonly dir: string, private file: CostBudgetFile) {}
@@ -370,14 +458,19 @@ export class CostBudget {
       maxToolCalls: prereg.budget.maxToolCalls,
       maxDurationMs: prereg.budget.maxDurationMs,
       maxUsdMicros: prereg.budget.maxUsdMicros,
+      maxModelCalls: prereg.budget.campaignWorstCaseModelCalls,
     };
     await mkdir(dir, { recursive: true });
     return withR97CampaignLock(dir, async () => {
       let raw: string | null = null;
       try {
         raw = await readFile(path, "utf8");
-      } catch {
-        raw = null;
+      } catch (err) {
+        // Distinguish a genuinely ABSENT ledger from an unreadable/permission-
+        // denied one. Only ENOENT means "a brand new campaign may create it";
+        // EACCES/EPERM/EISDIR are real failures that must NOT be read as "fresh".
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") raw = null;
+        else throw new Error(`cost budget could not be read in ${dir}: ${err instanceof Error ? err.message : String(err)}`);
       }
       if (raw === null) {
         if (!opts.allowCreate) {
@@ -388,11 +481,19 @@ export class CostBudget {
           preregistrationDigest: prereg.preregistrationDigest,
           caps,
           charged: { inputTokens: 0, outputTokens: 0, totalTokens: 0, toolCalls: 0, durationMs: 0, usdMicros: 0, unknownCalls: 0 },
+          reserved: { ...ZERO_RESERVATION },
+          reservations: {},
         };
         await writeAtomic(path, file);
         return new CostBudget(dir, file);
       }
-      const parsed = JSON.parse(raw) as CostBudgetFile;
+      let parsed: CostBudgetFile;
+      try {
+        parsed = JSON.parse(raw) as CostBudgetFile;
+      } catch {
+        // Corrupt bytes are a LOSS, never a fresh allowance.
+        throw new Error(`cost budget in ${dir} is not valid JSON — refusing to treat a corrupt ledger as a new campaign`);
+      }
       if (parsed.schemaVersion !== TOOL_CALL_EFFICIENCY_COST_BUDGET_SCHEMA) {
         throw new Error(`cost budget schema ${String(parsed.schemaVersion)} is not ${TOOL_CALL_EFFICIENCY_COST_BUDGET_SCHEMA}`);
       }
@@ -402,6 +503,8 @@ export class CostBudget {
       if (stableStringify(parsed.caps) !== stableStringify(caps)) {
         throw new Error("cost budget caps do not match the pre-registration — refusing to reuse it");
       }
+      parsed.reserved = { ...ZERO_RESERVATION, ...(parsed.reserved ?? {}) };
+      parsed.reservations = parsed.reservations ?? {};
       return new CostBudget(dir, parsed);
     });
   }
@@ -409,33 +512,108 @@ export class CostBudget {
   view(): CostBudgetView {
     const c = this.file.charged;
     const caps = this.file.caps;
+    const r = this.file.reserved;
+    // A dimension is exhausted when charged+reserved is at/over its cap.
+    const at = (charged: number, reserved: number, max: number): boolean => charged + reserved >= max;
     const exhaustedDimensions: string[] = [];
-    if (c.inputTokens > caps.maxInputTokens) exhaustedDimensions.push("inputTokens");
-    if (c.outputTokens > caps.maxOutputTokens) exhaustedDimensions.push("outputTokens");
-    if (c.totalTokens > caps.maxTotalTokens) exhaustedDimensions.push("totalTokens");
-    if (c.toolCalls > caps.maxToolCalls) exhaustedDimensions.push("toolCalls");
-    if (c.durationMs > caps.maxDurationMs) exhaustedDimensions.push("durationMs");
-    if (caps.maxUsdMicros !== null && c.usdMicros > caps.maxUsdMicros) exhaustedDimensions.push("usdMicros");
+    if (at(c.inputTokens, r.inputTokens, caps.maxInputTokens)) exhaustedDimensions.push("inputTokens");
+    if (at(c.outputTokens, r.outputTokens, caps.maxOutputTokens)) exhaustedDimensions.push("outputTokens");
+    if (at(c.totalTokens, r.inputTokens + r.outputTokens, caps.maxTotalTokens)) exhaustedDimensions.push("totalTokens");
+    if (at(c.toolCalls, r.toolCalls, caps.maxToolCalls)) exhaustedDimensions.push("toolCalls");
+    if (at(c.durationMs, r.durationMs, caps.maxDurationMs)) exhaustedDimensions.push("durationMs");
+    if (caps.maxUsdMicros !== null && at(c.usdMicros, r.usdMicros, caps.maxUsdMicros)) exhaustedDimensions.push("usdMicros");
     return { ...this.file, exhausted: exhaustedDimensions.length > 0, exhaustedDimensions };
   }
 
   /** True when a call may NOT leave: any dimension is already at/over cap. */
   cannotAffordMore(): { refused: boolean; reason: string } {
-    const c = this.file.charged;
-    const caps = this.file.caps;
-    if (c.inputTokens >= caps.maxInputTokens) return { refused: true, reason: "input-token cap reached" };
-    if (c.outputTokens >= caps.maxOutputTokens) return { refused: true, reason: "output-token cap reached" };
-    if (c.totalTokens >= caps.maxTotalTokens) return { refused: true, reason: "total-token cap reached" };
-    if (c.toolCalls >= caps.maxToolCalls) return { refused: true, reason: "tool-call cap reached" };
-    if (c.durationMs >= caps.maxDurationMs) return { refused: true, reason: "duration cap reached" };
-    if (caps.maxUsdMicros !== null && c.usdMicros >= caps.maxUsdMicros) return { refused: true, reason: "USD cap reached" };
+    const v = this.view();
+    if (v.exhausted) return { refused: true, reason: `${v.exhaustedDimensions.join(", ")} at cap` };
     return { refused: false, reason: "" };
   }
 
-  /** Charge actual usage after a call returned. Atomic under the campaign lock. */
+  /**
+   * RESERVE a conservative per-call upper bound BEFORE the request is sent. The
+   * reservation is refused when charged+reserved+delta would exceed ANY cap —
+   * the call is then never dispatched. Durable and same-lock.
+   */
+  async reserve(delta: CostReservationDelta): Promise<{ ok: true; id: string } | { ok: false; reason: string }> {
+    for (const [k, v] of Object.entries(delta)) {
+      if (!Number.isSafeInteger(v) || v < 0) return { ok: false, reason: `reservation ${k} must be a non-negative safe integer` };
+    }
+    return withR97CampaignLock(this.dir, async () => {
+      const file = JSON.parse(await readFile(join(this.dir, COST_BUDGET_FILENAME), "utf8")) as CostBudgetFile;
+      file.reserved = { ...ZERO_RESERVATION, ...(file.reserved ?? {}) };
+      file.reservations = file.reservations ?? {};
+      const c = file.charged;
+      const r = file.reserved;
+      const caps = file.caps;
+      const totalDelta = delta.inputTokens + delta.outputTokens;
+      const over = (charged: number, reserved: number, add: number, max: number): boolean => charged + reserved + add > max;
+      let reason = "";
+      if (over(c.inputTokens, r.inputTokens, delta.inputTokens, caps.maxInputTokens)) reason = "input-token cap would be exceeded";
+      else if (over(c.outputTokens, r.outputTokens, delta.outputTokens, caps.maxOutputTokens)) reason = "output-token cap would be exceeded";
+      else if (over(c.totalTokens, r.inputTokens + r.outputTokens, totalDelta, caps.maxTotalTokens)) reason = "total-token cap would be exceeded";
+      else if (over(c.toolCalls, r.toolCalls, delta.toolCalls, caps.maxToolCalls)) reason = "tool-call cap would be exceeded";
+      else if (over(c.durationMs, r.durationMs, delta.durationMs, caps.maxDurationMs)) reason = "duration cap would be exceeded";
+      else if (caps.maxUsdMicros !== null && over(c.usdMicros, r.usdMicros, delta.usdMicros, caps.maxUsdMicros)) reason = "USD cap would be exceeded";
+      if (reason !== "") return { ok: false as const, reason };
+      const id = `res-${process.pid}-${Date.now()}-${(reservationCounter += 1)}`;
+      file.reservations[id] = { ...delta };
+      r.inputTokens += delta.inputTokens;
+      r.outputTokens += delta.outputTokens;
+      r.toolCalls += delta.toolCalls;
+      r.durationMs += delta.durationMs;
+      r.usdMicros += delta.usdMicros;
+      await writeAtomic(join(this.dir, COST_BUDGET_FILENAME), file);
+      this.file = file;
+      return { ok: true as const, id };
+    });
+  }
+
+  /** Release a reservation whose call was never dispatched (no usage). */
+  async release(id: string): Promise<void> {
+    await this.settle(id, {});
+  }
+
+  /**
+   * Settle a reservation against the ACTUAL usage observed: the reservation is
+   * released and the real numbers are charged, in ONE locked transaction. An
+   * unknown outcome must charge the reserved upper bound (never a refund).
+   */
+  async settle(id: string, actual: { inputTokens?: number; outputTokens?: number; toolCalls?: number; durationMs?: number; usdMicros?: number; unknown?: boolean }): Promise<CostBudgetView> {
+    return withR97CampaignLock(this.dir, async () => {
+      const file = JSON.parse(await readFile(join(this.dir, COST_BUDGET_FILENAME), "utf8")) as CostBudgetFile;
+      file.reserved = { ...ZERO_RESERVATION, ...(file.reserved ?? {}) };
+      file.reservations = file.reservations ?? {};
+      const held = file.reservations[id] ?? { ...ZERO_RESERVATION };
+      file.reserved.inputTokens -= held.inputTokens;
+      file.reserved.outputTokens -= held.outputTokens;
+      file.reserved.toolCalls -= held.toolCalls;
+      file.reserved.durationMs -= held.durationMs;
+      file.reserved.usdMicros -= held.usdMicros;
+      delete file.reservations[id];
+      const inputTokens = actual.inputTokens ?? 0;
+      const outputTokens = actual.outputTokens ?? 0;
+      file.charged.inputTokens += inputTokens;
+      file.charged.outputTokens += outputTokens;
+      file.charged.totalTokens += inputTokens + outputTokens;
+      file.charged.toolCalls += actual.toolCalls ?? 0;
+      file.charged.durationMs += actual.durationMs ?? 0;
+      file.charged.usdMicros += actual.usdMicros ?? 0;
+      if (actual.unknown === true) file.charged.unknownCalls += 1;
+      await writeAtomic(join(this.dir, COST_BUDGET_FILENAME), file);
+      this.file = file;
+      return this.view();
+    });
+  }
+
+  /** Charge actual usage without a prior reservation (legacy/tests). Atomic. */
   async charge(delta: { inputTokens?: number; outputTokens?: number; toolCalls?: number; durationMs?: number; usdMicros?: number; unknown?: boolean }): Promise<CostBudgetView> {
     return withR97CampaignLock(this.dir, async () => {
       const file = JSON.parse(await readFile(join(this.dir, COST_BUDGET_FILENAME), "utf8")) as CostBudgetFile;
+      file.reserved = { ...ZERO_RESERVATION, ...(file.reserved ?? {}) };
+      file.reservations = file.reservations ?? {};
       const c = file.charged;
       const inputTokens = delta.inputTokens ?? 0;
       const outputTokens = delta.outputTokens ?? 0;
@@ -453,13 +631,43 @@ export class CostBudget {
   }
 }
 
+/**
+ * Atomically replace `path` with `value`.
+ *
+ * The previous version did `rm(path)` then `rename(tmp, path)`, which leaves a
+ * window where the ledger file does not exist (a crash there would look like a
+ * fresh campaign). `rename` over an existing file is atomic on POSIX AND on
+ * Windows (libuv uses MOVEFILE_REPLACE_EXISTING), so the delete window is
+ * removed entirely; the temp file is fsynced first so the rename cannot expose
+ * a partially written ledger.
+ */
 async function writeAtomic(path: string, value: unknown): Promise<void> {
   const tmp = `${path}.tmp-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
-  await writeFile(tmp, `${stableStringify(value)}\n`, "utf8");
-  // `force` already tolerates a missing target; any OTHER failure (EPERM/EBUSY) is
-  // real and must NOT be swallowed — it propagates so the atomic write fails closed.
-  await rm(path, { force: true });
-  await rename(tmp, path);
+  const data = `${stableStringify(value)}\n`;
+  const fh = await open(tmp, "w");
+  try {
+    await fh.writeFile(data, "utf8");
+    await fh.sync();
+  } finally {
+    await fh.close();
+  }
+  try {
+    await rename(tmp, path);
+  } catch (err) {
+    // A failed cleanup must NOT mask the rename failure, but it must not be a
+    // silent swallow either (P14-6): report the leftover temp file, then
+    // re-throw the original error.
+    try {
+      await rm(tmp, { force: true });
+    } catch (cleanupErr) {
+      process.stderr.write(
+        `[degraded] cost-ledger temp cleanup failed for ${tmp}: ${
+          cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)
+        }\n`,
+      );
+    }
+    throw err;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -508,13 +716,28 @@ export function createFormalBudgetedProvider(opts: {
       const inner = opts.provider.createClient(model, config);
       return {
         async *generate(request: ModelRequest, signal: AbortSignal): AsyncGenerator<ModelEvent> {
-          const cost = opts.costBudget.cannotAffordMore();
-          if (cost.refused) {
+          // A4 — RESERVE every billed dimension's conservative per-call upper
+          // bound BEFORE the request is sent. If the frozen budget cannot prove
+          // the call fits, it is never dispatched: the cap is never exceeded by
+          // an unreserved request.
+          const usdCeiling = opts.usdMicrosPerCall ?? 0;
+          const reservation = await opts.costBudget.reserve({
+            inputTokens: FORMAL_PER_CALL_INPUT_TOKEN_CEILING,
+            outputTokens: FORMAL_PER_CALL_OUTPUT_TOKEN_CEILING,
+            toolCalls: 0,
+            durationMs: perCallDurationMsCeiling(opts.costBudget.view().caps),
+            usdMicros: usdCeiling,
+          });
+          if (!reservation.ok) {
             stats.refusedCalls += 1;
-            throw new Error(`E4-N3: BUDGET_EXHAUSTED: ${cost.reason} — refusing to send a call the frozen budget cannot afford`);
+            throw new Error(`E4-N3: BUDGET_EXHAUSTED: ${reservation.reason} — refusing to send a call the frozen budget cannot afford`);
           }
+          const costReservationId = reservation.id;
           const reserved = await opts.ledger.reserve(opts.arm, 1);
           if (!reserved.ok || reserved.reservationId === null) {
+            // The call-ledger reservation was refused: release the cost
+            // reservation we just took so it cannot be left stranded.
+            await opts.costBudget.release(costReservationId);
             stats.refusedCalls += 1;
             throw new Error(`E4-N3: BUDGET_EXHAUSTED: ${reserved.reason} — refusing to send an unbilled call`);
           }
@@ -528,12 +751,16 @@ export function createFormalBudgetedProvider(opts: {
           let usdMicros = 0;
           let retries = 0;
           let settleStarted = false;
+          const startedAt = Date.now();
 
           const settle = async (): Promise<void> => {
             if (settleStarted) return;
             settleStarted = true;
+            const durationMs = Math.max(0, Date.now() - startedAt);
             if (!entered) {
               await opts.ledger.abandon(reservationId);
+              // Nothing was sent: release the cost reservation in full.
+              await opts.costBudget.release(costReservationId);
               return;
             }
             if (completed) {
@@ -542,14 +769,21 @@ export function createFormalBudgetedProvider(opts: {
               await opts.ledger.markUnknown(reservationId);
               stats.unknownCalls += 1;
               // A dispatched call whose outcome nobody saw may already be
-              // billed: charge the USD ceiling rather than refunding it.
-              await opts.costBudget.charge({ usdMicros: opts.usdMicrosPerCall ?? 0, unknown: true });
+              // billed: settle at the RESERVED upper bound (never a refund).
+              await opts.costBudget.settle(costReservationId, {
+                inputTokens: FORMAL_PER_CALL_INPUT_TOKEN_CEILING,
+                outputTokens: FORMAL_PER_CALL_OUTPUT_TOKEN_CEILING,
+                durationMs,
+                usdMicros: usdCeiling,
+                unknown: true,
+              });
               return;
             }
-            const chargedMicros = Math.max(usdMicros, opts.usdMicrosPerCall ?? 0);
-            const view = await opts.costBudget.charge({
+            const chargedMicros = Math.max(usdMicros, usdCeiling);
+            const view = await opts.costBudget.settle(costReservationId, {
               inputTokens,
               outputTokens,
+              durationMs,
               usdMicros: chargedMicros,
             });
             stats.chargedInputTokens += inputTokens;

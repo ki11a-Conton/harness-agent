@@ -13,7 +13,7 @@ import type { CommandDeps } from "./commands.js";
 import { runCommand } from "./commands.js";
 import { preregCmd, type PreregCommandDeps } from "./prereg-command.js";
 import { createProductionPreregRunner } from "./prereg-production-runner.js";
-import { resolveModelProvider, STUB_PROVIDER_ID } from "./provider.js";
+import { resolveModelProvider, DEFAULT_REAL_MODEL_ID, STUB_PROVIDER_ID } from "./provider.js";
 
 /**
  * Builtin tool set every `createDefaultDeps` host registers. Single source:
@@ -45,8 +45,9 @@ export const DEFAULT_SYSTEM_PROMPT = [
 ].join("\n");
 
 /** Default request model id for a real provider; the provider may still apply
- *  its own env-based default (e.g. OPENAI_MODEL) when configured. */
-export const DEFAULT_MODEL_ID = "gpt-4o-mini";
+ *  its own env-based default (e.g. OPENAI_MODEL) when configured. Sourced from
+ *  the provider-identity module so the default can never drift. */
+export const DEFAULT_MODEL_ID = DEFAULT_REAL_MODEL_ID;
 
 export interface DefaultDepsOptions {
   /** Enables persistent stores (JSONL session/event, durable approval +
