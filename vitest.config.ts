@@ -17,7 +17,19 @@ export default defineConfig({
     //
     // `configDefaults.exclude` is spread explicitly because a custom `exclude`
     // REPLACES the framework defaults (`**/node_modules/**`, `**/.git/**`).
-    exclude: [...configDefaults.exclude, "apps/cli/src/e4-r24-fixture-*.test.ts"],
+    //
+    // B0 (plan(20260926-070459).md §B0): the NEXT-round RED counterexamples are
+    // DELIBERATELY failing on the audited HEAD — they are the evidence for gaps
+    // G1–G7 and become GREEN only when B1–B5 close them. They must never be
+    // collected by the green regression run, or `pnpm test` would go red for the
+    // wrong reason. They stay individually runnable through the dedicated config
+    // `apps/cli/test-infra/red-next-gaps-vitest.config.ts`.
+    exclude: [
+      ...configDefaults.exclude,
+      "apps/cli/src/e4-r24-fixture-*.test.ts",
+      "packages/evaluation/src/prereg-next-gaps.test.ts",
+      "apps/cli/src/prereg-next-gaps.test.ts",
+    ],
     environment: "node",
     testTimeout: 300000,
     // E4-R24 (F04): when a suite run is NAMED (E2E_OBSERVATION_RUN_ID — set by
