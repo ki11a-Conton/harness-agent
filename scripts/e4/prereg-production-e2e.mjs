@@ -863,6 +863,14 @@ async function main() {
       writeArmCheckout(candidateDir, "candidate", true, evalMod.R97_ARM_BUILD_ENTRIES);
       const claimsDir = join(WORKSPACE, "claims");
       mkdirSync(claimsDir, { recursive: true });
+      // The in-process POS-EXEC gate resolves its claim anchor from
+      // `process.env` (not from the child-only `env` object below), so it must
+      // point INSIDE this run's disposable WORKSPACE as well. Otherwise the
+      // global tmpdir anchor remembers a budget dir that this script deletes on
+      // every run, and the NEXT run refuses with CAMPAIGN_STATE_LOST (a deleted
+      // root is a loss, not a fresh allowance). Scoping it here keeps the run
+      // idempotent without weakening that runtime rule.
+      process.env.R97_CAMPAIGN_CLAIMS_DIR = claimsDir;
       const env = {
         R97_ARM_BASELINE_DIR: baselineDir,
         R97_ARM_CANDIDATE_DIR: candidateDir,

@@ -1,9 +1,11 @@
-# tool_call_efficiency_v1 — 预注册可执行闭环阶段报告（N0–N7 + S0–S7）
+# tool_call_efficiency_v1 — 预注册可执行闭环阶段报告（N0–N7 + S0–S7 + A0–A7 + B0–B6）
 
-> 本文件是 **N0–N7 阶段**与后续 **S0–S7 阶段**的任务报告。它记录**已执行并验证**的事实，不把计划项
-> 写成已完成。
-> 状态规则：P5 只有在 N1–N5 可执行闭环落地并经 CI 验证后才可写 PASS；N7 / S7 在用户另行明确付费
+> 本文件是 **N0–N7 / S0–S7 / A0–A7 / B0–B6** 各阶段的任务报告。它记录**已执行并验证**的事实，
+> 不把计划项写成已完成。
+> 状态规则：P5 只有在 N1–N5 可执行闭环落地并经 CI 验证后才可写 PASS；N7 / S7 / B7 在用户另行明确付费
 > 授权前一律 **BLOCKED / PAID_NOT_RUN**。runtime ready 与 champion promotion 分开陈述。
+> 最新一轮为 **§B（B0–B6）**：它把 `productionOfflineReady` 拆成三个可分别断言的子项（见 §B.2），
+> 并给出正式比较的观测规范（§B.4）与待审批模板（§B.5）。
 
 - 阶段起点（固定审查 HEAD）：`1964c66bd3438846e7ef3b8ce76533ed29f3b450`
 - 上一轮审查基线：`6d027c8936bccefa6ecb47d1ebfa56a56c89efe3`
@@ -252,6 +254,7 @@ digest）。环境中不存在 API key 不构成授权；`preflightPaid.ok=true`
 （S 轮自述为 PASS 是过宽——该轮报告的表里根本没有 S1 行，而 S1 的“真实选择/执行身份”当时并未交付，
 由本文件 §A 的 A1/A2 补上）；**S7 = BLOCKED / PAID_NOT_RUN**（无用户书面付费授权）。
 判定 `productionOfflineReady` 必须读 §A 的四个独立 readiness 等级，不能只读这张表。
+（**最新一轮已把它进一步拆成三个可分别断言的子项，见 §B.2；以 §B.2 为准。**）
 
 > 本段绑定实现提交 `7fb389e`（S2/S5/S6 收尾）与其前序 `0ef6c4d`（S0/S3）、`2209abd`（S2/S4）。
 > 本段文字在该实现提交**之后**更新，故不引用本段自身所在文档提交的 SHA——"实现提交已验收"与
@@ -363,8 +366,214 @@ digest）。环境中不存在 API key 不构成授权；`preflightPaid.ok=true`
 - **诚实计数（plan §A7/F8）**：`n5-prereg-closed-loop.mjs` 的四个外部计数已由字面 `0` 改为
   `NOT_OBSERVED`（该脚本不构造 provider、也看不到子 vitest 进程的传输），`MEASURED` 的零调用证明
   改由进程内带计数器的 fake 承担；发行版 E2E 只在**自己测量**的量上写数字。
-- 边界：`productionOfflineReady=PASS` 证明的是**发行版可以在离线 fake 传输下走完形式链**，
+- 边界：`productionOfflineReady=PASS`（§A7 的旧判据）证明的是**发行版可以在离线 fake 传输下走完形式链**，
   它**不**证明模型效果、**不**证明付费实验已运行、**不**证明 candidate 优于 baseline。
+  **该判据在 §B.2 被拆分**：§A7 当时只测到进程内 adapter 的正向，本节的拆分层级才是当前的准确表述。
+
+---
+
+## B — 从“安全拒绝”走到“可验证地执行”（B0–B6）
+
+结论：**B0–B6 = PASS（离线）**；`productionOfflineReady` 按 §B6 要求**拆成三个可分别断言的子项**，
+四个 readiness 等级**分别**陈述。**B7 = BLOCKED / PAID_NOT_AUTHORIZED**（无用户书面付费授权）。
+
+> 绑定实现提交：`d26fd55`（B0：RED 反例 + 缺口矩阵）、`0e54ca5`（B1–B5）、以及本轮 E2E 幂等修复。
+> 本段文字在这些提交**之后**更新，故不引用本段自身所在文档提交的 SHA。本机干净工作树
+> （`git status --porcelain` 为空）下运行，故发行版的 `require-clean` observer 可以认证。
+> 0 外部付费请求；无 key、无付费开关；B7 保持 `PAID_NOT_RUN`。
+
+### B.1 缺口矩阵与 RED→GREEN
+
+B0 交付物 [prereg-next-gap-matrix.md](file:///workspace/docs/evidence/prereg-next-gap-matrix.md) 把评审列出的
+G1–G7 变成**可失败、可单跑、离线**的反例；B1–B5 关闭它们：
+
+| 缺口 | RED 反例（HEAD `8247caa` 实测失败输出） | 修复落点 | 本 HEAD 结果 |
+| --- | --- | --- | --- |
+| G1 | `[G1/B3]` 源无 `node:child_process`/`worker_threads` seam | B3：`prereg-arm-isolated-worker.mjs` + `prereg-arm-executor.ts` 每臂启动**自身构建**的隔离 stdio worker，driver 复核入口哈希 + 机制探针 | GREEN |
+| G2 | `[G2/B2]` `expected 2 to be 1`（重试发生第二次物理发送） | B2：每次物理 attempt（含内部 retry）前按维度预留 | GREEN |
+| G3 | `[G3/B2]` 未预约 ID / 负数 / 重复 settle 被静默接受 | B2：`settle` 拒绝未知 ID、负数/NaN、超预约、重复 | GREEN |
+| G4 | `[G4/B2]` `0.0005` 不覆盖 64k×15USD/1M 最坏；代理端点同价 | B2：`prereg-execution-identity.ts` 版本化 per-model/endpoint 价快照；未知代理端点 → `PRICING_UNKNOWN` | GREEN |
+| G5 | `[G5/B1]` 观察结果不含 `selectionProvenanceDigest`/`eligibilityDigests` | B1：validate/run 从冻结证据独立重算；`readCaseFiles` 用 `lstat`+`realpath` 拒绝 symlink 越界 | GREEN |
+| G6 | `[G6/B4]` 字节正确的 `null` manifest 得到 `verified=true` | B4：非 plain object（含 `null`）/数组/重复 key 立即 `verified=false`；run record 先写 temp+fsync 再覆盖式 rename | GREEN |
+| G7 | `[G7/B5]`/`[G7/B6]` 正向为 in-process fake；readiness 未拆分 | B5/B6：发行版子进程正向 + readiness 三拆 | GREEN |
+
+- RED 配置（结构性排除在主回归之外，避免绿变红）：`apps/cli/test-infra/red-next-gaps-vitest.config.ts`。
+- RED→GREEN 证据（本 HEAD 实测）：`npx vitest run --config apps/cli/test-infra/red-next-gaps-vitest.config.ts`
+  → **14 passed (14)**（B0 当时同一命令为 **14 failed (14)**）。
+- mutation gate（撤销每条修复须使对应测试 RED）：`node scripts/e4/r97-mutation-check.mjs`
+  → **27/27 CAUGHT**（T6 5/5 · A7 14/14 · N5 5/5 · S0 2/2），工作树 RESTORED。
+
+### B.2 readiness 拆分（§B6 的核心要求）
+
+§A 的 `productionOfflineReady=PASS` 只测到**进程内 adapter**的正向，**不得**读成“发行版子进程已走完完整正向”。
+本节按 §B6 把它拆成三个可分别断言的子项，并把四个 readiness 等级**分开**陈述：
+
+| readiness | 状态 | 依据（本 HEAD 实测，`node scripts/e4/prereg-production-e2e.mjs`） |
+| --- | --- | --- |
+| `offlineFixtureReady` | **PASS** | `scripts/e4/n5-prereg-closed-loop.mjs`：**123/123** 注入 adapter 离线闭环，root `e22e3fd68987…` |
+| `productionOfflineReady` | **PASS**（= 下列三子项全 PASS） | 拆分层级见下；任一子项非 PASS 则整体写 PARTIAL / NOT_READY |
+| ↳ `releaseCliNegativeAndCertification` | **PASS** | 发行版 `node apps/cli/dist/main.js` 负向矩阵 **9/9 拒绝**、每例 HTTP=0；`prereg build`/`validate` 退出码 0、provider=0 |
+| ↳ `inProcessAdapterForward` | **PASS** | 进程内**出厂** observer+executor 的完整成对 schedule：**124** arm run、**124** physical fake 调用、**124/124** 原始 evidence 复验通过 |
+| ↳ `releaseCliSubprocessForward` | **PASS** | **发行版 CLI 子进程**跑完 31×2×2=**124** arm run；两臂由各自**真实隔离构建**执行；loopback 计数 stub 实测 **124** 次物理请求 == durable ledger committed **124**、unknown **0**；**124/124** evidence 复验 |
+| `paidExperimentRun` | **NOT_RUN** | 无付费授权；脚本在 key/付费开关可选时拒绝运行；所有传输均为本地（进程内 fake 或 127.0.0.1 计数 stub） |
+| `championPromotion` | **NOT_RUN** | 推广是独立的后续审批，绝不从离线证据推断 |
+
+> 更正说明：§A 曾以“进程内 adapter 正向”单独支撑 `productionOfflineReady=PASS`。那是**过宽**的表述——
+> 它证明的是 harness 在两套机制参数下可工作，**不是**“两份冻结构建各自被执行”。B3/B5 引入隔离 worker 与
+> 发行版子进程正向后才补上证据；本表是当前准确的分项结论。
+
+**计数口径（历史保留，不覆盖）**：§A7 的 in-process 正向记录过 `physicalProviderCalls=316`、
+`armStatuses failed 96 / passed 28`、判定 `REJECT`（当时 arm checkout 由 `export {}` 合成、每次 generate
+可多次进入）。B3 把合成 stub 换成**真实可加载的 arm 构建**（每臂固定一次模型调用、outcome 固定为
+`failed`），因此本轮的确定值变为 **124 调用 / 124 failed / `INCONCLUSIVE`**。两者都保留各自来源，
+**不**把新数覆盖旧数，也不把任一离线数当作模型质量证据。
+
+### B.3 本机实测（本 HEAD，`treeClean=true`，linux，Node v24.1.0）
+
+| 命令 | 退出码 | 观测 |
+| --- | --- | --- |
+| `pnpm typecheck` | 0 | `tsc -b` 全仓通过 |
+| `pnpm test` | 0 | **374 文件全通过；7074 passed \| 10 skipped (7084)** |
+| `npx vitest run --config apps/cli/test-infra/red-next-gaps-vitest.config.ts` | 0 | **14 passed (14)** |
+| `node scripts/e4/r97-mutation-check.mjs` | 0 | **27/27 CAUGHT**；工作树 RESTORED |
+| `node scripts/e4/n5-prereg-closed-loop.mjs` | 0 | **123/123**；root `e22e3fd68987…`；32 logical runs；worst-case 960；external provider factory calls `NOT_OBSERVED` |
+| `node scripts/e4/prereg-production-e2e.mjs --out .ci/b6/e2e.json` | 0 | 见下表 |
+
+发行版 E2E 分项（stub/fake/ledger 各自计数器，均为本机实测）：
+
+| 阶段 | transport / backend | 观测 |
+| --- | --- | --- |
+| 负向矩阵 | 发行版 CLI 真子进程 | 9/9 拒绝；每例 `httpRequestsDuring=0`；原因码 `CLI_USAGE`（f6×3、a3×3）、`A1`/`F7`/`A4` |
+| 正向认证 | 发行版 CLI 真子进程 | build exit 0、validate exit 0、HTTP=0、provider=0 |
+| POS-EXEC 正向 | `in-process-adapter` / `in-process` | 124 arm run（failed 124）；`physicalProviderCalls=124`；`providerFactoryCalls=1`；ledger committed 124 / remaining 3596（granted 3720）；evidence 124/124；判定 `INCONCLUSIVE` |
+| POS-FWD 正向 | `release-cli-subprocess` / `release-cli-subprocess` | 124 arm run；`physicalStubRequests=124` == ledger committed 124；`unknown=0`、`transportRetries=0`；remaining 3596；evidence 124/124；判定 `INCONCLUSIVE [EFFECT_BELOW_THRESHOLD]` |
+
+- 冻结身份（POS-FWD 实测）：`preregistrationDigest=7b552d31…`、`planDigest=e519fd5d…`；
+  `campaignWorstCaseModelCalls=3720`（= 124 × 30）。
+- 边界：POS-FWD 的**唯一**可达端点是由 `TEST_ONLY` 哨兵 key 触达的 `127.0.0.1` 计数 stub；
+  脚本在任何真实 key/付费开关可选时**拒绝运行**（`externalProviderCalls`/`costUsdMicros` 均标 `NOT_OBSERVED`，
+  不冒充 0）。判定 `INCONCLUSIVE` 是诚实结果（fixture arm 全部 `failed`），不是伪造的 PASS。
+
+### B.4 正式比较的观测规范（供未来付费实验使用）
+
+**样本与选择（B1 已可独立重算）**
+
+- 冻结选择：`docs/evidence/tool-call-efficiency-case-selection.json`，**31** 个非 holdout 样本。
+- 选择规则 `TCCE-A1 v1`：从 R85 taxonomy（`docs/evidence/e4-r85-failure-taxonomy.json`，
+  `evidenceDigest=861557f0…`）的**已归属套件**（regression/adversarial/stress）中，选**全部**
+  `termination ∈ {agent_limit, tool_limit}` 且 `toolFailures > 0` 的 case，按 `(suite, caseId)` 排序，
+  **不挑样本**（no cherry-picking）；holdout 每-case 数据**从不读取**。
+- `selectionProvenanceDigest=5139741924…`；每个 case 另有 `eligibilityDigest` 与内容摘要。
+- validate/run 时由 B1 从上述冻结证据**独立重算**并与 artifact 逐项比对（不回显 artifact 自述）。
+
+**调度**
+
+- `repetitions ≥ 2`；`31 × 2 repetitions × 2 arms × 30`（每 arm run 模型调用上限）= **124** arm run，
+  worst case **3720** 模型调用；AB/BA 顺序由 `planDigest` 冻结。
+
+**每个 case × 每臂必须落地的观测**
+
+| 观测量 | 来源 |
+| --- | --- |
+| notice/verifier status（`verifiedCompletion`、`verification_failures`） | 该 run 的 `verifier.json` 原始字节，B4 严格复验 |
+| activation evidence v2 digest | `activation.json`；prompt-guidance 必须携带 `guidanceVersion` 且 digest == 批准臂摘要 |
+| security status / violations | `security.json` |
+| `tool_call_count`、`turn_count` | verifier 记录的 metrics |
+| physical model calls（含 retry）、input/output/total tokens、`usdMicros` | B2 的 campaign 预算 journal（reserved / committed / unknown / transportRetries） |
+| worker 构建身份（entry sha256 + 机制探针 + build-closure digest） | B3 worker manifest，driver 侧独立比对 |
+
+**判定语义（不得把缺失当 0 或当失败）**
+
+- `unknown`、infra/judge error、超时、missing evidence ⇒ 该 run **INVALID**；无法构成有效比较的 campaign
+  ⇒ 整体 **INCONCLUSIVE**，**绝不**默认按 0 或按失败计入。
+- 只有 `INVALID=0`、两臂均满足 eligible 最小样本数与重复次数、且效应超过冻结阈值时，才可能出
+  `ACCEPT`/`REJECT`。
+- B4 要求：这些决策输入在 ACCEPT 之前必须**从证据字节 + journal 推导**，不采用 runner 自报布尔。
+
+### B.5 待审批授权模板（UNAUTHORIZED，不可生效）
+
+模板文件 [prereg-paid-approval.template.json](file:///workspace/docs/evidence/prereg-paid-approval.template.json)
+是一份**只可提交、不可生效**的审批草案：`paid=false`，且含模板标记键——授权 loader 使用**精确键集**
+（`AUTHORIZATION_*`），因此该模板即使被当作授权读到也**必然被拒绝**，不会被误当成有效审批。
+
+未来真实付费实验必须由**用户另行**提供以下字段的**有效**授权（本任务不会自行签署）：
+
+| 字段 | 含义 |
+| --- | --- |
+| `preregistrationDigest` | 冻结实验的 exact digest（须与只读 `prereg validate` 输出一致） |
+| `candidateSourceSha` / `baselineArmDigest` / `candidateArmDigest` | 两块真实冻结构建的 SHA 与 build-closure digest |
+| `providerId` / `modelId` / `endpointDigest` | 具体模型与规范化端点 |
+| `caps.*` | 逐维最坏上限：`maxModelCalls` / `maxToolCalls` / `maxDurationMs` / `max{Input,Output,Total}Tokens` / `maxUsdMicros` |
+| `issuedAtMs` / `expiresAtMs` | 执行窗口（过期即拒绝） |
+| `approvalId` / `allowResume` / `paid` | 审批人标识 / 是否允许续跑 / 显式付费旗标 |
+
+- 付费前必须核验**外部当期定价来源**与代理计费差异；**不得**把代码里的 planning estimate 当客观账单。
+- 无该授权时：`preflightPaid` 以 `AUTHORIZATION_NOT_PAID` 等稳定码拒绝，`providerFactoryCalls=0`。
+
+### B.6 复现命令、CI 与重新审查触发条件
+
+**Windows PowerShell（作者本机）**
+
+```powershell
+pnpm typecheck
+pnpm test
+pnpm build
+npx vitest run --config apps/cli/test-infra/red-next-gaps-vitest.config.ts
+node scripts/e4/r97-mutation-check.mjs
+node scripts/e4/n5-prereg-closed-loop.mjs
+node scripts/e4/prereg-production-e2e.mjs --out .ci/b6/e2e.json
+pnpm docs:verify
+```
+
+**Ubuntu（GitHub Actions）**
+
+- 本 HEAD 的 Actions URL：**`NOT_OBSERVED`**。取得本 HEAD 证据的唯一方式：推送后由
+  `.github/workflows/ci.yml` 的 `r97-r98 closed loop`（`ubuntu-latest` + `windows-latest`）运行
+  `n5-prereg-closed-loop.mjs`、`prereg-production-e2e.mjs` 与 27 项 mutation gate；届时以该 run 的
+  job/step 状态与 artifact 为准。**不得**把上一 HEAD 的 run `36217188308`（审查基线 `3ff8946`）当作本 HEAD 证据。
+- 未取得该 run 前，本节只声称**本机（linux 沙箱）**实测值；跨平台冷启动与故障注入仍待 CI。
+
+**重新审查触发条件**
+
+- 新 HEAD；模型 / 定价 / 端点 / 构建 / 选择 / 策略任一变动，即须重跑本节的 RED 配置、`pnpm test`、
+  发行版 E2E 与 mutation gate，并重新核对 digest。
+
+### B.7 条件任务 B7 的只读准备材料（状态：BLOCKED / PAID_NOT_AUTHORIZED）
+
+**本任务不执行任何付费调用。** 当前状态：**0** 实际外部模型请求、**0** 费用、**无**有效付费授权文件，
+`status = BLOCKED: PAID_NOT_AUTHORIZED`。仓库中**不存在**能默认启动付费请求的命令或工作流：
+`prereg run` 需要显式 `--authorization`（`paid:true`）+ `--mode first-run|resume`，`paid:false` 或模板
+文件一律以 `AUTHORIZATION_NOT_PAID` 拒绝；发行版 E2E 在真实 key/付费开关可选时**拒绝运行**。
+
+批准前可执行（全部只读、`providerFactoryCalls=0`）：
+
+```powershell
+# 1) 从当前冻结选择构建 artifact（0 provider）
+node apps/cli/dist/main.js prereg build scripts/e4/fixtures/n5-prereg-config.json --out .ci/b7/prereg.json
+# 2) 只读认证：重算当前执行身份，打印 source/arms/selection/provider/endpoint/上限（0 provider）
+node apps/cli/dist/main.js prereg validate .ci/b7/prereg.json --json
+```
+
+`validate` 的输出即"完整身份 / 来源 / 上限"，用于填写 §B.5 模板中的
+`preregistrationDigest` / `candidateSourceSha` / `*ArmDigest` / `providerId` / `modelId` / `endpointDigest`。
+
+待用户**另行**提供有效授权后，**即将执行**的 exact 命令（当前**不得**运行）：
+
+```powershell
+node apps/cli/dist/main.js prereg run .ci/b7/prereg.json `
+  --authorization <user-issued-auth.json> `
+  --budget-dir .ci/b7/budget --out .ci/b7/out --mode first-run
+```
+
+冷启动与恢复步骤（授权批准后适用）：
+
+1. `--budget-dir` 必须是**空目录**；同名 campaign 已有 durable ledger 时以 `--mode resume` 续跑，
+   绝不新建第二个 allowance。
+2. 已发出但未记结果的请求按**保守上界**记 `unknown`，**不退款**、**不重复运行同一 arm 换回额度**。
+3. 出现超界、`unknown` 增长、证据缺失或 worker 构建漂移时**立即停机**，输出稳定 reason code，
+   结果判 `INVALID`/`INCONCLUSIVE`，不得自动重启成第二个新 allowance。
+4. 汇总只呈报 `ACCEPT/REJECT/INCONCLUSIVE/INVALID` 及理由；任何 `ACCEPT` **也不自动 promotion**，
+   由用户单独审批。
 
 ---
 

@@ -3,6 +3,11 @@
 > 本文件是 `plan(20260926-070459).md` §B0 的交付物：把评审列出的 G1–G7 变成**可失败、
 > 可单跑、离线**的反例，并如实记录当前 HEAD 的可观测行为、预期拒绝码、对应修复任务与
 > 复现命令。B0 不修改生产实现；它校准证据。
+>
+> **状态更新（B 轮收口）**：下列 14 条反例在 B0 时为 RED（`14 failed (14)`）；B1–B5 修复后
+> 已全部 **GREEN（`14 passed (14)`）**。各行的"反例状态"栏保留 B0 当时的 RED 结论作为历史，
+> 收口证据见 [tool-call-efficiency-p1-p7-report.md §B](file:///workspace/docs/evidence/tool-call-efficiency-p1-p7-report.md)。
+> 修复落点：B1←G5、B2←G2/G3/G4、B3←G1、B4←G6、B5←G1/G7、B6←G7。
 
 ## 0. 基线与证据范围（如实声明）
 
@@ -95,7 +100,11 @@ G2/G3/G4/G5/G6 均为**行为反例**：直接调用出厂 API，失败来自目
 
 ## 3. Readiness（四个维度分别报告）
 
-| 维度 | 状态 | 实测范围 / 来源 |
+> 下表是 **B0 当时**的结论（G1/G4/G5/G7 仍 RED，故 `productionOfflineReady=PARTIAL/NOT_READY`）。
+> B1–B5 收口后，`productionOfflineReady` 已按 §B6 要求拆成三个可分别断言的子项并**全部 PASS**；
+> 当前准确结论以报告 **§B.2** 为准。本表保留历史。
+
+| 维度 | 状态（B0 当时） | 实测范围 / 来源 |
 | --- | --- | --- |
 | `offlineFixtureReady` | **PASS** | `scripts/e4/n5-prereg-closed-loop.mjs`；123/123（基线 CI run `36217188308`） |
 | `productionOfflineReady` | **PARTIAL / NOT_READY** | 已证明：发行版负向拒绝矩阵 + build/validate（0 provider）；**当前进程** adapter 的 124-arm fake 正向。**未证明**：发行版 CLI 子进程的完整正向双构建、不可核价的真实预算（G1/G4/G7 仍 RED）。 |
@@ -104,6 +113,9 @@ G2/G3/G4/G5/G6 均为**行为反例**：直接调用出厂 API，失败来自目
 
 > 结论：B0 交付后 `productionOfflineReady` **不得**继续显示为整体 PASS —— G1/G4/G5/G7
 > 的 RED 反例直接证明"发行版完整正向 + 可核价预算"尚未达成。
+> **B 轮收口后**：上述 RED 全部转 GREEN，`releaseCliSubprocessForward` 已在发行版子进程跑完
+> 124 arm run 并核对 durable ledger；`productionOfflineReady` 现为 **PASS（三子项全 PASS）**，
+> 但**仍非付费运行**（`paidExperimentRun`/`championPromotion` 保持 NOT_RUN）。
 
 ---
 
