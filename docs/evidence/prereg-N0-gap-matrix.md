@@ -244,3 +244,9 @@ N7 提交 `cad5a1c7`（两平台 CI 门禁 + `ci-readiness.mjs`）、`d1f45c0d`�
 
 **N2 仍未完成的部分**：两臂的 git HEAD / clean-tree 身份仍由可遗忘的 `R97_ARM_REQUIRE_GIT`
 环境开关控制，故 N2 的"真实执行模式强制身份"一项仍为 **NOT_PROVEN**。
+
+## N7.4 / N8 — 用户授权后的裁定（实测）
+| 项 | 状态 | 依据 |
+|---|---|---|
+| N7.4 两平台 CI URL + artifact | **BLOCKED（网络出口）** | token 有效且含 `workflow` scope、`gh` 2.96.0 在位，但本环境无法承载 GitHub 流量：`git push` 直连报 `Failed to connect to github.com port 443`（exit 128）、绕过代理后 `Recv failure: Connection was reset`、`git ls-remote` 20.9s 连接超时；Node `fetch` 对 api.github.com 报 `ConnectTimeoutError`；PowerShell REST 可认证，但 45 个 blob 上传中 **16 个中途失败**（连接超时 / ResponseEnded / 连接被重置 / 一次 malformed request）。`git config` 指向 `http://127.0.0.1:7897` 却**无监听**（WinHTTP Direct、ProxyEnable=0），20 个 loopback 端口均无法隧道到 github.com。上传脚本在创建 tree/commit/ref **之前**中止，**远端未创建任何分支**。需用户恢复出口（启动 7897 代理）后即可推送并触发 CI。Ubuntu 仍 `NOT_PROVEN`。 |
+| N8 付费实验 | **BLOCKED: PAID_NOT_AUTHORIZED** | 用户给出端点/密钥/模型/高并发，并将**金额上限设为无限**；但闸门拒绝的原因是**费率不可建立**而非缺少上限：`resolveUsdMicrosPerCall`（apps/cli/src/prereg-execution-identity.ts:192）对「非空 baseUrl」与「未列模型」两条分支**同时**返回 `null`（该 loopback relay 与 `workbuddy-deepseek-v4.1-flash` 正好都命中），`observeExecutionIdentity` 因而记 `usdMicrosPerCall=null`，在任何 provider 构造前被拒 → `providerRequests=0`。未知费率 + 无限上限 = 最坏成本**无界**，故未削弱 N3 已验证的不变量。本轮付费请求 **0**、未创建 `paid:true` 授权、未发布任何分支。 |
