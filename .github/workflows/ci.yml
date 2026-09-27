@@ -114,31 +114,6 @@ jobs:
       - name: Build
         run: pnpm build
 
-      # -----------------------------------------------------------------------
-      # N7 — THE DEDICATED GATES, ON BOTH PLATFORMS (plan §N7 怎么做 1).
-      #
-      # HISTORY, CORRECTED: these two suites were once excluded from `pnpm test`
-      # because they were DELIBERATELY RED counterexamples (the N0 gate). As of N6
-      # all twelve are GREEN — measured on this revision as
-      # `Tests 12 passed (12)`, exit 0 — so they are now ordinary gates that must
-      # hold on ubuntu-latest AND windows-latest, not a historical note.
-      #
-      # They stay separate from `pnpm test` on purpose: the root config excludes
-      # them, so a future regression there cannot be masked by the whole-suite
-      # pass count, and this job fails loudly on either platform.
-      # -----------------------------------------------------------------------
-      - name: N7 — N0 behavioural gate (12 counterexamples, all GREEN) + legacy R97 cases (14)
-        run: |
-          pnpm test:n0-gaps
-          pnpm test:red-next-gaps
-
-      # N7 — the documentation examples are executable facts: the committed
-      # approval template must be REFUSED by the loader, the read-only build input
-      # must carry no inline catalog/selection, and no doc may link through a
-      # non-portable file:// URL.
-      - name: N7 — documentation smoke (approval template, read-only build input, portable links)
-        run: pnpm exec vitest run apps/cli/src/prereg-docs-smoke.test.ts
-
       # E4-R24 (F03/F04): independent STRICT usage audit over the suite's named
       # run. The strict verdict is rendered by its own process AFTER the final
       # results are committed — a test never writes its own success and then
@@ -161,6 +136,46 @@ jobs:
           name: observation-evidence-${{ matrix.os }}-${{ github.run_id }}
           path: .ci/observation-evidence/
           if-no-files-found: warn
+
+      # -----------------------------------------------------------------------
+      # N7 — THE DEDICATED GATES, ON BOTH PLATFORMS (plan §N7 怎么做 1).
+      #
+      # ORDERING IS LOAD-BEARING — DO NOT MOVE THESE ABOVE THE STRICT USAGE AUDIT.
+      # Measured on run 36323899133 (commit 3d6e7562): with these two steps placed
+      # between `Build` and `usage-audit --strict`, that job went RED on BOTH
+      # platforms at the audit step even though every test passed (ubuntu 7111
+      # passed / 10 skipped, windows 7120 passed / 1 skipped, zero failures).
+      #
+      # Cause: a vitest pass re-writes the observation evidence for the job's
+      # FIXED `E2E_OBSERVATION_RUN_ID`, so a second pass located before the audit
+      # truncates the committed rows the audit reads. The uploaded byte sizes
+      # prove it: green run 36299558711 uploaded
+      # `e4-r24-ubuntu-latest-36299558711.jsonl` at 4789 bytes, while red run
+      # 36323899133 uploaded the same file at 0 bytes with `*.candidates.jsonl`
+      # unchanged at 3354 bytes. Running these steps AFTER the audit and AFTER the
+      # evidence upload makes that clobbering harmless.
+      #
+      # HISTORY, CORRECTED: these two suites were once excluded from `pnpm test`
+      # because they were DELIBERATELY RED counterexamples (the N0 gate). As of N6
+      # all twelve are GREEN — measured on this revision as
+      # `Tests 12 passed (12)`, exit 0 — so they are now ordinary gates that must
+      # hold on ubuntu-latest AND windows-latest, not a historical note.
+      #
+      # They stay separate from `pnpm test` on purpose: the root config excludes
+      # them, so a future regression there cannot be masked by the whole-suite
+      # pass count, and this job fails loudly on either platform.
+      # -----------------------------------------------------------------------
+      - name: N7 — N0 behavioural gate (12 counterexamples, all GREEN) + legacy R97 cases (14)
+        run: |
+          pnpm test:n0-gaps
+          pnpm test:red-next-gaps
+
+      # N7 — the documentation examples are executable facts: the committed
+      # approval template must be REFUSED by the loader, the read-only build input
+      # must carry no inline catalog/selection, and no doc may link through a
+      # non-portable file:// URL.
+      - name: N7 — documentation smoke (approval template, read-only build input, portable links)
+        run: pnpm exec vitest run apps/cli/src/prereg-docs-smoke.test.ts
 
       - name: Benchmark smoke (stub/fake provider — no paid model)
         # One adversarial case through the real harness with the stub provider.
