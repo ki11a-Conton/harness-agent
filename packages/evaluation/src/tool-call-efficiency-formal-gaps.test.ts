@@ -490,3 +490,115 @@ describe("S0 — the committed N5 fixture is TEST_ONLY and discloses it", () => 
     expect(FIXTURE.selection.selectionProvenanceDigest).toBe("r87-selection-digest");
   });
 });
+
+// ---------------------------------------------------------------------------
+// N6 — the aggregate's cost and infra-error inputs come from the DURABLE JOURNAL
+// and from verified bytes, never from the arms' self-reported fields
+// ---------------------------------------------------------------------------
+
+describe("N6 — journal-bound cost accounting and infra-error handling", () => {
+  /** Run the full paired campaign with `runArm`, so the aggregate sees REAL records. */
+  async function runWith(dir: string, artifact: ToolCallEfficiencyPreregistrationV2, runArm: PreregisteredArmRunner) {
+    const admission = await openPreregisteredCampaignGate({
+      preregistrationJson: serializePreregistrationV2(artifact),
+      authorizationJson: authorizationFor(artifact),
+      observation: observationFor(),
+      budgetDir: join(dir, "budget"),
+      mode: "first-run",
+      now: () => NOW,
+      makeProvider: () => retryingProvider({ retries: 0 }).provider,
+    });
+    expect(admission.status).toBe("ADMITTED");
+    if (admission.status !== "ADMITTED") throw new Error("setup: campaign not admitted");
+    return runPreregisteredCampaign({
+      admission,
+      prereg: artifact,
+      resultsDir: join(dir, "runs"),
+      runArm,
+      now: () => NOW,
+    });
+  }
+
+  /** A runner whose CANDIDATE self-reports a huge token count. */
+  const selfReporting = (opts: { candidateTokens: number; status?: "passed" | "failed" | "error" }): PreregisteredArmRunner =>
+    async (arm) => ({
+      status: opts.status ?? (arm.armId === "candidate" ? "passed" : "failed"),
+      tokensUsed: arm.armId === "candidate" ? opts.candidateTokens : 0,
+      reason: "n6-self-report",
+      evidence: {
+        executorId: "forged",
+        traceDigest: "a".repeat(64),
+        verifiedCompletion: arm.armId === "candidate",
+        securityViolations: 0,
+        activationEvidenceDigest: arm.armId === "candidate" ? "b".repeat(64) : null,
+      },
+    });
+
+  const budgetOf = (artifact: ToolCallEfficiencyPreregistrationV2) => artifact.budget.campaignWorstCaseModelCalls;
+
+  it("[N6.7] tokensDelta follows the durable JOURNAL, never the arm's self-report", async () => {
+    const dir = await tempDir();
+    const artifact = prereg();
+    const run = await runWith(dir, artifact, selfReporting({ candidateTokens: 1_000_000 }));
+
+    const fromJournal = aggregatePreregisteredCampaign(run, artifact, {
+      providerCalls: 0,
+      budgetRemaining: budgetOf(artifact),
+      journalChargedTokens: 4242,
+    });
+    expect(fromJournal.decision.statistics.tokensDelta).toBe(4242);
+
+    // The arm claims a million tokens; the journal witnessed ZERO. Zero wins.
+    const zeroJournal = aggregatePreregisteredCampaign(run, artifact, {
+      providerCalls: 0,
+      budgetRemaining: budgetOf(artifact),
+      journalChargedTokens: 0,
+    });
+    expect(zeroJournal.decision.statistics.tokensDelta).toBe(0);
+  }, 120_000);
+
+  it("[N6.8] self-reported tokens with NO journal corroboration are NOT comparable", async () => {
+    const dir = await tempDir();
+    const artifact = prereg();
+    const run = await runWith(dir, artifact, selfReporting({ candidateTokens: 1_000_000 }));
+    const aggregate = aggregatePreregisteredCampaign(run, artifact, {
+      providerCalls: 0,
+      budgetRemaining: budgetOf(artifact),
+    });
+    // No journal ⇒ no corroborated consumption: 0, and explicitly flagged rather
+    // than silently treated as a measured zero.
+    expect(aggregate.decision.statistics.tokensDelta).toBe(0);
+    expect(aggregate.decision.gates.provenanceComparable).toBe(false);
+    expect(aggregate.decision.decision).not.toBe("ACCEPT");
+  }, 120_000);
+
+  it("[N6.9] a campaign whose EVERY arm run is an infrastructure error cannot claim artifact integrity", async () => {
+    const dir = await tempDir();
+    const artifact = prereg();
+    const run = await runWith(dir, artifact, selfReporting({ candidateTokens: 0, status: "error" }));
+    const aggregate = aggregatePreregisteredCampaign(run, artifact, {
+      providerCalls: 0,
+      budgetRemaining: budgetOf(artifact),
+    });
+    expect(aggregate.decision.gates.artifactIntegrity).toBe(false);
+    expect(aggregate.decision.decision).not.toBe("ACCEPT");
+  }, 120_000);
+
+  it("[N6.10] the SAME all-error campaign passes integrity only when the pre-registration DECLARES the tolerance", async () => {
+    const dir = await tempDir();
+    const artifact = prereg();
+    const run = await runWith(dir, artifact, selfReporting({ candidateTokens: 0, status: "error" }));
+    // Tolerance is DECLARED, not assumed: the same records, a different prereg.
+    const permissive = {
+      ...artifact,
+      evaluation: { ...artifact.evaluation, maxInfraErrorRatio: 1 },
+    } as ToolCallEfficiencyPreregistrationV2;
+    const aggregate = aggregatePreregisteredCampaign(run, permissive, {
+      providerCalls: 0,
+      budgetRemaining: budgetOf(artifact),
+    });
+    expect(aggregate.decision.gates.artifactIntegrity).toBe(true);
+    // ...and it is still not a green campaign: no pair has two live arms.
+    expect(aggregate.decision.decision).not.toBe("ACCEPT");
+  }, 120_000);
+});

@@ -518,7 +518,7 @@ function rate(records: PreregisteredRunRecord[]): number {
 export function aggregatePreregisteredCampaign(
   run: PreregisteredCampaignRun,
   prereg: ToolCallEfficiencyPreregistrationV2,
-  ledgerTotals: { providerCalls: number; budgetRemaining: number },
+  ledgerTotals: { providerCalls: number; budgetRemaining: number; journalChargedTokens?: number },
 ): PreregisteredAggregate {
   const policy = prereg.evaluation.decisionPolicy ?? DEFAULT_DECISION_POLICY_V3;
   const byArmRunId = new Map(run.records.map((r) => [r.armRunId, r]));
@@ -561,9 +561,20 @@ export function aggregatePreregisteredCampaign(
   const infraFailuresBaseline = baseline.filter((r) => r.outcome.status === "error").length;
   const infraFailuresCandidate = candidate.filter((r) => r.outcome.status === "error").length;
 
-  const tokensDelta =
+  // N6b — the token delta is the DURABLE JOURNAL's corroborated consumption, never
+  // the arms' self-reported `tokensUsed`. Summing the self-report let a campaign
+  // claim +15_999_984 tokens while the journal witnessed exactly zero. An absent
+  // journal is NOT `0` mistaken for a measurement: it is "no corroborated
+  // consumption", and it is reported separately below so the difference between
+  // the two is visible rather than silently collapsed.
+  const selfReportedTokens =
     candidate.reduce((sum, r) => sum + (r.outcome.tokensUsed ?? 0), 0)
     - baseline.reduce((sum, r) => sum + (r.outcome.tokensUsed ?? 0), 0);
+  const journalTokens = ledgerTotals.journalChargedTokens ?? null;
+  const tokensDelta = journalTokens ?? 0;
+  // Self-reported consumption that the journal does not corroborate cannot be
+  // compared across arms: the numbers are the runner's word, not the ledger's.
+  const tokensUncorroborated = journalTokens === null && selfReportedTokens !== 0;
 
   const contaminated = contaminatedPairs.length > 0;
 
@@ -577,9 +588,26 @@ export function aggregatePreregisteredCampaign(
   // (`record.evidenceVerified`). A well-SHAPED forgery (`"a".repeat(64)` with no
   // manifest/verifier/activation bytes on disk) is stamped `false` by the driver,
   // so it fails `artifactIntegrity` → INVALID and can never reach ACCEPT.
-  const digestValid = run.records.every(
-    (r) => r.evidenceVerified && armEvidenceProblems(r.outcome.evidence, r.outcome.status).length === 0,
+  //
+  // N6 — an `error` record carries NO evidence, so it is uncorroborated BY
+  // DEFINITION. `armEvidenceProblems(undefined, "error")` returns `[]` because
+  // nothing is MALFORMED, which is a shape statement and never a statement that
+  // anything was verified; treating it as corroboration let a campaign in which
+  // EVERY arm died look artifact-clean. Infra errors are therefore tolerated only
+  // up to the allowance the PRE-REGISTRATION declares, and that allowance
+  // defaults to ZERO: "tolerate errors" must be declared, never assumed.
+  const allowedInfraErrorRatio = prereg.evaluation.maxInfraErrorRatio ?? 0;
+  const infraErrorCount = run.records.filter((r) => r.outcome.status === "error").length;
+  const infraErrorRatio = run.records.length === 0 ? 1 : infraErrorCount / run.records.length;
+  const uncorroborated = run.records.filter(
+    (r) =>
+      r.outcome.status !== "error"
+      && (!r.evidenceVerified || armEvidenceProblems(r.outcome.evidence, r.outcome.status).length > 0),
   );
+  const digestValid =
+    run.records.length > 0
+    && infraErrorRatio <= allowedInfraErrorRatio
+    && uncorroborated.length === 0;
   const securityBreachesCandidate = candidate.reduce((s, r) => s + (r.outcome.evidence?.securityViolations ?? 0), 0);
   const securityBreachesBaseline = baseline.reduce((s, r) => s + (r.outcome.evidence?.securityViolations ?? 0), 0);
   const recoveryCount = run.records.reduce((s, r) => s + (r.outcome.evidence?.recoveries ?? 0), 0);
@@ -588,10 +616,15 @@ export function aggregatePreregisteredCampaign(
   const input: DecisionGateInputV3 = {
     digestValid,
     pairComplete: run.pairComplete && !contaminated,
-    comparable: !contaminated,
-    incomparabilityReasons: contaminated
-      ? [`baseline arms observed a candidate event in ${contaminatedPairs.length} pair(s)`]
-      : [],
+    comparable: !contaminated && !tokensUncorroborated,
+    incomparabilityReasons: [
+      ...(contaminated
+        ? [`baseline arms observed a candidate event in ${contaminatedPairs.length} pair(s)`]
+        : []),
+      ...(tokensUncorroborated
+        ? ["the arms self-report token usage that the durable cost journal does not corroborate"]
+        : []),
+    ],
     activationCoverage,
     activationEligibleCases: activated,
     minActivationEligibleCases: prereg.evaluation.minEligibleCases,

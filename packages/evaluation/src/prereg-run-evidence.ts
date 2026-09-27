@@ -124,6 +124,18 @@ const MANIFEST_KEYS = ["schemaVersion", "executorId", ...IDENTITY_KEYS, "armBuil
 const MANIFEST_REQUIRED = ["schemaVersion", "executorId", ...IDENTITY_KEYS] as const;
 
 /**
+ * N6 — the activation artifact's schema. MUST equal the executor's
+ * `PREREG_RUN_ACTIVATION_SCHEMA`; a test pins the equality so the writer and this
+ * reader cannot drift into disagreeing about what "activated" means.
+ */
+export const PREREG_RUN_ACTIVATION_SCHEMA = "prereg-run-activation-v1";
+/** The EXACT field set an activation artifact may carry. */
+const ACTIVATION_KEYS = ["schemaVersion", "caseId", "armId", "repetition", "orderIndex", "events"] as const;
+const ACTIVATION_REQUIRED = ["schemaVersion", "caseId", "armId", "repetition", "orderIndex", "events"] as const;
+/** The identity fields the activation artifact must agree with. */
+const ACTIVATION_IDENTITY_KEYS = ["caseId", "armId", "repetition", "orderIndex"] as const;
+
+/**
  * Parse `text` as a STRICT JSON object, or record a problem and return `null`.
  *
  * B4/G6 — the previous check did `parsed = JSON.parse(text)` and then tested
@@ -236,11 +248,40 @@ export function verifyArmEvidenceFromArtifacts(
   }
 
   // --- activation: request-bound evidence, or none at all -------------------
+  //
+  // N6 — a digest proves the BYTES did not change; it does NOT prove that an
+  // activation happened, and it does NOT prove the bytes describe a real event.
+  // The previous check compared the digest and stopped, so a hand-typed
+  // `{ "schemaVersion": "never-checked-by-the-validator", "requestId":
+  // "never-happened" }` verified perfectly as long as the caller declared its
+  // digest. The artifact's own CONTENT is therefore parsed and bound here: a
+  // well-formed activation schema, the same run identity, and real events.
   const activationPath = join(evidenceDir, PREREG_RUN_EVIDENCE_FILENAMES.activation);
   if (declared.activationEvidenceDigest !== null) {
     const activationText = readArtifact(PREREG_RUN_EVIDENCE_FILENAMES.activation);
-    if (activationText !== null && sha256Hex(activationText) !== declared.activationEvidenceDigest) {
-      problems.push("activationEvidenceDigest does not match the activation artifact bytes");
+    if (activationText !== null) {
+      if (sha256Hex(activationText) !== declared.activationEvidenceDigest) {
+        problems.push("activationEvidenceDigest does not match the activation artifact bytes");
+      }
+      const act = parseJsonObjectStrict(activationText, "activation", problems);
+      if (act !== null) {
+        const extra = Object.keys(act).filter((k) => !(ACTIVATION_KEYS as readonly string[]).includes(k));
+        if (extra.length > 0) problems.push(`activation has unknown key(s): ${extra.join(", ")}`);
+        for (const k of ACTIVATION_REQUIRED) {
+          if (!(k in act)) problems.push(`activation is missing ${k}`);
+        }
+        if (act.schemaVersion !== PREREG_RUN_ACTIVATION_SCHEMA) {
+          problems.push("activation schemaVersion is not the expected activation schema");
+        }
+        for (const key of ACTIVATION_IDENTITY_KEYS) {
+          if (key in act && act[key] !== identity[key]) {
+            problems.push(`activation ${key} does not match this run's identity`);
+          }
+        }
+        if (!Array.isArray(act.events) || act.events.length === 0) {
+          problems.push("activation carries no activation events");
+        }
+      }
     }
   } else if (existsSync(activationPath)) {
     problems.push("a non-activated run must not carry an activation artifact");

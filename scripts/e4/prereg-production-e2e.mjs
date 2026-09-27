@@ -522,9 +522,26 @@ async function writeArmCheckout(dir, marker, activate, entries) {
   writeFileSync(join(dir, markerName), `${JSON.stringify({ writer: "scripts/e4/prereg-production-e2e.mjs", schema: "r97-synthetic-fixture-checkout-v1", marker })}\n`, "utf8");
 }
 
+/**
+ * N6 — the DURABLE COST JOURNAL's corroborated token consumption, read from the
+ * budget directory the run actually used (`cost-budget.json`). `null` means the
+ * journal does not exist — explicitly UNKNOWN, never `0`, so the aggregate can
+ * tell "no corroborated consumption" apart from "measured zero".
+ */
+function costJournalTokensFromFile(budgetDir) {
+  try {
+    const file = JSON.parse(readFileSync(join(budgetDir, "cost-budget.json"), "utf8"));
+    const charged = file.charged;
+    if (charged === undefined || charged === null || typeof charged !== "object") return null;
+    const total = charged.totalTokens;
+    return Number.isSafeInteger(total) ? total : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The durable R97 ledger view, re-derived from the file the subprocess wrote. */
-function ledgerViewFromFile(budgetDir) {
-  const file = JSON.parse(readFileSync(join(budgetDir, R97_LEDGER_FILE), "utf8"));
+function ledgerViewFromFile(budgetDir) {  const file = JSON.parse(readFileSync(join(budgetDir, R97_LEDGER_FILE), "utf8"));
   let committed = 0;
   let outstanding = 0;
   let unknown = 0;
@@ -678,9 +695,13 @@ async function runPositiveExecution(dir, env) {
   // injected fake counter or the artifact's initial worst case ("不向 aggregate
   // 注入 fake.entered() 或初始 campaignWorstCaseModelCalls 当真实账本数").
   const ledgerView = await admission.ledger.view();
+  // N6 — the token delta is bound to the DURABLE COST JOURNAL, not to the arms'
+  // self-reported `tokensUsed`.
+  const journalChargedTokens = costJournalTokensFromFile(budgetDir);
   const aggregate = evalMod.aggregatePreregisteredCampaign(run, artifact, {
     providerCalls: ledgerView.committed,
     budgetRemaining: ledgerView.remaining,
+    journalChargedTokens,
   });
 
   const statuses = run.records.reduce((acc, r) => {
@@ -699,13 +720,24 @@ async function runPositiveExecution(dir, env) {
     physicalProviderCalls: fake.entered(),
     ledgerCommitted: ledgerView.committed,
     ledgerRemaining: ledgerView.remaining,
+    journalChargedTokens,
     providerFactoryCalls: admission.providerFactoryCalls,
     evidenceVerified: verified,
     evidenceUnverified: unverified,
     verifyProblems: verifyProblems.slice(0, 5),
     decision: aggregate.decision.decision,
     decisionReason: aggregate.decision.reason ?? null,
-    ok: run.records.length > 0 && fake.entered() > 0 && verified + unverified === run.records.filter((r) => r.outcome.status !== "error" && r.outcome.evidence !== undefined).length && unverified === 0,
+    // N6 — `ok` no longer excludes `error` records from the comparison. The old
+    // predicate (`records.filter(r => r.outcome.status !== "error" && ...)`) let a
+    // campaign whose arms ALL died satisfy the count trivially, because the
+    // right-hand side collapsed to 0. Every EXPECTED arm run must now be present,
+    // non-error, carry evidence, and be verified.
+    ok:
+      run.records.length === artifact.schedule.logicalRuns
+      && fake.entered() > 0
+      && run.records.every((r) => r.outcome.status !== "error" && r.outcome.evidence !== undefined)
+      && verified === run.records.length
+      && unverified === 0,
   };
   return out;
 }
@@ -841,13 +873,21 @@ async function runPositiveForward(stub, dir, env) {
   const aggregate = JSON.parse(readFileSync(join(outDir, "aggregate.json"), "utf8"));
   const physical = after - before;
   const expectArmRuns = artifact.schedule.logicalRuns;
+  // N6 — cross-check the aggregate the RELEASE CLI wrote against the durable cost
+  // journal that same run produced: neither may be the arms' self-report.
+  const journalChargedTokens = costJournalTokensFromFile(budgetDir);
+  const aggregateTokensDelta = aggregate?.decision?.statistics?.tokensDelta ?? null;
+  // N6 — see the in-process predicate: an `error` record now FAILS the comparison
+  // instead of being silently filtered out of a self-satisfying identity.
   const ok =
     records.length === expectArmRuns &&
     physical === expectArmRuns &&
     ledger.committed === physical &&
     ledger.unknown === 0 &&
-    verified + unverified === records.filter((r) => r.outcome.status !== "error" && r.outcome.evidence !== undefined).length &&
-    unverified === 0;
+    records.every((r) => r.outcome.status !== "error" && r.outcome.evidence !== undefined) &&
+    verified === records.length &&
+    unverified === 0 &&
+    aggregateTokensDelta === (journalChargedTokens ?? 0);
   return {
     transport: "release-cli-subprocess",
     executionBackend: "release-cli-subprocess",
@@ -856,6 +896,8 @@ async function runPositiveForward(stub, dir, env) {
     expectArmRuns,
     scheduledArmRuns: records.length,
     physicalStubRequests: physical,
+    journalChargedTokens,
+    aggregateTokensDelta,
     httpRequestsDuringBuildAndValidate: afterCertify - httpBeforeBuild,
     ledgerGranted: ledger.granted,
     ledgerCommitted: ledger.committed,

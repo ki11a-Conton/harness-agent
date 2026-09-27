@@ -173,6 +173,14 @@ export interface PreregEvaluationV2 {
    * load and refused on any mismatch.
    */
   minEligibleCases: number;
+  /**
+   * N6 — the share of arm runs the pre-registration PERMITS to be infrastructure
+   * `error`s before artifact integrity fails. ABSENT means ZERO: a campaign may
+   * not silently tolerate dead arms, and an `error` record carries no evidence, so
+   * it cannot corroborate anything by itself. Only an artifact that explicitly
+   * declares this ratio may carry error records past the integrity gate.
+   */
+  maxInfraErrorRatio?: number;
 }
 
 export interface PreregScheduleV2 {
@@ -833,7 +841,7 @@ export function parseAndValidatePreregistrationV2(json: string): ToolCallEfficie
   }
 
   const ev = expectObject(root.evaluation, "evaluation");
-  expectKeys(ev, ["judgeId", "judgeDigest", "verifierDigest", "scorerDigest", "decisionPolicy", "decisionPolicyDigest", "minEligibleCases"], "evaluation");
+  expectKeys(ev, ["judgeId", "judgeDigest", "verifierDigest", "scorerDigest", "decisionPolicy", "decisionPolicyDigest", "minEligibleCases", "maxInfraErrorRatio"], "evaluation");
   // Strictly validate the FULL policy (rejects malformed/out-of-range
   // thresholds); the digest is computed over the normalized policy so a
   // partially-declared threshold set cannot masquerade as the real policy.
@@ -848,6 +856,16 @@ export function parseAndValidatePreregistrationV2(json: string): ToolCallEfficie
   if (contract === undefined) {
     throw new PreregistrationV2Error("NO_CONTRACT", `no mechanism contract for ${TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2}`);
   }
+  // N6 — an OPTIONAL, explicitly declared tolerance for infrastructure errors.
+  // Absent stays absent (the aggregate then treats the allowance as ZERO), so no
+  // existing artifact's digest or behaviour changes.
+  let maxInfraErrorRatio: number | undefined;
+  if (ev.maxInfraErrorRatio !== undefined) {
+    if (typeof ev.maxInfraErrorRatio !== "number" || !Number.isFinite(ev.maxInfraErrorRatio) || ev.maxInfraErrorRatio < 0 || ev.maxInfraErrorRatio > 1) {
+      throw new PreregistrationV2Error("INVALID_POLICY", "evaluation.maxInfraErrorRatio must be a finite number in [0, 1]");
+    }
+    maxInfraErrorRatio = ev.maxInfraErrorRatio;
+  }
   const evaluation: PreregEvaluationV2 = {
     judgeId: expectString(ev.judgeId, "evaluation.judgeId"),
     judgeDigest: expectString(ev.judgeDigest, "evaluation.judgeDigest"),
@@ -856,6 +874,7 @@ export function parseAndValidatePreregistrationV2(json: string): ToolCallEfficie
     decisionPolicy,
     decisionPolicyDigest: expectString(ev.decisionPolicyDigest, "evaluation.decisionPolicyDigest"),
     minEligibleCases: expectNonNegInt(ev.minEligibleCases, "evaluation.minEligibleCases"),
+    ...(maxInfraErrorRatio === undefined ? {} : { maxInfraErrorRatio }),
   };
   if (evaluation.decisionPolicyDigest !== policyDigest) {
     throw new PreregistrationV2Error("DERIVED_TAMPERED", "evaluation.decisionPolicyDigest does not match the decision policy");
