@@ -1,0 +1,51 @@
+{
+  "_comment": [
+    "READ-ONLY pre-registration build input — the LEGAL SHAPE, with identity left to be filled in.",
+    "",
+    "WHY the identity placeholders are not filled in here: `prereg build` requires",
+    "subject.candidateSourceSha (40-hex, from `git rev-parse HEAD`) AND",
+    "subject.baselineArmDigest / subject.candidateArmDigest, which are computed from",
+    "TWO REAL arm build closures. A static committed file therefore CANNOT be a legal",
+    "input: those digests do not exist as constants. Measured on this checkout:",
+    "  prereg build <this-shape with no subject> --out .ci/x.json",
+    "  => exit 1, INVALID_FIELD: subject.candidateSourceSha must be a 40-hex git SHA",
+    "The working generator is scripts/e4/prereg-production-e2e.mjs `selectionEvidence()`",
+    "(HEAD + two arm dirs -> complete config). Generating a legal config from REAL",
+    "pinned checkouts is N1's scope and is NOT_PROVEN; see docs/evidence/E4-N7-report.md.",
+    "",
+    "It is nevertheless worth committing because it pins the READ-ONLY property that",
+    "CAN be checked without a key: no inline catalog/selection (which `prereg build`",
+    "refuses — negative case a1 in the E2E), and a repo-relative root.",
+    "",
+    "Commands (repo root, after `pnpm build`, NO provider key set):",
+    "  node apps/cli/dist/main.js prereg build <filled-in-config>.json --out .ci/prereg.json",
+    "  node apps/cli/dist/main.js prereg validate .ci/prereg.json --json",
+    "Both must exit 0 and resolve NO provider factory call."
+  ],
+  "candidateId": "tool_call_efficiency_v1",
+  "selectionEvidence": {
+    "root": "."
+  },
+  "subject": {
+    "candidateSourceSha": "<40-hex `git rev-parse HEAD`>",
+    "baselineArmDigest": "<from computeArmBuildDigestV1(<baseline arm dir>)>",
+    "candidateArmDigest": "<from computeArmBuildDigestV1(<candidate arm dir>)>",
+    "cleanTreePolicy": "require-clean",
+    "runtimeConfigDigest": "(derived by prereg build)"
+  },
+  "evaluation": {
+    "judgeId": "judge-formal",
+    "judgeDigest": "<64-hex>",
+    "verifierDigest": "<64-hex>",
+    "scorerDigest": "<64-hex>",
+    "decisionPolicy": "(DEFAULT_DECISION_POLICY_V3)"
+  },
+  "schedule": {
+    "repetitions": 2,
+    "orderSeed": 7
+  },
+  "budget": {
+    "maxModelCallsPerRun": 30,
+    "maxToolCalls": 100
+  }
+}

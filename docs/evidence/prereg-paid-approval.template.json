@@ -1,0 +1,34 @@
+{
+  "_comment": [
+    "APPROVAL TEMPLATE — NOT AN APPROVAL. This file is UNSIGNED and NON-RUNNABLE.",
+    "Every value is a placeholder that must be replaced before the file can authorize",
+    "anything. The loader (parseAndValidateAuthorizationV2) must REFUSE this file as",
+    "written: '<...>' placeholders are not digests, not ids and not integers.",
+    "paid is false, so even a completed copy of this template never authorizes a paid",
+    "experiment; a paid run additionally requires an explicit, separately issued",
+    "paid:true approval naming THIS model/endpoint/amount/SHA/time window.",
+    "See docs/evidence/E4-N7-report.md and plan(20260926-175819).md §N8."
+  ],
+  "schemaVersion": "tool-call-efficiency-authorization-v2",
+  "preregistrationDigest": "<64-hex preregistrationDigest from `prereg build`>",
+  "candidateSourceSha": "<40-hex candidate source sha>",
+  "baselineArmDigest": "<64-hex baseline arm build-closure digest>",
+  "candidateArmDigest": "<64-hex candidate arm build-closure digest>",
+  "providerId": "<provider id, e.g. openai>",
+  "modelId": "<model id>",
+  "endpointDigest": "<64-hex digest of the endpoint the approval names>",
+  "caps": {
+    "maxModelCalls": 0,
+    "maxToolCalls": 0,
+    "maxDurationMs": 0,
+    "maxInputTokens": 0,
+    "maxOutputTokens": 0,
+    "maxTotalTokens": 0,
+    "maxUsdMicros": 0
+  },
+  "issuedAtMs": 0,
+  "expiresAtMs": 0,
+  "approvalId": "<human-issued approval id — NOT auto-generated>",
+  "allowResume": false,
+  "paid": false
+}

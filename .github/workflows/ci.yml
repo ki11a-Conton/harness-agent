@@ -114,6 +114,31 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # -----------------------------------------------------------------------
+      # N7 — THE DEDICATED GATES, ON BOTH PLATFORMS (plan §N7 怎么做 1).
+      #
+      # HISTORY, CORRECTED: these two suites were once excluded from `pnpm test`
+      # because they were DELIBERATELY RED counterexamples (the N0 gate). As of N6
+      # all twelve are GREEN — measured on this revision as
+      # `Tests 12 passed (12)`, exit 0 — so they are now ordinary gates that must
+      # hold on ubuntu-latest AND windows-latest, not a historical note.
+      #
+      # They stay separate from `pnpm test` on purpose: the root config excludes
+      # them, so a future regression there cannot be masked by the whole-suite
+      # pass count, and this job fails loudly on either platform.
+      # -----------------------------------------------------------------------
+      - name: N7 — N0 behavioural gate (12 counterexamples, all GREEN) + legacy R97 cases (14)
+        run: |
+          pnpm test:n0-gaps
+          pnpm test:red-next-gaps
+
+      # N7 — the documentation examples are executable facts: the committed
+      # approval template must be REFUSED by the loader, the read-only build input
+      # must carry no inline catalog/selection, and no doc may link through a
+      # non-portable file:// URL.
+      - name: N7 — documentation smoke (approval template, read-only build input, portable links)
+        run: pnpm exec vitest run apps/cli/src/prereg-docs-smoke.test.ts
+
       # E4-R24 (F03/F04): independent STRICT usage audit over the suite's named
       # run. The strict verdict is rendered by its own process AFTER the final
       # results are committed — a test never writes its own success and then
@@ -951,6 +976,32 @@ jobs:
       # -----------------------------------------------------------------------
       - name: N5 — run the offline pre-registration closed loop (0 provider calls)
         run: node scripts/e4/n5-prereg-closed-loop.mjs --out .ci/r97-r98/n5-prereg-evidence.json
+
+      # -----------------------------------------------------------------------
+      # N7 — ONE READINESS ARTIFACT, FIVE SEPARATED LEVELS (plan §N7 验收, line 130).
+      #
+      # `if: always()` on purpose: a readiness artifact is most valuable when a
+      # phase FAILED, so the reviewer can see WHICH level failed instead of a bare
+      # red job. The script writes a single JSON a reviewer can recompute from —
+      # ciRunSha, OS, per-command exit codes, the measured counts and the levels.
+      #
+      # There is deliberately NO overall `ok` field: a green fixture-protocol loop
+      # must never read as "a real dual build exists" or as "a paid run is
+      # authorized". `realBuildOfflineReady` is BLOCKED while the forward basis is a
+      # SYNTHETIC fixture build (plan line 125 forbids proving production readiness
+      # with writeArmCheckout synthetic builds), and paid/promotion are NOT_RUN.
+      # -----------------------------------------------------------------------
+      - name: N7 — separated readiness levels (no single overall PASS)
+        if: always()
+        run: node scripts/e4/ci-readiness.mjs --e2e .ci/r97-r98/prereg-production-e2e.json --out .ci/r97-r98/ci-readiness.json --os-label "${{ matrix.os }}"
+
+      - name: Upload CI readiness artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-readiness-${{ matrix.os }}-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: .ci/r97-r98/ci-readiness.json
+          if-no-files-found: warn
 
       # -----------------------------------------------------------------------
       # N3 DIAGNOSTICS — publish the closed-loop phase failure and the failing

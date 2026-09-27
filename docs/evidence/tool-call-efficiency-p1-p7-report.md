@@ -386,7 +386,7 @@ digest）。环境中不存在 API key 不构成授权；`preflightPaid.ok=true`
 
 ### B.1 缺口矩阵与 RED→GREEN
 
-B0 交付物 [prereg-next-gap-matrix.md](file:///workspace/docs/evidence/prereg-next-gap-matrix.md) 把评审列出的
+B0 交付物 [prereg-next-gap-matrix.md](docs/evidence/prereg-next-gap-matrix.md) 把评审列出的
 G1–G7 变成**可失败、可单跑、离线**的反例；B1–B5 关闭它们：
 
 | 缺口 | RED 反例（HEAD `8247caa` 实测失败输出） | 修复落点 | 本 HEAD 结果 |
@@ -494,7 +494,7 @@ G1–G7 变成**可失败、可单跑、离线**的反例；B1–B5 关闭它们
 
 ### B.5 待审批授权模板（UNAUTHORIZED，不可生效）
 
-模板文件 [prereg-paid-approval.template.json](file:///workspace/docs/evidence/prereg-paid-approval.template.json)
+模板文件 [prereg-paid-approval.template.json](docs/evidence/prereg-paid-approval.template.json)
 是一份**只可提交、不可生效**的审批草案：`paid=false`，且含模板标记键——授权 loader 使用**精确键集**
 （`AUTHORIZATION_*`），因此该模板即使被当作授权读到也**必然被拒绝**，不会被误当成有效审批。
 
@@ -536,7 +536,7 @@ pnpm docs:verify
   `A7 — production-offline E2E on the release CLI`（跑 `prereg-production-e2e.mjs`）、
   `N5 — run the offline pre-registration closed loop (0 provider calls)`、
   `Prove the suite CATCHES the twenty-seven anti-cheat mutations`。
-- 交叉核对见 [B0 缺口矩阵 §0](file:///workspace/docs/evidence/prereg-next-gap-matrix.md)：上表"基线 CI"
+- 交叉核对见 [B0 缺口矩阵 §0](docs/evidence/prereg-next-gap-matrix.md)：上表"基线 CI"
   绑定的是审查基线 `3ff8946` 的 run `36217188308`，**不得**当作本 HEAD 证据。
 
 **本轮一次真实修正（由 CI 暴露，非模型质量问题）**
