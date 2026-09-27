@@ -199,3 +199,24 @@ worker ABI 要求与隔离校验**本身存在且正确**；失败的是**生产
   `pnpm test:red-next-gaps`、`pnpm test:n0-gaps`，以及该 HEAD 的 Windows/Ubuntu CI（N7）。
 - 本文件所有"实测"值均可由 §3 命令在本工作树复现；不可观察项一律标 `NOT_OBSERVED`，
   绝不以 `0` 冒充。
+
+---
+
+## 7. 后续轮次的状态更新（本轮）
+
+基线 SHA `1299e5cb` → 本轮提交 `1f3df072`（N0/N1a/N2）、`bef6e474`（N0 readiness 拆分）。
+完整证据、原始命令与退出码见 [`E4-N1-N2-report.md`](./E4-N1-N2-report.md)。
+
+| 反例 | 本轮前 | 本轮后 | 依据 |
+| --- | --- | --- | --- |
+| N1a（出厂构建缺版本化探针） | RED | **GREEN** | 出厂 `benchmark-command` 入口现导出非空 `R97_ARM_PROBE`；同文件 CONTROL 仍证明无探针的 checkout 被 `PREREG_WORKER_PROBE_MISSING` 拒绝。 |
+| N1b（CONTROL） | GREEN | GREEN | 不变。 |
+| N2（预注册隔离未到达 executor） | RED | **GREEN** | 隔离契约随 run context 传递；出厂 adapter 对 `vm/strong` 在任一 arm 工作前返回 `ARM_ISOLATION_UNSUPPORTED`。该字段为**必填**，编译期即强制 driver 传递。 |
+| N3 / N4a / N4b / N4c / N5a / N5b / N6a / N6b / N6c | RED | RED | 本轮未实现（N3–N6 未开始）。 |
+| N0 readiness 过度声称 | 已记录 | **已修正** | E2E readiness 现显式标注 `forward basis: SYNTHETIC_FIXTURE_BUILD`，并把真实双构建 + 真实 verifier 标为 `NOT_PROVEN`。 |
+
+本轮同时修复了被 N2 改写打断的 r97 mutation 锚点（`a5-real-cli-adapter-never-wired`），
+变异行为不变；`r97-mutation-check.test.ts` 恢复 32/32 GREEN。
+
+**N2 仍未完成的部分**：两臂的 git HEAD / clean-tree 身份仍由可遗忘的 `R97_ARM_REQUIRE_GIT`
+环境开关控制，故 N2 的"真实执行模式强制身份"一项仍为 **NOT_PROVEN**。
