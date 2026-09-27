@@ -813,6 +813,20 @@ export async function main(argv) {
  */
 async function finish(opts, steps, ok) {
   const runStep = steps.find((s) => s.step === "run");
+  // The per-arm revisions THIS run observed, read from the artifact the observe
+  // step wrote. `finish` has no `observations` binding in scope, so the file is the
+  // source; absent it (an early failure) the fields stay null = UNKNOWN rather than
+  // falling back to a default constant that names a revision nothing measured.
+  let observedSha = { baseline: null, candidate: null };
+  try {
+    const written = JSON.parse(await readFile(join(opts.outDir, "observation-summary.json"), "utf8"));
+    observedSha = {
+      baseline: typeof written?.arms?.baseline?.sourceSha === "string" ? written.arms.baseline.sourceSha : null,
+      candidate: typeof written?.arms?.candidate?.sourceSha === "string" ? written.arms.candidate.sourceSha : null,
+    };
+  } catch {
+    observedSha = { baseline: null, candidate: null };
+  }
   const summary = {
     acceptanceVersion: ACCEPTANCE_VERSION,
     platform: process.platform,
@@ -829,8 +843,23 @@ async function finish(opts, steps, ok) {
     baselineDir: opts.baselineDir,
     candidateDir: opts.candidateDir,
     outDir: opts.outDir,
-    baselineSha: opts.baseline,
-    candidateSha: opts.candidate,
+    // THE REVISIONS ACTUALLY MEASURED — NOT the configured defaults.
+    //
+    // FIX (N1): these fields used to read `opts.baseline` / `opts.candidate`, which
+    // are the caller's `--baseline/--candidate` options and fall back to
+    // r97-observe-arms' DEFAULT_*_SHA constants. Whenever the arms are supplied as
+    // DIRECTORIES (the normal path once a pair has been prepared) those options are
+    // absent, so a run over two OTHER revisions printed the default SHAs — identity
+    // that was never verified, contradicting this run's own observation-summary.json.
+    // Measured: a campaign over baseline 1f3df072/candidate a89f5a81 reported
+    // baselineSha=e9776ba/candidateSha=a203737 here while observation-summary.json
+    // recorded the truth. The observation is the ONLY artifact that attests what
+    // executed, so identity now comes from it; the declaration is kept separately so
+    // a declaration/measurement mismatch stays visible instead of being overwritten.
+    baselineSha: observedSha.baseline ?? opts.baseline ?? null,
+    candidateSha: observedSha.candidate ?? opts.candidate ?? null,
+    declaredBaselineSha: opts.baseline ?? null,
+    declaredCandidateSha: opts.candidate ?? null,
     steps: steps.map((s) => ({ step: s.step, ok: s.ok, code: s.code, ...(s.output === undefined ? {} : { output: s.output }) })),
     // The figures the run's own driver result reported. `strongPasses`/`weakPasses`
     // are carried because a weak pass — an artifact verifier that checks only that
