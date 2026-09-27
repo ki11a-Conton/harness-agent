@@ -474,6 +474,27 @@ export interface CostBudgetView extends CostBudgetFile {
 
 const COST_BUDGET_FILENAME = "cost-budget.json";
 
+/**
+ * N6 — the DURABLE cost journal's corroborated token consumption for `dir`, so a
+ * caller can bind `tokensDelta` to what was actually charged instead of to an
+ * arm's self-reported `tokensUsed`.
+ *
+ * `null` means the journal does not exist (or is unreadable): explicitly UNKNOWN,
+ * never `0`. The two must stay distinguishable, because "no corroborated
+ * consumption" and "measured zero consumption" are different facts.
+ */
+export async function readCostJournalChargedTokens(dir: string): Promise<number | null> {
+  try {
+    const file = JSON.parse(await readFile(join(dir, COST_BUDGET_FILENAME), "utf8")) as {
+      charged?: { totalTokens?: unknown };
+    };
+    const total = file.charged?.totalTokens;
+    return typeof total === "number" && Number.isSafeInteger(total) ? total : null;
+  } catch {
+    return null;
+  }
+}
+
 const ZERO_RESERVATION: CostReservationDelta = { inputTokens: 0, outputTokens: 0, toolCalls: 0, durationMs: 0, usdMicros: 0 };
 
 /**

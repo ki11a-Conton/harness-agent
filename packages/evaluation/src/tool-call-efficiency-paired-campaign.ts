@@ -518,7 +518,15 @@ function rate(records: PreregisteredRunRecord[]): number {
 export function aggregatePreregisteredCampaign(
   run: PreregisteredCampaignRun,
   prereg: ToolCallEfficiencyPreregistrationV2,
-  ledgerTotals: { providerCalls: number; budgetRemaining: number; journalChargedTokens?: number },
+  ledgerTotals: {
+    providerCalls: number;
+    budgetRemaining: number;
+    /**
+     * N6 — the DURABLE cost journal's corroborated token consumption. `null` (or
+     * absent) means the journal does not exist: explicitly UNKNOWN, never `0`.
+     */
+    journalChargedTokens?: number | null;
+  },
 ): PreregisteredAggregate {
   const policy = prereg.evaluation.decisionPolicy ?? DEFAULT_DECISION_POLICY_V3;
   const byArmRunId = new Map(run.records.map((r) => [r.armRunId, r]));

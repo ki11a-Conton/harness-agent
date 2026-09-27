@@ -34,6 +34,7 @@ import {
   observationViolationsV2,
   runPreregisteredCampaign,
   aggregatePreregisteredCampaign,
+  readCostJournalChargedTokens,
   type PreregisteredArmRunner,
   type PreregisteredCampaignObservationV2,
   type PreregisteredCampaignRun,
@@ -410,9 +411,13 @@ async function runCmd(rest: string[], deps: PreregCommandDeps): Promise<PreregCo
     };
   }
   const ledgerView = await admission.ledger.view();
+  // N6 — bind the token delta to the DURABLE cost journal this run produced, not
+  // to the arms' self-reported `tokensUsed`.
+  const journalChargedTokens = await readCostJournalChargedTokens(budgetDir);
   const aggregate = aggregatePreregisteredCampaign(run, artifact, {
     providerCalls: ledgerView.committed,
     budgetRemaining: ledgerView.remaining,
+    journalChargedTokens,
   });
   await mkdir(outDir, { recursive: true });
   await writeFile(join(outDir, "aggregate.json"), `${JSON.stringify(aggregate, null, 2)}\n`, "utf8");
