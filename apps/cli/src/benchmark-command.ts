@@ -3647,3 +3647,42 @@ async function runBenchmarkCampaignTriageCommand(
     };
   }
 }
+
+/**
+ * N1 — the VERSIONED MECHANISM PROBE every real arm build must export.
+ *
+ * WHY IT EXISTS
+ * -------------
+ * The isolated arm worker (`scripts/e4/prereg-arm-isolated-worker.mjs`) loads a
+ * frozen checkout's OWN build entry and refuses it with
+ * `PREREG_WORKER_PROBE_MISSING` unless that build exports BOTH `runOneCase` and
+ * a NON-EMPTY versioned mechanism probe. The probe is the build's attestation of
+ * WHICH mechanism wiring it carries: the worker reports it back and the executor
+ * carries it into the arm evidence (`armProbe`), so a run can show the mechanism
+ * identity that actually executed — independently of the entry hash, which only
+ * proves byte identity.
+ *
+ * It states, in one comparable string:
+ *   - the probe schema revision (bump it whenever this contract changes);
+ *   - the pre-registered candidate mechanism this build wires;
+ *   - the guidance version the candidate's prompt block comes from;
+ *   - a digest over the build's REAL runtime wiring (`runtimeConfigForHash` —
+ *     the same source `runtimeConfigDigest` is computed from).
+ *
+ * It is deliberately declared LAST in this module: `runtimeConfigForHash` reads
+ * module-level wiring constants, so evaluating this probe any earlier could
+ * observe a partially initialized module.
+ */
+export const R97_ARM_PROBE_SCHEMA_VERSION = "r97-arm-probe-v1";
+
+export const R97_ARM_PROBE = [
+  R97_ARM_PROBE_SCHEMA_VERSION,
+  `candidate=${TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2}`,
+  `guidance=${TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION}`,
+  `wiring=${computeRuntimeConfigHash(
+    runtimeConfigForHash(
+      { suite: "regression", candidate: TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2 } as BenchmarkCommandOptions,
+      32_000,
+    ),
+  )}`,
+].join(";");

@@ -640,13 +640,18 @@ export const MUTATIONS = [
     file: "apps/cli/src/prereg-production-runner.ts",
     // A5/F1: the release adapter's `runArm` is the REAL executor. This mutation
     // restores the pre-A5 `ARM_EXECUTOR_NOT_WIRED` stop, so a legal experiment can
-    // be admitted and then never executed. `void createPreregArmExecutor;` keeps
-    // the import referenced so the mutation changes BEHAVIOUR rather than tripping
-    // an unused-import diagnostic (which would test the toolchain, not the defect).
-    find: `    runArm: createPreregArmExecutor({ rootDir, env }),`,
+    // be admitted and then never executed. `void executorFor;` keeps the local
+    // helper referenced so the mutation changes BEHAVIOUR rather than tripping an
+    // unused-local diagnostic (which would test the toolchain, not the defect).
+    //
+    // N2 — the anchor tracks the CURRENT production text: `runArm` now builds the
+    // executor from the isolation contract the driver forwarded on the run
+    // context (`ctx.isolation`) instead of a default this adapter chose. The
+    // MUTATED behaviour is unchanged (the arm is never executed).
+    find: `    runArm: (arm, ctx) => executorFor(ctx.isolation)(arm, ctx),`,
     replace: `    // A7 mutation: the release CLI never executes an arm (pre-A5 behaviour).
     runArm: async () => {
-      void createPreregArmExecutor;
+      void executorFor;
       throw new Error(\`\${ARM_EXECUTOR_NOT_WIRED}: A7 mutation — the release CLI never executes an arm\`);
     },`,
     suite: "apps/cli/src/prereg-formal-gaps.test.ts",

@@ -108,6 +108,13 @@ export interface PreregisteredArmContext {
   arm: ArmRunRef;
   preregistrationDigest: string;
   planDigest: string;
+  /** N2 — the isolation contract the PRE-REGISTRATION declared, forwarded from
+   *  the frozen artifact by the driver. It is the driver's job to carry it, so an
+   *  executor cannot silently run under a weaker backend than the artifact names:
+   *  a backend this build cannot honour is a refusal
+   *  (`ARM_ISOLATION_UNSUPPORTED`) BEFORE any arm work, and a runner that needs
+   *  the contract no longer has to read it out of the environment. */
+  isolation: { isolationBackendId: string; isolationStrength: string };
   /** A6 — the driver-created directory this run's raw artifacts MUST be written
    *  to (manifest.json / verifier.json / activation.json / security.json). */
   evidenceDir: string;
@@ -410,6 +417,13 @@ export async function runPreregisteredCampaign(
       arm,
       preregistrationDigest,
       planDigest,
+      // N2 — the frozen artifact's isolation contract travels WITH the run, so
+      // the executor validates what the pre-registration declared rather than a
+      // default it chose itself.
+      isolation: {
+        isolationBackendId: prereg.isolation.isolationBackendId,
+        isolationStrength: prereg.isolation.isolationStrength,
+      },
       evidenceDir,
     });
     // F2/S4: refuse a result whose evidence is missing/malformed AT RECORD TIME,

@@ -66,6 +66,7 @@ import {
   resolveBenchmarkCaseDir,
   selectionFromFrozenEvidence,
   toolCallEfficiencyGuidanceDigest,
+  type PreregisteredArmRunner,
   type PreregisteredCampaignObservationV2,
   type ToolCallEfficiencyPreregistrationV2,
 } from "@ar/evaluation";
@@ -273,6 +274,22 @@ export function observeFrozenSelectionEvidence(root: string): FrozenSelectionObs
 export function createProductionPreregRunner(opts: ProductionPreregRunnerOptions = {}): PreregRunnerAdapter {
   const rootDir = opts.rootDir ?? process.cwd();
   const env = opts.env ?? process.env;
+  // N2 — one executor per DISTINCT declared isolation contract, built from the
+  // contract the driver forwarded. The map only avoids rebuilding an identical
+  // executor for every arm run; it never decides the contract itself.
+  const executors = new Map<string, PreregisteredArmRunner>();
+  const executorFor = (isolation: {
+    isolationBackendId: string;
+    isolationStrength: string;
+  }): PreregisteredArmRunner => {
+    const key = `${isolation.isolationBackendId}/${isolation.isolationStrength}`;
+    let runner = executors.get(key);
+    if (runner === undefined) {
+      runner = createPreregArmExecutor({ rootDir, env, isolation });
+      executors.set(key, runner);
+    }
+    return runner;
+  };
   return {
     observe: async (prereg) => {
       // B1 — re-derive the selection provenance + eligibility from the frozen
@@ -291,6 +308,12 @@ export function createProductionPreregRunner(opts: ProductionPreregRunnerOptions
     // A5 — the REAL executor. It fails closed (`ARM_CHECKOUT_MISSING` /
     // `ARM_BUILD_IDENTICAL` / `ARM_CASE_NOT_FOUND` / `ARM_EVIDENCE_DIR_MISSING`)
     // rather than fabricating a run result.
-    runArm: createPreregArmExecutor({ rootDir, env }),
+    //
+    // N2 — the executor is built from the ISOLATION CONTRACT THE DRIVER FORWARDED
+    // from the frozen pre-registration, not from a default this adapter invented.
+    // A campaign declaring a backend this build cannot honour is therefore
+    // refused with `ARM_ISOLATION_UNSUPPORTED` before any arm work, instead of
+    // silently running under the shipped `process-exec`/`process` backend.
+    runArm: (arm, ctx) => executorFor(ctx.isolation)(arm, ctx),
   };
 }

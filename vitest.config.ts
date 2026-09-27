@@ -29,6 +29,14 @@ export default defineConfig({
       "apps/cli/src/e4-r24-fixture-*.test.ts",
       "packages/evaluation/src/prereg-next-gaps.test.ts",
       "apps/cli/src/prereg-next-gaps.test.ts",
+      // N0 (plan(20260926-175819).md §N0): the NEXT-round (N1–N6) behavior
+      // counterexamples are DELIBERATELY failing on the audited HEAD — they are
+      // the evidence for the uncovered gaps and become GREEN only when N1–N6
+      // close them. They must never be collected by the green regression run,
+      // or `pnpm test` would go red for the wrong reason. They stay individually
+      // runnable through `apps/cli/test-infra/n0-gaps-vitest.config.ts`.
+      "packages/evaluation/src/prereg-n0-gaps.test.ts",
+      "apps/cli/src/prereg-n0-gaps.test.ts",
     ],
     environment: "node",
     testTimeout: 300000,

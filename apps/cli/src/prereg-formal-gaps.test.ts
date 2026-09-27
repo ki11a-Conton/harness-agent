@@ -298,6 +298,7 @@ describe("F1 — production execution identity and executor", () => {
         arm: ARM,
         preregistrationDigest: prereg().preregistrationDigest,
         planDigest: prereg().schedule.planDigest,
+        isolation: { isolationBackendId: "process-exec", isolationStrength: "process" },
         evidenceDir: join(await scratch("f1-runarm-none"), "ev"),
       }),
     ).rejects.toThrow(/ARM_CHECKOUT_MISSING/);
@@ -325,6 +326,7 @@ describe("F1 — production execution identity and executor", () => {
       arm: realArm,
       preregistrationDigest,
       planDigest,
+      isolation: { isolationBackendId: "process-exec", isolationStrength: "process" },
       evidenceDir,
     });
     // A real executor returns a real verdict (never a fabricated `passed`).

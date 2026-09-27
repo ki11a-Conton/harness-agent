@@ -1,6 +1,19 @@
 /**
  * B0 — RED counterexamples for the NEXT round's gaps (G1, G4, G7), CLI side.
  *
+ * STATUS AT HEAD `1299e5cb` (N0 re-run, plan(20260926-175819).md §N0) — the
+ * historical RED is now GREEN: the B-round work (B2/B3/B5/B6) closed G1/G4/G7.
+ * Re-running the dedicated matrix command at this HEAD:
+ *
+ *   pnpm exec vitest run --config apps/cli/test-infra/red-next-gaps-vitest.config.ts
+ *
+ * reports `Test Files 2 passed (2)` / `Tests 14 passed (14)`, exit 0 (raw log:
+ * `.ci/n0/red-next-gaps.log`). Everything below describing a test as "RED" or
+ * "FAILS on the audited HEAD (3ff8946)" is a HISTORICAL record of that audited
+ * state, NOT a property of the current HEAD. These counterexamples are retained
+ * unchanged as regression pins: do not delete them, and do not weaken them to
+ * obtain green.
+ *
  * WHY THIS FILE EXISTS (plan(20260926-070459).md §B0)
  * ---------------------------------------------------
  * B0 turns each remaining gap into an OFFLINE, INDIVIDUALLY RUNNABLE

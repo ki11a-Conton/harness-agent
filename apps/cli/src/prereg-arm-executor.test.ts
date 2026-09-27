@@ -183,6 +183,8 @@ async function runArmWith(input: {
     arm,
     preregistrationDigest: PREREG_DIGEST,
     planDigest: PLAN_DIGEST,
+    // N2 — the driver now carries the pre-registration's isolation contract.
+    isolation: { isolationBackendId: "process-exec", isolationStrength: "process" },
     evidenceDir: input.evidenceDir ?? join(await scratch("unused-ev"), "ev"),
   });
 }
@@ -228,6 +230,7 @@ describe("A5/B3 — the provisioned executor fails closed on every unprovable pr
         arm,
         preregistrationDigest: PREREG_DIGEST,
         planDigest: PLAN_DIGEST,
+        isolation: { isolationBackendId: "process-exec", isolationStrength: "process" },
         evidenceDir: join(await scratch("case-not-found-ev"), "ev"),
       }),
     ).rejects.toThrow(new RegExp(ARM_CASE_NOT_FOUND));
@@ -250,6 +253,7 @@ describe("A5/B3 — the provisioned executor fails closed on every unprovable pr
         arm,
         preregistrationDigest: PREREG_DIGEST,
         planDigest: PLAN_DIGEST,
+        isolation: { isolationBackendId: "process-exec", isolationStrength: "process" },
         evidenceDir: "",
       }),
     ).rejects.toThrow(new RegExp(ARM_EVIDENCE_DIR_MISSING));
@@ -290,6 +294,7 @@ describe("A5/B3 — the production adapter launches the arm's OWN build as a chi
       arm,
       preregistrationDigest: PREREG_DIGEST,
       planDigest: PLAN_DIGEST,
+      isolation: { isolationBackendId: "process-exec", isolationStrength: "process" },
       evidenceDir,
     });
 
@@ -343,6 +348,7 @@ describe("A5/B3 — the production adapter launches the arm's OWN build as a chi
       arm: baseArm,
       preregistrationDigest: PREREG_DIGEST,
       planDigest: PLAN_DIGEST,
+      isolation: { isolationBackendId: "process-exec", isolationStrength: "process" },
       evidenceDir: evBase,
     });
     const candArm = armRef("candidate");
@@ -352,6 +358,7 @@ describe("A5/B3 — the production adapter launches the arm's OWN build as a chi
       arm: candArm,
       preregistrationDigest: PREREG_DIGEST,
       planDigest: PLAN_DIGEST,
+      isolation: { isolationBackendId: "process-exec", isolationStrength: "process" },
       evidenceDir: evCand,
     });
 
@@ -390,6 +397,7 @@ describe("A5/B3 — the production adapter launches the arm's OWN build as a chi
       arm,
       preregistrationDigest: PREREG_DIGEST,
       planDigest: PLAN_DIGEST,
+      isolation: { isolationBackendId: "process-exec", isolationStrength: "process" },
       evidenceDir,
     });
     const manifest = JSON.parse(

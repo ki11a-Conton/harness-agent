@@ -13,6 +13,8 @@
     "test:forensics": "vitest run apps/cli/src/e4-r40-forensics.test.ts",
     "test:perf": "vitest run '**/*.perf.test.ts'",
     "test:soak": "vitest run '**/*.soak.test.ts'",
+    "test:red-next-gaps": "vitest run --config apps/cli/test-infra/red-next-gaps-vitest.config.ts",
+    "test:n0-gaps": "vitest run --config apps/cli/test-infra/n0-gaps-vitest.config.ts",
     "test:coverage": "tsc -b && vitest run --coverage --exclude '**/*.perf.test.ts' --exclude '**/*.soak.test.ts' --exclude '**/e3-repro-current-defects.test.ts' --exclude '**/e4-r40-forensics.test.ts' --exclude '**/r97-driver-closed-loop.test.ts'",
     "benchmark:smoke": "node apps/cli/dist/main.js benchmark smoke",
     "benchmark:campaign:validate": "node apps/cli/dist/main.js benchmark campaign validate scripts/benchmark/fixtures/r84-campaign/campaign --cases scripts/benchmark/fixtures/r84-campaign/cases --suites adversarial,stress --expect aaaa1111,bbbb2222",
