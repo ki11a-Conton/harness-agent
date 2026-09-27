@@ -134,6 +134,8 @@ New suite, all GREEN (exit `0`, `Test Files 1 passed`, `Tests 10 passed`):
 | `pnpm test` | `1` | `Test Files 6 failed | 369 passed (375)`, `Tests 23 failed | 7068 passed | 3 skipped (7094)` (`.ci/n0/n3-full.log`) |
 | `node scripts/e4/prereg-production-e2e.mjs --out .ci/n0/e2e-n3.json` (clean tree) | `0` | `prereg-production-e2e: PASS` (`.ci/n0/e2e-n3.log`) |
 | `node .ci/n0/probe-price.mjs` | `0` | observed-price table in §2 |
+| `pnpm docs:verify` (working tree as-is) | `1` | exactly one failure: `FAIL current plan entry (E4-00) plan.md references plan(20260926-070459).md but that spec file is missing` |
+| `pnpm docs:verify` (only the user's two uncommitted deletions set aside) | `0` | `ALL CHECKS PASS` |
 
 **Attribution of the `pnpm test` failures (measured, not assumed).** Comparing the FAIL set of
 `.ci/n0/full-final.log` (pre-N3, 23 lines) against `.ci/n0/n3-full.log` (post-N3, 23 lines) yields
@@ -204,6 +206,12 @@ conclusion.
 6. **N3 does not implement the per-send/per-retry re-check or the `UNKNOWN/FROZEN` no-refund
    state** (§N3 line 71). Deferred and reported as `NOT_PROVEN`.
 7. Pre-existing whole-suite failures remain (see §5) and are not caused by N3.
+8. **`pnpm docs:verify` fails for a reason outside this round.** Measured, not assumed:
+   `HANDOVER.md` and `plan(20260926-070459).md` both exist at `HEAD` but are deleted in the
+   working tree (the user's pre-existing entries, left untouched). With only those two deletions
+   temporarily set aside, the same command prints `ALL CHECKS PASS` and exits `0`. The
+   `FAIL current plan entry (E4-00)` message is therefore an artifact of the working tree, not of
+   N3's changes or of committed content.
 
 ## 9. Reproduction
 
