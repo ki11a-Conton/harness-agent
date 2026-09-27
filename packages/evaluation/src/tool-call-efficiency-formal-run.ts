@@ -666,10 +666,11 @@ export class CostBudget {
    *     silently REFUND the ledger);
    *   - repeated settle of the SAME id is refused by the same rule (the id is
    *     consumed by the first settle);
-   *   - a token / USD actual that exceeds the HELD pre-send upper bound is
-   *     refused: the bound was supposed to dominate the real cost, so an overrun
-   *     is a bound violation that must freeze the campaign, never be charged as
-   *     if it were planned. Duration is EXCLUDED from that bound check because
+   *   - a token / USD / tool-call actual that exceeds the HELD pre-send upper
+   *     bound is refused: the bound was supposed to dominate the real cost, so an
+   *     overrun is a bound violation that must freeze the campaign, never be
+   *     charged as if it were planned. Duration is EXCLUDED from that bound check
+   *     because
    *     its reservation is an explicit scheduling SHARE (a call's wall-clock is
    *     not provable in advance) — it is charged from the actual elapsed time
    *     and binds by refusing the NEXT call once charged+reserved reaches the
@@ -700,10 +701,13 @@ export class CostBudget {
         // twice.
         throw new Error(`cost budget settle refused: reservation id ${id} is not outstanding (unknown, already settled, or never reserved)`);
       }
-      // B2 — the held reservation is the trusted pre-send upper bound. Token/USD
-      // actuals may not exceed it; a real overrun freezes the campaign instead of
-      // being charged (see method docstring for the duration exception).
-      for (const k of ["inputTokens", "outputTokens", "usdMicros"] as const) {
+      // B2/N4 — the held reservation is the trusted pre-send upper bound.
+      // Token/USD actuals may not exceed it; a real overrun freezes the campaign
+      // instead of being charged (see method docstring for the duration
+      // exception). `toolCalls` is INCLUDED: the tool dimension is a held upper
+      // bound exactly like tokens and USD, so the old omission let a settle charge
+      // an arbitrarily larger tool-call count than was ever reserved.
+      for (const k of ["inputTokens", "outputTokens", "toolCalls", "usdMicros"] as const) {
         const v = actual[k];
         if (v !== undefined && v > held[k]) {
           throw new Error(
@@ -732,21 +736,57 @@ export class CostBudget {
     });
   }
 
-  /** Charge actual usage without a prior reservation (legacy/tests). Atomic. */
+  /**
+   * Charge actual usage without a prior reservation (legacy/tests). Atomic.
+   *
+   * N4 — this API used to write ANY value: it neither validated its dimensions
+   * nor enforced a single cap, so a NEGATIVE charge silently credited the
+   * campaign and an over-cap charge was durably recorded as if the bound had been
+   * respected. It now behaves like `reserve` with respect to the caps
+   * (charged + reserved + delta must fit EVERY dimension) and refuses with
+   * `BUDGET_EXHAUSTED` instead of writing. Unknown tool state is charged
+   * CONSERVATIVELY: callers pass the count actually observed, never a refund.
+   */
   async charge(delta: { inputTokens?: number; outputTokens?: number; toolCalls?: number; durationMs?: number; usdMicros?: number; unknown?: boolean }): Promise<CostBudgetView> {
+    // Static validation OUTSIDE the lock, exactly like `settle`: a malformed
+    // charge must never take the campaign lock.
+    const dims = ["inputTokens", "outputTokens", "toolCalls", "durationMs", "usdMicros"] as const;
+    for (const k of dims) {
+      const v = delta[k];
+      if (v === undefined) continue;
+      if (!Number.isSafeInteger(v) || v < 0) {
+        throw new Error(`cost budget charge refused: ${k} must be a non-negative safe integer (got ${String(v)})`);
+      }
+    }
     return withR97CampaignLock(this.dir, async () => {
       const file = JSON.parse(await readFile(join(this.dir, COST_BUDGET_FILENAME), "utf8")) as CostBudgetFile;
       file.reserved = { ...ZERO_RESERVATION, ...(file.reserved ?? {}) };
       file.reservations = file.reservations ?? {};
       const c = file.charged;
+      const r = file.reserved;
+      const caps = file.caps;
       const inputTokens = delta.inputTokens ?? 0;
       const outputTokens = delta.outputTokens ?? 0;
+      const toolCalls = delta.toolCalls ?? 0;
+      const durationMs = delta.durationMs ?? 0;
+      const usdMicros = delta.usdMicros ?? 0;
+      const totalDelta = inputTokens + outputTokens;
+      const over = (charged: number, reserved: number, add: number, max: number): boolean => charged + reserved + add > max;
+      let reason = "";
+      if (over(c.inputTokens, r.inputTokens, inputTokens, caps.maxInputTokens)) reason = "input-token cap would be exceeded";
+      else if (over(c.outputTokens, r.outputTokens, outputTokens, caps.maxOutputTokens)) reason = "output-token cap would be exceeded";
+      else if (over(c.totalTokens, r.inputTokens + r.outputTokens, totalDelta, caps.maxTotalTokens)) reason = "total-token cap would be exceeded";
+      else if (over(c.toolCalls, r.toolCalls, toolCalls, caps.maxToolCalls)) reason = "tool-call cap would be exceeded";
+      else if (over(c.durationMs, r.durationMs, durationMs, caps.maxDurationMs)) reason = "duration cap would be exceeded";
+      else if (caps.maxUsdMicros !== null && over(c.usdMicros, r.usdMicros, usdMicros, caps.maxUsdMicros)) reason = "USD cap would be exceeded";
+      // Refuse BEFORE mutating, so a refused charge writes nothing at all.
+      if (reason !== "") throw new Error(`E4-N3: BUDGET_EXHAUSTED: charge refused — ${reason}`);
       c.inputTokens += inputTokens;
       c.outputTokens += outputTokens;
       c.totalTokens += inputTokens + outputTokens;
-      c.toolCalls += delta.toolCalls ?? 0;
-      c.durationMs += delta.durationMs ?? 0;
-      c.usdMicros += delta.usdMicros ?? 0;
+      c.toolCalls += toolCalls;
+      c.durationMs += durationMs;
+      c.usdMicros += usdMicros;
       if (delta.unknown === true) c.unknownCalls += 1;
       await writeAtomic(join(this.dir, COST_BUDGET_FILENAME), file);
       this.file = file;
@@ -806,6 +846,8 @@ export interface FormalBudgetStats {
   chargedInputTokens: number;
   chargedOutputTokens: number;
   chargedUsdMicros: number;
+  /** N4 — tool calls the run actually made and that were charged to the budget. */
+  chargedToolCalls: number;
 }
 
 /**
@@ -829,6 +871,7 @@ export function createFormalBudgetedProvider(opts: {
     chargedInputTokens: 0,
     chargedOutputTokens: 0,
     chargedUsdMicros: 0,
+    chargedToolCalls: 0,
   };
 
   const wrapped: ModelProvider = {
@@ -885,6 +928,7 @@ export function createFormalBudgetedProvider(opts: {
           let completed = false;
           let inputTokens = 0;
           let outputTokens = 0;
+          let toolCallsUsed = 0;
           let usdMicros = 0;
           let retries = 0;
           let settleStarted = false;
@@ -930,6 +974,19 @@ export function createFormalBudgetedProvider(opts: {
             stats.chargedOutputTokens += outputTokens;
             stats.chargedUsdMicros += chargedMicros;
             void view;
+            // N4 — CONSUME the tool-call dimension. It is `charge`d rather than
+            // `settle`d because the per-attempt reservation cannot bound a count
+            // the model declares only AFTER the send: a pre-send tool upper bound
+            // does not exist at this layer. `charge` enforces the campaign cap
+            // under the same lock and refuses with `BUDGET_EXHAUSTED`, so an
+            // over-cap run freezes the campaign instead of being recorded — the
+            // dimension is now bounded, not inert. Reserving tool quota BEFORE
+            // each real ToolOrchestrator dispatch (plan §N4 item 1) is NOT done
+            // here; see docs/evidence/E4-N4-report.md.
+            if (toolCallsUsed > 0) {
+              await opts.costBudget.charge({ toolCalls: toolCallsUsed });
+              stats.chargedToolCalls += toolCallsUsed;
+            }
             // Each retry WAS a physical send. Its own usage is not separately
             // reported, so it is charged at its reserved upper bound — the
             // conservative settlement, never a refund.
@@ -973,6 +1030,12 @@ export function createFormalBudgetedProvider(opts: {
                 }
               } else if (ev.type === "completed") {
                 completed = true;
+                // N4 — the tool calls the completed response actually CARRIES.
+                // The tool dimension used to be inert (`toolCalls: 0` reserved
+                // and never settled), so `maxToolCalls` could never be consumed
+                // no matter how many tools a run invoked.
+                const declared = (ev.result as { toolCalls?: unknown } | undefined)?.toolCalls;
+                if (Array.isArray(declared)) toolCallsUsed += declared.length;
               }
               yield ev;
             }
