@@ -985,7 +985,7 @@ async function main() {
       offlineFixtureReady:
         "PASS (reported by scripts/e4/n5-prereg-closed-loop.mjs, not this script): the injected-adapter fixture chain runs offline",
       productionOfflineReady: ready
-        ? "PASS: (1) the SHIPPED entry point (real subprocess CLI) refuses every preflight counterexample with 0 HTTP; (2) it certifies a frozen identity with 0 provider; (3) the in-process shipped adapter executes the full paired schedule against a counting fake transport; (4) the SHIPPED release CLI subprocess executes the FULL forward schedule over two real isolated arm builds against a loopback counting stub, with its durable ledger and every arm's raw evidence re-checked. None of this is a paid run or a promotion."
+        ? "PASS (offline, SYNTHETIC fixtures): (1) the SHIPPED entry point (real subprocess CLI) refuses every preflight counterexample with 0 HTTP; (2) it certifies a frozen identity with 0 provider; (3) the in-process shipped adapter executes the full paired schedule against a counting fake transport; (4) the SHIPPED release CLI subprocess executes the FULL forward schedule over two SYNTHESIZED fixture arm build entries this script writes with writeArmCheckout — an IPC/protocol/ledger closed loop — against a loopback counting stub, with its durable ledger and every arm's raw evidence re-checked. NOT_PROVEN here: a REAL dual frozen build (two real pinned checkouts built from two distinct source SHAs) and the real verifier over them; that is N1's scope and this script does not claim it. None of this is a paid run or a promotion."
         : blocked !== null
           ? `NOT_READY: ${blocked}`
           : "NOT_READY: at least one phase did not pass",
@@ -994,6 +994,15 @@ async function main() {
           negative.length > 0 && negative.every((c) => c.ok) && positiveCert !== null && positiveCert.ok ? "PASS" : "FAIL",
         inProcessAdapterForward: positiveExec !== null && positiveExec.ok ? "PASS" : "FAIL",
         releaseCliSubprocessForward: positiveForward !== null && positiveForward.ok ? "PASS" : "NOT_READY",
+        // N0 — the split the plan requires. `releaseCliSubprocessForward=PASS`
+        // above proves the IPC + protocol + durable-ledger closed loop over
+        // SYNTHESIZED arm builds; it must never be read as a real dual frozen
+        // build or as the real verifier having run over one. Those are separately
+        // labelled here so an offline PASS cannot be quoted as production proof.
+        releaseCliSubprocessForwardBasis:
+          positiveForward !== null && positiveForward.ok ? "SYNTHETIC_FIXTURE_BUILD (writeArmCheckout entries, not two real pinned checkouts)" : "NOT_OBSERVED",
+        realDualFrozenBuildAndRealVerifier:
+          "NOT_PROVEN: this offline script builds no two real pinned checkouts from distinct source SHAs, so a real dual build and the real verifier over it are unproven by it (N1 scope)",
         overall: ready ? "PASS" : blocked !== null ? "BLOCKED" : "PARTIAL",
       },
       paidExperimentRun: "NOT_RUN: no paid authorization exists; this script refuses a selectable paid key/switch and every transport is local (in-process fake or a loopback counting stub)",
@@ -1012,6 +1021,8 @@ async function main() {
       `  positive execution (in-process): ${positiveExec === null ? blocked : `decision=${positiveExec.decision ?? positiveExec.code} arms=${positiveExec.scheduledArmRuns ?? "?"} physicalCalls=${positiveExec.physicalProviderCalls ?? "?"} verified=${positiveExec.evidenceVerified ?? "?"}`}\n` +
       `  positive forward (release CLI subprocess): ${positiveForward === null ? blocked : `stage=${positiveForward.stage ?? "ok"} decision=${positiveForward.decision ?? "?"} arms=${positiveForward.scheduledArmRuns ?? "?"} physicalStubRequests=${positiveForward.physicalStubRequests ?? "?"} ledgerCommitted=${positiveForward.ledgerCommitted ?? "?"} verified=${positiveForward.evidenceVerified ?? "?"}`}\n` +
       `  productionOfflineReadiness: negative+cert=${report.readiness.productionOfflineReadiness.releaseCliNegativeAndCertification} in-process=${report.readiness.productionOfflineReadiness.inProcessAdapterForward} release-subprocess=${report.readiness.productionOfflineReadiness.releaseCliSubprocessForward} overall=${report.readiness.productionOfflineReadiness.overall}\n` +
+      `  forward basis: ${report.readiness.productionOfflineReadiness.releaseCliSubprocessForwardBasis}\n` +
+      `  real dual build + real verifier: ${report.readiness.productionOfflineReadiness.realDualFrozenBuildAndRealVerifier}\n` +
       `  paidExperimentRun=${report.readiness.paidExperimentRun.split(":")[0]} championPromotion=${report.readiness.championPromotion.split(":")[0]}\n` +
       `  evidence: ${outPath}\n`,
   );
