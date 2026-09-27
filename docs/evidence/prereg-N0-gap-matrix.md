@@ -120,7 +120,7 @@ worker ABI 要求与隔离校验**本身存在且正确**；失败的是**生产
 | 命令 | 退出码 | 结果 |
 | --- | --- | --- |
 | `pnpm exec vitest run --config apps/cli/test-infra/red-next-gaps-vitest.config.ts` | **0** | 2 files / **14 passed**（旧 G1–G7 回归 pin，现 GREEN） |
-| `pnpm test:n0-gaps` | **1** | 2 files / **3 failed \| 9 passed (12)**（**N3、N4a/N4b/N4c、N5a/N5b 已转 GREEN**；剩余 3 条 RED 属 N6a/N6b/N6c） |
+| `pnpm test:n0-gaps` | **0** | 2 files / **12 passed (12)** —— **全部 N0 反例（N1a/N1b、N2、N3、N4a-c、N5a/N5b、N6a-c）均已转 GREEN**，门禁整体通过 |
 | `pnpm typecheck`（`tsc -b`） | **0** | 24 包全绿，含新增测试文件 |
 | `pnpm exec vitest list` → 过滤 `n0-gaps\|prereg-next-gaps` | **0** | **0 匹配**（根回归不收集两类反例） |
 | `pnpm build` | **0** | `tsc -b` 通过 |
@@ -158,6 +158,8 @@ worker ABI 要求与隔离校验**本身存在且正确**；失败的是**生产
 | `packages/evaluation/src/tool-call-efficiency-pricing-admission.test.ts` | 新增（N3 轮）：付费/合成 fixture 两类准入的逐类行为验收（10 例，全 GREEN，含正向对照 N3.10） |
 | `packages/evaluation/src/tool-call-efficiency-tool-budget.test.ts` | 新增（N4 轮）：工具额度上限、全或无、`charge()` 校验、零额度、消费、两臂共享、重开持久（9 例，全 GREEN） |
 | `apps/cli/src/prereg-egress-trust-boundary.test.ts` | 新增（N5 轮）：环境白名单（含 `NODE_OPTIONS`/代理/云凭证/其他 provider token）、能力声明、未标记 checkout 的**启动前**拒绝且 loopback 命中 0、带标记 fixture 真实运行且不继承任何敏感变量（4 例，全 GREEN） |
+| `packages/evaluation/src/prereg-activation-binding.test.ts` | 新增（N6 轮）：activation 内容绑定（真实产物通过；未知 schema、错 run identity、无 events、改一个 byte、删产物、unactivated 携带 activation 均被拒）（6 例，全 GREEN） |
+| `packages/evaluation/src/tool-call-efficiency-formal-gaps.test.ts` | 追加（N6 轮）：N6.7 journal 决定 `tokensDelta`、N6.8 无 journal 佐证则不可比、N6.9 全员 error 不得 artifact-clean、N6.10 容错必须显式声明（4 例，全 GREEN） |
 | `apps/cli/test-infra/n0-gaps-vitest.config.ts` | 新增：N0 专用配置（只收集上述两文件） |
 | `vitest.config.ts` | 修改：根 `exclude` 增加两个 N0 反例文件（结构性隔离，避免弄红 `pnpm test`） |
 | `package.json` | 修改：新增 `test:n0-gaps`、`test:red-next-gaps` 两个显式脚本（分离 EXPECTED_RED 与正式门禁） |
@@ -212,7 +214,8 @@ worker ABI 要求与隔离校验**本身存在且正确**；失败的是**生产
 N3 提交 `42e0cb16`（付费准入 fail closed + 合成 fixture 类）与 `a2c65e44`（N3 逐类行为证据）。
 N4 提交 `35eeb5f4`（工具维度上限/校验/消费）。
 N5 提交 `a142f666`（环境白名单 + 未标记 checkout 的启动前出网拒绝）与 `44d3641f`（fixture writer 补齐标记 + N5 证据）。
-完整证据、原始命令与退出码见 [`E4-N1-N2-report.md`](./E4-N1-N2-report.md)、[`E4-N3-report.md`](./E4-N3-report.md)、[`E4-N4-report.md`](./E4-N4-report.md)、[`E4-N5-report.md`](./E4-N5-report.md)。
+N6 提交 `42ea342d`（activation 内容绑定 + journal 化 tokensDelta + error 记录不可自证 + E2E `ok` 收紧）、`67ce2884`（release CLI 聚合绑定 journal）、`de7a5ecf`（fixture 改为真实 activation 形态）。
+完整证据、原始命令与退出码见 [`E4-N1-N2-report.md`](./E4-N1-N2-report.md)、[`E4-N3-report.md`](./E4-N3-report.md)、[`E4-N4-report.md`](./E4-N4-report.md)、[`E4-N5-report.md`](./E4-N5-report.md)、[`E4-N6-report.md`](./E4-N6-report.md)。
 
 | 反例 | 本轮前 | 本轮后 | 依据 |
 | --- | --- | --- | --- |
@@ -222,7 +225,7 @@ N5 提交 `a142f666`（环境白名单 + 未标记 checkout 的启动前出网�
 | N3（付费准入可绕过金额上限/未知价格） | RED | **GREEN** | 准入拆成两类且各自 fail closed：PAID 要求 `maxUsdMicros` 非空（`PAID_WITHOUT_USD_CAP`）且价格已知（`PRICING_UNKNOWN`）；合成 fixture 类（`fixtureMode` + `paid:false`，parser 拒绝与 `paid:true` 并存）必须证明**观测到的**传输不可计费。新增 10 条逐类行为用例，每条断言拒绝码 + provider factory=0 + 物理传输=0，并含正向对照（N3.10）。 |
 | N4a / N4b / N4c（工具调用维度惰性、`settle` 不校验 tool 上限、`charge()` 零校验） | RED | **GREEN** | `settle` 的"已持有上限"校验纳入 `toolCalls`（超限即冻结，且在任何写入前，全部维度要么全写要么不写）；`charge()` 逐维度校验非负安全整数并在同一锁内执行全部 cap 校验，超限抛 `BUDGET_EXHAUSTED` 且不写入；`createFormalBudgetedProvider` 消费 `completed` 响应携带的工具调用数。新增 9 条行为用例（N4.1–N4.9：上限、全或无、零额度、消费、超限冻结、两臂共享、重开后仍持久）。 |
 | N5a / N5b | RED | **GREEN** | worker 环境改为**显式白名单**（`buildWorkerEnv`，不再"复制全部再删 4 个键"）：代理、云凭证、其他 provider token、`NODE_OPTIONS` 全部不可见，而 worker 自己的声明输入仍到达。出网侧：本构建无法证明单一出网边界（`egressIsolationCapability().available === false`），因此**未带合成 fixture 标记的 checkout 在启动前**即以 `EGRESS_ISOLATION_UNAVAILABLE` 拒绝——loopback 计数为 0，且子进程的 import 期副作用从未发生；带标记的 fixture 仍真实运行（拒绝非"一刀切"）。此标记由 harness 自己的 fixture writer 写出，随产物传递，不依赖可遗忘的环境开关；**它不等于网络沙箱**。新增 4 条行为用例（N5.1–N5.4）。 |
-| N6a / N6b / N6c | RED | RED | 本轮未实现（N6 未开始）。 |
+| N6a / N6b / N6c | RED | **GREEN** | **N6a**：activation 产物此前**只校验 digest、从不解析内容**，因此 `{schemaVersion:"never-checked-by-the-validator"}` 只要 digest 自洽就能通过；现在解析并绑定 schema、arm/run identity 与真实 events（digest 只证明字节未变，不证明事件发生）。**N6b**：`tokensDelta` 由各 arm 自报 `tokensUsed` 求和（可自报 +15,999,984 而账本为 0），现取 durability journal（新增 `journalChargedTokens`），无 journal 佐证的自报使两臂**不可比**。**N6c**：`error` 记录因 `armEvidenceProblems(undefined,"error")===[]` 被当作"已核对"，使全员 `error` 的战役看起来 artifact-clean；现在 error 记录按定义不可自证，容错比例只能由 `evaluation.maxInfraErrorRatio` **显式声明**且默认 0。E2E `ok` 谓词不再静默排除 error 记录。 |
 | N0 readiness 过度声称 | 已记录 | **已修正** | E2E readiness 现显式标注 `forward basis: SYNTHETIC_FIXTURE_BUILD`，并把真实双构建 + 真实 verifier 标为 `NOT_PROVEN`。 |
 
 本轮同时修复了被 N2 改写打断的 r97 mutation 锚点（`a5-real-cli-adapter-never-wired`），
