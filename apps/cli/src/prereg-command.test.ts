@@ -25,6 +25,7 @@ import {
   PREREG_RUN_EVIDENCE_FILENAMES,
   PREREG_RUN_MANIFEST_SCHEMA,
   PREREG_RUN_SECURITY_SCHEMA,
+  PREREG_RUN_ACTIVATION_SCHEMA,
   PREREG_RUN_VERIFIER_SCHEMA,
   TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2,
   buildToolCallEfficiencyPreregistrationV2,
@@ -200,7 +201,20 @@ async function writeEvidence(
   await writeFile(join(ctx.evidenceDir, PREREG_RUN_EVIDENCE_FILENAMES.security), securityText, "utf8");
   let activationEvidenceDigest: string | null = null;
   if (opts.activate) {
-    const activationText = `${stableStringify({ schemaVersion: "prereg-run-activation-v1", armRunId: ctx.armRunId, activated: true })}\n`;
+    // N6 — this fixture must write the SAME activation shape the real executor
+    // writes. It previously wrote `{schemaVersion, armRunId, activated: true}` — a
+    // label-only activation whose digest was self-consistent but which named no
+    // events and no run identity. That is exactly the forgery N6 refuses (a digest
+    // proves the bytes did not change, never that an activation happened), so the
+    // fixture is bound to the real shape here rather than the validator relaxing.
+    const activationText = `${stableStringify({
+      schemaVersion: PREREG_RUN_ACTIVATION_SCHEMA,
+      caseId: ctx.arm.caseId,
+      armId: ctx.arm.armId,
+      repetition: ctx.arm.repetition,
+      orderIndex: ctx.arm.orderIndex,
+      events: [{ eventId: `${ctx.armRunId}-activation`, schemaVersion: "2.0.0", payloadDigest: sha(`${ctx.armRunId}:guidance-block`) }],
+    })}\n`;
     await writeFile(join(ctx.evidenceDir, PREREG_RUN_EVIDENCE_FILENAMES.activation), activationText, "utf8");
     activationEvidenceDigest = sha(activationText);
   }
