@@ -78,6 +78,26 @@ The pre-existing failure set is **load-dependent** and its size fluctuates betwe
 
 `apps/cli/src/cli.test.ts > asks for approval on write_file (edit:ask) and applies the denial` fails **at the baseline SHA `1299e5cb` with this round's changes absent** (12305 ms), so it is **not** caused by this round. It is a bounded approval-poll that times out under contention: it passes in isolation with the changes present, and the file itself ran 9366 ms in the failing run versus 5413 ms in a passing run. This round adds **no deterministic new failure**.
 
+### `pnpm docs:verify` — failing, and attributed to the user's own working tree
+
+`pnpm docs:verify` currently exits `1`:
+
+```
+FAIL  package count
+      HANDOVER.md does not claim a package count (packages/ on disk: 24)
+FAIL  current plan entry (E4-00)
+      plan.md references plan(20260926-070459).md but that spec file is missing
+```
+
+Both failures come from two **uncommitted deletions in the user's working tree** (`HANDOVER.md`, `plan(20260926-070459).md`); both files exist at HEAD. Setting only those entries aside and re-running gives:
+
+```
+ALL CHECKS PASS
+DOCS_EXIT_WITHOUT_USER_DELETIONS=0
+```
+
+This round therefore neither causes nor hides the failure. The deletions were left untouched deliberately — they are the user's own tree state, and restoring them would overwrite the user's work. This is input for **N7** (docs truthfulness), not a defect introduced here.
+
 ## 6. Observable provider / physical-request / cost values
 
 From `.ci/n0/e2e-split.json` (HEAD `bef6e474`, `treeClean=true`, `ok=true`):
