@@ -122,6 +122,8 @@ function observationFor(a: ToolCallEfficiencyPreregistrationV2, over: Partial<Pr
     // A KNOWN, non-null price: the fixture is money-bounded, so a null price
     // would (correctly) be refused as PRICING_UNKNOWN before admission.
     usdMicrosPerCall: 0,
+    // N3 — the observation carries a re-derived non-billable-transport proof.
+    endpointIsLoopback: false,
     ...over,
   };
 }

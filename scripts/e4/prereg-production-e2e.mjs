@@ -581,16 +581,17 @@ async function runPositiveExecution(dir, env) {
       expiresAtMs: 9_000_000_000_000,
       approvalId: "e2e-offline-TEST_ONLY-approval",
       allowResume: false,
-      // TEST_ONLY, and it cannot spend anything: the gate's `paid` flag is the
-      // authorization SEMANTIC (it authorizes a billed experiment), and it is the
-      // transport that decides whether money moves. Here the transport is the
-      // in-process counting fake and the artifact's provider identity is the
-      // unbilled stub (`usdMicrosPerCall = 0`), while this script REFUSES to run
-      // at all if a real key or the paid switch is selectable. The flag is
-      // recorded as `authorizationFixture` in the report so the distinction
-      // between "the gate admitted a paid-semantic artifact" and "a paid
-      // experiment ran" cannot be lost.
-      paid: true,
+      // N3 — this is the SEPARATELY-IDENTIFIED SYNTHETIC-FIXTURE class, NOT a
+      // paid approval. It carries `paid:false` + `fixtureMode`, and the parser
+      // refuses those two together, so it can never be confused with (or widened
+      // into) a paid authorization. The gate admits it only after the OBSERVED
+      // transport proves itself non-billable: here the artifact's provider
+      // identity is the unbilled stub (`usdMicrosPerCall = 0`). This script still
+      // refuses to run at all if a real key or the paid switch is selectable, and
+      // the class is recorded in `authorizationFixture` so "the gate admitted a
+      // fixture" is never read as "a paid experiment ran".
+      paid: false,
+      fixtureMode: "synthetic-offline-v1",
     },
     null,
     2,
@@ -768,10 +769,13 @@ async function runPositiveForward(stub, dir, env) {
     expiresAtMs: 9_000_000_000_000,
     approvalId: "e2e-offline-TEST_ONLY-forward-approval",
     allowResume: false,
-    // TEST_ONLY — the authorization SEMANTIC. It bills nothing: the ONLY
-    // reachable transport is the loopback counting stub and this script refuses
-    // to run when a real key/switch is selectable.
-    paid: true,
+    // N3 — the SEPARATELY-IDENTIFIED synthetic-fixture class (never a paid
+    // approval: `paid` must be false and the parser refuses the two together).
+    // It bills nothing, and the gate admits it only because the OBSERVED endpoint
+    // is loopback (the counting stub); a non-loopback or non-zero-priced
+    // transport is refused as `FIXTURE_TRANSPORT_NOT_NON_BILLABLE`.
+    paid: false,
+    fixtureMode: "synthetic-offline-v1",
   };
   writeFileSync(authPath, `${JSON.stringify(authorization, null, 2)}\n`, "utf8");
 
@@ -953,10 +957,12 @@ async function main() {
     treeClean: clean,
     blocked,
     authorizationFixture:
-      "TEST_ONLY: the POS-EXEC / POS-FWD authorizations carry paid:true (the gate's authorization semantic) with approvalIds " +
-      "'e2e-offline-TEST_ONLY-approval' / 'e2e-offline-TEST_ONLY-forward-approval'. They authorize NOTHING billable: POS-EXEC's " +
-      "transport is the in-process counting fake, POS-FWD's ONLY endpoint is the loopback counting stub reached through a " +
-      "TEST_ONLY sentinel key, and this script refuses to run if a real key or RUN_PAID_BENCHMARKS is selectable. " +
+      "FIXTURE_PASS (synthetic class, NOT a paid approval): the POS-EXEC / POS-FWD authorizations carry paid:false + " +
+      "fixtureMode=\"synthetic-offline-v1\" with approvalIds 'e2e-offline-TEST_ONLY-approval' / " +
+      "'e2e-offline-TEST_ONLY-forward-approval'. N3 makes this a separately-identified admission class: the parser refuses " +
+      "fixtureMode together with paid:true, so it cannot be confused with (or widened into) a paid authorization, and the gate " +
+      "admits it only after the OBSERVED transport proves itself non-billable (POS-EXEC: the unbilled stub priced at 0; POS-FWD: " +
+      "a loopback endpoint). This script refuses to run if a real key or RUN_PAID_BENCHMARKS is selectable. " +
       "paidExperimentRun remains NOT_RUN.",
     negative: {
       cases: negative.length,
@@ -985,7 +991,7 @@ async function main() {
       offlineFixtureReady:
         "PASS (reported by scripts/e4/n5-prereg-closed-loop.mjs, not this script): the injected-adapter fixture chain runs offline",
       productionOfflineReady: ready
-        ? "PASS (offline, SYNTHETIC fixtures): (1) the SHIPPED entry point (real subprocess CLI) refuses every preflight counterexample with 0 HTTP; (2) it certifies a frozen identity with 0 provider; (3) the in-process shipped adapter executes the full paired schedule against a counting fake transport; (4) the SHIPPED release CLI subprocess executes the FULL forward schedule over two SYNTHESIZED fixture arm build entries this script writes with writeArmCheckout — an IPC/protocol/ledger closed loop — against a loopback counting stub, with its durable ledger and every arm's raw evidence re-checked. NOT_PROVEN here: a REAL dual frozen build (two real pinned checkouts built from two distinct source SHAs) and the real verifier over them; that is N1's scope and this script does not claim it. None of this is a paid run or a promotion."
+        ? "PASS (offline, SYNTHETIC fixtures): (1) the SHIPPED entry point (real subprocess CLI) refuses every preflight counterexample with 0 HTTP; (2) it certifies a frozen identity with 0 provider; (3) the in-process shipped adapter executes the full paired schedule against a counting fake transport; (4) the SHIPPED release CLI subprocess executes the FULL forward schedule over two SYNTHESIZED fixture arm build entries this script writes with writeArmCheckout — an IPC/protocol/ledger closed loop — against a loopback counting stub, with its durable ledger and every arm's raw evidence re-checked. N3 ADMISSION CLASS: (3) and (4) are admitted as the separately-identified SYNTHETIC-FIXTURE class (paid:false + fixtureMode), because a PAID admission now additionally requires a non-null maxUsdMicros and a verifiable per-call price — so this FIXTURE_PASS is not, and cannot be widened into, a paid-admission proof. NOT_PROVEN here: a REAL dual frozen build (two real pinned checkouts built from two distinct source SHAs) and the real verifier over them; that is N1's scope and this script does not claim it. None of this is a paid run or a promotion."
         : blocked !== null
           ? `NOT_READY: ${blocked}`
           : "NOT_READY: at least one phase did not pass",
@@ -994,6 +1000,15 @@ async function main() {
           negative.length > 0 && negative.every((c) => c.ok) && positiveCert !== null && positiveCert.ok ? "PASS" : "FAIL",
         inProcessAdapterForward: positiveExec !== null && positiveExec.ok ? "PASS" : "FAIL",
         releaseCliSubprocessForward: positiveForward !== null && positiveForward.ok ? "PASS" : "NOT_READY",
+        // N3 — which admission CLASS the two positive phases got through. They are
+        // the separately-identified synthetic-fixture class (paid:false +
+        // fixtureMode), NOT a paid approval: a paid admission now additionally
+        // requires a non-null maxUsdMicros AND a verifiable per-call price, and
+        // neither is exercised here.
+        positivePhasesAdmissionClass:
+          positiveExec !== null && positiveExec.ok && positiveForward !== null && positiveForward.ok
+            ? "FIXTURE_PASS (N3 synthetic-fixture class: paid:false + fixtureMode=\"synthetic-offline-v1\"; a PAID admission requires a non-null maxUsdMicros and a verifiable per-call price and is NOT exercised here — paidExperimentRun=NOT_RUN)"
+            : "NOT_OBSERVED",
         // N0 — the split the plan requires. `releaseCliSubprocessForward=PASS`
         // above proves the IPC + protocol + durable-ledger closed loop over
         // SYNTHESIZED arm builds; it must never be read as a real dual frozen

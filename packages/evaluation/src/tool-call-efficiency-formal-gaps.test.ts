@@ -102,6 +102,8 @@ function observationFor(over: Partial<PreregisteredCampaignObservationV2> = {}):
     // A KNOWN, non-null price so a money-bounded campaign is not refused as
     // `PRICING_UNKNOWN`; the price-unknown test overrides this with `null`.
     usdMicrosPerCall: 0,
+    // N3 — the observation carries a re-derived non-billable-transport proof.
+    endpointIsLoopback: false,
     ...over,
   };
 }

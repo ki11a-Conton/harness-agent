@@ -108,6 +108,8 @@ function observationFor(over: Partial<PreregisteredCampaignObservationV2> = {}):
     selectionProvenanceDigest: FIXTURE.selection.selectionProvenanceDigest,
     decisionPolicyDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
     usdMicrosPerCall: 0,
+    // N3 — the observation carries a re-derived non-billable-transport proof.
+    endpointIsLoopback: false,
     ...over,
   };
 }

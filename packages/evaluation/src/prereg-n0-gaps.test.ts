@@ -173,6 +173,7 @@ function observationFor(a: ToolCallEfficiencyPreregistrationV2, over: Partial<Pr
     selectionProvenanceDigest: a.dataset.selectionProvenanceDigest,
     decisionPolicyDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
     usdMicrosPerCall: 0,
+    endpointIsLoopback: false,
     ...over,
   };
 }

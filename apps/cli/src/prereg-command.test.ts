@@ -144,6 +144,8 @@ function observationFor(over: Partial<PreregisteredCampaignObservationV2> = {}):
     // A KNOWN, non-null observed price: the fixture is money-bounded, so a
     // missing/undefined price would be refused as PRICING_UNKNOWN.
     usdMicrosPerCall: 0,
+    // N3 — the observation carries a re-derived non-billable-transport proof.
+    endpointIsLoopback: false,
     ...over,
   };
 }

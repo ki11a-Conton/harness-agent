@@ -52,6 +52,26 @@ import { openR97BudgetLedger, withR97CampaignLock, type R97BudgetLedger } from "
 
 export const TOOL_CALL_EFFICIENCY_AUTHORIZATION_V2_SCHEMA = "tool-call-efficiency-authorization-v2";
 
+/**
+ * N3 — the ONE recognized SYNTHETIC-FIXTURE admission marker.
+ *
+ * WHY IT EXISTS. `paid` is the paid-admission semantic ("this authorizes a billed
+ * experiment"). The offline harness needs to drive the SHIPPED release CLI end to
+ * end while billing nothing, and it used to say `paid:true` for that — which is
+ * exactly the conflation N3 closes: a `paid:true` authorization with
+ * `maxUsdMicros:null` or an unknown per-call price must never reach a provider
+ * factory. Plan §N2 requires the synthetic fixture mode to be SEPARATELY
+ * IDENTIFIED and to NOT be a paid-admission configuration, so this marker carries
+ * that meaning explicitly:
+ *
+ *   - a fixture authorization MUST NOT carry `paid:true` (the parser refuses the
+ *     combination outright, so it can never be confused with a paid approval);
+ *   - it is admitted only when the OBSERVED transport is provably non-billable;
+ *   - the money-bound/priced invariants below apply to the PAID class only, so
+ *     the fixture branch can never be used to widen a paid approval.
+ */
+export const FIXTURE_MODE_SYNTHETIC_OFFLINE = "synthetic-offline-v1";
+
 export interface AuthorizationCapsV2 {
   /** Must equal the pre-registration's worst case exactly. */
   maxModelCalls: number;
@@ -82,6 +102,12 @@ export interface ToolCallEfficiencyAuthorizationV2 {
   allowResume: boolean;
   /** Explicit paid flag — its absence is a refusal, never a default. */
   paid: boolean;
+  /**
+   * N3 — set ONLY by the offline synthetic harness, and only together with
+   * `paid:false`. When present the admission is the separately-identified
+   * FIXTURE class (see `FIXTURE_MODE_SYNTHETIC_OFFLINE`), never a paid approval.
+   */
+  fixtureMode?: string;
 }
 
 export class AuthorizationV2Error extends Error {
@@ -170,6 +196,7 @@ export function parseAndValidateAuthorizationV2(json: string): ToolCallEfficienc
       "approvalId",
       "allowResume",
       "paid",
+      "fixtureMode",
     ],
     "authorization",
   );
@@ -184,6 +211,18 @@ export function parseAndValidateAuthorizationV2(json: string): ToolCallEfficienc
     maxTotalTokens: authNonNegInt(raw.caps.maxTotalTokens, "caps.maxTotalTokens"),
     maxUsdMicros: raw.caps.maxUsdMicros === null ? null : authNonNegInt(raw.caps.maxUsdMicros, "caps.maxUsdMicros"),
   };
+  // N3 — the synthetic-fixture marker is additive and fail-closed: it must be the
+  // ONE recognized value, and it can NEVER be combined with the paid flag.
+  let fixtureMode: string | undefined;
+  if (raw.fixtureMode !== undefined) {
+    if (raw.fixtureMode !== FIXTURE_MODE_SYNTHETIC_OFFLINE) {
+      authFail("INVALID_FIXTURE_MODE", `fixtureMode must be "${FIXTURE_MODE_SYNTHETIC_OFFLINE}" when present`);
+    }
+    if (raw.paid === true) {
+      authFail("FIXTURE_MODE_CANNOT_BE_PAID", "a synthetic-fixture authorization must not carry the paid flag");
+    }
+    fixtureMode = FIXTURE_MODE_SYNTHETIC_OFFLINE;
+  }
   return {
     schemaVersion,
     preregistrationDigest: authString(raw.preregistrationDigest, "preregistrationDigest"),
@@ -199,6 +238,7 @@ export function parseAndValidateAuthorizationV2(json: string): ToolCallEfficienc
     approvalId: authString(raw.approvalId, "approvalId"),
     allowResume: raw.allowResume === true,
     paid: raw.paid === true,
+    ...(fixtureMode === undefined ? {} : { fixtureMode }),
   };
 }
 
@@ -222,7 +262,13 @@ export function checkAuthorizationV2(
   prereg: ToolCallEfficiencyPreregistrationV2,
   nowMs: number,
 ): { ok: true } | { ok: false; code: AuthorizationCheckCode; reason: string } {
-  if (!auth.paid) {
+  // N3 — two distinct admission classes, each with its OWN fail-closed
+  // preconditions (enforced in the gate): a PAID approval must be money-bounded
+  // and priced; a separately-identified FIXTURE approval bills nothing and must
+  // instead PROVE its observed transport is non-billable. The parser has already
+  // refused `fixtureMode` together with `paid:true`, so the classes cannot mix.
+  const isFixture = auth.fixtureMode === FIXTURE_MODE_SYNTHETIC_OFFLINE;
+  if (!auth.paid && !isFixture) {
     return { ok: false, code: "AUTHORIZATION_NOT_PAID", reason: "authorization does not carry the explicit paid flag" };
   }
   if (auth.preregistrationDigest !== prereg.preregistrationDigest) {
@@ -309,6 +355,14 @@ export interface PreregisteredCampaignObservationV2 {
    * (`PRICING_UNKNOWN`) — a silent zero would authorize unlimited spend.
    */
   usdMicrosPerCall: number | null;
+  /**
+   * N3 — TRUE only when the observer PROVED the resolved endpoint is a loopback
+   * address (`127.0.0.0/8`, `::1`, `localhost`). It is re-derived from the live
+   * environment on every run and is never read from the artifact, so a synthetic
+   * fixture can demonstrate that its only transport is non-billable. A proxy or
+   * any non-loopback endpoint observes `false`.
+   */
+  endpointIsLoopback: boolean;
 }
 
 /** Compare the artifact's bound identity against a fresh observation. */
@@ -949,6 +1003,8 @@ export type FormalRunCode =
   | "AUTHORIZATION_CAP_MISMATCH"
   | "RESUME_NOT_ALLOWED"
   | "PRICING_UNKNOWN"
+  | "PAID_WITHOUT_USD_CAP"
+  | "FIXTURE_TRANSPORT_NOT_NON_BILLABLE"
   | "BUDGET_STATE_REJECTED";
 
 export interface FormalRunRefusal {
@@ -1040,7 +1096,34 @@ export async function openPreregisteredCampaignGate(
   const authCheck = checkAuthorizationV2(auth, artifact, nowMs);
   if (!authCheck.ok) return refusal(authCheck.code, authCheck.reason);
 
-  // STEP 3b: `allowResume: false` is a REAL prohibition. A requested resume is
+  // STEP 3b: N3 — the two admission classes have DIFFERENT fail-closed
+  // preconditions, and neither may borrow the other's. This runs after the
+  // authorization is parsed (the class lives there) and before ANY budget,
+  // ledger or provider construction.
+  const isFixture = auth.fixtureMode === FIXTURE_MODE_SYNTHETIC_OFFLINE;
+  if (isFixture) {
+    if (!(opts.observation.usdMicrosPerCall === 0 || opts.observation.endpointIsLoopback === true)) {
+      return refusal(
+        "FIXTURE_TRANSPORT_NOT_NON_BILLABLE",
+        "a synthetic-fixture admission must PROVE its transport is non-billable (an unbilled stub priced at 0, or a loopback endpoint); this observation shows a billable transport",
+      );
+    }
+  } else {
+    if (artifact.budget.maxUsdMicros === null) {
+      return refusal(
+        "PAID_WITHOUT_USD_CAP",
+        "a paid authorization must be money-bounded, but the pre-registration's maxUsdMicros is null — an unbounded paid campaign is refused rather than admitted",
+      );
+    }
+    if (usdMicrosPerCall === null) {
+      return refusal(
+        "PRICING_UNKNOWN",
+        "the pre-registration is money-bounded (maxUsdMicros is set) but the observed per-call price is unknown — refusing rather than treating an unknown price as free",
+      );
+    }
+  }
+
+  // STEP 3c: `allowResume: false` is a REAL prohibition. A requested resume is
   // refused before any budget is opened.
   if (mode === "resume" && !auth.allowResume) {
     return refusal("RESUME_NOT_ALLOWED", "the authorization forbids resuming (allowResume is false)");

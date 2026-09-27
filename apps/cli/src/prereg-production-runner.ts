@@ -172,7 +172,33 @@ export function observeExecutionIdentity(
       modelId: provider.modelId,
       endpointBaseUrl: provider.endpointBaseUrl,
     }),
+    // N3 — re-derived from the LIVE endpoint, never from the artifact. It is the
+    // evidence the synthetic-fixture admission uses to show that its only
+    // transport is loopback (hence cannot bill anything).
+    endpointIsLoopback: endpointIsLoopbackAddress(provider.endpointBaseUrl),
   };
+}
+
+/**
+ * N3 — TRUE only for a PROVEN loopback endpoint. A `null`/empty base URL (the
+ * provider default, i.e. the real first-party endpoint) and any non-loopback
+ * host are both `false`, so this can never be used to certify a billable
+ * transport as non-billable.
+ */
+export function endpointIsLoopbackAddress(baseUrl: string | null): boolean {
+  if (baseUrl === null || baseUrl === "") return false;
+  let host: string;
+  try {
+    host = new URL(baseUrl).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  const bare = host.startsWith("[") && host.endsWith("]") ? host.slice(1, -1) : host;
+  if (bare === "localhost" || bare === "::1" || bare === "0:0:0:0:0:0:0:1") return true;
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(bare);
+  if (v4 === null) return false;
+  const octets = v4.slice(1).map((p) => Number(p));
+  return octets.every((o) => o <= 255) && octets[0] === 127;
 }
 
 /**
