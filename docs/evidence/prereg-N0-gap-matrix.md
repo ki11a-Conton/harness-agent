@@ -104,7 +104,7 @@ worker ABI 要求与隔离校验**本身存在且正确**；失败的是**生产
 | --- | --- | --- |
 | `fixtureProtocolReady`（合成 arm 模块 + release CLI + provider 代理 + durable ledger 的 IPC 闭环） | **PASS** | **同一 SHA 干净树实跑**：`prereg-production-e2e: PASS`，in-process `arms=124 physicalCalls=124 verified=124`、release-subprocess `arms=124 physicalStubRequests=124 ledgerCommitted=124 verified=124`，9/9 负向拒绝 0 HTTP，`decision=INCONCLUSIVE`（见 §3） |
 | `realBuildOfflineReady`（真实冻结源码 SHA 的双构建） | **NOT_PROVEN** | **N1a RED**：出厂构建缺 `R97_ARM_PROBE`；当前只有合成条目能过 worker ABI（E2E 的 `armEntrySource` 是脚本内合成，且 outcome 硬编码 `failed`/空事件/0 工具调用） |
-| `budgetEvidenceReady`（不可核价预算 + 同源账本） | **NOT_PROVEN** | **N3 已 GREEN**（付费准入无上限/未知价格现已 fail closed），但本项整体仍不足：**N4a/N4b/N4c RED**（工具调用维度惰性、账本可负数）、**N6b RED**（token 自报）、**N6c RED**（全 error 仍 `artifactIntegrity=true`）；且 N3 的"可核查费率来源/费率 digest 绑定"仍 `NOT_PROVEN` |
+| `budgetEvidenceReady`（不可核价预算 + 同源账本） | **NOT_PROVEN** | **N3 已 GREEN**（付费准入无上限/未知价格现已 fail closed）、**N4a/N4b/N4c 已 GREEN**（工具维度成为上限、`charge()` 受校验与 cap 约束、工具调用被消费），但本项整体仍不足：**N6b RED**（token 自报）、**N6c RED**（全 error 仍 `artifactIntegrity=true`）；且 N3 的"可核查费率来源/费率 digest 绑定"、N4 的"逐次物理 dispatch 前预留额度/全局 wall-clock 截止"仍 `NOT_PROVEN` |
 | `paidExperimentRun` | **NOT_RUN** | 无付费授权、无 key；本环境 0 外部请求（E2E 自报 `paidExperimentRun=NOT_RUN`） |
 | `championPromotion` | **NOT_RUN** | 独立后续审批，绝不从离线证据推断（E2E 自报 `championPromotion=NOT_RUN`） |
 
@@ -120,7 +120,7 @@ worker ABI 要求与隔离校验**本身存在且正确**；失败的是**生产
 | 命令 | 退出码 | 结果 |
 | --- | --- | --- |
 | `pnpm exec vitest run --config apps/cli/test-infra/red-next-gaps-vitest.config.ts` | **0** | 2 files / **14 passed**（旧 G1–G7 回归 pin，现 GREEN） |
-| `pnpm test:n0-gaps` | **1** | 2 files / **8 failed \| 4 passed (12)**（**N3 已转 GREEN**；剩余 8 条 RED 属 N4a/N4b/N4c、N5a/N5b、N6a/N6b/N6c） |
+| `pnpm test:n0-gaps` | **1** | 2 files / **5 failed \| 7 passed (12)**（**N3、N4a/N4b/N4c 已转 GREEN**；剩余 5 条 RED 属 N5a/N5b、N6a/N6b/N6c） |
 | `pnpm typecheck`（`tsc -b`） | **0** | 24 包全绿，含新增测试文件 |
 | `pnpm exec vitest list` → 过滤 `n0-gaps\|prereg-next-gaps` | **0** | **0 匹配**（根回归不收集两类反例） |
 | `pnpm build` | **0** | `tsc -b` 通过 |
@@ -153,9 +153,10 @@ worker ABI 要求与隔离校验**本身存在且正确**；失败的是**生产
 
 | 文件 | 性质 |
 | --- | --- |
-| `packages/evaluation/src/prereg-n0-gaps.test.ts` | 新增：N3/N4/N6a/N6b/N6c 行为反例（7 例；**N3 已 GREEN**，N4/N6 共 6 条仍 RED） |
+| `packages/evaluation/src/prereg-n0-gaps.test.ts` | 新增：N3/N4/N6a/N6b/N6c 行为反例（7 例；**N3、N4a/N4b/N4c 已 GREEN**，N6 共 3 条仍 RED） |
 | `apps/cli/src/prereg-n0-gaps.test.ts` | 新增：N1/N2/N5 行为反例（5 例：N1a/N1b/N2 GREEN，N5a/N5b 仍 RED） |
 | `packages/evaluation/src/tool-call-efficiency-pricing-admission.test.ts` | 新增（N3 轮）：付费/合成 fixture 两类准入的逐类行为验收（10 例，全 GREEN，含正向对照 N3.10） |
+| `packages/evaluation/src/tool-call-efficiency-tool-budget.test.ts` | 新增（N4 轮）：工具额度上限、全或无、`charge()` 校验、零额度、消费、两臂共享、重开持久（9 例，全 GREEN） |
 | `apps/cli/test-infra/n0-gaps-vitest.config.ts` | 新增：N0 专用配置（只收集上述两文件） |
 | `vitest.config.ts` | 修改：根 `exclude` 增加两个 N0 反例文件（结构性隔离，避免弄红 `pnpm test`） |
 | `package.json` | 修改：新增 `test:n0-gaps`、`test:red-next-gaps` 两个显式脚本（分离 EXPECTED_RED 与正式门禁） |
@@ -208,7 +209,8 @@ worker ABI 要求与隔离校验**本身存在且正确**；失败的是**生产
 
 基线 SHA `1299e5cb` → 本轮提交 `1f3df072`（N0/N1a/N2）、`bef6e474`（N0 readiness 拆分）。
 N3 提交 `42e0cb16`（付费准入 fail closed + 合成 fixture 类）与 `a2c65e44`（N3 逐类行为证据）。
-完整证据、原始命令与退出码见 [`E4-N1-N2-report.md`](./E4-N1-N2-report.md)、[`E4-N3-report.md`](./E4-N3-report.md)。
+N4 提交 `35eeb5f4`（工具维度上限/校验/消费）。
+完整证据、原始命令与退出码见 [`E4-N1-N2-report.md`](./E4-N1-N2-report.md)、[`E4-N3-report.md`](./E4-N3-report.md)、[`E4-N4-report.md`](./E4-N4-report.md)。
 
 | 反例 | 本轮前 | 本轮后 | 依据 |
 | --- | --- | --- | --- |
@@ -216,7 +218,8 @@ N3 提交 `42e0cb16`（付费准入 fail closed + 合成 fixture 类）与 `a2c6
 | N1b（CONTROL） | GREEN | GREEN | 不变。 |
 | N2（预注册隔离未到达 executor） | RED | **GREEN** | 隔离契约随 run context 传递；出厂 adapter 对 `vm/strong` 在任一 arm 工作前返回 `ARM_ISOLATION_UNSUPPORTED`。该字段为**必填**，编译期即强制 driver 传递。 |
 | N3（付费准入可绕过金额上限/未知价格） | RED | **GREEN** | 准入拆成两类且各自 fail closed：PAID 要求 `maxUsdMicros` 非空（`PAID_WITHOUT_USD_CAP`）且价格已知（`PRICING_UNKNOWN`）；合成 fixture 类（`fixtureMode` + `paid:false`，parser 拒绝与 `paid:true` 并存）必须证明**观测到的**传输不可计费。新增 10 条逐类行为用例，每条断言拒绝码 + provider factory=0 + 物理传输=0，并含正向对照（N3.10）。 |
-| N4a / N4b / N4c / N5a / N5b / N6a / N6b / N6c | RED | RED | 本轮未实现（N4–N6 未开始）。 |
+| N4a / N4b / N4c（工具调用维度惰性、`settle` 不校验 tool 上限、`charge()` 零校验） | RED | **GREEN** | `settle` 的"已持有上限"校验纳入 `toolCalls`（超限即冻结，且在任何写入前，全部维度要么全写要么不写）；`charge()` 逐维度校验非负安全整数并在同一锁内执行全部 cap 校验，超限抛 `BUDGET_EXHAUSTED` 且不写入；`createFormalBudgetedProvider` 消费 `completed` 响应携带的工具调用数。新增 9 条行为用例（N4.1–N4.9：上限、全或无、零额度、消费、超限冻结、两臂共享、重开后仍持久）。 |
+| N5a / N5b / N6a / N6b / N6c | RED | RED | 本轮未实现（N5/N6 未开始）。 |
 | N0 readiness 过度声称 | 已记录 | **已修正** | E2E readiness 现显式标注 `forward basis: SYNTHETIC_FIXTURE_BUILD`，并把真实双构建 + 真实 verifier 标为 `NOT_PROVEN`。 |
 
 本轮同时修复了被 N2 改写打断的 r97 mutation 锚点（`a5-real-cli-adapter-never-wired`），
