@@ -174,6 +174,86 @@ export function pricingSnapshotValid(nowMs: number = Date.now()): boolean {
   return nowMs < PRICING_SNAPSHOT_V1.invalidatedAtMs;
 }
 
+/**
+ * A pricing declaration the OPERATOR makes for one endpoint the snapshot cannot
+ * price (a relay, gateway or self-hosted endpoint), supplied as one JSON value in
+ * `PREREG_PRICING_JSON`.
+ *
+ * WHY THIS EXISTS (measured): `PRICING_SNAPSHOT_V1` prices only a known model on
+ * the FIRST-PARTY endpoint. Every other combination used to resolve to `null`, so
+ * a custom `OPENAI_BASE_URL` or an unlisted model was refused as `PRICING_UNKNOWN`
+ * before any provider was constructed. That refusal is correct when nobody has
+ * said what a call costs — but it also meant a correctly-authorized run against a
+ * known relay could never start. This declaration is how an operator states the
+ * rate, so the money bound still exists instead of being waived.
+ *
+ * It stays EXPLICIT on purpose: there is no default, no fallback and no
+ * "assume unlimited" mode. An absent, malformed, untraceable or non-positive
+ * declaration resolves to `null`, which is still a refusal. The plan's
+ * prohibition on a default paid path (`禁止真实 API key、默认付费路径`) is
+ * untouched: nothing here authorizes a run on its own, and the caller's own
+ * `RUN_PAID_BENCHMARKS` / approval gates still apply.
+ */
+export interface DeclaredPricing {
+  /** The exact base URL this declaration covers. `""` means the first-party default. */
+  baseUrl: string;
+  /** A traceable rate source. Required — an untraceable rate is not a rate. */
+  source: string;
+  /** model id → worst-case USD micros ONE request may cost. Values must be positive integers. */
+  boundByModel: Readonly<Record<string, number>>;
+}
+
+/** The single environment variable that carries a `DeclaredPricing` JSON value. */
+export const DECLARED_PRICING_ENV = "PREREG_PRICING_JSON";
+
+/**
+ * Parse a `DeclaredPricing` from its JSON text, or `null` when it is absent or
+ * does not fully qualify. Every rejection below is deliberate: a declaration that
+ * cannot bound a real cost must not be usable as if it could.
+ */
+export function parseDeclaredPricing(raw: string | undefined | null): DeclaredPricing | null {
+  if (raw === undefined || raw === null || raw.trim() === "") return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
+  const obj = parsed as Record<string, unknown>;
+  const source = typeof obj["source"] === "string" ? (obj["source"] as string).trim() : "";
+  if (source === "") return null; // traceability is mandatory, not decoration
+  const baseUrl = typeof obj["baseUrl"] === "string" ? (obj["baseUrl"] as string) : "";
+  const rawBounds = obj["boundByModel"];
+  if (typeof rawBounds !== "object" || rawBounds === null || Array.isArray(rawBounds)) return null;
+  const boundByModel: Record<string, number> = {};
+  for (const [modelId, value] of Object.entries(rawBounds as Record<string, unknown>)) {
+    if (modelId.trim() === "") continue;
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) continue;
+    boundByModel[modelId] = value;
+  }
+  if (Object.keys(boundByModel).length === 0) return null;
+  return { baseUrl, source, boundByModel };
+}
+
+/**
+ * The declared bound for THIS query, or `null`. A declaration covers exactly one
+ * endpoint (exact base-URL match) and exactly the models it names, so a rate
+ * declared for one relay can never silently price a different one.
+ */
+export function resolveDeclaredUsdMicrosPerCall(
+  query: PriceQuery = {},
+  env: Record<string, string | undefined> = process.env,
+): number | null {
+  const declared = parseDeclaredPricing(env[DECLARED_PRICING_ENV]);
+  if (declared === null) return null;
+  const baseUrl = query.endpointBaseUrl ?? "";
+  if (baseUrl !== declared.baseUrl) return null;
+  const modelId = query.modelId ?? DEFAULT_REAL_MODEL_ID;
+  const bound = declared.boundByModel[modelId];
+  return typeof bound === "number" ? bound : null;
+}
+
 export interface PriceQuery {
   /** The model the run will actually use; defaults to the first-party model. */
   modelId?: string;
@@ -184,18 +264,29 @@ export interface PriceQuery {
 /**
  * The observed per-call price for a provider/model/endpoint, or `null` when it
  * cannot be established. The stub makes no externally-billed call, so its price
- * is a genuinely observable `0`. A real provider is priced ONLY when the
- * snapshot is current AND the request targets the FIRST-PARTY endpoint AND the
- * model has a published bound; a proxy endpoint or an unlisted model is `null`
- * (unknown), which the money-bounded gate refuses as `PRICING_UNKNOWN`.
+ * is a genuinely observable `0`.
+ *
+ * For a real provider the order is:
+ *   1. an OPERATOR DECLARATION for exactly this endpoint+model (`PREREG_PRICING_JSON`)
+ *      — the only way a relay/gateway or an unlisted model can be priced, and
+ *      deliberately checked before the first-party snapshot so a declaration is
+ *      not silently shadowed by it;
+ *   2. the first-party snapshot, when it is current AND the request targets the
+ *      first-party endpoint AND the model has a published bound.
+ *
+ * Anything else is `null` (unknown), which the money-bounded gate refuses as
+ * `PRICING_UNKNOWN`. There is no default rate and no unlimited mode.
  */
 export function resolveUsdMicrosPerCall(providerId: string, query: PriceQuery = {}): number | null {
   if (providerId === STUB_PROVIDER_ID) return 0;
   if (providerId !== REAL_PROVIDER_ID) return null;
+  const declared = resolveDeclaredUsdMicrosPerCall(query);
+  if (declared !== null) return declared;
   if (!pricingSnapshotValid()) return null;
   const baseUrl = query.endpointBaseUrl ?? null;
   if (baseUrl !== null && baseUrl !== "") {
-    // A proxy/gateway's billing terms are not this snapshot's to claim.
+    // A proxy/gateway's billing terms are not this snapshot's to claim. Declare
+    // them in `PREREG_PRICING_JSON` to price such an endpoint explicitly.
     return null;
   }
   const modelId = query.modelId ?? DEFAULT_REAL_MODEL_ID;
