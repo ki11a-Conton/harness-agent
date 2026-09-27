@@ -64,7 +64,7 @@ pnpm test:n0-gaps          # = vitest run --config apps/cli/test-infra/n0-gaps-v
 | **N1a** | 真实 `benchmark-command` 缺 worker 所需导出 | 出厂入口模块必须导出**非空** `R97_ARM_PROBE` 与 `runOneCase` | `typeof mod["R97_ARM_PROBE"] === "undefined"`（`runOneCase` 为 function） | `string` 且非空 | N1 | `[N1] the shipped benchmark-command module must export a non-empty R97_ARM_PROBE and runOneCase` |
 | **N1b** | （对照，非 RED）worker ABI 是否真的强制 | 缺 probe 的 checkout 条目被 worker 拒绝 | **通过**：退出码非 0，`code = PREREG_WORKER_PROBE_MISSING` | 不变（回归 pin） | N1 | `[N1] CONTROL: the worker refuses a checkout entry that exports runOneCase but no probe` |
 | **N2** | 预注册 `isolation` 未传入生产 executor | 生产 adapter 对声明 `vm/strong` 的实验必须以 `ARM_ISOLATION_UNSUPPORTED` 拒绝 | **`ARM_CHECKOUT_MISSING`**（对照：把 isolation 显式传入 executor 时确实返回 `ARM_ISOLATION_UNSUPPORTED`） | `ARM_ISOLATION_UNSUPPORTED`，且发生在 provider factory 之前 | N2 | `[N2] the PRODUCTION adapter must refuse an unsupported isolation with ARM_ISOLATION_UNSUPPORTED` |
-| **N3** | `paid:true` + `maxUsdMicros=null` + 未知价格仍可被接纳 | 未知价格（`usdMicrosPerCall: null`）必须被拒绝，且 `makeProvider` 调用数 = 0 | **`status = ADMITTED`，`makeProvider` 调用 1 次** | `REFUSED` / `PRICING_UNKNOWN`，factory 0 | N3 | `[N3] maxUsdMicros=null + usdMicrosPerCall=null must be REFUSED before any provider factory call` |
+| **N3** | `paid:true` + `maxUsdMicros=null` + 未知价格仍可被接纳 | 未知价格（`usdMicrosPerCall: null`）必须被拒绝，且 `makeProvider` 调用数 = 0 | **`status = ADMITTED`，`makeProvider` 调用 1 次** | **已实现 GREEN**：`REFUSED` / `PAID_WITHOUT_USD_CAP`，factory 0（价格未知这一半另由 `PRICING_UNKNOWN` 覆盖） | N3 | `[N3] maxUsdMicros=null + usdMicrosPerCall=null must be REFUSED before any provider factory call` |
 | **N4a** | `settle` 不校验工具调用维度 | `toolCalls` 实际值超过**持有预约**必须被拒绝 | **resolve**，且 `charged.toolCalls = 9`（持有预约仅 1） | 抛出；账本不得吸收超支 | N4 | `[N4] settling a toolCalls actual ABOVE the held reservation must be refused` |
 | **N4b** | 工具调用 cap 从未被消费 | 一次真实 `completed`（携带 2 个 tool call）必须记入 durable 账本 | **`charged.toolCalls = 0`**（维度恒为惰性） | `2` | N4 | `[N4] a completed call that CARRIES tool calls must consume the maxToolCalls dimension` |
 | **N4c** | 账本可被负数污染 | `charge()` 必须拒绝负数 | **resolve**，durable 账本 `charged.inputTokens = -5`、`totalTokens = -5` | 抛出；账本不变 | N4 | `[N4] charge() must reject a NEGATIVE actual instead of writing it into the ledger` |
@@ -104,7 +104,7 @@ worker ABI 要求与隔离校验**本身存在且正确**；失败的是**生产
 | --- | --- | --- |
 | `fixtureProtocolReady`（合成 arm 模块 + release CLI + provider 代理 + durable ledger 的 IPC 闭环） | **PASS** | **同一 SHA 干净树实跑**：`prereg-production-e2e: PASS`，in-process `arms=124 physicalCalls=124 verified=124`、release-subprocess `arms=124 physicalStubRequests=124 ledgerCommitted=124 verified=124`，9/9 负向拒绝 0 HTTP，`decision=INCONCLUSIVE`（见 §3） |
 | `realBuildOfflineReady`（真实冻结源码 SHA 的双构建） | **NOT_PROVEN** | **N1a RED**：出厂构建缺 `R97_ARM_PROBE`；当前只有合成条目能过 worker ABI（E2E 的 `armEntrySource` 是脚本内合成，且 outcome 硬编码 `failed`/空事件/0 工具调用） |
-| `budgetEvidenceReady`（不可核价预算 + 同源账本） | **NOT_PROVEN** | **N3 RED**（未知价格可被接纳）、**N4a/N4b/N4c RED**（工具调用维度惰性、账本可负数）、**N6b RED**（token 自报）、**N6c RED**（全 error 仍 `artifactIntegrity=true`） |
+| `budgetEvidenceReady`（不可核价预算 + 同源账本） | **NOT_PROVEN** | **N3 已 GREEN**（付费准入无上限/未知价格现已 fail closed），但本项整体仍不足：**N4a/N4b/N4c RED**（工具调用维度惰性、账本可负数）、**N6b RED**（token 自报）、**N6c RED**（全 error 仍 `artifactIntegrity=true`）；且 N3 的"可核查费率来源/费率 digest 绑定"仍 `NOT_PROVEN` |
 | `paidExperimentRun` | **NOT_RUN** | 无付费授权、无 key；本环境 0 外部请求（E2E 自报 `paidExperimentRun=NOT_RUN`） |
 | `championPromotion` | **NOT_RUN** | 独立后续审批，绝不从离线证据推断（E2E 自报 `championPromotion=NOT_RUN`） |
 
@@ -120,7 +120,7 @@ worker ABI 要求与隔离校验**本身存在且正确**；失败的是**生产
 | 命令 | 退出码 | 结果 |
 | --- | --- | --- |
 | `pnpm exec vitest run --config apps/cli/test-infra/red-next-gaps-vitest.config.ts` | **0** | 2 files / **14 passed**（旧 G1–G7 回归 pin，现 GREEN） |
-| `pnpm test:n0-gaps` | **1** | 2 files / **11 failed \| 1 passed (12)**（本轮 EXPECTED_RED；11 RED + 1 对照） |
+| `pnpm test:n0-gaps` | **1** | 2 files / **8 failed \| 4 passed (12)**（**N3 已转 GREEN**；剩余 8 条 RED 属 N4a/N4b/N4c、N5a/N5b、N6a/N6b/N6c） |
 | `pnpm typecheck`（`tsc -b`） | **0** | 24 包全绿，含新增测试文件 |
 | `pnpm exec vitest list` → 过滤 `n0-gaps\|prereg-next-gaps` | **0** | **0 匹配**（根回归不收集两类反例） |
 | `pnpm build` | **0** | `tsc -b` 通过 |
@@ -153,8 +153,9 @@ worker ABI 要求与隔离校验**本身存在且正确**；失败的是**生产
 
 | 文件 | 性质 |
 | --- | --- |
-| `packages/evaluation/src/prereg-n0-gaps.test.ts` | 新增：N3/N4/N6a/N6b/N6c 行为反例（7 例，全 RED） |
-| `apps/cli/src/prereg-n0-gaps.test.ts` | 新增：N1/N2/N5 行为反例（5 例：4 RED + 1 对照） |
+| `packages/evaluation/src/prereg-n0-gaps.test.ts` | 新增：N3/N4/N6a/N6b/N6c 行为反例（7 例；**N3 已 GREEN**，N4/N6 共 6 条仍 RED） |
+| `apps/cli/src/prereg-n0-gaps.test.ts` | 新增：N1/N2/N5 行为反例（5 例：N1a/N1b/N2 GREEN，N5a/N5b 仍 RED） |
+| `packages/evaluation/src/tool-call-efficiency-pricing-admission.test.ts` | 新增（N3 轮）：付费/合成 fixture 两类准入的逐类行为验收（10 例，全 GREEN，含正向对照 N3.10） |
 | `apps/cli/test-infra/n0-gaps-vitest.config.ts` | 新增：N0 专用配置（只收集上述两文件） |
 | `vitest.config.ts` | 修改：根 `exclude` 增加两个 N0 反例文件（结构性隔离，避免弄红 `pnpm test`） |
 | `package.json` | 修改：新增 `test:n0-gaps`、`test:red-next-gaps` 两个显式脚本（分离 EXPECTED_RED 与正式门禁） |
@@ -168,12 +169,13 @@ worker ABI 要求与隔离校验**本身存在且正确**；失败的是**生产
 
 ## 5. 未执行项与残余限制
 
-- **N3 的判定依据存在产品决策依赖（需在 N3 落地时确认）**：当前 `pricingUnknownPolicy`
-  **从未被门禁读取**（`grep` 显示它只出现在 prereg 构建/校验与测试中，`formal-run.ts` 零引用）。
-  v2 头注释把预算描述为"USD cap **或** 明确的 pricing-unknown → refuse 策略"，按该读法
-  `maxUsdMicros: null` + 未知价格**必须**拒绝；而 observation 注释采用较弱读法
-  （"money-bounded 时 null 价格才拒绝"）。本反例按**计划的 N3 表述**（"未知价格不会触发定价
-  拒绝…不能当已核实的现实价格"）取强读法。N3 落地前需先确认该策略语义。
+- **N3 的判定依据存在产品决策依赖 —— 已在 N3 落地时解决**：`pricingUnknownPolicy` 至今
+  仍**未被门禁读取**，因此 N3 没有依赖它，而是把拒绝做成**结构性**的：`paid:true` 必须同时
+  满足 `maxUsdMicros !== null`（否则 `PAID_WITHOUT_USD_CAP`）与已知价格（否则 `PRICING_UNKNOWN`），
+  在任何预算/账本/provider 构造之前 fail closed。N0 反例采用的强读法即为最终实现；
+  合成 fixture 走**单独标识**的类（`fixtureMode` + `paid:false`），它放宽的是"已知价格"这一条，
+  但必须证明观测到的传输不可计费，且 parser 拒绝它与 `paid:true` 并存。残余：
+  `pricingUnknownPolicy` 字段仍然惰性（见 [`E4-N3-report.md`](./E4-N3-report.md) §8.2）。
 - **N5b 的"修复"可能超出进程内可控范围**：环境白名单是纯代码改动；阻止 arm 直接 loopback
   出网需要真实沙箱/权限边界。N0 只负责给出反例；N5 落地时必须明确其可达强度，不得把
   "白名单已加"当成"网络沙箱已建立"。
@@ -205,14 +207,16 @@ worker ABI 要求与隔离校验**本身存在且正确**；失败的是**生产
 ## 7. 后续轮次的状态更新（本轮）
 
 基线 SHA `1299e5cb` → 本轮提交 `1f3df072`（N0/N1a/N2）、`bef6e474`（N0 readiness 拆分）。
-完整证据、原始命令与退出码见 [`E4-N1-N2-report.md`](./E4-N1-N2-report.md)。
+N3 提交 `42e0cb16`（付费准入 fail closed + 合成 fixture 类）与 `a2c65e44`（N3 逐类行为证据）。
+完整证据、原始命令与退出码见 [`E4-N1-N2-report.md`](./E4-N1-N2-report.md)、[`E4-N3-report.md`](./E4-N3-report.md)。
 
 | 反例 | 本轮前 | 本轮后 | 依据 |
 | --- | --- | --- | --- |
 | N1a（出厂构建缺版本化探针） | RED | **GREEN** | 出厂 `benchmark-command` 入口现导出非空 `R97_ARM_PROBE`；同文件 CONTROL 仍证明无探针的 checkout 被 `PREREG_WORKER_PROBE_MISSING` 拒绝。 |
 | N1b（CONTROL） | GREEN | GREEN | 不变。 |
 | N2（预注册隔离未到达 executor） | RED | **GREEN** | 隔离契约随 run context 传递；出厂 adapter 对 `vm/strong` 在任一 arm 工作前返回 `ARM_ISOLATION_UNSUPPORTED`。该字段为**必填**，编译期即强制 driver 传递。 |
-| N3 / N4a / N4b / N4c / N5a / N5b / N6a / N6b / N6c | RED | RED | 本轮未实现（N3–N6 未开始）。 |
+| N3（付费准入可绕过金额上限/未知价格） | RED | **GREEN** | 准入拆成两类且各自 fail closed：PAID 要求 `maxUsdMicros` 非空（`PAID_WITHOUT_USD_CAP`）且价格已知（`PRICING_UNKNOWN`）；合成 fixture 类（`fixtureMode` + `paid:false`，parser 拒绝与 `paid:true` 并存）必须证明**观测到的**传输不可计费。新增 10 条逐类行为用例，每条断言拒绝码 + provider factory=0 + 物理传输=0，并含正向对照（N3.10）。 |
+| N4a / N4b / N4c / N5a / N5b / N6a / N6b / N6c | RED | RED | 本轮未实现（N4–N6 未开始）。 |
 | N0 readiness 过度声称 | 已记录 | **已修正** | E2E readiness 现显式标注 `forward basis: SYNTHETIC_FIXTURE_BUILD`，并把真实双构建 + 真实 verifier 标为 `NOT_PROVEN`。 |
 
 本轮同时修复了被 N2 改写打断的 r97 mutation 锚点（`a5-real-cli-adapter-never-wired`），
