@@ -115,6 +115,8 @@ New suite: `pnpm exec vitest run packages/evaluation/src/tool-call-efficiency-to
 | `pnpm test` | `1` | `Test Files 6 failed | 370 passed (376)`, `Tests 23 failed | 7077 passed | 3 skipped (7103)` (`.ci/n0/n4-full.log`) |
 | `pnpm build` | `0` | release CLI `apps/cli/dist` rebuilt |
 | `node scripts/e4/prereg-production-e2e.mjs --out .ci/n0/e2e-n4.json` (clean tree) | `0` | `prereg-production-e2e: PASS` (`.ci/n0/e2e-n4.log`) |
+| `pnpm docs:verify` (working tree as-is) | `1` | `FAIL package count` + `FAIL current plan entry (E4-00)` |
+| `pnpm docs:verify` (only the user's two uncommitted deletions set aside) | `0` | `ALL CHECKS PASS` |
 
 **Attribution of the `pnpm test` failures (measured).** Diffing the FAIL set of `.ci/n0/n3-full.log`
 (pre-N4, 23 lines) against `.ci/n0/n4-full.log` (post-N4, 23 lines) yields an **empty diff in both
@@ -177,6 +179,12 @@ Clean-tree E2E, `treeClean=true`, `ok=true`, **unchanged from N3**:
 6. **Unknown tool state is charged conservatively**, but a `completed` response that declares tool
    calls nobody dispatches is still charged — conservative (over-counts), never a refund.
 7. Pre-existing whole-suite failures remain (see §5) and are not caused by N4.
+8. **`pnpm docs:verify` fails for a reason outside this round.** Measured, not assumed:
+   `HANDOVER.md` and `plan(20260926-070459).md` both exist at `HEAD` but are deleted in the
+   working tree (the user's pre-existing entries, left untouched). With only those two deletions
+   temporarily set aside, the same command prints `ALL CHECKS PASS` and exits `0`. Both reported
+   failures (`package count`, `current plan entry`) are working-tree artifacts, not consequences
+   of N4 or of committed content.
 
 ## 9. Reproduction
 
