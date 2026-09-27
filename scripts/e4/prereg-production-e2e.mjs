@@ -70,6 +70,9 @@ const CLI_ENTRY = join(REPO_ROOT, "apps", "cli", "dist", "main.js");
 const EVAL_ENTRY = join(REPO_ROOT, "packages", "evaluation", "dist", "index.js");
 const RUNNER_ENTRY = join(REPO_ROOT, "apps", "cli", "dist", "prereg-production-runner.js");
 const IDENTITY_ENTRY = join(REPO_ROOT, "apps", "cli", "dist", "prereg-execution-identity.js");
+/** N5 — the executor that OWNS the fixture-marker rule; the fixture writer must
+ *  use its constant rather than a copy, so the two cannot drift apart. */
+const EXECUTOR_ENTRY = join(REPO_ROOT, "apps", "cli", "dist", "prereg-arm-executor.js");
 
 /** B3/B5 — the declared arm build entry the isolated worker loads. POSIX on
  *  purpose: it must equal the `R97_ARM_BUILD_ENTRIES` row the executor compares
@@ -494,7 +497,7 @@ function armEntrySource(marker, activate) {
  * modules too (distinct per arm), so the shared closure walker resolves a
  * build-closure digest from the arm's OWN bytes.
  */
-function writeArmCheckout(dir, marker, activate, entries) {
+async function writeArmCheckout(dir, marker, activate, entries) {
   for (const rel of entries) {
     const abs = join(dir, rel);
     mkdirSync(dirname(abs), { recursive: true });
@@ -503,6 +506,20 @@ function writeArmCheckout(dir, marker, activate, entries) {
       : `export const R97_ARM_SIBLING_STUB = ${JSON.stringify(`sibling:${marker}`)};\n`;
     writeFileSync(abs, source, "utf8");
   }
+  // N5 — this tree was produced by the harness's OWN fixture writer, so it carries
+  // the synthetic-fixture marker. The arm executor refuses to START any checkout
+  // WITHOUT it, because this build cannot prove a single-egress boundary for
+  // untrusted code. The marker travels with the artifact and cannot be forgotten
+  // by a caller. This does NOT make the fixture a network sandbox — it is
+  // trusted-by-construction, and a real checkout is refused before it starts.
+  const executorMod = await import(pathToFileURL(EXECUTOR_ENTRY).href);
+  const markerName = executorMod.FIXTURE_CHECKOUT_MARKER_FILENAME;
+  if (typeof markerName !== "string" || markerName === "") {
+    throw new Error(
+      "writeArmCheckout: the executor exports no FIXTURE_CHECKOUT_MARKER_FILENAME — refusing to write a fixture tree whose marker would not match the executor's refusal rule",
+    );
+  }
+  writeFileSync(join(dir, markerName), `${JSON.stringify({ writer: "scripts/e4/prereg-production-e2e.mjs", schema: "r97-synthetic-fixture-checkout-v1", marker })}\n`, "utf8");
 }
 
 /** The durable R97 ledger view, re-derived from the file the subprocess wrote. */
@@ -901,8 +918,8 @@ async function main() {
       const baselineDir = join(armRoot, "baseline");
       const candidateDir = join(armRoot, "candidate");
       const evalMod = await import(pathToFileURL(EVAL_ENTRY).href);
-      writeArmCheckout(baselineDir, "baseline", false, evalMod.R97_ARM_BUILD_ENTRIES);
-      writeArmCheckout(candidateDir, "candidate", true, evalMod.R97_ARM_BUILD_ENTRIES);
+      await writeArmCheckout(baselineDir, "baseline", false, evalMod.R97_ARM_BUILD_ENTRIES);
+      await writeArmCheckout(candidateDir, "candidate", true, evalMod.R97_ARM_BUILD_ENTRIES);
       const claimsDir = join(WORKSPACE, "claims");
       mkdirSync(claimsDir, { recursive: true });
       // The in-process POS-EXEC gate resolves its claim anchor from

@@ -54,6 +54,7 @@ import {
   ARM_ISOLATION_UNSUPPORTED,
   ARM_PROBE_EXPORT,
   ARM_WORKER_RESULT_SENTINEL,
+  EGRESS_ISOLATION_UNAVAILABLE,
   PREREG_ARM_WORKER_REL,
   createPreregArmExecutor,
 } from "./prereg-arm-executor.js";
@@ -294,13 +295,20 @@ describe("N0 RED — N5: the arm worker is neither a credential nor a network bo
       R97_ESCAPED_SENTINEL: SENTINEL,
     };
     const production = createProductionPreregRunner({ rootDir: REPO_ROOT, env });
-    const outcome = await production.runArm(armRef("candidate"), await contextFor(evidenceDir, "candidate"));
-    void (outcome as PreregisteredArmOutcome);
+    // N5 permits EITHER outcome for a checkout that is not a proven synthetic
+    // fixture: no request may succeed, OR the MODE is refused BEFORE it starts.
+    // A pre-start refusal is therefore captured instead of thrown. The allowlist
+    // itself is proven NON-vacuously on the fixture path that really runs — see
+    // `prereg-egress-trust-boundary.test.ts`.
+    const refusalCode = await catchCode(async () => production.runArm(armRef("candidate"), await contextFor(evidenceDir, "candidate")));
 
     const leaked = existsSync(leakPath) ? await readFile(leakPath, "utf8") : "NOT_INHERITED";
     // N5 requires the worker's environment to be an explicit allowlist: an
     // arbitrary driver variable must not be readable by the arm build.
     expect(leaked).not.toBe(SENTINEL);
+    // A refusal must be the EXACT pre-start code, never a generic failure
+    // discovered only after the child had already run.
+    if (refusalCode !== null) expect(refusalCode).toBe(EGRESS_ISOLATION_UNAVAILABLE);
   }, 180_000);
 
   it("[N5] the arm build must NOT be able to make a direct LOOPBACK request", async () => {

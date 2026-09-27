@@ -114,9 +114,72 @@ const SUPPORTED_ISOLATION: Record<string, readonly string[]> = {
 /** B3 — the mechanism probe export every real arm build carries. */
 export const ARM_PROBE_EXPORT = "R97_ARM_PROBE";
 
-/** Environment variables the worker must NOT inherit: it owns no provider and
- *  reads no key. Stripping them is defence in depth on top of the proxy design. */
-const PROVIDER_ENV_KEYS = ["OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL", "RUN_PAID_BENCHMARKS"] as const;
+/**
+ * N5 — the isolation backend cannot be honoured for an UNTRUSTED checkout because
+ * no provable egress boundary exists on this platform.
+ */
+export const EGRESS_ISOLATION_UNAVAILABLE = "EGRESS_ISOLATION_UNAVAILABLE";
+
+/**
+ * N5 — the marker a SYNTHETIC fixture checkout carries. It is written by the
+ * harness's own fixture writer (`scripts/e4/prereg-production-e2e.mjs`
+ * `writeArmCheckout`), so it declares "this tree was produced by the harness
+ * itself", travels WITH the artifact, and cannot be forgotten by a caller the way
+ * an env switch or an option can. Its absence means "untrusted checkout".
+ */
+export const FIXTURE_CHECKOUT_MARKER_FILENAME = ".r97-synthetic-fixture-checkout";
+
+/**
+ * N5 — the ONLY environment a worker may inherit. An explicit ALLOWLIST, because
+ * "copy the driver env and delete the provider keys" cannot be audited: it leaked
+ * `HTTP(S)_PROXY`/`NO_PROXY`, cloud credentials (`AWS_*`, `AZURE_*`, `GOOGLE_*`),
+ * other providers' tokens (`ANTHROPIC_*`, `DEEPSEEK_*`), config-file pointers
+ * (`NODE_EXTRA_CA_CERTS`, `SSL_CERT_FILE`, `NPM_CONFIG_*`) and — worst —
+ * `NODE_OPTIONS`, which injects arbitrary code into every child Node process.
+ *
+ * Every entry below is either an OS essential needed to START node and resolve
+ * modules (all non-secret) or one of the worker's own declared inputs. No proxy,
+ * credential, token, config or Node-injection variable is on the list.
+ */
+const WORKER_ENV_ALLOWLIST = [
+  // OS essentials required to launch node and resolve modules, on Windows AND Linux.
+  "PATH",
+  "Path",
+  "PATHEXT",
+  "SystemRoot",
+  "SYSTEMROOT",
+  "windir",
+  "COMSPEC",
+  "TEMP",
+  "TMP",
+  "TMPDIR",
+  "HOME",
+  "USERPROFILE",
+  "LANG",
+  "LC_ALL",
+  // The worker's own declared inputs (paths and the explicit git gate).
+  "R97_ARM_BASELINE_DIR",
+  "R97_ARM_CANDIDATE_DIR",
+  "R97_CAMPAIGN_CLAIMS_DIR",
+  "R97_ARM_REQUIRE_GIT",
+] as const;
+
+/**
+ * N5 — is there a provable single-egress boundary for UNTRUSTED code here? The
+ * Node permission model does not cover network access, and this build establishes
+ * no OS-level sandbox on either Windows or Ubuntu. The honest answer is NO, so the
+ * caller must refuse untrusted execution BEFORE it starts rather than discovering
+ * a leak after a request has left. Recorded as a capability, not as a claim of
+ * isolation.
+ */
+export function egressIsolationCapability(): { available: boolean; backend: string; detail: string } {
+  return {
+    available: false,
+    backend: "none",
+    detail:
+      "no portably provable network-isolation boundary exists in this build: the Node permission model does not cover network access, and no OS-level sandbox is established on Windows or Ubuntu",
+  };
+}
 
 function sha256Hex(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
@@ -179,10 +242,17 @@ function armEntryPathOrRefuse(armId: "baseline" | "candidate", dir: string): { p
   return { path, sha256: sha256Hex(readFileSync(path, "utf8")) };
 }
 
-/** The worker must not inherit provider credentials: it uses the driver's channel. */
-function sanitizedWorkerEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  const out: NodeJS.ProcessEnv = { ...env };
-  for (const k of PROVIDER_ENV_KEYS) delete out[k];
+/**
+ * N5 — build the worker's environment from the ALLOWLIST. Fail closed: a name that
+ * is not listed is not passed, whatever it is. The old form
+ * (`{ ...env }` then delete four keys) is deliberately gone.
+ */
+export function buildWorkerEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = {};
+  for (const k of WORKER_ENV_ALLOWLIST) {
+    const v = env[k];
+    if (typeof v === "string") out[k] = v;
+  }
   return out;
 }
 
@@ -342,6 +412,22 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
     }
     const caseDef = await loadBenchmarkCase(caseDir);
 
+    // --- 3b. the EGRESS TRUST BOUNDARY (N5) --------------------------------
+    // A SYNTHETIC fixture checkout — the marker the harness's own fixture writer
+    // emits — is trusted by construction, and is explicitly NOT a network sandbox.
+    // Every OTHER checkout is untrusted code, and untrusted code may only run
+    // behind a provable single-egress boundary. That boundary does not exist in
+    // this build, so the mode is refused HERE, before the child starts — the plan
+    // forbids letting a request leave and then calling it a failure.
+    const fixtureTrusted = existsSync(join(armDir, FIXTURE_CHECKOUT_MARKER_FILENAME));
+    const capability = egressIsolationCapability();
+    if (!fixtureTrusted && !capability.available) {
+      refuse(
+        EGRESS_ISOLATION_UNAVAILABLE,
+        `the ${arm.armId} checkout is not a synthetic fixture build and this build cannot prove a single-egress boundary for untrusted code (${capability.detail}) — refusing to START it rather than discovering the leak after a request left`,
+      );
+    }
+
     // --- 4. run the arm's OWN build in an isolated child process ------------
     const launched = await launchArmWorker({
       workerPath,
@@ -425,7 +511,7 @@ interface LaunchArmWorkerResult {
 async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmWorkerResult> {
   const child = spawn(process.execPath, [opts.workerPath], {
     stdio: ["pipe", "pipe", "pipe"],
-    env: sanitizedWorkerEnv(opts.env),
+    env: buildWorkerEnv(opts.env),
     windowsHide: true,
   });
   const reader = createLineReader(child.stdout);
