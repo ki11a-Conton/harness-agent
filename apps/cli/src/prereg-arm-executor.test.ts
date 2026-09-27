@@ -53,6 +53,7 @@ import {
   ARM_EVIDENCE_DIR_MISSING,
   ARM_ISOLATION_UNSUPPORTED,
   ARM_PROBE_EXPORT,
+  FIXTURE_CHECKOUT_MARKER_FILENAME,
   createPreregArmExecutor,
 } from "./prereg-arm-executor.js";
 import { createProductionPreregRunner } from "./prereg-production-runner.js";
@@ -130,6 +131,11 @@ async function makeArmCheckout(dir: string, marker: string, activate = false): P
     const source = rel === ARM_ENTRY_REL ? armEntrySource(marker, activate) : `export {}; // stub:${marker}\n`;
     await writeFile(abs, source, "utf8");
   }
+  // N5 — this tree is written by the harness's OWN fixture writer, so it carries
+  // the synthetic-fixture marker the executor requires before it will START a
+  // checkout. Without it the executor refuses with EGRESS_ISOLATION_UNAVAILABLE
+  // (see prereg-egress-trust-boundary.test.ts); this is a marker, NOT a sandbox.
+  await writeFile(join(dir, FIXTURE_CHECKOUT_MARKER_FILENAME), `${JSON.stringify({ writer: "prereg-arm-executor.test.ts", marker })}\n`, "utf8");
 }
 
 /**

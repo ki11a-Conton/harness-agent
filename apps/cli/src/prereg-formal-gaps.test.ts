@@ -58,6 +58,9 @@ import {
   type ToolCallEfficiencyPreregistrationV2,
 } from "@ar/evaluation";
 import { preregCmd } from "./prereg-command.js";
+// N5 — the fixture marker constant is OWNED by the executor; the test's fixture
+// writer must use it rather than a copy, so the two cannot drift apart.
+import { FIXTURE_CHECKOUT_MARKER_FILENAME } from "./prereg-arm-executor.js";
 import { createProductionPreregRunner, observeCaseContentDigests, observeExecutionIdentity } from "./prereg-production-runner.js";
 
 const REPO_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
@@ -276,6 +279,11 @@ async function makeArmCheckout(dir: string, marker: string, activate = false): P
     const source = rel === ARM_ENTRY_REL ? armEntrySource(marker, activate) : `export {}; // stub:${marker}\n`;
     await writeFile(abs, source, "utf8");
   }
+  // N5 — this tree is written by the harness's OWN fixture writer, so it carries
+  // the synthetic-fixture marker the executor requires before it will START a
+  // checkout. Without it the executor refuses with EGRESS_ISOLATION_UNAVAILABLE
+  // (see prereg-egress-trust-boundary.test.ts); this is a marker, NOT a sandbox.
+  await writeFile(join(dir, FIXTURE_CHECKOUT_MARKER_FILENAME), `${JSON.stringify({ writer: "prereg-formal-gaps.test.ts", marker })}\n`, "utf8");
 }
 
 // ---------------------------------------------------------------------------
