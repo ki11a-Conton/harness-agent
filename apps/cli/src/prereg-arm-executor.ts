@@ -347,7 +347,33 @@ export function isTrustedBuildGrant(value: unknown): value is TrustedBuildGrant 
   );
 }
 
-/** R5 — the verdict of the self-proving git/closure identity of ONE arm checkout. */
+/** R5 — the verdict of the CHEAP git identity of ONE arm checkout (no closure
+ *  walk): a real work tree at a 40-hex HEAD with an EMPTY status. */
+interface ArmGitHead {
+  ok: boolean;
+  detail: string;
+  gitHead: string | null;
+}
+
+/**
+ * R5 — HEAD + cleanliness. Deliberately separate from the closure digest: these
+ * are the cheapest checks and they run FIRST, so a tree that is not a clean git
+ * work tree is refused with the reason that actually applies ("dirty") instead of
+ * a downstream closure error.
+ */
+function armGitHeadAndClean(dir: string, armId: "baseline" | "candidate"): ArmGitHead {
+  const head = git(dir, ["rev-parse", "HEAD"]);
+  if (head === null || !/^[0-9a-f]{40}$/.test(head)) {
+    return { ok: false, detail: `the ${armId} checkout is not a git work tree at a 40-hex HEAD (head=${head === null ? "unreadable" : head})`, gitHead: null };
+  }
+  const porcelain = git(dir, ["status", "--porcelain"]);
+  if (porcelain === null || porcelain !== "") {
+    return { ok: false, detail: `the ${armId} checkout is DIRTY${porcelain === null ? " (git status unreadable)" : ""} — an arm must run from an exact, unmodified tree`, gitHead: head };
+  }
+  return { ok: true, detail: "", gitHead: head };
+}
+
+/** R5 — the verdict of the git/closure identity of ONE arm checkout. */
 interface ArmGitIdentity {
   ok: boolean;
   detail: string;
@@ -362,21 +388,15 @@ interface ArmGitIdentity {
  * `R97_ARM_REQUIRE_GIT=1`.
  */
 function armGitIdentity(dir: string, armId: "baseline" | "candidate"): ArmGitIdentity {
-  const head = git(dir, ["rev-parse", "HEAD"]);
-  if (head === null || !/^[0-9a-f]{40}$/.test(head)) {
-    return { ok: false, detail: `the ${armId} checkout is not a git work tree at a 40-hex HEAD (head=${head === null ? "unreadable" : head})`, gitHead: null, buildDigest: null };
-  }
-  const porcelain = git(dir, ["status", "--porcelain"]);
-  if (porcelain === null || porcelain !== "") {
-    return { ok: false, detail: `the ${armId} checkout is DIRTY${porcelain === null ? " (git status unreadable)" : ""} — an arm must run from an exact, unmodified tree`, gitHead: head, buildDigest: null };
-  }
+  const head = armGitHeadAndClean(dir, armId);
+  if (!head.ok) return { ok: false, detail: head.detail, gitHead: head.gitHead, buildDigest: null };
   let buildDigest: string;
   try {
     buildDigest = computeArmBuildDigestV1(dir);
   } catch {
-    return { ok: false, detail: `the ${armId} checkout's declared execution closure cannot be established`, gitHead: head, buildDigest: null };
+    return { ok: false, detail: `the ${armId} checkout's declared execution closure cannot be established`, gitHead: head.gitHead, buildDigest: null };
   }
-  return { ok: true, detail: "", gitHead: head, buildDigest };
+  return { ok: true, detail: "", gitHead: head.gitHead, buildDigest };
 }
 
 /**
@@ -763,6 +783,28 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
       );
     }
     const otherDir = arm.armId === "candidate" ? env["R97_ARM_BASELINE_DIR"] : env["R97_ARM_CANDIDATE_DIR"];
+    // R5 — git identity is a property of the DECLARED mode, not of an env var the
+    // operator has to remember. `trusted-build` ALWAYS proves HEAD + clean tree for
+    // BOTH arms, BEFORE the closure walk, so the refusal names what actually
+    // failed; the legacy env flag is kept only as extra strictness for the fixture
+    // posture.
+    const isTrustedBuild = backendId === TRUSTED_BUILD_BACKEND_ID && strength === TRUSTED_BUILD_STRENGTH;
+    const requireGit = isTrustedBuild || env["R97_ARM_REQUIRE_GIT"] === "1";
+    const counterpartArmId: "baseline" | "candidate" = arm.armId === "candidate" ? "baseline" : "candidate";
+    const gitHead = requireGit ? armGitHeadAndClean(armDir, arm.armId) : null;
+    const counterpartGitHead = requireGit && isDir(otherDir) ? armGitHeadAndClean(otherDir, counterpartArmId) : null;
+    if (gitHead !== null && !gitHead.ok) {
+      refuse(
+        isTrustedBuild ? TRUSTED_BUILD_NOT_PROVEN : ARM_BUILD_UNRESOLVABLE,
+        `${isTrustedBuild ? `the declared ${TRUSTED_BUILD_BACKEND_ID}/${TRUSTED_BUILD_STRENGTH} mode requires` : "R97_ARM_REQUIRE_GIT=1 but"}: ${gitHead.detail}`,
+      );
+    }
+    if (counterpartGitHead !== null && !counterpartGitHead.ok) {
+      refuse(
+        isTrustedBuild ? TRUSTED_BUILD_NOT_PROVEN : ARM_BUILD_UNRESOLVABLE,
+        `${isTrustedBuild ? `the declared ${TRUSTED_BUILD_BACKEND_ID}/${TRUSTED_BUILD_STRENGTH} mode requires` : "R97_ARM_REQUIRE_GIT=1 but"}: ${counterpartGitHead.detail}`,
+      );
+    }
     const armBuildDigest = armBuildDigestOrRefuse(arm.armId, armDir);
     if (isDir(otherDir) && armBuildDigestOrRefuse(arm.armId === "candidate" ? "baseline" : "candidate", otherDir) === armBuildDigest) {
       refuse(
@@ -770,36 +812,14 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
         `${arm.armId} and its counterpart resolve to the SAME build digest (${armBuildDigest.slice(0, 12)}…) — an experiment with one build is not a paired experiment`,
       );
     }
-    // Pre-flight the entry the worker will load, and (when required) the git
-    // identity of BOTH checkouts — all BEFORE any request leaves.
+    // Pre-flight the entry the worker will load — all BEFORE any request leaves.
     const entry = armEntryPathOrRefuse(arm.armId, armDir);
-    // R5 — git identity is a property of the DECLARED mode, not of an env var the
-    // operator has to remember. `trusted-build` ALWAYS proves HEAD + clean tree +
-    // resolvable closure for BOTH arms; the legacy env flag is kept only as an
-    // extra strictness for the fixture posture.
-    const isTrustedBuild = backendId === TRUSTED_BUILD_BACKEND_ID && strength === TRUSTED_BUILD_STRENGTH;
-    const requireGit = isTrustedBuild || env["R97_ARM_REQUIRE_GIT"] === "1";
-    const identity = requireGit
-      ? armGitIdentity(armDir, arm.armId)
-      : { ok: true, detail: "", gitHead: null, buildDigest: armBuildDigest };
-    const counterpartArmId: "baseline" | "candidate" = arm.armId === "candidate" ? "baseline" : "candidate";
-    const counterpartIdentity = requireGit && isDir(otherDir)
-      ? armGitIdentity(otherDir, counterpartArmId)
-      : null;
-    if (requireGit) {
-      if (!identity.ok) {
-        refuse(
-          isTrustedBuild ? TRUSTED_BUILD_NOT_PROVEN : ARM_BUILD_UNRESOLVABLE,
-          `${isTrustedBuild ? `the declared ${TRUSTED_BUILD_BACKEND_ID}/${TRUSTED_BUILD_STRENGTH} mode requires` : "R97_ARM_REQUIRE_GIT=1 but"}: ${identity.detail}`,
-        );
-      }
-      if (counterpartIdentity !== null && !counterpartIdentity.ok) {
-        refuse(
-          isTrustedBuild ? TRUSTED_BUILD_NOT_PROVEN : ARM_BUILD_UNRESOLVABLE,
-          `${isTrustedBuild ? `the declared ${TRUSTED_BUILD_BACKEND_ID}/${TRUSTED_BUILD_STRENGTH} mode requires` : "R97_ARM_REQUIRE_GIT=1 but"}: ${counterpartIdentity.detail}`,
-        );
-      }
-    }
+    const identity: ArmGitIdentity = {
+      ok: true,
+      detail: "",
+      gitHead: gitHead?.gitHead ?? null,
+      buildDigest: armBuildDigest,
+    };
 
     // --- 2. the evidence directory the A6 re-verification reads back --------
     if (typeof ctx.evidenceDir !== "string" || ctx.evidenceDir.length === 0) {
@@ -850,8 +870,8 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
       if (!identity.ok || identity.gitHead === null) {
         refuse(TRUSTED_BUILD_NOT_PROVEN, `the ${arm.armId} checkout cannot prove the git identity the ${TRUSTED_BUILD_BACKEND_ID}/${TRUSTED_BUILD_STRENGTH} mode requires: ${identity.detail}`);
       }
-      if (counterpartIdentity !== null && (!counterpartIdentity.ok || counterpartIdentity.gitHead === null)) {
-        refuse(TRUSTED_BUILD_NOT_PROVEN, `the counterpart checkout cannot prove the git identity the ${TRUSTED_BUILD_BACKEND_ID}/${TRUSTED_BUILD_STRENGTH} mode requires: ${counterpartIdentity.detail}`);
+      if (counterpartGitHead !== null && !counterpartGitHead.ok) {
+        refuse(TRUSTED_BUILD_NOT_PROVEN, `the counterpart checkout cannot prove the git identity the ${TRUSTED_BUILD_BACKEND_ID}/${TRUSTED_BUILD_STRENGTH} mode requires: ${counterpartGitHead.detail}`);
       }
       // Recorded, not claimed: the mode provides no network isolation.
       process.stderr.write(

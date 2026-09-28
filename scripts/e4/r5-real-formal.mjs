@@ -187,11 +187,25 @@ async function phaseIdentity() {
 // The offline scripted provider (test host; no socket, no credential)
 // ---------------------------------------------------------------------------
 
-/** Turn one script step into a provider event stream. The shapes the arm's own
- *  runtime understands: a `write_file` tool call, or a completing text turn. */
-function eventsFor(steps) {
-  const tail = Array.from({ length: 10 }, () => ({ text: "nothing further to do" }));
-  return [...steps, ...tail];
+/** One model CALL's event stream: EXACTLY ONE terminal `completed`, in the shapes
+ *  the arm's own `ScriptedModelProvider` emits (`started` + `text_delta` or
+ *  `tool_call_delta` + `completed`). Emitting two terminal events in one stream is
+ *  a protocol error the runtime retries, so a call emits exactly one step.
+ *  Every call reports usage, so the R2 cost journal has real measured tokens. */
+function* eventsForCall(steps, counter) {
+  const step = steps[0];
+  yield { type: "started", timestamp: 0 };
+  if (step.tool !== undefined) {
+    counter.n += 1;
+    const toolCall = { id: `r5-call-${counter.n}`, name: step.tool.name, args: step.tool.args };
+    yield { type: "tool_call_delta", toolCall, timestamp: 0 };
+    yield { type: "usage", usage: { inputTokens: 12, outputTokens: 6 }, timestamp: 0 };
+    yield { type: "completed", result: { finishReason: "tool_calls", toolCalls: [toolCall] }, timestamp: 0 };
+  } else {
+    yield { type: "text_delta", text: step.text, timestamp: 0 };
+    yield { type: "usage", usage: { inputTokens: 12, outputTokens: 6 }, timestamp: 0 };
+    yield { type: "completed", result: { finishReason: "stop", text: step.text }, timestamp: 0 };
+  }
 }
 
 /**
@@ -199,8 +213,14 @@ function eventsFor(steps) {
  * the script for the case whose `request.md` that request carries. Resolving the
  * case from the real context (rather than a call counter) is what makes the tool
  * call genuinely bound to the case the runtime asked about.
+ *
+ * Per case, the caller's script is one call: the tool write (or the claim-only
+ * text). The FOLLOW-UP call (the runtime asks again with the tool result) gets a
+ * completing text, so a turn cannot loop and the stream is always total.
  */
-function createOfflineScriptedProvider({ caseScripts, fallback = "text-only", transcript }) {
+function createOfflineScriptedProvider({ caseScripts, transcript }) {
+  const counter = { n: 0 };
+  const seen = new Map();
   return {
     id: "r5-offline-scripted",
     async listModels() {
@@ -210,39 +230,27 @@ function createOfflineScriptedProvider({ caseScripts, fallback = "text-only", tr
       return {
         async *generate(request) {
           const text = JSON.stringify(request ?? {});
-          const hit = caseScripts.find((c) => c.needle !== null && text.includes(c.needle));
-          const script = hit ?? caseScripts.find((c) => c.isFallback === true) ?? null;
-          const variant = script === null ? fallback : script.variant;
-          const steps =
-            variant === "write" && script?.writeTarget != null
-              ? [
-                  { tool: { name: "write_file", args: { path: script.writeTarget.path, content: script.writeTarget.content } } },
-                  { text: `wrote ${script.writeTarget.path}` },
-                ]
-              : variant === "wrong-path" && script?.writeTarget != null
-                ? [
-                    { tool: { name: "write_file", args: { path: `${script.writeTarget.path}.not-the-required-path`, content: script.writeTarget.content } } },
-                    { text: "wrote somewhere else" },
-                  ]
-                : [{ text: "done" }];
-          if (transcript !== undefined) {
-            transcript.push({ caseId: hit?.caseId ?? null, variant, chars: text.length });
+          const script = caseScripts.find((c) => c.needle !== null && text.includes(c.needle)) ?? null;
+          const caseId = script?.caseId ?? null;
+          const callIndex = seen.get(caseId) ?? 0;
+          seen.set(caseId, callIndex + 1);
+          const variant = script?.variant ?? "text-only";
+          let steps;
+          if (callIndex === 0 && variant === "write" && script?.writeTarget != null) {
+            steps = [
+              { tool: { name: "write_file", args: { path: script.writeTarget.path, content: script.writeTarget.content } } },
+            ];
+          } else if (callIndex === 0 && variant === "wrong-path" && script?.writeTarget != null) {
+            steps = [
+              { tool: { name: "write_file", args: { path: `${script.writeTarget.path}.not-the-required-path`, content: script.writeTarget.content } } },
+            ];
+          } else if (callIndex <= 1 && variant === "write") {
+            steps = [{ text: `wrote ${script?.writeTarget?.path ?? "the artifact"}` }];
+          } else {
+            steps = [{ text: "nothing further to do" }];
           }
-          for (const ev of eventsFor(steps)) {
-            if (ev.tool !== undefined) {
-              yield {
-                type: "completed",
-                result: {
-                  finishReason: "tool_calls",
-                  toolCalls: [{ id: `call-${transcript?.length ?? 0}`, name: ev.tool.name, arguments: JSON.stringify(ev.tool.args) }],
-                },
-                timestamp: 0,
-              };
-            } else {
-              yield { type: "text", text: ev.text, timestamp: 0 };
-              yield { type: "completed", result: { finishReason: "stop", text: ev.text }, timestamp: 0 };
-            }
-          }
+          transcript.push({ callIndex, caseId, variant, strength: script?.strength ?? null, contentMode: script?.contentMode ?? null, chars: text.length });
+          yield* eventsForCall(steps, counter);
         },
       };
     },
@@ -755,42 +763,52 @@ async function phaseNegative({ workRoot }) {
   return rows;
 }
 
+/**
+ * Copy an arm's DECLARED execution closure into `dest`.
+ *
+ * The closure walker follows the entries' own relative imports, so copying the
+ * five entry FILES is not enough — the whole `dist` directory each entry lives in
+ * must travel (`packages/evaluation/dist/index.js` imports `./eval-case.js`, and a
+ * missing sibling is refused as "the covered artifact set must never shrink
+ * silently"). Bare specifiers stay external, so `node_modules` is not needed.
+ */
+async function copyArmClosure(srcArm, dest) {
+  const mod = await import(pathToFileURL(EVAL_ENTRY).href);
+  await rm(dest, { recursive: true, force: true });
+  await mkdir(dest, { recursive: true });
+  const distDirs = new Set(mod.R97_ARM_BUILD_ENTRIES.map((rel) => dirname(rel)));
+  for (const rel of distDirs) {
+    await cp(join(srcArm, rel), join(dest, rel), { recursive: true });
+  }
+  // The copied dist is ESM; a bare tmp tree needs the marker or Node refuses the
+  // copy as CJS ("Cannot use import statement outside a module") — which would
+  // refuse for the WRONG reason and mask the violation under test.
+  await writeFile(join(dest, "package.json"), `${JSON.stringify({ name: "r5-temp-arm", private: true, type: "module" }, null, 2)}\n`, "utf8");
+  return { entryRel: mod.R97_ARM_BUILD_ENTRIES.find((e) => e.endsWith("benchmark-command.js")), distDirs: [...distDirs] };
+}
+
+function gitInitCommit(dir, message) {
+  execFileSync("git", ["-C", dir, "init", "-q"]);
+  execFileSync("git", ["-C", dir, "add", "-A"]);
+  execFileSync("git", ["-C", dir, "-c", "user.name=r5", "-c", "user.email=r5@local", "commit", "-q", "-m", message]);
+}
+
 /** A copy of the baseline arm's execution closure with NO `R97_ARM_PROBE` export. */
 async function makeAbiLessArm(workRoot) {
   const dir = join(workRoot, "arm-no-abi");
-  await rm(dir, { recursive: true, force: true });
-  await mkdir(dir, { recursive: true });
-  const mod = await import(pathToFileURL(EVAL_ENTRY).href);
-  const entryRel = mod.R97_ARM_BUILD_ENTRIES.find((e) => e.endsWith("benchmark-command.js"));
-  for (const rel of mod.R97_ARM_BUILD_ENTRIES) {
-    const src = join(DEFAULT_PAIR.baseline, rel);
-    const dst = join(dir, rel);
-    await mkdir(dirname(dst), { recursive: true });
-    await cp(src, dst);
-  }
+  const { entryRel } = await copyArmClosure(DEFAULT_PAIR.baseline, dir);
   const entryPath = join(dir, entryRel);
   const bytes = await readFile(entryPath, "utf8");
   await writeFile(entryPath, bytes.replace(/export const R97_ARM_PROBE =/, "const REMOVED_R97_ARM_PROBE ="), "utf8");
-  execFileSync("git", ["-C", dir, "init", "-q"]);
-  execFileSync("git", ["-C", dir, "add", "-A"]);
-  execFileSync("git", ["-C", dir, "-c", "user.name=r5", "-c", "user.email=r5@local", "commit", "-q", "-m", "abi-less arm"]);
+  gitInitCommit(dir, "abi-less arm");
   return { baseline: dir, candidate: DEFAULT_PAIR.candidate };
 }
 
 /** A real git work tree that is DIRTY (an uncommitted file). */
 async function makeDirtyArm(workRoot) {
   const dir = join(workRoot, "arm-dirty");
-  await rm(dir, { recursive: true, force: true });
-  await mkdir(dir, { recursive: true });
-  const mod = await import(pathToFileURL(EVAL_ENTRY).href);
-  for (const rel of mod.R97_ARM_BUILD_ENTRIES) {
-    const dst = join(dir, rel);
-    await mkdir(dirname(dst), { recursive: true });
-    await cp(join(DEFAULT_PAIR.baseline, rel), dst);
-  }
-  execFileSync("git", ["-C", dir, "init", "-q"]);
-  execFileSync("git", ["-C", dir, "add", "-A"]);
-  execFileSync("git", ["-C", dir, "-c", "user.name=r5", "-c", "user.email=r5@local", "commit", "-q", "-m", "clean arm"]);
+  await copyArmClosure(DEFAULT_PAIR.baseline, dir);
+  gitInitCommit(dir, "clean arm");
   await writeFile(join(dir, "UNCOMMITTED.txt"), "dirty\n", "utf8");
   return { baseline: dir, candidate: DEFAULT_PAIR.candidate };
 }
