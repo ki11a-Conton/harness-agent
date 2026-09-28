@@ -58,9 +58,11 @@ import {
   type ToolCallEfficiencyPreregistrationV2,
 } from "@ar/evaluation";
 import { preregCmd } from "./prereg-command.js";
-// N5 — the fixture marker constant is OWNED by the executor; the test's fixture
-// writer must use it rather than a copy, so the two cannot drift apart.
-import { FIXTURE_CHECKOUT_MARKER_FILENAME } from "./prereg-arm-executor.js";
+// N5/R1 — the fixture marker constant is OWNED by the executor; the test's
+// fixture writer must use it rather than a copy, so the two cannot drift apart.
+// R1/F2 — the marker is NOT the trust source: this test host also pins the trees
+// it wrote with `createFixtureCheckoutTrust`.
+import { FIXTURE_CHECKOUT_MARKER_FILENAME, createFixtureCheckoutTrust } from "./prereg-arm-executor.js";
 import { createProductionPreregRunner, observeCaseContentDigests, observeExecutionIdentity } from "./prereg-production-runner.js";
 
 const REPO_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
@@ -326,6 +328,8 @@ describe("F1 — production execution identity and executor", () => {
     const runner = createProductionPreregRunner({
       rootDir: REPO_ROOT,
       env: { R97_ARM_BASELINE_DIR: base, R97_ARM_CANDIDATE_DIR: cand },
+      // R1/F2 — test-host trust capability (the marker is not a trust source).
+      trustedFixtureCheckouts: createFixtureCheckoutTrust(base, cand),
     });
     const realArm: ArmRunRef = { armId: "candidate", caseId: REAL_FROZEN_CASE_ID, repetition: 0, orderIndex: 0 };
     const preregistrationDigest = prereg().preregistrationDigest;

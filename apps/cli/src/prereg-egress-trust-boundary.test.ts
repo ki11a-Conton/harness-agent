@@ -13,14 +13,21 @@
  *     child starts, with the exact `EGRESS_ISOLATION_UNAVAILABLE` code, and a
  *     loopback counter observes ZERO requests — the refusal is pre-start, never a
  *     post-hoc judgement of a request that already left;
- *   - the refusal is NOT blanket: a synthetic-fixture checkout really runs and
- *     produces an outcome, so the positive budgeted path is intact;
+ *   - the refusal is NOT blanket: a checkout THIS TEST HOST pinned with
+ *     `createFixtureCheckoutTrust` really runs and produces an outcome, so the
+ *     positive budgeted path is intact;
  *   - the capability probe reports the truth (`available: false`), so paid /
  *     untrusted execution stays closed on both platforms.
  *
+ * R1/F2 UPDATE: the `.r97-synthetic-fixture-checkout` MARKER is no longer the
+ * trust source. It is required to be a regular file but is never sufficient; the
+ * trust anchor is the out-of-band test-host capability. Writing, copying,
+ * hard-linking or symlinking the marker — or swapping the entry behind it — is
+ * therefore refused, measured in `prereg-fixture-checkout-trust.test.ts`.
+ *
  * NOT proven here — stated plainly, never implied:
- *   - this is NOT a network sandbox. There is no in-worker egress block; the
- *     fixture path is trusted BY CONSTRUCTION (the harness wrote the tree) and
+ *   - this is NOT a network sandbox. There is no in-worker egress block; a pinned
+ *     fixture path is trusted BY CONSTRUCTION (the test host pinned the tree) and
  *     would still be able to open a socket. `paidExperimentReady` stays false.
  *
  * SAFETY: zero network EXCEPT the loopback counter this file creates on 127.0.0.1
@@ -46,6 +53,7 @@ import {
   EGRESS_ISOLATION_UNAVAILABLE,
   FIXTURE_CHECKOUT_MARKER_FILENAME,
   buildWorkerEnv,
+  createFixtureCheckoutTrust,
   egressIsolationCapability,
 } from "./prereg-arm-executor.js";
 import { createProductionPreregRunner } from "./prereg-production-runner.js";
@@ -269,7 +277,13 @@ describe("N5 — the refusal is not blanket: the fixture path really runs", () =
       R97_ARM_BASELINE_DIR: baselineDir,
       R97_ARM_CANDIDATE_DIR: candidateDir,
     };
-    const production = createProductionPreregRunner({ rootDir: REPO_ROOT, env });
+    const production = createProductionPreregRunner({
+      rootDir: REPO_ROOT,
+      env,
+      // R1/F2 — the marker is not a trust source any more: this TEST HOST pins the
+      // two trees it just wrote, and a pinned checkout is the ONLY runnable one.
+      trustedFixtureCheckouts: createFixtureCheckoutTrust(baselineDir, candidateDir),
+    });
     const outcome = await production.runArm(armRef("candidate"), await contextFor(evidenceDir, "candidate"));
 
     // NON-VACUOUS: the child really ran (its import-time writes exist)...

@@ -38,11 +38,13 @@ import { stableStringify } from "./manifest.js";
 import {
   assertFormalExecutionPreregistration,
   assertNoDuplicateJsonKeys,
+  PROVIDER_DEFAULT_ENDPOINT_DIGEST,
   PreregistrationV2Error,
   TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2,
   TOOL_CALL_EFFICIENCY_PREREGISTRATION_V2_SCHEMA,
   type ToolCallEfficiencyPreregistrationV2,
 } from "./tool-call-efficiency-preregistration-v2.js";
+import { captureEndpointIdentity } from "./provenance-v3.js";
 import { buildPairedPlan, type PairedExperimentPlan } from "./paired-plan.js";
 import { openR97BudgetLedger, withR97CampaignLock, type R97BudgetLedger } from "./r97-budget-ledger.js";
 
@@ -71,6 +73,77 @@ export const TOOL_CALL_EFFICIENCY_AUTHORIZATION_V2_SCHEMA = "tool-call-efficienc
  *     the fixture branch can never be used to widen a paid approval.
  */
 export const FIXTURE_MODE_SYNTHETIC_OFFLINE = "synthetic-offline-v1";
+
+/**
+ * R1/F1 — the brand of the TEST-HOST-owned non-billable transport capability.
+ *
+ * WHY THIS EXISTS (P0, plan(20260928-105425).md §R1, F1)
+ * ------------------------------------------------------
+ * Before R1 the fixture branch below accepted `observation.endpointIsLoopback`
+ * as PROOF that the transport could not bill, and therefore skipped the paid
+ * branch's money cap. An endpoint ADDRESS is not evidence about billing: the
+ * user's own local relay (127.0.0.1:8317) is a paid, forwarding, loopback
+ * endpoint. Any operator could point `OPENAI_BASE_URL` at a loopback relay,
+ * declare `paid:false + fixtureMode`, and obtain an uncapped path to a real
+ * billed upstream.
+ *
+ * The fix separates the ADDRESS from the BILLING CLASS: the fixture class is
+ * admitted only when the CALLER supplies a capability object that can be created
+ * by one exported factory and is therefore NOT derivable from any JSON, env
+ * variable, marker file, port number or sentinel key. The capability carries the
+ * non-billable PROVIDER ITSELF, so a fixture admission never touches the
+ * operator's provider factory (and therefore never touches real credentials).
+ *
+ * This is deliberately an in-process capability: `createProductionPreregRunner`
+ * has no option, env var or CLI flag that can construct it, so the release CLI
+ * accepts NO fixture-bypass configuration (plan §R1 怎么做 1).
+ */
+const NON_BILLABLE_FIXTURE_BRAND: unique symbol = Symbol("ar.evaluation.nonBillableFixtureTransport");
+
+/**
+ * R1/F1 — a transport the TEST HOST owns and that provably cannot bill: it is
+ * supplied together with the provider that reaches it, and the gate uses THAT
+ * provider instead of the operator's `makeProvider`.
+ */
+export interface NonBillableFixtureTransport {
+  readonly [NON_BILLABLE_FIXTURE_BRAND]: true;
+  /** The address this capability was issued for. Binds it to ONE endpoint. */
+  readonly endpointBaseUrl: string | null;
+  /** Binds it to ONE provider/model, so it cannot be re-pointed at another. */
+  readonly providerId: string;
+  readonly modelId: string;
+  /** The non-billable transport. Never the operator's credential-bearing one. */
+  readonly provider: ModelProvider;
+}
+
+/**
+ * R1/F1 — create the test-host capability. NOT reachable from the production
+ * CLI: there is no env var, JSON field, marker file or flag that produces it.
+ */
+export function createNonBillableFixtureTransport(input: {
+  endpointBaseUrl: string | null;
+  providerId: string;
+  modelId: string;
+  provider: ModelProvider;
+}): NonBillableFixtureTransport {
+  return Object.freeze({
+    [NON_BILLABLE_FIXTURE_BRAND]: true as const,
+    endpointBaseUrl: input.endpointBaseUrl,
+    providerId: input.providerId,
+    modelId: input.modelId,
+    provider: input.provider,
+  });
+}
+
+/** R1/F1 — is this the real branded capability (not a look-alike object)? */
+export function isNonBillableFixtureTransport(value: unknown): value is NonBillableFixtureTransport {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as Record<PropertyKey, unknown>)[NON_BILLABLE_FIXTURE_BRAND] === true
+  );
+}
+
 
 export interface AuthorizationCapsV2 {
   /** Must equal the pre-registration's worst case exactly. */
@@ -356,11 +429,17 @@ export interface PreregisteredCampaignObservationV2 {
    */
   usdMicrosPerCall: number | null;
   /**
-   * N3 — TRUE only when the observer PROVED the resolved endpoint is a loopback
-   * address (`127.0.0.0/8`, `::1`, `localhost`). It is re-derived from the live
-   * environment on every run and is never read from the artifact, so a synthetic
-   * fixture can demonstrate that its only transport is non-billable. A proxy or
-   * any non-loopback endpoint observes `false`.
+   * R1/F1 — the ADDRESS class of the resolved endpoint, NOT a billing class.
+   *
+   * TRUE only when the observer proved the endpoint is loopback (`127.0.0.0/8`,
+   * `::1`, `localhost`). It is re-derived from the live environment on every run
+   * and is never read from the artifact.
+   *
+   * It is NO LONGER evidence about billing and MUST NOT be used as one: a
+   * loopback address can carry PAID relay traffic (a user's own local relay is
+   * exactly that). The synthetic-fixture admission therefore requires an injected
+   * `NonBillableFixtureTransport` capability instead — see
+   * `openPreregisteredCampaignGate`. This field remains a diagnostic fact.
    */
   endpointIsLoopback: boolean;
 }
@@ -1123,6 +1202,19 @@ export interface PreregisteredCampaignOptions {
   now?: () => number;
   /** The provider factory. Called ONLY after every preflight passed. */
   makeProvider: () => ModelProvider | Promise<ModelProvider>;
+  /**
+   * R1/F1 — the TEST-HOST capability that admits the separately-identified
+   * synthetic-fixture class. Only `createNonBillableFixtureTransport` produces a
+   * value this option accepts; there is no JSON/env/marker/flag path to it, and
+   * the production CLI never sets it.
+   *
+   * When present (and only then) a `fixtureMode` authorization is admissible, and
+   * the gate uses the capability's OWN provider — `makeProvider` is never called,
+   * so an operator's real credentials can never be combined with a fixture
+   * admission. When absent, the fixture class is refused: an endpoint address,
+   * port, sentinel key or marker file proves NOTHING about billing.
+   */
+  nonBillableTransport?: unknown;
 }
 
 function refusal(code: FormalRunCode, reason: string): FormalRunRefusal {
@@ -1180,16 +1272,48 @@ export async function openPreregisteredCampaignGate(
   const authCheck = checkAuthorizationV2(auth, artifact, nowMs);
   if (!authCheck.ok) return refusal(authCheck.code, authCheck.reason);
 
-  // STEP 3b: N3 — the two admission classes have DIFFERENT fail-closed
+  // STEP 3b: N3/R1 — the two admission classes have DIFFERENT fail-closed
   // preconditions, and neither may borrow the other's. This runs after the
   // authorization is parsed (the class lives there) and before ANY budget,
   // ledger or provider construction.
+  //
+  // R1/F1 — THE FIX. The fixture branch used to accept
+  // `observation.endpointIsLoopback === true` (or a declared price of 0) as PROOF
+  // that the transport could not bill, and therefore skipped the paid branch's
+  // money cap. An endpoint ADDRESS is not a billing class: a loopback relay can be
+  // a paid forwarding endpoint (the user's own local relay), so a fixture
+  // admission now requires a capability the TEST HOST injected — one that also
+  // carries the non-billable PROVIDER, is BOUND to the observed endpoint and
+  // provider/model, and cannot be produced from any artifact, env, marker, port
+  // or sentinel key.
   const isFixture = auth.fixtureMode === FIXTURE_MODE_SYNTHETIC_OFFLINE;
+  const fixtureTransport = isFixture && isNonBillableFixtureTransport(opts.nonBillableTransport)
+    ? opts.nonBillableTransport
+    : null;
   if (isFixture) {
-    if (!(opts.observation.usdMicrosPerCall === 0 || opts.observation.endpointIsLoopback === true)) {
+    if (fixtureTransport === null) {
       return refusal(
         "FIXTURE_TRANSPORT_NOT_NON_BILLABLE",
-        "a synthetic-fixture admission must PROVE its transport is non-billable (an unbilled stub priced at 0, or a loopback endpoint); this observation shows a billable transport",
+        "a synthetic-fixture admission must PROVE its transport is non-billable by INJECTING a test-host non-billable transport (createNonBillableFixtureTransport); the observation shows no such capability. An endpoint address is not evidence about billing — 127.0.0.1 / localhost / ::1 can carry PAID relay traffic (a user's own local relay is exactly that), so no address, port, sentinel key or marker can make a transport free",
+      );
+    }
+    // The capability is BOUND: it cannot be re-pointed at another endpoint or
+    // another model than the one this run observed.
+    const capabilityEndpointDigest =
+      captureEndpointIdentity(fixtureTransport.endpointBaseUrl) ?? PROVIDER_DEFAULT_ENDPOINT_DIGEST;
+    if (capabilityEndpointDigest !== opts.observation.endpointDigest) {
+      return refusal(
+        "FIXTURE_TRANSPORT_NOT_NON_BILLABLE",
+        "the injected non-billable transport was issued for a DIFFERENT endpoint than the one observed now — a fixture capability cannot be applied to another endpoint",
+      );
+    }
+    if (
+      fixtureTransport.providerId !== opts.observation.providerId ||
+      fixtureTransport.modelId !== opts.observation.modelId
+    ) {
+      return refusal(
+        "FIXTURE_TRANSPORT_NOT_NON_BILLABLE",
+        `the injected non-billable transport was issued for ${fixtureTransport.providerId}/${fixtureTransport.modelId}, not the observed ${opts.observation.providerId}/${opts.observation.modelId} — a fixture capability cannot be applied to another model`,
       );
     }
   } else {
@@ -1252,8 +1376,12 @@ export async function openPreregisteredCampaignGate(
     return refusal("BUDGET_STATE_REJECTED", err instanceof Error ? err.message : String(err));
   }
 
-  // STEP 6: ONLY NOW construct the provider.
-  const provider = await opts.makeProvider();
+  // STEP 6: ONLY NOW construct the provider. On the PAID path that is the
+  // caller's factory (the real, credential-bearing transport). On the
+  // synthetic-fixture path it is the injected capability's OWN non-billable
+  // provider, so `makeProvider` — and therefore any operator credential — is
+  // never reached by a fixture admission.
+  const provider = fixtureTransport !== null ? fixtureTransport.provider : await opts.makeProvider();
   const plan = buildPairedPlan({
     suite: artifact.dataset.suiteId,
     cases: artifact.dataset.cases.map((c) => c.caseId),

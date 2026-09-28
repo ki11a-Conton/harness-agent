@@ -15,8 +15,15 @@
  *                         non-null) AND priced (a KNOWN per-call price).
  *   SYNTHETIC FIXTURE   — `fixtureMode` + `paid:false` (plan §N2: separately
  *                         identified, never a paid-admission config); bills
- *                         nothing, so it must instead PROVE its OBSERVED
- *                         transport is non-billable instead of declaring a price.
+ *                         nothing, so it must instead PROVE its transport is
+ *                         non-billable.
+ *
+ * R1/F1 UPDATE (plan(20260928-105425).md §R1): "prove its transport is
+ * non-billable" no longer means "the address is loopback" or "the declared price
+ * is 0". A loopback address can carry PAID relay traffic, so the fixture class now
+ * requires a test-host-injected, endpoint- and model-bound non-billable transport
+ * (`createNonBillableFixtureTransport`). N3.10 pins the refusal of the old
+ * loopback proof; N3.10b pins that the injected capability still admits.
  *
  * SAFETY
  * ------
@@ -47,6 +54,7 @@ import {
 } from "./tool-call-efficiency-preregistration-v2.js";
 import {
   FIXTURE_MODE_SYNTHETIC_OFFLINE,
+  createNonBillableFixtureTransport,
   openPreregisteredCampaignGate,
   type PreregisteredCampaignObservationV2,
   type ToolCallEfficiencyAuthorizationV2,
@@ -341,22 +349,77 @@ describe("N3 — the SYNTHETIC FIXTURE class can never widen a paid approval", (
     );
   }, 60_000);
 
-  it("[N3.10] POSITIVE CONTROL: a fixture admission over a PROVEN loopback endpoint is ADMITTED", async () => {
-    // Without this control the refusals above could all be satisfied by a gate
-    // that refuses everything. The class is real, and it is reachable only
-    // through the loopback/unbilled proof. `maxUsdMicros` is null because a
-    // fixture bills nothing, and a money-BOUNDED prereg with an unknown price is
-    // still refused earlier (see N3.11) — the fixture class does not relax that.
-    const r = await runGate({
-      fixture: true,
-      endpoint: LOOPBACK_ENDPOINT,
-      budgetOver: { maxUsdMicros: null },
-      obsOver: { usdMicrosPerCall: null, endpointIsLoopback: true },
+  it("[N3.10] R1/F1: a LOOPBACK address is NOT proof of non-billable — refused with 0 factory / 0 transport", async () => {
+    // R1/F1 (P0, plan(20260928-105425).md §R1). The baseline accepted
+    // `endpointIsLoopback === true` as PROOF that the transport could not bill and
+    // therefore skipped the paid branch's money cap. A loopback address proves
+    // nothing about billing: a user's own local relay is a paid forwarding
+    // loopback endpoint. The fixture class now requires a test-host-injected
+    // non-billable transport, so this exact shape must be REFUSED.
+    await expectRefusedWithZeroRequests(
+      runGate({
+        fixture: true,
+        endpoint: LOOPBACK_ENDPOINT,
+        budgetOver: { maxUsdMicros: null },
+        obsOver: { usdMicrosPerCall: null, endpointIsLoopback: true },
+      }),
+      "FIXTURE_TRANSPORT_NOT_NON_BILLABLE",
+    );
+  }, 60_000);
+
+  it("[N3.10b] R1/F1 POSITIVE CONTROL: an INJECTED non-billable transport is still ADMITTED", async () => {
+    // Without this control the refusal above could be satisfied by a gate that
+    // refuses everything. The fixture class is real — it is reachable ONLY through
+    // the explicitly injected, endpoint-bound, provider-carrying capability, and
+    // `makeProvider` (the operator's credential-bearing factory) is never entered.
+    const endpoint = LOOPBACK_ENDPOINT;
+    const base = preregOptions();
+    const artifact = buildToolCallEfficiencyPreregistrationV2({
+      ...base,
+      provider: { ...base.provider!, endpointBaseUrl: endpoint },
+      budget: { ...base.budget!, maxUsdMicros: null },
     });
-    expect(r.status).toBe("ADMITTED");
-    // ADMITTED means the gate may construct the provider LATER; it must not have
-    // done so during admission, and no transport may have been entered.
-    expect(r.transportCalls).toBe(0);
+    const authJson: Record<string, unknown> = authorizationFor(artifact) as unknown as Record<string, unknown>;
+    authJson["paid"] = false;
+    authJson["fixtureMode"] = FIXTURE_MODE_SYNTHETIC_OFFLINE;
+    let transportCalls = 0;
+    const grant = createNonBillableFixtureTransport({
+      endpointBaseUrl: endpoint,
+      providerId: artifact.provider.providerId,
+      modelId: artifact.provider.modelId,
+      provider: {
+        id: "n3-injected-nonbillable",
+        async listModels() {
+          return [];
+        },
+        createClient() {
+          transportCalls += 1;
+          return {
+            // eslint-disable-next-line require-yield
+            async *generate(): AsyncGenerator<ModelEvent> {
+              throw new Error("the injected non-billable stub is never driven here");
+            },
+          };
+        },
+      },
+    });
+    const operatorFactory = vi.fn((): ModelProvider => {
+      throw new Error("FORBIDDEN: a fixture admission must never enter the operator's factory");
+    });
+    const result = await openPreregisteredCampaignGate({
+      preregistrationJson: serializePreregistrationV2(artifact),
+      authorizationJson: JSON.stringify(authJson),
+      observation: observationFor(artifact, endpoint, { usdMicrosPerCall: null, endpointIsLoopback: true }),
+      budgetDir: await tempDir(),
+      mode: "first-run",
+      now: () => 1_700_000_000_000,
+      makeProvider: operatorFactory,
+      nonBillableTransport: grant,
+    });
+    expect(result.status, `code=${(result as { code?: string }).code}`).toBe("ADMITTED");
+    expect(operatorFactory).not.toHaveBeenCalled();
+    // Admission constructs the provider LATER; no transport may have been entered.
+    expect(transportCalls).toBe(0);
   }, 60_000);
 
   it("[N3.11] the fixture class does NOT relax the money bound: a BOUNDED prereg with an unknown price is REFUSED", async () => {

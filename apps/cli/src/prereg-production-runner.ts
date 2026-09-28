@@ -72,7 +72,7 @@ import {
 } from "@ar/evaluation";
 import { stableStringify } from "@ar/evaluation";
 import { PROVIDER_DEFAULT_ENDPOINT_DIGEST } from "@ar/evaluation";
-import { createPreregArmExecutor } from "./prereg-arm-executor.js";
+import { createPreregArmExecutor, type FixtureCheckoutTrust } from "./prereg-arm-executor.js";
 import { resolveModelProvider } from "./provider.js";
 import { formalExecutionProfile, resolveUsdMicrosPerCall } from "./prereg-execution-identity.js";
 import type { PreregRunnerAdapter } from "./prereg-command.js";
@@ -257,6 +257,14 @@ export interface ProductionPreregRunnerOptions {
   rootDir?: string;
   /** Environment the provider identity is observed from; defaults to the process env. */
   env?: NodeJS.ProcessEnv;
+  /**
+   * R1/F2 — the TEST-HOST fixture-checkout trust capability. The release CLI
+   * (`preregCommandDeps()` → `createProductionPreregRunner()`) passes NONE, so the
+   * shipped entry point accepts NO fixture-bypass configuration: a checkout whose
+   * only claim is a `.r97-synthetic-fixture-checkout` marker is untrusted code and
+   * is refused before the worker starts. Only a test composition root injects it.
+   */
+  trustedFixtureCheckouts?: FixtureCheckoutTrust;
 }
 
 /**
@@ -311,7 +319,17 @@ export function createProductionPreregRunner(opts: ProductionPreregRunnerOptions
     const key = `${isolation.isolationBackendId}/${isolation.isolationStrength}`;
     let runner = executors.get(key);
     if (runner === undefined) {
-      runner = createPreregArmExecutor({ rootDir, env, isolation });
+      // R1/F2 — the fixture trust capability is forwarded ONLY when the caller
+      // (a test composition root) injected one. The production CLI never does, so
+      // a marker-only checkout can never be started from the release entry point.
+      runner = createPreregArmExecutor({
+        rootDir,
+        env,
+        isolation,
+        ...(opts.trustedFixtureCheckouts === undefined
+          ? {}
+          : { trustedFixtureCheckouts: opts.trustedFixtureCheckouts }),
+      });
       executors.set(key, runner);
     }
     return runner;

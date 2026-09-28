@@ -54,6 +54,7 @@ import {
   ARM_ISOLATION_UNSUPPORTED,
   ARM_PROBE_EXPORT,
   FIXTURE_CHECKOUT_MARKER_FILENAME,
+  createFixtureCheckoutTrust,
   createPreregArmExecutor,
 } from "./prereg-arm-executor.js";
 import { createProductionPreregRunner } from "./prereg-production-runner.js";
@@ -131,10 +132,11 @@ async function makeArmCheckout(dir: string, marker: string, activate = false): P
     const source = rel === ARM_ENTRY_REL ? armEntrySource(marker, activate) : `export {}; // stub:${marker}\n`;
     await writeFile(abs, source, "utf8");
   }
-  // N5 — this tree is written by the harness's OWN fixture writer, so it carries
-  // the synthetic-fixture marker the executor requires before it will START a
-  // checkout. Without it the executor refuses with EGRESS_ISOLATION_UNAVAILABLE
-  // (see prereg-egress-trust-boundary.test.ts); this is a marker, NOT a sandbox.
+  // R1/F2 — this tree is written by this TEST suite, which therefore also pins it
+  // with `createFixtureCheckoutTrust` (see each `createProductionPreregRunner`
+  // call). The marker alone is NOT a trust source: a self-written, copied,
+  // hard-linked or symlinked marker upgrades nothing (see
+  // `prereg-fixture-checkout-trust.test.ts`); this is a marker, NOT a sandbox.
   await writeFile(join(dir, FIXTURE_CHECKOUT_MARKER_FILENAME), `${JSON.stringify({ writer: "prereg-arm-executor.test.ts", marker })}\n`, "utf8");
 }
 
@@ -291,6 +293,9 @@ describe("A5/B3 — the production adapter launches the arm's OWN build as a chi
     const runner = createProductionPreregRunner({
       rootDir: REPO_ROOT,
       env: { R97_ARM_BASELINE_DIR: base, R97_ARM_CANDIDATE_DIR: cand },
+      // R1/F2 — the marker is no longer a trust source: this TEST HOST pins the two
+      // checkouts it just wrote, and only a pinned checkout may start.
+      trustedFixtureCheckouts: createFixtureCheckoutTrust(base, cand),
     });
     const fake = fakeProvider();
     const arm = armRef("candidate");
@@ -340,6 +345,8 @@ describe("A5/B3 — the production adapter launches the arm's OWN build as a chi
     const runner = createProductionPreregRunner({
       rootDir: REPO_ROOT,
       env: { R97_ARM_BASELINE_DIR: base, R97_ARM_CANDIDATE_DIR: cand },
+      // R1/F2 — test-host trust capability (the marker is not a trust source).
+      trustedFixtureCheckouts: createFixtureCheckoutTrust(base, cand),
     });
     const readManifest = (dir: string): { armBuildDigest?: string; armEntrySha256?: string; armProbe?: string; armId?: string } =>
       JSON.parse(
@@ -395,6 +402,8 @@ describe("A5/B3 — the production adapter launches the arm's OWN build as a chi
     const runner = createProductionPreregRunner({
       rootDir: REPO_ROOT,
       env: { R97_ARM_BASELINE_DIR: cand, R97_ARM_CANDIDATE_DIR: base },
+      // R1/F2 — test-host trust capability (the marker is not a trust source).
+      trustedFixtureCheckouts: createFixtureCheckoutTrust(cand, base),
     });
     const arm = armRef("baseline");
     await runner.runArm(arm, {
