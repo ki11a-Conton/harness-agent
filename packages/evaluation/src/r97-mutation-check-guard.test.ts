@@ -118,6 +118,16 @@ interface GateModule {
     afterText: string;
   }) => { landed: boolean; findCount: number; replaceCount: number; reason: string | null };
   applyAnchor: (source: string, find: string, replace: string) => { ok: boolean; occurrences: number; text: string };
+  /**
+   * E4-R17b (A6): the SECOND sample of the target, taken after the workspace build and
+   * immediately before the bound test runs. Exported so the reverted-target case is
+   * pinned without mutating a production file.
+   */
+  verifyMutationStillApplied: (opts: {
+    mutation: { file: string; find: string; replace: string };
+    intendedText: string;
+    afterBuildText: string | null;
+  }) => { landed: boolean; reason: string | null };
   changedPorcelainLines: (before: string, after: string) => string[];
   unexpectedChangedPaths: (
     before: string,
@@ -1085,6 +1095,150 @@ describe("E4-R17 X5: silent false results are replaced by distinct loud failures
     expect(report.siblingChange).toBeUndefined();
     expect(report.caught).toBe(1);
     expect(report.totalMutations).toBe(1);
+  });
+});
+
+/* ==========================================================================
+ * X5b (A6) — the TARGET file itself, rewritten by a foreign writer during the window.
+ *
+ * MEASURED by independent verification at the pre-fix merge: a foreign writer that put
+ * the target's ORIGINAL bytes back during `tsc -b` produced
+ *
+ *   [MISSED] a6-forged-evidence-accepted  the test PASSED with the mutation applied —
+ *            it does not catch this defect
+ *
+ * with no abort and no sibling flag — a false EXPLANATION (the test ran against the
+ * restored source, so nothing had shown the test fails to catch the defect). The
+ * sibling check excludes the target by construction, and the landing sample was taken
+ * before the revert landed.
+ *
+ * WHICH OF THESE ARE REAL RACES, stated plainly so nothing is over-claimed: the pure
+ * cases drive `verifyMutationStillApplied` directly; the report-plumbing cases inject a
+ * result through the seam; and the one case marked REAL drives a genuine second OS
+ * process that rewrites the file while the "build step" is in flight, but over a TEMP
+ * file rather than a production one. The gate's own end-to-end A6 reproducer (a real
+ * `git checkout` of the production target during a real `tsc -b`) is recorded as a
+ * measurement in the round report, NOT as a case here.
+ * ========================================================================== */
+
+describe("E4-R17b (A6): the target rewritten by a foreign writer is its own distinct failure", () => {
+  const target = "packages/evaluation/src/prereg-run-evidence.ts";
+  const mutation = { file: target, find: "  return { verified: problems.length === 0, problems };", replace: "  return { verified: true, problems };" };
+  const intended = "export function verify() {\n  return { verified: true, problems };\n}\n";
+  const original = "export function verify() {\n  return { verified: problems.length === 0, problems };\n}\n";
+
+  it("accepts the intended bytes when nothing wrote the target", () => {
+    const verdict = mod.verifyMutationStillApplied({ mutation, intendedText: intended, afterBuildText: intended });
+    expect(verdict.landed).toBe(true);
+    expect(verdict.reason).toBeNull();
+  });
+
+  it("REFUSES when the target was put back, and its reason is DISTINCT from 'DID NOT LAND'", () => {
+    const still = mod.verifyMutationStillApplied({ mutation, intendedText: intended, afterBuildText: original });
+    expect(still.landed).toBe(false);
+    expect(still.reason).toMatch(/DID NOT STAY APPLIED/);
+    expect(still.reason).toContain(target);
+    // The two failures have different repairs, so they must not read alike: "my write
+    // never took" vs "someone else overwrote the file while I held it".
+    const neverLanded = mod.verifyMutationLanded({ mutation, intendedText: intended, afterText: original });
+    expect(still.reason).not.toBe(neverLanded.reason);
+  });
+
+  it("reports an unreadable target as NOT readable, never as a matching file", () => {
+    const verdict = mod.verifyMutationStillApplied({ mutation, intendedText: intended, afterBuildText: null });
+    expect(verdict.landed).toBe(false);
+    expect(verdict.reason).toMatch(/could not be read/);
+  });
+
+  it("REAL second OS process: a concurrent rewrite of the file is detected after the build step", async () => {
+    // A genuine race between two processes: the child rewrites the file 150 ms in, while
+    // the parent is inside its (here simulated by a wait — the gate's real build step is
+    // `tsc -b`) build window. The detection itself is what is being pinned.
+    const dir = tempDir();
+    const file = join(dir, "prereg-run-evidence.ts");
+    writeFileSync(file, intended, "utf8");
+    const writer = join(dir, "foreign-writer.mjs");
+    writeFileSync(
+      writer,
+      [
+        `import { writeFileSync } from "node:fs";`,
+        `await new Promise((resolve) => setTimeout(resolve, 150));`,
+        `writeFileSync(${JSON.stringify(file)}, ${JSON.stringify(original)}, "utf8");`,
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const child = spawn(process.execPath, [writer], { stdio: "ignore" });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      const verdict = mod.verifyMutationStillApplied({
+        mutation,
+        intendedText: intended,
+        afterBuildText: readFileSync(file, "utf8"),
+      });
+      expect(verdict.landed, "a foreign rewrite during the build must be DETECTED").toBe(false);
+      expect(verdict.reason).toMatch(/DID NOT STAY APPLIED/);
+    } finally {
+      if (child.exitCode === null) {
+        child.kill();
+        await new Promise((resolve) => child.once("close", resolve));
+      }
+    }
+  });
+
+  it("reports a target changed under the gate as NOT LANDED, and says it in the tail", async () => {
+    const dir = tempDir();
+    const lockPath = join(dir, "gate.lock.json");
+    const out = join(dir, "report.json");
+    const stdout = capture();
+    const code = await mod.main(["--only", ONE_ID, "--out", out], mainDeps(lockPath, {
+      stdout: stdout.stream,
+      runOne: () => ({
+        ...stubResult(ONE_ID, false),
+        applied: true,
+        targetChanged: true,
+        reason: "THE MUTATION DID NOT STAY APPLIED: seam-driven fixture",
+      }),
+    }));
+    expect(code).toBe(mod.EXIT_FAILED);
+    // The tail must not let a reader conclude "the test does not catch this defect".
+    expect(stdout.text()).toMatch(/never reached their test on disk/);
+    expect(stdout.text()).toContain("DID NOT STAY APPLIED");
+    const report = JSON.parse(readFileSync(out, "utf8")) as {
+      ok: boolean;
+      mutationsNotLanded: number;
+      mutationsTargetChangedUnderGate: number;
+      mutationsWriteClobbered: number;
+    };
+    expect(report.ok).toBe(false);
+    expect(report.mutationsTargetChangedUnderGate).toBe(1);
+    expect(report.mutationsNotLanded).toBe(1);
+    expect(report.mutationsWriteClobbered).toBe(0);
+  });
+
+  it("counts a PRE-WRITE anchor refusal in mutationsNotLanded too (it used to read 0)", async () => {
+    // MEASURED by independent verification: renaming a2's anchor produced a loud
+    // `the mutation anchor appears 0 time(s)` while the report said
+    // `mutationsNotLanded: 0`, so a reader grepping that one field saw nothing.
+    const dir = tempDir();
+    const lockPath = join(dir, "gate.lock.json");
+    const out = join(dir, "report.json");
+    const code = await mod.main(["--only", ONE_ID, "--out", out], mainDeps(lockPath, {
+      runOne: () => ({
+        ...stubResult(ONE_ID, false),
+        applied: false,
+        reason: "the mutation anchor appears 0 time(s) in packages/x.ts; exactly 1 is required",
+      }),
+    }));
+    expect(code).toBe(mod.EXIT_FAILED);
+    const report = JSON.parse(readFileSync(out, "utf8")) as {
+      mutationsNotLanded: number;
+      mutationsTargetChangedUnderGate: number;
+      mutationsWithSiblingChange: number;
+    };
+    expect(report.mutationsNotLanded, "a reader grepping this field must not see 0").toBe(1);
+    expect(report.mutationsTargetChangedUnderGate).toBe(0);
+    expect(report.mutationsWithSiblingChange).toBe(0);
   });
 });
 

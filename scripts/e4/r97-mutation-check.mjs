@@ -1473,6 +1473,52 @@ export function verifyMutationLanded(opts) {
   };
 }
 
+/**
+ * Is the mutation STILL on disk by the time the build has finished?
+ *
+ * MEASURED (independent verification at `9da441bf`). A foreign writer that puts the
+ * ORIGINAL bytes back over the target DURING `tsc -b` produced a plausible, and
+ * wrong, verdict:
+ *
+ *   [MISSED] a6-forged-evidence-accepted  the test PASSED with the mutation applied —
+ *            it does not catch this defect
+ *
+ * with no `[ABORT]` and no sibling-change flag. The explanation is false: the test did
+ * not run against the mutation at all, it ran against the RESTORED source. Two
+ * existing checks cannot see this by construction — `verifyMutationLanded` samples the
+ * file immediately after the write, which is too early for a revert that lands during
+ * the build, and the sibling-change check EXCLUDES the target file, because the target
+ * is legitimately dirty for as long as the mutation is applied.
+ *
+ * So the target is sampled a SECOND time, after the build and immediately before the
+ * test run, and must still be the exact text the gate wrote. This is a DISTINCT
+ * failure from `verifyMutationLanded` (the reason text differs), because the operator
+ * needs to know which of the two happened: "my write never took" and "someone else
+ * overwrote it while I held it" have different repairs.
+ *
+ * HONEST LIMIT, stated rather than papered over: a foreign writer that reverts AND
+ * re-applies inside the same window leaves both samples equal to the intended text and
+ * is invisible to any point-sampling check. What this closes is the PERSISTENT revert —
+ * the form that was measured.
+ */
+export function verifyMutationStillApplied(opts) {
+  const { mutation, intendedText, afterBuildText } = opts;
+  if (afterBuildText === intendedText) return { landed: true, reason: null };
+  return {
+    landed: false,
+    reason:
+      `THE MUTATION DID NOT STAY APPLIED: ${mutation.file} did hold the text this gate wrote when it was ` +
+      `first re-read, but by the time the workspace build finished it did NOT any more (` +
+      (afterBuildText === null
+        ? "the file could not be read"
+        : `${afterBuildText.length} bytes on disk vs ${intendedText.length} intended`) +
+      `). The bound test would then run against bytes this gate did not write, so its result must NOT be ` +
+      `reported as "the test does not catch this defect" — nobody showed that. Another process is writing the ` +
+      `SAME file the gate is mutating, and the sibling-change check cannot see it because the target is ` +
+      `excluded there by construction. No result from this mutation can be trusted.`,
+  };
+}
+
 /** The porcelain lines that differ between two `git status --porcelain` snapshots. */
 export function changedPorcelainLines(before, after) {
   const a = String(before).split(/\r?\n/).filter((line) => line.trim() !== "");
@@ -1656,8 +1702,24 @@ function runOne(mutation, ctx = {}) {
       // package is rebuilt. A build failure is reported as a broken mutation rather
       // than being counted as the test catching it.
       const buildResult = build();
-      const testRun = buildResult.code === 0 ? runVitest(mutation.suite, mutation.test) : null;
-      result = { buildCode: buildResult.code, buildOut: tail(buildResult.out), testRun };
+      // ---- IS THE MUTATION STILL ON DISK NOW THAT THE BUILD HAS RUN? (E4-R17b) --
+      //
+      // MEASURED by independent verification: a foreign writer that reverted the TARGET
+      // during `tsc -b` produced a plausible `[MISSED] … the test PASSED with the
+      // mutation applied — it does not catch this defect`, which was a false explanation
+      // — the test ran against the restored source. Sampling again here, immediately
+      // before the test run, is what makes that case a distinct failure instead.
+      const stillApplied = verifyMutationStillApplied({
+        mutation,
+        intendedText: applied.text,
+        afterBuildText: readFileSync(target, "utf8"),
+      });
+      if (!stillApplied.landed) {
+        result = { targetChanged: true, reason: stillApplied.reason, buildCode: buildResult.code };
+      } else {
+        const testRun = buildResult.code === 0 ? runVitest(mutation.suite, mutation.test) : null;
+        result = { buildCode: buildResult.code, buildOut: tail(buildResult.out), testRun };
+      }
     }
   } finally {
     writeFileSync(target, original, "utf8");
@@ -1677,6 +1739,24 @@ function runOne(mutation, ctx = {}) {
       ok: false,
       applied: true,
       reason: `RESTORATION FAILED: ${mutation.file} hashes ${restoredHash} but was ${originalHash} before the mutation`,
+    };
+  }
+
+  // THE TARGET WAS OVERWRITTEN UNDER THE GATE, between the write and the test run. This
+  // is checked FIRST because it invalidates everything downstream: the test did not run
+  // against the mutation, so "the test does not catch this defect" would be a lie.
+  if (result.targetChanged === true) {
+    return {
+      id: mutation.id,
+      planWording: mutation.planWording,
+      round: mutation.round,
+      file: mutation.file,
+      suite: mutation.suite,
+      test: mutation.test,
+      ok: false,
+      applied: true,
+      targetChanged: true,
+      reason: result.reason,
     };
   }
 
@@ -2227,7 +2307,18 @@ export async function main(argv, overrides = {}) {
       lockReclaimedBecause: lock.reclaimedBecause ?? null,
       preexistingEolOnlyDirt: verdict.tolerated.map((entry) => entry.path),
       eolOnlyDirtContentChanged: toleratedContentChanged,
-      mutationsNotLanded: results.filter((r) => r.didNotLand === true).length,
+      // `mutationsNotLanded` is the UNION of every way a mutation failed to reach the
+      // test, so a reader grepping this one field for "did not land" cannot see zero
+      // while an anchor refused to apply. MEASURED by independent verification: the
+      // anchor-check and pre-existing-mutation branches (`applied: false`) were NOT
+      // counted here, and a renamed anchor produced `mutationsNotLanded: 0` next to a
+      // loud `the mutation anchor appears 0 time(s)`. The components are reported
+      // separately so the count stays auditable rather than becoming a catch-all.
+      mutationsNotLanded: results.filter(
+        (r) => r.applied !== true || r.didNotLand === true || r.targetChanged === true,
+      ).length,
+      mutationsWriteClobbered: results.filter((r) => r.didNotLand === true).length,
+      mutationsTargetChangedUnderGate: results.filter((r) => r.targetChanged === true).length,
       mutationsWithSiblingChange: results.filter((r) => r.siblingFileChanged === true).length,
       ...(siblingChange === null ? {} : { siblingChange }),
       // The whole-tree restoration, reported separately from the per-file hashes.
@@ -2252,6 +2343,17 @@ export async function main(argv, overrides = {}) {
           `did NOT mutate changed during ${siblingChange.mutationId} (${siblingChange.unexpected
             .map((entry) => entry.path)
             .join(", ")}). This is the concurrency hazard E4-R17 guards against, NOT a mutation result.\n`,
+      );
+    }
+    // A mutation that never reached its test must not be summarised as "the test did not
+    // catch it": nobody showed that. Both of these get their own line in the tail, not
+    // only a per-mutation reason an operator has to scroll back for.
+    const didNotLand = results.filter((r) => r.didNotLand === true || r.targetChanged === true);
+    if (didNotLand.length > 0) {
+      say(
+        `\n[FAIL] ${didNotLand.length} mutation(s) never reached their test on disk ` +
+          `(${didNotLand.map((r) => r.id).join(", ")}). Their results say NOTHING about whether the bound tests ` +
+          `catch the defect. This is the concurrency hazard E4-R17 guards against, NOT a mutation result.\n`,
       );
     }
     // RELEASED EXPLICITLY HERE, on the normal path, AFTER the report is written and
