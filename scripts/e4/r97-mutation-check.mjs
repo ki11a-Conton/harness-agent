@@ -522,6 +522,32 @@ export const MUTATIONS = [
     // 假 evidence 被接受
     planWording: "假 evidence 被接受",
     round: "A7",
+    // =====================================================================
+    // R13/R12 MEASURED STATUS: this mutation LANDS (its anchor matches exactly
+    // once — the meta-suite checks that) but it is NOT CAUGHT any more. It IS
+    // caught at a85db6dc (full gate 27/27); on the merged tree the full gate is
+    // 26/27 with this as the single MISS. Reported as a DOCUMENTED dead check
+    // rather than faked: the mutation was not deleted, weakened or re-pointed.
+    //
+    // WHY (measured by applying this mutation and instrumenting the decision,
+    // then reverting the instrumentation):
+    //   decision = INVALID, reasonCodes = ["COST_CEILING_EXCEEDED", "INCOMPARABLE"]
+    //   gates.artifactIntegrity    = true   (the corroboration defeat DID work)
+    //   gates.costBounded          = false
+    //   gates.provenanceComparable = false
+    // Defeating artifact corroboration still leaves the fabricated pair refused
+    // by TWO further hard gates that are independent of evidence: the cost
+    // ceiling and provenance comparability. `armEvidenceProblems` returns [] for
+    // this fixture (it is well SHAPED), so evidence was never the deciding gate.
+    //
+    // A TWO-SITE mutation therefore CANNOT restore this check: flipping the
+    // verdict needs the evidence check AND the cost gate AND the provenance gate
+    // defeated together — a compound mutation of three unrelated invariants that
+    // no longer isolates "forged evidence is accepted", i.e. exactly the faking
+    // the R12/R13 mandate forbids. The honest repair belongs to the TEST FIXTURE
+    // (make the fabricated pair clear the cost/provenance gates so evidence
+    // corroboration is decisive again), not to this anchor.
+    // =====================================================================
     file: "packages/evaluation/src/prereg-run-evidence.ts",
     // A6/F4: a run's DECLARED evidence is trusted only after its raw artifacts
     // are read back and hashed. This mutation reports every claim as corroborated,
