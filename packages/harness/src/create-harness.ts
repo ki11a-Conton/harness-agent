@@ -121,6 +121,12 @@ export interface Harness {
   registry: ToolRegistry;
   sessionService: SessionService;
   agents: AgentDefinition[];
+  /**
+   * R3/F4 — the orchestrator THIS harness composed, carrying the tool-dispatch
+   * budget and campaign deadline it was configured with. Exposed so the
+   * composition-root binding can be exercised on the real instance.
+   */
+  orchestrator: ToolOrchestrator;
 
   /** P25-2: live session actors — the SINGLE owner of active turn state. The
    *  RPC/gateway path routes session.run/cancel/steer/followup through it
@@ -262,10 +268,25 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   // workspace is admitted into its own sandbox while it runs and removed on
   // disposal, so the child can write its workspace and nothing outside it.
   const childWorkspaceRoots = new Map<SessionId, string>();
+  // R3/F4 — the campaign's pre-dispatch tool budget and its ONE wall-clock
+  // deadline are forwarded from the host that opened the pre-registered campaign
+  // (`admission.toolDispatchBudget` / `admission.campaignDeadlineAtMs`). Without
+  // this binding the cap and the deadline are a seam no production path supplies,
+  // so the tool budget must be enforced HERE — at the composition root every
+  // harness, including the arm worker's, is built by.
+  //
+  // The deadline is captured ONCE into a local so a later mutation of the config
+  // object cannot move it, and it is read through a thunk so the orchestrator
+  // always compares against the campaign's single frozen deadline.
+  const campaignDeadlineAtMs = config.campaignDeadlineAtMs;
   const orchestrator = new ToolOrchestrator({
     registry,
     approval: new StoreApprovalResolver(approvalStore),
     workspaceRoot: cwd,
+    ...(config.toolDispatchBudget !== undefined ? { toolBudget: config.toolDispatchBudget } : {}),
+    ...(campaignDeadlineAtMs !== undefined
+      ? { dispatchDeadlineAtMs: () => campaignDeadlineAtMs }
+      : {}),
     sandboxExtraRoots: (sessionId) => {
       const root = childWorkspaceRoots.get(sessionId);
       return root !== undefined ? [root] : [];
@@ -773,6 +794,11 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     sessionService,
     sessions,
     agents,
+    // R3/F4 — the composed orchestrator (with whatever tool budget and campaign
+    // deadline this harness was given) is exposed so a host/test can exercise the
+    // REAL wired instance rather than a look-alike, the same reason
+    // `recoveryStore` is exposed below.
+    orchestrator,
       ...(memoryBridge !== undefined ? { memoryBridge } : {}),
     ...(memoryStore !== undefined ? { memoryStore } : {}),
     ...(recoveryStore !== undefined ? { recoveryStore } : {}),
