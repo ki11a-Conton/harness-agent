@@ -37,6 +37,8 @@
 import { createHash } from "node:crypto";
 import { budgetForCapabilities, resolveCapabilities } from "@ar/model";
 import {
+  FORMAL_PER_CALL_INPUT_TOKEN_CEILING,
+  FORMAL_PER_CALL_OUTPUT_TOKEN_CEILING,
   TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2,
   computeRuntimeConfigHash,
   stableStringify,
@@ -177,6 +179,19 @@ export type PricingCurrency = "USD";
 
 export const SUPPORTED_PRICING_CURRENCY: PricingCurrency = "USD";
 
+/**
+ * THE per-call token envelope a per-call price must cover: the formal per-call
+ * INPUT ceiling plus the per-call OUTPUT ceiling.
+ *
+ * It is deliberately NOT the per-RUN conversation budget
+ * (`formalExecutionProfile().budgetTokens`): a per-call price bounds ONE call,
+ * so checking it against an accumulated per-run budget is a category error that
+ * would refuse every correctly-priced first-party run. Both the build and the
+ * observe site pass THIS value as `requiredTokenCeiling`.
+ */
+export const PRICING_PER_CALL_TOKEN_ENVELOPE =
+  FORMAL_PER_CALL_INPUT_TOKEN_CEILING + FORMAL_PER_CALL_OUTPUT_TOKEN_CEILING;
+
 export const PRICING_SNAPSHOT_V1 = {
   version: "pricing-snapshot-v2",
   source: "provider published rate card (list price, highest tier), recorded out of band in docs/evidence",
@@ -188,7 +203,7 @@ export const PRICING_SNAPSHOT_V1 = {
   /** When the published rate card was recorded (2025-01-01T00:00:00Z). */
   issuedAtMs: 1_735_689_600_000,
   /** The per-call token envelope the per-call bound below was computed for. */
-  coveredTokenCeiling: 33_000,
+  coveredTokenCeiling: PRICING_PER_CALL_TOKEN_ENVELOPE,
   requestBoundByModel: {
     [DEFAULT_REAL_MODEL_ID]: 2_500_000,
   } as Readonly<Record<string, number>>,

@@ -121,6 +121,25 @@ export interface PreregProviderV2 {
   endpointDigest: string;
   /** Digest of the effective request profile (budget tokens, stall policy, …). */
   requestProfileDigest: string;
+  /**
+   * F5/R4 — the canonical digest of the pricing BASIS this plan was approved at
+   * (amount + source level + source + model + endpoint + currency + ceilings +
+   * validity window). It is a SOURCE field, so it is part of
+   * `preregistrationDigest`: the authorization and every resume are bound to the
+   * root digest, which means a swapped pricing basis invalidates an old approval
+   * even when the per-call amount is unchanged.
+   *
+   * OPTIONAL for reading legacy artifacts (their root digest is recomputed from
+   * their own body exactly as before); `prereg build` always writes it, and it is
+   * strictly validated when present.
+   */
+  pricingDigest?: string;
+  /**
+   * F5/R4 — the per-call price (integer USD micros, or `null` when unpriceable)
+   * the approval was based on, for the read-only review package. Bound in the
+   * root digest alongside `pricingDigest`.
+   */
+  usdMicrosPerCall?: number | null;
 }
 
 /** One selected case: id + CONTENT digest + eligibility evidence digest. */
@@ -252,6 +271,10 @@ export interface PreregistrationV2Options {
     /** Raw base URL; normalized to a digest inside. Never stored raw. */
     endpointBaseUrl?: string | null;
     requestProfile: Record<string, unknown>;
+    /** F5/R4 — the approved pricing-basis digest (see `PreregProviderV2`). */
+    pricingDigest?: string;
+    /** F5/R4 — the approved per-call price (integer USD micros, or `null`). */
+    usdMicrosPerCall?: number | null;
   };
   /** The REAL catalog universe the selection must be a subset of. */
   catalog: PreregCatalogEntryV2[];
@@ -291,6 +314,12 @@ function sourceBody(a: ToolCallEfficiencyPreregistrationV2): Record<string, unkn
       modelId: a.provider.modelId,
       endpointDigest: a.provider.endpointDigest,
       requestProfileDigest: a.provider.requestProfileDigest,
+      // F5/R4 — the pricing BASIS is part of the root identity. Spread
+      // conditionally so an artifact that binds no pricing basis keeps the exact
+      // digest it had before (its own body determines its digest), while a built
+      // artifact that DOES bind one can never be re-approved under a swapped rate.
+      ...(a.provider.pricingDigest !== undefined ? { pricingDigest: a.provider.pricingDigest } : {}),
+      ...(a.provider.usdMicrosPerCall !== undefined ? { usdMicrosPerCall: a.provider.usdMicrosPerCall } : {}),
     },
     dataset: {
       suiteId: a.dataset.suiteId,
@@ -468,6 +497,10 @@ export function buildToolCallEfficiencyPreregistrationV2(
     requestProfileDigest: createHash("sha256")
       .update(stableStringify(opts.provider?.requestProfile ?? {}), "utf8")
       .digest("hex"),
+    // F5/R4 — bind the approved pricing BASIS (only when the caller observed one;
+    // a legacy/offline build that has no basis stays byte-identical to before).
+    ...(opts.provider?.pricingDigest !== undefined ? { pricingDigest: opts.provider.pricingDigest } : {}),
+    ...(opts.provider?.usdMicrosPerCall !== undefined ? { usdMicrosPerCall: opts.provider.usdMicrosPerCall } : {}),
   };
 
   // --- dataset: selection MUST be a subset of the real catalog --------------
@@ -808,12 +841,30 @@ export function parseAndValidatePreregistrationV2(json: string): ToolCallEfficie
   }
 
   const pv = expectObject(root.provider, "provider");
-  expectKeys(pv, ["providerId", "modelId", "endpointDigest", "requestProfileDigest"], "provider");
+  expectKeys(pv, ["providerId", "modelId", "endpointDigest", "requestProfileDigest", "pricingDigest", "usdMicrosPerCall"], "provider");
+  // F5/R4 — validate the pricing basis STRICTLY when it is present. A digest that
+  // is not a sha256, or a negative/fractional price, is a tampered or malformed
+  // binding and must never be silently dropped (a dropped basis would let the
+  // artifact evade the pricing-drift comparison).
+  let pricingDigest: string | undefined;
+  if (pv.pricingDigest !== undefined) {
+    const digest = expectString(pv.pricingDigest, "provider.pricingDigest");
+    if (!/^[0-9a-f]{64}$/.test(digest)) {
+      throw new PreregistrationV2Error("INVALID_FIELD", "provider.pricingDigest must be a 64-character lowercase sha256 hex string");
+    }
+    pricingDigest = digest;
+  }
+  let usdMicrosPerCall: number | null | undefined;
+  if (pv.usdMicrosPerCall !== undefined) {
+    usdMicrosPerCall = pv.usdMicrosPerCall === null ? null : expectNonNegInt(pv.usdMicrosPerCall, "provider.usdMicrosPerCall");
+  }
   const provider: PreregProviderV2 = {
     providerId: expectString(pv.providerId, "provider.providerId"),
     modelId: expectString(pv.modelId, "provider.modelId"),
     endpointDigest: expectString(pv.endpointDigest, "provider.endpointDigest"),
     requestProfileDigest: expectString(pv.requestProfileDigest, "provider.requestProfileDigest"),
+    ...(pricingDigest !== undefined ? { pricingDigest } : {}),
+    ...(usdMicrosPerCall !== undefined ? { usdMicrosPerCall } : {}),
   };
 
   const ds = expectObject(root.dataset, "dataset");

@@ -41,7 +41,13 @@ import {
   selectionFromFrozenEvidence,
   TOOL_CALL_EFFICIENCY_CASE_SELECTION_PATH,
 } from "@ar/evaluation";
-import { formalExecutionProfile } from "./prereg-execution-identity.js";
+import {
+  DECLARED_PRICING_ENV,
+  PRICING_PER_CALL_TOKEN_ENVELOPE,
+  describePricingInspection,
+  formalExecutionProfile,
+  resolvePricingBasis,
+} from "./prereg-execution-identity.js";
 
 export interface PreregRunnerAdapter {
   /** Re-observe the execution identity NOW (source, arms, guidance, cases…). */
@@ -218,7 +224,45 @@ async function buildCmd(rest: string[]): Promise<PreregCommandResult> {
   // identity here would drift from what actually executes, which is exactly the
   // defect the formal gate refuses.
   const base = config as unknown as PreregistrationV2Options;
-  const profile = formalExecutionProfile();
+  // F5/R4 — the build path observes the pricing basis from the SAME env the rest
+  // of the profile uses, so the digest it binds is the one `prereg run` will
+  // re-derive (and the one a resume is keyed by).
+  const env = process.env;
+  const profile = formalExecutionProfile(env);
+  const pricing = resolvePricingBasis(
+    profile.provider.providerId,
+    {
+      modelId: profile.provider.modelId,
+      endpointBaseUrl: profile.provider.endpointBaseUrl,
+      // The PER-CALL envelope a per-call price must cover — never the per-RUN
+      // conversation budget (see PRICING_PER_CALL_TOKEN_ENVELOPE).
+      requiredTokenCeiling: PRICING_PER_CALL_TOKEN_ENVELOPE,
+    },
+    env,
+  );
+  // F5/R4 — fail CLOSED when a declaration was SUPPLIED and does not qualify:
+  // building a plan whose pricing basis is silently absent would produce an
+  // artifact whose price can never be re-derived (and therefore never certified)
+  // at run time. An environment that supplies NO declaration is unaffected: the
+  // run-time gate still decides (`PRICING_UNKNOWN`).
+  if (!pricing.ok && (env[DECLARED_PRICING_ENV] ?? "").trim() !== "") {
+    return {
+      exitCode: 1,
+      lines: [
+        "prereg build: REFUSED (PRICING_DECLARATION_INVALID)",
+        `  ${pricing.reason}: ${pricing.detail}`,
+        "  provider calls: 0",
+      ],
+    };
+  }
+  // A priced basis is bound into the artifact (and therefore into the root
+  // `preregistrationDigest`, the authorization and the resume key). An
+  // unbilled-stub or unpriceable run binds nothing: there is no pricing basis a
+  // swap could invalidate.
+  const boundPricing =
+    pricing.ok && pricing.basis.basisKind !== "unbilled_stub"
+      ? { pricingDigest: pricing.basis.pricingDigest, usdMicrosPerCall: pricing.basis.usdMicrosPerCall }
+      : {};
   const options: PreregistrationV2Options = {
     ...base,
     catalog: resolved.catalog,
@@ -231,6 +275,7 @@ async function buildCmd(rest: string[]): Promise<PreregCommandResult> {
       modelId: profile.provider.modelId,
       endpointBaseUrl: profile.provider.endpointBaseUrl,
       requestProfile: profile.requestProfile,
+      ...boundPricing,
     },
   };
   try {
@@ -247,6 +292,19 @@ async function buildCmd(rest: string[]): Promise<PreregCommandResult> {
         `  selectionProvenance:    ${artifact.dataset.selectionProvenanceDigest}`,
         `  cases: ${artifact.dataset.cases.length}  repetitions: ${artifact.schedule.repetitions}  logicalRuns: ${artifact.schedule.logicalRuns}`,
         `  worst-case model calls: ${artifact.budget.campaignWorstCaseModelCalls}`,
+        // F5/R4 — read-only pricing review: the source LEVEL, the budget
+        // computation and the digest, with credentials redacted. It never
+        // constructs a provider ("provider calls: 0" below).
+        ...describePricingInspection({
+          providerId: profile.provider.providerId,
+          query: {
+            modelId: profile.provider.modelId,
+            endpointBaseUrl: profile.provider.endpointBaseUrl,
+            requiredTokenCeiling: PRICING_PER_CALL_TOKEN_ENVELOPE,
+          },
+          env,
+          maxModelCalls: artifact.budget.campaignWorstCaseModelCalls,
+        }).map((line) => `  ${line}`),
         "  provider calls: 0",
       ],
     };
@@ -280,11 +338,29 @@ async function validateCmd(rest: string[], deps: PreregCommandDeps): Promise<Pre
   return {
     exitCode: 0,
     lines: json
-      ? [JSON.stringify({ ok: true, preregistrationDigest: artifact.preregistrationDigest, planDigest: artifact.schedule.planDigest })]
+      ? [
+          JSON.stringify({
+            ok: true,
+            preregistrationDigest: artifact.preregistrationDigest,
+            planDigest: artifact.schedule.planDigest,
+            // F5/R4 — the pricing basis the artifact BINDS. Read-only: no provider
+            // is constructed and no live price is observed here, so the actual
+            // cost stays null (NOT_OBSERVED), never 0.
+            pricingDigest: artifact.provider.pricingDigest ?? null,
+            usdMicrosPerCall: artifact.provider.usdMicrosPerCall ?? null,
+            actualCostUsd: null,
+          }),
+        ]
       : [
           `prereg validate: OK`,
           `  preregistrationDigest: ${artifact.preregistrationDigest}`,
           `  planDigest:             ${artifact.schedule.planDigest}`,
+          `  pricing basis:          ${
+            artifact.provider.pricingDigest !== undefined
+              ? `bound (${artifact.provider.usdMicrosPerCall ?? "null"} µUSD/call CEILING — actual cost NOT_OBSERVED)`
+              : "NOT_BOUND (legacy artifact: no pricing basis was bound)"
+          }`,
+          `  pricingDigest:          ${artifact.provider.pricingDigest ?? "NOT_OBSERVED"}`,
           "  provider calls: 0",
         ],
   };

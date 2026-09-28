@@ -74,7 +74,7 @@ import { stableStringify } from "@ar/evaluation";
 import { PROVIDER_DEFAULT_ENDPOINT_DIGEST } from "@ar/evaluation";
 import { createPreregArmExecutor, type FixtureCheckoutTrust } from "./prereg-arm-executor.js";
 import { resolveModelProvider } from "./provider.js";
-import { formalExecutionProfile, resolveUsdMicrosPerCall } from "./prereg-execution-identity.js";
+import { PRICING_PER_CALL_TOKEN_ENVELOPE, formalExecutionProfile, resolvePricingBasis } from "./prereg-execution-identity.js";
 import type { PreregRunnerAdapter } from "./prereg-command.js";
 
 /**
@@ -138,6 +138,25 @@ export function observeExecutionIdentity(
   // the drift defect this observer exists to prevent.
   const { provider, runtimeConfigDigest, requestProfileDigest } = formalExecutionProfile(env);
   const endpointDigest = captureEndpointIdentity(provider.endpointBaseUrl) ?? PROVIDER_DEFAULT_ENDPOINT_DIGEST;
+  // F5/R4 — the pricing basis is observed from THE SAME injected `env` as every
+  // other identity input. Previously the price was read from the global
+  // `process.env` behind this caller's back, so two fixed envs could
+  // cross-contaminate one price. `resolvePricingBasis` REQUIRES the env and
+  // returns the full basis (amount, source level, source, validity, coverage) so
+  // the canonical `pricingDigest` can be bound into the pre-registration and
+  // compared at run/resume time. An unpriceable run stays `null` (never 0) and
+  // carries no digest, so the money-bounded gate still refuses it.
+  const pricing = resolvePricingBasis(
+    provider.providerId,
+    {
+      modelId: provider.modelId,
+      endpointBaseUrl: provider.endpointBaseUrl,
+      // The PER-CALL envelope a per-call price must cover — never the per-RUN
+      // conversation budget (see PRICING_PER_CALL_TOKEN_ENVELOPE).
+      requiredTokenCeiling: PRICING_PER_CALL_TOKEN_ENVELOPE,
+    },
+    env,
+  );
   return {
     // A non-40-hex (or unreadable) HEAD can never equal a bound sha → refusal.
     candidateSourceSha: head !== null && /^[0-9a-f]{40}$/.test(head) ? head : "",
@@ -168,10 +187,16 @@ export function observeExecutionIdentity(
     // the first-party endpoint, and `null` (unknown) for a proxy endpoint or an
     // unlisted model — which the money-bounded gate refuses as `PRICING_UNKNOWN`,
     // never a silent zero.
-    usdMicrosPerCall: resolveUsdMicrosPerCall(provider.providerId, {
-      modelId: provider.modelId,
-      endpointBaseUrl: provider.endpointBaseUrl,
-    }),
+    usdMicrosPerCall: pricing.ok ? pricing.basis.usdMicrosPerCall : null,
+    // F5/R4 — the canonical digest of the observed pricing BASIS, and the source
+    // LEVEL for the read-only review package. Unpriceable ⇒ no digest, so a
+    // bound artifact can never match it. An `unbilled_stub` basis is likewise not
+    // bound: it makes no externally-billed call, so there is no pricing basis a
+    // swap could invalidate, and binding a synthetic constant would add drift
+    // noise without adding a guarantee. (Model/endpoint changes still invalidate
+    // through the existing identity fields.)
+    ...(pricing.ok && pricing.basis.basisKind !== "unbilled_stub" ? { pricingDigest: pricing.basis.pricingDigest } : {}),
+    pricingSourceKind: pricing.ok ? pricing.basis.basisKind : null,
     // N3 — re-derived from the LIVE endpoint, never from the artifact. It is the
     // evidence the synthetic-fixture admission uses to show that its only
     // transport is loopback (hence cannot bill anything).

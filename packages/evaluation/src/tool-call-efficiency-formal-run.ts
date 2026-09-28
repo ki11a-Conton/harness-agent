@@ -429,6 +429,30 @@ export interface PreregisteredCampaignObservationV2 {
    */
   usdMicrosPerCall: number | null;
   /**
+   * F5/R4 — the canonical digest of the WHOLE pricing basis that produced
+   * `usdMicrosPerCall`: the amount PLUS the source level (operator_declared vs
+   * provider_verified), the source, the model, the endpoint, the currency, the
+   * ceilings and the validity window.
+   *
+   * `usdMicrosPerCall` (and `budget.maxUsdMicros`) alone cannot bind the basis: a
+   * swapped rate SOURCE, endpoint or validity window that happens to keep the same
+   * amount would be invisible. `observationViolationsV2` therefore compares this
+   * digest, so a pricing-basis change after approval is execution identity drift —
+   * refused BEFORE any provider factory call.
+   *
+   * OPTIONAL in the type only for source compatibility with in-memory fixtures
+   * that predate R4; `observeExecutionIdentity` ALWAYS sets it, and a bound digest
+   * against a missing observed one is reported as drift (fail closed).
+   */
+  pricingDigest?: string;
+  /**
+   * F5/R4 — the LEVEL of the observed price: `provider_verified` (a
+   * provider-published rate card), `operator_declared` (a conservative UPPER
+   * BOUND the operator stated, never an invoice) or `unbilled_stub`. This is a
+   * review-package diagnostic; the BINDING is `pricingDigest`.
+   */
+  pricingSourceKind?: "operator_declared" | "provider_verified" | "unbilled_stub" | null;
+  /**
    * R1/F1 — the ADDRESS class of the resolved endpoint, NOT a billing class.
    *
    * TRUE only when the observer proved the endpoint is loopback (`127.0.0.0/8`,
@@ -442,6 +466,29 @@ export interface PreregisteredCampaignObservationV2 {
    * `openPreregisteredCampaignGate`. This field remains a diagnostic fact.
    */
   endpointIsLoopback: boolean;
+}
+
+/**
+ * F5/R4 — the pricing digest BOUND by the pre-registration.
+ *
+ * The canonical location is `provider.pricingDigest`. A root-level
+ * `pricingDigest` is accepted as a compatibility alias (R0's F5 counterexample
+ * writes it there); new artifacts must use the `provider` location.
+ */
+function boundPricingDigestOf(artifact: ToolCallEfficiencyPreregistrationV2): string | null {
+  const nested = artifact.provider.pricingDigest;
+  if (typeof nested === "string") return nested;
+  const root = (artifact as { pricingDigest?: unknown }).pricingDigest;
+  return typeof root === "string" ? root : null;
+}
+
+/** F5/R4 — the per-call price the pre-registration was approved at, or
+ *  `undefined` when it binds none (a legacy artifact). Same alias rule. */
+function boundUsdMicrosPerCallOf(artifact: ToolCallEfficiencyPreregistrationV2): number | null | undefined {
+  const nested = artifact.provider.usdMicrosPerCall;
+  if (typeof nested === "number" || nested === null) return nested;
+  const root = (artifact as { usdMicrosPerCall?: unknown }).usdMicrosPerCall;
+  return typeof root === "number" ? root : undefined;
 }
 
 /** Compare the artifact's bound identity against a fresh observation. */
@@ -464,6 +511,17 @@ export function observationViolationsV2(
   cmp("provider.modelId", artifact.provider.modelId, obs.modelId);
   cmp("provider.endpointDigest", artifact.provider.endpointDigest, obs.endpointDigest);
   cmp("provider.requestProfileDigest", artifact.provider.requestProfileDigest, obs.requestProfileDigest);
+  // F5/R4 — the pricing BASIS, not merely its amount. `budget.maxUsdMicros` is the
+  // CAP; two bases with the same per-call amount but a different source level,
+  // source, endpoint, currency, ceilings or validity window are DIFFERENT
+  // execution identities and must never inherit an old approval. `undefined`
+  // normalizes to `null`, so a legacy in-memory pair (neither side carries one) is
+  // not spurious drift, while a BOUND digest against a missing observed one is.
+  cmp("pricingDigest", boundPricingDigestOf(artifact), obs.pricingDigest ?? null);
+  const boundUsdMicrosPerCall = boundUsdMicrosPerCallOf(artifact);
+  if (boundUsdMicrosPerCall !== undefined) {
+    cmp("provider.usdMicrosPerCall", boundUsdMicrosPerCall, obs.usdMicrosPerCall);
+  }
   cmp("evaluation.decisionPolicyDigest", artifact.evaluation.decisionPolicyDigest, obs.decisionPolicyDigest);
   // B1 — the selection's provenance and every case's eligibility are compared
   // against values the observer RE-DERIVED from the frozen selection/taxonomy,
