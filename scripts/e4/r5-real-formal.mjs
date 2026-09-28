@@ -15,7 +15,8 @@
  *     mode is bound by the artifact digest and by the authorization that names
  *     that digest);
  *   - two GENUINE git checkouts of this repository (the published pair
- *     `8265dc39…` / `ee15e7e7…` by default), enforced as clean work trees at a
+ *     `4f8d98ec…` / `2314ce1d…` by default, re-pinned by R15 so both arms
+ *     contain P2-41/P2-43), enforced as clean work trees at a
  *     40-hex HEAD with resolving, DIFFERING execution closures;
  *   - a test-host OFFLINE scripted provider, so no request is paid and no socket
  *     is opened (the release CLI cannot reach an offline transport by design —
@@ -79,10 +80,18 @@ const PROTOCOL_FIXES = [
 ];
 
 const DEFAULT_PAIR = {
+  // A local directory convention (NOT a revision claim): the arms must be
+  // re-prepared at the pair below, e.g.
+  //   node scripts/e4/r97-observe-arms.mjs --root $env:TEMP\r97-arms-n1pair
   baseline: join(tmpdir(), "r97-arms-n1pair", "baseline"),
   candidate: join(tmpdir(), "r97-arms-n1pair", "candidate"),
-  expectedBaselineHead: "8265dc39",
-  expectedCandidateHead: "ee15e7e7",
+  // R15 re-pin: the previous `8265dc39`/`ee15e7e7` pair predated the protocol
+  // fixes, so `--identity` (the DEFAULT phase) reported P2-41/P2-43 NOT PRESENT
+  // in both arms. These are the same SHAs `r97-observe-arms.mjs` defaults to,
+  // `.github/workflows/ci.yml` binds, and `r97-driver-closed-loop.test.ts`
+  // asserts. There is no CLI flag for this pair, so the defaults ARE the binding.
+  expectedBaselineHead: "4f8d98ec",
+  expectedCandidateHead: "2314ce1d",
 };
 
 function git(root, args) {
