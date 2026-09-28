@@ -67,6 +67,7 @@ import {
 } from "./tool-call-efficiency-preregistration-v2.js";
 import {
   CostBudget,
+  createDurableToolDispatchBudget,
   createFormalBudgetedProvider,
   openPreregisteredCampaignGate,
   type PreregisteredCampaignObservationV2,
@@ -331,7 +332,7 @@ describe("N0 RED — N4: CostBudget.settle never validates the tool-call actual"
         };
       },
     };
-    const { provider: wrapped } = createFormalBudgetedProvider({
+    const { provider: wrapped, stats } = createFormalBudgetedProvider({
       provider,
       ledger,
       costBudget,
@@ -342,7 +343,25 @@ describe("N0 RED — N4: CostBudget.settle never validates the tool-call actual"
     for await (const _ev of client.generate({} as ModelRequest, new AbortController().signal)) {
       // drain
     }
-    // The durable ledger must show the two tool calls the run actually made.
+    // R3/F4 — UPDATED SEMANTICS (plan(20260928-105425).md §R3, F4). This test used
+    // to require the DECLARATION to consume the dimension; that after-the-fact
+    // tally was the defect (it charged tools that were never dispatched, and it
+    // could throw after the model ledger had already committed). The declaration is
+    // now a DIAGNOSTIC, and the dimension is consumed by the REAL dispatch point:
+    // the durable pre-dispatch budget. The gate's INTENT is preserved — the tool
+    // dimension is really consumed — with the consumption attributed correctly.
+    expect(stats.declaredToolCalls).toBe(2);
+    expect(costBudget.view().charged.toolCalls).toBe(0);
+    const dispatch = createDurableToolDispatchBudget({
+      costBudget,
+      deadlineAtMs: costBudget.deadlineAtMs(),
+      now: () => Date.now(),
+    });
+    for (const id of ["c1", "c2"]) {
+      const r = await dispatch.reserve({ toolCallId: id, tool: "read_file", sessionId: "s", readOnly: true, sideEffectScope: "none" });
+      expect(r.ok).toBe(true);
+      if (r.ok) await r.settle("dispatched");
+    }
     expect(costBudget.view().charged.toolCalls).toBe(2);
   }, 60_000);
 

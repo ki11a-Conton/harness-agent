@@ -56,7 +56,63 @@ export interface OrchestratorDeps {
    *  reconciliation on resume). Absent by default; hosts wire it to their
    *  fault injector. */
   intentPersistedFailAt?: () => Promise<void>;
+  /** R3/F4 — the campaign's TOOL-DISPATCH budget. When set, one reservation is
+   *  taken at the REAL dispatch point (after every fail-closed gate, before the
+   *  tool body runs) and settled exactly once. A refusal means the tool body
+   *  NEVER runs, so `maxToolCalls` becomes a PRE-execution constraint instead of
+   *  an after-the-fact tally. The implementation is injected: `packages/tools`
+   *  must NOT depend on the evaluation package. */
+  toolBudget?: ToolDispatchBudget;
+  /** R3/F4 — the campaign's SINGLE wall-clock deadline (epoch ms), read through
+   *  the host's clock. `null` = no deadline. Checked BEFORE the reservation and
+   *  before the tool body: after the deadline no new tool starts, whether or not
+   *  a budget is wired. */
+  dispatchDeadlineAtMs?: () => number | null;
 }
+
+/**
+ * R3/F4 — the MINIMAL pre-dispatch budget capability (structural, so neither
+ * `packages/tools` nor `packages/core` depends on `@ar/evaluation`; the durable
+ * implementation is bound by the host).
+ *
+ * FROZEN COUNTING SEMANTICS (one dispatch = one reservation):
+ *   - rejected (schema/permission/approval/sandbox denial): NEVER reserved, never
+ *     dispatched — `0` on the tool dimension.
+ *   - cache hit / deduplicated read: served without a dispatch, so NOT reserved
+ *     and NOT counted as an actual dispatch (it may be reported separately).
+ *   - not_executed: reserved, but the body never started (e.g. the `tool.started`
+ *     event failed) → the reservation is RELEASED.
+ *   - dispatched: the body ran and returned a result (success, failed or denied)
+ *     → the reservation is CHARGED, exactly once.
+ *   - retry / recovery re-dispatch: a NEW dispatch, therefore its OWN reservation.
+ *   - post-cancel / timeout with a possible side effect: charged as `unknown`,
+ *     NEVER refunded — `unknown` is not "cancelled" and not a release.
+ */
+export interface ToolDispatchBudget {
+  reserve(request: ToolDispatchReservationRequest): Promise<ToolDispatchReservation>;
+}
+
+export interface ToolDispatchReservationRequest {
+  toolCallId: string;
+  tool: string;
+  sessionId: string;
+  turnId?: string;
+  readOnly: boolean;
+  sideEffectScope: string;
+}
+
+export interface ToolDispatchReservation {
+  /** `false` → the dispatch MUST NOT run. */
+  ok: boolean;
+  /** Stable reason when `ok` is false (e.g. TOOL_BUDGET_EXHAUSTED). */
+  reason?: string;
+  /** Settle exactly once. Implementations MUST be idempotent. */
+  settle(outcome: "dispatched" | "not_executed" | "unknown"): Promise<void>;
+}
+
+/** R3/F4 — the stable reason codes the orchestrator refuses a dispatch with. */
+export const TOOL_BUDGET_EXHAUSTED = "TOOL_BUDGET_EXHAUSTED";
+export const CAMPAIGN_DEADLINE_EXCEEDED = "CAMPAIGN_DEADLINE_EXCEEDED";
 
 interface SanitizedCall {
   action: "read" | "edit" | "exec";
@@ -92,6 +148,8 @@ export class ToolOrchestrator {
   private readonly nonFatal?: NonFatalErrorSink;
   private readonly persistIntent?: (intent: ToolIntentPayload) => Promise<void>;
   private readonly intentPersistedFailAt?: () => Promise<void>;
+  private readonly toolBudget?: ToolDispatchBudget;
+  private readonly dispatchDeadlineAtMs?: () => number | null;
 
   constructor(deps: OrchestratorDeps) {
     this.registry = deps.registry;
@@ -105,6 +163,8 @@ export class ToolOrchestrator {
     this.nonFatal = deps.nonFatal;
     this.persistIntent = deps.persistIntent;
     this.intentPersistedFailAt = deps.intentPersistedFailAt;
+    this.toolBudget = deps.toolBudget;
+    this.dispatchDeadlineAtMs = deps.dispatchDeadlineAtMs;
   }
 
   async execute(request: ToolCallRequest, context: ToolExecutionContext): Promise<ToolResult> {
@@ -228,39 +288,117 @@ export class ToolOrchestrator {
         await this.intentPersistedFailAt?.();
       }
 
-      await this.emit("tool.started", request, context, {});
-      let result: ToolResult;
+      // 8b. R3/F4 — THE DEADLINE, then THE PRE-DISPATCH RESERVATION.
+      //
+      // This is the REAL dispatch point: schema, permission, approval, sandbox and
+      // the durable intent have all passed, and the tool body has NOT run. A
+      // refusal here means `runBounded` is never entered, so the campaign's tool
+      // cap and its single wall-clock deadline constrain execution BEFORE the side
+      // effect instead of tallying it afterwards.
+      const deadlineAtMs = this.dispatchDeadlineAtMs?.() ?? null;
+      if (deadlineAtMs !== null && this.now() >= deadlineAtMs) {
+        await this.emit("tool.failed", request, context, {
+          toolCallId: request.call.id,
+          tool: tool.name,
+          error: errorInfo("RESOURCE_LIMIT", `${CAMPAIGN_DEADLINE_EXCEEDED}: the campaign deadline passed before this tool started`),
+          durationMs: this.now() - started,
+        }).catch((err) => this.nonFatal?.report("orchestrator.emit:tool.failed", err));
+        return this.failToolLimit(request, context, CAMPAIGN_DEADLINE_EXCEEDED,
+          `the campaign deadline (${new Date(deadlineAtMs).toISOString()}) passed before this tool started; refusing to start it`, started);
+      }
+
+      let dispatchReservation: ToolDispatchReservation | undefined;
+      if (this.toolBudget !== undefined) {
+        dispatchReservation = await this.toolBudget.reserve({
+          toolCallId: request.call.id,
+          tool: tool.name,
+          sessionId: request.sessionId,
+          ...(request.turnId !== undefined ? { turnId: request.turnId } : {}),
+          readOnly: semantics.readOnly,
+          sideEffectScope: semantics.sideEffectScope,
+        });
+        if (!dispatchReservation.ok) {
+          const reason = dispatchReservation.reason ?? TOOL_BUDGET_EXHAUSTED;
+          await this.emit("tool.failed", request, context, {
+            toolCallId: request.call.id,
+            tool: tool.name,
+            error: errorInfo("RESOURCE_LIMIT", reason),
+            durationMs: this.now() - started,
+          }).catch((err) => this.nonFatal?.report("orchestrator.emit:tool.failed", err));
+          return this.failToolLimit(request, context, reason,
+            `refusing to dispatch ${tool.name}: ${reason} (the campaign tool budget is a pre-execution constraint)`, started);
+        }
+      }
+
+      let dispatchOutcome: "dispatched" | "not_executed" | "unknown" = "not_executed";
+      let bodyStarted = false;
       try {
-        result = await this.runBounded(tool, args, request, context);
+        await this.emit("tool.started", request, context, {});
+        bodyStarted = true;
+        let result: ToolResult;
+        try {
+          result = await this.runBounded(tool, args, request, context);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          // The body ran (or may have): a throw is NOT "not executed".
+          dispatchOutcome = mayHaveSideEffect(semantics) ? "unknown" : "dispatched";
+          return this.fail(request, context, "INTERNAL_ERROR", message, started);
+        }
+
+        // 9. enforce timeout/output limits
+        if (result.status === "timeout") {
+          dispatchOutcome = mayHaveSideEffect(semantics) ? "unknown" : "dispatched";
+          return this.fail(request, context, "PROCESS_TIMEOUT", "tool execution timed out", started, result);
+        }
+        result = this.applyOutputLimit(result, context);
+
+        // 10. capture evidence into the event trail
+        if (result.evidence === undefined && result.status === "success") {
+          const evidence = this.buildEvidence(tool, args);
+          if (evidence) result = { ...result, evidence: [evidence] };
+        }
+        await this.emit("tool.completed", request, context, {
+          status: result.status,
+          durationMs: this.now() - started,
+          evidence: result.evidence ?? [],
+          outputPreview: this.preview(result.output),
+        });
+
+        // R3/F4 — a cancelled call whose effects nobody saw is UNKNOWN, never a
+        // clean "no side effect" and never a refund.
+        dispatchOutcome =
+          result.status === "cancelled" && mayHaveSideEffect(semantics) ? "unknown" : "dispatched";
+
+        // 12. normalize result
+        return this.normalize(result);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        dispatchOutcome = bodyStarted && mayHaveSideEffect(semantics) ? "unknown" : bodyStarted ? "dispatched" : "not_executed";
         return this.fail(request, context, "INTERNAL_ERROR", message, started);
+      } finally {
+        // Exactly once, and only if a reservation was actually taken.
+        if (dispatchReservation !== undefined) {
+          await dispatchReservation.settle(bodyStarted ? dispatchOutcome : "not_executed");
+        }
       }
-
-      // 9. enforce timeout/output limits
-      if (result.status === "timeout") {
-        return this.fail(request, context, "PROCESS_TIMEOUT", "tool execution timed out", started, result);
-      }
-      result = this.applyOutputLimit(result, context);
-
-      // 10. capture evidence into the event trail
-      if (result.evidence === undefined && result.status === "success") {
-        const evidence = this.buildEvidence(tool, args);
-        if (evidence) result = { ...result, evidence: [evidence] };
-      }
-      await this.emit("tool.completed", request, context, {
-        status: result.status,
-        durationMs: this.now() - started,
-        evidence: result.evidence ?? [],
-        outputPreview: this.preview(result.output),
-      });
-
-      // 12. normalize result
-      return this.normalize(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return this.fail(request, context, "INTERNAL_ERROR", message, started);
     }
+  }
+
+  /** R3/F4 — a pre-dispatch refusal with a STABLE reason code in the message and
+   *  in `metadata.reasonCode` (`RESOURCE_LIMIT` is the existing typed code; the
+   *  fine-grained reason is not invented as a new contract code). */
+  private failToolLimit(
+    request: ToolCallRequest,
+    context: ToolExecutionContext,
+    reasonCode: string,
+    message: string,
+    started: number,
+  ): ToolResult {
+    const base = this.fail(request, context, "RESOURCE_LIMIT", `${reasonCode}: ${message}`, started);
+    return { ...base, metadata: { ...(base.metadata ?? {}), reasonCode, preDispatch: true } };
   }
 
   // --- pipeline helpers ---------------------------------------------------
@@ -516,7 +654,7 @@ export class ToolOrchestrator {
   private fail(
     request: ToolCallRequest,
     context: ToolExecutionContext,
-    code: "TOOL_SCHEMA_ERROR" | "PROCESS_TIMEOUT" | "APPROVAL_DENIED" | "INTERNAL_ERROR" | "PERMISSION_DENIED" | "SANDBOX_DENIED" | "SANDBOX_FILESYSTEM_DENIED" | "SANDBOX_PROCESS_DENIED" | "SANDBOX_NETWORK_DENIED" | "PERSISTENCE_ERROR",
+    code: "TOOL_SCHEMA_ERROR" | "PROCESS_TIMEOUT" | "APPROVAL_DENIED" | "INTERNAL_ERROR" | "PERMISSION_DENIED" | "SANDBOX_DENIED" | "SANDBOX_FILESYSTEM_DENIED" | "SANDBOX_PROCESS_DENIED" | "SANDBOX_NETWORK_DENIED" | "PERSISTENCE_ERROR" | "RESOURCE_LIMIT",
     message: string,
     started: number,
     base?: ToolResult,

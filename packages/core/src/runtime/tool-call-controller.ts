@@ -47,6 +47,13 @@ import type { RecoveryPolicy } from "../recovery/recovery.js";
 import { defaultSandboxPolicy, rethrowIfKill, RuntimeKilledError } from "./turn-helpers.js";
 import type { FaultPoint, FaultPointContext, TurnContext } from "./turn-helpers.js";
 
+/**
+ * R3/F4 — the campaign-deadline refusal reason code, mirrored from `@ar/tools`
+ * (`CAMPAIGN_DEADLINE_EXCEEDED`). `@ar/core` must not depend on `@ar/tools`, so the
+ * literal is duplicated deliberately; a unit test pins the two together.
+ */
+const CAMPAIGN_DEADLINE_EXCEEDED = "CAMPAIGN_DEADLINE_EXCEEDED";
+
 /** Q-1: one executed tool call as returned to the turn loop. `streak` is the
  *  consecutive-identical-call count AFTER this call was recorded.
  *  E4-R86 (H2): `progressCancelled`/`wouldBeStreak` are set when this repeated
@@ -117,6 +124,16 @@ export interface ToolCallControllerDeps {
   resourceConflictOf?: (call: ToolCall) => import("@ar/contracts").ResourceConflictKey | undefined;
   /** Max parallel concurrency-safe calls per read batch. */
   maxParallelToolCalls: number;
+  /**
+   * R3/F4 — the campaign's SINGLE wall-clock deadline (epoch ms, read through
+   * `now`). Checked before EVERY dispatch this controller makes, including each
+   * recovery retry, so a hung tool cannot be re-dispatched after the deadline. The
+   * orchestrator enforces the same deadline at the real dispatch point this
+   * controller calls; this gate makes the guarantee explicit at the controller's
+   * own retry boundary (and works even when the host wired no tool budget).
+   * Absent or returning `null` = no campaign deadline.
+   */
+  dispatchDeadlineAtMs?: () => number | null;
   /** E4-R87 (Phase A): when `false`, `noteExecutedCall` passes NO result
    *  fingerprint to `AgentState.noteToolCall` — the pre-R86 name+args-only
    *  streak contract (byte-identical to source SHA e9776ba). Default/absent =
@@ -637,6 +654,24 @@ export class ToolCallController {
     };
 
     let result: ToolResult;
+    // R3/F4 — the SINGLE campaign deadline, read through the injected clock. This
+    // mirrors the orchestrator's own gate; the controller needs its own because it
+    // is the layer that RE-DISPATCHES on recovery, and a hung tool must not be
+    // restarted after the deadline even when no tool budget was wired.
+    // (The literal mirrors `CAMPAIGN_DEADLINE_EXCEEDED` in `@ar/tools`; `@ar/core`
+    // must not depend on `@ar/tools`, so it is not imported.)
+    const campaignDeadlineExpired = (): boolean => {
+      const at = this.deps.dispatchDeadlineAtMs?.() ?? null;
+      return at !== null && this.deps.now() >= at;
+    };
+    // A dispatch refused by the deadline: nothing ran, so it is an explicit
+    // pre-dispatch refusal — never `unknown`, and never presented as a cancellation.
+    const deadlineRefusal = (): ToolResult => ({
+      status: "failed",
+      error: errorInfo("RESOURCE_LIMIT", `${CAMPAIGN_DEADLINE_EXCEEDED}: the campaign deadline passed before this tool could start`),
+      metadata: { reasonCode: CAMPAIGN_DEADLINE_EXCEEDED, preDispatch: true },
+    });
+    let deadlineRefused = false;
     try {
       // P16-6: kill BEFORE the durable tool intent is persisted — all gates
       // (policy/hook/permission/approval/sandbox) passed but NOTHING is on
@@ -644,22 +679,28 @@ export class ToolCallController {
       await this.deps.failAt("tool.intent_persisting", { sessionId: session.id, turnId, toolCallId: call.id, tool: call.name });
       // P1-5: a kill here leaves the tool outcome unknown (reconciliation).
       await this.deps.failAt("tool.executing", { sessionId: session.id, turnId, toolCallId: call.id, tool: call.name });
-      result = await this.deps.orchestrator.executeBound(
-        {
-          ...request,
-          binding: frozenBinding,
-          // P26-4: frozen step-world identity for the intent journal — the
-          // crash-recovery can attribute an intent to the exact step/router.
-          stepId: step.record.stepId,
-          routerFingerprint: step.record.toolRouterFingerprint,
-          toolBindingFingerprint: stableFingerprint([
-            frozenBinding.name,
-            frozenBinding.provenance,
-            frozenBinding.semantics,
-          ]),
-        },
-        execCtx,
-      );
+      // R3/F4 — THE DEADLINE GATE. After the campaign deadline no new tool starts.
+      if (campaignDeadlineExpired()) {
+        deadlineRefused = true;
+        result = deadlineRefusal();
+      } else {
+        result = await this.deps.orchestrator.executeBound(
+          {
+            ...request,
+            binding: frozenBinding,
+            // P26-4: frozen step-world identity for the intent journal — the
+            // crash-recovery can attribute an intent to the exact step/router.
+            stepId: step.record.stepId,
+            routerFingerprint: step.record.toolRouterFingerprint,
+            toolBindingFingerprint: stableFingerprint([
+              frozenBinding.name,
+              frozenBinding.provenance,
+              frozenBinding.semantics,
+            ]),
+          },
+          execCtx,
+        );
+      }
     } catch (err) {
       // P1-5: a simulated kill is not a tool failure to recover from.
       rethrowIfKill(err);
@@ -668,7 +709,19 @@ export class ToolCallController {
         // CANCELLED tool outcome, not a fabricated failure the model would then
         // react to. The turn itself is cancelled by the caller; the committed
         // side effects are reported separately, never rolled back.
-        result = { status: "cancelled" };
+        //
+        // R3/F4 — for a tool that MAY have had a side effect, "cancelled" must not
+        // be read as "nothing happened": the side-effect outcome is UNKNOWN, and it
+        // is labelled as such (the durable tool budget records the same fact as
+        // `unknown`, charged and never refunded).
+        const semantics = this.deps.toolSemanticsOf(call.name);
+        result =
+          semantics.sideEffectScope !== "none"
+            ? {
+                status: "cancelled",
+                metadata: { reasonCode: "POST_CANCEL_UNKNOWN_EFFECT", sideEffectOutcome: "unknown" },
+              }
+            : { status: "cancelled" };
       } else {
         result = {
           status: "failed",
@@ -680,7 +733,7 @@ export class ToolCallController {
     if (result.status === "failed" || result.status === "denied") {
       await this.deps.hooks.toolError(hookCtx, call, result);
     }
-    if ((result.status === "failed" || result.status === "timeout") && this.deps.recovery !== undefined) {
+    if (!deadlineRefused && (result.status === "failed" || result.status === "timeout") && this.deps.recovery !== undefined) {
       // plan.md Phase 3.6: auto-retry ONLY idempotent read-only tools
       // (retry: "safe"). Tools with unknown or non-idempotent effects are
       // never blindly re-executed — the failed result flows to the model,
@@ -705,6 +758,11 @@ export class ToolCallController {
           if ((decision.retryDelayMs ?? 0) > 0) {
             await timerSleep(this.deps.timer, decision.retryDelayMs ?? 0);
           }
+          // R3/F4 — a retry is a NEW dispatch: it must not start after the deadline.
+          if (campaignDeadlineExpired()) {
+            result = deadlineRefusal();
+            break;
+          }
           try {
             result = await this.deps.orchestrator.executeBound({ ...request, binding: frozenBinding }, execCtx);
           } catch (err) {
@@ -726,6 +784,7 @@ export class ToolCallController {
         break;
       }
     } else if (
+      !deadlineRefused &&
       (result.status === "failed" || result.status === "timeout") &&
       this.deps.adaptiveRecovery !== undefined
     ) {
@@ -761,6 +820,11 @@ export class ToolCallController {
         }, turnId);
         if (decision.action === "retry_safe") {
           if (retryPolicy !== "safe") break;
+          // R3/F4 — a retry is a NEW dispatch: it must not start after the deadline.
+          if (campaignDeadlineExpired()) {
+            result = deadlineRefusal();
+            break;
+          }
           try {
             result = await this.deps.orchestrator.executeBound({ ...request, binding: frozenBinding }, execCtx);
           } catch (err) {

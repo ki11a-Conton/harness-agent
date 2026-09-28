@@ -516,6 +516,22 @@ export interface CostBudgetFile {
   schemaVersion: string;
   preregistrationDigest: string;
   caps: CostBudgetCapsV2;
+  /**
+   * R3/F4 — when the campaign was OPENED (epoch ms), written once at creation.
+   */
+  openedAtMs: number;
+  /**
+   * R3/F4 — the campaign's SINGLE wall-clock deadline (epoch ms), frozen when the
+   * campaign is created and REUSED unchanged by every later open/resume. Resume
+   * therefore never regains a full fresh duration: the remaining time is
+   * `campaignDeadlineAtMs - now`, whatever the caller asks for.
+   *
+   * A LEGACY file that predates this field is treated as ALREADY EXPIRED
+   * (`deadlineSource: "legacy-missing-expired"`), never as a fresh window.
+   */
+  campaignDeadlineAtMs: number;
+  /** R3/F4 — how the deadline above was established (auditable). */
+  deadlineSource?: "created" | "reused" | "legacy-missing-expired";
   charged: {
     inputTokens: number;
     outputTokens: number;
@@ -551,7 +567,8 @@ export interface CostBudgetView extends CostBudgetFile {
   exhaustedDimensions: string[];
 }
 
-const COST_BUDGET_FILENAME = "cost-budget.json";
+/** R3/F4 — the durable cost-budget file name (exported so tests read the same file). */
+export const COST_BUDGET_FILENAME = "cost-budget.json";
 
 /**
  * N6 — the DURABLE cost journal's corroborated token consumption for `dir`, so a
@@ -628,7 +645,12 @@ let reservationCounter = 0;
 export class CostBudget {
   private constructor(private readonly dir: string, private file: CostBudgetFile) {}
 
-  static async open(dir: string, prereg: ToolCallEfficiencyPreregistrationV2, opts: { allowCreate: boolean }): Promise<CostBudget> {
+  static async open(
+    dir: string,
+    prereg: ToolCallEfficiencyPreregistrationV2,
+    opts: { allowCreate: boolean; now?: () => number },
+  ): Promise<CostBudget> {
+    const clock = opts.now ?? (() => Date.now());
     const path = join(dir, COST_BUDGET_FILENAME);
     const caps: CostBudgetCapsV2 = {
       maxInputTokens: prereg.budget.maxInputTokens,
@@ -659,6 +681,10 @@ export class CostBudget {
           schemaVersion: TOOL_CALL_EFFICIENCY_COST_BUDGET_SCHEMA,
           preregistrationDigest: prereg.preregistrationDigest,
           caps,
+          // R3/F4 — the ONE campaign deadline, frozen here and never re-created.
+          openedAtMs: clock(),
+          campaignDeadlineAtMs: clock() + caps.maxDurationMs,
+          deadlineSource: "created",
           charged: { inputTokens: 0, outputTokens: 0, totalTokens: 0, toolCalls: 0, durationMs: 0, usdMicros: 0, unknownCalls: 0 },
           reserved: { ...ZERO_RESERVATION },
           reservations: {},
@@ -684,6 +710,23 @@ export class CostBudget {
       }
       parsed.reserved = { ...ZERO_RESERVATION, ...(parsed.reserved ?? {}) };
       parsed.reservations = parsed.reservations ?? {};
+      // R3/F4 — the deadline is REUSED, never re-created: a resume keeps whatever
+      // is left. A legacy file that predates the field is treated as ALREADY
+      // EXPIRED (never as a fresh window) and the migration is persisted so the
+      // fact is durable. An existing deadline field is left byte-identical.
+      const parsedDeadline = (parsed as { campaignDeadlineAtMs?: unknown }).campaignDeadlineAtMs;
+      const parsedOpened = (parsed as { openedAtMs?: unknown }).openedAtMs;
+      if (typeof parsedDeadline === "number" && Number.isFinite(parsedDeadline)) {
+        if (typeof parsedOpened !== "number" || Number.isFinite(parsedOpened) === false) {
+          parsed.openedAtMs = clock();
+          await writeAtomic(path, parsed);
+        }
+      } else {
+        parsed.campaignDeadlineAtMs = clock();
+        parsed.deadlineSource = "legacy-missing-expired";
+        if (typeof parsedOpened !== "number" || Number.isFinite(parsedOpened) === false) parsed.openedAtMs = clock();
+        await writeAtomic(path, parsed);
+      }
       return new CostBudget(dir, parsed);
     });
   }
@@ -709,6 +752,15 @@ export class CostBudget {
     const v = this.view();
     if (v.exhausted) return { refused: true, reason: `${v.exhaustedDimensions.join(", ")} at cap` };
     return { refused: false, reason: "" };
+  }
+
+  /**
+   * R3/F4 — the campaign's ONE durable wall-clock deadline (epoch ms). Frozen at
+   * creation and reused by every later open, so a resume keeps only the time that
+   * is left instead of receiving a fresh `maxDurationMs`.
+   */
+  deadlineAtMs(): number {
+    return this.file.campaignDeadlineAtMs;
   }
 
   /**
@@ -948,6 +1000,101 @@ export interface FormalBudgetStats {
   chargedUsdMicros: number;
   /** N4 — tool calls the run actually made and that were charged to the budget. */
   chargedToolCalls: number;
+  /**
+   * R3/F4 — the DIAGNOSTIC "how many tools the MODEL DECLARED in its completed
+   * responses". This is a different fact from "tools actually dispatched", it is
+   * NEVER charged to the tool dimension here (the pre-dispatch reservation at the
+   * real dispatch point does that), and the two values are expected to differ:
+   * a declared tool that is never dispatched must not appear as consumption.
+   */
+  declaredToolCalls: number;
+}
+
+/** R3/F4 — the stable reason codes the durable tool-dispatch budget refuses with. */
+export const TOOL_DISPATCH_BUDGET_EXHAUSTED = "TOOL_BUDGET_EXHAUSTED";
+export const TOOL_DISPATCH_DEADLINE_EXCEEDED = "CAMPAIGN_DEADLINE_EXCEEDED";
+
+/**
+ * R3/F4 — the durable PRE-DISPATCH tool budget. It implements the STRUCTURAL
+ * capability `packages/tools` declares (no import in either direction), and it is
+ * bound by the host into `ToolOrchestrator({ toolBudget })`.
+ *
+ * One REAL dispatch = one `{ toolCalls: 1 }` reservation on the SAME durable,
+ * same-lock `CostBudget` whose `maxToolCalls` cap it enforces. `reserve()`
+ * therefore refuses BEFORE the tool body runs, and the campaign deadline is
+ * checked in the same place, so no tool starts after it.
+ */
+export interface DurableToolDispatchBudget {
+  reserve(request: {
+    toolCallId: string;
+    tool: string;
+    sessionId: string;
+    turnId?: string;
+    readOnly: boolean;
+    sideEffectScope: string;
+  }): Promise<{
+    ok: boolean;
+    reason?: string;
+    settle(outcome: "dispatched" | "not_executed" | "unknown"): Promise<void>;
+  }>;
+  /** MEASURED counters for evidence; never a substitute for the durable journal. */
+  stats(): {
+    reserved: number;
+    dispatched: number;
+    released: number;
+    unknown: number;
+    capRefused: number;
+    deadlineRefused: number;
+  };
+}
+
+export function createDurableToolDispatchBudget(opts: {
+  costBudget: CostBudget;
+  deadlineAtMs: number | null;
+  now?: () => number;
+}): DurableToolDispatchBudget {
+  const clock = opts.now ?? (() => Date.now());
+  const counters = { reserved: 0, dispatched: 0, released: 0, unknown: 0, capRefused: 0, deadlineRefused: 0 };
+  return {
+    stats: () => ({ ...counters }),
+    async reserve() {
+      if (opts.deadlineAtMs !== null && clock() >= opts.deadlineAtMs) {
+        counters.deadlineRefused += 1;
+        return { ok: false, reason: TOOL_DISPATCH_DEADLINE_EXCEEDED, async settle() {} };
+      }
+      const reserved = await opts.costBudget.reserve({ inputTokens: 0, outputTokens: 0, toolCalls: 1, durationMs: 0, usdMicros: 0 });
+      if (!reserved.ok) {
+        counters.capRefused += 1;
+        return { ok: false, reason: TOOL_DISPATCH_BUDGET_EXHAUSTED, async settle() {} };
+      }
+      counters.reserved += 1;
+      let settled = false;
+      return {
+        ok: true,
+        async settle(outcome) {
+          if (settled) return;
+          settled = true;
+          if (outcome === "dispatched") {
+            counters.dispatched += 1;
+            // SETTLE (not `charge`): the held `{ toolCalls: 1 }` reservation is
+            // replaced by the actual one, so the cap is checked exactly once and
+            // the reservation cannot be double-counted.
+            await opts.costBudget.settle(reserved.id, { toolCalls: 1 });
+            return;
+          }
+          if (outcome === "unknown") {
+            counters.unknown += 1;
+            // A dispatch whose effects nobody saw is charged at its upper bound
+            // and NEVER refunded.
+            await opts.costBudget.settle(reserved.id, { toolCalls: 1, unknown: true });
+            return;
+          }
+          counters.released += 1;
+          await opts.costBudget.release(reserved.id);
+        },
+      };
+    },
+  };
 }
 
 /**
@@ -962,7 +1109,18 @@ export function createFormalBudgetedProvider(opts: {
   costBudget: CostBudget;
   arm: string;
   usdMicrosPerCall: number | null;
+  /**
+   * R3/F4 — the campaign's ONE durable deadline. Every physical send (the initial
+   * request AND every retry) is refused once it has passed, so no HTTP request
+   * leaves after the deadline. `null` = no deadline.
+   */
+  deadlineAtMs?: number | null;
+  /** R3/F4 — injectable clock for the deadline check (offline-testable). */
+  now?: () => number;
 }): { provider: ModelProvider; stats: FormalBudgetStats } {
+  const clock = opts.now ?? (() => Date.now());
+  const deadlineAtMs = opts.deadlineAtMs ?? null;
+  const deadlinePassed = (): boolean => deadlineAtMs !== null && clock() >= deadlineAtMs;
   const stats: FormalBudgetStats = {
     logicalCalls: 0,
     refusedCalls: 0,
@@ -972,6 +1130,7 @@ export function createFormalBudgetedProvider(opts: {
     chargedOutputTokens: 0,
     chargedUsdMicros: 0,
     chargedToolCalls: 0,
+    declaredToolCalls: 0,
   };
 
   const wrapped: ModelProvider = {
@@ -1028,7 +1187,6 @@ export function createFormalBudgetedProvider(opts: {
           let completed = false;
           let inputTokens = 0;
           let outputTokens = 0;
-          let toolCallsUsed = 0;
           let usdMicros = 0;
           let retries = 0;
           let settleStarted = false;
@@ -1064,29 +1222,35 @@ export function createFormalBudgetedProvider(opts: {
             }
             await opts.ledger.commit(reservationId, 1, retries);
             const chargedMicros = Math.max(usdMicros, usdCeiling);
-            const view = await opts.costBudget.settle(primary, {
-              inputTokens,
-              outputTokens,
-              durationMs,
-              usdMicros: chargedMicros,
-            });
+            // R3/F4 — STATE MACHINE: a failure between `ledger.commit` and the cost
+            // settlement must NOT leave "model ledger committed / cost unsettled"
+            // silently behind. It is recorded as `unknown` and the campaign STOPS.
+            let view: CostBudgetView;
+            try {
+              view = await opts.costBudget.settle(primary, {
+                inputTokens,
+                outputTokens,
+                durationMs,
+                usdMicros: chargedMicros,
+              });
+            } catch (err) {
+              stats.unknownCalls += 1;
+              throw new Error(
+                `E4-R3: BUDGET_STATE_REJECTED: the model ledger committed reservation ${reservationId} but its cost settlement failed (${err instanceof Error ? err.message : String(err)}); recorded as unknown and stopping rather than continuing with an unsettled charge`,
+              );
+            }
             stats.chargedInputTokens += inputTokens;
             stats.chargedOutputTokens += outputTokens;
             stats.chargedUsdMicros += chargedMicros;
             void view;
-            // N4 — CONSUME the tool-call dimension. It is `charge`d rather than
-            // `settle`d because the per-attempt reservation cannot bound a count
-            // the model declares only AFTER the send: a pre-send tool upper bound
-            // does not exist at this layer. `charge` enforces the campaign cap
-            // under the same lock and refuses with `BUDGET_EXHAUSTED`, so an
-            // over-cap run freezes the campaign instead of being recorded — the
-            // dimension is now bounded, not inert. Reserving tool quota BEFORE
-            // each real ToolOrchestrator dispatch (plan §N4 item 1) is NOT done
-            // here; see docs/evidence/E4-N4-report.md.
-            if (toolCallsUsed > 0) {
-              await opts.costBudget.charge({ toolCalls: toolCallsUsed });
-              stats.chargedToolCalls += toolCallsUsed;
-            }
+            // R3/F4 — the TOOL dimension is NO LONGER charged here. This path used
+            // to `charge` the tool calls the model DECLARED in its response, i.e.
+            // an after-the-fact tally that could throw AFTER the ledger commit and
+            // that counted tools that were never dispatched (F4). Tool quota is now
+            // reserved at the REAL dispatch point
+            // (`createDurableToolDispatchBudget` + `ToolOrchestrator.toolBudget`),
+            // and the declared count is kept ONLY as a diagnostic
+            // (`stats.declaredToolCalls`).
             // Each retry WAS a physical send. Its own usage is not separately
             // reported, so it is charged at its reserved upper bound — the
             // conservative settlement, never a refund.
@@ -1096,6 +1260,17 @@ export function createFormalBudgetedProvider(opts: {
           };
 
           try {
+            // R3/F4 — THE DEADLINE GATE, before the initial physical send. Once the
+            // single campaign deadline has passed, no new HTTP request leaves.
+            if (deadlinePassed()) {
+              // The `finally` below releases the cost reservation and abandons the
+              // call-ledger reservation exactly once (`entered` is still false), so
+              // this branch only refuses.
+              stats.refusedCalls += 1;
+              throw new Error(
+                `E4-R3: ${TOOL_DISPATCH_DEADLINE_EXCEEDED}: the campaign deadline (${new Date(deadlineAtMs ?? 0).toISOString()}) passed before this request was sent — refusing to send after the deadline`,
+              );
+            }
             const stream = inner.generate(request, signal);
             entered = true;
             for await (const ev of stream) {
@@ -1109,7 +1284,14 @@ export function createFormalBudgetedProvider(opts: {
                 // unbilled request leave the process. The reservations are taken
                 // at the `retry` event, which the client emits immediately BEFORE
                 // the next fetch, so a refusal here aborts the generator before
-                // that fetch runs.
+                // that fetch runs. R3/F4 — the same deadline gate applies: a hung
+                // retry may NOT resume sending after the deadline.
+                if (deadlinePassed()) {
+                  stats.refusedCalls += 1;
+                  throw new Error(
+                    `E4-R3: ${TOOL_DISPATCH_DEADLINE_EXCEEDED}: the campaign deadline passed before this retry could be sent — refusing to continue after the deadline`,
+                  );
+                }
                 const retryCostId = await reserveCost("retry");
                 const retryReservation = await opts.ledger.reserve(opts.arm, 1);
                 if (!retryReservation.ok || retryReservation.reservationId === null) {
@@ -1130,12 +1312,16 @@ export function createFormalBudgetedProvider(opts: {
                 }
               } else if (ev.type === "completed") {
                 completed = true;
-                // N4 — the tool calls the completed response actually CARRIES.
-                // The tool dimension used to be inert (`toolCalls: 0` reserved
-                // and never settled), so `maxToolCalls` could never be consumed
-                // no matter how many tools a run invoked.
+                // R3/F4 — "how many tools the model DECLARED" is a DIAGNOSTIC. It is
+                // recorded here and NEVER charged to the tool dimension: the real
+                // dispatch point reserves and charges one unit per ACTUAL dispatch,
+                // so a declared-but-never-dispatched tool cannot look like
+                // consumption and a dispatch that ran without being declared still
+                // pays.
                 const declared = (ev.result as { toolCalls?: unknown } | undefined)?.toolCalls;
-                if (Array.isArray(declared)) toolCallsUsed += declared.length;
+                if (Array.isArray(declared)) {
+                  stats.declaredToolCalls += declared.length;
+                }
               }
               yield ev;
             }
@@ -1187,6 +1373,16 @@ export interface FormalRunAdmission {
   provider: ModelProvider;
   budgetStats: FormalBudgetStats;
   providerFactoryCalls: number;
+  /**
+   * R3/F4 — the durable PRE-DISPATCH tool budget this campaign must bind into its
+   * `ToolOrchestrator` (`new ToolOrchestrator({ …, toolBudget: admission.toolDispatchBudget })`).
+   * The binding is ONE line in the host composition root, which is why this is
+   * returned here rather than constructed there: the durable implementation needs
+   * the SAME `CostBudget` the gate just opened.
+   */
+  toolDispatchBudget: DurableToolDispatchBudget;
+  /** R3/F4 — the campaign's ONE durable deadline (epoch ms). */
+  campaignDeadlineAtMs: number;
 }
 
 export interface PreregisteredCampaignOptions {
@@ -1371,7 +1567,12 @@ export async function openPreregisteredCampaignGate(
   }
 
   try {
-    costBudget = await CostBudget.open(opts.budgetDir, artifact, { allowCreate: ledger.mode !== "resume" });
+    // R3/F4 — the SAME injectable clock the caller uses for the authorization is
+    // used to freeze the campaign deadline, so an offline test controls it.
+    costBudget = await CostBudget.open(opts.budgetDir, artifact, {
+      allowCreate: ledger.mode !== "resume",
+      now: opts.now ?? (() => Date.now()),
+    });
   } catch (err) {
     return refusal("BUDGET_STATE_REJECTED", err instanceof Error ? err.message : String(err));
   }
@@ -1388,12 +1589,23 @@ export async function openPreregisteredCampaignGate(
     repetitions: artifact.schedule.repetitions,
     orderSeed: artifact.schedule.orderSeed,
   });
+  // R3/F4 — the campaign's ONE deadline, read from the durable budget. A resume
+  // reuses whatever is left: `resume` can never obtain a fresh `maxDurationMs`.
+  const campaignDeadlineAtMs = costBudget.deadlineAtMs();
+  const clock = opts.now ?? (() => Date.now());
   const { provider: budgeted, stats } = createFormalBudgetedProvider({
     provider,
     ledger,
     costBudget,
     arm: TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2,
     usdMicrosPerCall,
+    deadlineAtMs: campaignDeadlineAtMs,
+    now: clock,
+  });
+  const toolDispatchBudget = createDurableToolDispatchBudget({
+    costBudget,
+    deadlineAtMs: campaignDeadlineAtMs,
+    now: clock,
   });
   return {
     status: "ADMITTED",
@@ -1404,6 +1616,8 @@ export async function openPreregisteredCampaignGate(
     provider: budgeted,
     budgetStats: stats,
     providerFactoryCalls: 1,
+    toolDispatchBudget,
+    campaignDeadlineAtMs,
   };
 }
 
