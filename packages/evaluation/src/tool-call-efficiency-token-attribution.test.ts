@@ -42,6 +42,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ModelEvent, ModelProvider, ModelRequest, ProviderConfig } from "@ar/contracts";
+import { errorInfo } from "@ar/contracts";
 import {
   DEFAULT_DECISION_POLICY_V3,
   PREREG_RUN_ACTIVATION_SCHEMA,
@@ -60,6 +61,7 @@ import {
   serializePreregistrationV2,
   stableStringify,
   toolCallEfficiencyGuidanceDigest,
+  type ArmRunRef,
   type CostJournalView,
   type FormalRunAdmission,
   type PreregisteredAggregate,
@@ -85,7 +87,9 @@ function sha256Hex(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
-function artifactFor(opts: { maxTokensDelta?: number; cases?: number } = {}): ToolCallEfficiencyPreregistrationV2 {
+function artifactFor(
+  opts: { maxTokensDelta?: number; cases?: number; budget?: Partial<PreregistrationV2Options["budget"]> } = {},
+): ToolCallEfficiencyPreregistrationV2 {
   const count = opts.cases ?? CASES;
   const base = structuredClone(FIXTURE);
   const catalog = base.catalog.slice(0, count);
@@ -99,6 +103,7 @@ function artifactFor(opts: { maxTokensDelta?: number; cases?: number } = {}): To
     selection: { ...base.selection, caseIds: catalog.map((c) => c.caseId) },
     schedule: { ...base.schedule, repetitions: REPS },
     evaluation: { ...base.evaluation, decisionPolicy },
+    ...(opts.budget === undefined ? {} : { budget: { ...base.budget, ...opts.budget } }),
   });
 }
 
@@ -180,7 +185,7 @@ interface Usage {
   output: number;
 }
 
-function usageProvider(usage: Usage): { provider: ModelProvider; calls: () => number } {
+function usageProvider(usage: Usage, retries: { value: number }): { provider: ModelProvider; calls: () => number } {
   let calls = 0;
   const provider: ModelProvider = {
     id: "r2-fake-usage",
@@ -191,6 +196,14 @@ function usageProvider(usage: Usage): { provider: ModelProvider; calls: () => nu
       return {
         async *generate(_req: ModelRequest, _signal: AbortSignal): AsyncGenerator<ModelEvent> {
           calls += 1;
+          for (let i = 0; i < retries.value; i += 1) {
+            yield {
+              type: "retry",
+              attempt: i + 1,
+              error: errorInfo("MODEL_ERROR", "transient transport failure"),
+              timestamp: 0,
+            };
+          }
           yield { type: "usage", usage: { inputTokens: usage.input, outputTokens: usage.output }, timestamp: 0 };
           yield { type: "completed", result: { finishReason: "stop" }, timestamp: 0 };
         },
@@ -316,14 +329,18 @@ async function runCampaign(
   opts: {
     perRun: { baseline: Usage; candidate: Usage };
     maxTokensDelta?: number;
+    budget?: Partial<PreregistrationV2Options["budget"]>;
+    retryWhen?: (arm: ArmRunRef) => number;
     report?: (armId: "baseline" | "candidate") => number;
     existing?: Campaign;
   },
 ): Promise<Campaign> {
   const dir = opts.existing?.dir ?? (await tempDir(tag));
-  const artifact = opts.existing?.artifact ?? artifactFor({ maxTokensDelta: opts.maxTokensDelta });
+  const artifact =
+    opts.existing?.artifact ?? artifactFor({ maxTokensDelta: opts.maxTokensDelta, budget: opts.budget });
   const usage: Usage = { input: 0, output: 0 };
-  const fake = usageProvider(usage);
+  const retries = { value: 0 };
+  const fake = usageProvider(usage, retries);
   const budgetDir = opts.existing?.budgetDir ?? join(dir, "budget");
   const resultsDir = opts.existing?.resultsDir ?? join(dir, "runs");
 
@@ -331,6 +348,7 @@ async function runCampaign(
     const want = opts.perRun[arm.armId];
     usage.input = want.input;
     usage.output = want.output;
+    retries.value = opts.retryWhen?.(arm) ?? 0;
     await drain(ctx.provider);
     const passed = arm.armId === "candidate";
     const evidence = await writeRunArtifacts(ctx, passed, passed);
@@ -690,7 +708,43 @@ describe("F3 — per-arm token attribution through the real aggregate", () => {
     expect(inflatedAggregate.decision.decision).not.toBe("ACCEPT");
   }, 120_000);
 
-  it("[F3.11] a genuine zero needs independent zero evidence; a missing request is never 0", async () => {
+  it("[F3.11] a retry is one charged attempt, recorded once, and never measured consumption", async () => {
+    // Every candidate arm run reports ONE provider-internal retry. The retry is a
+    // second physical send whose own usage is not separately observable, so it is
+    // charged at its reserved upper bound — a BOUND, recorded as such.
+    const c = await runCampaign("retry", {
+      perRun: { baseline: { input: 8, output: 2 }, candidate: { input: 3, output: 1 } },
+      // The retry settlement charges the full per-call ceiling, so this campaign
+      // declares a budget that can actually afford ten of them.
+      budget: { maxInputTokens: 1_000_000, maxOutputTokens: 512_000, maxTotalTokens: 1_000_000 },
+      retryWhen: (arm) => (arm.armId === "candidate" ? 1 : 0),
+    });
+    const entries = c.journal.entries ?? [];
+    // 10 baseline (initial only) + 10 candidate initial + 10 candidate retries.
+    expect(entries.length).toBe(CASES * REPS + CASES * REPS * 2);
+
+    // Every physical attempt has its OWN reservation id: a retry is charged once
+    // and is never attributed to two arms.
+    const reservationIds = entries.map((e) => e.reservationId);
+    expect(new Set(reservationIds).size).toBe(reservationIds.length);
+    const retryEntries = entries.filter((e) => e.basis === "RESERVED_UPPER_BOUND");
+    expect(retryEntries.length).toBe(CASES * REPS);
+    expect(retryEntries.every((e) => e.arm === "candidate" && e.outcomeUnknown && e.inputTokens === null)).toBe(true);
+
+    expect(c.aggregate.cost.basis).toBe("UNKNOWN_ATTRIBUTION");
+    expect(c.aggregate.cost.deltaTokens).toBeNull();
+    expect(c.aggregate.cost.unknownAttempts).toEqual({ baseline: 0, candidate: CASES * REPS });
+    expect(c.aggregate.cost.requests).toEqual({ baseline: CASES * REPS, candidate: CASES * REPS * 2 });
+    expect(c.aggregate.cost.problems.join(" ")).toMatch(/bound is not measured consumption/i);
+    // The TOTAL still counts what was actually charged (measured + reserved),
+    // independently of the (unknown) per-arm delta.
+    expect(c.aggregate.cost.totalTokens).toBe(c.journal.chargedTotalTokens);
+    expect(c.aggregate.cost.totalTokens).toBe(100 + 40 + CASES * REPS * 64_000);
+    expect(c.aggregate.decision.decision).not.toBe("ACCEPT");
+    expect(c.aggregate.decision.gates.costBounded).toBe(false);
+  }, 180_000);
+
+  it("[F3.12] a genuine zero needs independent zero evidence; a missing request is never 0", async () => {
     const c = await runCampaign("zero", {
       perRun: { baseline: { input: 8, output: 2 }, candidate: { input: 3, output: 1 } },
     });
