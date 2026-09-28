@@ -187,11 +187,26 @@ async function phaseIdentity() {
 // The offline scripted provider (test host; no socket, no credential)
 // ---------------------------------------------------------------------------
 
-/** Turn one script step into a provider event stream. The shapes the arm's own
- *  runtime understands: a `write_file` tool call, or a completing text turn. */
-function eventsFor(steps) {
-  const tail = Array.from({ length: 10 }, () => ({ text: "nothing further to do" }));
-  return [...steps, ...tail];
+/** Turn one script step into the EXACT event shapes the runtime consumes.
+ *  (`started` + `text_delta`/`tool_call_delta` + `completed` — copied from the
+ *  arm's own `ScriptedModelProvider`, so the double cannot invent a protocol the
+ *  real transports do not speak.) Every call reports usage, so the R2 cost
+ *  journal has real measured tokens to attribute per arm. */
+function* eventsForCall(steps, counter) {
+  yield { type: "started", timestamp: 0 };
+  for (const step of steps) {
+    if (step.tool !== undefined) {
+      counter.n += 1;
+      const toolCall = { id: `r5-call-${counter.n}`, name: step.tool.name, args: step.tool.args };
+      yield { type: "tool_call_delta", toolCall, timestamp: 0 };
+      yield { type: "usage", usage: { inputTokens: 12, outputTokens: 6 }, timestamp: 0 };
+      yield { type: "completed", result: { finishReason: "tool_calls", toolCalls: [toolCall] }, timestamp: 0 };
+    } else {
+      yield { type: "text_delta", text: step.text, timestamp: 0 };
+      yield { type: "usage", usage: { inputTokens: 12, outputTokens: 6 }, timestamp: 0 };
+      yield { type: "completed", result: { finishReason: "stop", text: step.text }, timestamp: 0 };
+    }
+  }
 }
 
 /**
@@ -199,8 +214,14 @@ function eventsFor(steps) {
  * the script for the case whose `request.md` that request carries. Resolving the
  * case from the real context (rather than a call counter) is what makes the tool
  * call genuinely bound to the case the runtime asked about.
+ *
+ * The FIRST call for a case emits that case's script; every FOLLOW-UP call for the
+ * same case (the runtime asks again with the tool result) is a completing text,
+ * so a turn cannot loop forever and the stream is always total.
  */
-function createOfflineScriptedProvider({ caseScripts, fallback = "text-only", transcript }) {
+function createOfflineScriptedProvider({ caseScripts, transcript }) {
+  const counter = { n: 0 };
+  const seen = new Map();
   return {
     id: "r5-offline-scripted",
     async listModels() {
@@ -210,39 +231,25 @@ function createOfflineScriptedProvider({ caseScripts, fallback = "text-only", tr
       return {
         async *generate(request) {
           const text = JSON.stringify(request ?? {});
-          const hit = caseScripts.find((c) => c.needle !== null && text.includes(c.needle));
-          const script = hit ?? caseScripts.find((c) => c.isFallback === true) ?? null;
-          const variant = script === null ? fallback : script.variant;
+          const script = caseScripts.find((c) => c.needle !== null && text.includes(c.needle)) ?? null;
+          const caseId = script?.caseId ?? null;
+          const callIndex = seen.get(caseId) ?? 0;
+          seen.set(caseId, callIndex + 1);
+          const variant = script?.variant ?? "text-only";
           const steps =
-            variant === "write" && script?.writeTarget != null
+            callIndex === 0 && variant === "write" && script?.writeTarget != null
               ? [
                   { tool: { name: "write_file", args: { path: script.writeTarget.path, content: script.writeTarget.content } } },
                   { text: `wrote ${script.writeTarget.path}` },
                 ]
-              : variant === "wrong-path" && script?.writeTarget != null
+              : callIndex === 0 && variant === "wrong-path" && script?.writeTarget != null
                 ? [
                     { tool: { name: "write_file", args: { path: `${script.writeTarget.path}.not-the-required-path`, content: script.writeTarget.content } } },
                     { text: "wrote somewhere else" },
                   ]
-                : [{ text: "done" }];
-          if (transcript !== undefined) {
-            transcript.push({ caseId: hit?.caseId ?? null, variant, chars: text.length });
-          }
-          for (const ev of eventsFor(steps)) {
-            if (ev.tool !== undefined) {
-              yield {
-                type: "completed",
-                result: {
-                  finishReason: "tool_calls",
-                  toolCalls: [{ id: `call-${transcript?.length ?? 0}`, name: ev.tool.name, arguments: JSON.stringify(ev.tool.args) }],
-                },
-                timestamp: 0,
-              };
-            } else {
-              yield { type: "text", text: ev.text, timestamp: 0 };
-              yield { type: "completed", result: { finishReason: "stop", text: ev.text }, timestamp: 0 };
-            }
-          }
+                : [{ text: "nothing further to do" }];
+          transcript.push({ callIndex, caseId, variant, strength: script?.strength ?? null, contentMode: script?.contentMode ?? null, chars: text.length });
+          yield* eventsForCall(steps, counter);
         },
       };
     },
