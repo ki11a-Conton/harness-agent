@@ -8,9 +8,9 @@ recorded as superseded, with their scope, date and SHA.
 
 | | |
 | --- | --- |
-| Status date | 2026-09-28 (round R7, Windows 10 local measurement) |
-| Repository SHA this status is written from | `2645006f9a394311f47f9e2fd4b83b3c5aed5abf` (main: R6 + R1 + R2 + R4-in-scope merged) |
-| Authoring task | `task-10` (R7-core, F6) |
+| Status date | 2026-09-28 (round R7 close, Windows 10 local measurement) |
+| Repository SHA this status is written from | `910b80e69e920125a0bfb2ab60281f56010eb5ac` (main: R1 + R2 + R3 + R3-binding + R4 + R5 + R6 + R12 + R7-core merged) |
+| Authoring task | `task-10` (R7-core, F6) → extended by `task-8` (R7 close: refreshed R0 rows, gate results, mutation status) |
 | Platform measured here | Windows only. Ubuntu evidence quoted below comes from downloaded GitHub Actions artifacts, not from a local Linux run. |
 | Frozen 8-case selection | `docs/evidence/e4-r87-case-selection.json` — **unmodified**; its stored digest recomputes to `0d8af323110301e0392c77d595c8c34f5f01851ffe6844f0ed7fab49703465ae`. **6 weak passes / 0 strong passes** is the frozen result and is NOT raised by anything in this round. |
 
@@ -242,3 +242,70 @@ pnpm test:red-next-gaps
 ```
 
 All of the above are local and offline: no provider, no key, no relay, no paid request.
+
+---
+
+## 9. R7 close (`task-8`) — the merged round on ONE SHA
+
+**SHA measured:** `910b80e69e920125a0bfb2ab60281f56010eb5ac` (branch `e4/r7-close` = main + a
+refreshed R0 row + this document; the branch commit is reported with the task). Windows 10
+local only — **Ubuntu was NOT run here**; dual-platform CI and the Ubuntu cold start remain
+the Actions authority.
+
+### 9.1 Gates, with real exit codes and counts (measured locally)
+
+| Command | Exit | Result |
+| --- | --- | --- |
+| `pnpm typecheck` | `0` | clean |
+| `pnpm build` | `0` | clean |
+| `pnpm docs:verify` | `0` | `ALL CHECKS PASS` |
+| `pnpm test:n0-gaps` | `0` | **12 passed (12)** |
+| `pnpm test:red-next-gaps` | `0` | **14 passed (14)** |
+| R0 gap gate (`vitest run --config apps/cli/test-infra/r0-gaps-vitest.config.ts`) | `0` | **22 passed (22)** (was `8 failed \| 4 passed` before this task refreshed the two stale F5 rows) |
+| `pnpm test` (full, run ONCE) | `1` | **Test Files 5 failed \| 394 passed (399)**; **Tests 22 failed \| 7347 passed \| 5 skipped (7374)** |
+
+### 9.2 The 22 full-suite failures are PRE-EXISTING, not introduced here
+
+They are **not all green locally and are not reported as such.** The failing set is exactly the
+two categories the round already knew about, plus the same real-chain/E2E environmental class:
+
+- `packages/evaluation/src/e4-r77-baseline-oracle.test.ts` — **7** (argv/quoting class)
+- `packages/evaluation/src/r97-arm-worker-contract.test.ts` — **9** (worker-timing /
+  temp-checkout class; the recorded detail is `has no loadable apps/cli/dist/benchmark-command.js
+  … Cannot use import statement outside a module`, i.e. a Windows-local temp-dir ESM/CJS artifact)
+- `apps/cli/src/e4-09-production-e2e.test.ts` — **4**, `apps/cli/src/e4-r55-failure-wiring.test.ts`
+  — **1**, `apps/cli/src/benchmark-command.test.ts` — **1** (`E4-R41` host probe; same real-chain class)
+
+Baseline `a85db6dc` fails the same class locally (task-12 proved the baseline name-set is a
+**superset** of the merged one; this task did not re-run baseline, so that superset claim is
+cited, not re-measured). **No failing name above is in a file this round changed.** CI on
+ubuntu + windows is the authority for these.
+
+### 9.3 The refreshed R0 rows (stale call sites, not weakened contracts)
+
+`R0-F5-fold` was a stale CALL SITE: it fed `issuedAt`/`expiresAt` into the **legacy** shape,
+whose allowed keys are exactly `baseUrl`/`source`/`boundByModel`, so the strict parser
+correctly rejected it as `unknown_field`. It now pins **both accepted forms** (labelled legacy
+mode, and the `v2_windowed` form). `R0-F5-A` demanded `null` for a validity-less declaration,
+which is no longer the accepted contract (task-6 deliberately keeps that shape as an
+explicitly-labelled `legacy_ephemeral` mode); it is **re-expressed** to assert what the gap was
+actually about — such a declaration must be labelled `legacy_ephemeral` +
+`sourceKind: "operator_declared"`, carry `issuedAt`/`expiresAt === null`, produce a different
+digest from the windowed basis, and can never self-declare `provider_verified`. **No production
+contract was weakened to satisfy a test.**
+
+### 9.4 Mutation gate — one OPEN item
+
+The anti-cheat mutation gate is **26/27 CAUGHT**. The one miss,
+**`a6-forged-evidence-accepted`**, is a dead check repaired separately by `task-13`. It is
+recorded here as an **OPEN item** and is **not** reported as passing, and it is not a
+formal-experiment blocker by itself.
+
+### 9.5 Formal-experiment readiness — UNCHANGED, and no paid package is emitted
+
+`realBuildOfflineReady` is still **BLOCKED** (`NO_REAL_ARM_PAIR`) and `budgetEvidenceReady` is
+still **NOT_PROVEN**; `paidExperimentRun` is **NOT_RUN**. A green CI is **not** a substitute for
+formal-experiment readiness, so this document does **not** emit a pending-review
+model/endpoint/price-source/amount/calls/tools/duration/window package: those conditions are
+not met on this SHA. Historical paid `agent benchmark` requests remain **historical paid
+benchmarks**, never renamed into formal `prereg run` experiments.
