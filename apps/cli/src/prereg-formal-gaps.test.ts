@@ -45,6 +45,7 @@ import {
   openPreregisteredCampaignGate,
   openR97BudgetLedger,
   parseAndValidatePreregistrationV2,
+  readCostJournal,
   runPreregisteredCampaign,
   serializePreregistrationV2,
   stableStringify,
@@ -519,15 +520,44 @@ describe("F4 — ACT is unreachable from unverified evidence", () => {
       runArm: forged,
       now: () => NOW,
     });
+
+    // R14 — hand the aggregate the DURABLE LEDGER THIS CAMPAIGN REALLY PRODUCED,
+    // exactly as the release CLI does (`preregCmd` reads
+    // `readCostJournal(budgetDir)`). The forged runner never touches
+    // `ctx.provider`, so the ledger witnesses a GENUINE CORROBORATED ZERO: no call,
+    // no charge, no entry — the one zero the cost rule permits to be 0 ("all-zero
+    // calls with independent verifiable zero evidence"). It is NOT an absent
+    // ledger, which is refused as NOT_OBSERVED.
+    //
+    // WHY THIS LINE EXISTS (R13/R12 measured, R14 repaired): without it the fixture
+    // described a JOURNAL-LESS campaign, and the merged R2 cost rule correctly
+    // refused that before evidence corroboration could be the deciding gate — the
+    // one-site mutation on `prereg-run-evidence.ts` then had nothing left to flip,
+    // so this check went dead. Feeding the real ledger restores the fixture's
+    // STATED premise below ("every hard gate is satisfied") and makes evidence
+    // corroboration the sole blocker again.
+    const journal = await readCostJournal(join(dir, "budget"));
     const aggregate = aggregatePreregisteredCampaign(run, artifact, {
       providerCalls: 0,
       budgetRemaining: artifact.budget.campaignWorstCaseModelCalls,
+      journalChargedTokens: journal.chargedTotalTokens,
+      journal,
     });
 
     // THE INVARIANT: an outcome whose evidence cannot be verified against the
     // real trace/verifier/activation bytes is INVALID (or refused) — never a
-    // champion ACCEPT. Today the shape check is the whole check, and every
-    // non-evidence gate passes, so the current build ACCEPTs this fabrication.
+    // champion ACCEPT.
+    //
+    // The first four assertions state the PREMISE and the fifth states the
+    // property: the campaign's cost evidence is a corroborated zero and the arms
+    // ARE comparable, so the ONLY remaining blocker is artifact corroboration —
+    // and forged evidence must fail it. If a future change makes cost or
+    // provenance refuse this fixture again, these assertions fail LOUDLY instead
+    // of letting the verdict pass for a reason unrelated to evidence.
+    expect(aggregate.cost.basis).toBe("JOURNAL_ZERO_EVIDENCE");
+    expect(aggregate.decision.gates.costBounded).toBe(true);
+    expect(aggregate.decision.gates.provenanceComparable).toBe(true);
+    expect(aggregate.decision.gates.artifactIntegrity).toBe(false);
     expect(aggregate.decision.decision).not.toBe("ACCEPT");
   });
 });
