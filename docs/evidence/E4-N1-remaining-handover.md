@@ -501,3 +501,22 @@ state `docs:verify`'s E4-00 check treats as an honest PASS. `pnpm docs:verify` �
 §5's stale digest comment (`227d00b6…`) was corrected to the real `0d8af323…`; that string now appears
 nowhere in the repository except in §5 itself, which documents it as the stale value.
 
+### 10.4 Two-platform CI, verified on the published head
+
+Run [36365533719](https://github.com/ki11a-Conton/harness-agent/actions/runs/36365533719) at head
+`c44034ed03f2a03c8fedf43c78e7c52bc9f70c3e` (= `origin/main`, attempt 1) concluded **success**, 7/7 jobs
+on both platforms. The step that was red before (`Generate gate execution evidence (P38.2-4/10, E4-R09
+unified V2)`) is `success` on ubuntu **and** windows.
+
+The re-pin is confirmed from the runners' own artifacts rather than from a green tick — the uploaded
+`closed-loop-identity.json` on each platform:
+
+| Artifact | `armBaselineSha` | `armCandidateSha` | suite | matrix | `providerCalls` | strong / weak |
+|---|---|---|---|---|---|---|
+| `r97-r98-closed-loop-ubuntu-latest-…` | `8265dc39…` | `ee15e7e7…` | 564/564 | 9/9 | 0 | 0 / 6 |
+| `r97-r98-closed-loop-windows-latest-…` | `8265dc39…` | `ee15e7e7…` | 564/564 | 9/9 | 0 | 0 / 6 |
+
+So the comparable pair is what CI actually built on both platforms, and `strongPasses=0` / `weakPasses=6`
+is reproduced there too — the structural zero is not an artefact of this development host.
+
+
