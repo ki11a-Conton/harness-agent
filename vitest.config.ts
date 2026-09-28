@@ -37,15 +37,18 @@ export default defineConfig({
       // runnable through `apps/cli/test-infra/n0-gaps-vitest.config.ts`.
       "packages/evaluation/src/prereg-n0-gaps.test.ts",
       "apps/cli/src/prereg-n0-gaps.test.ts",
-      // R0 (plan(20260928-105425).md §R0 line 63): the F5/F6 RED counterexamples
-      // are DELIBERATELY failing on the audited HEAD and assert the TARGET
-      // behaviour R4/R7 must implement. Same contract as B0/N0: they stay
-      // individually runnable through
+      // R0 (plan(20260928-105425).md §R0 line 63): the F5 counterexamples are
+      // DELIBERATELY failing on the audited HEAD and assert the TARGET behaviour
+      // task-9 must implement. They stay individually runnable through
       // `apps/cli/test-infra/r0-gaps-vitest.config.ts` and must NOT be collected
-      // by the green regression run. R7 moves them into the formal gate when the
-      // fixes land.
+      // by the green regression run until they close.
+      //
+      // The F6 file is NO LONGER excluded: R7-core turned it GREEN
+      // (`16 passed (16)`), so it is now an ordinary gate that `pnpm test` and
+      // the `R7 — F6 readiness classification gate` CI step both run. An
+      // exclusion is only honest while the file is genuinely red; leaving a
+      // green suite excluded would make it a gate in name only.
       "apps/cli/src/r0-f5-pricing-declaration-gaps.test.ts",
-      "apps/cli/src/r0-f6-ci-readiness-classification.test.ts",
     ],
     environment: "node",
     testTimeout: 300000,
