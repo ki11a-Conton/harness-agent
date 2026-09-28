@@ -577,18 +577,26 @@ export const MUTATIONS = [
     // A4/F3: the duration dimension is a real ledger dimension charged from the
     // ACTUAL elapsed time. This mutation settles it at 0, so `maxDurationMs` is
     // never exercised and the cap can never bind.
-    find: `            const view = await opts.costBudget.settle(primary, {
-              inputTokens,
-              outputTokens,
-              durationMs,
-              usdMicros: chargedMicros,
-            });`,
-    replace: `            const view = await opts.costBudget.settle(primary, {
-              inputTokens,
-              outputTokens,
-              durationMs: 0, // A7 mutation: the duration dimension is never charged
-              usdMicros: chargedMicros,
-            });`,
+    //
+    // R12 anchor repair: the R2 x R3 merge resolution moved this settlement into
+    // a guarded state machine (`let view: CostBudgetView; try { view = await
+    // opts.costBudget.settle(...) } catch { ... }`), so the pre-merge anchor text
+    // (`const view = await opts.costBudget.settle(...)`) no longer existed and the
+    // mutation landed 0 times — a silent no-op, not a caught mutation. The anchor
+    // below is the SAME settlement call in its current shape; the replacement is
+    // unchanged, so the defeat condition (duration settled at 0) is identical.
+    find: `              view = await opts.costBudget.settle(primary, {
+                inputTokens,
+                outputTokens,
+                durationMs,
+                usdMicros: chargedMicros,
+              });`,
+    replace: `              view = await opts.costBudget.settle(primary, {
+                inputTokens,
+                outputTokens,
+                durationMs: 0, // A7 mutation: the duration dimension is never charged
+                usdMicros: chargedMicros,
+              });`,
     suite: "apps/cli/src/prereg-formal-gaps.test.ts",
     test: "the duration dimension is charged, not left at zero",
     catchExpectation:
