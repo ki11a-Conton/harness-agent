@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Message } from "@ar/contracts";
-import { newMessageId, newSessionId, newToolCallId, assertToolProtocol, findOrphanToolResults } from "@ar/contracts";
-import { trimMessageHistory } from "./turn-helpers.js";
+import { errorInfo, newMessageId, newSessionId, newToolCallId, assertToolProtocol, findOrphanToolResults } from "@ar/contracts";
+import { decideModelRetry, trimMessageHistory } from "./turn-helpers.js";
 
 /**
  * P2-41/PROTOCOL: the Phase-8 message-history trim bounds what the MODEL sees
@@ -53,5 +53,44 @@ describe("trimMessageHistory tool-protocol safety", () => {
     ];
     const trimmed = trimMessageHistory(messages, 1);
     assertToolProtocol(trimmed);
+  });
+});
+
+describe("F7/R6 decideModelRetry: a local wire-protocol refusal is never retried", () => {
+  // A recovery policy that WOULD retry a generic model_error.
+  const retryingPolicy = { action: "retry", retryDelayMs: 0, maxAttempts: 3, reason: "model_error" };
+
+  it("fails immediately for provider.kind === protocol (physical HTTP 0 already)", () => {
+    const local = errorInfo("MODEL_ERROR", "refusing to send a wire-illegal chat request", {
+      retryable: false,
+      safeToRetry: false,
+      provider: { kind: "protocol" },
+    });
+    const action = decideModelRetry(local, false, retryingPolicy, 1);
+    expect(action.action).toBe("fail");
+    if (action.action !== "fail") throw new Error("unreachable");
+    expect(action.reason).toContain("local wire-protocol violation");
+    expect(action.reason).toContain("physical HTTP 0");
+    // No run.limit_reached event: no provider limit was reached — the harness
+    // refused its own body.
+    expect(action.suppressLimitEvent).toBe(true);
+  });
+
+  it("still retries the same failure when it is NOT a local protocol defect", () => {
+    const remote = errorInfo("MODEL_ERROR", "OpenAI chat completion failed: HTTP 500", {
+      provider: { kind: "server_error", status: 500 },
+    });
+    expect(decideModelRetry(remote, false, retryingPolicy, 1).action).toBe("retry");
+  });
+
+  it("does not retry a protocol refusal on any attempt number", () => {
+    const local = errorInfo("MODEL_ERROR", "wire-illegal", {
+      retryable: false,
+      safeToRetry: false,
+      provider: { kind: "protocol" },
+    });
+    for (const attempt of [1, 2, 3, 9]) {
+      expect(decideModelRetry(local, false, retryingPolicy, attempt).action).toBe("fail");
+    }
   });
 });

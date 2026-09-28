@@ -13,8 +13,18 @@ import type {
   ToolSpec,
   Usage,
 } from "@ar/contracts";
-import { AgentError, errorInfo, newToolCallId, toolNameViolation, TOOL_NAME_PATTERN } from "@ar/contracts";
+import {
+  AgentError,
+  errorInfo,
+  findSerializedWireIssues,
+  newToolCallId,
+  renderWireIssues,
+  toolNameViolation,
+  TOOL_NAME_PATTERN,
+  type SerializedChatMessage,
+} from "@ar/contracts";
 import { redactSecrets } from "@ar/security";
+import { buildProviderDiagnosticBundle } from "./provider-diagnostics.js";
 
 /** Optional OpenAI-compatible provider settings, passable via ProviderConfig. */
 export interface OpenAIProviderConfig {
@@ -132,6 +142,10 @@ function toOpenAiTool(tool: ToolSpec): Record<string, unknown> {
         {
           retryable: false,
           safeToRetry: false,
+          // F7/R6: a name outside the grammar is a LOCAL protocol defect, not a
+          // transient provider failure — resending the identical body can never
+          // succeed, so the recovery engine must not retry it.
+          provider: { kind: "protocol" },
           evidence: JSON.stringify({ tool: tool.name, pattern: TOOL_NAME_PATTERN.source }),
         },
       ),
@@ -273,16 +287,75 @@ async function* streamChatCompletion(
   const timedOut = (): boolean => timeoutSignal !== undefined && timeoutSignal.aborted && !signal.aborted;
   const timeoutMessage = `OpenAI chat completion timed out after ${opts.requestTimeoutMs}ms`;
 
+  // F7/R6: the wire body is serialized HERE, and the tool-protocol check runs
+  // on that serialized array immediately before the send — never on an assumed
+  // shape. `toOpenAiMessage` is 1:1, but the check does not rely on that: a
+  // `tool` message without a `tool_call_id` becomes `{role:"tool"}` with no
+  // correlation id on the wire, and the serialized check sees exactly that.
+  const wireMessages = request.messages.map(toOpenAiMessage);
   const body: Record<string, unknown> = {
     model: opts.modelId,
-    messages: request.messages.map(toOpenAiMessage),
+    messages: wireMessages,
     stream: true,
     // Request stream usage so token accounting works on compatible servers
     // (plan.md Phase 8/10 observability; harmless for servers that ignore it).
     stream_options: { include_usage: true },
   };
-  const tools = request.tools?.map(toOpenAiTool);
+
+  // P2-43: an illegal advertised function name fails closed locally. The
+  // diagnostic bundle is attached so a real-world 11133 can be correlated with
+  // the exact request structure without retaining any content.
+  let tools: ReturnType<typeof toOpenAiTool>[] | undefined;
+  try {
+    tools = request.tools?.map(toOpenAiTool);
+  } catch (err) {
+    if (err instanceof AgentError) {
+      throw new AgentError({
+        ...err.info,
+        provider: err.info.provider ?? { kind: "protocol" },
+        evidence: JSON.stringify(
+          buildProviderDiagnosticBundle({
+            reason: "tool_name_not_in_grammar",
+            messages: wireMessages,
+            endpoint: opts.baseUrl,
+            modelId: opts.modelId,
+            ...(request.tools !== undefined ? { tools: request.tools } : {}),
+          }),
+        ),
+      });
+    }
+    throw err;
+  }
   if (tools?.length) body.tools = tools;
+
+  // F7/R6: refuse a wire-illegal request LOCALLY. This is the last point before
+  // the socket: a violation here means the durable transcript / view repair
+  // produced a pairing a strict OpenAI-compatible upstream rejects (the
+  // observed 11148 "tool calls and tool results do not match"). No fetch is
+  // issued, so the physical HTTP count for this attempt is 0.
+  const wireIssues = findSerializedWireIssues(wireMessages);
+  if (wireIssues.length > 0) {
+    throw new AgentError(
+      errorInfo(
+        "MODEL_ERROR",
+        `refusing to send a wire-illegal chat request: ${wireIssues.length} tool-protocol violation(s) in the serialized message view — every assistant 'tool_calls' block must be followed immediately by exactly one 'tool' message per 'tool_call_id'\n${renderWireIssues(wireIssues)}`,
+        {
+          retryable: false,
+          safeToRetry: false,
+          provider: { kind: "protocol" },
+          evidence: JSON.stringify(
+            buildProviderDiagnosticBundle({
+              reason: "wire_protocol_violation",
+              messages: wireMessages,
+              endpoint: opts.baseUrl,
+              modelId: opts.modelId,
+              ...(request.tools !== undefined ? { tools: request.tools } : {}),
+            }),
+          ),
+        },
+      ),
+    );
+  }
 
   let response: Response;
   for (let attempt = 0; ; attempt += 1) {
@@ -332,6 +405,20 @@ async function* streamChatCompletion(
             status: response.status,
             ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
           },
+          // F7/R6: a REAL provider error carries a redaction-safe diagnostic
+          // bundle — request structure, tool call/result ID correlation, digests,
+          // status and a stable reason — so the 11148 class is diagnosable from
+          // the run artifact without retaining any user content or tool output.
+          evidence: JSON.stringify(
+            buildProviderDiagnosticBundle({
+              reason: "http_status",
+              messages: wireMessages,
+              endpoint: opts.baseUrl,
+              modelId: opts.modelId,
+              status: response.status,
+              ...(request.tools !== undefined ? { tools: request.tools } : {}),
+            }),
+          ),
         },
       );
       // 429 (rate limit) and 5xx are transient; other statuses (401/403/400)

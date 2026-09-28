@@ -407,6 +407,21 @@ export function decideModelRetry(
 ): ModelRetryAction {
   if (modelFailed === undefined) return { action: "success" };
 
+  // F7/R6: a LOCAL wire-protocol refusal was detected before the socket, so the
+  // physical HTTP count for the attempt is 0. It is deterministic — the
+  // identical request body would be rejected again — so the recovery policy's
+  // generic "model_error → retry" must not apply: retrying only burns budget on
+  // a request that can never be sent. Fail immediately, without a limit event
+  // (no provider limit was reached; the harness refused its own body).
+  if (modelFailed.provider?.kind === "protocol") {
+    return {
+      action: "fail",
+      maxAttempts: attempt,
+      reason: `local wire-protocol violation (no request was sent, physical HTTP 0): ${modelFailed.message}`,
+      suppressLimitEvent: true,
+    };
+  }
+
   if (isContextOverflowError(modelFailed)) {
     if (!reactiveCompacted) return { action: "compact-and-retry" };
     return { action: "fail", maxAttempts: 1, reason: "context overflow after reactive compact", suppressLimitEvent: true };
