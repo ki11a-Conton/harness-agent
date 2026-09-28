@@ -39,6 +39,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { spawn } from "node:child_process";
 import { existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -113,8 +114,10 @@ interface GateModule {
   dirtyTreeReason: (verdict: { tolerated?: Array<{ path: string }>; blocking?: Array<{ line: string }> }) => string;
   verifyMutationLanded: (opts: {
     mutation: { file: string; find: string; replace: string };
+    intendedText: string;
     afterText: string;
   }) => { landed: boolean; findCount: number; replaceCount: number; reason: string | null };
+  applyAnchor: (source: string, find: string, replace: string) => { ok: boolean; occurrences: number; text: string };
   changedPorcelainLines: (before: string, after: string) => string[];
   unexpectedChangedPaths: (
     before: string,
@@ -886,14 +889,10 @@ describe("E4-R17 X5: silent false results are replaced by distinct loud failures
     replace: "  return { verified: true, problems };",
   };
 
-  it("verifyMutationLanded requires the anchor ABSENT and the mutated text PRESENT", () => {
-    const landed = mod.verifyMutationLanded({
-      mutation,
-      afterText: "function f() {\n  return { verified: true, problems };\n}\n",
-    });
+  it("verifyMutationLanded accepts the exact text the gate produced", () => {
+    const intended = "function f() {\n  return { verified: true, problems };\n}\n";
+    const landed = mod.verifyMutationLanded({ mutation, intendedText: intended, afterText: intended });
     expect(landed.landed).toBe(true);
-    expect(landed.findCount).toBe(0);
-    expect(landed.replaceCount).toBe(1);
     expect(landed.reason).toBeNull();
   });
 
@@ -901,14 +900,66 @@ describe("E4-R17 X5: silent false results are replaced by distinct loud failures
     // The whole reason this check exists: an unlanded mutation leaves the bound test
     // PASSING and is then reported as a MISS that reads like a defect in the test — or,
     // worse, a "restore" of a file nobody changed reports a catch for nothing.
-    const landed = mod.verifyMutationLanded({
-      mutation,
-      afterText: "function f() {\n  return { verified: false, problems };\n}\n",
-    });
+    const intended = "function f() {\n  return { verified: true, problems };\n}\n";
+    const onDisk = "function f() {\n  return { verified: false, problems };\n}\n";
+    const landed = mod.verifyMutationLanded({ mutation, intendedText: intended, afterText: onDisk });
     expect(landed.landed).toBe(false);
-    expect(landed.findCount).toBe(1);
     expect(landed.reason).toMatch(/THE MUTATION DID NOT LAND/);
     expect(landed.reason).toContain(mutation.file);
+  });
+
+  it("accepts an INSERT-style mutation whose replace CONTAINS its find — MEASURED, not assumed", () => {
+    // MEASURED DEFECT in the first version of this check: it required "the find anchor is
+    // ABSENT". `n5-provider-constructed-before-preflight` PREPENDS a line to the block its
+    // find matches, so its replacement CONTAINS the anchor and the anchor count correctly
+    // stays at 1. The absent-anchor rule rejected that correct application during a full
+    // gate run (`[MISSED] n5-provider-constructed-before-preflight … found the anchor 1
+    // time(s) and the mutated text 1 time(s)`). Byte equality against the text the gate
+    // produced is what makes insert-style and replace-style anchors behave alike.
+    const insert = {
+      file: "packages/evaluation/src/example.ts",
+      find: "  // STEP 0: refused.\n  // Only the artifact may decide.",
+      replace:
+        "  void (await opts.makeProvider()); // inserted BEFORE the block\n" +
+        "  // STEP 0: refused.\n  // Only the artifact may decide.",
+    };
+    expect(insert.replace.includes(insert.find), "the premise of this test: insert-style replace").toBe(true);
+    const applied = mod.applyAnchor(`function f() {\n${insert.find}\n}\n`, insert.find, insert.replace);
+    expect(applied.ok).toBe(true);
+    const verdict = mod.verifyMutationLanded({
+      mutation: insert,
+      intendedText: applied.text,
+      afterText: applied.text,
+    });
+    expect(verdict.landed, "a correct insert-style application must NOT be rejected").toBe(true);
+    expect(verdict.findCount, "the anchor legitimately survives an insert-style mutation").toBe(1);
+  });
+
+  it("never rejects a CORRECT application of ANY mutation in the real list", async () => {
+    // The regression pin for the defect above, over the real list rather than a fixture:
+    // for every mutation the gate carries, applying it and then verifying it must pass.
+    // If a future anchor is written insert-style, this fails here instead of during a
+    // full gate run.
+    let insertStyle = 0;
+    for (const mutation of mod.MUTATIONS) {
+      const src = await readFile(join(REPO, mutation.file), "utf8");
+      const applied = mod.applyAnchor(src, mutation.find, mutation.replace);
+      expect(applied.ok, `${mutation.id}: its anchor no longer lands on ${mutation.file}`).toBe(true);
+      const verdict = mod.verifyMutationLanded({
+        mutation,
+        intendedText: applied.text,
+        afterText: applied.text,
+      });
+      expect(verdict.landed, `${mutation.id}: the landing check rejected a CORRECT application`).toBe(true);
+      // Counted through the gate's own EOL-insensitive matcher, because this checkout is
+      // CRLF while the anchors are written LF — a raw `includes` would miss the anchor
+      // for a reason that has nothing to do with the anchor's shape.
+      if (verdict.findCount > 0) insertStyle += 1;
+    }
+    expect(
+      insertStyle,
+      "no insert-style mutation is left in the list; this test's measured premise is gone",
+    ).toBeGreaterThan(0);
   });
 
   it("ignores the file the mutation targets and reports ONLY the unexpected one", () => {

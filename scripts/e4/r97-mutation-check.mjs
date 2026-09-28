@@ -1428,25 +1428,48 @@ export function dirtyTreeReason(verdict) {
  * that did not take, followed by a "restore" of a file nobody changed, would report a
  * catch for a mutation that was never applied.
  *
- * So the file is RE-READ after the write and both halves are required: the anchor must
- * be ABSENT and the mutated text PRESENT. Exported as a pure function so both
- * directions are pinned by a test rather than only observed when an anchor rots.
+ * THE RULE IS BYTE EQUALITY, and that is a MEASURED decision rather than the obvious
+ * one. The first version of this check required "the `find` anchor is ABSENT and the
+ * `replace` text is PRESENT", and the gate's own full run rejected a CORRECT
+ * application with it:
+ *
+ *   [MISSED] n5-provider-constructed-before-preflight  THE MUTATION DID NOT LAND …
+ *            found the anchor 1 time(s) and the mutated text 1 time(s)
+ *
+ * `n5-provider-constructed-before-preflight` is INSERT-style: its `replace` PREPENDS a
+ * line to the commented block its `find` matches, so the replacement CONTAINS the
+ * anchor and the anchor count correctly STAYS at 1. The absent-anchor rule therefore
+ * rejected a mutation that had landed perfectly. Comparing the file against the exact
+ * text the gate produced is both simpler and strictly stronger: it says "the bytes on
+ * disk are the bytes this gate wrote", which is the property that matters, and it is
+ * true for insert-style and replace-style anchors alike.
+ *
+ * `findCount`/`replaceCount` are still reported, for DIAGNOSIS only. Exported as a pure
+ * function so both directions are pinned by a test rather than only observed when an
+ * anchor rots.
  */
 export function verifyMutationLanded(opts) {
-  const { mutation, afterText } = opts;
+  const { mutation, intendedText, afterText } = opts;
+  if (afterText === intendedText) {
+    return {
+      landed: true,
+      findCount: anchorOccurrences(intendedText, mutation.find),
+      replaceCount: anchorOccurrences(intendedText, mutation.replace),
+      reason: null,
+    };
+  }
   const findCount = anchorOccurrences(afterText, mutation.find);
   const replaceCount = anchorOccurrences(afterText, mutation.replace);
-  if (findCount === 0 && replaceCount >= 1) return { landed: true, findCount, replaceCount, reason: null };
   return {
     landed: false,
     findCount,
     replaceCount,
     reason:
-      `THE MUTATION DID NOT LAND: after writing ${mutation.file} the gate re-read the file and found the ` +
-      `anchor ${findCount} time(s) and the mutated text ${replaceCount} time(s); the required state is ` +
-      `anchor 0 and mutated text >= 1. This gate wrote those bytes, so the file on disk is not the file ` +
-      `this gate produced — either another process is editing the same tree or the write did not take. ` +
-      `No result from this mutation can be trusted.`,
+      `THE MUTATION DID NOT LAND: after writing ${mutation.file} the gate re-read the file and it is NOT the ` +
+      `text the gate produced (${afterText.length} bytes on disk vs ${intendedText.length} intended; the ` +
+      `anchor now appears ${findCount} time(s) and the mutated text ${replaceCount} time(s)). This gate wrote ` +
+      `those bytes, so the file on disk is not the file this gate produced — either another process is editing ` +
+      `the same tree or the write did not take. No result from this mutation can be trusted.`,
   };
 }
 
@@ -1608,11 +1631,18 @@ function runOne(mutation, ctx = {}) {
 
     // ---- DID THE ANCHORED MUTATION ACTUALLY LAND? (E4-R17) ------------------
     //
-    // The write above is re-read and checked against BOTH anchors. A `find`/`replace`
-    // that silently did not take would otherwise make the bound test PASS and be
-    // reported as a MISS that reads like a defect in the test — and, worse, a restore
-    // of a file nobody changed would report a catch for a mutation never applied.
-    const landed = verifyMutationLanded({ mutation, afterText: readFileSync(target, "utf8") });
+    // The write above is re-read and compared BYTE-FOR-BYTE against the text this gate
+    // produced. A write that silently did not take would otherwise make the bound test
+    // PASS and be reported as a MISS that reads like a defect in the test — and, worse,
+    // a restore of a file nobody changed would report a catch for a mutation never
+    // applied. Byte equality rather than "the anchor is absent" because MEASURED, this
+    // round: `n5-provider-constructed-before-preflight` is insert-style and its replace
+    // CONTAINS its find, so the anchor legitimately survives the mutation.
+    const landed = verifyMutationLanded({
+      mutation,
+      intendedText: applied.text,
+      afterText: readFileSync(target, "utf8"),
+    });
     if (!landed.landed) {
       result = {
         didNotLand: true,
