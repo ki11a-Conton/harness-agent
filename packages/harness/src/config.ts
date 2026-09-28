@@ -12,6 +12,7 @@ import type {
   Verifier,
 } from "@ar/contracts";
 import type { MemoryScope, MemoryType } from "@ar/contracts";
+import type { ToolDispatchBudget } from "@ar/tools";
 
 /** Feature toggles of the production composition root (plan.md P0-3). */
 export interface HarnessFeatureFlags {
@@ -76,6 +77,24 @@ export interface HarnessConfig {
 
   memory?: HarnessMemoryConfig;
   delegation?: HarnessDelegationConfig;
+
+  /**
+   * R3/F4 — the campaign's PRE-DISPATCH tool budget, supplied by the host that
+   * opened the pre-registered campaign (`admission.toolDispatchBudget`). When set,
+   * the harness forwards it to `ToolOrchestrator`, so one reservation is taken at
+   * the REAL dispatch point and `maxToolCalls` constrains execution BEFORE the
+   * side effect instead of tallying it afterwards. When absent the harness behaves
+   * exactly as before (no budget wired) — this is a capability, not a config flag,
+   * and `@ar/harness` never fabricates one.
+   */
+  toolDispatchBudget?: ToolDispatchBudget;
+
+  /**
+   * R3/F4 — the campaign's SINGLE wall-clock deadline (epoch ms), supplied by the
+   * same host (`admission.campaignDeadlineAtMs`). The harness forwards it to the
+   * orchestrator, which refuses any tool dispatch after it. Absent → no deadline.
+   */
+  campaignDeadlineAtMs?: number;
 
   /** Explicit budget wins over capability-derived budget. */
   contextBudget?: ContextBudget;
