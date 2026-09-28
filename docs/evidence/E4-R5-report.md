@@ -97,10 +97,18 @@ count of provider `generate()` entries.
 | --- | --- | --- |
 | swapped arms (grant vs checkout directory) | `TRUSTED_BUILD_NOT_PROVEN` — "not the directory the grant pinned" | 0 |
 | dirty arm work tree | `TRUSTED_BUILD_NOT_PROVEN` — "the baseline checkout is DIRTY" | 0 |
-| missing ABI (arm build without `R97_ARM_PROBE`) | worker boundary refusal | 0 |
 | tampered decision policy | `PREREGISTRATION_IDENTITY_DRIFT` (policy digest) | 0 |
 | real checkouts under the undeclared `process-exec` posture | `EGRESS_ISOLATION_UNAVAILABLE` | 0 |
 | unsupported backend (`os-container/strict`) | `ARM_ISOLATION_UNSUPPORTED` | 0 |
+| missing ABI (arm build without `R97_ARM_PROBE`) | see below — the E2E row is NOT isolated | 3 |
+
+**The missing-ABI row is honestly downgraded.** In the end-to-end harness the ABI-less
+arm is a temp copy whose bare `@ar/contracts` import cannot resolve (no
+`node_modules`), so it refuses with `ERR_MODULE_NOT_FOUND` after 3 model-call
+attempts — the wrong boundary, with calls. That row therefore does NOT evidence
+"refused before the provider step". The ABI boundary IS pinned, with a measured zero,
+by the in-process unit test `[R5.10]` (stub arm without the probe export → worker
+refusal, `calls === 0`), which is the evidence cited for it.
 
 The unit suite pins the same matrix in-process (`apps/cli/src/prereg-trusted-build.test.ts`,
 11/11) including the POSITIVE path, which spawns the shipped worker against a stub
