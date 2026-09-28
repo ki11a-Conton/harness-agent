@@ -780,6 +780,10 @@ async function copyArmClosure(srcArm, dest) {
   for (const rel of distDirs) {
     await cp(join(srcArm, rel), join(dest, rel), { recursive: true });
   }
+  // The copied dist is ESM; a bare tmp tree needs the marker or Node refuses the
+  // copy as CJS ("Cannot use import statement outside a module") — which would
+  // refuse for the WRONG reason and mask the violation under test.
+  await writeFile(join(dest, "package.json"), `${JSON.stringify({ name: "r5-temp-arm", private: true, type: "module" }, null, 2)}\n`, "utf8");
   return { entryRel: mod.R97_ARM_BUILD_ENTRIES.find((e) => e.endsWith("benchmark-command.js")), distDirs: [...distDirs] };
 }
 
