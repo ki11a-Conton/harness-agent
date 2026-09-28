@@ -51,7 +51,7 @@
 
 import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ModelEvent, ModelProvider } from "@ar/contracts";
@@ -121,13 +121,161 @@ export const ARM_PROBE_EXPORT = "R97_ARM_PROBE";
 export const EGRESS_ISOLATION_UNAVAILABLE = "EGRESS_ISOLATION_UNAVAILABLE";
 
 /**
- * N5 — the marker a SYNTHETIC fixture checkout carries. It is written by the
- * harness's own fixture writer (`scripts/e4/prereg-production-e2e.mjs`
- * `writeArmCheckout`), so it declares "this tree was produced by the harness
- * itself", travels WITH the artifact, and cannot be forgotten by a caller the way
- * an env switch or an option can. Its absence means "untrusted checkout".
+ * N5/R1 — the marker a SYNTHETIC fixture checkout carries, alongside the
+ * test-host trust capability (see `createFixtureCheckoutTrust`).
+ *
+ * R1/F2 (P0): this marker is a PROVENANCE BREADCRUMB AND NOTHING MORE. On the
+ * audited baseline the executor trusted a checkout SOLELY because this file
+ * existed, so any writer could create/copy/link it into an arbitrary tree and the
+ * executor would run that tree as if the harness had authored it. A filename is
+ * not provenance: the trust anchor is the out-of-band capability the TEST HOST
+ * injects, and this marker is only an additional regular-file requirement on a
+ * checkout that capability already pinned.
  */
 export const FIXTURE_CHECKOUT_MARKER_FILENAME = ".r97-synthetic-fixture-checkout";
+
+/**
+ * R1/F2 — the brand of the TEST-HOST-owned fixture-checkout trust capability.
+ * Module-private on purpose: an object literal cannot carry it, so a JSON/env/
+ * marker-driven bypass cannot fabricate one.
+ */
+const FIXTURE_CHECKOUT_TRUST_BRAND: unique symbol = Symbol("ar.cli.fixtureCheckoutTrust");
+
+/** R1/F2 — one checkout the test host pinned, with the hashes it pinned. */
+export interface TrustedFixtureCheckout {
+  /** Canonical (`realpath`) checkout directory. */
+  readonly dir: string;
+  /** The build-closure digest observed when the capability was created. */
+  readonly buildDigest: string;
+  /** The sha256 of the arm build entry observed at the same moment. */
+  readonly entrySha256: string;
+}
+
+/**
+ * R1/F2 — a capability that says "these EXACT directories were produced by the
+ * harness fixture writer, and their bytes were THESE". Not reachable from the
+ * production CLI: no env var, JSON field, marker file, port or flag produces it.
+ */
+export interface FixtureCheckoutTrust {
+  readonly [FIXTURE_CHECKOUT_TRUST_BRAND]: true;
+  readonly checkouts: readonly TrustedFixtureCheckout[];
+}
+
+/**
+ * R1/F2 — pin the fixture checkouts the TEST HOST wrote. Computes each pinned
+ * checkout's canonical path, build digest and entry hash AT ISSUE TIME, so the
+ * executor can verify — immediately before the worker starts — that the tree it
+ * was pointed at is still byte-for-byte the tree that was trusted. A tree that
+ * cannot establish its closure throws here (fail closed): a capability for an
+ * unbuilt tree would be a capability for nothing.
+ */
+export function createFixtureCheckoutTrust(...dirs: readonly string[]): FixtureCheckoutTrust {
+  const rel = R97_ARM_BUILD_ENTRIES.find((e) => e.endsWith("benchmark-command.js"));
+  if (rel === undefined) throw new Error(`${ARM_WORKER_ENTRY_MISSING}: the shared arm build entry list names no benchmark-command.js`);
+  const checkouts = dirs.map((dir) => {
+    const real = realpathSync(dir);
+    const entryPath = join(real, rel);
+    const st = lstatSync(entryPath);
+    if (!st.isFile() || st.isSymbolicLink()) {
+      throw new Error(`${ARM_WORKER_ENTRY_MISSING}: ${real} has no regular build entry ${rel}`);
+    }
+    return {
+      dir: real,
+      buildDigest: computeArmBuildDigestV1(real),
+      entrySha256: sha256Hex(readFileSync(entryPath, "utf8")),
+    };
+  });
+  return Object.freeze({
+    [FIXTURE_CHECKOUT_TRUST_BRAND]: true as const,
+    checkouts: Object.freeze(checkouts),
+  });
+}
+
+/** R1/F2 — is this the real branded capability (not a look-alike object)? */
+export function isFixtureCheckoutTrust(value: unknown): value is FixtureCheckoutTrust {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as Record<PropertyKey, unknown>)[FIXTURE_CHECKOUT_TRUST_BRAND] === true
+  );
+}
+
+/**
+ * R1/F2 — decide whether THIS checkout may start. Every condition is verified
+ * before the child is spawned:
+ *
+ *   1. a branded capability was injected by the test host at all;
+ *   2. the marker exists and is a REGULAR, non-symlink file (a copied, hard-linked
+ *      or symlinked marker is not provenance);
+ *   3. the checkout's CANONICAL path is one this capability pinned — so a copied
+ *      tree, even one with an identical marker, is not trusted;
+ *   4. its build closure and entry bytes still equal the pinned hashes — so
+ *      swapping the entry (or moving it) after the capability was issued is not
+ *      trusted.
+ *
+ * It returns the REASON on refusal so the refusal message names what failed.
+ */
+function verifyFixtureCheckoutTrust(
+  trust: FixtureCheckoutTrust | undefined,
+  armDir: string,
+  armId: "baseline" | "candidate",
+): { trusted: boolean; detail: string } {
+  if (!isFixtureCheckoutTrust(trust)) {
+    return {
+      trusted: false,
+      detail: "no test-host fixture trust capability was injected into this executor",
+    };
+  }
+  const markerPath = join(armDir, FIXTURE_CHECKOUT_MARKER_FILENAME);
+  try {
+    const st = lstatSync(markerPath);
+    if (!st.isFile() || st.isSymbolicLink()) {
+      return {
+        trusted: false,
+        detail: `the synthetic-fixture marker on the ${armId} checkout is not a regular file (a symlink/directory marker is not provenance)`,
+      };
+    }
+  } catch {
+    return { trusted: false, detail: `the ${armId} checkout carries no regular synthetic-fixture marker` };
+  }
+  let real: string;
+  try {
+    real = realpathSync(armDir);
+  } catch {
+    return { trusted: false, detail: `the ${armId} checkout path cannot be canonicalised` };
+  }
+  const pinned = trust.checkouts.find((c) => c.dir === real);
+  if (pinned === undefined) {
+    return {
+      trusted: false,
+      detail: `the ${armId} checkout is not one of the ${trust.checkouts.length} checkout(s) the injected fixture capability pinned`,
+    };
+  }
+  try {
+    if (computeArmBuildDigestV1(armDir) !== pinned.buildDigest) {
+      return {
+        trusted: false,
+        detail: `the ${armId} checkout's build closure no longer matches the digest pinned when the fixture capability was issued (a swapped or moved entry is not trusted)`,
+      };
+    }
+    const rel = R97_ARM_BUILD_ENTRIES.find((e) => e.endsWith("benchmark-command.js"));
+    if (rel === undefined) return { trusted: false, detail: "no declared benchmark-command.js entry" };
+    const entryPath = join(armDir, rel);
+    const entryStat = lstatSync(entryPath);
+    if (!entryStat.isFile() || entryStat.isSymbolicLink()) {
+      return { trusted: false, detail: `the ${armId} arm build entry is not a regular file` };
+    }
+    if (sha256Hex(readFileSync(entryPath, "utf8")) !== pinned.entrySha256) {
+      return {
+        trusted: false,
+        detail: `the ${armId} arm build entry no longer matches the hash pinned when the fixture capability was issued (a swapped entry is not trusted)`,
+      };
+    }
+  } catch {
+    return { trusted: false, detail: `the ${armId} checkout no longer resolves its declared build closure` };
+  }
+  return { trusted: true, detail: "" };
+}
 
 /**
  * N5 — the ONLY environment a worker may inherit. An explicit ALLOWLIST, because
@@ -312,6 +460,18 @@ export interface PreregArmExecutorDeps {
   workerPath?: string;
   /** B3 — the wall-clock bound on one arm-run child process. */
   workerTimeoutMs?: number;
+  /**
+   * R1/F2 — the TEST-HOST fixture-checkout trust capability. Only
+   * `createFixtureCheckoutTrust` produces a value this option accepts, and the
+   * production CLI (`createProductionPreregRunner` with no option) supplies none,
+   * so the release CLI accepts NO fixture-bypass configuration.
+   *
+   * A checkout is trusted iff it is one the capability pinned AND its bytes still
+   * match the pinned digests. The `.r97-synthetic-fixture-checkout` marker is
+   * required but is NEVER sufficient — a marker alone, copied, hard-linked or
+   * symlinked, upgrades nothing.
+   */
+  trustedFixtureCheckouts?: FixtureCheckoutTrust;
 }
 
 /**
@@ -412,19 +572,23 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
     }
     const caseDef = await loadBenchmarkCase(caseDir);
 
-    // --- 3b. the EGRESS TRUST BOUNDARY (N5) --------------------------------
-    // A SYNTHETIC fixture checkout — the marker the harness's own fixture writer
-    // emits — is trusted by construction, and is explicitly NOT a network sandbox.
-    // Every OTHER checkout is untrusted code, and untrusted code may only run
-    // behind a provable single-egress boundary. That boundary does not exist in
-    // this build, so the mode is refused HERE, before the child starts — the plan
-    // forbids letting a request leave and then calling it a failure.
-    const fixtureTrusted = existsSync(join(armDir, FIXTURE_CHECKOUT_MARKER_FILENAME));
+    // --- 3b. the EGRESS TRUST BOUNDARY (N5, tightened by R1/F2) -------------
+    // A checkout may only start when the TEST HOST injected a fixture trust
+    // capability that pins THIS canonical directory and the hashes it had when the
+    // capability was issued. The `.r97-synthetic-fixture-checkout` marker is an
+    // additional regular-file requirement, never the trust source: writing,
+    // copying, hard-linking or symlinking it — or swapping the entry behind it —
+    // upgrades nothing. Every OTHER checkout is untrusted code, and untrusted code
+    // may only run behind a provable single-egress boundary. That boundary does
+    // not exist in this build, so the mode is refused HERE, before the child
+    // starts — the plan forbids letting a request leave and then calling it a
+    // failure.
+    const fixtureTrust = verifyFixtureCheckoutTrust(deps.trustedFixtureCheckouts, armDir, arm.armId);
     const capability = egressIsolationCapability();
-    if (!fixtureTrusted && !capability.available) {
+    if (!fixtureTrust.trusted && !capability.available) {
       refuse(
         EGRESS_ISOLATION_UNAVAILABLE,
-        `the ${arm.armId} checkout is not a synthetic fixture build and this build cannot prove a single-egress boundary for untrusted code (${capability.detail}) — refusing to START it rather than discovering the leak after a request left`,
+        `the ${arm.armId} checkout is not a fixture build this process TRUSTS (${fixtureTrust.detail}) and this build cannot prove a single-egress boundary for untrusted code (${capability.detail}) — refusing to START it rather than discovering the leak after a request left`,
       );
     }
 

@@ -26,16 +26,20 @@
  *       (the shipped `runArm`, the shipped observer), a real frozen case and the
  *       real verifier, with a COUNTING fake provider as the transport. Every arm's
  *       raw evidence is re-verified from the bytes it wrote. Kept as a UNIT
- *       regression (it exercises the adapter in the test process).
- *   POS-FWD (release CLI, real subprocess) — B5. The SHIPPED entry point runs
- *       `prereg build` → `prereg validate` → `prereg run` end to end over the
- *       full frozen schedule (31 cases × 2 repetitions × 2 arms = 124 arm runs),
- *       with the TWO real executable arm builds launched as isolated workers and
- *       the ONLY reachable transport the loopback counting stub. The per-arm
- *       records, the raw evidence bytes and the DURABLE ledger written by the
- *       subprocess are read back and cross-checked here (physicalFetches vs the
- *       ledger's own committed count). This — not POS-EXEC — is what proves the
- *       release CLI can walk the formal forward path offline.
+ *       regression (it exercises the adapter in the test process). R1: this phase
+ *       is a TEST COMPOSITION ROOT — it injects the two capabilities the release
+ *       CLI cannot accept (a non-billable transport and pinned fixture checkouts).
+ *   POS-FWD (release CLI, real subprocess) — R1 CHANGED WHAT THIS PROVES. It used
+ *       to run the full frozen schedule through the shipped subprocess over
+ *       synthesized fixture checkouts. The release CLI accepts NO fixture-bypass
+ *       configuration, so a subprocess cannot be handed the trust capability that
+ *       admits fixture code, and the SHIPPED entry point now REFUSES that campaign
+ *       BEFORE any request (measured: non-zero exit, 0 HTTP against the loopback
+ *       counting stub, no per-arm record). This phase therefore asserts a SECURITY
+ *       property (fail-closed, pre-request) rather than a forward run; the positive
+ *       closed loop is POS-EXEC. A sanctioned trusted-fixture mode for the release
+ *       CLI must enter the preregistration and the approval itself (R5) and is NOT
+ *       claimed here.
  *
  * HONEST COUNTS (plan §A7)
  * ------------------------
@@ -60,7 +64,7 @@
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -506,12 +510,15 @@ async function writeArmCheckout(dir, marker, activate, entries) {
       : `export const R97_ARM_SIBLING_STUB = ${JSON.stringify(`sibling:${marker}`)};\n`;
     writeFileSync(abs, source, "utf8");
   }
-  // N5 — this tree was produced by the harness's OWN fixture writer, so it carries
-  // the synthetic-fixture marker. The arm executor refuses to START any checkout
-  // WITHOUT it, because this build cannot prove a single-egress boundary for
-  // untrusted code. The marker travels with the artifact and cannot be forgotten
-  // by a caller. This does NOT make the fixture a network sandbox — it is
-  // trusted-by-construction, and a real checkout is refused before it starts.
+  // R1/F2 — this tree was produced by the harness's OWN fixture writer, so it
+  // carries the synthetic-fixture marker. That marker is a PROVENANCE BREADCRUMB,
+  // NOT a trust source: the caller that wrote the tree must also PIN it with
+  // `createFixtureCheckoutTrust` (POS-EXEC does; the release-CLI subprocess cannot,
+  // which is why POS-FWD now asserts its pre-request refusal). The marker travels
+  // with the artifact and is required to be a regular file, but on its own it
+  // grants nothing — writing, copying, hard-linking or symlinking it upgrades
+  // nothing. This does NOT make the fixture a network sandbox, and a real checkout
+  // is refused before it starts.
   const executorMod = await import(pathToFileURL(EXECUTOR_ENTRY).href);
   const markerName = executorMod.FIXTURE_CHECKOUT_MARKER_FILENAME;
   if (typeof markerName !== "string" || markerName === "") {
@@ -589,7 +596,16 @@ async function runPositiveExecution(dir, env) {
   const preregistrationJson = evalMod.serializePreregistrationV2(artifact);
 
   // 2. the SHIPPED adapter: the real observer and the real arm executor.
-  const runner = runnerMod.createProductionPreregRunner({ rootDir: REPO_ROOT, env });
+  // R1/F2 — this TEST PARENT wrote the two arm checkouts, so it is the only party
+  // that can and does PIN them. The marker file alone is no longer a trust source:
+  // a self-written/copied/symlinked marker, or a swapped entry, upgrades nothing
+  // (see `apps/cli/src/prereg-fixture-checkout-trust.test.ts`).
+  const executorMod = await import(pathToFileURL(EXECUTOR_ENTRY).href);
+  const trustedFixtureCheckouts = executorMod.createFixtureCheckoutTrust(
+    env.R97_ARM_BASELINE_DIR,
+    env.R97_ARM_CANDIDATE_DIR,
+  );
+  const runner = runnerMod.createProductionPreregRunner({ rootDir: REPO_ROOT, env, trustedFixtureCheckouts });
   const observation = await runner.observe(artifact);
 
   const authorizationJson = `${JSON.stringify(
@@ -635,6 +651,11 @@ async function runPositiveExecution(dir, env) {
   const resultsDir = join(dir, "pos-exec-runs");
   const fake = countingFakeProvider();
 
+  // R1/F1 — the fixture class is admitted ONLY through a test-host-injected,
+  // endpoint- and model-bound NON-BILLABLE transport. `makeProvider` is the
+  // operator's credential-bearing factory; it must never be entered on this path,
+  // and `operatorFactoryEntered` is a MEASURED count of that.
+  let operatorFactoryEntered = 0;
   const admission = await evalMod.openPreregisteredCampaignGate({
     preregistrationJson,
     authorizationJson,
@@ -642,7 +663,16 @@ async function runPositiveExecution(dir, env) {
     budgetDir,
     mode: "first-run",
     now: () => NOW,
-    makeProvider: () => fake.provider,
+    makeProvider: () => {
+      operatorFactoryEntered += 1;
+      return fake.provider;
+    },
+    nonBillableTransport: evalMod.createNonBillableFixtureTransport({
+      endpointBaseUrl: profile.provider.endpointBaseUrl ?? null,
+      providerId: observation.providerId,
+      modelId: observation.modelId,
+      provider: fake.provider,
+    }),
   });
   if (admission.status !== "ADMITTED") {
     return {
@@ -722,6 +752,9 @@ async function runPositiveExecution(dir, env) {
     ledgerRemaining: ledgerView.remaining,
     journalChargedTokens,
     providerFactoryCalls: admission.providerFactoryCalls,
+    // R1/F1 — MEASURED: the operator's credential-bearing factory entries on a
+    // fixture admission. Must be 0; the injected non-billable provider is used.
+    operatorFactoryEntered,
     evidenceVerified: verified,
     evidenceUnverified: unverified,
     verifyProblems: verifyProblems.slice(0, 5),
@@ -735,6 +768,7 @@ async function runPositiveExecution(dir, env) {
     ok:
       run.records.length === artifact.schedule.logicalRuns
       && fake.entered() > 0
+      && operatorFactoryEntered === 0
       && run.records.every((r) => r.outcome.status !== "error" && r.outcome.evidence !== undefined)
       && verified === run.records.length
       && unverified === 0,
@@ -761,19 +795,19 @@ function forwardRefusal(stage, res, httpDuring) {
 }
 
 /**
- * B5 — the FULL frozen schedule through the SHIPPED release entry point as a
- * real SUBPROCESS (`node apps/cli/dist/main.js`), never the in-process adapter.
+ * B5/R1 — the SHIPPED release entry point as a real SUBPROCESS
+ * (`node apps/cli/dist/main.js`) over the same two synthesized fixture checkouts.
  *
- * `prereg build` → `prereg validate` → `prereg run --mode first-run` over all 31
- * cases × 2 repetitions × 2 arms. The subprocess's ONLY reachable transport is
- * the loopback counting stub — its `OPENAI_BASE_URL` points at it and its
- * `TEST_ONLY` sentinel key resolves a real provider against that endpoint — so
- * every physical model call is counted at the stub rather than inferred. The two
- * arms are executed by the B3 isolated workers, each loading its OWN checkout's
- * build. The per-arm records, their raw evidence bytes and the DURABLE ledger
- * the subprocess wrote are read back and cross-checked:
- * `physicalStubRequests === ledger.committed`, `ledger.unknown === 0`, and every
- * record's evidence re-verifies from the bytes it wrote.
+ * R1/F1+F2 — WHAT THIS PHASE NOW PROVES. It used to run the full frozen schedule
+ * here. After R1 the fixture admission requires an in-process, branded capability
+ * (a non-billable transport bound to the observed endpoint/model) and the arm
+ * executor requires another (the pinned fixture checkouts). A subprocess can be
+ * handed neither, and the release CLI deliberately accepts NO fixture-bypass
+ * configuration. So `prereg build` and `prereg validate` still run (0 provider,
+ * 0 HTTP), and `prereg run` must be REFUSED before any request: non-zero exit,
+ * 0 requests at the loopback counting stub, no per-arm record. That is a
+ * SECURITY result — fail-closed ahead of the network — and it is reported as
+ * `CLOSED_BY_R1`, never as a forward-execution PASS.
  */
 async function runPositiveForward(stub, dir, env) {
   const evalMod = await import(pathToFileURL(EVAL_ENTRY).href);
@@ -818,98 +852,66 @@ async function runPositiveForward(stub, dir, env) {
     expiresAtMs: 9_000_000_000_000,
     approvalId: "e2e-offline-TEST_ONLY-forward-approval",
     allowResume: false,
-    // N3 — the SEPARATELY-IDENTIFIED synthetic-fixture class (never a paid
+    // N3/R1 — the SEPARATELY-IDENTIFIED synthetic-fixture class (never a paid
     // approval: `paid` must be false and the parser refuses the two together).
-    // It bills nothing, and the gate admits it only because the OBSERVED endpoint
-    // is loopback (the counting stub); a non-loopback or non-zero-priced
-    // transport is refused as `FIXTURE_TRANSPORT_NOT_NON_BILLABLE`.
+    // R1 CHANGE: the shipped CLI has NO fixture-bypass configuration, so this
+    // authorization is REFUSED before any request in POS-FWD. That refusal — not a
+    // forward run — is what this phase now measures.
     paid: false,
     fixtureMode: "synthetic-offline-v1",
   };
   writeFileSync(authPath, `${JSON.stringify(authorization, null, 2)}\n`, "utf8");
 
   // 3. the FULL forward schedule through the shipped release CLI subprocess.
+  //
+  // R1/F1+F2 — this phase is now a SECURITY POSITIVE, not a forward run. A
+  // subprocess cannot receive the in-process test-host capabilities
+  // (`nonBillableTransport`, `trustedFixtureCheckouts`), and the release CLI
+  // accepts NO fixture-bypass configuration — so the SHIPPED entry point must
+  // REFUSE this fixture campaign BEFORE any request: non-zero exit, 0 HTTP against
+  // the loopback stub, no per-arm record written. A legitimate trusted-fixture mode
+  // belongs to R5 (it must enter the preregistration and the approval itself,
+  // rather than letting a marker or a flag grant it unilaterally), and is NOT
+  // claimed here.
   const before = stub.count();
   const run = await runCliAsync(
     ["prereg", "run", preregPath, "--authorization", authPath, "--budget-dir", budgetDir, "--out", outDir, "--mode", "first-run"],
     env,
   );
   const after = stub.count();
-  if (run.code !== 0) return forwardRefusal("run", run, after - before);
-
-  // 4. read back the DURABLE ledger and EVERY per-arm record the subprocess wrote.
-  const ledger = ledgerViewFromFile(budgetDir);
+  const httpDuringRun = after - before;
   const runsDir = join(outDir, "runs");
-  const recordFiles = readdirSync(runsDir).filter((f) => f.endsWith(".json"));
-  const records = recordFiles.map((f) => JSON.parse(readFileSync(join(runsDir, f), "utf8")));
-
-  // 5. re-verify every arm's evidence from the bytes the subprocess wrote.
-  const evidenceRoot = join(runsDir, evalMod.PREREG_RUN_EVIDENCE_DIRNAME);
-  let verified = 0;
-  let unverified = 0;
-  const verifyProblems = [];
-  for (const record of records) {
-    if (record.outcome.status === "error" || record.outcome.evidence === undefined) continue;
-    const v = evalMod.verifyArmEvidenceFromArtifacts(
-      join(evidenceRoot, record.armRunId),
-      {
-        preregistrationDigest: record.preregistrationDigest,
-        planDigest: record.planDigest,
-        armRunId: record.armRunId,
-        armId: record.armId,
-        caseId: record.caseId,
-        repetition: record.repetition,
-        orderIndex: record.orderIndex,
-      },
-      record.outcome.evidence,
-    );
-    if (v.verified) verified += 1;
-    else {
-      unverified += 1;
-      verifyProblems.push(...v.problems);
-    }
-  }
-
-  const aggregate = JSON.parse(readFileSync(join(outDir, "aggregate.json"), "utf8"));
-  const physical = after - before;
+  const recordFiles = existsSync(runsDir) ? readdirSync(runsDir).filter((f) => f.endsWith(".json")) : [];
+  const refusalCode =
+    ["EGRESS_ISOLATION_UNAVAILABLE", "FIXTURE_TRANSPORT_NOT_NON_BILLABLE"].find((c) => run.out.includes(c)) ?? null;
+  // The refusal must have happened BEFORE the budget was touched: if the durable
+  // ledger file exists at all, it must record nothing committed/reserved/unknown.
+  const ledgerFile = join(budgetDir, R97_LEDGER_FILE);
+  const ledger = existsSync(ledgerFile) ? ledgerViewFromFile(budgetDir) : null;
+  const noLedgerCommitment = ledger === null || (ledger.committed === 0 && ledger.outstanding === 0 && ledger.unknown === 0);
+  const refusedByDesign =
+    run.code !== 0 && httpDuringRun === 0 && recordFiles.length === 0 && refusalCode !== null && noLedgerCommitment;
   const expectArmRuns = artifact.schedule.logicalRuns;
-  // N6 — cross-check the aggregate the RELEASE CLI wrote against the durable cost
-  // journal that same run produced: neither may be the arms' self-report.
-  const journalChargedTokens = costJournalTokensFromFile(budgetDir);
-  const aggregateTokensDelta = aggregate?.decision?.statistics?.tokensDelta ?? null;
-  // N6 — see the in-process predicate: an `error` record now FAILS the comparison
-  // instead of being silently filtered out of a self-satisfying identity.
-  const ok =
-    records.length === expectArmRuns &&
-    physical === expectArmRuns &&
-    ledger.committed === physical &&
-    ledger.unknown === 0 &&
-    records.every((r) => r.outcome.status !== "error" && r.outcome.evidence !== undefined) &&
-    verified === records.length &&
-    unverified === 0 &&
-    aggregateTokensDelta === (journalChargedTokens ?? 0);
   return {
     transport: "release-cli-subprocess",
     executionBackend: "release-cli-subprocess",
     preregistrationDigest: artifact.preregistrationDigest,
     planDigest: artifact.schedule.planDigest,
     expectArmRuns,
-    scheduledArmRuns: records.length,
-    physicalStubRequests: physical,
-    journalChargedTokens,
-    aggregateTokensDelta,
+    scheduledArmRuns: recordFiles.length,
+    // MEASURED, and legitimately 0: the refusal happened BEFORE any request left,
+    // which is exactly what the loopback stub's own counter proves.
+    physicalStubRequests: httpDuringRun,
     httpRequestsDuringBuildAndValidate: afterCertify - httpBeforeBuild,
-    ledgerGranted: ledger.granted,
-    ledgerCommitted: ledger.committed,
-    ledgerRemaining: ledger.remaining,
-    ledgerUnknown: ledger.unknown,
-    ledgerTransportRetries: ledger.transportRetries,
-    evidenceVerified: verified,
-    evidenceUnverified: unverified,
-    verifyProblems: verifyProblems.slice(0, 5),
-    decision: aggregate.decision?.decision ?? null,
-    decisionReasonCodes: aggregate.decision?.reasonCodes ?? null,
-    ok,
+    refusedByDesign,
+    refusalCode,
+    exitCode: run.code,
+    // `null` = NOT_OBSERVED (no ledger was opened); a number is the durable
+    // ledger's own count, never an inferred one.
+    ledgerFilePresent: ledger !== null,
+    ledgerCommitted: ledger === null ? null : ledger.committed,
+    ledgerUnknown: ledger === null ? null : ledger.unknown,
+    ok: refusedByDesign,
     lines: run.out.trim().split(/\r?\n/).slice(0, 10),
   };
 }
@@ -1016,13 +1018,13 @@ async function main() {
     treeClean: clean,
     blocked,
     authorizationFixture:
-      "FIXTURE_PASS (synthetic class, NOT a paid approval): the POS-EXEC / POS-FWD authorizations carry paid:false + " +
-      "fixtureMode=\"synthetic-offline-v1\" with approvalIds 'e2e-offline-TEST_ONLY-approval' / " +
-      "'e2e-offline-TEST_ONLY-forward-approval'. N3 makes this a separately-identified admission class: the parser refuses " +
-      "fixtureMode together with paid:true, so it cannot be confused with (or widened into) a paid authorization, and the gate " +
-      "admits it only after the OBSERVED transport proves itself non-billable (POS-EXEC: the unbilled stub priced at 0; POS-FWD: " +
-      "a loopback endpoint). This script refuses to run if a real key or RUN_PAID_BENCHMARKS is selectable. " +
-      "paidExperimentRun remains NOT_RUN.",
+      "FIXTURE_PASS (synthetic class, NOT a paid approval): the POS-EXEC authorization carries paid:false + " +
+      "fixtureMode=\"synthetic-offline-v1\" with approvalId 'e2e-offline-TEST_ONLY-approval'. N3/R1 make this a separately-identified " +
+      "admission class: the parser refuses fixtureMode together with paid:true, so it cannot be confused with (or widened into) a paid " +
+      "authorization, and the gate admits it ONLY through the test host's INJECTED, endpoint- and model-bound non-billable transport " +
+      "(POS-EXEC), never because an address is loopback and never through the operator's credential-bearing factory (MEASURED 0 entries). " +
+      "POS-FWD's authorization is written but REFUSED by the shipped CLI before any request. This script refuses to run if a real key or " +
+      "RUN_PAID_BENCHMARKS is selectable. paidExperimentRun remains NOT_RUN.",
     negative: {
       cases: negative.length,
       refusalsOk: negative.filter((c) => c.ok).length,
@@ -1036,8 +1038,15 @@ async function main() {
       httpRequestsAgainstTheLoopbackStub: "MEASURED: the stub's own request counter (0 for every refusal and the 0-provider certification)",
       physicalProviderCalls: positiveExec === null ? "NOT_OBSERVED" : `MEASURED: the fake provider's generate() entry counter = ${positiveExec.physicalProviderCalls}`,
       providerFactoryCalls: positiveExec === null ? "NOT_OBSERVED" : `MEASURED: the gate's providerFactoryCalls = ${positiveExec.providerFactoryCalls}`,
-      forwardPhysicalStubRequests: positiveForward === null ? "NOT_OBSERVED" : `MEASURED: the loopback stub's request counter over the POS-FWD subprocess run = ${positiveForward.physicalStubRequests}`,
-      forwardLedgerCommitted: positiveForward === null ? "NOT_OBSERVED" : `MEASURED: the durable R97 ledger the subprocess wrote committed = ${positiveForward.ledgerCommitted}`,
+      operatorFactoryEnteredByTheFixtureAdmission:
+        positiveExec === null
+          ? "NOT_OBSERVED"
+          : `MEASURED: the operator's credential-bearing provider factory entries on the fixture admission = ${positiveExec.operatorFactoryEntered} (must be 0; the injected non-billable transport is used)`,
+      forwardPhysicalStubRequests:
+        positiveForward === null
+          ? "NOT_OBSERVED"
+          : `MEASURED: the loopback stub's request counter across the POS-FWD subprocess = ${positiveForward.physicalStubRequests} (the R1 refusal is PRE-request)`,
+      forwardRefusalCode: positiveForward === null ? "NOT_OBSERVED" : positiveForward.refusalCode,
       externalProviderCalls: "NOT_OBSERVED: no externally-billed provider exists in this environment (a key/switch is refused above)",
       costUsdMicros: "NOT_OBSERVED: no provider was billed; a paid run is BLOCKED",
       loopbackStubBaseUrlDigest: sha256Hex(httpBaseUrl),
@@ -1050,7 +1059,7 @@ async function main() {
       offlineFixtureReady:
         "PASS (reported by scripts/e4/n5-prereg-closed-loop.mjs, not this script): the injected-adapter fixture chain runs offline",
       productionOfflineReady: ready
-        ? "PASS (offline, SYNTHETIC fixtures): (1) the SHIPPED entry point (real subprocess CLI) refuses every preflight counterexample with 0 HTTP; (2) it certifies a frozen identity with 0 provider; (3) the in-process shipped adapter executes the full paired schedule against a counting fake transport; (4) the SHIPPED release CLI subprocess executes the FULL forward schedule over two SYNTHESIZED fixture arm build entries this script writes with writeArmCheckout — an IPC/protocol/ledger closed loop — against a loopback counting stub, with its durable ledger and every arm's raw evidence re-checked. N3 ADMISSION CLASS: (3) and (4) are admitted as the separately-identified SYNTHETIC-FIXTURE class (paid:false + fixtureMode), because a PAID admission now additionally requires a non-null maxUsdMicros and a verifiable per-call price — so this FIXTURE_PASS is not, and cannot be widened into, a paid-admission proof. NOT_PROVEN here: a REAL dual frozen build (two real pinned checkouts built from two distinct source SHAs) and the real verifier over them; that is N1's scope and this script does not claim it. None of this is a paid run or a promotion."
+        ? "PASS (offline, SYNTHETIC fixtures): (1) the SHIPPED entry point (real subprocess CLI) refuses every preflight counterexample with 0 HTTP; (2) it certifies a frozen identity with 0 provider; (3) the in-process shipped adapter executes the full paired schedule against a counting fake transport that is INJECTED as the test host's non-billable transport, and its two fixture checkouts are PINNED by an injected trust capability; (4) R1: the SHIPPED release CLI subprocess, given the SAME two synthesized fixture arm build entries, now REFUSES the campaign before any request (no in-process capability is reachable from a subprocess, and the release CLI accepts NO fixture-bypass configuration) — measured as non-zero exit, 0 requests at the loopback counting stub and no per-arm record. N3/R1 ADMISSION CLASS: (3) is admitted as the separately-identified SYNTHETIC-FIXTURE class (paid:false + fixtureMode) ONLY through the injected, endpoint- and model-bound non-billable transport, so its address cannot make it free and the operator's credential-bearing factory is never entered (MEASURED 0). NOT_PROVEN here: a REAL dual frozen build (two real pinned checkouts built from two distinct source SHAs) and the real verifier over them; that is N1's scope and this script does not claim it. Also NOT_PROVEN: a legitimate trusted-fixture mode for the release CLI — R1 closes the marker-only path instead of reopening it, and a sanctioned mode must enter the preregistration and the approval itself (R5). None of this is a paid run or a promotion."
         : blocked !== null
           ? `NOT_READY: ${blocked}`
           : "NOT_READY: at least one phase did not pass",
@@ -1058,23 +1067,36 @@ async function main() {
         releaseCliNegativeAndCertification:
           negative.length > 0 && negative.every((c) => c.ok) && positiveCert !== null && positiveCert.ok ? "PASS" : "FAIL",
         inProcessAdapterForward: positiveExec !== null && positiveExec.ok ? "PASS" : "FAIL",
-        releaseCliSubprocessForward: positiveForward !== null && positiveForward.ok ? "PASS" : "NOT_READY",
-        // N3 — which admission CLASS the two positive phases got through. They are
-        // the separately-identified synthetic-fixture class (paid:false +
-        // fixtureMode), NOT a paid approval: a paid admission now additionally
-        // requires a non-null maxUsdMicros AND a verifiable per-call price, and
-        // neither is exercised here.
+        // R1/F2 — the release CLI's fixture path is CLOSED, not proven: a
+        // subprocess cannot carry the test-host trust capability, so the shipped
+        // entry point refuses those checkouts before any request. "CLOSED" is a
+        // security result; it is NOT a forward-execution PASS.
+        releaseCliSubprocessForward:
+          positiveForward !== null && positiveForward.refusedByDesign === true
+            ? "CLOSED_BY_R1 (fixture campaign refused pre-request; 0 HTTP)"
+            : positiveForward !== null && positiveForward.ok
+              ? "PASS"
+              : "NOT_READY",
+        // N3/R1 — which admission CLASS the positive phase got through. It is the
+        // separately-identified synthetic-fixture class (paid:false + fixtureMode),
+        // admitted ONLY via the injected non-billable transport; a PAID admission
+        // additionally requires a non-null maxUsdMicros AND a verifiable per-call
+        // price, and is NOT exercised here.
         positivePhasesAdmissionClass:
-          positiveExec !== null && positiveExec.ok && positiveForward !== null && positiveForward.ok
-            ? "FIXTURE_PASS (N3 synthetic-fixture class: paid:false + fixtureMode=\"synthetic-offline-v1\"; a PAID admission requires a non-null maxUsdMicros and a verifiable per-call price and is NOT exercised here — paidExperimentRun=NOT_RUN)"
+          positiveExec !== null && positiveExec.ok
+            ? "FIXTURE_PASS (N3 synthetic-fixture class: paid:false + fixtureMode=\"synthetic-offline-v1\", admitted through an INJECTED endpoint/model-bound non-billable transport; the operator's provider factory was never entered. A PAID admission requires a non-null maxUsdMicros and a verifiable per-call price and is NOT exercised here — paidExperimentRun=NOT_RUN)"
             : "NOT_OBSERVED",
-        // N0 — the split the plan requires. `releaseCliSubprocessForward=PASS`
-        // above proves the IPC + protocol + durable-ledger closed loop over
-        // SYNTHESIZED arm builds; it must never be read as a real dual frozen
-        // build or as the real verifier having run over one. Those are separately
-        // labelled here so an offline PASS cannot be quoted as production proof.
+        // N0 — the split the plan requires. `inProcessAdapterForward=PASS` proves
+        // the IPC + protocol + durable-ledger closed loop over SYNTHESIZED arm
+        // builds; it must never be read as a real dual frozen build or as the real
+        // verifier having run over one. Those are separately labelled here so an
+        // offline PASS cannot be quoted as production proof.
         releaseCliSubprocessForwardBasis:
-          positiveForward !== null && positiveForward.ok ? "SYNTHETIC_FIXTURE_BUILD (writeArmCheckout entries, not two real pinned checkouts)" : "NOT_OBSERVED",
+          positiveForward !== null && positiveForward.refusedByDesign === true
+            ? "CLOSED_BY_R1: the SHIPPED release CLI refuses a marker-only SYNTHETIC fixture checkout/preregistration before any request (0 HTTP); the positive in-process closed loop uses the test host's injected non-billable transport and pinned fixture checkouts"
+            : positiveForward !== null && positiveForward.ok
+              ? "SYNTHETIC_FIXTURE_BUILD (writeArmCheckout entries, not two real pinned checkouts)"
+              : "NOT_OBSERVED",
         realDualFrozenBuildAndRealVerifier:
           "NOT_PROVEN: this offline script builds no two real pinned checkouts from distinct source SHAs, so a real dual build and the real verifier over it are unproven by it (N1 scope)",
         overall: ready ? "PASS" : blocked !== null ? "BLOCKED" : "PARTIAL",
@@ -1093,7 +1115,7 @@ async function main() {
       `  negative: ${report.negative.refusalsOk}/${report.negative.cases} refusals on the release CLI (0 HTTP)\n` +
       `  positive certification: ${positiveCert === null ? blocked : `${positiveCert.ok ? "ok" : "FAIL"} (build ${positiveCert.build.exitCode}, validate ${positiveCert.validate.exitCode}, ${positiveCert.httpRequestsDuring} HTTP)`}\n` +
       `  positive execution (in-process): ${positiveExec === null ? blocked : `decision=${positiveExec.decision ?? positiveExec.code} arms=${positiveExec.scheduledArmRuns ?? "?"} physicalCalls=${positiveExec.physicalProviderCalls ?? "?"} verified=${positiveExec.evidenceVerified ?? "?"}`}\n` +
-      `  positive forward (release CLI subprocess): ${positiveForward === null ? blocked : `stage=${positiveForward.stage ?? "ok"} decision=${positiveForward.decision ?? "?"} arms=${positiveForward.scheduledArmRuns ?? "?"} physicalStubRequests=${positiveForward.physicalStubRequests ?? "?"} ledgerCommitted=${positiveForward.ledgerCommitted ?? "?"} verified=${positiveForward.evidenceVerified ?? "?"}`}\n` +
+      `  positive forward (release CLI subprocess): ${positiveForward === null ? blocked : `refusedByDesign=${positiveForward.refusedByDesign ?? "?"} refusalCode=${positiveForward.refusalCode ?? "?"} exit=${positiveForward.exitCode ?? "?"} httpRequests=${positiveForward.physicalStubRequests ?? "?"} armRecords=${positiveForward.scheduledArmRuns ?? "?"}`}\n` +
       `  productionOfflineReadiness: negative+cert=${report.readiness.productionOfflineReadiness.releaseCliNegativeAndCertification} in-process=${report.readiness.productionOfflineReadiness.inProcessAdapterForward} release-subprocess=${report.readiness.productionOfflineReadiness.releaseCliSubprocessForward} overall=${report.readiness.productionOfflineReadiness.overall}\n` +
       `  forward basis: ${report.readiness.productionOfflineReadiness.releaseCliSubprocessForwardBasis}\n` +
       `  real dual build + real verifier: ${report.readiness.productionOfflineReadiness.realDualFrozenBuildAndRealVerifier}\n` +
