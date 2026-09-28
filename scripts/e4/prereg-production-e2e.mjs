@@ -894,6 +894,43 @@ function forwardRefusal(stage, res, httpDuring) {
 }
 
 /**
+ * R16 — the SEPARATELY-IDENTIFIED synthetic-fixture authorization, bound exactly
+ * to `artifact`. Factored out (it was inline) because the declared-posture probes
+ * must write a SECOND approval bound to a DIFFERENT (trusted-build) artifact and
+ * show that the first one no longer authorizes it.
+ *
+ * N3/R1 — this is never a paid approval: `paid` must be false and the parser
+ * refuses `paid:true` together with `fixtureMode`.
+ */
+function fixtureAuthorizationFor(artifact, approvalId) {
+  return {
+    schemaVersion: "tool-call-efficiency-authorization-v2",
+    preregistrationDigest: artifact.preregistrationDigest,
+    candidateSourceSha: artifact.subject.candidateSourceSha,
+    baselineArmDigest: artifact.subject.baselineArmDigest,
+    candidateArmDigest: artifact.subject.candidateArmDigest,
+    providerId: artifact.provider.providerId,
+    modelId: artifact.provider.modelId,
+    endpointDigest: artifact.provider.endpointDigest,
+    caps: {
+      maxModelCalls: artifact.budget.campaignWorstCaseModelCalls,
+      maxToolCalls: artifact.budget.maxToolCalls,
+      maxDurationMs: artifact.budget.maxDurationMs,
+      maxInputTokens: artifact.budget.maxInputTokens,
+      maxOutputTokens: artifact.budget.maxOutputTokens,
+      maxTotalTokens: artifact.budget.maxTotalTokens,
+      maxUsdMicros: artifact.budget.maxUsdMicros,
+    },
+    issuedAtMs: 1_000,
+    expiresAtMs: 9_000_000_000_000,
+    approvalId,
+    allowResume: false,
+    paid: false,
+    fixtureMode: "synthetic-offline-v1",
+  };
+}
+
+/**
  * B5/R1 — the SHIPPED release entry point as a real SUBPROCESS
  * (`node apps/cli/dist/main.js`) over the same two synthesized fixture checkouts.
  *
@@ -929,49 +966,43 @@ async function runPositiveForward(stub, dir, env) {
 
   // 2. the independent authorization BINDS the artifact the release CLI wrote.
   const artifact = JSON.parse(readFileSync(preregPath, "utf8"));
-  const authorization = {
-    schemaVersion: "tool-call-efficiency-authorization-v2",
-    preregistrationDigest: artifact.preregistrationDigest,
-    candidateSourceSha: artifact.subject.candidateSourceSha,
-    baselineArmDigest: artifact.subject.baselineArmDigest,
-    candidateArmDigest: artifact.subject.candidateArmDigest,
-    providerId: artifact.provider.providerId,
-    modelId: artifact.provider.modelId,
-    endpointDigest: artifact.provider.endpointDigest,
-    caps: {
-      maxModelCalls: artifact.budget.campaignWorstCaseModelCalls,
-      maxToolCalls: artifact.budget.maxToolCalls,
-      maxDurationMs: artifact.budget.maxDurationMs,
-      maxInputTokens: artifact.budget.maxInputTokens,
-      maxOutputTokens: artifact.budget.maxOutputTokens,
-      maxTotalTokens: artifact.budget.maxTotalTokens,
-      maxUsdMicros: artifact.budget.maxUsdMicros,
-    },
-    issuedAtMs: 1_000,
-    expiresAtMs: 9_000_000_000_000,
-    approvalId: "e2e-offline-TEST_ONLY-forward-approval",
-    allowResume: false,
-    // N3/R1 — the SEPARATELY-IDENTIFIED synthetic-fixture class (never a paid
-    // approval: `paid` must be false and the parser refuses the two together).
-    // R1 CHANGE: the shipped CLI has NO fixture-bypass configuration, so this
-    // authorization is REFUSED before any request in POS-FWD. That refusal — not a
-    // forward run — is what this phase now measures.
-    paid: false,
-    fixtureMode: "synthetic-offline-v1",
-  };
+  const authorization = fixtureAuthorizationFor(artifact, "e2e-offline-TEST_ONLY-forward-approval");
   writeFileSync(authPath, `${JSON.stringify(authorization, null, 2)}\n`, "utf8");
 
   // 3. the FULL forward schedule through the shipped release CLI subprocess.
   //
-  // R1/F1+F2 — this phase is now a SECURITY POSITIVE, not a forward run. A
-  // subprocess cannot receive the in-process test-host capabilities
-  // (`nonBillableTransport`, `trustedFixtureCheckouts`), and the release CLI
-  // accepts NO fixture-bypass configuration — so the SHIPPED entry point must
-  // REFUSE this fixture campaign BEFORE any request: non-zero exit, 0 HTTP against
-  // the loopback stub, no per-arm record written. A legitimate trusted-fixture mode
-  // belongs to R5 (it must enter the preregistration and the approval itself,
-  // rather than letting a marker or a flag grant it unilaterally), and is NOT
-  // claimed here.
+  // R1/F1+F2 — this phase is a SECURITY POSITIVE, not a forward run. A subprocess
+  // cannot receive the in-process test-host capabilities (`nonBillableTransport`,
+  // `trustedFixtureCheckouts`), and the release CLI accepts NO fixture-bypass
+  // configuration — so the SHIPPED entry point must REFUSE this fixture campaign
+  // BEFORE any request: non-zero exit, 0 HTTP against the loopback stub, no per-arm
+  // record written.
+  //
+  // R16 — THE DECLARED-MODE REQUIREMENT, AND WHY IT STILL DOES NOT ADMIT THIS RUN.
+  // R5 built the right primitive: a DECLARED `trusted-build`/`no-os-network-sandbox`
+  // posture carried in the digest-bound pre-registration and honored by the shipped
+  // arm executor. R16 asks whether that posture can restore a genuine RELEASE-CLI
+  // FORWARD RUN of this campaign. It cannot, and `declaredPostureProbes` below
+  // MEASURES the three independent reasons rather than asserting them:
+  //
+  //   (b) DIGEST   — declaring the posture changes `preregistrationDigest`, so the
+  //                  approval written for the `process-exec` artifact is refused
+  //                  `AUTHORIZATION_DIGEST_MISMATCH` at 0 HTTP: the declared
+  //                  posture IS bound by the approval (through its digest), so
+  //                  changing it invalidates the approval.
+  //   (c) NO BYPASS— with a FRESH approval bound to the trusted-build artifact the
+  //                  campaign is STILL refused `FIXTURE_TRANSPORT_NOT_NON_BILLABLE`
+  //                  at 0 HTTP with no per-arm record. The binding blocker is the
+  //                  TRANSPORT admission class, which lives in the formal gate and
+  //                  never reads `isolation` at all; a posture whose own name says
+  //                  "no-os-network-sandbox" cannot stand in for a proof that a
+  //                  transport cannot bill. Admitting it there would re-open R1's
+  //                  F1 defect and would run this artifact UNCAPPED (`maxUsdMicros`
+  //                  is null by design in this offline gate).
+  //   (a) FLAG     — `--fixture-mode` is not on the `prereg run` whitelist, so a
+  //                  flag-driven bypass attempt is `CLI_USAGE` at 0 HTTP.
+  //
+  // See `docs/evidence/e4-r16-fixture-forward-path.md` for the full finding.
   const before = stub.count();
   const run = await runCliAsync(
     ["prereg", "run", preregPath, "--authorization", authPath, "--budget-dir", budgetDir, "--out", outDir, "--mode", "first-run"],
@@ -991,6 +1022,9 @@ async function runPositiveForward(stub, dir, env) {
   const refusedByDesign =
     run.code !== 0 && httpDuringRun === 0 && recordFiles.length === 0 && refusalCode !== null && noLedgerCommitment;
   const expectArmRuns = artifact.schedule.logicalRuns;
+  // R16 — the DECLARED-posture probes: a declared `trusted-build` posture is bound
+  // by the approval's digest, but cannot license a fixture TRANSPORT.
+  const declared = await declaredPostureProbes(stub, dir, env, selection, artifact, preregPath, authPath);
   // LEAD MERGE RESOLUTION (R1 x R2 conflict on this file).
   //
   // R1 turned this phase into a SECURITY POSITIVE: the shipped release CLI has no
@@ -1026,8 +1060,185 @@ async function runPositiveForward(stub, dir, env) {
     ledgerFilePresent: ledger !== null,
     ledgerCommitted: ledger === null ? null : ledger.committed,
     ledgerUnknown: ledger === null ? null : ledger.unknown,
-    ok: refusedByDesign,
+    // R16 — the declared-posture measurement. Every `false` here is a REFUSAL the
+    // shipped CLI failed to make; every `null` is NOT_OBSERVED.
+    declaredPosture: declared,
+    // R16 — the honest statement of what the release CLI would have to be given to
+    // run this campaign, and why neither route is available without weakening R1.
+    declaredModeRequirement:
+      "REQUIRED FOR A RELEASE-CLI FIXTURE FORWARD RUN (NOT SATISFIED, BY DESIGN): the fixture admission class needs the test host's IN-PROCESS, Symbol-branded non-billable transport (createNonBillableFixtureTransport); no env var, JSON field, marker, port or flag produces it, and `preregCommandDeps()` passes no options, so a subprocess cannot have one. The other admission class is PAID and additionally requires paid:true, a non-null maxUsdMicros and a KNOWN per-call price — a different class, not licensed by any isolation posture. Declaring `trusted-build`/`no-os-network-sandbox` therefore changes what the ARM EXECUTOR trusts (R5) and NOTHING about the transport gate. A declaration standing in for the billing proof is exactly R1's F1 defect and would run this artifact UNCAPPED (maxUsdMicros is null here).",
+    ok: refusedByDesign && declared.allRefusedBeforeAnyRequest,
     lines: run.out.trim().split(/\r?\n/).slice(0, 10),
+  };
+}
+
+/**
+ * R16 — WHAT A DECLARED POSTURE CAN AND CANNOT GRANT.
+ *
+ * Runs THREE probes against the SHIPPED release CLI, each with the loopback
+ * stub's own request counter read around it. Nothing here is inferred from a
+ * return code alone: a refusal counts only when the counter did not move, no
+ * per-arm record was written and the named refusal code is present in the output.
+ *
+ *   (a) FLAG   — `--fixture-mode` is not on the `prereg run` argument whitelist,
+ *                so a flag-driven bypass attempt is `CLI_USAGE` at 0 HTTP. A flag
+ *                grants nothing because there is no flag that grants anything.
+ *   (b) DIGEST — the SAME campaign is re-built DECLARING
+ *                `isolationBackendId: "trusted-build"` /
+ *                `isolationStrength: "no-os-network-sandbox"`. `isolation` is part
+ *                of the canonical source body, so the root digest MOVES. The
+ *                approval written for the `process-exec` artifact is then REFUSED
+ *                `AUTHORIZATION_DIGEST_MISMATCH` at 0 HTTP: the declared posture is
+ *                bound BY THE APPROVAL (through the digest it authorizes), so
+ *                changing the posture invalidates the approval.
+ *   (c) NO BYPASS — with a FRESH approval bound to the trusted-build artifact, the
+ *                campaign is STILL refused `FIXTURE_TRANSPORT_NOT_NON_BILLABLE` at
+ *                0 HTTP with no per-arm record. This is the binding blocker, and it
+ *                is independent of the posture: the transport admission lives in
+ *                the formal gate, which never reads `isolation` at all.
+ *
+ * A NOTE ON WHAT THIS IS NOT: (c) is NOT "the declared mode failed". R5's posture
+ * is honored by the arm executor (proven in
+ * `apps/cli/src/prereg-declared-posture-forward-path.test.ts`); it is simply not a
+ * TRANSPORT claim, and this phase never gets as far as the executor.
+ */
+async function declaredPostureProbes(stub, dir, env, selection, processExecArtifact, preregPath, authPath) {
+  // --- (a) a flag-driven bypass attempt ------------------------------------
+  const flagBudget = join(dir, "pos-fwd-flag-budget");
+  const flagOut = join(dir, "pos-fwd-flag-out");
+  const beforeFlag = stub.count();
+  const flagAttempt = await runCliAsync(
+    [
+      "prereg", "run", preregPath,
+      "--authorization", authPath,
+      "--budget-dir", flagBudget,
+      "--out", flagOut,
+      "--mode", "first-run",
+      // NOT a real flag: the point is that inventing one cannot upgrade the run.
+      "--fixture-mode", "synthetic-offline-v1",
+    ],
+    env,
+  );
+  const flagHttp = stub.count() - beforeFlag;
+  const flagDrivenBypassRefused = flagAttempt.code !== 0 && flagHttp === 0 && flagAttempt.out.includes("CLI_USAGE");
+
+  // --- (b) declare the R5 posture; the digest must move --------------------
+  const declaredCfg = join(dir, "pos-fwd-declared-config.json");
+  writeFileSync(
+    declaredCfg,
+    `${JSON.stringify(
+      {
+        ...selection.config,
+        isolation: {
+          ...selection.config.isolation,
+          isolationBackendId: "trusted-build",
+          isolationStrength: "no-os-network-sandbox",
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  const declaredPrereg = join(dir, "pos-fwd-declared-prereg.json");
+  const beforeDeclaredBuild = stub.count();
+  const declaredBuild = await runCliAsync(["prereg", "build", declaredCfg, "--out", declaredPrereg], env);
+  const declaredValidate =
+    declaredBuild.code === 0
+      ? await runCliAsync(["prereg", "validate", declaredPrereg, "--json"], env)
+      : { code: 1, out: "(skipped: build failed)" };
+  const declaredBuildHttp = stub.count() - beforeDeclaredBuild;
+  let declaredArtifact = null;
+  try {
+    declaredArtifact = declaredBuild.code === 0 ? JSON.parse(readFileSync(declaredPrereg, "utf8")) : null;
+  } catch {
+    declaredArtifact = null;
+  }
+  const postureIsDigestBound =
+    declaredArtifact !== null &&
+    declaredArtifact.isolation?.isolationBackendId === "trusted-build" &&
+    declaredArtifact.isolation?.isolationStrength === "no-os-network-sandbox" &&
+    declaredArtifact.preregistrationDigest !== processExecArtifact.preregistrationDigest;
+
+  // (b1) the STALE approval (bound to the process-exec artifact) no longer authorizes.
+  const staleBudget = join(dir, "pos-fwd-stale-budget");
+  const staleOut = join(dir, "pos-fwd-stale-out");
+  const beforeStale = stub.count();
+  const staleRun = await runCliAsync(
+    ["prereg", "run", declaredPrereg, "--authorization", authPath, "--budget-dir", staleBudget, "--out", staleOut, "--mode", "first-run"],
+    env,
+  );
+  const staleHttp = stub.count() - beforeStale;
+  const staleApprovalRefused =
+    declaredArtifact !== null && staleRun.code !== 0 && staleHttp === 0 && staleRun.out.includes("AUTHORIZATION_DIGEST_MISMATCH");
+
+  // (c) a FRESH approval bound to the declared artifact: STILL no fixture bypass.
+  const declaredAuthPath = join(dir, "pos-fwd-declared-auth.json");
+  let declaredRun = { code: 1, out: "(skipped: declared build failed)" };
+  let declaredRunHttp = 0;
+  let declaredRecords = [];
+  let declaredLedgerCommitted = null;
+  let declaredRefusalCode = null;
+  if (declaredArtifact !== null) {
+    writeFileSync(
+      declaredAuthPath,
+      `${JSON.stringify(fixtureAuthorizationFor(declaredArtifact, "e2e-offline-TEST_ONLY-declared-posture-approval"), null, 2)}\n`,
+      "utf8",
+    );
+    const declaredBudget = join(dir, "pos-fwd-declared-budget");
+    const declaredOut = join(dir, "pos-fwd-declared-out");
+    const beforeDeclaredRun = stub.count();
+    declaredRun = await runCliAsync(
+      ["prereg", "run", declaredPrereg, "--authorization", declaredAuthPath, "--budget-dir", declaredBudget, "--out", declaredOut, "--mode", "first-run"],
+      env,
+    );
+    declaredRunHttp = stub.count() - beforeDeclaredRun;
+    const declaredRunsDir = join(declaredOut, "runs");
+    declaredRecords = existsSync(declaredRunsDir) ? readdirSync(declaredRunsDir).filter((f) => f.endsWith(".json")) : [];
+    const declaredLedgerFile = join(declaredBudget, R97_LEDGER_FILE);
+    if (existsSync(declaredLedgerFile)) {
+      declaredLedgerCommitted = ledgerViewFromFile(declaredBudget).committed;
+    }
+    declaredRefusalCode =
+      ["FIXTURE_TRANSPORT_NOT_NON_BILLABLE", "EGRESS_ISOLATION_UNAVAILABLE", "PAID_WITHOUT_USD_CAP", "PRICING_UNKNOWN"].find((c) =>
+        declaredRun.out.includes(c),
+      ) ?? null;
+  }
+  const declaredPostureGrantsNoBypass =
+    declaredArtifact !== null &&
+    declaredRun.code !== 0 &&
+    declaredRunHttp === 0 &&
+    declaredRecords.length === 0 &&
+    declaredRefusalCode === "FIXTURE_TRANSPORT_NOT_NON_BILLABLE";
+
+  return {
+    // (a) a marker/flag grants nothing
+    flagDrivenBypassAttempt: "agent prereg run … --fixture-mode synthetic-offline-v1",
+    flagDrivenBypassRefused,
+    flagDrivenBypassExitCode: flagAttempt.code,
+    flagDrivenBypassHttp: flagHttp,
+    // (b) the declared posture is BOUND: changing it invalidates the approval
+    declaredIsolationBackendId: declaredArtifact?.isolation?.isolationBackendId ?? null,
+    declaredIsolationStrength: declaredArtifact?.isolation?.isolationStrength ?? null,
+    declaredPreregistrationDigest: declaredArtifact?.preregistrationDigest ?? null,
+    processExecPreregistrationDigest: processExecArtifact.preregistrationDigest,
+    postureIsDigestBound,
+    declaredBuildExitCode: declaredBuild.code,
+    declaredValidateExitCode: declaredValidate.code,
+    declaredBuildAndValidateHttp: declaredBuildHttp,
+    staleApprovalRefused,
+    staleApprovalRefusalCode: staleRun.out.includes("AUTHORIZATION_DIGEST_MISMATCH") ? "AUTHORIZATION_DIGEST_MISMATCH" : null,
+    staleApprovalHttp: staleHttp,
+    // (c) the declared posture does NOT license a fixture transport
+    freshApprovalRefusalCode: declaredRefusalCode,
+    freshApprovalExitCode: declaredRun.code,
+    freshApprovalHttp: declaredRunHttp,
+    freshApprovalArmRecords: declaredRecords.length,
+    freshApprovalLedgerCommitted: declaredLedgerCommitted,
+    declaredPostureGrantsNoBypass,
+    allRefusedBeforeAnyRequest:
+      flagDrivenBypassRefused && postureIsDigestBound && staleApprovalRefused && declaredPostureGrantsNoBypass,
+    forwardRunPossibleWithoutWeakeningR1: false,
   };
 }
 
@@ -1162,6 +1373,12 @@ async function main() {
           ? "NOT_OBSERVED"
           : `MEASURED: the loopback stub's request counter across the POS-FWD subprocess = ${positiveForward.physicalStubRequests} (the R1 refusal is PRE-request)`,
       forwardRefusalCode: positiveForward === null ? "NOT_OBSERVED" : positiveForward.refusalCode,
+      // R16 — the declared-posture measurement, kept as its own field so a reader
+      // can never read it as "the declared mode failed" or as a forward PASS.
+      declaredPostureForwardRun:
+        positiveForward === null
+          ? "NOT_OBSERVED"
+          : "NOT_OBSERVED: no release-CLI fixture forward run exists. The DECLARED trusted-build posture is bound by the approval's digest (MEASURED), yet the transport admission still refuses the campaign before any request; making the declaration substitute for the billing proof is R1's F1 defect and was NOT done",
       externalProviderCalls: "NOT_OBSERVED: no externally-billed provider exists in this environment (a key/switch is refused above)",
       costUsdMicros: "NOT_OBSERVED: no provider was billed; a paid run is BLOCKED",
       loopbackStubBaseUrlDigest: sha256Hex(httpBaseUrl),
@@ -1174,7 +1391,7 @@ async function main() {
       offlineFixtureReady:
         "PASS (reported by scripts/e4/n5-prereg-closed-loop.mjs, not this script): the injected-adapter fixture chain runs offline",
       productionOfflineReady: ready
-        ? "PASS (offline, SYNTHETIC fixtures): (1) the SHIPPED entry point (real subprocess CLI) refuses every preflight counterexample with 0 HTTP; (2) it certifies a frozen identity with 0 provider; (3) the in-process shipped adapter executes the full paired schedule against a counting fake transport that is INJECTED as the test host's non-billable transport, and its two fixture checkouts are PINNED by an injected trust capability; (4) R1: the SHIPPED release CLI subprocess, given the SAME two synthesized fixture arm build entries, now REFUSES the campaign before any request (no in-process capability is reachable from a subprocess, and the release CLI accepts NO fixture-bypass configuration) — measured as non-zero exit, 0 requests at the loopback counting stub and no per-arm record. N3/R1 ADMISSION CLASS: (3) is admitted as the separately-identified SYNTHETIC-FIXTURE class (paid:false + fixtureMode) ONLY through the injected, endpoint- and model-bound non-billable transport, so its address cannot make it free and the operator's credential-bearing factory is never entered (MEASURED 0). NOT_PROVEN here: a REAL dual frozen build (two real pinned checkouts built from two distinct source SHAs) and the real verifier over them; that is N1's scope and this script does not claim it. Also NOT_PROVEN: a legitimate trusted-fixture mode for the release CLI — R1 closes the marker-only path instead of reopening it, and a sanctioned mode must enter the preregistration and the approval itself (R5). None of this is a paid run or a promotion."
+        ? "PASS (offline, SYNTHETIC fixtures): (1) the SHIPPED entry point (real subprocess CLI) refuses every preflight counterexample with 0 HTTP; (2) it certifies a frozen identity with 0 provider; (3) the in-process shipped adapter executes the full paired schedule against a counting fake transport that is INJECTED as the test host's non-billable transport, and its two fixture checkouts are PINNED by an injected trust capability; (4) R1: the SHIPPED release CLI subprocess, given the SAME two synthesized fixture arm build entries, now REFUSES the campaign before any request (no in-process capability is reachable from a subprocess, and the release CLI accepts NO fixture-bypass configuration) — measured as non-zero exit, 0 requests at the loopback counting stub and no per-arm record. N3/R1 ADMISSION CLASS: (3) is admitted as the separately-identified SYNTHETIC-FIXTURE class (paid:false + fixtureMode) ONLY through the injected, endpoint- and model-bound non-billable transport, so its address cannot make it free and the operator's credential-bearing factory is never entered (MEASURED 0). NOT_PROVEN here: a REAL dual frozen build (two real pinned checkouts built from two distinct source SHAs) and the real verifier over them; that is N1's scope and this script does not claim it. Also NOT_PROVEN (R16 — RESOLVED AS A DOCUMENTED, MEASURED REFUSAL): a legitimate release-CLI fixture FORWARD RUN. R5's DECLARED `trusted-build`/`no-os-network-sandbox` posture is honored by the arm executor and is bound by the approval through the artifact digest, but it is NOT a transport claim: the formal gate admits a fixture campaign only through an in-process Symbol-branded non-billable transport, which a subprocess cannot be given without an env/flag/file bypass (forbidden), and the only other admission class is PAID (paid:true + a known per-call price + a money cap). Letting the declaration stand in for the billing proof would re-open R1's F1 defect and run this UNCAPPED artifact (maxUsdMicros is null here), so it was NOT done. See docs/evidence/e4-r16-fixture-forward-path.md. None of this is a paid run or a promotion."
         : blocked !== null
           ? `NOT_READY: ${blocked}`
           : "NOT_READY: at least one phase did not pass",
@@ -1208,7 +1425,7 @@ async function main() {
         // offline PASS cannot be quoted as production proof.
         releaseCliSubprocessForwardBasis:
           positiveForward !== null && positiveForward.refusedByDesign === true
-            ? "CLOSED_BY_R1: the SHIPPED release CLI refuses a marker-only SYNTHETIC fixture checkout/preregistration before any request (0 HTTP); the positive in-process closed loop uses the test host's injected non-billable transport and pinned fixture checkouts"
+            ? "CLOSED_BY_R1: the SHIPPED release CLI refuses a marker-only SYNTHETIC fixture checkout/preregistration before any request (0 HTTP); the positive in-process closed loop uses the test host's injected non-billable transport and pinned fixture checkouts. R16 RE-SPECIFICATION: the DECLARED `trusted-build`/`no-os-network-sandbox` posture (R5) is present in the digest-bound artifact and is bound BY THE APPROVAL through that digest (declaring it MOVES the root digest and the old approval is refused AUTHORIZATION_DIGEST_MISMATCH — MEASURED), but it does not and cannot license this run: the binding blocker is the TRANSPORT admission class, which the posture never reaches. A release-CLI fixture forward run therefore remains NOT_OBSERVED, and is not claimed"
             : positiveForward !== null && positiveForward.ok
               ? "SYNTHETIC_FIXTURE_BUILD (writeArmCheckout entries, not two real pinned checkouts)"
               : "NOT_OBSERVED",
@@ -1233,6 +1450,7 @@ async function main() {
       `  positive forward (release CLI subprocess): ${positiveForward === null ? blocked : `refusedByDesign=${positiveForward.refusedByDesign ?? "?"} refusalCode=${positiveForward.refusalCode ?? "?"} exit=${positiveForward.exitCode ?? "?"} httpRequests=${positiveForward.physicalStubRequests ?? "?"} armRecords=${positiveForward.scheduledArmRuns ?? "?"}`}\n` +
       `  productionOfflineReadiness: negative+cert=${report.readiness.productionOfflineReadiness.releaseCliNegativeAndCertification} in-process=${report.readiness.productionOfflineReadiness.inProcessAdapterForward} release-subprocess=${report.readiness.productionOfflineReadiness.releaseCliSubprocessForward} overall=${report.readiness.productionOfflineReadiness.overall}\n` +
       `  forward basis: ${report.readiness.productionOfflineReadiness.releaseCliSubprocessForwardBasis}\n` +
+      `  R16 declared posture: ${positiveForward === null ? "NOT_OBSERVED" : `declared=${positiveForward.declaredPosture?.declaredIsolationBackendId ?? "?"}/${positiveForward.declaredPosture?.declaredIsolationStrength ?? "?"} digestMoved=${positiveForward.declaredPosture?.postureIsDigestBound ?? "?"} staleApprovalRefused=${positiveForward.declaredPosture?.staleApprovalRefused ?? "?"} (${positiveForward.declaredPosture?.staleApprovalRefusalCode ?? "?"}) freshApprovalRefusal=${positiveForward.declaredPosture?.freshApprovalRefusalCode ?? "?"} freshHttp=${positiveForward.declaredPosture?.freshApprovalHttp ?? "?"} flagRefused=${positiveForward.declaredPosture?.flagDrivenBypassRefused ?? "?"} forwardRunPossibleWithoutWeakeningR1=${positiveForward.declaredPosture?.forwardRunPossibleWithoutWeakeningR1 ?? "?"}`}\n` +
       `  real dual build + real verifier: ${report.readiness.productionOfflineReadiness.realDualFrozenBuildAndRealVerifier}\n` +
       `  paidExperimentRun=${report.readiness.paidExperimentRun.split(":")[0]} championPromotion=${report.readiness.championPromotion.split(":")[0]}\n` +
       `  evidence: ${outPath}\n`,
