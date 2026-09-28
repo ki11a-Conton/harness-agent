@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * N7 — one machine-readable readiness artifact per CI run.
- * plan(20260926-175819).md §N7 (line 117), acceptance at line 130.
+ * N7/R7 — one machine-readable readiness artifact per CI run.
+ * plan(20260926-175819).md §N7 (line 117); plan(20260928-105425).md §R7 lines 199-219.
  *
  * WHY ONE ARTIFACT: the acceptance criterion is that "a reviewer can recompute the
  * core counts and identity from a SINGLE artifact". This writes exactly that:
@@ -13,27 +13,62 @@
  * level carries its own status, its own basis, and — when it is not green — the
  * concrete reason it is not.
  *
+ * R7/F6 — READINESS IS CLASSIFIED FROM STRUCTURE, NEVER FROM PROSE.
+ * The previous revision decided `realBuildOfflineReady` with
+ *
+ *     readinessText.includes("SYNTHETIC") ? SYNTHETIC_FIXTURE_BUILD
+ *                                         : REAL_DUAL_PINNED_BUILD
+ *
+ * so ANY other string — lowercase `synthetic`, an empty string, an unrelated
+ * sentence — was read as a REAL dual pinned build and could render
+ * `realBuildOfflineReady = PASS`. A documentation edit could therefore move a
+ * gate. That classifier is DELETED. `readiness.productionOfflineReady` (the
+ * human-readable prose) is now read by nothing in this file.
+ *
+ * Instead:
+ *   1. the EXECUTION KIND is a structured field, matched against a closed enum
+ *      (`KNOWN_EXECUTION_KINDS`); anything unrecognised or missing is `NOT_OBSERVED`
+ *      and can never raise a level;
+ *   2. `REAL_DUAL_PINNED_BUILD` alone is not enough: a REAL declaration must also
+ *      carry VERIFIED EVIDENCE (artifact SHA against `--expect-sha`, run id, the two
+ *      distinct arm source SHAs + build digests, a verifier that ran over every
+ *      case, command exit codes all 0, and a journal that is internally consistent).
+ *      A forged REAL enum with no evidence is NOT_PROVEN, never PASS.
+ *
  * HONESTY RULES ENFORCED HERE:
- *   - `realBuildOfflineReady` is BLOCKED unless the E2E's own forward basis says a
- *     REAL dual pinned build ran. Synthetic `writeArmCheckout` fixtures never
- *     satisfy it (plan line 125 forbids exactly that substitution).
+ *   - `realBuildOfflineReady` is BLOCKED when the structured kind is a declared
+ *     synthetic/closed basis, and NOT_PROVEN when it is unreadable or its REAL
+ *     evidence does not verify (plan line 125 forbids inferring a real build from a
+ *     green fixture loop).
  *   - `paidExperimentRun` / `championPromotion` are NEVER set by this script.
  *   - an absent measurement is `null`/UNKNOWN — never `0`.
+ *   - no log/text is ever scanned for the word "PASS".
+ *
+ * R7/F6 — PLATFORM MEASUREMENT. This process records its OWN platform as MEASURED
+ * (`platforms.thisProcess` + the `windows`/`ubuntu` slot it ran on). The other
+ * platform is NOT hardcoded NOT_PROVEN: it is `NOT_OBSERVED` until
+ * `--other-platform-artifact <ci-readiness.json>` is supplied, and is accepted only
+ * when that artifact's `ciRunSha` equals THIS run's expected SHA
+ * (`MEASURED_SAME_SHA`); a mismatched SHA is `NOT_PROVEN`.
  *
  * SAFETY: reads local files and runs the offline test gates. Zero network, zero
  * provider, zero cost, no key.
  *
  * usage: node scripts/e4/ci-readiness.mjs --e2e <e2e.json> --out <readiness.json>
  *        [--exit-pnpm-test=N] [--exit-typecheck=N] [--exit-build=N] [--os-label=...]
+ *        [--expect-sha=<40hex>] [--run-id=<id>] [--other-platform-artifact=<json>]
  */
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(here, "..", "..");
+
+const SCHEMA_VERSION = "prereg-ci-readiness-v2";
 
 function arg(name, dflt = null) {
   const eq = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -76,6 +111,19 @@ function readJson(path) {
   }
 }
 
+function sha256File(path) {
+  try {
+    return createHash("sha256").update(readFileSync(path)).digest("hex");
+  } catch {
+    return null;
+  }
+}
+
+const SHA40 = /^[0-9a-f]{40}$/;
+const isSha40 = (v) => typeof v === "string" && SHA40.test(v);
+const isNonEmptyString = (v) => typeof v === "string" && v.trim() !== "";
+const asInt = (v) => (v === null || v === undefined || v === "" ? null : Number.isInteger(Number(v)) ? Number(v) : null);
+
 const gitSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" }).trim();
 
 // --- the fast, platform-neutral gates this script runs itself -----------------
@@ -83,30 +131,124 @@ const n0Gate = runGate("pnpm", ["test:n0-gaps"]);
 const legacyGate = runGate("pnpm", ["test:red-next-gaps"]);
 const docsSmoke = runGate("pnpm", ["exec", "vitest", "run", "apps/cli/src/prereg-docs-smoke.test.ts"]);
 
-// --- exit codes the CI job already knows (never re-derived by guesswork) ------
+// --- identity inputs ----------------------------------------------------------
+// `--expect-sha` is the SHA this readiness is being certified FOR. It defaults to
+// this checkout's HEAD; a CI job may pass it explicitly so a stale artifact cannot
+// be replayed under a newer SHA.
+const expectSha = arg("expect-sha", gitSha);
+const runId = arg("run-id", process.env["GITHUB_RUN_ID"] ?? null);
+const otherPlatformPath = arg("other-platform-artifact");
+
 const declaredExits = {
   typecheck: arg("exit-typecheck"),
   test: arg("exit-pnpm-test"),
   build: arg("exit-build"),
 };
-const asInt = (v) => (v === null || v === undefined ? null : Number.isInteger(Number(v)) ? Number(v) : null);
 
 // --- measured counts, all from the E2E artifact -------------------------------
 const e2e = readJson(e2ePath);
 const exec = e2e?.positiveExecution ?? null;
 const fwd = e2e?.positiveForward ?? null;
 
+// --- F6/R7: the EXECUTION KIND is a structured enum, never prose ---------------
 /**
- * The E2E states its own forward basis in `readiness.productionOfflineReady`.
- * When that statement names SYNTHETIC fixtures, no real dual pinned build ran —
- * and `realBuildOfflineReady` must then be BLOCKED, never inferred from a green
- * fixture loop (plan line 125). An unreadable statement is UNKNOWN, not real.
+ * The closed set of execution kinds this script understands. Only
+ * `REAL_DUAL_PINNED_BUILD` can ever carry `real: true`, and even that needs the
+ * evidence checks below.
  */
-const readinessText = typeof e2e?.readiness?.productionOfflineReady === "string" ? e2e.readiness.productionOfflineReady : null;
-const basis = readinessText === null ? null : readinessText.includes("SYNTHETIC") ? "SYNTHETIC_FIXTURE_BUILD" : "REAL_DUAL_PINNED_BUILD";
+const KNOWN_EXECUTION_KINDS = Object.freeze({
+  REAL_DUAL_PINNED_BUILD: { real: true, blocker: null },
+  SYNTHETIC_FIXTURE_BUILD: { real: false, blocker: "NO_REAL_ARM_PAIR" },
+  CLOSED_BY_R1: { real: false, blocker: "NO_REAL_ARM_PAIR" },
+  NOT_OBSERVED: { real: false, blocker: null },
+});
 
-/** Is the E2E's own forward basis a REAL dual pinned build? */
-const realBasis = basis === "REAL_DUAL_PINNED_BUILD";
+/**
+ * Extract a structured kind from a field that may be a bare enum
+ * (`"SYNTHETIC_FIXTURE_BUILD"`) or an enum followed by a separator and a prose
+ * explanation (`"SYNTHETIC_FIXTURE_BUILD (writeArmCheckout entries…)"`).
+ *
+ * The token must be the FIRST thing in the string and exactly `[A-Z][A-Z0-9_]*`.
+ * This is a schema parse, not a substring search: `"my synthetic fixture"`,
+ * `""`, `"synthetic"` (lowercase), `"REAL: but actually synthetic"` and every other
+ * free-text value do NOT produce a known kind.
+ */
+function executionKindToken(value) {
+  if (typeof value !== "string") return null;
+  const match = /^([A-Z][A-Z0-9_]*)(?=$|[\s:(])/.exec(value.trim());
+  return match === null ? null : match[1];
+}
+
+const offlineReadiness = e2e?.readiness?.productionOfflineReadiness ?? null;
+const executionKind = executionKindToken(offlineReadiness?.["executionKind"]) ?? executionKindToken(offlineReadiness?.["releaseCliSubprocessForwardBasis"]);
+const executionKindKnown = executionKind !== null && Object.hasOwn(KNOWN_EXECUTION_KINDS, executionKind);
+const kindSpec = executionKindKnown ? KNOWN_EXECUTION_KINDS[executionKind] : null;
+
+/** TRUE only when the structured kind says REAL *and* the evidence verifies. */
+const realDeclaration = kindSpec?.real === true;
+
+/**
+ * R7 — the evidence a REAL declaration must actually carry. Every entry is a
+ * check that returns a reason string when it fails, so a forged enum with no
+ * artifact produces a list of concrete failures instead of a PASS.
+ */
+function verifyRealEvidence() {
+  const failures = [];
+  const dualBuild = e2e?.dualBuild ?? null;
+  const baselineArm = dualBuild?.baselineArm ?? null;
+  const candidateArm = dualBuild?.candidateArm ?? null;
+  const verifier = dualBuild?.verifier ?? null;
+
+  if (e2e === null) failures.push("NO_INPUT_ARTIFACT: the --e2e artifact is unreadable, so no REAL basis can be verified");
+  if (!isNonEmptyString(e2e?.["ciRunSha"])) failures.push("NO_ARTIFACT_SHA: the artifact carries no ciRunSha");
+  else if (isSha40(expectSha) && e2e["ciRunSha"] !== expectSha) {
+    failures.push(`SHA_MISMATCH: artifact ciRunSha ${e2e["ciRunSha"]} != expected ${expectSha}`);
+  }
+  if (!isNonEmptyString(runId)) failures.push("NO_RUN_ID: neither --run-id nor GITHUB_RUN_ID was supplied");
+  else if (isNonEmptyString(e2e?.["runId"]) && e2e["runId"] !== runId) {
+    failures.push(`RUN_ID_MISMATCH: the artifact was produced by run ${e2e["runId"]}, this readiness run is ${runId}`);
+  }
+  if (!isNonEmptyString(e2e?.["os"])) failures.push("NO_OS: the artifact does not record the OS it was produced on");
+  if (dualBuild === null || typeof dualBuild !== "object") {
+    failures.push("NO_DUAL_BUILD_EVIDENCE: the artifact carries no dualBuild evidence block");
+  } else {
+    if (!isSha40(baselineArm?.sourceSha)) failures.push("BASELINE_ARM_UNIDENTIFIED: dualBuild.baselineArm.sourceSha is not a 40-hex SHA");
+    if (!isSha40(candidateArm?.sourceSha)) failures.push("CANDIDATE_ARM_UNIDENTIFIED: dualBuild.candidateArm.sourceSha is not a 40-hex SHA");
+    if (isSha40(baselineArm?.sourceSha) && baselineArm.sourceSha === candidateArm?.sourceSha) {
+      failures.push("ARMS_IDENTICAL: both arms name the same source SHA, so there is no comparable pair");
+    }
+    if (!isNonEmptyString(baselineArm?.buildDigest)) failures.push("BASELINE_BUILD_DIGEST_MISSING: dualBuild.baselineArm.buildDigest is empty");
+    if (!isNonEmptyString(candidateArm?.buildDigest)) failures.push("CANDIDATE_BUILD_DIGEST_MISSING: dualBuild.candidateArm.buildDigest is empty");
+    if (verifier?.ran !== true) failures.push("VERIFIER_NOT_RUN: dualBuild.verifier.ran is not true");
+    if (!Number.isInteger(verifier?.casesTotal) || verifier.casesTotal <= 0) failures.push("VERIFIER_CASES_MISSING: dualBuild.verifier.casesTotal is not a positive integer");
+    else if (verifier.casesVerified !== verifier.casesTotal) {
+      failures.push(`VERIFIER_INCOMPLETE: ${String(verifier.casesVerified)}/${String(verifier.casesTotal)} cases reached a verdict`);
+    }
+  }
+  const exits = e2e?.commandExits ?? null;
+  for (const gate of ["typecheck", "test", "build"]) {
+    const code = asInt(exits?.[gate]);
+    if (code !== 0) failures.push(`COMMAND_EXIT_${gate.toUpperCase()}: ${gate} exit code is ${code === null ? "null" : String(code)}, not 0`);
+  }
+  if (e2e?.ok !== true) failures.push("E2E_NOT_OK: the E2E artifact does not report ok=true");
+  if (fwd !== null && fwd?.["costMatchesJournal"] === false) failures.push("JOURNAL_MISMATCH: positiveForward.costMatchesJournal is false");
+  const journalDelta = fwd?.["aggregateTokensDelta"];
+  const independentDelta = fwd?.["independentTokens"]?.["delta"];
+  if (Number.isFinite(journalDelta) && Number.isFinite(independentDelta) && journalDelta !== independentDelta) {
+    failures.push(`JOURNAL_MISMATCH: aggregateTokensDelta ${String(journalDelta)} != independently recomputed delta ${String(independentDelta)}`);
+  }
+  return failures;
+}
+
+const realEvidenceFailures = realDeclaration ? verifyRealEvidence() : [];
+const realBasis = realDeclaration && realEvidenceFailures.length === 0;
+
+const basis = executionKindKnown ? executionKind : "NOT_OBSERVED";
+const basisSource = typeof offlineReadiness?.["executionKind"] === "string" && executionKindToken(offlineReadiness["executionKind"]) !== null
+  ? "readiness.productionOfflineReadiness.executionKind"
+  : typeof offlineReadiness?.["releaseCliSubprocessForwardBasis"] === "string"
+    ? "readiness.productionOfflineReadiness.releaseCliSubprocessForwardBasis (leading enum token)"
+    : "NOT_OBSERVED (no structured execution-kind field in the E2E artifact)";
 
 const counts = {
   // provider factory / physical request / ledger / journal — the numbers a
@@ -141,11 +283,27 @@ const levels = {
     counts_ref: ["inProcessPhysicalProviderCalls", "forwardPhysicalStubRequests", "evidenceVerified"],
   },
   realBuildOfflineReady: {
-    status: realBasis ? (e2e?.ok === true ? "PASS" : "FAIL") : "BLOCKED",
+    status: realBasis ? "PASS" : kindSpec?.blocker != null ? "BLOCKED" : "NOT_PROVEN",
     basis: realBasis
-      ? "two real pinned checkouts built from distinct source SHAs"
-      : "no real dual pinned build is available: the forward basis is a SYNTHETIC fixture build, so this level is BLOCKED rather than inferred from the fixture loop (N1)",
-    blocker: realBasis ? null : "NO_REAL_ARM_PAIR: real dual frozen arm builds + the real verifier over them are N1's scope and are NOT_PROVEN",
+      ? "two real pinned checkouts built from distinct source SHAs, verified from the artifact's own evidence (R7)"
+      : realDeclaration
+        ? "execution kind declares REAL_DUAL_PINNED_BUILD but its evidence did not verify, so this level is NOT_PROVEN (R7: a forged enum is not a real build)"
+        : executionKindKnown
+          ? `the structured execution kind is ${executionKind}, so no real dual pinned build is available: this level is BLOCKED rather than inferred from the fixture loop (N1)`
+          : "the structured execution kind is missing or unrecognised (NOT_OBSERVED), so this level is NOT_PROVEN — prose is never read (R7)",
+    blocker: realBasis
+      ? null
+      : kindSpec?.blocker === "NO_REAL_ARM_PAIR"
+        ? "NO_REAL_ARM_PAIR: real dual frozen arm builds + the real verifier over them are NOT_PROVEN"
+        : realDeclaration
+          ? `REAL_EVIDENCE_UNVERIFIED: ${realEvidenceFailures.join("; ")}`
+          : null,
+    evidence: {
+      executionKind,
+      executionKindSource: basisSource,
+      realDeclaration,
+      failures: realEvidenceFailures,
+    },
   },
   budgetEvidenceReady: {
     status: "NOT_PROVEN",
@@ -165,10 +323,70 @@ const levels = {
   championPromotion: { status: "NOT_RUN", basis: "no promotion is performed or authorized by this script" },
 };
 
+// --- R7: this process measures ITS OWN platform; the other one must be read ---
+const THIS_PLATFORM = process.platform === "win32" ? "windows" : process.platform === "linux" ? "ubuntu" : "other";
+const otherPlatform = otherPlatformPath === null ? null : readJson(otherPlatformPath);
+const otherPlatformSha = typeof otherPlatform?.["ciRunSha"] === "string" && otherPlatform.ciRunSha !== "" ? otherPlatform.ciRunSha : null;
+const otherPlatformSameSha = otherPlatformSha !== null && otherPlatformSha === expectSha;
+
+/**
+ * The other platform's artifact must show that ITS OWN process measured the
+ * platform it ran on. This is what makes the old hardcoded `NOT_PROVEN` visible:
+ * a real `ubuntu-latest` artifact produced by the pre-R7 script reports
+ * `platforms.ubuntu.status = "NOT_PROVEN"`, so it does NOT certify Ubuntu.
+ */
+const otherPlatformSelfMeasured = (() => {
+  if (otherPlatform === null || typeof otherPlatform !== "object") return false;
+  if (otherPlatform?.["platforms"]?.["thisProcess"]?.["status"] === "MEASURED") return true;
+  const raw = otherPlatform?.["os"]?.["platform"];
+  const slot = raw === "win32" ? "windows" : raw === "linux" ? "ubuntu" : null;
+  return slot !== null && otherPlatform?.["platforms"]?.[slot]?.["status"] === "MEASURED";
+})();
+
+const crossPlatformStatus =
+  otherPlatformPath === null
+    ? "NOT_OBSERVED"
+    : otherPlatformSha === null
+      ? "NOT_PROVEN"
+      : !otherPlatformSameSha
+        ? "NOT_PROVEN"
+        : otherPlatformSelfMeasured
+          ? "MEASURED_SAME_SHA"
+          : "NOT_PROVEN";
+
+function platformSlot(name) {
+  if (THIS_PLATFORM === name) return { status: "MEASURED", detail: `this process: ${process.platform}/${process.arch}` };
+  if (otherPlatformPath === null) {
+    return {
+      status: "NOT_OBSERVED",
+      detail: "no --other-platform-artifact was supplied, so this platform was not measured by this run (it is NOT assumed unproven, and it is NOT assumed measured)",
+    };
+  }
+  if (otherPlatformSha === null) return { status: "NOT_PROVEN", detail: "the supplied other-platform artifact has no ciRunSha" };
+  if (!otherPlatformSameSha) {
+    return { status: "NOT_PROVEN", detail: `SHA_MISMATCH: the other-platform artifact is for ${otherPlatformSha}, this run certifies ${expectSha}` };
+  }
+  if (!otherPlatformSelfMeasured) {
+    return {
+      status: "NOT_PROVEN",
+      detail: `OTHER_PLATFORM_NOT_SELF_MEASURED: ${otherPlatformPath} is for the same SHA but does not report its own platform as MEASURED (the pre-R7 script hardcoded ubuntu NOT_PROVEN even on a real ubuntu-latest run)`,
+    };
+  }
+  return { status: "MEASURED_SAME_SHA", detail: `read from ${otherPlatformPath}, checked against the SAME SHA ${expectSha}, and it reports its own platform as MEASURED` };
+}
+
 const artifact = {
-  schemaVersion: "prereg-ci-readiness-v1",
+  schemaVersion: SCHEMA_VERSION,
   generatedBy: "scripts/e4/ci-readiness.mjs",
   ciRunSha: gitSha,
+  expectedSha: expectSha,
+  ciRunId: isNonEmptyString(runId) ? runId : null,
+  inputs: {
+    e2ePath,
+    e2eSha256: sha256File(e2ePath),
+    otherPlatformArtifactPath: otherPlatformPath,
+    otherPlatformArtifactSha256: otherPlatformPath === null ? null : sha256File(otherPlatformPath),
+  },
   os: {
     label: arg("os-label", `${process.platform}-${process.arch}`),
     platform: process.platform,
@@ -177,10 +395,24 @@ const artifact = {
   },
   // The workflow runs on BOTH platforms; this process only measured one.
   platforms: {
-    windows: { status: process.platform === "win32" ? "MEASURED" : "NOT_OBSERVED", detail: "this process" },
-    ubuntu: {
-      status: "NOT_PROVEN",
-      detail: "no GitHub Actions run is available from this checkout; the CI job must be executed on a runner and its artifact uploaded",
+    thisProcess: { platform: THIS_PLATFORM, rawPlatform: process.platform, status: "MEASURED" },
+    windows: platformSlot("windows"),
+    ubuntu: platformSlot("ubuntu"),
+    crossPlatform: {
+      status: crossPlatformStatus,
+      sameSha: otherPlatformSameSha,
+      selfMeasured: otherPlatformSelfMeasured,
+      source: otherPlatformPath,
+      detail:
+        otherPlatformPath === null
+          ? "no other-platform artifact was supplied; the other platform stays NOT_OBSERVED rather than being hardcoded NOT_PROVEN"
+          : otherPlatformSha === null
+            ? "the supplied other-platform artifact has no ciRunSha"
+            : !otherPlatformSameSha
+              ? `SHA_MISMATCH: ${otherPlatformSha} != ${expectSha}`
+              : otherPlatformSelfMeasured
+                ? `the other platform's artifact was read, its ciRunSha equals ${expectSha}, and it reports its own platform MEASURED`
+                : "OTHER_PLATFORM_NOT_SELF_MEASURED: same SHA, but the artifact does not report its own platform as MEASURED",
     },
   },
   commandExits: {
@@ -192,7 +424,9 @@ const artifact = {
     docsSmoke: docsSmoke.exitCode,
   },
   counts,
+  executionKind,
   forwardBasis: basis,
+  forwardBasisSource: basisSource,
   levels,
   // Deliberately NO top-level `ok`: the five levels above are the contract, and a
   // single boolean is exactly the conflation the plan forbids.
@@ -200,6 +434,8 @@ const artifact = {
     "counts.* === null means NOT_OBSERVED (an unmeasured value), never zero.",
     "externalProviderCalls/costUsdMicros are NOT_OBSERVED because nothing is billed offline.",
     "A green fixtureProtocolReady does not imply realBuildOfflineReady and never authorizes a paid run.",
+    "R7: the execution kind is read from a structured enum field; readiness.productionOfflineReady prose is not read at all, and no log is scanned for the word PASS.",
+    "R7: a platform is MEASURED only by the process that ran on it, or by an other-platform artifact whose ciRunSha equals expectedSha.",
   ],
 };
 
@@ -209,9 +445,14 @@ writeFileSync(outPath, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
 const line = (name, lvl) => `  ${name}: ${lvl.status}`;
 console.log("prereg-ci-readiness (SEPARATED levels — no single overall PASS)");
 console.log(`  ciRunSha: ${artifact.ciRunSha}`);
+console.log(`  expectedSha: ${artifact.expectedSha}`);
+console.log(`  runId: ${artifact.ciRunId ?? "NOT_OBSERVED"}`);
 console.log(`  os: ${artifact.os.label} (node ${artifact.os.node})`);
 for (const [name, lvl] of Object.entries(levels)) console.log(line(name, lvl));
-console.log(`  forward basis: ${basis ?? "NOT_OBSERVED"}`);
+console.log(`  execution kind: ${executionKind ?? "NOT_OBSERVED"} (${basisSource})`);
+console.log(`  forward basis: ${basis}`);
+console.log(`  platforms: this=${THIS_PLATFORM} windows=${artifact.platforms.windows.status} ubuntu=${artifact.platforms.ubuntu.status} cross=${crossPlatformStatus}`);
+if (realDeclaration && realEvidenceFailures.length > 0) console.log(`  real-build evidence failures: ${realEvidenceFailures.length}`);
 console.log(`  evidence: ${outPath}`);
 
 // The SCRIPT exits 0 when it successfully wrote an artifact. It does not encode a
