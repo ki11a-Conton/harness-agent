@@ -67,25 +67,48 @@ export const EXIT_CONFIG = 2;
  * `--candidate` override them, which is what makes the script usable for a
  * future campaign without editing code.
  *
- * THE N1 COMPARABLE PAIR (re-pinned). These were `e9776ba`/`a203737` — the
- * R87/R92 MECHANISM experiment's frozen pair (the pre-R86 progress-blind gate
- * and the H2 fix). That pair is still load-bearing for the R87/R92 constants and
- * the committed historical manifests, and those are deliberately NOT touched.
- * But the closed loop only needs "two distinct real revisions" for its
- * acceptance precondition, and the mechanism pair is not an ABI-comparable pair
- * for the current tree — which is what made N1 unable to prepare a legal one.
- * The pair below is N1's purpose-built comparable baseline/candidate
- * (`8265dc39` / `ee15e7e7`).
+ * THE R87/R92 MECHANISM PAIR IS NOT THIS PAIR. `e9776ba`/`a203737` — the
+ * pre-R86 progress-blind gate and the H2 fix — are still load-bearing for the
+ * R87/R92 constants and the committed historical manifests, and those are
+ * deliberately NOT touched. The closed loop only needs a comparable pair for the
+ * MECHANISM it measures, which is the `tool_call_efficiency_v1` guidance.
+ *
+ * THE PAIR, re-pinned by R15 (`8265dc39`/`ee15e7e7` -> the pair below).
+ *
+ * WHY THE OLD PAIR HAD TO MOVE. It was purpose-built and single-commit, but BOTH
+ * of its arms predated the protocol fixes, so an experiment run on it exercised
+ * STALE protocol code and its numbers did not describe the current harness:
+ *   - P2-41 `9df60bd5` — never split or orphan an assistant `tool_calls` block;
+ *   - P2-43 `a85db6dc` — tool names must satisfy the provider function-name
+ *     grammar.
+ * `ee15e7e7` is an ancestor of P2-41; `8265dc39` branches off `ee15e7e7`, so it
+ * is NOT an ancestor of P2-41 either. Neither arm build contained either fix.
+ *
+ * WHAT MOVED. The BASE is now `2314ce1d` (local `main`: the harness as it is
+ * now) and the SAME one-commit neutralization `8265dc39` made is re-applied to
+ * it:
+ *   - candidate `2314ce1d` = the base, unmodified;
+ *   - baseline `4f8d98ec` = `2314ce1d` + that one commit, whose ENTIRE diff is
+ *     `packages/evaluation/src/mechanism-guidance.ts` (+1/-20): it sets
+ *     `TOOL_CALL_EFFICIENCY_GUIDANCE_V1` to the empty string and changes nothing
+ *     else. `git diff --numstat 2314ce1d 4f8d98ec` is `1  20  packages/evaluation/
+ *     src/mechanism-guidance.ts`, byte-identical to the old pair's
+ *     `git diff --numstat ee15e7e7 8265dc39`.
+ * Both arms therefore contain P2-41 and P2-43 by ANCESTRY
+ * (`git merge-base --is-ancestor <fix> <arm>` exits 0) AND BY CONTENT (the shipped
+ * `message-protocol` and `tool-name` symbols are present in each arm's TREE, not
+ * merely in its history). The mechanism difference under test stays exactly the
+ * `tool_call_efficiency_v1` guidance text.
  *
  * MEASURED ancestry, because it decides whether a fetch is needed:
- * `ee15e7e7` IS an ancestor of the current tree, so it needs no branch;
- * `8265dc39` is NOT, so it is published on the remote branch
- * `e4/n1-baseline-comparable` and CI checks it out with `fetch-depth: 0`. The
+ * `2314ce1d` IS an ancestor of this tree, so it needs no branch; `4f8d98ec` is
+ * NOT (it is a purpose-built commit), so it must be published on the branch
+ * `e4/r15-baseline-neutralized` for CI to check it out with `fetch-depth: 0`. The
  * setup step verifies BOTH SHAs are present locally and treats a missing
  * revision as a SETUP failure rather than fabricating an observation.
  */
-export const DEFAULT_BASELINE_SHA = "8265dc39f74b3d556e059bb86b1cc192357e21dd";
-export const DEFAULT_CANDIDATE_SHA = "ee15e7e7c65d9f62b5fc92d4d5cb69c97a3925fd";
+export const DEFAULT_BASELINE_SHA = "4f8d98ec65d475844d3ed4b959a3199f84ed5d03";
+export const DEFAULT_CANDIDATE_SHA = "2314ce1db40bfa10dc58b0d136e0696450e90cc8";
 
 /** The env vars the D6 test reads, named once so the printed advice and the test
  *  cannot drift apart. */

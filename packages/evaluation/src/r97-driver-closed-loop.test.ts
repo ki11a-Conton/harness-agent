@@ -1679,10 +1679,13 @@ describe("E4-R97 D6: the REAL two-arm observation produces a FINALIZED plan", ()
       endpointBaseUrl: "https://api.openai.com/v1",
     });
 
-    // The two arms are REAL, DISTINCT revisions — N1's comparable pair, the same
-    // pair `r97-observe-arms.mjs` defaults to and `ci.yml` binds.
-    expect(observations["baseline"]!.sourceSha).toBe("8265dc39f74b3d556e059bb86b1cc192357e21dd");
-    expect(observations["candidate"]!.sourceSha).toBe("ee15e7e7c65d9f62b5fc92d4d5cb69c97a3925fd");
+    // The two arms are REAL, DISTINCT revisions — R15's comparable pair, the same
+    // pair `r97-observe-arms.mjs` defaults to and `ci.yml` binds. Both arms are
+    // built on `2314ce1d`, so both contain P2-41 (`9df60bd5`) and P2-43
+    // (`a85db6dc`); the previous pair predated both fixes and measured stale
+    // protocol code.
+    expect(observations["baseline"]!.sourceSha).toBe("4f8d98ec65d475844d3ed4b959a3199f84ed5d03");
+    expect(observations["candidate"]!.sourceSha).toBe("2314ce1db40bfa10dc58b0d136e0696450e90cc8");
     expect(observations["baseline"]!.planDigest).not.toBe(observations["candidate"]!.planDigest);
 
     // Both were clean checkouts, so the digest describes the build on disk.
@@ -1772,10 +1775,13 @@ describe("E4-R97 D6: the REAL two-arm observation produces a FINALIZED plan", ()
     };
 
     // ONE source of truth for the revisions: the script's defaults must be the
-    // exact SHAs the acceptance test above asserts against. These are N1's
-    // comparable pair (see `r97-observe-arms.mjs` for why they moved).
-    expect(setup.DEFAULT_BASELINE_SHA).toBe("8265dc39f74b3d556e059bb86b1cc192357e21dd");
-    expect(setup.DEFAULT_CANDIDATE_SHA).toBe("ee15e7e7c65d9f62b5fc92d4d5cb69c97a3925fd");
+    // exact SHAs the acceptance test above asserts against. These are R15's
+    // comparable pair — the base `2314ce1d` (candidate) and that base plus the
+    // single guidance-neutralization commit `4f8d98ec` (baseline), chosen because
+    // the previous pair predated P2-41/P2-43 (see `r97-observe-arms.mjs` for why
+    // they moved).
+    expect(setup.DEFAULT_BASELINE_SHA).toBe("4f8d98ec65d475844d3ed4b959a3199f84ed5d03");
+    expect(setup.DEFAULT_CANDIDATE_SHA).toBe("2314ce1db40bfa10dc58b0d136e0696450e90cc8");
 
     // The environment variable NAMES must be the ones this file reads, or the
     // setup command would publish variables the test ignores.
