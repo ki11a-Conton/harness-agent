@@ -73,26 +73,7 @@ export const TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION = "tool-call-efficiency:v2";
  *  narrowed to "same arguments + unchanged state", so a legitimate retry after
  *  fixing the cause (re-running a test command, re-reading a changed file) is
  *  explicitly allowed rather than forbidden. */
-export const TOOL_CALL_EFFICIENCY_GUIDANCE_V1 = [
-  "",
-  "Tool-call efficiency guidance:",
-  "- A turn allows a limited number of model iterations (typically 30 model",
-  "  calls). This limit counts MODEL CALLS, not tool calls: you may attach",
-  "  several tool calls to one model call, so tool calls can outnumber model",
-  "  calls.",
-  "- Before repeating a tool call that just failed, change something — the",
-  "  arguments, the target, or the approach. Re-issuing an identical call with",
-  "  the same arguments against unchanged state tends to fail the same way and",
-  "  only spends an iteration.",
-  "- Only abandon a tool when it keeps failing the SAME way with unchanged",
-  "  inputs and no change in state. Once you have fixed the underlying cause,",
-  "  calling the same tool again (for example re-running the test command) is",
-  "  expected and correct.",
-  "- Read each file you need in as few calls as possible, and do not re-read a",
-  "  file you have already read unless it changed.",
-  "- Make each edit complete before moving on, so the verification command you",
-  "  run near the end reflects finished work rather than a half-applied change.",
-].join("\n");
+export const TOOL_CALL_EFFICIENCY_GUIDANCE_V1 = "";
 
 /** sha256 over the ACTUAL tool-call efficiency strategy text — binds the arm
  *  digest, the execution identity and the promotion target to the real text. */
