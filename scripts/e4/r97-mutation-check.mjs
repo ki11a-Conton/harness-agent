@@ -523,30 +523,34 @@ export const MUTATIONS = [
     planWording: "假 evidence 被接受",
     round: "A7",
     // =====================================================================
-    // R13/R12 MEASURED STATUS: this mutation LANDS (its anchor matches exactly
-    // once — the meta-suite checks that) but it is NOT CAUGHT any more. It IS
-    // caught at a85db6dc (full gate 27/27); on the merged tree the full gate is
-    // 26/27 with this as the single MISS. Reported as a DOCUMENTED dead check
-    // rather than faked: the mutation was not deleted, weakened or re-pointed.
+    // MEASURED HISTORY, and the R14 resolution.
     //
-    // WHY (measured by applying this mutation and instrumenting the decision,
-    // then reverting the instrumentation):
+    // a85db6dc → 27/27 CAUGHT. After the R1/R2 merges this check went DEAD
+    // (26/27), and R13 measured exactly why by applying this mutation and
+    // instrumenting the decision:
     //   decision = INVALID, reasonCodes = ["COST_CEILING_EXCEEDED", "INCOMPARABLE"]
     //   gates.artifactIntegrity    = true   (the corroboration defeat DID work)
     //   gates.costBounded          = false
     //   gates.provenanceComparable = false
-    // Defeating artifact corroboration still leaves the fabricated pair refused
-    // by TWO further hard gates that are independent of evidence: the cost
-    // ceiling and provenance comparability. `armEvidenceProblems` returns [] for
-    // this fixture (it is well SHAPED), so evidence was never the deciding gate.
+    // So the fixture was refused by TWO gates independent of evidence, and
+    // flipping the verdict would have needed a compound mutation of three
+    // unrelated invariants — not a minimal expression of this defect.
     //
-    // A TWO-SITE mutation therefore CANNOT restore this check: flipping the
-    // verdict needs the evidence check AND the cost gate AND the provenance gate
-    // defeated together — a compound mutation of three unrelated invariants that
-    // no longer isolates "forged evidence is accepted", i.e. exactly the faking
-    // the R12/R13 mandate forbids. The honest repair belongs to the TEST FIXTURE
-    // (make the fabricated pair clear the cost/provenance gates so evidence
-    // corroboration is decisive again), not to this anchor.
+    // R14 DECISION (with the evidence recorded in the R14 report): the cost rule
+    // was NOT introduced to reject this fixture. It refuses a JOURNAL-LESS
+    // campaign, which is what R2 mandatorily changed ("a missing ledger must not
+    // degrade to 0"; "no journal => not proven cost-safe even when the outcome
+    // delta is 0"), and this fixture simply predates the `readCostJournal`
+    // wiring every production caller uses. The property the test asserts never
+    // moved; the fixture only stopped isolating it.
+    //
+    // R14 REPAIR (in the TEST FIXTURE, not here): the fixture now hands the
+    // aggregate the durable ledger the campaign really produced — a corroborated
+    // ZERO (the forged runner never calls `ctx.provider`: no call, no charge, no
+    // entry), which is the one zero the cost rule permits. Cost and provenance
+    // therefore PASS, artifact corroboration is again the sole blocker, and this
+    // one-site mutation is load-bearing once more. This anchor is unchanged; the
+    // mutation was not deleted, weakened or re-pointed.
     // =====================================================================
     file: "packages/evaluation/src/prereg-run-evidence.ts",
     // A6/F4: a run's DECLARED evidence is trusted only after its raw artifacts
