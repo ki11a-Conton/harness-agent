@@ -34,7 +34,7 @@ import {
   observationViolationsV2,
   runPreregisteredCampaign,
   aggregatePreregisteredCampaign,
-  readCostJournalChargedTokens,
+  readCostJournal,
   type PreregisteredArmRunner,
   type PreregisteredCampaignObservationV2,
   type PreregisteredCampaignRun,
@@ -411,13 +411,16 @@ async function runCmd(rest: string[], deps: PreregCommandDeps): Promise<PreregCo
     };
   }
   const ledgerView = await admission.ledger.view();
-  // N6 — bind the token delta to the DURABLE cost journal this run produced, not
-  // to the arms' self-reported `tokensUsed`.
-  const journalChargedTokens = await readCostJournalChargedTokens(budgetDir);
+  // N7/F3 — read the DURABLE cost ledger as TWO independent facts: the read-only
+  // charged TOTAL and the raw per-request entries the per-arm delta is derived
+  // from. The old call read the total and the aggregate used it AS the delta (the
+  // F3 defect: total 248 reported as `tokensDelta` 248).
+  const journal = await readCostJournal(budgetDir);
   const aggregate = aggregatePreregisteredCampaign(run, artifact, {
     providerCalls: ledgerView.committed,
     budgetRemaining: ledgerView.remaining,
-    journalChargedTokens,
+    journalChargedTokens: journal.chargedTotalTokens,
+    journal,
   });
   await mkdir(outDir, { recursive: true });
   await writeFile(join(outDir, "aggregate.json"), `${JSON.stringify(aggregate, null, 2)}\n`, "utf8");
@@ -429,9 +432,17 @@ async function runCmd(rest: string[], deps: PreregCommandDeps): Promise<PreregCo
       `  planDigest:             ${run.planDigest}`,
       `  decision: ${aggregate.decision.decision} [${aggregate.decision.reasonCodes.join(", ") || "no reason"}]`,
       `  provider calls: ${ledgerView.committed}  remaining: ${ledgerView.remaining}`,
+      // N7/F3 — total consumption and the candidate-vs-baseline change are printed
+      // as SEPARATE metrics so a reader can never collapse one into the other.
+      `  tokens: total ${fmtTokens(aggregate.cost.totalTokens)} (${aggregate.cost.basis})  baseline ${fmtTokens(aggregate.cost.baselineTokens)}  candidate ${fmtTokens(aggregate.cost.candidateTokens)}  delta ${fmtTokens(aggregate.cost.deltaTokens)}`,
       `  aggregate: ${join(outDir, "aggregate.json")}`,
     ],
   };
+}
+
+/** `null` is NOT_OBSERVED, never 0 — a print helper so the CLI cannot hide that. */
+function fmtTokens(v: number | null): string {
+  return v === null ? "NOT_OBSERVED" : String(v);
 }
 
 export async function preregCmd(rest: string[], deps: PreregCommandDeps = {}): Promise<PreregCommandResult> {

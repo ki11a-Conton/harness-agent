@@ -69,6 +69,7 @@ import {
   CostBudget,
   createFormalBudgetedProvider,
   openPreregisteredCampaignGate,
+  readCostJournal,
   type PreregisteredCampaignObservationV2,
   type ToolCallEfficiencyAuthorizationV2,
 } from "./tool-call-efficiency-formal-run.js";
@@ -471,6 +472,7 @@ describe("N0 RED — N6b: tokensDelta is summed from self-reported outcome.token
       }
     }
 
+    const journal = await readCostJournal(budgetDir);
     const aggregate = aggregatePreregisteredCampaign(
       {
         schemaVersion: "tool-call-efficiency-paired-campaign-v1",
@@ -483,11 +485,22 @@ describe("N0 RED — N6b: tokensDelta is summed from self-reported outcome.token
         pairComplete: true,
       },
       artifact,
-      { providerCalls: 0, budgetRemaining: artifact.budget.campaignWorstCaseModelCalls },
+      {
+        providerCalls: 0,
+        budgetRemaining: artifact.budget.campaignWorstCaseModelCalls,
+        journalChargedTokens: journal.chargedTotalTokens,
+        journal,
+      },
     );
 
-    // N6 requires the cost gate to be driven by the durable journal. With zero
-    // journal tokens the honest delta is 0, not 15_999_984.
+    // N6b/F3 — the DURABLE journal this test created witnessed exactly zero
+    // tokens, and the call ledger agrees that nothing was billed, so this is a
+    // CORROBORATED zero: 0. (An ABSENT journal is a different fact and is never
+    // read as 0 — see the F3 suite.)
+    expect(aggregate.cost.basis).toBe("JOURNAL_ZERO_EVIDENCE");
+    expect(aggregate.cost.totalTokens).toBe(0);
+    expect(aggregate.cost.deltaTokens).toBe(0);
+    // The arms self-report 15_999_984 tokens; the ledger's zero wins.
     expect(aggregate.decision.statistics.tokensDelta).toBe(0);
     expect(aggregate.decision.gates.costBounded).toBe(true);
   }, 60_000);
