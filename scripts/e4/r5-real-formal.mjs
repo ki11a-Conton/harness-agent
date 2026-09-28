@@ -763,42 +763,48 @@ async function phaseNegative({ workRoot }) {
   return rows;
 }
 
+/**
+ * Copy an arm's DECLARED execution closure into `dest`.
+ *
+ * The closure walker follows the entries' own relative imports, so copying the
+ * five entry FILES is not enough — the whole `dist` directory each entry lives in
+ * must travel (`packages/evaluation/dist/index.js` imports `./eval-case.js`, and a
+ * missing sibling is refused as "the covered artifact set must never shrink
+ * silently"). Bare specifiers stay external, so `node_modules` is not needed.
+ */
+async function copyArmClosure(srcArm, dest) {
+  const mod = await import(pathToFileURL(EVAL_ENTRY).href);
+  await rm(dest, { recursive: true, force: true });
+  await mkdir(dest, { recursive: true });
+  const distDirs = new Set(mod.R97_ARM_BUILD_ENTRIES.map((rel) => dirname(rel)));
+  for (const rel of distDirs) {
+    await cp(join(srcArm, rel), join(dest, rel), { recursive: true });
+  }
+  return { entryRel: mod.R97_ARM_BUILD_ENTRIES.find((e) => e.endsWith("benchmark-command.js")), distDirs: [...distDirs] };
+}
+
+function gitInitCommit(dir, message) {
+  execFileSync("git", ["-C", dir, "init", "-q"]);
+  execFileSync("git", ["-C", dir, "add", "-A"]);
+  execFileSync("git", ["-C", dir, "-c", "user.name=r5", "-c", "user.email=r5@local", "commit", "-q", "-m", message]);
+}
+
 /** A copy of the baseline arm's execution closure with NO `R97_ARM_PROBE` export. */
 async function makeAbiLessArm(workRoot) {
   const dir = join(workRoot, "arm-no-abi");
-  await rm(dir, { recursive: true, force: true });
-  await mkdir(dir, { recursive: true });
-  const mod = await import(pathToFileURL(EVAL_ENTRY).href);
-  const entryRel = mod.R97_ARM_BUILD_ENTRIES.find((e) => e.endsWith("benchmark-command.js"));
-  for (const rel of mod.R97_ARM_BUILD_ENTRIES) {
-    const src = join(DEFAULT_PAIR.baseline, rel);
-    const dst = join(dir, rel);
-    await mkdir(dirname(dst), { recursive: true });
-    await cp(src, dst);
-  }
+  const { entryRel } = await copyArmClosure(DEFAULT_PAIR.baseline, dir);
   const entryPath = join(dir, entryRel);
   const bytes = await readFile(entryPath, "utf8");
   await writeFile(entryPath, bytes.replace(/export const R97_ARM_PROBE =/, "const REMOVED_R97_ARM_PROBE ="), "utf8");
-  execFileSync("git", ["-C", dir, "init", "-q"]);
-  execFileSync("git", ["-C", dir, "add", "-A"]);
-  execFileSync("git", ["-C", dir, "-c", "user.name=r5", "-c", "user.email=r5@local", "commit", "-q", "-m", "abi-less arm"]);
+  gitInitCommit(dir, "abi-less arm");
   return { baseline: dir, candidate: DEFAULT_PAIR.candidate };
 }
 
 /** A real git work tree that is DIRTY (an uncommitted file). */
 async function makeDirtyArm(workRoot) {
   const dir = join(workRoot, "arm-dirty");
-  await rm(dir, { recursive: true, force: true });
-  await mkdir(dir, { recursive: true });
-  const mod = await import(pathToFileURL(EVAL_ENTRY).href);
-  for (const rel of mod.R97_ARM_BUILD_ENTRIES) {
-    const dst = join(dir, rel);
-    await mkdir(dirname(dst), { recursive: true });
-    await cp(join(DEFAULT_PAIR.baseline, rel), dst);
-  }
-  execFileSync("git", ["-C", dir, "init", "-q"]);
-  execFileSync("git", ["-C", dir, "add", "-A"]);
-  execFileSync("git", ["-C", dir, "-c", "user.name=r5", "-c", "user.email=r5@local", "commit", "-q", "-m", "clean arm"]);
+  await copyArmClosure(DEFAULT_PAIR.baseline, dir);
+  gitInitCommit(dir, "clean arm");
   await writeFile(join(dir, "UNCOMMITTED.txt"), "dirty\n", "utf8");
   return { baseline: dir, candidate: DEFAULT_PAIR.candidate };
 }
