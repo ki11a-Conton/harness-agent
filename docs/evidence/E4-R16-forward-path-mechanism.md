@@ -18,6 +18,42 @@ consequence drawn from those readings, not itself executed.
 
 ---
 
+> ## CORRECTION (added by the Lead after `task-16` completed) — read this before acting on §2
+>
+> This note's **[INFERRED]** conclusion in §2 was **WRONG**, and `task-16` disproved it by
+> **measurement**. Keep the note for its §1 source readings, which held up, but do not act on §2.
+>
+> §2 claimed the positive forward run is restorable by declaring the `trusted-build` posture **plus**
+> two real clean git-pinned checkouts. That is not sufficient. There is a **second, binding blocker
+> that fires BEFORE the arm executor is ever reached**:
+>
+> **B1 — the transport/billing admission class** in `openPreregisteredCampaignGate` STEP 3b
+> (`packages/evaluation/src/tool-call-efficiency-formal-run.ts`, refusals at `:1971`, `:1981`, `:1990`)
+> runs after `checkAuthorizationV2` and **before** any budget/ledger/provider/arm work. That file has
+> **zero** references to `isolation` or `trusted-build` — Lead-verified with
+> `git grep -c -i "trusted-build\|isolation"` → **0** — so the declared posture never reaches it. With
+> `fixtureMode` set, the gate demands the module-private Symbol-branded `nonBillableTransport`, and a
+> subprocess has no path to it: `apps/cli/src/main.ts:117` calls `createProductionPreregRunner()` with
+> **no options**. The only other class is PAID, which this authorization does not satisfy.
+>
+> **Measured, not argued:** `task-16` re-specified POS-FWD so it now *declares*
+> `trusted-build`/`no-os-network-sandbox`, and it is **still** refused
+> `FIXTURE_TRANSPORT_NOT_NON_BILLABLE` at 0 HTTP and 0 arm records. So **the real arm pair alone will
+> not restore POS-FWD** while the authorization carries `fixtureMode`.
+>
+> **Consequence for the arm re-pin (`task-15`):** the new pair (baseline `4f8d98ec`, candidate
+> `2314ce1d`) is still valuable and correct — both arms now genuinely contain P2-41/P2-43, which was
+> the actual defect — but it is **not** a path to a positive POS-FWD. Do not build toward that premise.
+>
+> **Disposition:** `task-16` accepted option (b) — a documented, measured refusal. No R1 invariant was
+> weakened and no bypass was added. A future positive release-CLI fixture forward run would need an
+> honestly-designed admission class carrying a **declared-posture-aware transport contractual claim**,
+> not a reuse of the posture. See `docs/evidence/e4-r16-fixture-forward-path.md` for the measurements.
+>
+> The lesson worth keeping: §2 was a plausible source-reading inference that a single measured run
+> falsified. **[INFERRED]** is not **[MEASURED]**, and this file now says so in the same place the
+> wrong inference used to stand alone.
+
 ## 1. The mechanism that actually blocks POS-FWD
 
 ### 1.1 POS-FWD declares `process-exec`, and its checkouts are synthetic **[READ]**
