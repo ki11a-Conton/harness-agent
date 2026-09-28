@@ -118,7 +118,15 @@ const counts = {
   forwardPhysicalStubRequests: fwd?.physicalStubRequests ?? null,
   forwardLedgerCommitted: fwd?.ledgerCommitted ?? null,
   forwardJournalChargedTokens: fwd?.journalChargedTokens ?? null,
+  // F3/R2 — the forward TOTAL and the candidate-vs-baseline DELTA are two
+  // independent numbers, and the independently recomputed per-arm values are
+  // reported next to them so a reviewer can recompute every one of them.
+  forwardAggregateTokensTotal: fwd?.aggregateTokensTotal ?? null,
   forwardAggregateTokensDelta: fwd?.aggregateTokensDelta ?? null,
+  forwardAggregateTokensBaseline: fwd?.aggregateTokensBaseline ?? null,
+  forwardAggregateTokensCandidate: fwd?.aggregateTokensCandidate ?? null,
+  forwardIndependentTokensDelta: fwd?.independentTokens?.delta ?? null,
+  forwardCostMatchesJournal: fwd?.costMatchesJournal ?? null,
   evidenceVerified: exec?.evidenceVerified ?? null,
   evidenceUnverified: exec?.evidenceUnverified ?? null,
   decision: exec?.decision ?? null,
@@ -142,7 +150,16 @@ const levels = {
   budgetEvidenceReady: {
     status: "NOT_PROVEN",
     basis:
-      "token/cost accounting is journal-bound and the journal was cross-checked (forward journal == forward aggregate delta), and the tool/token/USD dimensions are hard-capped. The full armRunId <-> request IDs <-> ledger reservation/commit <-> verifier bytes chain is NOT bound, and it needs real arm artifacts (N1)",
+      "token/cost accounting is journal-bound: the cost journal now carries one entry per billed physical attempt with its armRunId / requestId / reservationId, so per-arm baseline/candidate/delta are re-derived from the raw entries and the charged TOTAL is reported as a SEPARATE metric (F3/R2: a campaign total is never presented as a candidate-vs-baseline difference), and the E2E recomputes both independently from the journal bytes. The armRunId <-> requestId <-> reservationId attribution is therefore recorded, but it is NOT yet bound to the trusted execution manifest / verifier bytes, and it needs real arm artifacts (N1)",
+    counts_ref: [
+      "forwardJournalChargedTokens",
+      "forwardAggregateTokensTotal",
+      "forwardAggregateTokensDelta",
+      "forwardAggregateTokensBaseline",
+      "forwardAggregateTokensCandidate",
+      "forwardIndependentTokensDelta",
+      "forwardCostMatchesJournal",
+    ],
   },
   paidExperimentRun: { status: "NOT_RUN", basis: "no paid authorization exists; this script never creates one" },
   championPromotion: { status: "NOT_RUN", basis: "no promotion is performed or authorized by this script" },

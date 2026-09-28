@@ -536,7 +536,7 @@ describe("N6 — journal-bound cost accounting and infra-error handling", () => 
 
   const budgetOf = (artifact: ToolCallEfficiencyPreregistrationV2) => artifact.budget.campaignWorstCaseModelCalls;
 
-  it("[N6.7] tokensDelta follows the durable JOURNAL, never the arm's self-report", async () => {
+  it("[N6.7/F3] a legacy total-only journal yields a read-only TOTAL and NO delta (never total-as-delta)", async () => {
     const dir = await tempDir();
     const artifact = prereg();
     const run = await runWith(dir, artifact, selfReporting({ candidateTokens: 1_000_000 }));
@@ -546,18 +546,30 @@ describe("N6 — journal-bound cost accounting and infra-error handling", () => 
       budgetRemaining: budgetOf(artifact),
       journalChargedTokens: 4242,
     });
-    expect(fromJournal.decision.statistics.tokensDelta).toBe(4242);
+    // F3 — 4242 is the campaign TOTAL, not the baseline→candidate DIFFERENCE. The
+    // old code reported it as `tokensDelta` (total 248 was reported as delta 248 on
+    // the two-platform artifact); a total can never be a per-arm comparison.
+    expect(fromJournal.cost.totalTokens).toBe(4242);
+    expect(fromJournal.cost.basis).toBe("LEGACY_TOTAL_ONLY");
+    expect(fromJournal.cost.baselineTokens).toBeNull();
+    expect(fromJournal.cost.candidateTokens).toBeNull();
+    expect(fromJournal.cost.deltaTokens).toBeNull();
+    expect(fromJournal.decision.statistics.tokensDelta).not.toBe(4242);
+    expect(fromJournal.decision.gates.provenanceComparable).toBe(false);
 
-    // The arm claims a million tokens; the journal witnessed ZERO. Zero wins.
+    // A legacy ledger that charged a measured zero is STILL not a per-arm
+    // comparison: the total is readable, the delta does not exist.
     const zeroJournal = aggregatePreregisteredCampaign(run, artifact, {
       providerCalls: 0,
       budgetRemaining: budgetOf(artifact),
       journalChargedTokens: 0,
     });
-    expect(zeroJournal.decision.statistics.tokensDelta).toBe(0);
+    expect(zeroJournal.cost.totalTokens).toBe(0);
+    expect(zeroJournal.cost.deltaTokens).toBeNull();
+    expect(zeroJournal.decision.gates.provenanceComparable).toBe(false);
   }, 120_000);
 
-  it("[N6.8] self-reported tokens with NO journal corroboration are NOT comparable", async () => {
+  it("[N6.8/F3] a missing journal is NOT a measured zero and never comparable", async () => {
     const dir = await tempDir();
     const artifact = prereg();
     const run = await runWith(dir, artifact, selfReporting({ candidateTokens: 1_000_000 }));
@@ -565,9 +577,13 @@ describe("N6 — journal-bound cost accounting and infra-error handling", () => 
       providerCalls: 0,
       budgetRemaining: budgetOf(artifact),
     });
-    // No journal ⇒ no corroborated consumption: 0, and explicitly flagged rather
-    // than silently treated as a measured zero.
-    expect(aggregate.decision.statistics.tokensDelta).toBe(0);
+    // No journal ⇒ no corroborated cost: the total and the per-arm tokens are
+    // NOT_OBSERVED (`null`) — not a measured 0, and not a comparable campaign.
+    expect(aggregate.cost.basis).toBe("NO_JOURNAL");
+    expect(aggregate.cost.totalTokens).toBeNull();
+    expect(aggregate.cost.baselineTokens).toBeNull();
+    expect(aggregate.cost.candidateTokens).toBeNull();
+    expect(aggregate.cost.deltaTokens).toBeNull();
     expect(aggregate.decision.gates.provenanceComparable).toBe(false);
     expect(aggregate.decision.decision).not.toBe("ACCEPT");
   }, 120_000);

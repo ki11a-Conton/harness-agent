@@ -43,7 +43,14 @@ import {
 } from "./champion-decision-v3.js";
 import { DEFAULT_DECISION_POLICY_V3 } from "./decision-policy-v3.js";
 import { PREREG_V2_MIN_REPETITIONS, type ToolCallEfficiencyPreregistrationV2 } from "./tool-call-efficiency-preregistration-v2.js";
-import type { FormalRunAdmission } from "./tool-call-efficiency-formal-run.js";
+import {
+  TOOL_CALL_EFFICIENCY_COST_JOURNAL_SCHEMA,
+  costJournalEntryProblems,
+  type CostJournalArmId,
+  type CostJournalEntry,
+  type CostJournalView,
+  type FormalRunAdmission,
+} from "./tool-call-efficiency-formal-run.js";
 
 export const PREREGISTERED_CAMPAIGN_SCHEMA = "tool-call-efficiency-paired-campaign-v1";
 
@@ -345,6 +352,35 @@ async function assertResultsDirIntegrity(
 }
 
 /**
+ * N7/F3 — attribute every provider request ONE arm run makes to that arm run's
+ * EXACT identity (campaign digest, armRunId, arm, case, repetition).
+ *
+ * The durable cost journal is written by the budget-wrapped provider; the DRIVER
+ * is the only layer that knows which arm run is currently executing, so it binds
+ * the scope immediately before the run and clears it in a `finally`. Arm runs are
+ * executed strictly sequentially, so one bound scope at a time is unambiguous,
+ * and a throwing runner cannot leak its identity onto the next arm.
+ */
+async function withArmJournalScope<T>(
+  admission: FormalRunAdmission,
+  identity: PreregRunIdentity,
+  run: () => Promise<T>,
+): Promise<T> {
+  admission.costBudget.bindJournalScope({
+    campaignDigest: identity.preregistrationDigest,
+    armRunId: identity.armRunId,
+    arm: identity.armId,
+    caseId: identity.caseId,
+    repetition: identity.repetition,
+  });
+  try {
+    return await run();
+  } finally {
+    admission.costBudget.bindJournalScope(null);
+  }
+}
+
+/**
  * Execute the pre-registered schedule exactly, stamping every record with the
  * root identity. A record that exists but binds a DIFFERENT identity — including
  * a different `orderIndex` — is a refusal, never silently overwritten or reused.
@@ -411,21 +447,23 @@ export async function runPreregisteredCampaign(
       resumedArmRunIds.push(armRunId);
       continue;
     }
-    const outcome = await runArm(arm, {
-      provider: admission.provider,
-      armRunId,
-      arm,
-      preregistrationDigest,
-      planDigest,
-      // N2 — the frozen artifact's isolation contract travels WITH the run, so
-      // the executor validates what the pre-registration declared rather than a
-      // default it chose itself.
-      isolation: {
-        isolationBackendId: prereg.isolation.isolationBackendId,
-        isolationStrength: prereg.isolation.isolationStrength,
-      },
-      evidenceDir,
-    });
+    const outcome = await withArmJournalScope(admission, identity, () =>
+      runArm(arm, {
+        provider: admission.provider,
+        armRunId,
+        arm,
+        preregistrationDigest,
+        planDigest,
+        // N2 — the frozen artifact's isolation contract travels WITH the run, so
+        // the executor validates what the pre-registration declared rather than a
+        // default it chose itself.
+        isolation: {
+          isolationBackendId: prereg.isolation.isolationBackendId,
+          isolationStrength: prereg.isolation.isolationStrength,
+        },
+        evidenceDir,
+      }),
+    );
     // F2/S4: refuse a result whose evidence is missing/malformed AT RECORD TIME,
     // so a bare-boolean outcome never even reaches the aggregate.
     assertArmEvidence(outcome.evidence, armRunId, outcome.status);
@@ -491,6 +529,250 @@ export interface PreregisteredAggregate {
   /** Total provider calls the ledger settled for this campaign. */
   providerCalls: number;
   budgetRemaining: number;
+  /**
+   * N7/F3 — the campaign's token cost, as TWO independent metrics: the read-only
+   * TOTAL the durable ledger charged, and the per-arm comparison
+   * (`candidateTokens - baselineTokens`) derived from the per-request journal.
+   */
+  cost: CampaignCostAttribution;
+}
+
+// ---------------------------------------------------------------------------
+// N7/F3 — cost attribution
+//
+// `tokensDelta = journalChargedTokens ?? 0` read the campaign TOTAL as if it were
+// the candidate-vs-baseline DIFFERENCE (measured: total 248 reported as delta
+// 248). A ledger existing is not enough to compare arms. The attribution below is
+// re-derived from the RAW per-request journal entries, and the total stays a
+// separate metric.
+// ---------------------------------------------------------------------------
+
+export type CostAttributionBasis =
+  /** Per-arm attribution derived from a per-request journal and reconciled with the ledger's total. */
+  | "JOURNAL_PER_ARM"
+  /** A genuine, independently corroborated zero: no call, no charge, no entry. */
+  | "JOURNAL_ZERO_EVIDENCE"
+  /** A ledger written before the per-request journal existed: total readable, attribution NOT. */
+  | "LEGACY_TOTAL_ONLY"
+  /** No durable ledger at all. */
+  | "NO_JOURNAL"
+  /** A journal exists but cannot support a per-arm comparison (see `problems`). */
+  | "UNKNOWN_ATTRIBUTION";
+
+export interface CampaignCostAttribution {
+  /** Tokens the durable ledger charged for the WHOLE campaign (read-only). */
+  totalTokens: number | null;
+  /** MEASURED tokens the journal attributed to each arm; null = NOT_OBSERVED. */
+  baselineTokens: number | null;
+  candidateTokens: number | null;
+  /** `candidateTokens - baselineTokens`; null when either arm is NOT_OBSERVED. */
+  deltaTokens: number | null;
+  /** Conservative upper bounds charged for attempts whose real usage was never observed. */
+  reservedUpperBound: { baseline: number; candidate: number };
+  basis: CostAttributionBasis;
+  /** Physical attempts the journal attributed to each arm. */
+  requests: { baseline: number; candidate: number };
+  /** Attempts whose real usage was never observed, per arm. */
+  unknownAttempts: { baseline: number; candidate: number };
+  /**
+   * The arms' SELF-REPORTED token delta, kept as a DIAGNOSTIC contrast only. It
+   * never feeds the verdict: a runner's word cannot move a journal-derived result.
+   */
+  selfReportedDelta: number | null;
+  /** Why the attribution cannot support a per-arm comparison (empty = trusted). */
+  problems: string[];
+}
+
+/**
+ * N7/F3 — derive the per-arm cost from the RAW journal entries, never from a
+ * caller-supplied summary and never from the arms' self-reported `tokensUsed`.
+ *
+ * Every entry is checked against the campaign's own records (campaign digest,
+ * scheduled armRunId, arm/case/repetition identity) and duplicates are refused,
+ * so a request cannot be attributed to two arms nor replayed onto one. The sum of
+ * the attributed entries must reconcile with the ledger's `charged.totalTokens`;
+ * unattributed consumption makes the whole comparison NOT_OBSERVED rather than
+ * silently dropping it.
+ */
+function computeCostAttribution(
+  run: PreregisteredCampaignRun,
+  providerCalls: number,
+  journal: CostJournalView | null,
+  selfReportedDelta: number | null,
+): CampaignCostAttribution {
+  const ZERO_PAIR = { baseline: 0, candidate: 0 };
+  const notObserved = (
+    basis: CostAttributionBasis,
+    problems: string[],
+    totalTokens: number | null,
+  ): CampaignCostAttribution => ({
+    totalTokens,
+    baselineTokens: null,
+    candidateTokens: null,
+    deltaTokens: null,
+    reservedUpperBound: { ...ZERO_PAIR },
+    basis,
+    requests: { ...ZERO_PAIR },
+    unknownAttempts: { ...ZERO_PAIR },
+    selfReportedDelta,
+    problems,
+  });
+
+  if (journal === null || journal.exists !== true) {
+    return notObserved(
+      "NO_JOURNAL",
+      [
+        "no durable cost journal exists for this campaign — its total and its per-arm tokens are NOT_OBSERVED, and an absent ledger is never read as a measured 0 (the campaign is therefore NOT proven cost-safe, whatever the outcome delta)",
+      ],
+      null,
+    );
+  }
+  if (journal.entries === null) {
+    // A legacy ledger: its TOTAL is a real, readable fact; its arm attribution is
+    // not available and must not be invented from the total.
+    return notObserved(
+      "LEGACY_TOTAL_ONLY",
+      [
+        "the cost ledger is a legacy total-only ledger: its charged total is readable (read-only), but it carries no per-request attribution, so no per-arm comparison exists (none is fabricated from the total)",
+      ],
+      journal.chargedTotalTokens,
+    );
+  }
+
+  const problems: string[] = [];
+  if (journal.journalSchemaVersion !== TOOL_CALL_EFFICIENCY_COST_JOURNAL_SCHEMA) {
+    problems.push(`the cost journal schema is ${String(journal.journalSchemaVersion)}, not ${TOOL_CALL_EFFICIENCY_COST_JOURNAL_SCHEMA}`);
+  }
+  const recordByArmRunId = new Map(run.records.map((r) => [r.armRunId, r]));
+  const seenReservation = new Map<string, string>();
+  const seenCostReservation = new Set<string>();
+  const seenAttempts = new Set<string>();
+  const attributed: CostJournalEntry[] = [];
+  for (const entry of journal.entries) {
+    const entryProblems = costJournalEntryProblems(entry);
+    if (entry.campaignDigest !== run.preregistrationDigest) {
+      entryProblems.push(
+        `a request belongs to campaign ${String(entry.campaignDigest).slice(0, 12)}…, not to this campaign (${run.preregistrationDigest.slice(0, 12)}…)`,
+      );
+    }
+    const record = recordByArmRunId.get(entry.armRunId);
+    if (record === undefined) {
+      entryProblems.push(`a request is attributed to arm run ${entry.armRunId}, which this campaign never scheduled — a missing/cross-campaign request`);
+    } else if (entry.arm !== record.armId || entry.caseId !== record.caseId || entry.repetition !== record.repetition) {
+      entryProblems.push(
+        `a request is attributed to ${entry.arm}/${entry.caseId}#${entry.repetition}, which is not arm run ${entry.armRunId}'s identity (${record.armId}/${record.caseId}#${record.repetition}) — a mis-attributed request`,
+      );
+    }
+    const priorArm = seenReservation.get(entry.reservationId);
+    if (priorArm !== undefined) {
+      entryProblems.push(
+        `reservation ${entry.reservationId} is attributed more than once (${priorArm} and ${entry.armRunId}) — a physical attempt is charged exactly once and never to two arms`,
+      );
+    } else {
+      seenReservation.set(entry.reservationId, entry.armRunId);
+    }
+    if (seenCostReservation.has(entry.costReservationId)) {
+      entryProblems.push(`cost reservation ${entry.costReservationId} is recorded more than once`);
+    } else {
+      seenCostReservation.add(entry.costReservationId);
+    }
+    const attemptKey = `${entry.armRunId}|${entry.requestId}#${entry.attemptId}`;
+    if (seenAttempts.has(attemptKey)) {
+      entryProblems.push(`attempt ${attemptKey} is recorded twice — a replayed or resumed attempt must not be charged again`);
+    } else {
+      seenAttempts.add(attemptKey);
+    }
+    if (entryProblems.length > 0) problems.push(...entryProblems);
+    else attributed.push(entry);
+  }
+
+  const attributedChargedTotal = attributed.reduce((sum, e) => sum + e.chargedTotalTokens, 0);
+  const chargedTotal = journal.chargedTotalTokens;
+  if (chargedTotal === null) {
+    problems.push("the cost ledger's charged total is unreadable — the per-request attribution cannot be reconciled with it");
+  } else if (attributedChargedTotal !== chargedTotal) {
+    problems.push(
+      `the per-request attribution covers ${attributedChargedTotal} token(s) but the ledger charged ${chargedTotal} — unattributed consumption exists, so no per-arm comparison is trusted`,
+    );
+  }
+
+  const perArm = (arm: CostJournalArmId): { measured: number; reserved: number; requests: number; unknown: number } => {
+    const list = attributed.filter((e) => e.arm === arm);
+    let measured = 0;
+    let reserved = 0;
+    let unknown = 0;
+    for (const e of list) {
+      if (e.basis === "MEASURED") measured += (e.inputTokens ?? 0) + (e.outputTokens ?? 0);
+      else {
+        reserved += (e.reservedInputTokens ?? 0) + (e.reservedOutputTokens ?? 0);
+        unknown += 1;
+      }
+    }
+    return { measured, reserved, requests: list.length, unknown };
+  };
+  const b = perArm("baseline");
+  const c = perArm("candidate");
+
+  // A genuine zero needs INDEPENDENT zero evidence: the durable call ledger says
+  // no call was made, the cost ledger charged nothing, and the journal holds no
+  // entry. That is a different fact from "no ledger", and only this one may be 0.
+  if (attributed.length === 0 && chargedTotal === 0 && providerCalls === 0 && problems.length === 0) {
+    return {
+      totalTokens: 0,
+      baselineTokens: 0,
+      candidateTokens: 0,
+      deltaTokens: 0,
+      reservedUpperBound: { ...ZERO_PAIR },
+      basis: "JOURNAL_ZERO_EVIDENCE",
+      requests: { ...ZERO_PAIR },
+      unknownAttempts: { ...ZERO_PAIR },
+      selfReportedDelta,
+      problems: [],
+    };
+  }
+
+  if (attributed.length === 0) {
+    problems.push(
+      `the journal attributes no request at all while the campaign reports ${providerCalls} committed provider call(s) and ${String(chargedTotal)} charged token(s) — the per-arm cost is NOT_OBSERVED (a missing request is never 0)`,
+    );
+  } else if (b.requests === 0 || c.requests === 0) {
+    problems.push(
+      `the journal attributes no request to the ${b.requests === 0 ? "baseline" : "candidate"} arm — one arm's cost is absent, so no per-arm delta exists (a missing arm is never 0)`,
+    );
+  }
+  if (b.unknown > 0 || c.unknown > 0) {
+    problems.push(
+      `${b.unknown + c.unknown} attempt(s) settled at a CONSERVATIVE reservation because their real usage was never observed — a bound is not measured consumption, so the per-arm delta is NOT_OBSERVED`,
+    );
+  }
+
+  if (problems.length > 0) {
+    return {
+      totalTokens: chargedTotal,
+      baselineTokens: null,
+      candidateTokens: null,
+      deltaTokens: null,
+      reservedUpperBound: { baseline: b.reserved, candidate: c.reserved },
+      basis: "UNKNOWN_ATTRIBUTION",
+      requests: { baseline: b.requests, candidate: c.requests },
+      unknownAttempts: { baseline: b.unknown, candidate: c.unknown },
+      selfReportedDelta,
+      problems,
+    };
+  }
+
+  return {
+    totalTokens: chargedTotal,
+    baselineTokens: b.measured,
+    candidateTokens: c.measured,
+    deltaTokens: c.measured - b.measured,
+    reservedUpperBound: { baseline: 0, candidate: 0 },
+    basis: "JOURNAL_PER_ARM",
+    requests: { baseline: b.requests, candidate: c.requests },
+    unknownAttempts: { baseline: 0, candidate: 0 },
+    selfReportedDelta,
+    problems: [],
+  };
 }
 
 /**
@@ -522,10 +804,17 @@ export function aggregatePreregisteredCampaign(
     providerCalls: number;
     budgetRemaining: number;
     /**
-     * N6 — the DURABLE cost journal's corroborated token consumption. `null` (or
-     * absent) means the journal does not exist: explicitly UNKNOWN, never `0`.
+     * N6 — the durable cost journal's corroborated TOTAL consumption, read-only.
+     * `null` (or absent) means the ledger does not exist: explicitly UNKNOWN,
+     * never `0`. Kept for callers that only have the total; it is NOT a difference.
      */
     journalChargedTokens?: number | null;
+    /**
+     * N7/F3 — the ledger as READ: the read-only total PLUS the raw per-request
+     * journal entries the per-arm comparison is derived from. `null`/absent means
+     * no ledger could be read.
+     */
+    journal?: CostJournalView | null;
   },
 ): PreregisteredAggregate {
   const policy = prereg.evaluation.decisionPolicy ?? DEFAULT_DECISION_POLICY_V3;
@@ -569,20 +858,23 @@ export function aggregatePreregisteredCampaign(
   const infraFailuresBaseline = baseline.filter((r) => r.outcome.status === "error").length;
   const infraFailuresCandidate = candidate.filter((r) => r.outcome.status === "error").length;
 
-  // N6b — the token delta is the DURABLE JOURNAL's corroborated consumption, never
-  // the arms' self-reported `tokensUsed`. Summing the self-report let a campaign
-  // claim +15_999_984 tokens while the journal witnessed exactly zero. An absent
-  // journal is NOT `0` mistaken for a measurement: it is "no corroborated
-  // consumption", and it is reported separately below so the difference between
-  // the two is visible rather than silently collapsed.
-  const selfReportedTokens =
+  // N7/F3 — the per-arm cost comes from the durable journal's per-request
+  // attribution, NEVER from the arms' self-reported `tokensUsed` (summing the
+  // self-report once let a campaign claim +15_999_984 tokens while the journal
+  // witnessed zero). The two metrics stay INDEPENDENT: `totalTokens` is what the
+  // whole campaign consumed; `deltaTokens` is candidate minus baseline. An absent
+  // or legacy ledger leaves the delta NOT_OBSERVED — never `0`.
+  const selfReportedDelta =
     candidate.reduce((sum, r) => sum + (r.outcome.tokensUsed ?? 0), 0)
     - baseline.reduce((sum, r) => sum + (r.outcome.tokensUsed ?? 0), 0);
-  const journalTokens = ledgerTotals.journalChargedTokens ?? null;
-  const tokensDelta = journalTokens ?? 0;
-  // Self-reported consumption that the journal does not corroborate cannot be
-  // compared across arms: the numbers are the runner's word, not the ledger's.
-  const tokensUncorroborated = journalTokens === null && selfReportedTokens !== 0;
+  // A caller that only supplies the read-only total is describing a LEGACY
+  // ledger: the total is usable, per-arm attribution is not.
+  const journalView: CostJournalView | null =
+    ledgerTotals.journal ?? (ledgerTotals.journalChargedTokens === undefined || ledgerTotals.journalChargedTokens === null
+      ? null
+      : { exists: true, chargedTotalTokens: ledgerTotals.journalChargedTokens, journalSchemaVersion: null, entries: null });
+  const cost = computeCostAttribution(run, ledgerTotals.providerCalls, journalView, selfReportedDelta);
+  const costNotObserved = cost.deltaTokens === null;
 
   const contaminated = contaminatedPairs.length > 0;
 
@@ -624,13 +916,18 @@ export function aggregatePreregisteredCampaign(
   const input: DecisionGateInputV3 = {
     digestValid,
     pairComplete: run.pairComplete && !contaminated,
-    comparable: !contaminated && !tokensUncorroborated,
+    comparable: !contaminated && !costNotObserved,
     incomparabilityReasons: [
       ...(contaminated
         ? [`baseline arms observed a candidate event in ${contaminatedPairs.length} pair(s)`]
         : []),
-      ...(tokensUncorroborated
-        ? ["the arms self-report token usage that the durable cost journal does not corroborate"]
+      // N7/F3 — an uncorroborated or legacy cost attribution makes the arms
+      // INCOMPARABLE: there is no per-arm cost to compare, so no verdict may rest
+      // on one. The reason names the concrete journal problem, not a generic flag.
+      ...(costNotObserved
+        ? cost.problems.length > 0
+          ? cost.problems
+          : ["the candidate-vs-baseline token change is NOT_OBSERVED"]
         : []),
     ],
     activationCoverage,
@@ -650,7 +947,12 @@ export function aggregatePreregisteredCampaign(
     repetitions,
     perRepetitionDeltas,
     minConclusiveNetDelta: policy.minConclusiveNetDelta,
-    tokensDelta,
+    // N7/F3 — the frozen decision layer takes a NUMBER, so an unknown delta is
+    // encoded as +Infinity: `tokensDelta <= maxTokensDelta` is then FALSE, i.e.
+    // an unmeasured cost change is never "bounded". The honest per-arm facts
+    // (including `deltaTokens: null`) are carried by `aggregate.cost`, and
+    // `comparable:false` above already forces INVALID.
+    tokensDelta: cost.deltaTokens ?? Number.POSITIVE_INFINITY,
     maxTokensDelta: policy.maxTokensDelta,
     // Derived from the pre-registered repetition minimum (which the builder
     // enforces at >= PREREG_V2_MIN_REPETITIONS) — not a literal `false`.
@@ -661,7 +963,7 @@ export function aggregatePreregisteredCampaign(
   };
 
   return {
-    schemaVersion: "tool-call-efficiency-paired-aggregate-v1",
+    schemaVersion: "tool-call-efficiency-paired-aggregate-v2",
     preregistrationDigest: run.preregistrationDigest,
     planDigest: run.planDigest,
     decision: decideChampionV3(input),
@@ -669,5 +971,6 @@ export function aggregatePreregisteredCampaign(
     contaminatedPairs,
     providerCalls: ledgerTotals.providerCalls,
     budgetRemaining: ledgerTotals.budgetRemaining,
+    cost,
   };
 }

@@ -433,6 +433,120 @@ export interface CostBudgetCapsV2 {
   maxModelCalls: number;
 }
 
+// ---------------------------------------------------------------------------
+// N7/F3 — the per-request / per-attempt / per-arm cost journal
+//
+// The `charged.totalTokens` counter alone answers "how much did the whole
+// campaign consume?", which is NOT the question the champion verdict asks. The
+// verdict needs "how much did the CANDIDATE consume RELATIVE TO the baseline?",
+// and a campaign total cannot answer that — reading the total as a difference is
+// the F3 defect (measured: total 248 was reported as `tokensDelta` 248).
+//
+// The journal therefore records ONE entry per BILLED PHYSICAL ATTEMPT, carrying
+// the full request identity (campaign digest, armRunId, arm, case, repetition,
+// requestId, attemptId, reservationId). The campaign aggregate then sums the
+// entries PER ARM and computes `candidate - baseline`, while the ledger's own
+// `charged.totalTokens` stays an INDEPENDENT metric of total consumption.
+// ---------------------------------------------------------------------------
+
+export const TOOL_CALL_EFFICIENCY_COST_JOURNAL_SCHEMA = "tool-call-efficiency-cost-journal-v2";
+
+export type CostJournalArmId = "baseline" | "candidate";
+
+/**
+ * How an entry's token numbers were obtained.
+ *
+ *   MEASURED             — the real usage a completed response reported;
+ *   RESERVED_UPPER_BOUND — the pre-send CONSERVATIVE ceiling that was charged
+ *                          because the attempt's real usage was never observed
+ *                          (a retry whose own usage is not separately reported,
+ *                          or a dispatched call whose outcome nobody saw).
+ *
+ * A reservation is a BOUND, never consumption, and the two are stored in
+ * different fields so no reader can mistake one for the other.
+ */
+export type CostJournalBasis = "MEASURED" | "RESERVED_UPPER_BOUND";
+
+/** The exact identity every request of ONE arm run is attributed to. */
+export interface CostJournalScope {
+  /** Root campaign identity: the pre-registration digest of the ledger's campaign. */
+  campaignDigest: string;
+  armRunId: string;
+  arm: CostJournalArmId;
+  caseId: string;
+  repetition: number;
+}
+
+/**
+ * ONE billed physical attempt (the initial send, or one provider-internal retry).
+ *
+ * `(campaignDigest, armRunId, requestId, attemptId)` names the attempt and
+ * `reservationId` (the R97 call-ledger reservation id) names the billable unit.
+ * Both are enforced unique, so one physical retry is charged EXACTLY ONCE and can
+ * never be attributed to two arms.
+ */
+export interface CostJournalEntry {
+  schemaVersion: string;
+  campaignDigest: string;
+  armRunId: string;
+  arm: CostJournalArmId;
+  caseId: string;
+  repetition: number;
+  requestId: string;
+  attemptId: number;
+  /** The R97 call-ledger reservation of THIS physical attempt. */
+  reservationId: string;
+  /** The cost-budget reservation this entry settled. */
+  costReservationId: string;
+  basis: CostJournalBasis;
+  /** Real observed tokens — non-null IFF `basis === "MEASURED"`. */
+  inputTokens: number | null;
+  outputTokens: number | null;
+  /** Conservative pre-send upper bound — non-null IFF `basis === "RESERVED_UPPER_BOUND"`. */
+  reservedInputTokens: number | null;
+  reservedOutputTokens: number | null;
+  /** Tokens this entry added to `charged.totalTokens` (derived, not caller-asserted). */
+  chargedTotalTokens: number;
+  /** TRUE when the attempt was dispatched but its real outcome was never observed. */
+  outcomeUnknown: boolean;
+  loggedAt: number;
+}
+
+export interface CostJournalFile {
+  schemaVersion: string;
+  entries: CostJournalEntry[];
+}
+
+/** What a caller supplies for ONE attempt; the arm identity comes from the bound scope. */
+export interface CostJournalAttempt {
+  requestId: string;
+  attemptId: number;
+  reservationId: string;
+  costReservationId: string;
+  basis: CostJournalBasis;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  reservedInputTokens: number | null;
+  reservedOutputTokens: number | null;
+  outcomeUnknown: boolean;
+}
+
+/**
+ * The durable cost ledger as READ, with its two independent facts kept apart:
+ * the read-only TOTAL the ledger charged, and the per-request journal entries.
+ * `entries === null` means the ledger is a legacy total-only ledger (its journal
+ * section is absent): the total is readable, per-arm attribution is NOT, and no
+ * arm attribution may be fabricated from the total.
+ */
+export interface CostJournalView {
+  /** TRUE when the cost-budget file exists and parsed. */
+  exists: boolean;
+  /** `charged.totalTokens`, or null when it is absent/unreadable. */
+  chargedTotalTokens: number | null;
+  journalSchemaVersion: string | null;
+  entries: CostJournalEntry[] | null;
+}
+
 export interface CostBudgetFile {
   schemaVersion: string;
   preregistrationDigest: string;
@@ -454,6 +568,12 @@ export interface CostBudgetFile {
   reserved: CostReservationDelta;
   /** Outstanding reservations by id, so each can be released/settled exactly. */
   reservations: Record<string, CostReservationDelta>;
+  /**
+   * N7/F3 — per-request/per-attempt/per-arm attribution. ABSENT on a ledger
+   * written before this field existed (a legacy ledger): such a ledger is still
+   * readable as a TOTAL, but it carries no arm attribution and none is invented.
+   */
+  journal?: CostJournalFile;
 }
 
 /** One reservation's per-dimension upper bound (all non-negative integers). */
@@ -484,15 +604,100 @@ const COST_BUDGET_FILENAME = "cost-budget.json";
  * consumption" and "measured zero consumption" are different facts.
  */
 export async function readCostJournalChargedTokens(dir: string): Promise<number | null> {
+  return (await readCostJournal(dir)).chargedTotalTokens;
+}
+
+/**
+ * N7/F3 — read the durable cost ledger as TWO independent facts: the read-only
+ * charged TOTAL and the raw per-request journal entries.
+ *
+ * `entries === null` (with `exists === true`) means the ledger predates the
+ * per-request journal: its total is still readable, but a reader must NOT invent
+ * arm attribution from it. Never throws: an absent/corrupt ledger is reported
+ * structurally (`exists:false` / null fields), so a caller can distinguish
+ * "unreadable" from "measured zero".
+ */
+export async function readCostJournal(dir: string): Promise<CostJournalView> {
+  let raw: string;
   try {
-    const file = JSON.parse(await readFile(join(dir, COST_BUDGET_FILENAME), "utf8")) as {
-      charged?: { totalTokens?: unknown };
-    };
-    const total = file.charged?.totalTokens;
-    return typeof total === "number" && Number.isSafeInteger(total) ? total : null;
+    raw = await readFile(join(dir, COST_BUDGET_FILENAME), "utf8");
   } catch {
-    return null;
+    return { exists: false, chargedTotalTokens: null, journalSchemaVersion: null, entries: null };
   }
+  const blank: CostJournalView = { exists: true, chargedTotalTokens: null, journalSchemaVersion: null, entries: null };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return blank;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return blank;
+  const file = parsed as { charged?: { totalTokens?: unknown }; journal?: { schemaVersion?: unknown; entries?: unknown } };
+  const total = file.charged?.totalTokens;
+  const chargedTotalTokens = typeof total === "number" && Number.isSafeInteger(total) ? total : null;
+  const journal = file.journal;
+  if (journal === undefined || journal === null || !Array.isArray(journal.entries)) {
+    return { exists: true, chargedTotalTokens, journalSchemaVersion: null, entries: null };
+  }
+  return {
+    exists: true,
+    chargedTotalTokens,
+    journalSchemaVersion: typeof journal.schemaVersion === "string" ? journal.schemaVersion : null,
+    // The SHAPE of each entry is validated by `costJournalEntryProblems`; this
+    // reader never blesses content, it only hands the bytes on.
+    entries: journal.entries as CostJournalEntry[],
+  };
+}
+
+/**
+ * N7/F3 — the shape problems of ONE journal attempt. EMPTY means the attempt is
+ * an unambiguous statement (a MEASURED attempt carries measured tokens and no
+ * reservation; a RESERVED_UPPER_BOUND attempt carries a bound and no measured
+ * usage, and admits its outcome was never observed).
+ *
+ * The point of the shape gate is that a conservative reservation can NEVER be
+ * presented as consumption, and a measured attempt can never smuggle a bound in
+ * as if it were usage.
+ */
+export function costJournalEntryProblems(a: Partial<CostJournalAttempt> | undefined): string[] {
+  if (a === undefined || a === null || typeof a !== "object") return ["journal attempt is missing"];
+  const p: string[] = [];
+  if (typeof a.requestId !== "string" || a.requestId === "") p.push("requestId must be a non-empty string");
+  if (!Number.isSafeInteger(a.attemptId) || (a.attemptId ?? -1) < 0) p.push("attemptId must be a non-negative integer");
+  if (typeof a.reservationId !== "string" || a.reservationId === "") p.push("reservationId must be a non-empty string");
+  if (typeof a.costReservationId !== "string" || a.costReservationId === "") p.push("costReservationId must be a non-empty string");
+  const checkInt = (v: number | null | undefined, name: string): void => {
+    if (v === null || v === undefined) return;
+    if (!Number.isSafeInteger(v) || v < 0) p.push(`${name} must be null or a non-negative integer`);
+  };
+  checkInt(a.inputTokens, "inputTokens");
+  checkInt(a.outputTokens, "outputTokens");
+  checkInt(a.reservedInputTokens, "reservedInputTokens");
+  checkInt(a.reservedOutputTokens, "reservedOutputTokens");
+  if (a.basis === "MEASURED") {
+    if (a.inputTokens === null || a.inputTokens === undefined) p.push("a MEASURED attempt must carry inputTokens");
+    if (a.outputTokens === null || a.outputTokens === undefined) p.push("a MEASURED attempt must carry outputTokens");
+    if ((a.reservedInputTokens ?? null) !== null || (a.reservedOutputTokens ?? null) !== null) {
+      p.push("a MEASURED attempt must not carry reserved tokens");
+    }
+  } else if (a.basis === "RESERVED_UPPER_BOUND") {
+    if ((a.inputTokens ?? null) !== null || (a.outputTokens ?? null) !== null) {
+      p.push("a RESERVED_UPPER_BOUND attempt must not present a reservation as measured usage");
+    }
+    if (a.reservedInputTokens === null || a.reservedInputTokens === undefined) p.push("a RESERVED_UPPER_BOUND attempt must carry reservedInputTokens");
+    if (a.reservedOutputTokens === null || a.reservedOutputTokens === undefined) p.push("a RESERVED_UPPER_BOUND attempt must carry reservedOutputTokens");
+    if (a.outcomeUnknown !== true) p.push("a RESERVED_UPPER_BOUND attempt must be flagged outcomeUnknown");
+  } else {
+    p.push(`unknown journal basis ${String(a.basis)}`);
+  }
+  return p;
+}
+
+/** The exact tokens an attempt adds to `charged.totalTokens` (derived, never asserted). */
+function chargedTokensOf(attempt: CostJournalAttempt): number {
+  return attempt.basis === "MEASURED"
+    ? (attempt.inputTokens ?? 0) + (attempt.outputTokens ?? 0)
+    : (attempt.reservedInputTokens ?? 0) + (attempt.reservedOutputTokens ?? 0);
 }
 
 const ZERO_RESERVATION: CostReservationDelta = { inputTokens: 0, outputTokens: 0, toolCalls: 0, durationMs: 0, usdMicros: 0 };
@@ -547,6 +752,14 @@ let reservationCounter = 0;
  * a cap can never be exceeded by a request that was never reserved.
  */
 export class CostBudget {
+  /**
+   * N7/F3 — the arm-run identity every following charged attempt is attributed
+   * to. It is set by the campaign DRIVER immediately before it invokes one arm
+   * run and cleared immediately afterwards; the driver executes arm runs
+   * strictly sequentially, so a single bound scope is unambiguous.
+   */
+  private journalScope: CostJournalScope | null = null;
+
   private constructor(private readonly dir: string, private file: CostBudgetFile) {}
 
   static async open(dir: string, prereg: ToolCallEfficiencyPreregistrationV2, opts: { allowCreate: boolean }): Promise<CostBudget> {
@@ -583,6 +796,12 @@ export class CostBudget {
           charged: { inputTokens: 0, outputTokens: 0, totalTokens: 0, toolCalls: 0, durationMs: 0, usdMicros: 0, unknownCalls: 0 },
           reserved: { ...ZERO_RESERVATION },
           reservations: {},
+          // N7/F3 — a ledger THIS build creates declares its per-request journal
+          // section immediately, so "a fresh ledger that made no request" is
+          // distinguishable from "a legacy ledger that has no journal at all".
+          // Without this an empty v2 ledger reads as legacy and a corroborated
+          // zero could never be recognised as one.
+          journal: { schemaVersion: TOOL_CALL_EFFICIENCY_COST_JOURNAL_SCHEMA, entries: [] },
         };
         await writeAtomic(path, file);
         return new CostBudget(dir, file);
@@ -630,6 +849,120 @@ export class CostBudget {
     const v = this.view();
     if (v.exhausted) return { refused: true, reason: `${v.exhaustedDimensions.join(", ")} at cap` };
     return { refused: false, reason: "" };
+  }
+
+  /**
+   * N7/F3 — bind (or clear) the identity every FOLLOWING attempt is attributed
+   * to. Binding a DIFFERENT arm run while one is already bound is refused: an
+   * in-flight request must never be re-attributed to another arm.
+   */
+  bindJournalScope(scope: CostJournalScope | null): void {
+    if (scope === null) {
+      this.journalScope = null;
+      return;
+    }
+    const current = this.journalScope;
+    if (current !== null) {
+      if (
+        current.campaignDigest !== scope.campaignDigest
+        || current.armRunId !== scope.armRunId
+        || current.arm !== scope.arm
+        || current.caseId !== scope.caseId
+        || current.repetition !== scope.repetition
+      ) {
+        throw new Error(
+          `cost journal scope is already bound to ${current.arm} ${current.armRunId} — refusing to re-attribute in-flight requests to ${scope.arm} ${scope.armRunId}`,
+        );
+      }
+      return;
+    }
+    this.journalScope = { ...scope };
+  }
+
+  /** The currently bound arm-run scope, or null when nothing is bound. */
+  currentJournalScope(): CostJournalScope | null {
+    return this.journalScope === null ? null : { ...this.journalScope };
+  }
+
+  /**
+   * Append ONE billed physical attempt to the per-request journal.
+   *
+   * The entry's charged amount is DERIVED from its basis (measured tokens, or the
+   * conservative upper bound), so the sum of entries can be checked against the
+   * ledger's own `charged.totalTokens`. Duplicate identities are refused:
+   * the same `reservationId` may appear once — attributed to exactly one arm —
+   * and `(armRunId, requestId, attemptId)` may appear once.
+   *
+   * Without a bound scope this REFUSES: an unattributable billed attempt must not
+   * silently vanish from the per-arm comparison.
+   */
+  async recordJournalAttempt(attempt: CostJournalAttempt): Promise<CostJournalEntry> {
+    const scope = this.journalScope;
+    if (scope === null) {
+      throw new Error("cost journal: no arm-run scope is bound — refusing to record an unattributable billed attempt");
+    }
+    const problems = costJournalEntryProblems(attempt);
+    if (problems.length > 0) throw new Error(`cost journal: ${problems.join("; ")}`);
+    const entry: CostJournalEntry = {
+      schemaVersion: TOOL_CALL_EFFICIENCY_COST_JOURNAL_SCHEMA,
+      campaignDigest: scope.campaignDigest,
+      armRunId: scope.armRunId,
+      arm: scope.arm,
+      caseId: scope.caseId,
+      repetition: scope.repetition,
+      requestId: attempt.requestId,
+      attemptId: attempt.attemptId,
+      reservationId: attempt.reservationId,
+      costReservationId: attempt.costReservationId,
+      basis: attempt.basis,
+      inputTokens: attempt.inputTokens,
+      outputTokens: attempt.outputTokens,
+      reservedInputTokens: attempt.reservedInputTokens,
+      reservedOutputTokens: attempt.reservedOutputTokens,
+      chargedTotalTokens: chargedTokensOf(attempt),
+      outcomeUnknown: attempt.outcomeUnknown === true,
+      loggedAt: Date.now(),
+    };
+    await withR97CampaignLock(this.dir, async () => {
+      const file = JSON.parse(await readFile(join(this.dir, COST_BUDGET_FILENAME), "utf8")) as CostBudgetFile;
+      if (file.preregistrationDigest !== entry.campaignDigest) {
+        throw new Error(
+          "cost journal: the bound scope's campaign digest is not this ledger's pre-registration — refusing a cross-campaign attribution",
+        );
+      }
+      const journal = file.journal ?? { schemaVersion: TOOL_CALL_EFFICIENCY_COST_JOURNAL_SCHEMA, entries: [] };
+      if (journal.schemaVersion !== TOOL_CALL_EFFICIENCY_COST_JOURNAL_SCHEMA) {
+        throw new Error(`cost journal schema ${String(journal.schemaVersion)} is not ${TOOL_CALL_EFFICIENCY_COST_JOURNAL_SCHEMA}`);
+      }
+      const duplicateAttempt = journal.entries.find(
+        (e) => e.armRunId === entry.armRunId && e.requestId === entry.requestId && e.attemptId === entry.attemptId,
+      );
+      if (duplicateAttempt !== undefined) {
+        throw new Error(
+          `cost journal: attempt ${entry.requestId}#${entry.attemptId} of ${entry.armRunId} is already recorded — refusing to charge one physical attempt twice`,
+        );
+      }
+      const duplicateReservation = journal.entries.find((e) => e.reservationId === entry.reservationId);
+      if (duplicateReservation !== undefined) {
+        throw new Error(
+          `cost journal: reservation ${entry.reservationId} is already attributed to ${duplicateReservation.arm} ${duplicateReservation.armRunId} — a physical attempt is charged exactly once and never to two arms`,
+        );
+      }
+      const duplicateCostReservation = journal.entries.find((e) => e.costReservationId === entry.costReservationId);
+      if (duplicateCostReservation !== undefined) {
+        throw new Error(`cost journal: cost reservation ${entry.costReservationId} is already recorded — refusing a duplicate settlement attribution`);
+      }
+      journal.entries.push(entry);
+      file.journal = journal;
+      await writeAtomic(join(this.dir, COST_BUDGET_FILENAME), file);
+      this.file = file;
+    });
+    return entry;
+  }
+
+  /** The journal as currently persisted (raw entries, in write order). */
+  journalEntries(): CostJournalEntry[] {
+    return [...(this.file.journal?.entries ?? [])];
   }
 
   /**
@@ -894,6 +1227,12 @@ export function createFormalBudgetedProvider(opts: {
     chargedUsdMicros: 0,
     chargedToolCalls: 0,
   };
+  /**
+   * N7/F3 — the per-arm-run logical request counter that names each request in
+   * the cost journal (`<armRunId>:r<N>`). It lives with the provider so the
+   * names are unique across the whole campaign.
+   */
+  const journalRequestCounters = new Map<string, number>();
 
   const wrapped: ModelProvider = {
     id: opts.provider.id,
@@ -905,6 +1244,17 @@ export function createFormalBudgetedProvider(opts: {
       return {
         async *generate(request: ModelRequest, signal: AbortSignal): AsyncGenerator<ModelEvent> {
           const usdCeiling = opts.usdMicrosPerCall ?? 0;
+          // N7/F3 — the journal identity of THIS logical request. It is taken from
+          // the arm-run scope the campaign driver bound before it invoked this arm
+          // run. With no bound scope there is no attribution, and the aggregate
+          // will refuse to call the campaign's per-arm cost proven (never `0`).
+          const journalScope = opts.costBudget.currentJournalScope();
+          let journalRequestId: string | null = null;
+          if (journalScope !== null) {
+            const next = (journalRequestCounters.get(journalScope.armRunId) ?? 0) + 1;
+            journalRequestCounters.set(journalScope.armRunId, next);
+            journalRequestId = `${journalScope.armRunId}:r${next}`;
+          }
           // The conservative per-call upper bound reserved for EVERY physical
           // attempt (the initial send AND each internal retry — B2). A retry is a
           // real second HTTP request that may be billed, so it must fit the frozen
@@ -923,6 +1273,27 @@ export function createFormalBudgetedProvider(opts: {
               throw new Error(`E4-N3: BUDGET_EXHAUSTED: ${what} cost reservation refused (${r.reason}) — refusing to send a call the frozen budget cannot afford`);
             }
             return r.id;
+          };
+          /**
+           * N7/F3 — record ONE billed physical attempt in the durable journal with
+           * its arm-run identity (from the bound scope), its request/attempt names
+           * and its R97 reservation id. A MEASURED attempt contributes its real
+           * tokens; an attempt whose real usage was never observed contributes its
+           * CONSERVATIVE bound, flagged `outcomeUnknown`, never as consumption.
+           */
+          const recordAttempt = async (entry: {
+            attemptId: number;
+            reservationId: string;
+            costReservationId: string;
+            basis: CostJournalBasis;
+            inputTokens: number | null;
+            outputTokens: number | null;
+            reservedInputTokens: number | null;
+            reservedOutputTokens: number | null;
+            outcomeUnknown: boolean;
+          }): Promise<void> => {
+            if (journalScope === null || journalRequestId === null) return;
+            await opts.costBudget.recordJournalAttempt({ requestId: journalRequestId, ...entry });
           };
 
           // A4/B2 — RESERVE every billed dimension's conservative per-call upper
@@ -945,6 +1316,10 @@ export function createFormalBudgetedProvider(opts: {
           // FIRST belongs to the request whose usage the stream reports; the rest
           // belong to retries and are settled at their reserved upper bound.
           const costReservationIds: string[] = [costReservationId];
+          // N7/F3 — the R97 call-ledger reservation of EACH physical attempt, in
+          // the same send order, so every journal entry names exactly one billable
+          // unit (and therefore can never be attributed to two arms).
+          const attemptLedgerIds: string[] = [reservationId];
           let entered = false;
           let completed = false;
           let inputTokens = 0;
@@ -978,8 +1353,23 @@ export function createFormalBudgetedProvider(opts: {
               stats.unknownCalls += 1;
               // A dispatched call whose outcome nobody saw may already be
               // billed: settle at the RESERVED upper bound (never a refund).
-              for (const id of costReservationIds) {
+              for (let i = 0; i < costReservationIds.length; i += 1) {
+                const id = costReservationIds[i]!;
                 await opts.costBudget.settle(id, { ...delta, unknown: true });
+                // N7/F3 — the attempt WAS dispatched; its real usage is unknown, so
+                // its cost is the conservative reservation. It is recorded as such
+                // and can therefore never be read as measured consumption.
+                await recordAttempt({
+                  attemptId: i,
+                  reservationId: attemptLedgerIds[i]!,
+                  costReservationId: id,
+                  basis: "RESERVED_UPPER_BOUND",
+                  inputTokens: null,
+                  outputTokens: null,
+                  reservedInputTokens: delta.inputTokens,
+                  reservedOutputTokens: delta.outputTokens,
+                  outcomeUnknown: true,
+                });
               }
               return;
             }
@@ -990,6 +1380,19 @@ export function createFormalBudgetedProvider(opts: {
               outputTokens,
               durationMs,
               usdMicros: chargedMicros,
+            });
+            // N7/F3 — the initial send completed and its usage WAS observed: this
+            // attempt contributes MEASURED tokens to its arm and to nothing else.
+            await recordAttempt({
+              attemptId: 0,
+              reservationId: attemptLedgerIds[0]!,
+              costReservationId: primary,
+              basis: "MEASURED",
+              inputTokens,
+              outputTokens,
+              reservedInputTokens: null,
+              reservedOutputTokens: null,
+              outcomeUnknown: false,
             });
             stats.chargedInputTokens += inputTokens;
             stats.chargedOutputTokens += outputTokens;
@@ -1010,9 +1413,22 @@ export function createFormalBudgetedProvider(opts: {
             }
             // Each retry WAS a physical send. Its own usage is not separately
             // reported, so it is charged at its reserved upper bound — the
-            // conservative settlement, never a refund.
-            for (const id of extraAttempts) {
+            // conservative settlement, never a refund. N7/F3 records it as a
+            // RESERVED_UPPER_BOUND attempt (a bound, not consumption).
+            for (let i = 0; i < extraAttempts.length; i += 1) {
+              const id = extraAttempts[i]!;
               await opts.costBudget.settle(id, { ...delta, unknown: true });
+              await recordAttempt({
+                attemptId: i + 1,
+                reservationId: attemptLedgerIds[i + 1]!,
+                costReservationId: id,
+                basis: "RESERVED_UPPER_BOUND",
+                inputTokens: null,
+                outputTokens: null,
+                reservedInputTokens: delta.inputTokens,
+                reservedOutputTokens: delta.outputTokens,
+                outcomeUnknown: true,
+              });
             }
           };
 
@@ -1042,6 +1458,7 @@ export function createFormalBudgetedProvider(opts: {
                 }
                 await opts.ledger.commit(retryReservation.reservationId, 1, 1);
                 costReservationIds.push(retryCostId);
+                attemptLedgerIds.push(retryReservation.reservationId);
                 stats.logicalCalls += 1;
               } else if (ev.type === "usage") {
                 inputTokens = Math.max(inputTokens, ev.usage.inputTokens);

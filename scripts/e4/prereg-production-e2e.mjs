@@ -523,21 +523,101 @@ async function writeArmCheckout(dir, marker, activate, entries) {
 }
 
 /**
- * N6 — the DURABLE COST JOURNAL's corroborated token consumption, read from the
- * budget directory the run actually used (`cost-budget.json`). `null` means the
- * journal does not exist — explicitly UNKNOWN, never `0`, so the aggregate can
- * tell "no corroborated consumption" apart from "measured zero".
+ * N6/N7 — the DURABLE COST LEDGER read from the budget directory the run actually
+ * used (`cost-budget.json`), as TWO independent facts: the read-only charged TOTAL
+ * and the RAW per-request journal entries. `exists:false` means no ledger at all —
+ * explicitly UNKNOWN, never `0`. `entries:null` on an existing file means a LEGACY
+ * total-only ledger whose total is readable but whose arm attribution does NOT
+ * exist (and must not be invented from the total — the F3 defect).
  */
-function costJournalTokensFromFile(budgetDir) {
+function journalFromFile(budgetDir) {
+  let file;
   try {
-    const file = JSON.parse(readFileSync(join(budgetDir, "cost-budget.json"), "utf8"));
-    const charged = file.charged;
-    if (charged === undefined || charged === null || typeof charged !== "object") return null;
-    const total = charged.totalTokens;
-    return Number.isSafeInteger(total) ? total : null;
+    file = JSON.parse(readFileSync(join(budgetDir, "cost-budget.json"), "utf8"));
   } catch {
-    return null;
+    return { exists: false, chargedTotalTokens: null, journalSchemaVersion: null, entries: null };
   }
+  const charged = file.charged;
+  const total = charged !== undefined && charged !== null ? charged.totalTokens : undefined;
+  const chargedTotalTokens = Number.isSafeInteger(total) ? total : null;
+  const journal = file.journal;
+  if (journal === undefined || journal === null || !Array.isArray(journal.entries)) {
+    return { exists: true, chargedTotalTokens, journalSchemaVersion: null, entries: null };
+  }
+  return {
+    exists: true,
+    chargedTotalTokens,
+    journalSchemaVersion: typeof journal.schemaVersion === "string" ? journal.schemaVersion : null,
+    entries: journal.entries,
+  };
+}
+
+/**
+ * N7/F3 — recompute total/baseline/candidate/delta INDEPENDENTLY from the raw
+ * journal entries. This script deliberately does NOT reuse the aggregate's own
+ * arithmetic: the release evidence must be able to disagree with it.
+ *
+ * A MEASURED entry contributes real tokens to its arm; a RESERVED_UPPER_BOUND
+ * entry makes its arm's measured total NOT_OBSERVED (`null`) — a conservative
+ * reservation is a bound, never consumption, so it can never be summed as one.
+ */
+function independentArmTokens(journal) {
+  if (journal === null || journal.exists !== true) {
+    return { total: null, attributedTotal: null, baseline: null, candidate: null, delta: null, basis: "NO_JOURNAL", requests: { baseline: 0, candidate: 0 } };
+  }
+  if (journal.entries === null) {
+    return { total: journal.chargedTotalTokens, attributedTotal: null, baseline: null, candidate: null, delta: null, basis: "LEGACY_TOTAL_ONLY", requests: { baseline: 0, candidate: 0 } };
+  }
+  const measured = { baseline: 0, candidate: 0 };
+  const unknown = { baseline: 0, candidate: 0 };
+  const requests = { baseline: 0, candidate: 0 };
+  let attributedTotal = 0;
+  let reserved = 0;
+  for (const e of journal.entries) {
+    if (e === null || typeof e !== "object") continue;
+    attributedTotal += Number.isSafeInteger(e.chargedTotalTokens) ? e.chargedTotalTokens : 0;
+    if (e.arm !== "baseline" && e.arm !== "candidate") continue;
+    requests[e.arm] += 1;
+    if (e.basis === "MEASURED") {
+      measured[e.arm] += (e.inputTokens ?? 0) + (e.outputTokens ?? 0);
+    } else {
+      unknown[e.arm] += 1;
+      reserved += (e.reservedInputTokens ?? 0) + (e.reservedOutputTokens ?? 0);
+    }
+  }
+  const known = unknown.baseline === 0 && unknown.candidate === 0;
+  return {
+    total: journal.chargedTotalTokens,
+    attributedTotal,
+    baseline: known ? measured.baseline : null,
+    candidate: known ? measured.candidate : null,
+    delta: known ? measured.candidate - measured.baseline : null,
+    basis: unknown.baseline + unknown.candidate > 0 ? "UNKNOWN_RESERVATION" : "JOURNAL_PER_ARM",
+    reservedUpperBound: reserved,
+    requests,
+  };
+}
+
+/** Exact, null-aware token equality: NOT_OBSERVED (`null`) equals only NOT_OBSERVED. */
+function sameTokens(a, b) {
+  if (a === undefined || a === null) return b === undefined || b === null;
+  return a === b;
+}
+
+/**
+ * N7/F3 — the aggregate's own cost block must match this script's INDEPENDENT
+ * recomputation from the raw journal bytes. This replaces the old
+ * `aggregateTokensDelta === (journalChargedTokens ?? 0)` assertion, which treated
+ * the campaign TOTAL as if it were the candidate-vs-baseline DIFFERENCE.
+ */
+function costMatchesIndependent(aggregateCost, independent) {
+  if (aggregateCost === undefined || aggregateCost === null) return false;
+  return (
+    sameTokens(aggregateCost.totalTokens, independent.total)
+    && sameTokens(aggregateCost.baselineTokens, independent.baseline)
+    && sameTokens(aggregateCost.candidateTokens, independent.candidate)
+    && sameTokens(aggregateCost.deltaTokens, independent.delta)
+  );
 }
 
 /** The durable R97 ledger view, re-derived from the file the subprocess wrote. */
@@ -695,14 +775,20 @@ async function runPositiveExecution(dir, env) {
   // injected fake counter or the artifact's initial worst case ("不向 aggregate
   // 注入 fake.entered() 或初始 campaignWorstCaseModelCalls 当真实账本数").
   const ledgerView = await admission.ledger.view();
-  // N6 — the token delta is bound to the DURABLE COST JOURNAL, not to the arms'
-  // self-reported `tokensUsed`.
-  const journalChargedTokens = costJournalTokensFromFile(budgetDir);
+  // N7/F3 — the token metrics are bound to the DURABLE COST JOURNAL read as two
+  // independent facts (charged TOTAL + raw per-request attribution), not to the
+  // arms' self-reported `tokensUsed`, and never as `total == delta`.
+  const journal = await evalMod.readCostJournal(budgetDir);
   const aggregate = evalMod.aggregatePreregisteredCampaign(run, artifact, {
     providerCalls: ledgerView.committed,
     budgetRemaining: ledgerView.remaining,
-    journalChargedTokens,
+    journalChargedTokens: journal.chargedTotalTokens,
+    journal,
   });
+  // The aggregate's per-arm cost must equal an INDEPENDENT recomputation from the
+  // raw journal bytes this script reads itself.
+  const independent = independentArmTokens(journal);
+  const journalChargedTokens = journal.chargedTotalTokens;
 
   const statuses = run.records.reduce((acc, r) => {
     acc[r.outcome.status] = (acc[r.outcome.status] ?? 0) + 1;
@@ -721,6 +807,16 @@ async function runPositiveExecution(dir, env) {
     ledgerCommitted: ledgerView.committed,
     ledgerRemaining: ledgerView.remaining,
     journalChargedTokens,
+    // N7/F3 — total consumption and the candidate-vs-baseline CHANGE, each
+    // reported separately and each independently recomputable from the raw journal.
+    tokensTotal: aggregate.cost.totalTokens,
+    tokensBaseline: aggregate.cost.baselineTokens,
+    tokensCandidate: aggregate.cost.candidateTokens,
+    tokensDelta: aggregate.cost.deltaTokens,
+    tokensBasis: aggregate.cost.basis,
+    tokensReservedUpperBound: aggregate.cost.reservedUpperBound,
+    tokensProblems: aggregate.cost.problems,
+    independentTokens: independent,
     providerFactoryCalls: admission.providerFactoryCalls,
     evidenceVerified: verified,
     evidenceUnverified: unverified,
@@ -732,12 +828,15 @@ async function runPositiveExecution(dir, env) {
     // campaign whose arms ALL died satisfy the count trivially, because the
     // right-hand side collapsed to 0. Every EXPECTED arm run must now be present,
     // non-error, carry evidence, and be verified.
+    // N7/F3 — and the aggregate's per-arm cost must equal this script's OWN
+    // recomputation from the raw journal: a total is never accepted as a delta.
     ok:
       run.records.length === artifact.schedule.logicalRuns
       && fake.entered() > 0
       && run.records.every((r) => r.outcome.status !== "error" && r.outcome.evidence !== undefined)
       && verified === run.records.length
-      && unverified === 0,
+      && unverified === 0
+      && costMatchesIndependent(aggregate.cost, independent),
   };
   return out;
 }
@@ -873,10 +972,17 @@ async function runPositiveForward(stub, dir, env) {
   const aggregate = JSON.parse(readFileSync(join(outDir, "aggregate.json"), "utf8"));
   const physical = after - before;
   const expectArmRuns = artifact.schedule.logicalRuns;
-  // N6 — cross-check the aggregate the RELEASE CLI wrote against the durable cost
-  // journal that same run produced: neither may be the arms' self-report.
-  const journalChargedTokens = costJournalTokensFromFile(budgetDir);
-  const aggregateTokensDelta = aggregate?.decision?.statistics?.tokensDelta ?? null;
+  // N7/F3 — the aggregate the RELEASE CLI wrote is cross-checked against the
+  // durable cost journal that same run produced, read HERE as two independent
+  // facts and recomputed HERE per arm. The old predicate
+  // (`aggregateTokensDelta === (journalChargedTokens ?? 0)`) equated the campaign
+  // TOTAL with the candidate-vs-baseline DIFFERENCE — the F3 defect.
+  const journal = journalFromFile(budgetDir);
+  const journalChargedTokens = journal.chargedTotalTokens;
+  const independent = independentArmTokens(journal);
+  const aggregateTokensTotal = aggregate?.cost?.totalTokens ?? null;
+  const aggregateTokensDelta = aggregate?.cost?.deltaTokens ?? null;
+  const costMatchesJournal = costMatchesIndependent(aggregate?.cost, independent);
   // N6 — see the in-process predicate: an `error` record now FAILS the comparison
   // instead of being silently filtered out of a self-satisfying identity.
   const ok =
@@ -887,7 +993,7 @@ async function runPositiveForward(stub, dir, env) {
     records.every((r) => r.outcome.status !== "error" && r.outcome.evidence !== undefined) &&
     verified === records.length &&
     unverified === 0 &&
-    aggregateTokensDelta === (journalChargedTokens ?? 0);
+    costMatchesJournal;
   return {
     transport: "release-cli-subprocess",
     executionBackend: "release-cli-subprocess",
@@ -897,7 +1003,15 @@ async function runPositiveForward(stub, dir, env) {
     scheduledArmRuns: records.length,
     physicalStubRequests: physical,
     journalChargedTokens,
+    // total and delta are SEPARATE release facts, plus the raw per-arm values and
+    // this script's own recomputation so a reader can re-derive every one of them.
+    aggregateTokensTotal,
     aggregateTokensDelta,
+    aggregateTokensBasis: aggregate?.cost?.basis ?? null,
+    aggregateTokensBaseline: aggregate?.cost?.baselineTokens ?? null,
+    aggregateTokensCandidate: aggregate?.cost?.candidateTokens ?? null,
+    independentTokens: independent,
+    costMatchesJournal,
     httpRequestsDuringBuildAndValidate: afterCertify - httpBeforeBuild,
     ledgerGranted: ledger.granted,
     ledgerCommitted: ledger.committed,

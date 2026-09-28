@@ -212,3 +212,58 @@ git stash pop
 
 `.ci/` is gitignored (`.gitignore` line 9); the raw logs named above live there and are referenced,
 not committed.
+
+---
+
+## 10. Correction — F3 / R2 (per-arm journal attribution), appended after the fact
+
+This section **supersedes** the cost-related claims above; the earlier text is kept as the historical
+record of the N6 state at commit `a85db6dc`.
+
+**What was wrong.** §1's table row `positiveForward.journalChargedTokens / aggregateTokensDelta =
+248 / 248 ("now equal — the CLI reads the journal")` describes the DEFECT, not a fix:
+`aggregatePreregisteredCampaign` computed
+
+```ts
+const tokensDelta = journalChargedTokens ?? 0;   // the campaign TOTAL, used as a DIFFERENCE
+```
+
+so a campaign that consumed 248 tokens reported a candidate-vs-baseline change of 248. A ledger
+existing was treated as proof that the two arms had been compared. §8 point 4 ("a journal is still
+trusted by existence") and §8 point 5 are the same defect from the other side: with no journal the
+delta silently became `0`, and a self-reported delta of exactly `0` disabled the
+`tokensUncorroborated` guard entirely.
+
+**What changed (R2).**
+
+- `cost-budget.json` now carries a per-request journal: one entry per billed PHYSICAL attempt with
+  `campaignDigest, armRunId, arm, caseId, repetition, requestId, attemptId, reservationId,
+  costReservationId`, plus `basis` (`MEASURED` | `RESERVED_UPPER_BOUND`) and the tokens that belong to
+  that basis. A conservative reservation is stored in its own fields and can never be read as
+  consumption.
+- The campaign driver binds the arm-run scope immediately before `runArm` and clears it in a
+  `finally`; the journal refuses a duplicate `reservationId` (one attempt is charged exactly once and
+  never to two arms) and a duplicate `(armRunId, requestId, attemptId)`.
+- `aggregatePreregisteredCampaign` re-derives `totalTokens` (read-only ledger total) and
+  `baselineTokens` / `candidateTokens` / `deltaTokens` independently from the RAW entries, reconciles
+  the attributed sum against the ledger total, and refuses (delta `null`, not `0`) on: no ledger, a
+  legacy total-only ledger, an unobserved/reserved attempt, a missing arm, a duplicate or
+  mis-attributed request, a foreign campaign digest, or an unrecognised schema. Output schema is
+  `tool-call-efficiency-paired-aggregate-v2`.
+- The E2E no longer asserts `aggregateTokensDelta === journalChargedTokens`; it recomputes
+  total/baseline/candidate/delta from the raw journal bytes itself and requires the aggregate to
+  match (`costMatchesJournal`).
+
+**Evidence.** The target assertions live in
+`packages/evaluation/src/tool-call-efficiency-token-delta-red-probe.test.ts` (RED on `a85db6dc`:
+`expected 140 to be -60`, and `expected true to be false` for the missing-ledger comparability gate)
+and the behavioural suite is
+`packages/evaluation/src/tool-call-efficiency-token-attribution.test.ts` (GREEN: 100/40 → total 140,
+delta −60; 100/100 → total 200, delta 0; arm swap inverts the delta and leaves the total unchanged;
+self-reports cannot move the journal result; resume does not re-charge; identical validity with
+different true cost moves the cost gate).
+
+**Still NOT_PROVEN after R2.** The per-request attribution is not yet bound to the trusted execution
+manifest / verifier bytes, and `budgetEvidenceReady` therefore stays `NOT_PROVEN`. The 248/248 row
+above is no longer how correctness is judged: the two numbers are different metrics and equal values
+are no longer evidence of anything.
