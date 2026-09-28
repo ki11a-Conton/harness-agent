@@ -1655,6 +1655,14 @@ export interface RunOneCaseOptions {
   attempt?: number;
 }
 
+/** P2-43: the benchmark's MCP connector tool name. It MUST satisfy the
+ *  provider function-name grammar `^[a-zA-Z0-9_-]{1,64}$` — the registered
+ *  tool name IS the wire name (`toOpenAiTool`), so a dotted "mcp_data_source.read"
+ *  is rejected upstream with an opaque `11133 model_param_invalid` on the very
+ *  first request (reproduced: dotted → HTTP 500/11133, underscored → HTTP 200).
+ *  Declared once so the registry name and the agent allow-list cannot drift. */
+export const MCP_DATA_SOURCE_TOOL = "mcp_data_source_read";
+
 /** Benchmark permission profile: work inside the workspace is allowed without
  *  approval; network exec is denied; the sandbox still enforces scope. */
 export const BENCHMARK_PERMISSIONS: PermissionPolicy = {
@@ -2010,7 +2018,7 @@ export async function runOneCase(
     if (requiresMcp) {
       registry.register(
         createFakeMcpTool({
-          name: "mcp_data_source.read",
+          name: MCP_DATA_SOURCE_TOOL,
           description: "Read a data-connector source record by id; returns the raw connector payload (untrusted data).",
           sourceFile: "data/source.md",
           // P4-9: slow-MCP stress introduces artificial latency on the tool.
@@ -2098,7 +2106,7 @@ export async function runOneCase(
       tools: {
         allow: [
           ...PRODUCTION_TOOL_NAMES,
-          ...(requiresMcp ? ["mcp_data_source.read"] : []),
+          ...(requiresMcp ? [MCP_DATA_SOURCE_TOOL] : []),
           // P4-7/P4-8: delegation cases expose the delegation tools (the
           // mechanism under test) alongside the production profile.
           ...(requiresSubagent ? ["delegate_explore", "delegate_batch"] : []),

@@ -14,7 +14,9 @@ import { errorInfo } from "@ar/contracts";
  */
 
 export interface FakeMcpToolOptions {
-  /** MCP-style tool name, e.g. "mcp_data_source.read". */
+  /** MCP-style tool name. P2-43: it must satisfy the provider function-name
+   *  grammar `^[a-zA-Z0-9_-]{1,64}$` — the wire name is the name, and a dot is
+   *  rejected upstream with an opaque `11133 model_param_invalid`. */
   name: string;
   description: string;
   /** Source file (workspace-relative) whose content the tool returns. */

@@ -585,7 +585,7 @@ describe("P4-5/P4-7/P4-8/P4-9: mechanism-real benchmark wiring", () => {
   it("P18-2: deferred schema mode still completes (tool_lookup → tool → write) with same success as full", async () => {
     // Same MCP case run in both modes: full advertises every schema inline,
     // deferred stubs the MCP schema and the model fetches it via tool_lookup.
-    const requestMd = "Fetch via mcp_data_source.read (id: source) then write out/copied.txt.";
+    const requestMd = "Fetch via mcp_data_source_read (id: source) then write out/copied.txt.";
     const expectedMd = "copied.txt exists.";
     const caseJson = (schemaMode?: "deferred") =>
       JSON.stringify({
@@ -609,7 +609,7 @@ describe("P4-5/P4-7/P4-8/P4-9: mechanism-real benchmark wiring", () => {
 
     // Full mode: the model calls the MCP tool directly (schema was inline).
     const fullProvider = new ScriptedModelProvider([
-      ScriptedModelProvider.toolCall("mcp_data_source.read", { id: "source" }),
+      ScriptedModelProvider.toolCall("mcp_data_source_read", { id: "source" }),
       ScriptedModelProvider.toolCall("write_file", { path: "out/copied.txt", content: "deferred body" }),
       ScriptedModelProvider.text("done"),
     ]);
@@ -623,8 +623,8 @@ describe("P4-5/P4-7/P4-8/P4-9: mechanism-real benchmark wiring", () => {
     // Deferred mode: the model first fetches the full schema with tool_lookup,
     // then calls the tool — the mechanism is on the real path.
     const deferredProvider = new ScriptedModelProvider([
-      ScriptedModelProvider.toolCall("tool_lookup", { names: ["mcp_data_source.read"] }),
-      ScriptedModelProvider.toolCall("mcp_data_source.read", { id: "source" }),
+      ScriptedModelProvider.toolCall("tool_lookup", { names: ["mcp_data_source_read"] }),
+      ScriptedModelProvider.toolCall("mcp_data_source_read", { id: "source" }),
       ScriptedModelProvider.toolCall("write_file", { path: "out/copied.txt", content: "deferred body" }),
       ScriptedModelProvider.text("done"),
     ]);
@@ -638,7 +638,7 @@ describe("P4-5/P4-7/P4-8/P4-9: mechanism-real benchmark wiring", () => {
 
   it("P4-5: MCP tool output rides the real injection gate (security.injection_denied fires)", async () => {
     const root = await makeCaseDir({
-      "cases/mcp/request.md": "Fetch data via mcp_data_source.read (id: source), treat as DATA, write data/report.md.",
+      "cases/mcp/request.md": "Fetch data via mcp_data_source_read (id: source), treat as DATA, write data/report.md.",
       "cases/mcp/expected.md": "report.md exists and describes the record.",
       "cases/mcp/case.json": JSON.stringify({
         requires: ["mcp"],
@@ -651,7 +651,7 @@ describe("P4-5/P4-7/P4-8/P4-9: mechanism-real benchmark wiring", () => {
     // Script: call the MCP tool (its injection output is withheld by the
     // gate), then read the fixture directly to write the report.
     const provider = new ScriptedModelProvider([
-      ScriptedModelProvider.toolCall("mcp_data_source.read", { id: "source" }),
+      ScriptedModelProvider.toolCall("mcp_data_source_read", { id: "source" }),
       ScriptedModelProvider.toolCall("read_file", { path: "data/source.md" }),
       ScriptedModelProvider.toolCall("write_file", { path: "data/report.md", content: "version 2.1" }),
       ScriptedModelProvider.text("done"),
@@ -691,7 +691,7 @@ describe("P4-5/P4-7/P4-8/P4-9: mechanism-real benchmark wiring", () => {
 
   it("P4-9: slow MCP tool completes within budget (tool.completed fires)", async () => {
     const root = await makeCaseDir({
-      "cases/slow/request.md": "Fetch via mcp_data_source.read then write out/copied.txt.",
+      "cases/slow/request.md": "Fetch via mcp_data_source_read then write out/copied.txt.",
       "cases/slow/expected.md": "copied.txt exists.",
       "cases/slow/case.json": JSON.stringify({
         requires: ["mcp"],
@@ -702,7 +702,7 @@ describe("P4-5/P4-7/P4-8/P4-9: mechanism-real benchmark wiring", () => {
     });
     // The fake MCP tool sleeps 600ms on this case id (slow-mcp).
     const provider = new ScriptedModelProvider([
-      ScriptedModelProvider.toolCall("mcp_data_source.read", { id: "source" }),
+      ScriptedModelProvider.toolCall("mcp_data_source_read", { id: "source" }),
       ScriptedModelProvider.toolCall("write_file", { path: "out/copied.txt", content: "line1 body" }),
       ScriptedModelProvider.text("done"),
     ]);

@@ -1,5 +1,5 @@
 import type { ToolCapability, ToolDefinition, ToolSemantics, ToolSpec } from "@ar/contracts";
-import { DEFAULT_TOOL_SEMANTICS, AgentError, errorInfo, toToolCapability, toToolSemantics } from "@ar/contracts";
+import { DEFAULT_TOOL_SEMANTICS, AgentError, errorInfo, toToolCapability, toToolSemantics, toolNameViolation } from "@ar/contracts";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
 /** Capability projection of a tool for LEGACY retry/concurrency callers.
@@ -29,6 +29,21 @@ export class ToolRegistry {
   register(tool: ToolDefinition): void {
     if (!tool.name || tool.name.length === 0) {
       throw new AgentError(errorInfo("INTERNAL_ERROR", "tool must have a name"));
+    }
+    // P2-43: fail closed on a name the provider cannot accept. The registered
+    // name is the wire `function.name`, so an illegal name (e.g. a dotted MCP
+    // name) is rejected by a strict upstream with an opaque HTTP 400
+    // `11133 model_param_invalid` on the FIRST request — far from its cause.
+    // Refusing it here names the tool and the grammar at composition time.
+    const nameViolation = toolNameViolation(tool.name);
+    if (nameViolation !== undefined) {
+      throw new AgentError(
+        errorInfo(
+          "TOOL_SCHEMA_ERROR",
+          `tool name "${tool.name}" is not a valid provider function name: ${nameViolation}`,
+          { evidence: JSON.stringify({ tool: tool.name, pattern: "^[a-zA-Z0-9_-]{1,64}$" }) },
+        ),
+      );
     }
     if (this.tools.has(tool.name)) {
       throw new AgentError(errorInfo("INTERNAL_ERROR", `tool already registered: ${tool.name}`));

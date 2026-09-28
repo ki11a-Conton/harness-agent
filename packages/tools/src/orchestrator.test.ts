@@ -89,6 +89,29 @@ describe("ToolRegistry (TOOL-001)", () => {
     expect(() => r.register(broken)).toThrow(/metadata.name/);
   });
 
+  it("P2-43: rejects a tool name outside the provider function-name grammar", () => {
+    const r = new ToolRegistry();
+    // The reproduced defect: a dotted MCP-style name reaches the wire as
+    // `function.name` and a strict upstream answers HTTP 400/11133
+    // (`model_param_invalid`) on the first request — before any tool ran.
+    const dotted = {
+      ...readFileTool,
+      name: "mcp_data_source.read",
+      metadata: { ...readFileTool.metadata, name: "mcp_data_source.read" },
+    };
+    expect(() => r.register(dotted)).toThrow(/not a valid provider function name/);
+    expect(r.names()).toEqual([]); // fail closed: nothing was registered
+
+    // The legal form of the same tool registers.
+    const underscored = {
+      ...readFileTool,
+      name: "mcp_data_source_read",
+      metadata: { ...readFileTool.metadata, name: "mcp_data_source_read" },
+    };
+    expect(() => r.register(underscored)).not.toThrow();
+    expect(r.names()).toEqual(["mcp_data_source_read"]);
+  });
+
   it("emits serializable JSON schemas", () => {
     const r = new ToolRegistry();
     r.register(readFileTool);

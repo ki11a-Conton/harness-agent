@@ -13,7 +13,7 @@ import type {
   ToolSpec,
   Usage,
 } from "@ar/contracts";
-import { AgentError, errorInfo, newToolCallId } from "@ar/contracts";
+import { AgentError, errorInfo, newToolCallId, toolNameViolation, TOOL_NAME_PATTERN } from "@ar/contracts";
 import { redactSecrets } from "@ar/security";
 
 /** Optional OpenAI-compatible provider settings, passable via ProviderConfig. */
@@ -115,6 +115,28 @@ function toOpenAiMessage(message: Message): OpenAiMessage {
 }
 
 function toOpenAiTool(tool: ToolSpec): Record<string, unknown> {
+  // P2-43: this is the exact point a tool name becomes the wire
+  // `tools[].function.name`. A name outside the OpenAI grammar
+  // `^[a-zA-Z0-9_-]{1,64}$` is rejected by a strict upstream with an opaque
+  // HTTP 400 `{"code":11133,...,"extError":{"code":"model_param_invalid"}}` that
+  // names neither the tool nor the grammar — and it rejects the WHOLE request,
+  // so the turn dies as an unexplained `model_error` before any tool runs
+  // (reproduced: `mcp_data_source.read` → HTTP 500/11133; `mcp_data_source_read`
+  // → HTTP 200). Fail closed HERE, locally and actionably.
+  const violation = toolNameViolation(tool.name);
+  if (violation !== undefined) {
+    throw new AgentError(
+      errorInfo(
+        "MODEL_ERROR",
+        `tool "${tool.name}" is not a valid provider function name: ${violation}. A tool name is sent verbatim as the OpenAI "function.name" and must match ${TOOL_NAME_PATTERN.source}.`,
+        {
+          retryable: false,
+          safeToRetry: false,
+          evidence: JSON.stringify({ tool: tool.name, pattern: TOOL_NAME_PATTERN.source }),
+        },
+      ),
+    );
+  }
   return {
     type: "function",
     function: {

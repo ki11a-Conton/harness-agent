@@ -37,6 +37,53 @@ export function estimateSpecsTokens(specs: readonly ToolSpec[]): number {
 export type ToolRisk = "readonly" | "side_effect" | "elevated" | "critical";
 
 /**
+ * P2-43: the provider function-name grammar.
+ *
+ * The registered tool name IS the wire name (`toOpenAiTool` maps
+ * `ToolSpec.name` → `tools[].function.name`), so it must satisfy the
+ * OpenAI-compatible grammar `^[a-zA-Z0-9_-]{1,64}$`. A strict upstream rejects
+ * a name outside it with HTTP 400
+ * `{"code":11133,"msg":"Invalid request parameters","extError":{"code":"model_param_invalid"}}`
+ * — an opaque rejection that names neither the offending tool nor the grammar,
+ * on the FIRST request of the turn (so it surfaces as `model_error` with
+ * `model_calls: 0` and no tool ever ran).
+ *
+ * Observed trigger: a dotted name, the common MCP-server convention
+ * (`remote.echo`), used by the benchmark's own fake connector tool. Reproduced
+ * against a real relay: `mcp_data_source.read` → HTTP 500/11133, while
+ * `mcp_data_source_read` → HTTP 200 with an identical body otherwise.
+ */
+export const TOOL_NAME_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
+
+/** True when `name` can be put on the wire as a provider function name. */
+export function isValidToolName(name: string): boolean {
+  return TOOL_NAME_PATTERN.test(name);
+}
+
+/** Human-readable reason `name` is not a legal wire tool name, else undefined. */
+export function toolNameViolation(name: string): string | undefined {
+  if (name.length === 0) return "the name is empty";
+  if (name.length > 64) return `the name is ${name.length} characters (the limit is 64)`;
+  const illegal = [...new Set([...name].filter((ch) => !/[a-zA-Z0-9_-]/.test(ch)))];
+  if (illegal.length > 0) {
+    return `the name contains illegal character(s) ${illegal.map((c) => JSON.stringify(c)).join(", ")} — allowed: a-z A-Z 0-9 _ -`;
+  }
+  return undefined;
+}
+
+/** Assert `name` is a legal wire tool name, throwing with the grammar and the
+ *  concrete violation. Callers fail closed at composition time instead of
+ *  shipping a request the upstream rejects opaquely. */
+export function assertValidToolName(name: string, context = "tool"): void {
+  const violation = toolNameViolation(name);
+  if (violation === undefined) return;
+  throw new Error(
+    `${context} name ${JSON.stringify(name)} is not a valid provider function name: ${violation}. ` +
+      `It must match ${TOOL_NAME_PATTERN.source} (the tool name is sent verbatim as the OpenAI "function.name").`,
+  );
+}
+
+/**
  * Auto-retry classification for the recovery engine (plan.md Phase 3.6):
  * - "safe"    → idempotent read-only; the runtime MAY auto-retry on
  *               failure/timeout (bounded by RecoveryPolicy).

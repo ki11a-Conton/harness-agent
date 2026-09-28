@@ -320,6 +320,39 @@ describe("OpenAICompatibleProvider", () => {
     expect(requestBody().stream).toBe(true);
   });
 
+  it("P2-43: fails closed on an illegal function name instead of sending it to the provider", async () => {
+    stubFetch();
+    // The reproduced defect: the dotted MCP-style name was sent verbatim as
+    // `function.name` and a strict upstream answered HTTP 400/11133
+    // (`model_param_invalid`), killing the turn before any tool ran. The name
+    // must be rejected locally, without issuing a request at all.
+    const tools: ToolSpec[] = [
+      { name: "mcp_data_source.read", description: "dotted", inputSchema: { type: "object" } },
+    ];
+
+    await expect(
+      generate(new OpenAICompatibleProvider(), { messages: [], tools }, new AbortController().signal),
+    ).rejects.toMatchObject({ info: { code: "MODEL_ERROR", retryable: false } });
+    await expect(
+      generate(new OpenAICompatibleProvider(), { messages: [], tools }, new AbortController().signal),
+    ).rejects.toThrow(/not a valid provider function name/);
+    // No request was made — the failure is local and names the offending tool.
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    // The legal form of the SAME tool is sent normally.
+    mockFetch.mockResolvedValueOnce(
+      sseResponse([sseEvent({ choices: [{ delta: { content: "ok" }, finish_reason: "stop" }] })]),
+    );
+    await generate(
+      new OpenAICompatibleProvider(),
+      { messages: [], tools: [{ ...tools[0]!, name: "mcp_data_source_read" }] },
+      new AbortController().signal,
+    );
+    expect((requestBody().tools as Array<{ function: { name: string } }>)[0]!.function.name).toBe(
+      "mcp_data_source_read",
+    );
+  });
+
   it("sends a POST with Bearer auth, JSON body and the configured model", async () => {
     stubFetch();
     mockFetch.mockResolvedValueOnce(
