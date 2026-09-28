@@ -27,6 +27,7 @@
  * the OS temp dir; no key is read.
  */
 
+import { readFileSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -40,7 +41,15 @@ import {
   type PreregistrationV2Options,
   type ToolCallEfficiencyPreregistrationV2,
 } from "./tool-call-efficiency-preregistration-v2.js";
-import { CostBudget, createFormalBudgetedProvider } from "./tool-call-efficiency-formal-run.js";
+import {
+  COST_BUDGET_FILENAME,
+  CostBudget,
+  TOOL_DISPATCH_BUDGET_EXHAUSTED,
+  TOOL_DISPATCH_DEADLINE_EXCEEDED,
+  createDurableToolDispatchBudget,
+  createFormalBudgetedProvider,
+  type FormalBudgetStats,
+} from "./tool-call-efficiency-formal-run.js";
 import { openR97BudgetLedger } from "./r97-budget-ledger.js";
 
 const SHA_A = "a".repeat(40);
@@ -155,23 +164,50 @@ function toolCallingProvider(toolCallCount: number): ModelProvider {
   };
 }
 
-async function drain(provider: ModelProvider, budget: CostBudget, dir: string, arm: string): Promise<void> {
+async function drain(
+  provider: ModelProvider,
+  budget: CostBudget,
+  dir: string,
+  arm: string,
+  over: { deadlineAtMs?: number | null; now?: () => number } = {},
+): Promise<{ stats: FormalBudgetStats; error: unknown }> {
   const ledger = await openR97BudgetLedger(dir, {
     planDigest: "p".repeat(64),
     campaignModelCalls: 100,
     mode: "first-run",
   });
-  const { provider: wrapped } = createFormalBudgetedProvider({
+  const { provider: wrapped, stats } = createFormalBudgetedProvider({
     provider,
     ledger,
     costBudget: budget,
     arm,
     usdMicrosPerCall: 0,
+    ...(over.deadlineAtMs !== undefined ? { deadlineAtMs: over.deadlineAtMs } : {}),
+    ...(over.now !== undefined ? { now: over.now } : {}),
   });
   const client = wrapped.createClient({ providerId: "n4-tool-fake", modelId: "m" } as ModelRef, {} as ProviderConfig);
-  for await (const _ev of client.generate({} as ModelRequest, new AbortController().signal)) {
-    // drain
+  let error: unknown = null;
+  try {
+    for await (const _ev of client.generate({} as ModelRequest, new AbortController().signal)) {
+      // drain
+    }
+  } catch (err) {
+    // A RED refusal (budget/deadline) is thrown BEFORE the transport is entered;
+    // the caller asserts on it rather than on a silent pass.
+    error = err;
   }
+  return { stats, error };
+}
+
+/** R3/F4 — one real tool dispatch's reservation request. */
+function toolReservation(): {
+  toolCallId: string;
+  tool: string;
+  sessionId: string;
+  readOnly: boolean;
+  sideEffectScope: string;
+} {
+  return { toolCallId: "call-1", tool: "read_file", sessionId: "s1", readOnly: true, sideEffectScope: "none" };
 }
 
 describe("N4 — the held tool reservation is an upper BOUND", () => {
@@ -236,40 +272,153 @@ describe("N4 — charge() validates and enforces every cap", () => {
   }, 60_000);
 });
 
-describe("N4 — the tool dimension is CONSUMED, and two arms SHARE the quota", () => {
-  it("[N4.6] a completed response carrying 2 tool calls charges exactly 2 to the campaign ledger", async () => {
+describe("R3/F4 — a DECLARED tool call is a diagnostic, NOT consumption", () => {
+  it("[N4.6/R3] a completed response carrying 2 tool calls records declaredToolCalls=2 and charges 0 to the tool dimension", async () => {
+    // F4: the tool dimension used to be charged from the DECLARATION, an
+    // after-the-fact tally. Actual consumption is now reserved at the REAL
+    // dispatch point, so a declared-but-never-dispatched tool cannot look like
+    // consumption.
     const dir = await tempDir();
     const budget = await CostBudget.open(dir, artifactWith(), { allowCreate: true });
-    await drain(toolCallingProvider(2), budget, dir, TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2);
-    expect(budget.view().charged.toolCalls).toBe(2);
-  }, 60_000);
-
-  it("[N4.7] a response carrying MORE tool calls than the campaign cap allows freezes the charge", async () => {
-    const dir = await tempDir();
-    const budget = await CostBudget.open(dir, artifactWith({ maxToolCalls: 1 }), { allowCreate: true });
-    await expect(drain(toolCallingProvider(2), budget, dir, "candidate")).rejects.toThrow(/BUDGET_EXHAUSTED|tool-call cap/);
+    const { stats } = await drain(toolCallingProvider(2), budget, dir, TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2);
+    expect(stats.declaredToolCalls).toBe(2);
     expect(budget.view().charged.toolCalls).toBe(0);
   }, 60_000);
 
-  it("[N4.8] TWO arms share ONE campaign tool quota — the second arm gets no fresh allowance", async () => {
+  it("[N4.7/R3] a declaration OVER the cap no longer freezes anything: the cap is enforced at DISPATCH", async () => {
+    // Under the old semantics the declaration itself threw BUDGET_EXHAUSTED after
+    // the model ledger had already committed. Now the declaration never charges;
+    // the durable dispatch budget is what enforces `maxToolCalls`.
     const dir = await tempDir();
-    // maxToolCalls = 2: the FIRST arm consumes both, so the second arm's tool
-    // consumption must be refused. A per-arm reset would wrongly admit it.
+    const budget = await CostBudget.open(dir, artifactWith({ maxToolCalls: 1 }), { allowCreate: true });
+    const { stats } = await drain(toolCallingProvider(2), budget, dir, "candidate");
+    expect(stats.declaredToolCalls).toBe(2);
+    expect(budget.view().charged.toolCalls).toBe(0);
+    const dispatch = createDurableToolDispatchBudget({ costBudget: budget, deadlineAtMs: null });
+    expect((await dispatch.reserve(toolReservation())).ok).toBe(true);
+    expect((await dispatch.reserve(toolReservation())).ok).toBe(false);
+    expect(budget.view().charged.toolCalls).toBe(0); // still reserved, not yet settled
+  }, 60_000);
+
+  it("[N4.8/R3] TWO arms competing CONCURRENTLY never exceed the cap", async () => {
+    const dir = await tempDir();
     const budget = await CostBudget.open(dir, artifactWith({ maxToolCalls: 2 }), { allowCreate: true });
-    await drain(toolCallingProvider(2), budget, dir, "baseline");
+    const dispatch = createDurableToolDispatchBudget({ costBudget: budget, deadlineAtMs: null });
+    // Four arms race for TWO slots. The reservation is taken under the campaign
+    // lock, so exactly two may proceed no matter the interleaving.
+    const results = await Promise.all([1, 2, 3, 4].map(() => dispatch.reserve(toolReservation())));
+    expect(results.filter((r) => r.ok).length).toBe(2);
+    expect(results.filter((r) => !r.ok).length).toBe(2);
+    expect(results.filter((r) => !r.ok).every((r) => r.reason === TOOL_DISPATCH_BUDGET_EXHAUSTED)).toBe(true);
+    for (const r of results) if (r.ok) await r.settle("dispatched");
     expect(budget.view().charged.toolCalls).toBe(2);
-    await expect(drain(toolCallingProvider(1), budget, dir, "candidate")).rejects.toThrow(/BUDGET_EXHAUSTED/);
-    expect(budget.view().charged.toolCalls).toBe(2);
+    expect(dispatch.stats()).toMatchObject({ reserved: 2, dispatched: 2, capRefused: 2, unknown: 0, released: 0 });
   }, 90_000);
 
-  it("[N4.9] the quota is DURABLE: a reopened campaign still sees the consumed tool calls", async () => {
+  it("[N4.9/R3] an UNKNOWN dispatch is CHARGED, never refunded", async () => {
     const dir = await tempDir();
-    const artifact = artifactWith({ maxToolCalls: 2 });
-    const first = await CostBudget.open(dir, artifact, { allowCreate: true });
-    await first.charge({ toolCalls: 2 });
-    // Re-open from disk (a crash/restart is the same code path) and try again.
-    const second = await CostBudget.open(dir, artifact, { allowCreate: false });
-    expect(second.view().charged.toolCalls).toBe(2);
-    await expect(second.charge({ toolCalls: 1 })).rejects.toThrow(/BUDGET_EXHAUSTED/);
+    const budget = await CostBudget.open(dir, artifactWith({ maxToolCalls: 2 }), { allowCreate: true });
+    const dispatch = createDurableToolDispatchBudget({ costBudget: budget, deadlineAtMs: null });
+    const r = await dispatch.reserve(toolReservation());
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    await r.settle("unknown");
+    const v = budget.view();
+    expect(v.charged.toolCalls).toBe(1);
+    expect(v.reserved.toolCalls).toBe(0);
+    expect(dispatch.stats().unknown).toBe(1);
+  }, 60_000);
+
+  it("[N4.10/R3] a RELEASED dispatch (never executed) refunds its reservation", async () => {
+    const dir = await tempDir();
+    const budget = await CostBudget.open(dir, artifactWith({ maxToolCalls: 2 }), { allowCreate: true });
+    const dispatch = createDurableToolDispatchBudget({ costBudget: budget, deadlineAtMs: null });
+    const r = await dispatch.reserve(toolReservation());
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    await r.settle("not_executed");
+    const v = budget.view();
+    expect(v.charged.toolCalls).toBe(0);
+    expect(v.reserved.toolCalls).toBe(0);
+    expect(dispatch.stats().released).toBe(1);
+  }, 60_000);
+
+  it("[N4.11/R3] maxToolCalls=0 ⇒ the dispatch budget refuses EVERY dispatch", async () => {
+    const dir = await tempDir();
+    const budget = await CostBudget.open(dir, artifactWith({ maxToolCalls: 0 }), { allowCreate: true });
+    const dispatch = createDurableToolDispatchBudget({ costBudget: budget, deadlineAtMs: null });
+    const r = await dispatch.reserve(toolReservation());
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe(TOOL_DISPATCH_BUDGET_EXHAUSTED);
+    expect(budget.view().charged.toolCalls).toBe(0);
+  }, 60_000);
+});
+
+describe("R3/F4 — ONE campaign deadline, and it is durable", () => {
+  it("[N4.12/R3] the deadline is frozen at creation and REUSED by a later open (a resume keeps only what is left)", async () => {
+    const dir = await tempDir();
+    const artifact = artifactWith({ maxDurationMs: 600_000 });
+    const t0 = 1_700_000_000_000;
+    const first = await CostBudget.open(dir, artifact, { allowCreate: true, now: () => t0 });
+    expect(first.deadlineAtMs()).toBe(t0 + 600_000);
+    // A "restart" 500s later asking for a brand-new window must NOT get one.
+    const second = await CostBudget.open(dir, artifact, { allowCreate: false, now: () => t0 + 500_000 });
+    expect(second.deadlineAtMs()).toBe(t0 + 600_000);
+    expect(second.deadlineAtMs() - (t0 + 500_000)).toBe(100_000);
+  }, 60_000);
+
+  it("[N4.13/R3] a LEGACY budget file without a deadline is treated as EXPIRED, never as a fresh window", async () => {
+    const dir = await tempDir();
+    const artifact = artifactWith({ maxDurationMs: 600_000 });
+    const t0 = 1_700_000_000_000;
+    await CostBudget.open(dir, artifact, { allowCreate: true, now: () => t0 });
+    // Simulate a pre-R3 file: strip the field.
+    const path = join(dir, COST_BUDGET_FILENAME);
+    const raw = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    delete raw["campaignDeadlineAtMs"];
+    delete raw["openedAtMs"];
+    writeFileSync(path, `${JSON.stringify(raw, null, 2)}\n`, "utf8");
+    const reopened = await CostBudget.open(dir, artifact, { allowCreate: false, now: () => t0 + 10 });
+    expect(reopened.deadlineAtMs()).toBe(t0 + 10);
+    expect(reopened.view().deadlineSource).toBe("legacy-missing-expired");
+    const dispatch = createDurableToolDispatchBudget({
+      costBudget: reopened,
+      deadlineAtMs: reopened.deadlineAtMs(),
+      now: () => t0 + 10,
+    });
+    const r = await dispatch.reserve(toolReservation());
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe(TOOL_DISPATCH_DEADLINE_EXCEEDED);
+    expect(dispatch.stats().deadlineRefused).toBe(1);
+  }, 60_000);
+
+  it("[N4.14/R3] after the deadline the provider sends NO request (the fake transport is never entered)", async () => {
+    const dir = await tempDir();
+    const budget = await CostBudget.open(dir, artifactWith(), { allowCreate: true });
+    let entered = 0;
+    const provider: ModelProvider = {
+      id: "n4-deadline-fake",
+      async listModels() {
+        return [];
+      },
+      createClient() {
+        return {
+          async *generate(): AsyncGenerator<ModelEvent> {
+            entered += 1;
+            yield { type: "completed", result: { finishReason: "stop" } as never, timestamp: 0 };
+          },
+        };
+      },
+    };
+    const { stats, error } = await drain(provider, budget, dir, "candidate", {
+      deadlineAtMs: 1_000,
+      now: () => 5_000, // already past
+    });
+    expect(entered).toBe(0);
+    expect(stats.refusedCalls).toBe(1);
+    expect(String(error)).toMatch(/CAMPAIGN_DEADLINE_EXCEEDED/);
+    expect(budget.view().reserved.usdMicros).toBe(0); // the cost reservation was released
+    expect(budget.view().reserved.durationMs).toBe(0);
+    expect(budget.view().reserved.toolCalls).toBe(0);
   }, 60_000);
 });
