@@ -18,7 +18,6 @@ import {
   computeArgsHash,
   errorInfo,
   isToolAllowedByPolicy,
-  newMessageId,
   resourceConflicts,
   sleep as timerSleep,
   stableFingerprint,
@@ -59,6 +58,22 @@ export interface ExecutedToolCall {
   streak: number;
   progressCancelled?: boolean;
   wouldBeStreak?: number;
+  /** P2-41/PROTOCOL: adaptive-recovery observations produced while this call
+   *  executed. They are `role:"system"` messages and MUST NOT be persisted
+   *  before the batch's `tool` results are durable — the wire protocol requires
+   *  an assistant message carrying `tool_calls` to be followed IMMEDIATELY by
+   *  one `tool` message per `tool_call_id`. The runtime appends them once the
+   *  whole block is durable (see AgentRuntime.handleToolResults). */
+  deferredObservations?: string[];
+}
+
+/** P2-41/PROTOCOL: one settled call from a parallel read batch, carrying the
+ *  observations produced during its execution so the caller can persist them
+ *  only AFTER the batch's tool results are durable. */
+export interface SettledToolCall {
+  call: ToolCall;
+  result: ToolResult;
+  deferredObservations?: string[];
 }
 
 /** Q-1: everything ToolCallController needs from the runtime. All fields are
@@ -128,6 +143,30 @@ export class ToolCallController {
   /** P18-6: per-call resource conflict key, when a resolver is wired. */
   private conflictKeyOf(call: ToolCall): import("@ar/contracts").ResourceConflictKey | undefined {
     return this.deps.resourceConflictOf?.(call);
+  }
+
+  /**
+   * P2-41/PROTOCOL: buffer an adaptive-recovery observation instead of
+   * persisting it now.
+   *
+   * The observation is a `role:"system"` message. Persisting it during tool
+   * EXECUTION would place it between the assistant message carrying
+   * `tool_calls` and the `tool` results that `handleToolResults` persists
+   * afterwards:
+   *
+   *   assistant(tool_calls) -> system(recovery) -> tool(result)
+   *
+   * A strict OpenAI-compatible upstream rejects that ordering with HTTP 400
+   * ("An assistant message with 'tool_calls' must be followed by tool messages
+   * responding to each 'tool_call_id'"). The observation is therefore collected
+   * per call and appended by the runtime once the whole tool block is durable.
+   *
+   * The collector is REQUIRED (every in-class call site supplies a per-call
+   * array) so an observation can never be silently dropped or persisted in the
+   * wrong position.
+   */
+  private deferObservation(collector: string[], content: string): void {
+    collector.push(content);
   }
 
   /**
@@ -208,18 +247,24 @@ export class ToolCallController {
         const settled = await this.runReadBatch(ctx, batch, turnState, step, parentCallId);
         state.transition("observing");
         state.transition("thinking");
-        for (const { call: c, result } of settled) {
+        for (const { call: c, result, deferredObservations } of settled) {
           executed.push({
             call: c,
             result,
             ...this.noteExecutedCall(state, c, result),
+            ...(deferredObservations !== undefined && deferredObservations.length > 0
+              ? { deferredObservations }
+              : {}),
           });
           this.recordStallTrace(state, c, result);
         }
         i = j;
       } else {
         state.transition("tool_pending");
-        const result = await this.executeToolCall(ctx, call, turnState, step, parentCallId);
+        // P2-41/PROTOCOL: observations produced during execution are collected
+        // here and persisted by the caller AFTER this batch's tool results.
+        const observations: string[] = [];
+        const result = await this.executeToolCall(ctx, call, turnState, step, parentCallId, observations);
         state.transition("observing");
         state.transition("thinking");
         if (signal.aborted) {
@@ -233,6 +278,7 @@ export class ToolCallController {
             call,
             result,
             ...this.noteExecutedCall(state, call, result),
+            ...(observations.length > 0 ? { deferredObservations: observations } : {}),
           });
           this.recordStallTrace(state, call, result);
           for (let k = i + 1; k < calls.length; k++) {
@@ -255,6 +301,7 @@ export class ToolCallController {
           call,
           result,
           ...this.noteExecutedCall(state, call, result),
+          ...(observations.length > 0 ? { deferredObservations: observations } : {}),
         });
         this.recordStallTrace(state, call, result);
         i += 1;
@@ -278,17 +325,21 @@ export class ToolCallController {
     /** P15-2: the immutable step shared by every call in this batch. */
     step: StepExecutionSnapshot,
     parentCallId?: string,
-  ): Promise<Array<{ call: ToolCall; result: ToolResult }>> {
+  ): Promise<SettledToolCall[]> {
     const { signal } = ctx;
     if (signal.aborted || batch.length === 0) return [];
-    return new Promise<Array<{ call: ToolCall; result: ToolResult }>>((resolve, reject) => {
-      const results: Array<{ call: ToolCall; result: ToolResult } | undefined> = new Array(batch.length);
+    return new Promise<SettledToolCall[]>((resolve, reject) => {
+      const results: Array<SettledToolCall | undefined> = new Array(batch.length);
+      // P2-41/PROTOCOL: one collector PER CALL so a parallel batch cannot
+      // interleave observations by completion order; the caller flushes them in
+      // call order once every tool result is durable.
+      const observationsByIdx: string[][] = batch.map(() => []);
       // P18-5: per-call settlement promises — the abort path needs them to
       // WAIT for non-cancellable in-flight calls instead of lying about them.
       const settlePromises: Array<Promise<void> | undefined> = new Array(batch.length);
       let remaining = batch.length;
       let done = false;
-      const finish = (arr: Array<{ call: ToolCall; result: ToolResult }>) => {
+      const finish = (arr: SettledToolCall[]) => {
         if (done) return;
         done = true;
         signal.removeEventListener("abort", onAbort);
@@ -310,7 +361,7 @@ export class ToolCallController {
         //   - in-flight + NON-cancellable → NEVER lied about as cancelled (a
         //     non-cancellable tool may have produced side effects). We wait
         //     for its REAL settlement and record what actually happened.
-        const immediate: Array<{ call: ToolCall; result: ToolResult }> = [];
+        const immediate: SettledToolCall[] = [];
         const waitIdx: number[] = [];
         for (let i = 0; i < batch.length; i++) {
           const existing = results[i];
@@ -323,6 +374,9 @@ export class ToolCallController {
                 status: "cancelled",
                 error: errorInfo("USER_CANCELLED", "read batch aborted before the call settled (cancellable)"),
               },
+              ...(observationsByIdx[i]!.length > 0
+                ? { deferredObservations: observationsByIdx[i]! }
+                : {}),
             });
           } else {
             waitIdx.push(i);
@@ -341,7 +395,7 @@ export class ToolCallController {
       };
       signal.addEventListener("abort", onAbort, { once: true });
       batch.forEach((c, idx) => {
-        const promise = this.executeToolCall(ctx, c, turnState, step, parentCallId);
+        const promise = this.executeToolCall(ctx, c, turnState, step, parentCallId, observationsByIdx[idx]!);
         // P18-5: the settle signal ALWAYS resolves (the rejection is already
         // recorded into results by the catch below — the abort wait path only
         // needs to know WHEN settlement happened, never to see the error).
@@ -351,10 +405,16 @@ export class ToolCallController {
         );
         promise
           .then((result) => {
-            results[idx] = { call: c, result };
+            results[idx] = {
+              call: c,
+              result,
+              ...(observationsByIdx[idx]!.length > 0
+                ? { deferredObservations: observationsByIdx[idx]! }
+                : {}),
+            };
             remaining -= 1;
             if (remaining === 0 && !done) {
-              finish(results.filter((r): r is { call: ToolCall; result: ToolResult } => r !== undefined));
+              finish(results.filter((r): r is SettledToolCall => r !== undefined));
             }
           })
           .catch((err) => {
@@ -373,7 +433,7 @@ export class ToolCallController {
             };
             remaining -= 1;
             if (remaining === 0 && !done) {
-              finish(results.filter((r): r is { call: ToolCall; result: ToolResult } => r !== undefined));
+              finish(results.filter((r): r is SettledToolCall => r !== undefined));
             }
           });
       });
@@ -462,6 +522,10 @@ export class ToolCallController {
     /** P15-2: the immutable step this tool call belongs to. */
     step: StepExecutionSnapshot,
     parentCallId?: string,
+    /** P2-41/PROTOCOL: per-call collector for adaptive-recovery observations.
+     *  REQUIRED so an observation can never be persisted inside the tool block
+     *  (see `deferObservation`). */
+    deferredObservations: string[] = [],
   ): Promise<ToolResult> {
     const { session, turnId, signal, agent } = ctx;
     // P1-20: tool latency starts at the request (includes policy gates,
@@ -744,14 +808,7 @@ export class ToolCallController {
               `[recovery:${decision.action}] "${call.name}" failed without a safe retry (${decision.reason}); ` +
               "stop repeating it and try a different approach.";
           }
-          await this.deps.store.appendMessage({
-            id: newMessageId(),
-            sessionId: session.id,
-            turnId,
-            role: "system",
-            content,
-            createdAt: this.deps.now(),
-          });
+          this.deferObservation(deferredObservations, content);
           break;
         }
         // P19-3: reconcile_unknown_effect — the call may have STARTED and
@@ -760,16 +817,11 @@ export class ToolCallController {
         // surfaces a typed reconciliation observation so the model/user
         // confirms the actual effect state before any next step.
         if (decision.action === "reconcile_unknown_effect") {
-          await this.deps.store.appendMessage({
-            id: newMessageId(),
-            sessionId: session.id,
-            turnId,
-            role: "system",
-            content:
-              `[recovery:reconcile_unknown_effect] "${call.name}" may have taken effect but its outcome is unknown (${decision.reason}). ` +
+          this.deferObservation(
+            deferredObservations,
+            `[recovery:reconcile_unknown_effect] "${call.name}" may have taken effect but its outcome is unknown (${decision.reason}). ` +
               "Do NOT re-run it. Inspect the current state (files/processes/output) and reconcile what actually happened before continuing.",
-            createdAt: this.deps.now(),
-          });
+          );
           break;
         }
         // ask_user / fail_safe: cease auto-recovery here; the failed result is

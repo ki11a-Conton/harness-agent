@@ -2,6 +2,7 @@ export * from "./ids.js";
 export * from "./errors.js";
 export * from "./model.js";
 export * from "./message.js";
+export * from "./message-protocol.js";
 export * from "./tool.js";
 export * from "./agent.js";
 export * from "./session.js";

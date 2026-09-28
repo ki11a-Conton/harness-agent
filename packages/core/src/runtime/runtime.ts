@@ -39,6 +39,7 @@ import {
   RUNTIME_POLICY_SNAPSHOT_KEY,
   buildSkillSnapshot,
   computeArgsHash,
+  dropOrphanToolResults,
   errorInfo,
   isToolAllowedByPolicy,
   newArtifactId,
@@ -78,6 +79,7 @@ import type {
   AskReason,
   AskId,
   Timer,
+  TerminationReason,
 } from "@ar/contracts";
 import type { ContextPipeline, InstructionDiscoveryOptions } from "@ar/context";
 import type { ToolSelector } from "../tools/tool-selector.js";
@@ -981,7 +983,10 @@ export class AgentRuntime {
           // error the runtime retries with a REDUCED history — the state
           // digest message (appended below) plus the most recent messages.
           // The full transcript stays in the store (transcript fallback).
-          history = history.slice(-12);
+          // P2-41/PROTOCOL: a tail slice can cut an assistant `tool_calls`
+          // message away while its `tool` results remain; an orphan tool result
+          // is rejected by a strict upstream, so the view is repaired.
+          history = dropOrphanToolResults(history.slice(-12));
         }
 
         // Q-1: context pipeline + compaction + overflow extracted to buildContext.
@@ -1286,170 +1291,232 @@ export class AgentRuntime {
     budget: RunBudgetTracker,
   ): Promise<ToolResultsAction> {
     const { sessionId, turnId, signal, agent } = ctx;
-        for (const { call, result, streak, progressCancelled, wouldBeStreak } of executed) {
-          // P0-12: update_plan is a runtime-internal tool that applies
-          // working state mutations directly — no external execution.
-          if (call.name === "update_plan") {
-            const mutations = call.args.mutations as WorkingStateMutation[] | undefined;
-            if (mutations !== undefined) {
-              for (const mutation of mutations) {
-                applyWorkingStateMutation(working, mutation);
-              }
-            }
-            // Skip the normal tool processing (no block, no message, no ledger).
-            state.countToolCall();
-            continue;
-          }
-          const content = await this.contextController.renderToolResultForContext(ctx, call, result);
-          priorBlocks.push(toContextBlock(call.id, result, content));
-          await this.store.appendMessage({
-            id: newMessageId(),
-            sessionId,
-            turnId,
-            role: "tool",
-            content,
-            toolCallId: call.id,
-            createdAt: this.now(),
-          });
-          updateWorkingState(call, result, working, this.semanticsOf(call.name));
-          state.countToolCall();
-          // P1-3/P1-4: record the call in the durable execution ledger (the
-          // side-effect-safety basis for resume/reconciliation) and checkpoint
-          // after a successful side-effect tool — a durable safe boundary for
-          // long tasks.
-          toolLedger.push({
-            toolCallId: call.id,
-            tool: call.name,
-            argsHash: computeArgsHash(call.args),
-            started: this.now(),
-            completed: this.now(),
-            status: result.status,
-            ...(result.output !== undefined
-              ? { resultHash: computeArgsHash({ output: result.output }) }
-              : {}),
-            sideEffect: this.semanticsOf(call.name).sideEffectScope !== "none",
-          });
-          if (this.semanticsOf(call.name).sideEffectScope !== "none" && result.status === "success") {
-            // P2-41: a landed side effect (new artifact / file diff) is concrete
-            // progress — clear the stall window so a later similar call is not
-            // misjudged as stagnation.
-            state.recordProgress("new_artifact");
-            // P1-5: kill after the effect landed but BEFORE its checkpoint —
-            // the window where only the store result message proves it.
-            await this.failAt("tool.completed", { sessionId, turnId, toolCallId: call.id, tool: call.name });
-            if (this.checkpointPolicy.afterSideEffectTools) {
-              await this.recoveryController.checkpoint(
-                ctx, working, state, toolLedger, `tool:completed:${call.name}`,
-                this.activeBudgetUsage?.(),
-              );
-              // P1-5: kill AFTER the checkpoint persisted (a durable safety
-              // boundary exists — resume can proceed from it).
-              await this.failAt("tool.checkpointed", { sessionId, turnId, toolCallId: call.id, tool: call.name });
-            }
-          }
-          // E4-R86 (H2): a repeated call+args whose RESULT CHANGED is observable
-          // progress — the identical-call streak was cancelled, so the turn must
-          // NOT be terminated for it. Emit structured evidence of the fix path
-          // (countable, secret-free: tool name + counts only).
-          if (progressCancelled === true) {
-            await this.emit(sessionId, "stall.progress_detected", {
-              tool: call.name,
-              wouldBeStreak: wouldBeStreak ?? streak,
-              allowed: this.maxRepeatedIdenticalToolCalls,
-            }, turnId);
-          }
-          if (
-            this.maxRepeatedIdenticalToolCalls > 0 &&
-            streak >= this.maxRepeatedIdenticalToolCalls
-          ) {
-            // plan.md Phase 11 stall recovery: before terminating, give the
-            // model one bounded chance to change strategy. The streak is
-            // reset and a system observation is injected; a second streak
-            // (recovery budget exhausted) terminates as before.
-            if (this.maxStallRecoveries > 0 && state.useStallRecovery(this.maxStallRecoveries)) {
-              await this.emit(sessionId, "retry.stallRecovery", {
-                streak,
-                allowed: this.maxRepeatedIdenticalToolCalls,
-                remaining: this.maxStallRecoveries,
-              }, turnId);
-              state.resetToolStreak();
-              await this.store.appendMessage({
-                id: newMessageId(),
-                sessionId,
-                turnId,
-                role: "system",
-                content:
-                  `[stall recovery — the identical tool call "${call.name}" was repeated ${streak} times without progress]\n` +
-                  "The call keeps returning the same result. Try a different approach or stop repeating it.",
-                createdAt: this.now(),
-              });
-              continue;
-            }
-            await this.emit(sessionId, "run.limit_reached", { limit: "maxRepeatedToolCalls", used: streak, allowed: this.maxRepeatedIdenticalToolCalls }, turnId);
-            return { action: "finish", outcome: await this.recoveryController.finishTurn(
-              ctx, "failed", state, working,
-              errorInfo("RESOURCE_LIMIT", `maxRepeatedToolCalls (${this.maxRepeatedIdenticalToolCalls}) reached: repeated identical call ${call.name}`),
-              "tool_limit",
-              toolLedger,
-            ) };
-          }
-          // P2-41: broader stall PATTERNS beyond the identical-call gate. The
-          // pure window classifier reports a specific pattern when the recent
-          // executions show no progress; if that pattern is enabled we treat it
-          // exactly like the identical gate: bounded recovery (inject a system
-          // observation, clear the window) then terminate.
-          const stallPattern = state.stallPattern();
-          if (
-            stallPattern !== null &&
-            this.enabledStallPatterns.has(stallPattern)
-          ) {
-            if (this.maxPatternStallRecoveries > 0 && state.useStallRecovery(this.maxPatternStallRecoveries + this.maxStallRecoveries)) {
-              await this.emit(sessionId, "retry.stallRecovery", {
-                pattern: stallPattern,
-                allowed: STALL_WINDOW_SIZE,
-                remaining: this.maxPatternStallRecoveries,
-              }, turnId);
-              state.clearStallWindow();
-              await this.store.appendMessage({
-                id: newMessageId(),
-                sessionId,
-                turnId,
-                role: "system",
-                content:
-                  `[stall recovery — detected "${stallPattern}" (repeated tool work without progress)]\n` +
-                  "Try a different approach or stop repeating the same work.",
-                createdAt: this.now(),
-              });
-              continue;
-            }
-            await this.emit(sessionId, "run.limit_reached", { limit: "stallPattern", used: 1, allowed: this.maxPatternStallRecoveries, pattern: stallPattern }, turnId);
-            return { action: "finish", outcome: await this.recoveryController.finishTurn(
-              ctx, "failed", state, working,
-              errorInfo("RESOURCE_LIMIT", `stall pattern detected: ${stallPattern}`),
-              "tool_limit",
-              toolLedger,
-            ) };
-          }
-          if (agent.limits.maxToolCalls !== undefined) {
-            const breach = budget.onToolCall();
-            if (breach !== undefined) {
-              await this.emit(sessionId, "run.limit_reached", { ...breach }, turnId);
-              return { action: "finish", outcome: await this.recoveryController.finishTurn(
-                ctx, "failed", state, working,
-                errorInfo("RESOURCE_LIMIT", `maxToolCalls (${agent.limits.maxToolCalls}) reached`),
-                "tool_limit",
-                toolLedger,
-              ) };
-            }
+    // P2-41/PROTOCOL: the wire protocol requires an assistant message carrying
+    // `tool_calls` to be followed IMMEDIATELY by one `tool` message per
+    // `tool_call_id` — nothing may be interleaved, and none may be missing. A
+    // strict OpenAI-compatible upstream rejects a violation of the NEXT request
+    // with HTTP 400 ("An assistant message with 'tool_calls' must be followed by
+    // tool messages responding to each 'tool_call_id'").
+    //
+    // The processing is therefore split into two phases so the invariant holds
+    // STRUCTURALLY rather than per-exit-path:
+    //   Phase 1 persists one `tool` message for EVERY executed call, in call
+    //           order, with no gate able to short-circuit it. (Previously the
+    //           runtime-internal `update_plan` skipped its message entirely, and
+    //           a gate that terminated mid-batch left every later call
+    //           unanswered — both produced the same upstream 400.)
+    //   Phase 2 evaluates the stall/limit gates. It may append observations, but
+    //           only AFTER the whole block is durable, so a gate can never split
+    //           the block or orphan a requested tool call.
+    //
+    // The tool calls were ALL executed before this method runs (the batch is
+    // settled in ToolCallController.executeToolCalls), so persisting every
+    // result also makes the transcript reflect what actually happened.
+    const deferredObservations: string[] = [];
+    for (const { call, result, deferredObservations: callObservations } of executed) {
+      if (callObservations !== undefined) deferredObservations.push(...callObservations);
+      // P0-12: update_plan is a runtime-internal tool whose mutations the runtime
+      // applies directly (the tool itself is a no-op recorder). It still owes the
+      // model a `tool` message — the model requested it with a real
+      // `tool_call_id`, and leaving it unanswered is a protocol violation.
+      if (call.name === "update_plan") {
+        const mutations = call.args.mutations as WorkingStateMutation[] | undefined;
+        if (mutations !== undefined) {
+          for (const mutation of mutations) {
+            applyWorkingStateMutation(working, mutation);
           }
         }
-        // P2-37: a user interrupt arrived during the tool batch. Side effects
-        // that already COMMITTED (recorded above into the durable ledger,
-        // working state and transcript) are KEPT and reported on the cancelled
-        // outcome — cancel is not a rollback. Remaining calls were not run.
-        if (signal.aborted) {
-          return { action: "finish", outcome: await this.recoveryController.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger) };
+        // No context block and no ledger entry (it has no external effect), but
+        // the result message is mandatory.
+        const planContent = await this.contextController.renderToolResultForContext(ctx, call, result);
+        await this.store.appendMessage({
+          id: newMessageId(),
+          sessionId,
+          turnId,
+          role: "tool",
+          content: planContent,
+          toolCallId: call.id,
+          createdAt: this.now(),
+        });
+        state.countToolCall();
+        continue;
+      }
+      const content = await this.contextController.renderToolResultForContext(ctx, call, result);
+      priorBlocks.push(toContextBlock(call.id, result, content));
+      await this.store.appendMessage({
+        id: newMessageId(),
+        sessionId,
+        turnId,
+        role: "tool",
+        content,
+        toolCallId: call.id,
+        createdAt: this.now(),
+      });
+      updateWorkingState(call, result, working, this.semanticsOf(call.name));
+      state.countToolCall();
+      // P1-3/P1-4: record the call in the durable execution ledger (the
+      // side-effect-safety basis for resume/reconciliation) and checkpoint
+      // after a successful side-effect tool — a durable safe boundary for
+      // long tasks.
+      toolLedger.push({
+        toolCallId: call.id,
+        tool: call.name,
+        argsHash: computeArgsHash(call.args),
+        started: this.now(),
+        completed: this.now(),
+        status: result.status,
+        ...(result.output !== undefined
+          ? { resultHash: computeArgsHash({ output: result.output }) }
+          : {}),
+        sideEffect: this.semanticsOf(call.name).sideEffectScope !== "none",
+      });
+      if (this.semanticsOf(call.name).sideEffectScope !== "none" && result.status === "success") {
+        // P2-41: a landed side effect (new artifact / file diff) is concrete
+        // progress — clear the stall window so a later similar call is not
+        // misjudged as stagnation.
+        state.recordProgress("new_artifact");
+        // P1-5: kill after the effect landed but BEFORE its checkpoint —
+        // the window where only the store result message proves it.
+        await this.failAt("tool.completed", { sessionId, turnId, toolCallId: call.id, tool: call.name });
+        if (this.checkpointPolicy.afterSideEffectTools) {
+          await this.recoveryController.checkpoint(
+            ctx, working, state, toolLedger, `tool:completed:${call.name}`,
+            this.activeBudgetUsage?.(),
+          );
+          // P1-5: kill AFTER the checkpoint persisted (a durable safety
+          // boundary exists — resume can proceed from it).
+          await this.failAt("tool.checkpointed", { sessionId, turnId, toolCallId: call.id, tool: call.name });
         }
+      }
+    }
+
+    // ── Phase 2: gates. The tool block above is fully durable, so every
+    // observation appended from here on lands AFTER it (protocol-safe).
+    let deferredStallObservation: string | null = null;
+    let terminal: { error: ReturnType<typeof errorInfo>; reason: TerminationReason } | null = null;
+    for (const { call, result, streak, progressCancelled, wouldBeStreak } of executed) {
+      // P0-12: the internal update_plan call never participates in the stall /
+      // tool-budget gates (it is bookkeeping, not external work).
+      if (call.name === "update_plan") continue;
+      // E4-R86 (H2): a repeated call+args whose RESULT CHANGED is observable
+      // progress — the identical-call streak was cancelled, so the turn must
+      // NOT be terminated for it. Emit structured evidence of the fix path
+      // (countable, secret-free: tool name + counts only).
+      if (progressCancelled === true) {
+        await this.emit(sessionId, "stall.progress_detected", {
+          tool: call.name,
+          wouldBeStreak: wouldBeStreak ?? streak,
+          allowed: this.maxRepeatedIdenticalToolCalls,
+        }, turnId);
+      }
+      if (
+        this.maxRepeatedIdenticalToolCalls > 0 &&
+        streak >= this.maxRepeatedIdenticalToolCalls
+      ) {
+        // plan.md Phase 11 stall recovery: before terminating, give the
+        // model one bounded chance to change strategy. The streak is
+        // reset and a system observation is injected; a second streak
+        // (recovery budget exhausted) terminates as before.
+        if (this.maxStallRecoveries > 0 && state.useStallRecovery(this.maxStallRecoveries)) {
+          await this.emit(sessionId, "retry.stallRecovery", {
+            streak,
+            allowed: this.maxRepeatedIdenticalToolCalls,
+            remaining: this.maxStallRecoveries,
+          }, turnId);
+          state.resetToolStreak();
+          // Deferred (see `deferredStallObservation`): appending here would
+          // split the tool-result block of this batch.
+          deferredStallObservation =
+            `[stall recovery — the identical tool call "${call.name}" was repeated ${streak} times without progress]\n` +
+            "The call keeps returning the same result. Try a different approach or stop repeating it.";
+          continue;
+        }
+        await this.emit(sessionId, "run.limit_reached", { limit: "maxRepeatedToolCalls", used: streak, allowed: this.maxRepeatedIdenticalToolCalls }, turnId);
+        terminal = {
+          error: errorInfo("RESOURCE_LIMIT", `maxRepeatedToolCalls (${this.maxRepeatedIdenticalToolCalls}) reached: repeated identical call ${call.name}`),
+          reason: "tool_limit",
+        };
+        break;
+      }
+      // P2-41: broader stall PATTERNS beyond the identical-call gate. The
+      // pure window classifier reports a specific pattern when the recent
+      // executions show no progress; if that pattern is enabled we treat it
+      // exactly like the identical gate: bounded recovery (inject a system
+      // observation, clear the window) then terminate.
+      const stallPattern = state.stallPattern();
+      if (
+        stallPattern !== null &&
+        this.enabledStallPatterns.has(stallPattern)
+      ) {
+        if (this.maxPatternStallRecoveries > 0 && state.useStallRecovery(this.maxPatternStallRecoveries + this.maxStallRecoveries)) {
+          await this.emit(sessionId, "retry.stallRecovery", {
+            pattern: stallPattern,
+            allowed: STALL_WINDOW_SIZE,
+            remaining: this.maxPatternStallRecoveries,
+          }, turnId);
+          state.clearStallWindow();
+          // Deferred (see `deferredStallObservation`): appending here would
+          // split the tool-result block of this batch.
+          deferredStallObservation =
+            `[stall recovery — detected "${stallPattern}" (repeated tool work without progress)]\n` +
+            "Try a different approach or stop repeating the same work.";
+          continue;
+        }
+        await this.emit(sessionId, "run.limit_reached", { limit: "stallPattern", used: 1, allowed: this.maxPatternStallRecoveries, pattern: stallPattern }, turnId);
+        terminal = {
+          error: errorInfo("RESOURCE_LIMIT", `stall pattern detected: ${stallPattern}`),
+          reason: "tool_limit",
+        };
+        break;
+      }
+      if (agent.limits.maxToolCalls !== undefined) {
+        const breach = budget.onToolCall();
+        if (breach !== undefined) {
+          await this.emit(sessionId, "run.limit_reached", { ...breach }, turnId);
+          terminal = {
+            error: errorInfo("RESOURCE_LIMIT", `maxToolCalls (${agent.limits.maxToolCalls}) reached`),
+            reason: "tool_limit",
+          };
+          break;
+        }
+      }
+    }
+
+    // P2-41/PROTOCOL: the batch's tool results are ALL durable now, so every
+    // deferred observation (adaptive-recovery per call, then the stall gate) is
+    // appended strictly AFTER the block — never inside it.
+    for (const observation of deferredObservations) {
+      await this.store.appendMessage({
+        id: newMessageId(),
+        sessionId,
+        turnId,
+        role: "system",
+        content: observation,
+        createdAt: this.now(),
+      });
+    }
+    if (deferredStallObservation !== null) {
+      await this.store.appendMessage({
+        id: newMessageId(),
+        sessionId,
+        turnId,
+        role: "system",
+        content: deferredStallObservation,
+        createdAt: this.now(),
+      });
+    }
+    if (terminal !== null) {
+      return { action: "finish", outcome: await this.recoveryController.finishTurn(
+        ctx, "failed", state, working, terminal.error, terminal.reason, toolLedger,
+      ) };
+    }
+    // P2-37: a user interrupt arrived during the tool batch. Side effects
+    // that already COMMITTED (recorded above into the durable ledger,
+    // working state and transcript) are KEPT and reported on the cancelled
+    // outcome — cancel is not a rollback. Remaining calls were not run.
+    if (signal.aborted) {
+      return { action: "finish", outcome: await this.recoveryController.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger) };
+    }
     return { action: "done" };
   }
 

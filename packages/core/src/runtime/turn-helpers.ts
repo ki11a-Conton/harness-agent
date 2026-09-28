@@ -7,7 +7,7 @@
  * functions in runtime.ts.
  */
 
-import { errorInfo, DEFAULT_TOOL_SEMANTICS } from "@ar/contracts";
+import { errorInfo, DEFAULT_TOOL_SEMANTICS, dropOrphanToolResults } from "@ar/contracts";
 import type {
   AgentDefinition,
   AskUserRequest,
@@ -361,6 +361,12 @@ export function buildStateDigest(working: WorkingState, reason: string): string 
  * fits `headroomTokens`, always keeping the most recent tail (the digest
  * message, the current turn's context and the latest tool results). The
  * store keeps the full transcript — this only bounds what the model sees.
+ *
+ * P2-41/PROTOCOL: a prefix trim can cut an assistant message carrying
+ * `tool_calls` away while its `tool` results remain. An orphan tool result is
+ * rejected by a strict upstream ("messages with role 'tool' must be a response
+ * to a preceding message with 'tool_calls'"), so the trimmed VIEW is repaired
+ * before it is sent. The durable transcript is untouched.
  */
 export function trimMessageHistory(
   history: readonly Message[],
@@ -371,7 +377,7 @@ export function trimMessageHistory(
   while (kept.length > MIN_KEEP && estimateMessageTokens(kept) > headroomTokens) {
     kept = kept.slice(1);
   }
-  return kept;
+  return dropOrphanToolResults(kept);
 }
 
 // ── Q-1: model-call retry decision (pure) ─────────────────────────

@@ -26,7 +26,7 @@ import type {
   ToolExecutionContext,
   ToolResult,
 } from "@ar/contracts";
-import { errorInfo, newAgentId, newMessageId, newSessionId, newToolCallId, newTurnId } from "@ar/contracts";
+import { errorInfo, newAgentId, newMessageId, newSessionId, newToolCallId, newTurnId, assertToolProtocol } from "@ar/contracts";
 import { DEFAULT_TOOL_SEMANTICS, fileConflictKey } from "@ar/contracts";
 import { AdaptiveRecoveryPlanner } from "@ar/contracts";
 import { DeterministicToolSelector } from "../tools/tool-selector.js";
@@ -893,6 +893,346 @@ describe("AgentRuntime (CORE-001)", () => {
     expect(outcome.error?.code).toBe("RESOURCE_LIMIT");
     const limit = storedEvents.find((e) => e.type === "run.limit_reached");
     expect(limit?.payload.limit).toBe("stallPattern");
+
+    // P2-41/PROTOCOL: the injected system observation must not have split any
+    // tool-result block — the event/outcome assertions above never checked the
+    // persisted message ORDER, which is what the upstream rejects.
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    assertToolProtocol(messages);
+  });
+
+  it("P2-41/PROTOCOL: a stall observation must NOT split a multi-call tool-result block", async () => {
+    // The OpenAI-compatible wire protocol requires an assistant message that
+    // carries `tool_calls` to be followed IMMEDIATELY by one `tool` message per
+    // `tool_call_id` — nothing may be interleaved. Both stall-recovery gates used
+    // to append their `role:"system"` observation INSIDE the per-call result
+    // loop, so a batch of N>1 calls whose gate fired at call k<N persisted
+    //   assistant[tool_calls], tool(c1)..tool(ck), system(stall), tool(ck+1)..
+    // and a strict upstream rejected the next request with HTTP 400 ("An
+    // assistant message with 'tool_calls' must be followed by tool messages
+    // responding to each 'tool_call_id'"). This pins the ordering invariant.
+    const first = { id: newToolCallId(), name: "echo", args: { text: "same" } };
+    const second = { id: newToolCallId(), name: "echo", args: { text: "other" } };
+    const batch: ModelEvent[] = [
+      { type: "started", timestamp: 0 },
+      { type: "tool_call_delta", toolCall: first, timestamp: 0 },
+      { type: "tool_call_delta", toolCall: second, timestamp: 0 },
+      {
+        type: "completed",
+        result: { finishReason: "tool_calls", toolCalls: [first, second] },
+        timestamp: 0,
+      },
+    ];
+    const provider = new ScriptedModelProvider([
+      // Iteration 1: `echo{same}` alone => streak 1 (below the limit, no gate).
+      ScriptedModelProvider.toolCall("echo", { text: "same" }),
+      // Iteration 2: the SAME call again (streak 2 => the identical gate fires on
+      // the FIRST call of the batch, while the second call's result is still
+      // pending) plus a second, first-time call (streak 1 => no gate). The batch
+      // therefore runs to completion, which is what makes the ordering matter:
+      // the observation must land AFTER both results, not between them.
+      batch,
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new FakeOrchestrator({ status: "success", output: "ok" });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      maxRepeatedIdenticalToolCalls: 2,
+      maxStallRecoveries: 1,
+    });
+    await runOne(runtime, store, events);
+
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+
+    // The recovery observation must still be injected (the fix moves it, not removes it).
+    const stallIdx = messages.findIndex(
+      (m) => m.role === "system" && m.content.startsWith("[stall recovery"),
+    );
+    expect(stallIdx, "the stall observation was not injected at all").toBeGreaterThanOrEqual(0);
+
+    // ...but the batch's tool results must stay CONTIGUOUS behind their assistant
+    // message: every requested id answered before any non-tool message appears.
+    const assistantIdx = messages.findIndex(
+      (m) => m.role === "assistant" && (m.toolCalls?.length ?? 0) === 2,
+    );
+    expect(assistantIdx, "the two-call assistant message was not persisted").toBeGreaterThanOrEqual(0);
+    const requested = new Set(messages[assistantIdx]!.toolCalls!.map((c) => c.id));
+    const answered = new Set<string>();
+    let cursor = assistantIdx + 1;
+    while (cursor < messages.length && messages[cursor]!.role === "tool") {
+      const id = messages[cursor]!.toolCallId;
+      if (id !== undefined) answered.add(id);
+      cursor += 1;
+    }
+    for (const id of requested) {
+      expect(
+        answered.has(id),
+        `tool_call ${id} has no tool result adjacent to its assistant message — the tool block was split`,
+      ).toBe(true);
+    }
+
+    // And the observation lands AFTER the whole block, not inside it.
+    expect(
+      stallIdx,
+      "the stall observation was injected INSIDE the tool-result block",
+    ).toBeGreaterThan(cursor - 1);
+  });
+
+  it("P2-42/PROTOCOL: an adaptive-recovery observation must not precede its own tool result", async () => {
+    // A SECOND, independent source of the same wire-protocol violation.
+    // `ToolCallController.executeToolCalls` appends its adaptive-recovery
+    // observation while the tool is still being EXECUTED — after the assistant
+    // message carrying `tool_calls` was persisted (model-call-controller) but
+    // BEFORE `handleToolResults` persists the `tool` result. That yields
+    //   assistant(tool_calls) -> system(recovery) -> tool(...)
+    // which the same strict upstream rejects. This one needs only ONE tool call.
+    const provider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("flaky", { op: "x" }),
+      ScriptedModelProvider.text("done"),
+    ]);
+    const orch = new FakeOrchestrator({
+      status: "failed",
+      error: errorInfo("INTERNAL_ERROR", "flaky failed"),
+    });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      adaptiveRecovery: new AdaptiveRecoveryPlanner(),
+      maxToolCalls: 8,
+    });
+    await runOne(runtime, store, events);
+
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    const assistantIdx = messages.findIndex(
+      (m) => m.role === "assistant" && (m.toolCalls?.length ?? 0) === 1,
+    );
+    expect(assistantIdx, "the assistant message was not persisted").toBeGreaterThanOrEqual(0);
+    const requestedId = messages[assistantIdx]!.toolCalls![0]!.id;
+
+    // The message immediately after the assistant tool_calls must be its tool
+    // result — nothing may be interleaved.
+    const next = messages[assistantIdx + 1]!;
+    expect(
+      next.role === "tool" && next.toolCallId === requestedId,
+      `the message right after the assistant tool_calls must be its tool result, got role="${next.role}"`,
+    ).toBe(true);
+
+    // The observation must still be injected — but strictly AFTER its result.
+    const observationIdx = messages.findIndex(
+      (m) => m.role === "system" && m.content.startsWith("[recovery:"),
+    );
+    expect(observationIdx, "the recovery observation was not injected at all").toBeGreaterThanOrEqual(0);
+    expect(
+      observationIdx,
+      "the recovery observation was injected BEFORE its own tool result",
+    ).toBeGreaterThan(assistantIdx + 1);
+  });
+
+  it("P2-41/PROTOCOL: a runtime-internal update_plan call is answered in a multi-call batch", async () => {
+    const plan = { id: newToolCallId(), name: "update_plan", args: { mutations: [{ op: "set_plan", steps: ["x"] }] } };
+    const echo = { id: newToolCallId(), name: "echo", args: { text: "hi" } };
+    const batch: ModelEvent[] = [
+      { type: "started", timestamp: 0 },
+      { type: "tool_call_delta", toolCall: plan, timestamp: 0 },
+      { type: "tool_call_delta", toolCall: echo, timestamp: 0 },
+      { type: "completed", result: { finishReason: "tool_calls", toolCalls: [plan, echo] }, timestamp: 0 },
+    ];
+    const provider = new ScriptedModelProvider([batch, ScriptedModelProvider.text("done")]);
+    const orch = new FakeOrchestrator({ status: "success", output: "ok" });
+    const { runtime, store, events } = makeRuntime(provider, orch, {});
+    await runOne(runtime, store, events);
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    const assistantIdx = messages.findIndex((m) => m.role === "assistant" && (m.toolCalls?.length ?? 0) === 2);
+    expect(assistantIdx).toBeGreaterThanOrEqual(0);
+    const requested = messages[assistantIdx]!.toolCalls!.map((c) => c.id);
+    const answered = new Set<string>();
+    let cursor = assistantIdx + 1;
+    while (cursor < messages.length && messages[cursor]!.role === "tool") {
+      const id = messages[cursor]!.toolCallId;
+      if (id !== undefined) answered.add(id);
+      cursor += 1;
+    }
+    for (const id of requested) {
+      expect(answered.has(id), `tool_call ${id} has no adjacent tool result`).toBe(true);
+    }
+  });
+
+  it("P2-41/PROTOCOL: a parked ask_user turn does not leave an unanswered tool_call", async () => {
+    const provider = new ScriptedModelProvider([
+      ScriptedModelProvider.toolCall("ask_user", { question: "q?", reason: "choice_required" }),
+    ]);
+    const { runtime, store, events } = makeRuntime(provider, new FakeOrchestrator(), { maxIterationsPerTurn: 1 });
+    const { session, outcome } = await runOne(runtime, store, events);
+    expect(outcome.status).toBe("waiting_for_user");
+    const messages = await store.listMessages(session.id);
+    const assistantIdx = messages.findIndex((m) => m.role === "assistant" && (m.toolCalls?.length ?? 0) === 1);
+    expect(assistantIdx).toBeGreaterThanOrEqual(0);
+    const next = messages[assistantIdx + 1];
+    expect(next?.role, "message after assistant(tool_calls) must be its tool result").toBe("tool");
+  });
+
+  it("P2-41/PROTOCOL: a tool budget reached mid-batch does not leave later tool_calls unanswered", async () => {
+    const a = { id: newToolCallId(), name: "echo", args: { text: "a" } };
+    const b = { id: newToolCallId(), name: "echo", args: { text: "b" } };
+    const c = { id: newToolCallId(), name: "echo", args: { text: "c" } };
+    const batch: ModelEvent[] = [
+      { type: "started", timestamp: 0 },
+      { type: "tool_call_delta", toolCall: a, timestamp: 0 },
+      { type: "tool_call_delta", toolCall: b, timestamp: 0 },
+      { type: "tool_call_delta", toolCall: c, timestamp: 0 },
+      { type: "completed", result: { finishReason: "tool_calls", toolCalls: [a, b, c] }, timestamp: 0 },
+    ];
+    const provider = new ScriptedModelProvider([batch, ScriptedModelProvider.text("done")]);
+    const orch = new FakeOrchestrator({ status: "success", output: "ok" });
+    const { runtime, store, events } = makeRuntime(provider, orch, { maxToolCalls: 1 });
+    await runOne(runtime, store, events);
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    const assistantIdx = messages.findIndex((m) => m.role === "assistant" && (m.toolCalls?.length ?? 0) === 3);
+    expect(assistantIdx).toBeGreaterThanOrEqual(0);
+    const requested = messages[assistantIdx]!.toolCalls!.map((cc) => cc.id);
+    const answered = new Set<string>();
+    let cursor = assistantIdx + 1;
+    while (cursor < messages.length && messages[cursor]!.role === "tool") {
+      const id = messages[cursor]!.toolCallId;
+      if (id !== undefined) answered.add(id);
+      cursor += 1;
+    }
+    for (const id of requested) {
+      expect(answered.has(id), `tool_call ${id} has no adjacent tool result`).toBe(true);
+    }
+    assertToolProtocol(messages);
+  });
+
+  it("P2-41/PROTOCOL: a turn that fails after the model streamed tool_calls does not leave them unanswered", async () => {
+    const c1 = { id: newToolCallId(), name: "echo", args: { text: "a" } };
+    const c2 = { id: newToolCallId(), name: "echo", args: { text: "b" } };
+    const provider = new ScriptedModelProvider([
+      [
+        { type: "started", timestamp: 0 },
+        { type: "tool_call_delta", toolCall: c1, timestamp: 0 },
+        { type: "tool_call_delta", toolCall: c2, timestamp: 0 },
+        { type: "completed", result: { finishReason: "error", error: errorInfo("MODEL_ERROR", "stream died") }, timestamp: 0 },
+      ],
+      ScriptedModelProvider.text("done"),
+    ]);
+    const { runtime, store, events } = makeRuntime(provider, new FakeOrchestrator(), {});
+    await runOne(runtime, store, events);
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    for (let i = 0; i < messages.length; i++) {
+      const m = messages[i]!;
+      if (m.role !== "assistant" || !m.toolCalls?.length) continue;
+      const ids = new Set(m.toolCalls.map((t) => t.id));
+      const seen = new Set<string>();
+      let j = i + 1;
+      while (j < messages.length && messages[j]!.role === "tool") {
+        if (messages[j]!.toolCallId) seen.add(messages[j]!.toolCallId!);
+        j += 1;
+      }
+      for (const id of ids) {
+        expect(seen.has(id), `tool_call ${id} has no adjacent tool result`).toBe(true);
+      }
+    }
+  });
+
+  it("P2-41/PROTOCOL: a stall termination mid-batch does not leave later tool_calls unanswered", async () => {
+    const a = { id: newToolCallId(), name: "echo", args: { text: "same" } };
+    const b = { id: newToolCallId(), name: "echo", args: { text: "other" } };
+    const batch: ModelEvent[] = [
+      { type: "started", timestamp: 0 },
+      { type: "tool_call_delta", toolCall: a, timestamp: 0 },
+      { type: "tool_call_delta", toolCall: b, timestamp: 0 },
+      { type: "completed", result: { finishReason: "tool_calls", toolCalls: [a, b] }, timestamp: 0 },
+    ];
+    const provider = new ScriptedModelProvider([batch, ScriptedModelProvider.text("done")]);
+    const orch = new FakeOrchestrator({ status: "success", output: "ok" });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      maxRepeatedIdenticalToolCalls: 1,
+      maxStallRecoveries: 0,
+      maxPatternStallRecoveries: 0,
+    });
+    const { outcome } = await runOne(runtime, store, events);
+    expect(outcome.status).toBe("failed");
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    const assistantIdx = messages.findIndex((m) => m.role === "assistant" && (m.toolCalls?.length ?? 0) === 2);
+    expect(assistantIdx).toBeGreaterThanOrEqual(0);
+    const requested = messages[assistantIdx]!.toolCalls!.map((cc) => cc.id);
+    const answered = new Set<string>();
+    let cursor = assistantIdx + 1;
+    while (cursor < messages.length && messages[cursor]!.role === "tool") {
+      const id = messages[cursor]!.toolCallId;
+      if (id !== undefined) answered.add(id);
+      cursor += 1;
+    }
+    for (const id of requested) {
+      expect(answered.has(id), `tool_call ${id} has no adjacent tool result`).toBe(true);
+    }
+  });
+
+  it("P2-41/PROTOCOL: a lone update_plan call is answered", async () => {
+    const plan = { id: newToolCallId(), name: "update_plan", args: { mutations: [{ op: "set_plan", steps: ["x"] }] } };
+    const provider = new ScriptedModelProvider([
+      [
+        { type: "started", timestamp: 0 },
+        { type: "tool_call_delta", toolCall: plan, timestamp: 0 },
+        { type: "completed", result: { finishReason: "tool_calls", toolCalls: [plan] }, timestamp: 0 },
+      ],
+      ScriptedModelProvider.text("done"),
+    ]);
+    const { runtime, store, events } = makeRuntime(provider, new FakeOrchestrator({ status: "success", output: "ok" }), {});
+    await runOne(runtime, store, events);
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    assertToolProtocol(messages);
+  });
+
+  it("P2-41/PROTOCOL: a stop finish_reason carrying tool_calls is answered", async () => {
+    const c1 = { id: newToolCallId(), name: "echo", args: { text: "a" } };
+    const provider = new ScriptedModelProvider([
+      [
+        { type: "started", timestamp: 0 },
+        { type: "tool_call_delta", toolCall: c1, timestamp: 0 },
+        { type: "completed", result: { finishReason: "stop", text: "truncated", toolCalls: [c1] }, timestamp: 0 },
+      ],
+      ScriptedModelProvider.text("done"),
+    ]);
+    const { runtime, store, events } = makeRuntime(provider, new FakeOrchestrator(), {});
+    await runOne(runtime, store, events);
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    assertToolProtocol(messages);
+  });
+
+  it("P2-41/PROTOCOL: a cancelled finish_reason carrying tool_calls is answered", async () => {
+    const c1 = { id: newToolCallId(), name: "echo", args: { text: "a" } };
+    const c2 = { id: newToolCallId(), name: "echo", args: { text: "b" } };
+    const provider = new ScriptedModelProvider([
+      [
+        { type: "started", timestamp: 0 },
+        { type: "tool_call_delta", toolCall: c1, timestamp: 0 },
+        { type: "tool_call_delta", toolCall: c2, timestamp: 0 },
+        { type: "completed", result: { finishReason: "cancelled", toolCalls: [c1, c2] }, timestamp: 0 },
+      ],
+      ScriptedModelProvider.text("done"),
+    ]);
+    const { runtime, store, events } = makeRuntime(provider, new FakeOrchestrator(), {});
+    await runOne(runtime, store, events);
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    assertToolProtocol(messages);
+  });
+
+  it("P2-41/PROTOCOL: an adaptive-recovery observation in a multi-call batch stays after the block", async () => {
+    const f1 = { id: newToolCallId(), name: "flaky", args: { op: "x" } };
+    const f2 = { id: newToolCallId(), name: "flaky", args: { op: "y" } };
+    const batch: ModelEvent[] = [
+      { type: "started", timestamp: 0 },
+      { type: "tool_call_delta", toolCall: f1, timestamp: 0 },
+      { type: "tool_call_delta", toolCall: f2, timestamp: 0 },
+      { type: "completed", result: { finishReason: "tool_calls", toolCalls: [f1, f2] }, timestamp: 0 },
+    ];
+    const provider = new ScriptedModelProvider([batch, ScriptedModelProvider.text("done")]);
+    const orch = new FakeOrchestrator({ status: "failed", error: errorInfo("INTERNAL_ERROR", "flaky failed") });
+    const { runtime, store, events } = makeRuntime(provider, orch, {
+      adaptiveRecovery: new AdaptiveRecoveryPlanner(),
+      maxToolCalls: 8,
+    });
+    await runOne(runtime, store, events);
+    const messages = await store.listMessages((await store.listSessions())[0]!.id);
+    assertToolProtocol(messages);
   });
 
   it("P2-42: adaptive recovery applies bounded change_strategy / delegate observations instead of only failing", async () => {
@@ -920,6 +1260,19 @@ describe("AgentRuntime (CORE-001)", () => {
     const delegateObs = messages.filter((m) => m.role === "system" && m.content.startsWith("[recovery:delegate_specialist]"));
     expect(strategyObs).toHaveLength(2);
     expect(delegateObs).toHaveLength(1);
+
+    // P2-42/PROTOCOL: counting the observations is not enough — they must also
+    // be ORDERED after their tool results (an observation interleaved into the
+    // block is what the upstream rejects).
+    assertToolProtocol(messages);
+    for (let i = 0; i < messages.length; i += 1) {
+      const message = messages[i]!;
+      if (message.role !== "system" || !message.content.startsWith("[recovery:")) continue;
+      expect(
+        messages[i - 1]?.role,
+        "an adaptive-recovery observation must directly follow a tool result, never an assistant tool_calls message",
+      ).toBe("tool");
+    }
 
     // The run still completes from the model's perspective (a tool failure is
     // surfaced to the model, not turned into an immediate turn failure).
@@ -1721,8 +2074,7 @@ describe("AgentRuntime (CORE-001)", () => {
     }
   });
 
-  it("message-history trim: within-budget history stays untouched (Phase 8)", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "rt-notrim-"));
+  it("message-history trim: within-budget history stays untouched (Phase 8)", async () => {    const cwd = await mkdtemp(join(tmpdir(), "rt-notrim-"));
     try {
       const provider = new ScriptedModelProvider([ScriptedModelProvider.text("done")]);
       const { runtime, store, events } = makeRuntime(provider, new FakeOrchestrator(), {

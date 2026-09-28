@@ -271,7 +271,41 @@ export class ModelCallController {
       usage: finalizeUsage(usage),
     }, turnId, { spanId: callId });
 
+    // P2-41/PROTOCOL: the assistant message above carries `tool_calls`, so the
+    // wire protocol requires one `tool` message per `tool_call_id` IMMEDIATELY
+    // after it — nothing may be interleaved and none may be missing. Every path
+    // below that does NOT hand these calls to the executor must therefore answer
+    // them first. Otherwise the NEXT request (this turn's next iteration, a
+    // later turn on the same session, or a resume) is rejected by a strict
+    // OpenAI-compatible upstream with HTTP 400 ("An assistant message with
+    // 'tool_calls' must be followed by tool messages responding to each
+    // 'tool_call_id'"). Previously the error/cancelled and parked-ask paths left
+    // the calls dangling, and the `stop` path could append a verification
+    // observation straight after them.
+    const settleUnexecutedToolCalls = async (
+      reason: (call: ToolCall) => string,
+    ): Promise<void> => {
+      for (const call of toolCalls) {
+        await this.deps.store.appendMessage({
+          id: newMessageId(),
+          sessionId,
+          turnId,
+          role: "tool",
+          content: reason(call),
+          toolCallId: call.id,
+          createdAt: this.deps.now(),
+        });
+      }
+    };
+
     if (final.finishReason === "stop") {
+      // A provider may report `stop` (or any non-`tool_calls` reason) while the
+      // stream still carried tool calls; those calls are NOT executed on this
+      // path, so they are settled before any verification observation is
+      // appended.
+      await settleUnexecutedToolCalls(
+        (call) => `[not executed] the model finished with "stop" after requesting "${call.name}"; no tool ran.`,
+      );
       await this.deps.failAt("verification.started", { sessionId, turnId });
       const verificationStartedAt = this.deps.now();
       const gate = await this.deps.runVerificationGate(ctx);
@@ -329,6 +363,13 @@ export class ModelCallController {
       return { action: "finish", outcome: await this.deps.finishTurn(ctx, "failed", state, working, info, "model_error", toolLedger) };
     }
     if (final.finishReason === "error" || final.finishReason === "cancelled") {
+      // P2-41/PROTOCOL: the stream died / was cancelled after it had already
+      // streamed tool calls. They are never executed on this path, so they must
+      // still be answered to keep the transcript protocol-valid.
+      await settleUnexecutedToolCalls(
+        (call) =>
+          `[not executed] the model call ended with "${final!.finishReason}" after requesting "${call.name}"; no tool ran.`,
+      );
       const info = final.error ?? errorInfo("MODEL_ERROR", `model finished with ${final.finishReason}`);
       await this.deps.emit(sessionId, "model.failed", { error: info }, turnId);
       return { action: "finish", outcome: await this.deps.finishTurn(ctx, "failed", state, working, info, "model_error", toolLedger) };
@@ -345,6 +386,16 @@ export class ModelCallController {
     // still NOT a fabricated side-effect error.
     const askCall = toolCalls.find((c) => c.name === ASK_GATE_TOOL);
     if (askCall !== undefined) {
+      // P2-41/PROTOCOL: the ask gate is a formal runtime PHASE — no tool
+      // executes. The assistant message still carries `tool_calls`, so every
+      // requested call (the ask and any sibling) is answered before parking;
+      // otherwise the resumed turn replays a dangling `tool_calls` block and the
+      // upstream rejects it.
+      await settleUnexecutedToolCalls((call) =>
+        call.name === ASK_GATE_TOOL
+          ? "[ask_user] the question was delivered to the user; the turn is parked awaiting their reply."
+          : `[not executed] the turn parked for user input before "${call.name}" ran.`,
+      );
       return { action: "finish", outcome: await this.deps.parkForUserInput(ctx, state, working, askCall, toolLedger) };
     }
     return { action: "proceed", toolCalls };
