@@ -187,25 +187,24 @@ async function phaseIdentity() {
 // The offline scripted provider (test host; no socket, no credential)
 // ---------------------------------------------------------------------------
 
-/** Turn one script step into the EXACT event shapes the runtime consumes.
- *  (`started` + `text_delta`/`tool_call_delta` + `completed` — copied from the
- *  arm's own `ScriptedModelProvider`, so the double cannot invent a protocol the
- *  real transports do not speak.) Every call reports usage, so the R2 cost
- *  journal has real measured tokens to attribute per arm. */
+/** One model CALL's event stream: EXACTLY ONE terminal `completed`, in the shapes
+ *  the arm's own `ScriptedModelProvider` emits (`started` + `text_delta` or
+ *  `tool_call_delta` + `completed`). Emitting two terminal events in one stream is
+ *  a protocol error the runtime retries, so a call emits exactly one step.
+ *  Every call reports usage, so the R2 cost journal has real measured tokens. */
 function* eventsForCall(steps, counter) {
+  const step = steps[0];
   yield { type: "started", timestamp: 0 };
-  for (const step of steps) {
-    if (step.tool !== undefined) {
-      counter.n += 1;
-      const toolCall = { id: `r5-call-${counter.n}`, name: step.tool.name, args: step.tool.args };
-      yield { type: "tool_call_delta", toolCall, timestamp: 0 };
-      yield { type: "usage", usage: { inputTokens: 12, outputTokens: 6 }, timestamp: 0 };
-      yield { type: "completed", result: { finishReason: "tool_calls", toolCalls: [toolCall] }, timestamp: 0 };
-    } else {
-      yield { type: "text_delta", text: step.text, timestamp: 0 };
-      yield { type: "usage", usage: { inputTokens: 12, outputTokens: 6 }, timestamp: 0 };
-      yield { type: "completed", result: { finishReason: "stop", text: step.text }, timestamp: 0 };
-    }
+  if (step.tool !== undefined) {
+    counter.n += 1;
+    const toolCall = { id: `r5-call-${counter.n}`, name: step.tool.name, args: step.tool.args };
+    yield { type: "tool_call_delta", toolCall, timestamp: 0 };
+    yield { type: "usage", usage: { inputTokens: 12, outputTokens: 6 }, timestamp: 0 };
+    yield { type: "completed", result: { finishReason: "tool_calls", toolCalls: [toolCall] }, timestamp: 0 };
+  } else {
+    yield { type: "text_delta", text: step.text, timestamp: 0 };
+    yield { type: "usage", usage: { inputTokens: 12, outputTokens: 6 }, timestamp: 0 };
+    yield { type: "completed", result: { finishReason: "stop", text: step.text }, timestamp: 0 };
   }
 }
 
@@ -215,9 +214,9 @@ function* eventsForCall(steps, counter) {
  * case from the real context (rather than a call counter) is what makes the tool
  * call genuinely bound to the case the runtime asked about.
  *
- * The FIRST call for a case emits that case's script; every FOLLOW-UP call for the
- * same case (the runtime asks again with the tool result) is a completing text,
- * so a turn cannot loop forever and the stream is always total.
+ * Per case, the caller's script is one call: the tool write (or the claim-only
+ * text). The FOLLOW-UP call (the runtime asks again with the tool result) gets a
+ * completing text, so a turn cannot loop and the stream is always total.
  */
 function createOfflineScriptedProvider({ caseScripts, transcript }) {
   const counter = { n: 0 };
@@ -236,18 +235,20 @@ function createOfflineScriptedProvider({ caseScripts, transcript }) {
           const callIndex = seen.get(caseId) ?? 0;
           seen.set(caseId, callIndex + 1);
           const variant = script?.variant ?? "text-only";
-          const steps =
-            callIndex === 0 && variant === "write" && script?.writeTarget != null
-              ? [
-                  { tool: { name: "write_file", args: { path: script.writeTarget.path, content: script.writeTarget.content } } },
-                  { text: `wrote ${script.writeTarget.path}` },
-                ]
-              : callIndex === 0 && variant === "wrong-path" && script?.writeTarget != null
-                ? [
-                    { tool: { name: "write_file", args: { path: `${script.writeTarget.path}.not-the-required-path`, content: script.writeTarget.content } } },
-                    { text: "wrote somewhere else" },
-                  ]
-                : [{ text: "nothing further to do" }];
+          let steps;
+          if (callIndex === 0 && variant === "write" && script?.writeTarget != null) {
+            steps = [
+              { tool: { name: "write_file", args: { path: script.writeTarget.path, content: script.writeTarget.content } } },
+            ];
+          } else if (callIndex === 0 && variant === "wrong-path" && script?.writeTarget != null) {
+            steps = [
+              { tool: { name: "write_file", args: { path: `${script.writeTarget.path}.not-the-required-path`, content: script.writeTarget.content } } },
+            ];
+          } else if (callIndex <= 1 && variant === "write") {
+            steps = [{ text: `wrote ${script?.writeTarget?.path ?? "the artifact"}` }];
+          } else {
+            steps = [{ text: "nothing further to do" }];
+          }
           transcript.push({ callIndex, caseId, variant, strength: script?.strength ?? null, contentMode: script?.contentMode ?? null, chars: text.length });
           yield* eventsForCall(steps, counter);
         },
