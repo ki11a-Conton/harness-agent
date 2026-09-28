@@ -12,9 +12,12 @@ Nothing here is inferred from a source string alone, and no unobserved value is 
 | Delete `plan(20260926-175819).md` from remote `main` | **DONE, PUSHED** | `e1e4a637` |
 | Operator-declared relay pricing (paid path no longer refused on an unknown rate) | **DONE, PUSHED** | `433ef314` |
 | Task 4 step 1 — publish the baseline arm branch | **DONE, PUSHED** | branch `e4/n1-baseline-comparable` |
-| Task 4 steps 2–4 — re-pin the closed-loop default arm pair | **NOT STARTED** | — |
-| Task 3 — `strongPasses` is structurally `0` | **NOT STARTED** (root cause MEASURED, fix designed, see §3) | — |
-| CI on current `main` (`433ef314`) | **No step failed** — all test/gate/audit steps `success` on both platforms; the two big jobs were still finishing trailing upload steps at handover (§1.3) | — |
+| Task 4 steps 2–4 — re-pin the closed-loop default arm pair | **DONE** — see §10 | this round |
+| Task 3 — `strongPasses` is structurally `0` | **DONE (Design B)** — root cause re-measured and CONFIRMED; a false-positive `strong` found and fixed — see §10.2 | this round |
+| CI on current `main` (`433ef314`) | **WAS RED** on both platforms (`36325754535` @ `0f02327`) — `docs` gate failed: `HANDOVER.md` missing + `plan.md` dangling. **FIXED** — see §10.3 | this round |
+
+> **The two tasks in this document are closed.** §2 and §3 remain as the analysis that was handed
+> over; the round that finished them is recorded in **§10** below, with its own measured evidence.
 
 Read §1.3: earlier runs show as `cancelled` because pushes landed minutes apart and the concurrency group
 supersedes the in-flight run. That is *superseded*, not *failed*.
@@ -412,3 +415,89 @@ The relay API key and a GitHub token both appeared **in plaintext in the convers
 `git grep` confirms **neither is written to any tracked file or artifact**, but both are outside the
 user's control boundary now. **Rotate both.** Pass them via environment variables or a URL only, never in
 a committed file, and never in a commit message.
+
+## 10. The round that finished Tasks 3 and 4
+
+Platform: Windows 10 / PowerShell 7, Node `v24.18.1`. No paid request was made; `providerCalls=0`.
+
+### 10.1 Task 4 — the arm pair is re-pinned, and the loop is measured green on it
+
+All four sites from §2.2 moved to `8265dc39` / `ee15e7e7`, and nothing else: the R87/R92 production
+constants, the R87 mechanism fixtures, the committed `e4-r87/r88/r90-phase-a-manifest.json` records, the
+frozen selection payload and the historical reports were all left alone.
+
+MEASURED ancestry — this decides whether a fetch is needed, and §1.1's expectation was checked rather
+than assumed: `ee15e7e7` **is** an ancestor of the current tree; `8265dc39` is **not**, which is exactly
+why it needs the published branch `e4/n1-baseline-comparable` and CI's `fetch-depth: 0`.
+
+```powershell
+node scripts/e4/r97-closed-loop.mjs --all --out .ci/n1/closed-loop-final --arms-root "$env:TEMP/r97-arms-n1-final"
+# [1/5] setup OK · [2/5] acceptance OK status=OFFLINE_ACCEPTED passes=6/16
+# [3/5] suite OK 564/564 · [4/5] matrix OK 9/9 · [5/5] identity OK    (exit 0)
+```
+
+`closed-loop-identity.json` binds the run to the arms actually built —
+`armBaselineSha=8265dc39…`, `armCandidateSha=ee15e7e7…` — and the D6/R101 assertions pass against them
+(`r97-driver-closed-loop.test.ts` → **77 passed (77)**).
+
+**The open semantic question in §2.3 was checked, not assumed.** `git grep` for
+`e9776ba|a203737|progress-blind|pre-R86` in that file now returns nothing, and the whole file passes
+against the new pair, so no test encodes R87-mechanism semantics that the re-pin breaks. **No assertion
+was loosened.**
+
+One environment note that cost a run and is worth knowing: this machine has stale arm checkouts at
+`D:/r97-arm-baseline` / `D:/r97-arm-candidate` built at the OLD revisions. With `R97_ARM_*_DIR` unset the
+D6 test falls back to those paths, finds a real CLI, and then fails on the SHA assertion — correctly, but
+confusingly. The runner sets the variables itself, so CI is unaffected; set them explicitly when running
+that file by hand.
+
+### 10.2 Task 3 — `strongPasses=0` re-measured, declared, and a false-positive `strong` fixed
+
+§3.2's conclusion is **CONFIRMED** by sweeping all 96 `benchmarks/**/case.json` with the seam's own
+exported `writeTargetOf`/`passStrengthOf`:
+
+| Claim from §3 | Verdict |
+|---|---|
+| the frozen 8 contains no `strong` case | **CONFIRMED** — 3 `weak` + 5 `null` |
+| exactly 3 cases in the tree can be `strong` | **CONFIRMED — after the fix below** (4 before) |
+| 15 cases carry a literal but no artifact verifier | CONFIRMED |
+
+Design **B** was taken (declare the structural limitation, cite the numbers) rather than Design A: the
+zero is structural for a digest-bound set that must not be edited, so a second case set would add a
+parallel selection and digest machinery for a number that would still be 0 for the frozen set. The N1
+report now states this in §11.2 with the measured partition.
+
+**The defect the measurement exposed — a false-positive `strong`.** `writeTargetOf` recovered the
+expected bytes with `/!==\s*'([^']*)'/`; the `*` also matched the emptiness test `l.trim() !== ''`. So
+`benchmarks/baseline-e4-r74/stress-10-subagents` — requirement: *"at least 10 non-empty lines"* — was
+recovered as `content: ""` and labelled **`strong`**. Because the artifact verifier only checks
+`exists && touched`, that is a **strong pass on empty content**: the exact false pass this labelling
+exists to prevent. It was invisible for the frozen set (that case is not in it) and would have
+mis-reported any future case set containing it.
+
+Fixed by requiring a non-empty literal (`([^']+)`). Pinned by a new test that was proved
+**discriminating**: reverting the pattern makes it fail with
+`an empty literal must never become the written content: expected '' not to be ''`, and the file was
+restored byte-identically (sha256 `5a75c25d…` before and after). `r97-offline-seam.test.ts` →
+**18 passed (18)**.
+
+### 10.3 Also fixed: `main`'s two-platform CI was RED before any of the above
+
+§1.3 asked the next agent to confirm the current `main` run is green. It was **not**: run `36325754535`
+at `0f02327` failed on **both** platforms at *"Generate gate execution evidence"*, because the `docs`
+release gate was red:
+
+```
+FAIL  package count        HANDOVER.md does not claim a package count (packages/ on disk: 24)
+FAIL  current plan entry   plan.md references plan(20260926-070459).md but that spec file is missing
+```
+
+`a322a21` deleted **both** `HANDOVER.md` and the spec `plan.md` still pointed at — one check had no
+document to read, the other had a dangling pointer. Fixed by restoring `HANDOVER.md` (still truthful:
+24 packages on disk, no volatile SHA in its canonical section) and removing the dangling `plan.md`, the
+state `docs:verify`'s E4-00 check treats as an honest PASS. `pnpm docs:verify` → **ALL CHECKS PASS**;
+`docs-verify.test.ts` → **19 passed (19)**.
+
+§5's stale digest comment (`227d00b6…`) was corrected to the real `0d8af323…`; that string now appears
+nowhere in the repository except in §5 itself, which documents it as the stale value.
+

@@ -4,7 +4,7 @@
  * 命中了目标路径，才进入真实请求授权门。").
  *
  * The frozen selection (`docs/evidence/e4-r87-case-selection.json`, schema
- * `e4-r87-case-selection-v1`, digest 227d00b6…) was committed BEFORE any replay
+ * `e4-r87-case-selection-v1`, digest 0d8af323…) was committed BEFORE any replay
  * executed; this suite refuses to run on a digest mismatch (plan §R87 #2/#5).
  *
  * Arms:

@@ -131,6 +131,9 @@ succeeded (`exit 0`).
 
 ## 9. Residual limits
 
+> **Items 1 and 2 were closed by the follow-up round recorded in §10.** They are left as written
+> (they were true when this report was produced) with pointers to §10, rather than rewritten.
+
 1. **The default pair is still the illegal one.** `DEFAULT_BASELINE_SHA`/`DEFAULT_CANDIDATE_SHA` remain
    `e9776ba`/`a203737`, and `r97-driver-closed-loop.test.ts` hardcodes them at lines 1683–1684 (D6) and
    1775–1776 (R101). The legal pair therefore exists only as an explicit argument. Re-pinning it plus a
@@ -138,8 +141,13 @@ succeeded (`exit 0`).
    job's arm env) that this round did not make. Until it is made, the configured path stays
    `BLOCKED: NO_REAL_ARM_PAIR` and CI's closed-loop job still prepares ABI-less arms — I did **not**
    measure whether that job currently passes or fails, so its status is unproven either way.
+   → **CLOSED, see §10.1**: the pair is now re-pinned to `8265dc39`/`ee15e7e7` at all four sites, and
+   the full closed loop was measured green with those arms.
 2. **`strongPasses=0`.** The real chain runs, but no case is strongly verified offline. N1's "at least one
    valid offline case" is therefore PARTIAL, and a stronger case (or a real model) is needed to close it.
+   → **CLOSED as a declared limitation with measured numbers, see §10.2**: the zero is structural for the
+   frozen selection (3 artifact-only `weak` + 5 command-only `null`), and a false-positive `strong` was
+   found and fixed while measuring it.
 3. **The pair is not a controlled single-mechanism experiment.** `1f3df072` differs from HEAD by the whole
    N0–N1/N4/N5/N6/N7 stack, not by one mechanism. Plan line 41 asks for the expected single mechanism
    difference plus equivalence of everything else to be recorded; that is not satisfied by this pair.
@@ -166,3 +174,97 @@ node scripts/e4/r97-closed-loop.mjs --acceptance --arms-root "$env:TEMP\r97-arms
 
 Artifacts (all gitignored under `.ci/`): `.ci/n1/acceptance-summary.RED.json` (the RED), `.ci/n1b/acceptance/`
 (the GREEN), `.ci/n1/d6-real-arms.log`, `.ci/n1/observe-arms.log`, `.ci/n1/1-full.log`.
+
+## 11. Follow-up round: the two unfinished items closed
+
+This section closes the handover `docs/evidence/E4-N1-remaining-handover.md` §2 (Task 4, arm re-pin)
+and §3 (Task 3, `strongPasses`). Platform: Windows 10 / PowerShell 7, Node `v24.18.1`.
+
+### 11.1 Task 4 — the default arm pair is re-pinned to the comparable pair
+
+Four sites moved, exactly the set the handover enumerated; the R87/R92 mechanism constants and the
+committed historical manifests were **not** touched:
+
+| Site | Was | Now |
+|---|---|---|
+| `scripts/e4/r97-observe-arms.mjs` (`DEFAULT_*_SHA`) | `e9776ba` / `a203737` | `8265dc39` / `ee15e7e7` |
+| `packages/evaluation/src/r97-driver-closed-loop.test.ts` (D6 observed-SHA) | same old pair | same new pair |
+| `packages/evaluation/src/r97-driver-closed-loop.test.ts` (R101 defaults) | same old pair | same new pair |
+| `.github/workflows/ci.yml` (`R97_ARM_*_SHA`) | same old pair | same new pair |
+
+MEASURED ancestry, which is why one of the two needs a branch: `ee15e7e7` **is** an ancestor of the
+current tree, `8265dc39` is **not** — it is published on the remote branch `e4/n1-baseline-comparable`,
+and CI checks out with `fetch-depth: 0`.
+
+**Verification (the D6 path needs two REAL arm builds, not a string edit):**
+
+```powershell
+node scripts/e4/r97-closed-loop.mjs --all --out .ci/n1/closed-loop --arms-root "$env:TEMP/r97-arms-n1"
+# [1/5] setup OK · [2/5] acceptance OK status=OFFLINE_ACCEPTED passes=6/16
+# [3/5] suite OK 563/563 · [4/5] matrix OK 9/9 · [5/5] identity OK   (exit 0)
+```
+
+`closed-loop-identity.json` records the arms actually built —
+`armBaselineSha=8265dc39…`, `armCandidateSha=ee15e7e7…` — so the pair is bound to the run rather than
+to the caller's declaration. The D6 and R101 assertions were then run against those freshly built arms
+(`R97_ARM_BASELINE_DIR`/`R97_ARM_CANDIDATE_DIR`): **`r97-driver-closed-loop.test.ts` 77 passed (77),
+exit 0**, including *"both arms are observed by the real CLI dry-run and the plan FINALIZES"* and
+*"R101: the arm-setup command EXISTS and agrees with the SHAs this file asserts"*.
+
+The open semantic question the handover flagged (`:1685` asserts the arms produce **different**
+`planDigest` values; other tests might assume the baseline is the progress-blind pre-R86 revision) was
+checked rather than assumed: `git grep` finds no `e9776ba`/`a203737`/`progress-blind`/`pre-R86`
+reference left in that file, and the whole file passes against the new pair. No assertion was loosened.
+
+### 11.2 Task 3 — `strongPasses=0` is structural, and a false-positive `strong` was found and fixed
+
+The handover's §3.2 conclusion is **CONFIRMED** by direct measurement over all 96 `benchmarks/**/case.json`
+files, using the seam's own exported `writeTargetOf`/`passStrengthOf` rather than re-reading the prose:
+
+| Claim | Verdict | Measured |
+|---|---|---|
+| the frozen 8-case selection contains no `strong` case | **CONFIRMED** | 3 `weak` + 5 `null`, 0 `strong` |
+| exactly 3 cases in the tree can be `strong` | **CONFIRMED after a fix** (4 before it, see below) | 3 |
+| 15 cases carry a literal but no artifact verifier (so `null` before the literal is read) | CONFIRMED | 15 |
+
+So `strongPasses === 0` for the frozen selection is **structural**, and this report declares it as such
+(Design B) rather than editing the digest-bound frozen selection, whose digest `0d8af323…` is a
+production constant and is referenced by three committed historical manifests.
+
+**The defect the measurement exposed.** `writeTargetOf` recovered the artifact's expected bytes with
+`/!==\s*'([^']*)'/`. The `*` also matched the ubiquitous emptiness test `l.trim() !== ''`, so
+`benchmarks/baseline-e4-r74/stress-10-subagents` — whose real requirement is *"at least 10 non-empty
+lines"* — was recovered as `content: ""` and classified **`strong`**. Since the artifact verifier only
+checks `exists && touched`, that combination yields a **strong pass on empty content**: precisely the
+false pass the strong/weak labelling exists to prevent. It was invisible for the frozen set (that case
+is not in it) and would have mis-reported a future case set that included it.
+
+Fixed by requiring a non-empty literal (`([^']+)`); such a case now correctly falls through to the
+labelled banner and is `weak`. Measured effect: the tree went from **4** cases classified `strong`
+to **3**, matching the handover's count. Pinned by a new test
+(`r97-offline-seam.test.ts` → *"REFUSES an EMPTY literal — an emptiness test is not the case's expected
+bytes"*), which was proved **discriminating** rather than merely green: reverting the pattern to
+`([^']*)` makes it fail with
+`an empty literal must never become the written content: expected '' not to be ''`, and the source was
+restored byte-identically (sha256 `5a75c25d1c744c07347b1bdaea4183c9c476ac0dd033f80fa04221ff72a25a03`
+before and after). `r97-offline-seam.test.ts` → **18 passed (18)**.
+
+### 11.3 Also fixed: main's two-platform CI was red before any of this
+
+The handover's "first action" was to confirm the current `main` run is green. It was **not**: run
+`36325754535` at `0f02327` failed on **both** platforms at the same step, *"Generate gate execution
+evidence (P38.2-4/10, E4-R09 unified V2)"*, whose real cause is the `docs` release gate:
+
+```
+FAIL  package count          HANDOVER.md does not claim a package count (packages/ on disk: 24)
+FAIL  current plan entry     plan.md references plan(20260926-070459).md but that spec file is missing
+```
+
+`a322a21` deleted **both** `HANDOVER.md` and the spec that `plan.md` still pointed at, leaving one
+doc-truth check with no document to read and the other with a dangling pointer. Fixed by restoring
+`HANDOVER.md` (its content is still truthful: 24 packages on disk, no volatile SHA in its canonical
+section) and removing the dangling `plan.md`, which is the state the `docs:verify` E4-00 check treats
+as an honest PASS ("no plan.md — no in-progress plan"). Reproduced and verified locally:
+`pnpm docs:verify` → **ALL CHECKS PASS**; `apps/cli/src/docs-verify.test.ts` → **19 passed (19)**.
+
+

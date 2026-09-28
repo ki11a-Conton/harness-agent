@@ -1679,9 +1679,10 @@ describe("E4-R97 D6: the REAL two-arm observation produces a FINALIZED plan", ()
       endpointBaseUrl: "https://api.openai.com/v1",
     });
 
-    // The two arms are REAL, DISTINCT revisions.
-    expect(observations["baseline"]!.sourceSha).toBe("e9776ba66190ea63b1bacb685c91aa900b6935e7");
-    expect(observations["candidate"]!.sourceSha).toBe("a20373743b56de6a3a110fecdd254737ece71afa");
+    // The two arms are REAL, DISTINCT revisions — N1's comparable pair, the same
+    // pair `r97-observe-arms.mjs` defaults to and `ci.yml` binds.
+    expect(observations["baseline"]!.sourceSha).toBe("8265dc39f74b3d556e059bb86b1cc192357e21dd");
+    expect(observations["candidate"]!.sourceSha).toBe("ee15e7e7c65d9f62b5fc92d4d5cb69c97a3925fd");
     expect(observations["baseline"]!.planDigest).not.toBe(observations["candidate"]!.planDigest);
 
     // Both were clean checkouts, so the digest describes the build on disk.
@@ -1771,9 +1772,10 @@ describe("E4-R97 D6: the REAL two-arm observation produces a FINALIZED plan", ()
     };
 
     // ONE source of truth for the revisions: the script's defaults must be the
-    // exact SHAs the acceptance test above asserts against.
-    expect(setup.DEFAULT_BASELINE_SHA).toBe("e9776ba66190ea63b1bacb685c91aa900b6935e7");
-    expect(setup.DEFAULT_CANDIDATE_SHA).toBe("a20373743b56de6a3a110fecdd254737ece71afa");
+    // exact SHAs the acceptance test above asserts against. These are N1's
+    // comparable pair (see `r97-observe-arms.mjs` for why they moved).
+    expect(setup.DEFAULT_BASELINE_SHA).toBe("8265dc39f74b3d556e059bb86b1cc192357e21dd");
+    expect(setup.DEFAULT_CANDIDATE_SHA).toBe("ee15e7e7c65d9f62b5fc92d4d5cb69c97a3925fd");
 
     // The environment variable NAMES must be the ones this file reads, or the
     // setup command would publish variables the test ignores.

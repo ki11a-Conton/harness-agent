@@ -901,9 +901,13 @@ jobs:
       # out either — a matrix job must not reintroduce one, not even in prose.
       OPENAI_API_KEY: ""
       RUN_PAID_BENCHMARKS: ""
-      # The historical arm revisions, quoted so YAML cannot coerce them.
-      R97_ARM_BASELINE_SHA: "e9776ba66190ea63b1bacb685c91aa900b6935e7"
-      R97_ARM_CANDIDATE_SHA: "a20373743b56de6a3a110fecdd254737ece71afa"
+      # The closed loop's default arm revisions (N1's comparable pair), quoted so
+      # YAML cannot coerce them. R101 asserts this file literally contains the
+      # `r97-observe-arms.mjs` defaults, so this line moves WITH those defaults —
+      # it is not an independent copy. `8265dc39` is not an ancestor of this
+      # commit, so it is fetched from the branch `e4/n1-baseline-comparable`.
+      R97_ARM_BASELINE_SHA: "8265dc39f74b3d556e059bb86b1cc192357e21dd"
+      R97_ARM_CANDIDATE_SHA: "ee15e7e7c65d9f62b5fc92d4d5cb69c97a3925fd"
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4

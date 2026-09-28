@@ -352,6 +352,33 @@ describe("E4-R101-A (T6) C5: a pass is labelled STRONG or WEAK, never just 'pass
     expect(exec.passStrengthOf(target)).toBe("strong");
   });
 
+  it("REFUSES an EMPTY literal — an emptiness test is not the case's expected bytes", async () => {
+    // MEASURED DEFECT: the recovery pattern was `!==\s*'([^']*)'`, whose `*` also
+    // matched the ubiquitous emptiness test `l.trim() !== ''`. That made
+    // `benchmarks/baseline-e4-r74/stress-10-subagents` — a case whose real
+    // requirement is "at least 10 non-empty lines" — recover `content: ""` and be
+    // labelled STRONG. An empty artifact cannot satisfy a case that demands bytes,
+    // and the artifact verifier only checks `exists && touched`, so the old pattern
+    // produced a strong pass on empty content: the exact false pass this labelling
+    // exists to prevent. A case with only an empty literal must be WEAK (it gets the
+    // labelled banner), and its written content must be non-empty.
+    const def = await caseJson("baseline-e4-r74/stress-10-subagents");
+    const target = exec.writeTargetOf(def, { caseId: "baseline-e4-r74/stress-10-subagents" });
+    expect(target, "an artifact-bearing case must still get a write target").not.toBeNull();
+    expect(target?.content, "an empty literal must never become the written content").not.toBe("");
+    expect(target?.contentSource).toBe("offline-banner");
+    expect(exec.passStrengthOf(target)).toBe("weak");
+    // And the case really does contain an empty-string comparison, so this test is
+    // about a real shape rather than a hypothetical one. `caseJson` returns a loose
+    // record, so the shape is narrowed explicitly here rather than left as `any`.
+    const verification = (def["verification"] ?? []) as Array<{ kind?: string; args?: unknown[] }>;
+    const arg = verification
+      .filter((s) => s?.kind === "command")
+      .flatMap((s) => s.args ?? [])
+      .find((a) => typeof a === "string" && a.includes("!== ''"));
+    expect(arg, "the case no longer contains an empty-string comparison").toBeDefined();
+  });
+
   it("labels a banner-derived pass as weak", async () => {
     for (const rel of ARTIFACT_ONLY) {
       const target = exec.writeTargetOf(await caseJson(rel), { caseId: rel });

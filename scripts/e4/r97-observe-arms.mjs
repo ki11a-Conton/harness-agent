@@ -59,16 +59,33 @@ export const EXIT_SETUP_FAILED = 1;
 export const EXIT_CONFIG = 2;
 
 /**
- * The frozen revisions the R97 plan binds.
+ * The default revisions the closed loop prepares.
  *
- * These are the SAME two SHAs the CI job uses and the D6 test asserts against,
- * so a locally prepared pair and a CI-prepared pair describe the same
+ * These are the SAME two SHAs the CI job uses and the D6/R101 tests assert
+ * against, so a locally prepared pair and a CI-prepared pair describe the same
  * experiment. They are defaults, never a hard requirement: `--baseline` /
  * `--candidate` override them, which is what makes the script usable for a
  * future campaign without editing code.
+ *
+ * THE N1 COMPARABLE PAIR (re-pinned). These were `e9776ba`/`a203737` — the
+ * R87/R92 MECHANISM experiment's frozen pair (the pre-R86 progress-blind gate
+ * and the H2 fix). That pair is still load-bearing for the R87/R92 constants and
+ * the committed historical manifests, and those are deliberately NOT touched.
+ * But the closed loop only needs "two distinct real revisions" for its
+ * acceptance precondition, and the mechanism pair is not an ABI-comparable pair
+ * for the current tree — which is what made N1 unable to prepare a legal one.
+ * The pair below is N1's purpose-built comparable baseline/candidate
+ * (`8265dc39` / `ee15e7e7`).
+ *
+ * MEASURED ancestry, because it decides whether a fetch is needed:
+ * `ee15e7e7` IS an ancestor of the current tree, so it needs no branch;
+ * `8265dc39` is NOT, so it is published on the remote branch
+ * `e4/n1-baseline-comparable` and CI checks it out with `fetch-depth: 0`. The
+ * setup step verifies BOTH SHAs are present locally and treats a missing
+ * revision as a SETUP failure rather than fabricating an observation.
  */
-export const DEFAULT_BASELINE_SHA = "e9776ba66190ea63b1bacb685c91aa900b6935e7";
-export const DEFAULT_CANDIDATE_SHA = "a20373743b56de6a3a110fecdd254737ece71afa";
+export const DEFAULT_BASELINE_SHA = "8265dc39f74b3d556e059bb86b1cc192357e21dd";
+export const DEFAULT_CANDIDATE_SHA = "ee15e7e7c65d9f62b5fc92d4d5cb69c97a3925fd";
 
 /** The env vars the D6 test reads, named once so the printed advice and the test
  *  cannot drift apart. */

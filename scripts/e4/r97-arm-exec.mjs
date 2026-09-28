@@ -264,9 +264,21 @@ export function writeTargetOf(caseDef, ctx) {
     if (spec?.kind !== "command" || !Array.isArray(spec.args)) continue;
     // The fixture's inline node check compares against a literal; recover it
     // without executing anything.
+    //
+    // MEASURED DEFECT: the pattern must NOT accept an EMPTY literal. The previous
+    // `([^']*)` matched the ubiquitous emptiness test `l.trim() !== ''`, so
+    // `benchmarks/baseline-e4-r74/stress-10-subagents` — whose real requirement is
+    // "at least 10 non-empty lines" — was recovered as `content: ""` and labelled
+    // `strong`. Writing an empty artifact cannot satisfy a case that demands bytes,
+    // and the artifact verifier only checks `exists && touched`, so that combination
+    // produced a "strong" pass on empty content: precisely the false pass this
+    // labelling exists to prevent. `([^']+)` requires a real, non-empty expectation,
+    // which is what "the case's own command embeds the bytes the seam writes" means.
+    // An empty literal is not a recoverable expectation, so such a case correctly
+    // falls through to the labelled banner and is `weak`.
     for (const arg of spec.args) {
       if (typeof arg !== "string") continue;
-      const m = /!==\s*'([^']*)'/.exec(arg);
+      const m = /!==\s*'([^']+)'/.exec(arg);
       if (m !== null) {
         content = m[1];
         break;
