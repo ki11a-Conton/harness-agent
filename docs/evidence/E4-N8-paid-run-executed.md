@@ -103,3 +103,40 @@ authorization artifact was created, and no promotion was claimed.
 4. The relay does not publish rates, so no USD figure can be derived; only tokens are observable.
 5. Nothing here re-pins the repository's arm defaults (`e9776ba`/`a203737`), so the *prereg* path
    remains unable to prepare legal arms by default.
+
+---
+
+## 7. R6 update — **fixed / pending real-world verification**
+
+Appended 2026-09-28T19:17+08:00 by R6 (`task-4`, branch `e4/r6-protocol`). Sections 1–6 above are
+the historical record and were **not** modified. The 11148 root cause in §2 remains a hypothesis:
+no relay was contacted in this task and no new billed call was made.
+
+| item | value |
+|---|---|
+| fix commit | `13c00e0b476aab1a55b897d8427ef68bc2b8154c` (baseline before it: `a85db6dcf1004ef1159f62bc0a11de53247a296c`) |
+| status | **fixed (offline) / pending real-world verification** |
+| evidence | `docs/evidence/R6-wire-protocol-offline.md` |
+| platform | Windows 10 local only; Ubuntu/GitHub-Actions NOT RUN |
+
+What §6.1 ("the failing request body was not retained") is answered by, now:
+
+1. **The failing body can no longer be silently malformed.** The OpenAI-compatible provider
+   validates the SERIALIZED `messages` array immediately before `fetch`
+   (`packages/model/src/openai.ts`) and fails closed locally when the assistant `tool_calls` /
+   `tool` result pairing is not wire-legal: `MODEL_ERROR`, `retryable=false`, `safeToRetry=false`,
+   `provider.kind="protocol"`, **physical HTTP = 0**, and `decideModelRetry` will not resend it.
+   The old `isToolProtocolValid`/`assertToolProtocol` only detected MISSING results; orphan,
+   duplicate, extra, duplicate-call-id, no-id and interleaved shapes passed them (reproduced RED at
+   the baseline SHA: 4 failed | 4 passed).
+2. **The next real 400 is diagnosable from the run artifact.** Every non-OK provider response now
+   carries a redaction-safe diagnostic bundle in the error `evidence`: request structure (roles,
+   counts, byte sizes), tool call/result **ID correlation** (per id: name, result count, result
+   indexes, duplicated request), unanswered ids and orphan result indexes — the 11148 signature —
+   plus `status`, a stable `reason`, and endpoint/model **digests**. No key, no user content and no
+   tool output is retained (`redacted: true`, `contentRetained: false`).
+3. **What is still NOT proven:** whether `workbuddy-deepseek-v4.1-flash`'s 11148 would have been
+   refused locally by this check, and whether the stall-recovery injection in §2 was its actual
+   cause. That needs a real call against that alias, which this task deliberately did not make.
+   The claim is therefore **fixed / pending real-world verification**, not "verified in production".
+
