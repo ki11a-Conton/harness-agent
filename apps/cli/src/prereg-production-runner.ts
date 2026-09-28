@@ -72,7 +72,7 @@ import {
 } from "@ar/evaluation";
 import { stableStringify } from "@ar/evaluation";
 import { PROVIDER_DEFAULT_ENDPOINT_DIGEST } from "@ar/evaluation";
-import { createPreregArmExecutor, type FixtureCheckoutTrust } from "./prereg-arm-executor.js";
+import { createPreregArmExecutor, type FixtureCheckoutTrust, type TrustedBuildGrant } from "./prereg-arm-executor.js";
 import { resolveModelProvider } from "./provider.js";
 import { PRICING_PER_CALL_TOKEN_ENVELOPE, formalExecutionProfile, resolvePricingBasis } from "./prereg-execution-identity.js";
 import type { PreregRunnerAdapter } from "./prereg-command.js";
@@ -290,6 +290,16 @@ export interface ProductionPreregRunnerOptions {
    * is refused before the worker starts. Only a test composition root injects it.
    */
   trustedFixtureCheckouts?: FixtureCheckoutTrust;
+  /**
+   * R5 — the TEST-HOST trusted-build grant for the audited `trusted-build`
+   * posture. The release CLI passes NONE, and the mode is deliberately
+   * SELF-PROVING: a declared `trusted-build`/`no-os-network-sandbox`
+   * pre-registration is admitted when both real checkouts prove a clean git work
+   * tree at a 40-hex HEAD with resolving, DIFFERING execution closures. The grant
+   * adds PRECISE pins (canonical dir + HEAD + closure digest + entry hash) so a
+   * swapped SHA, a swapped directory or a swapped closure is refused by name.
+   */
+  trustedBuildGrant?: TrustedBuildGrant;
 }
 
 /**
@@ -354,6 +364,7 @@ export function createProductionPreregRunner(opts: ProductionPreregRunnerOptions
         ...(opts.trustedFixtureCheckouts === undefined
           ? {}
           : { trustedFixtureCheckouts: opts.trustedFixtureCheckouts }),
+        ...(opts.trustedBuildGrant === undefined ? {} : { trustedBuildGrant: opts.trustedBuildGrant }),
       });
       executors.set(key, runner);
     }

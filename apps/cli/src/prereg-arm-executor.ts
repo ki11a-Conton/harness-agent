@@ -106,9 +106,17 @@ export const PREREG_ARM_WORKER_REL = join("scripts", "e4", "prereg-arm-isolated-
 export const ARM_WORKER_RESULT_SENTINEL = "__PREREG_ARM_RESULT__";
 
 /** B3 — the isolation backends this executor can actually honour. A pre-registered
- *  experiment naming anything else is refused before any request. */
+ *  experiment naming anything else is refused before any request.
+ *
+ *  R5 adds the audited `trusted-build` posture: two REAL, git-pinned checkouts,
+ *  with NO OS network sandbox. The strength string says so in as many words, so
+ *  nothing downstream can read the mode as an isolation claim. */
 const SUPPORTED_ISOLATION: Record<string, readonly string[]> = {
   "process-exec": ["process"],
+  // R5 — the values of TRUSTED_BUILD_BACKEND_ID / TRUSTED_BUILD_STRENGTH
+  // (declared below; they cannot be referenced here, this map is initialized
+  // before them). The two are pinned together by a test.
+  "trusted-build": ["no-os-network-sandbox"],
 };
 
 /** B3 — the mechanism probe export every real arm build carries. */
@@ -198,6 +206,228 @@ export function isFixtureCheckoutTrust(value: unknown): value is FixtureCheckout
     value !== null &&
     (value as Record<PropertyKey, unknown>)[FIXTURE_CHECKOUT_TRUST_BRAND] === true
   );
+}
+
+// ---------------------------------------------------------------------------
+// R5 — the AUDITED TRUSTED-BUILD mode
+//
+// The fixture capability above answers "may this process run code the HARNESS
+// generated?". R5 needs the other question: "may this process run TWO REAL,
+// operator-built arms of this repository?" The answer is a DECLARED mode, not a
+// marker and not an env variable:
+//
+//   isolationBackendId = "trusted-build"
+//   isolationStrength  = "no-os-network-sandbox"
+//
+// Both strings live in the pre-registration artifact, so the mode is bound by the
+// artifact digest and by the authorization that names that digest: changing the
+// posture invalidates the approval. A marker file, an env var or a CLI flag
+// cannot switch it on — and the mode's own NAME states the honest limitation
+// (there is NO OS network sandbox behind it).
+//
+// What the mode enforces, immediately before the child starts:
+//
+//   1. BOTH checkouts are real git work trees at a 40-hex HEAD;
+//   2. BOTH are CLEAN (`git status --porcelain` empty);
+//   3. BOTH resolve their declared execution closure, and the two closures
+//      DIFFER (one build under two names is not a paired experiment);
+//   4. the entry the worker will load is a regular file, and it is hashed so the
+//      worker's own report can be compared against it;
+//   5. when the TEST HOST injected a `TrustedBuildGrant`, the canonical directory
+//      of each arm, its git HEAD, its closure digest and its entry hash all equal
+//      the pinned values — so a swapped directory, a swapped HEAD, a dirty tree
+//      or a swapped closure is refused HERE.
+// ---------------------------------------------------------------------------
+
+/** R5 — the declared isolation backend that means "audited real builds, no sandbox". */
+export const TRUSTED_BUILD_BACKEND_ID = "trusted-build";
+/** R5 — the honest strength: this mode claims NO OS network isolation. */
+export const TRUSTED_BUILD_STRENGTH = "no-os-network-sandbox";
+/** R5 — a checkout that cannot prove its git identity/closure is not trusted. */
+export const TRUSTED_BUILD_NOT_PROVEN = "TRUSTED_BUILD_NOT_PROVEN";
+
+/** R5 — the statement every trusted-build refusal and record carries. */
+export const TRUSTED_BUILD_NETWORK_SANDBOX = "none";
+
+/**
+ * R5 — the brand of the TEST-HOST-owned trusted-build capability.
+ * Module-private on purpose: no JSON/env/marker can fabricate one.
+ */
+const TRUSTED_BUILD_BRAND: unique symbol = Symbol("ar.cli.trustedBuildGrant");
+
+/** R5 — one arm checkout the test host pinned, with the identity it pinned. */
+export interface TrustedBuildPin {
+  readonly armId: "baseline" | "candidate";
+  /** Canonical (`realpath`) checkout directory. */
+  readonly dir: string;
+  /** The git HEAD observed when the grant was issued (40-hex). */
+  readonly gitHead: string;
+  /** The execution-closure digest observed at the same moment. */
+  readonly buildDigest: string;
+  /** The sha256 of the arm build entry observed at the same moment. */
+  readonly entrySha256: string;
+}
+
+/**
+ * R5 — a capability that says "these EXACT directories were the audited arm
+ * builds, at THESE git HEADs and THESE bytes". Not reachable from the production
+ * CLI: no env var, JSON field, marker file, port or flag produces it.
+ */
+export interface TrustedBuildGrant {
+  readonly [TRUSTED_BUILD_BRAND]: true;
+  readonly isolationBackendId: typeof TRUSTED_BUILD_BACKEND_ID;
+  readonly isolationStrength: typeof TRUSTED_BUILD_STRENGTH;
+  /** The honest capability statement: this grant proves NO network isolation. */
+  readonly networkSandbox: typeof TRUSTED_BUILD_NETWORK_SANDBOX;
+  readonly detail: string;
+  readonly pins: readonly TrustedBuildPin[];
+}
+
+function trustedBuildEntryRel(): string {
+  const rel = R97_ARM_BUILD_ENTRIES.find((e) => e.endsWith("benchmark-command.js"));
+  if (rel === undefined) throw new Error(`${ARM_WORKER_ENTRY_MISSING}: the shared arm build entry list names no benchmark-command.js`);
+  return rel;
+}
+
+/**
+ * R5 — pin the two real arm checkouts the TEST HOST audited. Every field is
+ * OBSERVED here, at issue time, so the executor can verify immediately before the
+ * worker starts that the tree it was pointed at is still the tree that was
+ * audited. A checkout that cannot establish its git identity or its build closure
+ * throws (fail closed): a grant for an unprovable tree is a grant for nothing.
+ */
+export function createTrustedBuildGrant(input: {
+  baselineDir: string;
+  candidateDir: string;
+}): TrustedBuildGrant {
+  const rel = trustedBuildEntryRel();
+  const pin = (armId: "baseline" | "candidate", dir: string): TrustedBuildPin => {
+    const real = realpathSync(dir);
+    const head = execFileSync("git", ["-C", real, "rev-parse", "HEAD"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    if (!/^[0-9a-f]{40}$/.test(head)) {
+      throw new Error(`${TRUSTED_BUILD_NOT_PROVEN}: ${real} is not a git work tree at a 40-hex HEAD (head=${head})`);
+    }
+    const entryPath = join(real, rel);
+    const st = lstatSync(entryPath);
+    if (!st.isFile() || st.isSymbolicLink()) {
+      throw new Error(`${ARM_WORKER_ENTRY_MISSING}: ${real} has no regular build entry ${rel}`);
+    }
+    return {
+      armId,
+      dir: real,
+      gitHead: head,
+      buildDigest: computeArmBuildDigestV1(real),
+      entrySha256: sha256Hex(readFileSync(entryPath, "utf8")),
+    };
+  };
+  const pins = [
+    pin("baseline", input.baselineDir),
+    pin("candidate", input.candidateDir),
+  ];
+  if (pins[0]!.buildDigest === pins[1]!.buildDigest) {
+    throw new Error(`${ARM_BUILD_IDENTICAL}: the two granted checkouts resolve to the SAME build digest — an experiment with one build is not a paired experiment`);
+  }
+  return Object.freeze({
+    [TRUSTED_BUILD_BRAND]: true as const,
+    isolationBackendId: TRUSTED_BUILD_BACKEND_ID,
+    isolationStrength: TRUSTED_BUILD_STRENGTH,
+    networkSandbox: TRUSTED_BUILD_NETWORK_SANDBOX,
+    detail:
+      "test-host-issued trusted-build grant: two AUDITED real checkouts pinned by canonical directory, git HEAD, execution-closure digest and entry hash. It proves WHAT runs, not that running it is safe — this build establishes NO OS network sandbox on Windows or Ubuntu.",
+    pins: Object.freeze(pins),
+  });
+}
+
+/** R5 — is this the real branded grant (not a look-alike object)? */
+export function isTrustedBuildGrant(value: unknown): value is TrustedBuildGrant {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as Record<PropertyKey, unknown>)[TRUSTED_BUILD_BRAND] === true
+  );
+}
+
+/** R5 — the verdict of the self-proving git/closure identity of ONE arm checkout. */
+interface ArmGitIdentity {
+  ok: boolean;
+  detail: string;
+  gitHead: string | null;
+  buildDigest: string | null;
+}
+
+/**
+ * R5 — prove the git/closure identity of ONE arm checkout. This is a CHECK, not a
+ * claim: an unreadable HEAD, a dirty tree or an unresolvable closure is a refusal.
+ * It is what removes the old dependence on the operator remembering
+ * `R97_ARM_REQUIRE_GIT=1`.
+ */
+function armGitIdentity(dir: string, armId: "baseline" | "candidate"): ArmGitIdentity {
+  const head = git(dir, ["rev-parse", "HEAD"]);
+  if (head === null || !/^[0-9a-f]{40}$/.test(head)) {
+    return { ok: false, detail: `the ${armId} checkout is not a git work tree at a 40-hex HEAD (head=${head === null ? "unreadable" : head})`, gitHead: null, buildDigest: null };
+  }
+  const porcelain = git(dir, ["status", "--porcelain"]);
+  if (porcelain === null || porcelain !== "") {
+    return { ok: false, detail: `the ${armId} checkout is DIRTY${porcelain === null ? " (git status unreadable)" : ""} — an arm must run from an exact, unmodified tree`, gitHead: head, buildDigest: null };
+  }
+  let buildDigest: string;
+  try {
+    buildDigest = computeArmBuildDigestV1(dir);
+  } catch {
+    return { ok: false, detail: `the ${armId} checkout's declared execution closure cannot be established`, gitHead: head, buildDigest: null };
+  }
+  return { ok: true, detail: "", gitHead: head, buildDigest };
+}
+
+/**
+ * R5 — verify the injected grant against the checkout this arm run is about to
+ * use. Every pinned field must still hold: a swapped directory, a swapped HEAD, a
+ * dirty tree, a swapped closure or a swapped entry is refused BEFORE the child
+ * starts. Refusals name the field, so the evidence says WHAT moved.
+ */
+function verifyTrustedBuildGrant(
+  grant: TrustedBuildGrant | undefined,
+  armId: "baseline" | "candidate",
+  armDir: string,
+  identity: ArmGitIdentity,
+): { trusted: boolean; detail: string } {
+  if (!isTrustedBuildGrant(grant)) {
+    return { trusted: false, detail: "no test-host trusted-build grant was injected into this executor" };
+  }
+  if (grant.isolationBackendId !== TRUSTED_BUILD_BACKEND_ID || grant.isolationStrength !== TRUSTED_BUILD_STRENGTH) {
+    return { trusted: false, detail: `the injected grant was issued for ${grant.isolationBackendId}/${grant.isolationStrength}, not the declared mode` };
+  }
+  let real: string;
+  try {
+    real = realpathSync(armDir);
+  } catch {
+    return { trusted: false, detail: `the ${armId} checkout path cannot be canonicalised` };
+  }
+  const pinned = grant.pins.find((p) => p.armId === armId);
+  if (pinned === undefined) {
+    return { trusted: false, detail: `the injected grant pins no ${armId} checkout` };
+  }
+  if (pinned.dir !== real) {
+    return { trusted: false, detail: `the ${armId} checkout is not the directory the grant pinned (a swapped checkout directory is not trusted)` };
+  }
+  if (identity.gitHead === null || identity.gitHead !== pinned.gitHead) {
+    return { trusted: false, detail: `the ${armId} checkout HEAD is ${identity.gitHead === null ? "unreadable" : identity.gitHead.slice(0, 12)}, not the granted ${pinned.gitHead.slice(0, 12)} (a swapped SHA is not trusted)` };
+  }
+  if (identity.buildDigest === null || identity.buildDigest !== pinned.buildDigest) {
+    return { trusted: false, detail: `the ${armId} checkout's build closure no longer matches the granted digest (a swapped closure is not trusted)` };
+  }
+  const rel = trustedBuildEntryRel();
+  try {
+    const entryPath = join(real, rel);
+    const st = lstatSync(entryPath);
+    if (!st.isFile() || st.isSymbolicLink()) return { trusted: false, detail: `the ${armId} arm build entry is not a regular file` };
+    if (sha256Hex(readFileSync(entryPath, "utf8")) !== pinned.entrySha256) {
+      return { trusted: false, detail: `the ${armId} arm build entry no longer matches the granted hash (a swapped entry is not trusted)` };
+    }
+  } catch {
+    return { trusted: false, detail: `the ${armId} checkout no longer resolves its declared build entry` };
+  }
+  return { trusted: true, detail: "" };
 }
 
 /**
@@ -472,6 +702,17 @@ export interface PreregArmExecutorDeps {
    * symlinked, upgrades nothing.
    */
   trustedFixtureCheckouts?: FixtureCheckoutTrust;
+  /**
+   * R5 — the TEST-HOST trusted-build grant for the audited `trusted-build` mode.
+   * Only `createTrustedBuildGrant` produces a value this option accepts. When it
+   * is supplied, the mode additionally requires every pinned field (canonical
+   * directory, git HEAD, closure digest, entry hash) to still hold.
+   *
+   * It is OPTIONAL because the mode is self-proving: a clean git work tree whose
+   * closure resolves is enough for the DECLARED audited posture. The grant is what
+   * makes "swapped SHA / swapped closure / swapped directory" refusals precise.
+   */
+  trustedBuildGrant?: TrustedBuildGrant;
 }
 
 /**
@@ -487,7 +728,6 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
   const profile = formalExecutionProfile(env);
   const workerPath = deps.workerPath ?? join(root, PREREG_ARM_WORKER_REL);
   const workerTimeoutMs = deps.workerTimeoutMs ?? 600_000;
-  const requireGit = env["R97_ARM_REQUIRE_GIT"] === "1";
 
   // The frozen selection is the ONLY source of `caseId -> suite`. It is read
   // once, lazily, so construction stays free of I/O.
@@ -533,20 +773,31 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
     // Pre-flight the entry the worker will load, and (when required) the git
     // identity of BOTH checkouts — all BEFORE any request leaves.
     const entry = armEntryPathOrRefuse(arm.armId, armDir);
+    // R5 — git identity is a property of the DECLARED mode, not of an env var the
+    // operator has to remember. `trusted-build` ALWAYS proves HEAD + clean tree +
+    // resolvable closure for BOTH arms; the legacy env flag is kept only as an
+    // extra strictness for the fixture posture.
+    const isTrustedBuild = backendId === TRUSTED_BUILD_BACKEND_ID && strength === TRUSTED_BUILD_STRENGTH;
+    const requireGit = isTrustedBuild || env["R97_ARM_REQUIRE_GIT"] === "1";
+    const identity = requireGit
+      ? armGitIdentity(armDir, arm.armId)
+      : { ok: true, detail: "", gitHead: null, buildDigest: armBuildDigest };
+    const counterpartArmId: "baseline" | "candidate" = arm.armId === "candidate" ? "baseline" : "candidate";
+    const counterpartIdentity = requireGit && isDir(otherDir)
+      ? armGitIdentity(otherDir, counterpartArmId)
+      : null;
     if (requireGit) {
-      for (const [id, dir] of [
-        [arm.armId, armDir],
-        [arm.armId === "candidate" ? "baseline" : "candidate", otherDir],
-      ] as const) {
-        if (!isDir(dir)) continue;
-        const head = git(dir, ["rev-parse", "HEAD"]);
-        const porcelain = git(dir, ["status", "--porcelain"]);
-        if (head === null || !/^[0-9a-f]{40}$/.test(head) || porcelain !== "") {
-          refuse(
-            ARM_BUILD_UNRESOLVABLE,
-            `R97_ARM_REQUIRE_GIT=1 but the ${id} arm checkout is not a clean git work tree (head=${head === null ? "unreadable" : head.slice(0, 12)}, dirty=${porcelain !== ""})`,
-          );
-        }
+      if (!identity.ok) {
+        refuse(
+          isTrustedBuild ? TRUSTED_BUILD_NOT_PROVEN : ARM_BUILD_UNRESOLVABLE,
+          `${isTrustedBuild ? `the declared ${TRUSTED_BUILD_BACKEND_ID}/${TRUSTED_BUILD_STRENGTH} mode requires` : "R97_ARM_REQUIRE_GIT=1 but"}: ${identity.detail}`,
+        );
+      }
+      if (counterpartIdentity !== null && !counterpartIdentity.ok) {
+        refuse(
+          isTrustedBuild ? TRUSTED_BUILD_NOT_PROVEN : ARM_BUILD_UNRESOLVABLE,
+          `${isTrustedBuild ? `the declared ${TRUSTED_BUILD_BACKEND_ID}/${TRUSTED_BUILD_STRENGTH} mode requires` : "R97_ARM_REQUIRE_GIT=1 but"}: ${counterpartIdentity.detail}`,
+        );
       }
     }
 
@@ -572,24 +823,49 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
     }
     const caseDef = await loadBenchmarkCase(caseDir);
 
-    // --- 3b. the EGRESS TRUST BOUNDARY (N5, tightened by R1/F2) -------------
-    // A checkout may only start when the TEST HOST injected a fixture trust
-    // capability that pins THIS canonical directory and the hashes it had when the
-    // capability was issued. The `.r97-synthetic-fixture-checkout` marker is an
-    // additional regular-file requirement, never the trust source: writing,
-    // copying, hard-linking or symlinking it — or swapping the entry behind it —
-    // upgrades nothing. Every OTHER checkout is untrusted code, and untrusted code
-    // may only run behind a provable single-egress boundary. That boundary does
-    // not exist in this build, so the mode is refused HERE, before the child
-    // starts — the plan forbids letting a request leave and then calling it a
-    // failure.
-    const fixtureTrust = verifyFixtureCheckoutTrust(deps.trustedFixtureCheckouts, armDir, arm.armId);
-    const capability = egressIsolationCapability();
-    if (!fixtureTrust.trusted && !capability.available) {
-      refuse(
-        EGRESS_ISOLATION_UNAVAILABLE,
-        `the ${arm.armId} checkout is not a fixture build this process TRUSTS (${fixtureTrust.detail}) and this build cannot prove a single-egress boundary for untrusted code (${capability.detail}) — refusing to START it rather than discovering the leak after a request left`,
+    // --- 3b. the EGRESS TRUST BOUNDARY (N5/R1, extended by R5) ---------------
+    // Two admitted postures, each with its OWN proof obligation:
+    //
+    //   `trusted-build` (R5) — the DECLARED audited posture. The proof is the git
+    //     identity + clean tree + resolvable, DIFFERING closures of BOTH arms
+    //     (verified above), plus, when injected, every field of the test-host
+    //     grant. The mode's OWN NAME states the limitation it does not remove:
+    //     NO OS network sandbox exists on this platform. It is an audited trust
+    //     declaration about WHICH bytes run, not an isolation claim.
+    //
+    //   `process-exec` (R1) — a checkout may start only when the TEST HOST
+    //     injected a fixture trust capability that pins THIS canonical directory
+    //     and the hashes it had when the capability was issued. The marker is an
+    //     additional regular-file requirement, never the trust source. Every
+    //     OTHER checkout is untrusted, and untrusted code may only run behind a
+    //     provable single-egress boundary — which does not exist here, so it is
+    //     refused BEFORE the child starts.
+    if (isTrustedBuild) {
+      const granted = verifyTrustedBuildGrant(deps.trustedBuildGrant, arm.armId, armDir, identity);
+      // A grant, when present, is BINDING: a pinned checkout whose fields moved is
+      // refused rather than silently fallen back to the self-proving check.
+      if (deps.trustedBuildGrant !== undefined && !granted.trusted) {
+        refuse(TRUSTED_BUILD_NOT_PROVEN, `the injected trusted-build grant does not hold for the ${arm.armId} checkout: ${granted.detail}`);
+      }
+      if (!identity.ok || identity.gitHead === null) {
+        refuse(TRUSTED_BUILD_NOT_PROVEN, `the ${arm.armId} checkout cannot prove the git identity the ${TRUSTED_BUILD_BACKEND_ID}/${TRUSTED_BUILD_STRENGTH} mode requires: ${identity.detail}`);
+      }
+      if (counterpartIdentity !== null && (!counterpartIdentity.ok || counterpartIdentity.gitHead === null)) {
+        refuse(TRUSTED_BUILD_NOT_PROVEN, `the counterpart checkout cannot prove the git identity the ${TRUSTED_BUILD_BACKEND_ID}/${TRUSTED_BUILD_STRENGTH} mode requires: ${counterpartIdentity.detail}`);
+      }
+      // Recorded, not claimed: the mode provides no network isolation.
+      process.stderr.write(
+        `[prereg] trusted-build mode: ${arm.armId} @ ${identity.gitHead.slice(0, 12)} closure ${armBuildDigest.slice(0, 12)}… network sandbox=${TRUSTED_BUILD_NETWORK_SANDBOX}\n`,
       );
+    } else {
+      const fixtureTrust = verifyFixtureCheckoutTrust(deps.trustedFixtureCheckouts, armDir, arm.armId);
+      const capability = egressIsolationCapability();
+      if (!fixtureTrust.trusted && !capability.available) {
+        refuse(
+          EGRESS_ISOLATION_UNAVAILABLE,
+          `the ${arm.armId} checkout is not a fixture build this process TRUSTS (${fixtureTrust.detail}) and this build cannot prove a single-egress boundary for untrusted code (${capability.detail}) — refusing to START it rather than discovering the leak after a request left`,
+        );
+      }
     }
 
     // --- 4. run the arm's OWN build in an isolated child process ------------
