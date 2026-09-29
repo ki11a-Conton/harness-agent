@@ -333,20 +333,24 @@ export async function verifyDocs(deps: { root: string }): Promise<DocVerificatio
     }
   }
 
+  // The parsed script table is hoisted so BOTH #5 (the gate table) and #6 (the
+  // README prose) validate against the SAME package.json read. Reading it twice
+  // could let the two checks disagree about the same file.
+  let pkgScripts: Record<string, string> = {};
+  let pkgOk = true;
+  try {
+    const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as { scripts?: Record<string, string> };
+    pkgScripts = pkg.scripts ?? {};
+  } catch (err) {
+    pkgOk = false;
+    process.stderr.write(`[docs:verify] package.json unreadable: ${err instanceof Error ? err.message : String(err)}\n`);
+  }
+
   // ---- E4-10 #5: every release-gate command exists as a real package.json
   // script. A gate that references a non-existent script can never run, so its
   // evidence would be fabricated or NOT_RUN — fail closed on a dangling command.
   {
     const { GATE_COMMANDS } = await import("./release-verify.js");
-    let pkgScripts: Record<string, string> = {};
-    let pkgOk = true;
-    try {
-      const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as { scripts?: Record<string, string> };
-      pkgScripts = pkg.scripts ?? {};
-    } catch (err) {
-      pkgOk = false;
-      process.stderr.write(`[docs:verify] package.json unreadable: ${err instanceof Error ? err.message : String(err)}\n`);
-    }
     const missing: string[] = [];
     for (const cmd of Object.values(GATE_COMMANDS)) {
       const m = cmd.match(/^pnpm\s+([A-Za-z0-9:_-]+)/);
@@ -362,6 +366,61 @@ export async function verifyDocs(deps: { root: string }): Promise<DocVerificatio
         : missing.length === 0
           ? "every release-gate command maps to a real package.json script"
           : `gate command(s) reference missing scripts: ${missing.join(", ")}`,
+    });
+  }
+
+  // ---- E4-10 #6: every `pnpm <script>` DOCUMENTED in the READMEs exists as a
+  // real package.json script.
+  //
+  // The check above (#5) validates `GATE_COMMANDS` — the gate table the release
+  // verifier executes. It does NOT look at the README prose, so a README could
+  // document `pnpm release:gate <gate>` while no such script existed and #5 would
+  // still report "every release-gate command maps to a real package.json script".
+  // That is exactly the defect found on 2026-09-29: `release:gate` and
+  // `release:artifacts` were documented in BOTH READMEs and existed in NEITHER.
+  //
+  // A documented-but-missing command is the same class of lie as a dangling gate
+  // command: a reader copies it, it fails, and the documentation has no truth
+  // value. So it is checked here too — over the docs, not over a fixed table.
+  {
+    const README_DOCS = ["README.md", "README.zh-CN.md"];
+    // pnpm's OWN commands, which are not package.json scripts and therefore must
+    // not be reported as missing. Kept as a closed allow-list rather than a
+    // prefix rule: anything else documented as `pnpm <name>` IS expected to be a
+    // script in this repo, so an unlisted name is a real finding.
+    const PNPM_BUILTINS = new Set(["install", "exec", "add", "remove", "update", "why", "dlx", "audit", "list", "run", "publish", "pack", "licenses", "outdated", "patch", "prune", "rebuild", "setup", "store", "root", "bin", "doctor", "fetch", "import", "init", "link", "deploy", "env"]);
+    const missing: string[] = [];
+    let docsRead = 0;
+    for (const doc of README_DOCS) {
+      let text: string;
+      try {
+        text = await readFile(join(root, doc), "utf8");
+      } catch {
+        // A missing translation is not a failure; a missing README.md is caught
+        // by the link/portable-path checks elsewhere.
+        continue;
+      }
+      docsRead += 1;
+      // Only fenced `pnpm <name>` invocations count. Require the name to start
+      // with a letter so `pnpm --version`-style flags are not mistaken for
+      // scripts, and stop at whitespace/`<`/backtick so `pnpm release:gate <gate>`
+      // yields `release:gate` and not the placeholder.
+      for (const m of text.matchAll(/^\s*pnpm\s+([A-Za-z][A-Za-z0-9:_-]*)/gm)) {
+        const scriptName = m[1]!;
+        if (PNPM_BUILTINS.has(scriptName)) continue;
+        if (pkgScripts[scriptName] === undefined) missing.push(`${scriptName} (in ${doc})`);
+      }
+    }
+    const uniqueMissing = [...new Set(missing)];
+    checks.push({
+      name: "documented pnpm scripts exist in package.json (E4-10 #6)",
+      truthful: docsRead > 0 && uniqueMissing.length === 0,
+      reason:
+        docsRead === 0
+          ? "no README could be read — documented commands cannot be verified"
+          : uniqueMissing.length === 0
+            ? `every pnpm command documented in ${docsRead} README file(s) maps to a real package.json script`
+            : `documented command(s) reference missing scripts: ${uniqueMissing.join(", ")}`,
     });
   }
 

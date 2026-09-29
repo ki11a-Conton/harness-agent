@@ -132,6 +132,11 @@ describe("P20-3 docs:verify — machine truth verification", () => {
     await makeRoot({
       ...suiteCaseFiles(3),
       "benchmarks/README.md": README_CLAIMS,
+      // E4-10 #6 needs a README to scan. Every `pnpm <name>` here resolves to a
+      // script in the package.json below, so this fixture is truthful by
+      // construction; `docs:verify` itself (a real script) and `install` (a pnpm
+      // builtin) are both covered.
+      "README.md": ["```bash", "pnpm install", "pnpm typecheck", "pnpm docs:verify", "```", ""].join("\n"),
       "package.json": JSON.stringify({
         scripts: {
           typecheck: "tsc -b", test: "vitest run", build: "tsc -b", "test:coverage": "vitest run --coverage",
@@ -152,6 +157,45 @@ describe("P20-3 docs:verify — machine truth verification", () => {
     const result = await verifyDocs({ root });
     expect(result.ok).toBe(true);
     for (const check of result.checks) expect(check.truthful, check.name).toBe(true);
+  });
+
+  it("fails closed when a README documents a pnpm script that does not exist (E4-10 #6)", async () => {
+    // The defect this check exists for (measured 2026-09-29): BOTH READMEs
+    // documented `pnpm release:gate <gate>` and `pnpm release:artifacts` while
+    // NEITHER existed in package.json. The older E4-10 check did NOT catch it,
+    // because it validates the GATE_COMMANDS table rather than the README prose —
+    // so it reported "every release-gate command maps to a real package.json
+    // script" while the docs told a reader to run a command that would fail.
+    await makeRoot({
+      ...suiteCaseFiles(3),
+      "benchmarks/README.md": README_CLAIMS,
+      "README.md": ["```bash", "pnpm typecheck", "pnpm release:gate <gate>", "```", ""].join("\n"),
+      "package.json": JSON.stringify({
+        scripts: {
+          typecheck: "tsc -b", test: "vitest run", build: "tsc -b", "test:coverage": "vitest run --coverage",
+          "docs:verify": "node apps/cli/dist/main.js docs:verify", "benchmark:smoke": "node apps/cli/dist/main.js benchmark smoke",
+          "test:protocol": "vitest run x", "test:security": "vitest run x", "test:race": "vitest run x", "test:chaos": "vitest run x",
+          "capability:audit": "node apps/cli/dist/main.js audit --strict",
+        },
+      }),
+      "packages/a/package.json": "{}",
+      "packages/b/package.json": "{}",
+      "packages/c/package.json": "{}",
+      "packages/d/package.json": "{}",
+      "HANDOVER.md": HANDOVER,
+      ".github/workflows/ci.yml": CI_WITH_GATES,
+      "CAPABILITY_MATRIX.md": MATRIX_MD,
+      "CAPABILITY_MATRIX.json": MATRIX_JSON,
+    });
+    const result = await verifyDocs({ root });
+    expect(result.ok).toBe(false);
+    const docCheck = result.checks.find((c) => c.name === "documented pnpm scripts exist in package.json (E4-10 #6)")!;
+    expect(docCheck.truthful).toBe(false);
+    // The placeholder must be stripped: `<gate>` is not part of the script name.
+    expect(docCheck.reason).toContain("release:gate");
+    expect(docCheck.reason).not.toContain("<gate>");
+    // `pnpm typecheck` DOES exist, so it must not be reported as missing.
+    expect(docCheck.reason).not.toContain("typecheck");
   });
 
   it("fails closed when a release-gate command references a missing script (E4-10)", async () => {

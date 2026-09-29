@@ -33,6 +33,8 @@
     "capability:audit": "node apps/cli/dist/main.js audit --strict",
     "e4:verify-production-usage": "node apps/cli/dist/main.js usage-audit --strict",
     "release:verify": "node apps/cli/dist/main.js release verify",
+    "release:gate": "node apps/cli/dist/main.js release gate",
+    "release:artifacts": "node apps/cli/dist/main.js release artifacts",
     "deps:audit": "pnpm audit"
   },
   "devDependencies": {

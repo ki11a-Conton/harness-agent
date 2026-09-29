@@ -123,8 +123,40 @@ pnpm test:chaos                  # MCP 混沌
 pnpm docs:verify                 # 机器可推导的文档真实性
 pnpm capability:audit            # 严格能力审计
 pnpm release:verify              # 从证据推导发布结论
-pnpm release:gate <gate>         # 运行单个门禁并写 V2 证据
+pnpm release:gate <gate>         # 运行单个门禁并写 V2 证据（CLI：agent release gate）
+pnpm release:artifacts           # 生成发布所需的产物
 ```
+
+预注册 / 证据门禁（E4-R0/R7 轮次新增中间三项）：
+
+```bash
+pnpm test:r0-gaps                # 就绪分类（31）+ 定价反例（6）= 37
+pnpm test:formal-gate            # 严格 R5 正式门禁（21）+ 双平台（18）+ 离线配置（33）= 72
+pnpm e4:formal-r5                # 运行 R5 正式链；未满足的不变量会以 NONZERO 退出并逐条具名
+pnpm e4:formal-r5:verify <root>  # 只读复验已保留的证据包，仅凭该包本身即可复算
+pnpm e4:ci-readiness             # 将 E2E 产物归约为五个「互相分离」的就绪等级
+pnpm e4:dual-platform            # 把两个平台的就绪分支合并为同一 SHA 的唯一结论
+```
+
+**全程离线，不产生任何费用。** 以上命令都不会发起付费请求、不会联系真实模型服务，
+`RUN_PAID_BENCHMARKS` 保持未设置。唯一的网络面是一个本地计数桩，它断言外部请求数为 **0**。
+真实的付费实验与晋升是**另外一个、尚未执行**的阶段。
+
+**部分门禁要求工作区干净（tracked tree clean）。** `prereg` 观察器、
+`prereg-production-e2e.mjs` 的正向阶段以及 R5 正式链在脏工作区上都会以
+`CLEAN_TREE_REQUIRED` 拒绝执行——该拒绝是正确的，但这也意味着：在脏工作区上跑，
+**并不能证明这些阶段通过**。要真正执行它们，请使用隔离的 worktree：
+
+```powershell
+git worktree add --detach "$env:TEMP\clean-run" HEAD
+cd "$env:TEMP\clean-run"; pnpm install --prefer-offline; pnpm build
+node scripts/e4/prereg-production-e2e.mjs --out .ci\e2e.json
+git -C "<repo>" worktree remove --force "$env:TEMP\clean-run"
+```
+
+清理时**不要**使用 `git checkout -- .` / `git reset --hard` / `git clean -fd`：
+在共享工作区里它们会一并丢弃其他人的未提交改动。只按明确路径恢复你自己负责的文件
+（`git restore --source=HEAD -- <path>`），或者干脆用 worktree 工作。
 
 **先构建后测试的合同（E4-R57）。** `pnpm test` 与 `pnpm test:coverage` 都会先跑
 `tsc -b`，因此在没有 `dist/`、没有 tsbuildinfo 缓存的干净检出上也能直接执行。这是**前置

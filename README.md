@@ -139,8 +139,41 @@ pnpm test:chaos                  # MCP chaos
 pnpm docs:verify                 # machine-derivable documentation truth
 pnpm capability:audit            # strict capability audit
 pnpm release:verify              # release verdict from evidence
-pnpm release:gate <gate>         # run ONE gate and write V2 evidence
+pnpm release:gate <gate>         # run ONE gate and write V2 evidence (CLI: agent release gate)
+pnpm release:artifacts           # materialise the release artifacts
 ```
+
+Pre-registration / evidence gates (the E4-R0/R7 round adds the middle three):
+
+```bash
+pnpm test:r0-gaps                # readiness-classification (31) + pricing counter-examples (6) = 37
+pnpm test:formal-gate            # strict R5 formal gate (21) + dual-platform (18) + offline profile (33) = 72
+pnpm e4:formal-r5                # run the R5 formal chain; exits NONZERO naming each unmet invariant
+pnpm e4:formal-r5:verify <root>  # re-verify a KEPT evidence bundle read-only, from the bundle alone
+pnpm e4:ci-readiness             # reduce the E2E artifact to the five SEPARATED readiness levels
+pnpm e4:dual-platform            # join the two platform readiness legs into one same-SHA verdict
+```
+
+**Offline only — nothing here bills.** No paid request is made by any of these, no real
+model service is contacted, and `RUN_PAID_BENCHMARKS` stays unset. The only network
+surface is a loopback counting stub that asserts **0** external requests. A real billed
+experiment and any promotion are a **separate, unexecuted** stage.
+
+**Some gates require a CLEAN tracked tree.** The `prereg` observer, the positive phases of
+`prereg-production-e2e.mjs` and the R5 formal chain all refuse with `CLEAN_TREE_REQUIRED`
+on a dirty tree — that refusal is correct, but it means a dirty-tree run proves nothing
+about those phases. To exercise one, use an isolated worktree:
+
+```powershell
+git worktree add --detach "$env:TEMP\clean-run" HEAD
+cd "$env:TEMP\clean-run"; pnpm install --prefer-offline; pnpm build
+node scripts/e4/prereg-production-e2e.mjs --out .ci\e2e.json
+git -C "<repo>" worktree remove --force "$env:TEMP\clean-run"
+```
+
+Do **not** use `git checkout -- .` / `git reset --hard` / `git clean -fd` for cleanup:
+those discard other uncommitted work in a shared tree. Restore only the explicit paths you
+own (`git restore --source=HEAD -- <path>`), or work in a worktree.
 
 **Build-before-test contract (E4-R57).** `pnpm test` and `pnpm test:coverage` both run
 `tsc -b` first, so they work from a clean checkout with no `dist/` and no tsbuildinfo
