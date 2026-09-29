@@ -1214,7 +1214,26 @@ async function acquireLock(
       }
       return { lockPath, token };
     } catch (err) {
-      if ((err as { code?: string }).code !== "EEXIST") throw err;
+      // MEASURED WINDOWS DEFECT, fixed here. `open(path, "wx")` does not always
+      // report contention as EEXIST: when the name is in a transient
+      // delete/rename state, Windows returns EPERM (errno -4048). That state is
+      // created by this lock's OWN release step — `rm(lockPath)` racing another
+      // acquirer's `open` — so EPERM here is the SAME condition EEXIST describes:
+      // "someone else holds it right now, try again".
+      //
+      // Before this fix only EEXIST was absorbed, so a ~3%-per-attempt Windows
+      // race (measured 154/5000 under concurrent acquire+release; ZERO over 5000
+      // attempts when the rm is sequential) escaped the retry loop and its entire
+      // dead-owner/deadline machinery, aborting a whole campaign with
+      // `EPERM: operation not permitted, open ... budget-ledger.lock`.
+      //
+      // The widening is deliberately MINIMAL and still bounded: the loop below
+      // re-checks `now() >= deadline` on every pass, so a permanently
+      // unavailable path still fails closed with R97_LOCK_HELD rather than
+      // spinning forever. Any other code (ENOENT, EACCES on a real permission
+      // problem, ENOSPC, …) is still a hard error and still propagates.
+      const code = (err as { code?: string }).code;
+      if (code !== "EEXIST" && code !== "EPERM") throw err;
     }
 
     // The lock exists. Decide whether its owner is still alive.
