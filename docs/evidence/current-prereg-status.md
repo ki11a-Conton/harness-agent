@@ -10,7 +10,7 @@
 > | | |
 > | --- | --- |
 > | Status date | 2026-09-29 (round E4-R0/R7, Windows 10 local measurement) |
-> | Commits this round | `ade2a53` (S3–S7, 17 files) → `f379a69` (S7 wiring) — on `origin/main` |
+> | Commits this round | `ade2a53` (S3–S7, 17 files) → `f379a69` → `ad8aa8e` (CI fix + this banner) → `659e009` (S4/F5) → `6b784c1` (Phase F) → `1726ab0` (docs E4-10 #6) → `b861b78` (ledger-lock EPERM) → `21bae0b` (Phase G) → `c0e0056` (task-10) — all on `origin/main` |
 > | Prior round's SHA | `910b80e` (superseded as *current*; historical content retained below) |
 > | Platform measured here | **Windows only.** No Linux host in this session; Ubuntu is GitHub Actions only and is `NOT_RUN` locally. |
 > | Paid authorization | **None.** No paid request was made, `RUN_PAID_BENCHMARKS` stayed unset, and no promotion was performed. |
@@ -27,9 +27,9 @@
 >
 > | Level | Status | What it is actually based on |
 > | --- | --- | --- |
-> | `fixtureProtocolReady` | **PASS** | the offline closed loop over SYNTHETIC fixture arm builds. This implies nothing about a real dual build. |
-> | `realBuildOfflineReady` | **NOT_PROVEN** | no producer writes the `dualBuild` block yet, so there is no real arm pair to certify. The `--e2e` artifact names this omission explicitly (`dualBuild` → `NO_DUAL_BUILD_EVIDENCE`) instead of emitting a placeholder. Note the change of vocabulary from the old `BLOCKED (NO_REAL_ARM_PAIR)`: `NOT_PROVEN` is the honest reading — the evidence to decide it does not exist yet, which is different from a proven blocker. |
-> | `budgetEvidenceReady` | **NOT_PROVEN** | `requestDispatchBinding` still reports `REQUEST_DISPATCH_JOURNAL_NOT_BOUND`: the request/attempt and tool-dispatch journals are not in the bundle contract, so the binding cannot be performed (tracked as task-10). |
+> | `fixtureProtocolReady` | **PASS** | the offline closed loop over SYNTHETIC fixture arm builds. On a CLEAN checkout the producer now exits 0 with 124/124 scheduled arm runs, 124 physical provider calls, 124/124 evidence verified and **0** unverified, `operatorFactoryEntered` **0**, and `verifyProblems: []`. This implies nothing about a real dual build. |
+> | `realBuildOfflineReady` | **NOT_PROVEN** | no producer writes the `dualBuild` block, so there is no real arm pair to certify. The `--e2e` artifact names this omission explicitly (`dualBuild` → `NO_DUAL_BUILD_EVIDENCE`) instead of emitting a placeholder. The vocabulary changed from the old `BLOCKED (NO_REAL_ARM_PAIR)`: `NOT_PROVEN` is the honest reading — the evidence to decide the level does not exist yet, which differs from a proven obstruction. |
+> | `budgetEvidenceReady` | **NOT_PROVEN** | the request/attempt and tool-dispatch journals are NOT cross-bound in practice. `bindRequestDispatchJournals` is now a REAL binding with a reachable `MEASURED` path (and 11 regressions), but **nothing in this repository writes a tool-dispatch journal** — `r5-real-formal.mjs` only COPIES `dispatch*.json`. So the umbrella code `REQUEST_DISPATCH_JOURNAL_NOT_BOUND` correctly stays FIRST, naming `DISPATCH_JOURNAL_MISSING` as the specific cause. |
 > | `paidExperimentRun` | **NOT_RUN** | no paid authorization exists; the scripts never create one. |
 > | `championPromotion` | **NOT_RUN** | promotion is a separate, later approval. |
 >
@@ -41,8 +41,20 @@
 > | F2 — deadline could not abort the in-flight model stream | one campaign deadline, owned AbortController, abort-before-kill, detached stream service loop | hanging-provider and deaf-provider counter-examples; real 127.0.0.1 HTTP stub observes a CLOSED connection |
 > | F3 — readiness read self-reported JSON | readiness recomputed from raw evidence through `readiness-evidence-verify.mjs` | the forged-JSON input that previously yielded `PASS` now yields `NOT_PROVEN` with 6 independent reasons |
 > | F4 — release CLI had no offline forward path | closed-enum versioned offline profile + symbol-branded capability bound to the observed identity | `provider-offline-profile` 33/33; real-provider-config ⇒ refusal, with a counting proof that the real factory is never entered |
-> | F5 — `r5-real-formal.mjs` exited 0 on a failed report | strict gate with NAMED failures, kept evidence root, four-variant content matrix | `r5-formal-gate` 21/21, each asserting a nonzero exit AND its code |
+> | F5 — `r5-real-formal.mjs` exited 0 on a failed report | strict gate with NAMED failures, kept evidence root, four-variant content matrix | `r5-formal-gate` 25/25, each asserting a nonzero exit AND its code. Proven by CONTRAST: the pre-S4 script (890 lines) contains **0** occurrences of `GATE FAIL`; the new gate names 27 failures on the same input |
 > | F6 — a legacy price silently authorized unlimited billed spend | `resolvePricingBasisReadOnly` split from `resolvePricingBasis` (+ eligibility) | `legacy_not_executable`; every refusal asserts `factoryCalls === 0` **and** `transportCalls === 0`, with an `ADMITTED` positive control |
+>
+> ### Three further defects found by RUNNING the round, not by reviewing it
+>
+> | Defect | How it was found | Fix |
+> | --- | --- | --- |
+> | **The dual-platform CI job failed on EVERY run** | the `readiness` teammate executed my exact job command line instead of reading my wiring description. It passed `--strict` with no `--require`, so it demanded three levels of which two are legitimately `NOT_PROVEN`. My own comment three lines above already said those must not be required — the command line just did not say it | `ad8aa8e`, measured both ways: without `--require` → exit 1; with `--require fixtureProtocolReady` → strict gate PASS (exit 0) while `realBuildOfflineReady` is still honestly `NOT_PROVEN` |
+> | **The offline fixture pinned a PAST clock** (`NOW = 1_700_000_000_000`, 2023-11-14) so the campaign deadline was already expired and the arm refused with `ARM_DEADLINE_EXCEEDED` before its first request — on BOTH CI platforms. This was my F2 guarantee working correctly; the FIXTURE was stale | CI run `36524279295`, then reproduced locally | `6b784c1`: one clock read once, and an assertion that FIRES (mutant run exits 1 with `FIXTURE_CLOCK_CLOSED` naming the exact CI deadline) |
+> | **`budget-ledger.lock` acquisition aborted on Windows `EPERM`** instead of retrying. `open(path,"wx")` reports contention as `EPERM` when the name is transiently unavailable — and that state is created by the lock's OWN release `rm` racing another acquirer's `open`. Only `EEXIST` was absorbed, so it escaped the entire retry/deadline machinery | running the clean-tree positive phase twice; then isolated by 4 probes (concurrent open+rm → 154/5000 EPERM; **sequential rm → 0/5000**) | `b861b78`: widen to `EEXIST || EPERM`, still bounded by the deadline so a wedged lock still fails closed. The regression **fails on the pre-fix code** with the exact CI error |
+>
+> The third one is a **pre-existing** defect, not a regression from this round: the lock
+> code predates it, and only a real concurrent campaign can expose it. Its regression test
+> reproduces the CI-scale failure rather than exercising a happy path.
 >
 > ### Gaps stated as gaps — NOT marked DONE
 >
@@ -53,23 +65,39 @@
 >   calls against a **3-turn** script, so a real content case would hit
 >   `OFFLINE_SCRIPT_EXHAUSTED`. The script was deliberately **not** padded to the 30-turn
 >   `maxIterationsPerTurn` ceiling: that would fabricate a run shape no real loop produces,
->   and every padded turn is a turn that cannot fail. What the offline profile *does*
->   demonstrate is the transport and admission boundary, not content-task competence.
-> - **The bare release-CLI forward run is NOT_PROVEN.** `node apps/cli/dist/main.js prereg
->   run` still takes the refusal path. The Phase E POS-FWD phase sets `OPENAI_API_KEY` to a
->   test-only value, and the S3 identity rule refuses an offline profile whenever a real
->   provider configuration is present — so weakening the rule would be required to make it
->   green, which is precisely the drift the rule prevents. Not attempted, not claimed.
+>   and every padded turn is a turn that cannot fail.
+> - **The release-CLI forward run is `CLOSED_BY_R1`, reported as NOT_OBSERVED.** The shipped
+>   release CLI refuses a marker-only synthetic fixture checkout before any request (0 HTTP,
+>   no per-arm record). The Phase D identity rule refuses an offline profile whenever a real
+>   provider configuration is present, and the release CLI accepts no fixture-bypass
+>   configuration. Making it green would require weakening that rule, which re-opens the
+>   "observe as X while running Y" drift it exists to prevent. Not attempted, not claimed.
+> - **`realBuildOfflineReady` stays `NOT_PROVEN`.** No two real pinned checkouts built from
+>   distinct source SHAs exist (N1 scope).
 > - **Ubuntu `NOT_RUN` locally.** No Linux host. CI is the only Ubuntu evidence.
 > - **The mutation gate was NOT re-run** this round (it must run serially in a clean
->   isolated directory; the tree had four concurrent writers).
+>   isolated directory; the tree had concurrent writers).
+>
+> ### A trap worth knowing: a phase that cannot run cannot fail
+>
+> Several gates refuse a dirty tree (`CLEAN_TREE_REQUIRED`) — the `prereg` observer, the
+> positive phases of `prereg-production-e2e.mjs`, and the R5 formal chain. That refusal is
+> correct, but it means **a dirty-tree run proves nothing about those phases**, and it is
+> exactly how the stale fixture clock stayed invisible locally and then failed both CI
+> platforms. To exercise such a phase, use an isolated worktree at the commit under test
+> (`git worktree add --detach`), and carry changes back as a patch
+> (`git diff <base> HEAD -- <file> | git apply`).
+>
+> For cleanup, **never** use `git checkout -- .` / `git reset --hard` / `git clean -fd` in
+> a shared tree: those discard other uncommitted work. Restore only explicit paths
+> (`git restore --source=HEAD -- <path>`).
 >
 > ### Shortest path for a Windows user
 >
 > ```powershell
 > pnpm typecheck                      # tsc -b, exit 0
-> pnpm test:formal-gate               # 69 tests: strict R5 gate + dual-platform + offline profile
-> pnpm test:r0-gaps                   # 37 tests: readiness classification + pricing counter-examples
+> pnpm test:formal-gate               # 76 tests: strict R5 gate (25) + dual-platform (18) + offline profile (33)
+> pnpm test:r0-gaps                   # 48 tests: readiness classification + journal binding + pricing counter-examples
 > node scripts/e4/prereg-production-e2e.mjs --out .ci/r97-r98/prereg-production-e2e.json
 > node scripts/e4/ci-readiness.mjs --e2e .ci/r97-r98/prereg-production-e2e.json --out .ci/r97-r98/ci-readiness.json
 > ```
