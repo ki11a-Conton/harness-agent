@@ -49,6 +49,7 @@ import {
   type CostJournalArmId,
   type CostJournalEntry,
   type CostJournalView,
+  type DurableToolDispatchBudget,
   type FormalRunAdmission,
 } from "./tool-call-efficiency-formal-run.js";
 
@@ -125,6 +126,28 @@ export interface PreregisteredArmContext {
   /** A6 — the driver-created directory this run's raw artifacts MUST be written
    *  to (manifest.json / verifier.json / activation.json / security.json). */
   evidenceDir: string;
+  /**
+   * R0/S1 (F1) — the campaign's ONE durable PRE-DISPATCH tool budget, forwarded
+   * from `FormalRunAdmission.toolDispatchBudget`. The driver ALWAYS supplies it,
+   * so an executor can never choose to run a formal arm without the campaign's
+   * tool cap: the capability travels WITH the run, exactly like `isolation`.
+   *
+   * It is a live object (its `reserve()`/`settle()` are methods), so it cannot
+   * cross the worker's process boundary as JSON. The executor is responsible for
+   * exporting it over a VERSIONED stdio RPC and for refusing an arm build that
+   * does not declare the matching ABI — never for silently dropping it.
+   *
+   * Optional in the TYPE only so a non-formal caller (a direct unit test of the
+   * executor) can omit it; the formal driver never does.
+   */
+  toolDispatchBudget?: DurableToolDispatchBudget;
+  /**
+   * R0/S1 (F1) — the campaign's ONE persisted wall-clock deadline (epoch ms),
+   * forwarded from `FormalRunAdmission.campaignDeadlineAtMs`. It is the SAME
+   * instant the cost journal holds, so the arm's orchestrator can refuse a tool
+   * that would start after it, without the worker re-deriving a window.
+   */
+  campaignDeadlineAtMs?: number;
 }
 
 export type PreregisteredArmRunner = (
@@ -462,6 +485,14 @@ export async function runPreregisteredCampaign(
           isolationStrength: prereg.isolation.isolationStrength,
         },
         evidenceDir,
+        // R0/S1 (F1) — the campaign's durable tool budget + its ONE deadline are
+        // forwarded from the ADMISSION, so the formal path cannot run an arm
+        // whose tool dispatches escape `maxToolCalls`. Before this line the
+        // context carried no budget and the executor had nothing to forward, so
+        // `ToolOrchestrator` was built without a `toolBudget` and the cap was
+        // enforced nowhere on the formal path.
+        toolDispatchBudget: admission.toolDispatchBudget,
+        campaignDeadlineAtMs: admission.campaignDeadlineAtMs,
       }),
     );
     // F2/S4: refuse a result whose evidence is missing/malformed AT RECORD TIME,

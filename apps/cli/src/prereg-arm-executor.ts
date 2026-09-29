@@ -68,6 +68,7 @@ import {
   selectionFromFrozenEvidence,
   stableStringify,
   type BenchmarkCase,
+  type DurableToolDispatchBudget,
   type EvalOutcome,
   type PreregisteredArmContext,
   type PreregisteredArmEvidence,
@@ -75,6 +76,7 @@ import {
   type PreregisteredArmRunner,
 } from "@ar/evaluation";
 import { formalExecutionProfile } from "./prereg-execution-identity.js";
+import { R97_ARM_ABI_TOOL_BUDGET } from "./r97-arm-abi.js";
 
 /** A stable, machine-readable reason code for every fail-closed refusal here. */
 export const ARM_EXECUTOR_NOT_WIRED = "ARM_EXECUTOR_NOT_WIRED";
@@ -93,6 +95,13 @@ export const ARM_BUILD_PROBE_MISMATCH = "ARM_BUILD_PROBE_MISMATCH";
 export const ARM_WORKER_FAILED = "ARM_WORKER_FAILED";
 /** B3 — the child exceeded its wall-clock bound and was killed. */
 export const ARM_WORKER_TIMEOUT = "ARM_WORKER_TIMEOUT";
+/**
+ * R0/S1 (F1) — the arm build does not declare the `tool-budget-rpc-v1` ABI, so
+ * it cannot honour the campaign's durable tool budget. The formal path REFUSES
+ * it before the first model request instead of running it with `maxToolCalls`
+ * silently unenforced.
+ */
+export const ARM_WORKER_ABI_UNSUPPORTED = "ARM_WORKER_ABI_UNSUPPORTED";
 
 /** The activation artifact schema (only written for an activated candidate). */
 export const PREREG_RUN_ACTIVATION_SCHEMA = "prereg-run-activation-v1";
@@ -693,9 +702,9 @@ interface WorkerReport {
   ok: boolean;
   code?: string;
   error?: string;
-  armBuildReport?: { entryRel: string; entrySha256: string; probe: string } | null;
+  armBuildReport?: { entryRel: string; entrySha256: string; probe: string; abi?: string[] } | null;
   outcome?: EvalOutcome;
-  proxyBudget?: { modelCalls: number };
+  proxyBudget?: { modelCalls: number; toolReserves?: number; toolSettles?: number };
 }
 
 export interface PreregArmExecutorDeps {
@@ -895,6 +904,7 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
       timeoutMs: workerTimeoutMs,
       checkoutDir: armDir,
       caseDef,
+      armRunId: ctx.armRunId,
       runOptions: {
         modelId: profile.provider.modelId,
         budgetTokens: profile.budgetTokens,
@@ -906,6 +916,12 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
         attempt: 1,
       },
       provider: ctx.provider,
+      // R0/S1 (F1) — the campaign's durable tool budget and its ONE deadline are
+      // forwarded from the driver's context. When the driver supplied one, the
+      // worker must prove the `tool-budget-rpc-v1` ABI BEFORE any model request
+      // and every tool dispatch is reserved and settled against this budget.
+      ...(ctx.toolDispatchBudget === undefined ? {} : { toolDispatchBudget: ctx.toolDispatchBudget }),
+      ...(ctx.campaignDeadlineAtMs === undefined ? {} : { campaignDeadlineAtMs: ctx.campaignDeadlineAtMs }),
     });
 
     // --- 5. independently corroborate the reported build identity ----------
@@ -951,6 +967,19 @@ interface LaunchArmWorkerOptions {
   runOptions: Record<string, unknown>;
   /** The ONE budget-wrapped provider. The child owns none. */
   provider: ModelProvider;
+  /**
+   * R0/S1 (F1) — the campaign's ONE durable PRE-DISPATCH tool budget. When it is
+   * present this is a FORMAL arm run: the child must prove the
+   * `tool-budget-rpc-v1` ABI before any model request, and every tool dispatch
+   * the arm makes is reserved and settled HERE, against the same `CostBudget`
+   * that enforces `maxToolCalls`.
+   */
+  toolDispatchBudget?: DurableToolDispatchBudget;
+  /** R0/S1 — the campaign's ONE persisted deadline (epoch ms), forwarded so the
+   *  arm's orchestrator refuses a tool that would start after it. */
+  campaignDeadlineAtMs?: number | null;
+  /** R0/S1 — the arm-run identity a reservation must belong to. */
+  armRunId: string;
 }
 
 interface LaunchArmWorkerResult {
@@ -958,6 +987,11 @@ interface LaunchArmWorkerResult {
   /** MEASURED physical provider entries this driver serviced for the child. */
   physicalProviderCalls: number;
   exitCode: number | null;
+}
+
+/** R0/S1 — one live reservation the child has been granted but not yet settled. */
+interface LiveReservation {
+  settle: (outcome: "dispatched" | "not_executed" | "unknown") => Promise<void>;
 }
 
 /**
@@ -994,10 +1028,39 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
     child.on("error", () => resolve(null));
   });
 
-  // Kick the child off with its single options line.
+  // R0/S1 (F1) — the child is told whether the FORMAL budget RPC is in play. The
+  // flag is a TRANSPORT instruction; the capability itself is exported over the
+  // RPC and never serialized.
+  const wantsBudgetRpc = opts.toolDispatchBudget !== undefined;
+  const runOptions = wantsBudgetRpc ? { ...opts.runOptions, toolBudgetRpc: true } : opts.runOptions;
+
+  // R0/S1 — the reservations the child currently holds, keyed by the reservation
+  // id THIS driver minted. A settle naming an unknown id is refused; a duplicate
+  // settle is acknowledged without settling twice.
+  const liveReservations = new Map<string, LiveReservation>();
+  const settledReservations = new Set<string>();
+  let reservationSeq = 0;
+  /** R0/S1 — set when the child's declared ABI cannot honour the formal path. */
+  let abiRefusal: string | null = null;
+  /** R0/S1 — MEASURED reservations this driver granted / refused. */
+  const budgetCounters = { granted: 0, refused: 0, settled: 0, unknownSettle: 0 };
+
+  // Kick the child off with its single options line. `armRunId` is carried at the
+  // TOP level (not inside `runOptions`, whose `armId` is the baseline/candidate
+  // label) so a reservation can be bound to the arm RUN it belongs to.
   child.stdin?.write(
-    `${JSON.stringify({ checkoutDir: opts.checkoutDir, case: opts.caseDef, runOptions: opts.runOptions })}\n`,
+    `${JSON.stringify({ checkoutDir: opts.checkoutDir, case: opts.caseDef, runOptions, armRunId: opts.armRunId })}\n`,
   );
+
+  const reply = (frame: Record<string, unknown>): void => {
+    if (child.stdin === null || child.stdin.destroyed || !child.stdin.writable) return;
+    try {
+      child.stdin.write(`${JSON.stringify(frame)}\n`);
+    } catch {
+      // A write to a channel the child already closed is not an error worth
+      // propagating: the child's exit is what classifies the arm.
+    }
+  };
 
   let report: WorkerReport | null = null;
   let sawResult = false;
@@ -1010,26 +1073,100 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
         report = JSON.parse(line.slice(ARM_WORKER_RESULT_SENTINEL.length)) as WorkerReport;
         break;
       }
-      let frame: { t?: string; id?: number; request?: unknown };
+      let frame: { t?: string; id?: number; request?: unknown; [k: string]: unknown };
       try {
         frame = JSON.parse(line) as typeof frame;
       } catch {
         continue; // a non-frame line is ignored
       }
-      if (frame.t !== "request" || typeof frame.id !== "number") continue;
+      if (typeof frame.id !== "number") continue;
+
+      // --- R0/S1: the ABI capability handshake, BEFORE any arm code runs ----
+      if (frame.t === "hello") {
+        const abi = Array.isArray(frame["abi"]) ? (frame["abi"] as unknown[]).filter((c): c is string => typeof c === "string") : [];
+        if (!wantsBudgetRpc) {
+          // A child that opens a handshake the driver did not ask for is not a
+          // protocol this driver speaks.
+          reply({ t: "abort", id: frame.id, reason: "this driver did not request the budget ABI handshake" });
+          continue;
+        }
+        if (!abi.includes(R97_ARM_ABI_TOOL_BUDGET)) {
+          abiRefusal =
+            `the ${opts.armRunId} arm build declares no ${R97_ARM_ABI_TOOL_BUDGET} capability (declared: [${abi.join(", ") || "none"}]) — ` +
+            `the formal pre-registered path must refuse an arm that cannot honour the campaign's durable tool budget, rather than run it with maxToolCalls unenforced`;
+          reply({ t: "abort", id: frame.id, reason: abiRefusal });
+          continue;
+        }
+        reply({ t: "proceed", id: frame.id });
+        continue;
+      }
+
+      // --- R0/S1: the tool-dispatch budget RPC -----------------------------
+      if (frame.t === "tool_reserve") {
+        if (opts.toolDispatchBudget === undefined) {
+          reply({ t: "tool_error", id: frame.id, message: "no tool-dispatch budget is wired for this arm run" });
+          continue;
+        }
+        if (frame["armRunId"] !== opts.armRunId) {
+          // An old worker's message must not spend a new arm's quota.
+          reply({
+            t: "tool_error",
+            id: frame.id,
+            message: `reservation for ${String(frame["armRunId"])} cannot be charged to ${opts.armRunId}`,
+          });
+          continue;
+        }
+        const reservationId = `${opts.armRunId}:tool:${++reservationSeq}`;
+        const granted = await opts.toolDispatchBudget.reserve(frame.request as never);
+        if (!granted.ok) {
+          budgetCounters.refused += 1;
+          reply({ t: "tool_grant", id: frame.id, ok: false, reason: granted.reason ?? "TOOL_BUDGET_EXHAUSTED" });
+          continue;
+        }
+        budgetCounters.granted += 1;
+        liveReservations.set(reservationId, { settle: granted.settle });
+        reply({ t: "tool_grant", id: frame.id, ok: true, reservationId });
+        continue;
+      }
+
+      if (frame.t === "tool_settle") {
+        const reservationId = String(frame["reservationId"]);
+        const outcome = frame["outcome"];
+        if (outcome !== "dispatched" && outcome !== "not_executed" && outcome !== "unknown") {
+          reply({ t: "tool_error", id: frame.id, message: `unknown settlement outcome ${String(outcome)}` });
+          continue;
+        }
+        if (settledReservations.has(reservationId)) {
+          // Idempotent: a duplicate settle is acknowledged, never charged twice.
+          reply({ t: "tool_settled", id: frame.id, duplicate: true });
+          continue;
+        }
+        const live = liveReservations.get(reservationId);
+        if (live === undefined) {
+          budgetCounters.unknownSettle += 1;
+          reply({ t: "tool_error", id: frame.id, message: `no live reservation ${reservationId} belongs to ${opts.armRunId}` });
+          continue;
+        }
+        liveReservations.delete(reservationId);
+        settledReservations.add(reservationId);
+        budgetCounters.settled += 1;
+        await live.settle(outcome);
+        reply({ t: "tool_settled", id: frame.id });
+        continue;
+      }
+
+      if (frame.t !== "request") continue;
       // Service the call with the ONE budget channel and stream the events back.
       try {
-        const client = opts.provider.createClient({ id: opts.runOptions["modelId"] as string } as never, {} as never);
+        const client = opts.provider.createClient({ id: runOptions["modelId"] as string } as never, {} as never);
         physicalProviderCalls += 1;
         for await (const event of client.generate(frame.request as never, new AbortController().signal)) {
-          child.stdin?.write(`${JSON.stringify({ t: "event", id: frame.id, event })}\n`);
+          reply({ t: "event", id: frame.id, event });
           if ((event as ModelEvent).type === "completed" || (event as ModelEvent).type === "error") break;
         }
-        child.stdin?.write(`${JSON.stringify({ t: "done", id: frame.id })}\n`);
+        reply({ t: "done", id: frame.id });
       } catch (err) {
-        child.stdin?.write(
-          `${JSON.stringify({ t: "error", id: frame.id, message: err instanceof Error ? err.message : String(err) })}\n`,
-        );
+        reply({ t: "error", id: frame.id, message: err instanceof Error ? err.message : String(err) });
       }
     }
   } finally {
@@ -1038,6 +1175,23 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
   }
   const exitCode = await exited;
 
+  // A reservation the child never settled is NOT refunded here: the durable
+  // budget's own conservative rule decides, and an unproven dispatch must stay
+  // visible as unsettled rather than be silently released.
+  if (liveReservations.size > 0) {
+    for (const [reservationId, live] of liveReservations) {
+      liveReservations.delete(reservationId);
+      settledReservations.add(reservationId);
+      budgetCounters.settled += 1;
+      await live.settle("unknown").catch(() => undefined);
+    }
+  }
+
+  // R0/S1 — an arm refused by the capability pre-check reports the CAPABILITY
+  // reason, never a downstream timeout or a missing result.
+  if (abiRefusal !== null) {
+    refuse(ARM_WORKER_ABI_UNSUPPORTED, abiRefusal);
+  }
   if (timedOut) {
     refuse(ARM_WORKER_TIMEOUT, `the arm worker exceeded its ${opts.timeoutMs} ms bound and was killed`);
   }

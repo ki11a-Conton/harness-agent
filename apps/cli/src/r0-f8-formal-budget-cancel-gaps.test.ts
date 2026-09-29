@@ -34,20 +34,41 @@
  * requests. F2 races a watchdog so a failure can never hang CI.
  */
 
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ModelEvent, ModelProvider, ModelRequest, ProviderConfig } from "@ar/contracts";
-import { R97_ARM_BUILD_ENTRIES, type ArmRunRef } from "@ar/evaluation";
+import {
+  DEFAULT_DECISION_POLICY_V3,
+  R97_ARM_BUILD_ENTRIES,
+  TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2,
+  buildToolCallEfficiencyPreregistrationV2,
+  captureEndpointIdentity,
+  computeThresholdDigestV3,
+  mechanismContractFor,
+  openPreregisteredCampaignGate,
+  runPreregisteredCampaign,
+  serializePreregistrationV2,
+  stableStringify,
+  toolCallEfficiencyGuidanceDigest,
+  type ArmRunRef,
+  type PreregisteredArmContext,
+  type PreregisteredCampaignObservationV2,
+  type PreregistrationV2Options,
+  type ToolCallEfficiencyPreregistrationV2,
+} from "@ar/evaluation";
 import {
   ARM_PROBE_EXPORT,
+  ARM_WORKER_ABI_UNSUPPORTED,
   FIXTURE_CHECKOUT_MARKER_FILENAME,
   createFixtureCheckoutTrust,
   createPreregArmExecutor,
 } from "./prereg-arm-executor.js";
+import { R97_ARM_ABI } from "./r97-arm-abi.js";
 
 const REPO_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 const SCRATCH_ROOT = join(REPO_ROOT, ".ci", "r0-f8-scratch");
@@ -90,7 +111,7 @@ afterEach(async () => {
  * Either way it writes the RAW observation to a deterministic temp path, so the
  * assertions read real files rather than trusting returned prose.
  */
-function armEntrySource(marker: string, mode: "budget" | "model"): string {
+function armEntrySource(marker: string, mode: "budget" | "model", declareAbi = true): string {
   return `
 import { existsSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
@@ -99,6 +120,11 @@ import { join } from "node:path";
 import { ToolOrchestrator, ToolRegistry, writeFileTool } from ${JSON.stringify(TOOLS_DIST)};
 
 export const ${ARM_PROBE_EXPORT} = "probe:${marker}";
+${
+  declareAbi
+    ? `export const R97_ARM_ABI = ${JSON.stringify(R97_ARM_ABI)};`
+    : `// OLD-ABI build: deliberately exports no R97_ARM_ABI capability list.`
+}
 
 const OBS = ${JSON.stringify(observationPath(marker, mode))};
 
@@ -163,7 +189,7 @@ export async function runOneCase(caseDef, opts, _suite) {
       { id: callId, sessionId, turnId: "t1", agentId: "a1", call: { id: callId, name: "write_file", args: { path: join(workspace, name), content: "written-by-" + name } } },
       { sessionId, turnId: "t1", agentId: "a1", cwd: workspace, signal: new AbortController().signal, permissions, sandboxPolicy },
     );
-    results.push({ name, status: r.status, reasonCode: r.metadata && r.metadata.reasonCode ? r.metadata.reasonCode : null });
+    results.push({ name, status: r.status, reasonCode: r.metadata && r.metadata.reasonCode ? r.metadata.reasonCode : null, output: String(r.output ?? "").slice(0, 400), error: r.error ? JSON.stringify(r.error).slice(0, 400) : null });
   }
   writeFileSync(OBS, JSON.stringify({
     marker: ${JSON.stringify(marker)},
@@ -181,11 +207,20 @@ export async function runOneCase(caseDef, opts, _suite) {
 }
 
 /** Build a real, loadable arm checkout with distinct entry bytes. */
-async function makeArmCheckout(dir: string, marker: string, mode: "budget" | "model"): Promise<void> {
+async function makeArmCheckout(
+  dir: string,
+  marker: string,
+  mode: "budget" | "model",
+  declareAbi = true,
+): Promise<void> {
   for (const rel of R97_ARM_BUILD_ENTRIES) {
     const abs = join(dir, rel);
     await mkdir(join(abs, ".."), { recursive: true });
-    await writeFile(abs, rel === ARM_ENTRY_REL ? armEntrySource(marker, mode) : `export {}; // stub:${marker}\n`, "utf8");
+    await writeFile(
+      abs,
+      rel === ARM_ENTRY_REL ? armEntrySource(marker, mode, declareAbi) : `export {}; // stub:${marker}\n`,
+      "utf8",
+    );
   }
   await writeFile(
     join(dir, FIXTURE_CHECKOUT_MARKER_FILENAME),
@@ -297,8 +332,7 @@ describe("S0a/F1 — the FORMAL arm path must enforce the campaign tool cap befo
   }, 180_000);
 });
 
-describe("S0a/F2 — a worker timeout must cancel the in-flight model stream", () => {
-  it("[F2] the provider's AbortSignal is aborted and the driver returns inside a bounded window", async () => {
+describe("S0a/F2 — a worker timeout must cancel the in-flight model stream", () => {  it("[F2] the provider's AbortSignal is aborted and the driver returns inside a bounded window", async () => {
     const base = await scratch("f2-base");
     const cand = await scratch("f2-cand");
     await makeArmCheckout(base, "baseline", "model");
@@ -375,4 +409,204 @@ describe("S0a/F2 — a worker timeout must cancel the in-flight model stream", (
     ).toBe(true);
     expect(raced, "the driver did not settle before the watchdog").not.toBe(WATCHDOG);
   }, 60_000);
+});
+
+// ---------------------------------------------------------------------------
+// S1 acceptance (a) — an OLD-ABI arm is refused BEFORE the first model request
+// ---------------------------------------------------------------------------
+
+describe("S1 — an arm build without the tool-budget ABI cannot run on the formal path", () => {
+  it("[F1/ABI] refuses an arm that declares no tool-budget capability, with 0 model requests", async () => {
+    const base = await scratch("abi-base");
+    const cand = await scratch("abi-cand");
+    await makeArmCheckout(base, "baseline", "model");
+    // The candidate is a build that WOULD make a model call if it were allowed to
+    // run, and declares NO `R97_ARM_ABI` — an old-ABI arm.
+    await makeArmCheckout(cand, "candidate", "model", false);
+
+    let providerEntries = 0;
+    const counting: ModelProvider = {
+      id: "r0-f8-abi-counting",
+      async listModels() {
+        return [];
+      },
+      createClient() {
+        return {
+          // eslint-disable-next-line require-yield
+          async *generate(): AsyncGenerator<ModelEvent> {
+            providerEntries += 1;
+            throw new Error("no model request may be issued before the ABI pre-check passes");
+          },
+        };
+      },
+    };
+
+    const budget = countingBudget(1);
+    const evidenceDir = join(await scratch("abi-ev"), "pair-0-candidate");
+    const executor = createPreregArmExecutor({
+      rootDir: REPO_ROOT,
+      env: { R97_ARM_BASELINE_DIR: base, R97_ARM_CANDIDATE_DIR: cand },
+      trustedFixtureCheckouts: createFixtureCheckoutTrust(base, cand),
+      workerTimeoutMs: 60_000,
+    });
+
+    const arm = armRef();
+    const err = await executor(arm, {
+      provider: counting,
+      armRunId: "pair-0-candidate",
+      arm,
+      preregistrationDigest: PREREG_DIGEST,
+      planDigest: PLAN_DIGEST,
+      isolation: { isolationBackendId: "process-exec", isolationStrength: "process" },
+      evidenceDir,
+      toolDispatchBudget: budget.budget as never,
+      campaignDeadlineAtMs: Date.now() + 600_000,
+    }).then(
+      () => null,
+      (e: unknown) => e,
+    );
+
+    expect(err, "the executor admitted an arm build that cannot honour the campaign tool budget").not.toBeNull();
+    expect(String(err)).toContain(ARM_WORKER_ABI_UNSUPPORTED);
+    // THE POINT OF THE PRE-CHECK: the refusal happened before the arm ran, so the
+    // provider was never entered and no quota was spent.
+    expect(providerEntries, "a model request was issued before the ABI pre-check").toBe(0);
+    expect(budget.refusals()).toBe(0);
+  }, 90_000);
+});
+
+// ---------------------------------------------------------------------------
+// S1 acceptance (b) — the FORMAL campaign entry actually forwards the budget
+// ---------------------------------------------------------------------------
+
+const N5_FIXTURE = JSON.parse(
+  readFileSync(join(REPO_ROOT, "scripts", "e4", "fixtures", "n5-prereg-config.json"), "utf8"),
+) as PreregistrationV2Options;
+const GATE_NOW = 1_700_000_000_000;
+
+function gatePrereg(): ToolCallEfficiencyPreregistrationV2 {
+  return buildToolCallEfficiencyPreregistrationV2(structuredClone(N5_FIXTURE));
+}
+
+function gateObservation(): PreregisteredCampaignObservationV2 {
+  const caseContentDigests: Record<string, string> = {};
+  const eligibilityDigests: Record<string, string> = {};
+  for (const caseId of N5_FIXTURE.selection.caseIds) {
+    caseContentDigests[caseId] = `content-${caseId}`;
+    eligibilityDigests[caseId] = `elig-${caseId}`;
+  }
+  const sha256 = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
+  return {
+    candidateSourceSha: N5_FIXTURE.subject.candidateSourceSha,
+    cleanTree: true,
+    baselineArmDigest: N5_FIXTURE.subject.baselineArmDigest,
+    candidateArmDigest: N5_FIXTURE.subject.candidateArmDigest,
+    guidanceDigest: toolCallEfficiencyGuidanceDigest(),
+    contractDigest: sha256(stableStringify(mechanismContractFor(TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2))),
+    runtimeConfigDigest: N5_FIXTURE.subject.runtimeConfigDigest,
+    providerId: N5_FIXTURE.provider.providerId,
+    modelId: N5_FIXTURE.provider.modelId,
+    endpointDigest: captureEndpointIdentity(N5_FIXTURE.provider.endpointBaseUrl ?? null)!,
+    requestProfileDigest: sha256(stableStringify(N5_FIXTURE.provider.requestProfile)),
+    caseContentDigests,
+    eligibilityDigests,
+    selectionProvenanceDigest: N5_FIXTURE.selection.selectionProvenanceDigest,
+    decisionPolicyDigest: computeThresholdDigestV3(DEFAULT_DECISION_POLICY_V3),
+    usdMicrosPerCall: 0,
+    endpointIsLoopback: false,
+  };
+}
+
+function gateAuthorization(a: ToolCallEfficiencyPreregistrationV2): string {
+  return JSON.stringify({
+    schemaVersion: "tool-call-efficiency-authorization-v2",
+    preregistrationDigest: a.preregistrationDigest,
+    candidateSourceSha: a.subject.candidateSourceSha,
+    baselineArmDigest: a.subject.baselineArmDigest,
+    candidateArmDigest: a.subject.candidateArmDigest,
+    providerId: a.provider.providerId,
+    modelId: a.provider.modelId,
+    endpointDigest: a.provider.endpointDigest,
+    caps: {
+      maxModelCalls: a.budget.campaignWorstCaseModelCalls,
+      maxToolCalls: a.budget.maxToolCalls,
+      maxDurationMs: a.budget.maxDurationMs,
+      maxInputTokens: a.budget.maxInputTokens,
+      maxOutputTokens: a.budget.maxOutputTokens,
+      maxTotalTokens: a.budget.maxTotalTokens,
+      maxUsdMicros: a.budget.maxUsdMicros,
+    },
+    issuedAtMs: 1_000,
+    expiresAtMs: 9_000_000_000_000,
+    approvalId: "approval-1",
+    allowResume: true,
+    paid: true,
+  });
+}
+
+describe("S1 — the FORMAL campaign entry forwards the durable tool budget", () => {
+  it("[F1] runArm receives the admission's own budget object and its ONE deadline", async () => {
+    const dir = await scratch("s1-campaign");
+    const claimsDir = await mkdtemp(join(await scratch("s1-claims"), "claims-"));
+    const previousClaims = process.env["R97_CAMPAIGN_CLAIMS_DIR"];
+    process.env["R97_CAMPAIGN_CLAIMS_DIR"] = claimsDir;
+    try {
+      const artifact = gatePrereg();
+      const admission = await openPreregisteredCampaignGate({
+        preregistrationJson: serializePreregistrationV2(artifact),
+        authorizationJson: gateAuthorization(artifact),
+        observation: gateObservation(),
+        budgetDir: join(dir, "budget"),
+        mode: "first-run",
+        now: () => GATE_NOW,
+        makeProvider: () => inertProvider(),
+      });
+      expect(admission.status, JSON.stringify(admission).slice(0, 400)).toBe("ADMITTED");
+      if (admission.status !== "ADMITTED") throw new Error("setup: the campaign was not admitted");
+      const admitted = admission;
+
+      const seen: Array<{ armRunId: string; hasBudget: boolean; sameObject: boolean; deadline: number | undefined }> = [];
+      await runPreregisteredCampaign({
+        admission: admitted,
+        prereg: artifact,
+        resultsDir: join(dir, "runs"),
+        runArm: async (arm, ctx: PreregisteredArmContext) => {
+          seen.push({
+            armRunId: ctx.armRunId,
+            hasBudget: ctx.toolDispatchBudget !== undefined,
+            // Identity, not merely presence: a driver that built its OWN budget
+            // would enforce a SECOND cap that the campaign's ledger never sees.
+            sameObject: ctx.toolDispatchBudget === admitted.toolDispatchBudget,
+            deadline: ctx.campaignDeadlineAtMs,
+          });
+          return {
+            status: "failed" as const,
+            tokensUsed: 0,
+            evidence: {
+              executorId: "s1-forwarding-probe",
+              traceDigest: "a".repeat(64),
+              verifiedCompletion: false,
+              securityViolations: 0,
+              activationEvidenceDigest: null,
+            },
+          };
+        },
+        now: () => GATE_NOW,
+      });
+
+      expect(seen.length, "the campaign scheduled no arm run").toBeGreaterThan(0);
+      expect(
+        seen.every((s) => s.hasBudget),
+        `F1: the campaign handed runArm a context with NO tool budget (${JSON.stringify(seen.slice(0, 2))})`,
+      ).toBe(true);
+      expect(seen.every((s) => s.sameObject)).toBe(true);
+      expect(
+        seen.every((s) => s.deadline === admitted.campaignDeadlineAtMs),
+        "F1: the campaign deadline never reached the arm context",
+      ).toBe(true);
+    } finally {
+      if (previousClaims === undefined) delete process.env["R97_CAMPAIGN_CLAIMS_DIR"];
+      else process.env["R97_CAMPAIGN_CLAIMS_DIR"] = previousClaims;
+    }
+  }, 90_000);
 });

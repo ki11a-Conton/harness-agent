@@ -93,6 +93,7 @@ import {
   writeFileTool,
   ALLOW_INSECURE_LOCAL_BENCHMARK_FLAG,
 } from "@ar/tools";
+import type { ToolDispatchBudget } from "@ar/tools";
 import {
   MemEventStore,
   MemSessionStore,
@@ -1653,6 +1654,22 @@ export interface RunOneCaseOptions {
   armId?: string;
   repetition?: number;
   attempt?: number;
+  /**
+   * R0/S1 (F1) — the campaign's durable PRE-DISPATCH tool budget, when the caller
+   * is a FORMAL pre-registered arm run. The host binds it straight into this
+   * case's own `ToolOrchestrator`, so `maxToolCalls` is a pre-execution
+   * constraint instead of an after-the-fact tally.
+   *
+   * Absent for an ordinary benchmark run: the default behaviour is unchanged, and
+   * with no budget the orchestrator performs no reservation at all.
+   */
+  toolBudget?: ToolDispatchBudget;
+  /**
+   * R0/S1 (F1) — the campaign's SINGLE wall-clock deadline (epoch ms), read
+   * through a host clock. `null`/absent = no deadline. Passed as a getter so a
+   * long case cannot freeze an early value.
+   */
+  dispatchDeadlineAtMs?: () => number | null;
 }
 
 /** P2-43: the benchmark's MCP connector tool name. It MUST satisfy the
@@ -2059,6 +2076,12 @@ export async function runOneCase(
           });
         },
       },
+      // R0/S1 (F1) — the FORMAL path's durable tool budget. Absent for an
+      // ordinary benchmark run, so the default wiring is unchanged; present for a
+      // pre-registered arm run, where the reservation is taken at the real
+      // dispatch point and a refusal means the tool body NEVER runs.
+      ...(opts.toolBudget !== undefined ? { toolBudget: opts.toolBudget } : {}),
+      ...(opts.dispatchDeadlineAtMs !== undefined ? { dispatchDeadlineAtMs: opts.dispatchDeadlineAtMs } : {}),
     });
 
     // Holdout anonymization (Phase 6.5): the runtime-side task id never
@@ -3682,6 +3705,25 @@ async function runBenchmarkCampaignTriageCommand(
  * observe a partially initialized module.
  */
 export const R97_ARM_PROBE_SCHEMA_VERSION = "r97-arm-probe-v1";
+
+/**
+ * R0/S1 (F1) — the VERSIONED worker/arm ABI this build supports, as an exported
+ * capability list. The isolated arm worker relays it to the driver BEFORE any
+ * model request, and the driver refuses the arm when the capability the formal
+ * path needs is missing.
+ *
+ * WHY AN EXPORTED LIST AND NOT A FEATURE TEST: the driver must refuse an arm
+ * that cannot honour the campaign's durable tool budget BEFORE the first model
+ * request, and it must be able to tell that from a build that merely has a
+ * broken `node_modules`. A declared, versioned capability is checkable from the
+ * build's own bytes; a runtime probe is not.
+ *
+ * `tool-budget-rpc-v1` means: this build's `runOneCase` accepts
+ * `opts.toolBudget` (the structural `ToolDispatchBudget`) and binds it into the
+ * `ToolOrchestrator` it constructs for the case. A build WITHOUT this string is
+ * an OLD-ABI arm: the formal path must refuse it rather than run it unbudgeted.
+ */
+export { R97_ARM_ABI, R97_ARM_ABI_MODEL_PROXY, R97_ARM_ABI_TOOL_BUDGET } from "./r97-arm-abi.js";
 
 export const R97_ARM_PROBE = [
   R97_ARM_PROBE_SCHEMA_VERSION,
