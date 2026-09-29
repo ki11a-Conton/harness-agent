@@ -237,11 +237,41 @@ Everything else in this round is evidence and gating.
    `agent benchmark` runs exist (§4.2); a formal `prereg run` does not, and this round does not
    authorize one.
 4. **Promotion** — `championPromotion = NOT_RUN`.
-5. **Ubuntu** — the fixed readiness script has not run on a real Ubuntu runner. The Ubuntu evidence
-   quoted here is (a) downloaded historical artifacts and (b) a Windows `process.platform`
-   simulation. Cold-start on Ubuntu still has to be executed by GitHub Actions.
+5. **Ubuntu** — the F6 suite is now **gated on ubuntu** and green there (run `36508490472`, commit
+   `349559d`, both `install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest)` and
+   `coverage gate (ubuntu)` succeeded). The Ubuntu case inside that suite is still a
+   `process.platform` preload simulation locally; the real Ubuntu evidence is the Actions job. The
+   fixed readiness script has not been run by hand on a real Ubuntu runner.
 6. **Model-quality verdict** — unchanged: 6 weak passes / 0 strong passes on the frozen selection,
    `INCONCLUSIVE`. No number in this document claims otherwise.
+
+---
+
+## 6.1 F4/R3 deadline — the mid-stream half is now closed
+
+The R3 round enforced the campaign deadline at **pre-send** boundaries only (initial send and every
+retry). `HANDOVER-20260928-E4-R0-R7.md` residual 2 recorded the remainder: a provider stream that is
+**entered** before the deadline and then **stalls** past it was not aborted, so the unit never
+converged.
+
+RED reproducer (`packages/evaluation/src/tool-call-efficiency-tool-budget.test.ts`, `[R3-mid-stream]`,
+before the fix): a provider yields one event then stalls 30 s, deadline 300 ms out.
+
+```
+AssertionError: expected false to be true      // the AbortSignal never fired
+Duration 31.96s / case 30096ms                  // it waited out the entire stall
+```
+
+GREEN after the fix (`560ec24`): **355 ms**, `aborted = true`, error names
+`CAMPAIGN_DEADLINE_EXCEEDED`. The fix arms one timer at the deadline that aborts a linked
+controller and passes that linked signal to the inner provider; a truncated stream is reported as a
+deadline abort, not a clean completion; the `finally` clears the timer and the caller listener. The
+pre-send behaviour is unchanged (the existing `[N4.14/R3]` case still refuses with the transport never
+entered). Sanctioned under Runtime Freeze P38.4-11 clause 4.
+
+Still `NOT_OBSERVED` on this dimension: the **worker/CLI** leg (cancel the in-flight provider stream
+on worker **timeout**, closed stdin, hung child, partial frames) — the provider leg is now covered,
+the worker leg is not.
 
 ---
 
