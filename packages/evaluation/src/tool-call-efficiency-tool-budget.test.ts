@@ -421,4 +421,67 @@ describe("R3/F4 — ONE campaign deadline, and it is durable", () => {
     expect(budget.view().reserved.durationMs).toBe(0);
     expect(budget.view().reserved.toolCalls).toBe(0);
   }, 60_000);
+
+  /**
+   * R3/F4 residual — the MID-STREAM half (§R3 怎么验收: "人为卡住 provider/worker/tool：
+   * 截止后没有新的 HTTP 或工具启动，进程最终可收敛").
+   *
+   * The pre-send gate above covers a deadline that has ALREADY passed. It does not
+   * cover a stream that is entered while the deadline is still in the future and
+   * then STALLS past it: nothing aborts the in-flight `AbortSignal`, so the unit
+   * never converges. These two cases pin that gap. Real time is used for the stall
+   * (a real timer must be able to interrupt it); the deadline itself is passed in
+   * explicitly so the case is deterministic apart from one bounded sleep.
+   */
+  it("[R3-mid-stream] a provider that stalls PAST the deadline is aborted and the unit converges", async () => {
+    const dir = await tempDir();
+    const budget = await CostBudget.open(dir, artifactWith(), { allowCreate: true });
+    let entered = 0;
+    let aborted = false;
+    let released = false;
+    const provider: ModelProvider = {
+      id: "r3-midstream-fake",
+      async listModels() {
+        return [];
+      },
+      createClient() {
+        return {
+          async *generate(_req: ModelRequest, signal: AbortSignal): AsyncGenerator<ModelEvent> {
+            entered += 1;
+            // One real event, so the stream is genuinely "in flight" and past the
+            // pre-send gate, then a stall that outlives the deadline.
+            yield { type: "text_delta", text: "partial" } as never;
+            await new Promise<void>((resolve) => {
+              const t = setTimeout(resolve, 30_000);
+              signal.addEventListener(
+                "abort",
+                () => {
+                  aborted = true;
+                  clearTimeout(t);
+                  released = true;
+                  resolve();
+                },
+                { once: true },
+              );
+            });
+            yield { type: "completed", result: { finishReason: "stop" } as never, timestamp: 0 };
+          },
+        };
+      },
+    };
+
+    const startedAt = Date.now();
+    const { error } = await drain(provider, budget, dir, "candidate", {
+      deadlineAtMs: Date.now() + 300,
+      now: () => Date.now(),
+    });
+    const elapsed = Date.now() - startedAt;
+
+    expect(entered).toBe(1); // the request DID leave before the deadline
+    expect(aborted).toBe(true); // ...and the in-flight stream was cancelled at it
+    expect(released).toBe(true);
+    expect(String(error)).toMatch(/CAMPAIGN_DEADLINE_EXCEEDED/);
+    // "the process eventually converges" — it must not wait out the 30s stall.
+    expect(elapsed, `a stalled stream took ${elapsed}ms to converge past a 300ms deadline`).toBeLessThan(15_000);
+  }, 60_000);
 });

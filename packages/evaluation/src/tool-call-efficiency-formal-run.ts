@@ -1737,6 +1737,39 @@ export function createFormalBudgetedProvider(opts: {
             }
           };
 
+          /**
+           * R3/F4 residual — the MID-STREAM half. The gates below cover a deadline
+           * that has ALREADY passed (initial send and retry). Neither covers a
+           * stream entered while the deadline is still in the future that then
+           * STALLS past it: without a timer nothing aborts the caller's signal, so
+           * a hung provider outlives the campaign deadline and the unit never
+           * converges (§R3 怎么验收: "截止后没有新的 HTTP 或工具启动，进程最终可收敛").
+           *
+           * The caller owns `signal`; we do not replace it. We arm one timer that
+           * fires AT the deadline and aborts a linked controller, and we observe
+           * that controller for the rest of this generator. The timer is cleared in
+           * the `finally` so a prompt call leaves no pending handle.
+           */
+          const midStreamAbort = new AbortController();
+          const onCallerAbort = (): void => midStreamAbort.abort();
+          if (signal.aborted) onCallerAbort();
+          else signal.addEventListener("abort", onCallerAbort, { once: true });
+          let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
+          let deadlineAborted = false;
+          if (deadlineAtMs !== null) {
+            const remaining = deadlineAtMs - clock();
+            if (remaining > 0) {
+              deadlineTimer = setTimeout(() => {
+                deadlineAborted = true;
+                midStreamAbort.abort();
+              }, remaining);
+              // A pending aborter must never hold the event loop open on its own.
+              if (typeof deadlineTimer === "object" && deadlineTimer !== null && "unref" in deadlineTimer) {
+                (deadlineTimer as { unref: () => void }).unref();
+              }
+            }
+          }
+
           try {
             // R3/F4 — THE DEADLINE GATE, before the initial physical send. Once the
             // single campaign deadline has passed, no new HTTP request leaves.
@@ -1749,9 +1782,18 @@ export function createFormalBudgetedProvider(opts: {
                 `E4-R3: ${TOOL_DISPATCH_DEADLINE_EXCEEDED}: the campaign deadline (${new Date(deadlineAtMs ?? 0).toISOString()}) passed before this request was sent — refusing to send after the deadline`,
               );
             }
-            const stream = inner.generate(request, signal);
+            const stream = inner.generate(request, midStreamAbort.signal);
             entered = true;
             for await (const ev of stream) {
+              // R3/F4 — the deadline fired while this stream was in flight (or the
+              // caller cancelled). Stop consuming and surface the deadline as the
+              // cause rather than reporting a truncated stream as a completion.
+              if (deadlineAborted) {
+                stats.refusedCalls += 1;
+                throw new Error(
+                  `E4-R3: ${TOOL_DISPATCH_DEADLINE_EXCEEDED}: the campaign deadline (${new Date(deadlineAtMs ?? 0).toISOString()}) passed while this stream was in flight — the in-flight request was aborted`,
+                );
+              }
               if (ev.type === "retry") {
                 retries += 1;
                 stats.retries += 1;
@@ -1804,7 +1846,18 @@ export function createFormalBudgetedProvider(opts: {
               }
               yield ev;
             }
+            // The stream ENDED. If the deadline fired while it was in flight the
+            // abort is the cause, and a truncated response must not be reported as
+            // a clean completion.
+            if (deadlineAborted) {
+              stats.refusedCalls += 1;
+              throw new Error(
+                `E4-R3: ${TOOL_DISPATCH_DEADLINE_EXCEEDED}: the campaign deadline (${new Date(deadlineAtMs ?? 0).toISOString()}) passed while this stream was in flight — the in-flight request was aborted`,
+              );
+            }
           } finally {
+            if (deadlineTimer !== null) clearTimeout(deadlineTimer);
+            signal.removeEventListener("abort", onCallerAbort);
             await settle();
           }
         },
