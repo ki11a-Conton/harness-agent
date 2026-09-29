@@ -1665,7 +1665,12 @@ jobs:
           for leg in ubuntu windows; do
             echo "--- leg ${leg} ---"
             if [ -d ".ci/dual/${leg}" ]; then
-              find ".ci/dual/${leg}" -maxdepth 3 -printf '  %s\t%p\n' | sort -k2 | head -40
+              # Depth 6 is required to reach the per-arm artifacts, which live at
+              # `<leg>/prereg-production-e2e/pos-exec-runs/evidence/<armRunId>/`.
+              # The first version used maxdepth 3 and showed an apparently EMPTY
+              # `evidence/` directory, which was misleading.
+              find ".ci/dual/${leg}" -maxdepth 6 -printf '  %s\t%p\n' | sort -k2 | head -60
+              echo "  (files under the evidence dir: $(find ".ci/dual/${leg}" -path '*evidence*' -type f | wc -l))"
             else
               echo "  (the directory .ci/dual/${leg} does not exist — the download produced nothing)"
             fi
