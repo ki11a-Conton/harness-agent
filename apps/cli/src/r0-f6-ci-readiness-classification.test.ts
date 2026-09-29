@@ -39,7 +39,7 @@
  */
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -92,6 +92,10 @@ interface RunOptions {
 interface RunResult {
   exitCode: number | null;
   artifact: ReadinessArtifact;
+  /** The artifact exactly as written, so a test can record the raw output verbatim. */
+  rawArtifact: string;
+  /** The temp directory the run used (input, output and any raw evidence files). */
+  dir: string;
   stderr: string;
 }
 
@@ -123,10 +127,17 @@ function runScript(e2e: Record<string, unknown> | null, opts: RunOptions = {}): 
   const result = spawnSync(process.execPath, nodeArgs, {
     cwd: REPO_ROOT,
     encoding: "utf8",
+    // WATCHDOG: the readiness script shells out to three nested gates. A wedged
+    // child must be killed instead of hanging CI, so this suite always terminates.
+    timeout: 120_000,
     env: { ...process.env, PATH: `${shimDir};${process.env["PATH"] ?? ""}` },
   });
-  const artifact = JSON.parse(readFileSync(outPath, "utf8")) as ReadinessArtifact;
-  return { exitCode: result.status, artifact, stderr: result.stderr ?? "" };
+  if (result.error) {
+    throw new Error(`ci-readiness child did not complete (watchdog 120000ms): ${result.error.message}\nstderr: ${result.stderr ?? ""}`);
+  }
+  const rawArtifact = readFileSync(outPath, "utf8");
+  const artifact = JSON.parse(rawArtifact) as ReadinessArtifact;
+  return { exitCode: result.status, artifact, rawArtifact, dir, stderr: result.stderr ?? "" };
 }
 
 /**
@@ -196,6 +207,34 @@ function realE2e(overrides: Record<string, unknown> = {}): Record<string, unknow
       },
     },
     ...overrides,
+  };
+}
+
+/**
+ * S0b / F3 — the FROZEN forged input of plan(20260929-015956).md §4 item 5 and
+ * Appendix B. Every field the classifier reads is present and self-reportedly
+ * good, so nothing can bail early on an unrelated missing field. The ONLY things
+ * absent are the three that must be real:
+ *   - a legal build digest (`buildDigest` is the literal "x" for BOTH arms);
+ *   - the artifact's own `runId` (the reviewer omitted it; the caller still
+ *     passes `--run-id`, which is what the current script accepts instead);
+ *   - any raw arm / verifier / journal evidence (no evidence root is named).
+ *
+ * FROZEN means: task-7 must replay THIS object unchanged, so the before/after
+ * pair is comparable. Do not "fix" the input to make the gate pass.
+ */
+function forgedF3E2e(): Record<string, unknown> {
+  return {
+    ...baseE2e(),
+    ciRunSha: HEAD,
+    os: "windows-latest",
+    commandExits: { typecheck: 0, test: 0, build: 0 },
+    dualBuild: {
+      baselineArm: { sourceSha: "a".repeat(40), buildDigest: "x" },
+      candidateArm: { sourceSha: "b".repeat(40), buildDigest: "x" },
+      verifier: { ran: true, casesVerified: 1, casesTotal: 1 },
+    },
+    readiness: { productionOfflineReadiness: { executionKind: "REAL_DUAL_PINNED_BUILD" } },
   };
 }
 
@@ -452,5 +491,61 @@ describe("R7/F6 — readiness comes from a structured kind + verified evidence, 
     // A REAL basis still does not authorize money or promotion.
     expect(artifact.levels["paidExperimentRun"]?.status).toBe("NOT_RUN");
     expect(artifact.levels["championPromotion"]?.status).toBe("NOT_RUN");
+  });
+});
+
+/**
+ * S0b — plan(20260929-015956).md §4 item 5 / Appendix B. The F3 counter-example.
+ *
+ * MEASURED DEFECT against the UNMODIFIED script at HEAD f23de8e (real child
+ * process, same input as this test):
+ *
+ *   inputHasRunId: false, inputBuildDigests: ["x","x"]
+ *   realBuildOfflineReady: { status: "PASS", blocker: null, evidence: { failures: [] } }
+ *
+ * `verifyRealEvidence()` (scripts/e4/ci-readiness.mjs L195-240) checks
+ * `buildDigest` for NON-EMPTINESS only (L220-221), accepts a caller-supplied
+ * `--run-id` in place of the artifact's own run identity (L207-210), and never
+ * opens — or even names — an arm / verifier / journal raw file.
+ *
+ * THIS BLOCK IS DELIBERATELY RED. It asserts the CORRECT behaviour, so it fails
+ * until task-7 (S6) derives readiness from raw evidence. It is NOT `test.fails`,
+ * NOT `skip`, and NOT an inverted assertion: nothing here makes a known defect
+ * look green.
+ */
+describe("S0b/F3 — a forged REAL declaration with no raw evidence must not PASS (RED counter-example)", () => {
+  it("S0b-F3-RED: forged REAL JSON with buildDigest 'x', no raw evidence and no artifact runId must not PASS", () => {
+    const forged = forgedF3E2e();
+    // The caller DOES pass --run-id, exactly as the reviewer did. The defect is
+    // that the ARTIFACT's own runId is never required.
+    const { artifact, rawArtifact, exitCode, dir } = runReal(forged);
+
+    // Verbatim before/after record (plan §4 item 5: keep the raw input and the
+    // raw output; the SAME input is replayed after the fix).
+    console.log(`[S0b-F3] raw forged input JSON: ${JSON.stringify(forged)}`);
+    console.log(`[S0b-F3] raw readiness output JSON: ${rawArtifact}`);
+
+    // The input is COMPLETE: nothing bailed early on an unrelated missing field.
+    expect(exitCode).toBe(0);
+    expect(artifact.executionKind).toBe("REAL_DUAL_PINNED_BUILD");
+    expect(artifact.forwardBasis).toBe("REAL_DUAL_PINNED_BUILD");
+    // ...and it really is the forged shape: no artifact runId, no evidence root.
+    expect(Object.hasOwn(forged, "runId")).toBe(false);
+    expect(Object.keys(forged).some((k) => /evidence|bundle|root/i.test(k))).toBe(false);
+    // No arm / verifier / journal / manifest / aggregate / schedule raw file was
+    // created anywhere for this run.
+    expect(readdirSync(dir).filter((entry) => /arm|verifier|journal|manifest|aggregate|schedule/i.test(entry))).toEqual([]);
+
+    const level = artifact.levels["realBuildOfflineReady"];
+    const reasons = `${level?.blocker ?? ""} ${(level?.evidence?.failures ?? []).join(" ")}`;
+
+    // TARGET 1 — a forged declaration must never reach PASS.
+    expect(level?.status).not.toBe("PASS");
+    // TARGET 2 — the missing ARTIFACT run identity must be named.
+    expect(reasons).toMatch(/run[ _-]?id/i);
+    // TARGET 3 — "x" is not a legal build digest and must be named.
+    expect(reasons).toMatch(/digest/i);
+    // TARGET 4 — the absent raw evidence must be named.
+    expect(reasons).toMatch(/evidence|raw|bundle|manifest/i);
   });
 });
