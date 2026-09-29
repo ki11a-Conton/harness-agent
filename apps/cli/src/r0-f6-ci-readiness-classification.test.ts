@@ -996,3 +996,189 @@ describe("S0b/F3 — a forged REAL declaration with no raw evidence must not PAS
     expect(reasons).toMatch(/evidence|raw|bundle|manifest/i);
   });
 });
+
+/**
+ * task-10 — the request/dispatch journal CROSS-BINDING.
+ *
+ * `bindRequestDispatchJournals` is the function that decides whether
+ * `budgetEvidenceReady` can reach MEASURED. It is exported from the verifier and
+ * takes its inputs explicitly, so it is asserted DIRECTLY here rather than only
+ * through the CLI — otherwise a defect inside it would be invisible, because NO
+ * producer writes a tool-dispatch journal yet (see the NOT_PROVEN note below).
+ *
+ * The point of these cases is that the function must have a REACHABLE MEASURED
+ * path (a checker that can never pass is not a checker) while refusing every
+ * splice, duplicate and unobserved-outcome shape. The umbrella code
+ * `REQUEST_DISPATCH_JOURNAL_NOT_BOUND` must stay FIRST in the reason, with the
+ * specific cause after it, so the report names EXACTLY which input is missing.
+ */
+describe("task-10 — request/dispatch journal cross-binding", () => {
+  const ARM_B = "arm-run-baseline";
+  const ARM_C = "arm-run-candidate";
+  const CASE_ID = "reg-01-basic-edit";
+
+  function schedule(): Map<string, { armId: string; caseId: string }> {
+    return new Map([
+      [ARM_B, { armId: "baseline", caseId: CASE_ID }],
+      [ARM_C, { armId: "candidate", caseId: CASE_ID }],
+    ]);
+  }
+
+  function entry(over: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      armRunId: ARM_B,
+      arm: "baseline",
+      caseId: CASE_ID,
+      requestId: "rq-1",
+      attemptId: 0,
+      reservationId: "rs-1",
+      campaignDigest: "digest-1",
+      outcomeUnknown: false,
+      ...over,
+    };
+  }
+
+  function dispatchOver(reservations: unknown[]): { reservations: unknown[] } {
+    return { reservations };
+  }
+
+  async function bind(over: {
+    // `null` is a MEANINGFUL input here (the journal is absent), so it must not be
+    // conflated with "not supplied" — hence the `in` check rather than `??`.
+    entries?: unknown;
+    dispatchJournal?: unknown;
+    dispatchJournalProblem?: string | null;
+    scheduleArms?: Map<string, { armId: string; caseId: string }>;
+  }) {
+    const mod = await import(pathToFileURL(join(REPO_ROOT, "scripts", "e4", "readiness-evidence-verify.mjs")).href);
+    return mod.bindRequestDispatchJournals({
+      entries: "entries" in over ? over.entries : [entry()],
+      scheduleArms: over.scheduleArms ?? schedule(),
+      dispatchJournal:
+        "dispatchJournal" in over
+          ? over.dispatchJournal
+          : dispatchOver([{ reservationId: "rs-1", outcome: "settled" }]),
+      dispatchJournalFile: "dispatch-journal.json",
+      dispatchJournalProblem: over.dispatchJournalProblem ?? null,
+    });
+  }
+
+  it("BIND-1: a fully consistent pair of journals reaches MEASURED with its digest, counts and reasons intact", async () => {
+    const result = await bind({
+      entries: [
+        entry(),
+        entry({ armRunId: ARM_C, arm: "candidate", requestId: "rq-2", reservationId: "rs-2" }),
+      ],
+      dispatchJournal: dispatchOver([
+        { reservationId: "rs-1", outcome: "settled" },
+        { reservationId: "rs-2", outcome: "settled" },
+      ]),
+    });
+    expect(result.status).toBe("MEASURED");
+    expect(result.reason).toBeNull();
+    expect(result.problems).toEqual([]);
+    // The facts actually describe the input, so this is not a blind PASS.
+    expect(result.facts.requestJournalEntries).toBe(2);
+    expect(result.facts.boundAttempts).toBe(2);
+    expect(result.facts.boundReservations).toBe(2);
+    expect(result.facts.unsettledReservations).toBe(0);
+    expect(result.facts.distinctArms).toEqual([ARM_B, ARM_C].sort());
+  });
+
+  it("BIND-2: a MISSING journal refuses and still names the request/attempt binding", async () => {
+    const result = await bind({ entries: null });
+    expect(result.status).toBe("NOT_PROVEN");
+    expect(result.reason).toMatch(/^REQUEST_DISPATCH_JOURNAL_NOT_BOUND:/);
+    expect(result.reason).toMatch(/REQUEST_JOURNAL_MISSING/);
+  });
+
+  it("BIND-3: an ABSENT tool-dispatch journal refuses — a granted reservation that never settled cannot be excluded", async () => {
+    const result = await bind({ dispatchJournal: null });
+    expect(result.status).toBe("NOT_PROVEN");
+    expect(result.reason).toMatch(/DISPATCH_JOURNAL_MISSING/);
+  });
+
+  it("BIND-4: the SAME attempt settled twice is refused as a duplicate", async () => {
+    const result = await bind({ entries: [entry(), entry()] });
+    expect(result.status).toBe("NOT_PROVEN");
+    expect(result.reason).toMatch(/JOURNAL_DUPLICATE_ATTEMPT/);
+  });
+
+  it("BIND-5: one reservation attributed to BOTH arms is refused as a cross-arm splice", async () => {
+    const result = await bind({
+      entries: [
+        entry(),
+        entry({ armRunId: ARM_C, arm: "candidate", requestId: "rq-2", reservationId: "rs-1" }),
+      ],
+    });
+    expect(result.status).toBe("NOT_PROVEN");
+    expect(result.reason).toMatch(/CROSS_ARM_RESERVATION/);
+  });
+
+  it("BIND-6: entries spliced from two DIFFERENT runs are refused as a cross-run splice", async () => {
+    const result = await bind({
+      entries: [entry(), entry({ requestId: "rq-3", reservationId: "rs-3", campaignDigest: "digest-OTHER" })],
+    });
+    expect(result.status).toBe("NOT_PROVEN");
+    expect(result.reason).toMatch(/CROSS_RUN_SPLICE/);
+  });
+
+  it("BIND-7: an entry for an UNSCHEDULED arm is refused rather than ignored", async () => {
+    const result = await bind({ entries: [entry({ armRunId: "arm-not-scheduled" })] });
+    expect(result.status).toBe("NOT_PROVEN");
+    expect(result.reason).toMatch(/JOURNAL_UNKNOWN_ARM/);
+  });
+
+  it("BIND-8: an UNOBSERVED outcome stays visible as a conservative bound and is never counted as measured", async () => {
+    const result = await bind({ entries: [entry({ outcomeUnknown: true })] });
+    expect(result.status).toBe("NOT_PROVEN");
+    expect(result.reason).toMatch(/DROPPED_RETRY_UNOBSERVED/);
+    // It was still BOUND (not silently dropped), and the count records it.
+    expect(result.facts.boundAttempts).toBe(1);
+    expect(result.facts.droppedRetries).toBe(1);
+  });
+
+  it("BIND-9: a dispatch reservation settled with no outcome is UNKNOWN, never zero", async () => {
+    const result = await bind({
+      dispatchJournal: dispatchOver([{ reservationId: "rs-1", outcome: null }]),
+    });
+    expect(result.status).toBe("NOT_PROVEN");
+    expect(result.reason).toMatch(/TOOL_UNKNOWN/);
+    expect(result.facts.unsettledReservations).toBe(1);
+  });
+
+  it("BIND-10: a dispatch reservation appearing in NO request entry is refused as unbound", async () => {
+    const result = await bind({
+      dispatchJournal: dispatchOver([
+        { reservationId: "rs-1", outcome: "settled" },
+        { reservationId: "rs-orphan", outcome: "settled" },
+      ]),
+    });
+    expect(result.status).toBe("NOT_PROVEN");
+    expect(result.reason).toMatch(/DISPATCH_RESERVATION_UNBOUND/);
+  });
+
+  it("BIND-11: the real producer currently writes NO dispatch journal, so budgetEvidenceReady is NOT_PROVEN — recorded, not hidden", async () => {
+    // This is the honest current state and the reason `budgetEvidenceReady` is
+    // NOT_PROVEN rather than PASS: `r5-real-formal.mjs` COPIES `dispatch*.json`
+    // into the evidence dir, but no producer in this repository WRITES such a
+    // file. Reproduce the search rather than trusting this comment.
+    const { execFileSync } = await import("node:child_process");
+    const out = execFileSync("git", ["grep", "-l", "dispatch-journal", "--", "*.ts", "*.mjs", "*.js"], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    });
+    // Every match must be a CONSUMER (a verifier, the readiness reducer, or this
+    // test asserting the gap). A match that WRITES the file would be a producer,
+    // and that is what must not exist yet.
+    const consumers = ["readiness-evidence-verify", "ci-readiness", "r0-f6-ci-readiness-classification"];
+    const producers = out
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .filter((f) => !consumers.some((c) => f.includes(c)));
+    expect(producers, `unexpected producers of a dispatch journal: ${producers.join(", ")}`).toEqual([]);
+    // And the consumer set is non-empty, so this is not vacuously true.
+    expect(out.trim().length).toBeGreaterThan(0);
+  });
+});

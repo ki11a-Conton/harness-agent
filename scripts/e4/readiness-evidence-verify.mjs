@@ -44,7 +44,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
 export const READINESS_EVIDENCE_SCHEMA = "prereg-readiness-evidence-v1";
@@ -66,6 +66,56 @@ export const ARM_EVIDENCE_FILES = Object.freeze({
   security: "security.json",
   activation: "activation.json",
 });
+
+/**
+ * S6b — the TOOL-DISPATCH reservation journal (plan §10.2-10.4).
+ *
+ * The request/attempt journal is the cost ledger's own `entries` array: every
+ * `CostJournalEntry` already carries `(armRunId, requestId, attemptId,
+ * reservationId, costReservationId)`, and the campaign enforces those unique
+ * (tool-call-efficiency-formal-run.ts L1073-1133). What the ledger does NOT carry
+ * is the TOOL-DISPATCH side: the `tool_grant`/`tool_settle` RPC a tool call goes
+ * through, and whether a granted reservation was ever settled. Without that a
+ * dispatched-but-never-settled tool call is invisible, so it cannot be excluded
+ * from the budget proof.
+ *
+ * `r5-real-formal.mjs` L1445-1451 already COPIES any `dispatch*.json` from the
+ * budget directory into the bundle, so the transport for this file exists; the
+ * missing piece is that nothing PRODUCES one yet. Absence is therefore reported
+ * as a named, actionable gap — never as "the budget reconciled".
+ */
+export const DISPATCH_JOURNAL_FILENAMES = Object.freeze([
+  "dispatch-journal.json",
+  "tool-dispatch-journal.json",
+  "dispatch-reservations.json",
+]);
+
+/**
+ * Locate the tool-dispatch journal under the evidence root, confined to it.
+ * Returns `{file, journal}` when found, `{file:null, journal:null}` when the
+ * bundle simply does not carry one, and a `problem` when it exists but is
+ * unreadable — "absent" and "broken" must never read the same.
+ */
+export function findDispatchJournal(evidenceRoot) {
+  let names;
+  try {
+    names = readdirSync(evidenceRoot);
+  } catch {
+    return { file: null, journal: null, problem: null };
+  }
+  const named = DISPATCH_JOURNAL_FILENAMES.filter((n) => names.includes(n));
+  const patterned = names.filter((n) => /^dispatch.*\.json$/i.test(n));
+  const candidates = [...new Set([...named, ...patterned])];
+  if (candidates.length === 0) return { file: null, journal: null, problem: null };
+  const file = candidates[0];
+  const r = resolveInsideRoot(evidenceRoot, file);
+  if (!r.ok) return { file, journal: null, problem: r.problem };
+  try {
+    return { file, journal: JSON.parse(readFileSync(r.path, "utf8")), problem: null };
+  } catch {
+    return { file, journal: null, problem: `${file} is not readable JSON` };
+  }
+}
 
 const SHA40 = /^[0-9a-f]{40}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
@@ -168,6 +218,189 @@ export function recomputeJournalTotals(entries) {
 }
 
 /**
+ * S6b — CROSS-BIND the request/attempt journal and the tool-dispatch journal.
+ *
+ * This is the deferred half of task-7. It is a REAL check, not a placeholder:
+ * when both journals are present and reconcile it returns `MEASURED`, which is
+ * the only way `budgetEvidenceReady` can PASS.
+ *
+ * Bindings enforced (each with its own named reason):
+ *   - `armRunId` must name a PLANNED schedule arm and the arm's own `armId`
+ *     (`JOURNAL_UNKNOWN_ARM`, `REQUEST_JOURNAL_ARM_MISMATCH`);
+ *   - `(armRunId, requestId, attemptId)` may be settled exactly once
+ *     (`JOURNAL_DUPLICATE_ATTEMPT`);
+ *   - `reservationId` may be settled exactly once, and never to two arms
+ *     (`DUPLICATE_RESERVATION_SETTLEMENT`, `CROSS_ARM_RESERVATION`);
+ *   - every entry must share ONE `campaignDigest`, so two runs cannot be spliced
+ *     (`CROSS_RUN_SPLICE`);
+ *   - a dispatched-but-unobserved attempt stays visible as its conservative
+ *     upper bound and is never flattened to zero (`DROPPED_RETRY_UNOBSERVED`);
+ *   - every dispatch reservation must appear in the request journal and be
+ *     settled; an unknown/absent outcome is `TOOL_UNKNOWN` / `UNSETTLED`.
+ *
+ * @param {object} input
+ * @param {Array<object>|null} input.entries        raw cost-journal entries
+ * @param {Map<string, object>} input.scheduleArms  armRunId -> schedule record
+ * @param {object|null} input.dispatchJournal       the located dispatch journal
+ * @param {string|null} input.dispatchJournalFile   its filename, for messages
+ * @param {string|null} input.dispatchJournalProblem unreadable-journal problem
+ * @returns {{status: string, reason: string|null, problems: string[], facts: object}}
+ */
+export function bindRequestDispatchJournals({ entries, scheduleArms, dispatchJournal, dispatchJournalFile, dispatchJournalProblem }) {
+  const problems = [];
+  const facts = {
+    requestJournalEntries: entries === null ? null : entries.length,
+    boundAttempts: 0,
+    boundReservations: 0,
+    distinctArms: [],
+    droppedRetries: 0,
+    dispatchJournalFile: dispatchJournalFile ?? null,
+    dispatchReservations: null,
+    unsettledReservations: null,
+  };
+
+  // --- the request/attempt journal -----------------------------------------
+  if (entries === null) {
+    return {
+      status: "NOT_PROVEN",
+      reason:
+        "REQUEST_DISPATCH_JOURNAL_NOT_BOUND: REQUEST_JOURNAL_MISSING: cost-journal.json carries no entries array, so armRunId <-> requestId <-> attemptId <-> reservationId cannot be cross-bound",
+      problems: ["REQUEST_JOURNAL_MISSING"],
+      facts,
+    };
+  }
+
+  const campaignDigests = new Set();
+  const seenAttempts = new Set();
+  const reservationOwner = new Map();
+  const boundArms = new Set();
+
+  for (const e of entries) {
+    if (e === null || typeof e !== "object") {
+      problems.push("REQUEST_JOURNAL_ENTRY_MALFORMED: a journal entry is not an object");
+      continue;
+    }
+    if (!isNonEmptyString(e.armRunId)) {
+      problems.push("JOURNAL_ENTRY_UNATTRIBUTED: a journal entry carries no armRunId");
+      continue;
+    }
+    const scheduled = scheduleArms.get(e.armRunId) ?? null;
+    if (scheduled === null) {
+      problems.push(`JOURNAL_UNKNOWN_ARM: journal entry for ${e.armRunId} has no schedule entry`);
+      continue;
+    }
+    if (e.arm !== scheduled.armId) {
+      problems.push(`REQUEST_JOURNAL_ARM_MISMATCH: ${e.armRunId} is scheduled as ${scheduled.armId} but the journal attributes it to ${JSON.stringify(e.arm)}`);
+    }
+    if (isNonEmptyString(scheduled.caseId) && isNonEmptyString(e.caseId) && e.caseId !== scheduled.caseId) {
+      problems.push(`REQUEST_JOURNAL_SCOPE_MISMATCH: ${e.armRunId} is scheduled for case ${scheduled.caseId} but the journal says ${e.caseId}`);
+    }
+    if (!isNonEmptyString(e.requestId)) {
+      problems.push(`REQUEST_JOURNAL_NO_REQUEST_ID: ${e.armRunId} carries no requestId`);
+      continue;
+    }
+    if (asInt(e.attemptId) === null || asInt(e.attemptId) < 0) {
+      problems.push(`REQUEST_JOURNAL_NO_ATTEMPT_ID: ${e.armRunId}/${e.requestId} carries no non-negative attemptId`);
+      continue;
+    }
+    if (!isNonEmptyString(e.reservationId)) {
+      problems.push(`REQUEST_JOURNAL_NO_RESERVATION_ID: ${e.armRunId}/${e.requestId}#${e.attemptId} carries no reservationId`);
+      continue;
+    }
+    if (isNonEmptyString(e.campaignDigest)) campaignDigests.add(e.campaignDigest);
+
+    const attemptKey = `${e.armRunId}|${e.requestId}|${e.attemptId}`;
+    if (seenAttempts.has(attemptKey)) {
+      problems.push(`JOURNAL_DUPLICATE_ATTEMPT: ${attemptKey} is settled more than once`);
+    } else {
+      seenAttempts.add(attemptKey);
+      facts.boundAttempts += 1;
+    }
+
+    const owner = reservationOwner.get(e.reservationId);
+    if (owner === undefined) {
+      reservationOwner.set(e.reservationId, { armRunId: e.armRunId, arm: e.arm });
+      facts.boundReservations += 1;
+    } else if (owner.arm !== e.arm) {
+      problems.push(
+        `CROSS_ARM_RESERVATION: reservation ${e.reservationId} is attributed to both ${owner.arm} and ${e.arm} — a physical attempt is charged exactly once and never to two arms`,
+      );
+    } else {
+      problems.push(`DUPLICATE_RESERVATION_SETTLEMENT: reservation ${e.reservationId} is settled more than once`);
+    }
+
+    boundArms.add(e.armRunId);
+
+    // A dispatched attempt whose real usage was never observed is a DROPPED
+    // RETRY. It is not an error to have one, but it must stay VISIBLE as a
+    // conservative bound rather than being silently treated as measured.
+    if (e.outcomeUnknown === true) {
+      facts.droppedRetries += 1;
+      problems.push(
+        `DROPPED_RETRY_UNOBSERVED: ${e.armRunId}/${e.requestId}#${e.attemptId} was dispatched but its real outcome was never observed, so its conservative upper bound is reported instead of measured usage`,
+      );
+    }
+  }
+
+  if (campaignDigests.size > 1) {
+    problems.push(`CROSS_RUN_SPLICE: the request journal carries ${campaignDigests.size} distinct campaignDigests (${[...campaignDigests].join(", ")}), so entries from different runs are spliced together`);
+  }
+  facts.distinctArms = [...boundArms].sort();
+
+  // --- the tool-dispatch reservation journal --------------------------------
+  if (dispatchJournalProblem !== null && dispatchJournalProblem !== undefined) {
+    problems.push(`DISPATCH_JOURNAL_MALFORMED: ${dispatchJournalProblem}`);
+  }
+  if (dispatchJournal === null || dispatchJournal === undefined) {
+    problems.push(
+      "DISPATCH_JOURNAL_MISSING: no tool-dispatch reservation journal is present in the bundle, so a tool call that was granted a reservation but never settled cannot be excluded from the budget proof",
+    );
+  } else {
+    const reservations = Array.isArray(dispatchJournal.reservations)
+      ? dispatchJournal.reservations
+      : Array.isArray(dispatchJournal.entries)
+        ? dispatchJournal.entries
+        : null;
+    if (reservations === null) {
+      problems.push(`DISPATCH_JOURNAL_MALFORMED: ${dispatchJournalFile ?? "the dispatch journal"} carries no reservations/entries array`);
+    } else {
+      facts.dispatchReservations = reservations.length;
+      let unsettled = 0;
+      for (const r of reservations) {
+        if (r === null || typeof r !== "object") {
+          problems.push("DISPATCH_RESERVATION_MALFORMED: a dispatch reservation is not an object");
+          continue;
+        }
+        if (!isNonEmptyString(r.reservationId)) {
+          problems.push("DISPATCH_RESERVATION_NO_ID: a dispatch reservation carries no reservationId");
+          continue;
+        }
+        if (!reservationOwner.has(r.reservationId)) {
+          problems.push(`DISPATCH_RESERVATION_UNBOUND: dispatch reservation ${r.reservationId} appears in no request-journal entry`);
+        }
+        const outcome = r.outcome;
+        if (outcome === undefined || outcome === null || outcome === "unknown") {
+          unsettled += 1;
+          problems.push(`TOOL_UNKNOWN: dispatch reservation ${r.reservationId} has no settled outcome (${JSON.stringify(outcome)}), so its consumption is UNKNOWN rather than zero`);
+        }
+      }
+      facts.unsettledReservations = unsettled;
+    }
+  }
+
+  if (problems.length === 0) return { status: "MEASURED", reason: null, problems, facts };
+  // The stable umbrella code stays FIRST: `budgetEvidenceReady` is genuinely NOT
+  // cross-bound. The specific cause follows, so the report names EXACTLY which
+  // input is missing instead of a blanket "not implemented yet".
+  return {
+    status: "NOT_PROVEN",
+    reason: `REQUEST_DISPATCH_JOURNAL_NOT_BOUND: ${problems.join("; ")}`,
+    problems,
+    facts,
+  };
+}
+
+/**
  * Verify one readiness evidence bundle.
  *
  * @param {object} input
@@ -198,15 +431,17 @@ export function verifyEvidenceBundle(input) {
     derivedVerifierCoverage: null,
     budget: null,
     journalBinding: { status: "NOT_PROVEN", reason: null },
-    // S6 — the request/attempt/dispatch-journal cross-binding (plan §10.2-10.4)
-    // is S4's bundle contract and does not exist yet. It is declared here as an
-    // UNBOUND dimension so `budgetEvidenceReady` can never PASS while a required
-    // part of the budget proof is missing. It is never silently dropped.
+    // S6b — the request/attempt + tool-dispatch journal cross-binding. FILLED BY
+    // `bindRequestDispatchJournals` below from the raw entries and the schedule;
+    // the initial value is the fail-closed default for a bundle that never gets
+    // that far (no evidence root, or no journal at all). `budgetEvidenceReady`
+    // can never PASS while this is not MEASURED — it is never silently dropped.
     requestDispatchBinding: {
       status: "NOT_PROVEN",
       reason:
-        "REQUEST_DISPATCH_JOURNAL_NOT_BOUND: the per-request/per-attempt request journal and the tool-dispatch reservation journal are not part of the bundle contract yet (S4/plan §10.2-10.4), so armRunId <-> requestId <-> attemptId <-> reservationId cannot be cross-bound and a dropped retry, a duplicate settlement or a tool unknown cannot be excluded",
+        "REQUEST_DISPATCH_JOURNAL_NOT_BOUND: no request/attempt journal was read, so armRunId <-> requestId <-> attemptId <-> reservationId cannot be cross-bound",
     },
+    requestDispatchFacts: null,
   };
 
   if (!isNonEmptyString(evidenceRoot)) {
@@ -328,9 +563,8 @@ export function verifyEvidenceBundle(input) {
   }
 
   // --- 2. schedule + per-arm raw evidence -----------------------------------
-  // `scheduleArmIds` is hoisted out of the block below because the budget step
-  // needs it to detect a journal entry that belongs to no planned arm.
-  const scheduleArmIds = new Set();
+  /** armRunId -> the schedule record, so the budget step can bind arm/case too. */
+  const scheduleArms = new Map();
   const scheduleText = readInside(EVIDENCE_BUNDLE_FILES.schedule);
   if (scheduleText !== null) {
     const schedule = parseObject(scheduleText, EVIDENCE_BUNDLE_FILES.schedule, problems);
@@ -355,7 +589,12 @@ export function verifyEvidenceBundle(input) {
             continue;
           }
           seen.add(armRunId);
-          scheduleArmIds.add(armRunId);
+          scheduleArms.set(armRunId, {
+            armRunId,
+            armId: entry.armId,
+            caseId: entry.caseId,
+            repetition: asInt(entry.repetition),
+          });
           if (entry.armId !== "baseline" && entry.armId !== "candidate") {
             problems.push(`SCHEDULE_ARM_ID_INVALID: ${armRunId} names armId ${JSON.stringify(entry.armId)}`);
             continue;
@@ -429,19 +668,6 @@ export function verifyEvidenceBundle(input) {
         budgetProblems.push("JOURNAL_ENTRIES_MISSING: cost-journal.json carries no entries array, so per-arm attribution cannot be reconciled");
         facts.journalBinding = { status: "NOT_PROVEN", reason: "JOURNAL_ENTRIES_MISSING: the raw per-request entries are absent" };
       } else {
-        const seenAttempts = new Set();
-        for (const e of entries) {
-          if (!isNonEmptyString(e?.armRunId)) {
-            budgetProblems.push("JOURNAL_ENTRY_UNATTRIBUTED: a journal entry carries no armRunId");
-            continue;
-          }
-          if (scheduleArmIds.size > 0 && !scheduleArmIds.has(e.armRunId)) {
-            budgetProblems.push(`JOURNAL_UNKNOWN_ARM: journal entry for ${e.armRunId} has no schedule entry`);
-          }
-          const key = `${e.armRunId}|${String(e.requestId)}|${String(e.attemptId)}`;
-          if (seenAttempts.has(key)) budgetProblems.push(`JOURNAL_DUPLICATE_ATTEMPT: ${key} is settled more than once`);
-          seenAttempts.add(key);
-        }
         const totals = recomputeJournalTotals(entries);
         facts.budget = totals;
         const cost = aggregate.cost ?? null;
@@ -469,6 +695,25 @@ export function verifyEvidenceBundle(input) {
           facts.journalBinding = { status: "MEASURED", reason: null };
         } else {
           facts.journalBinding = { status: "NOT_PROVEN", reason: budgetProblems.join("; ") };
+        }
+
+        // S6b — the REAL request/dispatch-journal cross-binding. This replaces
+        // the task-7 placeholder: it is computed from the raw entries and the
+        // schedule, and it is the ONLY way `budgetEvidenceReady` can PASS.
+        const dispatch = findDispatchJournal(evidenceRoot);
+        const binding = bindRequestDispatchJournals({
+          entries,
+          scheduleArms,
+          dispatchJournal: dispatch.journal,
+          dispatchJournalFile: dispatch.file,
+          dispatchJournalProblem: dispatch.problem,
+        });
+        facts.requestDispatchBinding = { status: binding.status, reason: binding.reason };
+        facts.requestDispatchFacts = binding.facts;
+        // The binding's own findings are BUDGET-level facts: they must not make
+        // the REAL-BUILD level unproven (the levels stay independent).
+        for (const p of binding.problems) {
+          if (!budgetProblems.includes(p)) budgetProblems.push(p);
         }
       }
     }
