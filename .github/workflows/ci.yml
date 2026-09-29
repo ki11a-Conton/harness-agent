@@ -1583,7 +1583,18 @@ jobs:
   # ---------------------------------------------------------------------------
   dual-platform-acceptance:
     name: dual-platform acceptance (same SHA)
-    needs: [verify, coverage]
+    # `r97-r98-closed-loop` is REQUIRED here, and its absence was the last wiring
+    # bug in this job. Measured on run 36533501940: the two `ci-readiness-*`
+    # artifacts existed and were correctly named (196 KB each — the JSON plus the
+    # raw evidence bundle), the requested names matched byte for byte, and yet BOTH
+    # download steps produced nothing, so the verifier refused with
+    #   MISSING_ARTIFACT: windows: ... is missing or unreadable
+    #   MISSING_ARTIFACT: ubuntu:  ... is missing or unreadable
+    # The legs are UPLOADED by `r97-r98-closed-loop`, which was not in `needs`, so
+    # this job neither waited for them nor could see their artifacts.
+    # `coverage` is kept because it is a real readiness input (`verify` and
+    # `coverage` both gate the tree this job reads).
+    needs: [verify, coverage, r97-r98-closed-loop]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -1620,9 +1631,16 @@ jobs:
       # name, so download them into a per-leg directory. The verifier reads each
       # leg's `platform` field and refuses if it disagrees with the leg name —
       # that is what makes a mislabelled download detectable rather than silent.
+      #
+      # NOTE on error handling: these steps keep `continue-on-error: true` so an
+      # absent artifact surfaces as a NAMED `MISSING_ARTIFACT` refusal in the
+      # verdict (which names the platform) rather than as a bare infra red. But
+      # that ALSO hid a wiring bug: on run 36533501940 both downloads silently
+      # produced nothing and only the refusal was visible. So each download now
+      # LISTS what it actually received — the evidence of success is printed, not
+      # assumed, and an empty download is visible in the log even though the step
+      # itself is non-fatal.
       - name: Download ubuntu readiness leg
-        # `if: always()` + non-fatal: an absent artifact must surface as
-        # PLATFORM_MISSING in the verdict, not as a green job.
         if: always()
         continue-on-error: true
         uses: actions/download-artifact@v4
@@ -1637,6 +1655,21 @@ jobs:
         with:
           name: ci-readiness-windows-latest-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: .ci/dual/windows
+
+      - name: Show what each leg actually downloaded
+        if: always()
+        run: |
+          # Printed BEFORE the verdict so an empty leg is distinguishable from a
+          # malformed one. `find` is used rather than a shell glob so an empty
+          # directory is reported explicitly instead of expanding to itself.
+          for leg in ubuntu windows; do
+            echo "--- leg ${leg} ---"
+            if [ -d ".ci/dual/${leg}" ]; then
+              find ".ci/dual/${leg}" -maxdepth 3 -printf '  %s\t%p\n' | sort -k2 | head -40
+            else
+              echo "  (the directory .ci/dual/${leg} does not exist — the download produced nothing)"
+            fi
+          done
 
       - name: Reduce both legs to one same-SHA verdict
         id: dual
