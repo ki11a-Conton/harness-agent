@@ -19,7 +19,7 @@
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -43,7 +43,7 @@ afterAll(() => {
 interface Verdict {
   schemaVersion: string;
   acceptanceUnit: { ciRunId: string; expectedSha: string; ciRunSha: string; attempt: number | null; platforms: string[] };
-  legs: Record<string, { path: string; platform: string; recordedPlatform: string; attempt: number | null; evidenceRoot: string | null; bundleReVerified: { ok: boolean; problems: string[]; derivedVerifierCoverage: { verified: number; total: number } | null; journalBinding: string | null; requestDispatchBinding: string | null } | null }>;
+  legs: Record<string, { path: string; platform: string; recordedPlatform: string; attempt: number | null; evidenceRoot: string | null; evidenceRootRecorded: string | null; evidenceRootResolvedFrom: string | null; bundleReVerified: { ok: boolean; problems: string[]; derivedVerifierCoverage: { verified: number; total: number } | null; journalBinding: string | null; requestDispatchBinding: string | null } | null }>;
   levels: Record<string, { windows: string; ubuntu: string; verdict: string }>;
   overall: string;
   findings: { level: string; verdict: string; windows: string; ubuntu: string }[];
@@ -524,5 +524,79 @@ describe("S7b — dual-platform acceptance joins two legs, or refuses", () => {
     expect(v.legs["windows"]?.bundleReVerified?.derivedVerifierCoverage).toEqual({ verified: 2, total: 2 });
     // ...and the deferred dimension stays visibly NOT_PROVEN rather than passing.
     expect(v.legs["windows"]?.bundleReVerified?.requestDispatchBinding).toBe("NOT_PROVEN");
+  });
+
+  it("DP-O: a leg that records a RELATIVE evidenceRoot (the real CI layout) still resolves and re-verifies", () => {
+    const s = scratch();
+    // Mirror the REAL CI shape: `ci-readiness.mjs` records the RAW `--evidence-root`
+    // argument, which in the e4 job is a path relative to THAT job's workspace
+    // (`.ci/r97-r98/readiness-evidence`). The joining job downloads the artifact
+    // somewhere else, with the bundle BESIDE the leg's ci-readiness.json.
+    const copyBundle = (from: string, to: string): void => {
+      execFileSync(process.execPath, ["-e", "require('fs').cpSync(process.argv[1], process.argv[2], {recursive:true})", from, to], { cwd: REPO_ROOT });
+    };
+
+    const windowsLegDir = join(s.dir, "windows");
+    mkdirSync(windowsLegDir, { recursive: true });
+    copyBundle(writeValidBundle(s.dir, "windows"), join(windowsLegDir, "readiness-evidence"));
+
+    const ubuntuLegDir = join(s.dir, "ubuntu");
+    mkdirSync(ubuntuLegDir, { recursive: true });
+    copyBundle(writeValidBundle(s.dir, "ubuntu"), join(ubuntuLegDir, "readiness-evidence"));
+
+    const windows = writeArtifact(
+      s.dir,
+      "windows/ci-readiness.json",
+      readinessArtifact("windows", { inputs: { evidenceRoot: ".ci/r97-r98/readiness-evidence" } }),
+    );
+    const ubuntu = writeArtifact(
+      s.dir,
+      "ubuntu/ci-readiness.json",
+      readinessArtifact("ubuntu", { inputs: { evidenceRoot: ".ci/r97-r98/readiness-evidence" } }),
+    );
+
+    // The recorded relative path does NOT exist from this CWD — which is exactly
+    // why resolving only against the CWD would refuse every real leg.
+    expect(existsSync(".ci/r97-r98/readiness-evidence")).toBe(false);
+
+    const r = s.run(["--windows", windows, "--ubuntu", ubuntu]);
+    expect(r.exitCode, r.stderr).toBe(0);
+    const v = r.verdict!;
+    expect(v.legs["windows"]?.evidenceRootResolvedFrom).toBe("leg-dir/basename");
+    expect(v.legs["windows"]?.bundleReVerified?.ok).toBe(true);
+    expect(v.legs["ubuntu"]?.bundleReVerified?.ok).toBe(true);
+  });
+
+  it("DP-P: an UNLOCATABLE evidenceRoot refuses, naming every candidate tried", () => {
+    const s = scratch();
+    const pair = consistentPair(s.dir);
+    const nowhere = writeArtifact(
+      s.dir,
+      "ci-readiness-ubuntu-nowhere.json",
+      readinessArtifact("ubuntu", { inputs: { evidenceRoot: "no/such/bundle/anywhere" } }),
+    );
+    const r = s.run(["--windows", pair.windows, "--ubuntu", nowhere]);
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr).toContain("NO_RAW_EVIDENCE");
+    // "the bundle is somewhere else" must not read like "there is no bundle".
+    expect(r.stderr).toContain("tried ");
+    expect(r.stderr).toContain("leg-dir/basename=");
+    expect(r.verdict).toBeNull();
+  });
+
+  it("DP-Q: an explicit --windows-evidence-root override is honoured and recorded", () => {
+    const s = scratch();
+    const windowsBundle = writeValidBundle(s.dir, "windows");
+    const ubuntuBundle = writeValidBundle(s.dir, "ubuntu");
+    const windows = writeArtifact(s.dir, "ci-readiness-windows.json", readinessArtifact("windows", { inputs: { evidenceRoot: "stale/producing-job/path" } }));
+    const ubuntu = writeArtifact(s.dir, "ci-readiness-ubuntu.json", readinessArtifact("ubuntu", { inputs: { evidenceRoot: ubuntuBundle } }));
+
+    const r = s.run(["--windows", windows, "--ubuntu", ubuntu, "--windows-evidence-root", windowsBundle]);
+    expect(r.exitCode, r.stderr).toBe(0);
+    const v = r.verdict!;
+    // The override wins, and the leg's own (wrong) claim is still visible.
+    expect(v.legs["windows"]?.evidenceRootResolvedFrom).toBe("override(absolute)");
+    expect(v.legs["windows"]?.evidenceRootRecorded).toBe("stale/producing-job/path");
+    expect(v.legs["windows"]?.bundleReVerified?.ok).toBe(true);
   });
 });

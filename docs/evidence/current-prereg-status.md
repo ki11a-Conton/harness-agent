@@ -1,5 +1,84 @@
 # Current pre-registration status — one entry point for "where does this actually stand?"
 
+> ## CURRENT (2026-09-29) — round E4-R0/R7 per `plan(20260929-015956).md`
+>
+> **Everything below this banner is the PREVIOUS round (R7, SHA `910b80e`) and is kept
+> as history by SHA, not deleted.** Read this banner for the current state; read the
+> rest for how the levels were arrived at. Old run numbers are never mixed into
+> "current".
+>
+> | | |
+> | --- | --- |
+> | Status date | 2026-09-29 (round E4-R0/R7, Windows 10 local measurement) |
+> | Commits this round | `ade2a53` (S3–S7, 17 files) → `f379a69` (S7 wiring) — on `origin/main` |
+> | Prior round's SHA | `910b80e` (superseded as *current*; historical content retained below) |
+> | Platform measured here | **Windows only.** No Linux host in this session; Ubuntu is GitHub Actions only and is `NOT_RUN` locally. |
+> | Paid authorization | **None.** No paid request was made, `RUN_PAID_BENCHMARKS` stayed unset, and no promotion was performed. |
+>
+> ### The five levels, as measured now (never collapsed into one PASS)
+>
+> ```
+> fixtureProtocolReady: PASS
+> realBuildOfflineReady: NOT_PROVEN
+> budgetEvidenceReady:   NOT_PROVEN
+> paidExperimentRun:     NOT_RUN
+> championPromotion:     NOT_RUN
+> ```
+>
+> | Level | Status | What it is actually based on |
+> | --- | --- | --- |
+> | `fixtureProtocolReady` | **PASS** | the offline closed loop over SYNTHETIC fixture arm builds. This implies nothing about a real dual build. |
+> | `realBuildOfflineReady` | **NOT_PROVEN** | no producer writes the `dualBuild` block yet, so there is no real arm pair to certify. The `--e2e` artifact names this omission explicitly (`dualBuild` → `NO_DUAL_BUILD_EVIDENCE`) instead of emitting a placeholder. Note the change of vocabulary from the old `BLOCKED (NO_REAL_ARM_PAIR)`: `NOT_PROVEN` is the honest reading — the evidence to decide it does not exist yet, which is different from a proven blocker. |
+> | `budgetEvidenceReady` | **NOT_PROVEN** | `requestDispatchBinding` still reports `REQUEST_DISPATCH_JOURNAL_NOT_BOUND`: the request/attempt and tool-dispatch journals are not in the bundle contract, so the binding cannot be performed (tracked as task-10). |
+> | `paidExperimentRun` | **NOT_RUN** | no paid authorization exists; the scripts never create one. |
+> | `championPromotion` | **NOT_RUN** | promotion is a separate, later approval. |
+>
+> ### What this round actually FIXED (each with a counter-example that now passes)
+>
+> | Defect | Fix | Evidence |
+> | --- | --- | --- |
+> | F1 — formal arm tool dispatch ignored the durable budget | versioned worker RPC (`tool-budget-rpc-v1`) + reservation/settle binding | cap-1 two-real-writes counter-example: second write returns `TOOL_BUDGET_EXHAUSTED`, `filesOnDisk` has only the first |
+> | F2 — deadline could not abort the in-flight model stream | one campaign deadline, owned AbortController, abort-before-kill, detached stream service loop | hanging-provider and deaf-provider counter-examples; real 127.0.0.1 HTTP stub observes a CLOSED connection |
+> | F3 — readiness read self-reported JSON | readiness recomputed from raw evidence through `readiness-evidence-verify.mjs` | the forged-JSON input that previously yielded `PASS` now yields `NOT_PROVEN` with 6 independent reasons |
+> | F4 — release CLI had no offline forward path | closed-enum versioned offline profile + symbol-branded capability bound to the observed identity | `provider-offline-profile` 33/33; real-provider-config ⇒ refusal, with a counting proof that the real factory is never entered |
+> | F5 — `r5-real-formal.mjs` exited 0 on a failed report | strict gate with NAMED failures, kept evidence root, four-variant content matrix | `r5-formal-gate` 21/21, each asserting a nonzero exit AND its code |
+> | F6 — a legacy price silently authorized unlimited billed spend | `resolvePricingBasisReadOnly` split from `resolvePricingBasis` (+ eligibility) | `legacy_not_executable`; every refusal asserts `factoryCalls === 0` **and** `transportCalls === 0`, with an `ADMITTED` positive control |
+>
+> ### Gaps stated as gaps — NOT marked DONE
+>
+> - **`plan §7` item 6 is NOT MET.** A non-holdout content task completing via a real
+>   `write_file` through the real runtime → orchestrator → verifier is **not**
+>   demonstrated. The scripted provider emits a well-formed `write_file` call with zero
+>   network calls, but recorded real runs of `reg-12-csv-parse` cost **11/13/20/28** model
+>   calls against a **3-turn** script, so a real content case would hit
+>   `OFFLINE_SCRIPT_EXHAUSTED`. The script was deliberately **not** padded to the 30-turn
+>   `maxIterationsPerTurn` ceiling: that would fabricate a run shape no real loop produces,
+>   and every padded turn is a turn that cannot fail. What the offline profile *does*
+>   demonstrate is the transport and admission boundary, not content-task competence.
+> - **The bare release-CLI forward run is NOT_PROVEN.** `node apps/cli/dist/main.js prereg
+>   run` still takes the refusal path. The Phase E POS-FWD phase sets `OPENAI_API_KEY` to a
+>   test-only value, and the S3 identity rule refuses an offline profile whenever a real
+>   provider configuration is present — so weakening the rule would be required to make it
+>   green, which is precisely the drift the rule prevents. Not attempted, not claimed.
+> - **Ubuntu `NOT_RUN` locally.** No Linux host. CI is the only Ubuntu evidence.
+> - **The mutation gate was NOT re-run** this round (it must run serially in a clean
+>   isolated directory; the tree had four concurrent writers).
+>
+> ### Shortest path for a Windows user
+>
+> ```powershell
+> pnpm typecheck                      # tsc -b, exit 0
+> pnpm test:formal-gate               # 69 tests: strict R5 gate + dual-platform + offline profile
+> pnpm test:r0-gaps                   # 37 tests: readiness classification + pricing counter-examples
+> node scripts/e4/prereg-production-e2e.mjs --out .ci/r97-r98/prereg-production-e2e.json
+> node scripts/e4/ci-readiness.mjs --e2e .ci/r97-r98/prereg-production-e2e.json --out .ci/r97-r98/ci-readiness.json
+> ```
+> `node scripts/e4/r5-real-formal.mjs --verify <bundleRoot>` re-verifies a KEPT evidence
+> bundle read-only and exits nonzero naming each unmet invariant. The real billed
+> experiment and promotion remain a **separate, unexecuted** stage.
+
+---
+
 **Scope of this document.** This is the CURRENT-status entry point the R7 round adds
 (`plan(20260928-105425).md` §R7 item 4). It exists because several reports in
 `docs/evidence/` describe their own round and are now stale as *current* statements. Neither

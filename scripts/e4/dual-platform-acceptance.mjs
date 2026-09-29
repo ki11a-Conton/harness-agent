@@ -60,7 +60,7 @@
 
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isNonEmptyString, isSha40, verifyEvidenceBundle } from "./readiness-evidence-verify.mjs";
 
@@ -94,7 +94,18 @@ const UNPROVEN_STATUSES = new Set(["NOT_PROVEN", "NOT_RUN", "NOT_OBSERVED", "BLO
 // the trap this script must not reproduce.
 // ---------------------------------------------------------------------------
 
-const FLAGS_WITH_VALUE = new Set(["windows", "ubuntu", "in", "out", "expect-sha", "run-id", "attempt", "require"]);
+const FLAGS_WITH_VALUE = new Set([
+  "windows",
+  "ubuntu",
+  "in",
+  "out",
+  "expect-sha",
+  "run-id",
+  "attempt",
+  "require",
+  "windows-evidence-root",
+  "ubuntu-evidence-root",
+]);
 const BOOLEAN_FLAGS = new Set(["strict", "help"]);
 
 function parseCli(argv) {
@@ -157,6 +168,12 @@ const USAGE = `usage: node scripts/e4/dual-platform-acceptance.mjs
   --expect-sha        additionally pin both legs to this 40-hex commit
   --run-id            additionally pin both legs to this CI run id
   --attempt           additionally pin both legs to this attempt number
+  --windows-evidence-root / --ubuntu-evidence-root
+                      override where that leg's raw bundle is read from. Needed
+                      because a leg records the path RELATIVE to the job that
+                      PRODUCED it, which need not resolve in the job that JOINS
+                      them; without an override the joiner tries the recorded
+                      path, then CWD, then beside the leg artifact itself.
 `;
 
 const parsed = parseCli(process.argv.slice(2));
@@ -241,6 +258,45 @@ function recordsEvidenceRoot(path) {
   }
 }
 
+/**
+ * WHERE IS THE RAW BUNDLE?
+ *
+ * `ci-readiness.mjs` records `inputs.evidenceRoot` as the RAW `--evidence-root`
+ * argument it was given. In CI that argument is a path RELATIVE to the PRODUCING
+ * job's workspace (`.ci/r97-r98/readiness-evidence`), and the artifact is
+ * uploaded with the bundle beside it. The JOINING job downloads that artifact
+ * into a different directory entirely (`.ci/dual/windows/`), so the recorded
+ * string does not resolve against this process's CWD.
+ *
+ * Resolving only against the CWD would therefore refuse EVERY real leg for a
+ * reason that is about job layout, not about the evidence — a gate that is red
+ * for the wrong reason is a gate nobody trusts. So we try the documented
+ * candidates IN ORDER, record which one matched, and still refuse (naming every
+ * candidate) when none matches. Nothing here weakens verification: whichever
+ * directory is found must still pass the FULL `verifyEvidenceBundle`.
+ *
+ * A caller can also pin the location explicitly with `--windows-evidence-root` /
+ * `--ubuntu-evidence-root`, which is tried FIRST and is never silently ignored.
+ */
+function resolveEvidenceRoot(recorded, legPath, isOverride) {
+  if (!isNonEmptyString(recorded)) return { resolved: null, from: null, tried: [] };
+  const tried = [];
+  const legDir = dirname(resolve(legPath));
+  const candidates = [];
+  if (isAbsolute(recorded)) {
+    candidates.push([isOverride ? "override(absolute)" : "recorded(absolute)", recorded]);
+  } else {
+    candidates.push([isOverride ? "override(cwd)" : "cwd", resolve(recorded)]);
+    candidates.push(["leg-dir/basename", join(legDir, basename(recorded))]);
+    candidates.push(["leg-dir/recorded", join(legDir, recorded)]);
+  }
+  for (const [from, candidate] of candidates) {
+    tried.push(`${from}=${candidate}`);
+    if (existsSync(candidate)) return { resolved: candidate, from, tried };
+  }
+  return { resolved: null, from: null, tried };
+}
+
 // ---------------------------------------------------------------------------
 // Loading one leg
 // ---------------------------------------------------------------------------
@@ -252,7 +308,7 @@ const sha256Text = (text) => createHash("sha256").update(text, "utf8").digest("h
  * Validation is a PARSE, never a coercion: a stringified attempt number is
  * MALFORMED_ARTIFACT rather than silently `Number()`d into a passing value.
  */
-function loadLeg(flagPlatform, path) {
+function loadLeg(flagPlatform, path, evidenceRootOverride) {
   const problems = [];
   const bad = (msg) => problems.push(`MALFORMED_ARTIFACT: ${flagPlatform}: ${msg}`);
 
@@ -330,15 +386,23 @@ function loadLeg(flagPlatform, path) {
   }
 
   // --- raw evidence ---------------------------------------------------------
-  const evidenceRoot = isNonEmptyString(art.inputs?.evidenceRoot) ? art.inputs.evidenceRoot : null;
+  const recordedEvidenceRoot = isNonEmptyString(art.inputs?.evidenceRoot) ? art.inputs.evidenceRoot : null;
+  const resolution = resolveEvidenceRoot(evidenceRootOverride ?? recordedEvidenceRoot, path, isNonEmptyString(evidenceRootOverride));
+  const evidenceRoot = resolution.resolved;
   const claimsRawPass = LEVELS.filter((n) => RAW_DEPENDENT_LEVELS.has(n) && levels[n]?.status === "PASS");
   let bundleReVerified = null;
   if (claimsRawPass.length > 0 && evidenceRoot === null) {
     problems.push(`NO_RAW_EVIDENCE: the leg claims ${claimsRawPass.join(", ")} = PASS but records no evidenceRoot, so no raw bundle can be read`);
   }
-  if (evidenceRoot !== null) {
-    if (!existsSync(evidenceRoot)) {
-      problems.push(`NO_RAW_EVIDENCE: the recorded evidenceRoot ${evidenceRoot} does not exist`);
+  if (recordedEvidenceRoot !== null || isNonEmptyString(evidenceRootOverride)) {
+    if (evidenceRoot === null) {
+      // Name EVERY candidate tried: "the bundle is somewhere else" and "there is
+      // no bundle" are different facts and must not read the same.
+      problems.push(
+        `NO_RAW_EVIDENCE: the recorded evidenceRoot ${JSON.stringify(recordedEvidenceRoot)} could not be located` +
+          (isNonEmptyString(evidenceRootOverride) ? ` (nor the override ${JSON.stringify(evidenceRootOverride)})` : "") +
+          `; tried ${resolution.tried.join(", ")}`,
+      );
     } else {
       // Re-verify through the EXISTING task-7 verifier (imported, not reimplemented).
       const bundle = verifyEvidenceBundle({
@@ -375,7 +439,11 @@ function loadLeg(flagPlatform, path) {
       ciRunSha: art.ciRunSha,
       expectedSha: art.expectedSha,
       attempt,
+      // Both are recorded so a reviewer can see WHAT the leg claimed and WHERE the
+      // bytes were actually found — a bare resolved path would hide a wrong claim.
+      evidenceRootRecorded: recordedEvidenceRoot,
       evidenceRoot,
+      evidenceRootResolvedFrom: resolution.from,
       levels,
       bundleReVerified,
       bundleDerivedVerifierCoverage: bundleReVerified?.derivedVerifierCoverage ?? null,
@@ -458,8 +526,8 @@ if (refusal.length === 0) {
       console.error(`dual-platform-acceptance: the A6 per-arm evidence verifier is unavailable (${armEvidenceVerifierError}); raw arm artifacts cannot be verified`);
     }
   }
-  const w = loadLeg("windows", windowsPath);
-  const u = loadLeg("ubuntu", ubuntuPath);
+  const w = loadLeg("windows", windowsPath, one("windows-evidence-root"));
+  const u = loadLeg("ubuntu", ubuntuPath, one("ubuntu-evidence-root"));
   for (const r of [...(w.problems ?? []), ...(u.problems ?? [])]) refusal.push(r);
 
   if (refusal.length === 0) {

@@ -1607,6 +1607,21 @@ jobs:
         if: always()
         run: |
           set +e
+          # `--require fixtureProtocolReady` is REQUIRED and is not the script's
+          # default. The default set is
+          # ["fixtureProtocolReady","realBuildOfflineReady","budgetEvidenceReady"],
+          # and BOTH of the latter two are legitimately NOT_PROVEN right now — no
+          # producer writes the `dualBuild` block and no producer writes the raw
+          # evidence bundle yet. Combined with `--strict` that makes the gate fail
+          # on every run for a recorded, known gap, which is not what this job is
+          # for. The script deliberately does not narrow its own default (a default
+          # that silently omits a level could hide a real gap elsewhere), so the
+          # requirement is spelled out HERE, exactly as the readiness step above
+          # spells out `--require fixtureProtocolReady,budgetEvidenceReady`.
+          #
+          # `--require` is COMMA-SEPARATED, not repeated: a repeated flag is
+          # refused loudly by design, because ci-readiness.mjs's arg() returns the
+          # FIRST match and would silently apply only one level.
           node scripts/e4/dual-platform-acceptance.mjs \
             --windows .ci/dual/windows/ci-readiness.json \
             --ubuntu .ci/dual/ubuntu/ci-readiness.json \
@@ -1614,6 +1629,7 @@ jobs:
             --run-id "${{ github.run_id }}" \
             --attempt "${{ github.run_attempt }}" \
             --expect-sha "${{ github.sha }}" \
+            --require fixtureProtocolReady \
             --strict
           DUAL_RC=$?
           set -e
