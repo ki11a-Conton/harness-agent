@@ -567,6 +567,61 @@ describe("S7b — dual-platform acceptance joins two legs, or refuses", () => {
     expect(v.legs["ubuntu"]?.bundleReVerified?.ok).toBe(true);
   });
 
+  it("DP-R: the REAL nested CI artifact layout resolves — the bundle one level ABOVE the leg JSON's directory", () => {
+    // Reproduces run 36536713230 exactly. `actions/upload-artifact` was given
+    // repo-root-relative paths, so `actions/download-artifact` PRESERVES them and
+    // each leg arrives NESTED one level deeper than DP-O's flat shape:
+    //   .ci/dual/<os>/r97-r98/ci-readiness.json          <- the leg JSON
+    //   .ci/dual/<os>/prereg-production-e2e/pos-exec-runs/evidence/  <- the bundle
+    // DP-O's `leg-dir/basename` candidate cannot find that (the bundle is NOT
+    // beside the JSON), so this case is what proves `leg-root/recorded` works.
+    const s = scratch();
+    const copyBundle = (from: string, to: string): void => {
+      execFileSync(process.execPath, ["-e", "require('fs').cpSync(process.argv[1], process.argv[2], {recursive:true})", from, to], { cwd: REPO_ROOT });
+    };
+
+    // The e2e producer's real recorded value — the path RELATIVE TO THE e4 JOB.
+    const RECORDED = ".ci/prereg-production-e2e/pos-exec-runs/evidence";
+
+    // `writeArtifact` writes into its own subdirectory (mirroring the download's
+    // nesting), so the parent must exist first.
+    mkdirSync(join(s.dir, "windows", "r97-r98"), { recursive: true });
+    mkdirSync(join(s.dir, "ubuntu", "r97-r98"), { recursive: true });
+
+    const windows = writeArtifact(
+      s.dir,
+      "windows/r97-r98/ci-readiness.json",
+      readinessArtifact("windows", { inputs: { evidenceRoot: RECORDED } }),
+    );
+    const ubuntu = writeArtifact(
+      s.dir,
+      "ubuntu/r97-r98/ci-readiness.json",
+      readinessArtifact("ubuntu", { inputs: { evidenceRoot: RECORDED } }),
+    );
+
+    // Mirror the download EXACTLY as measured on run 36536713230: the uploader's
+    // `path:` entries are repo-root-relative, so the download reproduces the FULL
+    // recorded path INCLUDING the `.ci/` segment, under the LEG ROOT:
+    //   .ci/dual/<os>/r97-r98/ci-readiness.json                       <- leg JSON
+    //   .ci/dual/<os>/.ci/prereg-production-e2e/pos-exec-runs/evidence <- bundle
+    for (const leg of ["windows", "ubuntu"] as const) {
+      const dest = join(s.dir, leg, RECORDED);
+      mkdirSync(dest, { recursive: true });
+      copyBundle(writeValidBundle(s.dir, leg), dest);
+    }
+
+    const r = s.run(["--windows", windows, "--ubuntu", ubuntu]);
+    expect(r.exitCode, r.stderr).toBe(0);
+    const v = r.verdict!;
+    // Resolved via the LEG ROOT (the bundle is NOT beside the leg JSON), which is
+    // the case DP-O's flat layout cannot cover.
+    expect(v.legs["windows"]?.evidenceRootResolvedFrom).toBe("leg-root/recorded");
+    expect(v.legs["ubuntu"]?.evidenceRootResolvedFrom).toBe("leg-root/recorded");
+    // And the bundle was genuinely re-verified from that location.
+    expect(v.legs["windows"]?.bundleReVerified?.ok).toBe(true);
+    expect(v.legs["ubuntu"]?.bundleReVerified?.ok).toBe(true);
+  });
+
   it("DP-P: an UNLOCATABLE evidenceRoot refuses, naming every candidate tried", () => {
     const s = scratch();
     const pair = consistentPair(s.dir);

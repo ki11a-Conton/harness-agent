@@ -282,6 +282,27 @@ function resolveEvidenceRoot(recorded, legPath, isOverride) {
   if (!isNonEmptyString(recorded)) return { resolved: null, from: null, tried: [] };
   const tried = [];
   const legDir = dirname(resolve(legPath));
+  // The leg ARTIFACT's own directory (`.ci/dual/<platform>`), which is where
+  // `actions/download-artifact` places a bundle the producing job uploaded
+  // alongside its JSON. The uploader lists repo-root-relative paths, so the
+  // artifact preserves them and the download NESTS one level deeper than the
+  // JSON: with the JSON at `.ci/dual/<os>/r97-r98/ci-readiness.json`, the bundle
+  // lands at `.ci/dual/<os>/prereg-production-e2e/pos-exec-runs/evidence`.
+  //
+  // MEASURED on run 36536713230: none of the candidates below matched that real
+  // location, so the join refused NO_RAW_EVIDENCE even though the bundle had
+  // downloaded correctly. The candidate is derived from the leg artifact path's
+  // GRANDPARENT (strip `r97-r98/<file>`), not hardcoded, so a different artifact
+  // layout does not silently break it.
+  const legRoot = dirname(legDir);
+  // The uploader's `path:` entries are repo-root-relative (`.ci/prereg-production-e2e/...`),
+  // and `actions/upload-artifact` stores them, so the download reproduces the FULL
+  // path including the `.ci/` segment: `<legRoot>/.ci/prereg-production-e2e/pos-exec-runs/evidence`.
+  // The `leg-root/recorded` candidate below therefore finds it AS RECORDED, and
+  // `leg-root/dot-ci-stripped` covers the other plausible packaging (an uploader
+  // that rooted its paths at `.ci/` instead of the repo root). Both are tried, so
+  // neither layout can silently break the join.
+  const withoutDotCi = recorded.replace(/^\.ci[/\\]/, "");
   const candidates = [];
   if (isAbsolute(recorded)) {
     candidates.push([isOverride ? "override(absolute)" : "recorded(absolute)", recorded]);
@@ -289,6 +310,11 @@ function resolveEvidenceRoot(recorded, legPath, isOverride) {
     candidates.push([isOverride ? "override(cwd)" : "cwd", resolve(recorded)]);
     candidates.push(["leg-dir/basename", join(legDir, basename(recorded))]);
     candidates.push(["leg-dir/recorded", join(legDir, recorded)]);
+    candidates.push(["leg-root/recorded", join(legRoot, recorded)]);
+    if (withoutDotCi !== recorded) {
+      candidates.push(["leg-root/without-dot-ci", join(legRoot, withoutDotCi)]);
+    }
+    candidates.push(["leg-root/basename", join(legRoot, basename(recorded))]);
   }
   for (const [from, candidate] of candidates) {
     tried.push(`${from}=${candidate}`);

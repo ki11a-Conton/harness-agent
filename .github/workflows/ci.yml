@@ -1695,9 +1695,18 @@ jobs:
           # `--require` is COMMA-SEPARATED, not repeated: a repeated flag is
           # refused loudly by design, because ci-readiness.mjs's arg() returns the
           # FIRST match and would silently apply only one level.
+          # PATHS — read from the "Show what each leg actually downloaded" step
+          # above rather than assumed. `actions/download-artifact` preserves the
+          # path stored INSIDE the artifact, and the uploader's `path:` listed
+          # repo-root-relative entries, so each leg arrives NESTED:
+          #   .ci/dual/<leg>/r97-r98/ci-readiness.json
+          #   .ci/dual/<leg>/prereg-production-e2e/pos-exec-runs/evidence/...
+          # NOT `.ci/dual/<leg>/ci-readiness.json`, which is what I first wrote and
+          # which is why the join refused MISSING_ARTIFACT even though both legs
+          # had downloaded successfully (measured on run 36536713230).
           node scripts/e4/dual-platform-acceptance.mjs \
-            --windows .ci/dual/windows/ci-readiness.json \
-            --ubuntu .ci/dual/ubuntu/ci-readiness.json \
+            --windows .ci/dual/windows/r97-r98/ci-readiness.json \
+            --ubuntu .ci/dual/ubuntu/r97-r98/ci-readiness.json \
             --out .ci/dual/dual-platform-acceptance.json \
             --run-id "${{ github.run_id }}" \
             --attempt "${{ github.run_attempt }}" \
