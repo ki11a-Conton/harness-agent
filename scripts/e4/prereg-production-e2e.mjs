@@ -59,6 +59,23 @@
  * is selectable, and every provider/transport below is local and counted.
  *
  * Usage: node scripts/e4/prereg-production-e2e.mjs [--out <path>]
+ *          [--run-id <id>] [--attempt <n>] [--platform windows|ubuntu]
+ *          [--evidence-root <dir>]
+ *
+ * E-R16/F3 — RUN IDENTITY AND DUAL-BUILD EVIDENCE
+ * ----------------------------------------------
+ * The `--e2e` artifact now carries the fields `scripts/e4/ci-readiness.mjs`
+ * verifies for `realBuildOfflineReady`: `runId`, `attempt`, `platform`,
+ * `dualBuild` and `evidenceRoot`. Each is emitted ONLY from a real source
+ * (`--flag` or the `GITHUB_*` CI variable, real arm directories, a real
+ * verification pass, a real bundle), and each is OMITTED otherwise, with the
+ * reason recorded in `omittedEvidenceFields`.
+ *
+ * AN OMITTED FIELD IS `NOT_PROVEN`; A FABRICATED ONE IS THE F3 DEFECT. Omitting
+ * makes the readiness consumer report `NO_ARTIFACT_RUN_ID` /
+ * `NO_ARTIFACT_ATTEMPT` / `NO_ARTIFACT_PLATFORM` / `NO_DUAL_BUILD_EVIDENCE` /
+ * `NO_RAW_EVIDENCE` and `realBuildOfflineReady: NOT_PROVEN` — the correct,
+ * honest state for a local run, and NOT a regression.
  */
 
 import { execFileSync, spawn, spawnSync } from "node:child_process";
@@ -99,13 +116,183 @@ const NOW = 1_700_000_000_000;
 
 function parseArgs(argv) {
   const out = {};
+  // Both spellings are accepted (`--flag value` and `--flag=value`): CI scripts
+  // commonly use the `=` form, and silently ignoring it would drop a real run
+  // identity and degrade it to an honest-but-unnecessary NOT_PROVEN.
+  const flags = {
+    "--out": "out",
+    "--run-id": "runId",
+    "--attempt": "attempt",
+    "--platform": "platform",
+    "--evidence-root": "evidenceRoot",
+  };
   for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i] === "--out") {
-      out.out = argv[i + 1];
+    const arg = argv[i];
+    if (typeof arg !== "string") continue;
+    const eq = arg.indexOf("=");
+    const name = eq === -1 ? arg : arg.slice(0, eq);
+    const key = flags[name];
+    if (key === undefined) continue;
+    if (eq !== -1) {
+      out[key] = arg.slice(eq + 1);
+    } else {
+      out[key] = argv[i + 1];
       i += 1;
     }
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// F3/E-R16 — THE RUN-IDENTITY AND DUAL-BUILD BLOCK
+// ---------------------------------------------------------------------------
+
+/**
+ * THE GOVERNING PRINCIPLE OF THIS BLOCK:
+ *
+ *   AN OMITTED FIELD IS `NOT_PROVEN`. A FABRICATED ONE IS THE F3 DEFECT.
+ *
+ * `ci-readiness.mjs` treats a MISSING key as an explicit failure with a named
+ * reason code (`NO_ARTIFACT_RUN_ID`, `NO_ARTIFACT_ATTEMPT`, `NO_ARTIFACT_PLATFORM`,
+ * `NO_DUAL_BUILD_EVIDENCE`, `NO_RAW_EVIDENCE`) and reports
+ * `realBuildOfflineReady: NOT_PROVEN`. That is the CORRECT current state for a
+ * local run, and it is NOT a regression. What this script must never do is emit
+ * `""`, `"unknown"`, `"x"` or a `process.platform` value such as `win32`/`linux`
+ * — the consumer's closed enum is `"windows" | "ubuntu"`, so `win32` would be a
+ * *present but wrong* value, which is strictly worse than omitting it.
+ *
+ * Every field below is therefore added ONLY when it was genuinely established,
+ * and the reason for every omission is recorded in `omittedEvidenceFields` so a
+ * reader can tell "not measured here" from "lost".
+ */
+
+/** The closed enum the readiness consumer accepts. `process.platform` is NOT it. */
+const PLATFORM_ENUM = ["windows", "ubuntu"];
+
+/**
+ * The run identity. `--flag` wins over the CI environment variable; when neither
+ * exists the key is OMITTED (never `""`, never a placeholder).
+ */
+function collectRunIdentity(args) {
+  const omitted = [];
+  const identity = {};
+
+  const runId = nonEmpty(args.runId) ?? nonEmpty(process.env["GITHUB_RUN_ID"]);
+  if (runId !== null) identity.runId = runId;
+  else omitted.push({ field: "runId", reason: "neither --run-id nor GITHUB_RUN_ID was supplied", consumerCode: "NO_ARTIFACT_RUN_ID" });
+
+  // A NUMBER, per the consumer (`asInt`). A non-numeric value is refused rather
+  // than coerced — a coerced attempt would be a fabricated one.
+  const attemptRaw = nonEmpty(args.attempt) ?? nonEmpty(process.env["GITHUB_RUN_ATTEMPT"]);
+  if (attemptRaw === null) {
+    omitted.push({ field: "attempt", reason: "neither --attempt nor GITHUB_RUN_ATTEMPT was supplied", consumerCode: "NO_ARTIFACT_ATTEMPT" });
+  } else if (!/^\d+$/.test(attemptRaw)) {
+    omitted.push({ field: "attempt", reason: `the supplied attempt ${JSON.stringify(attemptRaw)} is not an integer`, consumerCode: "NO_ARTIFACT_ATTEMPT" });
+  } else {
+    identity.attempt = Number.parseInt(attemptRaw, 10);
+  }
+
+  // The closed enum. Deliberately NOT `process.platform`: that yields `win32` /
+  // `linux`, which the consumer's enum does not accept, so inferring it would
+  // emit a present-but-wrong value instead of an honest omission.
+  const platform = nonEmpty(args.platform);
+  if (platform === null) {
+    omitted.push({
+      field: "platform",
+      reason: "no --platform was supplied; it is NOT inferred from process.platform (which yields win32/linux, outside the consumer's closed enum)",
+      consumerCode: "NO_ARTIFACT_PLATFORM",
+    });
+  } else if (!PLATFORM_ENUM.includes(platform)) {
+    omitted.push({
+      field: "platform",
+      reason: `--platform ${JSON.stringify(platform)} is not one of ${PLATFORM_ENUM.join("|")}`,
+      consumerCode: "NO_ARTIFACT_PLATFORM",
+    });
+  } else {
+    identity.platform = platform;
+  }
+
+  return { identity, omitted };
+}
+
+function nonEmpty(v) {
+  return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
+}
+
+/**
+ * F3 — the dual-build block, from the REAL arm directories.
+ *
+ * Both `sourceSha` values must be real 40-hex SHAs and both `buildDigest` values
+ * must be real 64-hex sha256 digests of the arm's OWN bytes (via the EXISTING
+ * `computeArmBuildDigestV1`). `verifier.ran` is `true` ONLY when this script
+ * actually observed arm evidence being re-verified.
+ *
+ * IF ANY OF THAT CANNOT BE ESTABLISHED, THE WHOLE BLOCK IS OMITTED. A partial or
+ * placeholder block is exactly the forgery the F3 verifier must refuse, so it is
+ * never emitted in a degraded form.
+ */
+async function collectDualBuild(armDirs, verifierFacts) {
+  const reasons = [];
+  if (armDirs === null || armDirs === undefined) {
+    return { dualBuild: null, reasons: ["no arm directories were materialised in this run"] };
+  }
+  const evalMod = await import(pathToFileURL(EVAL_ENTRY).href);
+
+  const readArm = (label, dir, runId) => {
+    if (typeof dir !== "string" || dir === "") {
+      reasons.push(`${label}: no arm directory`);
+      return null;
+    }
+    let sourceSha = null;
+    try {
+      sourceSha = nonEmpty(git(["-C", dir, "rev-parse", "HEAD"]));
+    } catch {
+      reasons.push(`${label}: git rev-parse HEAD failed at ${dir}`);
+      return null;
+    }
+    if (sourceSha === null || !/^[0-9a-f]{40}$/.test(sourceSha)) {
+      reasons.push(`${label}: ${dir} is not at a 40-hex SHA`);
+      return null;
+    }
+    let buildDigest = null;
+    try {
+      buildDigest = evalMod.computeArmBuildDigestV1(dir);
+    } catch (err) {
+      reasons.push(`${label}: computeArmBuildDigestV1 failed at ${dir} (${err instanceof Error ? err.message : String(err)})`);
+      return null;
+    }
+    if (typeof buildDigest !== "string" || !/^[0-9a-f]{64}$/.test(buildDigest)) {
+      reasons.push(`${label}: buildDigest at ${dir} is not a 64-hex sha256`);
+      return null;
+    }
+    return { sourceSha, buildDigest, dir, runId };
+  };
+
+  const baselineArm = readArm("baselineArm", armDirs.baselineDir, armDirs.baselineRunId);
+  const candidateArm = readArm("candidateArm", armDirs.candidateDir, armDirs.candidateRunId);
+  if (baselineArm === null || candidateArm === null) {
+    return { dualBuild: null, reasons };
+  }
+
+  // The verifier facts come from the REAL verification pass in POS-EXEC. When it
+  // did not run, this block is omitted rather than reported with `ran:false`
+  // plus invented counts.
+  if (verifierFacts === null || verifierFacts === undefined) {
+    reasons.push("the verifier pass did not run, so verifier{ran,casesTotal,casesVerified} is not established");
+    return { dualBuild: null, reasons };
+  }
+  return {
+    dualBuild: {
+      baselineArm: { sourceSha: baselineArm.sourceSha, buildDigest: baselineArm.buildDigest, dir: baselineArm.dir },
+      candidateArm: { sourceSha: candidateArm.sourceSha, buildDigest: candidateArm.buildDigest, dir: candidateArm.dir },
+      verifier: {
+        ran: verifierFacts.ran === true,
+        casesTotal: verifierFacts.casesTotal,
+        casesVerified: verifierFacts.casesVerified,
+      },
+    },
+    reasons,
+  };
 }
 
 function sha256Hex(text) {
@@ -1276,6 +1463,10 @@ async function main() {
   let positiveExec = null;
   let positiveForward = null;
   let blocked = null;
+  // F3/E-R16 — the REAL arm directories this run materialised, or `null` when the
+  // positive phases never ran (dirty tree / blocked). `dualBuild` is derived from
+  // these and is OMITTED entirely when they do not exist.
+  let armDirs = null;
 
   try {
     negative = await runNegativeMatrix(stub, WORKSPACE);
@@ -1287,6 +1478,7 @@ async function main() {
       const armRoot = join(WORKSPACE, "arms");
       const baselineDir = join(armRoot, "baseline");
       const candidateDir = join(armRoot, "candidate");
+      armDirs = { baselineDir, candidateDir };
       const evalMod = await import(pathToFileURL(EVAL_ENTRY).href);
       await writeArmCheckout(baselineDir, "baseline", false, evalMod.R97_ARM_BUILD_ENTRIES);
       await writeArmCheckout(candidateDir, "candidate", true, evalMod.R97_ARM_BUILD_ENTRIES);
@@ -1330,8 +1522,40 @@ async function main() {
     positiveExec.ok &&
     positiveForward !== null &&
     positiveForward.ok;
+  // F3/E-R16 — the run identity and the dual-build block, each established from
+  // REAL sources or omitted. `runIdentity.identity` is spread FIRST so a
+  // fabricated `runId`/`attempt`/`platform` cannot shadow it later in the literal.
+  const runIdentity = collectRunIdentity(parsed);
+  const verifierFacts =
+    positiveExec !== null && typeof positiveExec.evidenceVerified === "number"
+      ? {
+          ran: positiveExec.evidenceVerified > 0,
+          casesTotal: positiveExec.scheduledArmRuns ?? 0,
+          casesVerified: positiveExec.evidenceVerified,
+        }
+      : null;
+  const dualBuildResult = await collectDualBuild(armDirs, verifierFacts);
+  const omittedEvidenceFields = [
+    ...runIdentity.omitted,
+    ...(dualBuildResult.dualBuild === null
+      ? [{ field: "dualBuild", reason: dualBuildResult.reasons.join("; ") || "not established", consumerCode: "NO_DUAL_BUILD_EVIDENCE" }]
+      : []),
+    ...(typeof parsed.evidenceRoot === "string" && parsed.evidenceRoot.trim() !== ""
+      ? []
+      : [{ field: "evidenceRoot", reason: "no --evidence-root was supplied for this artifact", consumerCode: "NO_RAW_EVIDENCE" }]),
+  ];
+
   const report = {
     schema: SCHEMA,
+    ...runIdentity.identity,
+    ...(dualBuildResult.dualBuild !== null ? { dualBuild: dualBuildResult.dualBuild } : {}),
+    ...(typeof parsed.evidenceRoot === "string" && parsed.evidenceRoot.trim() !== ""
+      ? { evidenceRoot: parsed.evidenceRoot.trim() }
+      : {}),
+    // NOT_PROVEN is a POSITION, not a failure: each omitted field names the
+    // consumer reason code it will surface as. See the block comment above
+    // `collectRunIdentity` for the governing principle.
+    omittedEvidenceFields,
     head: (() => {
       try {
         return git(["rev-parse", "HEAD"]);
@@ -1339,7 +1563,11 @@ async function main() {
         return "(unknown)";
       }
     })(),
-    platform: process.platform,
+    // The RAW runtime platform, kept under its own key. It must NEVER be aliased
+    // to the readiness `platform` field: `ci-readiness.mjs` compares that field
+    // against the closed enum "windows"|"ubuntu", so a `win32`/`linux` value
+    // there is a present-but-WRONG identity — worse than an honest omission.
+    rawProcessPlatform: process.platform,
     node: process.version,
     treeClean: clean,
     blocked,

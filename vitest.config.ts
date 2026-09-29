@@ -48,7 +48,14 @@ export default defineConfig({
       // the `R7 — F6 readiness classification gate` CI step both run. An
       // exclusion is only honest while the file is genuinely red; leaving a
       // green suite excluded would make it a gate in name only.
-      "apps/cli/src/r0-f5-pricing-declaration-gaps.test.ts",
+      //
+      // S5 (F6, legacy price) — REMOVED this exclusion. The pricing counter-example
+      // file is now genuinely GREEN (`6 passed (6)`) after
+      // `resolvePricingBasisReadOnly` was split from `resolvePricingBasis`, so by
+      // the SAME rule it must run in `pnpm test` rather than be a gate in name
+      // only. The CI step `R7 — F6/F3 readiness classification + F5-pricing
+      // counterexamples` runs it explicitly by path as well, so it is gated both
+      // in the aggregate suite and as a named step.
     ],
     environment: "node",
     testTimeout: 300000,
