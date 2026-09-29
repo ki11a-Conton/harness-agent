@@ -599,13 +599,19 @@ describe("S7b — dual-platform acceptance joins two legs, or refuses", () => {
       readinessArtifact("ubuntu", { inputs: { evidenceRoot: RECORDED } }),
     );
 
-    // Mirror the download EXACTLY as measured on run 36536713230: the uploader's
-    // `path:` entries are repo-root-relative, so the download reproduces the FULL
-    // recorded path INCLUDING the `.ci/` segment, under the LEG ROOT:
-    //   .ci/dual/<os>/r97-r98/ci-readiness.json                       <- leg JSON
-    //   .ci/dual/<os>/.ci/prereg-production-e2e/pos-exec-runs/evidence <- bundle
+    // Mirror the download EXACTLY as MEASURED on run 36540340331 (from the CI
+    // diagnostic step's `find`), NOT as assumed:
+    //   .ci/dual/<os>/r97-r98/ci-readiness.json                        <- leg JSON
+    //   .ci/dual/<os>/prereg-production-e2e/pos-exec-runs/evidence/…   <- bundle
+    // The `.ci/` segment is STRIPPED by the uploader's `path:` entry, so the bundle
+    // sits under the leg ROOT with the `.ci/` prefix removed — which is why the
+    // `leg-root/without-dot-ci` candidate exists. My first version of this test
+    // put the bundle at `<leg>/.ci/...` (with the segment kept) and so encoded an
+    // assumption the real artifact does not satisfy; the measured layout is what
+    // is asserted here.
+    const withoutDotCi = RECORDED.replace(/^\.ci\//, "");
     for (const leg of ["windows", "ubuntu"] as const) {
-      const dest = join(s.dir, leg, RECORDED);
+      const dest = join(s.dir, leg, withoutDotCi);
       mkdirSync(dest, { recursive: true });
       copyBundle(writeValidBundle(s.dir, leg), dest);
     }
@@ -615,8 +621,8 @@ describe("S7b — dual-platform acceptance joins two legs, or refuses", () => {
     const v = r.verdict!;
     // Resolved via the LEG ROOT (the bundle is NOT beside the leg JSON), which is
     // the case DP-O's flat layout cannot cover.
-    expect(v.legs["windows"]?.evidenceRootResolvedFrom).toBe("leg-root/recorded");
-    expect(v.legs["ubuntu"]?.evidenceRootResolvedFrom).toBe("leg-root/recorded");
+    expect(v.legs["windows"]?.evidenceRootResolvedFrom).toBe("leg-root/without-dot-ci");
+    expect(v.legs["ubuntu"]?.evidenceRootResolvedFrom).toBe("leg-root/without-dot-ci");
     // And the bundle was genuinely re-verified from that location.
     expect(v.legs["windows"]?.bundleReVerified?.ok).toBe(true);
     expect(v.legs["ubuntu"]?.bundleReVerified?.ok).toBe(true);
