@@ -204,6 +204,30 @@ describe("content sensitivity and identity", () => {
     await expectRefusal(dir, "CONTENT_INSENSITIVE");
   });
 
+  it("refuses a matrix that never ran a degradation variant, naming CONTENT_MATRIX_INCOMPLETE", async () => {
+    // The honest failure mode: the four-variant schedule did not run. Deleting the
+    // case would hide it, so the gate must FAIL and name the missing variant.
+    const dir = await brokenCopy("content-matrix-incomplete", async (d) => {
+      await editJson(join(d, "content-matrix.json"), (doc) => {
+        const cases = doc["cases"] as Json;
+        const first = cases[Object.keys(cases)[0]!] as Json;
+        ((first["arms"] as Json)["candidate"] as Json)["skipped"] = "absent";
+      });
+    });
+    await expectRefusal(dir, "CONTENT_MATRIX_INCOMPLETE");
+  });
+
+  it("refuses a matrix whose correct variant did not pass, naming CONTENT_CORRECT_FAILED", async () => {
+    const dir = await brokenCopy("content-correct-failed", async (d) => {
+      await editJson(join(d, "content-matrix.json"), (doc) => {
+        const cases = doc["cases"] as Json;
+        const first = cases[Object.keys(cases)[0]!] as Json;
+        ((first["arms"] as Json)["baseline"] as Json)["correct"] = "failed";
+      });
+    });
+    await expectRefusal(dir, "CONTENT_CORRECT_FAILED");
+  });
+
   it("refuses a missing-ABI negative that reached the model, naming MISSING_ABI_REACHED_MODEL", async () => {
     const dir = await brokenCopy("missing-abi-reached-model", async (d) => {
       await editJson(join(d, "negatives.json"), (doc) => {
@@ -213,6 +237,29 @@ describe("content sensitivity and identity", () => {
       });
     });
     await expectRefusal(dir, "MISSING_ABI_REACHED_MODEL");
+  });
+
+  it("refuses a negative refused for the WRONG reason, naming NEGATIVE_WRONG_REASON", async () => {
+    // The hole the first real run exposed: a dirty driver work tree refuses EVERY
+    // counter-example with PREREGISTRATION_IDENTITY_DRIFT, so a matrix of rows that
+    // merely "refused" would look complete while proving nothing about any boundary.
+    const dir = await brokenCopy("negative-wrong-reason", async (d) => {
+      await editJson(join(d, "negatives.json"), (doc) => {
+        const row = (doc["rows"] as Json[]).find((r) => r["violation"] === "missing-ABI")!;
+        row["refusalCode"] = "PREREGISTRATION_IDENTITY_DRIFT";
+      });
+    });
+    await expectRefusal(dir, "NEGATIVE_WRONG_REASON");
+  });
+
+  it("refuses a negative with no expected code, naming NEGATIVE_WRONG_REASON", async () => {
+    const dir = await brokenCopy("negative-no-expectation", async (d) => {
+      await editJson(join(d, "negatives.json"), (doc) => {
+        const row = (doc["rows"] as Json[]).find((r) => r["violation"] === "unsupported-isolation")!;
+        delete row["expectedRefusalCode"];
+      });
+    });
+    await expectRefusal(dir, "NEGATIVE_WRONG_REASON");
   });
 
   it("refuses a wrong arm checkout, naming WRONG_PAIR", async () => {

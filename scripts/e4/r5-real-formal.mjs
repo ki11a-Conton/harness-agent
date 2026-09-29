@@ -616,7 +616,48 @@ async function phaseFormal({ full, workRoot, contentMode = "correct" }) {
   // S4/task-6: the RAW records and the directory they (and their A6 evidence)
   // live in travel with the result, so the gate can re-derive the schedule from
   // the bytes rather than from a self-reported count.
-  return { dir, evidence, records, recordsDir };
+  return { dir, evidence, records, recordsDir, budgetDir };
+}
+
+// ---------------------------------------------------------------------------
+// Phase: the FOUR-VARIANT content matrix, through the ACTUAL formal chain
+// ---------------------------------------------------------------------------
+
+/**
+ * S4/task-6 item 4. The pre-S4 script had only `--content`, which called the arm's
+ * `runOneCase` DIRECTLY — a fixture result, not formal four-variant evidence, and it
+ * never exercised the pre-registration/budget/worker/aggregate path. This phase
+ * instead schedules correct, empty, wrong and skipped THROUGH `phaseFormal`, i.e.
+ * through the same formal `preregCmd(["run", …])` entry as the real campaign, and
+ * reads every verdict from the RAW `verifier.json` the arm wrote.
+ *
+ * The matrix is restricted to the content-sensitive cases (`CONTENT_FIXES`): for a
+ * case with no content dimension, "empty/wrong/skipped" has no meaning and claiming
+ * a verdict for it would be a fabricated result.
+ */
+async function phaseContentMatrix({ workRoot }) {
+  const modes = ["correct", "empty", "wrong", "skipped"];
+  const matrix = {};
+  const perMode = {};
+  for (const mode of modes) {
+    const res = await phaseFormal({ full: false, workRoot: join(workRoot, `cm-${mode}`), contentMode: mode });
+    perMode[mode] = {
+      exitCode: res.evidence.exitCode,
+      records: res.evidence.records,
+      evidenceVerified: res.evidence.evidenceVerified,
+      modelCalls: res.evidence.modelCallsByTranscript,
+    };
+    for (const [caseId, entry] of Object.entries(res.evidence.perCase ?? {})) {
+      if (!(caseId in CONTENT_FIXES)) continue;
+      matrix[caseId] ??= { contentMode: "formal-four-variant", arms: { baseline: {}, candidate: {} } };
+      for (const armId of ["baseline", "candidate"]) {
+        const verifier = entry?.[armId] ?? null;
+        matrix[caseId].arms[armId][mode] =
+          verifier === null || verifier === undefined ? "absent" : verifier.verifiedCompletion === true ? "passed" : "failed";
+      }
+    }
+  }
+  return { matrix, perMode };
 }
 
 // ---------------------------------------------------------------------------
@@ -702,6 +743,22 @@ async function phaseContent({ workRoot }) {
 // Phase: negative refusals BEFORE the provider step
 // ---------------------------------------------------------------------------
 
+/**
+ * S4/task-6: the refusal CODE each counter-example must produce. Without this, a
+ * single environmental condition (a dirty driver work tree refuses EVERY row with
+ * `PREREGISTRATION_IDENTITY_DRIFT`) makes the whole matrix look "refused" while
+ * proving nothing about any individual boundary. Keyed by the label `phaseNegative`
+ * passes to `attempt()`, because that label is what lands in `negatives.json`.
+ */
+const EXPECTED_REFUSAL_CODES = {
+  "swapped-arms (grant vs checkout directory)": "TRUSTED_BUILD_NOT_PROVEN",
+  "missing-ABI (arm build without R97_ARM_PROBE)": "ARM_WORKER_ABI_UNSUPPORTED",
+  "wrong-policy (tampered decision policy digest)": "PREREGISTRATION_IDENTITY_DRIFT",
+  "undeclared-mode (process-exec with real checkouts, no fixture capability)": "EGRESS_ISOLATION_UNAVAILABLE",
+  "dirty-tree (git work tree with uncommitted bytes)": "TRUSTED_BUILD_NOT_PROVEN",
+  "unsupported-isolation": "ARM_ISOLATION_UNSUPPORTED",
+};
+
 async function phaseNegative({ workRoot }) {
   const runnerMod = await import(pathToFileURL(RUNNER_ENTRY).href);
   const cliMod = await import(pathToFileURL(CLI_ENTRY).href);
@@ -771,10 +828,18 @@ async function phaseNegative({ workRoot }) {
     });
     const recordsDir = join(dir, "out", "runs");
     const records = existsSync(recordsDir) ? readdirSync(recordsDir).filter((f) => f.endsWith(".json")).length : 0;
+    // S4/task-6: record the refusal CODE, not just the exit code. A negative that is
+    // refused for the WRONG reason (a dirty tree masks every boundary at once) proves
+    // nothing about the boundary under test, so the gate compares this against the
+    // code the violation is supposed to produce.
+    const refusalLine = res.lines.find((l) => l.includes("REFUSED")) ?? res.lines[0] ?? "";
+    const refusalCode = /REFUSED\s*\(([A-Z0-9_]+)\)/.exec(refusalLine)?.[1] ?? null;
     rows.push({
       violation: label,
       exitCode: res.exitCode,
       refused: res.exitCode !== 0,
+      refusalCode,
+      expectedRefusalCode: EXPECTED_REFUSAL_CODES[label] ?? null,
       firstLine: res.lines[0] ?? null,
       reasonLine: res.lines[1] ?? null,
       physicalModelCalls: providerCalls,
@@ -869,7 +934,7 @@ function parseArgs(argv) {
   };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
-    if (a === "--all") out.phases = new Set(["identity", "formal", "full", "content", "negative"]);
+    if (a === "--all") out.phases = new Set(["identity", "formal", "full", "content", "content-matrix", "negative"]);
     else if (a === "--out") out.out = argv[++i];
     else if (a === "--evidence-dir") out.evidenceDir = argv[++i];
     else if (a === "--verify") out.verify = argv[++i];
@@ -901,6 +966,11 @@ async function runRealChain() {
     if (args.phases.has("formal")) report.formalSmall = await phaseFormal({ full: false, workRoot });
     if (args.phases.has("full")) report.formalFull = await phaseFormal({ full: true, workRoot });
     if (args.phases.has("content")) report.contentFixture = await phaseContent({ workRoot });
+    if (args.phases.has("content-matrix")) {
+      const cm = await phaseContentMatrix({ workRoot });
+      report.contentMatrix = cm.matrix;
+      report.contentMatrixRuns = cm.perMode;
+    }
     if (args.phases.has("negative")) report.negative = await phaseNegative({ workRoot });
   } catch (err) {
     report.fatal = err instanceof Error ? `${err.message}\n${err.stack ?? ""}` : String(err);
@@ -975,6 +1045,16 @@ export const R5_GATE_VERSION = "e4-r5-formal-gate-v1";
 const EVIDENCE_FILES = ["manifest.json", "verifier.json", "security.json"];
 const OPTIONAL_EVIDENCE_FILES = ["activation.json"];
 const REQUIRED_NEGATIVES = ["swapped-arms", "missing-ABI", "wrong-policy", "undeclared-mode", "dirty-tree", "unsupported-isolation"];
+
+/** The codes the fixture bundle records for each required counter-example. */
+const FIXTURE_REFUSAL_CODES = {
+  "swapped-arms": "TRUSTED_BUILD_NOT_PROVEN",
+  "missing-ABI": "ARM_WORKER_ABI_UNSUPPORTED",
+  "wrong-policy": "PREREGISTRATION_IDENTITY_DRIFT",
+  "undeclared-mode": "EGRESS_ISOLATION_UNAVAILABLE",
+  "dirty-tree": "TRUSTED_BUILD_NOT_PROVEN",
+  "unsupported-isolation": "ARM_ISOLATION_UNSUPPORTED",
+};
 
 function isSha40(value) {
   return typeof value === "string" && /^[0-9a-f]{40}$/.test(value);
@@ -1272,6 +1352,20 @@ export function verifyEvidenceBundle(root, config = PAIR_CONFIG) {
           failures.push(fail("CONTENT_INSENSITIVE", `${caseId}/${armId} has no variant results`));
           continue;
         }
+        // COMPLETENESS FIRST. If the four-variant schedule did not actually run, the
+        // honest outcome is a NAMED failure that says which variant is missing — the
+        // case is NOT deleted, and a missing variant is never read as a pass.
+        for (const variant of ["correct", "empty", "wrong", "skipped"]) {
+          const verdict = variants[variant];
+          if (verdict !== "passed" && verdict !== "failed") {
+            failures.push(
+              fail(
+                "CONTENT_MATRIX_INCOMPLETE",
+                `${caseId}/${armId} has no "${variant}" variant result (got ${String(verdict)}): the four-variant schedule did not run, so content sensitivity is unproven for this case`,
+              ),
+            );
+          }
+        }
         if (variants.correct !== "passed") {
           failures.push(
             fail("CONTENT_CORRECT_FAILED", `${caseId}/${armId} correct variant is ${String(variants.correct)}, not passed — the content verifier did not confirm the real fix`),
@@ -1297,14 +1391,39 @@ export function verifyEvidenceBundle(root, config = PAIR_CONFIG) {
     failures.push(fail("NEGATIVE_ROW_MISSING", "negatives.json is absent, so no counter-example is recorded"));
   } else {
     const rows = readJsonFile(negativesPath).rows ?? [];
+    // The producer labels a row with the FULL violation description ("dirty-tree (git
+    // work tree with uncommitted bytes)") so the report reads well; the required set
+    // is keyed by the short id. Match on the prefix so a reworded description cannot
+    // silently drop a required counter-example.
+    const rowFor = (violation) => rows.find((r) => r.violation === violation || String(r.violation).startsWith(`${violation} `) || String(r.violation).startsWith(`${violation}(`));
     for (const violation of REQUIRED_NEGATIVES) {
-      if (!rows.some((r) => r.violation === violation)) {
+      if (rowFor(violation) === undefined) {
         failures.push(fail("NEGATIVE_ROW_MISSING", `the counter-example "${violation}" is not recorded`));
       }
     }
     for (const row of rows) {
       if (row.exitCode === 0) {
         failures.push(fail("NEGATIVE_ACCEPTED", `the "${String(row.violation)}" counter-example was ACCEPTED (exit 0) instead of refused`));
+      }
+      // REFUSED FOR THE RIGHT REASON. A row that is refused by an unrelated
+      // condition (a dirty driver tree refuses EVERY row with
+      // PREREGISTRATION_IDENTITY_DRIFT) does not evidence the boundary it names, so
+      // the code must match. `expectedRefusalCode` is recorded by the producer from
+      // EXPECTED_REFUSAL_CODES; a row with no expectation cannot be checked and is
+      // reported as such rather than passed silently.
+      if (row.refused === true) {
+        if (row.expectedRefusalCode === null || row.expectedRefusalCode === undefined) {
+          failures.push(
+            fail("NEGATIVE_WRONG_REASON", `the "${String(row.violation)}" row records no expected refusal code, so "refused" cannot be attributed to this violation`),
+          );
+        } else if (row.refusalCode !== row.expectedRefusalCode) {
+          failures.push(
+            fail(
+              "NEGATIVE_WRONG_REASON",
+              `the "${String(row.violation)}" row was refused with ${String(row.refusalCode)} but this violation must produce ${String(row.expectedRefusalCode)}; the refusal is not evidence for this boundary`,
+            ),
+          );
+        }
       }
       if (row.violation === "missing-ABI") {
         if (row.refusedBeforeAnyModelCall !== true || row.physicalModelCalls !== 0) {
@@ -1347,13 +1466,19 @@ async function writeEvidenceBundle({ evidenceDir, report, args }) {
   const identity = report.identity ?? null;
   for (const armId of ["baseline", "candidate"]) {
     const observed = identity?.arms?.[armId] ?? null;
+    // `phaseIdentity()` observes the git/build identity; the WORKER ABI has to be
+    // observed separately (it is a property of the arm's own dist tree), so ask
+    // `observeArm` rather than assuming a field that phaseIdentity never sets —
+    // assuming it is what made the first real run report WORKER_ABI_MISSING for two
+    // arms that do declare the ABI.
+    const abiObserved = observeArm(armId === "baseline" ? DEFAULT_PAIR.baseline : DEFAULT_PAIR.candidate, PAIR_CONFIG);
     pair[armId] = {
       sourceSha: armId === "baseline" ? PAIR_CONFIG.baseline.sha : PAIR_CONFIG.candidate.sha,
-      head: observed?.head ?? null,
-      clean: observed?.clean ?? null,
-      buildDigest: observed?.buildDigest ?? null,
-      entrySha256: observed?.armEntrySha256 ?? null,
-      workerAbi: PAIR_CONFIG.requiredWorkerAbi.filter((abi) => observed?.abi?.[abi] === true || observed?.workerAbi?.includes?.(abi) === true),
+      head: observed?.head ?? abiObserved.head ?? null,
+      clean: observed?.clean ?? abiObserved.clean ?? null,
+      buildDigest: typeof observed?.buildDigest === "string" && observed.buildDigest.length === 64 ? observed.buildDigest : abiObserved.buildDigest,
+      entrySha256: observed?.entrySha256 ?? abiObserved.entrySha256 ?? null,
+      workerAbi: abiObserved.workerAbi ?? [],
       protocolFixes: Object.fromEntries(
         (PAIR_CONFIG.requiredProtocolFixes ?? []).map((f) => [f.id, observed?.protocolFixes?.[f.id]?.presentInArmBuild === true]),
       ),
@@ -1442,7 +1567,7 @@ async function writeEvidenceBundle({ evidenceDir, report, args }) {
   if (budgetDir !== null && existsSync(join(budgetDir, "cost-budget.json"))) {
     await cp(join(budgetDir, "cost-budget.json"), join(evidenceDir, "cost-journal.json"));
   }
-  if (budgetDir !== null) {
+  if (budgetDir !== null && existsSync(budgetDir)) {
     for (const name of readdirSync(budgetDir)) {
       if (name.startsWith("dispatch") && name.endsWith(".json")) {
         await cp(join(budgetDir, name), join(evidenceDir, name));
@@ -1453,9 +1578,13 @@ async function writeEvidenceBundle({ evidenceDir, report, args }) {
     await cp(join(formal.dir, "aggregate.json"), join(evidenceDir, "aggregate.json"));
   }
 
-  // The content matrix, taken from the per-case RAW verifier evidence.
+  // The content matrix, taken from the per-case RAW verifier evidence. RESTRICTED to
+  // the content-sensitive cases (`CONTENT_FIXES`): a case with no content dimension
+  // has no empty/wrong/skipped meaning, and seeding it here would manufacture a
+  // CONTENT_MATRIX_INCOMPLETE failure for a case that was never supposed to have one.
   const matrixCases = {};
   for (const [caseId, entry] of Object.entries(formal?.evidence?.perCase ?? {})) {
+    if (!(caseId in CONTENT_FIXES)) continue;
     const verdict = (verifier) => (verifier === null || verifier === undefined ? "absent" : verifier.verifiedCompletion === true ? "passed" : "failed");
     matrixCases[caseId] = {
       contentMode: entry?.contentMode ?? null,
@@ -1486,6 +1615,11 @@ async function writeEvidenceBundle({ evidenceDir, report, args }) {
           violation: r.violation,
           exitCode: r.exitCode,
           refused: r.refused,
+          // The refusal CODE and the code this violation MUST produce travel with the
+          // row, so the gate can tell "refused for the right reason" from "refused
+          // because the driver work tree happened to be dirty".
+          refusalCode: r.refusalCode ?? null,
+          expectedRefusalCode: r.expectedRefusalCode ?? null,
           physicalModelCalls: r.physicalModelCalls,
           refusedBeforeAnyModelCall: r.refused === true && (r.physicalModelCalls ?? 0) === 0,
           reasonLine: r.reasonLine ?? null,
@@ -1621,6 +1755,8 @@ export async function emitFixtureBundle(dir) {
           violation,
           exitCode: 1,
           refused: true,
+          refusalCode: FIXTURE_REFUSAL_CODES[violation],
+          expectedRefusalCode: FIXTURE_REFUSAL_CODES[violation],
           physicalModelCalls: 0,
           refusedBeforeAnyModelCall: true,
           reasonLine: `${violation} refused (fixture)`,
