@@ -36,6 +36,7 @@
 
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { createServer } from "node:http";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -62,9 +63,12 @@ import {
   type ToolCallEfficiencyPreregistrationV2,
 } from "@ar/evaluation";
 import {
+  ARM_DEADLINE_EXCEEDED,
   ARM_PROBE_EXPORT,
   ARM_WORKER_ABI_UNSUPPORTED,
+  ARM_WORKER_TIMEOUT,
   FIXTURE_CHECKOUT_MARKER_FILENAME,
+  WORKER_CLEANUP_GRACE_MS,
   createFixtureCheckoutTrust,
   createPreregArmExecutor,
 } from "./prereg-arm-executor.js";
@@ -408,6 +412,218 @@ describe("S0a/F2 — a worker timeout must cancel the in-flight model stream", (
       "F2: the worker timed out but the provider's AbortSignal was never aborted — the in-flight model stream cannot be cancelled",
     ).toBe(true);
     expect(raced, "the driver did not settle before the watchdog").not.toBe(WATCHDOG);
+    // The driver must classify the stop with a STABLE reason, inside the declared
+    // window: the timeout plus the explicit cleanup grace, plus scheduler slack.
+    expect(String(raced)).toContain(ARM_WORKER_TIMEOUT);
+    expect(elapsed, "the driver exceeded timeout + cleanup grace").toBeLessThan(1_500 + WORKER_CLEANUP_GRACE_MS + 3_000);
+  }, 60_000);
+
+  it("[F2] a provider that IGNORES its AbortSignal still cannot keep the driver waiting", async () => {
+    const base = await scratch("f2-ignore-base");
+    const cand = await scratch("f2-ignore-cand");
+    await makeArmCheckout(base, "baseline", "model");
+    await makeArmCheckout(cand, "candidate", "model");
+
+    let providerEntered = false;
+    let releaseHang: (() => void) | null = null;
+    const deaf: ModelProvider = {
+      id: "r0-f8-deaf",
+      async listModels() {
+        return [];
+      },
+      createClient(_model: never, _config: ProviderConfig) {
+        return {
+          async *generate(_req: ModelRequest, _signal: AbortSignal): AsyncGenerator<ModelEvent> {
+            providerEntered = true;
+            // DELIBERATELY never looks at the signal and never yields.
+            await new Promise<void>((resolve) => {
+              releaseHang = resolve;
+            });
+          },
+        };
+      },
+    };
+
+    const evidenceDir = join(await scratch("f2-ignore-ev"), "pair-0-candidate");
+    const executor = createPreregArmExecutor({
+      rootDir: REPO_ROOT,
+      env: { R97_ARM_BASELINE_DIR: base, R97_ARM_CANDIDATE_DIR: cand },
+      trustedFixtureCheckouts: createFixtureCheckoutTrust(base, cand),
+      workerTimeoutMs: 1_200,
+    });
+
+    const arm = armRef();
+    const started = Date.now();
+    const WATCHDOG = Symbol("watchdog");
+    const raced = await Promise.race([
+      executor(arm, {
+        provider: deaf,
+        armRunId: "pair-0-candidate",
+        arm,
+        preregistrationDigest: PREREG_DIGEST,
+        planDigest: PLAN_DIGEST,
+        isolation: { isolationBackendId: "process-exec", isolationStrength: "process" },
+        evidenceDir,
+      }).then(
+        () => "settled" as const,
+        (err: unknown) => err,
+      ),
+      new Promise<typeof WATCHDOG>((resolve) => setTimeout(() => resolve(WATCHDOG), 12_000)),
+    ]);
+    const elapsed = Date.now() - started;
+    if (releaseHang !== null) (releaseHang as () => void)();
+
+    // THE POINT: "stop waiting" must not depend on the provider cooperating. The
+    // result is UNCONFIRMED — the driver never claims the remote request was
+    // revoked, only that it stopped waiting for it.
+    expect(providerEntered).toBe(true);
+    expect(raced, "the watchdog fired: a deaf provider parked the driver").not.toBe(WATCHDOG);
+    expect(String(raced)).toContain(ARM_WORKER_TIMEOUT);
+    expect(elapsed, "the driver exceeded timeout + cleanup grace").toBeLessThan(1_200 + WORKER_CLEANUP_GRACE_MS + 3_000);
+  }, 60_000);
+
+  it("[F2] a real HTTP stub observes its connection CLOSED after the client cancels", async () => {
+    const base = await scratch("f2-http-base");
+    const cand = await scratch("f2-http-cand");
+    await makeArmCheckout(base, "baseline", "model");
+    await makeArmCheckout(cand, "candidate", "model");
+
+    let serverSawClose = false;
+    let requestArrived = false;
+    const server = createServer((req, res) => {
+      requestArrived = true;
+      res.writeHead(200, { "content-type": "text/event-stream" });
+      res.write(": open\n");
+      // NEVER end the response: only a client cancellation can close it.
+      req.on("close", () => {
+        serverSawClose = true;
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    const port = typeof address === "object" && address !== null ? address.port : 0;
+
+    const streaming: ModelProvider = {
+      id: "r0-f8-http-stub",
+      async listModels() {
+        return [];
+      },
+      createClient(_model: never, _config: ProviderConfig) {
+        return {
+          async *generate(_req: ModelRequest, signal: AbortSignal): AsyncGenerator<ModelEvent> {
+            const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ stream: true }),
+              signal,
+            });
+            const reader = res.body?.getReader();
+            if (reader === undefined) return;
+            for (;;) {
+              const { done } = await reader.read();
+              if (done) break;
+            }
+          },
+        };
+      },
+    };
+
+    const evidenceDir = join(await scratch("f2-http-ev"), "pair-0-candidate");
+    const executor = createPreregArmExecutor({
+      rootDir: REPO_ROOT,
+      env: { R97_ARM_BASELINE_DIR: base, R97_ARM_CANDIDATE_DIR: cand },
+      trustedFixtureCheckouts: createFixtureCheckoutTrust(base, cand),
+      workerTimeoutMs: 1_500,
+    });
+
+    const arm = armRef();
+    const WATCHDOG = Symbol("watchdog");
+    try {
+      const raced = await Promise.race([
+        executor(arm, {
+          provider: streaming,
+          armRunId: "pair-0-candidate",
+          arm,
+          preregistrationDigest: PREREG_DIGEST,
+          planDigest: PLAN_DIGEST,
+          isolation: { isolationBackendId: "process-exec", isolationStrength: "process" },
+          evidenceDir,
+        }).then(
+          () => "settled" as const,
+          (err: unknown) => err,
+        ),
+        new Promise<typeof WATCHDOG>((resolve) => setTimeout(() => resolve(WATCHDOG), 12_000)),
+      ]);
+      expect(raced, "the watchdog fired").not.toBe(WATCHDOG);
+      expect(String(raced)).toContain(ARM_WORKER_TIMEOUT);
+      expect(requestArrived, "the local stub never received the request").toBe(true);
+      // Give the server a moment to observe the socket teardown.
+      for (let i = 0; i < 40 && !serverSawClose; i++) {
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      expect(
+        serverSawClose,
+        "F2: the driver aborted but the server never observed its connection closing — the transport was not really cancelled",
+      ).toBe(true);
+    } finally {
+      // Cleanup runs even when an assertion failed.
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }, 60_000);
+
+  it("[F2] an ALREADY-EXPIRED campaign makes 0 model requests and 0 tool dispatches", async () => {
+    const base = await scratch("f2-expired-base");
+    const cand = await scratch("f2-expired-cand");
+    await makeArmCheckout(base, "baseline", "budget");
+    await makeArmCheckout(cand, "candidate", "budget");
+
+    let providerEntries = 0;
+    const counting: ModelProvider = {
+      id: "r0-f8-expired-counting",
+      async listModels() {
+        return [];
+      },
+      createClient() {
+        return {
+          // eslint-disable-next-line require-yield
+          async *generate(): AsyncGenerator<ModelEvent> {
+            providerEntries += 1;
+            throw new Error("no request may be issued after the campaign deadline");
+          },
+        };
+      },
+    };
+
+    const budget = countingBudget(1);
+    const evidenceDir = join(await scratch("f2-expired-ev"), "pair-0-candidate");
+    const executor = createPreregArmExecutor({
+      rootDir: REPO_ROOT,
+      env: { R97_ARM_BASELINE_DIR: base, R97_ARM_CANDIDATE_DIR: cand },
+      trustedFixtureCheckouts: createFixtureCheckoutTrust(base, cand),
+      workerTimeoutMs: 60_000,
+    });
+
+    const arm = armRef();
+    const err = await executor(arm, {
+      provider: counting,
+      armRunId: "pair-0-candidate",
+      arm,
+      preregistrationDigest: PREREG_DIGEST,
+      planDigest: PLAN_DIGEST,
+      isolation: { isolationBackendId: "process-exec", isolationStrength: "process" },
+      evidenceDir,
+      toolDispatchBudget: budget.budget as never,
+      // The deadline is in the PAST: a resume must reuse it, not re-derive it.
+      campaignDeadlineAtMs: Date.now() - 60_000,
+    }).then(
+      () => null,
+      (e: unknown) => e,
+    );
+
+    expect(err, "an expired campaign was admitted").not.toBeNull();
+    expect(String(err)).toContain(ARM_DEADLINE_EXCEEDED);
+    expect(providerEntries, "a model request was issued after the campaign deadline").toBe(0);
+    expect(budget.refusals(), "a tool dispatch was attempted after the campaign deadline").toBe(0);
   }, 60_000);
 });
 

@@ -102,6 +102,18 @@ export const ARM_WORKER_TIMEOUT = "ARM_WORKER_TIMEOUT";
  * silently unenforced.
  */
 export const ARM_WORKER_ABI_UNSUPPORTED = "ARM_WORKER_ABI_UNSUPPORTED";
+/**
+ * R0/S2 (F2) — the campaign's ONE persisted deadline had already passed when this
+ * arm run was about to start. Zero model requests and zero tool dispatches are
+ * attempted; the deadline is NOT re-derived as `now + duration`.
+ */
+export const ARM_DEADLINE_EXCEEDED = "ARM_DEADLINE_EXCEEDED";
+/**
+ * R0/S2 — the short, EXPLICIT grace the driver gives an aborted model stream to
+ * unwind before it stops waiting. Reaching it does NOT mean the remote request
+ * was revoked: the result is recorded as unconfirmed.
+ */
+export const WORKER_CLEANUP_GRACE_MS = 2_000;
 
 /** The activation artifact schema (only written for an activated candidate). */
 export const PREREG_RUN_ACTIVATION_SCHEMA = "prereg-run-activation-v1";
@@ -756,7 +768,7 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
   const env = deps.env;
   const profile = formalExecutionProfile(env);
   const workerPath = deps.workerPath ?? join(root, PREREG_ARM_WORKER_REL);
-  const workerTimeoutMs = deps.workerTimeoutMs ?? 600_000;
+  const configuredWorkerTimeoutMs = deps.workerTimeoutMs ?? 600_000;
 
   // The frozen selection is the ONLY source of `caseId -> suite`. It is read
   // once, lazily, so construction stays free of I/O.
@@ -898,6 +910,29 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
     }
 
     // --- 4. run the arm's OWN build in an isolated child process ------------
+    //
+    // R0/S2 (F2) — THE ONE DEADLINE. `campaignDeadlineAtMs` is the instant the
+    // cost journal already holds, so the effective per-arm bound is
+    // min(campaign remaining, workerTimeoutMs) and a RESUME reuses the original
+    // deadline instead of recomputing `now + duration`. An already-expired
+    // campaign is refused HERE, so it makes zero model requests and zero tool
+    // dispatches.
+    const campaignDeadlineAtMs = ctx.campaignDeadlineAtMs ?? null;
+    let workerTimeoutMs = configuredWorkerTimeoutMs;
+    if (campaignDeadlineAtMs !== null) {
+      const remaining = campaignDeadlineAtMs - Date.now();
+      if (remaining <= 0) {
+        refuse(
+          ARM_DEADLINE_EXCEEDED,
+          `the campaign deadline (${new Date(campaignDeadlineAtMs).toISOString()}) had already passed when ${ctx.armRunId} was about to start — ` +
+            `refusing before the first model request rather than re-deriving a fresh window`,
+        );
+      }
+      if (remaining < workerTimeoutMs) {
+        workerTimeoutMs = remaining;
+      }
+    }
+
     const launched = await launchArmWorker({
       workerPath,
       env,
@@ -987,6 +1022,20 @@ interface LaunchArmWorkerResult {
   /** MEASURED physical provider entries this driver serviced for the child. */
   physicalProviderCalls: number;
   exitCode: number | null;
+  /**
+   * R0/S2 — what the deadline actually did to the in-flight transport. Recorded
+   * as OBSERVED, never as a claim that a remote request was revoked: a provider
+   * that ignores its `AbortSignal` leaves `streamSettled: false`.
+   */
+  cancellation: {
+    timedOut: boolean;
+    /** The driver aborted the controller the provider is holding. */
+    signalAborted: boolean;
+    /** The provider's generator returned within the cleanup grace. */
+    streamSettled: boolean;
+    /** MEASURED wall-clock ms from the deadline firing to the driver resuming. */
+    cleanupMs: number;
+  };
 }
 
 /** R0/S1 — one live reservation the child has been granted but not yet settled. */
@@ -1017,10 +1066,39 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
   });
 
   let timedOut = false;
-  const timer = setTimeout(() => {
+  /**
+   * R0/S2 (F2) — THE CONTROLLER HAS AN EXPLICIT OWNER.
+   *
+   * Before this, each model stream was started with a freshly constructed
+   * `new AbortController().signal` whose controller was never kept, so NOTHING in
+   * the process could abort it: a worker timeout killed the child while the
+   * driver's in-flight `for await` stayed parked on a provider that never yields.
+   *
+   * The owner is a mutable HOLDER, not a bare `let`: a `let` assigned only in one
+   * closure is narrowed to `never` in the others, which is exactly the kind of
+   * type-level accident that let the old discard-the-controller pattern look
+   * correct.
+   */
+  const streamOwner: { current: { id: number; controller: AbortController } | null } = { current: null };
+  /** Resolves when the currently serviced model stream unwinds (either way). */
+  let streamSettled: Promise<void> = Promise.resolve();
+  const cancellation = { timedOut: false, signalAborted: false, streamSettled: true, cleanupMs: 0 };
+
+  const deadlineFired = (): void => {
     timedOut = true;
+    cancellation.timedOut = true;
+    const startedCleanup = Date.now();
+    // 1. ABORT THE TRANSPORT FIRST — the provider is holding this exact signal.
+    if (streamOwner.current !== null) {
+      cancellation.signalAborted = true;
+      cancellation.streamSettled = false;
+      streamOwner.current.controller.abort();
+    }
+    // 2. Only then close the child process THIS task owns. Never a batch kill.
     child.kill();
-  }, opts.timeoutMs);
+    cancellation.cleanupMs = Date.now() - startedCleanup;
+  };
+  const timer = setTimeout(deadlineFired, opts.timeoutMs);
   timer.unref?.();
 
   const exited = new Promise<number | null>((resolve) => {
@@ -1053,13 +1131,41 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
   );
 
   const reply = (frame: Record<string, unknown>): void => {
+    // A post-cancellation write must never raise: the child may already be gone
+    // (EPIPE / ERR_STREAM_DESTROYED), and that is a normal end-of-life race.
     if (child.stdin === null || child.stdin.destroyed || !child.stdin.writable) return;
     try {
       child.stdin.write(`${JSON.stringify(frame)}\n`);
     } catch {
-      // A write to a channel the child already closed is not an error worth
-      // propagating: the child's exit is what classifies the arm.
+      // The child's exit is what classifies the arm, not this write.
     }
+  };
+
+  /**
+   * R0/S2 — service ONE model request DETACHED. The old code awaited the whole
+   * provider stream inline, which parked the frame loop inside a generator that
+   * never ends; the deadline timer could then fire but the driver could never
+   * return. The loop below now stays responsive while the stream runs.
+   */
+  const serviceModelRequest = (id: number, request: unknown): void => {
+    const controller = new AbortController();
+    streamOwner.current = { id, controller };
+    physicalProviderCalls += 1;
+    const run = (async (): Promise<void> => {
+      try {
+        const client = opts.provider.createClient({ id: runOptions["modelId"] as string } as never, {} as never);
+        for await (const event of client.generate(request as never, controller.signal)) {
+          if (timedOut) break; // no event is published after the deadline
+          reply({ t: "event", id, event });
+          if ((event as ModelEvent).type === "completed" || (event as ModelEvent).type === "error") break;
+        }
+        if (!timedOut) reply({ t: "done", id });
+      } catch (err) {
+        if (!timedOut) reply({ t: "error", id, message: err instanceof Error ? err.message : String(err) });
+      }
+    })();
+    streamSettled = run;
+    void run.catch(() => undefined);
   };
 
   let report: WorkerReport | null = null;
@@ -1155,23 +1261,47 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
         continue;
       }
 
-      if (frame.t !== "request") continue;
-      // Service the call with the ONE budget channel and stream the events back.
-      try {
-        const client = opts.provider.createClient({ id: runOptions["modelId"] as string } as never, {} as never);
-        physicalProviderCalls += 1;
-        for await (const event of client.generate(frame.request as never, new AbortController().signal)) {
-          reply({ t: "event", id: frame.id, event });
-          if ((event as ModelEvent).type === "completed" || (event as ModelEvent).type === "error") break;
+      // --- R0/S2: the child cancelled an in-flight model request ------------
+      if (frame.t === "cancel") {
+        // The arm build stopped waiting. Abort THIS request's transport (not
+        // somebody else's) and keep the loop responsive.
+        if (streamOwner.current !== null && streamOwner.current.id === frame.id) {
+          cancellation.signalAborted = true;
+          streamOwner.current.controller.abort();
         }
-        reply({ t: "done", id: frame.id });
-      } catch (err) {
-        reply({ t: "error", id: frame.id, message: err instanceof Error ? err.message : String(err) });
+        continue;
       }
+
+      if (frame.t !== "request") continue;
+      serviceModelRequest(frame.id, frame.request);
     }
   } finally {
     clearTimeout(timer);
+  }
+
+  // R0/S2 — STOP WAITING even when the provider ignores its AbortSignal. The
+  // grace is bounded and explicit; reaching it records `streamSettled: false`
+  // (unconfirmed), and never claims the remote request was revoked.
+  if (timedOut) {
+    const grace = new Promise<void>((resolve) => {
+      const t = setTimeout(resolve, WORKER_CLEANUP_GRACE_MS);
+      t.unref?.();
+    });
+    await Promise.race([streamSettled.catch(() => undefined), grace]);
+    cancellation.streamSettled = await Promise.race([
+      streamSettled.then(() => true).catch(() => true),
+      new Promise<boolean>((resolve) => {
+        const t = setTimeout(() => resolve(false), 0);
+        t.unref?.();
+      }),
+    ]);
+  }
+
+  // The child owns its own stdin; close it, then take the exit code.
+  try {
     child.stdin?.end();
+  } catch {
+    // already closed
   }
   const exitCode = await exited;
 
@@ -1193,7 +1323,12 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
     refuse(ARM_WORKER_ABI_UNSUPPORTED, abiRefusal);
   }
   if (timedOut) {
-    refuse(ARM_WORKER_TIMEOUT, `the arm worker exceeded its ${opts.timeoutMs} ms bound and was killed`);
+    refuse(
+      ARM_WORKER_TIMEOUT,
+      `the arm worker exceeded its ${opts.timeoutMs} ms bound; the transport was aborted first ` +
+        `(signalAborted=${String(cancellation.signalAborted)}, providerReturnedWithinGrace=${String(cancellation.streamSettled)}) ` +
+        `and the worker this task owns was then killed. A provider that did not return leaves the remote request UNCONFIRMED, not revoked`,
+    );
   }
   if (!sawResult || report === null) {
     refuse(
@@ -1207,7 +1342,7 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
   if (exitCode !== 0) {
     refuse(ARM_WORKER_FAILED, `the arm worker reported a result but exited ${exitCode}`);
   }
-  return { report, physicalProviderCalls, exitCode };
+  return { report, physicalProviderCalls, exitCode, cancellation };
 }
 
 /**

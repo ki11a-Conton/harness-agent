@@ -226,7 +226,7 @@ function createProxyProvider(router, write, budget) {
     },
     createClient() {
       return {
-        async *generate(request, _signal) {
+        async *generate(request, signal) {
           if (budget.modelInFlight) {
             throw new Error("PREREG_WORKER_CONCURRENCY: the isolated worker services one model call at a time");
           }
@@ -234,10 +234,25 @@ function createProxyProvider(router, write, budget) {
           const id = budget.nextId++;
           const box = router.open(id);
           budget.calls += 1;
+          // R0/S2 (F2) — HONOUR THE SIGNAL. The old proxy took `_signal` and
+          // ignored it, so an arm that aborted its own request left this
+          // generator parked on the driver forever. A rejection (not a resolve)
+          // is what unwinds the `Promise.race` below.
+          let onAbort = null;
+          const cancelled = new Promise((_resolve, reject) => {
+            onAbort = () => reject(Object.assign(new Error("PREREG_WORKER_CANCELLED: the arm aborted this model request"), { code: "PREREG_WORKER_CANCELLED" }));
+            if (signal?.aborted === true) {
+              onAbort();
+              return;
+            }
+            signal?.addEventListener("abort", onAbort, { once: true });
+          });
+          // A rejection nobody awaits yet must not become an unhandled rejection.
+          cancelled.catch(() => undefined);
           try {
             write({ t: "request", id, request });
             for (;;) {
-              const frame = await box.next();
+              const frame = await Promise.race([box.next(), cancelled]);
               if (frame === null) throw new Error("PREREG_WORKER_EOF: the driver closed the channel mid-call");
               if (frame.t === "event") {
                 yield frame.event;
@@ -248,7 +263,20 @@ function createProxyProvider(router, write, budget) {
                 throw new Error(`PREREG_WORKER_PROVIDER_ERROR: ${frame.message}`);
               }
             }
+          } catch (err) {
+            // Tell the DRIVER to stop waiting too, so a cancelled request cannot
+            // leave the parent's transport parked either. Best effort: the parent
+            // may already have closed the channel.
+            if (err && err.code === "PREREG_WORKER_CANCELLED") {
+              try {
+                write({ t: "cancel", id });
+              } catch {
+                // the channel is gone; nothing to cancel
+              }
+            }
+            throw err;
           } finally {
+            if (onAbort !== null) signal?.removeEventListener?.("abort", onAbort);
             router.close(id);
             budget.modelInFlight = false;
           }
