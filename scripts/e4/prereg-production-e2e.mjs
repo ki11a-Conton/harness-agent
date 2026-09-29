@@ -108,7 +108,64 @@ const R97_LEDGER_FILE = "budget-ledger.json";
 
 const SCHEMA = "prereg-production-offline-e2e-v1";
 const WORKSPACE = join(REPO_ROOT, ".ci", "prereg-production-e2e");
-const NOW = 1_700_000_000_000;
+
+/**
+ * S3/F4 (Phase F) — THE ONE INJECTED CLOCK.
+ *
+ * WHY THIS IS NOT A FROZEN CONSTANT ANY MORE
+ * ------------------------------------------
+ * It used to be `1_700_000_000_000` (2023-11-14T22:13:20Z). The formal gate
+ * freezes the durable campaign deadline as `clock() + caps.maxDurationMs`, i.e.
+ * `1_700_000_000_000 + 600_000` = 2023-11-14T22:23:20Z, and S2 (F2) made that
+ * deadline REAL: `prereg-arm-executor.ts` now refuses a campaign whose deadline
+ * has already passed rather than silently re-deriving a fresh window. A fixture
+ * pinned ~2 years in the PAST therefore fails with `ARM_DEADLINE_EXCEEDED` at
+ * the first arm. That refusal is CORRECT — the FIXTURE was wrong.
+ *
+ * So the wall-clock anchor is now OPEN (read once, here, at process start) while
+ * everything determinism actually depends on — token counts, digests, ids,
+ * repetitions, the frozen case set — stays fixed. `assertCampaignClockIsOpen`
+ * below makes a regression loud instead of silent.
+ *
+ * ONE CLOCK, ALWAYS: every `now: () => NOW` in this script reads THIS constant.
+ * There is deliberately no second epoch and no phase that uses raw `Date.now()`
+ * for a deadline comparison — mixing an open clock with a frozen one is exactly
+ * the inconsistency that produced the CI failure.
+ */
+const NOW = Date.now();
+
+/** The declared campaign duration the artifact binds (`budget.maxDurationMs`).
+ *  The gate freezes `campaignDeadlineAtMs = clock() + THIS`, so the guard below
+ *  must use the same number or it would validate a deadline nobody creates. */
+const DECLARED_MAX_DURATION_MS = 600_000;
+
+/**
+ * FAIL LOUDLY if this script's OWN injected clock would place the campaign
+ * deadline in the past. This is an ASSERTION, not a comment: a frozen past
+ * `NOW` must break the run here, with a message naming the cause, instead of
+ * surfacing 1,000 lines later as an opaque `ARM_DEADLINE_EXCEEDED` from inside
+ * the executor — or, worse, only in CI on a clean tree where the positive
+ * phases actually execute.
+ *
+ * `issuedAtMs` is deliberately NOT checked for "in the past": the formal gate
+ * compares it as `nowMs < auth.issuedAtMs` → `AUTHORIZATION_NOT_YET_VALID`, so
+ * the authorization epoch is REQUIRED to be at or before the injected clock.
+ */
+function assertCampaignClockIsOpen() {
+  const deadlineAtMs = NOW + DECLARED_MAX_DURATION_MS;
+  if (!Number.isFinite(NOW) || !Number.isSafeInteger(NOW)) {
+    throw new Error(`FIXTURE_CLOCK_INVALID: the injected clock ${String(NOW)} is not a safe integer epoch`);
+  }
+  if (deadlineAtMs <= Date.now()) {
+    throw new Error(
+      `FIXTURE_CLOCK_CLOSED: the injected clock NOW=${NOW} (${new Date(NOW).toISOString()}) places the campaign ` +
+        `deadline at ${deadlineAtMs} (${new Date(deadlineAtMs).toISOString()}), which is already in the past ` +
+        `relative to ${new Date(Date.now()).toISOString()}. The arm executor would (correctly) refuse with ` +
+        `ARM_DEADLINE_EXCEEDED before the first model request. Derive NOW from the real clock at process start ` +
+        `(see the NOW declaration) rather than pinning a past epoch.`,
+    );
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Small helpers
@@ -574,7 +631,10 @@ async function selectionEvidence(dir, env) {
     budget: {
       maxModelCallsPerRun: 30,
       maxToolCalls: 100,
-      maxDurationMs: 600_000,
+      // Phase F — the SAME constant the clock guard uses. The gate freezes the
+      // campaign deadline as `clock() + caps.maxDurationMs`, so if these two ever
+      // diverged the guard would validate a deadline nobody creates.
+      maxDurationMs: DECLARED_MAX_DURATION_MS,
       maxInputTokens: 320_000,
       maxOutputTokens: 64_000,
       maxTotalTokens: 384_000,
@@ -1449,6 +1509,19 @@ async function main() {
       process.stdout.write(`[FAIL] built artifact missing: ${entry} — run \`pnpm build\` first\n`);
       return 1;
     }
+  }
+
+  // S3/F4 (Phase F) — refuse to run at all if this script's own injected clock
+  // would make the campaign deadline already-expired. Checked BEFORE any phase,
+  // so a regression is a named failure here rather than an opaque
+  // ARM_DEADLINE_EXCEEDED from the arm executor — and it fires locally on a
+  // dirty tree too, where the positive phases would otherwise short-circuit and
+  // hide it until CI.
+  try {
+    assertCampaignClockIsOpen();
+  } catch (err) {
+    process.stdout.write(`[FAIL] ${err instanceof Error ? err.message : String(err)}\n`);
+    return 1;
   }
 
   rmSync(WORKSPACE, { recursive: true, force: true });
