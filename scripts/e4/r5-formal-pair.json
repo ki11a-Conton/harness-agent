@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "e4-r5-formal-pair-v1",
+  "purpose": "THE authoritative comparable pair for the strict R5 formal gate (plan(20260929-015956).md §8 / task-6). This file is the ONE place the pair is pinned. scripts/e4/r5-real-formal.mjs, scripts/e4/r97-observe-arms.mjs, apps/cli/src/r5-formal-gate.test.ts and CI all read it, so a pair change is a ONE-file change and can never be half-applied.",
+  "whyThisPairExists": "The historical pair (4f8d98ec… / 2314ce1d…) predates R0/S1 and R0/S2: neither arm exports the versioned worker ABI r97-arm-abi.ts declares, so the formal worker boundary refuses both arms with ARM_WORKER_ABI_UNSUPPORTED before the first model request. That pair is therefore unusable for the forward formal path and is kept only as a historical baseline. This pair carries the SAME S1/S2 infrastructure in BOTH arms; the ONLY difference is the pre-registered guidance.",
+  "baseline": {
+    "sha": "6d60920830e02a338ef6db34ac5f163cad1f1e09",
+    "role": "comparable baseline: identical to the candidate in every file EXCEPT packages/evaluation/src/mechanism-guidance.ts, where TOOL_CALL_EFFICIENCY_GUIDANCE_V1 is neutralised to the empty string. It deliberately fails its own product-strategy assertions; that is the point of a comparable baseline and MUST NOT be 'fixed' on product main.",
+    "mechanism": "tool_call_efficiency_v1 guidance NEUTRALISED (empty strategy text)",
+    "branchNote": "This commit is NOT an ancestor of product main and is not required to be: it is fetched by SHA. scripts/e4/r5-real-formal.mjs --setup-pair creates it locally from the candidate SHA when it is absent, so the pair is reproducible offline; CI fetches it by SHA instead."
+  },
+  "candidate": {
+    "sha": "66082ded3fec1f7ce9734d891023bc39c52c09b1",
+    "role": "product main at the pin: carries the real tool_call_efficiency_v1 guidance text AND the S1/S2 execution infrastructure.",
+    "mechanism": "tool_call_efficiency_v1 guidance ACTIVE (real v2 strategy text)"
+  },
+  "allowedArmDiff": [
+    "packages/evaluation/src/mechanism-guidance.ts"
+  ],
+  "requiredProtocolFixes": [
+    { "id": "P2-41", "sha": "9df60bd5", "what": "tool-call transcript ordering" },
+    { "id": "P2-43", "sha": "a85db6dc", "what": "provider function-name grammar" }
+  ],
+  "requiredWorkerAbi": [
+    "model-proxy-rpc-v1",
+    "tool-budget-rpc-v1"
+  ],
+  "requiredClosureEntries": [
+    "apps/cli/dist/main.js",
+    "apps/cli/dist/benchmark-command.js",
+    "packages/model/dist/index.js",
+    "packages/core/dist/index.js",
+    "packages/evaluation/dist/index.js"
+  ],
+  "armDirEnv": {
+    "baseline": "R97_ARM_BASELINE_DIR",
+    "candidate": "R97_ARM_CANDIDATE_DIR"
+  },
+  "isolation": {
+    "isolationBackendId": "trusted-build",
+    "isolationStrength": "no-os-network-sandbox",
+    "networkSandbox": "none",
+    "limitation": "trusted-build/no-os-network-sandbox says the MODEL TRANSPORT is not billed and that the two arms are real clean git checkouts at a 40-hex HEAD with differing execution closures. It grants NO OS network isolation to arbitrary arm code: the arm process is NOT network-sandboxed, and that field is kept honest rather than upgraded by this gate."
+  },
+  "numbering": {
+    "used": "plan(20260929-015956).md",
+    "note": "The plan numbers the r5-real-formal.mjs exit-code defect F5 and the readiness-classification defect F6 (F6 already fixed and committed as 66082de by the readiness owner). The task BOARD's task-2 subject line calls its own legacy-price defect 'F6'; that is a different defect and a different numbering. Every F-number in docs/evidence/E4-R5-report.md uses the PLAN's numbering, and the report states so."
+  }
+}

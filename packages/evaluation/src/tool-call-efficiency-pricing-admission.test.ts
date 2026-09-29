@@ -229,6 +229,7 @@ async function runGate(opts: {
   authOver?: Record<string, unknown>;
   endpoint?: string;
   fixture?: boolean;
+  mode?: "first-run" | "resume" | "auto";
 }): Promise<RunResult> {
   const endpoint = opts.endpoint ?? FIRST_PARTY_ENDPOINT;
   const base = preregOptions();
@@ -270,7 +271,7 @@ async function runGate(opts: {
     authorizationJson: JSON.stringify(authJson),
     observation: observationFor(artifact, endpoint, opts.obsOver ?? {}),
     budgetDir,
-    mode: "first-run",
+    mode: opts.mode ?? "first-run",
     now: () => 1_700_000_000_000,
     makeProvider: factory,
   });
@@ -429,6 +430,65 @@ describe("N3 — the SYNTHETIC FIXTURE class can never widen a paid approval", (
         endpoint: LOOPBACK_ENDPOINT,
         obsOver: { usdMicrosPerCall: null, endpointIsLoopback: true },
       }),
+      "PRICING_UNKNOWN",
+    );
+  }, 60_000);
+});
+
+describe("N3/F6 — a price with no execution eligibility is refused on the FIRST request and on RESUME", () => {
+  // F6 (plan(20260929-015956).md §9): the historical `legacy_ephemeral`
+  // declaration stays READABLE but is no longer automatically executable. The
+  // identity resolver therefore observes `usdMicrosPerCall === null` and binds NO
+  // `pricingDigest` for it, which is exactly the observation shape asserted here.
+  // The admission consequence is the same on a new run and on a resume: the
+  // money-bounded gate refuses PRICING_UNKNOWN and the provider factory is never
+  // entered (0 counting-provider requests).
+  it("[F6.1] a NEW billed run with a non-executable (legacy) price is REFUSED with 0 factory / 0 transport", async () => {
+    await expectRefusedWithZeroRequests(
+      runGate({
+        obsOver: { usdMicrosPerCall: null },
+        mode: "first-run",
+      }),
+      "PRICING_UNKNOWN",
+    );
+  }, 60_000);
+
+  it("[F6.2] a RESUME with a non-executable (legacy) price is REFUSED BEFORE the budget/ledger is opened", async () => {
+    // The refusal must happen before any ledger work: mode "resume" against a
+    // budget dir that has NO prior ledger would otherwise fail as
+    // BUDGET_STATE_REJECTED, so PRICING_UNKNOWN here proves the price gate runs
+    // first and no provider (and no budget) is reached.
+    await expectRefusedWithZeroRequests(
+      runGate({
+        obsOver: { usdMicrosPerCall: null },
+        mode: "resume",
+      }),
+      "PRICING_UNKNOWN",
+    );
+  }, 60_000);
+
+  it("[F6.3] the refusal names the PRICE, never the authorization or the budget", async () => {
+    const r = await runGate({ obsOver: { usdMicrosPerCall: null }, mode: "resume" });
+    expect(r.status).toBe("REFUSED");
+    expect(r.code).toBe("PRICING_UNKNOWN");
+    expect(r.factoryCalls).toBe(0);
+    expect(r.transportCalls).toBe(0);
+  }, 60_000);
+
+  it("[F6.4] POSITIVE CONTROL: the SAME run with an eligible (windowed) price is not refused for pricing", async () => {
+    // Without this control the refusals above could be satisfied by a gate that
+    // refuses everything. A known, non-null price on the same fixture must reach
+    // the authorization/budget stage instead of PRICING_UNKNOWN.
+    const r = await runGate({ obsOver: { usdMicrosPerCall: 2_500_000 } });
+    expect(r.status, `code=${r.code}`).toBe("ADMITTED");
+    expect(r.factoryCalls).toBe(1);
+  }, 60_000);
+
+  it("[F6.5] an expired price basis (observed as unknown) is refused with 0 factory on a resume too", async () => {
+    // An expired declaration resolves to a refusal upstream, so the observation
+    // carries no price. Expressed here as the observation contract the gate sees.
+    await expectRefusedWithZeroRequests(
+      runGate({ obsOver: { usdMicrosPerCall: null }, mode: "resume" }),
       "PRICING_UNKNOWN",
     );
   }, 60_000);

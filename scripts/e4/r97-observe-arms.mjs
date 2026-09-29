@@ -45,7 +45,7 @@
 // Exit codes: 0 ready · 1 setup failure · 2 usage error.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -109,6 +109,41 @@ export const EXIT_CONFIG = 2;
  */
 export const DEFAULT_BASELINE_SHA = "4f8d98ec65d475844d3ed4b959a3199f84ed5d03";
 export const DEFAULT_CANDIDATE_SHA = "2314ce1db40bfa10dc58b0d136e0696450e90cc8";
+
+// ---------------------------------------------------------------------------
+// S4/task-6 — THE R5 FORMAL PAIR, READ FROM THE ONE AUTHORITATIVE FILE
+// ---------------------------------------------------------------------------
+/**
+ * The STRICT R5 formal gate (plan(20260929-015956).md §8, defect F5) needs a pair
+ * that exports the versioned worker ABI (`r97-arm-abi.ts`), because the formal
+ * worker boundary refuses an arm that does not declare it with
+ * `ARM_WORKER_ABI_UNSUPPORTED` BEFORE the first model request. The R97/R101 pair
+ * above predates that ABI, so it is unusable for the formal chain — but it is NOT
+ * replaced here: `apps/cli/src/r97-driver-closed-loop.test.ts` asserts those two
+ * exact SHAs, and the R97/R101 manifests and constants are load-bearing history.
+ *
+ * So the formal pair is a SECOND, explicitly selected pair (`--pair r5`), and it is
+ * pinned in exactly ONE place — `scripts/e4/r5-formal-pair.json` — which
+ * `scripts/e4/r5-real-formal.mjs` and `apps/cli/src/r5-formal-gate.test.ts` also
+ * read. A re-pin is therefore a one-file change that cannot be half-applied.
+ *
+ * The pair is only SELECTED, never created here: `--pair r5` still goes through the
+ * same `prepareArm()` (a real `git worktree add --detach <sha>` + `pnpm install` +
+ * `pnpm build` + clean-tree assertion), so a missing revision is a SETUP FAILURE
+ * and never a fabricated observation. The baseline commit is not an ancestor of
+ * product main by design; it must be fetchable BY SHA (CI) or created locally by
+ * `r5-real-formal.mjs --setup-pair`.
+ */
+export const R5_PAIR_CONFIG_PATH = join(here, "r5-formal-pair.json");
+
+export const R5_PAIR = (() => {
+  const raw = readFileSync(R5_PAIR_CONFIG_PATH, "utf8");
+  const cfg = JSON.parse(raw);
+  if (cfg.schemaVersion !== "e4-r5-formal-pair-v1") {
+    throw new Error(`r5-formal-pair.json has schemaVersion ${String(cfg.schemaVersion)}, expected e4-r5-formal-pair-v1`);
+  }
+  return { baseline: cfg.baseline.sha, candidate: cfg.candidate.sha, config: cfg };
+})();
 
 /** The env vars the D6 test reads, named once so the printed advice and the test
  *  cannot drift apart. */
@@ -295,6 +330,9 @@ export function parseArgs(argv) {
     root: value("--root"),
     baseline: value("--baseline"),
     candidate: value("--candidate"),
+    // `--pair r5` selects the formal pair from `r5-formal-pair.json`. It only
+    // changes WHICH pair the defaults come from; it never bypasses `prepareArm`.
+    pair: value("--pair"),
     printEnv: argv.includes("--print-env"),
   };
 }
@@ -308,8 +346,17 @@ export async function main(argv) {
     return EXIT_CONFIG;
   }
 
-  const baselineSha = parsed.baseline ?? process.env["R97_ARM_BASELINE_SHA"] ?? DEFAULT_BASELINE_SHA;
-  const candidateSha = parsed.candidate ?? process.env["R97_ARM_CANDIDATE_SHA"] ?? DEFAULT_CANDIDATE_SHA;
+  if (parsed.pair !== undefined && parsed.pair !== "r5" && parsed.pair !== "r97") {
+    process.stderr.write(`r97-observe-arms: --pair must be "r5" or "r97" (got ${JSON.stringify(parsed.pair)})\n`);
+    return EXIT_CONFIG;
+  }
+  const selected =
+    parsed.pair === "r5"
+      ? { label: "r5", baseline: R5_PAIR.baseline, candidate: R5_PAIR.candidate }
+      : { label: "r97", baseline: DEFAULT_BASELINE_SHA, candidate: DEFAULT_CANDIDATE_SHA };
+
+  const baselineSha = parsed.baseline ?? process.env["R97_ARM_BASELINE_SHA"] ?? selected.baseline;
+  const candidateSha = parsed.candidate ?? process.env["R97_ARM_CANDIDATE_SHA"] ?? selected.candidate;
   for (const [label, sha] of [
     ["--baseline", baselineSha],
     ["--candidate", candidateSha],

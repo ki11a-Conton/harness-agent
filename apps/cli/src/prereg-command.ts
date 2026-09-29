@@ -56,6 +56,19 @@ export interface PreregRunnerAdapter {
   makeProvider: () => ModelProvider | Promise<ModelProvider>;
   /** How one arm of the frozen schedule is executed. */
   runArm: PreregisteredArmRunner;
+  /**
+   * S3/F4 (Phase C) — the OPTIONAL non-billable transport seam.
+   *
+   * It is a ZERO-ARGUMENT FUNCTION, never a value, so the transport cannot be
+   * carried in a JSON artifact, an env var, a CLI flag or a marker file: it has
+   * to be supplied by a composition root that already holds the built-in
+   * offline profile. The spread below is the ONLY place it can reach the gate.
+   *
+   * The adapter CHOOSES it; `deps` cannot. This keeps the profile id out of the
+   * argument surface entirely — see `preregCommandDeps()` in `main.ts`, the one
+   * caller that can set it.
+   */
+  offlineTransport?: () => unknown;
 }
 
 export interface PreregCommandDeps {
@@ -448,6 +461,13 @@ async function runCmd(rest: string[], deps: PreregCommandDeps): Promise<PreregCo
     mode: mode,
     now: deps.now,
     makeProvider: deps.runner.makeProvider,
+    // S3/F4 (Phase C) — the ONE conditional spread. Absent (the production
+    // default, and every existing caller) this key is not even present, so the
+    // gate takes its unchanged no-capability path and still refuses a
+    // fixture-mode authorization with FIXTURE_TRANSPORT_NOT_NON_BILLABLE.
+    ...(deps.runner.offlineTransport !== undefined
+      ? { nonBillableTransport: deps.runner.offlineTransport() }
+      : {}),
   });
   if (admission.status === "REFUSED") {
     return {

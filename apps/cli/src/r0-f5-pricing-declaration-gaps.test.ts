@@ -33,6 +33,7 @@ import {
   DECLARED_PRICING_ENV,
   parseDeclaredPricingStrict,
   resolveDeclaredUsdMicrosPerCall,
+  resolvePricingBasis,
   resolveUsdMicrosPerCall,
 } from "./prereg-execution-identity.js";
 import { observeExecutionIdentity } from "./prereg-production-runner.js";
@@ -95,6 +96,7 @@ type EnvAwareResolve = (
   providerId: string,
   query: { modelId?: string; endpointBaseUrl?: string | null },
   env: Record<string, string | undefined>,
+  nowMs?: number,
 ) => number | null;
 
 /**
@@ -178,10 +180,21 @@ describe("R0/F5 — the operator pricing declaration is not a frozen identity in
     // keys are exactly `baseUrl`/`source`/`boundByModel` — the strict parser
     // correctly rejected it as `unknown_field`. Both ACCEPTED forms are pinned
     // here instead: the labelled legacy mode, and the v2 windowed mode.
+    //
+    // F6 REFRESH (plan(20260929-015956).md §9): the legacy form is READABLE but
+    // has NO execution eligibility, so the positive control must use the v2
+    // WINDOWED form. The legacy form is pinned as an explicit refusal instead of
+    // being silently priced — this is the F6 fix, not a weakened assertion.
     const legacy = declaration();
     expect(
       resolveDeclaredUsdMicrosPerCall({ modelId: RELAY_MODEL, endpointBaseUrl: RELAY }, { [DECLARED_PRICING_ENV]: legacy }),
-    ).toBe(1_000_000);
+    ).toBeNull();
+    const legacyParsed = parseDeclaredPricingStrict(legacy);
+    expect(legacyParsed.ok).toBe(true);
+    if (legacyParsed.ok) {
+      expect(legacyParsed.value.mode).toBe("legacy_ephemeral");
+      expect(legacyParsed.value.boundByModel[RELAY_MODEL]).toBe(1_000_000);
+    }
 
     const windowed = windowedDeclaration();
     const parsed = parseDeclaredPricingStrict(windowed);
@@ -230,23 +243,53 @@ describe("R0/F5 — the operator pricing declaration is not a frozen identity in
     const forgedV2 = parseDeclaredPricingStrict(windowedDeclaration({ sourceKind: "provider_verified" }));
     expect(forgedV2.ok).toBe(false);
     if (!forgedV2.ok) expect(forgedV2.reason).toBe("self_declared_provider_verified");
-    // The legacy mode still prices the relay through the env it was HANDED, and an
-    // empty env prices nothing — the declaration is the only basis.
+    // F6 REFRESH (plan(20260929-015956).md §9): READABLE is no longer the same as
+    // EXECUTABLE. The legacy declaration is still parsed, labelled and reviewable
+    // (asserted above), but it carries no validity window and no covered token
+    // ceiling, so it must NOT price a new billed run or a resume. The execution
+    // surfaces refuse it; an empty env prices nothing either way.
     expect(
       resolveDeclaredUsdMicrosPerCall({ modelId: RELAY_MODEL, endpointBaseUrl: RELAY }, { [DECLARED_PRICING_ENV]: raw }),
-    ).toBe(1_000_000);
+    ).toBeNull();
     expect(resolveDeclaredUsdMicrosPerCall({ modelId: RELAY_MODEL, endpointBaseUrl: RELAY }, {})).toBeNull();
+    // The refusal is the STABLE F6 reason, not a generic "invalid", and the
+    // windowed form is the one that still prices the same relay/rate.
+    const refusal = resolvePricingBasis(
+      REAL_PROVIDER_ID,
+      { modelId: RELAY_MODEL, endpointBaseUrl: RELAY, requiredTokenCeiling: 32_000 },
+      { [DECLARED_PRICING_ENV]: raw },
+      Date.parse("2026-06-01T00:00:00.000Z"),
+    );
+    expect(refusal.ok).toBe(false);
+    if (!refusal.ok) {
+      expect(refusal.reason).toBe("legacy_not_executable");
+      expect(refusal.detail).toContain("prereg-pricing-v2");
+    }
+    expect(
+      resolveDeclaredUsdMicrosPerCall(
+        { modelId: RELAY_MODEL, endpointBaseUrl: RELAY },
+        { [DECLARED_PRICING_ENV]: windowedDeclaration() },
+        Date.parse("2026-06-01T00:00:00.000Z"),
+      ),
+    ).toBe(1_000_000);
   });
 
-  it("R0-F5-B (RED): a declaration whose validity window has LAPSED must not price the relay", () => {
-    const raw = declaration({
+  it("R0-F5-B: a declaration whose validity window has LAPSED must not price the relay", () => {
+    // F6 REFRESH: expressed on the v2 WINDOWED shape, which is the only shape
+    // that can carry a window at all. The old call put `issuedAt`/`expiresAt` on
+    // the LEGACY shape, where they are `unknown_field` — so it "passed" on a
+    // parse error rather than on the expiry rule. This pins the expiry rule.
+    const raw = windowedDeclaration({
       issuedAt: "2020-01-01T00:00:00.000Z",
       expiresAt: "2020-01-02T00:00:00.000Z",
     });
-    // TARGET: an expired declaration is void. Today both unknown fields are
-    // ignored, so the stale 1_000_000 µUSD/call bound is still returned.
+    expect(parseDeclaredPricingStrict(raw).ok).toBe(true);
     expect(
-      resolveDeclaredUsdMicrosPerCall({ modelId: RELAY_MODEL, endpointBaseUrl: RELAY }, { [DECLARED_PRICING_ENV]: raw }),
+      resolveDeclaredUsdMicrosPerCall(
+        { modelId: RELAY_MODEL, endpointBaseUrl: RELAY },
+        { [DECLARED_PRICING_ENV]: raw },
+        Date.parse("2026-06-01T00:00:00.000Z"),
+      ),
     ).toBeNull();
   });
 
@@ -265,38 +308,67 @@ describe("R0/F5 — the operator pricing declaration is not a frozen identity in
     ).toBe(true);
   });
 
-  it("R0-F5-D (RED): resolveUsdMicrosPerCall must read the env it was HANDED, not process.env", () => {
-    const raw = declaration();
+  it("R0-F5-D: resolveUsdMicrosPerCall must read the env it was HANDED, not process.env", () => {
+    // F6 REFRESH: the env-source contract is asserted on the v2 WINDOWED shape,
+    // which is the one that is execution-eligible. The legacy shape is refused
+    // for a DIFFERENT reason (no window/coverage), so it could no longer
+    // distinguish "read the wrong env" from "not executable" — using it here
+    // would have made this test pass for the wrong reason.
+    const raw = windowedDeclaration();
     const withEnv = resolveUsdMicrosPerCall as unknown as EnvAwareResolve;
     const query = { modelId: RELAY_MODEL, endpointBaseUrl: RELAY };
+    const nowMs = Date.parse("2026-06-01T00:00:00.000Z");
 
     // Minimal input 1: the declaration exists ONLY in the injected env.
     delete process.env[DECLARED_PRICING_ENV];
     // TARGET: the injected env is the source of truth (plan §R4 #1).
-    expect(withEnv(REAL_PROVIDER_ID, query, { [DECLARED_PRICING_ENV]: raw })).toBe(1_000_000);
+    expect(withEnv(REAL_PROVIDER_ID, query, { [DECLARED_PRICING_ENV]: raw }, nowMs)).toBe(1_000_000);
 
     // Minimal input 2: the declaration exists ONLY in the global env.
     process.env[DECLARED_PRICING_ENV] = raw;
     // TARGET: a call handed an EMPTY env must not be priced by process.env.
-    expect(withEnv(REAL_PROVIDER_ID, query, {})).toBeNull();
+    expect(withEnv(REAL_PROVIDER_ID, query, {}, nowMs)).toBeNull();
+    // ...and the legacy shape is refused on the injected env too (F6).
+    expect(withEnv(REAL_PROVIDER_ID, query, { [DECLARED_PRICING_ENV]: declaration() }, nowMs)).toBeNull();
   });
 
-  it("R0-F5-E (RED): observeExecutionIdentity(env) must not price from a DIFFERENT process.env declaration", () => {
-    // Minimal input: the caller's env declares 1_000_000 µUSD/call; the global
-    // process env declares 99_000_000 µUSD/call for the same endpoint+model.
+  it("R0-F5-E: observeExecutionIdentity(env) must not price from a DIFFERENT process.env declaration", () => {
+    // F6 REFRESH: the injected/global conflict is asserted on the v2 WINDOWED
+    // shape (execution-eligible), with the SAME amount in both envs so the only
+    // thing under test is WHICH ENV was read. The legacy shape is refused for
+    // its own reason and can no longer isolate this defect.
+    const nowMs = Date.parse("2026-06-01T00:00:00.000Z");
     const injected = {
       OPENAI_API_KEY: FAKE_KEY,
       OPENAI_MODEL: RELAY_MODEL,
       OPENAI_BASE_URL: RELAY,
-      [DECLARED_PRICING_ENV]: declaration({ boundByModel: { [RELAY_MODEL]: 1_000_000 } }),
+      [DECLARED_PRICING_ENV]: windowedDeclaration({ source: "injected env declaration" }),
     } as NodeJS.ProcessEnv;
-    process.env[DECLARED_PRICING_ENV] = declaration({ boundByModel: { [RELAY_MODEL]: 99_000_000 } });
+    // The GLOBAL env names a DIFFERENT endpoint + model + source. If the observer
+    // read the global declaration it could not price the injected endpoint at all.
+    process.env[DECLARED_PRICING_ENV] = windowedDeclaration({
+      baseUrl: "http://127.0.0.1:45998/v1",
+      source: "decoy global declaration",
+      ceilingByModel: { "decoy-global-model": 99_000_000 },
+    });
+    process.env["OPENAI_MODEL"] = "decoy-global-model";
+    process.env["OPENAI_BASE_URL"] = "http://127.0.0.1:45998/v1";
 
-    const observed = observeExecutionIdentity(REPO_ROOT, injected);
-
-    // TARGET: the observed price comes from the env that was handed in.
-    // This is the production call site: `formalExecutionProfile(env)` and
-    // `env["R97_ARM_*"]` use `injected`, but the price silently uses the global.
-    expect(observed.usdMicrosPerCall).toBe(1_000_000);
+    try {
+      const observed = observeExecutionIdentity(REPO_ROOT, injected);
+      // TARGET: the observed price comes from the env that was handed in.
+      // This is the production call site: `formalExecutionProfile(env)` and
+      // `env["R97_ARM_*"]` use `injected`, but the price silently uses the global.
+      expect(observed.usdMicrosPerCall).toBe(1_000_000);
+      expect(observed.modelId).toBe(RELAY_MODEL);
+      expect(observed.pricingSourceKind).toBe("operator_declared");
+      // F6: the observed basis is EXECUTION-ELIGIBLE, so it carries a digest the
+      // pre-registration can bind (a non-executable price binds none).
+      expect(observed.pricingDigest).toMatch(/^[0-9a-f]{64}$/);
+    } finally {
+      delete process.env["OPENAI_MODEL"];
+      delete process.env["OPENAI_BASE_URL"];
+    }
+    void nowMs;
   });
 });

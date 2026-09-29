@@ -50,9 +50,12 @@ import {
 } from "./benchmark-command.js";
 import {
   DEFAULT_REAL_MODEL_ID,
+  OFFLINE_MODEL_ID,
+  OFFLINE_PROVIDER_ID,
   REAL_PROVIDER_ID,
   STUB_MODEL_ID,
   STUB_PROVIDER_ID,
+  isOfflineProfileId,
 } from "./provider.js";
 
 /** The `agent benchmark --budget` default (documented default; a case.json may
@@ -72,6 +75,40 @@ export interface ProviderIdentity {
 }
 
 /**
+ * S3/F4 (Phase D) — the OFFLINE PROFILE SELECTION, passed IN.
+ *
+ * It is deliberately an explicit parameter and NOT a global/env read: the
+ * selection is a compile-time constant in the composition root (`main.ts`'s
+ * `PREREG_OFFLINE_PROFILE_ID`), and the identity function must be TOLD about it
+ * rather than guessing. The default is "not selected", so every existing caller
+ * (there are six) is unchanged and no keyless run is silently relabelled.
+ */
+export interface ProviderIdentitySelection {
+  /** The selected built-in offline profile, or `null` when none is selected. */
+  offlineProfileId: string | null;
+}
+
+/** Nothing selected — the behaviour every pre-existing caller keeps. */
+export const NO_PROVIDER_IDENTITY_SELECTION: ProviderIdentitySelection = Object.freeze({
+  offlineProfileId: null,
+});
+
+/** The refusal raised when the offline profile and a real provider config are
+ *  BOTH present. They may never be reconciled by preference. */
+export class ProviderIdentityConflictError extends Error {
+  readonly code = "OFFLINE_PROFILE_AND_REAL_PROVIDER_CONFIG";
+  constructor(envProvider: string) {
+    super(
+      `OFFLINE_PROFILE_AND_REAL_PROVIDER_CONFIG: the built-in offline profile was selected for this run, but the ` +
+        `environment also carries a REAL provider configuration (${envProvider}). These may not be reconciled by ` +
+        `preference: an offline run must never be reported while a credential-bearing provider could be ` +
+        `constructed from the environment. Clear the provider configuration or deselect the offline profile.`,
+    );
+    this.name = "ProviderIdentityConflictError";
+  }
+}
+
+/**
  * The provider/model/endpoint the execution path WILL resolve from `env`.
  *
  * Precedence mirrors `resolveModelProvider` (a key is what makes a real,
@@ -79,11 +116,44 @@ export interface ProviderIdentity {
  * `OPENAI_MODEL` or `OPENAI_API_KEY` selects the real provider; `OPENAI_MODEL`
  * overrides `DEFAULT_REAL_MODEL_ID`; a keyless run is the stub. `--provider` /
  * `--model` overrides do NOT exist on the prereg chain (A3).
+ *
+ * S3/F4 (Phase D) — THE THIRD CASE. The two outcomes above are UNCHANGED. An
+ * offline identity is observed ONLY when `selection` explicitly names a built-in
+ * offline profile — i.e. when that profile is already the selected provider for
+ * this process. Concretely:
+ *
+ *   - no selection (the default, and every pre-existing caller) → the two
+ *     original outcomes, so a keyless env still observes `stub`/`stub-model`
+ *     and no existing run is silently relabelled as offline;
+ *   - offline selected AND a real provider config present → REFUSAL
+ *     (`ProviderIdentityConflictError`), never a preference-based fallback;
+ *   - offline selected AND keyless → the offline identity.
  */
-export function resolveProviderIdentity(env: NodeJS.ProcessEnv = process.env): ProviderIdentity {
+export function resolveProviderIdentity(
+  env: NodeJS.ProcessEnv = process.env,
+  selection: ProviderIdentitySelection = NO_PROVIDER_IDENTITY_SELECTION,
+): ProviderIdentity {
   const hasKey = (env["OPENAI_API_KEY"] ?? "") !== "";
   const model = env["OPENAI_MODEL"] ?? "";
   const real = hasKey || model !== "";
+
+  // The offline case is checked FIRST, but only when it was explicitly selected.
+  // A real provider configuration alongside it is a CONFLICT, never a
+  // preference.
+  if (selection.offlineProfileId !== null) {
+    if (!isOfflineProfileId(selection.offlineProfileId)) {
+      throw new ProviderIdentityConflictError(
+        `unknown offline profile id ${JSON.stringify(selection.offlineProfileId)}`,
+      );
+    }
+    if (real) throw new ProviderIdentityConflictError(hasKey ? "OPENAI_API_KEY" : "OPENAI_MODEL");
+    return {
+      providerId: OFFLINE_PROVIDER_ID,
+      modelId: OFFLINE_MODEL_ID,
+      endpointBaseUrl: null,
+    };
+  }
+
   return {
     providerId: real ? REAL_PROVIDER_ID : STUB_PROVIDER_ID,
     modelId: real ? model || DEFAULT_REAL_MODEL_ID : STUB_MODEL_ID,
@@ -121,9 +191,18 @@ export interface FormalExecutionProfile {
  * The full, re-derivable execution profile: provider identity, effective
  * request profile and the two digests. Shared by `prereg build` (the writer)
  * and `observeExecutionIdentity` (the certifier).
+ *
+ * S3/F4 (Phase D) — `selection` is optional and defaults to "nothing selected",
+ * so every pre-existing single-argument caller observes exactly what it did
+ * before. Only a caller that has actually selected the built-in offline profile
+ * passes it, and a real provider configuration alongside that selection is a
+ * REFUSAL (`ProviderIdentityConflictError`) rather than a silent preference.
  */
-export function formalExecutionProfile(env: NodeJS.ProcessEnv = process.env): FormalExecutionProfile {
-  const provider = resolveProviderIdentity(env);
+export function formalExecutionProfile(
+  env: NodeJS.ProcessEnv = process.env,
+  selection: ProviderIdentitySelection = NO_PROVIDER_IDENTITY_SELECTION,
+): FormalExecutionProfile {
+  const provider = resolveProviderIdentity(env, selection);
   const budgetTokens =
     budgetForCapabilities(resolveCapabilities({ providerId: provider.providerId, modelId: provider.modelId })) ??
     FORMAL_EXECUTION_DEFAULT_BUDGET_TOKENS;
@@ -261,7 +340,20 @@ export type PricingRejectionReason =
   | "endpoint_mismatch"
   | "model_not_declared"
   | "snapshot_expired"
-  | "provider_unknown";
+  | "provider_unknown"
+  /**
+   * F6 — the declaration is READABLE but has no execution eligibility: the
+   * historical `legacy_ephemeral` shape carries no validity window and no
+   * covered token ceiling, so it may be inspected/diagnosed but must not
+   * authorize a new billed run or a resume. The detail names the migration
+   * target instead of leaving the operator with a bare "invalid".
+   */
+  | "legacy_not_executable"
+  /** F6 — a migration input that is not the legacy shape. */
+  | "not_legacy_declaration"
+  /** F6 — a migration needs an explicit, bounded window; "never expires" is
+   *  never auto-filled on the operator's behalf. */
+  | "migration_window_required";
 
 export interface PricingRejection {
   ok: false;
@@ -686,6 +778,17 @@ export interface ResolvedPricingBasis {
   usdMicrosPerCall: number;
   /** `null` only for the unbilled stub. */
   sourceKind: PricingSourceKind | null;
+  /**
+   * F6 — the DECLARATION MODE this basis was read from, or `null` when no
+   * declaration produced it (the unbilled stub / the provider rate card).
+   *
+   * This is what keeps a `legacy_ephemeral` declaration VISIBLE in the
+   * read-only inspection instead of being flattened into "no source". It is
+   * deliberately NOT part of `pricingBasisDigest`: `validity.kind` already
+   * distinguishes an unspecified from a windowed validity, and re-keying every
+   * existing digest is not required to separate the two modes.
+   */
+  declarationMode: DeclaredPricingMode | null;
   /** Whether the basis came from an INJECTED env or (legacy call shape) from the
    *  process environment. A `process_env` basis is the F5 inconsistency made
    *  VISIBLE instead of silent; the identity path always injects. */
@@ -753,15 +856,23 @@ function withDigest(basis: Omit<ResolvedPricingBasis, "pricingDigest">): Resolve
 }
 
 /**
- * Resolve the pricing basis from ONE injected environment.
+ * Resolve the pricing basis from ONE injected environment — the READ-ONLY
+ * interpretation.
  *
  * Order: an operator declaration for exactly this endpoint+model; else the
  * committed provider rate card, which covers ONLY the first-party default
  * endpoint and the models it lists. A declaration that is PRESENT but invalid is
  * returned as its own rejection — it never silently falls through to the rate
  * card, which would price the endpoint with a basis the operator did not declare.
+ *
+ * F6 — THIS FUNCTION DOES NOT DECIDE EXECUTION ELIGIBILITY. It answers "what
+ * does this declaration say?", which is what inspect/diagnose needs, and it
+ * returns a `legacy_ephemeral` basis for the historical shape. Authorizing a
+ * billed run or a resume MUST go through `resolvePricingBasis`, which adds the
+ * eligibility decision on top. Never treat a `ok: true` from this function as
+ * permission to construct a provider.
  */
-export function resolvePricingBasis(
+export function resolvePricingBasisReadOnly(
   providerId: string,
   query: PriceQuery,
   env: Record<string, string | undefined>,
@@ -779,6 +890,7 @@ export function resolvePricingBasis(
         basisKind: "unbilled_stub",
         usdMicrosPerCall: 0,
         sourceKind: null,
+        declarationMode: null,
         envSource,
         source: "stub provider: no externally-billed call is made",
         currency: SUPPORTED_PRICING_CURRENCY,
@@ -836,6 +948,7 @@ export function resolvePricingBasis(
           basisKind: "operator_declared",
           usdMicrosPerCall: ceiling,
           sourceKind: "operator_declared",
+          declarationMode: declared.mode,
           envSource,
           source: declared.source,
           currency: declared.currency,
@@ -892,6 +1005,7 @@ export function resolvePricingBasis(
       basisKind: "provider_verified",
       usdMicrosPerCall: bound,
       sourceKind: "provider_verified",
+      declarationMode: null,
       envSource,
       source: PRICING_SNAPSHOT_V1.source,
       currency: PRICING_SNAPSHOT_V1.currency,
@@ -914,6 +1028,327 @@ export function resolvePricingBasis(
   };
 }
 
+/* ── F6: EXECUTION ELIGIBILITY — separate from parsing / reading ─────────── */
+
+/**
+ * F6 — the stable, machine-readable migration instruction for a legacy
+ * declaration. It is emitted VERBATIM so a log/UI can point at the same
+ * procedure, and it never auto-fills "never expires" or guesses a rate.
+ */
+export const LEGACY_PRICING_MIGRATION_NOTE =
+  "the historical `{ baseUrl, source, boundByModel }` declaration is read-only: it carries no validity window and no covered token ceiling. " +
+  "Re-declare the SAME endpoint and rate with an explicit window and coverage using `prereg-pricing-v2` " +
+  "(`migrateLegacyDeclarationToV2` converts an existing declaration offline once the operator supplies `issuedAt`, `expiresAt` and `coveredTokenCeiling`). " +
+  "No window, no rate and no approval is ever inferred for you.";
+
+/** F6 — the explicit execution-eligibility decision for an ALREADY-RESOLVED
+ *  basis. Parsing and reading are deliberately a different question. */
+export interface PricingExecutionEligibility {
+  eligible: boolean;
+  /** `null` when eligible; otherwise the stable, distinct refusal reason. */
+  reason: PricingRejectionReason | null;
+  detail: string;
+  /** The migration instruction when the basis is a readable legacy declaration. */
+  migrationNote: string | null;
+}
+
+/**
+ * F6 — may this basis authorize a NEW billed run or a resume?
+ *
+ * A price being READABLE is not the same as a price being EXECUTABLE. The
+ * historical `legacy_ephemeral` declaration is still parsed, labelled and shown
+ * by every read-only surface, but it has no validity window and no covered token
+ * ceiling, so it is refused here with a stable migration reason instead of
+ * silently pricing an unbounded amount of future spend.
+ *
+ * The `unbilled_stub` stays a SEPARATE exception: its zero comes from a real
+ * no-network provider (the stub transport), never from an endpoint address or a
+ * declared rate of 0.
+ */
+export function pricingExecutionEligibility(
+  basis: ResolvedPricingBasis,
+  nowMs: number = Date.now(),
+): PricingExecutionEligibility {
+  const eligible = (detail: string): PricingExecutionEligibility => ({ eligible: true, reason: null, detail, migrationNote: null });
+  const refuse = (reason: PricingRejectionReason, detail: string, migrationNote: string | null = null): PricingExecutionEligibility => ({
+    eligible: false,
+    reason,
+    detail,
+    migrationNote,
+  });
+
+  if (basis.basisKind === "unbilled_stub") {
+    return eligible("the unbilled stub makes no externally-billed call; its zero comes from the real no-network provider");
+  }
+  if (basis.currency !== SUPPORTED_PRICING_CURRENCY) {
+    return refuse("unsupported_currency", `currency ${JSON.stringify(basis.currency)} is not ${SUPPORTED_PRICING_CURRENCY}`);
+  }
+  if (!Number.isSafeInteger(basis.usdMicrosPerCall) || basis.usdMicrosPerCall <= 0) {
+    return refuse(
+      "illegal_numeric",
+      `a per-call bound of ${String(basis.usdMicrosPerCall)} µUSD cannot authorize a billed run (a positive integer is required; 0 is only the unbilled stub)`,
+    );
+  }
+  // No validity window at all: the legacy shape. READABLE, not executable.
+  if (basis.validity.kind === "unspecified" || basis.validity.issuedAt === null || basis.validity.expiresAt === null) {
+    return refuse(
+      "legacy_not_executable",
+      `the declaration is a ${basis.declarationMode ?? "legacy_ephemeral"} declaration with no validity window: it may be inspected but not executed. ${LEGACY_PRICING_MIGRATION_NOTE}`,
+      LEGACY_PRICING_MIGRATION_NOTE,
+    );
+  }
+  const issuedMs = Date.parse(basis.validity.issuedAt);
+  const expiresMs = Date.parse(basis.validity.expiresAt);
+  if (!Number.isFinite(issuedMs) || !Number.isFinite(expiresMs) || !(expiresMs > issuedMs)) {
+    return refuse(
+      "invalid_validity_window",
+      `invalid validity window ${basis.validity.issuedAt} → ${basis.validity.expiresAt}`,
+    );
+  }
+  if (nowMs >= expiresMs) {
+    return refuse(
+      basis.validity.kind === "snapshot" ? "snapshot_expired" : "expired",
+      `the basis expired at ${basis.validity.expiresAt} (checked at ${new Date(nowMs).toISOString()})`,
+    );
+  }
+  if (nowMs < issuedMs) {
+    return refuse("not_yet_valid", `the basis is not valid until ${basis.validity.issuedAt} (checked at ${new Date(nowMs).toISOString()})`);
+  }
+  // Coverage: an upper bound that does not cover the request's token envelope
+  // does not bound that request.
+  const required = basis.coverage.requiredTokenCeiling;
+  if (required !== null && (basis.coverage.coveredTokenCeiling === null || required > basis.coverage.coveredTokenCeiling)) {
+    return refuse(
+      "insufficient_token_coverage",
+      `the basis covers ${basis.coverage.coveredTokenCeiling ?? "no"} tokens but the request ceiling is ${required}`,
+    );
+  }
+  return eligible("the basis is windowed, unexpired, covers the request envelope and has an explicit currency");
+}
+
+/**
+ * F6 — the SHIPPED execution resolver: the read-only basis PLUS the explicit
+ * eligibility decision.
+ *
+ * This is the function every billed-execution and resume surface must use. It is
+ * the same choke point `observeExecutionIdentity` (the identity a resume is
+ * compared against) and `prereg build` (the identity that is bound) already go
+ * through, so a legacy declaration can no longer authorize a new billed run or a
+ * resume: it resolves to a refusal, the observed price becomes `null`, no
+ * `pricingDigest` is bound, and the money-bounded gate refuses `PRICING_UNKNOWN`
+ * before any provider is constructed.
+ */
+export function resolvePricingBasis(
+  providerId: string,
+  query: PriceQuery,
+  env: Record<string, string | undefined>,
+  nowMs: number = Date.now(),
+  envSource: "injected" | "process_env" = "injected",
+): PricingResolution {
+  const readOnly = resolvePricingBasisReadOnly(providerId, query, env, nowMs, envSource);
+  if (!readOnly.ok) return readOnly;
+  const eligibility = pricingExecutionEligibility(readOnly.basis, nowMs);
+  if (!eligibility.eligible) {
+    return { ok: false, reason: eligibility.reason ?? "provider_unknown", detail: eligibility.detail };
+  }
+  return readOnly;
+}
+
+/**
+ * F6 — the pre-send decision for ONE physical send or retry.
+ *
+ * The price expiry is folded into EVERY new physical send and retry: after
+ * expiry nothing is sent. A request that was ALREADY sent keeps the ORIGINAL
+ * reservation as its settlement (the amount it was reserved at) — expiry never
+ * invents a new price and never rewrites an existing journal/artifact field. An
+ * in-flight request whose true usage cannot be determined settles as the
+ * conservative `unknown` at that same original reservation, not as a refund.
+ */
+export interface PricingSendDecision {
+  /** TRUE only when a new physical send may go out. */
+  allow: boolean;
+  reason: PricingRejectionReason | null;
+  detail: string;
+  /** TRUE when this decision made NO new physical send. */
+  sentNothing: boolean;
+  /** TRUE when a request was already sent and must settle at its ORIGINAL
+   *  reservation (never at a newly derived price). */
+  settlesAtOriginalReservation: boolean;
+  /** The amount this send settles at: the basis' own bound. */
+  settlementUsdMicrosPerCall: number;
+}
+
+export function decidePhysicalSend(input: {
+  basis: ResolvedPricingBasis;
+  nowMs?: number;
+  /** Physical sends already made for THIS request (0 = none yet). */
+  alreadySent: number;
+}): PricingSendDecision {
+  const nowMs = input.nowMs ?? Date.now();
+  const alreadySent = Math.max(0, input.alreadySent);
+  const eligibility = pricingExecutionEligibility(input.basis, nowMs);
+  if (eligibility.eligible) {
+    return {
+      allow: true,
+      reason: null,
+      detail: "the pricing basis is still eligible at this send/retry",
+      sentNothing: false,
+      settlesAtOriginalReservation: false,
+      settlementUsdMicrosPerCall: input.basis.usdMicrosPerCall,
+    };
+  }
+  const reason = eligibility.reason ?? "provider_unknown";
+  return {
+    allow: false,
+    reason,
+    detail:
+      alreadySent > 0
+        ? `${eligibility.detail} — no further send or retry is made; the ${alreadySent} request(s) already sent settle at the original reservation of ${input.basis.usdMicrosPerCall} µUSD (never at a newly derived price)`
+        : `${eligibility.detail} — nothing is sent`,
+    sentNothing: true,
+    settlesAtOriginalReservation: alreadySent > 0,
+    settlementUsdMicrosPerCall: input.basis.usdMicrosPerCall,
+  };
+}
+
+/** F6 — the longest validity window a migration may declare (one year). A
+ *  longer window is a "never expires" claim in disguise and is refused. */
+export const MAX_DECLARED_PRICING_WINDOW_MS = 366 * 24 * 60 * 60 * 1000;
+
+export interface LegacyPricingMigrationWindow {
+  issuedAt: string;
+  expiresAt: string;
+  coveredTokenCeiling: number;
+}
+
+/**
+ * F6 — the OFFLINE migration helper for the legacy declaration format.
+ *
+ * PURE and offline: it converts an existing legacy declaration into a
+ * `prereg-pricing-v2` value using the rates the operator ALREADY declared
+ * (unchanged) plus the window and coverage the OPERATOR supplies. It never
+ * auto-fills "never expires", never guesses a rate, and never signs anything —
+ * the converted value still has to pass the ordinary gate.
+ */
+export function migrateLegacyDeclarationToV2(
+  legacyRaw: string | undefined | null,
+  window: LegacyPricingMigrationWindow,
+): { ok: true; json: string; value: DeclaredPricing } | PricingRejection {
+  const parsed = parseDeclaredPricingStrict(legacyRaw);
+  if (!parsed.ok) return parsed;
+  if (parsed.value.mode !== "legacy_ephemeral") {
+    return {
+      ok: false,
+      reason: "not_legacy_declaration",
+      detail: `this declaration is already ${parsed.value.mode}; the converter only upgrades the legacy_ephemeral shape`,
+    };
+  }
+  const issuedMs = Date.parse(window.issuedAt);
+  const expiresMs = Date.parse(window.expiresAt);
+  if (
+    typeof window.issuedAt !== "string" ||
+    typeof window.expiresAt !== "string" ||
+    window.issuedAt === "" ||
+    window.expiresAt === "" ||
+    !Number.isFinite(issuedMs) ||
+    !Number.isFinite(expiresMs) ||
+    !(expiresMs > issuedMs)
+  ) {
+    return {
+      ok: false,
+      reason: "migration_window_required",
+      detail: "the migration needs an explicit ISO-8601 `issuedAt` and a LATER `expiresAt`; no window is inferred for you",
+    };
+  }
+  if (expiresMs - issuedMs > MAX_DECLARED_PRICING_WINDOW_MS) {
+    return {
+      ok: false,
+      reason: "migration_window_required",
+      detail: `the migration window must not exceed ${MAX_DECLARED_PRICING_WINDOW_MS} ms (about one year): a longer window is a "never expires" claim, which is never auto-filled`,
+    };
+  }
+  if (!isPositiveSafeInteger(window.coveredTokenCeiling)) {
+    return {
+      ok: false,
+      reason: "illegal_numeric",
+      detail: "the migration needs an explicit positive `coveredTokenCeiling`: the legacy shape declares none, and one is never guessed",
+    };
+  }
+  // The converted value is built as JSON and re-parsed by the STRICT parser, so
+  // the converter can never emit something the gate would refuse to read.
+  const json = JSON.stringify({
+    schema: V2_PRICING_SCHEMA,
+    sourceKind: "operator_declared",
+    source: parsed.value.source,
+    baseUrl: parsed.value.baseUrl,
+    currency: SUPPORTED_PRICING_CURRENCY,
+    issuedAt: new Date(issuedMs).toISOString(),
+    expiresAt: new Date(expiresMs).toISOString(),
+    coveredTokenCeiling: window.coveredTokenCeiling,
+    ceilingByModel: parsed.value.boundByModel,
+  });
+  const reparsed = parseDeclaredPricingStrict(json);
+  if (!reparsed.ok) return reparsed;
+  return { ok: true, json, value: reparsed.value };
+}
+
+/* ── F6: ONE environment resolution for observation, price and construction ─ */
+
+export interface ExecutionEnvironmentResolution {
+  provider: ProviderIdentity;
+  /** The EXECUTION resolution (eligibility applied) for exactly `provider`. */
+  pricing: PricingResolution;
+  /** TRUE only when the price basis is for the SAME model and endpoint as the
+   *  provider identity — i.e. A's price cannot execute B's provider. */
+  priceMatchesProvider: boolean;
+  /** The inputs the REAL provider must be constructed with, derived from the
+   *  SAME resolution. Passing anything else would re-introduce the split. */
+  constructionInput: { apiKey: string; baseUrl: string | null; modelId: string };
+}
+
+/**
+ * F6 — resolve the provider identity, the price AND the provider-construction
+ * input from ONE env object in a single call.
+ *
+ * The F5 defect was that observation and price resolution could read different
+ * environments (the price from the global `process.env`). This function makes
+ * the agreement a checked fact instead of a convention: the caller gets the
+ * identity, the price and the exact construction input together, so a price
+ * declared for endpoint A can never be spent through a provider built for
+ * endpoint B.
+ */
+export function resolveExecutionEnvironment(
+  env: Record<string, string | undefined>,
+  nowMs: number = Date.now(),
+): ExecutionEnvironmentResolution {
+  const provider = resolveProviderIdentity(env as NodeJS.ProcessEnv);
+  const pricing = resolvePricingBasis(
+    provider.providerId,
+    {
+      modelId: provider.modelId,
+      endpointBaseUrl: provider.endpointBaseUrl,
+      requiredTokenCeiling: PRICING_PER_CALL_TOKEN_ENVELOPE,
+    },
+    env,
+    nowMs,
+    "injected",
+  );
+  const priceMatchesProvider =
+    pricing.ok &&
+    pricing.basis.endpointBaseUrl === normalizeEndpointBaseUrl(provider.endpointBaseUrl) &&
+    pricing.basis.modelId === provider.modelId;
+  return {
+    provider,
+    pricing,
+    priceMatchesProvider,
+    constructionInput: {
+      apiKey: env["OPENAI_API_KEY"] ?? "",
+      baseUrl: provider.endpointBaseUrl,
+      modelId: provider.modelId,
+    },
+  };
+}
+
 /**
  * The declared bound for THIS query, or `null` (legacy surface).
  *
@@ -926,13 +1361,13 @@ export function resolveDeclaredUsdMicrosPerCall(
   env: Record<string, string | undefined> = process.env,
   nowMs: number = Date.now(),
 ): number | null {
-  const parsed = parseDeclaredPricingStrict(env[DECLARED_PRICING_ENV]);
-  if (!parsed.ok) return null;
-  const declared = parsed.value;
-  if (declared.baseUrl !== normalizeEndpointBaseUrl(query.endpointBaseUrl ?? null)) return null;
-  if (declared.issuedAt !== null && declared.expiresAt !== null && nowMs >= Date.parse(declared.expiresAt)) return null;
-  const modelId = query.modelId ?? DEFAULT_REAL_MODEL_ID;
-  return effectivePerCallCeiling(modelId, declared);
+  // F6 — a DECLARED bound, and only when the declaration is EXECUTION-ELIGIBLE.
+  // The read-only layer is used so the fall-through to the provider rate card is
+  // visible as `provider_verified` (this surface answers only for a declaration).
+  const readOnly = resolvePricingBasisReadOnly(REAL_PROVIDER_ID, query, env, nowMs, "process_env");
+  if (!readOnly.ok || readOnly.basis.basisKind !== "operator_declared") return null;
+  if (!pricingExecutionEligibility(readOnly.basis, nowMs).eligible) return null;
+  return readOnly.basis.usdMicrosPerCall;
 }
 
 /**
@@ -1056,14 +1491,68 @@ export interface PricingInspectionInput {
 export function describePricingInspection(input: PricingInspectionInput): string[] {
   const query = input.query ?? {};
   const nowMs = input.nowMs ?? Date.now();
-  const resolution = resolvePricingBasis(input.providerId, query, input.env, nowMs);
+  // F6 — the inspection reads the declaration through the READ-ONLY layer, so a
+  // legacy declaration is still SHOWN (mode, level, amount, coverage, validity)
+  // instead of being flattened into "no source". The execution decision is then
+  // reported SEPARATELY and explicitly, so a reviewer always sees both the
+  // readable basis and whether it may execute.
+  const readOnly = resolvePricingBasisReadOnly(input.providerId, query, input.env, nowMs);
+  const eligibility = readOnly.ok ? pricingExecutionEligibility(readOnly.basis, nowMs) : null;
+  const resolution: PricingResolution =
+    readOnly.ok && eligibility !== null && !eligibility.eligible
+      ? { ok: false, reason: eligibility.reason ?? "provider_unknown", detail: eligibility.detail }
+      : readOnly;
   const drift = detectPricingDrift(input.boundPricingDigest ?? null, resolution);
 
-  if (!resolution.ok) {
+  const levelOf = (basis: ResolvedPricingBasis): string =>
+    basis.basisKind === "unbilled_stub"
+      ? "unbilled_stub (no externally-billed call)"
+      : basis.sourceKind === "operator_declared"
+        ? "operator_declared (CONSERVATIVE UPPER BOUND — not a provider invoice)"
+        : "provider_verified (provider-published rate card)";
+
+  // A readable basis that is NOT execution-eligible is reported in full: the
+  // declaration is not hidden, the refusal is explicit.
+  if (readOnly.ok && eligibility !== null && !eligibility.eligible) {
+    const basis = readOnly.basis;
+    const lines = [
+      `pricing source level: ${levelOf(basis)}`,
+      `declaration mode: ${basis.declarationMode ?? "(none — provider rate card)"}`,
+      `execution eligibility: NOT EXECUTABLE (${eligibility.reason})`,
+      `  ${eligibility.detail}`,
+      `endpoint: ${redactEndpointForDisplay(basis.endpointBaseUrl ?? query.endpointBaseUrl ?? null)}`,
+      `model: ${basis.modelId}`,
+      `currency: ${basis.currency}`,
+      `per-call bound: ${microsToUsd(basis.usdMicrosPerCall)} USD (${basis.usdMicrosPerCall} µUSD)`,
+      `covered token ceiling: ${basis.coverage.coveredTokenCeiling ?? "unspecified"}${
+        basis.coverage.requiredTokenCeiling !== null ? ` (request ceiling ${basis.coverage.requiredTokenCeiling})` : ""
+      }`,
+    ];
+    if (input.maxModelCalls !== null && input.maxModelCalls !== undefined) {
+      lines.push(
+        `budget computation: ${input.maxModelCalls} model calls x ${microsToUsd(basis.usdMicrosPerCall)} USD = ${microsToUsd(
+          basis.usdMicrosPerCall * input.maxModelCalls,
+        )} USD (operator-declared CEILING — an upper bound, not an observed actual; NOT authorized for execution)`,
+      );
+    }
+    lines.push(
+      `validity: ${basis.validity.kind}${
+        basis.validity.issuedAt !== null ? ` ${basis.validity.issuedAt} → ${basis.validity.expiresAt}` : " (no expiry claimed)"
+      }, checked at ${new Date(nowMs).toISOString()}`,
+      `pricingDigest: ${basis.pricingDigest}`,
+      `bound pricingDigest: ${input.boundPricingDigest ?? "(none)"}`,
+      `pricing drift: ${drift.code} — ${drift.detail}`,
+      "provider calls: 0 (refused before any provider construction)",
+      "actual provider cost: NOT_OBSERVED",
+    );
+    return lines;
+  }
+
+  if (!readOnly.ok) {
     return [
       "pricing source level: NONE (no reviewable source) — the run cannot be priced",
-      `pricing rejection: ${resolution.reason}`,
-      `  ${resolution.detail}`,
+      `pricing rejection: ${readOnly.reason}`,
+      `  ${readOnly.detail}`,
       `endpoint: ${redactEndpointForDisplay(query.endpointBaseUrl ?? null)}`,
       `model: ${query.modelId ?? DEFAULT_REAL_MODEL_ID}`,
       `pricing drift: ${drift.code} — ${drift.detail}`,
@@ -1072,15 +1561,12 @@ export function describePricingInspection(input: PricingInspectionInput): string
     ];
   }
 
-  const basis = resolution.basis;
-  const level =
-    basis.basisKind === "unbilled_stub"
-      ? "unbilled_stub (no externally-billed call)"
-      : basis.sourceKind === "operator_declared"
-        ? "operator_declared (CONSERVATIVE UPPER BOUND — not a provider invoice)"
-        : "provider_verified (provider-published rate card)";
+  const basis = readOnly.basis;
+  const level = levelOf(basis);
   const lines = [
     `pricing source level: ${level}`,
+    `declaration mode: ${basis.declarationMode ?? "(none — provider rate card)"}`,
+    `execution eligibility: EXECUTABLE`,
     `endpoint: ${redactEndpointForDisplay(query.endpointBaseUrl ?? null)}`,
     `model: ${basis.modelId}`,
     `currency: ${basis.currency}`,

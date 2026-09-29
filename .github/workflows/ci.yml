@@ -36,7 +36,18 @@ jobs:
         # P10-6: promotion of path/filesystem/process/store-sensitive changes
         # requires BOTH platforms green. Keep both entries always — a silent
         # single-platform gate would not be a gate.
-        os: [ubuntu-latest, windows-latest]
+        #
+        # `platform` is carried as an EXPLICIT matrix axis rather than derived
+        # from `runner.os` inside a step. `ci-readiness.mjs --platform` accepts
+        # only the closed enum {windows, ubuntu}, and the value it records must
+        # come from the job definition that actually ran — not from a guess made
+        # by the process under test about itself. It must stay in lockstep with
+        # `os`: exactly one entry per OS, and no third value.
+        include:
+          - os: ubuntu-latest
+            platform: ubuntu
+          - os: windows-latest
+            platform: windows
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
@@ -186,11 +197,19 @@ jobs:
       # `E2E_OBSERVATION_RUN_ID` observation rows and truncates them, which is
       # exactly the failure that commit 6629c5cf fixed. Do not move it upwards.
       #
-      # The sibling F5 file is still deliberately RED (task-9 owns its fix) and
-      # stays excluded from the green run, so only the F6 file is named here.
+      # The sibling pricing file `r0-f5-pricing-declaration-gaps.test.ts` (task-2,
+      # S5) is green on its own but is still listed in `vitest.config.ts` L51
+      # `exclude`; it is therefore run through the SAME config here, explicitly by
+      # path, and the exclusion is removed at S7 once S5 is committed.
+      #
+      # Plan numbering note: "F6" in the plan §1.2 is the readiness-classification
+      # defect. That is what this step gates. The plan's F5 is the
+      # `r5-real-formal.mjs` exit-code defect (S4). The board's task-2 subject line
+      # separately calls the legacy-price issue "F6"; that is a board local label
+      # only and does not refer to this gate.
       # -----------------------------------------------------------------------
-      - name: R7 — F6 readiness classification gate (16 counterexamples, all GREEN)
-        run: pnpm exec vitest run --config apps/cli/test-infra/r0-gaps-vitest.config.ts apps/cli/src/r0-f6-ci-readiness-classification.test.ts
+      - name: R7 — F6/F3 readiness classification + F5-pricing counterexamples (37 tests, all GREEN)
+        run: pnpm exec vitest run --config apps/cli/test-infra/r0-gaps-vitest.config.ts apps/cli/src/r0-f6-ci-readiness-classification.test.ts apps/cli/src/r0-f5-pricing-declaration-gaps.test.ts
 
       - name: Benchmark smoke (stub/fake provider — no paid model)
         # One adversarial case through the real harness with the stub provider.
@@ -897,7 +916,15 @@ jobs:
       # legs' evidence, and `fail-fast` would cancel the second before it reported.
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        # `platform` is needed by the N7 readiness step on this job too (same
+        # closed enum and same reason as the `e4` job above): the recorded
+        # platform must come from the job definition, never from the runner's
+        # self-report. Keep it in lockstep with `os`.
+        include:
+          - os: ubuntu-latest
+            platform: ubuntu
+          - os: windows-latest
+            platform: windows
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     permissions:
@@ -973,9 +1000,25 @@ jobs:
       #
       # The step name carries the SHA/OS/run/attempt the evidence is bound to; the
       # artifact upload below already includes all four in its name.
+      #
+      # NAME ACCURACY (plan §11). The previous step name claimed a
+      # "production-offline E2E" outright, which hid a real limitation: the
+      # RELEASE-entry POS-FWD phase currently ends in the
+      # FIXTURE_TRANSPORT_NOT_NON_BILLABLE REFUSAL branch, because the release
+      # composition root injects no non-billable transport. So on the shipped
+      # entry point what is proven today is the REFUSAL (plus the 0-provider
+      # certification), NOT a forward run. The name below states which branches
+      # actually execute and which is still missing, so a green job cannot be read
+      # as "the release CLI forward path passed". When S3 lands a real forward
+      # path, add a forward step and name it as such rather than widening this one.
       # -----------------------------------------------------------------------
-      - name: A7 — production-offline E2E on the release CLI (real selection/observer/executor + fake transport, 0 external requests)
+      - name: A7a — release-CLI POS-REFUSE + 0-provider certification (real selection/observer/executor + fake transport, 0 external requests)
         run: node scripts/e4/prereg-production-e2e.mjs --out .ci/r97-r98/prereg-production-e2e.json
+
+      # A7b is intentionally ABSENT, not skipped: the release-entry FORWARD run has
+      # no acceptance evidence yet (plan §7 item 6/F4, task-5). A `run: exit 1`
+      # placeholder would be noise; a `run: echo skipped` would be dishonest. The
+      # gap is recorded here and in docs/evidence/current-prereg-status.md instead.
 
       # -----------------------------------------------------------------------
       # THE WHOLE CLOSED LOOP, ONE PLATFORM-NEUTRAL COMMAND (plan 怎么做 1/2/3).
@@ -1022,20 +1065,77 @@ jobs:
       #
       # There is deliberately NO overall `ok` field: a green fixture-protocol loop
       # must never read as "a real dual build exists" or as "a paid run is
-      # authorized". `realBuildOfflineReady` is BLOCKED while the forward basis is a
-      # SYNTHETIC fixture build (plan line 125 forbids proving production readiness
-      # with writeArmCheckout synthetic builds), and paid/promotion are NOT_RUN.
+      # authorized". `realBuildOfflineReady` is NOT_PROVEN while the forward basis
+      # is a SYNTHETIC fixture build (plan line 125 forbids proving production
+      # readiness with writeArmCheckout synthetic builds), and paid/promotion are
+      # NOT_RUN. NOT_PROVEN is the honest reading here: it is neither a PASS nor a
+      # claim that the level is unreachable — it says the raw evidence to decide it
+      # does not exist yet.
+      #
+      # BINDING (task-8). The artifact is evidence only if it is bound to THIS
+      # run. `--run-id`/`--attempt` come from github.* (never from a file), and
+      # `--platform` is derived from the matrix entry rather than the runner's
+      # self-report, so the value cannot disagree with the row that produced it.
+      # `--expect-sha` pins the artifact to the commit under test. `--evidence-root`
+      # names the raw bundle the levels are recomputed FROM, so a level can no
+      # longer be satisfied by a self-reported field in a hand-written JSON — the
+      # whole point of the F3 fix (commit 66082de).
+      #
+      # `--strict` makes an unmet required level a NONZERO exit. It is meaningful
+      # here only because `--require` is narrowed to the two levels CI can
+      # legitimately reach on this runner. `realBuildOfflineReady` is deliberately
+      # NOT required: nothing produces the `dualBuild` block yet (task-5, S3), so
+      # requiring it would fail the job for a known, recorded gap. The level still
+      # appears in the artifact as NOT_PROVEN with its reasons — reported, not
+      # hidden, and not silently promoted to PASS.
+      # -----------------------------------------------------------------------
+      # Invocation notes that are easy to get wrong:
+      #   * EVERYTHING ON ONE LINE. A folded `>` scalar joins the lines with
+      #     spaces, so a run-on block "works" here — but a silently truncated or
+      #     re-wrapped command is exactly how a gate stops gating. One line, with
+      #     backslash continuations as the ONLY line breaks.
+      #   * `--require a,b` is COMMA-SEPARATED, NOT repeated. `arg()` returns the
+      #     FIRST match, so `--require x --require y` silently requires only `x`.
+      #     Verified: the repeated form recorded requiredLevels=["fixtureProtocolReady"]
+      #     with `strict:false`; the comma form records both levels and `strict:true`.
+      #   * `--strict` is read with `process.argv.some(...)`, so it must appear as a
+      #     bare token. With the folded scalar it never parsed and the gate ran in
+      #     REPORT mode (exit 0) while looking green.
       # -----------------------------------------------------------------------
       - name: N7 — separated readiness levels (no single overall PASS)
         if: always()
-        run: node scripts/e4/ci-readiness.mjs --e2e .ci/r97-r98/prereg-production-e2e.json --out .ci/r97-r98/ci-readiness.json --os-label "${{ matrix.os }}"
+        run: >-
+          node scripts/e4/ci-readiness.mjs
+          --e2e .ci/r97-r98/prereg-production-e2e.json
+          --out .ci/r97-r98/ci-readiness.json
+          --os-label "${{ matrix.os }}"
+          --run-id "${{ github.run_id }}"
+          --attempt "${{ github.run_attempt }}"
+          --platform "${{ matrix.platform }}"
+          --expect-sha "${{ github.sha }}"
+          --evidence-root .ci/r97-r98/readiness-evidence
+          --require fixtureProtocolReady,budgetEvidenceReady
+          --strict
 
       - name: Upload CI readiness artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ci-readiness-${{ matrix.os }}-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
-          path: .ci/r97-r98/ci-readiness.json
+          # Upload the readiness JSON *and the raw evidence bundle it was
+          # recomputed from*. Uploading only the JSON would let a reviewer read a
+          # level without being able to recompute it, which is exactly the
+          # forged-readiness failure mode F3/F6 is about.
+          #
+          # This job uploads ONE LEG. The two legs (ubuntu + windows) are JOINED
+          # into a single same-SHA / same-run / same-attempt verdict by
+          # scripts/e4/dual-platform-acceptance.mjs (task-11), which refuses to
+          # combine legs that are not the same acceptance unit. Reading one leg's
+          # green as dual-platform acceptance is precisely the mistake that
+          # summary exists to prevent.
+          path: |
+            .ci/r97-r98/ci-readiness.json
+            .ci/r97-r98/readiness-evidence
           if-no-files-found: warn
 
       # -----------------------------------------------------------------------
@@ -1428,4 +1528,115 @@ jobs:
         run: |
           echo "release attestation: NOT READY"
           echo "runtimeReleaseReady=false was recorded; failing the job per INV-P38.3-007."
+          exit 1
+
+  # ---------------------------------------------------------------------------
+  # S7 — DUAL-PLATFORM ACCEPTANCE AT ONE SHA.
+  #
+  # P10-6 requires BOTH platforms green before a path/filesystem/process-sensitive
+  # change is promoted. Until now that requirement had no machine-checkable
+  # artifact: the `e4` job uploaded one readiness artifact per platform and a human
+  # had to eyeball two files. Two failure modes were therefore invisible:
+  #
+  #   1. Reading ONE leg's green as dual-platform acceptance.
+  #   2. Combining two legs that are not the same acceptance unit — e.g. a
+  #      `run_attempt=2` re-run of one platform joined with the `run_attempt=1`
+  #      artifact from the other, or legs produced at two different SHAs.
+  #
+  # This job downloads BOTH legs and reduces them with
+  # `scripts/e4/dual-platform-acceptance.mjs`, which REFUSES (nonzero, named
+  # reason, no verdict) when the legs disagree on run id, SHA, attempt or
+  # platform. `if: always()` so the verdict is computed even when a platform leg
+  # failed — a missing leg is itself a refusal (`PLATFORM_MISSING`), not a skip.
+  #
+  # Gate strictness is deliberately SPLIT, and this is the honest choice:
+  #   * Phases A/B are RECORDED but not required — join integrity (same run,
+  #     same SHA, same attempt, both platforms present, each leg's raw bundle
+  #     re-verifying) is a property of THIS job's own wiring, so it must hold.
+  #   * `realBuildOfflineReady` is NOT required. No producer writes the
+  #     `dualBuild` block yet (task-5/S3), so requiring it would fail the job for
+  #     a known, recorded gap. It is still reported per level as NOT_PROVEN.
+  # ---------------------------------------------------------------------------
+  dual-platform-acceptance:
+    name: dual-platform acceptance (same SHA)
+    needs: [verify, coverage]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      # Each leg was uploaded as its OWN artifact with a platform/SHA/run/attempt
+      # name, so download them into a per-leg directory. The verifier reads each
+      # leg's `platform` field and refuses if it disagrees with the leg name —
+      # that is what makes a mislabelled download detectable rather than silent.
+      - name: Download ubuntu readiness leg
+        # `if: always()` + non-fatal: an absent artifact must surface as
+        # PLATFORM_MISSING in the verdict, not as a green job.
+        if: always()
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-readiness-ubuntu-latest-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: .ci/dual/ubuntu
+
+      - name: Download windows readiness leg
+        if: always()
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-readiness-windows-latest-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: .ci/dual/windows
+
+      - name: Reduce both legs to one same-SHA verdict
+        id: dual
+        if: always()
+        run: |
+          set +e
+          node scripts/e4/dual-platform-acceptance.mjs \
+            --windows .ci/dual/windows/ci-readiness.json \
+            --ubuntu .ci/dual/ubuntu/ci-readiness.json \
+            --out .ci/dual/dual-platform-acceptance.json \
+            --run-id "${{ github.run_id }}" \
+            --attempt "${{ github.run_attempt }}" \
+            --expect-sha "${{ github.sha }}" \
+            --strict
+          DUAL_RC=$?
+          set -e
+          echo "dual_rc=${DUAL_RC}" >> "$GITHUB_OUTPUT"
+          echo "dual-platform-acceptance exit code: ${DUAL_RC}"
+
+      - name: Upload dual-platform verdict (always)
+        # A negative verdict still leaves debuggable evidence — and the verdict
+        # JSON is the ONLY artifact a later reviewer needs to see which level
+        # split and which legs were combined, or refused.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dual-platform-acceptance-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: .ci/dual/dual-platform-acceptance.json
+          if-no-files-found: warn
+
+      - name: Fail job when the two legs are not one acceptance unit (S7)
+        # Kept as a DEDICATED step, mirroring the release-attestation job: the
+        # verdict is always written and uploaded first, so a refusal is readable
+        # instead of vanishing behind a red step.
+        if: always() && steps.dual.outputs.dual_rc != '0'
+        run: |
+          echo "dual-platform acceptance: NOT ACCEPTED"
+          echo "See the dual-platform-acceptance artifact for the named refusal reason."
           exit 1

@@ -13,7 +13,15 @@ import type { CommandDeps } from "./commands.js";
 import { runCommand } from "./commands.js";
 import { preregCmd, type PreregCommandDeps } from "./prereg-command.js";
 import { createProductionPreregRunner } from "./prereg-production-runner.js";
-import { resolveModelProvider, DEFAULT_REAL_MODEL_ID, STUB_PROVIDER_ID } from "./provider.js";
+import { formalExecutionProfile } from "./prereg-execution-identity.js";
+import {
+  OFFLINE_CONTENT_PROFILE_ID,
+  resolveOfflineProfileCapability,
+  resolveModelProvider,
+  DEFAULT_REAL_MODEL_ID,
+  STUB_PROVIDER_ID,
+  type OfflineProfileId,
+} from "./provider.js";
 
 /**
  * Builtin tool set every `createDefaultDeps` host registers. Single source:
@@ -103,6 +111,69 @@ export function isPreProviderCommand(args: string[]): boolean {
 }
 
 /**
+ * S3/F4 (Phase C) — the REPOSITORY-FIXED offline profile this build runs.
+ *
+ * It is a compile-time literal in the shipped source. There is deliberately no
+ * CLI flag, no env var, no JSON field, no marker file and no path that can
+ * change it: `preregCommandDeps()` is the only caller, and it names the
+ * constant. An unknown/absent id is a REFUSAL (never a fallback), which is why
+ * `resolveOfflineProfileCapability` is the function that turns this into a
+ * transport — see `offlineTransportForPrereg`.
+ */
+export const PREREG_OFFLINE_PROFILE_ID: OfflineProfileId = OFFLINE_CONTENT_PROFILE_ID;
+
+/**
+ * S3/F4 (Phase C) — build the offline transport factory for the prereg chain.
+ *
+ * Returns `undefined` — meaning "no seam at all", so the gate keeps its
+ * unchanged refusal path — whenever the offline profile cannot be justified:
+ *
+ *   - the environment carries a REAL provider configuration (the capability
+ *     and the resolved provider must agree, so an offline run may never be
+ *     reported while a credential-bearing provider is constructible), or
+ *   - the OBSERVED identity is not the offline profile's identity.
+ *
+ * The identity is RE-OBSERVED here from the same `formalExecutionProfile(env)`
+ * source the runner's observer uses, and not minted: a caller cannot hand this
+ * function an endpoint, so it cannot be used to launder an arbitrary paid
+ * endpoint into the non-billable admission class. Since Phase D the selection is
+ * passed IN (`{ offlineProfileId }`), so the offline identity is reported only
+ * because this profile is genuinely selected — and a real provider config
+ * alongside it is a refusal, not a preference.
+ *
+ * Returns a ZERO-ARGUMENT thunk, not a value: the capability is only built when
+ * the gate actually asks for it, and a factory cannot be serialized into a
+ * JSON artifact, env var or marker.
+ */
+export function offlineTransportForPrereg(
+  env: NodeJS.ProcessEnv = process.env,
+): (() => unknown) | undefined {
+  // S3/F4 (Phase D) — the identity is re-observed WITH the selection NAMED, so
+  // the observer reports the offline identity only because the offline profile
+  // is genuinely the selected provider for this process — never by guessing.
+  // A real provider configuration alongside the selection THROWS
+  // (`ProviderIdentityConflictError`), which is the required refusal: the two
+  // are never reconciled by preference, and no seam is produced.
+  let observed: { providerId: string; modelId: string; endpointBaseUrl: string | null };
+  try {
+    observed = formalExecutionProfile(env, { offlineProfileId: PREREG_OFFLINE_PROFILE_ID }).provider;
+  } catch {
+    return undefined;
+  }
+  const resolution = resolveOfflineProfileCapability({
+    profileId: PREREG_OFFLINE_PROFILE_ID,
+    identity: {
+      providerId: observed.providerId,
+      modelId: observed.modelId,
+      endpointBaseUrl: observed.endpointBaseUrl,
+    },
+    env,
+  });
+  if (!resolution.ok) return undefined;
+  return () => resolution.capability;
+}
+
+/**
  * The `prereg` chain runs against its OWN adapter and never needs the
  * interactive host. S2/F1b wires the PRODUCTION adapter here, so the shipped
  * `node apps/cli/dist/main.js prereg …` path can actually run the formal chain:
@@ -112,9 +183,22 @@ export function isPreProviderCommand(args: string[]): boolean {
  * artifact's own claims back as "observed", and anything it cannot certify is
  * reported unobservable so the gate REFUSES rather than fabricating a match.
  * `makeProvider` is invoked only after the fail-closed gate admits.
+ *
+ * S3/F4 (Phase C): the adapter additionally carries the built-in offline
+ * transport seam when — and only when — `offlineTransportForPrereg()` can bind
+ * it to the identity this process actually observes. On a real-provider
+ * environment that returns `undefined`, the key is absent, and the gate still
+ * refuses a fixture-mode authorization with
+ * `FIXTURE_TRANSPORT_NOT_NON_BILLABLE`.
  */
-export function preregCommandDeps(): PreregCommandDeps {
-  return { runner: createProductionPreregRunner() };
+export function preregCommandDeps(env: NodeJS.ProcessEnv = process.env): PreregCommandDeps {
+  const offlineTransport = offlineTransportForPrereg(env);
+  return {
+    runner: {
+      ...createProductionPreregRunner(),
+      ...(offlineTransport !== undefined ? { offlineTransport } : {}),
+    },
+  };
 }
 
 function writeLines(lines: readonly string[], exitCode: number): number {

@@ -324,6 +324,102 @@ describe("R4-wiring/F5 — the pricing BASIS is bound, not just its amount", () 
     expect(observationViolationsV2(legacy, observationFor(legacy))).toEqual([]);
   });
 
+  /**
+   * F6 (plan(20260929-015956).md §9) — the BINDING must survive every part of the
+   * basis, not just the amount. Each case below is a DIFFERENT digest at the SAME
+   * per-call amount, so an amount-only comparison would have admitted the swap.
+   * The gate must refuse each with 0 provider-factory / 0 transport entries.
+   */
+  it("W8: a VALIDITY-window swap at the same amount is REFUSED with 0 factory / 0 transport", async () => {
+    const built = withBasis(BASIS_A);
+    // Same amount, same source, different window ⇒ a different basis digest.
+    const windowSwapped = observationFor(built, { pricingDigest: sha("same amount, different validity window") });
+    const result = await runGate({ artifact: built, observation: windowSwapped });
+    expect(result.status).toBe("REFUSED");
+    expect(result.code).toBe("PREREGISTRATION_IDENTITY_DRIFT");
+    expect(result.factoryCalls).toBe(0);
+    expect(result.transportCalls).toBe(0);
+  });
+
+  it("W9: a COVERAGE-ceiling shrink at the same amount is REFUSED with 0 factory / 0 transport", async () => {
+    const built = withBasis(BASIS_A);
+    const coverageShrunk = observationFor(built, { pricingDigest: sha("same amount, smaller covered token ceiling") });
+    const result = await runGate({ artifact: built, observation: coverageShrunk });
+    expect(result.status).toBe("REFUSED");
+    expect(result.code).toBe("PREREGISTRATION_IDENTITY_DRIFT");
+    expect(result.factoryCalls).toBe(0);
+    expect(result.transportCalls).toBe(0);
+  });
+
+  it("W10: a SOURCE swap at the same amount is REFUSED with 0 factory / 0 transport", async () => {
+    const built = withBasis(BASIS_A);
+    const sourceSwapped = observationFor(built, { pricingDigest: sha("same amount, different rate source") });
+    const result = await runGate({ artifact: built, observation: sourceSwapped });
+    expect(result.status).toBe("REFUSED");
+    expect(result.code).toBe("PREREGISTRATION_IDENTITY_DRIFT");
+    expect(result.factoryCalls).toBe(0);
+    expect(result.transportCalls).toBe(0);
+  });
+
+  it("W11: an AMOUNT change is refused too, and is reported as its own violation", async () => {
+    const built = withBasis(BASIS_A);
+    const amountChanged = observationFor(built, { usdMicrosPerCall: AMOUNT + 1 });
+    const violations = observationViolationsV2(built, amountChanged);
+    expect(violations.some((v) => /usdMicrosPerCall/i.test(v))).toBe(true);
+    const result = await runGate({ artifact: built, observation: amountChanged });
+    expect(result.status).toBe("REFUSED");
+    expect(result.code).toBe("PREREGISTRATION_IDENTITY_DRIFT");
+    expect(result.factoryCalls).toBe(0);
+    expect(result.transportCalls).toBe(0);
+  });
+
+  it("W12 (F6 control): a NON-EXECUTABLE price is refused with 0 factory — as PRICING_UNKNOWN when nothing was bound, and as drift when a basis WAS bound", async () => {
+    // F6 — the identity resolver observes `usdMicrosPerCall: null` and binds no
+    // `pricingDigest` for a legacy/non-executable declaration. An artifact that
+    // (like a legacy declaration) binds NO basis must reach the money bound and
+    // be refused there; an artifact that DID bind a basis must be refused even
+    // earlier, as identity drift. Both are refusals with 0 provider-factory
+    // calls, so neither can ever construct a provider for a price it cannot
+    // execute.
+    const legacyArtifact = buildToolCallEfficiencyPreregistrationV2(preregOptions());
+    expect(legacyArtifact.provider.pricingDigest).toBeUndefined();
+    const nonExecutable = observationFor(legacyArtifact, { usdMicrosPerCall: null });
+    const refused = await runGate({ artifact: legacyArtifact, observation: nonExecutable });
+    expect(refused.status).toBe("REFUSED");
+    expect(refused.code).toBe("PRICING_UNKNOWN");
+    expect(refused.factoryCalls).toBe(0);
+    expect(refused.transportCalls).toBe(0);
+
+    // ...and the same non-executable observation against an artifact that DID
+    // bind a basis is refused as drift — still with 0 factory / 0 transport.
+    const bound = withBasis(BASIS_A);
+    const driftRefused = await runGate({ artifact: bound, observation: observationFor(bound, { usdMicrosPerCall: null }) });
+    expect(driftRefused.status).toBe("REFUSED");
+    expect(driftRefused.code).toBe("PREREGISTRATION_IDENTITY_DRIFT");
+    expect(driftRefused.factoryCalls).toBe(0);
+    expect(driftRefused.transportCalls).toBe(0);
+  });
+
+  it("W13: a MODEL mismatch is REFUSED with 0 factory / 0 transport", async () => {
+    const built = withBasis(BASIS_A);
+    const result = await runGate({ artifact: built, observation: observationFor(built, { modelId: "a-different-model" }) });
+    expect(result.status).toBe("REFUSED");
+    expect(result.code).toBe("PREREGISTRATION_IDENTITY_DRIFT");
+    expect(result.factoryCalls).toBe(0);
+    expect(result.transportCalls).toBe(0);
+  });
+
+  it("W14: an ENDPOINT mismatch is REFUSED with 0 factory / 0 transport", async () => {
+    const built = withBasis(BASIS_A);
+    const otherEndpoint = captureEndpointIdentity("https://other.example.com/v1")!;
+    expect(otherEndpoint).not.toBe(built.provider.endpointDigest);
+    const result = await runGate({ artifact: built, observation: observationFor(built, { endpointDigest: otherEndpoint }) });
+    expect(result.status).toBe("REFUSED");
+    expect(result.code).toBe("PREREGISTRATION_IDENTITY_DRIFT");
+    expect(result.factoryCalls).toBe(0);
+    expect(result.transportCalls).toBe(0);
+  });
+
   it("W7: the strict loader preserves a bound basis and refuses a tampered digest", () => {
     const json = serializePreregistrationV2(withBasis(BASIS_A));
     const reloaded = assertFormalExecutionPreregistration(json);

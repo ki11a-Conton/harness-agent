@@ -14,10 +14,10 @@
  *     `no-os-network-sandbox` (it lives in the pre-registration artifact, so the
  *     mode is bound by the artifact digest and by the authorization that names
  *     that digest);
- *   - two GENUINE git checkouts of this repository (the published pair
- *     `4f8d98ec…` / `2314ce1d…` by default, re-pinned by R15 so both arms
- *     contain P2-41/P2-43), enforced as clean work trees at a
- *     40-hex HEAD with resolving, DIFFERING execution closures;
+ *   - two GENUINE git checkouts of this repository, pinned in ONE place
+ *     (`scripts/e4/r5-formal-pair.json`; see that file for why the historical
+ *     `4f8d98ec…` / `2314ce1d…` pair is unusable here), enforced as clean work
+ *     trees at a 40-hex HEAD with resolving, DIFFERING execution closures;
  *   - a test-host OFFLINE scripted provider, so no request is paid and no socket
  *     is opened (the release CLI cannot reach an offline transport by design —
  *     R1 — which is why this composition root exists and why the bare
@@ -79,19 +79,40 @@ const PROTOCOL_FIXES = [
   { id: "P2-43", sha: "a85db6dc", what: "provider function-name grammar" },
 ];
 
+// ---------------------------------------------------------------------------
+// S4/task-6 — THE AUTHORITATIVE PAIR, READ FROM ONE FILE
+// ---------------------------------------------------------------------------
+/**
+ * The pair is pinned in `scripts/e4/r5-formal-pair.json` and NOWHERE ELSE. This
+ * module, `r97-observe-arms.mjs`, `apps/cli/src/r5-formal-gate.test.ts` and CI all
+ * read that one file, so a re-pin is a ONE-file change that can never be
+ * half-applied (the defect the historical hardcoded defaults invited).
+ *
+ * The arm DIRECTORIES remain a local convention (they are build outputs, not
+ * revisions); only the SHAs are identity.
+ */
+const PAIR_CONFIG_PATH = join(here, "r5-formal-pair.json");
+
+function readPairConfig() {
+  const raw = readFileSync(PAIR_CONFIG_PATH, "utf8");
+  const cfg = JSON.parse(raw);
+  if (cfg.schemaVersion !== "e4-r5-formal-pair-v1") {
+    throw new Error(`r5-formal-pair.json has schemaVersion ${String(cfg.schemaVersion)}, expected e4-r5-formal-pair-v1`);
+  }
+  return cfg;
+}
+
+export const PAIR_CONFIG = readPairConfig();
+
 const DEFAULT_PAIR = {
-  // A local directory convention (NOT a revision claim): the arms must be
-  // re-prepared at the pair below, e.g.
-  //   node scripts/e4/r97-observe-arms.mjs --root $env:TEMP\r97-arms-n1pair
-  baseline: join(tmpdir(), "r97-arms-n1pair", "baseline"),
-  candidate: join(tmpdir(), "r97-arms-n1pair", "candidate"),
-  // R15 re-pin: the previous `8265dc39`/`ee15e7e7` pair predated the protocol
-  // fixes, so `--identity` (the DEFAULT phase) reported P2-41/P2-43 NOT PRESENT
-  // in both arms. These are the same SHAs `r97-observe-arms.mjs` defaults to,
-  // `.github/workflows/ci.yml` binds, and `r97-driver-closed-loop.test.ts`
-  // asserts. There is no CLI flag for this pair, so the defaults ARE the binding.
-  expectedBaselineHead: "4f8d98ec",
-  expectedCandidateHead: "2314ce1d",
+  baseline: join(tmpdir(), "r97-arms-r5pair", "baseline"),
+  candidate: join(tmpdir(), "r97-arms-r5pair", "candidate"),
+  baselineSha: PAIR_CONFIG.baseline.sha,
+  candidateSha: PAIR_CONFIG.candidate.sha,
+  // Kept for `--identity`'s `headMatchesPublished` check: it compares a PREFIX of
+  // the arm's HEAD against the pinned SHA's prefix, so a wrong checkout is named.
+  expectedBaselineHead: PAIR_CONFIG.baseline.sha.slice(0, 8),
+  expectedCandidateHead: PAIR_CONFIG.candidate.sha.slice(0, 8),
 };
 
 function git(root, args) {
@@ -592,7 +613,10 @@ async function phaseFormal({ full, workRoot, contentMode = "correct" }) {
     decision: aggregate?.decision?.decision ?? null,
     reasonCodes: aggregate?.decision?.reasonCodes ?? null,
   };
-  return { dir, evidence };
+  // S4/task-6: the RAW records and the directory they (and their A6 evidence)
+  // live in travel with the result, so the gate can re-derive the schedule from
+  // the bytes rather than from a self-reported count.
+  return { dir, evidence, records, recordsDir };
 }
 
 // ---------------------------------------------------------------------------
@@ -826,18 +850,39 @@ async function makeDirtyArm(workRoot) {
 // main
 // ---------------------------------------------------------------------------
 
+/**
+ * S4/task-6 — the CLI. Every `--name <value>` option is listed HERE so a new
+ * valued option can never be silently swallowed as a "phase": the old parser
+ * treated every `--x` except `--out` as a phase name, so a typo'd option became
+ * a no-op phase instead of an error.
+ */
 function parseArgs(argv) {
-  const out = { phases: new Set(), out: null };
+  const out = {
+    phases: new Set(),
+    out: null,
+    evidenceDir: null,
+    verify: null,
+    verifyPairObservations: null,
+    setupPair: null,
+    emitFixtureBundle: null,
+    unknown: [],
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === "--all") out.phases = new Set(["identity", "formal", "full", "content", "negative"]);
-    else if (a.startsWith("--") && a !== "--out") out.phases.add(a.slice(2));
     else if (a === "--out") out.out = argv[++i];
+    else if (a === "--evidence-dir") out.evidenceDir = argv[++i];
+    else if (a === "--verify") out.verify = argv[++i];
+    else if (a === "--verify-pair-observations") out.verifyPairObservations = argv[++i];
+    else if (a === "--setup-pair") out.setupPair = argv[++i];
+    else if (a === "--emit-fixture-bundle") out.emitFixtureBundle = argv[++i];
+    else if (a.startsWith("--")) out.phases.add(a.slice(2));
+    else out.unknown.push(a);
   }
   return out;
 }
 
-async function main() {
+async function runRealChain() {
   const args = parseArgs(process.argv.slice(2));
   if (args.phases.size === 0) args.phases.add("identity");
   const workRoot = await mkdtemp(join(tmpdir(), "r5-real-formal-"));
@@ -877,11 +922,794 @@ async function main() {
   if (report.negative) for (const r of report.negative) summary.push(`negative ${r.violation}: refused=${r.refused} exit=${r.exitCode} modelCalls=${r.physicalModelCalls} :: ${r.firstLine ?? ""} ${r.reasonLine ?? ""}`);
   if (report.fatal) summary.push(`FATAL: ${report.fatal.split("\n")[0]}`);
 
+  // S4/task-6 item 7: the RAW evidence tree is KEPT. `workRoot` is a scratch
+  // workspace and may be deleted, but the raw manifest/verifier/security/activation
+  // files, the request journal, the dispatch journal, the build identity, the
+  // schedule and the aggregate are copied OUT of it FIRST, because a report that
+  // references evidence which no longer exists is not evidence.
+  const evidenceDir = args.evidenceDir !== null ? resolve(args.evidenceDir) : join(REPO_ROOT, ".ci", "r5-evidence");
+  let bundle = null;
+  try {
+    bundle = await writeEvidenceBundle({ evidenceDir, report, args });
+    summary.push(`bundle: ${evidenceDir} records=${bundle.recordCount} verified=${bundle.verifiedCount}`);
+  } catch (err) {
+    const message = err instanceof Error ? `${err.message}\n${err.stack ?? ""}` : String(err);
+    report.bundleError = message;
+    summary.push(`BUNDLE ERROR: ${message.split("\n")[0]}`);
+  }
+
   const outPath = args.out !== null ? resolve(args.out) : join(REPO_ROOT, ".ci", "r5-real-formal.json");
   await mkdir(dirname(outPath), { recursive: true });
   await writeFile(outPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   process.stdout.write(`prereg-r5-real-formal (${R5_VERSION})\n  ${summary.join("\n  ")}\n  evidence: ${outPath}\n`);
-  return report.fatal === undefined ? 0 : 1;
+  return { report, outPath, evidenceDir };
+}
+
+// ===========================================================================
+// S4/task-6 — THE STRICT GATE (plan(20260929-015956).md §8, defect F5)
+// ===========================================================================
+//
+// WHY THIS EXISTS. The pre-S4 script decided success from ONE thing:
+// `report.fatal === undefined`. That is an exit-code defect in both directions:
+// every assertion it made lived INSIDE `report`, so a report that recorded a
+// missing record, a substituted "passed", a corrupted record, a deleted verifier,
+// a journal mismatch or incomplete evidence still exited 0, and a downstream job
+// could not tell a passing gate from a failed one without parsing prose.
+//
+// The gate below therefore (a) re-derives every claim from the RAW BYTES rather
+// than from a self-reported count, and (b) turns every violation into a NAMED
+// failure with a NONZERO exit. `report.fatal` remains a failure, but it is no
+// longer the ONLY one.
+//
+// WHAT IT DOES NOT PROVE. `verifyEvidenceBundle` proves the bundle is CONSISTENT
+// WITH ITSELF and with the pinned pair. It does NOT prove a real experiment ran:
+// a synthetic fixture bundle can be perfectly consistent. That is why the bundle
+// carries `fixture: true|false`, why the real-chain path records that the chain
+// actually executed, and why "harness gate passed" is kept distinct from
+// "experiment decision ACCEPT". Real model quality and promotion stay NOT_RUN.
+
+export const R5_EVIDENCE_SCHEMA = "e4-r5-evidence-v1";
+export const R5_SCHEDULE_SCHEMA = "e4-r5-schedule-v1";
+export const R5_GATE_VERSION = "e4-r5-formal-gate-v1";
+
+const EVIDENCE_FILES = ["manifest.json", "verifier.json", "security.json"];
+const OPTIONAL_EVIDENCE_FILES = ["activation.json"];
+const REQUIRED_NEGATIVES = ["swapped-arms", "missing-ABI", "wrong-policy", "undeclared-mode", "dirty-tree", "unsupported-isolation"];
+
+function isSha40(value) {
+  return typeof value === "string" && /^[0-9a-f]{40}$/.test(value);
+}
+function isSha256(value) {
+  return typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
+}
+function fail(code, detail) {
+  return { code, detail };
+}
+function readJsonFile(path) {
+  return JSON.parse(readFileSync(path, "utf8"));
+}
+
+/**
+ * The recomputation contract for the cost journal, stated once so the producer and
+ * the verifier cannot drift: a MEASURED entry charges its real input+output tokens;
+ * a non-measured (reserved) entry charges its reserved tokens. This mirrors
+ * `readCostJournal(...).chargedTotalTokens`.
+ */
+function recomputeJournal(entries) {
+  const perArm = { baseline: 0, candidate: 0 };
+  let total = 0;
+  let measured = 0;
+  for (const e of entries ?? []) {
+    const arm = e.arm === "baseline" ? "baseline" : "candidate";
+    const charged =
+      e.basis === "MEASURED"
+        ? (e.inputTokens ?? 0) + (e.outputTokens ?? 0)
+        : (e.reservedInputTokens ?? 0) + (e.reservedOutputTokens ?? 0);
+    if (e.basis === "MEASURED") measured += 1;
+    perArm[arm] += charged;
+    total += charged;
+  }
+  return { total, measured, perArm, delta: perArm.candidate - perArm.baseline };
+}
+
+/** Observe ONE arm checkout: HEAD, cleanliness, closure digest, entry hash, ABI. */
+export function observeArm(dir, config) {
+  if (dir === null || !existsSync(dir)) return { exists: false, dir };
+  const head = git(dir, ["rev-parse", "HEAD"]);
+  const porcelain = git(dir, ["status", "--porcelain"]);
+  let buildDigest = null;
+  let closureError = null;
+  try {
+    buildDigest = evalMod.computeArmBuildDigestV1(dir);
+  } catch (err) {
+    closureError = err instanceof Error ? err.message : String(err);
+  }
+  // The ABI strings live in `apps/cli/dist/r97-arm-abi.js` (tsc emits per file, so
+  // the entry does not inline them). A missing file means a pre-S1 checkout.
+  const abiPath = join(dir, "apps", "cli", "dist", "r97-arm-abi.js");
+  const abiSource = existsSync(abiPath) ? readFileSync(abiPath, "utf8") : "";
+  const workerAbi = (config.requiredWorkerAbi ?? []).filter((abi) => abiSource.includes(abi));
+  const entryPath = join(dir, "apps", "cli", "dist", "benchmark-command.js");
+  const entrySha256 = existsSync(entryPath) ? sha256Hex(readFileSync(entryPath, "utf8")) : null;
+  return {
+    exists: true,
+    dir,
+    head,
+    clean: porcelain === "",
+    porcelain,
+    buildDigest,
+    closureError,
+    entrySha256,
+    workerAbi,
+    declaredAbi: (config.requiredWorkerAbi ?? []).length,
+  };
+}
+
+/**
+ * Verify the pinned pair from OBSERVATIONS (never from a claim). Pure over its
+ * input, so the counter-examples in `apps/cli/src/r5-formal-gate.test.ts` can drive
+ * every branch cheaply, while the real chain feeds it `observeArm()` output.
+ */
+export function verifyPairArms(config, observed) {
+  const failures = [];
+  const pinned = { baseline: config.baseline.sha, candidate: config.candidate.sha };
+  for (const armId of ["baseline", "candidate"]) {
+    const o = observed?.[armId];
+    if (o === undefined || o === null || o.exists !== true) {
+      failures.push(fail("PAIR_NOT_PINNED", `the ${armId} arm checkout is absent; the pinned pair cannot be verified`));
+      continue;
+    }
+    if (o.head !== pinned[armId]) {
+      failures.push(fail("WRONG_PAIR", `${armId} HEAD ${String(o.head)} is not the pinned ${pinned[armId]}`));
+    }
+    if (o.clean !== true) {
+      failures.push(fail("DIRTY_ARM", `${armId} work tree is not clean (uncommitted changes present)`));
+    }
+    if (!isSha256(o.buildDigest)) {
+      failures.push(
+        fail("CLOSURE_UNRESOLVABLE", `${armId} has no resolvable execution-closure digest (${o.closureError ?? String(o.buildDigest)})`),
+      );
+    }
+    for (const fix of config.requiredProtocolFixes ?? []) {
+      if (o.protocolFixes?.[fix.id] !== true) {
+        failures.push(fail("PROTOCOL_FIX_MISSING", `${armId} does not carry ${fix.id} (${fix.sha}): ${fix.what}`));
+      }
+    }
+    for (const abi of config.requiredWorkerAbi ?? []) {
+      if (!(o.workerAbi ?? []).includes(abi)) {
+        failures.push(fail("WORKER_ABI_MISSING", `${armId} does not declare the worker ABI ${abi}`));
+      }
+    }
+  }
+  if (isSha256(observed?.baseline?.buildDigest) && observed.baseline.buildDigest === observed?.candidate?.buildDigest) {
+    failures.push(
+      fail("IDENTICAL_CLOSURE", `both arms report the SAME execution closure ${String(observed.baseline.buildDigest).slice(0, 16)}…, so the pair is not comparable`),
+    );
+  }
+  if (Array.isArray(observed?.armDiffFiles)) {
+    const allowed = new Set(config.allowedArmDiff ?? []);
+    const extra = observed.armDiffFiles.filter((f) => !allowed.has(f));
+    if (extra.length > 0) {
+      failures.push(
+        fail("INFRASTRUCTURE_DIFF", `the arms differ outside the allowed mechanism file(s): ${extra.join(", ")}`),
+      );
+    }
+  }
+  return { ok: failures.length === 0, failures };
+}
+
+/**
+ * Verify a KEPT evidence bundle. Every check re-reads the raw bytes; nothing is
+ * taken from the report's own summary. Returns NAMED failures.
+ */
+export function verifyEvidenceBundle(root, config = PAIR_CONFIG) {
+  const failures = [];
+  const need = (rel) => join(root, rel);
+
+  const identityPath = need("identity.json");
+  if (!existsSync(identityPath)) {
+    return { ok: false, failures: [fail("IDENTITY_MISSING", `identity.json is absent from ${root}`)] };
+  }
+  const identity = readJsonFile(identityPath);
+  if (identity.schemaVersion !== R5_EVIDENCE_SCHEMA) {
+    failures.push(fail("IDENTITY_INVALID", `identity schemaVersion is ${String(identity.schemaVersion)}, expected ${R5_EVIDENCE_SCHEMA}`));
+  }
+  if (!isSha40(identity.driverHead)) {
+    failures.push(fail("IDENTITY_INVALID", `driverHead ${String(identity.driverHead)} is not a 40-hex revision`));
+  }
+  if (identity.closuresDistinguishable !== true) {
+    failures.push(fail("IDENTITY_INVALID", "identity does not record that the two arms' execution closures are distinguishable"));
+  }
+  for (const armId of ["baseline", "candidate"]) {
+    const arm = identity.pair?.[armId];
+    if (arm === undefined || arm === null) {
+      failures.push(fail("WRONG_PAIR", `identity carries no ${armId} arm`));
+      continue;
+    }
+    if (arm.sourceSha !== config[armId].sha) {
+      failures.push(fail("WRONG_PAIR", `${armId} sourceSha ${String(arm.sourceSha)} is not the pinned ${config[armId].sha}`));
+    }
+    if (!isSha40(arm.head)) {
+      failures.push(fail("WRONG_PAIR", `${armId} head ${String(arm.head)} is not a 40-hex revision`));
+    }
+    if (arm.clean !== true) {
+      failures.push(fail("DIRTY_ARM", `${armId} was not a clean checkout when the bundle was written`));
+    }
+    if (!isSha256(arm.buildDigest)) {
+      failures.push(fail("CLOSURE_UNRESOLVABLE", `${armId} buildDigest ${String(arm.buildDigest)} is not a 64-hex closure digest`));
+    }
+    for (const abi of config.requiredWorkerAbi ?? []) {
+      if (!(arm.workerAbi ?? []).includes(abi)) {
+        failures.push(fail("WORKER_ABI_MISSING", `${armId} does not declare the worker ABI ${abi}`));
+      }
+    }
+    for (const fix of config.requiredProtocolFixes ?? []) {
+      if (arm.protocolFixes?.[fix.id] !== true) {
+        failures.push(fail("PROTOCOL_FIX_MISSING", `${armId} does not carry ${fix.id} (${fix.sha})`));
+      }
+    }
+  }
+  if (isSha256(identity.pair?.baseline?.buildDigest) && identity.pair.baseline.buildDigest === identity.pair?.candidate?.buildDigest) {
+    failures.push(fail("IDENTICAL_CLOSURE", "identity records ONE execution closure for both arms, so the pair is not comparable"));
+  }
+
+  // ---- the schedule, re-derived from the raw records -----------------------
+  const schedulePath = need("schedule.json");
+  if (!existsSync(schedulePath)) {
+    return { ok: false, failures: [...failures, fail("MISSING_RECORD", `schedule.json is absent from ${root}`)] };
+  }
+  const schedule = readJsonFile(schedulePath);
+  const planned = schedule.planned ?? {};
+  const records = Array.isArray(schedule.records) ? schedule.records : [];
+  const expectedLogicalRuns =
+    (planned.cases ?? []).length * (planned.repetitions ?? 0) * (planned.arms ?? []).length;
+  if (records.length !== expectedLogicalRuns) {
+    const seen = new Set(records.map((r) => `${r.caseId}|${r.armId}|${r.repetition}`));
+    const missing = [];
+    for (const caseId of planned.cases ?? []) {
+      for (const armId of planned.arms ?? []) {
+        for (let rep = 1; rep <= (planned.repetitions ?? 0); rep += 1) {
+          if (!seen.has(`${caseId}|${armId}|${rep}`)) missing.push(`${caseId}/${armId}/rep${rep}`);
+        }
+      }
+    }
+    failures.push(
+      fail(
+        "MISSING_RECORD",
+        `the schedule planned ${expectedLogicalRuns} logical runs but carries ${records.length} record(s); missing: ${missing.slice(0, 6).join(", ") || "(none derivable — the plan itself is incomplete)"}`,
+      ),
+    );
+  }
+
+  for (const rec of records) {
+    const label = `${String(rec.caseId)}/${String(rec.armId)}/rep${String(rec.repetition)}`;
+    if (rec.status === "error" && (rec.reason === undefined || rec.reason === null || rec.reason === "")) {
+      failures.push(fail("UNEXPLAINED_INFRA_ERROR", `${label} recorded an infrastructure error with no reason`));
+    }
+    const evDir = need(join("evidence", String(rec.armRunId)));
+    if (!existsSync(evDir)) {
+      failures.push(fail("MISSING_EVIDENCE", `${label} has no evidence directory (evidence/${String(rec.armRunId)})`));
+      continue;
+    }
+    for (const f of EVIDENCE_FILES) {
+      if (!existsSync(join(evDir, f))) {
+        failures.push(fail("INCOMPLETE_EVIDENCE", `${label} is missing evidence/${String(rec.armRunId)}/${f}`));
+      }
+    }
+    const manifestPath = join(evDir, "manifest.json");
+    if (existsSync(manifestPath)) {
+      const digest = sha256Hex(readFileSync(manifestPath, "utf8"));
+      if (rec.traceDigest !== digest) {
+        failures.push(
+          fail(
+            "CORRUPT_RECORD",
+            `${label} records traceDigest ${String(rec.traceDigest)} but the manifest bytes hash to ${digest}`,
+          ),
+        );
+      }
+    }
+    const verifierPath = join(evDir, "verifier.json");
+    if (existsSync(verifierPath)) {
+      const verifier = readJsonFile(verifierPath);
+      if (verifier.verifiedCompletion !== rec.verifiedCompletion) {
+        failures.push(
+          fail(
+            "WRONG_AS_PASSED",
+            `${label} claims verifiedCompletion=${String(rec.verifiedCompletion)} but the raw verifier says ${String(verifier.verifiedCompletion)}`,
+          ),
+        );
+      }
+    }
+    for (const f of OPTIONAL_EVIDENCE_FILES) {
+      if (rec.evidenceFiles !== undefined && Array.isArray(rec.evidenceFiles) && rec.evidenceFiles.includes(f) && !existsSync(join(evDir, f))) {
+        failures.push(fail("INCOMPLETE_EVIDENCE", `${label} declares ${f} but the file is absent`));
+      }
+    }
+  }
+
+  // ---- the cost journal, recomputed from the raw entries -------------------
+  const journalPath = need("cost-journal.json");
+  const aggregatePath = need("aggregate.json");
+  if (!existsSync(journalPath)) {
+    failures.push(fail("JOURNAL_MISMATCH", "cost-journal.json is absent, so no cost claim can be recomputed"));
+  } else if (!existsSync(aggregatePath)) {
+    failures.push(fail("JOURNAL_MISMATCH", "aggregate.json is absent, so the journal has nothing to agree with"));
+  } else {
+    const journal = readJsonFile(journalPath);
+    const aggregate = readJsonFile(aggregatePath);
+    const recomputed = recomputeJournal(journal.entries);
+    const claimedTotal = aggregate.cost?.totalTokens ?? null;
+    const claimedDelta = aggregate.cost?.deltaTokens ?? null;
+    if (claimedTotal !== recomputed.total) {
+      failures.push(
+        fail("JOURNAL_MISMATCH", `aggregate claims totalTokens=${String(claimedTotal)} but the raw journal entries sum to ${recomputed.total}`),
+      );
+    }
+    if (claimedDelta !== recomputed.delta) {
+      failures.push(
+        fail("JOURNAL_MISMATCH", `aggregate claims deltaTokens=${String(claimedDelta)} but the raw journal entries give ${recomputed.delta}`),
+      );
+    }
+    if (journal.schemaVersion !== "tool-call-efficiency-cost-journal-v2") {
+      failures.push(fail("JOURNAL_MISMATCH", `cost journal schema is ${String(journal.schemaVersion)}`));
+    }
+  }
+
+  // ---- the content matrix: correct passes, every degradation fails ---------
+  const matrixPath = need("content-matrix.json");
+  if (!existsSync(matrixPath)) {
+    failures.push(fail("CONTENT_INSENSITIVE", "content-matrix.json is absent, so content sensitivity is unproven"));
+  } else {
+    const matrix = readJsonFile(matrixPath);
+    const cases = matrix.cases ?? {};
+    if (Object.keys(cases).length === 0) {
+      failures.push(fail("CONTENT_INSENSITIVE", "the content matrix carries no case, so content sensitivity is unproven"));
+    }
+    for (const [caseId, entry] of Object.entries(cases)) {
+      for (const armId of ["baseline", "candidate"]) {
+        const variants = entry?.arms?.[armId];
+        if (variants === undefined || variants === null) {
+          failures.push(fail("CONTENT_INSENSITIVE", `${caseId}/${armId} has no variant results`));
+          continue;
+        }
+        if (variants.correct !== "passed") {
+          failures.push(
+            fail("CONTENT_CORRECT_FAILED", `${caseId}/${armId} correct variant is ${String(variants.correct)}, not passed — the content verifier did not confirm the real fix`),
+          );
+        }
+        for (const variant of ["empty", "wrong", "skipped"]) {
+          if (variants[variant] === "passed") {
+            failures.push(
+              fail(
+                "CONTENT_INSENSITIVE",
+                `${caseId}/${armId} ${variant} variant PASSED, so this result is not sensitive to content and cannot support a strategy claim`,
+              ),
+            );
+          }
+        }
+      }
+    }
+  }
+
+  // ---- the negative matrix: refused BEFORE the first model request ---------
+  const negativesPath = need("negatives.json");
+  if (!existsSync(negativesPath)) {
+    failures.push(fail("NEGATIVE_ROW_MISSING", "negatives.json is absent, so no counter-example is recorded"));
+  } else {
+    const rows = readJsonFile(negativesPath).rows ?? [];
+    for (const violation of REQUIRED_NEGATIVES) {
+      if (!rows.some((r) => r.violation === violation)) {
+        failures.push(fail("NEGATIVE_ROW_MISSING", `the counter-example "${violation}" is not recorded`));
+      }
+    }
+    for (const row of rows) {
+      if (row.exitCode === 0) {
+        failures.push(fail("NEGATIVE_ACCEPTED", `the "${String(row.violation)}" counter-example was ACCEPTED (exit 0) instead of refused`));
+      }
+      if (row.violation === "missing-ABI") {
+        if (row.refusedBeforeAnyModelCall !== true || row.physicalModelCalls !== 0) {
+          failures.push(
+            fail(
+              "MISSING_ABI_REACHED_MODEL",
+              `the missing-ABI counter-example reached the model (physicalModelCalls=${String(row.physicalModelCalls)}), so the refusal happened too late to prove the boundary`,
+            ),
+          );
+        }
+      }
+      if (row.violation === "wrong-policy" || row.violation === "unsupported-isolation") {
+        if (row.refused !== true) {
+          failures.push(
+            fail(
+              "POLICY_OR_ISOLATION_UNREFUSED",
+              `the "${String(row.violation)}" counter-example was not refused, so the isolation/policy boundary is not enforced`,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  return { ok: failures.length === 0, failures };
+}
+
+/**
+ * Write the KEPT evidence bundle from the phase results. The raw per-phase trees
+ * are copied verbatim under `raw/`, and the canonical gate inputs are written from
+ * the RAW records — never from a summary.
+ */
+async function writeEvidenceBundle({ evidenceDir, report, args }) {
+  await mkdir(evidenceDir, { recursive: true });
+  const formal = report.formalSmall ?? null;
+  const records = formal?.records ?? [];
+  const recordsDir = formal?.recordsDir ?? null;
+
+  const pair = {};
+  const identity = report.identity ?? null;
+  for (const armId of ["baseline", "candidate"]) {
+    const observed = identity?.arms?.[armId] ?? null;
+    pair[armId] = {
+      sourceSha: armId === "baseline" ? PAIR_CONFIG.baseline.sha : PAIR_CONFIG.candidate.sha,
+      head: observed?.head ?? null,
+      clean: observed?.clean ?? null,
+      buildDigest: observed?.buildDigest ?? null,
+      entrySha256: observed?.armEntrySha256 ?? null,
+      workerAbi: PAIR_CONFIG.requiredWorkerAbi.filter((abi) => observed?.abi?.[abi] === true || observed?.workerAbi?.includes?.(abi) === true),
+      protocolFixes: Object.fromEntries(
+        (PAIR_CONFIG.requiredProtocolFixes ?? []).map((f) => [f.id, observed?.protocolFixes?.[f.id]?.presentInArmBuild === true]),
+      ),
+    };
+  }
+  const distinct =
+    isSha256(pair.baseline.buildDigest) && isSha256(pair.candidate.buildDigest) && pair.baseline.buildDigest !== pair.candidate.buildDigest;
+
+  await writeFile(
+    join(evidenceDir, "identity.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: R5_EVIDENCE_SCHEMA,
+        fixture: false,
+        gateVersion: R5_GATE_VERSION,
+        driverHead: report.driverHead ?? null,
+        treeClean: report.treeClean === true,
+        platform: report.platform ?? null,
+        pair,
+        closuresDistinguishable: distinct,
+        isolation: PAIR_CONFIG.isolation,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+
+  // Copy the raw trees FIRST: the schedule below must point at bytes that exist.
+  const rawRoot = join(evidenceDir, "raw");
+  await mkdir(rawRoot, { recursive: true });
+  if (recordsDir !== null && existsSync(recordsDir)) {
+    await cp(recordsDir, join(rawRoot, "runs"), { recursive: true });
+  }
+  const evidenceRoot = join(evidenceDir, "evidence");
+  if (recordsDir !== null && existsSync(join(recordsDir, "evidence"))) {
+    await cp(join(recordsDir, "evidence"), evidenceRoot, { recursive: true });
+  }
+
+  let verifiedCount = 0;
+  const scheduleRecords = [];
+  for (const rec of records) {
+    const evDir = join(evidenceRoot, String(rec.armRunId));
+    const manifestPath = join(evDir, "manifest.json");
+    const traceDigest = existsSync(manifestPath) ? sha256Hex(readFileSync(manifestPath, "utf8")) : null;
+    const verifiedCompletion = rec.outcome?.evidence?.verifiedCompletion ?? null;
+    if (rec.outcome?.status !== "error" && traceDigest !== null) verifiedCount += 1;
+    scheduleRecords.push({
+      armRunId: rec.armRunId,
+      armId: rec.armId,
+      caseId: rec.caseId,
+      repetition: rec.repetition,
+      orderIndex: rec.orderIndex,
+      preregistrationDigest: rec.preregistrationDigest,
+      planDigest: rec.planDigest,
+      status: rec.outcome?.status ?? "unknown",
+      reason: rec.outcome?.reason ?? rec.reason ?? null,
+      verifiedCompletion,
+      traceDigest,
+      evidenceFiles: existsSync(evDir) ? readdirSync(evDir).filter((f) => f.endsWith(".json")) : [],
+    });
+  }
+  await writeFile(
+    join(evidenceDir, "schedule.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: R5_SCHEDULE_SCHEMA,
+        planned: {
+          cases: formal?.evidence?.sampleCaseIds ?? [],
+          arms: ["baseline", "candidate"],
+          repetitions: formal?.evidence?.logicalRuns !== undefined && (formal?.evidence?.sampleCaseIds ?? []).length > 0
+            ? (formal.evidence.logicalRuns / ((formal.evidence.sampleCaseIds ?? []).length * 2))
+            : 0,
+          logicalRuns: formal?.evidence?.logicalRuns ?? 0,
+        },
+        records: scheduleRecords,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+
+  // The journals: copied from the budget dir, kept byte-for-byte.
+  const budgetDir = formal?.budgetDir ?? null;
+  if (budgetDir !== null && existsSync(join(budgetDir, "cost-budget.json"))) {
+    await cp(join(budgetDir, "cost-budget.json"), join(evidenceDir, "cost-journal.json"));
+  }
+  if (budgetDir !== null) {
+    for (const name of readdirSync(budgetDir)) {
+      if (name.startsWith("dispatch") && name.endsWith(".json")) {
+        await cp(join(budgetDir, name), join(evidenceDir, name));
+      }
+    }
+  }
+  if (formal?.dir !== undefined && existsSync(join(formal.dir, "aggregate.json"))) {
+    await cp(join(formal.dir, "aggregate.json"), join(evidenceDir, "aggregate.json"));
+  }
+
+  // The content matrix, taken from the per-case RAW verifier evidence.
+  const matrixCases = {};
+  for (const [caseId, entry] of Object.entries(formal?.evidence?.perCase ?? {})) {
+    const verdict = (verifier) => (verifier === null || verifier === undefined ? "absent" : verifier.verifiedCompletion === true ? "passed" : "failed");
+    matrixCases[caseId] = {
+      contentMode: entry?.contentMode ?? null,
+      arms: {
+        baseline: { correct: verdict(entry?.baseline), empty: "absent", wrong: "absent", skipped: "absent" },
+        candidate: { correct: verdict(entry?.candidate), empty: "absent", wrong: "absent", skipped: "absent" },
+      },
+    };
+  }
+  const contentRuns = report.contentMatrix ?? null;
+  if (contentRuns !== null) {
+    for (const [caseId, entry] of Object.entries(contentRuns)) {
+      matrixCases[caseId] = entry;
+    }
+  }
+  await writeFile(
+    join(evidenceDir, "content-matrix.json"),
+    `${JSON.stringify({ schemaVersion: "e4-r5-content-matrix-v1", cases: matrixCases }, null, 2)}\n`,
+    "utf8",
+  );
+
+  await writeFile(
+    join(evidenceDir, "negatives.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: "e4-r5-negatives-v1",
+        rows: (report.negative ?? []).map((r) => ({
+          violation: r.violation,
+          exitCode: r.exitCode,
+          refused: r.refused,
+          physicalModelCalls: r.physicalModelCalls,
+          refusedBeforeAnyModelCall: r.refused === true && (r.physicalModelCalls ?? 0) === 0,
+          reasonLine: r.reasonLine ?? null,
+        })),
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+
+  await writeFile(join(evidenceDir, "report.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  return { recordCount: scheduleRecords.length, verifiedCount };
+}
+
+/** A deliberately SYNTHETIC but internally CONSISTENT bundle, for the counter-examples. */
+export async function emitFixtureBundle(dir) {
+  await mkdir(dir, { recursive: true });
+  const manifestText = `${JSON.stringify({ fixture: true, armProbe: { guidance: "fixture" } }, null, 2)}\n`;
+  const armRuns = [
+    { armRunId: "fixture-baseline-reg-12-csv-parse-r1", armId: "baseline", caseId: "reg-12-csv-parse", repetition: 1, orderIndex: 0 },
+    { armRunId: "fixture-candidate-reg-12-csv-parse-r1", armId: "candidate", caseId: "reg-12-csv-parse", repetition: 1, orderIndex: 1 },
+  ];
+  for (const rec of armRuns) {
+    const evDir = join(dir, "evidence", rec.armRunId);
+    await mkdir(evDir, { recursive: true });
+    await writeFile(join(evDir, "manifest.json"), manifestText, "utf8");
+    await writeFile(
+      join(evDir, "verifier.json"),
+      `${JSON.stringify({ fixture: true, armRunId: rec.armRunId, verifiedCompletion: true, casesTotal: 1, casesVerified: 1 }, null, 2)}\n`,
+      "utf8",
+    );
+    await writeFile(join(evDir, "security.json"), `${JSON.stringify({ fixture: true, violations: [] }, null, 2)}\n`, "utf8");
+  }
+  const traceDigest = sha256Hex(manifestText);
+  await writeFile(
+    join(dir, "identity.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: R5_EVIDENCE_SCHEMA,
+        fixture: true,
+        gateVersion: R5_GATE_VERSION,
+        driverHead: PAIR_CONFIG.candidate.sha,
+        treeClean: true,
+        platform: `${process.platform}-${process.arch}`,
+        pair: {
+          baseline: {
+            sourceSha: PAIR_CONFIG.baseline.sha,
+            head: PAIR_CONFIG.baseline.sha,
+            clean: true,
+            buildDigest: "a".repeat(64),
+            entrySha256: "b".repeat(64),
+            workerAbi: PAIR_CONFIG.requiredWorkerAbi,
+            protocolFixes: { "P2-41": true, "P2-43": true },
+          },
+          candidate: {
+            sourceSha: PAIR_CONFIG.candidate.sha,
+            head: PAIR_CONFIG.candidate.sha,
+            clean: true,
+            buildDigest: "c".repeat(64),
+            entrySha256: "d".repeat(64),
+            workerAbi: PAIR_CONFIG.requiredWorkerAbi,
+            protocolFixes: { "P2-41": true, "P2-43": true },
+          },
+        },
+        closuresDistinguishable: true,
+        isolation: PAIR_CONFIG.isolation,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  await writeFile(
+    join(dir, "schedule.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: R5_SCHEDULE_SCHEMA,
+        planned: { cases: ["reg-12-csv-parse"], arms: ["baseline", "candidate"], repetitions: 1, logicalRuns: 2 },
+        records: armRuns.map((r) => ({ ...r, status: "ok", verifiedCompletion: true, traceDigest, evidenceFiles: ["manifest.json", "verifier.json", "security.json"] })),
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  await writeFile(
+    join(dir, "cost-journal.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: "tool-call-efficiency-cost-journal-v2",
+        entries: [
+          { arm: "baseline", basis: "MEASURED", inputTokens: 100, outputTokens: 20, requestId: "r1" },
+          { arm: "candidate", basis: "MEASURED", inputTokens: 90, outputTokens: 20, requestId: "r2" },
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  await writeFile(
+    join(dir, "aggregate.json"),
+    `${JSON.stringify({ fixture: true, cost: { totalTokens: 230, deltaTokens: -10, baselineTokens: 120, candidateTokens: 110 }, decision: { decision: "INCONCLUSIVE", reasonCodes: ["FIXTURE"] } }, null, 2)}\n`,
+    "utf8",
+  );
+  await writeFile(
+    join(dir, "content-matrix.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: "e4-r5-content-matrix-v1",
+        cases: {
+          "reg-12-csv-parse": {
+            contentMode: "formal-four-variant",
+            arms: {
+              baseline: { correct: "passed", empty: "failed", wrong: "failed", skipped: "failed" },
+              candidate: { correct: "passed", empty: "failed", wrong: "failed", skipped: "failed" },
+            },
+          },
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  await writeFile(
+    join(dir, "negatives.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: "e4-r5-negatives-v1",
+        rows: REQUIRED_NEGATIVES.map((violation) => ({
+          violation,
+          exitCode: 1,
+          refused: true,
+          physicalModelCalls: 0,
+          refusedBeforeAnyModelCall: true,
+          reasonLine: `${violation} refused (fixture)`,
+        })),
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  return dir;
+}
+
+function reportFailures(label, failures, stream = process.stdout) {
+  for (const f of failures) stream.write(`${label} ${f.code}: ${f.detail}\n`);
+}
+
+async function main() {
+  const args = parseArgs(process.argv.slice(2));
+
+  if (args.emitFixtureBundle !== null) {
+    await emitFixtureBundle(resolve(args.emitFixtureBundle));
+    process.stdout.write(`wrote a SYNTHETIC fixture bundle to ${resolve(args.emitFixtureBundle)}\n`);
+    return 0;
+  }
+
+  if (args.verify !== null) {
+    const root = resolve(args.verify);
+    const result = verifyEvidenceBundle(root);
+    if (!result.ok) {
+      reportFailures("GATE FAIL", result.failures);
+      return 1;
+    }
+    process.stdout.write(`GATE PASS (${R5_GATE_VERSION}): ${root} is consistent with the pinned pair\n`);
+    return 0;
+  }
+
+  if (args.verifyPairObservations !== null) {
+    const observed = readJsonFile(resolve(args.verifyPairObservations));
+    const result = verifyPairArms(PAIR_CONFIG, observed);
+    if (!result.ok) {
+      reportFailures("GATE FAIL", result.failures);
+      return 1;
+    }
+    process.stdout.write(`PAIR OK (${R5_GATE_VERSION}): both arms match scripts/e4/r5-formal-pair.json\n`);
+    return 0;
+  }
+
+  if (args.unknown.length > 0) {
+    process.stderr.write(`unknown argument(s): ${args.unknown.join(", ")}\n`);
+    return 2;
+  }
+
+  const { report, evidenceDir } = await runRealChain();
+
+  // The OVERALL result: every phase outcome AND the strict gate over the KEPT
+  // bundle. A fatal error is a failure, but it is no longer the ONLY one.
+  const failures = [];
+  if (report.fatal !== undefined) {
+    failures.push(fail("FATAL", String(report.fatal).split("\n")[0]));
+  }
+  if (report.bundleError !== undefined) {
+    failures.push(fail("BUNDLE_ERROR", String(report.bundleError).split("\n")[0]));
+  }
+  const gate = verifyEvidenceBundle(evidenceDir);
+  for (const f of gate.failures) failures.push(f);
+
+  report.gate = {
+    version: R5_GATE_VERSION,
+    evidenceDir,
+    passed: failures.length === 0,
+    failures,
+    // "harness gate passed" is NOT "experiment decision ACCEPT": the decision is
+    // reported separately and real model quality stays NOT_RUN.
+    decision: report.formalSmall?.evidence?.decision ?? null,
+    realModelQuality: "NOT_RUN",
+    promotion: "NOT_RUN",
+  };
+  const outPath = args.out !== null ? resolve(args.out) : join(REPO_ROOT, ".ci", "r5-real-formal.json");
+  await mkdir(dirname(outPath), { recursive: true });
+  await writeFile(outPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+
+  if (failures.length > 0) {
+    reportFailures("GATE FAIL", failures);
+    process.stdout.write(`R5 gate: ${failures.length} named failure(s); bundle ${evidenceDir}\n`);
+    return 1;
+  }
+  process.stdout.write(`GATE PASS (${R5_GATE_VERSION}): bundle ${evidenceDir}\n`);
+  return 0;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

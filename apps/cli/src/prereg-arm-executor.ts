@@ -1035,6 +1035,28 @@ interface LaunchArmWorkerResult {
     streamSettled: boolean;
     /** MEASURED wall-clock ms from the deadline firing to the driver resuming. */
     cleanupMs: number;
+    /**
+     * R0/S2 — frames the driver could NOT deliver because the child had already
+     * closed its stdin (or the write raised EPIPE/ERR_STREAM_DESTROYED).
+     *
+     * Counted rather than swallowed: an end-of-life race is normal, but it must
+     * be OBSERVABLE, because a large count means the driver was still talking to
+     * a child that had stopped listening and any state it reported is suspect.
+     * See the empty-catch audit in `packages/security`.
+     */
+    frameWritesAfterClose: number;
+    /** The first write error seen, or null when none was raised. */
+    frameWriteError: string | null;
+    /**
+     * R0/S2 — settlements the durable budget could not be told about, so an
+     * unproven dispatch stays visibly UNSETTLED instead of being silently
+     * released. Counted for the same reason as `frameWritesAfterClose`.
+     */
+    settleNoticesFailed: number;
+    /** DETACHED stream rejections absorbed so they cannot become unhandled. */
+    detachedStreamRejections: number;
+    /** The first such rejection's message, or null. */
+    detachedStreamError: string | null;
   };
 }
 
@@ -1082,7 +1104,17 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
   const streamOwner: { current: { id: number; controller: AbortController } | null } = { current: null };
   /** Resolves when the currently serviced model stream unwinds (either way). */
   let streamSettled: Promise<void> = Promise.resolve();
-  const cancellation = { timedOut: false, signalAborted: false, streamSettled: true, cleanupMs: 0 };
+  const cancellation = {
+    timedOut: false,
+    signalAborted: false,
+    streamSettled: true,
+    cleanupMs: 0,
+    frameWritesAfterClose: 0,
+    frameWriteError: null as string | null,
+    settleNoticesFailed: 0,
+    detachedStreamRejections: 0,
+    detachedStreamError: null as string | null,
+  };
 
   const deadlineFired = (): void => {
     timedOut = true;
@@ -1133,11 +1165,20 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
   const reply = (frame: Record<string, unknown>): void => {
     // A post-cancellation write must never raise: the child may already be gone
     // (EPIPE / ERR_STREAM_DESTROYED), and that is a normal end-of-life race.
-    if (child.stdin === null || child.stdin.destroyed || !child.stdin.writable) return;
+    //
+    // R0/S2 — this is NOT a silent swallow. The occurrence is COUNTED and
+    // surfaced on the cancellation record, so "the child stopped accepting
+    // frames" is an observed fact rather than an invisible one. The child's exit
+    // still classifies the arm; this only makes the race reportable.
+    if (child.stdin === null || child.stdin.destroyed || !child.stdin.writable) {
+      cancellation.frameWritesAfterClose += 1;
+      return;
+    }
     try {
       child.stdin.write(`${JSON.stringify(frame)}\n`);
-    } catch {
-      // The child's exit is what classifies the arm, not this write.
+    } catch (err) {
+      cancellation.frameWritesAfterClose += 1;
+      cancellation.frameWriteError = err instanceof Error ? err.message : String(err);
     }
   };
 
@@ -1165,7 +1206,20 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
       }
     })();
     streamSettled = run;
-    void run.catch(() => undefined);
+    // R0/S2 — the run body already reports its own failures to the child
+    // (L1198-1200). This trailing handler exists ONLY so a rejected DETACHED
+    // promise can never become an unhandled rejection that tears the driver
+    // down mid-arm. It records the fact instead of discarding it: an empty
+    // handler here is what the `packages/security` empty-catch audit forbids,
+    // and rightly so — an unobserved rejection is exactly the kind of thing
+    // that later looks like a driver crash with no explanation.
+    void run.then(
+      () => undefined,
+      (err: unknown) => {
+        cancellation.detachedStreamRejections += 1;
+        cancellation.detachedStreamError = err instanceof Error ? err.message : String(err);
+      },
+    );
   };
 
   let report: WorkerReport | null = null;
@@ -1287,7 +1341,18 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
       const t = setTimeout(resolve, WORKER_CLEANUP_GRACE_MS);
       t.unref?.();
     });
-    await Promise.race([streamSettled.catch(() => undefined), grace]);
+    await Promise.race([
+      streamSettled.then(
+        () => undefined,
+        (err: unknown) => {
+          // Reaching here is expected on the timeout path (the abort rejects the
+          // in-flight generate). Record it so it is not an unobserved rejection.
+          cancellation.detachedStreamRejections += 1;
+          cancellation.detachedStreamError ??= err instanceof Error ? err.message : String(err);
+        },
+      ),
+      grace,
+    ]);
     cancellation.streamSettled = await Promise.race([
       streamSettled.then(() => true).catch(() => true),
       new Promise<boolean>((resolve) => {
@@ -1298,10 +1363,17 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
   }
 
   // The child owns its own stdin; close it, then take the exit code.
+  //
+  // R0/S2 — the guard above already establishes non-null/writable, but the child
+  // can die between the check and the write, so the throw is real. It is NOT
+  // discarded: an EPIPE here is the same end-of-life race `reply()` counts, and
+  // folding it into the same counter keeps one number for "the child stopped
+  // listening" regardless of which call site observed it.
   try {
     child.stdin?.end();
-  } catch {
-    // already closed
+  } catch (err) {
+    cancellation.frameWritesAfterClose += 1;
+    cancellation.frameWriteError ??= err instanceof Error ? err.message : String(err);
   }
   const exitCode = await exited;
 
@@ -1313,7 +1385,18 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
       liveReservations.delete(reservationId);
       settledReservations.add(reservationId);
       budgetCounters.settled += 1;
-      await live.settle("unknown").catch(() => undefined);
+      // R0/S2 — the budget could not be told this dispatch settled. That is
+      // exactly the "unproven dispatch" case this branch exists to keep visible,
+      // so the failure is COUNTED (`settleNoticesFailed`) rather than swallowed:
+      // a nonzero count is the signal that the journal holds a reservation whose
+      // fate is unknown, and a reader must be able to see that instead of
+      // inferring it from a missing entry.
+      try {
+        await live.settle("unknown");
+      } catch (err) {
+        cancellation.settleNoticesFailed += 1;
+        cancellation.frameWriteError ??= err instanceof Error ? err.message : String(err);
+      }
     }
   }
 
