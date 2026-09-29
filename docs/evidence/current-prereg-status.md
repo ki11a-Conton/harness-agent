@@ -110,6 +110,48 @@ same five levels. Feeding the historical Ubuntu artifact in as the other platfor
 `NOT_PROVEN` (`OTHER_PLATFORM_NOT_SELF_MEASURED`) — honest, because that artifact cannot show its
 own platform measured.
 
+### 3.1 The `main` CI red at `afc84b7` was a test-side role assumption, not a product defect
+
+`main` was green at `a85db6dc` (run `36405088815`) and red at `d4b90d44`/`afc84b7`
+(runs `36435869148`, `36437529000`). The whole red was **one test**, on ubuntu only:
+
+```
+FAIL apps/cli/src/r0-f6-ci-readiness-classification.test.ts > R7-F6-H
+AssertionError: expected 'MEASURED' to be 'MEASURED_SAME_SHA'
+```
+
+`R7-F6-H` asserted `platforms.ubuntu.status === "MEASURED_SAME_SHA"` while choosing the scenario
+with **no** `--os-label` override, i.e. it always ran as a Windows process. In that direction
+`ubuntu` is the PEER slot and returns `MEASURED_SAME_SHA`, so the suite was green locally. On a real
+ubuntu runner the roles are mirrored: `platformSlot("ubuntu")` returns the early `MEASURED` (this
+process *is* ubuntu) and never reaches the other-platform branch, so the same assertion failed.
+
+This is hypothesis **(a)** from the handover — a Windows-only assumption in the test. The product is
+**correct in both directions** and was not changed; the evidence above (§3, lines 106–108) already
+recorded the Linux-direction output. Reproduced and pinned by running the real script with
+`process.platform` forced to `linux`:
+
+| `--os-label` | `thisProcess` | `ubuntu` slot | `windows` slot | `crossPlatform` |
+| --- | --- | --- | --- | --- |
+| `windows-local` (what the suite used) | windows | `MEASURED_SAME_SHA` ← old assertion | `MEASURED` | `MEASURED_SAME_SHA` |
+| `ubuntu-latest` (a real CI runner) | ubuntu | **`MEASURED`** ← old assertion demanded `MEASURED_SAME_SHA` → FAIL | `MEASURED_SAME_SHA` | `MEASURED_SAME_SHA` |
+
+Fix: `R7-F6-H` now asserts the **peer role** (whichever platform is not this process) instead of the
+hardcoded name `ubuntu`, and additionally pins that this process's own slot is `MEASURED`. A new
+`R7-F6-H2` runs the same scenario through the `process.platform`→`linux` preload so the mirrored
+direction is exercised locally on every run instead of first executing on CI. The F6 suite is
+**17 passed (17)** on Windows; the file is no longer excluded, so `pnpm test` and the
+`R7 — F6 readiness classification gate` CI step both gate it.
+
+---
+
+## 3.2 Scope of that fix
+
+No production source was changed for the CI red: the change is confined to
+`apps/cli/src/r0-f6-ci-readiness-classification.test.ts`. The alternative the handover explicitly
+forbids — re-adding the file to the `vitest.config.ts` exclude list to obtain a green tick — was
+**not** taken; that would have hidden the cross-platform branch F6 exists to surface.
+
 ---
 
 ## 4. Corrections to statements that are no longer current

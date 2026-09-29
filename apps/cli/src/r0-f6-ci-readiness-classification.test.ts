@@ -297,14 +297,26 @@ describe("R7/F6 — readiness comes from a structured kind + verified evidence, 
       "utf8",
     );
 
+    // The peer slot is whichever platform is NOT this process. Naming `ubuntu`
+    // unconditionally encoded a Windows-only assumption: on a real ubuntu runner
+    // `ubuntu` IS this process, so `platformSlot("ubuntu")` returns the early
+    // `MEASURED` and never reaches the other-platform branch — which made this
+    // suite red on CI while green on Windows. The product was right in both
+    // cases; the assertion was not platform-agnostic. Assert the PEER role, not
+    // a hardcoded platform name, and additionally pin that the two slots are
+    // role-symmetric.
+    const peerSlot = (r: RunResult): "windows" | "ubuntu" => (r.artifact.platforms.thisProcess.platform === "ubuntu" ? "windows" : "ubuntu");
+
     const matching = runScript(baseE2e(), { extraArgs: ["--other-platform-artifact", sameShaPath] });
-    expect(matching.artifact.platforms.ubuntu.status).toBe("MEASURED_SAME_SHA");
+    expect(matching.artifact.platforms[peerSlot(matching)].status).toBe("MEASURED_SAME_SHA");
     expect(matching.artifact.platforms.crossPlatform.status).toBe("MEASURED_SAME_SHA");
     expect(matching.artifact.platforms.crossPlatform.sameSha).toBe(true);
     expect(matching.artifact.platforms.crossPlatform.selfMeasured).toBe(true);
+    // The slot this process actually ran on is always MEASURED, on either OS.
+    expect(matching.artifact.platforms[matching.artifact.platforms.thisProcess.platform as "windows" | "ubuntu"].status).toBe("MEASURED");
 
     const mismatched = runScript(baseE2e(), { extraArgs: ["--other-platform-artifact", otherShaPath] });
-    expect(mismatched.artifact.platforms.ubuntu.status).toBe("NOT_PROVEN");
+    expect(mismatched.artifact.platforms[peerSlot(mismatched)].status).toBe("NOT_PROVEN");
     expect(mismatched.artifact.platforms.crossPlatform.status).toBe("NOT_PROVEN");
     expect(mismatched.artifact.platforms.crossPlatform.detail).toContain("SHA_MISMATCH");
 
@@ -312,13 +324,41 @@ describe("R7/F6 — readiness comes from a structured kind + verified evidence, 
     // this is exactly the historical real ubuntu-latest artifact, which hardcoded
     // `platforms.ubuntu.status = "NOT_PROVEN"`.
     const notSelfMeasured = runScript(baseE2e(), { extraArgs: ["--other-platform-artifact", v1HardcodePath] });
-    expect(notSelfMeasured.artifact.platforms.ubuntu.status).toBe("NOT_PROVEN");
+    expect(notSelfMeasured.artifact.platforms[peerSlot(notSelfMeasured)].status).toBe("NOT_PROVEN");
     expect(notSelfMeasured.artifact.platforms.crossPlatform.detail).toContain("OTHER_PLATFORM_NOT_SELF_MEASURED");
 
     // Absent evidence is NOT_OBSERVED — not "unproven", and not "measured".
     const absent = runScript(baseE2e());
-    expect(absent.artifact.platforms.ubuntu.status).toBe("NOT_OBSERVED");
+    expect(absent.artifact.platforms[peerSlot(absent)].status).toBe("NOT_OBSERVED");
     expect(absent.artifact.platforms.crossPlatform.status).toBe("NOT_OBSERVED");
+  });
+
+  it("R7-F6-H2: the cross-platform branch is role-symmetric — a Linux process is exercised, not assumed", () => {
+    // Run the SAME scenario with process.platform forced to linux, so the peer
+    // slot is `windows` and the Linux branch is really taken. Without this the
+    // suite only ever proved the Windows direction and CI was the first place
+    // the mirrored direction ran.
+    const dir = mkdtempSync(join(tmpdir(), "r0-f6-sym-"));
+    CREATED.push(dir);
+    const sameShaPath = join(dir, "other-same-sha.json");
+    writeFileSync(
+      sameShaPath,
+      JSON.stringify({ schemaVersion: "prereg-ci-readiness-v2", ciRunSha: HEAD, platforms: { thisProcess: { status: "MEASURED" } } }),
+      "utf8",
+    );
+
+    const linux = runScript(baseE2e(), { linuxSimulation: true, osLabel: "ubuntu-latest", extraArgs: ["--other-platform-artifact", sameShaPath] });
+    expect(linux.artifact.os.platform).toBe("linux");
+    expect(linux.artifact.platforms.thisProcess.platform).toBe("ubuntu");
+    // This process measured its own platform...
+    expect(linux.artifact.platforms.ubuntu.status).toBe("MEASURED");
+    // ...and the PEER (windows) is the one accepted at the same SHA.
+    expect(linux.artifact.platforms.windows.status).toBe("MEASURED_SAME_SHA");
+    expect(linux.artifact.platforms.crossPlatform.status).toBe("MEASURED_SAME_SHA");
+
+    const linuxAbsent = runScript(baseE2e(), { linuxSimulation: true, osLabel: "ubuntu-latest" });
+    expect(linuxAbsent.artifact.platforms.windows.status).toBe("NOT_OBSERVED");
+    expect(linuxAbsent.artifact.platforms.crossPlatform.status).toBe("NOT_OBSERVED");
   });
 
   it("R7-F6-M1: a FORGED REAL enum with no artifact evidence must not upgrade", () => {
