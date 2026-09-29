@@ -57,13 +57,28 @@
  * usage: node scripts/e4/ci-readiness.mjs --e2e <e2e.json> --out <readiness.json>
  *        [--exit-pnpm-test=N] [--exit-typecheck=N] [--exit-build=N] [--os-label=...]
  *        [--expect-sha=<40hex>] [--run-id=<id>] [--other-platform-artifact=<json>]
+ *        [--evidence-root=<dir>] [--attempt=<n>] [--platform=windows|ubuntu]
+ *        [--strict] [--require=<level>[,<level>...]]
+ *
+ * S6/F3 — READINESS IS COMPUTED FROM RAW EVIDENCE. A REAL declaration is now
+ * corroborated by reading the actual arm / verifier / journal bytes under
+ * `--evidence-root` (scripts/e4/readiness-evidence-verify.mjs). The artifact's
+ * OWN run identity (runId + attempt + platform) is required, a build digest must
+ * be a LEGAL 64-hex sha256 rather than merely non-empty, and every path is
+ * confined to the evidence root. Nothing inside the bundle is ever executed.
+ *
+ * `--strict` turns the report into a GATE: it exits non-zero when a required
+ * level is not PASS (default: fixtureProtocolReady, realBuildOfflineReady,
+ * budgetEvidenceReady). Without `--strict` the script keeps its report-mode
+ * exit 0, because a readiness artifact is most useful when a phase FAILED.
  */
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { isSha256Hex, verifyEvidenceBundle } from "./readiness-evidence-verify.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(here, "..", "..");
@@ -76,6 +91,66 @@ function arg(name, dflt = null) {
   const i = process.argv.indexOf(`--${name}`);
   if (i !== -1 && i + 1 < process.argv.length && !process.argv[i + 1].startsWith("--")) return process.argv[i + 1];
   return dflt;
+}
+
+// --- S6/F3: the CLI schema is VALIDATED, not guessed -------------------------
+// A silently-ignored typo (`--evidnce-root`) used to be indistinguishable from
+// "no evidence root supplied", which is exactly how a misconfigured gate reads
+// as a weaker gate. Unknown flags, missing values and stray positionals are
+// refused before any file is read.
+const FLAGS_WITH_VALUE = new Set([
+  "e2e",
+  "out",
+  "exit-pnpm-test",
+  "exit-typecheck",
+  "exit-build",
+  "os-label",
+  "expect-sha",
+  "run-id",
+  "other-platform-artifact",
+  "evidence-root",
+  "attempt",
+  "platform",
+  "require",
+]);
+const BOOLEAN_FLAGS = new Set(["strict"]);
+
+function cliSchemaProblems(argv) {
+  const problems = [];
+  const consumed = new Set();
+  for (let i = 0; i < argv.length; i += 1) {
+    const token = argv[i];
+    if (!token.startsWith("--")) continue;
+    const eq = token.indexOf("=");
+    const name = eq === -1 ? token.slice(2) : token.slice(2, eq);
+    if (BOOLEAN_FLAGS.has(name)) {
+      if (eq !== -1) problems.push(`--${name} does not take a value`);
+      continue;
+    }
+    if (!FLAGS_WITH_VALUE.has(name)) {
+      problems.push(`unknown argument: ${token}`);
+      continue;
+    }
+    if (eq !== -1) continue;
+    const next = argv[i + 1];
+    if (next === undefined || next.startsWith("--")) {
+      problems.push(`--${name} requires a value`);
+      continue;
+    }
+    consumed.add(i + 1);
+    i += 1;
+  }
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i].startsWith("--") || consumed.has(i)) continue;
+    problems.push(`unexpected positional argument: ${argv[i]}`);
+  }
+  return problems;
+}
+
+const cliProblems = cliSchemaProblems(process.argv.slice(2));
+if (cliProblems.length > 0) {
+  console.error(`ci-readiness: refusing to run on an invalid command line:\n  ${cliProblems.join("\n  ")}`);
+  process.exit(2);
 }
 
 const e2ePath = arg("e2e");
@@ -138,6 +213,19 @@ const docsSmoke = runGate("pnpm", ["exec", "vitest", "run", "apps/cli/src/prereg
 const expectSha = arg("expect-sha", gitSha);
 const runId = arg("run-id", process.env["GITHUB_RUN_ID"] ?? null);
 const otherPlatformPath = arg("other-platform-artifact");
+// S6/F3 — the raw evidence root and the run identity it must agree with.
+const evidenceRoot = arg("evidence-root");
+const attemptArg = asInt(arg("attempt"));
+const platformArg = arg("platform");
+// S6/F3 — report mode (default, exit 0) vs GATE mode (`--strict`, exit non-zero
+// when a required level is not PASS). Plan §10.9: "脚本成功写出报告" and
+// "必要 gate 通过" are two different facts and must not share one exit code.
+const strictMode = process.argv.some((a) => a === "--strict");
+const requireList = (arg("require") ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter((s) => s !== "");
+const REQUIRED_LEVELS = requireList.length > 0 ? requireList : ["fixtureProtocolReady", "realBuildOfflineReady", "budgetEvidenceReady"];
 
 const declaredExits = {
   typecheck: arg("exit-typecheck"),
@@ -188,10 +276,19 @@ const kindSpec = executionKindKnown ? KNOWN_EXECUTION_KINDS[executionKind] : nul
 const realDeclaration = kindSpec?.real === true;
 
 /**
- * R7 — the evidence a REAL declaration must actually carry. Every entry is a
+ * R7/F3 — the evidence a REAL declaration must actually carry. Every entry is a
  * check that returns a reason string when it fails, so a forged enum with no
  * artifact produces a list of concrete failures instead of a PASS.
+ *
+ * S6 — the artifact's OWN identity and the RAW evidence root are now mandatory:
+ *   - the artifact must CARRY `runId`, `attempt` and `platform` (a caller-supplied
+ *     `--run-id` is not a substitute for the artifact's own identity, plan §10.5);
+ *   - a `buildDigest` must be a LEGAL 64-hex sha256, not merely non-empty;
+ *   - `--evidence-root` must be supplied and every claim re-derived from the raw
+ *     arm / verifier / journal bytes (readiness-evidence-verify.mjs).
  */
+let bundleFacts = null;
+
 function verifyRealEvidence() {
   const failures = [];
   const dualBuild = e2e?.dualBuild ?? null;
@@ -204,10 +301,27 @@ function verifyRealEvidence() {
   else if (isSha40(expectSha) && e2e["ciRunSha"] !== expectSha) {
     failures.push(`SHA_MISMATCH: artifact ciRunSha ${e2e["ciRunSha"]} != expected ${expectSha}`);
   }
-  if (!isNonEmptyString(runId)) failures.push("NO_RUN_ID: neither --run-id nor GITHUB_RUN_ID was supplied");
-  else if (isNonEmptyString(e2e?.["runId"]) && e2e["runId"] !== runId) {
-    failures.push(`RUN_ID_MISMATCH: the artifact was produced by run ${e2e["runId"]}, this readiness run is ${runId}`);
+
+  // --- run identity: the ARTIFACT must carry it (S6/F3) ---------------------
+  const artifactRunId = e2e?.["runId"];
+  if (!isNonEmptyString(artifactRunId)) {
+    failures.push("NO_ARTIFACT_RUN_ID: the artifact carries no runId, so the run identity of its evidence cannot be established (a caller-supplied --run-id is not a substitute)");
+  } else if (isNonEmptyString(runId) && artifactRunId !== runId) {
+    failures.push(`RUN_ID_MISMATCH: the artifact was produced by run ${artifactRunId}, this readiness run is ${runId}`);
   }
+  if (!isNonEmptyString(runId)) failures.push("NO_RUN_ID: neither --run-id nor GITHUB_RUN_ID was supplied");
+
+  // --- attempt + platform: the same run/attempt requirement per schema ------
+  const artifactAttempt = asInt(e2e?.["attempt"]);
+  if (artifactAttempt === null) failures.push("NO_ARTIFACT_ATTEMPT: the artifact carries no attempt number");
+  else if (attemptArg === null) failures.push("NO_ATTEMPT_INPUT: --attempt was not supplied, so the artifact's attempt cannot be corroborated");
+  else if (artifactAttempt !== attemptArg) failures.push(`ATTEMPT_MISMATCH: the artifact is attempt ${artifactAttempt}, this verification is attempt ${attemptArg}`);
+
+  const artifactPlatform = e2e?.["platform"];
+  if (!isNonEmptyString(artifactPlatform)) failures.push("NO_ARTIFACT_PLATFORM: the artifact carries no platform");
+  else if (!isNonEmptyString(platformArg)) failures.push("NO_PLATFORM_INPUT: --platform was not supplied, so the artifact's platform cannot be corroborated");
+  else if (artifactPlatform !== platformArg) failures.push(`PLATFORM_MISMATCH: the artifact is platform ${artifactPlatform}, this verification is ${platformArg}`);
+
   if (!isNonEmptyString(e2e?.["os"])) failures.push("NO_OS: the artifact does not record the OS it was produced on");
   if (dualBuild === null || typeof dualBuild !== "object") {
     failures.push("NO_DUAL_BUILD_EVIDENCE: the artifact carries no dualBuild evidence block");
@@ -217,8 +331,16 @@ function verifyRealEvidence() {
     if (isSha40(baselineArm?.sourceSha) && baselineArm.sourceSha === candidateArm?.sourceSha) {
       failures.push("ARMS_IDENTICAL: both arms name the same source SHA, so there is no comparable pair");
     }
+    // S6/F3 — a digest must be a LEGAL sha256, not merely a non-empty string.
+    // `"x"` used to satisfy this check and carried a forged build to PASS.
     if (!isNonEmptyString(baselineArm?.buildDigest)) failures.push("BASELINE_BUILD_DIGEST_MISSING: dualBuild.baselineArm.buildDigest is empty");
+    else if (!isSha256Hex(baselineArm.buildDigest)) {
+      failures.push(`BASELINE_BUILD_DIGEST_MALFORMED: dualBuild.baselineArm.buildDigest is not a 64-hex sha256 (got ${JSON.stringify(baselineArm.buildDigest)})`);
+    }
     if (!isNonEmptyString(candidateArm?.buildDigest)) failures.push("CANDIDATE_BUILD_DIGEST_MISSING: dualBuild.candidateArm.buildDigest is empty");
+    else if (!isSha256Hex(candidateArm.buildDigest)) {
+      failures.push(`CANDIDATE_BUILD_DIGEST_MALFORMED: dualBuild.candidateArm.buildDigest is not a 64-hex sha256 (got ${JSON.stringify(candidateArm.buildDigest)})`);
+    }
     if (verifier?.ran !== true) failures.push("VERIFIER_NOT_RUN: dualBuild.verifier.ran is not true");
     if (!Number.isInteger(verifier?.casesTotal) || verifier.casesTotal <= 0) failures.push("VERIFIER_CASES_MISSING: dualBuild.verifier.casesTotal is not a positive integer");
     else if (verifier.casesVerified !== verifier.casesTotal) {
@@ -237,11 +359,63 @@ function verifyRealEvidence() {
   if (Number.isFinite(journalDelta) && Number.isFinite(independentDelta) && journalDelta !== independentDelta) {
     failures.push(`JOURNAL_MISMATCH: aggregateTokensDelta ${String(journalDelta)} != independently recomputed delta ${String(independentDelta)}`);
   }
+  // --- S6/F3: RAW EVIDENCE — every claim above must be corroborated ---------
+  // The artifact's self-reported fields are a CLAIM. Without an evidence root
+  // there are no bytes to check, so a REAL declaration is NOT_PROVEN no matter
+  // how complete its JSON looks.
+  if (!isNonEmptyString(evidenceRoot)) {
+    failures.push("NO_RAW_EVIDENCE: no --evidence-root was supplied, so no raw arm/verifier/journal file was read and the self-reported fields above are uncorroborated");
+  } else {
+    const bundle = verifyEvidenceBundle({
+      evidenceRoot,
+      expectSha,
+      runId: isNonEmptyString(runId) ? runId : null,
+      attempt: attemptArg,
+      platform: platformArg,
+      armEvidenceVerifier,
+      // S6/F3 — the artifact's OWN arm build identity must equal the raw identity
+      // file's. A well-formed sha256 that matches nothing is still a forgery.
+      declaredArms: { baseline: baselineArm, candidate: candidateArm },
+    });
+    bundleFacts = bundle.facts;
+    for (const p of bundle.problems) failures.push(`RAW_EVIDENCE: ${p}`);
+  }
   return failures;
+}
+
+// The A6 per-arm verifier is loaded LAZILY (only when a REAL declaration with an
+// evidence root is actually being verified) so the script still classifies an
+// artifact when the evaluation package has not been built.
+let armEvidenceVerifier = null;
+let armEvidenceVerifierError = null;
+if (realDeclaration && isNonEmptyString(evidenceRoot)) {
+  try {
+    const mod = await import(pathToFileURL(join(REPO_ROOT, "packages", "evaluation", "dist", "index.js")).href);
+    if (typeof mod.verifyArmEvidenceFromArtifacts !== "function") {
+      armEvidenceVerifierError = "packages/evaluation/dist/index.js does not export verifyArmEvidenceFromArtifacts";
+    } else {
+      armEvidenceVerifier = mod.verifyArmEvidenceFromArtifacts;
+    }
+  } catch (err) {
+    armEvidenceVerifierError = err instanceof Error ? err.message : String(err);
+  }
+  if (armEvidenceVerifier === null) {
+    console.error(`ci-readiness: the A6 per-arm evidence verifier is unavailable (${armEvidenceVerifierError}); raw arm artifacts cannot be verified`);
+  }
 }
 
 const realEvidenceFailures = realDeclaration ? verifyRealEvidence() : [];
 const realBasis = realDeclaration && realEvidenceFailures.length === 0;
+const bundleJournalBinding = bundleFacts?.journalBinding ?? { status: "NOT_PROVEN", reason: "no evidence bundle was verified" };
+const bundleRequestDispatch = bundleFacts?.requestDispatchBinding ?? {
+  status: "NOT_PROVEN",
+  reason: "no evidence bundle was verified",
+};
+// budgetEvidenceReady may PASS only when the raw journal reconciled AND the
+// request/dispatch cross-binding is proven. Until S4's bundle contract lands the
+// second dimension is explicitly unbound, so this stays NOT_PROVEN with a named
+// reason — never because the code was written.
+const budgetBasis = realBasis && bundleJournalBinding.status === "MEASURED" && bundleRequestDispatch.status === "MEASURED";
 
 const basis = executionKindKnown ? executionKind : "NOT_OBSERVED";
 const basisSource = typeof offlineReadiness?.["executionKind"] === "string" && executionKindToken(offlineReadiness["executionKind"]) !== null
@@ -285,9 +459,9 @@ const levels = {
   realBuildOfflineReady: {
     status: realBasis ? "PASS" : kindSpec?.blocker != null ? "BLOCKED" : "NOT_PROVEN",
     basis: realBasis
-      ? "two real pinned checkouts built from distinct source SHAs, verified from the artifact's own evidence (R7)"
+      ? "two real pinned checkouts built from distinct source SHAs, with every arm's manifest/verifier/security re-verified from the raw bytes under --evidence-root (S6/F3)"
       : realDeclaration
-        ? "execution kind declares REAL_DUAL_PINNED_BUILD but its evidence did not verify, so this level is NOT_PROVEN (R7: a forged enum is not a real build)"
+        ? "execution kind declares REAL_DUAL_PINNED_BUILD but its evidence did not verify against the raw evidence root, so this level is NOT_PROVEN (S6/F3: a forged enum and a self-reported digest are not a real build)"
         : executionKindKnown
           ? `the structured execution kind is ${executionKind}, so no real dual pinned build is available: this level is BLOCKED rather than inferred from the fixture loop (N1)`
           : "the structured execution kind is missing or unrecognised (NOT_OBSERVED), so this level is NOT_PROVEN — prose is never read (R7)",
@@ -302,13 +476,31 @@ const levels = {
       executionKind,
       executionKindSource: basisSource,
       realDeclaration,
+      evidenceRoot: isNonEmptyString(evidenceRoot) ? evidenceRoot : null,
       failures: realEvidenceFailures,
+      bundle: bundleFacts,
     },
   },
+  // S6/F3 — COMPUTED, not hard-coded. It may PASS only when the same run's raw
+  // evidence verified AND the raw cost-journal entries reconciled against the
+  // aggregate. A missing request/dispatch-journal binding is reported as an
+  // explicit NOT_PROVEN naming the missing inputs — never as a green PASS.
   budgetEvidenceReady: {
-    status: "NOT_PROVEN",
-    basis:
-      "token/cost accounting is journal-bound: the cost journal now carries one entry per billed physical attempt with its armRunId / requestId / reservationId, so per-arm baseline/candidate/delta are re-derived from the raw entries and the charged TOTAL is reported as a SEPARATE metric (F3/R2: a campaign total is never presented as a candidate-vs-baseline difference), and the E2E recomputes both independently from the journal bytes. The armRunId <-> requestId <-> reservationId attribution is therefore recorded, but it is NOT yet bound to the trusted execution manifest / verifier bytes, and it needs real arm artifacts (N1)",
+    status: budgetBasis ? "PASS" : "NOT_PROVEN",
+    basis: budgetBasis
+      ? "per-arm baseline/candidate/total/delta were recomputed from the raw cost-journal entries and reconciled against the aggregate, AND the request/dispatch journal was cross-bound to the schedule and manifest (S6/F3). This proves the OFFLINE execution only; it does not authorize a paid run"
+      : realBasis
+        ? `the raw arm evidence verified, but the budget is not fully bound: ${bundleRequestDispatch.reason ?? bundleJournalBinding.reason ?? "no journal binding was established"}`
+        : `no raw evidence bundle verified, so the budget cannot be attributed: ${realDeclaration ? realEvidenceFailures.slice(0, 3).join("; ") : "the execution kind is not a REAL declaration"}`,
+    blocker: budgetBasis ? null : bundleRequestDispatch.reason ?? bundleJournalBinding.reason ?? (realDeclaration ? "BUDGET_NOT_BOUND: the raw evidence did not verify" : "BUDGET_NOT_BOUND: no REAL declaration"),
+    evidence: {
+      journalBinding: bundleJournalBinding.status,
+      journalBindingReason: bundleJournalBinding.reason,
+      requestDispatchBinding: bundleRequestDispatch.status,
+      requestDispatchBindingReason: bundleRequestDispatch.reason,
+      budget: bundleFacts?.budget ?? null,
+      derivedVerifierCoverage: bundleFacts?.derivedVerifierCoverage ?? null,
+    },
     counts_ref: [
       "forwardJournalChargedTokens",
       "forwardAggregateTokensTotal",
@@ -386,6 +578,12 @@ const artifact = {
     e2eSha256: sha256File(e2ePath),
     otherPlatformArtifactPath: otherPlatformPath,
     otherPlatformArtifactSha256: otherPlatformPath === null ? null : sha256File(otherPlatformPath),
+    // S6/F3 — the raw evidence root that corroborates (or refuses) a REAL claim.
+    evidenceRoot: isNonEmptyString(evidenceRoot) ? evidenceRoot : null,
+    attempt: attemptArg,
+    platform: platformArg,
+    strict: strictMode,
+    requiredLevels: strictMode ? REQUIRED_LEVELS : null,
   },
   os: {
     label: arg("os-label", `${process.platform}-${process.arch}`),
@@ -452,9 +650,26 @@ for (const [name, lvl] of Object.entries(levels)) console.log(line(name, lvl));
 console.log(`  execution kind: ${executionKind ?? "NOT_OBSERVED"} (${basisSource})`);
 console.log(`  forward basis: ${basis}`);
 console.log(`  platforms: this=${THIS_PLATFORM} windows=${artifact.platforms.windows.status} ubuntu=${artifact.platforms.ubuntu.status} cross=${crossPlatformStatus}`);
-if (realDeclaration && realEvidenceFailures.length > 0) console.log(`  real-build evidence failures: ${realEvidenceFailures.length}`);
+if (realDeclaration && realEvidenceFailures.length > 0) {
+  console.log(`  real-build evidence failures: ${realEvidenceFailures.length}`);
+  for (const f of realEvidenceFailures) console.log(`    - ${f}`);
+}
 console.log(`  evidence: ${outPath}`);
 
-// The SCRIPT exits 0 when it successfully wrote an artifact. It does not encode a
-// verdict: the levels are the verdict, and CI reads them.
+// REPORT MODE (default): the SCRIPT exits 0 when it successfully wrote an
+// artifact. It does not encode a verdict: the levels are the verdict, and a
+// readiness artifact is most useful when a phase FAILED.
+//
+// GATE MODE (`--strict`, plan §10.9): "the script wrote a report" and "the
+// required gate passed" are two different facts. In gate mode an unmet required
+// level makes CI exit non-zero.
+if (strictMode) {
+  const unmet = REQUIRED_LEVELS.filter((name) => levels[name]?.status !== "PASS");
+  if (unmet.length > 0) {
+    console.error(`ci-readiness STRICT GATE FAILED: ${unmet.length} required readiness level(s) are not PASS`);
+    for (const name of unmet) console.error(`  ${name}: ${levels[name]?.status ?? "UNKNOWN"}${levels[name] === undefined ? " (not a known level)" : ""}`);
+    process.exit(1);
+  }
+  console.log(`  strict gate: PASS (required: ${REQUIRED_LEVELS.join(", ")})`);
+}
 process.exit(0);

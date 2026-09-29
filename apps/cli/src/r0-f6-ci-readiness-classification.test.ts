@@ -39,9 +39,10 @@
  */
 
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -60,11 +61,34 @@ afterAll(() => {
   }
 });
 
+interface LevelEvidence {
+  realDeclaration?: boolean;
+  failures?: string[];
+  evidenceRoot?: string | null;
+  bundle?: {
+    derivedVerifierCoverage?: { verified: number; total: number } | null;
+    identity?: Record<string, unknown> | null;
+  } | null;
+  journalBinding?: string;
+  journalBindingReason?: string | null;
+  requestDispatchBinding?: string;
+  requestDispatchBindingReason?: string | null;
+  budget?: Record<string, number> | null;
+}
+
 interface ReadinessArtifact {
   schemaVersion: string;
   ciRunSha: string;
   expectedSha: string;
   ciRunId: string | null;
+  inputs: {
+    e2ePath: string;
+    evidenceRoot: string | null;
+    attempt: number | null;
+    platform: string | null;
+    strict: boolean;
+    requiredLevels: string[] | null;
+  };
   os: { label: string; platform: string; arch: string; node: string };
   platforms: {
     thisProcess: { platform: string; status: string };
@@ -77,10 +101,7 @@ interface ReadinessArtifact {
   executionKind: string | null;
   forwardBasis: string | null;
   forwardBasisSource: string;
-  levels: Record<
-    string,
-    { status: string; basis: string; blocker?: string | null; evidence?: { realDeclaration: boolean; failures: string[] } }
-  >;
+  levels: Record<string, { status: string; basis: string; blocker?: string | null; evidence?: LevelEvidence }>;
 }
 
 interface RunOptions {
@@ -135,9 +156,39 @@ function runScript(e2e: Record<string, unknown> | null, opts: RunOptions = {}): 
   if (result.error) {
     throw new Error(`ci-readiness child did not complete (watchdog 120000ms): ${result.error.message}\nstderr: ${result.stderr ?? ""}`);
   }
-  const rawArtifact = readFileSync(outPath, "utf8");
+  let rawArtifact: string;
+  try {
+    rawArtifact = readFileSync(outPath, "utf8");
+  } catch {
+    // A refused command line exits before writing anything. Surface WHY instead
+    // of a bare ENOENT, so a refusal is diagnosable rather than a test mystery.
+    throw new Error(
+      `ci-readiness wrote no artifact (exit ${String(result.status)})\n--- stdout ---\n${result.stdout ?? ""}\n--- stderr ---\n${result.stderr ?? ""}`,
+    );
+  }
   const artifact = JSON.parse(rawArtifact) as ReadinessArtifact;
   return { exitCode: result.status, artifact, rawArtifact, dir, stderr: result.stderr ?? "" };
+}
+
+/**
+ * Runs the real script and returns the RAW process result WITHOUT reading an
+ * artifact. Used for the CLI-schema refusals, which exit before writing one.
+ */
+function runScriptRaw(e2e: Record<string, unknown>, opts: RunOptions = {}): { exitCode: number | null; stdout: string; stderr: string } {
+  const dir = mkdtempSync(join(tmpdir(), "r0-f6-raw-"));
+  CREATED.push(dir);
+  const e2ePath = join(dir, "e2e.json");
+  writeFileSync(e2ePath, JSON.stringify(e2e), "utf8");
+  const shimDir = join(dir, "bin");
+  mkdirSync(shimDir);
+  writeFileSync(join(shimDir, "pnpm.cmd"), "@echo off\r\nexit /b 0\r\n", "utf8");
+  writeFileSync(join(shimDir, "pnpm"), "#!/bin/sh\nexit 0\n", "utf8");
+  const result = spawnSync(
+    process.execPath,
+    [SCRIPT, "--e2e", e2ePath, "--out", join(dir, "readiness.json"), "--os-label", opts.osLabel ?? "windows-local", ...(opts.extraArgs ?? [])],
+    { cwd: REPO_ROOT, encoding: "utf8", timeout: 120_000, env: { ...process.env, PATH: `${shimDir};${process.env["PATH"] ?? ""}` } },
+  );
+  return { exitCode: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
 /**
@@ -236,6 +287,163 @@ function forgedF3E2e(): Record<string, unknown> {
     },
     readiness: { productionOfflineReadiness: { executionKind: "REAL_DUAL_PINNED_BUILD" } },
   };
+}
+
+// ---------------------------------------------------------------------------
+// S6/F3 — a COMPLETE, self-consistent raw evidence bundle.
+//
+// This is the bundle S4 is contracted to keep (plan §10.2): the bundle's OWN run
+// identity, both arm build identities, a schedule, and the per-arm A6 artifacts
+// (`manifest.json` / `verifier.json` / `security.json`) whose bytes are what the
+// verifier re-reads. `tamper` mutates files AFTER the digests were computed, so a
+// tampered artifact is genuinely detectable rather than merely self-inconsistent.
+// ---------------------------------------------------------------------------
+
+const BUNDLE_SCHEMA = "prereg-readiness-evidence-v1";
+const BUNDLE_EXECUTOR_ID = "prereg-arm-executor-v1";
+const BUNDLE_CASE_ID = "reg-12-csv-parse";
+
+interface BundleSpec {
+  runId: string;
+  attempt: number;
+  platform: string;
+  driverSha: string;
+  armRunIds?: [string, string];
+  sourceShas?: [string, string];
+  buildDigests?: [string, string];
+  withBudget?: boolean;
+  /** Applied to the on-disk files AFTER all digests were computed. */
+  tamper?: (paths: Record<string, string>) => void;
+  /** Rewrites `identity.json` after it was written. */
+  tamperIdentity?: (identity: Record<string, unknown>) => Record<string, unknown>;
+}
+
+interface Bundle {
+  root: string;
+  runId: string;
+  attempt: number;
+  platform: string;
+  driverSha: string;
+}
+
+const sha256 = (text: string): string => createHash("sha256").update(text, "utf8").digest("hex");
+
+function writeEvidenceBundle(parentDir: string, spec: BundleSpec): Bundle {
+  const root = join(parentDir, "evidence-root");
+  const armRunIds = spec.armRunIds ?? ["run-baseline-0", "run-candidate-0"];
+  const sourceShas = spec.sourceShas ?? ["1".repeat(40), "2".repeat(40)];
+  const buildDigests = spec.buildDigests ?? ["a".repeat(64), "b".repeat(64)];
+  const entryShas: [string, string] = ["c".repeat(64), "d".repeat(64)];
+  const armIds = ["baseline", "candidate"] as const;
+  const preregDigest = "e".repeat(64);
+  const planDigest = "f".repeat(64);
+  const files: Record<string, string> = {};
+
+  const identity: Record<string, unknown> = {
+    schemaVersion: BUNDLE_SCHEMA,
+    driverSha: spec.driverSha,
+    runId: spec.runId,
+    attempt: spec.attempt,
+    platform: spec.platform,
+    closuresDistinguishable: true,
+    arms: {
+      baseline: { sourceSha: sourceShas[0], buildDigest: buildDigests[0], entrySha256: entryShas[0], clean: true },
+      candidate: { sourceSha: sourceShas[1], buildDigest: buildDigests[1], entrySha256: entryShas[1], clean: true },
+    },
+  };
+  files["identity.json"] = `${JSON.stringify(spec.tamperIdentity ? spec.tamperIdentity(identity) : identity)}\n`;
+
+  const scheduleArms = armIds.map((armId, i) => {
+    const armRunId = armRunIds[i]!;
+    const manifestText = `${JSON.stringify({
+      schemaVersion: "prereg-run-manifest-v1",
+      executorId: BUNDLE_EXECUTOR_ID,
+      preregistrationDigest: preregDigest,
+      planDigest,
+      armRunId,
+      armId,
+      caseId: BUNDLE_CASE_ID,
+      repetition: 1,
+      orderIndex: i,
+      armBuildDigest: buildDigests[i],
+      armEntrySha256: entryShas[i],
+      armProbe: "r97-arm-probe-v1",
+    })}\n`;
+    const verifierText = `${JSON.stringify({ schemaVersion: "prereg-run-verifier-v1", verifiedCompletion: true, status: "passed", grade: "strong", violations: [] })}\n`;
+    const securityText = `${JSON.stringify({ schemaVersion: "prereg-run-security-v1", violations: 0 })}\n`;
+    files[`evidence/${armRunId}/manifest.json`] = manifestText;
+    files[`evidence/${armRunId}/verifier.json`] = verifierText;
+    files[`evidence/${armRunId}/security.json`] = securityText;
+    return {
+      armRunId,
+      armId,
+      caseId: BUNDLE_CASE_ID,
+      repetition: 1,
+      orderIndex: i,
+      preregistrationDigest: preregDigest,
+      planDigest,
+      evidence: {
+        executorId: BUNDLE_EXECUTOR_ID,
+        traceDigest: sha256(manifestText),
+        verifiedCompletion: true,
+        securityViolations: 0,
+        activationEvidenceDigest: null,
+      },
+    };
+  });
+  files["schedule.json"] = `${JSON.stringify({ schemaVersion: BUNDLE_SCHEMA, arms: scheduleArms })}\n`;
+
+  if (spec.withBudget === true) {
+    const entries = [
+      { armRunId: armRunIds[0], arm: "baseline", caseId: BUNDLE_CASE_ID, repetition: 1, requestId: "rq-b", attemptId: 0, reservationId: "rs-b", basis: "MEASURED", inputTokens: 100, outputTokens: 20, reservedInputTokens: null, reservedOutputTokens: null, chargedTotalTokens: 120, outcomeUnknown: false },
+      { armRunId: armRunIds[1], arm: "candidate", caseId: BUNDLE_CASE_ID, repetition: 1, requestId: "rq-c", attemptId: 0, reservationId: "rs-c", basis: "MEASURED", inputTokens: 40, outputTokens: 20, reservedInputTokens: null, reservedOutputTokens: null, chargedTotalTokens: 60, outcomeUnknown: false },
+    ];
+    files["cost-journal.json"] = `${JSON.stringify({ schemaVersion: "tool-call-efficiency-cost-journal-v2", entries })}\n`;
+    files["aggregate.json"] = `${JSON.stringify({ schemaVersion: "prereg-aggregate-v1", cost: { totalTokens: 180, deltaTokens: -60 } })}\n`;
+  }
+
+  const paths: Record<string, string> = {};
+  for (const [rel, text] of Object.entries(files)) {
+    const abs = join(root, rel);
+    mkdirSync(dirname(abs), { recursive: true });
+    writeFileSync(abs, text, "utf8");
+    paths[rel] = abs;
+  }
+  spec.tamper?.(paths);
+  return { root, runId: spec.runId, attempt: spec.attempt, platform: spec.platform, driverSha: spec.driverSha };
+}
+
+/** The E2E artifact that points at a REAL bundle (the positive case). */
+function realBundleE2e(bundle: Bundle): Record<string, unknown> {
+  return {
+    ...realE2e(),
+    ciRunSha: bundle.driverSha,
+    runId: bundle.runId,
+    attempt: bundle.attempt,
+    platform: bundle.platform,
+    evidenceRoot: bundle.root,
+  };
+}
+
+/** Runs the real script over a bundle-backed artifact with the matching CLI inputs. */
+function runRealBundle(
+  e2e: Record<string, unknown>,
+  bundle: Bundle,
+  extra: string[] = [],
+): RunResult {
+  return runScript(e2e, {
+    extraArgs: [
+      "--run-id",
+      bundle.runId,
+      "--attempt",
+      String(bundle.attempt),
+      "--platform",
+      bundle.platform,
+      "--evidence-root",
+      bundle.root,
+      ...extra,
+    ],
+  });
 }
 
 describe("R7/F6 — readiness comes from a structured kind + verified evidence, never from prose", () => {
@@ -404,7 +612,7 @@ describe("R7/F6 — readiness comes from a structured kind + verified evidence, 
     const { artifact } = runScript(kindE2e("REAL_DUAL_PINNED_BUILD"));
     expect(artifact.executionKind).toBe("REAL_DUAL_PINNED_BUILD");
     expect(artifact.levels["realBuildOfflineReady"]?.status).toBe("NOT_PROVEN");
-    expect(artifact.levels["realBuildOfflineReady"]?.evidence?.failures.length ?? 0).toBeGreaterThan(0);
+    expect((artifact.levels["realBuildOfflineReady"]?.evidence?.failures ?? []).length).toBeGreaterThan(0);
   });
 
   it("R7-F6-M2: a REAL declaration for a DIFFERENT SHA must not upgrade", () => {
@@ -480,7 +688,13 @@ describe("R7/F6 — readiness comes from a structured kind + verified evidence, 
   });
 
   it("R7-F6-P: the COMPLETE REAL evidence is required and IS sufficient — PASS (the path is not dead code)", () => {
-    const { artifact } = runReal(realE2e());
+    const dir = mkdtempSync(join(tmpdir(), "r0-f6-real-"));
+    CREATED.push(dir);
+    // S6/F3 — "complete" now means a COMPLETE RAW EVIDENCE BUNDLE, not a complete
+    // set of self-reported fields. This is the positive case that proves the REAL
+    // path is reachable rather than dead code.
+    const bundle = writeEvidenceBundle(dir, { runId: "36540000000", attempt: 1, platform: "windows", driverSha: HEAD, withBudget: true });
+    const { artifact } = runRealBundle(realBundleE2e(bundle), bundle);
     expect(artifact.executionKind).toBe("REAL_DUAL_PINNED_BUILD");
     expect(artifact.ciRunId).toBe("36540000000");
     expect(artifact.expectedSha).toBe(HEAD);
@@ -488,9 +702,242 @@ describe("R7/F6 — readiness comes from a structured kind + verified evidence, 
     expect(artifact.levels["realBuildOfflineReady"]?.status).toBe("PASS");
     expect(artifact.levels["realBuildOfflineReady"]?.blocker).toBeNull();
     expect(artifact.levels["realBuildOfflineReady"]?.evidence?.failures).toEqual([]);
+    // The verifier coverage is DERIVED from the per-arm records, not self-reported.
+    expect(artifact.levels["realBuildOfflineReady"]?.evidence?.bundle?.derivedVerifierCoverage).toEqual({ verified: 2, total: 2 });
+    // S6 — budgetEvidenceReady is COMPUTED. The raw journal reconciles, but the
+    // request/dispatch cross-binding is S4's contract and does not exist yet, so
+    // this level stays NOT_PROVEN with that dimension named. It must NOT be
+    // promoted to PASS because the code was written.
+    expect(artifact.levels["budgetEvidenceReady"]?.status).toBe("NOT_PROVEN");
+    expect(artifact.levels["budgetEvidenceReady"]?.evidence?.journalBinding).toBe("MEASURED");
+    expect(artifact.levels["budgetEvidenceReady"]?.evidence?.requestDispatchBinding).toBe("NOT_PROVEN");
+    expect(artifact.levels["budgetEvidenceReady"]?.blocker).toContain("REQUEST_DISPATCH_JOURNAL_NOT_BOUND");
     // A REAL basis still does not authorize money or promotion.
     expect(artifact.levels["paidExperimentRun"]?.status).toBe("NOT_RUN");
     expect(artifact.levels["championPromotion"]?.status).toBe("NOT_RUN");
+  });
+});
+
+/**
+ * S6 — plan(20260929-015956).md §10. The raw-evidence verifier's refusal matrix.
+ *
+ * Every test below is a NEGATIVE that must refuse for its OWN reason, so the
+ * classifier cannot be satisfied by a well-formed JSON shape. The positive case
+ * above (`R7-F6-P`) proves the same machinery renders PASS when the evidence is
+ * actually complete.
+ */
+describe("S6/F3 — readiness is computed from raw evidence, and each missing dimension refuses independently", () => {
+  /** A fresh complete bundle, so each test mutates exactly one dimension. */
+  function freshBundle(spec: Partial<BundleSpec> = {}): { dir: string; bundle: Bundle } {
+    const dir = mkdtempSync(join(tmpdir(), "r0-f6-bundle-"));
+    CREATED.push(dir);
+    const bundle = writeEvidenceBundle(dir, { runId: "36540000000", attempt: 1, platform: "windows", driverSha: HEAD, ...spec });
+    return { dir, bundle };
+  }
+
+  it("S6-A: the ARTIFACT must carry its own runId, attempt and platform", () => {
+    const { bundle } = freshBundle();
+    const base = realBundleE2e(bundle);
+
+    const noRunId = runRealBundle({ ...base, runId: undefined }, bundle);
+    expect(noRunId.artifact.levels["realBuildOfflineReady"]?.status).toBe("NOT_PROVEN");
+    expect(noRunId.artifact.levels["realBuildOfflineReady"]?.blocker).toContain("NO_ARTIFACT_RUN_ID");
+
+    const noAttempt = runRealBundle({ ...base, attempt: undefined }, bundle);
+    expect(noAttempt.artifact.levels["realBuildOfflineReady"]?.blocker).toContain("NO_ARTIFACT_ATTEMPT");
+
+    const noPlatform = runRealBundle({ ...base, platform: undefined }, bundle);
+    expect(noPlatform.artifact.levels["realBuildOfflineReady"]?.blocker).toContain("NO_ARTIFACT_PLATFORM");
+  });
+
+  it("S6-B: a wrong attempt or platform must refuse even when everything else is complete", () => {
+    const { bundle } = freshBundle();
+    const base = realBundleE2e(bundle);
+
+    const wrongAttempt = runRealBundle({ ...base, attempt: 2 }, bundle);
+    expect(wrongAttempt.artifact.levels["realBuildOfflineReady"]?.status).toBe("NOT_PROVEN");
+    expect(wrongAttempt.artifact.levels["realBuildOfflineReady"]?.blocker).toContain("ATTEMPT_MISMATCH");
+
+    const wrongPlatform = runRealBundle({ ...base, platform: "ubuntu" }, bundle);
+    expect(wrongPlatform.artifact.levels["realBuildOfflineReady"]?.blocker).toContain("PLATFORM_MISMATCH");
+  });
+
+  it("S6-C: a bundle for a DIFFERENT driver SHA must refuse", () => {
+    const { bundle } = freshBundle({ driverSha: "9".repeat(40) });
+    const { artifact } = runRealBundle({ ...realBundleE2e(bundle), ciRunSha: HEAD }, bundle);
+    expect(artifact.levels["realBuildOfflineReady"]?.status).toBe("NOT_PROVEN");
+    const reasons = `${artifact.levels["realBuildOfflineReady"]?.blocker ?? ""}`;
+    expect(reasons).toContain("IDENTITY_SHA_MISMATCH");
+  });
+
+  it("S6-D: a MALFORMED or mismatched build digest must refuse", () => {
+    // (a) self-reported digest is not a legal sha256
+    const malformed = freshBundle({ buildDigests: ["x", "b".repeat(64)] });
+    const a = runRealBundle(realBundleE2e(malformed.bundle), malformed.bundle);
+    expect(a.artifact.levels["realBuildOfflineReady"]?.blocker).toContain("BASELINE_BUILD_DIGEST_MALFORMED");
+
+    // (b) the artifact's digest does not match the raw identity file
+    const mismatch = freshBundle();
+    const e2e = realBundleE2e(mismatch.bundle);
+    const dualBuild = e2e["dualBuild"] as Record<string, Record<string, string>>;
+    dualBuild["baselineArm"]!["buildDigest"] = "9".repeat(64);
+    const b = runRealBundle(e2e, mismatch.bundle);
+    expect(b.artifact.levels["realBuildOfflineReady"]?.blocker).toContain("BASELINE_BUILD_DIGEST_MISMATCH");
+  });
+
+  it("S6-E: a DELETED per-arm verifier must refuse (a parsed schedule is not evidence)", () => {
+    const { bundle } = freshBundle({
+      tamper: (paths) => {
+        rmSync(paths["evidence/run-baseline-0/verifier.json"]!, { force: true });
+      },
+    });
+    const { artifact } = runRealBundle(realBundleE2e(bundle), bundle);
+    expect(artifact.levels["realBuildOfflineReady"]?.status).toBe("NOT_PROVEN");
+    expect(artifact.levels["realBuildOfflineReady"]?.blocker).toContain("ARM_EVIDENCE_UNVERIFIED");
+    expect(artifact.levels["realBuildOfflineReady"]?.blocker).toContain("verifier.json");
+  });
+
+  it("S6-F: a TAMPERED manifest must refuse even though its declared digest is unchanged", () => {
+    const { bundle } = freshBundle({
+      tamper: (paths) => {
+        const p = paths["evidence/run-candidate-0/manifest.json"]!;
+        writeFileSync(p, `${readFileSync(p, "utf8").replace('"armId":"candidate"', '"armId":"baseline"')}`, "utf8");
+      },
+    });
+    const { artifact } = runRealBundle(realBundleE2e(bundle), bundle);
+    expect(artifact.levels["realBuildOfflineReady"]?.status).toBe("NOT_PROVEN");
+    expect(artifact.levels["realBuildOfflineReady"]?.blocker).toContain("ARM_EVIDENCE_UNVERIFIED");
+  });
+
+  it("S6-G: identical arm closures / identical source SHAs must refuse", () => {
+    const { bundle } = freshBundle({ sourceShas: ["1".repeat(40), "1".repeat(40)] });
+    const { artifact } = runRealBundle(realBundleE2e(bundle), bundle);
+    expect(artifact.levels["realBuildOfflineReady"]?.status).toBe("NOT_PROVEN");
+    expect(artifact.levels["realBuildOfflineReady"]?.blocker).toContain("ARMS_IDENTICAL");
+  });
+
+  it("S6-H: a path that escapes the evidence root must refuse", () => {
+    const { dir, bundle } = freshBundle();
+    // A schedule naming an arm run OUTSIDE the root.
+    const schedulePath = join(bundle.root, "schedule.json");
+    const schedule = JSON.parse(readFileSync(schedulePath, "utf8")) as { arms: { armRunId: string }[] };
+    schedule.arms[0]!.armRunId = "../../outside-the-root";
+    writeFileSync(schedulePath, `${JSON.stringify(schedule)}\n`, "utf8");
+    const { artifact } = runRealBundle(realBundleE2e(bundle), bundle);
+    const reasons = `${artifact.levels["realBuildOfflineReady"]?.blocker ?? ""}`;
+    expect(artifact.levels["realBuildOfflineReady"]?.status).toBe("NOT_PROVEN");
+    expect(reasons).toMatch(/PATH_REJECTED|PATH_ESCAPE/);
+    expect(dir.length).toBeGreaterThan(0);
+  });
+
+  it("S6-I: an unknown CLI argument is REFUSED, never silently ignored", () => {
+    const { bundle } = freshBundle();
+    // A typo'd flag must be an ERROR, not a silently-absent input: otherwise a
+    // misconfigured gate reads exactly like a weaker gate.
+    const typo = runScriptRaw(realBundleE2e(bundle), { extraArgs: ["--run-id", bundle.runId, "--evidnce-root", bundle.root] });
+    expect(typo.exitCode).toBe(2);
+    expect(typo.stderr).toContain("unknown argument: --evidnce-root");
+
+    // A known flag with no value is refused too.
+    const valueless = runScriptRaw(realBundleE2e(bundle), { extraArgs: ["--run-id", bundle.runId, "--evidence-root"] });
+    expect(valueless.exitCode).toBe(2);
+    expect(valueless.stderr).toContain("--evidence-root requires a value");
+
+    // A bare positional is refused.
+    const positional = runScriptRaw(realBundleE2e(bundle), { extraArgs: ["--run-id", bundle.runId, "stray"] });
+    expect(positional.exitCode).toBe(2);
+    expect(positional.stderr).toContain("unexpected positional argument: stray");
+  });
+
+  it("S6-J: report mode exits 0 while `--strict` exits non-zero when a required level is unmet", () => {
+    const { bundle } = freshBundle();
+    const e2e = realBundleE2e(bundle);
+
+    // REPORT MODE: the artifact was written, so exit 0 — the levels are the verdict.
+    const report = runScript(e2e, {
+      extraArgs: ["--run-id", bundle.runId, "--attempt", "1", "--platform", "windows", "--evidence-root", bundle.root],
+    });
+    expect(report.exitCode).toBe(0);
+    expect(report.artifact.inputs["strict"]).toBe(false);
+
+    // GATE MODE: budgetEvidenceReady is NOT_PROVEN (the request/dispatch binding
+    // is unbound), so a strict gate on it MUST fail.
+    const strict = runScript(e2e, {
+      extraArgs: ["--run-id", bundle.runId, "--attempt", "1", "--platform", "windows", "--evidence-root", bundle.root, "--strict"],
+    });
+    expect(strict.exitCode).toBe(1);
+    expect(strict.artifact.inputs["strict"]).toBe(true);
+    expect(strict.artifact.inputs["requiredLevels"]).toEqual(["fixtureProtocolReady", "realBuildOfflineReady", "budgetEvidenceReady"]);
+
+    // A strict gate over ONLY the levels that really passed must exit 0.
+    const narrow = runScript(e2e, {
+      extraArgs: ["--run-id", bundle.runId, "--attempt", "1", "--platform", "windows", "--evidence-root", bundle.root, "--strict", "--require", "fixtureProtocolReady,realBuildOfflineReady"],
+    });
+    expect(narrow.exitCode, JSON.stringify(narrow.artifact.levels["realBuildOfflineReady"])).toBe(0);
+  });
+
+  it("S6-K: an UNBOUND budget dimension is NOT_PROVEN with its reason, never flattened to zero", () => {
+    // No aggregate / cost-journal: the journal binding is explicitly missing.
+    const { bundle } = freshBundle();
+    const { artifact } = runRealBundle(realBundleE2e(bundle), bundle);
+    const level = artifact.levels["budgetEvidenceReady"];
+    expect(level?.status).toBe("NOT_PROVEN");
+    expect(level?.evidence?.journalBinding).toBe("NOT_PROVEN");
+    expect(level?.evidence?.journalBindingReason).toContain("JOURNAL_BINDING_NOT_PROVEN");
+    expect(level?.evidence?.requestDispatchBinding).toBe("NOT_PROVEN");
+    expect(level?.evidence?.budget).toBeNull();
+  });
+
+  it("S6-L: an unknown-usage journal entry keeps its conservative upper bound and is not reported as measured", () => {
+    const { bundle } = freshBundle({
+      withBudget: true,
+      tamper: (paths) => {
+        const p = paths["cost-journal.json"]!;
+        const journal = JSON.parse(readFileSync(p, "utf8")) as { entries: Record<string, unknown>[] };
+        journal.entries[1] = {
+          ...journal.entries[1],
+          basis: "RESERVED_UPPER_BOUND",
+          inputTokens: null,
+          outputTokens: null,
+          reservedInputTokens: 40,
+          reservedOutputTokens: 20,
+          chargedTotalTokens: 60,
+          outcomeUnknown: true,
+        };
+        writeFileSync(p, `${JSON.stringify(journal)}\n`, "utf8");
+      },
+    });
+    const { artifact } = runRealBundle(realBundleE2e(bundle), bundle);
+    const level = artifact.levels["budgetEvidenceReady"];
+    expect(level?.status).toBe("NOT_PROVEN");
+    expect(level?.evidence?.journalBinding).toBe("NOT_PROVEN");
+    expect(level?.evidence?.journalBindingReason).toContain("JOURNAL_UNKNOWN_USAGE");
+    const budget = level?.evidence?.budget as Record<string, number> | null;
+    expect(budget?.["reservedUpperBound"]).toBe(60);
+    expect(budget?.["unknownEntries"]).toBe(1);
+    expect(budget?.["measuredTotal"]).toBe(120);
+  });
+
+  it("S6-M: a DUPLICATE journal attempt and an unknown arm are both refused, on the BUDGET level only", () => {
+    const { bundle } = freshBundle({
+      withBudget: true,
+      tamper: (paths) => {
+        const p = paths["cost-journal.json"]!;
+        const journal = JSON.parse(readFileSync(p, "utf8")) as { entries: Record<string, unknown>[] };
+        journal.entries.push({ ...journal.entries[0] });
+        journal.entries.push({ ...journal.entries[0], armRunId: "run-not-in-schedule" });
+        writeFileSync(p, `${JSON.stringify(journal)}\n`, "utf8");
+      },
+    });
+    const { artifact } = runRealBundle(realBundleE2e(bundle), bundle);
+    // A journal defect is a BUDGET fact: it must be reported on the budget level
+    // and must NOT make the REAL-BUILD level unproven (the levels stay independent).
+    expect(artifact.levels["realBuildOfflineReady"]?.status).toBe("PASS");
+    const budget = artifact.levels["budgetEvidenceReady"];
+    const reasons = `${budget?.blocker ?? ""} ${budget?.evidence?.journalBindingReason ?? ""}`;
+    expect(budget?.status).toBe("NOT_PROVEN");
+    expect(reasons).toContain("JOURNAL_DUPLICATE_ATTEMPT");
+    expect(reasons).toContain("JOURNAL_UNKNOWN_ARM");
   });
 });
 
