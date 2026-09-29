@@ -81,7 +81,7 @@
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -117,6 +117,12 @@ const TEST_ONLY_API_KEY = "TEST_ONLY-not-a-real-key";
 const R97_LEDGER_FILE = "budget-ledger.json";
 
 const SCHEMA = "prereg-production-offline-e2e-v1";
+/** S6b/Phase H — the schema `scripts/e4/readiness-evidence-verify.mjs` requires
+ *  in EVERY bundle root file (`identity.json`, `schedule.json`, `aggregate.json`,
+ *  `cost-journal.json`). Declared here as a literal because the verifier's own
+ *  export is ESM-only and this script must not import it (that would make the
+ *  producer depend on the verifier it is being checked by). */
+const READINESS_EVIDENCE_SCHEMA = "prereg-readiness-evidence-v1";
 const WORKSPACE = join(REPO_ROOT, ".ci", "prereg-production-e2e");
 
 /**
@@ -368,6 +374,31 @@ function sha256Hex(text) {
 
 function git(args) {
   return execFileSync("git", ["-C", REPO_ROOT, ...args], { encoding: "utf8" }).trim();
+}
+
+/**
+ * S6b/Phase H — a real checkout's HEAD, or `null`.
+ *
+ * A `git -C <dir> rev-parse HEAD` on a directory that is NOT a git checkout does
+ * NOT fail: git walks UP to the enclosing repository and returns THAT commit. The
+ * two synthetic arm checkouts are plain directories inside the repo, so a naive
+ * call returns the SAME sha for both and the bundle declares a comparable pair
+ * where none exists (the verifier correctly flags `ARMS_IDENTICAL`). That is a
+ * FABRICATED identity, so this refuses it: the directory must be its own
+ * repository ROOT, otherwise there is no per-arm source identity to report.
+ */
+function gitShaOf(dir) {
+  if (typeof dir !== "string" || dir === "") return null;
+  try {
+    const top = execFileSync("git", ["-C", dir, "rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
+    // The arm dir must BE the repo root (or a path equal to it after
+    // normalisation). Anything else means git answered for an ANCESTOR repo.
+    if (resolve(top) !== resolve(dir)) return null;
+    const sha = execFileSync("git", ["-C", dir, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+    return /^[0-9a-f]{40}$/.test(sha) ? sha : null;
+  } catch {
+    return null;
+  }
 }
 
 function paidEnvironmentPresent() {
@@ -988,10 +1019,19 @@ function ledgerViewFromFile(budgetDir) {  const file = JSON.parse(readFileSync(j
   };
 }
 
-async function runPositiveExecution(dir, env) {
+async function runPositiveExecution(dir, env, runIdentity) {
   const evalMod = await import(pathToFileURL(EVAL_ENTRY).href);
   const runnerMod = await import(pathToFileURL(RUNNER_ENTRY).href);
   const identityMod = await import(pathToFileURL(IDENTITY_ENTRY).href);
+
+  // S6b/Phase H — the identity the bundle root must carry. Both arm SHAs are
+  // READ from the real arm checkouts this phase was handed, never invented; the
+  // driver SHA is this repo's own HEAD.
+  const armSourceSha = { baseline: gitShaOf(env.R97_ARM_BASELINE_DIR), candidate: gitShaOf(env.R97_ARM_CANDIDATE_DIR) };
+  const driverSha = (() => {
+    const sha = git(["rev-parse", "HEAD"]);
+    return typeof sha === "string" && /^[0-9a-f]{40}$/.test(sha) ? sha : null;
+  })();
 
   // 1. the artifact, built IN-PROCESS from the same frozen selection + env.
   const { config } = await selectionEvidence(dir, env);
@@ -1158,6 +1198,32 @@ async function runPositiveExecution(dir, env) {
   const independent = independentArmTokens(journal);
   const journalChargedTokens = journal.chargedTotalTokens;
 
+  // S6b/Phase H — the bundle ROOT files the readiness verifier reads. Written
+  // here because every input is in scope: the run records (schedule + the arm
+  // manifests), the durable aggregate, and the cost journal read back from disk.
+  const bundleRecords = run.records.map((r) => ({
+    armRunId: r.armRunId,
+    armId: r.armId,
+    caseId: r.caseId,
+    repetition: r.repetition,
+    orderIndex: r.orderIndex,
+    preregistrationDigest: r.preregistrationDigest,
+    planDigest: r.planDigest,
+    declaredEvidence: r.outcome.evidence,
+    manifestPath: join(evidenceRoot, r.armRunId, "manifest.json"),
+    sourceSha: armSourceSha[r.armId] ?? null,
+  }));
+  const bundle = writeEvidenceBundleRoot(evidenceRoot, {
+    schemaVersion: READINESS_EVIDENCE_SCHEMA,
+    driverSha,
+    runId: runIdentity.identity.runId ?? null,
+    attempt: runIdentity.identity.attempt ?? null,
+    platform: runIdentity.identity.platform ?? null,
+    records: bundleRecords,
+    aggregate,
+    journal,
+  });
+
   const statuses = run.records.reduce((acc, r) => {
     acc[r.outcome.status] = (acc[r.outcome.status] ?? 0) + 1;
     return acc;
@@ -1171,8 +1237,7 @@ async function runPositiveExecution(dir, env) {
     logicalRuns: artifact.schedule.logicalRuns,
     scheduledArmRuns: run.records.length,
     armStatuses: statuses,
-    physicalProviderCalls: fake.entered(),
-    ledgerCommitted: ledgerView.committed,
+    physicalProviderCalls: fake.entered(),    ledgerCommitted: ledgerView.committed,
     ledgerRemaining: ledgerView.remaining,
     journalChargedTokens,
     // N7/F3 — total consumption and the candidate-vs-baseline CHANGE, each
@@ -1211,6 +1276,163 @@ async function runPositiveExecution(dir, env) {
       && costMatchesIndependent(aggregate.cost, independent),
   };
   return out;
+}
+
+/**
+ * S6b/Phase H — WRITE THE EVIDENCE-BUNDLE ROOT FILES.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * `scripts/e4/readiness-evidence-verify.mjs` declares the bundle contract
+ * (`EVIDENCE_BUNDLE_FILES`, L53-60): it reads `identity.json`, `schedule.json`,
+ * `aggregate.json` and `cost-journal.json` from the evidence ROOT, and the
+ * per-arm artifacts from `<root>/evidence/<armRunId>/`. This producer used to
+ * write ONLY the per-arm layer, so `--evidence-root` re-verification failed with
+ * `MISSING_RAW_EVIDENCE: identity.json …; schedule.json …` — a structurally
+ * incomplete bundle, not a path bug.
+ *
+ * NOTHING HERE IS INVENTED. Every value is either
+ *   - measured by this run (SHAs, digests, the aggregate, the ledger view), or
+ *   - READ BACK from the bytes the campaign/budget already wrote (the per-arm
+ *     manifests and the durable cost journal's own `entries` array).
+ * A field this run did not measure is OMITTED, never defaulted — the consumer
+ * reports a named problem for a missing field, which is the honest outcome.
+ *
+ * WHAT IS DELIBERATELY STILL ABSENT: there is no TOOL-DISPATCH journal
+ * (`dispatch-journal.json`). Nothing in this build produces one, so
+ * `budgetEvidenceReady` stays NOT_PROVEN with `DISPATCH_JOURNAL_MISSING`. That is
+ * expected; fabricating one to force a PASS is the F3 defect.
+ */
+function writeEvidenceBundleRoot(evidenceRoot, ctx) {
+  const write = (name, value) => {
+    writeFileSync(join(evidenceRoot, name), `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  };
+  const problems = [];
+
+  // --- the per-arm layer, in the layout the verifier expects ---------------
+  // `readiness-evidence-verify.mjs` reads the per-arm artifacts from
+  // `<evidenceRoot>/evidence/<armRunId>/` (EVIDENCE_BUNDLE_FILES.armEvidenceDir),
+  // while the campaign writes them FLAT at `<resultsDir>/evidence/<armRunId>/`.
+  // This bundle root IS that `evidence` directory, so the arms must be nested one
+  // level deeper under it. Without this the verifier reports every arm as
+  // `ARM_EVIDENCE_UNVERIFIED: artifact manifest.json is missing or unreadable`.
+  // The copies are REAL BYTES (not rewritten), so each arm's manifest still
+  // hashes to what the campaign wrote.
+  const armEvidenceDir = join(evidenceRoot, "evidence");
+  mkdirSync(armEvidenceDir, { recursive: true });
+  for (const r of ctx.records) {
+    const from = join(evidenceRoot, r.armRunId);
+    const to = join(armEvidenceDir, r.armRunId);
+    if (!existsSync(from)) continue;
+    mkdirSync(to, { recursive: true });
+    for (const f of ["manifest.json", "verifier.json", "security.json", "activation.json"]) {
+      const src = join(from, f);
+      if (existsSync(src)) copyFileSync(src, join(to, f));
+    }
+  }
+
+  // --- identity.json ------------------------------------------------------
+  // `arms.<id>.{sourceSha,buildDigest,entrySha256,clean}` are read from the ARM
+  // MANIFESTS the campaign wrote (a real sha256 of the arm's own entry bytes),
+  // not re-derived here. `clean` is TRUE because `require-clean` is a
+  // precondition of this whole phase (the observer refuses a dirty tree), and
+  // the arm checkouts are freshly materialised inside the disposable workspace.
+  const armIdentity = (armId) => {
+    const record = ctx.records.find((r) => r.armId === armId && r.manifestPath !== null);
+    if (record === undefined) {
+      problems.push(`identity: no manifest was written for the ${armId} arm`);
+      return null;
+    }
+    let man;
+    try {
+      man = JSON.parse(readFileSync(record.manifestPath, "utf8"));
+    } catch (err) {
+      problems.push(`identity: the ${armId} manifest is unreadable (${err instanceof Error ? err.message : String(err)})`);
+      return null;
+    }
+    const entry = {
+      buildDigest: man.armBuildDigest,
+      entrySha256: man.armEntrySha256,
+      clean: true,
+      probe: man.armProbe,
+    };
+    const sha = record.sourceSha;
+    if (typeof sha === "string" && /^[0-9a-f]{40}$/.test(sha)) entry.sourceSha = sha;
+    else problems.push(`identity: the ${armId} arm has no 40-hex sourceSha`);
+    return entry;
+  };
+  const baseline = armIdentity("baseline");
+  const candidate = armIdentity("candidate");
+
+  const identity = {
+    schemaVersion: ctx.schemaVersion,
+    driverSha: ctx.driverSha,
+    runId: ctx.runId,
+    attempt: ctx.attempt,
+    platform: ctx.platform,
+    executionBackend: "in-process",
+    // The two arm builds are distinguishable ONLY if their closure digests
+    // differ; that is a MEASURED comparison, not an assertion.
+    closuresDistinguishable:
+      baseline !== null &&
+      candidate !== null &&
+      typeof baseline.buildDigest === "string" &&
+      typeof candidate.buildDigest === "string" &&
+      baseline.buildDigest !== candidate.buildDigest,
+    arms: {
+      ...(baseline !== null ? { baseline } : {}),
+      ...(candidate !== null ? { candidate } : {}),
+    },
+  };
+  if (ctx.driverSha === null) problems.push("identity: the run has no 40-hex driver SHA");
+  write("identity.json", identity);
+
+  // --- schedule.json ------------------------------------------------------
+  // The schedule the campaign ACTUALLY executed, taken from the run records.
+  const schedule = {
+    schemaVersion: ctx.schemaVersion,
+    arms: ctx.records.map((r) => ({
+      armRunId: r.armRunId,
+      armId: r.armId,
+      caseId: r.caseId,
+      repetition: r.repetition,
+      orderIndex: r.orderIndex,
+      preregistrationDigest: r.preregistrationDigest,
+      planDigest: r.planDigest,
+      evidence: r.declaredEvidence,
+    })),
+  };
+  write("schedule.json", schedule);
+
+  // --- aggregate.json -----------------------------------------------------
+  const cost = ctx.aggregate.cost;
+  write("aggregate.json", {
+    schemaVersion: ctx.schemaVersion,
+    decision: ctx.aggregate.decision.decision,
+    decisionReason: ctx.aggregate.decision.reason ?? null,
+    arms: ctx.aggregate.arms ?? null,
+    cost: {
+      totalTokens: cost.totalTokens,
+      baselineTokens: cost.baselineTokens,
+      candidateTokens: cost.candidateTokens,
+      deltaTokens: cost.deltaTokens,
+      basis: cost.basis,
+      reservedUpperBound: cost.reservedUpperBound,
+    },
+  });
+
+  // --- cost-journal.json --------------------------------------------------
+  // The durable journal's OWN `entries`, copied verbatim from the file the
+  // budget wrote. `trustedCounterfactual` is carried so the consumer can see the
+  // strategy's direction without this script reinterpreting a single entry.
+  write("cost-journal.json", {
+    schemaVersion: ctx.schemaVersion,
+    journalSchemaVersion: ctx.journal.schemaVersion ?? null,
+    chargedTotalTokens: ctx.journal.chargedTotalTokens,
+    entries: ctx.journal.entries ?? [],
+  });
+
+  return { problems, armCount: schedule.arms.length };
 }
 
 // ---------------------------------------------------------------------------
@@ -1631,6 +1853,10 @@ async function main() {
   // positive phases never ran (dirty tree / blocked). `dualBuild` is derived from
   // these and is OMITTED entirely when they do not exist.
   let armDirs = null;
+  // S6b/Phase H — the run identity, collected ONCE and used both for the bundle
+  // root's `identity.json` and (below) for the report's own top-level fields, so
+  // the two can never disagree.
+  const runIdentityForBundle = collectRunIdentity(parsed);
 
   try {
     negative = await runNegativeMatrix(stub, WORKSPACE);
@@ -1665,7 +1891,7 @@ async function main() {
         R97_CAMPAIGN_CLAIMS_DIR: claimsDir,
       };
       positiveCert = await runPositiveCertification(stub, WORKSPACE, env);
-      positiveExec = await runPositiveExecution(WORKSPACE, env);
+      positiveExec = await runPositiveExecution(WORKSPACE, env, runIdentityForBundle);
       // B5 — the SAME two frozen arm builds, but the schedule is now driven by
       // the SHIPPED release CLI as a real subprocess. Its ONLY endpoint is the
       // loopback counting stub, reached through the `TEST_ONLY` sentinel key.
@@ -1692,7 +1918,7 @@ async function main() {
   // F3/E-R16 — the run identity and the dual-build block, each established from
   // REAL sources or omitted. `runIdentity.identity` is spread FIRST so a
   // fabricated `runId`/`attempt`/`platform` cannot shadow it later in the literal.
-  const runIdentity = collectRunIdentity(parsed);
+  const runIdentity = runIdentityForBundle;
   const verifierFacts =
     positiveExec !== null && typeof positiveExec.evidenceVerified === "number"
       ? {
