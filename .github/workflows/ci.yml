@@ -1132,7 +1132,7 @@ jobs:
           --attempt "${{ github.run_attempt }}"
           --platform "${{ matrix.platform }}"
           --expect-sha "${{ github.sha }}"
-          --evidence-root .ci/r97-r98/readiness-evidence
+          --evidence-root .ci/prereg-production-e2e/pos-exec-runs/evidence
           --require fixtureProtocolReady
           --strict
 
@@ -1154,8 +1154,13 @@ jobs:
           # summary exists to prevent.
           path: |
             .ci/r97-r98/ci-readiness.json
-            .ci/r97-r98/readiness-evidence
-          if-no-files-found: warn
+            .ci/prereg-production-e2e/pos-exec-runs/evidence
+          # Was `if-no-files-found: warn`, which is how the bundle silently failed
+          # to upload and the joining job then refused with NO_RAW_EVIDENCE while
+          # this job still looked green (measured: the artifact was 1934 bytes —
+          # the JSON alone). `error` makes a missing bundle fail HERE, where it is
+          # actionable, rather than in the join.
+          if-no-files-found: error
 
       # -----------------------------------------------------------------------
       # N3 DIAGNOSTICS — publish the closed-loop phase failure and the failing
@@ -1599,6 +1604,18 @@ jobs:
       - name: Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
+      # The verifier re-derives the raw evidence, which needs the REAL A6 per-arm
+      # evidence verifier from `packages/evaluation/dist`. Measured on run
+      # 36530711327: without this the job refused with
+      #   "the A6 per-arm evidence verifier is unavailable (Cannot find module
+      #    '.../packages/evaluation/dist/index.js' ...); raw arm artifacts cannot
+      #    be verified"
+      # and exit 2. `continue-on-error` is deliberately NOT set: if the build
+      # fails, this job must fail rather than silently fall back to an unverified
+      # reading of the legs.
+      - name: Build (the verifier needs packages/evaluation/dist)
+        run: pnpm build
+
       # Each leg was uploaded as its OWN artifact with a platform/SHA/run/attempt
       # name, so download them into a per-leg directory. The verifier reads each
       # leg's `platform` field and refuses if it disagrees with the leg name —
@@ -1630,13 +1647,17 @@ jobs:
           # default. The default set is
           # ["fixtureProtocolReady","realBuildOfflineReady","budgetEvidenceReady"],
           # and BOTH of the latter two are legitimately NOT_PROVEN right now — no
-          # producer writes the `dualBuild` block and no producer writes the raw
-          # evidence bundle yet. Combined with `--strict` that makes the gate fail
-          # on every run for a recorded, known gap, which is not what this job is
-          # for. The script deliberately does not narrow its own default (a default
-          # that silently omits a level could hide a real gap elsewhere), so the
-          # requirement is spelled out HERE, exactly as the readiness step above
-          # spells out `--require fixtureProtocolReady,budgetEvidenceReady`.
+          # producer writes the `dualBuild` block and nothing in this repository
+          # writes a tool-dispatch journal. Combined with `--strict` that makes the
+          # gate fail on every run for a recorded, known gap, which is not what this
+          # job is for. The script deliberately does not narrow its own default (a
+          # default that silently omits a level could hide a real gap elsewhere), so
+          # the requirement is spelled out HERE.
+          #
+          # NOTE the asymmetry with the readiness step above: that one requires
+          # exactly `fixtureProtocolReady`, the same single level, for the same
+          # reason. I first required two levels there and the job failed on both
+          # platforms for a gap rather than a regression.
           #
           # `--require` is COMMA-SEPARATED, not repeated: a repeated flag is
           # refused loudly by design, because ci-readiness.mjs's arg() returns the
