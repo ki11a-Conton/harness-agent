@@ -1082,12 +1082,31 @@ jobs:
       # whole point of the F3 fix (commit 66082de).
       #
       # `--strict` makes an unmet required level a NONZERO exit. It is meaningful
-      # here only because `--require` is narrowed to the two levels CI can
-      # legitimately reach on this runner. `realBuildOfflineReady` is deliberately
-      # NOT required: nothing produces the `dualBuild` block yet (task-5, S3), so
-      # requiring it would fail the job for a known, recorded gap. The level still
-      # appears in the artifact as NOT_PROVEN with its reasons — reported, not
-      # hidden, and not silently promoted to PASS.
+      # only because `--require` is narrowed to the levels CI can legitimately
+      # reach on this runner. EXACTLY ONE level is required:
+      #
+      #   * `fixtureProtocolReady` — PASS here. The fixture arm now declares AND
+      #     HONOURS the versioned worker ABI, so the in-process positive campaign
+      #     really runs (measured: 124/124 scheduled arm runs, 124 physical calls,
+      #     124/124 verified with 0 unverified, operatorFactoryEntered 0).
+      #
+      # The other two are deliberately NOT required, because BOTH are honestly
+      # NOT_PROVEN and requiring either would fail the job every run for a recorded
+      # gap rather than for a regression:
+      #   * `realBuildOfflineReady` — nothing produces the `dualBuild` block yet, so
+      #     there is no real arm pair to certify.
+      #   * `budgetEvidenceReady` — the request/dispatch cross-binding is now a REAL
+      #     check with a reachable MEASURED path, but NOTHING IN THIS REPOSITORY
+      #     WRITES A TOOL-DISPATCH JOURNAL (`r5-real-formal.mjs` only COPIES
+      #     `dispatch*.json`), so `REQUEST_DISPATCH_JOURNAL_NOT_BOUND` /
+      #     `DISPATCH_JOURNAL_MISSING` correctly holds it at NOT_PROVEN.
+      #     I initially required this level too, and the job failed on both
+      #     platforms for exactly that reason — the gate was right and the
+      #     requirement was wrong. Wiring a real producer is what would justify
+      #     adding it back (tracked as task-10's follow-up).
+      #
+      # Both levels still appear in the artifact with their reasons — reported, not
+      # hidden, and never silently promoted to PASS.
       # -----------------------------------------------------------------------
       # Invocation notes that are easy to get wrong:
       #   * EVERYTHING ON ONE LINE. A folded `>` scalar joins the lines with
@@ -1114,7 +1133,7 @@ jobs:
           --platform "${{ matrix.platform }}"
           --expect-sha "${{ github.sha }}"
           --evidence-root .ci/r97-r98/readiness-evidence
-          --require fixtureProtocolReady,budgetEvidenceReady
+          --require fixtureProtocolReady
           --strict
 
       - name: Upload CI readiness artifact
