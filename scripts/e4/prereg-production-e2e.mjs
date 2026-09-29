@@ -95,10 +95,20 @@ const IDENTITY_ENTRY = join(REPO_ROOT, "apps", "cli", "dist", "prereg-execution-
  *  use its constant rather than a copy, so the two cannot drift apart. */
 const EXECUTOR_ENTRY = join(REPO_ROOT, "apps", "cli", "dist", "prereg-arm-executor.js");
 
-/** B3/B5 — the declared arm build entry the isolated worker loads. POSIX on
+/** R0/S1 — the declared arm build entry the isolated worker loads. POSIX on
  *  purpose: it must equal the `R97_ARM_BUILD_ENTRIES` row the executor compares
  *  against, and `path.join` accepts forward slashes on Windows too. */
 const ARM_ENTRY_REL = "apps/cli/dist/benchmark-command.js";
+/** R0/S1 Phase G — the absolute path of the same entry. The fixture arm imports
+ *  `R97_ARM_ABI` from here so its declared capability list cannot drift from the
+ *  one `prereg-arm-executor` requires. */
+const CLI_BENCHMARK_ENTRY = join(REPO_ROOT, "apps", "cli", "dist", "benchmark-command.js");
+/** Phase G — the built `@ar/tools` entry. The fixture arm needs it to construct a
+ *  REAL `ToolOrchestrator`, which is what makes its `tool-budget-rpc-v1` claim
+ *  true rather than merely asserted. Embedded as a `file://` URL: the value goes
+ *  into generated module source, and Node's ESM loader rejects a bare Windows
+ *  absolute path (`ERR_UNSUPPORTED_ESM_URL_SCHEME: Received protocol 'c:'`). */
+const TOOLS_DIST = pathToFileURL(join(REPO_ROOT, "packages", "tools", "dist", "index.js")).href;
 /** B3 — the versioned mechanism probe every real arm build must export. */
 const ARM_PROBE_EXPORT = "R97_ARM_PROBE";
 /** TEST_ONLY sentinel: an invalid key that can never bill anything. The ONLY
@@ -711,9 +721,52 @@ function countingFakeProvider() {
  * different entry bytes ⇒ different build-closure digest AND a different
  * observable probe.
  */
-function armEntrySource(marker, activate) {
+/**
+ * R0/S1 — the ABI list the fixture arm declares. RETURNED from the driver's own
+ * constant space (the same `R97_ARM_ABI` the executor consumes), never re-typed,
+ * so the fixture cannot claim a capability the real ABI does not contain.
+ */
+async function fixtureArmAbi() {
+  const mod = await import(pathToFileURL(CLI_BENCHMARK_ENTRY).href);
+  const abi = mod.R97_ARM_ABI;
+  const toolBudget = mod.R97_ARM_ABI_TOOL_BUDGET;
+  if (!Array.isArray(abi) || abi.length === 0 || typeof toolBudget !== "string") {
+    throw new Error(
+      "fixtureArmAbi: the built CLI exports no R97_ARM_ABI capability list — refusing to write a fixture arm that would claim an ABI it cannot import",
+    );
+  }
+  return [...abi];
+}
+
+/**
+ * R0/S1/F1 + Phase G — the synthetic fixture arm.
+ *
+ * WHAT CHANGED AND WHY
+ * --------------------
+ * A7a previously REFUSED this fixture with `ARM_WORKER_ABI_UNSUPPORTED`: the arm
+ * exported only `R97_ARM_PROBE` + `runOneCase`, so the worker reported `abi: []`
+ * and the S1 pre-check correctly refused it BEFORE the first model request. The
+ * fixture therefore represented an arm built BEFORE S1 and could not exercise
+ * the formal path at all.
+ *
+ * The arm now declares `R97_ARM_ABI` AND GENUINELY HONOURS IT. Declaring
+ * `tool-budget-rpc-v1` while never calling the budget RPC would be a fabricated
+ * capability — the exact forgery this round exists to prevent — so `runOneCase`
+ * constructs a REAL `ToolOrchestrator` bound to the worker's forwarded
+ * `opts.toolBudget` and executes a REAL `write_file` through it. Each dispatch is
+ * routed through `budget.reserve()`/`settle()` over the driver's stdio channel,
+ * so the campaign's durable tool cap is genuinely enforced on this arm.
+ */
+function armEntrySource(marker, activate, abi) {
   return [
     `export const ${ARM_PROBE_EXPORT} = ${JSON.stringify(`probe:${marker}`)};`,
+    // R0/S1 — the versioned capability list, taken from the built CLI so it
+    // cannot drift from what `prereg-arm-executor` requires.
+    `export const R97_ARM_ABI = ${JSON.stringify(abi)};`,
+    `import { ToolOrchestrator, ToolRegistry, writeFileTool } from ${JSON.stringify(TOOLS_DIST)};`,
+    "import { mkdtempSync } from 'node:fs';",
+    "import { join } from 'node:path';",
+    "import { tmpdir } from 'node:os';",
     "export async function runOneCase(caseDef, opts, _suite) {",
     "  const client = opts.provider.createClient({ id: 'arm-fixture' }, {});",
     "  let input = 0;",
@@ -722,14 +775,52 @@ function armEntrySource(marker, activate) {
     "    if (ev.type === 'usage') { input += ev.usage.inputTokens; output += ev.usage.outputTokens; }",
     "    if (ev.type === 'completed' || ev.type === 'error') break;",
     "  }",
+    // THE REAL BUDGETED TOOL DISPATCH. `opts.toolBudget` is the worker's proxy
+    // budget; binding it into the orchestrator is what makes the declared
+    // `tool-budget-rpc-v1` capability TRUE rather than claimed.
+    "  const workspace = mkdtempSync(join(tmpdir(), 'e2e-arm-ws-'));",
+    "  const registry = new ToolRegistry();",
+    "  registry.register(writeFileTool);",
+    "  const orchestrator = new ToolOrchestrator({",
+    "    registry,",
+    "    workspaceRoot: workspace,",
+    "    events: { async emit() {} },",
+    "    ...(opts.toolBudget !== undefined ? { toolBudget: opts.toolBudget } : {}),",
+    "  });",
+    "  const sessionId = 'e2e-arm-session';",
+    "  const permissions = { rules: [",
+    "    { action: 'read', resource: 'file', effect: 'allow' },",
+    "    { action: 'edit', resource: 'file', effect: 'allow' },",
+    "  ] };",
+    "  const sandboxPolicy = {",
+    "    filesystem: { mode: 'workspace-write', allowedPaths: [workspace] },",
+    "    network: { mode: 'deny' },",
+    "    process: { timeoutMs: 5000, maxOutputBytes: 65536 },",
+    "  };",
+    "  let toolCallCount = 0;",
+    "  let dispatchStatus = null;",
+    "  try {",
+    "    const callId = 'e2e-arm-call-1';",
+    "    const r = await orchestrator.execute(",
+    "      { id: callId, sessionId, turnId: 't1', agentId: 'a1', call: { id: callId, name: 'write_file', args: { path: join(workspace, 'arm-proof.txt'), content: 'written-by-' + caseDef.id } } },",
+    "      { sessionId, turnId: 't1', agentId: 'a1', cwd: workspace, signal: new AbortController().signal, permissions, sandboxPolicy },",
+    "    );",
+    "    dispatchStatus = r.status;",
+    "    toolCallCount = 1;",
+    "  } catch (err) {",
+    // A REFUSED dispatch is a REAL outcome of the budget path (the campaign cap
+    // or the deadline refused it), not a driver failure — record it, never
+    // swallow it, and never let it masquerade as a successful write.
+    "    dispatchStatus = 'refused:' + String(err && err.message ? err.message : err);",
+    "  }",
     "  const outcome = {",
     "    caseId: caseDef.id,",
     "    status: 'failed',",
     "    actualStatus: 'completed',",
     "    events: [],",
-    "    metrics: { turn_count: 1, tool_call_count: 0, tokens_input: input, tokens_output: output, context_tokens: 0, compaction_count: 0, duration_ms: 0, retry_count: 0, verification_failures: 0, human_interventions: 0, estimated_cost: 0, usage_unknown: 0, cache_tokens_read: 0, cache_tokens_created: 0, model_call_count: 1 },",
+    "    metrics: { turn_count: 1, tool_call_count: toolCallCount, tokens_input: input, tokens_output: output, context_tokens: 0, compaction_count: 0, duration_ms: 0, retry_count: 0, verification_failures: 0, human_interventions: 0, estimated_cost: 0, usage_unknown: 0, cache_tokens_read: 0, cache_tokens_created: 0, model_call_count: 1 },",
     "    violations: [],",
-    `    reason: ${JSON.stringify(`arm-probe:${marker}`)},`,
+    `    reason: ${JSON.stringify(`arm-probe:${marker}`)} + '/dispatch:' + String(dispatchStatus),`,
     "    suite: caseDef.suite || 'regression',",
     "    judgeVersion: '1.0.0',",
     "    terminationReason: 'verified_incomplete',",
@@ -748,12 +839,12 @@ function armEntrySource(marker, activate) {
  * modules too (distinct per arm), so the shared closure walker resolves a
  * build-closure digest from the arm's OWN bytes.
  */
-async function writeArmCheckout(dir, marker, activate, entries) {
+async function writeArmCheckout(dir, marker, activate, entries, abi) {
   for (const rel of entries) {
     const abs = join(dir, rel);
     mkdirSync(dirname(abs), { recursive: true });
     const source = rel === ARM_ENTRY_REL
-      ? armEntrySource(marker, activate)
+      ? armEntrySource(marker, activate, abi)
       : `export const R97_ARM_SIBLING_STUB = ${JSON.stringify(`sibling:${marker}`)};\n`;
     writeFileSync(abs, source, "utf8");
   }
@@ -1553,8 +1644,11 @@ async function main() {
       const candidateDir = join(armRoot, "candidate");
       armDirs = { baselineDir, candidateDir };
       const evalMod = await import(pathToFileURL(EVAL_ENTRY).href);
-      await writeArmCheckout(baselineDir, "baseline", false, evalMod.R97_ARM_BUILD_ENTRIES);
-      await writeArmCheckout(candidateDir, "candidate", true, evalMod.R97_ARM_BUILD_ENTRIES);
+      // R0/S1 Phase G — the fixture arms declare the SAME versioned ABI the real
+      // executor requires, imported from the built CLI rather than re-typed.
+      const abi = await fixtureArmAbi();
+      await writeArmCheckout(baselineDir, "baseline", false, evalMod.R97_ARM_BUILD_ENTRIES, abi);
+      await writeArmCheckout(candidateDir, "candidate", true, evalMod.R97_ARM_BUILD_ENTRIES, abi);
       const claimsDir = join(WORKSPACE, "claims");
       mkdirSync(claimsDir, { recursive: true });
       // The in-process POS-EXEC gate resolves its claim anchor from
