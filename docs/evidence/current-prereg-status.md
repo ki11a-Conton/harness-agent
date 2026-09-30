@@ -27,9 +27,9 @@
 >
 > | Level | Status | What it is actually based on |
 > | --- | --- | --- |
-> | `fixtureProtocolReady` | **PASS** | the offline closed loop over SYNTHETIC fixture arm builds. On a CLEAN checkout the producer now exits 0 with 124/124 scheduled arm runs, 124 physical provider calls, 124/124 evidence verified and **0** unverified, `operatorFactoryEntered` **0**, and `verifyProblems: []`. This implies nothing about a real dual build. |
-> | `realBuildOfflineReady` | **NOT_PROVEN** | no producer writes the `dualBuild` block, so there is no real arm pair to certify. The `--e2e` artifact names this omission explicitly (`dualBuild` → `NO_DUAL_BUILD_EVIDENCE`) instead of emitting a placeholder. The vocabulary changed from the old `BLOCKED (NO_REAL_ARM_PAIR)`: `NOT_PROVEN` is the honest reading — the evidence to decide the level does not exist yet, which differs from a proven obstruction. |
-> | `budgetEvidenceReady` | **NOT_PROVEN** | the request/attempt and tool-dispatch journals are NOT cross-bound in practice. `bindRequestDispatchJournals` is now a REAL binding with a reachable `MEASURED` path (and 11 regressions), but **nothing in this repository writes a tool-dispatch journal** — `r5-real-formal.mjs` only COPIES `dispatch*.json`. So the umbrella code `REQUEST_DISPATCH_JOURNAL_NOT_BOUND` correctly stays FIRST, naming `DISPATCH_JOURNAL_MISSING` as the specific cause. |
+> | `fixtureProtocolReady` | **PASS** | the offline closed loop over SYNTHETIC fixture arm builds. On a CLEAN checkout the producer exits 0 with 124/124 scheduled arm runs, 124 physical provider calls, and the emitted bundle now verifies **124/124 arms** with `journalBinding: MEASURED` and a budget reconciled from the raw entries (1240 = 620 + 620, delta 0). This implies nothing about a real dual build. |
+> | `realBuildOfflineReady` | **BLOCKED** | named blocker `NO_REAL_ARM_PAIR`. The arms are synthesized as plain directories, so `identity.arms.*.sourceSha` is honestly OMITTED and no real arm pair exists to certify. It is deliberately NOT listed among the check names in this document: the docs checker validates check NAMES only, so naming it as though it were a check would surface a false green across the whole file. Reported here as the honest level, not as a proven pass. |
+> | `budgetEvidenceReady` | **NOT_PROVEN** | the request/attempt journal now cross-binds, but the tool-dispatch journal is still produced by NOTHING in this repository — `r5-real-formal.mjs` only COPIES `dispatch*.json`. So the umbrella code `REQUEST_DISPATCH_JOURNAL_NOT_BOUND` correctly stays FIRST, naming `DISPATCH_JOURNAL_MISSING` as the specific cause. The binding is now a REAL check with a reachable `MEASURED` path (11 regressions, one reaching `MEASURED`), so this is a missing-input NOT_PROVEN rather than an unimplemented one. |
 > | `paidExperimentRun` | **NOT_RUN** | no paid authorization exists; the scripts never create one. |
 > | `championPromotion` | **NOT_RUN** | promotion is a separate, later approval. |
 >
@@ -51,10 +51,53 @@
 > | **The dual-platform CI job failed on EVERY run** | the `readiness` teammate executed my exact job command line instead of reading my wiring description. It passed `--strict` with no `--require`, so it demanded three levels of which two are legitimately `NOT_PROVEN`. My own comment three lines above already said those must not be required — the command line just did not say it | `ad8aa8e`, measured both ways: without `--require` → exit 1; with `--require fixtureProtocolReady` → strict gate PASS (exit 0) while `realBuildOfflineReady` is still honestly `NOT_PROVEN` |
 > | **The offline fixture pinned a PAST clock** (`NOW = 1_700_000_000_000`, 2023-11-14) so the campaign deadline was already expired and the arm refused with `ARM_DEADLINE_EXCEEDED` before its first request — on BOTH CI platforms. This was my F2 guarantee working correctly; the FIXTURE was stale | CI run `36524279295`, then reproduced locally | `6b784c1`: one clock read once, and an assertion that FIRES (mutant run exits 1 with `FIXTURE_CLOCK_CLOSED` naming the exact CI deadline) |
 > | **`budget-ledger.lock` acquisition aborted on Windows `EPERM`** instead of retrying. `open(path,"wx")` reports contention as `EPERM` when the name is transiently unavailable — and that state is created by the lock's OWN release `rm` racing another acquirer's `open`. Only `EEXIST` was absorbed, so it escaped the entire retry/deadline machinery | running the clean-tree positive phase twice; then isolated by 4 probes (concurrent open+rm → 154/5000 EPERM; **sequential rm → 0/5000**) | `b861b78`: widen to `EEXIST || EPERM`, still bounded by the deadline so a wedged lock still fails closed. The regression **fails on the pre-fix code** with the exact CI error |
+> | **The fixture arm declared no ABI** — `ARM_WORKER_ABI_UNSUPPORTED`, because the synthetic arm predated S1 and exported no `R97_ARM_ABI` | the clean-tree run after the clock fix | `21bae0b`: the arm now IMPORTS the ABI from the built CLI (so it cannot drift) and GENUINELY HONOURS it — a real `ToolOrchestrator` bound to the worker's forwarded budget, issuing a real `write_file` dispatch |
+> | **The producer wrote no bundle ROOT** — `RAW_EVIDENCE_MISMATCH`: the verifier reads `identity.json`, `schedule.json`, `aggregate.json`, `cost-journal.json` from the evidence ROOT, and the producer wrote only the per-arm layer | the dual-platform job log, after the path fixes moved the failure forward | `174236c`: the four root files are emitted from measured data (`cost-journal.json` is the ledger's own `entries`, copied verbatim). Result: **124/124 arms verified** (was 0/124), `journalBinding: MEASURED` |
+> | **The readiness step required a level that is honestly `NOT_PROVEN`** (`budgetEvidenceReady`), so the job failed every run — the same mistake as the dual-platform job, in the same round, three lines from a comment warning about it | reading the CI log for run `36530711327` | `5b8ba05`: require exactly one level, `fixtureProtocolReady`, which genuinely PASSES |
 >
-> The third one is a **pre-existing** defect, not a regression from this round: the lock
-> code predates it, and only a real concurrent campaign can expose it. Its regression test
-> reproduces the CI-scale failure rather than exercising a happy path.
+> The Windows `EPERM` one is a **pre-existing** defect, not a regression from this round: the
+> lock code predates it, and only a real concurrent campaign can expose it. Its regression
+> test reproduces the CI-scale failure rather than exercising a happy path.
+>
+> ### `sourceSha` is deliberately ABSENT — the anti-fabrication finding
+>
+> `identity.arms.{baseline,candidate}.sourceSha` is OMITTED, so the bundle still reports
+> `BASELINE_SOURCE_SHA_INVALID` / `CANDIDATE_SOURCE_SHA_INVALID`. That is the truthful
+> encoding of "this bundle has no comparable real arm pair", and it is checkable:
+> `writeArmCheckout` synthesizes the arms as PLAIN DIRECTORIES, so `<arm>/.git` does not
+> exist and `git -C <arm> rev-parse --show-toplevel` answers for the ENCLOSING repo. A naive
+> `rev-parse HEAD` therefore returns the SAME SHA for both arms. Measured side by side by
+> the Lead on a real arm directory:
+>
+> ```
+> naive  rev-parse HEAD  -> bb9cf96e2a52a1247d48bb9440ba4950e9ea9ab9   <- a fabrication
+> guarded (the fix)      -> null                                       <- correct
+> ```
+>
+> The producer's FIRST implementation used the naive form and it made the verifier QUIET,
+> which is the most dangerous shape a bug can take. The verifier's `ARMS_IDENTICAL` check
+> caught it — a check designed to catch a forger caught an honest implementation — and the
+> guard now requires the arm dir to be its own repo root. The honest response was to OMIT
+> the field rather than restore quiet. Making the arms real clean git checkouts at distinct
+> SHAs is the `NO_REAL_ARM_PAIR` gap and is **not** claimed here.
+>
+> ### Three wiring defects, all the same shape
+>
+> `needs: [verify, coverage]` omitted `r97-r98-closed-loop` — the job that UPLOADS the legs —
+> so the join waited for nothing and its downloads found nothing. The `--evidence-root` named
+> a path NOBODY CREATES, and the upload listed that same nonexistent path under
+> `if-no-files-found: warn`, so it uploaded **nothing** while the job still looked green
+> (measured: the artifact was 1934 bytes — the JSON alone; it is now 196 KB with the bundle).
+> And the leg JSON paths were one level too shallow, because `actions/download-artifact`
+> preserves the uploader's repo-root-relative paths.
+>
+> The pattern is worth naming: **the CI was wired from the SHAPE of the scripts rather than
+> from their OUTPUTS.** Every one of these was caught by a real run; none by review. A
+> `Show what each leg actually downloaded` step was added for exactly this reason, and it
+> located two of them immediately. That step then had to be deepened itself: at
+> `-maxdepth 3` it printed an apparently EMPTY evidence directory, because the per-arm
+> artifacts live at depth 5. The lesson recorded for the next round: **print the evidence of
+> success, and print it deep enough to be evidence.**
 >
 > ### Gaps stated as gaps — NOT marked DONE
 >
