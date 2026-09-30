@@ -1164,21 +1164,59 @@ describe("task-10 — request/dispatch journal cross-binding", () => {
     // into the evidence dir, but no producer in this repository WRITES such a
     // file. Reproduce the search rather than trusting this comment.
     const { execFileSync } = await import("node:child_process");
-    const out = execFileSync("git", ["grep", "-l", "dispatch-journal", "--", "*.ts", "*.mjs", "*.js"], {
+
+    // The claim is "no producer WRITES a dispatch journal". The first version of
+    // this test approximated that with a bare substring grep for
+    // `dispatch-journal` and required every matching FILE to be a known consumer.
+    // That approximation produced a FALSE POSITIVE as soon as a file merely NAMED
+    // the filename in a comment explaining why it is absent — which is exactly
+    // what happened when `prereg-production-e2e.mjs` gained a comment saying it
+    // deliberately writes no dispatch journal. The test then failed while nothing
+    // had started producing one. A grep for a NAME cannot distinguish "writes the
+    // file" from "mentions the name", so this now looks for the WRITE.
+    const matches = execFileSync("git", ["grep", "-n", "dispatch-journal", "--", "*.ts", "*.mjs", "*.js"], {
       cwd: REPO_ROOT,
       encoding: "utf8",
-    });
-    // Every match must be a CONSUMER (a verifier, the readiness reducer, or this
-    // test asserting the gap). A match that WRITES the file would be a producer,
-    // and that is what must not exist yet.
-    const consumers = ["readiness-evidence-verify", "ci-readiness", "r0-f6-ci-readiness-classification"];
-    const producers = out
+    })
       .split("\n")
-      .map((s) => s.trim())
       .filter(Boolean)
-      .filter((f) => !consumers.some((c) => f.includes(c)));
-    expect(producers, `unexpected producers of a dispatch journal: ${producers.join(", ")}`).toEqual([]);
-    // And the consumer set is non-empty, so this is not vacuously true.
-    expect(out.trim().length).toBeGreaterThan(0);
+      .map((line) => {
+        const parts = line.split(":");
+        const file = parts[0] ?? "";
+        const lineNo = parts[1] ?? "";
+        return { file, lineNo, text: parts.slice(2).join(":") };
+      });
+
+    const consumers = ["readiness-evidence-verify", "ci-readiness", "r0-f6-ci-readiness-classification"];
+
+    // A PRODUCER is a line that actually sinks the journal to disk. Comments are
+    // stripped first, so a comment that merely names the file is not a write.
+    const writes = matches.filter((m) => {
+      if (consumers.some((c) => m.file.includes(c))) return false;
+      const code = m.text
+        .replace(/\/\/.*$/, "")
+        .replace(/^\s*\*.*$/, "")
+        .replace(/^\s*\/\*.*$/, "");
+      return /writeFileSync|writeFile\(|createWriteStream|appendFile/.test(code);
+    });
+
+    expect(
+      writes.map((w) => `${w.file}:${w.lineNo}`),
+      `unexpected PRODUCERS of a dispatch journal: ${writes.map((w) => `${w.file}:${w.lineNo}: ${w.text.trim()}`).join(" | ")}`,
+    ).toEqual([]);
+
+    // NON-VACUITY, in three directions, so a typo in the pattern cannot make this
+    // pass silently: the search must find SOMETHING; it must actually SEE the
+    // producer's comment naming the absent journal (which is what made the old
+    // version fail); and it must still find the real CONSUMERS.
+    expect(matches.length, "the grep found no matches at all, so it proves nothing").toBeGreaterThan(0);
+    expect(
+      matches.some((m) => m.file.includes("prereg-production-e2e")),
+      "expected the producer to NAME the deliberately-absent journal in a comment; if this fails the grep is not seeing the real tree",
+    ).toBe(true);
+    expect(
+      matches.filter((m) => consumers.some((c) => m.file.includes(c))).length,
+      "expected to still find the real consumers",
+    ).toBeGreaterThan(0);
   });
 });
