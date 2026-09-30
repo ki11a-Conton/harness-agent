@@ -50,9 +50,10 @@ const mod = (await import(SCRIPT)) as {
     /** Which round's defect list this mutation came from: T6's five, A7's seven,
      *  N2's one (finding F2: the spawned child runner must be inside the approved
      *  driver build identity), N5's five (the pre-registration closed loop's
-     *  invariants — plan §N5), or S0's two (the release-CLI pre-provider dispatch
-     *  F1a and the evidence-derived contamination F2/S4). */
-    round: "T6" | "A7" | "N2" | "N5" | "S0";
+     *  invariants — plan §N5), S0's two (the release-CLI pre-provider dispatch
+     *  F1a and the evidence-derived contamination F2/S4), or S7's three (the two
+     *  directions of the join's level scoping, and the Windows ledger-lock EPERM). */
+    round: "T6" | "A7" | "N2" | "N5" | "S0" | "S7";
     file: string;
     find: string;
     replace: string;
@@ -153,8 +154,22 @@ describe("E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations"
     // untagged entry would be invisible to BOTH, so it is a failure rather than a
     // silently-ignored extra.
     for (const m of mod.MUTATIONS) {
-      expect(["T6", "A7", "N2", "N5", "S0"], `${m.id} has no round tag`).toContain(m.round);
+      expect(["T6", "A7", "N2", "N5", "S0", "S7"], `${m.id} has no round tag`).toContain(m.round);
     }
+  });
+
+  it("declares the S7 mutations for THIS round's own defects", () => {
+    // S7 (plan §11 item 3): "mutation gate 保留现有有效覆盖，并补能破坏本轮关键不变量
+    // 的最小变异". Pinned as an exact set of three so a gate that quietly dropped one
+    // would not still report "all mutations caught" — the same reasoning as S0/N5.
+    // Each covers a defect THIS round fixed: both directions of the join's level
+    // scoping, and the Windows ledger-lock EPERM that aborted a live campaign.
+    const s7 = mod.MUTATIONS.filter((m) => m.round === "S7");
+    expect(s7, "S7 must add one mutation per defect this round fixed").toHaveLength(3);
+    const wording = s7.map((m) => m.planWording).join("\n");
+    expect(wording).toContain("把 bundle 复验的等级归属放宽到所有问题码");
+    expect(wording).toContain("把 bundle 复验的拒绝范围还原成");
+    expect(wording).toContain("把 Windows 上的锁竞争 EPERM 当成致命错误");
   });
 
   it("declares the S0 mutations for the release-CLI wiring + evidence invariants", () => {

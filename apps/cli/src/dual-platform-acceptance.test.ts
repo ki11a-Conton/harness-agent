@@ -19,7 +19,7 @@
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -653,7 +653,17 @@ describe("S7b — dual-platform acceptance joins two legs, or refuses", () => {
     for (const leg of ["windows", "ubuntu"] as const) {
       const dest = join(s.dir, leg, withoutDotCi);
       mkdirSync(dest, { recursive: true });
-      copyBundle(writeValidBundle(s.dir, leg), dest);
+      // `dest` IS the evidence root, so the bundle's CONTENTS belong directly inside
+      // it. Copying the bundle DIR into `dest` nests it one level too deep
+      // (`<dest>/bundle-<leg>/…`), after which the verifier reads an EMPTY evidence
+      // root and refuses MISSING_RAW_EVIDENCE. That is precisely what happened on
+      // first fixing this test: the old `ok: true` assertion had been passing only
+      // because the pre-fix join refused on `bundleReVerified.ok` instead of on the
+      // missing files it had genuinely found.
+      const src = writeValidBundle(s.dir, leg);
+      for (const entry of readdirSync(src)) {
+        cpSync(join(src, entry), join(dest, entry), { recursive: true });
+      }
     }
 
     const r = s.run(["--windows", windows, "--ubuntu", ubuntu]);
@@ -663,8 +673,18 @@ describe("S7b — dual-platform acceptance joins two legs, or refuses", () => {
     // the case DP-O's flat layout cannot cover.
     expect(v.legs["windows"]?.evidenceRootResolvedFrom).toBe("leg-root/without-dot-ci");
     expect(v.legs["ubuntu"]?.evidenceRootResolvedFrom).toBe("leg-root/without-dot-ci");
-    // And the bundle was genuinely re-verified from that location.
-    expect(v.legs["windows"]?.bundleReVerified?.ok).toBe(true);
+    // And the bundle really WAS re-verified from that location, cleanly. This is
+    // the assertion that makes DP-R meaningful: it proves the `leg-root/without-dot-ci`
+    // candidate found the COMPLETE bundle, not merely some directory that exists.
+    // The earlier version asserted `bundleReVerified.ok === true` and passed only by
+    // accident — with the bundle nested one level too deep the verifier read an
+    // EMPTY root, but the pre-fix join refused on `ok` rather than on the missing
+    // files, so the test was green for the wrong reason. `writeValidBundle` does
+    // carry a real arm pair (two distinct 40-hex `sourceSha`s), so a correct
+    // resolution of a correctly-copied bundle must verify with NO problems at all.
+    const w = v.legs["windows"]!;
+    expect(w.bundleReVerified?.problems).toEqual([]);
+    expect(w.bundleReVerified?.ok).toBe(true);
     expect(v.legs["ubuntu"]?.bundleReVerified?.ok).toBe(true);
   });
 
