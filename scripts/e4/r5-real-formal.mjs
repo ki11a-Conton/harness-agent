@@ -55,7 +55,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -411,6 +411,28 @@ const SMALL_SAMPLE = [
   "adv-artifact-injection",
   "reg-03-add-import",
   "reg-24-error-handling",
+  // S5/N5 — THE CASE THE BUILT-IN OFFLINE PROVIDER CAN ACTUALLY FINISH.
+  //
+  // Measured, not assumed: `reg-22-api-stub`'s frozen verification is
+  // `node -e "const s=require('./server.js'); s.listen(0, …) … /health …"`, and the
+  // offline scripted provider's ONE content task writes exactly that `server.js`
+  // (`OFFLINE_CONTENT_TASK`: suite "regression", caseId "reg-22-api-stub",
+  // outputPath "server.js"). The other five cases ask for artifacts and commands
+  // that script cannot produce (`out/cleaned.json`, `python3 …`, and — measured by
+  // direct reproduction — a `node` import of an ESM body the case workspace has no
+  // `"type": "module"` for), so under this posture they can only ever fail content
+  // verification. That is a SCHEDULE/PROVIDER MISMATCH, not a Runtime defect: it
+  // predates this round (at 00c8660a the script wrote only the demo file
+  // `offline-forward-proof.txt`, which satisfies no case at all, and this list never
+  // contained `reg-22-api-stub`).
+  //
+  // Including a case the posture CAN satisfy is what makes plan §8's "the normal
+  // content path must reach a REAL verifier success" reachable at all. It changes no
+  // standard: the same two arms, the same budget, the same evidence chain and the
+  // same gate are compared — the offline provider is simply given one case it was
+  // built for. The other five stay in the schedule on purpose and are reported as
+  // the control group this posture cannot serve.
+  "reg-22-api-stub",
 ];
 
 async function buildArtifactAndAuth({ env, sampleCaseIds, isolationBackendId = "trusted-build", isolationStrength = "no-os-network-sandbox", policyDigestTamper = null, armsRoot = null }) {
@@ -1003,15 +1025,43 @@ function gitInitCommit(dir, message) {
   execFileSync("git", ["-C", dir, "-c", "user.name=r5", "-c", "user.email=r5@local", "commit", "-q", "-m", message]);
 }
 
-/** A copy of the baseline arm's execution closure with NO `R97_ARM_PROBE` export. */
+/**
+ * A copy of the baseline arm's execution closure with NO `R97_ARM_PROBE` export.
+ *
+ * S5/N5 — IT MUST ALSO BE *RESOLVABLE*. A real arm checkout has its own installed
+ * `node_modules`; this synthetic one is only a copied closure, so the moment the
+ * worker imports `apps/cli/dist/benchmark-command.js` it died with
+ * `ERR_MODULE_NOT_FOUND: Cannot find package '@ar/contracts'` — module resolution
+ * failing FIRST, which is NOT the boundary this row exists to prove. The row is
+ * supposed to be refused because the arm declares no `R97_ARM_PROBE`
+ * (`ARM_WORKER_ABI_UNSUPPORTED`), and an unrelated resolution error must not be
+ * accepted as evidence for it (the gate said exactly that:
+ * `NEGATIVE_WRONG_REASON`). So the fixture gets a `node_modules` link to the
+ * workspace's own installed tree, which is what a real arm has, and nothing else
+ * about the arm changes: the probe export is still removed.
+ */
 async function makeAbiLessArm(workRoot) {
   const dir = join(workRoot, "arm-no-abi");
   const { entryRel } = await copyArmClosure(DEFAULT_PAIR.baseline, dir);
+  await linkWorkspaceModules(dir);
   const entryPath = join(dir, entryRel);
   const bytes = await readFile(entryPath, "utf8");
   await writeFile(entryPath, bytes.replace(/export const R97_ARM_PROBE =/, "const REMOVED_R97_ARM_PROBE ="), "utf8");
   gitInitCommit(dir, "abi-less arm");
   return { baseline: dir, candidate: DEFAULT_PAIR.candidate };
+}
+
+/** Give a synthetic arm the module resolution a real installed arm has.
+ *  `apps/cli/node_modules` is where this workspace's pnpm layout puts the
+ *  `@ar/*` links the closure entry imports. */
+async function linkWorkspaceModules(armDir) {
+  const target = join(REPO_ROOT, "apps", "cli", "node_modules");
+  if (!existsSync(target)) return;
+  try {
+    await symlink(target, join(armDir, "node_modules"), "junction");
+  } catch {
+    // A pre-existing link is fine; anything else will surface as a named refusal.
+  }
 }
 
 /** A real git work tree that is DIRTY (an uncommitted file). */
@@ -1266,9 +1316,17 @@ async function runRealChain() {
     if (args.phases.has("negative")) report.negative = await phaseNegative({ workRoot });
   } catch (err) {
     report.fatal = err instanceof Error ? `${err.message}\n${err.stack ?? ""}` : String(err);
-  } finally {
-    await rm(workRoot, { recursive: true, force: true }).catch(() => undefined);
   }
+  // S5/N5 — THE SCRATCH ROOT IS **NOT** DELETED HERE ANY MORE.
+  //
+  // It used to be, in this `finally`, and that single line is what emptied the
+  // bundle: `writeEvidenceBundle` runs BELOW this point and copies the per-armRun
+  // evidence (`<phase>/out/runs/evidence/<armRunId>/…`), the cost journal, the
+  // dispatch journal and the aggregate OUT of this root. Deleting the root first
+  // left every copy with a non-existent source, which the copies silently skip, so
+  // the bundle kept `raw/` EMPTY and the gate reported 20 × MISSING_EVIDENCE plus
+  // JOURNAL_MISMATCH — with the failures on the record but no longer recomputable.
+  // The deletion now happens after the bundle has taken its copy (see below).
 
   const summary = [];
   if (report.identity) {
@@ -1298,6 +1356,9 @@ async function runRealChain() {
     const message = err instanceof Error ? `${err.message}\n${err.stack ?? ""}` : String(err);
     report.bundleError = message;
     summary.push(`BUNDLE ERROR: ${message.split("\n")[0]}`);
+  } finally {
+    // NOW the scratch root may go: the bundle holds the bytes.
+    await rm(workRoot, { recursive: true, force: true }).catch(() => undefined);
   }
 
   const outPath = args.out !== null ? resolve(args.out) : join(REPO_ROOT, ".ci", "r5-real-formal.json");

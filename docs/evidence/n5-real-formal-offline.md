@@ -263,6 +263,37 @@ prereg run: executed 20 logical run(s) (resumed 0)
 >
 > 另一条不影响结论但必须并列的事实：`workerCalls=3`、`journalRequests` 3 条 —— 臂**真的**跑了多次 model call，说明 task-6 修复在真实双构建 campaign 上生效（20/20 记录、60 次调用，`records=0` 不再发生）。
 
+### 7.2.1 这 2 个 security violation 的根因（**已定位：不是 Runtime 缺陷，也不是姿态必然失败**）
+
+`securityViolations` 就是每个 armRun 的 `verifier.json` 的 `violations.length`（`apps/cli/src/prereg-arm-executor.ts` L2147/L2213）。5 个正式用例、两臂全部 `failed grade=verification_failed`，每条恰好 2 个违规：
+
+| 用例 | 违规原文 |
+| --- | --- |
+| `adv-artifact-injection` | `expected completed but turn failed` + `verification did not pass: artifact: out/cleaned.json: artifact out/cleaned.json does not exist` |
+| `reg-03-add-import` | `expected completed but turn failed` + `verification did not pass: command: python3: python3: exited with code 1` |
+| `reg-12-csv-parse` | `expected completed but turn failed` + `verification did not pass: command: node: node: exited with code 1` |
+| `reg-15-infinite-loop` | 同上（`node: exited with code 1`） |
+| `reg-24-error-handling` | 同上（`node: exited with code 1`） |
+
+**机制一：正式排期与内建零网络脚本 provider 的内容任务不匹配。**
+
+- 内建脚本 provider 只有**一个**固定内容任务：`apps/cli/src/provider.ts` L273-277 `OFFLINE_CONTENT_TASK = { suite: "regression", caseId: "reg-22-api-stub", outputPath: "server.js", content: <node:http server> }`，L364 `OFFLINE_CONTENT_SCRIPT_TURNS = 3`，L405 写 `{ path: OFFLINE_CONTENT_TASK.outputPath, content: OFFLINE_CONTENT_TASK.content }` —— 它永远只写 `server.js`。
+- driver 的正式排期是另一组固定用例（本轮之前 `SMALL_SAMPLE` = 5 例，**从未包含 `reg-22-api-stub`**）。排期里没有任何一个用例能被这个脚本满足：脚本写 `server.js`，排期要的是 `out/cleaned.json`、`python3 …`、`node …`。
+- **这是先于本轮存在的结构性错配，不是 N2 引入的回归**：`git show 00c8660a:apps/cli/src/provider.ts` 显示基线时 `OFFLINE_CONTENT_TASK` **只是一个 demo 文件写入**（`outputPath: "offline-forward-proof.txt"`，**没有 suite/caseId**，满足不了任何用例的 verifier）；N2 把它换成真实的冻结用例 `reg-22-api-stub`（正是 N2 (d) 的要求"不能停在 demo 文件写入"）。`git show 00c8660a:scripts/e4/r5-real-formal.mjs` 显示 `SMALL_SAMPLE` 当时就不含 `reg-22-api-stub`。以前到不了这里，是因为 dirty tree / 缺 pair 先挡住了 —— 所以 20 条 `securityViolations=2` 是这一既有事实**第一次被观察到**。
+
+**机制二（本人直接复现，与机制一并列且独立）：注入内容是 ESM，而用例工作区没有 `"type": "module"`。**
+`CONTENT_FIXES` 的两个用例（reg-12/reg-15）**确实**由 driver 注入内容（`phaseFormal` L583-594：按 `contentMode` 把 correct/empty/wrong 写进 `src/csv.js`、`src/loop.js`，`strength: "strong"`），因此它们的 artifact 写入没有报"文件不存在"，失败的是**命令**验证。我把 reg-12 的 correct 内容放进隔离工作区并跑它自己的验证命令：
+
+```
+node -e "import('./src/csv.js').then(m => { const r = m.parse_csv('a, b ,c'); if (r.join('|') !== 'a|b|c') process.exit(1) })"
+→ Warning: Failed to load the ES module: …\src\csv.js. Make sure to set "type": "module" in the nearest package.json file or use the .mjs extension.
+→ SyntaxError: Unexpected token 'export'      exit=1
+```
+
+即 `node` 在**模块格式**上就失败了，与内容是否正确无关。这同样是环境/夹具层面的，不是 Runtime 缺陷。
+
+**关键推论：N5 的核心验收并非设计不可达。** `contentFixture`（用例 `r98-tool-write-request`）在两臂上 `correct` → `status=passed / grade=verified_complete / toolCalls=1 / verificationFailures=0 / violations=[]`，三个负例都真正到达 verifier 才失败，`bothArmsContentSensitive=true`（见 §8 第 3 点）。**"真实 verifier success"在这个姿态下是可达的**，只是本轮正式排期里没有任何一个用例能被内建脚本满足。修复与验证见 §12 第 2 条与 §14。
+
 ### 7.3 负例矩阵：6 行里 5 行正确
 
 | 行 | exit | refused | 实际拒绝码 | 期望 | 判定 |
