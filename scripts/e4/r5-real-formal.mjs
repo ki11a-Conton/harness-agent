@@ -554,19 +554,40 @@ async function grantFor(env) {
  *
  * The `wrong` bodies TERMINATE (a still-broken countDown that stops at 1), so a
  * negative cannot hang the campaign.
+ *
+ * S5/N5 — WHY THESE BODIES ARE COMMONJS, MEASURED NOT GUESSED.
+ *
+ * The workspace is `mkdtemp(join(tmpdir(), "harness-bench-"))` populated with EXACTLY
+ * the case's frozen fixture (`assertWorkspaceIsolated` permits nothing else), so it
+ * NEVER holds a package.json. With no `"type": "module"` in scope Node loads
+ * `src/*.js` as CJS, and the ESM bodies this table used to inject died on
+ * `SyntaxError: Unexpected token 'export'` BEFORE the verifier could look at the
+ * content — that is what produced every `CONTENT_CORRECT_FAILED`:
+ *
+ *   node -e "import('./src/csv.js')…" → Failed to load the ES module … set "type":
+ *   "module" … Unexpected token 'export'  (exit non-zero)
+ *
+ * Measured alternatives that do NOT rescue it: `--experimental-detect-module`,
+ * `--no-experimental-detect-module`, and an `.mjs` wrapper; and a package.json cannot
+ * be added because the workspace may hold only the frozen fixture. The CJS form below
+ * DOES load under that same `import()` (Node's lexer surfaces `exports.parse_csv` /
+ * `exports.countDown` as named exports) and the frozen verifier then PASSES on the
+ * correct body while still FAILING the empty and wrong bodies. So this is a
+ * module-format fix: the verifier, the frozen cases, the CONTENT_FIXES semantics and
+ * the workspace-isolation rule are all untouched.
  */
 const CONTENT_FIXES = {
   "reg-12-csv-parse": {
     path: "src/csv.js",
-    correct: "export function parse_csv(line) {\n  return line.split(',').map((field) => field.trim());\n}\n",
+    correct: "exports.parse_csv = function (line) {\n  return line.split(',').map((field) => field.trim());\n};\n",
     empty: "",
-    wrong: "export function parse_csv(line) {\n  return line.split(',');\n}\n",
+    wrong: "exports.parse_csv = function (line) {\n  return line.split(',');\n};\n",
   },
   "reg-15-infinite-loop": {
     path: "src/loop.js",
-    correct: "export function countDown(n) {\n  const out = [];\n  let i = n;\n  while (i >= 0) {\n    out.push(i);\n    i -= 1;\n  }\n  return out;\n}\n",
+    correct: "exports.countDown = function (n) {\n  const out = [];\n  for (let i = n; i >= 0; i -= 1) out.push(i);\n  return out;\n};\n",
     empty: "",
-    wrong: "export function countDown(n) {\n  const out = [];\n  let i = n;\n  while (i > 0) {\n    out.push(i);\n    i -= 1;\n  }\n  return out;\n}\n",
+    wrong: "exports.countDown = function (n) {\n  const out = [];\n  let i = n;\n  while (i > 0) {\n    out.push(i);\n    i -= 1;\n  }\n  return out;\n};\n",
   },
 };
 
@@ -1019,10 +1040,25 @@ async function copyArmClosure(srcArm, dest) {
   return { entryRel: mod.R97_ARM_BUILD_ENTRIES.find((e) => e.endsWith("benchmark-command.js")), distDirs: [...distDirs] };
 }
 
+/**
+ * S5/N5 — `maxBuffer` IS NOT OPTIONAL HERE.
+ *
+ * This runs over a copied arm CLOSURE inside a scratch root, so `git add -A` in the
+ * ABI-less fixture can emit far more than `execFileSync`'s default 1 MiB of child
+ * stdout — and when it does, Node throws `spawnSync git ENOBUFS` and the ENTIRE
+ * negative phase dies with it (measured: 6 × NEGATIVE_ROW_MISSING, and the
+ * `missing-ABI` row never got far enough to prove `ARM_WORKER_ABI_UNSUPPORTED`).
+ * The captures stay enabled on purpose: a git failure must still be visible.
+ */
+const GIT_MAX_BUFFER = 64 * 1024 * 1024;
+
 function gitInitCommit(dir, message) {
-  execFileSync("git", ["-C", dir, "init", "-q"]);
-  execFileSync("git", ["-C", dir, "add", "-A"]);
-  execFileSync("git", ["-C", dir, "-c", "user.name=r5", "-c", "user.email=r5@local", "commit", "-q", "-m", message]);
+  execFileSync("git", ["-C", dir, "init", "-q"], { stdio: ["ignore", "pipe", "pipe"], maxBuffer: GIT_MAX_BUFFER });
+  execFileSync("git", ["-C", dir, "add", "-A"], { stdio: ["ignore", "pipe", "pipe"], maxBuffer: GIT_MAX_BUFFER });
+  execFileSync("git", ["-C", dir, "-c", "user.name=r5", "-c", "user.email=r5@local", "commit", "-q", "-m", message], {
+    stdio: ["ignore", "pipe", "pipe"],
+    maxBuffer: GIT_MAX_BUFFER,
+  });
 }
 
 /**
@@ -2154,8 +2190,17 @@ async function writeEvidenceBundle({ evidenceDir, report, args }) {
       }
     }
   }
-  if (formal?.dir !== undefined && existsSync(join(formal.dir, "aggregate.json"))) {
-    await cp(join(formal.dir, "aggregate.json"), join(evidenceDir, "aggregate.json"));
+  // S5/N5 — the aggregate is written to `<phase>/out/aggregate.json` (this driver
+  // READS it from there, L697), not to the phase root. Looking only at the phase root
+  // is what left the bundle without an aggregate and made the gate report
+  // `JOURNAL_MISMATCH: aggregate.json is absent, so the journal has nothing to agree
+  // with` on an otherwise fully gathered bundle. Both locations are tried so the
+  // gathering cannot silently regress if the layout ever moves.
+  for (const candidate of [formal?.dir === undefined ? null : join(formal.dir, "out", "aggregate.json"), formal?.dir === undefined ? null : join(formal.dir, "aggregate.json")]) {
+    if (candidate !== null && existsSync(candidate)) {
+      await cp(candidate, join(evidenceDir, "aggregate.json"));
+      break;
+    }
   }
 
   // The content matrix, taken from the per-case RAW verifier evidence. RESTRICTED to
