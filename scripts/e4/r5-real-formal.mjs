@@ -625,7 +625,9 @@ async function phaseFormal({ full, workRoot, contentMode = "correct" }) {
   for (const c of artifact.dataset.cases) {
     const caseDir = join(REPO_ROOT, "benchmarks", c.suite, c.caseId);
     const def = await armExec.readCaseDef(caseDir, c.caseId);
-    const needle = def.requestMd.length > 40 ? def.requestMd.slice(0, 200) : null;
+    // loadBenchmarkCase derives task from requestMd.trim(); the final newline
+    // is absent from the actual user message, so a short full-file needle fails.
+    const needle = def.requestMd.trim().slice(0, 200) || null;
     const content = CONTENT_FIXES[c.caseId];
     if (content !== undefined) {
       const body =
@@ -1095,13 +1097,22 @@ function gitInitCommit(dir, message) {
  * about the arm changes: the probe export is still removed.
  */
 async function makeAbiLessArm(workRoot) {
-  const dir = join(workRoot, "arm-no-abi");
-  const { entryRel } = await copyArmClosure(DEFAULT_PAIR.baseline, dir);
-  const entryPath = join(dir, entryRel);
-  const bytes = await readFile(entryPath, "utf8");
-  await writeFile(entryPath, bytes.replace(/export const R97_ARM_PROBE =/, "const REMOVED_R97_ARM_PROBE ="), "utf8");
-  gitInitCommit(dir, "abi-less arm");
-  return { baseline: dir, candidate: DEFAULT_PAIR.candidate };
+  const dirs = {};
+  // Mutate the ABI dimension in BOTH arms: otherwise a correctly ordered
+  // candidate run may physically send before the missing baseline ABI is seen.
+  // Keep the probe: removing it reaches PROBE_MISSING rather than the ABI gate.
+  for (const armId of ["baseline", "candidate"]) {
+    const dir = join(workRoot, `arm-no-abi-${armId}`);
+    const { entryRel } = await copyArmClosure(DEFAULT_PAIR[armId], dir);
+    const entryPath = join(dir, entryRel);
+    const bytes = await readFile(entryPath, "utf8");
+    const changed = bytes.replace('export { R97_ARM_ABI,', 'export {');
+    if (changed === bytes) throw new Error("N5_ABI_MUTATION_ANCHOR_MISSING");
+    await writeFile(entryPath, changed, "utf8");
+    gitInitCommit(dir, "abi-less arm");
+    dirs[armId] = dir;
+  }
+  return dirs;
 }
 
 /** Give a synthetic arm the module resolution a real installed arm has.
@@ -2205,10 +2216,19 @@ async function writeEvidenceBundle({ evidenceDir, report, args }) {
     "utf8",
   );
 
-  // The journals: copied from the budget dir, kept byte-for-byte.
+  // Keep the durable budget file byte-for-byte, and expose its nested journal
+  // in the top-level journal schema consumed by both independent verifiers.
   const budgetDir = formal?.budgetDir ?? null;
   if (budgetDir !== null && existsSync(join(budgetDir, "cost-budget.json"))) {
-    await cp(join(budgetDir, "cost-budget.json"), join(evidenceDir, "cost-journal.json"));
+    const source = join(budgetDir, "cost-budget.json");
+    await cp(source, join(evidenceDir, "cost-budget.json"));
+    const ledger = readJsonFile(source);
+    await writeFile(join(evidenceDir, "cost-journal.json"), `${JSON.stringify({
+      schemaVersion: ledger.journal?.schemaVersion ?? null,
+      entries: ledger.journal?.entries ?? null,
+      charged: ledger.charged,
+      reserved: ledger.reserved,
+    }, null, 2)}\n`, "utf8");
   }
   if (budgetDir !== null && existsSync(budgetDir)) {
     for (const name of readdirSync(budgetDir)) {
