@@ -52,6 +52,9 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ToolCallEfficiencyPreregistrationV2 } from "@ar/evaluation";
 import {
+  PREREG_RUN_EVIDENCE_DIRNAME,
+} from "@ar/evaluation";
+import {
   N2_FORWARD_CASE,
   prepareArmCheckout,
   prepareIdentityRoot,
@@ -61,7 +64,6 @@ import {
 
 const REPO_ROOT = process.cwd();
 const CLI = join(REPO_ROOT, "apps", "cli", "dist", "main.js");
-const EVIDENCE_DIRNAME = "arm-runs";
 
 /**
  * Phase timing. An end-to-end release run is expensive (a prepared identity root,
@@ -133,7 +135,7 @@ function show(run: CliRun): string {
 
 /** Every per-arm-run evidence directory the driver created. */
 async function evidenceDirs(outDir: string): Promise<string[]> {
-  const root = join(outDir, EVIDENCE_DIRNAME);
+  const root = join(outDir, "runs", PREREG_RUN_EVIDENCE_DIRNAME);
   if (!existsSync(root)) return [];
   const out: string[] = [];
   for (const entry of await readdir(root, { withFileTypes: true })) {
@@ -152,12 +154,9 @@ async function evidenceDirs(outDir: string): Promise<string[]> {
  *     package is ~4s each, the closure digest ~11-15s each, and the two `git`
  *     commits are ~100s each on this machine), so leaving it in the default run
  *     would tax every developer and every CI job;
- *   - at the time of writing it reaches the REAL arm executor and the REAL
- *     isolated arm worker and is then stopped by the driver's own concurrency
- *     guard (`ARM_WORKER_PROTOCOL_VIOLATION`), so it is PARTIAL — see
- *     `docs/evidence/n2-release-cli-forward.md`, which records the captured
- *     output verbatim. A test that is known to fail is skipped WITH A REASON and
- *     reported, never softened into a pass.
+ *   - N6 opts in on both platforms. The lifecycle defect and this test's stale
+ *     evidence path are fixed; both arms in both repetitions must pass the
+ *     frozen content verifier (four independent raw verdicts).
  *
  * Run it with:  N2_RUN_RELEASE_E2E=1 npx vitest run apps/cli/src/n2-release-cli-forward.test.ts
  */
@@ -328,7 +327,7 @@ describe.skipIf(!RUN_RELEASE_E2E)("N2 (d) — the release CLI runs a real offlin
     expect(
       verified.map((r) => r.armId).sort(),
       `the frozen verifier for ${N2_FORWARD_CASE.suite}/${N2_FORWARD_CASE.caseId} did not pass in both arms: ${JSON.stringify(forwardRuns)}`,
-    ).toEqual(["baseline", "candidate"]);
+    ).toEqual(["baseline", "baseline", "candidate", "candidate"]);
 
     // (4) AT LEAST ONE REAL TOOL DISPATCH — a dispatched settlement in the durable
     // journal, naming the tool. `settled`/`dispatched` is written only after the

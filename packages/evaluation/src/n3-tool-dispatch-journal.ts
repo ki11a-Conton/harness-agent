@@ -193,9 +193,10 @@ async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
   } catch (err) {
     try {
       await rm(tmp, { force: true });
-    } catch {
+    } catch (cleanupError) {
       // A failed cleanup must not mask the rename failure; the original error is
       // rethrown below and the leftover temp file is inert.
+      console.warn(`[degraded] dispatch-journal.temp-cleanup: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`);
     }
     throw err;
   }

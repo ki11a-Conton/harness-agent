@@ -356,9 +356,8 @@ function* eventsForCall(steps, counter) {
  * text). The FOLLOW-UP call (the runtime asks again with the tool result) gets a
  * completing text, so a turn cannot loop and the stream is always total.
  */
-function createOfflineScriptedProvider({ caseScripts, transcript }) {
+export function createOfflineScriptedProvider({ caseScripts, transcript }) {
   const counter = { n: 0 };
-  const seen = new Map();
   return {
     id: "r5-offline-scripted",
     async listModels() {
@@ -367,11 +366,15 @@ function createOfflineScriptedProvider({ caseScripts, transcript }) {
     createClient() {
       return {
         async *generate(request) {
-          const text = JSON.stringify(request ?? {});
+          // Match decoded message content: JSON.stringify escapes request.md's
+          // newlines, so the literal needle otherwise never matches any case.
+          const messages = Array.isArray(request?.messages) ? request.messages : [];
+          const text = messages.map((m) => typeof m.content === "string" ? m.content : JSON.stringify(m.content ?? "")).join("\n");
           const script = caseScripts.find((c) => c.needle !== null && text.includes(c.needle)) ?? null;
           const caseId = script?.caseId ?? null;
-          const callIndex = seen.get(caseId) ?? 0;
-          seen.set(caseId, callIndex + 1);
+          // Every arm/repetition starts a new conversation. An instance-wide
+          // case counter makes only the first run write, starving later runs.
+          const callIndex = messages.filter((m) => m.role === "assistant").length;
           const variant = script?.variant ?? "text-only";
           let steps;
           if (callIndex === 0 && variant === "write" && script?.writeTarget != null) {
@@ -1033,6 +1036,21 @@ async function copyArmClosure(srcArm, dest) {
   for (const rel of distDirs) {
     await cp(join(srcArm, rel), join(dest, rel), { recursive: true });
   }
+  // The declared entries import other @ar packages. Those dependencies must
+  // live INSIDE the copied checkout; links into the driver's @ar tree are
+  // correctly rejected by the execution-closure verifier.
+  for (const name of readdirSync(join(srcArm, "packages"))) {
+    const from = join(srcArm, "packages", name);
+    if (!existsSync(join(from, "dist")) || !existsSync(join(from, "package.json"))) continue;
+    await cp(join(from, "dist"), join(dest, "packages", name, "dist"), { recursive: true });
+    await cp(join(from, "package.json"), join(dest, "packages", name, "package.json"));
+    const pkg = JSON.parse(readFileSync(join(from, "package.json"), "utf8"));
+    const link = join(dest, "node_modules", pkg.name);
+    await mkdir(dirname(link), { recursive: true });
+    await symlink(join(dest, "packages", name), link, "junction");
+  }
+  await linkWorkspaceModules(dest, srcArm);
+  await writeFile(join(dest, ".gitignore"), "node_modules/\n", "utf8");
   // The copied dist is ESM; a bare tmp tree needs the marker or Node refuses the
   // copy as CJS ("Cannot use import statement outside a module") — which would
   // refuse for the WRONG reason and mask the violation under test.
@@ -1079,7 +1097,6 @@ function gitInitCommit(dir, message) {
 async function makeAbiLessArm(workRoot) {
   const dir = join(workRoot, "arm-no-abi");
   const { entryRel } = await copyArmClosure(DEFAULT_PAIR.baseline, dir);
-  await linkWorkspaceModules(dir);
   const entryPath = join(dir, entryRel);
   const bytes = await readFile(entryPath, "utf8");
   await writeFile(entryPath, bytes.replace(/export const R97_ARM_PROBE =/, "const REMOVED_R97_ARM_PROBE ="), "utf8");
@@ -1090,13 +1107,23 @@ async function makeAbiLessArm(workRoot) {
 /** Give a synthetic arm the module resolution a real installed arm has.
  *  `apps/cli/node_modules` is where this workspace's pnpm layout puts the
  *  `@ar/*` links the closure entry imports. */
-async function linkWorkspaceModules(armDir) {
-  const target = join(REPO_ROOT, "apps", "cli", "node_modules");
-  if (!existsSync(target)) return;
-  try {
-    await symlink(target, join(armDir, "node_modules"), "junction");
-  } catch {
-    // A pre-existing link is fine; anything else will surface as a named refusal.
+async function linkWorkspaceModules(armDir, srcArm) {
+  const roots = [join(srcArm, "apps", "cli", "node_modules"), ...readdirSync(join(srcArm, "packages")).map((n) => join(srcArm, "packages", n, "node_modules"))];
+  for (const root of roots) {
+    if (!existsSync(root)) continue;
+    for (const entry of readdirSync(root, { withFileTypes: true })) {
+      if (entry.name.startsWith(".")) continue;
+      const names = entry.name.startsWith("@")
+        ? readdirSync(join(root, entry.name)).map((n) => `${entry.name}/${n}`)
+        : [entry.name];
+      for (const name of names) {
+        if (name.startsWith("@ar/")) continue;
+        const link = join(armDir, "node_modules", name);
+        if (existsSync(link)) continue;
+        await mkdir(dirname(link), { recursive: true });
+        await symlink(join(root, name), link, "junction");
+      }
+    }
   }
 }
 

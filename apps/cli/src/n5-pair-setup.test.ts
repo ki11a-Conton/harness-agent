@@ -157,7 +157,7 @@ describe("S5/N5 — --setup-pair refuses anything that is not the pinned baselin
     const path = join(scratch, "pin-mismatch.json");
     await writeFile(
       path,
-      `${JSON.stringify({ schemaVersion: "e4-r5-formal-pair-v1", baseline: { sha: "0".repeat(40) }, candidate: { sha: HISTORICAL_CANDIDATE } }, null, 2)}\n`,
+      `${JSON.stringify({ schemaVersion: "e4-r5-formal-pair-v1", baseline: { sha: "0".repeat(40) }, candidate: { sha: git(["rev-parse", "HEAD"]) } }, null, 2)}\n`,
       "utf8",
     );
     const result = driverJson(`return await m.setupPair(${JSON.stringify(path)}, ${JSON.stringify(REPO_ROOT)});`) as { ok: boolean; code: string; detail: string };
