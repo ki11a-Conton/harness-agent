@@ -778,7 +778,7 @@ export const MUTATIONS = [
     find: `      REAL_ARM_PAIR_ONLY_CODES.has(codeOfProblem(problem)) &&`,
     replace: `      true &&`,
     suite: "apps/cli/src/dual-platform-acceptance.test.ts",
-    test: "DP-U: NON-VACUITY — a bundle-IDENTITY defect (no platform) is NOT an arm-pair code and still refuses a fixture-only run",
+    test: "DP-U",
     catchExpectation:
       "IDENTITY_PLATFORM_MISSING is attributed to realBuildOfflineReady, so a platform-less bundle is accepted by a fixture-only run",
   },
@@ -794,7 +794,7 @@ export const MUTATIONS = [
     find: `      if (classified.blocksAll.length > 0) {`,
     replace: `      if (bundle.problems.length > 0) {`,
     suite: "apps/cli/src/dual-platform-acceptance.test.ts",
-    test: "DP-S: an honest NO-REAL-ARM-PAIR bundle does NOT fail a fixture-only run, and the problems are still RECORDED",
+    test: "DP-S",
     catchExpectation:
       "BASELINE_/CANDIDATE_SOURCE_SHA_INVALID refuse a run that requires only fixtureProtocolReady, so the join is unsatisfiable in CI",
   },
