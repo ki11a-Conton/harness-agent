@@ -54,3 +54,9 @@ node scripts/e4/dual-platform-acceptance.mjs --windows <windows-artifact>/ci-rea
 
 本地 run id 必须明确标为 local；不能伪造 GitHub run。
 最终 CI URL / run / attempt / artifact：**尚未收回**。
+
+## 当前阻塞
+
+本地实现已提交到 `codex/complete-handover-n5-n6`，但向该 GitHub 分支的推送被自动审批
+拒绝，理由是用户授权拉取和完成工作，尚未明确授权发布到远端。未绕过审批，也未将
+本地 Linux 证据记作 Windows/Ubuntu CI 完成。下一步需要用户授权推送该分支并运行 CI。

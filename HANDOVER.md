@@ -23,6 +23,10 @@ CSV/countdown 两臂 correct=passed；三个内容负组皆 failed；六项身�
 
 ## 尚待收口：N6 最终同 SHA 双平台验收
 
+本地分支为 `codex/complete-handover-n5-n6`。推送被自动审批拒绝：当前用户授权涵盖
+拉取与完成工作，未明确授权发布到远端。代码和本地验收均已提交；需要用户明确授权
+推送该分支后才能触发并收回 GitHub Actions 双平台结果，禁止绕过审批。
+
 1. 从干净的最终提交运行新增 `real-formal-offline` Windows/Ubuntu matrix。
    producer 是 `scripts/e4/n6-real-formal-ci.mjs`；执行全仓 pnpm test（N2 E2E 显式开启）、
    fixture producer、真实两臂安装构建、formal 四变体与身份反例。
