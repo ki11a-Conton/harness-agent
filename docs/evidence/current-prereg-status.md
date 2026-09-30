@@ -61,6 +61,28 @@
 > lock code predates it, and only a real concurrent campaign can expose it. Its regression
 > test reproduces the CI-scale failure rather than exercising a happy path.
 >
+> ### The EPERM regression test was NOT a reliable detector — corrected by measurement
+>
+> The original `[EPERM-1]` provokes the defect by running 12 workers × 40 concurrent
+> acquire/release cycles and hoping the ~3 % open-vs-rm race fires. Adding a mutation for
+> this defect exposed that this is not reliable: **with the fix reverted, `EPERM-1` PASSED
+> 6/6 runs** (480 attempts each). A regression test that passes on the broken code is not a
+> detector, and the mutation gate correctly reported `MISSED` rather than claiming a catch
+> that had not happened.
+>
+> `acquireLock` now takes an injectable `openFn` (default: the real `fs.open`;
+> `withR97CampaignLock` forwards `opts.openFn`), and `[EPERM-4]` raises the exact Windows
+> `EPERM` three times through that seam before delegating to the real open. Measured both
+> ways: fix present → `EPERM-4` passes 4/4; fix reverted → `EPERM-4` **fails 4/4**.
+> `EPERM-1` is kept, because a probabilistic counter-example that fires sometimes beats
+> none — it is simply not load-bearing for the gate.
+>
+> Two further mutations were added for this round's own defects (the join's level scoping in
+> both directions), taking the gate to **30/30 CAUGHT**, including all three new ones. One
+> trap worth recording: vitest treats `-t` as a **regex**, so a filter of `[EPERM-4]` is an
+> invalid character class and killed vitest at STARTUP — which the gate also reports as
+> `MISSED`, correctly, because an infrastructure abort is not a caught mutation.
+>
 > ### `sourceSha` is deliberately ABSENT — the anti-fabrication finding
 >
 > `identity.arms.{baseline,candidate}.sourceSha` is OMITTED, so the bundle still reports
@@ -160,6 +182,7 @@
 > pnpm typecheck                      # tsc -b, exit 0
 > pnpm test:formal-gate               # 81 tests: strict R5 gate (25) + dual-platform (23) + offline profile (33)
 > pnpm test:r0-gaps                   # 48 tests: readiness classification + journal binding + pricing counter-examples
+> node scripts/e4/r97-mutation-check.mjs   # 30/30 mutations CAUGHT, working tree restored
 > node scripts/e4/prereg-production-e2e.mjs --out .ci/r97-r98/prereg-production-e2e.json
 > node scripts/e4/ci-readiness.mjs --e2e .ci/r97-r98/prereg-production-e2e.json --out .ci/r97-r98/ci-readiness.json
 > ```
