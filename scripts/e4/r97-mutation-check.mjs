@@ -810,7 +810,7 @@ export const MUTATIONS = [
     find: `    if (code !== "EEXIST" && code !== "EPERM") throw err;`,
     replace: `    if (code !== "EEXIST") throw err;`,
     suite: "packages/evaluation/src/r97-budget-ledger-lock-eperm.test.ts",
-    test: "[EPERM-4]",
+    test: "EPERM\-4",
     catchExpectation:
       "a raw EPERM escapes the retry/deadline machinery, so a wedged-looking lock aborts the campaign. NOTE: pointed at EPERM-4, not EPERM-1 — with the fix reverted, EPERM-1 PASSED 6/6 runs on this machine because it depends on a ~3% race actually firing, so it cannot serve as a mutation target. EPERM-4 forces the same condition through the openFn seam and failed 4/4.",
   },
