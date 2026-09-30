@@ -49,7 +49,17 @@ jobs:
           - os: windows-latest
             platform: windows
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    # 30 was too tight and made this job FLAKY, which was measured rather than
+    # guessed. The ubuntu leg of run 36666746237 completed in 25.5 minutes — only
+    # 4.5 minutes of margin — and the very next run (36668701803, a DOCS-ONLY
+    # commit that changed no test) had the identical job cancelled at exactly
+    # 30:10, which then skipped `release attestation` and marked the whole run
+    # `cancelled`. A gate that goes red for reasons unrelated to the change under
+    # test is a gate nobody trusts, and a docs-only commit is the clearest
+    # possible evidence that the timeout, not the change, was the variable.
+    # 60 matches `r97-r98-closed-loop` (also a full-suite job) rather than
+    # inventing a second number, and still bounds a genuinely hung run.
+    timeout-minutes: 60
     env:
       # Never let an absent key silently flip a job into "no-op success".
       OPENAI_API_KEY: ""
