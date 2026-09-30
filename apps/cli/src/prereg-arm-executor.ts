@@ -114,6 +114,47 @@ export const ARM_DEADLINE_EXCEEDED = "ARM_DEADLINE_EXCEEDED";
  * was revoked: the result is recorded as unconfirmed.
  */
 export const WORKER_CLEANUP_GRACE_MS = 2_000;
+/**
+ * N1 (F30-1) — the bounded wait for the worker PROCESS to actually exit after it
+ * has been stopped. The old code `await`ed the `exited` promise with no bound at
+ * all, so a child that wrote a result frame and then refused to exit parked the
+ * driver forever. Reaching this bound kills the child hard and takes ONE more
+ * bounded look; `exited` is never awaited without a deadline.
+ */
+export const WORKER_EXIT_GRACE_MS = 2_000;
+/**
+ * N1 (F30-1) — the short drain grace after the child PROCESS exits (or after a
+ * stop is triggered), before the driver gives up on further stdout. `'exit'` may
+ * be emitted BEFORE the last buffered stdout data is consumed, so this grace is
+ * what stops a process-exit event from pre-empting a result frame the child
+ * already wrote. It is a FALLBACK, not a delay: the child's frame stream reaching
+ * EOF is the PRIMARY trigger and normally releases the loop immediately, so a
+ * well-behaved worker pays nothing.
+ */
+export const WORKER_EXIT_DRAIN_MS = 1_000;
+/**
+ * N1 (F30-1) — the DECLARED worst-case total cleanup bound for one arm stop:
+ * provider-unwind grace + stdout drain + two bounded waits for the child process
+ * to exit. A stop that exceeds it is a bug, not a slow machine. Measured values
+ * for every acceptance scenario are recorded in `docs/evidence/n1-worker-lifecycle.md`
+ * and are far below this ceiling.
+ */
+export const N1_WORKER_CLEANUP_BOUND_MS =
+  WORKER_CLEANUP_GRACE_MS + WORKER_EXIT_DRAIN_MS + 2 * WORKER_EXIT_GRACE_MS;
+/**
+ * N1 (F30-1) — the caller cancelled the arm run before/while it was in flight.
+ * Cancellation-only: this code is reachable from an `AbortSignal`, never from a
+ * flag, so it can stop work but can never grant a capability.
+ */
+export const ARM_RUN_CANCELLED = "ARM_RUN_CANCELLED";
+/**
+ * N1 (F30-1) — the worker asked the driver to service a SECOND model request
+ * while one was still in flight. The protocol admits ONE active request per
+ * worker (see `serviceModelRequest`), so the parent REFUSES it instead of
+ * overwriting the live controller — losing the first controller is what made the
+ * earlier request uncancellable.
+ */
+export const ARM_WORKER_PROTOCOL_VIOLATION = "ARM_WORKER_PROTOCOL_VIOLATION";
 
 /** The activation artifact schema (only written for an activated candidate). */
 export const PREREG_RUN_ACTIVATION_SCHEMA = "prereg-run-activation-v1";
@@ -613,11 +654,37 @@ function isDir(path: string | undefined): path is string {
   }
 }
 
-function refuse(code: string, message: string): never {
+/**
+ * A STABLE refusal. The error carries the stable `code` AND, when the refusal
+ * came out of an arm-run stop, the OBSERVED cancellation record.
+ *
+ * N1 (F30-1) — plan §4 item 7: "错误路径的 cancellation 观测应能被测试和 artifact
+ * 读取，不只留在抛错前的局部变量". Before N1 the abort facts existed only as local
+ * variables inside `launchArmWorker` that were discarded by the very `refuse()`
+ * that reported the failure, so neither a test nor a report could read them. The
+ * record is attached here as a NON-ENUMERABLE property so it never changes the
+ * error's serialized shape or its `message`, while remaining directly readable.
+ */
+function refuse(code: string, message: string, cancellation?: WorkerCancellationRecord): never {
   const err = new Error(`${code}: ${message}`);
   (err as { code?: string }).code = code;
+  if (cancellation !== undefined) {
+    Object.defineProperty(err, "cancellation", {
+      value: cancellation,
+      enumerable: false,
+      writable: false,
+      configurable: false,
+    });
+  }
   throw err;
 }
+
+/**
+ * N1 (F30-1) — the OBSERVED cancellation facts for one arm-run stop, as attached
+ * to a refusal. Structurally the `cancellation` field of `LaunchArmWorkerResult`,
+ * named so a reader of a thrown error does not have to import the internal type.
+ */
+export type WorkerCancellationRecord = LaunchArmWorkerResult["cancellation"];
 
 function git(root: string, args: readonly string[]): string | null {
   try {
@@ -675,8 +742,22 @@ export function buildWorkerEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return out;
 }
 
-/** A line-delimited reader over a child stream that never loses a frame. */
-function createLineReader(stream: NodeJS.ReadableStream): { next: () => Promise<string | null> } {
+/**
+ * A line-delimited reader over a child stream that never loses a frame.
+ *
+ * N1 (F30-1) — `release()` is the BOUNDED release added for this task. A reader
+ * whose stream never closes (a child that exited while its pipe stayed open, or a
+ * stopped worker whose stdout is still held) would park `next()` forever, which
+ * is exactly the unbounded wait F30-1 is about. `release()` ends the stream
+ * LOGICALLY: every queued line is still delivered first, then `next()` resolves
+ * `null`. It is idempotent, and it deliberately does NOT race a second `next()`
+ * against a discarded one — a discarded `next()` leaves a waiter in the queue
+ * that would consume the very line the caller is still waiting for.
+ */
+function createLineReader(stream: NodeJS.ReadableStream): {
+  next: () => Promise<string | null>;
+  release: () => void;
+} {
   let buffer = "";
   const queued: string[] = [];
   const waiters: Array<(line: string | null) => void> = [];
@@ -706,6 +787,10 @@ function createLineReader(stream: NodeJS.ReadableStream): { next: () => Promise<
       if (queued.length > 0) return Promise.resolve(queued.shift()!);
       if (ended) return Promise.resolve(null);
       return new Promise((resolve) => waiters.push(resolve));
+    },
+    release(): void {
+      ended = true;
+      while (waiters.length > 0) waiters.shift()!(null);
     },
   };
 }
@@ -957,24 +1042,44 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
       // and every tool dispatch is reserved and settled against this budget.
       ...(ctx.toolDispatchBudget === undefined ? {} : { toolDispatchBudget: ctx.toolDispatchBudget }),
       ...(ctx.campaignDeadlineAtMs === undefined ? {} : { campaignDeadlineAtMs: ctx.campaignDeadlineAtMs }),
+      // N1 (F30-1) — the CALLER-CANCELLATION path. The frozen
+      // `PreregisteredArmContext` declares no signal today, so this reads one
+      // DEFENSIVELY: a driver that supplies `signal` gets the same finalize as the
+      // deadline, and a driver that supplies none is unaffected. It is a narrow,
+      // explicit read of an optional field — not a change to the frozen contract
+      // (that interface is owned by another task this wave) and not a capability
+      // channel: an `AbortSignal` can only STOP work, never grant it.
+      ...(() => {
+        const supplied = (ctx as { signal?: unknown }).signal;
+        return supplied instanceof AbortSignal ? { callerSignal: supplied } : {};
+      })(),
     });
 
     // --- 5. independently corroborate the reported build identity ----------
+    //
+    // N1 (F30-1) — every refusal AFTER the worker ran carries the OBSERVED
+    // cancellation record. Plan §4 item 7 requires the abort facts to be readable
+    // from the error path, not to live only in a local variable that the throw
+    // discards: a caller that gets `ARM_BUILD_PROBE_MISMATCH` can still prove
+    // whether the worker's transport was aborted and whether it was classified as
+    // a normal completion.
     const report = launched.report;
+    const observed = launched.cancellation;
     if (report.armBuildReport === null || report.armBuildReport === undefined) {
-      refuse(ARM_BUILD_PROBE_MISMATCH, `the ${arm.armId} worker ran no arm build (no build report was returned)`);
+      refuse(ARM_BUILD_PROBE_MISMATCH, `the ${arm.armId} worker ran no arm build (no build report was returned)`, observed);
     }
     if (report.armBuildReport.entrySha256 !== entry.sha256) {
       refuse(
         ARM_BUILD_PROBE_MISMATCH,
         `the ${arm.armId} worker loaded a build entry (${report.armBuildReport.entrySha256.slice(0, 12)}…) that is not the pre-flight verified entry (${entry.sha256.slice(0, 12)}…)`,
+        observed,
       );
     }
     if (report.armBuildReport.entryRel !== R97_ARM_BUILD_ENTRIES.find((e) => e.endsWith("benchmark-command.js"))) {
-      refuse(ARM_BUILD_PROBE_MISMATCH, `the ${arm.armId} worker loaded ${report.armBuildReport.entryRel}, not the declared build entry`);
+      refuse(ARM_BUILD_PROBE_MISMATCH, `the ${arm.armId} worker loaded ${report.armBuildReport.entryRel}, not the declared build entry`, observed);
     }
     if (report.outcome === undefined) {
-      refuse(ARM_WORKER_FAILED, `the ${arm.armId} worker ran the build but returned no case outcome`);
+      refuse(ARM_WORKER_FAILED, `the ${arm.armId} worker ran the build but returned no case outcome`, observed);
     }
 
     return writeArmEvidence({
@@ -1015,7 +1120,31 @@ interface LaunchArmWorkerOptions {
   campaignDeadlineAtMs?: number | null;
   /** R0/S1 — the arm-run identity a reservation must belong to. */
   armRunId: string;
+  /**
+   * N1 (F30-1) — the caller's cancellation signal, when it supplied one. It is
+   * ONE of the termination triggers and is handled by the same finalize as the
+   * deadline and the worker exit: an arm stopped from outside must abort the
+   * transport it owns, not merely stop being awaited.
+   */
+  callerSignal?: AbortSignal | undefined;
 }
+
+/**
+ * N1 (F30-1) — the ONE classification of why a worker was stopped. The union is
+ * closed so an unclassified stop cannot be returned as a silent default, and so
+ * a reader can tell a TIMEOUT apart from an early EXIT apart from a clean
+ * COMPLETION.
+ */
+type WorkerTerminationReason =
+  | "completed" // the worker wrote its result frame and exited 0
+  | "deadline" // the arm exceeded its wall-clock bound
+  | "caller_cancelled" // the caller aborted the arm run
+  | "worker_exit" // the child exited before writing a result
+  | "worker_error" // the child could not be spawned / raised `error`
+  | "stdout_eof" // the child's stdout closed with no result frame
+  | "result_frame_rejected" // the result sentinel line was not parseable
+  | "protocol_violation" // the child broke the ONE-active-request contract
+  | "unsupported_abi"; // the arm build declares no tool-budget capability
 
 interface LaunchArmWorkerResult {
   report: WorkerReport;
@@ -1026,6 +1155,13 @@ interface LaunchArmWorkerResult {
    * R0/S2 — what the deadline actually did to the in-flight transport. Recorded
    * as OBSERVED, never as a claim that a remote request was revoked: a provider
    * that ignores its `AbortSignal` leaves `streamSettled: false`.
+   *
+   * N1 (F30-1) — this record is now produced by ONE idempotent finalize that
+   * EVERY termination path converges on (deadline, worker exit, child `error`,
+   * stdout EOF, malformed result frame, caller cancellation, normal completion),
+   * so it is populated on the non-timeout paths too. Before N1 only the deadline
+   * path aborted the transport, so a worker that exited after sending a request
+   * left the provider's signal `false` and the remote outcome unrecorded.
    */
   cancellation: {
     timedOut: boolean;
@@ -1033,8 +1169,36 @@ interface LaunchArmWorkerResult {
     signalAborted: boolean;
     /** The provider's generator returned within the cleanup grace. */
     streamSettled: boolean;
-    /** MEASURED wall-clock ms from the deadline firing to the driver resuming. */
+    /** MEASURED wall-clock ms from the stop being triggered to the driver resuming. */
     cleanupMs: number;
+    /**
+     * N1 — the single classification of WHY this worker was stopped. Every
+     * termination path sets exactly one; `null` is unreachable in a returned
+     * result (a result is only returned when a result frame was accepted).
+     */
+    terminationReason: WorkerTerminationReason;
+    /**
+     * N1 — the three transport states are reported SEPARATELY and are never
+     * collapsed into one another:
+     *   `localAbort`             — this driver aborted the controller it owns;
+     *   `providerReturned`       — the provider's generator unwound in grace;
+     *   `remoteOutcomeUnknown`   — the remote side was never confirmed, so
+     *                              nothing may claim the request was revoked.
+     */
+    localAbort: boolean;
+    providerReturned: boolean;
+    remoteOutcomeUnknown: boolean;
+    /** N1 — model requests REFUSED because one was already in flight. */
+    concurrencyRefusals: number;
+    /**
+     * N1 — how many times a normal frame write was suppressed because the stop
+     * had already been triggered (no normal event is ever published post-close).
+     */
+    framesSuppressedAfterStop: number;
+    /** N1 — EPIPE / ERR_STREAM_DESTROYED / `error` events observed on stdin. */
+    stdinErrors: number;
+    /** The first such stdin error's message, or null. */
+    stdinError: string | null;
     /**
      * R0/S2 — frames the driver could NOT deliver because the child had already
      * closed its stdin (or the write raised EPIPE/ERR_STREAM_DESTROYED).
@@ -1100,15 +1264,73 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
    * closure is narrowed to `never` in the others, which is exactly the kind of
    * type-level accident that let the old discard-the-controller pattern look
    * correct.
+   *
+   * N1 (F30-1) — ONE WORKER, ONE ACTIVE MODEL REQUEST. The protocol already
+   * enforced this on the child side (`createProxyProvider` throws
+   * `PREREG_WORKER_CONCURRENCY`), so a single slot is the honest shape. What was
+   * missing is the PARENT side of the same rule: `serviceModelRequest` used to
+   * OVERWRITE `current` unconditionally, so a second request silently discarded
+   * the first controller and the first provider stream became uncancellable.
+   * The parent now REFUSES the second request instead (see
+   * `ARM_WORKER_PROTOCOL_VIOLATION`), and that refusal is itself a termination
+   * path. No concurrency was added to dodge the question.
    */
   const streamOwner: { current: { id: number; controller: AbortController } | null } = { current: null };
+  /**
+   * N1 — whether a model request is CURRENTLY in flight. Distinct from
+   * `streamOwner.current !== null` on purpose: the holder is cleared in the
+   * stream's own `finally`, which runs a microtask AFTER the terminal `done`
+   * frame was written, so a stop triggered in that window must not be read as
+   * "abort the stream you already completed".
+   */
+  let streamActive = false;
+  /**
+   * N1 — set when a request ended because its provider stream really finished
+   * (terminal event delivered, `done` published). `finalize` uses it to keep the
+   * plan §4 rule "a normally-completed stream must NOT be reported as cancelled".
+   */
+  let streamCompleted = false;
   /** Resolves when the currently serviced model stream unwinds (either way). */
   let streamSettled: Promise<void> = Promise.resolve();
+  /**
+   * N1 — set by `finalize` BEFORE anything is aborted or closed. It is the ONE
+   * latch that stops new frames being accepted, stops normal events being
+   * written to a dying child, and refuses a late second model request.
+   */
+  let stopTriggered = false;
+  /**
+   * N1 — the bounded "the child is gone, stop waiting for more stdout" release.
+   * A stop, or a child process that has exited, arms this; when it fires the
+   * reader is released so the frame loop can classify the stop instead of waiting
+   * on a stdout that may never close. It is the bound that makes "the worker wrote
+   * a result and then refused to exit" finite.
+   */
+  let drainArmed = false;
+  const armDrain = (): void => {
+    if (drainArmed) return;
+    drainArmed = true;
+    const t = setTimeout(() => {
+      // `release()` ends the reader LOGICALLY: every queued line is still
+      // delivered first, so a result frame the child already wrote is never lost.
+      reader.release();
+    }, WORKER_EXIT_DRAIN_MS);
+    t.unref?.();
+  };
+  /** N1 — the ONE classification of why this worker is being stopped. */
+  let terminationReason: WorkerTerminationReason | null = null;
   const cancellation = {
     timedOut: false,
     signalAborted: false,
     streamSettled: true,
     cleanupMs: 0,
+    terminationReason: "completed" as WorkerTerminationReason,
+    localAbort: false,
+    providerReturned: false,
+    remoteOutcomeUnknown: false,
+    concurrencyRefusals: 0,
+    framesSuppressedAfterStop: 0,
+    stdinErrors: 0,
+    stdinError: null as string | null,
     frameWritesAfterClose: 0,
     frameWriteError: null as string | null,
     settleNoticesFailed: 0,
@@ -1116,26 +1338,157 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
     detachedStreamError: null as string | null,
   };
 
+  /**
+   * N1 (F30-1) — THE ONE IDEMPOTENT FINALIZE.
+   *
+   * Every termination path — deadline, caller cancellation, worker exit, child
+   * `error`, stdout EOF, a malformed result frame, a protocol violation, a normal
+   * completion — converges here, in this fixed order:
+   *
+   *   1. set "no new frames are accepted" (the latch) and record WHY;
+   *   2. abort the ACTIVE transport the provider is holding;
+   *   3. close the child process THIS task owns (never a batch kill);
+   *   4. record the MEASURED cleanup elapsed time.
+   *
+   * The first caller wins; every later call is a no-op that cannot overwrite the
+   * recorded reason or re-run the kill. Before N1 only `deadlineFired` did this,
+   * so a worker that exited non-timeout returned `ARM_WORKER_FAILED` with the
+   * provider's `AbortSignal` still `false`.
+   */
+  const finalize = (reason: WorkerTerminationReason): void => {
+    if (stopTriggered) return; // idempotent: the first reason is the reason
+    stopTriggered = true;
+    terminationReason = reason;
+    cancellation.terminationReason = reason;
+    const startedCleanup = Date.now();
+    // 0. RELEASE A PARKED READ. A stop that arrives while the frame loop is
+    //    awaiting `reader.next()` must be able to unwind it; without this the
+    //    loop would stay parked until the child's stdout closed, which is exactly
+    //    the unbounded wait this task removes. No frame is dropped by this: a
+    //    line already queued is still delivered by `reader.next()`.
+    armDrain();
+    // 1. NO NEW FRAMES. Set before the abort so a stream that unwinds on abort
+    //    cannot publish a late `event`/`done` frame to a stopped worker.
+    // 2. ABORT THE TRANSPORT FIRST — the provider is holding this exact signal.
+    //
+    // N1 — only when a request is REALLY still in flight. A stream that already
+    // delivered its terminal event is not cancelled just because the child chose
+    // to exit right after; recording it as aborted would be a false claim, and
+    // the plan forbids reporting a normally-completed stream as cancelled.
+    if (streamOwner.current !== null && !(streamCompleted && !streamActive)) {
+      cancellation.signalAborted = true;
+      cancellation.localAbort = true;
+      cancellation.streamSettled = false;
+      try {
+        streamOwner.current.controller.abort();
+      } catch (err) {
+        // An abort listener that throws must not skip the child kill below.
+        cancellation.detachedStreamRejections += 1;
+        cancellation.detachedStreamError ??= err instanceof Error ? err.message : String(err);
+      }
+    }
+    // 3. Only then close the child process THIS task owns. Never a batch kill.
+    //
+    // N1 — ONE documented exception: on `completed` the child has just written
+    // its result frame and is exiting on its own. SIGTERMing it there would
+    // replace its real exit code with a kill signal and turn every SUCCESSFUL arm
+    // into `ARM_WORKER_FAILED`. So the child is NOT killed on `completed`; the
+    // bounded exit wait below still guarantees the process cannot outlive the
+    // cleanup bound (it escalates to SIGKILL), which is the property that matters.
+    // Every non-completion reason is a stop, and a stop closes the child here.
+    if (reason !== "completed") {
+      try {
+        child.kill();
+      } catch (err) {
+        cancellation.detachedStreamRejections += 1;
+        cancellation.detachedStreamError ??= err instanceof Error ? err.message : String(err);
+      }
+    }
+    cancellation.cleanupMs = Date.now() - startedCleanup;
+  };
+
   const deadlineFired = (): void => {
     timedOut = true;
     cancellation.timedOut = true;
-    const startedCleanup = Date.now();
-    // 1. ABORT THE TRANSPORT FIRST — the provider is holding this exact signal.
-    if (streamOwner.current !== null) {
-      cancellation.signalAborted = true;
-      cancellation.streamSettled = false;
-      streamOwner.current.controller.abort();
-    }
-    // 2. Only then close the child process THIS task owns. Never a batch kill.
-    child.kill();
-    cancellation.cleanupMs = Date.now() - startedCleanup;
+    finalize("deadline");
   };
   const timer = setTimeout(deadlineFired, opts.timeoutMs);
   timer.unref?.();
 
-  const exited = new Promise<number | null>((resolve) => {
-    child.on("exit", (code) => resolve(code));
-    child.on("error", () => resolve(null));
+  /**
+   * N1 — the caller's cancellation, if it supplied a signal. `{ once: true }` so
+   * a second abort cannot re-enter, and the listener is removed on every exit
+   * path below so a long-lived caller signal cannot leak this worker.
+   */
+  const onCallerAbort = (): void => {
+    finalize("caller_cancelled");
+  };
+  if (opts.callerSignal !== undefined) {
+    if (opts.callerSignal.aborted) onCallerAbort();
+    else opts.callerSignal.addEventListener("abort", onCallerAbort, { once: true });
+  }
+
+  /**
+   * N1 — the child PROCESS state, observed rather than awaited blindly.
+   *
+   * The old code built `exited` from `child.on("exit")`/`child.on("error")` and
+   * then `await`ed it with no bound, so a child that wrote a result and refused
+   * to exit parked the driver forever. Here the events are RECORDED (so they can
+   * also drive the termination paths) and every await below races a deadline.
+   */
+  let processExited = false;
+  /** N1 — the child could not be spawned or raised `error` (never ran). */
+  let processErrored = false;
+  /** N1 — the terminating signal, when the child was signalled rather than exited. */
+  let exitSignalName: NodeJS.Signals | null = null;
+  let exitCode: number | null = null;
+  let exitResolve: (() => void) | null = null;
+  const exitSignal = new Promise<void>((resolve) => {
+    exitResolve = resolve;
+  });
+  /**
+   * N1 — the accepted result frame. Declared here: the exit handler reads it.
+   *
+   * A mutable HOLDER, not two bare `let`s, for the same reason `streamOwner` is
+   * one: `handleLine` assigns them from inside a closure, and TypeScript narrows
+   * a `let` that only a closure assigns to its initializer at every use site —
+   * here that narrowed `sawResult` to `false`, made the "no result" refusal
+   * statically unconditional, and turned `report` into `never`. The holder keeps
+   * the declared types honest at every read.
+   */
+  const result: { sawResult: boolean; report: WorkerReport | null } = { sawResult: false, report: null };
+  child.on("exit", (code, signal) => {
+    processExited = true;
+    exitCode = code;
+    exitSignalName = signal;
+    // N1 — the child is gone, so no further stdout can arrive in a well-behaved
+    // case. ARM THE BOUNDED DRAIN rather than finalizing here: `'exit'` can be
+    // delivered BEFORE the parent has drained the result frame the child wrote,
+    // so classifying immediately would mislabel a SUCCESSFUL run as an early
+    // exit. The frame loop stays authoritative — it consumes whatever is buffered
+    // and then classifies from the real evidence (`result.sawResult`), within the
+    // drain bound.
+    armDrain();
+    exitResolve?.();
+  });
+  child.on("error", () => {
+    processExited = true;
+    processErrored = true;
+    if (exitCode === null) exitCode = null;
+    armDrain();
+    exitResolve?.();
+  });
+  /**
+   * N1 (F30-1) — stdin has an ASYNC error channel that a synchronous try/catch
+   * around `write()` cannot see: an EPIPE arrives as an `'error'` EVENT on the
+   * stream, and an unhandled one would tear the driver process down. It is
+   * recorded (never an empty catch) and counts as an observed end-of-life race.
+   */
+  child.stdin?.on("error", (err: Error) => {
+    cancellation.stdinErrors += 1;
+    cancellation.stdinError ??= err instanceof Error ? err.message : String(err);
+    cancellation.frameWritesAfterClose += 1;
+    cancellation.frameWriteError ??= cancellation.stdinError;
   });
 
   // R0/S1 (F1) — the child is told whether the FORMAL budget RPC is in play. The
@@ -1170,6 +1523,15 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
     // surfaced on the cancellation record, so "the child stopped accepting
     // frames" is an observed fact rather than an invisible one. The child's exit
     // still classifies the arm; this only makes the race reportable.
+    //
+    // N1 (F30-1) — the stop latch is checked FIRST: after a stop no normal frame
+    // (an `event`, a `done`, a `proceed`, a `tool_grant`) may be published to a
+    // worker the driver has already declared dead. Only the `abort` refusal frame
+    // is allowed past, because that one is the driver TELLING the child to stop.
+    if (stopTriggered && frame["t"] !== "abort") {
+      cancellation.framesSuppressedAfterStop += 1;
+      return;
+    }
     if (child.stdin === null || child.stdin.destroyed || !child.stdin.writable) {
       cancellation.frameWritesAfterClose += 1;
       return;
@@ -1187,22 +1549,73 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
    * provider stream inline, which parked the frame loop inside a generator that
    * never ends; the deadline timer could then fire but the driver could never
    * return. The loop below now stays responsive while the stream runs.
+   *
+   * N1 (F30-1) — ONE ACTIVE REQUEST PER WORKER, ENFORCED HERE.
+   *
+   * The child-side proxy already refuses a concurrent `generate()` (see
+   * `createProxyProvider`'s `PREREG_WORKER_CONCURRENCY`), so the protocol's real
+   * arity is ONE. The parent half of that rule was missing: the old body
+   * assigned `streamOwner.current` unconditionally, so a second request replaced
+   * the live controller and the FIRST provider stream could never be aborted —
+   * it stayed parked on a provider that never yields, which is exactly the F30-1
+   * class of leak. The parent now REFUSES the second request as a PROTOCOL
+   * VIOLATION and finalizes, so the first controller is never lost and no
+   * uncancellable stream is created. Returning `false` lets the frame loop treat
+   * the refusal as a termination path.
    */
-  const serviceModelRequest = (id: number, request: unknown): void => {
+  const serviceModelRequest = (id: number, request: unknown): boolean => {
+    if (stopTriggered) {
+      // The stop already happened: a request arriving now is refused, never
+      // started, so no new transport can be opened on a dead worker.
+      cancellation.concurrencyRefusals += 1;
+      return false;
+    }
+    if (streamOwner.current !== null) {
+      // ONE slot. Refusing beats clobbering: the live controller is the ONLY
+      // handle to the in-flight provider stream, and overwriting it would strand
+      // that stream uncancellable for the rest of the process's life.
+      cancellation.concurrencyRefusals += 1;
+      return false;
+    }
     const controller = new AbortController();
     streamOwner.current = { id, controller };
+    streamActive = true;
     physicalProviderCalls += 1;
     const run = (async (): Promise<void> => {
       try {
         const client = opts.provider.createClient({ id: runOptions["modelId"] as string } as never, {} as never);
         for await (const event of client.generate(request as never, controller.signal)) {
-          if (timedOut) break; // no event is published after the deadline
+          if (stopTriggered) {
+            // N1 — a normal frame the driver WITHHELD because the stop already
+            // happened. Counted here rather than only inside `reply()`, because
+            // this is where the suppression actually occurs: the loop breaks
+            // before it would ever have called `reply`.
+            cancellation.framesSuppressedAfterStop += 1;
+            break;
+          }
           reply({ t: "event", id, event });
           if ((event as ModelEvent).type === "completed" || (event as ModelEvent).type === "error") break;
         }
-        if (!timedOut) reply({ t: "done", id });
+        if (!stopTriggered) reply({ t: "done", id });
+        else cancellation.framesSuppressedAfterStop += 1;
+        // N1 — the request genuinely ENDED: its events were published and its
+        // terminal `done` (or the provider's own terminal event) was delivered.
+        // This is what `finalize` reads to decide whether an abort is still owed,
+        // so a stream that finished normally is NOT reported as cancelled.
+        streamCompleted = true;
       } catch (err) {
-        if (!timedOut) reply({ t: "error", id, message: err instanceof Error ? err.message : String(err) });
+        // The run body reports its own failure to the child, but only while the
+        // worker is still live: a post-stop write must not be published.
+        if (!stopTriggered) reply({ t: "error", id, message: err instanceof Error ? err.message : String(err) });
+      } finally {
+        // N1 — the slot is released HERE, in the stream's own `finally`, so it is
+        // released on every outcome: normal completion, provider error, or abort.
+        // Before N1 the slot was never released at all, which is why a second
+        // request could silently take it over mid-flight.
+        if (streamOwner.current !== null && streamOwner.current.controller === controller) {
+          streamOwner.current = null;
+          streamActive = false;
+        }
       }
     })();
     streamSettled = run;
@@ -1220,123 +1633,206 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
         cancellation.detachedStreamError = err instanceof Error ? err.message : String(err);
       },
     );
+    return true;
   };
 
-  let report: WorkerReport | null = null;
-  let sawResult = false;
+  /**
+   * N1 — handle ONE line from the child. Returns `false` when the frame loop must
+   * STOP (result accepted, malformed result, or a terminal protocol violation).
+   *
+   * This is the old loop body with its routing rules unchanged; extracting it is
+   * what lets the loop race the bounded drain signal without duplicating the
+   * router.
+   */
+  const handleLine = async (line: string): Promise<boolean> => {
+    if (line.startsWith(ARM_WORKER_RESULT_SENTINEL)) {
+      const parsed = ((): WorkerReport | null => {
+        try {
+          return JSON.parse(line.slice(ARM_WORKER_RESULT_SENTINEL.length)) as WorkerReport;
+        } catch {
+          // N1 — a malformed result frame is a CLASSIFIED termination, not a
+          // silent `sawResult = true` followed by a confusing downstream crash
+          // when the unparsed report is dereferenced.
+          return null;
+        }
+      })();
+      if (parsed === null) {
+        finalize("result_frame_rejected");
+        return false;
+      }
+      result.sawResult = true;
+      result.report = parsed;
+      return false;
+    }
+    let frame: { t?: string; id?: number; request?: unknown; [k: string]: unknown };
+    try {
+      frame = JSON.parse(line) as typeof frame;
+    } catch {
+      return true; // a non-frame line is ignored
+    }
+    if (typeof frame.id !== "number") return true;
+
+    // --- R0/S1: the ABI capability handshake, BEFORE any arm code runs ----
+    if (frame.t === "hello") {
+      const abi = Array.isArray(frame["abi"]) ? (frame["abi"] as unknown[]).filter((c): c is string => typeof c === "string") : [];
+      if (!wantsBudgetRpc) {
+        // A child that opens a handshake the driver did not ask for is not a
+        // protocol this driver speaks.
+        reply({ t: "abort", id: frame.id, reason: "this driver did not request the budget ABI handshake" });
+        return true;
+      }
+      if (!abi.includes(R97_ARM_ABI_TOOL_BUDGET)) {
+        abiRefusal =
+          `the ${opts.armRunId} arm build declares no ${R97_ARM_ABI_TOOL_BUDGET} capability (declared: [${abi.join(", ") || "none"}]) — ` +
+          `the formal pre-registered path must refuse an arm that cannot honour the campaign's durable tool budget, rather than run it with maxToolCalls unenforced`;
+        reply({ t: "abort", id: frame.id, reason: abiRefusal });
+        return true;
+      }
+      reply({ t: "proceed", id: frame.id });
+      return true;
+    }
+
+    // --- R0/S1: the tool-dispatch budget RPC -----------------------------
+    if (frame.t === "tool_reserve") {
+      if (opts.toolDispatchBudget === undefined) {
+        reply({ t: "tool_error", id: frame.id, message: "no tool-dispatch budget is wired for this arm run" });
+        return true;
+      }
+      if (frame["armRunId"] !== opts.armRunId) {
+        // An old worker's message must not spend a new arm's quota.
+        reply({
+          t: "tool_error",
+          id: frame.id,
+          message: `reservation for ${String(frame["armRunId"])} cannot be charged to ${opts.armRunId}`,
+        });
+        return true;
+      }
+      const reservationId = `${opts.armRunId}:tool:${++reservationSeq}`;
+      const granted = await opts.toolDispatchBudget.reserve(frame.request as never);
+      if (!granted.ok) {
+        budgetCounters.refused += 1;
+        reply({ t: "tool_grant", id: frame.id, ok: false, reason: granted.reason ?? "TOOL_BUDGET_EXHAUSTED" });
+        return true;
+      }
+      budgetCounters.granted += 1;
+      liveReservations.set(reservationId, { settle: granted.settle });
+      reply({ t: "tool_grant", id: frame.id, ok: true, reservationId });
+      return true;
+    }
+
+    if (frame.t === "tool_settle") {
+      const reservationId = String(frame["reservationId"]);
+      const outcome = frame["outcome"];
+      if (outcome !== "dispatched" && outcome !== "not_executed" && outcome !== "unknown") {
+        reply({ t: "tool_error", id: frame.id, message: `unknown settlement outcome ${String(outcome)}` });
+        return true;
+      }
+      if (settledReservations.has(reservationId)) {
+        // Idempotent: a duplicate settle is acknowledged, never charged twice.
+        reply({ t: "tool_settled", id: frame.id, duplicate: true });
+        return true;
+      }
+      const live = liveReservations.get(reservationId);
+      if (live === undefined) {
+        budgetCounters.unknownSettle += 1;
+        reply({ t: "tool_error", id: frame.id, message: `no live reservation ${reservationId} belongs to ${opts.armRunId}` });
+        return true;
+      }
+      liveReservations.delete(reservationId);
+      settledReservations.add(reservationId);
+      budgetCounters.settled += 1;
+      await live.settle(outcome);
+      reply({ t: "tool_settled", id: frame.id });
+      return true;
+    }
+
+    // --- R0/S2: the child cancelled an in-flight model request ------------
+    if (frame.t === "cancel") {
+      // The arm build stopped waiting. Abort THIS request's transport (not
+      // somebody else's) and keep the loop responsive.
+      if (streamOwner.current !== null && streamOwner.current.id === frame.id) {
+        cancellation.signalAborted = true;
+        cancellation.localAbort = true;
+        streamOwner.current.controller.abort();
+      }
+      return true;
+    }
+
+    if (frame.t !== "request") return true;
+    if (!serviceModelRequest(frame.id, frame.request)) {
+      // N1 — the ONE-active-request contract was broken (or the worker asked
+      // after its own stop). That is a terminal protocol violation: continuing
+      // would leave an uncancellable stream behind, so the arm is stopped and
+      // classified instead.
+      finalize("protocol_violation");
+      return false;
+    }
+    return true;
+  };
+
   try {
     for (;;) {
+      // N1 (F30-1) — the read is BOUNDED. `reader.next()` alone parks until the
+      // child writes or its stdout closes, so a child that exits (or is stopped)
+      // while its pipe stays open would park the driver forever. `armDrain()`
+      // releases the reader logically after the drain bound, so `next()` returns
+      // `null` and the loop reaches its classification. No frame is lost: every
+      // line already queued is delivered before the release takes effect.
       const line = await reader.next();
       if (line === null) break;
-      if (line.startsWith(ARM_WORKER_RESULT_SENTINEL)) {
-        sawResult = true;
-        report = JSON.parse(line.slice(ARM_WORKER_RESULT_SENTINEL.length)) as WorkerReport;
-        break;
-      }
-      let frame: { t?: string; id?: number; request?: unknown; [k: string]: unknown };
-      try {
-        frame = JSON.parse(line) as typeof frame;
-      } catch {
-        continue; // a non-frame line is ignored
-      }
-      if (typeof frame.id !== "number") continue;
-
-      // --- R0/S1: the ABI capability handshake, BEFORE any arm code runs ----
-      if (frame.t === "hello") {
-        const abi = Array.isArray(frame["abi"]) ? (frame["abi"] as unknown[]).filter((c): c is string => typeof c === "string") : [];
-        if (!wantsBudgetRpc) {
-          // A child that opens a handshake the driver did not ask for is not a
-          // protocol this driver speaks.
-          reply({ t: "abort", id: frame.id, reason: "this driver did not request the budget ABI handshake" });
-          continue;
-        }
-        if (!abi.includes(R97_ARM_ABI_TOOL_BUDGET)) {
-          abiRefusal =
-            `the ${opts.armRunId} arm build declares no ${R97_ARM_ABI_TOOL_BUDGET} capability (declared: [${abi.join(", ") || "none"}]) — ` +
-            `the formal pre-registered path must refuse an arm that cannot honour the campaign's durable tool budget, rather than run it with maxToolCalls unenforced`;
-          reply({ t: "abort", id: frame.id, reason: abiRefusal });
-          continue;
-        }
-        reply({ t: "proceed", id: frame.id });
-        continue;
-      }
-
-      // --- R0/S1: the tool-dispatch budget RPC -----------------------------
-      if (frame.t === "tool_reserve") {
-        if (opts.toolDispatchBudget === undefined) {
-          reply({ t: "tool_error", id: frame.id, message: "no tool-dispatch budget is wired for this arm run" });
-          continue;
-        }
-        if (frame["armRunId"] !== opts.armRunId) {
-          // An old worker's message must not spend a new arm's quota.
-          reply({
-            t: "tool_error",
-            id: frame.id,
-            message: `reservation for ${String(frame["armRunId"])} cannot be charged to ${opts.armRunId}`,
-          });
-          continue;
-        }
-        const reservationId = `${opts.armRunId}:tool:${++reservationSeq}`;
-        const granted = await opts.toolDispatchBudget.reserve(frame.request as never);
-        if (!granted.ok) {
-          budgetCounters.refused += 1;
-          reply({ t: "tool_grant", id: frame.id, ok: false, reason: granted.reason ?? "TOOL_BUDGET_EXHAUSTED" });
-          continue;
-        }
-        budgetCounters.granted += 1;
-        liveReservations.set(reservationId, { settle: granted.settle });
-        reply({ t: "tool_grant", id: frame.id, ok: true, reservationId });
-        continue;
-      }
-
-      if (frame.t === "tool_settle") {
-        const reservationId = String(frame["reservationId"]);
-        const outcome = frame["outcome"];
-        if (outcome !== "dispatched" && outcome !== "not_executed" && outcome !== "unknown") {
-          reply({ t: "tool_error", id: frame.id, message: `unknown settlement outcome ${String(outcome)}` });
-          continue;
-        }
-        if (settledReservations.has(reservationId)) {
-          // Idempotent: a duplicate settle is acknowledged, never charged twice.
-          reply({ t: "tool_settled", id: frame.id, duplicate: true });
-          continue;
-        }
-        const live = liveReservations.get(reservationId);
-        if (live === undefined) {
-          budgetCounters.unknownSettle += 1;
-          reply({ t: "tool_error", id: frame.id, message: `no live reservation ${reservationId} belongs to ${opts.armRunId}` });
-          continue;
-        }
-        liveReservations.delete(reservationId);
-        settledReservations.add(reservationId);
-        budgetCounters.settled += 1;
-        await live.settle(outcome);
-        reply({ t: "tool_settled", id: frame.id });
-        continue;
-      }
-
-      // --- R0/S2: the child cancelled an in-flight model request ------------
-      if (frame.t === "cancel") {
-        // The arm build stopped waiting. Abort THIS request's transport (not
-        // somebody else's) and keep the loop responsive.
-        if (streamOwner.current !== null && streamOwner.current.id === frame.id) {
-          cancellation.signalAborted = true;
-          streamOwner.current.controller.abort();
-        }
-        continue;
-      }
-
-      if (frame.t !== "request") continue;
-      serviceModelRequest(frame.id, frame.request);
+      if (!(await handleLine(line))) break;
     }
   } finally {
     clearTimeout(timer);
+    if (opts.callerSignal !== undefined) opts.callerSignal.removeEventListener("abort", onCallerAbort);
+  }
+
+  // N1 (F30-1) — EVERY path that leaves the frame loop finalizes here, not just
+  // the timeout. Reaching this point with `stopTriggered` still false means the
+  // loop ended because the child's stdout ended (or its process did), so the
+  // transport is aborted and the child is closed exactly once, before anything is
+  // classified. This is the line the old implementation was missing: it cleared
+  // the timer and returned `ARM_WORKER_FAILED` while the provider's signal was
+  // still `false`.
+  //
+  // The reason is taken from the REAL evidence, in this order: a result frame was
+  // accepted (`completed`), the child could not be spawned (`worker_error`), the
+  // child exited without a result (`worker_exit`), otherwise its stdout simply
+  // ended (`stdout_eof`).
+  //
+  // The stdout 'end' event and the process 'exit' event are SEPARATE signals that
+  // race, and 'end' usually wins. Waiting a bounded moment for the exit evidence
+  // is what keeps a plain `exit(2)` classified as `worker_exit` instead of the
+  // weaker `stdout_eof`; it cannot hang, and it costs nothing when the exit event
+  // already arrived.
+  if (!stopTriggered && !result.sawResult && !processExited) {
+    await Promise.race([
+      exitSignal,
+      new Promise<void>((resolve) => {
+        const t = setTimeout(resolve, 250);
+        t.unref?.();
+      }),
+    ]);
+  }
+  if (!stopTriggered) {
+    finalize(
+      result.sawResult
+        ? "completed"
+        : processErrored
+          ? "worker_error"
+          : processExited
+            ? "worker_exit"
+            : "stdout_eof",
+    );
   }
 
   // R0/S2 — STOP WAITING even when the provider ignores its AbortSignal. The
   // grace is bounded and explicit; reaching it records `streamSettled: false`
   // (unconfirmed), and never claims the remote request was revoked.
-  if (timedOut) {
+  //
+  // N1 — this now runs whenever a transport was aborted, not only on the timeout:
+  // a worker that exited mid-request deserves the same bounded unwind.
+  if (cancellation.localAbort) {
     const grace = new Promise<void>((resolve) => {
       const t = setTimeout(resolve, WORKER_CLEANUP_GRACE_MS);
       t.unref?.();
@@ -1345,7 +1841,7 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
       streamSettled.then(
         () => undefined,
         (err: unknown) => {
-          // Reaching here is expected on the timeout path (the abort rejects the
+          // Reaching here is expected after an abort (the abort rejects the
           // in-flight generate). Record it so it is not an unobserved rejection.
           cancellation.detachedStreamRejections += 1;
           cancellation.detachedStreamError ??= err instanceof Error ? err.message : String(err);
@@ -1353,13 +1849,21 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
       ),
       grace,
     ]);
-    cancellation.streamSettled = await Promise.race([
-      streamSettled.then(() => true).catch(() => true),
+    cancellation.providerReturned = await Promise.race([
+      streamSettled.then(
+        () => true,
+        () => true,
+      ),
       new Promise<boolean>((resolve) => {
         const t = setTimeout(() => resolve(false), 0);
         t.unref?.();
       }),
     ]);
+    cancellation.streamSettled = cancellation.providerReturned;
+    // N1 — the three states stay DISTINCT and are never collapsed: a local abort
+    // that the provider ignored means the remote outcome is UNKNOWN, and nothing
+    // downstream may read that as "the request was revoked".
+    cancellation.remoteOutcomeUnknown = !cancellation.providerReturned;
   }
 
   // The child owns its own stdin; close it, then take the exit code.
@@ -1375,11 +1879,57 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
     cancellation.frameWritesAfterClose += 1;
     cancellation.frameWriteError ??= err instanceof Error ? err.message : String(err);
   }
-  const exitCode = await exited;
+
+  /**
+   * N1 (F30-1) — BOUNDED WAIT FOR THE CHILD PROCESS.
+   *
+   * `exited` used to be awaited with no bound, so a child that wrote a result
+   * frame and then refused to exit parked the driver forever (acceptance row:
+   * "result frame then child will not exit"). The wait is now: whatever is left
+   * of the cleanup grace, then ONE hard kill, then a second bounded look. The
+   * result is a measured `exitCode: null` — explicitly classified, never an
+   * unbounded await.
+   */
+  const exitWaitMs = processExited ? 0 : WORKER_EXIT_GRACE_MS;
+  let exitWaitExpired = false;
+  if (!processExited) {
+    const waitStarted = Date.now();
+    await Promise.race([
+      exitSignal,
+      new Promise<void>((resolve) => {
+        const t = setTimeout(resolve, exitWaitMs);
+        t.unref?.();
+      }),
+    ]);
+    if (!processExited) {
+      // The child is not cooperating. SIGKILL, then ONE more bounded look so a
+      // normally-killable process still reports its real code.
+      exitWaitExpired = true;
+      try {
+        child.kill("SIGKILL");
+      } catch (err) {
+        cancellation.detachedStreamRejections += 1;
+        cancellation.detachedStreamError ??= err instanceof Error ? err.message : String(err);
+      }
+      await Promise.race([
+        exitSignal,
+        new Promise<void>((resolve) => {
+          const t = setTimeout(resolve, WORKER_EXIT_GRACE_MS);
+          t.unref?.();
+        }),
+      ]);
+    }
+    cancellation.cleanupMs += Date.now() - waitStarted;
+  }
 
   // A reservation the child never settled is NOT refunded here: the durable
   // budget's own conservative rule decides, and an unproven dispatch must stay
   // visible as unsettled rather than be silently released.
+  //
+  // N1 — the ID and the bound are preserved exactly: this path settles the
+  // ORIGINAL reservation id as `unknown` (local abort vs provider returned vs
+  // remote outcome unknown are reported separately above), it never re-mints an
+  // id and never disguises the settle as "no dispatch happened".
   if (liveReservations.size > 0) {
     for (const [reservationId, live] of liveReservations) {
       liveReservations.delete(reservationId);
@@ -1403,7 +1953,21 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
   // R0/S1 — an arm refused by the capability pre-check reports the CAPABILITY
   // reason, never a downstream timeout or a missing result.
   if (abiRefusal !== null) {
-    refuse(ARM_WORKER_ABI_UNSUPPORTED, abiRefusal);
+    refuse(
+      ARM_WORKER_ABI_UNSUPPORTED,
+      `${abiRefusal} (termination=${cancellation.terminationReason}, signalAborted=${String(cancellation.signalAborted)})`,
+      cancellation,
+    );
+  }
+  if (terminationReason === "protocol_violation") {
+    refuse(
+      ARM_WORKER_PROTOCOL_VIOLATION,
+      `the arm worker opened a SECOND concurrent model request while one was already in flight (refusals=${cancellation.concurrencyRefusals}); ` +
+        `this driver services ONE active request per worker, so the arm was stopped rather than let the first controller be lost ` +
+        `(termination=${cancellation.terminationReason}, signalAborted=${String(cancellation.signalAborted)}, ` +
+        `providerReturnedWithinGrace=${String(cancellation.providerReturned)})`,
+      cancellation,
+    );
   }
   if (timedOut) {
     refuse(
@@ -1411,21 +1975,33 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
       `the arm worker exceeded its ${opts.timeoutMs} ms bound; the transport was aborted first ` +
         `(signalAborted=${String(cancellation.signalAborted)}, providerReturnedWithinGrace=${String(cancellation.streamSettled)}) ` +
         `and the worker this task owns was then killed. A provider that did not return leaves the remote request UNCONFIRMED, not revoked`,
+      cancellation,
     );
   }
-  if (!sawResult || report === null) {
+  if (!result.sawResult || result.report === null) {
     refuse(
       ARM_WORKER_FAILED,
-      `the arm worker produced no result (exit=${exitCode ?? "unreadable"})${stderr.trim() === "" ? "" : `: ${stderr.trim().slice(0, 200)}`}`,
+      `the arm worker produced no result (exit=${exitCode ?? "unreadable"}, termination=${cancellation.terminationReason}, ` +
+        `signalAborted=${String(cancellation.signalAborted)}, cleanupMs=${cancellation.cleanupMs})` +
+        `${stderr.trim() === "" ? "" : `: ${stderr.trim().slice(0, 200)}`}`,
+      cancellation,
     );
   }
-  if (!report.ok) {
-    refuse(report.code ?? ARM_WORKER_FAILED, `the arm worker refused: ${report.error ?? "unknown error"}`);
+  if (!result.report.ok) {
+    refuse(
+      result.report.code ?? ARM_WORKER_FAILED,
+      `the arm worker refused: ${result.report.error ?? "unknown error"}`,
+      cancellation,
+    );
   }
   if (exitCode !== 0) {
-    refuse(ARM_WORKER_FAILED, `the arm worker reported a result but exited ${exitCode}`);
+    refuse(
+      ARM_WORKER_FAILED,
+      `the arm worker reported a result but exited ${exitCode}${exitWaitExpired ? " (it did not exit within the cleanup bound and was killed)" : ""}`,
+      cancellation,
+    );
   }
-  return { report, physicalProviderCalls, exitCode, cancellation };
+  return { report: result.report, physicalProviderCalls, exitCode, cancellation };
 }
 
 /**
