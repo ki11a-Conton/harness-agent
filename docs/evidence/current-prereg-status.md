@@ -446,7 +446,7 @@ Everything else in this round is evidence and gating.
 ## 6.1 F4/R3 deadline — the mid-stream half is now closed
 
 The R3 round enforced the campaign deadline at **pre-send** boundaries only (initial send and every
-retry). `HANDOVER-20260928-E4-R0-R7.md` residual 2 recorded the remainder: a provider stream that is
+retry). The E4-R0/R7 handover (since deleted; see `HANDOVER.md` §0) residual 2 recorded the remainder: a provider stream that is
 **entered** before the deadline and then **stalls** past it was not aborted, so the unit never
 converged.
 
