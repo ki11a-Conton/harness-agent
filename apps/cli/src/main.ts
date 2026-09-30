@@ -11,11 +11,19 @@ import {
 } from "@ar/tools";
 import type { CommandDeps } from "./commands.js";
 import { runCommand } from "./commands.js";
-import { preregCmd, type PreregCommandDeps } from "./prereg-command.js";
+import { preregCmd, type PreregCommandDeps, type PreregResolvedSelection } from "./prereg-command.js";
 import { createProductionPreregRunner } from "./prereg-production-runner.js";
-import { formalExecutionProfile } from "./prereg-execution-identity.js";
+import {
+  PRICING_PER_CALL_TOKEN_ENVELOPE,
+  formalExecutionProfile,
+  resolvePricingBasis,
+  type FormalExecutionProfile,
+  type PricingResolution,
+} from "./prereg-execution-identity.js";
+import type { PricingExecutionGuard } from "@ar/evaluation";
 import {
   OFFLINE_CONTENT_PROFILE_ID,
+  OFFLINE_PROVIDER_ID,
   resolveOfflineProfileCapability,
   resolveModelProvider,
   DEFAULT_REAL_MODEL_ID,
@@ -123,6 +131,98 @@ export function isPreProviderCommand(args: string[]): boolean {
 export const PREREG_OFFLINE_PROFILE_ID: OfflineProfileId = OFFLINE_CONTENT_PROFILE_ID;
 
 /**
+ * N2 (F30-2) — resolve the ONE execution selection the `prereg` chain runs on.
+ *
+ * Every fact below is derived from the SAME `env`, in ONE place, and handed to
+ * every consumer as a single object:
+ *
+ *   profile              the execution identity, request profile and digests,
+ *                        observed WITH the offline selection named;
+ *   pricing              the per-call basis, from the SAME env (never a second
+ *                        `process.env` read that could disagree);
+ *   offlineProfileSelected  TRUE only when the identity this process actually
+ *                        reports IS the built-in offline identity;
+ *   pricingGuard         the send-boundary price check, armed only when there is
+ *                        an executable priced basis to stand behind.
+ *
+ * A REAL provider configuration alongside the fixed offline selection is a
+ * CONFLICT, and the conflict is resolved by DROPPING the offline selection —
+ * never by hiding the credential-bearing provider, and never by silently
+ * reporting an offline identity while a real one is constructible. That keeps
+ * `ProviderIdentityConflictError` the refusal it was written to be while leaving
+ * the observer and the provider factory reading the SAME identity.
+ */
+export function resolvePreregSelection(env: NodeJS.ProcessEnv = process.env): PreregResolvedSelection {
+  let profile: FormalExecutionProfile;
+  let offlineProfileSelected = false;
+  try {
+    profile = formalExecutionProfile(env, { offlineProfileId: PREREG_OFFLINE_PROFILE_ID });
+    offlineProfileSelected = profile.provider.providerId === OFFLINE_PROVIDER_ID;
+  } catch {
+    // The offline selection and a real provider configuration cannot both be
+    // honoured. The real configuration is the one that is NOT dropped.
+    profile = formalExecutionProfile(env);
+  }
+  const pricing = resolvePricingBasis(
+    profile.provider.providerId,
+    {
+      modelId: profile.provider.modelId,
+      endpointBaseUrl: profile.provider.endpointBaseUrl,
+      // The PER-CALL envelope a per-call price must cover — never the per-RUN
+      // conversation budget (see PRICING_PER_CALL_TOKEN_ENVELOPE).
+      requiredTokenCeiling: PRICING_PER_CALL_TOKEN_ENVELOPE,
+    },
+    env,
+  );
+  const pricingGuard = pricingExecutionGuardFor(pricing);
+  return {
+    env,
+    profile,
+    pricing,
+    offlineProfileSelected,
+    ...(pricingGuard !== undefined ? { pricingGuard } : {}),
+  };
+}
+
+/**
+ * N2 (F30-5) — build the send-boundary guard from the selection's OWN basis.
+ *
+ * It takes the pricing resolution that is part of `PreregResolvedSelection`, so
+ * the guard can never be armed against a basis this process did not resolve. It
+ * returns `undefined` — never a synthetic `0` window, never a null-window guard —
+ * when there is nothing billable to stand behind:
+ *
+ *   - no basis at all (an unpriceable provider or endpoint): the money-bounded
+ *     gate refuses such a campaign on its own (`PRICING_UNKNOWN`);
+ *   - the `unbilled_stub` basis: the stub transport makes no externally-billed
+ *     call, so it has no price window a send could outlive. Arming a guard here
+ *     would refuse every stub send as "no windowed validity", which would be a
+ *     behaviour change with no billing fact behind it.
+ *
+ * A basis that DID resolve has already passed `pricingExecutionEligibility`
+ * (windowed, unexpired, covering the envelope, explicit currency), so its window
+ * is a real interval and the guard re-checks exactly that interval at every
+ * physical send and retry.
+ */
+export function pricingExecutionGuardFor(pricing: PricingResolution): PricingExecutionGuard | undefined {
+  if (!pricing.ok) return undefined;
+  const basis = pricing.basis;
+  if (basis.basisKind === "unbilled_stub") return undefined;
+  if (basis.sourceKind === null) return undefined;
+  if (basis.validity.issuedAt === null || basis.validity.expiresAt === null) return undefined;
+  return {
+    amountUsdMicros: basis.usdMicrosPerCall,
+    basisDigest: basis.pricingDigest,
+    sourceKind: basis.sourceKind,
+    currency: basis.currency,
+    issuedAtMs: Date.parse(basis.validity.issuedAt),
+    expiresAtMs: Date.parse(basis.validity.expiresAt),
+    coveredTokenCeiling: basis.coverage.coveredTokenCeiling,
+    requiredTokenCeiling: basis.coverage.requiredTokenCeiling ?? PRICING_PER_CALL_TOKEN_ENVELOPE,
+  };
+}
+
+/**
  * S3/F4 (Phase C) — build the offline transport factory for the prereg chain.
  *
  * Returns `undefined` — meaning "no seam at all", so the gate keeps its
@@ -133,12 +233,11 @@ export const PREREG_OFFLINE_PROFILE_ID: OfflineProfileId = OFFLINE_CONTENT_PROFI
  *     reported while a credential-bearing provider is constructible), or
  *   - the OBSERVED identity is not the offline profile's identity.
  *
- * The identity is RE-OBSERVED here from the same `formalExecutionProfile(env)`
- * source the runner's observer uses, and not minted: a caller cannot hand this
- * function an endpoint, so it cannot be used to launder an arbitrary paid
- * endpoint into the non-billable admission class. Since Phase D the selection is
- * passed IN (`{ offlineProfileId }`), so the offline identity is reported only
- * because this profile is genuinely selected — and a real provider config
+ * The identity is RE-OBSERVED from the ONE selection (N2/F30-2), never minted: a
+ * caller cannot hand this function an endpoint, so it cannot be used to launder an
+ * arbitrary paid endpoint into the non-billable admission class. The selection is
+ * passed IN (`preregCommandDeps` resolves it), so the offline identity is reported
+ * only because this profile is genuinely selected — and a real provider config
  * alongside it is a refusal, not a preference.
  *
  * Returns a ZERO-ARGUMENT thunk, not a value: the capability is only built when
@@ -148,18 +247,18 @@ export const PREREG_OFFLINE_PROFILE_ID: OfflineProfileId = OFFLINE_CONTENT_PROFI
 export function offlineTransportForPrereg(
   env: NodeJS.ProcessEnv = process.env,
 ): (() => unknown) | undefined {
-  // S3/F4 (Phase D) — the identity is re-observed WITH the selection NAMED, so
-  // the observer reports the offline identity only because the offline profile
-  // is genuinely the selected provider for this process — never by guessing.
-  // A real provider configuration alongside the selection THROWS
-  // (`ProviderIdentityConflictError`), which is the required refusal: the two
-  // are never reconciled by preference, and no seam is produced.
-  let observed: { providerId: string; modelId: string; endpointBaseUrl: string | null };
-  try {
-    observed = formalExecutionProfile(env, { offlineProfileId: PREREG_OFFLINE_PROFILE_ID }).provider;
-  } catch {
-    return undefined;
-  }
+  return offlineTransportForSelection(resolvePreregSelection(env));
+}
+
+/** The capability thunk for an ALREADY-RESOLVED selection. This is the only
+ *  place the selection is turned into a transport, so the capability and the
+ *  observer can never be derived from two different environments. */
+function offlineTransportForSelection(selection: PreregResolvedSelection): (() => unknown) | undefined {
+  // The offline identity is a FACT about the selection, not a preference: if the
+  // selection resolved to a real or stub identity there is no offline profile to
+  // bind a capability to, and no seam is produced.
+  if (!selection.offlineProfileSelected) return undefined;
+  const observed = selection.profile.provider;
   const resolution = resolveOfflineProfileCapability({
     profileId: PREREG_OFFLINE_PROFILE_ID,
     identity: {
@@ -167,7 +266,7 @@ export function offlineTransportForPrereg(
       modelId: observed.modelId,
       endpointBaseUrl: observed.endpointBaseUrl,
     },
-    env,
+    env: selection.env,
   });
   if (!resolution.ok) return undefined;
   return () => resolution.capability;
@@ -185,17 +284,30 @@ export function offlineTransportForPrereg(
  * `makeProvider` is invoked only after the fail-closed gate admits.
  *
  * S3/F4 (Phase C): the adapter additionally carries the built-in offline
- * transport seam when — and only when — `offlineTransportForPrereg()` can bind
- * it to the identity this process actually observes. On a real-provider
- * environment that returns `undefined`, the key is absent, and the gate still
- * refuses a fixture-mode authorization with
+ * transport seam when — and only when — the selection reports the offline
+ * identity. On a real-provider environment that seam is absent, and the gate
+ * still refuses a fixture-mode authorization with
  * `FIXTURE_TRANSPORT_NOT_NON_BILLABLE`.
+ *
+ * N2 (F30-2): the adapter is built from the SAME resolved selection as the seam
+ * and the pricing guard. The injected `env` is threaded into
+ * `createProductionPreregRunner({ env })`, so the observer and the provider
+ * factory read THAT environment and never `process.env` — the run's capability
+ * and its observed/built identity can no longer describe two different
+ * executions.
  */
 export function preregCommandDeps(env: NodeJS.ProcessEnv = process.env): PreregCommandDeps {
-  const offlineTransport = offlineTransportForPrereg(env);
+  const selection = resolvePreregSelection(env);
+  const offlineTransport = offlineTransportForSelection(selection);
   return {
+    selection,
     runner: {
-      ...createProductionPreregRunner(),
+      // N2 (F30-2) — the SELECTION is handed over, not merely its env: the
+      // observer then reports the very identity `prereg build` bound (for the
+      // offline profile that is `offline-scripted`, which a bare keyless
+      // re-derivation would report as `stub` → a false identity drift that made
+      // the release CLI unable to run the profile it had just built).
+      ...createProductionPreregRunner({ selection }),
       ...(offlineTransport !== undefined ? { offlineTransport } : {}),
     },
   };

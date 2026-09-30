@@ -47,7 +47,55 @@ import {
   describePricingInspection,
   formalExecutionProfile,
   resolvePricingBasis,
+  type FormalExecutionProfile,
+  type PricingResolution,
 } from "./prereg-execution-identity.js";
+import type { PricingExecutionGuard } from "@ar/evaluation";
+
+/**
+ * N2 (F30-2) — THE ONE RESOLVED EXECUTION SELECTION the release `prereg` chain
+ * runs on.
+ *
+ * WHY IT EXISTS. The composition root used to resolve the SAME facts from
+ * DIFFERENT sources in different places: `offlineTransportForPrereg(env)` bound
+ * the capability to an INJECTED env while `createProductionPreregRunner()` fell
+ * back to `process.env` for the observer it built, `prereg build` read
+ * `process.env` again, and the provider factory read the process env a third
+ * time. Whenever the injected env differed from `process.env`, the run's
+ * capability, its observed identity, the price it bound and the provider it
+ * would have built could all describe DIFFERENT executions — "observed as X
+ * while running Y", which is precisely the drift the formal gate exists to
+ * refuse.
+ *
+ * This object is resolved ONCE, from ONE environment, and every consumer
+ * (observer, provider factory, capability, pricing basis, pricing guard, the
+ * `build` command's identity binding) is derived from it. Nothing downstream
+ * re-reads the environment: an injected env is the ONLY env this chain sees.
+ */
+export interface PreregResolvedSelection {
+  /** The ONE environment this chain resolved from. Never re-read downstream. */
+  readonly env: NodeJS.ProcessEnv;
+  /** The execution profile, observed WITH the offline selection named. On a
+   *  real-provider conflict the offline selection is DROPPED (never the real
+   *  configuration), so this is the credential-bearing identity. */
+  readonly profile: FormalExecutionProfile;
+  /** The pricing basis resolved from the SAME env as the profile — one read. */
+  readonly pricing: PricingResolution;
+  /** TRUE only when this process really reports the built-in offline identity. */
+  readonly offlineProfileSelected: boolean;
+  /**
+   * N2 (F30-5) — the guard EVERY physical send and retry of this campaign
+   * re-checks the price window against.
+   *
+   * ABSENT (not `null`, not a zero amount) when there is no executable priced
+   * basis to stand behind: the built-in offline profile and the unbilled stub
+   * make no externally-billed call at all, so there is no window a send could
+   * have outlived. Inventing one would either arm a guard against a price nobody
+   * declared or refuse every offline send — both are worse than the honest
+   * "nothing to arm".
+   */
+  readonly pricingGuard?: PricingExecutionGuard;
+}
 
 export interface PreregRunnerAdapter {
   /** Re-observe the execution identity NOW (source, arms, guidance, cases…). */
@@ -77,6 +125,16 @@ export interface PreregCommandDeps {
    * E2E injects a deterministic fake. Absent → `validate`/`run` refuse.
    */
   runner?: PreregRunnerAdapter;
+  /**
+   * N2 (F30-2) — the ONE resolved execution selection (see
+   * `PreregResolvedSelection`). `preregCommandDeps()` always supplies it, so the
+   * `build` command binds the identity of the SAME environment the observer,
+   * the provider factory and the pricing guard were resolved from.
+   *
+   * Absent (a bare `preregCmd(args, {})`, and every pre-existing unit caller)
+   * keeps the historical behaviour: the process environment.
+   */
+  selection?: PreregResolvedSelection;
   now?: () => number;
 }
 
@@ -189,7 +247,7 @@ function pathsOverlap(a: string, b: string): boolean {
 }
 
 /** `agent prereg build <config.json> --out <prereg.json>` */
-async function buildCmd(rest: string[]): Promise<PreregCommandResult> {
+async function buildCmd(rest: string[], deps: PreregCommandDeps = {}): Promise<PreregCommandResult> {
   const parsed = parseArgs(rest, { valueFlags: ["--out"], boolFlags: [], requiredFlags: ["--out"], minPositionals: 1, maxPositionals: 1 });
   if (!("positionals" in parsed)) return parsed;
   const configPath = parsed.positionals[0]!;
@@ -240,19 +298,27 @@ async function buildCmd(rest: string[]): Promise<PreregCommandResult> {
   // F5/R4 — the build path observes the pricing basis from the SAME env the rest
   // of the profile uses, so the digest it binds is the one `prereg run` will
   // re-derive (and the one a resume is keyed by).
-  const env = process.env;
-  const profile = formalExecutionProfile(env);
-  const pricing = resolvePricingBasis(
-    profile.provider.providerId,
-    {
-      modelId: profile.provider.modelId,
-      endpointBaseUrl: profile.provider.endpointBaseUrl,
-      // The PER-CALL envelope a per-call price must cover — never the per-RUN
-      // conversation budget (see PRICING_PER_CALL_TOKEN_ENVELOPE).
-      requiredTokenCeiling: PRICING_PER_CALL_TOKEN_ENVELOPE,
-    },
-    env,
-  );
+  //
+  // N2 (F30-2) — THE SAME ENV IS THE SELECTION'S ENV, not the process env. This
+  // command used to read `process.env` while `preregCommandDeps()` had resolved
+  // the capability and the observer from an INJECTED env, so `build` could bind an
+  // identity no other member of the chain would ever observe. The selection is the
+  // single source; a bare caller with no selection keeps the process env.
+  const env = deps.selection?.env ?? process.env;
+  const profile = deps.selection?.profile ?? formalExecutionProfile(env);
+  const pricing =
+    deps.selection?.pricing ??
+    resolvePricingBasis(
+      profile.provider.providerId,
+      {
+        modelId: profile.provider.modelId,
+        endpointBaseUrl: profile.provider.endpointBaseUrl,
+        // The PER-CALL envelope a per-call price must cover — never the per-RUN
+        // conversation budget (see PRICING_PER_CALL_TOKEN_ENVELOPE).
+        requiredTokenCeiling: PRICING_PER_CALL_TOKEN_ENVELOPE,
+      },
+      env,
+    );
   // F5/R4 — fail CLOSED when a declaration was SUPPLIED and does not qualify:
   // building a plan whose pricing basis is silently absent would produce an
   // artifact whose price can never be re-derived (and therefore never certified)
@@ -461,6 +527,19 @@ async function runCmd(rest: string[], deps: PreregCommandDeps): Promise<PreregCo
     mode: mode,
     now: deps.now,
     makeProvider: deps.runner.makeProvider,
+    // N2 (F30-5) — THE ARMING OF THE PRICING GUARD ON THE RELEASE ENTRY POINT.
+    //
+    // The guard is constructed ONCE, in the composition root, from the SAME
+    // resolved selection that produced the capability and the observed identity
+    // (no second environment read — see `PreregResolvedSelection`), and it is
+    // handed to the formal wrapper here. Without this line the send-boundary
+    // price check is proven but never armed on the shipped `prereg run` path.
+    //
+    // `undefined` (no executable priced basis: the built-in offline profile, the
+    // unbilled stub, an unpriceable endpoint) leaves the wrapper's pre-existing
+    // behaviour exactly as it was, which is the correct outcome for a campaign
+    // that makes no externally-billed call.
+    ...(deps.selection?.pricingGuard !== undefined ? { pricingGuard: deps.selection.pricingGuard } : {}),
     // S3/F4 (Phase C) — the ONE conditional spread. Absent (the production
     // default, and every existing caller) this key is not even present, so the
     // gate takes its unchanged no-capability path and still refuses a
@@ -545,7 +624,7 @@ export async function preregCmd(rest: string[], deps: PreregCommandDeps = {}): P
   const [sub, ...tail] = rest;
   switch (sub) {
     case "build":
-      return buildCmd(tail);
+      return buildCmd(tail, deps);
     case "validate":
       return validateCmd(tail, deps);
     case "run":

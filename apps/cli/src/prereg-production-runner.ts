@@ -75,7 +75,8 @@ import { PROVIDER_DEFAULT_ENDPOINT_DIGEST } from "@ar/evaluation";
 import { createPreregArmExecutor, type FixtureCheckoutTrust, type TrustedBuildGrant } from "./prereg-arm-executor.js";
 import { resolveModelProvider } from "./provider.js";
 import { PRICING_PER_CALL_TOKEN_ENVELOPE, formalExecutionProfile, resolvePricingBasis } from "./prereg-execution-identity.js";
-import type { PreregRunnerAdapter } from "./prereg-command.js";
+import type { FormalExecutionProfile, PricingResolution } from "./prereg-execution-identity.js";
+import type { PreregResolvedSelection, PreregRunnerAdapter } from "./prereg-command.js";
 
 /**
  * A value the observer could NOT independently establish. It is deliberately
@@ -124,10 +125,23 @@ function armDigest(dir: string | undefined): string {
  * `env` is injectable so the identity can be pinned deterministically in a test
  * without touching the process environment; the default is the process env the
  * provider resolution itself reads.
+ *
+ * N2 (F30-2) — `selected` is the ONE resolved selection the composition root
+ * already made. Without it this function re-derives the profile itself, and for a
+ * keyless process that derivation reports `stub`/`stub-model` — while `prereg
+ * build` bound the OFFLINE identity (`offline-scripted`) from the same
+ * environment. The two then disagree on `providerId`, so a legitimate offline
+ * campaign is refused as `PREREGISTRATION_IDENTITY_DRIFT` and the release CLI
+ * cannot run the profile it has just built. Passing the selection through makes
+ * the observed identity the SAME value the artifact was built from: one source,
+ * rather than two derivations that merely happen to agree.
+ *
+ * Both fields are optional, so every existing caller keeps its behaviour.
  */
 export function observeExecutionIdentity(
   root: string,
   env: NodeJS.ProcessEnv = process.env,
+  selected?: { profile?: FormalExecutionProfile; pricing?: PricingResolution },
 ): PreregisteredCampaignObservationV2 {
   const head = git(root, ["rev-parse", "HEAD"]);
   const porcelain = git(root, ["status", "--porcelain"]);
@@ -136,7 +150,7 @@ export function observeExecutionIdentity(
   // execution path uses (`resolveModelProvider` + the pinned harness wiring +
   // the versioned pricing snapshot). Echoing the artifact's own claims would be
   // the drift defect this observer exists to prevent.
-  const { provider, runtimeConfigDigest, requestProfileDigest } = formalExecutionProfile(env);
+  const { provider, runtimeConfigDigest, requestProfileDigest } = selected?.profile ?? formalExecutionProfile(env);
   const endpointDigest = captureEndpointIdentity(provider.endpointBaseUrl) ?? PROVIDER_DEFAULT_ENDPOINT_DIGEST;
   // F5/R4 — the pricing basis is observed from THE SAME injected `env` as every
   // other identity input. Previously the price was read from the global
@@ -146,17 +160,23 @@ export function observeExecutionIdentity(
   // the canonical `pricingDigest` can be bound into the pre-registration and
   // compared at run/resume time. An unpriceable run stays `null` (never 0) and
   // carries no digest, so the money-bounded gate still refuses it.
-  const pricing = resolvePricingBasis(
-    provider.providerId,
-    {
-      modelId: provider.modelId,
-      endpointBaseUrl: provider.endpointBaseUrl,
-      // The PER-CALL envelope a per-call price must cover — never the per-RUN
-      // conversation budget (see PRICING_PER_CALL_TOKEN_ENVELOPE).
-      requiredTokenCeiling: PRICING_PER_CALL_TOKEN_ENVELOPE,
-    },
-    env,
-  );
+  //
+  // N2 — when the composition root already resolved the price, its resolution is
+  // the one observed: it is a pure function of `env` + the profile, and its
+  // digest excludes the wall-clock observation instant.
+  const pricing =
+    selected?.pricing ??
+    resolvePricingBasis(
+      provider.providerId,
+      {
+        modelId: provider.modelId,
+        endpointBaseUrl: provider.endpointBaseUrl,
+        // The PER-CALL envelope a per-call price must cover — never the per-RUN
+        // conversation budget (see PRICING_PER_CALL_TOKEN_ENVELOPE).
+        requiredTokenCeiling: PRICING_PER_CALL_TOKEN_ENVELOPE,
+      },
+      env,
+    );
   return {
     // A non-40-hex (or unreadable) HEAD can never equal a bound sha → refusal.
     candidateSourceSha: head !== null && /^[0-9a-f]{40}$/.test(head) ? head : "",
@@ -283,6 +303,13 @@ export interface ProductionPreregRunnerOptions {
   /** Environment the provider identity is observed from; defaults to the process env. */
   env?: NodeJS.ProcessEnv;
   /**
+   * N2 (F30-2) — the ONE resolved selection the composition root already made
+   * (profile + pricing + env). When present, the observer reports THAT identity
+   * instead of re-deriving one, so `build`/`observe`/`makeProvider` can never
+   * disagree. Absent (a bare caller) keeps the previous derivation.
+   */
+  selection?: PreregResolvedSelection;
+  /**
    * R1/F2 — the TEST-HOST fixture-checkout trust capability. The release CLI
    * (`preregCommandDeps()` → `createProductionPreregRunner()`) passes NONE, so the
    * shipped entry point accepts NO fixture-bypass configuration: a checkout whose
@@ -342,7 +369,10 @@ export function observeFrozenSelectionEvidence(root: string): FrozenSelectionObs
  */
 export function createProductionPreregRunner(opts: ProductionPreregRunnerOptions = {}): PreregRunnerAdapter {
   const rootDir = opts.rootDir ?? process.cwd();
-  const env = opts.env ?? process.env;
+  // N2 (F30-2) — the observer, the provider factory and (through
+  // `preregCommandDeps`) the capability all read the SAME env: the selection's
+  // when one was handed over, else this option's, else the process env.
+  const env = opts.selection?.env ?? opts.env ?? process.env;
   // N2 — one executor per DISTINCT declared isolation contract, built from the
   // contract the driver forwarded. The map only avoids rebuilding an identical
   // executor for every arm run; it never decides the contract itself.
@@ -377,14 +407,39 @@ export function createProductionPreregRunner(opts: ProductionPreregRunnerOptions
       // absent/inconsistent this THROWS, so the gate refuses with zero provider
       // factory calls rather than certifying a self-declared catalog.
       const frozen = observeFrozenSelectionEvidence(rootDir);
+      // N2 (F30-2) — the observation uses the SELECTION's own profile/pricing when
+      // the composition root handed one over, so the identity `prereg run`
+      // certifies is literally the identity `prereg build` wrote.
+      const selected =
+        opts.selection === undefined ? undefined : { profile: opts.selection.profile, pricing: opts.selection.pricing };
       return {
-        ...observeExecutionIdentity(rootDir, env),
+        ...observeExecutionIdentity(rootDir, env, selected),
         caseContentDigests: observeCaseContentDigests(rootDir, prereg),
         eligibilityDigests: frozen.eligibilityDigests,
         selectionProvenanceDigest: frozen.selectionProvenanceDigest,
       };
     },
-    makeProvider: async (): Promise<ModelProvider> => (await resolveModelProvider()).provider,
+    // N2 (F30-2) — THE PROVIDER FACTORY READS THE SAME ENV THE OBSERVER DOES.
+    //
+    // This used to be `resolveModelProvider()`, which resolves from
+    // `process.env`. The observer above is resolved from the INJECTED `env`, so
+    // the campaign could be observed as one identity and then actually run
+    // against another — the exact "observe as X while running Y" drift the formal
+    // gate exists to refuse (and, with a real key in `process.env`, a keyless
+    // injected run would have built a BILLABLE provider).
+    //
+    // Every field the resolver consults is passed EXPLICITLY. `apiKey` is passed
+    // as `""` rather than omitted when the injected env has no key, because an
+    // omitted field makes the resolver fall back to `process.env` — which is the
+    // mixing this fixes.
+    makeProvider: async (): Promise<ModelProvider> =>
+      (
+        await resolveModelProvider({
+          apiKey: env["OPENAI_API_KEY"] ?? "",
+          ...(env["OPENAI_BASE_URL"] !== undefined ? { baseUrl: env["OPENAI_BASE_URL"] } : {}),
+          ...(env["OPENAI_MODEL"] !== undefined ? { modelId: env["OPENAI_MODEL"] } : {}),
+        })
+      ).provider,
     // A5 — the REAL executor. It fails closed (`ARM_CHECKOUT_MISSING` /
     // `ARM_BUILD_IDENTICAL` / `ARM_CASE_NOT_FOUND` / `ARM_EVIDENCE_DIR_MISSING`)
     // rather than fabricating a run result.

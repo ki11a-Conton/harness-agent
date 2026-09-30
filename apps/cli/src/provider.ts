@@ -226,15 +226,95 @@ export const OFFLINE_MODEL_ID = "offline-scripted-model";
 // The scripted content task
 // ---------------------------------------------------------------------------
 
-/** Where the offline content profile writes, and what it writes there.
- *  Repository-fixed: never read from an artifact or the environment. */
+/**
+ * N2 (F30-4) — the VERSION of the scripted content task table.
+ *
+ * Bumped when the target, the bytes or the mapping changes, so an artifact/report
+ * can state WHICH task script produced a forward run instead of implying that
+ * every `offline-scripted-content-v1` run wrote the same thing.
+ */
+export const OFFLINE_CONTENT_SCRIPT_VERSION = "offline-scripted-task-v1";
+
+/**
+ * N2 (F30-4) — THE TASK THE SCRIPT WRITES, AND WHY IT IS A REAL FROZEN CASE.
+ *
+ * The previous table wrote `offline-forward-proof.txt` with a self-invented
+ * marker. No frozen verifier reads that file, so "the offline profile can drive a
+ * content task" could never be measured — the proof stopped at "a tool REQUEST
+ * was emitted" (see the honest NOT_PROVEN note the Phase D test had to carry).
+ *
+ * The table now writes the file the FROZEN, NON-HOLDOUT case
+ * `regression/reg-22-api-stub` requires, so the case's OWN committed verifier
+ * command decides PASS/FAIL. That is what makes a full
+ * `runtime → tool dispatch → verifier` forward run measurable on the release
+ * entry point instead of inferred.
+ *
+ * WHY THIS CASE (each is a measured property of the committed case):
+ *   1. it is in the committed frozen selection
+ *      (`docs/evidence/tool-call-efficiency-case-selection.json`) and NOT in
+ *      `benchmarks/holdout`;
+ *   2. its fixture is ONE file (`server.js`) the scripted model can write
+ *      EXACTLY, so the script needs NEITHER more turns NOR a fabricated verdict;
+ *   3. its verifier is a REAL behavioural check — it loads the written file,
+ *      binds an ephemeral LOOPBACK port, requests `GET /health` and requires 200
+ *      plus `{"ok":true}` — so only a correct write passes it;
+ *   4. it is CommonJS over Node built-ins, so it depends neither on ESM syntax
+ *      detection nor on a `node --test <dir>` argument form whose behaviour
+ *      differs between Node 22 (CI) and Node 24 (measured locally): the same
+ *      bytes decide the same way on both.
+ *
+ * It binds a loopback socket on an ephemeral port and nothing else: no external
+ * endpoint, no credential, no billed request.
+ *
+ * The case itself is NOT modified: nothing under `benchmarks/` changes.
+ *
+ * Repository-fixed: never read from an artifact or the environment.
+ */
 export const OFFLINE_CONTENT_TASK = Object.freeze({
-  /** The artifact path the scripted model asks `write_file` to create. */
-  outputPath: "offline-forward-proof.txt",
+  /** The suite the target case lives in (also the `benchmarks/` subdirectory). */
+  suite: "regression",
+  /** The frozen case this scripted task serves. */
+  caseId: "reg-22-api-stub",
+  /**
+   * The path the scripted model asks `write_file` to write, relative to the
+   * case's workspace. It is the SAME file the case fixture ships (`server.js`),
+   * so the run is a real edit of real fixture bytes — not a new demo file.
+   */
+  outputPath: "server.js",
   /** The exact bytes it writes. The verifier's "correct content" is this. */
-  content: "OFFLINE-FORWARD-OK\n",
-  /** A second marker so a "wrong content" control is expressible. */
-  wrongContent: "OFFLINE-FORWARD-WRONG\n",
+  content: [
+    "const http = require('http');",
+    "",
+    "const server = http.createServer((req, res) => {",
+    "  if (req.url === '/health') {",
+    "    res.writeHead(200, { 'content-type': 'application/json' });",
+    "    res.end(JSON.stringify({ ok: true }));",
+    "    return;",
+    "  }",
+    "  res.writeHead(404);",
+    "  res.end();",
+    "});",
+    "",
+    "module.exports = server;",
+    "",
+  ].join("\n"),
+  /**
+   * The one-dimension-wrong control: the fixture's OWN (unfixed) bytes, which
+   * answer 404 for every path. Derived from the passing positive by removing
+   * exactly the `/health` branch, so the case's own verifier really fails and the
+   * derived negative cannot be vacuous.
+   */
+  wrongContent: [
+    "const http = require('http');",
+    "",
+    "const server = http.createServer((req, res) => {",
+    "  res.writeHead(404);",
+    "  res.end();",
+    "});",
+    "",
+    "module.exports = server;",
+    "",
+  ].join("\n"),
 });
 
 /**
@@ -352,6 +432,76 @@ function offlineContentTurn(index: number): ModelEvent[] {
 }
 
 /**
+ * N2 (F30-3) — WHY THE SCRIPT CURSOR IS CONVERSATION-SCOPED, AND WHY IT IS
+ * DERIVED FROM THE REQUEST'S OWN TRANSCRIPT.
+ *
+ * MEASURED DEFECT. The cursor used to be `let turn = 0` in the PROVIDER INSTANCE
+ * body. The release driver builds ONE provider for the whole campaign and calls
+ * `provider.createClient(...)` for EVERY model request, so two arm-runs of the
+ * same campaign shared one cursor: the baseline consumed turns 0/1 and the
+ * candidate started at turn 2 — already past its "write the file" step — and then
+ * ran off the end of the 3-turn table. The second arm could therefore never
+ * perform the task, and a resume/repetition inherited whatever the previous arm
+ * had eaten. That is a CROSS-ARM exhaustion, i.e. the arms were not independent.
+ *
+ * WHY NOT `createClient`. Moving the counter into `createClient` is the tempting
+ * one-line "fix" and it is WRONG for the same measurement: the driver creates a
+ * NEW client for every model request, so every request would restart at step 0 —
+ * the run would write the file forever and never terminate.
+ *
+ * THE SCOPE THAT MATCHES THE PROTOCOL. A model request's own transcript IS the
+ * conversation state, and it is the only thing the provider is actually given.
+ * The step is therefore derived from the request:
+ *
+ *   step = how many ASSISTANT messages the transcript already carries
+ *
+ * which is exactly "how many model turns this conversation has completed". That
+ * makes the cursor per-CONVERSATION (one `runtime.createSession` per arm-run, per
+ * case, per repetition), so:
+ *
+ *   - two arms, several repetitions and a changed order never share a cursor;
+ *   - a RESUME re-derives the step from the transcript it is given;
+ *   - a RETRY re-sends the same transcript and therefore resolves to the SAME
+ *     step — a retry cannot silently advance the script;
+ *   - and because the transcript is what the model sees, "the script answered
+ *     from where the conversation is" is a property of the request rather than a
+ *     hidden mutable counter.
+ *
+ * A monotone HIGH-WATER mark per conversation guards the one way the transcript
+ * can move backwards (context trimming/compaction): a trimmed transcript must
+ * never rewind the script into re-writing a file it already wrote.
+ *
+ * IDENTITY-LESS REQUESTS keep the historical sequential behaviour, so a caller
+ * that drives the provider directly with `{ messages: [] }` sees exactly the
+ * table order it saw before (and the pinned Phase B tests keep their meaning).
+ */
+const ANONYMOUS_CONVERSATION = "<no-conversation-identity>";
+
+/**
+ * The conversation a request belongs to, and how many model turns of it the
+ * request's transcript already shows.
+ *
+ * A request with NO transcript identity (no `messages`, or messages that carry no
+ * `sessionId`) is NOT guessed into a conversation: it is reported as
+ * identity-less and handled by the historical anonymous counter.
+ */
+function conversationProgressOf(request: unknown): { key: string | null; observed: number } {
+  const messages = (request as { messages?: unknown } | null | undefined)?.messages;
+  if (!Array.isArray(messages)) return { key: null, observed: 0 };
+  let key: string | null = null;
+  let observed = 0;
+  for (const raw of messages) {
+    if (raw === null || typeof raw !== "object") continue;
+    const message = raw as { role?: unknown; sessionId?: unknown };
+    if (message.role === "assistant") observed += 1;
+    if (key === null && typeof message.sessionId === "string" && message.sessionId !== "") {
+      key = message.sessionId;
+    }
+  }
+  return { key, observed };
+}
+
+/**
  * A provider that can drive a CONTENT task and provably never touches a
  * network. It is deliberately NOT `stubProvider()`: the stub's single
  * `MODEL_ERROR` cannot request a tool call, so it can never produce a real
@@ -370,7 +520,15 @@ export function createOfflineScriptedProvider(input?: {
 }): ModelProvider {
   const id = input?.providerId ?? OFFLINE_PROVIDER_ID;
   const modelId = input?.modelId ?? OFFLINE_MODEL_ID;
-  let turn = 0;
+  /**
+   * N2 (F30-3) — the per-CONVERSATION script cursor (see the doc block above).
+   * Keyed by the transcript's own session identity, so the provider can be shared
+   * by every arm, repetition and repetition-order without the arms interfering.
+   */
+  const conversationCursor = new Map<string, number>();
+  /** N2 (F30-3) — the historical cursor for requests that carry no conversation
+   *  identity at all. Unchanged single-consumer behaviour. */
+  let anonymousTurn = 0;
   return {
     id,
     async listModels() {
@@ -379,8 +537,16 @@ export function createOfflineScriptedProvider(input?: {
     createClient(_model: ModelRef, _config: ProviderConfig) {
       return {
         async *generate(request: unknown): AsyncGenerator<ModelEvent, void, void> {
-          const index = turn;
-          turn += 1;
+          const progress = conversationProgressOf(request);
+          let index: number;
+          if (progress.key === null) {
+            index = anonymousTurn;
+            anonymousTurn += 1;
+          } else {
+            const highWater = conversationCursor.get(progress.key) ?? 0;
+            index = Math.max(progress.observed, highWater);
+            conversationCursor.set(progress.key, index);
+          }
           input?.onTurn?.(index, (request as { tools?: readonly ToolSpec[] }).tools ?? []);
           if (index >= OFFLINE_CONTENT_SCRIPT_TURNS) input?.onExhausted?.(index);
           // Zero I/O. The events are produced from the frozen table.
