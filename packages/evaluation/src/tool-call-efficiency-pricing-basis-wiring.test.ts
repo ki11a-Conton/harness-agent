@@ -42,6 +42,7 @@ import {
   observationViolationsV2,
   openPreregisteredCampaignGate,
   type PreregisteredCampaignObservationV2,
+  type PricingExecutionGuard,
   type ToolCallEfficiencyAuthorizationV2,
 } from "./tool-call-efficiency-formal-run.js";
 
@@ -70,13 +71,17 @@ function sha(s: string): string {
 }
 
 function preregOptions(
-  pricing: { pricingDigest?: string; usdMicrosPerCall?: number | null } = {},
+  pricing: {
+    pricingDigest?: string;
+    usdMicrosPerCall?: number | null;
+    candidateArmDigest?: string;
+  } = {},
 ): PreregistrationV2Options {
   return {
     subject: {
       candidateSourceSha: SHA_A,
       baselineArmDigest: "baseline-arm-digest",
-      candidateArmDigest: "candidate-arm-digest",
+      candidateArmDigest: pricing.candidateArmDigest ?? "candidate-arm-digest",
       cleanTreePolicy: "require-clean",
       runtimeConfigDigest: "runtime-config-digest",
     },
@@ -159,7 +164,10 @@ function observationFor(
   };
 }
 
-function authorizationFor(a: ToolCallEfficiencyPreregistrationV2): ToolCallEfficiencyAuthorizationV2 {
+function authorizationFor(
+  a: ToolCallEfficiencyPreregistrationV2,
+  approvalId = "approval-1",
+): ToolCallEfficiencyAuthorizationV2 {
   return {
     schemaVersion: "tool-call-efficiency-authorization-v2",
     preregistrationDigest: a.preregistrationDigest,
@@ -180,7 +188,7 @@ function authorizationFor(a: ToolCallEfficiencyPreregistrationV2): ToolCallEffic
     },
     issuedAtMs: 1_000,
     expiresAtMs: 9_000_000_000_000,
-    approvalId: "approval-1",
+    approvalId,
     allowResume: true,
     paid: true,
   };
@@ -215,6 +223,7 @@ async function runGate(opts: {
   artifact: ToolCallEfficiencyPreregistrationV2;
   authorization?: string;
   observation?: PreregisteredCampaignObservationV2;
+  pricingGuard?: PricingExecutionGuard | null;
 }): Promise<RunResult> {
   let factoryCalls = 0;
   let transportCalls = 0;
@@ -244,6 +253,7 @@ async function runGate(opts: {
     mode: "first-run",
     now: () => 1_700_000_000_000,
     makeProvider: factory,
+    ...(opts.pricingGuard !== undefined ? { pricingGuard: opts.pricingGuard } : {}),
   });
   return { status: result.status, code: (result as { code?: string }).code, factoryCalls, transportCalls };
 }
@@ -418,6 +428,119 @@ describe("R4-wiring/F5 — the pricing BASIS is bound, not just its amount", () 
     expect(result.code).toBe("PREREGISTRATION_IDENTITY_DRIFT");
     expect(result.factoryCalls).toBe(0);
     expect(result.transportCalls).toBe(0);
+  });
+
+  it("W15 (F30-5): the gate THREADS the pricing guard into the send path — an ADMITTED campaign still refuses a send on an expired price", async () => {
+    // This is the end-to-end link N4 exists to prove: it is not enough for
+    // `checkPricingExecutionGuard` to return a reason. The gate must hand the
+    // frozen basis to the REAL budgeted provider, and that provider must refuse
+    // the physical send. So this test admits successfully, then drives the
+    // ADMITTED provider's own `generate` and requires the send to be refused.
+    const built = withBasis(BASIS_A);
+    let transportCalls = 0;
+    const provider: ModelProvider = {
+      id: "w15-fake",
+      async listModels() {
+        return [];
+      },
+      createClient() {
+        return {
+          async *generate(): AsyncGenerator<ModelEvent> {
+            transportCalls += 1;
+            yield { type: "completed", result: { finishReason: "stop" } as never, timestamp: 0 };
+          },
+        };
+      },
+    };
+    const expiredAt = 1_600_000_000_000; // BEFORE the gate's clock of 1.7e12
+    const admitted = await openPreregisteredCampaignGate({
+      preregistrationJson: serializePreregistrationV2(built),
+      authorizationJson: JSON.stringify(authorizationFor(built)),
+      observation: observationFor(built),
+      budgetDir: await tempDir(),
+      mode: "first-run",
+      now: () => 1_700_000_000_000,
+      makeProvider: () => provider,
+      pricingGuard: {
+        amountUsdMicros: AMOUNT,
+        basisDigest: BASIS_A,
+        sourceKind: "operator_declared",
+        currency: "USD",
+        issuedAtMs: expiredAt - 86_400_000,
+        expiresAtMs: expiredAt, // already past at the gate's clock
+        coveredTokenCeiling: 64_000,
+        requiredTokenCeiling: 64_000,
+      },
+    });
+    // Admission itself succeeded: the price EXPIRY is a per-send gate, not an
+    // admission gate (the authorization window is the admission-window concept).
+    expect(admitted.status).toBe("ADMITTED");
+    if (admitted.status !== "ADMITTED") throw new Error("the expired-price campaign should still ADMIT");
+    const client = admitted.provider.createClient(
+      { providerId: "w15-fake", modelId: "m" } as ModelRef,
+      {} as ProviderConfig,
+    );
+    let error: unknown = null;
+    try {
+      for await (const _ev of client.generate({} as ModelRequest, new AbortController().signal)) {
+        // drain
+      }
+    } catch (err) {
+      error = err;
+    }
+    expect(transportCalls).toBe(0); // the physical send never left
+    expect(String(error)).toContain("PRICING_WINDOW_EXPIRED");
+    expect(admitted.budgetStats.pricingRefusedCalls).toBe(1);
+
+    // POSITIVE CONTROL: the identical campaign shape with a LIVE window does send,
+    // so the refusal above is the PRICE WINDOW and nothing else about the fixture.
+    //
+    // It needs its own campaign identity: the R97 ledger deliberately refuses to
+    // let ONE authorization establish two live campaigns, and the campaign id is
+    // derived from the frozen subject. Pinning a different candidate arm digest is
+    // a genuinely different campaign — not a way around the guard.
+    const controlArtifact = buildToolCallEfficiencyPreregistrationV2(
+      preregOptions({
+        pricingDigest: BASIS_A,
+        usdMicrosPerCall: AMOUNT,
+        candidateArmDigest: "w15-live-control-arm",
+      }),
+    );
+    const live = await openPreregisteredCampaignGate({
+      preregistrationJson: serializePreregistrationV2(controlArtifact),
+      authorizationJson: JSON.stringify(authorizationFor(controlArtifact)),
+      observation: observationFor(controlArtifact),
+      budgetDir: await tempDir(),
+      mode: "first-run",
+      now: () => 1_700_000_000_000,
+      makeProvider: () => provider,
+      pricingGuard: {
+        amountUsdMicros: AMOUNT,
+        basisDigest: BASIS_A,
+        sourceKind: "operator_declared",
+        currency: "USD",
+        issuedAtMs: 1_600_000_000_000,
+        expiresAtMs: 1_800_000_000_000, // still live
+        coveredTokenCeiling: 64_000,
+        requiredTokenCeiling: 64_000,
+      },
+    });
+    expect(live.status, `control refused with ${String((live as { code?: string }).code)}: ${String((live as { reason?: string }).reason)}`).toBe("ADMITTED");
+    if (live.status !== "ADMITTED") throw new Error("the live-window control campaign should ADMIT");
+    const liveClient = live.provider.createClient(
+      { providerId: "w15-fake", modelId: "m" } as ModelRef,
+      {} as ProviderConfig,
+    );
+    let liveError: unknown = null;
+    try {
+      for await (const _ev of liveClient.generate({} as ModelRequest, new AbortController().signal)) {
+        // drain
+      }
+    } catch (err) {
+      liveError = err;
+    }
+    expect(liveError).toBeNull();
+    expect(transportCalls).toBe(1); // the live window really does send
   });
 
   it("W7: the strict loader preserves a bound basis and refuses a tampered digest", () => {

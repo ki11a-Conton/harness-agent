@@ -157,6 +157,103 @@ export interface AuthorizationCapsV2 {
   maxUsdMicros: number | null;
 }
 
+/**
+ * N4/F30-5 — the pricing error codes a pre-send price check can raise. They are
+ * SEPARATE from provider errors on purpose: a pricing refusal must never be
+ * mistaken for a transient transport failure and retried (plan §7 item 4).
+ */
+export const PRICING_WINDOW_EXPIRED = "PRICING_WINDOW_EXPIRED";
+export const PRICING_NOT_EXECUTABLE = "PRICING_NOT_EXECUTABLE";
+export const PRICING_COVERAGE_INSUFFICIENT = "PRICING_COVERAGE_INSUFFICIENT";
+export const PRICING_BASIS_DRIFT = "PRICING_BASIS_DRIFT";
+
+/**
+ * N4/F30-5 — the FROZEN, re-observed pricing basis that authorizes a physical
+ * send, as a narrow value object.
+ *
+ * WHY IT EXISTS. `createFormalBudgetedProvider` used to receive only
+ * `usdMicrosPerCall` (an AMOUNT) and a deadline. An amount cannot express a
+ * VALIDITY WINDOW: a price that was correct at admission and has since expired
+ * is indistinguishable from one that is still valid, so a campaign could keep
+ * sending (and retrying) on a price nobody could still stand behind.
+ *
+ * WHY A NARROW TYPE AND NOT THE RESOLVED BASIS. `packages/evaluation` must not
+ * depend on `apps/cli` (dependency direction), so this carries the few facts the
+ * send path must re-check and nothing else. The CALLER resolves it once, from the
+ * same environment it observed, and hands over a frozen snapshot — so a later
+ * environment change cannot silently "refresh" the price mid-campaign. The
+ * `basisDigest` is what binds the snapshot to the reservation.
+ *
+ * `null`/absent window fields mean NO windowed validity (a legacy declaration):
+ * that is NOT executable (plan §7: "legacy 无有效窗口 … run/resume 拒绝").
+ */
+export interface PricingExecutionGuard {
+  /** The per-call upper bound in integer USD micros. */
+  amountUsdMicros: number;
+  /** The digest binding this snapshot to the pre-registration/reservation. */
+  basisDigest: string;
+  /** The evidence level the price came from; never upgraded by this path. */
+  sourceKind: "operator_declared" | "provider_verified";
+  /** The declared currency. Only `USD` is executable here. */
+  currency: string;
+  issuedAtMs: number | null;
+  expiresAtMs: number | null;
+  /** The token ceiling the price covers. */
+  coveredTokenCeiling: number | null;
+  /** The token ceiling the request envelope actually needs. */
+  requiredTokenCeiling: number;
+  /**
+   * Optional: the basis digest the caller's reservation was made against. When
+   * set and different from `basisDigest`, the send is refused as identity drift.
+   */
+  expectedBasisDigest?: string;
+}
+
+/**
+ * N4/F30-5 — the ONE pre-send price decision, evaluated at every reserve/send
+ * boundary. Returns a refusal reason (a `PRICING_*` code) or `null` when the send
+ * may leave.
+ *
+ * It is deliberately PURE and takes `nowMs` as a parameter so the same decision is
+ * testable at a millisecond boundary without a clock abstraction in the provider.
+ * The deadline comparison is `nowMs >= expiresAtMs`: a price is valid UP TO but
+ * NOT INCLUDING its expiry instant, matching `checkAuthorizationV2` and
+ * `pricingExecutionEligibility` (which both use `>=`/`<` the same way).
+ */
+export function checkPricingExecutionGuard(guard: PricingExecutionGuard, nowMs: number): string | null {
+  if (guard.expectedBasisDigest !== undefined && guard.expectedBasisDigest !== guard.basisDigest) {
+    return PRICING_BASIS_DRIFT;
+  }
+  if (!Number.isSafeInteger(guard.amountUsdMicros) || guard.amountUsdMicros < 0) {
+    return `${PRICING_NOT_EXECUTABLE}: the bound ${String(guard.amountUsdMicros)} is not a non-negative integer`;
+  }
+  if (guard.currency !== "USD") {
+    return `${PRICING_NOT_EXECUTABLE}: currency ${guard.currency} is not executable`;
+  }
+  // A missing window is a legacy/non-executable declaration, NOT "never expires".
+  if (guard.issuedAtMs === null || guard.expiresAtMs === null) {
+    return `${PRICING_NOT_EXECUTABLE}: the declared price has no windowed validity period (legacy declaration) — it is readable for review but must not authorize a billed send`;
+  }
+  if (!Number.isFinite(guard.issuedAtMs) || !Number.isFinite(guard.expiresAtMs) || guard.expiresAtMs <= guard.issuedAtMs) {
+    return `${PRICING_NOT_EXECUTABLE}: the declared validity window is not a valid interval`;
+  }
+  if (nowMs >= guard.expiresAtMs) {
+    return `${PRICING_WINDOW_EXPIRED}: the declared price expired at ${new Date(guard.expiresAtMs).toISOString()} (checked at ${new Date(nowMs).toISOString()}) — refusing to send on an expired price`;
+  }
+  if (nowMs < guard.issuedAtMs) {
+    return `${PRICING_NOT_EXECUTABLE}: the declared price is not yet effective (issued ${new Date(guard.issuedAtMs).toISOString()})`;
+  }
+  // An amount is a bound, so the covered ceiling must actually cover the envelope.
+  if (
+    guard.coveredTokenCeiling !== null &&
+    Number.isFinite(guard.coveredTokenCeiling) &&
+    guard.coveredTokenCeiling < guard.requiredTokenCeiling
+  ) {
+    return `${PRICING_COVERAGE_INSUFFICIENT}: the declared price covers ${String(guard.coveredTokenCeiling)} tokens but the request envelope needs ${String(guard.requiredTokenCeiling)}`;
+  }
+  return null;
+}
+
 export interface ToolCallEfficiencyAuthorizationV2 {
   schemaVersion: string;
   /** The EXACT pre-registration digest this approval authorizes. */
@@ -1384,6 +1481,12 @@ async function writeAtomic(path: string, value: unknown): Promise<void> {
 export interface FormalBudgetStats {
   logicalCalls: number;
   refusedCalls: number;
+  /**
+   * N4/F30-5 — how many physical sends were refused by the PRICE gate. Counted
+   * separately from `refusedCalls` so a pricing stop is never read as a budget or
+   * transport failure.
+   */
+  pricingRefusedCalls: number;
   unknownCalls: number;
   retries: number;
   chargedInputTokens: number;
@@ -1508,13 +1611,34 @@ export function createFormalBudgetedProvider(opts: {
   deadlineAtMs?: number | null;
   /** R3/F4 — injectable clock for the deadline check (offline-testable). */
   now?: () => number;
+  /**
+   * N4/F30-5 — the FROZEN pricing basis that authorizes a physical send. When
+   * absent, no pre-send price check runs (the caller then carries the whole
+   * burden, as before this change). When present, EVERY physical send — the
+   * initial request AND every internal retry — re-checks the validity window,
+   * the coverage and the basis binding against the SAME snapshot.
+   */
+  pricingGuard?: PricingExecutionGuard | null;
 }): { provider: ModelProvider; stats: FormalBudgetStats } {
   const clock = opts.now ?? (() => Date.now());
   const deadlineAtMs = opts.deadlineAtMs ?? null;
   const deadlinePassed = (): boolean => deadlineAtMs !== null && clock() >= deadlineAtMs;
+  const pricingGuard = opts.pricingGuard ?? null;
+  /**
+   * N4/F30-5 — THE PRE-SEND PRICE GATE. Called at every reserve/send boundary.
+   * A refusal is a `PRICING_*` error, which is NOT a provider error: it must
+   * never be swallowed and retried, and it is counted in its own stat so a
+   * pricing stop can never be mistaken for transport flakiness.
+   */
+  const pricingRefusal = (where: string): string | null => {
+    if (pricingGuard === null) return null;
+    const reason = checkPricingExecutionGuard(pricingGuard, clock());
+    return reason === null ? null : `${reason} (${where})`;
+  };
   const stats: FormalBudgetStats = {
     logicalCalls: 0,
     refusedCalls: 0,
+    pricingRefusedCalls: 0,
     unknownCalls: 0,
     retries: 0,
     chargedInputTokens: 0,
@@ -1591,6 +1715,18 @@ export function createFormalBudgetedProvider(opts: {
             if (journalScope === null || journalRequestId === null) return;
             await opts.costBudget.recordJournalAttempt({ requestId: journalRequestId, ...entry });
           };
+
+          // N4/F30-5 — THE PRICE GATE, before ANY reservation for the initial
+          // physical send. It runs first so a refused send strands nothing: no
+          // cost reservation, no call-ledger reservation, no logical call.
+          // The frozen basis is re-checked against the CURRENT clock, so a price
+          // that was valid at admission and has since expired cannot send.
+          const initialPriceRefusal = pricingRefusal("initial send");
+          if (initialPriceRefusal !== null) {
+            stats.pricingRefusedCalls += 1;
+            stats.refusedCalls += 1;
+            throw new Error(`E4-N4: ${initialPriceRefusal}`);
+          }
 
           // A4/B2 — RESERVE every billed dimension's conservative per-call upper
           // bound BEFORE the request is sent. If the frozen budget cannot prove
@@ -1806,6 +1942,19 @@ export function createFormalBudgetedProvider(opts: {
                 // the next fetch, so a refusal here aborts the generator before
                 // that fetch runs. R3/F4 — the same deadline gate applies: a hung
                 // retry may NOT resume sending after the deadline.
+                // N4/F30-5 — the SAME price gate on the RETRY path. A retry is a
+                // new physical send that may be billed, so it re-checks the frozen
+                // basis against the current clock. This is checked BEFORE the retry
+                // reservations so a refused retry leaves no reservation behind, and
+                // BEFORE the retry leaves, so an expired price stops the stream.
+                // The error is a `PRICING_*` code, never a provider error, so no
+                // outer retry loop can mistake it for transient transport failure.
+                const retryPriceRefusal = pricingRefusal("retry");
+                if (retryPriceRefusal !== null) {
+                  stats.pricingRefusedCalls += 1;
+                  stats.refusedCalls += 1;
+                  throw new Error(`E4-N4: ${retryPriceRefusal}`);
+                }
                 if (deadlinePassed()) {
                   stats.refusedCalls += 1;
                   throw new Error(
@@ -1928,6 +2077,13 @@ export interface PreregisteredCampaignOptions {
   budgetDir: string;
   mode?: "auto" | "first-run" | "resume";
   now?: () => number;
+  /**
+   * N4/F30-5 — the FROZEN pricing basis that authorizes a physical send. When
+   * supplied it is handed to `createFormalBudgetedProvider`, so every send and
+   * retry re-checks the price window; when absent the pre-change behaviour is
+   * preserved (the caller carries the burden).
+   */
+  pricingGuard?: PricingExecutionGuard | null;
   /** The provider factory. Called ONLY after every preflight passed. */
   makeProvider: () => ModelProvider | Promise<ModelProvider>;
   /**
@@ -2133,6 +2289,10 @@ export async function openPreregisteredCampaignGate(
     usdMicrosPerCall,
     deadlineAtMs: campaignDeadlineAtMs,
     now: clock,
+    // N4/F30-5 — the frozen pricing basis is handed to the send choke point so
+    // EVERY physical send and retry re-checks its validity, not just admission.
+    // `undefined` (the caller supplied none) leaves the pre-change behaviour.
+    pricingGuard: opts.pricingGuard ?? null,
   });
   const toolDispatchBudget = createDurableToolDispatchBudget({
     costBudget,
