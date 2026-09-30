@@ -43,7 +43,7 @@ afterAll(() => {
 interface Verdict {
   schemaVersion: string;
   acceptanceUnit: { ciRunId: string; expectedSha: string; ciRunSha: string; attempt: number | null; platforms: string[] };
-  legs: Record<string, { path: string; platform: string; recordedPlatform: string; attempt: number | null; evidenceRoot: string | null; evidenceRootRecorded: string | null; evidenceRootResolvedFrom: string | null; bundleReVerified: { ok: boolean; problems: string[]; derivedVerifierCoverage: { verified: number; total: number } | null; journalBinding: string | null; requestDispatchBinding: string | null } | null }>;
+  legs: Record<string, { path: string; platform: string; recordedPlatform: string; attempt: number | null; evidenceRoot: string | null; evidenceRootRecorded: string | null; evidenceRootResolvedFrom: string | null; bundleReVerified: { ok: boolean; problems: string[]; derivedVerifierCoverage: { verified: number; total: number } | null; journalBinding: string | null; requestDispatchBinding: string | null; verifierLevels: Record<string, { status: string; reason: string | null }> | null; levelAuthority: string | null; blocksAllLevels: string[]; realBuildOnly: { blockedLevel: string; required: boolean; problems: string[] } } | null }>;
   levels: Record<string, { windows: string; ubuntu: string; verdict: string }>;
   overall: string;
   findings: { level: string; verdict: string; windows: string; ubuntu: string }[];
@@ -263,6 +263,46 @@ function writeValidBundle(dir: string, platform: "windows" | "ubuntu"): string {
     mkdirSync(dirname(p), { recursive: true });
     writeFileSync(p, text, "utf8");
   }
+  return root;
+}
+
+/**
+ * `writeValidBundle` with the REAL ARM PAIR removed — the honest shape Phase H
+ * writes for a `SYNTHETIC_FIXTURE_BUILD` run: every other byte is valid, and
+ * `identity.arms.<id>.sourceSha` is OMITTED (not null), which is what makes the
+ * verifier emit `BASELINE_/CANDIDATE_SOURCE_SHA_INVALID`.
+ *
+ * The digest/entry/clean fields stay real, so the ONLY problems are the two
+ * sourceSha codes: a test using this fixture proves the level attribution, not
+ * the fixture's own brokenness.
+ */
+function writeValidBundleWithoutArmPair(dir: string, platform: "windows" | "ubuntu"): string {
+  const root = writeValidBundle(dir, platform);
+  const identityPath = join(root, "identity.json");
+  const identity = JSON.parse(readFileSync(identityPath, "utf8")) as {
+    arms: Record<string, Record<string, unknown>>;
+    closuresDistinguishable?: unknown;
+  };
+  for (const armId of ["baseline", "candidate"]) {
+    delete identity.arms[armId]!.sourceSha;
+  }
+  // `closuresDistinguishable` is recomputed by the verifier from the two build
+  // digests, which still differ, so it stays true and is NOT one of the problems.
+  writeFileSync(identityPath, `${JSON.stringify(identity)}\n`, "utf8");
+  return root;
+}
+
+/**
+ * A bundle that is valid in every way EXCEPT that it carries NO platform on
+ * `identity.json` — the exact CI wiring defect (`ci.yml` never passed
+ * `--platform`) that the dual-platform join must still refuse.
+ */
+function writeValidBundleWithoutPlatform(dir: string, platform: "windows" | "ubuntu"): string {
+  const root = writeValidBundle(dir, platform);
+  const identityPath = join(root, "identity.json");
+  const identity = JSON.parse(readFileSync(identityPath, "utf8")) as Record<string, unknown>;
+  delete identity.platform;
+  writeFileSync(identityPath, `${JSON.stringify(identity)}\n`, "utf8");
   return root;
 }
 
@@ -659,5 +699,94 @@ describe("S7b — dual-platform acceptance joins two legs, or refuses", () => {
     expect(v.legs["windows"]?.evidenceRootResolvedFrom).toBe("override(absolute)");
     expect(v.legs["windows"]?.evidenceRootRecorded).toBe("stale/producing-job/path");
     expect(v.legs["windows"]?.bundleReVerified?.ok).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // DP-S..DP-V — the bundle re-verification is LEVEL-SCOPED, not blanket.
+  //
+  // MEASURED CI DEFECT (run 36656606680, job `dual-platform acceptance`): the
+  // e4 job requires ONLY `fixtureProtocolReady` (ci.yml N7), yet the join refused
+  // because the bundle honestly carries no REAL ARM PAIR. Those codes speak to
+  // `realBuildOfflineReady` alone, so refusing a fixture-only run on them made the
+  // join unsatisfiable in CI. The fix must be fail-closed: only a closed set of
+  // ARM-PAIR codes may be attributed to that level, and everything else must
+  // still refuse.
+  // -------------------------------------------------------------------------
+
+  it("DP-S: an honest NO-REAL-ARM-PAIR bundle does NOT fail a fixture-only run, and the problems are still RECORDED", () => {
+    const s = scratch();
+    const windowsBundle = writeValidBundleWithoutArmPair(s.dir, "windows");
+    const ubuntuBundle = writeValidBundleWithoutArmPair(s.dir, "ubuntu");
+    const windows = writeArtifact(s.dir, "ci-readiness-windows.json", readinessArtifact("windows", { inputs: { evidenceRoot: windowsBundle } }));
+    const ubuntu = writeArtifact(s.dir, "ci-readiness-ubuntu.json", readinessArtifact("ubuntu", { inputs: { evidenceRoot: ubuntuBundle } }));
+
+    const r = s.run(["--windows", windows, "--ubuntu", ubuntu, "--require", "fixtureProtocolReady", "--strict"]);
+    expect(r.exitCode, r.stderr).toBe(0);
+
+    const leg = r.verdict!.legs["windows"]!;
+    // The bundle did NOT verify — that fact is never hidden.
+    expect(leg.bundleReVerified?.ok).toBe(false);
+    expect(leg.bundleReVerified?.problems).toContainEqual(expect.stringContaining("BASELINE_SOURCE_SHA_INVALID"));
+    expect(leg.bundleReVerified?.problems).toContainEqual(expect.stringContaining("CANDIDATE_SOURCE_SHA_INVALID"));
+    // ...but those problems are RECORDED as belonging to the real-build level...
+    expect(leg.bundleReVerified?.realBuildOnly?.blockedLevel).toBe("realBuildOfflineReady");
+    expect(leg.bundleReVerified?.realBuildOnly?.required).toBe(false);
+    expect(leg.bundleReVerified?.realBuildOnly?.problems).toContainEqual(expect.stringContaining("BASELINE_SOURCE_SHA_INVALID"));
+    // ...and NOTHING blocks the levels this run actually required.
+    expect(leg.bundleReVerified?.blocksAllLevels).toEqual([]);
+    // The run still refuses to claim success: the overall verdict is NOT_PROVEN.
+    expect(r.verdict!.overall).toBe("NOT_PROVEN");
+    expect(r.verdict!.overall).not.toBe("PASS");
+  });
+
+  it("DP-T: the SAME no-pair bundle DOES refuse once realBuildOfflineReady is required (the scoping is a gate, not a waiver)", () => {
+    const s = scratch();
+    const windowsBundle = writeValidBundleWithoutArmPair(s.dir, "windows");
+    const ubuntuBundle = writeValidBundleWithoutArmPair(s.dir, "ubuntu");
+    const windows = writeArtifact(s.dir, "ci-readiness-windows.json", readinessArtifact("windows", { inputs: { evidenceRoot: windowsBundle } }));
+    const ubuntu = writeArtifact(s.dir, "ci-readiness-ubuntu.json", readinessArtifact("ubuntu", { inputs: { evidenceRoot: ubuntuBundle } }));
+
+    const r = s.run(["--windows", windows, "--ubuntu", ubuntu, "--require", "fixtureProtocolReady,realBuildOfflineReady"]);
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr).toContain("RAW_EVIDENCE_MISMATCH");
+    expect(r.stderr).toContain("BASELINE_SOURCE_SHA_INVALID");
+    expect(r.verdict).toBeNull();
+  });
+
+  it("DP-U: NON-VACUITY — a bundle-IDENTITY defect (no platform) is NOT an arm-pair code and still refuses a fixture-only run", () => {
+    const s = scratch();
+    // This is the real CI defect verbatim: the missing `--platform` made every
+    // bundle carry no platform. It is a defect OF THE BUNDLE'S RUN IDENTITY, so
+    // scoping the arm-pair codes must not let it through.
+    const windowsBundle = writeValidBundleWithoutPlatform(s.dir, "windows");
+    const ubuntuBundle = writeValidBundleWithoutPlatform(s.dir, "ubuntu");
+    const windows = writeArtifact(s.dir, "ci-readiness-windows.json", readinessArtifact("windows", { inputs: { evidenceRoot: windowsBundle } }));
+    const ubuntu = writeArtifact(s.dir, "ci-readiness-ubuntu.json", readinessArtifact("ubuntu", { inputs: { evidenceRoot: ubuntuBundle } }));
+
+    const r = s.run(["--windows", windows, "--ubuntu", ubuntu, "--require", "fixtureProtocolReady", "--strict"]);
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr).toContain("IDENTITY_PLATFORM_MISSING");
+    expect(r.verdict).toBeNull();
+  });
+
+  it("DP-V: a bundle that fully verifies still yields an honest NOT_PROVEN overall, and reports the verifier's own levels", () => {
+    const s = scratch();
+    const windowsBundle = writeValidBundle(s.dir, "windows");
+    const ubuntuBundle = writeValidBundle(s.dir, "ubuntu");
+    const windows = writeArtifact(s.dir, "ci-readiness-windows.json", readinessArtifact("windows", { inputs: { evidenceRoot: windowsBundle } }));
+    const ubuntu = writeArtifact(s.dir, "ci-readiness-ubuntu.json", readinessArtifact("ubuntu", { inputs: { evidenceRoot: ubuntuBundle } }));
+
+    const r = s.run(["--windows", windows, "--ubuntu", ubuntu, "--require", "fixtureProtocolReady", "--strict"]);
+    expect(r.exitCode, r.stderr).toBe(0);
+    const leg = r.verdict!.legs["windows"]!;
+    expect(leg.bundleReVerified?.ok).toBe(true);
+    expect(leg.bundleReVerified?.realBuildOnly?.problems).toEqual([]);
+    // The verifier's OWN per-level verdicts are carried through, so a reviewer can
+    // see WHICH level failed without re-deriving it from the problem text.
+    expect(leg.bundleReVerified?.verifierLevels?.realBuildOfflineReady?.status).toBe("PASS");
+    expect(leg.bundleReVerified?.verifierLevels?.budgetEvidenceReady?.status).toBe("NOT_PROVEN");
+    expect(leg.bundleReVerified?.levelAuthority).toBe("verifyEvidenceBundle.levels + REAL_ARM_PAIR_ONLY_CODES");
+    // A fully-valid bundle does NOT make the join claim acceptance.
+    expect(r.verdict!.overall).toBe("NOT_PROVEN");
   });
 });

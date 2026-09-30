@@ -44,7 +44,7 @@
 > | F5 — `r5-real-formal.mjs` exited 0 on a failed report | strict gate with NAMED failures, kept evidence root, four-variant content matrix | `r5-formal-gate` 25/25, each asserting a nonzero exit AND its code. Proven by CONTRAST: the pre-S4 script (890 lines) contains **0** occurrences of `GATE FAIL`; the new gate names 27 failures on the same input |
 > | F6 — a legacy price silently authorized unlimited billed spend | `resolvePricingBasisReadOnly` split from `resolvePricingBasis` (+ eligibility) | `legacy_not_executable`; every refusal asserts `factoryCalls === 0` **and** `transportCalls === 0`, with an `ADMITTED` positive control |
 >
-> ### Three further defects found by RUNNING the round, not by reviewing it
+> ### Further defects found by RUNNING the round, not by reviewing it
 >
 > | Defect | How it was found | Fix |
 > | --- | --- | --- |
@@ -54,6 +54,8 @@
 > | **The fixture arm declared no ABI** — `ARM_WORKER_ABI_UNSUPPORTED`, because the synthetic arm predated S1 and exported no `R97_ARM_ABI` | the clean-tree run after the clock fix | `21bae0b`: the arm now IMPORTS the ABI from the built CLI (so it cannot drift) and GENUINELY HONOURS it — a real `ToolOrchestrator` bound to the worker's forwarded budget, issuing a real `write_file` dispatch |
 > | **The producer wrote no bundle ROOT** — `RAW_EVIDENCE_MISMATCH`: the verifier reads `identity.json`, `schedule.json`, `aggregate.json`, `cost-journal.json` from the evidence ROOT, and the producer wrote only the per-arm layer | the dual-platform job log, after the path fixes moved the failure forward | `174236c`: the four root files are emitted from measured data (`cost-journal.json` is the ledger's own `entries`, copied verbatim). Result: **124/124 arms verified** (was 0/124), `journalBinding: MEASURED` |
 > | **The readiness step required a level that is honestly `NOT_PROVEN`** (`budgetEvidenceReady`), so the job failed every run — the same mistake as the dual-platform job, in the same round, three lines from a comment warning about it | reading the CI log for run `36530711327` | `5b8ba05`: require exactly one level, `fixtureProtocolReady`, which genuinely PASSES |
+> | **The A7a producer never passed `--platform`**, so every bundle honestly recorded no platform and the join refused `IDENTITY_PLATFORM_MISSING`. `collectRunIdentity` deliberately refuses to infer it from `process.platform` (which yields `win32`/`linux`, outside the closed `PLATFORM_ENUM`), and the `GITHUB_RUN_ID`/`GITHUB_RUN_ATTEMPT` env fallbacks have no platform counterpart — so the omission was silent | CI run `36656606680`, then reproduced locally from a staged bundle shaped like Phase H's real output | `--platform "${{ matrix.platform }}"` on the A7a step (the N7 consumer already had it; only the producer was missing it) |
+> | **The join's bundle re-verification was NOT level-scoped**, so a run requiring only `fixtureProtocolReady` still refused on `BASELINE_SOURCE_SHA_INVALID` / `CANDIDATE_SOURCE_SHA_INVALID` — the codes that truthfully say "this bundle has no real arm pair", which is exactly what a `SYNTHETIC_FIXTURE_BUILD` run is supposed to have. Requiring those made the join unsatisfiable in CI | the same refusal, read as three distinct causes rather than one | closed-set attribution: only the seven ARM-PAIR codes may be attributed to `realBuildOfflineReady`, and only when that level is not required. Everything else — including `IDENTITY_PLATFORM_MISSING` and any code this repo has not emitted yet — still blocks every level, so the scoping cannot mask a real defect |
 >
 > The Windows `EPERM` one is a **pre-existing** defect, not a regression from this round: the
 > lock code predates it, and only a real concurrent campaign can expose it. Its regression
@@ -80,6 +82,23 @@
 > guard now requires the arm dir to be its own repo root. The honest response was to OMIT
 > the field rather than restore quiet. Making the arms real clean git checkouts at distinct
 > SHAs is the `NO_REAL_ARM_PAIR` gap and is **not** claimed here.
+>
+> ### Why the level attribution is a CLOSED code list, not the verifier's own `levels.reason`
+>
+> The obvious way to scope the refusal is to ask the verifier which level a problem belongs
+> to. `verifyEvidenceBundle` publishes `levels.realBuildOfflineReady.reason` — but reading
+> `readiness-evidence-verify.mjs:750` shows that field is `problems.join("; ")`, i.e. the
+> WHOLE problem list, not a classifier. Measured on a bundle whose only defect was a missing
+> `identity.platform`, reason-matching attributed `IDENTITY_PLATFORM_MISSING` to
+> `realBuildOfflineReady` alone — which would have let a bundle with no platform pass a
+> fixture-only run. A test (`DP-U`) now pins that counter-example.
+>
+> So the attribution uses a closed set of seven codes, each verified present in the verifier,
+> and requires **both** that the code is an arm-pair code **and** that the verifier reports
+> that level not-`PASS`. The downgraded problems are still written into the verdict under
+> `bundleReVerified.realBuildOnly.problems`, and `overall` stays `NOT_PROVEN`, so nothing is
+> hidden and no run can be misread as accepted. Two-sided non-vacuity: reverting to the
+> blanket refusal fails `DP-S`; downgrading *every* problem fails `DP-U`.
 >
 > ### Three wiring defects, all the same shape
 >
@@ -139,7 +158,7 @@
 >
 > ```powershell
 > pnpm typecheck                      # tsc -b, exit 0
-> pnpm test:formal-gate               # 76 tests: strict R5 gate (25) + dual-platform (18) + offline profile (33)
+> pnpm test:formal-gate               # 81 tests: strict R5 gate (25) + dual-platform (23) + offline profile (33)
 > pnpm test:r0-gaps                   # 48 tests: readiness classification + journal binding + pricing counter-examples
 > node scripts/e4/prereg-production-e2e.mjs --out .ci/r97-r98/prereg-production-e2e.json
 > node scripts/e4/ci-readiness.mjs --e2e .ci/r97-r98/prereg-production-e2e.json --out .ci/r97-r98/ci-readiness.json

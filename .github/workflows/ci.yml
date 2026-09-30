@@ -1012,8 +1012,13 @@ jobs:
       # as "the release CLI forward path passed". When S3 lands a real forward
       # path, add a forward step and name it as such rather than widening this one.
       # -----------------------------------------------------------------------
+      # `--platform` is passed EXPLICITLY. `collectRunIdentity` refuses to infer it
+      # from `process.platform` (which yields `win32`/`linux`, outside the closed
+      # `PLATFORM_ENUM`), so omitting it makes every bundle honestly record no
+      # platform — and the dual-platform join then refuses with
+      # IDENTITY_PLATFORM_MISSING. The env fallbacks cover runId/attempt only.
       - name: A7a — release-CLI POS-REFUSE + 0-provider certification (real selection/observer/executor + fake transport, 0 external requests)
-        run: node scripts/e4/prereg-production-e2e.mjs --out .ci/r97-r98/prereg-production-e2e.json
+        run: node scripts/e4/prereg-production-e2e.mjs --out .ci/r97-r98/prereg-production-e2e.json --platform "${{ matrix.platform }}"
 
       # A7b is intentionally ABSENT, not skipped: the release-entry FORWARD run has
       # no acceptance evidence yet (plan §7 item 6/F4, task-5). A `run: exit 1`

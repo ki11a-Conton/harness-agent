@@ -86,6 +86,77 @@ const DEFAULT_REQUIRED = ["fixtureProtocolReady", "realBuildOfflineReady", "budg
 
 const PLATFORMS = ["windows", "ubuntu"];
 
+/**
+ * Problems that are ONLY evidence of "there is no real arm pair in this bundle".
+ *
+ * `realBuildOfflineReady` is the one level that asserts a real, comparable pair of
+ * frozen arm builds. A run that never claimed one legitimately has no
+ * `identity.arms.<id>.sourceSha` and different build digests, so these codes say
+ * nothing about any other level.
+ *
+ * The DIGEST/ENTRY/CLEAN codes are deliberately NOT in this set even though they
+ * are emitted next to the SHA ones: `readiness-evidence-verify.mjs` computes
+ * `levels.realBuildOfflineReady.reason` as `problems.join("; ")`, i.e. the WHOLE
+ * problem list, so that reason cannot be used to attribute a problem to a level.
+ * Only codes that are unambiguously about the ARM PAIR are listed; everything
+ * else — including any code this repo has not emitted yet — blocks every level.
+ *
+ * Every member is verified present in `scripts/e4/readiness-evidence-verify.mjs`.
+ */
+const REAL_ARM_PAIR_ONLY_CODES = new Set([
+  "ARMS_IDENTICAL",
+  "BASELINE_SOURCE_SHA_INVALID",
+  "BUILD_IDENTITY_MISSING",
+  "BUILD_IDENTITY_UNVERIFIABLE",
+  "CANDIDATE_SOURCE_SHA_INVALID",
+  "CLOSURES_NOT_DISTINGUISHABLE",
+  "IDENTITY_ARMS_MISSING",
+]);
+
+/** The code of a verifier problem, which is always the text before the first `:`. */
+const codeOfProblem = (problem) => {
+  const idx = problem.indexOf(":");
+  return idx === -1 ? problem.trim() : problem.slice(0, idx).trim();
+};
+
+/**
+ * Partition re-verification problems by which level they can honestly block.
+ *
+ * Fail-closed in four ways:
+ *   1. a problem is downgraded only when its code is on the closed arm-pair list;
+ *   2. ...and only when `realBuildOfflineReady` is NOT one of the required levels;
+ *   3. ...and only when the verifier itself reports that level NOT_PROVEN, so a
+ *      verifier that disagreed could never be overruled;
+ *   4. every other problem, known or unknown, blocks ALL levels.
+ * The downgraded problems are still RETURNED verbatim, so the report records them
+ * instead of hiding them.
+ */
+function classifyBundleProblems(bundle, requiredLevels) {
+  const blocksAll = [];
+  const realBuildOnly = [];
+  const bundleProblems = Array.isArray(bundle?.problems) ? bundle.problems : [];
+  const requiresRealBuild = requiredLevels.includes("realBuildOfflineReady");
+  const levels = typeof bundle?.levels === "object" && bundle.levels !== null ? bundle.levels : null;
+  const realBuildNotProven = levels === null || levels.realBuildOfflineReady?.status !== "PASS";
+  for (const problem of bundleProblems) {
+    if (
+      REAL_ARM_PAIR_ONLY_CODES.has(codeOfProblem(problem)) &&
+      !requiresRealBuild &&
+      realBuildNotProven
+    ) {
+      realBuildOnly.push(problem);
+    } else {
+      blocksAll.push(problem);
+    }
+  }
+  return {
+    blocksAll,
+    realBuildOnly,
+    levelAuthority: levels === null ? null : "verifyEvidenceBundle.levels + REAL_ARM_PAIR_ONLY_CODES",
+    levels,
+  };
+}
+
 /** Statuses that mean "not decided", as opposed to a decided FAIL. */
 const UNPROVEN_STATUSES = new Set(["NOT_PROVEN", "NOT_RUN", "NOT_OBSERVED", "BLOCKED"]);
 
@@ -334,7 +405,7 @@ const sha256Text = (text) => createHash("sha256").update(text, "utf8").digest("h
  * Validation is a PARSE, never a coercion: a stringified attempt number is
  * MALFORMED_ARTIFACT rather than silently `Number()`d into a passing value.
  */
-function loadLeg(flagPlatform, path, evidenceRootOverride) {
+function loadLeg(flagPlatform, path, evidenceRootOverride, requiredLevels) {
   const problems = [];
   const bad = (msg) => problems.push(`MALFORMED_ARTIFACT: ${flagPlatform}: ${msg}`);
 
@@ -440,15 +511,28 @@ function loadLeg(flagPlatform, path, evidenceRootOverride) {
         // Injected so the per-arm manifest/verifier/security bytes are really read.
         armEvidenceVerifier,
       });
+      const classified = classifyBundleProblems(bundle, requiredLevels);
       bundleReVerified = {
         ok: bundle.problems.length === 0,
         problems: bundle.problems,
         derivedVerifierCoverage: bundle.facts?.derivedVerifierCoverage ?? null,
         journalBinding: bundle.facts?.journalBinding?.status ?? null,
         requestDispatchBinding: bundle.facts?.requestDispatchBinding?.status ?? null,
+        // The verifier's OWN per-level verdicts, carried through so a reviewer sees
+        // which level really failed rather than a flattened problem list.
+        verifierLevels: classified.levels,
+        levelAuthority: classified.levelAuthority,
+        // Recorded, not hidden: a problem that cannot block the levels this run
+        // actually requires is still reported verbatim, with the level it speaks to.
+        blocksAllLevels: classified.blocksAll,
+        realBuildOnly: {
+          blockedLevel: "realBuildOfflineReady",
+          required: requiredLevels.includes("realBuildOfflineReady"),
+          problems: classified.realBuildOnly,
+        },
       };
-      if (bundle.problems.length > 0) {
-        problems.push(`RAW_EVIDENCE_MISMATCH: re-verifying ${flagPlatform}'s bundle reported: ${bundle.problems.join("; ")}`);
+      if (classified.blocksAll.length > 0) {
+        problems.push(`RAW_EVIDENCE_MISMATCH: re-verifying ${flagPlatform}'s bundle reported: ${classified.blocksAll.join("; ")}`);
       }
     }
   }
@@ -552,8 +636,8 @@ if (refusal.length === 0) {
       console.error(`dual-platform-acceptance: the A6 per-arm evidence verifier is unavailable (${armEvidenceVerifierError}); raw arm artifacts cannot be verified`);
     }
   }
-  const w = loadLeg("windows", windowsPath, one("windows-evidence-root"));
-  const u = loadLeg("ubuntu", ubuntuPath, one("ubuntu-evidence-root"));
+  const w = loadLeg("windows", windowsPath, one("windows-evidence-root"), REQUIRED_LEVELS);
+  const u = loadLeg("ubuntu", ubuntuPath, one("ubuntu-evidence-root"), REQUIRED_LEVELS);
   for (const r of [...(w.problems ?? []), ...(u.problems ?? [])]) refusal.push(r);
 
   if (refusal.length === 0) {
