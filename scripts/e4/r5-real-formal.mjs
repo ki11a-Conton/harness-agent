@@ -94,6 +94,91 @@ const PROTOCOL_FIXES = [
  */
 const PAIR_CONFIG_PATH = join(here, "r5-formal-pair.json");
 
+/**
+ * S5/N5 — THE ONE CLOCK, READ ONCE. WHY THIS IS NOT A FROZEN CONSTANT.
+ *
+ * This driver used to pass `now: () => 1_700_000_000_000` (2023-11-14T22:13:20Z)
+ * to `prereg run`. The formal gate freezes the durable campaign deadline as
+ * `clock() + budget.maxDurationMs`, and S2/F2 made that deadline REAL:
+ * `prereg-arm-executor.ts` refuses a campaign whose deadline has already passed
+ * rather than silently re-deriving a fresh window. A clock pinned ~2 years in the
+ * PAST therefore made every arm refuse with `ARM_DEADLINE_EXCEEDED` before its
+ * first model request — the campaign recorded ZERO arm runs on a CLEAN tree, and
+ * the refusal was correct: the DRIVER was wrong. (The previous round attributed
+ * `records=0` to the dirty tree alone; that refusal was real, but it masked this
+ * second, independent blocker.)
+ *
+ * The wall-clock anchor is now OPEN (read ONCE, here, at process start) while
+ * everything determinism actually depends on — the artifact, its digests, the
+ * case set, the repetitions — stays fixed. `assertCampaignClockIsOpen` below makes
+ * a regression LOUD instead of silent.
+ *
+ * The same defect was already found and fixed once in `prereg-production-e2e.mjs`
+ * (its `FIXTURE_CLOCK_CLOSED` guard, commit 6b784c1). This driver never got it.
+ */
+export const CAMPAIGN_NOW = Date.now();
+
+/** The declared campaign duration the artifact binds (`budget.maxDurationMs`).
+ *  The gate freezes `campaignDeadlineAtMs = clock() + THIS`, so the guard below
+ *  must use the same number or it would validate a deadline nobody creates. */
+export const R5_DECLARED_MAX_DURATION_MS = 600_000;
+
+/**
+ * Fail LOUDLY if this driver's own injected clock would place the campaign
+ * deadline in the past. An ASSERTION, not a comment: a frozen past clock must
+ * break the run here, naming the cause, instead of surfacing as an opaque
+ * `ARM_DEADLINE_EXCEEDED` from inside the executor.
+ */
+export function assertCampaignClockIsOpen(nowMs, maxDurationMs) {
+  const deadlineAtMs = nowMs + maxDurationMs;
+  if (!Number.isFinite(nowMs) || !Number.isSafeInteger(nowMs)) {
+    throw new Error(`R5_CAMPAIGN_CLOCK_INVALID: the injected clock ${String(nowMs)} is not a safe integer epoch`);
+  }
+  if (deadlineAtMs <= Date.now()) {
+    throw new Error(
+      `R5_CAMPAIGN_CLOCK_CLOSED: the injected clock ${nowMs} (${new Date(nowMs).toISOString()}) places the campaign ` +
+        `deadline at ${deadlineAtMs} (${new Date(deadlineAtMs).toISOString()}), which is already in the past relative ` +
+        `to ${new Date(Date.now()).toISOString()}. The arm executor would (correctly) refuse with ` +
+        `ARM_DEADLINE_EXCEEDED before the first model request, so no arm run would record anything.`,
+    );
+  }
+  return deadlineAtMs;
+}
+
+/** The claim-anchor variable name, mirrored from the ledger that reads it. */
+const R97_CAMPAIGN_CLAIMS_DIR_ENV = "R97_CAMPAIGN_CLAIMS_DIR";
+
+/**
+ * S5/N5 — SCOPE THE CAMPAIGN CLAIM ANCHOR TO THIS RUN.
+ *
+ * The durable ledger records, for each campaign id, an anchor under
+ * `R97_CAMPAIGN_CLAIMS_DIR` — and it reads that variable from **`process.env`**,
+ * not from the injected env object the runner is constructed with. This driver
+ * only ever set the injected copy, so the anchor landed in the machine-global
+ * `tmpdir()/e4-r97-campaign-claims`. It remembered a budget directory that this
+ * driver deletes at the end of every run, and the NEXT run was refused with
+ * `CAMPAIGN_STATE_LOST` ("a deleted root is a LOSS of the consumed record, not a
+ * fresh allowance"): the gate was not re-runnable, which a reproducible gate must
+ * be.
+ *
+ * Pointing it INSIDE the run's own disposable root keeps the run idempotent
+ * WITHOUT weakening that runtime rule: within one run the anchor still holds, and
+ * a lost root is still a loss. `prereg-production-e2e.mjs` carries the same fix
+ * for the same reason.
+ */
+async function withScopedCampaignClaimsDir(claimsDir, fn) {
+  const previous = process.env[R97_CAMPAIGN_CLAIMS_DIR_ENV];
+  await mkdir(claimsDir, { recursive: true });
+  process.env[R97_CAMPAIGN_CLAIMS_DIR_ENV] = claimsDir;
+  try {
+    return await fn();
+  } finally {
+    if (previous === undefined) delete process.env[R97_CAMPAIGN_CLAIMS_DIR_ENV];
+    else process.env[R97_CAMPAIGN_CLAIMS_DIR_ENV] = previous;
+  }
+}
+
+
 function readPairConfig() {
   const raw = readFileSync(PAIR_CONFIG_PATH, "utf8");
   const cfg = JSON.parse(raw);
@@ -203,7 +288,11 @@ async function phaseIdentity() {
   }
   const distinguishable = arms.baseline.buildDigest !== arms.candidate.buildDigest;
   return {
-    pair: "published E4-N1 comparable pair (baseline 8265dc39 / candidate ee15e7e7)",
+    // The label is DERIVED from the pinned config, never a remembered string: this
+    // line used to name the superseded E4-N1 pair (8265dc39/ee15e7e7) while the
+    // config pinned a different one, so the report described a pair it was not
+    // observing.
+    pair: `pinned formal pair (baseline ${PAIR_CONFIG.baseline.sha.slice(0, 8)} / candidate ${PAIR_CONFIG.candidate.sha.slice(0, 8)})`,
     arms,
     closuresDistinguishable: distinguishable,
     mechanismDifference:
@@ -507,9 +596,11 @@ async function phaseFormal({ full, workRoot, contentMode = "correct" }) {
     runArm: base.runArm,
   };
 
-  const result = await cliMod.preregCmd(
-    ["run", preregPath, "--authorization", authPath, "--budget-dir", budgetDir, "--out", outDir, "--mode", "first-run"],
-    { runner, now: () => 1_700_000_000_000 },
+  const result = await withScopedCampaignClaimsDir(join(dir, "claims"), () =>
+    cliMod.preregCmd(
+      ["run", preregPath, "--authorization", authPath, "--budget-dir", budgetDir, "--out", outDir, "--mode", "first-run"],
+      { runner, now: () => CAMPAIGN_NOW },
+    ),
   );
 
   const recordsDir = join(outDir, "runs");
@@ -823,10 +914,12 @@ async function phaseNegative({ workRoot }) {
       },
       runArm: base.runArm,
     };
-    const res = await cliMod.preregCmd(["run", preregPath, "--authorization", authPath, "--budget-dir", join(dir, "budget"), "--out", join(dir, "out"), "--mode", "first-run"], {
-      runner,
-      now: () => 1_700_000_000_000,
-    });
+    const res = await withScopedCampaignClaimsDir(join(dir, "claims"), () =>
+      cliMod.preregCmd(["run", preregPath, "--authorization", authPath, "--budget-dir", join(dir, "budget"), "--out", join(dir, "out"), "--mode", "first-run"], {
+        runner,
+        now: () => CAMPAIGN_NOW,
+      }),
+    );
     const recordsDir = join(dir, "out", "runs");
     const records = existsSync(recordsDir) ? readdirSync(recordsDir).filter((f) => f.endsWith(".json")).length : 0;
     // S4/task-6: record the refusal CODE, not just the exit code. A negative that is
@@ -931,6 +1024,8 @@ function parseArgs(argv) {
     verifyPairObservations: null,
     setupPair: null,
     emitFixtureBundle: null,
+    emitRealShapedBundle: null,
+    deriveBaseline: null,
     unknown: [],
   };
   for (let i = 0; i < argv.length; i += 1) {
@@ -941,11 +1036,185 @@ function parseArgs(argv) {
     else if (a === "--verify") out.verify = argv[++i];
     else if (a === "--verify-pair-observations") out.verifyPairObservations = argv[++i];
     else if (a === "--setup-pair") out.setupPair = argv[++i];
+    else if (a === "--derive-baseline") out.deriveBaseline = argv[++i];
     else if (a === "--emit-fixture-bundle") out.emitFixtureBundle = argv[++i];
+    else if (a === "--emit-real-shaped-bundle") out.emitRealShapedBundle = argv[++i];
     else if (a.startsWith("--")) out.phases.add(a.slice(2));
     else out.unknown.push(a);
   }
   return out;
+}
+
+// ===========================================================================
+// S5/N5 — THE PINNED PAIR'S BASELINE, DERIVED DETERMINISTICALLY
+// ===========================================================================
+//
+// The historical pair claimed (in `r5-formal-pair.json` AND in the report) that
+// `r5-real-formal.mjs --setup-pair` "creates the baseline locally from the
+// candidate SHA when it is absent, so the pair is reproducible offline". The flag
+// existed and NOTHING consumed it: the claim was false, and the pair was in fact
+// reproducible only by fetching a commit that is not in this repository.
+//
+// This is that missing implementation, and it is DETERMINISTIC: the same candidate
+// always yields the same baseline SHA, on any machine, with no network, because
+// every input to the commit object is fixed — the candidate's tree, the ONE
+// transformed file, a fixed message, a fixed author and a fixed timestamp. The
+// commit is built with `git hash-object -t commit -w --stdin` from bytes this
+// module assembles, so no git heuristic (`commit.gpgsign`, hooks, message cleanup)
+// can add a header or change a byte.
+//
+// PROVEN, not asserted: with the historical recipe (candidate 2314ce1d, the R15
+// message/author/date) this generator reproduces the hand-made commit 4f8d98ec
+// BYTE-FOR-BYTE — same blob e11c4231, same tree 8c0471fc, same commit SHA. That
+// self-test lives in `apps/cli/src/n5-pair-setup.test.ts` and is skipped where the
+// historical objects are not present (a shallow CI clone).
+
+/** The ONE file a comparable baseline may differ in. */
+const BASELINE_MECHANISM_PATH = "packages/evaluation/src/mechanism-guidance.ts";
+
+/**
+ * The ONE transformation: the v1 tool-call-efficiency strategy text neutralised to
+ * the empty string, exactly as the historical comparable baselines were built.
+ * Deterministic and fail-closed: if the anchor does not appear EXACTLY once the
+ * generator refuses rather than emitting a baseline nobody reviewed.
+ */
+export function neutraliseGuidance(source) {
+  const pattern = /export const TOOL_CALL_EFFICIENCY_GUIDANCE_V1 = \[[\s\S]*?\]\.join\("\\n"\);/;
+  const hits = source.match(new RegExp(pattern.source, "g")) ?? [];
+  if (hits.length !== 1) {
+    throw new Error(
+      `R5_PAIR_TRANSFORM_FAILED: expected exactly ONE TOOL_CALL_EFFICIENCY_GUIDANCE_V1 array literal in ${BASELINE_MECHANISM_PATH}, found ${hits.length} — the baseline must be derived by a reviewed transformation, never guessed`,
+    );
+  }
+  return source.replace(pattern, 'export const TOOL_CALL_EFFICIENCY_GUIDANCE_V1 = "";');
+}
+
+/** The fixed recipe the N5 baseline is derived with. `epochSeconds` is computed
+ *  from a fixed ISO instant so two machines agree on the commit bytes. */
+export const R5_BASELINE_RECIPE = Object.freeze({
+  message:
+    "E4-N5: purpose-built comparable baseline (neutralize tool_call_efficiency_v1 guidance only)\n" +
+    "\n" +
+    "The candidate arm is this commit's parent, unmodified. The ENTIRE diff is\n" +
+    "packages/evaluation/src/mechanism-guidance.ts: TOOL_CALL_EFFICIENCY_GUIDANCE_V1 is\n" +
+    "set to the empty string and nothing else changes. Both arms therefore carry the\n" +
+    "same S1/S2 budget, cancellation and evidence infrastructure, and the only\n" +
+    "dimension under test is the pre-registered guidance text.\n" +
+    "\n" +
+    "This commit is NOT an ancestor of product main and deliberately fails its own\n" +
+    "product-strategy assertions; that is the point of a comparable baseline and it\n" +
+    "MUST NOT be fixed on main. It is reproduced offline by `--setup-pair`, which\n" +
+    "asserts the derived SHA equals the pinned one.\n",
+  authorName: "n5-formal",
+  authorEmail: "n5@local",
+  epochSeconds: Math.floor(Date.parse("2026-09-30T00:00:00+08:00") / 1000),
+  timezone: "+0800",
+});
+
+/** `git` with the output NOT trimmed — a blob read must keep its exact bytes. */
+function gitRaw(root, args, input) {
+  return execFileSync("git", ["-C", root, ...args], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    ...(input === undefined ? {} : { input }),
+  });
+}
+
+/**
+ * Build the deterministic neutralised child commit of `candidateSha`.
+ *
+ * The tree is assembled through a PRIVATE `GIT_INDEX_FILE`, so the driver's own
+ * work tree, index and HEAD are never touched — this works on a dirty tree, which
+ * matters because the pin step runs before the final commit is written.
+ */
+export async function deriveNeutralisedCommit(repoRoot, recipe) {
+  const { candidateSha, message, authorName, authorEmail, epochSeconds, timezone } = recipe;
+  const source = gitRaw(repoRoot, ["show", `${candidateSha}:${BASELINE_MECHANISM_PATH}`]);
+  const transformed = neutraliseGuidance(source);
+  const blob = gitRaw(repoRoot, ["hash-object", "-w", "--stdin"], transformed).trim();
+
+  const scratch = await mkdtemp(join(tmpdir(), "r5-setup-pair-"));
+  const indexArgs = (args) =>
+    execFileSync("git", ["-C", repoRoot, ...args], {
+      encoding: "utf8",
+      env: { ...process.env, GIT_INDEX_FILE: join(scratch, "index") },
+      maxBuffer: 64 * 1024 * 1024,
+    }).trim();
+  try {
+    indexArgs(["read-tree", candidateSha]);
+    indexArgs(["update-index", "--cacheinfo", `100644,${blob},${BASELINE_MECHANISM_PATH}`]);
+    const tree = indexArgs(["write-tree"]);
+    const commitBody =
+      `tree ${tree}\n` +
+      `parent ${candidateSha}\n` +
+      `author ${authorName} <${authorEmail}> ${epochSeconds} ${timezone}\n` +
+      `committer ${authorName} <${authorEmail}> ${epochSeconds} ${timezone}\n` +
+      `\n` +
+      message;
+    const sha = gitRaw(repoRoot, ["hash-object", "-t", "commit", "-w", "--stdin"], commitBody).trim();
+    return { sha, tree, blob, transformedBytes: Buffer.byteLength(transformed, "utf8") };
+  } finally {
+    await rm(scratch, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+/** Derive the N5 baseline for one candidate SHA. */
+export async function deriveBaselineCommit(repoRoot, candidateSha) {
+  return deriveNeutralisedCommit(repoRoot, {
+    candidateSha,
+    message: R5_BASELINE_RECIPE.message,
+    authorName: R5_BASELINE_RECIPE.authorName,
+    authorEmail: R5_BASELINE_RECIPE.authorEmail,
+    epochSeconds: R5_BASELINE_RECIPE.epochSeconds,
+    timezone: R5_BASELINE_RECIPE.timezone,
+  });
+}
+
+/** Does this repository hold the object? (Empty output + exit 0 = yes.) */
+function objectPresent(root, revision) {
+  try {
+    return git(root, ["cat-file", "-e", `${revision}^{commit}`]) !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Make the pinned pair usable locally: the candidate must exist, and the baseline
+ * is either already present or derived — and a DERIVED baseline whose SHA is not
+ * the pinned one is a SETUP FAILURE, never a silently different experiment.
+ */
+export async function setupPair(configPath, repoRoot = REPO_ROOT) {
+  let config;
+  try {
+    config = JSON.parse(readFileSync(configPath, "utf8"));
+  } catch (err) {
+    return { ok: false, code: "PAIR_CONFIG_UNREADABLE", detail: `${configPath}: ${err instanceof Error ? err.message : String(err)}` };
+  }
+  const baselineSha = config?.baseline?.sha;
+  const candidateSha = config?.candidate?.sha;
+  if (!isSha40(baselineSha) || !isSha40(candidateSha)) {
+    return { ok: false, code: "PAIR_CONFIG_INVALID", detail: "baseline.sha and candidate.sha must both be 40-hex revisions" };
+  }
+  if (!objectPresent(repoRoot, candidateSha)) {
+    return {
+      ok: false,
+      code: "CANDIDATE_ABSENT",
+      detail: `the candidate ${candidateSha} is not present in ${repoRoot}; the pair cannot be reproduced from a commit this repository does not have`,
+    };
+  }
+  const already = objectPresent(repoRoot, baselineSha);
+  const derived = await deriveBaselineCommit(repoRoot, candidateSha);
+  if (derived.sha !== baselineSha) {
+    return {
+      ok: false,
+      code: "BASELINE_PIN_MISMATCH",
+      detail:
+        `deriving the baseline from candidate ${candidateSha} produced ${derived.sha}, but the pair pins ${baselineSha}. ` +
+        `A pair is re-pinned by DERIVING the baseline and writing that SHA into r5-formal-pair.json (--derive-baseline), never by accepting whatever came out.`,
+    };
+  }
+  return { ok: true, baselineSha, candidateSha, created: !already, tree: derived.tree, blob: derived.blob };
 }
 
 async function runRealChain() {
@@ -963,6 +1232,10 @@ async function runRealChain() {
     externalNetwork: "none: the only provider is an in-process scripted double",
   };
   try {
+    // S5/N5 — FAIL LOUDLY BEFORE ANY PHASE if this driver's own clock would make
+    // the campaign deadline already-expired. Phase-scoped and fatal on purpose:
+    // the alternative is a silent `records=0` reported as an arm problem.
+    assertCampaignClockIsOpen(CAMPAIGN_NOW, R5_DECLARED_MAX_DURATION_MS);
     if (args.phases.has("identity")) report.identity = await phaseIdentity();
     if (args.phases.has("formal")) report.formalSmall = await phaseFormal({ full: false, workRoot });
     if (args.phases.has("full")) report.formalFull = await phaseFormal({ full: true, workRoot });
@@ -1063,6 +1336,9 @@ function isSha40(value) {
 function isSha256(value) {
   return typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
 }
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim() !== "";
+}
 function fail(code, detail) {
   return { code, detail };
 }
@@ -1112,6 +1388,12 @@ export function observeArm(dir, config) {
   const workerAbi = (config.requiredWorkerAbi ?? []).filter((abi) => abiSource.includes(abi));
   const entryPath = join(dir, "apps", "cli", "dist", "benchmark-command.js");
   const entrySha256 = existsSync(entryPath) ? sha256Hex(readFileSync(entryPath, "utf8")) : null;
+  // S5/N5 — the entry is also REALLY LOADED, in its own process and its own cwd,
+  // so `probe` is an observation of the module rather than a string scraped out of
+  // a text scan. `buildDigest` identifies the arm's execution closure; the PROBE
+  // is what binds the mechanism wiring, and the entry hash is cross-checked
+  // against the driver's own read below.
+  const loaded = observeArmEntryLoad(dir, "apps/cli/dist/benchmark-command.js");
   return {
     exists: true,
     dir,
@@ -1123,7 +1405,66 @@ export function observeArm(dir, config) {
     entrySha256,
     workerAbi,
     declaredAbi: (config.requiredWorkerAbi ?? []).length,
+    probe: loaded.probe,
+    probeError: loaded.error,
+    runOneCaseExport: loaded.runOneCaseExport,
+    declaredArmAbi: loaded.abi,
+    loadedEntrySha256: loaded.entrySha256,
+    entryHashAgrees: entrySha256 !== null && loaded.entrySha256 !== null && entrySha256 === loaded.entrySha256,
   };
+}
+
+/**
+ * S5/N5 — LOAD the arm's built entry the way the FORMAL WORKER loads it, and read
+ * the identity the BUILD ITSELF declares.
+ *
+ * This is a REAL module load in a child process whose cwd IS the arm checkout, so
+ * the probe it reports is a property of the module the worker would import — not a
+ * regex hit on the bundle's bytes. It returns the child's OWN sha256 of the entry
+ * file as well, so the driver can require that the bytes it hashed are the bytes
+ * that were imported (a mismatch is reported, never smoothed over).
+ *
+ * The arm's `r97-arm-abi.js` text scan in `observeArm` stays: it is the same
+ * observation `verifyPairArms` documents, and the two together mean a missing ABI
+ * is named whether it is missing from the SOURCE or from the LOADED module.
+ */
+export function observeArmEntryLoad(dir, entryRel) {
+  const entryPath = join(dir, entryRel);
+  if (!existsSync(entryPath)) return { probe: null, abi: null, runOneCaseExport: "missing", entrySha256: null, error: `the arm declares no built entry at ${entryRel}` };
+  const script = [
+    'const { createHash } = await import("node:crypto");',
+    'const { readFileSync } = await import("node:fs");',
+    `const ENTRY_URL = ${JSON.stringify(pathToFileURL(entryPath).href)};`,
+    `const ENTRY_PATH = ${JSON.stringify(entryPath)};`,
+    "let out = { probe: null, abi: null, runOneCaseExport: 'missing', entrySha256: null, error: null };",
+    "try {",
+    "  const m = await import(ENTRY_URL);",
+    "  out.probe = typeof m.R97_ARM_PROBE === 'string' && m.R97_ARM_PROBE !== '' ? m.R97_ARM_PROBE : null;",
+    "  out.abi = Array.isArray(m.R97_ARM_ABI) ? m.R97_ARM_ABI.filter((s) => typeof s === 'string') : null;",
+    "  out.runOneCaseExport = typeof m.runOneCase;",
+    "  out.entrySha256 = createHash('sha256').update(readFileSync(ENTRY_PATH, 'utf8'), 'utf8').digest('hex');",
+    "} catch (err) { out.error = err && err.message ? String(err.message) : String(err); }",
+    "process.stdout.write(JSON.stringify(out));",
+  ].join("\n");
+  try {
+    const raw = execFileSync(process.execPath, ["--input-type=module", "-e", script], {
+      cwd: dir,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 120_000,
+      maxBuffer: 8 * 1024 * 1024,
+    });
+    return JSON.parse(raw);
+  } catch (err) {
+    const detail = err !== null && typeof err === "object" && "stderr" in err ? String(err.stderr ?? "") : "";
+    return {
+      probe: null,
+      abi: null,
+      runOneCaseExport: "missing",
+      entrySha256: null,
+      error: `the arm entry could not be loaded: ${(detail.trim() || (err instanceof Error ? err.message : String(err))).split("\n")[0]}`,
+    };
+  }
 }
 
 /**
@@ -1229,6 +1570,23 @@ export function verifyEvidenceBundle(root, config = PAIR_CONFIG) {
         failures.push(fail("PROTOCOL_FIX_MISSING", `${armId} does not carry ${fix.id} (${fix.sha})`));
       }
     }
+    // S5/N5 — the root identity must be able to BIND an execution: without a
+    // really-loaded probe and an entry hash that the loading process agrees with,
+    // there is nothing for a record's manifest to be checked against. A fixture
+    // bundle is exempt from the PRESENCE rule only (it declares `fixture: true`
+    // and is never evidence that an experiment ran); a real bundle is not.
+    if (identity.fixture !== true) {
+      if (!isNonEmptyString(arm.probe)) {
+        failures.push(
+          fail("ARM_IDENTITY_INCOMPLETE", `${armId} records no probe from a real module load${arm.probeError === undefined || arm.probeError === null ? "" : ` (${String(arm.probeError)})`}, so no manifest can be bound to this arm's build`),
+        );
+      }
+      if (arm.entryHashAgrees !== true) {
+        failures.push(
+          fail("ARM_IDENTITY_INCOMPLETE", `${armId} does not record that the entry bytes the driver hashed are the bytes the loader imported (driver ${String(arm.entrySha256).slice(0, 12)}…, loader ${String(arm.loadedEntrySha256).slice(0, 12)}…)`),
+        );
+      }
+    }
   }
   if (isSha256(identity.pair?.baseline?.buildDigest) && identity.pair.baseline.buildDigest === identity.pair?.candidate?.buildDigest) {
     failures.push(fail("IDENTICAL_CLOSURE", "identity records ONE execution closure for both arms, so the pair is not comparable"));
@@ -1299,6 +1657,68 @@ export function verifyEvidenceBundle(root, config = PAIR_CONFIG) {
             `${label} claims verifiedCompletion=${String(rec.verifiedCompletion)} but the raw verifier says ${String(verifier.verifiedCompletion)}`,
           ),
         );
+      }
+    }
+
+    // ---- S5/N5: the manifest must describe THIS run, on THIS arm's build ----
+    //
+    // A6 (`verifyArmEvidenceFromArtifacts`) already replays the run identity and
+    // the declared trace digest, and it deliberately admits manifests whose build
+    // fields are ABSENT so old fixtures keep working. That permissiveness must not
+    // be read as a real-layer pass, so the binding to the ROOT identity is checked
+    // here — and for a real bundle the three build fields are REQUIRED.
+    //
+    // Measured against the pre-S5 gate: a bundle carrying one arm's manifest under
+    // another arm's record, a swapped root buildDigest, a swapped entry hash, a
+    // swapped baseline/candidate identity and a manifest with its build fields
+    // deleted were ALL accepted with exit 0.
+    if (existsSync(manifestPath)) {
+      let man = null;
+      try {
+        man = readJsonFile(manifestPath);
+      } catch {
+        failures.push(fail("MANIFEST_IDENTITY_MISMATCH", `${label} carries a manifest that is not readable JSON`));
+      }
+      if (man !== null && typeof man === "object" && !Array.isArray(man)) {
+        for (const key of ["armRunId", "armId", "caseId", "repetition", "orderIndex"]) {
+          if (man[key] !== rec[key]) {
+            failures.push(
+              fail(
+                "MANIFEST_IDENTITY_MISMATCH",
+                `${label} carries a manifest whose ${key} is ${JSON.stringify(man[key])} — the record and its evidence describe different runs (a spliced manifest cannot be attributed to this arm run)`,
+              ),
+            );
+          }
+        }
+        const armIdentity = identity.pair?.[String(rec.armId)] ?? null;
+        const buildFields = { armBuildDigest: armIdentity?.buildDigest ?? null, armEntrySha256: armIdentity?.entrySha256 ?? null, armProbe: armIdentity?.probe ?? null };
+        const absent = Object.keys(buildFields).filter((k) => !isNonEmptyString(man[k]));
+        if (absent.length > 0) {
+          if (identity.fixture !== true) {
+            failures.push(
+              fail(
+                "ARM_BUILD_FIELDS_MISSING",
+                `${label} carries no ${absent.join(", ")} in its manifest, so the build that RAN this arm run is not bound to the root identity (a real-layer bundle must name it)`,
+              ),
+            );
+          }
+        } else {
+          const codes = {
+            armBuildDigest: "ARM_BUILD_DIGEST_MISMATCH",
+            armEntrySha256: "ARM_ENTRY_MISMATCH",
+            armProbe: "ARM_PROBE_MISMATCH",
+          };
+          for (const [field, expected] of Object.entries(buildFields)) {
+            if (isNonEmptyString(expected) && man[field] !== expected) {
+              failures.push(
+                fail(
+                  codes[field],
+                  `${label} manifest ${field} ${String(man[field]).slice(0, 24)}… is not the ${String(rec.armId)} build the root identity observed (${String(expected).slice(0, 24)}…)`,
+                ),
+              );
+            }
+          }
+        }
       }
     }
     for (const f of OPTIONAL_EVIDENCE_FILES) {
@@ -1551,6 +1971,15 @@ async function writeEvidenceBundle({ evidenceDir, report, args }) {
       buildDigest: typeof observed?.buildDigest === "string" && observed.buildDigest.length === 64 ? observed.buildDigest : abiObserved.buildDigest,
       entrySha256: observed?.entrySha256 ?? abiObserved.entrySha256 ?? null,
       workerAbi: abiObserved.workerAbi ?? [],
+      // S5/N5 — the LOADED entry identity: the probe the build's own module
+      // exports (observed by really importing it), the hash the CHILD computed for
+      // the file it imported, and whether that agrees with the driver's own read.
+      probe: abiObserved.probe ?? null,
+      probeError: abiObserved.probeError ?? null,
+      loadedEntrySha256: abiObserved.loadedEntrySha256 ?? null,
+      entryHashAgrees: abiObserved.entryHashAgrees === true,
+      declaredArmAbi: abiObserved.declaredArmAbi ?? null,
+      runOneCaseExport: abiObserved.runOneCaseExport ?? null,
       protocolFixes: Object.fromEntries(
         (PAIR_CONFIG.requiredProtocolFixes ?? []).map((f) => [f.id, observed?.protocolFixes?.[f.id]?.presentInArmBuild === true]),
       ),
@@ -1707,17 +2136,59 @@ async function writeEvidenceBundle({ evidenceDir, report, args }) {
   return { recordCount: scheduleRecords.length, verifiedCount };
 }
 
-/** A deliberately SYNTHETIC but internally CONSISTENT bundle, for the counter-examples. */
-export async function emitFixtureBundle(dir) {
+/**
+ * A deliberately SYNTHETIC but internally CONSISTENT bundle, for the counter-examples.
+ *
+ * S5/N5 — TWO SHAPES, ONE HONESTY LABEL.
+ *
+ * `fixture: true` (the default) is the labelled synthetic bundle: it says so in
+ * `identity.json` and is never evidence that an experiment ran.
+ * `fixture: false` (`--emit-real-shaped-bundle`) has the SHAPE of a real bundle —
+ * per-arm probes, entry hashes and per-run manifests that carry the build fields —
+ * because the build-binding checks below only mean something if a bundle can carry
+ * the fields they require. Having the SHAPE is NOT evidence that a real run
+ * happened, and the emitted `identity.json` of the real-shaped bundle is written by
+ * THIS function, which never builds an arm, never spawns a worker and never
+ * contacts a provider. Only the real chain's own `writeEvidenceBundle` produces
+ * evidence.
+ */
+export async function emitFixtureBundle(dir, opts = {}) {
+  const fixture = opts.fixture !== false;
   await mkdir(dir, { recursive: true });
-  const manifestText = `${JSON.stringify({ fixture: true, armProbe: { guidance: "fixture" } }, null, 2)}\n`;
   const armRuns = [
     { armRunId: "fixture-baseline-reg-12-csv-parse-r1", armId: "baseline", caseId: "reg-12-csv-parse", repetition: 1, orderIndex: 0 },
     { armRunId: "fixture-candidate-reg-12-csv-parse-r1", armId: "candidate", caseId: "reg-12-csv-parse", repetition: 1, orderIndex: 1 },
   ];
+  // One build identity per arm, and a manifest for EACH run that names exactly the
+  // run it belongs to and the build it ran on.
+  const armBuild = {
+    baseline: { buildDigest: "a".repeat(64), entrySha256: "b".repeat(64), probe: "r97-arm-probe-v1;candidate=tool_call_efficiency_v1;guidance=fixture-baseline" },
+    candidate: { buildDigest: "c".repeat(64), entrySha256: "d".repeat(64), probe: "r97-arm-probe-v1;candidate=tool_call_efficiency_v1;guidance=fixture-candidate" },
+  };
+  const manifestTexts = {};
   for (const rec of armRuns) {
     const evDir = join(dir, "evidence", rec.armRunId);
     await mkdir(evDir, { recursive: true });
+    const manifestText = `${JSON.stringify(
+      {
+        schemaVersion: "prereg-run-manifest-v1",
+        executorId: "fixture",
+        preregistrationDigest: "f".repeat(64),
+        planDigest: "f".repeat(64),
+        armRunId: rec.armRunId,
+        armId: rec.armId,
+        caseId: rec.caseId,
+        repetition: rec.repetition,
+        orderIndex: rec.orderIndex,
+        armBuildDigest: armBuild[rec.armId].buildDigest,
+        armEntrySha256: armBuild[rec.armId].entrySha256,
+        armProbe: armBuild[rec.armId].probe,
+        fixture: true,
+      },
+      null,
+      2,
+    )}\n`;
+    manifestTexts[rec.armRunId] = manifestText;
     await writeFile(join(evDir, "manifest.json"), manifestText, "utf8");
     await writeFile(
       join(evDir, "verifier.json"),
@@ -1726,36 +2197,34 @@ export async function emitFixtureBundle(dir) {
     );
     await writeFile(join(evDir, "security.json"), `${JSON.stringify({ fixture: true, violations: [] }, null, 2)}\n`, "utf8");
   }
-  const traceDigest = sha256Hex(manifestText);
+  const armIdentitySource = (armId) => ({
+    sourceSha: armId === "baseline" ? PAIR_CONFIG.baseline.sha : PAIR_CONFIG.candidate.sha,
+    head: armId === "baseline" ? PAIR_CONFIG.baseline.sha : PAIR_CONFIG.candidate.sha,
+    clean: true,
+    buildDigest: armBuild[armId].buildDigest,
+    entrySha256: armBuild[armId].entrySha256,
+    workerAbi: PAIR_CONFIG.requiredWorkerAbi,
+    protocolFixes: { "P2-41": true, "P2-43": true },
+    probe: armBuild[armId].probe,
+    probeError: null,
+    loadedEntrySha256: armBuild[armId].entrySha256,
+    entryHashAgrees: true,
+    declaredArmAbi: PAIR_CONFIG.requiredWorkerAbi,
+    runOneCaseExport: "function",
+  });
   await writeFile(
     join(dir, "identity.json"),
     `${JSON.stringify(
       {
         schemaVersion: R5_EVIDENCE_SCHEMA,
-        fixture: true,
+        fixture,
         gateVersion: R5_GATE_VERSION,
         driverHead: PAIR_CONFIG.candidate.sha,
         treeClean: true,
         platform: `${process.platform}-${process.arch}`,
         pair: {
-          baseline: {
-            sourceSha: PAIR_CONFIG.baseline.sha,
-            head: PAIR_CONFIG.baseline.sha,
-            clean: true,
-            buildDigest: "a".repeat(64),
-            entrySha256: "b".repeat(64),
-            workerAbi: PAIR_CONFIG.requiredWorkerAbi,
-            protocolFixes: { "P2-41": true, "P2-43": true },
-          },
-          candidate: {
-            sourceSha: PAIR_CONFIG.candidate.sha,
-            head: PAIR_CONFIG.candidate.sha,
-            clean: true,
-            buildDigest: "c".repeat(64),
-            entrySha256: "d".repeat(64),
-            workerAbi: PAIR_CONFIG.requiredWorkerAbi,
-            protocolFixes: { "P2-41": true, "P2-43": true },
-          },
+          baseline: armIdentitySource("baseline"),
+          candidate: armIdentitySource("candidate"),
         },
         closuresDistinguishable: true,
         isolation: PAIR_CONFIG.isolation,
@@ -1771,7 +2240,15 @@ export async function emitFixtureBundle(dir) {
       {
         schemaVersion: R5_SCHEDULE_SCHEMA,
         planned: { cases: ["reg-12-csv-parse"], arms: ["baseline", "candidate"], repetitions: 1, logicalRuns: 2 },
-        records: armRuns.map((r) => ({ ...r, status: "ok", verifiedCompletion: true, traceDigest, evidenceFiles: ["manifest.json", "verifier.json", "security.json"] })),
+        records: armRuns.map((r) => ({
+          ...r,
+          status: "ok",
+          verifiedCompletion: true,
+          traceDigest: sha256Hex(manifestTexts[r.armRunId]),
+          preregistrationDigest: "f".repeat(64),
+          planDigest: "f".repeat(64),
+          evidenceFiles: ["manifest.json", "verifier.json", "security.json"],
+        })),
       },
       null,
       2,
@@ -1783,6 +2260,11 @@ export async function emitFixtureBundle(dir) {
     `${JSON.stringify(
       {
         schemaVersion: "tool-call-efficiency-cost-journal-v2",
+        // S5/N5 — the durable TOOL dimension the dispatch contract reconciles
+        // against. Zero here, and proved zero below by a coverage record for every
+        // scheduled arm run rather than by an absent file.
+        charged: { totalTokens: 230, toolCalls: 0 },
+        reserved: { toolCalls: 0 },
         entries: [
           { arm: "baseline", basis: "MEASURED", inputTokens: 100, outputTokens: 20, requestId: "r1" },
           { arm: "candidate", basis: "MEASURED", inputTokens: 90, outputTokens: 20, requestId: "r2" },
@@ -1793,6 +2275,31 @@ export async function emitFixtureBundle(dir) {
     )}\n`,
     "utf8",
   );
+
+  if (!fixture) {
+    // A real-SHAPED bundle carries a dispatch journal, because a real bundle that
+    // wired the campaign tool budget must: its absence is `DISPATCH_JOURNAL_MISSING`
+    // (NOT_PROVEN, never "nothing dispatched"). This one is EMPTY on purpose and
+    // carries the coverage proof the contract requires for an empty journal.
+    const at = 1_700_000_000_000;
+    await writeFile(
+      join(dir, "dispatch-journal.json"),
+      `${JSON.stringify(
+        {
+          schemaVersion: "e4-n3-tool-dispatch-journal-v1",
+          campaignDigest: "f".repeat(64),
+          eventCount: 0,
+          events: [],
+          coverage: {
+            armRuns: armRuns.map((r, i) => ({ armRunId: r.armRunId, openedAtMs: at + i, closedAtMs: at + i + 1, reserveFrames: 0, settleFrames: 0 })),
+          },
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+  }
   await writeFile(
     join(dir, "aggregate.json"),
     `${JSON.stringify({ fixture: true, cost: { totalTokens: 230, deltaTokens: -10, baselineTokens: 120, candidateTokens: 110 }, decision: { decision: "INCONCLUSIVE", reasonCodes: ["FIXTURE"] } }, null, 2)}\n`,
@@ -1852,6 +2359,31 @@ async function main() {
   if (args.emitFixtureBundle !== null) {
     await emitFixtureBundle(resolve(args.emitFixtureBundle));
     process.stdout.write(`wrote a SYNTHETIC fixture bundle to ${resolve(args.emitFixtureBundle)}\n`);
+    return 0;
+  }
+
+  if (args.emitRealShapedBundle !== null) {
+    await emitFixtureBundle(resolve(args.emitRealShapedBundle), { fixture: false });
+    process.stdout.write(
+      `wrote a bundle with the real bundle's SHAPE to ${resolve(args.emitRealShapedBundle)}\n` +
+        "  it has no arm build, no worker run and no provider call behind it: SHAPE is not EVIDENCE\n",
+    );
+    return 0;
+  }
+
+  if (args.deriveBaseline !== null) {
+    const result = await deriveBaselineCommit(REPO_ROOT, args.deriveBaseline);
+    process.stdout.write(`R5 pair baseline for candidate ${args.deriveBaseline}:\n  ${result.sha}\n`);
+    return 0;
+  }
+
+  if (args.setupPair !== null) {
+    const result = await setupPair(args.setupPair);
+    if (!result.ok) {
+      process.stderr.write(`SETUP FAILED ${result.code}: ${result.detail}\n`);
+      return 1;
+    }
+    process.stdout.write(`PAIR READY: baseline ${result.baselineSha} (${result.created ? "created" : "already present"}), candidate ${result.candidateSha}\n`);
     return 0;
   }
 

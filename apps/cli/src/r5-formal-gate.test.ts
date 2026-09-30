@@ -26,6 +26,7 @@
  * double inside the gate script's own phases, which this file does not invoke.
  */
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -65,6 +66,7 @@ async function editJson(path: string, mutate: (doc: Json) => void): Promise<void
 
 let workRoot = "";
 let fixture = "";
+let realShaped = "";
 
 beforeAll(async () => {
   workRoot = await mkdtemp(join(tmpdir(), "r5-formal-gate-"));
@@ -72,6 +74,15 @@ beforeAll(async () => {
   const emitted = runGate(["--emit-fixture-bundle", fixture]);
   if (emitted.status !== 0) {
     throw new Error(`--emit-fixture-bundle failed (exit ${emitted.status}):\n${emitted.output}`);
+  }
+  // S5/N5 — a bundle with the REAL bundle's SHAPE. The build-binding checks below
+  // can only be exercised on a bundle that carries the fields they require, and a
+  // fixture is exempt from that PRESENCE rule on purpose. It is emitted by the same
+  // synthetic emitter, so SHAPE is not EVIDENCE that an experiment ran.
+  realShaped = join(workRoot, "real-shaped");
+  const emittedReal = runGate(["--emit-real-shaped-bundle", realShaped]);
+  if (emittedReal.status !== 0) {
+    throw new Error(`--emit-real-shaped-bundle failed (exit ${emittedReal.status}):\n${emittedReal.output}`);
   }
 });
 
@@ -83,6 +94,14 @@ afterAll(async () => {
 async function brokenCopy(name: string, mutate: (dir: string) => Promise<void>): Promise<string> {
   const dir = join(workRoot, `case-${name}`);
   await cp(fixture, dir, { recursive: true });
+  await mutate(dir);
+  return dir;
+}
+
+/** The same, from the REAL-SHAPED control bundle (build fields present). */
+async function brokenRealCopy(name: string, mutate: (dir: string) => Promise<void>): Promise<string> {
+  const dir = join(workRoot, `real-case-${name}`);
+  await cp(realShaped, dir, { recursive: true });
   await mutate(dir);
   return dir;
 }
@@ -401,5 +420,164 @@ describe("the pinned pair is read from ONE authoritative file", () => {
       "4f8d98ec65d475844d3ed4b959a3199f84ed5d03",
       "2314ce1db40bfa10dc58b0d136e0696450e90cc8",
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S5/N5 — the build identity is BOUND to the execution evidence
+// ---------------------------------------------------------------------------
+//
+// WHY THIS BLOCK EXISTS. The gate used to accept, with exit 0, a bundle whose
+// root `buildDigest` had been swapped, whose arm `entrySha256` had been swapped,
+// whose record carried ANOTHER arm run's manifest, and whose manifests had the
+// build fields deleted. Checking that a digest is 64-hex, and that two JSON files
+// repeat each other, is not a binding. Measured against the pre-S5 gate:
+//
+//   | tamper                                   | pre-S5 | post-S5 |
+//   | swap only the root buildDigest            | exit 0 | ARM_BUILD_DIGEST_MISMATCH |
+//   | swap only one arm's entrySha256           | exit 0 | ARM_ENTRY_MISMATCH |
+//   | splice another run's manifest             | exit 0 | MANIFEST_IDENTITY_MISMATCH |
+//   | delete the manifest build fields          | exit 0 | ARM_BUILD_FIELDS_MISSING |
+//   | swap baseline/candidate                   | WRONG_PAIR | WRONG_PAIR (unchanged) |
+//
+// FIXTURE COMPATIBILITY IS SEPARATE, deliberately: a bundle that DECLARES
+// `fixture: true` is never evidence an experiment ran, and it is exempt from the
+// PRESENCE requirement only — whatever build fields it does carry must still be
+// self-consistent. A bundle that does not declare itself a fixture must name the
+// build that ran, for every record.
+
+describe("S5/N5 — the build identity is bound to the execution evidence", () => {
+  it("control: a bundle with the real SHAPE passes, so each tamper below isolates one dimension", () => {
+    const run = runGate(["--verify", realShaped]);
+    expect(run.status, run.output).toBe(0);
+    expect(run.output).toContain("GATE PASS");
+  });
+
+  it("refuses a swapped ROOT buildDigest, naming ARM_BUILD_DIGEST_MISMATCH", async () => {
+    const dir = await brokenRealCopy("root-build-digest", async (d) => {
+      await editJson(join(d, "identity.json"), (doc) => {
+        ((doc["pair"] as Json)["baseline"] as Json)["buildDigest"] = "e".repeat(64);
+      });
+    });
+    await expectRefusal(dir, "ARM_BUILD_DIGEST_MISMATCH");
+  });
+
+  it("refuses a swapped ARM ENTRY hash, naming ARM_ENTRY_MISMATCH", async () => {
+    const dir = await brokenRealCopy("arm-entry-hash", async (d) => {
+      await editJson(join(d, "identity.json"), (doc) => {
+        ((doc["pair"] as Json)["candidate"] as Json)["entrySha256"] = "9".repeat(64);
+      });
+    });
+    await expectRefusal(dir, "ARM_ENTRY_MISMATCH");
+  });
+
+  it("refuses a SPLICED manifest even when its traceDigest was kept consistent, naming MANIFEST_IDENTITY_MISMATCH", async () => {
+    // The traceDigest is re-derived from the spliced bytes on purpose: otherwise
+    // CORRUPT_RECORD would catch it and this counter-example would prove nothing
+    // about the identity binding.
+    const dir = await brokenRealCopy("spliced-manifest", async (d) => {
+      const schedule = await readJson(join(d, "schedule.json"));
+      const records = schedule["records"] as Json[];
+      const first = records[0]!;
+      const second = records[1]!;
+      const secondManifest = await readFile(join(d, "evidence", String(second["armRunId"]), "manifest.json"), "utf8");
+      await writeFile(join(d, "evidence", String(first["armRunId"]), "manifest.json"), secondManifest, "utf8");
+      await editJson(join(d, "schedule.json"), (doc) => {
+        (doc["records"] as Json[])[0]!["traceDigest"] = createHash("sha256").update(secondManifest, "utf8").digest("hex");
+      });
+    });
+    const run = await expectRefusal(dir, "MANIFEST_IDENTITY_MISMATCH");
+    expect(run.output, "the spliced manifest was caught by its integrity digest, not by the identity binding").not.toContain("CORRUPT_RECORD");
+  });
+
+  it("refuses SWAPPED baseline/candidate identities, naming WRONG_PAIR", async () => {
+    const dir = await brokenRealCopy("swapped-identities", async (d) => {
+      await editJson(join(d, "identity.json"), (doc) => {
+        const pair = doc["pair"] as Json;
+        const baseline = pair["baseline"];
+        pair["baseline"] = pair["candidate"];
+        pair["candidate"] = baseline;
+      });
+    });
+    await expectRefusal(dir, "WRONG_PAIR");
+  });
+
+  it("refuses two manifests EXCHANGED between the arms, naming ARM_BUILD_DIGEST_MISMATCH", async () => {
+    // This is the tamper that entry-SHA equality between arms cannot catch: the two
+    // real arms can share an entry hash, so the arm identity is the CLOSURE digest
+    // and the probe.
+    const dir = await brokenRealCopy("exchanged-manifests", async (d) => {
+      const schedule = await readJson(join(d, "schedule.json"));
+      const records = schedule["records"] as Json[];
+      const first = records[0]!;
+      const second = records[1]!;
+      const firstPath = join(d, "evidence", String(first["armRunId"]), "manifest.json");
+      const secondPath = join(d, "evidence", String(second["armRunId"]), "manifest.json");
+      const firstText = await readFile(firstPath, "utf8");
+      const secondText = await readFile(secondPath, "utf8");
+      await writeFile(firstPath, secondText, "utf8");
+      await writeFile(secondPath, firstText, "utf8");
+      await editJson(join(d, "schedule.json"), (doc) => {
+        const records = doc["records"] as Json[];
+        records[0]!["traceDigest"] = createHash("sha256").update(secondText, "utf8").digest("hex");
+        records[1]!["traceDigest"] = createHash("sha256").update(firstText, "utf8").digest("hex");
+      });
+    });
+    const run = await expectRefusal(dir, "ARM_BUILD_DIGEST_MISMATCH");
+    expect(run.output).toContain("MANIFEST_IDENTITY_MISMATCH");
+  });
+
+  it("refuses a manifest whose build fields were DELETED, naming ARM_BUILD_FIELDS_MISSING", async () => {
+    const dir = await brokenRealCopy("deleted-build-fields", async (d) => {
+      const schedule = await readJson(join(d, "schedule.json"));
+      for (const rec of schedule["records"] as Json[]) {
+        const manifestPath = join(d, "evidence", String(rec["armRunId"]), "manifest.json");
+        const doc = await readJson(manifestPath);
+        delete doc["armBuildDigest"];
+        delete doc["armEntrySha256"];
+        delete doc["armProbe"];
+        const text = `${JSON.stringify(doc, null, 2)}\n`;
+        await writeFile(manifestPath, text, "utf8");
+        await editJson(join(d, "schedule.json"), (sched) => {
+          const target = (sched["records"] as Json[]).find((r) => r["armRunId"] === rec["armRunId"])!;
+          target["traceDigest"] = createHash("sha256").update(text, "utf8").digest("hex");
+        });
+      }
+    });
+    await expectRefusal(dir, "ARM_BUILD_FIELDS_MISSING");
+  });
+
+  it("refuses a bundle with no LOADED probe in its root identity, naming ARM_IDENTITY_INCOMPLETE", async () => {
+    const dir = await brokenRealCopy("no-root-probe", async (d) => {
+      await editJson(join(d, "identity.json"), (doc) => {
+        ((doc["pair"] as Json)["baseline"] as Json)["probe"] = null;
+      });
+    });
+    await expectRefusal(dir, "ARM_IDENTITY_INCOMPLETE");
+  });
+
+  it("keeps the LABELLED fixture working, so fixture compatibility stays separate from the real-layer rule", async () => {
+    // Same single-dimension tamper as the deleted-build-fields case above, applied
+    // to the bundle that declares `fixture: true`: presence is not required there
+    // (and it is never evidence), but the real layer above still refuses it.
+    const dir = await brokenCopy("fixture-no-build-fields", async (d) => {
+      const schedule = await readJson(join(d, "schedule.json"));
+      for (const rec of schedule["records"] as Json[]) {
+        const manifestPath = join(d, "evidence", String(rec["armRunId"]), "manifest.json");
+        const doc = await readJson(manifestPath);
+        delete doc["armBuildDigest"];
+        delete doc["armEntrySha256"];
+        delete doc["armProbe"];
+        const text = `${JSON.stringify(doc, null, 2)}\n`;
+        await writeFile(manifestPath, text, "utf8");
+        await editJson(join(d, "schedule.json"), (sched) => {
+          const target = (sched["records"] as Json[]).find((r) => r["armRunId"] === rec["armRunId"])!;
+          target["traceDigest"] = createHash("sha256").update(text, "utf8").digest("hex");
+        });
+      }
+    });
+    const run = runGate(["--verify", dir]);
+    expect(run.output, run.output).toContain("GATE PASS");
+    expect(run.status).toBe(0);
   });
 });
