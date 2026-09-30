@@ -29,6 +29,14 @@
  *   MALFORMED_ARTIFACT     a schema field is missing or the wrong TYPE (parse, never coerce)
  *   NO_RAW_EVIDENCE        a leg claims a raw-evidence-dependent level but its bundle is absent
  *   RAW_EVIDENCE_MISMATCH  the bundle exists but does not re-verify against its own claims
+ *   EVIDENCE_ROOT_AMBIGUOUS  two artifact-relative roots exist for one leg (never scanned)
+ *   EVIDENCE_ROOT_ESCAPE   the recorded root resolves outside the leg artifact's tree
+ *   EVIDENCE_ROOT_OVERRIDE_UNUSABLE  an explicit --*-evidence-root cannot be read
+ *   EVIDENCE_ROOT_UNUSABLE the located root exists but is not a directory
+ *
+ * F30-7 (evidence-root resolution): the joining job's CWD is NOT an automatic
+ * candidate. See `resolveEvidenceRoot` for the rule, why scan order was the bug,
+ * and how a stale `<cwd>/.ci/...` bundle can no longer be read by accident.
  *
  * EXIT CODES (three genuinely different facts, never collapsed):
  *   0  report mode: the verdict was written
@@ -59,10 +67,10 @@
  */
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { isNonEmptyString, isSha40, verifyEvidenceBundle } from "./readiness-evidence-verify.mjs";
+import { isNonEmptyString, isSha40, resolveInsideRoot, verifyEvidenceBundle } from "./readiness-evidence-verify.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(here, "..", "..");
@@ -243,8 +251,11 @@ const USAGE = `usage: node scripts/e4/dual-platform-acceptance.mjs
                       override where that leg's raw bundle is read from. Needed
                       because a leg records the path RELATIVE to the job that
                       PRODUCED it, which need not resolve in the job that JOINS
-                      them; without an override the joiner tries the recorded
-                      path, then CWD, then beside the leg artifact itself.
+                      them. The override is used VERBATIM and is never silently
+                      ignored: an override that cannot be read is a refusal, not
+                      a fall back. Without an override only the leg artifact's
+                      OWN tree is searched — the joining process's cwd is
+                      deliberately NOT a candidate (F30-7).
 `;
 
 const parsed = parseCli(process.argv.slice(2));
@@ -330,68 +341,181 @@ function recordsEvidenceRoot(path) {
 }
 
 /**
- * WHERE IS THE RAW BUNDLE?
+ * WHERE IS THE RAW BUNDLE?  (F30-7: deterministic, artifact-relative, never CWD)
  *
  * `ci-readiness.mjs` records `inputs.evidenceRoot` as the RAW `--evidence-root`
  * argument it was given. In CI that argument is a path RELATIVE to the PRODUCING
- * job's workspace (`.ci/r97-r98/readiness-evidence`), and the artifact is
- * uploaded with the bundle beside it. The JOINING job downloads that artifact
- * into a different directory entirely (`.ci/dual/windows/`), so the recorded
- * string does not resolve against this process's CWD.
+ * job's workspace (`.ci/prereg-production-e2e/pos-exec-runs/evidence`), and the
+ * artifact is uploaded with the bundle beside it. The JOINING job downloads that
+ * artifact into a different directory entirely (`.ci/dual/<os>/`), so the
+ * recorded string does not resolve against this process's CWD.
  *
- * Resolving only against the CWD would therefore refuse EVERY real leg for a
- * reason that is about job layout, not about the evidence — a gate that is red
- * for the wrong reason is a gate nobody trusts. So we try the documented
- * candidates IN ORDER, record which one matched, and still refuse (naming every
- * candidate) when none matches. Nothing here weakens verification: whichever
- * directory is found must still pass the FULL `verifyEvidenceBundle`.
+ * THE RULE, written down here rather than left to scan order:
  *
- * A caller can also pin the location explicitly with `--windows-evidence-root` /
- * `--ubuntu-evidence-root`, which is tried FIRST and is never silently ignored.
+ *   1. AN EXPLICIT OVERRIDE WINS. `--windows-evidence-root` /
+ *      `--ubuntu-evidence-root` replaces auto-resolution completely: it is used
+ *      VERBATIM (absolute) or against the CWD (relative), and a value that cannot
+ *      be read is a LOUD refusal — never a silent fall back to an auto root.
+ *   2. OTHERWISE ONLY THE LEG ARTIFACT'S OWN TREE IS RANKED, in the documented
+ *      order below. The joining process's CWD is NOT a candidate. That is the
+ *      F30-7 fix: a stale `<cwd>/.ci/.../evidence` left by an earlier local run
+ *      used to be scanned FIRST and win silently, so the join re-verified the
+ *      wrong bytes and refused. An unrelated directory is no longer reachable by
+ *      auto-resolution at all.
+ *   3. TWO DISTINCT EXISTING ROOTS REFUSE. Silently taking the first match is
+ *      what made (2) invisible; when more than one artifact-relative root exists
+ *      the join refuses EVIDENCE_ROOT_AMBIGUOUS and lists all of them.
+ *   4. OWNERSHIP IS ENFORCED. Every auto candidate must resolve INSIDE the leg
+ *      artifact's own tree: a `..` escape, or a symlink that leaves the tree, is
+ *      refused (EVIDENCE_ROOT_ESCAPE) even when the escaped directory exists.
+ *   5. "NOTHING FOUND" STILL NAMES EVERY CANDIDATE — "the bundle is somewhere
+ *      else" and "there is no bundle" must not read the same.
+ *
+ * The chosen candidate, the rule, and EVERY ranked candidate (with whether it
+ * existed) are recorded in the verdict, so the decision is auditable instead of
+ * implicit. Nothing here weakens verification: whichever directory is found must
+ * still pass the FULL `verifyEvidenceBundle`.
  */
+
+/** The rule text recorded in every verdict leg; see `resolveEvidenceRoot`. */
+const EVIDENCE_ROOT_RULE = [
+  "artifact-relative-only: an explicit --windows-evidence-root/--ubuntu-evidence-root override is used verbatim;",
+  "otherwise only the leg artifact's own tree is ranked (leg-dir/basename, leg-dir/recorded, leg-root/recorded, leg-root/without-dot-ci, leg-root/basename);",
+  "the joining process's cwd is NEVER an automatic candidate (F30-7);",
+  "two or more distinct existing artifact-relative roots refuse as ambiguous instead of being scanned;",
+  "every auto candidate must resolve inside the leg artifact's own tree.",
+].join(" ");
+
+/**
+ * A usable evidence root must EXIST and BE A DIRECTORY. `existsSync` alone also
+ * accepts a FILE, which then reads as an empty bundle rather than as a wrong
+ * path — two different facts that must not be reported the same way.
+ */
+function usableDirectory(path) {
+  try {
+    return statSync(path).isDirectory()
+      ? { ok: true, note: "exists and is a directory" }
+      : { ok: false, note: "exists but is not a directory" };
+  } catch {
+    return { ok: false, note: "does not exist" };
+  }
+}
+
 function resolveEvidenceRoot(recorded, legPath, isOverride) {
-  if (!isNonEmptyString(recorded)) return { resolved: null, from: null, tried: [] };
   const tried = [];
-  const legDir = dirname(resolve(legPath));
-  // The leg ARTIFACT's own directory (`.ci/dual/<platform>`), which is where
-  // `actions/download-artifact` places a bundle the producing job uploaded
-  // alongside its JSON. The uploader lists repo-root-relative paths, so the
-  // artifact preserves them and the download NESTS one level deeper than the
-  // JSON: with the JSON at `.ci/dual/<os>/r97-r98/ci-readiness.json`, the bundle
-  // lands at `.ci/dual/<os>/prereg-production-e2e/pos-exec-runs/evidence`.
-  //
-  // MEASURED on run 36536713230: none of the candidates below matched that real
-  // location, so the join refused NO_RAW_EVIDENCE even though the bundle had
-  // downloaded correctly. The candidate is derived from the leg artifact path's
-  // GRANDPARENT (strip `r97-r98/<file>`), not hardcoded, so a different artifact
-  // layout does not silently break it.
-  const legRoot = dirname(legDir);
-  // The uploader's `path:` entries are repo-root-relative (`.ci/prereg-production-e2e/...`),
-  // and `actions/upload-artifact` stores them, so the download reproduces the FULL
-  // path including the `.ci/` segment: `<legRoot>/.ci/prereg-production-e2e/pos-exec-runs/evidence`.
-  // The `leg-root/recorded` candidate below therefore finds it AS RECORDED, and
-  // `leg-root/dot-ci-stripped` covers the other plausible packaging (an uploader
-  // that rooted its paths at `.ci/` instead of the repo root). Both are tried, so
-  // neither layout can silently break the join.
-  const withoutDotCi = recorded.replace(/^\.ci[/\\]/, "");
   const candidates = [];
-  if (isAbsolute(recorded)) {
-    candidates.push([isOverride ? "override(absolute)" : "recorded(absolute)", recorded]);
-  } else {
-    candidates.push([isOverride ? "override(cwd)" : "cwd", resolve(recorded)]);
-    candidates.push(["leg-dir/basename", join(legDir, basename(recorded))]);
-    candidates.push(["leg-dir/recorded", join(legDir, recorded)]);
-    candidates.push(["leg-root/recorded", join(legRoot, recorded)]);
-    if (withoutDotCi !== recorded) {
-      candidates.push(["leg-root/without-dot-ci", join(legRoot, withoutDotCi)]);
+  const problems = [];
+  const outcome = (resolved, from) => ({ resolved, from, tried, candidates, rule: EVIDENCE_ROOT_RULE, problems });
+  if (!isNonEmptyString(recorded)) return outcome(null, null);
+
+  // --- 1. an explicit override is authoritative and is never replaced ---------
+  if (isOverride) {
+    const from = isAbsolute(recorded) ? "override(absolute)" : "override(cwd)";
+    const target = resolve(recorded);
+    tried.push(`${from}=${target}`);
+    const usable = usableDirectory(target);
+    candidates.push({ from, path: target, exists: usable.ok, note: usable.note });
+    if (!usable.ok) {
+      problems.push(
+        `EVIDENCE_ROOT_OVERRIDE_UNUSABLE: the explicit evidence-root override ${JSON.stringify(recorded)} resolved to ${target}, which ${usable.note}; refusing rather than silently falling back to an auto-resolved root, because an ignored override is how the join reads bytes nobody chose`,
+      );
+      return outcome(null, null);
     }
-    candidates.push(["leg-root/basename", join(legRoot, basename(recorded))]);
+    return outcome(target, from);
   }
-  for (const [from, candidate] of candidates) {
-    tried.push(`${from}=${candidate}`);
-    if (existsSync(candidate)) return { resolved: candidate, from, tried };
+
+  // --- 2. an ABSOLUTE recorded path is taken as the producer recorded it ------
+  if (isAbsolute(recorded)) {
+    const from = "recorded(absolute)";
+    const target = resolve(recorded);
+    tried.push(`${from}=${target}`);
+    const usable = usableDirectory(target);
+    candidates.push({ from, path: target, exists: usable.ok, note: usable.note });
+    if (!usable.ok) {
+      // "a file sits there" is a different fact from "nothing is there".
+      if (usable.note !== "does not exist") {
+        problems.push(`EVIDENCE_ROOT_UNUSABLE: the recorded evidenceRoot ${JSON.stringify(recorded)} exists at ${target} but ${usable.note}`);
+      }
+      return outcome(null, null);
+    }
+    return outcome(target, from);
   }
-  return { resolved: null, from: null, tried };
+
+  // --- 3. relative: rank the leg artifact's OWN tree, never the CWD -----------
+  const legDir = dirname(resolve(legPath));
+  const legRoot = dirname(legDir);
+  // The uploader's `path:` entries are repo-root-relative
+  // (`.ci/prereg-production-e2e/...`), and `actions/upload-artifact` stores them
+  // with the shared `.ci/` prefix stripped, so the download reproduces the path
+  // WITHOUT it: `<legRoot>/prereg-production-e2e/pos-exec-runs/evidence`. The
+  // `leg-root/recorded` candidate covers the other plausible packaging (an
+  // uploader that kept the `.ci/` segment as a real directory), and
+  // `leg-root/without-dot-ci` the measured one. Both are ranked, so neither
+  // layout can silently break the join.
+  //
+  // MEASURED on run 36536713230: no candidate matched the real location, so the
+  // join refused NO_RAW_EVIDENCE even though the bundle had downloaded correctly.
+  // The candidates are derived from the leg artifact path itself (its directory
+  // and its grandparent), never hardcoded.
+  const withoutDotCi = recorded.replace(/^\.ci[/\\]/, "");
+  const specs = [
+    // A downloading job also places a bundle BESIDE the leg JSON (DP-O's flat
+    // shape), which is the most specific location, so it is ranked first.
+    ["leg-dir/basename", join(legDir, basename(recorded))],
+    ["leg-dir/recorded", join(legDir, recorded)],
+    ["leg-root/recorded", join(legRoot, recorded)],
+  ];
+  if (withoutDotCi !== recorded) {
+    specs.push(["leg-root/without-dot-ci", join(legRoot, withoutDotCi)]);
+  }
+  specs.push(["leg-root/basename", join(legRoot, basename(recorded))]);
+
+  const seen = new Set();
+  const escaped = [];
+  for (const [from, absolute] of specs) {
+    // OWNERSHIP: the repository's single implementation of "stays inside the
+    // root" is REUSED, not reimplemented — it refuses both a lexical `..` escape
+    // and a path whose REAL location leaves the root through a link.
+    const rel = relative(legRoot, absolute);
+    const inside = resolveInsideRoot(legRoot, rel === "" ? "." : rel);
+    if (!inside.ok) {
+      tried.push(`${from}=REJECTED(${inside.problem})`);
+      candidates.push({ from, path: resolve(absolute), exists: false, note: `rejected: ${inside.problem}` });
+      // An escape that DOES exist is reported even though it is never read: "the
+      // bundle is outside the tree" must not read as "there is no bundle".
+      if (usableDirectory(resolve(absolute)).ok) {
+        escaped.push(`${from}=${resolve(absolute)} (${inside.problem})`);
+      }
+      continue;
+    }
+    const target = inside.path;
+    // The SAME directory under two names is not a second candidate: a recorded
+    // path with no directory component makes `leg-dir/basename` and
+    // `leg-dir/recorded` identical, and counting that as ambiguity would refuse
+    // a leg that has exactly one root.
+    if (seen.has(target)) continue;
+    seen.add(target);
+    tried.push(`${from}=${target}`);
+    const usable = usableDirectory(target);
+    candidates.push({ from, path: target, exists: usable.ok, note: usable.note });
+  }
+
+  if (escaped.length > 0) {
+    problems.push(
+      `EVIDENCE_ROOT_ESCAPE: the recorded evidenceRoot ${JSON.stringify(recorded)} resolves OUTSIDE the leg artifact's tree ${legRoot}, so it is refused even though it exists: ${escaped.join(", ")}`,
+    );
+    return outcome(null, null);
+  }
+
+  const existing = candidates.filter((c) => c.exists);
+  if (existing.length > 1) {
+    problems.push(
+      `EVIDENCE_ROOT_AMBIGUOUS: ${existing.length} distinct artifact-relative evidence roots exist for this leg (${existing.map((c) => `${c.from}=${c.path}`).join(", ")}); the join does not take the first match by scan order — name the intended root with --windows-evidence-root/--ubuntu-evidence-root`,
+    );
+    return outcome(null, null);
+  }
+  if (existing.length === 1) return outcome(existing[0].path, existing[0].from);
+  return outcome(null, null);
 }
 
 // ---------------------------------------------------------------------------
@@ -488,11 +612,16 @@ function loadLeg(flagPlatform, path, evidenceRootOverride, requiredLevels) {
   const evidenceRoot = resolution.resolved;
   const claimsRawPass = LEVELS.filter((n) => RAW_DEPENDENT_LEVELS.has(n) && levels[n]?.status === "PASS");
   let bundleReVerified = null;
-  if (claimsRawPass.length > 0 && evidenceRoot === null) {
+  if (claimsRawPass.length > 0 && evidenceRoot === null && resolution.problems.length === 0) {
     problems.push(`NO_RAW_EVIDENCE: the leg claims ${claimsRawPass.join(", ")} = PASS but records no evidenceRoot, so no raw bundle can be read`);
   }
   if (recordedEvidenceRoot !== null || isNonEmptyString(evidenceRootOverride)) {
-    if (evidenceRoot === null) {
+    if (resolution.problems.length > 0) {
+      // F30-7: an ambiguous, escaping or unusable root is a NAMED refusal. It is
+      // never replaced by a fallback candidate, which is exactly how a stale
+      // unrelated bundle used to be read without anyone choosing it.
+      for (const p of resolution.problems) problems.push(p);
+    } else if (evidenceRoot === null) {
       // Name EVERY candidate tried: "the bundle is somewhere else" and "there is
       // no bundle" are different facts and must not read the same.
       problems.push(
@@ -554,6 +683,11 @@ function loadLeg(flagPlatform, path, evidenceRootOverride, requiredLevels) {
       evidenceRootRecorded: recordedEvidenceRoot,
       evidenceRoot,
       evidenceRootResolvedFrom: resolution.from,
+      // F30-7: the RULE and EVERY ranked candidate are recorded, so a reviewer
+      // can see the resolution was rule-driven — and that the joining process's
+      // cwd was never a candidate — rather than trusting an unexplained path.
+      evidenceRootRule: resolution.rule,
+      evidenceRootCandidates: resolution.candidates,
       levels,
       bundleReVerified,
       bundleDerivedVerifierCoverage: bundleReVerified?.derivedVerifierCoverage ?? null,

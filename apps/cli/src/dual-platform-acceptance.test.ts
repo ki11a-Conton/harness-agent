@@ -43,7 +43,7 @@ afterAll(() => {
 interface Verdict {
   schemaVersion: string;
   acceptanceUnit: { ciRunId: string; expectedSha: string; ciRunSha: string; attempt: number | null; platforms: string[] };
-  legs: Record<string, { path: string; platform: string; recordedPlatform: string; attempt: number | null; evidenceRoot: string | null; evidenceRootRecorded: string | null; evidenceRootResolvedFrom: string | null; bundleReVerified: { ok: boolean; problems: string[]; derivedVerifierCoverage: { verified: number; total: number } | null; journalBinding: string | null; requestDispatchBinding: string | null; verifierLevels: Record<string, { status: string; reason: string | null }> | null; levelAuthority: string | null; blocksAllLevels: string[]; realBuildOnly: { blockedLevel: string; required: boolean; problems: string[] } } | null }>;
+  legs: Record<string, { path: string; platform: string; recordedPlatform: string; attempt: number | null; evidenceRoot: string | null; evidenceRootRecorded: string | null; evidenceRootResolvedFrom: string | null; evidenceRootRule: string | null; evidenceRootCandidates: { from: string; path: string; exists: boolean; note: string }[] | null; bundleReVerified: { ok: boolean; problems: string[]; derivedVerifierCoverage: { verified: number; total: number } | null; journalBinding: string | null; requestDispatchBinding: string | null; verifierLevels: Record<string, { status: string; reason: string | null }> | null; levelAuthority: string | null; blocksAllLevels: string[]; realBuildOnly: { blockedLevel: string; required: boolean; problems: string[] } } | null }>;
   levels: Record<string, { windows: string; ubuntu: string; verdict: string }>;
   overall: string;
   findings: { level: string; verdict: string; windows: string; ubuntu: string }[];
@@ -134,7 +134,7 @@ function deepMerge(base: unknown, over: unknown): unknown {
 function scratch(): {
   dir: string;
   write: (name: string, value: unknown) => string;
-  run: (args: string[]) => RunResult;
+  run: (args: string[], options?: { cwd?: string }) => RunResult;
 } {
   const dir = mkdtempSync(join(tmpdir(), "dp-accept-"));
   CREATED.push(dir);
@@ -144,10 +144,14 @@ function scratch(): {
     writeFileSync(p, typeof value === "string" ? value : JSON.stringify(value), "utf8");
     return p;
   };
-  const run = (args: string[]): RunResult => {
+  const run = (args: string[], options?: { cwd?: string }): RunResult => {
     const verdictPath = join(dir, `verdict-${Math.random().toString(36).slice(2)}.json`);
     const result = spawnSync(process.execPath, [SCRIPT, ...args, "--out", verdictPath], {
-      cwd: REPO_ROOT,
+      // The join runs from the repository root in CI. A test that models a STALE
+      // bundle at the join's own cwd points this at its own directory (DP-W),
+      // which is what makes the F30-7 condition hermetic instead of dependent on
+      // whatever happens to be left in this checkout.
+      cwd: options?.cwd ?? REPO_ROOT,
       encoding: "utf8",
       timeout: 60_000,
     });
@@ -304,6 +308,47 @@ function writeValidBundleWithoutPlatform(dir: string, platform: "windows" | "ubu
   delete identity.platform;
   writeFileSync(identityPath, `${JSON.stringify(identity)}\n`, "utf8");
   return root;
+}
+
+/**
+ * The RECORDED `inputs.evidenceRoot` the e4 producer writes — verbatim from
+ * `ci.yml`'s `--evidence-root` argument, i.e. a path RELATIVE to the PRODUCING
+ * job's workspace. This is the value whose resolution F30-7 is about.
+ */
+const CI_RECORDED_EVIDENCE_ROOT = ".ci/prereg-production-e2e/pos-exec-runs/evidence";
+
+/** Copy a bundle's CONTENTS into `dest` — `dest` itself IS the evidence root. */
+function copyBundleInto(root: string, dest: string): void {
+  mkdirSync(dest, { recursive: true });
+  for (const entry of readdirSync(root)) {
+    cpSync(join(root, entry), join(dest, entry), { recursive: true });
+  }
+}
+
+/**
+ * The MEASURED CI download layout (ci.yml's own note: `.ci/dual/<leg>/r97-r98/
+ * ci-readiness.json` beside `.ci/dual/<leg>/prereg-production-e2e/pos-exec-runs/
+ * evidence`): the leg JSON nested under the leg ROOT, and its bundle at
+ * `<legRoot>/<recorded with the .ci/ segment stripped>` — the shape
+ * `actions/upload-artifact` produces when the uploader's `path:` entries are
+ * repo-root-relative. Returns the paths the test needs to assert against.
+ */
+function nestedLeg(
+  dir: string,
+  leg: "windows" | "ubuntu",
+  options: { recorded?: string } = {},
+): { artifact: string; bundle: string; legRoot: string } {
+  const recorded = options.recorded ?? CI_RECORDED_EVIDENCE_ROOT;
+  const legRoot = join(dir, leg);
+  mkdirSync(join(legRoot, "r97-r98"), { recursive: true });
+  const artifact = writeArtifact(
+    dir,
+    `${leg}/r97-r98/ci-readiness.json`,
+    readinessArtifact(leg, { inputs: { evidenceRoot: recorded } }),
+  );
+  const bundle = join(legRoot, recorded.replace(/^\.ci[/\\]/, ""));
+  copyBundleInto(writeValidBundle(dir, leg), bundle);
+  return { artifact, bundle, legRoot };
 }
 
 describe("S7b — dual-platform acceptance joins two legs, or refuses", () => {
@@ -719,6 +764,166 @@ describe("S7b — dual-platform acceptance joins two legs, or refuses", () => {
     expect(v.legs["windows"]?.evidenceRootResolvedFrom).toBe("override(absolute)");
     expect(v.legs["windows"]?.evidenceRootRecorded).toBe("stale/producing-job/path");
     expect(v.legs["windows"]?.bundleReVerified?.ok).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // DP-W..DP-Z2 — F30-7: the evidence-root RESOLUTION RULE, made explicit.
+  //
+  // DP-R proves the real nested layout resolves, but only while this checkout
+  // happens to contain (or not contain) a stale `<cwd>/.ci/...` bundle. Before
+  // the fix the resolver ranked the joining process's CWD FIRST, so such a stale
+  // bundle silently WON and the join re-verified the wrong bytes. DP-W makes
+  // that condition HERMETIC: the join is run with its cwd set to a directory
+  // holding a decoy at exactly the recorded relative path. The remaining tests
+  // pin the rest of the rule — ownership (DP-X), the override (DP-Y), and the
+  // no-silent-first-exists ambiguity refusal (DP-Z / DP-Z2).
+  // -------------------------------------------------------------------------
+
+  it("DP-W: a STALE bundle at the join's cwd NEVER wins — the artifact-relative root does", () => {
+    const s = scratch();
+    const w = nestedLeg(s.dir, "windows");
+    const u = nestedLeg(s.dir, "ubuntu");
+
+    // The F30-7 decoy, reproduced hermetically: a leftover bundle sitting at
+    // exactly the RECORDED relative path, resolved against the directory the
+    // join actually RUNS IN.
+    const staleCwd = join(s.dir, "stale-cwd");
+    const decoy = join(staleCwd, CI_RECORDED_EVIDENCE_ROOT);
+    mkdirSync(decoy, { recursive: true });
+    expect(existsSync(decoy)).toBe(true);
+
+    // CONTROL — the decoy is genuinely LETHAL: naming it explicitly makes the
+    // join refuse. That is what makes the next assertion behavioural rather than
+    // a recorded string that a cwd-first resolver would also have printed.
+    const control = s.run(["--windows", w.artifact, "--ubuntu", u.artifact, "--windows-evidence-root", decoy]);
+    expect(control.exitCode).toBe(2);
+    expect(control.stderr).toContain("RAW_EVIDENCE_MISMATCH");
+    expect(control.verdict).toBeNull();
+
+    // THE FIX: the stale directory is present in the join's cwd and does NOT win.
+    const r = s.run(["--windows", w.artifact, "--ubuntu", u.artifact], { cwd: staleCwd });
+    expect(r.exitCode, r.stderr).toBe(0);
+    const leg = r.verdict!.legs["windows"]!;
+    expect(leg.evidenceRootResolvedFrom).toBe("leg-root/without-dot-ci");
+    expect(leg.evidenceRoot).toBe(w.bundle);
+    expect(leg.evidenceRoot).not.toBe(decoy);
+    // The cwd is not merely "tried and lost" — it is not a candidate at all, so
+    // no future scan-order change can reach it. `length > 0` first, so the list
+    // assertions below cannot pass vacuously against a missing field.
+    const ranked = leg.evidenceRootCandidates ?? [];
+    expect(ranked.length).toBeGreaterThan(0);
+    // The RULE is pinned here, not just described in a comment: this is the
+    // candidate set and its ORDER, with no cwd-derived entry in it.
+    expect(ranked.map((c) => c.from)).toEqual([
+      "leg-dir/basename",
+      "leg-dir/recorded",
+      "leg-root/recorded",
+      "leg-root/without-dot-ci",
+      "leg-root/basename",
+    ]);
+    expect(ranked.map((c) => c.path)).not.toContain(decoy);
+    expect(ranked.some((c) => c.from.startsWith("cwd"))).toBe(false);
+    expect(leg.evidenceRootRule).toContain("NEVER an automatic candidate");
+    expect(leg.bundleReVerified?.ok).toBe(true);
+  });
+
+  it("DP-X: a recorded root that ESCAPES the leg artifact's tree is refused, not silently read", () => {
+    const s = scratch();
+    const ubuntu = consistentPair(s.dir).ubuntu;
+
+    // A COMPLETE, VALID bundle — but OUTSIDE the leg artifact's tree.
+    const escapedBundle = join(s.dir, "escape-bundle");
+    copyBundleInto(writeValidBundle(s.dir, "windows"), escapedBundle);
+    mkdirSync(join(s.dir, "legs", "windows", "r97-r98"), { recursive: true });
+    const artifact = writeArtifact(
+      s.dir,
+      "legs/windows/r97-r98/ci-readiness.json",
+      readinessArtifact("windows", { inputs: { evidenceRoot: `../../escape-bundle` } }),
+    );
+
+    // CONTROL — the escaped bundle is GOOD: naming it explicitly verifies
+    // cleanly. So the refusal below is about OWNERSHIP, not brokenness.
+    const control = s.run(["--windows", artifact, "--ubuntu", ubuntu, "--windows-evidence-root", escapedBundle]);
+    expect(control.exitCode, control.stderr).toBe(0);
+    expect(control.verdict!.legs["windows"]?.bundleReVerified?.ok).toBe(true);
+
+    const r = s.run(["--windows", artifact, "--ubuntu", ubuntu]);
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr).toContain("EVIDENCE_ROOT_ESCAPE");
+    expect(r.stderr).toContain(escapedBundle);
+    expect(r.verdict).toBeNull();
+  });
+
+  it("DP-Y: an UNREADABLE override refuses instead of silently falling back to an auto root", () => {
+    const s = scratch();
+    const w = nestedLeg(s.dir, "windows");
+    const u = nestedLeg(s.dir, "ubuntu");
+
+    // CONTROL — the artifact-relative resolution is GREEN on its own, which is
+    // exactly the fallback that must not be taken quietly.
+    const ok = s.run(["--windows", w.artifact, "--ubuntu", u.artifact]);
+    expect(ok.exitCode, ok.stderr).toBe(0);
+
+    const bogus = join(s.dir, "no-such-override-root");
+    const r = s.run(["--windows", w.artifact, "--ubuntu", u.artifact, "--windows-evidence-root", bogus]);
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr).toContain("EVIDENCE_ROOT_OVERRIDE_UNUSABLE");
+    expect(r.stderr).toContain(bogus);
+    expect(r.verdict).toBeNull();
+  });
+
+  it("DP-Z: two DISTINCT artifact-relative roots refuse as AMBIGUOUS — no silent first-exists", () => {
+    const s = scratch();
+    const ubuntu = writeArtifact(s.dir, "ci-readiness-ubuntu.json", readinessArtifact("ubuntu"));
+    const RECORDED = ".ci/r97-r98/readiness-evidence";
+
+    const legRoot = join(s.dir, "windows");
+    mkdirSync(legRoot, { recursive: true });
+    const artifact = writeArtifact(
+      s.dir,
+      "windows/ci-readiness.json",
+      readinessArtifact("windows", { inputs: { evidenceRoot: RECORDED } }),
+    );
+    // Two legitimate roots at once: DP-O's flat shape (beside the leg JSON,
+    // `leg-dir/basename`) AND DP-R's nested shape (`leg-root/without-dot-ci`).
+    // Both are COMPLETE bundles, so the only reason to refuse is the ambiguity.
+    const beside = join(legRoot, "readiness-evidence");
+    const nested = join(s.dir, "r97-r98", "readiness-evidence");
+    copyBundleInto(writeValidBundle(s.dir, "windows"), beside);
+    copyBundleInto(writeValidBundle(s.dir, "windows"), nested);
+
+    const r = s.run(["--windows", artifact, "--ubuntu", ubuntu]);
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr).toContain("EVIDENCE_ROOT_AMBIGUOUS");
+    // BOTH candidates are named, so a human can choose deliberately (the override
+    // is the way out) instead of the join choosing by scan order.
+    expect(r.stderr).toContain(beside);
+    expect(r.stderr).toContain(nested);
+    expect(r.verdict).toBeNull();
+  });
+
+  it("DP-Z2: the SAME root reached by two candidate names is NOT ambiguity (one dimension from DP-Z)", () => {
+    const s = scratch();
+    const ubuntu = writeArtifact(s.dir, "ci-readiness-ubuntu.json", readinessArtifact("ubuntu"));
+
+    // `recorded` has no directory component, so `leg-dir/basename` and
+    // `leg-dir/recorded` name the SAME directory — and so do `leg-root/basename`
+    // and `leg-root/recorded`. Counting NAMES instead of distinct roots would
+    // refuse a leg that has exactly one root, which is why the resolver dedupes
+    // before it decides.
+    const legRoot = join(s.dir, "windows");
+    mkdirSync(legRoot, { recursive: true });
+    const artifact = writeArtifact(
+      s.dir,
+      "windows/ci-readiness.json",
+      readinessArtifact("windows", { inputs: { evidenceRoot: "readiness-evidence" } }),
+    );
+    copyBundleInto(writeValidBundle(s.dir, "windows"), join(legRoot, "readiness-evidence"));
+
+    const r = s.run(["--windows", artifact, "--ubuntu", ubuntu]);
+    expect(r.exitCode, r.stderr).toBe(0);
+    expect(r.verdict!.legs["windows"]?.evidenceRootResolvedFrom).toBe("leg-dir/basename");
+    expect(r.verdict!.legs["windows"]?.bundleReVerified?.ok).toBe(true);
   });
 
   // -------------------------------------------------------------------------
