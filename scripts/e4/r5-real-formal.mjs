@@ -273,6 +273,15 @@ async function phaseIdentity() {
       }
       fixes[fix.id] = { sha: fix.sha, what: fix.what, presentInArmBuild: present };
     }
+    // S5/N5 — the LOADED-entry identity is recorded HERE too, not only inside the
+    // bundle, because plan §8 item 3 requires the report itself to name, per arm:
+    // the source SHA, the clean tree, the worker ABI, the closure digest, the REAL
+    // loaded entry hash and the probe. The load is a genuine `import()` of that
+    // arm's built entry in a child process whose cwd IS the arm checkout.
+    const loaded = observeArmEntryLoad(dir, entryRel);
+    const abiSource = existsSync(join(dir, "apps", "cli", "dist", "r97-arm-abi.js"))
+      ? readFileSync(join(dir, "apps", "cli", "dist", "r97-arm-abi.js"), "utf8")
+      : "";
     arms[armId] = {
       dir,
       exists: true,
@@ -283,6 +292,15 @@ async function phaseIdentity() {
       buildDigestShort: typeof buildDigest === "string" && buildDigest.length === 64 ? buildDigest.slice(0, 12) : buildDigest,
       entryRel,
       entrySha256,
+      // The ABI the arm's own build declares, from the loaded module when it can be
+      // loaded and from its bytes otherwise — never from this driver's constants.
+      workerAbi: (PAIR_CONFIG.requiredWorkerAbi ?? []).filter((abi) => abiSource.includes(abi)),
+      declaredArmAbi: loaded.abi,
+      probe: loaded.probe,
+      probeError: loaded.error,
+      runOneCaseExport: loaded.runOneCaseExport,
+      loadedEntrySha256: loaded.entrySha256,
+      entryHashAgrees: entrySha256 !== null && loaded.entrySha256 !== null && entrySha256 === loaded.entrySha256,
       protocolFixes: fixes,
     };
   }
@@ -1256,7 +1274,7 @@ async function runRealChain() {
   if (report.identity) {
     for (const [armId, a] of Object.entries(report.identity.arms)) {
       summary.push(
-        `identity ${armId}: exists=${a.exists} head=${a.head?.slice(0, 12) ?? "null"} clean=${a.clean ?? "?"} closure=${a.buildDigestShort ?? "?"} P2-41=${a.protocolFixes?.["P2-41"]?.presentInArmBuild ?? "?"} P2-43=${a.protocolFixes?.["P2-43"]?.presentInArmBuild ?? "?"}`,
+        `identity ${armId}: exists=${a.exists} head=${a.head?.slice(0, 12) ?? "null"} clean=${a.clean ?? "?"} closure=${a.buildDigestShort ?? "?"} P2-41=${a.protocolFixes?.["P2-41"]?.presentInArmBuild ?? "?"} P2-43=${a.protocolFixes?.["P2-43"]?.presentInArmBuild ?? "?"} abi=[${(a.workerAbi ?? []).join(",")}] loadedEntryAgrees=${a.entryHashAgrees === true ? "yes" : "NO"} probe=${a.probe === null || a.probe === undefined ? "MISSING" : String(a.probe).split("wiring=")[1]?.slice(0, 12) ?? "present"}`,
       );
     }
   }
