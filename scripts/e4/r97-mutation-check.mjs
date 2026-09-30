@@ -765,6 +765,55 @@ export const MUTATIONS = [
     catchExpectation:
       "the release adapter refuses with ARM_EXECUTOR_NOT_WIRED even when a real frozen checkout exists, so a legal experiment can never execute",
   },
+  {
+    id: "s7-level-scoping-downgrades-every-problem",
+    planWording: "把 bundle 复验的等级归属放宽到所有问题码",
+    round: "S7",
+    // The join attributes ONLY a closed set of ARM-PAIR codes to
+    // `realBuildOfflineReady`; everything else must still refuse at every level.
+    // Dropping the closed-set test turns the scoping into a blanket waiver, which
+    // would let a bundle with NO PLATFORM — the exact CI wiring defect this round
+    // fixed — pass a fixture-only run.
+    file: "scripts/e4/dual-platform-acceptance.mjs",
+    find: `      REAL_ARM_PAIR_ONLY_CODES.has(codeOfProblem(problem)) &&`,
+    replace: `      true &&`,
+    suite: "apps/cli/src/dual-platform-acceptance.test.ts",
+    test: "DP-U: NON-VACUITY — a bundle-IDENTITY defect (no platform) is NOT an arm-pair code and still refuses a fixture-only run",
+    catchExpectation:
+      "IDENTITY_PLATFORM_MISSING is attributed to realBuildOfflineReady, so a platform-less bundle is accepted by a fixture-only run",
+  },
+  {
+    id: "s7-join-refuses-on-any-bundle-problem",
+    planWording: "把 bundle 复验的拒绝范围还原成“任何问题都拒绝”",
+    round: "S7",
+    // The pre-fix behaviour: any bundle problem refuses, regardless of which
+    // level it speaks to. This is what made the CI join unsatisfiable, because
+    // requiring a real arm pair of a SYNTHETIC_FIXTURE_BUILD run asks for
+    // something that run is defined not to have.
+    file: "scripts/e4/dual-platform-acceptance.mjs",
+    find: `      if (classified.blocksAll.length > 0) {`,
+    replace: `      if (bundle.problems.length > 0) {`,
+    suite: "apps/cli/src/dual-platform-acceptance.test.ts",
+    test: "DP-S: an honest NO-REAL-ARM-PAIR bundle does NOT fail a fixture-only run, and the problems are still RECORDED",
+    catchExpectation:
+      "BASELINE_/CANDIDATE_SOURCE_SHA_INVALID refuse a run that requires only fixtureProtocolReady, so the join is unsatisfiable in CI",
+  },
+  {
+    id: "s7-ledger-lock-eperm-not-retried",
+    planWording: "把 Windows 上的锁竞争 EPERM 当成致命错误",
+    round: "S7",
+    // `open(path,"wx")` reports contention as EPERM on Windows when the name is
+    // transiently unavailable — a state the lock's OWN release `rm` creates by
+    // racing another acquirer. Narrowing the absorbed set back to EEXIST alone
+    // restores the defect: a live campaign aborts instead of retrying.
+    file: "packages/evaluation/src/r97-budget-ledger.ts",
+    find: `    if (code !== "EEXIST" && code !== "EPERM") throw err;`,
+    replace: `    if (code !== "EEXIST") throw err;`,
+    suite: "packages/evaluation/src/r97-budget-ledger-lock-eperm.test.ts",
+    test: "[EPERM-1] concurrent acquire/release of ONE lock path never throws a raw EPERM",
+    catchExpectation:
+      "a raw EPERM escapes the retry/deadline machinery, so a wedged-looking lock aborts the campaign on Windows",
+  },
 ];
 
 /**
