@@ -249,15 +249,67 @@ function createProxyProvider(router, write, budget) {
           });
           // A rejection nobody awaits yet must not become an unhandled rejection.
           cancelled.catch(() => undefined);
+          /**
+           * task-6 — declared OUTSIDE the `try` because the `finally` below reads
+           * them: a consumer that breaks on the terminal event force-returns this
+           * generator, so the wait for the driver's `done` happens there.
+           */
+          let terminalDelivered = false;
+          let doneSeen = false;
           try {
             write({ t: "request", id, request });
+            /**
+             * N5-BLOCKER (task-6) — THE TERMINAL EVENT IS NOT THE END OF THE
+             * DRIVER'S SINGLE-FLIGHT WINDOW.
+             *
+             * This generator used to `return` as soon as it had yielded the
+             * terminal `completed`/`error` event. The ARM's runtime then
+             * legitimately opened its next model call immediately — while the
+             * driver was still inside the FIRST request's cleanup: `for await`
+             * performs `iterator.return()` on `break`, and for the formal chain
+             * that cleanup settles the durable cost journal (~38 ms of file I/O).
+             * The driver releases its one-active-request slot only AFTER that
+             * cleanup, so the arm's next, perfectly SEQUENTIAL request arrived
+             * while the slot was still owned and was refused as
+             * `ARM_WORKER_PROTOCOL_VIOLATION` (measured: request #2 arrived 39 ms
+             * after #1, the slot was released 38 ms after that; deterministic over
+             * repeated runs). The real formal campaign therefore recorded ZERO
+             * arm runs and every real case looked like an infrastructure failure.
+             *
+             * The driver's own `done` frame is exactly "this request is over, the
+             * slot is free": it is written after that cleanup and before the
+             * release. So the proxy now ends on `done` (or on a provider error)
+             * instead of ending on the terminal event. The parent's invariant is
+             * untouched — a genuinely CONCURRENT second request (one sent before
+             * the terminal event) is still refused by the driver, and the
+             * `budget.modelInFlight` guard below still refuses it in this process.
+             */
             for (;;) {
               const frame = await Promise.race([box.next(), cancelled]);
-              if (frame === null) throw new Error("PREREG_WORKER_EOF: the driver closed the channel mid-call");
+              if (frame === null) {
+                // A driver that closed the channel AFTER delivering the terminal
+                // event has already ended this request (e.g. it stopped the arm in
+                // the window between the terminal event and `done`). Ending the
+                // stream cleanly there preserves the pre-fix behaviour of that
+                // path instead of turning a stop into a spurious EOF error.
+                if (terminalDelivered) return;
+                throw new Error("PREREG_WORKER_EOF: the driver closed the channel mid-call");
+              }
               if (frame.t === "event") {
+                // The flag is set BEFORE the yield on purpose: a consumer that
+                // `break`s on the terminal event force-returns this generator AT
+                // the yield, so anything written after it would never run — and
+                // the `finally` below is exactly where such a consumer is held
+                // until the driver frees its slot.
+                if (frame.event?.type === "completed" || frame.event?.type === "error") {
+                  // NOT the end of this call: the driver has not freed its slot
+                  // yet. Keep reading until `done` (below) or an early consumer
+                  // return (the `finally`).
+                  terminalDelivered = true;
+                }
                 yield frame.event;
-                if (frame.event?.type === "completed" || frame.event?.type === "error") return;
               } else if (frame.t === "done") {
+                doneSeen = true;
                 return;
               } else if (frame.t === "error") {
                 throw new Error(`PREREG_WORKER_PROVIDER_ERROR: ${frame.message}`);
@@ -276,6 +328,25 @@ function createProxyProvider(router, write, budget) {
             }
             throw err;
           } finally {
+            /**
+             * task-6 — AN EARLY-RETURNING CONSUMER MUST NOT OUTRUN THE DRIVER.
+             *
+             * An arm's `for await (…) { …; break; }` force-returns THIS generator on
+             * the terminal event (`AsyncIteratorClose`). A real benchmark runtime
+             * drains the stream, but a consumer that breaks is legitimate too, and
+             * either way the arm's next model call must not be issued before the
+             * driver has freed its one-active-request slot. That slot is freed only
+             * after the driver's post-terminal cleanup, and the driver's `done`
+             * frame is written between the two. So when the terminal event has been
+             * delivered but `done` has not been read, wait for that one frame here.
+             *
+             * `cancelled` and a closed channel both end the wait, so this can never
+             * park: the driver either sends `done` or ends the child.
+             */
+            if (terminalDelivered && !doneSeen) {
+              const last = await Promise.race([box.next(), cancelled]).catch(() => null);
+              if (last !== null && last.t === "done") doneSeen = true;
+            }
             if (onAbort !== null) signal?.removeEventListener?.("abort", onAbort);
             router.close(id);
             budget.modelInFlight = false;

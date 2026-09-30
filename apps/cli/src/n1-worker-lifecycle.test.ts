@@ -116,11 +116,11 @@ function armEntrySource(marker: string): string {
   ].join("\n");
 }
 
-async function makeArmCheckout(dir: string, marker: string): Promise<void> {
+async function makeArmCheckout(dir: string, marker: string, entrySource?: string): Promise<void> {
   for (const rel of R97_ARM_BUILD_ENTRIES) {
     const abs = join(dir, rel);
     await mkdir(join(abs, ".."), { recursive: true });
-    await writeFile(abs, rel === ARM_ENTRY_REL ? armEntrySource(marker) : `export {}; // stub:${marker}\n`, "utf8");
+    await writeFile(abs, rel === ARM_ENTRY_REL ? (entrySource ?? armEntrySource(marker)) : `export {}; // stub:${marker}\n`, "utf8");
   }
   await writeFile(
     join(dir, FIXTURE_CHECKOUT_MARKER_FILENAME),
@@ -350,11 +350,14 @@ async function runArmCase(input: {
   provider: ModelProvider;
   timeoutMs: number;
   extraContext?: Partial<PreregisteredArmContext>;
+  /** task-6 — a custom arm BUILD ENTRY, so a case can exercise a real arm whose
+   *  `runOneCase` makes more than one model call. Defaults to the N1 stub entry. */
+  armEntry?: string;
 }): Promise<{ result: PreregisteredArmOutcome | null; error: unknown; elapsedMs: number; watchdogFired: boolean }> {
   const base = await scratch("n1-base");
   const cand = await scratch("n1-cand");
-  await makeArmCheckout(base, "baseline");
-  await makeArmCheckout(cand, "candidate");
+  await makeArmCheckout(base, "baseline", input.armEntry);
+  await makeArmCheckout(cand, "candidate", input.armEntry);
 
   const executor = createPreregArmExecutor({
     rootDir: REPO_ROOT,
@@ -893,4 +896,153 @@ describe("N1 (F30-1) — the cleanup bound is a DECLARED, exported number", () =
     expect(N1_WORKER_CLEANUP_BOUND_MS).toBeLessThan(30_000);
     expect(WATCHDOG_MS).toBeGreaterThan(N1_WORKER_CLEANUP_BOUND_MS);
   });
+});
+
+// ---------------------------------------------------------------------------
+// task-6 / N5-BLOCKER — WHEN THE SINGLE-FLIGHT SLOT IS ACTUALLY FREE
+// ---------------------------------------------------------------------------
+//
+// The SHIPPED arm worker used to end its proxy `generate()` ON THE TERMINAL EVENT.
+// Every real benchmark case makes more than one model call (act, then finish), so
+// the arm's next, perfectly SEQUENTIAL request was issued while the driver was
+// still inside the FIRST request's cleanup: `for await` runs `iterator.return()`
+// on `break`, and in the formal chain that cleanup settles the durable cost
+// journal. The driver releases its one-active-request slot only AFTER that
+// cleanup, so the second request was refused as `ARM_WORKER_PROTOCOL_VIOLATION`
+// and the real campaign recorded ZERO arm runs (every case looked like an
+// infrastructure failure). Measured with the BUILT executor instrumented (no repo
+// file touched):
+//
+//   frame t=request id=2   ← request 1
+//   slot ACQUIRE    id=2
+//   frame t=request id=3   ← request 2, 39 ms later, while the slot was still owned
+//   slot RELEASE           ← 38 ms after that
+//
+// The fix is in the CHILD, so the driver's invariant is untouched: the proxy waits
+// for the driver's `done` frame — written after that cleanup and immediately
+// before the release — instead of returning on the terminal event. A genuinely
+// CONCURRENT second request is still refused, by the driver (row 5 above) and by
+// the child's own `modelInFlight` guard (the control below).
+//
+// The provider below models the measurable cleanup: it settles for `settleMs`
+// AFTER the terminal event, which is exactly what keeps the driver's slot owned
+// while the child has already seen the terminal event. Without that delay the old
+// defect is an untestable race, because the harness provider has nothing to
+// settle — the delay is the measured ~38 ms, not decoration.
+
+const REAL_ARM_WORKER_PATH = join(REPO_ROOT, "scripts", "e4", "prereg-arm-isolated-worker.mjs");
+
+function settlingProvider(opts: { settleMs: number }): { provider: ModelProvider; entered: () => number; terminal: () => number } {
+  let entered = 0;
+  let terminal = 0;
+  const provider: ModelProvider = {
+    id: "n1-settling",
+    async listModels() {
+      return [];
+    },
+    createClient() {
+      return {
+        async *generate(_req: ModelRequest, _signal: AbortSignal): AsyncGenerator<ModelEvent> {
+          entered += 1;
+          try {
+            yield { type: "usage", usage: { inputTokens: 10, outputTokens: 5 }, timestamp: 0 };
+            terminal += 1;
+            yield { type: "completed", result: { finishReason: "stop" }, timestamp: 0 };
+          } finally {
+            // The formal chain's durable settle: `return()` on the consumer's
+            // `break` awaits this, and only then does the driver write `done` and
+            // release its slot.
+            await new Promise((resolve) => setTimeout(resolve, opts.settleMs));
+          }
+        },
+      };
+    },
+  };
+  return { provider, entered: () => entered, terminal: () => terminal };
+}
+
+/** An arm BUILD ENTRY whose `runOneCase` makes TWO model calls. */
+function twoCallArmEntry(marker: string, mode: "sequential" | "concurrent"): string {
+  const metricsLine = (calls: number): string =>
+    `    metrics: { turn_count: ${calls}, tool_call_count: 0, tokens_input: ${calls * 10}, tokens_output: ${calls * 5}, context_tokens: 0, compaction_count: 0, duration_ms: 0, retry_count: 0, verification_failures: 0, human_interventions: 0, estimated_cost: 0, usage_unknown: 0, cache_tokens_read: 0, cache_tokens_created: 0, model_call_count: ${calls} },`;
+  const lines = [
+    `export const ${ARM_PROBE_EXPORT} = "probe:${marker}";`,
+    `export const R97_ARM_ABI = ${JSON.stringify(R97_ARM_ABI)};`,
+    "export async function runOneCase(caseDef, opts) {",
+    "  const client = opts.provider.createClient({}, {});",
+    "  const drain = async (turn) => {",
+    "    for await (const ev of client.generate({ messages: [{ role: 'user', content: 'turn ' + turn }] }, opts.signal)) {",
+    "      if (ev && (ev.type === 'completed' || ev.type === 'error')) break;",
+    "    }",
+    "  };",
+  ];
+  if (mode === "concurrent") {
+    lines.push(
+      "  // BOTH started without awaiting the first: the child-side guard must refuse the second.",
+      "  let refusal = null;",
+      "  const first = drain(1);",
+      "  const second = drain(2).catch((err) => { refusal = String(err && err.message ? err.message : err); });",
+      "  await first;",
+      "  await second;",
+      "  return { caseId: caseDef.id, status: refusal === null ? 'failed' : 'error', actualStatus: 'completed', events: [],",
+      metricsLine(1),
+      "    violations: [], reason: refusal === null ? 'no-concurrency-refusal' : refusal, suite: caseDef.suite || 'regression', judgeVersion: '1.0.0', terminationReason: 'verified_incomplete' };",
+    );
+  } else {
+    lines.push(
+      "  // SEQUENTIAL: each call returns before the next one starts — the shape every",
+      "  // real benchmark case has (act, then finish).",
+      "  await drain(1);",
+      "  await drain(2);",
+      "  return { caseId: caseDef.id, status: 'failed', actualStatus: 'completed', events: [],",
+      metricsLine(2),
+      "    violations: [], reason: 'two-sequential-model-calls', suite: caseDef.suite || 'regression', judgeVersion: '1.0.0', terminationReason: 'verified_incomplete' };",
+    );
+  }
+  lines.push("}", "");
+  return lines.join("\n");
+}
+
+describe("task-6 / N5-BLOCKER — the slot is free once the driver has said `done`", () => {
+  it("[sequential] a real arm build whose case makes TWO sequential model calls completes, both streams serviced", async () => {
+    const settling = settlingProvider({ settleMs: 40 });
+    const run = await runArmCase({
+      workerPath: REAL_ARM_WORKER_PATH,
+      provider: settling.provider,
+      timeoutMs: 60_000,
+      armEntry: twoCallArmEntry("task6-sequential", "sequential"),
+    });
+
+    expect(run.watchdogFired, "the watchdog fired: the arm never settled").toBe(false);
+    expect(
+      String(run.error ?? ""),
+      "a legitimate SEQUENTIAL second request was refused as a concurrency violation",
+    ).not.toContain(ARM_WORKER_PROTOCOL_VIOLATION);
+    expect(run.error, `the arm run did not complete: ${String(run.error)}`).toBeNull();
+    expect(run.result?.status, "the arm run returned no outcome").toBe("failed");
+    // THE POINT: BOTH sequential calls reached the provider. Before the fix the
+    // second one was refused and the arm was stopped, so this number was 1.
+    expect(settling.entered(), "the second sequential request never reached the provider").toBe(2);
+    expect(settling.terminal(), "not every serviced stream was allowed to reach its terminal event").toBe(2);
+    expect(run.elapsedMs).toBeLessThan(N1_WORKER_CLEANUP_BOUND_MS);
+  }, 120_000);
+
+  it("[control] a genuinely CONCURRENT second request is still refused, inside the child", async () => {
+    const settling = settlingProvider({ settleMs: 40 });
+    const run = await runArmCase({
+      workerPath: REAL_ARM_WORKER_PATH,
+      provider: settling.provider,
+      timeoutMs: 60_000,
+      armEntry: twoCallArmEntry("task6-concurrent", "concurrent"),
+    });
+
+    expect(run.watchdogFired).toBe(false);
+    expect(
+      String(run.result?.reason ?? run.error ?? ""),
+      "the child-side one-in-flight guard no longer refuses a concurrent call",
+    ).toContain("PREREG_WORKER_CONCURRENCY");
+    // Exactly ONE physical provider entry: the refused concurrent call never
+    // reached the parent's provider.
+    expect(settling.entered(), "the refused concurrent call still opened a provider stream").toBe(1);
+  }, 120_000);
 });
