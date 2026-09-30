@@ -1,5 +1,31 @@
 # Current pre-registration status — one entry point for "where does this actually stand?"
 
+## CURRENT — 2026-10-01，N5 收口 / N6 接线
+
+| 层级 | 当前结论 | 证据边界 |
+| --- | --- | --- |
+| fixtureProtocolReady | 本地 PASS | fixture producer 124/124 arms、124 calls、124/124 raw 证据复验 |
+| realBuildOfflineReady | 本地 N5 + N6 readiness PASS；最终双平台待验收 | 真实 pair、24/24 raw records、12 content successes、四变体敏感性成立 |
+| budgetEvidenceReady | 本地 N5 + N6 readiness PASS；最终双平台待验收 | 60 MEASURED requests、1080 tokens、12 dispatched tools、24 coverage；独立复验 |
+| paidExperimentRun | NOT_RUN | 本轮零付费调用 |
+| championPromotion | NOT_RUN | 没有执行 promotion |
+
+详细实现与原始数字见 [N5 报告](n5-real-formal-offline.md)、
+[N2 release CLI 验收](n2-release-cli-forward.md)、[N6 最终验收入口](n6-dual-platform-final.md)。
+两个 CI 平台由 n6-real-formal-ci.mjs 分别运行 full pnpm test（显式启用 N2 E2E）、fixture、
+真实 arm build、formal 内容矩阵与六项身份负例。join 要求三个 offline levels，并检查每个
+leg 的 SHA/run/attempt/platform 与 artifact-relative 原始数据。fixture-only loop 仍独立保留。
+
+本地 N6 producer 八个实际命令均 exit 0，全仓 417 files / 7663 tests passed；三个 offline levels
+分别 PASS，local run id 不冒充 CI run。
+
+上一轮的“NO_REAL_ARM_PAIR”“没有 dispatch producer”“无 CI”不再作为 current 结论。
+远端基线 42ae7c2 的 workflow 已 completed/failure（两个测试问题已修），不能冒充本轮终验。
+本轮最终同 SHA 的 CI 结果须按 N6 报告更新；没有 final attestation 前不能声明双平台完成。
+
+## Historical / superseded — 以下旧 CURRENT banner 仅是历史快照
+
+
 > ## CURRENT (2026-09-29) — round E4-R0/R7 per `plan(20260929-015956).md`
 >
 > **Everything below this banner is the PREVIOUS round (R7, SHA `910b80e`) and is kept

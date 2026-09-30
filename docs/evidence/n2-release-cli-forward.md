@@ -1,5 +1,22 @@
 # N2 — 发布入口 CLI 正向证据（统一 selection / 脚本游标作用域 / 价格守卫接线）
 
+## CURRENT — 2026-10-01，N2 (a)(b)(c)(d) DONE（本地 Linux）
+
+`N2_RUN_RELEASE_E2E=1 pnpm exec vitest run apps/cli/src/n2-release-cli-forward.test.ts`
+已真实运行通过（约 17 s）：release CLI subprocess 的 build → validate → run，原始 evidence
+中 reg-22-api-stub 在 **baseline/candidate × 两次 repetition 共四次** verifiedCompletion=true，
+真实 write_file settlement > 0；身份保持 offline-scripted，价格 NOT_BOUND，零付费请求。
+
+旧测试把证据目录写成 arm-runs；实际是 out/runs/evidence。修复使用
+PREREG_RUN_EVIDENCE_DIRNAME，并要求四次成功，未减少排期或放宽 verifier。
+测试继续 opt-in；N6 producer 显式启用该测试，两个 CI 平台都必须运行。
+
+Phase E 的 runId/attempt/platform/dualBuild/evidenceRoot 已在 prereg-production-e2e.mjs 存在，
+本轮 fixture producer 用真实 local run 身份输出后也完整成功；不存在交接所述缺字段待实现项。
+
+## Historical / superseded — 以下是上一轮记录
+
+
 > 状态：**(a) DONE / (b) DONE / (c) DONE / (d) PARTIAL**
 > 本文件是 `plan(20260930-061557).md` §5 N2 的交付证据，按 §10 汇报格式书写。
 > 所有数字都是本机实测；**未知数值一律写 `null`，绝不写 0**。

@@ -130,6 +130,7 @@ async function main() {
     build: run("build", "pnpm", ["build"]),
   };
   run("fixture", process.execPath, ["scripts/e4/prereg-production-e2e.mjs", "--out", join(outDir, "fixture-report.json"), "--platform", platform, "--run-id", runId, "--attempt", String(attempt)]);
+  await cp(join(ROOT, ".ci", "prereg-production-e2e", "pos-exec-runs", "evidence"), join(outDir, "fixture-bundle"), { recursive: true });
   run("pair", process.execPath, ["scripts/e4/r5-real-formal.mjs", "--setup-pair", "scripts/e4/r5-formal-pair.json"]);
   run("arms", process.execPath, ["scripts/e4/r97-observe-arms.mjs", "--pair", "r5"]);
   run("formal", process.execPath, ["scripts/e4/r5-real-formal.mjs", "--identity", "--formal", "--content", "--content-matrix", "--negative", "--evidence-dir", join(outDir, "formal"), "--out", join(outDir, "formal-report.json")]);

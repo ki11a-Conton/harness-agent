@@ -1,5 +1,86 @@
 # N5 — 真实构建 pair、formal 内容矩阵与 build 绑定（离线、零付费）
 
+## CURRENT — 2026-10-01，N5 DONE（Linux 容器离线实测）
+
+Driver `a13ad35`，candidate `b6e6d942fadb665a5e58f25dabcf7c38d7b7fba7`，baseline
+`298bb9236bfb42c3a43dce479af16360604a14a2`。三个 checkout 均干净。
+Node v24.19.0；两臂各自执行 frozen-lockfile 安装与真实源码构建，loaded entry hash
+一致，closure 与 probe 两臂不同。GitHub Actions 的最终同 SHA Windows/Ubuntu 结论属于 N6，
+不能由本次 Linux 容器运行替代。
+
+| 实测项 | 结果 |
+| --- | --- |
+| formal schedule | 6 case × 2 arm × 2 repetition = 24；24/24 原始证据结构复验 |
+| 实际内容成功 | **12/24** verifiedCompletion=true；其他控制任务保留真实失败 |
+| correct / empty / wrong / skipped | CSV 与 countdown 的两臂均 **passed / failed / failed / failed** |
+| 原始 model journal | 60 个 MEASURED 物理离线请求；720 input + 360 output = 1080 tokens |
+| 两臂预算 | baseline 540 / candidate 540；delta 0；unknownCalls 0 |
+| tool journal | 12 个真实 dispatched settlement；24 journal events；24 armRun coverage |
+| 六项 admission 负例 | 全部按目标码拒绝；每行 physicalModelCalls=0 |
+| strict gate / 独立 --verify | **exit 0 / exit 0**；失败项 0 |
+| 实验统计结论 | **REJECT**；这是包含未解决控制任务的诊断排期，不是候选效果或 promotion 证明 |
+| paid / promotion / --full | **NOT_RUN / NOT_RUN / NOT_RUN** |
+
+### 修复机制及反例
+
+1. provider 原先对 JSON.stringify(request) 搜索原始多行 request.md；转义与尾换行均使
+   needle 无法匹配 task。现从 decoded message content 匹配 trim 后的 task 前缀。
+2. provider 原先按 case 使用实例级 seen 游标，后续 arm/repetition 不再写入。
+   现由当前 conversation 的 assistant 消息数派生进度；每次 createClient 仍保持同一会话语义。
+   `n5-offline-provider.test.ts` 覆盖多行请求、四个独立会话、follow-up 不重复写入和单终止事件。
+3. cost-budget.json 是 **外层 budget schema + 内层 journal**，不能直接改名当 cost-journal。
+   现保留原始 cost-budget.json 字节，并从其真实 journal 导出 entries/schemaVersion，保留
+   charged/reserved 的 tool 维度。没有修改任何 usage 或 settlement 数值。
+4. ABI 负例过去移除了 probe，实际命中 PREREG_WORKER_PROBE_MISSING；且只改 baseline
+   会在其拒绝前运行 candidate。现两臂只移除 R97_ARM_ABI export，保留 probe，并将所有
+   @ar dependencies 复制到各自 checkout 内。目标码仍是 ARM_WORKER_ABI_UNSUPPORTED，
+   两臂 admission 前物理请求均为 0；未修改 worker 或放宽 isolation gate。
+
+### 六项负例
+
+| 维度 | 实际拒绝码 | physicalModelCalls |
+| --- | --- | --- |
+| swapped-arms | TRUSTED_BUILD_NOT_PROVEN | 0 |
+| missing-ABI | ARM_WORKER_ABI_UNSUPPORTED | 0 |
+| wrong-policy | PREREGISTRATION_IDENTITY_DRIFT | 0 |
+| undeclared-mode | EGRESS_ISOLATION_UNAVAILABLE | 0 |
+| dirty-tree | TRUSTED_BUILD_NOT_PROVEN | 0 |
+| unsupported-isolation | ARM_ISOLATION_UNSUPPORTED | 0 |
+
+### §11 当前判定
+
+**N5 DONE**：真实 pair、内容正确组、三个内容负组、身份负例、budget/dispatch 原始数据及
+独立 bundle gate 已在至少一个平台完整成功。frozen verifier、用例语义和 Runtime 架构未改。
+`evidenceVerified=24` 与 `verifiedCompletion=true=12` 是不同指标。
+
+### §14 改前 / 改后
+
+| 指标 | 交接时 / 首次重跑 | 修复后 |
+| --- | --- | --- |
+| 内容正确矩阵 | 四个 correct verdict 全 failed | 四个 correct verdict 全 passed |
+| 正式内容成功 armRun | 0 | 12 |
+| 实际 tool dispatch | 0 | 12 |
+| model journal | budget 外层被误当 journal，entries 缺失 | 60 MEASURED entries、1080 tokens |
+| ABI 负例 | closure 外部解析失败，后为 probe-missing 且 3 sends | ARM_WORKER_ABI_UNSUPPORTED，0 sends |
+| 完整 gate | 13 项失败 → 7 项失败 | 0 项失败 |
+
+可重跑（已构建且干净的 driver）：
+
+```bash
+node scripts/e4/r5-real-formal.mjs --setup-pair scripts/e4/r5-formal-pair.json
+node scripts/e4/r97-observe-arms.mjs --pair r5
+node scripts/e4/r5-real-formal.mjs --identity --formal --content --content-matrix --negative --evidence-dir .ci/n5-final --out .ci/n5-final.json
+node scripts/e4/r5-real-formal.mjs --verify .ci/n5-final
+```
+
+原始 bundle：本轮运行目录 `.ci/n5-final/`（identity/schedule/aggregate/cost-budget/
+cost-journal/dispatch-journal/content-matrix/negatives/evidence/raw）；CI producer 会保留同样
+完整 raw bundle。首次失败和 dirty-driver 探测均不计入成功证据。
+
+## Historical / superseded — 以下是上一轮的原始报告
+
+以下旧章节的 PARTIAL、Windows、Ubuntu NOT_RUN、未 push 等均为当时快照，当前判定以顶部为准。
+
 任务：N5（`plan(20260930-061557).md` §8）
 状态：**DONE（Windows 本地；Ubuntu 尚待 N6）** — 见 §11 的判定依据与 §12 剩余问题。本文档随真实运行结果更新；`§5` 之后为实测章节。
 起始基线：`00c8660a`（本轮 plan 采纳点）
