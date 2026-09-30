@@ -910,7 +910,7 @@ async function phaseContent({ workRoot }) {
  */
 const EXPECTED_REFUSAL_CODES = {
   "swapped-arms (grant vs checkout directory)": "TRUSTED_BUILD_NOT_PROVEN",
-  "missing-ABI (arm build without R97_ARM_PROBE)": "ARM_WORKER_ABI_UNSUPPORTED",
+  "missing-ABI (arm build without R97_ARM_ABI)": "ARM_WORKER_ABI_UNSUPPORTED",
   "wrong-policy (tampered decision policy digest)": "PREREGISTRATION_IDENTITY_DRIFT",
   "undeclared-mode (process-exec with real checkouts, no fixture capability)": "EGRESS_ISOLATION_UNAVAILABLE",
   "dirty-tree (git work tree with uncommitted bytes)": "TRUSTED_BUILD_NOT_PROVEN",
@@ -1012,7 +1012,7 @@ async function phaseNegative({ workRoot }) {
   // the violation under test can be reached at all.
   const small = SMALL_SAMPLE;
   await attempt("swapped-arms (grant vs checkout directory)", { sampleCaseIds: small, injectedGrant: await grantFor(cleanEnv({ R97_ARM_BASELINE_DIR: DEFAULT_PAIR.candidate, R97_ARM_CANDIDATE_DIR: DEFAULT_PAIR.baseline })) });
-  await attempt("missing-ABI (arm build without R97_ARM_PROBE)", { sampleCaseIds: small, armsRoot: await makeAbiLessArm(workRoot) });
+  await attempt("missing-ABI (arm build without R97_ARM_ABI)", { sampleCaseIds: small, armsRoot: await makeAbiLessArm(workRoot) });
   await attempt("wrong-policy (tampered decision policy digest)", { sampleCaseIds: small, policyDigestTamper: 123_456 });
   await attempt("undeclared-mode (process-exec with real checkouts, no fixture capability)", { sampleCaseIds: small, isolationBackendId: "process-exec", isolationStrength: "process" });
   await attempt("dirty-tree (git work tree with uncommitted bytes)", { sampleCaseIds: small, armsRoot: await makeDirtyArm(workRoot) });
@@ -1082,7 +1082,7 @@ function gitInitCommit(dir, message) {
 }
 
 /**
- * A copy of the baseline arm's execution closure with NO `R97_ARM_PROBE` export.
+ * Copies of both arm execution closures with NO `R97_ARM_ABI` export.
  *
  * S5/N5 — IT MUST ALSO BE *RESOLVABLE*. A real arm checkout has its own installed
  * `node_modules`; this synthetic one is only a copied closure, so the moment the

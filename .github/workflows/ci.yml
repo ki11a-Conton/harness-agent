@@ -1600,6 +1600,49 @@ jobs:
   #     `dualBuild` block yet (task-5/S3), so requiring it would fail the job for
   #     a known, recorded gap. It is still reported per level as NOT_PROVEN.
   # ---------------------------------------------------------------------------
+  # N6 keeps the fixture-only loop above and adds an independently enforced
+  # real-build path. The producer runs the full suite (including N2 release CLI),
+  # installs/builds the deterministic pair, and retains both raw evidence trees.
+  real-formal-offline:
+    name: real formal offline (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: ubuntu
+          - os: windows-latest
+            platform: windows
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    env:
+      OPENAI_API_KEY: ""
+      RUN_PAID_BENCHMARKS: ""
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build the driver
+        run: pnpm build
+      - name: Real formal + release CLI + measured readiness (zero paid requests)
+        run: node scripts/e4/n6-real-formal-ci.mjs --platform "${{ matrix.platform }}" --out .ci/n6-real-formal
+      - name: Upload formal leg and raw bundles (including failures)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n6-real-formal-${{ matrix.os }}-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: .ci/n6-real-formal/
+          if-no-files-found: error
+
   dual-platform-acceptance:
     name: dual-platform acceptance (same SHA)
     # `r97-r98-closed-loop` is REQUIRED here, and its absence was the last wiring
@@ -1613,7 +1656,7 @@ jobs:
     # this job neither waited for them nor could see their artifacts.
     # `coverage` is kept because it is a real readiness input (`verify` and
     # `coverage` both gate the tree this job reads).
-    needs: [verify, coverage, r97-r98-closed-loop]
+    needs: [verify, coverage, r97-r98-closed-loop, real-formal-offline]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -1664,7 +1707,7 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          name: ci-readiness-ubuntu-latest-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          name: n6-real-formal-ubuntu-latest-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: .ci/dual/ubuntu
 
       - name: Download windows readiness leg
@@ -1672,7 +1715,7 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          name: ci-readiness-windows-latest-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          name: n6-real-formal-windows-latest-${{ github.sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: .ci/dual/windows
 
       - name: Show what each leg actually downloaded
@@ -1700,52 +1743,18 @@ jobs:
         if: always()
         run: |
           set +e
-          # `--require fixtureProtocolReady` is REQUIRED and is not the script's
-          # default. The default set is
-          # ["fixtureProtocolReady","realBuildOfflineReady","budgetEvidenceReady"],
-          # and BOTH of the latter two are legitimately NOT_PROVEN right now — no
-          # producer writes the `dualBuild` block and nothing in this repository
-          # writes a tool-dispatch journal. Combined with `--strict` that makes the
-          # gate fail on every run for a recorded, known gap, which is not what this
-          # job is for. The script deliberately does not narrow its own default (a
-          # default that silently omits a level could hide a real gap elsewhere), so
-          # the requirement is spelled out HERE.
-          #
-          # NOTE the asymmetry with the readiness step above: that one requires
-          # exactly `fixtureProtocolReady`, the same single level, for the same
-          # reason. I first required two levels there and the job failed on both
-          # platforms for a gap rather than a regression.
-          #
-          # This step kept refusing even WITH `--require fixtureProtocolReady`,
-          # because the join refused on ANY `verifyEvidenceBundle` problem. The
-          # bundle's honest shape for a SYNTHETIC_FIXTURE_BUILD run is to carry no
-          # real arm pair, which the verifier reports as
-          # BASELINE_/CANDIDATE_SOURCE_SHA_INVALID — codes that speak only to
-          # `realBuildOfflineReady`. Requiring them here made the join
-          # unsatisfiable. The join now attributes exactly seven arm-pair codes to
-          # that level (and only while it is not required); every other problem,
-          # including a bundle with no platform, still refuses at ANY level.
-          #
-          # `--require` is COMMA-SEPARATED, not repeated: a repeated flag is
-          # refused loudly by design, because ci-readiness.mjs's arg() returns the
-          # FIRST match and would silently apply only one level.
-          # PATHS — read from the "Show what each leg actually downloaded" step
-          # above rather than assumed. `actions/download-artifact` preserves the
-          # path stored INSIDE the artifact, and the uploader's `path:` listed
-          # repo-root-relative entries, so each leg arrives NESTED:
-          #   .ci/dual/<leg>/r97-r98/ci-readiness.json
-          #   .ci/dual/<leg>/prereg-production-e2e/pos-exec-runs/evidence/...
-          # NOT `.ci/dual/<leg>/ci-readiness.json`, which is what I first wrote and
-          # which is why the join refused MISSING_ARTIFACT even though both legs
-          # had downloaded successfully (measured on run 36536713230).
+          # Each artifact contains ci-readiness.json beside readiness-bundle/.
+          # Roots are resolved within the downloaded leg; no producer absolute
+          # path or unrelated cwd bundle can substitute for the downloaded bytes.
+          # All three offline levels are now required. Paid/promotion are excluded.
           node scripts/e4/dual-platform-acceptance.mjs \
-            --windows .ci/dual/windows/r97-r98/ci-readiness.json \
-            --ubuntu .ci/dual/ubuntu/r97-r98/ci-readiness.json \
+            --windows .ci/dual/windows/ci-readiness.json \
+            --ubuntu .ci/dual/ubuntu/ci-readiness.json \
             --out .ci/dual/dual-platform-acceptance.json \
             --run-id "${{ github.run_id }}" \
             --attempt "${{ github.run_attempt }}" \
             --expect-sha "${{ github.sha }}" \
-            --require fixtureProtocolReady \
+            --require fixtureProtocolReady,realBuildOfflineReady,budgetEvidenceReady \
             --strict
           DUAL_RC=$?
           set -e
@@ -1767,7 +1776,7 @@ jobs:
         # Kept as a DEDICATED step, mirroring the release-attestation job: the
         # verdict is always written and uploaded first, so a refusal is readable
         # instead of vanishing behind a red step.
-        if: always() && steps.dual.outputs.dual_rc != '0'
+        if: always() && (steps.dual.outputs.dual_rc != '0' || needs.verify.result != 'success' || needs.coverage.result != 'success' || needs.r97-r98-closed-loop.result != 'success' || needs.real-formal-offline.result != 'success')
         run: |
           echo "dual-platform acceptance: NOT ACCEPTED"
           echo "See the dual-platform-acceptance artifact for the named refusal reason."
