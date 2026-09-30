@@ -822,12 +822,22 @@ function defaultIsAlive(pid: number): boolean {
 export async function withR97CampaignLock<T>(
   dir: string,
   fn: () => Promise<T>,
-  opts: { lockTimeoutMs?: number; isAlive?: (pid: number) => boolean; now?: () => number } = {},
+  opts: {
+    lockTimeoutMs?: number;
+    isAlive?: (pid: number) => boolean;
+    now?: () => number;
+    /**
+     * Injection seam for the exclusive `open`. Production always uses the real
+     * `fs.open`; a test supplies a wrapper so a Windows `EPERM` can be raised
+     * DETERMINISTICALLY instead of waiting for a ~3% race to happen to fire.
+     */
+    openFn?: typeof open;
+  } = {},
 ): Promise<T> {
   const lockTimeoutMs = opts.lockTimeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS;
   const isAlive = opts.isAlive ?? defaultIsAlive;
   const now = opts.now ?? (() => Date.now());
-  const { lockPath, token } = await acquireLock(dir, lockTimeoutMs, isAlive, now);
+  const { lockPath, token } = await acquireLock(dir, lockTimeoutMs, isAlive, now, opts.openFn ?? open);
   try {
     return await fn();
   } finally {
@@ -1194,13 +1204,14 @@ async function acquireLock(
   timeoutMs: number,
   isAlive: (pid: number) => boolean,
   now: () => number,
+  openFn: typeof open = open,
 ): Promise<{ lockPath: string; token: string }> {
   const lockPath = join(dir, R97_LEDGER_LOCK_FILENAME);
   const deadline = now() + timeoutMs;
   for (;;) {
     const token = newLockToken();
     try {
-      const fh = await open(lockPath, "wx");
+      const fh = await openFn(lockPath, "wx");
       try {
         const record: R97LockRecord = {
           token,
