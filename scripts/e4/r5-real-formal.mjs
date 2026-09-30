@@ -60,6 +60,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { verifyDispatchJournal } from "./n3-dispatch-journal-contract.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(here, "..", "..");
@@ -1332,6 +1333,77 @@ export function verifyEvidenceBundle(root, config = PAIR_CONFIG) {
     }
     if (journal.schemaVersion !== "tool-call-efficiency-cost-journal-v2") {
       failures.push(fail("JOURNAL_MISMATCH", `cost journal schema is ${String(journal.schemaVersion)}`));
+    }
+
+    // ---- N3: the TOOL-DISPATCH journal, through the SAME shared contract ----
+    //
+    // The readiness verifier (`readiness-evidence-verify.mjs`) and this bundle
+    // verifier must recompute ONE contract, not two drifting copies — that is why
+    // the checks live in `n3-dispatch-journal-contract.mjs` and both import them.
+    //
+    // What is checked here is the RAW journal this bundle carries, against the
+    // schedule it declares and the request/attempt entries of the cost journal it
+    // also carries: schema, field types, the closed settlement enum, unique
+    // identifiers, a contiguous event sequence, the coverage proof, the parent
+    // request/attempt it names, and count conservation against the durable
+    // `charged.toolCalls` / `reserved.toolCalls`.
+    //
+    // A MISSING journal stays NOT_PROVEN; it is never read as "nothing
+    // dispatched". The synthetic fixture bundle is exempt ONLY because it declares
+    // `fixture: true` and its cost journal carries no tool dimension at all — a
+    // real bundle that wired the campaign tool budget must carry one.
+    const dispatchNames = existsSync(root)
+      ? readdirSync(root).filter((n) => /^dispatch.*\.json$/i.test(n)).sort()
+      : [];
+    const journalArmRuns = new Map();
+    for (const rec of records) {
+      if (rec === null || typeof rec !== "object" || typeof rec.armRunId !== "string") continue;
+      journalArmRuns.set(rec.armRunId, {
+        armRunId: rec.armRunId,
+        armId: rec.armId,
+        caseId: rec.caseId,
+        repetition: rec.repetition,
+        orderIndex: rec.orderIndex,
+      });
+    }
+    const chargedToolCalls = Number.isInteger(journal.charged?.toolCalls) ? journal.charged.toolCalls : null;
+    const reservedToolCalls = Number.isInteger(journal.reserved?.toolCalls) ? journal.reserved.toolCalls : null;
+    if (dispatchNames.length === 0) {
+      if (identity.fixture !== true) {
+        failures.push(
+          fail(
+            "DISPATCH_JOURNAL_MISSING",
+            "the bundle carries no dispatch journal, so a tool call that was granted a reservation but never settled cannot be excluded from the budget proof (NOT_PROVEN, not zero)",
+          ),
+        );
+      } else if ((chargedToolCalls ?? 0) > 0 || (reservedToolCalls ?? 0) > 0) {
+        failures.push(
+          fail(
+            "DISPATCH_JOURNAL_MISSING",
+            `the cost journal shows ${String(chargedToolCalls)} charged / ${String(reservedToolCalls)} outstanding tool call(s) but the bundle carries no dispatch journal`,
+          ),
+        );
+      }
+    } else {
+      const dispatchPath = need(dispatchNames[0]);
+      let dispatchJournal = null;
+      try {
+        dispatchJournal = readJsonFile(dispatchPath);
+      } catch {
+        failures.push(fail("DISPATCH_JOURNAL_MALFORMED", `${dispatchNames[0]} is not readable JSON`));
+      }
+      if (dispatchJournal !== null) {
+        const verdict = verifyDispatchJournal({
+          journal: dispatchJournal,
+          journalFile: dispatchNames[0],
+          scheduleArms: journalArmRuns,
+          requestEntries: Array.isArray(journal.entries) ? journal.entries : null,
+          budgetFacts: { chargedToolCalls, reservedToolCalls },
+        });
+        for (const problem of verdict.problems) {
+          failures.push(fail(problem.split(":")[0], problem));
+        }
+      }
     }
   }
 

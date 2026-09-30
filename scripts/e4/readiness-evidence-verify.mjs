@@ -46,6 +46,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
+import { verifyDispatchJournal } from "./n3-dispatch-journal-contract.mjs";
 
 export const READINESS_EVIDENCE_SCHEMA = "prereg-readiness-evidence-v1";
 
@@ -80,9 +81,15 @@ export const ARM_EVIDENCE_FILES = Object.freeze({
  * from the budget proof.
  *
  * `r5-real-formal.mjs` L1445-1451 already COPIES any `dispatch*.json` from the
- * budget directory into the bundle, so the transport for this file exists; the
- * missing piece is that nothing PRODUCES one yet. Absence is therefore reported
- * as a named, actionable gap — never as "the budget reconciled".
+ * budget directory into the bundle, so the transport for this file exists; N3
+ * added the missing piece — `createDurableToolDispatchBudget` (fed by the
+ * isolated arm worker's `tool_reserve`/`tool_settle` RPC) now WRITES
+ * `dispatch-journal.json` into the campaign's budget directory through the same
+ * lock-and-atomic-replace protocol as the cost ledger.
+ *
+ * The strict contract this file is validated against lives in
+ * `./n3-dispatch-journal-contract.mjs`, so the readiness verifier and the R5
+ * bundle verifier recompute ONE contract rather than two drifting copies.
  */
 export const DISPATCH_JOURNAL_FILENAMES = Object.freeze([
   "dispatch-journal.json",
@@ -235,8 +242,12 @@ export function recomputeJournalTotals(entries) {
  *     (`CROSS_RUN_SPLICE`);
  *   - a dispatched-but-unobserved attempt stays visible as its conservative
  *     upper bound and is never flattened to zero (`DROPPED_RETRY_UNOBSERVED`);
- *   - every dispatch reservation must appear in the request journal and be
- *     settled; an unknown/absent outcome is `TOOL_UNKNOWN` / `UNSETTLED`.
+ *   - the TOOL-DISPATCH journal is validated against the STRICT versioned
+ *     contract in `./n3-dispatch-journal-contract.mjs`: schema, field types, a
+ *     CLOSED settlement enum, unique ids, a contiguous event sequence, a
+ *     complete coverage proof, a parent request/attempt that really exists, and
+ *     COUNT CONSERVATION against the durable `charged.toolCalls` /
+ *     `reserved.toolCalls` (N3/F30-4).
  *
  * @param {object} input
  * @param {Array<object>|null} input.entries        raw cost-journal entries
@@ -244,9 +255,19 @@ export function recomputeJournalTotals(entries) {
  * @param {object|null} input.dispatchJournal       the located dispatch journal
  * @param {string|null} input.dispatchJournalFile   its filename, for messages
  * @param {string|null} input.dispatchJournalProblem unreadable-journal problem
+ * @param {{chargedToolCalls: number|null, reservedToolCalls: number|null}|null} [input.budgetFacts]
+ *        the durable tool dimension of the SAME cost journal, used for count
+ *        conservation. Absent ⇒ NOT_PROVEN (an omitted field is never a 0).
  * @returns {{status: string, reason: string|null, problems: string[], facts: object}}
  */
-export function bindRequestDispatchJournals({ entries, scheduleArms, dispatchJournal, dispatchJournalFile, dispatchJournalProblem }) {
+export function bindRequestDispatchJournals({
+  entries,
+  scheduleArms,
+  dispatchJournal,
+  dispatchJournalFile,
+  dispatchJournalProblem,
+  budgetFacts = null,
+}) {
   const problems = [];
   const facts = {
     requestJournalEntries: entries === null ? null : entries.length,
@@ -255,8 +276,8 @@ export function bindRequestDispatchJournals({ entries, scheduleArms, dispatchJou
     distinctArms: [],
     droppedRetries: 0,
     dispatchJournalFile: dispatchJournalFile ?? null,
-    dispatchReservations: null,
-    unsettledReservations: null,
+    /** N3 — recomputed dispatch facts (null until a journal was actually read). */
+    toolDispatch: null,
   };
 
   // --- the request/attempt journal -----------------------------------------
@@ -348,6 +369,20 @@ export function bindRequestDispatchJournals({ entries, scheduleArms, dispatchJou
   facts.distinctArms = [...boundArms].sort();
 
   // --- the tool-dispatch reservation journal --------------------------------
+  //
+  // N3 (F30-4) — THE STRICT CONTRACT. The previous version of this block accepted
+  // a dispatch reservation on ONE test ("it has a non-empty id that also appears
+  // in the request journal"), so a duplicated id, a wrong arm, an undefined
+  // `outcome` such as `"banana"`, and an empty `reservations: []` with no
+  // coverage were all read as MEASURED — while a REAL, independent tool
+  // reservation id (`<armRunId>:tool:1`) was rejected as UNBOUND because it is
+  // not a model quota id. The tool id and the model quota id are DIFFERENT
+  // identifiers in different namespaces: they are never compared for equality,
+  // and the dispatch is bound to its parent model request/attempt by EXISTENCE.
+  //
+  // The checks themselves live in `n3-dispatch-journal-contract.mjs` so the R5
+  // bundle verifier recomputes exactly the same contract.
+  facts.toolDispatch = null;
   if (dispatchJournalProblem !== null && dispatchJournalProblem !== undefined) {
     problems.push(`DISPATCH_JOURNAL_MALFORMED: ${dispatchJournalProblem}`);
   }
@@ -356,45 +391,37 @@ export function bindRequestDispatchJournals({ entries, scheduleArms, dispatchJou
       "DISPATCH_JOURNAL_MISSING: no tool-dispatch reservation journal is present in the bundle, so a tool call that was granted a reservation but never settled cannot be excluded from the budget proof",
     );
   } else {
-    const reservations = Array.isArray(dispatchJournal.reservations)
-      ? dispatchJournal.reservations
-      : Array.isArray(dispatchJournal.entries)
-        ? dispatchJournal.entries
-        : null;
-    if (reservations === null) {
-      problems.push(`DISPATCH_JOURNAL_MALFORMED: ${dispatchJournalFile ?? "the dispatch journal"} carries no reservations/entries array`);
-    } else {
-      facts.dispatchReservations = reservations.length;
-      let unsettled = 0;
-      for (const r of reservations) {
-        if (r === null || typeof r !== "object") {
-          problems.push("DISPATCH_RESERVATION_MALFORMED: a dispatch reservation is not an object");
-          continue;
-        }
-        if (!isNonEmptyString(r.reservationId)) {
-          problems.push("DISPATCH_RESERVATION_NO_ID: a dispatch reservation carries no reservationId");
-          continue;
-        }
-        if (!reservationOwner.has(r.reservationId)) {
-          problems.push(`DISPATCH_RESERVATION_UNBOUND: dispatch reservation ${r.reservationId} appears in no request-journal entry`);
-        }
-        const outcome = r.outcome;
-        if (outcome === undefined || outcome === null || outcome === "unknown") {
-          unsettled += 1;
-          problems.push(`TOOL_UNKNOWN: dispatch reservation ${r.reservationId} has no settled outcome (${JSON.stringify(outcome)}), so its consumption is UNKNOWN rather than zero`);
-        }
-      }
-      facts.unsettledReservations = unsettled;
+    const verdict = verifyDispatchJournal({
+      journal: dispatchJournal,
+      journalFile: dispatchJournalFile ?? null,
+      scheduleArms,
+      requestEntries: entries,
+      budgetFacts: budgetFacts ?? null,
+    });
+    facts.toolDispatch = verdict.facts;
+    for (const p of verdict.problems) {
+      if (!problems.includes(p)) problems.push(p);
     }
   }
 
   if (problems.length === 0) return { status: "MEASURED", reason: null, problems, facts };
-  // The stable umbrella code stays FIRST: `budgetEvidenceReady` is genuinely NOT
-  // cross-bound. The specific cause follows, so the report names EXACTLY which
-  // input is missing instead of a blanket "not implemented yet".
+  /**
+   * N3 — THE UMBRELLA CODE. The stable F30-4 code stays FIRST while the
+   * dispatch journal is genuinely absent (`budgetEvidenceReady` is not
+   * cross-bound); once a journal IS present, the leading code names the CLASS of
+   * the failure, so a retained UNKNOWN bound is never swallowed by a blanket
+   * "not bound" and a specific cause is never hidden behind the umbrella.
+   */
+  const unknownRetained = problems.some((p) => p.startsWith("DISPATCH_SETTLE_INCOMPLETE") || p.startsWith("DISPATCH_SETTLE_DUPLICATE"));
+  const umbrella =
+    dispatchJournal === null || dispatchJournal === undefined
+      ? "REQUEST_DISPATCH_JOURNAL_NOT_BOUND"
+      : unknownRetained
+        ? "DISPATCH_UNKNOWN_RETAINED"
+        : "TOOL_DISPATCH_JOURNAL_NOT_PROVEN";
   return {
     status: "NOT_PROVEN",
-    reason: `REQUEST_DISPATCH_JOURNAL_NOT_BOUND: ${problems.join("; ")}`,
+    reason: `${umbrella}: ${problems.join("; ")}`,
     problems,
     facts,
   };
@@ -594,6 +621,10 @@ export function verifyEvidenceBundle(input) {
             armId: entry.armId,
             caseId: entry.caseId,
             repetition: asInt(entry.repetition),
+            // N3 — the schedule's order index travels with the record so the
+            // tool-dispatch journal can be bound to the SAME scheduled arm run
+            // (and so a journal that quietly re-orders the pair is refused).
+            orderIndex: asInt(entry.orderIndex),
           });
           if (entry.armId !== "baseline" && entry.armId !== "candidate") {
             problems.push(`SCHEDULE_ARM_ID_INVALID: ${armRunId} names armId ${JSON.stringify(entry.armId)}`);
@@ -701,12 +732,20 @@ export function verifyEvidenceBundle(input) {
         // the task-7 placeholder: it is computed from the raw entries and the
         // schedule, and it is the ONLY way `budgetEvidenceReady` can PASS.
         const dispatch = findDispatchJournal(evidenceRoot);
+        // N3 — the durable TOOL dimension of the SAME cost journal. Count
+        // conservation (`charged == dispatched + unknown`,
+        // `reserved == granted-but-unsettled`) is only possible from these two
+        // numbers; when the bundle's cost journal omits them the binding reports
+        // NOT_PROVEN rather than assuming zero.
+        const chargedToolCalls = asInt(journal.charged?.toolCalls);
+        const reservedToolCalls = asInt(journal.reserved?.toolCalls);
         const binding = bindRequestDispatchJournals({
           entries,
           scheduleArms,
           dispatchJournal: dispatch.journal,
           dispatchJournalFile: dispatch.file,
           dispatchJournalProblem: dispatch.problem,
+          budgetFacts: { chargedToolCalls, reservedToolCalls },
         });
         facts.requestDispatchBinding = { status: binding.status, reason: binding.reason };
         facts.requestDispatchFacts = binding.facts;

@@ -814,6 +814,121 @@ export const MUTATIONS = [
     catchExpectation:
       "a raw EPERM escapes the retry/deadline machinery, so a wedged-looking lock aborts the campaign. NOTE: pointed at EPERM-4, not EPERM-1 — with the fix reverted, EPERM-1 PASSED 6/6 runs on this machine because it depends on a ~3% race actually firing, so it cannot serve as a mutation target. EPERM-4 forces the same condition through the openFn seam and failed 4/4.",
   },
+  // =========================================================================
+  // N3 (defect F30-4) — the STRICT tool-dispatch journal contract.
+  //
+  // Each of these four undoes ONE clause of `verifyDispatchJournal`, restoring a
+  // behaviour the pre-N3 checker actually had: it accepted a dispatch reservation
+  // on the single test "an object with a non-empty id exists", so a duplicated
+  // id, an undefined outcome such as `"banana"`, a wrong arm and an empty
+  // `reservations: []` with no coverage were ALL read as a reconciled budget.
+  // The clauses live in ONE module (`n3-dispatch-journal-contract.mjs`) so the
+  // readiness verifier and the R5 bundle verifier cannot drift apart; that is why
+  // every N3 mutation targets that module rather than one of its callers.
+  // =========================================================================
+  {
+    id: "n3-only-checks-id-existence",
+    // 只查 ID 存在
+    planWording: "只查 ID 存在",
+    round: "N3",
+    // The per-field presence/type loop is the ONLY place a missing or mistyped
+    // field is named. Emptying the iterated list restores the pre-N3 checker:
+    // the fields are never inspected, so the contract degrades to "the object has
+    // whichever keys the caller happened to write".
+    file: "scripts/e4/n3-dispatch-journal-contract.mjs",
+    find: `    for (const [field, ok] of Object.entries(EVENT_FIELDS)) {`,
+    replace: `    for (const [field, ok] of []) { // N3 mutation: only the identifier's existence is checked; every field and type check is skipped`,
+    suite: "apps/cli/src/n3-dispatch-journal.test.ts",
+    test: "an omitted field is never read as a value",
+    catchExpectation:
+      "an omitted field is no longer NAMED as missing, so `omitted` silently becomes indistinguishable from a stated value — the exact conflation the versioned schema exists to prevent",
+  },
+  {
+    id: "n3-any-outcome-counts-as-settled",
+    // 任意 outcome 算 settled
+    planWording: "任意 outcome 算 settled",
+    round: "N3",
+    // A permissive `has()` defeats BOTH enum sites at once (the field-type map and
+    // the `settled` branch), which is exactly the pre-N3 rule: any non-null
+    // `outcome` — including `"banana"` — counted as "settled".
+    file: "scripts/e4/n3-dispatch-journal-contract.mjs",
+    find: `const SETTLEMENTS = new Set(DISPATCH_SETTLEMENTS);`,
+    replace: `const SETTLEMENTS = { has: () => true }; // N3 mutation: every outcome counts as settled`,
+    suite: "apps/cli/src/n3-dispatch-journal.test.ts",
+    test: "an undefined settlement value is refused by the closed enum",
+    catchExpectation:
+      "an undefined settlement value is accepted, so a dispatch carrying an unenumerated outcome is read as settled instead of as UNKNOWN with its bound retained",
+  },
+  {
+    id: "n3-does-not-check-arm",
+    // 不查 arm
+    planWording: "不查 arm",
+    round: "N3",
+    // The pre-N3 checker never read the arm at all: a dispatch attributed to the
+    // candidate arm could satisfy a baseline reservation.
+    file: "scripts/e4/n3-dispatch-journal-contract.mjs",
+    find: `      if (e.arm !== scheduled.armId) {`,
+    replace: `      if (false) { // N3 mutation: the event's arm is not checked against the schedule`,
+    suite: "apps/cli/src/n3-dispatch-journal.test.ts",
+    test: "a dispatch attributed to the WRONG ARM is refused",
+    catchExpectation:
+      "an event whose arm contradicts the schedule is no longer refused as an arm mismatch, so a cross-arm splice can be reported as a clean binding",
+  },
+  {
+    id: "n3-does-not-check-complete-coverage",
+    // 不查完整覆盖
+    planWording: "不查完整覆盖",
+    round: "N3",
+    // The completeness loop is what makes "the schedule planned this arm run and
+    // NO producer observed it" a refusal. Disabling it means an uncovered arm run
+    // is simply absent from the proof instead of blocking it.
+    file: "scripts/e4/n3-dispatch-journal-contract.mjs",
+    find: `        if (!observed.has(armRunId)) {`,
+    replace: `        if (false) { // N3 mutation: an arm run the schedule planned may go uncovered`,
+    suite: "apps/cli/src/n3-dispatch-journal.test.ts",
+    test: "a real zero-tool run passes ONLY with an exported coverage proof",
+    catchExpectation:
+      "a scheduled arm run that no producer covered stops failing the coverage check, so an unobserved arm run is silently excluded from the tool budget instead of refusing it",
+  },
+  // =========================================================================
+  // N6 (defect F30-7) — the dual-platform join's evidence-root RESOLUTION RULE.
+  //
+  // F30-7's fix made the join rank ONLY the leg artifact's own tree, so a STALE
+  // bundle sitting beside the joining process's cwd can never win. n6-resolver
+  // proved the fix by hand (restoring cwd-first turned DP-R, DP-W and DP-Y red)
+  // but the file was outside its write scope, so that counterexample never entered
+  // the automated registry. It is registered here so the same fix carries
+  // automated load-bearing protection from now on.
+  // =========================================================================
+  {
+    id: "f30-7-cwd-first-evidence-root",
+    // 把 evidence root 的 cwd-first 解析恢复（F30-7）
+    planWording: "把 evidence root 的 cwd-first 解析恢复（F30-7）",
+    round: "N6",
+    // `resolveEvidenceRoot` ranks the leg artifact's own tree and NEVER the
+    // joining process's cwd. Re-inserting a cwd candidate BEFORE that ranking
+    // restores the pre-fix scan order, in which a stale bundle beside the caller
+    // won.
+    //
+    // The inserted code uses THIS file's own `outcome(...)` factory and its own
+    // `tried`/`candidates` audit arrays, so the mutated resolver still returns the
+    // module's real verdict SHAPE (a hand-written literal would test the shape
+    // instead of the behaviour) and records the cwd attempt the way the pre-fix
+    // version did.
+    file: "scripts/e4/dual-platform-acceptance.mjs",
+    find: `  const legRoot = dirname(legDir);`,
+    replace: `  const legRoot = dirname(legDir);
+  // F30-7 mutation: the joining process's cwd is ranked FIRST again (pre-fix).
+  const cwdCandidate = resolve(recorded);
+  const cwdUsable = usableDirectory(cwdCandidate);
+  tried.push(\`cwd=\${cwdCandidate}\`);
+  candidates.push({ from: "cwd", path: cwdCandidate, exists: cwdUsable.ok, note: cwdUsable.note });
+  if (cwdUsable.ok) return outcome(cwdCandidate, "cwd");`,
+    suite: "apps/cli/src/dual-platform-acceptance.test.ts",
+    test: "DP-W",
+    catchExpectation:
+      "a stale bundle at the joining process's cwd wins again, so the join re-verifies bytes nobody chose instead of the leg artifact's own root",
+  },
 ];
 
 /**

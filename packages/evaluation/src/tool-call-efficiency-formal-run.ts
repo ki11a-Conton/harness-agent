@@ -47,6 +47,13 @@ import {
 import { captureEndpointIdentity } from "./provenance-v3.js";
 import { buildPairedPlan, type PairedExperimentPlan } from "./paired-plan.js";
 import { openR97BudgetLedger, withR97CampaignLock, type R97BudgetLedger } from "./r97-budget-ledger.js";
+import {
+  ToolDispatchJournal,
+  type DispatchRefusalReason,
+  type DispatchSettlement,
+  type ToolDispatchArmRunScope,
+  type ToolDispatchDispatchContext,
+} from "./n3-tool-dispatch-journal.js";
 
 // ---------------------------------------------------------------------------
 // Authorization v2 — owner-provided, read-only to the code
@@ -1519,14 +1526,26 @@ export const TOOL_DISPATCH_DEADLINE_EXCEEDED = "CAMPAIGN_DEADLINE_EXCEEDED";
  * checked in the same place, so no tool starts after it.
  */
 export interface DurableToolDispatchBudget {
-  reserve(request: {
-    toolCallId: string;
-    tool: string;
-    sessionId: string;
-    turnId?: string;
-    readOnly: boolean;
-    sideEffectScope: string;
-  }): Promise<{
+  /**
+   * Reserve ONE real dispatch.
+   *
+   * `context` carries the identity the CALLER can prove and this budget cannot:
+   * the tool-side reservation id it minted, the schedule order index, and the
+   * parent model request/attempt that declared the tool call. Every field is
+   * optional because the direct-host path has none of them — and an absent field
+   * is recorded as `null` (NOT_PROVEN), never invented.
+   */
+  reserve(
+    request: {
+      toolCallId: string;
+      tool: string;
+      sessionId: string;
+      turnId?: string;
+      readOnly: boolean;
+      sideEffectScope: string;
+    },
+    context?: ToolDispatchDispatchContext,
+  ): Promise<{
     ok: boolean;
     reason?: string;
     settle(outcome: "dispatched" | "not_executed" | "unknown"): Promise<void>;
@@ -1540,28 +1559,193 @@ export interface DurableToolDispatchBudget {
     capRefused: number;
     deadlineRefused: number;
   };
+  /**
+   * N3 — the COVERAGE hooks, present IFF this budget owns a durable
+   * tool-dispatch journal. A producing execution calls them around the arm run it
+   * actually launches, so "this arm run dispatched nothing" is an exported fact
+   * instead of an absent file.
+   */
+  coverage?: {
+    beginArmRun(scope: ToolDispatchArmRunScope): Promise<void>;
+    closeArmRun(armRunId: string): Promise<void>;
+  };
 }
+
+/** N3 — a journal write failure is a REFUSAL, not a silent degradation. */
+export const TOOL_DISPATCH_JOURNAL_UNWRITABLE = "TOOL_DISPATCH_JOURNAL_UNWRITABLE";
 
 export function createDurableToolDispatchBudget(opts: {
   costBudget: CostBudget;
   deadlineAtMs: number | null;
   now?: () => number;
+  /**
+   * N3 — when supplied, EVERY reservation, refusal and settlement is ALSO
+   * persisted to `<dir>/dispatch-journal.json` through the same-lock, atomic,
+   * append-only protocol the cost ledger uses. The journal is then the raw
+   * evidence `readiness-evidence-verify.mjs` re-computes `budgetEvidenceReady`
+   * from, instead of the missing producer that made that level permanently
+   * NOT_PROVEN (`DISPATCH_JOURNAL_MISSING`).
+   */
+  journal?: { dir: string; campaignDigest: string | null } | null;
 }): DurableToolDispatchBudget {
   const clock = opts.now ?? (() => Date.now());
   const counters = { reserved: 0, dispatched: 0, released: 0, unknown: 0, capRefused: 0, deadlineRefused: 0 };
+  const journalSpec = opts.journal ?? null;
+  const journalPromise: { current: Promise<ToolDispatchJournal> | null } = { current: null };
+  const journal = (): Promise<ToolDispatchJournal> => {
+    if (journalSpec === null) {
+      throw new Error("internal: no tool-dispatch journal is configured for this budget");
+    }
+    journalPromise.current ??= ToolDispatchJournal.open(journalSpec.dir, {
+      campaignDigest: journalSpec.campaignDigest,
+      now: clock,
+    });
+    return journalPromise.current;
+  };
+  /**
+   * The arm scope every event of one reserve/settle pair shares. It is read from
+   * the cost budget's OWN bound journal scope, so the tool journal and the
+   * request/attempt journal can never disagree about arm/case/repetition.
+   */
+  const scopeOf = (): {
+    armRunId: string;
+    arm: "baseline" | "candidate";
+    caseId: string;
+    repetition: number;
+    campaignDigest: string | null;
+  } | null => {
+    const scope = opts.costBudget.currentJournalScope();
+    if (scope === null) return null;
+    return {
+      armRunId: scope.armRunId,
+      arm: scope.arm,
+      caseId: scope.caseId,
+      repetition: scope.repetition,
+      campaignDigest: scope.campaignDigest,
+    };
+  };
   return {
     stats: () => ({ ...counters }),
-    async reserve() {
+    ...(journalSpec === null
+      ? {}
+      : {
+          coverage: {
+            beginArmRun: async (scope: ToolDispatchArmRunScope): Promise<void> => {
+              await (await journal()).beginArmRun(scope);
+            },
+            closeArmRun: async (armRunId: string): Promise<void> => {
+              await (await journal()).closeArmRun(armRunId);
+            },
+          },
+        }),
+    async reserve(request, context) {
+      const scope = scopeOf();
+      const orderIndex = context?.orderIndex ?? null;
+      const parentRequestId = context?.parentRequestId ?? null;
+      const parentAttemptId = context?.parentAttemptId ?? null;
+      const toolReservationId = context?.toolReservationId ?? null;
+      /**
+       * N3 — record the refusal BEFORE returning it, so a bundle can tell "the
+       * cap refused this dispatch" from "this dispatch never existed". A refusal
+       * is NOT a dispatch: it takes no reservation and must never be counted as
+       * consumption.
+       */
+      const recordRefusal = async (reason: DispatchRefusalReason): Promise<void> => {
+        if (journalSpec === null || scope === null) return;
+        try {
+          await (
+            await journal()
+          ).append({
+            type: "reserve_refused",
+            armRunId: scope.armRunId,
+            arm: scope.arm,
+            caseId: scope.caseId,
+            repetition: scope.repetition,
+            orderIndex,
+            campaignDigest: scope.campaignDigest,
+            toolReservationId,
+            dispatchId: null,
+            toolCallId: request.toolCallId,
+            tool: request.tool,
+            sessionId: request.sessionId,
+            turnId: request.turnId ?? null,
+            readOnly: request.readOnly,
+            sideEffectScope: request.sideEffectScope,
+            parentRequestId,
+            parentAttemptId,
+            refusalReason: reason,
+            settlement: null,
+          });
+        } catch (err) {
+          // The journal could not be told about a refusal. The refusal still
+          // stands (nothing was dispatched, nothing was reserved), but the fact
+          // that a refusal went unrecorded must not vanish silently.
+          process.stderr.write(
+            `[degraded] N3 dispatch-journal refusal record failed for ${scope.armRunId}: ${
+              err instanceof Error ? err.message : String(err)
+            }\n`,
+          );
+        }
+      };
       if (opts.deadlineAtMs !== null && clock() >= opts.deadlineAtMs) {
         counters.deadlineRefused += 1;
+        await recordRefusal(TOOL_DISPATCH_DEADLINE_EXCEEDED);
         return { ok: false, reason: TOOL_DISPATCH_DEADLINE_EXCEEDED, async settle() {} };
       }
       const reserved = await opts.costBudget.reserve({ inputTokens: 0, outputTokens: 0, toolCalls: 1, durationMs: 0, usdMicros: 0 });
       if (!reserved.ok) {
         counters.capRefused += 1;
+        await recordRefusal(TOOL_DISPATCH_BUDGET_EXHAUSTED);
         return { ok: false, reason: TOOL_DISPATCH_BUDGET_EXHAUSTED, async settle() {} };
       }
       counters.reserved += 1;
+      /**
+       * N3 — THE ACCEPTANCE FACT IS PERSISTED BEFORE `reserve()` RETURNS. The
+       * caller only runs the tool body after this resolves, so there is no window
+       * in which a side effect exists without a durable record that it was
+       * allowed. A journal that cannot be written refuses the dispatch instead of
+       * letting an unrecorded one run.
+       */
+      if (journalSpec !== null && scope !== null) {
+        try {
+          await (
+            await journal()
+          ).append({
+            type: "reserve_granted",
+            armRunId: scope.armRunId,
+            arm: scope.arm,
+            caseId: scope.caseId,
+            repetition: scope.repetition,
+            orderIndex,
+            campaignDigest: scope.campaignDigest,
+            toolReservationId,
+            dispatchId: reserved.id,
+            toolCallId: request.toolCallId,
+            tool: request.tool,
+            sessionId: request.sessionId,
+            turnId: request.turnId ?? null,
+            readOnly: request.readOnly,
+            sideEffectScope: request.sideEffectScope,
+            parentRequestId,
+            parentAttemptId,
+            refusalReason: null,
+            settlement: null,
+          });
+        } catch (err) {
+          // Nothing has been dispatched yet, so releasing the bound is exact — not
+          // a refund of a side effect. The dispatch is refused because its
+          // acceptance could not be proven durably.
+          counters.released += 1;
+          await opts.costBudget.release(reserved.id);
+          return {
+            ok: false,
+            reason: `${TOOL_DISPATCH_JOURNAL_UNWRITABLE}: the durable tool-dispatch journal could not record this reservation (${
+              err instanceof Error ? err.message : String(err)
+            })`,
+            async settle() {},
+          };
+        }
+      }
       let settled = false;
       return {
         ok: true,
@@ -1574,17 +1758,45 @@ export function createDurableToolDispatchBudget(opts: {
             // replaced by the actual one, so the cap is checked exactly once and
             // the reservation cannot be double-counted.
             await opts.costBudget.settle(reserved.id, { toolCalls: 1 });
-            return;
-          }
-          if (outcome === "unknown") {
+          } else if (outcome === "unknown") {
             counters.unknown += 1;
             // A dispatch whose effects nobody saw is charged at its upper bound
             // and NEVER refunded.
             await opts.costBudget.settle(reserved.id, { toolCalls: 1, unknown: true });
-            return;
+          } else {
+            counters.released += 1;
+            await opts.costBudget.release(reserved.id);
           }
-          counters.released += 1;
-          await opts.costBudget.release(reserved.id);
+          // The durable settlement is recorded AFTER the ledger moved, so the
+          // journal can never claim a settlement the budget did not perform. A
+          // crash between the two leaves a `reserve_granted` with no `settled`
+          // event — which the verifier reads as UNKNOWN with the upper bound
+          // retained, never as a release.
+          if (journalSpec !== null && scope !== null) {
+            await (
+              await journal()
+            ).append({
+              type: "settled",
+              armRunId: scope.armRunId,
+              arm: scope.arm,
+              caseId: scope.caseId,
+              repetition: scope.repetition,
+              orderIndex,
+              campaignDigest: scope.campaignDigest,
+              toolReservationId,
+              dispatchId: reserved.id,
+              toolCallId: request.toolCallId,
+              tool: request.tool,
+              sessionId: request.sessionId,
+              turnId: request.turnId ?? null,
+              readOnly: request.readOnly,
+              sideEffectScope: request.sideEffectScope,
+              parentRequestId,
+              parentAttemptId,
+              refusalReason: null,
+              settlement: outcome satisfies DispatchSettlement,
+            });
+          }
         },
       };
     },
@@ -2298,6 +2510,12 @@ export async function openPreregisteredCampaignGate(
     costBudget,
     deadlineAtMs: campaignDeadlineAtMs,
     now: clock,
+    // N3 — the dispatch journal lives NEXT TO the ledger it corroborates, so the
+    // same lock, the same atomic-replace protocol and the same directory the
+    // bundle already collects (`cost-budget.json`, any `dispatch*.json`) apply.
+    // Without this the tool side of the budget has no raw evidence at all and
+    // `budgetEvidenceReady` can only ever report `DISPATCH_JOURNAL_MISSING`.
+    journal: { dir: opts.budgetDir, campaignDigest: artifact.preregistrationDigest },
   });
   return {
     status: "ADMITTED",

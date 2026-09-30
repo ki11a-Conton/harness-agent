@@ -62,6 +62,7 @@ import {
   PREREG_RUN_VERIFIER_SCHEMA,
   R97_ARM_BUILD_ENTRIES,
   TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2,
+  TOOL_DISPATCH_JOURNAL_UNWRITABLE,
   computeArmBuildDigestV1,
   loadBenchmarkCase,
   resolveBenchmarkCaseDir,
@@ -1018,42 +1019,90 @@ export function createPreregArmExecutor(deps: PreregArmExecutorDeps): Preregiste
       }
     }
 
-    const launched = await launchArmWorker({
-      workerPath,
-      env,
-      timeoutMs: workerTimeoutMs,
-      checkoutDir: armDir,
-      caseDef,
-      armRunId: ctx.armRunId,
-      runOptions: {
-        modelId: profile.provider.modelId,
-        budgetTokens: profile.budgetTokens,
-        // The mechanism difference IS the arm: candidate → the pre-registered
-        // mechanism, baseline → the champion wiring. Never a CLI flag.
-        ...(arm.armId === "candidate" ? { candidate: TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2 } : {}),
-        armId: arm.armId,
-        repetition: arm.repetition + 1,
-        attempt: 1,
-      },
-      provider: ctx.provider,
-      // R0/S1 (F1) — the campaign's durable tool budget and its ONE deadline are
-      // forwarded from the driver's context. When the driver supplied one, the
-      // worker must prove the `tool-budget-rpc-v1` ABI BEFORE any model request
-      // and every tool dispatch is reserved and settled against this budget.
-      ...(ctx.toolDispatchBudget === undefined ? {} : { toolDispatchBudget: ctx.toolDispatchBudget }),
-      ...(ctx.campaignDeadlineAtMs === undefined ? {} : { campaignDeadlineAtMs: ctx.campaignDeadlineAtMs }),
-      // N1 (F30-1) — the CALLER-CANCELLATION path. The frozen
-      // `PreregisteredArmContext` declares no signal today, so this reads one
-      // DEFENSIVELY: a driver that supplies `signal` gets the same finalize as the
-      // deadline, and a driver that supplies none is unaffected. It is a narrow,
-      // explicit read of an optional field — not a change to the frozen contract
-      // (that interface is owned by another task this wave) and not a capability
-      // channel: an `AbortSignal` can only STOP work, never grant it.
-      ...(() => {
-        const supplied = (ctx as { signal?: unknown }).signal;
-        return supplied instanceof AbortSignal ? { callerSignal: supplied } : {};
-      })(),
-    });
+    // N3 — COVERAGE. The producing execution declares, BEFORE it launches the
+    // arm's worker, that it OBSERVED this arm run. That is what makes a truly
+    // zero-tool arm run provable: the journal exists, names the arm run and
+    // carries 0 reserve frames, instead of a reader being asked to accept an
+    // empty `reservations: []` as proof that nothing dispatched.
+    //
+    // A journal that cannot be opened is a REFUSAL: an arm whose dispatches could
+    // not be recorded must not run, because no later step could tell "dispatched
+    // nothing" from "lost the record".
+    const coverage = ctx.toolDispatchBudget?.coverage;
+    if (coverage !== undefined) {
+      try {
+        await coverage.beginArmRun({
+          armRunId: ctx.armRunId,
+          arm: arm.armId,
+          caseId: arm.caseId,
+          repetition: arm.repetition,
+          orderIndex: arm.orderIndex,
+          campaignDigest: ctx.preregistrationDigest,
+        });
+      } catch (err) {
+        refuse(
+          TOOL_DISPATCH_JOURNAL_UNWRITABLE,
+          `the durable tool-dispatch journal could not declare coverage for ${ctx.armRunId} (${
+            err instanceof Error ? err.message : String(err)
+          }) — refusing to run an arm whose tool dispatches could not be recorded`,
+        );
+      }
+    }
+    let launched: LaunchArmWorkerResult;
+    try {
+      launched = await launchArmWorker({
+        workerPath,
+        env,
+        timeoutMs: workerTimeoutMs,
+        checkoutDir: armDir,
+        caseDef,
+        armRunId: ctx.armRunId,
+        orderIndex: arm.orderIndex,
+        runOptions: {
+          modelId: profile.provider.modelId,
+          budgetTokens: profile.budgetTokens,
+          // The mechanism difference IS the arm: candidate → the pre-registered
+          // mechanism, baseline → the champion wiring. Never a CLI flag.
+          ...(arm.armId === "candidate" ? { candidate: TOOL_CALL_EFFICIENCY_CANDIDATE_ID_V2 } : {}),
+          armId: arm.armId,
+          repetition: arm.repetition + 1,
+          attempt: 1,
+        },
+        provider: ctx.provider,
+        // R0/S1 (F1) — the campaign's durable tool budget and its ONE deadline are
+        // forwarded from the driver's context. When the driver supplied one, the
+        // worker must prove the `tool-budget-rpc-v1` ABI BEFORE any model request
+        // and every tool dispatch is reserved and settled against this budget.
+        ...(ctx.toolDispatchBudget === undefined ? {} : { toolDispatchBudget: ctx.toolDispatchBudget }),
+        ...(ctx.campaignDeadlineAtMs === undefined ? {} : { campaignDeadlineAtMs: ctx.campaignDeadlineAtMs }),
+        // N1 (F30-1) — the CALLER-CANCELLATION path. The frozen
+        // `PreregisteredArmContext` declares no signal today, so this reads one
+        // DEFENSIVELY: a driver that supplies `signal` gets the same finalize as the
+        // deadline, and a driver that supplies none is unaffected. It is a narrow,
+        // explicit read of an optional field — not a change to the frozen contract
+        // (that interface is owned by another task this wave) and not a capability
+        // channel: an `AbortSignal` can only STOP work, never grant it.
+        ...(() => {
+          const supplied = (ctx as { signal?: unknown }).signal;
+          return supplied instanceof AbortSignal ? { callerSignal: supplied } : {};
+        })(),
+      });
+    } finally {
+      // The arm run is over however it ended (result, refusal, timeout, crash).
+      // Closing the coverage is what turns "observed N reserve frames" into a
+      // CLOSED fact rather than a run that is still in flight.
+      if (coverage !== undefined) {
+        try {
+          await coverage.closeArmRun(ctx.armRunId);
+        } catch (err) {
+          process.stderr.write(
+            `[degraded] N3 dispatch-journal coverage close failed for ${ctx.armRunId}: ${
+              err instanceof Error ? err.message : String(err)
+            }\n`,
+          );
+        }
+      }
+    }
 
     // --- 5. independently corroborate the reported build identity ----------
     //
@@ -1120,6 +1169,13 @@ interface LaunchArmWorkerOptions {
   campaignDeadlineAtMs?: number | null;
   /** R0/S1 — the arm-run identity a reservation must belong to. */
   armRunId: string;
+  /**
+   * N3 — the schedule's order index for this arm run, when the driver knows it.
+   * It travels with every tool-dispatch journal event so the journal can be
+   * bound to the SAME scheduled arm the readiness verifier reconciles. `null`
+   * means "not proven here", never a substituted 0.
+   */
+  orderIndex?: number | null;
   /**
    * N1 (F30-1) — the caller's cancellation signal, when it supplied one. It is
    * ONE of the termination triggers and is handled by the same finalize as the
@@ -1245,6 +1301,37 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
   });
   const reader = createLineReader(child.stdout);
   let physicalProviderCalls = 0;
+  /**
+   * N3 — THE PARENT LINK. A tool dispatch is a CONSEQUENCE of a model response,
+   * and the durable journal must say WHICH request declared the tool call.
+   *
+   * `modelRequestOrdinal` counts the model requests this driver has actually
+   * serviced for this arm run (the same 1-based ordinal
+   * `createFormalBudgetedProvider` uses to name the request-journal entry
+   * `<armRunId>:r<N>`), and `lastCompletedRequestOrdinal` remembers the most
+   * recent request whose terminal `completed` event was FORWARDED to the worker.
+   *
+   * The worker runs one request at a time and executes the tools of a response
+   * before it asks for the next one, so the request that declared a tool call is
+   * exactly the last one whose `completed` event reached the child. When no
+   * request has completed yet, there is NO provable parent: the journal records
+   * `null` and the verifier refuses the binding rather than inventing one.
+   */
+  let modelRequestOrdinal = 0;
+  let lastCompletedRequestOrdinal: number | null = null;
+  /** N3 — the parent identity a `tool_reserve` frame is attributed to, or nulls. */
+  const parentOf = (): { parentRequestId: string | null; parentAttemptId: number | null } =>
+    lastCompletedRequestOrdinal === null
+      ? { parentRequestId: null, parentAttemptId: null }
+      : {
+          parentRequestId: `${opts.armRunId}:r${lastCompletedRequestOrdinal}`,
+          // The response the child consumed is the logical request's OBSERVED
+          // attempt, which the request journal records as attempt 0 (a physical
+          // retry is recorded as its own, higher, attempt id). The verifier
+          // requires the named attempt to EXIST in that journal, so a wrong
+          // constant here fails closed instead of passing silently.
+          parentAttemptId: 0,
+        };
   let stderr = "";
   child.stderr?.setEncoding("utf8");
   child.stderr?.on("data", (chunk: string) => {
@@ -1581,6 +1668,12 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
     streamOwner.current = { id, controller };
     streamActive = true;
     physicalProviderCalls += 1;
+    // N3 — this serviced request's 1-based ordinal for THIS arm run. It is the
+    // `<N>` of the request-journal name `<armRunId>:r<N>` the budgeted provider
+    // mints for the very same call, and it is the number the tool-dispatch
+    // journal resolves a tool call's parent request from.
+    modelRequestOrdinal += 1;
+    const ordinal = modelRequestOrdinal;
     const run = (async (): Promise<void> => {
       try {
         const client = opts.provider.createClient({ id: runOptions["modelId"] as string } as never, {} as never);
@@ -1594,7 +1687,13 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
             break;
           }
           reply({ t: "event", id, event });
-          if ((event as ModelEvent).type === "completed" || (event as ModelEvent).type === "error") break;
+          if ((event as ModelEvent).type === "completed" || (event as ModelEvent).type === "error") {
+            // N3 — the worker only receives this frame if `reply` published it
+            // (a suppressed frame is not delivered), so this is exactly "the
+            // response that declared the arm's tool calls reached the child".
+            if ((event as ModelEvent).type === "completed") lastCompletedRequestOrdinal = ordinal;
+            break;
+          }
         }
         if (!stopTriggered) reply({ t: "done", id });
         else cancellation.framesSuppressedAfterStop += 1;
@@ -1708,7 +1807,17 @@ async function launchArmWorker(opts: LaunchArmWorkerOptions): Promise<LaunchArmW
         return true;
       }
       const reservationId = `${opts.armRunId}:tool:${++reservationSeq}`;
-      const granted = await opts.toolDispatchBudget.reserve(frame.request as never);
+      // N3 — the TOOL-side reservation id, the schedule order index and the
+      // parent model request/attempt travel WITH the reservation, so the durable
+      // journal can bind this dispatch to the arm run, the case and the very
+      // model request that declared it. The tool id is minted HERE and is
+      // deliberately NOT the model's quota id: the two are different identifiers
+      // in different namespaces and are never compared for equality.
+      const granted = await opts.toolDispatchBudget.reserve(frame.request as never, {
+        toolReservationId: reservationId,
+        orderIndex: opts.orderIndex ?? null,
+        ...parentOf(),
+      });
       if (!granted.ok) {
         budgetCounters.refused += 1;
         reply({ t: "tool_grant", id: frame.id, ok: false, reason: granted.reason ?? "TOOL_BUDGET_EXHAUSTED" });

@@ -49,11 +49,15 @@ const mod = (await import(SCRIPT)) as {
     planWording: string;
     /** Which round's defect list this mutation came from: T6's five, A7's seven,
      *  N2's one (finding F2: the spawned child runner must be inside the approved
-     *  driver build identity), N5's five (the pre-registration closed loop's
-     *  invariants — plan §N5), S0's two (the release-CLI pre-provider dispatch
-     *  F1a and the evidence-derived contamination F2/S4), or S7's three (the two
-     *  directions of the join's level scoping, and the Windows ledger-lock EPERM). */
-    round: "T6" | "A7" | "N2" | "N5" | "S0" | "S7";
+     *  driver build identity), N3's four (defect F30-4: the strict tool-dispatch
+     *  journal contract — the plan's own list "只查 ID 存在 / 任意 outcome 算 settled /
+     *  不查 arm / 不查完整覆盖"), N5's five (the pre-registration closed loop's
+     *  invariants — plan §N5), N6's one (defect F30-7: the dual-platform join must
+     *  resolve its evidence root artifact-relative, never from the cwd), S0's two
+     *  (the release-CLI pre-provider dispatch F1a and the evidence-derived
+     *  contamination F2/S4), or S7's three (the two directions of the join's level
+     *  scoping, and the Windows ledger-lock EPERM). */
+    round: "T6" | "A7" | "N2" | "N3" | "N5" | "N6" | "S0" | "S7";
     file: string;
     find: string;
     replace: string;
@@ -154,7 +158,7 @@ describe("E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations"
     // untagged entry would be invisible to BOTH, so it is a failure rather than a
     // silently-ignored extra.
     for (const m of mod.MUTATIONS) {
-      expect(["T6", "A7", "N2", "N5", "S0", "S7"], `${m.id} has no round tag`).toContain(m.round);
+      expect(["T6", "A7", "N2", "N3", "N5", "N6", "S0", "S7"], `${m.id} has no round tag`).toContain(m.round);
     }
   });
 
@@ -206,6 +210,41 @@ describe("E4-R101-A (T6) X1: the mutation gate covers the plan's five mutations"
     const n2 = mod.MUTATIONS.filter((m) => m.round === "N2");
     expect(n2, "N2 must add exactly the child-runner identity mutation").toHaveLength(1);
     expect(n2.map((m) => m.planWording).join("\n")).toContain("被 spawn 的 child runner 不在批准构建身份内");
+  });
+
+  it("declares the N3 mutations for the strict tool-dispatch journal contract (F30-4)", () => {
+    // N3 (defect F30-4). The pre-N3 checker accepted a dispatch reservation on ONE
+    // test — "an object with a non-empty id exists" — so a duplicated id, a wrong
+    // arm, an undefined outcome such as `"banana"` and an empty `reservations: []`
+    // with no coverage were ALL read as a reconciled budget. These four mutations
+    // are the plan's own list, and each undoes exactly ONE clause of the shared
+    // contract so the class of defect cannot come back unnoticed.
+    //
+    // Pinned as an exact set of four for the usual reason: a gate that quietly
+    // dropped one would otherwise still report "all mutations caught".
+    const n3 = mod.MUTATIONS.filter((m) => m.round === "N3");
+    expect(n3, "N3 must add one mutation per F30-4 clause").toHaveLength(4);
+    const wording = n3.map((m) => m.planWording).join("\n");
+    expect(wording).toContain("只查 ID 存在");
+    expect(wording).toContain("任意 outcome 算 settled");
+    expect(wording).toContain("不查 arm");
+    expect(wording).toContain("不查完整覆盖");
+    // Every N3 mutation must be bound to the N3 suite: a mutation that landed in
+    // an unrelated suite would report a catch it did not make.
+    for (const m of n3) {
+      expect(m.suite, `${m.id} is not bound to the N3 suite`).toBe("apps/cli/src/n3-dispatch-journal.test.ts");
+    }
+  });
+
+  it("declares the N6 mutation for the dual-platform join's evidence-root rule (F30-7)", () => {
+    // N6 (defect F30-7). The join used to fall back to the joining process's cwd,
+    // so a STALE bundle beside the caller won and the join re-verified bytes
+    // nobody chose. The fix ranks only the leg artifact's own tree; this mutation
+    // re-inserts the cwd candidate BEFORE that ranking, restoring the pre-fix
+    // scan order. Pinned as an exact set of one.
+    const n6 = mod.MUTATIONS.filter((m) => m.round === "N6");
+    expect(n6, "N6 must add exactly the evidence-root resolution mutation").toHaveLength(1);
+    expect(n6.map((m) => m.planWording).join("\n")).toContain("把 evidence root 的 cwd-first 解析恢复");
   });
 
   it("gives every mutation a unique id and a stated expectation", () => {

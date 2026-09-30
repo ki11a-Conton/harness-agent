@@ -40,7 +40,7 @@
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -1017,10 +1017,10 @@ describe("task-10 — request/dispatch journal cross-binding", () => {
   const ARM_C = "arm-run-candidate";
   const CASE_ID = "reg-01-basic-edit";
 
-  function schedule(): Map<string, { armId: string; caseId: string }> {
+  function schedule(): Map<string, { armId: string; caseId: string; repetition: number; orderIndex: number }> {
     return new Map([
-      [ARM_B, { armId: "baseline", caseId: CASE_ID }],
-      [ARM_C, { armId: "candidate", caseId: CASE_ID }],
+      [ARM_B, { armId: "baseline", caseId: CASE_ID, repetition: 0, orderIndex: 0 }],
+      [ARM_C, { armId: "candidate", caseId: CASE_ID, repetition: 0, orderIndex: 1 }],
     ]);
   }
 
@@ -1029,7 +1029,8 @@ describe("task-10 — request/dispatch journal cross-binding", () => {
       armRunId: ARM_B,
       arm: "baseline",
       caseId: CASE_ID,
-      requestId: "rq-1",
+      repetition: 0,
+      requestId: `${ARM_B}:r1`,
       attemptId: 0,
       reservationId: "rs-1",
       campaignDigest: "digest-1",
@@ -1038,8 +1039,82 @@ describe("task-10 — request/dispatch journal cross-binding", () => {
     };
   }
 
-  function dispatchOver(reservations: unknown[]): { reservations: unknown[] } {
-    return { reservations };
+  /**
+   * N3/F30-4 — ONE tool-dispatch journal event in the versioned contract. Every
+   * test below derives from a VALID journal and changes ONE dimension, so the
+   * failure it asserts is the dimension it names rather than an earlier gate.
+   */
+  function event(over: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      type: "reserve_granted",
+      armRunId: ARM_B,
+      arm: "baseline",
+      caseId: CASE_ID,
+      repetition: 0,
+      orderIndex: 0,
+      campaignDigest: "digest-1",
+      toolReservationId: `${ARM_B}:tool:1`,
+      dispatchId: "cost-res-1",
+      toolCallId: "call-1",
+      tool: "write_file",
+      sessionId: "s1",
+      turnId: "t1",
+      readOnly: false,
+      sideEffectScope: "filesystem",
+      parentRequestId: `${ARM_B}:r1`,
+      parentAttemptId: 0,
+      refusalReason: null,
+      settlement: null,
+      ...over,
+    };
+  }
+
+  function coverage(over: Array<Record<string, unknown>> = []): Array<Record<string, unknown>> {
+    return [
+      { armRunId: ARM_B, arm: "baseline", caseId: CASE_ID, repetition: 0, orderIndex: 0, openedAtMs: 1, closedAtMs: 9, reserveFrames: 1, settleFrames: 1 },
+      { armRunId: ARM_C, arm: "candidate", caseId: CASE_ID, repetition: 0, orderIndex: 1, openedAtMs: 2, closedAtMs: 10, reserveFrames: 1, settleFrames: 1 },
+      ...over,
+    ];
+  }
+
+  function journalOf(events: Array<Record<string, unknown>>, over: Record<string, unknown> = {}): Record<string, unknown> {
+    const numbered = events.map((e, i) => ({ seq: i + 1, atMs: 1_000 + i, ...e }));
+    return {
+      schemaVersion: "e4-n3-tool-dispatch-journal-v1",
+      campaignDigest: "digest-1",
+      eventCount: numbered.length,
+      events: numbered,
+      coverage: { armRuns: coverage() },
+      ...over,
+    };
+  }
+
+  /** The fully consistent baseline: one dispatched tool per arm. */
+  function okEvents(): Array<Record<string, unknown>> {
+    return [
+      event(),
+      event({ type: "settled", settlement: "dispatched" }),
+      event({
+        armRunId: ARM_C,
+        arm: "candidate",
+        orderIndex: 1,
+        toolReservationId: `${ARM_C}:tool:1`,
+        dispatchId: "cost-res-2",
+        toolCallId: "call-2",
+        parentRequestId: `${ARM_C}:r1`,
+      }),
+      event({
+        type: "settled",
+        armRunId: ARM_C,
+        arm: "candidate",
+        orderIndex: 1,
+        toolReservationId: `${ARM_C}:tool:1`,
+        dispatchId: "cost-res-2",
+        toolCallId: "call-2",
+        parentRequestId: `${ARM_C}:r1`,
+        settlement: "dispatched",
+      }),
+    ];
   }
 
   async function bind(over: {
@@ -1049,31 +1124,27 @@ describe("task-10 — request/dispatch journal cross-binding", () => {
     dispatchJournal?: unknown;
     dispatchJournalProblem?: string | null;
     scheduleArms?: Map<string, { armId: string; caseId: string }>;
+    budgetFacts?: { chargedToolCalls: number | null; reservedToolCalls: number | null } | null;
   }) {
     const mod = await import(pathToFileURL(join(REPO_ROOT, "scripts", "e4", "readiness-evidence-verify.mjs")).href);
     return mod.bindRequestDispatchJournals({
-      entries: "entries" in over ? over.entries : [entry()],
+      entries:
+        "entries" in over
+          ? over.entries
+          : [
+              entry(),
+              entry({ armRunId: ARM_C, arm: "candidate", requestId: `${ARM_C}:r1`, reservationId: "rs-2" }),
+            ],
       scheduleArms: over.scheduleArms ?? schedule(),
-      dispatchJournal:
-        "dispatchJournal" in over
-          ? over.dispatchJournal
-          : dispatchOver([{ reservationId: "rs-1", outcome: "settled" }]),
+      dispatchJournal: "dispatchJournal" in over ? over.dispatchJournal : journalOf(okEvents()),
       dispatchJournalFile: "dispatch-journal.json",
       dispatchJournalProblem: over.dispatchJournalProblem ?? null,
+      budgetFacts: "budgetFacts" in over ? over.budgetFacts : { chargedToolCalls: 2, reservedToolCalls: 0 },
     });
   }
 
   it("BIND-1: a fully consistent pair of journals reaches MEASURED with its digest, counts and reasons intact", async () => {
-    const result = await bind({
-      entries: [
-        entry(),
-        entry({ armRunId: ARM_C, arm: "candidate", requestId: "rq-2", reservationId: "rs-2" }),
-      ],
-      dispatchJournal: dispatchOver([
-        { reservationId: "rs-1", outcome: "settled" },
-        { reservationId: "rs-2", outcome: "settled" },
-      ]),
-    });
+    const result = await bind({});
     expect(result.status).toBe("MEASURED");
     expect(result.reason).toBeNull();
     expect(result.problems).toEqual([]);
@@ -1081,8 +1152,16 @@ describe("task-10 — request/dispatch journal cross-binding", () => {
     expect(result.facts.requestJournalEntries).toBe(2);
     expect(result.facts.boundAttempts).toBe(2);
     expect(result.facts.boundReservations).toBe(2);
-    expect(result.facts.unsettledReservations).toBe(0);
     expect(result.facts.distinctArms).toEqual([ARM_B, ARM_C].sort());
+    // N3 — the dispatch facts are RECOMPUTED from the journal, not trusted from
+    // it: two grants, two dispatches, zero retained upper bounds.
+    expect(result.facts.toolDispatch.reserveGranted).toBe(2);
+    expect(result.facts.toolDispatch.reserveRefused).toBe(0);
+    expect(result.facts.toolDispatch.settledDispatched).toBe(2);
+    expect(result.facts.toolDispatch.settledUnknown).toBe(0);
+    expect(result.facts.toolDispatch.unsettledGrants).toBe(0);
+    expect(result.facts.toolDispatch.eventCount).toBe(4);
+    expect(result.facts.toolDispatch.chargedToolCalls).toBe(2);
   });
 
   it("BIND-2: a MISSING journal refuses and still names the request/attempt binding", async () => {
@@ -1108,7 +1187,7 @@ describe("task-10 — request/dispatch journal cross-binding", () => {
     const result = await bind({
       entries: [
         entry(),
-        entry({ armRunId: ARM_C, arm: "candidate", requestId: "rq-2", reservationId: "rs-1" }),
+        entry({ armRunId: ARM_C, arm: "candidate", requestId: `${ARM_C}:r1`, reservationId: "rs-1" }),
       ],
     });
     expect(result.status).toBe("NOT_PROVEN");
@@ -1117,7 +1196,7 @@ describe("task-10 — request/dispatch journal cross-binding", () => {
 
   it("BIND-6: entries spliced from two DIFFERENT runs are refused as a cross-run splice", async () => {
     const result = await bind({
-      entries: [entry(), entry({ requestId: "rq-3", reservationId: "rs-3", campaignDigest: "digest-OTHER" })],
+      entries: [entry(), entry({ requestId: `${ARM_B}:r2`, reservationId: "rs-3", campaignDigest: "digest-OTHER" })],
     });
     expect(result.status).toBe("NOT_PROVEN");
     expect(result.reason).toMatch(/CROSS_RUN_SPLICE/);
@@ -1138,85 +1217,78 @@ describe("task-10 — request/dispatch journal cross-binding", () => {
     expect(result.facts.droppedRetries).toBe(1);
   });
 
-  it("BIND-9: a dispatch reservation settled with no outcome is UNKNOWN, never zero", async () => {
+  it("BIND-9: a granted dispatch with NO settlement event is UNKNOWN with its bound retained, never zero", async () => {
+    // ONE dimension changed from the valid journal: the settlement events are
+    // removed. The grant stays, its upper bound stays, and the leading code names
+    // the UNKNOWN rather than flattening it into the umbrella "not bound".
     const result = await bind({
-      dispatchJournal: dispatchOver([{ reservationId: "rs-1", outcome: null }]),
+      dispatchJournal: journalOf([event()], {
+        coverage: {
+          armRuns: [
+            { armRunId: ARM_B, arm: "baseline", caseId: CASE_ID, repetition: 0, orderIndex: 0, openedAtMs: 1, closedAtMs: 9, reserveFrames: 1, settleFrames: 0 },
+          ],
+        },
+      }),
+      entries: [entry()],
+      budgetFacts: { chargedToolCalls: 0, reservedToolCalls: 1 },
     });
     expect(result.status).toBe("NOT_PROVEN");
-    expect(result.reason).toMatch(/TOOL_UNKNOWN/);
-    expect(result.facts.unsettledReservations).toBe(1);
+    expect(result.reason).toMatch(/^DISPATCH_UNKNOWN_RETAINED:/);
+    expect(result.reason).toMatch(/DISPATCH_SETTLE_INCOMPLETE/);
+    expect(result.facts.toolDispatch.unsettledGrants).toBe(1);
+    // The upper bound is RETAINED in the ledger, not refunded.
+    expect(result.facts.toolDispatch.reservedToolCalls).toBe(1);
   });
 
-  it("BIND-10: a dispatch reservation appearing in NO request entry is refused as unbound", async () => {
+  it("BIND-10: a dispatch whose PARENT model request does not exist is refused as unbound", async () => {
     const result = await bind({
-      dispatchJournal: dispatchOver([
-        { reservationId: "rs-1", outcome: "settled" },
-        { reservationId: "rs-orphan", outcome: "settled" },
+      dispatchJournal: journalOf([
+        event({ parentRequestId: `${ARM_B}:r7` }),
+        event({ type: "settled", settlement: "dispatched", parentRequestId: `${ARM_B}:r7` }),
       ]),
+      entries: [entry()],
+      budgetFacts: { chargedToolCalls: 1, reservedToolCalls: 0 },
     });
     expect(result.status).toBe("NOT_PROVEN");
-    expect(result.reason).toMatch(/DISPATCH_RESERVATION_UNBOUND/);
+    expect(result.reason).toMatch(/DISPATCH_PARENT_REQUEST_UNBOUND/);
   });
 
-  it("BIND-11: the real producer currently writes NO dispatch journal, so budgetEvidenceReady is NOT_PROVEN — recorded, not hidden", async () => {
-    // This is the honest current state and the reason `budgetEvidenceReady` is
-    // NOT_PROVEN rather than PASS: `r5-real-formal.mjs` COPIES `dispatch*.json`
-    // into the evidence dir, but no producer in this repository WRITES such a
-    // file. Reproduce the search rather than trusting this comment.
-    const { execFileSync } = await import("node:child_process");
+  it("BIND-11: a PRODUCER now writes the durable dispatch journal — the contract changed, and the change is asserted rather than deleted", async () => {
+    // CONTRACT CHANGE (N3/F30-4). This test used to assert the OPPOSITE — "no
+    // producer in this repository WRITES a dispatch journal" — which was the
+    // honest state while `budgetEvidenceReady` could only ever report
+    // `DISPATCH_JOURNAL_MISSING`. N3 added the producer, so the assertion is
+    // INVERTED rather than removed: the claim is now that a producer EXISTS, that
+    // it actually sinks the journal to disk, and that the production admission
+    // path WIRES it — otherwise the file would be dead code and the level would
+    // stay NOT_PROVEN.
+    //
+    // The files are read from disk rather than through `git grep`, because the
+    // claim is about the WORKING TREE the tests run against: a `git grep` would
+    // not see the producer until it is committed, which would make this assertion
+    // depend on the git index instead of on the code.
+    const { readFileSync: read } = await import("node:fs");
+    const producerPath = join(REPO_ROOT, "packages", "evaluation", "src", "n3-tool-dispatch-journal.ts");    expect(existsSync(producerPath), "the N3 tool-dispatch journal producer does not exist").toBe(true);
+    const producer = read(producerPath, "utf8");
+    // It must WRITE: a module that only defines a schema produces nothing.
+    expect(producer, "the producer never writes the journal file").toMatch(/writeJsonAtomic\(this\.path/);
+    // It must write the file name the verifier looks for FIRST.
+    expect(producer).toMatch(/N3_DISPATCH_JOURNAL_FILENAME = "dispatch-journal\.json"/);
 
-    // The claim is "no producer WRITES a dispatch journal". The first version of
-    // this test approximated that with a bare substring grep for
-    // `dispatch-journal` and required every matching FILE to be a known consumer.
-    // That approximation produced a FALSE POSITIVE as soon as a file merely NAMED
-    // the filename in a comment explaining why it is absent — which is exactly
-    // what happened when `prereg-production-e2e.mjs` gained a comment saying it
-    // deliberately writes no dispatch journal. The test then failed while nothing
-    // had started producing one. A grep for a NAME cannot distinguish "writes the
-    // file" from "mentions the name", so this now looks for the WRITE.
-    const matches = execFileSync("git", ["grep", "-n", "dispatch-journal", "--", "*.ts", "*.mjs", "*.js"], {
-      cwd: REPO_ROOT,
-      encoding: "utf8",
-    })
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => {
-        const parts = line.split(":");
-        const file = parts[0] ?? "";
-        const lineNo = parts[1] ?? "";
-        return { file, lineNo, text: parts.slice(2).join(":") };
-      });
-
-    const consumers = ["readiness-evidence-verify", "ci-readiness", "r0-f6-ci-readiness-classification"];
-
-    // A PRODUCER is a line that actually sinks the journal to disk. Comments are
-    // stripped first, so a comment that merely names the file is not a write.
-    const writes = matches.filter((m) => {
-      if (consumers.some((c) => m.file.includes(c))) return false;
-      const code = m.text
-        .replace(/\/\/.*$/, "")
-        .replace(/^\s*\*.*$/, "")
-        .replace(/^\s*\/\*.*$/, "");
-      return /writeFileSync|writeFile\(|createWriteStream|appendFile/.test(code);
-    });
-
+    const budgetPath = join(REPO_ROOT, "packages", "evaluation", "src", "tool-call-efficiency-formal-run.ts");
+    const budget = read(budgetPath, "utf8");
     expect(
-      writes.map((w) => `${w.file}:${w.lineNo}`),
-      `unexpected PRODUCERS of a dispatch journal: ${writes.map((w) => `${w.file}:${w.lineNo}: ${w.text.trim()}`).join(" | ")}`,
-    ).toEqual([]);
+      budget,
+      "the durable tool budget is never given a journal, so nothing would produce one on the production path",
+    ).toMatch(/journal: \{ dir: opts\.budgetDir/);
 
-    // NON-VACUITY, in three directions, so a typo in the pattern cannot make this
-    // pass silently: the search must find SOMETHING; it must actually SEE the
-    // producer's comment naming the absent journal (which is what made the old
-    // version fail); and it must still find the real CONSUMERS.
-    expect(matches.length, "the grep found no matches at all, so it proves nothing").toBeGreaterThan(0);
-    expect(
-      matches.some((m) => m.file.includes("prereg-production-e2e")),
-      "expected the producer to NAME the deliberately-absent journal in a comment; if this fails the grep is not seeing the real tree",
-    ).toBe(true);
-    expect(
-      matches.filter((m) => consumers.some((c) => m.file.includes(c))).length,
-      "expected to still find the real consumers",
-    ).toBeGreaterThan(0);
+    // The real CONSUMERS must still exist, so the change above cannot pass by
+    // having deleted the checks that read the journal.
+    const verifierPath = join(REPO_ROOT, "scripts", "e4", "readiness-evidence-verify.mjs");
+    expect(existsSync(verifierPath)).toBe(true);
+    expect(read(verifierPath, "utf8")).toMatch(/verifyDispatchJournal\(/);
+    const contractPath = join(REPO_ROOT, "scripts", "e4", "n3-dispatch-journal-contract.mjs");
+    expect(existsSync(contractPath), "the shared strict contract module does not exist").toBe(true);
+    expect(read(contractPath, "utf8")).toMatch(/e4-n3-tool-dispatch-journal-v1/);
   });
 });

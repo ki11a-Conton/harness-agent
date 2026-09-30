@@ -63,6 +63,7 @@ export * from "./tool-call-efficiency-preregistration.js";
 export * from "./tool-call-efficiency-preregistration-v2.js";
 export * from "./tool-call-efficiency-case-selection.js";
 export * from "./tool-call-efficiency-formal-run.js";
+export * from "./n3-tool-dispatch-journal.js";
 export * from "./tool-call-efficiency-paired-campaign.js";
 export * from "./prereg-run-evidence.js";
 export * from "./paired-executor.js";
