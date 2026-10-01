@@ -60,8 +60,9 @@ node scripts/e4/dual-platform-acceptance.mjs --windows <windows-artifact>/ci-rea
 首次推送因缺少明确授权被自动审批拦截；用户随后已明确授权继续推送。
 最终 GitHub 双平台结果仍待实际 workflow 完成后收证。
 
-用户授权后的发布尝试仍受连接配置阻塞：命令行 git 缺少 HTTPS 登录凭据；
-GitHub 接口 create-tree 返回 403 Resource not accessible by integration。
-已连接用户为 ki11a-Conton，但可见 GitHub App installation 仅在 CXCXHH 账户下，
-未看到覆盖本仓库的安装授权。没有创建远端分支，尚未触发新的 CI。
-下一步需在 GitHub 连接中授权 ki11a-Conton/harness-agent 仓库后继续推送。
+用户授权后的首次发布尝试曾受连接配置阻塞：命令行 git 缺少 HTTPS 登录凭据，
+GitHub 接口 create-tree 返回 403。用户随后提供本次推送凭据，分支已成功发布。
+首次触发的 workflow 为 [36795341364](https://github.com/ki11a-Conton/harness-agent/actions/runs/36795341364)，
+SHA 为 112a6170737767454378366c856d6695cb79b362。该运行仅作发布证据，不能提前记作验收通过。
+后续最终提交的 workflow 须从[分支 CI 列表](https://github.com/ki11a-Conton/harness-agent/actions?query=branch%3Acodex%2Fcomplete-handover-n5-n6)
+获取，并按当前提交 SHA 完整收证。当前状态为 CI_PENDING，已无发布权限阻塞。

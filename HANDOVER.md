@@ -23,7 +23,7 @@ CSV/countdown 两臂 correct=passed；三个内容负组皆 failed；六项身�
 
 ## 尚待收口：N6 最终同 SHA 双平台验收
 
-工作分支为 `codex/complete-handover-n5-n6`。用户已明确授权推送。
+工作分支为 `codex/complete-handover-n5-n6`。用户已明确授权推送，且分支已发布；当前为 CI_PENDING。
 最终 GitHub Actions 结果仍须按下列规则收证。
 
 1. 从干净的最终提交运行新增 `real-formal-offline` Windows/Ubuntu matrix。
