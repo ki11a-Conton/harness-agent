@@ -8,7 +8,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { cp, rm } from "node:fs/promises";
 import { dirname, join, resolve, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { verifyEvidenceBundle as verifyFormal } from "./r5-real-formal.mjs";
+import { verifyEvidenceBundle as verifyFormal, R5_ARM_ROOT } from "./r5-real-formal.mjs";
 import { READINESS_EVIDENCE_SCHEMA } from "./readiness-evidence-verify.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -132,7 +132,7 @@ async function main() {
   run("fixture", process.execPath, ["scripts/e4/prereg-production-e2e.mjs", "--out", join(outDir, "fixture-report.json"), "--platform", platform, "--run-id", runId, "--attempt", String(attempt)]);
   await cp(join(ROOT, ".ci", "prereg-production-e2e", "pos-exec-runs", "evidence"), join(outDir, "fixture-bundle"), { recursive: true });
   run("pair", process.execPath, ["scripts/e4/r5-real-formal.mjs", "--setup-pair", "scripts/e4/r5-formal-pair.json"]);
-  run("arms", process.execPath, ["scripts/e4/r97-observe-arms.mjs", "--pair", "r5"]);
+  run("arms", process.execPath, ["scripts/e4/r97-observe-arms.mjs", "--pair", "r5", "--root", R5_ARM_ROOT]);
   run("formal", process.execPath, ["scripts/e4/r5-real-formal.mjs", "--identity", "--formal", "--content", "--content-matrix", "--negative", "--evidence-dir", join(outDir, "formal"), "--out", join(outDir, "formal-report.json")]);
   const { root } = await writeReadinessInputs({ formalRoot: join(outDir, "formal"), outDir, identity: { sha, runId, attempt, platform }, commandExits, fixture: read(join(outDir, "fixture-report.json")) });
   run("readiness", process.execPath, ["scripts/e4/ci-readiness.mjs", "--e2e", join(outDir, "e2e.json"), "--out", join(outDir, "ci-readiness.json"), "--evidence-root", relative(ROOT, root).replaceAll("\\", "/"), "--expect-sha", sha, "--run-id", runId, "--attempt", String(attempt), "--platform", platform, "--require", "fixtureProtocolReady,realBuildOfflineReady,budgetEvidenceReady", "--strict"]);

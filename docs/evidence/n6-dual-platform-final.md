@@ -66,3 +66,12 @@ GitHub 接口 create-tree 返回 403。用户随后提供本次推送凭据，�
 SHA 为 112a6170737767454378366c856d6695cb79b362。该运行仅作发布证据，不能提前记作验收通过。
 后续最终提交的 workflow 须从[分支 CI 列表](https://github.com/ki11a-Conton/harness-agent/actions?query=branch%3Acodex%2Fcomplete-handover-n5-n6)
 获取，并按当前提交 SHA 完整收证。当前状态为 CI_PENDING，已无发布权限阻塞。
+
+## 首次新增 formal CI 失败与修复
+
+run 36795418445 / bfe404e 的 Ubuntu 与 Windows formal 作业均在 formal 步骤失败；
+全仓测试、typecheck、build、fixture、pair、arms 步骤已实际通过。
+Ubuntu artifact 11132914340 保留原始日志：observer 生成随机 r97-arms-* 目录，
+formal 却读取 r97-arms-r5pair，因而报告两臂不存在。本地既存固定目录曾掩盖此依赖。
+修复为导出并共享 R5_ARM_ROOT，observer 显式 --root，与 formal 读取路径一致。
+原始失败不改写为通过；修复后的最终同 SHA 双平台结果仍须新 workflow 收证。

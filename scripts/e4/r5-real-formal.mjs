@@ -190,9 +190,10 @@ function readPairConfig() {
 
 export const PAIR_CONFIG = readPairConfig();
 
+export const R5_ARM_ROOT = join(tmpdir(), "r97-arms-r5pair");
 const DEFAULT_PAIR = {
-  baseline: join(tmpdir(), "r97-arms-r5pair", "baseline"),
-  candidate: join(tmpdir(), "r97-arms-r5pair", "candidate"),
+  baseline: join(R5_ARM_ROOT, "baseline"),
+  candidate: join(R5_ARM_ROOT, "candidate"),
   baselineSha: PAIR_CONFIG.baseline.sha,
   candidateSha: PAIR_CONFIG.candidate.sha,
   // Kept for `--identity`'s `headMatchesPublished` check: it compares a PREFIX of
