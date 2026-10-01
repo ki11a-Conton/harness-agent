@@ -34,32 +34,30 @@ export const searchFilesTool: ToolDefinition<SearchFilesInput, string[]> = {
     concurrencySafe: true,
   },
   async execute(input: SearchFilesInput, context: ToolExecutionContext): Promise<ToolResult<string[]>> {
+    if (context.signal.aborted) return { status: "cancelled" };
     try {
       const { readdir } = await import("node:fs/promises");
-      const { join, relative, resolve, posix, sep } = await import("node:path");
+      const { join, relative, resolve, sep } = await import("node:path");
       const maxResults = input.maxResults ?? 1000;
       const root = resolve(context.cwd, input.path ?? ".");
       const hits: string[] = [];
 
-      const wanted = input.pattern.split("/").filter(Boolean);
       const wantBasename = !input.pattern.includes("/");
 
-      async function walk(dir: string, depth: number): Promise<boolean> {
+      async function walk(dir: string): Promise<boolean> {
+        context.signal.throwIfAborted();
         if (hits.length >= maxResults) return false;
-        let entries;
-        try {
-          entries = await readdir(dir, { withFileTypes: true });
-        } catch {
-          return true;
-        }
+        const entries = await readdir(dir, { withFileTypes: true });
+        context.signal.throwIfAborted();
         for (const entry of entries) {
+          context.signal.throwIfAborted();
           if (hits.length >= maxResults) return false;
           const base = entry.name;
           if (base === ".git" || base === "node_modules" || base === ".DS_Store") continue;
           const abs = join(dir, base);
           const rel = relative(root, abs).split(sep).join("/");
           if (entry.isDirectory()) {
-            const ok = await walk(abs, depth + 1);
+            const ok = await walk(abs);
             if (!ok) return false;
           } else if (entry.isFile() || entry.isSymbolicLink()) {
             const candidate = wantBasename ? base : rel;
@@ -69,14 +67,15 @@ export const searchFilesTool: ToolDefinition<SearchFilesInput, string[]> = {
         return true;
       }
 
-      await walk(root, 0);
-      void posix;
+      await walk(root);
+      context.signal.throwIfAborted();
       return {
         status: "success",
         output: hits,
         evidence: [{ type: "file", description: `search_files: ${hits.length} match(es) for ${input.pattern}`, source: input.pattern, timestamp: Date.now() }],
       };
     } catch (err) {
+      if (context.signal.aborted) return { status: "cancelled" };
       return {
         status: "failed",
         error: errorInfo("PROCESS_ERROR", err instanceof Error ? err.message : String(err)),

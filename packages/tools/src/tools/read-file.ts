@@ -24,11 +24,13 @@ export const readFileTool: ToolDefinition<{ path: string }, string> = {
     }
     try {
       const { readFile } = await import("node:fs/promises");
-      const content = await readFile(input.path, "utf8");
+      const { resolve } = await import("node:path");
+      const target = resolve(context.cwd, input.path);
+      const content = await readFile(target, "utf8");
       return {
         status: "success",
         output: content,
-        evidence: [{ type: "file", description: "read_file executed", source: input.path, timestamp: Date.now() }],
+        evidence: [{ type: "file", description: "read_file executed", source: target, timestamp: Date.now() }],
       };
     } catch (err) {
       return {

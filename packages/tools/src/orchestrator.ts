@@ -191,6 +191,8 @@ export class ToolOrchestrator {
     started: number,
   ): Promise<ToolResult> {
     try {
+      if (context.signal.aborted) return this.cancelledBeforeDispatch();
+
       // 2+3. validate & normalize arguments
       const parsed = tool.inputSchema.safeParse(request.call.args);
       if (!parsed.success) {
@@ -229,6 +231,8 @@ export class ToolOrchestrator {
       } else {
         await this.emit("tool.permission_resolved", request, context, { effect: "allow", reason: decision.reason });
       }
+
+      if (context.signal.aborted) return this.cancelledBeforeDispatch();
 
       // 7. resolve sandbox
       const sandboxDecision = this.evaluateSandbox(context, surface);
@@ -288,6 +292,8 @@ export class ToolOrchestrator {
         await this.intentPersistedFailAt?.();
       }
 
+      if (context.signal.aborted) return this.cancelledBeforeDispatch();
+
       // 8b. R3/F4 — THE DEADLINE, then THE PRE-DISPATCH RESERVATION.
       //
       // This is the REAL dispatch point: schema, permission, approval, sandbox and
@@ -333,7 +339,9 @@ export class ToolOrchestrator {
       let dispatchOutcome: "dispatched" | "not_executed" | "unknown" = "not_executed";
       let bodyStarted = false;
       try {
+        if (context.signal.aborted) return this.cancelledBeforeDispatch();
         await this.emit("tool.started", request, context, {});
+        if (context.signal.aborted) return this.cancelledBeforeDispatch();
         bodyStarted = true;
         let result: ToolResult;
         try {
@@ -385,6 +393,13 @@ export class ToolOrchestrator {
       const message = err instanceof Error ? err.message : String(err);
       return this.fail(request, context, "INTERNAL_ERROR", message, started);
     }
+  }
+
+  private cancelledBeforeDispatch(): ToolResult {
+    return {
+      status: "cancelled",
+      error: errorInfo("USER_CANCELLED", "tool execution cancelled before dispatch"),
+    };
   }
 
   /** R3/F4 — a pre-dispatch refusal with a STABLE reason code in the message and
@@ -507,6 +522,8 @@ export class ToolOrchestrator {
           policy: context.sandboxPolicy,
         });
       case "command":
+      case "dependency_install":
+      case "remote_code_execution":
         return manager.evaluate({
           target: surface.target ?? "",
           operation: "exec",
