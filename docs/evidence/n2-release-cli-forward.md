@@ -1,5 +1,9 @@
 # N2 — 发布入口 CLI 正向证据（统一 selection / 脚本游标作用域 / 价格守卫接线）
 
+> 双平台收证补充：实现 SHA `ad66f62004ed5e59a71b32839f8a4dab05124818` 的 [CI](https://github.com/ki11a-Conton/harness-agent/actions/runs/36797936842)
+> 已 completed/success；本文件原有 Linux 测量保留为历史身份，Windows/Ubuntu 原始证据见
+> [N6 final attestation](n6-final-ci-attestation.json)。
+
 ## CURRENT — 2026-10-01，N2 (a)(b)(c)(d) DONE（本地 Linux）
 
 `N2_RUN_RELEASE_E2E=1 pnpm exec vitest run apps/cli/src/n2-release-cli-forward.test.ts`

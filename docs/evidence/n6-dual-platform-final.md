@@ -1,6 +1,38 @@
 # N6 — 双平台最终验收
 
-## CURRENT — 2026-10-01
+## CURRENT — 2026-10-01，DONE
+
+验收实现提交 `ad66f62004ed5e59a71b32839f8a4dab05124818`，
+[workflow 36797936842 / attempt 1](https://github.com/ki11a-Conton/harness-agent/actions/runs/36797936842) **completed/success**。
+全部十项作业 success，包括双平台 verify、双平台 real formal、双平台 fixture loop、coverage、
+cold-start、release attestation、同 SHA 双平台汇总。没有借用旧 SHA 的结果。
+
+| 验收项 | Windows | Ubuntu |
+| --- | --- | --- |
+| 全仓测试（显式启用 N2 E2E） | 417 files；7673 passed / 2 skipped | 417 files；7664 passed / 11 skipped |
+| producer 八个实际命令 | 全部 exit 0 | 全部 exit 0 |
+| formal 原始证据 / 内容成功 | 24/24 verified；12 content successes | 24/24 verified；12 content successes |
+| MEASURED 预算 / tools | 60 calls；1080 tokens；12 dispatch；24 coverage | 60 calls；1080 tokens；12 dispatch；24 coverage |
+| 内容四变体与六项身份反例 | 全部符合预期；反例 0 calls | 全部符合预期；反例 0 calls |
+| 三个 offline readiness levels | PASS / PASS / PASS | PASS / PASS / PASS |
+
+下载两平台 artifact 后，在新的本地路径运行两个 formal --verify 及现有 dual-platform
+--strict 重验，全部 exit 0；strictGatePassed=true，unmetRequiredLevels=[]。
+所有 ZIP SHA-256 均与 GitHub 公布 digest 相同：
+
+- Windows artifact [11134872725](https://github.com/ki11a-Conton/harness-agent/actions/runs/36797936842/artifacts/11134872725)
+- Ubuntu artifact [11135355694](https://github.com/ki11a-Conton/harness-agent/actions/runs/36797936842/artifacts/11135355694)
+- dual artifact [11135895474](https://github.com/ki11a-Conton/harness-agent/actions/runs/36797936842/artifacts/11135895474)
+
+完整 digest、作业 ID、身份与实测数字见 [n6-final-ci-attestation.json](n6-final-ci-attestation.json)。
+paidExperimentRun/championPromotion 仍 NOT_RUN，因此原始全五层 overall=NOT_PROVEN；
+N6 要求的三个离线层均 BOTH_PASS，strict gate 已通过。实验统计 decision 仍 REJECT，不能 promotion。
+Windows 规范长路径修复后实际成功构建、加载两臂；历史失败及其 raw artifacts 保留在下文。
+
+本报告固化上述实现 SHA 的验收，不把后续文档提交伪装成该 SHA。
+后续分支最新提交的 CI 可从[分支运行列表](https://github.com/ki11a-Conton/harness-agent/actions?query=branch%3Acodex%2Fcomplete-handover-n5-n6)读取。
+
+## Historical — 接线与首次验收过程
 
 **接线完成；最终同 SHA GitHub Actions 结论待收。** 不声明 Windows/Ubuntu 已完成。
 本轮基线为 42ae7c2；它的旧 [workflow](https://github.com/ki11a-Conton/harness-agent/actions/runs/36731649499)

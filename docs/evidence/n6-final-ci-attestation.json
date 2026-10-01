@@ -1,0 +1,235 @@
+{
+  "schemaVersion": "harness-n6-ci-attestation-v1",
+  "verifiedOn": "2026-10-01",
+  "workflow": {
+    "runId": 36797936842,
+    "sha": "ad66f62004ed5e59a71b32839f8a4dab05124818",
+    "attempt": 1,
+    "workflowUrl": "https://github.com/ki11a-Conton/harness-agent/actions/runs/36797936842",
+    "jobs": [
+      {
+        "id": 110165980362,
+        "name": "r97-r98 closed loop (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 110165980571,
+        "name": "install · typecheck · test · build · benchmark-smoke · audit (windows-latest, windows)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 110165980580,
+        "name": "r97-r98 closed loop (windows-latest)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 110165980627,
+        "name": "offline cold-start (ubuntu)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 110165980633,
+        "name": "install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest, ubuntu)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 110165980646,
+        "name": "coverage gate (ubuntu)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 110165980658,
+        "name": "real formal offline (windows)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 110165980718,
+        "name": "real formal offline (ubuntu)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 110174194521,
+        "name": "release attestation (P38-12)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 110174194580,
+        "name": "dual-platform acceptance (same SHA)",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "artifacts": [
+      {
+        "id": 11135895474,
+        "name": "dual-platform-acceptance-ad66f62004ed5e59a71b32839f8a4dab05124818-36797936842-attempt-1",
+        "digest": "sha256:4dbb129ccdb8c1f8a9548fd409f2e9ce7791104a4c81ab8a631b6fd2c4df3595",
+        "url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/36797936842/artifacts/11135895474"
+      },
+      {
+        "id": 11135355694,
+        "name": "n6-real-formal-ubuntu-latest-ad66f62004ed5e59a71b32839f8a4dab05124818-36797936842-attempt-1",
+        "digest": "sha256:8d4c94539270e5c2a78b3cb24754df1df629dfde30ff777a4461dfc04818c111",
+        "url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/36797936842/artifacts/11135355694"
+      },
+      {
+        "id": 11134872725,
+        "name": "n6-real-formal-windows-latest-ad66f62004ed5e59a71b32839f8a4dab05124818-36797936842-attempt-1",
+        "digest": "sha256:8059611271a09cdffe4cd0d87647f701026485d7f5255c3b71f9a3051acc9907",
+        "url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/36797936842/artifacts/11134872725"
+      }
+    ]
+  },
+  "scope": "three offline readiness levels; paid experiment and promotion excluded",
+  "levels": {
+    "fixtureProtocolReady": {
+      "windows": "PASS",
+      "ubuntu": "PASS",
+      "verdict": "BOTH_PASS",
+      "windowsBlocker": null,
+      "ubuntuBlocker": null
+    },
+    "realBuildOfflineReady": {
+      "windows": "PASS",
+      "ubuntu": "PASS",
+      "verdict": "BOTH_PASS",
+      "windowsBlocker": null,
+      "ubuntuBlocker": null
+    },
+    "budgetEvidenceReady": {
+      "windows": "PASS",
+      "ubuntu": "PASS",
+      "verdict": "BOTH_PASS",
+      "windowsBlocker": null,
+      "ubuntuBlocker": null
+    },
+    "paidExperimentRun": {
+      "windows": "NOT_RUN",
+      "ubuntu": "NOT_RUN",
+      "verdict": "NOT_PROVEN",
+      "windowsBlocker": null,
+      "ubuntuBlocker": null
+    },
+    "championPromotion": {
+      "windows": "NOT_RUN",
+      "ubuntu": "NOT_RUN",
+      "verdict": "NOT_PROVEN",
+      "windowsBlocker": null,
+      "ubuntuBlocker": null
+    }
+  },
+  "independentRelocationReverification": {
+    "strictGatePassed": true,
+    "exitCode": 0,
+    "unmetRequiredLevels": []
+  },
+  "platforms": {
+    "windows": {
+      "node": "v22.23.2",
+      "commandExitCodes": {
+        "pair": 0,
+        "arms": 0,
+        "typecheck": 0,
+        "test": 0,
+        "build": 0,
+        "fixture": 0,
+        "formal": 0,
+        "readiness": 0
+      },
+      "tests": {
+        "filesPassed": 417,
+        "passed": 7673,
+        "skipped": 2
+      },
+      "formal": {
+        "rawRecords": 24,
+        "rawRecordsVerified": 24,
+        "contentVerifierSuccesses": 12,
+        "physicalOfflineCalls": 60,
+        "chargedTokens": {
+          "total": 1080,
+          "baseline": 540,
+          "candidate": 540,
+          "delta": 0,
+          "reservedUpperBound": {
+            "baseline": 0,
+            "candidate": 0
+          }
+        },
+        "contentSensitive": true,
+        "negativeCases": 6,
+        "negativePhysicalCalls": 0,
+        "decision": "REJECT",
+        "contentMatrixCases": [
+          "reg-12-csv-parse",
+          "reg-15-infinite-loop"
+        ]
+      },
+      "levels": {
+        "fixtureProtocolReady": "PASS",
+        "realBuildOfflineReady": "PASS",
+        "budgetEvidenceReady": "PASS",
+        "paidExperimentRun": "NOT_RUN",
+        "championPromotion": "NOT_RUN"
+      }
+    },
+    "ubuntu": {
+      "node": "v22.23.3",
+      "commandExitCodes": {
+        "pair": 0,
+        "arms": 0,
+        "typecheck": 0,
+        "test": 0,
+        "build": 0,
+        "fixture": 0,
+        "formal": 0,
+        "readiness": 0
+      },
+      "tests": {
+        "filesPassed": 417,
+        "passed": 7664,
+        "skipped": 11
+      },
+      "formal": {
+        "rawRecords": 24,
+        "rawRecordsVerified": 24,
+        "contentVerifierSuccesses": 12,
+        "physicalOfflineCalls": 60,
+        "chargedTokens": {
+          "total": 1080,
+          "baseline": 540,
+          "candidate": 540,
+          "delta": 0,
+          "reservedUpperBound": {
+            "baseline": 0,
+            "candidate": 0
+          }
+        },
+        "contentSensitive": true,
+        "negativeCases": 6,
+        "negativePhysicalCalls": 0,
+        "decision": "REJECT",
+        "contentMatrixCases": [
+          "reg-12-csv-parse",
+          "reg-15-infinite-loop"
+        ]
+      },
+      "levels": {
+        "fixtureProtocolReady": "PASS",
+        "realBuildOfflineReady": "PASS",
+        "budgetEvidenceReady": "PASS",
+        "paidExperimentRun": "NOT_RUN",
+        "championPromotion": "NOT_RUN"
+      }
+    }
+  }
+}

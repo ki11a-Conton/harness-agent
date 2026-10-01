@@ -1,4 +1,4 @@
-# HANDOVER.md — 未完成任务交接
+# HANDOVER.md — 本轮交接任务验收完成
 
 仓库规模：`packages/（24 个包）`。当前计划是 `plan(20260930-061557).md`；没有悬空 plan.md。
 Runtime Freeze、ToolOrchestrator/PermissionEngine/SandboxManager/Verification 约定继续适用。
@@ -9,9 +9,9 @@ Runtime Freeze、ToolOrchestrator/PermissionEngine/SandboxManager/Verification �
 | 任务 | 当前结论 | 证据入口 |
 | --- | --- | --- |
 | N1 / N3 / N4 | DONE，保留原实现和原验收 | docs/evidence/n1-worker-lifecycle.md、n3-dispatch-journal.md、n4-pricing-send-guard.md |
-| N2 (a)(b)(c)(d) | DONE（Linux 容器实测）；release CLI E2E 四次内容 verifier 成功 | docs/evidence/n2-release-cli-forward.md |
-| N5 | DONE（Linux 容器完整离线 gate）；24/24 raw records、12 content successes | docs/evidence/n5-real-formal-offline.md |
-| N6 | 接线完成，最终同 SHA Windows/Ubuntu CI 结论待收 | docs/evidence/n6-dual-platform-final.md |
+| N2 (a)(b)(c)(d) | DONE（Windows/Ubuntu CI）；release CLI E2E 四次内容 verifier 成功 | docs/evidence/n2-release-cli-forward.md |
+| N5 | DONE（Windows/Ubuntu CI）；每平台 24/24 raw records、12 content successes | docs/evidence/n5-real-formal-offline.md |
+| N6 | DONE；同 SHA 双平台 CI completed/success，三个 offline levels BOTH_PASS | docs/evidence/n6-dual-platform-final.md |
 | task-5 / Phase E | 字段已存在并经 fixture producer 运行；不存在待实现的缺字段项 | scripts/e4/prereg-production-e2e.mjs |
 | release CLI 真实内容闭环 | DONE；未扩 turn，未改 frozen verifier | apps/cli/src/n2-release-cli-forward.test.ts |
 
@@ -21,23 +21,20 @@ CSV/countdown 两臂 correct=passed；三个内容负组皆 failed；六项身�
 实验统计结论仍 REJECT（其他控制任务保留真实失败），不能用于 promotion。
 `--full` 仍 NOT_RUN，仅为尽力而为的可选诊断，不阻塞 N5 DONE。
 
-## 尚待收口：N6 最终同 SHA 双平台验收
+## 本轮已收口：N6 同 SHA 双平台验收
 
-工作分支为 `codex/complete-handover-n5-n6`。用户已明确授权推送，且分支已发布；当前为 CI_PENDING。
-最终 GitHub Actions 结果仍须按下列规则收证。
+验收实现提交为 `ad66f62004ed5e59a71b32839f8a4dab05124818`，
+[workflow 36797936842 / attempt 1](https://github.com/ki11a-Conton/harness-agent/actions/runs/36797936842) 已 completed/success。
+verify（两平台）、coverage、r97-r98-closed-loop（两平台）、real-formal-offline（两平台）、
+release attestation 和 dual-platform acceptance 全部 success。下载后的两平台原始 bundle
+独立 --verify 及 artifact-relative 双平台重验均 exit 0；三个要求的 offline levels BOTH_PASS。
+Windows 全仓 7673 passed / 2 skipped；Ubuntu 7664 passed / 11 skipped；各 417 files passed。
+每平台 producer 的八个命令均 exit 0，paidExperimentRun/championPromotion 均 NOT_RUN。
 
-1. 从干净的最终提交运行新增 `real-formal-offline` Windows/Ubuntu matrix。
-   producer 是 `scripts/e4/n6-real-formal-ci.mjs`；执行全仓 pnpm test（N2 E2E 显式开启）、
-   fixture producer、真实两臂安装构建、formal 四变体与身份反例。
-2. 下载 `n6-real-formal-<os>-<sha>-<run>-attempt-<attempt>`。
-   每 leg 包含 ci-readiness.json、readiness-bundle/、formal/、fixture-bundle/、命令日志。
-   join 要求 fixtureProtocolReady、realBuildOfflineReady、budgetEvidenceReady 三层。
-3. 必须等 workflow completed，且 verify/coverage/r97-r98-closed-loop/real-formal-offline
-   全部 success；不能只读 join 退出码，也不能借用旧 SHA 的绿灯。
-4. 失败时按具名日志修复，保留 raw artifact；缺 Windows leg、旧 run/attempt、错误 SHA、
-   无 dispatch/build/verifier 证据均不得被标 PASS。
-5. 收回最终 CI URL 与 artifact 后更新 docs/evidence/n6-dual-platform-final.md 和
-   current-prereg-status.md。本地 Linux 容器运行不是 GitHub Ubuntu attestation。
+证据索引和 ZIP digest 固化于 `docs/evidence/n6-final-ci-attestation.json`，完整说明见
+`docs/evidence/n6-dual-platform-final.md`。工作分支为 `codex/complete-handover-n5-n6`，已发布。
+本轮无待实现任务；`--full`、付费实验、promotion 是未授权的后续事项，不冒充已运行。
+后续文档提交不能借用此 SHA 为新 SHA 的 attestation，应读取该分支最新 workflow 的实际结果。
 
 用户只需 Windows；不要求用户安装 Linux/WSL/Docker。
 提交信息使用文件 + git commit -F；只 add 当前任务 scope，不 git add -A。

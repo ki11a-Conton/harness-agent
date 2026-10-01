@@ -1,12 +1,12 @@
 # Current pre-registration status — one entry point for "where does this actually stand?"
 
-## CURRENT — 2026-10-01，N5 收口 / N6 接线
+## CURRENT — 2026-10-01，N1–N6 已收口
 
 | 层级 | 当前结论 | 证据边界 |
 | --- | --- | --- |
-| fixtureProtocolReady | 本地 PASS | fixture producer 124/124 arms、124 calls、124/124 raw 证据复验 |
-| realBuildOfflineReady | 本地 N5 + N6 readiness PASS；最终双平台待验收 | 真实 pair、24/24 raw records、12 content successes、四变体敏感性成立 |
-| budgetEvidenceReady | 本地 N5 + N6 readiness PASS；最终双平台待验收 | 60 MEASURED requests、1080 tokens、12 dispatched tools、24 coverage；独立复验 |
+| fixtureProtocolReady | Windows/Ubuntu BOTH_PASS | fixture producer 124/124 arms、124 calls、124/124 raw 证据复验 |
+| realBuildOfflineReady | Windows/Ubuntu BOTH_PASS | 真实 pair、24/24 raw records、12 content successes、四变体敏感性成立 |
+| budgetEvidenceReady | Windows/Ubuntu BOTH_PASS | 60 MEASURED requests、1080 tokens、12 dispatched tools、24 coverage；独立复验 |
 | paidExperimentRun | NOT_RUN | 本轮零付费调用 |
 | championPromotion | NOT_RUN | 没有执行 promotion |
 
@@ -21,7 +21,12 @@ leg 的 SHA/run/attempt/platform 与 artifact-relative 原始数据。fixture-on
 
 上一轮的“NO_REAL_ARM_PAIR”“没有 dispatch producer”“无 CI”不再作为 current 结论。
 远端基线 42ae7c2 的 workflow 已 completed/failure（两个测试问题已修），不能冒充本轮终验。
-本轮最终同 SHA 的 CI 结果须按 N6 报告更新；没有 final attestation 前不能声明双平台完成。
+最终实现 attestation 为 `ad66f62004ed5e59a71b32839f8a4dab05124818`，
+[workflow 36797936842 / attempt 1](https://github.com/ki11a-Conton/harness-agent/actions/runs/36797936842) completed/success，十项作业全部 success。
+Windows 7673 passed / 2 skipped；Ubuntu 7664 passed / 11 skipped，各 417 files passed。
+两平台原始 formal bundle 下载后的独立 gate、artifact-relative 双平台重验均 exit 0。
+[N6 机器证据索引](n6-final-ci-attestation.json) 固化 run/SHA/attempt、作业结论、artifact ID/digest。
+后续文档提交的 CI 以分支最新 workflow 实际 SHA 为准，不把这份实现 attestation 改写为别的 SHA。
 
 ## Historical / superseded — 以下旧 CURRENT banner 仅是历史快照
 

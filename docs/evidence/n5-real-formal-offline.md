@@ -1,5 +1,9 @@
 # N5 — 真实构建 pair、formal 内容矩阵与 build 绑定（离线、零付费）
 
+> 双平台收证补充：实现 SHA `ad66f62004ed5e59a71b32839f8a4dab05124818` 的 [CI](https://github.com/ki11a-Conton/harness-agent/actions/runs/36797936842)
+> 已 completed/success；本文件原有 Linux 测量保留为历史身份，Windows/Ubuntu 原始证据见
+> [N6 final attestation](n6-final-ci-attestation.json)。
+
 ## CURRENT — 2026-10-01，N5 DONE（Linux 容器离线实测）
 
 Driver `a13ad35`，candidate `b6e6d942fadb665a5e58f25dabcf7c38d7b7fba7`，baseline
