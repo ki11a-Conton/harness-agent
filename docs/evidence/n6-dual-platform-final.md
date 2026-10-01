@@ -83,3 +83,8 @@ run 36796373370 / ee73bd1 的 Windows artifact 11133728976 显示：固定目录
 observer 现在执行 pnpm build --force --verbose，保留项目编译诊断，并逐项检查声明的
 R97_ARM_BUILD_ENTRIES；缺少任意入口即 ARM_BUILD_INCOMPLETE，不再凭 CLI 存在宣称 ready。
 producer 在全仓测试前准备两臂，尽早报告 setup failure。最终 CI 结论仍待新运行实测。
+
+run 36797374328 / a2fe383 的 Windows setup 提前拒绝：artifact 11133779901 证明编译器
+列出了所有项目并强制重建，但 evaluation/dist/index.js 仍未出现。当前进一步将 TEMP
+的 RUNNER~1 短路径规范化，避免编译输入与 workspace junction 的别名混用，并保留
+Windows --listEmittedFiles 和缺失文件的目录诊断。此修复的有效性须由后续 CI 验证。

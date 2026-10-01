@@ -45,7 +45,7 @@
 // Exit codes: 0 ready · 1 setup failure · 2 usage error.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -254,6 +254,7 @@ async function prepareArm(opts) {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
         timeout: 1_800_000,
+        maxBuffer: 64 * 1024 * 1024,
         shell: true,
       });
     }
@@ -262,6 +263,7 @@ async function prepareArm(opts) {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
       timeout: 1_800_000,
+      maxBuffer: 64 * 1024 * 1024,
       shell: false,
     });
   };
@@ -274,7 +276,7 @@ async function prepareArm(opts) {
   try {
     // A pinned checkout must emit its own complete closure, independently of
     // incremental build state. Retain the compiler's project diagnostics.
-    process.stdout.write(runPnpm(["build", "--force", "--verbose"]));
+    process.stdout.write(runPnpm(["build", "--force", "--verbose", ...(isWindows ? ["--listEmittedFiles"] : [])]));
   } catch (err) {
     throw new Error(`arm ${label}: pnpm build FAILED in ${dir} — ${firstLine(err)}`);
   }
@@ -314,7 +316,14 @@ export function assertArmBuildEntries(dir, entries) {
     const p = join(dir, rel);
     return !existsSync(p) || !statSync(p).isFile();
   });
-  if (missing.length > 0) throw new Error(`ARM_BUILD_INCOMPLETE: ${dir} is missing ${missing.join(", ")}`);
+  if (missing.length > 0) {
+    const diagnostics = missing.map((rel) => {
+      const parent = dirname(join(dir, rel));
+      const siblings = existsSync(parent) ? readdirSync(parent) : [];
+      return `${rel}: directory=${existsSync(parent)} files=${siblings.length} indexEntries=${siblings.filter((n) => /^index\./i.test(n)).join(",")}`;
+    });
+    throw new Error(`ARM_BUILD_INCOMPLETE: ${dir} is missing ${missing.join(", ")}\n${diagnostics.join("\n")}`);
+  }
 }
 
 function firstLine(err) {
@@ -389,7 +398,7 @@ export async function main(argv) {
     return EXIT_CONFIG;
   }
 
-  const root = parsed.root !== undefined ? resolve(parsed.root) : await mkdtemp(join(tmpdir(), "r97-arms-"));
+  const root = parsed.root !== undefined ? resolve(parsed.root) : await mkdtemp(join(realpathSync.native(tmpdir()), "r97-arms-"));
   const dirs = {
     baseline: join(root, "baseline"),
     candidate: join(root, "candidate"),

@@ -56,7 +56,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -190,7 +190,9 @@ function readPairConfig() {
 
 export const PAIR_CONFIG = readPairConfig();
 
-export const R5_ARM_ROOT = join(tmpdir(), "r97-arms-r5pair");
+// Windows exposes TEMP as an 8.3 alias; use one canonical path for compiler
+// inputs, workspace junctions, emitted files and the execution identity.
+export const R5_ARM_ROOT = join(realpathSync.native(tmpdir()), "r97-arms-r5pair");
 const DEFAULT_PAIR = {
   baseline: join(R5_ARM_ROOT, "baseline"),
   candidate: join(R5_ARM_ROOT, "candidate"),
