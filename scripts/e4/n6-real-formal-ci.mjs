@@ -124,6 +124,9 @@ async function main() {
     if (code !== 0) throw new Error(`N6_COMMAND_FAILED: ${label} (see ${outDir}/${label}.log)`);
     return code;
   }
+  // Fail an incomplete pinned build before spending minutes on full suites.
+  run("pair", process.execPath, ["scripts/e4/r5-real-formal.mjs", "--setup-pair", "scripts/e4/r5-formal-pair.json"]);
+  run("arms", process.execPath, ["scripts/e4/r97-observe-arms.mjs", "--pair", "r5", "--root", R5_ARM_ROOT]);
   const commandExits = {
     typecheck: run("typecheck", "pnpm", ["typecheck"]),
     test: run("test", "pnpm", ["test"], { ...process.env, N2_RUN_RELEASE_E2E: "1" }),
@@ -131,8 +134,6 @@ async function main() {
   };
   run("fixture", process.execPath, ["scripts/e4/prereg-production-e2e.mjs", "--out", join(outDir, "fixture-report.json"), "--platform", platform, "--run-id", runId, "--attempt", String(attempt)]);
   await cp(join(ROOT, ".ci", "prereg-production-e2e", "pos-exec-runs", "evidence"), join(outDir, "fixture-bundle"), { recursive: true });
-  run("pair", process.execPath, ["scripts/e4/r5-real-formal.mjs", "--setup-pair", "scripts/e4/r5-formal-pair.json"]);
-  run("arms", process.execPath, ["scripts/e4/r97-observe-arms.mjs", "--pair", "r5", "--root", R5_ARM_ROOT]);
   run("formal", process.execPath, ["scripts/e4/r5-real-formal.mjs", "--identity", "--formal", "--content", "--content-matrix", "--negative", "--evidence-dir", join(outDir, "formal"), "--out", join(outDir, "formal-report.json")]);
   const { root } = await writeReadinessInputs({ formalRoot: join(outDir, "formal"), outDir, identity: { sha, runId, attempt, platform }, commandExits, fixture: read(join(outDir, "fixture-report.json")) });
   run("readiness", process.execPath, ["scripts/e4/ci-readiness.mjs", "--e2e", join(outDir, "e2e.json"), "--out", join(outDir, "ci-readiness.json"), "--evidence-root", relative(ROOT, root).replaceAll("\\", "/"), "--expect-sha", sha, "--run-id", runId, "--attempt", String(attempt), "--platform", platform, "--require", "fixtureProtocolReady,realBuildOfflineReady,budgetEvidenceReady", "--strict"]);

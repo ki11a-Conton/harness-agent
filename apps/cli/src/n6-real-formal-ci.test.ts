@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -10,6 +10,23 @@ const readiness = new URL("../../../scripts/e4/readiness-evidence-verify.mjs", i
 const evaluation = new URL("../../../packages/evaluation/dist/index.js", import.meta.url).href;
 
 describe("N6 real-formal evidence adapter (synthetic test bytes, no experiment)", () => {
+  it("refuses a CLI-only arm when a declared package entry was not emitted", () => {
+    const dir = mkdtempSync(join(tmpdir(), "n6-incomplete-build-"));
+    try {
+      mkdirSync(join(dir, "apps", "cli", "dist"), { recursive: true });
+      writeFileSync(join(dir, "apps", "cli", "dist", "main.js"), "export {};\n");
+      const observer = new URL("../../../scripts/e4/r97-observe-arms.mjs", import.meta.url).href;
+      const r = spawnSync(process.execPath, ["--input-type=module", "-e", `
+        const { assertArmBuildEntries } = await import(${JSON.stringify(observer)});
+        assertArmBuildEntries(${JSON.stringify(dir)}, ['apps/cli/dist/main.js', 'packages/evaluation/dist/index.js']);
+      `], { encoding: "utf8", timeout: 30_000 });
+      expect(r.status).not.toBe(0);
+      expect(r.stderr).toContain("ARM_BUILD_INCOMPLETE");
+      expect(r.stderr).toContain("packages/evaluation/dist/index.js");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   it("relocates intact raw evidence, re-verifies with A6, and rejects stale SHA and changed content", () => {
     const dir = mkdtempSync(join(tmpdir(), "n6-adapter-"));
     try {

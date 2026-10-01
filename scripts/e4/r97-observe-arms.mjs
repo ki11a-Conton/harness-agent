@@ -272,7 +272,9 @@ async function prepareArm(opts) {
     throw new Error(`arm ${label}: pnpm install FAILED in ${dir} — ${firstLine(err)}`);
   }
   try {
-    runPnpm(["build"]);
+    // A pinned checkout must emit its own complete closure, independently of
+    // incremental build state. Retain the compiler's project diagnostics.
+    process.stdout.write(runPnpm(["build", "--force", "--verbose"]));
   } catch (err) {
     throw new Error(`arm ${label}: pnpm build FAILED in ${dir} — ${firstLine(err)}`);
   }
@@ -281,6 +283,8 @@ async function prepareArm(opts) {
   if (!existsSync(cliEntry) || !statSync(cliEntry).isFile()) {
     throw new Error(`arm ${label}: no built CLI at ${cliEntry} after a successful build`);
   }
+  const { R97_ARM_BUILD_ENTRIES } = await import(pathToFileURL(join(REPO_ROOT, "packages", "evaluation", "dist", "index.js")).href);
+  assertArmBuildEntries(dir, R97_ARM_BUILD_ENTRIES);
 
   // A DIRTY arm is refused by the plan (`clean: true` requires an empty
   // porcelain), and `node_modules`/`dist` are git-ignored so this must hold after
@@ -302,6 +306,15 @@ async function prepareArm(opts) {
   }
 
   return { dir, sha, cliEntry };
+}
+
+/** A CLI file alone cannot prove that its required execution closure built. */
+export function assertArmBuildEntries(dir, entries) {
+  const missing = entries.filter((rel) => {
+    const p = join(dir, rel);
+    return !existsSync(p) || !statSync(p).isFile();
+  });
+  if (missing.length > 0) throw new Error(`ARM_BUILD_INCOMPLETE: ${dir} is missing ${missing.join(", ")}`);
 }
 
 function firstLine(err) {

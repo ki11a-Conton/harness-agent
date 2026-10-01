@@ -75,3 +75,11 @@ Ubuntu artifact 11132914340 保留原始日志：observer 生成随机 r97-arms-
 formal 却读取 r97-arms-r5pair，因而报告两臂不存在。本地既存固定目录曾掩盖此依赖。
 修复为导出并共享 R5_ARM_ROOT，observer 显式 --root，与 formal 读取路径一致。
 原始失败不改写为通过；修复后的最终同 SHA 双平台结果仍须新 workflow 收证。
+
+## Windows 不完整 build 的后续防护
+
+run 36796373370 / ee73bd1 的 Windows artifact 11133728976 显示：固定目录中的两臂
+存在且干净，但 pnpm build exit 0 后缺少 packages/evaluation/dist/index.js，加载失败。
+observer 现在执行 pnpm build --force --verbose，保留项目编译诊断，并逐项检查声明的
+R97_ARM_BUILD_ENTRIES；缺少任意入口即 ARM_BUILD_INCOMPLETE，不再凭 CLI 存在宣称 ready。
+producer 在全仓测试前准备两臂，尽早报告 setup failure。最终 CI 结论仍待新运行实测。
