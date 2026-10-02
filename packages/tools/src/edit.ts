@@ -50,6 +50,30 @@ function allMatchesIndexes(content: string, old: string): number[] {
   return res;
 }
 
+/** Match CRLF and LF in one view while retaining original offsets.
+ * No other Unicode or punctuation normalization is performed. */
+function lfView(content: string): { text: string; offsets: number[] } {
+  const offsets = [0];
+  const parts: string[] = [];
+  for (let i = 0; i < content.length; i++) {
+    if (content[i] === "\r" && content[i + 1] === "\n") { parts.push("\n"); i++; }
+    else parts.push(content[i]!);
+    offsets.push(i + 1);
+  }
+  return { text: parts.join(""), offsets };
+}
+
+/** Prefer the touched line's terminator, then the preceding line, then LF. */
+function localEol(content: string, offset: number): string {
+  let newline = content.indexOf("\n", offset);
+  if (newline < 0) newline = content.lastIndexOf("\n", offset - 1);
+  return newline > 0 && content[newline - 1] === "\r" ? "\r\n" : "\n";
+}
+
+function replacementEol(text: string, eol: string): string {
+  return text.replace(/\r\n|\n/g, eol);
+}
+
 /**
  * Text-anchor replace. Defaults to first occurrence (backward compatible).
  * When `occurrence` is given, it must be within range or the call fails loudly
@@ -64,18 +88,18 @@ export function applyReplace(
   if (oldText.length === 0) {
     return { ok: false, content, count: 0, matched: 0, error: "oldText must not be empty" };
   }
-  const matches = allMatchesIndexes(content, oldText);
+  const bom = content.startsWith("\ufeff") ? "\ufeff" : "";
+  const body = content.slice(bom.length);
+  const view = lfView(body);
+  const includesBom = bom.length > 0 && oldText.startsWith(bom);
+  const anchor = oldText.slice(includesBom ? bom.length : 0).replace(/\r\n/g, "\n");
+  const matches = allMatchesIndexes(view.text, anchor).filter((index) => !includesBom || index === 0);
   if (matches.length === 0) {
     return { ok: false, content, count: 0, matched: 0, error: "anchor not found" };
   }
 
-  if (options.replaceAll) {
-    const replaced = content.split(oldText).join(newText);
-    return { ok: true, content: replaced, count: matches.length, matched: matches.length };
-  }
-
   const occurrence = options.occurrence;
-  if (occurrence !== undefined) {
+  if (!options.replaceAll && occurrence !== undefined) {
     if (occurrence < 1 || occurrence > matches.length) {
       return {
         ok: false,
@@ -85,15 +109,21 @@ export function applyReplace(
         error: `occurrence ${occurrence} out of range (file has ${matches.length})`,
       };
     }
-    const idx = matches[occurrence - 1]!;
-    const replaced = content.slice(0, idx) + newText + content.slice(idx + oldText.length);
-    return { ok: true, content: replaced, count: 1, matched: matches.length };
   }
-
-  // Default: first occurrence (unchanged behaviour).
-  const idx = matches[0]!;
-  const replaced = content.slice(0, idx) + newText + content.slice(idx + oldText.length);
-  return { ok: true, content: replaced, count: 1, matched: matches.length };
+  // Splice original blocks; each occurrence gets its own local EOL, so
+  // replaceAll does not homogenize an existing mixed-EOL file.
+  const selected = options.replaceAll ? matches : [matches[(occurrence ?? 1) - 1]!];
+  let cursor = 0;
+  const parts = [bom];
+  for (const index of selected) {
+    const start = view.offsets[index]!;
+    const end = view.offsets[index + anchor.length]!;
+    const replacement = includesBom && newText.startsWith(bom) ? newText.slice(bom.length) : newText;
+    parts.push(body.slice(cursor, start), replacementEol(replacement, localEol(body, start)));
+    cursor = end;
+  }
+  parts.push(body.slice(cursor));
+  return { ok: true, content: parts.join(""), count: selected.length, matched: matches.length };
 }
 
 /** Structured line-range edit: replace lines [lineStart..lineEnd] (1-based,
@@ -104,7 +134,6 @@ export function applyLineRange(
   lineEnd: number,
   replacement: string,
 ): ApplyResult {
-  const lines = content.split("\n");
   if (!Number.isInteger(lineStart) || !Number.isInteger(lineEnd)) {
     return { ok: false, content, count: 0, matched: 0, error: "lineStart/lineEnd must be integers" };
   }
@@ -117,14 +146,39 @@ export function applyLineRange(
       error: `invalid line range [${lineStart}, ${lineEnd}]`,
     };
   }
-  // 1-based inclusive → JS slice: removed = lines.slice(lineStart-1, lineEnd).
-  const removedCount = Math.max(0, Math.min(lineEnd, lines.length) - (lineStart - 1));
-  const head = lines.slice(0, lineStart - 1);
-  const tail = lines.slice(Math.min(lineEnd, lines.length));
-  const replaceLines = replacement.length === 0 ? [] : replacement.split("\n");
+  const bom = content.startsWith("\ufeff") ? "\ufeff" : "";
+  const body = content.slice(bom.length);
+  // Include the trailing empty logical line for the existing count/clamp API.
+  const starts = [0];
+  for (let i = 0; i < body.length; i++) if (body[i] === "\n") starts.push(i + 1);
+  const startIndex = Math.min(lineStart - 1, starts.length);
+  const endIndex = Math.min(lineEnd, starts.length);
+  const start = starts[startIndex] ?? body.length;
+  const end = starts[endIndex] ?? body.length;
+  const removedCount = Math.max(0, endIndex - (lineStart - 1));
+  const eol = localEol(body, start);
+  let inserted = replacementEol(bom && start === 0 && replacement.startsWith(bom) ? replacement.slice(bom.length) : replacement, eol);
+  let head = body.slice(0, start);
+  if (inserted.length > 0) {
+    if (startIndex === starts.length) {
+      // Preserve the legacy out-of-bounds start behavior: append a new line.
+      inserted = eol + inserted;
+    } else if (endIndex < starts.length) {
+      // The final touched line separates replacement from the untouched tail.
+      const boundary = body[end - 2] === "\r" ? "\r\n" : "\n";
+      inserted += boundary;
+    } else if (body.endsWith("\n") && !inserted.endsWith("\n")) {
+      // Replacing through EOF retains the original terminal newline.
+      inserted += body.endsWith("\r\n") ? "\r\n" : "\n";
+    }
+  } else if (endIndex === starts.length && !body.endsWith("\n") && head.endsWith("\n")) {
+    // Removing the final unterminated line keeps the preceding line
+    // unterminated, as in the existing LF range API.
+    head = head.slice(0, head.endsWith("\r\n") ? -2 : -1);
+  }
   return {
     ok: true,
-    content: [...head, ...replaceLines, ...tail].join("\n"),
+    content: bom + head + inserted + body.slice(end),
     count: removedCount,
     matched: 0,
   };

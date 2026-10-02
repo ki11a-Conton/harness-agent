@@ -2,6 +2,10 @@ import { z } from "zod";
 import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
 import { errorInfo } from "@ar/contracts";
 import { applyLineRange, applyReplace, lineDiff } from "../edit.js";
+import {
+  assertFileVersion, checkFileVersion, decodeEditableUtf8, fileSha256,
+  FileOperationCancelled, FileVersionConflict, throwIfFileCancelled, withFileLock,
+} from "../file-coordination.js";
 
 export interface EditFileInput {
   path: string;
@@ -18,6 +22,11 @@ export interface EditFileInput {
   lineEnd?: number;
   /** Line-range mode: replacement for the [lineStart..lineEnd] region. */
   replacement?: string;
+  /** Optional raw-byte read version. A mismatch fails without writing. */
+  expectedSha256?: string;
+  /** Strict editing requires a read version for ranges and repeated anchors.
+   * Omission retains the existing first/occurrence/all compatibility API. */
+  profile?: "compatibility" | "strict";
 }
 
 export interface EditFileOutput {
@@ -39,6 +48,8 @@ const fileSchema = z.object({
   lineStart: z.number().int().min(1).optional(),
   lineEnd: z.number().int().min(1).optional(),
   replacement: z.string().optional(),
+  expectedSha256: z.string().regex(/^[a-fA-F0-9]{64}$/).optional(),
+  profile: z.enum(["compatibility", "strict"]).optional(),
 });
 
 /**
@@ -54,7 +65,7 @@ const fileSchema = z.object({
 export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
   name: "edit_file",
   description:
-    "Edit a UTF-8 file: replace anchor text (first/occurrence/all) or replace a line range. Returns a recorded diff.",
+    "Edit a UTF-8 file: replace anchor text (first/occurrence/all) or a line range. Supply expectedSha256 from versioned read_file to reject stale content; on conflict, reread and recalculate. profile=strict requires a version for ranges/repeated anchors. Default compatibility permits unversioned edits. Returns a diff.",
   inputSchema: fileSchema,
   risk: "side_effect",
   metadata: {
@@ -75,6 +86,9 @@ export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
       const target = resolve(context.cwd, input.path);
 
       const isRange = input.lineStart !== undefined;
+      if (input.profile === "strict" && isRange && input.expectedSha256 === undefined) {
+        return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR", "strict range edits require expectedSha256; no writes made, read_file with versioned=true and recalculate") };
+      }
       if (isRange) {
         if (input.lineEnd === undefined || input.replacement === undefined) {
           return {
@@ -95,45 +109,65 @@ export const editFileTool: ToolDefinition<EditFileInput, EditFileOutput> = {
         };
       }
 
-      const before = await readFile(target, "utf8");
-      const res = isRange
-        ? applyLineRange(before, input.lineStart!, input.lineEnd!, input.replacement!)
-        : applyReplace(before, input.oldText!, input.newText!, {
-            replaceAll: input.replaceAll,
-            occurrence: input.occurrence,
-          });
+      return await withFileLock(target, context.signal, async (): Promise<ToolResult<EditFileOutput>> => {
+        const bytes = await readFile(target).catch((err: NodeJS.ErrnoException) => {
+          if (input.expectedSha256 !== undefined && ["ENOENT", "ENOTDIR", "EISDIR"].includes(err.code ?? "")) {
+            throw new FileVersionConflict(target);
+          }
+          throw err;
+        });
+        throwIfFileCancelled(context.signal);
+        assertFileVersion(bytes, input.expectedSha256, target);
+        const before = decodeEditableUtf8(bytes);
+        const res = isRange
+          ? applyLineRange(before, input.lineStart!, input.lineEnd!, input.replacement!)
+          : applyReplace(before, input.oldText!, input.newText!, {
+              replaceAll: input.replaceAll,
+              occurrence: input.occurrence,
+            });
 
-      if (!res.ok) {
-        return {
-          status: "failed",
-          error: errorInfo(
-            "PROCESS_ERROR",
-            `edit_file: ${res.error} in ${target}${
-              res.matched > 0 && input.occurrence !== undefined ? `; file has ${res.matched} occurrence(s)` : ""
-            }`,
-          ),
+        if (input.profile === "strict" && res.matched > 1 && input.expectedSha256 === undefined) {
+          return { status: "failed", error: errorInfo("TOOL_SCHEMA_ERROR", "strict edits of repeated anchors require expectedSha256; no writes made, read_file with versioned=true and recalculate") };
+        }
+
+        if (!res.ok) {
+          return {
+            status: "failed",
+            error: errorInfo(
+              "PROCESS_ERROR",
+              `edit_file: ${res.error} in ${target}${
+                res.matched > 0 && input.occurrence !== undefined ? `; file has ${res.matched} occurrence(s)` : ""
+              }`,
+            ),
+          };
+        }
+
+        // Best-effort pre-write check catches external changes observed here;
+        // this is not an atomic CAS against arbitrary external writers.
+        await checkFileVersion(target, input.expectedSha256 ?? fileSha256(bytes));
+        throwIfFileCancelled(context.signal);
+        await writeFile(target, res.content, "utf8");
+        const output: EditFileOutput = {
+          path: target,
+          diff: lineDiff(before, res.content),
+          ...(isRange ? { replacedLines: res.count } : { replacements: res.count }),
         };
-      }
-
-      await writeFile(target, res.content, "utf8");
-      const output: EditFileOutput = {
-        path: target,
-        diff: lineDiff(before, res.content),
-        ...(isRange ? { replacedLines: res.count } : { replacements: res.count }),
-      };
-      return {
-        status: "success",
-        output,
-        evidence: [
-          {
-            type: "file",
-            description: `edit_file: ${isRange ? `${res.count} line(s) replaced` : `${res.count} replacement(s)`}`,
-            source: target,
-            timestamp: Date.now(),
-          },
-        ],
-      };
+        return {
+          status: "success",
+          output,
+          evidence: [
+            {
+              type: "file",
+              description: `edit_file: ${isRange ? `${res.count} line(s) replaced` : `${res.count} replacement(s)`}`,
+              source: target,
+              timestamp: Date.now(),
+            },
+          ],
+        };
+      });
     } catch (err) {
+      if (err instanceof FileOperationCancelled) return { status: "cancelled" };
+      if (err instanceof FileVersionConflict) return { status: "failed", error: errorInfo("PROCESS_ERROR", err.message, { retryable: false, safeToRetry: false }) };
       return {
         status: "failed",
         error: errorInfo("PROCESS_ERROR", err instanceof Error ? err.message : String(err)),

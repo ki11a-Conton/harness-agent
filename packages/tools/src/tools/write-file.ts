@@ -2,11 +2,14 @@ import { z } from "zod";
 import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
 import { errorInfo, isNodeErrorCode } from "@ar/contracts";
 import { assessWriteSafety } from "../write-safety.js";
+import { checkFileVersion, FileOperationCancelled, FileVersionConflict, throwIfFileCancelled, withFileLock } from "../file-coordination.js";
 
 export interface WriteFileInput {
   path: string;
   content: string;
   append?: boolean;
+  /** Optional raw-byte read version, checked for append and overwrite. */
+  expectedSha256?: string;
 }
 
 export interface WriteFileOutput {
@@ -26,11 +29,12 @@ export interface WriteFileOutput {
  */
 export const writeFileTool: ToolDefinition<WriteFileInput, WriteFileOutput> = {
   name: "write_file",
-  description: "Write or append UTF-8 content to a file.",
+  description: "Write or append UTF-8 content. Supply expectedSha256 from versioned read_file to reject stale content; on conflict, reread and recalculate.",
   inputSchema: z.object({
     path: z.string().min(1),
     content: z.string(),
     append: z.boolean().optional(),
+    expectedSha256: z.string().regex(/^[a-fA-F0-9]{64}$/).optional(),
   }),
   risk: "side_effect",
   metadata: {
@@ -50,56 +54,65 @@ export const writeFileTool: ToolDefinition<WriteFileInput, WriteFileOutput> = {
       const { dirname, resolve } = await import("node:path");
       const target = resolve(context.cwd, input.path);
       const bytes = Buffer.byteLength(input.content, "utf8");
+      return await withFileLock(target, context.signal, async (): Promise<ToolResult<WriteFileOutput>> => {
+        if (input.expectedSha256 !== undefined) await checkFileVersion(target, input.expectedSha256);
+        throwIfFileCancelled(context.signal);
 
-      // P2-27: measure the pre-write shape so the guard can rate the write.
-      let exists = false;
-      let originalBytes = 0;
-      try {
-        const st = await stat(target);
-        exists = st.isFile();
-        originalBytes = st.size;
-      } catch (err) {
-        // P14-6: ENOENT → brand-new file (the guard rates it "create");
-        // any other stat failure is reported, never silent.
-        if (!isNodeErrorCode(err, "ENOENT")) {
-          process.stderr.write(`[degraded] write-file.stat: ${err instanceof Error ? err.message : String(err)}\n`);
+        // P2-27: measure the pre-write shape so the guard can rate the write.
+        let exists = false;
+        let originalBytes = 0;
+        try {
+          const st = await stat(target);
+          exists = st.isFile();
+          originalBytes = st.size;
+        } catch (err) {
+          // P14-6: ENOENT → brand-new file (the guard rates it "create");
+          // any other stat failure is reported, never silent.
+          if (!isNodeErrorCode(err, "ENOENT")) {
+            process.stderr.write(`[degraded] write-file.stat: ${err instanceof Error ? err.message : String(err)}\n`);
+          }
         }
-      }
-      const safety = assessWriteSafety({
-        exists,
-        originalBytes,
-        newBytes: bytes,
-        append: input.append ?? false,
-        // P2-26 checkpoints are not yet wired into this tool; a destructive
-        // overwrite without one is exactly what the guard must catch.
-        untracked: false,
-        hasCheckpoint: false,
-      });
+        const safety = assessWriteSafety({
+          exists,
+          originalBytes,
+          newBytes: bytes,
+          append: input.append ?? false,
+          // P2-26 checkpoints are not yet wired into this tool; a destructive
+          // overwrite without one is exactly what the guard must catch.
+          untracked: false,
+          hasCheckpoint: false,
+        });
 
-      if (safety.level === "danger") {
+        if (safety.level === "danger") {
+          return {
+            status: "denied",
+            error: errorInfo("WRITE_SAFETY_DENIED", `write blocked by write-safety guard (${safety.reason})`),
+          };
+        }
+
+        throwIfFileCancelled(context.signal);
+        await mkdir(dirname(target), { recursive: true });
+        if (input.expectedSha256 !== undefined) await checkFileVersion(target, input.expectedSha256);
+        throwIfFileCancelled(context.signal);
+        if (input.append) {
+          await appendFile(target, input.content, "utf8");
+        } else {
+          await writeFile(target, input.content, "utf8");
+        }
+        const output: WriteFileOutput = { path: target, bytes };
+        if (safety.level === "caution") {
+          output.safetyWarning = `write-safety: ${safety.reason}; recommend a checkpoint before overwriting untracked content`;
+          output.safetyFlags = safety.flags;
+        }
         return {
-          status: "denied",
-          error: errorInfo("WRITE_SAFETY_DENIED", `write blocked by write-safety guard (${safety.reason})`),
+          status: "success",
+          output,
+          evidence: [{ type: "file", description: `wrote ${bytes} bytes`, source: target, timestamp: Date.now() }],
         };
-      }
-
-      await mkdir(dirname(target), { recursive: true });
-      if (input.append) {
-        await appendFile(target, input.content, "utf8");
-      } else {
-        await writeFile(target, input.content, "utf8");
-      }
-      const output: WriteFileOutput = { path: target, bytes };
-      if (safety.level === "caution") {
-        output.safetyWarning = `write-safety: ${safety.reason}; recommend a checkpoint before overwriting untracked content`;
-        output.safetyFlags = safety.flags;
-      }
-      return {
-        status: "success",
-        output,
-        evidence: [{ type: "file", description: `wrote ${bytes} bytes`, source: target, timestamp: Date.now() }],
-      };
+      });
     } catch (err) {
+      if (err instanceof FileOperationCancelled) return { status: "cancelled" };
+      if (err instanceof FileVersionConflict) return { status: "failed", error: errorInfo("PROCESS_ERROR", err.message, { retryable: false, safeToRetry: false }) };
       return {
         status: "failed",
         error: errorInfo("PROCESS_ERROR", err instanceof Error ? err.message : String(err)),

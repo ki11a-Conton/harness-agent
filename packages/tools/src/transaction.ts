@@ -35,6 +35,7 @@
 import { promises as fs } from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { randomBytes } from "node:crypto";
+import { withFileLocks } from "./file-coordination.js";
 
 /** Immutable before/after state of a single file path. */
 export type FileSnapshot =
@@ -166,26 +167,29 @@ export class WorkspaceChangeTransaction {
    */
   async snapshot(plans: readonly ChangePlan[]): Promise<this> {
     this.assertOpen();
-    for (const plan of plans) {
-      const abs = this.resolveInside(plan.path);
-      const before = await this.readSnapshot(abs);
-      const kind: ChangeKind =
-        !before.exists && plan.content !== undefined
-          ? "create"
-          : !before.exists && plan.content === undefined
-            ? "delete"
-            : before.exists && plan.content === undefined
+    return withFileLocks(plans.map((plan) => this.resolveInside(plan.path)), undefined, async () => {
+      this.assertOpen();
+      for (const plan of plans) {
+        const abs = this.resolveInside(plan.path);
+        const before = await this.readSnapshot(abs);
+        const kind: ChangeKind =
+          !before.exists && plan.content !== undefined
+            ? "create"
+            : !before.exists && plan.content === undefined
               ? "delete"
-              : "write";
-      const after: FileSnapshot =
-        plan.content === undefined
-          ? { exists: false }
-          : { exists: true, content: plan.content, bytes: Buffer.byteLength(plan.content, this.encoding) };
-      // Deletes that target a path which does not exist are no-ops; still record
-      // them so rollback remains consistent (it restores "absent" → nothing).
-      this.changes.push({ path: plan.path, absolutePath: abs, kind, before, after });
-    }
-    return this;
+              : before.exists && plan.content === undefined
+                ? "delete"
+                : "write";
+        const after: FileSnapshot =
+          plan.content === undefined
+            ? { exists: false }
+            : { exists: true, content: plan.content, bytes: Buffer.byteLength(plan.content, this.encoding) };
+        // Deletes that target a path which does not exist are no-ops; still record
+        // them so rollback remains consistent (it restores "absent" → nothing).
+        this.changes.push({ path: plan.path, absolutePath: abs, kind, before, after });
+      }
+      return this;
+    });
   }
 
   /**
@@ -196,40 +200,48 @@ export class WorkspaceChangeTransaction {
    */
   async commit(): Promise<TransactionCommitResult> {
     this.assertOpen();
-    const applied: string[] = [];
-    try {
-      // 1. Write/overwrite/create all non-delete changes first.
-      for (const c of this.changes) {
-        if (!c.after.exists) continue;
-        await this.writeAtomic(c.absolutePath, c.after.content);
-        applied.push(c.absolutePath);
-      }
-      // 2. Apply deletes after all content is in place.
-      for (const c of this.changes) {
-        if (c.kind === "delete") {
-          await fs.rm(c.absolutePath, { force: true });
+    // Keep the intended-after / authoritative-before contract: acquiring the
+    // cooperative locks does not make the snapshot an implicit CAS condition.
+    return withFileLocks(this.changes.map((change) => change.absolutePath), undefined, async () => {
+      this.assertOpen();
+      const applied: string[] = [];
+      try {
+        // 1. Write/overwrite/create all non-delete changes first.
+        for (const c of this.changes) {
+          if (!c.after.exists) continue;
+          await this.writeAtomic(c.absolutePath, c.after.content);
           applied.push(c.absolutePath);
         }
+        // 2. Apply deletes after all content is in place.
+        for (const c of this.changes) {
+          if (c.kind === "delete") {
+            await fs.rm(c.absolutePath, { force: true });
+            applied.push(c.absolutePath);
+          }
+        }
+      } catch (err) {
+        // Best-effort: undo what we already applied, then rethrow.
+        const rollbackErr = await this.tryRollbackApplied(applied);
+        this._state = "open";
+        throw new TransactionApplyError(
+          `commit failed after ${applied.length} applied file(s)${rollbackErr ? `; rollback error: ${rollbackErr}` : ""}: ${err instanceof Error ? err.message : String(err)}`,
+          applied,
+        );
       }
-    } catch (err) {
-      // Best-effort: undo what we already applied, then rethrow.
-      const rollbackErr = await this.tryRollbackApplied(applied);
-      this._state = "open";
-      throw new TransactionApplyError(
-        `commit failed after ${applied.length} applied file(s)${rollbackErr ? `; rollback error: ${rollbackErr}` : ""}: ${err instanceof Error ? err.message : String(err)}`,
-        applied,
-      );
-    }
-    this._state = "committed";
-    return { state: this._state, applied };
+      this._state = "committed";
+      return { state: this._state, applied };
+    });
   }
 
   /** Revert every staged path to its before-state. Safe to call while open. */
   async rollback(): Promise<void> {
     if (this._state === "rolled_back") return;
-    const err = await this.tryRollbackApplied(this.changes.map((c) => c.absolutePath));
-    if (err) throw err;
-    this._state = "rolled_back";
+    return withFileLocks(this.changes.map((change) => change.absolutePath), undefined, async () => {
+      if (this._state === "rolled_back") return;
+      const err = await this.tryRollbackApplied(this.changes.map((c) => c.absolutePath));
+      if (err) throw err;
+      this._state = "rolled_back";
+    });
   }
 
   private async tryRollbackApplied(applied: string[]): Promise<Error | null> {
