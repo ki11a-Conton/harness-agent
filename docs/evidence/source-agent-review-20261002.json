@@ -1,0 +1,1039 @@
+{
+  "collection_url": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK",
+  "collection_commit": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+  "harness_commit": "acf8dcc394de6c6efefed52602e49014b372f372",
+  "total_tracked_files": 24937,
+  "snapshots": [
+    {
+      "directory": "codex-main",
+      "collection_tree_sha": "d1891e779f69fce33fb7866a3e4e2120d94af15c",
+      "tracked_files": 6175,
+      "source_extension_counts": {
+        ".rs": 3050,
+        ".ts": 676,
+        ".py": 149,
+        ".js": 3,
+        ".mjs": 1
+      },
+      "manifest_versions": {
+        "codex-main/package.json": null
+      },
+      "license_path": "codex-main/LICENSE",
+      "upstream_commit": "unknown"
+    },
+    {
+      "directory": "opencode-dev",
+      "collection_tree_sha": "db948e81edfeed12c8a75e41249075475ab96a3b",
+      "tracked_files": 6503,
+      "source_extension_counts": {
+        ".ts": 2683,
+        ".tsx": 607,
+        ".js": 4,
+        ".mjs": 5
+      },
+      "manifest_versions": {
+        "opencode-dev/package.json": null,
+        "opencode-dev/packages/opencode/package.json": "1.18.16"
+      },
+      "license_path": "opencode-dev/LICENSE",
+      "upstream_commit": "unknown"
+    },
+    {
+      "directory": "pi-main",
+      "collection_tree_sha": "3f16dd3bf40bcd1bd88eba259d674f4f0900427d",
+      "tracked_files": 1359,
+      "source_extension_counts": {
+        ".ts": 1121,
+        ".js": 5,
+        ".mjs": 28
+      },
+      "manifest_versions": {
+        "pi-main/package.json": "0.0.3",
+        "pi-main/packages/coding-agent/package.json": "0.84.1"
+      },
+      "license_path": "pi-main/LICENSE",
+      "upstream_commit": "unknown"
+    },
+    {
+      "directory": "hermes-agent-main",
+      "collection_tree_sha": "910aa75ee7af4ced194931469cd39403306d2df6",
+      "tracked_files": 8655,
+      "source_extension_counts": {
+        ".rs": 9,
+        ".ts": 1401,
+        ".tsx": 646,
+        ".py": 3984,
+        ".js": 11,
+        ".mjs": 94
+      },
+      "manifest_versions": {
+        "hermes-agent-main/package.json": "1.0.0"
+      },
+      "license_path": "hermes-agent-main/LICENSE",
+      "upstream_commit": "unknown",
+      "pyproject_version": "0.20.0"
+    },
+    {
+      "directory": "claude-code-fork-main",
+      "collection_tree_sha": "2544bd02fa4a6b00aa8482a762241f5900aaed0f",
+      "tracked_files": 1903,
+      "source_extension_counts": {
+        ".ts": 1332,
+        ".tsx": 552,
+        ".js": 18
+      },
+      "manifest_versions": {},
+      "license_path": null,
+      "upstream_commit": "unknown"
+    },
+    {
+      "directory": "harness-agent-src",
+      "collection_tree_sha": "64278d64b79c017b6c40674c7ec56e375c37746e",
+      "tracked_files": 281,
+      "source_extension_counts": {
+        ".ts": 197,
+        ".js": 1
+      },
+      "manifest_versions": {
+        "harness-agent-src/package.json": "0.1.0"
+      },
+      "license_path": null,
+      "upstream_commit": "unknown"
+    }
+  ],
+  "existing_reports_are_secondary_evidence_only": true,
+  "schemaVersion": 1,
+  "research_date": "2026-10-02",
+  "sourceFingerprints": [
+    {
+      "repository": "codex-main",
+      "path": "LICENSE",
+      "bytes": 10926,
+      "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc"
+    },
+    {
+      "repository": "codex-main",
+      "path": "NOTICE",
+      "bytes": 242,
+      "sha256": "9d71575ecfd9a843fc1677b0efb08053c6ba9fd686a0de1a6f5382fd3c220915"
+    },
+    {
+      "repository": "codex-main",
+      "path": "codex-rs/core/src/session/turn.rs",
+      "bytes": 108124,
+      "sha256": "8c4b556feab139c6284e5951030dde87c90ea7590738aa498553a7be38b560c2"
+    },
+    {
+      "repository": "codex-main",
+      "path": "codex-rs/core/src/tools/context.rs",
+      "bytes": 17425,
+      "sha256": "d000e3529a8d9642454b6949fb84a8abf444ab31338c6eab6276607ea5bac3a6"
+    },
+    {
+      "repository": "codex-main",
+      "path": "codex-rs/core/src/tools/context_tests.rs",
+      "bytes": 16694,
+      "sha256": "ba6f436761f512cc1aef1cd5e3d3edbb1a2d8894cfe1288850aa605edaaf57ff"
+    },
+    {
+      "repository": "codex-main",
+      "path": "codex-rs/utils/string/src/truncate.rs",
+      "bytes": 4496,
+      "sha256": "51a22c8252db01b668f312e17c87c43c1abd96fc46ac3cfca0a85d45f6dc4d71"
+    },
+    {
+      "repository": "codex-main",
+      "path": "codex-rs/utils/output-truncation/src/truncate_tests.rs",
+      "bytes": 12681,
+      "sha256": "75f77b990587271839f73b586b7708e37511dde5447f9160819e35262d18bfdb"
+    },
+    {
+      "repository": "codex-main",
+      "path": "codex-rs/core/src/agents_md.rs",
+      "bytes": 16935,
+      "sha256": "6813df76dfb83b39113ba218aab3083ffa3025a2409b3e9a384acb734800f2ea"
+    },
+    {
+      "repository": "opencode-dev",
+      "path": "LICENSE",
+      "bytes": 1065,
+      "sha256": "625f0f619133f89bbbb2abe37369613dfa1885eba1e50d02170deb62bb42cb6b"
+    },
+    {
+      "repository": "opencode-dev",
+      "path": "packages/opencode/package.json",
+      "bytes": 5331,
+      "sha256": "19aab169fd4cec4e076ed3f0b40f54dde54aa3f4ad97fbac011c7a484f052e1b"
+    },
+    {
+      "repository": "opencode-dev",
+      "path": "packages/opencode/src/session/instruction.ts",
+      "bytes": 8581,
+      "sha256": "fee79c023eae44f720d4d600f334a987ad5f7615c4a008a20c89131a92684a8f"
+    },
+    {
+      "repository": "opencode-dev",
+      "path": "packages/opencode/src/session/processor.ts",
+      "bytes": 26497,
+      "sha256": "f53f0f08007dbc2306d4ba1ca9a6fa7a7c59de2bbe2f81edab625de49f5c6b74"
+    },
+    {
+      "repository": "opencode-dev",
+      "path": "packages/core/src/file-mutation.ts",
+      "bytes": 7483,
+      "sha256": "8e47abe63908e0f11064c70e9142c51c615273d319c53d084456092257ab4d43"
+    },
+    {
+      "repository": "opencode-dev",
+      "path": "packages/core/test/file-mutation.test.ts",
+      "bytes": 15269,
+      "sha256": "a9561664bee95f544bf894f62c4167364a173e5ad883760abd47b14899d6a2f9"
+    },
+    {
+      "repository": "opencode-dev",
+      "path": "packages/core/src/tool-output-store.ts",
+      "bytes": 7969,
+      "sha256": "3eea248408c62f7ce4c56433dabdbabf8507095dda812b41a1e1168b713536b2"
+    },
+    {
+      "repository": "opencode-dev",
+      "path": "packages/core/test/tool-output-store.test.ts",
+      "bytes": 9758,
+      "sha256": "b277e2f2309ad7143a6aeeab4520f765cd2db410d289cdcb907355129adc18a7"
+    },
+    {
+      "repository": "pi-main",
+      "path": "LICENSE",
+      "bytes": 1069,
+      "sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48"
+    },
+    {
+      "repository": "pi-main",
+      "path": "packages/coding-agent/package.json",
+      "bytes": 3914,
+      "sha256": "f9aaa275eac3292508bd9a1325d705a41c2d24c9a34da2b690e400d5a761a985"
+    },
+    {
+      "repository": "pi-main",
+      "path": "packages/agent/src/agent-loop.ts",
+      "bytes": 22212,
+      "sha256": "9bc5704c40ee78f4f07ab3fea20ff3aecce45f54c697e6f4ccc6718052a918aa"
+    },
+    {
+      "repository": "pi-main",
+      "path": "packages/agent/test/agent-loop.test.ts",
+      "bytes": 47733,
+      "sha256": "51e6a86ad886f71360840447b65648e194e715cd6bde1def0284b51eb1f7e4e6"
+    },
+    {
+      "repository": "pi-main",
+      "path": "packages/agent/src/harness/tools/edit.ts",
+      "bytes": 5161,
+      "sha256": "fa2a6223c25075c359fcbc6e98de8618041d2b651258429198ffa1515a5267df"
+    },
+    {
+      "repository": "pi-main",
+      "path": "packages/agent/src/harness/tools/edit-diff.ts",
+      "bytes": 16509,
+      "sha256": "70f486d5d5e54a76913d96597e792fc3e2c0938813b01595824a63b2300800db"
+    },
+    {
+      "repository": "pi-main",
+      "path": "packages/coding-agent/test/tools.test.ts",
+      "bytes": 43185,
+      "sha256": "4aee8f60b046d2005d9d03120d0499226d75a83ee4ddd534df4e733bc17eb536"
+    },
+    {
+      "repository": "hermes-agent-main",
+      "path": "LICENSE",
+      "bytes": 1070,
+      "sha256": "821556e6336796450ab852d375117b48a4887e71d255794fd6318d99982a5ab6"
+    },
+    {
+      "repository": "hermes-agent-main",
+      "path": "pyproject.toml",
+      "bytes": 24351,
+      "sha256": "41f1f61a5835c211eda4e5d8575167a11843ae769c87c3d2aacf600ad0624305"
+    },
+    {
+      "repository": "hermes-agent-main",
+      "path": "agent/conversation_loop.py",
+      "bytes": 436582,
+      "sha256": "fff9d21123aa85f58a97c469688bf467e338052813dd6e87b725137fad8d5cc6"
+    },
+    {
+      "repository": "hermes-agent-main",
+      "path": "agent/context_compressor.py",
+      "bytes": 368399,
+      "sha256": "e3522c31108dcc7dae3e214d2440859fa60fd3b49c80c80ec3b0f002c3ef29a5"
+    },
+    {
+      "repository": "hermes-agent-main",
+      "path": "agent/memory_manager.py",
+      "bytes": 50027,
+      "sha256": "99be35bdb240393ec52f56e204465622e877ecce24deb450b0cbcf0ef7c87ce7"
+    },
+    {
+      "repository": "hermes-agent-main",
+      "path": "tests/agent/test_memory_provider.py",
+      "bytes": 45861,
+      "sha256": "437d7957f28fe1c09ddf5695bdedd86b211defb22f2b7f3bd0d0860f57c1b0bb"
+    },
+    {
+      "repository": "claude-code-fork-main",
+      "path": "README.md",
+      "bytes": 9843,
+      "sha256": "2b808f0cfaea9ef8760b7bdc88802d501401f0cf51f1051af43a5727aa666615"
+    },
+    {
+      "repository": "claude-code-fork-main",
+      "path": "src/query.ts",
+      "bytes": 68683,
+      "sha256": "74e0ce0d86cfd453add8dc1d15ccb6311b02964b8321e3721b8e71fbd87252ce"
+    },
+    {
+      "repository": "claude-code-fork-main",
+      "path": "src/utils/toolResultStorage.ts",
+      "bytes": 38384,
+      "sha256": "db2bf39064319eefccebf49cf5c4521b42a13bc63caf2c57b21113f6204e6bcd"
+    },
+    {
+      "repository": "claude-code-fork-main",
+      "path": "src/utils/skills/skillChangeDetector.ts",
+      "bytes": 10033,
+      "sha256": "0f84056a1a40ab1710c2c4d2386a3b322f1db3c847aa209a32eaa162ba47d9c1"
+    },
+    {
+      "repository": "claude-code-fork-main",
+      "path": "src/main.tsx",
+      "bytes": 803924,
+      "sha256": "ad018cfab3cd3d55878176e43cd5facd300ed649d2910070a3fae257604dc407"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "AGENTS.md",
+      "bytes": 1730,
+      "sha256": "ca24b5a24e947195f2c18bfcd24d177ab4bbf14d3933d687800f000cd76d6f15"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "HANDOVER.md",
+      "bytes": 3531,
+      "sha256": "7149777a1217d571a04a99e2a483e3aaf5106ad0c223c17063c38e1218e9bb2b"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/model/src/openai.ts",
+      "bytes": 26687,
+      "sha256": "03e58ccdff0be42f5abc32a75c0939b9d49fa796af0330bcd95b3b754061b234"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/contracts/src/model.ts",
+      "bytes": 4083,
+      "sha256": "9db29ab4aa47a76f25d255d04905d12b4ec1b50ad7672387c11d34656e292fd3"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/core/src/runtime/runtime.ts",
+      "bytes": 85261,
+      "sha256": "ad363e45043c7f2d3dfb625579aa13a6f56f503421c9e8a3788dfaeaba05bf83"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/core/src/runtime/context-controller.ts",
+      "bytes": 26580,
+      "sha256": "f3f7f3caaae19ef1d659411ff341e74f5cd12d2a259a1071fad4d1e427020726"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/core/src/runtime/model-call-controller.ts",
+      "bytes": 28632,
+      "sha256": "2f124dfa88e84f921a80cac824c6e7b674e1091a607f4532b660d290b9e80b5c"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/core/src/runtime/turn-helpers.ts",
+      "bytes": 32225,
+      "sha256": "52b8c67a7a1f3d117ddd1608b40fd8defd83a0917bb0f0befa332b8a852e0a0d"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/core/src/runtime/tool-call-controller.ts",
+      "bytes": 43184,
+      "sha256": "b763afaf137d199aaa133aaad9115982c2abfcefcb153f7ed5fa6f011024a3f4"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/tools/src/orchestrator.ts",
+      "bytes": 32963,
+      "sha256": "22785123a38cb2da110ec47f859e155d809ecd73afa2c23cd1afd9609e55b1f5"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/tools/src/process/executor.ts",
+      "bytes": 31751,
+      "sha256": "25ad91b81d1111eda042aaa75636d5dcf2eaa824f952d3fb509ab8f418f220ab"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/tools/src/tools/edit-file.ts",
+      "bytes": 5155,
+      "sha256": "00e8edd052d8ee6def577d9167f2224f87552f256e02a878c567ae8d17b1ad18"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/tools/src/tools/read-file.ts",
+      "bytes": 1539,
+      "sha256": "1de630cc9d6d44a272f29b5134b2a7f577a0fba36329ce4d18766c195c76335f"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/tools/src/edit.ts",
+      "bytes": 5918,
+      "sha256": "ea90fc3ea57964a2d9e56c794608999e91c5670beb4cea1a163febd663fd3f3e"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/tools/src/verification/task-verifier.ts",
+      "bytes": 11215,
+      "sha256": "8900a81bcaa67fa6d68139def049050f697dfc5117d5b649fac900f6f3d1f977"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/core/src/verification/runtime-verifier.ts",
+      "bytes": 5759,
+      "sha256": "c5dce9eaeb0f89b1891e033018223399226eb8a2c57e0fe4ca4cb1ceb9d566b8"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/harness/src/skill-context.ts",
+      "bytes": 10957,
+      "sha256": "aa7c24a25a38c8b462a4ff75cafc4f0b70d042e93082dd9d0070172092870274"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/skills/src/skill-loader.ts",
+      "bytes": 11446,
+      "sha256": "06af4fddbb69ffe30876c06715b45cbb66e4ebd45c374dc877dde1c23f4015e0"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/context/src/discovery.ts",
+      "bytes": 7833,
+      "sha256": "d7a854812b022c7fdff7e79fac26c7b1dade2012a959bf51923cace65d5af338"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/harness/src/compose/compose-context.ts",
+      "bytes": 6053,
+      "sha256": "4317d13705ffe990d56d191f68c3f35823fcac6a9634a21e7ef6d8aa3ea67192"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/evaluation/src/candidate-registry.ts",
+      "bytes": 11221,
+      "sha256": "1cdf1b1ad99aa7ba06689ac59c56656d4f488330f4eddde9588d4f71437510c6"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/evaluation/src/arm-factory.ts",
+      "bytes": 22599,
+      "sha256": "7533ee96f9fe5616e8b8d3776664f67a7bee9aae40a1eaf766bf399dc98bd8a4"
+    },
+    {
+      "repository": "harness-agent",
+      "path": "packages/evaluation/src/paired-executor.ts",
+      "bytes": 25303,
+      "sha256": "160a06c7c1f8eee86a375a8567dfcd3835c65640178bc8737d76f9c900b14006"
+    }
+  ],
+  "harnessSnapshotComparison": {
+    "harnessHead": "acf8dcc394de6c6efefed52602e49014b372f372",
+    "collectionHead": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+    "snapshotPrefix": "harness-agent-src/",
+    "upstreamRevisionStatus": "not declared; collection commit does not establish individual upstream revisions",
+    "trackedFiles": {
+      "current": 2750,
+      "snapshot": 281,
+      "common": 279,
+      "byteChangedCommon": 183,
+      "contentChangedIgnoringCrLf": 177,
+      "currentOnly": 2471,
+      "snapshotOnly": 2
+    },
+    "packageDirectories": {
+      "current": 24,
+      "snapshot": 18
+    },
+    "representativeFiles": [
+      {
+        "path": "AGENTS.md",
+        "current": {
+          "exists": true,
+          "bytes": 1730,
+          "sha256": "ca24b5a24e947195f2c18bfcd24d177ab4bbf14d3933d687800f000cd76d6f15"
+        },
+        "snapshot": {
+          "exists": true,
+          "bytes": 862,
+          "sha256": "f4384bec914b94c71c4183117d1b7ba446ef5d9e8ea2d27203738fd666331e63"
+        }
+      },
+      {
+        "path": "packages/tools/src/tools/edit-file.ts",
+        "current": {
+          "exists": true,
+          "bytes": 5155,
+          "sha256": "00e8edd052d8ee6def577d9167f2224f87552f256e02a878c567ae8d17b1ad18"
+        },
+        "snapshot": {
+          "exists": true,
+          "bytes": 2577,
+          "sha256": "01edafecff8e74734288240ed1aae16540842e265d3ced20a2b3bec5fd532283"
+        }
+      },
+      {
+        "path": "packages/tools/src/edit.ts",
+        "current": {
+          "exists": true,
+          "bytes": 5918,
+          "sha256": "ea90fc3ea57964a2d9e56c794608999e91c5670beb4cea1a163febd663fd3f3e"
+        },
+        "snapshot": {
+          "exists": false
+        }
+      },
+      {
+        "path": "packages/core/src/runtime/runtime.ts",
+        "current": {
+          "exists": true,
+          "bytes": 85261,
+          "sha256": "ad363e45043c7f2d3dfb625579aa13a6f56f503421c9e8a3788dfaeaba05bf83"
+        },
+        "snapshot": {
+          "exists": true,
+          "bytes": 78333,
+          "sha256": "fd7145ac61ab03f094304957611842823fee07a50d07e27815954a694b9fc5d5"
+        }
+      },
+      {
+        "path": "packages/core/src/runtime/context-controller.ts",
+        "current": {
+          "exists": true,
+          "bytes": 26580,
+          "sha256": "f3f7f3caaae19ef1d659411ff341e74f5cd12d2a259a1071fad4d1e427020726"
+        },
+        "snapshot": {
+          "exists": false
+        }
+      },
+      {
+        "path": "packages/core/src/runtime/model-call-controller.ts",
+        "current": {
+          "exists": true,
+          "bytes": 28632,
+          "sha256": "2f124dfa88e84f921a80cac824c6e7b674e1091a607f4532b660d290b9e80b5c"
+        },
+        "snapshot": {
+          "exists": false
+        }
+      },
+      {
+        "path": "packages/evaluation/src/candidate-registry.ts",
+        "current": {
+          "exists": true,
+          "bytes": 11221,
+          "sha256": "1cdf1b1ad99aa7ba06689ac59c56656d4f488330f4eddde9588d4f71437510c6"
+        },
+        "snapshot": {
+          "exists": false
+        }
+      },
+      {
+        "path": "packages/evaluation/src/paired-executor.ts",
+        "current": {
+          "exists": true,
+          "bytes": 25303,
+          "sha256": "160a06c7c1f8eee86a375a8567dfcd3835c65640178bc8737d76f9c900b14006"
+        },
+        "snapshot": {
+          "exists": false
+        }
+      },
+      {
+        "path": "packages/harness/src/create-harness.ts",
+        "current": {
+          "exists": true,
+          "bytes": 39728,
+          "sha256": "89cd40e952b890aa307f6e5f5027ecef0ef34a8ccef6a28f6359d51a85fce347"
+        },
+        "snapshot": {
+          "exists": false
+        }
+      }
+    ]
+  },
+  "upstream_test_execution": "NOT_RUN; source and test logic reviewed only",
+  "production_optimization_execution": "NOT_RUN; this delivery is code analysis, baseline reproductions and an implementation plan",
+  "model_quality_evaluation": "NOT_RUN",
+  "baseline_regression": {
+    "command": "see docs/research/source-agent-review-20261002/harness-current.md section 6",
+    "test_files_passed": 10,
+    "tests_passed": 119,
+    "duration_seconds": 4.61,
+    "platform": "linux",
+    "scope": "existing features only; not new-implementation acceptance"
+  },
+  "git_access": "Native terminal Git only; no GitHub connector used",
+  "reproducerScripts": [
+    {
+      "path": "scripts/research/source-agent-review.mjs",
+      "sha256": "bc4e9496cf16f3caf0df62a77f7fb938408a28148fad113376696c3153660a4d"
+    },
+    {
+      "path": "scripts/research/source-review-claude.mjs",
+      "sha256": "ac90a3a4c8c4177d1b514e78e9a7abab310025ab23558bc0a0417cd34605ce82"
+    },
+    {
+      "path": "scripts/research/source-review-codex.mjs",
+      "sha256": "3f5d1a737a7602e6d710a33f503d247d3a0349313295afa5e746a3064680fca8"
+    },
+    {
+      "path": "scripts/research/source-review-edit.mjs",
+      "sha256": "5c4d6e55877af8baf17cfb57a2e046ec68367bd12625e20c269d2100944d2199"
+    },
+    {
+      "path": "scripts/research/source-review-hermes.mjs",
+      "sha256": "96375e64c0ed5653c8ee00703987e84b779a2b82f12ef02a75a8e4d9cc11bc59"
+    },
+    {
+      "path": "scripts/research/source-review-pi.mjs",
+      "sha256": "d474733568d09a3312bd254d430f0d0c717d95b949794a551f25bb76bbdf1531"
+    },
+    {
+      "path": "scripts/research/source-review-verification.mjs",
+      "sha256": "34b7d7a83e9fed9198193855f7506c41e04322a701533e8afacc690b596a596f"
+    }
+  ],
+  "reproductions": {
+    "schemaVersion": 1,
+    "purpose": "Baseline defect observations. Exit 0 means reproduction completed, not that defects were fixed or quality improved.",
+    "harnessSourceCommit": "acf8dcc394de6c6efefed52602e49014b372f372",
+    "collectionCommit": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+    "reproducedAt": "2026-10-02T14:56:31.100Z",
+    "environment": {
+      "node": "v24.19.0",
+      "platform": "linux",
+      "arch": "x64"
+    },
+    "baselineSourceFingerprintsVerified": true,
+    "results": [
+      {
+        "id": "output-boundary",
+        "script": "scripts/research/source-review-codex.mjs",
+        "observation": {
+          "schemaVersion": 1,
+          "node": "v24.19.0",
+          "platform": "linux",
+          "observationExitSemantics": "Exit 0 means the reproducer completed; inspect contractChecks for correctness.",
+          "contextShapeBoundary": [
+            {
+              "scenario": "string_with_budget",
+              "redactorCalls": 1,
+              "detectorCalls": 1,
+              "events": [
+                "security.secret_redacted",
+                "security.injection_denied"
+              ],
+              "renderedBytes": 109,
+              "secretVisible": false,
+              "attackVisible": false,
+              "blocked": true,
+              "rawResultUnchanged": true,
+              "artifact": {
+                "bytes": 10027,
+                "sha256": "48a691fd1a3e8c83cffbcdc19544816bfc81c28b8c22c784b766c09dee1c4b41",
+                "secretVisible": false,
+                "completeRedactedModelText": true
+              },
+              "contractChecks": {
+                "redactorInvoked": true,
+                "detectorInvoked": true,
+                "noSecretInModelText": true,
+                "noAttackInModelText": true
+              }
+            },
+            {
+              "scenario": "exec_object_with_budget",
+              "redactorCalls": 0,
+              "detectorCalls": 0,
+              "events": [],
+              "renderedBytes": 10070,
+              "secretVisible": true,
+              "attackVisible": true,
+              "blocked": false,
+              "rawResultUnchanged": true,
+              "artifact": null,
+              "contractChecks": {
+                "redactorInvoked": false,
+                "detectorInvoked": false,
+                "noSecretInModelText": false,
+                "noAttackInModelText": false
+              }
+            },
+            {
+              "scenario": "string_without_budget",
+              "redactorCalls": 0,
+              "detectorCalls": 0,
+              "events": [],
+              "renderedBytes": 10032,
+              "secretVisible": true,
+              "attackVisible": true,
+              "blocked": false,
+              "rawResultUnchanged": true,
+              "artifact": null,
+              "contractChecks": {
+                "redactorInvoked": false,
+                "detectorInvoked": false,
+                "noSecretInModelText": false,
+                "noAttackInModelText": false
+              }
+            }
+          ],
+          "executorUtf8": {
+            "byteCap": {
+              "maxOutputBytes": 8,
+              "actualBodyBytes": 24,
+              "actualCodeUnits": 8,
+              "status": "success",
+              "truncated": true,
+              "capRespected": false
+            },
+            "chunkBoundary": {
+              "expected": "😀",
+              "actual": "���",
+              "status": "success",
+              "validUtf8Preserved": false,
+              "streamingActual": "���",
+              "streamingUtf8Preserved": false
+            },
+            "orchestratorByteCap": {
+              "maxOutputBytes": 8,
+              "actualBodyBytes": 24,
+              "capRespected": false,
+              "note": "Body bytes exclude the independently appended truncation notice."
+            }
+          },
+          "temporaryWorkspaceRemoved": true
+        }
+      },
+      {
+        "id": "provider-and-eol",
+        "script": "scripts/research/source-review-pi.mjs",
+        "observation": {
+          "schemaVersion": 1,
+          "probe": "pi-source-comparison",
+          "baselineSourceCommit": "acf8dcc394de6c6efefed52602e49014b372f372",
+          "artifactBasis": "existing project dist; rebuild before comparing another source revision",
+          "mockBoundary": "fetch always replaced; MemorySessionStore/MemoryEventStore; FakeOrchestrator only records calls",
+          "actualHttpRequests": 0,
+          "actualToolFilesystemWrites": 0,
+          "mockFetchCalls": 10,
+          "observations": [
+            {
+              "label": "length-text",
+              "level": "provider+completion-controller",
+              "providerFinishReason": "stop",
+              "coreAction": "finish",
+              "outcome": {
+                "status": "completed",
+                "terminationReason": "model_stopped"
+              },
+              "executableCalls": 0,
+              "durableMessages": [
+                {
+                  "role": "assistant",
+                  "content": "partial answer"
+                }
+              ],
+              "mockFetchCalls": 1
+            },
+            {
+              "label": "content-filter-text",
+              "level": "provider+completion-controller",
+              "providerFinishReason": "stop",
+              "coreAction": "finish",
+              "outcome": {
+                "status": "completed",
+                "terminationReason": "model_stopped"
+              },
+              "executableCalls": 0,
+              "durableMessages": [
+                {
+                  "role": "assistant",
+                  "content": "partial answer"
+                }
+              ],
+              "mockFetchCalls": 1
+            },
+            {
+              "label": "natural-eof-complete-tool-json",
+              "level": "provider+completion-controller",
+              "providerFinishReason": "tool_calls",
+              "coreAction": "proceed",
+              "outcome": null,
+              "executableCalls": 1,
+              "durableMessages": [
+                {
+                  "role": "assistant",
+                  "content": ""
+                }
+              ],
+              "mockFetchCalls": 1
+            },
+            {
+              "label": "done-complete-tool-json-no-finish-reason",
+              "level": "provider+completion-controller",
+              "providerFinishReason": "tool_calls",
+              "coreAction": "proceed",
+              "outcome": null,
+              "executableCalls": 1,
+              "durableMessages": [
+                {
+                  "role": "assistant",
+                  "content": ""
+                }
+              ],
+              "mockFetchCalls": 1
+            },
+            {
+              "label": "normal-stop-control",
+              "level": "provider+completion-controller",
+              "providerFinishReason": "stop",
+              "coreAction": "finish",
+              "outcome": {
+                "status": "completed",
+                "terminationReason": "model_stopped"
+              },
+              "executableCalls": 0,
+              "durableMessages": [
+                {
+                  "role": "assistant",
+                  "content": "done"
+                }
+              ],
+              "mockFetchCalls": 1
+            },
+            {
+              "label": "normal-tool-call-control",
+              "level": "provider+completion-controller",
+              "providerFinishReason": "tool_calls",
+              "coreAction": "proceed",
+              "outcome": null,
+              "executableCalls": 1,
+              "durableMessages": [
+                {
+                  "role": "assistant",
+                  "content": ""
+                }
+              ],
+              "mockFetchCalls": 1
+            },
+            {
+              "label": "runtime-natural-eof",
+              "level": "real-runtime+fake-orchestrator",
+              "terminalStatus": "completed",
+              "terminationReason": "model_stopped",
+              "fakeOrchestratorDispatches": [
+                {
+                  "id": "call_1",
+                  "name": "write_file",
+                  "args": {
+                    "path": "a.txt",
+                    "content": "partial"
+                  }
+                }
+              ],
+              "mockFetchCalls": 2,
+              "actualToolFilesystemWrites": 0
+            },
+            {
+              "label": "runtime-normal-tool-call-control",
+              "level": "real-runtime+fake-orchestrator",
+              "terminalStatus": "completed",
+              "terminationReason": "model_stopped",
+              "fakeOrchestratorDispatches": [
+                {
+                  "id": "call_1",
+                  "name": "write_file",
+                  "args": {
+                    "path": "a.txt",
+                    "content": "complete"
+                  }
+                }
+              ],
+              "mockFetchCalls": 2,
+              "actualToolFilesystemWrites": 0
+            },
+            {
+              "label": "crlf-line-range",
+              "level": "pure-edit-function",
+              "input": "a\r\nb\r\nc\r\n",
+              "operation": {
+                "lineStart": 2,
+                "lineEnd": 2,
+                "replacement": "B"
+              },
+              "result": {
+                "ok": true,
+                "content": "a\r\nB\nc\r\n",
+                "count": 1,
+                "matched": 0
+              },
+              "intendedPreservedEolOutput": "a\r\nB\r\nc\r\n"
+            },
+            {
+              "label": "lf-anchor-in-crlf",
+              "level": "pure-edit-function",
+              "input": "a\r\nb\r\nc\r\n",
+              "operation": {
+                "oldText": "a\nb",
+                "newText": "A\nB"
+              },
+              "result": {
+                "ok": false,
+                "content": "a\r\nb\r\nc\r\n",
+                "count": 0,
+                "matched": 0,
+                "error": "anchor not found"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "steering-and-prefetch",
+        "script": "scripts/research/source-review-hermes.mjs",
+        "observation": {
+          "targetSource": "acf8dcc394de6c6efefed52602e49014b372f372",
+          "results": [
+            {
+              "case": "steer-survival-after-history-trim",
+              "outcome": "completed",
+              "requests": [
+                {
+                  "call": 1,
+                  "steerVisible": true,
+                  "userMessages": 2,
+                  "modelMessages": 2
+                },
+                {
+                  "call": 2,
+                  "steerVisible": true,
+                  "userMessages": 2,
+                  "modelMessages": 4
+                },
+                {
+                  "call": 3,
+                  "steerVisible": false,
+                  "userMessages": 0,
+                  "modelMessages": 3
+                },
+                {
+                  "call": 4,
+                  "steerVisible": false,
+                  "userMessages": 0,
+                  "modelMessages": 4
+                },
+                {
+                  "call": 5,
+                  "steerVisible": false,
+                  "userMessages": 0,
+                  "modelMessages": 8
+                },
+                {
+                  "call": 6,
+                  "steerVisible": false,
+                  "userMessages": 0,
+                  "modelMessages": 8
+                }
+              ],
+              "steerDurable": true,
+              "digests": 4,
+              "allDigestsPreserveSteer": false
+            },
+            {
+              "case": "pre-turn-memory-duration",
+              "maxDurationMs": 5,
+              "statusAfter50ms": "STILL_PENDING",
+              "storedTurnStatus": "running",
+              "modelCalls": 0,
+              "statusAfterRelease": "failed"
+            },
+            {
+              "case": "pre-turn-memory-abort",
+              "maxDurationMs": 5,
+              "statusAfter50ms": "STILL_PENDING",
+              "storedTurnStatus": "running",
+              "modelCalls": 0,
+              "statusAfterRelease": "cancelled"
+            }
+          ]
+        }
+      },
+      {
+        "id": "skill-refresh",
+        "script": "scripts/research/source-review-claude.mjs",
+        "observation": {
+          "byteLimit": {
+            "status": "success",
+            "configuredBytes": 100,
+            "returnedPayloadBytes": 300,
+            "returnedTotalBytes": 335
+          },
+          "skillRefresh": {
+            "firstOld": true,
+            "providerRetainedOld": true,
+            "providerSawUpdated": false,
+            "directLoaderSawUpdated": true,
+            "providerStillInjectsDeleted": true
+          }
+        }
+      },
+      {
+        "id": "edit-concurrency",
+        "script": "scripts/research/source-review-edit.mjs",
+        "observation": {
+          "staleRange": {
+            "observed": "A\nB\nC",
+            "status": "success",
+            "actual": "HEADER\nFIXED_B\nB\nC",
+            "intendedTargetUnchanged": true,
+            "wrongLineChanged": true
+          },
+          "concurrentIndependentEdits": {
+            "readers": 2,
+            "statuses": [
+              "success",
+              "success"
+            ],
+            "actual": "A=0\nB=1\n",
+            "bothEditsPresent": false
+          }
+        }
+      },
+      {
+        "id": "verification-feedback",
+        "script": "scripts/research/source-review-verification.mjs",
+        "observation": {
+          "executorStderr": "AssertionError: src/add.ts:12 expected 3 received 4",
+          "gateStatus": "failed",
+          "gateReason": "unit tests: test-runner: exit 1",
+          "failureDetailPreservedInVerificationResult": false,
+          "failureDetailPreservedInModelFeedback": false
+        }
+      }
+    ]
+  }
+}
