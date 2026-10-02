@@ -24,6 +24,7 @@ import {
   SandboxManager,
 } from "@ar/security";
 import type { ToolRegistry } from "./registry.js";
+import { utf8Prefix } from "./process/utf8-output.js";
 
 export interface OrchestratorDeps {
   registry: ToolRegistry;
@@ -626,9 +627,12 @@ export class ToolOrchestrator {
     const maxBytes = context.sandboxPolicy.process.maxOutputBytes;
     if (maxBytes === undefined || typeof result.output !== "string") return result;
     if (Buffer.byteLength(result.output, "utf8") <= maxBytes) return result;
+    // This limit covers the string body only. The diagnostic marker below is
+    // additional overhead, including at cap=0; structured payloads retain their
+    // contract and are budgeted separately at the model-facing context boundary.
     return {
       ...result,
-      output: `${result.output.slice(0, maxBytes)}\n…[output truncated at ${maxBytes} bytes]`,
+      output: `${utf8Prefix(result.output, maxBytes)}\n…[output truncated at ${maxBytes} bytes]`,
     };
   }
 

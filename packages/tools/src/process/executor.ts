@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 import type { SandboxExecutionOption, SandboxExecutionProvenance } from "./sandbox-executor.js";
 import { buildSandboxLaunch, policyDigestOf, SANDBOX_BACKEND_DENIED } from "./sandbox-executor.js";
+import { Utf8OutputCollector } from "./utf8-output.js";
 
 export type ExecStatus = "success" | "failed" | "timeout" | "cancelled" | "error" | "denied";
 
@@ -30,7 +31,7 @@ export interface ExecOptions {
   timeoutMs?: number;
   maxOutputBytes?: number;
   signal?: AbortSignal;
-  /** Streaming channel: every stdout/stderr chunk is delivered here (EXEC-001). */
+  /** Decoded stdout/stderr text, including output past the capture cap (EXEC-001). */
   onOutput?: (chunk: { stream: "stdout" | "stderr"; text: string }) => void;
   /** Shell override: defaults to cmd.exe on win32, /bin/sh elsewhere. */
   shell?: string;
@@ -344,8 +345,8 @@ export function planArgvLaunch(
 }
 
 /** E4-R79: shared bounded-collect + timeout + cancel + tree-kill lifecycle.
- *  Both the legacy shell path and the argv path use EXACTLY this machinery, so
- *  the argv path cannot drift from the shell path on the semantics the verifier
+ *  Shell, argv and prepared sandbox launches use this machinery, so none of
+ *  the routes can drift on the semantics the verifier
  *  depends on (timeout, cancellation, output truncation, orphan cleanup). */
 interface CollectedExec {
   timeoutMs: number;
@@ -361,19 +362,18 @@ function collect(
   killTree: () => void,
   started: number,
 ): Promise<ExecOutcome> {
-  const stdoutChunks: string[] = [];
-  const stderrChunks: string[] = [];
-  let stdoutBytes = 0;
-  let stderrBytes = 0;
-  let truncated = false;
+  const streams = {
+    stdout: new Utf8OutputCollector(opts.maxOutputBytes),
+    stderr: new Utf8OutputCollector(opts.maxOutputBytes),
+  };
   let settled = false;
 
   const outcome = (status: ExecStatus, exitCode: number | null, error?: string): ExecOutcome => ({
     status,
     exitCode,
-    stdout: stdoutChunks.join(""),
-    stderr: stderrChunks.join(""),
-    truncated,
+    stdout: streams.stdout.text,
+    stderr: streams.stderr.text,
+    truncated: streams.stdout.truncated || streams.stderr.truncated,
     durationMs: Date.now() - started,
     ...(error !== undefined ? { error } : {}),
   });
@@ -384,18 +384,8 @@ function collect(
     return outcome(status, exitCode, error);
   };
 
-  const drain = (stream: "stdout" | "stderr", data: Buffer) => {
-    const text = data.toString();
-    const byteLen = Buffer.byteLength(text, "utf8");
-    const cap = opts.maxOutputBytes - (stream === "stdout" ? stdoutBytes : stderrBytes);
-    if (cap > 0) {
-      (stream === "stdout" ? stdoutChunks : stderrChunks).push(text.slice(0, cap));
-      if (byteLen > cap) truncated = true;
-    } else {
-      truncated = true;
-    }
-    if (stream === "stdout") stdoutBytes += byteLen;
-    else stderrBytes += byteLen;
+  const deliver = (stream: "stdout" | "stderr", text: string) => {
+    if (text.length === 0) return;
     try {
       opts.onOutput?.({ stream, text });
     } catch (err) {
@@ -405,8 +395,10 @@ function collect(
 
   const listeners: Array<() => void> = [];
 
-  child.stdout?.on("data", (d: Buffer) => drain("stdout", d));
-  child.stderr?.on("data", (d: Buffer) => drain("stderr", d));
+  child.stdout?.on("data", (d: Buffer) => deliver("stdout", streams.stdout.write(d)));
+  child.stderr?.on("data", (d: Buffer) => deliver("stderr", streams.stderr.write(d)));
+  child.stdout?.on("end", () => deliver("stdout", streams.stdout.end()));
+  child.stderr?.on("end", () => deliver("stderr", streams.stderr.end()));
 
   return new Promise<ExecOutcome>((resolve) => {
     let forced: { status: "timeout" | "cancelled"; error: string } | undefined;
@@ -443,6 +435,10 @@ function collect(
     });
 
     child.on("close", (code, signal) => {
+      // Close also flushes test/failed-spawn streams that do not emit end.
+      // Collector.end is idempotent; normal EOF and close cannot duplicate it.
+      deliver("stdout", streams.stdout.end());
+      deliver("stderr", streams.stderr.end());
       if (code === 0) {
         done("success", 0);
       } else if (code !== null) {
@@ -537,51 +533,6 @@ export class ProcessExecutor {
       // Spawn the sandboxed process.
       const child = spawn(launch.file, launch.args, spawnOpts);
 
-      const stdoutChunks: string[] = [];
-      const stderrChunks: string[] = [];
-      let stdoutBytes = 0;
-      let stderrBytes = 0;
-      let truncated = false;
-      let settled = false;
-
-      const outcome = (status: ExecStatus, exitCode: number | null, error?: string): ExecOutcome => ({
-        status,
-        exitCode,
-        stdout: stdoutChunks.join(""),
-        stderr: stderrChunks.join(""),
-        truncated,
-        durationMs: Date.now() - started,
-        ...(error !== undefined ? { error } : {}),
-        denial: undefined,
-        insecure: provenance.insecureLocal,
-        provenance,
-      });
-
-      const finish = (status: ExecStatus, exitCode: number | null, error?: string): ExecOutcome => {
-        if (settled) return outcome(status, exitCode, error);
-        settled = true;
-        return outcome(status, exitCode, error);
-      };
-
-      const drain = (stream: "stdout" | "stderr", data: Buffer) => {
-        const text = data.toString();
-        const byteLen = Buffer.byteLength(text, "utf8");
-        const cap = maxOutputBytes - (stream === "stdout" ? stdoutBytes : stderrBytes);
-        if (cap > 0) {
-          (stream === "stdout" ? stdoutChunks : stderrChunks).push(text.slice(0, cap));
-          if (byteLen > cap) truncated = true;
-        } else {
-          truncated = true;
-        }
-        if (stream === "stdout") stdoutBytes += byteLen;
-        else stderrBytes += byteLen;
-        try {
-          opts.onOutput?.({ stream, text });
-        } catch (err) {
-          process.stderr.write(`[degraded] executor.onOutput: ${err instanceof Error ? err.message : String(err)}\n`);
-        }
-      };
-
       const killTree = () => {
         if (!child.pid) return;
         if (isCmd) {
@@ -596,64 +547,13 @@ export class ProcessExecutor {
         }
       };
 
-      const listeners: Array<() => void> = [];
-
-      child.stdout?.on("data", (d: Buffer) => drain("stdout", d));
-      child.stderr?.on("data", (d: Buffer) => drain("stderr", d));
-
-      return new Promise<ExecOutcome>((resolve) => {
-        let forced: { status: "timeout" | "cancelled"; error: string } | undefined;
-
-        const done = (status: ExecStatus, exitCode: number | null, error?: string) => {
-          if (forced !== undefined) {
-            const o = finish(forced.status, null, forced.error);
-            if (settled) {
-              clearTimeout(timer);
-              for (const l of listeners) l();
-              resolve(o);
-            }
-            return;
-          }
-          const o = finish(status, exitCode, error);
-          if (settled) {
-            clearTimeout(timer);
-            for (const l of listeners) l();
-            resolve(o);
-          }
-        };
-
-        const timer = timeoutMs > 0
-          ? setTimeout(() => {
-              killTree();
-              forced = { status: "timeout", error: `timed out after ${timeoutMs}ms` };
-              done("timeout", null);
-            }, timeoutMs)
-          : undefined;
-
-        child.on("error", (err) => {
-          done("error", null, err instanceof Error ? err.message : String(err));
-        });
-
-        child.on("close", (code, signal) => {
-          if (code === 0) {
-            done("success", 0);
-          } else if (code !== null) {
-            done("failed", code, `exited with code ${code}${signal ? ` (${signal})` : ""}`);
-          } else {
-            done("error", null, `process closed without exit code${signal ? ` (${signal})` : ""}`);
-          }
-        });
-
-        const abortHandler = () => {
-          killTree();
-          forced = { status: "cancelled", error: "cancelled by caller" };
-          done("cancelled", null);
-        };
-        opts.signal?.addEventListener("abort", abortHandler, { once: true });
-        listeners.push(() => opts.signal?.removeEventListener("abort", abortHandler));
-
-        if (opts.signal?.aborted) void abortHandler();
-      });
+      const collected = await collect(
+        child,
+        { timeoutMs, maxOutputBytes, cwd: opts.cwd, signal: opts.signal, ...(opts.onOutput !== undefined ? { onOutput: opts.onOutput } : {}) },
+        killTree,
+        started,
+      );
+      return { ...collected, denial: undefined, insecure: provenance.insecureLocal, provenance };
     }
 
     // ---- Original (non-sandboxed) path ----
@@ -682,13 +582,6 @@ export class ProcessExecutor {
     } else {
       shellArgs.push("-c", opts.command);
     }
-
-    const stdoutChunks: string[] = [];
-    const stderrChunks: string[] = [];
-    let stdoutBytes = 0;
-    let stderrBytes = 0;
-    let truncated = false;
-    let settled = false;
 
     const child: ChildProcess = spawn(shell, shellArgs, spawnOpts);
     if (process.env.EXEC_DEBUG !== undefined) {
