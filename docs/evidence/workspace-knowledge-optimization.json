@@ -1,0 +1,907 @@
+{
+  "schemaVersion": 1,
+  "baseline": {
+    "schemaVersion": 1,
+    "label": "baseline",
+    "sourceCommit": "9cf89a95fbec2d902d56558d0b8bdfc989874a84",
+    "sourceChangesFromCommit": [],
+    "sourceDigest": "055eea0a96bf598d387b0b2b13f5a4fd50a28b6f53c023019eaa67ea87b5fec4",
+    "scriptDigest": "7e2c16c6d4e54fbca22b3d7efc3c2eb3f3106d31ff2e234bed5836155e5f0a87",
+    "environment": {
+      "node": "v24.19.0",
+      "platform": "linux",
+      "arch": "x64"
+    },
+    "config": {
+      "samples": 7,
+      "directories": 24,
+      "filesPerDirectory": 8,
+      "concurrency": 16,
+      "scanLimit": 8
+    },
+    "scenarios": {
+      "repoWarmBurst": {
+        "samples": [
+          {
+            "operations": {
+              "stat": 3088,
+              "readFile": 0,
+              "readdir": 416
+            },
+            "elapsedMs": 41.812528
+          },
+          {
+            "operations": {
+              "stat": 3088,
+              "readFile": 0,
+              "readdir": 416
+            },
+            "elapsedMs": 48.24234799999999
+          },
+          {
+            "operations": {
+              "stat": 3088,
+              "readFile": 0,
+              "readdir": 416
+            },
+            "elapsedMs": 49.95443399999999
+          },
+          {
+            "operations": {
+              "stat": 3088,
+              "readFile": 0,
+              "readdir": 416
+            },
+            "elapsedMs": 47.90955000000008
+          },
+          {
+            "operations": {
+              "stat": 3088,
+              "readFile": 0,
+              "readdir": 416
+            },
+            "elapsedMs": 46.14893300000017
+          },
+          {
+            "operations": {
+              "stat": 3088,
+              "readFile": 0,
+              "readdir": 416
+            },
+            "elapsedMs": 44.45098500000017
+          },
+          {
+            "operations": {
+              "stat": 3088,
+              "readFile": 0,
+              "readdir": 416
+            },
+            "elapsedMs": 46.90347399999996
+          }
+        ],
+        "medianOperations": {
+          "stat": 3088,
+          "readFile": 0,
+          "readdir": 416
+        },
+        "medianElapsedMs": 46.90347399999996
+      },
+      "repoChanged": {
+        "samples": [
+          {
+            "operations": {
+              "stat": 386,
+              "readFile": 3,
+              "readdir": 52
+            },
+            "elapsedMs": 11.05066500000001
+          },
+          {
+            "operations": {
+              "stat": 386,
+              "readFile": 3,
+              "readdir": 52
+            },
+            "elapsedMs": 14.796762999999999
+          },
+          {
+            "operations": {
+              "stat": 386,
+              "readFile": 3,
+              "readdir": 52
+            },
+            "elapsedMs": 14.201602000000094
+          },
+          {
+            "operations": {
+              "stat": 386,
+              "readFile": 3,
+              "readdir": 52
+            },
+            "elapsedMs": 15.4211150000001
+          },
+          {
+            "operations": {
+              "stat": 386,
+              "readFile": 3,
+              "readdir": 52
+            },
+            "elapsedMs": 13.133264000000054
+          },
+          {
+            "operations": {
+              "stat": 386,
+              "readFile": 3,
+              "readdir": 52
+            },
+            "elapsedMs": 10.95859500000006
+          },
+          {
+            "operations": {
+              "stat": 386,
+              "readFile": 3,
+              "readdir": 52
+            },
+            "elapsedMs": 9.795556999999917
+          }
+        ],
+        "medianOperations": {
+          "stat": 386,
+          "readFile": 3,
+          "readdir": 52
+        },
+        "medianElapsedMs": 13.133264000000054
+      },
+      "boundedScan": {
+        "samples": [
+          {
+            "operations": {
+              "stat": 8,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 1.7013230000000021
+          },
+          {
+            "operations": {
+              "stat": 8,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 0.9865019999999731
+          },
+          {
+            "operations": {
+              "stat": 8,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 3.781780000000026
+          },
+          {
+            "operations": {
+              "stat": 8,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 1.26925899999992
+          },
+          {
+            "operations": {
+              "stat": 8,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 1.1997539999999844
+          },
+          {
+            "operations": {
+              "stat": 8,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 0.8687039999999797
+          },
+          {
+            "operations": {
+              "stat": 8,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 0.895663999999897
+          }
+        ],
+        "medianOperations": {
+          "stat": 8,
+          "readFile": 0,
+          "readdir": 26
+        },
+        "medianElapsedMs": 1.1997539999999844
+      },
+      "symbolColdBurst": {
+        "samples": [
+          {
+            "operations": {
+              "stat": 3088,
+              "readFile": 3072,
+              "readdir": 416
+            },
+            "elapsedMs": 219.764369
+          },
+          {
+            "operations": {
+              "stat": 3088,
+              "readFile": 3072,
+              "readdir": 416
+            },
+            "elapsedMs": 199.00446599999998
+          },
+          {
+            "operations": {
+              "stat": 3088,
+              "readFile": 3072,
+              "readdir": 416
+            },
+            "elapsedMs": 203.83013599999992
+          },
+          {
+            "operations": {
+              "stat": 3088,
+              "readFile": 3072,
+              "readdir": 416
+            },
+            "elapsedMs": 221.60879
+          },
+          {
+            "operations": {
+              "stat": 3088,
+              "readFile": 3072,
+              "readdir": 416
+            },
+            "elapsedMs": 190.49852899999996
+          },
+          {
+            "operations": {
+              "stat": 3088,
+              "readFile": 3072,
+              "readdir": 416
+            },
+            "elapsedMs": 172.06251300000008
+          },
+          {
+            "operations": {
+              "stat": 3088,
+              "readFile": 3072,
+              "readdir": 416
+            },
+            "elapsedMs": 188.35570299999995
+          }
+        ],
+        "medianOperations": {
+          "stat": 3088,
+          "readFile": 3072,
+          "readdir": 416
+        },
+        "medianElapsedMs": 199.00446599999998
+      },
+      "symbolWarmBurst": {
+        "samples": [
+          {
+            "operations": {
+              "stat": 16,
+              "readFile": 0,
+              "readdir": 0
+            },
+            "elapsedMs": 0.2378800000000183
+          },
+          {
+            "operations": {
+              "stat": 16,
+              "readFile": 0,
+              "readdir": 0
+            },
+            "elapsedMs": 0.20416900000009264
+          },
+          {
+            "operations": {
+              "stat": 16,
+              "readFile": 0,
+              "readdir": 0
+            },
+            "elapsedMs": 0.21924200000000837
+          },
+          {
+            "operations": {
+              "stat": 16,
+              "readFile": 0,
+              "readdir": 0
+            },
+            "elapsedMs": 0.282568000000083
+          },
+          {
+            "operations": {
+              "stat": 16,
+              "readFile": 0,
+              "readdir": 0
+            },
+            "elapsedMs": 0.27484499999991385
+          },
+          {
+            "operations": {
+              "stat": 16,
+              "readFile": 0,
+              "readdir": 0
+            },
+            "elapsedMs": 0.1756359999999404
+          },
+          {
+            "operations": {
+              "stat": 16,
+              "readFile": 0,
+              "readdir": 0
+            },
+            "elapsedMs": 0.2309690000001865
+          }
+        ],
+        "medianOperations": {
+          "stat": 16,
+          "readFile": 0,
+          "readdir": 0
+        },
+        "medianElapsedMs": 0.2309690000001865
+      },
+      "symbolChanged": {
+        "samples": [
+          {
+            "operations": {
+              "stat": 1,
+              "readFile": 0,
+              "readdir": 0
+            },
+            "elapsedMs": 0.40038599999996904
+          },
+          {
+            "operations": {
+              "stat": 1,
+              "readFile": 0,
+              "readdir": 0
+            },
+            "elapsedMs": 0.1811840000000302
+          },
+          {
+            "operations": {
+              "stat": 1,
+              "readFile": 0,
+              "readdir": 0
+            },
+            "elapsedMs": 0.2806640000000016
+          },
+          {
+            "operations": {
+              "stat": 1,
+              "readFile": 0,
+              "readdir": 0
+            },
+            "elapsedMs": 0.10779299999990144
+          },
+          {
+            "operations": {
+              "stat": 1,
+              "readFile": 0,
+              "readdir": 0
+            },
+            "elapsedMs": 0.1043170000000373
+          },
+          {
+            "operations": {
+              "stat": 1,
+              "readFile": 0,
+              "readdir": 0
+            },
+            "elapsedMs": 0.24751500000002125
+          },
+          {
+            "operations": {
+              "stat": 1,
+              "readFile": 0,
+              "readdir": 0
+            },
+            "elapsedMs": 0.14241499999980078
+          }
+        ],
+        "medianOperations": {
+          "stat": 1,
+          "readFile": 0,
+          "readdir": 0
+        },
+        "medianElapsedMs": 0.1811840000000302
+      }
+    },
+    "correctness": {
+      "repoWarmStable": true,
+      "repoChangeVisible": true,
+      "scanBounded": true,
+      "symbolBurstComplete": true,
+      "symbolWarmReuse": true,
+      "symbolChangedVisible": false,
+      "defaultSymbolScope": false,
+      "nestedSymbolChangeVisible": false,
+      "workspaceIsolation": false,
+      "fileBudgetIsolation": false
+    }
+  },
+  "candidate": {
+    "schemaVersion": 1,
+    "label": "candidate",
+    "sourceCommit": "9cf89a95fbec2d902d56558d0b8bdfc989874a84",
+    "sourceChangesFromCommit": [
+      "packages/tools/src/repo-map.ts",
+      "packages/tools/src/symbol-index.ts",
+      "packages/tools/src/tools/repo-map-tool.ts"
+    ],
+    "sourceDigest": "c563c456ff87ba2368429d37e00d265e246d40a6cbdb3668d6b8f6a50bef6f36",
+    "scriptDigest": "7e2c16c6d4e54fbca22b3d7efc3c2eb3f3106d31ff2e234bed5836155e5f0a87",
+    "environment": {
+      "node": "v24.19.0",
+      "platform": "linux",
+      "arch": "x64"
+    },
+    "config": {
+      "samples": 7,
+      "directories": 24,
+      "filesPerDirectory": 8,
+      "concurrency": 16,
+      "scanLimit": 8
+    },
+    "scenarios": {
+      "repoWarmBurst": {
+        "samples": [
+          {
+            "operations": {
+              "stat": 193,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 7.563149999999993
+          },
+          {
+            "operations": {
+              "stat": 193,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 6.158754999999985
+          },
+          {
+            "operations": {
+              "stat": 193,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 6.7563690000000065
+          },
+          {
+            "operations": {
+              "stat": 193,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 6.3901050000000055
+          },
+          {
+            "operations": {
+              "stat": 193,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 6.358136000000002
+          },
+          {
+            "operations": {
+              "stat": 193,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 5.55682499999989
+          },
+          {
+            "operations": {
+              "stat": 193,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 8.140142999999966
+          }
+        ],
+        "medianOperations": {
+          "stat": 193,
+          "readFile": 0,
+          "readdir": 26
+        },
+        "medianElapsedMs": 6.3901050000000055
+      },
+      "repoChanged": {
+        "samples": [
+          {
+            "operations": {
+              "stat": 193,
+              "readFile": 3,
+              "readdir": 26
+            },
+            "elapsedMs": 8.983128000000008
+          },
+          {
+            "operations": {
+              "stat": 193,
+              "readFile": 3,
+              "readdir": 26
+            },
+            "elapsedMs": 7.637070999999992
+          },
+          {
+            "operations": {
+              "stat": 193,
+              "readFile": 3,
+              "readdir": 26
+            },
+            "elapsedMs": 6.634275000000002
+          },
+          {
+            "operations": {
+              "stat": 193,
+              "readFile": 3,
+              "readdir": 26
+            },
+            "elapsedMs": 9.862387000000012
+          },
+          {
+            "operations": {
+              "stat": 193,
+              "readFile": 3,
+              "readdir": 26
+            },
+            "elapsedMs": 5.960825999999997
+          },
+          {
+            "operations": {
+              "stat": 193,
+              "readFile": 3,
+              "readdir": 26
+            },
+            "elapsedMs": 9.106362999999988
+          },
+          {
+            "operations": {
+              "stat": 193,
+              "readFile": 3,
+              "readdir": 26
+            },
+            "elapsedMs": 7.27964099999997
+          }
+        ],
+        "medianOperations": {
+          "stat": 193,
+          "readFile": 3,
+          "readdir": 26
+        },
+        "medianElapsedMs": 7.637070999999992
+      },
+      "boundedScan": {
+        "samples": [
+          {
+            "operations": {
+              "stat": 8,
+              "readFile": 0,
+              "readdir": 3
+            },
+            "elapsedMs": 0.43539900000000387
+          },
+          {
+            "operations": {
+              "stat": 8,
+              "readFile": 0,
+              "readdir": 3
+            },
+            "elapsedMs": 0.6916259999999852
+          },
+          {
+            "operations": {
+              "stat": 8,
+              "readFile": 0,
+              "readdir": 3
+            },
+            "elapsedMs": 0.35560799999996107
+          },
+          {
+            "operations": {
+              "stat": 8,
+              "readFile": 0,
+              "readdir": 3
+            },
+            "elapsedMs": 4.965010000000007
+          },
+          {
+            "operations": {
+              "stat": 8,
+              "readFile": 0,
+              "readdir": 3
+            },
+            "elapsedMs": 0.2970889999999713
+          },
+          {
+            "operations": {
+              "stat": 8,
+              "readFile": 0,
+              "readdir": 3
+            },
+            "elapsedMs": 0.3254419999999527
+          },
+          {
+            "operations": {
+              "stat": 8,
+              "readFile": 0,
+              "readdir": 3
+            },
+            "elapsedMs": 0.5960710000000518
+          }
+        ],
+        "medianOperations": {
+          "stat": 8,
+          "readFile": 0,
+          "readdir": 3
+        },
+        "medianElapsedMs": 0.43539900000000387
+      },
+      "symbolColdBurst": {
+        "samples": [
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 192,
+              "readdir": 26
+            },
+            "elapsedMs": 33.143581
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 192,
+              "readdir": 26
+            },
+            "elapsedMs": 27.670382999999987
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 192,
+              "readdir": 26
+            },
+            "elapsedMs": 29.898032
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 192,
+              "readdir": 26
+            },
+            "elapsedMs": 24.40550499999995
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 192,
+              "readdir": 26
+            },
+            "elapsedMs": 24.785658999999953
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 192,
+              "readdir": 26
+            },
+            "elapsedMs": 25.349582000000055
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 192,
+              "readdir": 26
+            },
+            "elapsedMs": 27.107361999999966
+          }
+        ],
+        "medianOperations": {
+          "stat": 192,
+          "readFile": 192,
+          "readdir": 26
+        },
+        "medianElapsedMs": 27.107361999999966
+      },
+      "symbolWarmBurst": {
+        "samples": [
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 7.175758000000002
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 7.725616000000031
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 7.761859999999956
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 5.482643000000053
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 6.232808000000091
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 5.662134999999921
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 0,
+              "readdir": 26
+            },
+            "elapsedMs": 5.451495999999906
+          }
+        ],
+        "medianOperations": {
+          "stat": 192,
+          "readFile": 0,
+          "readdir": 26
+        },
+        "medianElapsedMs": 6.232808000000091
+      },
+      "symbolChanged": {
+        "samples": [
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 1,
+              "readdir": 26
+            },
+            "elapsedMs": 7.075091000000015
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 1,
+              "readdir": 26
+            },
+            "elapsedMs": 7.283145999999988
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 1,
+              "readdir": 26
+            },
+            "elapsedMs": 8.262607000000003
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 1,
+              "readdir": 26
+            },
+            "elapsedMs": 5.517444999999952
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 1,
+              "readdir": 26
+            },
+            "elapsedMs": 5.6142509999999675
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 1,
+              "readdir": 26
+            },
+            "elapsedMs": 8.309448000000089
+          },
+          {
+            "operations": {
+              "stat": 192,
+              "readFile": 1,
+              "readdir": 26
+            },
+            "elapsedMs": 5.7164960000000065
+          }
+        ],
+        "medianOperations": {
+          "stat": 192,
+          "readFile": 1,
+          "readdir": 26
+        },
+        "medianElapsedMs": 7.075091000000015
+      }
+    },
+    "correctness": {
+      "repoWarmStable": true,
+      "repoChangeVisible": true,
+      "scanBounded": true,
+      "symbolBurstComplete": true,
+      "symbolWarmReuse": true,
+      "symbolChangedVisible": true,
+      "defaultSymbolScope": true,
+      "nestedSymbolChangeVisible": true,
+      "workspaceIsolation": true,
+      "fileBudgetIsolation": true
+    }
+  },
+  "gates": [
+    {
+      "scenario": "repoWarmBurst",
+      "operation": "stat",
+      "before": 3088,
+      "after": 193,
+      "reduction": 0.9375,
+      "minimumReduction": 0.9,
+      "passed": true
+    },
+    {
+      "scenario": "repoChanged",
+      "operation": "stat",
+      "before": 386,
+      "after": 193,
+      "reduction": 0.5,
+      "minimumReduction": 0.45,
+      "passed": true
+    },
+    {
+      "scenario": "boundedScan",
+      "operation": "readdir",
+      "before": 26,
+      "after": 3,
+      "reduction": 0.8846153846153846,
+      "minimumReduction": 0.75,
+      "passed": true
+    },
+    {
+      "scenario": "symbolColdBurst",
+      "operation": "readFile",
+      "before": 3072,
+      "after": 192,
+      "reduction": 0.9375,
+      "minimumReduction": 0.9,
+      "passed": true
+    }
+  ],
+  "correctnessPassed": true,
+  "passed": true
+}

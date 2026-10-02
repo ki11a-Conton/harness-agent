@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { ToolDefinition, ToolExecutionContext, ToolResult } from "@ar/contracts";
 import { errorInfo } from "@ar/contracts";
-import { RepositoryMapCache, type RepositoryMap } from "../repo-map.js";
+import { resolve } from "node:path";
+import { DEFAULT_MAX_FILES, RepositoryMapCache, type RepositoryMap } from "../repo-map.js";
 
 /**
  * P2-30 repo_map tool. Read-only; policy (permission + sandbox path scoping)
@@ -28,17 +29,26 @@ export interface RepoMapResolver {
 }
 
 /**
- * Holds one cache instance per resolver returned by `makeRepoMapResolver`, so
- * callers (tests, runtime) can control which process-local cache a tool uses.
+ * Keeps bounded process-local caches by workspace and file budget. The cache
+ * getter exposes the most recently requested entry for lifecycle diagnostics.
  */
 export function makeRepoMapResolver(): RepoMapResolver {
+  const caches = new Map<string, RepositoryMapCache>();
+  const maxEntries = 8;
   let cache: RepositoryMapCache | null = null;
   return {
     get cache() {
       return cache;
     },
     async resolve(input: RepoMapToolInput, cwd: string): Promise<RepositoryMap> {
-      if (!cache) cache = new RepositoryMapCache({ root: cwd, maxFiles: input.maxFiles });
+      const root = resolve(cwd);
+      const maxFiles = input.maxFiles ?? DEFAULT_MAX_FILES;
+      const key = JSON.stringify([root, maxFiles]);
+      cache = caches.get(key) ?? new RepositoryMapCache({ root, maxFiles });
+      // Map insertion order records actual use, including warm hits.
+      caches.delete(key);
+      caches.set(key, cache);
+      if (caches.size > maxEntries) caches.delete(caches.keys().next().value!);
       if (input.refresh) cache.invalidate();
       return cache.get();
     },

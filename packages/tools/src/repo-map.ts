@@ -23,14 +23,13 @@
  * preserves size and (rounded) mtime — i.e. it closes the mtime-granularity gap.
  *
  * Ephemeral, bounded workspace knowledge: never persisted; `maxFiles` caps the
- * file tree (`complete:false` when truncated). A single reader runs at most one
- * in-flight build; concurrent `get()` share it.
+ * file tree (`complete:false` when truncated). Concurrent `get()` share both
+ * validation and construction for the same invalidation generation.
  */
 import { promises as fs, type Dirent } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, resolve } from "node:path";
-import { isNodeErrorCode } from "@ar/contracts";
-import { matchGlobDirs, resolveWorkspace } from "./workspace.js";
+import { resolveWorkspace } from "./workspace.js";
 
 const SKIP_DIRS = new Set([
   ".git",
@@ -46,7 +45,7 @@ const SKIP_DIRS = new Set([
   ".next",
 ]);
 const MAX_MANIFEST_BYTES = 256 * 1024;
-const DEFAULT_MAX_FILES = 50_000;
+export const DEFAULT_MAX_FILES = 50_000;
 const MAX_DEPS = 64;
 
 const LANGUAGE_BY_EXT: Record<string, string> = {
@@ -149,25 +148,26 @@ async function walkFiles(
   root: string,
   rel: string,
   onFile: (abs: string, relFile: string) => Promise<boolean | void>,
-): Promise<void> {
+): Promise<boolean> {
   if (rel === "") rel = ".";
   let entries: Dirent[];
   try {
     entries = await fs.readdir(join(root, rel), { withFileTypes: true });
   } catch {
-    return;
+    return true;
   }
   for (const e of entries) {
     if (e.isDirectory()) {
       if (SKIP_DIRS.has(e.name)) continue;
       const relDir = rel === "." ? e.name : `${rel}/${e.name}`;
-      await walkFiles(root, relDir, onFile);
+      if (!(await walkFiles(root, relDir, onFile))) return false;
     } else if (e.isFile()) {
       const relFile = rel === "." ? e.name : `${rel}/${e.name}`;
       const keep = await onFile(join(root, relFile), relFile);
-      if (keep === false) return;
+      if (keep === false) return false;
     }
   }
+  return true;
 }
 
 /** Cheap stat walk returning repo-relative entries, skipping VCS/dep dirs. */
@@ -178,7 +178,7 @@ export async function scanRepoStats(root: string, maxFiles = DEFAULT_MAX_FILES):
     const st = await fs.stat(abs).catch(() => null);
     if (!st || !st.isFile()) return true;
     out.push({ path: relFile, size: st.size, mtimeMs: st.mtimeMs });
-    return true;
+    return out.length < maxFiles;
   });
   return out;
 }
@@ -199,8 +199,9 @@ export class RepositoryMapCache {
   private readonly rootResolved: string;
   private readonly maxFiles: number;
   private map: RepositoryMap | null = null;
-  private build: Promise<RepositoryMap> | null = null;
-  private dirtyPath: string | null = null;
+  private flight: { generation: number; promise: Promise<RepositoryMap> } | null = null;
+  private generation = 0;
+  private mapGeneration = -1;
   private readonly counters = { hits: 0, builds: 0, lastBuildMs: 0 };
 
   constructor(opts: RepoMapOptions) {
@@ -213,9 +214,10 @@ export class RepositoryMapCache {
     return this.counters;
   }
 
-  /** True when a fresh map is already held (no work needed on next get()). */
+  /** True when a map is held with no pending explicit invalidation.
+   *  get() still checks the filesystem for external changes. */
   isFresh(): boolean {
-    return this.map !== null;
+    return this.map !== null && this.mapGeneration === this.generation;
   }
 
   /** Return the current cached map or null if never built / invalidated. */
@@ -229,32 +231,39 @@ export class RepositoryMapCache {
    * or the cache was invalidated / dirty-marked.
    */
   async get(): Promise<RepositoryMap> {
-    // Fast path handled synchronously from here on; the shared build promise
-    // makes concurrent gets coalesce onto one scan.
-    if (this.map && !this.dirtyPath) {
-      const cur = await scanRepoStats(this.rootResolved, this.maxFiles);
-      if (repoFingerprint(cur) === this.map.fingerprint) {
-        this.counters.hits++;
-        return this.map;
-      }
+    const generation = this.generation;
+    if (this.flight?.generation === generation) return this.flight.promise;
+    const flight = { generation, promise: this.load(generation) };
+    this.flight = flight;
+    try {
+      return await flight.promise;
+    } finally {
+      // An invalidation may have installed a newer flight while we awaited.
+      if (this.flight === flight) this.flight = null;
     }
-    if (this.build) {
-      this.dirtyPath = null;
-      return await this.build;
+  }
+
+  private async load(generation: number): Promise<RepositoryMap> {
+    // One extra entry distinguishes an exact cap from a truncated tree, even
+    // when the retained entries (and their fingerprint) are unchanged.
+    const observed = await scanRepoStats(this.rootResolved, this.maxFiles + 1);
+    if (generation !== this.generation) return this.get();
+    const entries = observed.slice(0, this.maxFiles);
+    const complete = observed.length <= this.maxFiles;
+    if (this.map && this.mapGeneration === generation &&
+        this.map.fingerprint === repoFingerprint(entries) && this.map.complete === complete) {
+      this.counters.hits++;
+      return this.map;
     }
     this.counters.builds++;
     const startedAt = Date.now();
-    const build = this.doBuild();
-    this.build = build;
-    try {
-      const map = await build;
-      this.map = map;
-      this.counters.lastBuildMs = Date.now() - startedAt;
-      return map;
-    } finally {
-      if (this.build === build) this.build = null;
-      this.dirtyPath = null;
-    }
+    const map = await this.doBuild(entries, complete);
+    // Never publish or return a result built before an explicit mutation.
+    if (generation !== this.generation) return this.get();
+    this.map = map;
+    this.mapGeneration = generation;
+    this.counters.lastBuildMs = Date.now() - startedAt;
+    return map;
   }
 
   /**
@@ -262,24 +271,22 @@ export class RepositoryMapCache {
    * changed so the next get() rebuilds even if size + rounded mtime match
    * (covers quick rewrites in the same mtime tick).
    */
-  noteChange(relPath?: string): void {
-    this.dirtyPath ??= relPath ?? "*";
+  noteChange(_relPath?: string): void {
+    this.generation++;
   }
 
   /** Drop the cached map entirely; the next get() rebuilds from scratch. */
   invalidate(): void {
     this.map = null;
-    this.dirtyPath = null;
+    this.generation++;
   }
 
-  private async doBuild(): Promise<RepositoryMap> {
+  private async doBuild(statEntries: StatEntry[], complete: boolean): Promise<RepositoryMap> {
     const files: RepoFile[] = [];
-    const statEntries: StatEntry[] = [];
     const statByPath = new Map<string, number>();
     const manifestPaths: string[] = [];
     const langCount = new Map<string, number>();
     const lockDirs = new Set<string>();
-    let complete = true;
 
     // P2-30+: workspace glob awareness. When the repo declares workspaces we
     // treat manifests OUTSIDE the member set as non-boundaries (monorepo glob
@@ -289,16 +296,10 @@ export class RepositoryMapCache {
     const memberDirs =
       ws.explicit && ws.members.length > 0 ? new Set(ws.members) : null;
 
-    await walkFiles(this.rootResolved, ".", async (abs, relFile) => {
-      if (files.length >= this.maxFiles) {
-        complete = false;
-        return false;
-      }
-      const st = await fs.stat(abs).catch(() => null);
-      if (!st || !st.isFile()) return true;
-      files.push({ path: relFile, size: st.size });
-      statByPath.set(relFile, st.size);
-      statEntries.push({ path: relFile, size: st.size, mtimeMs: st.mtimeMs });
+    for (const entry of statEntries) {
+      const relFile = entry.path;
+      files.push({ path: relFile, size: entry.size });
+      statByPath.set(relFile, entry.size);
       const base = relFile.split("/").pop() ?? relFile;
       const dir = dirOf(relFile, base);
       if (MANIFEST_NAMES.has(base)) {
@@ -311,8 +312,7 @@ export class RepositoryMapCache {
       const ext = extOf(base);
       const lang = LANGUAGE_BY_EXT[ext];
       if (lang) langCount.set(lang, (langCount.get(lang) ?? 0) + 1);
-      return true;
-    });
+    }
 
     const packages: RepoPackage[] = [];
     const allEntrypoints: string[] = [];
