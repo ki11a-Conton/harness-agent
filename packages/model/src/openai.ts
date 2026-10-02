@@ -184,6 +184,26 @@ function summarize(value: unknown): string {
   return redactSecrets(raw.replace(/\s+/g, " ").trim()).content.slice(0, BODY_SUMMARY_LIMIT);
 }
 
+/** Missing or abnormal completion evidence must never authorize a tool batch. */
+function streamTerminationError(
+  boundary: "finish_reason" | "done" | "eof" | "missing_body",
+  finishReason: string | null = null,
+): ReturnType<typeof errorInfo> {
+  // Provider-controlled reasons can contain arbitrary content. Preserve a
+  // bounded, redacted reason for audit without retaining secrets in evidence.
+  const reason = finishReason === null ? null : summarize(finishReason);
+  return errorInfo(
+    "MODEL_ERROR",
+    `OpenAI chat completion ended without a normal finish_reason (${boundary}${reason === null ? "" : `: ${reason}`})`,
+    {
+      retryable: false,
+      safeToRetry: false,
+      provider: { kind: "protocol" },
+      evidence: JSON.stringify({ boundary, finishReason: reason }),
+    },
+  );
+}
+
 function isAbortError(value: unknown): boolean {
   return value instanceof Error && value.name === "AbortError";
 }
@@ -439,7 +459,11 @@ async function* streamChatCompletion(
 
   const reader = response.body?.getReader();
   if (!reader) {
-    yield { type: "completed", result: { finishReason: "stop" }, timestamp: Date.now() };
+    yield {
+      type: "completed",
+      result: { finishReason: "error", text: "", error: streamTerminationError("missing_body") },
+      timestamp: Date.now(),
+    };
     return;
   }
 
@@ -461,7 +485,7 @@ async function* streamChatCompletion(
   });
   if (signal.aborted) aborted = true;
 
-  const finishEvents = (reason: FinishReason | undefined): ModelEvent[] => {
+  const finishEvents = (reason: FinishReason, error?: ReturnType<typeof errorInfo>): ModelEvent[] => {
     const calls: ToolCall[] = [...toolCalls.values()].map((tc) => ({
       id: tc.id ? (tc.id as ToolCallId) : newToolCallId(),
       name: tc.name,
@@ -475,7 +499,8 @@ async function* streamChatCompletion(
     events.push({
       type: "completed",
       result: {
-        finishReason: reason ?? (calls.length ? "tool_calls" : "stop"),
+        finishReason: reason,
+        ...(error ? { error } : {}),
         text,
         ...(calls.length ? { toolCalls: calls } : {}),
         ...(reasoning.length > 0 ? { reasoningContent: reasoning } : {}),
@@ -488,7 +513,9 @@ async function* streamChatCompletion(
 
   const processData = (payload: string): { events: ModelEvent[]; finished: boolean } => {
     if (payload === "[DONE]") {
-      return { events: finishEvents(undefined), finished: true };
+      // R1: DONE closes the transport; it does not certify model completion.
+      // This also rejects legacy DONE-only text responses consistently.
+      return { events: finishEvents("error", streamTerminationError("done")), finished: true };
     }
     let chunk: ChatChunk;
     try {
@@ -525,11 +552,12 @@ async function* streamChatCompletion(
         toolCalls.set(call.index, slot);
       }
     }
-    if (choice?.finish_reason) {
-      // Non-stop/tool_calls reasons (e.g. "length") also map to "stop":
-      // the streamed text is still delivered, the caller decides what to do.
-      const reason: FinishReason = choice.finish_reason === "tool_calls" ? "tool_calls" : "stop";
-      return { events: [...events, ...finishEvents(reason)], finished: true };
+    const reason = choice?.finish_reason;
+    if (reason !== undefined && reason !== null) {
+      const completion = reason === "stop" || reason === "tool_calls"
+        ? finishEvents(reason)
+        : finishEvents("error", streamTerminationError("finish_reason", reason));
+      return { events: [...events, ...completion], finished: true };
     }
     return { events, finished: false };
   };
@@ -585,8 +613,8 @@ async function* streamChatCompletion(
     return;
   }
   if (!finished) {
-    // Stream ended without a finish_reason (EOF or [DONE] missing) — infer it.
-    for (const ev of finishEvents(undefined)) yield ev;
+    // Natural EOF cannot authorize execution, even with complete JSON args.
+    for (const ev of finishEvents("error", streamTerminationError("eof"))) yield ev;
   }
 }
 

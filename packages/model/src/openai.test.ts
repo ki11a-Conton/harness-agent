@@ -171,7 +171,7 @@ describe("OpenAICompatibleProvider", () => {
     expect(completedEvent(events).result.usage).toEqual({ inputTokens: 10, outputTokens: 5 });
   });
 
-  it("completes with stop when the stream ends via [DONE] without a finish_reason", async () => {
+  it("R1: rejects legacy DONE-only text without a normal finish_reason", async () => {
     stubFetch();
     mockFetch.mockResolvedValueOnce(
       sseResponse([
@@ -182,7 +182,10 @@ describe("OpenAICompatibleProvider", () => {
 
     const events = await generate(new OpenAICompatibleProvider(), { messages: [] }, new AbortController().signal);
 
-    expect(completedEvent(events).result).toMatchObject({ finishReason: "stop", text: "ok" });
+    expect(completedEvent(events).result).toMatchObject({
+      finishReason: "error", text: "ok",
+      error: { provider: { kind: "protocol" }, retryable: false, safeToRetry: false },
+    });
   });
 
   it("emits an error event with the status code on HTTP 401 without leaking the key", async () => {
