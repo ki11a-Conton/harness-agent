@@ -1,0 +1,514 @@
+{
+  "schemaVersion": 1,
+  "baseline": {
+    "schemaVersion": 1,
+    "label": "baseline",
+    "sourceCommit": "b747502c8cbcfd6dbb996c0dd744069468b17abd",
+    "sourceChangesFromCommit": [],
+    "sourceDigest": "33c7fe1bc37cd862a927bda4b9b036fd394bcd36a164e91035305111f58edb4a",
+    "scriptDigest": "93509f088893561bde012d3d92217b9af269ce1b78126bfa22b0a5fc0b33d645",
+    "environment": {
+      "node": "v24.19.0",
+      "platform": "linux",
+      "arch": "x64"
+    },
+    "config": {
+      "samples": 7,
+      "previewBytes": 4096,
+      "asciiBytes": 1048576,
+      "unicodeRepeats": 131072,
+      "denseLineRepeats": 262144
+    },
+    "scenarios": {
+      "singleLineAscii": {
+        "samples": [
+          {
+            "elapsedMs": 1.1900909999999953,
+            "splitInputBytes": 1048576,
+            "inputBytes": 1048576,
+            "outputBytes": 1048637,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 262160
+          },
+          {
+            "elapsedMs": 0.5814699999999959,
+            "splitInputBytes": 1048576,
+            "inputBytes": 1048576,
+            "outputBytes": 1048637,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 262160
+          },
+          {
+            "elapsedMs": 0.5817800000000091,
+            "splitInputBytes": 1048576,
+            "inputBytes": 1048576,
+            "outputBytes": 1048637,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 262160
+          },
+          {
+            "elapsedMs": 0.6547000000000054,
+            "splitInputBytes": 1048576,
+            "inputBytes": 1048576,
+            "outputBytes": 1048637,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 262160
+          },
+          {
+            "elapsedMs": 0.7190980000000025,
+            "splitInputBytes": 1048576,
+            "inputBytes": 1048576,
+            "outputBytes": 1048637,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 262160
+          },
+          {
+            "elapsedMs": 0.5783050000000003,
+            "splitInputBytes": 1048576,
+            "inputBytes": 1048576,
+            "outputBytes": 1048637,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 262160
+          },
+          {
+            "elapsedMs": 0.5923060000000078,
+            "splitInputBytes": 1048576,
+            "inputBytes": 1048576,
+            "outputBytes": 1048637,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 262160
+          }
+        ],
+        "medians": {
+          "elapsedMs": 0.5923060000000078,
+          "splitInputBytes": 1048576,
+          "inputBytes": 1048576,
+          "outputBytes": 1048637,
+          "reportedTokens": 1024,
+          "estimatedOutputTokens": 262160
+        }
+      },
+      "singleLineUnicode": {
+        "samples": [
+          {
+            "elapsedMs": 1.989649,
+            "splitInputBytes": 1310720,
+            "inputBytes": 1310720,
+            "outputBytes": 1310781,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 327696
+          },
+          {
+            "elapsedMs": 2.119495999999998,
+            "splitInputBytes": 1310720,
+            "inputBytes": 1310720,
+            "outputBytes": 1310781,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 327696
+          },
+          {
+            "elapsedMs": 2.1416889999999995,
+            "splitInputBytes": 1310720,
+            "inputBytes": 1310720,
+            "outputBytes": 1310781,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 327696
+          },
+          {
+            "elapsedMs": 3.4271949999999975,
+            "splitInputBytes": 1310720,
+            "inputBytes": 1310720,
+            "outputBytes": 1310781,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 327696
+          },
+          {
+            "elapsedMs": 2.2466289999999987,
+            "splitInputBytes": 1310720,
+            "inputBytes": 1310720,
+            "outputBytes": 1310781,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 327696
+          },
+          {
+            "elapsedMs": 2.087758000000008,
+            "splitInputBytes": 1310720,
+            "inputBytes": 1310720,
+            "outputBytes": 1310781,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 327696
+          },
+          {
+            "elapsedMs": 2.0844629999999995,
+            "splitInputBytes": 1310720,
+            "inputBytes": 1310720,
+            "outputBytes": 1310781,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 327696
+          }
+        ],
+        "medians": {
+          "elapsedMs": 2.119495999999998,
+          "splitInputBytes": 1310720,
+          "inputBytes": 1310720,
+          "outputBytes": 1310781,
+          "reportedTokens": 1024,
+          "estimatedOutputTokens": 327696
+        }
+      },
+      "denseLines": {
+        "samples": [
+          {
+            "elapsedMs": 9.65005699999999,
+            "splitInputBytes": 1048576,
+            "inputBytes": 1048576,
+            "outputBytes": 4156,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 1039
+          },
+          {
+            "elapsedMs": 9.14913900000002,
+            "splitInputBytes": 1048576,
+            "inputBytes": 1048576,
+            "outputBytes": 4156,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 1039
+          },
+          {
+            "elapsedMs": 10.294301999999988,
+            "splitInputBytes": 1048576,
+            "inputBytes": 1048576,
+            "outputBytes": 4156,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 1039
+          },
+          {
+            "elapsedMs": 25.951347,
+            "splitInputBytes": 1048576,
+            "inputBytes": 1048576,
+            "outputBytes": 4156,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 1039
+          },
+          {
+            "elapsedMs": 7.397019,
+            "splitInputBytes": 1048576,
+            "inputBytes": 1048576,
+            "outputBytes": 4156,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 1039
+          },
+          {
+            "elapsedMs": 8.24239799999998,
+            "splitInputBytes": 1048576,
+            "inputBytes": 1048576,
+            "outputBytes": 4156,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 1039
+          },
+          {
+            "elapsedMs": 12.076638000000003,
+            "splitInputBytes": 1048576,
+            "inputBytes": 1048576,
+            "outputBytes": 4156,
+            "reportedTokens": 1024,
+            "estimatedOutputTokens": 1039
+          }
+        ],
+        "medians": {
+          "elapsedMs": 9.65005699999999,
+          "splitInputBytes": 1048576,
+          "inputBytes": 1048576,
+          "outputBytes": 4156,
+          "reportedTokens": 1024,
+          "estimatedOutputTokens": 1039
+        }
+      }
+    },
+    "correctness": {
+      "previewBodyBounded": false,
+      "previewTokensAccurate": false,
+      "previewUnicodeValid": true,
+      "protectedAnchorPreserved": false,
+      "distinctOriginalsPreserved": false,
+      "latestOccurrenceOrder": false,
+      "unicodeDigestTokensAccurate": false,
+      "rehydrationBudgetAccurate": false,
+      "breakerRecognizesLaterIneffectiveness": false
+    },
+    "timingNote": "Elapsed time includes split instrumentation; hard gates use payload/processed-byte counts, not timings. Tokens are heuristic budget estimates, not provider measurements."
+  },
+  "candidate": {
+    "schemaVersion": 1,
+    "label": "candidate",
+    "sourceCommit": "b747502c8cbcfd6dbb996c0dd744069468b17abd",
+    "sourceChangesFromCommit": [
+      "packages/context/src/compaction.ts",
+      "packages/context/src/pipeline.ts",
+      "packages/context/src/rehydration.ts"
+    ],
+    "sourceDigest": "608f0922c3b4a20fc8227481b8924b586c40cd76354418e5045f36453793bc02",
+    "scriptDigest": "93509f088893561bde012d3d92217b9af269ce1b78126bfa22b0a5fc0b33d645",
+    "environment": {
+      "node": "v24.19.0",
+      "platform": "linux",
+      "arch": "x64"
+    },
+    "config": {
+      "samples": 7,
+      "previewBytes": 4096,
+      "asciiBytes": 1048576,
+      "unicodeRepeats": 131072,
+      "denseLineRepeats": 262144
+    },
+    "scenarios": {
+      "singleLineAscii": {
+        "samples": [
+          {
+            "elapsedMs": 0.9163860000000028,
+            "splitInputBytes": 0,
+            "inputBytes": 1048576,
+            "outputBytes": 4157,
+            "reportedTokens": 1040,
+            "estimatedOutputTokens": 1040
+          },
+          {
+            "elapsedMs": 0.2638589999999965,
+            "splitInputBytes": 0,
+            "inputBytes": 1048576,
+            "outputBytes": 4157,
+            "reportedTokens": 1040,
+            "estimatedOutputTokens": 1040
+          },
+          {
+            "elapsedMs": 0.22664300000000281,
+            "splitInputBytes": 0,
+            "inputBytes": 1048576,
+            "outputBytes": 4157,
+            "reportedTokens": 1040,
+            "estimatedOutputTokens": 1040
+          },
+          {
+            "elapsedMs": 0.17622699999999725,
+            "splitInputBytes": 0,
+            "inputBytes": 1048576,
+            "outputBytes": 4157,
+            "reportedTokens": 1040,
+            "estimatedOutputTokens": 1040
+          },
+          {
+            "elapsedMs": 0.18419899999999956,
+            "splitInputBytes": 0,
+            "inputBytes": 1048576,
+            "outputBytes": 4157,
+            "reportedTokens": 1040,
+            "estimatedOutputTokens": 1040
+          },
+          {
+            "elapsedMs": 0.193913000000002,
+            "splitInputBytes": 0,
+            "inputBytes": 1048576,
+            "outputBytes": 4157,
+            "reportedTokens": 1040,
+            "estimatedOutputTokens": 1040
+          },
+          {
+            "elapsedMs": 0.16538000000000608,
+            "splitInputBytes": 0,
+            "inputBytes": 1048576,
+            "outputBytes": 4157,
+            "reportedTokens": 1040,
+            "estimatedOutputTokens": 1040
+          }
+        ],
+        "medians": {
+          "elapsedMs": 0.193913000000002,
+          "splitInputBytes": 0,
+          "inputBytes": 1048576,
+          "outputBytes": 4157,
+          "reportedTokens": 1040,
+          "estimatedOutputTokens": 1040
+        }
+      },
+      "singleLineUnicode": {
+        "samples": [
+          {
+            "elapsedMs": 0.7469999999999999,
+            "splitInputBytes": 0,
+            "inputBytes": 1310720,
+            "outputBytes": 4157,
+            "reportedTokens": 1040,
+            "estimatedOutputTokens": 1040
+          },
+          {
+            "elapsedMs": 0.5933679999999981,
+            "splitInputBytes": 0,
+            "inputBytes": 1310720,
+            "outputBytes": 4157,
+            "reportedTokens": 1040,
+            "estimatedOutputTokens": 1040
+          },
+          {
+            "elapsedMs": 0.5688609999999983,
+            "splitInputBytes": 0,
+            "inputBytes": 1310720,
+            "outputBytes": 4157,
+            "reportedTokens": 1040,
+            "estimatedOutputTokens": 1040
+          },
+          {
+            "elapsedMs": 0.4504309999999947,
+            "splitInputBytes": 0,
+            "inputBytes": 1310720,
+            "outputBytes": 4157,
+            "reportedTokens": 1040,
+            "estimatedOutputTokens": 1040
+          },
+          {
+            "elapsedMs": 0.4431200000000075,
+            "splitInputBytes": 0,
+            "inputBytes": 1310720,
+            "outputBytes": 4157,
+            "reportedTokens": 1040,
+            "estimatedOutputTokens": 1040
+          },
+          {
+            "elapsedMs": 0.44325000000000614,
+            "splitInputBytes": 0,
+            "inputBytes": 1310720,
+            "outputBytes": 4157,
+            "reportedTokens": 1040,
+            "estimatedOutputTokens": 1040
+          },
+          {
+            "elapsedMs": 0.45544900000000155,
+            "splitInputBytes": 0,
+            "inputBytes": 1310720,
+            "outputBytes": 4157,
+            "reportedTokens": 1040,
+            "estimatedOutputTokens": 1040
+          }
+        ],
+        "medians": {
+          "elapsedMs": 0.45544900000000155,
+          "splitInputBytes": 0,
+          "inputBytes": 1310720,
+          "outputBytes": 4157,
+          "reportedTokens": 1040,
+          "estimatedOutputTokens": 1040
+        }
+      },
+      "denseLines": {
+        "samples": [
+          {
+            "elapsedMs": 0.15663599999999178,
+            "splitInputBytes": 0,
+            "inputBytes": 1048576,
+            "outputBytes": 4156,
+            "reportedTokens": 1039,
+            "estimatedOutputTokens": 1039
+          },
+          {
+            "elapsedMs": 0.15461399999999514,
+            "splitInputBytes": 0,
+            "inputBytes": 1048576,
+            "outputBytes": 4156,
+            "reportedTokens": 1039,
+            "estimatedOutputTokens": 1039
+          },
+          {
+            "elapsedMs": 0.17636699999999905,
+            "splitInputBytes": 0,
+            "inputBytes": 1048576,
+            "outputBytes": 4156,
+            "reportedTokens": 1039,
+            "estimatedOutputTokens": 1039
+          },
+          {
+            "elapsedMs": 0.23665799999999138,
+            "splitInputBytes": 0,
+            "inputBytes": 1048576,
+            "outputBytes": 4156,
+            "reportedTokens": 1039,
+            "estimatedOutputTokens": 1039
+          },
+          {
+            "elapsedMs": 0.24048400000000925,
+            "splitInputBytes": 0,
+            "inputBytes": 1048576,
+            "outputBytes": 4156,
+            "reportedTokens": 1039,
+            "estimatedOutputTokens": 1039
+          },
+          {
+            "elapsedMs": 0.25439500000000237,
+            "splitInputBytes": 0,
+            "inputBytes": 1048576,
+            "outputBytes": 4156,
+            "reportedTokens": 1039,
+            "estimatedOutputTokens": 1039
+          },
+          {
+            "elapsedMs": 0.2790119999999945,
+            "splitInputBytes": 0,
+            "inputBytes": 1048576,
+            "outputBytes": 4156,
+            "reportedTokens": 1039,
+            "estimatedOutputTokens": 1039
+          }
+        ],
+        "medians": {
+          "elapsedMs": 0.23665799999999138,
+          "splitInputBytes": 0,
+          "inputBytes": 1048576,
+          "outputBytes": 4156,
+          "reportedTokens": 1039,
+          "estimatedOutputTokens": 1039
+        }
+      }
+    },
+    "correctness": {
+      "previewBodyBounded": true,
+      "previewTokensAccurate": true,
+      "previewUnicodeValid": true,
+      "protectedAnchorPreserved": true,
+      "distinctOriginalsPreserved": true,
+      "latestOccurrenceOrder": true,
+      "unicodeDigestTokensAccurate": true,
+      "rehydrationBudgetAccurate": true,
+      "breakerRecognizesLaterIneffectiveness": true
+    },
+    "timingNote": "Elapsed time includes split instrumentation; hard gates use payload/processed-byte counts, not timings. Tokens are heuristic budget estimates, not provider measurements."
+  },
+  "gates": [
+    {
+      "scenario": "singleLineAscii",
+      "operation": "outputBytes",
+      "before": 1048637,
+      "after": 4157,
+      "reduction": 0.9960358064802215,
+      "minimumReduction": 0.99,
+      "passed": true
+    },
+    {
+      "scenario": "singleLineUnicode",
+      "operation": "outputBytes",
+      "before": 1310781,
+      "after": 4157,
+      "reduction": 0.9968286082877308,
+      "minimumReduction": 0.99,
+      "passed": true
+    },
+    {
+      "scenario": "denseLines",
+      "operation": "splitInputBytes",
+      "before": 1048576,
+      "after": 0,
+      "reduction": 1,
+      "minimumReduction": 0.99,
+      "passed": true
+    }
+  ],
+  "correctnessPassed": true,
+  "passed": true
+}

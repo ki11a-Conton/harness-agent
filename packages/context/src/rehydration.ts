@@ -1,4 +1,5 @@
 import type { CompactionSummary, ContextBlock } from "@ar/contracts";
+import { DEFAULT_TOKEN_ESTIMATOR, type TokenEstimator } from "./tokenizer.js";
 
 /**
  * P17-7 post-compaction rehydration — after the digest folds older content
@@ -27,12 +28,11 @@ export const DEFAULT_REHYDRATION_OPTIONS: RehydrationOptions = {
   maxTokens: 600,
 };
 
-const ESTIMATED_TOKENS = (content: string): number => Math.ceil(content.length / 4);
-
 function block(
   id: string,
   content: string,
   priority: number,
+  estimator: TokenEstimator,
   extra: Partial<ContextBlock> = {},
 ): ContextBlock {
   return {
@@ -40,7 +40,7 @@ function block(
     source: "memory", // rehydration points come from durable state
     trust: "semi-trusted",
     priority,
-    tokens: ESTIMATED_TOKENS(content),
+    tokens: estimator.estimate(content),
     content,
     compressible: true,
     ephemeral: false,
@@ -55,6 +55,7 @@ function block(
 export function buildRehydrationBlocks(
   summary: CompactionSummary,
   opts: Partial<RehydrationOptions> = {},
+  estimator: TokenEstimator = DEFAULT_TOKEN_ESTIMATOR,
 ): ContextBlock[] {
   const { maxFiles, maxTokens } = { ...DEFAULT_REHYDRATION_OPTIONS, ...opts };
   const out: ContextBlock[] = [];
@@ -69,7 +70,7 @@ export function buildRehydrationBlocks(
   const recentFiles = [...summary.filesChanged, ...summary.artifactRefs];
   if (recentFiles.length > 0) {
     const files = recentFiles.slice(0, maxFiles);
-    push(block("rehydrate:files", `## Files in play\n${files.map((f) => `- ${f}`).join("\n")}`, 800));
+    push(block("rehydrate:files", `## Files in play\n${files.map((f) => `- ${f}`).join("\n")}`, 800, estimator));
   }
 
   // Active plan (pending tasks) — the working set must stay visible.
@@ -78,13 +79,14 @@ export function buildRehydrationBlocks(
       "rehydrate:plan",
       `## Active Plan\n${summary.openTasks.map((t) => `- ${t}`).join("\n")}`,
       850,
+      estimator,
     ));
   }
 
   // Selected/invoked skills — the digest does not carry skill identity.
   const skills = summary.importantFacts.filter((f) => /^(?:skill|using|deploy|review)\b/i.test(f));
   if (skills.length > 0) {
-    push(block("rehydrate:skills", `## Skills in Play\n${skills.map((s) => `- ${s}`).join("\n")}`, 700));
+    push(block("rehydrate:skills", `## Skills in Play\n${skills.map((s) => `- ${s}`).join("\n")}`, 700, estimator));
   }
 
   // Unresolved tool evidence — commands/tests that must be reconciled.
@@ -93,6 +95,7 @@ export function buildRehydrationBlocks(
       "rehydrate:unresolved",
       `## Recent Evidence\n${[...summary.commandsRun, ...summary.tests].map((c) => `- ${c}`).join("\n")}`,
       750,
+      estimator,
     ));
   }
 
@@ -100,7 +103,7 @@ export function buildRehydrationBlocks(
   const pointers = summary.artifactRefs.length > 0
     ? summary.artifactRefs.map((a) => `- artifact: ${a}`).join("\n")
     : "- full transcript preserved on disk";
-  push(block("rehydrate:pointers", `## Refs\n${pointers}`, 600));
+  push(block("rehydrate:pointers", `## Refs\n${pointers}`, 600, estimator));
 
   return out;
 }

@@ -1,4 +1,6 @@
 import type { CompactionSummary, Compactor, ContextBlock, ContextSource } from "@ar/contracts";
+import { DEFAULT_CONTEXT_CATEGORY, NEVER_COMPACT_SOURCES } from "@ar/contracts";
+import { DEFAULT_TOKEN_ESTIMATOR, type TokenEstimator } from "./tokenizer.js";
 
 /**
  * CTX-003 — Context compaction.
@@ -18,9 +20,21 @@ const COMPACTABLE_SOURCES: ReadonlySet<ContextSource> = new Set([
   "memory",
   "subagent",
 ]);
+const PRESERVED_SOURCES: ReadonlySet<string> = new Set([
+  ...NEVER_COMPACT_SOURCES, "project", "local", "skill",
+]);
+
+/** Early preview/drop/dedup stages have the same preservation fence as the
+ *  digest. MCP data may be previewed, but is not folded into a digest. */
+function canReduce(block: ContextBlock): boolean {
+  if (!block.compressible || block.category === "protected-instruction" || block.instructional === true) return false;
+  if (PRESERVED_SOURCES.has(block.source)) return false;
+  if (block.trust === "trusted" && !COMPACTABLE_SOURCES.has(block.source)) return false;
+  return COMPACTABLE_SOURCES.has(block.source) || block.source === "mcp";
+}
 
 export function isCompactable(block: ContextBlock): boolean {
-  return block.compressible === true && COMPACTABLE_SOURCES.has(block.source);
+  return canReduce(block) && COMPACTABLE_SOURCES.has(block.source);
 }
 
 /** Priority of the single summary block: 900. Lower than a system/user block
@@ -65,15 +79,14 @@ function renderSummary(summary: CompactionSummary): string {
   return lines.join("\n");
 }
 
-function makeSummaryBlock(summary: CompactionSummary, now: () => number): ContextBlock {
+function makeSummaryBlock(summary: CompactionSummary, now: () => number, estimator: TokenEstimator): ContextBlock {
   const content = renderSummary(summary);
   return {
     id: "compaction-summary",
     source: "memory",
     trust: "semi-trusted",
     priority: SUMMARY_PRIORITY,
-    // Rough token estimate: ~4 chars per token (EN/ASCII heuristics).
-    tokens: Math.ceil(content.length / 4),
+    tokens: estimator.estimate(content),
     content,
     compressible: false, // the summary itself is never re-compacted
     ephemeral: false,
@@ -95,9 +108,11 @@ function makeSummaryBlock(summary: CompactionSummary, now: () => number): Contex
  */
 export class DefaultCompactor implements Compactor {
   private readonly nowFn: () => number;
+  private readonly estimator: TokenEstimator;
 
-  constructor(opts: { now?: () => number } = {}) {
+  constructor(opts: { now?: () => number; tokenEstimator?: TokenEstimator } = {}) {
     this.nowFn = opts.now ?? Date.now;
+    this.estimator = opts.tokenEstimator ?? DEFAULT_TOKEN_ESTIMATOR;
   }
 
   compact(blocks: ContextBlock[], summary: CompactionSummary): ContextBlock[] {
@@ -120,7 +135,7 @@ export class DefaultCompactor implements Compactor {
     // Ordering: preserved blocks keep their original relative order; the single
     // summary block is appended after the last preserved block so the leading
     // system/user context (e.g. goal, security policy) is never displaced.
-    preserved.push(makeSummaryBlock(summary, this.nowFn));
+    preserved.push(makeSummaryBlock(summary, this.nowFn, this.estimator));
     return preserved;
   }
 }
@@ -146,6 +161,8 @@ export interface MultiStageCompactorOptions {
    *  marker; the full content is expected to live in an artifact store
    *  referenced by the block id). Default 16 KiB. */
   previewMaxBytes?: number;
+  /** Budget estimates for generated content, including preview markers. */
+  tokenEstimator?: TokenEstimator;
   /** Stage 5: optional LLM summarizer — invoked ONLY when the digest still
    *  exceeds the budget (the caller owns the model call; this stays a pure
    *  interface so the compactor itself never does I/O). */
@@ -170,6 +187,7 @@ const DEFAULT_PREVIEW_MAX_BYTES = 16 * 1024;
  *  Stages 1-4 are pure and deterministic; 5-6 are optional hooks. */
 export class MultiStageCompactor implements Compactor {
   private readonly previewMaxBytes: number;
+  private readonly estimator: TokenEstimator;
   private readonly summarize?: MultiStageCompactorOptions["summarize"];
   private readonly onStage?: MultiStageCompactorOptions["onStage"];
   private readonly reactiveFallback?: MultiStageCompactorOptions["reactiveFallback"];
@@ -177,6 +195,7 @@ export class MultiStageCompactor implements Compactor {
 
   constructor(opts: MultiStageCompactorOptions = {}) {
     this.previewMaxBytes = opts.previewMaxBytes ?? DEFAULT_PREVIEW_MAX_BYTES;
+    this.estimator = opts.tokenEstimator ?? DEFAULT_TOKEN_ESTIMATOR;
     this.summarize = opts.summarize;
     this.onStage = opts.onStage;
     this.reactiveFallback = opts.reactiveFallback;
@@ -189,43 +208,57 @@ export class MultiStageCompactor implements Compactor {
 
   async compact(blocks: ContextBlock[], summary: CompactionSummary): Promise<ContextBlock[]> {
     let current = blocks;
-    const beforeTokens = sumTokens(blocks);
+    const originalContents = new Map<ContextBlock, string>();
 
     // Stage 1 — offload / preview oversized evidence.
     const previewed = current.map((block) => {
-      if (block.category !== "evidence") return block;
-      if (Buffer.byteLength(block.content, "utf8") <= this.previewMaxBytes) return block;
-      return {
+      if ((block.category ?? DEFAULT_CONTEXT_CATEGORY) !== "evidence" || !canReduce(block)) return block;
+      const bytes = Buffer.byteLength(block.content, "utf8");
+      if (bytes <= this.previewMaxBytes) return block;
+      const content = truncateAtLineBoundary(block.content, this.previewMaxBytes) + "\n" + previewMarker(bytes) + "\n";
+      const preview = {
         ...block,
-        content: truncateAtLineBoundary(block.content, this.previewMaxBytes) + "\n" + previewMarker(Buffer.byteLength(block.content)) + "\n",
-        tokens: Math.ceil(this.previewMaxBytes / 4),
+        content,
+        tokens: this.estimator.estimate(content),
       };
+      originalContents.set(preview, block.content);
+      return preview;
     });
     const offloaded = previewed.filter((b, i) => b.content !== current[i]!.content).length;
     this.report({ stage: "offload", droppedBlocks: 0, beforeTokens: sumTokens(current), afterTokens: sumTokens(previewed), used: offloaded > 0 });
     current = previewed;
 
     // Stage 2 — drop expired ephemeral observations.
-    const nonEphemeral = current.filter((b) => !(b.ephemeral === true || b.category === "ephemeral"));
+    const nonEphemeral = current.filter((b) => !(canReduce(b) && (b.ephemeral === true || b.category === "ephemeral")));
     this.report({ stage: "ephemeral-drop", droppedBlocks: current.length - nonEphemeral.length, beforeTokens: sumTokens(current), afterTokens: sumTokens(nonEphemeral), used: nonEphemeral.length !== current.length });
     current = nonEphemeral;
 
     // Stage 3 — deterministic micro-compaction: drop repeated IDENTICAL
     // evidence content (keep the LAST occurrence, call order preserved).
     const micro: ContextBlock[] = [];
-    const seen = new Map<string, number>(); // content -> index to update
-    for (const block of current) {
-      if (block.category === "evidence") {
-        const idx = seen.get(block.content);
-        if (idx !== undefined) micro[idx] = block; // replace with the newer copy
-        else {
-          seen.set(block.content, micro.length);
+    const seen = new Map<string, Set<string>>();
+    // Walk backwards, then reverse: keep the newest occurrence at its real
+    // position. Compare original contents, never lossy preview prefixes.
+    for (let i = current.length - 1; i >= 0; i--) {
+      const block = current[i]!;
+      if ((block.category ?? DEFAULT_CONTEXT_CATEGORY) === "evidence" && canReduce(block)) {
+        const original = originalContents.get(block);
+        const previouslyPreviewed = original === undefined && /\n# \[previewed at \d+ bytes — full content in artifact\]\n?$/.test(block.content);
+        if (previouslyPreviewed) {
           micro.push(block);
+          continue;
         }
-      } else {
-        micro.push(block);
+        const p = block.provenance;
+        const identity = JSON.stringify([block.source, block.trust, block.path, block.scope, block.instructional, block.persistable, p?.kind, p?.serviceId, p?.toolId, p?.version, p?.trust, p?.networkBoundary]);
+        const content = original ?? block.content;
+        const contents = seen.get(identity) ?? new Set<string>();
+        if (contents.has(content)) continue;
+        contents.add(content);
+        seen.set(identity, contents);
       }
+      micro.push(block);
     }
+    micro.reverse();
     this.report({ stage: "micro-compact", droppedBlocks: current.length - micro.length, beforeTokens: sumTokens(current), afterTokens: sumTokens(micro), used: micro.length !== current.length });
     current = micro;
 
@@ -241,7 +274,7 @@ export class MultiStageCompactor implements Compactor {
       this.report({ stage: "digest", droppedBlocks: 0, beforeTokens: sumTokens(current), afterTokens: sumTokens(current), used: false });
       return current; // nothing compressible → no digest, no summary
     }
-    preserved.push(makeSummaryBlock(summary, this.nowFn));
+    preserved.push(makeSummaryBlock(summary, this.nowFn, this.estimator));
     this.report({ stage: "digest", droppedBlocks: digestCandidates, beforeTokens: sumTokens(current), afterTokens: sumTokens(preserved), used: true });
     current = preserved;
 
@@ -255,7 +288,7 @@ export class MultiStageCompactor implements Compactor {
           const before = sumTokens(current);
           const replaced = current.map((b) =>
             b.id === "compaction-summary"
-              ? { ...b, content: summarized, tokens: Math.ceil(summarized.length / 4) }
+              ? { ...b, content: summarized, tokens: this.estimator.estimate(summarized) }
               : b,
           );
           this.report({ stage: "summary", droppedBlocks: 0, beforeTokens: before, afterTokens: sumTokens(replaced), used: true });
@@ -286,16 +319,20 @@ export function previewMarker(bytes: number): string {
 }
 
 function truncateAtLineBoundary(content: string, maxBytes: number): string {
-  const lines = content.split("\n");
-  const kept: string[] = [];
   let bytes = 0;
-  for (const line of lines) {
-    const lineBytes = Buffer.byteLength(line) + (kept.length > 0 ? 1 : 0);
-    if (kept.length > 0 && bytes + lineBytes > maxBytes) break;
-    kept.push(line);
-    bytes += lineBytes;
+  let end = 0;
+  let lastNewline = -1;
+  // Examine only the bounded prefix, including at most one non-fitting code
+  // point. This avoids splitting the entire evidence and never cuts a pair.
+  while (end < content.length) {
+    const code = content.codePointAt(end)!;
+    const codeBytes = code <= 0x7f ? 1 : code <= 0x7ff ? 2 : code <= 0xffff ? 3 : 4;
+    if (bytes + codeBytes > maxBytes) break;
+    if (code === 10) lastNewline = end;
+    bytes += codeBytes;
+    end += code > 0xffff ? 2 : 1;
   }
-  return kept.join("\n");
+  return content.slice(0, lastNewline >= 0 ? lastNewline : end);
 }
 
 
