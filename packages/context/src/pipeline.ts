@@ -8,6 +8,7 @@ import type {
   DiscoveredInstruction,
   InstructionDiscovery,
   InstructionDiscoveryOptions,
+  ToolCall,
 } from "@ar/contracts";
 import { performance } from "node:perf_hooks";
 import { BudgetPlannerImpl } from "./budget.js";
@@ -110,7 +111,7 @@ export interface ContextPipelineBuildOptions {
    * observe and trim it — but the messages are NOT part of the system-prompt
    * blocks and never admitted/compacted here.
    */
-  messages?: readonly { role: string; content: string }[];
+  messages?: readonly MessageTokenInput[];
   /** P1-2: what must survive compaction, supplied by the host's working
    *  state. The pipeline only decides *when* to compact, *which* blocks to
    *  retain and the budget — it never synthesizes summary content. When a
@@ -136,7 +137,7 @@ const SYSTEM_BLOCK_ID = "system-prompt";
 const INSTRUCTION_PRIORITY = 1000;
 /** Priority for skill index blocks: below system/project, above tool blocks. */
 const SKILL_PRIORITY = 500;
-/** Per-message structural overhead (role/formatting), added to the content bytes. */
+/** Per-message / per-tool-call structural overhead, in addition to payload text. */
 const MESSAGE_OVERHEAD_TOKENS = 8;
 /** P6-1: block id suffix marking an injection-quarantined envelope (prevents
  *  re-enveloping an already-isolated block on the next build). */
@@ -165,16 +166,40 @@ function toQuarantineEnvelope(block: ContextBlock, reasons: string[], estimator:
   };
 }
 
+/** Payload fields that can be replayed to the model. Plain role/content input
+ *  remains supported; persisted ids, timestamps and prompt metadata are not
+ *  sent as payload and do not enter this budget. */
+export interface MessageTokenInput {
+  role: string;
+  content: string;
+  toolCalls?: readonly ToolCall[];
+  toolCallId?: string;
+  reasoningContent?: string;
+}
+
 /**
- * Token estimate of a message history (Phase 8): per-message overhead plus
- * the content bytes. Shared by the pipeline (accounting) and the runtime
- * (trimming) so both use the same yardstick.
+ * Budget estimate of the complete message payload: body, reasoning, tool call
+ * arguments and correlation fields, with fixed structural overhead. This is
+ * still an estimate, not measured provider usage. Field selection follows the
+ * message roles so stray metadata on a different role is not counted.
  */
-export function estimateMessageTokens(messages: readonly { role: string; content: string }[], estimator: TokenEstimator = DEFAULT_TOKEN_ESTIMATOR): number {
-  return messages.reduce(
-    (sum, message) => sum + MESSAGE_OVERHEAD_TOKENS + estimator.estimate(message.content),
-    0,
-  );
+export function estimateMessageTokens(messages: readonly MessageTokenInput[], estimator: TokenEstimator = DEFAULT_TOKEN_ESTIMATOR): number {
+  let total = 0;
+  for (const message of messages) {
+    total += MESSAGE_OVERHEAD_TOKENS + estimator.estimate(message.content);
+    if (message.role === "assistant") {
+      if (message.reasoningContent !== undefined) total += estimator.estimate(message.reasoningContent);
+      for (const call of message.toolCalls ?? []) {
+        total += MESSAGE_OVERHEAD_TOKENS
+          + estimator.estimate(call.id)
+          + estimator.estimate(call.name)
+          + estimator.estimate(JSON.stringify(call.args));
+      }
+    } else if (message.role === "tool" && message.toolCallId !== undefined) {
+      total += estimator.estimate(message.toolCallId);
+    }
+  }
+  return total;
 }
 
 /**
@@ -240,6 +265,12 @@ export class ContextPipeline {
   /** P6-5: token counting through the injected estimator. */
   private estimateTokens(content: string): number {
     return this.tokenEstimator.estimate(content);
+  }
+
+  /** Use the configured estimator when the runtime prices a trimmed view or
+   *  a newly appended digest, rather than falling back to the byte heuristic. */
+  estimateMessageTokens(messages: readonly MessageTokenInput[]): number {
+    return estimateMessageTokens(messages, this.tokenEstimator);
   }
 
   async build(opts: ContextPipelineBuildOptions): Promise<ContextPipelineResult> {
@@ -443,7 +474,7 @@ export class ContextPipeline {
     // joins the selected blocks (messages are sent to the model by the
     // runtime, not spliced into the system prompt), but the runtime uses this
     // figure to trim the history before the call.
-    const messagesTokens = opts.messages !== undefined ? estimateMessageTokens(opts.messages, this.tokenEstimator) : 0;
+    const messagesTokens = opts.messages !== undefined ? this.estimateMessageTokens(opts.messages) : 0;
 
     // 6. Compact iff the plan could not fit everything. `plan.report.compressed`
     //    is always 0 from the planner today, but is part of the trigger for

@@ -1,0 +1,612 @@
+{
+  "schemaVersion": 1,
+  "baseline": {
+    "schemaVersion": 1,
+    "label": "baseline",
+    "config": {
+      "samples": 7,
+      "counts": [
+        2000,
+        4000,
+        8000
+      ],
+      "contentBytes": 512,
+      "headroom": 0
+    },
+    "environment": {
+      "node": "v24.19.0",
+      "platform": "linux",
+      "arch": "x64"
+    },
+    "gitHead": "249770e1737cc2f7143af66b143dbb7cad089020",
+    "sourceDiffDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sourceHashes": {
+      "packages/context/src/pipeline.ts": "7e89d18c56891a24c07ba3ca1bef692bdc8138366a58c0015f610bc90214b89f",
+      "packages/context/src/tokenizer.ts": "832c0e89b1d5c7ce48735812e23558f408b8d94c96ba664f9db1bd2812d4ba90",
+      "packages/context/src/index.ts": "7a9f0f66863b0122ed428ba40a0243f49d7869422c30063bcd14e22cff65d880",
+      "packages/core/src/runtime/turn-helpers.ts": "114c6e9b9e3d54605a1e5325d39b4d5b1c19caae6b0b1ecfa465d2e6f0e44a29",
+      "packages/core/src/runtime/context-controller.ts": "7c64c430b2b0f31ececbce45f57880addcb695b582c784856d6cfb28501cb26f",
+      "packages/contracts/src/message-protocol.ts": "1a32d04660c61ca1d402b27c7ccca43ea2ca88a8ec5ab3687983218ae1032cc2"
+    },
+    "compiledHashes": {
+      "packages/context/dist/pipeline.js": "85daf1a3970f38206e8ff78622ddf8b66d865d7809ed4a53d295111299ed961b",
+      "packages/context/dist/tokenizer.js": "046ecef24885d49062e0e4b8d5d73abaf1ee8d7179439f09a8cadbf1bc4fac98",
+      "packages/context/dist/index.js": "b45b27d751b33bf66d41ac8db4e7c568f5dfb3e137be882d013c06a555889267",
+      "packages/core/dist/runtime/turn-helpers.js": "9ff8159c3cba68b181c065ad38fa1b064905e051b5ab0a8b0828280bf8cc13b6",
+      "packages/core/dist/runtime/context-controller.js": "e8bdf854e22c8ae58d9e6638b31739fdab8d4a438db4db08db7f191ee1e1c07e",
+      "packages/contracts/dist/message-protocol.js": "52178e71977d254b43039c907530a9285c22cc919b3ba5dd6eb1b01763052113"
+    },
+    "scriptDigest": "099e479ba130a47e64358278ac1fa5032e23b809c93ab5291babd50741fd159e",
+    "scenarios": {
+      "2000": {
+        "samples": [
+          {
+            "elapsedMs": 228.53639399999997,
+            "countedBytes": 1024506880,
+            "countCalls": 2000990,
+            "sliceCalls": 1996,
+            "sliceCopiedMessages": 1998994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 219.094533,
+            "countedBytes": 1024506880,
+            "countCalls": 2000990,
+            "sliceCalls": 1996,
+            "sliceCopiedMessages": 1998994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 204.46448199999998,
+            "countedBytes": 1024506880,
+            "countCalls": 2000990,
+            "sliceCalls": 1996,
+            "sliceCopiedMessages": 1998994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 204.419854,
+            "countedBytes": 1024506880,
+            "countCalls": 2000990,
+            "sliceCalls": 1996,
+            "sliceCopiedMessages": 1998994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 200.25160800000003,
+            "countedBytes": 1024506880,
+            "countCalls": 2000990,
+            "sliceCalls": 1996,
+            "sliceCopiedMessages": 1998994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 203.13747399999988,
+            "countedBytes": 1024506880,
+            "countCalls": 2000990,
+            "sliceCalls": 1996,
+            "sliceCopiedMessages": 1998994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 199.76466200000004,
+            "countedBytes": 1024506880,
+            "countCalls": 2000990,
+            "sliceCalls": 1996,
+            "sliceCopiedMessages": 1998994,
+            "outputMessages": 4
+          }
+        ],
+        "outputDigest": "0c32d0c82cfe927b32f9cff0b77e69522aa383e552702fe0905a8c09a6066b8e",
+        "medians": {
+          "elapsedMs": 204.419854,
+          "countedBytes": 1024506880,
+          "countCalls": 2000990,
+          "sliceCalls": 1996,
+          "sliceCopiedMessages": 1998994,
+          "outputMessages": 4
+        }
+      },
+      "4000": {
+        "samples": [
+          {
+            "elapsedMs": 914.0344959999998,
+            "countedBytes": 4097018880,
+            "countCalls": 8001990,
+            "sliceCalls": 3996,
+            "sliceCopiedMessages": 7997994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 849.9956899999997,
+            "countedBytes": 4097018880,
+            "countCalls": 8001990,
+            "sliceCalls": 3996,
+            "sliceCopiedMessages": 7997994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 839.7602569999995,
+            "countedBytes": 4097018880,
+            "countCalls": 8001990,
+            "sliceCalls": 3996,
+            "sliceCopiedMessages": 7997994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 839.7156500000001,
+            "countedBytes": 4097018880,
+            "countCalls": 8001990,
+            "sliceCalls": 3996,
+            "sliceCopiedMessages": 7997994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 842.2989979999993,
+            "countedBytes": 4097018880,
+            "countCalls": 8001990,
+            "sliceCalls": 3996,
+            "sliceCopiedMessages": 7997994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 844.5280510000002,
+            "countedBytes": 4097018880,
+            "countCalls": 8001990,
+            "sliceCalls": 3996,
+            "sliceCopiedMessages": 7997994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 847.3522220000004,
+            "countedBytes": 4097018880,
+            "countCalls": 8001990,
+            "sliceCalls": 3996,
+            "sliceCopiedMessages": 7997994,
+            "outputMessages": 4
+          }
+        ],
+        "outputDigest": "cddce4716a4aff7a15228d5f9b2e6425208d2671f2be47dd413c2a0ab6f6bc91",
+        "medians": {
+          "elapsedMs": 844.5280510000002,
+          "countedBytes": 4097018880,
+          "countCalls": 8001990,
+          "sliceCalls": 3996,
+          "sliceCopiedMessages": 7997994,
+          "outputMessages": 4
+        }
+      },
+      "8000": {
+        "samples": [
+          {
+            "elapsedMs": 3218.7227949999988,
+            "countedBytes": 16386042880,
+            "countCalls": 32003990,
+            "sliceCalls": 7996,
+            "sliceCopiedMessages": 31995994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 3196.3559030000015,
+            "countedBytes": 16386042880,
+            "countCalls": 32003990,
+            "sliceCalls": 7996,
+            "sliceCopiedMessages": 31995994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 3272.430221999999,
+            "countedBytes": 16386042880,
+            "countCalls": 32003990,
+            "sliceCalls": 7996,
+            "sliceCopiedMessages": 31995994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 3150.676457999998,
+            "countedBytes": 16386042880,
+            "countCalls": 32003990,
+            "sliceCalls": 7996,
+            "sliceCopiedMessages": 31995994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 3137.8387000000002,
+            "countedBytes": 16386042880,
+            "countCalls": 32003990,
+            "sliceCalls": 7996,
+            "sliceCopiedMessages": 31995994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 3242.863971999999,
+            "countedBytes": 16386042880,
+            "countCalls": 32003990,
+            "sliceCalls": 7996,
+            "sliceCopiedMessages": 31995994,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 3219.5059489999985,
+            "countedBytes": 16386042880,
+            "countCalls": 32003990,
+            "sliceCalls": 7996,
+            "sliceCopiedMessages": 31995994,
+            "outputMessages": 4
+          }
+        ],
+        "outputDigest": "80fd0e11a45d352bdc1b512902e790523a5a2e7487523a137b92694324b9bb53",
+        "medians": {
+          "elapsedMs": 3218.7227949999988,
+          "countedBytes": 16386042880,
+          "countCalls": 32003990,
+          "sliceCalls": 7996,
+          "sliceCopiedMessages": 31995994,
+          "outputMessages": 4
+        }
+      }
+    },
+    "payloadAccounting": {
+      "toolArgumentReported": 8,
+      "toolArgumentExpected": 8025,
+      "reasoningReported": 8,
+      "reasoningExpected": 7508
+    },
+    "correctness": {
+      "tailPreserved2000": true,
+      "tailPreserved4000": true,
+      "tailPreserved8000": true,
+      "toolArgumentsCounted": false,
+      "reasoningCounted": false,
+      "toolResultIdCounted": false,
+      "hiddenCallTrimmed": false,
+      "toolViewLegal": true,
+      "corruptionRemainsVisible": true,
+      "injectedCounterHonored": false,
+      "eachMessagePricedOnce": false,
+      "pipelineCountsHiddenFields": false,
+      "pipelineCounterMatchesReport": false
+    }
+  },
+  "candidate": {
+    "schemaVersion": 1,
+    "label": "candidate",
+    "config": {
+      "samples": 7,
+      "counts": [
+        2000,
+        4000,
+        8000
+      ],
+      "contentBytes": 512,
+      "headroom": 0
+    },
+    "environment": {
+      "node": "v24.19.0",
+      "platform": "linux",
+      "arch": "x64"
+    },
+    "gitHead": "249770e1737cc2f7143af66b143dbb7cad089020",
+    "sourceDiffDigest": "b1b8b95605d9d7da0fddcab90516204e974ac7cfe74c4f275cab663c3617f790",
+    "sourceHashes": {
+      "packages/context/src/pipeline.ts": "4de75bc3e3dd5b57d694401ee85325793e7e317348a22e4f03beadcd3ee67661",
+      "packages/context/src/tokenizer.ts": "832c0e89b1d5c7ce48735812e23558f408b8d94c96ba664f9db1bd2812d4ba90",
+      "packages/context/src/index.ts": "f9ff7d8a7a43abdda1d1803301b8e9141ded97b7f3e05735e531ede219c64667",
+      "packages/core/src/runtime/turn-helpers.ts": "52b8c67a7a1f3d117ddd1608b40fd8defd83a0917bb0f0befa332b8a852e0a0d",
+      "packages/core/src/runtime/context-controller.ts": "f3f7f3caaae19ef1d659411ff341e74f5cd12d2a259a1071fad4d1e427020726",
+      "packages/contracts/src/message-protocol.ts": "1a32d04660c61ca1d402b27c7ccca43ea2ca88a8ec5ab3687983218ae1032cc2"
+    },
+    "compiledHashes": {
+      "packages/context/dist/pipeline.js": "3d4bd953470a1ec0ab5874a33f063e6a82d5de123b4316c3331d2f9bda35d1cf",
+      "packages/context/dist/tokenizer.js": "046ecef24885d49062e0e4b8d5d73abaf1ee8d7179439f09a8cadbf1bc4fac98",
+      "packages/context/dist/index.js": "b45b27d751b33bf66d41ac8db4e7c568f5dfb3e137be882d013c06a555889267",
+      "packages/core/dist/runtime/turn-helpers.js": "a7446ba1fa9ad3c0390f7f4f5776118f24caf6cc4cba6ee49d8e4890a3bb283d",
+      "packages/core/dist/runtime/context-controller.js": "3e21b7420622ba1abcc5f68a373f32c9349ebe4f64aaebe11dafe2b57342389b",
+      "packages/contracts/dist/message-protocol.js": "52178e71977d254b43039c907530a9285c22cc919b3ba5dd6eb1b01763052113"
+    },
+    "scriptDigest": "099e479ba130a47e64358278ac1fa5032e23b809c93ab5291babd50741fd159e",
+    "scenarios": {
+      "2000": {
+        "samples": [
+          {
+            "elapsedMs": 2.6782420000000045,
+            "countedBytes": 1024000,
+            "countCalls": 2000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 0.6824519999999978,
+            "countedBytes": 1024000,
+            "countCalls": 2000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 0.5273579999999995,
+            "countedBytes": 1024000,
+            "countCalls": 2000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 4.281936999999999,
+            "countedBytes": 1024000,
+            "countCalls": 2000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 0.3788330000000002,
+            "countedBytes": 1024000,
+            "countCalls": 2000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 0.49763300000000044,
+            "countedBytes": 1024000,
+            "countCalls": 2000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 0.5678190000000001,
+            "countedBytes": 1024000,
+            "countCalls": 2000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          }
+        ],
+        "outputDigest": "0c32d0c82cfe927b32f9cff0b77e69522aa383e552702fe0905a8c09a6066b8e",
+        "medians": {
+          "elapsedMs": 0.5678190000000001,
+          "countedBytes": 1024000,
+          "countCalls": 2000,
+          "sliceCalls": 1,
+          "sliceCopiedMessages": 4,
+          "outputMessages": 4
+        }
+      },
+      "4000": {
+        "samples": [
+          {
+            "elapsedMs": 1.5320180000000079,
+            "countedBytes": 2048000,
+            "countCalls": 4000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 1.4977360000000033,
+            "countedBytes": 2048000,
+            "countCalls": 4000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 0.8351630000000085,
+            "countedBytes": 2048000,
+            "countCalls": 4000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 0.539676,
+            "countedBytes": 2048000,
+            "countCalls": 4000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 0.4967809999999986,
+            "countedBytes": 2048000,
+            "countCalls": 4000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 0.5068370000000044,
+            "countedBytes": 2048000,
+            "countCalls": 4000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 0.4868760000000094,
+            "countedBytes": 2048000,
+            "countCalls": 4000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          }
+        ],
+        "outputDigest": "cddce4716a4aff7a15228d5f9b2e6425208d2671f2be47dd413c2a0ab6f6bc91",
+        "medians": {
+          "elapsedMs": 0.539676,
+          "countedBytes": 2048000,
+          "countCalls": 4000,
+          "sliceCalls": 1,
+          "sliceCopiedMessages": 4,
+          "outputMessages": 4
+        }
+      },
+      "8000": {
+        "samples": [
+          {
+            "elapsedMs": 5.640543000000008,
+            "countedBytes": 4096000,
+            "countCalls": 8000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 1.2218189999999964,
+            "countedBytes": 4096000,
+            "countCalls": 8000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 1.221999000000011,
+            "countedBytes": 4096000,
+            "countCalls": 8000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 3.083394999999996,
+            "countedBytes": 4096000,
+            "countCalls": 8000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 1.516754000000006,
+            "countedBytes": 4096000,
+            "countCalls": 8000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 1.1679669999999902,
+            "countedBytes": 4096000,
+            "countCalls": 8000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          },
+          {
+            "elapsedMs": 1.0025469999999927,
+            "countedBytes": 4096000,
+            "countCalls": 8000,
+            "sliceCalls": 1,
+            "sliceCopiedMessages": 4,
+            "outputMessages": 4
+          }
+        ],
+        "outputDigest": "80fd0e11a45d352bdc1b512902e790523a5a2e7487523a137b92694324b9bb53",
+        "medians": {
+          "elapsedMs": 1.221999000000011,
+          "countedBytes": 4096000,
+          "countCalls": 8000,
+          "sliceCalls": 1,
+          "sliceCopiedMessages": 4,
+          "outputMessages": 4
+        }
+      }
+    },
+    "payloadAccounting": {
+      "toolArgumentReported": 8025,
+      "toolArgumentExpected": 8025,
+      "reasoningReported": 7508,
+      "reasoningExpected": 7508
+    },
+    "correctness": {
+      "tailPreserved2000": true,
+      "tailPreserved4000": true,
+      "tailPreserved8000": true,
+      "toolArgumentsCounted": true,
+      "reasoningCounted": true,
+      "toolResultIdCounted": true,
+      "hiddenCallTrimmed": true,
+      "toolViewLegal": true,
+      "corruptionRemainsVisible": true,
+      "injectedCounterHonored": true,
+      "eachMessagePricedOnce": true,
+      "pipelineCountsHiddenFields": true,
+      "pipelineCounterMatchesReport": true
+    }
+  },
+  "gates": [
+    {
+      "scenario": 4000,
+      "operation": "countedBytes",
+      "before": 4097018880,
+      "after": 2048000,
+      "reduction": 0.9995001243440694,
+      "minimumReduction": 0.99,
+      "passed": true
+    },
+    {
+      "scenario": 4000,
+      "operation": "countCalls",
+      "before": 8001990,
+      "after": 4000,
+      "reduction": 0.9995001243440694,
+      "minimumReduction": 0.99,
+      "passed": true
+    },
+    {
+      "scenario": 4000,
+      "operation": "sliceCopiedMessages",
+      "before": 7997994,
+      "after": 4,
+      "reduction": 0.9999994998745936,
+      "minimumReduction": 0.99,
+      "passed": true
+    },
+    {
+      "scenario": 8000,
+      "operation": "countedBytes",
+      "before": 16386042880,
+      "after": 4096000,
+      "reduction": 0.9997500311679888,
+      "minimumReduction": 0.99,
+      "passed": true
+    },
+    {
+      "scenario": 8000,
+      "operation": "countCalls",
+      "before": 32003990,
+      "after": 8000,
+      "reduction": 0.9997500311679888,
+      "minimumReduction": 0.99,
+      "passed": true
+    },
+    {
+      "scenario": 8000,
+      "operation": "sliceCopiedMessages",
+      "before": 31995994,
+      "after": 4,
+      "reduction": 0.9999998749843496,
+      "minimumReduction": 0.99,
+      "passed": true
+    },
+    {
+      "scenario": "2000->4000",
+      "operation": "linearScaling",
+      "ratio": 2,
+      "maximumRatio": 2.1,
+      "passed": true
+    },
+    {
+      "scenario": "4000->8000",
+      "operation": "linearScaling",
+      "ratio": 2,
+      "maximumRatio": 2.1,
+      "passed": true
+    }
+  ],
+  "identicalTextViews": true,
+  "correctnessPassed": true,
+  "passed": true
+}

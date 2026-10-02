@@ -1,66 +1,71 @@
-# Harness Agent 上下文压缩优化计划
+# Harness Agent 长会话消息处理优化计划
 
-日期：2026-10-02。本轮优化长任务的上下文压缩、受保护信息保留和预算计量。先复现问题，再实施修改，以离线配对基准与完整回归验收。按 AGENTS.md 的 Runtime Freeze 要求，本轮属于有确定复现的正确性维护；不调整智能体策略或推广实验结果。
+日期：2026-10-02。目标是降低长会话裁剪的重复计算，并修复历史消息预算遗漏与估算器不一致。先建立反例和配对基准，再修改实现，最后按以下标准验收。
 
-## 基线与范围
+## 基线、依据与范围
 
-- origin/main 已同步，仍为 `991576901e6ac718dc30246e5b11c84771f42dce`。实现基于上一轮完成快照 `b747502c8cbcfd6dbb996c0dd744069468b17abd`，保留已有工具安全与工作区知识优化。
-- 上一轮计划归档为 `plan(20261002-workspace-knowledge).md`；更早的审查计划继续保留。
-- 开发与完整测试使用 `/workspace/harness-agent-context-optimization`；验收后将明确范围的文件同步回 `/workspace/harness-agent`。
-- 修改范围：`packages/context/src/compaction.ts`、`pipeline.ts`、`rehydration.ts`、相关回归测试、基准脚本、证据与计划。不改变 Core 架构、工具权限或 sandbox / Verification 边界，不新增依赖。
-- 已读取 AGENTS.md、HANDOVER.md、CTX-002 / CTX-003 及 ContextBlock、TokenEstimator、熔断器契约。保留现有多阶段压缩顺序与 host 提供摘要的要求。
+- 本轮基于已完成的上下文优化快照 `249770e1737cc2f7143af66b143dbb7cad089020`，保留此前审查、工具安全、工作区知识和上下文压缩优化。上一轮计划归档为 `plan(20261002-context-compaction).md`。
+- 已读取 AGENTS.md、HANDOVER.md、LOOP-001、CTX-002，以及 Message、TokenEstimator 和工具消息协议契约。遵守 Runtime Freeze：以工具参数/reasoning 预算漏算及注入估算器失配的确定复现作为正确性维护依据；性能修改以同环境配对基准验收。
+- 审查发现：`trimMessageHistory` 每删除一条消息都会重新扫描并复制剩余历史；`estimateMessageTokens` 只计算 content，遗漏发送给模型的工具参数、调用标识与 reasoning；ContextPipeline 的注入估算器没有传入裁剪路径。
+- 开发工作树：`/workspace/harness-agent-history-optimization`；基线工作树：`/workspace/harness-agent-history-baseline`。长链测试在干净、冻结的开发快照执行，验收后同步到 `/workspace/harness-agent`。
+- 范围：context 的消息计量与导出、core 的历史裁剪 helper 和 context-controller 调用、相关回归测试、离线基准、证据及计划。不增加依赖，不重构 Runtime 架构，不改变工具权限、安全边界或完成验证规则。
 
 ## 做什么、怎么做、怎么验收
 
 | 项目 | 做什么 | 怎么做 | 怎么验收 |
 | --- | --- | --- | --- |
-| C1 有界、安全的压缩 | 修复超长首行逃过字节限制、全量 split 分配、不可压缩信息被早期阶段改写/删除、证据去重丢失顺序与不同原文 | 仅扫描有限预览前缀，按完整 Unicode 码点计 UTF-8 字节，优先保留完整行；标记额外字节计入 token；保护 system/user/project/local/skill、受保护类别、instructional 和 compressible:false；以原始证据内容及来源身份去重，保留最后出现位置，跨来源和已有预览保守保留 | 测试超长 JSON/单行、中文/emoji、完整行边界、原文不可变、保护块全部字段保留、相同预览不同尾部、来源身份、A→B→A 的最后出现顺序；1 MiB 单行证据输出字节下降至少 99%，正文不超过 previewMaxBytes；大量换行输入的全量 split 处理字节下降至少 99% |
-| C2 一致的预算计量 | 修复摘要、复水、隔离包裹和消息历史使用不同 token 估算方式，避免中文内容预算低报 | 所有生成内容通过现有 TokenEstimator seam；默认使用 UTF-8 bytes/4；支持注入的估算器；保持默认接口兼容 | 覆盖 Default/MultiStage 摘要、预览与标记、中文复水、隔离内容、消息历史、注入估算器；实际报告 tokens 与所用估算器一致，复水总额不超过限制；仅统计启发式预算，不冒充模型真实 tokenizer |
-| C3 可靠的压缩反馈 | 防止阶段报告跨 build 累积导致熔断误判；压缩失败可计入熔断，报告剩余预算应与最终内容一致 | 每次压缩隔离阶段记录，基于本次输入与复水后的输出记录收益；为注入 compactor 提供实际输入/输出兜底统计；失败调用 recordFailure；记录实际耗时并重算 available | 首次有效后连续无效压缩按设定阈值打开熔断；失败会计入，打开后不再调用 compactor；并发默认 build 不混淆计数；report.used/available 与最终块相符；protected overflow 如实为负 |
-| C4 证据与交付 | 完整执行计划，验证兼容性与量化收益 | 新测试在原实现上先取得 RED；同一脚本/配置/环境运行基线与候选配对基准，保存样本、源码和脚本摘要，加入基线自比较负向检查；执行类型/构建、上下文与 Harness 集成、安全和干净快照全量测试 | 基准正确性检查与两项 99% 门槛均通过；相关测试、`corepack pnpm typecheck`、`build`、`test:security`、`test` 退出 0；`git diff --check` 通过；同步后字节核对、目标目录构建通过，计划填入实际结果 |
+| H1 完整的消息预算 | 消除正文为空但包含巨大工具参数/reasoning 时的预算低报 | 通过现有 TokenEstimator 计量正文、assistant reasoning、tool call 的 id/name/JSON 参数及工具结果关联 id；保留正文消息现有的每消息 8 token 结构开销；工具调用增加明确的结构开销。ContextPipeline 的统计与公开计量方法复用同一实现，provider 数据仅用于协议对照，不增加 provider 依赖 | 工具调用、多个调用、中文/emoji、JSON 转义、reasoning、关联 id、普通消息及注入估算器回归全部通过；role 对应字段才计入；较大的隐藏字段触发裁剪；普通正文消息结果兼容，输入保持原样 |
+| H2 线性的历史裁剪 | 消除长会话裁剪的平方级重复扫描与数组复制，同时修复报告/裁剪估算器失配 | 每条消息成本只计算一次，累计后找出首个符合 headroom 的后缀，最后一次切片；context-controller 显式传入 pipeline 的计量方法；保留当前最少 4 条消息和只修复开头孤立工具结果的协议规则，完整 transcript 保留在 store | 2000/4000/8000 条正文历史，候选输出与基线一致；4000 和 8000 条场景扫描字节、计量次数与切片复制量下降至少 99%；输入翻倍时扫描量至多 2.1 倍；定向测试检查边界预算、tail 保底、工具调用块、孤立结果、内部损坏 fail-closed 及不可变性 |
+| H3 真实调用路径的回归 | 确保智能体在含巨大工具参数/reasoning 或定制估算器的长会话里使用正确预算，仍保留最新任务与摘要 | 使用记录请求的 ScriptedModelProvider 驱动真实 AgentRuntime；播种合法旧工具块与近期任务，检查模型看到的消息、预算和协议，以及 store 中原始数据 | 原实现上取得失败反例；候选在真实 runtime 路径按注入估算器满足可满足的 headroom、保留最新用户输入与状态摘要、保留完整原始消息；现有 wire-protocol e2e、loop 集成、安全回归通过 |
+| H4 可复核交付 | 执行计划并报告量化证据与限制 | 同脚本/配置/Node 环境运行基线与候选，保存样本及源码/脚本摘要；基线自比较必须失败；执行 typecheck、build、相关单元/集成、安全和干净快照完整 test；同步后逐文件核对并在目标目录构建 | 所有正确性与性能门槛通过；`corepack pnpm typecheck`、`build`、`test:security`、`test` 和 `git diff --check` 退出 0；plan.md 更新实际结果，证据可复现；此前交付文件保持一致 |
 
 ## 执行步骤
 
-1. [x] 同步远端，检查工作区、历史优化与相关契约，确定可复现目标。
-2. [x] 在修改实现前写下本计划、方法和验收门槛。
-3. [x] 写离线基准与回归测试，保存原实现的 RED 与量化基线。
-4. [x] 完成 C1–C3；通过定向回归和配对基准。
-5. [x] 完成类型、构建、集成、安全与干净快照全量验收。
-6. [x] 记录实际结果与限制，同步最终代码和计划回用户工作区。
+1. [x] 审查实现与现有任务，明确可复现问题和限定范围。
+2. [x] 在修改生产代码前写下本计划，归档上轮计划并建立隔离工作树。
+3. [x] 编写回归反例与离线基准，取得原实现 RED 和性能基线。
+4. [x] 实现 H1/H2，完成定向回归与配对基准。
+5. [ ] 在干净冻结快照完成 H3/H4 的全量验收。
+6. [ ] 记录结果、限制和复现命令，同步最终代码至用户工作区。
 
-## 验收结果
+## 验收结果（完成后填写）
 
-C1–C4 全部完成，优化代码与计划已同步至 `/workspace/harness-agent`，前两轮的 12 个交付文件保持一致。
+已完成原实现反例、实现、定向验收和配对基准；全量验收与交付待完成。
 
-- 同一批 39 项新增回归：基线 35 失败 / 4 通过，候选全部通过。上下文包合计 149 项、9 个文件全部通过。
-- Harness 集成与单元：213 项、29 个文件全部通过；Runtime 真实 loop 集成与消息协议：31 项、2 个文件全部通过。
+- 同一组 38 项新增回归：基线 15 失败 / 23 通过，候选全部通过。
+- Context / Core / Model / Contracts / Harness：1,345 项、105 个文件全部通过，包含真实 Runtime 和 HTTP wire-protocol e2e。
 - 安全：2,135 项、19 个文件全部通过。
-- 全量 `corepack pnpm test`：419 个文件通过 / 1 个文件跳过，7,773 项通过 / 12 项按仓库原配置跳过 / 0 项失败，退出 0，耗时 604.07 秒。使用干净冻结快照 `cc8096e2b25969daf8be6fc198228db11fda787a`，验收后仅补充本计划。
-- `corepack pnpm typecheck`、`corepack pnpm build` 与 `git diff --check` 通过。
-- 配对基准：7 个样本，Node 24.19.0 / Linux / x64，预览正文上限 4,096 bytes；全部正确性检查和 99% 门槛通过。基线与自身比较被拒绝，退出 1。
+- `corepack pnpm typecheck`、`corepack pnpm build`、`git diff --check` 通过。
+- 配对基准：同脚本、Node 24.19.0 / Linux / x64、每场景 7 个样本。三种正文历史的输出身份与基线一致；13 项候选正确性检查、6 项 99% 降幅门槛和 2 项线性增长门槛全部通过。基线自比较退出 1，不能冒充优化成功。
 
-| 场景 | 基线 | 候选 | 结果 |
+| 场景/计量 | 基线 | 候选 | 结果 |
 | --- | ---: | ---: | --- |
-| 1 MiB ASCII 单行的最终预览 UTF-8 bytes | 1,048,637 | 4,157 | 减少 99.6036% |
-| 1.25 MiB 中文/emoji 单行的最终预览 UTF-8 bytes | 1,310,781 | 4,157 | 减少 99.6829% |
-| 密集换行输入交给全量 split 的 bytes | 1,048,576 | 0 | 避免全量 split 分配 |
-| ASCII 单行预览的预算估算 / 实际按同一估算器计量 | 1,024 / 262,160 | 1,040 / 1,040 | 预算与实际预览内容一致 |
+| 4,000 条历史，正文累计扫描 bytes | 4,097,018,880 | 2,048,000 | 减少 99.9500% |
+| 8,000 条历史，正文计量次数 | 32,003,990 | 8,000 | 减少 99.9750% |
+| 8,000 条历史，正文累计扫描 bytes | 16,386,042,880 | 4,096,000 | 减少 99.9750% |
+| 8,000 条历史，slice 复制的消息引用数 | 31,995,994 | 4 | 减少 99.99999% |
+| 32 KB 工具参数消息，预算估算/本方案应计预算 | 8 / 8,025 | 8,025 / 8,025 | 消除参数低报 |
+| 中文/emoji reasoning 消息，预算估算/本方案应计预算 | 8 / 7,508 | 7,508 / 7,508 | 消除 reasoning 低报 |
 
-7 个样本、环境、工作区源码差异及源码/脚本 SHA-256 固化于 `docs/evidence/context-compaction-optimization.json`。日志保存在 `.ci/context-optimization/`。计时受 split 插桩开销影响，仅作观测；验收门槛基于实际输出字节与 split 处理字节，不使用不稳定耗时。
+候选的输入从 2,000→4,000→8,000 条翻倍时，扫描字节均为 2 倍。性能计时含插桩，仅作观测；门槛使用重复扫描和 slice 复制计数，不将其等同于总内存占用或模型 token 节省。原始样本、环境、源码和脚本 SHA-256 在 `docs/evidence/message-history-optimization.json`；日志在 `.ci/history-optimization/`。
 
 ## 复现方式
 
-先在候选和基线工作树分别执行 `corepack pnpm install --frozen-lockfile` 与 `corepack pnpm build`；基线快照为 `b747502c8cbcfd6dbb996c0dd744069468b17abd`。从候选工作树使用同一脚本：
+先在基线和候选各执行 `corepack pnpm install --frozen-lockfile`、`corepack pnpm build`，再从候选使用同一个脚本：
 
 ```bash
-node scripts/benchmark/context-compaction.mjs --repo-root /workspace/harness-agent-context-baseline --label baseline --out /tmp/context-baseline.json
-node scripts/benchmark/context-compaction.mjs --repo-root /workspace/harness-agent-context-optimization --label candidate --out /tmp/context-candidate.json
-node scripts/benchmark/context-compaction.mjs --compare --baseline /tmp/context-baseline.json --candidate /tmp/context-candidate.json
-corepack pnpm exec vitest run packages/context packages/harness packages/core/src/runtime/loop-integration.test.ts packages/core/src/runtime/turn-helpers.protocol.test.ts
+node scripts/benchmark/message-history.mjs --repo-root /workspace/harness-agent-history-baseline --label baseline --out /tmp/history-baseline.json
+node scripts/benchmark/message-history.mjs --repo-root /workspace/harness-agent-history-optimization --label candidate --out /tmp/history-candidate.json
+node scripts/benchmark/message-history.mjs --compare --baseline /tmp/history-baseline.json --candidate /tmp/history-candidate.json
+corepack pnpm exec vitest run packages/context packages/core packages/model packages/contracts packages/harness --exclude '**/*.perf.test.ts' --exclude '**/*.soak.test.ts'
 corepack pnpm typecheck
 corepack pnpm build
 corepack pnpm test:security
 corepack pnpm test
 ```
 
-本轮只在当前 Linux / Node 24 环境验收，不宣称 Windows CI、真实模型成功率或模型 token 消耗提升。预览不能代替原始证据；完整内容仍应由现有 artifact/transcript 路径保留。previewMaxBytes 限制正文，显式预览标记在此上增加少量字节；预算统计包含标记。受保护信息不会为硬凑预算而被删改，仍可能如实报告超限。本容器使用已有 Linux subreaper 启动进程测试，处理 PID 1 不回收孤儿进程的环境差异。
+基线为上述 `249770e` 快照。运行原实现的 RED 时，将两份新增回归测试复制到基线，仅执行定向 Vitest；新公开计量方法在旧实现不存在，因此该 RED 不是基线类型构建验收。
+
+## 约束与实际限制
+
+token 数值仍是预算估算，不能冒充模型真实 tokenizer 或计费 usage。最少 4 条消息是现有保底行为；保底消息本身超过预算时，不通过删除当前任务掩盖超限。仅自动移除裁剪后开头的孤立工具结果，内部协议损坏仍由原有 send-boundary 验证拒绝。reasoning/参数的预算计量不改变它们的持久化或发送内容，不将正文写入基准证据。只报告本环境实际运行的验收，不借用既往 Windows CI，也不声称真实模型成功率提升。本容器的进程测试沿用现有 Linux subreaper 启动器处理 PID 1 不回收孤儿进程的问题。

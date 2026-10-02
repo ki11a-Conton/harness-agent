@@ -21,6 +21,7 @@ export type {
   ContextPipelineDeps,
   ContextPipelineResult,
   ContextPipelineBuildOptions,
+  MessageTokenInput,
 } from "./pipeline.js";
 
 // P2-16: versioned system-prompt / runtime-rule registry with rollback.

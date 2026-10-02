@@ -393,7 +393,8 @@ export class ContextController {
                 createdAt: this.deps.now(),
               });
               history = await this.deps.store.listMessages(sessionId);
-              history = trimMessageHistory(history, headroom);
+              const pipeline = this.deps.context.pipeline;
+              history = trimMessageHistory(history, headroom, (message) => pipeline.estimateMessageTokens([message]));
             }
           }
           if (built.report.used > this.deps.context.budget.maxTokens) {

@@ -371,13 +371,22 @@ export function buildStateDigest(working: WorkingState, reason: string): string 
 export function trimMessageHistory(
   history: readonly Message[],
   headroomTokens: number,
+  tokensForMessage: (message: Message) => number = (message) => estimateMessageTokens([message]),
 ): Message[] {
   const MIN_KEEP = 4;
-  let kept = [...history];
-  while (kept.length > MIN_KEEP && estimateMessageTokens(kept) > headroomTokens) {
-    kept = kept.slice(1);
+  if (history.length <= MIN_KEEP) return dropOrphanToolResults(history);
+
+  // Price each payload once, then subtract the dropped prefix. Re-estimating
+  // and copying every remaining suffix makes long-session trims quadratic.
+  // The callback lets the runtime share its pipeline's configured estimator.
+  const costs = history.map(tokensForMessage);
+  let remainingTokens = costs.reduce((sum, cost) => sum + cost, 0);
+  let start = 0;
+  while (history.length - start > MIN_KEEP && remainingTokens > headroomTokens) {
+    remainingTokens -= costs[start]!;
+    start += 1;
   }
-  return dropOrphanToolResults(kept);
+  return dropOrphanToolResults(history.slice(start));
 }
 
 // ── Q-1: model-call retry decision (pure) ─────────────────────────
