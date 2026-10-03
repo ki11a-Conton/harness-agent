@@ -10,8 +10,10 @@ import { stableFingerprint } from "@ar/contracts";
 import * as evaluation from "@ar/evaluation";
 import { computePromptDigest, computeRuntimeConfigHash, getArmFactory, getCandidateRegistry, buildPairedPlan, runPairedExperiment,
   buildExecutionIdentityV1, caseInputFingerprintV1, DEFAULT_DECISION_POLICY_V3, computeThresholdDigestV3, type BenchmarkCase } from "@ar/evaluation";
-import { MemEventStore } from "@ar/harness";
+import { MemEventStore, PathScopedContextPipeline } from "@ar/harness";
 import { HierarchicalInstructionDiscovery } from "@ar/context";
+import { redactSecrets } from "@ar/security";
+import { protectToolOutputText } from "../../../packages/core/src/runtime/tool-output-security.js";
 import { runOneCase, runtimeConfigForHash, type BenchmarkCommandOptions } from "./benchmark-command.js";
 
 const ID = "path_scoped_instructions_v1";
@@ -122,6 +124,41 @@ const docs = (request: ModelRequest): string[] => [...(request.system ?? "").mat
   .map(match => match[1]!.replaceAll("\\", "/").replace(/.*\/harness-bench-[^/]+\//u, ""));
 const scopedFacts = (outcome: Awaited<ReturnType<typeof runOneCase>>) => outcome.events.filter(event => event.type === "context.selected" && event.payload.strategy === ID);
 
+// CI's public failure annotations can expose this allowlisted diagnostic when
+// the signed private log download is unavailable. Keep prompts, headers, tool
+// arguments/output and environment values out of this test-only boundary.
+function rejectRuntimeError(outcome: Awaited<ReturnType<typeof runOneCase>>): void {
+  if (outcome.actualStatus !== "error") return;
+  const text = (value: unknown, max: number): string | undefined => typeof value === "string"
+    ? protectToolOutputText(value, { redact: redactSecrets }).content.replace(/[\u0000-\u001f]+/gu, " ").slice(0, max)
+    : undefined;
+  const recent = outcome.events.filter(event => /^(?:tool\.failed|model\.failed|turn\.(?:started|failed)|run\.|runtime\.degraded|session\.)/u.test(event.type))
+    .slice(-4).map(event => {
+      const error = event.payload.error;
+      const fields = error !== null && typeof error === "object" ? error as Record<string, unknown> : {};
+      return {
+        type: event.type,
+        sequence: event.sequence,
+        code: text(fields.code, 60),
+        status: text(event.payload.status, 40),
+        terminationReason: text(event.payload.terminationReason, 60),
+      };
+    });
+  const summary = {
+    reason: text(outcome.reason, 500),
+    caseId: text(outcome.caseId, 100),
+    actualStatus: outcome.actualStatus,
+    failureCategory: outcome.failureCategory,
+    terminationReason: text(outcome.terminationReason, 80),
+    hostMutationStatus: outcome.hostMutation?.status,
+    violations: outcome.violations.slice(0, 2).map(value => text(value, 120)),
+    recent,
+  };
+  while (JSON.stringify(summary).length > 1900 && recent.length > 0) recent.shift();
+  while (JSON.stringify(summary).length > 1900 && summary.violations.length > 0) summary.violations.pop();
+  throw new Error(`S2_RUNTIME_ERROR_JSON=${JSON.stringify(summary)}`);
+}
+
 async function run(caseDef: BenchmarkCase, candidate: boolean, m: ReturnType<typeof model>) {
   const beforeFilesystem = { ...filesystemCounts };
   const beforeDiscovery = { ...defaultDiscoveryCounts };
@@ -129,6 +166,7 @@ async function run(caseDef: BenchmarkCase, candidate: boolean, m: ReturnType<typ
     provider: m.provider, modelId: "s2-offline-fixture", budgetTokens: 32_000,
     ...(candidate && candidateAvailable() ? { candidate: ID } : {}), processConfinement: "insecure-local",
   }, "regression");
+  rejectRuntimeError(outcome);
   const facts = scopedFacts(outcome);
   const contextBuilds = outcome.events.filter(event => event.type === "context.built");
   evidence.push({ caseId: caseDef.id, candidate, actualStatus: outcome.actualStatus, status: outcome.status,
@@ -155,6 +193,27 @@ async function run(caseDef: BenchmarkCase, candidate: boolean, m: ReturnType<typ
 }
 
 describe("S2 CLI path-scoped instruction challenger", () => {
+  it("publishes only a bounded redacted diagnostic for a real runtime exception", async () => {
+    const fixture = await monorepo();
+    fixture.id = "s2-error-diagnostic";
+    fixture.verification = [];
+    const key = "sk-proj-offlinediagnostic123456789012345";
+    const cause = JSON.stringify({ message: `runtime fixture\n${key}\n${"detail ".repeat(400)}` });
+    vi.spyOn(PathScopedContextPipeline.prototype, "build").mockRejectedValueOnce(new Error(cause));
+    const error = await run(fixture, true, model(() => undefined)).catch((value: unknown) => value);
+    expect(error).toBeInstanceOf(Error);
+    const message = (error as Error).message;
+    expect(message).toMatch(/^S2_RUNTIME_ERROR_JSON=/u);
+    expect(message).not.toContain(key);
+    expect(message).not.toMatch(/[\r\n]/u);
+    expect(message.length).toBeLessThanOrEqual("S2_RUNTIME_ERROR_JSON=".length + 1900);
+    const diagnostic = JSON.parse(message.slice("S2_RUNTIME_ERROR_JSON=".length)) as Record<string, unknown>;
+    expect(diagnostic.failureCategory).toBe("harness");
+    expect(diagnostic.reason).toContain("[redacted]");
+    expect(diagnostic.recent).toBeInstanceOf(Array);
+    expect(Object.keys(diagnostic).sort()).toEqual(["actualStatus", "caseId", "failureCategory", "hostMutationStatus", "reason", "recent", "violations"]);
+  });
+
   it("normalizes both Windows and POSIX fixture document paths before comparing relative scopes", () => {
     for (const path of [
       "/tmp/harness-bench-fixture/packages/a/AGENTS.md",
@@ -288,6 +347,7 @@ describe("S2 CLI path-scoped instruction challenger", () => {
           ...(arm.armId === "candidate" && candidateAvailable() ? { candidate: ID } : {}),
           processConfinement: "insecure-local", armId: arm.armId, repetition: arm.repetition, attempt: 1,
         }, "regression");
+        rejectRuntimeError(result);
         observed.push({ arm: arm.armId, repetition: arm.repetition, caseId: caseDef.id, actualStatus: result.actualStatus,
           requestCount: active.requests.length, requests: active.requests.map(request => ({ sources: docs(request),
             digest: computePromptDigest(JSON.stringify(request)), bytes: Buffer.byteLength(request.system ?? "", "utf8") })),

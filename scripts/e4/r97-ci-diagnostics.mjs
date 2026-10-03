@@ -34,6 +34,19 @@ import { join } from "node:path";
 const MAX_SUMMARY_LINES = 120;
 const MAX_ANNOTATIONS = 8;
 const MAX_LINE_CHARS = 240;
+// S2 emits this one allowlisted, field-redacted diagnostic from its test fixture.
+// Its reason must survive the ordinary short annotation limit to diagnose a
+// Windows-only failure when authenticated log/artifact downloads are unavailable.
+const MAX_S2_DIAGNOSTIC_CHARS = 2000;
+
+function isS2RuntimeDiagnostic(line) {
+  return /^(?:Error:\s*)?S2_RUNTIME_ERROR_JSON=\{/.test(line.trimStart());
+}
+
+function prioritizeFailures(lines) {
+  const priority = (line) => isS2RuntimeDiagnostic(line) ? 0 : /FAIL |AssertionError/.test(line) ? 1 : 2;
+  return [...lines].sort((a, b) => priority(a) - priority(b));
+}
 
 function flagValue(argv, name) {
   const i = argv.indexOf(name);
@@ -54,14 +67,14 @@ function interestingLines(text) {
     .split(/\r?\n/)
     .map((l) => l.replace(/\u001b\[[0-9;]*m/g, "").trimEnd())
     .filter((l) =>
-      /FAIL |AssertionError|Failed Tests|Test Files|Tests +\d|Error:|expected |^\s*×|✕/.test(l),
+      isS2RuntimeDiagnostic(l) || /FAIL |AssertionError|Failed Tests|Test Files|Tests +\d|Error:|expected |^\s*×|✕/.test(l),
     );
 }
 
 /** Git-Hub workflow commands treat `%`, CR and LF as escapes; a raw newline in an
  *  annotation message truncates it silently. */
-function escapeCommand(line) {
-  return line.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A").slice(0, MAX_LINE_CHARS);
+function escapeCommand(line, maxChars = MAX_LINE_CHARS) {
+  return line.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A").slice(0, maxChars);
 }
 
 /** What a vitest JSON report says went wrong, as `test name — first failure line`. */
@@ -91,7 +104,8 @@ async function main(argv) {
     } else {
       // The vitest summary itself names every failed test; the surrounding log is
       // kept only as the fallback when the summary is absent.
-      const failed = interestingLines(text).filter((l) => /FAIL |AssertionError|expected |Error:/.test(l));
+      const failed = prioritizeFailures(interestingLines(text).filter((l) =>
+        isS2RuntimeDiagnostic(l) || /FAIL |AssertionError|expected |Error:/.test(l)));
       const counts = interestingLines(text).filter((l) => /Test Files|Tests +\d|Failed Tests/.test(l));
       blocks.push(...counts, ...failed);
       annotations.push(...failed);
@@ -141,8 +155,9 @@ async function main(argv) {
     process.stdout.write(summary);
   }
 
-  for (const line of annotations.slice(0, MAX_ANNOTATIONS)) {
-    process.stdout.write(`::error::${escapeCommand(`[${label}] ${line}`)}\n`);
+  for (const line of prioritizeFailures(annotations).slice(0, MAX_ANNOTATIONS)) {
+    const maxChars = isS2RuntimeDiagnostic(line) ? MAX_S2_DIAGNOSTIC_CHARS : MAX_LINE_CHARS;
+    process.stdout.write(`::error::${escapeCommand(`[${label}] ${line}`, maxChars)}\n`);
   }
   return 0;
 }
