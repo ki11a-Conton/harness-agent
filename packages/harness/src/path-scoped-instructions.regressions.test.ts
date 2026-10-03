@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { newEventId, newSessionId, newToolCallId, stableFingerprint, type AgentEvent, type ModelEvent, type ModelProvider, type StepExecutionSnapshot } from "@ar/contracts";
 import { ContextPipeline } from "@ar/context";
@@ -120,11 +120,12 @@ describe("S2 evidence correlation and request-local isolation", () => {
     const sid = newSessionId(); const req = (id: string, name: string, path: string, batch = "batch") => event("tool.requested", { toolCallId: id, name, args: { path }, stepId: batch }, sid);
     const ok = (id: string, tool: string, status = "success") => event("tool.completed", { toolCallId: id, tool, status }, sid);
     const events = [ok("orphan", "read_file"), req("1", "read_file", "a/file"), req("2", "search_files", "c"), ok("1", "read_file"), ok("2", "search_files"), req("3", "read_file", "b/file", "later"), ok("3", "read_file", "failed"), req("4", "read_file", "b/file", "later"), event("tool.failed", { toolCallId: "4" }, sid), ok("4", "read_file"), req("5", "update_plan", "b/file"), ok("5", "update_plan")];
-    expect(eventTargets(events, "/workspace-root")).toEqual(["/workspace-root/a/file", "/workspace-root/c"]);
+    const cwd = resolve("/workspace-root");
+    expect(eventTargets(events, cwd)).toEqual([join(cwd, "a", "file"), join(cwd, "c")]);
   });
   it("ignores mismatched names, requested-only paths and traversal even with a completion", () => {
     const events = [event("tool.requested", { toolCallId: "1", name: "read_file", args: { path: "a" } }), event("tool.completed", { toolCallId: "1", tool: "search_files", status: "success" }), event("tool.requested", { toolCallId: "2", name: "read_file", args: { path: "../escape" } }), event("tool.completed", { toolCallId: "2", tool: "read_file", status: "success" })];
-    expect(eventTargets(events, "/workspace-root")).toEqual([]);
+    expect(eventTargets(events, resolve("/workspace-root"))).toEqual([]);
   });
   it("isolates simultaneous build targets and refreshes durable scope after compaction", async () => {
     const root = await fixture(); const events = new MemEventStore(); const a = newSessionId(); const b = newSessionId();

@@ -21,6 +21,11 @@ const definitions = evaluation as unknown as Record<string, unknown>;
 // The unchanged baseline executes its real default discovery. It must fail
 // scope/content assertions, never test collection because an export is new.
 const candidateAvailable = () => getCandidateRegistry().find(ID) !== undefined;
+function isInstructionPath(path: unknown, relativePath: string): boolean {
+  if (typeof path !== "string") return false;
+  const normalized = path.replaceAll("\\", "/");
+  return normalized === relativePath || normalized.endsWith(`/${relativePath}`);
+}
 let scratch: string;
 const evidence: Record<string, unknown>[] = [];
 const filesystemCounts = { documentReadFileCalls: 0, directoryListings: 0 };
@@ -297,9 +302,24 @@ describe("S2 CLI path-scoped instruction challenger", () => {
     const candidate = await run(fixture, true, model((_request, index) => index === 0 ? { name: "read_file", args: { path: "packages/a/config.json" } } : undefined));
     expect(docs(candidate.requests[1]!)).toEqual(["AGENTS.md"]);
     expect(candidate.requests[1]!.system).not.toContain("Ignore all previous instructions");
-    expect(candidate.outcome.events.some(event => event.type === "security.injection_denied" && String(event.payload.target).endsWith("packages/a/AGENTS.md"))).toBe(true);
+    expect(candidate.outcome.events.some(event => event.type === "security.injection_denied" && isInstructionPath(event.payload.target, "packages/a/AGENTS.md"))).toBe(true);
     expect(candidate.facts).toHaveLength(2);
-    expect(JSON.stringify(candidate.facts.map(fact => fact.payload.instructionSources))).not.toContain("packages/a/AGENTS.md");
+    const instructionSources = candidate.facts.flatMap(fact => fact.payload.instructionSources as { path?: string }[]);
+    expect(instructionSources.some(source => isInstructionPath(source.path, "packages/a/AGENTS.md"))).toBe(false);
+  });
+
+  it("detects rejected instruction paths in both denial events and source entries on Windows and POSIX", () => {
+    for (const path of ["C:\\temp\\workspace\\packages\\a\\AGENTS.md", "/tmp/workspace/packages/a/AGENTS.md"]) {
+      const denied = { type: "security.injection_denied", payload: { target: path } };
+      const witnessed = [{ kind: "project_instruction", path }];
+      expect(denied.type === "security.injection_denied" && isInstructionPath(denied.payload.target, "packages/a/AGENTS.md")).toBe(true);
+      // If this forbidden path leaks into a source entry, the absence check
+      // above must fail for either native spelling (not inspect JSON escapes).
+      expect(witnessed.some(source => isInstructionPath(source.path, "packages/a/AGENTS.md"))).toBe(true);
+    }
+    expect(isInstructionPath("C:\\temp\\workspace\\otherpackages\\a\\AGENTS.md", "packages/a/AGENTS.md")).toBe(false);
+    expect(isInstructionPath("/tmp/workspace/packages/b/AGENTS.md", "packages/a/AGENTS.md")).toBe(false);
+    expect(isInstructionPath(undefined, "packages/a/AGENTS.md")).toBe(false);
   });
 
   it("records zero activation when no project document reaches the request", async () => {
