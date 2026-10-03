@@ -311,4 +311,76 @@ describe("R2 bound steering crash recovery preserves original lineage", () => {
     expect(durable).toHaveLength(1); expect(durable[0]?.turnId).toBe(turn.id);
     expect(visibleUsers(f.provider.requests[0]!).find(m => m.content.startsWith("[Session resumed"))?.content).toContain(STEER);
   });
+
+
+  it("serializes the same session's concurrent bound-steer recovery before the run guard", async () => {
+    const checkpoints = new Checkpoints();
+    const f = fixture([ScriptedModelProvider.text("done"), ScriptedModelProvider.text("done")], { checkpointStore: checkpoints });
+    const { session, turn } = await start(f);
+    const promptId = await bindSteer(f, session.id, turn.id);
+    await saveInterrupted(f, session.id, turn.id, checkpoints);
+    let release!: () => void, entered!: () => void, secondHistory!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const appending = new Promise<void>(resolve => { entered = resolve; });
+    const bothRead = new Promise<void>(resolve => { secondHistory = resolve; });
+    const append = f.store.appendMessage.bind(f.store);
+    const list = f.store.listMessages.bind(f.store);
+    let unappendedHistories = 0;
+    f.store.listMessages = async (id) => {
+      const history = await list(id);
+      if (id === session.id && !history.some(m => m.promptId === promptId) && ++unappendedHistories === 2) secondHistory();
+      return history;
+    };
+    f.store.appendMessage = async (message) => {
+      if (message.promptId === promptId) { entered(); await gate; }
+      return append(message);
+    };
+    const first = f.runtime.resumeTurn(session.id, new AbortController().signal);
+    let second: ReturnType<typeof f.runtime.resumeTurn> | undefined;
+    try {
+      await appending;
+      second = f.runtime.resumeTurn(session.id, new AbortController().signal);
+      await bothRead;
+      // Let the second recovery reach the boundary while the first write is
+      // held. These are microtasks, independent of wall-clock or fs speed.
+      for (let i = 0; i < 40; i++) await Promise.resolve();
+    } finally { release(); }
+    const outcomes = await Promise.allSettled([first, second!]);
+    expect(outcomes.some(outcome => outcome.status === "fulfilled" && outcome.value.outcome.status === "completed")).toBe(true);
+    const durable = (await list(session.id)).filter(m => m.role === "user" && m.promptId === promptId);
+    expect(durable).toHaveLength(1); expect(durable[0]?.turnId).toBe(turn.id);
+    expect(f.inbox.consumed).toBe(1);
+    expect(f.inbox.prompts[0]).toMatchObject({ status: "consumed", promotedTurnId: turn.id });
+    for (const request of f.provider.requests) assertToolProtocol(request.messages);
+  });
+
+  it("does not hold another session behind a recovering steer write", async () => {
+    const checkpoints = new Checkpoints();
+    const f = fixture([ScriptedModelProvider.text("other done"), ScriptedModelProvider.text("first done")], { checkpointStore: checkpoints });
+    const first = await start(f), other = await start(f, "OTHER SESSION TASK");
+    const firstPrompt = await bindSteer(f, first.session.id, first.turn.id);
+    const otherPrompt = await bindSteer(f, other.session.id, other.turn.id, "OTHER_SESSION_CONSTRAINT");
+    // The existing fixture's checkpoint lookup ignores session id; use the
+    // two actual durable records indexed by their owning session here.
+    await saveInterrupted(f, first.session.id, first.turn.id, checkpoints);
+    await saveInterrupted(f, other.session.id, other.turn.id, checkpoints);
+    checkpoints.loadLatest = async (id?: SessionId) => checkpoints.saved.find(checkpoint => checkpoint.sessionId === id);
+    let release!: () => void, entered!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const appending = new Promise<void>(resolve => { entered = resolve; });
+    const append = f.store.appendMessage.bind(f.store);
+    let firstSettled = false;
+    f.store.appendMessage = async (message) => {
+      if (message.promptId === firstPrompt) { entered(); await gate; }
+      return append(message);
+    };
+    const blocked = f.runtime.resumeTurn(first.session.id, new AbortController().signal).finally(() => { firstSettled = true; });
+    try {
+      await appending;
+      const completed = await f.runtime.resumeTurn(other.session.id, new AbortController().signal);
+      expect(completed.outcome.status).toBe("completed"); expect(firstSettled).toBe(false);
+      expect((await f.store.listMessages(other.session.id)).filter(m => m.promptId === otherPrompt)).toHaveLength(1);
+    } finally { release(); await blocked; }
+    expect((await f.store.listMessages(first.session.id)).filter(m => m.promptId === firstPrompt)).toHaveLength(1);
+  }, 15000);
 });

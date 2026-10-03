@@ -126,6 +126,10 @@ export interface ContextControllerDeps {
 }
 
 export class ContextController {
+  /** Append/consume spans two stores. Serialize this boundary per session
+   * in one runtime, including recovery before runTurn acquires its guard. */
+  private readonly steeringInFlight = new Map<SessionId, Promise<void>>();
+
   constructor(private readonly deps: ContextControllerDeps) {}
 
   /**
@@ -471,6 +475,30 @@ export class ContextController {
     ctx: Pick<TurnContext, "sessionId" | "turnId">,
     history: Message[],
     options: { recoverBoundOnly?: boolean } = {},
+  ): Promise<Message[]> {
+    if (this.deps.inbox === undefined) return history;
+    const previous = this.steeringInFlight.get(ctx.sessionId);
+    let release!: () => void;
+    const current = new Promise<void>((resolve) => { release = resolve; });
+    this.steeringInFlight.set(ctx.sessionId, current);
+    try {
+      if (previous !== undefined) {
+        await previous;
+        // The waiting caller's input was read before its predecessor's
+        // append/consume. Deduplicate against the latest durable transcript.
+        history = await this.deps.store.listMessages(ctx.sessionId);
+      }
+      return await this.injectSteeringPromptsOnce(ctx, history, options);
+    } finally {
+      release();
+      if (this.steeringInFlight.get(ctx.sessionId) === current) this.steeringInFlight.delete(ctx.sessionId);
+    }
+  }
+
+  private async injectSteeringPromptsOnce(
+    ctx: Pick<TurnContext, "sessionId" | "turnId">,
+    history: Message[],
+    options: { recoverBoundOnly?: boolean },
   ): Promise<Message[]> {
     const { sessionId, turnId } = ctx;
     if (this.deps.inbox === undefined) return history;
