@@ -49,7 +49,11 @@ export function protectToolOutputText(raw: string, hooks: ToolOutputSecurityHook
         if (typeof decoded === "string") {
           tokens.push({ start: match.index, end: match.index + match[0].length, decoded });
         }
-      } catch { /* Quoted prose need not be a valid JSON literal. */ }
+      } catch {
+        // Quoted prose need not be a JSON literal. The whole-text scanner
+        // has already inspected it; continue with the other original tokens.
+        continue;
+      }
     }
     return tokens;
   };
