@@ -1,0 +1,10 @@
+{
+  "caseId": "reg-24-error-handling",
+  "scenario": "non-target-tamper",
+  "checkerSha256": "5af8d9712380335d1a84a81c04ec271bed22624484ca15ca14fb8f65e67339a3",
+  "status": 1,
+  "signal": null,
+  "error": null,
+  "stdout": "",
+  "stderr": "node:assert:152\n  throw new AssertionError(obj);\n  ^\n\nAssertionError [ERR_ASSERTION]: immutable fixture changed: data/good.json\n+ actual - expected\n\n+ '6980621a6a8b774b5cb8a0df8a0d44a14a4de5a46417774d7ffbabf2a2b9ef53'\n- 'e346432021b04179518d9614f3560ccd71354a4ee101ddcb893d6959a9d6301c'\n\n    at checkImmutable ([eval]:9:10)\n    at [eval]:11:1\n    at [eval]:16:137\n    at runScriptInThisContext (node:internal/vm:219:10)\n    at node:internal/process/execution:451:12\n    at [eval]-wrapper:6:24\n    at runScriptInContext (node:internal/process/execution:449:60)\n    at evalFunction (node:internal/process/execution:283:30)\n    at evalTypeScript (node:internal/process/execution:295:3)\n    at node:internal/main/eval_string:71:3 {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: '6980621a6a8b774b5cb8a0df8a0d44a14a4de5a46417774d7ffbabf2a2b9ef53',\n  expected: 'e346432021b04179518d9614f3560ccd71354a4ee101ddcb893d6959a9d6301c',\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+}

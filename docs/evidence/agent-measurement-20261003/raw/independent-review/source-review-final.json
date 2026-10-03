@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "agent-measurement-independent-source-review-v1",
+  "status": "PASS_SOURCE_REVIEW_AND_TARGET_EVIDENCE",
+  "sourceCommitAtObservation": "ab99c4dd759b874099235855be255240acdc67ab",
+  "sourceFileSha256": {
+    "packages/harness/src/skill-context.ts": "feeede6c3430ee53154aad9fae2f526a096e119aa56d729bd1cf2d0e3d9627f6",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/core/src/runtime/context-controller.ts": "22fe6661072b6674e0ab75a9535a6530de8700cec1a596d6ba858a3d0bda9bfd",
+    "packages/core/src/runtime/runtime.ts": "b86ca5183801474fd11b1080180918b62b342fd02f3fe4c99b2c514d4f7d98d5",
+    "packages/skills/src/task-scoped-selection.ts": "90398b4aee683eb746dc503f9b54a847f89c181ae475dab31029b8c9c375c9be",
+    "packages/model/src/openai.ts": "a3b12a1677711843a90d3299be6136432e7c18c635d3045121750913600d6319",
+    "apps/cli/src/benchmark-command.ts": "097e4887434019d92f4b5d13e5aedae91e0ca6857e33511fde6ea219cf8ad003",
+    "packages/evaluation/src/candidate-registry.ts": "6c30204ae036f0b87c0809998df1d30ceac7355eaa60fa7a292571ff113958e8",
+    "packages/evaluation/src/arm-factory.ts": "888c1fe5991c82f254758e927ebde59d7772b8fa8b255a03d012f0f3a17dc3cc",
+    "packages/evaluation/src/activation-evidence.ts": "34b850c7b4f71889c7531a9edcc4607f40df169bbfe46ece78d020302cd65c93",
+    "packages/evaluation/src/activation-evidence-execution.ts": "fa23c5c0df7e0f918480bd93e0c87c7fe7ca66526c4faec8ee3e82b2c8525ffb",
+    "packages/evaluation/src/mechanism-contract.ts": "5ec058baf3b24d75de4add4d9960bc2c05439fd21b44a7d69ec80022f2a45b42",
+    "packages/contracts/src/skill.ts": "76589381cdf9c295f29cc92a6f7308c1533a5af15baf1db2c3deae35d6e77dc2"
+  },
+  "checks": {
+    "m1QueueAndExactTurnSetsReviewed": true,
+    "m1IndependentConcurrentCandidateAll100": true,
+    "m2UnknownWithRequiredIndependentPass": true,
+    "m2SelectorDefaultOffAndImmutablePolicyReviewed": true,
+    "cliWitnessUsesPerSessionRealInputsNotGlobalDiscovery": true,
+    "concurrentRequestsUniqueAndBodiesMatch": true,
+    "pairedCompleteNoPartial": true,
+    "pairedABBA": true,
+    "pairedCountersEqualObservedCalls": true,
+    "m3SameParserPolicyFrozenIntoPlanAndRealClientReviewed": true,
+    "pilotFixedInputsAndReceiptHashesVerified": true,
+    "cliFinalManifestSourceHashesVerified": true,
+    "cliFinalManifestArtifactHashesVerified": true
+  },
+  "blockers": [],
+  "targetAcceptance": {
+    "M1": {
+      "newRegressions": 11,
+      "baselineFail": 9,
+      "baselinePass": 2,
+      "candidateTargetPass": 157,
+      "independentConcurrentRounds": 20,
+      "concurrentEventsPerRound": 100,
+      "baselineInconsistentRounds": 6,
+      "candidateInconsistentRounds": 0
+    },
+    "M2": {
+      "coreTargetPass": 38,
+      "cliTargetPass": 86,
+      "pairedLogicalRuns": 4,
+      "pairedModelAttempts": 16,
+      "concurrentSessions": 3,
+      "concurrentRequests": 6,
+      "cliBaselineSameFixtureFail": 8,
+      "cliBaselineSameFixturePass": 0,
+      "cliManifestSourceHashesVerified": 12,
+      "cliManifestArtifactHashesVerified": 7
+    },
+    "M3": {
+      "targetPass": 53,
+      "localHttpChecks": 6
+    },
+    "Pilot": {
+      "fixedFilesVerified": 43,
+      "receiptsVerified": 20,
+      "correctRepairPasses": 3,
+      "negativeFailuresExpected": 17
+    }
+  },
+  "M4": "BLOCKED_MISSING_MODEL_CREDENTIALS_AND_COST_CONFIGURATION",
+  "M5": "ROOT_OWNED_CLEAN_SAME_SHA_FULL_ACCEPTANCE_PENDING",
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "limits": [
+    "Admission is successfully built final context, not provider HTTP attempts.",
+    "Queue is per-process single ledger, not cross-process CAS or crash atomicity.",
+    "Paired engineering fixture uses insecure-local and is not promotion eligible.",
+    "Node checker negative coverage is not general malicious JavaScript isolation.",
+    "Transport policy and generate caps do not establish hard USD caps."
+  ]
+}

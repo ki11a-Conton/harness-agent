@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "frozen-agent-engineering-probe-v1",
+  "testedSourceSha": "72232950938fcefa2e0a79c222c177deb79ec200",
+  "before": {
+    "head": "72232950938fcefa2e0a79c222c177deb79ec200",
+    "trackedClean": true
+  },
+  "after": {
+    "head": "72232950938fcefa2e0a79c222c177deb79ec200",
+    "trackedClean": true
+  },
+  "sourceDirty": false,
+  "argv": [
+    "node",
+    "scripts/research/agent-measurement-20261003/skill-admission.mjs",
+    "--out",
+    "/workspace/harness-agent/.ci/agent-measurement-20261003/final-probes/skill-admission",
+    "--candidate",
+    "task_scoped_skills_v1"
+  ],
+  "cwd": "/workspace/harness-agent-agent-measurement-acceptance",
+  "exitCode": 0,
+  "durationSeconds": 1.591,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "paidProviderCalls": 0,
+  "stdoutLog": "skill-admission.stdout.log",
+  "stdoutSha256": "afb6c56c5de4f464f89560fe636b5d0d45f85a13e0bffe0b60b0d788a6c93cc8",
+  "artifactsSha256": {
+    "default-0-events.json": "177a45fc2213775e86f65c0c6cf5cc5db932c138a042b2d4e92b658ded8e6ae7",
+    "default-1-events.json": "7ef7aad25b395f4ac1e08a20b4a5f8207655dd089e30c3fefea6cd7d6d6bc227",
+    "default-2-events.json": "02490e56e69c3fcfc1c261a85797a41c1302109bb7aed98e1d2fceb81f7f9c6c",
+    "selected-0-events.json": "6faaa270dcdbf318aa8051cc43c671562aa021793096ddf96e7987e683b323d5",
+    "selected-1-events.json": "225200dd7298384d05815f622045ce63e13c554a64040503ecef7812b68a4792",
+    "selected-2-events.json": "8366c1b733b48427a791ef148b2b8b6957a1e7dc6edd1c930938c643e5199b21",
+    "skills-measurement.json": "df0722e96bf744eca4ee249fa981fcc8fe1a2348a8cc03bcd0d70c8ee17c301d"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "observedAt": "2026-10-03T17:19:23.942988+00:00",
+  "testedSourceSha": "72232950938fcefa2e0a79c222c177deb79ec200",
+  "inspection": "environment presence only; no secret value read or emitted",
+  "present": {
+    "OPENAI_API_KEY": false,
+    "OPENAI_BASE_URL": false,
+    "DEEPSEEK_API_KEY": false,
+    "ANTHROPIC_API_KEY": false,
+    "GEMINI_API_KEY": false,
+    "OPENROUTER_API_KEY": false,
+    "MODEL_PROVIDER": false,
+    "MODEL_ID": false,
+    "OIC_MANIFEST_PATH": false
+  },
+  "environmentConfigurationReceipt": "final-model-environment.json",
+  "modelPilot": "BLOCKED_MISSING_MODEL_CREDENTIALS_AND_COST_CONFIGURATION",
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN"
+}

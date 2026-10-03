@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "frozen-agent-engineering-probe-v1",
+  "testedSourceSha": "72232950938fcefa2e0a79c222c177deb79ec200",
+  "before": {
+    "head": "72232950938fcefa2e0a79c222c177deb79ec200",
+    "trackedClean": true
+  },
+  "after": {
+    "head": "72232950938fcefa2e0a79c222c177deb79ec200",
+    "trackedClean": true
+  },
+  "sourceDirty": false,
+  "argv": [
+    "node",
+    "scripts/research/agent-measurement-20261003/skill-context.mjs",
+    "--out",
+    "/workspace/harness-agent/.ci/agent-measurement-20261003/final-probes/skill-context"
+  ],
+  "cwd": "/workspace/harness-agent-agent-measurement-acceptance",
+  "exitCode": 0,
+  "durationSeconds": 5.577,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "paidProviderCalls": 0,
+  "stdoutLog": "skill-context.stdout.log",
+  "stdoutSha256": "eee9bd8c2ed6defe5642a80f3941b35e227889ef60a9bc91abbc48fffe92377e",
+  "artifactsSha256": {
+    "baseline-full.json": "89e8b36da7f8c54abb2c7ba359c53894862a739b7b00be01c4a55a1217e78c79",
+    "baseline-tight.json": "d0c2acc3a7daacbd0d8963e5a303bc1d3b64e1705f218ea752def5d9e6823113",
+    "legacy-selector-one.json": "8a08bb42e53b64b6b27631df821650348e80953a804ca719c43afcc6a725392b",
+    "paired-ab-baseline.json": "59cd8d655321cecc255890f8b10ae001c6668d8f8f046375b9ce7b7267fc1845",
+    "paired-ab-task-scoped.json": "7eba86a3510ebd0aceb91404dd400f163643323d3b0d978316c9af3bad1e11c7",
+    "paired-ba-baseline.json": "e35e84c0feceeaa5d1156c786b813e0a69bc21e1a3ed3ee2496f3b6fcab55768",
+    "paired-ba-task-scoped.json": "ff8561eb275a22bc99dc679e070e2d4118e9f7913336cef3d1311346d590c335",
+    "summary.json": "05731b4c0a640c7cd3179002b889fb921bfc32b8d0139f67b41f2c2b8b159413",
+    "task-scoped-one-tight.json": "26e6a6fcc970c2dc6826f51ff78b02099cfbe6141705fc03eb89021eac136fdc",
+    "task-scoped-one.json": "51300f8c73c1c6e996b09457a14e3e778410cbeff3b6a29d1aaa1779e277ad0f",
+    "tool-selector.json": "db57492d40cb4c8e71391d2abc732a3382b9b40a9e9f6d9ffaf58e1e6c4bf517"
+  }
+}

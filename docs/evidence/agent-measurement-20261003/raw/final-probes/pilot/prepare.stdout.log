@@ -1,0 +1,266 @@
+{
+  "schemaVersion": "agent-measurement-pilot-preparation-v1",
+  "inputDigest": "7742d338bcdcbd65864f36b320e1cc4013d8e1204f1c53656216c1d777ca91a2",
+  "preparedInputHashesVerified": true,
+  "paidCalls": 0,
+  "promotion": "NOT_RUN",
+  "cases": [
+    {
+      "caseId": "skills-port-config",
+      "candidate": "task_scoped_skills_v1",
+      "formalCaseSchema": "PASS",
+      "checker": {
+        "originalFixture": "FAIL_EXPECTED",
+        "correctRepair": "PASS",
+        "nonTargetTamper": "FAIL_EXPECTED",
+        "moduleTimeNonTargetTamper": "FAIL_EXPECTED",
+        "assertMonkeypatch": "FAIL_EXPECTED",
+        "ruleTamper": "FAIL_EXPECTED",
+        "earlyExitBypass": "FAIL_EXPECTED"
+      },
+      "dryRun": "PASS",
+      "pairOrders": [
+        "BA",
+        "AB"
+      ],
+      "checkerReceipts": [
+        {
+          "scenario": "original-fixture",
+          "status": 1,
+          "path": "checker-self-test/skills-port-config/original-fixture.json",
+          "sha256": "1a6f42b542b18721f18bd44117f736ad51c83e7a3e74de8b6741e014654e94a8"
+        },
+        {
+          "scenario": "correct-repair",
+          "status": 0,
+          "path": "checker-self-test/skills-port-config/correct-repair.json",
+          "sha256": "8d124e0dfe3e3945766b11bc8f82372f1a18a97a0746c6f0c96d53de9a1d948e"
+        },
+        {
+          "scenario": "non-target-tamper",
+          "status": 1,
+          "path": "checker-self-test/skills-port-config/non-target-tamper.json",
+          "sha256": "f64c05059c2bf1275443db9dbefdcf8568fd7b2b18937c6bed2e61cfbd2424d6"
+        },
+        {
+          "scenario": "module-time-non-target-tamper",
+          "status": 1,
+          "path": "checker-self-test/skills-port-config/module-time-non-target-tamper.json",
+          "sha256": "245bdd2c39f0e542b76d7d63b8e0b8f538ca830ac349b75893dc60a439416aae"
+        },
+        {
+          "scenario": "assert-monkeypatch",
+          "status": 1,
+          "path": "checker-self-test/skills-port-config/assert-monkeypatch.json",
+          "sha256": "873051ec7f732dd519d645db5f6dc0231bc8aa1f827ac1ad7b3a3ca51941359c"
+        },
+        {
+          "scenario": "rule-tamper",
+          "status": 1,
+          "path": "checker-self-test/skills-port-config/rule-tamper.json",
+          "sha256": "a5f462ca1a3c1c1265580845529fcfa7dac9da20ea06be307b81258c6408dbbe"
+        },
+        {
+          "scenario": "early-exit-bypass",
+          "status": 1,
+          "path": "checker-self-test/skills-port-config/early-exit-bypass.json",
+          "sha256": "452f6b012f2cac414c3652896f8f59f1ce9b23f562535737f5d929ee8ceaf002"
+        }
+      ],
+      "candidateRegistration": "PASS",
+      "dryRunArgv": [
+        "apps/cli/dist/main.js",
+        "benchmark",
+        "--dry-run",
+        "--cases",
+        "/workspace/harness-agent/.ci/agent-measurement-20261003/final-probes/pilot/cases/skills",
+        "--candidate",
+        "task_scoped_skills_v1",
+        "--limit",
+        "1",
+        "--repeat",
+        "2",
+        "--seed",
+        "19",
+        "--provider",
+        "openai",
+        "--model",
+        "gpt-4o-mini",
+        "--max-model-calls",
+        "40",
+        "--max-logical-runs",
+        "4"
+      ],
+      "dryRunStdoutSha256": "aee13f1cefea4c16aff3b068d61036953a637f88ae298bd835409d158daf82e2"
+    },
+    {
+      "caseId": "reg-24-error-handling",
+      "candidate": "diagnostic_first_repair_v1",
+      "formalCaseSchema": "PASS",
+      "checker": {
+        "originalFixture": "FAIL_EXPECTED",
+        "correctRepair": "PASS",
+        "nonTargetTamper": "FAIL_EXPECTED",
+        "moduleTimeNonTargetTamper": "FAIL_EXPECTED",
+        "assertMonkeypatch": "FAIL_EXPECTED",
+        "earlyExitBypass": "FAIL_EXPECTED"
+      },
+      "dryRun": "PASS",
+      "pairOrders": [
+        "BA",
+        "AB"
+      ],
+      "checkerReceipts": [
+        {
+          "scenario": "original-fixture",
+          "status": 1,
+          "path": "checker-self-test/reg-24-error-handling/original-fixture.json",
+          "sha256": "572e592666b843ca871469b4b6addab9c34134af028e608b19a9e0b31fc04e2f"
+        },
+        {
+          "scenario": "correct-repair",
+          "status": 0,
+          "path": "checker-self-test/reg-24-error-handling/correct-repair.json",
+          "sha256": "c0cb93bc6a45e23a25d3a316b47aa6fad52c824397bb51bd29fe0a022dfa4fbe"
+        },
+        {
+          "scenario": "non-target-tamper",
+          "status": 1,
+          "path": "checker-self-test/reg-24-error-handling/non-target-tamper.json",
+          "sha256": "69b319e70b63babe02721671aa9d0a4a166e71090066c7b38fd5067046e3f79d"
+        },
+        {
+          "scenario": "module-time-non-target-tamper",
+          "status": 1,
+          "path": "checker-self-test/reg-24-error-handling/module-time-non-target-tamper.json",
+          "sha256": "3cd8dd7f7462067b5a566b0742b895c70f9f812ceab915c13f5cafd4a0dd7ac8"
+        },
+        {
+          "scenario": "assert-monkeypatch",
+          "status": 1,
+          "path": "checker-self-test/reg-24-error-handling/assert-monkeypatch.json",
+          "sha256": "eac71a2eadc4c8c9d1121353e25fb12acfe5a9019e8ca66e991c771180950380"
+        },
+        {
+          "scenario": "early-exit-bypass",
+          "status": 1,
+          "path": "checker-self-test/reg-24-error-handling/early-exit-bypass.json",
+          "sha256": "8a8851a2fe01b456720a98329995e1014bed862a074e1e1e4707e238c35a528a"
+        }
+      ],
+      "candidateRegistration": "PASS",
+      "dryRunArgv": [
+        "apps/cli/dist/main.js",
+        "benchmark",
+        "--dry-run",
+        "--cases",
+        "/workspace/harness-agent/.ci/agent-measurement-20261003/final-probes/pilot/cases/diagnostic",
+        "--candidate",
+        "diagnostic_first_repair_v1",
+        "--limit",
+        "1",
+        "--repeat",
+        "2",
+        "--seed",
+        "19",
+        "--provider",
+        "openai",
+        "--model",
+        "gpt-4o-mini",
+        "--max-model-calls",
+        "40",
+        "--max-logical-runs",
+        "4"
+      ],
+      "dryRunStdoutSha256": "ab6009dfafab13a89fa8609fb21bc9b0643bb20ccc65daa0932f845a049e0327"
+    },
+    {
+      "caseId": "instructions-api-retry-label",
+      "candidate": "path_scoped_instructions_v1",
+      "formalCaseSchema": "PASS",
+      "checker": {
+        "originalFixture": "FAIL_EXPECTED",
+        "correctRepair": "PASS",
+        "nonTargetTamper": "FAIL_EXPECTED",
+        "moduleTimeNonTargetTamper": "FAIL_EXPECTED",
+        "assertMonkeypatch": "FAIL_EXPECTED",
+        "ruleTamper": "FAIL_EXPECTED",
+        "earlyExitBypass": "FAIL_EXPECTED"
+      },
+      "dryRun": "PASS",
+      "pairOrders": [
+        "BA",
+        "AB"
+      ],
+      "checkerReceipts": [
+        {
+          "scenario": "original-fixture",
+          "status": 1,
+          "path": "checker-self-test/instructions-api-retry-label/original-fixture.json",
+          "sha256": "180306d82c3d744ba9da2b9cb46800a88a3d245a2d99ca9a43a169a4b4fbbaa7"
+        },
+        {
+          "scenario": "correct-repair",
+          "status": 0,
+          "path": "checker-self-test/instructions-api-retry-label/correct-repair.json",
+          "sha256": "0ba3e7fb32d4e653a100aea5db281e60516ce909d8d3300849b7d053e8c9d229"
+        },
+        {
+          "scenario": "non-target-tamper",
+          "status": 1,
+          "path": "checker-self-test/instructions-api-retry-label/non-target-tamper.json",
+          "sha256": "da5ca8995f77b8a86ca46d55cfaf27313553f9754304d6d77b9eaef55218f9ac"
+        },
+        {
+          "scenario": "module-time-non-target-tamper",
+          "status": 1,
+          "path": "checker-self-test/instructions-api-retry-label/module-time-non-target-tamper.json",
+          "sha256": "7246c74817f6cffc258405e6e07c733f445b193858d522c99a473c2fd7583381"
+        },
+        {
+          "scenario": "assert-monkeypatch",
+          "status": 1,
+          "path": "checker-self-test/instructions-api-retry-label/assert-monkeypatch.json",
+          "sha256": "522ab6df3b830255bd63a86715bc8f4c44e22619073720aad3cfd517c131da79"
+        },
+        {
+          "scenario": "rule-tamper",
+          "status": 1,
+          "path": "checker-self-test/instructions-api-retry-label/rule-tamper.json",
+          "sha256": "d8f952441841949f0564c967584eadc0d3331d05acfc17e116c632a6b8cf0026"
+        },
+        {
+          "scenario": "early-exit-bypass",
+          "status": 1,
+          "path": "checker-self-test/instructions-api-retry-label/early-exit-bypass.json",
+          "sha256": "5b42dbee55063b0bc273668fa8a6f030b12e48ac54105f8a16e1240775612587"
+        }
+      ],
+      "candidateRegistration": "PASS",
+      "dryRunArgv": [
+        "apps/cli/dist/main.js",
+        "benchmark",
+        "--dry-run",
+        "--cases",
+        "/workspace/harness-agent/.ci/agent-measurement-20261003/final-probes/pilot/cases/instructions",
+        "--candidate",
+        "path_scoped_instructions_v1",
+        "--limit",
+        "1",
+        "--repeat",
+        "2",
+        "--seed",
+        "19",
+        "--provider",
+        "openai",
+        "--model",
+        "gpt-4o-mini",
+        "--max-model-calls",
+        "40",
+        "--max-logical-runs",
+        "4"
+      ],
+      "dryRunStdoutSha256": "3faf0a5a23a839afc4fc94fdae9dc17f2ca473d46349009fb4fb4b179c49843c"
+    }
+  ]
+}

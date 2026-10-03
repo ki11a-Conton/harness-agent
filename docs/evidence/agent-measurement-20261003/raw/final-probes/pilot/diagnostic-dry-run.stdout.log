@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "e4-02",
+  "mode": "dry-run",
+  "planDigest": "c58dc828caadb980b88addd15e79117266de79236bca95137ac6c893f28be319",
+  "casesDir": "/workspace/harness-agent/.ci/agent-measurement-20261003/final-probes/pilot/cases/diagnostic",
+  "suite": "regression",
+  "casesTotal": 1,
+  "caseIds": [
+    "reg-24-error-handling"
+  ],
+  "limit": 1,
+  "repeat": 2,
+  "interleave": false,
+  "shuffle": false,
+  "seed": 19,
+  "candidate": "diagnostic_first_repair_v1",
+  "billingClass": "external-billed",
+  "paidAuthorizationRequired": true,
+  "paidAuthorized": false,
+  "totalLogicalRuns": 4,
+  "estimatedModelCalls": 40,
+  "estimatedTokens": 160000,
+  "estimatedCostUsd": 0.02,
+  "limits": {
+    "maxLogicalRuns": 4,
+    "maxModelCalls": 40,
+    "maxEstimatedTokens": null,
+    "maxEstimatedCostUsd": null
+  },
+  "estimateStatus": "bounded",
+  "isolationStrength": "strong",
+  "promotionEligible": true,
+  "providerCalls": 0,
+  "providerId": "openai",
+  "modelId": "gpt-4o-mini",
+  "endpointIdentity": null,
+  "judgeVersion": "1.0.0",
+  "sourceSha": "72232950938fcefa2e0a79c222c177deb79ec200",
+  "treeFingerprint": null,
+  "decisionPolicy": {
+    "version": "e4-05-policy-v1",
+    "minActivationEligibleCases": 3,
+    "minActivationCoverage": 0.5,
+    "maxVerifiedDrop": 0.05,
+    "minConclusiveNetDelta": 1,
+    "maxTokensDelta": 50000,
+    "securityBreachesAllowed": 0,
+    "minRecoveryRate": null
+  },
+  "thresholdDigest": "844c8db996796df2c88ab4c7f0fec5a106a92f9027933ee2f8b7553c9a7ae8ce",
+  "effectiveModelParams": {
+    "budgetTokens": 89600,
+    "stallPolicy": {
+      "maxRepeatedIdenticalToolCalls": 3,
+      "maxStallRecoveries": 1,
+      "maxPatternStallRecoveries": 1,
+      "enabledStallPatterns": [
+        "alternating_loop",
+        "repeated_error",
+        "repeated_read_no_change",
+        "verification_fix_loop",
+        "no_progress"
+      ]
+    },
+    "providerRequestPolicy": {
+      "maxProviderRetries": 0,
+      "retryDelayMs": 200,
+      "requestTimeoutMs": 120000
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # 2026-10-03 实测优化独立审查
 
-状态：实施中。此文件不是整轮验收通过声明。真实模型质量、付费调用和 promotion 均未执行；缺少模型凭据及费用配置时 M4 必须保留 BLOCKED。
+状态：工程独立审查与clean验收通过，真实模型pilot仍BLOCKED；不是整轮全部完成声明。真实模型质量、付费调用和 promotion 均未执行；缺少模型凭据及费用配置时 M4 必须保留 BLOCKED。
 
 审查基线为 `c31e4a8046f1e22b0da29c9310f5c131c5d9a38f`。已读取 AGENTS.md、本轮实施前计划与任务，以及 context、evaluation、benchmark、verification 的有关契约。只读审查生产代码，独立小探针写入仓库外证据目录。
 
@@ -19,7 +19,7 @@
 | M1 admission | 以最终 built.blocks 的真实正文/token 为准；预算、安全、required-tools、空正文拒绝不产生注入/成功反馈；protected overflow 和 hook 前观察到的取消不调用 admission hook | 代码审查及针对性回归通过 |
 | M1 隔离 | session 与 turn 共同绑定使用集合；多 step 注入逐次计量，turn outcome 一次；迟到旧 turn 不污染新 turn | 使用 session→Map(turnId, Set)；对应回归通过 |
 | M1 持久化 | 共享 ledger 的首次读取和完整写入串行，错误反馈不丢失，持久化结果与内存一致 | 独立真实 FS 并发探针候选 20/20 完整 |
-| M2 默认兼容 | 新候选默认关闭，旧 selectSkills API/工具 schema/Verification 不变，只从安全索引及可信 host task 选择 | 源码审查、实际 Harness 请求及新旧 selector 回归通过；CLI 局部验收待完成 |
+| M2 默认兼容 | 新候选默认关闭，旧 selectSkills API/工具 schema/Verification 不变，只从安全索引及可信 host task 选择 | 源码审查、实际 Harness 请求及新旧 selector 回归通过；CLI 86项局部验收通过 |
 | M2 选择 | 中文/英文明确名称与 host requiredNames 不被 top-k 裁掉；稳定排序；unknown/no-overlap 回落；名称边界不误匹配；并发任务互不借用目标 | 新策略代码及实际请求符合要求；独立 unknown+required 负例已变绿 |
 | M3 身份 | retry/delay/timeout 的解析、dry-run digest、execution identity 与实际 provider client 一致；旧 digest 拒绝时实际 HTTP=0 | 代码审查通过，53 个有关测试通过 |
 | M3 实际请求 | 本地 HTTP 503 反例与环境事后变化证明冻结值生效；generate cap、物理请求数与美元预算分别报告 | 原始 manifest 的 6 checks 通过；三种预算没有混称 |
@@ -34,7 +34,7 @@ M1 把反馈从 load 移到 awaited admission hook，在 protected overflow 判�
 
 M3 使用同一数字参数解析器供计划和客户端，三项数字复制后冻结；effectiveModelParams 同时进入执行计划和 paired execution identity。wrapper 使真实 client 使用计划参数，避免后来环境或显式 client 配置改写已确认的策略。不相关 provider 无该参数，旧 OpenAI 显式覆盖/默认解析行为保留。实际 HTTP 证据记录 retries=0 的一次失败、retries=2 的三次请求成功、冻结 timeout 生效，paid calls 都是 0。
 
-截至本段审查，M1/M2/M3 生产实现及 Pilot checker 未发现剩余阻塞；M2 CLI 局部验收及全仓冻结 SHA 验收仍待完成。
+截至本段审查，M1/M2/M3 生产实现及 Pilot checker 未发现剩余阻塞；M2 CLI 86项局部验收已完成；全仓冻结 SHA `7223295` 验收已通过（8193PASS/12SKIP）；后续双平台CI10/10成功，见独立原生API收据；main随最终文档跟进提交原生Git发布。
 
 ## Pilot checker 独立核对
 
@@ -49,3 +49,15 @@ checker 在宿主中通过固定 argv 运行，不在 agent 可写工作区内�
 新策略另加入中文无空格句子中的 Latin 名称、UI/db/go 短技能名与长 description/top-k 压力回归；冻结策略数字及 required 名称数组，真实 task 输入按当前 session/turn 的 authoritative user 消息取值。并发不同 task 和实际 SessionActor steering 已覆盖。普通未知任务的完整索引回落是有意兼容行为，不能宣称这种任务也减少提示。
 
 新候选自身的同源码 AB/BA 工程探针平均 system 为 241365.5→3333.5 bytes，减少约 98.62%；两个 arm 的工具 schema 同为 7400 bytes、用户目标保留。报告的五份生产源文件 hash 与独立审查时的当前代码全部一致。这个新候选测量与本文件前述 c31 原基线/旧 selector 测量分开记录，仍是 scripted provider 的工程结果。
+
+## 最终实现审查
+
+独立结论共13项检查通过，无剩余工程阻塞，原记录保存在 [source-review-final.json](agent-measurement-20261003/raw/independent-review/source-review-final.json)。记录观察commit为本地中间提交ab99c4d，逐文件源hash与最终冻结实现 `72232950938fcefa2e0a79c222c177deb79ec200` 相同；随后仅增补raw byte checkout属性和文档证据。不能把此代码审查当作全仓或真实模型验收。
+
+CLI observer在实际body provider接缝按session复制input.skills，pipeline witness读取本session快照，避免共享discovery数组竞态。真实delegate_batch覆盖3个session/6个请求，每请求唯一绑定messageIDs、实际system、正文及durable skill fingerprint。完整paired BA→AB、4arm共16次scripted模型尝试，含原Verification失败后的重试；6次候选正文观察的system/schema哈希匹配。原Verification保持，工程结果不能用来推广。
+
+## Clean验收的独立复核
+
+[最终独立记录](agent-measurement-20261003/raw/independent-review/final-acceptance-review.json) 为PASS：8条命令日志hash、164个文件的工作树/commit blob hash、8193PASS/12SKIP、7条指定runId/SHA的strict usage来源、四组final工程探针、43个pilot输入与20个checker receipts全部匹配。所审dev索引是197文件/4300804bytes的准确阶段快照；之后新增的本收据和CI记录由最终交付索引再核验。该收据观察时CI总结果和main尚未完成，不能改写其历史状态。
+
+后续平台结论由 [CI收据](agent-measurement-20261003/raw/ci/ci-verification.json) 独立记录：同源码SHA、10/10成功，Ubuntu/Windows、汇总和发布证明都包含。未改变前述观察时仍pending的原始review receipt。

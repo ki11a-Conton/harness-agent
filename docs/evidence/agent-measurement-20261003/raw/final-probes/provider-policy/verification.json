@@ -1,0 +1,27 @@
+{
+  "testedSourceSha": "72232950938fcefa2e0a79c222c177deb79ec200",
+  "cleanBefore": true,
+  "cleanAfter": true,
+  "command": [
+    "node",
+    "/workspace/harness-agent-agent-measurement-acceptance/scripts/research/agent-measurement-20261003/provider-policy.mjs",
+    "--repo",
+    "/workspace/harness-agent-agent-measurement-acceptance",
+    "--out",
+    "/workspace/harness-agent/.ci/agent-measurement-20261003/final-probes/provider-policy"
+  ],
+  "exitCode": 0,
+  "checks": {
+    "constructorZeroRetriesFrozen": true,
+    "constructorTwoRetriesFrozen": true,
+    "wrapperPolicyFrozen": true,
+    "timeoutFrozen": true,
+    "eachPolicyChangesKeylessDigest": true,
+    "keylessZeroProviderCalls": true
+  },
+  "paidCalls": 0,
+  "files": {
+    "manifest.json": "b598fe96d3b0cb01663654e7e02e167373d44533f46f967749c5de9d887806bc",
+    "stdout.log": "824813dca4f7dffadb3739f0b02d3206ed8629cffc87a3bfd333af6f5dcd7bbb"
+  }
+}

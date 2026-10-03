@@ -1,0 +1,223 @@
+{
+  "schemaVersion": "agent-measurement-independent-final-acceptance-review-v1",
+  "reviewedAt": "2026-10-03T17:37:53.840030+00:00",
+  "status": "PASS_LOCAL_FROZEN_ACCEPTANCE_REVIEW",
+  "testedSourceSha": "72232950938fcefa2e0a79c222c177deb79ec200",
+  "acceptanceWorkspace": "/workspace/harness-agent-agent-measurement-acceptance",
+  "acceptanceHeadMatched": true,
+  "acceptanceWorktreeClean": true,
+  "frozenManifestSha256": "ab39b76dc155256d50fbef8e765d525994a5225e238941cefe8346ba7e603c06",
+  "commandsVerified": [
+    {
+      "name": "typecheck",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "typecheck"
+      ],
+      "exitCode": 0,
+      "log": "typecheck.log",
+      "logSha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f"
+    },
+    {
+      "name": "build",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "build"
+      ],
+      "exitCode": 0,
+      "log": "build.log",
+      "logSha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f"
+    },
+    {
+      "name": "security",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "test:security"
+      ],
+      "exitCode": 0,
+      "log": "security.log",
+      "logSha256": "f0a312675fb6ad363a61a2df16abdcdf993d52e94ec1c4ba3c39283103ac5f29"
+    },
+    {
+      "name": "docs-verify",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "docs:verify"
+      ],
+      "exitCode": 0,
+      "log": "docs-verify.log",
+      "logSha256": "5b6bfc16a4cba6980277756607adb067e82684bfe5541a9614b3b183059d2666"
+    },
+    {
+      "name": "full",
+      "argv": [
+        "python3",
+        "/workspace/harness-agent/.ci/history-optimization/run-with-subreaper.py",
+        "corepack",
+        "pnpm",
+        "test"
+      ],
+      "exitCode": 0,
+      "log": "full.log",
+      "logSha256": "062989c18dae9aae9abb34c7ea79e24623ba44c5da6f35a0e41f4d7fe3499ce6"
+    },
+    {
+      "name": "usage-audit",
+      "argv": [
+        "node",
+        "apps/cli/dist/main.js",
+        "usage-audit",
+        "--run",
+        "agent-measurement-linux-72232950938f-1791047804",
+        "--strict"
+      ],
+      "exitCode": 0,
+      "log": "usage-audit.log",
+      "logSha256": "f2cf7a87fa38978ce86d8717f2c58808bb41b78ea4b0f95a8c1d383987323dba"
+    },
+    {
+      "name": "artifact-integrity",
+      "argv": [
+        "node",
+        "scripts/research/agent-measurement-20261003/verify-artifacts.mjs",
+        "docs/evidence/agent-measurement-20261003/artifact-index.json"
+      ],
+      "exitCode": 0,
+      "log": "artifact-integrity.log",
+      "logSha256": "632bf37de3cef2f3b87f73be8fcf1b966d51e582a51a26a34836eb5d389c593f"
+    },
+    {
+      "name": "diff-check",
+      "argv": [
+        "/usr/bin/git",
+        "diff",
+        "--check",
+        "c31e4a8046f1e22b0da29c9310f5c131c5d9a38f",
+        "72232950938fcefa2e0a79c222c177deb79ec200"
+      ],
+      "exitCode": 0,
+      "log": "diff-check.log",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "changedFileFilesystemAndCommitBlobHashesVerified": 164,
+  "fullSuite": {
+    "passedTests": 8193,
+    "skippedTests": 12,
+    "totalTests": 8205,
+    "passedFiles": 445,
+    "skippedFiles": 1,
+    "totalFiles": 446,
+    "source": "full.log raw Vitest footer and successful subprocess-supervisor footer"
+  },
+  "securitySuite": {
+    "passedTests": 2135
+  },
+  "strictUsageAudit": {
+    "status": "PASS",
+    "runId": "agent-measurement-linux-72232950938f-1791047804",
+    "observedCapabilities": 7,
+    "allRowsSameTestedSourceSha": true,
+    "committedObservationSha256": "d813857cb233c903b372d1240e56fcac84af8c99e49cd8d1b7d02a65a1598361",
+    "candidateObservationSha256": "b0a82b1a5f3c7726888abc09a96d018f5a1a16f168c71c3fdf93dbb6bf2778a6",
+    "sourceTestFile": "apps/cli/src/e4-09-production-e2e.test.ts",
+    "sourceTestPassedInFullSuite": true
+  },
+  "finalProbes": {
+    "skill-context": {
+      "status": "PASS",
+      "sourceSha": "72232950938fcefa2e0a79c222c177deb79ec200",
+      "sourceDirty": false,
+      "sourceFilesVerified": 5,
+      "rawArtifactsVerified": 11,
+      "receiptSha256": "537b60621ec989c8b0420fcafffe60387b4555a6c1ad91d28c87beb40e4b2f63",
+      "summarySha256": "05731b4c0a640c7cd3179002b889fb921bfc32b8d0139f67b41f2c2b8b159413",
+      "logicalRuns": 10,
+      "physicalScriptedRequests": 20,
+      "skillCount": 100,
+      "pairedBaselineMeanSystemBytes": 242365.5,
+      "pairedCandidateMeanSystemBytes": 3343.5,
+      "pairedSystemBytesReductionPercent": 98.62047197311499,
+      "unchangedToolSchemaBytes": 7400
+    },
+    "skill-admission": {
+      "status": "PASS",
+      "sourceSha": "72232950938fcefa2e0a79c222c177deb79ec200",
+      "sourceDirty": false,
+      "sourceFilesVerified": 6,
+      "rawArtifactsVerified": 7,
+      "receiptSha256": "a4a807628dbd01726b490ed29fdd3c831731319af0d5794a6bb4b7045c4fa35f",
+      "summarySha256": "df0722e96bf744eca4ee249fa981fcc8fe1a2348a8cc03bcd0d70c8ee17c301d",
+      "logicalRuns": 6,
+      "physicalScriptedRequests": 18,
+      "candidateRelevantRequests": 9,
+      "baselineRelevantRequests": 0,
+      "originalVerifierPasses": 6,
+      "baselineLoadedPerRun": 63,
+      "baselineActuallyAdmittedPerRun": 12,
+      "candidateLoadedAndAdmittedPerRun": 3
+    },
+    "provider-policy": {
+      "status": "PASS",
+      "sourceSha": "72232950938fcefa2e0a79c222c177deb79ec200",
+      "sourceDirty": false,
+      "sourceAndBuildFilesVerified": 6,
+      "rawArtifactsVerified": 2,
+      "manifestSha256": "b598fe96d3b0cb01663654e7e02e167373d44533f46f967749c5de9d887806bc",
+      "verificationSha256": "1b478efdb7f07b72ae690f4b84680ab64964795f0d03c10b7d95e20985e4e48b",
+      "checksPassed": 6,
+      "physicalHttpCounts": [
+        1,
+        3,
+        3,
+        1
+      ],
+      "transportRetries": [
+        0,
+        2,
+        2,
+        0
+      ],
+      "distinctKeylessPlanDigests": 4
+    },
+    "pilot": {
+      "status": "PASS_PREPARATION_ONLY",
+      "sourceSha": "72232950938fcefa2e0a79c222c177deb79ec200",
+      "sourceDirty": false,
+      "inputDigest": "7742d338bcdcbd65864f36b320e1cc4013d8e1204f1c53656216c1d777ca91a2",
+      "fixedInputFilesVerified": 43,
+      "checkerReceiptsVerified": 20,
+      "correctRepairPasses": 3,
+      "expectedNegativeFailures": 17,
+      "keylessDryRuns": 3,
+      "rawArtifactsVerified": 76,
+      "manifestSha256": "e46692033b4b1a7b265d5480fa6158d95beb600afff04b01767a67873cee06b1",
+      "limitations": "Node checks do not establish a complete arbitrary-malicious-JavaScript sandbox; paid model quality and promotion were not run."
+    }
+  },
+  "developmentArtifactIndexSnapshot": {
+    "status": "PASS_ALL_INDEXED_FILES",
+    "path": "/workspace/harness-agent-agent-measurement/docs/evidence/agent-measurement-20261003/artifact-index.json",
+    "sha256": "6c86e9807094062efa550ebada6a00bbb8713fca430ae208487ada2a16847d04",
+    "filesVerified": 197,
+    "bytesVerified": 4300804,
+    "stageAtReview": "M1-M3 clean engineering acceptance PASS; dual-platform CI and main pending; M4 blocked",
+    "note": "This is the exact index snapshot reviewed. The parent may append final documentation/CI artifacts afterward."
+  },
+  "blockers": [],
+  "paidProviderCalls": 0,
+  "realModelQuality": "NOT_RUN_BLOCKED_MISSING_CREDENTIALS_AND_CONFIRMED_COST",
+  "promotion": "NOT_RUN",
+  "remoteCi": "IN_PROGRESS_NOT_REVIEWED_IN_THIS_LOCAL_REVIEW",
+  "remoteMain": "NOT_PUSHED_BY_PARENT_AT_REVIEW",
+  "windows": "NOT_CLAIMED_BY_THIS_LOCAL_REVIEW",
+  "limitations": [
+    "Scripted-model engineering probes and local HTTP probes do not establish real model quality improvement.",
+    "Planning estimates and generate-attempt caps do not establish physical HTTP or USD hard caps.",
+    "Final documentation-only changes after the frozen implementation SHA need their own documentation checks and source diff audit."
+  ]
+}
