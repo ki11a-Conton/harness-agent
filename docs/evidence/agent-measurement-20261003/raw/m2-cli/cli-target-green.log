@@ -1,0 +1,24 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-agent-measurement
+
+ ✓ apps/cli/src/task-scoped-skills.test.ts (8 tests) 1290ms
+     ✓ admits the relevant body at 8k, preserves tools/task/verifier and binds evidence to actual requests  326ms
+     ✓ executes AB/BA through the real paired engine with independent verification and no partial pairs  507ms
+ ✓ apps/cli/src/diagnostic-first-repair.test.ts (10 tests) 5127ms
+     ✓ gets actual assertion diagnostics after exit 1, repairs, reruns the same command, then passes the original gate  354ms
+     ✓ gets actual syntax diagnostics after exit 1, repairs, reruns the same command, then passes the original gate  333ms
+     ✓ bounds repeated identical failures with existing Runtime limits  2346ms
+     ✓ executes independent S1 through the existing identity-bound AB/BA paired engine  1298ms
+ ✓ apps/cli/src/path-scoped-instructions.test.ts (10 tests) 783ms
+     ✓ executes the actual AB/BA paired engine twice with fixed inputs and independent content verification  404ms
+ ✓ packages/evaluation/src/arm-factory.test.ts (18 tests) 14ms
+ ✓ packages/evaluation/src/mechanism-contract.test.ts (9 tests) 12ms
+ ✓ packages/evaluation/src/candidate-registry.test.ts (9 tests) 8ms
+ ✓ packages/evaluation/src/activation-evidence-execution.test.ts (9 tests) 7ms
+ ✓ packages/evaluation/src/activation-evidence.test.ts (13 tests) 6ms
+
+ Test Files  8 passed (8)
+      Tests  86 passed (86)
+   Start at  17:11:40
+   Duration  11.35s (transform 1.82s, setup 0ms, import 3.21s, tests 7.25s, environment 1ms)
+

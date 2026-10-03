@@ -1,0 +1,14 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-agent-measurement
+
+[skill denied] detection=required-tools target=/tmp/ar-task-skills-OBBJza/skills/danger/SKILL.md reasons=required tool not allowed by host policy: ungranted-tool
+[skill denied] detection=injection target=/tmp/ar-task-skills-OBBJza/skills/hostile/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+ ✓ packages/harness/src/task-scoped-skills.integration.test.ts (10 tests) 242ms
+ ✓ packages/skills/src/task-scoped-selection.test.ts (23 tests) 16ms
+ ✓ packages/skills/src/selection.test.ts (5 tests) 5ms
+
+ Test Files  3 passed (3)
+      Tests  38 passed (38)
+   Start at  17:05:27
+   Duration  3.02s (transform 1.86s, setup 0ms, import 2.39s, tests 264ms, environment 0ms)
+

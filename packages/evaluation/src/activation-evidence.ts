@@ -31,6 +31,7 @@ export type ActivationReasonCode =
   | "budget_guidance_injected"
   | "tool_call_efficiency_guidance_injected"
   | "diagnostic_first_repair_guidance_injected"
+  | "task_scoped_skills_selected"
   | "path_scoped_instructions_selected"
   | "eligible_case"
   | "not_eligible_no_seed"
@@ -210,6 +211,12 @@ export interface ActivationCaseSource {
   verification?: readonly { kind: string; command?: string }[];
 }
 
+/** Only immutable original fixture packages confer eligibility. Actual
+ *  activation additionally requires reduced selection and admitted bytes. */
+export function taskScopedSkillsEligible(caseDef: Pick<ActivationCaseSource, "fixture">): boolean {
+  return Object.keys(caseDef.fixture ?? {}).some(path => /^skills\/[^/]+\/SKILL\.md$/u.test(path));
+}
+
 /** Eligibility is fixed by the original case, never by an arm's outcome. */
 export function diagnosticFirstRepairEligible(caseDef: Pick<ActivationCaseSource, "verification">): boolean {
   return caseDef.verification?.some((spec) => spec.kind === "command" && typeof spec.command === "string" && spec.command.trim().length > 0) ?? false;
@@ -379,6 +386,21 @@ export function activationEvidenceFor(
         baselineMechanismDigest: "benchmark-standard-prompt",
         candidateMechanismDigest: "benchmark-prompt+tool-call-efficiency-guidance",
         summary: { injectionCount: injections.length },
+      };
+    }
+    case "task_scoped_skills_v1": {
+      const selections = activationEvents.filter(event => event.type === "task_scoped_skills_selected" &&
+        typeof event.payload?.count === "number" && event.payload.count > 0 &&
+        typeof event.payload?.selectedCount === "number" && typeof event.payload?.discoveredCount === "number" &&
+        event.payload.selectedCount < event.payload.discoveredCount);
+      const eligible = taskScopedSkillsEligible(caseDef);
+      return {
+        schemaVersion: ACTIVATION_EVIDENCE_SCHEMA_VERSION, candidateId, caseId: caseDef.id, eligible,
+        activated: eligible && selections.length > 0, activationCount: selections.length,
+        reasonCodes: !eligible ? ["not_eligible_no_mechanism"] : selections.length ? ["task_scoped_skills_selected"] : ["activation_zero"],
+        baselineMechanismDigest: "",
+        candidateMechanismDigest: selections.length ? guidanceBlockDigest(JSON.stringify(selections.map(event => event.payload))) : "",
+        summary: { selections: selections.length },
       };
     }
     case "path_scoped_instructions_v1": {

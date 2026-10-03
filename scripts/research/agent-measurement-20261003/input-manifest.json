@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "agent-measurement-pilot-v1",
+  "purpose": "exploratory-only",
+  "paidCalls": 0,
+  "repeat": 2,
+  "orderSeed": 19,
+  "armsPerStrategy": 4,
+  "inputDigest": "7742d338bcdcbd65864f36b320e1cc4013d8e1204f1c53656216c1d777ca91a2",
+  "cases": [
+    {
+      "strategy": "skills",
+      "candidate": "task_scoped_skills_v1",
+      "caseId": "skills-port-config",
+      "targetPath": "src/port-config.js",
+      "fixtureFiles": 23,
+      "inputDigest": "c9f3fb8a1d931b395dfaf7de1c50db40570f71261857746596643bf371975911",
+      "files": {
+        "case.json": "2205aebb2a1052776377fda4bc5851dcdccc407be3b4c4ddfd6eec9cf3773198",
+        "expected.md": "49f781a1d1e1a2ef44ddeec077d5afa239a4bdbd5ada335e143849f229ecf01a",
+        "fixture/package.json": "70c140c30ba7c499c95f8092aac10b3bfa4aada599d692c33f0650e7e279f97e",
+        "fixture/skills/weather-00/SKILL.md": "3d2f00c00391e5ff5a26e45a6ae6e784b4e8212820fe10fc7926c01f47cbf1e5",
+        "fixture/skills/weather-01/SKILL.md": "318fb843be8723a568ccd6b5e633b47096efa99ca4b7df98d20d0e49a2081298",
+        "fixture/skills/weather-02/SKILL.md": "215cbcda327e64a6e73c05c1b820a529462bad7127e7c19126b465dd9c40ded1",
+        "fixture/skills/weather-03/SKILL.md": "0bd652d994a8fb1ea85187c4770964f809644b59476d8adc637ae5bea416bb85",
+        "fixture/skills/weather-04/SKILL.md": "46865c6659dbcccb9e346491e07df406cbd29d66880e9ab4dcb0fc0f813da134",
+        "fixture/skills/weather-05/SKILL.md": "90efaded30aef8e71106a38c1164a22a9122eafbf21eb31e912bda02621c2ee6",
+        "fixture/skills/weather-06/SKILL.md": "ca37d43fbdf6dcd9172d33da58bc076777252ea0ffdcc85b61c624e2088c2195",
+        "fixture/skills/weather-07/SKILL.md": "efd46378e3003dd52b5d152e77c35db96e1537a10b1de29c171f1605b44b585d",
+        "fixture/skills/weather-08/SKILL.md": "fd790238695afa394286ca58adef8dd4efd5cc212795787db8604cf10970eb3c",
+        "fixture/skills/weather-09/SKILL.md": "e427fb16a6e0e7f8d96573fc3d44ab899fb3915b279d36d96e852dc03532a44a",
+        "fixture/skills/weather-10/SKILL.md": "dfeca0701f5dcfc423425e069108818f9cdcc40ff54938d6e43e94bcce7dc637",
+        "fixture/skills/weather-11/SKILL.md": "c00f822e2518e3f146644e2f394d781c589936348a07eb2cf9dac54017ff4eac",
+        "fixture/skills/weather-12/SKILL.md": "a54c35307436130acdf33e206201d4eaf153d480cf9be206e2e81a6be6ea9b7a",
+        "fixture/skills/weather-13/SKILL.md": "ff2618c567122ae36c5c8e80e3291bb8a2fbef74a1cc32493950b17679c3dfa7",
+        "fixture/skills/weather-14/SKILL.md": "bb8456174127eddb1e3bbebe78ebaf6200c61d880c7e2a9e1e8772ac13722844",
+        "fixture/skills/weather-15/SKILL.md": "8f7d016e04631d865f126d58e24c56a5ea5cc929790f340765c17c3778996bf1",
+        "fixture/skills/weather-16/SKILL.md": "ea8735b14040e4ac6217c3cf9d3f540310ec70844343a015939481310e38529e",
+        "fixture/skills/weather-17/SKILL.md": "156c4df2a97593460e805a58b55c787453fd95940fcf8abcb2f9f421184a3076",
+        "fixture/skills/weather-18/SKILL.md": "50bdf95473e804691f746ed20835eb39b89b6516877cd7ec3a5013794dea3aef",
+        "fixture/skills/weather-19/SKILL.md": "15bfded20e1e4014e835d0a6cc4edc5ef3e84c8e51fffd9a773dcca58dfcc12d",
+        "fixture/skills/zz-port-config/SKILL.md": "53c802b66277731164e78808af8b4d920a1502e51091a6363b2d46ff189a59a7",
+        "fixture/src/port-config.js": "1f388618e6392bc33082c86d1fd70e312c4ebe1be017a3f9288c247ebd6e6832",
+        "request.md": "9e5dcf6e560824740deef7ccf79f80c4d1c52e53ed62bd2d54c586a470b98502"
+      }
+    },
+    {
+      "strategy": "diagnostic",
+      "candidate": "diagnostic_first_repair_v1",
+      "caseId": "reg-24-error-handling",
+      "targetPath": "src/io.js",
+      "fixtureFiles": 3,
+      "inputDigest": "00afb791c6d862bf86f5cd356abae81cb694fdd132cfb0e05fd9002739663c9e",
+      "files": {
+        "case.json": "aa1d2210209939ba007f3b96d9d57dfa427770eb7926b8ef014afbadfcab233f",
+        "expected.md": "112fb0f24413e8cbad36f7a09307d251b063cb90aeee60186843cb51ea14bf0a",
+        "fixture/data/bad.json": "23790cf84da5ce5aa8d3f1334fd03b9f55f822513916071a7b2c38e78a2cacef",
+        "fixture/data/good.json": "e346432021b04179518d9614f3560ccd71354a4ee101ddcb893d6959a9d6301c",
+        "fixture/src/io.js": "5d3c364b2c3aa8adb11502ffbf6abf954274834843352cf02decb5043783644a",
+        "request.md": "285364351eaa277c98c11dcfe1a9ebd444a22b0a4c76146290e2c00768954fe1"
+      }
+    },
+    {
+      "strategy": "instructions",
+      "candidate": "path_scoped_instructions_v1",
+      "caseId": "instructions-api-retry-label",
+      "targetPath": "packages/api/src/retry-label.js",
+      "fixtureFiles": 8,
+      "inputDigest": "19ac04da6d3edf5a81a29da3a05420d6a98a4a49592a01a786b58e6945aa1a32",
+      "files": {
+        "case.json": "a0220733aea71a9986a8567ad8de5a38910188d6334d3514e37e31be527ec5ba",
+        "expected.md": "b43b2d89b8e4982bec361f484b5d7a3fe1d0fe80404f7ba9a1277855d18aec28",
+        "fixture/AGENTS.md": "7cdca43efc1e55d1a38cd0675fa997abdba14bf76d3162e2571f84bca1c52b03",
+        "fixture/package.json": "2d69bc658a631160633caebc30743b9d2124879677b4bb6b166b8da917f8099a",
+        "fixture/packages/api/AGENTS.md": "ff3264104181d5fa5e6e6bc8d1d5a0caf09b0d6cbff2df5c77fdfc0a4b1529aa",
+        "fixture/packages/api/src/retry-label.js": "8c6bde05f22bc9ada26d99289b72f921e1169fb7637ba44bf05293b05adc9eec",
+        "fixture/packages/jobs/AGENTS.md": "f4e829ae80f40776d57cab0b64fe1f04174e7a371cd880e2c46595019c3bd802",
+        "fixture/packages/jobs/src/retry-label.js": "13780ae9b286d9fb8b7057f4cf83c6639c0e3c83804301dce5db20407bc53365",
+        "fixture/packages/web/AGENTS.md": "76e51fbd3e05bd88f4cd0c30f02e752fa42311225fc0ec7e7fb7edc5fdc41e8a",
+        "fixture/packages/web/src/retry-label.js": "11e15ba78f8986b1ac5eb12ae41403e404a4c0638cab1453e435fa95cb460a97",
+        "request.md": "1083a29e491dff35520846724f9846126ace18bf02c241e67fad0174b5b66930"
+      }
+    }
+  ]
+}

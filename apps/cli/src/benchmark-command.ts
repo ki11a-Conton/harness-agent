@@ -14,19 +14,21 @@ import type {
   InstructionSource,
   SessionId,
   TurnId,
+  Skill,
 } from "@ar/contracts";
-import { newAgentId, newEventId, newMemoryId, AdaptiveRecoveryPlanner, stableFingerprint } from "@ar/contracts";
+import { newAgentId, newEventId, newMemoryId, AdaptiveRecoveryPlanner, stableFingerprint, buildSkillSnapshot } from "@ar/contracts";
 import type { ContextBlock, MemoryScope } from "@ar/contracts";
 import { AgentRuntime, DEFAULT_ENABLED_STALL_PATTERNS, defaultSandboxPolicy } from "@ar/core";
 import { RecoveryPolicy } from "@ar/core";
 import { ContextPipeline } from "@ar/context";
 import type { ContextPipelineBuildOptions, ContextPipelineResult } from "@ar/context";
-import { resolveCapabilities, budgetForCapabilities } from "@ar/model";
+import { resolveCapabilities, budgetForCapabilities, resolveOpenAIRequestPolicy, withOpenAIRequestPolicy } from "@ar/model";
 import {
   BENCHMARK_SUITE_VERSION,
   activationEvidenceFor,
   diagnosticFirstRepairEligible,
   pathScopedInstructionsEligible,
+  taskScopedSkillsEligible,
   buildSecurityOutcomeFromEventsV2,
   securityExpectationFromCase,
   buildActivationEvidenceFromSignalsV2,
@@ -108,7 +110,9 @@ import {
   READONLY_TOOL_NAMES,
   createDelegationTools,
   PathScopedContextPipeline,
+  createSkillBodyBlockProvider,
 } from "@ar/harness";
+import { FileSkillLoader, createTaskScopedSkillSelector } from "@ar/skills";
 import {
   AgentExecutionScheduler,
   Delegator,
@@ -286,6 +290,9 @@ export async function runBenchmarkCommand(
   // provider's built-in default endpoint, which is itself a real choice that the
   // digest covers.
   const endpointIdentity = captureEndpointIdentity(endpointBaseUrl);
+  // Resolve once before asynchronous planning. Execution receives the same
+  // transport policy; retry/delay/timeout changes invalidate confirmation.
+  const providerRequestPolicy = providerId === REAL_PROVIDER_ID ? resolveOpenAIRequestPolicy() : undefined;
 
   // E4-R13 (N03): the CONFIRMED plan must bind the full authorization surface —
   // provider/model identity, judge version, source snapshot (real tree
@@ -309,6 +316,7 @@ export async function runBenchmarkCommand(
       // params — bound into the execution-plan digest (effectiveModelParams is
       // hashed with the whole plan), so a loop-detection change is visible.
       stallPolicy: BENCHMARK_STALL_POLICY,
+      ...(providerRequestPolicy !== undefined ? { providerRequestPolicy } : {}),
     },
   };
 
@@ -333,12 +341,13 @@ export async function runBenchmarkCommand(
   // plan could authorize endpoint A while execution silently contacted endpoint
   // B with the operator's key. The runtime calls createClient(model, {}) with
   // an empty config, so constructor-time identity is the only injection point.
-  const provider =
+  const baseProvider =
     providerOverride ??
     (await resolveModelProvider({
       baseUrl: endpointBaseUrl,
       modelId: providerId === REAL_PROVIDER_ID ? modelId : undefined,
     })).provider;
+  const provider = providerRequestPolicy === undefined ? baseProvider : withOpenAIRequestPolicy(baseProvider, providerRequestPolicy);
 
   // E3-01: billing authorization (after resolution, confirm).
   if (billingClass === "external-billed" && !opts.paidAuthorized) {
@@ -781,7 +790,7 @@ async function runPairedPromotion(
     candidateConfigHash,
     providerId: identityFacts.providerId,
     modelId: identityFacts.modelId,
-    effectiveModelParams: { budgetTokens: defaultBudgetTokens, stallPolicy: BENCHMARK_STALL_POLICY },
+    effectiveModelParams: { ...confirmedPlan.effectiveModelParams },
     sourceSha: identityFacts.sourceSha,
     treeFingerprint: identityFacts.treeFingerprint,
     limits: {
@@ -1807,6 +1816,17 @@ class ObservedPathScopedContextPipeline extends PathScopedContextPipeline {
   }
 }
 
+/** M2 observes the unchanged pipeline, including the blocks that survive
+ *  security and budget admission. Both arms use this same adapter. */
+class ObservedSkillContextPipeline extends ContextPipeline {
+  constructor(private readonly onBuilt: (result: ContextPipelineResult, opts: ContextPipelineBuildOptions) => void) { super(); }
+  override async build(opts: ContextPipelineBuildOptions): Promise<ContextPipelineResult> {
+    const result = await super.build(opts);
+    this.onBuilt(result, opts);
+    return result;
+  }
+}
+
 /** S2 observes the real provider boundary rather than claiming activation
  *  from construction of the optional adapter. */
 function observeScopedInstructionsRequest(provider: ModelProvider, onRequest: (request: ModelRequest) => Promise<void>): ModelProvider {
@@ -1872,6 +1892,7 @@ export async function runOneCase(
 ): Promise<EvalOutcome> {
   // P4-6: closed in the outer finally (the memory store lives for the case).
   let memoryClose: (() => void) | undefined;
+  let skillDataDir: string | undefined;
   // P4-3: mechanism requirements are checked BEFORE the case starts — a case
   // that needs a mechanism this harness does not wire is an infrastructure
   // failure (never a pretend run). This benchmark runtime's wiring is fixed
@@ -2026,6 +2047,10 @@ export async function runOneCase(
     type ScopedBuild = { result: ContextPipelineResult; systemPrompt: string; discovery: Record<string, number> };
     const scopedBuilds = new Map<string, ScopedBuild>();
     const pendingScopedStarts = new Map<string, { event: AgentEvent; build: ScopedBuild }>();
+    type SkillBuild = { result: ContextPipelineResult; selected: readonly Skill[]; discoveredCount: number };
+    const skillBuilds = new Map<string, SkillBuild>();
+    const skillInputs = new Map<string, { skills: readonly Skill[]; names: readonly string[] }>();
+    const pendingSkillStarts = new Map<string, { event: AgentEvent; build: SkillBuild }>();
     if (candidateId !== undefined) {
       events.onAppended = (event: AgentEvent) => {
         const payload = event.payload;
@@ -2033,8 +2058,13 @@ export async function runOneCase(
           const build = scopedBuilds.get(event.sessionId);
           if (build !== undefined) pendingScopedStarts.set(event.sessionId, { event, build });
         }
+        if (armMechanisms.taskScopedSkillsConfig !== undefined && event.type === "model.started") {
+          const build = skillBuilds.get(event.sessionId);
+          if (build !== undefined) pendingSkillStarts.set(event.sessionId, { event, build });
+        }
         if (event.type === "model.failed" || event.type === "model.completed") {
           pendingScopedStarts.delete(event.sessionId);
+          pendingSkillStarts.delete(event.sessionId);
         }
         // Track tool_lookup calls for deferred schema activation.
         if (armMechanisms.deferredSchema && event.type === "tool.requested" && payload.name === "tool_lookup") {
@@ -2198,6 +2228,41 @@ export async function runOneCase(
       },
     };
 
+    // The original fixture, rather than environment skill roots or the arm
+    // name, installs this fixed adapter identically in both experiment arms.
+    // FileSkillLoader and the production body provider preserve revision,
+    // secret/injection and required-tools checks before context admission.
+    const fixtureHasSkills = taskScopedSkillsEligible(caseDef);
+    let fixtureSkills: Skill[] = [];
+    const fixtureSkillSecurity: import("@ar/core").SkillSecurityDenialRecord[] = [];
+    const fixtureSkillLoader = fixtureHasSkills ? new FileSkillLoader({ onSecurityDenied: event => {
+      fixtureSkillSecurity.push({ detection: event.detection, reasons: event.reasons, path: event.path, source: event.source });
+    } }) : undefined;
+    const discoverFixtureSkills = async () => {
+      fixtureSkillSecurity.length = 0;
+      fixtureSkills = await fixtureSkillLoader!.discover({ roots: [join(workspace, "skills")], maxSkills: 100 });
+      return { skills: fixtureSkills, security: fixtureSkillSecurity };
+    };
+    // Host feedback is outside the model-writable fixture and is removed in
+    // the same finally as that fixture. Strong confinement grants only the
+    // fixture workspace, so tools cannot edit their own effectiveness ledger.
+    if (fixtureHasSkills) skillDataDir = await mkdtemp(join(tmpdir(), "harness-bench-skill-ledger-"));
+    const fixtureSkillBodies = fixtureSkillLoader !== undefined ? createSkillBodyBlockProvider({
+      loader: fixtureSkillLoader, discover: async () => (await discoverFixtureSkills()).skills,
+      dataDir: skillDataDir!, toolPolicy: agent.tools,
+      onRequiredToolsDenied: event => fixtureSkillSecurity.push({ detection: event.detection, reasons: event.reasons, path: event.path, source: event.source }),
+    }) : undefined;
+    const skillUseBySession = new Map<SessionId, { turnId: TurnId; names: Set<string> }>();
+    const taskScopedSkillSelector = armMechanisms.taskScopedSkillsConfig !== undefined
+      ? createTaskScopedSkillSelector(armMechanisms.taskScopedSkillsConfig) : undefined;
+    const skillPipeline = fixtureHasSkills ? new ObservedSkillContextPipeline((result, buildOpts) => {
+      if (buildOpts.telemetrySessionId === undefined) return;
+      const frozen = skillInputs.get(buildOpts.telemetrySessionId);
+      if (frozen === undefined) { skillBuilds.delete(buildOpts.telemetrySessionId); return; }
+      const selectedNames = new Set(buildOpts.skills?.map(entry => entry.name) ?? []);
+      skillBuilds.set(buildOpts.telemetrySessionId, { result, selected: frozen.skills.filter(skill => selectedNames.has(skill.manifest.name)), discoveredCount: frozen.skills.length });
+    }) : undefined;
+
     // P4-7/P4-8: read-only worker agent the Delegator creates children with.
     const subagentAgent: AgentDefinition = {
       id: newAgentId(),
@@ -2309,6 +2374,51 @@ export async function runOneCase(
       activationEvents.push({ type: "path_scoped_instructions_selected", payload });
     };
 
+    const observeSkillRequest = async (request: ModelRequest): Promise<void> => {
+      if (armMechanisms.taskScopedSkillsConfig === undefined) return;
+      const actualSystem = request.system ?? "";
+      const matches = [...pendingSkillStarts.values()].filter(({ event }) =>
+        stableFingerprint([event.payload.contextMessageIds]) === stableFingerprint([request.messages.map(message => message.id)]) &&
+        event.payload.contextFingerprint === stableFingerprint([request.messages.map(message => message.id), event.payload.contextBlockIds, actualSystem]),
+      );
+      if (matches.length !== 1) return;
+      const { event, build } = matches[0]!;
+      pendingSkillStarts.delete(event.sessionId);
+      // Identity/fallback selection is an honest no-op, not activation.
+      if (build.selected.length >= build.discoveredCount) return;
+      const entries = build.selected.map(skill => {
+        const body = build.result.blocks.find(block => block.source === "skill" && block.id === `skill-body:${skill.manifest.name}`);
+        return {
+          name: skill.manifest.name, source: skill.provenance?.source ?? "unknown",
+          requiredTools: [...(skill.manifest.requiredTools ?? [])], requiredMcpServers: [...(skill.manifest.requiredMcpServers ?? [])],
+          ...(body !== undefined ? { bodyHash: stableFingerprint([body.content]) } : {}),
+        };
+      });
+      if (event.payload.skillSnapshotFingerprint !== buildSkillSnapshot(entries).fingerprint) return;
+      const admitted = build.result.blocks.filter(block => block.source === "skill" && block.id.startsWith("skill-body:") && actualSystem.includes(
+        `[context trust=${block.trust} source=skill${block.scope !== undefined ? ` scope=${block.scope}` : ""}${block.path !== undefined ? ` path=${block.path}` : ""}]\n${block.content}`,
+      ));
+      if (admitted.length === 0) return;
+      const durableStep = (await events.list(event.sessionId)).find(item => item.id === event.id && item.type === "model.started");
+      if (durableStep?.payload.skillSnapshotFingerprint !== buildSkillSnapshot(entries).fingerprint) return;
+      const payload = {
+        strategy: armMechanisms.taskScopedSkillsConfig.strategy,
+        constructorIdentity: resolvedArm.mechanisms.activations.find(item => item.mechanism === candidateId)?.constructorIdentity,
+        configDigest: computeRuntimeConfigHash(armMechanisms.taskScopedSkillsConfig), armDigest: resolvedArm.digest,
+        stepId: durableStep.payload.stepId, contextFingerprint: durableStep.payload.contextFingerprint,
+        contextMessageIds: durableStep.payload.contextMessageIds, skillSnapshotFingerprint: durableStep.payload.skillSnapshotFingerprint,
+        selectedSkills: entries, selectedCount: build.selected.length, discoveredCount: build.discoveredCount,
+        admittedBodies: admitted.map(block => ({ name: block.id.slice("skill-body:".length), bodyHash: stableFingerprint([block.content]), tokens: block.tokens })),
+        count: admitted.length, systemDigest: computePromptDigest(actualSystem), schemaDigest: computeRuntimeConfigHash(request.tools ?? []),
+        contextTokens: build.result.report.used, contextBytes: Buffer.byteLength(actualSystem, "utf8"),
+      };
+      await events.appendNew({ id: newEventId(), sessionId: event.sessionId,
+        ...(event.turnId !== undefined ? { turnId: event.turnId } : {}), timestamp: now(), type: "context.selected",
+        payload: { source: "skill", id: "task-scoped-skills-v1", tokens: admitted.reduce((sum, block) => sum + block.tokens, 0), ...payload },
+      });
+      activationEvents.push({ type: "task_scoped_skills_selected", payload });
+    };
+
     const runtime = new AgentRuntime({
       store,
       events,
@@ -2321,6 +2431,8 @@ export async function runOneCase(
             })
           : scopedPipeline !== undefined
             ? observeScopedInstructionsRequest(opts.provider, observeScopedRequest)
+            : armMechanisms.taskScopedSkillsConfig !== undefined
+              ? observeScopedInstructionsRequest(opts.provider, observeSkillRequest)
             : opts.provider,
       orchestrator,
       // P23-1: the process catalog is read once per step to freeze the step
@@ -2367,7 +2479,7 @@ export async function runOneCase(
       maxPatternStallRecoveries: BENCHMARK_STALL_POLICY.maxPatternStallRecoveries,
       enabledStallPatterns: BENCHMARK_STALL_POLICY.enabledStallPatterns,
       context: {
-        pipeline: scopedPipeline ?? new ContextPipeline(),
+        pipeline: scopedPipeline ?? skillPipeline ?? new ContextPipeline(),
         budget: {
           maxTokens: caseDef.contextBudgetTokens ?? opts.budgetTokens,
           reserved: { system: 256, task: 128, output: 256 },
@@ -2377,6 +2489,31 @@ export async function runOneCase(
           dynamic: armMechanisms.adaptiveContextDynamic,
         },
       },
+      ...(fixtureSkillBodies !== undefined ? {
+        skills: discoverFixtureSkills,
+        ...(taskScopedSkillSelector !== undefined ? { skillSelector: taskScopedSkillSelector } : {}),
+        skillBodyBlocks: (input: { sessionId: SessionId; names: string[]; skills?: readonly Skill[] }) => {
+          skillInputs.set(input.sessionId, { names: [...input.names], skills: [...(input.skills ?? [])] });
+          return fixtureSkillBodies.load(input.names, input.skills);
+        },
+        onSkillBodiesAdmitted: async (input: { sessionId: SessionId; turnId: TurnId; blocks: readonly ContextBlock[] }) => {
+          let used = skillUseBySession.get(input.sessionId);
+          if (used?.turnId !== input.turnId) { used = { turnId: input.turnId, names: new Set() }; skillUseBySession.set(input.sessionId, used); }
+          for (const block of input.blocks) {
+            if (!block.id.startsWith("skill-body:") || block.provenance?.toolId !== block.id.slice("skill-body:".length)) continue;
+            const name = block.id.slice("skill-body:".length);
+            used.names.add(name);
+            await fixtureSkillBodies.record(name, { kind: "injected" });
+            await fixtureSkillBodies.record(name, { kind: "tokensUsed", count: block.tokens });
+          }
+        },
+        onTurnComplete: async (input: { sessionId: SessionId; turnId: TurnId; outcome: { status: string } }) => {
+          const used = skillUseBySession.get(input.sessionId);
+          if (used?.turnId !== input.turnId) return;
+          skillUseBySession.delete(input.sessionId);
+          for (const name of used.names) await fixtureSkillBodies.record(name, { kind: input.outcome.status === "completed" ? "taskCompleted" : "taskFailed" });
+        },
+      } : {}),
       ...(caseDef.verification !== undefined && caseDef.verification.length > 0
         ? {
             task: {
@@ -2549,12 +2686,14 @@ export async function runOneCase(
         e.type === "budget_guidance_injected" ||
         e.type === "tool_call_efficiency_guidance_injected" ||
         e.type === "diagnostic_first_repair_guidance_injected" ||
+        e.type === "task_scoped_skills_selected" ||
         e.type === "path_scoped_instructions_selected",
     );
     const hasSeedMemory = ((caseDef as { sources?: { memory?: unknown[] } }).sources?.memory?.length ?? 0) > 0;
     const activationEligible = armMechanisms.memoryRetrieval ? hasSeedMemory
       : armMechanisms.diagnosticFirstRepair ? diagnosticFirstRepairEligible(caseDef)
       : armMechanisms.pathScopedInstructionsConfig !== undefined ? pathScopedInstructionsEligible(caseDef)
+      : armMechanisms.taskScopedSkillsConfig !== undefined ? taskScopedSkillsEligible(caseDef)
       : true;
     const activationEvidenceV2 =
       candidateId !== undefined
@@ -2651,6 +2790,7 @@ export async function runOneCase(
       ...(activationEvidenceV2 !== undefined ? { activationEvidenceV2 } : {}),
     };
   } finally {
+    if (skillDataDir !== undefined) await rm(skillDataDir, { recursive: true, force: true });
     if (memoryClose !== undefined) {
       try {
         memoryClose();
@@ -2845,6 +2985,7 @@ export function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudge
       dynamic: mech.adaptiveContextDynamic,
     },
     ...(mech.pathScopedInstructionsConfig !== undefined ? { instructionDiscovery: mech.pathScopedInstructionsConfig } : {}),
+    ...(mech.taskScopedSkillsConfig !== undefined ? { skillSelection: mech.taskScopedSkillsConfig } : {}),
     maxIterationsPerTurn: 30,
     // E4-R86 (H2): the loop-detection threshold is part of the effective
     // runtime wiring — a change to stall detection MUST change the effective

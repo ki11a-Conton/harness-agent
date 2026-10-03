@@ -1,0 +1,295 @@
+{
+  "schemaVersion": "agent-measurement-provider-policy-v1",
+  "purpose": "actual local HTTP and keyless CLI execution-policy identity",
+  "sourceSha": "bd7c4371fb849b23ce508b3d5e4ae79baabc1449",
+  "dirty": true,
+  "sourceAndBuildSha256": {
+    "packages/model/src/openai.ts": "90d4bad8adffb9236e0429d413293c26d5355bc62782be50cb7f3f9ca1d99b9f",
+    "packages/model/dist/openai.js": "9274e927e18dbca76ecc3f4316bbace011d4edb673163ffe13bc12772857fb93",
+    "apps/cli/src/benchmark-command.ts": "130f263a6e61752e379ed0da830a650f032038a45c264d9353ac50abd548eec9",
+    "apps/cli/dist/benchmark-command.js": "fb2339795c20d9ecf94454cc1322edd72f764550680c9498afceab634d92e884",
+    "packages/model/src/openai-request-policy.test.ts": "d21f2aca691b64493bacc7acaa4bff125ca82344f973c97164a675a10cecacc5",
+    "apps/cli/src/benchmark-provider-policy.test.ts": "59b4c502e86529a5c9ab94a3f95307f6fd01d0d0e3011a64aa0f8d0f3bf4e54b"
+  },
+  "environment": {
+    "node": "v24.19.0",
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "measuredAt": "2026-10-03T16:44:55.590Z",
+  "resolverAvailable": true,
+  "frozenWrapperAvailable": true,
+  "probes": [
+    {
+      "name": "frozen-zero-retry",
+      "policy": {
+        "maxProviderRetries": 0,
+        "retryDelayMs": 0,
+        "requestTimeoutMs": 2000
+      },
+      "laterEnv": {
+        "maxProviderRetries": 2,
+        "retryDelayMs": 0,
+        "requestTimeoutMs": 2000
+      },
+      "physicalHttp": 1,
+      "transportRetries": 0,
+      "events": [
+        {
+          "type": "started"
+        },
+        {
+          "type": "error"
+        }
+      ],
+      "callerFallbackUsed": false,
+      "closedResponses": 1,
+      "wrapper": false,
+      "mutatedOriginal": true,
+      "externalBilledCalls": 0
+    },
+    {
+      "name": "frozen-two-retries",
+      "policy": {
+        "maxProviderRetries": 2,
+        "retryDelayMs": 0,
+        "requestTimeoutMs": 2000
+      },
+      "laterEnv": {
+        "maxProviderRetries": 0,
+        "retryDelayMs": 0,
+        "requestTimeoutMs": 2000
+      },
+      "physicalHttp": 3,
+      "transportRetries": 2,
+      "events": [
+        {
+          "type": "started"
+        },
+        {
+          "type": "retry"
+        },
+        {
+          "type": "retry"
+        },
+        {
+          "type": "text_delta"
+        },
+        {
+          "type": "completed",
+          "finishReason": "stop"
+        }
+      ],
+      "callerFallbackUsed": false,
+      "closedResponses": 3,
+      "wrapper": false,
+      "mutatedOriginal": false,
+      "externalBilledCalls": 0
+    },
+    {
+      "name": "wrapper-enforces-confirmed-policy",
+      "policy": {
+        "maxProviderRetries": 2,
+        "retryDelayMs": 0,
+        "requestTimeoutMs": 2000
+      },
+      "laterEnv": {
+        "maxProviderRetries": 0,
+        "retryDelayMs": 0,
+        "requestTimeoutMs": 2000
+      },
+      "physicalHttp": 3,
+      "transportRetries": 2,
+      "events": [
+        {
+          "type": "started"
+        },
+        {
+          "type": "retry"
+        },
+        {
+          "type": "retry"
+        },
+        {
+          "type": "text_delta"
+        },
+        {
+          "type": "completed",
+          "finishReason": "stop"
+        }
+      ],
+      "callerFallbackUsed": false,
+      "closedResponses": 3,
+      "wrapper": true,
+      "mutatedOriginal": true,
+      "externalBilledCalls": 0
+    },
+    {
+      "name": "frozen-timeout",
+      "policy": {
+        "maxProviderRetries": 0,
+        "retryDelayMs": 0,
+        "requestTimeoutMs": 50
+      },
+      "laterEnv": {
+        "maxProviderRetries": 0,
+        "retryDelayMs": 0,
+        "requestTimeoutMs": 0
+      },
+      "physicalHttp": 1,
+      "transportRetries": 0,
+      "events": [
+        {
+          "type": "started"
+        },
+        {
+          "type": "error"
+        }
+      ],
+      "callerFallbackUsed": false,
+      "closedResponses": 1,
+      "wrapper": false,
+      "mutatedOriginal": false,
+      "externalBilledCalls": 0
+    }
+  ],
+  "keyless": [
+    {
+      "policy": {
+        "maxProviderRetries": 0,
+        "retryDelayMs": 0,
+        "requestTimeoutMs": 1000
+      },
+      "planDigest": "87be27a36bf6074d697f608feed1c5524b6ec9ab0a787fe74bfe4274d2f10af9",
+      "effectiveModelParams": {
+        "budgetTokens": 32000,
+        "stallPolicy": {
+          "maxRepeatedIdenticalToolCalls": 3,
+          "maxStallRecoveries": 1,
+          "maxPatternStallRecoveries": 1,
+          "enabledStallPatterns": [
+            "alternating_loop",
+            "repeated_error",
+            "repeated_read_no_change",
+            "verification_fix_loop",
+            "no_progress"
+          ]
+        },
+        "providerRequestPolicy": {
+          "maxProviderRetries": 0,
+          "retryDelayMs": 0,
+          "requestTimeoutMs": 1000
+        }
+      },
+      "providerCalls": 0,
+      "sourceSha": "bd7c4371fb849b23ce508b3d5e4ae79baabc1449",
+      "treeFingerprint": "fa98748a05b81cfacca71bcaac5416998315af4d1e470210cab6169e2c10c7c2"
+    },
+    {
+      "policy": {
+        "maxProviderRetries": 9,
+        "retryDelayMs": 0,
+        "requestTimeoutMs": 1000
+      },
+      "planDigest": "b19a5dcd1fd867494223e86df43ef729f457a6958af46207b5cc3be8a858296f",
+      "effectiveModelParams": {
+        "budgetTokens": 32000,
+        "stallPolicy": {
+          "maxRepeatedIdenticalToolCalls": 3,
+          "maxStallRecoveries": 1,
+          "maxPatternStallRecoveries": 1,
+          "enabledStallPatterns": [
+            "alternating_loop",
+            "repeated_error",
+            "repeated_read_no_change",
+            "verification_fix_loop",
+            "no_progress"
+          ]
+        },
+        "providerRequestPolicy": {
+          "maxProviderRetries": 9,
+          "retryDelayMs": 0,
+          "requestTimeoutMs": 1000
+        }
+      },
+      "providerCalls": 0,
+      "sourceSha": "bd7c4371fb849b23ce508b3d5e4ae79baabc1449",
+      "treeFingerprint": "fa98748a05b81cfacca71bcaac5416998315af4d1e470210cab6169e2c10c7c2"
+    },
+    {
+      "policy": {
+        "maxProviderRetries": 0,
+        "retryDelayMs": 900,
+        "requestTimeoutMs": 1000
+      },
+      "planDigest": "706e6a2241ad3891a9dee89ebfde52c36a3d8ff7d21d84b6364b66abed1bf696",
+      "effectiveModelParams": {
+        "budgetTokens": 32000,
+        "stallPolicy": {
+          "maxRepeatedIdenticalToolCalls": 3,
+          "maxStallRecoveries": 1,
+          "maxPatternStallRecoveries": 1,
+          "enabledStallPatterns": [
+            "alternating_loop",
+            "repeated_error",
+            "repeated_read_no_change",
+            "verification_fix_loop",
+            "no_progress"
+          ]
+        },
+        "providerRequestPolicy": {
+          "maxProviderRetries": 0,
+          "retryDelayMs": 900,
+          "requestTimeoutMs": 1000
+        }
+      },
+      "providerCalls": 0,
+      "sourceSha": "bd7c4371fb849b23ce508b3d5e4ae79baabc1449",
+      "treeFingerprint": "fa98748a05b81cfacca71bcaac5416998315af4d1e470210cab6169e2c10c7c2"
+    },
+    {
+      "policy": {
+        "maxProviderRetries": 0,
+        "retryDelayMs": 0,
+        "requestTimeoutMs": 120000
+      },
+      "planDigest": "e279ad9a192a84ad64ac9b3aac3a7c10a86c837be1e24e12d59dbe186d413b9e",
+      "effectiveModelParams": {
+        "budgetTokens": 32000,
+        "stallPolicy": {
+          "maxRepeatedIdenticalToolCalls": 3,
+          "maxStallRecoveries": 1,
+          "maxPatternStallRecoveries": 1,
+          "enabledStallPatterns": [
+            "alternating_loop",
+            "repeated_error",
+            "repeated_read_no_change",
+            "verification_fix_loop",
+            "no_progress"
+          ]
+        },
+        "providerRequestPolicy": {
+          "maxProviderRetries": 0,
+          "retryDelayMs": 0,
+          "requestTimeoutMs": 120000
+        }
+      },
+      "providerCalls": 0,
+      "sourceSha": "bd7c4371fb849b23ce508b3d5e4ae79baabc1449",
+      "treeFingerprint": "fa98748a05b81cfacca71bcaac5416998315af4d1e470210cab6169e2c10c7c2"
+    }
+  ],
+  "checks": {
+    "constructorZeroRetriesFrozen": true,
+    "constructorTwoRetriesFrozen": true,
+    "wrapperPolicyFrozen": true,
+    "timeoutFrozen": true,
+    "eachPolicyChangesKeylessDigest": true,
+    "keylessZeroProviderCalls": true
+  },
+  "passed": true,
+  "paidCalls": 0,
+  "realModelBenefit": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "limitation": "generate attempt caps and planning estimates do not establish physical HTTP or USD caps"
+}

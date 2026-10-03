@@ -29,7 +29,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { getCandidateRegistry, PATH_SCOPED_INSTRUCTIONS_CONFIG_V1, type CandidateRegistration, type PathScopedInstructionsRuntimeConfig } from "./candidate-registry.js";
+import { getCandidateRegistry, PATH_SCOPED_INSTRUCTIONS_CONFIG_V1, TASK_SCOPED_SKILLS_CONFIG_V1, type CandidateRegistration, type PathScopedInstructionsRuntimeConfig, type TaskScopedSkillsRuntimeConfig } from "./candidate-registry.js";
 import { stableStringify } from "./manifest.js";
 import { budgetAwareCompletionGuidanceDigest, toolCallEfficiencyGuidanceDigest, diagnosticFirstRepairGuidanceDigest, DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1 } from "./mechanism-guidance.js";
 
@@ -126,6 +126,8 @@ export interface RuntimeMechanisms {
   pathScopedInstructions?: "path_scoped_instructions_v1";
   /** Exact S2 constructor policy, hashed with the resolved arm. */
   pathScopedInstructionsConfig?: Readonly<PathScopedInstructionsRuntimeConfig>;
+  /** M2 exact selector policy, absent from all existing arms. */
+  taskScopedSkillsConfig?: Readonly<TaskScopedSkillsRuntimeConfig>;
   /** Digest of prompt/system additions (null = none). */
   promptAdditionsDigest: string | null;
   /** Policy version that produced these mechanisms. */
@@ -216,6 +218,14 @@ export function wireCandidateMechanism(reg: CandidateRegistration): MechanismWir
       ? (config.features as Record<string, unknown>)
       : {};
   switch (reg.id) {
+    case "task_scoped_skills_v1":
+      return {
+        constructorId: "skills:task-scoped-selection-v1",
+        apply: (config) => ({ ...config, skillSelection: { ...TASK_SCOPED_SKILLS_CONFIG_V1 } }),
+        isActive: (config) => (config.skillSelection as Record<string, unknown> | undefined)?.strategy === "task_scoped_skills_v1",
+        applyRuntime: (base) => ({ ...base, taskScopedSkillsConfig: { ...TASK_SCOPED_SKILLS_CONFIG_V1 } }),
+        declaredPaths: ["harnessConfig.skillSelection"],
+      };
     case "memory_retrieval":
       return {
         constructorId: "memory:sqlite-retrieval-v1",

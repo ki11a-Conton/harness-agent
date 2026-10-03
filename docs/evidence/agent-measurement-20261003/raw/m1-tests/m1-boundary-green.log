@@ -1,0 +1,16 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-agent-measurement
+
+ ✓ packages/core/src/runtime/runtime.test.ts (83 tests) 180ms
+ ✓ packages/core/src/runtime/step-snapshot.invariant.test.ts (10 tests) 29ms
+ ✓ packages/harness/src/security-regression-matrix.test.ts (12 tests) 19ms
+ ✓ packages/core/src/runtime/skill-instruction-snapshot.p32.test.ts (10 tests) 7ms
+ ✓ packages/harness/src/context-wiring.integration.test.ts (3 tests) 516ms
+     ✓ env_snapshot reports the live harness wiring (profile, workspace root, tool list)  490ms
+
+ Test Files  5 passed (5)
+      Tests  118 passed (118)
+   Start at  16:21:01
+   Duration  4.35s (transform 2.08s, setup 0ms, import 2.90s, tests 751ms, environment 0ms)
+
+JSON report written to /workspace/harness-agent/.ci/agent-measurement-20261003/opportunities/m1-boundary-green.json

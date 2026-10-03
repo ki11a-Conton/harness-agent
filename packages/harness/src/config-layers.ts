@@ -222,6 +222,7 @@ const LIFECYCLE_RULES: ReadonlyArray<{ match: string; lifecycle: ConfigLifecycle
   { match: "memory", lifecycle: "session_frozen" },
   { match: "delegation", lifecycle: "session_frozen" },
   { match: "skillSelector", lifecycle: "session_frozen" },
+  { match: "skillSelection", lifecycle: "session_frozen" },
   { match: "toolSelector", lifecycle: "session_frozen" },
   // turn_dynamic — per-turn task/verification inputs
   { match: "task", lifecycle: "turn_dynamic" },
@@ -263,6 +264,7 @@ export const CONFIG_FIELD_DOCS: Readonly<Record<string, ConfigFieldDoc>> = {
   "memory.*": { lifecycle: "session_frozen", doc: "memory store config (enabled/dbPath/scope/topK)" },
   "delegation.*": { lifecycle: "session_frozen", doc: "subagent delegation caps" },
   skillSelector: { lifecycle: "session_frozen", doc: "skill index pruning callback" },
+  "skillSelection.*": { lifecycle: "session_frozen", doc: "opt-in task_scoped_skills_v1 metadata selection policy" },
   toolSelector: { lifecycle: "session_frozen", doc: "progressive tool disclosure callback" },
   task: { lifecycle: "turn_dynamic", doc: "task whose verification specs gate completion" },
   "verification.*": { lifecycle: "turn_dynamic", doc: "verification plan builder / verifier overrides" },

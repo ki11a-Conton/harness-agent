@@ -1,0 +1,546 @@
+{
+  "sourceCommit": "bd7c4371fb849b23ce508b3d5e4ae79baabc1449",
+  "sourceDirty": true,
+  "sourceSha256": {
+    "packages/skills/src/task-scoped-selection.ts": "90398b4aee683eb746dc503f9b54a847f89c181ae475dab31029b8c9c375c9be",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/src/skill-context.ts": "feeede6c3430ee53154aad9fae2f526a096e119aa56d729bd1cf2d0e3d9627f6",
+    "packages/core/src/runtime/context-controller.ts": "22fe6661072b6674e0ab75a9535a6530de8700cec1a596d6ba858a3d0bda9bfd",
+    "packages/core/src/runtime/runtime.ts": "b86ca5183801474fd11b1080180918b62b342fd02f3fe4c99b2c514d4f7d98d5"
+  },
+  "platform": "linux",
+  "node": "v24.19.0",
+  "kind": "REAL_FILESYSTEM_REAL_HARNESS_SCRIPTED_MODEL_ENGINEERING_PROBE",
+  "liveModelQuality": "NOT_RUN",
+  "paidModelCalls": 0,
+  "skillCount": 100,
+  "fixtureSkillSha256": {
+    "compile-check": "2d2e439d3e6949423767d1ac66d5cf0fbf8b3d84933279f590ea52b767aa3feb",
+    "specialty-001": "a0bbbafb29fe20a09d06693a5d481c069a18dc470ddbcde1f8dbe759b6b16ebb",
+    "specialty-002": "9be6079352e0e56e648c02ea2b8faa791ece9a450cb0bdd62d6c6aeab2ed1dd6",
+    "specialty-003": "c59d27b3a1a60873838347dae9ee15a094bd568db240a773f48437faab1d94a5",
+    "specialty-004": "de7884b7f7c0c0b9adc1c3be833c13d050bc76c261071369c9a953ee539b496d",
+    "specialty-005": "7676cc17c721d7d26a2cd0fe8305ec74e2983716f56e8000378aa0403adc7f47",
+    "specialty-006": "13ac14009ed4c7853d145676455ab0370002f57ff5e22647364c56d171d23e09",
+    "specialty-007": "2a61d5bd36771124ed5c998da43f65c9010a2d2aebe416f7383c004259111f8a",
+    "specialty-008": "6b321bd5ba4fe8b51912ca6c47b63879c059abcae0762f53734e770c84d0cc6c",
+    "specialty-009": "6adcc972f1cedd3f1e36035ee8f615494bfe1db44d187b0b74d73d17941a5589",
+    "specialty-010": "c2ade72140d77ebfdf84cc640e55037cf5126b0bc4b3d451f448ece77b8109bb",
+    "specialty-011": "1b11411b476a837b8e527057c6463cfafbe2a252086ec9252a071d9b047dcb7c",
+    "specialty-012": "9a6f661d3c7cafdf877b053ff34cd58ef7353a2a580df64fa7d4bccf29e147a2",
+    "specialty-013": "71a8dd91c84270f565a7cdcc0eab702ec467cbfe1dc2340fb7d65b2dd87a2ca8",
+    "specialty-014": "80667a18a4b7e3c36e05d9a6ce369cbcc96b54615b276e5af52983713470cb5d",
+    "specialty-015": "618c11a7dae5f206033366c8ae6ae9b28dddc507ff8db92d5ae1fdfc5bda683a",
+    "specialty-016": "80fc32bbc02d2596cdb4bb60a6c17d8fee1830bc798f78b78adef06584b822b1",
+    "specialty-017": "e81c06761f8eb3d3666545a2e7a8bd023eba6213154e39a0183c2708a6cefe82",
+    "specialty-018": "81f756ecf9cca01ab01a85674938c1e07a9ac55bcc55b21bcf584d499321818d",
+    "specialty-019": "bd916ffcb32ac1c301246e2e7dda324901fbd0be21778b45dd4147a40aad1232",
+    "specialty-020": "fa3488dcb89d0f938d6c9fe8fe9c0849e25487742c12754112b84c63f90867b4",
+    "specialty-021": "eea597b452308e0c3ef831ab39b45e8828e9b364aafcbb6bf9eb736f643dd663",
+    "specialty-022": "fce340de4ad1960e74c210d8ba1f1c4e6671204b8e1312ef3e75aba2db3d5690",
+    "specialty-023": "a9680dc8ba43dd34b51971587e7b1421ab433db86521b29d580f2768384fc027",
+    "specialty-024": "8e6a81425fd6ccddb6a8b8763d3a13e512df12b93d9946f49b360166e75e3422",
+    "specialty-025": "04b71027952f5debb6490b99cbfbfd804ef386de9d572cd268d9c048ee7200b0",
+    "specialty-026": "d07d53f89062de6b3ab3fd462ae141ead31fb5bd330eaa85975934a4a0ef719b",
+    "specialty-027": "1ce84fbcf033cb7a117bc466dd6bbd57d98eae95101b7f6bacaaf43e72c27f24",
+    "specialty-028": "81507a5ca3d185376eca0381368c134e24286730f830e2d0bac57b86085b2784",
+    "specialty-029": "b53d0e319dc8ff440964232ddecec63421a53c4c7445d0c6bb278cd43c55c879",
+    "specialty-030": "7eda7a9fbc3b4ac99c9ed2014b625d226bab318de39e4eb9fbc1467eb9e13702",
+    "specialty-031": "1725507f23a3bfef0675bc7637e4239469966f21633e5ed853ec2242e785a0d2",
+    "specialty-032": "377a8c0b846da71928801f8cb1430ebffb78210edc3601bcd4044683b523afda",
+    "specialty-033": "19706cd6179402242ad83a1976390e65976d9eb0d6b3f03f345354a74e6775a5",
+    "specialty-034": "adaebb34ef2bf9745ece8e6b6d62f06f15a7bc176ff886d046b5891d39ce41df",
+    "specialty-035": "87d850402a8e481f50210431e69b783b49b0d90aeedb78768000d76bb3f6769b",
+    "specialty-036": "b2a869525a9181c25ae255b927ead304019c803d1f3a3e81d330d3f5b636d1ad",
+    "specialty-037": "9b06f87234f8e1082683aaeab99eb74f166beca4cdbf4916dead5f8286db0a2e",
+    "specialty-038": "c3d6e4b91e9f3ee1bfd2a839edf2b567438a1a0f6c2966de37809a9e84a2c5a0",
+    "specialty-039": "df57c604fb24de4f428ec60bbf5f4cca61c94c7299c54eec1b911a30f045392f",
+    "specialty-040": "a682984c3365da4c473977914ab53ee84089295482610a4c0ea81621f83c2ea9",
+    "specialty-041": "277d84ba64eb2e9b6be953b73a104c973ab6dafaa66e2233f3f4394a824b10e3",
+    "specialty-042": "24d2da4202e67f20beaf6296494836d8a955eb04b44663f8b0d4de651a58e348",
+    "specialty-043": "a1ebb68e2b6c28bad4cf947980ec4dd624ddb5585c22a1bb7c4485e9ef9257af",
+    "specialty-044": "da57e25d9c0cc44f1faecad4473fba15252eeae4be641e6d63f6e0962947e157",
+    "specialty-045": "0a3a7e074e1d04e5dc10a26f9272cd30c0e6429d442b1ef8d959f3f171581605",
+    "specialty-046": "f66f18ddc56d56383484ecdf5c013bd833501b2d453909a826621aef7f2c1923",
+    "specialty-047": "7b2c0955bf9da8ad2daf478dcbf46754c44cccf296e0fa9f0608366a635e599e",
+    "specialty-048": "31d51bdeb6350838248980e83bcdab2deb5d433403e95ceab815b7cd6cd95fcc",
+    "specialty-049": "de462b1c981d57c3bca22d65699b4011a8a61acba581ee8336faaf1752c2d106",
+    "specialty-050": "d68d4336d2070183ac542f91d4298f3c2ea8672b185e863efb8b49c8895fac98",
+    "specialty-051": "2c6771ee2bb5f2b7b3ce2c4fbf2bb650ab641fe8008d156fffb48337d9555a9e",
+    "specialty-052": "065d85635034b85787608a2264eb17dc0d4552d7d3b7699fb9a95a419a0e94c9",
+    "specialty-053": "e19f703137d9920f27e470afe630c336990b03b9bd67dcb102666466a38647a6",
+    "specialty-054": "dd69779a3f7558b4447f104d9993c46e92f9623d4298c66f19446490d9ae699e",
+    "specialty-055": "3b31cf32e8174b8365a2affc5966ff5934f8982d969b8d9adfc88b97a6ae4503",
+    "specialty-056": "b5db75d5857fff9763c4de4c1d998705a96fd7e27214ce1eb38aec1271f8673d",
+    "specialty-057": "237794f0f9ae4d7ec0ccce028fca90c4a8e54849c776b2244795523741e03a2c",
+    "specialty-058": "84723f46d3e23e03d7a493f6b4561d5acafad83be52fbf2d646ee11b8f559d4a",
+    "specialty-059": "a2ffb324ef25d40b7caee6ae78551c5064179d2ccd65ec4f9378f2132c1d3e24",
+    "specialty-060": "cbc47dea1593de5a90f8cd96bb03e2c3652f396947ee0dd19d5c406e84aedb0a",
+    "specialty-061": "4fda421fbc0123b588316e2bf2e1d242f9d161cbdcecb9d1a3b7f4b1c96d53c9",
+    "specialty-062": "421cdbe160e6419eee4a73a321712a9542503db3eb0a7668c89d4472192d3369",
+    "specialty-063": "d427da8cc93a3bd24628d691bc3bef1b6b8ab0fec77251d75766c3b96fb3a7c4",
+    "specialty-064": "971a780bda62165b6ac3db67982a5e46812db42f1e175197d55a81bfc9341539",
+    "specialty-065": "4435601b906af16b62f419adf4da97f5c1b0138994d1ae9ef7309efdb8c7fe0b",
+    "specialty-066": "045814284105746533f4167c5a6afdb985deca9ee266882f82278c662e325ad1",
+    "specialty-067": "18a75032e6ad7480fe9c6cbb05da797ee250cc0f45db7301d67f7c41b101261c",
+    "specialty-068": "1ab237bf084ba51b1900e0025b755fabf1949815b241b593482e1783ca3c96be",
+    "specialty-069": "9bbc1582175a6d3cdb8413a74dd57ca6b771d087dc30c9db2e7ae99216ae141c",
+    "specialty-070": "a4ab97dd24ade1746ebaf2ce7d61d68ffecf640a918bb0708f90f85c654e8c82",
+    "specialty-071": "87977ff6efedac6ad3e79ef82c52d5044e0223924aa4f5ae7ded4a0d4677079f",
+    "specialty-072": "fde8ed99a2d557d2302f7b4cf17e926b36318391eff8a6eac510fa926b7deddb",
+    "specialty-073": "b2030d2c8a3cca1684162aa39b47a2a4f4f154394e65b375e32d0766aebc0254",
+    "specialty-074": "11cc2cbba6dea68ac1411be8f7c04a40d37bbaeca264729d47489594bfb1c690",
+    "specialty-075": "3527a309b895acd436186876f4044a945424f1a3e058b425fcefbaaca5b200ec",
+    "specialty-076": "3e128284878eb4604a8a7dc3bdee7ce5096566c47eeccc7047145f94096ff771",
+    "specialty-077": "1edce4784838605358f58911a49dca799f23a9bb0c0528f43eabf6a7249a6722",
+    "specialty-078": "10393768c2f73fb9e38aa29afa3821a15b8c41c1777cd0d86f817724c8c60603",
+    "specialty-079": "375a734da5e9e38d8090cbced44c4abe376090dc670ff4ade42eb2d4a0538540",
+    "specialty-080": "4dde7f79067a4b4aff3e6562158b4290d175b9b4b3ccd563e54a5a8dca18e01b",
+    "specialty-081": "d9c6f147f3b70b0357060a371f03b3943674b4fe29f254f5c9e5062956aa95e4",
+    "specialty-082": "f3095614c17f62d95e0c5603d14cf8e09fb1ae8477fc4c5d0821aa43c277aa99",
+    "specialty-083": "df357ab4d65fc718d2053ab5003debbdeaa0678c1df7a5b4173cc8974fba67d8",
+    "specialty-084": "2d5e11eafe249c2eebc349e424dbffbb1127e9c16e7585e6a60d38248494bb88",
+    "specialty-085": "a4d33cadd685e7734a16782f1f8b81c034b1727d27b9bcca3b087ca409f5ab4a",
+    "specialty-086": "c03395743cd1b3bdc75907f4779d3491701db343be668e1df5dd484a7eb3d129",
+    "specialty-087": "4084789a22d122deabb39b7642ee1c6d35444655f494dae81a2bfeea6dee02fd",
+    "specialty-088": "330e195243880526ddc3475d2246afb9d98869af7a8d41bf6cded0e827020e5e",
+    "specialty-089": "d92b232cfbfadc1c098c0dc99489d27fbb2417425f1f1bc8b5d9849b63c677cf",
+    "specialty-090": "25651659bbe5906d85b2d4baf6923a56d7b00a48ea03550c2264e4a5ced2da57",
+    "specialty-091": "4f0b6c5346a792073cf5ee53f9957ffa78e066a2fb281f7df218966b7a8d155f",
+    "specialty-092": "505d929649cb63611e8e627893a1078a1c48605420977de9f0d691ad5feab8ca",
+    "specialty-093": "f6b1370650117edc02f8171bd0018b4f941599ba8ad3ccc50b10311ab2094a2e",
+    "specialty-094": "3e66ab1eddac8bdac35505c3b996742643c7f21409d4a1099b415e97ba56c336",
+    "specialty-095": "392d0429578ee59c19f2c881e995b03bf21c3ece1d8f44c961dcfe3737d15d2d",
+    "specialty-096": "015d7c64d95edf5a693cc945c91a8f232cd3705cc0d0ed16586598d4d912eb00",
+    "specialty-097": "e6ed20a07013910efd1fbc808f1cdb02661db80a1cbd41d65839729d2d178ea0",
+    "specialty-098": "a89a323f4221ced1df4f39c671d6da8e9d4685adabc245ae90ae7bb51dc39a73",
+    "specialty-099": "5322d8e47b78cf84041918b8ab4c1726408d93adad6150a4c1239497cb7448b6"
+  },
+  "runs": [
+    {
+      "label": "baseline-full",
+      "status": "completed",
+      "elapsedMs": 877.632223,
+      "requests": [
+        {
+          "systemBytes": 241332,
+          "requestBytes": 253040,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 100,
+          "relevantBody": true
+        },
+        {
+          "systemBytes": 241399,
+          "requestBytes": 253697,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 100,
+          "relevantBody": true
+        }
+      ],
+      "ledgerNames": 100
+    },
+    {
+      "label": "legacy-selector-one",
+      "status": "completed",
+      "elapsedMs": 178.10729700000002,
+      "requests": [
+        {
+          "systemBytes": 3300,
+          "requestBytes": 11048,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 1,
+          "relevantBody": true
+        },
+        {
+          "systemBytes": 3367,
+          "requestBytes": 11705,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 1,
+          "relevantBody": true
+        }
+      ],
+      "ledgerNames": 1
+    },
+    {
+      "label": "task-scoped-one",
+      "status": "completed",
+      "elapsedMs": 187.11765100000002,
+      "requests": [
+        {
+          "systemBytes": 3300,
+          "requestBytes": 11048,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 1,
+          "relevantBody": true
+        },
+        {
+          "systemBytes": 3367,
+          "requestBytes": 11705,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 1,
+          "relevantBody": true
+        }
+      ],
+      "ledgerNames": 1
+    },
+    {
+      "label": "baseline-tight",
+      "status": "completed",
+      "elapsedMs": 522.8844920000001,
+      "requests": [
+        {
+          "systemBytes": 50349,
+          "requestBytes": 59152,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 17,
+          "relevantBody": true
+        },
+        {
+          "systemBytes": 50349,
+          "requestBytes": 60630,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 17,
+          "relevantBody": true
+        }
+      ],
+      "ledgerNames": 100
+    },
+    {
+      "label": "task-scoped-one-tight",
+      "status": "completed",
+      "elapsedMs": 152.07346899999993,
+      "requests": [
+        {
+          "systemBytes": 3300,
+          "requestBytes": 11048,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 1,
+          "relevantBody": true
+        },
+        {
+          "systemBytes": 3367,
+          "requestBytes": 11705,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 1,
+          "relevantBody": true
+        }
+      ],
+      "ledgerNames": 1
+    },
+    {
+      "label": "tool-selector",
+      "status": "completed",
+      "elapsedMs": 157.527783,
+      "requests": [
+        {
+          "systemBytes": 3300,
+          "requestBytes": 11048,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 1,
+          "relevantBody": true
+        },
+        {
+          "systemBytes": 3367,
+          "requestBytes": 11705,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 1,
+          "relevantBody": true
+        }
+      ],
+      "ledgerNames": 1
+    },
+    {
+      "label": "paired-ab-baseline",
+      "status": "completed",
+      "elapsedMs": 582.2480489999998,
+      "requests": [
+        {
+          "systemBytes": 241332,
+          "requestBytes": 253040,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 100,
+          "relevantBody": true
+        },
+        {
+          "systemBytes": 241399,
+          "requestBytes": 253697,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 100,
+          "relevantBody": true
+        }
+      ],
+      "ledgerNames": 100
+    },
+    {
+      "label": "paired-ab-task-scoped",
+      "status": "completed",
+      "elapsedMs": 154.29636100000016,
+      "requests": [
+        {
+          "systemBytes": 3300,
+          "requestBytes": 11048,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 1,
+          "relevantBody": true
+        },
+        {
+          "systemBytes": 3367,
+          "requestBytes": 11705,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 1,
+          "relevantBody": true
+        }
+      ],
+      "ledgerNames": 1
+    },
+    {
+      "label": "paired-ba-task-scoped",
+      "status": "completed",
+      "elapsedMs": 181.49449000000004,
+      "requests": [
+        {
+          "systemBytes": 3300,
+          "requestBytes": 11048,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 1,
+          "relevantBody": true
+        },
+        {
+          "systemBytes": 3367,
+          "requestBytes": 11705,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 1,
+          "relevantBody": true
+        }
+      ],
+      "ledgerNames": 1
+    },
+    {
+      "label": "paired-ba-baseline",
+      "status": "completed",
+      "elapsedMs": 589.562989,
+      "requests": [
+        {
+          "systemBytes": 241332,
+          "requestBytes": 253040,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 100,
+          "relevantBody": true
+        },
+        {
+          "systemBytes": 241399,
+          "requestBytes": 253697,
+          "toolsCount": 12,
+          "toolsBytes": 7400,
+          "bodyCount": 100,
+          "relevantBody": true
+        }
+      ],
+      "ledgerNames": 100
+    }
+  ],
+  "loaderRealIo": [
+    {
+      "step": 0,
+      "delta": {
+        "readdir": 101,
+        "lstat": 501,
+        "open": 100,
+        "readFile": 100
+      }
+    },
+    {
+      "step": 1,
+      "delta": {
+        "readdir": 0,
+        "lstat": 401,
+        "open": 0,
+        "readFile": 100
+      }
+    },
+    {
+      "step": 2,
+      "delta": {
+        "readdir": 0,
+        "lstat": 401,
+        "open": 0,
+        "readFile": 100
+      }
+    }
+  ],
+  "loaderSelectedRealIo": [
+    {
+      "step": 0,
+      "delta": {
+        "readdir": 101,
+        "lstat": 303,
+        "open": 100,
+        "readFile": 1
+      }
+    },
+    {
+      "step": 1,
+      "delta": {
+        "readdir": 0,
+        "lstat": 202,
+        "open": 0,
+        "readFile": 0
+      }
+    },
+    {
+      "step": 2,
+      "delta": {
+        "readdir": 0,
+        "lstat": 202,
+        "open": 0,
+        "readFile": 0
+      }
+    }
+  ],
+  "lexical": [
+    {
+      "goal": "typescript compiler fix diagnostic errors",
+      "selected": [
+        "compile-check"
+      ],
+      "excludedCount": 99
+    },
+    {
+      "goal": "修复类型检查错误",
+      "selected": [
+        "compile-check",
+        "specialty-001",
+        "specialty-002",
+        "specialty-003",
+        "specialty-004",
+        "specialty-005",
+        "specialty-006",
+        "specialty-007",
+        "specialty-008",
+        "specialty-009",
+        "specialty-010",
+        "specialty-011",
+        "specialty-012",
+        "specialty-013",
+        "specialty-014",
+        "specialty-015",
+        "specialty-016",
+        "specialty-017",
+        "specialty-018",
+        "specialty-019",
+        "specialty-020",
+        "specialty-021",
+        "specialty-022",
+        "specialty-023",
+        "specialty-024",
+        "specialty-025",
+        "specialty-026",
+        "specialty-027",
+        "specialty-028",
+        "specialty-029",
+        "specialty-030",
+        "specialty-031",
+        "specialty-032",
+        "specialty-033",
+        "specialty-034",
+        "specialty-035",
+        "specialty-036",
+        "specialty-037",
+        "specialty-038",
+        "specialty-039",
+        "specialty-040",
+        "specialty-041",
+        "specialty-042",
+        "specialty-043",
+        "specialty-044",
+        "specialty-045",
+        "specialty-046",
+        "specialty-047",
+        "specialty-048",
+        "specialty-049",
+        "specialty-050",
+        "specialty-051",
+        "specialty-052",
+        "specialty-053",
+        "specialty-054",
+        "specialty-055",
+        "specialty-056",
+        "specialty-057",
+        "specialty-058",
+        "specialty-059",
+        "specialty-060",
+        "specialty-061",
+        "specialty-062",
+        "specialty-063",
+        "specialty-064",
+        "specialty-065",
+        "specialty-066",
+        "specialty-067",
+        "specialty-068",
+        "specialty-069",
+        "specialty-070",
+        "specialty-071",
+        "specialty-072",
+        "specialty-073",
+        "specialty-074",
+        "specialty-075",
+        "specialty-076",
+        "specialty-077",
+        "specialty-078",
+        "specialty-079",
+        "specialty-080",
+        "specialty-081",
+        "specialty-082",
+        "specialty-083",
+        "specialty-084",
+        "specialty-085",
+        "specialty-086",
+        "specialty-087",
+        "specialty-088",
+        "specialty-089",
+        "specialty-090",
+        "specialty-091",
+        "specialty-092",
+        "specialty-093",
+        "specialty-094",
+        "specialty-095",
+        "specialty-096",
+        "specialty-097",
+        "specialty-098",
+        "specialty-099"
+      ],
+      "excludedCount": 0
+    },
+    {
+      "goal": "修复 TypeScript 类型检查错误",
+      "selected": [],
+      "excludedCount": 100
+    },
+    {
+      "goal": "compile-check",
+      "selected": [
+        "compile-check"
+      ],
+      "excludedCount": 99
+    }
+  ]
+}

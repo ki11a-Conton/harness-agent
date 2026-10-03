@@ -104,7 +104,9 @@ export interface HarnessConfig {
   /** P2-8: skill index pruning before injection (progressive disclosure:
    *  index → selection → body on demand). Receives the metadata rows and
    *  returns the subset to inject. Default: identity (all skills indexed). */
-  skillSelector?: (entries: SkillIndexEntry[]) => SkillIndexEntry[];
+  skillSelector?: (entries: SkillIndexEntry[], context: import("@ar/contracts").SkillSelectionContext) => SkillIndexEntry[];
+  /** Default OFF. Metadata selection is the only experimental strategy delta. */
+  skillSelection?: import("@ar/skills").TaskScopedSkillSelectionConfig;
 
   /**
    * E4-R05 (F12): optional system-prompt SUFFIX for the main agent installed by

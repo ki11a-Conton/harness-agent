@@ -1,0 +1,310 @@
+{
+  "actualStatus": "completed",
+  "childStarts": 2,
+  "requests": [
+    {
+      "systemDigest": "fb25d564711798056d154d4132ac18fd30929a7a92ce83fcce6c4beae49c339c",
+      "messageIds": [
+        "message_ece3fcd3-11b7-4fbf-b41a-bdc28d08f547"
+      ]
+    },
+    {
+      "systemDigest": "870852cdeca27649135bdea4c38f8a61ee61f5f8e95fa1ce5e5b56079238ace4",
+      "messageIds": [
+        "message_4bf4560f-7f4a-45a1-9cf0-432c197f7388"
+      ]
+    },
+    {
+      "systemDigest": "b1e03633c06fc98ec492e35c9d95f6eda87d9d3bc074da50afddda4ba63d8cac",
+      "messageIds": [
+        "message_17cc390a-5efe-42d7-8de8-e5b05647bf46"
+      ]
+    },
+    {
+      "systemDigest": "3eb1781b5413cf08043065f6751f0b0d78e3b02d0f71ccf15e7e87dbc0bc3708",
+      "messageIds": [
+        "message_4bf4560f-7f4a-45a1-9cf0-432c197f7388",
+        "message_d643c383-2551-40d1-99c9-804ce1808a39",
+        "message_1abf2b9c-f341-4b32-8d89-a5c420da4abe"
+      ]
+    },
+    {
+      "systemDigest": "e9247fab5cdf9f0cbaad1a2c7f9a8ad4f92cff8b30b289391b85b327fa559d62",
+      "messageIds": [
+        "message_17cc390a-5efe-42d7-8de8-e5b05647bf46",
+        "message_894422f0-2555-4d86-a1d4-3c447499924d",
+        "message_20423689-4dc8-44bc-b1cd-b76b55e45151"
+      ]
+    },
+    {
+      "systemDigest": "ff51968df10b134efc01f70f681cf6abf3fa66aa12150bd13030bf6e6d814b05",
+      "messageIds": [
+        "message_ece3fcd3-11b7-4fbf-b41a-bdc28d08f547",
+        "message_900440fe-3239-4fba-8adb-5a29a22b2fa6",
+        "message_665dc1e2-3892-4fb2-90be-4b66ce9620ce"
+      ]
+    }
+  ],
+  "witnessed": [
+    {
+      "sessionId": "session_58dbe4e4-d111-4d0e-8dd3-d0f9f3959637",
+      "turnId": "turn_d5ddedd3-b31e-40d6-92d5-2a0de012e44a",
+      "payload": {
+        "source": "skill",
+        "id": "task-scoped-skills-v1",
+        "tokens": 1303,
+        "strategy": "task_scoped_skills_v1",
+        "constructorIdentity": "skills:task-scoped-selection-v1",
+        "configDigest": "39c1f31817c8aceedcbbde9acbdb25091ea90978917d02a8ae3aabff9b5fe18b",
+        "armDigest": "4b9b6875a8d3ff191053c1a01c1273bb51f78fe35a59527290f7cae31c7a8ee6",
+        "stepId": "turn_d5ddedd3-b31e-40d6-92d5-2a0de012e44a:0",
+        "contextFingerprint": "0088d8e733ceacfbd4d2db0fca1e8ace019ce7ed77f7627256ec835b84982156",
+        "contextMessageIds": [
+          "message_ece3fcd3-11b7-4fbf-b41a-bdc28d08f547"
+        ],
+        "skillSnapshotFingerprint": "cc7df19f207b06c049aa534acce361903d1516609305339e99bee7798901826e",
+        "selectedSkills": [
+          {
+            "name": "port-config",
+            "source": "local-filesystem",
+            "requiredTools": [],
+            "requiredMcpServers": [],
+            "bodyHash": "5a2b3fef34d787a525c47196ff18cc945858863a14e3d78c8990fb340ead5862"
+          }
+        ],
+        "selectedCount": 1,
+        "discoveredCount": 5,
+        "admittedBodies": [
+          {
+            "name": "port-config",
+            "bodyHash": "5a2b3fef34d787a525c47196ff18cc945858863a14e3d78c8990fb340ead5862",
+            "tokens": 1303
+          }
+        ],
+        "count": 1,
+        "systemDigest": "fb25d564711798056d154d4132ac18fd30929a7a92ce83fcce6c4beae49c339c",
+        "schemaDigest": "8ba63010c2091bbe292b4d2b2967b3f9af628dd349ed43f7b1243742025d6526",
+        "contextTokens": 1439,
+        "contextBytes": 6293
+      }
+    },
+    {
+      "sessionId": "session_6ea46355-4119-4303-b210-f40ce50508d3",
+      "turnId": "turn_b6abb44b-fb0b-4ade-89d9-13f926157fc9",
+      "payload": {
+        "source": "skill",
+        "id": "task-scoped-skills-v1",
+        "tokens": 28,
+        "strategy": "task_scoped_skills_v1",
+        "constructorIdentity": "skills:task-scoped-selection-v1",
+        "configDigest": "39c1f31817c8aceedcbbde9acbdb25091ea90978917d02a8ae3aabff9b5fe18b",
+        "armDigest": "4b9b6875a8d3ff191053c1a01c1273bb51f78fe35a59527290f7cae31c7a8ee6",
+        "stepId": "turn_b6abb44b-fb0b-4ade-89d9-13f926157fc9:0",
+        "contextFingerprint": "33eef44279e66ad52beda27864f70d2e13c6b1b0a5cc476013392426fdf97428",
+        "contextMessageIds": [
+          "message_4bf4560f-7f4a-45a1-9cf0-432c197f7388"
+        ],
+        "skillSnapshotFingerprint": "61039830bd32b0d23144f6d13e45c9059fab08c1c2a4d7f81f3e78ab8e762d95",
+        "selectedSkills": [
+          {
+            "name": "alpha-lore",
+            "source": "local-filesystem",
+            "requiredTools": [],
+            "requiredMcpServers": [],
+            "bodyHash": "7101a46e01994f2b94e1751e7c4467555d2ffba5f6f52418380136261cf3d217"
+          }
+        ],
+        "selectedCount": 1,
+        "discoveredCount": 5,
+        "admittedBodies": [
+          {
+            "name": "alpha-lore",
+            "bodyHash": "7101a46e01994f2b94e1751e7c4467555d2ffba5f6f52418380136261cf3d217",
+            "tokens": 28
+          }
+        ],
+        "count": 1,
+        "systemDigest": "870852cdeca27649135bdea4c38f8a61ee61f5f8e95fa1ce5e5b56079238ace4",
+        "schemaDigest": "72aa11a353beb5b1bded641f3fe5de6639c03a102e853ae7e8d847406f0f140c",
+        "contextTokens": 70,
+        "contextBytes": 805
+      }
+    },
+    {
+      "sessionId": "session_bf5c6ed9-5841-4e84-b0d8-be74ec29be62",
+      "turnId": "turn_c3eecdcc-579d-4164-9e56-ca3ee9d8d79e",
+      "payload": {
+        "source": "skill",
+        "id": "task-scoped-skills-v1",
+        "tokens": 28,
+        "strategy": "task_scoped_skills_v1",
+        "constructorIdentity": "skills:task-scoped-selection-v1",
+        "configDigest": "39c1f31817c8aceedcbbde9acbdb25091ea90978917d02a8ae3aabff9b5fe18b",
+        "armDigest": "4b9b6875a8d3ff191053c1a01c1273bb51f78fe35a59527290f7cae31c7a8ee6",
+        "stepId": "turn_c3eecdcc-579d-4164-9e56-ca3ee9d8d79e:0",
+        "contextFingerprint": "1613dc26fec752a1184806cae0b2ddbdedf3f4587881369d19d25323b4ab557c",
+        "contextMessageIds": [
+          "message_17cc390a-5efe-42d7-8de8-e5b05647bf46"
+        ],
+        "skillSnapshotFingerprint": "a22be6a0586f7d6c54e0c772c7292caf650dd057735e1fe523cae00c8600fbbf",
+        "selectedSkills": [
+          {
+            "name": "beta-practice",
+            "source": "local-filesystem",
+            "requiredTools": [],
+            "requiredMcpServers": [],
+            "bodyHash": "37819728be34d9b7bf4aa90384d5689f3d0f8aa85521f83d99224943ae689c82"
+          }
+        ],
+        "selectedCount": 1,
+        "discoveredCount": 5,
+        "admittedBodies": [
+          {
+            "name": "beta-practice",
+            "bodyHash": "37819728be34d9b7bf4aa90384d5689f3d0f8aa85521f83d99224943ae689c82",
+            "tokens": 28
+          }
+        ],
+        "count": 1,
+        "systemDigest": "b1e03633c06fc98ec492e35c9d95f6eda87d9d3bc074da50afddda4ba63d8cac",
+        "schemaDigest": "72aa11a353beb5b1bded641f3fe5de6639c03a102e853ae7e8d847406f0f140c",
+        "contextTokens": 71,
+        "contextBytes": 808
+      }
+    },
+    {
+      "sessionId": "session_6ea46355-4119-4303-b210-f40ce50508d3",
+      "turnId": "turn_b6abb44b-fb0b-4ade-89d9-13f926157fc9",
+      "payload": {
+        "source": "skill",
+        "id": "task-scoped-skills-v1",
+        "tokens": 28,
+        "strategy": "task_scoped_skills_v1",
+        "constructorIdentity": "skills:task-scoped-selection-v1",
+        "configDigest": "39c1f31817c8aceedcbbde9acbdb25091ea90978917d02a8ae3aabff9b5fe18b",
+        "armDigest": "4b9b6875a8d3ff191053c1a01c1273bb51f78fe35a59527290f7cae31c7a8ee6",
+        "stepId": "turn_b6abb44b-fb0b-4ade-89d9-13f926157fc9:1",
+        "contextFingerprint": "42b0d77fcbd7be351ecb1dc3d85530c3b7ead5df29f4dcfc69133e4ebef6d312",
+        "contextMessageIds": [
+          "message_4bf4560f-7f4a-45a1-9cf0-432c197f7388",
+          "message_d643c383-2551-40d1-99c9-804ce1808a39",
+          "message_1abf2b9c-f341-4b32-8d89-a5c420da4abe"
+        ],
+        "skillSnapshotFingerprint": "61039830bd32b0d23144f6d13e45c9059fab08c1c2a4d7f81f3e78ab8e762d95",
+        "selectedSkills": [
+          {
+            "name": "alpha-lore",
+            "source": "local-filesystem",
+            "requiredTools": [],
+            "requiredMcpServers": [],
+            "bodyHash": "7101a46e01994f2b94e1751e7c4467555d2ffba5f6f52418380136261cf3d217"
+          }
+        ],
+        "selectedCount": 1,
+        "discoveredCount": 5,
+        "admittedBodies": [
+          {
+            "name": "alpha-lore",
+            "bodyHash": "7101a46e01994f2b94e1751e7c4467555d2ffba5f6f52418380136261cf3d217",
+            "tokens": 28
+          }
+        ],
+        "count": 1,
+        "systemDigest": "3eb1781b5413cf08043065f6751f0b0d78e3b02d0f71ccf15e7e87dbc0bc3708",
+        "schemaDigest": "72aa11a353beb5b1bded641f3fe5de6639c03a102e853ae7e8d847406f0f140c",
+        "contextTokens": 73,
+        "contextBytes": 863
+      }
+    },
+    {
+      "sessionId": "session_bf5c6ed9-5841-4e84-b0d8-be74ec29be62",
+      "turnId": "turn_c3eecdcc-579d-4164-9e56-ca3ee9d8d79e",
+      "payload": {
+        "source": "skill",
+        "id": "task-scoped-skills-v1",
+        "tokens": 28,
+        "strategy": "task_scoped_skills_v1",
+        "constructorIdentity": "skills:task-scoped-selection-v1",
+        "configDigest": "39c1f31817c8aceedcbbde9acbdb25091ea90978917d02a8ae3aabff9b5fe18b",
+        "armDigest": "4b9b6875a8d3ff191053c1a01c1273bb51f78fe35a59527290f7cae31c7a8ee6",
+        "stepId": "turn_c3eecdcc-579d-4164-9e56-ca3ee9d8d79e:1",
+        "contextFingerprint": "89ecdac7d87e447f70d8bc4ee884f404e8bb96285d5a6f5fc0513e2e58cd0fbc",
+        "contextMessageIds": [
+          "message_17cc390a-5efe-42d7-8de8-e5b05647bf46",
+          "message_894422f0-2555-4d86-a1d4-3c447499924d",
+          "message_20423689-4dc8-44bc-b1cd-b76b55e45151"
+        ],
+        "skillSnapshotFingerprint": "a22be6a0586f7d6c54e0c772c7292caf650dd057735e1fe523cae00c8600fbbf",
+        "selectedSkills": [
+          {
+            "name": "beta-practice",
+            "source": "local-filesystem",
+            "requiredTools": [],
+            "requiredMcpServers": [],
+            "bodyHash": "37819728be34d9b7bf4aa90384d5689f3d0f8aa85521f83d99224943ae689c82"
+          }
+        ],
+        "selectedCount": 1,
+        "discoveredCount": 5,
+        "admittedBodies": [
+          {
+            "name": "beta-practice",
+            "bodyHash": "37819728be34d9b7bf4aa90384d5689f3d0f8aa85521f83d99224943ae689c82",
+            "tokens": 28
+          }
+        ],
+        "count": 1,
+        "systemDigest": "e9247fab5cdf9f0cbaad1a2c7f9a8ad4f92cff8b30b289391b85b327fa559d62",
+        "schemaDigest": "72aa11a353beb5b1bded641f3fe5de6639c03a102e853ae7e8d847406f0f140c",
+        "contextTokens": 74,
+        "contextBytes": 866
+      }
+    },
+    {
+      "sessionId": "session_58dbe4e4-d111-4d0e-8dd3-d0f9f3959637",
+      "turnId": "turn_d5ddedd3-b31e-40d6-92d5-2a0de012e44a",
+      "payload": {
+        "source": "skill",
+        "id": "task-scoped-skills-v1",
+        "tokens": 1303,
+        "strategy": "task_scoped_skills_v1",
+        "constructorIdentity": "skills:task-scoped-selection-v1",
+        "configDigest": "39c1f31817c8aceedcbbde9acbdb25091ea90978917d02a8ae3aabff9b5fe18b",
+        "armDigest": "4b9b6875a8d3ff191053c1a01c1273bb51f78fe35a59527290f7cae31c7a8ee6",
+        "stepId": "turn_d5ddedd3-b31e-40d6-92d5-2a0de012e44a:1",
+        "contextFingerprint": "8bb44e522b6c0c94fec970904d9a0e471dcb859b1fbf3af46bec8f1959498e20",
+        "contextMessageIds": [
+          "message_ece3fcd3-11b7-4fbf-b41a-bdc28d08f547",
+          "message_900440fe-3239-4fba-8adb-5a29a22b2fa6",
+          "message_665dc1e2-3892-4fb2-90be-4b66ce9620ce"
+        ],
+        "skillSnapshotFingerprint": "cc7df19f207b06c049aa534acce361903d1516609305339e99bee7798901826e",
+        "selectedSkills": [
+          {
+            "name": "port-config",
+            "source": "local-filesystem",
+            "requiredTools": [],
+            "requiredMcpServers": [],
+            "bodyHash": "5a2b3fef34d787a525c47196ff18cc945858863a14e3d78c8990fb340ead5862"
+          }
+        ],
+        "selectedCount": 1,
+        "discoveredCount": 5,
+        "admittedBodies": [
+          {
+            "name": "port-config",
+            "bodyHash": "5a2b3fef34d787a525c47196ff18cc945858863a14e3d78c8990fb340ead5862",
+            "tokens": 1303
+          }
+        ],
+        "count": 1,
+        "systemDigest": "ff51968df10b134efc01f70f681cf6abf3fa66aa12150bd13030bf6e6d814b05",
+        "schemaDigest": "8ba63010c2091bbe292b4d2b2967b3f9af628dd349ed43f7b1243742025d6526",
+        "contextTokens": 1505,
+        "contextBytes": 6602
+      }
+    }
+  ],
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN"
+}

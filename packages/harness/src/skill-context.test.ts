@@ -135,20 +135,20 @@ describe("P2-8: skill body blocks (progressive disclosure)", () => {
 });
 
 describe("P2-9: skill effectiveness funnel", () => {
-  it("records loaded + injected on body load and task outcome on completion", async () => {
+  it("body load records preparation without claiming context admission", async () => {
     const root = await tempDir();
     const dataDir = await tempDir();
     await writeSkill(root, "deploy", "deployment commands", "# Deploy\nSafe body.");
     const provider = providerFor(root, dataDir);
 
     await provider.load(["deploy"]);
-    await provider.record("deploy", { kind: "taskCompleted" });
 
     const effectiveness = await provider.effectivenessOf("deploy");
     expect(effectiveness).toBeDefined();
     expect(effectiveness!.loadedCount).toBe(1);
-    expect(effectiveness!.injectedCount).toBe(1);
-    expect(effectiveness!.completedCount).toBe(1);
+    expect(effectiveness!.injectedCount).toBe(0);
+    expect(effectiveness!.tokenCount).toBe(0);
+    expect(effectiveness!.completedCount).toBe(0);
     expect(effectiveness!.failedCount).toBe(0);
 
     const all = await provider.listEffectiveness();
@@ -164,12 +164,13 @@ describe("P2-9: skill effectiveness funnel", () => {
 
     const second = providerFor(root, dataDir);
     const effectiveness = await second.effectivenessOf("deploy");
-    expect(effectiveness!.injectedCount).toBe(1);
+    expect(effectiveness!.loadedCount).toBe(1);
+    expect(effectiveness!.injectedCount).toBe(0);
   });
 });
 
 describe("P6-2/P6-4: skill provenance + token ROI", () => {
-  it("body blocks carry provenance and load books injection tokens for ROI", async () => {
+  it("body blocks carry provenance and ROI uses explicit admitted token feedback", async () => {
     const root = await tempDir();
     const dataDir = await tempDir();
     await writeSkill(root, "deploy", "deployment commands", "# Deploy\nSafe body.");
@@ -183,7 +184,9 @@ describe("P6-2/P6-4: skill provenance + token ROI", () => {
       serviceId: "skill-loader",
       toolId: "deploy",
     });
-    // P6-4: injection cost booked; completion gives a positive ROI.
+    expect((await provider.tokenROI("deploy")).tokensInjected).toBe(0);
+    await provider.record("deploy", { kind: "injected" });
+    await provider.record("deploy", { kind: "tokensUsed", count: blocks[0]!.tokens });
     await provider.record("deploy", { kind: "taskCompleted" });
     const roi = await provider.tokenROI("deploy");
     expect(roi.tokensInjected).toBeGreaterThan(0);

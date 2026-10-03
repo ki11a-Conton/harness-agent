@@ -1,0 +1,10 @@
+{
+  "caseId": "skills-port-config",
+  "scenario": "module-time-non-target-tamper",
+  "checkerSha256": "dba93b25b6d9dc14e8cc780b33471d73295205e73d164f65b20f67da358ede31",
+  "status": 1,
+  "signal": null,
+  "error": null,
+  "stdout": "",
+  "stderr": "node:assert:152\n  throw new AssertionError(obj);\n  ^\n\nAssertionError [ERR_ASSERTION]: immutable fixture changed: package.json\n+ actual - expected\n\n+ '733035904b658da0ea054cad611f8981bc16765f61b5c12d4cbd7431781bfe37'\n- '70c140c30ba7c499c95f8092aac10b3bfa4aada599d692c33f0650e7e279f97e'\n\n    at checkImmutable ([eval]:9:10)\n    at [eval]:15:1\n    at [eval]:16:135\n    at runScriptInThisContext (node:internal/vm:219:10)\n    at node:internal/process/execution:451:12\n    at [eval]-wrapper:6:24\n    at runScriptInContext (node:internal/process/execution:449:60)\n    at evalFunction (node:internal/process/execution:283:30)\n    at evalTypeScript (node:internal/process/execution:295:3)\n    at node:internal/main/eval_string:71:3 {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: '733035904b658da0ea054cad611f8981bc16765f61b5c12d4cbd7431781bfe37',\n  expected: '70c140c30ba7c499c95f8092aac10b3bfa4aada599d692c33f0650e7e279f97e',\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+}

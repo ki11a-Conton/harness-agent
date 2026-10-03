@@ -61,7 +61,7 @@ import {
 } from "@ar/session";
 import { JSONLEventStore } from "@ar/events";
 import { SqliteRuntimeStore } from "@ar/store";
-import { FileSkillLoader } from "@ar/skills";
+import { FileSkillLoader, createTaskScopedSkillSelector } from "@ar/skills";
 import {
   createProductionTools,
   createToolLookupTool,
@@ -217,6 +217,11 @@ export const DEFAULT_MAIN_SYSTEM_PROMPT = [
 ].join("\n");
 
 export async function createHarness(config: HarnessConfig): Promise<Harness> {
+  if (config.skillSelector !== undefined && config.skillSelection !== undefined) {
+    throw new TypeError("skillSelector and skillSelection are mutually exclusive");
+  }
+  const skillSelector = config.skillSelection === undefined
+    ? config.skillSelector : createTaskScopedSkillSelector(config.skillSelection);
   const cwd = config.cwd;
   const dataDir = config.dataDir;
   if (dataDir !== undefined) await mkdir(dataDir, { recursive: true });
@@ -390,7 +395,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
 
   // --- skill bodies (P2-8) + effectiveness ledger (P2-9) --------------------
   let skillBodyProvider: SkillBodyBlockProvider | undefined;
-  const skillUseBySession = new Map<SessionId, string[]>();
+  const skillUseBySession = new Map<SessionId, Map<TurnId, Set<string>>>();
   if (features.skills && dataDir !== undefined) {
     // P14-4: the skill boundary receives the same conferred tool capability
     // as the main agent — a skill declaring requiredTools outside it is
@@ -464,7 +469,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     ...(askUserStore !== undefined ? { askUserStore } : {}),
     skills: features.skills ? discoverSkills : undefined,
     ...(config.toolSelector !== undefined ? { toolSelector: config.toolSelector } : {}),
-    ...(config.skillSelector !== undefined ? { skillSelector: config.skillSelector } : {}),
+    ...(skillSelector !== undefined ? { skillSelector } : {}),
     // P2-2: pre-turn memory retrieval — one call per turn, rendered blocks
     // enter the context pipeline as memory prior data; the injected memory
     // ids are remembered for the P2-4 outcome feedback at turn end.
@@ -493,13 +498,21 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
     ...(skillBodyProvider !== undefined
       ? {
           skillBodyBlocks: async (input: { sessionId: SessionId; turnId: TurnId; names: string[]; skills?: readonly Skill[] }) => {
-            const blocks = await skillBodyProvider.load(input.names, input.skills);
-            const used = skillUseBySession.get(input.sessionId) ?? [];
-            for (const name of input.names) {
-              if (!used.includes(name)) used.push(name);
+            return skillBodyProvider.load(input.names, input.skills);
+          },
+          onSkillBodiesAdmitted: async (input: { sessionId: SessionId; turnId: TurnId; blocks: readonly ContextBlock[] }) => {
+            const turns = skillUseBySession.get(input.sessionId) ?? new Map<TurnId, Set<string>>();
+            const used = turns.get(input.turnId) ?? new Set<string>();
+            for (const block of input.blocks) {
+              if (block.source !== "skill" || !block.id.startsWith("skill-body:")) continue;
+              const name = block.id.slice("skill-body:".length);
+              if (name === "" || block.provenance?.toolId !== name) continue;
+              await skillBodyProvider.record(name, { kind: "injected" });
+              await skillBodyProvider.record(name, { kind: "tokensUsed", count: block.tokens });
+              used.add(name);
             }
-            skillUseBySession.set(input.sessionId, used);
-            return blocks;
+            turns.set(input.turnId, used);
+            skillUseBySession.set(input.sessionId, turns);
           },
         }
       : {}),
@@ -551,8 +564,10 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
             }
             // P2-9: skill effectiveness task-outcome feedback.
             if (skillBodyProvider !== undefined) {
-              const used = skillUseBySession.get(input.sessionId) ?? [];
-              skillUseBySession.delete(input.sessionId);
+              const turns = skillUseBySession.get(input.sessionId);
+              const used = turns?.get(input.turnId) ?? [];
+              turns?.delete(input.turnId);
+              if (turns?.size === 0) skillUseBySession.delete(input.sessionId);
               for (const name of used) {
                 await skillBodyProvider.record(
                   name,

@@ -1,0 +1,626 @@
+{
+  "schema": "agent-measurement-artifacts/v1",
+  "baselineSourceSha": "c31e4a8046f1e22b0da29c9310f5c131c5d9a38f",
+  "stage": "implementation-targets; final clean acceptance pending",
+  "scope": "Retained baseline originals plus implementation target JSON/logs, complete top-level request traces, independent probes and pilot checker receipts. Generated fixture/session/case subtrees omitted; raw inner indexes retain original locations. Individual records declare historical sourceDirty/source hashes; no final-source claim.",
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "files": [
+    {
+      "path": "raw/baseline-opportunities/artifact-index.json",
+      "bytes": 2215,
+      "sha256": "0707632df384ff8011240a1dc1c06b700308959804ffc91322aa1b6ec2229867"
+    },
+    {
+      "path": "raw/baseline-opportunities/default-0-events.json",
+      "bytes": 103610,
+      "sha256": "120bc482283d4f06ea546d2463bf150ed18434d898648ce58b0254976f0c6eb6"
+    },
+    {
+      "path": "raw/baseline-opportunities/default-1-events.json",
+      "bytes": 103610,
+      "sha256": "a3ae7dd6527a19c29b35f53f1cfaf3637b0013a5a8f8adb28dfb1a2d3d9045d5"
+    },
+    {
+      "path": "raw/baseline-opportunities/default-2-events.json",
+      "bytes": 103610,
+      "sha256": "c5cddb491eaef026f8bc378caa7519a8dd3583536060e1afc4a215a7c5c7f842"
+    },
+    {
+      "path": "raw/baseline-opportunities/measure-selector-negatives.mjs",
+      "bytes": 3443,
+      "sha256": "ff7a446ff1ca7846ce111969bfa583101b5c6eb883eecba57d1f246d3ba9120f"
+    },
+    {
+      "path": "raw/baseline-opportunities/measure-skills.log",
+      "bytes": 30203,
+      "sha256": "01abba310cc27c927c27ef0b93d1671b481b8ccca5d8738dd232b2023e27d0da"
+    },
+    {
+      "path": "raw/baseline-opportunities/measure-skills.mjs",
+      "bytes": 6471,
+      "sha256": "9e3552f0880fb44f9d92e58f5ac4faf9ddc9a9a1b5dc7baf6aef79ce7c9550b3"
+    },
+    {
+      "path": "raw/baseline-opportunities/report.md",
+      "bytes": 4441,
+      "sha256": "1afa972e710c386983f9e37e135fb84bb6900895ab7827a84fa1c361fdb15d73"
+    },
+    {
+      "path": "raw/baseline-opportunities/selected-0-events.json",
+      "bytes": 54327,
+      "sha256": "64f6462889a6c8840ee99a9dbdd3d61a8f95cbf374b82e91164caa72f4fc9881"
+    },
+    {
+      "path": "raw/baseline-opportunities/selected-1-events.json",
+      "bytes": 54327,
+      "sha256": "1cb263ffc261ee784c9850fb9e3349367f2d374fe03e4f1633c156ff7076e1dc"
+    },
+    {
+      "path": "raw/baseline-opportunities/selected-2-events.json",
+      "bytes": 54327,
+      "sha256": "ac6e9e65acd27d28b939938057c751f52dc51aec5007765fef50e695832a8fd8"
+    },
+    {
+      "path": "raw/baseline-opportunities/selector-negatives.json",
+      "bytes": 6040,
+      "sha256": "0f9d9d27b3f17ec6ff80d96162424f70c2193cef5c58869e2ddddc4e95a46bb3"
+    },
+    {
+      "path": "raw/baseline-opportunities/selector-negatives.log",
+      "bytes": 4479,
+      "sha256": "4be5c6324cff2b75f5adce331a62f7da862df3aaf04dc466f66fbd359859f10d"
+    },
+    {
+      "path": "raw/baseline-opportunities/skills-measurement.json",
+      "bytes": 41977,
+      "sha256": "e3b49e48a3cb09f38f6a77c2ef379ae01e4e9c47642b96ef193a178981ed5d31"
+    },
+    {
+      "path": "raw/baseline-skill-context/baseline-full.json",
+      "bytes": 61889,
+      "sha256": "8bb199576e66b8e3353b3b9d1dace2ebbbb01f96294e8628e6e65d85ba3b41bd"
+    },
+    {
+      "path": "raw/baseline-skill-context/baseline-tight.json",
+      "bytes": 40191,
+      "sha256": "4dbaaeedca5edd46869b2aa8d8d2e1eacfc85681db3854626f82d93587a62a0e"
+    },
+    {
+      "path": "raw/baseline-skill-context/manifest.json",
+      "bytes": 2489,
+      "sha256": "8efb63e71f8803b071e297862a34c7d9bc8e891de55d6dbbdbee53e1eb472468"
+    },
+    {
+      "path": "raw/baseline-skill-context/paired-ab-baseline.json",
+      "bytes": 61901,
+      "sha256": "c40fa988acf7d0fa7bfb69db262327b82085170a350f6a7b8a8d6a2e2a275f5a"
+    },
+    {
+      "path": "raw/baseline-skill-context/paired-ab-selector.json",
+      "bytes": 4482,
+      "sha256": "adafe5ac1c8125f8ce12cb7f4ba59f5f00a5d11327f5e8963ea257512f053edd"
+    },
+    {
+      "path": "raw/baseline-skill-context/paired-ba-baseline.json",
+      "bytes": 61901,
+      "sha256": "1b16c259f703fe5b41e62c7d673f7c8b62bbd6660a3e9bc7c35f531d6f4f1b05"
+    },
+    {
+      "path": "raw/baseline-skill-context/paired-ba-selector.json",
+      "bytes": 4482,
+      "sha256": "11b668a381d9c6cb1e91da7643cc289828ee4cb9673ab60946bcffa2fcc71aa5"
+    },
+    {
+      "path": "raw/baseline-skill-context/probe.log",
+      "bytes": 5150,
+      "sha256": "ddf2571e4e8da3ca3112a1586dbd210575650a298cf60fb42092c645863cc290"
+    },
+    {
+      "path": "raw/baseline-skill-context/probe.mjs",
+      "bytes": 8819,
+      "sha256": "a764332131849853883f5c7c821b790ce07482cb4f4cd5d309af955652f80c1b"
+    },
+    {
+      "path": "raw/baseline-skill-context/report.md",
+      "bytes": 8482,
+      "sha256": "32a58837e0a60b38cbf488f33a55af052f573cf9f502411b4abc3e0f60f8a6cf"
+    },
+    {
+      "path": "raw/baseline-skill-context/selector-one-tight.json",
+      "bytes": 4479,
+      "sha256": "55708d5b8fffebc778d0fe3b3849f4213149e4e0a5e7fca9106a88f5145f3365"
+    },
+    {
+      "path": "raw/baseline-skill-context/selector-one.json",
+      "bytes": 4476,
+      "sha256": "37d173202f418c3b80a8c6a482a33104b4f0b8b19a61bc87990949c7bd8833f2"
+    },
+    {
+      "path": "raw/baseline-skill-context/summary.json",
+      "bytes": 18259,
+      "sha256": "cc20b11bea0aae6d5fe97fcec1aaadf907feb5d885be0179dd71f241e84f2aba"
+    },
+    {
+      "path": "raw/baseline-skill-context/tool-selector.json",
+      "bytes": 4477,
+      "sha256": "d5e65fc6629a8fcc323fa43045145598d0eb3ecbc110480e6c3f550a8224e651"
+    },
+    {
+      "path": "raw/independent-review/concurrent-ledger-baseline.json",
+      "bytes": 2624,
+      "sha256": "165d6742ff5c4741ef7314cff41116dbd6f04bd4cbc4a2ae1361acff2bc8ccec"
+    },
+    {
+      "path": "raw/independent-review/concurrent-ledger-candidate.json",
+      "bytes": 2782,
+      "sha256": "1028a7cf6b9a78bc5c8002996e79e789303983bb0ed92ca7ca53b8ebc13cc3c3"
+    },
+    {
+      "path": "raw/independent-review/concurrent-ledger-probe.mjs",
+      "bytes": 2061,
+      "sha256": "c8c7ddfa32a57138646bc60e313f22bb46c1c8cc8614ef9795c52398c8e1bc6e"
+    },
+    {
+      "path": "raw/independent-review/pilot-receipts.json",
+      "bytes": 5365,
+      "sha256": "9a3ca11ada813a1cc6c3aea8229d7cb74266cc591d6ba052f277aca98451a123"
+    },
+    {
+      "path": "raw/independent-review/unknown-required-candidate.json",
+      "bytes": 925,
+      "sha256": "1b1a38530a5d603eafc57c98fba7c7fb643269be6e9c9c29e69208166441f609"
+    },
+    {
+      "path": "raw/m1-candidate/default-0-events.json",
+      "bytes": 103610,
+      "sha256": "83ffbc7c4a3edfcf8bb6f84eb930c11f62f07771680de3d2ffb0ee84f1ead97c"
+    },
+    {
+      "path": "raw/m1-candidate/default-1-events.json",
+      "bytes": 103610,
+      "sha256": "87eb058dfc10f509d77cf14205ff170ec10935a426b9803b484ea156da966a37"
+    },
+    {
+      "path": "raw/m1-candidate/default-2-events.json",
+      "bytes": 103610,
+      "sha256": "265ca20fa1b2e75ef301c625a90adefcd2bb184c5ade65515be77159bf14d8f0"
+    },
+    {
+      "path": "raw/m1-candidate/selected-0-events.json",
+      "bytes": 54327,
+      "sha256": "b3c30d981cb48e1305fdd001ee12430eb1c6126a3ed4862ed1b58a01e59a258b"
+    },
+    {
+      "path": "raw/m1-candidate/selected-1-events.json",
+      "bytes": 54327,
+      "sha256": "ee660b8f952b9bba5d897dc6e257f09a625077a24d62559883880c91fd8b9d7f"
+    },
+    {
+      "path": "raw/m1-candidate/selected-2-events.json",
+      "bytes": 54327,
+      "sha256": "38eaf5217c86cc5ae14b801832a8e9d1319761b12245fd12fa78d9ea0da9dfc9"
+    },
+    {
+      "path": "raw/m1-candidate/skills-measurement.json",
+      "bytes": 42665,
+      "sha256": "9b6033c70f749ad5f300556dce80a0e9bc2690424971e1c8566abe50afbd33e3"
+    },
+    {
+      "path": "raw/m1-tests/m1-8k-final-green.log",
+      "bytes": 5447,
+      "sha256": "ec77bfae40d92bdaaceeeeaa083fdaab50bdf304919a88baae1c4f1ec65e3c9f"
+    },
+    {
+      "path": "raw/m1-tests/m1-baseline-red.json",
+      "bytes": 11038,
+      "sha256": "6b67404a58c04b154aba651ac8d869c34045fd118932daaf64bd790569dade99"
+    },
+    {
+      "path": "raw/m1-tests/m1-baseline-red.log",
+      "bytes": 11611,
+      "sha256": "d6ce50c81aa910b87f28aa257450ada3e43cfd515c7b9ddde8c38b2726a48201"
+    },
+    {
+      "path": "raw/m1-tests/m1-boundary-green.json",
+      "bytes": 42281,
+      "sha256": "7248f452acf089766cf188076f4e3267dcc865ead568e6dca055dcdbb38b9afb"
+    },
+    {
+      "path": "raw/m1-tests/m1-boundary-green.log",
+      "bytes": 827,
+      "sha256": "18a2439b837e82949150c47db37417ca3ebe4b42e23e26a25b3355690c85ae90"
+    },
+    {
+      "path": "raw/m1-tests/m1-probe-build.log",
+      "bytes": 9,
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f"
+    },
+    {
+      "path": "raw/m1-tests/m1-target-green.json",
+      "bytes": 16010,
+      "sha256": "f403e291d451b51bedc32ba4348b8fdee510ed3c906cd430a998303f685afd5f"
+    },
+    {
+      "path": "raw/m1-tests/m1-target-green.log",
+      "bytes": 1594,
+      "sha256": "e4a0eaff45ee8aeebb4899e5a4e3851bcc5d9b8f1d867abf9359b3293e352416"
+    },
+    {
+      "path": "raw/m1-tests/m1-typecheck.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "raw/m1-tests/manifest.json",
+      "bytes": 6414,
+      "sha256": "55631f9e7dfa1a9b8642dbe0612257236f7168d926dc31371bf8c5bacd91d5cb"
+    },
+    {
+      "path": "raw/m2-8k-root/default-0-events.json",
+      "bytes": 103610,
+      "sha256": "712da7f2cf3edaedee3dfe18f56b2e86e1543bd8db80e9f929d501e12403d87e"
+    },
+    {
+      "path": "raw/m2-8k-root/default-1-events.json",
+      "bytes": 103610,
+      "sha256": "29ff5ca715a37bbf9948bcceeadb2f93830f9344c6afeb156fb7e1c81c62e747"
+    },
+    {
+      "path": "raw/m2-8k-root/default-2-events.json",
+      "bytes": 103610,
+      "sha256": "61587cda999d1b067738006cbf10be67499c14a89a34ae285d54565e1f2a4af5"
+    },
+    {
+      "path": "raw/m2-8k-root/probe.log",
+      "bytes": 5512,
+      "sha256": "ff6870f4e11c8630b24f0a0d147b214713538206d952575da6f8cbcb47d09712"
+    },
+    {
+      "path": "raw/m2-8k-root/selected-0-events.json",
+      "bytes": 54327,
+      "sha256": "ea00db3e0100a85394966f6493d98a1add7fc9f908a0417099e70e0da441afb6"
+    },
+    {
+      "path": "raw/m2-8k-root/selected-1-events.json",
+      "bytes": 54327,
+      "sha256": "3f116b00ecef21840908bd9d717f5c0d1b25b0aa5187d5937154fbb68e750c7a"
+    },
+    {
+      "path": "raw/m2-8k-root/selected-2-events.json",
+      "bytes": 54327,
+      "sha256": "c690c88461350ec952aa4397f426e51d0ce5e9dcaca055e53b8d9ce383f4223f"
+    },
+    {
+      "path": "raw/m2-8k-root/skills-measurement.json",
+      "bytes": 42856,
+      "sha256": "83dcaec292eb3faf0e7a2e3a16fa0815cf401d929d5676c23b57e33dad33a65a"
+    },
+    {
+      "path": "raw/m2-cli/cli-baseline-red.log",
+      "bytes": 10870,
+      "sha256": "a154ac638cbda620254d5908a561c39d907e36502a03c3ab77b8c581f9156624"
+    },
+    {
+      "path": "raw/m2-cli/cli-concurrency-results.json",
+      "bytes": 12483,
+      "sha256": "6d96f3a67203f0717bf370cf7b56153894add3aeba5f73c300c5c887d96f206f"
+    },
+    {
+      "path": "raw/m2-cli/cli-intermediate-negative.log",
+      "bytes": 3637,
+      "sha256": "3d5b41f53ba285ca17189346e02e10cb08e3d5e8e8504dbe1a64cc8bf4d9af3e"
+    },
+    {
+      "path": "raw/m2-cli/cli-manifest.json",
+      "bytes": 6789,
+      "sha256": "cdce02576f0fe20bbf698787e0bd07b35a872f91b0aabe8564e0b9aa9bea6044"
+    },
+    {
+      "path": "raw/m2-cli/cli-paired-results.json",
+      "bytes": 381048,
+      "sha256": "88ceb1310360221f92dc9deb86db94c191547f82871ac89a420e51ccb313c48d"
+    },
+    {
+      "path": "raw/m2-cli/cli-target-green.log",
+      "bytes": 1564,
+      "sha256": "2dedde1fc3f6234350262c8753ae3dbc825a2b7fbf1763294c4390db9c6aa696"
+    },
+    {
+      "path": "raw/m2-cli/cli-typecheck.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "raw/m2-core/core-harness-target.log",
+      "bytes": 805,
+      "sha256": "462f6688cabd7a58265106a7277c4a44874bd012a6927bbe73fcd909e3861815"
+    },
+    {
+      "path": "raw/m2-core/core-harness-typecheck.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "raw/m2-core/m2-core-manifest.json",
+      "bytes": 4287,
+      "sha256": "2f6d75901d89844246f7a322521f4f6fc1eaa70a5eb4e6f174bc732ae72e7507"
+    },
+    {
+      "path": "raw/m2-core/real-harness-baseline-red.log",
+      "bytes": 421999,
+      "sha256": "58d2106174ddd86f04e810165e04c3a4821f699119df542404dba1bc2641ed9b"
+    },
+    {
+      "path": "raw/m2-core/skill-context/baseline-full.json",
+      "bytes": 61889,
+      "sha256": "65aa0921b201536fd1eb16677f49f25936f70ca70ffdb47b8dfa2ddbf42d2da3"
+    },
+    {
+      "path": "raw/m2-core/skill-context/baseline-tight.json",
+      "bytes": 39950,
+      "sha256": "b4ce8c874c4277e9980745d5b5fed963736fb77ac29b4389ff6c0c7efef301ce"
+    },
+    {
+      "path": "raw/m2-core/skill-context/legacy-selector-one.json",
+      "bytes": 4483,
+      "sha256": "9ec793d288b09258617f38daf25e070761cc4b2f125214ce88b5b130be11af66"
+    },
+    {
+      "path": "raw/m2-core/skill-context/paired-ab-baseline.json",
+      "bytes": 61901,
+      "sha256": "0ce4d454e258a03faf138ecdb2b1a7a25fc10d6a4492d85115614c862fe8ef03"
+    },
+    {
+      "path": "raw/m2-core/skill-context/paired-ab-task-scoped.json",
+      "bytes": 4485,
+      "sha256": "986a63f04a5de192de0112e64941264ef63c1d6a67f6d979e846484a5c16db99"
+    },
+    {
+      "path": "raw/m2-core/skill-context/paired-ba-baseline.json",
+      "bytes": 61894,
+      "sha256": "8f14350a03065a5a41e92615e977b9253da85aa46f63cbc8edef8c47c05c20a5"
+    },
+    {
+      "path": "raw/m2-core/skill-context/paired-ba-task-scoped.json",
+      "bytes": 4485,
+      "sha256": "4e0f5c0b8b12c13a5261eaecdd05f7d25e0a4690b05b446018b200da836f48e6"
+    },
+    {
+      "path": "raw/m2-core/skill-context/summary.json",
+      "bytes": 19463,
+      "sha256": "8b066d2612b096b96a51a7034cf459baf457c7ce1c296d497e7247f61b29a1f5"
+    },
+    {
+      "path": "raw/m2-core/skill-context/task-scoped-one-tight.json",
+      "bytes": 4482,
+      "sha256": "98a356f0f5b1cc3b7829ba33da396eee76bda29c94d1b7e57f14bfd09d03040b"
+    },
+    {
+      "path": "raw/m2-core/skill-context/task-scoped-one.json",
+      "bytes": 4479,
+      "sha256": "8039a314361401dc7321fc0cd412ccca3609eec105563ffe68bb2d8273c9152d"
+    },
+    {
+      "path": "raw/m2-core/skill-context/tool-selector.json",
+      "bytes": 4469,
+      "sha256": "2e7f27c9d4598c5f566c81bf4e78e2a42bbfcf99456c3c5e9320838e4c29d46c"
+    },
+    {
+      "path": "raw/m3/baseline/manifest.json",
+      "bytes": 7313,
+      "sha256": "514bf721eb68281c89d3032282567caef4595118f437f7b4a29f21cf41f09b87"
+    },
+    {
+      "path": "raw/m3/baseline-red-final.json",
+      "bytes": 11222,
+      "sha256": "af9039e0a027784d1f9272b97efa8a37b72b6a4e58329fdd531bfb3200e9c0a3"
+    },
+    {
+      "path": "raw/m3/baseline-red-final.log",
+      "bytes": 97,
+      "sha256": "18218d26ca8500e143498cf9f2d408a9d164e2b603a2c36b6b3bffff20f384c3"
+    },
+    {
+      "path": "raw/m3/baseline-red-tests.json",
+      "bytes": 11641,
+      "sha256": "6eddfb5c8022b396aec087432e20b0ccaf0ab5f1dbfa6fb57be025271b09617e"
+    },
+    {
+      "path": "raw/m3/baseline-red-tests.log",
+      "bytes": 97,
+      "sha256": "9de8402f2c9f9545d015d199f8a523f8445f06ca4f03d434e66ee9a3d223fa7b"
+    },
+    {
+      "path": "raw/m3/baseline-test-record.json",
+      "bytes": 1214,
+      "sha256": "dec3c6dd3f050f5f27899a1708d1e88360bf9677fd757f298fd1bb1302ebbf3d"
+    },
+    {
+      "path": "raw/m3/candidate/manifest.json",
+      "bytes": 8402,
+      "sha256": "56e40f471763e1dd35a19fa1351721c7f0aaf5bd59493f352586a8c0a604dd3e"
+    },
+    {
+      "path": "raw/m3/m3-final-target.json",
+      "bytes": 20409,
+      "sha256": "d494b19aff8ee8522afd8376d8b135ef7f4215022416de5a55ab06e2bef5d25e"
+    },
+    {
+      "path": "raw/m3/m3-root-target.json",
+      "bytes": 5630,
+      "sha256": "9a097b532a15fd8f9ae98e3a99ee356dba07ec66fe249837e7b77e7ef9ad537b"
+    },
+    {
+      "path": "raw/m3/native-baseline.log",
+      "bytes": 305,
+      "sha256": "eb54003a42d2999132368a566c039e32cd5b8e8ef4497dfeb537f6f70b4379ae"
+    },
+    {
+      "path": "raw/m3/native-candidate.log",
+      "bytes": 298,
+      "sha256": "e6481674ef29969263caa4430abf76f103bb569626f77fbc55214917e13c36a7"
+    },
+    {
+      "path": "raw/model-readiness.json",
+      "bytes": 640,
+      "sha256": "cdec3a5fe569cc50fa0bd2e8b166d42110fa3d1585469aa4d8a1802ad2ac0b7e"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/instructions-api-retry-label/assert-monkeypatch.json",
+      "bytes": 4200,
+      "sha256": "bfdde2968fed85f511d6db1e5b82610117834113f5069da46d094c1ddbf761a8"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/instructions-api-retry-label/correct-repair.json",
+      "bytes": 248,
+      "sha256": "0ba3e7fb32d4e653a100aea5db281e60516ce909d8d3300849b7d053e8c9d229"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/instructions-api-retry-label/early-exit-bypass.json",
+      "bytes": 1124,
+      "sha256": "5b42dbee55063b0bc273668fa8a6f030b12e48ac54105f8a16e1240775612587"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/instructions-api-retry-label/module-time-non-target-tamper.json",
+      "bytes": 1292,
+      "sha256": "7246c74817f6cffc258405e6e07c733f445b193858d522c99a473c2fd7583381"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/instructions-api-retry-label/non-target-tamper.json",
+      "bytes": 1280,
+      "sha256": "da5ca8995f77b8a86ca46d55cfaf27313553f9754304d6d77b9eaef55218f9ac"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/instructions-api-retry-label/original-fixture.json",
+      "bytes": 3930,
+      "sha256": "6a6f506b8e52cff513371fdd5777458b33675ec7933834488e869eaea7491ec1"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/instructions-api-retry-label/rule-tamper.json",
+      "bytes": 1271,
+      "sha256": "d8f952441841949f0564c967584eadc0d3331d05acfc17e116c632a6b8cf0026"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/reg-24-error-handling/assert-monkeypatch.json",
+      "bytes": 3845,
+      "sha256": "e8b94c3a12aca9c9d673f74474b08f97fac194b66f3abedcb8ed0439c30dd1ae"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/reg-24-error-handling/correct-repair.json",
+      "bytes": 241,
+      "sha256": "c0cb93bc6a45e23a25d3a316b47aa6fad52c824397bb51bd29fe0a022dfa4fbe"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/reg-24-error-handling/early-exit-bypass.json",
+      "bytes": 1101,
+      "sha256": "8a8851a2fe01b456720a98329995e1014bed862a074e1e1e4707e238c35a528a"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/reg-24-error-handling/module-time-non-target-tamper.json",
+      "bytes": 3700,
+      "sha256": "0c431581ef00e6dc4ec3e733e8a7f78e4c69c061c0cabf69a4be0af247df29b9"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/reg-24-error-handling/non-target-tamper.json",
+      "bytes": 1275,
+      "sha256": "69b319e70b63babe02721671aa9d0a4a166e71090066c7b38fd5067046e3f79d"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/reg-24-error-handling/original-fixture.json",
+      "bytes": 2935,
+      "sha256": "b74ab3a5cd6f58ba8c766492e32bb6368c2539ccd69d07ac73915c87da4ed465"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/skills-port-config/assert-monkeypatch.json",
+      "bytes": 4242,
+      "sha256": "554a429f05c4008d78471f72df045f3bfd49eb23d28cc3cbd122ec6ae9a69c3a"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/skills-port-config/correct-repair.json",
+      "bytes": 238,
+      "sha256": "8d124e0dfe3e3945766b11bc8f82372f1a18a97a0746c6f0c96d53de9a1d948e"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/skills-port-config/early-exit-bypass.json",
+      "bytes": 1094,
+      "sha256": "452f6b012f2cac414c3652896f8f59f1ce9b23f562535737f5d929ee8ceaf002"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/skills-port-config/module-time-non-target-tamper.json",
+      "bytes": 1282,
+      "sha256": "245bdd2c39f0e542b76d7d63b8e0b8f538ca830ac349b75893dc60a439416aae"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/skills-port-config/non-target-tamper.json",
+      "bytes": 1270,
+      "sha256": "f64c05059c2bf1275443db9dbefdcf8568fd7b2b18937c6bed2e61cfbd2424d6"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/skills-port-config/original-fixture.json",
+      "bytes": 3724,
+      "sha256": "fc7484acd86379e2cfcec7385041e272f0b7ef3c117eda14d064454b7f71e6dd"
+    },
+    {
+      "path": "raw/pilot-preparation/checker-self-test/skills-port-config/rule-tamper.json",
+      "bytes": 1278,
+      "sha256": "a5f462ca1a3c1c1265580845529fcfa7dac9da20ea06be307b81258c6408dbbe"
+    },
+    {
+      "path": "raw/pilot-preparation/diagnostic-dry-run.stderr.log",
+      "bytes": 111,
+      "sha256": "14242571538e7f0eeb3e53d06f61cfdaeaba3e76d842110b42994d1dbc596c19"
+    },
+    {
+      "path": "raw/pilot-preparation/diagnostic-dry-run.stdout.log",
+      "bytes": 2056,
+      "sha256": "29a76b212d7a606dfd9ecdc97133afee38e4fda165483f800b59ce52fb5ef901"
+    },
+    {
+      "path": "raw/pilot-preparation/input-manifest.json",
+      "bytes": 5811,
+      "sha256": "246e471447f7be241bd183b543596d4717adb54f5885e5273e06a9151a2acd4b"
+    },
+    {
+      "path": "raw/pilot-preparation/instructions-dry-run.stderr.log",
+      "bytes": 111,
+      "sha256": "14242571538e7f0eeb3e53d06f61cfdaeaba3e76d842110b42994d1dbc596c19"
+    },
+    {
+      "path": "raw/pilot-preparation/instructions-dry-run.stdout.log",
+      "bytes": 2066,
+      "sha256": "8cd761e1a69c067ffefd615bc584f7c48c6daaf9d1f785d327fac03132f247be"
+    },
+    {
+      "path": "raw/pilot-preparation/preparation-check-report.json",
+      "bytes": 1092,
+      "sha256": "0e6b17da5f12a66d2bef410da26fceb8a5de571547481316da02f5dad17872d7"
+    },
+    {
+      "path": "raw/pilot-preparation/preparation-check.stdout.log",
+      "bytes": 1092,
+      "sha256": "0e6b17da5f12a66d2bef410da26fceb8a5de571547481316da02f5dad17872d7"
+    },
+    {
+      "path": "raw/pilot-preparation/preparation-report.json",
+      "bytes": 9199,
+      "sha256": "05455c7e7714d1bc8c2ebf328973a4cc5cababb8238d9056a4f7fdea46fa968a"
+    },
+    {
+      "path": "raw/pilot-preparation/preparation.stdout.log",
+      "bytes": 9199,
+      "sha256": "05455c7e7714d1bc8c2ebf328973a4cc5cababb8238d9056a4f7fdea46fa968a"
+    },
+    {
+      "path": "raw/pilot-preparation/skills-dry-run.stderr.log",
+      "bytes": 111,
+      "sha256": "14242571538e7f0eeb3e53d06f61cfdaeaba3e76d842110b42994d1dbc596c19"
+    },
+    {
+      "path": "raw/pilot-preparation/skills-dry-run.stdout.log",
+      "bytes": 2044,
+      "sha256": "2ccb11a0f95c178a09cc5db2c1aa48c5a794814ed96133222926a1cb206caf1b"
+    }
+  ]
+}

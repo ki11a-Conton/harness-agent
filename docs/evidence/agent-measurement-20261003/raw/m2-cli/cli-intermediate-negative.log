@@ -1,0 +1,71 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-agent-measurement
+
+ ✓ apps/cli/src/path-scoped-instructions.test.ts (10 tests) 789ms
+     ✓ executes the actual AB/BA paired engine twice with fixed inputs and independent content verification  391ms
+ ✓ apps/cli/src/diagnostic-first-repair.test.ts (10 tests) 5353ms
+     ✓ gets actual assertion diagnostics after exit 1, repairs, reruns the same command, then passes the original gate  370ms
+     ✓ gets actual syntax diagnostics after exit 1, repairs, reruns the same command, then passes the original gate  326ms
+     ✓ bounds repeated identical failures with existing Runtime limits  2373ms
+     ✓ executes independent S1 through the existing identity-bound AB/BA paired engine  1479ms
+ ❯ apps/cli/src/task-scoped-skills.test.ts (8 tests | 1 failed) 1344ms
+     ✓ registers one default-off delta with the exact installed selector policy 5ms
+     ✓ admits the relevant body at 8k, preserves tools/task/verifier and binds evidence to actual requests  313ms
+     ✓ reduces 100-skill system bytes by at least 90% with the same model task and tool schemas  303ms
+     ✓ keeps unknown fallback and skill-free cases unactivated 51ms
+     ✓ does not activate denied, unavailable-tool or budget-dropped bodies 58ms
+     × binds concurrent delegated goals to their own frozen skill selection and request 59ms
+     ✓ accepts the candidate through CLI paired dry-run with zero provider calls 17ms
+     ✓ executes AB/BA through the real paired engine with independent verification and no partial pairs  537ms
+ ✓ packages/evaluation/src/arm-factory.test.ts (18 tests) 12ms
+ ✓ packages/evaluation/src/mechanism-contract.test.ts (9 tests) 12ms
+ ✓ packages/evaluation/src/activation-evidence-execution.test.ts (9 tests) 8ms
+ ✓ packages/evaluation/src/activation-evidence.test.ts (13 tests) 6ms
+ ✓ packages/evaluation/src/candidate-registry.test.ts (9 tests) 10ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/cli/src/task-scoped-skills.test.ts > M2 CLI task-scoped skill challenger > binds concurrent delegated goals to their own frozen skill selection and request
+AssertionError: expected [ …(3) ] to deeply equal [ ObjectContaining{…} ]
+
+- Expected
++ Received
+
+@@ -4,6 +4,20 @@
+      "name": "alpha-specialist",
+      "requiredMcpServers": [],
+      "requiredTools": [],
+      "source": "local-filesystem",
+    },
++   {
++     "bodyHash": "cdcd9a6e3ed06a0e857b52554a7b2663460d93887a1828d1f64c054ba80e9b48",
++     "name": "beta-specialist",
++     "requiredMcpServers": [],
++     "requiredTools": [],
++     "source": "local-filesystem",
++   },
++   {
++     "bodyHash": "5a2b3fef34d787a525c47196ff18cc945858863a14e3d78c8990fb340ead5862",
++     "name": "port-config",
++     "requiredMcpServers": [],
++     "requiredTools": [],
++     "source": "local-filesystem",
++   },
+  ]
+
+ ❯ apps/cli/src/task-scoped-skills.test.ts:162:50
+    160|         stableFingerprint([event.payload.contextMessageIds]) === stabl…
+    161|       expect(matches).toHaveLength(1);
+    162|       expect(matches[0]!.payload.selectedSkills).toEqual([expect.objec…
+       |                                                  ^
+    163|       expect(matches[0]!.payload.admittedBodies).toEqual([expect.objec…
+    164|       const started = committed.find(event => event.type === "model.st…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 7 passed (8)
+      Tests  1 failed | 85 passed (86)
+   Start at  17:10:17
+   Duration  12.53s (transform 2.54s, setup 0ms, import 4.08s, tests 7.53s, environment 1ms)
+

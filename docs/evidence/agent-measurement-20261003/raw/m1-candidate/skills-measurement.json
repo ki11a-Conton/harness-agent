@@ -1,0 +1,1669 @@
+{
+  "schema": "agent-layer-measurement.v1",
+  "sourceSha": "bd7c4371fb849b23ce508b3d5e4ae79baabc1449",
+  "dirty": true,
+  "sourceFingerprints": {
+    "packages/harness/src/create-harness.ts": "548e5e2fc76e7542c2ac53ef6fccf68530dded6c7522d12a4315d4836a3c12c9",
+    "packages/harness/src/skill-context.ts": "feeede6c3430ee53154aad9fae2f526a096e119aa56d729bd1cf2d0e3d9627f6",
+    "packages/core/src/runtime/context-controller.ts": "288b09e4e40e7524446e8397ad352b158d264c4f8bb20974432574442a6b1514",
+    "packages/core/src/runtime/runtime.ts": "0ff74c7f2cefded83e27403f87e48adfd7f6b726c7b350aafe7f35aa24bf9682",
+    "scripts/research/agent-measurement-20261003/skill-admission.mjs": "a4b8c1219324132a3f5551f540714eae38ad57246785ab055a34b1aea5c3c26b"
+  },
+  "node": "v24.19.0",
+  "platform": "linux",
+  "fixtureRoot": "/tmp/skill-context-measurement-6fsQNl",
+  "fixtureHashes": {
+    "weather-00": "cf89e14741450b3990cec35db0ab1584f0a8aa519c9e4fbbd9a437533cbf1c2f",
+    "weather-01": "924c6e57844b9de2c14aaddb1c1935ecc21f7d30a96757ef5ac62063b1e2551c",
+    "weather-02": "fcbd584971bf0230af649b631a7e36ebfea6d3f2538be7bc2018edcaf2caa9c7",
+    "weather-03": "bfd5373786c17ac5c776be2b8ae386fa3b7c34840225212bbfedd01df19250b8",
+    "weather-04": "7a58fd9406b18b7571e40577980c52e5e3709742fe77844f80b10f6f1b80d0f7",
+    "weather-05": "3925cbda59ed4a5ed39768bd633399bc5256f46fcdabea035420c564ab6c40ab",
+    "weather-06": "a8c8637599e464188c404b9b6924a927c2920586dfae3669a25a966444bad1e7",
+    "weather-07": "44dadb01bfb3b3e46d9d8d09981bd934ec3e97c5b8891b2a8f83b51b9cd371ae",
+    "weather-08": "8ba1922bf92483fd0d3131f70690d8eab1d0b06b396dd78ed6ba6f66ee429ee1",
+    "weather-09": "7dc2a85f97a9986d9aeef84082a055de584357984001a3ceb4a5f200785bfcff",
+    "weather-10": "c2ebd9d2268a628891ceeef7e591a2b76d487569b5e01754b6bbb21380c14139",
+    "weather-11": "a280ba6a7be3a3739fabd68314d27f9086ad12fe8d53462a7341f976c6d47ea4",
+    "weather-12": "1407cadd7dfc938d8ed487727a8ce1fdbd129a6b894bbb9abb895f0184e2d291",
+    "weather-13": "57a35d635e481b7da1061fa77811d3552dc3b3805d12266628032cc0d784d680",
+    "weather-14": "c426cd91df41490837c37f0c2da900ce6e6124186889b7ad894c6c57ad6baac8",
+    "weather-15": "54adbe178287d0051035b2645e34dae8933a3605647f648917ccf126a65a7f8b",
+    "weather-16": "9de55198fc063339997666291f7919b7f2b01397626f06ef5767fc2a501a9517",
+    "weather-17": "b7480186c8e97764f1e90806d07d12a559bd3ec67b063319dc61e8d0406337b4",
+    "weather-18": "d2e98317a2a51a790250ac403d04516d4473ab5653d6680f0f8f6f7585ad6e36",
+    "weather-19": "fc3d0836528466b623580215b47f933c2e727d71f41a2d00aff73ffae1e9d56e",
+    "zz-port-config": "81cc233b0bc7ce19d9b17bfc222402edb6542daf7b131a1bc5caa52df18db7a8"
+  },
+  "checkerSha256": "00b049476ba72bf3fa0a53443c07a7bcb364dcb8fed4a3bc3a8c276ea17667fe",
+  "provider": "offline-measurement",
+  "realModelQuality": "NOT_RUN",
+  "paidCalls": 0,
+  "goal": "repair port config",
+  "admissionTruthPass": true,
+  "verificationPass": true,
+  "runs": [
+    {
+      "arm": "default",
+      "repetition": 0,
+      "durationMs": 204.21250200000003,
+      "status": "completed",
+      "terminationReason": "verified_complete",
+      "requestCount": 3,
+      "requests": [
+        {
+          "step": 0,
+          "systemBytes": 18759,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 4,
+          "portBody": false,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        },
+        {
+          "step": 1,
+          "systemBytes": 18759,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 4,
+          "portBody": false,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        },
+        {
+          "step": 2,
+          "systemBytes": 18759,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 4,
+          "portBody": false,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        }
+      ],
+      "systemBytesTotal": 56277,
+      "toolSchemaBytesTotal": 22200,
+      "toolRequested": [
+        null,
+        null
+      ],
+      "toolCompleted": [
+        {
+          "tool": "read_file",
+          "status": "success"
+        },
+        {
+          "tool": "read_file"
+        },
+        {
+          "tool": "write_file",
+          "status": "success"
+        },
+        {
+          "tool": "write_file"
+        }
+      ],
+      "verificationPassed": true,
+      "targetLedger": {
+        "selectedCount": 0,
+        "loadedCount": 3,
+        "injectedCount": 0,
+        "completedCount": 0,
+        "failedCount": 0,
+        "verificationPassedCount": 0,
+        "verificationFailedCount": 0,
+        "toolCallCount": 0,
+        "tokenCount": 0,
+        "latencyMs": 0,
+        "lastUsedAt": 1791044640303
+      },
+      "contextSelected": [
+        "skill:weather-00",
+        "skill:weather-01",
+        "skill:weather-02",
+        "skill:weather-03",
+        "skill:weather-04",
+        "skill:weather-05",
+        "skill:weather-06",
+        "skill:weather-07",
+        "skill:weather-08",
+        "skill:weather-09",
+        "skill:weather-10",
+        "skill:weather-11",
+        "skill:weather-12",
+        "skill:weather-13",
+        "skill:weather-14",
+        "skill:weather-15",
+        "skill:weather-16",
+        "skill:weather-17",
+        "skill:weather-18",
+        "skill:weather-19",
+        "skill:zz-port-config",
+        "skill-body:weather-00",
+        "skill-body:weather-01",
+        "skill-body:weather-02",
+        "skill-body:weather-03",
+        "skill:weather-00",
+        "skill:weather-01",
+        "skill:weather-02",
+        "skill:weather-03",
+        "skill:weather-04",
+        "skill:weather-05",
+        "skill:weather-06",
+        "skill:weather-07",
+        "skill:weather-08",
+        "skill:weather-09",
+        "skill:weather-10",
+        "skill:weather-11",
+        "skill:weather-12",
+        "skill:weather-13",
+        "skill:weather-14",
+        "skill:weather-15",
+        "skill:weather-16",
+        "skill:weather-17",
+        "skill:weather-18",
+        "skill:weather-19",
+        "skill:zz-port-config",
+        "skill-body:weather-00",
+        "skill-body:weather-01",
+        "skill-body:weather-02",
+        "skill-body:weather-03",
+        "skill:weather-00",
+        "skill:weather-01",
+        "skill:weather-02",
+        "skill:weather-03",
+        "skill:weather-04",
+        "skill:weather-05",
+        "skill:weather-06",
+        "skill:weather-07",
+        "skill:weather-08",
+        "skill:weather-09",
+        "skill:weather-10",
+        "skill:weather-11",
+        "skill:weather-12",
+        "skill:weather-13",
+        "skill:weather-14",
+        "skill:weather-15",
+        "skill:weather-16",
+        "skill:weather-17",
+        "skill:weather-18",
+        "skill:weather-19",
+        "skill:zz-port-config",
+        "skill-body:weather-00",
+        "skill-body:weather-01",
+        "skill-body:weather-02",
+        "skill-body:weather-03"
+      ],
+      "contextDropped": [
+        {
+          "id": "skill-body:weather-04",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-05",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-06",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-07",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-08",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-09",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-10",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-11",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-12",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-13",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-14",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-15",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-16",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-17",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-18",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-19",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:zz-port-config",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-04",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-05",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-06",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-07",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-08",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-09",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-10",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-11",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-12",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-13",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-14",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-15",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-16",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-17",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-18",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-19",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:zz-port-config",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-04",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-05",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-06",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-07",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-08",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-09",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-10",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-11",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-12",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-13",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-14",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-15",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-16",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-17",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-18",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-19",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:zz-port-config",
+          "reason": "budget"
+        }
+      ],
+      "ledgerSkills": 21,
+      "loadedCount": 63,
+      "injectedCount": 12,
+      "tokensAttributed": 11436,
+      "configText": "module.exports = { port: 8080 };\n"
+    },
+    {
+      "arm": "selected",
+      "repetition": 0,
+      "durationMs": 79.057414,
+      "status": "completed",
+      "terminationReason": "verified_complete",
+      "requestCount": 3,
+      "requests": [
+        {
+          "step": 0,
+          "systemBytes": 5143,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 0,
+          "portBody": true,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        },
+        {
+          "step": 1,
+          "systemBytes": 5224,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 0,
+          "portBody": true,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        },
+        {
+          "step": 2,
+          "systemBytes": 5353,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 0,
+          "portBody": true,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        }
+      ],
+      "systemBytesTotal": 15720,
+      "toolSchemaBytesTotal": 22200,
+      "toolRequested": [
+        null,
+        null
+      ],
+      "toolCompleted": [
+        {
+          "tool": "read_file",
+          "status": "success"
+        },
+        {
+          "tool": "read_file"
+        },
+        {
+          "tool": "write_file",
+          "status": "success"
+        },
+        {
+          "tool": "write_file"
+        }
+      ],
+      "verificationPassed": true,
+      "targetLedger": {
+        "selectedCount": 0,
+        "loadedCount": 3,
+        "injectedCount": 3,
+        "completedCount": 1,
+        "failedCount": 0,
+        "verificationPassedCount": 0,
+        "verificationFailedCount": 0,
+        "toolCallCount": 0,
+        "tokenCount": 3030,
+        "latencyMs": 0,
+        "lastUsedAt": 1791044640450
+      },
+      "contextSelected": [
+        "skill:zz-port-config",
+        "skill-body:zz-port-config",
+        "skill:zz-port-config",
+        "skill-body:zz-port-config",
+        "skill:zz-port-config",
+        "skill-body:zz-port-config"
+      ],
+      "contextDropped": [],
+      "ledgerSkills": 1,
+      "loadedCount": 3,
+      "injectedCount": 3,
+      "tokensAttributed": 3030,
+      "configText": "module.exports = { port: 8080 };\n"
+    },
+    {
+      "arm": "selected",
+      "repetition": 1,
+      "durationMs": 69.53795300000002,
+      "status": "completed",
+      "terminationReason": "verified_complete",
+      "requestCount": 3,
+      "requests": [
+        {
+          "step": 0,
+          "systemBytes": 5143,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 0,
+          "portBody": true,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        },
+        {
+          "step": 1,
+          "systemBytes": 5224,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 0,
+          "portBody": true,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        },
+        {
+          "step": 2,
+          "systemBytes": 5353,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 0,
+          "portBody": true,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        }
+      ],
+      "systemBytesTotal": 15720,
+      "toolSchemaBytesTotal": 22200,
+      "toolRequested": [
+        null,
+        null
+      ],
+      "toolCompleted": [
+        {
+          "tool": "read_file",
+          "status": "success"
+        },
+        {
+          "tool": "read_file"
+        },
+        {
+          "tool": "write_file",
+          "status": "success"
+        },
+        {
+          "tool": "write_file"
+        }
+      ],
+      "verificationPassed": true,
+      "targetLedger": {
+        "selectedCount": 0,
+        "loadedCount": 3,
+        "injectedCount": 3,
+        "completedCount": 1,
+        "failedCount": 0,
+        "verificationPassedCount": 0,
+        "verificationFailedCount": 0,
+        "toolCallCount": 0,
+        "tokenCount": 3030,
+        "latencyMs": 0,
+        "lastUsedAt": 1791044640521
+      },
+      "contextSelected": [
+        "skill:zz-port-config",
+        "skill-body:zz-port-config",
+        "skill:zz-port-config",
+        "skill-body:zz-port-config",
+        "skill:zz-port-config",
+        "skill-body:zz-port-config"
+      ],
+      "contextDropped": [],
+      "ledgerSkills": 1,
+      "loadedCount": 3,
+      "injectedCount": 3,
+      "tokensAttributed": 3030,
+      "configText": "module.exports = { port: 8080 };\n"
+    },
+    {
+      "arm": "default",
+      "repetition": 1,
+      "durationMs": 122.93568100000005,
+      "status": "completed",
+      "terminationReason": "verified_complete",
+      "requestCount": 3,
+      "requests": [
+        {
+          "step": 0,
+          "systemBytes": 18759,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 4,
+          "portBody": false,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        },
+        {
+          "step": 1,
+          "systemBytes": 18759,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 4,
+          "portBody": false,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        },
+        {
+          "step": 2,
+          "systemBytes": 18759,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 4,
+          "portBody": false,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        }
+      ],
+      "systemBytesTotal": 56277,
+      "toolSchemaBytesTotal": 22200,
+      "toolRequested": [
+        null,
+        null
+      ],
+      "toolCompleted": [
+        {
+          "tool": "read_file",
+          "status": "success"
+        },
+        {
+          "tool": "read_file"
+        },
+        {
+          "tool": "write_file",
+          "status": "success"
+        },
+        {
+          "tool": "write_file"
+        }
+      ],
+      "verificationPassed": true,
+      "targetLedger": {
+        "selectedCount": 0,
+        "loadedCount": 3,
+        "injectedCount": 0,
+        "completedCount": 0,
+        "failedCount": 0,
+        "verificationPassedCount": 0,
+        "verificationFailedCount": 0,
+        "toolCallCount": 0,
+        "tokenCount": 0,
+        "latencyMs": 0,
+        "lastUsedAt": 1791044640595
+      },
+      "contextSelected": [
+        "skill:weather-00",
+        "skill:weather-01",
+        "skill:weather-02",
+        "skill:weather-03",
+        "skill:weather-04",
+        "skill:weather-05",
+        "skill:weather-06",
+        "skill:weather-07",
+        "skill:weather-08",
+        "skill:weather-09",
+        "skill:weather-10",
+        "skill:weather-11",
+        "skill:weather-12",
+        "skill:weather-13",
+        "skill:weather-14",
+        "skill:weather-15",
+        "skill:weather-16",
+        "skill:weather-17",
+        "skill:weather-18",
+        "skill:weather-19",
+        "skill:zz-port-config",
+        "skill-body:weather-00",
+        "skill-body:weather-01",
+        "skill-body:weather-02",
+        "skill-body:weather-03",
+        "skill:weather-00",
+        "skill:weather-01",
+        "skill:weather-02",
+        "skill:weather-03",
+        "skill:weather-04",
+        "skill:weather-05",
+        "skill:weather-06",
+        "skill:weather-07",
+        "skill:weather-08",
+        "skill:weather-09",
+        "skill:weather-10",
+        "skill:weather-11",
+        "skill:weather-12",
+        "skill:weather-13",
+        "skill:weather-14",
+        "skill:weather-15",
+        "skill:weather-16",
+        "skill:weather-17",
+        "skill:weather-18",
+        "skill:weather-19",
+        "skill:zz-port-config",
+        "skill-body:weather-00",
+        "skill-body:weather-01",
+        "skill-body:weather-02",
+        "skill-body:weather-03",
+        "skill:weather-00",
+        "skill:weather-01",
+        "skill:weather-02",
+        "skill:weather-03",
+        "skill:weather-04",
+        "skill:weather-05",
+        "skill:weather-06",
+        "skill:weather-07",
+        "skill:weather-08",
+        "skill:weather-09",
+        "skill:weather-10",
+        "skill:weather-11",
+        "skill:weather-12",
+        "skill:weather-13",
+        "skill:weather-14",
+        "skill:weather-15",
+        "skill:weather-16",
+        "skill:weather-17",
+        "skill:weather-18",
+        "skill:weather-19",
+        "skill:zz-port-config",
+        "skill-body:weather-00",
+        "skill-body:weather-01",
+        "skill-body:weather-02",
+        "skill-body:weather-03"
+      ],
+      "contextDropped": [
+        {
+          "id": "skill-body:weather-04",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-05",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-06",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-07",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-08",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-09",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-10",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-11",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-12",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-13",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-14",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-15",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-16",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-17",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-18",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-19",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:zz-port-config",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-04",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-05",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-06",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-07",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-08",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-09",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-10",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-11",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-12",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-13",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-14",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-15",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-16",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-17",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-18",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-19",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:zz-port-config",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-04",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-05",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-06",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-07",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-08",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-09",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-10",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-11",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-12",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-13",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-14",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-15",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-16",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-17",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-18",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-19",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:zz-port-config",
+          "reason": "budget"
+        }
+      ],
+      "ledgerSkills": 21,
+      "loadedCount": 63,
+      "injectedCount": 12,
+      "tokensAttributed": 11436,
+      "configText": "module.exports = { port: 8080 };\n"
+    },
+    {
+      "arm": "default",
+      "repetition": 2,
+      "durationMs": 131.202767,
+      "status": "completed",
+      "terminationReason": "verified_complete",
+      "requestCount": 3,
+      "requests": [
+        {
+          "step": 0,
+          "systemBytes": 18759,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 4,
+          "portBody": false,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        },
+        {
+          "step": 1,
+          "systemBytes": 18759,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 4,
+          "portBody": false,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        },
+        {
+          "step": 2,
+          "systemBytes": 18759,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 4,
+          "portBody": false,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        }
+      ],
+      "systemBytesTotal": 56277,
+      "toolSchemaBytesTotal": 22200,
+      "toolRequested": [
+        null,
+        null
+      ],
+      "toolCompleted": [
+        {
+          "tool": "read_file",
+          "status": "success"
+        },
+        {
+          "tool": "read_file"
+        },
+        {
+          "tool": "write_file",
+          "status": "success"
+        },
+        {
+          "tool": "write_file"
+        }
+      ],
+      "verificationPassed": true,
+      "targetLedger": {
+        "selectedCount": 0,
+        "loadedCount": 3,
+        "injectedCount": 0,
+        "completedCount": 0,
+        "failedCount": 0,
+        "verificationPassedCount": 0,
+        "verificationFailedCount": 0,
+        "toolCallCount": 0,
+        "tokenCount": 0,
+        "latencyMs": 0,
+        "lastUsedAt": 1791044640729
+      },
+      "contextSelected": [
+        "skill:weather-00",
+        "skill:weather-01",
+        "skill:weather-02",
+        "skill:weather-03",
+        "skill:weather-04",
+        "skill:weather-05",
+        "skill:weather-06",
+        "skill:weather-07",
+        "skill:weather-08",
+        "skill:weather-09",
+        "skill:weather-10",
+        "skill:weather-11",
+        "skill:weather-12",
+        "skill:weather-13",
+        "skill:weather-14",
+        "skill:weather-15",
+        "skill:weather-16",
+        "skill:weather-17",
+        "skill:weather-18",
+        "skill:weather-19",
+        "skill:zz-port-config",
+        "skill-body:weather-00",
+        "skill-body:weather-01",
+        "skill-body:weather-02",
+        "skill-body:weather-03",
+        "skill:weather-00",
+        "skill:weather-01",
+        "skill:weather-02",
+        "skill:weather-03",
+        "skill:weather-04",
+        "skill:weather-05",
+        "skill:weather-06",
+        "skill:weather-07",
+        "skill:weather-08",
+        "skill:weather-09",
+        "skill:weather-10",
+        "skill:weather-11",
+        "skill:weather-12",
+        "skill:weather-13",
+        "skill:weather-14",
+        "skill:weather-15",
+        "skill:weather-16",
+        "skill:weather-17",
+        "skill:weather-18",
+        "skill:weather-19",
+        "skill:zz-port-config",
+        "skill-body:weather-00",
+        "skill-body:weather-01",
+        "skill-body:weather-02",
+        "skill-body:weather-03",
+        "skill:weather-00",
+        "skill:weather-01",
+        "skill:weather-02",
+        "skill:weather-03",
+        "skill:weather-04",
+        "skill:weather-05",
+        "skill:weather-06",
+        "skill:weather-07",
+        "skill:weather-08",
+        "skill:weather-09",
+        "skill:weather-10",
+        "skill:weather-11",
+        "skill:weather-12",
+        "skill:weather-13",
+        "skill:weather-14",
+        "skill:weather-15",
+        "skill:weather-16",
+        "skill:weather-17",
+        "skill:weather-18",
+        "skill:weather-19",
+        "skill:zz-port-config",
+        "skill-body:weather-00",
+        "skill-body:weather-01",
+        "skill-body:weather-02",
+        "skill-body:weather-03"
+      ],
+      "contextDropped": [
+        {
+          "id": "skill-body:weather-04",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-05",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-06",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-07",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-08",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-09",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-10",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-11",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-12",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-13",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-14",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-15",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-16",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-17",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-18",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-19",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:zz-port-config",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-04",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-05",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-06",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-07",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-08",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-09",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-10",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-11",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-12",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-13",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-14",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-15",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-16",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-17",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-18",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-19",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:zz-port-config",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-04",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-05",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-06",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-07",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-08",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-09",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-10",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-11",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-12",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-13",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-14",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-15",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-16",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-17",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-18",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:weather-19",
+          "reason": "budget"
+        },
+        {
+          "id": "skill-body:zz-port-config",
+          "reason": "budget"
+        }
+      ],
+      "ledgerSkills": 21,
+      "loadedCount": 63,
+      "injectedCount": 12,
+      "tokensAttributed": 11436,
+      "configText": "module.exports = { port: 8080 };\n"
+    },
+    {
+      "arm": "selected",
+      "repetition": 2,
+      "durationMs": 74.86762499999998,
+      "status": "completed",
+      "terminationReason": "verified_complete",
+      "requestCount": 3,
+      "requests": [
+        {
+          "step": 0,
+          "systemBytes": 5143,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 0,
+          "portBody": true,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        },
+        {
+          "step": 1,
+          "systemBytes": 5224,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 0,
+          "portBody": true,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        },
+        {
+          "step": 2,
+          "systemBytes": 5353,
+          "toolSchemaBytes": 7400,
+          "weatherBodies": 0,
+          "portBody": true,
+          "toolNames": [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "search_files",
+            "grep_search",
+            "repo_tree",
+            "symbol_search",
+            "repo_map",
+            "discover_commands",
+            "env_snapshot",
+            "exec",
+            "update_plan"
+          ]
+        }
+      ],
+      "systemBytesTotal": 15720,
+      "toolSchemaBytesTotal": 22200,
+      "toolRequested": [
+        null,
+        null
+      ],
+      "toolCompleted": [
+        {
+          "tool": "read_file",
+          "status": "success"
+        },
+        {
+          "tool": "read_file"
+        },
+        {
+          "tool": "write_file",
+          "status": "success"
+        },
+        {
+          "tool": "write_file"
+        }
+      ],
+      "verificationPassed": true,
+      "targetLedger": {
+        "selectedCount": 0,
+        "loadedCount": 3,
+        "injectedCount": 3,
+        "completedCount": 1,
+        "failedCount": 0,
+        "verificationPassedCount": 0,
+        "verificationFailedCount": 0,
+        "toolCallCount": 0,
+        "tokenCount": 3030,
+        "latencyMs": 0,
+        "lastUsedAt": 1791044640853
+      },
+      "contextSelected": [
+        "skill:zz-port-config",
+        "skill-body:zz-port-config",
+        "skill:zz-port-config",
+        "skill-body:zz-port-config",
+        "skill:zz-port-config",
+        "skill-body:zz-port-config"
+      ],
+      "contextDropped": [],
+      "ledgerSkills": 1,
+      "loadedCount": 3,
+      "injectedCount": 3,
+      "tokensAttributed": 3030,
+      "configText": "module.exports = { port: 8080 };\n"
+    }
+  ],
+  "multilingual": [
+    {
+      "goal": "修复配置端口",
+      "result": {
+        "selected": [
+          {
+            "name": "配置端口",
+            "description": "修复配置端口错误的步骤"
+          },
+          {
+            "name": "数据库备份",
+            "description": "数据库备份和恢复步骤"
+          },
+          {
+            "name": "天气记录",
+            "description": "记录每日天气情况"
+          }
+        ],
+        "excluded": []
+      }
+    },
+    {
+      "goal": "repair port config",
+      "result": {
+        "selected": [],
+        "excluded": [
+          {
+            "name": "配置端口",
+            "description": "修复配置端口错误的步骤"
+          },
+          {
+            "name": "数据库备份",
+            "description": "数据库备份和恢复步骤"
+          },
+          {
+            "name": "天气记录",
+            "description": "记录每日天气情况"
+          }
+        ]
+      }
+    },
+    {
+      "goal": "请修复 config 的端口配置错误",
+      "result": {
+        "selected": [],
+        "excluded": [
+          {
+            "name": "配置端口",
+            "description": "修复配置端口错误的步骤"
+          },
+          {
+            "name": "数据库备份",
+            "description": "数据库备份和恢复步骤"
+          },
+          {
+            "name": "天气记录",
+            "description": "记录每日天气情况"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "caseId": "skills-port-config",
+  "scenario": "rule-tamper",
+  "checkerSha256": "dba93b25b6d9dc14e8cc780b33471d73295205e73d164f65b20f67da358ede31",
+  "status": 1,
+  "signal": null,
+  "error": null,
+  "stdout": "",
+  "stderr": "node:assert:152\n  throw new AssertionError(obj);\n  ^\n\nAssertionError [ERR_ASSERTION]: immutable fixture changed: skills/weather-00/SKILL.md\n+ actual - expected\n\n+ '5c87e52eec5a74aeeeb46336d83cf149f3e0ea2dd599406a9a4016f54381b366'\n- '3d2f00c00391e5ff5a26e45a6ae6e784b4e8212820fe10fc7926c01f47cbf1e5'\n\n    at checkImmutable ([eval]:9:10)\n    at [eval]:11:1\n    at [eval]:16:135\n    at runScriptInThisContext (node:internal/vm:219:10)\n    at node:internal/process/execution:451:12\n    at [eval]-wrapper:6:24\n    at runScriptInContext (node:internal/process/execution:449:60)\n    at evalFunction (node:internal/process/execution:283:30)\n    at evalTypeScript (node:internal/process/execution:295:3)\n    at node:internal/main/eval_string:71:3 {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: '5c87e52eec5a74aeeeb46336d83cf149f3e0ea2dd599406a9a4016f54381b366',\n  expected: '3d2f00c00391e5ff5a26e45a6ae6e784b4e8212820fe10fc7926c01f47cbf1e5',\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+}

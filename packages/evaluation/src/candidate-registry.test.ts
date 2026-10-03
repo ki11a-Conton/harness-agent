@@ -10,6 +10,7 @@ describe("CandidateRegistry (E1-03)", () => {
     const registry = createCandidateRegistry();
     const ids = registry.all().map((c) => c.id);
     expect(ids).toEqual([
+      "task_scoped_skills_v1",
       "context_pipeline_v5",
       "tool_selector_deferred_schema",
       "memory_retrieval",

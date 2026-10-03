@@ -85,7 +85,7 @@ export interface ContextControllerDeps {
   failAt: (point: FaultPoint, ctx: FaultPointContext) => Promise<void>;
   context?: { pipeline: ContextPipeline; budget: ContextBudget; instructionOpts?: InstructionDiscoveryOptions };
   skills?: () => Skill[] | SkillDiscovery | Promise<Skill[] | SkillDiscovery>;
-  skillSelector?: (entries: SkillIndexEntry[]) => SkillIndexEntry[];
+  skillSelector?: (entries: SkillIndexEntry[], context: import("@ar/contracts").SkillSelectionContext) => SkillIndexEntry[];
   /** P2-8: loads the body of the skills selected by `skillSelector` as
    *  semi-trusted context blocks (progressive disclosure: index → selection
    *  → body load → context). Receives the turn identity and selected names;
@@ -97,6 +97,11 @@ export interface ContextControllerDeps {
     names: string[];
     skills?: readonly Skill[];
   }) => Promise<ContextBlock[]>;
+  onSkillBodiesAdmitted?: (input: {
+    sessionId: SessionId;
+    turnId: TurnId;
+    blocks: readonly ContextBlock[];
+  }) => Promise<void>;
   recovery?: RecoveryPolicy;
   compactCounter: { value: number };
   checkpoint: (
@@ -163,6 +168,7 @@ export class ContextController {
     // host runs without a context pipeline.
     let skillSnapshotEntries: import("@ar/contracts").SkillSnapshot["selected"] | undefined;
     let instructionSources: readonly import("@ar/contracts").InstructionSource[] | undefined;
+    let admittedSkillBodies: readonly ContextBlock[] = [];
 
         if (this.deps.context !== undefined) {
           // Task 3: skill index — awaited once per build; provider errors
@@ -183,6 +189,11 @@ export class ContextController {
                     name: skill.manifest.name,
                     description: skill.manifest.description ?? "",
                   })),
+                  {
+                    goal: activeUsers.length > 0 ? activeUsers.map((message) => message.content).join("\n") : working.goal,
+                    sessionId,
+                    turnId,
+                  },
                 )
               : skills?.map((skill) => ({
                   name: skill.manifest.name,
@@ -247,6 +258,8 @@ export class ContextController {
             ...(selectedSkills.length > 0 ? { skills: selectedSkills } : {}),
           });
           if (this.deps.skillBodyBlocks !== undefined) {
+            const loadedIds = new Set(skillBodyBlocks.map((block) => block.id));
+            admittedSkillBodies = built.blocks.filter((block) => block.source === "skill" && loadedIds.has(block.id));
             // The step witnesses the body actually admitted to model context,
             // including any bounded rendering, rather than a discovery-time
             // body that may have changed or been denied before load.
@@ -450,6 +463,19 @@ export class ContextController {
             }
           }
         }
+
+    // Feedback is based on final blocks, after protected-context overflow
+    // checks. An abort observed before this hook admits nothing for the
+    // cancelled step. Once feedback begins, host writes are awaited rather
+    // than raced or detached; this metric is admission, not a provider call.
+    if (ctx.signal.aborted) {
+      return { action: "finish", outcome: await this.deps.finishTurn(
+        ctx, "cancelled", state, working, undefined, "cancelled", toolLedger,
+      ) };
+    }
+    if (this.deps.onSkillBodiesAdmitted !== undefined && admittedSkillBodies.length > 0) {
+      await this.deps.onSkillBodiesAdmitted({ sessionId, turnId, blocks: admittedSkillBodies });
+    }
 
     return {
       action: "proceed",

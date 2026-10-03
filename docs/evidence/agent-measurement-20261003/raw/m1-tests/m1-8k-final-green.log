@@ -1,0 +1,214 @@
+{
+  "sourceSha": "bd7c4371fb849b23ce508b3d5e4ae79baabc1449",
+  "dirty": true,
+  "admissionTruthPass": true,
+  "verificationPass": true,
+  "metrics": [
+    {
+      "arm": "default",
+      "repetition": 0,
+      "status": "completed",
+      "verificationPassed": true,
+      "systemBytesTotal": 56277,
+      "loadedCount": 63,
+      "injectedCount": 12,
+      "tokensAttributed": 11436,
+      "actualBodyCount": 12,
+      "targetLedger": {
+        "selectedCount": 0,
+        "loadedCount": 3,
+        "injectedCount": 0,
+        "completedCount": 0,
+        "failedCount": 0,
+        "verificationPassedCount": 0,
+        "verificationFailedCount": 0,
+        "toolCallCount": 0,
+        "tokenCount": 0,
+        "latencyMs": 0,
+        "lastUsedAt": 1791044640303
+      }
+    },
+    {
+      "arm": "selected",
+      "repetition": 0,
+      "status": "completed",
+      "verificationPassed": true,
+      "systemBytesTotal": 15720,
+      "loadedCount": 3,
+      "injectedCount": 3,
+      "tokensAttributed": 3030,
+      "actualBodyCount": 3,
+      "targetLedger": {
+        "selectedCount": 0,
+        "loadedCount": 3,
+        "injectedCount": 3,
+        "completedCount": 1,
+        "failedCount": 0,
+        "verificationPassedCount": 0,
+        "verificationFailedCount": 0,
+        "toolCallCount": 0,
+        "tokenCount": 3030,
+        "latencyMs": 0,
+        "lastUsedAt": 1791044640450
+      }
+    },
+    {
+      "arm": "selected",
+      "repetition": 1,
+      "status": "completed",
+      "verificationPassed": true,
+      "systemBytesTotal": 15720,
+      "loadedCount": 3,
+      "injectedCount": 3,
+      "tokensAttributed": 3030,
+      "actualBodyCount": 3,
+      "targetLedger": {
+        "selectedCount": 0,
+        "loadedCount": 3,
+        "injectedCount": 3,
+        "completedCount": 1,
+        "failedCount": 0,
+        "verificationPassedCount": 0,
+        "verificationFailedCount": 0,
+        "toolCallCount": 0,
+        "tokenCount": 3030,
+        "latencyMs": 0,
+        "lastUsedAt": 1791044640521
+      }
+    },
+    {
+      "arm": "default",
+      "repetition": 1,
+      "status": "completed",
+      "verificationPassed": true,
+      "systemBytesTotal": 56277,
+      "loadedCount": 63,
+      "injectedCount": 12,
+      "tokensAttributed": 11436,
+      "actualBodyCount": 12,
+      "targetLedger": {
+        "selectedCount": 0,
+        "loadedCount": 3,
+        "injectedCount": 0,
+        "completedCount": 0,
+        "failedCount": 0,
+        "verificationPassedCount": 0,
+        "verificationFailedCount": 0,
+        "toolCallCount": 0,
+        "tokenCount": 0,
+        "latencyMs": 0,
+        "lastUsedAt": 1791044640595
+      }
+    },
+    {
+      "arm": "default",
+      "repetition": 2,
+      "status": "completed",
+      "verificationPassed": true,
+      "systemBytesTotal": 56277,
+      "loadedCount": 63,
+      "injectedCount": 12,
+      "tokensAttributed": 11436,
+      "actualBodyCount": 12,
+      "targetLedger": {
+        "selectedCount": 0,
+        "loadedCount": 3,
+        "injectedCount": 0,
+        "completedCount": 0,
+        "failedCount": 0,
+        "verificationPassedCount": 0,
+        "verificationFailedCount": 0,
+        "toolCallCount": 0,
+        "tokenCount": 0,
+        "latencyMs": 0,
+        "lastUsedAt": 1791044640729
+      }
+    },
+    {
+      "arm": "selected",
+      "repetition": 2,
+      "status": "completed",
+      "verificationPassed": true,
+      "systemBytesTotal": 15720,
+      "loadedCount": 3,
+      "injectedCount": 3,
+      "tokensAttributed": 3030,
+      "actualBodyCount": 3,
+      "targetLedger": {
+        "selectedCount": 0,
+        "loadedCount": 3,
+        "injectedCount": 3,
+        "completedCount": 1,
+        "failedCount": 0,
+        "verificationPassedCount": 0,
+        "verificationFailedCount": 0,
+        "toolCallCount": 0,
+        "tokenCount": 3030,
+        "latencyMs": 0,
+        "lastUsedAt": 1791044640853
+      }
+    }
+  ],
+  "multilingual": [
+    {
+      "goal": "修复配置端口",
+      "result": {
+        "selected": [
+          {
+            "name": "配置端口",
+            "description": "修复配置端口错误的步骤"
+          },
+          {
+            "name": "数据库备份",
+            "description": "数据库备份和恢复步骤"
+          },
+          {
+            "name": "天气记录",
+            "description": "记录每日天气情况"
+          }
+        ],
+        "excluded": []
+      }
+    },
+    {
+      "goal": "repair port config",
+      "result": {
+        "selected": [],
+        "excluded": [
+          {
+            "name": "配置端口",
+            "description": "修复配置端口错误的步骤"
+          },
+          {
+            "name": "数据库备份",
+            "description": "数据库备份和恢复步骤"
+          },
+          {
+            "name": "天气记录",
+            "description": "记录每日天气情况"
+          }
+        ]
+      }
+    },
+    {
+      "goal": "请修复 config 的端口配置错误",
+      "result": {
+        "selected": [],
+        "excluded": [
+          {
+            "name": "配置端口",
+            "description": "修复配置端口错误的步骤"
+          },
+          {
+            "name": "数据库备份",
+            "description": "数据库备份和恢复步骤"
+          },
+          {
+            "name": "天气记录",
+            "description": "记录每日天气情况"
+          }
+        ]
+      }
+    }
+  ]
+}

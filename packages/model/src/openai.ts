@@ -63,6 +63,48 @@ const DEFAULT_MODEL = "gpt-4o-mini";
 const DEFAULT_MAX_PROVIDER_RETRIES = 2;
 const DEFAULT_RETRY_DELAY_MS = 200;
 const DEFAULT_REQUEST_TIMEOUT_MS = 120_000;
+
+/** Non-secret transport policy shared by planning and actual clients. */
+export interface OpenAIRequestPolicy {
+  maxProviderRetries: number;
+  retryDelayMs: number;
+  requestTimeoutMs: number;
+}
+
+function isPolicyNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+/** Keep the legacy explicit > environment > default parsing semantics. */
+export function resolveOpenAIRequestPolicy(
+  config: ProviderConfig = {},
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): OpenAIRequestPolicy {
+  const num = (value: unknown, variable: string | undefined, fallback: number): number => {
+    if (isPolicyNumber(value)) return value;
+    if (variable !== undefined) {
+      const parsed = Number(variable);
+      if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    }
+    return fallback;
+  };
+  return {
+    maxProviderRetries: num(config.maxProviderRetries, env.OPENAI_MAX_RETRIES, DEFAULT_MAX_PROVIDER_RETRIES),
+    retryDelayMs: num(config.retryDelayMs, env.OPENAI_RETRY_DELAY_MS, DEFAULT_RETRY_DELAY_MS),
+    requestTimeoutMs: num(config.requestTimeoutMs, env.OPENAI_REQUEST_TIMEOUT_MS, DEFAULT_REQUEST_TIMEOUT_MS),
+  };
+}
+
+/** A confirmed benchmark policy wins over subsequent client config/env reads.
+ * The copied policy carries no endpoint or authentication material. */
+export function withOpenAIRequestPolicy(provider: ModelProvider, policy: Readonly<OpenAIRequestPolicy>): ModelProvider {
+  const frozen = Object.freeze(resolveOpenAIRequestPolicy({ ...policy }, {}));
+  return {
+    id: provider.id,
+    listModels: () => provider.listModels(),
+    createClient: (model, config) => provider.createClient(model, { ...config, ...frozen }),
+  };
+}
 /** Truncation limit for response-body summaries included in error events. */
 const BODY_SUMMARY_LIMIT = 200;
 
@@ -643,13 +685,18 @@ export class OpenAICompatibleProvider implements ModelProvider {
     baseUrl?: string;
     modelId?: string;
   };
+  private readonly requestPolicy?: Readonly<OpenAIRequestPolicy>;
 
   constructor(identity: {
     apiKey?: string;
     baseUrl?: string;
     modelId?: string;
+    requestPolicy?: Readonly<OpenAIRequestPolicy>;
   } = {}) {
     this.identity = identity;
+    if (identity.requestPolicy !== undefined) {
+      this.requestPolicy = Object.freeze(resolveOpenAIRequestPolicy({ ...identity.requestPolicy }, {}));
+    }
   }
 
   async listModels(): Promise<ModelInfo[]> {
@@ -682,18 +729,19 @@ export class OpenAICompatibleProvider implements ModelProvider {
     // the call config or (E4-R83) the provider constructor, and the retry budget
     // via env. Explicit config values win over env vars (tests and callers that
     // pass config keep their behavior).
-    const num = (value: unknown, env: string | undefined, fallback: number): number => {
-      const fromValue = typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
-      if (fromValue !== undefined) return fromValue;
-      if (env !== undefined) {
-        const n = Number(env);
-        if (Number.isFinite(n) && n >= 0) return n;
+    let requestPolicy: OpenAIRequestPolicy;
+    if (this.requestPolicy === undefined) {
+      requestPolicy = resolveOpenAIRequestPolicy(config);
+    } else {
+      // Invalid overrides keep the constructor's frozen fallback, just as
+      // invalid legacy overrides keep the valid env/default value.
+      const frozenConfig: ProviderConfig = { ...this.requestPolicy };
+      for (const key of Object.keys(frozenConfig)) {
+        if (isPolicyNumber(config[key])) frozenConfig[key] = config[key];
       }
-      return fallback;
-    };
-    const maxProviderRetries = num(config.maxProviderRetries, process.env.OPENAI_MAX_RETRIES, DEFAULT_MAX_PROVIDER_RETRIES);
-    const retryDelayMs = num(config.retryDelayMs, process.env.OPENAI_RETRY_DELAY_MS, DEFAULT_RETRY_DELAY_MS);
-    const requestTimeoutMs = num(config.requestTimeoutMs, process.env.OPENAI_REQUEST_TIMEOUT_MS, DEFAULT_REQUEST_TIMEOUT_MS);
+      requestPolicy = resolveOpenAIRequestPolicy(frozenConfig, {});
+    }
+    const { maxProviderRetries, retryDelayMs, requestTimeoutMs } = requestPolicy;
     return {
       generate: (request, signal) =>
         streamChatCompletion(

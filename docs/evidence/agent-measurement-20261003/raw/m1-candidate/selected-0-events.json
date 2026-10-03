@@ -1,0 +1,1609 @@
+[
+  {
+    "id": "event_551ab332-2ec5-48b0-a947-acfe576611d9",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "timestamp": 1791044640375,
+    "type": "session.created",
+    "payload": {
+      "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+      "agentId": "agent_1bfa6c24-65c9-4068-9f5e-445314a49d99"
+    },
+    "sequence": 0,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_7281f4ca-a5e6-4f6c-8776-399a3effa1ef",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640376,
+    "type": "turn.started",
+    "payload": {
+      "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+      "text": "repair port config"
+    },
+    "sequence": 1,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_5b327008-a927-4560-b19a-cc4f90aa68d2",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "sequence": 2,
+    "timestamp": 1791044640383,
+    "type": "context.selected",
+    "payload": {
+      "source": "system",
+      "id": "system-prompt",
+      "priority": 9007199254740991,
+      "tokens": 130
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_b6f49d0d-3d56-4c85-aeaf-d3536d143ea6",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "sequence": 3,
+    "timestamp": 1791044640383,
+    "type": "context.selected",
+    "payload": {
+      "source": "skill",
+      "id": "skill:zz-port-config",
+      "priority": 500,
+      "tokens": 9
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_21c43b0d-7913-4639-bfc7-47573c2661ad",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "sequence": 4,
+    "timestamp": 1791044640383,
+    "type": "context.selected",
+    "payload": {
+      "source": "skill",
+      "id": "skill-body:zz-port-config",
+      "priority": 450,
+      "tokens": 1010
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_1bd817bb-5326-494c-87d8-dd9d2a851747",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640383,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-00",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-00/SKILL.md"
+    },
+    "sequence": 5,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_9b5b9f6d-ead4-4554-a7b7-2842b9ca363a",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640384,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-01",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-01/SKILL.md"
+    },
+    "sequence": 6,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_c51cfd1a-4bc0-467b-956a-0cae3ef39a2d",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640385,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-02",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-02/SKILL.md"
+    },
+    "sequence": 7,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_4c93eabe-1570-43e4-b9d0-84b25631c625",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640385,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-03",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-03/SKILL.md"
+    },
+    "sequence": 8,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_d71eca24-8917-4cf4-8a98-28c1a2ed09d6",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640385,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-04",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-04/SKILL.md"
+    },
+    "sequence": 9,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_94856472-fe9c-4af8-9460-94ad13ce1641",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640385,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-05",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-05/SKILL.md"
+    },
+    "sequence": 10,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_7af2393a-9150-4677-b87a-f2d60b343a36",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640385,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-06",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-06/SKILL.md"
+    },
+    "sequence": 11,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_c04491e8-7501-4d4f-9349-113e56d10a84",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640386,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-07",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-07/SKILL.md"
+    },
+    "sequence": 12,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_e7879a8e-036e-4586-a7b5-8ef6ea01cdf2",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640386,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-08",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-08/SKILL.md"
+    },
+    "sequence": 13,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_623bf587-e676-4473-a86c-f4caba5182f9",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640386,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-09",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-09/SKILL.md"
+    },
+    "sequence": 14,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_ceab48b3-20cb-44bd-ba5e-cbf80590da66",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640386,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-10",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-10/SKILL.md"
+    },
+    "sequence": 15,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_c4a5ab21-7ad6-4f29-ab8f-bfc89189d06d",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640386,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-11",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-11/SKILL.md"
+    },
+    "sequence": 16,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_050045bb-76e5-4c7b-9c48-52473a59dd43",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640387,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-12",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-12/SKILL.md"
+    },
+    "sequence": 17,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_6efddb7c-a7d3-4676-ac63-d24800dc412c",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640387,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-13",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-13/SKILL.md"
+    },
+    "sequence": 18,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_bced0a75-b010-4a47-b586-dbd8787a3d09",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640387,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-14",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-14/SKILL.md"
+    },
+    "sequence": 19,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_bb081d9d-6d27-46b5-90f7-15335d32133d",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640387,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-15",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-15/SKILL.md"
+    },
+    "sequence": 20,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_b33e2dfb-1aad-4abb-a099-708cc9e8ef1f",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640387,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-16",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-16/SKILL.md"
+    },
+    "sequence": 21,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_9d1863f2-37fb-4f15-b647-ed7839d48fcd",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640388,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-17",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-17/SKILL.md"
+    },
+    "sequence": 22,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_b9ea722c-cb97-4998-b30e-cba25e7e9e27",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640388,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-18",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-18/SKILL.md"
+    },
+    "sequence": 23,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_a603aa3f-73de-469f-8833-3706cc23b60e",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640388,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-19",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-19/SKILL.md"
+    },
+    "sequence": 24,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_cdebbb98-6c98-455a-8e14-83b607ae4b3c",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640388,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "zz-port-config",
+      "description": "repair port config",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/zz-port-config/SKILL.md"
+    },
+    "sequence": 25,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_4368dff3-8a24-4492-9bcc-e3f028adebd5",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640388,
+    "type": "context.built",
+    "payload": {
+      "tokens": 1149,
+      "used": 1149,
+      "budget": 8000,
+      "dropped": 0,
+      "compacted": false,
+      "messagesTokens": 13
+    },
+    "sequence": 26,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_182ae79b-9084-429d-825d-93d166371094",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "spanId": "modelcall_1d9eabea-8555-4119-a81a-98c1ebddaac3",
+    "timestamp": 1791044640390,
+    "type": "model.started",
+    "payload": {
+      "callId": "modelcall_1d9eabea-8555-4119-a81a-98c1ebddaac3",
+      "stepId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989:0",
+      "toolRouterFingerprint": "ca0ebb38a3be5d87a9937d67ace0716c3d87948f647fdac76367f62e68a2e09e",
+      "policyFingerprint": "9c8777fa069c9fb1547b1e35832d843aa8057e155fbe93faad29142d8b1c4e43",
+      "environmentFingerprint": "2f80e32b553d7e99d33356d778efc24a081c24e8f7fbcedb36042d4f9ab3a295",
+      "contextFingerprint": "7e93e76001fcf029dc4afbaf4f46a4bba70194afe97ec0f15c272aaef8c30a18",
+      "instructionFingerprint": "8d359cb56f374daf5dbcce9bfa332893c55deca40a3adbfaf545e00f396e3a2d",
+      "contextMessageIds": [
+        "message_7ffc7808-309c-41a5-91e2-6b9dc44357d4"
+      ],
+      "contextBlockIds": [],
+      "skillSnapshotFingerprint": "97689d0902f99a461706882fd5001d17d16239d24ee94dd9fa4004d522533015"
+    },
+    "sequence": 27,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_2528d917-efde-44bf-b5d4-f2cea5dad65e",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640391,
+    "type": "tools.selected",
+    "payload": {
+      "callId": "modelcall_1d9eabea-8555-4119-a81a-98c1ebddaac3",
+      "available": 12,
+      "selected": 12,
+      "dropped": [],
+      "advertisedTokens": 1179
+    },
+    "sequence": 28,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_f6f93f6a-e8f5-4a6b-b87f-55e671143b04",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "spanId": "modelcall_1d9eabea-8555-4119-a81a-98c1ebddaac3",
+    "timestamp": 1791044640392,
+    "type": "model.completed",
+    "payload": {
+      "callId": "modelcall_1d9eabea-8555-4119-a81a-98c1ebddaac3",
+      "finishReason": "tool_calls",
+      "toolCalls": 1,
+      "durationMs": 2,
+      "usage": {
+        "source": "unknown"
+      }
+    },
+    "sequence": 29,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_35dd1f52-ab88-4fef-ae4b-bbd9266c4efd",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "spanId": "read-0",
+    "parentSpanId": "modelcall_1d9eabea-8555-4119-a81a-98c1ebddaac3",
+    "timestamp": 1791044640392,
+    "type": "tool.requested",
+    "payload": {
+      "toolCallId": "read-0",
+      "name": "read_file",
+      "args": {
+        "path": "config.cjs"
+      },
+      "stepId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989:0"
+    },
+    "sequence": 30,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_18d85910-dd94-4f2f-add9-9d4cc5c6b9d5",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "sequence": 31,
+    "timestamp": 1791044640393,
+    "type": "tool.permission_resolved",
+    "payload": {
+      "toolCallId": "read-0",
+      "tool": "read_file",
+      "effect": "allow",
+      "reason": "rule 'anon' (allow) matched"
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_2e923285-3b4a-4d80-81e2-ca802341ef07",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "sequence": 32,
+    "timestamp": 1791044640393,
+    "type": "tool.started",
+    "payload": {
+      "toolCallId": "read-0",
+      "tool": "read_file"
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_2edcfd65-e28c-408c-afca-debe2b29fa06",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "sequence": 33,
+    "timestamp": 1791044640394,
+    "type": "tool.completed",
+    "payload": {
+      "toolCallId": "read-0",
+      "tool": "read_file",
+      "status": "success",
+      "durationMs": 1,
+      "evidence": [
+        {
+          "type": "file",
+          "description": "read_file executed",
+          "source": "/tmp/skill-context-measurement-6fsQNl/selected-0/config.cjs",
+          "timestamp": 1791044640394
+        }
+      ],
+      "outputPreview": "module.exports = { port: 3000 };\n"
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_e7055159-8b72-4a68-8e52-5fc5478b6159",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "spanId": "read-0",
+    "parentSpanId": "modelcall_1d9eabea-8555-4119-a81a-98c1ebddaac3",
+    "timestamp": 1791044640394,
+    "type": "tool.completed",
+    "payload": {
+      "toolCallId": "read-0",
+      "tool": "read_file",
+      "durationMs": 2
+    },
+    "sequence": 34,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_2bd1e2b7-05a4-476e-aeed-8901139bba67",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "sequence": 35,
+    "timestamp": 1791044640397,
+    "type": "context.selected",
+    "payload": {
+      "source": "system",
+      "id": "system-prompt",
+      "priority": 9007199254740991,
+      "tokens": 130
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_4d086c4d-647d-4331-9643-24eb8faf5803",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "sequence": 36,
+    "timestamp": 1791044640397,
+    "type": "context.selected",
+    "payload": {
+      "source": "skill",
+      "id": "skill:zz-port-config",
+      "priority": 500,
+      "tokens": 9
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_fb572db7-8dbf-4767-a866-1dbd34e0a80f",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "sequence": 37,
+    "timestamp": 1791044640397,
+    "type": "context.selected",
+    "payload": {
+      "source": "skill",
+      "id": "skill-body:zz-port-config",
+      "priority": 450,
+      "tokens": 1010
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_6d25be9a-182e-4b31-a651-e97ca375338d",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "sequence": 38,
+    "timestamp": 1791044640397,
+    "type": "context.selected",
+    "payload": {
+      "source": "tool",
+      "id": "tool:read-0",
+      "priority": 0,
+      "tokens": 9
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_fb7e12e3-dc3e-479b-9ced-c862cd388bf4",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640397,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-00",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-00/SKILL.md"
+    },
+    "sequence": 39,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_5db85b7b-2aa6-49f1-9349-fdbc6566d6a6",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640398,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-01",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-01/SKILL.md"
+    },
+    "sequence": 40,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_28abe086-1c0e-4511-8d1a-ea2afd15dbda",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640398,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-02",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-02/SKILL.md"
+    },
+    "sequence": 41,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_50002f97-a89a-42ac-9685-f0254b354f6a",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640398,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-03",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-03/SKILL.md"
+    },
+    "sequence": 42,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_c513d535-00bf-4a22-b108-cdcc6a900db5",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640398,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-04",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-04/SKILL.md"
+    },
+    "sequence": 43,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_9a33e355-f221-4914-9c21-9f6b21c1ebfc",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640398,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-05",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-05/SKILL.md"
+    },
+    "sequence": 44,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_e715acac-774a-40e4-8d37-2ee149319c9e",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640398,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-06",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-06/SKILL.md"
+    },
+    "sequence": 45,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_dcabf840-2281-4220-8927-bcd28b51eb17",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640398,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-07",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-07/SKILL.md"
+    },
+    "sequence": 46,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_f5ba4182-1963-43b2-a16f-8e918fecdc46",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640399,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-08",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-08/SKILL.md"
+    },
+    "sequence": 47,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_c518755c-85ba-44a4-b34e-686ea86d0bd8",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640399,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-09",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-09/SKILL.md"
+    },
+    "sequence": 48,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_2d791310-ad41-4076-9aa8-f8badbac85d0",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640399,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-10",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-10/SKILL.md"
+    },
+    "sequence": 49,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_76927877-e05c-4591-90cd-1b7b7b2769f3",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640399,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-11",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-11/SKILL.md"
+    },
+    "sequence": 50,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_96e20efa-6b5e-4346-8bb1-eca2eb57c530",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640399,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-12",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-12/SKILL.md"
+    },
+    "sequence": 51,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_89751f58-959d-4fd0-9b92-56874fd807ac",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640399,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-13",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-13/SKILL.md"
+    },
+    "sequence": 52,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_80c20297-8f0e-42da-a71f-aef5f9cc47bd",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640399,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-14",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-14/SKILL.md"
+    },
+    "sequence": 53,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_7d69c5eb-fd7a-4944-9691-4cabff9d78ca",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640400,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-15",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-15/SKILL.md"
+    },
+    "sequence": 54,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_99bc3b15-08be-4528-9e27-f98a7499cc34",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640400,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-16",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-16/SKILL.md"
+    },
+    "sequence": 55,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_b08a729e-0d82-4726-946b-53e23df71bc4",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640400,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-17",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-17/SKILL.md"
+    },
+    "sequence": 56,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_430af393-8464-4d18-b707-4829c81a4964",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640400,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-18",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-18/SKILL.md"
+    },
+    "sequence": 57,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_dc8c21f3-d86f-40d0-be18-a0737596892b",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640400,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-19",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-19/SKILL.md"
+    },
+    "sequence": 58,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_46abd4b6-db3e-4d5b-bda4-6316202fdc97",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640400,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "zz-port-config",
+      "description": "repair port config",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/zz-port-config/SKILL.md"
+    },
+    "sequence": 59,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_f8a2bc4f-b124-4539-8a6c-059bd0292458",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640401,
+    "type": "context.built",
+    "payload": {
+      "tokens": 1158,
+      "used": 1158,
+      "budget": 8000,
+      "dropped": 0,
+      "compacted": false,
+      "messagesTokens": 59
+    },
+    "sequence": 60,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_6cac0bb8-4471-4a6f-96bd-7b343157791c",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "spanId": "modelcall_6a2eccf4-1f20-41a4-b145-9eddc4fdffbc",
+    "timestamp": 1791044640402,
+    "type": "model.started",
+    "payload": {
+      "callId": "modelcall_6a2eccf4-1f20-41a4-b145-9eddc4fdffbc",
+      "stepId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989:1",
+      "toolRouterFingerprint": "ca0ebb38a3be5d87a9937d67ace0716c3d87948f647fdac76367f62e68a2e09e",
+      "policyFingerprint": "9c8777fa069c9fb1547b1e35832d843aa8057e155fbe93faad29142d8b1c4e43",
+      "environmentFingerprint": "2f80e32b553d7e99d33356d778efc24a081c24e8f7fbcedb36042d4f9ab3a295",
+      "contextFingerprint": "6614f085ac5e3de229010de91b777c32381f802f527d7129264d6fd04e403f38",
+      "instructionFingerprint": "06925686ca93bf116ba7858715091e35e6faf07dc6bc6e2cf51b9e7ab14e5e0e",
+      "contextMessageIds": [
+        "message_7ffc7808-309c-41a5-91e2-6b9dc44357d4",
+        "message_4ae59f05-4397-4b3e-8030-cd39ce97eb91",
+        "message_e41afb31-bd1b-4b76-89e9-2abb7ecb7462"
+      ],
+      "contextBlockIds": [
+        "tool:read-0"
+      ],
+      "skillSnapshotFingerprint": "97689d0902f99a461706882fd5001d17d16239d24ee94dd9fa4004d522533015"
+    },
+    "sequence": 61,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_edc8f2f7-d136-4092-9d06-defb23e03bd2",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640402,
+    "type": "tools.selected",
+    "payload": {
+      "callId": "modelcall_6a2eccf4-1f20-41a4-b145-9eddc4fdffbc",
+      "available": 12,
+      "selected": 12,
+      "dropped": [],
+      "advertisedTokens": 1179
+    },
+    "sequence": 62,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_e11fac23-5b93-4727-b0de-910d2382a79c",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "spanId": "modelcall_6a2eccf4-1f20-41a4-b145-9eddc4fdffbc",
+    "timestamp": 1791044640403,
+    "type": "model.completed",
+    "payload": {
+      "callId": "modelcall_6a2eccf4-1f20-41a4-b145-9eddc4fdffbc",
+      "finishReason": "tool_calls",
+      "toolCalls": 1,
+      "durationMs": 1,
+      "usage": {
+        "source": "unknown"
+      }
+    },
+    "sequence": 63,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_53fdad9d-31bf-4c58-a2af-3f830d2f8056",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "spanId": "write-0",
+    "parentSpanId": "modelcall_6a2eccf4-1f20-41a4-b145-9eddc4fdffbc",
+    "timestamp": 1791044640403,
+    "type": "tool.requested",
+    "payload": {
+      "toolCallId": "write-0",
+      "name": "write_file",
+      "args": {
+        "path": "config.cjs",
+        "content": "module.exports = { port: 8080 };\n"
+      },
+      "stepId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989:1"
+    },
+    "sequence": 64,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_1aee8a8e-2dde-4b5c-8da2-fc4b001f9430",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "sequence": 65,
+    "timestamp": 1791044640403,
+    "type": "tool.permission_resolved",
+    "payload": {
+      "toolCallId": "write-0",
+      "tool": "write_file",
+      "effect": "allow",
+      "reason": "rule 'anon' (allow) matched"
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_e6d3fa4e-06c2-405e-b1cf-288b4445360c",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "sequence": 66,
+    "timestamp": 1791044640404,
+    "type": "tool.intent_persisted",
+    "payload": {
+      "toolCallId": "write-0",
+      "tool": "write_file",
+      "argsHash": "503814704ded1d994179bb7f26593eb6c7b2e292125268151c507c26fe836219",
+      "sideEffectScope": "filesystem",
+      "idempotent": false,
+      "readOnly": false,
+      "startedAt": 1791044640404,
+      "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+      "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+      "stepId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989:1",
+      "routerFingerprint": "ca0ebb38a3be5d87a9937d67ace0716c3d87948f647fdac76367f62e68a2e09e",
+      "toolBindingFingerprint": "2f84c3153f355b4492349ee93b033041cf7b0ce0535e329f59a660f4885c7f9b"
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_a187613c-4a68-46bd-9189-7c57f00feba5",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "sequence": 67,
+    "timestamp": 1791044640404,
+    "type": "tool.started",
+    "payload": {
+      "toolCallId": "write-0",
+      "tool": "write_file"
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_79141e5b-9f04-4781-86a8-0eeb07676238",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "sequence": 68,
+    "timestamp": 1791044640405,
+    "type": "tool.completed",
+    "payload": {
+      "toolCallId": "write-0",
+      "tool": "write_file",
+      "status": "success",
+      "durationMs": 2,
+      "evidence": [
+        {
+          "type": "file",
+          "description": "wrote 33 bytes",
+          "source": "/tmp/skill-context-measurement-6fsQNl/selected-0/config.cjs",
+          "timestamp": 1791044640404
+        }
+      ],
+      "outputPreview": "{\"path\":\"/tmp/skill-context-measurement-6fsQNl/selected-0/config.cjs\",\"bytes\":33}"
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_1c06307f-38c3-4677-9f6e-8b91644cdccd",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "spanId": "write-0",
+    "parentSpanId": "modelcall_6a2eccf4-1f20-41a4-b145-9eddc4fdffbc",
+    "timestamp": 1791044640405,
+    "type": "tool.completed",
+    "payload": {
+      "toolCallId": "write-0",
+      "tool": "write_file",
+      "durationMs": 2
+    },
+    "sequence": 69,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_61c8ad0e-508f-4abc-a36b-f2635e644491",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640407,
+    "type": "checkpoint.created",
+    "payload": {
+      "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+      "checkpointId": "checkpoint_4589c558-debd-424c-a401-0dbc807026f0",
+      "reason": "tool:completed:write_file",
+      "iteration": 2,
+      "phase": "thinking",
+      "lastEventSequence": 69
+    },
+    "sequence": 70,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_25d553f7-058d-45a9-b2c2-30aa6f813641",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "sequence": 71,
+    "timestamp": 1791044640410,
+    "type": "context.selected",
+    "payload": {
+      "source": "system",
+      "id": "system-prompt",
+      "priority": 9007199254740991,
+      "tokens": 130
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_8353d488-33fa-45d5-af91-eabe55b0b5b2",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "sequence": 72,
+    "timestamp": 1791044640410,
+    "type": "context.selected",
+    "payload": {
+      "source": "skill",
+      "id": "skill:zz-port-config",
+      "priority": 500,
+      "tokens": 9
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_29f29489-eda3-48a1-87d4-325d7113c4da",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "sequence": 73,
+    "timestamp": 1791044640410,
+    "type": "context.selected",
+    "payload": {
+      "source": "skill",
+      "id": "skill-body:zz-port-config",
+      "priority": 450,
+      "tokens": 1010
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_fb861029-5fe9-4a9e-bf0e-659b36313270",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "sequence": 74,
+    "timestamp": 1791044640410,
+    "type": "context.selected",
+    "payload": {
+      "source": "tool",
+      "id": "tool:read-0",
+      "priority": 0,
+      "tokens": 9
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_82f91abb-d6a7-4558-b809-b6959d3c4ea0",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "sequence": 75,
+    "timestamp": 1791044640410,
+    "type": "context.selected",
+    "payload": {
+      "source": "tool",
+      "id": "tool:write-0",
+      "priority": 0,
+      "tokens": 21
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_1301463b-abf7-453d-ba5e-8236c4e6a1f5",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640410,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-00",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-00/SKILL.md"
+    },
+    "sequence": 76,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_c1c68bb1-82b4-4c56-8fbc-588e1abbea8d",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640411,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-01",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-01/SKILL.md"
+    },
+    "sequence": 77,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_06524908-bffe-4369-9f9e-6d897030f0b0",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640411,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-02",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-02/SKILL.md"
+    },
+    "sequence": 78,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_6ecf9b8c-d994-4a73-ba3a-adb00fd28c63",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640411,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-03",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-03/SKILL.md"
+    },
+    "sequence": 79,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_41148a54-001b-49d1-8dd3-761b388ca534",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640411,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-04",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-04/SKILL.md"
+    },
+    "sequence": 80,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_657e8d8b-2f1e-48ef-9388-8abe5674c042",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640411,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-05",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-05/SKILL.md"
+    },
+    "sequence": 81,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_0d001161-d81d-47cd-bf5d-d6ff8b61705c",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640412,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-06",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-06/SKILL.md"
+    },
+    "sequence": 82,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_7e2efdb3-c895-411f-8354-0339aef81c40",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640412,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-07",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-07/SKILL.md"
+    },
+    "sequence": 83,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_068109e5-3b91-46bd-96a7-91f581923a3c",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640412,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-08",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-08/SKILL.md"
+    },
+    "sequence": 84,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_d0766b89-e8c7-4f2d-96af-3fc83d2919f9",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640412,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-09",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-09/SKILL.md"
+    },
+    "sequence": 85,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_c05328c0-f89f-4aa2-a56d-334bf086183a",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640412,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-10",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-10/SKILL.md"
+    },
+    "sequence": 86,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_a24ad222-3b7d-4f99-873b-8e2d688cb10c",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640412,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-11",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-11/SKILL.md"
+    },
+    "sequence": 87,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_2c6b30f2-82bb-4eb4-9dab-6b1ba2741d0d",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640413,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-12",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-12/SKILL.md"
+    },
+    "sequence": 88,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_1bc4469d-2b22-4846-b577-222424ccdbe6",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640413,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-13",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-13/SKILL.md"
+    },
+    "sequence": 89,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_717479fe-c151-43a4-8a53-9b9c65332452",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640413,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-14",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-14/SKILL.md"
+    },
+    "sequence": 90,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_9f3d10d6-80ce-4509-9692-2a5feca2ee92",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640413,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-15",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-15/SKILL.md"
+    },
+    "sequence": 91,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_160d07dd-b518-494f-8b1f-5a232e6e5579",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640413,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-16",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-16/SKILL.md"
+    },
+    "sequence": 92,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_e6753efd-ce45-43fa-adeb-6daa848d0459",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640413,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-17",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-17/SKILL.md"
+    },
+    "sequence": 93,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_288b8cc3-c0fb-4c89-b1b4-96980b638939",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640413,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-18",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-18/SKILL.md"
+    },
+    "sequence": 94,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_3eea083e-ac56-43f9-bdc0-8129f27e0735",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640414,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "weather-19",
+      "description": "weather rainfall storm climate forecasts",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/weather-19/SKILL.md"
+    },
+    "sequence": 95,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_7c8cf1b3-e042-4325-b8fa-e6a2a92cc063",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640414,
+    "type": "skill.discovered",
+    "payload": {
+      "name": "zz-port-config",
+      "description": "repair port config",
+      "path": "/tmp/skill-context-measurement-6fsQNl/skills/zz-port-config/SKILL.md"
+    },
+    "sequence": 96,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_75ad7926-0fa5-44d2-8760-b53c09c543e8",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640414,
+    "type": "context.built",
+    "payload": {
+      "tokens": 1179,
+      "used": 1179,
+      "budget": 8000,
+      "dropped": 0,
+      "compacted": false,
+      "messagesTokens": 128
+    },
+    "sequence": 97,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_193fff03-fc7f-471d-971b-8b7fbf76615e",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "spanId": "modelcall_1ace847a-f2d8-4128-868f-65bc87b0d3b5",
+    "timestamp": 1791044640415,
+    "type": "model.started",
+    "payload": {
+      "callId": "modelcall_1ace847a-f2d8-4128-868f-65bc87b0d3b5",
+      "stepId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989:2",
+      "toolRouterFingerprint": "ca0ebb38a3be5d87a9937d67ace0716c3d87948f647fdac76367f62e68a2e09e",
+      "policyFingerprint": "9c8777fa069c9fb1547b1e35832d843aa8057e155fbe93faad29142d8b1c4e43",
+      "environmentFingerprint": "2f80e32b553d7e99d33356d778efc24a081c24e8f7fbcedb36042d4f9ab3a295",
+      "contextFingerprint": "5305df575eda5b9caec18541e4ab4ff7b7abe1e2afa56abfae6a1514f2367e31",
+      "instructionFingerprint": "cb211cdfdf3042930a9205d1e1e22f8f194f6e5bb11e13950de3eb20796dcba9",
+      "contextMessageIds": [
+        "message_7ffc7808-309c-41a5-91e2-6b9dc44357d4",
+        "message_4ae59f05-4397-4b3e-8030-cd39ce97eb91",
+        "message_e41afb31-bd1b-4b76-89e9-2abb7ecb7462",
+        "message_9122db34-7b53-4c2b-a6d9-25da96a33395",
+        "message_160d2708-6490-46e8-8038-76f642cdacb4"
+      ],
+      "contextBlockIds": [
+        "tool:read-0",
+        "tool:write-0"
+      ],
+      "skillSnapshotFingerprint": "97689d0902f99a461706882fd5001d17d16239d24ee94dd9fa4004d522533015"
+    },
+    "sequence": 98,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_2adce83f-7acc-4821-b383-b57105fa155e",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640416,
+    "type": "tools.selected",
+    "payload": {
+      "callId": "modelcall_1ace847a-f2d8-4128-868f-65bc87b0d3b5",
+      "available": 12,
+      "selected": 12,
+      "dropped": [],
+      "advertisedTokens": 1179
+    },
+    "sequence": 99,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_3590dc51-a8b0-4bf5-b3f7-48fd275ffaa6",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "spanId": "modelcall_1ace847a-f2d8-4128-868f-65bc87b0d3b5",
+    "timestamp": 1791044640416,
+    "type": "model.completed",
+    "payload": {
+      "callId": "modelcall_1ace847a-f2d8-4128-868f-65bc87b0d3b5",
+      "finishReason": "stop",
+      "toolCalls": 0,
+      "durationMs": 1,
+      "usage": {
+        "source": "unknown"
+      }
+    },
+    "sequence": 100,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_193ff940-fcc0-4e27-9838-7b54ce7ee5c9",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "sequence": 101,
+    "timestamp": 1791044640417,
+    "type": "verification.step_started",
+    "payload": {
+      "ref": "verification.step:command:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "kind": "command",
+      "description": "command"
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_86eb9cdd-5cd6-4024-b8c9-4f1ed27e2828",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "sequence": 102,
+    "timestamp": 1791044640446,
+    "type": "verification.step_completed",
+    "payload": {
+      "ref": "verification.step:command:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "kind": "command",
+      "description": "command",
+      "passed": true,
+      "detail": "exit code 0 in 29ms"
+    },
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_6076321a-f6fe-4794-98e2-9dd8765f3251",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640448,
+    "type": "checkpoint.created",
+    "payload": {
+      "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+      "checkpointId": "checkpoint_ed3388e3-406d-4b5c-84b9-2d3e57150d14",
+      "reason": "verification:passed",
+      "iteration": 2,
+      "phase": "thinking",
+      "lastEventSequence": 102
+    },
+    "sequence": 103,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_a11ca32a-9bf4-4110-a80f-b10bb206fd0e",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640449,
+    "type": "verification.completed",
+    "payload": {
+      "passed": true,
+      "durationMs": 32
+    },
+    "sequence": 104,
+    "schemaVersion": 1
+  },
+  {
+    "id": "event_f8a5413a-9a4c-4d52-8fbc-4df099b1b893",
+    "sessionId": "session_2585da86-b7f1-421f-b32e-bce7b4819dca",
+    "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+    "timestamp": 1791044640449,
+    "type": "turn.completed",
+    "payload": {
+      "turnId": "turn_37a44648-56f0-49b4-9949-cf46edd3e989",
+      "status": "completed",
+      "statusDetail": "completed",
+      "terminationReason": "verified_complete",
+      "grade": "verified_complete",
+      "completionEvidence": {
+        "passedSteps": 1,
+        "totalSteps": 1
+      }
+    },
+    "sequence": 105,
+    "schemaVersion": 1
+  }
+]

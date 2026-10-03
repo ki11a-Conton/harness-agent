@@ -48,6 +48,18 @@ export type {
   SkillSelection,
 } from "./selection.js";
 
+export {
+  TASK_SCOPED_SKILLS_STRATEGY_V1,
+  TASK_SCOPED_SKILLS_MAX_RELEVANT_V1,
+  selectTaskScopedSkills,
+  createTaskScopedSkillSelector,
+} from "./task-scoped-selection.js";
+export type {
+  TaskScopedSkillSelectionOptions,
+  TaskScopedSkillSelectionConfig,
+  TaskScopedSkillSelection,
+} from "./task-scoped-selection.js";
+
 // P14-4: skill required-tools capability gate (declared ⊆ host tool policy).
 export { checkSkillRequiredTools, requiredToolsDenial } from "./skill-capability.js";
 export type { SkillRequiredToolsVerdict } from "./skill-capability.js";

@@ -297,7 +297,9 @@ export interface AgentRuntimeDeps {
   /** P2-6: prunes the skill index before injection (index → relevant selection
    *  → body on demand). Receives the metadata rows; returns the subset to
    *  inject. Discovery events still cover every skill. Default: identity. */
-  skillSelector?: (entries: SkillIndexEntry[]) => SkillIndexEntry[];
+  /** An existing one-argument callback remains compatible; the host may use
+   * current user task identity without changing the runtime's default choice. */
+  skillSelector?: (entries: SkillIndexEntry[], context: import("@ar/contracts").SkillSelectionContext) => SkillIndexEntry[];
   /** P23-1: the mutable process tool catalog. READ ONCE at step snapshot
    *  build time to freeze the step's tool world; never consulted mid-step.
    *  (P35-1: the pre-P23 `toolSpecs` advertisement dep is GONE — the only
@@ -411,6 +413,16 @@ export interface AgentRuntimeDeps {
     names: string[];
     skills?: readonly Skill[];
   }) => Promise<ContextBlock[]>;
+  /** Awaited after final context admission and overflow checks. These are
+   *  the skill body blocks retained for this successful context build, not
+   *  discoveries or provider HTTP/retry usage. An abort observed before the
+   *  admission hook receives no callback. Host feedback is awaited through
+   *  completion even if cancellation arrives during a write. */
+  onSkillBodiesAdmitted?: (input: {
+    sessionId: SessionId;
+    turnId: TurnId;
+    blocks: readonly ContextBlock[];
+  }) => Promise<void>;
   /** P3-9: host-provided specialist delegation for adaptive recovery (the
    *  host owns the Delegator and the budget gate). When a tool keeps failing
    *  and the adaptive planner picks delegate_specialist, the host may really
@@ -499,6 +511,7 @@ export class AgentRuntime {
   private readonly adaptiveRecovery?: AdaptiveRecoveryPlanner;
   private readonly skills?: AgentRuntimeDeps["skills"];
   private readonly skillSelector?: AgentRuntimeDeps["skillSelector"];
+  private readonly onSkillBodiesAdmitted?: AgentRuntimeDeps["onSkillBodiesAdmitted"];
   /** P2-8: loads skill bodies for the selected skills (progressive disclosure). */
   private readonly skillBodyBlocks?: AgentRuntimeDeps["skillBodyBlocks"];
   /** P2-2: pre-turn memory retrieval (memory prior blocks + memory.retrieved). */
@@ -598,6 +611,7 @@ export class AgentRuntime {
     this.skills = deps.skills;
     this.skillSelector = deps.skillSelector;
     this.skillBodyBlocks = deps.skillBodyBlocks;
+    this.onSkillBodiesAdmitted = deps.onSkillBodiesAdmitted;
     this.memoryBlocks = deps.memoryBlocks;
     if (deps.memoryRetrievalTimeoutMs !== undefined &&
       (!Number.isFinite(deps.memoryRetrievalTimeoutMs) || deps.memoryRetrievalTimeoutMs < 0)) {
@@ -669,6 +683,7 @@ export class AgentRuntime {
       skills: this.skills,
       skillSelector: this.skillSelector,
       skillBodyBlocks: this.skillBodyBlocks,
+      onSkillBodiesAdmitted: this.onSkillBodiesAdmitted,
       recovery: this.recovery,
       compactCounter: this.compactCounter,
       checkpoint: (ctx, working, state, toolLedger, reason, budgetUsage) =>

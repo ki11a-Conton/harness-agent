@@ -1,0 +1,24 @@
+{
+  "baselineProductionSha": "c31e4a8046f1e22b0da29c9310f5c131c5d9a38f",
+  "formalBaselineTests": {
+    "file": "baseline-red-final.json",
+    "passed": 2,
+    "failed": 10,
+    "total": 12
+  },
+  "historicalIntermediateFixture": {
+    "file": "baseline-red-tests.json",
+    "passed": 1,
+    "failed": 11,
+    "limitation": "Includes incorrect non-OK error event oracle; superseded by baseline-red-final."
+  },
+  "fixtureEvolution": "Root additionally requested invalid explicit config regression after the 12-test baseline; current fixture now 13 tests, not the same fixture bytes as baseline-red-final.",
+  "artifacts": {
+    "native-baseline.log": "eb54003a42d2999132368a566c039e32cd5b8e8ef4497dfeb537f6f70b4379ae",
+    "baseline-red-tests.log": "9de8402f2c9f9545d015d199f8a523f8445f06ca4f03d434e66ee9a3d223fa7b",
+    "baseline-red-tests.json": "6eddfb5c8022b396aec087432e20b0ccaf0ab5f1dbfa6fb57be025271b09617e",
+    "baseline-red-final.log": "18218d26ca8500e143498cf9f2d408a9d164e2b603a2c36b6b3bffff20f384c3",
+    "baseline-red-final.json": "af9039e0a027784d1f9272b97efa8a37b72b6a4e58329fdd531bfb3200e9c0a3",
+    "native-candidate.log": "e6481674ef29969263caa4430abf76f103bb569626f77fbc55214917e13c36a7"
+  }
+}

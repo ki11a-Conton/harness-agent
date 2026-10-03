@@ -62,3 +62,9 @@ packages/tools/src/tools/write-file.ts whitespace=cr-at-eol
 packages/tools/src/transaction.ts whitespace=cr-at-eol
 packages/model/src/openai.ts whitespace=cr-at-eol
 packages/model/src/openai.test.ts whitespace=cr-at-eol
+
+# Measurement receipts are original raw bytes, including reporter whitespace.
+# Keep their SHA-256 stable on Windows; do not reformat generated log output.
+# Source and authored documentation keep the normal whitespace checks.
+docs/evidence/agent-measurement-20261003/raw/** -text
+docs/evidence/agent-measurement-20261003/raw/**/*.log -whitespace

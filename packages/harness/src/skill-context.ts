@@ -139,11 +139,9 @@ export function createSkillBodyBlockProvider(deps: SkillBodyBlockProviderDeps): 
           instructional: false,
           persistable: false,
         });
-        // P2-9: loaded + injected are observable facts of this build.
+        // Loading is preparation. Only the final context admission hook can
+        // establish injection and price the body that actually survived.
         await ledger.apply(name, { kind: "loaded" });
-        await ledger.apply(name, { kind: "injected" });
-        // P6-4: injection cost is a token fact — ROI = outcome per token.
-        await ledger.apply(name, { kind: "tokensUsed", count: blocks[blocks.length - 1]!.tokens });
       }
       return blocks;
     },
@@ -162,6 +160,10 @@ export class SkillEffectivenessLedger {
   private readonly now: () => number;
   private loaded = false;
   private profiles = new Map<string, SkillEffectiveness>();
+  // One ledger is shared by concurrent sessions. Serialize both its initial
+  // load and whole-file writes so an older persistence snapshot cannot
+  // overwrite newer feedback. Each caller still observes its own rejection.
+  private pending: Promise<void> = Promise.resolve();
 
   constructor(dataDir: string, now: () => number = Date.now) {
     this.file = join(dataDir, EFFECTIVENESS_FILE);
@@ -169,28 +171,27 @@ export class SkillEffectivenessLedger {
   }
 
   async apply(name: string, feedback: SkillUseFeedback): Promise<void> {
-    await this.load();
-    const skill = skillShell(name, this.profiles.get(name));
-    const updated = recordSkillEffectiveness(skill, feedback, { at: this.now() });
-    this.profiles.set(name, updated.effectiveness!);
-    await this.persist();
+    await this.enqueue(async () => {
+      await this.load();
+      const skill = skillShell(name, this.profiles.get(name));
+      const updated = recordSkillEffectiveness(skill, feedback, { at: this.now() });
+      this.profiles.set(name, updated.effectiveness!);
+      await this.persist();
+    });
   }
 
   async get(name: string): Promise<SkillEffectiveness | undefined> {
-    await this.load();
-    return this.profiles.get(name);
+    return this.enqueue(async () => { await this.load(); return this.profiles.get(name); });
   }
 
   async list(): Promise<Record<string, SkillEffectiveness>> {
-    await this.load();
-    return Object.fromEntries(this.profiles);
+    return this.enqueue(async () => { await this.load(); return Object.fromEntries(this.profiles); });
   }
 
   /** P6-4: token ROI — completed tasks per 1k injected tokens (0 when no
    *  evidence). Feeds the retrieval self-optimization loop. */
   async roiOf(name: string): Promise<{ tokensInjected: number; tasksCompleted: number; roiPer1k: number }> {
-    await this.load();
-    const profile = this.profiles.get(name);
+    const profile = await this.get(name);
     if (profile === undefined) return { tokensInjected: 0, tasksCompleted: 0, roiPer1k: 0 };
     const tokensInjected = profile.tokenCount;
     const tasksCompleted = profile.completedCount;
@@ -201,16 +202,23 @@ export class SkillEffectivenessLedger {
     };
   }
 
+  private enqueue<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.pending.then(operation);
+    // The caller receives `result`, including failure. The queue tail only
+    // recovers scheduling so a failed write does not poison later operations.
+    this.pending = result.then(() => undefined, () => undefined);
+    return result;
+  }
+
   private async load(): Promise<void> {
     if (this.loaded) return;
-    this.loaded = true;
     let content: string;
     try {
       content = await readFile(this.file, "utf8");
     } catch (err) {
       // P14-6: only the expected "no effectiveness file yet" ENOENT is silent;
       // any other read error is a real failure and propagates.
-      if (isNodeErrorCode(err, "ENOENT")) return;
+      if (isNodeErrorCode(err, "ENOENT")) { this.loaded = true; return; }
       throw err;
     }
     for (const line of content.split("\n")) {
@@ -225,6 +233,7 @@ export class SkillEffectivenessLedger {
         process.stderr.write(`[degraded] skill-ledger.corrupt-line: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
+    this.loaded = true;
   }
 
   private async persist(): Promise<void> {

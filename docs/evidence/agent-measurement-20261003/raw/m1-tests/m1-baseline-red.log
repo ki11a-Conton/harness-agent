@@ -1,0 +1,261 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-admission-baseline
+
+[skill denied] detection=injection target=/tmp/ar-skill-admission-uFwsn0/skills/blocked-injection/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions,extract-system-prompt
+[skill denied] detection=secret target=/tmp/ar-skill-admission-7iImo4/skills/blocked-secret/SKILL.md reasons=openai-key
+[skill denied] detection=required-tools target=/tmp/ar-skill-admission-l3Qwuk/skills/blocked-tools/SKILL.md reasons=required tool not allowed by host policy: unavailable_tool
+ ❯ packages/harness/src/skill-admission.regressions.test.ts (11 tests | 9 failed) 407ms
+     × does not claim injection, tokens or successful use for the relevant body dropped by the real 8k budget 269ms
+     × never attributes denied 'blocked-injection' body to a successful real turn 15ms
+     × never attributes denied 'blocked-secret' body to a successful real turn 17ms
+     × never attributes denied 'blocked-tools' body to a successful real turn 12ms
+     ✓ does not reuse a prior turn's admitted name after that body is deleted 26ms
+     ✓ counts repeated step admission and each failed/completed turn outcome once across concurrent sessions 22ms
+     × does not record admission when protected context overflow prevents any provider request 13ms
+     × abort during body preparation prevents admission and is complete before cancelled ack 11ms
+     × awaits admission feedback before model sampling and terminal completion 15ms
+     × does not overwrite a second mutation with a cold-load snapshot captured before its feedback 2ms
+     × retries a genuine cold-load read failure instead of overwriting restored persisted facts 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/harness/src/skill-admission.regressions.test.ts > M1: actual skill body admission and turn feedback > does not claim injection, tokens or successful use for the relevant body dropped by the real 8k budget
+AssertionError: expected { selectedCount: +0, …(10) } to match object { loadedCount: 3, …(4) }
+(6 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "completedCount": 0,
++   "completedCount": 1,
+    "failedCount": 0,
+-   "injectedCount": 0,
++   "injectedCount": 3,
+    "loadedCount": 3,
+-   "tokenCount": 0,
++   "tokenCount": 3033,
+  }
+
+ ❯ packages/harness/src/skill-admission.regressions.test.ts:63:22
+     61|       expect(p.requests.every((request) => !(request.system ?? "").inc…
+     62|       const target = await harness.skillBodies!.effectivenessOf("zz-po…
+     63|       expect(target).toMatchObject({ loadedCount: 3, injectedCount: 0,…
+       |                      ^
+     64|       const ledger = await harness.skillBodies!.listEffectiveness();
+     65|       const actualBodies = p.requests.reduce((count, request) => count…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  packages/harness/src/skill-admission.regressions.test.ts > M1: actual skill body admission and turn feedback > never attributes denied 'blocked-injection' body to a successful real turn
+AssertionError: expected { selectedCount: +0, …(10) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "completedCount": 1,
+  "failedCount": 0,
+  "injectedCount": 0,
+  "lastUsedAt": 1791044395432,
+  "latencyMs": 0,
+  "loadedCount": 0,
+  "selectedCount": 0,
+  "tokenCount": 0,
+  "toolCallCount": 0,
+  "verificationFailedCount": 0,
+  "verificationPassedCount": 0,
+}
+
+ ❯ packages/harness/src/skill-admission.regressions.test.ts:81:64
+     79|       expect((await turn(harness, f.cwd)).outcome.status).toBe("comple…
+     80|       expect(p.requests[0]?.system).toContain("# Safe reference"); exp…
+     81|       expect(await harness.skillBodies!.effectivenessOf(name)).toBeUnd…
+       |                                                                ^
+     82|       expect(await harness.skillBodies!.effectivenessOf("safe")).toMat…
+     83|     } finally { await harness.close(); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  packages/harness/src/skill-admission.regressions.test.ts > M1: actual skill body admission and turn feedback > never attributes denied 'blocked-secret' body to a successful real turn
+AssertionError: expected { selectedCount: +0, …(10) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "completedCount": 1,
+  "failedCount": 0,
+  "injectedCount": 0,
+  "lastUsedAt": 1791044395449,
+  "latencyMs": 0,
+  "loadedCount": 0,
+  "selectedCount": 0,
+  "tokenCount": 0,
+  "toolCallCount": 0,
+  "verificationFailedCount": 0,
+  "verificationPassedCount": 0,
+}
+
+ ❯ packages/harness/src/skill-admission.regressions.test.ts:81:64
+     79|       expect((await turn(harness, f.cwd)).outcome.status).toBe("comple…
+     80|       expect(p.requests[0]?.system).toContain("# Safe reference"); exp…
+     81|       expect(await harness.skillBodies!.effectivenessOf(name)).toBeUnd…
+       |                                                                ^
+     82|       expect(await harness.skillBodies!.effectivenessOf("safe")).toMat…
+     83|     } finally { await harness.close(); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  packages/harness/src/skill-admission.regressions.test.ts > M1: actual skill body admission and turn feedback > never attributes denied 'blocked-tools' body to a successful real turn
+AssertionError: expected { selectedCount: +0, …(10) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "completedCount": 1,
+  "failedCount": 0,
+  "injectedCount": 0,
+  "lastUsedAt": 1791044395461,
+  "latencyMs": 0,
+  "loadedCount": 0,
+  "selectedCount": 0,
+  "tokenCount": 0,
+  "toolCallCount": 0,
+  "verificationFailedCount": 0,
+  "verificationPassedCount": 0,
+}
+
+ ❯ packages/harness/src/skill-admission.regressions.test.ts:81:64
+     79|       expect((await turn(harness, f.cwd)).outcome.status).toBe("comple…
+     80|       expect(p.requests[0]?.system).toContain("# Safe reference"); exp…
+     81|       expect(await harness.skillBodies!.effectivenessOf(name)).toBeUnd…
+       |                                                                ^
+     82|       expect(await harness.skillBodies!.effectivenessOf("safe")).toMat…
+     83|     } finally { await harness.close(); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  packages/harness/src/skill-admission.regressions.test.ts > M1: actual skill body admission and turn feedback > does not record admission when protected context overflow prevents any provider request
+AssertionError: expected { selectedCount: +0, …(10) } to match object { loadedCount: 1, …(4) }
+(6 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "completedCount": 0,
+-   "failedCount": 0,
+-   "injectedCount": 0,
++   "failedCount": 1,
++   "injectedCount": 1,
+    "loadedCount": 1,
+-   "tokenCount": 0,
++   "tokenCount": 21,
+  }
+
+ ❯ packages/harness/src/skill-admission.regressions.test.ts:116:65
+    114|     try {
+    115|       expect((await turn(harness, f.cwd)).outcome.status).toBe("failed…
+    116|       expect(await harness.skillBodies!.effectivenessOf("one")).toMatc…
+       |                                                                 ^
+    117|     } finally { await harness.close(); }
+    118|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  packages/harness/src/skill-admission.regressions.test.ts > M1: actual skill body admission and turn feedback > abort during body preparation prevents admission and is complete before cancelled ack
+AssertionError: expected [ { messages: [ { …(6) } ], …(2) } ] to have a length of +0 but got 1
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ packages/harness/src/skill-admission.regressions.test.ts:126:147
+    124|     vi.spyOn(harness.skillBodies!, "load").mockImplementation(async (.…
+    125|     try {
+    126|       expect((await turn(harness, f.cwd, "cancelled preparation", unde…
+       |                                                                                                                                                   ^
+    127|       expect(await harness.skillBodies!.effectivenessOf("one")).toMatc…
+    128|     } finally { await harness.close(); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  packages/harness/src/skill-admission.regressions.test.ts > M1: actual skill body admission and turn feedback > awaits admission feedback before model sampling and terminal completion
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ packages/harness/src/skill-admission.regressions.test.ts:139:32
+    137|       const pending = turn(harness, f.cwd);
+    138|       const reachedAdmission = await Promise.race([entered.promise.the…
+    139|       expect(reachedAdmission).toBe(true); expect(p.requests).toHaveLe…
+       |                                ^
+    140|       expect((await pending).outcome.status).toBe("completed"); expect…
+    141|       expect(await new SkillEffectivenessLedger(f.dataDir).get("one"))…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  packages/harness/src/skill-admission.regressions.test.ts > M1: one ledger's concurrent read/mutate/persist boundary > does not overwrite a second mutation with a cold-load snapshot captured before its feedback
+AssertionError: expected { selectedCount: +0, …(10) } to match object { loadedCount: 1, injectedCount: 2 }
+(9 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "injectedCount": 2,
++   "injectedCount": 1,
+    "loadedCount": 1,
+  }
+
+ ❯ packages/harness/src/skill-admission.regressions.test.ts:162:37
+    160|     await new Promise((done) => setImmediate(done)); release.resolve();
+    161|     await Promise.all([first, second]);
+    162|     expect(await ledger.get("one")).toMatchObject({ loadedCount: 1, in…
+       |                                     ^
+    163|     expect(await new SkillEffectivenessLedger(f.dataDir).get("one")).t…
+    164|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+ FAIL  packages/harness/src/skill-admission.regressions.test.ts > M1: one ledger's concurrent read/mutate/persist boundary > retries a genuine cold-load read failure instead of overwriting restored persisted facts
+AssertionError: expected { selectedCount: +0, …(10) } to match object { loadedCount: 1, injectedCount: 1 }
+(9 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "injectedCount": 1,
+-   "loadedCount": 1,
++   "loadedCount": 0,
+  }
+
+ ❯ packages/harness/src/skill-admission.regressions.test.ts:174:37
+    172|     await fs.rmdir(path); await fs.rename(saved, path);
+    173|     await ledger.apply("one", { kind: "injected" });
+    174|     expect(await ledger.get("one")).toMatchObject({ loadedCount: 1, in…
+       |                                     ^
+    175|     expect(await new SkillEffectivenessLedger(f.dataDir).get("one")).t…
+    176|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  9 failed | 2 passed (11)
+   Start at  16:19:52
+   Duration  2.71s (transform 1.76s, setup 0ms, import 2.18s, tests 407ms, environment 0ms)
+
+JSON report written to /workspace/harness-agent/.ci/agent-measurement-20261003/opportunities/m1-baseline-red.json

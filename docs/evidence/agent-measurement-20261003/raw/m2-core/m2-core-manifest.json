@@ -1,0 +1,75 @@
+{
+  "sourceCommit": "bd7c4371fb849b23ce508b3d5e4ae79baabc1449",
+  "sourceDirty": true,
+  "sourceSha256": {
+    "packages/skills/src/task-scoped-selection.ts": "90398b4aee683eb746dc503f9b54a847f89c181ae475dab31029b8c9c375c9be",
+    "packages/skills/src/task-scoped-selection.test.ts": "4ab652ebb516b38cdcc14638dc18a7ef379f10e220c29cc2b8e41f241a385cb4",
+    "packages/skills/src/index.ts": "5c68993cf8ab2b0c7c2c9e45a844b59dd6dbdfcdb8573043a5f916dbd2fef079",
+    "packages/contracts/src/skill.ts": "76589381cdf9c295f29cc92a6f7308c1533a5af15baf1db2c3deae35d6e77dc2",
+    "packages/core/src/runtime/runtime.ts": "b86ca5183801474fd11b1080180918b62b342fd02f3fe4c99b2c514d4f7d98d5",
+    "packages/core/src/runtime/context-controller.ts": "22fe6661072b6674e0ab75a9535a6530de8700cec1a596d6ba858a3d0bda9bfd",
+    "packages/harness/src/config.ts": "8169bbf3aa33c5e1680736eb375118bf5ed397d2e67e6f1849548d3a8617bf46",
+    "packages/harness/src/config-layers.ts": "9cf798b16f72fb471a4e26cb25f6ea9685923bb46590bd865bb54283c679d77f",
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/src/task-scoped-skills.integration.test.ts": "7d3553712757386eef6905c475fa86b1e1d4cba9db6e8a3e215b8e3e0fb5591d",
+    "scripts/research/agent-measurement-20261003/skill-context.mjs": "fcf5dc62512257840426853857d5631e06abc95a2edf1ae7c99a1faa8e3e0251"
+  },
+  "strategy": "task_scoped_skills_v1",
+  "defaultEnabled": false,
+  "legacySelectSkillsChanged": false,
+  "onlyStrategyDelta": "selected skill metadata-name set",
+  "claims": {
+    "realFs": true,
+    "realHarness": true,
+    "actualTools": true,
+    "scriptedModel": true,
+    "paidModelCalls": 0,
+    "liveModelQuality": "NOT_RUN",
+    "promotion": "NOT_RUN"
+  },
+  "baseline": {
+    "commit": "c31e4a8046f1e22b0da29c9310f5c131c5d9a38f",
+    "newRealHarnessFixturePassed": 1,
+    "failed": 9,
+    "collectionErrors": 0,
+    "fixtureSha256": "7d3553712757386eef6905c475fa86b1e1d4cba9db6e8a3e215b8e3e0fb5591d"
+  },
+  "targets": {
+    "passed": 38,
+    "newSelector": 23,
+    "existingSelector": 5,
+    "actualHarness": 10,
+    "typecheckExitCode": 0
+  },
+  "actual100SkillProbe": {
+    "runs": 10,
+    "requests": 20,
+    "readFileToolCalls": 10,
+    "allCompleted": true,
+    "systemBytesMeanBaseline": 241365.5,
+    "systemBytesMeanCandidate": 3333.5,
+    "systemBytesReductionPct": 98.61889955275298,
+    "requestBytesReductionPct": 95.50989961261956,
+    "toolsCount": 12,
+    "toolsBytes": 7400,
+    "targetBodiesCandidatePerRequest": 1,
+    "abBaCompleted": true
+  },
+  "artifactSha256": {
+    "core-harness-target.log": "462f6688cabd7a58265106a7277c4a44874bd012a6927bbe73fcd909e3861815",
+    "core-harness-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "real-harness-baseline-red.log": "58d2106174ddd86f04e810165e04c3a4821f699119df542404dba1bc2641ed9b",
+    "skill-context/baseline-full.json": "65aa0921b201536fd1eb16677f49f25936f70ca70ffdb47b8dfa2ddbf42d2da3",
+    "skill-context/baseline-tight.json": "b4ce8c874c4277e9980745d5b5fed963736fb77ac29b4389ff6c0c7efef301ce",
+    "skill-context/legacy-selector-one.json": "9ec793d288b09258617f38daf25e070761cc4b2f125214ce88b5b130be11af66",
+    "skill-context/paired-ab-baseline.json": "0ce4d454e258a03faf138ecdb2b1a7a25fc10d6a4492d85115614c862fe8ef03",
+    "skill-context/paired-ab-task-scoped.json": "986a63f04a5de192de0112e64941264ef63c1d6a67f6d979e846484a5c16db99",
+    "skill-context/paired-ba-baseline.json": "8f14350a03065a5a41e92615e977b9253da85aa46f63cbc8edef8c47c05c20a5",
+    "skill-context/paired-ba-task-scoped.json": "4e0f5c0b8b12c13a5261eaecdd05f7d25e0a4690b05b446018b200da836f48e6",
+    "skill-context/summary.json": "8b066d2612b096b96a51a7034cf459baf457c7ce1c296d497e7247f61b29a1f5",
+    "skill-context/task-scoped-one-tight.json": "98a356f0f5b1cc3b7829ba33da396eee76bda29c94d1b7e57f14bfd09d03040b",
+    "skill-context/task-scoped-one.json": "8039a314361401dc7321fc0cd412ccca3609eec105563ffe68bb2d8273c9152d",
+    "skill-context/tool-selector.json": "2e7f27c9d4598c5f566c81bf4e78e2a42bbfcf99456c3c5e9320838e4c29d46c"
+  },
+  "remaining": "CLI/CandidateRegistry paired integration is delegated and has its own evidence; full-source freeze and full suite are root-owned."
+}

@@ -28,6 +28,19 @@ export const PATH_SCOPED_INSTRUCTIONS_CONFIG_V1: Readonly<PathScopedInstructions
   maxBytesPerFile: 50_000,
 });
 
+/** M2's sole arm delta. The task comes from the runtime's host goal. */
+export interface TaskScopedSkillsRuntimeConfig {
+  strategy: "task_scoped_skills_v1";
+  maxRelevantSkills: number;
+  requiredSkillNames: readonly string[];
+}
+
+export const TASK_SCOPED_SKILLS_CONFIG_V1: Readonly<TaskScopedSkillsRuntimeConfig> = Object.freeze({
+  strategy: "task_scoped_skills_v1",
+  maxRelevantSkills: 5,
+  requiredSkillNames: Object.freeze([] as string[]),
+});
+
 export interface CandidateRegistration {
   /** Stable candidate id (the single-variable switch name). */
   id: string;
@@ -90,6 +103,14 @@ const BASELINE_CONFIG: Record<string, unknown> = {
 };
 
 const CANDIDATES: CandidateRegistration[] = [
+  {
+    id: "task_scoped_skills_v1",
+    description: "Unicode task-scoped skill selection with explicit/required preservation and unknown-task full-index fallback",
+    status: "experimental",
+    layer: "agent-strategy",
+    enabledPatch: { skillSelection: TASK_SCOPED_SKILLS_CONFIG_V1 },
+    disabledPatch: { skillSelection: undefined },
+  },
   {
     id: "context_pipeline_v5",
     description: "context pipeline V5 (budget + instruction discovery + compaction)",

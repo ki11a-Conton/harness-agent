@@ -80,6 +80,16 @@ export interface ContractEvaluation {
 // ---------------------------------------------------------------------------
 
 const CONTRACTS: Record<string, MechanismContract> = {
+  task_scoped_skills_v1: {
+    schemaVersion: MECHANISM_CONTRACT_SCHEMA_VERSION,
+    candidateId: "task_scoped_skills_v1",
+    modelVisibleSurface: "task-selected safe skill index and admitted skill-body blocks in the actual model request; tool schemas and verifier unchanged",
+    eligibilityRule: "fixed skill fixture with a host task that selects a proper subset and at least one safe admitted body",
+    minEligibleCases: 5,
+    expectedFailureCluster: "context_overflow / verification_failed (applicable skill body displaced by unrelated bodies)",
+    requiredActivationEvents: ["task-scoped-skills-selected"],
+    forbiddenNoOpConditions: ["selector absent from actual context build", "unknown-task full-index fallback reported as activation", "selected body denied or dropped before the request", "tool schemas or verification altered", "fewer tokens substituted for task correctness"],
+  },
   path_scoped_instructions_v1: {
     schemaVersion: MECHANISM_CONTRACT_SCHEMA_VERSION,
     candidateId: "path_scoped_instructions_v1",

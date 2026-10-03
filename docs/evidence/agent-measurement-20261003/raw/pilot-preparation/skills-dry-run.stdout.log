@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "e4-02",
+  "mode": "dry-run",
+  "planDigest": "3491bfe6ce19cb18cb92c6dd2cf289366e6c60339fcb2994b3914488d7cebfeb",
+  "casesDir": "/workspace/harness-agent/.ci/agent-measurement-20261003/pilot/cases/skills",
+  "suite": "regression",
+  "casesTotal": 1,
+  "caseIds": [
+    "skills-port-config"
+  ],
+  "limit": 1,
+  "repeat": 2,
+  "interleave": false,
+  "shuffle": false,
+  "seed": 19,
+  "candidate": "task_scoped_skills_v1",
+  "billingClass": "external-billed",
+  "paidAuthorizationRequired": true,
+  "paidAuthorized": false,
+  "totalLogicalRuns": 4,
+  "estimatedModelCalls": 40,
+  "estimatedTokens": 160000,
+  "estimatedCostUsd": 0.02,
+  "limits": {
+    "maxLogicalRuns": 4,
+    "maxModelCalls": 40,
+    "maxEstimatedTokens": null,
+    "maxEstimatedCostUsd": null
+  },
+  "estimateStatus": "bounded",
+  "isolationStrength": "strong",
+  "promotionEligible": true,
+  "providerCalls": 0,
+  "providerId": "openai",
+  "modelId": "gpt-4o-mini",
+  "endpointIdentity": null,
+  "judgeVersion": "1.0.0",
+  "sourceSha": "bd7c4371fb849b23ce508b3d5e4ae79baabc1449",
+  "treeFingerprint": "40cc04084967951e8c06511881061a9d92e9082f87a516bd2c33a55c71adad58",
+  "decisionPolicy": {
+    "version": "e4-05-policy-v1",
+    "minActivationEligibleCases": 3,
+    "minActivationCoverage": 0.5,
+    "maxVerifiedDrop": 0.05,
+    "minConclusiveNetDelta": 1,
+    "maxTokensDelta": 50000,
+    "securityBreachesAllowed": 0,
+    "minRecoveryRate": null
+  },
+  "thresholdDigest": "844c8db996796df2c88ab4c7f0fec5a106a92f9027933ee2f8b7553c9a7ae8ce",
+  "effectiveModelParams": {
+    "budgetTokens": 89600,
+    "stallPolicy": {
+      "maxRepeatedIdenticalToolCalls": 3,
+      "maxStallRecoveries": 1,
+      "maxPatternStallRecoveries": 1,
+      "enabledStallPatterns": [
+        "alternating_loop",
+        "repeated_error",
+        "repeated_read_no_change",
+        "verification_fix_loop",
+        "no_progress"
+      ]
+    },
+    "providerRequestPolicy": {
+      "maxProviderRetries": 0,
+      "retryDelayMs": 200,
+      "requestTimeoutMs": 120000
+    }
+  }
+}

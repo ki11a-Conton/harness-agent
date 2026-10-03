@@ -1,0 +1,188 @@
+{
+  "schema": "M1-admission-acceptance.v1",
+  "status": "IMPLEMENTED_TARGET_PASS",
+  "baselineSha": "c31e4a8046f1e22b0da29c9310f5c131c5d9a38f",
+  "candidateHead": "bd7c4371fb849b23ce508b3d5e4ae79baabc1449",
+  "candidateDirty": true,
+  "sourceFiles": [
+    {
+      "path": "packages/harness/src/skill-context.ts",
+      "bytes": 11153,
+      "sha256": "feeede6c3430ee53154aad9fae2f526a096e119aa56d729bd1cf2d0e3d9627f6"
+    },
+    {
+      "path": "packages/harness/src/skill-context.test.ts",
+      "bytes": 7683,
+      "sha256": "7474e6c1abd419bd52aa5971bff8e064081aaf615d1c3ff5aeaf0aa864ef5f2d"
+    },
+    {
+      "path": "packages/harness/src/skill-admission.regressions.test.ts",
+      "bytes": 14760,
+      "sha256": "ab6905361bcd1e71a18c522eb42f95846d1252bd5ccb74a6e164abea88871916"
+    },
+    {
+      "path": "packages/harness/src/create-harness.ts",
+      "bytes": 41010,
+      "sha256": "548e5e2fc76e7542c2ac53ef6fccf68530dded6c7522d12a4315d4836a3c12c9"
+    },
+    {
+      "path": "packages/core/src/runtime/context-controller.ts",
+      "bytes": 33439,
+      "sha256": "288b09e4e40e7524446e8397ad352b158d264c4f8bb20974432574442a6b1514"
+    },
+    {
+      "path": "packages/core/src/runtime/runtime.ts",
+      "bytes": 90177,
+      "sha256": "0ff74c7f2cefded83e27403f87e48adfd7f6b726c7b350aafe7f35aa24bf9682"
+    },
+    {
+      "path": "scripts/research/agent-measurement-20261003/skill-admission.mjs",
+      "bytes": 8482,
+      "sha256": "a4b8c1219324132a3f5551f540714eae38ad57246785ab055a34b1aea5c3c26b"
+    }
+  ],
+  "baselineAndCandidateFixtureSha256": "ab6905361bcd1e71a18c522eb42f95846d1252bd5ccb74a6e164abea88871916",
+  "commands": [
+    {
+      "command": "corepack pnpm exec vitest run packages/harness/src/skill-admission.regressions.test.ts",
+      "workspace": "baseline c31e4a8, unchanged production",
+      "exitCode": 1,
+      "passed": 2,
+      "failed": 9
+    },
+    {
+      "command": "corepack pnpm exec vitest run skill-admission/skill-context/skill.integration/skill-revision-regressions",
+      "exitCode": 0,
+      "files": 4,
+      "passed": 39,
+      "failed": 0
+    },
+    {
+      "command": "corepack pnpm exec vitest run runtime/step-snapshot.invariant/skill-instruction-snapshot.p32/security-regression-matrix/context-wiring.integration",
+      "exitCode": 0,
+      "files": 5,
+      "passed": 118,
+      "failed": 0
+    },
+    {
+      "command": "corepack pnpm exec tsc -b packages/harness",
+      "exitCode": 0
+    },
+    {
+      "command": "corepack pnpm build",
+      "exitCode": 0
+    },
+    {
+      "command": "node scripts/research/agent-measurement-20261003/skill-admission.mjs --repo <candidate> --out <external-fresh-out>",
+      "exitCode": 0,
+      "turns": 6,
+      "modelRequests": 18,
+      "toolRequests": 12,
+      "verificationPassed": 6
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    }
+  ],
+  "metricSemantics": "One successfully built final context step after protected-overflow and abort guards; not provider physical HTTP or internal retry attempt usage. Every feedback write is awaited before proceeding and terminal ack. Per-ledger queue supports concurrent sessions in one process; no cross-process CAS claim.",
+  "rawArtifacts": [
+    {
+      "path": "m1-baseline-red.log",
+      "bytes": 11611,
+      "sha256": "d6ce50c81aa910b87f28aa257450ada3e43cfd515c7b9ddde8c38b2726a48201"
+    },
+    {
+      "path": "m1-baseline-red.json",
+      "bytes": 11038,
+      "sha256": "6b67404a58c04b154aba651ac8d869c34045fd118932daaf64bd790569dade99"
+    },
+    {
+      "path": "m1-target-green.log",
+      "bytes": 1594,
+      "sha256": "e4a0eaff45ee8aeebb4899e5a4e3851bcc5d9b8f1d867abf9359b3293e352416"
+    },
+    {
+      "path": "m1-target-green.json",
+      "bytes": 16010,
+      "sha256": "f403e291d451b51bedc32ba4348b8fdee510ed3c906cd430a998303f685afd5f"
+    },
+    {
+      "path": "m1-boundary-green.log",
+      "bytes": 827,
+      "sha256": "18a2439b837e82949150c47db37417ca3ebe4b42e23e26a25b3355690c85ae90"
+    },
+    {
+      "path": "m1-boundary-green.json",
+      "bytes": 42281,
+      "sha256": "7248f452acf089766cf188076f4e3267dcc865ead568e6dca055dcdbb38b9afb"
+    },
+    {
+      "path": "m1-typecheck.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "m1-probe-build.log",
+      "bytes": 9,
+      "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f"
+    },
+    {
+      "path": "m1-8k-final-green.log",
+      "bytes": 5447,
+      "sha256": "ec77bfae40d92bdaaceeeeaa083fdaab50bdf304919a88baae1c4f1ec65e3c9f"
+    }
+  ],
+  "probeArtifacts": [
+    {
+      "path": "default-0-events.json",
+      "bytes": 103610,
+      "sha256": "83ffbc7c4a3edfcf8bb6f84eb930c11f62f07771680de3d2ffb0ee84f1ead97c"
+    },
+    {
+      "path": "default-1-events.json",
+      "bytes": 103610,
+      "sha256": "87eb058dfc10f509d77cf14205ff170ec10935a426b9803b484ea156da966a37"
+    },
+    {
+      "path": "default-2-events.json",
+      "bytes": 103610,
+      "sha256": "265ca20fa1b2e75ef301c625a90adefcd2bb184c5ade65515be77159bf14d8f0"
+    },
+    {
+      "path": "selected-0-events.json",
+      "bytes": 54327,
+      "sha256": "b3c30d981cb48e1305fdd001ee12430eb1c6126a3ed4862ed1b58a01e59a258b"
+    },
+    {
+      "path": "selected-1-events.json",
+      "bytes": 54327,
+      "sha256": "ee660b8f952b9bba5d897dc6e257f09a625077a24d62559883880c91fd8b9d7f"
+    },
+    {
+      "path": "selected-2-events.json",
+      "bytes": 54327,
+      "sha256": "38eaf5217c86cc5ae14b801832a8e9d1319761b12245fd12fa78d9ea0da9dfc9"
+    },
+    {
+      "path": "skills-measurement.json",
+      "bytes": 42665,
+      "sha256": "9b6033c70f749ad5f300556dce80a0e9bc2690424971e1c8566abe50afbd33e3"
+    }
+  ],
+  "abandonedDiagnostics": [
+    {
+      "path": "m1-baseline-old-awaiter-interrupted.log",
+      "status": "TERMINATED: old fixture awaited new hook unavailable in baseline; excluded from acceptance counts"
+    },
+    {
+      "status": "First Vitest iteration: ESM readFile spy unavailable; 38 PASS/1 test-infrastructure failure, fixed faithful actual-read wrapper; excluded from final acceptance"
+    },
+    {
+      "status": "First dist probe lacked unbuilt mcp dependency, exit1; root build repaired workspace preparation, no source workaround; excluded from final acceptance"
+    }
+  ],
+  "realModelQuality": "NOT_RUN",
+  "paidCalls": 0,
+  "promotion": "NOT_RUN"
+}

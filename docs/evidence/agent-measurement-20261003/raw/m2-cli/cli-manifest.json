@@ -1,0 +1,152 @@
+{
+  "schemaVersion": "agent-measurement-m2-cli-v1",
+  "status": "OFFLINE_ENGINEERING_PASS",
+  "candidate": "task_scoped_skills_v1",
+  "candidateConfig": {
+    "strategy": "task_scoped_skills_v1",
+    "maxRelevantSkills": 5,
+    "requiredSkillNames": []
+  },
+  "source": {
+    "baseHead": "ab99c4dd759b874099235855be255240acdc67ab",
+    "trackedChangesPresent": true,
+    "sourceSha256": {
+      "apps/cli/src/benchmark-command.ts": "097e4887434019d92f4b5d13e5aedae91e0ca6857e33511fde6ea219cf8ad003",
+      "apps/cli/src/task-scoped-skills.test.ts": "cff2339f6f1c95163f1c0bb7b020e1afebbdb849472f45b9ddf652811d19173e",
+      "packages/evaluation/src/candidate-registry.ts": "6c30204ae036f0b87c0809998df1d30ceac7355eaa60fa7a292571ff113958e8",
+      "packages/evaluation/src/candidate-registry.test.ts": "b02e5e2bb6f90062ef386c60c97c1086deb6f4377d67f5d7728dc8e1649b11c1",
+      "packages/evaluation/src/arm-factory.ts": "888c1fe5991c82f254758e927ebde59d7772b8fa8b255a03d012f0f3a17dc3cc",
+      "packages/evaluation/src/mechanism-contract.ts": "5ec058baf3b24d75de4add4d9960bc2c05439fd21b44a7d69ec80022f2a45b42",
+      "packages/evaluation/src/activation-evidence.ts": "34b850c7b4f71889c7531a9edcc4607f40df169bbfe46ece78d020302cd65c93",
+      "packages/evaluation/src/activation-evidence-execution.ts": "fa23c5c0df7e0f918480bd93e0c87c7fe7ca66526c4faec8ee3e82b2c8525ffb",
+      "packages/skills/src/task-scoped-selection.ts": "90398b4aee683eb746dc503f9b54a847f89c181ae475dab31029b8c9c375c9be",
+      "packages/core/src/runtime/context-controller.ts": "22fe6661072b6674e0ab75a9535a6530de8700cec1a596d6ba858a3d0bda9bfd",
+      "packages/core/src/runtime/runtime.ts": "b86ca5183801474fd11b1080180918b62b342fd02f3fe4c99b2c514d4f7d98d5",
+      "packages/harness/src/skill-context.ts": "feeede6c3430ee53154aad9fae2f526a096e119aa56d729bd1cf2d0e3d9627f6"
+    },
+    "testedImplementationIdentifiedBy": "file fingerprints; final clean commit validation belongs to root acceptance"
+  },
+  "baseline": {
+    "head": "c31e4a8046f1e22b0da29c9310f5c131c5d9a38f",
+    "productionModified": false,
+    "sameFixtureSha256": "cff2339f6f1c95163f1c0bb7b020e1afebbdb849472f45b9ddf652811d19173e",
+    "command": "corepack pnpm exec vitest run apps/cli/src/task-scoped-skills.test.ts --reporter=default",
+    "exitCode": 1,
+    "failed": 8,
+    "passed": 0,
+    "meaning": "new challenger installation/behavior contract absent on unchanged baseline; not eight legacy runtime defects"
+  },
+  "candidateAcceptance": {
+    "command": "corepack pnpm exec vitest run apps/cli/src/task-scoped-skills.test.ts packages/evaluation/src/candidate-registry.test.ts packages/evaluation/src/arm-factory.test.ts packages/evaluation/src/mechanism-contract.test.ts packages/evaluation/src/activation-evidence.test.ts packages/evaluation/src/activation-evidence-execution.test.ts apps/cli/src/path-scoped-instructions.test.ts apps/cli/src/diagnostic-first-repair.test.ts --reporter=default",
+    "exitCode": 0,
+    "filesPassed": 8,
+    "testsPassed": 86,
+    "durationSeconds": 11.35,
+    "typecheck": {
+      "command": "corepack pnpm exec tsc -b apps/cli",
+      "exitCode": 0
+    },
+    "diffCheck": {
+      "command": "git diff --check",
+      "exitCode": 0
+    }
+  },
+  "controls": {
+    "defaultOff": true,
+    "declaredArmDelta": [
+      "harnessConfig.skillSelection"
+    ],
+    "baselineAndCandidateFixtureAdapter": "same safe FileSkillLoader and existing createSkillBodyBlockProvider; no environment roots",
+    "feedbackLedger": "host private temporary root outside model workspace; finally removed",
+    "toolSchemasUnchanged": true,
+    "originalVerificationUnchanged": true,
+    "independentCheckerSha256": "09e8d7636520e5e2d5796f86a550d33571b1692c4604f28fa9531b62d8587356",
+    "contextAdmissionFeedback": "existing M1 host callback awaited for actual admitted bodies, session/turn outcome once"
+  },
+  "coverage": [
+    "fixed 21-skill/8192 relevant body survived candidate; baseline verifier failed",
+    "100-skill system bytes candidate/baseline < 0.1; same task/tools",
+    "unknown full-index fallback produces no activation",
+    "no-skill fixture remains unactivated/ineligible",
+    "injection-denied body produces no activation",
+    "unavailable-required-tool body produces no activation",
+    "budget-dropped body produces no activation",
+    "CLI dry-run resolves candidate with physical provider calls zero",
+    "actual AB/BA paired engine with unchanged content verifier",
+    "actual concurrent delegate_batch: per-session body input snapshot and request-bound evidence"
+  ],
+  "paired": {
+    "complete": true,
+    "orders": [
+      "BA",
+      "AB"
+    ],
+    "counters": {
+      "logicalRuns": 4,
+      "modelCallAttempts": 16,
+      "transportRetries": 0,
+      "maxModelCalls": 40
+    },
+    "observedRequestCount": 16,
+    "partialPairs": 0,
+    "haltedByBudget": false,
+    "baselineStatuses": [
+      "failed",
+      "failed"
+    ],
+    "candidateStatuses": [
+      "completed",
+      "completed"
+    ]
+  },
+  "concurrency": {
+    "actualStatus": "completed",
+    "childStarts": 2,
+    "requestCount": 6,
+    "witnessCount": 6,
+    "sessions": 3
+  },
+  "intermediateNegative": {
+    "path": "cli-intermediate-negative.log",
+    "meaning": "85 passed/1 failed because two child fixture names shared specialist and config relevance terms; adjusted fixture goals/names to distinct lexical signals, production selector and verification unchanged"
+  },
+  "limits": {
+    "provider": "scripted offline fixture",
+    "paidModelCalls": 0,
+    "realModelQuality": "NOT_RUN",
+    "promotion": "NOT_RUN",
+    "sourceShaInOfflineExecutionIdentity": null,
+    "platform": "linux v24.19.0",
+    "windows": "NOT_RUN by this agent; root final cross-platform CI"
+  },
+  "artifacts": {
+    "cli-target-green.log": {
+      "sha256": "2dedde1fc3f6234350262c8753ae3dbc825a2b7fbf1763294c4390db9c6aa696",
+      "bytes": 1564
+    },
+    "cli-typecheck.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "cli-baseline-red.log": {
+      "sha256": "a154ac638cbda620254d5908a561c39d907e36502a03c3ab77b8c581f9156624",
+      "bytes": 10870
+    },
+    "cli-intermediate-negative.log": {
+      "sha256": "3d5b41f53ba285ca17189346e02e10cb08e3d5e8e8504dbe1a64cc8bf4d9af3e",
+      "bytes": 3637
+    },
+    "cli-paired-results.json": {
+      "sha256": "88ceb1310360221f92dc9deb86db94c191547f82871ac89a420e51ccb313c48d",
+      "bytes": 381048
+    },
+    "cli-concurrency-results.json": {
+      "sha256": "6d96f3a67203f0717bf370cf7b56153894add3aeba5f73c300c5c887d96f206f",
+      "bytes": 12483
+    },
+    "cli-baseline/cli-paired-results.json": {
+      "sha256": "ed5c42d2a20f9517a9776425e47ef9d1976aca898b48d5cd9f194f6c3c16203b",
+      "bytes": 164304
+    }
+  }
+}

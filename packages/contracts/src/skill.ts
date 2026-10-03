@@ -1,4 +1,12 @@
-import type { SkillId } from "./ids.js";
+import type { SessionId, SkillId, TurnId } from "./ids.js";
+
+/** Current authoritative user goal for one context build, including admitted
+ * user steering. Hosts can select metadata without a mutable global task goal. */
+export interface SkillSelectionContext {
+  goal: string;
+  sessionId: SessionId;
+  turnId: TurnId;
+}
 
 export type SkillStatus =
   | "discovered"
