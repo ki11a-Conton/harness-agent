@@ -1,0 +1,170 @@
+{
+  "label": "paired-ab-selector",
+  "status": "completed",
+  "elapsedMs": 155.89010499999995,
+  "maxTokens": 128000,
+  "modelCalls": 2,
+  "requests": [
+    {
+      "systemBytes": 3297,
+      "requestBytes": 11045,
+      "toolsBytes": 7400,
+      "toolsCount": 12,
+      "toolNames": [
+        "read_file",
+        "write_file",
+        "edit_file",
+        "search_files",
+        "grep_search",
+        "repo_tree",
+        "symbol_search",
+        "repo_map",
+        "discover_commands",
+        "env_snapshot",
+        "exec",
+        "update_plan"
+      ],
+      "bodyCount": 1,
+      "relevantBody": true,
+      "skillBodies": [
+        "SKILL_FIXTURE_0_BODY"
+      ],
+      "userGoalPresent": true
+    },
+    {
+      "systemBytes": 3364,
+      "requestBytes": 11702,
+      "toolsBytes": 7400,
+      "toolsCount": 12,
+      "toolNames": [
+        "read_file",
+        "write_file",
+        "edit_file",
+        "search_files",
+        "grep_search",
+        "repo_tree",
+        "symbol_search",
+        "repo_map",
+        "discover_commands",
+        "env_snapshot",
+        "exec",
+        "update_plan"
+      ],
+      "bodyCount": 1,
+      "relevantBody": true,
+      "skillBodies": [
+        "SKILL_FIXTURE_0_BODY"
+      ],
+      "userGoalPresent": true
+    }
+  ],
+  "ledgerNames": [
+    "compile-check"
+  ],
+  "ledgerInjected": {
+    "compile-check": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    }
+  },
+  "contextBuilt": [
+    {
+      "tokens": 678,
+      "used": 678,
+      "budget": 128000,
+      "dropped": 0,
+      "compacted": false,
+      "messagesTokens": 19
+    },
+    {
+      "tokens": 683,
+      "used": 683,
+      "budget": 128000,
+      "dropped": 0,
+      "compacted": false,
+      "messagesTokens": 66
+    }
+  ],
+  "contextSelected": [
+    {
+      "id": "system-prompt",
+      "source": "system",
+      "tokens": 130
+    },
+    {
+      "id": "skill:compile-check",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill-body:compile-check",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "system-prompt",
+      "source": "system",
+      "tokens": 130
+    },
+    {
+      "id": "skill:compile-check",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill-body:compile-check",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "tool:call-read-fixture",
+      "source": "tool",
+      "tokens": 5
+    }
+  ],
+  "modelStarted": [
+    {
+      "callId": "modelcall_c63b6811-fbf9-460a-8f60-3494f147a0c0",
+      "stepId": "turn_970c0b9b-741a-461a-8107-b1820bacf3b3:0",
+      "toolRouterFingerprint": "ca0ebb38a3be5d87a9937d67ace0716c3d87948f647fdac76367f62e68a2e09e",
+      "policyFingerprint": "9c8777fa069c9fb1547b1e35832d843aa8057e155fbe93faad29142d8b1c4e43",
+      "environmentFingerprint": "ca942c0778efd054ffbc5e66ffdb503814fe72bbf0c113b91e1ab7497b85351b",
+      "contextFingerprint": "486d0c307bc9868984b6297cf7dd8297d13240159262c2e3e4491a0d4f971666",
+      "instructionFingerprint": "d97891c96ef89e5975e054aa5e580398d5f0d630928fe5442464e408e03c9dcb",
+      "contextMessageIds": [
+        "message_08dcd03d-11df-4ec2-8a7e-671314f6ad06"
+      ],
+      "contextBlockIds": [],
+      "skillSnapshotFingerprint": "b73af22483db820659f7bd9ad147bd739cb3ec69c30ee48aeb2910c24397907a"
+    },
+    {
+      "callId": "modelcall_91593886-506f-4d43-ab96-601a44c94c4e",
+      "stepId": "turn_970c0b9b-741a-461a-8107-b1820bacf3b3:1",
+      "toolRouterFingerprint": "ca0ebb38a3be5d87a9937d67ace0716c3d87948f647fdac76367f62e68a2e09e",
+      "policyFingerprint": "9c8777fa069c9fb1547b1e35832d843aa8057e155fbe93faad29142d8b1c4e43",
+      "environmentFingerprint": "ca942c0778efd054ffbc5e66ffdb503814fe72bbf0c113b91e1ab7497b85351b",
+      "contextFingerprint": "d7f193ef37f48d69cc8ea2e09e6fc35acb1ec9f7d684776fa85e11bcd32a5710",
+      "instructionFingerprint": "2f2208162b6c5bce23f15fc61cb5985a13f59ef7dd865794920cf127c8751721",
+      "contextMessageIds": [
+        "message_08dcd03d-11df-4ec2-8a7e-671314f6ad06",
+        "message_c7f7b1b1-2d6b-41ec-9c68-8b4bb348aae3",
+        "message_4b9e63fd-40b6-4175-aee9-eb6c685dd9dc"
+      ],
+      "contextBlockIds": [
+        "tool:call-read-fixture"
+      ],
+      "skillSnapshotFingerprint": "b73af22483db820659f7bd9ad147bd739cb3ec69c30ee48aeb2910c24397907a"
+    }
+  ],
+  "toolRequests": [
+    {
+      "name": "read_file",
+      "args": {
+        "path": "input.txt"
+      }
+    }
+  ],
+  "failure": null
+}

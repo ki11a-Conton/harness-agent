@@ -1,0 +1,34 @@
+{
+  "kind": "real-fs-real-harness-scripted-model-engineering",
+  "sourceCommit": "c31e4a8046f1e22b0da29c9310f5c131c5d9a38f",
+  "trackedWorktreeClean": true,
+  "command": "node .ci/agent-measurement-20261003/skill-context/probe.mjs",
+  "exitCode": 0,
+  "liveModelQuality": "NOT_RUN",
+  "paidModelCalls": 0,
+  "sourceSha256": {
+    "packages/harness/src/config.ts": "1e225321bc5e215dd3f3977cd7b61d66118897b88db2793e216a0f9d78efb6bf",
+    "packages/harness/src/create-harness.ts": "5af9a8f7a5f82122df90f59e39a7d6cdb63134d12c40bc5ab386aad4476eafeb",
+    "packages/harness/src/skill-context.ts": "3cbe2e45a7b6a3e5b3883ddd5d518107cec79dea2649ffa9ef118949ede103b6",
+    "packages/skills/src/skill-loader.ts": "5905bb4ca7f8838a237a57788fd9c6b47bfc1923c82a65c80b8e5f9cbe9d5c5a",
+    "packages/skills/src/selection.ts": "ad9a4b9ae92f18a649258dd41bc81bbbd0175b28eb427a5fea0786e6f2b35885",
+    "packages/core/src/runtime/context-controller.ts": "8d55e59043215631aee4ca53529659133313423b582f326491bb1f9b4e236e44",
+    "packages/core/src/runtime/step-snapshot-factory.ts": "64d90a79c160a07f452a48bafb3e3c5a0ad7bc65cc0ac237712dd56ef471fe89",
+    "packages/core/src/tools/tool-selector.ts": "dd7f69130c0c3928027cbf7e984926c87dad6d60b31ade0862b69479e27c7ff6"
+  },
+  "artifactsSha256": {
+    "baseline-full.json": "8bb199576e66b8e3353b3b9d1dace2ebbbb01f96294e8628e6e65d85ba3b41bd",
+    "baseline-tight.json": "4dbaaeedca5edd46869b2aa8d8d2e1eacfc85681db3854626f82d93587a62a0e",
+    "paired-ab-baseline.json": "c40fa988acf7d0fa7bfb69db262327b82085170a350f6a7b8a8d6a2e2a275f5a",
+    "paired-ab-selector.json": "adafe5ac1c8125f8ce12cb7f4ba59f5f00a5d11327f5e8963ea257512f053edd",
+    "paired-ba-baseline.json": "1b16c259f703fe5b41e62c7d673f7c8b62bbd6660a3e9bc7c35f531d6f4f1b05",
+    "paired-ba-selector.json": "11b668a381d9c6cb1e91da7643cc289828ee4cb9673ab60946bcffa2fcc71aa5",
+    "probe.log": "ddf2571e4e8da3ca3112a1586dbd210575650a298cf60fb42092c645863cc290",
+    "probe.mjs": "a764332131849853883f5c7c821b790ce07482cb4f4cd5d309af955652f80c1b",
+    "report.md": "32a58837e0a60b38cbf488f33a55af052f573cf9f502411b4abc3e0f60f8a6cf",
+    "selector-one-tight.json": "55708d5b8fffebc778d0fe3b3849f4213149e4e0a5e7fca9106a88f5145f3365",
+    "selector-one.json": "37d173202f418c3b80a8c6a482a33104b4f0b8b19a61bc87990949c7bd8833f2",
+    "summary.json": "cc20b11bea0aae6d5fe97fcec1aaadf907feb5d885be0179dd71f241e84f2aba",
+    "tool-selector.json": "d5e65fc6629a8fcc323fa43045145598d0eb3ecbc110480e6c3f550a8224e651"
+  }
+}

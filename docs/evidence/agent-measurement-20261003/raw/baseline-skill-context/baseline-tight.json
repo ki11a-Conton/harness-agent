@@ -1,0 +1,2046 @@
+{
+  "label": "baseline-tight",
+  "status": "completed",
+  "elapsedMs": 477.03255,
+  "maxTokens": 16384,
+  "modelCalls": 2,
+  "requests": [
+    {
+      "systemBytes": 50298,
+      "requestBytes": 59101,
+      "toolsBytes": 7400,
+      "toolsCount": 12,
+      "toolNames": [
+        "read_file",
+        "write_file",
+        "edit_file",
+        "search_files",
+        "grep_search",
+        "repo_tree",
+        "symbol_search",
+        "repo_map",
+        "discover_commands",
+        "env_snapshot",
+        "exec",
+        "update_plan"
+      ],
+      "bodyCount": 17,
+      "relevantBody": true,
+      "skillBodies": [
+        "SKILL_FIXTURE_0_BODY",
+        "SKILL_FIXTURE_1_BODY",
+        "SKILL_FIXTURE_2_BODY",
+        "SKILL_FIXTURE_3_BODY",
+        "SKILL_FIXTURE_4_BODY",
+        "SKILL_FIXTURE_5_BODY",
+        "SKILL_FIXTURE_6_BODY",
+        "SKILL_FIXTURE_7_BODY",
+        "SKILL_FIXTURE_8_BODY",
+        "SKILL_FIXTURE_9_BODY",
+        "SKILL_FIXTURE_10_BODY",
+        "SKILL_FIXTURE_11_BODY",
+        "SKILL_FIXTURE_12_BODY",
+        "SKILL_FIXTURE_13_BODY",
+        "SKILL_FIXTURE_14_BODY",
+        "SKILL_FIXTURE_15_BODY",
+        "SKILL_FIXTURE_16_BODY"
+      ],
+      "userGoalPresent": true
+    },
+    {
+      "systemBytes": 50298,
+      "requestBytes": 60579,
+      "toolsBytes": 7400,
+      "toolsCount": 12,
+      "toolNames": [
+        "read_file",
+        "write_file",
+        "edit_file",
+        "search_files",
+        "grep_search",
+        "repo_tree",
+        "symbol_search",
+        "repo_map",
+        "discover_commands",
+        "env_snapshot",
+        "exec",
+        "update_plan"
+      ],
+      "bodyCount": 17,
+      "relevantBody": true,
+      "skillBodies": [
+        "SKILL_FIXTURE_0_BODY",
+        "SKILL_FIXTURE_1_BODY",
+        "SKILL_FIXTURE_2_BODY",
+        "SKILL_FIXTURE_3_BODY",
+        "SKILL_FIXTURE_4_BODY",
+        "SKILL_FIXTURE_5_BODY",
+        "SKILL_FIXTURE_6_BODY",
+        "SKILL_FIXTURE_7_BODY",
+        "SKILL_FIXTURE_8_BODY",
+        "SKILL_FIXTURE_9_BODY",
+        "SKILL_FIXTURE_10_BODY",
+        "SKILL_FIXTURE_11_BODY",
+        "SKILL_FIXTURE_12_BODY",
+        "SKILL_FIXTURE_13_BODY",
+        "SKILL_FIXTURE_14_BODY",
+        "SKILL_FIXTURE_15_BODY",
+        "SKILL_FIXTURE_16_BODY"
+      ],
+      "userGoalPresent": true
+    }
+  ],
+  "ledgerNames": [
+    "compile-check",
+    "specialty-001",
+    "specialty-002",
+    "specialty-003",
+    "specialty-004",
+    "specialty-005",
+    "specialty-006",
+    "specialty-007",
+    "specialty-008",
+    "specialty-009",
+    "specialty-010",
+    "specialty-011",
+    "specialty-012",
+    "specialty-013",
+    "specialty-014",
+    "specialty-015",
+    "specialty-016",
+    "specialty-017",
+    "specialty-018",
+    "specialty-019",
+    "specialty-020",
+    "specialty-021",
+    "specialty-022",
+    "specialty-023",
+    "specialty-024",
+    "specialty-025",
+    "specialty-026",
+    "specialty-027",
+    "specialty-028",
+    "specialty-029",
+    "specialty-030",
+    "specialty-031",
+    "specialty-032",
+    "specialty-033",
+    "specialty-034",
+    "specialty-035",
+    "specialty-036",
+    "specialty-037",
+    "specialty-038",
+    "specialty-039",
+    "specialty-040",
+    "specialty-041",
+    "specialty-042",
+    "specialty-043",
+    "specialty-044",
+    "specialty-045",
+    "specialty-046",
+    "specialty-047",
+    "specialty-048",
+    "specialty-049",
+    "specialty-050",
+    "specialty-051",
+    "specialty-052",
+    "specialty-053",
+    "specialty-054",
+    "specialty-055",
+    "specialty-056",
+    "specialty-057",
+    "specialty-058",
+    "specialty-059",
+    "specialty-060",
+    "specialty-061",
+    "specialty-062",
+    "specialty-063",
+    "specialty-064",
+    "specialty-065",
+    "specialty-066",
+    "specialty-067",
+    "specialty-068",
+    "specialty-069",
+    "specialty-070",
+    "specialty-071",
+    "specialty-072",
+    "specialty-073",
+    "specialty-074",
+    "specialty-075",
+    "specialty-076",
+    "specialty-077",
+    "specialty-078",
+    "specialty-079",
+    "specialty-080",
+    "specialty-081",
+    "specialty-082",
+    "specialty-083",
+    "specialty-084",
+    "specialty-085",
+    "specialty-086",
+    "specialty-087",
+    "specialty-088",
+    "specialty-089",
+    "specialty-090",
+    "specialty-091",
+    "specialty-092",
+    "specialty-093",
+    "specialty-094",
+    "specialty-095",
+    "specialty-096",
+    "specialty-097",
+    "specialty-098",
+    "specialty-099"
+  ],
+  "ledgerInjected": {
+    "compile-check": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-001": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1066
+    },
+    "specialty-002": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1066
+    },
+    "specialty-003": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1066
+    },
+    "specialty-004": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1066
+    },
+    "specialty-005": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1066
+    },
+    "specialty-006": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1066
+    },
+    "specialty-007": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1066
+    },
+    "specialty-008": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1066
+    },
+    "specialty-009": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1066
+    },
+    "specialty-010": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-011": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-012": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-013": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-014": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-015": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-016": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-017": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-018": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-019": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-020": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-021": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-022": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-023": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-024": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-025": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-026": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-027": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-028": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-029": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-030": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-031": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-032": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-033": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-034": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-035": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-036": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-037": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-038": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-039": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-040": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-041": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-042": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-043": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-044": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-045": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-046": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-047": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-048": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-049": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-050": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-051": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-052": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-053": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-054": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-055": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-056": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-057": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-058": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-059": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-060": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-061": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-062": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-063": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-064": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-065": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-066": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-067": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-068": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-069": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-070": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-071": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-072": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-073": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-074": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-075": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-076": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-077": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-078": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-079": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-080": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-081": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-082": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-083": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-084": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-085": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-086": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-087": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-088": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-089": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-090": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-091": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-092": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-093": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-094": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-095": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-096": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-097": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-098": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    },
+    "specialty-099": {
+      "loaded": 2,
+      "injected": 2,
+      "completed": 1,
+      "tokens": 1068
+    }
+  },
+  "contextBuilt": [
+    {
+      "tokens": 10590,
+      "used": 10590,
+      "budget": 16384,
+      "dropped": 83,
+      "compacted": true,
+      "messagesTokens": 19
+    },
+    {
+      "tokens": 10590,
+      "used": 10590,
+      "budget": 16384,
+      "dropped": 83,
+      "compacted": true,
+      "messagesTokens": 237
+    }
+  ],
+  "contextSelected": [
+    {
+      "id": "system-prompt",
+      "source": "system",
+      "tokens": 130
+    },
+    {
+      "id": "skill:compile-check",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-001",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-002",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-003",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-004",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-005",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-006",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-007",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-008",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-009",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-010",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-011",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-012",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-013",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-014",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-015",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-016",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-017",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-018",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-019",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-020",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-021",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-022",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-023",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-024",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-025",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-026",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-027",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-028",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-029",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-030",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-031",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-032",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-033",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-034",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-035",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-036",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-037",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-038",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-039",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-040",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-041",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-042",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-043",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-044",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-045",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-046",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-047",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-048",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-049",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-050",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-051",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-052",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-053",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-054",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-055",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-056",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-057",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-058",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-059",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-060",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-061",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-062",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-063",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-064",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-065",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-066",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-067",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-068",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-069",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-070",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-071",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-072",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-073",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-074",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-075",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-076",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-077",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-078",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-079",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-080",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-081",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-082",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-083",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-084",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-085",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-086",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-087",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-088",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-089",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-090",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-091",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-092",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-093",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-094",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-095",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-096",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-097",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-098",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-099",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill-body:compile-check",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "skill-body:specialty-001",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-002",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-003",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-004",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-005",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-006",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-007",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-008",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-009",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-010",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "skill-body:specialty-011",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "skill-body:specialty-012",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "skill-body:specialty-013",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "skill-body:specialty-014",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "skill-body:specialty-015",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "skill-body:specialty-016",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "system-prompt",
+      "source": "system",
+      "tokens": 130
+    },
+    {
+      "id": "skill:compile-check",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-001",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-002",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-003",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-004",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-005",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-006",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-007",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-008",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-009",
+      "source": "skill",
+      "tokens": 13
+    },
+    {
+      "id": "skill:specialty-010",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-011",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-012",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-013",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-014",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-015",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-016",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-017",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-018",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-019",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-020",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-021",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-022",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-023",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-024",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-025",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-026",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-027",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-028",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-029",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-030",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-031",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-032",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-033",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-034",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-035",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-036",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-037",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-038",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-039",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-040",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-041",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-042",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-043",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-044",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-045",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-046",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-047",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-048",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-049",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-050",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-051",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-052",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-053",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-054",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-055",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-056",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-057",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-058",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-059",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-060",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-061",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-062",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-063",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-064",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-065",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-066",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-067",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-068",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-069",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-070",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-071",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-072",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-073",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-074",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-075",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-076",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-077",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-078",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-079",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-080",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-081",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-082",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-083",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-084",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-085",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-086",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-087",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-088",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-089",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-090",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-091",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-092",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-093",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-094",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-095",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-096",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-097",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-098",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill:specialty-099",
+      "source": "skill",
+      "tokens": 14
+    },
+    {
+      "id": "skill-body:compile-check",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "skill-body:specialty-001",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-002",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-003",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-004",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-005",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-006",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-007",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-008",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-009",
+      "source": "skill",
+      "tokens": 533
+    },
+    {
+      "id": "skill-body:specialty-010",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "skill-body:specialty-011",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "skill-body:specialty-012",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "skill-body:specialty-013",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "skill-body:specialty-014",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "skill-body:specialty-015",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "skill-body:specialty-016",
+      "source": "skill",
+      "tokens": 534
+    },
+    {
+      "id": "tool:call-read-fixture",
+      "source": "tool",
+      "tokens": 5
+    }
+  ],
+  "modelStarted": [
+    {
+      "callId": "modelcall_0c33c3db-72b5-49a2-b85d-e081da07d892",
+      "stepId": "turn_b476ac15-8350-4409-9e65-4306cf357ac0:0",
+      "toolRouterFingerprint": "ca0ebb38a3be5d87a9937d67ace0716c3d87948f647fdac76367f62e68a2e09e",
+      "policyFingerprint": "9c8777fa069c9fb1547b1e35832d843aa8057e155fbe93faad29142d8b1c4e43",
+      "environmentFingerprint": "ca942c0778efd054ffbc5e66ffdb503814fe72bbf0c113b91e1ab7497b85351b",
+      "contextFingerprint": "6ebfe4455f1184c86cac3661693eaf538ca7d6b6f62fa131cc9e6d7c5478800f",
+      "instructionFingerprint": "d0b22d842fad6932993f3486ba4e9176c3be2149ab2a7df930e514765248410f",
+      "contextMessageIds": [
+        "message_07d970e9-b4e5-4d2b-ad6b-a207ac0b37d0"
+      ],
+      "contextBlockIds": [],
+      "skillSnapshotFingerprint": "ea765d651edad63bca235829bd5b83d8b19d315403e5f2650443e92d214b2bb7"
+    },
+    {
+      "callId": "modelcall_c0266f09-d25b-4f8e-be52-d1b25bd31fb0",
+      "stepId": "turn_b476ac15-8350-4409-9e65-4306cf357ac0:1",
+      "toolRouterFingerprint": "ca0ebb38a3be5d87a9937d67ace0716c3d87948f647fdac76367f62e68a2e09e",
+      "policyFingerprint": "9c8777fa069c9fb1547b1e35832d843aa8057e155fbe93faad29142d8b1c4e43",
+      "environmentFingerprint": "ca942c0778efd054ffbc5e66ffdb503814fe72bbf0c113b91e1ab7497b85351b",
+      "contextFingerprint": "e22ec31ef535a34ef2f6fbd0ccba9acec7f578308f1848e7d1d1cbe52588de20",
+      "instructionFingerprint": "d0b22d842fad6932993f3486ba4e9176c3be2149ab2a7df930e514765248410f",
+      "contextMessageIds": [
+        "message_07d970e9-b4e5-4d2b-ad6b-a207ac0b37d0",
+        "message_0375f04c-8552-4c1e-8315-9395293d2a46",
+        "message_7313ff2e-2042-4e32-9818-240818d14eda",
+        "message_56a3e1db-41d6-4f45-a303-ecb58c038ff4"
+      ],
+      "contextBlockIds": [
+        "tool:call-read-fixture"
+      ],
+      "skillSnapshotFingerprint": "ea765d651edad63bca235829bd5b83d8b19d315403e5f2650443e92d214b2bb7"
+    }
+  ],
+  "toolRequests": [
+    {
+      "name": "read_file",
+      "args": {
+        "path": "input.txt"
+      }
+    }
+  ],
+  "failure": null
+}
