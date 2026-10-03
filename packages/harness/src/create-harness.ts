@@ -29,6 +29,7 @@ import {
   type MemoryType,
   type SessionId,
   type SessionStore,
+  type Skill,
   type TurnId,
 } from "@ar/contracts";
 import {
@@ -354,7 +355,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   let memoryBridge: MemoryRuntimeBridge | undefined;
   // P2-4: which memories were injected per session this process saw — the
   // outcome feedback target at turn end.
-  const memoryInjectedBySession = new Map<SessionId, MemoryId[]>();
+  const memoryInjectedBySession = new Map<SessionId, { turnId: TurnId; ids: MemoryId[] }>();
   if (memoryEnabled) {
     const memoryDataDir = config.memory?.dbPath ?? dataDir;
     if (memoryDataDir === undefined) {
@@ -402,10 +403,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
       discover: async () => (await discoverSkills()).skills,
       dataDir,
       toolPolicy: skillToolPolicy,
-      // P32-2: cache identity includes the resolved config fingerprint + cwd
-      // so a same-cwd harness with different enabled/disabled skill config
-      // never reuses another harness's discovery/body cache (no cross-session
-      // skill leakage). Two harnesses with identical config share the cache.
+      // P32-2: each configured harness owns its provider and loader caches.
       cacheKey: `skill:${resolvedConfig.fingerprint}:${cwd}`,
       onRequiredToolsDenied: (event) => {
         pendingSkillSecurity.value.push({
@@ -477,20 +475,25 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
               sessionId: input.sessionId,
               goal: input.goal,
               cwd: input.cwd,
+              recordFeedback: false,
             });
-            const ids = memoryIdsOfBlocks(retrieved.blocks);
-            memoryInjectedBySession.set(input.sessionId, ids);
-            // P2-4: blocks handed to the runtime are injected into context.
-            await memoryBridge.recordInjected(ids);
             return retrieved.blocks;
+          },
+          // Only admitted memory receives feedback. This hook performs real
+          // writes, so the runtime awaits it before terminal reflection/fence.
+          onMemoryRetrieved: async (input: { sessionId: SessionId; turnId: TurnId; blocks: readonly ContextBlock[] }) => {
+            const ids = memoryIdsOfBlocks(input.blocks);
+            memoryInjectedBySession.set(input.sessionId, { turnId: input.turnId, ids });
+            await memoryBridge.recordRetrieved(input.blocks);
+            await memoryBridge.recordInjected(ids);
           },
         }
       : {}),
     // P2-8: progressive skill disclosure — bodies of the selected skills.
     ...(skillBodyProvider !== undefined
       ? {
-          skillBodyBlocks: async (input: { sessionId: SessionId; turnId: TurnId; names: string[] }) => {
-            const blocks = await skillBodyProvider.load(input.names);
+          skillBodyBlocks: async (input: { sessionId: SessionId; turnId: TurnId; names: string[]; skills?: readonly Skill[] }) => {
+            const blocks = await skillBodyProvider.load(input.names, input.skills);
             const used = skillUseBySession.get(input.sessionId) ?? [];
             for (const name of input.names) {
               if (!used.includes(name)) used.push(name);
@@ -511,8 +514,9 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
             const succeeded = input.outcome.status === "completed";
             // P2-4: usefulness outcome feedback for the injected memories.
             if (memoryBridge !== undefined) {
-              const ids = memoryInjectedBySession.get(input.sessionId) ?? [];
-              memoryInjectedBySession.delete(input.sessionId);
+              const admitted = memoryInjectedBySession.get(input.sessionId);
+              const ids = admitted?.turnId === input.turnId ? admitted.ids : [];
+              if (admitted?.turnId === input.turnId) memoryInjectedBySession.delete(input.sessionId);
               await memoryBridge.recordOutcome(ids, {
                 sessionId: input.sessionId,
                 succeeded,

@@ -139,27 +139,39 @@ export class MemoryRuntimeBridge {
     sessionId: SessionId;
     goal: string;
     cwd: string;
+    /** Preserve legacy feedback by default; false makes preparation read-only.
+     * Admitted blocks can be recorded later with recordRetrieved. */
+    recordFeedback?: boolean;
   }): Promise<RetrievedMemoryContext> {
     const query = input.goal.trim() === "" ? input.cwd : input.goal;
     const result = await retrieveMemories(this.store, query, this.scope, {
       k: this.suggestTopK(),
       now: this.now(),
     });
-    // P2-4: retrieval is observable on the funnel (retrievedCount++).
-    for (const item of result.items) {
-      await this.applyFeedback(item.memory.id, { kind: "retrieved" });
-      // P6-4: injection cost is a token fact (the block that entered context).
-      const tokens = memoryToBlock(item).tokens;
-      const entry = this.roi.get(item.memory.id) ?? { tokens: 0, injected: 0, succeeded: 0 };
-      entry.tokens += tokens;
-      entry.injected += 1;
-      this.roi.set(item.memory.id, entry);
-    }
+    const blocks = result.items.map(memoryToBlock);
+    if (input.recordFeedback !== false) await this.recordRetrieved(blocks);
     return {
-      blocks: result.items.map(memoryToBlock),
+      blocks,
       items: result.items,
       suppressed: result.suppressed,
     };
+  }
+
+  /** P2-4/P6-4: feedback for blocks admitted by the runtime. Preparation can
+   * stop waiting for pure retrieval; this write must be awaited to completion. */
+  async recordRetrieved(blocks: readonly ContextBlock[]): Promise<void> {
+    const tokensById = new Map<MemoryId, number>();
+    for (const block of blocks) {
+      const id = memoryIdsOfBlocks([block])[0];
+      if (id !== undefined) tokensById.set(id, (tokensById.get(id) ?? 0) + block.tokens);
+    }
+    for (const [id, tokens] of tokensById) {
+      await this.applyFeedback(id, { kind: "retrieved" });
+      const entry = this.roi.get(id) ?? { tokens: 0, injected: 0, succeeded: 0 };
+      entry.tokens += tokens;
+      entry.injected += 1;
+      this.roi.set(id, entry);
+    }
   }
 
   /** P2-4: a memory block entered the model context (injectedCount++). */

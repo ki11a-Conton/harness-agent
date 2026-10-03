@@ -26,7 +26,11 @@ import {
 } from "@ar/skills";
 
 export interface SkillBodyBlockProviderDeps {
-  loader: SkillLoader;
+  loader: SkillLoader & {
+    /** A filesystem loader can refuse a record whose revision changed after
+     *  the runtime froze the skill index for this step. */
+    loadSnapshot?: SkillLoader["load"];
+  };
   /** Discovers the current skill index (shared with the runtime's skills
    *  provider so selection and body loading see the same set). */
   discover: () => Promise<Skill[] | undefined>;
@@ -39,17 +43,14 @@ export interface SkillBodyBlockProviderDeps {
   /** P14-4: fired when a selected skill is denied because its requiredTools
    *  exceed the host tool policy (typed denial, never silent). */
   onRequiredToolsDenied?: (event: SkillSecurityDenial) => void;
-  /** P32-2: cache identity — the skill discovery/body caches are keyed by
-   *  this string so a same-cwd host with DIFFERENT enabled/disabled skill
-   *  config (or plugin/config fingerprint) never leaks selections across
-   *  harnesses. Absent → caches are keyed by skill name only (legacy single-
-   *  harness behavior). */
+  /** P32-2: retained for callers identifying their configured provider.
+   *  Providers own no discovery/body cache; the loader owns revision checks. */
   cacheKey?: string;
 }
 
 export interface SkillBodyBlockProvider {
   /** Load bodies for the selected skill names and render context blocks. */
-  load(names: readonly string[]): Promise<ContextBlock[]>;
+  load(names: readonly string[], snapshot?: readonly Skill[]): Promise<ContextBlock[]>;
   /** Record a feedback event on a named skill's funnel (P2-9). */
   record(name: string, feedback: SkillUseFeedback): Promise<void>;
   /** Latest effectiveness profile for a skill (undefined when never used). */
@@ -77,24 +78,9 @@ function estimateSkillTokens(content: string): number {
  */
 export function createSkillBodyBlockProvider(deps: SkillBodyBlockProviderDeps): SkillBodyBlockProvider {
   const ledger = new SkillEffectivenessLedger(deps.dataDir, deps.now);
-  // Process-level caches: discovery is a disk scan and bodies are large — a
-  // long turn builds context many times, so re-scan/re-read per build would
-  // be wasteful. Bodies are stable per process (skills are files).
-  //
-  // P32-2: cache key = `${cacheKey}:${name}` — a same-cwd harness with a
-  // different enabled/disabled skill config MUST NOT reuse another harness's
-  // body cache (cross-session leakage). When cacheKey is absent (legacy),
-  // keys stay name-only.
-  const cachePrefix = deps.cacheKey !== undefined ? `${deps.cacheKey}:` : "";
-  let discoveredSkills: Skill[] | undefined;
-  const bodyCache = new Map<string, string>();
-  const ensureSkills = async (): Promise<Skill[] | undefined> => {
-    if (discoveredSkills === undefined) discoveredSkills = await deps.discover();
-    return discoveredSkills;
-  };
   return {
-    async load(names) {
-      const skills = await ensureSkills();
+    async load(names, snapshot) {
+      const skills = snapshot ?? await deps.discover();
       if (skills === undefined) return [];
       const byName = new Map(skills.map((skill) => [skill.manifest.name, skill]));
       const blocks: ContextBlock[] = [];
@@ -109,19 +95,24 @@ export function createSkillBodyBlockProvider(deps: SkillBodyBlockProviderDeps): 
           deps.onRequiredToolsDenied?.(requiredToolsDenial(skill, required));
           continue;
         }
-        const cacheName = `${cachePrefix}${name}`;
-        let body = bodyCache.get(cacheName);
-        if (body === undefined) {
-          let loaded: Skill;
-          try {
-            loaded = await deps.loader.load(skill);
-          } catch {
-            continue; // denied at load (injection/secret) — the loader emitted it
-          }
-          body = loaded.body ?? "";
-          if (body === "") continue;
-          bodyCache.set(cacheName, body);
+        let loaded: Skill;
+        try {
+          loaded = snapshot !== undefined && deps.loader.loadSnapshot !== undefined
+            ? await deps.loader.loadSnapshot(skill)
+            : await deps.loader.load(skill);
+        } catch {
+          continue; // stale/deleted or denied at load — never inject it
         }
+        // Ordinary load refreshes stale records for legacy callers. Recheck
+        // the returned manifest before admitting that revision's body.
+        if (loaded.manifest.name !== name) continue;
+        const loadedRequired = checkSkillRequiredTools(loaded, deps.toolPolicy);
+        if (!loadedRequired.allowed) {
+          deps.onRequiredToolsDenied?.(requiredToolsDenial(loaded, loadedRequired));
+          continue;
+        }
+        const body = loaded.body ?? "";
+        if (body === "") continue;
         blocks.push({
           id: `${SKILL_BODY_PREFIX}${name}`,
           source: "skill",
@@ -132,14 +123,14 @@ export function createSkillBodyBlockProvider(deps: SkillBodyBlockProviderDeps): 
           compressible: true,
           ephemeral: false,
           category: "knowledge",
-          path: skill.path,
+          path: loaded.path,
           // P6-2: skill body blocks trace to the manifest name (stable across
           // discovers — FileSkillLoader ids are not) for effectiveness/ROI.
           provenance: {
             kind: "skill",
             serviceId: "skill-loader",
             toolId: name,
-            version: skill.manifest.version,
+            version: loaded.manifest.version,
             trust: "semi-trusted",
           },
           // P14-5: skill bodies are semi-trusted DATA (procedural knowledge,

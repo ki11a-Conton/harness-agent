@@ -43,8 +43,10 @@ import type {
 import type { ContextPipeline, InstructionDiscoveryOptions } from "@ar/context";
 import { protectedFieldsMissing } from "@ar/context";
 import { AgentState } from "../state/agent-state.js";
+import { protectToolOutputText } from "./tool-output-security.js";
 import type { RecoveryPolicy } from "../recovery/recovery.js";
 import {
+  activeUserMessages,
   buildStateDigest,
   renderToolResult,
   TRUST_BOUNDARY_PROMPT,
@@ -93,6 +95,7 @@ export interface ContextControllerDeps {
     sessionId: SessionId;
     turnId: TurnId;
     names: string[];
+    skills?: readonly Skill[];
   }) => Promise<ContextBlock[]>;
   recovery?: RecoveryPolicy;
   compactCounter: { value: number };
@@ -148,6 +151,7 @@ export class ContextController {
     reactiveCompacted: boolean,
   ): Promise<ContextUpdate> {
     const { sessionId, turnId, session } = ctx;
+    const activeUsers = activeUserMessages(history, turnId);
     let system = agent.systemPrompt;
     // P32-1/P32-3: step-witness values — the selected skill manifest-of
     // record and the instruction sources (system + AGENTS.md) assembled from
@@ -206,6 +210,7 @@ export class ContextController {
                 sessionId,
                 turnId,
                 names: selectedSkills.map((entry) => entry.name),
+                skills,
               });
             } catch (cause) {
               process.stderr.write(
@@ -217,7 +222,15 @@ export class ContextController {
             cwd: session.cwd,
             systemPrompt: agent.systemPrompt,
             priorBlocks: [...skillBodyBlocks, ...priorBlocks],
-            budget: this.deps.context.budget,
+            // Current user messages are sent on their original channel. Give
+            // them headroom before admitting ordinary system-side data.
+            budget: {
+              ...this.deps.context.budget,
+              reserved: {
+                ...this.deps.context.budget.reserved,
+                task: this.deps.context.budget.reserved.task + this.deps.context.pipeline.estimateMessageTokens(activeUsers),
+              },
+            },
             instructionOpts: this.deps.context.instructionOpts,
             messages: history,
             // P6-3: attach the session so context.* selection telemetry events
@@ -226,9 +239,19 @@ export class ContextController {
             // P1-2: what must survive compaction comes from the runtime's
             // working state (summaryOverride); the pipeline never synthesizes
             // summary content.
-            summaryOverride: workingStateToCompactionSummary(working),
+            summaryOverride: workingStateToCompactionSummary(working, activeUsers),
             ...(selectedSkills.length > 0 ? { skills: selectedSkills } : {}),
           });
+          if (this.deps.skillBodyBlocks !== undefined) {
+            // The step witnesses the body actually admitted to model context,
+            // including any bounded rendering, rather than a discovery-time
+            // body that may have changed or been denied before load.
+            for (const entry of entries) {
+              const body = built.blocks.find((block) => block.source === "skill" && block.id === `skill-body:${entry.name}`);
+              if (body !== undefined) entry.bodyHash = stableFingerprint([body.content]);
+              else delete entry.bodyHash;
+            }
+          }
           lastReportTokens = built.report.used;
           // P32-3: the exact instruction world THIS step was built from —
           // system prompt hash + every project instruction document that
@@ -271,12 +294,14 @@ export class ContextController {
             for (const sec of disco.security) {
               await this.deps.emit(
                 sessionId,
-                sec.detection === "injection" ? "security.skill_denied" : "security.secret_redacted",
+                sec.detection === "secret" ? "security.secret_redacted" : "security.skill_denied",
                 {
                   reason: sec.detection === "injection"
                     ? `injection detected (${sec.reasons.join(", ")})`
-                    : `secret detected (${sec.reasons.join(", ")})`,
-                  code: sec.detection === "injection" ? "SKILL_DENIED" : "SECRET_REDACTED",
+                    : sec.detection === "required-tools"
+                      ? `required tools denied (${sec.reasons.join(", ")})`
+                      : `secret detected (${sec.reasons.join(", ")})`,
+                  code: sec.detection === "secret" ? "SECRET_REDACTED" : "SKILL_DENIED",
                   source: sec.source,
                   target: sec.path,
                   details: sec.reasons,
@@ -328,13 +353,13 @@ export class ContextController {
               // keeps goal/completed-work/commands/errors after compaction;
               // full history stays in the store (transcript fallback).
               digestAppended = true;
-              const digestText = buildStateDigest(working, "context compacted — older tool outputs were folded into this summary");
+              const digestText = buildStateDigest(working, "context compacted — older tool outputs were folded into this summary", activeUsers);
               // P17-6: programmatic preservation check — a non-empty digest
               // is NOT success; every protected field must be present (or
               // carried by the durable working state). A violation is
               // surfaced on the event stream, never silent.
               const missing = protectedFieldsMissing(
-                protectedFactsFrom(working),
+                protectedFactsFrom(working, activeUsers),
                 digestText,
                 {
                   unresolvedTools: working.toolRefs,
@@ -389,26 +414,32 @@ export class ContextController {
                 sessionId,
                 turnId,
                 role: "system",
-                content: buildStateDigest(working, "message history trimmed — older messages folded into this summary; continue concisely"),
+                content: buildStateDigest(working, "message history trimmed — older messages folded into this summary; continue concisely", activeUsers),
                 createdAt: this.deps.now(),
               });
               history = await this.deps.store.listMessages(sessionId);
               const pipeline = this.deps.context.pipeline;
-              history = trimMessageHistory(history, headroom, (message) => pipeline.estimateMessageTokens([message]));
+              history = trimMessageHistory(history, headroom, (message) => pipeline.estimateMessageTokens([message]), activeUsers);
             }
           }
-          if (built.report.used > this.deps.context.budget.maxTokens) {
+          // The budget may retain a short recent tail above its estimate, but
+          // active user authority itself must never be evicted to fit. Detect
+          // that irreducible overflow before any provider/tool call.
+          const protectedTokens = built.report.used + this.deps.context.pipeline.estimateMessageTokens(activeUsers);
+          if (protectedTokens > this.deps.context.budget.maxTokens) {
             overflowAttempt += 1;
             const decision =
               this.deps.recovery?.decide("context_overflow", overflowAttempt) ?? {
                 action: "fail_safe" as const,
-                reason: `context overflow: used ${built.report.used} > maxTokens ${this.deps.context.budget.maxTokens}`,
+                reason: `context overflow: protected context used ${protectedTokens} > maxTokens ${this.deps.context.budget.maxTokens}`,
               };
-            if (decision.action === "ask" || decision.action === "fail_safe") {
-              await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxTokens", used: built.report.used }, turnId);
+            if (decision.action === "ask" || decision.action === "fail_safe" || activeUsers.length > 0) {
+              await this.deps.emit(sessionId, "run.limit_reached", { limit: "maxTokens", used: protectedTokens }, turnId);
               return { action: "finish", outcome: await this.deps.finishTurn(
                 ctx, "failed", state, working,
-                errorInfo("RESOURCE_LIMIT", decision.reason),
+                errorInfo("RESOURCE_LIMIT", decision.action === "retry"
+                  ? `protected user context cannot fit: used ${protectedTokens} > maxTokens ${this.deps.context.budget.maxTokens}`
+                  : decision.reason),
                 "context_limit",
                 toolLedger,
               ) };
@@ -437,23 +468,33 @@ export class ContextController {
    * Returns the (possibly refreshed) message history.
    */
   async injectSteeringPrompts(
-    ctx: TurnContext,
+    ctx: Pick<TurnContext, "sessionId" | "turnId">,
     history: Message[],
+    options: { recoverBoundOnly?: boolean } = {},
   ): Promise<Message[]> {
     const { sessionId, turnId } = ctx;
     if (this.deps.inbox === undefined) return history;
 
-    const pending = await this.deps.inbox.listPending(sessionId);
+    // Include promoted prompts: append/consume can be interrupted after the
+    // message is durable and before the inbox has reached consumed.
+    const pending = await this.deps.inbox.listRecoverable(sessionId);
     for (const prompt of pending) {
       if (prompt.kind !== "steer") continue;
-      if (history.some((m) => m.promptId === prompt.id)) {
+      // A fresh-turn checkpoint resume first settles the interrupted turn's
+      // own bound prompts. Preserve their lineage; unrelated and unbound
+      // prompts remain for the ordinary safe-boundary injection path.
+      if (options.recoverBoundOnly &&
+        (prompt.status !== "promoted" || prompt.promotedTurnId !== turnId)) continue;
+      if (history.some((m) => m.role === "user" && m.promptId === prompt.id)) {
         // A prior interrupted attempt already injected this steer; do not
         // append again, just reconcile the prompt to consumed.
         await this.deps.inbox.markPromoted(prompt.id);
         await this.deps.inbox.markConsumed(prompt.id);
         continue;
       }
+      if (prompt.promotedTurnId !== undefined && prompt.promotedTurnId !== turnId) continue;
       await this.deps.inbox.markPromoted(prompt.id);
+      await this.deps.inbox.bindPromotion(prompt.id, turnId);
       await this.deps.store.appendMessage({
         id: newMessageId(),
         sessionId,
@@ -478,13 +519,17 @@ export class ContextController {
   ): Promise<string> {
     const { sessionId, turnId } = ctx;
     const budget = this.deps.toolOutputBudget;
-    const raw = result.output;
-    if (budget === undefined || typeof raw !== "string") return renderToolResult(result);
+    // Render the existing model view first: structured successes serialize,
+    // failures expose their status/error detail, and null/undefined stay empty.
+    // This does not change the caller's ToolResult or its structured output.
+    const raw = renderToolResult(result) ?? "";
 
     // P0-7: redact secrets before the output crosses any boundary (artifact
     // file or inline message content). A redaction is observable as a
     // security.secret_redacted event; the sha256 covers the stored content.
-    const redactedOut = this.deps.outputRedactor !== undefined ? this.deps.outputRedactor(raw) : { content: raw, redacted: 0 };
+    const redactedOut = protectToolOutputText(raw, {
+      redact: this.deps.outputRedactor, detect: this.deps.injectionDetector,
+    });
     const out = redactedOut.content;
     if (redactedOut.redacted > 0) {
       // P0-7: a redaction is observable with a structured source/reason/code
@@ -499,18 +544,24 @@ export class ContextController {
       }, turnId);
     }
 
+    // Scan the complete redacted model text before reducing it to a preview.
+    // Budget configuration and output shape must never disable this boundary.
+    const injection = redactedOut.injection;
     const bytes = Buffer.byteLength(out, "utf8");
     let renderText: string;
-    if (bytes <= budget.maxInlineBytes) {
-      renderText = renderToolResult({ ...result, output: out });
+    if (budget === undefined || bytes <= budget.maxInlineBytes) {
+      renderText = out;
     } else {
       const hash = createHash("sha256").update(out).digest("hex");
       let ref = "(no artifact dir configured — inline truncated)";
       if (budget.artifactDir !== undefined) {
-        const path = join(budget.artifactDir, `${sessionId}-${turnId}-${call.id}.txt`);
+        // Provider correlation ids are untrusted values, never path parts.
+        const identity = createHash("sha256").update(JSON.stringify([sessionId, turnId, call.id])).digest("hex");
+        const path = join(budget.artifactDir, `tool-output-${identity}.txt`);
         try {
           await mkdir(dirname(path), { recursive: true });
-          await writeFile(path, out, "utf8");
+          // Exclusive creation refuses pre-existing files and symlinks.
+          await writeFile(path, out, { encoding: "utf8", flag: "wx", mode: 0o600 });
           ref = path;
           // P1-12: register the artifact under its own id — the path is only a
           // ref, never the identity. Sensitivity follows the tool semantics.
@@ -545,8 +596,24 @@ export class ContextController {
           ref = "(artifact write failed — inline truncated)";
         }
       }
-      const head = out.slice(0, 2000);
-      const tail = out.slice(-2000);
+      // maxInlineBytes is an artifact threshold, not a preview/marker cap.
+      // Each preview body has its own 2000-byte limit (ASCII-compatible).
+      // Only encode a bounded string slice, avoiding another full-size buffer.
+      const preview = (fromTail: boolean): string => {
+        let segment = fromTail ? out.slice(-2000) : out.slice(0, 2000);
+        if (out.length > 2000) {
+          if (fromTail && /[\uDC00-\uDFFF]/u.test(segment[0]!)) segment = segment.slice(1);
+          if (!fromTail && /[\uD800-\uDBFF]/u.test(segment.at(-1)!)) segment = segment.slice(0, -1);
+        }
+        const encoded = Buffer.from(segment, "utf8");
+        let start = fromTail ? Math.max(0, encoded.length - 2000) : 0;
+        let end = fromTail ? encoded.length : Math.min(encoded.length, 2000);
+        while (start < encoded.length && (encoded[start]! & 0xc0) === 0x80) start++;
+        while (end < encoded.length && (encoded[end]! & 0xc0) === 0x80) end--;
+        return encoded.subarray(start, end).toString("utf8");
+      };
+      const head = preview(false);
+      const tail = preview(true);
       renderText =
         `[tool output: ${bytes} bytes, exceeds inline budget (${budget.maxInlineBytes})]\n` +
         `[artifact: ${ref}]\n[sha256: ${hash}]\n` +
@@ -554,25 +621,22 @@ export class ContextController {
     }
 
     // P0-8: untrusted tool output must stay data-only in the model's context.
-    // The rendered text the model actually sees is scanned; on a hit the
+    // The complete model view is scanned; on a hit the
     // content is replaced with a blocked notice (never the injection itself)
     // and the denial is observable as security.injection_denied. The full
     // (non-rendered) output is never fed back to the model.
-    if (this.deps.injectionDetector !== undefined) {
-      const report = this.deps.injectionDetector(renderText);
-      if (report.hasInjection) {
-        await this.deps.emit(sessionId, "security.injection_denied", {
-          source: "tool",
-          target: call.name,
-          toolCallId: call.id,
-          reasons: report.reasons,
-          code: "SECURITY_DENIED",
-        }, turnId);
-        return (
-          `[tool output blocked: prompt-injection detected in "${call.name}" output ` +
-          `(${report.reasons.join(", ")}) — content withheld]`
-        );
-      }
+    if (injection?.hasInjection) {
+      await this.deps.emit(sessionId, "security.injection_denied", {
+        source: "tool",
+        target: call.name,
+        toolCallId: call.id,
+        reasons: injection.reasons,
+        code: "SECURITY_DENIED",
+      }, turnId);
+      return (
+        `[tool output blocked: prompt-injection detected in "${call.name}" output ` +
+        `(${injection.reasons.join(", ")}) — content withheld]`
+      );
     }
     return renderText;
   }
@@ -580,10 +644,10 @@ export class ContextController {
 
 /** P17-6: project the durable working state into the protected-facts shape
  *  the preservation checker verifies against. */
-function protectedFactsFrom(working: import("@ar/contracts").WorkingState): import("@ar/context").ProtectedFacts {
+function protectedFactsFrom(working: import("@ar/contracts").WorkingState, activeUsers: readonly Message[]): import("@ar/context").ProtectedFacts {
   return {
     goal: working.goal,
-    constraints: working.constraints,
+    constraints: [...working.constraints, ...activeUsers.map((message) => message.content)],
     pending: working.pending,
     decisions: working.decisions,
     filesChanged: working.filesChanged,

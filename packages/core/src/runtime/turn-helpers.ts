@@ -160,10 +160,10 @@ export function updateWorkingState(
  *  (completed work, artifact refs, child-agent refs). Empty lists stay empty
  *  (the compactor omits empty sections, so a sparse state yields a sparse
  *  summary). */
-export function workingStateToCompactionSummary(working: WorkingState): CompactionSummary {
+export function workingStateToCompactionSummary(working: WorkingState, activeUsers: readonly Message[] = []): CompactionSummary {
   return {
     goal: working.goal,
-    constraints: working.constraints,
+    constraints: [...working.constraints, ...activeUsers.map((message) => message.content)],
     decisions: working.decisions,
     completed: working.completed,
     filesChanged: working.filesChanged,
@@ -235,6 +235,7 @@ export function buildResumePrompt(
    *  unresolvedTools). When absent the prompt falls back to the generic
    *  "reconcile, do not blindly re-execute" wording. */
   verdicts?: ReconciliationVerdict[],
+  activeUsers: readonly Message[] = [],
 ): string {
   const list = (items: readonly string[], empty: string): string =>
     items.length > 0 ? items.map((item) => `- ${item}`).join("\n") : empty;
@@ -250,6 +251,9 @@ export function buildResumePrompt(
     "## Pending Work",
     list(working.pending, "- (none)"),
   ];
+  if (activeUsers.length > 0) {
+    lines.push("## Original User Inputs (in order; later corrections apply)", ...activeUsers.map((message) => message.content));
+  }
   if (working.filesChanged.length > 0) {
     lines.push("## Files Changed", list(working.filesChanged, "-"));
   }
@@ -325,7 +329,7 @@ export function toContextBlock(toolCallId: string, result: ToolResult, contentOv
 /** Structured state digest for compaction (plan.md Phase 4.4): what the
  *  model must remember after older tool outputs are folded away. Rendered
  *  from the single working state (P1-1) — no parallel journal. */
-export function buildStateDigest(working: WorkingState, reason: string): string {
+export function buildStateDigest(working: WorkingState, reason: string, activeUsers: readonly Message[] = []): string {
   const list = (items: readonly string[], empty = "- (none)"): string =>
     items.length > 0 ? items.map((i) => `- ${i}`).join("\n") : empty;
   const lines: string[] = [
@@ -353,7 +357,33 @@ export function buildStateDigest(working: WorkingState, reason: string): string 
     "## Memory / Skill / Child Agent Refs",
     list([...working.memoryRefs, ...working.toolRefs, ...working.childAgentRefs]),
   ];
+  if (activeUsers.length > 0) {
+    lines.push("## Active User Inputs (in order; later corrections apply)", ...activeUsers.map((message) => message.content));
+  }
   return lines.join("\n");
+}
+
+/** Current-turn user authority comes only from durable user messages, never
+ *  from a marker in tool/memory text. Prompt identity deduplicates steering;
+ *  turn identity bounds its lifetime without rewriting the working state. */
+export function activeUserMessages(history: readonly Message[], turnId: TurnId): Message[] {
+  const seen = new Set<string>();
+  return history.filter((message) => {
+    if (message.role !== "user" || message.turnId !== turnId) return false;
+    const identity = message.promptId ?? message.id;
+    if (seen.has(identity)) return false;
+    seen.add(identity);
+    return true;
+  });
+}
+
+/** Repair the suffix before reinserting anchors: otherwise a leading orphan
+ *  tool result would become an internal orphan behind a retained user. Keep
+ *  original order and message objects so complete tool blocks stay intact. */
+export function retainMessageHistoryTail(history: readonly Message[], start: number, activeUsers: readonly Message[] = []): Message[] {
+  const tail = dropOrphanToolResults(history.slice(start));
+  const kept = new Set([...activeUsers.filter((message) => message.role === "user"), ...tail].map((message) => message.id));
+  return history.filter((message) => kept.has(message.id));
 }
 
 /**
@@ -372,6 +402,7 @@ export function trimMessageHistory(
   history: readonly Message[],
   headroomTokens: number,
   tokensForMessage: (message: Message) => number = (message) => estimateMessageTokens([message]),
+  activeUsers: readonly Message[] = [],
 ): Message[] {
   const MIN_KEEP = 4;
   if (history.length <= MIN_KEEP) return dropOrphanToolResults(history);
@@ -380,13 +411,14 @@ export function trimMessageHistory(
   // and copying every remaining suffix makes long-session trims quadratic.
   // The callback lets the runtime share its pipeline's configured estimator.
   const costs = history.map(tokensForMessage);
+  const protectedIds = new Set(activeUsers.filter((message) => message.role === "user").map((message) => message.id));
   let remainingTokens = costs.reduce((sum, cost) => sum + cost, 0);
   let start = 0;
   while (history.length - start > MIN_KEEP && remainingTokens > headroomTokens) {
-    remainingTokens -= costs[start]!;
+    if (!protectedIds.has(history[start]!.id)) remainingTokens -= costs[start]!;
     start += 1;
   }
-  return dropOrphanToolResults(history.slice(start));
+  return retainMessageHistoryTail(history, start, activeUsers);
 }
 
 // ── Q-1: model-call retry decision (pure) ─────────────────────────

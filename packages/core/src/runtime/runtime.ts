@@ -93,6 +93,7 @@ import { AgentState } from "../state/agent-state.js";
 import { HookRegistry } from "../lifecycle/hooks.js";
 import { RecoveryPolicy } from "../recovery/recovery.js";
 import {
+  activeUserMessages,
   buildResumePrompt,
   classifyUnknownOutcome,
   DEFAULT_RUNTIME_TOOL_SEMANTICS,
@@ -100,6 +101,7 @@ import {
   isEffectiveAgentConfig,
   rethrowIfKill,
   renderToolResult,
+  retainMessageHistoryTail,
   toContextBlock,
   trimMessageHistory,
   updateWorkingState,
@@ -117,6 +119,7 @@ import type {
 } from "./turn-helpers.js";
 import { ToolCallController } from "./tool-call-controller.js";
 import { RunBudgetTracker } from "./run-budget.js";
+import { ReadOnlyPrefetch } from "./read-only-prefetch.js";
 
 /** P1-6: deterministic hash of a policy value (session fingerprinting). */
 function stableHashOf(value: unknown): string {
@@ -370,7 +373,22 @@ export interface AgentRuntimeDeps {
     turnId: TurnId;
     goal: string;
     cwd: string;
+    /** Optional for older hosts; provided on every new invocation. */
+    signal?: AbortSignal;
+    /** First instant that exceeds this execution's maxDurationMs. */
+    deadline?: number;
   }) => Promise<ContextBlock[]>;
+  /** Optional soft timeout: skip memory with an explicit degraded event.
+   * The hard turn deadline and cancellation always terminate the turn. */
+  memoryRetrievalTimeoutMs?: number;
+  /** Feedback for memory accepted by the active turn. This may persist
+   * accounting: unlike read-only retrieval, it is fully awaited before the
+   * terminal durability fence and is never raced against cancellation. */
+  onMemoryRetrieved?: (input: {
+    sessionId: SessionId;
+    turnId: TurnId;
+    blocks: readonly ContextBlock[];
+  }) => Promise<void>;
   /** P2-5: post-turn reflection hook. Invoked after every terminal turn
    *  outcome (completed / failed / cancelled) with the final outcome. The
    *  host owns the reflection pipeline (event stream read, deterministic
@@ -391,6 +409,7 @@ export interface AgentRuntimeDeps {
     sessionId: SessionId;
     turnId: TurnId;
     names: string[];
+    skills?: readonly Skill[];
   }) => Promise<ContextBlock[]>;
   /** P3-9: host-provided specialist delegation for adaptive recovery (the
    *  host owns the Delegator and the budget gate). When a tool keeps failing
@@ -484,6 +503,9 @@ export class AgentRuntime {
   private readonly skillBodyBlocks?: AgentRuntimeDeps["skillBodyBlocks"];
   /** P2-2: pre-turn memory retrieval (memory prior blocks + memory.retrieved). */
   private readonly memoryBlocks?: AgentRuntimeDeps["memoryBlocks"];
+  private readonly memoryRetrievalTimeoutMs?: number;
+  private readonly onMemoryRetrieved?: AgentRuntimeDeps["onMemoryRetrieved"];
+  private readonly memoryPrefetch: ReadOnlyPrefetch;
   /** P2-5: post-turn reflection hook (never alters the turn result). */
   private readonly onTurnComplete?: AgentRuntimeDeps["onTurnComplete"];
   /** P26-3: optional durability fence — flushed before turn completion ack. */
@@ -565,6 +587,7 @@ export class AgentRuntime {
     this.reportModelUsage = deps.reportModelUsage;
     this.now = deps.now ?? Date.now;
     this.timer = deps.timer ?? new RealTimer(this.now);
+    this.memoryPrefetch = new ReadOnlyPrefetch(this.timer, this.now);
     this.sandboxPolicy = deps.sandboxPolicy;
     this.context = deps.context;
     this.task = deps.task;
@@ -576,6 +599,12 @@ export class AgentRuntime {
     this.skillSelector = deps.skillSelector;
     this.skillBodyBlocks = deps.skillBodyBlocks;
     this.memoryBlocks = deps.memoryBlocks;
+    if (deps.memoryRetrievalTimeoutMs !== undefined &&
+      (!Number.isFinite(deps.memoryRetrievalTimeoutMs) || deps.memoryRetrievalTimeoutMs < 0)) {
+      throw new RangeError("memoryRetrievalTimeoutMs must be a finite nonnegative number");
+    }
+    this.memoryRetrievalTimeoutMs = deps.memoryRetrievalTimeoutMs;
+    this.onMemoryRetrieved = deps.onMemoryRetrieved;
     this.onTurnComplete = deps.onTurnComplete;
     this.durabilityFence = deps.durabilityFence;
     this.delegateSpecialist = deps.delegateSpecialist;
@@ -862,45 +891,13 @@ export class AgentRuntime {
     const { ctx, state, turn, working, toolLedger, turnState } = await this.prepareTurn(sessionId, turnId, signal, opts);
 
     const priorBlocks: ContextBlock[] = [];
-    // P2-2: pre-turn memory retrieval — runs once per turn, before the first
-    // model call. The retrieved memory blocks join the context pipeline as
-    // semi-trusted prior data; their ids land in the working state's
-    // memoryRefs and one memory.retrieved event is emitted per turn.
-    if (this.memoryBlocks !== undefined) {
-      const memoryBlocks = await this.memoryBlocks({
-        sessionId,
-        turnId,
-        goal: working.goal,
-        cwd: ctx.session.cwd,
-      });
-      if (memoryBlocks.length > 0) {
-        priorBlocks.push(...memoryBlocks);
-        const memoryIds: string[] = [];
-        for (const block of memoryBlocks) {
-          const id = block.id.startsWith("memory:") ? block.id.slice("memory:".length) : block.id;
-          if (id.length > 0 && !memoryIds.includes(id)) memoryIds.push(id);
-        }
-        const known = new Set(working.memoryRefs);
-        for (const id of memoryIds) {
-          if (!known.has(id)) {
-            working.memoryRefs.push(id);
-            known.add(id);
-          }
-        }
-        await this.emit(sessionId, "memory.retrieved", {
-          query: working.goal,
-          count: memoryIds.length,
-          memoryIds,
-          suppressed: 0,
-        }, turnId);
-      }
-    }
     let overflowAttempt = 0;
     let verificationFailures = opts.verificationRetriesSeed ?? 0;
     let reactiveCompacted = false;
     let digestAppended = false;
     let lastReportTokens: number | undefined;
-    // P0-10: unified run-budget tracker (replaces scattered counters).
+    // P0-10/R6: preparation consumes the same execution duration as the
+    // model loop; retrieval must not reset the turn's clock.
     const budget = new RunBudgetTracker(ctx.agent.limits, this.now);
     // P16-3: a resumed turn seeds its consumed counters from the checkpoint —
     // budget is NEVER refreshed on resume.
@@ -927,6 +924,53 @@ export class AgentRuntime {
     }
 
     try {
+      if (this.memoryBlocks !== undefined) {
+        const deadline = ctx.agent.limits.maxDurationMs === undefined ? undefined
+          : budget.snapshot().startedAt + ctx.agent.limits.maxDurationMs + 1;
+        const retrieved = await this.memoryPrefetch.run((prefetchSignal) => this.memoryBlocks!({
+          sessionId, turnId, goal: working.goal, cwd: ctx.session.cwd,
+          signal: prefetchSignal, ...(deadline !== undefined ? { deadline } : {}),
+        }), { signal, ...(deadline !== undefined ? { deadline } : {}),
+          ...(this.memoryRetrievalTimeoutMs !== undefined ? { timeoutMs: this.memoryRetrievalTimeoutMs } : {}),
+        });
+        if (signal.aborted || retrieved.status === "cancelled") {
+          return this.recoveryController.finishTurn(ctx, "cancelled", state, working, undefined, "cancelled", toolLedger);
+        }
+        const durationBreach = budget.onDurationCheck();
+        if (durationBreach !== undefined) {
+          await this.emit(sessionId, "run.limit_reached", { ...durationBreach }, turnId);
+          return this.recoveryController.finishTurn(ctx, "failed", state, working,
+            errorInfo("RESOURCE_LIMIT", `maxDurationMs (${durationBreach.allowed}ms) exceeded after ${durationBreach.used}ms`),
+            "time_limit", toolLedger);
+        }
+        if (retrieved.status === "rejected") {
+          return this.recoveryController.finishTurn(ctx, "failed", state, working,
+            errorInfo("INTERNAL_ERROR", "memory retrieval failed"), "provider_error", toolLedger);
+        }
+        if (retrieved.status === "busy" || retrieved.status === "timeout") {
+          await this.emit(sessionId, "runtime.degraded", {
+            reason: `memory_prefetch_${retrieved.status}`, component: "memory", readOnly: true,
+          }, turnId);
+        } else if (retrieved.status === "ready" && retrieved.value.length > 0) {
+          if (this.onMemoryRetrieved !== undefined) {
+            try { await this.onMemoryRetrieved({ sessionId, turnId, blocks: retrieved.value }); }
+            catch {
+              return this.recoveryController.finishTurn(ctx, "failed", state, working,
+                errorInfo("INTERNAL_ERROR", "memory feedback failed"), "provider_error", toolLedger);
+            }
+          }
+          priorBlocks.push(...retrieved.value);
+          const memoryIds = [...new Set(retrieved.value.map((block) =>
+            block.id.startsWith("memory:") ? block.id.slice("memory:".length) : block.id).filter(Boolean))];
+          const known = new Set(working.memoryRefs);
+          for (const id of memoryIds) {
+            if (!known.has(id)) { working.memoryRefs.push(id); known.add(id); }
+          }
+          await this.emit(sessionId, "memory.retrieved", {
+            query: working.goal, count: memoryIds.length, memoryIds, suppressed: 0,
+          }, turnId);
+        }
+      }
       // P15-2: step counter — one StepContext per model call; the batch of
       // tool calls it requests reuses the SAME step (immutable snapshot).
       let stepIndex = 0;
@@ -986,7 +1030,7 @@ export class AgentRuntime {
           // P2-41/PROTOCOL: a tail slice can cut an assistant `tool_calls`
           // message away while its `tool` results remain; an orphan tool result
           // is rejected by a strict upstream, so the view is repaired.
-          history = dropOrphanToolResults(history.slice(-12));
+          history = retainMessageHistoryTail(history, history.length - 12, activeUserMessages(history, turnId));
         }
 
         // Q-1: context pipeline + compaction + overflow extracted to buildContext.
@@ -1048,7 +1092,7 @@ export class AgentRuntime {
             sessionId,
             turnId,
             role: "system",
-            content: buildStateDigest(working, "context is full — reactive compact; continue concisely"),
+            content: buildStateDigest(working, "context is full — reactive compact; continue concisely", activeUserMessages(history, turnId)),
             createdAt: this.now(),
           });
           continue;
@@ -1643,7 +1687,20 @@ export class AgentRuntime {
       );
     }
 
-    const resumePrompt = buildResumePrompt(working, committedSideEffects, unresolvedTools, verdicts);
+    // A recovery continues the interrupted task in a fresh turn. Carry only
+    // that task's durable user inputs onto the existing user resume channel;
+    // copying prompt messages would duplicate their exactly-once identity.
+    let interruptedUsers: Message[] = [];
+    if (turnId !== undefined) {
+      // A steer can be durably bound just before its message append. Settle
+      // that crash window on the original turn before creating the resume
+      // turn: rewriting promotedTurnId would break exactly-once lineage.
+      const history = await this.contextController.injectSteeringPrompts(
+        { sessionId, turnId }, await this.store.listMessages(sessionId), { recoverBoundOnly: true },
+      );
+      interruptedUsers = activeUserMessages(history, turnId);
+    }
+    const resumePrompt = buildResumePrompt(working, committedSideEffects, unresolvedTools, verdicts, interruptedUsers);
     const turn = await this.startTurn(sessionId, resumePrompt);
     const bu = checkpoint.budgetUsage;
     const outcome = await this.runTurn(sessionId, turn.id, signal, {
