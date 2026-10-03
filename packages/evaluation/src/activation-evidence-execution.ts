@@ -40,7 +40,9 @@ export type ObservedActivationSignalType =
   | "recovery_decision"
   | "memory_retrieved"
   | "budget_guidance_injected"
-  | "tool_call_efficiency_guidance_injected";
+  | "tool_call_efficiency_guidance_injected"
+  | "diagnostic_first_repair_guidance_injected"
+  | "path_scoped_instructions_selected";
 
 export interface ObservedActivationSignal {
   type: ObservedActivationSignalType;
@@ -81,6 +83,8 @@ const SIGNAL_MAP: Record<
   memory_retrieved: { mechanism: "memory", evidenceType: "memory-block-injected" },
   budget_guidance_injected: { mechanism: "prompt-guidance", evidenceType: "prompt-guidance-injected" },
   tool_call_efficiency_guidance_injected: { mechanism: "prompt-guidance", evidenceType: "prompt-guidance-injected" },
+  diagnostic_first_repair_guidance_injected: { mechanism: "prompt-guidance", evidenceType: "prompt-guidance-injected" },
+  path_scoped_instructions_selected: { mechanism: "context", evidenceType: "context-selection" },
 };
 
 /** sha256 over the JSON of the actual payload — a real function of what the

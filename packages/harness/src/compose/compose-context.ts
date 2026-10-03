@@ -5,13 +5,14 @@
  * Owns the context pipeline (+ telemetry routing), the context budget
  * resolution, skill discovery, and the P7-6 lazy command discovery service.
  */
-import type { AgentEvent, ContextBudget } from "@ar/contracts";
+import type { AgentEvent, ContextBudget, EventStore } from "@ar/contracts";
 import { ContextPipeline } from "@ar/context";
 import { budgetForCapabilities, resolveCapabilities } from "@ar/model";
 import { FileSkillLoader } from "@ar/skills";
 import type { SkillDiscovery, SkillSecurityDenialRecord } from "@ar/core";
 import { CommandDiscoveryService } from "../command-discovery-service.js";
 import { DEFAULT_CONTEXT_BUDGET, type HarnessConfig, type HarnessFeatureFlags } from "../config.js";
+import { PathScopedContextPipeline } from "../path-scoped-instructions.js";
 
 export interface ComposedContext {
   pipeline: ContextPipeline;
@@ -39,11 +40,12 @@ export async function composeContext(
     payload: Record<string, unknown>,
     extra?: { turnId?: string; timestamp?: number },
   ) => Promise<void>,
+  events?: EventStore,
 ): Promise<ComposedContext> {
   // P6-3: context selection telemetry — the pipeline reports facts, the
   // harness routes them into the event stream (never content, only
   // source/priority/tokens/reason).
-  const pipeline = new ContextPipeline({
+  const pipelineDeps: import("@ar/context").ContextPipelineDeps = {
     onTelemetry: (event) => {
       // candidate facts without a quarantine reason are noise — skip.
       if (event.sessionId === undefined || (event.phase === "candidate" && event.reason !== "quarantine-envelope")) {
@@ -71,7 +73,11 @@ export async function composeContext(
         process.stderr.write(`[degraded] context-telemetry.append: ${err instanceof Error ? err.message : String(err)}\n`),
       );
     },
-  });
+  };
+  if (config.instructionDiscovery !== undefined && events === undefined) throw new Error("Path-scoped instructions require durable event evidence");
+  const pipeline = config.instructionDiscovery !== undefined && events !== undefined
+    ? new PathScopedContextPipeline({ workspaceRoot: cwd, config: config.instructionDiscovery, events }, pipelineDeps)
+    : new ContextPipeline(pipelineDeps);
   const { budget, budgetFallback } = await resolveContextBudget(config);
 
   // --- skills (P2-8) --------------------------------------------------------

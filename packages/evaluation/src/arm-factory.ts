@@ -29,9 +29,9 @@
  */
 
 import { createHash } from "node:crypto";
-import { getCandidateRegistry, type CandidateRegistration } from "./candidate-registry.js";
+import { getCandidateRegistry, PATH_SCOPED_INSTRUCTIONS_CONFIG_V1, type CandidateRegistration, type PathScopedInstructionsRuntimeConfig } from "./candidate-registry.js";
 import { stableStringify } from "./manifest.js";
-import { budgetAwareCompletionGuidanceDigest, toolCallEfficiencyGuidanceDigest } from "./mechanism-guidance.js";
+import { budgetAwareCompletionGuidanceDigest, toolCallEfficiencyGuidanceDigest, diagnosticFirstRepairGuidanceDigest, DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1 } from "./mechanism-guidance.js";
 
 export const ARM_FACTORY_SCHEMA_VERSION = "1.0.0";
 export const ARM_FACTORY_POLICY_VERSION = "e3-03-arm-v1";
@@ -120,6 +120,12 @@ export interface RuntimeMechanisms {
   budgetAwareCompletion: boolean;
   /** Tool-call efficiency guidance injected into the system prompt (N5). */
   toolCallEfficiency: boolean;
+  /** S1 experimental diagnostic guidance; omitted on existing arms. */
+  diagnosticFirstRepair?: boolean;
+  /** S2 experimental discovery; absent on existing arms. */
+  pathScopedInstructions?: "path_scoped_instructions_v1";
+  /** Exact S2 constructor policy, hashed with the resolved arm. */
+  pathScopedInstructionsConfig?: Readonly<PathScopedInstructionsRuntimeConfig>;
   /** Digest of prompt/system additions (null = none). */
   promptAdditionsDigest: string | null;
   /** Policy version that produced these mechanisms. */
@@ -282,6 +288,26 @@ export function wireCandidateMechanism(reg: CandidateRegistration): MechanismWir
           promptAdditionsDigest: toolCallEfficiencyGuidanceDigest(),
         }),
         declaredPaths: ["harnessConfig.toolCallEfficiency"],
+      };
+    case "diagnostic_first_repair_v1":
+      return {
+        constructorId: "completion:diagnostic-first-repair-guide-v1",
+        apply: (config) => ({ ...config, completionGuidance: DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1 }),
+        isActive: (config) => config.completionGuidance === DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1,
+        applyRuntime: (base) => ({
+          ...base,
+          diagnosticFirstRepair: true,
+          promptAdditionsDigest: diagnosticFirstRepairGuidanceDigest(),
+        }),
+        declaredPaths: ["harnessConfig.completionGuidance"],
+      };
+    case "path_scoped_instructions_v1":
+      return {
+        constructorId: "context:path-scoped-instructions-v1",
+        apply: (config) => ({ ...config, instructionDiscovery: { ...PATH_SCOPED_INSTRUCTIONS_CONFIG_V1 } }),
+        isActive: (config) => (config.instructionDiscovery as Record<string, unknown> | undefined)?.strategy === "path_scoped_instructions_v1",
+        applyRuntime: (base) => ({ ...base, pathScopedInstructions: "path_scoped_instructions_v1", pathScopedInstructionsConfig: { ...PATH_SCOPED_INSTRUCTIONS_CONFIG_V1 } }),
+        declaredPaths: ["harnessConfig.instructionDiscovery"],
       };
     default:
       // Unsupported or not-yet-wired candidates fail closed.

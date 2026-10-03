@@ -98,6 +98,8 @@ export interface HarnessConfig {
 
   /** Explicit budget wins over capability-derived budget. */
   contextBudget?: ContextBudget;
+  /** Opt-in experimental discovery; omitted preserves default behavior/hash. */
+  instructionDiscovery?: import("./path-scoped-instructions.js").PathScopedInstructionsConfig;
 
   /** P2-8: skill index pruning before injection (progressive disclosure:
    *  index → selection → body on demand). Receives the metadata rows and

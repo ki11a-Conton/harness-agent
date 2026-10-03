@@ -80,6 +80,26 @@ export interface ContractEvaluation {
 // ---------------------------------------------------------------------------
 
 const CONTRACTS: Record<string, MechanismContract> = {
+  path_scoped_instructions_v1: {
+    schemaVersion: MECHANISM_CONTRACT_SCHEMA_VERSION,
+    candidateId: "path_scoped_instructions_v1",
+    modelVisibleSurface: "real project context from workspace-bounded cwd/approved target ancestry, with instructionSources in step snapshots",
+    eligibilityRule: "monorepo task with distinct package/file rules and authorized target reads/searches",
+    minEligibleCases: 5,
+    expectedFailureCluster: "incorrect_scope (missing applicable rules or sibling rule contamination)",
+    requiredActivationEvents: ["path-scoped-instructions-selected"],
+    forbiddenNoOpConditions: ["default discovery still installed", "scope only changes a flag without real model requests", "unapproved target or out-of-workspace document admitted", "fewer tokens substituted for task correctness"],
+  },
+  diagnostic_first_repair_v1: {
+    schemaVersion: MECHANISM_CONTRACT_SCHEMA_VERSION,
+    candidateId: "diagnostic_first_repair_v1",
+    modelVisibleSurface: "versioned completionGuidance in the real model request; original verification gate unchanged",
+    eligibilityRule: "case has an original command verifier that can be rerun for diagnostic access",
+    minEligibleCases: 5,
+    expectedFailureCluster: "verification_failed (guessing repairs without concrete diagnostics)",
+    requiredActivationEvents: ["diagnostic-first-repair-guidance-injected"],
+    forbiddenNoOpConditions: ["guidance absent from real model requests", "baseline already injects the same guidance", "original verifier replaced or truth policy weakened"],
+  },
   adaptive_recovery_v2: {
     schemaVersion: MECHANISM_CONTRACT_SCHEMA_VERSION,
     candidateId: "adaptive_recovery_v2",

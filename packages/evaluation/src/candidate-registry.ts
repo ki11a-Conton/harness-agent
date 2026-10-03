@@ -9,9 +9,24 @@
  */
 
 import { stableStringify } from "./manifest.js";
+import { DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1 } from "./mechanism-guidance.js";
 
 export type CandidateStatus = "implemented" | "experimental" | "unsupported";
 export type CandidateLayer = "agent-strategy" | "harness-profile" | "benchmark-fixture";
+
+/** S2's installed discovery policy is one content-addressed arm input. */
+export interface PathScopedInstructionsRuntimeConfig {
+  strategy: "path_scoped_instructions_v1";
+  maxDocuments: number;
+  maxBytesPerFile: number;
+  initialTargets?: readonly string[];
+}
+
+export const PATH_SCOPED_INSTRUCTIONS_CONFIG_V1: Readonly<PathScopedInstructionsRuntimeConfig> = Object.freeze({
+  strategy: "path_scoped_instructions_v1",
+  maxDocuments: 4,
+  maxBytesPerFile: 50_000,
+});
 
 export interface CandidateRegistration {
   /** Stable candidate id (the single-variable switch name). */
@@ -185,6 +200,22 @@ const CANDIDATES: CandidateRegistration[] = [
     // run are never the same configuration.
     enabledPatch: { toolCallEfficiency: "v1" },
     disabledPatch: { toolCallEfficiency: undefined },
+  },
+  {
+    id: "diagnostic_first_repair_v1",
+    description: "diagnostic-first repair guidance: inspect bounded data-only exec diagnostics after verification failure, repair the cause and rerun the original verifier",
+    status: "experimental",
+    layer: "agent-strategy",
+    enabledPatch: { completionGuidance: DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1 },
+    disabledPatch: { completionGuidance: undefined },
+  },
+  {
+    id: "path_scoped_instructions_v1",
+    description: "workspace-bounded target ancestry discovery from successful read/search evidence; project documents remain untrusted data",
+    status: "experimental",
+    layer: "agent-strategy",
+    enabledPatch: { instructionDiscovery: PATH_SCOPED_INSTRUCTIONS_CONFIG_V1 },
+    disabledPatch: { instructionDiscovery: undefined },
   },
 ];
 

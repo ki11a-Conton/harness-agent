@@ -22,6 +22,8 @@ describe("CandidateRegistry (E1-03)", () => {
       "budget_aware_completion_v1",
       "adaptive_recovery_v2",
       "tool_call_efficiency_v1",
+      "diagnostic_first_repair_v1",
+      "path_scoped_instructions_v1",
     ]);
   });
 

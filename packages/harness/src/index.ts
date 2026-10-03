@@ -1,4 +1,5 @@
 export * from "./config.js";
+export * from "./path-scoped-instructions.js";
 export * from "./profiles.js";
 export * from "./introspection.js";
 export * from "./lifecycle.js";

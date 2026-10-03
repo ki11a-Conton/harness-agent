@@ -2,6 +2,8 @@
 
 // CTX-001: hierarchical instruction discovery.
 export { HierarchicalInstructionDiscovery } from "./discovery.js";
+export { PathScopedInstructionDiscovery } from "./path-scoped-discovery.js";
+export type { PathScopedInstructionDiscoveryOptions, PathScopedDiscoveryMetrics } from "./path-scoped-discovery.js";
 export type { InstructionDiscoveryOptions, DiscoveredInstruction } from "@ar/contracts";
 
 // CTX-002: budget planning.

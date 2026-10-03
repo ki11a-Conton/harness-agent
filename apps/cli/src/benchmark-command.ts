@@ -11,18 +11,22 @@ import type {
   ModelRequest,
   PermissionPolicy,
   ProviderConfig,
+  InstructionSource,
   SessionId,
   TurnId,
 } from "@ar/contracts";
-import { newAgentId, newEventId, newMemoryId, AdaptiveRecoveryPlanner } from "@ar/contracts";
+import { newAgentId, newEventId, newMemoryId, AdaptiveRecoveryPlanner, stableFingerprint } from "@ar/contracts";
 import type { ContextBlock, MemoryScope } from "@ar/contracts";
 import { AgentRuntime, DEFAULT_ENABLED_STALL_PATTERNS, defaultSandboxPolicy } from "@ar/core";
 import { RecoveryPolicy } from "@ar/core";
 import { ContextPipeline } from "@ar/context";
+import type { ContextPipelineBuildOptions, ContextPipelineResult } from "@ar/context";
 import { resolveCapabilities, budgetForCapabilities } from "@ar/model";
 import {
   BENCHMARK_SUITE_VERSION,
   activationEvidenceFor,
+  diagnosticFirstRepairEligible,
+  pathScopedInstructionsEligible,
   buildSecurityOutcomeFromEventsV2,
   securityExpectationFromCase,
   buildActivationEvidenceFromSignalsV2,
@@ -46,6 +50,8 @@ import {
   BUDGET_AWARE_COMPLETION_GUIDANCE_VERSION,
   TOOL_CALL_EFFICIENCY_GUIDANCE_V1,
   TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION,
+  DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1,
+  DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_VERSION,
   DEFAULT_DECISION_POLICY_V3,
   computeThresholdDigestV3,
   computeExecutionPlanDigest,
@@ -101,6 +107,7 @@ import {
   PRODUCTION_TOOL_NAMES,
   READONLY_TOOL_NAMES,
   createDelegationTools,
+  PathScopedContextPipeline,
 } from "@ar/harness";
 import {
   AgentExecutionScheduler,
@@ -1740,10 +1747,11 @@ export const TOOL_CALL_EFFICIENCY_GUIDANCE = TOOL_CALL_EFFICIENCY_GUIDANCE_V1;
  *  mechanisms are mutually exclusive (both occupy `completionGuidance`), so at
  *  most one is appended. */
 export function benchmarkModelVisibleSystemPrompt(
-  mech: Pick<RuntimeMechanisms, "budgetAwareCompletion" | "toolCallEfficiency">,
+  mech: Pick<RuntimeMechanisms, "budgetAwareCompletion" | "toolCallEfficiency" | "diagnosticFirstRepair">,
 ): string {
   if (mech.budgetAwareCompletion) return BENCHMARK_SYSTEM_PROMPT + BUDGET_AWARE_COMPLETION_GUIDANCE;
   if (mech.toolCallEfficiency) return BENCHMARK_SYSTEM_PROMPT + TOOL_CALL_EFFICIENCY_GUIDANCE;
+  if (mech.diagnosticFirstRepair) return BENCHMARK_SYSTEM_PROMPT + DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_V1;
   return BENCHMARK_SYSTEM_PROMPT;
 }
 
@@ -1780,6 +1788,37 @@ function observeGuidanceRequest(
           yield* client.generate(request, signal);
         },
       };
+    },
+  };
+}
+
+/** Capture the actual adapter result before the runtime constructs its step.
+ *  The observer below admits evidence only after that step is durable and the
+ *  selected project bytes are present in its real model request. */
+class ObservedPathScopedContextPipeline extends PathScopedContextPipeline {
+  constructor(scope: ConstructorParameters<typeof PathScopedContextPipeline>[0], private readonly onBuilt: (result: ContextPipelineResult, opts: ContextPipelineBuildOptions) => void) {
+    super(scope);
+  }
+
+  override async build(opts: ContextPipelineBuildOptions): Promise<ContextPipelineResult> {
+    const result = await super.build(opts);
+    this.onBuilt(result, opts);
+    return result;
+  }
+}
+
+/** S2 observes the real provider boundary rather than claiming activation
+ *  from construction of the optional adapter. */
+function observeScopedInstructionsRequest(provider: ModelProvider, onRequest: (request: ModelRequest) => Promise<void>): ModelProvider {
+  return {
+    id: provider.id,
+    listModels: () => provider.listModels(),
+    createClient(model, config) {
+      const client = provider.createClient(model, config);
+      return { generate: async function* (request: ModelRequest, signal: AbortSignal) {
+        await onRequest(request);
+        yield* client.generate(request, signal);
+      } };
     },
   };
 }
@@ -1982,10 +2021,21 @@ export async function runOneCase(
     // candidate-id comparison branches.
     let activationEvents: { type: string; payload?: Record<string, unknown> }[] = [];
     const candidateId = opts.candidate;
-    const armMechanisms: RuntimeMechanisms = getArmFactory().resolveRuntimeMechanisms(candidateId ?? null);
+    const resolvedArm = getArmFactory().resolveArm(candidateId ?? null);
+    const armMechanisms: RuntimeMechanisms = resolvedArm.runtimeMechanisms;
+    type ScopedBuild = { result: ContextPipelineResult; systemPrompt: string; discovery: Record<string, number> };
+    const scopedBuilds = new Map<string, ScopedBuild>();
+    const pendingScopedStarts = new Map<string, { event: AgentEvent; build: ScopedBuild }>();
     if (candidateId !== undefined) {
       events.onAppended = (event: AgentEvent) => {
         const payload = event.payload;
+        if (armMechanisms.pathScopedInstructionsConfig !== undefined && event.type === "model.started") {
+          const build = scopedBuilds.get(event.sessionId);
+          if (build !== undefined) pendingScopedStarts.set(event.sessionId, { event, build });
+        }
+        if (event.type === "model.failed" || event.type === "model.completed") {
+          pendingScopedStarts.delete(event.sessionId);
+        }
         // Track tool_lookup calls for deferred schema activation.
         if (armMechanisms.deferredSchema && event.type === "tool.requested" && payload.name === "tool_lookup") {
           activationEvents.push({ type: "tool_lookup_called", payload });
@@ -2110,7 +2160,9 @@ export async function runOneCase(
       ? { signal: "budget_guidance_injected", version: BUDGET_AWARE_COMPLETION_GUIDANCE_VERSION }
       : toolCallEfficiencyActive
         ? { signal: "tool_call_efficiency_guidance_injected", version: TOOL_CALL_EFFICIENCY_GUIDANCE_VERSION }
-        : undefined;
+        : armMechanisms.diagnosticFirstRepair
+          ? { signal: "diagnostic_first_repair_guidance_injected", version: DIAGNOSTIC_FIRST_REPAIR_GUIDANCE_VERSION }
+          : undefined;
     let observedGuidanceBlock: string | undefined;
 
     const agent: AgentDefinition = {
@@ -2196,6 +2248,67 @@ export async function runOneCase(
       memoryClose = () => memoryStore.close();
     }
 
+    const scopedPipeline: ObservedPathScopedContextPipeline | undefined = armMechanisms.pathScopedInstructionsConfig !== undefined
+      ? new ObservedPathScopedContextPipeline({ workspaceRoot: workspace, config: armMechanisms.pathScopedInstructionsConfig, events }, (result, buildOpts) => {
+          if (buildOpts.telemetrySessionId !== undefined) scopedBuilds.set(buildOpts.telemetrySessionId, { result, systemPrompt: buildOpts.systemPrompt, discovery: { ...scopedPipeline!.instructionDiscovery.metrics } });
+        })
+      : undefined;
+    const scopedActivation = resolvedArm.mechanisms.activations.find(activation => activation.mechanism === candidateId);
+    const observeScopedRequest = async (request: ModelRequest): Promise<void> => {
+      if (scopedPipeline === undefined) return;
+      const actualSystem = request.system ?? "";
+      const matches = [...pendingScopedStarts.values()].flatMap(pending => {
+        if (stableFingerprint([pending.event.payload.contextMessageIds]) !== stableFingerprint([request.messages.map(message => message.id)])) return [];
+        const built = pending.build.result;
+        const documents = built.discovered.filter(doc => built.blocks.some(block =>
+          block.source === "project" && block.path === doc.path && actualSystem.includes(
+            `[context trust=${block.trust} source=project${block.scope !== undefined ? ` scope=${block.scope}` : ""} path=${block.path}]\n${block.content}`,
+          ),
+        ));
+        const instructionSources: InstructionSource[] = [
+          { kind: "system", source: "system", contentHash: stableFingerprint([pending.build.systemPrompt]) },
+          ...documents.map(doc => ({ kind: "project_instruction" as const, source: doc.path, path: doc.path, contentHash: stableFingerprint([doc.content]) })),
+        ];
+        const expectedInstructionFingerprint = stableFingerprint([instructionSources, actualSystem]);
+        return pending.event.payload.instructionFingerprint === expectedInstructionFingerprint
+          ? [{ ...pending, documents, instructionSources, expectedInstructionFingerprint }] : [];
+      });
+      // Unique message and instruction identity isolates concurrent sessions.
+      if (matches.length !== 1) return;
+      const selected = matches[0]!;
+      pendingScopedStarts.delete(selected.event.sessionId);
+      // An empty or rejected project selection is not an activation.
+      if (selected.documents.length === 0) return;
+      const { instructionSources, expectedInstructionFingerprint } = selected;
+      const built = selected.build.result;
+      const durableStep = (await events.list(selected.event.sessionId)).find(event => event.id === selected.event.id && event.type === "model.started");
+      // The existing step snapshot independently pins these same sources.
+      if (durableStep === undefined || durableStep.payload.instructionFingerprint !== expectedInstructionFingerprint) return;
+      const payload = {
+        strategy: armMechanisms.pathScopedInstructionsConfig!.strategy,
+        constructorIdentity: scopedActivation?.constructorIdentity,
+        configDigest: computeRuntimeConfigHash(armMechanisms.pathScopedInstructionsConfig),
+        armDigest: resolvedArm.digest,
+        stepId: durableStep.payload.stepId,
+        contextFingerprint: durableStep.payload.contextFingerprint,
+        contextMessageIds: durableStep.payload.contextMessageIds,
+        instructionFingerprint: durableStep.payload.instructionFingerprint,
+        instructionSources,
+        systemDigest: computePromptDigest(actualSystem),
+        schemaDigest: computeRuntimeConfigHash(request.tools ?? []),
+        count: selected.documents.length,
+        contextTokens: built.report.used,
+        contextBytes: Buffer.byteLength(actualSystem, "utf8"),
+        discovery: selected.build.discovery,
+      };
+      // Persist the witnessed selection before producing the activation signal.
+      await events.appendNew({ id: newEventId(), sessionId: durableStep.sessionId,
+        ...(durableStep.turnId !== undefined ? { turnId: durableStep.turnId } : {}), timestamp: now(),
+        type: "context.selected", payload: { source: "project", id: "path-scoped-instructions-v1", tokens: built.report.used, ...payload },
+      });
+      activationEvents.push({ type: "path_scoped_instructions_selected", payload });
+    };
+
     const runtime = new AgentRuntime({
       store,
       events,
@@ -2206,7 +2319,9 @@ export async function runOneCase(
           ? observeGuidanceRequest(opts.provider, BENCHMARK_SYSTEM_PROMPT, (block) => {
               if (observedGuidanceBlock === undefined) observedGuidanceBlock = block;
             })
-          : opts.provider,
+          : scopedPipeline !== undefined
+            ? observeScopedInstructionsRequest(opts.provider, observeScopedRequest)
+            : opts.provider,
       orchestrator,
       // P23-1: the process catalog is read once per step to freeze the step
       // tool world; never consulted mid-step.
@@ -2252,7 +2367,7 @@ export async function runOneCase(
       maxPatternStallRecoveries: BENCHMARK_STALL_POLICY.maxPatternStallRecoveries,
       enabledStallPatterns: BENCHMARK_STALL_POLICY.enabledStallPatterns,
       context: {
-        pipeline: new ContextPipeline(),
+        pipeline: scopedPipeline ?? new ContextPipeline(),
         budget: {
           maxTokens: caseDef.contextBudgetTokens ?? opts.budgetTokens,
           reserved: { system: 256, task: 128, output: 256 },
@@ -2432,10 +2547,15 @@ export async function runOneCase(
         e.type === "recovery_decision" ||
         e.type === "memory_retrieved" ||
         e.type === "budget_guidance_injected" ||
-        e.type === "tool_call_efficiency_guidance_injected",
+        e.type === "tool_call_efficiency_guidance_injected" ||
+        e.type === "diagnostic_first_repair_guidance_injected" ||
+        e.type === "path_scoped_instructions_selected",
     );
     const hasSeedMemory = ((caseDef as { sources?: { memory?: unknown[] } }).sources?.memory?.length ?? 0) > 0;
-    const activationEligible = armMechanisms.memoryRetrieval ? hasSeedMemory : true;
+    const activationEligible = armMechanisms.memoryRetrieval ? hasSeedMemory
+      : armMechanisms.diagnosticFirstRepair ? diagnosticFirstRepairEligible(caseDef)
+      : armMechanisms.pathScopedInstructionsConfig !== undefined ? pathScopedInstructionsEligible(caseDef)
+      : true;
     const activationEvidenceV2 =
       candidateId !== undefined
         ? buildActivationEvidenceFromSignalsV2({
@@ -2724,6 +2844,7 @@ export function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudge
       reserved: { system: 256, task: 128, output: 256 },
       dynamic: mech.adaptiveContextDynamic,
     },
+    ...(mech.pathScopedInstructionsConfig !== undefined ? { instructionDiscovery: mech.pathScopedInstructionsConfig } : {}),
     maxIterationsPerTurn: 30,
     // E4-R86 (H2): the loop-detection threshold is part of the effective
     // runtime wiring — a change to stall detection MUST change the effective
@@ -2740,6 +2861,7 @@ export function runtimeConfigForHash(opts: BenchmarkCommandOptions, defaultBudge
       deferredSchema: mech.deferredSchema,
       stepBudgetCompletion: mech.budgetAwareCompletion,
       toolCallEfficiency: mech.toolCallEfficiency,
+      ...(mech.diagnosticFirstRepair ? { diagnosticFirstRepair: true } : {}),
     },
   };
 }

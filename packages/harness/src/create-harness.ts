@@ -313,7 +313,7 @@ export async function createHarness(config: HarnessConfig): Promise<Harness> {
   });
 
   // --- context pipeline + budget (P22-1: compose/compose-context) ------------
-  const context = await composeContext(config, features, cwd, dataDir, appendHarnessEvent);
+  const context = await composeContext(config, features, cwd, dataDir, appendHarnessEvent, events);
   const pipeline = context.pipeline;
   const { budget, budgetFallback } = context;
   // --- skills (P22-1: compose/compose-context) --------------------------------

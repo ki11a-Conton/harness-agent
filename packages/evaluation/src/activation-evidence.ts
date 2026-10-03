@@ -12,6 +12,8 @@
  * runner — the runner never writes `activated=true` from the candidate name.
  */
 
+import { guidanceBlockDigest } from "./activation-evidence-v2.js";
+
 export const ACTIVATION_EVIDENCE_SCHEMA_VERSION = "1.0.0";
 
 export type ActivationReasonCode =
@@ -28,6 +30,8 @@ export type ActivationReasonCode =
   | "context_dynamic_used"
   | "budget_guidance_injected"
   | "tool_call_efficiency_guidance_injected"
+  | "diagnostic_first_repair_guidance_injected"
+  | "path_scoped_instructions_selected"
   | "eligible_case"
   | "not_eligible_no_seed"
   | "not_eligible_no_mechanism"
@@ -201,7 +205,31 @@ export interface ActivationObservation {
 /** Input surface `activationEvidenceFor` needs from a case definition. */
 export interface ActivationCaseSource {
   id: string;
+  fixture?: Readonly<Record<string, string>>;
   sources?: { memory?: readonly { content: string; type?: string }[] };
+  verification?: readonly { kind: string; command?: string }[];
+}
+
+/** Eligibility is fixed by the original case, never by an arm's outcome. */
+export function diagnosticFirstRepairEligible(caseDef: Pick<ActivationCaseSource, "verification">): boolean {
+  return caseDef.verification?.some((spec) => spec.kind === "command" && typeof spec.command === "string" && spec.command.trim().length > 0) ?? false;
+}
+
+/** Fixed original-case eligibility: distinct sibling package rule documents
+ *  and real package files. Prompt text, requested tool strings and outcomes
+ *  cannot invent eligibility. Actual activation still requires a witnessed
+ *  admitted selection at the real model-request boundary. */
+export function pathScopedInstructionsEligible(caseDef: Pick<ActivationCaseSource, "fixture">): boolean {
+  const files = Object.entries(caseDef.fixture ?? {}).filter(([path]) =>
+    !path.startsWith("/") && !path.startsWith("\\") && !/^[a-z]:/iu.test(path) &&
+    !path.split(/[\\/]/u).some(segment => segment === ".." || segment === "." || segment === ""),
+  ).map(([path, content]) => [path.replaceAll("\\", "/"), content] as const);
+  const packages = files.filter(([path]) => path.endsWith("/AGENTS.md")).map(([path, content]) => ({ directory: path.slice(0, -"/AGENTS.md".length), content }))
+    .filter(rule => files.some(([path]) => path.startsWith(`${rule.directory}/`) && !path.endsWith("AGENTS.md")));
+  return packages.some((left, index) => packages.slice(index + 1).some(right =>
+    left.content !== right.content && left.directory !== right.directory &&
+    !left.directory.startsWith(`${right.directory}/`) && !right.directory.startsWith(`${left.directory}/`),
+  ));
 }
 
 /**
@@ -350,6 +378,39 @@ export function activationEvidenceFor(
         reasonCodes: injections.length > 0 ? ["tool_call_efficiency_guidance_injected"] : ["activation_zero"],
         baselineMechanismDigest: "benchmark-standard-prompt",
         candidateMechanismDigest: "benchmark-prompt+tool-call-efficiency-guidance",
+        summary: { injectionCount: injections.length },
+      };
+    }
+    case "path_scoped_instructions_v1": {
+      const selections = activationEvents.filter(event => event.type === "path_scoped_instructions_selected" &&
+        event.payload?.constructorIdentity === "context:path-scoped-instructions-v1" &&
+        typeof event.payload.configDigest === "string" && event.payload.configDigest.length > 0 &&
+        typeof event.payload.instructionFingerprint === "string" && event.payload.instructionFingerprint.length > 0 &&
+        Array.isArray(event.payload.instructionSources) && event.payload.instructionSources.some(source =>
+          source !== null && typeof source === "object" && (source as Record<string, unknown>).kind === "project_instruction"),
+      );
+      const eligible = pathScopedInstructionsEligible(caseDef);
+      return {
+        schemaVersion: ACTIVATION_EVIDENCE_SCHEMA_VERSION, candidateId, caseId: caseDef.id,
+        eligible, activated: eligible && selections.length > 0, activationCount: eligible ? selections.length : 0,
+        reasonCodes: !eligible ? ["not_eligible_no_mechanism"] : selections.length ? ["path_scoped_instructions_selected"] : ["activation_zero"],
+        baselineMechanismDigest: "context:default-hierarchical-discovery",
+        candidateMechanismDigest: selections.length ? selections[0]!.payload!.configDigest as string : "",
+        summary: { selectionCount: eligible ? selections.length : 0 },
+      };
+    }
+    case "diagnostic_first_repair_v1": {
+      const eligible = diagnosticFirstRepairEligible(caseDef);
+      const injections = activationEvents.filter((event) =>
+        event.type === "diagnostic_first_repair_guidance_injected" &&
+        typeof event.payload?.blockText === "string" && event.payload.blockText.length > 0,
+      );
+      return {
+        schemaVersion: ACTIVATION_EVIDENCE_SCHEMA_VERSION, candidateId, caseId: caseDef.id,
+        eligible, activated: injections.length > 0, activationCount: injections.length,
+        reasonCodes: injections.length ? ["diagnostic_first_repair_guidance_injected"] : ["activation_zero"],
+        baselineMechanismDigest: "benchmark-standard-prompt",
+        candidateMechanismDigest: injections.length ? guidanceBlockDigest(injections[0]!.payload!.blockText as string) : "",
         summary: { injectionCount: injections.length },
       };
     }

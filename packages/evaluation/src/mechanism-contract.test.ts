@@ -125,7 +125,10 @@ describe("E2-14 mechanism contract readiness", () => {
         ),
       },
     );
-    expect(matrix.length).toBe(6);
+    expect(matrix.map((entry) => entry.candidateId)).toEqual(expect.arrayContaining([
+      "adaptive_recovery_v2", "memory_retrieval", "delegation", "budget_aware_completion_v1",
+      "tool_selector_deferred_schema", "tool_call_efficiency_v1", "diagnostic_first_repair_v1",
+    ]));
     const table = readinessMatrixTable(matrix);
     const ar2 = table.find((r) => r.candidateId === "adaptive_recovery_v2")!;
     expect(ar2.readiness).toBe("READY");
