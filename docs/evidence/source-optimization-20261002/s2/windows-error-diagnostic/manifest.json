@@ -1,0 +1,143 @@
+{
+  "schemaVersion": "s2-windows-runtime-error-diagnostic-v1",
+  "dateUTC": "2026-10-03T05:01:31.662146+00:00",
+  "baseSHA": "1b3f386940316d4a79c04a522e701fafb32c8be2",
+  "previousWindowsCI": {
+    "jobId": 111130670866,
+    "shaPrefix": "1b3f3869",
+    "annotations": "../../ci-annotations-111130670866.json",
+    "result": "FAILED",
+    "cause": "NOT_YET_VISIBLE: same S2 failure names and actualStatus error; signed private log downloads unavailable"
+  },
+  "scope": {
+    "modifiedFiles": [
+      "apps/cli/src/path-scoped-instructions.test.ts"
+    ],
+    "productionChanges": false,
+    "purpose": "Expose the actual EvalRunner catch reason on existing error outcomes via a bounded redacted public Error marker; no guessed production fix",
+    "existingTruthAssertions": "unchanged",
+    "windowsSkip": false
+  },
+  "diagnosticContract": {
+    "marker": "S2_RUNTIME_ERROR_JSON=",
+    "sourceOfReason": "EvalRunner.run catches runtime.startTurn/runTurn exception and returns its actual error message as outcome.reason",
+    "allowedOutcomeFields": [
+      "reason",
+      "caseId",
+      "actualStatus",
+      "failureCategory",
+      "terminationReason",
+      "hostMutationStatus",
+      "violations"
+    ],
+    "allowedRecentEventFields": [
+      "type",
+      "sequence",
+      "code",
+      "status",
+      "terminationReason"
+    ],
+    "recentEventsMax": 4,
+    "serializedJSONCharsMax": 1900,
+    "singleLine": true,
+    "redaction": "Existing Core protectToolOutputText with injected real security.redactSecrets; structured/escaped strings processed before truncation",
+    "excluded": "No request, headers, tool args/output/error message, prompt, environment or full outcome/host state is printed"
+  },
+  "sourceSHA256": {
+    "apps/cli/src/path-scoped-instructions.test.ts": "c37d598fa0827337a4744082b5a001d0f0cc278f2e9e218e5c01158189874db4",
+    "packages/core/src/runtime/tool-output-security.ts": "4f74f2aa228be51202c1dda8a9bbd44b3ec06c9fce2d26892a120d1930e85d17",
+    "packages/security/src/secret-gate.ts": "419672907d5194a6e7a8419d0429c97545c474a40cad76f3a91c49b5340b03f2"
+  },
+  "checks": {
+    "frozen-target": {
+      "command": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "apps/cli/src/path-scoped-instructions.test.ts"
+      ],
+      "workspace": "/workspace/harness-agent-source-optimization",
+      "exitCode": 0,
+      "dateUTC": "2026-10-03T05:00:06.747826+00:00",
+      "sourceSHA256Before": "c37d598fa0827337a4744082b5a001d0f0cc278f2e9e218e5c01158189874db4",
+      "sourceSHA256After": "c37d598fa0827337a4744082b5a001d0f0cc278f2e9e218e5c01158189874db4",
+      "sourceUnchangedDuringRun": true
+    },
+    "frozen-typecheck": {
+      "command": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "apps/cli",
+        "--pretty",
+        "false"
+      ],
+      "workspace": "/workspace/harness-agent-source-optimization",
+      "exitCode": 0,
+      "dateUTC": "2026-10-03T05:00:07.537103+00:00",
+      "sourceSHA256Before": "c37d598fa0827337a4744082b5a001d0f0cc278f2e9e218e5c01158189874db4",
+      "sourceSHA256After": "c37d598fa0827337a4744082b5a001d0f0cc278f2e9e218e5c01158189874db4",
+      "sourceUnchangedDuringRun": true
+    },
+    "frozen-diff-check": {
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "apps/cli/src/path-scoped-instructions.test.ts"
+      ],
+      "workspace": "/workspace/harness-agent-source-optimization",
+      "exitCode": 0,
+      "dateUTC": "2026-10-03T05:00:07.540798+00:00",
+      "sourceSHA256Before": "c37d598fa0827337a4744082b5a001d0f0cc278f2e9e218e5c01158189874db4",
+      "sourceSHA256After": "c37d598fa0827337a4744082b5a001d0f0cc278f2e9e218e5c01158189874db4",
+      "sourceUnchangedDuringRun": true
+    }
+  },
+  "targetPassed": 9,
+  "realRuntimeDiagnosticSecurityRegression": "Actual PathScopedContextPipeline.build exception with JSON escaped newline, fake sk key and long reason reaches real EvalRunner catch; resulting diagnostic is bounded, single-line, redacted and classified harness",
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "windowsCauseAndAcceptance": "PENDING_NEW_CI",
+  "pairedRegression": {
+    "status": "ok",
+    "complete": true,
+    "counters": {
+      "logicalRuns": 4,
+      "modelCallAttempts": 28,
+      "transportRetries": 0,
+      "maxModelCalls": 64
+    },
+    "pairs": 2,
+    "partialPairs": 0,
+    "independentCheckerHash": "c9f2736296fb1e7e3bba73676739c97381d018debafa0ac6a8af5d5086243c26"
+  },
+  "sourceFreeze": "No further S2 changes pending; all final checks saw identical before/after fixture SHA",
+  "artifactsSHA256": {
+    "cli-concurrency-results.json": "52070230f4b70b204546e190255e2484d52262dcdcf5a4a45f580071c0d2bdac",
+    "cli-offline-results.json": "391a4f646f7582a4128e49dabcf63f08c650118cb5799a71ba89d7b3183510b0",
+    "cli-paired-results.json": "2560c4f7b8d578e3099e004b1788213acc988d14d54a9e072c2029f92835078b",
+    "diff.patch": "0eb88a169158223d58c815f5ec2d421bf420a4d947dc4472c6827b3aed96dfab",
+    "final-green.json": "c8a3f568d5585d1e7af5dc7e25a32b29481ceae44c1da50f3af7e572653e7d15",
+    "final-green.log": "120386ead67e95423b564980f3f53a064d662d333ddc6c7ea698e524ac9b7637",
+    "fixture.test.ts": "c37d598fa0827337a4744082b5a001d0f0cc278f2e9e218e5c01158189874db4",
+    "frozen-diff-check.json": "9e9acf453d95cf321beba7a6b09380135672f2cdf42fbb17b50d7c599a05f508",
+    "frozen-diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "frozen-target.json": "d909fa9af71d8413f1d6bc09ed65f3da5827278250b76c703937ae560a00339e",
+    "frozen-target.log": "3ba0278f140f8424a145c6bad87932fbbaa246789f00863e4f78d70ada49945f",
+    "frozen-typecheck.json": "18d7df0b9b13caa46b0a55cc7ef96772df88fd9217ccb445471e09a2268bc67b",
+    "frozen-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "green.json": "f77f171d7c9f380b4466cdd5eea8a07c10e49c057b41e29fb875d3448036fb4c",
+    "green.log": "57cd7dcf8753d0ddeb54d3f0f1c067681233c470346c59b2148a69e9f5e58005",
+    "safe-green.json": "02d553f3afe77a2bcaaefc8f924314e2796eb52a094e1c1437b07fecf47c9834",
+    "safe-green.log": "ea0302afc3cef815ac1c2d03af52dbb45330a825b438b6079d99a98ec9770254",
+    "typecheck.json": "3deed7e9a5f4d8dd06671e2cd0786a9542f0550b7d250f6a3ec1e6de3805460f",
+    "typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

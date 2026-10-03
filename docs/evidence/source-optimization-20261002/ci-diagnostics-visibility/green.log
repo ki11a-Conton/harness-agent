@@ -1,0 +1,13 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+r101-closed-loop: nothing to do — pass --all, or one or more of --setup-only --acceptance --suite --matrix --identity
+r101-closed-loop: the baseline arm has no built CLI at /workspace/harness-agent-source-optimization/.ci/definitely-not-prepared/baseline/apps/cli/dist/main.js — run --setup-only first (a missing arm is a setup failure, never a skip)
+ ✓ packages/evaluation/src/r97-closed-loop.test.ts (24 tests) 77ms
+ ✓ apps/cli/src/r97-ci-diagnostics.test.ts (6 tests) 220ms
+
+ Test Files  2 passed (2)
+      Tests  30 passed (30)
+   Start at  05:01:04
+   Duration  623ms (transform 86ms, setup 0ms, import 88ms, tests 297ms, environment 0ms)
+

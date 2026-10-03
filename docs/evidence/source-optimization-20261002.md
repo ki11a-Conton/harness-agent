@@ -1,6 +1,6 @@
 # 源码对照优化：实施与验收证据
 
-状态：**草案，等待最终冻结快照验收**。本文整理已经执行的基线反例和定向回归。R2 的 steering 原 turn 绑定后、append 前崩溃恢复窗口及 R3 编码输出安全已完成独立局部审查。干净工作树的完整 typecheck/build/security/full suite、新 SHA 的 Windows CI 与远端发布证据均待补充。
+状态：**Linux 冻结快照通过，Windows 集成验收中**。`ea50d885` 的干净工作树已完成类型/构建、安全 2135 PASS、全量 8115 PASS / 12 SKIP、严格 usage audit。`1b3f386` 的 Windows CI 仍有两个 S2 用例失败，下一提交 `9eef5c8` 补充安全的实际错误诊断；最终平台验收和 main 发布仍待完成。
 
 执行依据为 [plan.md](../../plan.md) 与 [SOURCE-OPT-20261002](../../tasks/SOURCE-OPT-20261002.md)。源码研究和实施验收分开保存：[原研究证据](source-agent-review-20261002.json) 保持原样，本轮记录见 [验收 JSON 草案](source-optimization-20261002.json)。
 
@@ -48,19 +48,19 @@ S2 的候选 instruction discovery 在 retained paired observation 中为 0 subt
 
 大体积 offline/paired JSON 未全部提交；原始字节 SHA 与概要保留在各 manifest 及本轮 JSON 的 externalArtifacts 中。所选小日志与 fixture 源码可以独立复查，缺失完整请求的 summary artifact 不提供其未保留内容的重新计算能力。
 
-## 最终验收待补
+## 冻结验收进度
 
-| 验收项 | 本草案状态 | 补证要求 |
+| 验收项 | 实际状态 | 受测来源与证据 |
 | --- | --- | --- |
-| R2 原 turn 绑定、append 前崩溃恢复 | PASS_TARGETED | 已保留正式反例 RED/GREEN、turn/inbox/wire 回归与源指纹；后续完整冻结验收仍待补 |
-| R3 独立编码输出/Artifact 安全复查 | PASS_TARGETED | 已保留最终同 fixture RED/GREEN、production/source SHA 与独立关闭结论；后续完整冻结验收仍待补 |
-| 冻结实现 SHA、clean tree | PENDING | 提交所有生产代码，在无并发 tracked edits 的独立工作树冻结 |
-| `corepack pnpm typecheck` / `build` | PENDING | 完整命令、环境、退出码、原始日志、受测 SHA |
-| `corepack pnpm test:security` / 全量 `test` | PENDING | 完整计数、skip 解释与原始日志；Linux 使用既有 subreaper，不能借用先前轮次全量结果 |
-| 新候选 Windows CI | NOT_RUN | 实际 workflow/run/job URL、受测 SHA、Windows 退出码和结果 |
-| 远端 main 发布 | PENDING | 原生终端 Git 实际 push 输出和远端 ref；先前 `acf8dcc` 发布不能代替本轮 |
-| 真实模型质量 / 付费实验 / champion promotion | NOT_RUN | 付费调用目前为 0；默认策略继续保持，后续按既有 paired 决策合同另行取证 |
+| R2 / R3 独立复审 | PASS_TARGETED | 正式 RED/GREEN、真实 Runtime/Controller probes 与源指纹均已保留 |
+| Linux 冻结 SHA、clean tree | PASS | `ea50d885eb8fdc7af90f491c7d3b37b3c6aec769`，每命令前后干净；[manifest](source-optimization-20261002/final/linux-ea50d885/manifest.json) |
+| typecheck / build | PASS | 两命令均退出 0，日志及受测 SHA 见同 manifest |
+| 安全 / 全量 test | PASS_LINUX | 安全 19 文件 / 2135 PASS；全量 438 PASS / 1 SKIP 文件、8115 PASS / 12 SKIP 测试，Linux subreaper 启动；[全量原始日志](source-optimization-20261002/final/linux-ea50d885/full.log) |
+| 严格 usage audit / 全变更 diff check | PASS_LINUX | 7 个能力观察记录，audit 退出 0；diff check 比较实现基线与受测 SHA，退出 0 |
+| 新候选 Windows CI | FAIL_UNDER_REPAIR | `1b3f386` [CI](https://github.com/ki11a-Conton/harness-agent/actions/runs/37097580019) 两个 S2 测试仍失败；`9eef5c8` 补实际原因诊断，不能将旧 Linux 结果当作新 SHA 的平台证据 |
+| 远端 main 发布 | PENDING | 当前 main 仍为 `acf8dcc`；候选分支通过原生终端 Git 推送，最终验收后发布 |
+| 真实模型质量 / 付费实验 / champion promotion | NOT_RUN | 付费调用 0；两个实验策略默认关闭 |
 
-本草案只整理现有执行材料，未额外运行测试；主线程后续补充最终受测 SHA 和完整验收结果。
+Linux 12 个跳过来自现有平台/opt-in 测试：executor 7、Windows execution boundary 3、N2 release CLI 1、N5 pair setup 1。沿用现有 full suite 排除的 perf/soak/forensics/driver closed-loop 策略，不额外声称执行。首次 `f9b0c834` 安全 gate 检出新增空 catch，修为显式 `continue` 后冻结 `ea50d885` 全部通过；失败日志也保留。后续源变化仅测试和 CI 诊断，需要新 SHA 的平台证据。
 
 冻结前并发补审：同 Runtime 的两个 resume 会在既有 SESSION_BUSY guard 生效前重复 append/consume 已绑定 steer。`78321b7` 对同 session 的注入过程串行处理，等待后重读 durable history，finally 释放；其他 sessions 独立。最终 active-user fixture 为 24 项，SHA `8a3c237d96309e4046ae53c41b4a130265f6a08d3af3ba5447c465a2897f1053`；同 fixture 修补前新增 2 项为 1 FAIL/1 PASS，8 文件相关回归为 110 PASS。独立实际 Runtime probe 的写入/消费各从 2 变为 1，原 promotedTurnId 不变；不承诺跨进程 CAS。见 [正式证据](source-optimization-20261002/r2/independent-bound-before-append/concurrency-review-manifest.json) 与 [独立复审](source-optimization-20261002/r2/concurrent-resume-independent-review.json)。

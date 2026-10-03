@@ -1,0 +1,138 @@
+{
+  "schemaVersion": "s2-windows-fixture-fix-v1",
+  "dateUTC": "2026-10-03T04:42:43.592725+00:00",
+  "originalWindowsCI": {
+    "sha": "ea50d885eb8fdc7af90f491c7d3b37b3c6aec769",
+    "runURL": "https://github.com/ki11a-Conton/harness-agent/actions/runs/37096715327",
+    "jobURL": "https://github.com/ki11a-Conton/harness-agent/actions/runs/37096715327/job/111128162041",
+    "result": "FAILED",
+    "annotations": "../../ci-annotations-111128162041.json",
+    "accessLimitation": "Authenticated job-log and artifact signed redirects were refused by the network proxy; annotations lack the assertion stack and full stderr. The diagnostic caps annotations at eight, so the two visible S2 failure names are not an exhaustive failure inventory."
+  },
+  "scope": {
+    "modifiedFiles": [
+      "apps/cli/src/path-scoped-instructions.test.ts"
+    ],
+    "productionChanges": false,
+    "skipOrAssertionWeakening": false,
+    "defaultStrategyChanges": false
+  },
+  "fixes": [
+    "Normalize document-path separators before stripping the fixture workspace prefix.",
+    "Run the unchanged independent checker through the existing VerificationSpec command+argv contract using process.execPath; use a filename containing spaces as the real transport regression."
+  ],
+  "originalSourceSHA256": "d8dbe9de883e33a50a83f15e9f98f1cee947c43381c45a0b507cc5e3e8c9e3bf",
+  "currentSourceSHA256": "7a9aeb1a210e044ab540161cc2e1ffbe826f548d7a154df19e52719915759f78",
+  "tests": {
+    "behavioralRed": {
+      "command": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "apps/cli/src/path-scoped-instructions.test.ts"
+      ],
+      "workspace": "/workspace/harness-agent-source-optimization",
+      "exitCode": 1,
+      "fixtureSHA256": "a6254685756a4b71e7f626eb0f93b6bb0cc028434c35f51804e3325a2d19e81e",
+      "purpose": "Linux behavioral reproduction of Windows separator handling and an absolute independent checker path containing spaces; production unchanged",
+      "failed": 3,
+      "passed": 5,
+      "baselineProduction": "ea50 source unchanged; only added deterministic Windows-path/space-path fixture counterexamples"
+    },
+    "targetGreen": {
+      "command": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "apps/cli/src/path-scoped-instructions.test.ts",
+        "packages/context/src/path-scoped-discovery.test.ts",
+        "packages/harness/src/path-scoped-instructions.regressions.test.ts",
+        "packages/evaluation/src/path-scoped-eligibility.test.ts"
+      ],
+      "workspace": "/workspace/harness-agent-source-optimization",
+      "exitCode": 0,
+      "fixtureSHA256": "24086b8d94a3d9a56f68b89f86ffa5a1cbc948b548ceb799c5b04b288e032aa8",
+      "dateUTC": "2026-10-03T04:40:33.149863+00:00",
+      "files": 4,
+      "passed": 40,
+      "fixtureSourceChangeAfterRun": "One explanatory comment was clarified after execution; executable content unchanged."
+    },
+    "typecheck": {
+      "command": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "packages/context",
+        "packages/harness",
+        "packages/evaluation",
+        "apps/cli",
+        "--pretty",
+        "false"
+      ],
+      "workspace": "/workspace/harness-agent-source-optimization",
+      "exitCode": 0,
+      "dateUTC": "2026-10-03T04:40:42.821743+00:00"
+    },
+    "diffCheckExitCode": 0
+  },
+  "pairedEvidence": {
+    "result": "ok",
+    "complete": true,
+    "counters": {
+      "logicalRuns": 4,
+      "modelCallAttempts": 28,
+      "transportRetries": 0,
+      "maxModelCalls": 64
+    },
+    "finalizedPairs": 2,
+    "partialPairs": 0,
+    "orders": [
+      "BA",
+      "AB"
+    ],
+    "independentCheckerSHA256": "c9f2736296fb1e7e3bba73676739c97381d018debafa0ac6a8af5d5086243c26",
+    "checkerContentUnchangedFromOriginalEvidence": true
+  },
+  "concurrentEvidence": {
+    "status": "completed",
+    "requests": 6,
+    "selections": 6,
+    "sessions": 3
+  },
+  "noDocumentEvidence": {
+    "selections": 0,
+    "aggregation": {
+      "activated": 0,
+      "eligibleButNotActivated": 0,
+      "ineligible": 1,
+      "invalid": 0,
+      "unknownLegacy": 0
+    }
+  },
+  "paidModelCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "windowsAfterFix": "PENDING_NEW_CI",
+  "sourceFreeze": "S2 fixture executable content frozen; final clean source SHA is assigned by root",
+  "artifactsSHA256": {
+    "cli-concurrency-results.json": "848421342059cea60be760db59871df2d0275f803f827cf048e6819411e9c036",
+    "cli-offline-results.json": "8ec8037a3a2ce8965e6ac54da3c4e7731165956b38bf8d70611fb5a8c59d1184",
+    "cli-paired-results.json": "d0626c628b6665857cff093efcd10d91e7d912e19164d3d1454d2d92da93e646",
+    "diff.patch": "9850de6c47806a5f97efedfdd98474d09b0ec5908a1684766bb0e47e7a2cb1a0",
+    "green-fixture.test.ts": "24086b8d94a3d9a56f68b89f86ffa5a1cbc948b548ceb799c5b04b288e032aa8",
+    "green.json": "13c9bd8e411aa82b6e571cee84f043e87a085978d66c3a115782d3b5bac6bed5",
+    "green.log": "d9a16547f395595db6b57b7d829d915ba984e5eee688a103724d17dc6a8b3381",
+    "original-fixture.test.ts": "d8dbe9de883e33a50a83f15e9f98f1cee947c43381c45a0b507cc5e3e8c9e3bf",
+    "red-fixture.test.ts": "a6254685756a4b71e7f626eb0f93b6bb0cc028434c35f51804e3325a2d19e81e",
+    "red.json": "1d992e5dcdb3f44eafce988dee7f9496ff69ecedd3b9927e474623ed8d3d4fe6",
+    "red.log": "edce9e2963fbba0bd9b42199375a2fe0e4b97cee53091380ccf108c463aadec6",
+    "typecheck.json": "dd54cf65d862e2f442e5b775269deb90a693e8f504a8ebe2988cab5eedcf1e2f",
+    "typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

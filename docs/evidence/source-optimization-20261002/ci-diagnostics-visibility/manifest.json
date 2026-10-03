@@ -1,0 +1,105 @@
+{
+  "purpose": "Public Windows failure reason survives pre-existing expected-error noise and ordinary annotation truncation",
+  "observedAt": "2026-10-03T05:02:41Z",
+  "baselineHead": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+  "candidateBaseHead": "1b3f386940316d4a79c04a522e701fafb32c8be2",
+  "candidateCommitState": "Root to commit; production diff limited to diagnostic script, fixture test added",
+  "fixtureShaEqual": true,
+  "baseline": {
+    "exitCode": 1,
+    "tests": 6,
+    "failed": 3,
+    "passed": 3,
+    "log": "baseline-final-fixture-red.log"
+  },
+  "candidate": {
+    "exitCode": 0,
+    "files": 2,
+    "tests": 30,
+    "passed": 30,
+    "diagnosticTests": 6,
+    "adjacentClosedLoopTests": 24,
+    "log": "green.log"
+  },
+  "typecheck": {
+    "command": "corepack pnpm exec tsc -b apps/cli",
+    "exitCode": 0
+  },
+  "compatibility": [
+    "8 total annotations preserved",
+    "240 chars ordinary message cap preserved",
+    "2000 chars only exact S2_RUNTIME_ERROR_JSON diagnostic prefix",
+    "percent/CR/LF workflow command escaping preserved",
+    "missing or malformed diagnostics exit zero preserved",
+    "no workflow or runtime production change"
+  ],
+  "intermediateRed": {
+    "log": "red.log",
+    "fixtureTests": 5,
+    "failed": 3,
+    "passed": 2,
+    "note": "Earlier fixture version before adding ordinary quoted-marker compatibility control; superseded by same-final-fixture baseline RED"
+  },
+  "files": [
+    {
+      "path": "/workspace/harness-agent-source-optimization/scripts/e4/r97-ci-diagnostics.mjs",
+      "bytes": 6935,
+      "sha256": "0674a12e467f719f0f1654df89f19739f96b8ed48a176080bcffbb4102559b96"
+    },
+    {
+      "path": "/workspace/harness-agent-source-optimization/apps/cli/src/r97-ci-diagnostics.test.ts",
+      "bytes": 5256,
+      "sha256": "2871c9d8a7491ac279120a8af71726d873b336f1247f4fe9b95247337b905f11"
+    },
+    {
+      "path": "/workspace/harness-agent-source-baseline/scripts/e4/r97-ci-diagnostics.mjs",
+      "bytes": 6099,
+      "sha256": "21a8d49ef5db5abfa7027c4cf35b1355cf7af78a00ec952486d51618d83bc398"
+    },
+    {
+      "path": "/workspace/harness-agent-source-baseline/apps/cli/src/r97-ci-diagnostics.test.ts",
+      "bytes": 5256,
+      "sha256": "2871c9d8a7491ac279120a8af71726d873b336f1247f4fe9b95247337b905f11"
+    },
+    {
+      "path": "/workspace/harness-agent/.ci/source-optimization/ci-diagnostics-visibility/baseline-final-fixture-red.log",
+      "bytes": 4197,
+      "sha256": "62a31581f4ca55353a9f4310a99390e0746b8501f19dc51ab053839088e3bc32"
+    },
+    {
+      "path": "/workspace/harness-agent/.ci/source-optimization/ci-diagnostics-visibility/green.log",
+      "bytes": 714,
+      "sha256": "96a30187abd81294be0f61f6e201876acbd937e0ccee4bc4e3f8ea2c5af184e9"
+    },
+    {
+      "path": "/workspace/harness-agent/.ci/source-optimization/ci-diagnostics-visibility/red.log",
+      "bytes": 4105,
+      "sha256": "b31eb1b5b3b8e8d976e49ac1bc33215d348564f4c554d3b4d71ad945e746f731"
+    },
+    {
+      "path": "/workspace/harness-agent/.ci/source-optimization/ci-diagnostics-visibility/typecheck.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/workspace/harness-agent/.ci/source-optimization/ci-diagnostics-visibility/baseline-final-fixture-red.exit",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "/workspace/harness-agent/.ci/source-optimization/ci-diagnostics-visibility/green.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "/workspace/harness-agent/.ci/source-optimization/ci-diagnostics-visibility/red.exit",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "/workspace/harness-agent/.ci/source-optimization/ci-diagnostics-visibility/typecheck.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-baseline
+
+ ❯ apps/cli/src/r97-ci-diagnostics.test.ts (6 tests | 3 failed) 211ms
+     × keeps the sanitized S2 runtime reason visible despite expected-error noise and the ordinary line cap 50ms
+     × publishes named failures and assertion traces before historical expected-error lines 36ms
+     × caps the dedicated marker and still escapes workflow commands in ordinary messages 35ms
+     ✓ keeps an ordinary line that merely quotes the marker under the existing short cap 32ms
+     ✓ reports a missing log without replacing the original job failure with a diagnostic failure 29ms
+     ✓ keeps malformed structured reports diagnostic-only with exit zero 29ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/cli/src/r97-ci-diagnostics.test.ts > N3 public CI diagnostics (real Node process) > keeps the sanitized S2 runtime reason visible despite expected-error noise and the ordinary line cap
+AssertionError: expected '::error::[verify] [degraded] fixture …' to contain 'Error: S2_RUNTIME_ERROR_JSON={"reason…'
+
+Expected: "Error: S2_RUNTIME_ERROR_JSON={"reason":"safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail safe diagnostic detail ROOT_CAUSE_VISIBLE","failureCategory":"harness","terminationReason":"error"}"
+Received: "::error::[verify] [degraded] fixture 0: Error: expected refusal"
+
+ ❯ apps/cli/src/r97-ci-diagnostics.test.ts:41:35
+     39|     expect(result.child.status).toBe(0);
+     40|     expect(result.annotations).toHaveLength(8);
+     41|     expect(result.annotations[0]).toContain(marker);
+       |                                   ^
+     42|     expect(result.annotations[0]).toContain("ROOT_CAUSE_VISIBLE");
+     43|     expect(result.summary).toContain(marker);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  apps/cli/src/r97-ci-diagnostics.test.ts > N3 public CI diagnostics (real Node process) > publishes named failures and assertion traces before historical expected-error lines
+AssertionError: expected '::error::[verify] [degraded] 0: Error…' to contain 'FAIL  path-scoped.test.ts'
+
+Expected: "FAIL  path-scoped.test.ts"
+Received: "::error::[verify] [degraded] 0: Error: expected fixture failure"
+
+ ❯ apps/cli/src/r97-ci-diagnostics.test.ts:52:35
+     50|     const result = await runDiagnostic([...noise, " FAIL  path-scoped.…
+     51|     expect(result.child.status).toBe(0);
+     52|     expect(result.annotations[0]).toContain("FAIL  path-scoped.test.ts…
+       |                                   ^
+     53|     expect(result.annotations[1]).toContain("AssertionError:");
+     54|     expect(result.annotations).toHaveLength(8);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  apps/cli/src/r97-ci-diagnostics.test.ts > N3 public CI diagnostics (real Node process) > caps the dedicated marker and still escapes workflow commands in ordinary messages
+AssertionError: expected 240 to be 2000 // Object.is equality
+
+- Expected
++ Received
+
+- 2000
++ 240
+
+ ❯ apps/cli/src/r97-ci-diagnostics.test.ts:62:64
+     60|     expect(result.child.status).toBe(0);
+     61|     expect(result.annotations[0]).toContain("S2_RUNTIME_ERROR_JSON=");
+     62|     expect(result.annotations[0]!.length - "::error::".length).toBe(20…
+       |                                                                ^
+     63|     expect(result.annotations[1]).toContain("100%25");
+     64|     expect(result.annotations[1]!.length - "::error::".length).toBe(24…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 3 passed (6)
+   Start at  05:02:10
+   Duration  354ms (transform 20ms, setup 0ms, import 31ms, tests 211ms, environment 0ms)
+
