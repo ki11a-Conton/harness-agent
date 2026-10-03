@@ -1,0 +1,54 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-baseline
+
+ ❯ packages/evaluation/src/path-scoped-eligibility.test.ts (3 tests | 2 failed) 11ms
+     × recognizes distinct sibling package docs with actual package files 6ms
+     ✓ does not invent eligibility from empty, root-only, duplicate, ancestor-only, traversal or outside docs 1ms
+     × requires observed selection identity and reports eligible-but-not-activated for no selection 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/evaluation/src/path-scoped-eligibility.test.ts > S2 fixed original-case activation eligibility > recognizes distinct sibling package docs with actual package files
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ packages/evaluation/src/path-scoped-eligibility.test.ts:9:31
+      7| describe("S2 fixed original-case activation eligibility", () => {
+      8|   it("recognizes distinct sibling package docs with actual package fil…
+      9|     expect(eligible(fixture)).toBe(true);
+       |                               ^
+     10|     expect(eligible(Object.fromEntries(Object.entries(fixture).map(([p…
+     11|     expect(activationEvidenceFor(ID, { id: "monorepo", fixture }, []).…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/evaluation/src/path-scoped-eligibility.test.ts > S2 fixed original-case activation eligibility > requires observed selection identity and reports eligible-but-not-activated for no selection
+AssertionError: expected { schemaVersion: '1.0.0', …(8) } to match object { eligible: true, …(2) }
+(6 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "activated": false,
+    "activationCount": 0,
+-   "eligible": true,
++   "eligible": false,
+  }
+
+ ❯ packages/evaluation/src/path-scoped-eligibility.test.ts:27:72
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+   Start at  22:16:17
+   Duration  1.07s (transform 760ms, setup 0ms, import 940ms, tests 11ms, environment 0ms)
+

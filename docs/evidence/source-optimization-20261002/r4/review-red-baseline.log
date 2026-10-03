@@ -1,0 +1,298 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-baseline
+
+ ❯ packages/tools/src/r4-file-regressions.test.ts (17 tests | 14 failed) 283ms
+     × preserves independent edits through existing hard-link aliases 73ms
+     × preserves two independent edits from separate sessions and orchestrators 65ms
+     × shares file identity through an in-workspace directory alias 70ms
+     × exposes raw-byte version to the model while keeping default read a string 6ms
+     × refuses a stale range before any write and permits a reread version 6ms
+     × refuses stale write_file with append=false without changing bytes 12ms
+     × refuses stale write_file with append=true without changing bytes 2ms
+     ✓ checks content rather than timestamp and accepts an unchanged hash 2ms
+     × rejects invalid expected hashes at schema validation 5ms
+     × serializes transaction commit with an in-flight tool edit 34ms
+     × fails closed on invalid UTF-8 rather than rewriting unedited bytes 2ms
+     × preserves CRLF when replacing a multiline range 1ms
+     ✓ keeps mixed line endings outside the touched range 0ms
+     × retains a UTF-8 BOM when editing the first line 1ms
+     × uses the touched line EOL for new anchor replacement lines 1ms
+     × normalizes each all-occurrence replacement only to its own local EOL 1ms
+     ✓ preserves exact matching without unicode folding 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 14 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/tools/src/r4-file-regressions.test.ts > R4 cooperative file edits > preserves independent edits through existing hard-link aliases
+AssertionError: expected [ 'failed', 'success' ] to deeply equal [ 'success', 'success' ]
+
+- Expected
++ Received
+
+  [
+-   "success",
++   "failed",
+    "success",
+  ]
+
+ ❯ packages/tools/src/r4-file-regressions.test.ts:71:52
+     69|     ]);
+     70|     gate.done();
+     71|     expect(results.map((result) => result.status)).toEqual(["success",…
+       |                                                    ^
+     72|     expect(await fs.readFile(target, "utf8")).toBe("A=1\nB=1\n");
+     73|     expect(await fs.readFile(alias, "utf8")).toBe("A=1\nB=1\n");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯
+
+ FAIL  packages/tools/src/r4-file-regressions.test.ts > R4 cooperative file edits > preserves two independent edits from separate sessions and orchestrators
+AssertionError: expected 'A=1\nB=0\n' to be 'A=1\nB=1\n' // Object.is equality
+
+- Expected
++ Received
+
+  A=1
+- B=1
++ B=0
+
+
+ ❯ packages/tools/src/r4-file-regressions.test.ts:86:47
+     84|     gate.done();
+     85|     expect(results.map((result) => result.status)).toEqual(["success",…
+     86|     expect(await fs.readFile(target, "utf8")).toBe("A=1\nB=1\n");
+       |                                               ^
+     87|   });
+     88|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯
+
+ FAIL  packages/tools/src/r4-file-regressions.test.ts > R4 cooperative file edits > shares file identity through an in-workspace directory alias
+AssertionError: expected 'A=1\nB=0\n' to be 'A=1\nB=1\n' // Object.is equality
+
+- Expected
++ Received
+
+  A=1
+- B=1
++ B=0
+
+
+ ❯ packages/tools/src/r4-file-regressions.test.ts:110:63
+    108|       ]);
+    109|       expect(results.map((result) => result.status)).toEqual(["success…
+    110|       expect(await read(join(directory, "file.txt"), "utf8")).toBe("A=…
+       |                                                               ^
+    111|     } finally { clearTimeout(deadline); release(); }
+    112|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯
+
+ FAIL  packages/tools/src/r4-file-regressions.test.ts > R4 cooperative file edits > exposes raw-byte version to the model while keeping default read a string
+AssertionError: expected '\ufeff中文\r\nbody\n' to deeply equal { …(4) }
+
+- Expected:
+{
+  "bytes": 16,
+  "content": "﻿中文
+body
+",
+  "path": "/tmp/r4-edit-LG3yNn/version.txt",
+  "sha256": "5797ba743aa25a307549ac5574c6d791588f20e1b564cfc137de046ea419cf06",
+}
+
++ Received:
+"﻿中文
+body
+"
+
+ ❯ packages/tools/src/r4-file-regressions.test.ts:121:30
+    119|     expect(plain.output).toBe(content);
+    120|     const versioned = await agent.invoke("read_file", { path: "version…
+    121|     expect(versioned.output).toEqual({ path: join(ws, "version.txt"), …
+       |                              ^
+    122|   });
+    123|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/14]⎯
+
+ FAIL  packages/tools/src/r4-file-regressions.test.ts > R4 cooperative file edits > refuses a stale range before any write and permits a reread version
+AssertionError: expected 'success' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "success"
+
+ ❯ packages/tools/src/r4-file-regressions.test.ts:131:27
+    129|     const before = await fs.readFile(path);
+    130|     const result = await agent.invoke("edit_file", { path: "stale.txt"…
+    131|     expect(result.status).toBe("failed");
+       |                           ^
+    132|     expect(result.error).toMatchObject({ retryable: false, safeToRetry…
+    133|     expect(result.error?.message).toMatch(/changed|stale|version/i);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/14]⎯
+
+ FAIL  packages/tools/src/r4-file-regressions.test.ts > R4 cooperative file edits > refuses stale write_file with append=false without changing bytes
+ FAIL  packages/tools/src/r4-file-regressions.test.ts > R4 cooperative file edits > refuses stale write_file with append=true without changing bytes
+AssertionError: expected 'success' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "success"
+
+ ❯ packages/tools/src/r4-file-regressions.test.ts:144:27
+    142|     await fs.writeFile(path, "CURRENT");
+    143|     const result = await harness().invoke("write_file", { path: "write…
+    144|     expect(result.status).toBe("failed");
+       |                           ^
+    145|     expect(result.error?.safeToRetry).toBe(false);
+    146|     expect(await fs.readFile(path, "utf8")).toBe("CURRENT");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/14]⎯
+
+ FAIL  packages/tools/src/r4-file-regressions.test.ts > R4 cooperative file edits > rejects invalid expected hashes at schema validation
+AssertionError: expected 'success' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "success"
+
+ ❯ packages/tools/src/r4-file-regressions.test.ts:160:27
+    158|     await fs.writeFile(join(ws, "schema.txt"), "same");
+    159|     const result = await harness().invoke("edit_file", { path: "schema…
+    160|     expect(result.status).toBe("failed");
+       |                           ^
+    161|     expect(result.error?.code).toBe("TOOL_SCHEMA_ERROR");
+    162|     expect(await fs.readFile(join(ws, "schema.txt"), "utf8")).toBe("sa…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/14]⎯
+
+ FAIL  packages/tools/src/r4-file-regressions.test.ts > R4 cooperative file edits > serializes transaction commit with an in-flight tool edit
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ packages/tools/src/r4-file-regressions.test.ts:189:36
+    187|     expect((await edit).status).toBe("success");
+    188|     await commit;
+    189|     expect(committedWhileEditHeld).toBe(false);
+       |                                    ^
+    190|     expect(await read(target, "utf8")).toBe("COMMITTED\n");
+    191|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/14]⎯
+
+ FAIL  packages/tools/src/r4-file-regressions.test.ts > R4 cooperative file edits > fails closed on invalid UTF-8 rather than rewriting unedited bytes
+AssertionError: expected 'success' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "success"
+
+ ❯ packages/tools/src/r4-file-regressions.test.ts:198:27
+    196|     await fs.writeFile(target, before);
+    197|     const result = await harness().invoke("edit_file", { path: "invali…
+    198|     expect(result.status).toBe("failed");
+       |                           ^
+    199|     expect(await fs.readFile(target)).toEqual(before);
+    200|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/14]⎯
+
+ FAIL  packages/tools/src/r4-file-regressions.test.ts > R4 exact editing with local EOL and BOM > preserves CRLF when replacing a multiline range
+AssertionError: expected 'one\r\nTWO\nMORE\nthree\r\n' to be 'one\r\nTWO\r\nMORE\r\nthree\r\n' // Object.is equality
+
+- Expected
++ Received
+
+  one
+- TWO
++ TWO
+- MORE
++ MORE
+  three
+
+
+ ❯ packages/tools/src/r4-file-regressions.test.ts:205:82
+    203| describe("R4 exact editing with local EOL and BOM", () => {
+    204|   it("preserves CRLF when replacing a multiline range", () => {
+    205|     expect(applyLineRange("one\r\ntwo\r\nthree\r\n", 2, 2, "TWO\nMORE"…
+       |                                                                                  ^
+    206|   });
+    207|   it("keeps mixed line endings outside the touched range", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/14]⎯
+
+ FAIL  packages/tools/src/r4-file-regressions.test.ts > R4 exact editing with local EOL and BOM > retains a UTF-8 BOM when editing the first line
+AssertionError: expected 'HEAD\ntail\r\n' to be '\ufeffHEAD\r\ntail\r\n' // Object.is equality
+
+- Expected
++ Received
+
+- ﻿HEAD
++ HEAD
+  tail
+
+
+ ❯ packages/tools/src/r4-file-regressions.test.ts:211:76
+    209|   });
+    210|   it("retains a UTF-8 BOM when editing the first line", () => {
+    211|     expect(applyLineRange("\ufeffhead\r\ntail\r\n", 1, 1, "HEAD").cont…
+       |                                                                            ^
+    212|   });
+    213|   it("uses the touched line EOL for new anchor replacement lines", () …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/14]⎯
+
+ FAIL  packages/tools/src/r4-file-regressions.test.ts > R4 exact editing with local EOL and BOM > uses the touched line EOL for new anchor replacement lines
+AssertionError: expected 'a\r\nnew\nextra\r\nz\n' to be 'a\r\nnew\r\nextra\r\nz\n' // Object.is equality
+
+- Expected
++ Received
+
+  a
+- new
++ new
+  extra
+  z
+
+
+ ❯ packages/tools/src/r4-file-regressions.test.ts:214:80
+    212|   });
+    213|   it("uses the touched line EOL for new anchor replacement lines", () …
+    214|     expect(applyReplace("a\r\ntarget\r\nz\n", "target", "new\nextra").…
+       |                                                                                ^
+    215|   });
+    216|   it("normalizes each all-occurrence replacement only to its own local…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/14]⎯
+
+ FAIL  packages/tools/src/r4-file-regressions.test.ts > R4 exact editing with local EOL and BOM > normalizes each all-occurrence replacement only to its own local EOL
+AssertionError: expected 'new\nextra\r\nmid\nnew\nextra\nend' to be 'new\r\nextra\r\nmid\nnew\nextra\nend' // Object.is equality
+
+- Expected
++ Received
+
+- new
++ new
+  extra
+  mid
+  new
+  extra
+  end
+
+ ❯ packages/tools/src/r4-file-regressions.test.ts:217:110
+    215|   });
+    216|   it("normalizes each all-occurrence replacement only to its own local…
+    217|     expect(applyReplace("target\r\nmid\ntarget\nend", "target", "new\n…
+       |                                                                                                              ^
+    218|   });
+    219|   it("preserves exact matching without unicode folding", () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/14]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  14 failed | 3 passed (17)
+   Start at  22:02:56
+   Duration  942ms (transform 374ms, setup 0ms, import 518ms, tests 283ms, environment 0ms)
+

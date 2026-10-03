@@ -1,0 +1,29 @@
+{
+  "arrivedAtAppend": 2,
+  "durableMessages": [
+    {
+      "id": "message_62a04f2e-4a7c-4ae9-a4f9-d9043eaa9b4e",
+      "turnId": "turn_4b36cfdd-f145-4fab-8b2f-fe811701be85",
+      "promptId": "prompt_136c4ade-b99a-4011-b316-e9a10169caee"
+    },
+    {
+      "id": "message_45511c87-c417-4d71-9427-22e8fea1a8ea",
+      "turnId": "turn_4b36cfdd-f145-4fab-8b2f-fe811701be85",
+      "promptId": "prompt_136c4ade-b99a-4011-b316-e9a10169caee"
+    }
+  ],
+  "inboxPromotedTurnId": "turn_4b36cfdd-f145-4fab-8b2f-fe811701be85",
+  "inboxConsumedCount": 2,
+  "modelRequests": 1,
+  "outcomes": [
+    {
+      "status": "fulfilled",
+      "outcome": "completed"
+    },
+    {
+      "status": "rejected",
+      "error": "AgentError: session session_2a8e2d03-e068-4ca6-a2d0-4a15a17c2df5 already has an active turn (turn_38fc5d73-e10c-4747-a6dc-273e2e835a1c)",
+      "code": "SESSION_BUSY"
+    }
+  ]
+}

@@ -1,0 +1,336 @@
+{
+  "startedOn": "2026-10-03T04:15:51.358Z",
+  "platform": "linux",
+  "node": "v24.19.0",
+  "sourceAndDistSha256": {
+    "packages/core/src/runtime/context-controller.ts": "c48ef9dd8ddea50bcfb9783d137b0fb139cc628bfeca4c24304728d54fb29d77",
+    "packages/core/src/runtime/tool-output-security.ts": "5a43dbda5684180c7b0aa11f19082c76a7662cfe96612b640b3d7a29b76d7b7e",
+    "packages/core/dist/runtime/context-controller.js": "b816283ff2d7d08e5a40f1243bf93a8fb9ef580d8e5d942b310701b28e3312c0",
+    "packages/core/dist/runtime/tool-output-security.js": "11711490875ed0834beab9ec336ca21567c08cf58649a8c0fe5bcfcb4ae1fc00",
+    "packages/security/src/secret-gate.ts": "419672907d5194a6e7a8419d0429c97545c474a40cad76f3a91c49b5340b03f2",
+    "packages/security/dist/secret-gate.js": "eecc9edf7988313b3d7577f2eef36174d1bb53079473834d6cd242bf854b0b10"
+  },
+  "actualControllerProbes": [
+    {
+      "label": "password plus escaped sibling",
+      "passed": true,
+      "unchangedOriginalResult": true,
+      "rendered": "[tool output: 130 bytes, exceeds inline budget (1)]\n[artifact: /tmp/r3-independent-probes-GnpZ3K/1/artifacts/tool-output-f23fb2db04079d6e5a1419414f69d859adc45740e9bd5c498b47689c2b41f2e5.txt#artifact:artifact_c33fef53-2a89-4b6c-a643-0b8bb8e49bb7]\n[sha256: 09c43ecce1db81f135403b981e69d78bc2f9bb82f01291fa9a56c1ae694c9e2f]\n--- output head ---\n{\"password\":\"[redacted]\",\"stderr\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\",\"stdout\":\"DIAG_SECOND safe\"}\n--- output tail ---\n{\"password\":\"[redacted]\",\"stderr\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\",\"stdout\":\"DIAG_SECOND safe\"}",
+      "events": [
+        {
+          "type": "security.secret_redacted",
+          "payload": {
+            "toolCallId": "toolcall_7e6b6e9a-ba0f-46d9-a5bd-165e507306e2",
+            "tool": "exec",
+            "redacted": 5,
+            "source": "tool-output-budget",
+            "reason": "secret redacted before boundary",
+            "code": "SECRET_REDACTED"
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "bytes": 130,
+          "sha256": "09c43ecce1db81f135403b981e69d78bc2f9bb82f01291fa9a56c1ae694c9e2f",
+          "mode": "600",
+          "content": "{\"password\":\"[redacted]\",\"stderr\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\",\"stdout\":\"DIAG_SECOND safe\"}"
+        }
+      ]
+    },
+    {
+      "label": "secret key with credential name",
+      "passed": true,
+      "unchangedOriginalResult": true,
+      "rendered": "[tool output: 64 bytes, exceeds inline budget (1)]\n[artifact: /tmp/r3-independent-probes-GnpZ3K/2/artifacts/tool-output-c33d24bda25ce5f63fc62fdbb4de234b5e14034f52cf0c435beeec7e8dabf19e.txt#artifact:artifact_2379aefd-2e73-4295-bae2-d4bccf90717a]\n[sha256: af59b5bf2683d9048fced4e0529610ef20592376cf22e450c2115e3291490848]\n--- output head ---\n{\"[redacted] password\":\"[redacted]\",\"stdout\":\"DIAG_SECOND safe\"}\n--- output tail ---\n{\"[redacted] password\":\"[redacted]\",\"stdout\":\"DIAG_SECOND safe\"}",
+      "events": [
+        {
+          "type": "security.secret_redacted",
+          "payload": {
+            "toolCallId": "toolcall_7d096e83-7e4e-44eb-a186-b4b82a404c92",
+            "tool": "exec",
+            "redacted": 6,
+            "source": "tool-output-budget",
+            "reason": "secret redacted before boundary",
+            "code": "SECRET_REDACTED"
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "bytes": 64,
+          "sha256": "af59b5bf2683d9048fced4e0529610ef20592376cf22e450c2115e3291490848",
+          "mode": "600",
+          "content": "{\"[redacted] password\":\"[redacted]\",\"stdout\":\"DIAG_SECOND safe\"}"
+        }
+      ]
+    },
+    {
+      "label": "failed JSON capture",
+      "passed": true,
+      "unchangedOriginalResult": true,
+      "rendered": "[tool output: 87 bytes, exceeds inline budget (1)]\n[artifact: /tmp/r3-independent-probes-GnpZ3K/3/artifacts/tool-output-6a0b5462e2c1bef4df7839a26ce2c27c9f62aa2b43506c67394d5e07512d7ab6.txt#artifact:artifact_196f5711-1574-460d-a57a-854dcfda532f]\n[sha256: 44737e0f4365c790dc2ec9d22a7cbe04d90766fcd080eb63175c32fd4baf3e23]\n--- output head ---\n[failed] {\"stderr\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\"}\n--- output tail ---\n[failed] {\"stderr\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\"}",
+      "events": [
+        {
+          "type": "security.secret_redacted",
+          "payload": {
+            "toolCallId": "toolcall_2a33a3af-43a1-4be3-8926-5b581bdfbf46",
+            "tool": "exec",
+            "redacted": 1,
+            "source": "tool-output-budget",
+            "reason": "secret redacted before boundary",
+            "code": "SECRET_REDACTED"
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "bytes": 87,
+          "sha256": "44737e0f4365c790dc2ec9d22a7cbe04d90766fcd080eb63175c32fd4baf3e23",
+          "mode": "600",
+          "content": "[failed] {\"stderr\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\"}"
+        }
+      ]
+    },
+    {
+      "label": "duplicate earlier secret",
+      "passed": true,
+      "unchangedOriginalResult": true,
+      "rendered": "[tool output: 106 bytes, exceeds inline budget (1)]\n[artifact: /tmp/r3-independent-probes-GnpZ3K/4/artifacts/tool-output-cb94224f7dc4b2d1d4c1c411db0af224e6118fb53a22488fc49ab28acdc0a4a2.txt#artifact:artifact_9cb5aea2-d71b-4714-84c8-497d22a7e41f]\n[sha256: 12b1edcb8f885e83e2aadb7122df70be3e7880e9f419c92ce6f151251b659dae]\n--- output head ---\n{\"stdout\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\",\"stdout\":\"DIAG_SECOND safe\"}\n--- output tail ---\n{\"stdout\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\",\"stdout\":\"DIAG_SECOND safe\"}",
+      "events": [
+        {
+          "type": "security.secret_redacted",
+          "payload": {
+            "toolCallId": "toolcall_85128736-c7d8-4363-ba03-18478ebc9293",
+            "tool": "exec",
+            "redacted": 1,
+            "source": "tool-output-budget",
+            "reason": "secret redacted before boundary",
+            "code": "SECRET_REDACTED"
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "bytes": 106,
+          "sha256": "12b1edcb8f885e83e2aadb7122df70be3e7880e9f419c92ce6f151251b659dae",
+          "mode": "600",
+          "content": "{\"stdout\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\",\"stdout\":\"DIAG_SECOND safe\"}"
+        }
+      ]
+    },
+    {
+      "label": "duplicate earlier authority",
+      "passed": true,
+      "unchangedOriginalResult": true,
+      "rendered": "[tool output blocked: prompt-injection detected in \"exec\" output (fake-system-prefix) — content withheld]",
+      "events": [
+        {
+          "type": "security.injection_denied",
+          "payload": {
+            "source": "tool",
+            "target": "exec",
+            "toolCallId": "toolcall_46a9f7f9-f106-4f7c-b5c1-21d86208b4e0",
+            "reasons": [
+              "fake-system-prefix"
+            ],
+            "code": "SECURITY_DENIED"
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "bytes": 68,
+          "sha256": "94725de44abda8ebadbc1454de95d9440f4b0128ac086a7919fca265178fd97f",
+          "mode": "600",
+          "content": "{\"stdout\":\"DIAG: leading\\nSYSTEM:\\tprobe_authority\",\"stdout\":\"safe\"}"
+        }
+      ]
+    },
+    {
+      "label": "numeric lexemes",
+      "passed": true,
+      "unchangedOriginalResult": true,
+      "rendered": "[tool output: 132 bytes, exceeds inline budget (1)]\n[artifact: /tmp/r3-independent-probes-GnpZ3K/6/artifacts/tool-output-5e3526db8da802384375e840593353b0305b9a38dad6a25e9a1545d3c4ae2a76.txt#artifact:artifact_883a9c92-e536-4850-abf1-99013ad0e2ad]\n[sha256: e846d1b4e63ee8db7c7c7fb999b699cac6bb1a334d157ae3794bc2fd338ccacc]\n--- output head ---\n{\"id\":[9007199254740993,18446744073709551615,-0,1e309],\"stdout\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\"}\n--- output tail ---\n{\"id\":[9007199254740993,18446744073709551615,-0,1e309],\"stdout\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\"}",
+      "events": [
+        {
+          "type": "security.secret_redacted",
+          "payload": {
+            "toolCallId": "toolcall_49b7e104-c734-464a-99d9-0187c8dce23e",
+            "tool": "exec",
+            "redacted": 1,
+            "source": "tool-output-budget",
+            "reason": "secret redacted before boundary",
+            "code": "SECRET_REDACTED"
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "bytes": 132,
+          "sha256": "e846d1b4e63ee8db7c7c7fb999b699cac6bb1a334d157ae3794bc2fd338ccacc",
+          "mode": "600",
+          "content": "{\"id\":[9007199254740993,18446744073709551615,-0,1e309],\"stdout\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\"}"
+        }
+      ]
+    },
+    {
+      "label": "colliding sanitized keys",
+      "passed": true,
+      "unchangedOriginalResult": true,
+      "rendered": "[tool output: 114 bytes, exceeds inline budget (1)]\n[artifact: /tmp/r3-independent-probes-GnpZ3K/7/artifacts/tool-output-45bdc1e325aff6b641ea4effe4b3014e59fdf73d93095b06e9e4a2ac56b5b67f.txt#artifact:artifact_c29bcd13-2fca-47ee-8e42-355f6d3ea384]\n[sha256: 06a95b0d410efdad7349cfa1b51e1661567923116655edf622de1987ac7a4615]\n--- output head ---\n{\"[redacted]\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\",\"[redacted]\":\"DIAG_SECOND safe\"}\n--- output tail ---\n{\"[redacted]\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\",\"[redacted]\":\"DIAG_SECOND safe\"}",
+      "events": [
+        {
+          "type": "security.secret_redacted",
+          "payload": {
+            "toolCallId": "toolcall_259a9b87-dd3e-40f9-9681-87e649f6e2d0",
+            "tool": "exec",
+            "redacted": 5,
+            "source": "tool-output-budget",
+            "reason": "secret redacted before boundary",
+            "code": "SECRET_REDACTED"
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "bytes": 114,
+          "sha256": "06a95b0d410efdad7349cfa1b51e1661567923116655edf622de1987ac7a4615",
+          "mode": "600",
+          "content": "{\"[redacted]\":\"DIAG: leading\\n[redacted]\\nDIAG_FIRST expected 8080 observed 3000\",\"[redacted]\":\"DIAG_SECOND safe\"}"
+        }
+      ]
+    },
+    {
+      "label": "unmappable numeric host redaction",
+      "passed": true,
+      "unchangedOriginalResult": true,
+      "rendered": "[tool output blocked: prompt-injection detected in \"exec\" output (tool-output-redaction-unmappable) — content withheld]",
+      "events": [
+        {
+          "type": "security.secret_redacted",
+          "payload": {
+            "toolCallId": "toolcall_349e3dce-7c76-4174-96f3-25a18ed47812",
+            "tool": "exec",
+            "redacted": 2,
+            "source": "tool-output-budget",
+            "reason": "secret redacted before boundary",
+            "code": "SECRET_REDACTED"
+          }
+        },
+        {
+          "type": "security.injection_denied",
+          "payload": {
+            "source": "tool",
+            "target": "exec",
+            "toolCallId": "toolcall_349e3dce-7c76-4174-96f3-25a18ed47812",
+            "reasons": [
+              "tool-output-redaction-unmappable"
+            ],
+            "code": "SECURITY_DENIED"
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "bytes": 70,
+          "sha256": "634aacbd587e52f7624f15eb94b5cc5bdfc2843b9df44c1e746d4c973fce41eb",
+          "mode": "600",
+          "content": "[tool output withheld: host redaction cannot preserve structured data]"
+        }
+      ]
+    },
+    {
+      "label": "pre-existing artifact symlink",
+      "passed": true,
+      "unchangedOriginalResult": true,
+      "rendered": "[tool output: 63 bytes, exceeds inline budget (1)]\n[artifact: (artifact write failed — inline truncated)]\n[sha256: c69c40c70a3b594cac2ffbaea13b0904109bce07aab848f00821d32dc78c790f]\n--- output head ---\nDIAG: leading\n[redacted]\nDIAG_FIRST expected 8080 observed 3000\n--- output tail ---\nDIAG: leading\n[redacted]\nDIAG_FIRST expected 8080 observed 3000",
+      "events": [
+        {
+          "type": "security.secret_redacted",
+          "payload": {
+            "toolCallId": "toolcall_09712257-a662-4f23-a3f9-f8130d723bf2",
+            "tool": "exec",
+            "redacted": 1,
+            "source": "tool-output-budget",
+            "reason": "secret redacted before boundary",
+            "code": "SECRET_REDACTED"
+          }
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "label": "throwing host hook",
+      "passed": true,
+      "unchangedOriginalResult": true,
+      "rendered": "[tool output blocked: prompt-injection detected in \"exec\" output (tool-output-security-hook-failed) — content withheld]",
+      "events": [
+        {
+          "type": "security.injection_denied",
+          "payload": {
+            "source": "tool",
+            "target": "exec",
+            "toolCallId": "toolcall_9ae60721-e8bc-44a0-b13d-c38e1e06b2a5",
+            "reasons": [
+              "tool-output-security-hook-failed"
+            ],
+            "code": "SECURITY_DENIED"
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "bytes": 44,
+          "sha256": "c76a07ba84b0ae74addce1416048003d37210ef1229218f60b5a747740925a1b",
+          "mode": "600",
+          "content": "[tool output withheld: security hook failed]"
+        }
+      ]
+    },
+    {
+      "label": "bounded escaped nesting",
+      "passed": true,
+      "unchangedOriginalResult": true,
+      "rendered": "[tool output blocked: prompt-injection detected in \"exec\" output (structured-output-security-depth) — content withheld]",
+      "events": [
+        {
+          "type": "security.injection_denied",
+          "payload": {
+            "source": "tool",
+            "target": "exec",
+            "toolCallId": "toolcall_ff39ceb1-4de2-456d-a073-78177c31a1a4",
+            "reasons": [
+              "structured-output-security-depth"
+            ],
+            "code": "SECURITY_DENIED"
+          }
+        }
+      ],
+      "artifacts": [
+        {
+          "bytes": 1150,
+          "sha256": "8906577634019d9579aac3ae7c2d7aa67d10de0e1e566f01f7c937b08189e03a",
+          "mode": "600",
+          "content": "{\"stdout\":\"{\\\"stdout\\\":\\\"{\\\\\\\"stdout\\\\\\\":\\\\\\\"{\\\\\\\\\\\\\\\"stdout\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\"{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"stdout\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"stdout\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"stdout\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"{\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"stdout\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\":\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"[tool output withheld: nested data exceeds security limit]\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"}\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"}\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"}\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"}\\\\\\\\\\\\\\\"}\\\\\\\"}\\\"}\"}"
+        }
+      ]
+    },
+    {
+      "label": "ordinary JSON formatting",
+      "passed": true,
+      "unchangedOriginalResult": true,
+      "rendered": "[tool output: 91 bytes, exceeds inline budget (1)]\n[artifact: /tmp/r3-independent-probes-GnpZ3K/12/artifacts/tool-output-b45aec8112cb3e983aeb39bcd0f8a45c7ba1bfe8a3043f530110dcf831aa5c1d.txt#artifact:artifact_dc6b9daf-3ab3-4987-81a3-70b71267ec42]\n[sha256: 67a3e71167e2a54ce1ffa9e800835dce6fba1c45e5b8d5543edf38943b4738ae]\n--- output head ---\n { \"id\" : 9007199254740993, \"message\":\"\\u0061\", \"again\":-0, \"message\":\"DIAG_SECOND safe\" } \n--- output tail ---\n { \"id\" : 9007199254740993, \"message\":\"\\u0061\", \"again\":-0, \"message\":\"DIAG_SECOND safe\" } ",
+      "events": [],
+      "artifacts": [
+        {
+          "bytes": 91,
+          "sha256": "67a3e71167e2a54ce1ffa9e800835dce6fba1c45e5b8d5543edf38943b4738ae",
+          "mode": "600",
+          "content": " { \"id\" : 9007199254740993, \"message\":\"\\u0061\", \"again\":-0, \"message\":\"DIAG_SECOND safe\" } "
+        }
+      ]
+    }
+  ],
+  "passed": 12
+}

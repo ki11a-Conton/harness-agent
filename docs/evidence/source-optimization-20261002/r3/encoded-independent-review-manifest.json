@@ -1,0 +1,184 @@
+{
+  "schema": "source-optimization-r3-independent-security-audit-v1",
+  "createdAt": "2026-10-03T04:16:26Z",
+  "fixtureSha256": "5948c313841c00dc955a4da4d2a7a822fe7d6774bfd7548e34100f4348f1d405",
+  "baseline": {
+    "head": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+    "failed": 34,
+    "passed": 2,
+    "total": 36,
+    "trackedDiff": "",
+    "notes": [
+      "Final symlink counterexample passes baseline because old artifact filename used raw call id; it exposed the intermediate hashed-name candidate instead.",
+      "Numeric custom hook with configured budget passes baseline because the old whole-text redactor was honored; no-budget variant fails.",
+      "Throwing hook failures are real render exceptions, not import/collection/type failures."
+    ]
+  },
+  "candidate": {
+    "tests": 85,
+    "passed": 85,
+    "failed": 0,
+    "files": 4,
+    "includesFrozenIndependentTests": 36,
+    "coreTypecheckExit": 0,
+    "sourceSha256": {
+      "packages/core/src/runtime/context-controller.ts": "c48ef9dd8ddea50bcfb9783d137b0fb139cc628bfeca4c24304728d54fb29d77",
+      "packages/core/src/runtime/tool-output-security.ts": "5a43dbda5684180c7b0aa11f19082c76a7662cfe96612b640b3d7a29b76d7b7e",
+      "packages/core/dist/runtime/context-controller.js": "b816283ff2d7d08e5a40f1243bf93a8fb9ef580d8e5d942b310701b28e3312c0",
+      "packages/core/dist/runtime/tool-output-security.js": "11711490875ed0834beab9ec336ca21567c08cf58649a8c0fe5bcfcb4ae1fc00",
+      "packages/security/src/secret-gate.ts": "419672907d5194a6e7a8419d0429c97545c474a40cad76f3a91c49b5340b03f2",
+      "packages/security/dist/secret-gate.js": "eecc9edf7988313b3d7577f2eef36174d1bb53079473834d6cd242bf854b0b10"
+    },
+    "readonlyProductionReview": "No unaddressed security defect found in reviewed JSON token rewriting and artifact exclusive creation; original ToolResult unchanged, full safe artifact bytes/hash consistent."
+  },
+  "actualControllerProbes": {
+    "passed": 12,
+    "failed": 0,
+    "platform": "linux",
+    "node": "v24.19.0"
+  },
+  "intermediateCandidateRed": {
+    "encodedOriginalHelper": {
+      "failed": 26,
+      "passed": 2,
+      "total": 28
+    },
+    "unicodeCredentialKey": {
+      "failed": 2,
+      "total": 2
+    },
+    "redactionHiddenAuthority": {
+      "failed": 2,
+      "total": 2
+    },
+    "secretCredentialKey": {
+      "failed": 2,
+      "total": 2
+    },
+    "unmappableNumericHook": {
+      "failed": 2,
+      "total": 2
+    },
+    "meaning": "These reproduce successive candidate defects, and are intentionally kept separate from unchanged baseline evidence."
+  },
+  "limitations": [
+    "Linux actual evidence; Windows not verified by this audit.",
+    "Configured artifact directory is trusted host storage. Final-file symlink control is not a cross-process parent-directory confinement attestation.",
+    "No provider/model quality, paid-model run, or champion promotion.",
+    "Redaction counts include detections across encoded/decoded views; no claim that they equal unique raw occurrences."
+  ],
+  "evidence": {
+    "encoded-independent-frozen-baseline-red.json": {
+      "sha256": "7204b4f3d1acb4dcfdb2a6726e8ba3eea9a621faf118ec5f6ed6c4694d61fc23",
+      "bytes": 778
+    },
+    "encoded-independent-frozen-baseline-red.log": {
+      "sha256": "c746d2116005d7c96375e4c5036e374ee3dcb08428611c5d1218c3ed3fdb0af9",
+      "bytes": 26493
+    },
+    "encoded-independent-frozen-baseline-red.exit": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2
+    },
+    "encoded-independent-frozen-candidate-green.json": {
+      "sha256": "e8114e2a71eba56192f648b1952e426cd21f5da4e109ea0e1da5c85dccd486c8",
+      "bytes": 1319
+    },
+    "encoded-independent-frozen-candidate-green.log": {
+      "sha256": "9e7b00ab7459747d76d17d668deb7ff93f27522c5f028ed52967a0ae87fdb42e",
+      "bytes": 601
+    },
+    "encoded-independent-frozen-candidate-green.exit": {
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    "encoded-independent-frozen-core-typecheck.json": {
+      "sha256": "bd1dc3d09eae9753813c7662f383a4c65ae86181bcff6dccf39a5ac6a7f7a8a4",
+      "bytes": 1021
+    },
+    "encoded-independent-frozen-core-typecheck.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "encoded-independent-frozen-core-typecheck.exit": {
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    "encoded-independent-controller-probes.mjs": {
+      "sha256": "74fdfba1abbe6edeb772e4cd2ded61b10b2985cca9e082592857abe591888b18",
+      "bytes": 8591
+    },
+    "encoded-independent-controller-probes.json": {
+      "sha256": "20e551a22fbdcd8f6cacab0693f5e91670e3c58d34e32f9a0ce61eb07b55d594",
+      "bytes": 17771
+    },
+    "encoded-independent-controller-probes.log": {
+      "sha256": "8172fe018eab4d320b09424f4ebb72092d82263ea13cfbdec11929a4d4279b0c",
+      "bytes": 107
+    },
+    "encoded-independent-controller-probes.exit": {
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    "encoded-independent-final-red.json": {
+      "sha256": "97c65005c5c07828febc6b58768bf9b71bfa2a3ef32d4a9213d562054569ac2a",
+      "bytes": 1165
+    },
+    "encoded-independent-final-red.log": {
+      "sha256": "c9dc4ef7ce082dd50fd3d4c386ab9b8cf34bee9fac565a3f45efffc32b556ab3",
+      "bytes": 21804
+    },
+    "encoded-independent-final-red.exit": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2
+    },
+    "encoded-independent-extra-key.json": {
+      "sha256": "ad135d14b307b3c7ef32ba8691f01a172e362f3b83884220c63f102f6281e469",
+      "bytes": 1158
+    },
+    "encoded-independent-extra-key.log": {
+      "sha256": "c639ae61c07612323f131789f559c05ec771e503f6becaca924133e7a48f9d31",
+      "bytes": 4228
+    },
+    "encoded-independent-extra-key.exit": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2
+    },
+    "encoded-independent-pre-redaction-injection.json": {
+      "sha256": "7d41d273f431393c9ccb50cd4dbfb07f1c19f70a02432124a70c8485ba98a4fe",
+      "bytes": 1168
+    },
+    "encoded-independent-pre-redaction-injection.log": {
+      "sha256": "d35dabede908c8499e23e8f60ba1f2a5b818a87731498c5012fbfa0dc8e308c0",
+      "bytes": 4388
+    },
+    "encoded-independent-pre-redaction-injection.exit": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2
+    },
+    "token-audit-secret-credential-key-red.json": {
+      "sha256": "042f36b1674adc9e15acd4e09c8cf246c12c8f6aeda27db760a3ef2265f90dcc",
+      "bytes": 1176
+    },
+    "token-audit-secret-credential-key-red.log": {
+      "sha256": "3f5566b976ae9a5251af4f3427b74429a491af366f0f4038330afe9499cfcf6a",
+      "bytes": 4500
+    },
+    "token-audit-secret-credential-key-red.exit": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2
+    },
+    "token-audit-host-numeric-red.json": {
+      "sha256": "637271fff657fe92b27b2f45a4187d26b726707b6c4213d79d01a1e399cb1e5b",
+      "bytes": 1165
+    },
+    "token-audit-host-numeric-red.log": {
+      "sha256": "583419ec831d7c89eb2084fe3d794eb4073bd9e1d8babe093a14571592e0dc70",
+      "bytes": 4579
+    },
+    "token-audit-host-numeric-red.exit": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "candidateId": "diagnostic_first_repair_v1",
+  "status": "experimental",
+  "baselineDigest": "3b7a75ad598de2e325eb35d49f71a2e90c832828d4c02b62fc3a20a6d63ae377",
+  "candidateDigest": "f3369adde710847798bc21ac55663e6369cf14a1385c0fd72472908a6ac826b7",
+  "comparison": {
+    "comparable": true,
+    "hasCausalDelta": true,
+    "undeclaredDeltas": [],
+    "declaredDeltas": [
+      "harnessConfig.completionGuidance"
+    ],
+    "missingDeclaredDeltas": [],
+    "reasonCode": null,
+    "providerCallsAllowed": true
+  },
+  "guidanceVersion": "diagnostic-first-repair:v1",
+  "promptAdditionsDigest": "cae61728f2f4dcf4713aa037907fa4c068460b74c7d6d1c42526d9570b686f6c",
+  "modelVisiblePromptDigest": "ec591c5fbb8af42e2e702ca7ee1ef7250edef47d5e3f53156c1812e5f78c9938",
+  "baselinePromptDigest": "9102f094abc7670958d32f58d9c2f883b7c91b87081b617aafc65be4f7d05b06",
+  "runtimeConfigHash": "d9253777f3cccd94db65bd76263ece56aab8589c9e64d305b004cebc55421ade",
+  "baselineRuntimeConfigHash": "80a8855e5b222c2111e7e3f5b84a35abd75c555b5c757033f2247b6e93dca8a0",
+  "mechanismContract": {
+    "schemaVersion": "1.0.0",
+    "candidateId": "diagnostic_first_repair_v1",
+    "modelVisibleSurface": "versioned completionGuidance in the real model request; original verification gate unchanged",
+    "eligibilityRule": "case has an original command verifier that can be rerun for diagnostic access",
+    "minEligibleCases": 5,
+    "expectedFailureCluster": "verification_failed (guessing repairs without concrete diagnostics)",
+    "requiredActivationEvents": [
+      "diagnostic-first-repair-guidance-injected"
+    ],
+    "forbiddenNoOpConditions": [
+      "guidance absent from real model requests",
+      "baseline already injects the same guidance",
+      "original verifier replaced or truth policy weakened"
+    ]
+  },
+  "defaultOff": true,
+  "quality": "NOT_RUN",
+  "promotion": "NOT_RUN"
+}

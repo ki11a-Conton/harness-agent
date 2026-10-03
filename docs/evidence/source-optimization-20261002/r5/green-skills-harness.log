@@ -1,0 +1,23 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+[skill denied] detection=required-tools target=/tmp/ar-skill-revision-KuGGVI/skills/lint/SKILL.md reasons=required tool not allowed by host policy: exec_command
+[skill denied] detection=injection target=/tmp/ar-skill-revision-LoKshc/skills/lint/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions
+[skill denied] detection=secret target=/tmp/ar-skill-revision-sxUgDW/skills/lint/SKILL.md reasons=openai-key
+ ✓ packages/harness/src/skill-revision-regressions.test.ts (20 tests) 206ms
+[degraded] skill-store.corrupt-line: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+ ✓ packages/skills/src/skill-evolution.test.ts (22 tests) 31ms
+ ✓ packages/skills/src/skill-loader.test.ts (22 tests) 93ms
+ ✓ packages/harness/src/skill-context.test.ts (7 tests) 42ms
+ ✓ packages/harness/src/skill.integration.test.ts (1 test) 56ms
+ ✓ packages/skills/src/skill-store.test.ts (6 tests) 55ms
+ ✓ packages/skills/src/effectiveness.test.ts (5 tests) 4ms
+ ✓ packages/skills/src/skill-capability.test.ts (7 tests) 6ms
+ ✓ packages/skills/src/selection.test.ts (5 tests) 5ms
+ ✓ packages/skills/src/skill-security.test.ts (2 tests) 4ms
+
+ Test Files  10 passed (10)
+      Tests  97 passed (97)
+   Start at  15:58:04
+   Duration  5.27s (transform 1.87s, setup 0ms, import 3.23s, tests 502ms, environment 1ms)
+

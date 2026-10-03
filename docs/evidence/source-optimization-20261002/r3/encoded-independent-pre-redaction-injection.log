@@ -1,0 +1,63 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+ ❯ packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts (32 tests | 2 failed | 30 skipped) 17ms
+     ↓ redacts a credential assignment and an escaped sibling without discarding diagnostics
+     ↓ denies an escaped sibling authority line when another field requires credential redaction
+     ↓ recognizes a credential field whose key is Unicode-escaped without rewriting unrelated data
+     × checks an original credential value for authority before its field is redacted 14ms
+     ↓ redacts captured JSON inside a failed error while retaining its status and diagnostic
+     ↓ denies authority encoded in a failed error JSON payload
+     ↓ checks the earlier value of a duplicate JSON key and preserves both diagnostic texts
+     ↓ denies an earlier duplicate-key SYSTEM authority payload
+     ↓ denies an earlier duplicate-key DEVELOPER authority payload
+     ↓ does not lose either value when distinct secret keys redact to the same text
+     ↓ retains untouched numeric lexeme 9007199254740993 when a sibling string is redacted
+     ↓ retains untouched numeric lexeme 18446744073709551615 when a sibling string is redacted
+     ↓ retains untouched numeric lexeme -0 when a sibling string is redacted
+     ↓ retains untouched numeric lexeme 1e309 when a sibling string is redacted
+     ↓ redacts a credential assignment and an escaped sibling without discarding diagnostics
+     ↓ denies an escaped sibling authority line when another field requires credential redaction
+     ↓ recognizes a credential field whose key is Unicode-escaped without rewriting unrelated data
+     × checks an original credential value for authority before its field is redacted 2ms
+     ↓ redacts captured JSON inside a failed error while retaining its status and diagnostic
+     ↓ denies authority encoded in a failed error JSON payload
+     ↓ checks the earlier value of a duplicate JSON key and preserves both diagnostic texts
+     ↓ denies an earlier duplicate-key SYSTEM authority payload
+     ↓ denies an earlier duplicate-key DEVELOPER authority payload
+     ↓ does not lose either value when distinct secret keys redact to the same text
+     ↓ retains untouched numeric lexeme 9007199254740993 when a sibling string is redacted
+     ↓ retains untouched numeric lexeme 18446744073709551615 when a sibling string is redacted
+     ↓ retains untouched numeric lexeme -0 when a sibling string is redacted
+     ↓ retains untouched numeric lexeme 1e309 when a sibling string is redacted
+     ↓ stores only fully redacted captured data with matching artifact bytes and hash
+     ↓ does not follow a pre-existing artifact symlink outside the configured root
+     ↓ withholds data and stores no secret when the redact hook throws
+     ↓ withholds data and stores no secret when the detect hook throws
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts > R3a encoded output independent regressions, budget=true > checks an original credential value for authority before its field is redacted
+ FAIL  packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts > R3a encoded output independent regressions, budget=false > checks an original credential value for authority before its field is redacted
+AssertionError: expected '{"[redacted],"stdout":"DIAG_SECOND sa…' to contain 'tool output blocked'
+
+Expected: "tool output blocked"
+Received: "{"[redacted],"stdout":"DIAG_SECOND safe"}"
+
+ ❯ expectDenial packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts:68:20
+     66|
+     67| function expectDenial(env: ReturnType<typeof fixture>, rendered: strin…
+     68|   expect(rendered).toContain("tool output blocked");
+       |                    ^
+     69|   expect(rendered).not.toContain(authority);
+     70|   expect(env.emit.mock.calls.find(([, type]) => type === "security.inj…
+ ❯ packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts:117:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 30 skipped (32)
+   Start at  04:06:18
+   Duration  554ms (transform 324ms, setup 0ms, import 417ms, tests 17ms, environment 0ms)
+

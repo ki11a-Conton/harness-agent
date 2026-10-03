@@ -1,0 +1,25 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+ ✓ packages/context/src/context-optimization-regressions.test.ts (39 tests) 19ms
+ ✓ packages/context/src/path-scoped-discovery.test.ts (20 tests) 65ms
+ ✓ packages/context/src/pipeline.test.ts (38 tests) 54ms
+ ✓ packages/context/src/taxonomy.test.ts (18 tests) 22ms
+ ✓ packages/core/src/runtime/step-snapshot.invariant.test.ts (10 tests) 27ms
+ ✓ packages/context/src/compaction.test.ts (10 tests) 8ms
+ ✓ packages/core/src/runtime/skill-instruction-snapshot.p32.test.ts (10 tests) 7ms
+ ✓ packages/context/src/discovery.test.ts (11 tests) 42ms
+ ✓ packages/harness/src/context-wiring.integration.test.ts (3 tests) 788ms
+     ✓ env_snapshot reports the live harness wiring (profile, workspace root, tool list)  754ms
+ ✓ packages/harness/src/path-scoped-instructions.regressions.test.ts (9 tests) 127ms
+ ✓ packages/context/src/circuit-breaker.test.ts (6 tests) 69ms
+ ✓ packages/context/src/policy-versioning.test.ts (10 tests) 7ms
+ ✓ packages/context/src/message-budget-regressions.test.ts (14 tests) 7ms
+ ✓ packages/context/src/prompt-versioning.test.ts (9 tests) 8ms
+ ✓ packages/context/src/budget.test.ts (8 tests) 6ms
+
+ Test Files  15 passed (15)
+      Tests  215 passed (215)
+   Start at  22:08:07
+   Duration  6.63s (transform 2.14s, setup 0ms, import 3.63s, tests 1.26s, environment 1ms)
+

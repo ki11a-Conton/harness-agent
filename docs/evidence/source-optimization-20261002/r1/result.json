@@ -1,0 +1,67 @@
+{
+  "scope": "R1",
+  "capturedAt": "2026-10-02T15:53:31.114116+00:00",
+  "baselineSha": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+  "candidateBaseSha": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+  "candidateCommit": "UNCOMMITTED",
+  "sourceDigests": {
+    "packages/model/src/openai.ts": "ee3bb56f44c1f6a230571377349402a32619e4d55e7ca20666a272f7308aeb1c",
+    "packages/model/src/openai.test.ts": "1a02d8408a425756e0af79b871e637fd4f81cbacaa3d13c3535f5a12101d4766",
+    "packages/model/src/openai-termination-regressions.test.ts": "1b390c6aaa92e73ba5aa6813b1adf436405b305116a15968f48ca0cfbeb18f97",
+    "packages/core/src/runtime/provider-termination-regressions.test.ts": "677b859675d9204ebbf263ba61ed08f67939dee1fbe6fba9a7bc758fb8bc960b"
+  },
+  "environment": {
+    "node": "v24.19.0",
+    "pnpm": "11.19.0",
+    "vitest": "4.1.10",
+    "network": "offline mocks plus existing loopback wire stub"
+  },
+  "red": {
+    "command": "pnpm exec vitest run packages/model/src/openai-termination-regressions.test.ts packages/core/src/runtime/provider-termination-regressions.test.ts",
+    "cwd": "/workspace/harness-agent-source-baseline",
+    "log": "red-baseline-final.log",
+    "exitCode": 1,
+    "tests": {
+      "failed": 26,
+      "passed": 4,
+      "skipped": 0
+    }
+  },
+  "green": {
+    "command": "pnpm exec vitest run packages/model/src/openai-termination-regressions.test.ts packages/model/src/openai.test.ts packages/model/src/openai.wire-stub.test.ts packages/model/src/provider-diagnostics.test.ts packages/core/src/runtime/provider-termination-regressions.test.ts packages/core/src/runtime/loop-integration.test.ts packages/core/src/runtime/resume.test.ts",
+    "cwd": "/workspace/harness-agent-source-optimization",
+    "log": "green-targeted-final.log",
+    "exitCode": 0,
+    "files": 7,
+    "tests": {
+      "passed": 139,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "typecheck": [
+    {
+      "command": "pnpm exec tsc -p packages/model/tsconfig.json",
+      "exitCode": 0,
+      "log": "typecheck-model.log"
+    },
+    {
+      "command": "pnpm exec tsc -p /workspace/harness-agent/.ci/source-optimization/r1/typecheck-r1-core.json",
+      "exitCode": 0,
+      "log": "typecheck-core-focused-final.log"
+    },
+    {
+      "command": "pnpm exec tsc -p packages/core/tsconfig.json --noEmit",
+      "exitCode": 1,
+      "log": "typecheck-core-tests.log",
+      "reason": "Unrelated R3 test ToolError missing safeToRetry; forwarded to owner"
+    }
+  ],
+  "compatibility": "Strict DONE-only text, natural EOF and HTTP 200 without a body now finishReason:error; no text-only compatibility mode. Explicit stop/tool_calls remain supported.",
+  "notRun": [
+    "full suite",
+    "real paid model",
+    "external network",
+    "promotion"
+  ]
+}

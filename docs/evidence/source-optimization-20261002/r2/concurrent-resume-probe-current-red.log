@@ -1,0 +1,28 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+ ❯ ../harness-agent/.ci/source-optimization/r2/concurrent-resume-probe.test.ts (1 test | 1 failed) 16ms
+   × independent concurrent bound recovery must append a promoted steer once 15ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../harness-agent/.ci/source-optimization/r2/concurrent-resume-probe.test.ts > independent concurrent bound recovery must append a promoted steer once
+AssertionError: expected [ { …(7) }, { …(7) } ] to have a length of 1 but got 2
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ ../harness-agent/.ci/source-optimization/r2/concurrent-resume-probe.test.ts:109:18
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  04:21:04
+   Duration  800ms (transform 505ms, setup 0ms, import 646ms, tests 16ms, environment 0ms)
+

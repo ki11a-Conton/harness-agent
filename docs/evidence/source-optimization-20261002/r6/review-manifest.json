@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-02T22:04:58.760873+00:00",
+  "reviewer": "finish_r4_r6_review",
+  "candidateCwd": "/workspace/harness-agent-source-optimization",
+  "baselineCwd": "/workspace/harness-agent-source-baseline",
+  "candidateGitHead": "b033e6aedbc5b32f1b77b40c849b8ddcb4edaa40",
+  "baselineGitHead": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+  "candidateContainsWorkingTreeChanges": true,
+  "platform": {
+    "actualSystem": "Linux",
+    "machine": "x86_64",
+    "release": "6.18.44",
+    "node": "v24.19.0",
+    "pnpm": "11.21.0",
+    "LinuxTargeted": "PASS",
+    "Windows": "NOT_RUN"
+  },
+  "configurationFiles": {
+    "package.json": {
+      "candidate": "853d88b24d1205236b33f55577862fb48b6208e113a9989c825ff54deb7e7931",
+      "baseline": "853d88b24d1205236b33f55577862fb48b6208e113a9989c825ff54deb7e7931"
+    },
+    "pnpm-lock.yaml": {
+      "candidate": "150f32f43fd702dc70a92236a40d39ebfa3585d8931743a0b32df412c7e106fd",
+      "baseline": "150f32f43fd702dc70a92236a40d39ebfa3585d8931743a0b32df412c7e106fd"
+    },
+    "vitest.config.ts": {
+      "candidate": "4dea4e8d08bda773ff329121fb8676bc40388d496a0178841c209ccccc01783e",
+      "baseline": "4dea4e8d08bda773ff329121fb8676bc40388d496a0178841c209ccccc01783e"
+    },
+    "tsconfig.base.json": {
+      "candidate": "ef1d4cc3885adc72552effcb48970857b0eb62d1110412d283b0358bff0e8ef1",
+      "baseline": "ef1d4cc3885adc72552effcb48970857b0eb62d1110412d283b0358bff0e8ef1"
+    },
+    "packages/tools/tsconfig.json": {
+      "candidate": "e3ee1eb112f31cf2ba2afdf82ee8776a6bdb9ba90449b96bdb074a471798d117",
+      "baseline": "e3ee1eb112f31cf2ba2afdf82ee8776a6bdb9ba90449b96bdb074a471798d117"
+    },
+    "packages/core/tsconfig.json": {
+      "candidate": "d071a24c2e7c97a9e4d4484bf0ac8c9baf87b3ded6aa5aac4c6d8a535a147c9d",
+      "baseline": "d071a24c2e7c97a9e4d4484bf0ac8c9baf87b3ded6aa5aac4c6d8a535a147c9d"
+    },
+    "packages/harness/tsconfig.json": {
+      "candidate": "5d0e1a8a434246888149765ce04f6029ad4d29fe557ee5e0516f4e8a91b2fe1f",
+      "baseline": "5d0e1a8a434246888149765ce04f6029ad4d29fe557ee5e0516f4e8a91b2fe1f"
+    }
+  },
+  "promptDigest": "NOT_APPLICABLE: no prompt is changed by R4/R6; this review is deterministic source/tool/runtime testing",
+  "commitStatus": "No commit made by this reviewer; the source hashes identify the reviewed working tree.",
+  "scope": "R6",
+  "sourceFiles": {
+    "packages/core/src/runtime/read-only-prefetch.ts": {
+      "candidate": "153644ec5e480ef735e092df483e70770a7727823b90cf640da77a60aca2f657",
+      "baseline": null
+    },
+    "packages/core/src/runtime/runtime.ts": {
+      "candidate": "f899f8c062c5ecc5e8857cc8567ea935a29998edc06efb054022c6451a24c3b3",
+      "baseline": "ad363e45043c7f2d3dfb625579aa13a6f56f503421c9e8a3788dfaeaba05bf83"
+    },
+    "packages/core/src/runtime/memory-prefetch.regressions.test.ts": {
+      "candidate": "180ce7c2ddd19ec8d641eb9aa2bcf762830d8869a8648548ddf91b7e2b638666",
+      "baseline": "16589f6673e3c9a7b71768fb1fdbdce7dee6bf447160bd2e1abd29f75a24340b"
+    },
+    "packages/harness/src/memory-runtime-bridge.ts": {
+      "candidate": "10adbd49707cf4070521a84b4581ea4864d4c23b1551e5ba10e3d578b6c16404",
+      "baseline": "5a110839e5955ad38fd8a491fdae2ab8df269fcb2e944c498eb8e9d6c5775564"
+    },
+    "packages/harness/src/create-harness.ts": {
+      "candidate": "5af9a8f7a5f82122df90f59e39a7d6cdb63134d12c40bc5ab386aad4476eafeb",
+      "baseline": "89cd40e952b890aa307f6e5f5027ecef0ef34a8ccef6a28f6359d51a85fce347"
+    },
+    "packages/harness/src/memory-prefetch-production.regressions.test.ts": {
+      "candidate": "e37abe48b28aef194220f9582f39fc9cf777d771ea48e5dd587cec1e59d84291",
+      "baseline": null
+    }
+  },
+  "sourceManifestSha256": "a448d3b573b4fba74bf60ac015c4519cdf5fbf06c73fcb4940932c6f326d32bb",
+  "configurationManifestSha256": "c4f578916b397bf965efb5b36f47ac0e7243df534ed08d6c6a55516859c1a03e",
+  "baselineTrackedSourceMatchesHead": {
+    "packages/core/src/runtime/read-only-prefetch.ts": null,
+    "packages/core/src/runtime/runtime.ts": true,
+    "packages/core/src/runtime/memory-prefetch.regressions.test.ts": null,
+    "packages/harness/src/memory-runtime-bridge.ts": true,
+    "packages/harness/src/create-harness.ts": true,
+    "packages/harness/src/memory-prefetch-production.regressions.test.ts": null
+  },
+  "typecheck": {
+    "command": "corepack pnpm exec tsc -b packages/core packages/tools packages/harness",
+    "cwd": "/workspace/harness-agent-source-optimization",
+    "evidence": {
+      "path": "/workspace/harness-agent/.ci/source-optimization/r4/review-typecheck.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exitCode": 0
+    }
+  },
+  "diffCheck": {
+    "command": "git diff --check -- <R4/R6 scoped source paths>",
+    "evidence": {
+      "path": "/workspace/harness-agent/.ci/source-optimization/r4/review-diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exitCode": 0
+    }
+  },
+  "red": {
+    "command": "corepack pnpm exec vitest run packages/core/src/runtime/memory-prefetch.regressions.test.ts",
+    "cwd": "/workspace/harness-agent-source-baseline",
+    "evidence": {
+      "path": "/workspace/harness-agent/.ci/source-optimization/r6/review-red-baseline.log",
+      "sha256": "255b7a0c38de4ecb47ca99da26157db15f104b38026a27255c2865981aaae5cf",
+      "exitCode": 1
+    },
+    "tests": {
+      "failed": 10,
+      "passed": 0,
+      "total": 10
+    },
+    "fixtureNote": "The baseline retains the initial 10-case R6 fixture; the candidate has 15 core cases plus 4 production composition cases."
+  },
+  "productionRedHistorical": {
+    "evidence": {
+      "path": "/workspace/harness-agent/.ci/source-optimization/r6/r6-production-red.log",
+      "sha256": "9b07f655d3c678295e27fe7cd46bc1554747048a6e7a1c1fdeb6047dabf3c063",
+      "exitCode": 1
+    },
+    "tests": {
+      "failed": 3,
+      "passed": 1,
+      "total": 4
+    },
+    "note": "Historical intermediate candidate RED demonstrated real production late feedback writes. Its source fingerprint was not captured by this reviewer; this log is supporting evidence, not a fingerprinted current execution."
+  },
+  "green": [
+    {
+      "command": "pnpm exec vitest run packages/core/src/runtime/memory-prefetch.regressions.test.ts packages/harness/src/memory-prefetch-production.regressions.test.ts packages/harness/src/memory-runtime-bridge.test.ts",
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "evidence": {
+        "path": "/workspace/harness-agent/.ci/source-optimization/r6/review-memory-targeted.log",
+        "sha256": "d95768a1398e1f2894706daded43ea3eddf9a3539735c575e10ad4def507ccce",
+        "exitCode": 0
+      },
+      "filesPassed": 3,
+      "testsPassed": 26
+    },
+    {
+      "command": "pnpm exec vitest run packages/core/src/runtime/resume.test.ts packages/core/src/runtime/run-budget.test.ts packages/core/src/runtime/session-race.test.ts packages/core/src/runtime/session-race2.test.ts packages/harness/src/memory.integration.test.ts packages/memory/src/retrieval.test.ts",
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "evidence": {
+        "path": "/workspace/harness-agent/.ci/source-optimization/r6/review-existing.log",
+        "sha256": "6ad614b4b15e314ea067428b114aba24dc2d2a28dc07d18a02e21d243ae7dfe8",
+        "exitCode": 0
+      },
+      "filesPassed": 6,
+      "testsPassed": 52
+    }
+  ],
+  "reviewFindings": [
+    "Independent read-only review found no blocker and made no production edit.",
+    "The turn deadline is based on the execution budget start, including memory preparation time; cancellation/hard deadline win same-boundary settlement.",
+    "Only read-only preparation is abandoned. The real provider retains its single in-flight slot until settlement; late resolve does not touch turn state and late reject remains observed.",
+    "Production retrieval uses recordFeedback:false. Only admitted memory gets retrieved/injected accounting, bound to the active turnId. Late memory neither writes usefulness/tokenROI nor contaminates a busy next turn.",
+    "Admitted onMemoryRetrieved writes are fully awaited before terminal reflection/durability fence/ack; cancellation does not abandon a pending feedback write.",
+    "Resume counters, fast retrieval, rejection, soft timeout and session races retain their contracts."
+  ],
+  "limitations": [
+    "The runtime cannot prevent side effects inside a host callback that violates the documented read-only preparation contract. Production composition satisfies it.",
+    "The in-flight slot is per runtime, shared across its workspaces; busy turns explicitly skip optional memory without cross-workspace content reuse.",
+    "Real feedback writes remain fully awaited and may delay cancellation; they are not covered by the read-only abandonment boundary.",
+    "Windows is NOT_RUN. Linux evidence is not a Windows attestation."
+  ]
+}

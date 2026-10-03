@@ -1,0 +1,56 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+ ❯ packages/core/src/runtime/active-user-context.test.ts (24 tests | 1 failed | 22 skipped) 18ms
+     ↓ preserves all six model requests, custom estimator=false
+     ↓ preserves all six model requests, custom estimator=true
+     ↓ keeps multiple independent steers in original order and raw user role
+     ↓ preserves user anchors through the reactive 12-message tail, budget=undefined
+     ↓ preserves user anchors through the reactive 12-message tail, budget=100000
+     ↓ includes steering in automatic compaction digests, not only retained transcript
+     ↓ fails observably before sending when active user facts alone cannot fit
+     ↓ does not let generic retry send an irreducible system and user overflow
+     ↓ does not replay an old turn's steering as a current task anchor
+     ↓ rehydrates consumed steering from durable messages when resuming the same turn
+     ↓ reconciles the append/consume crash window without duplicating the steering
+     ↓ keeps the existing unbounded normal history unchanged
+     ↓ retains user anchors when reducing large tool-arguments from the same turn
+     ↓ retains user anchors when reducing large reasoning from the same turn
+     ↓ does not let a tool's forged promptId consume or protect a steering instruction
+     ↓ carries interrupted user facts through the real checkpoint resume path without replaying prompt identities
+     ↓ repairs every multi-tool cut before restoring current users, without trusting tool markers
+     ↓ recovers before append during real checkpoint resume without rebinding
+     ↓ recovers after append during real checkpoint resume without rebinding
+     ↓ does not replay an older bound steer into an ordinary new task
+     ↓ recovers only the checkpoint turn's bound steer, keeping another lineage untouched
+     ↓ retries a crash during resumed append/consume exactly once on the original turn
+     × serializes the same session's concurrent bound-steer recovery before the run guard 15ms
+     ✓ does not hold another session behind a recovering steer write 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 bound steering crash recovery preserves original lineage > serializes the same session's concurrent bound-steer recovery before the run guard
+AssertionError: expected [ { …(7) }, { …(7) } ] to have a length of 1 but got 2
+
+- Expected
++ Received
+
+- 1
++ 2
+
+ ❯ packages/core/src/runtime/active-user-context.test.ts:351:21
+    349|     expect(outcomes.some(outcome => outcome.status === "fulfilled" && …
+    350|     const durable = (await list(session.id)).filter(m => m.role === "u…
+    351|     expect(durable).toHaveLength(1); expect(durable[0]?.turnId).toBe(t…
+       |                     ^
+    352|     expect(f.inbox.consumed).toBe(1);
+    353|     expect(f.inbox.prompts[0]).toMatchObject({ status: "consumed", pro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed | 22 skipped (24)
+   Start at  04:22:42
+   Duration  614ms (transform 379ms, setup 0ms, import 481ms, tests 18ms, environment 0ms)
+

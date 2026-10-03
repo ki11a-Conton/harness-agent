@@ -1,0 +1,29 @@
+{
+  "package": "source-optimization/R5",
+  "baseline_sha": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+  "candidate_base_sha": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+  "timestamp_utc": "2026-10-02T16:00:47.219012+00:00",
+  "environment": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "file_sha256": {
+    "packages/skills/src/skill-loader.ts": "5905bb4ca7f8838a237a57788fd9c6b47bfc1923c82a65c80b8e5f9cbe9d5c5a",
+    "packages/harness/src/skill-context.ts": "3cbe2e45a7b6a3e5b3883ddd5d518107cec79dea2649ffa9ef118949ede103b6",
+    "packages/harness/src/create-harness.ts": "cb8f146f4c719cbb5ab28219cd830f24ff90d774f3f05eb6071ab9d8eb9b0048",
+    "packages/harness/src/skill-revision-regressions.test.ts": "6d0e027e556a2cdeb1c9b522c878e45e9533841ae9f209946f3e4837f7911e86",
+    "packages/core/src/runtime/context-controller.ts": "4d9b161147c25b2805effbdf52c138936d236f9e4ed8e55c239471d1e5577cf4",
+    "packages/core/src/runtime/runtime.ts": "e8a1b6ad96f7151efac7826ff5dc3597cebbd0932895ea46f9e0a33ff5a9100c"
+  },
+  "verification": {
+    "baseline-body-delete.log": "2 target regressions failed, 7 skipped on unchanged production baseline",
+    "green-skills-harness.log": "10 files, 97 tests passed",
+    "green-composition-security.log": "6 files, 49 tests passed",
+    "green-production-final.log": "20 tests passed",
+    "typecheck-final.log": "pnpm exec tsc -b packages/harness exit 0"
+  },
+  "commands": {
+    "baseline-body-delete.log": "pnpm exec vitest run packages/harness/src/skill-revision-regressions.test.ts -t 'edited body|deleted SKILL'",
+    "green-skills-harness.log": "pnpm exec vitest run packages/harness/src/skill-revision-regressions.test.ts packages/harness/src/skill-context.test.ts packages/harness/src/skill.integration.test.ts packages/skills",
+    "green-composition-security.log": "pnpm exec vitest run packages/harness/src/create-harness.test.ts packages/harness/src/context-wiring.integration.test.ts packages/harness/src/security-regression-matrix.test.ts packages/harness/src/trust-envelope.test.ts packages/skills/src/skill-security.test.ts packages/skills/src/skill-capability.test.ts",
+    "green-production-final.log": "pnpm exec vitest run packages/harness/src/skill-revision-regressions.test.ts",
+    "typecheck-final.log": "pnpm exec tsc -b packages/harness"
+  }
+}

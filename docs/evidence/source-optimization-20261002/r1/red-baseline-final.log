@@ -1,0 +1,205 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-baseline
+
+ ❯ packages/core/src/runtime/provider-termination-regressions.test.ts (11 tests | 10 failed) 69ms
+     × settles complete JSON read/write intents after length, then permits a protocol-valid new turn 38ms
+     × settles complete JSON read/write intents after content_filter, then permits a protocol-valid new turn 3ms
+     × settles complete JSON read/write intents after unknown finish reason, then permits a protocol-valid new turn 2ms
+     × settles complete JSON read/write intents after natural EOF, then permits a protocol-valid new turn 11ms
+     × settles complete JSON read/write intents after DONE without finish reason, then permits a protocol-valid new turn 3ms
+     × does not invoke a passing verification gate for 'length' 2ms
+     × does not invoke a passing verification gate for 'content filter' 1ms
+     × does not invoke a passing verification gate for 'DONE-only text' 2ms
+     × does not invoke a passing verification gate for 'missing body' 1ms
+     × does not replay rejected intents when resuming the pre-model checkpoint 2ms
+     ✓ still executes a normally terminated tool batch exactly once per requested call 3ms
+ ❯ packages/model/src/openai-termination-regressions.test.ts (19 tests | 16 failed) 58ms
+     × fails output length with tool intent=false while retaining partial output 38ms
+     × fails output length with tool intent=true while retaining partial output 2ms
+     × fails content filter with tool intent=false while retaining partial output 1ms
+     × fails content filter with tool intent=true while retaining partial output 1ms
+     × fails unknown finish reason with tool intent=false while retaining partial output 1ms
+     × fails unknown finish reason with tool intent=true while retaining partial output 1ms
+     × fails empty finish reason with tool intent=false while retaining partial output 1ms
+     × fails empty finish reason with tool intent=true while retaining partial output 1ms
+     × fails natural EOF with tool intent=false while retaining partial output 1ms
+     × fails natural EOF with tool intent=true while retaining partial output 1ms
+     × fails DONE without finish reason with tool intent=false while retaining partial output 2ms
+     × fails DONE without finish reason with tool intent=true while retaining partial output 1ms
+     × fails an HTTP 200 response without a body instead of fabricating an empty answer 1ms
+     × retains an incomplete tool argument string for protocol-repair audit without certifying execution 1ms
+     × bounds and redacts unsupported finish reasons in diagnostics 1ms
+     ✓ accepts explicit normal stop regardless of subsequent transport close ('EOF') 1ms
+     ✓ accepts explicit normal stop regardless of subsequent transport close ('DONE') 1ms
+     ✓ accepts normal tool_calls with complete arguments 0ms
+     × treats an empty natural EOF as an incomplete response 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 26 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > fails output length with tool intent=false while retaining partial output
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > fails output length with tool intent=true while retaining partial output
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > fails content filter with tool intent=false while retaining partial output
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > fails content filter with tool intent=true while retaining partial output
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > fails unknown finish reason with tool intent=false while retaining partial output
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > fails unknown finish reason with tool intent=true while retaining partial output
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > fails empty finish reason with tool intent=false while retaining partial output
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > fails natural EOF with tool intent=false while retaining partial output
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > fails DONE without finish reason with tool intent=false while retaining partial output
+AssertionError: expected 'stop' to be 'error' // Object.is equality
+
+Expected: "error"
+Received: "stop"
+
+ ❯ packages/model/src/openai-termination-regressions.test.ts:51:35
+     49|     it.each([false, true])(`fails ${fixture.label} with tool intent=%s…
+     50|       const { events, result } = await generate([partial, ...(withTool…
+     51|       expect(result.finishReason).toBe("error");
+       |                                   ^
+     52|       expect(result.text).toBe("partial answer");
+     53|       expect(result.reasoningContent).toBe("partial reasoning");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/26]⎯
+
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > fails empty finish reason with tool intent=true while retaining partial output
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > fails natural EOF with tool intent=true while retaining partial output
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > fails DONE without finish reason with tool intent=true while retaining partial output
+AssertionError: expected 'tool_calls' to be 'error' // Object.is equality
+
+Expected: "error"
+Received: "tool_calls"
+
+ ❯ packages/model/src/openai-termination-regressions.test.ts:51:35
+     49|     it.each([false, true])(`fails ${fixture.label} with tool intent=%s…
+     50|       const { events, result } = await generate([partial, ...(withTool…
+     51|       expect(result.finishReason).toBe("error");
+       |                                   ^
+     52|       expect(result.text).toBe("partial answer");
+     53|       expect(result.reasoningContent).toBe("partial reasoning");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/26]⎯
+
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > fails an HTTP 200 response without a body instead of fabricating an empty answer
+AssertionError: expected 'stop' to be 'error' // Object.is equality
+
+Expected: "error"
+Received: "stop"
+
+ ❯ packages/model/src/openai-termination-regressions.test.ts:68:33
+     66|   it("fails an HTTP 200 response without a body instead of fabricating…
+     67|     const { result } = await generate(null);
+     68|     expect(result.finishReason).toBe("error");
+       |                                 ^
+     69|     expect(result.error).toMatchObject({ code: "MODEL_ERROR", retryabl…
+     70|     expect(JSON.parse(result.error!.evidence!)).toMatchObject({ bounda…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/26]⎯
+
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > retains an incomplete tool argument string for protocol-repair audit without certifying execution
+AssertionError: expected 'stop' to be 'error' // Object.is equality
+
+Expected: "error"
+Received: "stop"
+
+ ❯ packages/model/src/openai-termination-regressions.test.ts:75:33
+     73|   it("retains an incomplete tool argument string for protocol-repair a…
+     74|     const { result } = await generate([sse(toolDelta('{"path":"a.txt",…
+     75|     expect(result.finishReason).toBe("error");
+       |                                 ^
+     76|     expect(result.toolCalls?.[0]).toMatchObject({ id: "call_one", name…
+     77|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/26]⎯
+
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > bounds and redacts unsupported finish reasons in diagnostics
+AssertionError: expected 'stop' to be 'error' // Object.is equality
+
+Expected: "error"
+Received: "stop"
+
+ ❯ packages/model/src/openai-termination-regressions.test.ts:82:33
+     80|     const secret = "sk-proj-leakedsecret1234567890";
+     81|     const { result } = await generate([partial, terminal(`${secret}${"…
+     82|     expect(result.finishReason).toBe("error");
+       |                                 ^
+     83|     expect(JSON.stringify(result.error)).not.toContain(secret);
+     84|     const evidence = JSON.parse(result.error!.evidence!) as { finishRe…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/26]⎯
+
+ FAIL  packages/model/src/openai-termination-regressions.test.ts > R1: OpenAI stream termination evidence > treats an empty natural EOF as an incomplete response
+AssertionError: expected 'stop' to be 'error' // Object.is equality
+
+Expected: "error"
+Received: "stop"
+
+ ❯ packages/model/src/openai-termination-regressions.test.ts:107:33
+    105|   it("treats an empty natural EOF as an incomplete response", async ()…
+    106|     const { result } = await generate([]);
+    107|     expect(result.finishReason).toBe("error");
+       |                                 ^
+    108|     expect(result.text).toBe("");
+    109|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/26]⎯
+
+ FAIL  packages/core/src/runtime/provider-termination-regressions.test.ts > R1: incomplete native-provider output never reaches tools or successful verification > settles complete JSON read/write intents after length, then permits a protocol-valid new turn
+ FAIL  packages/core/src/runtime/provider-termination-regressions.test.ts > R1: incomplete native-provider output never reaches tools or successful verification > settles complete JSON read/write intents after content_filter, then permits a protocol-valid new turn
+ FAIL  packages/core/src/runtime/provider-termination-regressions.test.ts > R1: incomplete native-provider output never reaches tools or successful verification > settles complete JSON read/write intents after unknown finish reason, then permits a protocol-valid new turn
+ FAIL  packages/core/src/runtime/provider-termination-regressions.test.ts > R1: incomplete native-provider output never reaches tools or successful verification > settles complete JSON read/write intents after natural EOF, then permits a protocol-valid new turn
+ FAIL  packages/core/src/runtime/provider-termination-regressions.test.ts > R1: incomplete native-provider output never reaches tools or successful verification > settles complete JSON read/write intents after DONE without finish reason, then permits a protocol-valid new turn
+AssertionError: expected 'completed' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "completed"
+
+ ❯ packages/core/src/runtime/provider-termination-regressions.test.ts:82:30
+     80|       const turn = await env.runtime.startTurn(session.id, "first task…
+     81|       const outcome = await env.runtime.runTurn(session.id, turn.id, n…
+     82|       expect(outcome.status).toBe("failed");
+       |                              ^
+     83|       expect(outcome.terminationReason).toBe("model_error");
+     84|       expect(outcome.error).toMatchObject({ code: "MODEL_ERROR", retry…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/26]⎯
+
+ FAIL  packages/core/src/runtime/provider-termination-regressions.test.ts > R1: incomplete native-provider output never reaches tools or successful verification > does not invoke a passing verification gate for 'length'
+ FAIL  packages/core/src/runtime/provider-termination-regressions.test.ts > R1: incomplete native-provider output never reaches tools or successful verification > does not invoke a passing verification gate for 'content filter'
+ FAIL  packages/core/src/runtime/provider-termination-regressions.test.ts > R1: incomplete native-provider output never reaches tools or successful verification > does not invoke a passing verification gate for 'DONE-only text'
+ FAIL  packages/core/src/runtime/provider-termination-regressions.test.ts > R1: incomplete native-provider output never reaches tools or successful verification > does not invoke a passing verification gate for 'missing body'
+AssertionError: expected 'completed' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "completed"
+
+ ❯ packages/core/src/runtime/provider-termination-regressions.test.ts:114:28
+    112|     const turn = await env.runtime.startTurn(session.id, "task");
+    113|     const outcome = await env.runtime.runTurn(session.id, turn.id, new…
+    114|     expect(outcome.status).toBe("failed");
+       |                            ^
+    115|     expect(env.verify).not.toHaveBeenCalled();
+    116|     expect(env.orchestrator.calls).toHaveLength(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/26]⎯
+
+ FAIL  packages/core/src/runtime/provider-termination-regressions.test.ts > R1: incomplete native-provider output never reaches tools or successful verification > does not replay rejected intents when resuming the pre-model checkpoint
+AssertionError: expected 'completed' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "completed"
+
+ ❯ packages/core/src/runtime/provider-termination-regressions.test.ts:135:99
+    133|       effectiveAgentConfigRef: "effectiveAgent", contextRefs: [],
+    134|     }));
+    135|     expect((await env.runtime.runTurn(session.id, turn.id, new AbortCo…
+       |                                                                                                   ^
+    136|     expect(env.orchestrator.calls).toHaveLength(0);
+    137|     const resumed = await env.runtime.resumeTurn(session.id, new Abort…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/26]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  26 failed | 4 passed (30)
+   Start at  15:50:11
+   Duration  1.39s (transform 648ms, setup 0ms, import 921ms, tests 127ms, environment 0ms)
+

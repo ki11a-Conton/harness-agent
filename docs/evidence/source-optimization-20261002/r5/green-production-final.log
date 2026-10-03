@@ -1,0 +1,13 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+[skill denied] detection=required-tools target=/tmp/ar-skill-revision-vBlKzn/skills/lint/SKILL.md reasons=required tool not allowed by host policy: exec_command
+[skill denied] detection=injection target=/tmp/ar-skill-revision-iQdLFV/skills/lint/SKILL.md reasons=dismiss-previous-instructions,dismiss-all-instructions,override-own-instructions
+[skill denied] detection=secret target=/tmp/ar-skill-revision-AU8S1h/skills/lint/SKILL.md reasons=openai-key
+ ✓ packages/harness/src/skill-revision-regressions.test.ts (20 tests) 285ms
+
+ Test Files  1 passed (1)
+      Tests  20 passed (20)
+   Start at  16:00:42
+   Duration  3.35s (transform 2.36s, setup 0ms, import 2.91s, tests 285ms, environment 0ms)
+

@@ -1,0 +1,140 @@
+{
+  "schema": "r2-concurrent-resume-independent-audit-v1",
+  "createdAt": "2026-10-03T04:25:11Z",
+  "fixtureSha256": "41f34152cb969812a91604dcf27104dc7a1dfbe791fa0d1befc6125c2d3fb0d8",
+  "sameFixture": true,
+  "red": {
+    "exitCode": 1,
+    "failed": 1,
+    "sourceSha256": {
+      "packages/core/src/runtime/runtime.ts": "2f3c6571b0bb3cf706c9541a0a40a52482bdc6d580ee867923c7acbb3331fbd7",
+      "packages/core/src/runtime/context-controller.ts": "c48ef9dd8ddea50bcfb9783d137b0fb139cc628bfeca4c24304728d54fb29d77"
+    },
+    "observation": {
+      "arrivedAtAppend": 2,
+      "durableMessages": [
+        {
+          "id": "message_62a04f2e-4a7c-4ae9-a4f9-d9043eaa9b4e",
+          "turnId": "turn_4b36cfdd-f145-4fab-8b2f-fe811701be85",
+          "promptId": "prompt_136c4ade-b99a-4011-b316-e9a10169caee"
+        },
+        {
+          "id": "message_45511c87-c417-4d71-9427-22e8fea1a8ea",
+          "turnId": "turn_4b36cfdd-f145-4fab-8b2f-fe811701be85",
+          "promptId": "prompt_136c4ade-b99a-4011-b316-e9a10169caee"
+        }
+      ],
+      "inboxPromotedTurnId": "turn_4b36cfdd-f145-4fab-8b2f-fe811701be85",
+      "inboxConsumedCount": 2,
+      "modelRequests": 1,
+      "outcomes": [
+        {
+          "status": "fulfilled",
+          "outcome": "completed"
+        },
+        {
+          "status": "rejected",
+          "error": "AgentError: session session_2a8e2d03-e068-4ca6-a2d0-4a15a17c2df5 already has an active turn (turn_38fc5d73-e10c-4747-a6dc-273e2e835a1c)",
+          "code": "SESSION_BUSY"
+        }
+      ]
+    }
+  },
+  "green": {
+    "exitCode": 0,
+    "passed": 1,
+    "sourceSha256": {
+      "packages/core/src/runtime/runtime.ts": "2f3c6571b0bb3cf706c9541a0a40a52482bdc6d580ee867923c7acbb3331fbd7",
+      "packages/core/src/runtime/context-controller.ts": "8d55e59043215631aee4ca53529659133313423b582f326491bb1f9b4e236e44"
+    },
+    "observation": {
+      "arrivedAtAppend": 1,
+      "durableMessages": [
+        {
+          "id": "message_581908c8-2d40-40c8-9936-e2031f64f0ae",
+          "turnId": "turn_3fe07133-bcc7-4fcb-ab97-da63985cd1d7",
+          "promptId": "prompt_14d7c888-155e-4488-91ae-06b4c085fb0b"
+        }
+      ],
+      "inboxPromotedTurnId": "turn_3fe07133-bcc7-4fcb-ab97-da63985cd1d7",
+      "inboxConsumedCount": 1,
+      "modelRequests": 1,
+      "outcomes": [
+        {
+          "status": "fulfilled",
+          "outcome": "completed"
+        },
+        {
+          "status": "rejected",
+          "error": "AgentError: session session_fdf4693a-925d-4830-a3bf-e188ee1e8bd7 already has an active turn (turn_b417404c-289b-4cad-8446-d2fb8734a2e7)",
+          "code": "SESSION_BUSY"
+        }
+      ]
+    }
+  },
+  "readOnlyReview": [
+    "Per-session gate protects same-controller pre-run bound-steer recovery and ordinary injection.",
+    "Gate always resolves in finally even when predecessor throws, and only current/latest gate removes map entry.",
+    "Queued callers reload durable history after predecessor; uncontended callers reuse provided history.",
+    "Original bound turn identity remains intact; no global session lock."
+  ],
+  "scope": [
+    "Same runtime/controller instance only; no cross-process or multi-runtime shared-store CAS claim.",
+    "Existing creation of fresh concurrent resume turns and SESSION_BUSY outcome is preserved and not an acceptance claim of this narrow fix.",
+    "Initial unresolved external package imports failed collection and are recorded separately, not counted as behavior RED."
+  ],
+  "evidence": {
+    "concurrent-resume-probe.test.ts": {
+      "sha256": "41f34152cb969812a91604dcf27104dc7a1dfbe791fa0d1befc6125c2d3fb0d8",
+      "bytes": 8439
+    },
+    "concurrent-resume-probe.config.mjs": {
+      "sha256": "78cc8f55f4ad9cc0de250e673eb519e05b3d17dda3c6a98392aa574628dd9225",
+      "bytes": 209
+    },
+    "concurrent-resume-probe-current-red.json": {
+      "sha256": "887c577c85ef8edaec7c1dea4f2b7fe83ecf69c99ea9bb3df937e2a07c90ce7b",
+      "bytes": 914
+    },
+    "concurrent-resume-probe-current-red.log": {
+      "sha256": "ef40666ad4406dbe78981b36602923a3edf5ff6e5f0c923d5e6de4e2f1369379",
+      "bytes": 924
+    },
+    "concurrent-resume-probe-current-red.exit": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2
+    },
+    "concurrent-resume-probe-current-green.json": {
+      "sha256": "0d8ea0616c6416e9bd27b797d9a690327d580189fef6053708b93c876ee031dd",
+      "bytes": 914
+    },
+    "concurrent-resume-probe-current-green.log": {
+      "sha256": "06d0b51b1b5561d4587604a7b2fb7206ac2bd410c568397b656fe2bbe8b5c9c4",
+      "bytes": 229
+    },
+    "concurrent-resume-probe-current-green.exit": {
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    "concurrent-resume-probe-observation-red.json": {
+      "sha256": "aeebe148cc3abbc3bbef536e61c0215ce0c1eee5b5b735fe732fa7aa3e7612de",
+      "bytes": 884
+    },
+    "concurrent-resume-probe-observation-green.json": {
+      "sha256": "140bfa4267a61307b5ccc589a5255224002c89b64fce0a54dd0e84beb56bbcba",
+      "bytes": 686
+    },
+    "concurrent-resume-probe-collection-infra-error.json": {
+      "sha256": "0bc74f37f735d530fe38a1bb927d24c5f26479e743e0431aeca5feff921eae1e",
+      "bytes": 914
+    },
+    "concurrent-resume-probe-collection-infra-error.log": {
+      "sha256": "1536dbee3d248ba4231d83882826384cab2eb710a83cfcb7c3987347ba2568a6",
+      "bytes": 842
+    },
+    "concurrent-resume-probe-collection-infra-error.exit": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2
+    }
+  }
+}

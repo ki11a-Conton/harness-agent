@@ -1,0 +1,1167 @@
+{
+  "schemaVersion": "source-optimization-acceptance-v1",
+  "status": "DRAFT_PENDING_FROZEN_ACCEPTANCE",
+  "preparedAtUtc": "2026-10-03T04:16:15.122710+00:00",
+  "purpose": "Record executed package evidence without substituting historical working-tree results for final clean-tree acceptance.",
+  "research": {
+    "collectionUrl": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK",
+    "collectionCommit": "1a46ea13de9a3f5e6987c5dd0319b2000fe49c92",
+    "priorImplementationCommit": "acf8dcc394de6c6efefed52602e49014b372f372",
+    "baselineResearchCommit": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+    "baselineProductionUnchanged": true,
+    "baselineEvidence": "docs/evidence/source-agent-review-20261002.json",
+    "baselineEvidenceSha256": "f88cc3123e2e07b9502b82c71bc943018c66828fa6c814376268c3bb971f5c57",
+    "baselineEvidenceModifiedByThisPreparation": false
+  },
+  "codeCommits": {
+    "R1": "dd84bb4763b66d74a6071973828c0a1efb21d1a6",
+    "R3b": "b033e6aedbc5b32f1b77b40c849b8ddcb4edaa40",
+    "R4": "9ff841a8f26646d867418c4298b017ea063c3fbe",
+    "R2_R3a_R5_R6": "caaf566265a9d5a48fa93152347d768368d06345",
+    "S1_S2": "9700b5764e61c79c671e49a155745f72bfba3721",
+    "R2ConcurrentSteering": "78321b798c85cb2d0db20bf2e490c64964715637"
+  },
+  "finalSnapshot": {
+    "status": "PENDING",
+    "testedCommit": null,
+    "deliveryCommit": null,
+    "cleanTree": null,
+    "sourceDigests": null,
+    "configurationDigests": null,
+    "note": "Package implementation and independent R2/R3 reviews are closed; root-owned final commit, clean-tree acceptance and delivery remain pending."
+  },
+  "portableArtifacts": {
+    "index": "docs/evidence/source-optimization-20261002/index.json",
+    "indexSha256": "31c3577a156592cefd6b022e6e97a47a195781831c54d104c067ddb4a7d73e89",
+    "fileCount": 77,
+    "totalBytes": 381404,
+    "method": "byte-identical selected manifest/log copies; source package manifests retain their original working-tree paths and hashes"
+  },
+  "historicalExecutionSourceSnapshots": {
+    "R1": {
+      "head": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+      "sourceDigests": {
+        "packages/model/src/openai.ts": "ee3bb56f44c1f6a230571377349402a32619e4d55e7ca20666a272f7308aeb1c",
+        "packages/model/src/openai.test.ts": "1a02d8408a425756e0af79b871e637fd4f81cbacaa3d13c3535f5a12101d4766",
+        "packages/model/src/openai-termination-regressions.test.ts": "1b390c6aaa92e73ba5aa6813b1adf436405b305116a15968f48ca0cfbeb18f97",
+        "packages/core/src/runtime/provider-termination-regressions.test.ts": "677b859675d9204ebbf263ba61ed08f67939dee1fbe6fba9a7bc758fb8bc960b"
+      },
+      "environment": {
+        "node": "v24.19.0",
+        "pnpm": "11.19.0",
+        "vitest": "4.1.10",
+        "network": "offline mocks plus existing loopback wire stub"
+      }
+    },
+    "R3b": {
+      "fixtures": {
+        "packages/core/src/runtime/tool-output-boundary.regressions.test.ts": {
+          "sha256": "bc651b19ff289c43cc66e79188df007d08cc17e4365f2d2d524c9993248bdae2",
+          "baselineIdentical": true
+        },
+        "packages/tools/src/process/utf8-output.regressions.test.ts": {
+          "sha256": "b04458581feb7b9c950046122514ffee1c08e6943d325ca86f58ddb7a7ffa4ed",
+          "baselineIdentical": true
+        }
+      }
+    },
+    "R3aIntermediateCandidate": {
+      "head": "WORKING_TREE",
+      "sourceBefore": {
+        "packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts": "9ad6c41ca8f0386baa05792c93c5db423cdcb91cc54ec58e4656d47e11d03d7b",
+        "packages/core/src/runtime/tool-output-security.ts": "e39211dd077987cbb264221a99cc34b354f2002768718514b60918510d56ee86",
+        "packages/core/src/runtime/context-controller.ts": "c52fb4d3eb9bb6a7f246d94356236dbed951a68ef16098083174c7ba0559b949"
+      },
+      "sourceAfter": {
+        "packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts": "9ad6c41ca8f0386baa05792c93c5db423cdcb91cc54ec58e4656d47e11d03d7b",
+        "packages/core/src/runtime/tool-output-security.ts": "e39211dd077987cbb264221a99cc34b354f2002768718514b60918510d56ee86",
+        "packages/core/src/runtime/context-controller.ts": "c52fb4d3eb9bb6a7f246d94356236dbed951a68ef16098083174c7ba0559b949"
+      }
+    },
+    "R3aBaseline": {
+      "head": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+      "fixtureSha256": "0372130c7b9decab54689304bf4bc7e49745e9ed472f73e4f308720d29098fd8",
+      "sourceBefore": {
+        "packages/core/src/runtime/context-controller.ts": "f3f7f3caaae19ef1d659411ff341e74f5cd12d2a259a1071fad4d1e427020726"
+      },
+      "sourceAfter": {
+        "packages/core/src/runtime/context-controller.ts": "f3f7f3caaae19ef1d659411ff341e74f5cd12d2a259a1071fad4d1e427020726"
+      }
+    },
+    "R4": {
+      "head": "b033e6aedbc5b32f1b77b40c849b8ddcb4edaa40",
+      "uncommitted": true,
+      "sourceFiles": {
+        "packages/tools/src/file-coordination.ts": {
+          "candidate": "d081877bfc8dce7c274f5381f0bfd5d1e2276494967dc1cf7ae0bbd4a6dc3a54",
+          "baseline": null
+        },
+        "packages/tools/src/edit.ts": {
+          "candidate": "141500a53f5ba7a78500a4c4e361a32693a82fdcf22a286c5f4693b4ee93f541",
+          "baseline": "ea90fc3ea57964a2d9e56c794608999e91c5670beb4cea1a163febd663fd3f3e"
+        },
+        "packages/tools/src/tools/read-file.ts": {
+          "candidate": "becc6263cca637b70bd73c3fe52348a18506e413ec9dc477b723436c7dbc7515",
+          "baseline": "1de630cc9d6d44a272f29b5134b2a7f577a0fba36329ce4d18766c195c76335f"
+        },
+        "packages/tools/src/tools/edit-file.ts": {
+          "candidate": "cbae3b51c449068cc62fd7ce9d12190ead6efecee0967f8ca0397f9ad10a1663",
+          "baseline": "00e8edd052d8ee6def577d9167f2224f87552f256e02a878c567ae8d17b1ad18"
+        },
+        "packages/tools/src/tools/write-file.ts": {
+          "candidate": "4ceceb8029e8a6c727d78bf96a2e8a501963fe5816d3810a3cadcf081b9318c8",
+          "baseline": "78e8943d4f8d15ec3466cfc484c05911b6675d9a29470911f6a1f0ffa35158c6"
+        },
+        "packages/tools/src/transaction.ts": {
+          "candidate": "c8ac8551dee2ed6d99506d2618c554a432093c7d9d36cb023c979fcd86fca272",
+          "baseline": "ae3b7f383a0db05a13c3ffc6a4a4553016526b2243999b6d90f50fb8f1882310"
+        },
+        "packages/tools/src/r4-file-regressions.test.ts": {
+          "candidate": "374212ccfb37c1d5489a59fc4201efce8c91bc4b5d9428b653543c88afb2ebb1",
+          "baseline": "73641e28632c1bc2e9415930ce9dd6453866375c048cb023b102486c4d9ec725"
+        }
+      },
+      "sourceManifestSha256": "f79dcec83fd02e7b0960f5c9ed10e2da71a6a8687f1f5dd3394b668386314f20",
+      "configurationManifestSha256": "c4f578916b397bf965efb5b36f47ac0e7243df534ed08d6c6a55516859c1a03e"
+    },
+    "R5": {
+      "head": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+      "fileSha256": {
+        "packages/skills/src/skill-loader.ts": "5905bb4ca7f8838a237a57788fd9c6b47bfc1923c82a65c80b8e5f9cbe9d5c5a",
+        "packages/harness/src/skill-context.ts": "3cbe2e45a7b6a3e5b3883ddd5d518107cec79dea2649ffa9ef118949ede103b6",
+        "packages/harness/src/create-harness.ts": "cb8f146f4c719cbb5ab28219cd830f24ff90d774f3f05eb6071ab9d8eb9b0048",
+        "packages/harness/src/skill-revision-regressions.test.ts": "6d0e027e556a2cdeb1c9b522c878e45e9533841ae9f209946f3e4837f7911e86",
+        "packages/core/src/runtime/context-controller.ts": "4d9b161147c25b2805effbdf52c138936d236f9e4ed8e55c239471d1e5577cf4",
+        "packages/core/src/runtime/runtime.ts": "e8a1b6ad96f7151efac7826ff5dc3597cebbd0932895ea46f9e0a33ff5a9100c"
+      }
+    },
+    "R6": {
+      "head": "b033e6aedbc5b32f1b77b40c849b8ddcb4edaa40",
+      "uncommitted": true,
+      "sourceFiles": {
+        "packages/core/src/runtime/read-only-prefetch.ts": {
+          "candidate": "153644ec5e480ef735e092df483e70770a7727823b90cf640da77a60aca2f657",
+          "baseline": null
+        },
+        "packages/core/src/runtime/runtime.ts": {
+          "candidate": "f899f8c062c5ecc5e8857cc8567ea935a29998edc06efb054022c6451a24c3b3",
+          "baseline": "ad363e45043c7f2d3dfb625579aa13a6f56f503421c9e8a3788dfaeaba05bf83"
+        },
+        "packages/core/src/runtime/memory-prefetch.regressions.test.ts": {
+          "candidate": "180ce7c2ddd19ec8d641eb9aa2bcf762830d8869a8648548ddf91b7e2b638666",
+          "baseline": "16589f6673e3c9a7b71768fb1fdbdce7dee6bf447160bd2e1abd29f75a24340b"
+        },
+        "packages/harness/src/memory-runtime-bridge.ts": {
+          "candidate": "10adbd49707cf4070521a84b4581ea4864d4c23b1551e5ba10e3d578b6c16404",
+          "baseline": "5a110839e5955ad38fd8a491fdae2ab8df269fcb2e944c498eb8e9d6c5775564"
+        },
+        "packages/harness/src/create-harness.ts": {
+          "candidate": "5af9a8f7a5f82122df90f59e39a7d6cdb63134d12c40bc5ab386aad4476eafeb",
+          "baseline": "89cd40e952b890aa307f6e5f5027ecef0ef34a8ccef6a28f6359d51a85fce347"
+        },
+        "packages/harness/src/memory-prefetch-production.regressions.test.ts": {
+          "candidate": "e37abe48b28aef194220f9582f39fc9cf777d771ea48e5dd587cec1e59d84291",
+          "baseline": null
+        }
+      },
+      "sourceManifestSha256": "a448d3b573b4fba74bf60ac015c4519cdf5fbf06c73fcb4940932c6f326d32bb",
+      "configurationManifestSha256": "c4f578916b397bf965efb5b36f47ac0e7243df534ed08d6c6a55516859c1a03e"
+    },
+    "S1": {
+      "workspace": "/workspace/harness-agent-source-optimization",
+      "head": "9ff841a8f26646d867418c4298b017ea063c3fbe",
+      "uncommitted": true,
+      "files": {
+        "apps/cli/src/diagnostic-first-repair.test.ts": "e919e5cc7a86e8c2ed115d48173688a151188e92a1f395f0957bd41fc35b6968",
+        "apps/cli/src/benchmark-command.ts": "87d707ce35abbdd9ca56506add9a27d33761bee777c1c06f62e1d473b39cb96e",
+        "packages/evaluation/src/candidate-registry.ts": "433484087f2ad823d67d706aa77c1e21676a809957f59c6d278828897927f008",
+        "packages/evaluation/src/arm-factory.ts": "614aab7dcfa5a0ded110b4af7884ff69d1c5a87a999920fbb85620cd7001bec3",
+        "packages/evaluation/src/mechanism-guidance.ts": "32ac724322c6e6bc39e2625ba3d1f864b0f94054063b4ffe40ae14ad64fb5b87",
+        "packages/evaluation/src/mechanism-contract.ts": "ea0926fa12a46327e1fba2b7eda5ce2ce9ab9433164aa5f1ad839aac12f96164",
+        "packages/evaluation/src/activation-evidence.ts": "da7ffcf83b9bc8b0775e460bc18b42cf94c81af476dd36e8beb62bb486dff03f",
+        "packages/evaluation/src/activation-evidence-execution.ts": "47bb81b36d345f3f91ec91e8aa6f9fdfb426df0f3e38769f2171e64d84005d10"
+      }
+    },
+    "S2": {
+      "sourceSha256": {
+        "packages/context/src/path-scoped-discovery.ts": "808a978c333714fa2ca5c06317d71e98c767454201d417dbde33d05fb5ffbe2f",
+        "packages/context/src/path-scoped-discovery.test.ts": "93103778f7c8bbd057f90c1a9c96c63a5c35a1cdb1eb87e67855726d70b088ae",
+        "packages/context/src/index.ts": "a6bf5a166a7d45d0f129f0f1b1dcbbaccfac0e74d32ee5ef51bf027971269e9e",
+        "packages/harness/src/path-scoped-instructions.ts": "39bbb653b024c94121a12463bf4e6fe5b01a76f8fb8b3af00656eebf57b3305e",
+        "packages/harness/src/path-scoped-instructions.regressions.test.ts": "88f9ab7f4790820d8039b4727e0006c312d78ec7cc2ffdd7ee76b993fb6d2034",
+        "packages/harness/src/compose/compose-context.ts": "baac4beec11baac088b695f284a72580e1c44d65820aeb967e0bef109e60960c",
+        "packages/harness/src/config.ts": "1e225321bc5e215dd3f3977cd7b61d66118897b88db2793e216a0f9d78efb6bf",
+        "packages/harness/src/create-harness.ts": "5af9a8f7a5f82122df90f59e39a7d6cdb63134d12c40bc5ab386aad4476eafeb",
+        "packages/harness/src/index.ts": "e1ec6e546a67a4f0112d38228e59ae3fafe98ce66f693e4ca2646c7a39b5c98b",
+        "packages/evaluation/src/candidate-registry.ts": "433484087f2ad823d67d706aa77c1e21676a809957f59c6d278828897927f008",
+        "packages/evaluation/src/arm-factory.ts": "614aab7dcfa5a0ded110b4af7884ff69d1c5a87a999920fbb85620cd7001bec3",
+        "packages/evaluation/src/mechanism-contract.ts": "ea0926fa12a46327e1fba2b7eda5ce2ce9ab9433164aa5f1ad839aac12f96164",
+        "apps/cli/src/benchmark-command.ts": "dfc7dd612a295f0dbd94c2d9e2f0b3d4e15e76a4954beb3cb569db65caffbab5",
+        "apps/cli/src/path-scoped-instructions.test.ts": "d8dbe9de883e33a50a83f15e9f98f1cee947c43381c45a0b507cc5e3e8c9e3bf",
+        "packages/evaluation/src/activation-evidence.ts": "4a64756ae7a1ba30cfce97f9803507496642d16fcbc09c83da0fb4f4c11a7414",
+        "packages/evaluation/src/activation-evidence-execution.ts": "47bb81b36d345f3f91ec91e8aa6f9fdfb426df0f3e38769f2171e64d84005d10",
+        "packages/evaluation/src/path-scoped-eligibility.test.ts": "46f7166bd74b12f746b011c54029b56a7bdd6018b6ee83c402b413cfdf5cdd88"
+      },
+      "implementationIdentity": "uncommitted working-tree source hashes; root freeze evidence is authoritative"
+    },
+    "R3aFinalIndependentReview": {
+      "fixtureSha256": "5948c313841c00dc955a4da4d2a7a822fe7d6774bfd7548e34100f4348f1d405",
+      "candidateSourceSha256": {
+        "packages/core/src/runtime/context-controller.ts": "c48ef9dd8ddea50bcfb9783d137b0fb139cc628bfeca4c24304728d54fb29d77",
+        "packages/core/src/runtime/tool-output-security.ts": "5a43dbda5684180c7b0aa11f19082c76a7662cfe96612b640b3d7a29b76d7b7e",
+        "packages/core/dist/runtime/context-controller.js": "b816283ff2d7d08e5a40f1243bf93a8fb9ef580d8e5d942b310701b28e3312c0",
+        "packages/core/dist/runtime/tool-output-security.js": "11711490875ed0834beab9ec336ca21567c08cf58649a8c0fe5bcfcb4ae1fc00",
+        "packages/security/src/secret-gate.ts": "419672907d5194a6e7a8419d0429c97545c474a40cad76f3a91c49b5340b03f2",
+        "packages/security/dist/secret-gate.js": "eecc9edf7988313b3d7577f2eef36174d1bb53079473834d6cd242bf854b0b10"
+      },
+      "baselineHead": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+      "review": "No unaddressed security defect found in reviewed JSON token rewriting and artifact exclusive creation; original ToolResult unchanged, full safe artifact bytes/hash consistent."
+    },
+    "R2FinalIndependentReview": {
+      "baseline": {
+        "commit": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+        "productionUnchanged": true
+      },
+      "candidate": {
+        "commit": "9ff841a8f26646d867418c4298b017ea063c3fbe",
+        "workingTree": "uncommitted integration; full frozen verification owned by root"
+      },
+      "fixture": {
+        "path": "packages/core/src/runtime/active-user-context.test.ts",
+        "candidateSha256": "788896831c87034bbace526ba84ab6919b3d96139aa0425d2ec2ea97d7f909b6",
+        "baselineSha256": "788896831c87034bbace526ba84ab6919b3d96139aa0425d2ec2ea97d7f909b6",
+        "redAndGreenFixtureIdentical": true,
+        "note": "Final formal fixture has 22 cases; the final baseline/candidate RED command executes the 5 added cases and filters 17 prior cases. Do not claim all 22 cases were baseline RED."
+      },
+      "observedSourceFingerprints": {
+        "packages/core/src/runtime/active-user-context.test.ts": "788896831c87034bbace526ba84ab6919b3d96139aa0425d2ec2ea97d7f909b6",
+        "packages/core/src/runtime/context-controller.ts": "c48ef9dd8ddea50bcfb9783d137b0fb139cc628bfeca4c24304728d54fb29d77",
+        "packages/core/src/runtime/runtime.ts": "2f3c6571b0bb3cf706c9541a0a40a52482bdc6d580ee867923c7acbb3331fbd7",
+        "packages/core/src/runtime/turn-helpers.ts": "cb671480dc102b409fb7dddcdefa418542bee755147bf39c568c17c6a41d7a1a",
+        "packages/skills/src/skill-loader.ts": "5905bb4ca7f8838a237a57788fd9c6b47bfc1923c82a65c80b8e5f9cbe9d5c5a",
+        "packages/harness/src/skill-context.ts": "3cbe2e45a7b6a3e5b3883ddd5d518107cec79dea2649ffa9ef118949ede103b6",
+        "packages/core/src/runtime/read-only-prefetch.ts": "153644ec5e480ef735e092df483e70770a7727823b90cf640da77a60aca2f657",
+        "packages/harness/src/memory-runtime-bridge.ts": "10adbd49707cf4070521a84b4581ea4864d4c23b1551e5ba10e3d578b6c16404",
+        "packages/harness/src/create-harness.ts": "5af9a8f7a5f82122df90f59e39a7d6cdb63134d12c40bc5ab386aad4476eafeb"
+      }
+    }
+  },
+  "historicalConfigurationFiles": {
+    "package.json": {
+      "candidate": "853d88b24d1205236b33f55577862fb48b6208e113a9989c825ff54deb7e7931",
+      "baseline": "853d88b24d1205236b33f55577862fb48b6208e113a9989c825ff54deb7e7931"
+    },
+    "pnpm-lock.yaml": {
+      "candidate": "150f32f43fd702dc70a92236a40d39ebfa3585d8931743a0b32df412c7e106fd",
+      "baseline": "150f32f43fd702dc70a92236a40d39ebfa3585d8931743a0b32df412c7e106fd"
+    },
+    "vitest.config.ts": {
+      "candidate": "4dea4e8d08bda773ff329121fb8676bc40388d496a0178841c209ccccc01783e",
+      "baseline": "4dea4e8d08bda773ff329121fb8676bc40388d496a0178841c209ccccc01783e"
+    },
+    "tsconfig.base.json": {
+      "candidate": "ef1d4cc3885adc72552effcb48970857b0eb62d1110412d283b0358bff0e8ef1",
+      "baseline": "ef1d4cc3885adc72552effcb48970857b0eb62d1110412d283b0358bff0e8ef1"
+    },
+    "packages/tools/tsconfig.json": {
+      "candidate": "e3ee1eb112f31cf2ba2afdf82ee8776a6bdb9ba90449b96bdb074a471798d117",
+      "baseline": "e3ee1eb112f31cf2ba2afdf82ee8776a6bdb9ba90449b96bdb074a471798d117"
+    },
+    "packages/core/tsconfig.json": {
+      "candidate": "d071a24c2e7c97a9e4d4484bf0ac8c9baf87b3ded6aa5aac4c6d8a535a147c9d",
+      "baseline": "d071a24c2e7c97a9e4d4484bf0ac8c9baf87b3ded6aa5aac4c6d8a535a147c9d"
+    },
+    "packages/harness/tsconfig.json": {
+      "candidate": "5d0e1a8a434246888149765ce04f6029ad4d29fe557ee5e0516f4e8a91b2fe1f",
+      "baseline": "5d0e1a8a434246888149765ce04f6029ad4d29fe557ee5e0516f4e8a91b2fe1f"
+    }
+  },
+  "packages": [
+    {
+      "id": "R1",
+      "status": "TARGETED_PASS_PENDING_FROZEN_ACCEPTANCE",
+      "change": "Require explicit native stop/tool_calls; abnormal completion retains audit partials and settles unexecuted calls through existing Core protocol.",
+      "compatibility": "DONE-only text, natural EOF and absent body are protocol errors; no default compatibility mode.",
+      "checks": [
+        {
+          "log": "docs/evidence/source-optimization-20261002/r1/red-baseline-final.log",
+          "status": "RED",
+          "tests": {
+            "failed": 26,
+            "passed": 4,
+            "skipped": 0
+          },
+          "exitCode": 1,
+          "fixtureCount": 30
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r1/green-targeted-final.log",
+          "status": "GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 139,
+            "skipped": 0
+          },
+          "files": 7,
+          "exitCode": 0
+        }
+      ],
+      "fixtureIdentity": "Baseline production unchanged; exact candidate fixture fingerprints and commands are retained in the package manifest.",
+      "manifest": "docs/evidence/source-optimization-20261002/r1/result.json"
+    },
+    {
+      "id": "R2",
+      "status": "TARGETED_PASS_INDEPENDENT_REVIEW_CLOSED_PENDING_FROZEN_ACCEPTANCE",
+      "change": "Turn-bound durable original user/steer anchors survive trim/compaction/resume; checkpoint resume first settles bound-only steering in its original turn, then uses original user channel for the new resume prompt without rebinding. Ordinary new tasks do not inherit old bound steering.",
+      "fixtureIdentity": {
+        "path": "packages/core/src/runtime/active-user-context.test.ts",
+        "candidateSha256": "788896831c87034bbace526ba84ab6919b3d96139aa0425d2ec2ea97d7f909b6",
+        "baselineSha256": "788896831c87034bbace526ba84ab6919b3d96139aa0425d2ec2ea97d7f909b6",
+        "redAndGreenFixtureIdentical": true,
+        "note": "Final formal fixture has 22 cases; the final baseline/candidate RED command executes the 5 added cases and filters 17 prior cases. Do not claim all 22 cases were baseline RED."
+      },
+      "pending": "Root clean-tree integrated full-suite and committed source acceptance; independent recovery defect review is closed.",
+      "historicalChecks": [
+        {
+          "log": "docs/evidence/source-optimization-20261002/r2/red.log",
+          "status": "RED",
+          "tests": {
+            "failed": 9,
+            "passed": 2,
+            "skipped": 0
+          },
+          "fixtureCount": 11
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r2/additional-red.log",
+          "status": "RED",
+          "tests": {
+            "failed": 4,
+            "passed": 0,
+            "skipped": 11
+          },
+          "fixtureCount": 15
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r2/green-final.log",
+          "status": "HISTORICAL_GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 159,
+            "skipped": 0
+          },
+          "files": 5,
+          "newRegressionCount": 17
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r2/green-context-recovery.log",
+          "status": "HISTORICAL_GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 224,
+            "skipped": 0
+          },
+          "files": 10
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r2/green-protocol-security.log",
+          "status": "HISTORICAL_GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 93,
+            "skipped": 0
+          },
+          "files": 6
+        }
+      ],
+      "checks": [
+        {
+          "log": "docs/evidence/source-optimization-20261002/r2/independent-bound-before-append/formal-baseline-red.log",
+          "status": "RED",
+          "exitCode": 1,
+          "tests": {
+            "failed": 4,
+            "passed": 1,
+            "filteredSkipped": 17
+          },
+          "formalFixtureCount": 22,
+          "executedNewCases": 5
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r2/independent-bound-before-append/formal-candidate-red.log",
+          "status": "INTERMEDIATE_CANDIDATE_RED",
+          "exitCode": 1,
+          "tests": {
+            "failed": 3,
+            "passed": 2,
+            "filteredSkipped": 17
+          },
+          "formalFixtureCount": 22,
+          "executedNewCases": 5
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r2/independent-bound-before-append/final-targeted-green.log",
+          "status": "GREEN",
+          "exitCode": 0,
+          "files": 8,
+          "tests": {
+            "passed": 108,
+            "failed": 0,
+            "skipped": 0
+          },
+          "includesActiveUserRegressionCount": 22
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r2/independent-bound-before-append/final-typecheck.log",
+          "status": "GREEN",
+          "exitCode": 0,
+          "command": "corepack pnpm exec tsc -b packages/core --pretty false"
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r2/independent-bound-before-append/r5-r6-green.log",
+          "status": "GREEN_READONLY_REVIEW",
+          "exitCode": 0,
+          "files": 3,
+          "tests": {
+            "passed": 39,
+            "failed": 0,
+            "skipped": 0
+          },
+          "scope": "R5 skill revision, Core memory prefetch, actual Harness memory prefetch"
+        }
+      ],
+      "manifest": "docs/evidence/source-optimization-20261002/r2/independent-bound-before-append/integration-review-manifest.json",
+      "contracts": [
+        "original promotedTurnId never rewritten",
+        "checkpoint resume settles only promoted steer bound to checkpoint turn before assembling new user resume prompt",
+        "ordinary new task does not inherit a bound old steer",
+        "different bound lineage untouched",
+        "append/consume crash repeated recovery appends once",
+        "R5 file revision records/current-step body witness remain separate",
+        "R6 stopped read-only retrieval has no late feedback; admitted feedback writes fully awaited before terminal fence"
+      ]
+    },
+    {
+      "id": "R3a",
+      "status": "TARGETED_PASS_INDEPENDENT_REVIEW_CLOSED_PENDING_FROZEN_ACCEPTANCE",
+      "change": "Injected safety hooks protect actual model text regardless of budget; token-local encoded JSON safety, duplicate keys, failed prefix, credential fields, numeric lexemes, identity-hashed/exclusive artifact files; preserve raw ToolResult.",
+      "fixtureIdentity": {
+        "sameFinalBaselineCandidateFixture": true,
+        "sha256": "5948c313841c00dc955a4da4d2a7a822fe7d6774bfd7548e34100f4348f1d405",
+        "cases": 36,
+        "note": "Intermediate fixtures evolved 28/30/32/34 -> 36. The final baseline/candidate commands bind the same 36-case SHA; the historical 81-test GREEN is not the final acceptance result."
+      },
+      "pending": "Root final clean-tree integrated full-suite/source commit acceptance; independent R3 package review is closed.",
+      "historicalChecks": [
+        {
+          "log": "docs/evidence/source-optimization-20261002/r3/encoded-independent-baseline-red.log",
+          "status": "RED",
+          "tests": {
+            "failed": 31,
+            "passed": 1,
+            "skipped": 0
+          },
+          "fixtureCount": 32,
+          "record": "docs/evidence/source-optimization-20261002/r3/encoded-independent-baseline-red.json",
+          "exitCode": 1
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r3/encoded-independent-final-red.log",
+          "status": "INTERMEDIATE_CANDIDATE_RED",
+          "tests": {
+            "failed": 26,
+            "passed": 2,
+            "skipped": 0
+          },
+          "fixtureCount": 28,
+          "record": "docs/evidence/source-optimization-20261002/r3/encoded-independent-final-red.json",
+          "exitCode": 1
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r3/encoded-independent-extra-key.log",
+          "status": "INTERMEDIATE_CANDIDATE_RED",
+          "tests": {
+            "failed": 2,
+            "passed": 0,
+            "skipped": 28
+          },
+          "fixtureCount": 30
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r3/encoded-independent-pre-redaction-injection.log",
+          "status": "INTERMEDIATE_CANDIDATE_RED",
+          "tests": {
+            "failed": 2,
+            "passed": 0,
+            "skipped": 30
+          },
+          "fixtureCount": 32
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r3/token-rewrite-green.log",
+          "status": "HISTORICAL_GREEN_PENDING_REVIEW",
+          "tests": {
+            "failed": 0,
+            "passed": 81,
+            "skipped": 0
+          },
+          "files": 4
+        }
+      ],
+      "checks": [
+        {
+          "log": "docs/evidence/source-optimization-20261002/r3/encoded-independent-frozen-baseline-red.log",
+          "record": "docs/evidence/source-optimization-20261002/r3/encoded-independent-frozen-baseline-red.json",
+          "status": "RED",
+          "exitCode": 1,
+          "tests": {
+            "failed": 34,
+            "passed": 2,
+            "skipped": 0
+          },
+          "fixtureCount": 36
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r3/encoded-independent-frozen-candidate-green.log",
+          "record": "docs/evidence/source-optimization-20261002/r3/encoded-independent-frozen-candidate-green.json",
+          "status": "GREEN",
+          "exitCode": 0,
+          "tests": {
+            "failed": 0,
+            "passed": 85,
+            "skipped": 0
+          },
+          "files": 4,
+          "includesFrozenIndependentTests": 36
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r3/encoded-independent-frozen-core-typecheck.log",
+          "record": "docs/evidence/source-optimization-20261002/r3/encoded-independent-frozen-core-typecheck.json",
+          "status": "GREEN",
+          "exitCode": 0
+        },
+        {
+          "artifact": "docs/evidence/source-optimization-20261002/r3/encoded-independent-controller-probes.json",
+          "status": "GREEN",
+          "actualControllerProbes": {
+            "passed": 12,
+            "failed": 0
+          }
+        }
+      ],
+      "manifest": "docs/evidence/source-optimization-20261002/r3/encoded-independent-review-manifest.json",
+      "limitations": [
+        "Linux actual evidence; Windows not verified by this audit.",
+        "Configured artifact directory is trusted host storage. Final-file symlink control is not a cross-process parent-directory confinement attestation.",
+        "No provider/model quality, paid-model run, or champion promotion.",
+        "Redaction counts include detections across encoded/decoded views; no claim that they equal unique raw occurrences."
+      ],
+      "baselineNotes": [
+        "Final symlink counterexample passes baseline because old artifact filename used raw call id; it exposed the intermediate hashed-name candidate instead.",
+        "Numeric custom hook with configured budget passes baseline because the old whole-text redactor was honored; no-budget variant fails.",
+        "Throwing hook failures are real render exceptions, not import/collection/type failures."
+      ]
+    },
+    {
+      "id": "R3b",
+      "status": "TARGETED_PASS_PENDING_FROZEN_ACCEPTANCE",
+      "change": "Incremental UTF-8 decoding and per-stream captured body byte cap; continue drain/observer delivery; structured orchestrator results unchanged.",
+      "checks": [
+        {
+          "log": "docs/evidence/source-optimization-20261002/r3/r3b-red.log",
+          "status": "RED",
+          "tests": {
+            "failed": 26,
+            "passed": 8,
+            "skipped": 0
+          },
+          "fixtureCount": 34,
+          "exitCode": 1
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r3/r3b-green.log",
+          "status": "GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 315,
+            "skipped": 10
+          },
+          "files": 14,
+          "exitCode": 0
+        }
+      ],
+      "fixtureIdentity": "r3/r3-evidence.json records baselineIdentical for the 34-case process fixture.",
+      "resourceBoundary": {
+        "process": "persistent O(cap) per stream and at most 3 pending UTF-8 bytes; O(current chunk) temporary decoder text; drain/observer delivery continues after capture closes",
+        "orchestrator": "string body <= maxOutputBytes; marker extra including cap=0; structured result unchanged; prefix copies only bounded bytes",
+        "context": "maxInlineBytes is artifact threshold; head/tail each <=2000 UTF-8 bytes, metadata extra; serialization/redaction/scan still need complete captured model text and artifact hashes full redacted text"
+      },
+      "manifest": "docs/evidence/source-optimization-20261002/r3/r3-evidence.json"
+    },
+    {
+      "id": "R4",
+      "status": "TARGETED_PASS_PENDING_FROZEN_ACCEPTANCE",
+      "change": "Canonical path/dev+ino shared coordination with inode reacquisition; opt-in raw-byte version hash and strict profile; preserve untouched UTF-8/BOM/EOL/EOF bytes.",
+      "checks": [
+        {
+          "log": "docs/evidence/source-optimization-20261002/r4/review-red-baseline.log",
+          "status": "RED",
+          "tests": {
+            "failed": 14,
+            "passed": 3,
+            "skipped": 0
+          },
+          "fixtureCount": 17,
+          "exitCode": 1
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r4/review-green-targeted.log",
+          "status": "GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 176,
+            "skipped": 0
+          },
+          "files": 8,
+          "newRegressionCount": 41,
+          "exitCode": 0
+        }
+      ],
+      "fixtureIdentity": "The baseline retains the original 17-case valid-barrier regression fixture. The current candidate adds cancellation, strict-profile, multi-file-order and inode-reacquisition cases (41 total); supplemental cases are GREEN coverage, not represented as baseline RED.",
+      "limitations": [
+        "Locks coordinate tools and transactions in one process. The pre-write digest is not cross-process atomic CAS.",
+        "Transactions retain their existing authoritative snapshot/intended-after behavior and atomic rename may detach an existing hard-link alias.",
+        "Windows is NOT_RUN. Linux evidence is not a Windows attestation."
+      ],
+      "manifest": "docs/evidence/source-optimization-20261002/r4/review-manifest.json"
+    },
+    {
+      "id": "R5",
+      "status": "TARGETED_PASS_PENDING_FROZEN_ACCEPTANCE",
+      "change": "File identity/revision/config invalidation of skill index/body/security; freeze admitted in-flight records; avoid unchanged-subtree readdir.",
+      "checks": [
+        {
+          "log": "docs/evidence/source-optimization-20261002/r5/baseline-body-delete.log",
+          "status": "RED",
+          "tests": {
+            "failed": 2,
+            "passed": 0,
+            "skipped": 7
+          },
+          "fixtureCount": 9,
+          "exitCode": 1
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r5/green-production-final.log",
+          "status": "GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 20,
+            "skipped": 0
+          },
+          "files": 1,
+          "exitCode": 0
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r5/green-skills-harness.log",
+          "status": "GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 97,
+            "skipped": 0
+          },
+          "files": 10,
+          "exitCode": 0
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r5/green-composition-security.log",
+          "status": "GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 49,
+            "skipped": 0
+          },
+          "files": 6,
+          "exitCode": 0
+        }
+      ],
+      "fixtureIdentity": "Baseline contains the initial 9-case fixture; candidate expanded to 20. New cases are GREEN coverage, not baseline RED.",
+      "manifest": "docs/evidence/source-optimization-20261002/r5/manifest.json"
+    },
+    {
+      "id": "R6",
+      "status": "TARGETED_PASS_PENDING_FROZEN_ACCEPTANCE",
+      "change": "Bound readonly prefetch by cancellation/turn deadline/soft timeout and one real in-flight slot; isolate late results; production retrieval feedback is written only after admission and fully awaited before fence.",
+      "checks": [
+        {
+          "log": "docs/evidence/source-optimization-20261002/r6/review-red-baseline.log",
+          "status": "RED",
+          "tests": {
+            "failed": 10,
+            "passed": 0,
+            "skipped": 0
+          },
+          "fixtureCount": 10,
+          "exitCode": 1
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r6/review-memory-targeted.log",
+          "status": "GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 26,
+            "skipped": 0
+          },
+          "files": 3,
+          "coreNewRegressionCount": 15,
+          "productionNewRegressionCount": 4,
+          "exitCode": 0
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/r6/review-existing.log",
+          "status": "GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 52,
+            "skipped": 0
+          },
+          "files": 6,
+          "exitCode": 0
+        }
+      ],
+      "fixtureIdentity": "The baseline retains the initial 10-case R6 fixture; the candidate has 15 core cases plus 4 production composition cases.",
+      "limitations": [
+        "The runtime cannot prevent side effects inside a host callback that violates the documented read-only preparation contract. Production composition satisfies it.",
+        "The in-flight slot is per runtime, shared across its workspaces; busy turns explicitly skip optional memory without cross-workspace content reuse.",
+        "Real feedback writes remain fully awaited and may delay cancellation; they are not covered by the read-only abandonment boundary.",
+        "Windows is NOT_RUN. Linux evidence is not a Windows attestation."
+      ],
+      "manifest": "docs/evidence/source-optimization-20261002/r6/review-manifest.json"
+    },
+    {
+      "id": "S1",
+      "candidateId": "diagnostic_first_repair_v1",
+      "status": "PASS_OFFLINE_ENGINEERING_PENDING_FROZEN_ACCEPTANCE",
+      "defaultEnabled": false,
+      "change": "Versioned actual completionGuidance captures bounded diagnostics from the original command; original verification and independent content check decide completion.",
+      "checks": [
+        {
+          "log": "docs/evidence/source-optimization-20261002/s1/red-baseline-latest.log",
+          "status": "RED",
+          "tests": {
+            "failed": 10,
+            "passed": 0,
+            "skipped": 0
+          },
+          "fixtureCount": 10,
+          "exitCode": 1
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/s1/green-final.log",
+          "status": "HISTORICAL_GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 36,
+            "skipped": 0
+          },
+          "files": 2,
+          "S1": 10,
+          "structuredSecurity": 26,
+          "exitCode": 0
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/s1/compatibility-resume.log",
+          "status": "GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 95,
+            "skipped": 0
+          },
+          "files": 9,
+          "exitCode": 0
+        }
+      ],
+      "fixtureIdentity": "The retained S1 baseline and candidate test fingerprint is e919e5cc7a86e8c2ed115d48173688a151188e92a1f395f0957bd41fc35b6968. Later R3 changes are not attested by the historical S1 GREEN.",
+      "pairedOffline": {
+        "artifact": "paired-results.json",
+        "engine": "runPairedExperiment",
+        "cases": 2,
+        "repetitions": 2,
+        "finalizedPairs": 4,
+        "partialPairs": 0,
+        "logicalRuns": 8,
+        "modelCallAttempts": 36,
+        "orderSeed": 19,
+        "modelSeed": null,
+        "deterministicModelDouble": true,
+        "AB": 2,
+        "BA": 2,
+        "sameOriginalCasePerPair": true,
+        "independentContentVerifierHash": "15b39c9f94fa19c8f96dafe336bb89cf568490ba3810a77f67850d9d9fc18fdd",
+        "isolation": "explicit insecure-local offline fixture",
+        "promotionEligible": false,
+        "identityScope": "Offline execution identity binds schedule, original case input, arm config, provider/model, budget, policy and explicit insecure posture. Source commit/tree fields are null in the offline executor identity; current uncommitted source files are fingerprinted in this manifest. This is not promotion evidence."
+      },
+      "mechanismIdentity": {
+        "candidateId": "diagnostic_first_repair_v1",
+        "status": "experimental",
+        "baselineDigest": "3b7a75ad598de2e325eb35d49f71a2e90c832828d4c02b62fc3a20a6d63ae377",
+        "candidateDigest": "f3369adde710847798bc21ac55663e6369cf14a1385c0fd72472908a6ac826b7",
+        "comparison": {
+          "comparable": true,
+          "hasCausalDelta": true,
+          "undeclaredDeltas": [],
+          "declaredDeltas": [
+            "harnessConfig.completionGuidance"
+          ],
+          "missingDeclaredDeltas": [],
+          "reasonCode": null,
+          "providerCallsAllowed": true
+        },
+        "guidanceVersion": "diagnostic-first-repair:v1",
+        "promptAdditionsDigest": "cae61728f2f4dcf4713aa037907fa4c068460b74c7d6d1c42526d9570b686f6c",
+        "modelVisiblePromptDigest": "ec591c5fbb8af42e2e702ca7ee1ef7250edef47d5e3f53156c1812e5f78c9938",
+        "baselinePromptDigest": "9102f094abc7670958d32f58d9c2f883b7c91b87081b617aafc65be4f7d05b06",
+        "runtimeConfigHash": "d9253777f3cccd94db65bd76263ece56aab8589c9e64d305b004cebc55421ade",
+        "baselineRuntimeConfigHash": "80a8855e5b222c2111e7e3f5b84a35abd75c555b5c757033f2247b6e93dca8a0",
+        "mechanismContract": {
+          "schemaVersion": "1.0.0",
+          "candidateId": "diagnostic_first_repair_v1",
+          "modelVisibleSurface": "versioned completionGuidance in the real model request; original verification gate unchanged",
+          "eligibilityRule": "case has an original command verifier that can be rerun for diagnostic access",
+          "minEligibleCases": 5,
+          "expectedFailureCluster": "verification_failed (guessing repairs without concrete diagnostics)",
+          "requiredActivationEvents": [
+            "diagnostic-first-repair-guidance-injected"
+          ],
+          "forbiddenNoOpConditions": [
+            "guidance absent from real model requests",
+            "baseline already injects the same guidance",
+            "original verifier replaced or truth policy weakened"
+          ]
+        },
+        "defaultOff": true,
+        "quality": "NOT_RUN",
+        "promotion": "NOT_RUN"
+      },
+      "manifest": "docs/evidence/source-optimization-20261002/s1/final-result-manifest.json"
+    },
+    {
+      "id": "S2",
+      "candidateId": "path_scoped_instructions_v1",
+      "status": "PASS_OFFLINE_ENGINEERING_PENDING_FROZEN_ACCEPTANCE",
+      "defaultEnabled": false,
+      "change": "Optional host-root scoped instruction discovery from initial targets and actual successful authorized read/search events; request-local session scope; preserve default discovery and Core step source contract.",
+      "checks": [
+        {
+          "log": "docs/evidence/source-optimization-20261002/s2/baseline-red.log",
+          "status": "RED",
+          "tests": {
+            "failed": 26,
+            "passed": 3,
+            "skipped": 0
+          },
+          "fixtureCount": 29
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/s2/cli-baseline-red.log",
+          "status": "RED",
+          "tests": {
+            "failed": 6,
+            "passed": 1,
+            "skipped": 0
+          },
+          "fixtureCount": 7
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/s2/eligibility-baseline-red.log",
+          "status": "RED",
+          "tests": {
+            "failed": 2,
+            "passed": 1,
+            "skipped": 0
+          },
+          "fixtureCount": 3
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/s2/candidate-final-green.log",
+          "status": "GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 39,
+            "skipped": 0
+          },
+          "files": 4,
+          "exitCode": 0
+        },
+        {
+          "log": "docs/evidence/source-optimization-20261002/s2/regressions-green.log",
+          "status": "GREEN",
+          "tests": {
+            "failed": 0,
+            "passed": 215,
+            "skipped": 0
+          },
+          "files": 15,
+          "exitCode": 0
+        }
+      ],
+      "fixtureIdentity": {
+        "packages/context/src/path-scoped-discovery.test.ts": {
+          "candidateSHA256": "93103778f7c8bbd057f90c1a9c96c63a5c35a1cdb1eb87e67855726d70b088ae",
+          "baselineSHA256": "93103778f7c8bbd057f90c1a9c96c63a5c35a1cdb1eb87e67855726d70b088ae",
+          "identical": true
+        },
+        "packages/harness/src/path-scoped-instructions.regressions.test.ts": {
+          "candidateSHA256": "88f9ab7f4790820d8039b4727e0006c312d78ec7cc2ffdd7ee76b993fb6d2034",
+          "baselineSHA256": "88f9ab7f4790820d8039b4727e0006c312d78ec7cc2ffdd7ee76b993fb6d2034",
+          "identical": true
+        },
+        "apps/cli/src/path-scoped-instructions.test.ts": {
+          "candidateSHA256": "d8dbe9de883e33a50a83f15e9f98f1cee947c43381c45a0b507cc5e3e8c9e3bf",
+          "baselineSHA256": "d8dbe9de883e33a50a83f15e9f98f1cee947c43381c45a0b507cc5e3e8c9e3bf",
+          "identical": true
+        },
+        "packages/evaluation/src/path-scoped-eligibility.test.ts": {
+          "candidateSHA256": "46f7166bd74b12f746b011c54029b56a7bdd6018b6ee83c402b413cfdf5cdd88",
+          "baselineSHA256": "46f7166bd74b12f746b011c54029b56a7bdd6018b6ee83c402b413cfdf5cdd88",
+          "identical": true
+        }
+      },
+      "pairedOffline": {
+        "artifact": "cli-paired-results.json",
+        "status": "ok",
+        "complete": true,
+        "logicalRuns": 4,
+        "modelCallAttempts": 28,
+        "transportRetries": 0,
+        "pairs": 2,
+        "partialPairs": 0,
+        "orders": [
+          "BA",
+          "AB"
+        ],
+        "haltedByBudget": false,
+        "identity": {
+          "schemaVersion": "e4-r01",
+          "scheduleDigest": "6b15368999567faa8ebe366a06d42e6e519be11f569a3edc2e3660981cbd3b2b",
+          "suite": "regression",
+          "judgeVersion": "1.0.0",
+          "repetitions": 2,
+          "orderSeed": 19,
+          "modelSeed": null,
+          "caseIds": [
+            "s2-three-package-content"
+          ],
+          "caseFingerprints": {
+            "s2-three-package-content": "207cef5b81fbea5fed6adff20a50ace8a53b83f19bb389ffaa0118cba98d25d3"
+          },
+          "baselineConfigHash": "3b7a75ad598de2e325eb35d49f71a2e90c832828d4c02b62fc3a20a6d63ae377",
+          "candidate": "path_scoped_instructions_v1",
+          "candidateConfigHash": "c79ec2850168a8ea90bae4151747a752bdd85a7f2d221f1d17bf82911f5a5250",
+          "providerId": "s2-offline-fixture",
+          "modelId": "s2-offline-fixture",
+          "effectiveModelParams": {
+            "deterministicScript": "s2-v1",
+            "budgetTokens": 32000
+          },
+          "sourceSha": null,
+          "treeFingerprint": null,
+          "limits": {
+            "maxLogicalRuns": 4,
+            "maxModelCalls": 64,
+            "maxEstimatedTokens": null,
+            "maxEstimatedCostUsd": 0
+          },
+          "billingClass": "fixture",
+          "isolationBackendId": "insecure-local",
+          "isolationStrength": "insecure",
+          "isolationSelfTestId": "insecure-none",
+          "promotionEligible": false,
+          "decisionPolicy": {
+            "version": "e4-05-policy-v1",
+            "minActivationEligibleCases": 3,
+            "minActivationCoverage": 0.5,
+            "maxVerifiedDrop": 0.05,
+            "minConclusiveNetDelta": 1,
+            "maxTokensDelta": 50000,
+            "securityBreachesAllowed": 0,
+            "minRecoveryRate": null
+          },
+          "thresholdDigest": "844c8db996796df2c88ab4c7f0fec5a106a92f9027933ee2f8b7553c9a7ae8ce"
+        },
+        "independentVerifierHash": "c9f2736296fb1e7e3bba73676739c97381d018debafa0ac6a8af5d5086243c26"
+      },
+      "concurrentSessionEvidence": {
+        "artifact": "cli-concurrency-results.json",
+        "actualStatus": "completed",
+        "childStarts": 2,
+        "sessionCount": 3,
+        "requests": 6,
+        "durableModelStarts": 6,
+        "durableSelections": 6,
+        "sourceSets": [
+          [
+            "AGENTS.md"
+          ],
+          [
+            "AGENTS.md"
+          ],
+          [
+            "AGENTS.md"
+          ],
+          [
+            "AGENTS.md",
+            "packages/a/AGENTS.md"
+          ],
+          [
+            "AGENTS.md",
+            "packages/b/AGENTS.md"
+          ],
+          [
+            "AGENTS.md"
+          ]
+        ]
+      },
+      "noDocumentEvidence": {
+        "artifact": "cli-offline-results.json",
+        "caseId": "s2-no-visible-instruction",
+        "requests": 1,
+        "sources": [],
+        "durableSelections": 0,
+        "activation": {
+          "events": [],
+          "validation": {
+            "ok": true,
+            "issues": []
+          },
+          "aggregation": {
+            "activated": 0,
+            "eligibleButNotActivated": 0,
+            "ineligible": 1,
+            "invalid": 0,
+            "unknownLegacy": 0
+          }
+        }
+      },
+      "limits": [
+        "Offline scripted provider tests prove installation, content verification and safety contracts, not real-model improvement.",
+        "Node platform path rules are used; Windows execution has not been attested.",
+        "Target source is host initialTargets or last successful actual read/search batch; plan/model/output strings do not change scope.",
+        "Rule docs remain untrusted data and use the existing ContextPipeline injection scanner.",
+        "Paired fixture identity sourceSha/treeFingerprint are null because this executed before the final commit; exact fixture and source hashes are retained here, and the run is not promotion-eligible.",
+        "Zero subtree listings describes candidate instruction discovery only. Whole benchmark also performs five directory listings per candidate arm for other existing behavior."
+      ],
+      "manifest": "docs/evidence/source-optimization-20261002/s2/evidence.json"
+    }
+  ],
+  "externalArtifacts": [
+    {
+      "originalRelativePath": "s1/offline-results.json",
+      "sha256": "84aa2790b05930d2a21ff8d64d4946c4e9de2291f432834ae5ded3ac9dc49f61",
+      "bytes": 342704,
+      "portableCopy": false,
+      "summaryManifest": "docs/evidence/source-optimization-20261002/s1/final-result-manifest.json"
+    },
+    {
+      "originalRelativePath": "s1/paired-results.json",
+      "sha256": "2b33c00d9a5b0bcc5aa1006776deab0f3a6e7a5012592eb6a107156627b834ca",
+      "bytes": 334767,
+      "portableCopy": false,
+      "summaryManifest": "docs/evidence/source-optimization-20261002/s1/final-result-manifest.json"
+    },
+    {
+      "originalRelativePath": "s2/cli-offline-results.json",
+      "sha256": "f2a0298c83dc4224a8aa495d2a430dfbaecb85f3b7fc86072a88c8cd8ac8c41a",
+      "bytes": 64338,
+      "portableCopy": false,
+      "summaryManifest": "docs/evidence/source-optimization-20261002/s2/evidence.json"
+    },
+    {
+      "originalRelativePath": "s2/cli-paired-results.json",
+      "sha256": "dc2431a77001495e092077a590581a6cab128efaa09e510f4228366c5912fd12",
+      "bytes": 365664,
+      "portableCopy": false,
+      "summaryManifest": "docs/evidence/source-optimization-20261002/s2/evidence.json"
+    },
+    {
+      "originalRelativePath": "s2/cli-concurrency-results.json",
+      "sha256": "bfd112b5b03d9cb41d8a352a1a44075a655be55da7cd5a5e62d8777600377f77",
+      "bytes": 19814,
+      "portableCopy": false,
+      "summaryManifest": "docs/evidence/source-optimization-20261002/s2/evidence.json"
+    }
+  ],
+  "finalAcceptance": {
+    "R2CrashBeforeSteeringAppend": "PASS_TARGETED_INDEPENDENT_REVIEW_CLOSED",
+    "R3EncodedSafetyAudit": "PASS_TARGETED_INDEPENDENT_REVIEW_CLOSED",
+    "frozenCleanTree": "PENDING",
+    "typecheck": {
+      "status": "PENDING",
+      "command": "corepack pnpm typecheck"
+    },
+    "build": {
+      "status": "PENDING",
+      "command": "corepack pnpm build"
+    },
+    "security": {
+      "status": "PENDING",
+      "command": "corepack pnpm test:security"
+    },
+    "fullSuite": {
+      "status": "PENDING",
+      "command": "python3 /workspace/harness-agent/.ci/history-optimization/run-with-subreaper.py corepack pnpm test",
+      "platform": "Linux"
+    },
+    "diffCheck": {
+      "status": "PENDING",
+      "command": "git diff --check"
+    },
+    "Windows": {
+      "status": "NOT_RUN",
+      "testedCommit": null,
+      "workflowRun": null
+    },
+    "remoteMainPush": {
+      "status": "PENDING",
+      "remoteCommit": null,
+      "method": "native terminal Git; no GitHub connector"
+    },
+    "R2ConcurrentSteering": {
+      "status": "PASS_TARGETED",
+      "manifest": "docs/evidence/source-optimization-20261002/r2/independent-bound-before-append/concurrency-review-manifest.json",
+      "independentManifest": "docs/evidence/source-optimization-20261002/r2/concurrent-resume-independent-review.json",
+      "fixtureSha256": "8a3c237d96309e4046ae53c41b4a130265f6a08d3af3ba5447c465a2897f1053",
+      "preFixCommit": "caaf566265a9d5a48fa93152347d768368d06345",
+      "preFixRed": {
+        "failed": 1,
+        "passed": 1
+      },
+      "targetedGreen": {
+        "files": 8,
+        "passed": 110
+      },
+      "independentDuplicateAppendsBefore": 2,
+      "independentDuplicateAppendsAfter": 1,
+      "limit": "per Runtime instance and session; no cross-process CAS claim"
+    }
+  },
+  "quality": {
+    "provider": "scripted offline fixture",
+    "paidProviderCalls": 0,
+    "realModelBenefit": "NOT_RUN",
+    "promotion": "NOT_RUN",
+    "defaultStrategiesChanged": false,
+    "promotionEvidence": false,
+    "reason": "Offline paired engineering contracts have explicit insecure-local isolation and null sourceSha/treeFingerprint; they do not establish real-model benefit or promotion-grade identity."
+  },
+  "interpretation": {
+    "testCountsOverlap": true,
+    "doNotSumRepeatedRuns": true,
+    "LinuxDoesNotAttestWindows": true,
+    "preparationExecutedNewTests": false,
+    "finalSourceBindingPending": true,
+    "changedFixtures": "R2 historical fixtures evolved; the final 22-case fixture SHA is identical but baseline/pre-fix RED executes only the 5 added cases with 17 filtered skips. R4/R5/R6 baseline fixtures differ from supplemental GREEN fixtures. R3a intermediate fixtures evolved, while final independent 36-case baseline/candidate fixture SHA matches. S1 and S2 have retained same-fixture identity.",
+    "evidenceCopies": "Hashes attest copied file integrity, not test success or source freeze."
+  }
+}

@@ -1,0 +1,181 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-baseline
+
+ ❯ apps/cli/src/diagnostic-first-repair.test.ts (10 tests | 10 failed) 336ms
+     × wires one real completionGuidance delta with declared paths and versioned prompt digest 9ms
+     × gets actual assertion diagnostics after exit 1, repairs, reruns the same command, then passes the original gate 151ms
+     × gets actual syntax diagnostics after exit 1, repairs, reruns the same command, then passes the original gate 131ms
+     × redacts diagnostic secrets in data-only tool messages without elevating stderr into system instructions 9ms
+     × withholds injected diagnostics and never executes their instructions or declares success 8ms
+     × rejects fake PASS even when the agent replaces the targeted test with exit 0 8ms
+     × bounds repeated identical failures with existing Runtime limits 7ms
+     × honors the real pre-dispatch budget before a repair tool can start 7ms
+     × uses original command verification for eligibility and rejects forged guidance activation 4ms
+     × executes independent S1 through the existing identity-bound AB/BA paired engine 2ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/cli/src/diagnostic-first-repair.test.ts > S1 diagnostic_first_repair_v1 experimental strategy > wires one real completionGuidance delta with declared paths and versioned prompt digest
+AssertionError: expected undefined to match object { status: 'experimental', …(1) }
+
+- Expected:
+{
+  "layer": "agent-strategy",
+  "status": "experimental",
+}
+
++ Received:
+undefined
+
+ ❯ apps/cli/src/diagnostic-first-repair.test.ts:167:45
+    165| describe("S1 diagnostic_first_repair_v1 experimental strategy", () => {
+    166|   it("wires one real completionGuidance delta with declared paths and …
+    167|     expect(getCandidateRegistry().find(ID)).toMatchObject({ status: "e…
+       |                                             ^
+    168|     const factory = getArmFactory();
+    169|     const baseline = factory.resolveArm(null);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  apps/cli/src/diagnostic-first-repair.test.ts > S1 diagnostic_first_repair_v1 experimental strategy > gets actual assertion diagnostics after exit 1, repairs, reruns the same command, then passes the original gate
+ FAIL  apps/cli/src/diagnostic-first-repair.test.ts > S1 diagnostic_first_repair_v1 experimental strategy > gets actual syntax diagnostics after exit 1, repairs, reruns the same command, then passes the original gate
+Error: UNKNOWN_CANDIDATE: no such candidate "diagnostic_first_repair_v1"
+ ❯ resolveCandidate packages/evaluation/src/arm-factory.ts:418:13
+    416|     const candidate = registry.find(id);
+    417|     if (candidate === undefined) {
+    418|       throw new Error(`UNKNOWN_CANDIDATE: no such candidate "${id}"`);
+       |             ^
+    419|     }
+    420|     const baselineConfig = defaultBenchmarkHarnessConfig();
+ ❯ resolveArm packages/evaluation/src/arm-factory.ts:483:56
+ ❯ Object.resolveRuntimeMechanisms packages/evaluation/src/arm-factory.ts:486:5
+ ❯ runOneCase apps/cli/src/benchmark-command.ts:1985:62
+ ❯ run apps/cli/src/diagnostic-first-repair.test.ts:129:19
+ ❯ apps/cli/src/diagnostic-first-repair.test.ts:190:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  apps/cli/src/diagnostic-first-repair.test.ts > S1 diagnostic_first_repair_v1 experimental strategy > redacts diagnostic secrets in data-only tool messages without elevating stderr into system instructions
+Error: UNKNOWN_CANDIDATE: no such candidate "diagnostic_first_repair_v1"
+ ❯ resolveCandidate packages/evaluation/src/arm-factory.ts:418:13
+    416|     const candidate = registry.find(id);
+    417|     if (candidate === undefined) {
+    418|       throw new Error(`UNKNOWN_CANDIDATE: no such candidate "${id}"`);
+       |             ^
+    419|     }
+    420|     const baselineConfig = defaultBenchmarkHarnessConfig();
+ ❯ resolveArm packages/evaluation/src/arm-factory.ts:483:56
+ ❯ Object.resolveRuntimeMechanisms packages/evaluation/src/arm-factory.ts:486:5
+ ❯ runOneCase apps/cli/src/benchmark-command.ts:1985:62
+ ❯ run apps/cli/src/diagnostic-first-repair.test.ts:129:19
+ ❯ apps/cli/src/diagnostic-first-repair.test.ts:213:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  apps/cli/src/diagnostic-first-repair.test.ts > S1 diagnostic_first_repair_v1 experimental strategy > withholds injected diagnostics and never executes their instructions or declares success
+Error: UNKNOWN_CANDIDATE: no such candidate "diagnostic_first_repair_v1"
+ ❯ resolveCandidate packages/evaluation/src/arm-factory.ts:418:13
+    416|     const candidate = registry.find(id);
+    417|     if (candidate === undefined) {
+    418|       throw new Error(`UNKNOWN_CANDIDATE: no such candidate "${id}"`);
+       |             ^
+    419|     }
+    420|     const baselineConfig = defaultBenchmarkHarnessConfig();
+ ❯ resolveArm packages/evaluation/src/arm-factory.ts:483:56
+ ❯ Object.resolveRuntimeMechanisms packages/evaluation/src/arm-factory.ts:486:5
+ ❯ runOneCase apps/cli/src/benchmark-command.ts:1985:62
+ ❯ run apps/cli/src/diagnostic-first-repair.test.ts:129:19
+ ❯ apps/cli/src/diagnostic-first-repair.test.ts:225:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  apps/cli/src/diagnostic-first-repair.test.ts > S1 diagnostic_first_repair_v1 experimental strategy > rejects fake PASS even when the agent replaces the targeted test with exit 0
+Error: UNKNOWN_CANDIDATE: no such candidate "diagnostic_first_repair_v1"
+ ❯ resolveCandidate packages/evaluation/src/arm-factory.ts:418:13
+    416|     const candidate = registry.find(id);
+    417|     if (candidate === undefined) {
+    418|       throw new Error(`UNKNOWN_CANDIDATE: no such candidate "${id}"`);
+       |             ^
+    419|     }
+    420|     const baselineConfig = defaultBenchmarkHarnessConfig();
+ ❯ resolveArm packages/evaluation/src/arm-factory.ts:483:56
+ ❯ Object.resolveRuntimeMechanisms packages/evaluation/src/arm-factory.ts:486:5
+ ❯ runOneCase apps/cli/src/benchmark-command.ts:1985:62
+ ❯ run apps/cli/src/diagnostic-first-repair.test.ts:129:19
+ ❯ apps/cli/src/diagnostic-first-repair.test.ts:233:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  apps/cli/src/diagnostic-first-repair.test.ts > S1 diagnostic_first_repair_v1 experimental strategy > bounds repeated identical failures with existing Runtime limits
+Error: UNKNOWN_CANDIDATE: no such candidate "diagnostic_first_repair_v1"
+ ❯ resolveCandidate packages/evaluation/src/arm-factory.ts:418:13
+    416|     const candidate = registry.find(id);
+    417|     if (candidate === undefined) {
+    418|       throw new Error(`UNKNOWN_CANDIDATE: no such candidate "${id}"`);
+       |             ^
+    419|     }
+    420|     const baselineConfig = defaultBenchmarkHarnessConfig();
+ ❯ resolveArm packages/evaluation/src/arm-factory.ts:483:56
+ ❯ Object.resolveRuntimeMechanisms packages/evaluation/src/arm-factory.ts:486:5
+ ❯ runOneCase apps/cli/src/benchmark-command.ts:1985:62
+ ❯ run apps/cli/src/diagnostic-first-repair.test.ts:129:19
+ ❯ apps/cli/src/diagnostic-first-repair.test.ts:242:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  apps/cli/src/diagnostic-first-repair.test.ts > S1 diagnostic_first_repair_v1 experimental strategy > honors the real pre-dispatch budget before a repair tool can start
+Error: UNKNOWN_CANDIDATE: no such candidate "diagnostic_first_repair_v1"
+ ❯ resolveCandidate packages/evaluation/src/arm-factory.ts:418:13
+    416|     const candidate = registry.find(id);
+    417|     if (candidate === undefined) {
+    418|       throw new Error(`UNKNOWN_CANDIDATE: no such candidate "${id}"`);
+       |             ^
+    419|     }
+    420|     const baselineConfig = defaultBenchmarkHarnessConfig();
+ ❯ resolveArm packages/evaluation/src/arm-factory.ts:483:56
+ ❯ Object.resolveRuntimeMechanisms packages/evaluation/src/arm-factory.ts:486:5
+ ❯ runOneCase apps/cli/src/benchmark-command.ts:1985:62
+ ❯ run apps/cli/src/diagnostic-first-repair.test.ts:129:19
+ ❯ apps/cli/src/diagnostic-first-repair.test.ts:257:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+ FAIL  apps/cli/src/diagnostic-first-repair.test.ts > S1 diagnostic_first_repair_v1 experimental strategy > uses original command verification for eligibility and rejects forged guidance activation
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ apps/cli/src/diagnostic-first-repair.test.ts:271:53
+    269|     }
+    270|     const original = await fixture("assertion");
+    271|     expect(diagnosticFirstRepairEligible(original)).toBe(true);
+       |                                                     ^
+    272|     expect(activationEvidenceFor(ID, original, []).eligible).toBe(true…
+    273|     const withoutVerification = { ...original, id: "s1-no-command", ve…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+ FAIL  apps/cli/src/diagnostic-first-repair.test.ts > S1 diagnostic_first_repair_v1 experimental strategy > executes independent S1 through the existing identity-bound AB/BA paired engine
+Error: UNKNOWN_CANDIDATE: no such candidate "diagnostic_first_repair_v1"
+ ❯ resolveCandidate packages/evaluation/src/arm-factory.ts:418:13
+    416|     const candidate = registry.find(id);
+    417|     if (candidate === undefined) {
+    418|       throw new Error(`UNKNOWN_CANDIDATE: no such candidate "${id}"`);
+       |             ^
+    419|     }
+    420|     const baselineConfig = defaultBenchmarkHarnessConfig();
+ ❯ Object.resolveArm packages/evaluation/src/arm-factory.ts:483:56
+ ❯ apps/cli/src/diagnostic-first-repair.test.ts:306:98
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  10 failed (10)
+   Start at  22:09:32
+   Duration  2.53s (transform 1.67s, setup 0ms, import 2.08s, tests 336ms, environment 0ms)
+

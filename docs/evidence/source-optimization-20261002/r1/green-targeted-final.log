@@ -1,0 +1,17 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+ ✓ packages/core/src/runtime/provider-termination-regressions.test.ts (11 tests) 93ms
+ ✓ packages/model/src/openai.test.ts (40 tests) 1119ms
+     ✓ P1-18: honors Retry-After on 429 and classifies it rate_limit with retryAfterMs  1003ms
+ ✓ packages/model/src/openai.wire-stub.test.ts (22 tests) 61ms
+ ✓ packages/core/src/runtime/loop-integration.test.ts (26 tests) 48ms
+ ✓ packages/core/src/runtime/resume.test.ts (13 tests) 21ms
+ ✓ packages/model/src/openai-termination-regressions.test.ts (19 tests) 42ms
+ ✓ packages/model/src/provider-diagnostics.test.ts (8 tests) 8ms
+
+ Test Files  7 passed (7)
+      Tests  139 passed (139)
+   Start at  15:50:11
+   Duration  3.77s (transform 803ms, setup 0ms, import 1.40s, tests 1.39s, environment 1ms)
+

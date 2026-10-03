@@ -1,0 +1,23 @@
+{
+  "cwd": "/workspace/harness-agent-source-optimization",
+  "command": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "--config",
+    "/workspace/harness-agent/.ci/source-optimization/r2/concurrent-resume-probe.config.mjs"
+  ],
+  "startedAt": "2026-10-03T04:21:04Z",
+  "fixtureSha256": "41f34152cb969812a91604dcf27104dc7a1dfbe791fa0d1befc6125c2d3fb0d8",
+  "sourceBefore": {
+    "packages/core/src/runtime/runtime.ts": "2f3c6571b0bb3cf706c9541a0a40a52482bdc6d580ee867923c7acbb3331fbd7",
+    "packages/core/src/runtime/context-controller.ts": "c48ef9dd8ddea50bcfb9783d137b0fb139cc628bfeca4c24304728d54fb29d77"
+  },
+  "exitCode": 1,
+  "sourceAfter": {
+    "packages/core/src/runtime/runtime.ts": "2f3c6571b0bb3cf706c9541a0a40a52482bdc6d580ee867923c7acbb3331fbd7",
+    "packages/core/src/runtime/context-controller.ts": "c48ef9dd8ddea50bcfb9783d137b0fb139cc628bfeca4c24304728d54fb29d77"
+  }
+}

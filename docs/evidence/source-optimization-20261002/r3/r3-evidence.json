@@ -1,0 +1,22 @@
+{
+  "baselineCommit": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+  "fixtures": {
+    "packages/core/src/runtime/tool-output-boundary.regressions.test.ts": {
+      "sha256": "bc651b19ff289c43cc66e79188df007d08cc17e4365f2d2d524c9993248bdae2",
+      "baselineIdentical": true
+    },
+    "packages/tools/src/process/utf8-output.regressions.test.ts": {
+      "sha256": "b04458581feb7b9c950046122514ffee1c08e6943d325ca86f58ddb7a7ffa4ed",
+      "baselineIdentical": true
+    }
+  },
+  "scope": {
+    "r3a": "actual model text -> redaction -> full text injection scan -> optional artifact/preview; raw ToolResult unchanged",
+    "r3b": "UTF-8 decoding and per-stream captured text byte cap on shell/argv/prepared sandbox; orchestrator string-body cap with extra marker"
+  },
+  "resourceBoundaries": {
+    "process": "persistent O(cap) per stream and at most 3 pending UTF-8 bytes; O(current chunk) temporary decoder text; drain/observer delivery continues after capture closes",
+    "orchestrator": "string body <= maxOutputBytes; marker extra including cap=0; structured result unchanged; prefix copies only bounded bytes",
+    "context": "maxInlineBytes is artifact threshold; head/tail each <=2000 UTF-8 bytes, metadata extra; serialization/redaction/scan still need complete captured model text and artifact hashes full redacted text"
+  }
+}

@@ -1,0 +1,60 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+ ❯ packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts (30 tests | 2 failed | 28 skipped) 14ms
+     ↓ redacts a credential assignment and an escaped sibling without discarding diagnostics
+     ↓ denies an escaped sibling authority line when another field requires credential redaction
+     × recognizes a credential field whose key is Unicode-escaped without rewriting unrelated data 11ms
+     ↓ redacts captured JSON inside a failed error while retaining its status and diagnostic
+     ↓ denies authority encoded in a failed error JSON payload
+     ↓ checks the earlier value of a duplicate JSON key and preserves both diagnostic texts
+     ↓ denies an earlier duplicate-key SYSTEM authority payload
+     ↓ denies an earlier duplicate-key DEVELOPER authority payload
+     ↓ does not lose either value when distinct secret keys redact to the same text
+     ↓ retains untouched numeric lexeme 9007199254740993 when a sibling string is redacted
+     ↓ retains untouched numeric lexeme 18446744073709551615 when a sibling string is redacted
+     ↓ retains untouched numeric lexeme -0 when a sibling string is redacted
+     ↓ retains untouched numeric lexeme 1e309 when a sibling string is redacted
+     ↓ redacts a credential assignment and an escaped sibling without discarding diagnostics
+     ↓ denies an escaped sibling authority line when another field requires credential redaction
+     × recognizes a credential field whose key is Unicode-escaped without rewriting unrelated data 1ms
+     ↓ redacts captured JSON inside a failed error while retaining its status and diagnostic
+     ↓ denies authority encoded in a failed error JSON payload
+     ↓ checks the earlier value of a duplicate JSON key and preserves both diagnostic texts
+     ↓ denies an earlier duplicate-key SYSTEM authority payload
+     ↓ denies an earlier duplicate-key DEVELOPER authority payload
+     ↓ does not lose either value when distinct secret keys redact to the same text
+     ↓ retains untouched numeric lexeme 9007199254740993 when a sibling string is redacted
+     ↓ retains untouched numeric lexeme 18446744073709551615 when a sibling string is redacted
+     ↓ retains untouched numeric lexeme -0 when a sibling string is redacted
+     ↓ retains untouched numeric lexeme 1e309 when a sibling string is redacted
+     ↓ stores only fully redacted captured data with matching artifact bytes and hash
+     ↓ does not follow a pre-existing artifact symlink outside the configured root
+     ↓ withholds data and stores no secret when the redact hook throws
+     ↓ withholds data and stores no secret when the detect hook throws
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts > R3a encoded output independent regressions, budget=true > recognizes a credential field whose key is Unicode-escaped without rewriting unrelated data
+ FAIL  packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts > R3a encoded output independent regressions, budget=false > recognizes a credential field whose key is Unicode-escaped without rewriting unrelated data
+AssertionError: expected '{"\u0070assword" : "s3cret-api-key-va…' not to contain 's3cret-api-key-value'
+
+Expected: "s3cret-api-key-value"
+Received: "{"\u0070assword" : "s3cret-api-key-value", "id":9007199254740993, "stdout":"DIAG_SECOND safe"}"
+
+ ❯ packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts:104:26
+    102|     const env = fixture(budget);
+    103|     const rendered = await renderUnchanged(env, { status: "success", o…
+    104|     expect(rendered).not.toContain(genericPassword);
+       |                          ^
+    105|     expect(rendered).toContain('"id":9007199254740993');
+    106|     expect(rendered).toContain("DIAG_SECOND safe");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 28 skipped (30)
+   Start at  04:04:54
+   Duration  534ms (transform 321ms, setup 0ms, import 408ms, tests 14ms, environment 0ms)
+

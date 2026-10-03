@@ -1,0 +1,25 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+ ✓ packages/tools/src/process/executor.test.ts (30 tests | 7 skipped) 1574ms
+     ✓ kills the process tree on timeout (no orphan)  303ms
+     ✓ honors timeout, cancellation, output cap and env on the argv path  423ms
+ ✓ packages/tools/src/vs001.test.ts (13 tests) 351ms
+ ✓ packages/tools/src/orchestrator.test.ts (32 tests) 182ms
+ ✓ packages/tools/src/process/sandbox-executor.test.ts (33 tests) 137ms
+ ✓ packages/tools/src/process/utf8-output.regressions.test.ts (34 tests) 89ms
+ ✓ packages/security/src/sandbox.test.ts (52 tests) 21ms
+ ✓ packages/tools/src/process/windows-fixture-guard.test.ts (15 tests) 20ms
+ ✓ packages/harness/src/security-regression-matrix.test.ts (12 tests) 15ms
+ ✓ packages/tools/src/tool-dispatch-budget.test.ts (6 tests) 13ms
+ ✓ packages/tools/src/process/r96-windows-execution-boundary.test.ts (25 tests | 3 skipped) 14ms
+ ✓ packages/security/src/process-gate.test.ts (33 tests) 11ms
+ ✓ packages/security/src/secret-gate.test.ts (16 tests) 7ms
+ ✓ packages/security/src/injection-gate.test.ts (13 tests) 10ms
+ ✓ packages/security/src/permission.test.ts (11 tests) 5ms
+
+ Test Files  14 passed (14)
+      Tests  315 passed | 10 skipped (325)
+   Start at  15:54:51
+   Duration  6.59s (transform 1.13s, setup 0ms, import 2.00s, tests 2.45s, environment 1ms)
+

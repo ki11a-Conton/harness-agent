@@ -1,0 +1,222 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-baseline
+
+ ❯ packages/core/src/runtime/memory-prefetch.regressions.test.ts (10 tests | 10 failed) 33ms
+     × settles cancel without waiting for an abort-oblivious callback 13ms
+     × settles deadline without waiting for an abort-oblivious callback 4ms
+     × does not invoke retrieval or a model for an already aborted turn 2ms
+     × counts successful retrieval time in the original duration budget 1ms
+     × fences a late resolution and bounds in-flight callbacks across subsequent turns and workspaces 1ms
+     × uses an optional retrieval timeout as an explicit degraded outcome 1ms
+     × persists a failed terminal turn for an immediate provider rejection 2ms
+     × observes late rejections after cancellation and never injects their data 1ms
+     × passes cancellation/deadline to fast retrieval and preserves returned memory references 4ms
+     × gives cancellation priority over a same-boundary resolved promise 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/memory-prefetch.regressions.test.ts > R6: optional read-only memory prefetch obeys the turn lifecycle > settles cancel without waiting for an abort-oblivious callback
+AssertionError: expected undefined to be 'cancelled' // Object.is equality
+
+- Expected:
+"cancelled"
+
++ Received:
+undefined
+
+ ❯ packages/core/src/runtime/memory-prefetch.regressions.test.ts:69:30
+     67|     await flush();
+     68|     try {
+     69|       expect(result?.status).toBe(mode === "cancel" ? "cancelled" : "f…
+       |                              ^
+     70|       expect(result?.terminationReason).toBe(mode === "cancel" ? "canc…
+     71|       expect(env.generate).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  packages/core/src/runtime/memory-prefetch.regressions.test.ts > R6: optional read-only memory prefetch obeys the turn lifecycle > settles deadline without waiting for an abort-oblivious callback
+AssertionError: expected undefined to be 'failed' // Object.is equality
+
+- Expected:
+"failed"
+
++ Received:
+undefined
+
+ ❯ packages/core/src/runtime/memory-prefetch.regressions.test.ts:69:30
+     67|     await flush();
+     68|     try {
+     69|       expect(result?.status).toBe(mode === "cancel" ? "cancelled" : "f…
+       |                              ^
+     70|       expect(result?.terminationReason).toBe(mode === "cancel" ? "canc…
+     71|       expect(env.generate).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  packages/core/src/runtime/memory-prefetch.regressions.test.ts > R6: optional read-only memory prefetch obeys the turn lifecycle > does not invoke retrieval or a model for an already aborted turn
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      Object {
+        "cwd": "/offline",
+        "goal": "task",
+        "sessionId": "session_e7d63c1d-6106-4def-bb5a-b1c0d936ab81",
+        "turnId": "turn_7c152347-3210-4b40-a995-0bf207f5d71c",
+      },
+    ]
+
+
+Number of calls: 1
+
+ ❯ packages/core/src/runtime/memory-prefetch.regressions.test.ts:86:24
+     84|     const abort = new AbortController(); abort.abort();
+     85|     expect((await env.runtime.runTurn(session.id, turn.id, abort.signa…
+     86|     expect(called).not.toHaveBeenCalled();
+       |                        ^
+     87|     expect(env.generate).not.toHaveBeenCalled();
+     88|     expect(env.events.events.some((event) => event.type === "memory.re…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  packages/core/src/runtime/memory-prefetch.regressions.test.ts > R6: optional read-only memory prefetch obeys the turn lifecycle > counts successful retrieval time in the original duration budget
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array []
+
+
+Number of calls: 1
+
+ ❯ packages/core/src/runtime/memory-prefetch.regressions.test.ts:97:30
+     95|     expect(outcome.status).toBe("failed");
+     96|     expect(outcome.terminationReason).toBe("time_limit");
+     97|     expect(env.generate).not.toHaveBeenCalled();
+       |                              ^
+     98|     expect(env.events.events.some((event) => event.type === "memory.re…
+     99|     expect(outcome.state?.memoryRefs).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  packages/core/src/runtime/memory-prefetch.regressions.test.ts > R6: optional read-only memory prefetch obeys the turn lifecycle > fences a late resolution and bounds in-flight callbacks across subsequent turns and workspaces
+AssertionError: expected undefined to be 'cancelled' // Object.is equality
+
+- Expected:
+"cancelled"
+
++ Received:
+undefined
+
+ ❯ packages/core/src/runtime/memory-prefetch.regressions.test.ts:112:29
+    110|     await flush(); abort.abort(); await flush();
+    111|     try {
+    112|       expect(first?.status).toBe("cancelled");
+       |                             ^
+    113|       // SESSION_BUSY must have been released, but the external callba…
+    114|       // remains reserved until the real promise settles.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  packages/core/src/runtime/memory-prefetch.regressions.test.ts > R6: optional read-only memory prefetch obeys the turn lifecycle > uses an optional retrieval timeout as an explicit degraded outcome
+AssertionError: expected undefined to be 'completed' // Object.is equality
+
+- Expected:
+"completed"
+
++ Received:
+undefined
+
+ ❯ packages/core/src/runtime/memory-prefetch.regressions.test.ts:140:30
+    138|     await flush(); env.timer.advance(3); await flush();
+    139|     try {
+    140|       expect(result?.status).toBe("completed");
+       |                              ^
+    141|       expect(env.generate).toHaveBeenCalledTimes(1);
+    142|       expect(env.events.events.some((event) => event.type === "runtime…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  packages/core/src/runtime/memory-prefetch.regressions.test.ts > R6: optional read-only memory prefetch obeys the turn lifecycle > persists a failed terminal turn for an immediate provider rejection
+Error: private provider details
+ ❯ AgentRuntime.memoryBlocks packages/core/src/runtime/memory-prefetch.regressions.test.ts:150:43
+    148|
+    149|   it("persists a failed terminal turn for an immediate provider reject…
+    150|     const env = setup(async () => { throw new Error("private provider …
+       |                                           ^
+    151|     const { session, turn } = await env.start();
+    152|     const outcome = await env.runtime.runTurn(session.id, turn.id, new…
+ ❯ AgentRuntime.runTurnCore packages/core/src/runtime/runtime.ts:870:39
+ ❯ AgentRuntime.runTurn packages/core/src/runtime/runtime.ts:824:23
+ ❯ packages/core/src/runtime/memory-prefetch.regressions.test.ts:152:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+ FAIL  packages/core/src/runtime/memory-prefetch.regressions.test.ts > R6: optional read-only memory prefetch obeys the turn lifecycle > observes late rejections after cancellation and never injects their data
+Error: late rejection
+ ❯ packages/core/src/runtime/memory-prefetch.regressions.test.ts:171:29
+    169|     await flush(); abort.abort(); await flush();
+    170|     try { expect(result?.status).toBe("cancelled"); }
+    171|     finally { source.reject(new Error("late rejection")); await run; a…
+       |                             ^
+    172|     expect(env.events.events.some((event) => event.type === "memory.re…
+    173|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+ FAIL  packages/core/src/runtime/memory-prefetch.regressions.test.ts > R6: optional read-only memory prefetch obeys the turn lifecycle > passes cancellation/deadline to fast retrieval and preserves returned memory references
+AssertionError: expected { …(4) } to match object { …(4) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "cwd": "/offline",
+-   "deadline": 51,
+    "sessionId": "session_cb56a995-ac8f-4910-89cf-a78e2a987c0b",
+    "turnId": "turn_0d57ba23-3bee-4409-bd25-f9c150052241",
+  }
+
+ ❯ packages/core/src/runtime/memory-prefetch.regressions.test.ts:183:39
+    181|     expect(outcome.state?.memoryRefs).toEqual(["late"]);
+    182|     expect(env.events.events.filter((event) => event.type === "memory.…
+    183|     expect(called.mock.calls[0]?.[0]).toMatchObject({ sessionId: sessi…
+       |                                       ^
+    184|     expect(called.mock.calls[0]?.[0]?.signal).toBeInstanceOf(AbortSign…
+    185|     expect(env.timer.pendingCount()).toBe(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯
+
+ FAIL  packages/core/src/runtime/memory-prefetch.regressions.test.ts > R6: optional read-only memory prefetch obeys the turn lifecycle > gives cancellation priority over a same-boundary resolved promise
+AssertionError: expected [ 'late' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "late",
++ ]
+
+ ❯ packages/core/src/runtime/memory-prefetch.regressions.test.ts:197:39
+    195|     const outcome = await run;
+    196|     expect(outcome.status).toBe("cancelled");
+    197|     expect(outcome.state?.memoryRefs).toEqual([]);
+       |                                       ^
+    198|     expect(env.generate).not.toHaveBeenCalled();
+    199|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  10 failed (10)
+   Start at  22:02:56
+   Duration  925ms (transform 586ms, setup 0ms, import 738ms, tests 33ms, environment 0ms)
+

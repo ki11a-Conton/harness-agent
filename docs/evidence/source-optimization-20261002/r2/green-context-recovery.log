@@ -1,0 +1,19 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+ ✓ packages/core/src/runtime/runtime.test.ts (83 tests) 159ms
+ ✓ packages/core/src/runtime/fault-injection-v2.test.ts (17 tests) 46ms
+ ✓ packages/core/src/runtime/active-user-context.test.ts (16 tests) 63ms
+ ✓ packages/core/src/runtime/loop-integration.test.ts (26 tests) 47ms
+ ✓ packages/core/src/runtime/resume.test.ts (13 tests) 23ms
+ ✓ packages/core/src/runtime/crash-matrix.test.ts (8 tests) 27ms
+ ✓ packages/contracts/src/message-protocol.wire.test.ts (26 tests) 11ms
+ ✓ packages/core/src/runtime/crash-sideeffect.test.ts (5 tests) 27ms
+ ✓ packages/core/src/runtime/checkpoint.test.ts (6 tests) 27ms
+ ✓ packages/core/src/runtime/message-history-regressions.test.ts (24 tests) 44ms
+
+ Test Files  10 passed (10)
+      Tests  224 passed (224)
+   Start at  15:55:09
+   Duration  3.02s (transform 584ms, setup 0ms, import 1.46s, tests 475ms, environment 1ms)
+

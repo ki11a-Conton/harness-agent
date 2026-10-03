@@ -1,0 +1,35 @@
+cwd=/workspace/harness-agent-source-optimization
+started_utc=2026-10-02T22:02:21.326007+00:00
+platform=Linux-6.18.44-x86_64-with-glibc2.41
+command=pnpm exec vitest run packages/core/src/runtime/memory-prefetch.regressions.test.ts packages/harness/src/memory-prefetch-production.regressions.test.ts packages/harness/src/memory-runtime-bridge.test.ts
+
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+[degraded] scope-resolver.git: Command failed: git rev-parse --show-toplevel
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ ✓ packages/harness/src/memory-prefetch-production.regressions.test.ts (4 tests) 139ms
+ ✓ packages/harness/src/memory-runtime-bridge.test.ts (7 tests) 44ms
+ ✓ packages/core/src/runtime/memory-prefetch.regressions.test.ts (15 tests) 23ms
+
+ Test Files  3 passed (3)
+      Tests  26 passed (26)
+   Start at  22:02:22
+   Duration  3.73s (transform 2.27s, setup 0ms, import 3.11s, tests 206ms, environment 0ms)
+
+
+exit_code=0

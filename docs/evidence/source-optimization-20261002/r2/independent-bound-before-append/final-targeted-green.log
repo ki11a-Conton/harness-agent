@@ -1,0 +1,75 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+[degraded] session session_6215013e-d9d8-4162-9f39-5f40d7d0f02f failed to persist recovery record for turn_420bab70-8e4d-498d-b76b-273662eea554: store down
+[degraded] session session_6215013e-d9d8-4162-9f39-5f40d7d0f02f recovery lease failed for turn_420bab70-8e4d-498d-b76b-273662eea554: store down
+[degraded] session session_f663bccf-416c-42ed-8231-80b6b533d5c1 recovery lease failed for turn_6ef08973-6c5e-487b-8bdf-9005c1e83540: recovery CAS conflict for turn_6ef08973-6c5e-487b-8bdf-9005c1e83540: expected version 1, stored 2
+[degraded] session session_e5e3dd5d-e845-4e65-b761-c497530c34c9 terminal recovery ACK failed for turn_e3d369c6-5eb7-4dd8-8ca7-9f87fca48435: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_aae66b0c-3210-497d-81be-950db3a134f3 terminal recovery ACK failed for turn_e53c117d-04b9-4439-85e9-4b4215466d00: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_657d8f78-32ea-4b97-b76a-058167a18ae6 terminal recovery ACK failed for turn_6238688a-9567-4db7-b13b-350139ff7d7e: review terminal ACK failure — entering pending-commit (reconcile), queue frozen
+[degraded] session session_47bfe4b5-62d5-4b39-877c-ecbb8548b58b terminal recovery ACK failed for turn_e78df4ff-f513-49fc-b90a-71c2f1ff9529: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_47bfe4b5-62d5-4b39-877c-ecbb8548b58b failed to persist recovery record for turn_e78df4ff-f513-49fc-b90a-71c2f1ff9529: compound terminal/marker write outage
+[degraded] session session_da749a27-529d-4028-9f3e-b0c24b99f44d terminal recovery ACK failed for turn_53a5c76f-5fe9-4b1a-82ba-666947803eec: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_da749a27-529d-4028-9f3e-b0c24b99f44d failed to persist recovery record for turn_53a5c76f-5fe9-4b1a-82ba-666947803eec: compound terminal/marker write outage
+[degraded] session session_46c2a603-ff07-4805-8e5d-cb054174fcf6 terminal recovery ACK failed for turn_b9302727-ef3d-46c2-be4a-67cf2f59edb6: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_46c2a603-ff07-4805-8e5d-cb054174fcf6 failed to persist recovery record for turn_b9302727-ef3d-46c2-be4a-67cf2f59edb6: compound terminal/marker write outage
+[degraded] session session_1dd48d5c-aed3-4cb3-9572-e01ea9975a57 failed to persist recovery record for turn_3e43f188-64b1-4ae7-9fad-f5fbf45947f6: whole recovery store write outage
+[degraded] session session_1dd48d5c-aed3-4cb3-9572-e01ea9975a57 recovery lease failed for turn_3e43f188-64b1-4ae7-9fad-f5fbf45947f6: whole recovery store write outage
+[degraded] session session_6fe02f82-0e95-4d18-92c3-cc866dde5d46 recovery lease failed for turn_82f588d5-88a1-4899-9ebe-f01ccbe5f273: recovery store temporarily refuses the lease write
+[degraded] session session_23011a8c-122a-444f-8169-21e9ef13bce0 recovery lease failed for turn_14e1693a-6020-4d63-8af6-f977dac49502: recovery store temporarily refuses the lease write
+[degraded] session session_f6144f8f-b1ce-4c28-9d62-9572d04f49c5 recovery attempt-intent persist failed for turn_cd527f7b-ee47-4d58-985c-89fbf81a3eec — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_3a569de9-668c-438e-ac2d-2cfa274f01d1 recovery lease failed for turn_20a32c29-5bec-49d6-8b53-bd221f1054ff: recovery CAS conflict for turn_20a32c29-5bec-49d6-8b53-bd221f1054ff: expected version 0, stored 1
+[degraded] session session_a02a0606-5a8c-4fa3-9a10-efb18b30872e recovery lease failed for turn_148e35f5-aacd-4f0e-b1ec-a797825f6f90: recovery store temporarily refuses the lease write
+[degraded] session session_05afdaa0-956b-49ca-a9c0-2b3917d0e9f7 recovery lease failed for turn_75e36df6-bf63-4b20-954e-79928437ea83: recovery store temporarily refuses the lease write
+[degraded] session session_05afdaa0-956b-49ca-a9c0-2b3917d0e9f7 recovery lease failed for turn_75e36df6-bf63-4b20-954e-79928437ea83: recovery store temporarily refuses the lease write
+[degraded] session session_05afdaa0-956b-49ca-a9c0-2b3917d0e9f7 recovery lease failed for turn_75e36df6-bf63-4b20-954e-79928437ea83: recovery store temporarily refuses the lease write
+[degraded] session session_05afdaa0-956b-49ca-a9c0-2b3917d0e9f7 recovery lease failed for turn_75e36df6-bf63-4b20-954e-79928437ea83: recovery store temporarily refuses the lease write
+[degraded] session session_05afdaa0-956b-49ca-a9c0-2b3917d0e9f7 recovery lease failed for turn_75e36df6-bf63-4b20-954e-79928437ea83: recovery store temporarily refuses the lease write
+[degraded] session session_05afdaa0-956b-49ca-a9c0-2b3917d0e9f7 recovery lease failed for turn_75e36df6-bf63-4b20-954e-79928437ea83: recovery store temporarily refuses the lease write
+[degraded] session session_9aae62a5-6138-4743-a75b-c1f6d09d92ef recovery attempt-intent persist failed for turn_9a7062d3-0880-4b5e-9cb5-50ea0adb2a25 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_9aae62a5-6138-4743-a75b-c1f6d09d92ef release lease read failed for turn_9a7062d3-0880-4b5e-9cb5-50ea0adb2a25: recovery read outage
+[degraded] session session_7467c765-6a7a-4a87-8af9-e7201600c3be recovery attempt-intent persist failed for turn_2e1ee69d-ec03-4dda-a965-c37b3fd46c67 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_7467c765-6a7a-4a87-8af9-e7201600c3be recovery attempt-intent persist failed for turn_2e1ee69d-ec03-4dda-a965-c37b3fd46c67 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_7467c765-6a7a-4a87-8af9-e7201600c3be recovery attempt-intent persist failed for turn_2e1ee69d-ec03-4dda-a965-c37b3fd46c67 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_7467c765-6a7a-4a87-8af9-e7201600c3be recovery attempt-intent persist failed for turn_2e1ee69d-ec03-4dda-a965-c37b3fd46c67 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_7467c765-6a7a-4a87-8af9-e7201600c3be recovery attempt-intent persist failed for turn_2e1ee69d-ec03-4dda-a965-c37b3fd46c67 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_7467c765-6a7a-4a87-8af9-e7201600c3be recovery attempt-intent persist failed for turn_2e1ee69d-ec03-4dda-a965-c37b3fd46c67 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_7467c765-6a7a-4a87-8af9-e7201600c3be recovery attempt-intent persist failed for turn_2e1ee69d-ec03-4dda-a965-c37b3fd46c67 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_6e1317b6-f275-4651-a123-a4c23f4714f8 recovery attempt-intent persist failed for turn_075d5a7c-3968-4d6a-9a06-5bdbd530e763 — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_6e1317b6-f275-4651-a123-a4c23f4714f8 release lease read failed for turn_075d5a7c-3968-4d6a-9a06-5bdbd530e763: recovery read outage
+[degraded] session session_6e1317b6-f275-4651-a123-a4c23f4714f8 recovery record load failed for turn_075d5a7c-3968-4d6a-9a06-5bdbd530e763: recovery read outage
+[degraded] session session_4e89565b-4b4d-45fc-b503-e73466bec13f recovery attempt-intent persist failed for turn_aef7e375-7c70-4376-99ba-ea35805d6b7f — NOT running the action: recovery store temporarily refuses the intent write
+[degraded] session session_4e89565b-4b4d-45fc-b503-e73466bec13f release lease read failed for turn_aef7e375-7c70-4376-99ba-ea35805d6b7f: recovery read outage
+[degraded] session session_335e6d31-f2ec-4484-b9ff-2356aab211fc recovery discovery: durable read failed — session store temporarily unavailable
+[degraded] session session_4159ead1-d2da-4eb9-af5c-fbe89e76295d recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_4159ead1-d2da-4eb9-af5c-fbe89e76295d recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_4159ead1-d2da-4eb9-af5c-fbe89e76295d recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_4159ead1-d2da-4eb9-af5c-fbe89e76295d recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_4159ead1-d2da-4eb9-af5c-fbe89e76295d recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_4159ead1-d2da-4eb9-af5c-fbe89e76295d recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_4159ead1-d2da-4eb9-af5c-fbe89e76295d recovery discovery: inbox listing failed — inbox listRecoverable outage
+[degraded] session session_195832dd-e2dc-450b-9346-761b5b0d73a7 recovery discovery: durable read failed — session store unavailable for turn turn_ff347863-52d2-4933-8c83-f258c40f1f1d
+[degraded] session session_da637d52-8d15-4c7a-a556-0b68ad7d8e9a recovery discovery: durable read failed — session store temporarily unavailable
+[degraded] session session_45e08bee-75c6-4d28-aab2-5b7576dbf4b2 terminal recovery ACK failed for turn_0429e18c-45c3-4b40-bd0e-f3fb85b541c6: compound terminal/marker write outage — entering pending-commit (reconcile), queue frozen
+[degraded] session session_45e08bee-75c6-4d28-aab2-5b7576dbf4b2 failed to persist recovery record for turn_0429e18c-45c3-4b40-bd0e-f3fb85b541c6: compound terminal/marker write outage
+[degraded] session session_45e08bee-75c6-4d28-aab2-5b7576dbf4b2 recovery discovery: durable read failed — recovery store lookup outage
+[degraded] session session_237323c7-5338-4668-9596-1c67a1d1bbb1 recovery discovery: durable read failed — session store temporarily unavailable
+ ✓ packages/core/src/runtime/recovery-durable.test.ts (29 tests) 90ms
+ ✓ packages/core/src/runtime/active-user-context.test.ts (22 tests) 73ms
+ ✓ packages/core/src/runtime/wire-protocol-e2e.test.ts (8 tests) 93ms
+ ✓ packages/core/src/runtime/followup-recovery.test.ts (7 tests) 24ms
+[degraded] session session_6b686633-d7f4-428b-b094-d386a9a57713 durable followup consume failed for fup-1 (prompt remains bound to turn turn_595cc848-edce-410c-b02e-0509954d8872): injected consume failure
+[degraded] session session_0d9cee75-319b-42a2-ab22-bcbb5732b3df durable followup bind failed for fup-1 (created turn turn_3846a42d-a973-41df-8c9b-b9a2f6951f9f will not execute): injected bind failure
+ ✓ packages/core/src/runtime/followup-crash-matrix.test.ts (9 tests) 16ms
+[degraded] sqlite-store.close-journal-mode: database is locked
+[degraded] migrate.append: duplicate event id: event_6b42569f-ba58-4c55-bfbe-b3677bd5f08c
+[degraded] migrate.append: duplicate event id: event_d345df09-13f7-4f1e-984f-e1b968b7b5e2
+ ✓ packages/store/src/sqlite-runtime-store.test.ts (15 tests) 91ms
+ ✓ packages/core/src/runtime/resume.test.ts (13 tests) 22ms
+ ✓ packages/core/src/runtime/turn-helpers.protocol.test.ts (5 tests) 5ms
+
+ Test Files  8 passed (8)
+      Tests  108 passed (108)
+   Start at  04:15:12
+   Duration  2.80s (transform 746ms, setup 0ms, import 1.47s, tests 414ms, environment 1ms)
+

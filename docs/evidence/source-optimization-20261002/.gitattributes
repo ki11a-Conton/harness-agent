@@ -1,0 +1,3 @@
+# Preserve copied raw log bytes on Windows as well as Linux.
+# Vitest's intentional final blank lines are part of those fingerprinted bytes.
+*.log -text whitespace=cr-at-eol,-blank-at-eof

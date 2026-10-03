@@ -1,12 +1,13 @@
 # Harness Agent：开源 Coding Agent 源码驱动的优化计划
 
-日期：2026-10-02。状态：**源码分析与基线验证已完成；下列生产实现尚未开始。**
+日期：2026-10-02；最后更新：2026-10-03。状态：**集成验收中。S1/S2 已完成独立离线配对与工程验收，默认关闭；独立复查新增的 R2 崩溃恢复窗口已修复（110 项相关回归通过，含并发恢复去重），R3 最终 85 项安全回归与 12 个实际 Controller 探针通过，独立复审关闭。全量与 Windows 验收尚未完成。**
 
 本计划先分析用户提供的 Codex、OpenCode、Pi、Hermes、Claude Code fork 档案，再对照当前 Harness 代码制定。目标是让智能体正确处理模型中断、持续遵守用户约束、控制工具数据边界和安全修改代码；保留已有架构，随后用单变量评测验证策略收益。
 
 ## 1. 基线、证据与本轮交付
 
 - 当前实现基线：`acf8dcc394de6c6efefed52602e49014b372f372`。合集已克隆到 `/workspace/HARNESS-SRC-FORK`，固定提交 `1a46ea13de9a3f5e6987c5dd0319b2000fe49c92`。
+- RED 工作树固定在研究提交 `6f03bb25ffab0791e292bd888899f925c3d4320a`，与上述实现基线的生产代码相同。候选在独立工作树 `harness-agent-source-optimization` 实施。
 - 上一份已完成的长会话计划原样归档为 `plan(20261002-message-history).md`；先前安全、工作区知识、上下文压缩、消息完整计量和线性裁剪交付均保留。
 - [源码汇总与取舍](docs/research/source-agent-review-20261002.md)；[六份独立对照记录](docs/research/source-agent-review-20261002/README.md)；[来源/指纹/实际反例 JSON](docs/evidence/source-agent-review-20261002.json)；[复现入口](scripts/research/README.md)。每条改进能追溯到上游机制、当前代码、触发场景和验收反例。
 - 合集包含的是各项目快照，不等于已核实的 upstream commit。OpenCode 源码为 1.18.16，旧报告的 1.18.18 不作为证据。Claude 档案无开源许可证、构建配置和测试，只作为静态概念参照，独立实现本项目需求。
@@ -146,7 +147,7 @@ R1–R6 有当前代码确定性反例，允许针对缺陷作局部维护，不
 | B：R4/R5/R6 | 修编辑与准备阶段可靠性 | 在A结果基础上分别实施；先版本/lock/cache/deadline合同 | 零丢更新、格式不漂移、刷新生效、取消/期限可结束；平台证据真实 |
 | C：S1，随后S2 | 验证策略价值 | 失败聚类→单变量experimental候选→既有paired平台 | 真实安装/身份/内容和安全接线；模型收益另列实测，未跑则NOT_RUN |
 
-实现时先创建基线与候选隔离工作树，更新对应tasks与证据；按包分别提交，不修改无关模块。每项证据记录实现SHA、source/schema/prompt/config digest、环境、命令、原始输出、实际通过/失败/跳过；不能借用旧全量验收或旧Windows attestation。
+实现时先创建基线与候选隔离工作树，更新对应tasks与证据；R1/R3b/R4 分别提交；R2/R3a/R5/R6 共用 Core/Harness 接缝，合并为可构建的集成提交并分别记录反例与验收，S1/S2 策略另行提交。不修改无关模块。每项证据记录实现SHA、source/schema/prompt/config digest、环境、命令、原始输出、实际通过/失败/跳过；不能借用旧全量验收或旧Windows attestation。
 
 定向验收按本包新增测试及已有同目录unit/integration执行；R1/R2必须覆盖真实Runtime/wire边界，R3/R4必须覆盖Orchestrator与相关security，R5/R6必须覆盖生产组合与恢复/取消。每阶段生产实现冻结后执行：
 
@@ -168,11 +169,27 @@ git diff --check
 - [x] 分析五个agent家族核心源码/相关测试，核对当前Harness与合集旧快照。
 - [x] 运行基线反例、当前119项能力回归，重建后重跑六组探针。
 - [x] 保存源码指纹、复现脚本、分阶段取舍和本计划；归档上一份完成计划。
-- [ ] R1：模型终止语义与未执行调用结算。
-- [ ] R2：当前turn用户约束保护。
-- [ ] R3a/R3b：统一输出安全边界与UTF-8预算/解码。
-- [ ] R4：协作编辑/读版本/EOL完整性。
-- [ ] R5：技能revision与刷新。
-- [ ] R6：只读prefetch取消/期限。
-- [ ] S1/S2：分开注册、评估并报告策略候选。
+- [x] R1：模型终止语义与未执行调用结算（定向 RED/GREEN）。
+- [x] R2：当前turn用户约束保护，真实 checkpoint → 新 turn 及 bound → append/consume 崩溃窗口通过；原 promotedTurnId 保持。
+- [x] R3a/R3b：UTF-8预算/解码与统一输出安全边界分别验收；新增原位 JSON/Artifact 独立反例已 GREEN 并关闭复审。
+- [x] R4：协作编辑/读版本/EOL完整性（含硬链接与 inode 替换后的等锁调用）。
+- [x] R5：技能revision与刷新（实际正文进入 step 身份）。
+- [x] R6：只读prefetch取消/期限（含真实 Harness 反馈写入隔离）。
+- [x] S1/S2：分开注册并完成实际配置/请求/身份/activation、独立内容检查与离线 AB/BA 配对。真实模型收益和 promotion 仍 NOT_RUN，默认关闭。
 - [ ] 各实现阶段的冻结快照全量、安全与对应平台验收。
+
+## 8. 实施中的契约细化
+
+- R1 默认要求显式 `stop` 或 `tool_calls`。仅有 DONE 的文本响应也返回 protocol error；局部文本与工具意图保留供审计。没有默认文本兼容开关。
+- R3 进程 stdout/stderr 的捕获主体分别受 byte cap 限制；流继续 drain。Orchestrator 字符串截断标记为额外开销，结构化结果保持原结构。Context 的 `maxInlineBytes` 是 artifact 落盘阈值，头尾预览各最多 2000 UTF-8 bytes，引用元数据另计。
+- R4 新接口均 opt-in：`read_file({path, versioned:true})` 返回原始文件 bytes 的 SHA-256；`edit_file` / `write_file` 可传 `expectedSha256`，失配零写且不自动重试。`edit_file` 的 `profile:'strict'` 对行区间及重复锚点要求版本，默认仍兼容旧 API。进程内锁包括规范路径和可用的文件 dev/ino；不承诺跨进程原子 CAS。
+- R5 普通 `load` 自动采用新版本；当前 step 的 `loadSnapshot` 拒绝已经过期的记录，下一 step 重新发现。技能正文、安全拒绝及预算丢弃均反映在实际 step 的 bodyHash 中。
+- R6 停止等待的回调必须只读。实际 Harness 的检索使用 `recordFeedback:false`；被当前 turn 接纳后才经 `onMemoryRetrieved` 更新反馈，反馈写入完整 await 后才能结束 turn 和执行 durability fence。迟到检索不写反馈、不污染下一 turn。
+- S1 原有失败工具视图仍可能只含摘要，因此实验指南明确要求通过有界 capture wrapper 获取原命令的真实 exit/stdout/stderr。wrapper 自身成功仅说明取得诊断；原命令和独立 verifier 决定验收。
+- S1/S2 保持独立 experimental 候选。离线模型替身只验证安装、身份、内容与安全合同，不作为真实模型收益或默认启用证据。
+
+R3a 补充：真实安全 hooks 的 JSON 转义换行/tab 与嵌套 capture 反例，及 provider 工具调用 ID 越过 artifact 根目录的反例，已分别保留 RED/GREEN。模型文本和解码后的 JSON 字符串均检查；深度超限或安全 hook 失败时拒绝输出。Artifact 文件名只使用身份摘要，原始关联 ID 保留在登记元数据中。
+
+最终复查补充：R3 对原始 JSON 字符串 token 做扫描和原位替换，保留重复字段、格式以及大整数/`-0`/`1e309` 原文；解码后的字段名和值共同接受 credential policy。无法安全映射的 host 脱敏结果拒绝输出。Artifact 使用摘要文件名与 `wx`/`0600` 排他创建，不跟随预置最终文件 symlink；host 配置根目录不是跨进程目录替换保证。R2 恢复必须在原 turn lineage 内收敛已绑定但尚未写入的 steer，再构造新 turn 的原始 user 输入，不能重绑持久身份。
+
+R2 并发补充：同 Runtime/session 内将 steer append/consume 串行化，排队后重读 durable history；竞争恢复只有一份原 promptId 消息，其他 session 不阻塞。该局部保证不扩大成跨进程 CAS。

@@ -1,0 +1,28 @@
+{
+  "cwd": "/workspace/harness-agent-source-optimization",
+  "head": "9ff841a8f26646d867418c4298b017ea063c3fbe",
+  "command": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts",
+    "packages/core/src/runtime/structured-output-security.regressions.test.ts",
+    "packages/core/src/runtime/tool-output-boundary.regressions.test.ts",
+    "packages/core/src/runtime/tool-output-artifact-path.regressions.test.ts"
+  ],
+  "startedAt": "2026-10-03T04:13:50Z",
+  "fixtureSha256": "5948c313841c00dc955a4da4d2a7a822fe7d6774bfd7548e34100f4348f1d405",
+  "sourceBefore": {
+    "packages/core/src/runtime/context-controller.ts": "2ac73dda628c734eae85f11914a0c8e6b5e55bac8d9228626d2952f66c77c61d",
+    "packages/core/src/runtime/tool-output-security.ts": "5a43dbda5684180c7b0aa11f19082c76a7662cfe96612b640b3d7a29b76d7b7e"
+  },
+  "exitCode": 0,
+  "sourceAfter": {
+    "packages/core/src/runtime/context-controller.ts": "2ac73dda628c734eae85f11914a0c8e6b5e55bac8d9228626d2952f66c77c61d",
+    "packages/core/src/runtime/tool-output-security.ts": "5a43dbda5684180c7b0aa11f19082c76a7662cfe96612b640b3d7a29b76d7b7e"
+  },
+  "trackedDiffAfter": "candidate tracked changes recorded by main integration",
+  "finishedAt": "2026-10-03T04:13:53Z"
+}

@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-03T04:16:53.384272+00:00",
+  "scope": "R2 bound-before-append fresh-turn recovery; read-only R5/R6 review",
+  "baseline": {
+    "commit": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+    "productionUnchanged": true
+  },
+  "candidate": {
+    "commit": "9ff841a8f26646d867418c4298b017ea063c3fbe",
+    "workingTree": "uncommitted integration; full frozen verification owned by root"
+  },
+  "fixture": {
+    "path": "packages/core/src/runtime/active-user-context.test.ts",
+    "candidateSha256": "788896831c87034bbace526ba84ab6919b3d96139aa0425d2ec2ea97d7f909b6",
+    "baselineSha256": "788896831c87034bbace526ba84ab6919b3d96139aa0425d2ec2ea97d7f909b6",
+    "redAndGreenFixtureIdentical": true
+  },
+  "results": [
+    {
+      "log": "candidate-red.log",
+      "exit": 1,
+      "tests": 1,
+      "failed": 1,
+      "phase": "independent initial behavior probe"
+    },
+    {
+      "log": "baseline-red.log",
+      "exit": 1,
+      "tests": 1,
+      "failed": 1,
+      "phase": "unchanged production baseline behavior probe"
+    },
+    {
+      "log": "formal-candidate-red.log",
+      "exit": 1,
+      "testsExecuted": 5,
+      "failed": 3,
+      "passed": 2,
+      "filteredSkipped": 17,
+      "phase": "same formal regressions before R2 repair"
+    },
+    {
+      "log": "formal-baseline-red.log",
+      "exit": 1,
+      "testsExecuted": 5,
+      "failed": 4,
+      "passed": 1,
+      "filteredSkipped": 17,
+      "phase": "same formal regressions unchanged baseline"
+    },
+    {
+      "log": "final-targeted-green.log",
+      "exit": 0,
+      "files": 8,
+      "tests": 108,
+      "passed": 108,
+      "command": "corepack pnpm exec vitest run active-user-context resume recovery-durable followup-crash-matrix followup-recovery turn-helpers.protocol wire-protocol-e2e sqlite-runtime-store (explicit source paths)"
+    },
+    {
+      "log": "final-typecheck.log",
+      "exit": 0,
+      "command": "corepack pnpm exec tsc -b packages/core --pretty false"
+    },
+    {
+      "log": "r5-r6-green.log",
+      "exit": 0,
+      "files": 3,
+      "tests": 39,
+      "passed": 39,
+      "scope": "read-only review: skill-revision, Core memory-prefetch, actual Harness memory-prefetch"
+    }
+  ],
+  "observedSourceFingerprints": {
+    "packages/core/src/runtime/active-user-context.test.ts": "788896831c87034bbace526ba84ab6919b3d96139aa0425d2ec2ea97d7f909b6",
+    "packages/core/src/runtime/context-controller.ts": "c48ef9dd8ddea50bcfb9783d137b0fb139cc628bfeca4c24304728d54fb29d77",
+    "packages/core/src/runtime/runtime.ts": "2f3c6571b0bb3cf706c9541a0a40a52482bdc6d580ee867923c7acbb3331fbd7",
+    "packages/core/src/runtime/turn-helpers.ts": "cb671480dc102b409fb7dddcdefa418542bee755147bf39c568c17c6a41d7a1a",
+    "packages/skills/src/skill-loader.ts": "5905bb4ca7f8838a237a57788fd9c6b47bfc1923c82a65c80b8e5f9cbe9d5c5a",
+    "packages/harness/src/skill-context.ts": "3cbe2e45a7b6a3e5b3883ddd5d518107cec79dea2649ffa9ef118949ede103b6",
+    "packages/core/src/runtime/read-only-prefetch.ts": "153644ec5e480ef735e092df483e70770a7727823b90cf640da77a60aca2f657",
+    "packages/harness/src/memory-runtime-bridge.ts": "10adbd49707cf4070521a84b4581ea4864d4c23b1551e5ba10e3d578b6c16404",
+    "packages/harness/src/create-harness.ts": "5af9a8f7a5f82122df90f59e39a7d6cdb63134d12c40bc5ab386aad4476eafeb"
+  },
+  "logs": {
+    "final-targeted-green.log": "4910c145d2ac64e72de1858c6a1e41abd33c7c65e8c5bdd2d1b9d4888f130397",
+    "final-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "candidate-red.log": "90e3510bb9acbd951c0bcaaab265d3f693648e56dee984ae144b26fef4df77b8",
+    "r5-r6-green.log": "c11cb6d56f858963130abc3a5a736783645bd1bbabb9dd55fe3271d8eaf495b7",
+    "formal-candidate-red.log": "891f48b8f394b01d4a8ae9966b86bad1b85069c2e1c48eb0fc0a8c42bace86b0",
+    "baseline-red.log": "940d0bc5fb4c4a0eda0df1433415560ded0de74e52b47014a693ad7b342e6fd2",
+    "formal-baseline-red.log": "2b5f9443bf800a9b34236baa06f61d6fc7bbdf62841384c573a8cb0391fe0244"
+  },
+  "contracts": [
+    "original promotedTurnId never rewritten",
+    "checkpoint resume settles only promoted steer bound to checkpoint turn before assembling new user resume prompt",
+    "ordinary new task does not inherit a bound old steer",
+    "different bound lineage untouched",
+    "append/consume crash repeated recovery appends once",
+    "R5 file revision records/current-step body witness remain separate",
+    "R6 stopped read-only retrieval has no late feedback; admitted feedback writes fully awaited before terminal fence"
+  ],
+  "limitations": [
+    "same-process/file revision metadata invalidation is not atomic cross-process filesystem isolation",
+    "hosts must honor read-only retrieval callback contract",
+    "one unresolved external read-only prefetch slot per runtime degrades later memory retrieval until underlying settlement",
+    "offline scripted tests do not establish model quality or Windows acceptance"
+  ]
+}

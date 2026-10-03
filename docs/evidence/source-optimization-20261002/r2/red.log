@@ -1,0 +1,184 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-baseline
+
+ ❯ packages/core/src/runtime/active-user-context.test.ts (11 tests | 9 failed) 75ms
+     × preserves all six model requests, custom estimator=false 23ms
+     × preserves all six model requests, custom estimator=true 6ms
+     × keeps multiple independent steers in original order and raw user role 7ms
+     × preserves user anchors through the reactive 12-message tail, budget=undefined 6ms
+     × preserves user anchors through the reactive 12-message tail, budget=100000 8ms
+     × includes steering in automatic compaction digests, not only retained transcript 8ms
+     × fails observably before sending when active user facts alone cannot fit 1ms
+     ✓ does not replay an old turn's steering as a current task anchor 2ms
+     × rehydrates consumed steering from durable messages when resuming the same turn 4ms
+     × reconciles the append/consume crash window without duplicating the steering 6ms
+     ✓ keeps the existing unbounded normal history unchanged 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 active user context survives context reduction > preserves all six model requests, custom estimator=false
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 active user context survives context reduction > preserves all six model requests, custom estimator=true
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ expectActive packages/core/src/runtime/active-user-context.test.ts:68:75
+     66|   assertToolProtocol(request.messages);
+     67|   const users = visibleUsers(request);
+     68|   for (const text of texts) expect(users.filter(m => m.content === tex…
+       |                                                                           ^
+     69|   expect(texts.map(text => users.findIndex(m => m.content === text))).…
+     70| }
+ ❯ packages/core/src/runtime/active-user-context.test.ts:78:48
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 active user context survives context reduction > keeps multiple independent steers in original order and raw user role
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ expectActive packages/core/src/runtime/active-user-context.test.ts:68:75
+     66|   assertToolProtocol(request.messages);
+     67|   const users = visibleUsers(request);
+     68|   for (const text of texts) expect(users.filter(m => m.content === tex…
+       |                                                                           ^
+     69|   expect(texts.map(text => users.findIndex(m => m.content === text))).…
+     70| }
+ ❯ packages/core/src/runtime/active-user-context.test.ts:87:48
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 active user context survives context reduction > preserves user anchors through the reactive 12-message tail, budget=undefined
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 active user context survives context reduction > preserves user anchors through the reactive 12-message tail, budget=100000
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ expectActive packages/core/src/runtime/active-user-context.test.ts:68:75
+     66|   assertToolProtocol(request.messages);
+     67|   const users = visibleUsers(request);
+     68|   for (const text of texts) expect(users.filter(m => m.content === tex…
+       |                                                                           ^
+     69|   expect(texts.map(text => users.findIndex(m => m.content === text))).…
+     70| }
+ ❯ packages/core/src/runtime/active-user-context.test.ts:94:48
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 active user context survives context reduction > includes steering in automatic compaction digests, not only retained transcript
+AssertionError: expected '[message history trimmed — older mess…' to contain 'DO_NOT_TOUCH_CONFIG 中文🙂\nKeep the or…'
+
+- Expected
++ Received
+
+- DO_NOT_TOUCH_CONFIG 中文🙂
+- Keep the original bytes.
++ [message history trimmed — older messages folded into this summary; continue concisely — the full transcript is preserved on disk; retrieve details with read_file/search_files as needed]
++ ## User Goal / Exact User Requirements
++ CURRENT USER TASK: review and modify code
++ ## Hard Constraints
++ - (none)
++ ## Decisions
++ - (none)
++ ## Pending Tasks
++ - (none)
++ ## Completed Work
++ - (none)
++ ## Files Changed
++ - (none)
++ ## Commands / Tests Run
++ - (none)
++ ## Errors Encountered
++ - (none)
++ ## Important Facts
++ - (none)
++ ## Open Questions
++ - (none)
++ ## Memory / Skill / Child Agent Refs
++ - (none)
+
+ ❯ packages/core/src/runtime/active-user-context.test.ts:102:58
+    100|     const digests = (await f.store.listMessages(session.id)).filter(m …
+    101|     expect(digests.length).toBeGreaterThan(0);
+    102|     for (const digest of digests) expect(digest.content).toContain(STE…
+       |                                                          ^
+    103|     expect(f.events.events.filter(e => e.type === "context.protected_f…
+    104|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 active user context survives context reduction > fails observably before sending when active user facts alone cannot fit
+AssertionError: expected 'completed' to be 'failed' // Object.is equality
+
+Expected: "failed"
+Received: "completed"
+
+ ❯ packages/core/src/runtime/active-user-context.test.ts:109:28
+    107|     await f.inbox.steer(session.id, "PROTECTED_CONSTRAINT_".repeat(500…
+    108|     const outcome = await f.runtime.runTurn(session.id, turn.id, new A…
+    109|     expect(outcome.status).toBe("failed"); expect(outcome.error?.code)…
+       |                            ^
+    110|     expect(f.provider.requests).toHaveLength(0); expect(f.orchestrator…
+    111|     expect(f.events.events.some(e => e.type === "run.limit_reached" &&…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 active user context survives context reduction > rehydrates consumed steering from durable messages when resuming the same turn
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ expectActive packages/core/src/runtime/active-user-context.test.ts:68:75
+     66|   assertToolProtocol(request.messages);
+     67|   const users = visibleUsers(request);
+     68|   for (const text of texts) expect(users.filter(m => m.content === tex…
+       |                                                                           ^
+     69|   expect(texts.map(text => users.findIndex(m => m.content === text))).…
+     70| }
+ ❯ packages/core/src/runtime/active-user-context.test.ts:129:47
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 active user context survives context reduction > reconciles the append/consume crash window without duplicating the steering
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ expectActive packages/core/src/runtime/active-user-context.test.ts:68:75
+     66|   assertToolProtocol(request.messages);
+     67|   const users = visibleUsers(request);
+     68|   for (const text of texts) expect(users.filter(m => m.content === tex…
+       |                                                                           ^
+     69|   expect(texts.map(text => users.findIndex(m => m.content === text))).…
+     70| }
+ ❯ packages/core/src/runtime/active-user-context.test.ts:136:47
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  9 failed | 2 passed (11)
+   Start at  15:45:36
+   Duration  719ms (transform 406ms, setup 0ms, import 511ms, tests 75ms, environment 0ms)
+

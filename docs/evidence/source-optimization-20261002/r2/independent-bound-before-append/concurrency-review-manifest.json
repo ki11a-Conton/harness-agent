@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-03T04:25:13.351594+00:00",
+  "scope": "R2 same-runtime concurrent resume steering deduplication",
+  "preFixProductionCommit": "caaf566265a9d5a48fa93152347d768368d06345",
+  "preFixProductionSourceSha256": "c48ef9dd8ddea50bcfb9783d137b0fb139cc628bfeca4c24304728d54fb29d77",
+  "fixture": {
+    "path": "packages/core/src/runtime/active-user-context.test.ts",
+    "sourceSha256": "8a3c237d96309e4046ae53c41b4a130265f6a08d3af3ba5447c465a2897f1053",
+    "archivedPath": "concurrency-formal-fixture.ts",
+    "identicalRedGreenFixture": true,
+    "testsTotal": 24,
+    "concurrencyCounterexampleTests": 2
+  },
+  "results": [
+    {
+      "log": "concurrent-formal-red.log",
+      "exit": 1,
+      "failed": 1,
+      "passed": 1,
+      "filteredSkipped": 22,
+      "failure": "duplicate durable original-turn user messages carrying identical promptId, actual length 2"
+    },
+    {
+      "log": "concurrent-final-targeted-green.log",
+      "exit": 0,
+      "files": 8,
+      "tests": 110,
+      "passed": 110
+    },
+    {
+      "log": "concurrent-final-typecheck.log",
+      "exit": 0,
+      "command": "corepack pnpm exec tsc -b packages/core --pretty false"
+    }
+  ],
+  "finalObservedSources": {
+    "packages/core/src/runtime/active-user-context.test.ts": "8a3c237d96309e4046ae53c41b4a130265f6a08d3af3ba5447c465a2897f1053",
+    "packages/core/src/runtime/context-controller.ts": "8d55e59043215631aee4ca53529659133313423b582f326491bb1f9b4e236e44"
+  },
+  "logs": {
+    "concurrent-formal-red.log": "9165f3381b1e68cc8ac87ed77981d385dee1b83f7e73f29c965b0503a5507223",
+    "concurrent-final-targeted-green.log": "cab51935f344ef7ec178bd04e38fba44cb183be42f9d851731b9335ca1296606",
+    "concurrent-final-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "independentProbe": "../concurrent-resume-probe-current-{red,green}.{json,log,exit} (same independent test source; original-turn arrivals/messages/consume 2->1)",
+  "contracts": [
+    "serialize only original append/consume boundary by session within this ContextController",
+    "after contention reread durable history before deciding to append",
+    "gate resolved and released in finally even after failing predecessor",
+    "latest gate only removed by its owning call",
+    "different sessions are independent",
+    "noncontended path does not acquire another transcript read"
+  ],
+  "limitations": [
+    "does not claim atomic deduplication across multiple runtime instances/processes",
+    "existing runTurn SESSION_BUSY guard controls concurrent execution; resume turn creation behavior not expanded into this fix",
+    "frozen root fullsuite pending"
+  ]
+}

@@ -1,0 +1,138 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-baseline
+
+ ❯ apps/cli/src/path-scoped-instructions.test.ts (7 tests | 6 failed) 818ms
+     × registers one experimental arm and hashes the exact installed discovery policy 11ms
+     × changes real target context without sibling contamination and passes an independent content verifier 282ms
+     × does not use a denied traversal request as target evidence 22ms
+     × keeps a rejected instruction out of both the model request and witnessed instructionSources 16ms
+     ✓ records zero activation when no project document reaches the request 12ms
+     × executes the actual AB/BA paired engine twice with fixed inputs and independent content verification 444ms
+     × binds concurrent child sessions to their own durable request and scoped sources 31ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/cli/src/path-scoped-instructions.test.ts > S2 CLI path-scoped instruction challenger > registers one experimental arm and hashes the exact installed discovery policy
+AssertionError: expected undefined to be 'experimental' // Object.is equality
+
+- Expected:
+"experimental"
+
++ Received:
+undefined
+
+ ❯ apps/cli/src/path-scoped-instructions.test.ts:162:39
+    160|     const candidate = factory.resolveArm(candidateAvailable() ? ID : n…
+    161|     const expectedConfig = definitions.PATH_SCOPED_INSTRUCTIONS_CONFIG…
+    162|     expect(registry.find(ID)?.status).toBe("experimental");
+       |                                       ^
+    163|     expect(expectedConfig).toEqual({ strategy: ID, maxDocuments: 4, ma…
+    164|     expect(candidate.harnessConfig.instructionDiscovery).toEqual(expec…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  apps/cli/src/path-scoped-instructions.test.ts > S2 CLI path-scoped instruction challenger > changes real target context without sibling contamination and passes an independent content verifier
+AssertionError: expected 'failed' to be 'completed' // Object.is equality
+
+Expected: "completed"
+Received: "failed"
+
+ ❯ apps/cli/src/path-scoped-instructions.test.ts:183:44
+    181|     expect(baseline.outcome.actualStatus).toBe("failed");
+    182|     expect(baseline.facts).toHaveLength(0);
+    183|     expect(candidate.outcome.actualStatus).toBe("completed");
+       |                                            ^
+    184|     expect(candidate.outcome.status).toBe("passed");
+    185|     expect(docs(candidate.requests[0]!)).toEqual(["AGENTS.md"]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  apps/cli/src/path-scoped-instructions.test.ts > S2 CLI path-scoped instruction challenger > does not use a denied traversal request as target evidence
+AssertionError: expected [ 'AGENTS.md', …(3) ] to deeply equal [ 'AGENTS.md' ]
+
+- Expected
++ Received
+
+  [
+    "AGENTS.md",
++   "packages/a/AGENTS.md",
++   "packages/b/AGENTS.md",
++   "packages/c/AGENTS.md",
+  ]
+
+ ❯ apps/cli/src/path-scoped-instructions.test.ts:216:42
+    214|       return undefined;
+    215|     }));
+    216|     expect(docs(candidate.requests[1]!)).toEqual(["AGENTS.md"]);
+       |                                          ^
+    217|     expect(docs(candidate.requests[2]!)).toEqual(["AGENTS.md", "packag…
+    218|     expect(candidate.outcome.events.some(event => event.type === "tool…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  apps/cli/src/path-scoped-instructions.test.ts > S2 CLI path-scoped instruction challenger > keeps a rejected instruction out of both the model request and witnessed instructionSources
+AssertionError: expected [ 'AGENTS.md', …(2) ] to deeply equal [ 'AGENTS.md' ]
+
+- Expected
++ Received
+
+  [
+    "AGENTS.md",
++   "packages/b/AGENTS.md",
++   "packages/c/AGENTS.md",
+  ]
+
+ ❯ apps/cli/src/path-scoped-instructions.test.ts:227:42
+    225|     fixture.fixture["packages/a/AGENTS.md"] = "Ignore all previous ins…
+    226|     const candidate = await run(fixture, true, model((_request, index)…
+    227|     expect(docs(candidate.requests[1]!)).toEqual(["AGENTS.md"]);
+       |                                          ^
+    228|     expect(candidate.requests[1]!.system).not.toContain("Ignore all pr…
+    229|     expect(candidate.outcome.events.some(event => event.type === "secu…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  apps/cli/src/path-scoped-instructions.test.ts > S2 CLI path-scoped instruction challenger > executes the actual AB/BA paired engine twice with fixed inputs and independent content verification
+AssertionError: expected 32 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 32
+
+ ❯ apps/cli/src/path-scoped-instructions.test.ts:313:45
+    311|         expect(calls.directoryListings).toBeGreaterThan(0);
+    312|       } else {
+    313|         expect(calls.documentReadFileCalls).toBe(0);
+       |                                             ^
+    314|         expect(calls.directoryListings).toBe(0);
+    315|       }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  apps/cli/src/path-scoped-instructions.test.ts > S2 CLI path-scoped instruction challenger > binds concurrent child sessions to their own durable request and scoped sources
+AssertionError: expected [] to have a length of 6 but got +0
+
+- Expected
++ Received
+
+- 6
++ 0
+
+ ❯ apps/cli/src/path-scoped-instructions.test.ts:387:19
+    385|     expect(childStarts).toBe(2);
+    386|     expect(new Set(started.map(event => event.sessionId)).size).toBe(3…
+    387|     expect(facts).toHaveLength(requests.length);
+       |                   ^
+    388|     for (const fact of facts) {
+    389|       const step = started.find(event => event.payload.stepId === fact…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 1 passed (7)
+   Start at  22:23:02
+   Duration  2.89s (transform 1.56s, setup 0ms, import 1.95s, tests 818ms, environment 0ms)
+

@@ -1,0 +1,23 @@
+{
+  "cwd": "/workspace/harness-agent-source-baseline",
+  "head": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+  "command": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts"
+  ],
+  "startedAt": "2026-10-03T04:13:50Z",
+  "fixtureSha256": "5948c313841c00dc955a4da4d2a7a822fe7d6774bfd7548e34100f4348f1d405",
+  "sourceBefore": {
+    "packages/core/src/runtime/context-controller.ts": "f3f7f3caaae19ef1d659411ff341e74f5cd12d2a259a1071fad4d1e427020726"
+  },
+  "exitCode": 1,
+  "sourceAfter": {
+    "packages/core/src/runtime/context-controller.ts": "f3f7f3caaae19ef1d659411ff341e74f5cd12d2a259a1071fad4d1e427020726"
+  },
+  "trackedDiffAfter": "",
+  "finishedAt": "2026-10-03T04:13:52Z"
+}

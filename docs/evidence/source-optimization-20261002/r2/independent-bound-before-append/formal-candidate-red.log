@@ -1,0 +1,205 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+ ❯ packages/core/src/runtime/active-user-context.test.ts (22 tests | 3 failed | 17 skipped) 30ms
+     ↓ preserves all six model requests, custom estimator=false
+     ↓ preserves all six model requests, custom estimator=true
+     ↓ keeps multiple independent steers in original order and raw user role
+     ↓ preserves user anchors through the reactive 12-message tail, budget=undefined
+     ↓ preserves user anchors through the reactive 12-message tail, budget=100000
+     ↓ includes steering in automatic compaction digests, not only retained transcript
+     ↓ fails observably before sending when active user facts alone cannot fit
+     ↓ does not let generic retry send an irreducible system and user overflow
+     ↓ does not replay an old turn's steering as a current task anchor
+     ↓ rehydrates consumed steering from durable messages when resuming the same turn
+     ↓ reconciles the append/consume crash window without duplicating the steering
+     ↓ keeps the existing unbounded normal history unchanged
+     ↓ retains user anchors when reducing large tool-arguments from the same turn
+     ↓ retains user anchors when reducing large reasoning from the same turn
+     ↓ does not let a tool's forged promptId consume or protect a steering instruction
+     ↓ carries interrupted user facts through the real checkpoint resume path without replaying prompt identities
+     ↓ repairs every multi-tool cut before restoring current users, without trusting tool markers
+     × recovers before append during real checkpoint resume without rebinding 17ms
+     ✓ recovers after append during real checkpoint resume without rebinding 2ms
+     ✓ does not replay an older bound steer into an ordinary new task 1ms
+     × recovers only the checkpoint turn's bound steer, keeping another lineage untouched 3ms
+     × retries a crash during resumed append/consume exactly once on the original turn 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 bound steering crash recovery preserves original lineage > recovers before append during real checkpoint resume without rebinding
+AssertionError: expected '[Session resumed after an interruptio…' to contain '[steering] DO_NOT_TOUCH_CONFIG 中文🙂\n…'
+
+- Expected
++ Received
+
+- [steering] DO_NOT_TOUCH_CONFIG 中文🙂
+- Keep the original bytes.
++ [Session resumed after an interruption — durable checkpoint recovered]
++ The task below was interrupted mid-run. The state listed here is authoritative;
++ continue from it. Do NOT re-run anything listed under Committed side effects.
++ ## Goal
++ CURRENT USER TASK: review and modify code
++ ## Completed Work
++ - (none)
++ ## Pending Work
++ - (none)
++ ## Original User Inputs (in order; later corrections apply)
++ CURRENT USER TASK: review and modify code
++ ## Committed side effects (already applied — do NOT redo)
++ - (none)
++ ## Unresolved tool executions (started; outcome unknown — reconcile per the verdict, never blindly re-execute)
++ - (none)
++
++ Continue the task.
+
+ ❯ packages/core/src/runtime/active-user-context.test.ts:262:29
+    260|     expect(resumed.outcome.status).toBe("completed"); expect(f.provide…
+    261|     const resume = visibleUsers(f.provider.requests[0]!).find(m => m.c…
+    262|     expect(resume?.content).toContain(`[steering] ${STEER}`);
+       |                             ^
+    263|     expect(f.inbox.prompts[0]).toMatchObject({ status: "consumed", pro…
+    264|     const durable = (await f.store.listMessages(session.id)).filter(m …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 bound steering crash recovery preserves original lineage > recovers only the checkpoint turn's bound steer, keeping another lineage untouched
+AssertionError: expected '[Session resumed after an interruptio…' to contain 'DO_NOT_TOUCH_CONFIG 中文🙂\nKeep the or…'
+
+- Expected
++ Received
+
+- DO_NOT_TOUCH_CONFIG 中文🙂
+- Keep the original bytes.
++ [Session resumed after an interruption — durable checkpoint recovered]
++ The task below was interrupted mid-run. The state listed here is authoritative;
++ continue from it. Do NOT re-run anything listed under Committed side effects.
++ ## Goal
++ CURRENT USER TASK: review and modify code
++ ## Completed Work
++ - (none)
++ ## Pending Work
++ - (none)
++ ## Original User Inputs (in order; later corrections apply)
++ CURRENT USER TASK: review and modify code
++ ## Committed side effects (already applied — do NOT redo)
++ - (none)
++ ## Unresolved tool executions (started; outcome unknown — reconcile per the verdict, never blindly re-execute)
++ - (none)
++
++ Continue the task.
+
+ ❯ packages/core/src/runtime/active-user-context.test.ts:292:29
+    290|     expect(resumed.outcome.status).toBe("completed");
+    291|     const resume = visibleUsers(f.provider.requests[0]!).find(m => m.c…
+    292|     expect(resume?.content).toContain(STEER); expect(resume?.content).…
+       |                             ^
+    293|     expect(f.provider.requests[0]!.messages.some(m => m.content.includ…
+    294|     expect(f.inbox.prompts.find(p => p.id === own)).toMatchObject({ st…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 bound steering crash recovery preserves original lineage > retries a crash during resumed append/consume exactly once on the original turn
+AssertionError: promise resolved "{ …(8) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "checkpointId": "checkpoint_9b6a3682-9f30-477d-bf65-58eac30c9274",
++   "committedSideEffects": [],
++   "outcome": {
++     "grade": "unverified_complete",
++     "iterations": 0,
++     "state": {
++       "artifactRefs": [],
++       "childAgentRefs": [],
++       "commandsRun": [],
++       "completed": [],
++       "constraints": [],
++       "decisions": [],
++       "failures": [],
++       "filesChanged": [],
++       "goal": "CURRENT USER TASK: review and modify code",
++       "importantFacts": [],
++       "memoryRefs": [],
++       "openQuestions": [],
++       "pending": [],
++       "plan": [],
++       "testsRun": [],
++       "toolRefs": [],
++     },
++     "status": "completed",
++     "statusDetail": "completed",
++     "terminationReason": "model_stopped",
++     "toolCalls": 0,
++     "turn": {
++       "completedAt": 1791000827555,
++       "id": "turn_a139511a-226a-4712-af1b-a15c4891f6b8",
++       "input": {
++         "sessionId": "session_12847f7d-b1c9-4bf0-aab3-2365be027c1d",
++         "text": "[Session resumed after an interruption — durable checkpoint recovered]
++ The task below was interrupted mid-run. The state listed here is authoritative;
++ continue from it. Do NOT re-run anything listed under Committed side effects.
++ ## Goal
++ CURRENT USER TASK: review and modify code
++ ## Completed Work
++ - (none)
++ ## Pending Work
++ - (none)
++ ## Original User Inputs (in order; later corrections apply)
++ CURRENT USER TASK: review and modify code
++ ## Committed side effects (already applied — do NOT redo)
++ - (none)
++ ## Unresolved tool executions (started; outcome unknown — reconcile per the verdict, never blindly re-execute)
++ - (none)
++
++ Continue the task.",
++       },
++       "sessionId": "session_12847f7d-b1c9-4bf0-aab3-2365be027c1d",
++       "startedAt": 1791000827555,
++       "status": "completed",
++     },
++   },
++   "replayedEventCount": 2,
++   "sessionId": "session_12847f7d-b1c9-4bf0-aab3-2365be027c1d",
++   "state": {
++     "artifactRefs": [],
++     "childAgentRefs": [],
++     "commandsRun": [],
++     "completed": [],
++     "constraints": [],
++     "decisions": [],
++     "failures": [],
++     "filesChanged": [],
++     "goal": "CURRENT USER TASK: review and modify code",
++     "importantFacts": [],
++     "memoryRefs": [],
++     "openQuestions": [],
++     "pending": [],
++     "plan": [],
++     "testsRun": [],
++     "toolRefs": [],
++   },
++   "turnId": "turn_0f4678c5-9540-45be-9703-1ee452472cba",
++   "unresolvedTools": [],
+  }
+
+ ❯ packages/core/src/runtime/active-user-context.test.ts:305:81
+    303|     await saveInterrupted(f, session.id, turn.id, checkpoints);
+    304|     f.inbox.failConsumeOnce = true;
+    305|     await expect(f.runtime.resumeTurn(session.id, new AbortController(…
+       |                                                                                 ^
+    306|     expect(f.provider.requests).toHaveLength(0);
+    307|     const resumed = await f.runtime.resumeTurn(session.id, new AbortCo…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 2 passed | 17 skipped (22)
+   Start at  04:13:46
+   Duration  631ms (transform 374ms, setup 0ms, import 479ms, tests 30ms, environment 0ms)
+

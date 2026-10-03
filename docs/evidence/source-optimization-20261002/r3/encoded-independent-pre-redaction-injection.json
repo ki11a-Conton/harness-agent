@@ -1,0 +1,25 @@
+{
+  "cwd": "/workspace/harness-agent-source-optimization",
+  "command": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts",
+    "-t",
+    "original credential value"
+  ],
+  "startedAt": "2026-10-03T04:06:18Z",
+  "sourceBefore": {
+    "packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts": "0372130c7b9decab54689304bf4bc7e49745e9ed472f73e4f308720d29098fd8",
+    "packages/core/src/runtime/tool-output-security.ts": "e39211dd077987cbb264221a99cc34b354f2002768718514b60918510d56ee86",
+    "packages/core/src/runtime/context-controller.ts": "c52fb4d3eb9bb6a7f246d94356236dbed951a68ef16098083174c7ba0559b949"
+  },
+  "exitCode": 1,
+  "sourceAfter": {
+    "packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts": "0372130c7b9decab54689304bf4bc7e49745e9ed472f73e4f308720d29098fd8",
+    "packages/core/src/runtime/tool-output-security.ts": "e39211dd077987cbb264221a99cc34b354f2002768718514b60918510d56ee86",
+    "packages/core/src/runtime/context-controller.ts": "c52fb4d3eb9bb6a7f246d94356236dbed951a68ef16098083174c7ba0559b949"
+  }
+}

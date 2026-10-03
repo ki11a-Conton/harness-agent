@@ -1,0 +1,15 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+ ✓ apps/cli/src/diagnostic-first-repair.test.ts (10 tests) 4774ms
+     ✓ gets actual assertion diagnostics after exit 1, repairs, reruns the same command, then passes the original gate  331ms
+     ✓ gets actual syntax diagnostics after exit 1, repairs, reruns the same command, then passes the original gate  327ms
+     ✓ bounds repeated identical failures with existing Runtime limits  2130ms
+     ✓ executes independent S1 through the existing identity-bound AB/BA paired engine  1225ms
+ ✓ packages/core/src/runtime/structured-output-security.regressions.test.ts (26 tests) 20ms
+
+ Test Files  2 passed (2)
+      Tests  36 passed (36)
+   Start at  22:11:16
+   Duration  7.18s (transform 1.68s, setup 0ms, import 2.16s, tests 4.79s, environment 0ms)
+

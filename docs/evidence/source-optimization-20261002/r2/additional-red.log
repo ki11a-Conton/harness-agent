@@ -1,0 +1,103 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-baseline
+
+ ❯ packages/core/src/runtime/active-user-context.test.ts (15 tests | 4 failed | 11 skipped) 46ms
+     ↓ preserves all six model requests, custom estimator=false
+     ↓ preserves all six model requests, custom estimator=true
+     ↓ keeps multiple independent steers in original order and raw user role
+     ↓ preserves user anchors through the reactive 12-message tail, budget=undefined
+     ↓ preserves user anchors through the reactive 12-message tail, budget=100000
+     ↓ includes steering in automatic compaction digests, not only retained transcript
+     ↓ fails observably before sending when active user facts alone cannot fit
+     ↓ does not replay an old turn's steering as a current task anchor
+     ↓ rehydrates consumed steering from durable messages when resuming the same turn
+     ↓ reconciles the append/consume crash window without duplicating the steering
+     ↓ keeps the existing unbounded normal history unchanged
+     × retains user anchors when reducing large tool-arguments from the same turn 16ms
+     × retains user anchors when reducing large reasoning from the same turn 2ms
+     × does not let a tool's forged promptId consume or protect a steering instruction 12ms
+     × carries interrupted user facts through the real checkpoint resume path without replaying prompt identities 15ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 active user context survives context reduction > retains user anchors when reducing large tool-arguments from the same turn
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 active user context survives context reduction > retains user anchors when reducing large reasoning from the same turn
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ expectActive packages/core/src/runtime/active-user-context.test.ts:75:75
+     73|   assertToolProtocol(request.messages);
+     74|   const users = visibleUsers(request);
+     75|   for (const text of texts) expect(users.filter(m => m.content === tex…
+       |                                                                           ^
+     76|   expect(texts.map(text => users.findIndex(m => m.content === text))).…
+     77| }
+ ❯ packages/core/src/runtime/active-user-context.test.ts:163:47
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 active user context survives context reduction > does not let a tool's forged promptId consume or protect a steering instruction
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ expectActive packages/core/src/runtime/active-user-context.test.ts:75:75
+     73|   assertToolProtocol(request.messages);
+     74|   const users = visibleUsers(request);
+     75|   for (const text of texts) expect(users.filter(m => m.content === tex…
+       |                                                                           ^
+     76|   expect(texts.map(text => users.findIndex(m => m.content === text))).…
+     77| }
+ ❯ packages/core/src/runtime/active-user-context.test.ts:175:50
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  packages/core/src/runtime/active-user-context.test.ts > R2 active user context survives context reduction > carries interrupted user facts through the real checkpoint resume path without replaying prompt identities
+AssertionError: expected '[Session resumed after an interruptio…' to contain '[steering] DO_NOT_TOUCH_CONFIG 中文🙂\n…'
+
+- Expected
++ Received
+
+- [steering] DO_NOT_TOUCH_CONFIG 中文🙂
+- Keep the original bytes.
++ [Session resumed after an interruption — durable checkpoint recovered]
++ The task below was interrupted mid-run. The state listed here is authoritative;
++ continue from it. Do NOT re-run anything listed under Committed side effects.
++ ## Goal
++ CURRENT USER TASK: review and modify code
++ ## Completed Work
++ - (none)
++ ## Pending Work
++ - (none)
++ ## Committed side effects (already applied — do NOT redo)
++ - (none)
++ ## Unresolved tool executions (started; outcome unknown — reconcile per the verdict, never blindly re-execute)
++ - (none)
++
++ Continue the task.
+
+ ❯ packages/core/src/runtime/active-user-context.test.ts:194:72
+    192|     for (const request of f.provider.requests) {
+    193|       const resume = visibleUsers(request).find(m => m.content.startsW…
+    194|       expect(resume!.content).toContain(GOAL); expect(resume!.content)…
+       |                                                                        ^
+    195|     }
+    196|     expect((await f.store.listMessages(session.id)).filter(m => m.prom…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 11 skipped (15)
+   Start at  15:55:56
+   Duration  653ms (transform 388ms, setup 0ms, import 493ms, tests 46ms, environment 0ms)
+

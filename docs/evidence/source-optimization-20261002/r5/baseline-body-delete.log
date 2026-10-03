@@ -1,0 +1,96 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-baseline
+
+ ❯ packages/harness/src/skill-revision-regressions.test.ts (9 tests | 2 failed | 7 skipped) 29ms
+     × refreshes an edited body through the same provider while preserving the prior step block 19ms
+     × stops injecting a deleted SKILL.md through the same provider 9ms
+     ↓ rediscovers added nested packages and manifest renames at the next load
+     ↓ uses updated requiredTools before admitting the revised body
+     ↓ rescans injection after the same provider has cached a safe body
+     ↓ rescans secret after the same provider has cached a safe body
+     ↓ honors a supplied discovery snapshot without a second discovery or mixing manifests
+     ↓ does not reuse bodies across the same name at different paths or configurations
+     ↓ unchanged revisions reuse both directory discovery and body reads
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/harness/src/skill-revision-regressions.test.ts > R5: production skill provider revision refresh > refreshes an edited body through the same provider while preserving the prior step block
+AssertionError: expected '---\nname: lint\ndescription: lint pr…' to contain 'updated lint'
+
+- Expected
++ Received
+
+- updated lint
++ ---
++ name: lint
++ description: lint project files
++ version: 1.0.0
++ ---
++
++ Run the original lint command.
++
+
+ ❯ packages/harness/src/skill-revision-regressions.test.ts:51:32
+     49|     await writeSkill(path, { body: "Run the updated lint command.", ve…
+     50|     const second = await bodies.load(["lint"]);
+     51|     expect(second[0]?.content).toContain("updated lint");
+       |                                ^
+     52|     expect(second[0]?.provenance?.version).toBe("2.0.0");
+     53|     expect(first[0]?.content).toContain("original lint");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/harness/src/skill-revision-regressions.test.ts > R5: production skill provider revision refresh > stops injecting a deleted SKILL.md through the same provider
+AssertionError: expected [ { id: 'skill-body:lint', …(12) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "category": "knowledge",
++     "compressible": true,
++     "content": "---
++ name: lint
++ description: lint project files
++ version: 1.0.0
++ ---
++
++ Run the original lint command.
++ ",
++     "ephemeral": false,
++     "id": "skill-body:lint",
++     "instructional": false,
++     "path": "/tmp/ar-skill-revision-rwuT8c/skills/lint/SKILL.md",
++     "persistable": false,
++     "priority": 450,
++     "provenance": {
++       "kind": "skill",
++       "serviceId": "skill-loader",
++       "toolId": "lint",
++       "trust": "semi-trusted",
++       "version": "1.0.0",
++     },
++     "source": "skill",
++     "tokens": 25,
++     "trust": "semi-trusted",
++   },
++ ]
+
+ ❯ packages/harness/src/skill-revision-regressions.test.ts:65:41
+     63|     expect(await bodies.load(["lint"])).toHaveLength(1);
+     64|     await fs.rm(path);
+     65|     expect(await bodies.load(["lint"])).toEqual([]);
+       |                                         ^
+     66|   });
+     67|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 7 skipped (9)
+   Start at  15:47:15
+   Duration  536ms (transform 302ms, setup 0ms, import 371ms, tests 29ms, environment 0ms)
+

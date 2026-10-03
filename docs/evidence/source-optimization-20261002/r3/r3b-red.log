@@ -1,0 +1,352 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-baseline
+
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts (34 tests | 26 failed) 326ms
+     × argv limits stdout/stderr to independent 8-byte prefixes 17ms
+     × shell limits stdout/stderr to independent 8-byte prefixes 4ms
+     × sandbox limits stdout/stderr to independent 8-byte prefixes 8ms
+     × argv preserves valid UTF-8 across every single-byte chunk and full streaming after capture fills 7ms
+     × shell preserves valid UTF-8 across every single-byte chunk and full streaming after capture fills 33ms
+     × sandbox preserves valid UTF-8 across every single-byte chunk and full streaming after capture fills 5ms
+     ✓ cap=0 retains only a whole-character prefix 3ms
+     ✓ cap=1 retains only a whole-character prefix 2ms
+     × cap=2 retains only a whole-character prefix 2ms
+     × cap=3 retains only a whole-character prefix 3ms
+     × cap=4 retains only a whole-character prefix 3ms
+     × cap=7 retains only a whole-character prefix 3ms
+     × cap=8 retains only a whole-character prefix 2ms
+     × cap=9 retains only a whole-character prefix 1ms
+     ✓ cap=10 retains only a whole-character prefix 2ms
+     ✓ flushes genuinely incomplete UTF-8 once with replacement semantics 2ms
+     × argv keeps decoding and capturing when the streaming observer throws 46ms
+     × shell keeps decoding and capturing when the streaming observer throws 28ms
+     × sandbox keeps decoding and capturing when the streaming observer throws 3ms
+     × continues draining a flood after the capture prefix is closed 4ms
+     × captures actual argv process UTF-8 under the cap without changing exit status 70ms
+     × caps the real tool result by UTF-8 body bytes 34ms
+     × caps the real tool result by UTF-8 body bytes 3ms
+     ✓ cap=0 limits only whole UTF-8 body bytes and adds a separate marker 7ms
+     ✓ cap=1 limits only whole UTF-8 body bytes and adds a separate marker 3ms
+     × cap=2 limits only whole UTF-8 body bytes and adds a separate marker 3ms
+     × cap=3 limits only whole UTF-8 body bytes and adds a separate marker 1ms
+     × cap=4 limits only whole UTF-8 body bytes and adds a separate marker 1ms
+     × cap=7 limits only whole UTF-8 body bytes and adds a separate marker 1ms
+     × cap=8 limits only whole UTF-8 body bytes and adds a separate marker 7ms
+     × cap=9 limits only whole UTF-8 body bytes and adds a separate marker 3ms
+     × cap=10 limits only whole UTF-8 body bytes and adds a separate marker 4ms
+     ✓ cap=11 limits only whole UTF-8 body bytes and adds a separate marker 3ms
+     ✓ keeps structured process results intact even at cap=0 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 26 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > argv limits stdout/stderr to independent 8-byte prefixes
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > shell limits stdout/stderr to independent 8-byte prefixes
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > sandbox limits stdout/stderr to independent 8-byte prefixes
+AssertionError: expected '中中中中中中中中' to be '中中' // Object.is equality
+
+Expected: "中中"
+Received: "中中中中中中中中"
+
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:54:24
+     52|     const out = await collectRoute(route, [Buffer.from("中".repeat(100)…
+     53|     expect(out.status).toBe("success");
+     54|     expect(out.stdout).toBe("中中");
+       |                        ^
+     55|     expect(out.stderr).toBe("😀😀");
+     56|     expect(Buffer.byteLength(out.stdout)).toBeLessThanOrEqual(8);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > argv preserves valid UTF-8 across every single-byte chunk and full streaming after capture fills
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > shell preserves valid UTF-8 across every single-byte chunk and full streaming after capture fills
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > sandbox preserves valid UTF-8 across every single-byte chunk and full streaming after capture fills
+AssertionError: expected 'A\ufffd' to be 'A中' // Object.is equality
+
+Expected: "A中"
+Received: "A�"
+
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:67:24
+     65|     const chunks = [...Buffer.from(text)].map((byte) => Buffer.from([b…
+     66|     const out = await collectRoute(route, chunks, chunks, 4, (event) =…
+     67|     expect(out.stdout).toBe("A中");
+       |                        ^
+     68|     expect(out.stderr).toBe("A中");
+     69|     expect(events.filter((event) => event.stream === "stdout").map((ev…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > cap=2 retains only a whole-character prefix
+AssertionError: expected 4 to be less than or equal to 2
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:77:43
+     75|     const text = "A中😀BC";
+     76|     const out = await collectRoute("argv", [Buffer.from(text)], [], ca…
+     77|     expect(Buffer.byteLength(out.stdout)).toBeLessThanOrEqual(cap);
+       |                                           ^
+     78|     expect(text.startsWith(out.stdout)).toBe(true);
+     79|     expect(Buffer.from(out.stdout).toString("utf8")).toBe(out.stdout);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > cap=3 retains only a whole-character prefix
+AssertionError: expected 7 to be less than or equal to 3
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:77:43
+     75|     const text = "A中😀BC";
+     76|     const out = await collectRoute("argv", [Buffer.from(text)], [], ca…
+     77|     expect(Buffer.byteLength(out.stdout)).toBeLessThanOrEqual(cap);
+       |                                           ^
+     78|     expect(text.startsWith(out.stdout)).toBe(true);
+     79|     expect(Buffer.from(out.stdout).toString("utf8")).toBe(out.stdout);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > cap=4 retains only a whole-character prefix
+AssertionError: expected 8 to be less than or equal to 4
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:77:43
+     75|     const text = "A中😀BC";
+     76|     const out = await collectRoute("argv", [Buffer.from(text)], [], ca…
+     77|     expect(Buffer.byteLength(out.stdout)).toBeLessThanOrEqual(cap);
+       |                                           ^
+     78|     expect(text.startsWith(out.stdout)).toBe(true);
+     79|     expect(Buffer.from(out.stdout).toString("utf8")).toBe(out.stdout);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > cap=7 retains only a whole-character prefix
+AssertionError: expected 10 to be less than or equal to 7
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:77:43
+     75|     const text = "A中😀BC";
+     76|     const out = await collectRoute("argv", [Buffer.from(text)], [], ca…
+     77|     expect(Buffer.byteLength(out.stdout)).toBeLessThanOrEqual(cap);
+       |                                           ^
+     78|     expect(text.startsWith(out.stdout)).toBe(true);
+     79|     expect(Buffer.from(out.stdout).toString("utf8")).toBe(out.stdout);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > cap=8 retains only a whole-character prefix
+AssertionError: expected 10 to be less than or equal to 8
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:77:43
+     75|     const text = "A中😀BC";
+     76|     const out = await collectRoute("argv", [Buffer.from(text)], [], ca…
+     77|     expect(Buffer.byteLength(out.stdout)).toBeLessThanOrEqual(cap);
+       |                                           ^
+     78|     expect(text.startsWith(out.stdout)).toBe(true);
+     79|     expect(Buffer.from(out.stdout).toString("utf8")).toBe(out.stdout);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > cap=9 retains only a whole-character prefix
+AssertionError: expected 10 to be less than or equal to 9
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:77:43
+     75|     const text = "A中😀BC";
+     76|     const out = await collectRoute("argv", [Buffer.from(text)], [], ca…
+     77|     expect(Buffer.byteLength(out.stdout)).toBeLessThanOrEqual(cap);
+       |                                           ^
+     78|     expect(text.startsWith(out.stdout)).toBe(true);
+     79|     expect(Buffer.from(out.stdout).toString("utf8")).toBe(out.stdout);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > argv keeps decoding and capturing when the streaming observer throws
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > shell keeps decoding and capturing when the streaming observer throws
+AssertionError: expected { status: 'success', …(5) } to match object { status: 'success', …(4) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "exitCode": 0,
+    "status": "success",
+-   "stderr": "A中",
+-   "stdout": "A中",
++   "stderr": "A�",
++   "stdout": "A�",
+    "truncated": true,
+  }
+
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:101:19
+     99|         throw new Error("observer failed");
+    100|       });
+    101|       expect(out).toMatchObject({ status: "success", exitCode: 0, stdo…
+       |                   ^
+    102|       expect(events.filter((event) => event.stream === "stdout").map((…
+    103|       expect(events.filter((event) => event.stream === "stderr").map((…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > sandbox keeps decoding and capturing when the streaming observer throws
+AssertionError: expected { status: 'success', …(8) } to match object { status: 'success', …(4) }
+(11 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "exitCode": 0,
+    "status": "success",
+-   "stderr": "A中",
+-   "stdout": "A中",
++   "stderr": "A�",
++   "stdout": "A�",
+    "truncated": true,
+  }
+
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:101:19
+     99|         throw new Error("observer failed");
+    100|       });
+    101|       expect(out).toMatchObject({ status: "success", exitCode: 0, stdo…
+       |                   ^
+    102|       expect(events.filter((event) => event.stream === "stdout").map((…
+    103|       expect(events.filter((event) => event.stream === "stderr").map((…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > continues draining a flood after the capture prefix is closed
+AssertionError: expected '中' to be '' // Object.is equality
+
+- Expected
++ Received
+
++ 中
+
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:113:24
+    111|     const streamed: string[] = [];
+    112|     const out = await collectRoute("argv", [Buffer.from("中"), ...Array…
+    113|     expect(out.stdout).toBe("");
+       |                        ^
+    114|     expect(out.status).toBe("success");
+    115|     expect(out.truncated).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b ProcessExecutor UTF-8 byte capture and streaming > captures actual argv process UTF-8 under the cap without changing exit status
+AssertionError: expected '中中中中中中中中' to be '中中' // Object.is equality
+
+Expected: "中中"
+Received: "中中中中中中中中"
+
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:123:24
+    121|     expect(out.status).toBe("failed");
+    122|     expect(out.exitCode).toBe(3);
+    123|     expect(out.stdout).toBe("中中");
+       |                        ^
+    124|     expect(out.stderr).toBe("😀😀");
+    125|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b Orchestrator string capture cap > caps the real tool result by UTF-8 body bytes
+AssertionError: expected 24 to be less than or equal to 8
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:159:38
+    157|     expect(result.status).toBe("success");
+    158|     const [body] = (result.output as string).split("\n");
+    159|     expect(Buffer.byteLength(body!)).toBeLessThanOrEqual(8);
+       |                                      ^
+    160|     expect(Buffer.from(body!).toString("utf8")).toBe(body);
+    161|     expect(result.output).toContain("output truncated at 8 bytes");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b Orchestrator string capture cap > caps the real tool result by UTF-8 body bytes
+AssertionError: expected 16 to be less than or equal to 8
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:159:38
+    157|     expect(result.status).toBe("success");
+    158|     const [body] = (result.output as string).split("\n");
+    159|     expect(Buffer.byteLength(body!)).toBeLessThanOrEqual(8);
+       |                                      ^
+    160|     expect(Buffer.from(body!).toString("utf8")).toBe(body);
+    161|     expect(result.output).toContain("output truncated at 8 bytes");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b Orchestrator string capture cap > cap=2 limits only whole UTF-8 body bytes and adds a separate marker
+AssertionError: expected 4 to be less than or equal to 2
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:173:39
+    171|       expect((result.output as string).endsWith(marker)).toBe(true);
+    172|       const body = (result.output as string).slice(0, -marker.length);
+    173|       expect(Buffer.byteLength(body)).toBeLessThanOrEqual(cap);
+       |                                       ^
+    174|       expect(output.startsWith(body)).toBe(true);
+    175|       expect(body).not.toContain("�");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b Orchestrator string capture cap > cap=3 limits only whole UTF-8 body bytes and adds a separate marker
+AssertionError: expected 7 to be less than or equal to 3
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:173:39
+    171|       expect((result.output as string).endsWith(marker)).toBe(true);
+    172|       const body = (result.output as string).slice(0, -marker.length);
+    173|       expect(Buffer.byteLength(body)).toBeLessThanOrEqual(cap);
+       |                                       ^
+    174|       expect(output.startsWith(body)).toBe(true);
+    175|       expect(body).not.toContain("�");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b Orchestrator string capture cap > cap=4 limits only whole UTF-8 body bytes and adds a separate marker
+AssertionError: expected 8 to be less than or equal to 4
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:173:39
+    171|       expect((result.output as string).endsWith(marker)).toBe(true);
+    172|       const body = (result.output as string).slice(0, -marker.length);
+    173|       expect(Buffer.byteLength(body)).toBeLessThanOrEqual(cap);
+       |                                       ^
+    174|       expect(output.startsWith(body)).toBe(true);
+    175|       expect(body).not.toContain("�");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b Orchestrator string capture cap > cap=7 limits only whole UTF-8 body bytes and adds a separate marker
+AssertionError: expected 11 to be less than or equal to 7
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:173:39
+    171|       expect((result.output as string).endsWith(marker)).toBe(true);
+    172|       const body = (result.output as string).slice(0, -marker.length);
+    173|       expect(Buffer.byteLength(body)).toBeLessThanOrEqual(cap);
+       |                                       ^
+    174|       expect(output.startsWith(body)).toBe(true);
+    175|       expect(body).not.toContain("�");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b Orchestrator string capture cap > cap=8 limits only whole UTF-8 body bytes and adds a separate marker
+AssertionError: expected 11 to be less than or equal to 8
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:173:39
+    171|       expect((result.output as string).endsWith(marker)).toBe(true);
+    172|       const body = (result.output as string).slice(0, -marker.length);
+    173|       expect(Buffer.byteLength(body)).toBeLessThanOrEqual(cap);
+       |                                       ^
+    174|       expect(output.startsWith(body)).toBe(true);
+    175|       expect(body).not.toContain("�");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b Orchestrator string capture cap > cap=9 limits only whole UTF-8 body bytes and adds a separate marker
+AssertionError: expected 11 to be less than or equal to 9
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:173:39
+    171|       expect((result.output as string).endsWith(marker)).toBe(true);
+    172|       const body = (result.output as string).slice(0, -marker.length);
+    173|       expect(Buffer.byteLength(body)).toBeLessThanOrEqual(cap);
+       |                                       ^
+    174|       expect(output.startsWith(body)).toBe(true);
+    175|       expect(body).not.toContain("�");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/26]⎯
+
+ FAIL  packages/tools/src/process/utf8-output.regressions.test.ts > R3b Orchestrator string capture cap > cap=10 limits only whole UTF-8 body bytes and adds a separate marker
+AssertionError: expected 11 to be less than or equal to 10
+ ❯ packages/tools/src/process/utf8-output.regressions.test.ts:173:39
+    171|       expect((result.output as string).endsWith(marker)).toBe(true);
+    172|       const body = (result.output as string).slice(0, -marker.length);
+    173|       expect(Buffer.byteLength(body)).toBeLessThanOrEqual(cap);
+       |                                       ^
+    174|       expect(output.startsWith(body)).toBe(true);
+    175|       expect(body).not.toContain("�");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/26]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  26 failed | 8 passed (34)
+   Start at  15:54:50
+   Duration  3.24s (transform 1.93s, setup 0ms, import 2.40s, tests 326ms, environment 0ms)
+

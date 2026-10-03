@@ -1,0 +1,245 @@
+{
+  "schemaVersion": "source-optimization-s1-result-v1",
+  "recordedAt": "2026-10-02T22:13:05.015120+00:00",
+  "candidateId": "diagnostic_first_repair_v1",
+  "status": "PASS_OFFLINE_ENGINEERING_CONTRACT",
+  "sourceSnapshot": {
+    "workspace": "/workspace/harness-agent-source-optimization",
+    "head": "9ff841a8f26646d867418c4298b017ea063c3fbe",
+    "uncommitted": true,
+    "files": {
+      "apps/cli/src/diagnostic-first-repair.test.ts": "e919e5cc7a86e8c2ed115d48173688a151188e92a1f395f0957bd41fc35b6968",
+      "apps/cli/src/benchmark-command.ts": "87d707ce35abbdd9ca56506add9a27d33761bee777c1c06f62e1d473b39cb96e",
+      "packages/evaluation/src/candidate-registry.ts": "433484087f2ad823d67d706aa77c1e21676a809957f59c6d278828897927f008",
+      "packages/evaluation/src/arm-factory.ts": "614aab7dcfa5a0ded110b4af7884ff69d1c5a87a999920fbb85620cd7001bec3",
+      "packages/evaluation/src/mechanism-guidance.ts": "32ac724322c6e6bc39e2625ba3d1f864b0f94054063b4ffe40ae14ad64fb5b87",
+      "packages/evaluation/src/mechanism-contract.ts": "ea0926fa12a46327e1fba2b7eda5ce2ce9ab9433164aa5f1ad839aac12f96164",
+      "packages/evaluation/src/activation-evidence.ts": "da7ffcf83b9bc8b0775e460bc18b42cf94c81af476dd36e8beb62bb486dff03f",
+      "packages/evaluation/src/activation-evidence-execution.ts": "47bb81b36d345f3f91ec91e8aa6f9fdfb426df0f3e38769f2171e64d84005d10"
+    }
+  },
+  "baselineSnapshot": {
+    "workspace": "/workspace/harness-agent-source-baseline",
+    "head": "6f03bb25ffab0791e292bd888899f925c3d4320a"
+  },
+  "environment": {
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+    "node": "v24.19.0",
+    "pnpm": "11.21.0"
+  },
+  "commands": [
+    {
+      "name": "unchanged baseline current S1 fixture",
+      "command": "corepack pnpm vitest run apps/cli/src/diagnostic-first-repair.test.ts",
+      "cwd": "/workspace/harness-agent-source-baseline",
+      "exitCode": 1,
+      "tests": {
+        "failed": 10,
+        "passed": 0
+      },
+      "log": "red-baseline-latest.log",
+      "logSha256": "b0a07cb803d2f777a2082614516e41ec20923fdd6cd12b63bf88fcdbd9e03c2e"
+    },
+    {
+      "name": "evaluation/CLI typecheck",
+      "command": "corepack pnpm exec tsc -b packages/evaluation apps/cli",
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "exitCode": 0,
+      "log": "typecheck-final.log",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "mechanism/paired compatibility",
+      "command": "corepack pnpm vitest run packages/evaluation/src/candidate-registry.test.ts packages/evaluation/src/arm-factory.test.ts packages/evaluation/src/mechanism-contract.test.ts packages/evaluation/src/activation-evidence.test.ts packages/evaluation/src/activation-evidence-execution.test.ts packages/evaluation/src/activation-evidence-v2.test.ts packages/evaluation/src/paired-executor.test.ts packages/evaluation/src/paired-plan.test.ts packages/evaluation/src/paired-execution-identity.test.ts",
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "exitCode": 0,
+      "tests": {
+        "files": 9,
+        "passed": 95,
+        "failed": 0
+      },
+      "log": "compatibility-resume.log",
+      "logSha256": "07d4a7cabf69c34fb1124a6deafe75b8814b2d7c119b78058cda7375228659fb"
+    },
+    {
+      "name": "official paired executor/eligibility contract",
+      "command": "S1_EVIDENCE_DIR=/workspace/harness-agent/.ci/source-optimization/s1 corepack pnpm vitest run apps/cli/src/diagnostic-first-repair.test.ts -t 'existing identity-bound|original command verification'",
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "exitCode": 0,
+      "tests": {
+        "passed": 2,
+        "skipped": 8,
+        "failed": 0
+      },
+      "log": "paired-first.log",
+      "logSha256": "d3a35114b9b790e1ec2c701442a7cc72a9428a3b4383e9fcc2fd8765cb9a6a42"
+    },
+    {
+      "name": "S1 final and real structured security",
+      "command": "S1_EVIDENCE_DIR=/workspace/harness-agent/.ci/source-optimization/s1 corepack pnpm vitest run apps/cli/src/diagnostic-first-repair.test.ts packages/core/src/runtime/structured-output-security.regressions.test.ts",
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "exitCode": 0,
+      "tests": {
+        "files": 2,
+        "passed": 36,
+        "failed": 0,
+        "S1": 10,
+        "realStructuredSecurity": 26
+      },
+      "log": "green-final.log",
+      "logSha256": "b17d8b355e3e9f05c0c1dc16ae66dc25cb60d08279b6fb5359d8b6748cdf0e6f"
+    },
+    {
+      "name": "final evaluation/CLI typecheck",
+      "command": "corepack pnpm exec tsc -b packages/evaluation apps/cli",
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "exitCode": 0,
+      "log": "typecheck-verified-final.log",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "S1-associated whitespace validation",
+      "command": "git diff --check -- apps/cli/src/benchmark-command.ts packages/evaluation/src/candidate-registry.ts packages/evaluation/src/candidate-registry.test.ts packages/evaluation/src/arm-factory.ts packages/evaluation/src/mechanism-guidance.ts packages/evaluation/src/mechanism-contract.ts packages/evaluation/src/mechanism-contract.test.ts packages/evaluation/src/activation-evidence.ts packages/evaluation/src/activation-evidence-execution.ts",
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "exitCode": 0
+    }
+  ],
+  "mechanismIdentity": {
+    "candidateId": "diagnostic_first_repair_v1",
+    "status": "experimental",
+    "baselineDigest": "3b7a75ad598de2e325eb35d49f71a2e90c832828d4c02b62fc3a20a6d63ae377",
+    "candidateDigest": "f3369adde710847798bc21ac55663e6369cf14a1385c0fd72472908a6ac826b7",
+    "comparison": {
+      "comparable": true,
+      "hasCausalDelta": true,
+      "undeclaredDeltas": [],
+      "declaredDeltas": [
+        "harnessConfig.completionGuidance"
+      ],
+      "missingDeclaredDeltas": [],
+      "reasonCode": null,
+      "providerCallsAllowed": true
+    },
+    "guidanceVersion": "diagnostic-first-repair:v1",
+    "promptAdditionsDigest": "cae61728f2f4dcf4713aa037907fa4c068460b74c7d6d1c42526d9570b686f6c",
+    "modelVisiblePromptDigest": "ec591c5fbb8af42e2e702ca7ee1ef7250edef47d5e3f53156c1812e5f78c9938",
+    "baselinePromptDigest": "9102f094abc7670958d32f58d9c2f883b7c91b87081b617aafc65be4f7d05b06",
+    "runtimeConfigHash": "d9253777f3cccd94db65bd76263ece56aab8589c9e64d305b004cebc55421ade",
+    "baselineRuntimeConfigHash": "80a8855e5b222c2111e7e3f5b84a35abd75c555b5c757033f2247b6e93dca8a0",
+    "mechanismContract": {
+      "schemaVersion": "1.0.0",
+      "candidateId": "diagnostic_first_repair_v1",
+      "modelVisibleSurface": "versioned completionGuidance in the real model request; original verification gate unchanged",
+      "eligibilityRule": "case has an original command verifier that can be rerun for diagnostic access",
+      "minEligibleCases": 5,
+      "expectedFailureCluster": "verification_failed (guessing repairs without concrete diagnostics)",
+      "requiredActivationEvents": [
+        "diagnostic-first-repair-guidance-injected"
+      ],
+      "forbiddenNoOpConditions": [
+        "guidance absent from real model requests",
+        "baseline already injects the same guidance",
+        "original verifier replaced or truth policy weakened"
+      ]
+    },
+    "defaultOff": true,
+    "quality": "NOT_RUN",
+    "promotion": "NOT_RUN"
+  },
+  "pairedOffline": {
+    "artifact": "paired-results.json",
+    "engine": "runPairedExperiment",
+    "cases": 2,
+    "repetitions": 2,
+    "finalizedPairs": 4,
+    "partialPairs": 0,
+    "logicalRuns": 8,
+    "modelCallAttempts": 36,
+    "orderSeed": 19,
+    "modelSeed": null,
+    "deterministicModelDouble": true,
+    "AB": 2,
+    "BA": 2,
+    "sameOriginalCasePerPair": true,
+    "independentContentVerifierHash": "15b39c9f94fa19c8f96dafe336bb89cf568490ba3810a77f67850d9d9fc18fdd",
+    "isolation": "explicit insecure-local offline fixture",
+    "promotionEligible": false,
+    "identityScope": "Offline execution identity binds schedule, original case input, arm config, provider/model, budget, policy and explicit insecure posture. Source commit/tree fields are null in the offline executor identity; current uncommitted source files are fingerprinted in this manifest. This is not promotion evidence."
+  },
+  "reviews": {
+    "actualModelPromptInstalled": "PASS",
+    "declaredSemanticDelta": [
+      "harnessConfig.completionGuidance"
+    ],
+    "undeclaredDelta": [],
+    "versionAndActualPromptDigest": "PASS",
+    "defaultOff": "PASS",
+    "S2ExcludedFromS1": "PASS",
+    "originalVerificationGatePreserved": "PASS",
+    "eligibilityFromOriginalNonemptyCommand": "PASS",
+    "labelOnlyEmptyAlteredActivationRejected": "PASS",
+    "redactedDataOnlyDiagnosticMessages": "PASS",
+    "fakePassAndVerifierSubstitutionRejected": "PASS",
+    "injectionWithheld": "PASS",
+    "existingRuntimeAndPredispatchBudgetLimits": "PASS"
+  },
+  "quality": {
+    "realModelBenefit": "NOT_RUN",
+    "paidProviderCalls": 0,
+    "promotion": "NOT_RUN",
+    "defaultEnabled": false
+  },
+  "pending": [
+    "Root-owned frozen clean-tree typecheck/build/full-suite/security acceptance",
+    "Real-model paired quality evaluation remains NOT_RUN; default OFF"
+  ],
+  "history": [
+    {
+      "log": "green-resume.log",
+      "status": "FAIL",
+      "detail": "7 passed/1 failed: real nested JSON diagnostic secret bypass; preserved and fixed by R3a owner"
+    },
+    {
+      "log": "compatibility-targeted.log",
+      "status": "FAIL",
+      "detail": "127 passed/1 failed: promotion-grade host-probe expected artifact blocked by dirty source tree; no truth policy relaxation"
+    }
+  ],
+  "artifacts": {
+    "mechanism-identity.json": {
+      "sha256": "b9f7aadac6569ca831e4f1333e674145e06e2079357a96b1aee9bd0727a74b4e",
+      "bytes": 1875
+    },
+    "offline-results.json": {
+      "sha256": "84aa2790b05930d2a21ff8d64d4946c4e9de2291f432834ae5ded3ac9dc49f61",
+      "bytes": 342704
+    },
+    "paired-results.json": {
+      "sha256": "2b33c00d9a5b0bcc5aa1006776deab0f3a6e7a5012592eb6a107156627b834ca",
+      "bytes": 334767
+    }
+  },
+  "dependencySecurityFix": {
+    "owner": "root R3a",
+    "regression": "packages/core/src/runtime/structured-output-security.regressions.test.ts",
+    "candidateOldRed": "../r3a-structured/candidate-old-controller-red.log",
+    "baselineRed": "../r3a-structured/baseline-6f03bb2-red.log",
+    "redTests": 26,
+    "finalGreenTests": 26,
+    "sourceFiles": {
+      "packages/core/src/runtime/context-controller.ts": "c52fb4d3eb9bb6a7f246d94356236dbed951a68ef16098083174c7ba0559b949",
+      "packages/core/src/runtime/tool-output-security.ts": "e39211dd077987cbb264221a99cc34b354f2002768718514b60918510d56ee86",
+      "packages/core/src/runtime/structured-output-security.regressions.test.ts": "02e27652d72696a8b178fceef9efb50d1f4249d82f759aab9d9042ea37068d23"
+    },
+    "detail": "Real JSON escaped newline/tab/nested capture safety bug preserved as RED and fixed at injected-hook data boundary; S1 fixture not weakened"
+  },
+  "digests": {
+    "algorithm": "sha256 over sorted compact UTF-8 JSON for source files map and mechanism contract",
+    "sourceFilesDigest": "9ac7560661064e9ab09ab77a8eb64dc28d1030a6d287c9dca960c3b5d7bb2ffa",
+    "mechanismContractSchemaDigest": "d51432bb24764e8c5bf259b8bda2ccb958cf88e592e818944cc341a5c6d0ed7b",
+    "promptDigest": "ec591c5fbb8af42e2e702ca7ee1ef7250edef47d5e3f53156c1812e5f78c9938",
+    "baselinePromptDigest": "9102f094abc7670958d32f58d9c2f883b7c91b87081b617aafc65be4f7d05b06",
+    "candidateRuntimeConfigHash": "d9253777f3cccd94db65bd76263ece56aab8589c9e64d305b004cebc55421ade",
+    "baselineRuntimeConfigHash": "80a8855e5b222c2111e7e3f5b84a35abd75c555b5c757033f2247b6e93dca8a0"
+  }
+}

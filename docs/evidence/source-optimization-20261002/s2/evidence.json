@@ -1,0 +1,573 @@
+{
+  "schemaVersion": "source-optimization-s2-v2",
+  "strategy": "path_scoped_instructions_v1",
+  "status": "experimental",
+  "baselineSHA": "6f03bb25ffab0791e292bd888899f925c3d4320a",
+  "candidateBaseSHA": "9ff841a8f26646d867418c4298b017ea063c3fbe",
+  "implementationIdentity": "uncommitted working-tree source hashes; root freeze evidence is authoritative",
+  "sourceSHA256": {
+    "packages/context/src/path-scoped-discovery.ts": "808a978c333714fa2ca5c06317d71e98c767454201d417dbde33d05fb5ffbe2f",
+    "packages/context/src/path-scoped-discovery.test.ts": "93103778f7c8bbd057f90c1a9c96c63a5c35a1cdb1eb87e67855726d70b088ae",
+    "packages/context/src/index.ts": "a6bf5a166a7d45d0f129f0f1b1dcbbaccfac0e74d32ee5ef51bf027971269e9e",
+    "packages/harness/src/path-scoped-instructions.ts": "39bbb653b024c94121a12463bf4e6fe5b01a76f8fb8b3af00656eebf57b3305e",
+    "packages/harness/src/path-scoped-instructions.regressions.test.ts": "88f9ab7f4790820d8039b4727e0006c312d78ec7cc2ffdd7ee76b993fb6d2034",
+    "packages/harness/src/compose/compose-context.ts": "baac4beec11baac088b695f284a72580e1c44d65820aeb967e0bef109e60960c",
+    "packages/harness/src/config.ts": "1e225321bc5e215dd3f3977cd7b61d66118897b88db2793e216a0f9d78efb6bf",
+    "packages/harness/src/create-harness.ts": "5af9a8f7a5f82122df90f59e39a7d6cdb63134d12c40bc5ab386aad4476eafeb",
+    "packages/harness/src/index.ts": "e1ec6e546a67a4f0112d38228e59ae3fafe98ce66f693e4ca2646c7a39b5c98b",
+    "packages/evaluation/src/candidate-registry.ts": "433484087f2ad823d67d706aa77c1e21676a809957f59c6d278828897927f008",
+    "packages/evaluation/src/arm-factory.ts": "614aab7dcfa5a0ded110b4af7884ff69d1c5a87a999920fbb85620cd7001bec3",
+    "packages/evaluation/src/mechanism-contract.ts": "ea0926fa12a46327e1fba2b7eda5ce2ce9ab9433164aa5f1ad839aac12f96164",
+    "apps/cli/src/benchmark-command.ts": "dfc7dd612a295f0dbd94c2d9e2f0b3d4e15e76a4954beb3cb569db65caffbab5",
+    "apps/cli/src/path-scoped-instructions.test.ts": "d8dbe9de883e33a50a83f15e9f98f1cee947c43381c45a0b507cc5e3e8c9e3bf",
+    "packages/evaluation/src/activation-evidence.ts": "4a64756ae7a1ba30cfce97f9803507496642d16fcbc09c83da0fb4f4c11a7414",
+    "packages/evaluation/src/activation-evidence-execution.ts": "47bb81b36d345f3f91ec91e8aa6f9fdfb426df0f3e38769f2171e64d84005d10",
+    "packages/evaluation/src/path-scoped-eligibility.test.ts": "46f7166bd74b12f746b011c54029b56a7bdd6018b6ee83c402b413cfdf5cdd88"
+  },
+  "environment": {
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+    "node": "v24.19.0",
+    "pnpm": "11.21.0"
+  },
+  "config": {
+    "strategy": "path_scoped_instructions_v1",
+    "maxDocuments": 4,
+    "maxBytesPerFile": 50000
+  },
+  "configDigest": "fb05a7845f6878deccfb64fb970c2638f3d9a4d50203170846a39e7fcc94972c",
+  "constructorIdentity": "context:path-scoped-instructions-v1",
+  "defaultDiscovery": "unchanged",
+  "checks": {
+    "baselineNewContextHarnessTests": {
+      "result": "RED",
+      "failed": 26,
+      "passed": 3,
+      "log": "baseline-red.log",
+      "command": "corepack pnpm exec vitest run packages/context/src/path-scoped-discovery.test.ts packages/harness/src/path-scoped-instructions.regressions.test.ts"
+    },
+    "candidateNewContextHarnessTests": {
+      "result": "GREEN",
+      "passed": 29,
+      "log": "candidate-green.log"
+    },
+    "candidateRelatedRegression": {
+      "result": "GREEN",
+      "files": 15,
+      "passed": 215,
+      "log": "regressions-green.log",
+      "command": "corepack pnpm exec vitest run packages/context packages/harness/src/path-scoped-instructions.regressions.test.ts packages/harness/src/context-wiring.integration.test.ts packages/core/src/runtime/skill-instruction-snapshot.p32.test.ts packages/core/src/runtime/step-snapshot.invariant.test.ts"
+    },
+    "candidateCLI": {
+      "result": "GREEN",
+      "passed": 7,
+      "log": "candidate-final-green.log",
+      "command": "S2_EVIDENCE_DIR=/workspace/harness-agent/.ci/source-optimization/s2 corepack pnpm exec vitest run apps/cli/src/path-scoped-instructions.test.ts packages/context/src/path-scoped-discovery.test.ts packages/harness/src/path-scoped-instructions.regressions.test.ts packages/evaluation/src/path-scoped-eligibility.test.ts"
+    },
+    "baselineCLI": {
+      "result": "RED",
+      "failed": 6,
+      "log": "cli-baseline-red.log",
+      "passed": 1,
+      "command": "corepack pnpm exec vitest run apps/cli/src/path-scoped-instructions.test.ts"
+    },
+    "typecheck": {
+      "result": "GREEN",
+      "exitCode": 0,
+      "command": "corepack pnpm exec tsc -b packages/context packages/harness packages/evaluation apps/cli --pretty false",
+      "log": "all-target-typecheck.log",
+      "executedAtUTC": "2026-10-02T22:22:12Z"
+    },
+    "candidateFinalCombined": {
+      "result": "GREEN",
+      "files": 4,
+      "passed": 39,
+      "log": "candidate-final-green.log",
+      "executedAtUTC": "2026-10-02T22:22:11Z",
+      "exitCodeReported": 0,
+      "command": "S2_EVIDENCE_DIR=/workspace/harness-agent/.ci/source-optimization/s2 corepack pnpm exec vitest run apps/cli/src/path-scoped-instructions.test.ts packages/context/src/path-scoped-discovery.test.ts packages/harness/src/path-scoped-instructions.regressions.test.ts packages/evaluation/src/path-scoped-eligibility.test.ts"
+    },
+    "candidateEligibility": {
+      "result": "GREEN",
+      "files": 2,
+      "passed": 16,
+      "newTestsPassed": 3,
+      "existingActivationTestsPassed": 13,
+      "log": "eligibility-green.log",
+      "exitCodeReported": 0,
+      "command": "corepack pnpm exec vitest run packages/evaluation/src/path-scoped-eligibility.test.ts packages/evaluation/src/activation-evidence.test.ts"
+    },
+    "baselineEligibility": {
+      "result": "RED",
+      "failed": 2,
+      "passed": 1,
+      "log": "eligibility-baseline-red.log",
+      "exitCodeReported": 1,
+      "command": "corepack pnpm exec vitest run packages/evaluation/src/path-scoped-eligibility.test.ts"
+    }
+  },
+  "offlinePairedObservations": [
+    {
+      "caseId": "s2-three-package-content",
+      "candidate": false,
+      "status": "failed",
+      "actualStatus": "failed",
+      "modelRequests": 8,
+      "requestBytes": [
+        1513,
+        1571,
+        1689,
+        1747,
+        1865,
+        1925,
+        1925,
+        1925
+      ],
+      "toolCalls": 5,
+      "contextTokens": 1625,
+      "lastDiscovery": {
+        "documentReadFileCalls": 32,
+        "directoryListings": 40
+      }
+    },
+    {
+      "caseId": "s2-three-package-content",
+      "candidate": true,
+      "status": "passed",
+      "actualStatus": "completed",
+      "modelRequests": 6,
+      "requestBytes": [
+        1046,
+        1260,
+        1378,
+        1436,
+        1554,
+        1613
+      ],
+      "toolCalls": 5,
+      "contextTokens": 1042,
+      "lastDiscovery": {
+        "probes": 84,
+        "reads": 3,
+        "cacheHits": 8,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "caseId": "s2-denied-target",
+      "candidate": true,
+      "status": "passed",
+      "actualStatus": "completed",
+      "modelRequests": 3,
+      "requestBytes": [
+        1046,
+        1170,
+        1384
+      ],
+      "toolCalls": 2,
+      "contextTokens": 478,
+      "lastDiscovery": {
+        "probes": 28,
+        "reads": 2,
+        "cacheHits": 2,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "caseId": "s2-injection-target",
+      "candidate": true,
+      "status": "passed",
+      "actualStatus": "completed",
+      "modelRequests": 2,
+      "requestBytes": [
+        1046,
+        1104
+      ],
+      "toolCalls": 1,
+      "contextTokens": 287,
+      "lastDiscovery": {
+        "probes": 24,
+        "reads": 2,
+        "cacheHits": 1,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    },
+    {
+      "caseId": "s2-no-visible-instruction",
+      "candidate": true,
+      "status": "passed",
+      "actualStatus": "completed",
+      "modelRequests": 1,
+      "requestBytes": [
+        879
+      ],
+      "toolCalls": 0,
+      "contextTokens": 125,
+      "lastDiscovery": null
+    },
+    {
+      "caseId": "s2-parallel-scope",
+      "candidate": true,
+      "status": "passed",
+      "actualStatus": "completed",
+      "modelRequests": 6,
+      "requestBytes": [
+        1046,
+        669,
+        669,
+        883,
+        883,
+        1348
+      ],
+      "toolCalls": 1,
+      "contextTokens": 348,
+      "lastDiscovery": {
+        "probes": 54,
+        "reads": 3,
+        "cacheHits": 5,
+        "rejectedTargets": 0,
+        "truncatedDocuments": 0
+      }
+    }
+  ],
+  "qualityEvaluation": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "windowsExecution": "NOT_RUN",
+  "limits": [
+    "Offline scripted provider tests prove installation, content verification and safety contracts, not real-model improvement.",
+    "Node platform path rules are used; Windows execution has not been attested.",
+    "Target source is host initialTargets or last successful actual read/search batch; plan/model/output strings do not change scope.",
+    "Rule docs remain untrusted data and use the existing ContextPipeline injection scanner.",
+    "Paired fixture identity sourceSha/treeFingerprint are null because this executed before the final commit; exact fixture and source hashes are retained here, and the run is not promotion-eligible.",
+    "Zero subtree listings describes candidate instruction discovery only. Whole benchmark also performs five directory listings per candidate arm for other existing behavior."
+  ],
+  "logsSHA256": {
+    "all-target-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "baseline-red.log": "0831abde972f76254d9435d96c4f88ceedaf30916806a33a7b2acb6a6dd8a69b",
+    "candidate-final-green.log": "36affdd6e287a50cbc9331c2e676a96b604c8b0ad84e91c1888c73b2735b0229",
+    "candidate-green.log": "13e82cf2a198806c9f0fcb58d73ab67d0ff231a15d1be72c1161f64655e010ad",
+    "cli-baseline-red.log": "59f9566d806bd35169a3d6b19f6fb5df48307f3d568cb5bb1f4a2df5a0e38c31",
+    "cli-existing-baseline.log": "279539ba618b86ea0fa2d75170128ce3c3e9a695372364e589f35a61413d45c4",
+    "cli-existing-candidate-targeted.log": "b2511a68b0e36d7d7d65fd7ea175301486ee399f956501a433a766a01fd7cdbd",
+    "cli-green.log": "3464099911ef17c42ae4a8997dca931f54d6481fdacf17a37868f9415111c588",
+    "cli-regressions.log": "21c5366c922883474da727e9b1bd48252816f3dfd61326fb192cc791d9f66159",
+    "cli-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "eligibility-baseline-red.log": "4fae72f99b58f0b73f4e9f16ecc9f0b73074da29ca562167e7dcb7fbff6e5115",
+    "eligibility-green.log": "becc6e2ff8eb56631bb373e17c40b0bafd57ae2b4ba99c11907230a80fba8ec7",
+    "eligibility-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "regressions-green.log": "91d4a7d32c412cffbe35d234f2d4b4489bbb82bb131a64833320b005b6f51634",
+    "typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "audit": {
+    "updatedAt": "2026-10-03T04:06:27.679884+00:00",
+    "method": "Read-only audit of retained executed logs, case artifacts and current/baseline fixture hashes; no unnecessary rerun",
+    "sourceStatus": "S2 implementation and fixtures frozen; root final clean full-suite evidence is authoritative",
+    "otherRuntimeChanges": "R3 integration is still under root review; these retained target logs do not attest later Core changes."
+  },
+  "baselineCandidateFixtureIdentity": {
+    "packages/context/src/path-scoped-discovery.test.ts": {
+      "candidateSHA256": "93103778f7c8bbd057f90c1a9c96c63a5c35a1cdb1eb87e67855726d70b088ae",
+      "baselineSHA256": "93103778f7c8bbd057f90c1a9c96c63a5c35a1cdb1eb87e67855726d70b088ae",
+      "identical": true
+    },
+    "packages/harness/src/path-scoped-instructions.regressions.test.ts": {
+      "candidateSHA256": "88f9ab7f4790820d8039b4727e0006c312d78ec7cc2ffdd7ee76b993fb6d2034",
+      "baselineSHA256": "88f9ab7f4790820d8039b4727e0006c312d78ec7cc2ffdd7ee76b993fb6d2034",
+      "identical": true
+    },
+    "apps/cli/src/path-scoped-instructions.test.ts": {
+      "candidateSHA256": "d8dbe9de883e33a50a83f15e9f98f1cee947c43381c45a0b507cc5e3e8c9e3bf",
+      "baselineSHA256": "d8dbe9de883e33a50a83f15e9f98f1cee947c43381c45a0b507cc5e3e8c9e3bf",
+      "identical": true
+    },
+    "packages/evaluation/src/path-scoped-eligibility.test.ts": {
+      "candidateSHA256": "46f7166bd74b12f746b011c54029b56a7bdd6018b6ee83c402b413cfdf5cdd88",
+      "baselineSHA256": "46f7166bd74b12f746b011c54029b56a7bdd6018b6ee83c402b413cfdf5cdd88",
+      "identical": true
+    }
+  },
+  "pairedEngineEvidence": {
+    "artifact": "cli-paired-results.json",
+    "status": "ok",
+    "complete": true,
+    "logicalRuns": 4,
+    "modelCallAttempts": 28,
+    "transportRetries": 0,
+    "pairs": 2,
+    "partialPairs": 0,
+    "orders": [
+      "BA",
+      "AB"
+    ],
+    "haltedByBudget": false,
+    "identity": {
+      "schemaVersion": "e4-r01",
+      "scheduleDigest": "6b15368999567faa8ebe366a06d42e6e519be11f569a3edc2e3660981cbd3b2b",
+      "suite": "regression",
+      "judgeVersion": "1.0.0",
+      "repetitions": 2,
+      "orderSeed": 19,
+      "modelSeed": null,
+      "caseIds": [
+        "s2-three-package-content"
+      ],
+      "caseFingerprints": {
+        "s2-three-package-content": "207cef5b81fbea5fed6adff20a50ace8a53b83f19bb389ffaa0118cba98d25d3"
+      },
+      "baselineConfigHash": "3b7a75ad598de2e325eb35d49f71a2e90c832828d4c02b62fc3a20a6d63ae377",
+      "candidate": "path_scoped_instructions_v1",
+      "candidateConfigHash": "c79ec2850168a8ea90bae4151747a752bdd85a7f2d221f1d17bf82911f5a5250",
+      "providerId": "s2-offline-fixture",
+      "modelId": "s2-offline-fixture",
+      "effectiveModelParams": {
+        "deterministicScript": "s2-v1",
+        "budgetTokens": 32000
+      },
+      "sourceSha": null,
+      "treeFingerprint": null,
+      "limits": {
+        "maxLogicalRuns": 4,
+        "maxModelCalls": 64,
+        "maxEstimatedTokens": null,
+        "maxEstimatedCostUsd": 0
+      },
+      "billingClass": "fixture",
+      "isolationBackendId": "insecure-local",
+      "isolationStrength": "insecure",
+      "isolationSelfTestId": "insecure-none",
+      "promotionEligible": false,
+      "decisionPolicy": {
+        "version": "e4-05-policy-v1",
+        "minActivationEligibleCases": 3,
+        "minActivationCoverage": 0.5,
+        "maxVerifiedDrop": 0.05,
+        "minConclusiveNetDelta": 1,
+        "maxTokensDelta": 50000,
+        "securityBreachesAllowed": 0,
+        "minRecoveryRate": null
+      },
+      "thresholdDigest": "844c8db996796df2c88ab4c7f0fec5a106a92f9027933ee2f8b7553c9a7ae8ce"
+    },
+    "independentVerifierHash": "c9f2736296fb1e7e3bba73676739c97381d018debafa0ac6a8af5d5086243c26",
+    "observations": [
+      {
+        "arm": "candidate",
+        "repetition": 0,
+        "actualStatus": "completed",
+        "requestCount": 6,
+        "buildTokens": [
+          142,
+          156,
+          174,
+          177,
+          195,
+          198
+        ],
+        "discoveryCounters": {
+          "probes": 84,
+          "reads": 3,
+          "cacheHits": 8,
+          "rejectedTargets": 0,
+          "truncatedDocuments": 0
+        },
+        "observedDefaultDiscoveryCalls": {
+          "documentReadFileCalls": 0,
+          "directoryListings": 0
+        },
+        "observedFilesystemCalls": {
+          "documentReadFileCalls": 0,
+          "directoryListings": 5
+        }
+      },
+      {
+        "arm": "baseline",
+        "repetition": 0,
+        "actualStatus": "failed",
+        "requestCount": 8,
+        "buildTokens": [
+          175,
+          178,
+          196,
+          199,
+          217,
+          220,
+          220,
+          220
+        ],
+        "discoveryCounters": {
+          "documentReadFileCalls": 32,
+          "directoryListings": 40
+        },
+        "observedDefaultDiscoveryCalls": {
+          "documentReadFileCalls": 32,
+          "directoryListings": 40
+        },
+        "observedFilesystemCalls": {
+          "documentReadFileCalls": 32,
+          "directoryListings": 45
+        }
+      },
+      {
+        "arm": "baseline",
+        "repetition": 1,
+        "actualStatus": "failed",
+        "requestCount": 8,
+        "buildTokens": [
+          175,
+          178,
+          196,
+          199,
+          217,
+          220,
+          220,
+          220
+        ],
+        "discoveryCounters": {
+          "documentReadFileCalls": 32,
+          "directoryListings": 40
+        },
+        "observedDefaultDiscoveryCalls": {
+          "documentReadFileCalls": 32,
+          "directoryListings": 40
+        },
+        "observedFilesystemCalls": {
+          "documentReadFileCalls": 32,
+          "directoryListings": 45
+        }
+      },
+      {
+        "arm": "candidate",
+        "repetition": 1,
+        "actualStatus": "completed",
+        "requestCount": 6,
+        "buildTokens": [
+          142,
+          156,
+          174,
+          177,
+          195,
+          198
+        ],
+        "discoveryCounters": {
+          "probes": 84,
+          "reads": 3,
+          "cacheHits": 8,
+          "rejectedTargets": 0,
+          "truncatedDocuments": 0
+        },
+        "observedDefaultDiscoveryCalls": {
+          "documentReadFileCalls": 0,
+          "directoryListings": 0
+        },
+        "observedFilesystemCalls": {
+          "documentReadFileCalls": 0,
+          "directoryListings": 5
+        }
+      }
+    ],
+    "pairsAudit": [
+      {
+        "order": "BA",
+        "baselineActualStatus": "failed",
+        "candidateActualStatus": "completed",
+        "candidateContentVerification": "passed",
+        "sameEvaluationContextHash": true,
+        "differentConfigHash": true,
+        "candidateActivation": {
+          "activated": 6,
+          "eligibleButNotActivated": 0,
+          "ineligible": 0,
+          "invalid": 0,
+          "unknownLegacy": 0
+        }
+      },
+      {
+        "order": "AB",
+        "baselineActualStatus": "failed",
+        "candidateActualStatus": "completed",
+        "candidateContentVerification": "passed",
+        "sameEvaluationContextHash": true,
+        "differentConfigHash": true,
+        "candidateActivation": {
+          "activated": 6,
+          "eligibleButNotActivated": 0,
+          "ineligible": 0,
+          "invalid": 0,
+          "unknownLegacy": 0
+        }
+      }
+    ]
+  },
+  "concurrentSessionEvidence": {
+    "artifact": "cli-concurrency-results.json",
+    "actualStatus": "completed",
+    "childStarts": 2,
+    "sessionCount": 3,
+    "requests": 6,
+    "durableModelStarts": 6,
+    "durableSelections": 6,
+    "sourceSets": [
+      [
+        "AGENTS.md"
+      ],
+      [
+        "AGENTS.md"
+      ],
+      [
+        "AGENTS.md"
+      ],
+      [
+        "AGENTS.md",
+        "packages/a/AGENTS.md"
+      ],
+      [
+        "AGENTS.md",
+        "packages/b/AGENTS.md"
+      ],
+      [
+        "AGENTS.md"
+      ]
+    ]
+  },
+  "noDocumentEvidence": {
+    "artifact": "cli-offline-results.json",
+    "caseId": "s2-no-visible-instruction",
+    "requests": 1,
+    "sources": [],
+    "durableSelections": 0,
+    "activation": {
+      "events": [],
+      "validation": {
+        "ok": true,
+        "issues": []
+      },
+      "aggregation": {
+        "activated": 0,
+        "eligibleButNotActivated": 0,
+        "ineligible": 1,
+        "invalid": 0,
+        "unknownLegacy": 0
+      }
+    }
+  },
+  "paidModelCalls": 0,
+  "artifactsSHA256": {
+    "cli-concurrency-results.json": "bfd112b5b03d9cb41d8a352a1a44075a655be55da7cd5a5e62d8777600377f77",
+    "cli-offline-results.json": "f2a0298c83dc4224a8aa495d2a430dfbaecb85f3b7fc86072a88c8cd8ac8c41a",
+    "cli-paired-results.json": "dc2431a77001495e092077a590581a6cab128efaa09e510f4228366c5912fd12"
+  },
+  "independentAudit": {
+    "method": "Read-only second-agent audit of actual retained paired, concurrency and no-document JSON against fixture source",
+    "independentVerifierHashRecomputed": "c9f2736296fb1e7e3bba73676739c97381d018debafa0ac6a8af5d5086243c26",
+    "pairedCounterAndOrdersMatch": true,
+    "sameCaseContextAndDifferentConfigMatch": true,
+    "sixConcurrentRequestSummaryBindingsMatch": true,
+    "noDocumentZeroActivationMatch": true,
+    "limitation": "Concurrency JSON retains request summaries, not complete system text. Full instructionFingerprint equality is asserted by the executed test against actual in-memory ModelRequest; it cannot be independently recomputed from the summary artifact alone."
+  },
+  "taskDocumentationSHA256": {
+    "tasks/P3/CTX-001.md": "145c317f00676280d22a0479ab0378a87dabf84ff25562beb4304efade9607ac"
+  }
+}

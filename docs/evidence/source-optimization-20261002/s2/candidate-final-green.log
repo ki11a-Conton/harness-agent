@@ -1,0 +1,14 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-source-optimization
+
+ ✓ apps/cli/src/path-scoped-instructions.test.ts (7 tests) 628ms
+     ✓ executes the actual AB/BA paired engine twice with fixed inputs and independent content verification  343ms
+ ✓ packages/harness/src/path-scoped-instructions.regressions.test.ts (9 tests) 124ms
+ ✓ packages/context/src/path-scoped-discovery.test.ts (20 tests) 70ms
+ ✓ packages/evaluation/src/path-scoped-eligibility.test.ts (3 tests) 5ms
+
+ Test Files  4 passed (4)
+      Tests  39 passed (39)
+   Start at  22:22:11
+   Duration  4.01s (transform 1.82s, setup 0ms, import 2.76s, tests 826ms, environment 0ms)
+
