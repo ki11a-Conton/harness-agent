@@ -34,10 +34,10 @@ export class PathScopedInstructionDiscovery implements InstructionDiscovery {
   }
 
   async discover(cwd: string, opts: InstructionDiscoveryOptions = {}): Promise<DiscoveredInstruction[]> {
-    const current = resolve(cwd);
-    const rootStat = await this.safeStat(this.root);
-    const cwdStat = await this.safeStat(current);
-    if (!rootStat?.isDirectory() || !cwdStat?.isDirectory()) throw new Error("Path-scoped instruction discovery requires a real cwd inside its workspace root");
+    const canonicalRoot = await this.canonicalRoot();
+    const cwdPath = canonicalRoot === undefined ? undefined : await this.safeStat(resolve(cwd), canonicalRoot);
+    if (canonicalRoot === undefined || !cwdPath?.stat.isDirectory()) throw new Error("Path-scoped instruction discovery requires a real cwd inside its workspace root");
+    const current = cwdPath.path;
     const targets = [...(this.options.targets?.() ?? [])];
     const directories = new Set<string>();
     const addAncestors = (directory: string): void => {
@@ -50,9 +50,9 @@ export class PathScopedInstructionDiscovery implements InstructionDiscovery {
     for (const target of targets) {
       if (target.split(/[\\/]/u).includes("..")) { this.metrics.rejectedTargets++; continue; }
       const path = resolve(current, target);
-      const stat = await this.safeStat(path);
-      if (stat === undefined) { this.metrics.rejectedTargets++; continue; }
-      addAncestors(stat.isDirectory() ? path : dirname(path));
+      const checked = await this.safeStat(path, canonicalRoot);
+      if (checked === undefined) { this.metrics.rejectedTargets++; continue; }
+      addAncestors(checked.stat.isDirectory() ? checked.path : dirname(checked.path));
     }
     const depth = (dir: string): number => dir === this.root ? 0 : relative(this.root, dir).split(sep).length;
     const ordered = [...directories].sort((a, b) => depth(a) - depth(b) || a.localeCompare(b));
@@ -68,7 +68,7 @@ export class PathScopedInstructionDiscovery implements InstructionDiscovery {
     for (const dir of ordered) {
       if (docs.length >= maxDocuments) break;
       const path = join(dir, "AGENTS.md");
-      const loaded = await this.readDoc(path, maxBytes);
+      const loaded = await this.readDoc(path, maxBytes, canonicalRoot);
       if (loaded === undefined) continue;
       const truncated = loaded.truncated;
       if (truncated) this.metrics.truncatedDocuments++;
@@ -79,17 +79,31 @@ export class PathScopedInstructionDiscovery implements InstructionDiscovery {
     return docs;
   }
 
-  private within(path: string): boolean {
-    const rel = relative(this.root, path);
+  private within(path: string, root = this.root): boolean {
+    const rel = relative(root, path);
     return rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
   }
 
-  /** Reject every symlink component, including the document and target. */
-  private async safeStat(path: string): Promise<Stats | undefined> {
-    if (!this.within(path)) return undefined;
+  /** Windows realpath expands legitimate 8.3 names. Validate actual link
+   *  components before using that canonical root as a containment basis. */
+  private async canonicalRoot(): Promise<string | undefined> {
     try {
-      const rel = relative(this.root, path);
-      let current = this.root;
+      for (let path = this.root; ; path = dirname(path)) {
+        const stat = await lstat(path); this.metrics.probes++;
+        if (stat.isSymbolicLink() || (path === this.root && !stat.isDirectory())) return undefined;
+        if (dirname(path) === path) break;
+      }
+      return await realpath(this.root);
+    } catch { return undefined; }
+  }
+
+  /** Reject every symlink component, including the document and target. */
+  private async safeStat(path: string, canonicalRoot: string): Promise<{ stat: Stats; path: string } | undefined> {
+    const base = this.within(path) ? this.root : this.within(path, canonicalRoot) ? canonicalRoot : undefined;
+    if (base === undefined) return undefined;
+    try {
+      const rel = relative(base, path);
+      let current = base;
       let stat = await lstat(current); this.metrics.probes++;
       if (stat.isSymbolicLink()) return undefined;
       for (const segment of rel === "" ? [] : rel.split(sep)) {
@@ -97,25 +111,25 @@ export class PathScopedInstructionDiscovery implements InstructionDiscovery {
         stat = await lstat(current); this.metrics.probes++;
         if (stat.isSymbolicLink()) return undefined;
       }
-      // node:path.relative follows the host platform's identity rules (drive
-      // letter case on Windows), while still rejecting an alias through a
-      // symlinked ancestor on either platform.
-      if (relative(path, await realpath(path)) !== "") return undefined;
-      return stat;
+      const canonical = await realpath(path);
+      if (!this.within(canonical, canonicalRoot)) return undefined;
+      // Keep provenance and ancestry in the host root's spelling even when
+      // cwd/targets arrive in its canonical (long-name) spelling.
+      return { stat, path: resolve(this.root, relative(canonicalRoot, canonical)) };
     } catch { return undefined; }
   }
 
-  private async readDoc(path: string, maxBytes: number): Promise<{ content: string; sizeBytes: number; truncated: boolean } | undefined> {
-    const stat = await this.safeStat(path);
-    if (stat === undefined || !stat.isFile()) { this.cache.delete(path); return undefined; }
-    const revision = revisionOf(stat);
+  private async readDoc(path: string, maxBytes: number, canonicalRoot: string): Promise<{ content: string; sizeBytes: number; truncated: boolean } | undefined> {
+    const checked = await this.safeStat(path, canonicalRoot);
+    if (checked === undefined || !checked.stat.isFile()) { this.cache.delete(path); return undefined; }
+    const revision = revisionOf(checked.stat);
     const cached = this.cache.get(path);
     if (cached?.revision === revision && cached.maxBytes === maxBytes) { this.metrics.cacheHits++; return cached; }
     let handle: Awaited<ReturnType<typeof open>> | undefined;
     try {
       handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
       const opened = await handle.stat();
-      if (revisionOf(opened) !== revision || await this.safeStat(path) === undefined) return undefined;
+      if (revisionOf(opened) !== revision || await this.safeStat(path, canonicalRoot) === undefined) return undefined;
       // Capture only the declared prefix and at most one UTF-8 code point of
       // lookahead. Large repository files must never allocate their full size.
       const bytes = Buffer.alloc(Math.min(opened.size, maxBytes + 4));

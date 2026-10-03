@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InstructionDiscovery } from "@ar/contracts";
 import * as context from "./index.js";
@@ -57,6 +57,49 @@ describe("S2 opt-in path scoped discovery", () => {
   it("rejects a cwd outside its fixed workspace", async () => {
     const root = await fixture(MONOREPO); const outside = await fixture({ "AGENTS.md": "OUTSIDE" });
     await expect(discovery(root).discover(outside)).rejects.toThrow();
+  });
+  it("compares canonical root and candidate together when realpath expands a non-link root spelling", async () => {
+    const root = await fixture(MONOREPO);
+    const expandedRoot = `${root}-expanded-name`;
+    const original = fs.realpath;
+    // A controlled filesystem-boundary counterexample for Windows 8.3
+    // expansion, not a claim that this Linux process executes Windows paths.
+    vi.spyOn(fs, "realpath").mockImplementation((async (path: Parameters<typeof fs.realpath>[0]) => {
+      const absolute = resolve(String(path));
+      if (absolute === root || absolute.startsWith(`${root}/`) || absolute.startsWith(`${root}\\`)) {
+        return join(expandedRoot, relative(root, absolute));
+      }
+      return original(path);
+    }) as typeof fs.realpath);
+    syncBuiltinESMExports();
+    const docs = await discovery(root, () => ["c/src/file.ts"]).discover(root);
+    expect(docs.map(doc => doc.content)).toEqual(["ROOT rules\n", "C package rules\n"]);
+    expect(docs.map(doc => doc.path)).toEqual([join(root, "AGENTS.md"), join(root, "c/AGENTS.md")]);
+  });
+  it("accepts the host root's native canonical cwd and target spelling without changing provenance", async () => {
+    const root = await fixture(MONOREPO);
+    const canonical = await fs.realpath(root);
+    const docs = await discovery(root, () => [join(canonical, "c/src/file.ts")]).discover(canonical);
+    expect(docs.map(doc => doc.content)).toEqual(["ROOT rules\n", "C package rules\n"]);
+    expect(docs.map(doc => doc.path)).toEqual([join(root, "AGENTS.md"), join(root, "c/AGENTS.md")]);
+  });
+  it("rejects a canonical target escape despite an allowed lexical target", async () => {
+    const root = await fixture(MONOREPO);
+    const original = fs.realpath;
+    vi.spyOn(fs, "realpath").mockImplementation((async (path: Parameters<typeof fs.realpath>[0]) => {
+      if (resolve(String(path)) === join(root, "c/src/file.ts")) return `${root}-sibling/file.ts`;
+      return original(path);
+    }) as typeof fs.realpath);
+    syncBuiltinESMExports();
+    expect((await discovery(root, () => ["c/src/file.ts"]).discover(root)).map(doc => doc.content)).toEqual(["ROOT rules\n"]);
+  });
+  it("rejects a symlinked workspace root and a symlink in a workspace root's ancestry", async () => {
+    const root = await fixture(MONOREPO);
+    const parent = await fixture({});
+    const alias = join(parent, "alias");
+    await fs.symlink(root, alias, process.platform === "win32" ? "junction" : "dir");
+    await expect(discovery(alias).discover(alias)).rejects.toThrow();
+    await expect(discovery(join(alias, "c")).discover(join(alias, "c"))).rejects.toThrow();
   });
   it("does not follow a symlinked instruction file for an otherwise valid target", async () => {
     const root = await fixture(MONOREPO); await fs.rm(join(root, "c/AGENTS.md")); await fs.symlink(join(root, "b/AGENTS.md"), join(root, "c/AGENTS.md"));
