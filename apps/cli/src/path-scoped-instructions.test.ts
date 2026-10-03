@@ -68,7 +68,7 @@ afterEach(async () => {
 });
 
 async function monorepo(): Promise<BenchmarkCase> {
-  const checker = join(scratch, "frozen-content-check.cjs");
+  const checker = join(scratch, "frozen content check.cjs");
   await writeFile(checker, [
     "const fs = require('node:fs');",
     "for (const [pkg, port] of [['a',11],['b',22],['c',0]]) {",
@@ -79,7 +79,9 @@ async function monorepo(): Promise<BenchmarkCase> {
   const task = "Read packages/a/config.json then packages/b/config.json and record each package's port data from its applicable AGENTS.md. Keep c unchanged.";
   return {
     id: "s2-three-package-content", task, requestMd: task, expectedMd: "a.port=11 and b.port=22",
-    expected: { status: "completed" }, verification: [{ kind: "command", command: `node ${checker}` }],
+    // The independent checker is a program plus argv. A shell recipe would
+    // split this deliberately spaced path; argv preserves the path as given.
+    expected: { status: "completed" }, verification: [{ kind: "command", command: process.execPath, args: [checker] }],
     fixture: {
       "AGENTS.md": "ROOT_DATA=shared\nPackage files contain data for their own package.\n",
       "packages/a/AGENTS.md": "A_PORT=11\nThis datum applies to package a.\n",
@@ -117,7 +119,7 @@ function portRepairScript(request: ModelRequest, index: number) {
 }
 
 const docs = (request: ModelRequest): string[] => [...(request.system ?? "").matchAll(/^\[context trust=untrusted source=project[^\]]* path=([^\]]+)\]$/gmu)]
-  .map(match => match[1]!.replace(/.*\/harness-bench-[^/]+\//u, "").replaceAll("\\", "/"));
+  .map(match => match[1]!.replaceAll("\\", "/").replace(/.*\/harness-bench-[^/]+\//u, ""));
 const scopedFacts = (outcome: Awaited<ReturnType<typeof runOneCase>>) => outcome.events.filter(event => event.type === "context.selected" && event.payload.strategy === ID);
 
 async function run(caseDef: BenchmarkCase, candidate: boolean, m: ReturnType<typeof model>) {
@@ -153,6 +155,16 @@ async function run(caseDef: BenchmarkCase, candidate: boolean, m: ReturnType<typ
 }
 
 describe("S2 CLI path-scoped instruction challenger", () => {
+  it("normalizes both Windows and POSIX fixture document paths before comparing relative scopes", () => {
+    for (const path of [
+      "/tmp/harness-bench-fixture/packages/a/AGENTS.md",
+      "C:\\Users\\runner\\AppData\\Local\\Temp\\harness-bench-fixture\\packages\\a\\AGENTS.md",
+    ]) {
+      const request = { system: `[context trust=untrusted source=project scope=nested path=${path}]` } as ModelRequest;
+      expect(docs(request)).toEqual(["packages/a/AGENTS.md"]);
+    }
+  });
+
   it("registers one experimental arm and hashes the exact installed discovery policy", () => {
     const registry = getCandidateRegistry();
     const factory = getArmFactory();
@@ -247,7 +259,7 @@ describe("S2 CLI path-scoped instruction challenger", () => {
 
   it("executes the actual AB/BA paired engine twice with fixed inputs and independent content verification", async () => {
     const fixture = await monorepo();
-    const checker = join(scratch, "frozen-content-check.cjs");
+    const checker = join(scratch, "frozen content check.cjs");
     const verifierHash = computePromptDigest(await readFile(checker, "utf8"));
     const plan = buildPairedPlan({ suite: "regression", cases: [fixture.id], repetitions: 2, orderSeed: 19 });
     const arms = getArmFactory();
