@@ -1,0 +1,38 @@
+{
+  "platform": "linux",
+  "node": "v24.19.0",
+  "testedSource": "packages/context/src/path-scoped-discovery.ts",
+  "sourceSha256": "fb5ec00963093f7d28fd9b002ca7983f0df247e5d98b1b1981b05d08caa0c768",
+  "sourceUnchangedDuringProbe": true,
+  "windowsAliasBehavior": "NOT_RUN",
+  "actualFilesystemCases": [
+    {
+      "name": "normal explicit target gets root and applicable package",
+      "status": "PASS"
+    },
+    {
+      "name": "inside directory symlink target does not add authority",
+      "status": "PASS"
+    },
+    {
+      "name": "symlink cwd is rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "outside, traversal and root-sibling targets do not add authority",
+      "status": "PASS"
+    },
+    {
+      "name": "symlink instruction file remains excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit symlink host root is rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "symlink above host root is rejected",
+      "status": "PASS"
+    }
+  ]
+}

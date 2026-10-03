@@ -1,0 +1,50 @@
+
+ RUN  v4.1.10 /workspace/harness-agent-windows-root-red
+
+ ❯ packages/context/src/path-scoped-discovery.test.ts (24 tests | 1 failed) 97ms
+     ✓ loads only root and the explicit target package from three mutually exclusive packages 9ms
+     ✓ keeps the production default discovery subtree contract 5ms
+     ✓ preserves root → package → cwd order through an ancestor gap with document budget 1 3ms
+     ✓ preserves root → package → cwd order through an ancestor gap with document budget 2 4ms
+     ✓ preserves root → package → cwd order through an ancestor gap with document budget 4 4ms
+     ✓ unions multiple targets, deduplicates ancestors, and switches scope on a later discovery 13ms
+     ✓ rejects traversal, sibling-prefix, outside paths and every symlink component 4ms
+     ✓ rejects a cwd outside its fixed workspace 4ms
+     × compares canonical root and candidate together when realpath expands a non-link root spelling 7ms
+     ✓ accepts the host root's native canonical cwd and target spelling without changing provenance 4ms
+     ✓ rejects a canonical target escape despite an allowed lexical target 3ms
+     ✓ rejects a symlinked workspace root and a symlink in a workspace root's ancestry 3ms
+     ✓ does not follow a symlinked instruction file for an otherwise valid target 3ms
+     ✓ caps the complete UTF-8 document including marker at 0 bytes 2ms
+     ✓ caps the complete UTF-8 document including marker at 1 bytes 2ms
+     ✓ caps the complete UTF-8 document including marker at 2 bytes 1ms
+     ✓ caps the complete UTF-8 document including marker at 3 bytes 5ms
+     ✓ caps the complete UTF-8 document including marker at 4 bytes 2ms
+     ✓ caps the complete UTF-8 document including marker at 8 bytes 2ms
+     ✓ caps the complete UTF-8 document including marker at 17 bytes 2ms
+     ✓ caps the complete UTF-8 document including marker at 24 bytes 1ms
+     ✓ captures only a bounded prefix of a large sparse document and never calls readFile 2ms
+     ✓ reuses unchanged document captures but invalidates revision and cap changes 7ms
+     ✓ skips unreadable documents and continues to the next applicable ancestor 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/context/src/path-scoped-discovery.test.ts > S2 opt-in path scoped discovery > compares canonical root and candidate together when realpath expands a non-link root spelling
+Error: Path-scoped instruction discovery requires a real cwd inside its workspace root
+ ❯ PathScopedInstructionDiscovery.discover packages/context/src/path-scoped-discovery.ts:40:68
+     38|     const rootStat = await this.safeStat(this.root);
+     39|     const cwdStat = await this.safeStat(current);
+     40|     if (!rootStat?.isDirectory() || !cwdStat?.isDirectory()) throw new…
+       |                                                                    ^
+     41|     const targets = [...(this.options.targets?.() ?? [])];
+     42|     const directories = new Set<string>();
+ ❯ packages/context/src/path-scoped-discovery.test.ts:75:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 23 passed (24)
+   Start at  11:09:56
+   Duration  577ms (transform 284ms, setup 0ms, import 361ms, tests 97ms, environment 0ms)
+

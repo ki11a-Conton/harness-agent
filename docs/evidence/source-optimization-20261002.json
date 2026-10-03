@@ -1,7 +1,7 @@
 {
   "schemaVersion": "source-optimization-acceptance-v1",
-  "status": "LINUX_FROZEN_PASS_WINDOWS_NEW_CI_PENDING",
-  "preparedAtUtc": "2026-10-03T04:16:15.122710+00:00",
+  "status": "COMPLETE_ACCEPTED_SOURCE_PUBLISHED",
+  "preparedAtUtc": "2026-10-03T11:49:38.615224+00:00",
   "purpose": "Record executed package evidence without substituting historical working-tree results for final clean-tree acceptance.",
   "research": {
     "collectionUrl": "https://github.com/ki11a-Conton/HARNESS-SRC-FORK",
@@ -21,25 +21,49 @@
     "S1_S2": "9700b5764e61c79c671e49a155745f72bfba3721",
     "R2ConcurrentSteering": "78321b798c85cb2d0db20bf2e490c64964715637",
     "R3ExplicitTokenFallback": "ea50d885eb8fdc7af90f491c7d3b37b3c6aec769",
-    "S2WindowsFixture": "1b3f386940316d4a79c04a522e701fafb32c8be2"
+    "S2WindowsFixture": "1b3f386940316d4a79c04a522e701fafb32c8be2",
+    "S2PublicDiagnostics": "9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2",
+    "DocsCurrentPlan": "2b82bd51c7e720367d403bc4ff64ebcde53b1345",
+    "S2WindowsCanonicalRoot": "ad916e27fdb83cd82880d9a3c6f7849566acd97f",
+    "S2WindowsAssertions": "3cdb292efb742c4908e7745b456c6717b212e1d9"
   },
   "finalSnapshot": {
-    "status": "LINUX_PASS_WINDOWS_FAIL_UNDER_REPAIR",
-    "testedCommit": "ea50d885eb8fdc7af90f491c7d3b37b3c6aec769",
+    "status": "PASS_LINUX_AND_WINDOWS",
+    "testedCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9",
     "deliveryCommit": null,
     "cleanTree": true,
     "sourceDigests": {
       ".gitattributes": "3bd26233949644577012cdddcb23df254e0afdc48a9eddf2e85c19e0c9a7fc66",
       "apps/cli/src/benchmark-command.ts": "dfc7dd612a295f0dbd94c2d9e2f0b3d4e15e76a4954beb3cb569db65caffbab5",
       "apps/cli/src/diagnostic-first-repair.test.ts": "e919e5cc7a86e8c2ed115d48173688a151188e92a1f395f0957bd41fc35b6968",
-      "apps/cli/src/path-scoped-instructions.test.ts": "d8dbe9de883e33a50a83f15e9f98f1cee947c43381c45a0b507cc5e3e8c9e3bf",
+      "apps/cli/src/path-scoped-instructions.test.ts": "1ddb5f601a231754f36995c7606e3de4eda5d1c62361e9e240ccff3bcf24f9cd",
+      "apps/cli/src/r97-ci-diagnostics.test.ts": "2871c9d8a7491ac279120a8af71726d873b336f1247f4fe9b95247337b905f11",
       "docs/evidence/source-agent-review-20261002.json": "f88cc3123e2e07b9502b82c71bc943018c66828fa6c814376268c3bb971f5c57",
-      "docs/evidence/source-optimization-20261002.json": "87f72dc7b4021a1c83f3ded59530d1b5cefcd990e2cb5be098470574e2c1ebc6",
-      "docs/evidence/source-optimization-20261002.md": "ec898fa0169757b170cf5daaf458afba3ba9cf793267f8ef9f00f96844d8af94",
+      "docs/evidence/source-optimization-20261002.json": "568da94774185db08003ad221e20f53e1dd86541af62eb1944c1d2e046948cd1",
+      "docs/evidence/source-optimization-20261002.md": "c43cb4659bdfbc1cedd0b46af413781b70dc3b6fbccdbef5da8c7673cdec1714",
       "docs/evidence/source-optimization-20261002/.gitattributes": "ba68db294afb5bc88e380d82aa3b1b5036846f22f788a6f526f02de59e244f1b",
       "docs/evidence/source-optimization-20261002/.gitignore": "3a35df34579b10edc4d3a007e2dc1e30815b2bfe8604b9ae11436bafdc83912e",
-      "docs/evidence/source-optimization-20261002/README.md": "5cf6786964cb5084c844859b1f0b3b352bdd2e7c2078f892d603609129c5f39f",
-      "docs/evidence/source-optimization-20261002/index.json": "31c3577a156592cefd6b022e6e97a47a195781831c54d104c067ddb4a7d73e89",
+      "docs/evidence/source-optimization-20261002/README.md": "10a440f09d909407492c577e63f69d2fe74770bb04f78fbbfe02b0854a79f84d",
+      "docs/evidence/source-optimization-20261002/ci-diagnostics-visibility/baseline-final-fixture-red.log": "62a31581f4ca55353a9f4310a99390e0746b8501f19dc51ab053839088e3bc32",
+      "docs/evidence/source-optimization-20261002/ci-diagnostics-visibility/green.log": "96a30187abd81294be0f61f6e201876acbd937e0ccee4bc4e3f8ea2c5af184e9",
+      "docs/evidence/source-optimization-20261002/ci-diagnostics-visibility/manifest.json": "ab0ef2220af8ceb4f2c806540f4b30a307516b71f80f605d20ce024ba5dba9c3",
+      "docs/evidence/source-optimization-20261002/ci-diagnostics-visibility/typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "docs/evidence/source-optimization-20261002/final/first-attempt-f9b0c83/manifest.json": "b297ce4356cdc36c92fd0f9f837825127a7aa824d3bfcffe60fe5badacce4747",
+      "docs/evidence/source-optimization-20261002/final/first-attempt-f9b0c83/security.log": "14ea2ba5dc50a67129fdc5645808da425a57495abe1d30a60cd77251826a4122",
+      "docs/evidence/source-optimization-20261002/final/linux-ea50d885/build.log": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+      "docs/evidence/source-optimization-20261002/final/linux-ea50d885/diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "docs/evidence/source-optimization-20261002/final/linux-ea50d885/full.log": "c5fe8a1a90e0915115529214609e9f622f00d489b08b49c796290441d841882b",
+      "docs/evidence/source-optimization-20261002/final/linux-ea50d885/manifest.json": "70d1a8fd0a4c2f6be4b2ff6136cc96621c661131f84e8a7a8d07fe1ca093f74c",
+      "docs/evidence/source-optimization-20261002/final/linux-ea50d885/security.log": "af473d967ecfaf39000f92ae721408d70cee5a227c43ade998b224d472764044",
+      "docs/evidence/source-optimization-20261002/final/linux-ea50d885/typecheck.log": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+      "docs/evidence/source-optimization-20261002/final/linux-ea50d885/usage-audit.log": "f2cf7a87fa38978ce86d8717f2c58808bb41b78ea4b0f95a8c1d383987323dba",
+      "docs/evidence/source-optimization-20261002/final/run-frozen-acceptance.py": "8b5c88b4cb1bbd04e4e0600334cd5b2d355f1a5cae8739f15e7fafd7f4f569ef",
+      "docs/evidence/source-optimization-20261002/final/run-with-subreaper.py": "0b31c2b7db3bb0ec4ee07ba1ca94fda809520d0fe55a7f44abf0a82aebe26b53",
+      "docs/evidence/source-optimization-20261002/final/windows-1b3f386/ci-annotations-111130670681.json": "ee7867e0102aa838ad9008a02fe341768b29b31d09c9f8598cfbe3683cac3bd7",
+      "docs/evidence/source-optimization-20261002/final/windows-1b3f386/ci-annotations-111130670866.json": "aadc7d9d9d515372face9ff6cd644e3907bc1e141734582c94526b9973ff1f9b",
+      "docs/evidence/source-optimization-20261002/final/windows-1b3f386/ci-jobs-37097580019.json": "605d9a6a3355b8117b61bc43b1c63c0b60c1e457a956d57f5f26d095f3dd8f37",
+      "docs/evidence/source-optimization-20261002/final/windows-ea50d885-failure/verify-annotations.json": "38d850337c21e249e9bdb0ee225497f95a9d0785a791aba8fb8e630e2a860491",
+      "docs/evidence/source-optimization-20261002/index.json": "a823358e6f7a0efde8c510592379c099534dc5220f12e1185b0a58dc7abcae9c",
       "docs/evidence/source-optimization-20261002/r1/green-targeted-final.log": "c6edb0089c5249bc09e4c938586336c9608a74d302ac08d358d6d606519af0ec",
       "docs/evidence/source-optimization-20261002/r1/red-baseline-final.log": "f7bb50099423d7998f0aa13f2e71056fca3a5b81eb6398cc2ba7e03b4ac42c06",
       "docs/evidence/source-optimization-20261002/r1/result.json": "58e0c5e8a8f156e6792a897e7748832082f6bf74bbb1c49f09bf2f697cf55637",
@@ -117,6 +141,12 @@
       "docs/evidence/source-optimization-20261002/s2/eligibility-baseline-red.log": "4fae72f99b58f0b73f4e9f16ecc9f0b73074da29ca562167e7dcb7fbff6e5115",
       "docs/evidence/source-optimization-20261002/s2/evidence.json": "44ce0785a26d82b237890ad6c25b635fe58e728377ba88f840a1076a89042df0",
       "docs/evidence/source-optimization-20261002/s2/regressions-green.log": "91d4a7d32c412cffbe35d234f2d4b4489bbb82bb131a64833320b005b6f51634",
+      "docs/evidence/source-optimization-20261002/s2/windows-error-diagnostic/final-green.log": "120386ead67e95423b564980f3f53a064d662d333ddc6c7ea698e524ac9b7637",
+      "docs/evidence/source-optimization-20261002/s2/windows-error-diagnostic/frozen-diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "docs/evidence/source-optimization-20261002/s2/windows-error-diagnostic/frozen-target.log": "3ba0278f140f8424a145c6bad87932fbbaa246789f00863e4f78d70ada49945f",
+      "docs/evidence/source-optimization-20261002/s2/windows-error-diagnostic/frozen-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "docs/evidence/source-optimization-20261002/s2/windows-error-diagnostic/manifest.json": "261c2735a67c1edc62d1f4bb87a7bedbee4c6316ee8bc26fecff80f869995807",
+      "docs/evidence/source-optimization-20261002/s2/windows-fixture-fix/manifest.json": "a2ecd49c69c0fe13c7d262b96e83f93dbe9e544b31741cf7c145311939a128b4",
       "docs/research/source-agent-review-20261002.md": "9c1d9ca1888dd6be8218f62f3f0bc754352721de6e48a55e408ad8e8027c12e3",
       "docs/research/source-agent-review-20261002/README.md": "d2dc5487e75ca82e8ea7dd679af3221d8d8ffdd22a3f3af486ba1c7e13da1456",
       "docs/research/source-agent-review-20261002/claude.md": "ac3fc5f23d12eb9b9e3bdaba3c10f2a17746e8436fd632cabf1847786d1f083d",
@@ -126,8 +156,8 @@
       "docs/research/source-agent-review-20261002/opencode.md": "29efbb3df1f70c5e45e92dfe2b2ead61ed25f1e1377540000e1f0313a069e085",
       "docs/research/source-agent-review-20261002/pi.md": "7362ec34a266f263659b8b92675867baeb99289c4ea089940944c86a47cb4fc2",
       "packages/context/src/index.ts": "a6bf5a166a7d45d0f129f0f1b1dcbbaccfac0e74d32ee5ef51bf027971269e9e",
-      "packages/context/src/path-scoped-discovery.test.ts": "93103778f7c8bbd057f90c1a9c96c63a5c35a1cdb1eb87e67855726d70b088ae",
-      "packages/context/src/path-scoped-discovery.ts": "808a978c333714fa2ca5c06317d71e98c767454201d417dbde33d05fb5ffbe2f",
+      "packages/context/src/path-scoped-discovery.test.ts": "c56edec85e241709d235a29c62e68fcddae0d4356318108d6fe6c3359ee386b3",
+      "packages/context/src/path-scoped-discovery.ts": "fb5ec00963093f7d28fd9b002ca7983f0df247e5d98b1b1981b05d08caa0c768",
       "packages/core/src/runtime/active-user-context.test.ts": "8a3c237d96309e4046ae53c41b4a130265f6a08d3af3ba5447c465a2897f1053",
       "packages/core/src/runtime/context-controller.ts": "8d55e59043215631aee4ca53529659133313423b582f326491bb1f9b4e236e44",
       "packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts": "5948c313841c00dc955a4da4d2a7a822fe7d6774bfd7548e34100f4348f1d405",
@@ -155,7 +185,7 @@
       "packages/harness/src/index.ts": "e1ec6e546a67a4f0112d38228e59ae3fafe98ce66f693e4ca2646c7a39b5c98b",
       "packages/harness/src/memory-prefetch-production.regressions.test.ts": "e37abe48b28aef194220f9582f39fc9cf777d771ea48e5dd587cec1e59d84291",
       "packages/harness/src/memory-runtime-bridge.ts": "10adbd49707cf4070521a84b4581ea4864d4c23b1551e5ba10e3d578b6c16404",
-      "packages/harness/src/path-scoped-instructions.regressions.test.ts": "88f9ab7f4790820d8039b4727e0006c312d78ec7cc2ffdd7ee76b993fb6d2034",
+      "packages/harness/src/path-scoped-instructions.regressions.test.ts": "728571d13d4a7a665e8e42ef484bc485aadde6e2829bfdcc57b0247b32857a70",
       "packages/harness/src/path-scoped-instructions.ts": "39bbb653b024c94121a12463bf4e6fe5b01a76f8fb8b3af00656eebf57b3305e",
       "packages/harness/src/skill-context.ts": "3cbe2e45a7b6a3e5b3883ddd5d518107cec79dea2649ffa9ef118949ede103b6",
       "packages/harness/src/skill-revision-regressions.test.ts": "6d0e027e556a2cdeb1c9b522c878e45e9533841ae9f209946f3e4837f7911e86",
@@ -174,8 +204,10 @@
       "packages/tools/src/tools/read-file.ts": "becc6263cca637b70bd73c3fe52348a18506e413ec9dc477b723436c7dbc7515",
       "packages/tools/src/tools/write-file.ts": "4ceceb8029e8a6c727d78bf96a2e8a501963fe5816d3810a3cadcf081b9318c8",
       "packages/tools/src/transaction.ts": "c8ac8551dee2ed6d99506d2618c554a432093c7d9d36cb023c979fcd86fca272",
+      "plan(20261002-000000).md": "df0f07094e5caeee20ec1351b6c14da561def1efc212753219688cac86911e3d",
       "plan(20261002-message-history).md": "cfc71cabcfd0ccba2d906f896c6aa317ebd0e43b2fa843139e9a47f6e9cec5b4",
-      "plan.md": "1ebe29884a8fa684184bb89a8ce65fb632c5fe6b186ffc9d34c25b20c43874e2",
+      "plan.md": "39e94ecc625f05d7bf21c73025d6426ec740d30f67c6ea187777dd4e0872e7d3",
+      "scripts/e4/r97-ci-diagnostics.mjs": "0674a12e467f719f0f1654df89f19739f96b8ed48a176080bcffbb4102559b96",
       "scripts/research/README.md": "ddc6929c6e328c063746d4bdaf126b812542bcb05f1af73e5ea4cacc0ba3b949",
       "scripts/research/source-agent-review.mjs": "bc4e9496cf16f3caf0df62a77f7fb938408a28148fad113376696c3153660a4d",
       "scripts/research/source-review-claude.mjs": "ac90a3a4c8c4177d1b514e78e9a7abab310025ab23558bc0a0417cd34605ce82",
@@ -188,13 +220,81 @@
       "tasks/SOURCE-OPT-20261002.md": "4ae40eacee36b1bc70b75096de0e499bdc99c4e6aadadf6db6a9a0419173ae9a"
     },
     "configurationDigests": null,
-    "note": "Linux clean frozen suite tested ea50d885. The subsequent 1b3f386 changes only one S2 test fixture; production files are byte-identical. New same-SHA Ubuntu/Windows CI remains pending."
+    "note": "Exact accepted source is 3cdb292: Linux clean-tree seven-command acceptance plus all ten same-SHA CI jobs. Final follow-up changes plan/tasks/docs/evidence only; accepted code bytes stay identical.",
+    "latestCandidateCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9",
+    "latestCandidateAcceptance": "PASS",
+    "testedGitTree": "4d49ecf36375a1bafa8be96cf070b668e0e683e0",
+    "deliveryCommitResolution": "git rev-parse HEAD after final documentation publication; documentation-only delivery SHA is verified by the external native push receipt",
+    "acceptedCodeDigests": {
+      "apps/cli/src/benchmark-command.ts": "dfc7dd612a295f0dbd94c2d9e2f0b3d4e15e76a4954beb3cb569db65caffbab5",
+      "apps/cli/src/diagnostic-first-repair.test.ts": "e919e5cc7a86e8c2ed115d48173688a151188e92a1f395f0957bd41fc35b6968",
+      "apps/cli/src/path-scoped-instructions.test.ts": "1ddb5f601a231754f36995c7606e3de4eda5d1c62361e9e240ccff3bcf24f9cd",
+      "apps/cli/src/r97-ci-diagnostics.test.ts": "2871c9d8a7491ac279120a8af71726d873b336f1247f4fe9b95247337b905f11",
+      "packages/context/src/index.ts": "a6bf5a166a7d45d0f129f0f1b1dcbbaccfac0e74d32ee5ef51bf027971269e9e",
+      "packages/context/src/path-scoped-discovery.test.ts": "c56edec85e241709d235a29c62e68fcddae0d4356318108d6fe6c3359ee386b3",
+      "packages/context/src/path-scoped-discovery.ts": "fb5ec00963093f7d28fd9b002ca7983f0df247e5d98b1b1981b05d08caa0c768",
+      "packages/core/src/runtime/active-user-context.test.ts": "8a3c237d96309e4046ae53c41b4a130265f6a08d3af3ba5447c465a2897f1053",
+      "packages/core/src/runtime/context-controller.ts": "8d55e59043215631aee4ca53529659133313423b582f326491bb1f9b4e236e44",
+      "packages/core/src/runtime/encoded-tool-output-security.regressions.test.ts": "5948c313841c00dc955a4da4d2a7a822fe7d6774bfd7548e34100f4348f1d405",
+      "packages/core/src/runtime/memory-prefetch.regressions.test.ts": "180ce7c2ddd19ec8d641eb9aa2bcf762830d8869a8648548ddf91b7e2b638666",
+      "packages/core/src/runtime/provider-termination-regressions.test.ts": "677b859675d9204ebbf263ba61ed08f67939dee1fbe6fba9a7bc758fb8bc960b",
+      "packages/core/src/runtime/read-only-prefetch.ts": "153644ec5e480ef735e092df483e70770a7727823b90cf640da77a60aca2f657",
+      "packages/core/src/runtime/runtime.ts": "2f3c6571b0bb3cf706c9541a0a40a52482bdc6d580ee867923c7acbb3331fbd7",
+      "packages/core/src/runtime/structured-output-security.regressions.test.ts": "02e27652d72696a8b178fceef9efb50d1f4249d82f759aab9d9042ea37068d23",
+      "packages/core/src/runtime/tool-output-artifact-path.regressions.test.ts": "e8b888e328574a4251d683a4368d045537ce1afd3108c9fe93c5ad63662e709c",
+      "packages/core/src/runtime/tool-output-boundary.regressions.test.ts": "41220e441d741145ea562d027ab05b2628ad1528275008de1a72bd8f7f4c8b18",
+      "packages/core/src/runtime/tool-output-security.ts": "4f74f2aa228be51202c1dda8a9bbd44b3ec06c9fce2d26892a120d1930e85d17",
+      "packages/core/src/runtime/turn-helpers.ts": "cb671480dc102b409fb7dddcdefa418542bee755147bf39c568c17c6a41d7a1a",
+      "packages/evaluation/src/activation-evidence-execution.ts": "47bb81b36d345f3f91ec91e8aa6f9fdfb426df0f3e38769f2171e64d84005d10",
+      "packages/evaluation/src/activation-evidence.ts": "4a64756ae7a1ba30cfce97f9803507496642d16fcbc09c83da0fb4f4c11a7414",
+      "packages/evaluation/src/arm-factory.ts": "614aab7dcfa5a0ded110b4af7884ff69d1c5a87a999920fbb85620cd7001bec3",
+      "packages/evaluation/src/candidate-registry.test.ts": "ce5a287976a79336fe2f01cae12f31ee6e2c21239dfac9e96191774f61d421d0",
+      "packages/evaluation/src/candidate-registry.ts": "433484087f2ad823d67d706aa77c1e21676a809957f59c6d278828897927f008",
+      "packages/evaluation/src/mechanism-contract.test.ts": "f177a0ff79c3d48cd87a71ba34903b14dec9f84cc3a91f0893f9e505514bb180",
+      "packages/evaluation/src/mechanism-contract.ts": "ea0926fa12a46327e1fba2b7eda5ce2ce9ab9433164aa5f1ad839aac12f96164",
+      "packages/evaluation/src/mechanism-guidance.ts": "32ac724322c6e6bc39e2625ba3d1f864b0f94054063b4ffe40ae14ad64fb5b87",
+      "packages/evaluation/src/path-scoped-eligibility.test.ts": "46f7166bd74b12f746b011c54029b56a7bdd6018b6ee83c402b413cfdf5cdd88",
+      "packages/harness/src/compose/compose-context.ts": "baac4beec11baac088b695f284a72580e1c44d65820aeb967e0bef109e60960c",
+      "packages/harness/src/config.ts": "1e225321bc5e215dd3f3977cd7b61d66118897b88db2793e216a0f9d78efb6bf",
+      "packages/harness/src/create-harness.ts": "5af9a8f7a5f82122df90f59e39a7d6cdb63134d12c40bc5ab386aad4476eafeb",
+      "packages/harness/src/index.ts": "e1ec6e546a67a4f0112d38228e59ae3fafe98ce66f693e4ca2646c7a39b5c98b",
+      "packages/harness/src/memory-prefetch-production.regressions.test.ts": "e37abe48b28aef194220f9582f39fc9cf777d771ea48e5dd587cec1e59d84291",
+      "packages/harness/src/memory-runtime-bridge.ts": "10adbd49707cf4070521a84b4581ea4864d4c23b1551e5ba10e3d578b6c16404",
+      "packages/harness/src/path-scoped-instructions.regressions.test.ts": "728571d13d4a7a665e8e42ef484bc485aadde6e2829bfdcc57b0247b32857a70",
+      "packages/harness/src/path-scoped-instructions.ts": "39bbb653b024c94121a12463bf4e6fe5b01a76f8fb8b3af00656eebf57b3305e",
+      "packages/harness/src/skill-context.ts": "3cbe2e45a7b6a3e5b3883ddd5d518107cec79dea2649ffa9ef118949ede103b6",
+      "packages/harness/src/skill-revision-regressions.test.ts": "6d0e027e556a2cdeb1c9b522c878e45e9533841ae9f209946f3e4837f7911e86",
+      "packages/model/src/openai-termination-regressions.test.ts": "1b390c6aaa92e73ba5aa6813b1adf436405b305116a15968f48ca0cfbeb18f97",
+      "packages/model/src/openai.test.ts": "1a02d8408a425756e0af79b871e637fd4f81cbacaa3d13c3535f5a12101d4766",
+      "packages/model/src/openai.ts": "ee3bb56f44c1f6a230571377349402a32619e4d55e7ca20666a272f7308aeb1c",
+      "packages/skills/src/skill-loader.ts": "5905bb4ca7f8838a237a57788fd9c6b47bfc1923c82a65c80b8e5f9cbe9d5c5a",
+      "packages/tools/src/edit.ts": "141500a53f5ba7a78500a4c4e361a32693a82fdcf22a286c5f4693b4ee93f541",
+      "packages/tools/src/file-coordination.ts": "d081877bfc8dce7c274f5381f0bfd5d1e2276494967dc1cf7ae0bbd4a6dc3a54",
+      "packages/tools/src/orchestrator.ts": "adcd42ba547d15e725b9d0236bd7ca550cf2f363e60f2ed10951f92d1604d3eb",
+      "packages/tools/src/process/executor.ts": "beda7bdec94075e9071c808438b7e990f3869bf5203d1ef59401dd0663fdc242",
+      "packages/tools/src/process/utf8-output.regressions.test.ts": "b04458581feb7b9c950046122514ffee1c08e6943d325ca86f58ddb7a7ffa4ed",
+      "packages/tools/src/process/utf8-output.ts": "98efb1d71a534b1d9fa1cdac62a592088ff23a5787db687faf6f4543dc80a8ba",
+      "packages/tools/src/r4-file-regressions.test.ts": "374212ccfb37c1d5489a59fc4201efce8c91bc4b5d9428b653543c88afb2ebb1",
+      "packages/tools/src/tools/edit-file.ts": "cbae3b51c449068cc62fd7ce9d12190ead6efecee0967f8ca0397f9ad10a1663",
+      "packages/tools/src/tools/read-file.ts": "becc6263cca637b70bd73c3fe52348a18506e413ec9dc477b723436c7dbc7515",
+      "packages/tools/src/tools/write-file.ts": "4ceceb8029e8a6c727d78bf96a2e8a501963fe5816d3810a3cadcf081b9318c8",
+      "packages/tools/src/transaction.ts": "c8ac8551dee2ed6d99506d2618c554a432093c7d9d36cb023c979fcd86fca272",
+      "scripts/e4/r97-ci-diagnostics.mjs": "0674a12e467f719f0f1654df89f19739f96b8ed48a176080bcffbb4102559b96",
+      "scripts/research/README.md": "ddc6929c6e328c063746d4bdaf126b812542bcb05f1af73e5ea4cacc0ba3b949",
+      "scripts/research/source-agent-review.mjs": "bc4e9496cf16f3caf0df62a77f7fb938408a28148fad113376696c3153660a4d",
+      "scripts/research/source-review-claude.mjs": "ac90a3a4c8c4177d1b514e78e9a7abab310025ab23558bc0a0417cd34605ce82",
+      "scripts/research/source-review-codex.mjs": "3f5d1a737a7602e6d710a33f503d247d3a0349313295afa5e746a3064680fca8",
+      "scripts/research/source-review-edit.mjs": "5c4d6e55877af8baf17cfb57a2e046ec68367bd12625e20c269d2100944d2199",
+      "scripts/research/source-review-hermes.mjs": "96375e64c0ed5653c8ee00703987e84b779a2b82f12ef02a75a8e4d9cc11bc59",
+      "scripts/research/source-review-pi.mjs": "d474733568d09a3312bd254d430f0d0c717d95b949794a551f25bb76bbdf1531",
+      "scripts/research/source-review-verification.mjs": "34b7d7a83e9fed9198193855f7506c41e04322a701533e8afacc690b596a596f"
+    }
   },
   "portableArtifacts": {
     "index": "docs/evidence/source-optimization-20261002/index.json",
-    "indexSha256": "42437175f0f33ed57da8b7a5fdc0cd9882a5f854f502348ab9d4c75748c3bc39",
-    "fileCount": 89,
-    "totalBytes": 534498,
+    "indexSha256": "0e339a27dfa6263a86a97d13bc4236d06fd578efd9e30c82bdb0ecb9da1d6771",
+    "fileCount": 147,
+    "totalBytes": 1170607,
     "method": "byte-identical selected manifest/log copies; source package manifests retain their original working-tree paths and hashes"
   },
   "historicalExecutionSourceSnapshots": {
@@ -439,7 +539,7 @@
   "packages": [
     {
       "id": "R1",
-      "status": "TARGETED_PASS_PENDING_FROZEN_ACCEPTANCE",
+      "status": "PASS_DETERMINISTIC_MAINTENANCE",
       "change": "Require explicit native stop/tool_calls; abnormal completion retains audit partials and settles unexecuted calls through existing Core protocol.",
       "compatibility": "DONE-only text, natural EOF and absent body are protocol errors; no default compatibility mode.",
       "checks": [
@@ -467,11 +567,12 @@
         }
       ],
       "fixtureIdentity": "Baseline production unchanged; exact candidate fixture fingerprints and commands are retained in the package manifest.",
-      "manifest": "docs/evidence/source-optimization-20261002/r1/result.json"
+      "manifest": "docs/evidence/source-optimization-20261002/r1/result.json",
+      "finalAcceptedCodeCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9"
     },
     {
       "id": "R2",
-      "status": "TARGETED_PASS_INDEPENDENT_REVIEW_CLOSED_PENDING_FROZEN_ACCEPTANCE",
+      "status": "PASS_DETERMINISTIC_MAINTENANCE",
       "change": "Turn-bound durable original user/steer anchors survive trim/compaction/resume; checkpoint resume first settles bound-only steering in its original turn, then uses original user channel for the new resume prompt without rebinding. Ordinary new tasks do not inherit old bound steering.",
       "fixtureIdentity": {
         "path": "packages/core/src/runtime/active-user-context.test.ts",
@@ -599,11 +700,12 @@
         "append/consume crash repeated recovery appends once",
         "R5 file revision records/current-step body witness remain separate",
         "R6 stopped read-only retrieval has no late feedback; admitted feedback writes fully awaited before terminal fence"
-      ]
+      ],
+      "finalAcceptedCodeCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9"
     },
     {
       "id": "R3a",
-      "status": "TARGETED_PASS_INDEPENDENT_REVIEW_CLOSED_PENDING_FROZEN_ACCEPTANCE",
+      "status": "PASS_DETERMINISTIC_MAINTENANCE",
       "change": "Injected safety hooks protect actual model text regardless of budget; token-local encoded JSON safety, duplicate keys, failed prefix, credential fields, numeric lexemes, identity-hashed/exclusive artifact files; preserve raw ToolResult.",
       "fixtureIdentity": {
         "sameFinalBaselineCandidateFixture": true,
@@ -720,11 +822,12 @@
         "Final symlink counterexample passes baseline because old artifact filename used raw call id; it exposed the intermediate hashed-name candidate instead.",
         "Numeric custom hook with configured budget passes baseline because the old whole-text redactor was honored; no-budget variant fails.",
         "Throwing hook failures are real render exceptions, not import/collection/type failures."
-      ]
+      ],
+      "finalAcceptedCodeCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9"
     },
     {
       "id": "R3b",
-      "status": "TARGETED_PASS_PENDING_FROZEN_ACCEPTANCE",
+      "status": "PASS_DETERMINISTIC_MAINTENANCE",
       "change": "Incremental UTF-8 decoding and per-stream captured body byte cap; continue drain/observer delivery; structured orchestrator results unchanged.",
       "checks": [
         {
@@ -756,11 +859,12 @@
         "orchestrator": "string body <= maxOutputBytes; marker extra including cap=0; structured result unchanged; prefix copies only bounded bytes",
         "context": "maxInlineBytes is artifact threshold; head/tail each <=2000 UTF-8 bytes, metadata extra; serialization/redaction/scan still need complete captured model text and artifact hashes full redacted text"
       },
-      "manifest": "docs/evidence/source-optimization-20261002/r3/r3-evidence.json"
+      "manifest": "docs/evidence/source-optimization-20261002/r3/r3-evidence.json",
+      "finalAcceptedCodeCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9"
     },
     {
       "id": "R4",
-      "status": "TARGETED_PASS_PENDING_FROZEN_ACCEPTANCE",
+      "status": "PASS_DETERMINISTIC_MAINTENANCE",
       "change": "Canonical path/dev+ino shared coordination with inode reacquisition; opt-in raw-byte version hash and strict profile; preserve untouched UTF-8/BOM/EOL/EOF bytes.",
       "checks": [
         {
@@ -793,11 +897,12 @@
         "Transactions retain their existing authoritative snapshot/intended-after behavior and atomic rename may detach an existing hard-link alias.",
         "Windows is NOT_RUN. Linux evidence is not a Windows attestation."
       ],
-      "manifest": "docs/evidence/source-optimization-20261002/r4/review-manifest.json"
+      "manifest": "docs/evidence/source-optimization-20261002/r4/review-manifest.json",
+      "finalAcceptedCodeCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9"
     },
     {
       "id": "R5",
-      "status": "TARGETED_PASS_PENDING_FROZEN_ACCEPTANCE",
+      "status": "PASS_DETERMINISTIC_MAINTENANCE",
       "change": "File identity/revision/config invalidation of skill index/body/security; freeze admitted in-flight records; avoid unchanged-subtree readdir.",
       "checks": [
         {
@@ -846,11 +951,12 @@
         }
       ],
       "fixtureIdentity": "Baseline contains the initial 9-case fixture; candidate expanded to 20. New cases are GREEN coverage, not baseline RED.",
-      "manifest": "docs/evidence/source-optimization-20261002/r5/manifest.json"
+      "manifest": "docs/evidence/source-optimization-20261002/r5/manifest.json",
+      "finalAcceptedCodeCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9"
     },
     {
       "id": "R6",
-      "status": "TARGETED_PASS_PENDING_FROZEN_ACCEPTANCE",
+      "status": "PASS_DETERMINISTIC_MAINTENANCE",
       "change": "Bound readonly prefetch by cancellation/turn deadline/soft timeout and one real in-flight slot; isolate late results; production retrieval feedback is written only after admission and fully awaited before fence.",
       "checks": [
         {
@@ -896,12 +1002,13 @@
         "Real feedback writes remain fully awaited and may delay cancellation; they are not covered by the read-only abandonment boundary.",
         "Windows is NOT_RUN. Linux evidence is not a Windows attestation."
       ],
-      "manifest": "docs/evidence/source-optimization-20261002/r6/review-manifest.json"
+      "manifest": "docs/evidence/source-optimization-20261002/r6/review-manifest.json",
+      "finalAcceptedCodeCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9"
     },
     {
       "id": "S1",
       "candidateId": "diagnostic_first_repair_v1",
-      "status": "PASS_OFFLINE_ENGINEERING_PENDING_FROZEN_ACCEPTANCE",
+      "status": "PASS_OFFLINE_ENGINEERING_DEFAULT_OFF",
       "defaultEnabled": false,
       "change": "Versioned actual completionGuidance captures bounded diagnostics from the original command; original verification and independent content check decide completion.",
       "checks": [
@@ -1004,12 +1111,13 @@
         "quality": "NOT_RUN",
         "promotion": "NOT_RUN"
       },
-      "manifest": "docs/evidence/source-optimization-20261002/s1/final-result-manifest.json"
+      "manifest": "docs/evidence/source-optimization-20261002/s1/final-result-manifest.json",
+      "finalAcceptedCodeCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9"
     },
     {
       "id": "S2",
       "candidateId": "path_scoped_instructions_v1",
-      "status": "PASS_OFFLINE_ENGINEERING_PENDING_FROZEN_ACCEPTANCE",
+      "status": "PASS_OFFLINE_ENGINEERING_DEFAULT_OFF",
       "defaultEnabled": false,
       "change": "Optional host-root scoped instruction discovery from initial targets and actual successful authorized read/search events; request-local session scope; preserve default discovery and Core step source contract.",
       "checks": [
@@ -1212,7 +1320,8 @@
         "Paired fixture identity sourceSha/treeFingerprint are null because this executed before the final commit; exact fixture and source hashes are retained here, and the run is not promotion-eligible.",
         "Zero subtree listings describes candidate instruction discovery only. Whole benchmark also performs five directory listings per candidate arm for other existing behavior."
       ],
-      "manifest": "docs/evidence/source-optimization-20261002/s2/evidence.json"
+      "manifest": "docs/evidence/source-optimization-20261002/s2/evidence.json",
+      "finalAcceptedCodeCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9"
     }
   ],
   "externalArtifacts": [
@@ -1272,12 +1381,12 @@
       "status": "PASS",
       "log": "typecheck.log",
       "exitCode": 0,
-      "durationSeconds": 1.04,
+      "durationSeconds": 0.968,
       "logSha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
       "summary": [],
       "cleanAfter": true,
-      "testedCommit": "ea50d885eb8fdc7af90f491c7d3b37b3c6aec769",
-      "portableLog": "docs/evidence/source-optimization-20261002/final/linux-ea50d885/typecheck.log"
+      "testedCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9",
+      "portableLog": "docs/evidence/source-optimization-20261002/final/linux-3cdb292e/typecheck.log"
     },
     "build": {
       "name": "build",
@@ -1291,12 +1400,12 @@
       "status": "PASS",
       "log": "build.log",
       "exitCode": 0,
-      "durationSeconds": 0.553,
+      "durationSeconds": 0.524,
       "logSha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
       "summary": [],
       "cleanAfter": true,
-      "testedCommit": "ea50d885eb8fdc7af90f491c7d3b37b3c6aec769",
-      "portableLog": "docs/evidence/source-optimization-20261002/final/linux-ea50d885/build.log"
+      "testedCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9",
+      "portableLog": "docs/evidence/source-optimization-20261002/final/linux-3cdb292e/build.log"
     },
     "security": {
       "name": "security",
@@ -1310,16 +1419,16 @@
       "status": "PASS",
       "log": "security.log",
       "exitCode": 0,
-      "durationSeconds": 5.154,
-      "logSha256": "af473d967ecfaf39000f92ae721408d70cee5a227c43ade998b224d472764044",
+      "durationSeconds": 5.543,
+      "logSha256": "347f3c5c99144061c57629f722e2ddae9f464e4bfa278ee525ae33214cfc0cb8",
       "summary": [
         "Test Files  19 passed (19)",
         "Tests  2135 passed (2135)",
-        "Duration  4.46s (transform 368ms, setup 0ms, import 975ms, tests 1.46s, environment 2ms)"
+        "Duration  4.79s (transform 452ms, setup 0ms, import 1.08s, tests 1.47s, environment 2ms)"
       ],
       "cleanAfter": true,
-      "testedCommit": "ea50d885eb8fdc7af90f491c7d3b37b3c6aec769",
-      "portableLog": "docs/evidence/source-optimization-20261002/final/linux-ea50d885/security.log"
+      "testedCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9",
+      "portableLog": "docs/evidence/source-optimization-20261002/final/linux-3cdb292e/security.log"
     },
     "fullSuite": {
       "name": "full",
@@ -1335,17 +1444,17 @@
       "status": "PASS",
       "log": "full.log",
       "exitCode": 0,
-      "durationSeconds": 619.453,
-      "logSha256": "c5fe8a1a90e0915115529214609e9f622f00d489b08b49c796290441d841882b",
+      "durationSeconds": 620.048,
+      "logSha256": "161fefe0cc2d5f985340ad118db2d363db4a89113a60533db1164f2cb2300d3d",
       "summary": [
-        "Test Files  438 passed | 1 skipped (439)",
-        "Tests  8115 passed | 12 skipped (8127)",
-        "Duration  618.55s (transform 7.30s, setup 0ms, import 44.98s, tests 524.82s, environment 35ms)",
+        "Test Files  439 passed | 1 skipped (440)",
+        "Tests  8128 passed | 12 skipped (8140)",
+        "Duration  619.04s (transform 7.08s, setup 0ms, import 43.79s, tests 527.63s, environment 37ms)",
         "[review supervisor] command exit=0; reaped orphan descendants=70"
       ],
       "cleanAfter": true,
-      "testedCommit": "ea50d885eb8fdc7af90f491c7d3b37b3c6aec769",
-      "portableLog": "docs/evidence/source-optimization-20261002/final/linux-ea50d885/full.log"
+      "testedCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9",
+      "portableLog": "docs/evidence/source-optimization-20261002/final/linux-3cdb292e/full.log"
     },
     "diffCheck": {
       "name": "diff-check",
@@ -1354,40 +1463,78 @@
         "diff",
         "--check",
         "acf8dcc394de6c6efefed52602e49014b372f372",
-        "ea50d885eb8fdc7af90f491c7d3b37b3c6aec769"
+        "3cdb292efb742c4908e7745b456c6717b212e1d9"
       ],
       "cwd": "/workspace/harness-agent-source-acceptance",
       "cleanBefore": true,
       "status": "PASS",
       "log": "diff-check.log",
       "exitCode": 0,
-      "durationSeconds": 0.017,
+      "durationSeconds": 0.02,
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "summary": [],
       "cleanAfter": true,
-      "testedCommit": "ea50d885eb8fdc7af90f491c7d3b37b3c6aec769",
-      "portableLog": "docs/evidence/source-optimization-20261002/final/linux-ea50d885/diff-check.log"
+      "testedCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9",
+      "portableLog": "docs/evidence/source-optimization-20261002/final/linux-3cdb292e/diff-check.log"
     },
     "Windows": {
-      "status": "FAIL_UNDER_REPAIR",
-      "testedCommit": "1b3f386940316d4a79c04a522e701fafb32c8be2",
-      "workflowRun": "https://github.com/ki11a-Conton/harness-agent/actions/runs/37097580019",
-      "previousRun": {
-        "testedCommit": "ea50d885eb8fdc7af90f491c7d3b37b3c6aec769",
-        "workflowRun": "https://github.com/ki11a-Conton/harness-agent/actions/runs/37096715327",
-        "windowsVerify": "FAIL",
-        "windowsFormal": "FAIL",
-        "rootCause": "Two S2 failures observed; full signed log downloads blocked by proxy CONNECT 403. Fixture portability defects were found but latest run still fails, so they do not establish the full runtime root cause."
-      },
-      "windowsVerify": "FAIL",
-      "windowsFormal": "FAIL",
-      "rootCause": "Two S2 cases still fail after fixture portability correction. Actual runtime cause is not yet available; 9eef5c8 adds bounded redacted public diagnostics. No production root cause claim.",
-      "diagnosticCandidate": "9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2"
+      "status": "PASS",
+      "testedCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9",
+      "workflowRun": "https://github.com/ki11a-Conton/harness-agent/actions/runs/37119359152",
+      "historicalFailures": [
+        {
+          "testedCommit": "ea50d885eb8fdc7af90f491c7d3b37b3c6aec769",
+          "runId": 37096715327,
+          "windowsVerify": "FAIL",
+          "windowsFormal": "FAIL"
+        },
+        {
+          "testedCommit": "1b3f386940316d4a79c04a522e701fafb32c8be2",
+          "runId": 37097580019,
+          "windowsVerify": "FAIL",
+          "windowsFormal": "FAIL"
+        },
+        {
+          "testedCommit": "9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2",
+          "runId": 37098632930,
+          "windowsVerify": "FAIL",
+          "windowsFormal": "FAIL",
+          "ubuntuVerify": "FAIL_DOCS_GATE",
+          "actualRuntimeReason": "Path-scoped instruction discovery requires a real cwd inside its workspace root",
+          "rootCause": "Windows temporary root spelling is 8.3; realpath expands long name. Lexical-to-canonical equality incorrectly rejected a legitimate non-link directory."
+        },
+        {
+          "testedCommit": "ad916e27fdb83cd82880d9a3c6f7849566acd97f",
+          "runId": 37118864092,
+          "windowsVerify": "FAIL",
+          "windowsFormal": "FAIL",
+          "runtimeCwdError": "RESOLVED",
+          "actualFailures": [
+            "Harness evidence path oracle used POSIX absolute literal",
+            "CLI denial path suffix did not normalize Windows separators"
+          ],
+          "interpretation": "Production alias correction is independently verified on Linux; real Windows progressed to later assertions. Remaining corrections are test fixtures only."
+        }
+      ],
+      "fixManifest": "docs/evidence/source-optimization-20261002/s2/windows-root-cwd-fix/manifest.json",
+      "newCandidateWindowsOutcome": "PASS_ACTUAL_CI",
+      "windowsVerify": "PASS",
+      "windowsFormal": "PASS",
+      "dualPlatformAcceptance": "PASS",
+      "releaseAttestation": "PASS",
+      "manifest": "docs/evidence/source-optimization-20261002/final/ci-3cdb292e/manifest.json",
+      "jobCount": 10,
+      "allJobConclusionsSuccess": true,
+      "exitCodeEvidence": "GitHub API reports step/job conclusions; no numeric exit code is invented for successful steps.",
+      "artifactEvidence": "GitHub API metadata and reported ZIP digests; ZIP contents were not downloaded to this workspace. Remote reducers executed and passed on the exact source SHA."
     },
     "remoteMainPush": {
-      "status": "PENDING",
-      "remoteCommit": null,
-      "method": "native terminal Git; no GitHub connector"
+      "status": "PASS_SOURCE_PUBLISHED",
+      "remoteCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9",
+      "method": "native terminal Git with ephemeral auth; no GitHub connector",
+      "receipt": "docs/evidence/source-optimization-20261002/final/main-source-push-receipt.json",
+      "verifiedRemoteRef": "docs/evidence/source-optimization-20261002/final/main-source-ref.json",
+      "finalDocumentationFollowup": "will advance main with documentation/evidence only; see git HEAD and external final receipt"
     },
     "R2ConcurrentSteering": {
       "status": "PASS_TARGETED",
@@ -1414,7 +1561,7 @@
         "apps/cli/dist/main.js",
         "usage-audit",
         "--run",
-        "source-optimization-linux-ea50d885eb8f-1791001770",
+        "source-optimization-linux-3cdb292efb74-1791026568",
         "--strict"
       ],
       "cwd": "/workspace/harness-agent-source-acceptance",
@@ -1422,19 +1569,43 @@
       "status": "PASS",
       "log": "usage-audit.log",
       "exitCode": 0,
-      "durationSeconds": 0.341,
+      "durationSeconds": 0.342,
       "logSha256": "f2cf7a87fa38978ce86d8717f2c58808bb41b78ea4b0f95a8c1d383987323dba",
       "summary": [],
       "cleanAfter": true,
-      "testedCommit": "ea50d885eb8fdc7af90f491c7d3b37b3c6aec769",
-      "portableLog": "docs/evidence/source-optimization-20261002/final/linux-ea50d885/usage-audit.log"
+      "testedCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9",
+      "portableLog": "docs/evidence/source-optimization-20261002/final/linux-3cdb292e/usage-audit.log"
     },
     "S2WindowsFixture": {
       "status": "PASS_TARGETED_PENDING_WINDOWS",
       "manifest": "docs/evidence/source-optimization-20261002/s2/windows-fixture-fix/manifest.json",
       "fixedCheckerUnchanged": true,
       "paidCalls": 0
-    }
+    },
+    "historicalLinuxManifests": [
+      "docs/evidence/source-optimization-20261002/final/linux-ea50d885/manifest.json",
+      "docs/evidence/source-optimization-20261002/final/linux-ad916e27/manifest.json"
+    ],
+    "docsVerify": {
+      "name": "docs-verify",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "docs:verify"
+      ],
+      "cwd": "/workspace/harness-agent-source-acceptance",
+      "cleanBefore": true,
+      "status": "PASS",
+      "log": "docs-verify.log",
+      "exitCode": 0,
+      "durationSeconds": 0.702,
+      "logSha256": "5bdb6d89482b321475560601dca591fd0b92fda11f8780af6a86d75996a468eb",
+      "summary": [],
+      "cleanAfter": true,
+      "testedCommit": "3cdb292efb742c4908e7745b456c6717b212e1d9",
+      "portableLog": "docs/evidence/source-optimization-20261002/final/linux-3cdb292e/docs-verify.log"
+    },
+    "linuxManifest": "docs/evidence/source-optimization-20261002/final/linux-3cdb292e/manifest.json"
   },
   "quality": {
     "provider": "scripted offline fixture",
@@ -1449,9 +1620,10 @@
     "testCountsOverlap": true,
     "doNotSumRepeatedRuns": true,
     "LinuxDoesNotAttestWindows": true,
-    "preparationExecutedNewTests": false,
-    "finalSourceBindingPending": true,
-    "changedFixtures": "R2 historical fixtures evolved; the final 22-case fixture SHA is identical but baseline/pre-fix RED executes only the 5 added cases with 17 filtered skips. R4/R5/R6 baseline fixtures differ from supplemental GREEN fixtures. R3a intermediate fixtures evolved, while final independent 36-case baseline/candidate fixture SHA matches. S1 and S2 have retained same-fixture identity.",
-    "evidenceCopies": "Hashes attest copied file integrity, not test success or source freeze."
+    "preparationExecutedNewTests": true,
+    "finalSourceBindingPending": false,
+    "changedFixtures": "R2 historical 22-case recovery fixture retains five-case filtered RED; final 24-case fixture adds concurrent resume controls (pre-fix one FAIL/one PASS). R3a final 36-case RED/GREEN fixture is identical. Other supplemental fixture differences remain explicit in package manifests. Windows alias counterexample and subsequent native assertion failures are separately retained, not reclassified as model-quality evidence.",
+    "evidenceCopies": "Hashes attest copied file integrity, not test success or source freeze.",
+    "deliveryCodeMatchesAcceptedSource": true
   }
 }

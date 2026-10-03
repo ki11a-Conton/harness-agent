@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T11:10:49.646304+00:00",
+  "status": "LINUX_RED_GREEN_WINDOWS_CI_REQUIRED",
+  "platform": {
+    "system": "Linux",
+    "node": "v24.19.0"
+  },
+  "baselineCommit": "9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2",
+  "candidateBaseCommit": "2b82bd51c7e720367d403bc4ff64ebcde53b1345",
+  "candidateUncommittedFiles": [
+    "packages/context/src/path-scoped-discovery.ts",
+    "packages/context/src/path-scoped-discovery.test.ts"
+  ],
+  "sourceSha256": {
+    "packages/context/src/path-scoped-discovery.ts": "fb5ec00963093f7d28fd9b002ca7983f0df247e5d98b1b1981b05d08caa0c768",
+    "packages/context/src/path-scoped-discovery.test.ts": "c56edec85e241709d235a29c62e68fcddae0d4356318108d6fe6c3359ee386b3",
+    "packages/harness/src/path-scoped-instructions.ts": "39bbb653b024c94121a12463bf4e6fe5b01a76f8fb8b3af00656eebf57b3305e",
+    "packages/harness/src/path-scoped-instructions.regressions.test.ts": "88f9ab7f4790820d8039b4727e0006c312d78ec7cc2ffdd7ee76b993fb6d2034",
+    "apps/cli/src/path-scoped-instructions.test.ts": "c37d598fa0827337a4744082b5a001d0f0cc278f2e9e218e5c01158189874db4",
+    "packages/evaluation/src/path-scoped-eligibility.test.ts": "46f7166bd74b12f746b011c54029b56a7bdd6018b6ee83c402b413cfdf5cdd88"
+  },
+  "baselineSourceSha256": "808a978c333714fa2ca5c06317d71e98c767454201d417dbde33d05fb5ffbe2f",
+  "fixtureIdentical": true,
+  "fixtureSha256": "c56edec85e241709d235a29c62e68fcddae0d4356318108d6fe6c3359ee386b3",
+  "observedWindowsFailure": {
+    "annotationFile": "../../ci-annotations-111133692965.json",
+    "sha256": "9ffb7cb41c06c71bc144c240055ff025d0247fd630c4936d47b4e9bda48b7183",
+    "sourceCommit": "9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2",
+    "reason": "Path-scoped instruction discovery requires a real cwd inside its workspace root",
+    "stage": "before first model request"
+  },
+  "rootCause": "safeStat compared a lexical path directly to its realpath; Windows realpath legitimately expands 8.3 short names, so a usable workspace was classified as a link alias. Existing exec-workspace-policy.test.ts records the same native runner behavior.",
+  "fix": "Validate real root and all ancestors with lstat, reject explicit links, compare canonical root against canonical candidate, enforce both lexical and canonical boundaries, and rebase accepted paths to the host root spelling for stable provenance. Original candidate components are checked before canonicalization. No global lowercasing.",
+  "commands": [
+    {
+      "cwd": "/workspace/harness-agent-windows-root-red",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "install",
+        "--offline",
+        "--frozen-lockfile"
+      ],
+      "exitCode": 0,
+      "log": "red-install.log"
+    },
+    {
+      "cwd": "/workspace/harness-agent-windows-root-red",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "packages/contracts",
+        "packages/security",
+        "packages/context"
+      ],
+      "exitCode": 0,
+      "log": "red-build.log"
+    },
+    {
+      "cwd": "/workspace/harness-agent-windows-root-red",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/context/src/path-scoped-discovery.test.ts"
+      ],
+      "exitCode": 1,
+      "log": "context-baseline-red.log",
+      "tests": {
+        "failed": 1,
+        "passed": 23
+      },
+      "failure": "controlled non-link realpath expansion: same production line-40 exception, no collection failure"
+    },
+    {
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "packages/context/src/path-scoped-discovery.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "context-green.log",
+      "tests": {
+        "passed": 24
+      }
+    },
+    {
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "apps/cli/src/path-scoped-instructions.test.ts",
+        "packages/context/src/path-scoped-discovery.test.ts",
+        "packages/harness/src/path-scoped-instructions.regressions.test.ts",
+        "packages/evaluation/src/path-scoped-eligibility.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "s2-four-files-green.log",
+      "files": 4,
+      "tests": {
+        "passed": 45
+      }
+    },
+    {
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "packages/context",
+        "packages/harness",
+        "packages/evaluation",
+        "apps/cli"
+      ],
+      "exitCode": 0,
+      "log": "typecheck.log"
+    },
+    {
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "limits": [
+    "Linux controlled realpath expansion is a filesystem-boundary counterexample; it is not native Windows execution.",
+    "Native Windows acceptance remains pending a fresh CI run at the final code commit.",
+    "No model-quality or promotion evaluation was run; both remain NOT_RUN."
+  ],
+  "paidModelCalls": 0,
+  "artifacts": {
+    "context-baseline-red.log": {
+      "sha256": "9ee23685ce5c90240a930e96fb1b22c1f240555b5b2a826005f21449a3101fb1",
+      "bytes": 3360
+    },
+    "context-green.log": {
+      "sha256": "0155ac6a9afb1cc13010221e0f10c13e30f46739a04902e3bd98dea462506097",
+      "bytes": 302
+    },
+    "red-build.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "red-install.log": {
+      "sha256": "3ecbb1834d93269fc6c3636e69a48e22aa5a745e156204600aa189316d2feba6",
+      "bytes": 1317
+    },
+    "s2-four-files-green.log": {
+      "sha256": "3aa60f1ac6237f6633008656c136ceabf4431fb064d366e480e76ac6c796b8e4",
+      "bytes": 649
+    },
+    "typecheck.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  }
+}

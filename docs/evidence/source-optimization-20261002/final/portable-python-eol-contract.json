@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "portable-python-eol-contract-v1",
+  "checkedAtUtc": "2026-10-03T11:37:16.595979+00:00",
+  "commandBoundary": "Actual native git index checkout in isolated scratch repositories with core.autocrlf=true; source bytes unchanged.",
+  "platform": "Linux; Git conversion configuration controls this test; no claim of Windows kernel execution",
+  "results": [
+    {
+      "explicitPythonByteAttribute": false,
+      "autocrlf": true,
+      "expectedSha256": "712e25328ed700f87d62b88d1e30ab99733cd72bf74b0f5cd887044d6a4a75a4",
+      "checkoutSha256": "bbd908ced358f82918b75b75b2d549b6c13269428ab3a6c1c40541476f6fa3c6",
+      "bytesPreserved": false
+    },
+    {
+      "explicitPythonByteAttribute": true,
+      "autocrlf": true,
+      "expectedSha256": "712e25328ed700f87d62b88d1e30ab99733cd72bf74b0f5cd887044d6a4a75a4",
+      "checkoutSha256": "712e25328ed700f87d62b88d1e30ab99733cd72bf74b0f5cd887044d6a4a75a4",
+      "bytesPreserved": true
+    }
+  ]
+}

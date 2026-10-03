@@ -17,3 +17,5 @@
 每项先保留 unchanged baseline 的行为 RED，再记录候选 GREEN。日志失效、fixture 缺陷及中间失败保留并明确标记，不能用 collection/type 错误冒充行为缺陷。长链仅在干净冻结工作树运行，输出留在外部 evidence 目录。
 
 完成条件：各包回归、类型检查、build、安全与全量测试通过；Windows 只接受实际该平台证据。真实模型质量、付费实验和 champion promotion 与离线工程验收分开记录，未运行保持 NOT_RUN。
+
+最终完成：受测提交 `3cdb292efb742c4908e7745b456c6717b212e1d9`，Linux 冻结七命令全部 PASS（8128 测试、安全 2135），同 SHA CI 10/10 job PASS，原生 Git main 发布并核验。源码研究、各阶段 RED/GREEN、真实 Windows 修补与最终验收见 [完整证据](../docs/evidence/source-optimization-20261002.md)。S1/S2 默认关闭，真实模型质量与 promotion NOT_RUN。最终跟进仅文档/证据，与受测代码一致。

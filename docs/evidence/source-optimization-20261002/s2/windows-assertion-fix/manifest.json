@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T11:20:15.287723+00:00",
+  "status": "LINUX_TARGETED_PASS_WINDOWS_CI_PENDING",
+  "candidateBaseCommit": "ad916e27fdb83cd82880d9a3c6f7849566acd97f",
+  "changedFiles": [
+    "packages/harness/src/path-scoped-instructions.regressions.test.ts",
+    "apps/cli/src/path-scoped-instructions.test.ts"
+  ],
+  "sourceSha256": {
+    "packages/harness/src/path-scoped-instructions.regressions.test.ts": "728571d13d4a7a665e8e42ef484bc485aadde6e2829bfdcc57b0247b32857a70",
+    "apps/cli/src/path-scoped-instructions.test.ts": "1ddb5f601a231754f36995c7606e3de4eda5d1c62361e9e240ccff3bcf24f9cd"
+  },
+  "productionChanged": false,
+  "actualWindowsRed": {
+    "commit": "ad916e27fdb83cd82880d9a3c6f7849566acd97f",
+    "jobId": 111190879454,
+    "artifact": "windows-baseline-annotations.json",
+    "sha256": "29e78b11fa6ab2a3204b0e6db2cf91ce86cfc4518e4869436fd8644b22028f63",
+    "failures": [
+      {
+        "test": "requires matching durable requested/completed evidence and retains the last successful batch",
+        "cause": "POSIX-only expected values versus native D:\\workspace-root\\a\\file output"
+      },
+      {
+        "test": "keeps a rejected instruction out of both the model request and witnessed instructionSources",
+        "cause": "endsWith POSIX suffix did not recognize native Windows backslashes"
+      }
+    ]
+  },
+  "fix": [
+    "Harness expected paths now use node:path.resolve/join under the native platform rather than hard-coded POSIX absolute strings.",
+    "CLI checks normalized path separators for actual denial targets; source absence is checked per actual instructionSources entry.path, avoiding the old Windows JSON-escape false negative.",
+    "New controls recognize both Windows and POSIX forbidden paths in denial/source oracles, and reject sibling package/name matches."
+  ],
+  "commands": [
+    {
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "apps/cli/src/path-scoped-instructions.test.ts",
+        "packages/context/src/path-scoped-discovery.test.ts",
+        "packages/harness/src/path-scoped-instructions.regressions.test.ts",
+        "packages/evaluation/src/path-scoped-eligibility.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "s2-four-files-green.log",
+      "files": 4,
+      "tests": {
+        "passed": 46
+      }
+    },
+    {
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "argv": [
+        "corepack",
+        "pnpm",
+        "exec",
+        "tsc",
+        "-b",
+        "packages/harness",
+        "apps/cli"
+      ],
+      "exitCode": 0,
+      "log": "typecheck.log"
+    },
+    {
+      "cwd": "/workspace/harness-agent-source-optimization",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "limits": [
+    "The RED evidence is actual native Windows CI, not a fabricated Linux production failure.",
+    "Linux passed 46 targeted tests; actual fresh Windows acceptance remains pending.",
+    "Paid model calls 0; quality and promotion NOT_RUN."
+  ],
+  "artifacts": {
+    "candidate.diff": {
+      "sha256": "5b60c507453dcc31317f29d7556c13d8860e8ef028fe9a767f61d3f1a771b31f",
+      "bytes": 6083
+    },
+    "s2-four-files-green.log": {
+      "sha256": "a16b67c77b23c7cfd7ae02cec297d66059a08472c866e162a9507b8dc7fff2d1",
+      "bytes": 651
+    },
+    "typecheck.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "windows-baseline-annotations.json": {
+      "sha256": "29e78b11fa6ab2a3204b0e6db2cf91ce86cfc4518e4869436fd8644b22028f63",
+      "bytes": 5044
+    }
+  }
+}

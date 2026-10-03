@@ -2,7 +2,7 @@
 
 详细方案制定快照：[plan(20261002-000000).md](plan(20261002-000000).md)。该快照保留研究后、实施前的做什么/怎么做/怎么验收；以下记录当前实施状态。
 
-日期：2026-10-02；最后更新：2026-10-03。状态：**集成验收中。S1/S2 已完成独立离线配对与工程验收，默认关闭；独立复查新增的 R2 崩溃恢复窗口已修复（110 项相关回归通过，含并发恢复去重），R3 最终 85 项安全回归与 12 个实际 Controller 探针通过，独立复审关闭。Linux 干净快照 `ea50d885` 全量 8115 PASS / 12 SKIP、安全 2135 PASS，类型/构建/严格 usage audit 通过；Windows 仍有两个 S2 用例失败，正在获取真实原因，尚未发布 main。**
+日期：2026-10-02；最后更新：2026-10-03。状态：**已完成实施、完整验收与原生 Git main 发布。受测代码 `3cdb292`：Linux 8128 PASS / 12 SKIP、安全 2135 PASS，七项冻结命令全部通过；同 SHA 双平台 CI 10/10 job 成功，含 formal、闭环、coverage、release attestation。S1/S2 默认关闭，真实模型收益与 promotion 仍 NOT_RUN。最终跟进只更新计划和验收证据。**
 
 本计划先分析用户提供的 Codex、OpenCode、Pi、Hermes、Claude Code fork 档案，再对照当前 Harness 代码制定。目标是让智能体正确处理模型中断、持续遵守用户约束、控制工具数据边界和安全修改代码；保留已有架构，随后用单变量评测验证策略收益。
 
@@ -178,9 +178,10 @@ git diff --check
 - [x] R5：技能revision与刷新（实际正文进入 step 身份）。
 - [x] R6：只读prefetch取消/期限（含真实 Harness 反馈写入隔离）。
 - [x] S1/S2：分开注册并完成实际配置/请求/身份/activation、独立内容检查与离线 AB/BA 配对。真实模型收益和 promotion 仍 NOT_RUN，默认关闭。
-- [x] Linux 干净快照 `ea50d885eb8fdc7af90f491c7d3b37b3c6aec769`：全量 438 文件 / 8115 PASS、12 SKIP；安全 2135 PASS，类型/构建/严格 usage audit/diff check 通过。完整原始日志见 [冻结验收](docs/evidence/source-optimization-20261002/final/linux-ea50d885/manifest.json)。
-- [ ] 最新实现 SHA 的 Windows 与完整平台验收：`1b3f386` 仍有两个 S2 用例失败；`9eef5c8` 补充安全诊断，等待实际 CI reason 后继续修复。
-- [ ] 最终证据、工作区同步与远端 main 正常推送。
+- [x] 最终 Linux 干净快照 `3cdb292efb742c4908e7745b456c6717b212e1d9`：439 PASS / 1 SKIP 文件、8128 PASS / 12 SKIP 测试；安全 2135 PASS，类型/构建/docs verify/严格 usage audit/全变更 diff check 通过。[冻结验收](docs/evidence/source-optimization-20261002/final/linux-3cdb292e/manifest.json)。
+- [x] 同一实现 SHA 的 Windows/Ubuntu CI：10/10 job PASS，包含实际 full test、formal、闭环、coverage、双平台汇总及发布 attestation。[CI 证据](docs/evidence/source-optimization-20261002/final/ci-3cdb292e/manifest.json)。
+- [x] 原生终端 Git 正常推送 main，远端 ref 已核验；本地主要工作区已切换 main、离线安装与构建通过。[发布回执](docs/evidence/source-optimization-20261002/final/main-source-push-receipt.json)。
+- [x] 最终计划与可核对的便携原始证据收口；最终跟进仅为文档/证据，代码与受测提交一致。
 
 ## 8. 实施中的契约细化
 
@@ -197,3 +198,5 @@ R3a 补充：真实安全 hooks 的 JSON 转义换行/tab 与嵌套 capture 反�
 最终复查补充：R3 对原始 JSON 字符串 token 做扫描和原位替换，保留重复字段、格式以及大整数/`-0`/`1e309` 原文；解码后的字段名和值共同接受 credential policy。无法安全映射的 host 脱敏结果拒绝输出。Artifact 使用摘要文件名与 `wx`/`0600` 排他创建，不跟随预置最终文件 symlink；host 配置根目录不是跨进程目录替换保证。R2 恢复必须在原 turn lineage 内收敛已绑定但尚未写入的 steer，再构造新 turn 的原始 user 输入，不能重绑持久身份。
 
 R2 并发补充：同 Runtime/session 内将 steer append/consume 串行化，排队后重读 durable history；竞争恢复只有一份原 promptId 消息，其他 session 不阻塞。该局部保证不扩大成跨进程 CAS。
+
+Windows 收口：实际 CI 先检出 8.3 短名经 realpath 扩成长名后的误拒；`ad916e2` 改为原始组件链接检查与成对规范路径包含检查。其后两个测试路径断言使用 Linux 形式，`3cdb292` 改为本机路径 oracle，并直接逐条检查被拒绝文档的来源路径。保留所有真实失败，最终真实 Windows 全部通过。

@@ -1,6 +1,6 @@
 # 源码对照优化：实施与验收证据
 
-状态：**Linux 冻结快照通过，Windows 集成验收中**。`ea50d885` 的干净工作树已完成类型/构建、安全 2135 PASS、全量 8115 PASS / 12 SKIP、严格 usage audit。`1b3f386` 的 Windows CI 仍有两个 S2 用例失败，下一提交 `9eef5c8` 补充安全的实际错误诊断；最终平台验收和 main 发布仍待完成。
+状态：**实施、双平台验收与 main 发布完成**。受测代码 `3cdb292efb742c4908e7745b456c6717b212e1d9` 在 Linux 干净工作树完成七项命令（全量 8128 PASS / 12 SKIP，安全 2135 PASS），同 SHA [CI](https://github.com/ki11a-Conton/harness-agent/actions/runs/37119359152) 的 10 个 job 全部成功。main 已经通过原生终端 Git 发布并核验。最终跟进仅补计划/任务/验收文档，代码与该受测提交一致。两项实验策略默认关闭，真实模型收益与 promotion 为 NOT_RUN。
 
 执行依据为 [plan.md](../../plan.md) 与 [SOURCE-OPT-20261002](../../tasks/SOURCE-OPT-20261002.md)。源码研究和实施验收分开保存：[原研究证据](source-agent-review-20261002.json) 保持原样，本轮记录见 [验收 JSON 草案](source-optimization-20261002.json)。
 
@@ -18,7 +18,7 @@
 | 工作包 | 最终做法与边界 | 已执行结果 | 原始证据 |
 | --- | --- | --- | --- |
 | R1 | OpenAI-compatible provider 只将显式 `stop` / `tool_calls` 作为正常结束；保留异常部分响应用于审计，经现有 Core error 接缝结算未执行调用。仅 DONE、EOF、length/filter/未知 reason 不派发工具、不完成 Verification。 | unchanged baseline 30 项：26 FAIL、4 PASS；候选 7 文件 / 139 PASS；model 与 focused Core 类型检查通过。 | [manifest](source-optimization-20261002/r1/result.json)、[RED](source-optimization-20261002/r1/red-baseline-final.log)、[GREEN](source-optimization-20261002/r1/green-targeted-final.log) |
-| R2 | 原始 user/steer 由 durable turn 身份派生，保留原文、顺序、用户信道；普通/reactive 裁剪与真实 checkpoint 恢复使用同一保护集合。恢复前先在 original turn 结算已绑定未 append 的 steering，再拼新 turn 的 user channel 恢复输入；不 rebind，ordinary fresh task 不继承旧绑定。无法容纳时显式失败，工具伪 steering 不获得权威。 | 最终正式 fixture 22 项中的新增 5 项：baseline 4 FAIL、1 PASS、17 filtered SKIP；修补前候选 3 FAIL、2 PASS、17 SKIP，同 fixture SHA。最终 related 8 文件 / 108 PASS，包含全部 22 项 active-user 回归；Core 类型检查通过，独立恢复复查关闭。此前 11/15/17 项 fixture 和组合 GREEN 作为历史保留。 | [独立最终 manifest](source-optimization-20261002/r2/independent-bound-before-append/integration-review-manifest.json)、[正式 baseline RED](source-optimization-20261002/r2/independent-bound-before-append/formal-baseline-red.log)、[修补前候选 RED](source-optimization-20261002/r2/independent-bound-before-append/formal-candidate-red.log)、[最终 GREEN](source-optimization-20261002/r2/independent-bound-before-append/final-targeted-green.log) |
+| R2 | 原始 user/steer 由 durable turn 身份派生，保留原文、顺序、用户信道；普通/reactive 裁剪与真实 checkpoint 恢复使用同一保护集合。恢复前先在 original turn 结算已绑定未 append 的 steering，再拼新 turn 的 user channel 恢复输入；不 rebind，ordinary fresh task 不继承旧绑定。无法容纳时显式失败，工具伪 steering 不获得权威。 | 最终正式 fixture 22 项中的新增 5 项：baseline 4 FAIL、1 PASS、17 filtered SKIP；修补前候选 3 FAIL、2 PASS、17 SKIP，同 fixture SHA。恢复阶段 related 8 文件 / 108 PASS，包含当时 22 项 active-user 回归；最终并发补审增至 24 项，related 110 PASS；Core 类型检查通过，独立恢复复查关闭。此前 11/15/17 项 fixture 和组合 GREEN 作为历史保留。 | [独立最终 manifest](source-optimization-20261002/r2/independent-bound-before-append/integration-review-manifest.json)、[正式 baseline RED](source-optimization-20261002/r2/independent-bound-before-append/formal-baseline-red.log)、[修补前候选 RED](source-optimization-20261002/r2/independent-bound-before-append/formal-candidate-red.log)、[最终 GREEN](source-optimization-20261002/r2/independent-bound-before-append/final-targeted-green.log) |
 | R3a | 实际模型文本的安全处理与预算开关分离，原 ToolResult 保持原结构。编码字符串、重复 JSON key、失败前缀、敏感字段、原始数值 lexeme 与 artifact 预置 symlink 反例已覆盖；按字符串 token 局部重写、不可映射的自定义 hook 改写拒绝输出，artifact 排他创建。 | 最终同 fixture 36 项 baseline：34 FAIL、2 PASS；候选 4 文件 / 85 PASS，其中独立 fixture 36 项。12 项真实 Controller probes 全 PASS，Core 类型检查通过，独立局部审查关闭。之前 28/30/32/34 项候选缺陷分开保留，81 PASS 属历史结果。 | [独立最终 manifest](source-optimization-20261002/r3/encoded-independent-review-manifest.json)、[最终 RED](source-optimization-20261002/r3/encoded-independent-frozen-baseline-red.log)、[最终 GREEN](source-optimization-20261002/r3/encoded-independent-frozen-candidate-green.log)、[真实 Controller probes](source-optimization-20261002/r3/encoded-independent-controller-probes.json) |
 | R3b | StringDecoder 增量解码 stdout/stderr；每流捕获主体按 UTF-8 bytes 限制，超过 cap 继续 drain/observer。Orchestrator 字符串主体 cap 与附加 marker 分开，结构化结果不改形状。 | 同 fixture baseline 34 项：26 FAIL、8 PASS；候选 14 文件 / 315 PASS、10 SKIP；tools 类型检查通过。10 项跳过不作为 Windows 执行证据。 | [边界说明](source-optimization-20261002/r3/r3-evidence.json)、[RED](source-optimization-20261002/r3/r3b-red.log)、[GREEN](source-optimization-20261002/r3/r3b-green.log) |
 | R4 | 规范路径与可用 dev/ino 协作锁覆盖 read→edit/write 和 transaction；等待后重新解析 inode。opt-in versioned read / expectedSha256 / strict profile；原始 UTF-8 bytes、BOM/EOL/EOF 保留。保证限于进程内协作，不承诺外部编辑器的原子 CAS。 | 有效 barrier baseline 17 项：14 FAIL、3 PASS；候选新增至 41 项，相关 8 文件 / 176 PASS；Core/tools/harness 类型检查与 scoped diff check 通过。候选新增 24 项是补充绿色覆盖。 | [独立复查 manifest](source-optimization-20261002/r4/review-manifest.json)、[有效 RED](source-optimization-20261002/r4/review-red-baseline.log)、[GREEN](source-optimization-20261002/r4/review-green-targeted.log) |
@@ -40,7 +40,7 @@ R2 串行恢复阶段 fixture SHA 为 `788896831c87034bbace526ba84ab6919b3d96139
 | 策略 | 实际实现和内容验收 | 已执行离线结果 | 身份与证据 |
 | --- | --- | --- | --- |
 | S1 `diagnostic_first_repair_v1` | versioned completionGuidance 要求用 bounded capture wrapper 取得原命令真实 exit/stdout/stderr，按诊断修复，再跑同一命令；原 TaskVerifier 与独立内容 verifier 保持。wrapper 成功不等于原测试成功，诊断仍是脱敏 untrusted data。 | 同 fixture baseline 10 FAIL；S1 10 + 当时结构安全 26 = 36 PASS；相关 mechanism/paired 9 文件 / 95 PASS。真实 `runPairedExperiment`：2 cases × 2 repetitions，4 finalized pairs、8 logical runs、36 model attempts；AB/BA 各 2，无 partial pair。 | [结果 manifest](source-optimization-20261002/s1/final-result-manifest.json)、[机制身份](source-optimization-20261002/s1/mechanism-identity.json)、[RED](source-optimization-20261002/s1/red-baseline-latest.log)、[GREEN](source-optimization-20261002/s1/green-final.log) |
-| S2 `path_scoped_instructions_v1` | opt-in InstructionDiscovery 从固定 workspace root、host initialTargets 与实际成功获准 read/search 的 durable evidence 派生范围；按 ancestor 顺序和 cwd 优先级读文档，缺中间层继续；无兄弟 subtree scan。AsyncLocalStorage 隔离并发 session，已有 step source/snapshot 合同保持，默认 discovery 不变。 | 同 fixture context/harness baseline 26 FAIL、3 PASS；CLI 6 FAIL、1 PASS；eligibility 2 FAIL、1 PASS。最后 4 文件 / 39 PASS；相关默认/step 回归 15 文件 / 215 PASS。paired：1 case × 2 repetitions，2 pairs、4 logical runs、28 model attempts，AB/BA 各 1，无 partial pair。并发 3 sessions / 6 requests 绑定各自 source；无文档时 activation 0。 | [结果与独立审计](source-optimization-20261002/s2/evidence.json)、[context/harness RED](source-optimization-20261002/s2/baseline-red.log)、[CLI RED](source-optimization-20261002/s2/cli-baseline-red.log)、[最后 GREEN](source-optimization-20261002/s2/candidate-final-green.log) |
+| S2 `path_scoped_instructions_v1` | opt-in InstructionDiscovery 从固定 workspace root、host initialTargets 与实际成功获准 read/search 的 durable evidence 派生范围；按 ancestor 顺序和 cwd 优先级读文档，缺中间层继续；无兄弟 subtree scan。AsyncLocalStorage 隔离并发 session，已有 step source/snapshot 合同保持，默认 discovery 不变。 | 同 fixture context/harness baseline 26 FAIL、3 PASS；CLI 6 FAIL、1 PASS；eligibility 2 FAIL、1 PASS。原工程冻结 4 文件 / 39 PASS；Windows 修补后最终 4 文件 / 46 PASS；相关默认/step 回归 15 文件 / 215 PASS。paired：1 case × 2 repetitions，2 pairs、4 logical runs、28 model attempts，AB/BA 各 1，无 partial pair。并发 3 sessions / 6 requests 绑定各自 source；无文档时 activation 0。 | [结果与独立审计](source-optimization-20261002/s2/evidence.json)、[context/harness RED](source-optimization-20261002/s2/baseline-red.log)、[CLI RED](source-optimization-20261002/s2/cli-baseline-red.log)、[最后 GREEN](source-optimization-20261002/s2/candidate-final-green.log) |
 
 S1 记录 actual prompt/config/mechanism/schema digest，S2 记录 config、case、verifier、schedule 与 activation 身份。离线 paired executor 的 sourceSha/treeFingerprint 字段为 null，执行时的未提交源文件另有 SHA 指纹；isolation 为显式 `insecure-local` fixture，promotionEligible 为 false。这些材料不能作为 promotion-grade 的完整冻结身份。
 
@@ -48,19 +48,23 @@ S2 的候选 instruction discovery 在 retained paired observation 中为 0 subt
 
 大体积 offline/paired JSON 未全部提交；原始字节 SHA 与概要保留在各 manifest 及本轮 JSON 的 externalArtifacts 中。所选小日志与 fixture 源码可以独立复查，缺失完整请求的 summary artifact 不提供其未保留内容的重新计算能力。
 
-## 冻结验收进度
+## 最终冻结验收
 
-| 验收项 | 实际状态 | 受测来源与证据 |
+| 验收项 | 实际结果 | 来源与证据 |
 | --- | --- | --- |
-| R2 / R3 独立复审 | PASS_TARGETED | 正式 RED/GREEN、真实 Runtime/Controller probes 与源指纹均已保留 |
-| Linux 冻结 SHA、clean tree | PASS | `ea50d885eb8fdc7af90f491c7d3b37b3c6aec769`，每命令前后干净；[manifest](source-optimization-20261002/final/linux-ea50d885/manifest.json) |
-| typecheck / build | PASS | 两命令均退出 0，日志及受测 SHA 见同 manifest |
-| 安全 / 全量 test | PASS_LINUX | 安全 19 文件 / 2135 PASS；全量 438 PASS / 1 SKIP 文件、8115 PASS / 12 SKIP 测试，Linux subreaper 启动；[全量原始日志](source-optimization-20261002/final/linux-ea50d885/full.log) |
-| 严格 usage audit / 全变更 diff check | PASS_LINUX | 7 个能力观察记录，audit 退出 0；diff check 比较实现基线与受测 SHA，退出 0 |
-| 新候选 Windows CI | FAIL_UNDER_REPAIR | `1b3f386` [CI](https://github.com/ki11a-Conton/harness-agent/actions/runs/37097580019) 两个 S2 测试仍失败；`9eef5c8` 补实际原因诊断，不能将旧 Linux 结果当作新 SHA 的平台证据 |
-| 远端 main 发布 | PENDING | 当前 main 仍为 `acf8dcc`；候选分支通过原生终端 Git 推送，最终验收后发布 |
-| 真实模型质量 / 付费实验 / champion promotion | NOT_RUN | 付费调用 0；两个实验策略默认关闭 |
+| 受测 SHA / clean tree | PASS | `3cdb292efb742c4908e7745b456c6717b212e1d9`；每命令前后干净，[Linux manifest](source-optimization-20261002/final/linux-3cdb292e/manifest.json) |
+| typecheck / build / docs verify | PASS | 三命令退出 0；主工作区离线安装/构建也通过 |
+| 安全 | PASS | 19 文件 / 2135 PASS，[原始日志](source-optimization-20261002/final/linux-3cdb292e/security.log) |
+| 全量 | PASS_LINUX | 439 PASS / 1 SKIP 文件、8128 PASS / 12 SKIP 测试，[原始日志](source-optimization-20261002/final/linux-3cdb292e/full.log) |
+| 严格 usage audit / 全变更 diff check | PASS | 7 条能力观察记录，audit 和基线→受测提交 diff check 均退出 0 |
+| Windows / Ubuntu CI | PASS | 同 SHA 10/10 jobs 成功，含两平台 full/formal/closed-loop、coverage、cold-start、release attestation 与 dual-platform acceptance；[manifest](source-optimization-20261002/final/ci-3cdb292e/manifest.json) |
+| main 发布 | PASS | 原生终端 Git，发布代码 `3cdb292`，[回执](source-optimization-20261002/final/main-source-push-receipt.json) / [远端 ref](source-optimization-20261002/final/main-source-ref.json)；最终跟进仅补文档/证据 |
+| 真实模型收益 / 付费实验 / champion promotion | NOT_RUN | 付费调用 0，S1/S2 默认关闭；离线内容检查不作为真实模型收益 |
 
-Linux 12 个跳过来自现有平台/opt-in 测试：executor 7、Windows execution boundary 3、N2 release CLI 1、N5 pair setup 1。沿用现有 full suite 排除的 perf/soak/forensics/driver closed-loop 策略，不额外声称执行。首次 `f9b0c834` 安全 gate 检出新增空 catch，修为显式 `continue` 后冻结 `ea50d885` 全部通过；失败日志也保留。后续源变化仅测试和 CI 诊断，需要新 SHA 的平台证据。
+Linux 12 个跳过来自现有平台/opt-in 测试：executor 7、Windows execution boundary 3、N2 release CLI 1、N5 pair setup 1。full suite 沿用既有 perf/soak/forensics/driver closed-loop 排除规则；CI 另执行现有独立门。
+
+首次 `f9b0c834` 安全 gate 检出空 catch，显式 `continue` 修复后通过。后续真实 Windows 诊断确认 8.3 路径别名被误拒，`ad916e2` 以成对 canonical containment 修复，真实链接仍拒绝；两个后续 fixture 路径断言改为本机 oracle 与逐条来源路径检查，最终 `3cdb292` Windows 全部通过。失败记录、同 fixture RED/GREEN 与独立 7 项实际文件系统探针均保留。
+
+CI 数值退出码没有从 GitHub API 编造；保存实际 step/job conclusion。23 个远端 artifact 只保留 API metadata 与其报告的 ZIP digest，未在本地下载 ZIP；两个远端 reducers 在受测 SHA 实际运行通过。便携目录内所选原始文件的字节/SHA 已完整核对，原研究 JSON 未修改。
 
 冻结前并发补审：同 Runtime 的两个 resume 会在既有 SESSION_BUSY guard 生效前重复 append/consume 已绑定 steer。`78321b7` 对同 session 的注入过程串行处理，等待后重读 durable history，finally 释放；其他 sessions 独立。最终 active-user fixture 为 24 项，SHA `8a3c237d96309e4046ae53c41b4a130265f6a08d3af3ba5447c465a2897f1053`；同 fixture 修补前新增 2 项为 1 FAIL/1 PASS，8 文件相关回归为 110 PASS。独立实际 Runtime probe 的写入/消费各从 2 变为 1，原 promotedTurnId 不变；不承诺跨进程 CAS。见 [正式证据](source-optimization-20261002/r2/independent-bound-before-append/concurrency-review-manifest.json) 与 [独立复审](source-optimization-20261002/r2/concurrent-resume-independent-review.json)。

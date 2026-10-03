@@ -1,0 +1,122 @@
+[
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2/.github",
+    "start_line": 2,
+    "start_column": null,
+    "end_line": 2,
+    "end_column": null,
+    "annotation_level": "warning",
+    "title": "",
+    "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, actions/upload-artifact@v4, pnpm/action-setup@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2/.github",
+    "start_line": 19,
+    "start_column": null,
+    "end_line": 19,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "[verify]  FAIL  apps/cli/src/path-scoped-instructions.test.ts > S2 CLI path-scoped instruction challenger > keeps a rejected instruction out of both the model request and witnessed instructionSources",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2/.github",
+    "start_line": 18,
+    "start_column": null,
+    "end_line": 18,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "[verify]  FAIL  apps/cli/src/path-scoped-instructions.test.ts > S2 CLI path-scoped instruction challenger > does not use a denied traversal request as target evidence",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2/.github",
+    "start_line": 17,
+    "start_column": null,
+    "end_line": 17,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "[verify]  FAIL  apps/cli/src/path-scoped-instructions.test.ts > S2 CLI path-scoped instruction challenger > changes real target context without sibling contamination and passes an independent content verifier",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2/.github",
+    "start_line": 16,
+    "start_column": null,
+    "end_line": 16,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "[verify] Error: S2_RUNTIME_ERROR_JSON={\"reason\":\"Path-scoped instruction discovery requires a real cwd inside its workspace root\",\"caseId\":\"s2-parallel-scope\",\"actualStatus\":\"error\",\"failureCategory\":\"harness\",\"hostMutationStatus\":\"unknown\",\"violations\":[],\"recent\":[{\"type\":\"session.created\",\"sequence\":1},{\"type\":\"turn.started\",\"sequence\":2}]}",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2/.github",
+    "start_line": 15,
+    "start_column": null,
+    "end_line": 15,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "[verify] Error: S2_RUNTIME_ERROR_JSON={\"reason\":\"Path-scoped instruction discovery requires a real cwd inside its workspace root\",\"caseId\":\"s2-no-visible-instruction\",\"actualStatus\":\"error\",\"failureCategory\":\"harness\",\"hostMutationStatus\":\"unknown\",\"violations\":[],\"recent\":[{\"type\":\"session.created\",\"sequence\":1},{\"type\":\"turn.started\",\"sequence\":2}]}",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2/.github",
+    "start_line": 14,
+    "start_column": null,
+    "end_line": 14,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "[verify] Error: S2_RUNTIME_ERROR_JSON={\"reason\":\"Path-scoped instruction discovery requires a real cwd inside its workspace root\",\"caseId\":\"s2-injection-target\",\"actualStatus\":\"error\",\"failureCategory\":\"harness\",\"hostMutationStatus\":\"unknown\",\"violations\":[],\"recent\":[{\"type\":\"session.created\",\"sequence\":1},{\"type\":\"turn.started\",\"sequence\":2}]}",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2/.github",
+    "start_line": 13,
+    "start_column": null,
+    "end_line": 13,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "[verify] Error: S2_RUNTIME_ERROR_JSON={\"reason\":\"Path-scoped instruction discovery requires a real cwd inside its workspace root\",\"caseId\":\"s2-denied-target\",\"actualStatus\":\"error\",\"failureCategory\":\"harness\",\"hostMutationStatus\":\"unknown\",\"violations\":[],\"recent\":[{\"type\":\"session.created\",\"sequence\":1},{\"type\":\"turn.started\",\"sequence\":2}]}",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2/.github",
+    "start_line": 12,
+    "start_column": null,
+    "end_line": 12,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "[verify] Error: S2_RUNTIME_ERROR_JSON={\"reason\":\"Path-scoped instruction discovery requires a real cwd inside its workspace root\",\"caseId\":\"s2-three-package-content\",\"actualStatus\":\"error\",\"failureCategory\":\"harness\",\"hostMutationStatus\":\"unknown\",\"violations\":[],\"recent\":[{\"type\":\"session.created\",\"sequence\":1},{\"type\":\"turn.started\",\"sequence\":2}]}",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/ki11a-Conton/harness-agent/blob/9eef5c8f1f969a598a7c7a32e5e60b61dde74fb2/.github",
+    "start_line": 2324,
+    "start_column": null,
+    "end_line": 2324,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "Process completed with exit code 1.",
+    "raw_details": ""
+  }
+]
