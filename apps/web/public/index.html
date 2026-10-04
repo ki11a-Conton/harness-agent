@@ -1,34 +1,53 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Harness Agent — Web 控制台</title>
-<link rel="stylesheet" href="/style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Harness Agent — 工作台</title>
+  <link rel="stylesheet" href="/vendor/deepseek/base.css">
+  <link rel="stylesheet" href="/vendor/deepseek/design-platform.css">
+  <link rel="stylesheet" href="/vendor/deepseek/gradient-shadow-text.css">
+  <link rel="stylesheet" href="/vendor/deepseek/scrollbar.css">
+  <link rel="stylesheet" href="/vendor/deepseek/focus.css">
+  <link rel="stylesheet" href="/vendor/deepseek/corner-shape.css">
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <div id="app">
-  <aside id="sidebar">
+  <button id="sidebar-backdrop" tabindex="-1" aria-label="关闭会话侧栏"></button>
+  <aside id="sidebar" aria-label="会话导航">
     <div class="sidebar-header">
-      <h1>会话</h1>
-      <button id="new-session-btn" title="新建会话">＋</button>
+      <div class="brand"><span class="brand-mark" aria-hidden="true">h</span><span>harness<span class="brand-caption">AGENT WORKSPACE</span></span></div>
+      <button id="sidebar-close" class="icon-button" aria-label="收起会话侧栏" title="收起会话侧栏"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button>
     </div>
+    <button id="new-session-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>新建会话</span><span class="button-key" aria-hidden="true">＋</span></button>
+    <div class="section-label"><span>会话记录</span><span id="session-count">0</span></div>
     <ul id="session-list"></ul>
-    <div class="sidebar-footer">本地 Web 控制台</div>
+    <div class="sidebar-footer"><span class="workspace-dot" aria-hidden="true"></span><div>本地工作台<span>Harness Agent</span></div></div>
   </aside>
   <main id="main">
     <header id="topbar">
-      <span id="conn-dot" class="dot"></span>
-      <span id="conn-label">连接中…</span>
-      <span id="agent-status"></span>
+      <button id="sidebar-toggle" class="icon-button" aria-label="展开会话侧栏" aria-controls="sidebar" aria-expanded="true" title="展开会话侧栏"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button>
+      <div class="title-block"><span class="topbar-eyebrow">工作台</span><h1 id="session-title">新会话</h1></div>
+      <div class="connection"><span id="conn-dot" class="dot off"></span><span id="conn-label">连接中…</span></div>
+      <button id="theme-toggle" class="icon-button" aria-label="切换为深色主题" title="切换为深色主题">
+        <svg class="theme-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.5A8.5 8.5 0 0 1 8.5 3.8a8.5 8.5 0 1 0 11.7 11.7Z"/></svg>
+        <svg class="theme-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></svg>
+      </button>
     </header>
-    <section id="messages" aria-live="polite"></section>
+    <section id="messages" aria-label="聊天记录" aria-live="polite" aria-busy="true">
+      <div id="empty-state"><div class="hero-mark" aria-hidden="true">h</div><p class="hero-eyebrow">HARNESS AGENT</p><h2>从一个目标开始</h2><p>描述你的任务，一起把它完成。<br>工具执行、审批与验收，进度都在这里。</p><div class="hero-capabilities"><span>代码任务</span><span>可控执行</span><span>结果验收</span></div></div>
+      <div id="message-list"></div>
+    </section>
     <footer id="composer">
-      <textarea id="input" rows="1" placeholder="输入消息…（Enter 发送，Shift+Enter 换行）"></textarea>
-      <div class="composer-actions">
-        <button id="cancel-btn" disabled>取消</button>
-        <button id="send-btn">发送</button>
+      <div class="activity-bar"><span id="agent-status" role="status">就绪</span><span id="session-meta"></span></div>
+      <div id="composer-card">
+        <label class="sr-only" for="input">消息</label>
+        <textarea id="input" rows="2" placeholder="告诉 Harness，你想完成什么…" maxlength="200000"></textarea>
+        <div class="composer-actions"><span class="keyboard-hint">Enter 发送 <span>·</span> Shift+Enter 换行</span><div class="composer-trailing"><button id="cancel-btn" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg><span>停止</span></button><button id="send-btn" aria-label="发送消息" title="发送消息" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 11 6-6 6 6M12 5v14"/></svg></button></div></div>
       </div>
+      <p class="composer-caption">每一步，清晰可控。</p>
     </footer>
   </main>
 </div>

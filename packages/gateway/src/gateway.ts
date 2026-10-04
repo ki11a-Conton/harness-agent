@@ -224,6 +224,14 @@ export class Gateway {
       await this.reply(msg, `[approve] error: unknown or already-resolved approval: ${rawId}`);
       return;
     }
+    // A known approval id is not authority to decide it. Bind the decision
+    // to the session established for this exact channel and sender; an
+    // optional route must not create a binding as a side effect of approval.
+    const sessionId = this.sessionByUser.get(this.userKey(msg));
+    if (sessionId !== request.sessionId) {
+      await this.reply(msg, "[approve] error: approval does not belong to this sender's session");
+      return;
+    }
     const decidedBy = `${msg.channelId}:${msg.from}`;
     const decision = (await this.rpc.invoke("session.approve", {
       approvalId: rawId,
@@ -351,6 +359,8 @@ export class Gateway {
   }
 
   private userKey(msg: ChannelMessage): string {
-    return `${msg.channelId}:${msg.from}`;
+    // Channel ids and senders are unrestricted strings. Encode the tuple so
+    // embedded separators cannot alias a different channel's session owner.
+    return JSON.stringify([msg.channelId, msg.from]);
   }
 }

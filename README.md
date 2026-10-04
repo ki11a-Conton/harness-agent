@@ -119,6 +119,11 @@ subject to PermissionEngine and SandboxManager.**
 
 ## Getting started
 
+After building, start the Web console from the repository root with
+`node apps/web/dist/main.js` and open <http://127.0.0.1:8787>.
+See [Web UI](docs/web-ui.md) for the DeepSeek Harness UI source attribution,
+supported interactions, and session lifecycle.
+
 Requirements: **Node ≥ 22**, **pnpm ≥ 9** (workspace pinned to pnpm 11.21.0).
 
 ```bash

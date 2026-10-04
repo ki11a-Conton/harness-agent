@@ -112,6 +112,10 @@ pnpm test                        # 先 tsc -b，再跑完整 vitest 套件（单
 pnpm build                       # 构建所有包
 ```
 
+Web 控制台：构建后在项目根目录运行 `node apps/web/dist/main.js`，打开
+<http://127.0.0.1:8787>。DeepSeek Harness UI 移植、许可与使用说明见
+[Web 控制台](docs/web-ui.md)。
+
 完整套件即默认的 `pnpm test`。专项门禁：
 
 ```bash

@@ -528,6 +528,82 @@ describe("WebServer SSE", () => {
     expect(human.payload).toMatchObject({ approvalId: request.id, value: "allow" });
   });
 
+  it("U3 marks real pending approval frames and disables their resolved history replay", async () => {
+    const h = await makeHarness();
+    await postJson(h, "/api/messages", { from: USER, text: "start work" });
+    const sessionId = h.bindings.get(USER)!;
+    await waitFor(async () => (await h.store.listTurns(sessionId))[0]?.status === "completed" ? true : undefined);
+    const request: ApprovalRequest = {
+      id: newApprovalId(), sessionId, agentId: AGENT.id, action: "exec",
+      target: "npm install", reason: "dependency changes", policyRule: "install-review",
+      createdAt: h.clock.t, expiresAt: h.clock.t + 60_000,
+    };
+    h.approvalStore.create(request);
+    const original = await h.events.appendNew({
+      id: newEventId(), sessionId, timestamp: h.clock.t, type: "approval.created",
+      payload: { approvalId: request.id, target: request.target, reason: request.reason },
+    });
+    const reader = await openSse(h);
+    await reader.next(); // hello
+    const pending = await waitForFrame(reader, (f) => isEvent(f, "approval.created"));
+    expect((pending.event as AgentEvent).payload).toMatchObject({
+      approvalId: request.id, pending: true, sessionId, expiresAt: request.expiresAt,
+      action: request.action, agentId: request.agentId, policyRule: request.policyRule,
+    });
+    expect((await h.events.list(sessionId)).find((e) => e.id === original.id)).toEqual(original);
+
+    const decision = await postJson(h, "/api/commands", { from: USER, text: `approve:${request.id}:allow` });
+    expect(decision.status).toBe(200);
+    expect(h.approvalStore.listPending()).toHaveLength(0);
+    // Reconnecting replays old events. The service must explicitly distinguish
+    // the old created event from a request that can still be decided.
+    const replayReader = await openSse(h);
+    await replayReader.next();
+    const replay = await waitForFrame(replayReader, (f) => isEvent(f, "approval.created"));
+    expect((replay.event as AgentEvent).payload).toMatchObject({ approvalId: request.id, pending: false });
+    expect((replay.event as AgentEvent).id).toBe(original.id);
+    expect((await h.events.list(sessionId)).find((e) => e.id === original.id)).toEqual(original);
+  });
+
+  it.each(["allow", "deny"] as const)("U3 refuses a foreign browser's %s and keeps the owner's approval pending", async (value) => {
+    const h = await makeHarness();
+    const owner = "web-owner-user";
+    const other = "web-other-user";
+    await postJson(h, "/api/messages", { from: owner, text: "owner's task" });
+    const sessionId = h.bindings.get(owner)!;
+    await waitFor(async () => (await h.store.listTurns(sessionId))[0]?.status === "completed" ? true : undefined);
+    await postJson(h, "/api/messages", { from: other, text: "other task" });
+    const otherSessionId = h.bindings.get(other)!;
+    expect(otherSessionId).not.toBe(sessionId);
+    await waitFor(async () => (await h.store.listTurns(otherSessionId))[0]?.status === "completed" ? true : undefined);
+    const reader = await openSse(h, other);
+    await reader.next(); // hello
+    const request: ApprovalRequest = {
+      id: newApprovalId(), sessionId, agentId: AGENT.id, action: "exec",
+      target: "npm install", reason: "dependency changes require approval",
+      createdAt: h.clock.t, expiresAt: h.clock.t + 60_000,
+    };
+    h.approvalStore.create(request);
+    const eventsBefore = await h.events.list(sessionId);
+
+    const res = await postJson(h, "/api/commands", { from: other, text: `approve:${request.id}:${value}` });
+    // The HTTP endpoint acknowledges command delivery; the Gateway decision
+    // is delivered over the browser's real SSE stream.
+    expect(res.status).toBe(200);
+    const refused = await waitForFrame(reader, (f) => f.type === "text" && String(f.text).startsWith("[approve]"));
+    expect(String(refused.text)).toContain("error: approval does not belong");
+    expect(h.approvalStore.listPending()).toEqual([request]);
+    expect(await h.events.list(sessionId)).toEqual(eventsBefore);
+    expect((await h.events.list(otherSessionId)).some((e) => e.type === "human.approval")).toBe(false);
+
+    const ownerReply = await postJson(h, "/api/commands", { from: owner, text: `approve:${request.id}:${value}` });
+    expect(ownerReply.status).toBe(200);
+    expect(h.approvalStore.listPending()).toHaveLength(0);
+    const human = (await h.events.list(sessionId)).filter((e) => e.type === "human.approval");
+    expect(human).toHaveLength(1);
+    expect(human[0]?.payload).toMatchObject({ approvalId: request.id, value, decidedBy: `web:${owner}` });
+  });
+
   it("history and sessions endpoints report the stored session", async () => {
     const h = await makeHarness();
     await postJson(h, "/api/messages", { from: USER, text: "hello agent" });

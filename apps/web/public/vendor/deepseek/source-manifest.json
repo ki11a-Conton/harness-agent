@@ -1,0 +1,94 @@
+{
+  "repository": "https://github.com/deepseek-ai/deepseek-harness",
+  "commit": "5badb15009ae1756c3afe0ae0cef1faafc290ccc",
+  "license": "MIT",
+  "copyright": "Copyright (c) 2026 DeepSeek",
+  "runtime": "Native DOM client using Harness existing HTTP/SSE; no upstream Host, framework or CDN.",
+  "files": [
+    {
+      "upstreamPath": "packages/client/ui-theme/src/styles/base.css",
+      "localPath": "vendor/deepseek/base.css",
+      "mode": "verbatim",
+      "upstreamSha256": "03704b5ac0e86d9d875c4fa5c985a7dfe5d56e20dc28a8d8221626aaf7aa482a",
+      "localSha256": "03704b5ac0e86d9d875c4fa5c985a7dfe5d56e20dc28a8d8221626aaf7aa482a"
+    },
+    {
+      "upstreamPath": "packages/client/ui-theme/src/styles/design-platform.css",
+      "localPath": "vendor/deepseek/design-platform.css",
+      "mode": "verbatim",
+      "upstreamSha256": "809b20ae477324fdf5181a2d338655a19919cabbf1b0e60adc149908462c5a66",
+      "localSha256": "809b20ae477324fdf5181a2d338655a19919cabbf1b0e60adc149908462c5a66"
+    },
+    {
+      "upstreamPath": "packages/client/ui-theme/src/styles/scrollbar.css",
+      "localPath": "vendor/deepseek/scrollbar.css",
+      "mode": "verbatim",
+      "upstreamSha256": "673450184fe82a679b5759a7f93ceab17895b9f12e1196f7efb281304afd8398",
+      "localSha256": "673450184fe82a679b5759a7f93ceab17895b9f12e1196f7efb281304afd8398"
+    },
+    {
+      "upstreamPath": "packages/client/ui-theme/src/styles/focus.css",
+      "localPath": "vendor/deepseek/focus.css",
+      "mode": "verbatim",
+      "upstreamSha256": "f7398e7730415592ab1e81cec36f8c5e23065becd06c050f0129a6fa44d247e8",
+      "localSha256": "f7398e7730415592ab1e81cec36f8c5e23065becd06c050f0129a6fa44d247e8"
+    },
+    {
+      "upstreamPath": "packages/client/ui-theme/src/styles/corner-shape.css",
+      "localPath": "vendor/deepseek/corner-shape.css",
+      "mode": "verbatim",
+      "upstreamSha256": "d94f82e1332b6d37e8345aafe1b6b4129faed65891edd3861c00b88940ec4d3f",
+      "localSha256": "d94f82e1332b6d37e8345aafe1b6b4129faed65891edd3861c00b88940ec4d3f"
+    },
+    {
+      "upstreamPath": "packages/client/ui-theme/src/styles/gradient-shadow-text.css",
+      "localPath": "vendor/deepseek/gradient-shadow-text.css",
+      "mode": "verbatim",
+      "upstreamSha256": "a32d784be999def56673b5f86bebd250f401cda1c861adc4c1ea0ebb1ce36ad6",
+      "localSha256": "a32d784be999def56673b5f86bebd250f401cda1c861adc4c1ea0ebb1ce36ad6"
+    },
+    {
+      "localPath": "style.css",
+      "mode": "adapted",
+      "localSha256": "60f6e63348d1a58e65e093c37dc847f065f1f7c2c56455d22f6eec90d695453f",
+      "upstreamSources": [
+        {
+          "upstreamPath": "packages/client/ui-layout/src/client/AppFrame.module.css",
+          "upstreamSha256": "f0bce7eb34595a249c7865b5e0542cfae175a50804060af46344aba906e6789c"
+        },
+        {
+          "upstreamPath": "packages/client/ui-sidebar/src/client/SidebarRoot.module.css",
+          "upstreamSha256": "798a151927c143ae9b7c2e52090cb7d2a4ed967e5701e7fdd2b4bb4a330d3f82"
+        },
+        {
+          "upstreamPath": "packages/client/ui-chat/src/client/chat/ChatView.module.css",
+          "upstreamSha256": "73e746a051e6077e92d91fa59ade9fb65a4ec48e57922616458df95a56a04dcd"
+        },
+        {
+          "upstreamPath": "packages/client/ui-chat/src/client/chat/MessageItem.module.css",
+          "upstreamSha256": "e52ee9df23a65396983f2f22b3186a1e6fd72e4ba4fd0f48d5bee746205870f1"
+        },
+        {
+          "upstreamPath": "packages/client/ui-conversation/src/client/skeleton/ConversationRoot.module.css",
+          "upstreamSha256": "d9d856868adfdc8a300600e060e6262afa42fc3bfc8019b5a597dec326b0c59c"
+        },
+        {
+          "upstreamPath": "packages/client/ui-conversation/src/client/skeleton/InputBar.module.css",
+          "upstreamSha256": "3728d67da4e1d1c2dd102d66f42f0c129a5c1e17e6a1167d738c999d0d87f60b"
+        },
+        {
+          "upstreamPath": "packages/client/ui-conversation/src/client/skeleton/HeroShell.module.css",
+          "upstreamSha256": "38a98b030dc643553bbbfaffeb8e98ca4668c59e55165da57aca31e89ee92f44"
+        }
+      ],
+      "adaptation": "CSS module selectors mapped to the native DOM; retained frame/sidebar/header/transcript/user-bubble/input/hero declarations. Removed Electron, Cordis/React slot and unconnected-control styling; added responsive overlay navigation and existing HTTP/SSE status/approval/code presentation."
+    },
+    {
+      "upstreamPath": "LICENSE",
+      "localPath": "vendor/deepseek/LICENSE",
+      "mode": "verbatim",
+      "upstreamSha256": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+      "localSha256": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be"
+    }
+  ]
+}

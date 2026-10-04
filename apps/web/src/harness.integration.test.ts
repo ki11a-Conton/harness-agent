@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createHarness, type Harness } from "@ar/harness";
-import type { AgentEvent } from "@ar/contracts";
+import type { AgentEvent, ModelEvent, ModelProvider } from "@ar/contracts";
 import { createRuntimeRpc, Gateway } from "@ar/gateway";
 import { ScriptedModelProvider } from "@ar/model";
 import { WebChannelAdapter } from "./adapter.js";
@@ -35,15 +35,16 @@ interface TestWebStack {
   gateway: Gateway;
   base: string;
   bindings: SessionBindings;
+  rpc: ReturnType<typeof createRuntimeRpc>;
 }
 
-async function makeStack(dataDir?: string): Promise<TestWebStack> {
+async function makeStack(dataDir?: string, modelProvider: ModelProvider = provider): Promise<TestWebStack> {
   const harness = await createHarness({
     cwd: process.cwd(),
     ...(dataDir !== undefined ? { dataDir } : {}),
     profile: "interactive",
-    modelProvider: provider,
-    model: { providerId: provider.id, modelId: "scripted-model" },
+    modelProvider,
+    model: { providerId: modelProvider.id, modelId: "scripted-model" },
   });
   const bindings = new SessionBindings();
   const registry = createRuntimeRpc(harness.runtime, {
@@ -75,7 +76,7 @@ async function makeStack(dataDir?: string): Promise<TestWebStack> {
     pollDelayMs: 10,
   });
   const { port } = await server.start();
-  return { harness, server, gateway, base: `http://127.0.0.1:${port}`, bindings };
+  return { harness, server, gateway, base: `http://127.0.0.1:${port}`, bindings, rpc: registry };
 }
 
 async function teardown(stack: TestWebStack): Promise<void> {
@@ -171,6 +172,67 @@ describe("P0-3: web host on the production harness composition root", () => {
       expect(sessions).toHaveLength(1);
       expect(stack.bindings.get(USER)).toBe(sessions[0]!.id);
     } finally {
+      await teardown(stack);
+    }
+  });
+
+  it("U3 cancels a genuinely blocked production turn through HTTP and Gateway", { timeout: 10_000 }, async () => {
+    let entered!: () => void;
+    const blocked = new Promise<void>((resolve) => { entered = resolve; });
+    let observedAbort = false;
+    const blockingProvider: ModelProvider = {
+      id: "web-cancellation-probe",
+      listModels: async () => [],
+      createClient: () => ({
+        async *generate(_request, signal): AsyncGenerator<ModelEvent, void, void> {
+          yield { type: "started", timestamp: Date.now() };
+          entered();
+          await new Promise<void>((resolve) => {
+            if (signal.aborted) resolve();
+            else signal.addEventListener("abort", () => resolve(), { once: true });
+          });
+          observedAbort = signal.aborted;
+          yield { type: "completed", result: { finishReason: "stop", text: "" }, timestamp: Date.now() };
+        },
+      }),
+    };
+    const stack = await makeStack(undefined, blockingProvider);
+    let turnId: string | undefined;
+    let sessionId: string | undefined;
+    try {
+      const message = await fetch(`${stack.base}/api/messages`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from: USER, text: "block until cancelled" }),
+      });
+      expect(message.status).toBe(200);
+      const session = (await stack.harness.store.listSessions())[0]!;
+      const turn = (await stack.harness.store.listTurns(session.id))[0]!;
+      sessionId = session.id;
+      turnId = turn.id;
+      await blocked;
+      expect(turn.status).toBe("running");
+      const cancel = await fetch(`${stack.base}/api/commands`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from: USER, text: "cancel" }),
+      });
+      expect(cancel.status).toBe(200);
+      const deadline = Date.now() + 5_000;
+      while (Date.now() < deadline) {
+        if ((await stack.harness.store.getTurn(turn.id))?.status === "cancelled") break;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      expect(observedAbort).toBe(true);
+      expect((await stack.harness.store.getTurn(turn.id))?.status).toBe("cancelled");
+      const events = await stack.harness.events.list(session.id);
+      expect(events.filter((e) => e.type === "turn.cancelled")).toHaveLength(1);
+      expect(events.filter((e) => e.type === "turn.completed")).toHaveLength(0);
+      expect(events.find((e) => e.type === "human.cancel")?.payload).toMatchObject({ turnId: turn.id, text: "cancel" });
+    } finally {
+      // Release the controlled model even if an assertion before the HTTP
+      // cancellation fails, so this regression cannot park the test process.
+      if (sessionId !== undefined && turnId !== undefined) {
+        await stack.rpc.invoke("session.cancel", { sessionId, turnId });
+      }
       await teardown(stack);
     }
   });

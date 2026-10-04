@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type {
   AgentDefinition,
   AgentEvent,
@@ -497,7 +497,9 @@ describe("Gateway approvals", () => {
     const h = makeGateway();
     gateways.push(h.gateway);
     await h.gateway.start();
-    const sessionId = "session_approval" as SessionId;
+    await h.channels[0]!.deliver("start work");
+    await waitForMessage(h.channels[0]!, (t) => t.startsWith("[run]"));
+    const sessionId = (await h.store.listSessions())[0]!.id;
     const request = pendingApproval(h.clock, sessionId);
     h.approvalStore.create(request);
 
@@ -517,12 +519,136 @@ describe("Gateway approvals", () => {
     const h = makeGateway();
     gateways.push(h.gateway);
     await h.gateway.start();
-    const request = pendingApproval(h.clock, "session_approval" as SessionId);
+    await h.channels[0]!.deliver("start work");
+    await waitForMessage(h.channels[0]!, (t) => t.startsWith("[run]"));
+    const request = pendingApproval(h.clock, (await h.store.listSessions())[0]!.id);
     h.approvalStore.create(request);
 
     await h.channels[0]!.deliver(`approve:${request.id}:deny`);
     const reply = await waitForMessage(h.channels[0]!, (t) => t.startsWith("[approve]"));
     expect(reply.text).toBe(`[approve] ${request.id} deny`);
+  });
+
+  it.each([
+    ["foreign session", "allow"],
+    ["foreign session", "deny"],
+    ["unbound sender", "allow"],
+    ["unbound sender", "deny"],
+    ["foreign channel", "allow"],
+    ["foreign channel", "deny"],
+  ] as const)("U3 rejects %s %s without resolving or auditing the owner's approval", async (source, value) => {
+    const ownerChannel = new FakeChannel("ch-a");
+    const foreignChannel = new FakeChannel("ch-b");
+    let ownerSessionId: SessionId | undefined;
+    const h = makeGateway({
+      channels: [ownerChannel, foreignChannel],
+      // A configured route is not a binding: an unbound sender must first
+      // establish its session through normal message routing.
+      route: (from) => from === "unbound" ? ownerSessionId : undefined,
+    });
+    gateways.push(h.gateway);
+    await h.gateway.start();
+    await ownerChannel.deliver("owner's work", "owner");
+    await waitForMessage(ownerChannel, (t) => t.startsWith("[run]"));
+    ownerSessionId = (await h.store.listSessions())[0]!.id;
+
+    const commandChannel = source === "foreign channel" ? foreignChannel : ownerChannel;
+    const sender = source === "foreign channel" ? "owner" : source === "unbound sender" ? "unbound" : "other";
+    if (source !== "unbound sender") {
+      await commandChannel.deliver("different work", sender);
+      await waitForMessage(commandChannel, (t) => t.startsWith("[run]"), commandChannel === ownerChannel ? 1 : 0);
+      expect(await h.store.listSessions()).toHaveLength(2);
+    }
+
+    const request = pendingApproval(h.clock, ownerSessionId);
+    h.approvalStore.create(request);
+    const pendingBefore = h.approvalStore.listPending();
+    const eventsBefore = await h.events.list(ownerSessionId);
+    const invoke = vi.spyOn(h.rpc, "invoke");
+    await commandChannel.deliver(`approve:${request.id}:${value}`, sender);
+    expect(h.approvalStore.listPending()).toEqual(pendingBefore);
+    expect(await h.events.list(ownerSessionId)).toEqual(eventsBefore);
+    expect(invoke).not.toHaveBeenCalled();
+    expect(commandChannel.sent.at(-1)).toMatchObject({ recipient: sender });
+    expect(String(commandChannel.sent.at(-1)?.payload)).toContain("[approve] error:");
+    expect(String(commandChannel.sent.at(-1)?.payload)).toContain("does not belong");
+
+    // Refusing the foreign decision leaves the real owner's request usable.
+    await ownerChannel.deliver(`approve:${request.id}:${value}`, "owner");
+    expect(h.approvalStore.listPending()).toHaveLength(0);
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("session.approve", {
+      approvalId: request.id,
+      value,
+      decidedBy: "ch-a:owner",
+    });
+    const human = (await h.events.list(ownerSessionId)).filter((e) => e.type === "human.approval");
+    expect(human).toHaveLength(1);
+    expect(human[0]?.payload).toMatchObject({ approvalId: request.id, value, decidedBy: "ch-a:owner" });
+  });
+
+  it.each(["allow", "deny"] as const)("U3 rejects delimiter-colliding channel/sender %s without touching the owner's approval", async (value) => {
+    const ownerChannel = new FakeChannel("ch-a");
+    const foreignChannel = new FakeChannel("ch-a:owner");
+    const h = makeGateway({ channels: [ownerChannel, foreignChannel] });
+    gateways.push(h.gateway);
+    await h.gateway.start();
+    await ownerChannel.deliver("owner's work", "owner:alias");
+    await waitForMessage(ownerChannel, (t) => t.startsWith("[run]"));
+    const ownerSession = (await h.store.listSessions())[0]!;
+    const request = pendingApproval(h.clock, ownerSession.id);
+    h.approvalStore.create(request);
+    const eventsBefore = await h.events.list(ownerSession.id);
+    const invoke = vi.spyOn(h.rpc, "invoke");
+
+    // Both identities concatenate to "ch-a:owner:alias", but the foreign
+    // channel's sender has never established any session binding.
+    await foreignChannel.deliver(`approve:${request.id}:${value}`, "alias");
+    expect(h.approvalStore.listPending()).toEqual([request]);
+    expect(await h.events.list(ownerSession.id)).toEqual(eventsBefore);
+    expect(invoke).not.toHaveBeenCalled();
+    expect(String(foreignChannel.sent.at(-1)?.payload)).toContain("does not belong");
+
+    // Normal routing must likewise establish a separate session for this
+    // tuple; a bound foreign sender still cannot decide the owner's request.
+    await foreignChannel.deliver("foreign work", "alias");
+    await waitForMessage(foreignChannel, (t) => t.startsWith("[run]"));
+    expect(await h.store.listSessions()).toHaveLength(2);
+    invoke.mockClear();
+    await foreignChannel.deliver(`approve:${request.id}:${value}`, "alias");
+    expect(h.approvalStore.listPending()).toEqual([request]);
+    expect(await h.events.list(ownerSession.id)).toEqual(eventsBefore);
+    expect(invoke).not.toHaveBeenCalled();
+
+    await ownerChannel.deliver(`approve:${request.id}:${value}`, "owner:alias");
+    expect(h.approvalStore.listPending()).toHaveLength(0);
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("session.approve", {
+      approvalId: request.id, value, decidedBy: "ch-a:owner:alias",
+    });
+    const human = (await h.events.list(ownerSession.id)).filter((e) => e.type === "human.approval");
+    expect(human).toHaveLength(1);
+    expect(human[0]?.payload).toMatchObject({ approvalId: request.id, value, decidedBy: "ch-a:owner:alias" });
+  });
+
+  it("U3 keeps a bound owner's approval one-shot and expires a late allow", async () => {
+    const h = makeGateway();
+    gateways.push(h.gateway);
+    await h.gateway.start();
+    await h.channels[0]!.deliver("start work");
+    await waitForMessage(h.channels[0]!, (t) => t.startsWith("[run]"));
+    const sessionId = (await h.store.listSessions())[0]!.id;
+    const request = pendingApproval(h.clock, sessionId);
+    h.approvalStore.create(request);
+    h.clock.t = request.expiresAt + 1;
+    const invoke = vi.spyOn(h.rpc, "invoke");
+
+    await h.channels[0]!.deliver(`approve:${request.id}:allow`);
+    expect(String(h.channels[0]!.sent.at(-1)?.payload)).toBe(`[approve] ${request.id} expired`);
+    await h.channels[0]!.deliver(`approve:${request.id}:allow`);
+    expect(String(h.channels[0]!.sent.at(-1)?.payload)).toContain("unknown or already-resolved");
+    expect(invoke).toHaveBeenCalledTimes(1);
+    const human = (await h.events.list(sessionId)).filter((e) => e.type === "human.approval");
+    expect(human).toHaveLength(1);
+    expect(human[0]?.payload).toMatchObject({ approvalId: request.id, value: "expired" });
   });
 
   it("replies with an error message for an unknown approval id", async () => {
@@ -767,7 +893,7 @@ describe("Gateway lifecycle and isolation", () => {
       expiresAt: h.clock.t + 60_000,
     };
     h.approvalStore.create(request);
-    await chA.deliver(`approve:${request.id}:allow`);
+    await chA.deliver(`approve:${request.id}:allow`, "alice");
     await waitForMessage(chA, (t) => t.startsWith("[approve]"), replyA.nextIndex);
     await new Promise((r) => setTimeout(r, 30));
     expect(chB.sentTexts().filter((t) => t.startsWith("[approve]"))).toHaveLength(0);

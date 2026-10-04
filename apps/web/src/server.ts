@@ -27,11 +27,21 @@ const KEEPALIVE_MS = 30_000;
 /** POST body cap (local tool; guards a runaway client). */
 const MAX_BODY_BYTES = 1_000_000;
 
-const STATIC_FILES: Record<string, { contentType: string }> = {
+const STATIC_FILES = {
   "index.html": { contentType: "text/html; charset=utf-8" },
   "app.js": { contentType: "text/javascript; charset=utf-8" },
   "style.css": { contentType: "text/css; charset=utf-8" },
-};
+  "vendor/deepseek/base.css": { contentType: "text/css; charset=utf-8" },
+  "vendor/deepseek/corner-shape.css": { contentType: "text/css; charset=utf-8" },
+  "vendor/deepseek/design-platform.css": { contentType: "text/css; charset=utf-8" },
+  "vendor/deepseek/focus.css": { contentType: "text/css; charset=utf-8" },
+  "vendor/deepseek/scrollbar.css": { contentType: "text/css; charset=utf-8" },
+  "vendor/deepseek/gradient-shadow-text.css": { contentType: "text/css; charset=utf-8" },
+  "vendor/deepseek/LICENSE": { contentType: "text/plain; charset=utf-8" },
+  "vendor/deepseek/source-manifest.json": { contentType: "application/json; charset=utf-8" },
+} as const;
+
+type StaticFile = keyof typeof STATIC_FILES;
 
 interface SseConnection {
   from: string;
@@ -172,9 +182,8 @@ export class WebServer {
     const path = url.pathname;
 
     if (req.method === "GET") {
-      if (path === "/") return this.serveStatic(res, "index.html");
-      if (path === "/app.js") return this.serveStatic(res, "app.js");
-      if (path === "/style.css") return this.serveStatic(res, "style.css");
+      const asset = path === "/" ? "index.html" : path.slice(1);
+      if (Object.hasOwn(STATIC_FILES, asset)) return this.serveStatic(res, asset as StaticFile);
       if (path === "/api/bootstrap") return this.handleBootstrap(res, url);
       if (path === "/api/events") return this.handleEvents(res, url);
       if (path === "/api/history") return this.handleHistory(res, url);
@@ -352,11 +361,14 @@ export class WebServer {
     const rawId = ev.payload.approvalId;
     const request =
       typeof rawId === "string" ? this.approvalStore.listPending().find((r) => r.id === rawId) : undefined;
-    if (request === undefined) return ev;
+    if (request === undefined) return { ...ev, payload: { ...ev.payload, pending: false } };
     return {
       ...ev,
       payload: {
         ...ev.payload,
+        pending: true,
+        sessionId: request.sessionId,
+        expiresAt: request.expiresAt,
         action: request.action,
         agentId: request.agentId,
         ...(request.policyRule !== undefined ? { policyRule: request.policyRule } : {}),
@@ -458,7 +470,7 @@ export class WebServer {
   }
 
   /** Static assets are cached in memory after the first read. */
-  private async serveStatic(res: ServerResponse, name: "index.html" | "app.js" | "style.css"): Promise<void> {
+  private async serveStatic(res: ServerResponse, name: StaticFile): Promise<void> {
     const cached = this.staticCache.get(name);
     if (cached !== undefined) {
       res.writeHead(200, {
