@@ -803,6 +803,74 @@ describe("Gateway event push", () => {
 });
 
 describe("Gateway cancellation", () => {
+  it("cancels the active queued followup rather than its completed predecessor", { timeout: 10_000 }, async () => {
+    let releaseFirst!: () => void;
+    let enterFirst!: () => void;
+    let enterSecond!: () => void;
+    const firstGate = new Promise<void>((resolve) => { releaseFirst = resolve; });
+    const firstEntered = new Promise<void>((resolve) => { enterFirst = resolve; });
+    const secondEntered = new Promise<void>((resolve) => { enterSecond = resolve; });
+    let calls = 0;
+    const provider: ModelProvider = {
+      id: "queued-stop",
+      listModels: async () => [],
+      createClient: () => ({
+        async *generate(_request: unknown, signal: AbortSignal): AsyncGenerator<ModelEvent, void, void> {
+          yield { type: "started", timestamp: 0 };
+          if (++calls === 1) {
+            enterFirst();
+            await firstGate;
+          } else {
+            enterSecond();
+            await new Promise<void>((resolve) => {
+              if (signal.aborted) resolve();
+              else signal.addEventListener("abort", () => resolve(), { once: true });
+            });
+          }
+          yield { type: "completed", timestamp: 0, result: { finishReason: "stop", text: "done" } };
+        },
+      }),
+    };
+    const h = makeGateway({ provider });
+    gateways.push(h.gateway);
+    await h.gateway.start();
+    let sessionId: SessionId | undefined;
+    try {
+      await h.channels[0]!.deliver("first task");
+      await firstEntered;
+      const session = (await h.store.listSessions())[0]!;
+      sessionId = session.id;
+      const first = (await h.store.listTurns(session.id))[0]!;
+      await h.channels[0]!.deliver("queued task");
+      await waitForMessage(h.channels[0]!, (text) => text.startsWith("[queued]"));
+      releaseFirst();
+      await secondEntered;
+      const status = await h.rpc.invoke("session.status", { sessionId }) as { activeTurn: { turnId: TurnId } };
+      const secondId = status.activeTurn.turnId;
+      expect(secondId).not.toBe(first.id);
+      expect((await h.store.getTurn(first.id))?.status).toBe("completed");
+
+      await h.channels[0]!.deliver("cancel", "foreign-user");
+      expect((await h.rpc.invoke("session.status", { sessionId }) as { activeTurn: { turnId: TurnId } }).activeTurn.turnId).toBe(secondId);
+      expect((await h.events.list(sessionId)).filter((event) => event.type === "human.cancel")).toHaveLength(0);
+      const before = h.channels[0]!.sent.length;
+      await h.channels[0]!.deliver("cancel");
+      const reply = await waitForMessage(h.channels[0]!, (text) => text.startsWith("[cancel]"), before);
+      expect(reply.text).toBe("[cancel] cancel_requested");
+      await vi.waitFor(async () => expect((await h.store.getTurn(secondId))?.status).toBe("cancelled"));
+      const human = (await h.events.list(sessionId)).find((event) => event.type === "human.cancel");
+      expect(human?.turnId).toBe(secondId);
+      expect(human?.payload).toMatchObject({ text: "cancel", turnId: secondId });
+      expect((await h.store.getTurn(first.id))?.status).toBe("completed");
+    } finally {
+      releaseFirst();
+      if (sessionId) {
+        const status = await h.rpc.invoke("session.status", { sessionId }) as { activeTurn?: { turnId: TurnId } };
+        if (status.activeTurn) await h.rpc.invoke("session.cancel", { sessionId, turnId: status.activeTurn.turnId });
+      }
+    }
+  });
+
   it("treats a cancel message as human.cancel and aborts the running turn", async () => {
     const provider = new BlockingProvider();
     const h = makeGateway({ provider });

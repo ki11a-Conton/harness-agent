@@ -362,6 +362,9 @@ function ensureAssistantBubble(messageId, view) {
 }
 function appendAssistantText(messageId, text, view) {
   if (!isCurrent(view)) return;
+  // Tool-call assistant records may have no text. Their tool/approval events
+  // remain visible, but an empty history record must not create a reply bubble.
+  if (String(text ?? "") === "") return;
   const entry = ensureAssistantBubble(messageId, view);
   if (entry.full) return;
   entry.text = String(text ?? "");

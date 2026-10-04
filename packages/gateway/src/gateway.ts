@@ -253,7 +253,13 @@ export class Gateway {
       await this.reply(msg, "[cancel] no session");
       return;
     }
-    const turnId = this.lastTurnBySession.get(sessionId);
+    // Actor-drained followups create new turns without passing session.send
+    // here. Query the bound session's live turn rather than a stale send id.
+    // Keep the cached id for the existing send -> starting cancellation window.
+    const status = (await this.rpc.invoke("session.status", { sessionId })) as {
+      activeTurn?: { turnId: TurnId };
+    };
+    const turnId = status.activeTurn?.turnId ?? this.lastTurnBySession.get(sessionId);
     if (turnId === undefined) {
       await this.reply(msg, "[cancel] not_running");
       return;

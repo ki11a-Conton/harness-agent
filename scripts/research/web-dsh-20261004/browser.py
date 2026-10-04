@@ -200,6 +200,26 @@ try:
                     page.locator('#input').press('Enter')
                     page.wait_for_function('__control.posts.length === 1')
                     return {'posts': page.evaluate('__control.posts'), 'composingPostCount': 0, 'shiftEnterPostCount': 0}
+                if kind == 'empty-assistant-tool-calls-do-not-create-chat-bubbles':
+                    page.evaluate("""() => {
+                        __control.histories = { [__control.A]: {sessionId:'empty-tools-session',messages:[
+                            {id:'user-task',role:'user',content:'A_ONLY_HISTORY'},
+                            {id:'tool-request',role:'assistant',content:'',toolCalls:[{id:'call-1',name:'write_file',args:{path:'safe.txt'}}]},
+                            {id:'tool-result',role:'tool',content:'write completed'},
+                            {id:'final-reply',role:'assistant',content:'ACTUAL_NONEMPTY_REPLY'}
+                        ]}};
+                    }""")
+                    page.locator('[data-from="browser-control-A-123"]').click()
+                    page.get_by_text('ACTUAL_NONEMPTY_REPLY', exact=True).wait_for()
+                    expect(page.locator('.assistant-row').count() == 1, 'empty tool-call assistant history created a reply bubble')
+                    expect('write completed' in page.locator('#messages').inner_text(), 'hiding empty assistant hid the tool result')
+                    page.evaluate("""() => {
+                        const i = __control.streams.length - 1;
+                        __control.emit(i,{type:'assistant_text',messageId:'empty-live',text:''});
+                        __control.emit(i,{type:'assistant_text',messageId:'final-reply',text:'ACTUAL_NONEMPTY_REPLY'});
+                    }""")
+                    expect(page.locator('.assistant-row').count() == 1, 'empty live assistant or replay created another bubble')
+                    return {'emptyToolCallRecords': 1, 'nonemptyReplies': 1, 'emptyLiveFrames': 1, 'toolResultVisible': True}
                 if kind == 'history-and-live-id-replay-does-not-duplicate':
                     page.evaluate("""() => {
                         __control.holdHistory = true;
@@ -299,7 +319,7 @@ try:
 
         controls = ['consecutive-assistants-and-id-replay', 'slow-a-history-cannot-pollute-b', 'xss-is-text']
         if args.mode == 'candidate':
-            controls += ['closed-sse-callback-cannot-pollute-new-session', 'old-post-error-cannot-pollute-new-session', 'ime-enter-does-not-send-and-enter-sends-once', 'history-and-live-id-replay-does-not-duplicate', 'history-before-live-id-replay-does-not-duplicate', 'hello-handshake-precedes-history-and-preserves-buffered-message', 'historical-and-expired-approvals-are-readonly', 'resolved-approval-replay-is-idempotent', 'reconnect-hello-merges-missed-history-without-duplicates']
+            controls += ['closed-sse-callback-cannot-pollute-new-session', 'old-post-error-cannot-pollute-new-session', 'ime-enter-does-not-send-and-enter-sends-once', 'empty-assistant-tool-calls-do-not-create-chat-bubbles', 'history-and-live-id-replay-does-not-duplicate', 'history-before-live-id-replay-does-not-duplicate', 'hello-handshake-precedes-history-and-preserves-buffered-message', 'historical-and-expired-approvals-are-readonly', 'resolved-approval-replay-is-idempotent', 'reconnect-hello-merges-missed-history-without-duplicates']
         for kind in controls:
             run_case(kind, 'controlled-protocol', lambda kind=kind: controlled_case(kind))
 

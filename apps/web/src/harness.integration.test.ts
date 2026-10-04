@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -232,6 +232,97 @@ describe("P0-3: web host on the production harness composition root", () => {
       // cancellation fails, so this regression cannot park the test process.
       if (sessionId !== undefined && turnId !== undefined) {
         await stack.rpc.invoke("session.cancel", { sessionId, turnId });
+      }
+      await teardown(stack);
+    }
+  });
+
+  it("U4 stops the active queued follow-up through HTTP without cancelling another sender's session", { timeout: 10_000 }, async () => {
+    let firstEntered!: () => void;
+    let releaseFirst!: () => void;
+    let followupEntered!: () => void;
+    const firstStarted = new Promise<void>((resolve) => { firstEntered = resolve; });
+    const firstGate = new Promise<void>((resolve) => { releaseFirst = resolve; });
+    const followupStarted = new Promise<void>((resolve) => { followupEntered = resolve; });
+    let observedFollowupAbort = false;
+    const queuedProvider: ModelProvider = {
+      id: "web-queued-followup-stop-probe",
+      listModels: async () => [],
+      createClient: () => ({
+        async *generate(request, signal): AsyncGenerator<ModelEvent, void, void> {
+          const text = request.messages.findLast((message) => message.role === "user")?.content;
+          yield { type: "started", timestamp: Date.now() };
+          if (text === "first gated turn") {
+            firstEntered();
+            await firstGate;
+            yield { type: "text_delta", text: "first completed", timestamp: Date.now() };
+            yield { type: "completed", result: { finishReason: "stop", text: "first completed" }, timestamp: Date.now() };
+            return;
+          }
+          followupEntered();
+          await new Promise<void>((resolve) => {
+            if (signal.aborted) resolve();
+            else signal.addEventListener("abort", () => resolve(), { once: true });
+          });
+          observedFollowupAbort = signal.aborted;
+          yield { type: "completed", result: { finishReason: "stop", text: "" }, timestamp: Date.now() };
+        },
+      }),
+    };
+    const dataDir = await tempDir();
+    const stack = await makeStack(dataDir, queuedProvider);
+    let sessionId: string | undefined;
+    let followupTurnId: string | undefined;
+    const post = (path: string, from: string, text: string) => fetch(`${stack.base}${path}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ from, text }),
+    });
+    try {
+      expect((await post("/api/messages", USER, "first gated turn")).status).toBe(200);
+      await firstStarted;
+      const session = (await stack.harness.store.listSessions())[0]!;
+      sessionId = session.id;
+      const firstTurn = (await stack.harness.store.listTurns(session.id))[0]!;
+      expect((await post("/api/messages", USER, "queued blocked follow-up")).status).toBe(200);
+      releaseFirst();
+      await followupStarted;
+      const followupTurn = (await stack.harness.store.listTurns(session.id)).find((turn) => turn.id !== firstTurn.id)!;
+      expect(followupTurn).toBeDefined();
+      followupTurnId = followupTurn.id;
+      expect((await stack.harness.store.getTurn(firstTurn.id))?.status).toBe("completed");
+      expect(followupTurn.status).toBe("running");
+
+      // A different browser identity cannot stop the owner's active follow-up.
+      expect((await post("/api/commands", "web-foreign-sender", "cancel")).status).toBe(200);
+      expect(observedFollowupAbort).toBe(false);
+      expect(stack.bindings.get("web-foreign-sender")).toBeUndefined();
+      expect((await stack.rpc.invoke("session.status", { sessionId })) as { activeTurn?: { turnId: string } }).toMatchObject({ activeTurn: { turnId: followupTurn.id } });
+
+      expect((await post("/api/commands", USER, "cancel")).status).toBe(200);
+      const deadline = Date.now() + 1_000;
+      while (Date.now() < deadline) {
+        if ((await stack.harness.store.getTurn(followupTurn.id))?.status === "cancelled") break;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      expect(observedFollowupAbort).toBe(true);
+      expect((await stack.harness.store.getTurn(followupTurn.id))?.status).toBe("cancelled");
+      expect((await stack.harness.store.getTurn(firstTurn.id))?.status).toBe("completed");
+      const events = await stack.harness.events.list(session.id);
+      expect(events.filter((event) => event.type === "turn.cancelled").map((event) => event.turnId)).toEqual([followupTurn.id]);
+      expect(events.filter((event) => event.type === "human.cancel").map((event) => event.payload.turnId)).toEqual([followupTurn.id]);
+    } finally {
+      releaseFirst();
+      // Cleanup uses the real follow-up id even when the HTTP stop regression fails.
+      if (sessionId !== undefined && followupTurnId !== undefined) {
+        await stack.rpc.invoke("session.cancel", { sessionId, turnId: followupTurnId });
+        // The actor acknowledges the durable inbox after its turn outcome.
+        // Wait for that write before afterEach removes the temporary directory.
+        const deadline = Date.now() + 1_000;
+        while (Date.now() < deadline) {
+          const records = (await readFile(join(dataDir, "inbox.jsonl"), "utf8")).trim().split("\n").map((line) => JSON.parse(line) as { prompt: { promotedTurnId?: string; status: string } });
+          if (records.some(({ prompt }) => prompt.promotedTurnId === followupTurnId && prompt.status === "consumed")) break;
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
       }
       await teardown(stack);
     }
