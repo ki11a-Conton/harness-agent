@@ -1,0 +1,374 @@
+{
+  "schemaVersion": 1,
+  "auditedSourceSha": "3adbebe8af87a8490e63365a077840b6765296ea",
+  "auditedAtUtc": "2026-10-04T12:15:12.012445+00:00",
+  "status": "SOURCE_MAPPING_AND_CONFIRMED_DEFECT_RECHECK_PASS",
+  "method": "源码逐一追踪全部静态/动态按钮和快捷键；queued followup stop另用真实Chromium+productionHarness+Gateway+WebServer复现；模型为显式离线scripted provider。 新修复冻结3adbebe的同一真实browser触发再次通过；全部17动作源码映射再次核对，广义全UI浏览器矩阵由root单独运行。",
+  "staticButtonCount": 7,
+  "dynamicButtonFamilies": 6,
+  "unboundVisibleButtons": [],
+  "mapping": [
+    {
+      "control": "#new-session-btn 新建会话",
+      "kind": "backend_identity_and_local_navigation",
+      "handler": "newSession → switchSession",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "85-175, 651"
+      },
+      "http": [
+        "GET /api/bootstrap?from=<uuid>",
+        "GET /api/events?from=<uuid> (SSE hello)",
+        "GET /api/history?from=<uuid>",
+        "GET /api/sessions"
+      ],
+      "backend": [
+        {
+          "path": "apps/web/src/server.ts",
+          "lines": "202-250, 292-324"
+        }
+      ],
+      "rpc": [],
+      "meaning": "bootstrap只产生有效浏览器身份；首次发送才通过Gateway创建真实agent session。"
+    },
+    {
+      "control": ".session-button 会话切换",
+      "kind": "backend_read_and_local_navigation",
+      "handler": "switchSession → connect → loadHistoryForView",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "110-247, 538-574"
+      },
+      "http": [
+        "GET /api/events?from=<saved>",
+        "GET /api/history?from=<saved>",
+        "GET /api/sessions"
+      ],
+      "rpc": [],
+      "backend": [
+        {
+          "path": "apps/web/src/server.ts",
+          "lines": "208-250, 292-324"
+        }
+      ],
+      "meaning": "关闭前一视图SSE/AbortController，按messageId恢复去重历史；切换不会停止后台任务。"
+    },
+    {
+      "control": "#send-btn / Enter 发送",
+      "kind": "backend_agent_execution",
+      "handler": "sendMessage → postJson",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "577-613, 652, 658-664"
+      },
+      "http": [
+        "POST /api/messages {from,text}"
+      ],
+      "backend": [
+        {
+          "path": "apps/web/src/server.ts",
+          "lines": "254-270, 416-443"
+        },
+        {
+          "path": "packages/gateway/src/gateway.ts",
+          "lines": "112-188, 191-213"
+        }
+      ],
+      "rpc": [
+        "session.create (unknown sender)",
+        "session.send",
+        "session.run",
+        "session.followup (busy session)"
+      ],
+      "meaning": "真实Harness actor运行模型/工具/验收；已有运行回合时发送的是排队的新回合。HTTP200为接收，不代表任务最终成功。"
+    },
+    {
+      "control": "#cancel-btn 停止",
+      "kind": "backend_agent_cancellation",
+      "handler": "cancel → postJson",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "260-264, 615-626, 653"
+      },
+      "http": [
+        "POST /api/commands {from,text:\"cancel\"}"
+      ],
+      "backend": [
+        {
+          "path": "apps/web/src/server.ts",
+          "lines": "273-289"
+        },
+        {
+          "path": "packages/gateway/src/gateway.ts",
+          "lines": "249-273"
+        },
+        {
+          "path": "packages/gateway/src/rpc.ts",
+          "lines": "161-171, 204-209"
+        }
+      ],
+      "rpc": [
+        "session.status (bound sender session)",
+        "session.cancel (actual activeTurn id; cached lastTurn fallback for direct-send starting window)"
+      ],
+      "meaning": "读取sender已绑定会话当前activeTurn后调用既有session.cancel；首直接回合与自动queued followup的停止均通过持久integration，自动queued followup另通过真实Chromium点击验证。"
+    },
+    {
+      "control": ".allow-btn 允许执行",
+      "kind": "backend_tool_approval",
+      "handler": "showApproval.decide(\"allow\")",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "385-439"
+      },
+      "http": [
+        "POST /api/commands {from:ownerFrom,text:\"approve:<approvalId>:allow\"}"
+      ],
+      "backend": [
+        {
+          "path": "apps/web/src/server.ts",
+          "lines": "273-289"
+        },
+        {
+          "path": "packages/gateway/src/gateway.ts",
+          "lines": "216-247"
+        }
+      ],
+      "rpc": [
+        "session.approve"
+      ],
+      "meaning": "使用审批创建时会话身份；后端校验审批属于绑定sender session，沿ApprovalStore/PermissionEngine/ToolOrchestrator执行。过期、历史审批按钮禁用。"
+    },
+    {
+      "control": ".deny-btn 拒绝",
+      "kind": "backend_tool_approval",
+      "handler": "showApproval.decide(\"deny\")",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "385-439"
+      },
+      "http": [
+        "POST /api/commands {from:ownerFrom,text:\"approve:<approvalId>:deny\"}"
+      ],
+      "backend": [
+        {
+          "path": "apps/web/src/server.ts",
+          "lines": "273-289"
+        },
+        {
+          "path": "packages/gateway/src/gateway.ts",
+          "lines": "216-247"
+        }
+      ],
+      "rpc": [
+        "session.approve"
+      ],
+      "meaning": "真实拒绝审批，后端记录decision及human.approval；不会执行被拒工具。"
+    },
+    {
+      "control": "#theme-toggle 浅/深色",
+      "kind": "local_only",
+      "handler": "setTheme",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "633-645"
+      },
+      "http": [],
+      "rpc": [],
+      "meaning": "data-ds-dark-theme/colorScheme + localStorage主题偏好。"
+    },
+    {
+      "control": "#sidebar-toggle 展开/收起",
+      "kind": "local_only",
+      "handler": "setSidebar",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "627-632, 646"
+      },
+      "http": [],
+      "rpc": [],
+      "meaning": "切换sidebar-collapsed，桌面偏好存localStorage；不需要后端。"
+    },
+    {
+      "control": "#sidebar-close 收起",
+      "kind": "local_only",
+      "handler": "setSidebar(true,true)",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "627-632, 647"
+      },
+      "http": [],
+      "rpc": [],
+      "meaning": "桌面收起/手机关闭drawer。"
+    },
+    {
+      "control": "#sidebar-backdrop 遮罩关闭",
+      "kind": "local_only",
+      "handler": "setSidebar(true)",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "627-632, 648"
+      },
+      "http": [],
+      "rpc": [],
+      "meaning": "手机drawer点击背景关闭；不需要后端。"
+    },
+    {
+      "control": ".copy-button 复制回复",
+      "kind": "local_only",
+      "handler": "copyButton(\"复制回复\") → navigator.clipboard.writeText(entry.text)",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "311-324, 346-361"
+      },
+      "http": [],
+      "rpc": [],
+      "meaning": "写浏览器剪贴板；localhost/HTTPS等安全上下文及clipboard权限由浏览器控制，失败显示复制失败。"
+    },
+    {
+      "control": ".copy-button 复制代码",
+      "kind": "local_only",
+      "handler": "copyButton(\"复制代码\") → navigator.clipboard.writeText(code)",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "311-324, 327-345"
+      },
+      "http": [],
+      "rpc": [],
+      "meaning": "仅复制围栏代码正文，模型内容按文字安全渲染。"
+    },
+    {
+      "control": ".copy-button 重新编辑（发送失败）",
+      "kind": "local_only",
+      "handler": "sendMessage retry click",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "594-608"
+      },
+      "http": [],
+      "rpc": [],
+      "meaning": "把失败消息恢复到输入框/会话草稿并聚焦；再次发送才请求后端。"
+    },
+    {
+      "control": "Shift+Enter",
+      "kind": "local_only",
+      "handler": "input keydown keeps native newline",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "658-663"
+      },
+      "http": [],
+      "rpc": [],
+      "meaning": "保留textarea换行，禁止此组合触发sendMessage。"
+    },
+    {
+      "control": "中文IME候选确认 Enter",
+      "kind": "local_only",
+      "handler": "compositionstart/end + isComposing/keyCode229 guard",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "655-663"
+      },
+      "http": [],
+      "rpc": [],
+      "meaning": "组合输入不发送；结束后正常Enter才发送。"
+    },
+    {
+      "control": "Escape（手机）",
+      "kind": "local_only",
+      "handler": "document keydown → setSidebar(true)",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "650"
+      },
+      "http": [],
+      "rpc": [],
+      "meaning": "关闭手机drawer，桌面Escape没有额外功能。"
+    },
+    {
+      "control": "#input 编辑消息",
+      "kind": "local_only",
+      "handler": "saveDraft + resizeInput + updateControls",
+      "frontend": {
+        "path": "apps/web/public/app.js",
+        "lines": "70-75, 260-268, 664"
+      },
+      "http": [],
+      "rpc": [],
+      "meaning": "按会话保存浏览器草稿，空文本/历史加载中/同会话POST中禁止发送。"
+    }
+  ],
+  "absentControls": [
+    "模型切换",
+    "API key/endpoint设置",
+    "文件上传",
+    "会话删除/重命名",
+    "重新生成回复",
+    "steer专用入口"
+  ],
+  "notes": [
+    "不存在的设置/模型按钮没有虚假事件处理；provider/model来自服务启动环境配置。",
+    "手机hero capabilities代码任务/可控执行/结果验收为非交互span标签。",
+    "会话列表来自浏览器localStorage（最多50）并用后端补标题，未实现跨浏览器帐号会话同步。",
+    "进程内from→session绑定重启不恢复，服务重启旧标签不会自动找回durable session；同一服务进程浏览器刷新可恢复。",
+    "SSE传运行/工具/审批/验收事件及完整assistant消息，生产后端未实现逐token回复显示。",
+    "HTTP接收成功应结合turn.completed/cancelled/failed和持久事件判定；未做付费模型质量测评。"
+  ],
+  "findings": [
+    {
+      "id": "WEB-FOLLOWUP-STOP-1",
+      "severity": "high",
+      "status": "FIXED_AND_RECHECKED_ON_3ADBEBE",
+      "trigger": "当前回合运行时发送followup；首回合完成、自动followup正在运行时点击停止",
+      "cause": "Gateway lastTurnBySession仅在直接session.send更新；自动followup使用新turnId，cancel仍引用旧id，actor返回not_running。",
+      "rawEvidence": [
+        "queued-stop-reproducer/result.json",
+        "queued-stop-reproducer/snapshot-before-stop.json",
+        "queued-stop-reproducer/snapshot-after-stop.json",
+        "queued-stop-reproducer/after-stop.png",
+        "queued-stop-reproducer/integration-red-cleanup-corrected.log"
+      ],
+      "minimalFix": "Gateway.handleCancel在绑定sender session上通过session.status读取activeTurn.turnId，再调用既有session.cancel；starting窗口保留lastTurn回退。Core/权限/沙箱不改。",
+      "failedBaselineSourceSha": "b016dc3ccbb1808728617374745fae46d5c3ee87",
+      "fixedSourceSha": "3adbebe8af87a8490e63365a077840b6765296ea",
+      "greenEvidence": [
+        "queued-stop-green/result.json",
+        "queued-stop-green/snapshot-before-stop.json",
+        "queued-stop-green/snapshot-after-stop.json",
+        "queued-stop-green/after-stop.png",
+        "queued-stop-green/integration-green.log",
+        "queued-stop-green/integration-green.json"
+      ],
+      "observedFix": "owner停止actualqueuedturn、provider信号abort、durableturn.cancelled/human.cancel指向新id、第一回合保持completed；foreign sender不能取消所有者会话。"
+    }
+  ],
+  "sourceFingerprints": {
+    "apps/web/public/index.html": "7987bd0b38de59ff679cd052a0069afb4d00132a027ad78633e78116a6971cf5",
+    "apps/web/public/app.js": "0c26fef5dc2bd6179c6da7cb202f36bbadfbeac2d78df2a2fde488ee320a2da0",
+    "apps/web/src/server.ts": "1db0bad5f52aefa7b1c7a94a4fc6ba1dda17390ab57283207ea2aafbcd873638",
+    "apps/web/src/main.ts": "8635759dd6e63f6296ad16a7756285ed23145192d20ded04609fbab4efd78402",
+    "apps/web/src/bindings.ts": "44d30d6bc1d4a79cebd4b53a006e47d76ffe573fd7fd76d4324589b112c0473f",
+    "packages/gateway/src/gateway.ts": "fc5c77a5a0fd39e63cb695d783284e667ffb866f1df7aae21903cdfaf8ea63b8",
+    "packages/gateway/src/rpc.ts": "c101b7423f35f58877d04edb370f028ea1efaa9ec018a4a0cc53538a3aee9040",
+    "packages/core/src/runtime/session-actor.ts": "0175495fe0e69495f6b326b47b7c84f1cb6008585284a50e02bccdd31bbd4dc4"
+  },
+  "auditedBaselineSourceSha": "b016dc3ccbb1808728617374745fae46d5c3ee87",
+  "freshQueuedStopBrowserRecheck": {
+    "status": "PASS",
+    "sourceShaBefore": "3adbebe8af87a8490e63365a077840b6765296ea",
+    "sourceShaAfter": "3adbebe8af87a8490e63365a077840b6765296ea",
+    "trackedCleanBefore": true,
+    "trackedCleanAfter": true,
+    "fingerprintsUnchanged": true,
+    "checks": {
+      "providerAbort": true,
+      "stopDisabled": true,
+      "followupCancelled": true,
+      "humanCancelTargetsFollowup": true,
+      "firstCompleted": true,
+      "oldTurnNotCancelled": true
+    },
+    "resultSha256": "668f60a7429166e2eb9791f2a9512d28491e98ae9f2e1e04219561e6acbe375b",
+    "scope": "真实Chromium仅新增queued followup stop场景；不把这六个断言当作所有按钮的新浏览器复测。"
+  }
+}

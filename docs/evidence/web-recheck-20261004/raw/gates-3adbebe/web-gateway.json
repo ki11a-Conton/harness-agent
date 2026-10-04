@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "sourceSha": "3adbebe8af87a8490e63365a077840b6765296ea",
+  "argv": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/gateway",
+    "apps/web"
+  ],
+  "before": {
+    "sha": "3adbebe8af87a8490e63365a077840b6765296ea",
+    "clean": true
+  },
+  "after": {
+    "sha": "3adbebe8af87a8490e63365a077840b6765296ea",
+    "clean": true
+  },
+  "exitCode": 0,
+  "durationSeconds": 21.531,
+  "log": "web-gateway.log",
+  "logSha256": "0539ff3ddb287eac527693de268806155650c467b8f92ac73b506ffbccd899ce",
+  "observedAt": "2026-10-04T12:15:23.697217+00:00"
+}

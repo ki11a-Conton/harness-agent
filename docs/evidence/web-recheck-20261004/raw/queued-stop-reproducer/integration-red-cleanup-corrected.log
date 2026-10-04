@@ -1,0 +1,40 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+[harness] context budget: model capabilities unknown for web-queued-followup-stop-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:42763
+ ↓ apps/web/src/harness.integration.test.ts > P0-3: web host on the production harness composition root > wires the interactive profile with the full tool set and durable stores when a dataDir is set
+ ↓ apps/web/src/harness.integration.test.ts > P0-3: web host on the production harness composition root > uses in-memory stores without a dataDir (checkpoint absent)
+ ↓ apps/web/src/harness.integration.test.ts > P0-3: web host on the production harness composition root > serves a full turn end-to-end through the harness runtime
+ ↓ apps/web/src/harness.integration.test.ts > P0-3: web host on the production harness composition root > creates a session and routes it through bindings for a new sender
+ ↓ apps/web/src/harness.integration.test.ts > P0-3: web host on the production harness composition root > U3 cancels a genuinely blocked production turn through HTTP and Gateway
+ × apps/web/src/harness.integration.test.ts > P0-3: web host on the production harness composition root > U4 stops the active queued follow-up through HTTP without cancelling another sender's session 1425ms
+   → expected false to be true // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/harness.integration.test.ts > P0-3: web host on the production harness composition root > U4 stops the active queued follow-up through HTTP without cancelling another sender's session
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ apps/web/src/harness.integration.test.ts:307:37
+    305|         await new Promise((resolve) => setTimeout(resolve, 10));
+    306|       }
+    307|       expect(observedFollowupAbort).toBe(true);
+       |                                     ^
+    308|       expect((await stack.harness.store.getTurn(followupTurn.id))?.sta…
+    309|       expect((await stack.harness.store.getTurn(firstTurn.id))?.status…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 skipped (6)
+   Start at  12:09:29
+   Duration  3.58s (transform 1.62s, setup 0ms, import 2.05s, tests 1.43s, environment 0ms)
+

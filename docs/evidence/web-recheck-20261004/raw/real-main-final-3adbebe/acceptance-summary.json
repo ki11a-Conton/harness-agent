@@ -1,0 +1,60 @@
+{
+  "reviewedAt": "2026-10-04T12:14:19.249874+00:00",
+  "status": "PASS",
+  "testedSourceSha": "3adbebe8af87a8490e63365a077840b6765296ea",
+  "trackedDirty": false,
+  "entrypoint": "apps/web/dist/main.js",
+  "productionProvider": "production OpenAICompatibleProvider HTTP/SSE",
+  "serverKind": "local deterministic OpenAI-compatible server",
+  "actualModelRequestCount": 5,
+  "browserPostCount": 5,
+  "cases": [
+    {
+      "name": "normal-main-http-model-reply",
+      "status": "PASS",
+      "modelRequests": 1,
+      "actualModel": "loopback-test-model"
+    },
+    {
+      "name": "normal-main-http-tool-approval-allow-write",
+      "status": "PASS",
+      "beforeApprovalFileAbsent": true,
+      "afterApprovalContent": "ACTUAL_MAIN_HTTP_PROVIDER_WRITE\n",
+      "actualTool": "write_file"
+    },
+    {
+      "name": "normal-main-http-tool-approval-deny-no-write",
+      "status": "PASS",
+      "fileAbsent": true
+    },
+    {
+      "name": "normal-main-refresh-history",
+      "status": "PASS",
+      "assistantBubbles": 3,
+      "uniqueNonemptyReplies": 3,
+      "emptyToolAssistantBubbles": 0,
+      "historicalApprovalCards": 2,
+      "actionableHistoricalApprovalButtons": 0
+    }
+  ],
+  "pageErrors": [],
+  "processExit": 0,
+  "fingerprintsStable": true,
+  "fingerprintCount": 27,
+  "productionEventCount": 54,
+  "completedTurns": 3,
+  "failedTurns": 0,
+  "humanApprovals": [
+    "allow",
+    "deny"
+  ],
+  "paidCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "probeScriptSha256": "6f0ab4a56efc53f7e2828953ee56b0a22e41b8437acdc9384df16829588ba7ba",
+  "rawResult": "real-main-final-3adbebe/result.json",
+  "rawRequestBodies": "real-main-final-3adbebe/model-requests.json",
+  "screenshots": [
+    "real-main-final-3adbebe/real-main-live-tools-desktop.png",
+    "real-main-final-3adbebe/real-main-desktop.png"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "status": "PASS",
+  "baseSourceSha": "b016dc3ccbb1808728617374745fae46d5c3ee87",
+  "sourceState": "tracked candidate edits, not frozen commit yet",
+  "command": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "apps/web/src/harness.integration.test.ts",
+    "--reporter=verbose"
+  ],
+  "exitCode": 0,
+  "tests": {
+    "passed": 6,
+    "skipped": 0
+  },
+  "observed": "queued followup abort observed, second durable turn cancelled, first durable turn completed, human.cancel targetssecond; foreign sender cannot cancel owner session",
+  "testSha256": "079d35c189c165f506d9cacbb3bf5d817115ed96ea061b15b80b160bfae98159",
+  "gatewaySourceSha256": "fc5c77a5a0fd39e63cb695d783284e667ffb866f1df7aae21903cdfaf8ea63b8",
+  "log": {
+    "path": "integration-green.log",
+    "sha256": "04a6a7420847348daa6de2e66c847ba5b2ca9acd663293557fb8b404fc1c7a3b"
+  },
+  "recordedAtUtc": "2026-10-04T12:12:49.439029+00:00"
+}

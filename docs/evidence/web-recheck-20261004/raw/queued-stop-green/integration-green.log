@@ -1,0 +1,27 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:33443
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:43883
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:43769
+ ✓ apps/web/src/harness.integration.test.ts > P0-3: web host on the production harness composition root > wires the interactive profile with the full tool set and durable stores when a dataDir is set 19ms
+ ✓ apps/web/src/harness.integration.test.ts > P0-3: web host on the production harness composition root > uses in-memory stores without a dataDir (checkpoint absent) 2ms
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:42755
+ ✓ apps/web/src/harness.integration.test.ts > P0-3: web host on the production harness composition root > serves a full turn end-to-end through the harness runtime 225ms
+[harness] context budget: model capabilities unknown for web-cancellation-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:44253
+ ✓ apps/web/src/harness.integration.test.ts > P0-3: web host on the production harness composition root > creates a session and routes it through bindings for a new sender 163ms
+[harness] context budget: model capabilities unknown for web-queued-followup-stop-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:33839
+ ✓ apps/web/src/harness.integration.test.ts > P0-3: web host on the production harness composition root > U3 cancels a genuinely blocked production turn through HTTP and Gateway 187ms
+ ✓ apps/web/src/harness.integration.test.ts > P0-3: web host on the production harness composition root > U4 stops the active queued follow-up through HTTP without cancelling another sender's session 418ms
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  12:12:32
+   Duration  3.04s (transform 1.50s, setup 0ms, import 1.88s, tests 1.02s, environment 0ms)
+

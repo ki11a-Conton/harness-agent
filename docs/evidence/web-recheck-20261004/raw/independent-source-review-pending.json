@@ -1,0 +1,74 @@
+{
+  "schema": "web-recheck-independent-source-review.v1",
+  "recordedAtUtc": "2026-10-04T12:15:55.902389+00:00",
+  "sourceSha": "3adbebe8af87a8490e63365a077840b6765296ea",
+  "status": "SOURCE_REVIEW_PASS_PENDING_BROWSER_AND_EXTRA_CONTROLS",
+  "blockingFindings": [],
+  "checks": [
+    {
+      "name": "frozen_source_clean",
+      "passed": true,
+      "evidence": "Native git HEAD and tracked status inspected at review time"
+    },
+    {
+      "name": "changed_path_scope",
+      "passed": true,
+      "evidence": [
+        "apps/web/public/app.js",
+        "apps/web/src/harness.integration.test.ts",
+        "packages/gateway/src/gateway.test.ts",
+        "packages/gateway/src/gateway.ts",
+        "scripts/research/web-dsh-20261004/browser.py",
+        "tasks/WEB-RECHECK-20261004.md"
+      ]
+    },
+    {
+      "name": "queued-stop-reproducer/integration-red.json log and immutable test bytes",
+      "passed": true,
+      "evidence": {
+        "receipt": "queued-stop-reproducer/integration-red.json",
+        "status": "EXPECTED_RED",
+        "log": ".ci/web-recheck-20261004/queued-stop-reproducer/integration-red-cleanup-corrected.log"
+      }
+    },
+    {
+      "name": "queued-stop-green/integration-green.json log and immutable test bytes",
+      "passed": true,
+      "evidence": {
+        "receipt": "queued-stop-green/integration-green.json",
+        "status": "PASS",
+        "log": ".ci/web-recheck-20261004/queued-stop-green/integration-green.log"
+      }
+    },
+    {
+      "name": "normal_main_strict_http_provider_source_and_build",
+      "passed": true,
+      "evidence": "4 cases PASS; production main and OpenAI compatible HTTP/SSE provider; 3 nonempty bubbles; 5 requests; read/write approval allow+deny; local deterministic model only"
+    },
+    {
+      "name": "queued_stop_browser_green",
+      "passed": true,
+      "evidence": {
+        "providerAbort": true,
+        "stopDisabled": true,
+        "followupCancelled": true,
+        "humanCancelTargetsFollowup": true,
+        "firstCompleted": true,
+        "oldTurnNotCancelled": true
+      }
+    }
+  ],
+  "sourceReview": {
+    "senderSessionBoundary": "Cancel finds existing binding with JSON channel/sender key; status and cancel both target exactly that session; foreign sender has no binding and cannot invoke owner cancellation. Approval ownership remains untouched.",
+    "cancelRaces": "actor.cancelTurn checks exact active turn id. Status/cancel interleaving can safely return not_running but cannot cancel a successor by mistake. Existing direct-send starting fallback retained. Actor-generated follow-up starting has no activeTurn/status visibility and cache can still name predecessor; this narrow existing window is not claimed fixed.",
+    "emptyAssistant": "Only appendAssistantText returns on empty string; tool result/history rendering and tool/approval event handling stay independent. Nonempty assistant IDs and rendering are unchanged. Production server sends complete assistant records, no per-token events on trail.",
+    "regressionReality": "Added tests use real createRuntimeRpc/Gateway with genuine active SessionActor, and real HTTP+production Harness composition for durable session data. Model response is deterministic, not a model-quality benchmark."
+  },
+  "remainingGate": "Existing candidate 27 browser cases and independent extra 10 controls not yet final-reviewed. Extra initial run failed 8/10; preserve raw results and inspect corrected probe rather than override failure.",
+  "limitations": [
+    "No paid external model calls or quality claim.",
+    "HTTP 200 means command/message received, not durable task completion.",
+    "Session bindings remain process-local; restart recovery not improved.",
+    "Stop cancels current running turn, not all queued future turns; no atomic stop-all semantics added."
+  ]
+}

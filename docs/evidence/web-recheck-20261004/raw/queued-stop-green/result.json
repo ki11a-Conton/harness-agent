@@ -1,0 +1,132 @@
+{
+  "sourceSha": "3adbebe8af87a8490e63365a077840b6765296ea",
+  "trackedDirtyAtStart": false,
+  "status": "PASS",
+  "checks": {
+    "providerAbort": true,
+    "stopDisabled": true,
+    "followupCancelled": true,
+    "humanCancelTargetsFollowup": true,
+    "firstCompleted": true,
+    "oldTurnNotCancelled": true
+  },
+  "productionStack": true,
+  "scriptedModelOnly": true,
+  "paidCalls": 0,
+  "uiStatus": "任务已取消",
+  "uiText": "[disconnect-complete]\n任务已取消\n[block]\n后续消息已加入队列，将在当前任务结束后处理。\nh\nHarness\nHARNESS_REPLY:[disconnect-complete]\n复制回复\n验收通过\n[run] completed turn:turn_c8b78315-547f-4f36-81e3-0e7c4398368a calls:0 iterations:0\n[cancel] cancel_requested\n已请求停止任务",
+  "cancelEnabledAfterClick": false,
+  "providerBlockedCall": {
+    "index": 1,
+    "prompt": "[block]",
+    "alreadyCalled": false,
+    "at": "2026-10-04T12:13:58.731Z",
+    "aborted": true
+  },
+  "events": [
+    {
+      "sessionId": "session_8c3a60d6-f07a-47c4-9586-3d9b47f74bef",
+      "turnId": "turn_c8b78315-547f-4f36-81e3-0e7c4398368a",
+      "type": "turn.started"
+    },
+    {
+      "sessionId": "session_8c3a60d6-f07a-47c4-9586-3d9b47f74bef",
+      "turnId": "turn_c8b78315-547f-4f36-81e3-0e7c4398368a",
+      "type": "turn.completed"
+    },
+    {
+      "sessionId": "session_8c3a60d6-f07a-47c4-9586-3d9b47f74bef",
+      "turnId": "turn_b72f4849-b857-4e4f-bbe4-ab07389926a4",
+      "type": "turn.started"
+    },
+    {
+      "sessionId": "session_8c3a60d6-f07a-47c4-9586-3d9b47f74bef",
+      "turnId": "turn_b72f4849-b857-4e4f-bbe4-ab07389926a4",
+      "type": "human.cancel"
+    },
+    {
+      "sessionId": "session_8c3a60d6-f07a-47c4-9586-3d9b47f74bef",
+      "turnId": "turn_b72f4849-b857-4e4f-bbe4-ab07389926a4",
+      "type": "turn.cancelled"
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:41387/api/bootstrap?from=78500536-f021-4e1d-871f-64fc95bd3f47",
+      "postData": null
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:41387/api/sessions",
+      "postData": null
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:41387/api/events?from=78500536-f021-4e1d-871f-64fc95bd3f47",
+      "postData": null
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:41387/api/history?from=78500536-f021-4e1d-871f-64fc95bd3f47",
+      "postData": null
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:41387/api/sessions",
+      "postData": null
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:41387/api/messages",
+      "postData": "{\"from\":\"78500536-f021-4e1d-871f-64fc95bd3f47\",\"text\":\"[disconnect-complete]\"}"
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:41387/api/messages",
+      "postData": "{\"from\":\"78500536-f021-4e1d-871f-64fc95bd3f47\",\"text\":\"[block]\"}"
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:41387/api/commands",
+      "postData": "{\"from\":\"78500536-f021-4e1d-871f-64fc95bd3f47\",\"text\":\"cancel\"}"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:41387/api/bootstrap?from=78500536-f021-4e1d-871f-64fc95bd3f47"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:41387/api/sessions"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:41387/api/events?from=78500536-f021-4e1d-871f-64fc95bd3f47"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:41387/api/history?from=78500536-f021-4e1d-871f-64fc95bd3f47"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:41387/api/sessions"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:41387/api/messages"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:41387/api/messages"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:41387/api/commands"
+    }
+  ],
+  "sourceStillClean": true,
+  "sourceShaAfter": "3adbebe8af87a8490e63365a077840b6765296ea",
+  "fingerprintsUnchanged": true
+}

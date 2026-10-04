@@ -1,0 +1,54 @@
+{
+  "sourceSha": "b016dc3ccbb1808728617374745fae46d5c3ee87",
+  "trackedDirty": true,
+  "entrypoint": "apps/web/dist/main.js",
+  "provider": "production OpenAICompatibleProvider HTTP/SSE",
+  "modelServer": "local deterministic OpenAI-compatible server",
+  "paidCalls": 0,
+  "externalModelQuality": "NOT_RUN",
+  "cases": [
+    {
+      "name": "normal-main-http-model-reply",
+      "status": "PASS",
+      "modelRequests": 1,
+      "actualModel": "loopback-test-model"
+    },
+    {
+      "name": "normal-main-http-tool-approval-allow-write",
+      "status": "PASS",
+      "beforeApprovalFileAbsent": true,
+      "afterApprovalContent": "ACTUAL_MAIN_HTTP_PROVIDER_WRITE\n",
+      "actualTool": "write_file"
+    },
+    {
+      "name": "normal-main-http-tool-approval-deny-no-write",
+      "status": "PASS",
+      "fileAbsent": true
+    },
+    {
+      "name": "normal-main-refresh-history",
+      "status": "PASS",
+      "uniqueNonemptyReplies": 3,
+      "totalAssistantBubbles": 5,
+      "emptyToolAssistantBubbles": 2
+    }
+  ],
+  "emptyToolAssistantBubbles": 2,
+  "assistantBubbleTexts": [
+    "LOOPBACK_REPLY:LOOPBACK_TEXT",
+    "",
+    "LOOPBACK_REPLY:LOOPBACK_ALLOW",
+    "",
+    "LOOPBACK_REPLY:LOOPBACK_DENY"
+  ],
+  "browserVersion": "151.0.7922.173",
+  "status": "PASS",
+  "processExit": 0,
+  "stdout": [
+    "[web] listening on http://127.0.0.1:36671",
+    "[web] SIGTERM — shutting down"
+  ],
+  "pageErrors": [],
+  "modelRequestsCount": 5,
+  "postApiRequestsCount": 5
+}

@@ -1,0 +1,61 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ packages/gateway/src/gateway.test.ts (32 tests | 1 failed | 31 skipped) 21ms
+     ↓ requires initialize before mutating methods
+     ↓ initialize returns protocol version + server info + capabilities
+     ↓ rejects repeated initialize with ALREADY_INITIALIZED
+     ↓ thread/start creates a session via the runtime
+     ↓ bounded ingress capacity=2: third concurrent call rejects fast with SERVER_OVERLOADED
+     ↓ idempotency key replays the result instead of re-running
+     ↓ unknown method fails closed
+     ↓ routes a channel message into a fresh session and replies with the run result
+     ↓ reuses an existing session when route maps the sender, and falls back to creation on a stale route
+     ↓ replies with an error when no session can be created (no route, no defaults)
+     ↓ P25-3/P25-5: a message while a turn is running is queued as a follow-up, never injected
+     ↓ resolves approve:<id>:allow through session.approve and records human.approval
+     ↓ resolves approve:<id>:deny through session.approve
+     ↓ U3 rejects foreign session allow without resolving or auditing the owner's approval
+     ↓ U3 rejects foreign session deny without resolving or auditing the owner's approval
+     ↓ U3 rejects unbound sender allow without resolving or auditing the owner's approval
+     ↓ U3 rejects unbound sender deny without resolving or auditing the owner's approval
+     ↓ U3 rejects foreign channel allow without resolving or auditing the owner's approval
+     ↓ U3 rejects foreign channel deny without resolving or auditing the owner's approval
+     ↓ U3 rejects delimiter-colliding channel/sender allow without touching the owner's approval
+     ↓ U3 rejects delimiter-colliding channel/sender deny without touching the owner's approval
+     ↓ U3 keeps a bound owner's approval one-shot and expires a late allow
+     ↓ replies with an error message for an unknown approval id
+     ↓ pushes approval.created to the channel with full action/target/reason/session fields
+     ↓ pushes tool.permission_requested events to the channel
+     ↓ pushes run.limit_reached events and ignores non-forwarded event types
+     ↓ falls back to event payload fields when the pending approval is already gone
+     × cancels the active queued followup rather than its completed predecessor 20ms
+     ↓ treats a cancel message as human.cancel and aborts the running turn
+     ↓ reports not_running when the sender has no active turn
+     ↓ connects channels on start and disconnects them on stop
+     ↓ keeps channels isolated: separate sessions, replies and approvals per channel
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/gateway/src/gateway.test.ts > Gateway cancellation > cancels the active queued followup rather than its completed predecessor
+AssertionError: expected '[cancel] not_running' to be '[cancel] cancel_requested' // Object.is equality
+
+Expected: "[cancel] cancel_requested"
+Received: "[cancel] not_running"
+
+ ❯ packages/gateway/src/gateway.test.ts:859:26
+    857|       await h.channels[0]!.deliver("cancel");
+    858|       const reply = await waitForMessage(h.channels[0]!, (text) => tex…
+    859|       expect(reply.text).toBe("[cancel] cancel_requested");
+       |                          ^
+    860|       await vi.waitFor(async () => expect((await h.store.getTurn(secon…
+    861|       const human = (await h.events.list(sessionId)).find((event) => e…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 31 skipped (32)
+   Start at  12:09:57
+   Duration  789ms (transform 513ms, setup 0ms, import 646ms, tests 21ms, environment 0ms)
+

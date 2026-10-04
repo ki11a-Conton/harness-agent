@@ -94,3 +94,7 @@ docs/evidence/agent-context-memory-20261004/raw/**/*.diff -whitespace
 # UI preregistration snapshots are immutable byte copies, including final blank line.
 plan(20261004-ui-preregister).md whitespace=-blank-at-eof
 plan(20261004-022759).md whitespace=-blank-at-eof
+
+# Preserve original Web recheck receipts, including failed probes and logs.
+docs/evidence/web-recheck-20261004/raw/** -text
+docs/evidence/web-recheck-20261004/raw/**/*.log -whitespace

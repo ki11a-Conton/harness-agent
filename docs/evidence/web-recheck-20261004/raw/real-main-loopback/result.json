@@ -1,0 +1,40 @@
+{
+  "sourceSha": "b016dc3ccbb1808728617374745fae46d5c3ee87",
+  "trackedDirty": false,
+  "entrypoint": "apps/web/dist/main.js",
+  "provider": "production OpenAICompatibleProvider HTTP/SSE",
+  "modelServer": "local deterministic OpenAI-compatible server",
+  "paidCalls": 0,
+  "externalModelQuality": "NOT_RUN",
+  "cases": [
+    {
+      "name": "normal-main-http-model-reply",
+      "status": "PASS",
+      "modelRequests": 1,
+      "actualModel": "loopback-test-model"
+    },
+    {
+      "name": "normal-main-http-tool-approval-allow-write",
+      "status": "PASS",
+      "beforeApprovalFileAbsent": true,
+      "afterApprovalContent": "ACTUAL_MAIN_HTTP_PROVIDER_WRITE\n",
+      "actualTool": "write_file"
+    },
+    {
+      "name": "normal-main-http-tool-approval-deny-no-write",
+      "status": "PASS",
+      "fileAbsent": true
+    }
+  ],
+  "status": "FAILED",
+  "error": "",
+  "traceback": "Traceback (most recent call last):\n  File \"/workspace/harness-agent/.ci/web-recheck-20261004/real-main-loopback.py\", line 75, in <module>\n    assert page.locator('.assistant-bubble').count()==3\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n",
+  "processExit": 0,
+  "stdout": [
+    "[web] listening on http://127.0.0.1:43767",
+    "[web] SIGTERM — shutting down"
+  ],
+  "pageErrors": [],
+  "modelRequestsCount": 5,
+  "postApiRequestsCount": 5
+}

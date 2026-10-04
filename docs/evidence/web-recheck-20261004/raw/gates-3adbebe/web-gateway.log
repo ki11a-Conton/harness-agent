@@ -1,0 +1,46 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:39881
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:45293
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:33191
+[harness] context budget: model capabilities unknown for scripted/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:38197
+[harness] context budget: model capabilities unknown for web-cancellation-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:44507
+[harness] context budget: model capabilities unknown for web-queued-followup-stop-probe/scripted-model — using conservative fallback 32000
+[web] listening on http://127.0.0.1:34971
+ ✓ apps/web/src/harness.integration.test.ts (6 tests) 4008ms
+     ✓ serves a full turn end-to-end through the harness runtime  1020ms
+     ✓ creates a session and routes it through bindings for a new sender  621ms
+     ✓ U3 cancels a genuinely blocked production turn through HTTP and Gateway  366ms
+     ✓ U4 stops the active queued follow-up through HTTP without cancelling another sender's session  1938ms
+[web] listening on http://127.0.0.1:45747
+[web] listening on http://127.0.0.1:38783
+[web] listening on http://127.0.0.1:40603
+[web] listening on http://127.0.0.1:35657
+[web] listening on http://127.0.0.1:38339
+[web] listening on http://127.0.0.1:46781
+[web] listening on http://127.0.0.1:38589
+[web] listening on http://127.0.0.1:34849
+[web] listening on http://127.0.0.1:44607
+[web] listening on http://127.0.0.1:39007
+[web] listening on http://127.0.0.1:46583
+[web] listening on http://127.0.0.1:37959
+[web] listening on http://127.0.0.1:46243
+[web] listening on http://127.0.0.1:43439
+[web] listening on http://127.0.0.1:39075
+ ✓ apps/web/src/server.test.ts (16 tests) 1104ms
+ ✓ packages/gateway/src/gateway.test.ts (32 tests) 636ms
+ ✓ packages/gateway/src/desktop-client.test.ts (17 tests) 137ms
+ ✓ packages/gateway/src/rpc.test.ts (26 tests) 41ms
+ ✓ packages/gateway/src/transport-conformance.test.ts (20 tests) 25ms
+
+ Test Files  6 passed (6)
+      Tests  117 passed (117)
+   Start at  12:15:04
+   Duration  18.79s (transform 6.28s, setup 0ms, import 10.41s, tests 5.95s, environment 1ms)
+

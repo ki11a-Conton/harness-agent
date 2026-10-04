@@ -1,0 +1,66 @@
+{
+  "schema": "web-extra-controls-completion.v1",
+  "status": "PASS",
+  "testedSourceSha": "3adbebe8af87a8490e63365a077840b6765296ea",
+  "mainSourceWasCleanAtStartAndEnd": true,
+  "passedCases": 10,
+  "assertions": 46,
+  "browserErrorCount": 0,
+  "productionBackendSessions": 3,
+  "productionProviderGenerateCalls": 10,
+  "productionTerminalEvents": {
+    "turn.completed": 7,
+    "turn.cancelled": 1,
+    "turn.failed": 0,
+    "human.approval": 2,
+    "human.cancel": 1,
+    "verification.completed": 7
+  },
+  "verificationDetails": "actual node child-process verifier, real approval-bound write_file; scripted model only",
+  "noPaidModelCalls": true,
+  "realModelQuality": "NOT_RUN",
+  "failedProbeHistory": {
+    "path": "run-3adbebe/result.json",
+    "status": "FAILED",
+    "passed": 8,
+    "failed": 2,
+    "cause": "overstrict IME oracle incorrectly treated native textarea default newline as input clearing; session history wait then cascaded because original A turn had not been sent. Source unchanged between runs.",
+    "correction": "Keep content after composition Enter and verify no backend/model invocation; reset textarea to original text before separately testing actual Shift+Enter and Enter. No product changes."
+  },
+  "probeIntegrity": [
+    {
+      "result": "FAILED",
+      "scriptPath": "probe-v1-failed.py",
+      "probeSha256": "8342bc3b9afa456b9e80b3c62ad7e1ae09aa5358644e855fed351b01578c2a56",
+      "scriptMatchesResultHash": true
+    },
+    {
+      "result": "PASS",
+      "scriptPath": "probe.py",
+      "probeSha256": "d08c44cee2ac5c9acd8a1b0aee27f56276c92786e38280e82837bc967983a9db",
+      "scriptMatchesResultHash": true
+    }
+  ],
+  "acceptedResult": "run-3adbebe-v2/result.json",
+  "cleanShutdown": {
+    "graceful": true,
+    "exitCode": 0,
+    "forcedKill": false,
+    "changedFingerprints": [],
+    "finalSourceSha": "3adbebe8af87a8490e63365a077840b6765296ea",
+    "trackedClean": true
+  },
+  "controls": [
+    "desktop IME composing Enter prevented send, Shift+Enter newline, Enter one actual send",
+    "actual session-list switching and separate local drafts",
+    "actual code clipboard copy",
+    "single labelled controlled HTTP POST abort, re-edit and one actual retry",
+    "mobile actual agent turn",
+    "mobile actual approval deny and absent file",
+    "mobile actual approval allow and written exact bytes",
+    "mobile stop via actual cancel command and provider AbortSignal",
+    "mobile backdrop drawer closure",
+    "mobile Escape drawer closure"
+  ],
+  "scopeLimit": "Synthetic composition lifecycle/isComposing DOM events verify guards; normal Enter/ShiftEnter are Chromium keyboard inputs. Mobile viewport390x844 touch enabled, not physical device. No paid model or model quality assessment."
+}

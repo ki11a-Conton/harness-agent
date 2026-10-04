@@ -1,0 +1,224 @@
+{
+  "sourceSha": "b016dc3ccbb1808728617374745fae46d5c3ee87",
+  "environment": {
+    "OPENAI_API_KEY": false,
+    "OPENAI_MODEL": false,
+    "OPENAI_BASE_URL": false
+  },
+  "entrypoint": "apps/web/dist/main.js",
+  "cwd": "isolated ignored probe directory",
+  "paidCalls": 0,
+  "indexStatus": 200,
+  "localUiServed": true,
+  "messagePostStatus": 200,
+  "messagePost": {
+    "ok": true
+  },
+  "history": {
+    "sessionId": "session_7bc1c6c1-d7b1-439b-8147-387bd0561797",
+    "messages": [
+      {
+        "id": "message_0cc8c9f1-20b2-4282-a2cc-5d9dfb28971e",
+        "sessionId": "session_7bc1c6c1-d7b1-439b-8147-387bd0561797",
+        "turnId": "turn_a92abfdd-bc15-4d2f-8ec2-6f4b29734268",
+        "role": "user",
+        "content": "Say hello, without using any tools.",
+        "createdAt": 1791115588326
+      }
+    ]
+  },
+  "frames": [
+    {
+      "type": "hello"
+    },
+    {
+      "type": "text",
+      "text": "[run] failed turn:turn_a92abfdd-bc15-4d2f-8ec2-6f4b29734268 calls:0 iterations:0"
+    },
+    {
+      "type": "text",
+      "text": "[limit] maxRetries: 1"
+    },
+    {
+      "type": "event",
+      "event": {
+        "id": "event_b7cd860f-9350-4461-9c19-569088565a45",
+        "sessionId": "session_7bc1c6c1-d7b1-439b-8147-387bd0561797",
+        "turnId": "turn_a92abfdd-bc15-4d2f-8ec2-6f4b29734268",
+        "timestamp": 1791115588327,
+        "type": "turn.started",
+        "payload": {
+          "turnId": "turn_a92abfdd-bc15-4d2f-8ec2-6f4b29734268",
+          "text": "Say hello, without using any tools."
+        },
+        "sequence": 1,
+        "schemaVersion": 1
+      }
+    },
+    {
+      "type": "event",
+      "event": {
+        "id": "event_96a75eeb-42b1-42ae-99b8-56e35741ad1f",
+        "sessionId": "session_7bc1c6c1-d7b1-439b-8147-387bd0561797",
+        "sequence": 2,
+        "timestamp": 1791115588336,
+        "type": "context.selected",
+        "payload": {
+          "source": "system",
+          "id": "system-prompt",
+          "priority": 9007199254740991,
+          "tokens": 130
+        },
+        "schemaVersion": 1
+      }
+    },
+    {
+      "type": "event",
+      "event": {
+        "id": "event_446bbad4-ca53-467f-bb04-c1de598de5e8",
+        "sessionId": "session_7bc1c6c1-d7b1-439b-8147-387bd0561797",
+        "turnId": "turn_a92abfdd-bc15-4d2f-8ec2-6f4b29734268",
+        "timestamp": 1791115588336,
+        "type": "context.built",
+        "payload": {
+          "tokens": 130,
+          "used": 130,
+          "budget": 32000,
+          "dropped": 0,
+          "compacted": false,
+          "messagesTokens": 17
+        },
+        "sequence": 3,
+        "schemaVersion": 1
+      }
+    },
+    {
+      "type": "event",
+      "event": {
+        "id": "event_ca8ebd2a-b0ce-464e-abaa-fce5a4c6e1b5",
+        "sessionId": "session_7bc1c6c1-d7b1-439b-8147-387bd0561797",
+        "turnId": "turn_a92abfdd-bc15-4d2f-8ec2-6f4b29734268",
+        "spanId": "modelcall_22cbfe62-2310-498c-8136-eb58def7ce96",
+        "timestamp": 1791115588340,
+        "type": "model.started",
+        "payload": {
+          "callId": "modelcall_22cbfe62-2310-498c-8136-eb58def7ce96",
+          "stepId": "turn_a92abfdd-bc15-4d2f-8ec2-6f4b29734268:0",
+          "toolRouterFingerprint": "ca0ebb38a3be5d87a9937d67ace0716c3d87948f647fdac76367f62e68a2e09e",
+          "policyFingerprint": "39dcd236e4d71aa5ce84014d9a017396f519a77af7953f7f6470ed1aeea3f1d3",
+          "environmentFingerprint": "fd3c39814706bbb7bc4dad273b26c83a3dfd2769c088fab20f845407cb205fee",
+          "contextFingerprint": "0bb555629bb8ce63aee0e177be18844726539b6effa4c0432c0eae53efb6d772",
+          "instructionFingerprint": "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204",
+          "contextMessageIds": [
+            "message_0cc8c9f1-20b2-4282-a2cc-5d9dfb28971e"
+          ],
+          "contextBlockIds": []
+        },
+        "sequence": 4,
+        "schemaVersion": 1
+      }
+    },
+    {
+      "type": "event",
+      "event": {
+        "id": "event_f3152540-734e-4e0d-bb95-30a7258032f6",
+        "sessionId": "session_7bc1c6c1-d7b1-439b-8147-387bd0561797",
+        "turnId": "turn_a92abfdd-bc15-4d2f-8ec2-6f4b29734268",
+        "timestamp": 1791115588340,
+        "type": "tools.selected",
+        "payload": {
+          "callId": "modelcall_22cbfe62-2310-498c-8136-eb58def7ce96",
+          "available": 12,
+          "selected": 12,
+          "dropped": [],
+          "advertisedTokens": 1179
+        },
+        "sequence": 5,
+        "schemaVersion": 1
+      }
+    },
+    {
+      "type": "event",
+      "event": {
+        "id": "event_dd27cef8-1d6e-4930-91f4-ec2fa43fbfa0",
+        "sessionId": "session_7bc1c6c1-d7b1-439b-8147-387bd0561797",
+        "turnId": "turn_a92abfdd-bc15-4d2f-8ec2-6f4b29734268",
+        "timestamp": 1791115588341,
+        "type": "model.failed",
+        "payload": {
+          "callId": "modelcall_22cbfe62-2310-498c-8136-eb58def7ce96",
+          "error": {
+            "code": "MODEL_ERROR",
+            "message": "no model provider configured — set OPENAI_API_KEY and restart",
+            "retryable": true,
+            "safeToRetry": true
+          }
+        },
+        "sequence": 6,
+        "schemaVersion": 1
+      }
+    },
+    {
+      "type": "event",
+      "event": {
+        "id": "event_ca335def-3a5b-4e97-b202-77bb4d5ecc67",
+        "sessionId": "session_7bc1c6c1-d7b1-439b-8147-387bd0561797",
+        "turnId": "turn_a92abfdd-bc15-4d2f-8ec2-6f4b29734268",
+        "timestamp": 1791115588342,
+        "type": "run.limit_reached",
+        "payload": {
+          "limit": "maxRetries",
+          "used": 1,
+          "allowed": 1
+        },
+        "sequence": 7,
+        "schemaVersion": 1
+      }
+    },
+    {
+      "type": "event",
+      "event": {
+        "id": "event_5fec287a-3f50-4e8a-8626-2f904729dc76",
+        "sessionId": "session_7bc1c6c1-d7b1-439b-8147-387bd0561797",
+        "turnId": "turn_a92abfdd-bc15-4d2f-8ec2-6f4b29734268",
+        "timestamp": 1791115588344,
+        "type": "turn.failed",
+        "payload": {
+          "turnId": "turn_a92abfdd-bc15-4d2f-8ec2-6f4b29734268",
+          "status": "failed",
+          "statusDetail": "failed_no_effect",
+          "error": {
+            "code": "MODEL_ERROR",
+            "message": "no model provider configured — set OPENAI_API_KEY and restart",
+            "retryable": true,
+            "safeToRetry": true
+          },
+          "terminationReason": "model_error",
+          "grade": "unverified_complete"
+        },
+        "sequence": 8,
+        "schemaVersion": 1
+      }
+    }
+  ],
+  "eventTypes": [
+    "turn.started",
+    "context.selected",
+    "context.built",
+    "model.started",
+    "tools.selected",
+    "model.failed",
+    "run.limit_reached",
+    "turn.failed"
+  ],
+  "turnFailed": true,
+  "turnCompleted": false,
+  "startupLogHasStubWarning": true,
+  "streamEnd": "TimeoutError",
+  "processExit": 0,
+  "stdout": [
+    "[harness] context budget: model capabilities unknown for stub/stub-model — using conservative fallback 32000",
+    "[web] listening on http://127.0.0.1:45767",
+    "[web] SIGTERM — shutting down"
+  ]
+}

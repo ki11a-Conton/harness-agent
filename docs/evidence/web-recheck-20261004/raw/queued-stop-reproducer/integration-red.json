@@ -1,0 +1,29 @@
+{
+  "status": "EXPECTED_RED",
+  "sourceSha": "b016dc3ccbb1808728617374745fae46d5c3ee87",
+  "scope": "新增持久queued followup HTTP stop回归，生产Gateway未修改时失败",
+  "command": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "apps/web/src/harness.integration.test.ts",
+    "-t",
+    "U4 stops the active queued follow-up",
+    "--reporter=verbose"
+  ],
+  "exitCode": 1,
+  "tests": {
+    "failed": 1,
+    "selectorFiltered": 5
+  },
+  "failure": "observedFollowupAbort false after owner HTTP cancel, expected true",
+  "testSha256": "079d35c189c165f506d9cacbb3bf5d817115ed96ea061b15b80b160bfae98159",
+  "log": {
+    "path": "integration-red-cleanup-corrected.log",
+    "sha256": "98347b4f82ce733732fe4472385dc513cc445aaf3cdbf6405d5e9c327faebe6e"
+  },
+  "firstLogRetained": "integration-red.log (same correctness RED; cleanup had durable inbox deletion race corrected in test only)",
+  "recordedAtUtc": "2026-10-04T12:11:20.048415+00:00"
+}

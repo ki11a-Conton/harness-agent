@@ -1,0 +1,196 @@
+{
+  "schema": "web-extra-controls.v1",
+  "status": "PASS",
+  "source": {
+    "base": "http://127.0.0.1:43421",
+    "backend": "http://127.0.0.1:41731",
+    "transportControl": "http://127.0.0.1:35715",
+    "inspector": "http://127.0.0.1:42763/snapshot",
+    "cwd": "/workspace/harness-agent/.ci/web-recheck-20261004/extra-controls/run-3adbebe-v2/fixture/workspace",
+    "sourceSha": "3adbebe8af87a8490e63365a077840b6765296ea",
+    "trackedDirty": false,
+    "fingerprints": {
+      "apps/web/src/server.ts": "1db0bad5f52aefa7b1c7a94a4fc6ba1dda17390ab57283207ea2aafbcd873638",
+      "apps/web/src/adapter.ts": "6ed06e0638b57e5247342675d691b0cf0de4116c22d3f571317e3974ba0ef4b3",
+      "apps/web/src/bindings.ts": "44d30d6bc1d4a79cebd4b53a006e47d76ffe573fd7fd76d4324589b112c0473f",
+      "packages/gateway/src/gateway.ts": "fc5c77a5a0fd39e63cb695d783284e667ffb866f1df7aae21903cdfaf8ea63b8",
+      "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+      "apps/web/dist/server.js": "195eb0d3e0f9c3b814c2b820e5e7191d13bd9145d778294a46e1c34bf287205d",
+      "apps/web/dist/adapter.js": "f1aa8a86f5b79f7163a86cfaec50c71860c7983e75a2f65946f9fac2bd2fd529",
+      "apps/web/dist/bindings.js": "e5e0a55554b60cdd9da0b19ebbc6a62ef8555f1ec347dfb3a5d9f3981a59c958",
+      "packages/gateway/dist/gateway.js": "e378af0002f8b8077df70467dd5c55524ecde8c663112df32cd6c73cb25e083e",
+      "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+      "static/app.js": "0c26fef5dc2bd6179c6da7cb202f36bbadfbeac2d78df2a2fde488ee320a2da0",
+      "static/index.html": "7987bd0b38de59ff679cd052a0069afb4d00132a027ad78633e78116a6971cf5",
+      "static/style.css": "60f6e63348d1a58e65e093c37dc847f065f1f7c2c56455d22f6eec90d695453f",
+      "static/vendor/deepseek/LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+      "static/vendor/deepseek/base.css": "03704b5ac0e86d9d875c4fa5c985a7dfe5d56e20dc28a8d8221626aaf7aa482a",
+      "static/vendor/deepseek/corner-shape.css": "d94f82e1332b6d37e8345aafe1b6b4129faed65891edd3861c00b88940ec4d3f",
+      "static/vendor/deepseek/design-platform.css": "809b20ae477324fdf5181a2d338655a19919cabbf1b0e60adc149908462c5a66",
+      "static/vendor/deepseek/focus.css": "f7398e7730415592ab1e81cec36f8c5e23065becd06c050f0129a6fa44d247e8",
+      "static/vendor/deepseek/gradient-shadow-text.css": "a32d784be999def56673b5f86bebd250f401cda1c861adc4c1ea0ebb1ce36ad6",
+      "static/vendor/deepseek/scrollbar.css": "673450184fe82a679b5759a7f93ceab17895b9f12e1196f7efb281304afd8398",
+      "static/vendor/deepseek/source-manifest.json": "16844150e74b11c61aa9e6f8745d46c3944406bbccc264eced91eb7796b6597a"
+    },
+    "node": "v24.19.0",
+    "fixtureSha256": "1e035a87d47e9bfc0c8683d9e4e9b9b648132626c0d01741fdd44dbc3605f439",
+    "staticDir": "/workspace/harness-agent/apps/web/public",
+    "paidCalls": 0,
+    "realModelQuality": "NOT_RUN",
+    "promotion": "NOT_RUN"
+  },
+  "expectedSha": "3adbebe8af87a8490e63365a077840b6765296ea",
+  "probeSha256": "d08c44cee2ac5c9acd8a1b0aee27f56276c92786e38280e82837bc967983a9db",
+  "fixtureSha256": "1e035a87d47e9bfc0c8683d9e4e9b9b648132626c0d01741fdd44dbc3605f439",
+  "cases": 10,
+  "passed": 10,
+  "failed": 0,
+  "assertions": 46,
+  "browserErrors": 0,
+  "chromium": "151.0.7922.173",
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "scope": "actual DOM + actual Harness/Gateway/WebServer/PermissionEngine/SandboxManager/Verifier, scripted model only; one explicitly marked aborted HTTP POST control; clipboard/sidebar are frontend controls",
+  "receipts": [
+    {
+      "name": "desktop-enter-shift-enter-and-ime-real-backend",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "prompt": "真实DOM输入法保护\n下一行",
+        "compositionEnterInput": "真实DOM输入法保护\n",
+        "realProviderCalls": 1,
+        "realMessagePostCount": 1,
+        "imeMethod": "DOM compositionstart/end and isComposing keyboard events; Enter/Shift+Enter through Chromium keyboard"
+      },
+      "assertCount": 7
+    },
+    {
+      "name": "desktop-session-list-buttons-and-isolated-drafts",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "fromA": "ab83e8a2-edc1-453f-af53-cd378a85daf3",
+        "fromB": "367c67dc-bb12-4561-a40c-32e591dd9732",
+        "genuineBackendSessions": 2,
+        "draftA": "DRAFT_A_LOCAL_ONLY",
+        "draftB": "DRAFT_B_LOCAL_ONLY",
+        "draftsTransmitted": 0,
+        "switchTransport": "UI buttons + genuine history/SSE"
+      },
+      "assertCount": 5
+    },
+    {
+      "name": "desktop-code-block-copy-actual-clipboard",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "clipboard": "console.log('ui-copy');\n",
+        "source": "scripted text via real Harness response + UI code-copy click + actual clipboard"
+      },
+      "assertCount": 2
+    },
+    {
+      "name": "desktop-send-failure-reedit-and-genuine-retry",
+      "group": "production-http-control",
+      "passed": true,
+      "observed": {
+        "faults": [
+          {
+            "type": "controlled-http-fault",
+            "action": "abort-single-POST",
+            "url": "http://127.0.0.1:43421/api/messages",
+            "postData": "{\"from\":\"367c67dc-bb12-4561-a40c-32e591dd9732\",\"text\":\"CONTROLLED_HTTP_ABORT_THEN_REAL_RETRY\"}"
+          }
+        ],
+        "originalInputRestored": true,
+        "realBackendRetryCalls": 1,
+        "persistedUserMessages": 1
+      },
+      "assertCount": 5
+    },
+    {
+      "name": "mobile-send-to-real-harness",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "realProviderCalls": 1,
+        "uiReply": "HARNESS_REPLY:MOBILE_ACTUAL_AGENT",
+        "viewport": [
+          390,
+          844
+        ],
+        "from": "7109d830-7973-4fc9-bfab-08ca04193be0",
+        "sessionId": "session_d8dc5cc7-70b1-4fe5-833b-14d2c3b8691d",
+        "verificationCompleted": true
+      },
+      "assertCount": 4
+    },
+    {
+      "name": "mobile-real-approval-deny",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "approvalId": "approval_448c1d04-c6b5-41ff-a648-7b98939c91f5",
+        "decision": "deny",
+        "file": "denied.txt",
+        "fileContent": null,
+        "actualHumanApprovalEvent": true
+      },
+      "assertCount": 6
+    },
+    {
+      "name": "mobile-real-approval-allow",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "approvalId": "approval_6bd9a8b3-3d76-4c43-a66a-2c895e1f48d7",
+        "decision": "allow",
+        "file": "allowed.txt",
+        "fileContent": "ACTUAL_HARNESS_WRITE\n",
+        "actualHumanApprovalEvent": true
+      },
+      "assertCount": 6
+    },
+    {
+      "name": "mobile-stop-real-running-turn",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "providerAbort": true,
+        "newTurnCancelledEvents": 1,
+        "humanCancel": true,
+        "cancelButtonDisabled": true
+      },
+      "assertCount": 3
+    },
+    {
+      "name": "mobile-backdrop-closes-drawer",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "drawerClosed": true,
+        "action": "real DOM backdrop click"
+      },
+      "assertCount": 1
+    },
+    {
+      "name": "mobile-escape-closes-drawer",
+      "group": "production-stack",
+      "passed": true,
+      "observed": {
+        "drawerClosed": true,
+        "action": "Chromium Escape keyboard input"
+      },
+      "assertCount": 1
+    }
+  ],
+  "cleanup": {
+    "graceful": true,
+    "exitCode": 0,
+    "forcedKill": false,
+    "changedFingerprints": [],
+    "finalSourceSha": "3adbebe8af87a8490e63365a077840b6765296ea",
+    "trackedClean": true
+  }
+}

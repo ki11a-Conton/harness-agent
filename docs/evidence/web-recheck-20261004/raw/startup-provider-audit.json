@@ -1,0 +1,176 @@
+{
+  "schema": "ar.web.startupProviderAudit.v1",
+  "reviewedSourceSha": "b016dc3ccbb1808728617374745fae46d5c3ee87",
+  "observedAt": "2026-10-04T12:10:50.477747+00:00",
+  "mode": "read-only independent audit; ignored deterministic probes; no paid model calls",
+  "startupCommand": [
+    "corepack pnpm install --frozen-lockfile",
+    "corepack pnpm build",
+    "node apps/web/dist/main.js"
+  ],
+  "requiredConfiguration": {
+    "OPENAI_API_KEY": "Required to select production OpenAICompatibleProvider; absent yields non-solving MODEL_ERROR stub.",
+    "OPENAI_BASE_URL": "Optional OpenAI-compatible base URL; default https://api.openai.com/v1; use chosen provider endpoint.",
+    "OPENAI_MODEL": "Optional model name; default gpt-4o-mini; must match endpoint support.",
+    "HARNESS_DATA_DIR": "Optional; set for persistent sessions/events/approval/checkpoint; absence is in-memory.",
+    "HARNESS_WEB_PORT": "Optional, default 8787.",
+    "HARNESS_WEB_HOST": "Optional, default 127.0.0.1."
+  },
+  "ambientConfigurationPresence": {
+    "OPENAI_API_KEY": false,
+    "OPENAI_BASE_URL": false,
+    "OPENAI_MODEL": false
+  },
+  "noKeyRealMain": {
+    "raw": "startup-probe/result.json",
+    "pageHttpStatus": 200,
+    "messagePostStatus": 200,
+    "events": [
+      "model.failed",
+      "turn.failed"
+    ],
+    "modelError": "no model provider configured — set OPENAI_API_KEY and restart",
+    "completed": false,
+    "shutdownExit": 0,
+    "stubNamedInStartupContextBudgetWarning": true
+  },
+  "localHttpModelRealMain": {
+    "rawFailedStrictBubbleCount": "real-main-loopback/result.json",
+    "rawEngineeringPassWithKnownEmptyBubbleDefect": "real-main-loopback-v2/result.json",
+    "realEntrypoint": "apps/web/dist/main.js",
+    "realProvider": "OpenAICompatibleProvider",
+    "transportPath": "/v1/chat/completions",
+    "requestCount": 5,
+    "modelValues": [
+      "loopback-test-model"
+    ],
+    "allStreamTrue": true,
+    "toolRequests": [
+      "write_file",
+      "write_file"
+    ],
+    "toolRoundTripActual": true,
+    "productionOutcomes": {
+      "completedTurns": 3,
+      "humanApprovalAllow": 1,
+      "humanApprovalDeny": 1,
+      "fileWrittenAfterAllow": true,
+      "fileAbsentAfterDeny": true,
+      "refreshReplyUnique": 3,
+      "emptyToolCallAssistantBubblesAfterRefresh": 2
+    },
+    "pageErrors": 0,
+    "paidCalls": 0,
+    "externalModelQuality": "NOT_RUN"
+  },
+  "sourceFingerprintsAtReview": {
+    "apps/web/src/main.ts": {
+      "sha256": "8635759dd6e63f6296ad16a7756285ed23145192d20ded04609fbab4efd78402",
+      "equalsTestedMainBlob": true
+    },
+    "apps/web/src/server.ts": {
+      "sha256": "1db0bad5f52aefa7b1c7a94a4fc6ba1dda17390ab57283207ea2aafbcd873638",
+      "equalsTestedMainBlob": true
+    },
+    "apps/web/src/adapter.ts": {
+      "sha256": "6ed06e0638b57e5247342675d691b0cf0de4116c22d3f571317e3974ba0ef4b3",
+      "equalsTestedMainBlob": true
+    },
+    "apps/web/src/bindings.ts": {
+      "sha256": "44d30d6bc1d4a79cebd4b53a006e47d76ffe573fd7fd76d4324589b112c0473f",
+      "equalsTestedMainBlob": true
+    },
+    "apps/web/public/app.js": {
+      "sha256": "d6fa3cc612f0e66fd6326cc6067eda9eb8c1ccc9146f2a44b65e8e83367e441c",
+      "equalsTestedMainBlob": true
+    },
+    "apps/cli/src/provider.ts": {
+      "sha256": "04a8b9e419ca1a12ad45cee8f79960e2c741d6a297a6f34b7073d5c1b0e7ba38",
+      "equalsTestedMainBlob": true
+    },
+    "packages/model/src/openai.ts": {
+      "sha256": "a3b12a1677711843a90d3299be6136432e7c18c635d3045121750913600d6319",
+      "equalsTestedMainBlob": true
+    },
+    "packages/harness/src/create-harness.ts": {
+      "sha256": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+      "equalsTestedMainBlob": true
+    }
+  },
+  "limitations": [
+    "Local HTTP model server is deterministic and verifies normal startup/provider transport/runtime/browser integration, not reasoning quality of live LLM.",
+    "Original direct browser fixture injects scripted provider and does not exercise production provider resolution/HTTP transport.",
+    "Without OPENAI_API_KEY UI can start and accepts POST, but real agent turn fails; HTTP 200 ack is not task success.",
+    "Default Web entrypoint passes no TaskSpec/verification specs; it does not exercise the fixture-configured child-process verification gate.",
+    "Web session sender binding is process-local; browser refresh works in same server process; restart does not reconnect prior durable sender session.",
+    "Web provides completed model messages plus SSE progress; no per-token text streaming claim.",
+    "Default Web host enables neither memory nor delegation; HARNESS_MEMORY env switch is implemented only by CLI host.",
+    "Observed empty bubbles for assistant toolCalls with empty content on history refresh; root is implementing regression fix.",
+    "CLI --help currently emits usage and exits 1 (unknown command), no model requests."
+  ],
+  "probeScriptSha256": {
+    "firstStrict": "add01f261141a27ce236281170c77cc6565884e9804dc0b3d93114cfb80ac13f",
+    "v2ReplyOracle": "b36d1f0b9c558a837aa1e4eb56baa590154308c1699544647a84ec5404cf0aa1"
+  },
+  "strictFinalAcceptance": {
+    "reviewedAt": "2026-10-04T12:14:19.249874+00:00",
+    "status": "PASS",
+    "testedSourceSha": "3adbebe8af87a8490e63365a077840b6765296ea",
+    "trackedDirty": false,
+    "entrypoint": "apps/web/dist/main.js",
+    "productionProvider": "production OpenAICompatibleProvider HTTP/SSE",
+    "serverKind": "local deterministic OpenAI-compatible server",
+    "actualModelRequestCount": 5,
+    "browserPostCount": 5,
+    "cases": [
+      {
+        "name": "normal-main-http-model-reply",
+        "status": "PASS",
+        "modelRequests": 1,
+        "actualModel": "loopback-test-model"
+      },
+      {
+        "name": "normal-main-http-tool-approval-allow-write",
+        "status": "PASS",
+        "beforeApprovalFileAbsent": true,
+        "afterApprovalContent": "ACTUAL_MAIN_HTTP_PROVIDER_WRITE\n",
+        "actualTool": "write_file"
+      },
+      {
+        "name": "normal-main-http-tool-approval-deny-no-write",
+        "status": "PASS",
+        "fileAbsent": true
+      },
+      {
+        "name": "normal-main-refresh-history",
+        "status": "PASS",
+        "assistantBubbles": 3,
+        "uniqueNonemptyReplies": 3,
+        "emptyToolAssistantBubbles": 0,
+        "historicalApprovalCards": 2,
+        "actionableHistoricalApprovalButtons": 0
+      }
+    ],
+    "pageErrors": [],
+    "processExit": 0,
+    "fingerprintsStable": true,
+    "fingerprintCount": 27,
+    "productionEventCount": 54,
+    "completedTurns": 3,
+    "failedTurns": 0,
+    "humanApprovals": [
+      "allow",
+      "deny"
+    ],
+    "paidCalls": 0,
+    "liveModelQuality": "NOT_RUN",
+    "probeScriptSha256": "6f0ab4a56efc53f7e2828953ee56b0a22e41b8437acdc9384df16829588ba7ba",
+    "rawResult": "real-main-final-3adbebe/result.json",
+    "rawRequestBodies": "real-main-final-3adbebe/model-requests.json",
+    "screenshots": [
+      "real-main-final-3adbebe/real-main-live-tools-desktop.png",
+      "real-main-final-3adbebe/real-main-desktop.png"
+    ]
+  },
+  "knownDefectFinalResolution": "Original strict b016dc3 observation of two empty assistant tool-call history bubbles reproduced and retained. Frozen 3adbebe fixes rendering: exact live and refreshed three nonempty assistant replies; two historical approvals readonly; no additional model request on refresh."
+}

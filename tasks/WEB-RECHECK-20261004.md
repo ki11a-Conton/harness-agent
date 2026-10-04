@@ -14,3 +14,5 @@
 正常 main 的本机 OpenAI 兼容 HTTP 模型闭环另发现：刷新历史后，content 为空的 assistant/tool_calls 记录被渲染成空回复气泡。保留原严格 count 失败，前端只跳过空文本气泡，真实 tool/approval 记录及非空回复不隐藏；增加 history/live/replay 浏览器回归。
 
 怎么验收：新增 Gateway/真实 Web HTTP 回归先 RED 后 GREEN；第二回合取消、第一回合完成、human.cancel 指向正确回合，外部 sender 无权取消。重跑原浏览器复现、26 场景验收及补充按钮实测；正常 main HTTP 模型回复和审批闭环；typecheck、相关 Gateway/Web 回归、安全、docs/diff 通过。明确 HTTP200 仅代表接收、无模型 key 时不能完成任务，以及进程重启不恢复会话绑定的已有边界。
+
+DONE：冻结源码 `3adbebe8af87a8490e63365a077840b6765296ea`，Gateway/Web 117/117、安全 2135/2135、typecheck/docs 全部通过。原浏览器增加空气泡回归后 27/27、77 断言；补充控件 10/10、46 断言；queued stop 6 项严格真实浏览器断言通过；实际 main + 本机 OpenAI HTTP 模型的回复、allow/deny、刷新 4 项通过。独审 18/18。原始 RED/失败探针与修正版本均保留，paid=0、线上模型质量 NOT_RUN；不是在本轮重跑了全仓测试。受测修复已原生 Git 发布 main；完成报告仅追加说明和证据及其字节保存规则，程序与受测源码等价。证据：[Web 复验报告](../docs/evidence/web-recheck-20261004.md)。

@@ -1,0 +1,115 @@
+{
+  "sourceSha": "b016dc3ccbb1808728617374745fae46d5c3ee87",
+  "trackedDirtyAtStart": false,
+  "status": "CONFIRMED_BUG",
+  "productionStack": true,
+  "scriptedModelOnly": true,
+  "paidCalls": 0,
+  "uiStatus": "正在思考…",
+  "uiText": "[disconnect-complete]\n正在思考…\n[block]\n后续消息已加入队列，将在当前任务结束后处理。\nh\nHarness\nHARNESS_REPLY:[disconnect-complete]\n复制回复\n验收通过\n[run] completed turn:turn_88e8029c-2ec1-4247-aefd-f2bbed477db5 calls:0 iterations:0\n[cancel] not_running\n已请求停止任务",
+  "cancelEnabledAfterClick": true,
+  "providerBlockedCall": {
+    "index": 1,
+    "prompt": "[block]",
+    "alreadyCalled": false,
+    "at": "2026-10-04T12:06:51.463Z"
+  },
+  "events": [
+    {
+      "sessionId": "session_49ecef10-01da-475b-b552-52ad2b71a8b6",
+      "turnId": "turn_88e8029c-2ec1-4247-aefd-f2bbed477db5",
+      "type": "turn.started"
+    },
+    {
+      "sessionId": "session_49ecef10-01da-475b-b552-52ad2b71a8b6",
+      "turnId": "turn_88e8029c-2ec1-4247-aefd-f2bbed477db5",
+      "type": "turn.completed"
+    },
+    {
+      "sessionId": "session_49ecef10-01da-475b-b552-52ad2b71a8b6",
+      "turnId": "turn_6f8fb19f-0bb9-498e-8747-024e4a58a4db",
+      "type": "turn.started"
+    },
+    {
+      "sessionId": "session_49ecef10-01da-475b-b552-52ad2b71a8b6",
+      "turnId": "turn_88e8029c-2ec1-4247-aefd-f2bbed477db5",
+      "type": "human.cancel"
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:45811/api/bootstrap?from=04e314c0-34e0-4397-b934-eb4d7c27d34b",
+      "postData": null
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:45811/api/sessions",
+      "postData": null
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:45811/api/events?from=04e314c0-34e0-4397-b934-eb4d7c27d34b",
+      "postData": null
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:45811/api/history?from=04e314c0-34e0-4397-b934-eb4d7c27d34b",
+      "postData": null
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:45811/api/sessions",
+      "postData": null
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:45811/api/messages",
+      "postData": "{\"from\":\"04e314c0-34e0-4397-b934-eb4d7c27d34b\",\"text\":\"[disconnect-complete]\"}"
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:45811/api/messages",
+      "postData": "{\"from\":\"04e314c0-34e0-4397-b934-eb4d7c27d34b\",\"text\":\"[block]\"}"
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:45811/api/commands",
+      "postData": "{\"from\":\"04e314c0-34e0-4397-b934-eb4d7c27d34b\",\"text\":\"cancel\"}"
+    }
+  ],
+  "responses": [
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:45811/api/bootstrap?from=04e314c0-34e0-4397-b934-eb4d7c27d34b"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:45811/api/sessions"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:45811/api/events?from=04e314c0-34e0-4397-b934-eb4d7c27d34b"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:45811/api/history?from=04e314c0-34e0-4397-b934-eb4d7c27d34b"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:45811/api/sessions"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:45811/api/messages"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:45811/api/messages"
+    },
+    {
+      "status": 200,
+      "url": "http://127.0.0.1:45811/api/commands"
+    }
+  ]
+}

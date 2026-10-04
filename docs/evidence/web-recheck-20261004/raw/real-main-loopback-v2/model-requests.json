@@ -1,0 +1,271 @@
+[
+  {
+    "index": 0,
+    "path": "/v1/chat/completions",
+    "model": "loopback-test-model",
+    "stream": true,
+    "toolNames": [
+      "read_file",
+      "write_file",
+      "edit_file",
+      "search_files",
+      "grep_search",
+      "repo_tree",
+      "symbol_search",
+      "repo_map",
+      "discover_commands",
+      "env_snapshot",
+      "exec",
+      "update_plan"
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": "LOOPBACK_TEXT"
+      }
+    ],
+    "prompt": "LOOPBACK_TEXT",
+    "afterTool": false,
+    "authorizationPresent": true
+  },
+  {
+    "index": 1,
+    "path": "/v1/chat/completions",
+    "model": "loopback-test-model",
+    "stream": true,
+    "toolNames": [
+      "read_file",
+      "write_file",
+      "edit_file",
+      "search_files",
+      "grep_search",
+      "repo_tree",
+      "symbol_search",
+      "repo_map",
+      "discover_commands",
+      "env_snapshot",
+      "exec",
+      "update_plan"
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": "LOOPBACK_TEXT"
+      },
+      {
+        "role": "assistant",
+        "content": "LOOPBACK_REPLY:LOOPBACK_TEXT"
+      },
+      {
+        "role": "user",
+        "content": "LOOPBACK_ALLOW"
+      }
+    ],
+    "prompt": "LOOPBACK_ALLOW",
+    "afterTool": false,
+    "authorizationPresent": true
+  },
+  {
+    "index": 2,
+    "path": "/v1/chat/completions",
+    "model": "loopback-test-model",
+    "stream": true,
+    "toolNames": [
+      "read_file",
+      "write_file",
+      "edit_file",
+      "search_files",
+      "grep_search",
+      "repo_tree",
+      "symbol_search",
+      "repo_map",
+      "discover_commands",
+      "env_snapshot",
+      "exec",
+      "update_plan"
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": "LOOPBACK_TEXT"
+      },
+      {
+        "role": "assistant",
+        "content": "LOOPBACK_REPLY:LOOPBACK_TEXT"
+      },
+      {
+        "role": "user",
+        "content": "LOOPBACK_ALLOW"
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "id": "loopback-call-1",
+            "type": "function",
+            "function": {
+              "name": "write_file",
+              "arguments": "{\"path\":\"allowed-real-main.txt\",\"content\":\"ACTUAL_MAIN_HTTP_PROVIDER_WRITE\\n\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "{\"path\":\"/workspace/harness-agent/.ci/web-recheck-20261004/real-main-loopback-v2/workspace/allowed-real-main.txt\",\"bytes\":32}",
+        "tool_call_id": "loopback-call-1"
+      }
+    ],
+    "prompt": "LOOPBACK_ALLOW",
+    "afterTool": true,
+    "authorizationPresent": true
+  },
+  {
+    "index": 3,
+    "path": "/v1/chat/completions",
+    "model": "loopback-test-model",
+    "stream": true,
+    "toolNames": [
+      "read_file",
+      "write_file",
+      "edit_file",
+      "search_files",
+      "grep_search",
+      "repo_tree",
+      "symbol_search",
+      "repo_map",
+      "discover_commands",
+      "env_snapshot",
+      "exec",
+      "update_plan"
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": "LOOPBACK_TEXT"
+      },
+      {
+        "role": "assistant",
+        "content": "LOOPBACK_REPLY:LOOPBACK_TEXT"
+      },
+      {
+        "role": "user",
+        "content": "LOOPBACK_ALLOW"
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "id": "loopback-call-1",
+            "type": "function",
+            "function": {
+              "name": "write_file",
+              "arguments": "{\"path\":\"allowed-real-main.txt\",\"content\":\"ACTUAL_MAIN_HTTP_PROVIDER_WRITE\\n\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "{\"path\":\"/workspace/harness-agent/.ci/web-recheck-20261004/real-main-loopback-v2/workspace/allowed-real-main.txt\",\"bytes\":32}",
+        "tool_call_id": "loopback-call-1"
+      },
+      {
+        "role": "assistant",
+        "content": "LOOPBACK_REPLY:LOOPBACK_ALLOW"
+      },
+      {
+        "role": "user",
+        "content": "LOOPBACK_DENY"
+      }
+    ],
+    "prompt": "LOOPBACK_DENY",
+    "afterTool": false,
+    "authorizationPresent": true
+  },
+  {
+    "index": 4,
+    "path": "/v1/chat/completions",
+    "model": "loopback-test-model",
+    "stream": true,
+    "toolNames": [
+      "read_file",
+      "write_file",
+      "edit_file",
+      "search_files",
+      "grep_search",
+      "repo_tree",
+      "symbol_search",
+      "repo_map",
+      "discover_commands",
+      "env_snapshot",
+      "exec",
+      "update_plan"
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": "LOOPBACK_TEXT"
+      },
+      {
+        "role": "assistant",
+        "content": "LOOPBACK_REPLY:LOOPBACK_TEXT"
+      },
+      {
+        "role": "user",
+        "content": "LOOPBACK_ALLOW"
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "id": "loopback-call-1",
+            "type": "function",
+            "function": {
+              "name": "write_file",
+              "arguments": "{\"path\":\"allowed-real-main.txt\",\"content\":\"ACTUAL_MAIN_HTTP_PROVIDER_WRITE\\n\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "{\"path\":\"/workspace/harness-agent/.ci/web-recheck-20261004/real-main-loopback-v2/workspace/allowed-real-main.txt\",\"bytes\":32}",
+        "tool_call_id": "loopback-call-1"
+      },
+      {
+        "role": "assistant",
+        "content": "LOOPBACK_REPLY:LOOPBACK_ALLOW"
+      },
+      {
+        "role": "user",
+        "content": "LOOPBACK_DENY"
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "id": "loopback-call-3",
+            "type": "function",
+            "function": {
+              "name": "write_file",
+              "arguments": "{\"path\":\"denied-real-main.txt\",\"content\":\"ACTUAL_MAIN_HTTP_PROVIDER_WRITE\\n\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "[denied] approval denied by web:c9e81db3-c13f-4358-8df9-5c23118b3712",
+        "tool_call_id": "loopback-call-3"
+      }
+    ],
+    "prompt": "LOOPBACK_DENY",
+    "afterTool": true,
+    "authorizationPresent": true
+  }
+]
