@@ -1,0 +1,305 @@
+{
+  "observedAt": "2026-10-04T00:42:12.796Z",
+  "head": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "gitStatus": "",
+  "sourceHashes": {
+    "packages/contracts/src/memory.ts": "e0bd5ef1ec8ad5c3d06820a8c753c1ff881fcbf80cdc17759f3475c102eb8a91",
+    "packages/memory/src/memory-store.ts": "2a6b62c3f67310eb2172678c10330571fcce3d7676e2ebb2ec64c1e3e9d6e9ee",
+    "packages/memory/src/sqlite-memory-store.ts": "2a4431d13f17f3ffeb159cbc11cf794c5da7ffdcfb86167e3118b8901d43369a",
+    "packages/memory/src/retrieval.ts": "c31fe6eb6e0082034ba6b003d90bdb5c2423de0ee8138b37b5a731b500e345d6",
+    "packages/harness/src/memory-runtime-bridge.ts": "10adbd49707cf4070521a84b4581ea4864d4c23b1551e5ba10e3d578b6c16404",
+    "packages/memory/dist/sqlite-memory-store.js": "8da75361465ca179988363cecd100fe976379a83fce88f41cef2a88d9b164a9c",
+    "packages/memory/dist/retrieval.js": "7fae0399ee4027c00a4d4c9b8004848154c647fb0f2cfd2e2739371a7e77f6bb",
+    "packages/harness/dist/memory-runtime-bridge.js": "c0aa80cef34d72f6f7b25bc51ac1377486b871f378f27b2cf92521083200e1dd"
+  },
+  "providerCalls": 0,
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "cases": [
+    {
+      "case": "retired-memory-retrieval",
+      "backend": "jsonl",
+      "byState": [
+        {
+          "state": "active",
+          "expectedRetrievable": true,
+          "actualIds": [
+            "life-active"
+          ],
+          "suppressed": []
+        },
+        {
+          "state": "deprecated",
+          "expectedRetrievable": false,
+          "actualIds": [
+            "life-deprecated"
+          ],
+          "suppressed": []
+        },
+        {
+          "state": "superseded",
+          "expectedRetrievable": false,
+          "actualIds": [
+            "life-superseded"
+          ],
+          "suppressed": []
+        },
+        {
+          "state": "stale",
+          "expectedRetrievable": false,
+          "actualIds": [
+            "life-stale"
+          ],
+          "suppressed": []
+        },
+        {
+          "state": "conflicting",
+          "expectedRetrievable": false,
+          "actualIds": [
+            "life-conflicting"
+          ],
+          "suppressed": []
+        }
+      ]
+    },
+    {
+      "case": "session-scope-isolation",
+      "backend": "jsonl",
+      "expectedOtherCount": 0,
+      "ownIds": [
+        "mem-1"
+      ],
+      "otherIds": [
+        "mem-1"
+      ],
+      "otherBlockContent": [
+        "[Prior experience — advisory, not authority]\nprivateMarkerA coding preference exclusive to session A\nConfidence: 90%"
+      ]
+    },
+    {
+      "case": "chinese-substring-search",
+      "backend": "jsonl",
+      "query": "端口配置",
+      "expectedContains": "mem-1",
+      "actualIds": [
+        "mem-1"
+      ]
+    },
+    {
+      "case": "concurrent-feedback",
+      "backend": "jsonl",
+      "operations": 20,
+      "expectedInjectedCount": 20,
+      "actualUsefulness": {
+        "retrievedCount": 0,
+        "injectedCount": 1,
+        "usedCount": 0,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.55
+      }
+    },
+    {
+      "case": "entry-roundtrip",
+      "backend": "jsonl",
+      "expectedKeys": [
+        "sourceTurn",
+        "structured",
+        "derivability",
+        "promotionState",
+        "securityScan",
+        "pollutionSources"
+      ],
+      "lostKeys": [],
+      "returned": {
+        "id": "mem-1",
+        "content": "memorymarker useful retry guidance",
+        "type": "procedural",
+        "sourceSession": "session-A",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791000000000,
+        "updatedAt": 1791000000000,
+        "deleted": false,
+        "scope": "workspace",
+        "sourceTurn": "turn-A",
+        "structured": {
+          "when": "retry guidance",
+          "do": "inspect error first",
+          "avoid": "blind retries",
+          "rootCause": "tool",
+          "outcome": "failure",
+          "evidenceRefs": [
+            "ev-1"
+          ]
+        },
+        "derivability": {
+          "verdict": "non-derivable",
+          "reason": "observed environment"
+        },
+        "promotionState": "quarantined",
+        "securityScan": {
+          "checked": true,
+          "passed": true,
+          "at": 1791000000000
+        },
+        "pollutionSources": [
+          "tool:read_file#fixture"
+        ]
+      }
+    },
+    {
+      "case": "retired-memory-retrieval",
+      "backend": "sqlite",
+      "byState": [
+        {
+          "state": "active",
+          "expectedRetrievable": true,
+          "actualIds": [
+            "life-active"
+          ],
+          "suppressed": []
+        },
+        {
+          "state": "deprecated",
+          "expectedRetrievable": false,
+          "actualIds": [
+            "life-deprecated"
+          ],
+          "suppressed": []
+        },
+        {
+          "state": "superseded",
+          "expectedRetrievable": false,
+          "actualIds": [
+            "life-superseded"
+          ],
+          "suppressed": []
+        },
+        {
+          "state": "stale",
+          "expectedRetrievable": false,
+          "actualIds": [
+            "life-stale"
+          ],
+          "suppressed": []
+        },
+        {
+          "state": "conflicting",
+          "expectedRetrievable": false,
+          "actualIds": [
+            "life-conflicting"
+          ],
+          "suppressed": []
+        }
+      ]
+    },
+    {
+      "case": "session-scope-isolation",
+      "backend": "sqlite",
+      "expectedOtherCount": 0,
+      "ownIds": [
+        "mem-1"
+      ],
+      "otherIds": [
+        "mem-1"
+      ],
+      "otherBlockContent": [
+        "[Prior experience — advisory, not authority]\nprivateMarkerA coding preference exclusive to session A\nConfidence: 90%"
+      ]
+    },
+    {
+      "case": "chinese-substring-search",
+      "backend": "sqlite",
+      "query": "端口配置",
+      "expectedContains": "mem-1",
+      "actualIds": []
+    },
+    {
+      "case": "concurrent-feedback",
+      "backend": "sqlite",
+      "operations": 20,
+      "expectedInjectedCount": 20,
+      "actualUsefulness": {
+        "retrievedCount": 0,
+        "injectedCount": 1,
+        "usedCount": 0,
+        "taskSuccessCount": 0,
+        "verificationPassedCount": 0,
+        "score": 0.55
+      }
+    },
+    {
+      "case": "entry-roundtrip",
+      "backend": "sqlite",
+      "expectedKeys": [
+        "sourceTurn",
+        "structured",
+        "derivability",
+        "promotionState",
+        "securityScan",
+        "pollutionSources"
+      ],
+      "lostKeys": [
+        "sourceTurn",
+        "structured",
+        "derivability",
+        "promotionState",
+        "securityScan",
+        "pollutionSources"
+      ],
+      "returned": {
+        "id": "mem-1",
+        "content": "memorymarker useful retry guidance",
+        "type": "procedural",
+        "sourceSession": "session-A",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791000000000,
+        "updatedAt": 1791000000000,
+        "deleted": false
+      }
+    },
+    {
+      "case": "migration-preserves-metadata",
+      "result": {
+        "total": 1,
+        "inserted": 1,
+        "skipped": 0,
+        "denied": []
+      },
+      "lostKeys": [
+        "state",
+        "evidence",
+        "usefulness"
+      ],
+      "returned": {
+        "id": "mem-1",
+        "content": "memorymarker useful retry guidance",
+        "type": "procedural",
+        "sourceSession": "session-A",
+        "scope": "workspace",
+        "importance": 0.9,
+        "confidence": 0.9,
+        "novelty": 0.9,
+        "stability": 0.9,
+        "createdAt": 1791000000000,
+        "updatedAt": 1791000000000,
+        "deleted": false
+      }
+    },
+    {
+      "case": "bridge-close-sqlite",
+      "expectedError": null,
+      "actualError": {
+        "name": "TypeError",
+        "message": "Cannot read properties of undefined (reading 'closed')"
+      }
+    }
+  ]
+}

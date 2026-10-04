@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "baseline": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "finding1": {
+    "module": "packages/harness/src/reflection-runner.ts",
+    "cause": "PostTurnReflector reflects the complete session but tags journal/candidate with input turn and calculates pollution only for that input turn.",
+    "observed": "Old MCP failure is quarantined on its own turn, then the same old evidence is queued as pending and relabeled with a new successful clean turn and task goal.",
+    "securityLimit": "This weakens quarantine provenance. It does not prove automatic promotion or bypass of later security/evaluation/sandbox gates; explicit learn promotion remains required.",
+    "minimalFix": "Project the target turn's event stream in Harness before reflection; pass the same projected events to Reflector and pollution detector. Keep Reflector's general session stream API unchanged."
+  },
+  "finding2": {
+    "module": "packages/harness/src/reflection-runner.ts",
+    "cause": "Journal append reads the full journal then calls writeFile without a mutex. Concurrent sessions read identical snapshots and overwrite each other's receipts.",
+    "observed": "Ten repetitions of 20 concurrent sessions: 200 outputs announced and 200 candidate records, but 10 surviving journal rows.",
+    "minimalFix": "Use the existing @ar/store-integrity withLock keyed by normalized journal path and appendDurable for each JSONL record. Preserve catch-and-report error compatibility; no whole-journal rewrite. No cross-process locking claim."
+  },
+  "legacyAttribution": [
+    "An event's explicit outer turnId is authoritative; contradictory current boundary cannot retag it.",
+    "For untagged legacy events, use an unambiguous current turn.started boundary through that turn's terminal boundary. Boundary payload.turnId can identify legacy turn boundaries when outer turnId is missing.",
+    "Untagged current-turn tool requests/failures/completions must remain correlated and pollution quarantine must remain effective.",
+    "Old-turn untagged MCP requests must not contaminate a current clean turn.",
+    "Do not claim orphan events outside a known turn span as belonging to the requested current turn. For fully untagged/boundary-free history, attribution cannot be recovered reliably; prefer observable exclusion rather than guessing or silently dequarantining."
+  ],
+  "acceptance": [
+    "The original built production reproducer demonstrates baseline failure. A candidate-mode verification of the exact same scenario gives old turn one quarantined candidate and new clean turn zero outputs/candidates; old evidence is never relabeled.",
+    "Current explicit failure still creates the original expected candidate/structured evidence, and current MCP pollution still creates quarantined candidates.",
+    "Current untagged failures inside identifiable boundaries still reflect; old untagged failure/MCP rows do not replay or leak pollution into later turn; unknown/orphan rows are not assigned to the target turn.",
+    "Two turns reusing a toolCallId cannot correlate an old request or later recovery across the target boundary.",
+    "Current permission and sandbox denials stay non-generalizable; injection/secret memory-write rejections produce the original audit events and no queued candidate.",
+    "All 20 current independent sessions retain 20 unique parseable journal records, with 20 candidates and unchanged announced output counts, across repeated concurrent runs.",
+    "Different PostTurnReflector instances pointing at the same journal in one process do not lose or interleave records.",
+    "Append preserves pre-existing schema-1 journal lines byte-for-byte; listJournal continues to read them and reports corrupt lines without rewriting history.",
+    "Journal write failure remains contained and reported. The baseline announces one output even when the journal write fails; preserve this compatibility or explicitly document any truthful count semantic change.",
+    "A failed journal append does not poison the mutex chain: a subsequent valid append succeeds.",
+    "Event list errors remain contained and reported; candidate-store add errors remain contained and candidates stays zero; write-gate denial event-store append failures still propagate as audit failures.",
+    "Existing Harness reflection and Memory reflection tests, relevant security/integration tests, typecheck, and full suite pass on the final frozen code revision."
+  ],
+  "excluded": [
+    "No model or paid API calls",
+    "No changes to default strategy, Runtime architecture, security policy, or learning promotion gate",
+    "No claim that previously persisted incorrect candidates are repaired by this forward-path fix",
+    "No synthetic or patched production implementation was used in the reproducer"
+  ]
+}

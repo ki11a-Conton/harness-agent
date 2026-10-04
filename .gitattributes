@@ -68,3 +68,7 @@ packages/model/src/openai.test.ts whitespace=cr-at-eol
 # Source and authored documentation keep the normal whitespace checks.
 docs/evidence/agent-measurement-20261003/raw/** -text
 docs/evidence/agent-measurement-20261003/raw/**/*.log -whitespace
+
+# Preserve new trust-audit raw receipts and generated reporter whitespace.
+docs/evidence/agent-trust-20261004/raw/** -text
+docs/evidence/agent-trust-20261004/raw/**/*.log -whitespace

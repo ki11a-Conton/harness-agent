@@ -1,0 +1,37 @@
+{
+  "sourceSha": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "dirty": false,
+  "allDefectsReproduced": true,
+  "receipts": [
+    {
+      "name": "quoted-required-failure",
+      "bugObserved": true,
+      "rawExitCode": 7,
+      "convertedPassed": true,
+      "harnessStatus": "completed",
+      "harnessTermination": "verified_complete"
+    },
+    {
+      "name": "compound-required-failure",
+      "bugObserved": true,
+      "rawExitCode": 9,
+      "convertedPassed": true,
+      "harnessStatus": "completed",
+      "harnessTermination": "verified_complete"
+    },
+    {
+      "name": "discovery-root-truncated",
+      "bugObserved": true,
+      "rawExitCode": 11,
+      "harnessStatus": "completed",
+      "harnessTermination": "verified_complete",
+      "rootCommandsRetained": 0
+    },
+    {
+      "name": "quoted-space-path",
+      "bugObserved": true,
+      "rawExitCode": 0,
+      "convertedPassed": false
+    }
+  ]
+}

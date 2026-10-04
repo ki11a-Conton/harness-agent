@@ -1,0 +1,120 @@
+{
+  "schema": "agent-round2-tools-compatibility.v1",
+  "platform": "linux",
+  "scope": "Hypothetical naive recipe-preservation fix guard; no claim baseline executes interpolated paths as shell syntax.",
+  "changedPath": "src/a.test.ts;node marker.cjs;tail.test.ts",
+  "plan": {
+    "steps": [
+      {
+        "kind": "command",
+        "command": "node pass.cjs src/a.test.ts;node marker.cjs;tail.test.ts",
+        "required": false
+      },
+      {
+        "kind": "command",
+        "command": "node pass.cjs",
+        "cwd": "src",
+        "required": true
+      }
+    ],
+    "rationale": [
+      "targeted test for changed test file(s): src/a.test.ts;node marker.cjs;tail.test.ts",
+      "affected package test (package: src)"
+    ]
+  },
+  "baseline": {
+    "level": 3,
+    "passed": true,
+    "checks": [
+      {
+        "id": "command:node",
+        "kind": "command",
+        "description": "planned: node pass.cjs src/a.test.ts;node marker.cjs;tail.test.ts",
+        "passed": true,
+        "evidence": {
+          "type": "test",
+          "description": "exit code 0 in 29ms",
+          "source": "node",
+          "timestamp": 1791074701656
+        }
+      },
+      {
+        "id": "command:node",
+        "kind": "command",
+        "description": "planned: node pass.cjs",
+        "passed": true,
+        "evidence": {
+          "type": "test",
+          "description": "exit code 0 in 28ms",
+          "source": "node",
+          "timestamp": 1791074701658
+        }
+      }
+    ],
+    "evidence": [
+      {
+        "type": "test",
+        "description": "exit code 0 in 29ms",
+        "source": "node",
+        "timestamp": 1791074701656
+      },
+      {
+        "type": "test",
+        "description": "exit code 0 in 28ms",
+        "source": "node",
+        "timestamp": 1791074701658
+      }
+    ],
+    "startedAt": 1791074701626,
+    "completedAt": 1791074701658
+  },
+  "markerBeforeNaiveFix": false,
+  "naiveFixOutcome": {
+    "status": "failed",
+    "exitCode": 127,
+    "stdout": "TEST_ENTRYPOINT_RAN\n",
+    "stderr": "/bin/sh: 1: tail.test.ts: not found\n",
+    "truncated": false,
+    "durationMs": 52,
+    "error": "exited with code 127"
+  },
+  "markerAfterNaiveFix": true,
+  "explicitArgvSpec": {
+    "kind": "command",
+    "command": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+    "args": [
+      "/workspace/harness-agent/.ci/agent-round2-20261004/tools-audit/fixtures/compatibility/argv-check.cjs",
+      "a&node marker.cjs|; $literal"
+    ]
+  },
+  "explicitArgvResult": {
+    "level": 3,
+    "passed": true,
+    "checks": [
+      {
+        "id": "command:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "kind": "command",
+        "description": "command: /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "passed": true,
+        "evidence": {
+          "type": "test",
+          "description": "exit code 0 in 27ms",
+          "source": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "timestamp": 1791074701739
+        }
+      }
+    ],
+    "evidence": [
+      {
+        "type": "test",
+        "description": "exit code 0 in 27ms",
+        "source": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "timestamp": 1791074701739
+      }
+    ],
+    "startedAt": 1791074701711,
+    "completedAt": 1791074701739
+  },
+  "markerAfterExplicitArgv": false,
+  "compatibilityGuardObserved": true
+}

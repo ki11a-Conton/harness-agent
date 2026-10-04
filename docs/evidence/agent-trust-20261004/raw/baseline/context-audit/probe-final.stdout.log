@@ -1,0 +1,123 @@
+{
+  "report": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/report.json",
+  "instructionSnapshots": [
+    {
+      "name": "default-admitted",
+      "outcome": "completed",
+      "requestCount": 1,
+      "bodyInRequest": true,
+      "projectSourceCount": 1,
+      "sourceDocumentAbsentFromModel": false
+    },
+    {
+      "name": "default-injection-denied",
+      "outcome": "completed",
+      "requestCount": 1,
+      "bodyInRequest": false,
+      "projectSourceCount": 1,
+      "sourceDocumentAbsentFromModel": true
+    },
+    {
+      "name": "scoped-injection-denied",
+      "outcome": "completed",
+      "requestCount": 1,
+      "bodyInRequest": false,
+      "projectSourceCount": 0,
+      "sourceDocumentAbsentFromModel": false
+    },
+    {
+      "name": "default-budget-dropped",
+      "outcome": "completed",
+      "requestCount": 1,
+      "bodyInRequest": false,
+      "projectSourceCount": 1,
+      "sourceDocumentAbsentFromModel": true
+    },
+    {
+      "name": "scoped-budget-dropped",
+      "outcome": "completed",
+      "requestCount": 1,
+      "bodyInRequest": false,
+      "projectSourceCount": 0,
+      "sourceDocumentAbsentFromModel": false
+    },
+    {
+      "name": "default-denied-revision",
+      "outcome": "completed",
+      "requestCount": 2,
+      "bodyInRequest": false,
+      "projectSourceCount": 2,
+      "sourceDocumentAbsentFromModel": true
+    },
+    {
+      "name": "scoped-denied-revision",
+      "outcome": "completed",
+      "requestCount": 2,
+      "bodyInRequest": false,
+      "projectSourceCount": 0,
+      "sourceDocumentAbsentFromModel": false
+    }
+  ],
+  "byteCaps": [
+    {
+      "name": "ascii-single-line",
+      "cap": 256,
+      "sourceBytes": 120000,
+      "capturedBytes": 120030,
+      "capExceeded": true,
+      "truncated": true,
+      "containsReplacement": false,
+      "sourceSizeReported": 120000,
+      "discoveryReads": [
+        {
+          "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/byte-cap-ascii-single-line-xLqWYz/AGENTS.md",
+          "bytesReturned": 120000
+        }
+      ],
+      "admittedProjectBlocks": 0,
+      "discoveredCount": 1,
+      "dropped": 1,
+      "reportedUsedTokens": 5
+    },
+    {
+      "name": "unicode-single-line",
+      "cap": 256,
+      "sourceBytes": 420000,
+      "capturedBytes": 420030,
+      "capExceeded": true,
+      "truncated": true,
+      "containsReplacement": false,
+      "sourceSizeReported": 420000,
+      "discoveryReads": [
+        {
+          "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/byte-cap-unicode-single-line-RwGPWq/AGENTS.md",
+          "bytesReturned": 420000
+        }
+      ],
+      "admittedProjectBlocks": 0,
+      "discoveredCount": 1,
+      "dropped": 1,
+      "reportedUsedTokens": 5
+    },
+    {
+      "name": "line-boundary",
+      "cap": 256,
+      "sourceBytes": 120011,
+      "capturedBytes": 40,
+      "capExceeded": false,
+      "truncated": true,
+      "containsReplacement": false,
+      "sourceSizeReported": 120011,
+      "discoveryReads": [
+        {
+          "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/byte-cap-line-boundary-raCuPl/AGENTS.md",
+          "bytesReturned": 120011
+        }
+      ],
+      "admittedProjectBlocks": 1,
+      "discoveredCount": 1,
+      "dropped": 0,
+      "reportedUsedTokens": 15
+    }
+  ]
+}

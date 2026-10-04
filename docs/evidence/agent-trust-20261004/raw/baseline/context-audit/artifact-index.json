@@ -1,0 +1,66 @@
+{
+  "scope": "Final read-only context audit script/findings/stdout/stderr and full request/snapshot/event JSON traces. Generated workspace/data files and preliminary runs excluded. Empty stderr is an intentional zero-error receipt.",
+  "baseHead": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "artifacts": [
+    {
+      "path": "audit-findings.json",
+      "bytes": 5888,
+      "sha256": "35a36cbd81ec202819ced495261b49e0c179929926deac1d91f9ab4d9958912a"
+    },
+    {
+      "path": "baseline-final/default-admitted.trace.json",
+      "bytes": 28013,
+      "sha256": "ab207fd3b660c159d79ad58be136edfdc97d9a8883ef425d2ee96757b2f6993e"
+    },
+    {
+      "path": "baseline-final/default-budget-dropped.trace.json",
+      "bytes": 29472,
+      "sha256": "6abd6b8a6d183759bd93879ab446906416827f6e3fd8cf6ca6f6e969466ab869"
+    },
+    {
+      "path": "baseline-final/default-denied-revision.trace.json",
+      "bytes": 57382,
+      "sha256": "b82641933fa806eaeba8a8c141e73a20b11c3a9e8f6e541b44f7f7ead31ce4a9"
+    },
+    {
+      "path": "baseline-final/default-injection-denied.trace.json",
+      "bytes": 28675,
+      "sha256": "d136c69b0d1ce9adc44e517ad8f6a837fa74713aab641e73624092729f8232c4"
+    },
+    {
+      "path": "baseline-final/report.json",
+      "bytes": 19075,
+      "sha256": "bc97c6abadaa21c93041ad7d407b8af463668e5d64cb89f56b9d44c8392240d5"
+    },
+    {
+      "path": "baseline-final/scoped-budget-dropped.trace.json",
+      "bytes": 27647,
+      "sha256": "22f6c3ffd8fb3955d27ed332c3f555c29f64a05f54a3d0ed92d0bb3a8bb9d284"
+    },
+    {
+      "path": "baseline-final/scoped-denied-revision.trace.json",
+      "bytes": 54151,
+      "sha256": "c6d875e891c9b6bd65dbb8af073d8661bb9e149789186c3e1f2fa0c24e17abb4"
+    },
+    {
+      "path": "baseline-final/scoped-injection-denied.trace.json",
+      "bytes": 26845,
+      "sha256": "756a6ced824c1a728ba23f57c1e7ea9f819fa28f9aeb626f8465547fe3b683bc"
+    },
+    {
+      "path": "probe-final.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "probe-final.stdout.log",
+      "bytes": 3435,
+      "sha256": "ed0690fd1070034bf1126b4c979048aba5c04ca384b52fcf610451be1409515b"
+    },
+    {
+      "path": "probe.mjs",
+      "bytes": 7995,
+      "sha256": "cc49b15731711c2f461a94e70bc5c53fcca6a6ecd18c8c0066801cba50bf1b6d"
+    }
+  ]
+}

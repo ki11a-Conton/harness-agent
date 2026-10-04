@@ -1,0 +1,366 @@
+{
+  "head": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "gitStatus": "",
+  "sourceHashes": {
+    "packages/harness/src/create-harness.ts": "a115aa9c8ec71b86e689e80ab9195c21cd85c8f19a0d9de669e9e19d8becf84e",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "packages/core/dist/runtime/context-controller.js": "601b8ad652675e360a408dd06a08b4a4f6e29e27b98117bd580ea2816a110c57"
+  },
+  "observedAt": "2026-10-04T00:43:26.198Z",
+  "realProviderCalls": 0,
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "scriptedGenerateCalls": 10,
+  "cases": [
+    {
+      "backend": "jsonl",
+      "mode": "session-scope",
+      "sourceSession": "session_abd3d4c8-3ee8-4261-bcb0-d42889d161d3",
+      "querySession": "session_2f71eca3-82e8-45a1-81ea-f0634aaf2a3c",
+      "marker": "memoryaudit1marker",
+      "expectedMarkerInSystem": false,
+      "actualMarkerInSystem": true,
+      "requestFile": "harness-jsonl-session-scope-requests.json",
+      "scriptedGenerateCalls": 1,
+      "outcome": {
+        "status": "completed",
+        "memoryRefs": [
+          "audit-memory-1"
+        ]
+      },
+      "memoryRetrievalEvents": [
+        {
+          "query": "memoryaudit1marker",
+          "count": 1,
+          "memoryIds": [
+            "audit-memory-1"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "backend": "jsonl",
+      "mode": "deprecated",
+      "sourceSession": "session_d1760cd7-b19b-446c-91ac-2ad6ffe4416f",
+      "querySession": "session_d1760cd7-b19b-446c-91ac-2ad6ffe4416f",
+      "marker": "memoryaudit2marker",
+      "expectedMarkerInSystem": false,
+      "actualMarkerInSystem": true,
+      "requestFile": "harness-jsonl-deprecated-requests.json",
+      "scriptedGenerateCalls": 1,
+      "outcome": {
+        "status": "completed",
+        "memoryRefs": [
+          "audit-memory-2"
+        ]
+      },
+      "memoryRetrievalEvents": [
+        {
+          "query": "memoryaudit2marker",
+          "count": 1,
+          "memoryIds": [
+            "audit-memory-2"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "backend": "jsonl",
+      "mode": "superseded",
+      "sourceSession": "session_5d9701a8-ddaa-4ee5-84c6-08c2181b026c",
+      "querySession": "session_5d9701a8-ddaa-4ee5-84c6-08c2181b026c",
+      "marker": "memoryaudit3marker",
+      "expectedMarkerInSystem": false,
+      "actualMarkerInSystem": true,
+      "requestFile": "harness-jsonl-superseded-requests.json",
+      "scriptedGenerateCalls": 1,
+      "outcome": {
+        "status": "completed",
+        "memoryRefs": [
+          "audit-memory-3"
+        ]
+      },
+      "memoryRetrievalEvents": [
+        {
+          "query": "memoryaudit3marker",
+          "count": 1,
+          "memoryIds": [
+            "audit-memory-3"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "backend": "jsonl",
+      "mode": "stale",
+      "sourceSession": "session_c73915e8-a205-497d-88f8-5f7c8f5c6fd7",
+      "querySession": "session_c73915e8-a205-497d-88f8-5f7c8f5c6fd7",
+      "marker": "memoryaudit4marker",
+      "expectedMarkerInSystem": false,
+      "actualMarkerInSystem": true,
+      "requestFile": "harness-jsonl-stale-requests.json",
+      "scriptedGenerateCalls": 1,
+      "outcome": {
+        "status": "completed",
+        "memoryRefs": [
+          "audit-memory-4"
+        ]
+      },
+      "memoryRetrievalEvents": [
+        {
+          "query": "memoryaudit4marker",
+          "count": 1,
+          "memoryIds": [
+            "audit-memory-4"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "backend": "jsonl",
+      "mode": "conflicting",
+      "sourceSession": "session_93cf1c8a-bb04-4401-aa77-e27463cd6384",
+      "querySession": "session_93cf1c8a-bb04-4401-aa77-e27463cd6384",
+      "marker": "memoryaudit5marker",
+      "expectedMarkerInSystem": false,
+      "actualMarkerInSystem": true,
+      "requestFile": "harness-jsonl-conflicting-requests.json",
+      "scriptedGenerateCalls": 1,
+      "outcome": {
+        "status": "completed",
+        "memoryRefs": [
+          "audit-memory-5"
+        ]
+      },
+      "memoryRetrievalEvents": [
+        {
+          "query": "memoryaudit5marker",
+          "count": 1,
+          "memoryIds": [
+            "audit-memory-5"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "backend": "sqlite",
+      "mode": "session-scope",
+      "sourceSession": "session_8874906d-948f-48c8-be29-9e6840b8237d",
+      "querySession": "session_fc483e5e-5e4e-4713-bb3a-d2e537b59e03",
+      "marker": "memoryaudit6marker",
+      "expectedMarkerInSystem": false,
+      "actualMarkerInSystem": true,
+      "requestFile": "harness-sqlite-session-scope-requests.json",
+      "scriptedGenerateCalls": 1,
+      "outcome": {
+        "status": "completed",
+        "memoryRefs": [
+          "audit-memory-6"
+        ]
+      },
+      "memoryRetrievalEvents": [
+        {
+          "query": "memoryaudit6marker",
+          "count": 1,
+          "memoryIds": [
+            "audit-memory-6"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "backend": "sqlite",
+      "mode": "deprecated",
+      "sourceSession": "session_e2543bd6-cffd-4d02-9966-88ab9d0155c9",
+      "querySession": "session_e2543bd6-cffd-4d02-9966-88ab9d0155c9",
+      "marker": "memoryaudit7marker",
+      "expectedMarkerInSystem": false,
+      "actualMarkerInSystem": true,
+      "requestFile": "harness-sqlite-deprecated-requests.json",
+      "scriptedGenerateCalls": 1,
+      "outcome": {
+        "status": "completed",
+        "memoryRefs": [
+          "audit-memory-7"
+        ]
+      },
+      "memoryRetrievalEvents": [
+        {
+          "query": "memoryaudit7marker",
+          "count": 1,
+          "memoryIds": [
+            "audit-memory-7"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "backend": "sqlite",
+      "mode": "superseded",
+      "sourceSession": "session_bbf98d3e-c9f5-4f02-9051-0d1bf195b4fe",
+      "querySession": "session_bbf98d3e-c9f5-4f02-9051-0d1bf195b4fe",
+      "marker": "memoryaudit8marker",
+      "expectedMarkerInSystem": false,
+      "actualMarkerInSystem": true,
+      "requestFile": "harness-sqlite-superseded-requests.json",
+      "scriptedGenerateCalls": 1,
+      "outcome": {
+        "status": "completed",
+        "memoryRefs": [
+          "audit-memory-8"
+        ]
+      },
+      "memoryRetrievalEvents": [
+        {
+          "query": "memoryaudit8marker",
+          "count": 1,
+          "memoryIds": [
+            "audit-memory-8"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "backend": "sqlite",
+      "mode": "stale",
+      "sourceSession": "session_0d5d24f6-0296-4ba2-a090-043ff8b8b483",
+      "querySession": "session_0d5d24f6-0296-4ba2-a090-043ff8b8b483",
+      "marker": "memoryaudit9marker",
+      "expectedMarkerInSystem": false,
+      "actualMarkerInSystem": true,
+      "requestFile": "harness-sqlite-stale-requests.json",
+      "scriptedGenerateCalls": 1,
+      "outcome": {
+        "status": "completed",
+        "memoryRefs": [
+          "audit-memory-9"
+        ]
+      },
+      "memoryRetrievalEvents": [
+        {
+          "query": "memoryaudit9marker",
+          "count": 1,
+          "memoryIds": [
+            "audit-memory-9"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "backend": "sqlite",
+      "mode": "conflicting",
+      "sourceSession": "session_553ba770-5bd1-49db-9bc0-6411c2ba80e9",
+      "querySession": "session_553ba770-5bd1-49db-9bc0-6411c2ba80e9",
+      "marker": "memoryaudit10marker",
+      "expectedMarkerInSystem": false,
+      "actualMarkerInSystem": true,
+      "requestFile": "harness-sqlite-conflicting-requests.json",
+      "scriptedGenerateCalls": 1,
+      "outcome": {
+        "status": "completed",
+        "memoryRefs": [
+          "audit-memory-10"
+        ]
+      },
+      "memoryRetrievalEvents": [
+        {
+          "query": "memoryaudit10marker",
+          "count": 1,
+          "memoryIds": [
+            "audit-memory-10"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    }
+  ]
+}

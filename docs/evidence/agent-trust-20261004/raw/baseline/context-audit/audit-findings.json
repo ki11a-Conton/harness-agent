@@ -1,0 +1,105 @@
+{
+  "baselineHead": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "readOnlySource": true,
+  "paidCalls": 0,
+  "modelQuality": "NOT_RUN",
+  "opportunities": [
+    {
+      "id": "C1-default-instruction-admission-identity",
+      "classification": "deterministic correctness bug; minimum Runtime maintenance permitted by AGENTS.md",
+      "what": "Make default step instructionSources describe only final admitted project blocks, with content hashes and ordering matching model request rendering. Keep raw discovery events distinct from admission.",
+      "how": "In ContextController derive project sources from built.blocks where source=project, using final block.content/path in final block order; keep system source. Do not filter discovery telemetry globally or enable S2. Keep architecture and ToolOrchestrator boundary unchanged.",
+      "baseline": {
+        "actualHarnessRuns": 9,
+        "defaultRejectedOrDroppedSourcesIncorrect": 4,
+        "normalAdmittedControl": "1 source and model content present",
+        "scopedRejectedOrDroppedControl": "0 sources",
+        "samePathDeniedRevision": "request system unchanged; instructionFingerprint changed; scoped control fingerprint unchanged"
+      },
+      "acceptance": [
+        "Baseline-red same Harness request/snapshot fixture for injection denied and budget dropped",
+        "Candidate rejected/dropped documents contribute zero project sources and do not change instruction fingerprint when only denied content changes",
+        "Admitted document changes request and next-step fingerprint; hashes use rendered content and order",
+        "Discovery remains observable even when denial occurs; context injection event and security gate preserved",
+        "Regression P32 step snapshot, default context wiring, S2 and active-user/skill snapshots all pass"
+      ],
+      "risk": "Snapshot identity changes for previously denied/dropped documents are intentional. Preserve discovery diagnostics; derive from final project blocks to handle custom bounded pipelines and final order."
+    },
+    {
+      "id": "C2-default-instruction-bounded-capture",
+      "classification": "deterministic context budget correctness defect plus measured avoidable full-file capture",
+      "what": "Bound default AGENTS.md captured body to configured byte cap, including single long ASCII/Unicode lines, and bound FS capture work to cap plus UTF-8 lookahead.",
+      "how": "Keep existing default ancestor/subtree policy and metadata. Replace full readFile with bounded regular-file capture; truncate at whole-line boundary when available, otherwise a valid UTF-8 code-point prefix. Preserve sizeBytes and explicit truncation marker. Agree whether legacy marker is outside cap (minimal compatibility) or included (stronger hard cap) before fixing tests; no automatic S2 promotion.",
+      "baseline": [
+        {
+          "name": "ascii-single-line",
+          "cap": 256,
+          "sourceBytes": 120000,
+          "capturedBytes": 120030,
+          "capExceeded": true,
+          "truncated": true,
+          "containsReplacement": false,
+          "sourceSizeReported": 120000,
+          "discoveryReads": [
+            {
+              "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/byte-cap-ascii-single-line-xLqWYz/AGENTS.md",
+              "bytesReturned": 120000
+            }
+          ],
+          "admittedProjectBlocks": 0,
+          "discoveredCount": 1,
+          "dropped": 1,
+          "reportedUsedTokens": 5
+        },
+        {
+          "name": "unicode-single-line",
+          "cap": 256,
+          "sourceBytes": 420000,
+          "capturedBytes": 420030,
+          "capExceeded": true,
+          "truncated": true,
+          "containsReplacement": false,
+          "sourceSizeReported": 420000,
+          "discoveryReads": [
+            {
+              "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/byte-cap-unicode-single-line-RwGPWq/AGENTS.md",
+              "bytesReturned": 420000
+            }
+          ],
+          "admittedProjectBlocks": 0,
+          "discoveredCount": 1,
+          "dropped": 1,
+          "reportedUsedTokens": 5
+        },
+        {
+          "name": "line-boundary",
+          "cap": 256,
+          "sourceBytes": 120011,
+          "capturedBytes": 40,
+          "capExceeded": false,
+          "truncated": true,
+          "containsReplacement": false,
+          "sourceSizeReported": 120011,
+          "discoveryReads": [
+            {
+              "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/byte-cap-line-boundary-raCuPl/AGENTS.md",
+              "bytesReturned": 120011
+            }
+          ],
+          "admittedProjectBlocks": 1,
+          "discoveredCount": 1,
+          "dropped": 0,
+          "reportedUsedTokens": 15
+        }
+      ],
+      "acceptance": [
+        "Actual FS capture is bounded by cap+4 instead of file size on large files",
+        "Single-line ASCII and Unicode bodies obey cap, do not introduce replacement characters, and are admitted by the 500-token actual pipeline",
+        "Multi-line prefix and small-file exact bytes preserved; truncation metadata truthful",
+        "No symlink regression, no invalid cwd swallowing, no change to root/nested/cwd precedence",
+        "Test cap=0, tiny positive cap, boundary exactly cap, line-aligned and partial UTF-8 cut; account explicit marker cost in criterion"
+      ],
+      "risk": "Legacy task CTX-001 explicitly records first long line as a residual exception. Eliminating it is an intentional improvement, not evidence that all earlier tests failed. Existing 30-byte Unicode test constrains marker semantics; keep compatibility or explicitly update contract. Detection scans bounded rendered content, as it already does for ordinary multi-line truncation."
+    }
+  ]
+}

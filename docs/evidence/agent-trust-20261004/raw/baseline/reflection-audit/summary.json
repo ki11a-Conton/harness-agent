@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "mode": "baseline deterministic defect reproduction using built production modules and actual filesystem stores",
+  "observedAt": "2026-10-04T00:44:46.960Z",
+  "repo": "/workspace/harness-agent",
+  "head": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "trackedStatus": "",
+  "sources": [
+    {
+      "path": "packages/harness/src/reflection-runner.ts",
+      "sha256": "0017aa7bb121552460b3dcb6c1f0e6e40bfea73b9161cf7033a4fb85a281b051"
+    },
+    {
+      "path": "packages/harness/dist/reflection-runner.js",
+      "sha256": "e682b04ffac28d4c34605deb16967c40f21f725ec8965dace68e53da83fed215"
+    },
+    {
+      "path": "packages/memory/src/reflection.ts",
+      "sha256": "f8764bac7981245bc5fb8eecde8c619c1f8235329e80cf67caedc20103d8a8cb"
+    },
+    {
+      "path": "packages/memory/dist/reflection.js",
+      "sha256": "637b137296d5310668a9f4de73042b250bd0635c56bd9737cfc27c9e5f08e850"
+    },
+    {
+      "path": "packages/harness/src/candidate-store.ts",
+      "sha256": "b55af583dd2661df6199526872df080e895bc6d264013e9cf9853b65542f1faf"
+    },
+    {
+      "path": "packages/harness/dist/candidate-store.js",
+      "sha256": "c41af360e643a42efef83f5cf04d19da02a858c2f38dd94cf5a0e516317bce51"
+    },
+    {
+      "path": "packages/events/src/event-store.ts",
+      "sha256": "ab7c5e6a2f7bfa8bec5fe9dbbf5249d842776b1fcc281d1f69bda62ca51597bb"
+    },
+    {
+      "path": "packages/events/dist/event-store.js",
+      "sha256": "691402d50f4c065ddf135a3b40f5514df6a36813df663f675c869eff1b3b3eb5"
+    }
+  ],
+  "paidModelCalls": 0,
+  "summary": {
+    "taggedOldMcpFailureRequeuedForCleanTurn": true,
+    "pollutedOldEvidenceLostQuarantineWhenRelabeledNewTurn": true,
+    "legacyOldMcpRequestLeaksIntoNewTurnPollution": true,
+    "concurrentRounds": 10,
+    "concurrentRoundsLosingJournalRows": 10,
+    "concurrentRowsExpected": 200,
+    "concurrentRowsSurviving": 10,
+    "journalErrorResult": {
+      "outputs": 1,
+      "candidates": 1
+    }
+  }
+}

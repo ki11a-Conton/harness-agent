@@ -1,0 +1,1023 @@
+{
+  "schema": "agent-round2-tools-audit.v1",
+  "sourceSha": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "dirty": false,
+  "node": "v24.19.0",
+  "platform": "linux",
+  "fingerprints": {
+    "packages/tools/src/verification/plan-builder.ts": "4e7ca818e6b67b85cbb2920517ec2186fe6f91e7fbdb0193d65bf5c252de6b16",
+    "packages/tools/src/verification/task-verifier.ts": "8900a81bcaa67fa6d68139def049050f697dfc5117d5b649fac900f6f3d1f977",
+    "packages/tools/src/command-discovery.ts": "22bf6fe48744c0677cd4cffd5db3585f047bee9d78c317fd76acd7bc59b92176",
+    "packages/harness/src/verification-planner.ts": "96e009eee9c1758631d3a1d702348afa214383aeb9d9ece43c0ac8f89431b038",
+    "packages/harness/src/compose/compose-verification.ts": "f1444b39c058f143a00ee55b303cae7a37bfca97edb1118d469b1b36508a1a1e",
+    "packages/tools/dist/verification/plan-builder.js": "083a651325c0a6053e04969bc3011ecc3782d6f36e6bb423632146b91947eb26",
+    "packages/tools/dist/verification/task-verifier.js": "bc4fa925b58c332550fff140972c41292238570ccade6c595565d61857eccf73",
+    "packages/tools/dist/command-discovery.js": "07212ffda5f091a73f6c39a6c995afb251baf389ed8380395ded5d219ceb3586",
+    "packages/harness/dist/verification-planner.js": "5ec3a0d80ba89cb87128fe94855ed8627777d7cad3df90d614b9c90bd1c451e0"
+  },
+  "paidCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "scope": "Built production Harness, planner, TaskVerifier and real local Node processes; scripted stop provider supplies no quality evidence.",
+  "receipts": [
+    {
+      "name": "quoted-required-failure",
+      "recipe": "node -e \"process.exit(7)\"",
+      "discovery": {
+        "root": "/workspace/harness-agent/.ci/agent-round2-20261004/tools-audit/fixtures/quoted-required-failure",
+        "discovered": [
+          {
+            "kind": "test",
+            "command": "node -e \"process.exit(7)\"",
+            "source": "package.json",
+            "file": "package.json",
+            "confidence": "high"
+          }
+        ],
+        "sourceFilesChecked": [
+          "package.json"
+        ]
+      },
+      "plan": {
+        "steps": [
+          {
+            "kind": "command",
+            "command": "node -e \"process.exit(7)\"",
+            "required": true
+          }
+        ],
+        "rationale": [
+          "repository test suite"
+        ]
+      },
+      "specs": [
+        {
+          "kind": "command",
+          "command": "node",
+          "args": [
+            "-e",
+            "\"process.exit(7)\""
+          ],
+          "description": "planned: node -e \"process.exit(7)\""
+        }
+      ],
+      "rawOutcome": {
+        "status": "failed",
+        "exitCode": 7,
+        "stdout": "",
+        "stderr": "",
+        "truncated": false,
+        "durationMs": 28,
+        "error": "exited with code 7"
+      },
+      "convertedResult": {
+        "level": 3,
+        "passed": true,
+        "checks": [
+          {
+            "id": "command:node",
+            "kind": "command",
+            "description": "planned: node -e \"process.exit(7)\"",
+            "passed": true,
+            "evidence": {
+              "type": "test",
+              "description": "exit code 0 in 26ms",
+              "source": "node",
+              "timestamp": 1791074625337
+            }
+          }
+        ],
+        "evidence": [
+          {
+            "type": "test",
+            "description": "exit code 0 in 26ms",
+            "source": "node",
+            "timestamp": 1791074625337
+          }
+        ],
+        "startedAt": 1791074625311,
+        "completedAt": 1791074625337
+      },
+      "explicitArgvResult": {
+        "level": 1,
+        "passed": false,
+        "checks": [
+          {
+            "id": "command:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+            "kind": "command",
+            "description": "command: /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+            "passed": false,
+            "evidence": {
+              "type": "test",
+              "description": "exit code 7 in 23ms",
+              "source": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+              "timestamp": 1791074625360
+            },
+            "error": {
+              "code": "VERIFICATION_FAILED",
+              "message": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node: exited with code 7",
+              "retryable": false,
+              "safeToRetry": false
+            }
+          }
+        ],
+        "evidence": [
+          {
+            "type": "test",
+            "description": "exit code 7 in 23ms",
+            "source": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+            "timestamp": 1791074625360
+          }
+        ],
+        "startedAt": 1791074625337,
+        "completedAt": 1791074625360
+      },
+      "harness": {
+        "outcome": {
+          "status": "completed",
+          "statusDetail": "completed",
+          "turn": {
+            "id": "turn_290b1a68-53e6-4fef-81a6-befdb77ebc4d",
+            "sessionId": "session_c19253d4-2aa0-460f-a861-9c8bab3dca85",
+            "input": {
+              "sessionId": "session_c19253d4-2aa0-460f-a861-9c8bab3dca85",
+              "text": "finish the task"
+            },
+            "status": "completed",
+            "startedAt": 1791074625376,
+            "completedAt": 1791074625429
+          },
+          "toolCalls": 0,
+          "iterations": 0,
+          "state": {
+            "goal": "finish the task",
+            "constraints": [],
+            "plan": [],
+            "decisions": [],
+            "completed": [],
+            "pending": [],
+            "filesChanged": [],
+            "commandsRun": [],
+            "testsRun": [],
+            "failures": [],
+            "importantFacts": [],
+            "openQuestions": [],
+            "toolRefs": [],
+            "artifactRefs": [],
+            "memoryRefs": [],
+            "childAgentRefs": []
+          },
+          "terminationReason": "verified_complete",
+          "grade": "verified_complete"
+        },
+        "scriptedCalls": 1,
+        "verificationEvents": [
+          {
+            "id": "event_b835c17f-b24f-4d2f-9a7a-f9b7711b120c",
+            "sessionId": "session_c19253d4-2aa0-460f-a861-9c8bab3dca85",
+            "sequence": 7,
+            "timestamp": 1791074625394,
+            "type": "verification.step_started",
+            "payload": {
+              "ref": "verification.step:command:node",
+              "kind": "command",
+              "description": "planned: node -e \"process.exit(7)\""
+            },
+            "schemaVersion": 1
+          },
+          {
+            "id": "event_75547982-507d-4120-bd6c-ba22e3a412e9",
+            "sessionId": "session_c19253d4-2aa0-460f-a861-9c8bab3dca85",
+            "sequence": 8,
+            "timestamp": 1791074625422,
+            "type": "verification.step_completed",
+            "payload": {
+              "ref": "verification.step:command:node",
+              "kind": "command",
+              "description": "planned: node -e \"process.exit(7)\"",
+              "passed": true,
+              "detail": "exit code 0 in 28ms"
+            },
+            "schemaVersion": 1
+          },
+          {
+            "id": "event_649621d9-e26c-4f16-aac6-c58b617c3719",
+            "sessionId": "session_c19253d4-2aa0-460f-a861-9c8bab3dca85",
+            "turnId": "turn_290b1a68-53e6-4fef-81a6-befdb77ebc4d",
+            "timestamp": 1791074625428,
+            "type": "verification.completed",
+            "payload": {
+              "passed": true,
+              "durationMs": 36
+            },
+            "sequence": 10,
+            "schemaVersion": 1
+          }
+        ],
+        "paidCalls": 0
+      },
+      "bugObserved": true
+    },
+    {
+      "name": "compound-required-failure",
+      "recipe": "node pass.cjs && node required-fail.cjs",
+      "plan": {
+        "steps": [
+          {
+            "kind": "command",
+            "command": "node pass.cjs && node required-fail.cjs",
+            "required": true
+          }
+        ],
+        "rationale": [
+          "repository test suite"
+        ]
+      },
+      "specs": [
+        {
+          "kind": "command",
+          "command": "node",
+          "args": [
+            "pass.cjs",
+            "&&",
+            "node",
+            "required-fail.cjs"
+          ],
+          "description": "planned: node pass.cjs && node required-fail.cjs"
+        }
+      ],
+      "rawOutcome": {
+        "status": "failed",
+        "exitCode": 9,
+        "stdout": "FIRST_COMMAND_RAN\nREQUIRED_TEST_RAN\n",
+        "stderr": "",
+        "truncated": false,
+        "durationMs": 56,
+        "error": "exited with code 9"
+      },
+      "convertedResult": {
+        "level": 3,
+        "passed": true,
+        "checks": [
+          {
+            "id": "command:node",
+            "kind": "command",
+            "description": "planned: node pass.cjs && node required-fail.cjs",
+            "passed": true,
+            "evidence": {
+              "type": "test",
+              "description": "exit code 0 in 27ms",
+              "source": "node",
+              "timestamp": 1791074625518
+            }
+          }
+        ],
+        "evidence": [
+          {
+            "type": "test",
+            "description": "exit code 0 in 27ms",
+            "source": "node",
+            "timestamp": 1791074625518
+          }
+        ],
+        "startedAt": 1791074625491,
+        "completedAt": 1791074625518
+      },
+      "harness": {
+        "outcome": {
+          "status": "completed",
+          "statusDetail": "completed",
+          "turn": {
+            "id": "turn_5fc65768-6ae3-4765-8118-d20d100e09f4",
+            "sessionId": "session_241c2434-e2d6-413f-9e8b-629828208378",
+            "input": {
+              "sessionId": "session_241c2434-e2d6-413f-9e8b-629828208378",
+              "text": "finish the task"
+            },
+            "status": "completed",
+            "startedAt": 1791074625525,
+            "completedAt": 1791074625570
+          },
+          "toolCalls": 0,
+          "iterations": 0,
+          "state": {
+            "goal": "finish the task",
+            "constraints": [],
+            "plan": [],
+            "decisions": [],
+            "completed": [],
+            "pending": [],
+            "filesChanged": [],
+            "commandsRun": [],
+            "testsRun": [],
+            "failures": [],
+            "importantFacts": [],
+            "openQuestions": [],
+            "toolRefs": [],
+            "artifactRefs": [],
+            "memoryRefs": [],
+            "childAgentRefs": []
+          },
+          "terminationReason": "verified_complete",
+          "grade": "verified_complete"
+        },
+        "scriptedCalls": 1,
+        "verificationEvents": [
+          {
+            "id": "event_41989fbf-acfc-4821-bb6e-518b44999af4",
+            "sessionId": "session_241c2434-e2d6-413f-9e8b-629828208378",
+            "sequence": 7,
+            "timestamp": 1791074625536,
+            "type": "verification.step_started",
+            "payload": {
+              "ref": "verification.step:command:node",
+              "kind": "command",
+              "description": "planned: node pass.cjs && node required-fail.cjs"
+            },
+            "schemaVersion": 1
+          },
+          {
+            "id": "event_fcc597b7-c82f-4429-84a9-ef43ce32f6f5",
+            "sessionId": "session_241c2434-e2d6-413f-9e8b-629828208378",
+            "sequence": 8,
+            "timestamp": 1791074625564,
+            "type": "verification.step_completed",
+            "payload": {
+              "ref": "verification.step:command:node",
+              "kind": "command",
+              "description": "planned: node pass.cjs && node required-fail.cjs",
+              "passed": true,
+              "detail": "exit code 0 in 28ms"
+            },
+            "schemaVersion": 1
+          },
+          {
+            "id": "event_ac8f7489-9612-4970-b534-81778fd42f66",
+            "sessionId": "session_241c2434-e2d6-413f-9e8b-629828208378",
+            "turnId": "turn_5fc65768-6ae3-4765-8118-d20d100e09f4",
+            "timestamp": 1791074625570,
+            "type": "verification.completed",
+            "payload": {
+              "passed": true,
+              "durationMs": 35
+            },
+            "sequence": 10,
+            "schemaVersion": 1
+          }
+        ],
+        "paidCalls": 0
+      },
+      "bugObserved": true
+    },
+    {
+      "name": "discovery-root-truncated",
+      "expectedRootTest": "node required-fail.cjs",
+      "rootManifestChecked": true,
+      "returnedCommandCount": 60,
+      "rootCommandsRetained": [],
+      "discovery": {
+        "root": "/workspace/harness-agent/.ci/agent-round2-20261004/tools-audit/fixtures/discovery-root-truncated",
+        "discovered": [
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p60/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p59/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p58/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p57/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p56/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p55/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p54/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p53/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p52/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p51/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p50/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p49/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p48/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p47/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p46/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p45/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p44/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p43/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p42/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p41/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p40/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p39/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p38/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p37/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p36/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p35/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p34/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p33/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p32/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p31/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p30/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p29/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p28/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p27/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p26/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p25/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p24/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p23/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p22/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p21/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p20/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p19/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p18/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p17/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p16/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p15/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p14/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p13/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p12/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p11/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p10/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p09/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p08/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p07/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p06/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p05/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p04/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p03/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p02/package.json",
+            "confidence": "high"
+          },
+          {
+            "kind": "test",
+            "command": "node smoke.cjs",
+            "source": "package.json",
+            "file": "packages/p01/package.json",
+            "confidence": "high"
+          }
+        ],
+        "sourceFilesChecked": [
+          "package.json",
+          "packages/p00/package.json",
+          "packages/p01/package.json",
+          "packages/p02/package.json",
+          "packages/p03/package.json",
+          "packages/p04/package.json",
+          "packages/p05/package.json",
+          "packages/p06/package.json",
+          "packages/p07/package.json",
+          "packages/p08/package.json",
+          "packages/p09/package.json",
+          "packages/p10/package.json",
+          "packages/p11/package.json",
+          "packages/p12/package.json",
+          "packages/p13/package.json",
+          "packages/p14/package.json",
+          "packages/p15/package.json",
+          "packages/p16/package.json",
+          "packages/p17/package.json",
+          "packages/p18/package.json",
+          "packages/p19/package.json",
+          "packages/p20/package.json",
+          "packages/p21/package.json",
+          "packages/p22/package.json",
+          "packages/p23/package.json",
+          "packages/p24/package.json",
+          "packages/p25/package.json",
+          "packages/p26/package.json",
+          "packages/p27/package.json",
+          "packages/p28/package.json",
+          "packages/p29/package.json",
+          "packages/p30/package.json",
+          "packages/p31/package.json",
+          "packages/p32/package.json",
+          "packages/p33/package.json",
+          "packages/p34/package.json",
+          "packages/p35/package.json",
+          "packages/p36/package.json",
+          "packages/p37/package.json",
+          "packages/p38/package.json",
+          "packages/p39/package.json",
+          "packages/p40/package.json",
+          "packages/p41/package.json",
+          "packages/p42/package.json",
+          "packages/p43/package.json",
+          "packages/p44/package.json",
+          "packages/p45/package.json",
+          "packages/p46/package.json",
+          "packages/p47/package.json",
+          "packages/p48/package.json",
+          "packages/p49/package.json",
+          "packages/p50/package.json",
+          "packages/p51/package.json",
+          "packages/p52/package.json",
+          "packages/p53/package.json",
+          "packages/p54/package.json",
+          "packages/p55/package.json",
+          "packages/p56/package.json",
+          "packages/p57/package.json",
+          "packages/p58/package.json",
+          "packages/p59/package.json",
+          "packages/p60/package.json"
+        ]
+      },
+      "summary": {
+        "test": "node smoke.cjs"
+      },
+      "rawOutcome": {
+        "status": "failed",
+        "exitCode": 11,
+        "stdout": "ROOT_REQUIRED_TEST_RAN\n",
+        "stderr": "",
+        "truncated": false,
+        "durationMs": 29,
+        "error": "exited with code 11"
+      },
+      "harness": {
+        "outcome": {
+          "status": "completed",
+          "statusDetail": "completed",
+          "turn": {
+            "id": "turn_5aa75951-8d29-4988-894a-6a99f9666b38",
+            "sessionId": "session_b6e68634-dbf8-4a69-b94c-554632731aa9",
+            "input": {
+              "sessionId": "session_b6e68634-dbf8-4a69-b94c-554632731aa9",
+              "text": "finish the task"
+            },
+            "status": "completed",
+            "startedAt": 1791074625632,
+            "completedAt": 1791074625693
+          },
+          "toolCalls": 0,
+          "iterations": 0,
+          "state": {
+            "goal": "finish the task",
+            "constraints": [],
+            "plan": [],
+            "decisions": [],
+            "completed": [],
+            "pending": [],
+            "filesChanged": [],
+            "commandsRun": [],
+            "testsRun": [],
+            "failures": [],
+            "importantFacts": [],
+            "openQuestions": [],
+            "toolRefs": [],
+            "artifactRefs": [],
+            "memoryRefs": [],
+            "childAgentRefs": []
+          },
+          "terminationReason": "verified_complete",
+          "grade": "verified_complete"
+        },
+        "scriptedCalls": 1,
+        "verificationEvents": [
+          {
+            "id": "event_2424378d-46fa-46b6-a0e3-37961b2244c7",
+            "sessionId": "session_b6e68634-dbf8-4a69-b94c-554632731aa9",
+            "sequence": 7,
+            "timestamp": 1791074625660,
+            "type": "verification.step_started",
+            "payload": {
+              "ref": "verification.step:command:node",
+              "kind": "command",
+              "description": "planned: node smoke.cjs"
+            },
+            "schemaVersion": 1
+          },
+          {
+            "id": "event_daa92e91-5217-4505-834a-0f2f4998fc1e",
+            "sessionId": "session_b6e68634-dbf8-4a69-b94c-554632731aa9",
+            "sequence": 8,
+            "timestamp": 1791074625687,
+            "type": "verification.step_completed",
+            "payload": {
+              "ref": "verification.step:command:node",
+              "kind": "command",
+              "description": "planned: node smoke.cjs",
+              "passed": true,
+              "detail": "exit code 0 in 27ms"
+            },
+            "schemaVersion": 1
+          },
+          {
+            "id": "event_4aa8d462-c047-4894-b5bb-fe58cdc21603",
+            "sessionId": "session_b6e68634-dbf8-4a69-b94c-554632731aa9",
+            "turnId": "turn_5aa75951-8d29-4988-894a-6a99f9666b38",
+            "timestamp": 1791074625692,
+            "type": "verification.completed",
+            "payload": {
+              "passed": true,
+              "durationMs": 47
+            },
+            "sequence": 10,
+            "schemaVersion": 1
+          }
+        ],
+        "paidCalls": 0
+      },
+      "bugObserved": true
+    },
+    {
+      "name": "quoted-space-path",
+      "rawOutcome": {
+        "status": "success",
+        "exitCode": 0,
+        "stdout": "SPACE_PATH_CHECK_RAN\n",
+        "stderr": "",
+        "truncated": false,
+        "durationMs": 29
+      },
+      "specs": [
+        {
+          "kind": "command",
+          "command": "node",
+          "args": [
+            "\"test",
+            "suite/required-check.cjs\""
+          ],
+          "description": "planned: node \"test suite/required-check.cjs\""
+        }
+      ],
+      "convertedResult": {
+        "level": 1,
+        "passed": false,
+        "checks": [
+          {
+            "id": "command:node",
+            "kind": "command",
+            "description": "planned: node \"test suite/required-check.cjs\"",
+            "passed": false,
+            "evidence": {
+              "type": "test",
+              "description": "exit code 1 in 27ms",
+              "source": "node",
+              "timestamp": 1791074625753
+            },
+            "error": {
+              "code": "VERIFICATION_FAILED",
+              "message": "node: exited with code 1",
+              "retryable": false,
+              "safeToRetry": false
+            }
+          }
+        ],
+        "evidence": [
+          {
+            "type": "test",
+            "description": "exit code 1 in 27ms",
+            "source": "node",
+            "timestamp": 1791074625753
+          }
+        ],
+        "startedAt": 1791074625726,
+        "completedAt": 1791074625754
+      },
+      "bugObserved": true
+    }
+  ],
+  "allDefectsReproduced": true
+}

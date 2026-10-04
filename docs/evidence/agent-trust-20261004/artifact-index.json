@@ -1,0 +1,317 @@
+{
+  "schema": "agent-trust-artifacts-v1",
+  "baselineSourceSha": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "stage": "preregistered plan; baseline-only",
+  "scope": "All indexed original audit records/scripts/logs plus original indexes; generated fixture/session trees omitted as original scopes state. Context audit retained as measured deferred work. Raw originals unchanged.",
+  "archivePlanSha256": "47190050efc8e3f74e663ddb58d983c353259545b914140408cee4cc4e8f827b",
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "files": [
+    {
+      "path": "raw/baseline/context-audit/artifact-index.json",
+      "bytes": 2370,
+      "sha256": "2dd3262f80ca651f7101ce6fe70a90a57110eae43a649810d327b5ed71bd6460"
+    },
+    {
+      "path": "raw/baseline/context-audit/audit-findings.json",
+      "bytes": 5888,
+      "sha256": "35a36cbd81ec202819ced495261b49e0c179929926deac1d91f9ab4d9958912a"
+    },
+    {
+      "path": "raw/baseline/context-audit/baseline-final/default-admitted.trace.json",
+      "bytes": 28013,
+      "sha256": "ab207fd3b660c159d79ad58be136edfdc97d9a8883ef425d2ee96757b2f6993e"
+    },
+    {
+      "path": "raw/baseline/context-audit/baseline-final/default-budget-dropped.trace.json",
+      "bytes": 29472,
+      "sha256": "6abd6b8a6d183759bd93879ab446906416827f6e3fd8cf6ca6f6e969466ab869"
+    },
+    {
+      "path": "raw/baseline/context-audit/baseline-final/default-denied-revision.trace.json",
+      "bytes": 57382,
+      "sha256": "b82641933fa806eaeba8a8c141e73a20b11c3a9e8f6e541b44f7f7ead31ce4a9"
+    },
+    {
+      "path": "raw/baseline/context-audit/baseline-final/default-injection-denied.trace.json",
+      "bytes": 28675,
+      "sha256": "d136c69b0d1ce9adc44e517ad8f6a837fa74713aab641e73624092729f8232c4"
+    },
+    {
+      "path": "raw/baseline/context-audit/baseline-final/report.json",
+      "bytes": 19075,
+      "sha256": "bc97c6abadaa21c93041ad7d407b8af463668e5d64cb89f56b9d44c8392240d5"
+    },
+    {
+      "path": "raw/baseline/context-audit/baseline-final/scoped-budget-dropped.trace.json",
+      "bytes": 27647,
+      "sha256": "22f6c3ffd8fb3955d27ed332c3f555c29f64a05f54a3d0ed92d0bb3a8bb9d284"
+    },
+    {
+      "path": "raw/baseline/context-audit/baseline-final/scoped-denied-revision.trace.json",
+      "bytes": 54151,
+      "sha256": "c6d875e891c9b6bd65dbb8af073d8661bb9e149789186c3e1f2fa0c24e17abb4"
+    },
+    {
+      "path": "raw/baseline/context-audit/baseline-final/scoped-injection-denied.trace.json",
+      "bytes": 26845,
+      "sha256": "756a6ced824c1a728ba23f57c1e7ea9f819fa28f9aeb626f8465547fe3b683bc"
+    },
+    {
+      "path": "raw/baseline/context-audit/probe-final.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "raw/baseline/context-audit/probe-final.stdout.log",
+      "bytes": 3435,
+      "sha256": "ed0690fd1070034bf1126b4c979048aba5c04ca384b52fcf610451be1409515b"
+    },
+    {
+      "path": "raw/baseline/context-audit/probe.mjs",
+      "bytes": 7995,
+      "sha256": "cc49b15731711c2f461a94e70bc5c53fcca6a6ecd18c8c0066801cba50bf1b6d"
+    },
+    {
+      "path": "raw/baseline/memory-audit/artifact-index.json",
+      "bytes": 3035,
+      "sha256": "22628bdab72a319f6304ef79be5cb105afb3081b005ad9c2f3123cf42f547a39"
+    },
+    {
+      "path": "raw/baseline/memory-audit/audit.md",
+      "bytes": 6715,
+      "sha256": "b5eeb5aaa0b75b93b5a01636a1282ecf448a2f7bf7ec399e981dee82095a101a"
+    },
+    {
+      "path": "raw/baseline/memory-audit/baseline.json",
+      "bytes": 8052,
+      "sha256": "b532514e8b43e9c45e70d1f7d74c69b01eb6cc03106b5a882f39b680e47ae261"
+    },
+    {
+      "path": "raw/baseline/memory-audit/baseline.log",
+      "bytes": 5097,
+      "sha256": "52c401794769bdf02e39b87b6d234a033a002dc5ffb08dcf4021368688f4b262"
+    },
+    {
+      "path": "raw/baseline/memory-audit/harness-baseline.json",
+      "bytes": 10232,
+      "sha256": "107f5ed245184b3e9afdb940b377f3859a63c86f5fafb54485b70b07cb2211c0"
+    },
+    {
+      "path": "raw/baseline/memory-audit/harness-baseline.log",
+      "bytes": 10232,
+      "sha256": "107f5ed245184b3e9afdb940b377f3859a63c86f5fafb54485b70b07cb2211c0"
+    },
+    {
+      "path": "raw/baseline/memory-audit/harness-jsonl-conflicting-requests.json",
+      "bytes": 16512,
+      "sha256": "f93e287ef5c4116bda4b40c4c0f64fdaeb132666427387f487c8e5a81f945586"
+    },
+    {
+      "path": "raw/baseline/memory-audit/harness-jsonl-deprecated-requests.json",
+      "bytes": 16511,
+      "sha256": "2fc93cea9007e3db5941949c8c60a6e581f0a0427472e337c2dec1be3fcd6b84"
+    },
+    {
+      "path": "raw/baseline/memory-audit/harness-jsonl-session-scope-requests.json",
+      "bytes": 16514,
+      "sha256": "3afc136415f1a11e17964476e59447515c61379b96ad27cef17d3456fa7d0b3c"
+    },
+    {
+      "path": "raw/baseline/memory-audit/harness-jsonl-stale-requests.json",
+      "bytes": 16506,
+      "sha256": "97b11e23b63f1c505fc4d2ceea4bd481cb405d8aa27a206e652e2fb8b20ed63b"
+    },
+    {
+      "path": "raw/baseline/memory-audit/harness-jsonl-superseded-requests.json",
+      "bytes": 16511,
+      "sha256": "34d1d0a754e402d09f329512b05b39f42424e9b913311899612418bc66fdb0d4"
+    },
+    {
+      "path": "raw/baseline/memory-audit/harness-probe.mjs",
+      "bytes": 3957,
+      "sha256": "a571b62079a78c218a128380774c02c51ec0eac965f188c782409d68c767d1c4"
+    },
+    {
+      "path": "raw/baseline/memory-audit/harness-sqlite-conflicting-requests.json",
+      "bytes": 16516,
+      "sha256": "0998d19fbd225e10bb70b238701b7e9a2f34962a4a148d29c10e4e7c6309aede"
+    },
+    {
+      "path": "raw/baseline/memory-audit/harness-sqlite-deprecated-requests.json",
+      "bytes": 16512,
+      "sha256": "159229ff3aff7b04abeec2eebb2e11a178b8ed56d40465ec90938334679502b5"
+    },
+    {
+      "path": "raw/baseline/memory-audit/harness-sqlite-session-scope-requests.json",
+      "bytes": 16515,
+      "sha256": "54d758d0877c8973baae51b2f4530d46e632cd89da24a51e0a9b59f6210afdc9"
+    },
+    {
+      "path": "raw/baseline/memory-audit/harness-sqlite-stale-requests.json",
+      "bytes": 16507,
+      "sha256": "c190b31d47dc56d89b7e75cc361bdd5b4c9363bdba4ad270c8d820e8b6ad95ce"
+    },
+    {
+      "path": "raw/baseline/memory-audit/harness-sqlite-superseded-requests.json",
+      "bytes": 16512,
+      "sha256": "e500e069fe531f6883a7c41b3c96453988203ade1d88bd5251be321611e5064f"
+    },
+    {
+      "path": "raw/baseline/memory-audit/probe.mjs",
+      "bytes": 6245,
+      "sha256": "57c8fd39fb63373084de234c2a409d09dcceac29705faf3181185b22827bbf89"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/artifact-index.json",
+      "bytes": 2927,
+      "sha256": "ad6cb45fd21a560ed6814190cde9c7abe85489e8e869f1fbf501fa435c08b8d7"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/concurrent-journal-0.json",
+      "bytes": 8396,
+      "sha256": "714fbd8133e73b71f3e62beaaa5c53f4c7b02cec248ffb28584aacce761081d0"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/concurrent-journal-1.json",
+      "bytes": 8401,
+      "sha256": "71f29f45a9e389af60cefb9797ec5318c199902f4dd9ccb7c8005b57933bd439"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/concurrent-journal-2.json",
+      "bytes": 8401,
+      "sha256": "1285ab8b84cb6750f68dd4347e18cc6e66221ff88884c8b68bc0917c9f61c887"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/concurrent-journal-3.json",
+      "bytes": 8401,
+      "sha256": "e0570872d1adaa1e20e4a0c71d0e7f787121a846d81c474744bab5eed3a2d4d5"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/concurrent-journal-4.json",
+      "bytes": 8401,
+      "sha256": "3390dd0c21f20ba1120212d2d35f527bdf615d5065b1149a0672d9aebe940033"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/concurrent-journal-5.json",
+      "bytes": 8401,
+      "sha256": "2a5f33e33dc2ce0f8b2ddbfc448ff45746f1c4f7af9f923f79d1eb73743fa5bb"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/concurrent-journal-6.json",
+      "bytes": 8401,
+      "sha256": "e8add5fe2903607a08c3111132434fd0f82e3d5c4097fe63a882a6dd8e1ce54c"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/concurrent-journal-7.json",
+      "bytes": 8401,
+      "sha256": "a18bd786c76d0024871c6bda92bbf530c112338526e7625ae93bc57e4e33184b"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/concurrent-journal-8.json",
+      "bytes": 8401,
+      "sha256": "370a4a776a3bddc5da45c2652b9491106b822d04795ff884d5cdb5857cfad2ea"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/concurrent-journal-9.json",
+      "bytes": 8401,
+      "sha256": "664a5497bd494d8ccf4fb38a0cfd375c7985f85ebb464c209640c2b521cf0a5d"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/old-mcp-new-clean-legacy.json",
+      "bytes": 10582,
+      "sha256": "b09d52e4252c476f868466b479293d4c4b61092a615af7ee159f25777eaa5640"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/old-mcp-new-clean-tagged.json",
+      "bytes": 10732,
+      "sha256": "df35045e7b50e7ae3abc82a881c6e003059d49c7f9498ab472914c00f4d2cd66"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/probe.mjs",
+      "bytes": 7752,
+      "sha256": "664bebc6327bd54d26e504c75cd282fd939c091fd5b2262af30691397c4d2777"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/probe.stderr.log",
+      "bytes": 85,
+      "sha256": "46731594c10bc392d5297dc2adb81b7efc76f655afd1d9faf91f9b9e55e78da2"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/probe.stdout.log",
+      "bytes": 331,
+      "sha256": "304b4e32bf56c3f24f5cfeb2be93d218809019dfb4338c3efb2c2472410bdfc8"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/recommendation.json",
+      "bytes": 4809,
+      "sha256": "164c8bf1a5703531388620213b4adf21b2e4956917a44af608e1a6a4c1cf7a9b"
+    },
+    {
+      "path": "raw/baseline/reflection-audit/summary.json",
+      "bytes": 1962,
+      "sha256": "0bde2a6e3abf24457c85d90ddc34dedd734693b85e5a372cc102a1b8a95fa8d0"
+    },
+    {
+      "path": "raw/baseline/tools-audit/artifact-index.json",
+      "bytes": 2062,
+      "sha256": "fd04e3e002d555f6e4442f798637bfed2d09fb7638c4b54e5eb8aeeda5dcc909"
+    },
+    {
+      "path": "raw/baseline/tools-audit/compound-required-failure-events.json",
+      "bytes": 6245,
+      "sha256": "014623e3c61fffaed95ce361aaa13f1d326733d3a8a381c7a0dfb2c5a4b3b222"
+    },
+    {
+      "path": "raw/baseline/tools-audit/discovery-root-truncated-events.json",
+      "bytes": 6195,
+      "sha256": "1cb203fbbee0cd51cbfffa66da18a1d43dfacd8179994e9037cf66eef1880545"
+    },
+    {
+      "path": "raw/baseline/tools-audit/quoted-required-failure-events.json",
+      "bytes": 6221,
+      "sha256": "14c55f0443bf95bc7554328e9a748887e76f32f40f4efbd27d5d5d950bcc5ca6"
+    },
+    {
+      "path": "raw/baseline/tools-audit/recommendations.md",
+      "bytes": 6546,
+      "sha256": "9d49d69d3d9c6363393ceef2cab3c3f8aa7b377845a38ecb213790cc01537ccb"
+    },
+    {
+      "path": "raw/baseline/tools-audit/repo-commands.json",
+      "bytes": 7135,
+      "sha256": "3176a60e68e5d1d550a0ada605fc5d05e7c0bc11d1ce9f33c227f2a589461aaf"
+    },
+    {
+      "path": "raw/baseline/tools-audit/reproduce-compatibility.log",
+      "bytes": 171,
+      "sha256": "67e2cfc0d1acc1a832e38ca091cceabd810c72fa700f5eff85962b0363765f1f"
+    },
+    {
+      "path": "raw/baseline/tools-audit/reproduce-compatibility.mjs",
+      "bytes": 2876,
+      "sha256": "c3b5a3c467e4f95a5c900ed2273a24af898d99e503e12c18e872818a9270e8e8"
+    },
+    {
+      "path": "raw/baseline/tools-audit/reproduce-verification.log",
+      "bytes": 928,
+      "sha256": "baf0175a8aa8e388b7a1cd4b00853c05bb02795291bdb686d9f0564229c19a9b"
+    },
+    {
+      "path": "raw/baseline/tools-audit/reproduce-verification.mjs",
+      "bytes": 8490,
+      "sha256": "deade3d8209e6b149085ef8a11191b272c86912232a4877808b55dcc21811881"
+    },
+    {
+      "path": "raw/baseline/tools-audit/verification-compatibility.json",
+      "bytes": 3470,
+      "sha256": "f2c383e68ae492aebe9908d112c58885a534c6527a5dca728828b8bf7dcc6ce3"
+    },
+    {
+      "path": "raw/baseline/tools-audit/verification-defects.json",
+      "bytes": 32871,
+      "sha256": "d48cf0418b72bfaf66e3eef4f067d7ebc51138aa04e5e57893b7ad286b294108"
+    }
+  ]
+}

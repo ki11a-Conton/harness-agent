@@ -1,0 +1,33 @@
+# Memory audit, 2026-10-04
+
+Baseline: `968544064f43cfc0a876c4e65fcb967cd466c9a2`; original worktree clean at both probes. Only `.ci/agent-round2-20261004/memory-audit` was written. Read AGENTS.md and MEMORY-001. Used actual built @ar/memory and @ar/harness, persisted JSONL and SQLite/WAL files, and the production createHarness → runtime → ContextPipeline → scripted provider path. No connector, credential reading, remote model request, or paid call.
+
+## Recommendation 1: make memory visibility honor session ownership and retirement
+
+**What:** Prevent another session's session-scoped memory and every non-active lifecycle state from entering the model context. These are deterministic correctness/security defects, not a proposed quality heuristic. Scope hierarchy contracts say session memories belong to the originating session; lifecycle.isRetrievable says only active/absent states are retrievable.
+
+**Evidence:** `baseline.json`: both backends return session-A's entry to bridge.retrieve(sessionId=session-B); deprecated, superseded, stale, conflicting each remain retrievable. `harness-baseline.json` plus 10 full request receipts prove the same through actual createHarness/runTurn: all 10 forbidden memories appear in the model system message, memoryRefs and memory.retrieved events; all turns completed, and injected/used feedback was awarded. Thus this is not merely a raw-store search behavior. The provider was scripted: 10 generate calls, 0 real provider calls/paid calls, real-model quality NOT_RUN.
+
+**How:** Make retrieval accept trusted session identity (e.g. additive RetrieveOptions.sessionId); MemoryRuntimeBridge passes its existing input.sessionId. For a session-scoped hit, match sourceSession to the current session; choose and document fail-closed behavior if identity is absent. Reuse lifecycle.isRetrievable to reject all retired states before scoring/dedup/Top-K. Add distinct suppression reasons for wrong-session and inactive hits, so observability distinguishes exclusion from dedup. Do not change Core architecture, search weights, candidate promotion, scope hierarchy, or infer session identity from goal/tool text. This only guarantees session ownership; other scope labels lack owner identities, so it does not establish cross-repository/workspace isolation.
+
+**Acceptance:** Original 10 actual-Harness negative cases yield no marker in requests, no memoryRefs and no feedback for forbidden entries. Own-session active/legacy active (state absent), global/workspace fallback positive cases still inject. Other session legacy entries, missing identity, all four retired states are excluded. Narrower-scope visibility, unsafe/deleted filtering, topK and normal active feedback remain correct in both backends. Existing unit/integration/security suites, clean full suite/typecheck and exact-SHA CI pass. Preserve original RED bytes separately from candidate receipts.
+
+## Recommendation 2: preserve MemoryEntry through SQLite write/update/migration
+
+**What:** Make the SQLite backend retain structured lessons and candidate provenance/lifecycle bookkeeping, and preserve existing lifecycle/evidence/usefulness during migration. This protects the agent's memory meaning across persistence backend and restart.
+
+**Evidence:** `baseline.json` entry-roundtrip: JSONL preserves sourceTurn, structured, derivability, promotionState, securityScan, pollutionSources; SQLite loses all 6 after actual write/get. The migration case loses state=deprecated, evidence and usefulness despite columns for these three already existing. A migrated retired memory therefore acquires no state and is treated as active. Existing migration tests use minimal entries, so their equality checks miss these fields. SQLite schema v5 has no candidate metadata columns and migrate INSERT binds only the original 12 fields.
+
+**How:** Add an additive, backward-compatible schema migration (e.g. v6 candidate_metadata JSON for the six known optional fields). Keep indexed identity/content/scope and existing evidence/usefulness/state columns authoritative; never let metadata overwrite them. Centralize serialization/binding and row decoding shared by write/update and migration; migration must include evidence/usefulness/state and new optional metadata in its transaction. Default missing/legacy metadata to undefined, preserve idempotence, dry-run, soft delete and security rejection. Preserve unknown malformed metadata recovery behavior explicitly without throwing away known valid fields. Do not introduce vectors or dependency changes.
+
+**Acceptance:** Both backends write/get/update/close-reopen round-trip a full MemoryEntry with 6 candidate fields plus evidence/usefulness/state without changes. JSONL→SQLite migrates a full entry and all lifecycle variants without resurrecting retirement; JSONL bytes remain unchanged. Idempotent retry, duplicate IDs, dry-run no-write, interrupted transaction rollback, FTS index consistency, unsafe rejection, deleted history and legacy v1-v5 DB upgrades pass. Harness requests render When/Do/Avoid and evidence identically before/after persistence. Test exact equality, not only field presence. The additive change needs no Core refactor and yields no claim of model success-rate gains.
+
+## Additional reproducible findings outside the two recommendations
+
+- 20 concurrent bridge.recordInjected operations on one entry produce injectedCount=1 instead of 20, for both real stores. Store-level mutation locks do not enclose bridge's get→recordUsefulness→update cycle. Follow-up should serialize the complete feedback RMW, and state limits for multiple bridge/process instances; a per-instance queue alone is not a universal atomic API.
+- Chinese substring `端口配置` against `调试端口配置时先检查环境变量。` hits JSONL but misses SQLite. FTS cleanly returns no hit, so exception-only LIKE fallback never runs. A Chinese retrieval challenger or tested substring-contract fix can be a later measured task; do not claim semantic search quality.
+- Exposed MemoryRuntimeBridge.close fails for SQLite because an unbound extracted close method loses its receiver. Harness.close uses a separate bound MemoryStoreCloser, so ordinary Harness shutdown is unaffected. Fix priority low.
+
+## Boundary
+
+No real-model quality or dollar-cost result exists in these probes. They establish context admission, isolation, durability and counter correctness. No candidate default promotion is justified or needed for deterministic bug fixes. Captured systems contain only synthetic fixture data; raw model-request receipts and SHA-256/byte index are retained. Generated fixture stores/session trees are outside the top-level portable receipt index scope.

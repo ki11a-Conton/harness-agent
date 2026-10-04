@@ -1,0 +1,285 @@
+{
+  "label": "old-mcp-new-clean-legacy",
+  "legacy": true,
+  "sessionId": "session_c931914b-133a-4876-ad11-b1adee25a358",
+  "oldTurn": "turn_d976849c-5a24-4e38-87a1-08e47c66dea9",
+  "newTurn": "turn_62b8ecc2-e140-480e-9dca-1e718711b621",
+  "oldResult": {
+    "outputs": 1,
+    "candidates": 1
+  },
+  "newResult": {
+    "outputs": 1,
+    "candidates": 1
+  },
+  "candidates": [
+    {
+      "id": "lc_17418c3c-f831-4249-894a-2c90098d9e89",
+      "kind": "memory",
+      "content": "tool mcp_remote_query failed with reproducer failure; verify inputs and environment before retry",
+      "proposedAt": 1791074686249,
+      "securityChecked": true,
+      "sourceCandidate": {
+        "content": "tool mcp_remote_query failed with reproducer failure; verify inputs and environment before retry",
+        "type": "procedural",
+        "sourceSession": "session_c931914b-133a-4876-ad11-b1adee25a358",
+        "importance": 0.9,
+        "confidence": 0.6,
+        "novelty": 0.5,
+        "stability": 0.5,
+        "structured": {
+          "when": "mcp_remote_query failed with reproducer failure",
+          "do": "verify inputs and environment state, then retry",
+          "avoid": "retrying the same call without checking inputs",
+          "rootCause": "tool",
+          "outcome": "failure",
+          "evidenceRefs": [
+            "event_d1d47e9f-b5df-4002-9383-a3d62ccbcaa1",
+            "event_3d638b78-3dbe-4f72-8f35-7e58d3a0e8bc"
+          ]
+        },
+        "sourceTurn": "turn_d976849c-5a24-4e38-87a1-08e47c66dea9",
+        "derivability": {
+          "verdict": "non-derivable",
+          "reason": "expresses a (?:environment|ci|toolchain|compiler|sandbox|network proxy|offline)b — a preference/decision/lesson that cannot be re-derived"
+        },
+        "promotionState": "quarantined",
+        "securityScan": {
+          "checked": true,
+          "passed": true,
+          "at": 1791074686249
+        },
+        "pollutionSources": [
+          "mcp:mcp_remote_query"
+        ]
+      },
+      "structured": {
+        "when": "mcp_remote_query failed with reproducer failure",
+        "do": "verify inputs and environment state, then retry",
+        "avoid": "retrying the same call without checking inputs",
+        "rootCause": "tool",
+        "outcome": "failure",
+        "evidenceRefs": [
+          "event_d1d47e9f-b5df-4002-9383-a3d62ccbcaa1",
+          "event_3d638b78-3dbe-4f72-8f35-7e58d3a0e8bc"
+        ]
+      }
+    },
+    {
+      "id": "lc_36635842-ff26-4090-a259-e6693cd8103d",
+      "kind": "memory",
+      "content": "tool mcp_remote_query failed with reproducer failure; verify inputs and environment before retry",
+      "proposedAt": 1791074686251,
+      "securityChecked": true,
+      "sourceCandidate": {
+        "content": "tool mcp_remote_query failed with reproducer failure; verify inputs and environment before retry",
+        "type": "procedural",
+        "sourceSession": "session_c931914b-133a-4876-ad11-b1adee25a358",
+        "importance": 0.9,
+        "confidence": 0.6,
+        "novelty": 0.5,
+        "stability": 0.5,
+        "structured": {
+          "when": "mcp_remote_query failed with reproducer failure",
+          "do": "verify inputs and environment state, then retry",
+          "avoid": "retrying the same call without checking inputs",
+          "rootCause": "tool",
+          "outcome": "failure",
+          "evidenceRefs": [
+            "event_d1d47e9f-b5df-4002-9383-a3d62ccbcaa1",
+            "event_3d638b78-3dbe-4f72-8f35-7e58d3a0e8bc"
+          ]
+        },
+        "sourceTurn": "turn_62b8ecc2-e140-480e-9dca-1e718711b621",
+        "derivability": {
+          "verdict": "non-derivable",
+          "reason": "expresses a (?:environment|ci|toolchain|compiler|sandbox|network proxy|offline)b — a preference/decision/lesson that cannot be re-derived"
+        },
+        "promotionState": "quarantined",
+        "securityScan": {
+          "checked": true,
+          "passed": true,
+          "at": 1791074686251
+        },
+        "pollutionSources": [
+          "mcp:mcp_remote_query"
+        ]
+      },
+      "structured": {
+        "when": "mcp_remote_query failed with reproducer failure",
+        "do": "verify inputs and environment state, then retry",
+        "avoid": "retrying the same call without checking inputs",
+        "rootCause": "tool",
+        "outcome": "failure",
+        "evidenceRefs": [
+          "event_d1d47e9f-b5df-4002-9383-a3d62ccbcaa1",
+          "event_3d638b78-3dbe-4f72-8f35-7e58d3a0e8bc"
+        ]
+      }
+    }
+  ],
+  "journal": [
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_c931914b-133a-4876-ad11-b1adee25a358",
+      "turnId": "turn_d976849c-5a24-4e38-87a1-08e47c66dea9",
+      "outcome": "failed",
+      "at": 1791074686248,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_d1d47e9f-b5df-4002-9383-a3d62ccbcaa1@10; tool.requested event_61651e9a-5d7f-41d2-8909-3fac44f6f2f9@9; turn.failed event_3d638b78-3dbe-4f72-8f35-7e58d3a0e8bc@11; task: old MCP task; turn.failed event_3d638b78-3dbe-4f72-8f35-7e58d3a0e8bc@11; task: old MCP task",
+        "lesson": "tool mcp_remote_query failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool mcp_remote_query failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_c931914b-133a-4876-ad11-b1adee25a358",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "mcp_remote_query failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_d1d47e9f-b5df-4002-9383-a3d62ccbcaa1",
+              "event_3d638b78-3dbe-4f72-8f35-7e58d3a0e8bc"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sessionId": "session_c931914b-133a-4876-ad11-b1adee25a358",
+      "turnId": "turn_62b8ecc2-e140-480e-9dca-1e718711b621",
+      "outcome": "completed",
+      "at": 1791074686251,
+      "reflection": {
+        "outcome": "failure",
+        "rootCause": "tool",
+        "evidence": "tool.failed event_d1d47e9f-b5df-4002-9383-a3d62ccbcaa1@10; tool.requested event_61651e9a-5d7f-41d2-8909-3fac44f6f2f9@9; turn.failed event_3d638b78-3dbe-4f72-8f35-7e58d3a0e8bc@11; task: new clean task; turn.failed event_3d638b78-3dbe-4f72-8f35-7e58d3a0e8bc@11; task: new clean task",
+        "lesson": "tool mcp_remote_query failed with reproducer failure; verify inputs and environment before retry",
+        "generalizable": true,
+        "candidate": {
+          "content": "tool mcp_remote_query failed with reproducer failure; verify inputs and environment before retry",
+          "type": "procedural",
+          "sourceSession": "session_c931914b-133a-4876-ad11-b1adee25a358",
+          "importance": 0.9,
+          "confidence": 0.6,
+          "novelty": 0.5,
+          "stability": 0.5,
+          "structured": {
+            "when": "mcp_remote_query failed with reproducer failure",
+            "do": "verify inputs and environment state, then retry",
+            "avoid": "retrying the same call without checking inputs",
+            "rootCause": "tool",
+            "outcome": "failure",
+            "evidenceRefs": [
+              "event_d1d47e9f-b5df-4002-9383-a3d62ccbcaa1",
+              "event_3d638b78-3dbe-4f72-8f35-7e58d3a0e8bc"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "event_1ed8f8f6-f9d3-48cc-97be-6e7d3f62c3dd",
+      "sessionId": "session_c931914b-133a-4876-ad11-b1adee25a358",
+      "turnId": "turn_d976849c-5a24-4e38-87a1-08e47c66dea9",
+      "timestamp": 8,
+      "type": "turn.started",
+      "payload": {
+        "turnId": "turn_d976849c-5a24-4e38-87a1-08e47c66dea9"
+      },
+      "sequence": 0,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_61651e9a-5d7f-41d2-8909-3fac44f6f2f9",
+      "sessionId": "session_c931914b-133a-4876-ad11-b1adee25a358",
+      "timestamp": 9,
+      "type": "tool.requested",
+      "payload": {
+        "toolCallId": "call-turn_d976849c-5a24-4e38-87a1-08e47c66dea9",
+        "name": "mcp_remote_query",
+        "args": {
+          "path": "src/main.ts"
+        }
+      },
+      "sequence": 1,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_d1d47e9f-b5df-4002-9383-a3d62ccbcaa1",
+      "sessionId": "session_c931914b-133a-4876-ad11-b1adee25a358",
+      "timestamp": 10,
+      "type": "tool.failed",
+      "payload": {
+        "toolCallId": "call-turn_d976849c-5a24-4e38-87a1-08e47c66dea9",
+        "name": "mcp_remote_query",
+        "error": {
+          "code": "PROCESS_ERROR",
+          "message": "reproducer failure"
+        }
+      },
+      "sequence": 2,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_3d638b78-3dbe-4f72-8f35-7e58d3a0e8bc",
+      "sessionId": "session_c931914b-133a-4876-ad11-b1adee25a358",
+      "turnId": "turn_d976849c-5a24-4e38-87a1-08e47c66dea9",
+      "timestamp": 11,
+      "type": "turn.failed",
+      "payload": {
+        "error": {
+          "code": "PROCESS_ERROR",
+          "message": "reproducer failure"
+        }
+      },
+      "sequence": 3,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_03e1338a-296a-441b-9dec-09e6b5a16585",
+      "sessionId": "session_c931914b-133a-4876-ad11-b1adee25a358",
+      "turnId": "turn_62b8ecc2-e140-480e-9dca-1e718711b621",
+      "timestamp": 12,
+      "type": "turn.started",
+      "payload": {
+        "turnId": "turn_62b8ecc2-e140-480e-9dca-1e718711b621"
+      },
+      "sequence": 4,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_c85befb8-511e-4f97-a05d-cc6b4792e9c0",
+      "sessionId": "session_c931914b-133a-4876-ad11-b1adee25a358",
+      "turnId": "turn_62b8ecc2-e140-480e-9dca-1e718711b621",
+      "timestamp": 13,
+      "type": "model.completed",
+      "payload": {
+        "finishReason": "stop"
+      },
+      "sequence": 5,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_93c12013-3305-4132-9c43-df0ed49ef6bb",
+      "sessionId": "session_c931914b-133a-4876-ad11-b1adee25a358",
+      "turnId": "turn_62b8ecc2-e140-480e-9dca-1e718711b621",
+      "timestamp": 14,
+      "type": "turn.completed",
+      "payload": {},
+      "sequence": 6,
+      "schemaVersion": 1
+    }
+  ]
+}

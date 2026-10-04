@@ -1,0 +1,504 @@
+{
+  "kind": "context-audit",
+  "observedAt": "2026-10-04T00:45:02.509Z",
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "source": {
+    "head": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+    "dirty": "",
+    "hashes": {
+      "packages/context/src/discovery.ts": "d7a854812b022c7fdff7e79fac26c7b1dade2012a959bf51923cace65d5af338",
+      "packages/context/dist/discovery.js": "2b0f106578dc3efb4eb48d120dcd1179bca2aeb81fdd68093504405419b84bae",
+      "packages/core/src/runtime/context-controller.ts": "22fe6661072b6674e0ab75a9535a6530de8700cec1a596d6ba858a3d0bda9bfd",
+      "packages/core/dist/runtime/context-controller.js": "601b8ad652675e360a408dd06a08b4a4f6e29e27b98117bd580ea2816a110c57",
+      "packages/harness/src/path-scoped-instructions.ts": "39bbb653b024c94121a12463bf4e6fe5b01a76f8fb8b3af00656eebf57b3305e",
+      "packages/harness/dist/path-scoped-instructions.js": "f154354bd7a818d4f9e327be0298d758570eddd971ef37eccf5a1e2b9bbbf835"
+    }
+  },
+  "instructionSnapshots": [
+    {
+      "name": "default-admitted",
+      "outcome": "completed",
+      "document": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-admitted-x3cKdv/workspace/AGENTS.md",
+      "bodyBytes": 41,
+      "requestCount": 1,
+      "bodyInRequest": true,
+      "projectSources": [
+        {
+          "kind": "project_instruction",
+          "source": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-admitted-x3cKdv/workspace/AGENTS.md",
+          "contentHash": "52e22d5068d984d3e0b88d0f9e1d6af20e5c6a19be7f4a764f0d828714259c23",
+          "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-admitted-x3cKdv/workspace/AGENTS.md"
+        }
+      ],
+      "sourceDocumentAbsentFromModel": false,
+      "events": [
+        {
+          "type": "instruction.discovered",
+          "payload": {
+            "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-admitted-x3cKdv/workspace/AGENTS.md",
+            "scope": "cwd",
+            "sizeBytes": 41,
+            "truncated": false
+          }
+        },
+        {
+          "type": "context.built",
+          "payload": {
+            "tokens": 141,
+            "used": 141,
+            "budget": 8000,
+            "dropped": 0,
+            "compacted": false,
+            "messagesTokens": 15
+          }
+        }
+      ],
+      "requestSystemSha256": [
+        "b3172b10757431b4ed78f9745c9bbbe6394fbf65bd8a8b4f7421e37350a1fb8f"
+      ],
+      "instructionFingerprints": [
+        "c2be2eee09dea90a2da7c7bdc6341fa185094df87254c1a86aa51543eaf0559e"
+      ]
+    },
+    {
+      "name": "default-injection-denied",
+      "outcome": "completed",
+      "document": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-injection-denied-c2PaEw/workspace/AGENTS.md",
+      "bodyBytes": 62,
+      "requestCount": 1,
+      "bodyInRequest": false,
+      "projectSources": [
+        {
+          "kind": "project_instruction",
+          "source": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-injection-denied-c2PaEw/workspace/AGENTS.md",
+          "contentHash": "9171aaebf5c1d769fe5d1b9011342c0f219cc258363fd39232488362eca12b30",
+          "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-injection-denied-c2PaEw/workspace/AGENTS.md"
+        }
+      ],
+      "sourceDocumentAbsentFromModel": true,
+      "events": [
+        {
+          "type": "instruction.discovered",
+          "payload": {
+            "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-injection-denied-c2PaEw/workspace/AGENTS.md",
+            "scope": "cwd",
+            "sizeBytes": 62,
+            "truncated": false
+          }
+        },
+        {
+          "type": "security.injection_denied",
+          "payload": {
+            "source": "project",
+            "target": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-injection-denied-c2PaEw/workspace/AGENTS.md",
+            "reason": "injection detected (dismiss-previous-instructions, dismiss-all-instructions, override-own-instructions, extract-system-prompt)",
+            "reasons": [
+              "dismiss-previous-instructions",
+              "dismiss-all-instructions",
+              "override-own-instructions",
+              "extract-system-prompt"
+            ],
+            "code": "INJECTION_DENIED"
+          }
+        },
+        {
+          "type": "context.built",
+          "payload": {
+            "tokens": 130,
+            "used": 130,
+            "budget": 8000,
+            "dropped": 0,
+            "compacted": false,
+            "messagesTokens": 15
+          }
+        }
+      ],
+      "requestSystemSha256": [
+        "c82ee0ace5f35da2677b1c04dd6d9d1c6296835e851b8e7f9ac3bfaf82009f28"
+      ],
+      "instructionFingerprints": [
+        "5fe6a002e3120d585f7fe8e0cc4937a25b975ca194dcbaa5a08299d035ea6ea6"
+      ]
+    },
+    {
+      "name": "scoped-injection-denied",
+      "outcome": "completed",
+      "document": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/scoped-injection-denied-2xvEQi/workspace/AGENTS.md",
+      "bodyBytes": 62,
+      "requestCount": 1,
+      "bodyInRequest": false,
+      "projectSources": [],
+      "sourceDocumentAbsentFromModel": false,
+      "events": [
+        {
+          "type": "security.injection_denied",
+          "payload": {
+            "source": "project",
+            "target": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/scoped-injection-denied-2xvEQi/workspace/AGENTS.md",
+            "reason": "injection detected (dismiss-previous-instructions, dismiss-all-instructions, override-own-instructions, extract-system-prompt)",
+            "reasons": [
+              "dismiss-previous-instructions",
+              "dismiss-all-instructions",
+              "override-own-instructions",
+              "extract-system-prompt"
+            ],
+            "code": "INJECTION_DENIED"
+          }
+        },
+        {
+          "type": "context.built",
+          "payload": {
+            "tokens": 130,
+            "used": 130,
+            "budget": 8000,
+            "dropped": 0,
+            "compacted": false,
+            "messagesTokens": 15
+          }
+        }
+      ],
+      "requestSystemSha256": [
+        "c82ee0ace5f35da2677b1c04dd6d9d1c6296835e851b8e7f9ac3bfaf82009f28"
+      ],
+      "instructionFingerprints": [
+        "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204"
+      ]
+    },
+    {
+      "name": "default-budget-dropped",
+      "outcome": "completed",
+      "document": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-budget-dropped-RFet13/workspace/AGENTS.md",
+      "bodyBytes": 41291,
+      "requestCount": 1,
+      "bodyInRequest": false,
+      "projectSources": [
+        {
+          "kind": "project_instruction",
+          "source": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-budget-dropped-RFet13/workspace/AGENTS.md",
+          "contentHash": "1455079f9979252f53d001b83fda7534315a7a5ee7cff92c369590b94fcb1d39",
+          "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-budget-dropped-RFet13/workspace/AGENTS.md"
+        }
+      ],
+      "sourceDocumentAbsentFromModel": true,
+      "events": [
+        {
+          "type": "context.dropped",
+          "payload": {
+            "source": "project",
+            "id": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-budget-dropped-RFet13/workspace/AGENTS.md",
+            "priority": 1000,
+            "tokens": 10323,
+            "reason": "budget"
+          }
+        },
+        {
+          "type": "instruction.discovered",
+          "payload": {
+            "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-budget-dropped-RFet13/workspace/AGENTS.md",
+            "scope": "cwd",
+            "sizeBytes": 41291,
+            "truncated": false
+          }
+        },
+        {
+          "type": "context.built",
+          "payload": {
+            "tokens": 130,
+            "used": 130,
+            "budget": 8000,
+            "dropped": 1,
+            "compacted": true,
+            "messagesTokens": 15
+          }
+        }
+      ],
+      "requestSystemSha256": [
+        "c82ee0ace5f35da2677b1c04dd6d9d1c6296835e851b8e7f9ac3bfaf82009f28"
+      ],
+      "instructionFingerprints": [
+        "45843b256e87450cf7324197dbe382a3a62c8f98f71933f0cedc0d5f0b77047b"
+      ]
+    },
+    {
+      "name": "scoped-budget-dropped",
+      "outcome": "completed",
+      "document": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/scoped-budget-dropped-pFd7sK/workspace/AGENTS.md",
+      "bodyBytes": 41291,
+      "requestCount": 1,
+      "bodyInRequest": false,
+      "projectSources": [],
+      "sourceDocumentAbsentFromModel": false,
+      "events": [
+        {
+          "type": "context.dropped",
+          "payload": {
+            "source": "project",
+            "id": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/scoped-budget-dropped-pFd7sK/workspace/AGENTS.md",
+            "priority": 1000,
+            "tokens": 10323,
+            "reason": "budget"
+          }
+        },
+        {
+          "type": "context.built",
+          "payload": {
+            "tokens": 130,
+            "used": 130,
+            "budget": 8000,
+            "dropped": 1,
+            "compacted": true,
+            "messagesTokens": 15
+          }
+        }
+      ],
+      "requestSystemSha256": [
+        "c82ee0ace5f35da2677b1c04dd6d9d1c6296835e851b8e7f9ac3bfaf82009f28"
+      ],
+      "instructionFingerprints": [
+        "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204"
+      ]
+    },
+    {
+      "name": "default-denied-revision",
+      "outcome": "completed",
+      "document": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-denied-revision-ubUBDP/workspace/AGENTS.md",
+      "bodyBytes": 62,
+      "requestCount": 2,
+      "bodyInRequest": false,
+      "projectSources": [
+        {
+          "kind": "project_instruction",
+          "source": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-denied-revision-ubUBDP/workspace/AGENTS.md",
+          "contentHash": "9171aaebf5c1d769fe5d1b9011342c0f219cc258363fd39232488362eca12b30",
+          "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-denied-revision-ubUBDP/workspace/AGENTS.md"
+        },
+        {
+          "kind": "project_instruction",
+          "source": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-denied-revision-ubUBDP/workspace/AGENTS.md",
+          "contentHash": "c8d7dd9aff9d11413dae32c72d0197976b078ef27ab4fb34f084169dd831448b",
+          "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-denied-revision-ubUBDP/workspace/AGENTS.md"
+        }
+      ],
+      "sourceDocumentAbsentFromModel": true,
+      "events": [
+        {
+          "type": "instruction.discovered",
+          "payload": {
+            "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-denied-revision-ubUBDP/workspace/AGENTS.md",
+            "scope": "cwd",
+            "sizeBytes": 62,
+            "truncated": false
+          }
+        },
+        {
+          "type": "security.injection_denied",
+          "payload": {
+            "source": "project",
+            "target": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-denied-revision-ubUBDP/workspace/AGENTS.md",
+            "reason": "injection detected (dismiss-previous-instructions, dismiss-all-instructions, override-own-instructions, extract-system-prompt)",
+            "reasons": [
+              "dismiss-previous-instructions",
+              "dismiss-all-instructions",
+              "override-own-instructions",
+              "extract-system-prompt"
+            ],
+            "code": "INJECTION_DENIED"
+          }
+        },
+        {
+          "type": "context.built",
+          "payload": {
+            "tokens": 130,
+            "used": 130,
+            "budget": 8000,
+            "dropped": 0,
+            "compacted": false,
+            "messagesTokens": 15
+          }
+        },
+        {
+          "type": "instruction.discovered",
+          "payload": {
+            "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-denied-revision-ubUBDP/workspace/AGENTS.md",
+            "scope": "cwd",
+            "sizeBytes": 91,
+            "truncated": false
+          }
+        },
+        {
+          "type": "security.injection_denied",
+          "payload": {
+            "source": "project",
+            "target": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/default-denied-revision-ubUBDP/workspace/AGENTS.md",
+            "reason": "injection detected (dismiss-previous-instructions, dismiss-all-instructions, override-own-instructions, extract-system-prompt)",
+            "reasons": [
+              "dismiss-previous-instructions",
+              "dismiss-all-instructions",
+              "override-own-instructions",
+              "extract-system-prompt"
+            ],
+            "code": "INJECTION_DENIED"
+          }
+        },
+        {
+          "type": "context.built",
+          "payload": {
+            "tokens": 130,
+            "used": 130,
+            "budget": 8000,
+            "dropped": 0,
+            "compacted": false,
+            "messagesTokens": 42
+          }
+        }
+      ],
+      "requestSystemSha256": [
+        "c82ee0ace5f35da2677b1c04dd6d9d1c6296835e851b8e7f9ac3bfaf82009f28",
+        "c82ee0ace5f35da2677b1c04dd6d9d1c6296835e851b8e7f9ac3bfaf82009f28"
+      ],
+      "instructionFingerprints": [
+        "e8e68cc1e0c8408f0e94792fd7593994dc893b73a1d10fd1f1e57ec0fc2ad775",
+        "ad9ec28be2a08365692e12da65381f44cf3e4f050d5a3f8a1e3ed5e796254f49"
+      ],
+      "revisionRequestSystemUnchanged": true,
+      "revisionInstructionFingerprintChanged": true
+    },
+    {
+      "name": "scoped-denied-revision",
+      "outcome": "completed",
+      "document": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/scoped-denied-revision-RmUkfg/workspace/AGENTS.md",
+      "bodyBytes": 62,
+      "requestCount": 2,
+      "bodyInRequest": false,
+      "projectSources": [],
+      "sourceDocumentAbsentFromModel": false,
+      "events": [
+        {
+          "type": "security.injection_denied",
+          "payload": {
+            "source": "project",
+            "target": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/scoped-denied-revision-RmUkfg/workspace/AGENTS.md",
+            "reason": "injection detected (dismiss-previous-instructions, dismiss-all-instructions, override-own-instructions, extract-system-prompt)",
+            "reasons": [
+              "dismiss-previous-instructions",
+              "dismiss-all-instructions",
+              "override-own-instructions",
+              "extract-system-prompt"
+            ],
+            "code": "INJECTION_DENIED"
+          }
+        },
+        {
+          "type": "context.built",
+          "payload": {
+            "tokens": 130,
+            "used": 130,
+            "budget": 8000,
+            "dropped": 0,
+            "compacted": false,
+            "messagesTokens": 15
+          }
+        },
+        {
+          "type": "security.injection_denied",
+          "payload": {
+            "source": "project",
+            "target": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/scoped-denied-revision-RmUkfg/workspace/AGENTS.md",
+            "reason": "injection detected (dismiss-previous-instructions, dismiss-all-instructions, override-own-instructions, extract-system-prompt)",
+            "reasons": [
+              "dismiss-previous-instructions",
+              "dismiss-all-instructions",
+              "override-own-instructions",
+              "extract-system-prompt"
+            ],
+            "code": "INJECTION_DENIED"
+          }
+        },
+        {
+          "type": "context.built",
+          "payload": {
+            "tokens": 130,
+            "used": 130,
+            "budget": 8000,
+            "dropped": 0,
+            "compacted": false,
+            "messagesTokens": 42
+          }
+        }
+      ],
+      "requestSystemSha256": [
+        "c82ee0ace5f35da2677b1c04dd6d9d1c6296835e851b8e7f9ac3bfaf82009f28",
+        "c82ee0ace5f35da2677b1c04dd6d9d1c6296835e851b8e7f9ac3bfaf82009f28"
+      ],
+      "instructionFingerprints": [
+        "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204",
+        "3181613ce2a6d77e943a0f74b1074ab19c2fd9d68bb596b11a63421b5483d204"
+      ],
+      "revisionRequestSystemUnchanged": true,
+      "revisionInstructionFingerprintChanged": false
+    }
+  ],
+  "byteCaps": [
+    {
+      "name": "ascii-single-line",
+      "cap": 256,
+      "sourceBytes": 120000,
+      "capturedBytes": 120030,
+      "capExceeded": true,
+      "truncated": true,
+      "containsReplacement": false,
+      "sourceSizeReported": 120000,
+      "discoveryReads": [
+        {
+          "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/byte-cap-ascii-single-line-xLqWYz/AGENTS.md",
+          "bytesReturned": 120000
+        }
+      ],
+      "admittedProjectBlocks": 0,
+      "discoveredCount": 1,
+      "dropped": 1,
+      "reportedUsedTokens": 5
+    },
+    {
+      "name": "unicode-single-line",
+      "cap": 256,
+      "sourceBytes": 420000,
+      "capturedBytes": 420030,
+      "capExceeded": true,
+      "truncated": true,
+      "containsReplacement": false,
+      "sourceSizeReported": 420000,
+      "discoveryReads": [
+        {
+          "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/byte-cap-unicode-single-line-RwGPWq/AGENTS.md",
+          "bytesReturned": 420000
+        }
+      ],
+      "admittedProjectBlocks": 0,
+      "discoveredCount": 1,
+      "dropped": 1,
+      "reportedUsedTokens": 5
+    },
+    {
+      "name": "line-boundary",
+      "cap": 256,
+      "sourceBytes": 120011,
+      "capturedBytes": 40,
+      "capExceeded": false,
+      "truncated": true,
+      "containsReplacement": false,
+      "sourceSizeReported": 120011,
+      "discoveryReads": [
+        {
+          "path": "/workspace/harness-agent/.ci/agent-round2-20261004/context-audit/baseline-final/byte-cap-line-boundary-raCuPl/AGENTS.md",
+          "bytesReturned": 120011
+        }
+      ],
+      "admittedProjectBlocks": 1,
+      "discoveredCount": 1,
+      "dropped": 0,
+      "reportedUsedTokens": 15
+    }
+  ]
+}
