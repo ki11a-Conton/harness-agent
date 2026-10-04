@@ -1,0 +1,299 @@
+{
+  "observedAt": "2026-10-04T07:09:29.947Z",
+  "repo": "/workspace/harness-agent",
+  "sourceHead": "616ef30593da69bdf6db3546d4c22b80c1b4378f",
+  "sourceStatus": "",
+  "sourceHashes": {
+    "packages/memory/src/search-text.ts": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+    "packages/memory/src/memory-store.ts": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+    "packages/memory/src/sqlite-memory-store.ts": "1a30d1a470aa8055be16aab3b77b499a6da9c154469b1ecab4a113afbe41d34e",
+    "packages/memory/src/retrieval.ts": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55",
+    "packages/memory/dist/search-text.js": "077ce28fe2280d104af3d98da7c07d11582f61ea7ad0beec1ccc2f730975b202",
+    "packages/memory/dist/memory-store.js": "8722ce368b39c5626668437f3ced379d035ae938e480f693a6971f12e3cf5ed5",
+    "packages/memory/dist/sqlite-memory-store.js": "1cd4c67569579db04297288d0dd30b234f4b10a2bdfc98d79d973d151a4792be",
+    "packages/memory/dist/retrieval.js": "642e15428ffcb008e68d6448d5465555477c17f20888b6bf4d76e483eab709d6"
+  },
+  "probeSha256": "7e4d7584d3b91909123d1f5dfebbdea814df237b871e16054b87f1ba78820c28",
+  "rowCount": 10000,
+  "warmups": 2,
+  "measuredSamples": 5,
+  "expectBaselineDefects": false,
+  "paidCalls": 0,
+  "realProviderCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "interpretation": "SQLite supplement scans live rows passing type/scope filters: O(n) scan cost. No retrieval throughput improvement claim. Runtime still applies existing TopK/safety/lifecycle/session gates; search contract has no new limit.",
+  "cases": [
+    {
+      "backend": "jsonl",
+      "name": "warm-fts",
+      "query": "retry",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 2000,
+      "candidateCounts": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "correctnessPass": true,
+      "search": {
+        "samplesMs": [
+          35.384051,
+          33.200939000000005,
+          33.51330100000001,
+          35.06687199999999,
+          34.117817
+        ],
+        "minMs": 33.200939000000005,
+        "medianMs": 34.117817,
+        "maxMs": 35.384051
+      },
+      "retrievalMs": 48.52824399999997,
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "uniqueReturnedIds": 1
+    },
+    {
+      "backend": "jsonl",
+      "name": "chinese-substring",
+      "query": "端口配置",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 2000,
+      "candidateCounts": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "correctnessPass": true,
+      "search": {
+        "samplesMs": [
+          38.366412999999966,
+          36.449171999999976,
+          40.858032000000094,
+          32.87844199999995,
+          36.239565000000084
+        ],
+        "minMs": 32.87844199999995,
+        "medianMs": 36.449171999999976,
+        "maxMs": 40.858032000000094
+      },
+      "retrievalMs": 554.995289,
+      "returnedTopK": 5,
+      "suppressedCount": 0,
+      "uniqueReturnedIds": 5
+    },
+    {
+      "backend": "jsonl",
+      "name": "structured-do",
+      "query": "portlint",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 2000,
+      "candidateCounts": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "correctnessPass": true,
+      "search": {
+        "samplesMs": [
+          34.613485999999966,
+          30.332701000000043,
+          30.824614999999994,
+          32.10199699999998,
+          30.39539600000012
+        ],
+        "minMs": 30.332701000000043,
+        "medianMs": 30.824614999999994,
+        "maxMs": 34.613485999999966
+      },
+      "retrievalMs": 62.95411399999989,
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "uniqueReturnedIds": 1
+    },
+    {
+      "backend": "jsonl",
+      "name": "actual-miss",
+      "query": "unmatchedmarkerquantum",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 0,
+      "candidateCounts": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "correctnessPass": true,
+      "search": {
+        "samplesMs": [
+          31.683664000000135,
+          31.704195000000027,
+          32.68630099999996,
+          31.99697900000001,
+          39.264401000000134
+        ],
+        "minMs": 31.683664000000135,
+        "medianMs": 31.99697900000001,
+        "maxMs": 39.264401000000134
+      },
+      "retrievalMs": 39.43796300000008,
+      "returnedTopK": 0,
+      "suppressedCount": 0,
+      "uniqueReturnedIds": 0
+    },
+    {
+      "backend": "sqlite",
+      "name": "warm-fts",
+      "query": "retry",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 2000,
+      "candidateCounts": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "correctnessPass": true,
+      "search": {
+        "samplesMs": [
+          61.06222200000002,
+          66.09498500000018,
+          54.88834399999996,
+          62.04155300000002,
+          53.493202999999994
+        ],
+        "minMs": 53.493202999999994,
+        "medianMs": 61.06222200000002,
+        "maxMs": 66.09498500000018
+      },
+      "retrievalMs": 71.71698800000013,
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "uniqueReturnedIds": 1
+    },
+    {
+      "backend": "sqlite",
+      "name": "chinese-substring",
+      "query": "端口配置",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 2000,
+      "candidateCounts": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "correctnessPass": true,
+      "search": {
+        "samplesMs": [
+          55.732098999999835,
+          58.4010760000001,
+          48.35176700000011,
+          56.15333699999974,
+          65.42892600000005
+        ],
+        "minMs": 48.35176700000011,
+        "medianMs": 56.15333699999974,
+        "maxMs": 65.42892600000005
+      },
+      "retrievalMs": 557.6699939999999,
+      "returnedTopK": 5,
+      "suppressedCount": 0,
+      "uniqueReturnedIds": 5
+    },
+    {
+      "backend": "sqlite",
+      "name": "structured-do",
+      "query": "portlint",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 2000,
+      "candidateCounts": [
+        2000,
+        2000,
+        2000,
+        2000,
+        2000
+      ],
+      "correctnessPass": true,
+      "search": {
+        "samplesMs": [
+          49.74679699999979,
+          44.93624099999988,
+          48.63007800000014,
+          51.060453999999936,
+          44.145122999999785
+        ],
+        "minMs": 44.145122999999785,
+        "medianMs": 48.63007800000014,
+        "maxMs": 51.060453999999936
+      },
+      "retrievalMs": 70.27644099999998,
+      "returnedTopK": 1,
+      "suppressedCount": 1999,
+      "uniqueReturnedIds": 1
+    },
+    {
+      "backend": "sqlite",
+      "name": "actual-miss",
+      "query": "unmatchedmarkerquantum",
+      "actualRowCount": 10000,
+      "filteredLiveRowCount": 10000,
+      "expectedMatchCount": 0,
+      "candidateCounts": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "correctnessPass": true,
+      "search": {
+        "samplesMs": [
+          53.85252700000001,
+          53.78000800000018,
+          46.71705400000019,
+          55.81827999999996,
+          54.322577999999794
+        ],
+        "minMs": 46.71705400000019,
+        "medianMs": 53.85252700000001,
+        "maxMs": 55.81827999999996
+      },
+      "retrievalMs": 47.25951499999974,
+      "returnedTopK": 0,
+      "suppressedCount": 0,
+      "uniqueReturnedIds": 0
+    }
+  ],
+  "fixtureSha256": "1d6be9ccf0eb0205ad5aefb65be1e203fbd9db481281647ec0d929b9697b2081",
+  "sourceHeadAfter": "616ef30593da69bdf6db3546d4c22b80c1b4378f",
+  "sourceStatusAfter": "",
+  "sourceHashesAfter": {
+    "packages/memory/src/search-text.ts": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+    "packages/memory/src/memory-store.ts": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+    "packages/memory/src/sqlite-memory-store.ts": "1a30d1a470aa8055be16aab3b77b499a6da9c154469b1ecab4a113afbe41d34e",
+    "packages/memory/src/retrieval.ts": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55",
+    "packages/memory/dist/search-text.js": "077ce28fe2280d104af3d98da7c07d11582f61ea7ad0beec1ccc2f730975b202",
+    "packages/memory/dist/memory-store.js": "8722ce368b39c5626668437f3ced379d035ae938e480f693a6971f12e3cf5ed5",
+    "packages/memory/dist/sqlite-memory-store.js": "1cd4c67569579db04297288d0dd30b234f4b10a2bdfc98d79d973d151a4792be",
+    "packages/memory/dist/retrieval.js": "642e15428ffcb008e68d6448d5465555477c17f20888b6bf4d76e483eab709d6"
+  },
+  "sourceUnchanged": true,
+  "correctnessFailures": [],
+  "status": "PASS"
+}

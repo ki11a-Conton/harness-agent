@@ -1,0 +1,23 @@
+{
+  "argv": [
+    "corepack",
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/security/src/no-silent-catch.test.ts",
+    "packages/context/src/default-discovery-read-failures.test.ts",
+    "packages/memory/src/memory-search-contract.regressions.test.ts",
+    "--reporter=default",
+    "--reporter=json",
+    "--outputFile=.ci/agent-context-memory-20261004/security-followup/green.json"
+  ],
+  "exitCode": 0,
+  "sourceHead": "616ef30593da69bdf6db3546d4c22b80c1b4378f",
+  "trackedDirty": true,
+  "sourceHashes": {
+    "packages/context/src/discovery.ts": "1bdec0d2aa562b210870cf577adb56ad872b6c860b66979ae87903d1b83c3a67",
+    "packages/memory/src/sqlite-memory-store.ts": "f278be463dec22f5ed15039e6e727b22a942eb6afbaab19e6961e177ae20cb6f"
+  },
+  "observedAt": "2026-10-04T07:11:34.354156+00:00"
+}

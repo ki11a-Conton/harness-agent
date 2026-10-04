@@ -1,0 +1,45 @@
+{
+  "status": "PASS",
+  "head": "616ef30593da69bdf6db3546d4c22b80c1b4378f",
+  "store": {
+    "total": 30,
+    "passed": 30,
+    "failed": []
+  },
+  "harness": {
+    "total": 12,
+    "passed": 12,
+    "failed": [],
+    "scriptedGenerateCalls": 12
+  },
+  "supplement": [
+    {
+      "backend": "jsonl",
+      "query": "端口配置",
+      "expectedIds": [
+        "exact-chinese-token",
+        "chinese-substring-also-required"
+      ],
+      "actualIds": [
+        "exact-chinese-token",
+        "chinese-substring-also-required"
+      ],
+      "pass": true
+    },
+    {
+      "backend": "sqlite",
+      "query": "端口配置",
+      "expectedIds": [
+        "exact-chinese-token",
+        "chinese-substring-also-required"
+      ],
+      "actualIds": [
+        "exact-chinese-token",
+        "chinese-substring-also-required"
+      ],
+      "pass": true
+    }
+  ],
+  "sourceUnchanged": true,
+  "paidCalls": 0
+}

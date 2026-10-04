@@ -1,0 +1,79 @@
+$ vitest run packages/security packages/harness/src/security-regression-matrix.test.ts
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ✓ packages/security/src/approval.test.ts (15 tests) 1017ms
+     ✓ expire  1002ms
+ ✓ packages/security/src/parser-fuzz.test.ts (1812 tests) 197ms
+ ❯ packages/security/src/no-silent-catch.test.ts (4 tests | 1 failed) 110ms
+     ✓ scans a non-empty production tree 1ms
+     ✓ forbids `.catch(() => {})` fire-and-forget swallows 36ms
+     ✓ forbids `.catch(() => undefined)` swallows 32ms
+     × forbids empty catch blocks (comments are not observability) 40ms
+ ✓ packages/security/src/sandbox.test.ts (52 tests) 23ms
+ ✓ packages/security/src/boundary-guard.test.ts (49 tests) 20ms
+ ✓ packages/harness/src/security-regression-matrix.test.ts (12 tests) 14ms
+ ✓ packages/security/src/canonical-path.test.ts (26 tests) 11ms
+ ✓ packages/security/src/process-gate.test.ts (33 tests) 13ms
+ ✓ packages/security/src/network-gate.test.ts (20 tests) 10ms
+ ✓ packages/security/src/capability-guard.test.ts (17 tests) 11ms
+ ✓ packages/security/src/injection-gate.test.ts (13 tests) 10ms
+ ✓ packages/security/src/approval-capability.test.ts (23 tests) 9ms
+ ✓ packages/security/src/secret-gate.test.ts (16 tests) 9ms
+ ✓ packages/security/src/permission.test.ts (11 tests) 5ms
+ ✓ packages/security/src/path-parity.test.ts (11 tests) 6ms
+ ✓ packages/security/src/supply-chain.test.ts (8 tests) 5ms
+ ✓ packages/security/src/permission-grant.test.ts (7 tests) 5ms
+ ✓ packages/security/src/denial.test.ts (4 tests) 5ms
+ ✓ packages/security/src/workflow-paid-authorization.test.ts (2 tests) 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/security/src/no-silent-catch.test.ts > P14-6: no silent security/recovery catches (static scan) > forbids empty catch blocks (comments are not observability)
+AssertionError: [
+  {
+    "file": "packages/context/src/discovery.ts",
+    "line": 213,
+    "snippet": "catch {  }"
+  },
+  {
+    "file": "packages/memory/src/sqlite-memory-store.ts",
+    "line": 242,
+    "snippet": "catch {\\n      \\n    }"
+  }
+]: expected [ { …(3) }, { …(3) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "file": "packages/context/src/discovery.ts",
++     "line": 213,
++     "snippet": "catch {  }",
++   },
++   {
++     "file": "packages/memory/src/sqlite-memory-store.ts",
++     "line": 242,
++     "snippet": "catch {\\n      \\n    }",
++   },
++ ]
+
+ ❯ packages/security/src/no-silent-catch.test.ts:118:49
+    116|       hits.push(...findMatches(stripped, EMPTY_CATCH_BLOCK, file));
+    117|     }
+    118|     expect(hits, JSON.stringify(hits, null, 2)).toEqual([]);
+       |                                                 ^
+    119|   });
+    120| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 18 passed (19)
+      Tests  1 failed | 2134 passed (2135)
+   Start at  07:09:50
+   Duration  4.70s (transform 363ms, setup 0ms, import 998ms, tests 1.48s, environment 1ms)
+
+[ELIFECYCLE] Command failed with exit code 1.

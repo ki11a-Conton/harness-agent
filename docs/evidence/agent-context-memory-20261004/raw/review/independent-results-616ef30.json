@@ -1,0 +1,276 @@
+{
+  "observedAt": "2026-10-04T07:09:56.519Z",
+  "sourceHead": "616ef30593da69bdf6db3546d4c22b80c1b4378f",
+  "sourceStatus": "",
+  "sourceHashes": {
+    "packages/context/src/discovery.ts": "0b420fb806ca6054a36eaf5f6cf8244122c9917477064f81c30e7c3c30139a87",
+    "packages/context/dist/discovery.js": "a07c99d09db0812c5a885e11e3b3b480a0b44afec2564243df7e68ac9e7b52ac",
+    "packages/harness/src/compose/compose-context.ts": "4cfd5671140bb1301e533a527bf42ad4d07ee138c69ac676b62bc9e4d41046b2",
+    "packages/harness/dist/compose/compose-context.js": "41bed417a0d28a02c7386e446c75afed2052c2a78565f5e767c63e38a2724d1b",
+    "packages/harness/src/effective-instruction-context.ts": "2de2ef2e1c5f84d269ba3522f26e334e1050492933eb546a99d75f18dddabef4",
+    "packages/harness/dist/effective-instruction-context.js": "c6c292da661bd76e846fa8c58c18ec90e84f106ebc8211977370f6351b9a2927",
+    "packages/memory/src/memory-store.ts": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+    "packages/memory/dist/memory-store.js": "8722ce368b39c5626668437f3ced379d035ae938e480f693a6971f12e3cf5ed5",
+    "packages/memory/src/search-text.ts": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+    "packages/memory/dist/search-text.js": "077ce28fe2280d104af3d98da7c07d11582f61ea7ad0beec1ccc2f730975b202",
+    "packages/memory/src/sqlite-memory-store.ts": "1a30d1a470aa8055be16aab3b77b499a6da9c154469b1ecab4a113afbe41d34e",
+    "packages/memory/dist/sqlite-memory-store.js": "1cd4c67569579db04297288d0dd30b234f4b10a2bdfc98d79d973d151a4792be"
+  },
+  "probeHash": "1355e89751475e2f813ab17c2ae628766bc0fb42d01b68d53cab7a6d61bf3687",
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "scenarios": [
+    {
+      "name": "512 exhaustive cap and bounded IO controls",
+      "pass": true,
+      "checks": 512,
+      "failures": []
+    },
+    {
+      "name": "exact cap preserves BOM",
+      "pass": true,
+      "output": "﻿漢🙂abc"
+    },
+    {
+      "name": "exact cap preserves ASCII",
+      "pass": true,
+      "output": "ab\ncd\n"
+    },
+    {
+      "name": "exact cap preserves empty",
+      "pass": true,
+      "output": ""
+    },
+    {
+      "name": "invalid cap NaN fails closed",
+      "pass": true
+    },
+    {
+      "name": "invalid cap positive infinity fails closed",
+      "pass": true
+    },
+    {
+      "name": "invalid cap negative infinity fails closed",
+      "pass": true
+    },
+    {
+      "name": "invalid cap negative fails closed",
+      "pass": true
+    },
+    {
+      "name": "malformed UTF-8 omitted invalid leading",
+      "pass": true
+    },
+    {
+      "name": "malformed UTF-8 omitted overlong",
+      "pass": true
+    },
+    {
+      "name": "malformed UTF-8 omitted incomplete final",
+      "pass": true
+    },
+    {
+      "name": "malformed UTF-8 omitted surrogate",
+      "pass": true
+    },
+    {
+      "name": "actual file symlink omitted",
+      "pass": true
+    },
+    {
+      "name": "actual FIFO omitted without blocking",
+      "pass": true
+    },
+    {
+      "name": "actual directory document omitted",
+      "pass": true
+    },
+    {
+      "name": "jsonl punctuation % literal",
+      "pass": true
+    },
+    {
+      "name": "jsonl punctuation _ literal",
+      "pass": false
+    },
+    {
+      "name": "jsonl punctuation \" literal",
+      "pass": true
+    },
+    {
+      "name": "jsonl supplemental exact filters 端口配置",
+      "pass": true,
+      "ids": [
+        "structured",
+        "retired"
+      ]
+    },
+    {
+      "name": "jsonl supplemental exact filters command_alpha",
+      "pass": true,
+      "ids": [
+        "structured",
+        "retired"
+      ]
+    },
+    {
+      "name": "jsonl supplemental exact filters command_beta",
+      "pass": true,
+      "ids": [
+        "structured",
+        "retired"
+      ]
+    },
+    {
+      "name": "jsonl non-search projection \"metadataonlyneedle\"",
+      "pass": true
+    },
+    {
+      "name": "jsonl non-search projection \"metadataevidenceonlyneedle\"",
+      "pass": true
+    },
+    {
+      "name": "jsonl non-search projection \"When:\"",
+      "pass": true
+    },
+    {
+      "name": "jsonl non-search projection \"Avoid:\"",
+      "pass": true
+    },
+    {
+      "name": "jsonl non-search projection \"\\t  \\n\"",
+      "pass": true
+    },
+    {
+      "name": "jsonl non-search projection \"absentneedle\"",
+      "pass": true
+    },
+    {
+      "name": "jsonl lifecycle/session gates",
+      "pass": true,
+      "ids": [
+        "structured"
+      ],
+      "suppressed": [
+        {
+          "id": "retired",
+          "reason": "inactive"
+        },
+        {
+          "id": "foreign",
+          "reason": "session-mismatch"
+        }
+      ]
+    },
+    {
+      "name": "sqlite punctuation % literal",
+      "pass": true
+    },
+    {
+      "name": "sqlite punctuation _ literal",
+      "pass": false
+    },
+    {
+      "name": "sqlite punctuation \" literal",
+      "pass": true
+    },
+    {
+      "name": "sqlite supplemental exact filters 端口配置",
+      "pass": true,
+      "ids": [
+        "structured",
+        "retired"
+      ]
+    },
+    {
+      "name": "sqlite supplemental exact filters command_alpha",
+      "pass": true,
+      "ids": [
+        "structured",
+        "retired"
+      ]
+    },
+    {
+      "name": "sqlite supplemental exact filters command_beta",
+      "pass": true,
+      "ids": [
+        "structured",
+        "retired"
+      ]
+    },
+    {
+      "name": "sqlite non-search projection \"metadataonlyneedle\"",
+      "pass": true
+    },
+    {
+      "name": "sqlite non-search projection \"metadataevidenceonlyneedle\"",
+      "pass": true
+    },
+    {
+      "name": "sqlite non-search projection \"When:\"",
+      "pass": true
+    },
+    {
+      "name": "sqlite non-search projection \"Avoid:\"",
+      "pass": true
+    },
+    {
+      "name": "sqlite non-search projection \"\\t  \\n\"",
+      "pass": true
+    },
+    {
+      "name": "sqlite non-search projection \"absentneedle\"",
+      "pass": true
+    },
+    {
+      "name": "sqlite lifecycle/session gates",
+      "pass": true,
+      "ids": [
+        "structured"
+      ],
+      "suppressed": [
+        {
+          "id": "retired",
+          "reason": "inactive"
+        },
+        {
+          "id": "foreign",
+          "reason": "session-mismatch"
+        }
+      ]
+    },
+    {
+      "name": "SQLite positive FTS supplemented once",
+      "pass": true,
+      "ids": [
+        "exact-token",
+        "structured",
+        "retired",
+        "foreign",
+        "wrong-type",
+        "substring"
+      ]
+    },
+    {
+      "name": "SQLite corrupt metadata stays non-retrievable",
+      "pass": true
+    },
+    {
+      "name": "source and distribution hashes unchanged during independent probe",
+      "pass": true
+    }
+  ],
+  "contextChecks": 512,
+  "contextFailures": [],
+  "sourceHashesUnchanged": true,
+  "status": "FAIL",
+  "summary": {
+    "scenarios": 44,
+    "passed": 42,
+    "failed": [
+      "jsonl punctuation _ literal",
+      "sqlite punctuation _ literal"
+    ]
+  }
+}

@@ -263,7 +263,7 @@ export class SqliteMemoryStore implements MemoryStore {
         `SELECT m.*, bm25(memories_fts) AS score FROM memories_fts f JOIN memories m ON m.id = f.id WHERE memories_fts MATCH ? AND ${where} ORDER BY score`,
       ).all(ftsQuery, ...params) as unknown as SqliteRow[];
     } catch {
-      // A missing index or rejected FTS query still uses the literal matcher.
+      process.stderr.write("[degraded] memory.search: FTS unavailable or query rejected; using literal search\n");
     }
     const hits: MemoryEntry[] = [];
     const seen = new Set<string>();

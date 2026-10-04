@@ -231,7 +231,9 @@ export class HierarchicalInstructionDiscovery implements InstructionDiscovery {
     } finally {
       // Discovery is best-effort per document, including descriptor cleanup.
       // A close failure must not suppress unrelated readable instructions.
-      try { await handle?.close(); } catch { /* already-read documents remain usable */ }
+      try { await handle?.close(); } catch {
+        process.stderr.write("[degraded] discovery.close: instruction handle cleanup failed\n");
+      }
     }
   }
 }

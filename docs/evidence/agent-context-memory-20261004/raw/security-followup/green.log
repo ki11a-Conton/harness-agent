@@ -1,0 +1,15 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ✓ packages/security/src/no-silent-catch.test.ts (4 tests) 104ms
+[degraded] memory.search: FTS unavailable or query rejected; using literal search
+ ✓ packages/memory/src/memory-search-contract.regressions.test.ts (43 tests) 93ms
+[degraded] discovery.close: instruction handle cleanup failed
+ ✓ packages/context/src/default-discovery-read-failures.test.ts (3 tests) 17ms
+
+ Test Files  3 passed (3)
+      Tests  50 passed (50)
+   Start at  07:11:33
+   Duration  930ms (transform 264ms, setup 0ms, import 391ms, tests 213ms, environment 0ms)
+
+JSON report written to /workspace/harness-agent/.ci/agent-context-memory-20261004/security-followup/green.json

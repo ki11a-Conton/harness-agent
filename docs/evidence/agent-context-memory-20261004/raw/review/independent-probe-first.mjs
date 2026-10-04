@@ -93,14 +93,7 @@ try {
         entry('foreign',{structured:lesson,scope:'session',sourceSession:'foreign'}),entry('deleted',{structured:lesson,deleted:true}),
         entry('wrong-type',{structured:lesson,type:'explicit'})];
       for(const memory of memories)await store.write(memory);
-      for(const query of ['%','_','"']) {
-        // Strategy command names contain actual underscores, which must also
-        // match. Raw store search intentionally includes inactive/foreign
-        // entries; trusted retrieval performs those later safety gates.
-        const expectedIds=query==='_'?['literal','structured','retired','foreign','wrong-type']:['literal'];
-        const actualIds=(await store.search(query)).map(row=>row.id);
-        check(backend+' punctuation '+query+' literal',JSON.stringify(actualIds)===JSON.stringify(expectedIds),{actualIds,expectedIds});
-      }
+      for(const query of ['%','_','"'])check(backend+' punctuation '+query+' literal',JSON.stringify((await store.search(query)).map(row=>row.id))===JSON.stringify(['literal']));
       for(const query of ['端口配置','command_alpha','command_beta']) {
         const raw=await store.search(query,{scope:'workspace',type:'procedural'});
         check(backend+' supplemental exact filters '+query,JSON.stringify(raw.map(row=>row.id))===JSON.stringify(['structured','retired']),{ids:raw.map(row=>row.id)});
