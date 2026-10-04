@@ -1,0 +1,84 @@
+{
+  "sourceSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+  "dirty": false,
+  "verificationIntegrityPass": true,
+  "receipts": [
+    {
+      "name": "quoted-required-failure",
+      "passed": true,
+      "rawExitCode": 7,
+      "convertedPassed": false,
+      "harnessTermination": "verification_failed",
+      "scriptedCalls": 3
+    },
+    {
+      "name": "compound-required-failure",
+      "passed": true,
+      "rawExitCode": 9,
+      "convertedPassed": false,
+      "harnessTermination": "verification_failed",
+      "scriptedCalls": 3
+    },
+    {
+      "name": "quoted-space-path",
+      "passed": true,
+      "rawExitCode": 0,
+      "convertedPassed": true,
+      "harnessTermination": "verified_complete",
+      "scriptedCalls": 1
+    },
+    {
+      "name": "ordinary-passing-recipe",
+      "passed": true,
+      "rawExitCode": 0,
+      "convertedPassed": true,
+      "harnessTermination": "verified_complete",
+      "scriptedCalls": 1
+    },
+    {
+      "name": "discovery-root-truncated",
+      "passed": true,
+      "rawExitCode": 11,
+      "harnessTermination": "verification_failed",
+      "scriptedCalls": 3
+    },
+    {
+      "name": "discovery-order-stability",
+      "passed": true
+    },
+    {
+      "name": "legacy-cache-upgrade",
+      "passed": true,
+      "harnessTermination": "verification_failed",
+      "scriptedCalls": 3
+    },
+    {
+      "name": "current-cache-warm-control",
+      "passed": true
+    },
+    {
+      "name": "changed-path-no-interpolation",
+      "passed": true,
+      "harnessTermination": "verified_complete",
+      "scriptedCalls": 1
+    },
+    {
+      "name": "explicit-argv-failure",
+      "passed": true,
+      "harnessTermination": "verification_failed",
+      "scriptedCalls": 3
+    },
+    {
+      "name": "explicit-argv-literal",
+      "passed": true,
+      "harnessTermination": "verified_complete",
+      "scriptedCalls": 1
+    },
+    {
+      "name": "empty-verification",
+      "passed": true,
+      "harnessTermination": "verification_failed",
+      "scriptedCalls": 3
+    }
+  ]
+}

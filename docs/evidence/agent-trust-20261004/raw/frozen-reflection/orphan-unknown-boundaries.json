@@ -1,0 +1,106 @@
+{
+  "label": "orphan-unknown-boundaries",
+  "pass": true,
+  "sessionId": "session_2168ce08-a5d3-4f27-a532-dd9a85a547d8",
+  "turnId": "turn_fdf3c227-43be-431d-81aa-e4b8d78ba079",
+  "result": {
+    "outputs": 0,
+    "candidates": 0
+  },
+  "events": [
+    {
+      "id": "event_d9244162-08b2-4197-ad23-9044ad4c5dee",
+      "sessionId": "session_2168ce08-a5d3-4f27-a532-dd9a85a547d8",
+      "timestamp": 31,
+      "type": "verification.failed",
+      "payload": {
+        "error": "orphan before start"
+      },
+      "sequence": 0,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_4732fc97-16b8-4b4a-a490-e737ea30272d",
+      "sessionId": "session_2168ce08-a5d3-4f27-a532-dd9a85a547d8",
+      "turnId": "turn_fdf3c227-43be-431d-81aa-e4b8d78ba079",
+      "timestamp": 32,
+      "type": "turn.started",
+      "payload": {
+        "turnId": "turn_fdf3c227-43be-431d-81aa-e4b8d78ba079"
+      },
+      "sequence": 1,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_a10b41b4-781a-4bc2-9f1e-880ea07989c6",
+      "sessionId": "session_2168ce08-a5d3-4f27-a532-dd9a85a547d8",
+      "turnId": "turn_fdf3c227-43be-431d-81aa-e4b8d78ba079",
+      "timestamp": 33,
+      "type": "model.completed",
+      "payload": {
+        "finishReason": "stop"
+      },
+      "sequence": 2,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_2f777096-a07c-4499-9b42-c6ca865aee76",
+      "sessionId": "session_2168ce08-a5d3-4f27-a532-dd9a85a547d8",
+      "turnId": "turn_fdf3c227-43be-431d-81aa-e4b8d78ba079",
+      "timestamp": 34,
+      "type": "turn.completed",
+      "payload": {
+        "turnId": "turn_fdf3c227-43be-431d-81aa-e4b8d78ba079"
+      },
+      "sequence": 3,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_531a8237-cb7e-4e1c-a1b2-b6ccc083c36a",
+      "sessionId": "session_2168ce08-a5d3-4f27-a532-dd9a85a547d8",
+      "timestamp": 35,
+      "type": "verification.failed",
+      "payload": {
+        "error": "orphan after terminal"
+      },
+      "sequence": 4,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_d7547fc8-6566-496c-a69d-286e3b1d559b",
+      "sessionId": "session_2168ce08-a5d3-4f27-a532-dd9a85a547d8",
+      "timestamp": 36,
+      "type": "turn.started",
+      "payload": {},
+      "sequence": 5,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_d2643cf2-5bec-433d-a4e1-43c38cb116b6",
+      "sessionId": "session_2168ce08-a5d3-4f27-a532-dd9a85a547d8",
+      "timestamp": 37,
+      "type": "verification.failed",
+      "payload": {
+        "error": "unknown span"
+      },
+      "sequence": 6,
+      "schemaVersion": 1
+    },
+    {
+      "id": "event_e41676f5-2e1f-4376-8149-6986a27c3a4d",
+      "sessionId": "session_2168ce08-a5d3-4f27-a532-dd9a85a547d8",
+      "timestamp": 38,
+      "type": "turn.failed",
+      "payload": {
+        "error": {
+          "code": "VERIFICATION_FAILED",
+          "message": "unknown terminal"
+        }
+      },
+      "sequence": 7,
+      "schemaVersion": 1
+    }
+  ],
+  "candidates": [],
+  "journal": []
+}

@@ -1,0 +1,298 @@
+{
+  "schema": "agent-round2-independent-final-acceptance-v1",
+  "observedAt": "2026-10-04T01:56:28.568825+00:00",
+  "status": "ACCEPTANCE_PASS_PUBLICATION_PENDING",
+  "testedSourceSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+  "acceptanceWorkspace": "/workspace/harness-agent-agent-round2-acceptance",
+  "sourceCleanBeforeAndAfterReview": true,
+  "frozenSourceTestProbeFilesVerified": 22,
+  "scope": "Read-only verification of frozen source, original complete local acceptance receipts, probe traces and GitHub-native REST CI receipts. No tests/build/probes/CI were rerun by this final verifier. Existing reviews and original interrupted files were preserved.",
+  "local": {
+    "commandsPassing": 8,
+    "logs": [
+      {
+        "name": "typecheck",
+        "path": "frozen-acceptance-resumed/typecheck.log",
+        "bytes": 9,
+        "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+        "exitCode": 0
+      },
+      {
+        "name": "build",
+        "path": "frozen-acceptance-resumed/build.log",
+        "bytes": 9,
+        "sha256": "faeaa94bcf7012d86f91ca647580449f56a263fb7eaf572c54789764f60a9b8f",
+        "exitCode": 0
+      },
+      {
+        "name": "security",
+        "path": "frozen-acceptance-resumed/security.log",
+        "bytes": 1593,
+        "sha256": "74b7a175aea61a4096cc4b61999bda47cab76f8e1425a647d196eb9c56052e0f",
+        "exitCode": 0
+      },
+      {
+        "name": "docs-verify",
+        "path": "frozen-acceptance-resumed/docs-verify.log",
+        "bytes": 1734,
+        "sha256": "a404c61cbe76cabb0675551a3fe10891a5b4ca41d846f2301e9cb513ed26006b",
+        "exitCode": 0
+      },
+      {
+        "name": "full",
+        "path": "frozen-acceptance-resumed/full.log",
+        "bytes": 86823,
+        "sha256": "6ab7206dad44ec8c2ee6431c809d01ada42d1c32f62f94d5b79b3e9e58b025d7",
+        "exitCode": 0
+      },
+      {
+        "name": "usage-audit",
+        "path": "frozen-acceptance-resumed/usage-audit.log",
+        "bytes": 763,
+        "sha256": "f2cf7a87fa38978ce86d8717f2c58808bb41b78ea4b0f95a8c1d383987323dba",
+        "exitCode": 0
+      },
+      {
+        "name": "artifact-integrity",
+        "path": "frozen-acceptance-resumed/artifact-integrity.log",
+        "bytes": 46,
+        "sha256": "7871c2cf3d2d6c6c938694e96d80da29a65a6f6170eb9a973225da402a4f1eec",
+        "exitCode": 0
+      },
+      {
+        "name": "diff-check",
+        "path": "frozen-acceptance-resumed/diff-check.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "exitCode": 0
+      }
+    ],
+    "fullTests": {
+      "passed": 8295,
+      "skipped": 12,
+      "filesPassed": 451,
+      "filesSkipped": 1,
+      "supervisorExit": 0,
+      "reapedOrphanDescendants": 70
+    },
+    "securityTestsPassed": 2135,
+    "interruptionPolicy": "Original partial manifest remains RUNNING, full NOT_COMPLETED; first four exact same-source command rows and log hashes reused verbatim. Only resumed full and subsequent checks provide completed verdict.",
+    "originalManifestSha256": "81e6d621cd21bf8f0cef0a95b2c701b4d5c8cf24a237872b6ae8d7b324e0d826",
+    "resumedManifestSha256": "6eccf376151a474044595df890c631bbacfd004a3272373a963d78f06a85976c",
+    "runtimeIdentity": {
+      "testedSourceSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+      "commandWorkingDirectory": "/workspace/harness-agent-agent-round2-acceptance",
+      "node": "v24.19.0",
+      "commandPnpm": "11.21.0",
+      "declaredPackageManager": "pnpm@11.21.0",
+      "launcherPnpmRecordedInResumedManifest": "12.9.1",
+      "explanation": "The resumed launcher identity was queried from /workspace. All eight acceptance command rows execute with cwd set to the frozen workspace and corepack resolves its declared packageManager. This receipt distinguishes launcher identity from actual command identity; raw manifests are retained unchanged.",
+      "sourceClean": true,
+      "observedAt": "2026-10-04T01:26:45Z"
+    },
+    "observationRunId": "agent-trust-linux-d01df59f31b1-1791077046",
+    "observationFiles": [
+      {
+        "path": "frozen-acceptance-resumed/observations/agent-trust-linux-d01df59f31b1-1791077046.jsonl",
+        "rows": 7,
+        "bytes": 4852,
+        "sha256": "57c6b6a4580835458b6a37b1e371a554848dbc4a704df2f6016725a5893e6e01"
+      },
+      {
+        "path": "frozen-acceptance-resumed/observations/agent-trust-linux-d01df59f31b1-1791077046.candidates.jsonl",
+        "rows": 7,
+        "bytes": 3417,
+        "sha256": "0c503208266b84e4096a1c98ecbcf2d264310a2ed2cb41d84cc21acab967495d"
+      }
+    ]
+  },
+  "frozenProbes": {
+    "verification": 12,
+    "memory": 32,
+    "reflection": 23,
+    "sourceClean": true,
+    "allTestedSourceSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+    "forbiddenMemoryBodies": 0,
+    "forbiddenMemoryCases": 10,
+    "allowedMemoryControls": 8,
+    "matchingConcurrentJournalCandidates": 200,
+    "multiReflectorJournalCandidates": 20,
+    "ghostQueueSameInstance": 0,
+    "ghostQueueFreshInstance": 0,
+    "indexes": [
+      {
+        "group": "frozen-verification",
+        "artifactsChecked": 14,
+        "indexSha256": "07a7eb9ea193c6b4e48fcd3742cb05bb13e4454bbd5cd7a6099ad7eca2121912"
+      },
+      {
+        "group": "frozen-memory",
+        "artifactsChecked": 24,
+        "indexSha256": "7e1aac7b4574666cd0203345b53c07e28c5bbe8f3491d371bb1ed670fcbfe15b"
+      },
+      {
+        "group": "frozen-reflection",
+        "artifactsChecked": 27,
+        "indexSha256": "72aab8c6417eae525fd0e617e7f19003b647fbb23af0030aa1e0ae7f83e789df"
+      }
+    ],
+    "candidateCorrespondence": [
+      {
+        "label": "concurrent-journal-0",
+        "matchingCandidateJournalTurns": 20,
+        "candidateSha256": "f07e618d980e23f0de3185d1be1be25f94ace00e536a3b8110f5ff9b151e8824"
+      },
+      {
+        "label": "concurrent-journal-1",
+        "matchingCandidateJournalTurns": 20,
+        "candidateSha256": "7c6c7fe140faa6ad806b209626a213494d8f15e9cc370a4fa4244447b556da8f"
+      },
+      {
+        "label": "concurrent-journal-2",
+        "matchingCandidateJournalTurns": 20,
+        "candidateSha256": "77e0afd1f8ae6598dd51724cddfc15cbac9d6ae822c169ab57b3f1c31f1aa087"
+      },
+      {
+        "label": "concurrent-journal-3",
+        "matchingCandidateJournalTurns": 20,
+        "candidateSha256": "8cb9c5639d0067cd78bf53db1062283cd39c68d050c8761bd4a0cd2491866430"
+      },
+      {
+        "label": "concurrent-journal-4",
+        "matchingCandidateJournalTurns": 20,
+        "candidateSha256": "489975d9671f6f7665c8048f7a458491126c45fb2dd7938d4ae4df40a53167aa"
+      },
+      {
+        "label": "concurrent-journal-5",
+        "matchingCandidateJournalTurns": 20,
+        "candidateSha256": "726410d39eb6757479a651748c4d8ac370090ebab3037ac66b817d3e1ffd8b6c"
+      },
+      {
+        "label": "concurrent-journal-6",
+        "matchingCandidateJournalTurns": 20,
+        "candidateSha256": "dbe335894f314e202949eb6f15974c14af1041284517a26e0dfbc66d0580ebd6"
+      },
+      {
+        "label": "concurrent-journal-7",
+        "matchingCandidateJournalTurns": 20,
+        "candidateSha256": "8f33e9036f58d9da281316d6b7d2bbc5b88aa3e8e6402ba60ad18ca7b8193da9"
+      },
+      {
+        "label": "concurrent-journal-8",
+        "matchingCandidateJournalTurns": 20,
+        "candidateSha256": "5d67667b8f3d9949e51ebe0fbbc4dc44d3b236b4c2021237ddab3db9ca2885b7"
+      },
+      {
+        "label": "concurrent-journal-9",
+        "matchingCandidateJournalTurns": 20,
+        "candidateSha256": "6666065e86df8490cabe376af03cd88fd2a7dc51657db1fd441224542cbadc26"
+      },
+      {
+        "label": "multi-instance-journal",
+        "matchingCandidateJournalTurns": 20,
+        "candidateSha256": "0d7b5e4b6ddc2a579190098cb526b6142655734d651393bf2a8d6a0fc9018c21"
+      }
+    ]
+  },
+  "ci": {
+    "runId": 37167480007,
+    "url": "https://github.com/ki11a-Conton/harness-agent/actions/runs/37167480007",
+    "headSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+    "conclusion": "success",
+    "jobsSucceeded": 10,
+    "jobs": [
+      {
+        "id": 111333351218,
+        "name": "offline cold-start (ubuntu)",
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+        "steps": 20
+      },
+      {
+        "id": 111333351266,
+        "name": "real formal offline (windows)",
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+        "steps": 12
+      },
+      {
+        "id": 111333351280,
+        "name": "coverage gate (ubuntu)",
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+        "steps": 13
+      },
+      {
+        "id": 111333351282,
+        "name": "install · typecheck · test · build · benchmark-smoke · audit (ubuntu-latest, ubuntu)",
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+        "steps": 38
+      },
+      {
+        "id": 111333351286,
+        "name": "r97-r98 closed loop (windows-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+        "steps": 18
+      },
+      {
+        "id": 111333351293,
+        "name": "install · typecheck · test · build · benchmark-smoke · audit (windows-latest, windows)",
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+        "steps": 38
+      },
+      {
+        "id": 111333351303,
+        "name": "real formal offline (ubuntu)",
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+        "steps": 12
+      },
+      {
+        "id": 111333351304,
+        "name": "r97-r98 closed loop (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+        "steps": 18
+      },
+      {
+        "id": 111338136613,
+        "name": "release attestation (P38-12)",
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+        "steps": 16
+      },
+      {
+        "id": 111338136625,
+        "name": "dual-platform acceptance (same SHA)",
+        "status": "completed",
+        "conclusion": "success",
+        "headSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+        "steps": 16
+      }
+    ],
+    "runSha256": "7c8233a17b96c2edd049651e6f9f75905b796e25174f3ed304c560c949861679",
+    "jobsSha256": "719e963f744aca3a939e6e728ca023c22520e057c38ebb4892a9a8e4e31b923f",
+    "scope": "GitHub-native API confirms actual completed jobs/steps on this source; no CI log-content claim beyond recorded API status."
+  },
+  "publication": "NOT_YET_ATTESTED",
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "remainingLimits": [
+    "No model-quality improvement or promotion inferred from offline engineering/CI evidence",
+    "No independent candidate-store cache freshness or cross-process writer coordination claim",
+    "Main publication must be independently checked by root after final docs commit/push"
+  ]
+}

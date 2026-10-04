@@ -1,0 +1,156 @@
+{
+  "schema": "agent-round2-independent-reflection-v1",
+  "observedAt": "2026-10-04T01:15:08.759295+00:00",
+  "stage": "Final T3 dirty-stage source freeze, original target evidence and actual fixture journal/candidate files independently checked. Prior45 turn tests preceded store extension; final combined full/CI still root responsibility.",
+  "reviewedHead": "965da0bb123fbdd9b61bded6bc345b767ad0c48f",
+  "sourceFingerprints": [
+    {
+      "path": "packages/harness/src/reflection-runner.ts",
+      "bytes": 13689,
+      "sha256": "96ff028d2fb18cb7940e70c91f04f2e8a2ff668a9b0f5e8120b1a070e3bb6fc1"
+    },
+    {
+      "path": "packages/harness/src/reflection-turn-isolation.regressions.test.ts",
+      "bytes": 16903,
+      "sha256": "b794469f2cb7d4c4164ccb6e89542da1c2a3b5b9380d81349ce58cf35aea8cef"
+    },
+    {
+      "path": "packages/harness/src/candidate-store.ts",
+      "bytes": 5157,
+      "sha256": "dbf0d5e85804cb413ea9df1bb0b3130eaa375a775a289e374210dc5d2629894d"
+    },
+    {
+      "path": "packages/harness/src/candidate-persistence.regressions.test.ts",
+      "bytes": 7707,
+      "sha256": "1693e2f89e0af93481c882cacf4b7140c01325341ee5da09a20d8d0d0829ec35"
+    },
+    {
+      "path": "scripts/research/agent-trust-20261004/reflection.mjs",
+      "bytes": 18210,
+      "sha256": "c79727906c8e710654cc6a99b0c4fce8ee5ec88a0e0e7dd64e8ca1aa5c9518ca"
+    }
+  ],
+  "originalArtifactGroups": {
+    "reflection-target": 61,
+    "reflection-persistence-target": 64
+  },
+  "originalArtifactsChecked": 125,
+  "ownerStoreTargetTests": 14,
+  "priorTurnTargetTests": 45,
+  "portableChecks": 23,
+  "concurrentCorrespondence": [
+    {
+      "label": "concurrent-journal-0",
+      "rows": 20,
+      "matchingInputJournalCandidateTurns": 20,
+      "candidateBytes": 30140,
+      "candidateSha256": "08174440796ecfd5759a0b3ba4a3269731e93a840a78ed35d72f764a9f0f6012",
+      "journalSha256": "fcec20b9a27658c69ccff28e4d587a9a74727a188e15b9be3e860d5f88b34bf1",
+      "sameTurnEvidenceVerified": true
+    },
+    {
+      "label": "concurrent-journal-1",
+      "rows": 20,
+      "matchingInputJournalCandidateTurns": 20,
+      "candidateBytes": 30140,
+      "candidateSha256": "77fb1911d7d1228002ea804511458bdf644b600e3e48a3638ec4a15deab31752",
+      "journalSha256": "9e8f2565c29a076a5dfc5cfcce0b8c56d2570442ec81310cfed13b7485a061a2",
+      "sameTurnEvidenceVerified": true
+    },
+    {
+      "label": "concurrent-journal-2",
+      "rows": 20,
+      "matchingInputJournalCandidateTurns": 20,
+      "candidateBytes": 30140,
+      "candidateSha256": "6cd23d47f1b090ee4246d682f41326c38fcf725f8fd4cccb53460702fd1f6173",
+      "journalSha256": "150bacc873a0c5c327132920b60929e758173b7d452a8fb4a401adc770d1e0c7",
+      "sameTurnEvidenceVerified": true
+    },
+    {
+      "label": "concurrent-journal-3",
+      "rows": 20,
+      "matchingInputJournalCandidateTurns": 20,
+      "candidateBytes": 30140,
+      "candidateSha256": "cb7576a4c50080b440b05a02391788c47fc5b0e4eb8afafb5d407ddecd814a0d",
+      "journalSha256": "b4ec7aef58d1c37731ada2b805639a34b2b8b7dd13776d3aef411e45bce86402",
+      "sameTurnEvidenceVerified": true
+    },
+    {
+      "label": "concurrent-journal-4",
+      "rows": 20,
+      "matchingInputJournalCandidateTurns": 20,
+      "candidateBytes": 30140,
+      "candidateSha256": "8dd8e0d6018a0e675c7db447d73e4b758a6bc4c4f235819d687f34ee53af41f8",
+      "journalSha256": "69d4725ef5669a67cff24e912a658d833fbc69cc6585ed0e35c0cd25e3e5ef8a",
+      "sameTurnEvidenceVerified": true
+    },
+    {
+      "label": "concurrent-journal-5",
+      "rows": 20,
+      "matchingInputJournalCandidateTurns": 20,
+      "candidateBytes": 30140,
+      "candidateSha256": "6b08ae47cbffb458eb0ae8ae0e183ff1c7854e3217c9957e8031fdd6c1a5a265",
+      "journalSha256": "a9319faeb5d68c2eaa730a9fed14f73bab8a6f68ad271b84817144b1ca0ee1ed",
+      "sameTurnEvidenceVerified": true
+    },
+    {
+      "label": "concurrent-journal-6",
+      "rows": 20,
+      "matchingInputJournalCandidateTurns": 20,
+      "candidateBytes": 30140,
+      "candidateSha256": "996a636b634474716c18e09a527f9135c18b7e0aa527f2a21601777de3fd5611",
+      "journalSha256": "5551811b5ad4211a0fca6d6e4a5427abce129119502dd89c9ce79396aa07fcb8",
+      "sameTurnEvidenceVerified": true
+    },
+    {
+      "label": "concurrent-journal-7",
+      "rows": 20,
+      "matchingInputJournalCandidateTurns": 20,
+      "candidateBytes": 30140,
+      "candidateSha256": "c69fc977d00e5c16af2b2bc7e1f877d8e36b29a65fc2e046115fbe40adbfac48",
+      "journalSha256": "eb867181a5e092dce3a7deabf5ab38af0953a356118bb7cbed30fed0e0e98282",
+      "sameTurnEvidenceVerified": true
+    },
+    {
+      "label": "concurrent-journal-8",
+      "rows": 20,
+      "matchingInputJournalCandidateTurns": 20,
+      "candidateBytes": 30140,
+      "candidateSha256": "e02684466cdac6e0d01cf3229962bf5fcdbbc81e9d0c5ff31074c561056434b8",
+      "journalSha256": "c20abb7a2a818755ac6d2860ae9c87d7eefeebb4c7bc87a562e95cffa4ca2d97",
+      "sameTurnEvidenceVerified": true
+    },
+    {
+      "label": "concurrent-journal-9",
+      "rows": 20,
+      "matchingInputJournalCandidateTurns": 20,
+      "candidateBytes": 30140,
+      "candidateSha256": "5ef0c5adf494b31fe335de6c73fc03d106386c378d3260f89d2d29704ca60fc2",
+      "journalSha256": "6513d3ef122612b4d17c98e736b815c4fbea71933097a29c53965c99e40817d9",
+      "sameTurnEvidenceVerified": true
+    },
+    {
+      "label": "multi-instance-journal",
+      "rows": 20,
+      "matchingInputJournalCandidateTurns": 20,
+      "candidateBytes": 30140,
+      "candidateSha256": "b3a1947f76fce26124e53a42463d5ce290fec6011453c80f3036230a08ada5ce",
+      "journalSha256": "9c7e89ebf2c3d0833cf490faf60eff17c48e18ad9f3fe90f44f76799ca7d70cc",
+      "sameTurnEvidenceVerified": true
+    }
+  ],
+  "ghostFixIndependentProbe": {
+    "sameInstanceQueueRows": 0,
+    "freshQueueRows": 0,
+    "journalRows": 1,
+    "returnCounts": {
+      "outputs": 1,
+      "candidates": 0
+    }
+  },
+  "status": "PASS",
+  "remainingScope": "No independent-instance candidate-cache freshness or cross-process coordination; no model quality/promotion evidence.",
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN"
+}

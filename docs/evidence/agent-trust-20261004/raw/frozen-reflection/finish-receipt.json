@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "stage": "frozen source-SHA actual built reflection/queue filesystem probe",
+  "observedAt": "2026-10-04T01:26:41.807027+00:00",
+  "sourceSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+  "repo": "/workspace/harness-agent-agent-round2-acceptance",
+  "command": [
+    "node",
+    "/workspace/harness-agent-agent-round2-acceptance/scripts/research/agent-trust-20261004/reflection.mjs",
+    "--repo",
+    "/workspace/harness-agent-agent-round2-acceptance",
+    "--out",
+    "/workspace/harness-agent/.ci/agent-round2-20261004/frozen-reflection"
+  ],
+  "exitCode": 0,
+  "durationSeconds": 1.0703940399980638,
+  "before": {
+    "head": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+    "trackedStatus": ""
+  },
+  "after": {
+    "head": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+    "trackedStatus": ""
+  },
+  "probeSummary": {
+    "checks": 23,
+    "passed": 23,
+    "failed": [],
+    "concurrentRounds": 10,
+    "concurrentExpectedJournalRows": 200,
+    "concurrentJournalRows": 200,
+    "concurrentCandidateRows": 200,
+    "multiInstanceJournalRows": 20
+  },
+  "ghostQueueAfterFault": {
+    "count": 0,
+    "get": null
+  },
+  "freshQueueAfterRepair": {
+    "count": 0,
+    "get": null
+  },
+  "retryResult": {
+    "outputs": 1,
+    "candidates": 1
+  },
+  "freshQueueAfterRetry": 1,
+  "paidModelCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "scope": "Probe ran once and modified no tracked files. JSON receipts/stdout/stderr retained; generated fixtures excluded from portable index. Same-process journal multi-instance uses one shared candidateStore; independent-instance cache coordination and cross-process writes are outside scope."
+}

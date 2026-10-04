@@ -1,0 +1,180 @@
+{
+  "schema": "agent-round2-independent-baseline-v1",
+  "observedAt": "2026-10-04T00:55:02.762324+00:00",
+  "baselineHead": "968544064f43cfc0a876c4e65fcb967cd466c9a2",
+  "baselineTrackedStatus": "",
+  "scope": "Independent hash and inner-record semantic checks of original receipts; no new model or runtime trial claimed. Source and built fingerprints separately verified against baseline workspace.",
+  "originalArtifactsChecked": 61,
+  "toolsFalseCompletion": [
+    {
+      "name": "quoted-required-failure",
+      "rawExitCode": 7,
+      "harnessGrade": "verified_complete",
+      "scriptedCalls": 1
+    },
+    {
+      "name": "compound-required-failure",
+      "rawExitCode": 9,
+      "harnessGrade": "verified_complete",
+      "scriptedCalls": 1
+    },
+    {
+      "name": "discovery-root-truncated",
+      "rawExitCode": 11,
+      "harnessGrade": "verified_complete",
+      "scriptedCalls": 1
+    }
+  ],
+  "forbiddenMemoryRequests": 10,
+  "migrationLosses": [
+    {
+      "case": "entry-roundtrip",
+      "backend": "sqlite",
+      "lostKeys": [
+        "sourceTurn",
+        "structured",
+        "derivability",
+        "promotionState",
+        "securityScan",
+        "pollutionSources"
+      ]
+    },
+    {
+      "case": "migration-preserves-metadata",
+      "backend": null,
+      "lostKeys": [
+        "state",
+        "evidence",
+        "usefulness"
+      ]
+    }
+  ],
+  "oldTurnReflection": [
+    {
+      "label": "tagged",
+      "oldState": "quarantined",
+      "newState": "pending",
+      "sameOldEvidence": true,
+      "newRelabeledTurn": "turn_3feb9929-57f1-4044-a94e-58a16e33002e"
+    },
+    {
+      "label": "legacy",
+      "oldState": "quarantined",
+      "newState": "quarantined",
+      "sameOldEvidence": true,
+      "newRelabeledTurn": "turn_62b8ecc2-e140-480e-9dca-1e718711b621"
+    }
+  ],
+  "concurrentJournal": {
+    "expected": 200,
+    "announced": 200,
+    "candidates": 200,
+    "persisted": 10
+  },
+  "sourceFingerprintsChecked": [
+    {
+      "path": "packages/tools/src/verification/plan-builder.ts",
+      "sha256": "4e7ca818e6b67b85cbb2920517ec2186fe6f91e7fbdb0193d65bf5c252de6b16"
+    },
+    {
+      "path": "packages/tools/src/verification/task-verifier.ts",
+      "sha256": "8900a81bcaa67fa6d68139def049050f697dfc5117d5b649fac900f6f3d1f977"
+    },
+    {
+      "path": "packages/tools/src/command-discovery.ts",
+      "sha256": "22bf6fe48744c0677cd4cffd5db3585f047bee9d78c317fd76acd7bc59b92176"
+    },
+    {
+      "path": "packages/harness/src/verification-planner.ts",
+      "sha256": "96e009eee9c1758631d3a1d702348afa214383aeb9d9ece43c0ac8f89431b038"
+    },
+    {
+      "path": "packages/harness/src/compose/compose-verification.ts",
+      "sha256": "f1444b39c058f143a00ee55b303cae7a37bfca97edb1118d469b1b36508a1a1e"
+    },
+    {
+      "path": "packages/tools/dist/verification/plan-builder.js",
+      "sha256": "083a651325c0a6053e04969bc3011ecc3782d6f36e6bb423632146b91947eb26"
+    },
+    {
+      "path": "packages/tools/dist/verification/task-verifier.js",
+      "sha256": "bc4fa925b58c332550fff140972c41292238570ccade6c595565d61857eccf73"
+    },
+    {
+      "path": "packages/tools/dist/command-discovery.js",
+      "sha256": "07212ffda5f091a73f6c39a6c995afb251baf389ed8380395ded5d219ceb3586"
+    },
+    {
+      "path": "packages/harness/dist/verification-planner.js",
+      "sha256": "5ec3a0d80ba89cb87128fe94855ed8627777d7cad3df90d614b9c90bd1c451e0"
+    },
+    {
+      "path": "packages/contracts/src/memory.ts",
+      "sha256": "e0bd5ef1ec8ad5c3d06820a8c753c1ff881fcbf80cdc17759f3475c102eb8a91"
+    },
+    {
+      "path": "packages/memory/src/memory-store.ts",
+      "sha256": "2a6b62c3f67310eb2172678c10330571fcce3d7676e2ebb2ec64c1e3e9d6e9ee"
+    },
+    {
+      "path": "packages/memory/src/sqlite-memory-store.ts",
+      "sha256": "2a4431d13f17f3ffeb159cbc11cf794c5da7ffdcfb86167e3118b8901d43369a"
+    },
+    {
+      "path": "packages/memory/src/retrieval.ts",
+      "sha256": "c31fe6eb6e0082034ba6b003d90bdb5c2423de0ee8138b37b5a731b500e345d6"
+    },
+    {
+      "path": "packages/harness/src/memory-runtime-bridge.ts",
+      "sha256": "10adbd49707cf4070521a84b4581ea4864d4c23b1551e5ba10e3d578b6c16404"
+    },
+    {
+      "path": "packages/memory/dist/sqlite-memory-store.js",
+      "sha256": "8da75361465ca179988363cecd100fe976379a83fce88f41cef2a88d9b164a9c"
+    },
+    {
+      "path": "packages/memory/dist/retrieval.js",
+      "sha256": "7fae0399ee4027c00a4d4c9b8004848154c647fb0f2cfd2e2739371a7e77f6bb"
+    },
+    {
+      "path": "packages/harness/dist/memory-runtime-bridge.js",
+      "sha256": "c0aa80cef34d72f6f7b25bc51ac1377486b871f378f27b2cf92521083200e1dd"
+    },
+    {
+      "path": "packages/harness/src/reflection-runner.ts",
+      "sha256": "0017aa7bb121552460b3dcb6c1f0e6e40bfea73b9161cf7033a4fb85a281b051"
+    },
+    {
+      "path": "packages/harness/dist/reflection-runner.js",
+      "sha256": "e682b04ffac28d4c34605deb16967c40f21f725ec8965dace68e53da83fed215"
+    },
+    {
+      "path": "packages/memory/src/reflection.ts",
+      "sha256": "f8764bac7981245bc5fb8eecde8c619c1f8235329e80cf67caedc20103d8a8cb"
+    },
+    {
+      "path": "packages/memory/dist/reflection.js",
+      "sha256": "637b137296d5310668a9f4de73042b250bd0635c56bd9737cfc27c9e5f08e850"
+    },
+    {
+      "path": "packages/harness/src/candidate-store.ts",
+      "sha256": "b55af583dd2661df6199526872df080e895bc6d264013e9cf9853b65542f1faf"
+    },
+    {
+      "path": "packages/harness/dist/candidate-store.js",
+      "sha256": "c41af360e643a42efef83f5cf04d19da02a858c2f38dd94cf5a0e516317bce51"
+    },
+    {
+      "path": "packages/events/src/event-store.ts",
+      "sha256": "ab7c5e6a2f7bfa8bec5fe9dbbf5249d842776b1fcc281d1f69bda62ca51597bb"
+    },
+    {
+      "path": "packages/events/dist/event-store.js",
+      "sha256": "691402d50f4c065ddf135a3b40f5514df6a36813df663f675c869eff1b3b3eb5"
+    }
+  ],
+  "paidCalls": 0,
+  "modelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN",
+  "status": "PASS"
+}

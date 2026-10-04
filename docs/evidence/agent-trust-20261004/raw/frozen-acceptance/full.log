@@ -1,0 +1,91 @@
+$ tsc -b && vitest run --exclude '**/*.perf.test.ts' --exclude '**/*.soak.test.ts' --exclude '**/e3-repro-current-defects.test.ts' --exclude '**/e4-r40-forensics.test.ts' --exclude '**/r97-driver-closed-loop.test.ts'
+
+ RUN  v4.1.10 /workspace/harness-agent-agent-round2-acceptance
+
+ ✓ packages/core/src/runtime/runtime.test.ts (83 tests) 162ms
+[harness] context budget: model capabilities unknown for stub/m — using conservative fallback 32000
+ ✓ apps/cli/src/benchmark-command.test.ts (99 tests) 8465ms
+     ✓ prevents cross-case contamination: case B cannot read case A's workspace file  1139ms
+     ✓ P4-7: subagent requirement runs the REAL Delegator (subagent.started fires)  1083ms
+     ✓ 3. --repeat 2 on 2 cases → exactly 8 logical arm runs (2×2×2)  310ms
+     ✓ N03/N05: a real paired run writes the V3 manifest with the FULL confirmed plan, policy and a unique sample grid  329ms
+[degraded] e4-r60 taskkill spawn: spawn taskkill ENOENT
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill spawn: boom
+[degraded] e4-r60 taskkill exit: taskkill exited with 1
+[degraded] e4-r60 taskkill: sync spawn failure
+[degraded] e4-r60 taskkill spawn: nope
+[degraded] e4-r60 taskkill spawn: injected taskkill failure
+[degraded] e4-r55 evidence root: ENOTDIR: not a directory, mkdir '/tmp/e4-r65-root-xsn8KY/a-file/child'
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+[degraded] e4-r55 evidence write child.stderr.txt: EACCES: injected write failure for child.stderr.txt
+[degraded] e4-r55 evidence write child-report.json: EIO: injected write failure for child-report.json
+[degraded] e4-r55 evidence write run.json: EIO: injected write failure for run.json
+[degraded] e4-r55 evidence write child.stdout.txt: EIO: injected write failure for child.stdout.txt
+
+R68_SYMLINK_CAPABILITY={"ok":true,"detail":"fs.symlink created a link that lstat reports as a symlink"}
+
+R68_LINK_DIRENT={"isSymbolicLink":true,"isFile":false}
+ ✓ apps/cli/src/e4-r55-failure-wiring.test.ts (65 tests) 13064ms
+     ✓ terminates a never-ending child's whole tree at the deadline and returns a structured timeout  4125ms
+     ✓ drives the real chain, judges its failure evidence, and requires an order mutation to break the acceptance  8297ms
+     ✓ I: a kill that never produces a terminal event resolves as UNCONFIRMED instead of hanging  454ms
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+usage: node scripts/e4/r97-arm-worker.mjs --checkout <arm dir> --case <caseId> --suite <suite> --arm <arm>
+                                                --provider <id> --model <id> [--endpoint <url>]
+                                                --plan-digest <hex> --state <execution state dir> --ledger <ledger dir>
+                                                [--source-sha <40-hex>] [--script-shape write-then-stop|text-only] [--json]
+
+The approved --provider/--model are REQUIRED: a worker that defaulted them would execute a
+different identity than the plan approved (plan T4 怎么做 6).
+ ✓ packages/evaluation/src/r97-arm-worker-contract.test.ts (48 tests) 25878ms
+     ✓ executes the case and records a verdict that can ONLY come from the real report  1236ms
+     ✓ TWO DIFFERENT CASES each enter their OWN context — no single placeholder request  1223ms
+     ✓ a case MISSING from the arm is refused — never borrowed from the driver repo (T4 怎么做 7)  332ms
+     ✓ leaves a real evidence file on disk after the worker returns  622ms
+     ✓ keeps the staging scratch out of the evidence, and only the scratch  640ms
+     ✓ the stored evidence row is REDACTED: no credential-shaped text reaches it  642ms
+     ✓ the record's detail AGREES with its own evidence on a REAL unit  619ms
+     ✓ grant=1, the consumer breaks mid-stream and the CLI throws: innerCalls=1, NOT abandoned, remaining=0, second reserve refused  398ms
+     ✓ a SETTLEMENT write failure on an ENTERED call is refused as `budget` and the allowance is NOT refunded  406ms
+     ✓ PROTOCOL FIXTURE: the runtime's model ref disagrees with the approval, and the synthetic PASS report must not win  434ms
+     ✓ PROTOCOL FIXTURE: a NULL runtime model ref is a refusal, never 'no drift'  399ms
+     ✓ PROTOCOL FIXTURE: a FAILED dry run ends the unit BEFORE any dispatch  392ms
+     ✓ PROTOCOL FIXTURE: an APPROVED-and-matching unit still reaches a verified PASS  385ms
+     ✓ PROTOCOL FIXTURE: a LEGITIMATE negative stays `case_failed`, not infrastructure  357ms
+     ✓ a dry run that never returns is stopped by the unit deadline, and its code does NOT outlive the unit  10673ms
+     ✓ a DISPATCH that never returns is stopped too, and the admitted call is NOT refunded  6637ms
+[degraded] session session_7207845d-65b1-4cd2-8cb1-7cd6bb9e88f3 durable followup consume failed for fup-1 (prompt remains bound to turn turn_aef6761d-f3f1-4e40-99af-066e1cec91bc): durable ack down
+[degraded] session session_7766b30a-352a-4b29-b6f2-820ef1e8fe0d durable followup bind failed for fup-1 (created turn turn_a3813172-a8e5-407b-8728-b7ff0ece24ba will not execute): bind down
+[degraded] inbox.promotion-identity-missing: session session_a024db71-286e-4835-86b8-d88c4adcfdae prompt prompt_96c34df3-1c25-4ff6-8274-ba07fa294e55 is promoted but has no promotedTurnId — recovery-required, not replayed
+[degraded] session session_f282fe72-b967-47da-a80f-b224a7460d07 failed to persist turn turn_60339950-6d1d-4d1d-9a0b-9fabe6cee92f as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_200e87fd-c8c6-4656-a4d3-c0988ab649c5 failed to persist turn turn_1a9c8334-4bef-4ca5-b963-184701b5c19e as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_200e87fd-c8c6-4656-a4d3-c0988ab649c5 failed to emit turn.cancelled for turn_1a9c8334-4bef-4ca5-b963-184701b5c19e: P38.2-9 simulated emit failure
+[degraded] session session_0286e87b-0a4a-40de-a985-d04b9a0a8cc8 failed to persist turn turn_4ac353ad-9023-484a-9727-f37e70a8aaa1 as cancelled: P38.2-9 simulated updateTurn failure
+[degraded] session session_3b41e66c-4459-49bb-abaf-56c63f10aa44 failed to persist turn turn_3b072fc7-7d9b-4fda-aa28-293a2aa18fb6 as cancelled: P38.3-8 simulated updateTurn failure
+ ✓ packages/core/src/runtime/session-actor.test.ts (68 tests) 64ms
+ ✓ packages/evaluation/src/r97-budget-ledger.test.ts (60 tests) 3218ms
+     ✓ REGRESSION: the first-open grant write happens UNDER the lock, not before it  769ms
+     ✓ a REAL reader process observing a REAL writer sees only COMPLETE versions, never CORRUPT  1418ms
+ ✓ packages/evaluation/src/r97-plan.test.ts (67 tests) 4100ms
+     ✓ 4. a selection whose case list was edited while keeping the OLD digest is REFUSED  337ms

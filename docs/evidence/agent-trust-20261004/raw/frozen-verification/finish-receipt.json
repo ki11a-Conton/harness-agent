@@ -1,0 +1,61 @@
+{
+  "schema": "agent-trust-t1-frozen-finish.v1",
+  "finishedAtUTC": "2026-10-04T01:26:20.154049+00:00",
+  "sourceShaBefore": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+  "sourceShaAfter": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+  "dirtyBefore": false,
+  "dirtyAfter": false,
+  "reportedSourceSha": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+  "reportedDirty": false,
+  "probeExitCode": 0,
+  "verificationIntegrityPass": true,
+  "checksTotal": 12,
+  "checksPassed": 12,
+  "eventArtifactChecks": [
+    {
+      "path": "quoted-required-failure-events.json",
+      "matched": true
+    },
+    {
+      "path": "compound-required-failure-events.json",
+      "matched": true
+    },
+    {
+      "path": "quoted-space-path-events.json",
+      "matched": true
+    },
+    {
+      "path": "ordinary-passing-recipe-events.json",
+      "matched": true
+    },
+    {
+      "path": "discovery-root-truncated-events.json",
+      "matched": true
+    },
+    {
+      "path": "legacy-cache-harness-events.json",
+      "matched": true
+    },
+    {
+      "path": "changed-path-no-interpolation-events.json",
+      "matched": true
+    },
+    {
+      "path": "explicit-argv-failure-events.json",
+      "matched": true
+    },
+    {
+      "path": "explicit-argv-literal-events.json",
+      "matched": true
+    },
+    {
+      "path": "empty-verification-events.json",
+      "matched": true
+    }
+  ],
+  "stdoutPath": "stdout.log",
+  "stderrPath": "stderr.log",
+  "paidCalls": 0,
+  "liveModelQuality": "NOT_RUN",
+  "promotion": "NOT_RUN"
+}

@@ -1,0 +1,508 @@
+{
+  "observedAt": "2026-10-04T01:25:57.356Z",
+  "repo": "/workspace/harness-agent-agent-round2-acceptance",
+  "sourceHead": "d01df59f31b156f7c8622ae6c926ce99bc751400",
+  "sourceStatus": "",
+  "sourceHashes": {
+    "packages/memory/src/retrieval.ts": "0921994bc133782ca2d01ae7e9af05d01e4fd2ac233916cb42c5350ad3621f55",
+    "packages/memory/src/security-gate.ts": "35dd1c100d6200a862ac50c3b2f1c0fff1d9feb8b7921e31c8805aed319a5efa",
+    "packages/memory/src/memory-store.ts": "ff28c1a0f3ba73f312279aa3efff786b618ed3f3d2fb795562c58e936443191b",
+    "packages/memory/src/sqlite-memory-store.ts": "0fd23b08c1f370d60c78b7ee7ebf82c939bff066a03696ccc976dcf09dac2773",
+    "packages/harness/src/memory-runtime-bridge.ts": "2d6cf39686f2884d2c390dcd13e7c7f46a3e368094d807b79124a79297a4f4cf",
+    "packages/memory/dist/retrieval.js": "642e15428ffcb008e68d6448d5465555477c17f20888b6bf4d76e483eab709d6",
+    "packages/memory/dist/security-gate.js": "4e5b30994c56a51aead532212406056b0f5e84dd80f74979e4b45ebbf85f72fa",
+    "packages/memory/dist/sqlite-memory-store.js": "f6b5774755c0c24ea6b6f99093fa7820f848c00bb09a899f3f169c8db340cb00",
+    "packages/harness/dist/create-harness.js": "442874f7297e7e0b7df5e715af249457fbd0bf6cd33f15b75d5e198700ea29e3",
+    "packages/harness/dist/memory-runtime-bridge.js": "b3b45a131640fad6a294aa8cb30a5c0d0770f1706c3281130a3816037d9eba09"
+  },
+  "probeSha256": "ca0701c5e7a37c4f2d71d3a518b31c484a283d7079977a4f111326477bf4a189",
+  "realProviderCalls": 0,
+  "paidCalls": 0,
+  "realModelQuality": "NOT_RUN",
+  "scriptedGenerateCalls": 18,
+  "checks": [
+    {
+      "name": "harness-jsonl-session-mismatch",
+      "pass": true,
+      "allowed": false,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "retrievalEvents": []
+    },
+    {
+      "name": "harness-jsonl-deprecated",
+      "pass": true,
+      "allowed": false,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "retrievalEvents": []
+    },
+    {
+      "name": "harness-jsonl-superseded",
+      "pass": true,
+      "allowed": false,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "retrievalEvents": []
+    },
+    {
+      "name": "harness-jsonl-stale",
+      "pass": true,
+      "allowed": false,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "retrievalEvents": []
+    },
+    {
+      "name": "harness-jsonl-conflicting",
+      "pass": true,
+      "allowed": false,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "retrievalEvents": []
+    },
+    {
+      "name": "harness-jsonl-owned-session",
+      "pass": true,
+      "allowed": true,
+      "bodySeen": true,
+      "memoryRefs": [
+        "memoryauditjsonlownedsessionmarker"
+      ],
+      "retrievalEvents": [
+        {
+          "query": "memoryauditjsonlownedsessionmarker",
+          "count": 1,
+          "memoryIds": [
+            "memoryauditjsonlownedsessionmarker"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "name": "harness-jsonl-global",
+      "pass": true,
+      "allowed": true,
+      "bodySeen": true,
+      "memoryRefs": [
+        "memoryauditjsonlglobalmarker"
+      ],
+      "retrievalEvents": [
+        {
+          "query": "memoryauditjsonlglobalmarker",
+          "count": 1,
+          "memoryIds": [
+            "memoryauditjsonlglobalmarker"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "name": "harness-jsonl-workspace",
+      "pass": true,
+      "allowed": true,
+      "bodySeen": true,
+      "memoryRefs": [
+        "memoryauditjsonlworkspacemarker"
+      ],
+      "retrievalEvents": [
+        {
+          "query": "memoryauditjsonlworkspacemarker",
+          "count": 1,
+          "memoryIds": [
+            "memoryauditjsonlworkspacemarker"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "name": "harness-jsonl-active",
+      "pass": true,
+      "allowed": true,
+      "bodySeen": true,
+      "memoryRefs": [
+        "memoryauditjsonlactivemarker"
+      ],
+      "retrievalEvents": [
+        {
+          "query": "memoryauditjsonlactivemarker",
+          "count": 1,
+          "memoryIds": [
+            "memoryauditjsonlactivemarker"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "name": "harness-sqlite-session-mismatch",
+      "pass": true,
+      "allowed": false,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "retrievalEvents": []
+    },
+    {
+      "name": "harness-sqlite-deprecated",
+      "pass": true,
+      "allowed": false,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "retrievalEvents": []
+    },
+    {
+      "name": "harness-sqlite-superseded",
+      "pass": true,
+      "allowed": false,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "retrievalEvents": []
+    },
+    {
+      "name": "harness-sqlite-stale",
+      "pass": true,
+      "allowed": false,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "retrievalEvents": []
+    },
+    {
+      "name": "harness-sqlite-conflicting",
+      "pass": true,
+      "allowed": false,
+      "bodySeen": false,
+      "memoryRefs": [],
+      "retrievalEvents": []
+    },
+    {
+      "name": "harness-sqlite-owned-session",
+      "pass": true,
+      "allowed": true,
+      "bodySeen": true,
+      "memoryRefs": [
+        "memoryauditsqliteownedsessionmarker"
+      ],
+      "retrievalEvents": [
+        {
+          "query": "memoryauditsqliteownedsessionmarker",
+          "count": 1,
+          "memoryIds": [
+            "memoryauditsqliteownedsessionmarker"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "name": "harness-sqlite-global",
+      "pass": true,
+      "allowed": true,
+      "bodySeen": true,
+      "memoryRefs": [
+        "memoryauditsqliteglobalmarker"
+      ],
+      "retrievalEvents": [
+        {
+          "query": "memoryauditsqliteglobalmarker",
+          "count": 1,
+          "memoryIds": [
+            "memoryauditsqliteglobalmarker"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "name": "harness-sqlite-workspace",
+      "pass": true,
+      "allowed": true,
+      "bodySeen": true,
+      "memoryRefs": [
+        "memoryauditsqliteworkspacemarker"
+      ],
+      "retrievalEvents": [
+        {
+          "query": "memoryauditsqliteworkspacemarker",
+          "count": 1,
+          "memoryIds": [
+            "memoryauditsqliteworkspacemarker"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "name": "harness-sqlite-active",
+      "pass": true,
+      "allowed": true,
+      "bodySeen": true,
+      "memoryRefs": [
+        "memoryauditsqliteactivemarker"
+      ],
+      "retrievalEvents": [
+        {
+          "query": "memoryauditsqliteactivemarker",
+          "count": 1,
+          "memoryIds": [
+            "memoryauditsqliteactivemarker"
+          ],
+          "suppressed": 0
+        }
+      ],
+      "usefulness": {
+        "retrievedCount": 1,
+        "injectedCount": 1,
+        "usedCount": 1,
+        "taskSuccessCount": 1,
+        "verificationPassedCount": 0,
+        "score": 0.8425
+      }
+    },
+    {
+      "name": "migration-full-entry",
+      "pass": true,
+      "migration": {
+        "total": 1,
+        "inserted": 1,
+        "skipped": 0,
+        "denied": []
+      },
+      "again": {
+        "total": 1,
+        "inserted": 0,
+        "skipped": 1,
+        "denied": []
+      },
+      "retiredRetrieved": 0
+    },
+    {
+      "name": "sqlite-update-reopen-full-entry",
+      "pass": true
+    },
+    {
+      "name": "structured-write-jsonl-injection-when",
+      "pass": true,
+      "code": "SECURITY_DENIED"
+    },
+    {
+      "name": "structured-write-jsonl-injection-do",
+      "pass": true,
+      "code": "SECURITY_DENIED"
+    },
+    {
+      "name": "structured-write-jsonl-injection-avoid",
+      "pass": true,
+      "code": "SECURITY_DENIED"
+    },
+    {
+      "name": "structured-write-jsonl-secret-when",
+      "pass": true,
+      "code": "SECURITY_DENIED"
+    },
+    {
+      "name": "structured-write-jsonl-secret-do",
+      "pass": true,
+      "code": "SECURITY_DENIED"
+    },
+    {
+      "name": "structured-write-jsonl-secret-avoid",
+      "pass": true,
+      "code": "SECURITY_DENIED"
+    },
+    {
+      "name": "structured-write-sqlite-injection-when",
+      "pass": true,
+      "code": "SECURITY_DENIED"
+    },
+    {
+      "name": "structured-write-sqlite-injection-do",
+      "pass": true,
+      "code": "SECURITY_DENIED"
+    },
+    {
+      "name": "structured-write-sqlite-injection-avoid",
+      "pass": true,
+      "code": "SECURITY_DENIED"
+    },
+    {
+      "name": "structured-write-sqlite-secret-when",
+      "pass": true,
+      "code": "SECURITY_DENIED"
+    },
+    {
+      "name": "structured-write-sqlite-secret-do",
+      "pass": true,
+      "code": "SECURITY_DENIED"
+    },
+    {
+      "name": "structured-write-sqlite-secret-avoid",
+      "pass": true,
+      "code": "SECURITY_DENIED"
+    }
+  ],
+  "receiptFiles": [
+    {
+      "path": "jsonl-session-mismatch-request.json",
+      "bytes": 17945,
+      "sha256": "98a0412ee0e6ce9c2c0008679df7ba6e2f28c3e1d8c7b224f13dfa7bd26bbe32"
+    },
+    {
+      "path": "jsonl-deprecated-request.json",
+      "bytes": 18002,
+      "sha256": "1176b22941fb4a2e84182b3d8743b619f73a9be5c72b1dd72565cc646bc951b5"
+    },
+    {
+      "path": "jsonl-superseded-request.json",
+      "bytes": 18031,
+      "sha256": "934cd49d7947102e6597436fb99e979e14ac4ae0f92e92aeb5636a90e9ced70a"
+    },
+    {
+      "path": "jsonl-stale-request.json",
+      "bytes": 17977,
+      "sha256": "bf96a267abb1c544be18f7e7a2cbd20c2aaefe754a26f6d096cdc7e6199f17be"
+    },
+    {
+      "path": "jsonl-conflicting-request.json",
+      "bytes": 18032,
+      "sha256": "588fcea88aa7c6726e98229e8b56bc2ed9a08532faf6b79dc2ca4aaf74b8dc71"
+    },
+    {
+      "path": "jsonl-owned-session-request.json",
+      "bytes": 18525,
+      "sha256": "e09fca28015e5b2da5a505f415d5735cd9fd1529e7dc44c2d248d55f93f436fb"
+    },
+    {
+      "path": "jsonl-global-request.json",
+      "bytes": 18475,
+      "sha256": "689b5bb785da73d517cf1ea8ff6f19cac4637eb4addd81ab50d241c7e4075a7e"
+    },
+    {
+      "path": "jsonl-workspace-request.json",
+      "bytes": 18502,
+      "sha256": "7d38b4c3764247e26eb1b6c7fc2598b59c17ed7b82f1ce787902b7e6c41fdbb9"
+    },
+    {
+      "path": "jsonl-active-request.json",
+      "bytes": 18523,
+      "sha256": "ce5432bb272fef967db53f15f0636acb73093b28699c36650b91a6ebff7dd06e"
+    },
+    {
+      "path": "sqlite-session-mismatch-request.json",
+      "bytes": 17949,
+      "sha256": "9ce78411cd10994f1a1a68b53e650810b27bd462ddb41506641b5a39c0f1efd2"
+    },
+    {
+      "path": "sqlite-deprecated-request.json",
+      "bytes": 18006,
+      "sha256": "4d0fc63713969ea16f11feab9c683c27c9cb7eaeefb3f09d6143a8f6b4badd17"
+    },
+    {
+      "path": "sqlite-superseded-request.json",
+      "bytes": 18035,
+      "sha256": "adcf28a35dcd7bf210b9c615fc9559e26a97299d879f181fd3e62610fe581e68"
+    },
+    {
+      "path": "sqlite-stale-request.json",
+      "bytes": 17981,
+      "sha256": "fd2b80cba4e5e184300fd8d5c6be8333043c6017e44a60a368937a8bd97a3563"
+    },
+    {
+      "path": "sqlite-conflicting-request.json",
+      "bytes": 18036,
+      "sha256": "31bc345f944eced10b1fc4b7168e9f12cfbbf6ec35ae414f3b633fa9dc7872fe"
+    },
+    {
+      "path": "sqlite-owned-session-request.json",
+      "bytes": 18533,
+      "sha256": "35b200be679814c4cb5dcd391a9cfb74692375e0538a102f7a95d886f2638005"
+    },
+    {
+      "path": "sqlite-global-request.json",
+      "bytes": 18483,
+      "sha256": "76e84379803feecb6bc97fb252602930236af58dfb459c831dacdcd4683f9c25"
+    },
+    {
+      "path": "sqlite-workspace-request.json",
+      "bytes": 18510,
+      "sha256": "cbdcb81baa540c87696de45d54816c1c418c7690c2a967445e101f15314162e0"
+    },
+    {
+      "path": "sqlite-active-request.json",
+      "bytes": 18531,
+      "sha256": "a976c8dc51e95fd8ea784f326d55fc88dbcbdea46bc8f1d6df010f9bf7226b3b"
+    },
+    {
+      "path": "metadata-migration.json",
+      "bytes": 3210,
+      "sha256": "a600ea38e1ee999ac16020c2b1994c3d7d5d9a7a83a77b928d122a12e8793379"
+    },
+    {
+      "path": "metadata-reopen.json",
+      "bytes": 2893,
+      "sha256": "0518e5959527e06068d28b6604e478c4ed5f65790828ff0ca30a7150856f107a"
+    }
+  ],
+  "forbiddenBodyCount": 0,
+  "forbiddenCaseCount": 10,
+  "allowedCaseCount": 8,
+  "status": "PASS"
+}

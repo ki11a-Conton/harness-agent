@@ -11,3 +11,5 @@
 T1 执行发现：基线命令缓存可跨进程保留错误的子包入口。实施包含旧无版本缓存定向失效和新版暖缓存控制，保证修复适用于升级后的实际启动路径；不扩大命令缓存的通用刷新政策。
 
 T3 独立审查实测追加：候选文件写失败会留下内存ghost，纳入最小copy-on-write持久化事务修复。验收要求add/update/remove失败保持原Map、实际list/get不暴露未落盘变更、恢复后重试正常；反思candidate写失败仍journal1、candidates0且实际queue0。不改变schema、promotion或独立store缓存协调。
+
+完成：受测源码d01df59f31b156f7c8622ae6c926ce99bc751400，clean本地8项检查通过，8295 PASS/12 SKIP，source CI37167480007同SHA10/10通过；3组冻结实测12/12、32/32、23/23通过。main原生发布后的API/ref/本地核对见ignored发布收据，源码与文档收尾SHA分开，原计划/pilot阻塞原样保留。
