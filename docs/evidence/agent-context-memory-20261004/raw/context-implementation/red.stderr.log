@@ -1,0 +1,643 @@
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 44 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single ASCII line including marker to 0 bytes
+AssertionError: expected 60033 to be less than or equal to 0
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single ASCII line including marker to 1 bytes
+AssertionError: expected 60033 to be less than or equal to 1
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single ASCII line including marker to 4 bytes
+AssertionError: expected 60033 to be less than or equal to 4
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single ASCII line including marker to 12 bytes
+AssertionError: expected 60033 to be less than or equal to 12
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single ASCII line including marker to 13 bytes
+AssertionError: expected 60033 to be less than or equal to 13
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single ASCII line including marker to 14 bytes
+AssertionError: expected 60033 to be less than or equal to 14
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single ASCII line including marker to 24 bytes
+AssertionError: expected 60033 to be less than or equal to 24
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single ASCII line including marker to 30 bytes
+AssertionError: expected 60033 to be less than or equal to 30
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single ASCII line including marker to 99 bytes
+AssertionError: expected 60033 to be less than or equal to 99
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single ASCII line including marker to 100 bytes
+AssertionError: expected 60033 to be less than or equal to 100
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single ASCII line including marker to 50000 bytes
+AssertionError: expected 60033 to be less than or equal to 50000
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single Chinese and emoji line including marker to 0 bytes
+AssertionError: expected 60029 to be less than or equal to 0
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single Chinese and emoji line including marker to 1 bytes
+AssertionError: expected 60029 to be less than or equal to 1
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single Chinese and emoji line including marker to 4 bytes
+AssertionError: expected 60029 to be less than or equal to 4
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single Chinese and emoji line including marker to 12 bytes
+AssertionError: expected 60029 to be less than or equal to 12
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single Chinese and emoji line including marker to 13 bytes
+AssertionError: expected 60029 to be less than or equal to 13
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single Chinese and emoji line including marker to 14 bytes
+AssertionError: expected 60029 to be less than or equal to 14
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single Chinese and emoji line including marker to 24 bytes
+AssertionError: expected 60029 to be less than or equal to 24
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single Chinese and emoji line including marker to 30 bytes
+AssertionError: expected 60029 to be less than or equal to 30
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single Chinese and emoji line including marker to 99 bytes
+AssertionError: expected 60029 to be less than or equal to 99
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single Chinese and emoji line including marker to 100 bytes
+AssertionError: expected 60029 to be less than or equal to 100
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > bounds a single Chinese and emoji line including marker to 50000 bytes
+AssertionError: expected 60029 to be less than or equal to 50000
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:33:48
+     31|         const doc = docs[0]!;
+     32|         expect(doc.sizeBytes).toBe(Buffer.byteLength(content)); expect…
+     33|         expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(cap…
+       |                                                ^
+     34|         expect(doc.content).not.toContain("\ufffd");
+     35|         // A valid UTF-8 prefix plus the optional ASCII marker must ro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > reserves marker space while preserving complete lines when possible
+AssertionError: expected 87 to be less than or equal to 70
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:47:45
+     45|     const prefix = doc!.content.slice(0, doc!.content.indexOf("\n# [tr…
+     46|     expect(content.startsWith(prefix + "\n")).toBe(true);
+     47|     expect(Buffer.byteLength(doc!.content)).toBeLessThanOrEqual(70);
+       |                                             ^
+     48|   });
+     49|   for (const content of ["", "a", "abc中文😀", "first\nsecond\n"]) {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > rejects invalid maxBytesPerFile=NaN explicitly
+AssertionError: promise resolved "[ { …(6) } ]" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+[
+  {
+    "content": "safe",
+    "detectedAt": 1791097023483,
+    "path": "/tmp/ar-default-doc-budget-xTpY8O/AGENTS.md",
+    "scope": "cwd",
+    "sizeBytes": 4,
+    "truncated": false,
+  },
+]
+
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:59:67
+     57|       it(`rejects invalid ${field}=${String(value)} explicitly`, async…
+     58|         const root = await fixture({ "AGENTS.md": "safe" });
+     59|         await expect(discovery.discover(root, { [field]: value })).rej…
+       |                                                                   ^
+     60|       });
+     61|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > rejects invalid maxBytesPerFile=Infinity explicitly
+AssertionError: promise resolved "[ { …(6) } ]" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+[
+  {
+    "content": "safe",
+    "detectedAt": 1791097023487,
+    "path": "/tmp/ar-default-doc-budget-JnZzzr/AGENTS.md",
+    "scope": "cwd",
+    "sizeBytes": 4,
+    "truncated": false,
+  },
+]
+
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:59:67
+     57|       it(`rejects invalid ${field}=${String(value)} explicitly`, async…
+     58|         const root = await fixture({ "AGENTS.md": "safe" });
+     59|         await expect(discovery.discover(root, { [field]: value })).rej…
+       |                                                                   ^
+     60|       });
+     61|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > rejects invalid maxBytesPerFile=-Infinity explicitly
+AssertionError: promise resolved "[ { …(6) } ]" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+[
+  {
+    "content": "safe
+# [truncated at 4 bytes]",
+    "detectedAt": 1791097023488,
+    "path": "/tmp/ar-default-doc-budget-pxAv02/AGENTS.md",
+    "scope": "cwd",
+    "sizeBytes": 4,
+    "truncated": true,
+  },
+]
+
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:59:67
+     57|       it(`rejects invalid ${field}=${String(value)} explicitly`, async…
+     58|         const root = await fixture({ "AGENTS.md": "safe" });
+     59|         await expect(discovery.discover(root, { [field]: value })).rej…
+       |                                                                   ^
+     60|       });
+     61|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > rejects invalid maxBytesPerFile=-1 explicitly
+AssertionError: promise resolved "[ { …(6) } ]" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+[
+  {
+    "content": "safe
+# [truncated at 4 bytes]",
+    "detectedAt": 1791097023490,
+    "path": "/tmp/ar-default-doc-budget-fFLXLl/AGENTS.md",
+    "scope": "cwd",
+    "sizeBytes": 4,
+    "truncated": true,
+  },
+]
+
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:59:67
+     57|       it(`rejects invalid ${field}=${String(value)} explicitly`, async…
+     58|         const root = await fixture({ "AGENTS.md": "safe" });
+     59|         await expect(discovery.discover(root, { [field]: value })).rej…
+       |                                                                   ^
+     60|       });
+     61|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[27/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > rejects invalid maxDocuments=NaN explicitly
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > rejects invalid maxDocuments=-Infinity explicitly
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > rejects invalid maxDocuments=-1 explicitly
+AssertionError: promise resolved "[]" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+[]
+
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:59:67
+     57|       it(`rejects invalid ${field}=${String(value)} explicitly`, async…
+     58|         const root = await fixture({ "AGENTS.md": "safe" });
+     59|         await expect(discovery.discover(root, { [field]: value })).rej…
+       |                                                                   ^
+     60|       });
+     61|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[28/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > rejects invalid maxDocuments=Infinity explicitly
+AssertionError: promise resolved "[ { …(6) } ]" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+[
+  {
+    "content": "safe",
+    "detectedAt": 1791097023492,
+    "path": "/tmp/ar-default-doc-budget-WFfKi1/AGENTS.md",
+    "scope": "cwd",
+    "sizeBytes": 4,
+    "truncated": false,
+  },
+]
+
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:59:67
+     57|       it(`rejects invalid ${field}=${String(value)} explicitly`, async…
+     58|         const root = await fixture({ "AGENTS.md": "safe" });
+     59|         await expect(discovery.discover(root, { [field]: value })).rej…
+       |                                                                   ^
+     60|       });
+     61|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[29/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > floors fractional byte/document budgets and keeps zero document budget empty
+AssertionError: expected 34 to be less than or equal to 4
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:66:79
+     64|     const root = await fixture({ "AGENTS.md": "safe root", "nested/AGE…
+     65|     const docs = await discovery.discover(root, { maxBytesPerFile: 4.9…
+     66|     expect(docs).toHaveLength(1); expect(Buffer.byteLength(docs[0]!.co…
+       |                                                                               ^
+     67|     expect(await discovery.discover(root, { maxDocuments: 0 })).toEqua…
+     68|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[30/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > captures only cap+4 bytes from an actual 16 MiB single-line document
+AssertionError: expected "readFile" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st readFile call:
+
+    Array [
+      "/tmp/ar-default-doc-budget-KB1CR7/AGENTS.md",
+      "utf8",
+    ]
+
+
+Number of calls: 1
+
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:79:75
+     77|       const read = vi.spyOn(proto, "read"); await handle.close(); sync…
+     78|       const docs = await discovery.discover(root, { maxBytesPerFile: 5…
+     79|       expect(handleReadFile).not.toHaveBeenCalled(); expect(readFile).…
+       |                                                                           ^
+     80|       expect(read.mock.calls.reduce((sum, args) => sum + Number(args[2…
+     81|       for (const args of read.mock.calls) expect((args[0] as Buffer).b…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[31/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > captures only cap+4 bytes from an actual 16 MiB multi-line document
+AssertionError: expected "readFile" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st readFile call:
+
+    Array [
+      "/tmp/ar-default-doc-budget-Ho4TMe/AGENTS.md",
+      "utf8",
+    ]
+
+
+Number of calls: 1
+
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:79:75
+     77|       const read = vi.spyOn(proto, "read"); await handle.close(); sync…
+     78|       const docs = await discovery.discover(root, { maxBytesPerFile: 5…
+     79|       expect(handleReadFile).not.toHaveBeenCalled(); expect(readFile).…
+       |                                                                           ^
+     80|       expect(read.mock.calls.reduce((sum, args) => sum + Number(args[2…
+     81|       for (const args of read.mock.calls) expect((args[0] as Buffer).b…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[32/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > omits malformed UTF-8 fffefd without injecting replacement characters
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > omits malformed UTF-8 c0af without injecting replacement characters
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > omits malformed UTF-8 61e4b8 without injecting replacement characters
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS discovery hard byte budget > omits malformed UTF-8 eda080 without injecting replacement characters
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:89:70
+     87|       const root = await fixture({ "AGENTS.md": bytes, "nested/AGENTS.…
+     88|       const docs = await discovery.discover(root, { maxBytesPerFile: 4…
+     89|       expect(docs.some(doc => doc.path === join(root, "AGENTS.md"))).t…
+       |                                                                      ^
+     90|       expect(docs.map(doc => doc.path)).toEqual([join(root, "nested/AG…
+     91|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[33/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS no-follow and isolated read failures > omits a cwd AGENTS file symlink while keeping regular controls
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS no-follow and isolated read failures > omits a ancestor AGENTS file symlink while keeping regular controls
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:122:93
+    120|       }
+    121|       const docs = await discovery.discover(join(root, "sub"));
+    122|       expect(docs.some(doc => doc.path === path || doc.content.include…
+       |                                                                                             ^
+    123|       expect(docs.some(doc => doc.content === "control")).toBe(true);
+    124|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[34/44]⎯
+
+ FAIL  packages/context/src/default-discovery-budget-regressions.test.ts > default AGENTS no-follow and isolated read failures > omits a document changed after its bounded capture
+AssertionError: expected [ 'unchanged-at-open', …(1) ] to deeply equal [ 'nested control' ]
+
+- Expected
++ Received
+
+  [
++   "unchanged-at-open",
+    "nested control",
+  ]
+
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts:152:70
+    150|       return result;
+    151|     }); await probe.close();
+    152|     expect((await discovery.discover(root)).map(doc => doc.content)).t…
+       |                                                                      ^
+    153|   });
+    154| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[35/44]⎯
+
+ FAIL  packages/harness/src/effective-instruction-context.regressions.test.ts > default Harness effective AGENTS instruction identity > pins only model-admitted injection project content and correlates actual step/model fingerprints
+AssertionError: expected [ { …(4) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "contentHash": "6b3f9436d0a355a50a421543419b2c78c7c84d2cf3d294f0805e726e6f01e6b1",
++     "kind": "project_instruction",
++     "path": "/tmp/ar-effective-instruction-zrqm9p/AGENTS.md",
++     "source": "/tmp/ar-effective-instruction-zrqm9p/AGENTS.md",
++   },
++ ]
+
+ ❯ packages/harness/src/effective-instruction-context.regressions.test.ts:59:149
+     57|           expect(steps[0]!.record.instructionFingerprint).not.toBe(ste…
+     58|         } else {
+     59|           for (let i = 0; i < bodies.length; i++) { expect(requests[i]…
+       |                                                                                                                                                     ^
+     60|           expect(steps[0]!.record.instructionFingerprint).toBe(steps[1…
+     61|           expect(events.filter(event => mode === "injection" ? event.t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[36/44]⎯
+
+ FAIL  packages/harness/src/effective-instruction-context.regressions.test.ts > default Harness effective AGENTS instruction identity > pins only model-admitted budget project content and correlates actual step/model fingerprints
+AssertionError: expected [ { …(4) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "contentHash": "d289c5e27c41989db9de9319cce8a428559aaa8369cba64e772a7c0962a27784",
++     "kind": "project_instruction",
++     "path": "/tmp/ar-effective-instruction-0CkVQV/AGENTS.md",
++     "source": "/tmp/ar-effective-instruction-0CkVQV/AGENTS.md",
++   },
++ ]
+
+ ❯ packages/harness/src/effective-instruction-context.regressions.test.ts:59:149
+     57|           expect(steps[0]!.record.instructionFingerprint).not.toBe(ste…
+     58|         } else {
+     59|           for (let i = 0; i < bodies.length; i++) { expect(requests[i]…
+       |                                                                                                                                                     ^
+     60|           expect(steps[0]!.record.instructionFingerprint).toBe(steps[1…
+     61|           expect(events.filter(event => mode === "injection" ? event.t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[37/44]⎯
+
+ FAIL  packages/harness/src/effective-instruction-context.regressions.test.ts > default Harness effective AGENTS instruction identity > pins the exact truncated document view rather than unread source bytes
+AssertionError: expected 105030 to be less than or equal to 50000
+ ❯ packages/harness/src/effective-instruction-context.regressions.test.ts:80:43
+     78|       const view = await h.context.pipeline.build({ cwd: root, systemP…
+     79|       const rendered = view.discovered[0]!.content;
+     80|       expect(Buffer.byteLength(rendered)).toBeLessThanOrEqual(50_000);…
+       |                                           ^
+     81|       const session = await h.runtime.createSession({ agent: h.agents[…
+     82|       expect((await h.runtime.runTurn(session.id, turn.id, new AbortCo…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[38/44]⎯
+

@@ -10,6 +10,7 @@ import type {
 import { AgentError, errorInfo } from "@ar/contracts";
 import { atomicWriteFile, backupTree, withLock } from "@ar/store-integrity";
 import { checkUnsafeMemoryEntry, scanMemoryEntries } from "./security-gate.js";
+import { matchesMemoryQuery, memorySearchText } from "./search-text.js";
 
 /** Single JSONL file holding every memory entry (MEMORY-001). */
 export const MEMORY_FILE_NAME = "memories.jsonl";
@@ -162,7 +163,8 @@ export class JsonlMemoryStore implements MemoryStore {
 
   /**
    * Case-insensitive substring OR token matching (no vector retrieval, §65).
-   * Matches when the lowercased query is a substring of the content, or when
+   * Matches when the lowercased query is a substring of content or rendered
+   * When/Do/Avoid strategy fields, or when
    * every whitespace-separated query token appears as a whole word in it.
    * Soft-deleted entries never match. `opts.scope` filters by exact scope
    * (scope hierarchy expansion is done by the retrieval layer, P0-4).
@@ -171,13 +173,14 @@ export class JsonlMemoryStore implements MemoryStore {
     query: string,
     opts: { type?: MemoryType; scope?: MemoryScope } = {},
   ): Promise<MemoryEntry[]> {
+    if (query.trim() === "") return [];
     const all = await this.readAll();
     return all.filter(
       (e) =>
         !e.deleted &&
         (opts.type === undefined || e.type === opts.type) &&
         (opts.scope === undefined || e.scope === opts.scope) &&
-        matches(query, e.content),
+        matchesMemoryQuery(query, memorySearchText(e)),
     );
   }
 
@@ -256,16 +259,4 @@ function parseJsonlLines(raw: string): MemoryEntry[] {
     }
   }
   return entries;
-}
-
-function matches(query: string, content: string): boolean {
-  const q = query.toLowerCase();
-  if (q === "") return false;
-  const c = content.toLowerCase();
-  if (c.includes(q)) return true;
-  const qTokens = q.split(/\s+/).filter((t) => t !== "");
-  const cTokens = new Set(
-    c.split(/[^a-z0-9]+/).filter((t) => t !== ""),
-  );
-  return qTokens.every((token) => cTokens.has(token));
 }

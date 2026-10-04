@@ -1,0 +1,42 @@
+{
+  "observedAt": "2026-10-04T06:58:36.734961+00:00",
+  "stage": "BASELINE_RED",
+  "sourceHead": "a1df586e4d105eb4171889931fbb59e557bb8d5d",
+  "command": "pnpm exec vitest run packages/context/src/default-discovery-budget-regressions.test.ts packages/harness/src/effective-instruction-context.regressions.test.ts --reporter=default --reporter=json --outputFile=.ci/agent-context-memory-20261004/context-implementation/red.json",
+  "exitCode": 1,
+  "behaviorFailed": 44,
+  "passed": 11,
+  "skip": 0,
+  "files": {
+    "packages/context/src/default-discovery-budget-regressions.test.ts": {
+      "bytes": 10187,
+      "sha256": "62e3119cec8f964bc78695553f9acc0583156aeb74cc1eb877bedda7b13743c7"
+    },
+    "packages/harness/src/effective-instruction-context.regressions.test.ts": {
+      "bytes": 7988,
+      "sha256": "98e833d0c748269b778793b8358111d407c4c43290778abb8eb24588584b8997"
+    },
+    "packages/context/src/discovery.ts": {
+      "bytes": 7833,
+      "sha256": "d7a854812b022c7fdff7e79fac26c7b1dade2012a959bf51923cace65d5af338"
+    },
+    "packages/harness/src/compose/compose-context.ts": {
+      "bytes": 6584,
+      "sha256": "baac4beec11baac088b695f284a72580e1c44d65820aeb967e0bef109e60960c"
+    }
+  },
+  "receipts": {
+    "red.json": {
+      "bytes": 38642,
+      "sha256": "00b50e8000605592b79ad5af2eea0a942d61ddbd5a6b5d2068d1e371ae7085aa"
+    },
+    "red.stdout.log": {
+      "bytes": 4666,
+      "sha256": "09ca63eeb0120d2ffaa578f5d0b48fd4e81d8c0cc1f85bc9f824b8b63648ed68"
+    },
+    "red.stderr.log": {
+      "bytes": 34487,
+      "sha256": "82fa3fe1e558fc70130fbf21c9471363a07366982f9cb2c4c506b5dbca881147"
+    }
+  }
+}

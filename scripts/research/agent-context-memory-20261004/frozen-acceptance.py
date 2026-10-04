@@ -30,6 +30,10 @@ save()
 commands = [
  ("typecheck", ["corepack","pnpm","typecheck"], env),
  ("build", ["corepack","pnpm","build"], env),
+ ("context-probe", ["node","scripts/research/agent-context-memory-20261004/context-probe.mjs",str(workspace),str(output/"context-probe")], env),
+ ("memory-probe", ["node","scripts/research/agent-context-memory-20261004/memory-probe.mjs",str(workspace),str(output/"memory-probe")], env),
+ ("memory-performance", ["node","scripts/research/agent-context-memory-20261004/memory-performance-probe.mjs",str(workspace),str(output/"memory-performance")], env),
+ ("joint-browser", ["python3","scripts/research/web-dsh-20261004/browser.py","--mode","candidate","--require-clean","--out",str(output/"joint-browser")], env),
  ("security", ["corepack","pnpm","test:security"], env),
  ("docs-verify", ["corepack","pnpm","docs:verify"], env),
  ("full", ["python3",str(Path(__file__).with_name("subreaper.py")),"corepack","pnpm","test"], named),

@@ -1,0 +1,14 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ packages/context/src/default-discovery-read-failures.test.ts (3 tests | 2 failed) 25ms
+     × continues discovery after a real descriptor closes then reports a cleanup error 12ms
+     ✓ accumulates actual short reads while keeping capture/allocation within cap+4 5ms
+     × omits an incomplete zero-byte capture instead of describing it as the source document 7ms
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+   Start at  07:03:32
+   Duration  343ms (transform 151ms, setup 0ms, import 199ms, tests 25ms, environment 0ms)
+
+JSON report written to /workspace/harness-agent/.ci/agent-context-memory-20261004/context-implementation/read-failures-red.json

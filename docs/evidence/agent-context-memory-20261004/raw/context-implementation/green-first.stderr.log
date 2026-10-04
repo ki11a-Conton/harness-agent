@@ -1,0 +1,22 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/context/src/discovery.test.ts > HierarchicalInstructionDiscovery (CTX-001) > measures truncation in UTF-8 bytes, not characters
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ packages/context/src/discovery.test.ts:152:50
+    150|     const doc = docs[0]!;
+    151|     expect(doc.truncated).toBe(true);
+    152|     expect(doc.content.startsWith("ascii-line")).toBe(true);
+       |                                                  ^
+    153|     expect(doc.content.includes("한국어")).toBe(false);
+    154|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

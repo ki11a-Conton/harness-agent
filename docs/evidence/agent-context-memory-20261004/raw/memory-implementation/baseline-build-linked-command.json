@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/workspace/harness-agent/node_modules/.bin/tsc",
+    "-p",
+    "packages/memory/tsconfig.json",
+    "--tsBuildInfoFile",
+    ".ci/baseline-memory.tsbuildinfo"
+  ],
+  "cwd": "/workspace/harness-agent-memory-baseline",
+  "startedAt": "2026-10-04T07:03:54.554131+00:00",
+  "finishedAt": "2026-10-04T07:03:54.998033+00:00",
+  "exitCode": 0,
+  "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "baselineSourceHead": "17aa6c7471faf8bdec020b45bfe7b9bb45470131",
+  "dependencyReuse": "three unchanged dependency dist copies and workspace package symlinks; isolated baseline tsBuildInfoFile"
+}

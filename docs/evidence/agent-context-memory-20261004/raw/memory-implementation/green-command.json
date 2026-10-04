@@ -1,0 +1,28 @@
+{
+  "command": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run",
+    "packages/memory",
+    "packages/harness/src/memory-runtime-bridge.test.ts",
+    "packages/harness/src/memory.integration.test.ts",
+    "packages/harness/src/memory-prefetch-production.regressions.test.ts",
+    "packages/harness/src/memory-search-production.regressions.test.ts",
+    "--reporter=default",
+    "--reporter=json",
+    "--outputFile=.ci/agent-context-memory-20261004/memory-implementation/green-vitest.json"
+  ],
+  "cwd": "/workspace/harness-agent",
+  "startedAt": "2026-10-04T06:59:50.946447+00:00",
+  "finishedAt": "2026-10-04T06:59:57.875720+00:00",
+  "exitCode": 0,
+  "sourceHashes": {
+    "packages/memory/src/search-text.ts": "e569e7f418e3edf87fba7fd2e9c1a1bdf7511d78ea85abcecd863def5c201fd0",
+    "packages/memory/src/memory-store.ts": "925f718e3f92baf32fb2868bafcdcd0701cb520e441049892848a4cb6d494caf",
+    "packages/memory/src/sqlite-memory-store.ts": "1a30d1a470aa8055be16aab3b77b499a6da9c154469b1ecab4a113afbe41d34e",
+    "packages/memory/src/memory-search-contract.regressions.test.ts": "18c811d7a86ea94d40d0cb14b1dc7c76d124721b261ee0dd3097e7962722be6a",
+    "packages/harness/src/memory-search-production.regressions.test.ts": "2b8ca8f48137f3fcca4b69ab42c17d43595e37c9b22b0d221977ac365b6f1078"
+  },
+  "logSha256": "93cc9575c964ebea08b5438275c6bda2db74dae02e56cc520af5b6cf6cbc8ba2"
+}

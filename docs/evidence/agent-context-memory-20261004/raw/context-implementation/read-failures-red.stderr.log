@@ -1,0 +1,40 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/context/src/default-discovery-read-failures.test.ts > default AGENTS bounded read/cleanup failures > continues discovery after a real descriptor closes then reports a cleanup error
+Error: cleanup failed
+ ❯ FileHandle.handle.close packages/context/src/default-discovery-read-failures.test.ts:30:81
+     28|     decorate(root, handle => {
+     29|       const close = handle.close.bind(handle);
+     30|       handle.close = async () => { await close(); closes++; throw Obje…
+       |                                                                                 ^
+     31|     });
+     32|     const docs = await new HierarchicalInstructionDiscovery().discover…
+ ❯ HierarchicalInstructionDiscovery.readDoc packages/context/src/discovery.ts:231:7
+ ❯ HierarchicalInstructionDiscovery.discover packages/context/src/discovery.ts:103:19
+ ❯ packages/context/src/default-discovery-read-failures.test.ts:32:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/context/src/default-discovery-read-failures.test.ts > default AGENTS bounded read/cleanup failures > omits an incomplete zero-byte capture instead of describing it as the source document
+AssertionError: expected [ …(2) ] to deeply equal [ 'nested control' ]
+
+- Expected
++ Received
+
+  [
++   "
++ # [truncated at 2600 bytes]",
+    "nested control",
+  ]
+
+ ❯ packages/context/src/default-discovery-read-failures.test.ts:58:65
+     56|     });
+     57|     const docs = await new HierarchicalInstructionDiscovery().discover…
+     58|     expect(reads).toBe(1); expect(docs.map(doc => doc.content)).toEqua…
+       |                                                                 ^
+     59|   });
+     60| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+

@@ -1,0 +1,23 @@
+{
+  "originalProbe": ".ci/agent-context-memory-20261004/audit-context/probe.mjs",
+  "originalBytes": 8030,
+  "originalSha256": "0b350a30eebc9b788d243255f128e8b0e2978e5d712a6bfadf7dfe3203125076",
+  "portableProbe": "scripts/research/agent-context-memory-20261004/context-probe.mjs",
+  "portableBytes": 12555,
+  "portableSha256": "f6979210c8e643975878982f18298f4d92e9e7e716dec597c66bacff251d631c",
+  "fixedInputsUnchanged": [
+    "12 discoverCase fixtures: exact bodies/caps/symlink; 16MiB single and multiline",
+    "3 raw ContextPipeline modes with same budgets/body strings",
+    "3 real Harness modes with same two-turn bodies/budgets/goals/offline provider"
+  ],
+  "changes": [
+    "parameterize repo/output paths",
+    "add own-source identity hashes",
+    "observe actual FileHandle captured bytes in addition to original readFile observations",
+    "observe actual StepExecutionSnapshot instruction sources/fingerprint",
+    "append explicit candidate verdicts, exit status",
+    "retain before/after HEAD/status/source-and-dist hashes and assert no identity drift",
+    "refuse overwriting an existing report.json before any fixture/source observation"
+  ],
+  "originalPreserved": true
+}

@@ -1,5 +1,5 @@
-import type { Dirent } from "node:fs";
-import { readFile, readdir, stat } from "node:fs/promises";
+import { constants, type Dirent, type Stats } from "node:fs";
+import { lstat, open, readdir, stat } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import type {
   DiscoveredInstruction,
@@ -55,8 +55,8 @@ export class HierarchicalInstructionDiscovery implements InstructionDiscovery {
     cwd: string,
     opts: InstructionDiscoveryOptions = {},
   ): Promise<DiscoveredInstruction[]> {
-    const maxBytesPerFile = opts.maxBytesPerFile ?? DEFAULT_MAX_BYTES_PER_FILE;
-    const maxDocuments = opts.maxDocuments ?? DEFAULT_MAX_DOCUMENTS;
+    const maxBytesPerFile = finiteBudget(opts.maxBytesPerFile ?? DEFAULT_MAX_BYTES_PER_FILE);
+    const maxDocuments = finiteBudget(opts.maxDocuments ?? DEFAULT_MAX_DOCUMENTS);
 
     const root = resolve(cwd);
     const rootStat = await stat(root);
@@ -113,8 +113,8 @@ export class HierarchicalInstructionDiscovery implements InstructionDiscovery {
       const candidate = join(dir, DOC_FILE_NAME);
       let exists = false;
       try {
-        await stat(candidate);
-        exists = true;
+        const candidateStat = await lstat(candidate);
+        exists = candidateStat.isFile() && !candidateStat.isSymbolicLink();
       } catch (err) {
         // P14-6: a missing document is the EXPECTED case for ancestor climb —
         // explicitly kept as "not exists" (fail-closed: an unreadable doc is
@@ -192,19 +192,32 @@ export class HierarchicalInstructionDiscovery implements InstructionDiscovery {
     scope: Candidate["scope"],
     maxBytes: number,
   ): Promise<DiscoveredInstruction | undefined> {
+    let handle: Awaited<ReturnType<typeof open>> | undefined;
     try {
-      const fileStat = await stat(path);
-      const sizeBytes = fileStat.size;
-      const content = await readFile(path, "utf8");
-      let result = content;
-      let truncated = false;
-      if (Buffer.byteLength(content) > maxBytes) {
-        result =
-          truncateAtLineBoundary(content, maxBytes) +
-          "\n" +
-          `# [truncated at ${sizeBytes} bytes]`;
-        truncated = true;
+      const fileStat = await lstat(path);
+      if (!fileStat.isFile() || fileStat.isSymbolicLink()) return undefined;
+      const revision = revisionOf(fileStat);
+      // NOFOLLOW protects the final component where supported. NONBLOCK also
+      // prevents a raced regular-file-to-FIFO replacement from hanging open.
+      handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+      const opened = await handle.stat();
+      const current = await lstat(path);
+      if (!opened.isFile() || current.isSymbolicLink() || revisionOf(opened) !== revision || revisionOf(current) !== revision) return undefined;
+      // Bound both allocation and application-level reads independently of
+      // source size. Four lookahead bytes suffice for one UTF-8 code point.
+      const bytes = Buffer.alloc(Math.min(opened.size, maxBytes + 4));
+      let captured = 0;
+      while (captured < bytes.length) {
+        const { bytesRead } = await handle.read(bytes, captured, bytes.length - captured, captured);
+        if (bytesRead === 0) break;
+        captured += bytesRead;
       }
+      if (captured !== bytes.length) return undefined;
+      const after = await lstat(path);
+      if (after.isSymbolicLink() || revisionOf(await handle.stat()) !== revision || revisionOf(after) !== revision) return undefined;
+      const sizeBytes = opened.size;
+      const truncated = sizeBytes > maxBytes;
+      const result = boundedText(bytes.subarray(0, captured), maxBytes, sizeBytes, truncated);
       return {
         path,
         scope,
@@ -215,6 +228,10 @@ export class HierarchicalInstructionDiscovery implements InstructionDiscovery {
       };
     } catch {
       return undefined;
+    } finally {
+      // Discovery is best-effort per document, including descriptor cleanup.
+      // A close failure must not suppress unrelated readable instructions.
+      try { await handle?.close(); } catch { /* already-read documents remain usable */ }
     }
   }
 }
@@ -225,15 +242,29 @@ function relativeDepth(filePath: string, base: string): number {
   return rel.split(sep).length;
 }
 
-function truncateAtLineBoundary(content: string, maxBytes: number): string {
-  const lines = content.split("\n");
-  const kept: string[] = [];
-  let bytes = 0;
-  for (const line of lines) {
-    const lineBytes = Buffer.byteLength(line) + (kept.length > 0 ? 1 : 0);
-    if (kept.length > 0 && bytes + lineBytes > maxBytes) break;
-    kept.push(line);
-    bytes += lineBytes;
-  }
-  return kept.join("\n");
+function finiteBudget(value: number): number {
+  if (!Number.isFinite(value) || value < 0) throw new Error("Instruction discovery budget must be finite and non-negative");
+  return Math.floor(value);
+}
+
+function revisionOf(value: Stats): string {
+  return [value.dev, value.ino, value.size, value.mtimeMs, value.ctimeMs].join(":");
+}
+
+function boundedText(bytes: Buffer, maxBytes: number, sizeBytes: number, truncated: boolean): string {
+  // Streaming decode permits only an unfinished trailing code point in the
+  // lookahead capture. Malformed input never expands into replacement text.
+  const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+  decoder.decode(bytes, { stream: truncated && bytes.length < sizeBytes });
+  if (!truncated) return decoder.decode(bytes);
+  const marker = `\n# [truncated at ${sizeBytes} bytes]`;
+  const suffix = Buffer.byteLength(marker) <= maxBytes ? marker : "";
+  let end = Math.max(0, maxBytes - Buffer.byteLength(suffix));
+  // A code point whose start lies before the boundary and continuation at
+  // the boundary is omitted whole. Exact boundaries keep the prefix intact.
+  while (end > 0 && end < bytes.length && (bytes[end]! & 0xc0) === 0x80) end--;
+  let prefix = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes.subarray(0, end));
+  const newline = prefix.lastIndexOf("\n");
+  if (newline >= 0) prefix = prefix.slice(0, newline);
+  return prefix + suffix;
 }

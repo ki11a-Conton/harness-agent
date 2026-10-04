@@ -1,0 +1,67 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+
+ ❯ packages/context/src/default-discovery-budget-regressions.test.ts (49 tests | 41 failed) 271ms
+     × bounds a single ASCII line including marker to 0 bytes 10ms
+     × bounds a single ASCII line including marker to 1 bytes 2ms
+     × bounds a single ASCII line including marker to 4 bytes 9ms
+     × bounds a single ASCII line including marker to 12 bytes 2ms
+     × bounds a single ASCII line including marker to 13 bytes 2ms
+     × bounds a single ASCII line including marker to 14 bytes 2ms
+     × bounds a single ASCII line including marker to 24 bytes 2ms
+     × bounds a single ASCII line including marker to 30 bytes 2ms
+     × bounds a single ASCII line including marker to 99 bytes 2ms
+     × bounds a single ASCII line including marker to 100 bytes 2ms
+     × bounds a single ASCII line including marker to 50000 bytes 2ms
+     × bounds a single Chinese and emoji line including marker to 0 bytes 2ms
+     × bounds a single Chinese and emoji line including marker to 1 bytes 2ms
+     × bounds a single Chinese and emoji line including marker to 4 bytes 2ms
+     × bounds a single Chinese and emoji line including marker to 12 bytes 2ms
+     × bounds a single Chinese and emoji line including marker to 13 bytes 2ms
+     × bounds a single Chinese and emoji line including marker to 14 bytes 2ms
+     × bounds a single Chinese and emoji line including marker to 24 bytes 2ms
+     × bounds a single Chinese and emoji line including marker to 30 bytes 2ms
+     × bounds a single Chinese and emoji line including marker to 99 bytes 2ms
+     × bounds a single Chinese and emoji line including marker to 100 bytes 2ms
+     × bounds a single Chinese and emoji line including marker to 50000 bytes 2ms
+     × reserves marker space while preserving complete lines when possible 1ms
+     ✓ preserves an exact-budget document of 0 bytes 3ms
+     ✓ preserves an exact-budget document of 1 bytes 1ms
+     ✓ preserves an exact-budget document of 13 bytes 1ms
+     ✓ preserves an exact-budget document of 13 bytes 1ms
+     × rejects invalid maxBytesPerFile=NaN explicitly 4ms
+     × rejects invalid maxBytesPerFile=Infinity explicitly 2ms
+     × rejects invalid maxBytesPerFile=-Infinity explicitly 1ms
+     × rejects invalid maxBytesPerFile=-1 explicitly 2ms
+     × rejects invalid maxDocuments=NaN explicitly 1ms
+     × rejects invalid maxDocuments=Infinity explicitly 1ms
+     × rejects invalid maxDocuments=-Infinity explicitly 1ms
+     × rejects invalid maxDocuments=-1 explicitly 1ms
+     × floors fractional byte/document budgets and keeps zero document budget empty 2ms
+     × captures only cap+4 bytes from an actual 16 MiB single-line document 50ms
+     × captures only cap+4 bytes from an actual 16 MiB multi-line document 118ms
+     × omits malformed UTF-8 fffefd without injecting replacement characters 4ms
+     × omits malformed UTF-8 c0af without injecting replacement characters 1ms
+     × omits malformed UTF-8 61e4b8 without injecting replacement characters 2ms
+     × omits malformed UTF-8 eda080 without injecting replacement characters 2ms
+     ✓ preserves default root/nested/cwd ordering, scope, dedup and maxDocuments 4ms
+     × omits a cwd AGENTS file symlink while keeping regular controls 2ms
+     × omits a ancestor AGENTS file symlink while keeping regular controls 2ms
+     ✓ omits a nested AGENTS file symlink while keeping regular controls 1ms
+     ✓ omits a nonregular AGENTS directory and keeps a readable nested document 1ms
+     ✓ isolates an unreadable AGENTS file from the rest of discovery 2ms
+     × omits a document changed after its bounded capture 3ms
+ ❯ packages/harness/src/effective-instruction-context.regressions.test.ts (6 tests | 3 failed) 60ms
+     ✓ pins only model-admitted allowed project content and correlates actual step/model fingerprints 26ms
+     × pins only model-admitted injection project content and correlates actual step/model fingerprints 14ms
+     × pins only model-admitted budget project content and correlates actual step/model fingerprints 11ms
+     ✓ keeps raw ContextPipeline discovery debug information for denied documents 2ms
+     × pins the exact truncated document view rather than unread source bytes 4ms
+     ✓ keeps concurrent builds independent for two cwd document worlds 2ms
+
+ Test Files  2 failed (2)
+      Tests  44 failed | 11 passed (55)
+   Start at  06:57:03
+   Duration  2.49s (transform 1.53s, setup 0ms, import 1.94s, tests 331ms, environment 0ms)
+
+JSON report written to /workspace/harness-agent/.ci/agent-context-memory-20261004/context-implementation/red.json

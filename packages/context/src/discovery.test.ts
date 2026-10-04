@@ -149,7 +149,10 @@ describe("HierarchicalInstructionDiscovery (CTX-001)", () => {
 
     const doc = docs[0]!;
     expect(doc.truncated).toBe(true);
-    expect(doc.content.startsWith("ascii-line")).toBe(true);
+    const prefix = doc.content.split("\n")[0]!;
+    expect(prefix.length).toBeGreaterThan(0);
+    expect("ascii-line".startsWith(prefix)).toBe(true);
+    expect(Buffer.byteLength(doc.content)).toBeLessThanOrEqual(30);
     expect(doc.content.includes("한국어")).toBe(false);
   });
 

@@ -1,0 +1,13 @@
+{
+  "sourceHead": "a1df586e4d105eb4171889931fbb59e557bb8d5d",
+  "discoverySourceHash": "8e639adb6c3a83bc6b4ea133833e3ad2eb76ee8390f4034ca8c8471cfbfd55ba",
+  "mechanism": "fs.open/FileHandle own close boundary: actually closes descriptor, then throws EIO only for cwd AGENTS; all reads/stat/candidate selection are production code",
+  "expected": "One problematic document must not abort all discovery or suppress remaining regular nested documents",
+  "paidCalls": 0,
+  "error": {
+    "message": "Synthetic close EIO after real descriptor closure",
+    "code": "EIO"
+  },
+  "passed": false,
+  "injectedCloseCalls": 1
+}

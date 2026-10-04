@@ -1,0 +1,17 @@
+{
+  "command": [
+    "/workspace/harness-agent/node_modules/.bin/tsc",
+    "-p",
+    "packages/memory/tsconfig.json",
+    "--tsBuildInfoFile",
+    ".ci/baseline-memory.tsbuildinfo"
+  ],
+  "cwd": "/workspace/harness-agent-memory-baseline",
+  "startedAt": "2026-10-04T07:03:24.813431+00:00",
+  "finishedAt": "2026-10-04T07:03:25.020453+00:00",
+  "exitCode": 1,
+  "logSha256": "f222233b9ca1b927999ca15cca559e033879a1d32efeb232909ebb6c5337adbc",
+  "baselineSourceHead": "17aa6c7471faf8bdec020b45bfe7b9bb45470131",
+  "dependencyReuse": "contracts, store-integrity, security unchanged dist; isolated baseline tsBuildInfoFile",
+  "previousAttempt": "pnpm exec triggered modules-directory integrity check and aborted before compiling; raw failed command retained"
+}

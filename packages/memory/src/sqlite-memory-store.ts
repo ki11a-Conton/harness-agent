@@ -14,6 +14,7 @@ import type {
 } from "@ar/contracts";
 import { AgentError, errorInfo } from "@ar/contracts";
 import { checkUnsafeMemoryEntry, scanMemoryEntries } from "./security-gate.js";
+import { matchesMemoryQuery, memorySearchText } from "./search-text.js";
 
 /**
  * P0-3: SQLite + WAL backend for the contracts MemoryStore (memories.db in
@@ -30,8 +31,8 @@ import { checkUnsafeMemoryEntry, scanMemoryEntries } from "./security-gate.js";
  *   the same semantics as JsonlMemoryStore.
  * - The security gate (injection/secret rejection) is shared with the
  *   JSONL backend: identical behavior on every persistence path (§67).
- * - FTS5 full-text index over content for search; the plain LIKE fallback
- *   is kept so search still works if the FTS5 tokenizer rejects a query.
+ * - FTS5 full-text ranking over content, supplemented by literal lexical
+ *   matches over content and persisted When/Do/Avoid strategy fields.
  */
 export interface SqliteMemoryStoreOptions {
   /** Directory holding memories.db; created on first open. */
@@ -235,8 +236,9 @@ export class SqliteMemoryStore implements MemoryStore {
   }
 
   /**
-   * Search entries by content. Uses the FTS5 index when the query tokenizes
-   * cleanly; falls back to the LIKE/case-insensitive scan otherwise.
+   * Preserve FTS5-ranked content hits, then add literal content/strategy
+   * matches the tokenizer omits (including Chinese and mixed substrings).
+   * The supplement scans only live rows passing the requested filters.
    * `opts.scope` filters by exact scope (hierarchy expansion is done by the
    * retrieval layer, P0-4).
    */
@@ -253,7 +255,7 @@ export class SqliteMemoryStore implements MemoryStore {
       where += " AND m.scope = ?";
       params.push(opts.scope);
     }
-    let rows: SqliteRow[];
+    let rows: SqliteRow[] = [];
     try {
       const ftsQuery = q.split(/\s+/).filter((t) => t !== "").map((t) => `"${t.replace(/"/g, "")}"`).join(" OR ");
       if (ftsQuery === "") throw new Error("empty fts query");
@@ -261,11 +263,28 @@ export class SqliteMemoryStore implements MemoryStore {
         `SELECT m.*, bm25(memories_fts) AS score FROM memories_fts f JOIN memories m ON m.id = f.id WHERE memories_fts MATCH ? AND ${where} ORDER BY score`,
       ).all(ftsQuery, ...params) as unknown as SqliteRow[];
     } catch {
-      rows = this.db.prepare(
-        `SELECT m.*, 0 AS score FROM memories m WHERE ${where} AND LOWER(m.content) LIKE ?`,
-      ).all(`%${q.toLowerCase()}%`, ...params) as unknown as SqliteRow[];
+      // A missing index or rejected FTS query still uses the literal matcher.
     }
-    return rows.map(rowToEntry);
+    const hits: MemoryEntry[] = [];
+    const seen = new Set<string>();
+    for (const row of rows) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      hits.push(rowToEntry(row));
+    }
+    // Run even when FTS found hits: one exact Chinese token does not imply
+    // that longer Chinese words containing the same substring were indexed.
+    const supplementalRows = this.db.prepare(
+      `SELECT m.* FROM memories m WHERE ${where} ORDER BY m.rowid`,
+    ).all(...params) as unknown as SqliteRow[];
+    for (const row of supplementalRows) {
+      if (seen.has(row.id)) continue;
+      const memory = rowToEntry(row);
+      if (!matchesMemoryQuery(q, memorySearchText(memory))) continue;
+      seen.add(row.id);
+      hits.push(memory);
+    }
+    return hits;
   }
 
   /** List all rows; soft-deleted rows are hidden unless opts.deleted is true. */

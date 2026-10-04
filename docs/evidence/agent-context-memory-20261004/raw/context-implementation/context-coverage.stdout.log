@@ -1,0 +1,45 @@
+
+ RUN  v4.1.10 /workspace/harness-agent
+      Coverage enabled with v8
+
+ ✓ packages/context/src/context-optimization-regressions.test.ts (39 tests) 22ms
+ ✓ packages/context/src/default-discovery-budget-regressions.test.ts (49 tests) 123ms
+ ✓ packages/context/src/path-scoped-discovery.test.ts (24 tests) 83ms
+ ✓ packages/context/src/circuit-breaker.test.ts (6 tests) 77ms
+ ✓ packages/context/src/pipeline.test.ts (38 tests) 74ms
+ ✓ packages/harness/src/effective-instruction-context.regressions.test.ts (6 tests) 60ms
+ ✓ packages/context/src/discovery.test.ts (11 tests) 38ms
+ ✓ packages/context/src/taxonomy.test.ts (18 tests) 20ms
+ ✓ packages/context/src/default-discovery-read-failures.test.ts (3 tests) 25ms
+ ✓ packages/context/src/compaction.test.ts (10 tests) 8ms
+ ✓ packages/context/src/prompt-versioning.test.ts (9 tests) 11ms
+ ✓ packages/context/src/policy-versioning.test.ts (10 tests) 8ms
+ ✓ packages/context/src/message-budget-regressions.test.ts (14 tests) 8ms
+ ✓ packages/context/src/budget.test.ts (8 tests) 7ms
+
+ Test Files  14 passed (14)
+      Tests  245 passed (245)
+   Start at  07:06:31
+   Duration  4.96s (transform 1.45s, setup 0ms, import 2.45s, tests 565ms, environment 1ms)
+
+JSON report written to /workspace/harness-agent/.ci/agent-context-memory-20261004/context-implementation/context-coverage.json
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   95.29 |    90.87 |   97.03 |   96.87 |                   
+ ...uit-breaker.ts |   93.33 |    88.23 |   85.71 |   92.85 | 105-106           
+ compaction.ts     |   91.22 |    85.98 |   93.75 |   91.39 | 284-295,302-305   
+ discovery.ts      |   93.23 |    86.31 |     100 |   97.39 | 125,150,168       
+ ...d-discovery.ts |   94.02 |    88.65 |     100 |   98.98 | 97                
+ pipeline.ts       |     100 |     98.5 |     100 |     100 | 255               
+ ...-versioning.ts |     100 |    97.87 |     100 |     100 | 93                
+ ...-versioning.ts |   97.72 |      100 |      95 |   96.96 | 96                
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 95.29% ( 709/744 )
+Branches     : 90.87% ( 428/471 )
+Functions    : 97.03% ( 131/135 )
+Lines        : 96.87% ( 619/639 )
+================================================================================

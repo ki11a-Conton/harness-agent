@@ -13,6 +13,7 @@ import type { SkillDiscovery, SkillSecurityDenialRecord } from "@ar/core";
 import { CommandDiscoveryService } from "../command-discovery-service.js";
 import { DEFAULT_CONTEXT_BUDGET, type HarnessConfig, type HarnessFeatureFlags } from "../config.js";
 import { PathScopedContextPipeline } from "../path-scoped-instructions.js";
+import { EffectiveInstructionContextPipeline } from "../effective-instruction-context.js";
 
 export interface ComposedContext {
   pipeline: ContextPipeline;
@@ -77,7 +78,7 @@ export async function composeContext(
   if (config.instructionDiscovery !== undefined && events === undefined) throw new Error("Path-scoped instructions require durable event evidence");
   const pipeline = config.instructionDiscovery !== undefined && events !== undefined
     ? new PathScopedContextPipeline({ workspaceRoot: cwd, config: config.instructionDiscovery, events }, pipelineDeps)
-    : new ContextPipeline(pipelineDeps);
+    : new EffectiveInstructionContextPipeline(pipelineDeps);
   const { budget, budgetFallback } = await resolveContextBudget(config);
 
   // --- skills (P2-8) --------------------------------------------------------
